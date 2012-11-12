@@ -62,12 +62,12 @@
     endmodule [:module_name]
     * ifc_name optional if only one ifc
 --Module Instantiation
-    Ifc_type ifc_name <­ module_name({parameter});
-    Ifc_type ifc_name <­ module_name([{parameter,}
+    Ifc_type ifc_name <- module_name({parameter});
+    Ifc_type ifc_name <- module_name([{parameter,}
         clocked_by clock_name,
         reset_by reset_name]);
     example:
-        Reg#(Time32) state <­ mkReg(0);
+        Reg#(Time32) state <- mkReg(0);
 --Rules
     rule rule_name [rule_predicate] ;
         action statements
@@ -111,16 +111,16 @@
         x = 23 ;
         b = foo.bar(x);
 --ActionValue Assignment Statement
-    Special <­ notation used to perform the action and return the value
-        type identifier <­ expression ;
-        identifier <­ expression ;
+    Special <- notation used to perform the action and return the value
+    type identifier <- expression ;
+    identifier <- expression ;
 --Implicit Type Declaration and Initialization
     let identifier = expression ;
 ---if expression is actionvalue method
     let identifier <-­ expression ;
     example:
         let n = valueof(Buffsize);
-        let z <­ rndm.get;
+        let z <- rndm.get;
 --Register Read and Write
     register_name <= expression ;
     example:
@@ -167,7 +167,8 @@
     tagged {pattern, pattern} 
 ---Pattern Matching Examples
 -----Pattern matching in a case statement
-    case (f(a)) matches tagged Valid .x : return x;
+    case (f(a)) matches
+        tagged Valid .x : return x;
         tagged Invalid : return 0;
     endcase
 -----Pattern matching in an if statement
@@ -188,38 +189,38 @@
     (* {attribute [= expression ]}*)
 ---Module Attributes (top­level only)
     synthesize
-    RST_N = “string”
-    CLK = “string”
-    always_ready [= “interface_method”]
-    always_enabled [= “interface_method”]
-    descending urgency = “{rule_names}”
-    preempts = “{rule_names, (list_rule_names)]}”
-    doc = “string“
+    RST_N = "string"
+    CLK = "string"
+    always_ready [= "interface_method"]
+    always_enabled [= "interface_method"]
+    descending urgency = "{rule_names}"
+    preempts = "{rule_names, (list_rule_names)]}"
+    doc = "string"
 ---Method Attributes
-    always_ready [= “interface_method”]
-    always_enabled [= “interface_method”]
-    ready = “string”
-    enable = “string”
-    result = “string”
-    prefix = “string”
-    port = “string”
+    always_ready [= "interface_method"]
+    always_enabled [= "interface_method"]
+    ready = "string"
+    enable = "string"
+    result = "string"
+    prefix = "string"
+    port = "string"
 ---Interface Attributes
-    always_ready [= “interface_method”]
-    always_enabled [= “interface_method”]
+    always_ready [= "interface_method"]
+    always_enabled [= "interface_method"]
 ---Function Attributes (top­level only)
     noinline
 ---Rule Attributes
     fire_when_enabled
     no_implicit_conditions
-    descending_urgency = “{rule_names}”
-    preempts “{rule_names, [(list_rule_names)]}”
+    descending_urgency = "{rule_names}"
+    preempts "{rule_names, [(list_rule_names)]}"
 --System Tasks and Functions
     $display $write $fopen $fdisplay $fwrite $fgetc $fflush $fclose $ungetc
     $finish $stop $dumpon $dumpoff $dumpvars $test$plusargs $time $stime
 --Importing C Functions
-    import “BDPI” [c_function_name =] function Return_type function_name [{argument}]) [provisos] ;
+    import "BDPI" [c_function_name =] function Return_type function_name [{argument}]) [provisos] ;
 --Importing Verilog Modules
-    import “BVI” [verilog_module_name] =
+    import "BVI" [verilog_module_name] =
         module [[Type]] module_name [# ({parameter})]
         ({Ifc_type ifc_name}) [provisos] ;
             module statements
@@ -334,9 +335,9 @@
         method Action decrement();
     endinterface
     module mkCounter(Counter#(count_t)) provisos(Arith#(count_t), Bits#(count_t, count_t_sz));
-        Reg#(count_t) value <­ mkReg(0);
-        PulseWire increment_called <­ mkPulseWire();
-        PulseWire decrement_called <­ mkPulseWire();
+        Reg#(count_t) value <- mkReg(0);
+        PulseWire increment_called <- mkPulseWire();
+        PulseWire decrement_called <- mkPulseWire();
         rule do_increment(increment_called && ! decrement_called);
             value <= value + 1;
         endrule
