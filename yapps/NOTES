@@ -1,0 +1,78 @@
+[Last updated August 11, 2003]
+
+Notes for myself:
+
+Document the LINENO trick
+
+Add a way to have a self-contained mode that doesn't require yappsrt?
+
+Add a debugging mode that helps you understand how the grammar
+  is constructed and how things are being parsed
+
+Optimize (remove) unused variables
+
+Yapps produces a bunch of inline list literals.  We should be able to
+  instead create these lists as class variables (but this makes it
+  harder to read the code).  Also, 'A in X' could be written
+  'X.has_key(A)' if we can convert the lists into dictionaries ahead
+  of time.
+
+Add a convenience to automatically gather up the values returned 
+  from subpatterns, put them into a list, and return them
+
+"Gather" mode that simply outputs the return values for certain nodes.
+  For example, if you just want all expressions, you could ask yapps
+  to gather the results of the 'expr' rule into a list.  This would 
+  ignore all the higher level structure.
+
+Improve the documentation
+
+Write some larger examples (probably XML/HTML)
+
+EOF needs to be dealt with.  It's probably a token that can match anywhere.
+
+Get rid of old-style regex support
+
+Use SRE's lex support to speed up lexing (this may be hard given that
+  yapps allows for context-sensitive lexers)
+
+Look over Dan Connoly's experience with Yapps (bugs, frustrations, etc.)
+  and see what improvements could be made
+
+Add something to pretty-print the grammar (without the actions)
+
+Maybe conditionals?  Follow this rule only if <condition> holds.
+  But this would be useful mainly when multiple rules match, and we
+  want the first matching rule.  The conditional would mean we skip to
+  the next rule.  Maybe this is part of the attribute grammar system,
+  where rule X<0> can be specified separately from X<N>.
+
+Convenience functions that could build return values for all rules
+  without specifying the code for each rule individually
+
+Patterns (abstractions over rules) -- for example, comma separated values
+  have a certain rule pattern that gets replicated all over the place
+
+  These are rules that take other rules as parameters.
+
+  rule list<separator,element>:            {{ result = [] }}
+                [ element                  {{ result.append(element) }}
+                  ( separator element      {{ result.append(element) }}
+                  )*
+                ]                          {{ return result }}
+      
+Inheritance of parser and scanner classes.  The base class (Parser)
+  may define common tokens like ID, STR, NUM, space, comments, EOF,
+  etc., and common rules/patterns like optional, sequence,
+  delimiter-separated sequence.
+
+Why do A? and (A | ) produce different code?  It seems that they
+should produce the very same code.
+
+Look at everyone's Yapps grammars, and come up with larger examples
+  http://www.w3.org/2000/10/swap/SemEnglish.g
+  http://www.w3.org/2000/10/swap/kifExpr.g
+  http://www.w3.org/2000/10/swap/rdfn3.g
+
+Construct lots of erroneous grammars and see what Yapps does with them
+  (improve error reporting)

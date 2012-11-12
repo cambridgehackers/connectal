@@ -1,0 +1,108 @@
+2003-08-27  Amit Patel  <amitp@cs.stanford.edu>
+
+	* *: (VERSION) Release 2.1.1
+
+	* *: Added a test/ directory for test cases; I had previously put
+	tests in the examples/ directory, which is a bad place to put
+	them.  Examples are useful for learning how Yapps works.  Tests
+	are for testing specific features of Yapps.
+	
+	* parsetree.py (Plus.update): Fixed a long-standing bug in which
+	the FOLLOW set of 'a'+ would include 'a'.  In theory this makes no
+	practical difference because the 'a'+ rule eats up all the 'a'
+	tokens anyway.  However, it makes error messages a little bit more
+	confusing because they imply that an 'a' can follow.
+
+	* yappsrt.py (print_error): Incorporated the context object into
+	the printing of error messages.
+
+2003-08-12  Amit Patel  <amitp@cs.stanford.edu>
+
+	* *: (VERSION) Release 2.1.0
+	
+	* parsetree.py: Improved error message generation.  Instead of
+	relying on the scanner to produce errors, the parser now checks
+	things explicitly and produces errors directly.  The parser has
+	better knowledge of the context, so its error messages are more
+	precise and helpful.
+
+	* yapps_grammar.g: Instead of setting self.rule in the setup()
+	method, pass it in the constructor.  To make it available at
+	construction time, pass it along as another attribute in the
+	attribute grammar.
+
+2003-08-11  Amit Patel  <amitp@cs.stanford.edu>
+
+	* parsetree.py: Generated parsers now include a context object
+	that describes the parse rule stack.  For example, while parsing
+	rule A, called from rule B, called from rule D, the context object
+	will let you reconstruct the path D > B > A.  [Thanks David Morley]
+	
+	* *: Removed all output when things are working
+	properly; all warnings/errors now go to stderr.
+
+	* yapps_grammar.g: Added support for A? meaning an optional A.
+	This is equivalent to [A].
+
+	* yapps2.py: Design - refactored yapps2.py into yapps2.py +
+	grammar.py + parsetree.py.  grammar.py is automatically generated
+	from grammar.g.  Added lots of docstrings.
+	
+2003-08-09  Amit Patel  <amitp@cs.stanford.edu>
+
+	* yapps2.py: Documentation - added doctest tests to some of the
+	set algorithms in class Generator.
+
+	* yapps2.py: Style - removed "import *" everywhere.
+
+	* yapps2.py: Style - moved to Python 2 -- string methods,
+	list comprehensions, inline syntax for apply
+
+2003-07-28  Amit Patel  <amitp@cs.stanford.edu>
+
+	* *: (VERSION) Release 2.0.4
+	
+	* yappsrt.py: Style - replaced raising string exceptions
+	with raising class exceptions.  [Thanks Alex Verstak]
+
+	* yappsrt.py: (SyntaxError) Bug fix - SyntaxError.__init__ should
+	call Exception.__init__
+
+	* yapps2.py: Bug fix - identifiers in grammar rules that had
+	digits in them were not accessible in the {{python code}} sections
+	of the grammar.
+
+	* yapps2.py: Style - changed "b >= a and b < c" to "a <= b < c"
+
+	* yapps2.py: Style - change "`expr`" to "repr(expr)"
+
+2002-08-00  Amit Patel  <amitp@cs.stanford.edu>
+
+	* *: (VERSION) Release 2.0.3
+
+	* yapps2.py: Bug fix - inline tokens using the r"" syntax weren't
+	treated properly.
+
+2002-04-00  Amit Patel  <amitp@cs.stanford.edu>
+
+	* *: (VERSION) Release 2.0.2
+
+	* yapps2.py: Bug fix - when generating the "else" clause, if the
+	comment was too long, Yapps was not emitting a newline.  [Thanks
+	Steven Engelhardt]	
+
+2001-10-00  Amit Patel  <amitp@cs.stanford.edu>
+
+	* *: (VERSION) Release 2.0.1
+
+	* yappsrt.py: (SyntaxError) Style - the exception classes now
+	inherit from Exception. [Thanks Rich Salz]
+
+	* yappsrt.py: (Scanner) Performance - instead of passing the set
+	of tokens into the scanner at initialization time, we build the
+	list at compile time.  You can still override the default list per
+	instance of the scanner, but in the common case, we don't have to
+	rebuild the token list.  [Thanks Amaury Forgeot d'Arc]
+
+
+	
