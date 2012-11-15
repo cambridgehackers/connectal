@@ -63,8 +63,9 @@ def generate(inputfilename, outputfilename='', dump=0, **flags):
     else:
         t.output = open(outputfilename, 'w')
         # jca: added so that runtime found correctly
+        t.output.write("#!/usr/bin/python\n")
         t.output.write("import os, sys\n")
-        t.output.write("sys.path.append(os.path.abspath('..'))\n")
+        t.output.write("sys.path.append(os.path.abspath('yapps'))\n")
         t.generate_output()
 
 if __name__ == '__main__':
