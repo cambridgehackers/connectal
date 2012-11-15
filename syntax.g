@@ -10,6 +10,7 @@ def lookup(map, name):
 %%
 parser Calculator:
     ignore:    "[ \r\t\n]+"
+    ignore:    "\\/\\/.*?\r?\n"
     token END: "$"
     token NUM: "[0-9]+"
     token VAR: "[a-zA-Z_][a-zA-Z0-9_]*"
