@@ -161,7 +161,7 @@ parser Calculator:
         | "no_implicit_conditions"
 
     rule attribute_statement:
-         "\\([*]" "{" attribute [ "=" expression ] "}" "[*]\\)"
+         "\\([*]" attribute [ "=" expression ] "[*]\\)"
 
     rule import_statements:
         "import"
@@ -210,7 +210,7 @@ parser Calculator:
             method_declarations
             subinterface_declarations
             "endinterface" [ ":" ifc_name ]
-        | "#" "\\(" "{" "type" Type_name "}" "\\)" ';'
+        | "#" "\\(" "type" Type_name "\\)" ';'
             method_declarations
             subinterface_declarations
             "endinterface" [ ":" ifc_name ]
@@ -377,6 +377,10 @@ parser Calculator:
         typedef_statements
         | function_statement
         | instance_statement
+        | import_statements
+        | interface_declarations
+        | attribute_statement
+        | method_declarations
 
     rule goal:
         (top_level_statements)* END
@@ -388,6 +392,7 @@ if __name__=='__main__':
     print 'args', sys.argv
     print 'args1', sys.argv[1]
     s = open(sys.argv[1]).read()
-    print 'Output:', parse('goal', s)
+    s1 = parse('goal', s)
+    print 'Output:', s1
     print 'Bye.'
 
