@@ -1,6 +1,6 @@
 globalvars = {}       # We will store the calculator's variables here
 def lookup(map, name):
-    #print "lookup", map, name
+    print "lookup", map, name
     for x, v in map:
         if x == name: return v
     if not globalvars.has_key(name):
@@ -17,6 +17,11 @@ parser Calculator:
     token VAR: "[a-zA-Z_][a-zA-Z0-9_]*"
     token STR:   r'"([^\\"]+|\\.)*"'
 
+    rule case_value:
+        "case" "\\(" expression "\\)"
+        (VAR ':' 'return' expression ';' )*
+        "endcase"
+
     # Each line can either be an expression or an assignment statement
     rule gggoal:   expr<<[]>> END            {{ return expr }}
                | "set" VAR expr<<[]>> END  {{ globalvars[VAR] = expr }}
@@ -32,20 +37,32 @@ parser Calculator:
     rule factor<<V>>: term<<V>>           {{ v = term }}
                      ( "[*]" term<<V>>    {{ v = v*term }}
                      |  "/"  term<<V>>    {{ v = v/term }}
+                     |  "\\^"  term<<V>>
+                     |  "<"  term<<V>>
+                     |  ">"  term<<V>>
                      |  "<<"  term<<V>>
                      |  ">>"  term<<V>>
                      |  "=="  term<<V>>
+                     |  "!="  term<<V>>
                      |  "\\?"  term<<V>> ':'  term<<V>>
                      )*                   {{ return v }}
 
+    rule fieldname: VAR
+
+    rule typefieldname: VAR
+
     # A term is a number, variable, or an expression surrounded by parentheses
     rule term<<V>>:
-                 NUM                      {{ return int(NUM) }}
+               case_value
+               | NUM  [ "\\'b" NUM ]      {{ return int(NUM) }}
                | VAR 
-                    ( r"[\\.]" VAR )*
-                    [ [ '#' ]
-                        ( "\\(" [ expr<<V>> ( ',' expr<<V>> )* ] "\\)"
-                        | "{" VAR ':' expr<<V>> ( ',' VAR ':' expr<<V>> )* "}"
+                    ( r"[\\.]" fieldname )*
+                    [ "#" ]
+                    [   ( "\\("
+                             ( expr<<V>> ( ',' expr<<V>> )* "\\)" ( r"[\\.]" fieldname )*
+                             | "\\)" ( r"[\\.]" fieldname )*
+                             )
+                        | "{" typefieldname ":" expr<<V>> ( ',' typefieldname ":" expr<<V>> )* "}"
                         )
                     ]
                     [ "\\[" expr<<V>> [ ':' expr<<V>> ] "\\]" ]
@@ -61,9 +78,8 @@ parser Calculator:
 
 ###########jca
 
-#    token STR:   '"[^\\"]+"'
-
-    rule STRING: VAR
+    rule STRING: STR
+#VAR
 
     rule interface_method: VAR
 
@@ -78,11 +94,6 @@ parser Calculator:
     rule Type: VAR
 
     rule action_name: VAR
-
-    rule action_statements:
-        ( let_statement
-        | expression ';'
-        )*
 
     rule c_function_name: VAR
 
@@ -144,7 +155,7 @@ parser Calculator:
         | "always_ready" [ "=" interface_method ]
         | "always_enabled" [ "=" interface_method ]
         | "descending" "urgency" "=" "{" rule_names "}"
-        | "preempts" [ "=" ] "{" rule_names ","  "\\(" list_rule_names "\\)" "}"
+        | "preempts" [ "=" ] "{" rule_names ','  "\\(" list_rule_names "\\)" "}"
         | "doc" "=" STRING
         | "ready" "=" STRING
         | "enable" "=" STRING
@@ -158,8 +169,6 @@ parser Calculator:
     rule attribute_statement:
          "\\([*]" attribute [ "=" expression ] "[*]\\)"
 
-    rule parameter: Type_item_or_name VAR (',' Type_item_or_name VAR)* 
-
     rule Type_item_or_name:
         Type_item
         | VAR [ "#" "\\(" expression (',' expression )* "\\)" ]
@@ -171,7 +180,7 @@ parser Calculator:
         ( "BDPI" [ c_function_name  "=" ] "function" Return_type
             function_name [ "{" arguments "}" ] "\\)"  [ provisos ] ';'
         | "BVI" [verilog_module_name]  "="
-            "module" [ [ Type ] ] module_name [ "#"  "\\(" parameter "\\)" ]
+            "module" [ Type ] module_name [ "#"  "\\(" parameter "\\)" ]
             "\\(" Ifc_type ifc_name "\\)"  [ provisos ] ';'
             module_statements
             importBVI_statements
@@ -179,11 +188,24 @@ parser Calculator:
         | Package_name  "::"  "[*]" ';'
         )
 
+    rule for_statement:
+        "for" "\\("
+            Type_item_or_name VAR "=" expression ';'
+            expression ';'
+            variable_assignment "\\)"
+        "begin"
+            ( let_statement
+            | if_statement
+            | variable_declaration_or_call
+            )*
+        "end"
+
     rule method_body_statements:
         ( let_statement
-        | expression ';'
+        | for_statement
         | return_statement
-        )*
+        | variable_declaration_or_call
+        )+
 
     rule method_name: VAR
 
@@ -197,7 +219,6 @@ parser Calculator:
               "endmethod" [ ":" method_name]
             ]
         | "Action" method_name  "\\(" parameter "\\)"
-            "AAA"
             [ "if"  "\\(" method_predicate "\\)" ] ';'
             [ method_body_statements
               "endmethod" [ ":" method_name]
@@ -224,28 +245,58 @@ parser Calculator:
         ( ';'
             ( method_declarations
 # ";"
-            | subinterface_declarations
+            #| subinterface_declarations
             )*
             "endinterface" [ ":" ifc_name ]
         | "#" "\\(" "type" Type_name "\\)" ';'
             ( method_declarations
 # ";"
-            | subinterface_declarations
+            #| subinterface_declarations
             )*
             "endinterface" [ ":" ifc_name ]
         )
+
+    rule variable_assignment:
+        term<<[]>>
+        ( '=' expression
+        | '<=' expression
+        )
+        #VAR [ "\\[" expression [ ':' expression ] "\\]" ]
+        #('=' | '<=') expression
+
+    rule variable_declaration:
+        Type_item_or_name VAR [ ( "=" | "<-" ) expression ] ';'
+
+    rule variable_declaration_or_call:
+        ( Type_item VAR [ ( "=" | "<-" ) expression ] ';'
+        #| expression [ VAR [ ( "=" | "<-" ) expression {{ print "FOO" }} ] ] ';'
+        | term<<[]>> ( VAR
+                         ( "=" expression ';'
+                         | "<-" expression ';'
+                         | ';' 
+                         ) 
+                     | "=" expression ';'
+                     | "<=" expression ';'
+                     | ';'
+                     )
+        )
+
+    rule variable_declaration_and_initializations:
+        let_statement
+        | variable_declaration
 
     rule module_declarations:
         "module" [ "\\[" "Module" "\\]" ] module_name [ "#"  "\\(" parameter "\\)" ]
         "\\(" [ Ifc_type ] [ ifc_name ] [ "[*]" ] "\\)" [provisos] ';'
         ( module_instantiations
-        | variable_declaration_and_initializations
         | rule_statements
         | interface_method_definitions
         | return_statement
         | function_statement
         | rule_statement
         | method_declarations
+        | for_statement
+        | variable_declaration_and_initializations
         )*
         "endmodule" [ ":" module_name]
 
@@ -273,21 +324,10 @@ parser Calculator:
         action_statements
         "endrule" [ ":"  rule_name ]
 
-    rule variable_assignment:
-        VAR  "=" expression ';'
-
-    rule variable_declaration:
-        Type_item VAR [ "=" expression ] ';'
-
-    rule variable_declaration_and_initializations:
-        variable_declaration
-        | let_statement
-
     rule rules_statement:
         "rules" [ ":"  rules_name]
         rule_satements
-        (variable_declaration | variable_assignment)*
-        #variable_declaration
+        (variable_declaration_or_call ';')*
         "endrules" [ ":"  rules_name]
 
     rule action_statement:
@@ -298,7 +338,7 @@ parser Calculator:
     rule Type_name: VAR
 
     rule Type_item:
-        ( "Bit#" | "Int#" | "Uint#" | "ComplexF#" ) "\\(" expression "\\)"
+        ( "Bit#" | "Int#" | "Uint#" | "ComplexF#" | "Reg#" | "FIFO#" | "Maybe#" ) "\\(" expression "\\)"
         | "Integer" | "Bool" | "String" | "Action" | "ActionValue#" "\\(" VAR "\\)"
         | "Nat"
 
@@ -351,24 +391,55 @@ parser Calculator:
 #    "match" pattern  "=" expression ';'
 
     rule argument_item:
-        ( "function" "Action" VAR "\\(" ( Type_item | VAR ) VAR "\\)"
-        | Type_item VAR
+        ( "function" 
+            ( "Action" VAR
+            | VAR [VAR]
+            )
+            "\\(" argument_item (',' argument_item)* "\\)"
+        | Type_item_or_name VAR
         )
 
     rule arguments:
         argument_item ( ',' argument_item)*
 
+    rule parameter: arguments
+
+    rule variable_assignment_or_call:
+        term<<[]>>
+        ( '=' expression ';'
+        | "<=" expression ';'
+        | ';'
+        )
+
+    rule if_item:
+        ( "begin"
+            ( variable_assignment_or_call )*
+          "end"
+        | variable_assignment_or_call
+        )
+
+    rule if_statement:
+        "if" "\\(" expression "\\)"
+           if_item [ "else" if_item ]
+
+    rule action_statements:
+        ( let_statement
+        | for_statement
+        | if_statement
+        | variable_declaration_or_call
+        )*
+
     rule function_body_statements:
-        variable_declaration
-        | let_statement
+        let_statement
         | action_statement
+        | variable_declaration_or_call
 
     rule function_statement:
-        "function" Type_item function_name  "\\("[arguments] "\\)"
+        "function" Type_item_or_name function_name  "\\("[arguments] "\\)"
         ( "=" expression ';'
         | [provisos] ';'
-            ( function_body_statements
-            | return_statement
+            ( return_statement
+            | function_body_statements
             )*
             "endfunction" [ ":"  function_name]
         )
