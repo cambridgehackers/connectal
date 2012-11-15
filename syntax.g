@@ -1,10 +1,11 @@
 globalvars = {}       # We will store the calculator's variables here
 def lookup(map, name):
-    print "lookup", map, name
+    #print "lookup", map, name
     for x, v in map:
         if x == name: return v
     if not globalvars.has_key(name):
-        print 'Undefined (defaulting to 0):', name
+        #print 'Undefined (defaulting to 0):', name
+        pass
     return globalvars.get(name, 0)
 
 %%
@@ -41,21 +42,22 @@ parser Calculator:
     rule term<<V>>:
                  NUM                      {{ return int(NUM) }}
                | VAR 
-                    ( r"[\\.]" VAR
-                    | [ '#' ]
-                        [ "\\(" expr<<V>> [( ',' expr<<V>> )*] "\\)"
-                        | "{" VAR ':' expr<<V>> [( ',' VAR ':' expr<<V>> )*] "}"
-                        ]
-                    )
+                    ( r"[\\.]" VAR )*
+                    [ [ '#' ]
+                        ( "\\(" [ expr<<V>> ( ',' expr<<V>> )* ] "\\)"
+                        | "{" VAR ':' expr<<V>> ( ',' VAR ':' expr<<V>> )* "}"
+                        )
+                    ]
                     [ "\\[" expr<<V>> [ ':' expr<<V>> ] "\\]" ]
                     {{ return lookup(V, VAR) }}
                | STR
                | "\\(" expr<<V>> "\\)"
                     [ "\\[" expr<<V>> [ ':' expr<<V>> ] "\\]" ]
                     {{ return expr }}
-               | "{" expr<<V>> [( ',' expr<<V>> )*] "}"
-               | "let" VAR "=" expr<<V>>  {{ V = [(VAR, expr)] + V }}
-                 "in" expr<<V>>           {{ return expr }}
+               | "{" expr<<V>> ( ',' expr<<V>> )* "}"
+
+               #| "let" VAR "=" expr<<V>>  {{ V = [(VAR, expr)] + V }}
+               #  "in" expr<<V>>           {{ return expr }}
 
 ###########jca
 
@@ -71,15 +73,16 @@ parser Calculator:
 
     rule list_rule_names: "LRN"
 
-    rule Ifc_type: VAR
-
     rule Return_type: VAR
 
     rule Type: VAR
 
     rule action_name: VAR
 
-    rule action_statements: "ACTST"
+    rule action_statements:
+        ( let_statement
+        | expression ';'
+        )*
 
     rule c_function_name: VAR
 
@@ -104,12 +107,6 @@ parser Calculator:
 
     rule interface_method_definitions: "IFCMETHDEF"
 
-    rule method_body_statements: "METHBOD"
-
-    rule method_name: VAR
-
-    rule method_predicate: expression
-
     rule module_instantiations: "MODINSTANC"
 
     rule module_name: VAR
@@ -118,13 +115,11 @@ parser Calculator:
 
     rule output_port: VAR
 
-    rule parameter: VAR
-
     rule port_name1: VAR
 
     rule port_name2: VAR
 
-    rule provisos: "provisos" "\\(" expression [(',' expression )* ] "\\)"
+    rule provisos: "provisos" "\\(" expression (',' expression )* "\\)"
 
     rule ready_port: VAR
 
@@ -132,7 +127,7 @@ parser Calculator:
 
     rule rule_name: VAR
 
-    rule rule_predicate: expression
+    rule rule_predicate: "\\(" expression "\\)"
 
     rule rule_satements: "RULESST"
 
@@ -163,38 +158,58 @@ parser Calculator:
     rule attribute_statement:
          "\\([*]" attribute [ "=" expression ] "[*]\\)"
 
+    rule parameter: Type_item_or_name VAR (',' Type_item_or_name VAR)* 
+
+    rule Type_item_or_name:
+        Type_item
+        | VAR [ "#" "\\(" expression (',' expression )* "\\)" ]
+
+    rule Ifc_type: Type_item_or_name
+
     rule import_statements:
         "import"
         ( "BDPI" [ c_function_name  "=" ] "function" Return_type
             function_name [ "{" arguments "}" ] "\\)"  [ provisos ] ';'
         | "BVI" [verilog_module_name]  "="
-            "module" [ [ Type ] ] module_name [ "#"  "\\(" "{" parameter "}" "\\)" ]
-            "\\(" "{" Ifc_type ifc_name "}" "\\)"  [ provisos ] ';'
+            "module" [ [ Type ] ] module_name [ "#"  "\\(" parameter "\\)" ]
+            "\\(" Ifc_type ifc_name "\\)"  [ provisos ] ';'
             module_statements
             importBVI_statements
             "endmodule" [ ":"  module_name ]
         | Package_name  "::"  "[*]" ';'
         )
 
+    rule method_body_statements:
+        ( let_statement
+        | expression ';'
+        | return_statement
+        )*
+
+    rule method_name: VAR
+
+    rule method_predicate: expression
+
     rule method_declarations:
         "method" 
-        ( "Type" method_name  [ "\\(" "{" parameter "}" "\\)" ]
-            [ "if"  "\\("method_predicate"\\)" ]
-            ';'
-            [
-            method_body_statements
-            return_statement
-            "endmethod" [ ":" method_name]
+        ( "Type" method_name  [ "\\(" parameter "\\)" ]
+            [ "if"  "\\(" method_predicate "\\)" ] ';'
+            [ method_body_statements
+              "endmethod" [ ":" method_name]
             ]
-        | "Action" method_name  "\\(" "{" parameter "}" "\\)"
-            [ "if"  "\\("method_predicate"\\)" ] ';'
-            method_body_statements
-            "endmethod" [ ":" method_name]
-        | "ActionValue" method_name "\\(" "{" parameter "}" "\\)"
-            [ "if"  "\\("method_predicate"\\)" ] ';'
-            method_body_statements
-            return_statement
-            "endmethod" [ ":" method_name]
+        | "Action" method_name  "\\(" parameter "\\)"
+            "AAA"
+            [ "if"  "\\(" method_predicate "\\)" ] ';'
+            [ method_body_statements
+              "endmethod" [ ":" method_name]
+            ]
+        | "ActionValue"
+            [ "#" "\\(" expression "\\)" ]
+            method_name "\\(" [ parameter ] "\\)"
+            [ "if"  "\\(" method_predicate "\\)" ] ';'
+            [ method_body_statements
+              #return_statement
+              "endmethod" [ ":" method_name]
+            ]
         | [ output_port ] method_name
             "\\(" "{" input_ports "}" "\\)"
             [ enable enable_port ]
@@ -202,27 +217,36 @@ parser Calculator:
             [ "reset_by" clock_name] ';'
         )
 
-    rule subinterface_declarations:
+    rule subinterface_declarations: "SUBINTER"
 
     rule interface_declarations:
         "interface" ifc_name 
         ( ';'
-            method_declarations
-            subinterface_declarations
+            ( method_declarations
+# ";"
+            | subinterface_declarations
+            )*
             "endinterface" [ ":" ifc_name ]
         | "#" "\\(" "type" Type_name "\\)" ';'
-            method_declarations
-            subinterface_declarations
+            ( method_declarations
+# ";"
+            | subinterface_declarations
+            )*
             "endinterface" [ ":" ifc_name ]
         )
 
     rule module_declarations:
-        "module" module_name [ "#"  "\\(" "{" parameter "}" "\\)" ]
-        "\\(" "{" Ifc_type ifc_name "[*]" "}" "\\)" [provisos] ';'
-        module_instantiations
-        variable_declaration_and_initializations
-        rule_statements
-        interface_method_definitions
+        "module" [ "\\[" "Module" "\\]" ] module_name [ "#"  "\\(" parameter "\\)" ]
+        "\\(" [ Ifc_type ] [ ifc_name ] [ "[*]" ] "\\)" [provisos] ';'
+        ( module_instantiations
+        | variable_declaration_and_initializations
+        | rule_statements
+        | interface_method_definitions
+        | return_statement
+        | function_statement
+        | rule_statement
+        | method_declarations
+        )*
         "endmodule" [ ":" module_name]
 
     rule package_statement:
@@ -239,8 +263,8 @@ parser Calculator:
 #    Type_name
 #    Type_name "#" "\\(" type_variable "\\)"
 
-#    Ifc_type ifc_name "<-" module_name "\\("{parameter}"\\)" ';'
-#    Ifc_type ifc_name "<-" module_name "\\("[{parameter ","}
+#    Ifc_type ifc_name "<-" module_name "\\("parameter"\\)" ';'
+#    Ifc_type ifc_name "<-" module_name "\\("[parameter ","
 #        "clocked_by" clock_name ","
 #        "reset_by" reset_name ] "\\)" ';'
 
@@ -255,17 +279,19 @@ parser Calculator:
     rule variable_declaration:
         Type_item VAR [ "=" expression ] ';'
 
-    rule variable_declaration_and_initializations: "VDI"
+    rule variable_declaration_and_initializations:
+        variable_declaration
+        | let_statement
 
     rule rules_statement:
         "rules" [ ":"  rules_name]
         rule_satements
-        #(variable_declaration | variable_assignment)
-        variable_declaration
+        (variable_declaration | variable_assignment)*
+        #variable_declaration
         "endrules" [ ":"  rules_name]
 
     rule action_statement:
-        "action" [ ":"  action_name] ';'
+        "action" [ ":"  action_name] [ ';' ]
         action_statements
         "endaction" [ ":" action_name]
 
@@ -278,8 +304,10 @@ parser Calculator:
 
 #    "type identifier "<-" expression ';'
 #    identifier "<-" expression ';'
-#    "let" identifier  "=" expression ';'
-#    "let" identifier "<-"­ expression ';'
+
+    rule let_statement:
+        "let" VAR  ( "=" | "<-" ) expression ';'
+
 #    register_name "<=" expression ';'
 
     rule Typeclass: VAR
@@ -322,11 +350,18 @@ parser Calculator:
 #    if  "\\(" x matches tagged Valid .n &&& n > 5 ... "\\)"
 #    "match" pattern  "=" expression ';'
 
+    rule argument_item:
+        ( "function" "Action" VAR "\\(" ( Type_item | VAR ) VAR "\\)"
+        | Type_item VAR
+        )
+
     rule arguments:
-        Type_item VAR [( ',' Type_item VAR)*]
+        argument_item ( ',' argument_item)*
 
     rule function_body_statements:
         variable_declaration
+        | let_statement
+        | action_statement
 
     rule function_statement:
         "function" Type_item function_name  "\\("[arguments] "\\)"
@@ -364,11 +399,10 @@ parser Calculator:
         "path" "\\(" port_name1 "," port_name2 "\\)"  ';'
 
     rule instance_arg:
-        Type_item
-        | VAR
+        Type_item_or_name
 
     rule instance_statement:
-        "instance" Type_name "#" "\\(" instance_arg [( ',' instance_arg )* ] "\\)"
+        "instance" Type_name "#" "\\(" instance_arg ( ',' instance_arg )* "\\)"
             [ provisos ] ';'
         (function_statement)*
         "endinstance"
@@ -381,6 +415,8 @@ parser Calculator:
         | interface_declarations
         | attribute_statement
         | method_declarations
+        | module_declarations
+        | let_statement
 
     rule goal:
         (top_level_statements)* END
