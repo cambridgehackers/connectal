@@ -202,6 +202,8 @@ class Parser:
     def _scan(self, type):
         """Returns the matched text, and moves to the next token"""
         tok = self._scanner.token(self._pos, [type])
+        #jca
+        #print "_scan:", tok, type
         if tok[2] != type:
             raise SyntaxError(tok[0], 'Trying to find '+type+' :'+ ' ,'.join(self._scanner.restrictions[self._pos]))
         self._pos = 1 + self._pos
