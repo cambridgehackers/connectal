@@ -19,41 +19,21 @@ parser Calculator:
     token NUM: "[0-9]+[\\'dhb]*[a-fA-F0-9]*"
     token VAR: "[a-zA-Z_][a-zA-Z0-9_]*"
     token STR:   r'"([^\\"]+|\\.)*"'
-    token LPAREN: "\\("
-    token RPAREN: "\\)"
+    token LPAREN: "\\(" token RPAREN: "\\)"
+    token LBRACKET: "\\[" token RBRACKET: "\\]"
+    token LBRACE: "{" token RBRACE: "}"
     token HASH: "#"
     token DOT: r"[\\.]"
     token COMMA: ','
     token COMMA2: ","
-    token AMPER: '&'
-    token AMPERAMPER: "&&"
-    token COLON: ':'
-    token COLONCOLON: "::"
-    token SEMICOLON: ';'
-    token LBRACKET: "\\["
-    token RBRACKET: "\\]"
-    token LBRACE: "{"
-    token RBRACE: "}"
+    token AMPER: '&' token AMPERAMPER: "&&"
+    token COLON: ':' token COLONCOLON: "::" token SEMICOLON: ';'
     token QUESTION: "\\?"
     token CARET: "\\^"
-    token LESS: "<"
-    token LESSLESS: "<<"
-    token LEQ: "<="
+    token LESS: "<" token LESSLESS: "<<" token LEQ: "<=" token LARROW: "<-"
     token GEQ: ">="
-    token LARROW: "<-"
-    token EQEQ: "=="
-    token EQUAL: "="
+    token EQUAL: "=" token EQEQ: "=="
     token STAR: "[*]"
-
-    rule case_statement:
-        "case" LPAREN expression RPAREN
-        ((VAR | NUM) COLON 
-            ( return_statement
-            | case_statement
-            | group_statements
-            )
-        )*
-        "endcase"
 
     # Each line can either be an expression or an assignment statement
     rule gggoal:   expr<<[]>> ENDTOKEN            {{ return expr }}
@@ -69,7 +49,8 @@ parser Calculator:
     # A factor is the product and division of terms
     rule factor<<V>>: nterm<<V>>           {{ v = nterm }}
                      ( STAR nterm<<V>>    {{ v = v*nterm }}
-                     |  "/"  nterm<<V>>    {{ v = v/nterm }}
+                     |  "/"  nterm<<V>>
+#    {{ v = v/nterm }}
                      |  CARET  nterm<<V>>
                      |  LESS  nterm<<V>>
                      |  ">"  nterm<<V>>
@@ -81,6 +62,8 @@ parser Calculator:
                      |  "!="  nterm<<V>>
                      |  AMPER  nterm<<V>>
                      |  AMPERAMPER  nterm<<V>>
+                     |  "||"  nterm<<V>>
+                     |  "%"  nterm<<V>>
                      |  QUESTION nterm<<V>> COLON  nterm<<V>>
                      )*                   {{ return v }}
 
@@ -91,26 +74,34 @@ parser Calculator:
     rule nterm<<V>>:
         [ ("!" | "~" | "-" ) ] term<<V>> {{ return term }}
 
+    rule call_params<<V>>:
+        LPAREN [ expr<<V>> [VAR]( COMMA expr<<V>> [VAR])* ] RPAREN
+
     # A term is a number, variable, or an expression surrounded by parentheses
-    rule term<<V>>:
+    rule term_partial<<V>>:
                NUM       {{ return int(10) }}
+               | "tagged" ("Valid" VAR | "Invalid")
                | VAR ( COLONCOLON VAR )*
-                    ( DOT fieldname )*
-                    [ HASH ]
-                    [   ( LPAREN [ expr<<V>> ( COMMA expr<<V>> )* ] RPAREN
-                        | LBRACE typefieldname COLON expr<<V>> ( COMMA typefieldname COLON expr<<V>> )* RBRACE
-                        )
-                    ]
-                    [ LBRACKET expr<<V>> [ COLON expr<<V>> ] RBRACKET ]
-                    ( DOT fieldname )*
+                    ( call_params<<V>>
+                    | LBRACE typefieldname COLON expr<<V>> ( COMMA typefieldname COLON expr<<V>> )* RBRACE
+                    | HASH
+                    )*
                     {{ return lookup(V, VAR) }}
                | Type_item
                | STR
-               | LPAREN expr<<V>> RPAREN ( DOT fieldname )*
-                    [ LBRACKET expr<<V>> [ COLON expr<<V>> ] RBRACKET ]
+               | LPAREN expr<<V>> RPAREN 
+#( DOT fieldname )*
+                    #[ LBRACKET expr<<V>> [ COLON expr<<V>> ] RBRACKET ]
                     {{ return expr }}
                | LBRACE expr<<V>> ( COMMA expr<<V>> )* RBRACE
                | QUESTION
+
+    rule term<<V>>:
+        term_partial<<V>>
+        ( LBRACKET expr<<V>> [ COLON expr<<V>> ] RBRACKET
+        | DOT fieldname [ call_params<<V>> ]
+        )*
+        {{ return term_partial }}
 
                #| "let" VAR EQUAL expr<<V>>  {{ V = [(VAR, expr)] + V }}
                #  "in" expr<<V>>           {{ return expr }}
@@ -160,8 +151,6 @@ parser Calculator:
 
     rule module_statements: "MODSTA"
 
-    rule output_port: VAR
-
     rule port_name1: VAR
 
     rule port_name2: VAR
@@ -176,8 +165,6 @@ parser Calculator:
         "return" expression SEMICOLON
 
     rule rule_name: VAR
-
-    rule rule_predicate: LPAREN expression RPAREN
 
     rule rules_name: VAR
 
@@ -204,9 +191,12 @@ parser Calculator:
     rule attribute_statement:
          "\\([*]" attribute [ EQUAL expression ] "[*]\\)"
 
+    rule Type_named_sub:
+        VAR [ HASH LPAREN expression (COMMA expression )* RPAREN ]
+
     rule Type_item_or_name:
         Type_item
-        | VAR [ HASH LPAREN expression (COMMA expression )* RPAREN ]
+        | Type_named_sub
 
     rule Ifc_type: Type_item_or_name
 
@@ -232,19 +222,25 @@ parser Calculator:
     rule variable_declaration:
         Type_item_or_name VAR [ ( EQUAL | LARROW ) expression ] SEMICOLON
 
+    rule assign_value:
+        ( case_statement
+        | seq_statement
+        | expression
+        )
+
     rule declared_item:
-        term<<[]>> [ ( EQUAL | LARROW ) (case_statement | expression) ]
+        term<<[]>> [ ( EQUAL | LARROW ) assign_value ]
 
     rule variable_declaration_or_call:
         ( Type_item declared_item ( COMMA declared_item )*
         | term<<[]>> [   ( declared_item ( COMMA declared_item )*
-                         | ( EQUAL | LEQ ) ( case_statement | expression)
+                         | ( EQUAL | LEQ ) assign_value
                          )
                      ]
         ) SEMICOLON
 
     rule for_decl_item:
-        Type_item_or_name [ VAR ] EQUAL expression
+        Type_item_or_name [ VAR ] ( EQUAL | LEQ ) expression
 
     rule for_statement:
         "for" LPAREN
@@ -252,8 +248,18 @@ parser Calculator:
             expression SEMICOLON
             variable_assignment ( COMMA variable_assignment )* RPAREN
         ( group_statements
+        | seq_statement
         | variable_declaration_or_call
         )
+
+    rule helper_statements:
+        ( "\\$display" | "\\$write" | "\\$fopen" | "\\$fdisplay"
+        | "\\$fwrite" | "\\$fgetc" | "\\$fflush" | "\\$fclose" | "\\$ungetc"
+        | "\\$finish" | "\\$stop" | "\\$dumpon" | "\\$dumpoff" | "\\$dumpvars"
+        | "\\$test\\$plusargs" | "\\$time" | "\\$stime"
+        )
+        [ LPAREN expression (COMMA expression)* RPAREN ]
+        SEMICOLON
 
     rule method_body_statements:
         ( let_statement
@@ -262,6 +268,9 @@ parser Calculator:
         | function_statement
         | if_statement
         | case_statement
+        | helper_statements
+        | seq_statement
+        | group_statements
         | variable_declaration_or_call
         )+
 
@@ -270,23 +279,20 @@ parser Calculator:
         method_body_statements
         END
 
+    rule seq_statement:
+        "seq"
+        method_body_statements
+        "endseq"
+
     rule method_name: VAR
 
     rule method_predicate: expression
 
+    rule output_port: "OUTPUTPORRRT"
+
     rule method_declarations:
         "method" 
-        ( "Type" method_name  [ argument_list ]
-            [ "if"  LPAREN method_predicate RPAREN ] SEMICOLON
-            [ method_body_statements
-              "endmethod" [ COLON method_name]
-            ]
-        | Type_item_basic method_name  [ argument_list ]
-            [ "if"  LPAREN method_predicate RPAREN ] SEMICOLON
-            [ method_body_statements
-              "endmethod" [ COLON method_name]
-            ]
-        | "Action" method_name  argument_list
+        ( "Action" method_name  argument_list
             [ "if"  LPAREN method_predicate RPAREN ] SEMICOLON
             [ method_body_statements
               "endmethod" [ COLON method_name]
@@ -299,6 +305,11 @@ parser Calculator:
               #return_statement
               "endmethod" [ COLON method_name]
             ]
+        | ("Type" | Type_item_basic | Type_named_sub) method_name  [ argument_list ]
+            [ "if"  LPAREN method_predicate RPAREN ] SEMICOLON
+            [ method_body_statements
+              "endmethod" [ COLON method_name]
+            ]
         | [ output_port ] method_name
             LPAREN LBRACE input_ports RBRACE RPAREN
             [ enable enable_port ]
@@ -306,21 +317,24 @@ parser Calculator:
             [ "reset_by" clock_name] SEMICOLON
         )
 
-    rule subinterface_declarations: "SUBINTER"
+    rule subinterface_declarations:
+        "interface" ifc_name VAR EQUAL expression SEMICOLON
 
     rule interface_arg:
-        "type" Type_name
+        ["numeric"] "type" Type_name
 
     rule interface_declarations:
-        "interface" ifc_name 
+        "interface" ifc_name [VAR]
         ( SEMICOLON
             ( method_declarations
-            #| subinterface_declarations
+            | attribute_statement
+            | subinterface_declarations
             )*
             "endinterface" [ COLON ifc_name ]
         | HASH LPAREN interface_arg ( COMMA interface_arg)* RPAREN SEMICOLON
             ( method_declarations
-            #| subinterface_declarations
+            | attribute_statement
+            | subinterface_declarations
             )*
             "endinterface" [ COLON ifc_name ]
         )
@@ -329,13 +343,15 @@ parser Calculator:
         DOT term<<[]>>
 
     rule match_statement:
-        "match" LBRACE match_arg (COMMA match_arg)* RBRACE EQUAL expression SEMICOLON
+        "match"
+        LBRACE match_arg (COMMA match_arg)* RBRACE EQUAL expression SEMICOLON
 
     rule module_declarations:
         "module" [ LBRACKET "Module" RBRACKET ] module_name [ HASH  argument_list ]
         LPAREN [ Ifc_type ] [ ifc_name ] [ STAR ] RPAREN provisos
         ( module_instantiations
         | rule_statements
+        | interface_declarations
         | interface_method_definitions
         | match_statement
         | return_statement
@@ -350,10 +366,11 @@ parser Calculator:
 
     rule package_statement:
         "package" Package_name SEMICOLON
-        typedef_statements
-        import_statements
-        interface_declarations
-        module_declarations
+        ( typedef_statements
+        | import_statements
+        | interface_declarations
+        | module_declarations
+        )*
         "endpackage" [ COLON  Package_name]
 
 #    Ifc_type ifc_name LARROW module_name argument_list SEMICOLON
@@ -362,6 +379,20 @@ parser Calculator:
 #        "reset_by" reset_name ] RPAREN SEMICOLON
 
     rule rule_statements: "RULEST"
+
+    rule tagged_match_arg:
+        VAR COLON DOT VAR
+#term<<[]>>
+
+    rule rule_predicate:
+        LPAREN
+        expression
+        [ "matches" "tagged" VAR
+            ( LBRACE tagged_match_arg (COMMA tagged_match_arg)* RBRACE
+            | DOT VAR
+            )
+        ]
+        RPAREN
 
     rule rule_statement:
         "rule" rule_name [rule_predicate] SEMICOLON
@@ -382,8 +413,10 @@ parser Calculator:
     rule Type_name: VAR
 
     rule Type_item_basic:
-        ( "Bit#" | "Int#" | "Uint#" | "ComplexF#" | "Reg#" | "FIFO#" | "Maybe#" ) LPAREN expression RPAREN
-        | "Vector#" LPAREN expression (COMMA expression)* RPAREN
+        ( "Bit#" | "Int#" | "Uint#" | "ComplexF#" | "Reg#" | "FIFO#" | "Maybe#" )
+           LPAREN expression RPAREN
+        | ("Vector#" | "Tuple2#" | "FixedPoint#")
+           LPAREN expression (COMMA expression)* RPAREN
         | "Integer" | "Bool" | "String"
         | "Nat"
 
@@ -394,8 +427,23 @@ parser Calculator:
 #    "type identifier LARROW expression SEMICOLON
 #    identifier LARROW expression SEMICOLON
 
+    rule case_statement:
+        "case" LPAREN expression RPAREN
+        ((VAR | NUM) COLON 
+            ( return_statement
+            | case_statement
+            | group_statements
+            | expression SEMICOLON
+            )
+        )*
+        "endcase"
+
     rule let_statement:
-        "let" VAR  ( EQUAL | LARROW )
+        "let"
+        ( VAR
+        | LBRACE VAR (COMMA VAR)* RBRACE
+        )
+        ( EQUAL | LARROW )
         ( case_statement
         | expression
         ) SEMICOLON
@@ -416,14 +464,18 @@ parser Calculator:
     rule deriving_clause:
         "deriving"  LPAREN Typeclass ( COMMA TypeClass )* RPAREN
 
+    rule struct_arg:
+        [ "numeric" ] "type" type_variable
+
     rule typedef_statements:
         "typedef" 
-        ( ( "type" | Type_item ) Type_name [ HASH LPAREN "type" type_variable RPAREN ] SEMICOLON
+        ( ( "type" | Type_item_or_name | NUM ) Type_name
+            [ HASH LPAREN struct_arg (COMMA struct_arg)* RPAREN ] SEMICOLON
         | "enum" LBRACE Elements ( COMMA Elements )* RBRACE Type_name
             [ deriving_clause ] SEMICOLON
         | "struct" LBRACE
             ( Type_item_or_name VAR SEMICOLON )* RBRACE
-            Type_name [ HASH LPAREN [ "numeric" ] "type" type_variable RPAREN ]
+            Type_name [ HASH LPAREN struct_arg (COMMA struct_arg)* RPAREN ]
                 [ deriving_clause ] SEMICOLON
         | "union" "tagged"
             LBRACE "type" Member SEMICOLON RBRACE
@@ -465,18 +517,21 @@ parser Calculator:
 
     rule if_item:
         ( group_statements
+        | if_statement
+        | seq_statement
         | variable_assignment_or_call
         )
 
     rule if_statement:
         "if" LPAREN expression RPAREN
-           if_item [ "else" (if_statement | if_item) ]
+           if_item [ "else" if_item ]
 
     rule action_statements:
         ( let_statement
         | for_statement
         | if_statement
         | variable_declaration_or_call
+        | group_statements
         )*
 
     rule function_body_statements:
@@ -498,8 +553,6 @@ parser Calculator:
             "endfunction" [ COLON  function_name]
         )
 
-#    $display $write $fopen $fdisplay $fwrite $fgetc $fflush $fclose $ungetc
-#    $finish $stop $dumpon $dumpoff $dumpvars $test$plusargs $time $stime
 
 #    "parameter" parameter_name  EQUAL expression SEMICOLON
 #    "port" port_name  EQUAL expression SEMICOLON
@@ -542,6 +595,7 @@ parser Calculator:
         | method_declarations
         | module_declarations
         | let_statement
+        | package_statement
 
     rule goal:
         (top_level_statements)* ENDTOKEN
@@ -550,10 +604,10 @@ parser Calculator:
 ############jca
 
 if __name__=='__main__':
-    print 'args', sys.argv
-    print 'args1', sys.argv[1]
+    #print 'args', sys.argv
+    #print 'args1', sys.argv[1]
     s = open(sys.argv[1]).read()
     s1 = parse('goal', s)
-    print 'Output:', s1
-    print 'Bye.'
+    #print 'Output:', s1
+    #print 'Bye.'
 
