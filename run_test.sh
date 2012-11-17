@@ -22,6 +22,10 @@ find ../blue-projects/ -name \*.bsv \
         echo "dont try: recursion depth"
     elif [ "$filename" == "../blue-projects//ofdm/src/WiMAX/Preambles.bsv" ] ; then
         echo "dont try: recursion depth"
+    elif [ "$filename" == "../blue-projects//ofdm/src/scripts/WiFiPreambles.bsv" ] ; then
+        echo "dont try: recursion depth"
+    elif [ "$filename" == "../blue-projects//ofdm/src/WiFi/Preambles.bsv" ] ; then
+        echo "dont try: recursion depth"
     else
         ./syntax.py $filename
     fi
