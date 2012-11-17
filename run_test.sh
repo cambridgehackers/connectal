@@ -14,17 +14,14 @@ fi
 find ../blue-projects/ -name \*.bsv \
 | while read filename ; do
     echo $filename
-    if [ "$filename" == "../blue-projects//80211_merge/common/Preambles.bsv" ] ; then
+    BNAME=`basename $filename`
+    if [ "$BNAME" == "Preambles.bsv" ] ; then
         echo "dont try: recursion depth"
-    elif [ "$filename" == "../blue-projects//memocodeDesignContest2009/src/core/NewLutInv.bsv" ] ; then
+    elif [ "$BNAME" == "NewLutInv.bsv" ] ; then
         echo "dont try: recursion depth"
-    elif [ "$filename" == "../blue-projects//ofdm/src/scripts/WiMAXPreambles.bsv" ] ; then
+    elif [ "$BNAME" == "WiMAXPreambles.bsv" ] ; then
         echo "dont try: recursion depth"
-    elif [ "$filename" == "../blue-projects//ofdm/src/WiMAX/Preambles.bsv" ] ; then
-        echo "dont try: recursion depth"
-    elif [ "$filename" == "../blue-projects//ofdm/src/scripts/WiFiPreambles.bsv" ] ; then
-        echo "dont try: recursion depth"
-    elif [ "$filename" == "../blue-projects//ofdm/src/WiFi/Preambles.bsv" ] ; then
+    elif [ "$BNAME" == "WiFiPreambles.bsv" ] ; then
         echo "dont try: recursion depth"
     else
         ./syntax.py $filename

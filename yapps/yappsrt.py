@@ -155,7 +155,7 @@ class Scanner:
             # add special code for '/* ... */' comments
             # (could not figure out how to do this with 'ignore') jca
             if len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '/*':
-                commentindex = string.find(self.input, "*/", self.pos) 
+                commentindex = string.find(self.input, "*/", self.pos+2) 
                 self.pos = commentindex + 2
             for p, regexp in self.patterns:
                 # First check to see if we're ignoring this token
