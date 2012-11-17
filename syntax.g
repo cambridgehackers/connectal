@@ -27,7 +27,6 @@ parser Calculator:
     token HASH: "#"
     token DOT: r"[\\.]"
     token COMMA: ','
-    token COMMA2: ","
     token AMPER: '&' token AMPERAMPER: "&&"
     token BAR: "\\|" token BARBAR: "\\|\\|"
     token COLON: ':' token COLONCOLON: "::" token SEMICOLON: ';'
@@ -124,24 +123,6 @@ parser Calculator:
 
 ###########jca
 
-    rule interface_method: VAR
-
-    rule Package_name: VAR
-
-    rule Return_type: VAR
-
-    rule Type: VAR
-
-    rule action_name: VAR
-
-    rule c_function_name: VAR
-
-    rule clock_name: VAR
-
-    rule enable: VAR
-
-    rule enable_port: VAR
-
     rule expression: expr<<[]>>
 
     rule function_name: VAR
@@ -152,45 +133,21 @@ parser Calculator:
         | '\\\\\\-'
         | '\\\\\\*'
 
-    rule importBVI_statement: "IMPBVI"
-
-    rule input_ports: VAR
-
-    rule module_name: VAR
-
-    rule module_statement: "MODSTA"
-
-    rule port_name1: VAR
-
-    rule port_name2: VAR
-
     rule provisos:
         [ "provisos" LPAREN expression (COMMA expression )* RPAREN ]
         SEMICOLON
 
-    rule ready_port: VAR
-
     rule return_statement:
         "return" expression SEMICOLON
-
-    rule rule_name: VAR
-
-    rule rules_name: VAR
-
-    rule verilog_module_name: VAR
-
-    rule rule_names: VAR
-
-    rule list_rule_names: "LRN"
 
     rule attribute:
         "synthesize"
         | "RST_N"  EQUAL STR
         | "CLK"  EQUAL STR
-        | "always_ready" [ EQUAL interface_method ]
-        | "always_enabled" [ EQUAL interface_method ]
+        | "always_ready" [ EQUAL VAR ]
+        | "always_enabled" [ EQUAL VAR ]
         | "descending_urgency" EQUAL expression
-        | "preempts" [ EQUAL ] LBRACE rule_names COMMA  LPAREN list_rule_names RPAREN RBRACE
+        | "preempts" [ EQUAL ] LBRACE VAR COMMA  LPAREN VAR RPAREN RBRACE
         | "doc" EQUAL STR
         | "ready" EQUAL STR
         | "enable" EQUAL STR
@@ -211,17 +168,47 @@ parser Calculator:
         Type_item
         | Type_named_sub
 
+    rule importBVI_statement:
+    "parameter" VAR  EQUAL expression SEMICOLON
+#    "port" VAR  EQUAL expression SEMICOLON
+    | "default_clock" VAR
+        [ LPAREN VAR [ COMMA VAR ] RPAREN ] [ EQUAL expression ] SEMICOLON
+    | "input_clock" VAR [ LPAREN VAR [ COMMA VAR ] RPAREN ]
+        EQUAL expression SEMICOLON
+    | "output_clock" VAR LPAREN VAR [ COMMA VAR ] RPAREN
+        SEMICOLON
+    | "no_reset" SEMICOLON
+    | "schedule"  ( VAR | LPAREN VAR RPAREN )
+        ( "CF" ( VAR | LPAREN VAR (COMMA VAR)* RPAREN)
+        | "SB" VAR
+        | "SBR" VAR
+        | "C" VAR
+        ) SEMICOLON
+    | "default_reset" VAR  LPAREN [ VAR ] RPAREN  [ EQUAL expression] SEMICOLON
+    | "input_reset" [ VAR ]  LPAREN [ VAR ] RPAREN
+        "clocked_by" LPAREN VAR RPAREN
+        EQUAL expression SEMICOLON
+    | "output_reset" VAR  LPAREN VAR RPAREN
+        "clocked_by" LPAREN VAR RPAREN
+        SEMICOLON
+#    "ancestor"  LPAREN clock1 COMMA clock2 RPAREN SEMICOLON
+#    "same_family"  LPAREN clock1 COMMA clock2 RPAREN SEMICOLON
+
     rule import_statement:
         "import"
-        ( "BDPI" [ c_function_name  EQUAL ] FUNCTION Return_type
+        ( r'"BDPI"'
+# [ VAR  EQUAL ]
+            FUNCTION VAR [ HASH call_params<<[]>> ]
             function_name argument_list provisos
-        | "BVI" [verilog_module_name]  EQUAL
-            "module" [ Type ] module_name [ HASH  argument_list ]
-            LPAREN Type_item_or_name VAR RPAREN  provisos
-            module_statement
-            importBVI_statement
-            "endmodule" [ COLON  module_name ]
-        | Package_name  COLONCOLON  STAR SEMICOLON
+        | r'"BVI"' [VAR] [ EQUAL ]
+            "module" VAR [ HASH  call_params<<[]>> ]
+            argument_list provisos
+            ( method_declaration
+            | importBVI_statement
+            )*
+            "endmodule" [ COLON  VAR ]
+        | VAR  COLONCOLON  STAR SEMICOLON
+        | SEMICOLON
         )
 
     rule variable_assignment:
@@ -285,6 +272,7 @@ parser Calculator:
         | group_statement
         | helper_statement
         | seq_statement
+        | par_statement
         | ifdef_statement
         | action_statement
         | match_statement
@@ -335,37 +323,43 @@ parser Calculator:
         ( function_body_statement )*
         "endseq"
 
-    rule method_name: VAR
-
-    rule method_predicate: expression
-
-    rule output_port: "OUTPUTPORRRT"
+    rule par_statement:
+        "par"
+        ( function_body_statement )*
+        "endpar"
 
     rule method_declaration:
         "method" 
-        ( "Action" method_name  argument_list
-            [ "if"  LPAREN method_predicate RPAREN ] SEMICOLON
+        ( "Action" VAR  argument_list
+            [ "if"  LPAREN expression RPAREN ]
+            [ EQUAL expression ]
+            SEMICOLON
             [ statement_list
-              "endmethod" [ COLON method_name]
+              "endmethod" [ COLON VAR]
             ]
         | "ActionValue"
             [ HASH LPAREN expression RPAREN ]
-            method_name [ argument_list ]
-            [ "if"  LPAREN method_predicate RPAREN ] SEMICOLON
+            VAR [ argument_list ]
+            [ "if"  LPAREN expression RPAREN ] SEMICOLON
             [ statement_list
               #return_statement
-              "endmethod" [ COLON method_name]
+              "endmethod" [ COLON VAR]
             ]
-        | ("Type" | Type_item_basic | Type_named_sub) [ method_name ]  [ argument_list ]
-            [ "if"  LPAREN method_predicate RPAREN ] SEMICOLON
+        | ("Type" | Type_item_basic | Type_named_sub) [ VAR ]  [ argument_list ]
+            [ ( ( "if" | "clocked_by" | "reset_by" | "enable" | "ready")
+                LPAREN VAR RPAREN 
+              )*
+            ]
+            [ EQUAL expression ]
+            SEMICOLON
             [ statement_list
-              "endmethod" [ COLON method_name]
+              "endmethod" [ COLON VAR]
             ]
-        | [ output_port ] method_name
-            LPAREN LBRACE input_ports RBRACE RPAREN
-            [ enable enable_port ]
-            [ "ready" ready_port ] [ "clocked_by" clock_name ]
-            [ "reset_by" clock_name] SEMICOLON
+        #| [ output_port ] VAR
+        #    LPAREN LBRACE input_ports RBRACE RPAREN
+        #    [ "enable" enable_port ]
+        #    [ "ready" ready_port ] [ "clocked_by" VAR ]
+        #    [ "reset_by" VAR] SEMICOLON
         )
 
     rule subinterface_declaration:
@@ -398,20 +392,23 @@ parser Calculator:
         "match"
         LBRACE match_arg (COMMA match_arg)* RBRACE EQUAL expression SEMICOLON
 
+    rule module_param:
+        Type_item_or_name [ VAR ] [ STAR ]
+
     rule module_declaration:
-        "module" [ LBRACKET "Module" RBRACKET ] module_name [ HASH  argument_list ]
-        LPAREN [ Type_item_or_name ] [ VAR ] [ STAR ] RPAREN provisos
+        "module" [ LBRACKET "Module" RBRACKET ] VAR [ HASH  argument_list ]
+        LPAREN [ module_param (COMMA module_param)* ] RPAREN provisos
         module_item
-        "endmodule" [ COLON module_name]
+        "endmodule" [ COLON VAR]
 
     rule package_statement:
-        "package" Package_name SEMICOLON
+        "package" VAR SEMICOLON
         package_statement_list
-        "endpackage" [ COLON  Package_name]
+        "endpackage" [ COLON  VAR]
 
-#    Type_item_or_name VAR LARROW module_name argument_list SEMICOLON
-#    Type_item_or_name VAR LARROW module_name argument_list COMMA2
-#        "clocked_by" clock_name COMMA2
+#    Type_item_or_name VAR LARROW VAR argument_list SEMICOLON
+#    Type_item_or_name VAR LARROW VAR argument_list COMMA
+#        "clocked_by" VAR COMMA
 #        "reset_by" reset_name ] RPAREN SEMICOLON
 
     rule tagged_match_arg:
@@ -428,20 +425,20 @@ parser Calculator:
         RPAREN
 
     rule rule_statement:
-        "rule" rule_name [rule_predicate] SEMICOLON
+        "rule" VAR [rule_predicate] SEMICOLON
         ( function_body_statement )*
-        "endrule" [ COLON  rule_name ]
+        "endrule" [ COLON  VAR ]
 
     rule rules_statement:
-        "rules" [ COLON  rules_name]
+        "rules" [ COLON  VAR]
         (rule_statement)*
         (variable_declaration_or_call SEMICOLON)*
-        "endrules" [ COLON  rules_name]
+        "endrules" [ COLON  VAR]
 
     rule action_statement:
-        "action" [ COLON  action_name] [ SEMICOLON ]
+        "action" [ COLON  VAR] [ SEMICOLON ]
         ( function_body_statement )*
-        "endaction" [ COLON action_name]
+        "endaction" [ COLON VAR]
 
     rule Type_name: VAR
 
@@ -536,12 +533,12 @@ parser Calculator:
         )
 
 #    "Type" variable_name  EQUAL "Type" LBRACE member COLON expression RBRACE
-#        "Coord" c1  EQUAL Coord{x COLON 1 COMMA2 y COLON foo}SEMICOLON
+#        "Coord" c1  EQUAL Coord{x COLON 1 COMMA y COLON foo}SEMICOLON
 
 #    "Type" variable_name  EQUAL Member expression SEMICOLON
 #    "tagged" "Member" [ pattern ]
 #    "tagged" "Type" [ member COLON pattern ]
-#    "tagged" { pattern COMMA2 pattern }
+#    "tagged" { pattern COMMA pattern }
 #    "case"  LPAREN f LPAREN a RPAREN RPAREN  matches
 #        "tagged" "Valid" .x  COLON  return x SEMICOLON
 #        "tagged" "Invalid"  COLON  return 0 SEMICOLON
@@ -595,27 +592,8 @@ parser Calculator:
             ]
         )
 
-#    "parameter" parameter_name  EQUAL expression SEMICOLON
-#    "port" port_name  EQUAL expression SEMICOLON
-#    "default_clock" clock_name
-#        [ LPAREN port_name COMMA2 port_name RPAREN ] [ EQUAL expression ] SEMICOLON
-#    "input_clock" clock_name [ LPAREN port_name COMMA2
-#        port_name RPAREN ]  EQUAL expression SEMICOLON
-#    "output_clock" clock_name
-#         LPAREN port_name [ COMMA2 port_name ] RPAREN SEMICOLON
-#    "no_reset" SEMICOLON
-#    "default_reset" clock_name  LPAREN [ port_name ] RPAREN  [ EQUAL expression] SEMICOLON
-#    "input_reset" clock_name  LPAREN [ port_name ] RPAREN   EQUAL expression SEMICOLON
-#    "output_reset" clock_name  LPAREN port_name RPAREN SEMICOLON
-#    "ancestor"  LPAREN clock1 COMMA2 clock2 RPAREN SEMICOLON
-#    "same_family"  LPAREN clock1 COMMA2 clock2 RPAREN SEMICOLON
-
-    rule schedule_statement:
-         "schedule"  LPAREN ( method_name ) RPAREN  ( "CF" | "SB" | "SBR" | "C" )
-         LPAREN ( method_name ) RPAREN SEMICOLON
-
     rule path_statement:
-        "path" LPAREN port_name1 COMMA2 port_name2 RPAREN  SEMICOLON
+        "path" LPAREN VAR COMMA VAR RPAREN  SEMICOLON
 
     rule instance_arg:
         Type_item_or_name
