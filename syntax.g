@@ -73,12 +73,11 @@ parser Calculator:
                      |  AMPERAMPER  nterm<<V>>
                      |  BAR  nterm<<V>>
                      |  BARBAR  nterm<<V>>
+                     |  MATCHES "tagged" VAR DOT fieldname
                      |  "%"  nterm<<V>>
                      )*                   {{ return v }}
 
     rule fieldname: VAR
-
-    rule typefieldname: VAR
 
     rule nterm<<V>>:
         [ ("!" | "~" | "-" ) ] term<<V>> {{ return term }}
@@ -97,7 +96,7 @@ parser Calculator:
                | interface_declaration
                | item_name ( COLONCOLON VAR )*
                     ( call_params<<V>>
-                    | LBRACE typefieldname COLON expr<<V>> ( COMMA typefieldname COLON expr<<V>> )* RBRACE
+                    | LBRACE fieldname COLON expr<<V>> ( COMMA fieldname COLON expr<<V>> )* RBRACE
                     | HASH
                     )*
                     {{ return lookup(V, item_name) }}
@@ -105,9 +104,6 @@ parser Calculator:
                | STR {{ return STR }}
                | function_operator {{ return function_operator }}
                | LPAREN expr<<V>> RPAREN  {{ return expr }}
-#( DOT fieldname )*
-                    #[ LBRACKET expr<<V>> [ COLON expr<<V>> ] RBRACKET ]
-                    {{ return expr }}
                | LBRACE expr<<V>> ( COMMA expr<<V>> )* RBRACE {{ return expr }}
                | QUESTION
 
@@ -162,11 +158,11 @@ parser Calculator:
          "\\([*]" attribute "[*]\\)"
 
     rule Type_named_sub:
-        VAR [ HASH LPAREN expression (COMMA expression )* RPAREN ]
+        HASH LPAREN expression (COMMA expression )* RPAREN
 
     rule Type_item_or_name:
         Type_item
-        | Type_named_sub
+        | VAR [ Type_named_sub ]
 
     rule importBVI_statement:
     "parameter" VAR  EQUAL expression SEMICOLON
@@ -196,8 +192,7 @@ parser Calculator:
 
     rule import_statement:
         "import"
-        ( r'"BDPI"'
-# [ VAR  EQUAL ]
+        ( r'"BDPI"' [ VAR  EQUAL ]
             FUNCTION VAR [ HASH call_params<<[]>> ]
             function_name argument_list provisos
         | r'"BVI"' [VAR] [ EQUAL ]
@@ -345,9 +340,9 @@ parser Calculator:
               #return_statement
               "endmethod" [ COLON VAR]
             ]
-        | ("Type" | Type_item_basic | Type_named_sub) [ VAR ]  [ argument_list ]
+        | ("Type" | Type_item_basic | VAR [ Type_named_sub ]) [ VAR ]  [ argument_list ]
             [ ( ( "if" | "clocked_by" | "reset_by" | "enable" | "ready")
-                LPAREN VAR RPAREN 
+                LPAREN expression RPAREN 
               )*
             ]
             [ EQUAL expression ]
@@ -362,26 +357,32 @@ parser Calculator:
         #    [ "reset_by" VAR] SEMICOLON
         )
 
-    rule subinterface_declaration:
-        "interface" Type_item_or_name [ VAR ] [ EQUAL expression ] SEMICOLON
-
     rule interface_arg:
-        [ ["numeric"] "type" ] Type_name
+        ["numeric"] "type" VAR
+        | expression
+
+    rule interfaceTypesub:
+        HASH LPAREN interface_arg (COMMA interface_arg )* RPAREN
 
     rule interface_declaration:
-        "interface" VAR [VAR]
+        "interface" VAR
+# [VAR]
+#Type_item_or_name
         ( SEMICOLON
             ( method_declaration
             | attribute_statement
-            | subinterface_declaration
+            | interface_declaration
             )*
             "endinterface" [ COLON VAR ]
-        | HASH LPAREN interface_arg ( COMMA interface_arg)* RPAREN SEMICOLON
-            ( method_declaration
-            | attribute_statement
-            | subinterface_declaration
-            )*
-            "endinterface" [ COLON VAR ]
+        | VAR SEMICOLON
+        | interfaceTypesub
+            ( VAR SEMICOLON
+            | SEMICOLON ( method_declaration
+                | attribute_statement
+                | interface_declaration
+                )+
+                "endinterface" [ COLON VAR ]
+            )
         | EQUAL expression SEMICOLON
         )
 
@@ -440,8 +441,6 @@ parser Calculator:
         ( function_body_statement )*
         "endaction" [ COLON VAR]
 
-    rule Type_name: VAR
-
     rule Type_item_basic:
         ( "Bit#" | "Int#" | "Uint#" | "ComplexF#" | "Reg#" | "FIFO#" | "Maybe#" )
            LPAREN expression RPAREN
@@ -464,21 +463,25 @@ parser Calculator:
         "case" LPAREN expression RPAREN
         ( MATCHES
           ( "tagged"
-             ( ( "Just" | "Load" | "Store" | "Add" | "Sub"
-               | "Mul" | "Div" | "Cond" | "Jump" | "SetPrefetch"
-               | "ForwardSrc" | "ForwardDest" | "Op"
-               | "ArithmeticInstruction"
-               | "Branch" | "CWData_Bit" | "DAdd" | "DEC_FUU"
-               | "DFBLuma" | "Imm0"
-               | "Left" | "LoadPage" | "LoadReq" | "LoadServiced"
-               | "NewUnit" | "Pass" | "RowSize" | "SetReg"
-               | "StoreReq" | "TV_V" | "Valid"
-               ) ( dot_field | LBRACE dot_field (COMMA dot_field)* RBRACE )
-             | "Invalid"
-             | "Nil"
-             | "Nothing"
-             | "Stop"
-             ) COLON function_body_statement
+             #(
+             VAR 
+#( "Just" | "Load" | "Store" | "Add" | "Sub"
+               #| "Mul" | "Div" | "Cond" | "Jump" | "SetPrefetch"
+               #| "ForwardSrc" | "ForwardDest" | "Op"
+               #| "ArithmeticInstruction"
+               #| "Branch" | "CWData_Bit" | "DAdd" | "DEC_FUU"
+               #| "DFBLuma" | "Imm0"
+               #| "Left" | "LoadPage" | "LoadReq" | "LoadServiced"
+               #| "NewUnit" | "Pass" | "RowSize" | "SetReg"
+               #| "StoreReq" | "TV_V" | "Valid"
+               #)
+                 [ dot_field | LBRACE dot_field (COMMA dot_field)* RBRACE ]
+             #| "Invalid"
+             #| "Nil"
+             #| "Nothing"
+             #| "Stop"
+             #)
+              COLON function_body_statement
           | "default" COLON function_body_statement
           )*
         | ((VAR | NUM) (COMMA (VAR | NUM))* COLON 
@@ -513,22 +516,30 @@ parser Calculator:
     rule struct_arg:
         [ "numeric" ] "type" type_variable
 
+    rule struct_arg_list:
+        LPAREN struct_arg (COMMA struct_arg)* RPAREN
+
     rule typedef_statement:
         "typedef" 
         Member
 
     rule Member:
-        ( ( "type" | Type_item_or_name | NUM ) [Type_name]
-            [ HASH LPAREN struct_arg (COMMA struct_arg)* RPAREN ] SEMICOLON
-        | "enum" LBRACE Elements ( COMMA Elements )* RBRACE Type_name
+        ( ( "type" | Type_item_or_name | NUM ) [VAR]
+            [ HASH struct_arg_list ] SEMICOLON
+        | "enum" LBRACE Elements ( COMMA Elements )* RBRACE VAR
             [ deriving_clause ] SEMICOLON
         | "struct" LBRACE
             ( Type_item_or_name VAR SEMICOLON )* RBRACE
-            Type_name [ HASH LPAREN struct_arg (COMMA struct_arg)* RPAREN ]
+            VAR [ HASH struct_arg_list ]
             [ deriving_clause ] SEMICOLON
         | "union" "tagged"
             LBRACE (Member)+ RBRACE
-            Type_name [ HASH [ "numeric" ] "type" type_variable ]
+            VAR
+            [ HASH
+                ( struct_arg
+                | struct_arg_list
+                )
+            ]
             [ deriving_clause ] SEMICOLON
         )
 
@@ -581,7 +592,7 @@ parser Calculator:
         "endactionvalue"
 
     rule function_header:
-        FUNCTION Type_item_or_name [function_name]  argument_list
+        FUNCTION Type_item_or_name [function_name] [ argument_list ]
 
     rule function_statement:
         function_header
@@ -599,7 +610,7 @@ parser Calculator:
         Type_item_or_name
 
     rule instance_statement:
-        "instance" Type_name HASH LPAREN instance_arg ( COMMA instance_arg )* RPAREN
+        "instance" VAR HASH LPAREN instance_arg ( COMMA instance_arg )* RPAREN
             provisos
         (function_statement)*
         "endinstance"
@@ -608,7 +619,7 @@ parser Calculator:
         VAR "determines" VAR
 
     rule typeclass_statement:
-        "typeclass" VAR HASH LPAREN interface_arg (COMMA interface_arg)* RPAREN
+        "typeclass" VAR interfaceTypesub
         [ "dependencies" LPAREN dep_item (COMMA dep_item)* RPAREN ]
         SEMICOLON
         (function_header SEMICOLON)*
@@ -621,7 +632,7 @@ parser Calculator:
         "`include" STR
 
     rule ifdef_statement:
-        "`ifdef" VAR
+        "`ifdef" [VAR]
            ( function_body_statement )*
         "`endif"
 
