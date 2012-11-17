@@ -21,6 +21,7 @@ keeps track of the parse stack.
 # grammar to make a standalone module.
 
 import sys, re
+import string
 
 class SyntaxError(Exception):
     """When we run into an unexpected token, this is the exception to use"""
@@ -151,6 +152,11 @@ class Scanner:
             # tokens in the list having preference
             best_match = -1
             best_pat = '(error)'
+            # add special code for '/* ... */' comments
+            # (could not figure out how to do this with 'ignore') jca
+            if len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '/*':
+                commentindex = string.find(self.input, "*/", self.pos) 
+                self.pos = commentindex + 2
             for p, regexp in self.patterns:
                 # First check to see if we're ignoring this token
                 if restrict and p not in restrict and p not in self.ignore:
