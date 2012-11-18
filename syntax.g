@@ -302,7 +302,8 @@ parser Calculator:
         | expression [   ( declared_item ( COMMA declared_item )*
                          | ( EQUAL | LEQ | LARROW) assign_value
                          # following weird rules needed since "VAR VAR" is a valid expression!!
-                         |               ( COMMA declared_item )*
+                                         ( COMMA declared_item )*
+                         |               ( COMMA declared_item )+
                          )
                      ]
         ) SEMICOLON
@@ -333,10 +334,10 @@ parser Calculator:
         | "\\$error"
         )
 
-    rule helper_statement:
-        helper_name
-        [ LPAREN [ expression (COMMA expression)* ] RPAREN ]
-        SEMICOLON
+    #rule helper_statement:
+        #helper_name
+        #[ LPAREN [ expression (COMMA expression)* ] RPAREN ]
+        #SEMICOLON
 
     rule function_body_statement:
         let_statement
@@ -345,7 +346,7 @@ parser Calculator:
         | case_statement
         | if_statement
         | group_statement
-        | helper_statement
+        #| helper_statement
         | seq_statement
         | par_statement
         | ifdef_statement
@@ -435,10 +436,9 @@ parser Calculator:
             method_body
         | ("Type" | Type_item_basic | VAR [ Type_named_sub ]) [ VAR ]  [ argument_list ]
             [ VAR ]
-            [ ( ( "if" | "clocked_by" | "reset_by" | "enable" | "ready")
+            ( ( "if" | "clocked_by" | "reset_by" | "enable" | "ready")
                 LPAREN [ ( assign_value | "enable" | "ready" ) ] RPAREN 
-              )*
-            ]
+            )*
             [ EQUAL assign_value ]
             method_body
         #| [ output_port ] VAR
@@ -547,7 +547,7 @@ parser Calculator:
         "endaction" [ COLON VAR]
 
     rule Type_item_basic:
-        ( "Bit#" | "Int#" | "Uint#" | "ComplexF#" | "Reg#" | "FIFO#" | "Maybe#" | "FixedPoint#" )
+        ( "Bit#" | "Int#" | "Uint#" | "ComplexF#" | "Reg#" | "FIFO#" | "Maybe#" )
            LPAREN expression [ COMMA expression ] RPAREN
         | ("Vector#" | "Tuple2#" | "FixedPoint#")
            LPAREN expression (COMMA expression)* RPAREN
@@ -571,7 +571,7 @@ parser Calculator:
         | (
               (expression (COMMA expression)*
               | "default"
-              | VAR
+              #| VAR
               )
               COLON (QUESTION SEMICOLON | function_body_statement)
           )*
