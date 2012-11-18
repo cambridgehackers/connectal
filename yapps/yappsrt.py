@@ -22,6 +22,7 @@ keeps track of the parse stack.
 
 import sys, re
 import string
+printtrace = False
 
 class SyntaxError(Exception):
     """When we run into an unexpected token, this is the exception to use"""
@@ -206,10 +207,12 @@ class Parser:
         return tok[2]
         
     def _scan(self, type):
+        global printtrace
         """Returns the matched text, and moves to the next token"""
         tok = self._scanner.token(self._pos, [type])
         #jca
-        #print "_scan:", tok, type
+        if printtrace:
+            print "_scan:", tok, type
         if tok[2] != type:
             raise SyntaxError(tok[0], 'Trying to find '+type+' :'+ ' ,'.join(self._scanner.restrictions[self._pos]))
         self._pos = 1 + self._pos
