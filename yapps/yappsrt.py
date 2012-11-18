@@ -204,6 +204,8 @@ class Parser:
         """Returns the token type for lookahead; if there are any args
         then the list of args is the set of token types to allow"""
         tok = self._scanner.token(self._pos, types)
+        if printtrace:
+            print "_peek:", tok
         return tok[2]
         
     def _scan(self, type):
