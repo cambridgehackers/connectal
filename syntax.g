@@ -10,7 +10,7 @@ def lookup(map, name):
 
 %%
 parser HSDL:
-    option:      "context-insensitive-scanner"
+    #option:      "context-insensitive-scanner"
 
     ignore:    "[ \r\t\n]+"
     ignore:    "\\/\\/.*?\r?\n"
@@ -34,10 +34,172 @@ parser HSDL:
     token EQUAL: "=" token EQEQ: "=="
     token STAR: "[*]"
     token STARSTAR: "[*][*]"
+    token TOKOPPLUS: '\\\\\\+'
+    token TOKOPMINUS: '\\\\\\-'
+    token TOKOPSTAR: '\\\\\\*'
+    token TOKOPCARET: '\\\\\\^'
+    token TOKOPCARETTILDE: '\\\\\\^~'
+    token TOKOPTILDECARET: '\\\\\\~\\^'
+    token TOKOPSLASH: '\\\\\\/'
+    token TOKOPAMPERAMPER: '\\\\\\&&'
+    token TOKOPAMPER: '\\\\\\&'
+    token TOKOPBAR: '\\\\\\|'
+    token TOKOPPERCENT: '\\\\\\%'
+    token TOKOPLESS: '\\\\\\<'
+    token TOKOPGREATER: '\\\\\\>'
+    token TOKOPLESSLESS: '\\\\\\<<'
+    token TOKOPLEQ: '\\\\\\<='
+    token TOKOPGEQ: '\\\\\\>='
+    token TOKOPGREATERGREATER: '\\\\\\>>'
+    token TOKOPEQUALEQUAL: '\\\\\\=='
+    token TOKOPSTARSTAR: '\\\\\\*\\*'
     token BEGIN: "begin"
     token END: "end"
     token FUNCTION: "function"
     token MATCHES: "matches"
+    token TOKACTION: "Action"
+    token TOKACTIONSTATEMENT: "action"
+    token TOKACTIONVALUE: "ActionValue"
+    token TOKACTIONVALUESTATEMENT: "actionvalue"
+    token TOKALWAYS_ENABLED: "always_enabled"
+    token TOKALWAYS_READY: "always_ready"
+    token TOKANCESTOR: "ancestor"
+    token TOKBDPI: r'"BDPI"'
+    token TOKBITHASH: "Bit#"
+    token TOKBITS: "Bits"
+    token TOKBOOL: "Bool"
+    token TOKBOUNDED: "Bounded"
+    token TOKBVI: r'"BVI"'
+    token TOKC: "C"
+    token TOKCASE: "case"
+    token TOKCF: "CF"
+    token TOKCLK: "CLK"
+    token TOKCLOCKED_BY: "clocked_by"
+    token TOKCOMPLEXHASH: "ComplexF#"
+    token TOKDEFAULT: "default"
+    token TOKDEFAULT_CLOCK: "default_clock"
+    token TOKDEFAULT_RESET: "default_reset"
+    token TOKDEPENDENCIES: "dependencies"
+    token TOKDERIVING: "deriving"
+    token TOKDESCENDING_URGENCY: "descending_urgency"
+    token TOKDETERMINES: "determines"
+    token TOKDISPLAY: "\\$display"
+    token TOKDOC: "doc"
+    token TOKDUMPOFF: "\\$dumpoff"
+    token TOKDUMPON: "\\$dumpon"
+    token TOKDUMPVARS: "\\$dumpvars"
+    token TOKELSE: "else"
+    token TOKENABLE: "enable"
+    token TOKENDACTION: "endaction"
+    token TOKENDACTIONVALUE: "endactionvalue"
+    token TOKENDCASE: "endcase"
+    token TOKENDFUNCTION: "endfunction"
+    token TOKENDINSTANCE: "endinstance"
+    token TOKENDINTERFACE: "endinterface"
+    token TOKENDMETHOD: "endmethod"
+    token TOKENDMODULE: "endmodule"
+    token TOKENDPACKAGE: "endpackage"
+    token TOKENDPAR: "endpar"
+    token TOKENDRULE: "endrule"
+    token TOKENDRULES: "endrules"
+    token TOKENDSEQ: "endseq"
+    token TOKENDTYPECLASS: "endtypeclass"
+    token TOKENUM: "enum"
+    token TOKEQ: "Eq"
+    token TOKERROR: "\\$error"
+    token TOKEXCLAIM: "!"
+    token TOKEXECUTION_ORDER: "execution_order"
+    token TOKEXPORT: "export"
+    token TOKFCLOSE: "\\$fclose"
+    token TOKFDISPLAY: "\\$fdisplay"
+    token TOKFFLUSH: "\\$fflush"
+    token TOKFGETC: "\\$fgetc"
+    token TOKFIFOHASH: "FIFO#"
+    token TOKFINISH: "\\$finish"
+    token TOKFIRE_WHEN_ENABLED: "fire_when_enabled"
+    token TOKFIXEDPOINTHASH: "FixedPoint#"
+    token TOKFOPEN: "\\$fopen"
+    token TOKFOR: "for"
+    token TOKFORMAT: "\\$format"
+    token TOKFWRITE: "\\$fwrite"
+    token TOKGREATER: ">"
+    token TOKIF: "if"
+    token TOKIMPORT: "import"
+    token TOKIN: "in"
+    token TOKINPUT_CLOCK: "input_clock"
+    token TOKINPUT_RESET: "input_reset"
+    token TOKINSTANCE: "instance"
+    token TOKINTEGER: "Integer"
+    token TOKINTERFACE: "interface"
+    token TOKINTHASH: "Int#"
+    token TOKLET: "let"
+    token TOKLPARENSTAR: "\\([*]"
+    token TOKMATCH: "match"
+    token TOKMAYBEHASH: "Maybe#"
+    token TOKMETHOD: "method"
+    token TOKMINUS: "-"
+    token TOKMODULE: "module"
+    token TOKMUTUALLY_EXCLUSIVE: "mutually_exclusive"
+    token TOKNAT: "Nat"
+    token TOKNOINLINE: "noinline"
+    token TOKNOTEQUAL: "!="
+    token TOKNO_IMPLICIT_CONDITIONS: "no_implicit_conditions"
+    token TOKNO_RESET: "no_reset"
+    token TOKNUMERIC: "numeric"
+    token TOKOUTPUT_CLOCK: "output_clock"
+    token TOKOUTPUT_RESET: "output_reset"
+    token TOKPACKAGE: "package"
+    token TOKPAR: "par"
+    token TOKPARAMETER: "parameter"
+    token TOKPATH: "path"
+    token TOKPDEFINE: "`define"
+    token TOKPELSE: "`else"
+    token TOKPENDIF: "`endif"
+    token TOKPERCENT: "%"
+    token TOKPIFDEF: "`ifdef"
+    token TOKPINCLUDE: "`include"
+    token TOKPLUS: "[+]"
+    token TOKPORT: "port"
+    token TOKPREEMPTS: "preempts"
+    token TOKPREFIX: "prefix"
+    token TOKPROVISOS: "provisos"
+    token TOKREADY: "ready"
+    token TOKREAL: "Real"
+    token TOKREGHASH: "Reg#"
+    token TOKRESET_BY: "reset_by"
+    token TOKRESULT: "result"
+    token TOKRETURN: "return"
+    token TOKRST_N: "RST_N"
+    token TOKRULE: "rule"
+    token TOKRULES: "rules"
+    token TOKSAME_FAMILY: "same_family"
+    token TOKSB: "SB"
+    token TOKSBR: "SBR"
+    token TOKSCHEDULE: "schedule"
+    token TOKSEQ: "seq"
+    token TOKSET: "set"
+    token TOKSLASH: "\/"
+    token TOKSTARRPAREN: "[*]\\)"
+    token TOKSTIME: "\\$stime"
+    token TOKSTOP: "\\$stop"
+    token TOKSTRING: "String"
+    token TOKSTRUCT: "struct"
+    token TOKSYNTHESIZE: "synthesize"
+    token TOKTAGGED: "tagged"
+    token TOKTESTPLUSARGS: "\\$test\\$plusargs"
+    token TOKTILDE: "~"
+    token TOKTIME: "\\$time"
+    token TOKTTYPE: "Type"
+    token TOKTUPLE2HASH: "Tuple2#"
+    token TOKTYPE: "type"
+    token TOKTYPECLASS: "typeclass"
+    token TOKTYPEDEF: "typedef"
+    token TOKUINTHASH: "Uint#"
+    token TOKUNGETC: "\\$ungetc"
+    token TOKUNION: "union"
+    token TOKVECTORHASH: "Vector#"
+    token TOKWHILE: "while"
+    token TOKWRITE: "\\$write"
 
     token NUM: "[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*"
     token VAR: "`*[a-zA-Z_][a-zA-Z0-9_]*"
@@ -46,7 +208,7 @@ parser HSDL:
 
     # Each line can either be an expression or an assignment statement
     rule gggoal:   expr<<[]>> ENDTOKEN            {{ return expr }}
-               | "set" VAR expr<<[]>> ENDTOKEN  {{ globalvars[VAR] = expr }}
+               | TOKSET VAR expr<<[]>> ENDTOKEN  {{ globalvars[VAR] = expr }}
                                            {{ return expr }}
 
     rule expr<<V>>:
@@ -57,9 +219,9 @@ parser HSDL:
 
     # An expression is the sum and difference of factors
     rule exprint<<V>>:   factor<<V>>         {{ n = factor }}
-                     ( "[+]" factor<<V>>
+                     ( TOKPLUS factor<<V>>
 #  {{ n = 0 }} # {{ n = n+factor }}
-                     |  "-"  factor<<V>>
+                     |  TOKMINUS  factor<<V>>
 #  {{ n = n-factor }}
                      )*                   {{ return n }}
 
@@ -70,7 +232,7 @@ parser HSDL:
         [ VAR COLON ] dot_item
 
     rule tdot_field_item:
-        "tagged" VAR [ dot_item ]
+        TOKTAGGED VAR [ dot_item ]
 
     rule dot_field_list:
         dot_item
@@ -78,13 +240,13 @@ parser HSDL:
         | LBRACE dot_field_item (COMMA dot_field_item)* RBRACE
 
     rule dot_field_ltagged:
-        "tagged" VAR
+        TOKTAGGED VAR
         [
             (dot_field_list
             | VAR
             | LPAREN
                 ( dot_field_list
-                | "tagged" VAR [ ( dot_item | VAR ) ]
+                | TOKTAGGED VAR [ ( dot_item | VAR ) ]
                 | VAR)
                 RPAREN
             )
@@ -101,17 +263,17 @@ parser HSDL:
                      | STARSTAR nterm<<V>>
                      | APOSTROPHE nterm<<V>>
 #    {{ v = v*nterm }}
-                     |  "/"  nterm<<V>>
+                     |  TOKSLASH  nterm<<V>>
 #    {{ v = v/nterm }}
                      |  CARET  nterm<<V>>
                      |  LESS  nterm<<V>>
-                     |  ">"  nterm<<V>>
+                     |  TOKGREATER  nterm<<V>>
                      |  GEQ  nterm<<V>>
                      |  LESSLESS  nterm<<V>>
                      #gets confused with assignment |  LEQ  nterm<<V>>
                      |  GREATERGREATER  nterm<<V>>
                      |  EQEQ  nterm<<V>>
-                     |  "!="  nterm<<V>>
+                     |  TOKNOTEQUAL  nterm<<V>>
                      |  AMPER  nterm<<V>>
                      |  AMPERAMPER  assign_value
 #nterm<<V>>
@@ -123,13 +285,13 @@ parser HSDL:
                           | LBRACE dot_field_item (COMMA dot_field_item)* RBRACE
                           | VAR
                           )
-                     |  "%"  nterm<<V>>
+                     |  TOKPERCENT  nterm<<V>>
                      )*                   {{ return v }}
 
     rule fieldname: VAR
 
     rule nterm<<V>>:
-        [ ("!" | "~" | "-" ) ] term<<V>> {{ return term }}
+        [ (TOKEXCLAIM | TOKTILDE | TOKMINUS ) ] term<<V>> {{ return term }}
 
     rule call_params<<V>>:
         LPAREN ( assign_value [VAR]( COMMA assign_value [VAR])* RPAREN | RPAREN )
@@ -141,7 +303,7 @@ parser HSDL:
     # A term is a number, variable, or an expression surrounded by parentheses
     rule term_partial<<V>>:
                NUM       {{ return int(10) }}
-               | "tagged" term_partial<<V>> [ term_partial<<V>> ]
+               | TOKTAGGED term_partial<<V>> [ term_partial<<V>> ]
                | item_name+ ( COLONCOLON VAR )*
                     ( call_params<<V>>
                     | LBRACE [ fieldname COLON assign_value ( COMMA fieldname COLON assign_value )* ] RBRACE
@@ -161,8 +323,8 @@ parser HSDL:
         )*
         {{ return term_partial }}
 
-               #| "let" VAR EQUAL expr<<V>>  {{ V = [(VAR, expr)] + V }}
-               #  "in" expr<<V>>           {{ return expr }}
+               #| TOKLET VAR EQUAL expr<<V>>  {{ V = [(VAR, expr)] + V }}
+               #  TOKIN expr<<V>>           {{ return expr }}
 
     rule expression: expr<<[]>>
 
@@ -170,54 +332,45 @@ parser HSDL:
         | function_operator
 
     rule function_operator:
-          '\\\\\\+'
-        | '\\\\\\-'
-        | '\\\\\\*'
-        | '\\\\\\^'
-        | '\\\\\\^~'
-        | '\\\\\\~\\^'
-        | '\\\\\\/'
-        | '\\\\\\&&'
-        | '\\\\\\&'
-        | '\\\\\\|'
-        | '\\\\\\%'
-        | '\\\\\\<'
-        | '\\\\\\>'
-        | '\\\\\\<<'
-        | '\\\\\\<='
-        | '\\\\\\>='
-        | '\\\\\\>>'
-        | '\\\\\\=='
-        | '\\\\\\*\\*'
+        TOKOPPLUS | TOKOPMINUS | TOKOPSTAR
+        | TOKOPCARET | TOKOPCARETTILDE | TOKOPTILDECARET
+        | TOKOPSLASH
+        | TOKOPAMPERAMPER | TOKOPAMPER
+        | TOKOPBAR
+        | TOKOPPERCENT
+        | TOKOPLESS | TOKOPLESSLESS | TOKOPLEQ
+        | TOKOPGREATER | TOKOPGREATERGREATER | TOKOPGEQ
+        | TOKOPEQUALEQUAL
+        | TOKOPSTARSTAR
 
     rule provisos:
-        "provisos" LPAREN [ expression (COMMA expression )* ] RPAREN
+        TOKPROVISOS LPAREN [ expression (COMMA expression )* ] RPAREN
 
     rule return_statement:
-        "return" assign_value SEMICOLON
+        TOKRETURN assign_value SEMICOLON
 
     rule attribute:
-        "synthesize"
-        | "RST_N"  EQUAL STR
-        | "CLK"  EQUAL STR
-        | "always_ready" [ EQUAL (VAR | STR) ]
-        | "always_enabled" [ EQUAL VAR ]
-        | "descending_urgency" EQUAL expression
-        | "preempts" [ EQUAL ] LBRACE VAR COMMA  LPAREN VAR RPAREN RBRACE
-        | "doc" EQUAL STR
-        | "ready" EQUAL STR
-        | "enable" EQUAL ( STR | VAR )
-        | "result" EQUAL ( STR | VAR )
-        | "prefix" EQUAL STR
-        | "port"  EQUAL STR
-        | "execution_order"  EQUAL STR
-        | "mutually_exclusive"  EQUAL STR
-        | "noinline"
-        | "fire_when_enabled"
-        | "no_implicit_conditions"
+        TOKSYNTHESIZE
+        | TOKRST_N  EQUAL STR
+        | TOKCLK  EQUAL STR
+        | TOKALWAYS_READY [ EQUAL (VAR | STR) ]
+        | TOKALWAYS_ENABLED [ EQUAL VAR ]
+        | TOKDESCENDING_URGENCY EQUAL expression
+        | TOKPREEMPTS [ EQUAL ] LBRACE VAR COMMA  LPAREN VAR RPAREN RBRACE
+        | TOKDOC EQUAL STR
+        | TOKREADY EQUAL STR
+        | TOKENABLE EQUAL ( STR | VAR )
+        | TOKRESULT EQUAL ( STR | VAR )
+        | TOKPREFIX EQUAL STR
+        | TOKPORT  EQUAL STR
+        | TOKEXECUTION_ORDER  EQUAL STR
+        | TOKMUTUALLY_EXCLUSIVE  EQUAL STR
+        | TOKNOINLINE
+        | TOKFIRE_WHEN_ENABLED
+        | TOKNO_IMPLICIT_CONDITIONS
 
     rule attribute_statement:
-         "\\([*]" attribute ( COMMA attribute )* "[*]\\)"
+         TOKLPARENSTAR attribute ( COMMA attribute )* TOKSTARRPAREN
 
     rule Type_named_sub:
         HASH LPAREN assign_value (COMMA assign_value )* RPAREN
@@ -227,52 +380,52 @@ parser HSDL:
         | VAR [ COLONCOLON VAR ] [ Type_named_sub ]
 
     rule importBVI_statement:
-    "parameter" VAR  EQUAL expression SEMICOLON
-#    "port" VAR  EQUAL expression SEMICOLON
-    | "default_clock" [ VAR ]
+    TOKPARAMETER VAR  EQUAL expression SEMICOLON
+#    TOKPORT VAR  EQUAL expression SEMICOLON
+    | TOKDEFAULT_CLOCK [ VAR ]
         [ LPAREN VAR [ COMMA VAR ] RPAREN ] [ EQUAL expression ] SEMICOLON
-    | "input_clock" [VAR] [ LPAREN VAR [ COMMA VAR ] RPAREN ]
+    | TOKINPUT_CLOCK [VAR] [ LPAREN VAR [ COMMA VAR ] RPAREN ]
         EQUAL expression SEMICOLON
-    | "output_clock" VAR LPAREN VAR [ COMMA VAR ] RPAREN
+    | TOKOUTPUT_CLOCK VAR LPAREN VAR [ COMMA VAR ] RPAREN
         SEMICOLON
-    | "no_reset" SEMICOLON
-    | "schedule"
+    | TOKNO_RESET SEMICOLON
+    | TOKSCHEDULE
         ( VAR | LPAREN VAR (COMMA VAR)* RPAREN )
-        ( "CF" | "SB" | "SBR" | "C" )
+        ( TOKCF | TOKSB | TOKSBR | TOKC )
         ( VAR | LPAREN VAR (COMMA VAR)* RPAREN )
         SEMICOLON
-    | "default_reset" VAR  LPAREN [ VAR ] RPAREN  [ EQUAL expression] SEMICOLON
-    | "input_reset" [ VAR ]  LPAREN [ VAR ] RPAREN
-        [ "clocked_by" LPAREN VAR RPAREN ]
+    | TOKDEFAULT_RESET VAR  LPAREN [ VAR ] RPAREN  [ EQUAL expression] SEMICOLON
+    | TOKINPUT_RESET [ VAR ]  LPAREN [ VAR ] RPAREN
+        [ TOKCLOCKED_BY LPAREN VAR RPAREN ]
         EQUAL expression SEMICOLON
-    | "output_reset" VAR  LPAREN VAR RPAREN
-        "clocked_by" LPAREN VAR RPAREN
+    | TOKOUTPUT_RESET VAR  LPAREN VAR RPAREN
+        TOKCLOCKED_BY LPAREN VAR RPAREN
         SEMICOLON
-#    "ancestor"  LPAREN clock1 COMMA clock2 RPAREN SEMICOLON
-#    "same_family"  LPAREN clock1 COMMA clock2 RPAREN SEMICOLON
+#    TOKANCESTOR  LPAREN clock1 COMMA clock2 RPAREN SEMICOLON
+#    TOKSAME_FAMILY  LPAREN clock1 COMMA clock2 RPAREN SEMICOLON
 
     rule import_declaration:
-        "import"
-        ( r'"BDPI"' [ VAR  EQUAL ]
+        TOKIMPORT
+        ( TOKBDPI [ VAR  EQUAL ]
             FUNCTION VAR [ HASH call_params<<[]>> ]
             function_name
             argument_list
             [ provisos ] SEMICOLON
-        | r'"BVI"' [VAR] [ EQUAL ]
-            "module" VAR
+        | TOKBVI [VAR] [ EQUAL ]
+            TOKMODULE VAR
             [ HASH  call_params<<[]>> ]
             argument_list
             [ provisos ] SEMICOLON
             ( method_declaration
             | importBVI_statement
             )*
-            "endmodule" [ COLON  VAR ]
+            TOKENDMODULE [ COLON  VAR ]
         | VAR  COLONCOLON  STAR SEMICOLON
         | SEMICOLON
         )
 
     rule export_declaration:
-        "export" VAR
+        TOKEXPORT VAR
         [ LPAREN DOT DOT RPAREN ]
         SEMICOLON
 
@@ -315,14 +468,14 @@ parser HSDL:
         Type_item_or_name [ VAR ] ( EQUAL | LEQ ) assign_value
 
     rule for_statement:
-        "for" LPAREN
+        TOKFOR LPAREN
             for_decl_item (COMMA for_decl_item)* SEMICOLON
             assign_value SEMICOLON
             variable_assignment ( COMMA variable_assignment )* RPAREN
         function_body_statement
 
     rule while_statement:
-        "while" LPAREN expression RPAREN
+        TOKWHILE LPAREN expression RPAREN
         ( action_statement
         | seq_statement
         | group_statement
@@ -330,11 +483,11 @@ parser HSDL:
         )
 
     rule helper_name:
-        ( "\\$display" | "\\$write" | "\\$fopen" | "\\$fdisplay"
-        | "\\$fwrite" | "\\$fgetc" | "\\$fflush" | "\\$fclose" | "\\$ungetc"
-        | "\\$finish" | "\\$stop" | "\\$dumpon" | "\\$dumpoff" | "\\$dumpvars"
-        | "\\$test\\$plusargs" | "\\$time" | "\\$stime" | "\\$format"
-        | "\\$error"
+        ( TOKDISPLAY | TOKWRITE | TOKFOPEN | TOKFDISPLAY
+        | TOKFWRITE | TOKFGETC | TOKFFLUSH | TOKFCLOSE | TOKUNGETC
+        | TOKFINISH | TOKSTOP | TOKDUMPON | TOKDUMPOFF | TOKDUMPVARS
+        | TOKTESTPLUSARGS | TOKTIME | TOKSTIME | TOKFORMAT
+        | TOKERROR
         )
 
     #rule helper_statement:
@@ -405,50 +558,50 @@ parser HSDL:
         END
 
     rule seq_statement:
-        "seq"
+        TOKSEQ
         ( function_body_statement
         | attribute_statement
         )*
-        "endseq"
+        TOKENDSEQ
 
     rule par_statement:
-        "par"
+        TOKPAR
         ( function_body_statement
         | attribute_statement
         )*
-        "endpar"
+        TOKENDPAR
 
     rule method_body:
         [ provisos ]
         SEMICOLON
         [
             ( function_body_statement )+
-            "endmethod" [ COLON VAR]
+            TOKENDMETHOD [ COLON VAR]
         ]
 
     rule method_declaration:
-        "method" 
-        ( "Action" VAR  [ argument_list ]
-            [ "if"  LPAREN assign_value RPAREN ]
+        TOKMETHOD 
+        ( TOKACTION VAR  [ argument_list ]
+            [ TOKIF  LPAREN assign_value RPAREN ]
             [ EQUAL assign_value ]
             method_body
-        | "ActionValue"
+        | TOKACTIONVALUE
             [ HASH LPAREN expression RPAREN ]
             VAR [ argument_list ]
-            [ "if"  LPAREN assign_value RPAREN ]
+            [ TOKIF  LPAREN assign_value RPAREN ]
             method_body
-        | ("Type" | Type_item_basic | VAR [ Type_named_sub ]) [ VAR ]  [ argument_list ]
+        | (TOKTTYPE | Type_item_basic | VAR [ Type_named_sub ]) [ VAR ]  [ argument_list ]
             [ VAR ]
-            ( ( "if" | "clocked_by" | "reset_by" | "enable" | "ready")
-                LPAREN [ ( assign_value | "enable" | "ready" ) ] RPAREN 
+            ( ( TOKIF | TOKCLOCKED_BY | TOKRESET_BY | TOKENABLE | TOKREADY)
+                LPAREN [ ( assign_value | TOKENABLE | TOKREADY ) ] RPAREN 
             )*
             [ EQUAL assign_value ]
             method_body
         #| [ output_port ] VAR
         #    LPAREN LBRACE input_ports RBRACE RPAREN
-        #    [ "enable" enable_port ]
-        #    [ "ready" ready_port ] [ "clocked_by" VAR ]
-        #    [ "reset_by" VAR] SEMICOLON
+        #    [ TOKENABLE enable_port ]
+        #    [ TOKREADY ready_port ] [ TOKCLOCKED_BY VAR ]
+        #    [ TOKRESET_BY VAR] SEMICOLON
         )
 
     rule interface_arg:
@@ -459,7 +612,7 @@ parser HSDL:
         HASH LPAREN interface_arg (COMMA interface_arg )* RPAREN
 
     rule subinterface_declaration:
-        "interface" VAR
+        TOKINTERFACE VAR
         ( interfaceTypesub VAR SEMICOLON
         | EQUAL assign_value SEMICOLON
         | VAR
@@ -470,7 +623,7 @@ parser HSDL:
                 | attribute_statement
                 #| subinterface_declaration
                 )+
-                "endinterface" [ COLON VAR ]
+                TOKENDINTERFACE [ COLON VAR ]
                 ]
             )
         )
@@ -480,10 +633,10 @@ parser HSDL:
         | attribute_statement
         | subinterface_declaration
         )+
-        "endinterface" [ COLON VAR ]
+        TOKENDINTERFACE [ COLON VAR ]
 
     rule interface_declaration:
-        "interface" VAR [COLONCOLON VAR] [VAR]
+        TOKINTERFACE VAR [COLONCOLON VAR] [VAR]
         ( [ SEMICOLON ] interface_body
         | interfaceTypesub SEMICOLON interface_body
         | EQUAL assign_value SEMICOLON
@@ -493,26 +646,26 @@ parser HSDL:
         DOT ( term<<[]>> | STAR )
 
     rule match_statement:
-        "match"
+        TOKMATCH
         LBRACE match_arg (COMMA match_arg)* RBRACE ( EQUAL | LARROW ) assign_value SEMICOLON
 
     rule module_param:
         Type_item_or_name [ VAR ] [ STAR ]
 
     rule module_declaration:
-        "module" [ LBRACKET assign_value RBRACKET ] VAR [ HASH  argument_list ]
+        TOKMODULE [ LBRACKET assign_value RBRACKET ] VAR [ HASH  argument_list ]
         LPAREN [ module_param (COMMA module_param)* ] RPAREN
         [ provisos ]
         SEMICOLON
         [
             module_item
-            "endmodule" [ COLON VAR]
+            TOKENDMODULE [ COLON VAR]
         ]
 
     rule package_statement:
-        "package" VAR SEMICOLON
+        TOKPACKAGE VAR SEMICOLON
         ( package_statement_item )*
-        "endpackage" [ COLON  VAR]
+        TOKENDPACKAGE [ COLON  VAR]
 
     rule tagged_match_arg:
         VAR COLON DOT VAR
@@ -520,7 +673,7 @@ parser HSDL:
     rule rule_predicate:
         LPAREN
         assign_value
-        [ MATCHES "tagged" VAR
+        [ MATCHES TOKTAGGED VAR
             ( LBRACE tagged_match_arg (COMMA tagged_match_arg)* RBRACE
             | DOT VAR
             )
@@ -528,61 +681,61 @@ parser HSDL:
         RPAREN
 
     rule rule_statement:
-        "rule" VAR [rule_predicate] SEMICOLON
+        TOKRULE VAR [rule_predicate] SEMICOLON
         ( function_body_statement
         | attribute_statement
         )*
-        "endrule" [ COLON  VAR ]
+        TOKENDRULE [ COLON  VAR ]
 
     rule rules_statement:
-        "rules" [ COLON  VAR]
+        TOKRULES [ COLON  VAR]
         ( rule_statement
         | variable_declaration_or_call SEMICOLON
         | attribute_statement
         )*
-        "endrules" [ COLON  VAR]
+        TOKENDRULES [ COLON  VAR]
 
     rule action_statement:
-        "action" [ COLON  VAR] [ SEMICOLON ]
+        TOKACTIONSTATEMENT [ COLON  VAR] [ SEMICOLON ]
         ( function_body_statement
         | attribute_statement
         )*
-        "endaction" [ COLON VAR]
+        TOKENDACTION [ COLON VAR]
 
     rule Type_item_basic:
-        ( "Bit#" | "Int#" | "Uint#" | "ComplexF#" | "Reg#" | "FIFO#" | "Maybe#" )
+        ( TOKBITHASH | TOKINTHASH | TOKUINTHASH | TOKCOMPLEXHASH | TOKREGHASH | TOKFIFOHASH | TOKMAYBEHASH )
            LPAREN expression [ COMMA expression ] RPAREN
-        | ("Vector#" | "Tuple2#" | "FixedPoint#")
+        | (TOKVECTORHASH | TOKTUPLE2HASH | TOKFIXEDPOINTHASH )
            LPAREN expression (COMMA expression)* RPAREN
-        | "Integer" | "Bool" | "String" | "Real" | "Nat"
+        | TOKINTEGER | TOKBOOL | TOKSTRING | TOKREAL | TOKNAT
 
     rule Type_item:
         Type_item_basic
-        | "Action" | "ActionValue" HASH LPAREN Type_item_or_name RPAREN
+        | TOKACTION | TOKACTIONVALUE HASH LPAREN Type_item_or_name RPAREN
 
     rule case_statement:
-        "case" LPAREN expression RPAREN
+        TOKCASE LPAREN expression RPAREN
         ( MATCHES
           (
               ( dot_field_selection
               | LBRACE tdot_field_item (COMMA tdot_field_item)* RBRACE
-              | "default"
+              | TOKDEFAULT
               | VAR 
               )
               COLON (QUESTION SEMICOLON | function_body_statement)
           )*
         | (
               (expression (COMMA expression)*
-              | "default"
+              | TOKDEFAULT
               #| VAR
               )
               COLON (QUESTION SEMICOLON | function_body_statement)
           )*
         )
-        "endcase"
+        TOKENDCASE
 
     rule let_statement:
-        "let"
+        TOKLET
         ( VAR
         | LBRACE VAR (COMMA VAR)* RBRACE
         )
@@ -592,32 +745,32 @@ parser HSDL:
     rule Elements: term<<[]>> [EQUAL expression]
 
     rule TypeClass:
-        "Eq" | "Bits" | "Bounded"
+        TOKEQ | TOKBITS | TOKBOUNDED
 
     rule deriving_clause:
-        "deriving"  LPAREN TypeClass ( COMMA TypeClass )* RPAREN
+        TOKDERIVING  LPAREN TypeClass ( COMMA TypeClass )* RPAREN
 
     rule struct_arg:
-        [ "numeric" | "parameter" ] "type" VAR
+        [ TOKNUMERIC | TOKPARAMETER ] TOKTYPE VAR
 
     rule struct_arg_list:
         LPAREN struct_arg (COMMA struct_arg)* RPAREN
 
     rule typedef_declaration:
-        "typedef" 
+        TOKTYPEDEF 
         Member
 
     rule Member:
-        ( ( "type" | Type_item_or_name | NUM | LPAREN Type_item_or_name RPAREN ) [VAR | "enable" ]
+        ( ( TOKTYPE | Type_item_or_name | NUM | LPAREN Type_item_or_name RPAREN ) [VAR | TOKENABLE ]
             [ HASH struct_arg_list ] SEMICOLON
-        | "enum" LBRACE Elements ( COMMA Elements )* RBRACE VAR
+        | TOKENUM LBRACE Elements ( COMMA Elements )* RBRACE VAR
             [ deriving_clause ] SEMICOLON
-        | "struct" LBRACE
+        | TOKSTRUCT LBRACE
             #( Type_item_or_name VAR SEMICOLON )* RBRACE
             ( Member )* RBRACE
             VAR [ HASH struct_arg_list ]
             [ deriving_clause ] SEMICOLON
-        | "union" "tagged"
+        | TOKUNION TOKTAGGED
             LBRACE (Member)+ RBRACE
             VAR
             [ HASH
@@ -629,8 +782,8 @@ parser HSDL:
         )
 
     rule function_return_type:
-        ( "Action" VAR
-        | "ActionValue"
+        ( TOKACTION VAR
+        | TOKACTIONVALUE
         | VAR
         )
         [ HASH LPAREN assign_value (COMMA assign_value)* RPAREN ]
@@ -648,7 +801,7 @@ parser HSDL:
 
     rule argument_item:
         ( FUNCTION function_argument
-        | Type_item_or_name_sub [ VAR | "enable" | "ready" ]
+        | Type_item_or_name_sub [ VAR | TOKENABLE | TOKREADY ]
         )
 
     rule argument_list:
@@ -662,11 +815,11 @@ parser HSDL:
         )
 
     rule if_statement:
-        "if" LPAREN assign_value RPAREN
-           function_body_statement [ "else" function_body_statement ]
+        TOKIF LPAREN assign_value RPAREN
+           function_body_statement [ TOKELSE function_body_statement ]
 
     rule actionvalue_statement:
-        "actionvalue"
+        TOKACTIONVALUESTATEMENT
         ( return_statement
         | let_statement
         | case_statement
@@ -675,7 +828,7 @@ parser HSDL:
         #| expression SEMICOLON
         | variable_declaration_or_call
         )*
-        "endactionvalue"
+        TOKENDACTIONVALUE
 
     rule function_header:
         FUNCTION
@@ -696,50 +849,50 @@ parser HSDL:
               ( function_body_statement
               | attribute_statement
               )+
-              "endfunction" [ COLON  function_name]
+              TOKENDFUNCTION [ COLON  function_name]
             ]
         )
 
     rule path_statement:
-        "path" LPAREN VAR COMMA VAR RPAREN  SEMICOLON
+        TOKPATH LPAREN VAR COMMA VAR RPAREN  SEMICOLON
 
     rule instance_arg:
         Type_item_or_name
         | NUM
 
     rule instance_statement:
-        "instance" VAR HASH LPAREN instance_arg ( COMMA instance_arg )* RPAREN
+        TOKINSTANCE VAR HASH LPAREN instance_arg ( COMMA instance_arg )* RPAREN
         [ provisos ] SEMICOLON
         ( function_statement
         | module_declaration
         )*
-        "endinstance" [ COLON VAR ]
+        TOKENDINSTANCE [ COLON VAR ]
 
     rule dep_item:
-        VAR "determines" VAR
+        VAR TOKDETERMINES VAR
 
     rule typeclass_statement:
-        "typeclass" VAR interfaceTypesub
-        [ "dependencies" LPAREN dep_item (COMMA dep_item)* RPAREN ]
+        TOKTYPECLASS VAR interfaceTypesub
+        [ TOKDEPENDENCIES LPAREN dep_item (COMMA dep_item)* RPAREN ]
         SEMICOLON
         (function_header SEMICOLON
         | module_declaration
         )*
-        "endtypeclass" [ COLON VAR ]
+        TOKENDTYPECLASS [ COLON VAR ]
 
     rule define_declaration:
-        "`define" VAR [expression]
+        TOKPDEFINE VAR [expression]
 
     rule include_declaration:
-        "`include" STR
+        TOKPINCLUDE STR
 
     rule ifdef_statement:
-        "`ifdef" [VAR | ANYCHAR]
+        TOKPIFDEF [VAR | ANYCHAR]
            [ module_item ]
-        [ "`else"
+        [ TOKPELSE
            [ module_item ]
         ]
-        "`endif"
+        TOKPENDIF
 
     rule goal:
         (top_level_statement)* ENDTOKEN
