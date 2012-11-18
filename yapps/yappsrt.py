@@ -71,6 +71,7 @@ class Scanner:
         self.pos = 0
         self.ignore = ignore
         self.first_line_number = 1
+        self.whitespace = re.compile("[ \r\t\n]+")
         
         if patterns is not None:
             # Compile the regex strings into regex objects
@@ -155,9 +156,20 @@ class Scanner:
             best_pat = '(error)'
             # add special code for '/* ... */' comments
             # (could not figure out how to do this with 'ignore') jca
-            if len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '/*':
-                commentindex = string.find(self.input, "*/", self.pos+2) 
-                self.pos = commentindex + 2
+            while True:
+                if len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '/*':
+                    commentindex = string.find(self.input, "*/", self.pos+2) 
+                    self.pos = commentindex + 2
+                elif len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '//':
+                    commentindex = string.find(self.input, "\n", self.pos+2) 
+                    self.pos = commentindex + 1
+                else:
+                    m = self.whitespace.match(self.input, self.pos)
+                    if m:
+                        #print "match", self.pos, len(m.group()), m.span()
+                        self.pos = m.end()
+                    else:
+                        break
             for p, regexp in self.patterns:
                 # First check to see if we're ignoring this token
                 if restrict and p not in restrict and p not in self.ignore:

@@ -187,6 +187,8 @@ class ParserDescription(yappsrt.Parser):
             STR = self._scan('STR')
             t = (STR, eval(STR,{},{}))
             if t not in tokens: tokens.insert( 0, t )
+            print "attempted to add token in middle of grammar!!!!", t
+            sys.exit(-1)
             return parsetree.Terminal(rule, STR)
         elif _token == 'ID':
             ID = self._scan('ID')

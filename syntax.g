@@ -12,8 +12,8 @@ def lookup(map, name):
 parser HSDL:
     #option:      "context-insensitive-scanner"
 
-    ignore:    "[ \r\t\n]+"
-    ignore:    "\\/\\/.*?\r?\n"
+    #ignore:    "[ \r\t\n]+"
+    #ignore:    "\\/\\/.*?\r?\n"
     #ignore:    "/\\*.*\\*/"
     token ENDTOKEN: "$"
     token LPAREN: "\\(" token RPAREN: "\\)"
