@@ -40,13 +40,6 @@ class Scanner:
         self.anychar = re.compile("[a-zA-Z0-9_]*")
         self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*")
         self.strings = re.compile(r'"([^\\"]+|\\.)*"')
-        newpatterns = []
-        for terminal, regex in self.patterns:
-            newpatterns.append( (terminal, re.compile(regex)) )
-        self.patterns = newpatterns
-        if patterns is not None:
-            print "patterns not allowed!!!"
-            sys.exit(-1)
     def get_token_pos(self):
         return len(self.tokens)
     def get_char_pos(self):
@@ -111,10 +104,13 @@ class Scanner:
         for p, regexp in self.patterns:
             if restrict and p not in restrict:
                 continue
-            m = regexp.match(self.input, self.pos)
-            if m:
+            if self.pos == len(self.input):
                 best_pat = p
-                best_match = len(m.group(0))
+                best_match = 0
+                break
+            if self.input[self.pos:self.pos+len(regexp)] == regexp:
+                best_pat = p
+                best_match = len(regexp)
                 break
         if best_pat == '(error)' and best_match < 0:
             msg = 'Bad Token'

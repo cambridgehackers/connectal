@@ -16,19 +16,19 @@ parser HSDL:
     #ignore:    "\\/\\/.*?\r?\n"
     #ignore:    "/\\*.*\\*/"
     token ENDTOKEN: "$"
-    token TOKLPARENSTAR: "\\([*]"
-    token LPAREN: "\\("
-    token RPAREN: "\\)"
+    token TOKLPARENSTAR: "(*"
+    token LPAREN: "("
+    token RPAREN: ")"
     token AMPERAMPERAMPER: "&&&"
     token AMPERAMPER: "&&"
     token AMPER: '&'
-    token BARBAR: "\\|\\|"
-    token BAR: "\\|"
+    token BARBAR: "||"
+    token BAR: "|"
     token COLONCOLON: "::"
     token COLON: ':'
     token SEMICOLON: ';'
-    token QUESTION: "\\?"
-    token CARET: "\\^"
+    token QUESTION: "?"
+    token CARET: "^"
     token TOKTILDE: "~"
     token LESSLESS: "<<"
     token LEQ: "<="
@@ -39,63 +39,63 @@ parser HSDL:
     token TOKGREATER: ">"
     token EQEQ: "=="
     token EQUAL: "="
-    token STARSTAR: "[*][*]"
-    token TOKSTARRPAREN: "[*]\\)"
-    token STAR: "[*]"
+    token STARSTAR: "**"
+    token TOKSTARRPAREN: "*)"
+    token STAR: "*"
     token TOKNOTEQUAL: "!="
     token TOKEXCLAIM: "!"
     token TOKMINUS: "-"
     token TOKPERCENT: "%"
-    token TOKPLUS: "[+]"
-    token TOKSLASH: "\/"
-    token LBRACKET: "\\["
-    token RBRACKET: "\\]"
+    token TOKPLUS: "+"
+    token TOKSLASH: "/"
+    token LBRACKET: "["
+    token RBRACKET: "]"
     token LBRACE: "{"
     token RBRACE: "}"
     token HASH: "#"
     token APOSTROPHE: "'"
-    token DOT: r"[\\.]"
+    token DOT: "."
     token COMMA: ','
 
-    token TOKOPPLUS: '\\\\\\+'
-    token TOKOPMINUS: '\\\\\\-'
-    token TOKOPCARET: '\\\\\\^'
-    token TOKOPTILDECARET: '\\\\\\~\\^'
-    token TOKOPCARETTILDE: '\\\\\\^~'
-    token TOKOPSLASH: '\\\\\\/'
-    token TOKOPAMPERAMPER: '\\\\\\&&'
-    token TOKOPAMPER: '\\\\\\&'
-    token TOKOPBAR: '\\\\\\|'
-    token TOKOPPERCENT: '\\\\\\%'
-    token TOKOPLESSLESS: '\\\\\\<<'
-    token TOKOPLEQ: '\\\\\\<='
-    token TOKOPLESS: '\\\\\\<'
-    token TOKOPGREATERGREATER: '\\\\\\>>'
-    token TOKOPGEQ: '\\\\\\>='
-    token TOKOPGREATER: '\\\\\\>'
-    token TOKOPEQUALEQUAL: '\\\\\\=='
-    token TOKOPSTARSTAR: '\\\\\\*\\*'
-    token TOKOPSTAR: '\\\\\\*'
+    token TOKOPPLUS: '\+'
+    token TOKOPMINUS: '\-'
+    token TOKOPCARET: '\^'
+    token TOKOPTILDECARET: '\~^'
+    token TOKOPCARETTILDE: '\^~'
+    token TOKOPSLASH: '\/'
+    token TOKOPAMPERAMPER: '\&&'
+    token TOKOPAMPER: '\&'
+    token TOKOPBAR: '\|'
+    token TOKOPPERCENT: '\%'
+    token TOKOPLESSLESS: '\<<'
+    token TOKOPLEQ: '\<='
+    token TOKOPLESS: '\<'
+    token TOKOPGREATERGREATER: '\>>'
+    token TOKOPGEQ: '\>='
+    token TOKOPGREATER: '\>'
+    token TOKOPEQUALEQUAL: '\=='
+    token TOKOPSTARSTAR: '\**'
+    token TOKOPSTAR: '\*'
 
-    token TOKDISPLAY: "\\$display"
-    token TOKDUMPOFF: "\\$dumpoff"
-    token TOKDUMPON: "\\$dumpon"
-    token TOKDUMPVARS: "\\$dumpvars"
-    token TOKERROR: "\\$error"
-    token TOKFCLOSE: "\\$fclose"
-    token TOKFDISPLAY: "\\$fdisplay"
-    token TOKFFLUSH: "\\$fflush"
-    token TOKFGETC: "\\$fgetc"
-    token TOKFINISH: "\\$finish"
-    token TOKFOPEN: "\\$fopen"
-    token TOKFORMAT: "\\$format"
-    token TOKFWRITE: "\\$fwrite"
-    token TOKSTIME: "\\$stime"
-    token TOKSTOP: "\\$stop"
-    token TOKTESTPLUSARGS: "\\$test\\$plusargs"
-    token TOKTIME: "\\$time"
-    token TOKUNGETC: "\\$ungetc"
-    token TOKWRITE: "\\$write"
+    token TOKDISPLAY: "$display"
+    token TOKDUMPOFF: "$dumpoff"
+    token TOKDUMPON: "$dumpon"
+    token TOKDUMPVARS: "$dumpvars"
+    token TOKERROR: "$error"
+    token TOKFCLOSE: "$fclose"
+    token TOKFDISPLAY: "$fdisplay"
+    token TOKFFLUSH: "$fflush"
+    token TOKFGETC: "$fgetc"
+    token TOKFINISH: "$finish"
+    token TOKFOPEN: "$fopen"
+    token TOKFORMAT: "$format"
+    token TOKFWRITE: "$fwrite"
+    token TOKSTIME: "$stime"
+    token TOKSTOP: "$stop"
+    token TOKTESTPLUSARGS: "$test$plusargs"
+    token TOKTIME: "$time"
+    token TOKUNGETC: "$ungetc"
+    token TOKWRITE: "$write"
 
     token TOKPDEFINE: "`define"
     token TOKPELSE: "`else"
