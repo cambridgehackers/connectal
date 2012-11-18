@@ -16,82 +16,105 @@ parser HSDL:
     #ignore:    "\\/\\/.*?\r?\n"
     #ignore:    "/\\*.*\\*/"
     token ENDTOKEN: "$"
-    token LPAREN: "\\(" token RPAREN: "\\)"
-    token LBRACKET: "\\[" token RBRACKET: "\\]"
-    token LBRACE: "{" token RBRACE: "}"
+    token TOKLPARENSTAR: "\\([*]"
+    token LPAREN: "\\("
+    token RPAREN: "\\)"
+    token AMPERAMPERAMPER: "&&&"
+    token AMPERAMPER: "&&"
+    token AMPER: '&'
+    token BARBAR: "\\|\\|"
+    token BAR: "\\|"
+    token COLONCOLON: "::"
+    token COLON: ':'
+    token SEMICOLON: ';'
+    token QUESTION: "\\?"
+    token CARET: "\\^"
+    token TOKTILDE: "~"
+    token LESSLESS: "<<"
+    token LEQ: "<="
+    token LARROW: "<-"
+    token LESS: "<"
+    token GREATERGREATER: ">>"
+    token GEQ: ">="
+    token TOKGREATER: ">"
+    token EQEQ: "=="
+    token EQUAL: "="
+    token STARSTAR: "[*][*]"
+    token TOKSTARRPAREN: "[*]\\)"
+    token STAR: "[*]"
+    token TOKNOTEQUAL: "!="
+    token TOKEXCLAIM: "!"
+    token TOKMINUS: "-"
+    token TOKPERCENT: "%"
+    token TOKPLUS: "[+]"
+    token TOKSLASH: "\/"
+    token LBRACKET: "\\["
+    token RBRACKET: "\\]"
+    token LBRACE: "{"
+    token RBRACE: "}"
     token HASH: "#"
     token APOSTROPHE: "'"
     token DOT: r"[\\.]"
     token COMMA: ','
-    token AMPER: '&' token AMPERAMPER: "&&" token AMPERAMPERAMPER: "&&&"
-    token BAR: "\\|" token BARBAR: "\\|\\|"
-    token COLON: ':' token COLONCOLON: "::" token SEMICOLON: ';'
-    token QUESTION: "\\?"
-    token CARET: "\\^"
-    token LESS: "<" token LESSLESS: "<<" token LEQ: "<=" token LARROW: "<-"
-    token GEQ: ">="
-    token GREATERGREATER: ">>"
-    token EQUAL: "=" token EQEQ: "=="
-    token STAR: "[*]"
-    token STARSTAR: "[*][*]"
+
     token TOKOPPLUS: '\\\\\\+'
     token TOKOPMINUS: '\\\\\\-'
-    token TOKOPSTAR: '\\\\\\*'
     token TOKOPCARET: '\\\\\\^'
-    token TOKOPCARETTILDE: '\\\\\\^~'
     token TOKOPTILDECARET: '\\\\\\~\\^'
+    token TOKOPCARETTILDE: '\\\\\\^~'
     token TOKOPSLASH: '\\\\\\/'
     token TOKOPAMPERAMPER: '\\\\\\&&'
     token TOKOPAMPER: '\\\\\\&'
     token TOKOPBAR: '\\\\\\|'
     token TOKOPPERCENT: '\\\\\\%'
-    token TOKOPLESS: '\\\\\\<'
-    token TOKOPGREATER: '\\\\\\>'
     token TOKOPLESSLESS: '\\\\\\<<'
     token TOKOPLEQ: '\\\\\\<='
-    token TOKOPGEQ: '\\\\\\>='
+    token TOKOPLESS: '\\\\\\<'
     token TOKOPGREATERGREATER: '\\\\\\>>'
+    token TOKOPGEQ: '\\\\\\>='
+    token TOKOPGREATER: '\\\\\\>'
     token TOKOPEQUALEQUAL: '\\\\\\=='
     token TOKOPSTARSTAR: '\\\\\\*\\*'
-    token BEGIN: "begin"
-    token END: "end"
-    token FUNCTION: "function"
-    token MATCHES: "matches"
-    token TOKACTION: "Action"
-    token TOKACTIONSTATEMENT: "action"
-    token TOKACTIONVALUE: "ActionValue"
-    token TOKACTIONVALUESTATEMENT: "actionvalue"
-    token TOKALWAYS_ENABLED: "always_enabled"
-    token TOKALWAYS_READY: "always_ready"
-    token TOKANCESTOR: "ancestor"
-    token TOKBDPI: r'"BDPI"'
-    token TOKBITHASH: "Bit#"
-    token TOKBITS: "Bits"
-    token TOKBOOL: "Bool"
-    token TOKBOUNDED: "Bounded"
-    token TOKBVI: r'"BVI"'
-    token TOKC: "C"
-    token TOKCASE: "case"
-    token TOKCF: "CF"
-    token TOKCLK: "CLK"
-    token TOKCLOCKED_BY: "clocked_by"
-    token TOKCOMPLEXHASH: "ComplexF#"
-    token TOKDEFAULT: "default"
-    token TOKDEFAULT_CLOCK: "default_clock"
-    token TOKDEFAULT_RESET: "default_reset"
-    token TOKDEPENDENCIES: "dependencies"
-    token TOKDERIVING: "deriving"
-    token TOKDESCENDING_URGENCY: "descending_urgency"
-    token TOKDETERMINES: "determines"
+    token TOKOPSTAR: '\\\\\\*'
+
     token TOKDISPLAY: "\\$display"
-    token TOKDOC: "doc"
     token TOKDUMPOFF: "\\$dumpoff"
     token TOKDUMPON: "\\$dumpon"
     token TOKDUMPVARS: "\\$dumpvars"
-    token TOKELSE: "else"
-    token TOKENABLE: "enable"
-    token TOKENDACTION: "endaction"
+    token TOKERROR: "\\$error"
+    token TOKFCLOSE: "\\$fclose"
+    token TOKFDISPLAY: "\\$fdisplay"
+    token TOKFFLUSH: "\\$fflush"
+    token TOKFGETC: "\\$fgetc"
+    token TOKFINISH: "\\$finish"
+    token TOKFOPEN: "\\$fopen"
+    token TOKFORMAT: "\\$format"
+    token TOKFWRITE: "\\$fwrite"
+    token TOKSTIME: "\\$stime"
+    token TOKSTOP: "\\$stop"
+    token TOKTESTPLUSARGS: "\\$test\\$plusargs"
+    token TOKTIME: "\\$time"
+    token TOKUNGETC: "\\$ungetc"
+    token TOKWRITE: "\\$write"
+
+    token TOKPDEFINE: "`define"
+    token TOKPELSE: "`else"
+    token TOKPENDIF: "`endif"
+    token TOKPIFDEF: "`ifdef"
+    token TOKPINCLUDE: "`include"
+
+    token TOKBDPI: '"BDPI"'
+    token TOKBVI: '"BVI"'
+
+    token NUM: "[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*"
+    token VAR: "`*[a-zA-Z_][a-zA-Z0-9_]*"
+    token ANYCHAR: "[a-zA-Z0-9_]*"
+    token STR:   r'"([^\\"]+|\\.)*"'
+
+    token TOKEN_FIRSTNAME: " "
+    token BEGIN: "begin"
     token TOKENDACTIONVALUE: "endactionvalue"
+    token TOKENDACTION: "endaction"
     token TOKENDCASE: "endcase"
     token TOKENDFUNCTION: "endfunction"
     token TOKENDINSTANCE: "endinstance"
@@ -100,65 +123,74 @@ parser HSDL:
     token TOKENDMODULE: "endmodule"
     token TOKENDPACKAGE: "endpackage"
     token TOKENDPAR: "endpar"
-    token TOKENDRULE: "endrule"
     token TOKENDRULES: "endrules"
+    token TOKENDRULE: "endrule"
     token TOKENDSEQ: "endseq"
     token TOKENDTYPECLASS: "endtypeclass"
+    token END: "end"
+    token FUNCTION: "function"
+    token MATCHES: "matches"
+    token TOKACTIONVALUE: "ActionValue"
+    token TOKACTION: "Action"
+    token TOKACTIONVALUESTATEMENT: "actionvalue"
+    token TOKACTIONSTATEMENT: "action"
+    token TOKALWAYS_ENABLED: "always_enabled"
+    token TOKALWAYS_READY: "always_ready"
+    token TOKANCESTOR: "ancestor"
+    token TOKBITHASH: "Bit#"
+    token TOKBITS: "Bits"
+    token TOKBOOL: "Bool"
+    token TOKBOUNDED: "Bounded"
+    token TOKCASE: "case"
+    token TOKCLOCKED_BY: "clocked_by"
+    token TOKCOMPLEXHASH: "ComplexF#"
+    token TOKCF: "CF"
+    token TOKCLK: "CLK"
+    token TOKC: "C"
+    token TOKDEFAULT_CLOCK: "default_clock"
+    token TOKDEFAULT_RESET: "default_reset"
+    token TOKDEFAULT: "default"
+    token TOKDEPENDENCIES: "dependencies"
+    token TOKDERIVING: "deriving"
+    token TOKDESCENDING_URGENCY: "descending_urgency"
+    token TOKDETERMINES: "determines"
+    token TOKDOC: "doc"
+    token TOKELSE: "else"
+    token TOKENABLE: "enable"
     token TOKENUM: "enum"
     token TOKEQ: "Eq"
-    token TOKERROR: "\\$error"
-    token TOKEXCLAIM: "!"
     token TOKEXECUTION_ORDER: "execution_order"
     token TOKEXPORT: "export"
-    token TOKFCLOSE: "\\$fclose"
-    token TOKFDISPLAY: "\\$fdisplay"
-    token TOKFFLUSH: "\\$fflush"
-    token TOKFGETC: "\\$fgetc"
     token TOKFIFOHASH: "FIFO#"
-    token TOKFINISH: "\\$finish"
     token TOKFIRE_WHEN_ENABLED: "fire_when_enabled"
     token TOKFIXEDPOINTHASH: "FixedPoint#"
-    token TOKFOPEN: "\\$fopen"
     token TOKFOR: "for"
-    token TOKFORMAT: "\\$format"
-    token TOKFWRITE: "\\$fwrite"
-    token TOKGREATER: ">"
     token TOKIF: "if"
     token TOKIMPORT: "import"
-    token TOKIN: "in"
     token TOKINPUT_CLOCK: "input_clock"
     token TOKINPUT_RESET: "input_reset"
     token TOKINSTANCE: "instance"
-    token TOKINTEGER: "Integer"
     token TOKINTERFACE: "interface"
+    token TOKINTEGER: "Integer"
     token TOKINTHASH: "Int#"
+    token TOKIN: "in"
     token TOKLET: "let"
-    token TOKLPARENSTAR: "\\([*]"
     token TOKMATCH: "match"
     token TOKMAYBEHASH: "Maybe#"
     token TOKMETHOD: "method"
-    token TOKMINUS: "-"
     token TOKMODULE: "module"
     token TOKMUTUALLY_EXCLUSIVE: "mutually_exclusive"
     token TOKNAT: "Nat"
     token TOKNOINLINE: "noinline"
-    token TOKNOTEQUAL: "!="
     token TOKNO_IMPLICIT_CONDITIONS: "no_implicit_conditions"
     token TOKNO_RESET: "no_reset"
     token TOKNUMERIC: "numeric"
     token TOKOUTPUT_CLOCK: "output_clock"
     token TOKOUTPUT_RESET: "output_reset"
     token TOKPACKAGE: "package"
-    token TOKPAR: "par"
     token TOKPARAMETER: "parameter"
+    token TOKPAR: "par"
     token TOKPATH: "path"
-    token TOKPDEFINE: "`define"
-    token TOKPELSE: "`else"
-    token TOKPENDIF: "`endif"
-    token TOKPERCENT: "%"
-    token TOKPIFDEF: "`ifdef"
-    token TOKPINCLUDE: "`include"
-    token TOKPLUS: "[+]"
     token TOKPORT: "port"
     token TOKPREEMPTS: "preempts"
     token TOKPREFIX: "prefix"
@@ -170,46 +202,27 @@ parser HSDL:
     token TOKRESULT: "result"
     token TOKRETURN: "return"
     token TOKRST_N: "RST_N"
-    token TOKRULE: "rule"
     token TOKRULES: "rules"
+    token TOKRULE: "rule"
     token TOKSAME_FAMILY: "same_family"
-    token TOKSB: "SB"
     token TOKSBR: "SBR"
+    token TOKSB: "SB"
     token TOKSCHEDULE: "schedule"
     token TOKSEQ: "seq"
     token TOKSET: "set"
-    token TOKSLASH: "\/"
-    token TOKSTARRPAREN: "[*]\\)"
-    token TOKSTIME: "\\$stime"
-    token TOKSTOP: "\\$stop"
     token TOKSTRING: "String"
     token TOKSTRUCT: "struct"
     token TOKSYNTHESIZE: "synthesize"
     token TOKTAGGED: "tagged"
-    token TOKTESTPLUSARGS: "\\$test\\$plusargs"
-    token TOKTILDE: "~"
-    token TOKTIME: "\\$time"
-    token TOKTTYPE: "Type"
     token TOKTUPLE2HASH: "Tuple2#"
-    token TOKTYPE: "type"
     token TOKTYPECLASS: "typeclass"
     token TOKTYPEDEF: "typedef"
+    token TOKTTYPE: "Type"
+    token TOKTYPE: "type"
     token TOKUINTHASH: "Uint#"
-    token TOKUNGETC: "\\$ungetc"
     token TOKUNION: "union"
     token TOKVECTORHASH: "Vector#"
     token TOKWHILE: "while"
-    token TOKWRITE: "\\$write"
-
-    token NUM: "[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*"
-    token VAR: "`*[a-zA-Z_][a-zA-Z0-9_]*"
-    token ANYCHAR: "[a-zA-Z0-9_]*"
-    token STR:   r'"([^\\"]+|\\.)*"'
-
-    # Each line can either be an expression or an assignment statement
-    rule gggoal:   expr<<[]>> ENDTOKEN            {{ return expr }}
-               | TOKSET VAR expr<<[]>> ENDTOKEN  {{ globalvars[VAR] = expr }}
-                                           {{ return expr }}
 
     rule expr<<V>>:
          exprint<<V>>
@@ -902,14 +915,9 @@ import string
 import newrt
 
 if __name__=='__main__':
-    #print 'args', sys.argv
-    #print 'args1', sys.argv[1]
     s = open(sys.argv[1]).read()
     # line continuation in string literals not handled by runtime
     s = string.replace(s, "\\\n", "  ")
     if len(sys.argv) > 2:
         newrt.printtrace = True
     s1 = parse('goal', s)
-    #print 'Output:', s1
-    #print 'Bye.'
-

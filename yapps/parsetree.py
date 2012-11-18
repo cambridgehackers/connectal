@@ -262,7 +262,7 @@ class Generator:
         self.write("class ", self.name, "Scanner(newrt.Scanner):\n")
         self.write("    patterns = [\n")
         for p in self.terminals:
-            self.write("        (%s, re.compile(%s)),\n" % (
+            self.write("        (%s, %s),\n" % (
                 repr(p), repr(self.tokens[p])))
         self.write("    ]\n")
         self.write("    def __init__(self, str):\n")

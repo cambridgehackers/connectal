@@ -36,10 +36,16 @@ class Scanner:
         self.pos = 0
         self.first_line_number = 1
         self.whitespace = re.compile("[ \r\t\n]+")
+        self.numbers = re.compile("[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*")
+        self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*")
+        self.strings = re.compile(r'"([^\\"]+|\\.)*"')
+        newpatterns = []
+        for terminal, regex in self.patterns:
+            newpatterns.append( (terminal, re.compile(regex)) )
+        self.patterns = newpatterns
         if patterns is not None:
-            self.patterns = []
-            for terminal, regex in patterns:
-                self.patterns.append( (terminal, re.compile(regex)) )
+            print "patterns not allowed!!!"
+            sys.exit(-1)
     def get_token_pos(self):
         return len(self.tokens)
     def get_char_pos(self):
@@ -92,9 +98,11 @@ class Scanner:
             if restrict and p not in restrict:
                 continue
             m = regexp.match(self.input, self.pos)
-            if m and len(m.group(0)) > best_match:
+            if m and len(m.group(0)) >= best_match:
                 best_pat = p
                 best_match = len(m.group(0))
+                if p != 'VAR':
+                    break
         if best_pat == '(error)' and best_match < 0:
             msg = 'Bad Token'
             if restrict:
