@@ -37,6 +37,7 @@ class Scanner:
         self.first_line_number = 1
         self.whitespace = re.compile("[ \r\t\n]+")
         self.numbers = re.compile("[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*")
+        self.anychar = re.compile("[a-zA-Z0-9_]*")
         self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*")
         self.strings = re.compile(r'"([^\\"]+|\\.)*"')
         newpatterns = []
@@ -94,15 +95,27 @@ class Scanner:
                 if not m:
                     break
                 self.pos = m.end()
+        m = self.numbers.match(self.input, self.pos)
+        if m:
+            best_pat = 'NUM'
+            best_match = len(m.group(0))
+        #m = self.anychar.match(self.input, self.pos)
+        m = self.alphatoken.match(self.input, self.pos)
+        if m:
+            best_pat = 'VAR'
+            best_match = len(m.group(0))
+        m = self.strings.match(self.input, self.pos)
+        if m:
+            best_pat = 'STR'
+            best_match = len(m.group(0))
         for p, regexp in self.patterns:
             if restrict and p not in restrict:
                 continue
             m = regexp.match(self.input, self.pos)
-            if m and len(m.group(0)) >= best_match:
+            if m:
                 best_pat = p
                 best_match = len(m.group(0))
-                if p != 'VAR':
-                    break
+                break
         if best_pat == '(error)' and best_match < 0:
             msg = 'Bad Token'
             if restrict:

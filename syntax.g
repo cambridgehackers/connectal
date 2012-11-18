@@ -106,10 +106,10 @@ parser HSDL:
     token TOKBDPI: '"BDPI"'
     token TOKBVI: '"BVI"'
 
-    token NUM: "[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*"
-    token VAR: "`*[a-zA-Z_][a-zA-Z0-9_]*"
-    token ANYCHAR: "[a-zA-Z0-9_]*"
-    token STR:   r'"([^\\"]+|\\.)*"'
+    token NUM: " [0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*"
+    token VAR: " `*[a-zA-Z_][a-zA-Z0-9_]*"
+    token ANYCHAR: " [a-zA-Z0-9_]*"
+    token STR:   r' "([^\\"]+|\\.)*"'
 
     token TOKEN_FIRSTNAME: " "
     token BEGIN: "begin"
