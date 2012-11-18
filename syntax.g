@@ -899,7 +899,7 @@ parser HSDL:
 
 %%
 import string
-import yappsrt
+import newrt
 
 if __name__=='__main__':
     #print 'args', sys.argv
@@ -908,7 +908,7 @@ if __name__=='__main__':
     # line continuation in string literals not handled by runtime
     s = string.replace(s, "\\\n", "  ")
     if len(sys.argv) > 2:
-        yappsrt.printtrace = True
+        newrt.printtrace = True
     s1 = parse('goal', s)
     #print 'Output:', s1
     #print 'Bye.'
