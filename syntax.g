@@ -18,13 +18,15 @@ parser Calculator:
     token FUNCTION: "function"
     token MATCHES: "matches"
     token ENDTOKEN: "$"
-    token NUM: "[0-9\\']+[dhb\\\\.]*[a-fA-F0-9_]*"
+    token NUM: "[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*"
     token VAR: "`*[a-zA-Z_][a-zA-Z0-9_]*"
+    token ANYCHAR: "[a-zA-Z0-9_]*"
     token STR:   r'"([^\\"]+|\\.)*"'
     token LPAREN: "\\(" token RPAREN: "\\)"
     token LBRACKET: "\\[" token RBRACKET: "\\]"
     token LBRACE: "{" token RBRACE: "}"
     token HASH: "#"
+    token APOSTROPHE: "'"
     token DOT: r"[\\.]"
     token COMMA: ','
     token AMPER: '&' token AMPERAMPER: "&&" token AMPERAMPERAMPER: "&&&"
@@ -46,7 +48,8 @@ parser Calculator:
 
     rule expr<<V>>:
          exprint<<V>>
-             [ QUESTION expr<<V>> COLON expr<<V>> ]
+             #[ QUESTION expr<<V>> COLON expr<<V>> ]
+             [ QUESTION assign_value COLON assign_value ]
              {{return exprint}}
 
     # An expression is the sum and difference of factors
@@ -63,6 +66,9 @@ parser Calculator:
     rule dot_field_item:
         [ VAR COLON ] dot_item
 
+    rule tdot_field_item:
+        "tagged" VAR [ dot_item ]
+
     rule dot_field_list:
         dot_item
         | NUM
@@ -72,9 +78,10 @@ parser Calculator:
         "tagged" VAR
         [
             (dot_field_list
+            | VAR
             | LPAREN
                 ( dot_field_list
-                | "tagged" VAR [ dot_item ]
+                | "tagged" VAR [ ( dot_item | VAR ) ]
                 | VAR)
                 RPAREN
             )
@@ -89,6 +96,7 @@ parser Calculator:
     rule factor<<V>>: nterm<<V>>           {{ v = nterm }}
                      ( STAR nterm<<V>>
                      | STARSTAR nterm<<V>>
+                     | APOSTROPHE nterm<<V>>
 #    {{ v = v*nterm }}
                      |  "/"  nterm<<V>>
 #    {{ v = v/nterm }}
@@ -97,17 +105,19 @@ parser Calculator:
                      |  ">"  nterm<<V>>
                      |  GEQ  nterm<<V>>
                      |  LESSLESS  nterm<<V>>
-                     |  LEQ  nterm<<V>>
+                     #gets confused with assignment |  LEQ  nterm<<V>>
                      |  GREATERGREATER  nterm<<V>>
                      |  EQEQ  nterm<<V>>
                      |  "!="  nterm<<V>>
                      |  AMPER  nterm<<V>>
-                     |  AMPERAMPER  nterm<<V>>
+                     |  AMPERAMPER  assign_value
+#nterm<<V>>
                      |  AMPERAMPERAMPER  nterm<<V>>
                      |  BAR  nterm<<V>>
                      |  BARBAR  nterm<<V>>
                      |  MATCHES
                           ( dot_field_selection
+                          | LBRACE dot_field_item (COMMA dot_field_item)* RBRACE
                           | VAR
                           )
                      |  "%"  nterm<<V>>
@@ -129,9 +139,9 @@ parser Calculator:
     rule term_partial<<V>>:
                NUM       {{ return int(10) }}
                | "tagged" term_partial<<V>> [ term_partial<<V>> ]
-               | item_name ( COLONCOLON VAR )*
+               | item_name+ ( COLONCOLON VAR )*
                     ( call_params<<V>>
-                    | LBRACE fieldname COLON assign_value ( COMMA fieldname COLON assign_value )* RBRACE
+                    | LBRACE [ fieldname COLON assign_value ( COMMA fieldname COLON assign_value )* ] RBRACE
                     | HASH
                     )*
                     {{ return lookup(V, item_name) }}
@@ -178,8 +188,7 @@ parser Calculator:
         | '\\\\\\*\\*'
 
     rule provisos:
-        [ "provisos" LPAREN [ expression (COMMA expression )* ] RPAREN ]
-        SEMICOLON
+        "provisos" LPAREN [ expression (COMMA expression )* ] RPAREN
 
     rule return_statement:
         "return" assign_value SEMICOLON
@@ -243,10 +252,14 @@ parser Calculator:
         "import"
         ( r'"BDPI"' [ VAR  EQUAL ]
             FUNCTION VAR [ HASH call_params<<[]>> ]
-            function_name argument_list provisos
+            function_name
+            argument_list
+            [ provisos ] SEMICOLON
         | r'"BVI"' [VAR] [ EQUAL ]
-            "module" VAR [ HASH  call_params<<[]>> ]
-            argument_list provisos
+            "module" VAR
+            [ HASH  call_params<<[]>> ]
+            argument_list
+            [ provisos ] SEMICOLON
             ( method_declaration
             | importBVI_statement
             )*
@@ -261,7 +274,7 @@ parser Calculator:
         SEMICOLON
 
     rule variable_assignment:
-        term<<[]>> ( EQUAL | LEQ | LARROW ) expression
+        term<<[]>> ( EQUAL | LEQ | LARROW ) assign_value
 
     rule assign_value:
         ( seq_statement
@@ -269,9 +282,10 @@ parser Calculator:
         | function_operator [expression]
         | case_statement
         | action_statement
+        | actionvalue_statement
         | rules_statement
         | FUNCTION function_argument
-        | expression [expression]
+        | expression ( LEQ expression )* [expression]
         | QUESTION
         )
 
@@ -292,12 +306,12 @@ parser Calculator:
         ) SEMICOLON
 
     rule for_decl_item:
-        Type_item_or_name [ VAR ] ( EQUAL | LEQ ) expression
+        Type_item_or_name [ VAR ] ( EQUAL | LEQ ) assign_value
 
     rule for_statement:
         "for" LPAREN
             for_decl_item (COMMA for_decl_item)* SEMICOLON
-            expression SEMICOLON
+            assign_value SEMICOLON
             variable_assignment ( COMMA variable_assignment )* RPAREN
         function_body_statement
 
@@ -305,6 +319,8 @@ parser Calculator:
         "while" LPAREN expression RPAREN
         ( action_statement
         | seq_statement
+        | group_statement
+        | VAR SEMICOLON
         )
 
     rule helper_name:
@@ -331,6 +347,7 @@ parser Calculator:
         | seq_statement
         | par_statement
         | ifdef_statement
+        | include_declaration
         | action_statement
         | match_statement
         | return_statement
@@ -346,15 +363,15 @@ parser Calculator:
         | import_declaration
         | interface_declaration
         | typedef_declaration
-        )*
+        )+
 
     rule top_level_statement:
         package_statement_item
         | package_statement
-        | instance_statement
-        | method_declaration
-        | let_statement
-        | typeclass_statement
+        #| instance_statement
+        #| method_declaration
+        #| let_statement
+        #| typeclass_statement
 
     rule package_statement_item:
         typedef_declaration
@@ -368,6 +385,11 @@ parser Calculator:
         | variable_declaration
         | attribute_statement
         | function_statement
+        | instance_statement
+        | method_declaration
+        | let_statement
+        | rule_statement
+        | typeclass_statement
 
     rule group_statement:
         BEGIN
@@ -391,6 +413,7 @@ parser Calculator:
         "endpar"
 
     rule method_body:
+        [ provisos ]
         SEMICOLON
         [
             ( function_body_statement )+
@@ -400,18 +423,18 @@ parser Calculator:
     rule method_declaration:
         "method" 
         ( "Action" VAR  [ argument_list ]
-            [ "if"  LPAREN expression RPAREN ]
+            [ "if"  LPAREN assign_value RPAREN ]
             [ EQUAL assign_value ]
             method_body
         | "ActionValue"
             [ HASH LPAREN expression RPAREN ]
             VAR [ argument_list ]
-            [ "if"  LPAREN expression RPAREN ]
+            [ "if"  LPAREN assign_value RPAREN ]
             method_body
         | ("Type" | Type_item_basic | VAR [ Type_named_sub ]) [ VAR ]  [ argument_list ]
             [ VAR ]
             [ ( ( "if" | "clocked_by" | "reset_by" | "enable" | "ready")
-                LPAREN [ ( expression | "enable" | "ready" ) ] RPAREN 
+                LPAREN [ ( assign_value | "enable" | "ready" ) ] RPAREN 
               )*
             ]
             [ EQUAL assign_value ]
@@ -473,9 +496,13 @@ parser Calculator:
 
     rule module_declaration:
         "module" [ LBRACKET assign_value RBRACKET ] VAR [ HASH  argument_list ]
-        LPAREN [ module_param (COMMA module_param)* ] RPAREN provisos
-        module_item
-        "endmodule" [ COLON VAR]
+        LPAREN [ module_param (COMMA module_param)* ] RPAREN
+        [ provisos ]
+        SEMICOLON
+        [
+            module_item
+            "endmodule" [ COLON VAR]
+        ]
 
     rule package_statement:
         "package" VAR SEMICOLON
@@ -504,8 +531,10 @@ parser Calculator:
 
     rule rules_statement:
         "rules" [ COLON  VAR]
-        (rule_statement)*
-        (variable_declaration_or_call SEMICOLON)*
+        ( rule_statement
+        | variable_declaration_or_call SEMICOLON
+        | attribute_statement
+        )*
         "endrules" [ COLON  VAR]
 
     rule action_statement:
@@ -529,13 +558,20 @@ parser Calculator:
     rule case_statement:
         "case" LPAREN expression RPAREN
         ( MATCHES
-          ( dot_field_selection
-              COLON function_body_statement
-          | "default" COLON (QUESTION SEMICOLON | function_body_statement)
+          (
+              ( dot_field_selection
+              | LBRACE tdot_field_item (COMMA tdot_field_item)* RBRACE
+              | "default"
+              | VAR 
+              )
+              COLON (QUESTION SEMICOLON | function_body_statement)
           )*
-        | (expression (COMMA expression)* COLON 
-                function_body_statement
-          | "default" COLON (QUESTION SEMICOLON | function_body_statement)
+        | (
+              (expression (COMMA expression)*
+              | "default"
+              | VAR
+              )
+              COLON (QUESTION SEMICOLON | function_body_statement)
           )*
         )
         "endcase"
@@ -601,9 +637,13 @@ parser Calculator:
         [VAR]
         [ argument_list ]
 
+    rule Type_item_or_name_sub:
+        Type_item_or_name
+        [ LBRACKET NUM COLON NUM RBRACKET ]
+
     rule argument_item:
         ( FUNCTION function_argument
-        | Type_item_or_name [ VAR | "enable" | "ready" ]
+        | Type_item_or_name_sub [ VAR | "enable" | "ready" ]
         )
 
     rule argument_list:
@@ -617,7 +657,7 @@ parser Calculator:
         )
 
     rule if_statement:
-        "if" LPAREN expression RPAREN
+        "if" LPAREN assign_value RPAREN
            function_body_statement [ "else" function_body_statement ]
 
     rule actionvalue_statement:
@@ -625,14 +665,17 @@ parser Calculator:
         ( return_statement
         | let_statement
         | case_statement
-        | expression SEMICOLON
+        | for_statement
+        | function_statement
+        #| expression SEMICOLON
+        | variable_declaration_or_call
         )*
         "endactionvalue"
 
     rule function_header:
         FUNCTION
         [
-            ( Type_item_or_name
+            ( Type_item_or_name_sub
             | LPAREN Type_item_or_name RPAREN
             )
         ]
@@ -641,8 +684,9 @@ parser Calculator:
 
     rule function_statement:
         function_header
+        [ provisos ]
         ( EQUAL assign_value SEMICOLON
-        | provisos
+        | SEMICOLON
             [
               ( function_body_statement
               | attribute_statement
@@ -660,9 +704,11 @@ parser Calculator:
 
     rule instance_statement:
         "instance" VAR HASH LPAREN instance_arg ( COMMA instance_arg )* RPAREN
-            provisos
-        (function_statement)*
-        "endinstance"
+        [ provisos ] SEMICOLON
+        ( function_statement
+        | module_declaration
+        )*
+        "endinstance" [ COLON VAR ]
 
     rule dep_item:
         VAR "determines" VAR
@@ -671,7 +717,9 @@ parser Calculator:
         "typeclass" VAR interfaceTypesub
         [ "dependencies" LPAREN dep_item (COMMA dep_item)* RPAREN ]
         SEMICOLON
-        (function_header SEMICOLON)*
+        (function_header SEMICOLON
+        | module_declaration
+        )*
         "endtypeclass" [ COLON VAR ]
 
     rule define_declaration:
@@ -681,10 +729,10 @@ parser Calculator:
         "`include" STR
 
     rule ifdef_statement:
-        "`ifdef" [VAR]
-           module_item
+        "`ifdef" [VAR | ANYCHAR]
+           [ module_item ]
         [ "`else"
-           module_item
+           [ module_item ]
         ]
         "`endif"
 

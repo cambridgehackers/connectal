@@ -11,8 +11,8 @@ if [ "$1" != "" ] ; then
 exit 1
 fi
 #ls ../blue-projects/80211/*.bsv 
-#find ../blue-projects/ -name \*.bsv 
-cat xx.bad \
+#cat xx.bad \
+find ../blue-projects/ -name \*.bsv \
 | while read filename ; do
     echo $filename
     BNAME=`basename $filename`
