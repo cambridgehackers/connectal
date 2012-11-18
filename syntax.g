@@ -301,6 +301,8 @@ parser Calculator:
         #| term<<[]>> [   ( declared_item ( COMMA declared_item )*
         | expression [   ( declared_item ( COMMA declared_item )*
                          | ( EQUAL | LEQ | LARROW) assign_value
+                         # following weird rules needed since "VAR VAR" is a valid expression!!
+                         |               ( COMMA declared_item )*
                          )
                      ]
         ) SEMICOLON
@@ -514,7 +516,7 @@ parser Calculator:
 
     rule rule_predicate:
         LPAREN
-        expression
+        assign_value
         [ MATCHES "tagged" VAR
             ( LBRACE tagged_match_arg (COMMA tagged_match_arg)* RBRACE
             | DOT VAR
