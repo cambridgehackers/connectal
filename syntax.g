@@ -9,19 +9,13 @@ def lookup(map, name):
     return globalvars.get(name, 0)
 
 %%
-parser Calculator:
+parser HSDL:
+    option:      "context-insensitive-scanner"
+
     ignore:    "[ \r\t\n]+"
     ignore:    "\\/\\/.*?\r?\n"
-    ignore:    "/\\*.*\\*/"
-    token BEGIN: "begin"
-    token END: "end"
-    token FUNCTION: "function"
-    token MATCHES: "matches"
+    #ignore:    "/\\*.*\\*/"
     token ENDTOKEN: "$"
-    token NUM: "[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*"
-    token VAR: "`*[a-zA-Z_][a-zA-Z0-9_]*"
-    token ANYCHAR: "[a-zA-Z0-9_]*"
-    token STR:   r'"([^\\"]+|\\.)*"'
     token LPAREN: "\\(" token RPAREN: "\\)"
     token LBRACKET: "\\[" token RBRACKET: "\\]"
     token LBRACE: "{" token RBRACE: "}"
@@ -40,6 +34,15 @@ parser Calculator:
     token EQUAL: "=" token EQEQ: "=="
     token STAR: "[*]"
     token STARSTAR: "[*][*]"
+    token BEGIN: "begin"
+    token END: "end"
+    token FUNCTION: "function"
+    token MATCHES: "matches"
+
+    token NUM: "[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*"
+    token VAR: "`*[a-zA-Z_][a-zA-Z0-9_]*"
+    token ANYCHAR: "[a-zA-Z0-9_]*"
+    token STR:   r'"([^\\"]+|\\.)*"'
 
     # Each line can either be an expression or an assignment statement
     rule gggoal:   expr<<[]>> ENDTOKEN            {{ return expr }}
@@ -555,7 +558,7 @@ parser Calculator:
 
     rule Type_item:
         Type_item_basic
-        | "Action" | "ActionValue#" LPAREN Type_item_or_name RPAREN
+        | "Action" | "ActionValue" HASH LPAREN Type_item_or_name RPAREN
 
     rule case_statement:
         "case" LPAREN expression RPAREN
