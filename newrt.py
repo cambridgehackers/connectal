@@ -31,7 +31,6 @@ class NoMoreTokens(Exception):
 class Scanner:
     def __init__(self, patterns, ignore, input):
         self.tokens = [] # [(begin char pos, end char pos, token name, matched text), ...]
-        self.restrictions = []
         self.input = input
         self.pos = 0
         self.first_line_number = 1
@@ -40,40 +39,21 @@ class Scanner:
         self.anychar = re.compile("[a-zA-Z0-9_]*")
         self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*")
         self.strings = re.compile(r'"([^\\"]+|\\.)*"')
-    def get_token_pos(self):
-        return len(self.tokens)
-    def get_char_pos(self):
-        return self.pos
     def get_prev_char_pos(self, i=None):
         if self.pos == 0: return 0
         if i is None: i = -1
         return self.tokens[i][0]
     def get_line_number(self):
-        return self.first_line_number + self.get_input_scanned().count('\n')
+        return self.first_line_number + self.self.input[:self.pos].count('\n')
     def get_column_number(self):
         s = self.get_input_scanned()
         i = s.rfind('\n') # may be -1, but that's okay in this case
         return len(s) - (i+1)
-    def get_input_scanned(self):
-        return self.input[:self.pos]
-    def get_input_unscanned(self):
-        return self.input[self.pos:]
-    def __repr__(self):
-        output = ''
-        for t in self.tokens[-10:]:
-            output = '%s\n  (@%s)  %s  =  %s' % (output,t[0],t[2],repr(t[3]))
-        return output
     def token(self, i, restrict=None):
-        if i == len(self.tokens):
-            self.jjscan(restrict)
         if i < len(self.tokens):
-            if restrict and self.restrictions[i]:
-                for r in restrict:
-                    if r not in self.restrictions[i]:
-                        raise NotImplementedError("Unimplemented: restriction set changed")
             return self.tokens[i]
-        raise NoMoreTokens()
-    def jjscan(self, restrict):
+        if i != len(self.tokens):
+            raise NoMoreTokens()
         best_match = -1
         best_pat = ''
         while True:
@@ -116,11 +96,11 @@ class Scanner:
                     best_pat = p
                     best_match = len(regexp)
                     break
-        if best_match < 0:
-            msg = 'Bad Token'
-            if restrict:
-                msg = 'Trying to find one of '+', '.join(restrict)
-            raise SyntaxError(self.pos, msg)
+            if best_match < 0:
+                msg = 'Bad Token'
+                if restrict:
+                    msg = 'Trying to find one of '+', '.join(restrict)
+                raise SyntaxError(self.pos, msg)
         # Create a token with this data
         token = (self.pos, self.pos+best_match, best_pat,
                  self.input[self.pos:self.pos+best_match], first_pat)
@@ -128,7 +108,7 @@ class Scanner:
         # Only add this token if it's not in the list (to prevent looping)
         if not self.tokens or token != self.tokens[-1]:
             self.tokens.append(token)
-            self.restrictions.append(restrict)
+        return token
 
 class Parser:
     def __init__(self, scanner):
@@ -145,7 +125,7 @@ class Parser:
         if printtrace:
             print "_scan:", tok, type
         if tok[2] != type and tok[4] != type:
-            raise SyntaxError(tok[0], 'Trying to find '+type+' :'+ ' ,'.join(self._scanner.restrictions[self._pos]))
+            raise SyntaxError(tok[0], 'Trying to find '+type)
         self._pos = 1 + self._pos
         return tok[3]
 
