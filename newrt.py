@@ -55,37 +55,44 @@ class Scanner:
             return self.thistoken
         best_match = 0
         best_pat = ''
+        first_pat = ''
         while True:
             if len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '/*':
                 commentindex = string.find(self.input, "*/", self.pos+2) 
                 self.pos = commentindex + 2
+                if commentindex == -1:
+                    self.pos = len(self.input)
+                    break
             elif len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '//':
                 commentindex = string.find(self.input, "\n", self.pos+2) 
                 self.pos = commentindex + 1
+                if commentindex == -1:
+                    self.pos = len(self.input)
+                    break
             else:
                 m = self.whitespace.match(self.input, self.pos)
                 if not m:
                     break
                 self.pos = m.end()
-        m = self.numbers.match(self.input, self.pos)
-        if m:
-            best_pat = 'NUM'
-            best_match = len(m.group(0))
-        #m = self.anychar.match(self.input, self.pos)
-        m = self.alphatoken.match(self.input, self.pos)
-        if m:
-            best_pat = 'VAR'
-            if m.group(0)[-1] == '#':
-                best_pat = 'TYPEVAR'
-            best_match = len(m.group(0))
-        m = self.strings.match(self.input, self.pos)
-        if m:
-            best_pat = 'STR'
-            best_match = len(m.group(0))
-        first_pat = best_pat
-        if self.pos == len(self.input):
+        if self.pos >= len(self.input):
             best_pat = 'ENDTOKEN'
         else:
+            m = self.numbers.match(self.input, self.pos)
+            if m:
+                best_pat = 'NUM'
+                best_match = len(m.group(0))
+            #m = self.anychar.match(self.input, self.pos)
+            m = self.alphatoken.match(self.input, self.pos)
+            if m:
+                best_pat = 'VAR'
+                if m.group(0)[-1] == '#':
+                    best_pat = 'TYPEVAR'
+                best_match = len(m.group(0))
+            m = self.strings.match(self.input, self.pos)
+            if m:
+                best_pat = 'STR'
+                best_match = len(m.group(0))
+            first_pat = best_pat
             for p, regexp in self.patterns:
                 if best_pat == '':
                     best_match = len(regexp)
@@ -101,6 +108,9 @@ class Scanner:
                 raise SyntaxError(self.pos, msg)
         #self.tokens.append(self.pos)
         global lasttokenpos
+        if self.pos < lasttokenpos:
+            print "we wentbackwardsssss!!!!", lasttokenpos, self.pos
+            sys.exit(-1)
         lasttokenpos = self.pos
         # Create a token with this data
         self.thistoken = (self.pos, self.pos+best_match, best_pat,

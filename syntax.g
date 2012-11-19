@@ -306,40 +306,35 @@ parser HSDL:
     rule nterm<<V>>:
         [ (TOKEXCLAIM | TOKTILDE | TOKMINUS ) ] term<<V>> {{ return term }}
 
-    rule call_params<<V>>:
-        LPAREN ( assign_value [VAR]( COMMA assign_value [VAR])* RPAREN | RPAREN )
+    rule call_params:
+        LPAREN [ assign_value [VAR]( COMMA assign_value [VAR])* ] RPAREN
 
     rule item_name:
         VAR
-        | TYPEVAR
+        | TYPEVAR call_params
         | helper_name
 
     # A term is a number, variable, or an expression surrounded by parentheses
     rule term_partial<<V>>:
                NUM       {{ return int(10) }}
                | TOKTAGGED term_partial<<V>> [ term_partial<<V>> ]
-               | item_name+ ( COLONCOLON (VAR | TYPEVAR | call_params<<V>>) )*
-                    ( call_params<<V>>
-                    # bogus syntax "Reg #"
-                    | HASH call_params<<V>>
+               | item_name+ ( COLONCOLON (VAR | TYPEVAR call_params) )*
+                    ( call_params
+                    | HASH call_params    # bogus syntax "Reg #"
                     | LBRACE [ fieldname COLON assign_value ( COMMA fieldname COLON assign_value )* ] RBRACE
                     )*
                     {{ return lookup(V, item_name) }}
                | Type_item {{ return Type_item }}
                | STR {{ return STR }}
-               #| LPAREN expr<<V>> RPAREN  {{ return expr }}
                | LPAREN assign_value RPAREN  {{ return assign_value }}
                | LBRACE assign_value ( COMMA assign_value )* RBRACE {{ return assign_value }}
 
     rule term<<V>>:
         term_partial<<V>>
         ( LBRACKET expr<<V>> [ COLON expr<<V>> ] RBRACKET
-        | DOT fieldname [ call_params<<V>> ]
+        | DOT fieldname [ call_params ]
         )*
         {{ return term_partial }}
-
-               #| TOKLET VAR EQUAL expr<<V>>  {{ V = [(VAR, expr)] + V }}
-               #  TOKIN expr<<V>>           {{ return expr }}
 
     rule expression: expr<<[]>>
 
@@ -393,7 +388,7 @@ parser HSDL:
     rule Type_item_or_name:
         Type_item
         | VAR [ COLONCOLON ( VAR | TYPEVAR [ Type_named_sub ] ) ]
-        | TYPEVAR [ Type_named_sub ]
+        #| TYPEVAR [ Type_named_sub ]
 
     rule importBVI_statement:
     TOKPARAMETER VAR  EQUAL expression SEMICOLON
@@ -423,12 +418,12 @@ parser HSDL:
     rule import_declaration:
         TOKIMPORT
         ( TOKBDPI [ VAR  EQUAL ]
-            FUNCTION ( VAR | TYPEVAR call_params<<[]>> )
+            FUNCTION ( VAR | TYPEVAR call_params )
             function_name
             argument_list
             [ provisos ] SEMICOLON
         | TOKBVI [VAR] [ EQUAL ]
-            TOKMODULE ( VAR | TYPEVAR call_params<<[]>> )
+            TOKMODULE ( VAR | TYPEVAR call_params )
             argument_list
             [ provisos ] SEMICOLON
             ( method_declaration
@@ -469,7 +464,6 @@ parser HSDL:
 
     rule variable_declaration_or_call:
         ( Type_item declared_item ( COMMA declared_item )*
-        #| term<<[]>> [   ( declared_item ( COMMA declared_item )*
         | expression [   ( declared_item ( COMMA declared_item )*
                          | ( EQUAL | LEQ | LARROW) assign_value
                          # following weird rules needed since "VAR VAR" is a valid expression!!
@@ -723,10 +717,11 @@ parser HSDL:
         TOKENDACTION [ COLON VAR]
 
     rule Type_item_basic:
-        ( TOKBITHASH | TOKINTHASH | TOKUINTHASH | TOKCOMPLEXHASH | TOKREGHASH | TOKFIFOHASH | TOKMAYBEHASH )
-           LPAREN expression [ COMMA expression ] RPAREN
-        | (TOKVECTORHASH | TOKTUPLE2HASH | TOKFIXEDPOINTHASH )
-           LPAREN expression (COMMA expression)* RPAREN
+        ( TYPEVAR | TOKBITHASH | TOKINTHASH | TOKUINTHASH | TOKCOMPLEXHASH
+        | TOKREGHASH | TOKFIFOHASH | TOKMAYBEHASH
+        | TOKVECTORHASH | TOKTUPLE2HASH | TOKFIXEDPOINTHASH
+        )
+           LPAREN [ assign_value ( COMMA assign_value)* ] RPAREN
         | TOKINTEGER | TOKBOOL | TOKSTRING | TOKREAL | TOKNAT
 
     rule Type_item:
