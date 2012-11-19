@@ -31,27 +31,23 @@ class NoMoreTokens(Exception):
 
 class Scanner:
     def __init__(self, patterns, ignore, input):
-        #self.tokens = [] # [(begin char pos)]
         self.thistoken = None
         self.input = input
         self.pos = 0
-        self.first_line_number = 1
         self.whitespace = re.compile("[ \r\t\n]+")
         self.numbers = re.compile("[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*")
         self.anychar = re.compile("[a-zA-Z0-9_]*")
+        #self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*#?")
         self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*")
         self.strings = re.compile(r'"([^\\"]+|\\.)*"')
         self.tokeninvalid = True
     def get_prev_char_pos(self, i=-1):
-        if self.pos == 0: return 0
-        #if i is None: i = -1
-        #return self.tokens[i]
         global lasttokenpos
         return lasttokenpos
     def get_line_number(self):
-        return self.first_line_number + self.self.input[:self.pos].count('\n')
+        return 1 + self.input[:self.pos].count('\n')
     def get_column_number(self):
-        return self.pos - (self.self.input[:self.pos].rfind('\n')+1)
+        return self.pos - (self.input[:self.pos].rfind('\n')+1)
     def jjtoken(self, restrict, advance_after_read):
         global printtrace
         p = self.tokeninvalid
@@ -80,6 +76,8 @@ class Scanner:
         m = self.alphatoken.match(self.input, self.pos)
         if m:
             best_pat = 'VAR'
+            if m.group(0)[-1] == '#':
+                best_pat = 'TYPEVAR'
             best_match = len(m.group(0))
         m = self.strings.match(self.input, self.pos)
         if m:
@@ -161,6 +159,7 @@ def print_line_with_pointer(text, p):
     print '> ',' '*p + '^'
     
 def print_error(input, err, scanner):
+    global lasttokenpos
     line_number = scanner.get_line_number()
     column_number = scanner.get_column_number()
     print '%d:%d: %s' % (line_number, column_number, err.msg)
@@ -169,7 +168,7 @@ def print_error(input, err, scanner):
         print_line_with_pointer(input, err.charpos)
     while context:
         print 'while parsing %s%s:' % (context.rule, tuple(context.args))
-        print_line_with_pointer(input, context.scanner.get_prev_char_pos(context.tokenpos))
+        print_line_with_pointer(input, lasttokenpos)
         context = context.parent
 
 def wrap_error_reporter(parser, rule):
