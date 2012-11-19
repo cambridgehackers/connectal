@@ -134,9 +134,6 @@ parser HSDL:
     token TOKACTION: "Action"
     token TOKACTIONVALUESTATEMENT: "actionvalue"
     token TOKACTIONSTATEMENT: "action"
-    token TOKALWAYS_ENABLED: "always_enabled"
-    token TOKALWAYS_READY: "always_ready"
-    token TOKANCESTOR: "ancestor"
     token TOKBITHASH: "Bit#"
     token TOKBITS: "Bits"
     token TOKBOOL: "Bool"
@@ -152,17 +149,14 @@ parser HSDL:
     token TOKDEFAULT: "default"
     token TOKDEPENDENCIES: "dependencies"
     token TOKDERIVING: "deriving"
-    token TOKDESCENDING_URGENCY: "descending_urgency"
     token TOKDETERMINES: "determines"
     token TOKDOC: "doc"
     token TOKELSE: "else"
     token TOKENABLE: "enable"
     token TOKENUM: "enum"
     token TOKEQ: "Eq"
-    token TOKEXECUTION_ORDER: "execution_order"
     token TOKEXPORT: "export"
     token TOKFIFOHASH: "FIFO#"
-    token TOKFIRE_WHEN_ENABLED: "fire_when_enabled"
     token TOKFIXEDPOINTHASH: "FixedPoint#"
     token TOKFOR: "for"
     token TOKIF: "if"
@@ -179,10 +173,7 @@ parser HSDL:
     token TOKMAYBEHASH: "Maybe#"
     token TOKMETHOD: "method"
     token TOKMODULE: "module"
-    token TOKMUTUALLY_EXCLUSIVE: "mutually_exclusive"
     token TOKNAT: "Nat"
-    token TOKNOINLINE: "noinline"
-    token TOKNO_IMPLICIT_CONDITIONS: "no_implicit_conditions"
     token TOKNO_RESET: "no_reset"
     token TOKNUMERIC: "numeric"
     token TOKOUTPUT_CLOCK: "output_clock"
@@ -190,9 +181,6 @@ parser HSDL:
     token TOKPACKAGE: "package"
     token TOKPARAMETER: "parameter"
     token TOKPAR: "par"
-    token TOKPATH: "path"
-    token TOKPORT: "port"
-    token TOKPREEMPTS: "preempts"
     token TOKPREFIX: "prefix"
     token TOKPROVISOS: "provisos"
     token TOKREADY: "ready"
@@ -204,7 +192,6 @@ parser HSDL:
     token TOKRST_N: "RST_N"
     token TOKRULES: "rules"
     token TOKRULE: "rule"
-    token TOKSAME_FAMILY: "same_family"
     token TOKSBR: "SBR"
     token TOKSB: "SB"
     token TOKSCHEDULE: "schedule"
@@ -212,7 +199,6 @@ parser HSDL:
     token TOKSET: "set"
     token TOKSTRING: "String"
     token TOKSTRUCT: "struct"
-    token TOKSYNTHESIZE: "synthesize"
     token TOKTAGGED: "tagged"
     token TOKTUPLE2HASH: "Tuple2#"
     token TOKTYPECLASS: "typeclass"
@@ -241,8 +227,8 @@ parser HSDL:
     rule dot_field_item:
         [ VAR COLON ] dot_item
 
-    rule tdot_field_item:
-        TOKTAGGED VAR [ dot_item ]
+    rule tagged_match_arg:
+        VAR COLON DOT VAR
 
     rule dot_field_list:
         dot_item
@@ -256,7 +242,7 @@ parser HSDL:
             (dot_field_list
             | LPAREN
                 ( dot_field_list
-                | TOKTAGGED VAR [ ( dot_item | VAR ) ]
+                | dot_field_ltagged
                 )
                 RPAREN
             )
@@ -295,8 +281,6 @@ parser HSDL:
                      |  TOKPERCENT  nterm<<V>>
                      )*                   {{ return v }}
 
-    rule fieldname: VAR
-
     rule nterm<<V>>:
         [ (TOKEXCLAIM | TOKTILDE | TOKMINUS ) ] term<<V>> {{ return term }}
 
@@ -311,12 +295,9 @@ parser HSDL:
                NUM       {{ return int(10) }}
                | TOKTAGGED term_partial<<V>> [ term_partial<<V>> ]
                | VAR
-#+ 
                     [ COLONCOLON type_instantiation ]
- #*
                     ( call_params
-                    | HASH call_params    # bogus syntax "Reg #"
-                    | LBRACE [ fieldname COLON assign_value ( COMMA fieldname COLON assign_value )* ] RBRACE
+                    | LBRACE [ VAR COLON assign_value ( COMMA VAR COLON assign_value )* ] RBRACE
                     )*
                | ( TOKDISPLAY | TOKWRITE | TOKFOPEN | TOKFDISPLAY
                  | TOKFWRITE | TOKFGETC | TOKFFLUSH | TOKFCLOSE | TOKUNGETC
@@ -331,7 +312,7 @@ parser HSDL:
     rule term<<V>>:
         term_partial<<V>>
         ( LBRACKET expr<<V>> [ COLON expr<<V>> ] RBRACKET
-        | DOT fieldname [ call_params ]
+        | DOT VAR [ call_params ]
         )*
         {{ return term_partial }}
 
@@ -356,19 +337,6 @@ parser HSDL:
 
     rule return_statement:
         TOKRETURN assign_value SEMICOLON
-
-    rule attribute:
-        ( TOKSYNTHESIZE | TOKRST_N | TOKCLK
-        | TOKALWAYS_READY | TOKALWAYS_ENABLED
-        | TOKDESCENDING_URGENCY EQUAL expression
-        | TOKPREEMPTS [ EQUAL ] LBRACE VAR COMMA  LPAREN VAR RPAREN RBRACE
-        | TOKDOC | TOKREADY | TOKENABLE | TOKRESULT | TOKPREFIX
-        | TOKPORT | TOKEXECUTION_ORDER | TOKMUTUALLY_EXCLUSIVE
-        | TOKNOINLINE | TOKFIRE_WHEN_ENABLED | TOKNO_IMPLICIT_CONDITIONS
-        ) [ EQUAL (VAR | STR) ]
-
-    rule attribute_statement:
-         TOKLPARENSTAR attribute ( COMMA attribute )* TOKSTARRPAREN
 
     rule Type_nitem:
         Type_item
@@ -448,14 +416,12 @@ parser HSDL:
         ( Type_item declared_item ( COMMA declared_item )*
         | expression [   ( declared_item ( COMMA declared_item )*
                          | ( EQUAL | LEQ | LARROW) assign_value
-                         # following weird rules needed since "VAR VAR" is a valid expression!!
-                                         ( COMMA declared_item )*
-                         |               ( COMMA declared_item )+
                          )
                      ]
         ) SEMICOLON
 
     rule for_decl_item:
+        # datatype might not be present
         Type_nitem [ VAR ] ( EQUAL | LEQ ) assign_value
 
     rule for_statement:
@@ -463,7 +429,7 @@ parser HSDL:
             for_decl_item (COMMA for_decl_item)* SEMICOLON
             assign_value SEMICOLON
             variable_assignment ( COMMA variable_assignment )* RPAREN
-        function_body_statement
+        single_statement
 
     rule while_statement:
         TOKWHILE LPAREN expression RPAREN
@@ -473,7 +439,71 @@ parser HSDL:
         | VAR SEMICOLON
         )
 
-    rule function_body_statement:
+    rule group_statement:
+        BEGIN
+        statement_list
+        END
+
+    rule seq_statement:
+        TOKSEQ
+        statement_list
+        TOKENDSEQ
+
+    rule par_statement:
+        TOKPAR
+        statement_list
+        TOKENDPAR
+
+    rule action_statement:
+        TOKACTIONSTATEMENT [ COLON  VAR] [ SEMICOLON ]
+        statement_list
+        TOKENDACTION [ COLON VAR]
+
+    rule case_statement:
+        TOKCASE LPAREN expression RPAREN
+        ( MATCHES
+          (
+              ( dot_field_selection
+              | LBRACE dot_field_ltagged (COMMA dot_field_ltagged)* RBRACE
+              | TOKDEFAULT
+              | VAR 
+              )
+              COLON (QUESTION SEMICOLON | single_statement)
+          )*
+        | (
+              (expression (COMMA expression)*
+              | TOKDEFAULT
+              )
+              COLON (QUESTION SEMICOLON | single_statement)
+          )*
+        )
+        TOKENDCASE
+
+    rule let_statement:
+        TOKLET
+        ( VAR
+        | LBRACE VAR (COMMA VAR)* RBRACE
+        )
+        ( EQUAL | LARROW ) assign_value SEMICOLON
+
+    rule if_statement:
+        TOKIF LPAREN assign_value RPAREN
+           single_statement [ TOKELSE single_statement ]
+
+    rule actionvalue_statement:
+        TOKACTIONVALUESTATEMENT
+        ( return_statement
+        | let_statement
+        | case_statement
+        | match_statement
+        | for_statement
+        | if_statement
+        | function_statement
+        | variable_declaration_or_call
+        )*
+        TOKENDACTIONVALUE
+
+    rule single_statement:
         let_statement
         | for_statement
         | function_statement
@@ -493,14 +523,11 @@ parser HSDL:
         | variable_declaration_or_call
 
     rule statement_list:
-        ( function_body_statement
-        | attribute_statement
-        )*
+        ( single_statement)*
 
     rule module_item:
-        ( function_body_statement
+        ( single_statement
         | method_declaration
-        | attribute_statement
         | import_declaration
         | interface_declaration
         | typedef_declaration
@@ -516,7 +543,6 @@ parser HSDL:
         | interface_declaration
         | module_declaration
         | variable_declaration
-        | attribute_statement
         | function_statement
         | instance_statement
         | method_declaration
@@ -528,33 +554,18 @@ parser HSDL:
         package_statement_item
         | package_statement
 
-    rule group_statement:
-        BEGIN
-        statement_list
-        END
-
-    rule seq_statement:
-        TOKSEQ
-        statement_list
-        TOKENDSEQ
-
-    rule par_statement:
-        TOKPAR
-        statement_list
-        TOKENDPAR
-
     rule method_body:
         [ provisos ]
         SEMICOLON
         [
-            ( function_body_statement )+
+            ( single_statement )+
             TOKENDMETHOD [ COLON VAR]
         ]
 
     rule method_declaration:
         TOKMETHOD 
         ( (TOKACTIONVALUE | Type_item) VAR [ argument_list ]
-        | (TOKTTYPE | VAR) [ VAR ]  [ argument_list ] [ VAR ]
+        | VAR [ VAR ] [ argument_list [ VAR ] ]
         )
         #| [ output_port ] VAR
         #    LPAREN LBRACE input_ports RBRACE RPAREN
@@ -570,21 +581,19 @@ parser HSDL:
     rule interface_arg:
         struct_arg | expression
 
-    rule interfaceTypesub:
+    rule user_type:
         TYPEVAR LPAREN interface_arg (COMMA interface_arg )* RPAREN
 
     rule subinterface_declaration:
         TOKINTERFACE
-        ( interfaceTypesub VAR SEMICOLON
+        ( user_type VAR SEMICOLON
         | VAR ( EQUAL assign_value SEMICOLON
             | VAR
                 ( EQUAL assign_value SEMICOLON
                 | SEMICOLON
                     [
-                    ( method_declaration
-                    | attribute_statement
-                    )+
-                    TOKENDINTERFACE [ COLON VAR ]
+                        ( method_declaration )+
+                        TOKENDINTERFACE [ COLON VAR ]
                     ]
                 )
             )
@@ -592,7 +601,6 @@ parser HSDL:
 
     rule interface_body:
         ( method_declaration
-        | attribute_statement
         | subinterface_declaration
         )+
         TOKENDINTERFACE [ COLON VAR ]
@@ -600,7 +608,7 @@ parser HSDL:
     rule interface_declaration:
         TOKINTERFACE [VAR [COLONCOLON VAR] [VAR]]
         ( [ SEMICOLON ] interface_body
-        | interfaceTypesub SEMICOLON interface_body
+        | user_type SEMICOLON interface_body
         | EQUAL assign_value SEMICOLON
         )
 
@@ -617,7 +625,6 @@ parser HSDL:
         ( EQUAL | LARROW ) assign_value SEMICOLON
 
     rule module_param:
-        #Type_nitem [ VAR ] [ STAR ]
         Type_nitem [ VAR | STAR ]
 
     rule module_declaration:
@@ -635,17 +642,15 @@ parser HSDL:
         ( package_statement_item )*
         TOKENDPACKAGE [ COLON  VAR]
 
-    rule tagged_match_arg:
-        VAR COLON DOT VAR
-
     rule rule_predicate:
         LPAREN
         assign_value
-        [ MATCHES TOKTAGGED VAR
-            ( LBRACE tagged_match_arg (COMMA tagged_match_arg)* RBRACE
-            | DOT VAR
-            )
-        ]
+#          [ MATCHES dot_field_ltagged
+#  # TOKTAGGED VAR
+#  #            ( LBRACE tagged_match_arg (COMMA tagged_match_arg)* RBRACE
+#  #            | DOT VAR
+#  #            )
+#          ]
         RPAREN
 
     rule rule_statement:
@@ -657,14 +662,8 @@ parser HSDL:
         TOKRULES [ COLON  VAR]
         ( rule_statement
         | variable_declaration_or_call SEMICOLON
-        | attribute_statement
         )*
         TOKENDRULES [ COLON  VAR]
-
-    rule action_statement:
-        TOKACTIONSTATEMENT [ COLON  VAR] [ SEMICOLON ]
-        statement_list
-        TOKENDACTION [ COLON VAR]
 
     rule Type_item:
         ( TYPEVAR | TOKBITHASH | TOKINTHASH | TOKUINTHASH | TOKCOMPLEXHASH
@@ -674,33 +673,6 @@ parser HSDL:
             )
             param_list
         | TOKINTEGER | TOKBOOL | TOKSTRING | TOKREAL | TOKNAT | TOKACTION
-
-    rule case_statement:
-        TOKCASE LPAREN expression RPAREN
-        ( MATCHES
-          (
-              ( dot_field_selection
-              | LBRACE tdot_field_item (COMMA tdot_field_item)* RBRACE
-              | TOKDEFAULT
-              | VAR 
-              )
-              COLON (QUESTION SEMICOLON | function_body_statement)
-          )*
-        | (
-              (expression (COMMA expression)*
-              | TOKDEFAULT
-              )
-              COLON (QUESTION SEMICOLON | function_body_statement)
-          )*
-        )
-        TOKENDCASE
-
-    rule let_statement:
-        TOKLET
-        ( VAR
-        | LBRACE VAR (COMMA VAR)* RBRACE
-        )
-        ( EQUAL | LARROW ) assign_value SEMICOLON
 
     rule enum_element: term<<[]>> [EQUAL expression]
 
@@ -715,14 +687,13 @@ parser HSDL:
 
     rule struct_arg_list:
           VAR
-        | interfaceTypesub
+        | user_type
 
     rule instance_arg:
         Type_nitem | NUM
 
     rule typedef_declaration:
-        TOKTYPEDEF 
-        struct_member
+        TOKTYPEDEF struct_member
 
     rule struct_member:
         (   ( TOKTYPE
@@ -761,9 +732,6 @@ parser HSDL:
     rule Type_sitem:
         Type_nitem [ LBRACKET NUM COLON NUM RBRACKET ]
 
-    rule param_list:
-        LPAREN [ assign_value (COMMA assign_value)* ] RPAREN
-
     rule argument_item:
         ( FUNCTION function_argument
         | Type_sitem [ VAR | TOKENABLE | TOKREADY ]
@@ -772,26 +740,12 @@ parser HSDL:
     rule argument_list:
         LPAREN [ argument_item ( COMMA argument_item)* ] RPAREN
 
+    rule param_list:
+        LPAREN [ assign_value (COMMA assign_value)* ] RPAREN
+
     rule variable_assignment_or_call:
         term<<[]>>
         ( EQUAL | LEQ ) assign_value SEMICOLON
-
-    rule if_statement:
-        TOKIF LPAREN assign_value RPAREN
-           function_body_statement [ TOKELSE function_body_statement ]
-
-    rule actionvalue_statement:
-        TOKACTIONVALUESTATEMENT
-        ( return_statement
-        | let_statement
-        | case_statement
-        | match_statement
-        | for_statement
-        | if_statement
-        | function_statement
-        | variable_declaration_or_call
-        )*
-        TOKENDACTIONVALUE
 
     rule function_header:
         FUNCTION
@@ -809,15 +763,10 @@ parser HSDL:
         ( EQUAL assign_value SEMICOLON
         | SEMICOLON
             [
-              ( function_body_statement
-              | attribute_statement
-              )+
+              ( single_statement)+
               TOKENDFUNCTION [ COLON  function_name]
             ]
         )
-
-    rule path_statement:
-        TOKPATH param_list SEMICOLON
 
     rule instance_statement:
         TOKINSTANCE TYPEVAR LPAREN instance_arg ( COMMA instance_arg )* RPAREN
@@ -831,10 +780,10 @@ parser HSDL:
         VAR TOKDETERMINES VAR
 
     rule typeclass_statement:
-        TOKTYPECLASS interfaceTypesub
+        TOKTYPECLASS user_type
         [ TOKDEPENDENCIES LPAREN dep_item (COMMA dep_item)* RPAREN ]
         SEMICOLON
-        (function_header SEMICOLON
+        ( function_header SEMICOLON
         | module_declaration
         )*
         TOKENDTYPECLASS [ COLON VAR ]
