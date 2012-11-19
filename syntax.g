@@ -13,7 +13,7 @@ parser HSDL:
     #option:      "context-insensitive-scanner"
 
     token ENDTOKEN: " $"
-    token TOKLPARENSTAR: "(*"
+    token TOKLPARENSTAR: " (*"
     token LPAREN: "("
     token RPAREN: ")"
     token AMPERAMPERAMPER: "&&&"
@@ -37,7 +37,7 @@ parser HSDL:
     token EQEQ: "=="
     token EQUAL: "="
     token STARSTAR: "**"
-    token TOKSTARRPAREN: "*)"
+    token TOKSTARRPAREN: " *)"
     token STAR: "*"
     token TOKNOTEQUAL: "!="
     token TOKEXCLAIM: "!"
@@ -54,25 +54,25 @@ parser HSDL:
     token DOT: "."
     token COMMA: ','
 
-    token TOKOPPLUS: '\+'
-    token TOKOPMINUS: '\-'
-    token TOKOPCARET: '\^'
-    token TOKOPTILDECARET: '\~^'
-    token TOKOPCARETTILDE: '\^~'
-    token TOKOPSLASH: '\/'
-    token TOKOPAMPERAMPER: '\&&'
-    token TOKOPAMPER: '\&'
-    token TOKOPBAR: '\|'
-    token TOKOPPERCENT: '\%'
-    token TOKOPLESSLESS: '\<<'
-    token TOKOPLEQ: '\<='
-    token TOKOPLESS: '\<'
-    token TOKOPGREATERGREATER: '\>>'
-    token TOKOPGEQ: '\>='
-    token TOKOPGREATER: '\>'
-    token TOKOPEQUALEQUAL: '\=='
-    token TOKOPSTARSTAR: '\**'
-    token TOKOPSTAR: '\*'
+    token TOKOPPLUS: '\\+'
+    token TOKOPMINUS: '\\-'
+    token TOKOPTILDECARET: '\\~^'
+    token TOKOPCARETTILDE: '\\^~'
+    token TOKOPCARET: '\\^'
+    token TOKOPSLASH: '\\/'
+    token TOKOPAMPERAMPER: '\\&&'
+    token TOKOPAMPER: '\\&'
+    token TOKOPBAR: '\\|'
+    token TOKOPPERCENT: '\\%'
+    token TOKOPLESSLESS: '\\<<'
+    token TOKOPLEQ: '\\<='
+    token TOKOPLESS: '\\<'
+    token TOKOPGREATERGREATER: '\\>>'
+    token TOKOPGEQ: '\\>='
+    token TOKOPGREATER: '\\>'
+    token TOKOPEQUALEQUAL: '\\=='
+    token TOKOPSTARSTAR: '\\**'
+    token TOKOPSTAR: '\\*'
 
     token TOKDISPLAY: "$display"
     token TOKDUMPOFF: "$dumpoff"
@@ -310,7 +310,10 @@ parser HSDL:
     rule term_partial<<V>>:
                NUM       {{ return int(10) }}
                | TOKTAGGED term_partial<<V>> [ term_partial<<V>> ]
-               | VAR+ ( COLONCOLON type_instantiation )*
+               | VAR
+#+ 
+                    [ COLONCOLON type_instantiation ]
+ #*
                     ( call_params
                     | HASH call_params    # bogus syntax "Reg #"
                     | LBRACE [ fieldname COLON assign_value ( COMMA fieldname COLON assign_value )* ] RBRACE
@@ -719,9 +722,9 @@ parser HSDL:
 
     rule typedef_declaration:
         TOKTYPEDEF 
-        Member
+        struct_member
 
-    rule Member:
+    rule struct_member:
         (   ( TOKTYPE
             | instance_arg
             | LPAREN Type_nitem RPAREN
@@ -732,14 +735,13 @@ parser HSDL:
             SEMICOLON
         | TOKENUM LBRACE enum_element ( COMMA enum_element )* RBRACE VAR
             [ deriving_clause ] SEMICOLON
-        | TOKSTRUCT LBRACE ( Member )* RBRACE
+        | ( TOKSTRUCT | TOKUNION TOKTAGGED )
+            LBRACE
+                ( struct_member )*
+            RBRACE
             struct_arg_list
-            [ deriving_clause ] SEMICOLON
-        | TOKUNION TOKTAGGED LBRACE (Member)+ RBRACE
-            struct_arg_list
-            #| TYPEVAR struct_arg
-            #)
-            [ deriving_clause ] SEMICOLON
+            [ deriving_clause ]
+            SEMICOLON
         )
 
     rule function_return_type:
@@ -783,7 +785,9 @@ parser HSDL:
         ( return_statement
         | let_statement
         | case_statement
+        | match_statement
         | for_statement
+        | if_statement
         | function_statement
         | variable_declaration_or_call
         )*
@@ -859,9 +863,7 @@ import string
 import newrt
 
 if __name__=='__main__':
-    s = open(sys.argv[1]).read()
-    # line continuation in string literals not handled by runtime
-    s = string.replace(s, "\\\n", "  ")
     if len(sys.argv) > 2:
         newrt.printtrace = True
+    s = open(sys.argv[1]).read() + '\n'
     s1 = parse('goal', s)

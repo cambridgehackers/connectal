@@ -34,11 +34,14 @@ class Scanner:
         self.thistoken = None
         self.input = input
         self.pos = 0
-        self.whitespace = re.compile("[ \r\t\n]+")
-        self.numbers = re.compile("[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*")
+        self.whitespace = re.compile("[ \r\t\n]+|//.*\\n")
+        self.commentpattern = re.compile("/[*].*?[*]/", re.DOTALL)
+        self.attributepattern = re.compile(r'\(\*.*?\*\)', re.DOTALL)
+        self.numbers = re.compile("[0-9\\']+[dhb\\\\.]*[a-fA-F0-9_]*")
         self.anychar = re.compile("[a-zA-Z0-9_]*")
         self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*#?")
-        self.strings = re.compile(r'"([^\\"]+|\\.)*"')
+        self.strings = re.compile(r'"([^\\"]+|\\.)*"', re.DOTALL)
+        self.spacehash = re.compile(" *#")
         self.tokeninvalid = True
     def get_prev_char_pos(self, i=-1):
         global lasttokenpos
@@ -49,6 +52,7 @@ class Scanner:
         return self.pos - (self.input[:self.pos].rfind('\n')+1)
     def jjtoken(self, restrict, advance_after_read):
         global printtrace
+        global lasttokenpos
         p = self.tokeninvalid
         self.tokeninvalid = advance_after_read
         if not p:
@@ -57,23 +61,17 @@ class Scanner:
         best_pat = ''
         first_pat = ''
         while True:
-            if len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '/*':
-                commentindex = string.find(self.input, "*/", self.pos+2) 
-                self.pos = commentindex + 2
-                if commentindex == -1:
-                    self.pos = len(self.input)
-                    break
-            elif len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '//':
-                commentindex = string.find(self.input, "\n", self.pos+2) 
-                self.pos = commentindex + 1
-                if commentindex == -1:
-                    self.pos = len(self.input)
-                    break
-            else:
+            m = self.commentpattern.match(self.input, self.pos)
+            if not m:
                 m = self.whitespace.match(self.input, self.pos)
-                if not m:
-                    break
-                self.pos = m.end()
+            if not m:
+                m = self.attributepattern.match(self.input, self.pos)
+                if m:
+                    #print "attribute:", m.group(0)
+                    pass
+            if not m:
+                break
+            self.pos = m.end()
         if self.pos >= len(self.input):
             best_pat = 'ENDTOKEN'
         else:
@@ -85,9 +83,14 @@ class Scanner:
             m = self.alphatoken.match(self.input, self.pos)
             if m:
                 best_pat = 'VAR'
+                best_match = len(m.group(0))
                 if m.group(0)[-1] == '#':
                     best_pat = 'TYPEVAR'
-                best_match = len(m.group(0))
+                else:
+                    m2 = self.spacehash.match(self.input, m.end())
+                    if m2:
+                        best_pat = 'TYPEVAR'
+                        best_match += len(m2.group(0))
             m = self.strings.match(self.input, self.pos)
             if m:
                 best_pat = 'STR'
@@ -106,16 +109,11 @@ class Scanner:
                 if restrict:
                     msg = 'Trying to find one of '+', '.join(restrict)
                 raise SyntaxError(self.pos, msg)
-        #self.tokens.append(self.pos)
-        global lasttokenpos
-        if self.pos < lasttokenpos:
-            print "we wentbackwardsssss!!!!", lasttokenpos, self.pos
-            sys.exit(-1)
         lasttokenpos = self.pos
+        self.pos += best_match
         # Create a token with this data
-        self.thistoken = (self.pos, self.pos+best_match, best_pat,
-                 self.input[self.pos:self.pos+best_match], first_pat)
-        self.pos = self.pos + best_match
+        self.thistoken = (lasttokenpos, self.pos, best_pat,
+                 self.input[lasttokenpos:self.pos], first_pat)
         if printtrace:
             print "_scan:", self.thistoken
         return self.thistoken
