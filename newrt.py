@@ -12,6 +12,7 @@
 import sys, re
 import string
 printtrace = False
+lasttokenpos = 0
 
 class SyntaxError(Exception):
     """When we run into an unexpected token, this is the exception to use"""
@@ -30,7 +31,8 @@ class NoMoreTokens(Exception):
 
 class Scanner:
     def __init__(self, patterns, ignore, input):
-        self.tokens = [] # [(begin char pos, end char pos, token name, matched text), ...]
+        #self.tokens = [] # [(begin char pos)]
+        self.thistoken = None
         self.input = input
         self.pos = 0
         self.first_line_number = 1
@@ -39,22 +41,24 @@ class Scanner:
         self.anychar = re.compile("[a-zA-Z0-9_]*")
         self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*")
         self.strings = re.compile(r'"([^\\"]+|\\.)*"')
-    def get_prev_char_pos(self, i=None):
+        self.tokeninvalid = True
+    def get_prev_char_pos(self, i=-1):
         if self.pos == 0: return 0
-        if i is None: i = -1
-        return self.tokens[i][0]
+        #if i is None: i = -1
+        #return self.tokens[i]
+        global lasttokenpos
+        return lasttokenpos
     def get_line_number(self):
         return self.first_line_number + self.self.input[:self.pos].count('\n')
     def get_column_number(self):
-        s = self.get_input_scanned()
-        i = s.rfind('\n') # may be -1, but that's okay in this case
-        return len(s) - (i+1)
-    def token(self, i, restrict=None):
-        if i < len(self.tokens):
-            return self.tokens[i]
-        if i != len(self.tokens):
-            raise NoMoreTokens()
-        best_match = -1
+        return self.pos - (self.self.input[:self.pos].rfind('\n')+1)
+    def jjtoken(self, restrict, advance_after_read):
+        global printtrace
+        p = self.tokeninvalid
+        self.tokeninvalid = advance_after_read
+        if not p:
+            return self.thistoken
+        best_match = 0
         best_pat = ''
         while True:
             if len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '/*':
@@ -84,49 +88,42 @@ class Scanner:
         first_pat = best_pat
         if self.pos == len(self.input):
             best_pat = 'ENDTOKEN'
-            best_match = 0
         else:
             for p, regexp in self.patterns:
-                checklen = len(regexp)
-                if best_match > 0:
-                    checklen = best_match
-                    if restrict and p not in restrict:
-                        continue
-                if self.input[self.pos:self.pos+checklen] == regexp:
-                    best_pat = p
+                if best_pat == '':
                     best_match = len(regexp)
+                elif restrict and p not in restrict:
+                    continue
+                if self.input[self.pos:self.pos+best_match] == regexp:
+                    best_pat = p
                     break
-            if best_match < 0:
+            if best_pat == '':
                 msg = 'Bad Token'
                 if restrict:
                     msg = 'Trying to find one of '+', '.join(restrict)
                 raise SyntaxError(self.pos, msg)
+        #self.tokens.append(self.pos)
+        global lasttokenpos
+        lasttokenpos = self.pos
         # Create a token with this data
-        token = (self.pos, self.pos+best_match, best_pat,
+        self.thistoken = (self.pos, self.pos+best_match, best_pat,
                  self.input[self.pos:self.pos+best_match], first_pat)
         self.pos = self.pos + best_match
-        # Only add this token if it's not in the list (to prevent looping)
-        if not self.tokens or token != self.tokens[-1]:
-            self.tokens.append(token)
-        return token
+        if printtrace:
+            print "_scan:", self.thistoken
+        return self.thistoken
 
 class Parser:
     def __init__(self, scanner):
         self._scanner = scanner
         self._pos = 0
     def _peek(self, *types):
-        tok = self._scanner.token(self._pos, types)
-        if printtrace:
-            print "_peek:", tok
+        tok = self._scanner.jjtoken(types, False)
         return tok[2]
     def _scan(self, type):
-        global printtrace
-        tok = self._scanner.token(self._pos, [type])
-        if printtrace:
-            print "_scan:", tok, type
+        tok = self._scanner.jjtoken([type], True)
         if tok[2] != type and tok[4] != type:
             raise SyntaxError(tok[0], 'Trying to find '+type)
-        self._pos = 1 + self._pos
         return tok[3]
 
 class Context:
