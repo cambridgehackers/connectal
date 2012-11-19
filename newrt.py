@@ -37,8 +37,7 @@ class Scanner:
         self.whitespace = re.compile("[ \r\t\n]+")
         self.numbers = re.compile("[0-9]+[\\'dhb\\\\.]*[a-fA-F0-9_]*")
         self.anychar = re.compile("[a-zA-Z0-9_]*")
-        #self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*#?")
-        self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*")
+        self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*#?")
         self.strings = re.compile(r'"([^\\"]+|\\.)*"')
         self.tokeninvalid = True
     def get_prev_char_pos(self, i=-1):
