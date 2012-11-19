@@ -75,7 +75,7 @@ class Scanner:
         raise NoMoreTokens()
     def jjscan(self, restrict):
         best_match = -1
-        best_pat = '(error)'
+        best_pat = ''
         while True:
             if len(self.input[self.pos:]) > 2 and self.input[self.pos:self.pos+2] == '/*':
                 commentindex = string.find(self.input, "*/", self.pos+2) 
@@ -101,25 +101,29 @@ class Scanner:
         if m:
             best_pat = 'STR'
             best_match = len(m.group(0))
-        for p, regexp in self.patterns:
-            if restrict and p not in restrict:
-                continue
-            if self.pos == len(self.input):
-                best_pat = p
-                best_match = 0
-                break
-            if self.input[self.pos:self.pos+len(regexp)] == regexp:
-                best_pat = p
-                best_match = len(regexp)
-                break
-        if best_pat == '(error)' and best_match < 0:
+        first_pat = best_pat
+        if self.pos == len(self.input):
+            best_pat = 'ENDTOKEN'
+            best_match = 0
+        else:
+            for p, regexp in self.patterns:
+                checklen = len(regexp)
+                if best_match > 0:
+                    checklen = best_match
+                    if restrict and p not in restrict:
+                        continue
+                if self.input[self.pos:self.pos+checklen] == regexp:
+                    best_pat = p
+                    best_match = len(regexp)
+                    break
+        if best_match < 0:
             msg = 'Bad Token'
             if restrict:
                 msg = 'Trying to find one of '+', '.join(restrict)
             raise SyntaxError(self.pos, msg)
         # Create a token with this data
         token = (self.pos, self.pos+best_match, best_pat,
-                 self.input[self.pos:self.pos+best_match])
+                 self.input[self.pos:self.pos+best_match], first_pat)
         self.pos = self.pos + best_match
         # Only add this token if it's not in the list (to prevent looping)
         if not self.tokens or token != self.tokens[-1]:
@@ -140,7 +144,7 @@ class Parser:
         tok = self._scanner.token(self._pos, [type])
         if printtrace:
             print "_scan:", tok, type
-        if tok[2] != type:
+        if tok[2] != type and tok[4] != type:
             raise SyntaxError(tok[0], 'Trying to find '+type+' :'+ ' ,'.join(self._scanner.restrictions[self._pos]))
         self._pos = 1 + self._pos
         return tok[3]
