@@ -311,7 +311,7 @@ parser HSDL:
 
     rule item_name:
         VAR
-        | TYPEVAR call_params
+        #| TYPEVAR call_params
         | helper_name
 
     # A term is a number, variable, or an expression surrounded by parentheses
@@ -590,27 +590,27 @@ parser HSDL:
 
     rule method_declaration:
         TOKMETHOD 
-        ( TOKACTION VAR  [ argument_list ]
-            [ TOKIF  LPAREN assign_value RPAREN ]
-            [ EQUAL assign_value ]
-            method_body
-        | (TOKACTIONVALUE | TOKACTIONVALUEHASH LPAREN expression RPAREN )
-            VAR [ argument_list ]
-            [ TOKIF  LPAREN assign_value RPAREN ]
-            method_body
-        | (TOKTTYPE | Type_item_basic | VAR | TYPEVAR [ Type_named_sub ]) [ VAR ]  [ argument_list ]
+        #( TOKACTION VAR  [ argument_list ]
+            #[ TOKIF  LPAREN assign_value RPAREN ]
+            #[ EQUAL assign_value ]
+        #| (TOKACTIONVALUE | TOKACTIONVALUEHASH LPAREN expression RPAREN | Type_item_basic )
+        ( (TOKACTIONVALUE | Type_item) VAR [ argument_list ]
+            #[ TOKIF  LPAREN assign_value RPAREN ]
+        | (TOKTTYPE | VAR
+# | TYPEVAR [ Type_named_sub ]
+          ) [ VAR ]  [ argument_list ]
             [ VAR ]
-            ( ( TOKIF | TOKCLOCKED_BY | TOKRESET_BY | TOKENABLE | TOKREADY)
-                LPAREN [ ( assign_value | TOKENABLE | TOKREADY ) ] RPAREN 
-            )*
-            [ EQUAL assign_value ]
-            method_body
+        )
         #| [ output_port ] VAR
         #    LPAREN LBRACE input_ports RBRACE RPAREN
         #    [ TOKENABLE enable_port ]
         #    [ TOKREADY ready_port ] [ TOKCLOCKED_BY VAR ]
         #    [ TOKRESET_BY VAR] SEMICOLON
-        )
+        ( ( TOKIF | TOKCLOCKED_BY | TOKRESET_BY | TOKENABLE | TOKREADY)
+            LPAREN [ ( assign_value | TOKENABLE | TOKREADY ) ] RPAREN 
+        )*
+        [ EQUAL assign_value ]
+        method_body
 
     rule interface_arg:
         struct_arg
