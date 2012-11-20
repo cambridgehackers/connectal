@@ -35,11 +35,13 @@ class Scanner:
         self.input = input
         self.pos = 0
         self.whitespace = re.compile("[ \r\t\n]+|//.*\\n")
+        self.preprocessor = re.compile("`[a-zA-Z0-9_]+")
         self.commentpattern = re.compile("/[*].*?[*]/", re.DOTALL)
         self.attributepattern = re.compile(r'\(\*.*?\*\)', re.DOTALL)
         self.numbers = re.compile("[0-9\\']+[dhb\\\\.]*[a-fA-F0-9_]*")
         self.anychar = re.compile("[a-zA-Z0-9_]*")
         self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*")
+        self.builtin = re.compile("\\$[a-zA-Z_]+")
         self.strings = re.compile(r'"([^\\"]+|\\.)*"', re.DOTALL)
         self.tokeninvalid = True
     def get_prev_char_pos(self, i=-1):
@@ -59,9 +61,53 @@ class Scanner:
                 if m:
                     #print "attribute:", m.group(0)
                     pass
+                    #"synthesize"
+                    #| "RST_N"  EQUAL STRING
+                    #| "CLK"  EQUAL STRING
+                    #| "always_ready" [ EQUAL interface_method ]
+                    #| "always_enabled" [ EQUAL interface_method ]
+                    #| "descending" "urgency" EQUAL LBRACE rule_names RBRACE
+                    #| "preempts" [ EQUAL ] LBRACE rule_names COMMA  LPAREN list_rule_names RPAREN RBRACE
+                    #| "doc" EQUAL STRING
+                    #| "ready" EQUAL STRING
+                    #| "enable" EQUAL STRING
+                    #| "result" EQUAL STRING
+                    #| "prefix" EQUAL STRING
+                    #| "port"  EQUAL STRING
+                    #| "noinline"
+                    #| "fire_when_enabled"
+                    #| "no_implicit_conditions"
+            if not m:
+                m = self.preprocessor.match(self.input, self.pos)
+                if m:
+                    #print "preprocessor:", m.group(0)
+                    s = m.group(0)
+                    if s == "`define" or s == "`include" or s == "`ifdef" or s == "`else" or s == "`endif":
+                        nextp = self.input.find('\n', self.pos)
+                        if nextp != -1:
+                            self.pos = nextp
+                            continue
+                    else:    # we are a substitution token
+                        return ['VAR', len(s)]
+                    pass
+                    #    rule define_declaration:
+                    #        TOKPDEFINE VAR [expr<<[]>>]
+                    #    rule include_declaration:
+                    #        TOKPINCLUDE STR
+                    #    rule ifdef_statement:
+                    #        TOKPIFDEF [VAR | ANYCHAR]
+                    #           [ module_item
+                    #           | TOKPUNDEF (VAR | ANYCHAR)
+                    #           ]
+                    #        [ TOKPELSE
+                    #           [ module_item ]
+                    #        ]
+                    #        TOKPENDIF
             if not m:
                 break
             self.pos = m.end()
+        return None
+
     def jjtoken(self, restrict, advance_after_read):
         global printtrace
         global lasttokenpos
@@ -72,8 +118,11 @@ class Scanner:
         best_match = 0
         best_pat = ''
         first_pat = ''
-        self.skipwhitespace()
+        preprocesstoken = self.skipwhitespace()
         lasttokenpos = self.pos
+        if preprocesstoken != None:
+            best_pat = preprocesstoken[0]
+            best_match = preprocesstoken[1]
         if lasttokenpos >= len(self.input):
             best_pat = 'ENDTOKEN'
         else:
@@ -100,6 +149,16 @@ class Scanner:
             if m:
                 best_pat = 'STR'
                 best_match = len(m.group(0))
+            m = self.builtin.match(self.input, lasttokenpos)
+            if m:
+                best_pat = 'BUILTINVAR'
+                best_match = len(m.group(0))
+
+                # "$display" "$dumpoff" "$dumpon" "$dumpvars"
+                # "$error" "$fclose" "$fdisplay" "$fflush"
+                # "$fgetc" "$finish" "$fopen" "$format"
+                # "$fwrite" "$stime" "$stop" "$test$plusargs"
+                # "$time" "$ungetc" "$write"
             first_pat = best_pat
             for p, regexp in self.patterns:
                 if best_pat == '':

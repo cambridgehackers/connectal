@@ -72,33 +72,6 @@ parser HSDL:
     token TOKOPSTARSTAR: '\\**'
     token TOKOPSTAR: '\\*'
 
-    token TOKDISPLAY: "$display"
-    token TOKDUMPOFF: "$dumpoff"
-    token TOKDUMPON: "$dumpon"
-    token TOKDUMPVARS: "$dumpvars"
-    token TOKERROR: "$error"
-    token TOKFCLOSE: "$fclose"
-    token TOKFDISPLAY: "$fdisplay"
-    token TOKFFLUSH: "$fflush"
-    token TOKFGETC: "$fgetc"
-    token TOKFINISH: "$finish"
-    token TOKFOPEN: "$fopen"
-    token TOKFORMAT: "$format"
-    token TOKFWRITE: "$fwrite"
-    token TOKSTIME: "$stime"
-    token TOKSTOP: "$stop"
-    token TOKTESTPLUSARGS: "$test$plusargs"
-    token TOKTIME: "$time"
-    token TOKUNGETC: "$ungetc"
-    token TOKWRITE: "$write"
-
-    token TOKPDEFINE: "`define"
-    token TOKPELSE: "`else"
-    token TOKPENDIF: "`endif"
-    token TOKPIFDEF: "`ifdef"
-    token TOKPUNDEF: "`undef"
-    token TOKPINCLUDE: "`include"
-
     token TOKBDPI: '"BDPI"'
     token TOKBVI: '"BVI"'
 
@@ -108,6 +81,7 @@ parser HSDL:
     token STR:   " "
     token TYPEVAR: " "
     token CLASSVAR: " "
+    token BUILTINVAR: " "
 
     token TOKACTION: "Action"
     token TOKACTIONSTATEMENT: "action"
@@ -294,11 +268,7 @@ parser HSDL:
         NUM
         | (TOKTAGGED term_single)+ [term_single]
         | term_single
-        | ( TOKDISPLAY | TOKWRITE | TOKFOPEN | TOKFDISPLAY
-          | TOKFWRITE | TOKFGETC | TOKFFLUSH | TOKFCLOSE | TOKUNGETC
-          | TOKFINISH | TOKSTOP | TOKDUMPON | TOKDUMPOFF | TOKDUMPVARS
-          | TOKTESTPLUSARGS | TOKTIME | TOKSTIME | TOKFORMAT | TOKERROR
-          ) [ param_list ]
+        | BUILTINVAR [ param_list ]
         | Type_item
         | STR {{ return STR }}
         | LPAREN assign_value RPAREN
@@ -502,8 +472,6 @@ parser HSDL:
         | group_statement
         | seq_statement
         | par_statement
-        | ifdef_statement
-        | include_declaration
         | action_statement
         | match_statement
         | return_statement
@@ -528,9 +496,6 @@ parser HSDL:
         typedef_declaration
         | import_declaration
         | export_declaration
-        | define_declaration
-        | include_declaration
-        | ifdef_statement
         | interface_declaration
         | function_declaration
         | module_declaration
@@ -744,22 +709,6 @@ parser HSDL:
         | module_declaration
         )*
         TOKENDTYPECLASS [ COLON VAR ]
-
-    rule define_declaration:
-        TOKPDEFINE VAR [expr<<[]>>]
-
-    rule include_declaration:
-        TOKPINCLUDE STR
-
-    rule ifdef_statement:
-        TOKPIFDEF [VAR | ANYCHAR]
-           [ module_item
-           | TOKPUNDEF (VAR | ANYCHAR)
-           ]
-        [ TOKPELSE
-           [ module_item ]
-        ]
-        TOKPENDIF
 
     rule goal:
         (top_level_statement)* ENDTOKEN
