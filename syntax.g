@@ -343,9 +343,6 @@ parser HSDL:
     rule function_name:
         VAR | function_operator
 
-    rule provisos_clause:
-        TOKPROVISOS LPAREN [ expr<<[]>> (COMMA expr<<[]>> )* ] RPAREN
-
     rule import_arg:
         ( VAR | LPAREN VAR (COMMA VAR)* RPAREN )
 
@@ -368,6 +365,9 @@ parser HSDL:
 #    TOKPORT VAR  EQUAL expr<<[]>> SEMICOLON
 #    TOKANCESTOR  LPAREN clock1 COMMA clock2 RPAREN SEMICOLON
 #    TOKSAME_FAMILY  LPAREN clock1 COMMA clock2 RPAREN SEMICOLON
+
+    rule provisos_clause:
+        TOKPROVISOS param_list
 
     rule import_declaration:
         TOKIMPORT
@@ -546,8 +546,7 @@ parser HSDL:
         | package_declaration
 
     rule method_body:
-        [ provisos_clause ]
-        SEMICOLON
+        [ provisos_clause ] SEMICOLON
         [
             ( single_statement )+
             TOKENDMETHOD [ COLON VAR]
@@ -585,17 +584,14 @@ parser HSDL:
             )
         )
 
-    rule interface_body:
-        ( method_declaration
-        | subinterface_declaration
-        )+
-        TOKENDINTERFACE [ COLON VAR ]
-
     rule interface_declaration:
         TOKINTERFACE [ CLASSVAR* VAR [VAR]]
-        ( [ SEMICOLON ] interface_body
-        | user_type SEMICOLON interface_body
-        | EQUAL assign_value SEMICOLON
+        ( EQUAL assign_value SEMICOLON
+        | [ user_type ] [SEMICOLON]
+            ( method_declaration
+            | subinterface_declaration
+            )+
+            TOKENDINTERFACE [ COLON VAR ]
         )
 
     rule match_arg:
@@ -616,8 +612,7 @@ parser HSDL:
     rule module_declaration:
         TOKMODULE [ LBRACKET assign_value RBRACKET ] ( VAR | TYPEVAR argument_list )
         LPAREN [ module_param (COMMA module_param)* ] RPAREN
-        [ provisos_clause ]
-        SEMICOLON
+        [ provisos_clause ] SEMICOLON
         [
             module_item
             TOKENDMODULE [ COLON VAR]
