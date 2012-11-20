@@ -39,9 +39,8 @@ class Scanner:
         self.attributepattern = re.compile(r'\(\*.*?\*\)', re.DOTALL)
         self.numbers = re.compile("[0-9\\']+[dhb\\\\.]*[a-fA-F0-9_]*")
         self.anychar = re.compile("[a-zA-Z0-9_]*")
-        self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*#?")
+        self.alphatoken = re.compile("`*[a-zA-Z_][a-zA-Z0-9_]*")
         self.strings = re.compile(r'"([^\\"]+|\\.)*"', re.DOTALL)
-        self.spacehash = re.compile(" *#")
         self.tokeninvalid = True
     def get_prev_char_pos(self, i=-1):
         global lasttokenpos
@@ -50,16 +49,7 @@ class Scanner:
         return 1 + self.input[:self.pos].count('\n')
     def get_column_number(self):
         return self.pos - (self.input[:self.pos].rfind('\n')+1)
-    def jjtoken(self, restrict, advance_after_read):
-        global printtrace
-        global lasttokenpos
-        p = self.tokeninvalid
-        self.tokeninvalid = advance_after_read
-        if not p:
-            return self.thistoken
-        best_match = 0
-        best_pat = ''
-        first_pat = ''
+    def skipwhitespace(self):
         while True:
             m = self.commentpattern.match(self.input, self.pos)
             if not m:
@@ -72,26 +62,41 @@ class Scanner:
             if not m:
                 break
             self.pos = m.end()
-        if self.pos >= len(self.input):
+    def jjtoken(self, restrict, advance_after_read):
+        global printtrace
+        global lasttokenpos
+        p = self.tokeninvalid
+        self.tokeninvalid = advance_after_read
+        if not p:
+            return self.thistoken
+        best_match = 0
+        best_pat = ''
+        first_pat = ''
+        self.skipwhitespace()
+        lasttokenpos = self.pos
+        if lasttokenpos >= len(self.input):
             best_pat = 'ENDTOKEN'
         else:
-            m = self.numbers.match(self.input, self.pos)
+            m = self.numbers.match(self.input, lasttokenpos)
             if m:
                 best_pat = 'NUM'
                 best_match = len(m.group(0))
-            #m = self.anychar.match(self.input, self.pos)
-            m = self.alphatoken.match(self.input, self.pos)
+            #m = self.anychar.match(self.input, lasttokenpos)
+            m = self.alphatoken.match(self.input, lasttokenpos)
             if m:
                 best_pat = 'VAR'
                 best_match = len(m.group(0))
-                if m.group(0)[-1] == '#':
-                    best_pat = 'TYPEVAR'
-                else:
-                    m2 = self.spacehash.match(self.input, m.end())
-                    if m2:
+                # lookahead past whitespace for '#' or '::'
+                self.pos = m.end()
+                self.skipwhitespace()
+                if self.pos < len(self.input):
+                    if self.input[self.pos] == '#':
                         best_pat = 'TYPEVAR'
-                        best_match += len(m2.group(0))
-            m = self.strings.match(self.input, self.pos)
+                        best_match = self.pos + 1 - lasttokenpos
+                    elif self.input[self.pos:self.pos+2] == '::':
+                        best_pat = 'CLASSVAR'
+                        best_match = self.pos + 2 - lasttokenpos
+            m = self.strings.match(self.input, lasttokenpos)
             if m:
                 best_pat = 'STR'
                 best_match = len(m.group(0))
@@ -101,16 +106,15 @@ class Scanner:
                     best_match = len(regexp)
                 elif restrict and p not in restrict:
                     continue
-                if self.input[self.pos:self.pos+best_match] == regexp:
+                if self.input[lasttokenpos:lasttokenpos+best_match] == regexp:
                     best_pat = p
                     break
             if best_pat == '':
                 msg = 'Bad Token'
                 if restrict:
                     msg = 'Trying to find one of '+', '.join(restrict)
-                raise SyntaxError(self.pos, msg)
-        lasttokenpos = self.pos
-        self.pos += best_match
+                raise SyntaxError(lasttokenpos, msg)
+        self.pos = lasttokenpos + best_match
         # Create a token with this data
         self.thistoken = (lasttokenpos, self.pos, best_pat,
                  self.input[lasttokenpos:self.pos], first_pat)

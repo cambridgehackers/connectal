@@ -21,7 +21,6 @@ parser HSDL:
     token AMPER: '&'
     token BARBAR: "||"
     token BAR: "|"
-    token COLONCOLON: "::"
     token COLON: ':'
     token SEMICOLON: ';'
     token QUESTION: "?"
@@ -280,26 +279,29 @@ parser HSDL:
         LPAREN [ call_pitem ( COMMA call_pitem )* ] RPAREN
 
     rule type_instantiation:
-        VAR | TYPEVAR call_params
+        TYPEVAR call_params
 
     rule item_name:
         ( VAR | TOKREADY | TOKENABLE)
 
+    rule term_single:
+        CLASSVAR* ( item_name | type_instantiation )
+        ( call_params
+        | LBRACE [ VAR COLON assign_value ( COMMA VAR COLON assign_value )* ] RBRACE
+        )*
+
     # A term is a number, variable, or an expression surrounded by parentheses
     rule term_partial<<V>>:
         NUM
-        | TOKTAGGED term_partial<<V>> [ term_partial<<V>> ]
-        | item_name
-             [ COLONCOLON type_instantiation ]
-             ( call_params
-             | LBRACE [ VAR COLON assign_value ( COMMA VAR COLON assign_value )* ] RBRACE
-             )*
+        #| (TOKTAGGED term_partial<<V>>)+ term_single
+        | (TOKTAGGED term_single)+ [term_single]
+        | term_single
         | ( TOKDISPLAY | TOKWRITE | TOKFOPEN | TOKFDISPLAY
           | TOKFWRITE | TOKFGETC | TOKFFLUSH | TOKFCLOSE | TOKUNGETC
           | TOKFINISH | TOKSTOP | TOKDUMPON | TOKDUMPOFF | TOKDUMPVARS
           | TOKTESTPLUSARGS | TOKTIME | TOKSTIME | TOKFORMAT | TOKERROR
           ) [ param_list ]
-        | Type_item {{ return Type_item }}
+        | Type_item
         | STR {{ return STR }}
         | LPAREN assign_value RPAREN
         | LBRACE assign_value ( COMMA assign_value )* RBRACE
@@ -372,19 +374,19 @@ parser HSDL:
     rule import_declaration:
         TOKIMPORT
         ( TOKBDPI [ VAR  EQUAL ]
-            FUNCTION type_instantiation
+            FUNCTION (VAR | type_instantiation)
             function_name
             argument_list
             [ provisos_clause ] SEMICOLON
         | TOKBVI [ VAR [ EQUAL ] ]
-            TOKMODULE type_instantiation
+            TOKMODULE (VAR | type_instantiation)
             argument_list
             [ provisos_clause ] SEMICOLON
             ( method_declaration
             | importBVI_statement
             )*
             TOKENDMODULE [ COLON  VAR ]
-        | VAR  COLONCOLON  STAR SEMICOLON
+        | CLASSVAR STAR SEMICOLON
         | SEMICOLON
         )
 
@@ -592,7 +594,7 @@ parser HSDL:
         TOKENDINTERFACE [ COLON VAR ]
 
     rule interface_declaration:
-        TOKINTERFACE [VAR [COLONCOLON VAR] [VAR]]
+        TOKINTERFACE [ CLASSVAR* VAR [VAR]]
         ( [ SEMICOLON ] interface_body
         | user_type SEMICOLON interface_body
         | EQUAL assign_value SEMICOLON
@@ -631,6 +633,7 @@ parser HSDL:
     rule function_return_type:
         ( TOKACTION VAR
         | TOKACTIONVALUE
+        | VAR
         | type_instantiation
         )
 
@@ -640,7 +643,8 @@ parser HSDL:
 
     rule Type_nitem:
         Type_item
-        | VAR [ COLONCOLON function_return_type ]
+        | VAR
+        | CLASSVAR function_return_type
 
     rule interface_arg:
         struct_arg | expr<<[]>>
