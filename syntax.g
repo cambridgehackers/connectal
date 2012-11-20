@@ -109,9 +109,31 @@ parser HSDL:
     token TYPEVAR: " "
     token CLASSVAR: " "
 
-    token BEGIN: "begin"
-    token TOKENDACTIONVALUE: "endactionvalue"
+    token TOKACTION: "Action"
+    token TOKACTIONSTATEMENT: "action"
+    token TOKACTIONVALUE: "ActionValue"
+    token TOKACTIONVALUESTATEMENT: "actionvalue"
+    token TOKBEGIN: "begin"
+    token TOKBITS: "Bits"
+    token TOKBOOL: "Bool"
+    token TOKBOUNDED: "Bounded"
+    token TOKC: "C"
+    token TOKCASE: "case"
+    token TOKCF: "CF"
+    token TOKCLK: "CLK"
+    token TOKCLOCKED_BY: "clocked_by"
+    token TOKDEFAULT: "default"
+    token TOKDEFAULT_CLOCK: "default_clock"
+    token TOKDEFAULT_RESET: "default_reset"
+    token TOKDEPENDENCIES: "dependencies"
+    token TOKDERIVING: "deriving"
+    token TOKDETERMINES: "determines"
+    token TOKDOC: "doc"
+    token TOKELSE: "else"
+    token TOKENABLE: "enable"
+    token TOKEND: "end"
     token TOKENDACTION: "endaction"
+    token TOKENDACTIONVALUE: "endactionvalue"
     token TOKENDCASE: "endcase"
     token TOKENDFUNCTION: "endfunction"
     token TOKENDINSTANCE: "endinstance"
@@ -120,48 +142,26 @@ parser HSDL:
     token TOKENDMODULE: "endmodule"
     token TOKENDPACKAGE: "endpackage"
     token TOKENDPAR: "endpar"
-    token TOKENDRULES: "endrules"
     token TOKENDRULE: "endrule"
+    token TOKENDRULES: "endrules"
     token TOKENDSEQ: "endseq"
     token TOKENDTYPECLASS: "endtypeclass"
-    token END: "end"
-    token FUNCTION: "function"
-    token MATCHES: "matches"
-    token TOKACTIONVALUE: "ActionValue"
-    token TOKACTION: "Action"
-    token TOKACTIONVALUESTATEMENT: "actionvalue"
-    token TOKACTIONSTATEMENT: "action"
-    token TOKBITS: "Bits"
-    token TOKBOOL: "Bool"
-    token TOKBOUNDED: "Bounded"
-    token TOKCASE: "case"
-    token TOKCLOCKED_BY: "clocked_by"
-    token TOKCF: "CF"
-    token TOKCLK: "CLK"
-    token TOKC: "C"
-    token TOKDEFAULT_CLOCK: "default_clock"
-    token TOKDEFAULT_RESET: "default_reset"
-    token TOKDEFAULT: "default"
-    token TOKDEPENDENCIES: "dependencies"
-    token TOKDERIVING: "deriving"
-    token TOKDETERMINES: "determines"
-    token TOKDOC: "doc"
-    token TOKELSE: "else"
-    token TOKENABLE: "enable"
     token TOKENUM: "enum"
     token TOKEQ: "Eq"
     token TOKEXPORT: "export"
     token TOKFOR: "for"
+    token TOKFUNCTION: "function"
     token TOKIF: "if"
     token TOKIMPORT: "import"
+    token TOKIN: "in"
     token TOKINPUT_CLOCK: "input_clock"
     token TOKINPUT_RESET: "input_reset"
     token TOKINSTANCE: "instance"
-    token TOKINTERFACE: "interface"
     token TOKINTEGER: "Integer"
-    token TOKIN: "in"
+    token TOKINTERFACE: "interface"
     token TOKLET: "let"
     token TOKMATCH: "match"
+    token TOKMATCHES: "matches"
     token TOKMETHOD: "method"
     token TOKMODULE: "module"
     token TOKNAT: "Nat"
@@ -170,8 +170,8 @@ parser HSDL:
     token TOKOUTPUT_CLOCK: "output_clock"
     token TOKOUTPUT_RESET: "output_reset"
     token TOKPACKAGE: "package"
-    token TOKPARAMETER: "parameter"
     token TOKPAR: "par"
+    token TOKPARAMETER: "parameter"
     token TOKPREFIX: "prefix"
     token TOKPROVISOS: "provisos"
     token TOKREADY: "ready"
@@ -179,21 +179,20 @@ parser HSDL:
     token TOKRESET_BY: "reset_by"
     token TOKRESULT: "result"
     token TOKRETURN: "return"
-    token TOKRST_N: "RST_N"
-    token TOKRULES: "rules"
     token TOKRULE: "rule"
-    token TOKSBR: "SBR"
+    token TOKRULES: "rules"
     token TOKSB: "SB"
+    token TOKSBR: "SBR"
     token TOKSCHEDULE: "schedule"
     token TOKSEQ: "seq"
     token TOKSET: "set"
     token TOKSTRING: "String"
     token TOKSTRUCT: "struct"
     token TOKTAGGED: "tagged"
-    token TOKTYPECLASS: "typeclass"
-    token TOKTYPEDEF: "typedef"
     token TOKTTYPE: "Type"
     token TOKTYPE: "type"
+    token TOKTYPECLASS: "typeclass"
+    token TOKTYPEDEF: "typedef"
     token TOKUNION: "union"
     token TOKWHILE: "while"
 
@@ -261,7 +260,7 @@ parser HSDL:
         |  AMPERAMPERAMPER  nterm<<V>>
         |  BAR  nterm<<V>>
         |  BARBAR  nterm<<V>>
-        |  MATCHES
+        |  TOKMATCHES
             ( dot_field_selection
             | LBRACE dot_field_item (COMMA dot_field_item)* RBRACE
             | VAR
@@ -293,7 +292,6 @@ parser HSDL:
     # A term is a number, variable, or an expression surrounded by parentheses
     rule term_partial<<V>>:
         NUM
-        #| (TOKTAGGED term_partial<<V>>)+ term_single
         | (TOKTAGGED term_single)+ [term_single]
         | term_single
         | ( TOKDISPLAY | TOKWRITE | TOKFOPEN | TOKFDISPLAY
@@ -324,7 +322,7 @@ parser HSDL:
             | variable_declaration_or_call SEMICOLON
             )*
             TOKENDRULES [ COLON  VAR]
-        | FUNCTION function_argument
+        | TOKFUNCTION function_argument
         | function_operator [expr<<[]>>]
         | expr<<[]>> ( LEQ expr<<[]>> )* [expr<<[]>>]
         | QUESTION
@@ -374,7 +372,7 @@ parser HSDL:
     rule import_declaration:
         TOKIMPORT
         ( TOKBDPI [ VAR  EQUAL ]
-            FUNCTION (VAR | type_instantiation)
+            TOKFUNCTION (VAR | type_instantiation)
             function_name
             argument_list
             [ provisos_clause ] SEMICOLON
@@ -436,9 +434,9 @@ parser HSDL:
         TOKRETURN assign_value SEMICOLON
 
     rule group_statement:
-        BEGIN
+        TOKBEGIN
         statement_list
-        END
+        TOKEND
 
     rule seq_statement:
         TOKSEQ
@@ -462,7 +460,7 @@ parser HSDL:
 
     rule case_statement:
         TOKCASE LPAREN expr<<[]>> RPAREN
-        ( MATCHES
+        ( TOKMATCHES
           (
               ( dot_field_selection
               | LBRACE dot_field_ltagged (COMMA dot_field_ltagged)* RBRACE
@@ -704,7 +702,7 @@ parser HSDL:
         Type_nitem [ LBRACKET NUM COLON NUM RBRACKET ]
 
     rule argument_item:
-        ( FUNCTION function_argument
+        ( TOKFUNCTION function_argument
         | Type_sitem [ item_name ]
         )
 
@@ -715,7 +713,7 @@ parser HSDL:
         LPAREN [ assign_value (COMMA assign_value)* ] RPAREN
 
     rule function_declaration:
-        FUNCTION
+        TOKFUNCTION
         [
             ( Type_sitem
             | LPAREN Type_nitem RPAREN
