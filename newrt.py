@@ -82,7 +82,7 @@ class Scanner:
                 if m:
                     #print "preprocessor:", m.group(0)
                     s = m.group(0)
-                    if s == "`define" or s == "`include" or s == "`ifdef" or s == "`else" or s == "`endif":
+                    if s == '`define' or s == '`include' or s == '`ifdef' or s == '`else' or s == '`endif' or s == '`undef':
                         nextp = self.input.find('\n', self.pos)
                         if nextp != -1:
                             self.pos = nextp
@@ -153,12 +153,11 @@ class Scanner:
             if m:
                 best_pat = 'BUILTINVAR'
                 best_match = len(m.group(0))
-
-                # "$display" "$dumpoff" "$dumpon" "$dumpvars"
-                # "$error" "$fclose" "$fdisplay" "$fflush"
-                # "$fgetc" "$finish" "$fopen" "$format"
-                # "$fwrite" "$stime" "$stop" "$test$plusargs"
-                # "$time" "$ungetc" "$write"
+                # '$display' '$dumpoff' '$dumpon' '$dumpvars'
+                # '$error' '$fclose' '$fdisplay' '$fflush'
+                # '$fgetc' '$finish' '$fopen' '$format'
+                # '$fwrite' '$stime' '$stop' '$test$plusargs'
+                # '$time' '$ungetc' '$write'
             first_pat = best_pat
             for p, regexp in self.patterns:
                 if best_pat == '':
@@ -178,7 +177,7 @@ class Scanner:
         self.thistoken = (lasttokenpos, self.pos, best_pat,
                  self.input[lasttokenpos:self.pos], first_pat)
         if printtrace:
-            print "_scan:", self.thistoken
+            print '_scan:', self.thistoken
         return self.thistoken
 
 class Parser:
