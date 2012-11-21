@@ -177,10 +177,25 @@ parser HSDL:
         typevar_item
         | TOKINTEGER | TOKBOOL | TOKSTRING | TOKREAL | TOKNAT | TOKACTION | TOKACTIONVALUE
 
+    rule Type_nitem:
+        #term_single
+        Type_item
+        | VAR [ LBRACKET NUM (COLON NUM)* RBRACKET ]
+        | CLASSVAR typevar_item_or_var
+
+    rule function_parameter:
+        TOKFUNCTION function_argument
+
+    rule formal_item:
+        ( function_parameter
+        | Type_nitem [ item_name ]
+        )
+
     rule param_item:
         (   LPAREN param_item RPAREN
         |   ( [ TOKNUMERIC | TOKPARAMETER ] TOKTYPE VAR
             | formal_item
+            #| function_parameter
             | NUM
             | STR
             )
@@ -200,17 +215,13 @@ parser HSDL:
         | TOKACTION
         | TOKACTIONVALUE
 
-    rule Type_nitem:
-        Type_item
-        | VAR [ LBRACKET NUM (COLON NUM)* RBRACKET ]
-        | CLASSVAR typevar_item_or_var
-
     rule Type_list:
         ( Type_nitem
         | LPAREN Type_nitem (COMMA Type_nitem)* RPAREN
         )
 
-    rule enum_element: term<<[]>> [EQUAL expr<<[]>>]
+    rule enum_element:
+        term<<[]>> [EQUAL expr<<[]>>]
 
     rule deriving_type_class:
         TOKEQ | TOKBITS | TOKBOUNDED
@@ -234,31 +245,12 @@ parser HSDL:
         )
         [VAR [ formal_list ] ]
 
-    rule function_parameter:
-        TOKFUNCTION function_argument
-
-    rule formal_item:
-        ( function_parameter
-        | Type_nitem [ item_name ]
-        )
-
     rule formal_list:
         LPAREN [ formal_item ( COMMA formal_item)* ] RPAREN
 
 ##########
 ########## Expressions
 ##########
-    rule expr<<V>>:
-         exprint<<V>>
-             [ QUESTION assign_value COLON assign_value ]
-             {{return exprint}}
-
-    # An expression is the sum and difference of factors
-    rule exprint<<V>>:
-        factor<<V>>         {{ n = factor }}
-        (  TOKPLUS factor<<V>>
-        |  TOKMINUS  factor<<V>>
-        )* {{ return n }}
 
     rule dot_item:
         DOT (VAR | STAR)
@@ -288,6 +280,18 @@ parser HSDL:
           tagged_dot_list
         | LPAREN tagged_dot_list RPAREN
         | NUM
+
+    rule expr<<V>>:
+         exprint<<V>>
+             [ QUESTION assign_value COLON assign_value ]
+             {{return exprint}}
+
+    # An expression is the sum and difference of factors
+    rule exprint<<V>>:
+        factor<<V>>         {{ n = factor }}
+        (  TOKPLUS factor<<V>>
+        |  TOKMINUS  factor<<V>>
+        )* {{ return n }}
 
     # A factor is the product and division of terms
     rule factor<<V>>: nterm<<V>>           {{ v = nterm }}
@@ -336,29 +340,26 @@ parser HSDL:
         )*
 
     # A term is a number, variable, or an expression surrounded by parentheses
-    rule term_partial<<V>>:
-        NUM
-        | (TOKTAGGED term_single)+ [term_single]
-        | term_single
-        | BUILTINVAR [ param_list ]
-        | Type_item
-        | STR {{ return STR }}
-        | paren_expression
-        | LBRACE assign_value ( COMMA assign_value )* RBRACE
-
     rule term<<V>>:
-        term_partial<<V>>
-        ( LBRACKET expr<<V>> [ COLON expr<<V>> ] RBRACKET
-        | DOT VAR [ call_params ]
+        (    NUM
+        |    (TOKTAGGED term_single)+ [term_single]
+        |    BUILTINVAR [ param_list ]
+        |    term_single
+        |    Type_item
+        |    STR {{ return STR }}
+        |    paren_expression
+        |    LBRACE assign_value ( COMMA assign_value )* RBRACE
+        )
+        (    LBRACKET expr<<V>> [ COLON expr<<V>> ] RBRACKET
+        |    DOT VAR [ call_params ]
         )*
-        {{ return term_partial }}
 
     rule assign_value:
-        ( seq_statement
-        | interface_declaration
-        | case_statement
-        | action_statement
+        ( action_statement
         | actionvalue_statement
+        | case_statement
+        | seq_statement
+        | interface_declaration
         | TOKRULES [ COLON  VAR]
             ( rule_statement)*
             TOKENDRULES [ COLON  VAR]
@@ -429,8 +430,8 @@ parser HSDL:
     rule while_statement:
         TOKWHILE paren_expression
         ( action_statement
-        | seq_statement
         | group_statement
+        | seq_statement
         | VAR SEMICOLON
         )
 
@@ -511,20 +512,20 @@ parser HSDL:
         ( EQUAL | LARROW ) assign_value SEMICOLON
 
     rule single_statement:
-        let_statement
-        | for_statement
+          action_statement
+        | actionvalue_statement
         | case_statement
-        | if_statement
+        | for_statement
+        | function_declaration
         | group_statement
-        | seq_statement
-        | par_statement
-        | action_statement
+        | if_statement
+        | let_statement
         | match_statement
+        | par_statement
         | return_statement
         | rule_statement
-        | actionvalue_statement
+        | seq_statement
         | while_statement
-        | function_declaration
         | variable_declaration_or_call
 
     rule statement_list:
@@ -593,7 +594,7 @@ parser HSDL:
         [ typevar_param_list ]
         [ provisos_clause ] SEMICOLON
         [
-            module_item
+            ( module_item | single_statement)+
             TOKENDMODULE [ COLON VAR]
         ]
 
@@ -642,8 +643,7 @@ parser HSDL:
             (   method_declaration
             |   TOKPARAMETER VAR  EQUAL expr<<[]>> SEMICOLON
             |   TOKDEFAULT_CLOCK [ VAR ] [ var_list ] [ EQUAL expr<<[]>> ] SEMICOLON
-            |   TOKINPUT_CLOCK [VAR] var_list
-                  EQUAL expr<<[]>> SEMICOLON
+            |   TOKINPUT_CLOCK [VAR] var_list EQUAL expr<<[]>> SEMICOLON
             |   TOKOUTPUT_CLOCK VAR var_list SEMICOLON
             |   TOKNO_RESET SEMICOLON
             |   TOKSCHEDULE import_arg
@@ -662,22 +662,17 @@ parser HSDL:
         SEMICOLON
 
     rule module_item:
-        ( single_statement
-        | method_declaration
-        | import_declaration
+          import_declaration
         | interface_declaration
+        | method_declaration
         | typedef_declaration
-        )+
 
     rule package_declaration_item:
-        typedef_declaration
-        | import_declaration
+          module_item
         | export_declaration
-        | interface_declaration
         | function_declaration
         | module_declaration
         | instance_declaration
-        | method_declaration
         | let_statement
         | rule_statement
         | typeclass_declaration
