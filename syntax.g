@@ -169,6 +169,85 @@ parser HSDL:
     token TOKUNION: "union"
     token TOKWHILE: "while"
 
+##########
+########## Datatypes
+##########
+
+    rule Type_item:
+        typevar_item
+        | TOKINTEGER | TOKBOOL | TOKSTRING | TOKREAL | TOKNAT | TOKACTION | TOKACTIONVALUE
+
+    rule param_item:
+        (   LPAREN param_item RPAREN
+        |   ( [ TOKNUMERIC | TOKPARAMETER ] TOKTYPE VAR
+            | formal_item
+            | NUM
+            | STR
+            )
+            [ VAR ]
+            [ typevar_param_list ]
+        )
+
+    rule typevar_param_list:
+        LPAREN [ param_item (COMMA param_item )* ] RPAREN
+
+    rule typevar_item:
+        TYPEVAR typevar_param_list
+
+    rule typevar_item_or_var:
+        VAR [ typevar_param_list ]
+        | typevar_item
+        | TOKACTION
+        | TOKACTIONVALUE
+
+    rule Type_nitem:
+        Type_item
+        | VAR [ LBRACKET NUM (COLON NUM)* RBRACKET ]
+        | CLASSVAR typevar_item_or_var
+
+    rule Type_list:
+        ( Type_nitem
+        | LPAREN Type_nitem (COMMA Type_nitem)* RPAREN
+        )
+
+    rule enum_element: term<<[]>> [EQUAL expr<<[]>>]
+
+    rule deriving_type_class:
+        TOKEQ | TOKBITS | TOKBOUNDED
+
+    rule single_type_definition:
+        (   Type_list [ Type_nitem | TOKENABLE ]
+        |   ( TOKENUM LBRACE enum_element ( COMMA enum_element )* RBRACE VAR
+            | ( TOKSTRUCT | TOKUNION TOKTAGGED )
+                LBRACE
+                    ( single_type_definition )*
+                RBRACE
+                typevar_item_or_var
+            )
+            [ TOKDERIVING  LPAREN deriving_type_class ( COMMA deriving_type_class )* RPAREN ]
+        )
+        SEMICOLON
+
+    rule function_argument: 
+        ( typevar_item_or_var
+        | LPAREN function_argument (COMMA function_argument)* RPAREN
+        )
+        [VAR [ formal_list ] ]
+
+    rule function_parameter:
+        TOKFUNCTION function_argument
+
+    rule formal_item:
+        ( function_parameter
+        | Type_nitem [ item_name ]
+        )
+
+    rule formal_list:
+        LPAREN [ formal_item ( COMMA formal_item)* ] RPAREN
+
+##########
+########## Expressions
+##########
     rule expr<<V>>:
          exprint<<V>>
              [ QUESTION assign_value COLON assign_value ]
@@ -306,49 +385,21 @@ parser HSDL:
     rule function_name:
         VAR | function_operator
 
-    rule import_arg:
-        ( VAR | var_list )
-
     rule var_list:
         LPAREN [VAR (COMMA VAR)*] RPAREN
 
     rule provisos_clause:
         TOKPROVISOS param_list
 
-    rule import_declaration:
-        TOKIMPORT
-        ( CLASSVAR STAR SEMICOLON
-        | SEMICOLON
-        | TOKBDPI [ VAR  EQUAL ]
-            TOKFUNCTION typevar_item_or_var
-            function_name
-            formal_list
-            [ provisos_clause ] SEMICOLON
-        | TOKBVI [ VAR [ EQUAL ] ]
-            TOKMODULE typevar_item_or_var
-            [ formal_list ]
-            [ provisos_clause ] SEMICOLON
-            (   method_declaration
-            |   TOKPARAMETER VAR  EQUAL expr<<[]>> SEMICOLON
-            |   TOKDEFAULT_CLOCK [ VAR ] [ var_list ] [ EQUAL expr<<[]>> ] SEMICOLON
-            |   TOKINPUT_CLOCK [VAR] var_list
-                  EQUAL expr<<[]>> SEMICOLON
-            |   TOKOUTPUT_CLOCK VAR var_list SEMICOLON
-            |   TOKNO_RESET SEMICOLON
-            |   TOKSCHEDULE import_arg
-                  ( TOKCF | TOKSB | TOKSBR | TOKC ) import_arg SEMICOLON
-            |   TOKDEFAULT_RESET VAR var_list  [ EQUAL expr<<[]>>] SEMICOLON
-            |   TOKINPUT_RESET [ VAR ] var_list [ TOKCLOCKED_BY var_list ]
-                  EQUAL expr<<[]>> SEMICOLON
-            |   TOKOUTPUT_RESET VAR var_list TOKCLOCKED_BY var_list SEMICOLON
-            )*
-            TOKENDMODULE [ COLON  VAR ]
-        )
+    rule paren_expression:
+        LPAREN [ assign_value ] RPAREN
 
-    rule export_declaration:
-        TOKEXPORT VAR
-        [ LPAREN DOT DOT RPAREN ]
-        SEMICOLON
+    rule param_list:
+        LPAREN [ assign_value (COMMA assign_value)* ] RPAREN
+
+##########
+########## Statements
+##########
 
     rule declared_item:
         term<<[]>> [ ( EQUAL | LARROW ) assign_value ]
@@ -374,9 +425,6 @@ parser HSDL:
             assign_value SEMICOLON
             for_variable_assignment ( COMMA for_variable_assignment )* RPAREN
         single_statement
-
-    rule paren_expression:
-        LPAREN [ assign_value ] RPAREN
 
     rule while_statement:
         TOKWHILE paren_expression
@@ -450,6 +498,18 @@ parser HSDL:
         statement_list
         TOKENDRULE [ COLON  VAR ]
 
+    rule match_arg:
+        DOT ( term<<[]>> | STAR )
+        | match_brace
+
+    rule match_brace:
+        LBRACE match_arg (COMMA match_arg)* RBRACE
+
+    rule match_statement:
+        TOKMATCH
+        match_brace
+        ( EQUAL | LARROW ) assign_value SEMICOLON
+
     rule single_statement:
         let_statement
         | for_statement
@@ -470,31 +530,9 @@ parser HSDL:
     rule statement_list:
         ( single_statement)*
 
-    rule module_item:
-        ( single_statement
-        | method_declaration
-        | import_declaration
-        | interface_declaration
-        | typedef_declaration
-        )+
-
-    rule package_declaration_item:
-        typedef_declaration
-        | import_declaration
-        | export_declaration
-        | interface_declaration
-        | function_declaration
-        | module_declaration
-        | vdeclaration
-        | instance_statement
-        | method_declaration
-        | let_statement
-        | rule_statement
-        | typeclass_declaration
-
-    rule vdeclaration:
-        Type_nitem VAR [ LBRACKET expr<<[]>> RBRACKET ]
-        [ ( EQUAL | LARROW ) assign_value ] SEMICOLON
+##########
+########## Declarations
+##########
 
     rule typedef_declaration:
         TOKTYPEDEF ( single_type_definition | NUM VAR SEMICOLON )
@@ -538,6 +576,9 @@ parser HSDL:
             TOKENDINTERFACE [ COLON VAR ]
         )
 
+    rule dep_item:
+        VAR TOKDETERMINES VAR
+
     rule typeclass_declaration:
         TOKTYPECLASS typevar_item
         [ TOKDEPENDENCIES LPAREN dep_item (COMMA dep_item)* RPAREN ]
@@ -546,18 +587,6 @@ parser HSDL:
         | module_declaration
         )*
         TOKENDTYPECLASS [ COLON VAR ]
-
-    rule match_arg:
-        DOT ( term<<[]>> | STAR )
-        | match_brace
-
-    rule match_brace:
-        LBRACE match_arg (COMMA match_arg)* RBRACE
-
-    rule match_statement:
-        TOKMATCH
-        match_brace
-        ( EQUAL | LARROW ) assign_value SEMICOLON
 
     rule module_declaration:
         TOKMODULE [ LBRACKET assign_value RBRACKET ] typevar_item_or_var
@@ -573,83 +602,8 @@ parser HSDL:
         ( package_declaration_item )*
         TOKENDPACKAGE [ COLON  VAR]
 
-    rule Type_item:
-        typevar_item
-        | TOKINTEGER | TOKBOOL | TOKSTRING | TOKREAL | TOKNAT | TOKACTION | TOKACTIONVALUE
-
-    rule param_item:
-        (   LPAREN param_item RPAREN
-        |   ( [ TOKNUMERIC | TOKPARAMETER ] TOKTYPE VAR
-            | formal_item
-            | NUM
-            | STR
-            )
-            [ VAR ]
-            [ typevar_param_list ]
-        )
-
-    rule typevar_param_list:
-        LPAREN [ param_item (COMMA param_item )* ] RPAREN
-
-    rule enum_element: term<<[]>> [EQUAL expr<<[]>>]
-
-    rule deriving_type_class:
-        TOKEQ | TOKBITS | TOKBOUNDED
-
-    rule typevar_item:
-        TYPEVAR typevar_param_list
-
-    rule typevar_item_or_var:
-        VAR [ typevar_param_list ]
-        | typevar_item
-        | TOKACTION
-        | TOKACTIONVALUE
-
-    rule Type_nitem:
-        Type_item
-        | VAR [ LBRACKET NUM (COLON NUM)* RBRACKET ]
-        | CLASSVAR typevar_item_or_var
-
-    rule Type_litem:
-        ( Type_nitem
-        | LPAREN Type_nitem (COMMA Type_nitem)* RPAREN
-        )
-
-    rule single_type_definition:
-        (   Type_litem [ Type_nitem | TOKENABLE ]
-        |   ( TOKENUM LBRACE enum_element ( COMMA enum_element )* RBRACE VAR
-            | ( TOKSTRUCT | TOKUNION TOKTAGGED )
-                LBRACE
-                    ( single_type_definition )*
-                RBRACE
-                typevar_item_or_var
-            )
-            [ TOKDERIVING  LPAREN deriving_type_class ( COMMA deriving_type_class )* RPAREN ]
-        )
-        SEMICOLON
-
-    rule function_argument: 
-        ( typevar_item_or_var
-        | LPAREN function_argument (COMMA function_argument)* RPAREN
-        )
-        [VAR [ formal_list ] ]
-
-    rule function_parameter:
-        TOKFUNCTION function_argument
-
-    rule formal_item:
-        ( function_parameter
-        | Type_nitem [ item_name ]
-        )
-
-    rule formal_list:
-        LPAREN [ formal_item ( COMMA formal_item)* ] RPAREN
-
-    rule param_list:
-        LPAREN [ assign_value (COMMA assign_value)* ] RPAREN
-
     rule function_declaration:
-        TOKFUNCTION [ Type_litem ]
+        TOKFUNCTION [ Type_list ]
         [function_name]
         [ formal_list ]
         [ provisos_clause ]
@@ -661,7 +615,7 @@ parser HSDL:
             ]
         )
 
-    rule instance_statement:
+    rule instance_declaration:
         TOKINSTANCE typevar_item
         [ provisos_clause ] SEMICOLON
         ( function_declaration
@@ -669,8 +623,66 @@ parser HSDL:
         )*
         TOKENDINSTANCE [ COLON VAR ]
 
-    rule dep_item:
-        VAR TOKDETERMINES VAR
+    rule import_arg:
+        ( VAR | var_list )
+
+    rule import_declaration:
+        TOKIMPORT
+        ( CLASSVAR STAR SEMICOLON
+        | SEMICOLON
+        | TOKBDPI [ VAR  EQUAL ]
+            TOKFUNCTION typevar_item_or_var
+            function_name
+            formal_list
+            [ provisos_clause ] SEMICOLON
+        | TOKBVI [ VAR [ EQUAL ] ]
+            TOKMODULE typevar_item_or_var
+            [ formal_list ]
+            [ provisos_clause ] SEMICOLON
+            (   method_declaration
+            |   TOKPARAMETER VAR  EQUAL expr<<[]>> SEMICOLON
+            |   TOKDEFAULT_CLOCK [ VAR ] [ var_list ] [ EQUAL expr<<[]>> ] SEMICOLON
+            |   TOKINPUT_CLOCK [VAR] var_list
+                  EQUAL expr<<[]>> SEMICOLON
+            |   TOKOUTPUT_CLOCK VAR var_list SEMICOLON
+            |   TOKNO_RESET SEMICOLON
+            |   TOKSCHEDULE import_arg
+                  ( TOKCF | TOKSB | TOKSBR | TOKC ) import_arg SEMICOLON
+            |   TOKDEFAULT_RESET VAR var_list  [ EQUAL expr<<[]>>] SEMICOLON
+            |   TOKINPUT_RESET [ VAR ] var_list [ TOKCLOCKED_BY var_list ]
+                  EQUAL expr<<[]>> SEMICOLON
+            |   TOKOUTPUT_RESET VAR var_list TOKCLOCKED_BY var_list SEMICOLON
+            )*
+            TOKENDMODULE [ COLON  VAR ]
+        )
+
+    rule export_declaration:
+        TOKEXPORT VAR
+        [ LPAREN DOT DOT RPAREN ]
+        SEMICOLON
+
+    rule module_item:
+        ( single_statement
+        | method_declaration
+        | import_declaration
+        | interface_declaration
+        | typedef_declaration
+        )+
+
+    rule package_declaration_item:
+        typedef_declaration
+        | import_declaration
+        | export_declaration
+        | interface_declaration
+        | function_declaration
+        | module_declaration
+        | instance_declaration
+        | method_declaration
+        | let_statement
+        | rule_statement
+        | typeclass_declaration
+        | Type_nitem VAR [ LBRACKET expr<<[]>> RBRACKET ]
+            [ ( EQUAL | LARROW ) assign_value ] SEMICOLON
 
     rule goal:
         ( package_declaration_item
