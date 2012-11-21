@@ -322,11 +322,11 @@ parser HSDL:
         | TOKBDPI [ VAR  EQUAL ]
             TOKFUNCTION typevar_item_or_var
             function_name
-            argument_list
+            formal_list
             [ provisos_clause ] SEMICOLON
         | TOKBVI [ VAR [ EQUAL ] ]
             TOKMODULE typevar_item_or_var
-            [ argument_list ]
+            [ formal_list ]
             [ provisos_clause ] SEMICOLON
             (   method_declaration
             |   TOKPARAMETER VAR  EQUAL expr<<[]>> SEMICOLON
@@ -501,7 +501,7 @@ parser HSDL:
         | package_declaration
 
     rule typedef_declaration:
-        TOKTYPEDEF single_type_definition
+        TOKTYPEDEF ( single_type_definition | NUM VAR SEMICOLON )
 
     rule method_body:
         [ provisos_clause ] SEMICOLON
@@ -512,8 +512,8 @@ parser HSDL:
 
     rule method_declaration:
         TOKMETHOD 
-        ( (TOKACTIONVALUE | Type_item) VAR [ argument_list ]
-        | VAR [ VAR ] [ argument_list [ VAR ] ]
+        ( (TOKACTIONVALUE | Type_item) VAR [ formal_list ]
+        | VAR [ VAR ] [ formal_list [ VAR ] ]
         )
         #| [ output_port ] VAR
         #    LPAREN LBRACE input_ports RBRACE RPAREN
@@ -585,35 +585,16 @@ parser HSDL:
         typevar_item
         | TOKINTEGER | TOKBOOL | TOKSTRING | TOKREAL | TOKNAT | TOKACTION
 
-    rule function_return_type:
-        ( TOKACTION VAR [call_params]
-        | TOKACTIONVALUE
-        | typevar_item_or_var
-        )
-
-    rule Type_nitem:
-        Type_item
-        | VAR [ LBRACKET NUM (COLON NUM)* RBRACKET ]
-        | CLASSVAR function_return_type
-
     rule param_item:
         (   LPAREN param_item RPAREN
         |   ( [ TOKNUMERIC | TOKPARAMETER ] TOKTYPE VAR
-            | argument_item
+            | formal_item
             | NUM
             | STR
             )
             [ VAR ]
             [ typevar_param_list ]
         )
-
-    rule typevar_item:
-        TYPEVAR typevar_param_list
-
-    rule typevar_item_or_var:
-        VAR [ typevar_param_list ]
-#[call_params]
-        | typevar_item
 
     rule typevar_param_list:
         LPAREN [ param_item (COMMA param_item )* ] RPAREN
@@ -623,14 +604,27 @@ parser HSDL:
     rule deriving_type_class:
         TOKEQ | TOKBITS | TOKBOUNDED
 
+    rule typevar_item:
+        TYPEVAR typevar_param_list
+
+    rule typevar_item_or_var:
+        VAR [ typevar_param_list ]
+        | typevar_item
+        | TOKACTION
+        | TOKACTIONVALUE
+
+    rule Type_nitem:
+        Type_item
+        | VAR [ LBRACKET NUM (COLON NUM)* RBRACKET ]
+        | CLASSVAR typevar_item_or_var
+
+    rule Type_litem:
+        ( Type_nitem
+        | LPAREN Type_nitem (COMMA Type_nitem)* RPAREN
+        )
+
     rule single_type_definition:
-        (   (
-# TOKTYPE |
-            Type_nitem
-            | NUM
-            | LPAREN Type_nitem RPAREN
-            )
-            [ Type_nitem | TOKENABLE ]
+        (   Type_litem [ Type_nitem | TOKENABLE ]
         |   ( TOKENUM LBRACE enum_element ( COMMA enum_element )* RBRACE VAR
             | ( TOKSTRUCT | TOKUNION TOKTAGGED )
                 LBRACE
@@ -643,35 +637,26 @@ parser HSDL:
         SEMICOLON
 
     rule function_argument: 
-        ( function_return_type
+        ( typevar_item_or_var
         | LPAREN function_argument (COMMA function_argument)* RPAREN
         )
-        [VAR [ argument_list ] ]
+        [VAR [ formal_list ] ]
 
-    rule Type_sitem:
-        Type_nitem
-# [ LBRACKET NUM COLON NUM RBRACKET ]
-
-    rule argument_item:
+    rule formal_item:
         ( TOKFUNCTION function_argument
-        | Type_sitem [ item_name ]
+        | Type_nitem [ item_name ]
         )
 
-    rule argument_list:
-        LPAREN [ argument_item ( COMMA argument_item)* ] RPAREN
+    rule formal_list:
+        LPAREN [ formal_item ( COMMA formal_item)* ] RPAREN
 
     rule param_list:
         LPAREN [ assign_value (COMMA assign_value)* ] RPAREN
 
     rule function_declaration:
-        TOKFUNCTION
-        [
-            ( Type_sitem
-            | LPAREN Type_nitem (COMMA Type_nitem)* RPAREN
-            )
-        ]
+        TOKFUNCTION [ Type_litem ]
         [function_name]
-        [ argument_list ]
+        [ formal_list ]
         [ provisos_clause ]
         ( EQUAL assign_value SEMICOLON
         | SEMICOLON
