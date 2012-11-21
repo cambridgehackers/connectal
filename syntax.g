@@ -16,11 +16,11 @@ parser HSDL:
     token TOKLPARENSTAR: " (*"
     token LPAREN: "("
     token RPAREN: ")"
-    token AMPERAMPERAMPER: "&&&"
-    token AMPERAMPER: "&&"
-    token AMPER: '&'
-    token BARBAR: "||"
-    token BAR: "|"
+    token TOKAMPERAMPERAMPER: "&&&"
+    token TOKAMPERAMPER: "&&"
+    token TOKAMPER: '&'
+    token TOKBARBAR: "||"
+    token TOKBAR: "|"
     token COLON: ':'
     token SEMICOLON: ';'
     token QUESTION: "?"
@@ -76,9 +76,8 @@ parser HSDL:
     token TOKBVI: '"BVI"'
 
     token NUM: " "
-    token VAR: " "
-    token ANYCHAR: " "
     token STR:   " "
+    token VAR: " "
     token TYPEVAR: " "
     token CLASSVAR: " "
     token BUILTINVAR: " "
@@ -216,9 +215,9 @@ parser HSDL:
 
     # A factor is the product and division of terms
     rule factor<<V>>: nterm<<V>>           {{ v = nterm }}
-        ( STAR nterm<<V>>
-        | STARSTAR nterm<<V>>
-        | APOSTROPHE nterm<<V>>
+        (  STAR nterm<<V>>
+        |  STARSTAR nterm<<V>>
+        |  APOSTROPHE nterm<<V>>
         |  TOKSLASH  nterm<<V>>
         |  CARET  nterm<<V>>
         |  LESS  nterm<<V>>
@@ -229,11 +228,11 @@ parser HSDL:
         |  GREATERGREATER  nterm<<V>>
         |  EQEQ  nterm<<V>>
         |  TOKNOTEQUAL  nterm<<V>>
-        |  AMPER  nterm<<V>>
-        |  AMPERAMPER  assign_value
-        |  AMPERAMPERAMPER  nterm<<V>>
-        |  BAR  nterm<<V>>
-        |  BARBAR  nterm<<V>>
+        |  TOKAMPER  nterm<<V>>
+        |  TOKAMPERAMPER  assign_value
+        |  TOKAMPERAMPERAMPER  nterm<<V>>
+        |  TOKBAR  nterm<<V>>
+        |  TOKBARBAR  nterm<<V>>
         |  TOKMATCHES
             ( dot_field_selection
             | LBRACE dot_field_item (COMMA dot_field_item)* RBRACE
@@ -243,7 +242,7 @@ parser HSDL:
         )*  {{ return v }}
 
     rule nterm<<V>>:
-        [ (TOKEXCLAIM | TOKTILDE | TOKMINUS ) ] term<<V>> {{ return term }}
+        [ (TOKEXCLAIM | TOKTILDE | TOKMINUS | TOKBAR) ] term<<V>> {{ return term }}
 
     rule call_pitem:
         [ TOKCLOCKED_BY | TOKRESET_BY ] assign_value
@@ -252,7 +251,8 @@ parser HSDL:
         LPAREN [ call_pitem ( COMMA call_pitem )* ] RPAREN
 
     rule type_instantiation:
-        TYPEVAR call_params
+        #TYPEVAR call_params
+        TYPEVAR typevar_param_list
 
     rule item_name:
         ( VAR | TOKREADY | TOKENABLE)
@@ -288,9 +288,7 @@ parser HSDL:
         | action_statement
         | actionvalue_statement
         | TOKRULES [ COLON  VAR]
-            ( rule_statement
-            | variable_declaration_or_call SEMICOLON
-            )*
+            ( rule_statement)*
             TOKENDRULES [ COLON  VAR]
         | TOKFUNCTION function_argument
         | function_operator [expr<<[]>>]
@@ -316,32 +314,14 @@ parser HSDL:
     rule import_arg:
         ( VAR | LPAREN VAR (COMMA VAR)* RPAREN )
 
-    rule importBVI_statement:
-        TOKPARAMETER VAR  EQUAL expr<<[]>> SEMICOLON
-        | TOKDEFAULT_CLOCK [ VAR ]
-            [ LPAREN VAR [ COMMA VAR ] RPAREN ] [ EQUAL expr<<[]>> ] SEMICOLON
-        | TOKINPUT_CLOCK [VAR] [ LPAREN VAR [ COMMA VAR ] RPAREN ]
-            EQUAL expr<<[]>> SEMICOLON
-        | TOKOUTPUT_CLOCK VAR LPAREN VAR [ COMMA VAR ] RPAREN SEMICOLON
-        | TOKNO_RESET SEMICOLON
-        | TOKSCHEDULE import_arg
-            ( TOKCF | TOKSB | TOKSBR | TOKC ) import_arg SEMICOLON
-        | TOKDEFAULT_RESET VAR  LPAREN [ VAR ] RPAREN  [ EQUAL expr<<[]>>] SEMICOLON
-        | TOKINPUT_RESET [ VAR ]  LPAREN [ VAR ] RPAREN
-            [ TOKCLOCKED_BY LPAREN VAR RPAREN ]
-            EQUAL expr<<[]>> SEMICOLON
-        | TOKOUTPUT_RESET VAR  LPAREN VAR RPAREN
-            TOKCLOCKED_BY LPAREN VAR RPAREN SEMICOLON
-#    TOKPORT VAR  EQUAL expr<<[]>> SEMICOLON
-#    TOKANCESTOR  LPAREN clock1 COMMA clock2 RPAREN SEMICOLON
-#    TOKSAME_FAMILY  LPAREN clock1 COMMA clock2 RPAREN SEMICOLON
-
     rule provisos_clause:
         TOKPROVISOS param_list
 
     rule import_declaration:
         TOKIMPORT
-        ( TOKBDPI [ VAR  EQUAL ]
+        ( CLASSVAR STAR SEMICOLON
+        | SEMICOLON
+        | TOKBDPI [ VAR  EQUAL ]
             TOKFUNCTION (VAR | type_instantiation)
             function_name
             argument_list
@@ -350,22 +330,30 @@ parser HSDL:
             TOKMODULE (VAR | type_instantiation)
             argument_list
             [ provisos_clause ] SEMICOLON
-            ( method_declaration
-            | importBVI_statement
+            (   method_declaration
+            |   TOKPARAMETER VAR  EQUAL expr<<[]>> SEMICOLON
+            |   TOKDEFAULT_CLOCK [ VAR ]
+                  [ LPAREN VAR [ COMMA VAR ] RPAREN ] [ EQUAL expr<<[]>> ] SEMICOLON
+            |   TOKINPUT_CLOCK [VAR] [ LPAREN VAR [ COMMA VAR ] RPAREN ]
+                  EQUAL expr<<[]>> SEMICOLON
+            |   TOKOUTPUT_CLOCK VAR LPAREN VAR [ COMMA VAR ] RPAREN SEMICOLON
+            |   TOKNO_RESET SEMICOLON
+            |   TOKSCHEDULE import_arg
+                  ( TOKCF | TOKSB | TOKSBR | TOKC ) import_arg SEMICOLON
+            |   TOKDEFAULT_RESET VAR  LPAREN [ VAR ] RPAREN  [ EQUAL expr<<[]>>] SEMICOLON
+            |   TOKINPUT_RESET [ VAR ]  LPAREN [ VAR ] RPAREN
+                  [ TOKCLOCKED_BY LPAREN VAR RPAREN ]
+                  EQUAL expr<<[]>> SEMICOLON
+            |   TOKOUTPUT_RESET VAR  LPAREN VAR RPAREN
+                  TOKCLOCKED_BY LPAREN VAR RPAREN SEMICOLON
             )*
             TOKENDMODULE [ COLON  VAR ]
-        | CLASSVAR STAR SEMICOLON
-        | SEMICOLON
         )
 
     rule export_declaration:
         TOKEXPORT VAR
         [ LPAREN DOT DOT RPAREN ]
         SEMICOLON
-
-    rule variable_declaration:
-        Type_nitem VAR [ LBRACKET expr<<[]>> RBRACKET ]
-        [ ( EQUAL | LARROW ) assign_value ] SEMICOLON
 
     rule declared_item:
         term<<[]>> [ ( EQUAL | LARROW ) assign_value ]
@@ -499,16 +487,23 @@ parser HSDL:
         | interface_declaration
         | function_declaration
         | module_declaration
-        | variable_declaration
+        | vdeclaration
         | instance_statement
         | method_declaration
         | let_statement
         | rule_statement
         | typeclass_statement
 
+    rule vdeclaration:
+        Type_nitem VAR [ LBRACKET expr<<[]>> RBRACKET ]
+        [ ( EQUAL | LARROW ) assign_value ] SEMICOLON
+
     rule top_level_statement:
         package_declaration_item
         | package_declaration
+
+    rule typedef_declaration:
+        TOKTYPEDEF struct_member
 
     rule method_body:
         [ provisos_clause ] SEMICOLON
@@ -535,7 +530,7 @@ parser HSDL:
 
     rule subinterface_declaration:
         TOKINTERFACE
-        ( user_type VAR SEMICOLON
+        ( typevar_item VAR SEMICOLON
         | VAR
             ( EQUAL assign_value SEMICOLON
             | VAR
@@ -552,7 +547,7 @@ parser HSDL:
     rule interface_declaration:
         TOKINTERFACE [ CLASSVAR* VAR [VAR]]
         ( EQUAL assign_value SEMICOLON
-        | [ user_type ] [SEMICOLON]
+        | [ typevar_item ] [SEMICOLON]
             ( method_declaration
             | subinterface_declaration
             )+
@@ -575,8 +570,10 @@ parser HSDL:
         Type_nitem [ VAR | STAR ]
 
     rule module_declaration:
-        TOKMODULE [ LBRACKET assign_value RBRACKET ] ( VAR | TYPEVAR argument_list )
-        LPAREN [ module_param (COMMA module_param)* ] RPAREN
+        TOKMODULE [ LBRACKET assign_value RBRACKET ] ( VAR | typevar_item )
+#TYPEVAR argument_list )
+        typevar_param_list
+        #LPAREN [ module_param (COMMA module_param)* ] RPAREN
         [ provisos_clause ] SEMICOLON
         [
             module_item
@@ -588,27 +585,48 @@ parser HSDL:
         ( package_declaration_item )*
         TOKENDPACKAGE [ COLON  VAR]
 
+    rule Type_item:
+        typevar_item
+#TYPEVAR param_list
+        | TOKINTEGER | TOKBOOL | TOKSTRING | TOKREAL | TOKNAT | TOKACTION
+
     rule function_return_type:
-        ( TOKACTION VAR
+        ( TOKACTION VAR [call_params]
         | TOKACTIONVALUE
-        | VAR
+        | VAR [call_params]
         | type_instantiation
         )
-
-    rule Type_item:
-        TYPEVAR param_list
-        | TOKINTEGER | TOKBOOL | TOKSTRING | TOKREAL | TOKNAT | TOKACTION
 
     rule Type_nitem:
         Type_item
         | VAR
         | CLASSVAR function_return_type
 
-    rule interface_arg:
-        struct_arg | expr<<[]>>
+    rule struct_arg:
+        [ TOKNUMERIC | TOKPARAMETER ] TOKTYPE VAR
 
-    rule user_type:
-        TYPEVAR LPAREN interface_arg (COMMA interface_arg )* RPAREN
+    rule interface_arg:
+        ( LPAREN interface_arg RPAREN
+        | ( struct_arg
+    | argument_item
+        #| Type_nitem
+#{{ print "UU" }}
+        | NUM
+        )
+        [ VAR ]
+        [ typevar_param_list ]
+        )
+# VAR
+#expr<<[]>>
+
+    rule instance_arg:
+        Type_nitem | NUM
+
+    rule typevar_item:
+        TYPEVAR typevar_param_list
+
+    rule typevar_param_list:
+        LPAREN [ interface_arg (COMMA interface_arg )* ] RPAREN
 
     rule enum_element: term<<[]>> [EQUAL expr<<[]>>]
 
@@ -618,18 +636,9 @@ parser HSDL:
     rule deriving_clause:
         TOKDERIVING  LPAREN deriving_type_class ( COMMA deriving_type_class )* RPAREN
 
-    rule struct_arg:
-        [ TOKNUMERIC | TOKPARAMETER ] TOKTYPE VAR
-
     rule struct_arg_list:
           VAR
-        | user_type
-
-    rule instance_arg:
-        Type_nitem | NUM
-
-    rule typedef_declaration:
-        TOKTYPEDEF struct_member
+         | typevar_item
 
     rule struct_member:
         (   ( TOKTYPE
@@ -637,7 +646,9 @@ parser HSDL:
             | LPAREN Type_nitem RPAREN
             )
             [ TOKENABLE
-            | struct_arg_list
+            | Type_nitem
+#VAR
+#struct_arg_list
             ]
             SEMICOLON
         | TOKENUM LBRACE enum_element ( COMMA enum_element )* RBRACE VAR
@@ -653,10 +664,9 @@ parser HSDL:
 
     rule function_argument: 
         ( function_return_type
-        | LPAREN function_return_type RPAREN
+        | LPAREN function_argument (COMMA function_argument)* RPAREN
         )
-        [VAR]
-        [ argument_list ]
+        [VAR [ argument_list ] ]
 
     rule Type_sitem:
         Type_nitem [ LBRACKET NUM COLON NUM RBRACKET ]
@@ -676,7 +686,7 @@ parser HSDL:
         TOKFUNCTION
         [
             ( Type_sitem
-            | LPAREN Type_nitem RPAREN
+            | LPAREN Type_nitem (COMMA Type_nitem)* RPAREN
             )
         ]
         [function_name]
@@ -691,7 +701,8 @@ parser HSDL:
         )
 
     rule instance_statement:
-        TOKINSTANCE TYPEVAR LPAREN instance_arg ( COMMA instance_arg )* RPAREN
+        TOKINSTANCE typevar_item
+#TYPEVAR LPAREN instance_arg ( COMMA instance_arg )* RPAREN
         [ provisos_clause ] SEMICOLON
         ( function_declaration
         | module_declaration
@@ -702,7 +713,7 @@ parser HSDL:
         VAR TOKDETERMINES VAR
 
     rule typeclass_statement:
-        TOKTYPECLASS user_type
+        TOKTYPECLASS typevar_item
         [ TOKDEPENDENCIES LPAREN dep_item (COMMA dep_item)* RPAREN ]
         SEMICOLON
         ( function_declaration
