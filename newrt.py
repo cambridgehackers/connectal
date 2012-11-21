@@ -82,7 +82,7 @@ class Scanner:
                 if m:
                     #print "preprocessor:", m.group(0)
                     s = m.group(0)
-                    if s == '`define' or s == '`include' or s == '`ifdef' or s == '`else' or s == '`endif' or s == '`undef':
+                    if s == '`define' or s == '`include' or s == '`ifdef' or s == '`else' or s == '`endif' or s == '`undef' or s == '`ifndef':
                         nextp = self.input.find('\n', self.pos)
                         if nextp != -1:
                             self.pos = nextp
