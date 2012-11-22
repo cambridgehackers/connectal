@@ -223,7 +223,7 @@ parser HSDL:
 
     rule single_type_definition:
         (   Type_list [ type_decl | TOKENABLE ]
-        |   ( TOKENUM LBRACE enum_element ( COMMA enum_element )* RBRACE VAR
+        |   ( TOKENUM LBRACE enum_element [ ( ( COMMA enum_element )+ | SEMICOLON ) ]  RBRACE VAR
             | ( TOKSTRUCT | TOKUNION TOKTAGGED )
                 LBRACE
                     ( single_type_definition )*
@@ -497,32 +497,45 @@ parser HSDL:
         [ equal_value ]
         [ provisos_clause ] SEMICOLON
         [
+        (
             ( single_statement )+
             TOKENDMETHOD [ COLON VAR]
+        |   TOKENDMETHOD [ COLON VAR]
+        )
         ]
 
-    rule subinterface_declaration:
+    rule subi_declaration:
         TOKINTERFACE
         ( typevar_item VAR SEMICOLON
         | VAR ( equal_value SEMICOLON
               | VAR ( equal_value SEMICOLON
-                    | SEMICOLON
-                        [
-                            ( method_declaration )+
-                            TOKENDINTERFACE [ COLON VAR ]
-                        ]
+                    | SEMICOLON [ method_declaration+ TOKENDINTERFACE [ COLON VAR ] ]
                     )
               )
         )
 
-    rule interface_declaration:
-        TOKINTERFACE [ CLASSVAR* VAR [VAR]]
-        ( equal_value SEMICOLON
-        | [ typevar_item ] [SEMICOLON]
-            ( method_declaration
-            | subinterface_declaration
+    rule interface_body:
+        (   ( method_declaration
+            | subi_declaration
             )+
             TOKENDINTERFACE [ COLON VAR ]
+        |   TOKENDINTERFACE [ COLON VAR ]
+        )
+
+    rule interface_declaration:
+        TOKINTERFACE CLASSVAR*
+        ( equal_value SEMICOLON
+        | typevar_item [SEMICOLON] interface_body
+        | SEMICOLON interface_body
+        | VAR
+            ( VAR
+                 ( SEMICOLON interface_body
+                 | equal_value SEMICOLON
+                 )
+            | SEMICOLON interface_body
+            | equal_value SEMICOLON
+            | interface_body
+            )
         )
 
     rule function_declaration:

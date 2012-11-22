@@ -7,7 +7,7 @@ chmod a+x syntax.py
 
 if [ "$1" != "" ] ; then
     echo running one $1
-    ./syntax.py $1 $2
+    ./syntax.py $1 $2 ss
 exit 1
 fi
 #ls ../blue-projects/80211/*.bsv 
