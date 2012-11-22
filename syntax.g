@@ -357,10 +357,8 @@ parser HSDL:
         )*
 
     rule assign_rvalue:
-        ( action_statement
-        | actionvalue_statement
+        ( group_statement
         | case_statement
-        | seq_statement
         | interface_declaration
         | TOKRULES [ COLON  VAR]
             ( rule_statement )*
@@ -413,14 +411,6 @@ parser HSDL:
     rule declared_item:
         term<<[]>> [ assign_opvalue ]
 
-    rule variable_declaration_or_call:
-        ( builtin_type declared_item ( COMMA declared_item )*
-        | expr<<[]>> [   ( declared_item ( COMMA declared_item )*
-                         | assign_opvalue
-                         )
-                     ]
-        ) SEMICOLON
-
     rule for_decl_item:
         # datatype might not be present
         type_decl [ VAR ] assign_opvalue
@@ -430,26 +420,6 @@ parser HSDL:
 
     rule return_statement:
         TOKRETURN assign_rvalue SEMICOLON
-
-    rule group_statement:
-        TOKBEGIN
-        statement_list
-        TOKEND
-
-    rule seq_statement:
-        TOKSEQ
-        statement_list
-        TOKENDSEQ
-
-    rule action_statement:
-        TOKACTIONSTATEMENT [ COLON  VAR] [ SEMICOLON ]
-        statement_list
-        TOKENDACTION [ COLON VAR]
-
-    rule actionvalue_statement:
-        TOKACTIONVALUESTATEMENT
-        statement_list
-        TOKENDACTIONVALUE
 
     rule case_statement:
         TOKCASE paren_expression
@@ -486,10 +456,16 @@ parser HSDL:
     rule match_brace:
         LBRACE match_arg (COMMA match_arg)* RBRACE
 
+    rule group_statement:
+          TOKBEGIN statement_list TOKEND
+        | TOKSEQ statement_list TOKENDSEQ
+        | TOKACTIONSTATEMENT [ COLON  VAR] [ SEMICOLON ]
+            statement_list
+            TOKENDACTION [ COLON VAR]
+        | TOKACTIONVALUESTATEMENT statement_list TOKENDACTIONVALUE
+
     rule single_statement:
-          action_statement
-        | actionvalue_statement
-        | case_statement
+          case_statement
         | TOKFOR LPAREN
                 for_decl_item (COMMA for_decl_item)* SEMICOLON
                 assign_rvalue SEMICOLON
@@ -504,14 +480,16 @@ parser HSDL:
         | TOKPAR statement_list TOKENDPAR
         | return_statement
         | rule_statement
-        | seq_statement
         | TOKWHILE paren_expression
-            ( action_statement
-            | group_statement
-            | seq_statement
-            | VAR SEMICOLON
+            (    group_statement
+            |    VAR SEMICOLON
             )
-        | variable_declaration_or_call
+        | builtin_type declared_item ( COMMA declared_item )* SEMICOLON
+        | expr<<[]>>
+            [   ( declared_item ( COMMA declared_item )*
+                | assign_opvalue
+                )
+            ] SEMICOLON
 
     rule statement_list:
         ( single_statement)*
@@ -522,7 +500,7 @@ parser HSDL:
 
     rule method_declaration:
         TOKMETHOD 
-        type_decl [ VAR ] [ formal_list ]
+        type_decl [ VAR ] [ formal_list [VAR] ]
         #( builtin_type VAR [ formal_list ]
         #| VAR [ VAR ] [ formal_list [ VAR ] ]
         #)
