@@ -438,11 +438,7 @@ parser HSDL:
         TOKENDCASE
 
     rule let_statement:
-        TOKLET
-        ( VAR
-        | LBRACE VAR (COMMA VAR)* RBRACE
-        )
-        assign_opvalue SEMICOLON
+        TOKLET ( VAR | LBRACE VAR (COMMA VAR)* RBRACE) assign_opvalue SEMICOLON
 
     rule rule_statement:
         TOKRULE VAR [paren_expression] SEMICOLON
@@ -480,10 +476,7 @@ parser HSDL:
         | TOKPAR statement_list TOKENDPAR
         | return_statement
         | rule_statement
-        | TOKWHILE paren_expression
-            (    group_statement
-            |    VAR SEMICOLON
-            )
+        | TOKWHILE paren_expression ( group_statement | VAR SEMICOLON)
         | builtin_type declared_item ( COMMA declared_item )* SEMICOLON
         | expr<<[]>>
             [   ( declared_item ( COMMA declared_item )*
@@ -499,11 +492,7 @@ parser HSDL:
 ############################################################################
 
     rule method_declaration:
-        TOKMETHOD 
-        type_decl [ VAR ] [ formal_list [VAR] ]
-        #( builtin_type VAR [ formal_list ]
-        #| VAR [ VAR ] [ formal_list [ VAR ] ]
-        #)
+        TOKMETHOD type_decl [ VAR ] [ formal_list [VAR] ]
         ( ( TOKIF | TOKCLOCKED_BY | TOKRESET_BY | TOKENABLE | TOKREADY) paren_expression )*
         [ equal_value ]
         [ provisos_clause ] SEMICOLON
