@@ -556,8 +556,17 @@ parser HSDL:
 
     rule module_contents_declaration:
           interface_declaration [SEMICOLON]
-        | func_or_module_declaration
+        | function_declaration
         | method_declaration
+        | TOKMODULE [ LBRACKET assign_rvalue RBRACKET ] typevar_item_or_var
+            [ typevar_param_list ]
+            [ provisos_clause ] SEMICOLON
+            [
+                (   TOKENDMODULE [ COLON VAR]
+                |   ( module_contents_declaration | single_statement)+
+                    TOKENDMODULE [ COLON VAR]
+                )
+            ]
         | TOKTYPEDEF ( single_type_definition | NUM VAR SEMICOLON )
         | TOKIMPORT
             ( CLASSVAR STAR SEMICOLON
@@ -588,18 +597,6 @@ parser HSDL:
                 TOKENDMODULE [ COLON  VAR ]
             )
 
-    rule func_or_module_declaration:
-          function_declaration
-        | TOKMODULE [ LBRACKET assign_rvalue RBRACKET ] typevar_item_or_var
-            [ typevar_param_list ]
-            [ provisos_clause ] SEMICOLON
-            [
-                (   TOKENDMODULE [ COLON VAR]
-                |   ( module_contents_declaration | single_statement)+
-                    TOKENDMODULE [ COLON VAR]
-                )
-            ]
-
     rule dep_item:
         VAR TOKDETERMINES VAR
 
@@ -608,14 +605,14 @@ parser HSDL:
         | TOKEXPORT VAR [ LPAREN DOT DOT RPAREN ] SEMICOLON
         | TOKINSTANCE typevar_item
             [ provisos_clause ] SEMICOLON
-            ( func_or_module_declaration )*
+            ( module_contents_declaration )*
             TOKENDINSTANCE [ COLON VAR ]
         | let_statement
         | rule_statement
         | TOKTYPECLASS typevar_item
             [ TOKDEPENDENCIES LPAREN dep_item (COMMA dep_item)* RPAREN ]
             SEMICOLON
-            ( func_or_module_declaration )*
+            ( module_contents_declaration )*
             TOKENDTYPECLASS [ COLON VAR ]
 
     rule goal:
