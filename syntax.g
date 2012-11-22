@@ -556,6 +556,7 @@ parser HSDL:
 
     rule module_contents_declaration:
           interface_declaration [SEMICOLON]
+        | func_or_module_declaration
         | method_declaration
         | TOKTYPEDEF ( single_type_definition | NUM VAR SEMICOLON )
         | TOKIMPORT
@@ -593,8 +594,10 @@ parser HSDL:
             [ typevar_param_list ]
             [ provisos_clause ] SEMICOLON
             [
-                ( module_contents_declaration | single_statement)+
-                TOKENDMODULE [ COLON VAR]
+                (   TOKENDMODULE [ COLON VAR]
+                |   ( module_contents_declaration | single_statement)+
+                    TOKENDMODULE [ COLON VAR]
+                )
             ]
 
     rule dep_item:
@@ -603,7 +606,6 @@ parser HSDL:
     rule declaration_item:
           module_contents_declaration
         | TOKEXPORT VAR [ LPAREN DOT DOT RPAREN ] SEMICOLON
-        | func_or_module_declaration
         | TOKINSTANCE typevar_item
             [ provisos_clause ] SEMICOLON
             ( func_or_module_declaration )*
