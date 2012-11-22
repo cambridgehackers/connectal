@@ -13,7 +13,6 @@ parser HSDL:
     #option:      "context-insensitive-scanner"
 
     token ENDTOKEN: " "
-    token TOKLPARENSTAR: " (*"
     token LPAREN: "("
     token RPAREN: ")"
     token TOKAMPERAMPERAMPER: "&&&"
@@ -36,7 +35,6 @@ parser HSDL:
     token EQEQ: "=="
     token EQUAL: "="
     token STARSTAR: "**"
-    token TOKSTARRPAREN: " *)"
     token STAR: "*"
     token TOKNOTEQUAL: "!="
     token TOKEXCLAIM: "!"
@@ -90,7 +88,6 @@ parser HSDL:
     token TOKC: "C"
     token TOKCASE: "case"
     token TOKCF: "CF"
-    token TOKCLK: "CLK"
     token TOKCLOCKED_BY: "clocked_by"
     token TOKDEFAULT: "default"
     token TOKDEFAULT_CLOCK: "default_clock"
@@ -122,7 +119,7 @@ parser HSDL:
     token TOKFUNCTION: "function"
     token TOKIF: "if"
     token TOKIMPORT: "import"
-    token TOKIN: "in"
+    #token TOKIN: "in"
     token TOKINPUT_CLOCK: "input_clock"
     token TOKINPUT_RESET: "input_reset"
     token TOKINSTANCE: "instance"
@@ -142,7 +139,6 @@ parser HSDL:
     token TOKPROVISOS: "provisos"
     token TOKREADY: "ready"
     token TOKRESET_BY: "reset_by"
-    token TOKRESULT: "result"
     token TOKRETURN: "return"
     token TOKRULE: "rule"
     token TOKRULES: "rules"
@@ -163,9 +159,10 @@ parser HSDL:
 ############################################################################
 
     rule type_decl:
-        typevar_item
-        | VAR [ LBRACKET NUM (COLON NUM)* RBRACKET ]
+        ( typevar_item_or_var
+ [ LBRACKET NUM (COLON NUM)* RBRACKET ]
         | CLASSVAR typevar_item_or_var
+        )
 
     rule formal_item:
         ( function_parameter
@@ -494,8 +491,7 @@ parser HSDL:
 
     rule interface_declaration:
         TOKINTERFACE CLASSVAR*
-        #typevar_item_or_var [ VAR ]
-        (typevar_item | VAR) [ VAR ]
+        typevar_item_or_var [ VAR ]
             ( equal_value
             | [ SEMICOLON ] [ interface_body ] TOKENDINTERFACE [ COLON VAR ]
             )
