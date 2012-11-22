@@ -169,23 +169,22 @@ parser HSDL:
     token TOKUNION: "union"
     token TOKWHILE: "while"
 
-##########
-########## Datatypes
-##########
+############################################################################
+############################# Datatypes ####################################
+############################################################################
 
-    rule Type_item:
+    rule builtin_type:
         typevar_item
         | TOKINTEGER | TOKBOOL | TOKSTRING | TOKREAL | TOKNAT | TOKACTION | TOKACTIONVALUE
 
-    rule Type_nitem:
-        Type_item
+    rule type_decl:
+        builtin_type
         | VAR [ LBRACKET NUM (COLON NUM)* RBRACKET ]
         | CLASSVAR typevar_item_or_var
-        #| CLASSVAR* ( item_name | typevar_item )
 
     rule formal_item:
         ( function_parameter
-        | Type_nitem [ item_name ]
+        | type_decl [ item_name ]
         )
 
     rule param_item:
@@ -212,8 +211,8 @@ parser HSDL:
         | TOKACTIONVALUE
 
     rule Type_list:
-        ( Type_nitem
-        | LPAREN Type_nitem (COMMA Type_nitem)* RPAREN
+        ( type_decl
+        | LPAREN type_decl (COMMA type_decl)* RPAREN
         )
 
     rule enum_element:
@@ -223,7 +222,7 @@ parser HSDL:
         TOKEQ | TOKBITS | TOKBOUNDED
 
     rule single_type_definition:
-        (   Type_list [ Type_nitem | TOKENABLE ]
+        (   Type_list [ type_decl | TOKENABLE ]
         |   ( TOKENUM LBRACE enum_element ( COMMA enum_element )* RBRACE VAR
             | ( TOKSTRUCT | TOKUNION TOKTAGGED )
                 LBRACE
@@ -247,9 +246,9 @@ parser HSDL:
     rule function_parameter:
         TOKFUNCTION function_argument
 
-##########
-########## Expressions
-##########
+############################################################################
+############################# Expressions ##################################
+############################################################################
 
     rule dot_item:
         DOT (VAR | STAR)
@@ -275,10 +274,17 @@ parser HSDL:
             )
         ]
 
-    rule dot_field_selection:
-          tagged_dot_list
+    rule matches_clause:
+        ( tagged_dot_list
         | LPAREN tagged_dot_list RPAREN
+        | LBRACE 
+             ( tagged_dot_list (COMMA tagged_dot_list)*
+             | dot_field_item (COMMA dot_field_item)*
+             ) RBRACE
+        | TOKDEFAULT
         | NUM
+        | VAR 
+        )
 
     rule expr<<V>>:
          exprint<<V>>
@@ -312,11 +318,7 @@ parser HSDL:
         |  TOKAMPERAMPERAMPER  nterm<<V>>
         |  TOKBAR  nterm<<V>>
         |  TOKBARBAR  nterm<<V>>
-        |  TOKMATCHES
-            ( dot_field_selection
-            | LBRACE dot_field_item (COMMA dot_field_item)* RBRACE
-            | VAR
-            )
+        |  TOKMATCHES matches_clause
         |  TOKPERCENT  nterm<<V>>
         )*  {{ return v }}
 
@@ -345,7 +347,7 @@ parser HSDL:
         |    (TOKTAGGED term_single)+ [term_single]
         |    BUILTINVAR [ param_list ]
         |    term_single
-        |    Type_item
+        |    builtin_type
         |    STR {{ return STR }}
         |    paren_expression
         |    LBRACE assign_rvalue ( COMMA assign_rvalue )* RBRACE
@@ -404,15 +406,15 @@ parser HSDL:
     rule param_list:
         LPAREN [ assign_rvalue (COMMA assign_rvalue)* ] RPAREN
 
-##########
-########## Statements
-##########
+############################################################################
+############################# Statements ###################################
+############################################################################
 
     rule declared_item:
         term<<[]>> [ assign_opvalue ]
 
     rule variable_declaration_or_call:
-        ( Type_item declared_item ( COMMA declared_item )*
+        ( builtin_type declared_item ( COMMA declared_item )*
         | expr<<[]>> [   ( declared_item ( COMMA declared_item )*
                          | assign_opvalue
                          )
@@ -421,7 +423,7 @@ parser HSDL:
 
     rule for_decl_item:
         # datatype might not be present
-        Type_nitem [ VAR ] assign_opvalue
+        type_decl [ VAR ] assign_opvalue
 
     rule for_variable_assignment:
         term<<[]>> assign_opvalue
@@ -453,11 +455,7 @@ parser HSDL:
         TOKCASE paren_expression
         ( TOKMATCHES
           (
-              ( dot_field_selection
-              | LBRACE tagged_dot_list (COMMA tagged_dot_list)* RBRACE
-              | TOKDEFAULT
-              | VAR 
-              )
+              matches_clause
               COLON (QUESTION SEMICOLON | single_statement)
           )*
         | (
@@ -518,15 +516,16 @@ parser HSDL:
     rule statement_list:
         ( single_statement)*
 
-##########
-########## Declarations
-##########
+############################################################################
+############################# Declarations #################################
+############################################################################
 
     rule method_declaration:
         TOKMETHOD 
-        ( Type_item VAR [ formal_list ]
-        | VAR [ VAR ] [ formal_list [ VAR ] ]
-        )
+        type_decl [ VAR ] [ formal_list ]
+        #( builtin_type VAR [ formal_list ]
+        #| VAR [ VAR ] [ formal_list [ VAR ] ]
+        #)
         ( ( TOKIF | TOKCLOCKED_BY | TOKRESET_BY | TOKENABLE | TOKREADY) paren_expression )*
         [ equal_value ]
         [ provisos_clause ] SEMICOLON
@@ -538,17 +537,15 @@ parser HSDL:
     rule subinterface_declaration:
         TOKINTERFACE
         ( typevar_item VAR SEMICOLON
-        | VAR
-            ( equal_value SEMICOLON
-            | VAR
-                ( equal_value SEMICOLON
-                | SEMICOLON
-                    [
-                        ( method_declaration )+
-                        TOKENDINTERFACE [ COLON VAR ]
-                    ]
-                )
-            )
+        | VAR ( equal_value SEMICOLON
+              | VAR ( equal_value SEMICOLON
+                    | SEMICOLON
+                        [
+                            ( method_declaration )+
+                            TOKENDINTERFACE [ COLON VAR ]
+                        ]
+                    )
+              )
         )
 
     rule interface_declaration:
@@ -637,7 +634,7 @@ parser HSDL:
             SEMICOLON
             ( func_or_module_declaration )*
             TOKENDTYPECLASS [ COLON VAR ]
-        | Type_nitem VAR [ LBRACKET expr<<[]>> RBRACKET ]
+        | type_decl VAR [ LBRACKET expr<<[]>> RBRACKET ]
             [ assign_opvalue ] SEMICOLON
 
     rule goal:
