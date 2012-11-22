@@ -358,7 +358,6 @@ parser HSDL:
 
     rule assign_rvalue:
         ( group_statement
-        | case_statement
         | interface_declaration
         | TOKRULES [ COLON  VAR]
             ( rule_statement )*
@@ -398,14 +397,14 @@ parser HSDL:
     rule var_list:
         LPAREN [var_list_elem (COMMA var_list_elem)*] RPAREN
 
-    rule provisos_clause:
-        TOKPROVISOS param_list
-
     rule paren_expression:
         LPAREN [ assign_rvalue ] RPAREN
 
     rule param_list:
         LPAREN [ assign_rvalue (COMMA assign_rvalue)* ] RPAREN
+
+    rule provisos_clause:
+        TOKPROVISOS param_list
 
 ############################################################################
 ############################# Statements ###################################
@@ -417,25 +416,6 @@ parser HSDL:
 
     rule for_variable_assignment:
         term<<[]>> assign_opvalue
-
-    rule return_statement:
-        TOKRETURN assign_rvalue SEMICOLON
-
-    rule case_statement:
-        TOKCASE paren_expression
-        ( TOKMATCHES
-          (
-              matches_clause
-              COLON (QUESTION SEMICOLON | single_statement)
-          )*
-        | (
-              (expr<<[]>> (COMMA expr<<[]>>)*
-              | TOKDEFAULT
-              )
-              COLON (QUESTION SEMICOLON | single_statement)
-          )*
-        )
-        TOKENDCASE
 
     rule declared_item:
         term<<[]>> [ assign_opvalue ]
@@ -470,10 +450,22 @@ parser HSDL:
             statement_list
             TOKENDACTION [ COLON VAR]
         | TOKACTIONVALUESTATEMENT statement_list TOKENDACTIONVALUE
+        | TOKCASE paren_expression
+            ( TOKMATCHES
+              (   matches_clause
+                  COLON (QUESTION SEMICOLON | single_statement)
+              )*
+            | (
+                  (expr<<[]>> (COMMA expr<<[]>>)*
+                  | TOKDEFAULT
+                  )
+                  COLON (QUESTION SEMICOLON | single_statement)
+              )*
+            )
+            TOKENDCASE
 
     rule single_statement:
-          case_statement
-        | TOKFOR LPAREN
+          TOKFOR LPAREN
                 for_decl_item (COMMA for_decl_item)* SEMICOLON
                 assign_rvalue SEMICOLON
                 for_variable_assignment ( COMMA for_variable_assignment )*
@@ -485,7 +477,7 @@ parser HSDL:
         | let_statement
         | TOKMATCH ( TOKTAGGED VAR dot_field_list | match_brace ) assign_opvalue SEMICOLON
         | TOKPAR statement_list TOKENDPAR
-        | return_statement
+        | TOKRETURN assign_rvalue SEMICOLON
         | rule_statement
         | TOKWHILE paren_expression ( group_statement | VAR SEMICOLON)
 
@@ -519,23 +511,18 @@ parser HSDL:
             )
         )+
 
-    rule top_interface_contents:
-          SEMICOLON [ interface_body ]
-            TOKENDINTERFACE [ COLON VAR ]
+    rule interface_contents:
+          SEMICOLON [ interface_body ] TOKENDINTERFACE [ COLON VAR ]
         | equal_value
-        | interface_body
-            TOKENDINTERFACE [ COLON VAR ]
+        | interface_body TOKENDINTERFACE [ COLON VAR ]
         | TOKENDINTERFACE [ COLON VAR ]
 
     rule interface_declaration:
         TOKINTERFACE CLASSVAR*
         ( typevar_item [SEMICOLON] [ interface_body ]
             TOKENDINTERFACE [ COLON VAR ]
-        | top_interface_contents
-        | VAR
-            ( VAR top_interface_contents
-            | top_interface_contents
-            )
+        | interface_contents
+        | VAR [ VAR ] interface_contents
         )
 
     rule function_declaration:
@@ -544,11 +531,7 @@ parser HSDL:
         [ formal_list ]
         [ provisos_clause ]
         ( equal_value SEMICOLON
-        | SEMICOLON
-            [
-                ( single_statement)+
-                TOKENDFUNCTION [ COLON  function_name]
-            ]
+        | SEMICOLON [ ( single_statement)+ TOKENDFUNCTION [ COLON  function_name] ]
         )
 
     rule import_arg:
@@ -563,8 +546,7 @@ parser HSDL:
             [ provisos_clause ] SEMICOLON
             [
                 (   TOKENDMODULE [ COLON VAR]
-                |   ( module_contents_declaration | single_statement)+
-                    TOKENDMODULE [ COLON VAR]
+                |   ( module_contents_declaration | single_statement)+ TOKENDMODULE [ COLON VAR]
                 )
             ]
         | TOKTYPEDEF ( single_type_definition | NUM VAR SEMICOLON )
@@ -580,19 +562,17 @@ parser HSDL:
                 TOKMODULE typevar_item_or_var
                 [ formal_list ]
                 [ provisos_clause ] SEMICOLON
-                (   method_declaration
-                |   interface_declaration [SEMICOLON]
-                |   TOKPARAMETER VAR  equal_value SEMICOLON
-                |   TOKDEFAULT_CLOCK [ VAR ] [ var_list ] [ equal_value ] SEMICOLON
-                |   TOKINPUT_CLOCK [VAR] var_list equal_value SEMICOLON
-                |   TOKOUTPUT_CLOCK VAR var_list SEMICOLON
-                |   TOKNO_RESET SEMICOLON
-                |   TOKSCHEDULE import_arg
-                      ( TOKCF | TOKSB | TOKSBR | TOKC ) import_arg SEMICOLON
-                |   TOKDEFAULT_RESET VAR var_list  [ equal_value ] SEMICOLON
-                |   TOKINPUT_RESET [ VAR ] var_list [ TOKCLOCKED_BY var_list ]
-                      equal_value SEMICOLON
-                |   TOKOUTPUT_RESET VAR var_list TOKCLOCKED_BY var_list SEMICOLON
+                ( method_declaration
+                | interface_declaration [SEMICOLON]
+                | TOKPARAMETER VAR  equal_value SEMICOLON
+                | TOKDEFAULT_CLOCK [ VAR ] [ var_list ] [ equal_value ] SEMICOLON
+                | TOKINPUT_CLOCK [VAR] var_list equal_value SEMICOLON
+                | TOKOUTPUT_CLOCK VAR var_list SEMICOLON
+                | TOKNO_RESET SEMICOLON
+                | TOKSCHEDULE import_arg ( TOKCF | TOKSB | TOKSBR | TOKC ) import_arg SEMICOLON
+                | TOKDEFAULT_RESET VAR var_list  [ equal_value ] SEMICOLON
+                | TOKINPUT_RESET [ VAR ] var_list [ TOKCLOCKED_BY var_list ] equal_value SEMICOLON
+                | TOKOUTPUT_RESET VAR var_list TOKCLOCKED_BY var_list SEMICOLON
                 )*
                 TOKENDMODULE [ COLON  VAR ]
             )
