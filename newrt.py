@@ -139,8 +139,14 @@ class Scanner:
                 self.pos = m.end()
                 self.skipwhitespace()
                 if self.pos < len(self.input):
-                    if self.input[self.pos] == '#':
+                    if m.group(0)[0].isupper():
                         best_pat = 'TYPEVAR'
+                        if self.input[self.pos] == '#':
+                            best_match = self.pos + 1 - lasttokenpos
+                        else:
+                            best_match = self.pos - lasttokenpos
+                    elif self.input[self.pos] == '#':
+                        best_pat = 'VAR'
                         best_match = self.pos + 1 - lasttokenpos
                     elif self.input[self.pos:self.pos+2] == '::':
                         best_pat = 'CLASSVAR'
