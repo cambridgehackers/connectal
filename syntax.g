@@ -399,7 +399,7 @@ parser HSDL:
         term<<[]>> [ assign_opvalue ]
 
     rule rule_statement:
-        TOKRULE VAR [paren_expression] SEMICOLON
+        TOKRULE VAR [paren_expression] [TOKIF paren_expression] SEMICOLON
         statement_list
         TOKENDRULE [ COLON  VAR ]
 
