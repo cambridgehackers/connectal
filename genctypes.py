@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import os, sys
+import os, sys, shutil
 import AST
 import newrt
 import syntax
@@ -171,7 +171,6 @@ class InterfaceMixin:
                          'initializers': ''}
         subinterfaces = []
         for d in self.decls:
-            print type(d), d
             if d.__class__ == AST.Interface:
                 subinterfaces.append(d.subinterfacename)
         if subinterfaces:
@@ -226,11 +225,13 @@ if __name__=='__main__':
     s = open(sys.argv[1]).read() + '\n'
     s1 = syntax.parse('goal', s)
     print s1
+    cppname = None
     if len(sys.argv) > 2:
         h = open('%s.h' % sys.argv[2], 'w')
-        cpp = open('%s.cpp' % sys.argv[2], 'w')
+        cppname = '%s.cpp' % sys.argv[2]
+        cpp = open(cppname, 'w')
         cpp.write('#include "ushw.h"\n')
-        cpp.write('#include "%s.h"\n' % sys.argv[2])
+        cpp.write('#include "%s.h"\n' % os.path.basename(sys.argv[2]))
     else:
         h = sys.stdout
         cpp = sys.stdout
@@ -239,3 +240,8 @@ if __name__=='__main__':
         print v.collectTypes()
         v.emitCDeclaration(h)
         v.emitCImplementation(cpp)
+    if cppname:
+        srcdir = os.path.dirname(sys.argv[0])
+        dstdir = os.path.dirname(cppname)
+        for f in ['ushw.h', 'ushw.cpp']:
+            shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
