@@ -1,15 +1,17 @@
 
 class Method:
-    def __init__(self, name, type_decl, params):
+    def __init__(self, name, return_type, params):
+        self.type = 'Method'
         self.name = name
-        self.type_decl = type_decl
+        self.return_type = return_type
         self.params = params
     def __repr__(self):
         sparams = map(str, self.params)
-        return '<method: %s %s %s>' % (self.name, self.type_decl, sparams)
+        return '<method: %s %s %s>' % (self.name, self.return_type, sparams)
 
 class Interface:
     def __init__(self, name, decls, subinterfacename=None):
+        self.type = 'Interface'
         self.name = name
         self.decls = decls
         self.subinterfacename = subinterfacename
@@ -18,6 +20,7 @@ class Interface:
 
 class Module:
     def __init__(self, name, decls):
+        self.type = 'Module'
         self.name = name
         self.decls = decls
     def __repr__(self):
@@ -39,6 +42,7 @@ class EnumElement:
 
 class Enum:
     def __init__(self, name, elements):
+        self.type = 'Enum'
         self.name = name
         self.elements = elements
     def __repr__(self):
@@ -53,6 +57,7 @@ class StructMember:
 
 class Struct:
     def __init__(self, name, elements):
+        self.type = 'Struct'
         self.name = name
         self.elements = elements
     def __repr__(self):
@@ -67,6 +72,7 @@ class Param:
 
 class Type:
     def __init__(self, name, params):
+        self.type = 'Type'
         self.name = name
         if params:
             self.params = params

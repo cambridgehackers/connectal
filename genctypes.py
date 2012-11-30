@@ -3,6 +3,7 @@ import os, sys, shutil
 import AST
 import newrt
 import syntax
+import bsvgen
 
 creatorTemplate = '''
 %(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName)
@@ -14,9 +15,9 @@ creatorTemplate = '''
 
 '''
 constructorTemplate='''
-%(namespace)s%(className)s::%(className)s(UshwInstance *p)
-%(initializers)s{
-    this->p = p;
+%(namespace)s%(className)s::%(className)s(UshwInstance *p, int baseChannelNumber)
+ : p(p), baseChannelNumber(baseChannelNumber)%(initializers)s
+{
 }
 %(namespace)s%(className)s::~%(className)s()
 {
@@ -29,9 +30,13 @@ methodTemplate='''
 struct %(className)s%(methodName)sMSG : public UshwMessage
 {
 struct Request {
+int channelNumber;
 %(paramStructDeclarations)s
 } request;
+struct Response {
+int responseChannel;
 %(resultType)s response;
+} response;
 };
 
 %(resultType)s %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
@@ -39,9 +44,10 @@ struct Request {
     %(className)s%(methodName)sMSG msg;
     msg.argsize = sizeof(msg.request);
     msg.resultsize = sizeof(msg.response);
+    msg.request.channelNumber = baseChannelNumber + %(methodChannelOffset)s;
 %(paramSetters)s
     p->sendMessage(&msg);
-    return msg.response;
+    return msg.response.response;
 };
 '''
 
@@ -51,12 +57,18 @@ def indent(f, indentation):
 
 class MethodMixin:
     def collectTypes(self):
-        result = [self.type_decl]
+        result = [self.return_type]
         result.append(AST.Type('Tuple#', self.params))
         return result
+    def resultTypeName(self):
+        if (self.return_type):
+            return self.return_type.cName()
+        else:
+            return int
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         indent(f, indentation)
-        f.write('%s %s ( ' % cName(self.name))
+        resultTypeName = self.resultTypeName()
+        f.write('%s %s ( ' % (resultTypeName, cName(self.name)))
         print parentClassName, self.name
         f.write(', '.join([cName(p.type) for p in self.params]))
         f.write(' );\n');
@@ -64,10 +76,7 @@ class MethodMixin:
         paramDeclarations = [ '%s %s' % (p.type.cName(), p.name) for p in self.params]
         paramStructDeclarations = [ '%s %s;\n' % (p.type.cName(), p.name) for p in self.params]
         paramSetters = [ 'msg.request.%s = %s;\n' % (p.name, p.name) for p in self.params]
-        resultTypeName = 'int'
-        if (self.type_decl):
-            print self.type_decl, self.type_decl.cName()
-            resultTypeName = self.type_decl.cName()
+        resultTypeName = self.resultTypeName()
         substs = {
             'namespace': namespace,
             'className': className,
@@ -75,7 +84,8 @@ class MethodMixin:
             'paramDeclarations': ', '.join(paramDeclarations),
             'paramStructDeclarations': ''.join(paramStructDeclarations),
             'paramSetters': ''.join(paramSetters),
-            'resultType': resultTypeName
+            'resultType': resultTypeName,
+            'methodChannelOffset': self.channelNumber
             }
         f.write(methodTemplate % substs)
 
@@ -134,6 +144,28 @@ class InterfaceMixin:
     def collectTypes(self):
         result = [d.collectTypes() for d in self.decls]
         return result
+    def getSubinterface(self, name):
+        subinterfaceName = name.replace(' ', '')
+        subinterface = syntax.globalvars[subinterfaceName]
+        print 'subinterface', subinterface, subinterface
+        return subinterface
+    def assignFriends(self):
+        self.friends = []
+        for d in self.decls:
+            if d.__class__ == AST.Interface:
+                i.friends.append(self.name)
+        print self.friends, self
+    def assignRequestResponseChannels(self):
+        channelNumber = 0
+        for d in self.decls:
+            if d.__class__ == AST.Interface:
+                i = self.getSubinterface(d.name)
+                d.baseChannelNumber = channelNumber
+                channelNumber = channelNumber + i.channelCount 
+            elif d.__class__ == AST.Method:
+                d.channelNumber = channelNumber
+                channelNumber = channelNumber + 1
+        self.channelCount = channelNumber
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         self.toplevel = (indentation == 0)
         name = cName(self.name)
@@ -150,20 +182,31 @@ class InterfaceMixin:
         indent(f, indentation)
         f.write('private:\n')
         indent(f, indentation+4)
-        f.write('%(name)s(UshwInstance *);\n' % {'name': name})
+        f.write('%(name)s(UshwInstance *, int baseChannelNumber=0);\n' % {'name': name})
         indent(f, indentation+4)
         f.write('~%(name)s();\n' % {'name': name})
         indent(f, indentation+4)
         f.write('UshwInstance *p;\n')
+        indent(f, indentation+4)
+        f.write('int baseChannelNumber;\n')
         if parentClassName:
             indent(f, indentation+4)
             f.write('friend class %s%s;\n' % (namespace, parentClassName))
+
+        ## dereference the interface, in case this is nested
+        subinterface = self.getSubinterface(self.name)
+        ## and declare our friends
+        for friend in subinterface.friends:
+            indent(f, indentation+4)
+            f.write('friend class %s;\n' % friend)
+
         indent(f, indentation)
         f.write('}')
         if self.subinterfacename:
             f.write(' %s' % self.subinterfacename)
         f.write(';\n');
     def emitCImplementation(self, f, parentClassName='', namespace=''):
+        self.assignRequestResponseChannels()
         if parentClassName:
             namespace = '%s%s::' % (namespace, parentClassName)
         className = cName(self.name)
@@ -179,7 +222,7 @@ class InterfaceMixin:
             if d.__class__ == AST.Interface:
                 subinterfaces.append(d.subinterfacename)
         if subinterfaces:
-            substitutions['initializers'] = (': %s\n'
+            substitutions['initializers'] = (', %s'
                                              % ', '.join([ '%s(p)' % i for i in subinterfaces]))
         if self.toplevel:
             f.write(creatorTemplate % substitutions)
@@ -195,6 +238,8 @@ class TypeMixin:
         cid = cid.replace(' ', '')
         if cid == 'Bit#':
             return 'unsigned int'
+        elif cid == 'Action':
+            return 'int'
         elif cid == 'ActionValue#':
             ## this is a Param but should be a Type
             return self.params[0].type.cName()
@@ -219,14 +264,14 @@ def cName(x):
     else:
         return x.cName()
 
-AST.Method.__bases__ += (MethodMixin,)
+AST.Method.__bases__ += (MethodMixin,bsvgen.MethodMixin)
 AST.StructMember.__bases__ += (StructMemberMixin,)
-AST.Struct.__bases__ += (StructMixin,)
+AST.Struct.__bases__ += (StructMixin,bsvgen.NullMixin)
 AST.EnumElement.__bases__ += (EnumElementMixin,)
-AST.Enum.__bases__ += (EnumMixin,)
-AST.Type.__bases__ += (TypeMixin,)
+AST.Enum.__bases__ += (EnumMixin,bsvgen.NullMixin)
+AST.Type.__bases__ += (TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (ParamMixin,)
-AST.Interface.__bases__ += (InterfaceMixin,)
+AST.Interface.__bases__ += (InterfaceMixin,bsvgen.InterfaceMixin)
 
 if __name__=='__main__':
     newrt.printtrace = True
@@ -235,21 +280,35 @@ if __name__=='__main__':
     print s1
     cppname = None
     if len(sys.argv) > 2:
-        h = open('%s.h' % sys.argv[2], 'w')
-        cppname = '%s.cpp' % sys.argv[2]
-        cpp = open(cppname, 'w')
-        cpp.write('#include "ushw.h"\n')
-        cpp.write('#include "%s.h"\n' % os.path.basename(sys.argv[2]))
+        mainInterfaceName = os.path.basename(sys.argv[2])
     else:
-        h = sys.stdout
-        cpp = sys.stdout
+        sys.exit(-1)
+    h = open('%s.h' % sys.argv[2], 'w')
+    cppname = '%s.cpp' % sys.argv[2]
+    bsvname = '%sWrapper.bsv' % sys.argv[2]
+    cpp = open(cppname, 'w')
+    cpp.write('#include "ushw.h"\n')
+    cpp.write('#include "%s.h"\n' % mainInterfaceName)
+    bsv = open(bsvname, 'w')
+    bsvgen.emitPreamble(bsv, sys.argv[1:])
+
+    ## prepass
+    for v in syntax.globaldecls:
+        try:
+            v.assignFriends()
+        except:
+            print 'no assignFriends', v
+    ## code generation pass
     for v in syntax.globaldecls:
         print v.name
         print v.collectTypes()
         v.emitCDeclaration(h)
         v.emitCImplementation(cpp)
+    if (syntax.globalvars.has_key(mainInterfaceName)):
+        subinterface = syntax.globalvars[mainInterfaceName]
+        subinterface.emitBsvImplementation(bsv)
     if cppname:
-        srcdir = os.path.dirname(sys.argv[0])
+        srcdir = os.path.dirname(sys.argv[0]) + '/cpp'
         dstdir = os.path.dirname(cppname)
         for f in ['ushw.h', 'ushw.cpp']:
             shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))

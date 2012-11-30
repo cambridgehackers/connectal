@@ -512,7 +512,9 @@ parser HSDL:
             ( equal_value
             | [ SEMICOLON ]
                 ( method_declaration {{ interfacevalue.append(method_declaration) }}
-                | interface_declaration {{ interfacevalue.append(interface_declaration) }}
+                | TOKINTERFACE {{subinterfaceid=""}} ( CLASSVAR {{ print CLASSVAR; subinterfaceid = subinterfaceid + CLASSVAR }} )* 
+                  TYPEVAR {{ subinterfaceid = TYPEVAR }} VAR {{subvar=VAR}} SEMICOLON
+                  {{interfacevalue.append(Interface(subinterfaceid, [], subvar))}}
                 )*
                 TOKENDINTERFACE [ COLON VAR ]
             ) {{ i=Interface(interfaceid, interfacevalue, var); return i }}
