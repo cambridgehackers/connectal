@@ -30,12 +30,14 @@ methodTemplate='''
 struct %(className)s%(methodName)sMSG : public UshwMessage
 {
 struct Request {
-int channelNumber;
+//fix Adapter.bsv to unreverse these
 %(paramStructDeclarations)s
+int channelNumber;
 } request;
 struct Response {
-int responseChannel;
+//fix Adapter.bsv to unreverse these
 %(resultType)s response;
+int responseChannel;
 } response;
 };
 
@@ -75,6 +77,8 @@ class MethodMixin:
     def emitCImplementation(self, f, className, namespace):
         paramDeclarations = [ '%s %s' % (p.type.cName(), p.name) for p in self.params]
         paramStructDeclarations = [ '%s %s;\n' % (p.type.cName(), p.name) for p in self.params]
+        ## fix Adapter.bsv to eliminate the need for this reversal
+        paramStructDeclarations.reverse()
         paramSetters = [ 'msg.request.%s = %s;\n' % (p.name, p.name) for p in self.params]
         resultTypeName = self.resultTypeName()
         substs = {

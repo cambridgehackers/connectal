@@ -66,7 +66,7 @@ requestRuleTemplate='''
 
 responseRuleTemplate='''
     rule %(methodName)s$response;
-        %(methodReturnType)s r <- dut.result();
+        %(methodReturnType)s r <- dut.%(methodName)s();
         let response = tagged %(MethodName)s$Response r;
         responseFifo.enq(response);
         responseFired <= responseFired + 1;
