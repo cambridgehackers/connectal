@@ -28,16 +28,20 @@ constructorTemplate='''
 methodTemplate='''
 struct %(className)s%(methodName)sMSG : public UshwMessage
 {
+struct Request {
 %(paramStructDeclarations)s
+} request;
+%(resultType)s response;
 };
 
-void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
+%(resultType)s %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
     %(className)s%(methodName)sMSG msg;
-    msg.argsize = sizeof(msg)-sizeof(UshwMessage);
-    msg.resultsize = 0;
+    msg.argsize = sizeof(msg.request);
+    msg.resultsize = sizeof(msg.response);
 %(paramSetters)s
     p->sendMessage(&msg);
+    return msg.response;
 };
 '''
 
@@ -52,25 +56,26 @@ class MethodMixin:
         return result
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         indent(f, indentation)
-        f.write('void %s ( ' % cName(self.name))
+        f.write('%s %s ( ' % cName(self.name))
         print parentClassName, self.name
-        for p in self.params:
-            print p
-            print cName(p)
-            print
         f.write(', '.join([cName(p.type) for p in self.params]))
         f.write(' );\n');
     def emitCImplementation(self, f, className, namespace):
         paramDeclarations = [ '%s %s' % (p.type.cName(), p.name) for p in self.params]
         paramStructDeclarations = [ '%s %s;\n' % (p.type.cName(), p.name) for p in self.params]
-        paramSetters = [ 'msg.%s = %s;\n' % (p.name, p.name) for p in self.params]
+        paramSetters = [ 'msg.request.%s = %s;\n' % (p.name, p.name) for p in self.params]
+        resultTypeName = 'int'
+        if (self.type_decl):
+            print self.type_decl, self.type_decl.cName()
+            resultTypeName = self.type_decl.cName()
         substs = {
             'namespace': namespace,
             'className': className,
             'methodName': cName(self.name),
             'paramDeclarations': ', '.join(paramDeclarations),
             'paramStructDeclarations': ''.join(paramStructDeclarations),
-            'paramSetters': ''.join(paramSetters)
+            'paramSetters': ''.join(paramSetters),
+            'resultType': resultTypeName
             }
         f.write(methodTemplate % substs)
 
@@ -190,6 +195,9 @@ class TypeMixin:
         cid = cid.replace(' ', '')
         if cid == 'Bit#':
             return 'unsigned int'
+        elif cid == 'ActionValue#':
+            ## this is a Param but should be a Type
+            return self.params[0].type.cName()
         cid = cid.replace('#', '_')
         if self.params:
             name = '%sL_%s_P' % (cid, '_'.join([cName(t) for t in self.params if t]))

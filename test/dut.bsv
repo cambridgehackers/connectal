@@ -1,6 +1,5 @@
 
 // Device Under Test
 interface DUT;
-    method Action put(Bit#(32) a, Bit#(32) b);
-    method ActionValue#(Bit#(32)) get();
+    method ActionValue#(Bit#(32)) operate(Bit#(32) a, Bit#(32) b);
 endinterface

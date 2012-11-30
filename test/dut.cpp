@@ -19,34 +19,24 @@ DUT::~DUT()
 }
 
 
-struct DUTputMSG : public UshwMessage
+struct DUToperateMSG : public UshwMessage
 {
+struct Request {
 unsigned int a;
 unsigned int b;
 
+} request;
+unsigned int response;
 };
 
-void DUT::put ( unsigned int a, unsigned int b )
+unsigned int DUT::operate ( unsigned int a, unsigned int b )
 {
-    DUTputMSG msg;
-    msg.argsize = sizeof(msg)-sizeof(UshwMessage);
-    msg.resultsize = 0;
-msg.a = a;
-msg.b = b;
+    DUToperateMSG msg;
+    msg.argsize = sizeof(msg.request);
+    msg.resultsize = sizeof(msg.response);
+msg.request.a = a;
+msg.request.b = b;
 
     p->sendMessage(&msg);
-};
-
-struct DUTgetMSG : public UshwMessage
-{
-
-};
-
-void DUT::get (  )
-{
-    DUTgetMSG msg;
-    msg.argsize = sizeof(msg)-sizeof(UshwMessage);
-    msg.resultsize = 0;
-
-    p->sendMessage(&msg);
+    return msg.response;
 };

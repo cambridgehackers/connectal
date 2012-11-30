@@ -1,8 +1,7 @@
 class DUT {
 public:
     static DUT *createDUT(const char *instanceName);
-    void put ( unsigned int, unsigned int );
-    void get (  );
+    void operate ( unsigned int, unsigned int );
 private:
     DUT(UshwInstance *);
     ~DUT();
