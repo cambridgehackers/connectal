@@ -10,6 +10,7 @@ class UshwInstance {
 public:
     friend UshwInstance *ushwOpen(const char *instanceName);
     int sendMessage(UshwMessage *msg);
+    int receiveMessage(UshwMessage *msg);
     void close();
 private:
     UshwInstance(const char *instanceName);

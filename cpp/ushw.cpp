@@ -25,6 +25,7 @@
 #include <fcntl.h>
 #include <linux/ioctl.h>
 #include <linux/types.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,6 +37,8 @@
 #include "ushw.h"
 
 #define USHW_PUTGET _IOWR('B', 17, UshwMessage)
+#define USHW_PUT _IOWR('B', 18, UshwMessage)
+#define USHW_GET _IOWR('B', 19, UshwMessage)
 
 void UshwInstance::close()
 {
@@ -68,8 +71,24 @@ UshwInstance *ushwOpen(const char *instanceName)
 
 int UshwInstance::sendMessage(UshwMessage *msg)
 {
-    int rc = ioctl(fd, USHW_PUTGET, msg);
+    int rc = ioctl(fd, USHW_PUT, msg);
     if (rc)
         fprintf(stderr, "sendMessage rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    return rc;
+}
+int UshwInstance::receiveMessage(UshwMessage *msg)
+{
+    struct pollfd fds[1] = {
+        { fd, POLLIN, 0 }
+    };
+    int rc = poll(fds, sizeof(fds)/sizeof(struct pollfd), 1000);
+    if (rc > 0)
+        fprintf(stderr, "poll returned rc=%d\n", rc);
+    else
+        fprintf(stderr, "poll returned rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+
+    rc = ioctl(fd, USHW_GET, msg);
+    if (rc)
+        fprintf(stderr, "receiveMessage rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;
 }
