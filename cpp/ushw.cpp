@@ -73,7 +73,8 @@ int UshwInstance::sendMessage(UshwMessage *msg)
 {
     int rc = ioctl(fd, USHW_PUT, msg);
     if (rc)
-        fprintf(stderr, "sendMessage rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+        fprintf(stderr, "sendMessage fd=%d rc=%d errno=%d:%s PUTGET=%x PUT=%x GET=%x\n", fd, rc, errno, strerror(errno),
+                USHW_PUTGET, USHW_PUT, USHW_GET);
     return rc;
 }
 int UshwInstance::receiveMessage(UshwMessage *msg)
@@ -82,13 +83,37 @@ int UshwInstance::receiveMessage(UshwMessage *msg)
         { fd, POLLIN, 0 }
     };
     int rc = poll(fds, sizeof(fds)/sizeof(struct pollfd), 1000);
-    if (rc > 0)
-        fprintf(stderr, "poll returned rc=%d\n", rc);
-    else
+    if (rc < 0) {
         fprintf(stderr, "poll returned rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+        return rc;
+    }
 
-    rc = ioctl(fd, USHW_GET, msg);
-    if (rc)
-        fprintf(stderr, "receiveMessage rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    if (rc > 0) {
+        int status  = ioctl(fd, USHW_GET, msg);
+        if (status) {
+            fprintf(stderr, "receiveMessage rc=%d errno=%d:%s\n", status, errno, strerror(errno));
+            return -status;
+        }
+    }
     return rc;
+}
+
+int UshwInstance::exec()
+{
+    unsigned int *buf = new unsigned int[1024];
+    UshwMessage *msg = (UshwMessage *)(buf);
+    fprintf(stderr, "exec()\n");
+    int messageReceived = 0;
+    while ((messageReceived = receiveMessage(msg)) >= 0) {
+        if (!messageReceived)
+            continue;
+        size_t size = msg->size;
+        if (!size)
+            continue;
+        int channel = *(buf+1+(size-1)/4); // channel number is last word of message
+        if (0) fprintf(stderr, "channel %x messageHandlers=%p\n", channel, messageHandlers);
+        if (messageHandlers && messageHandlers[channel])
+            messageHandlers[channel](msg);
+    }
+    return 0;
 }
