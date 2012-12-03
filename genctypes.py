@@ -1,9 +1,31 @@
 #!/usr/bin/python
-import os, sys, shutil
+import os, sys, shutil, string
 import AST
 import newrt
 import syntax
 import bsvgen
+
+classPrefixTemplate='''
+class %(namespace)s%(className)s {
+public:
+    enum %(className)sResponseChannel {
+        %(responseChannels)s, %(className)sNumChannels
+    };
+    int connectHandler(%(className)sResponseChannel c, UshwInstance::MessageHandler h) {
+        p->messageHandlers[c] = h;
+        return 0;
+    }
+
+    static %(className)s *create%(className)s(const char *instanceName);
+'''
+classSuffixTemplate='''
+private:
+    %(className)s(UshwInstance *, int baseChannelNumber=0);
+    ~%(className)s();
+    UshwInstance *p;
+    int baseChannelNumber;
+};
+'''
 
 creatorTemplate = '''
 %(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName)
@@ -12,12 +34,12 @@ creatorTemplate = '''
     %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(p);
     return instance;
 }
-
 '''
 constructorTemplate='''
 %(namespace)s%(className)s::%(className)s(UshwInstance *p, int baseChannelNumber)
  : p(p), baseChannelNumber(baseChannelNumber)%(initializers)s
 {
+  p->messageHandlers = new UshwInstance::MessageHandler [%(className)s::%(className)sNumChannels]();
 }
 %(namespace)s%(className)s::~%(className)s()
 {
@@ -32,30 +54,26 @@ struct %(className)s%(methodName)sMSG : public UshwMessage
 struct Request {
 //fix Adapter.bsv to unreverse these
 %(paramStructDeclarations)s
-int channelNumber;
 } request;
-struct Response {
-//fix Adapter.bsv to unreverse these
-%(resultType)s response;
-int responseChannel;
-} response;
+int channelNumber;
 };
 
-%(resultType)s %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
+void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
     %(className)s%(methodName)sMSG msg;
-    msg.argsize = sizeof(msg.request);
-    msg.resultsize = sizeof(msg.response);
-    msg.request.channelNumber = baseChannelNumber + %(methodChannelOffset)s;
+    msg.size = sizeof(msg.request) + sizeof(msg.channelNumber);
+    msg.channelNumber = baseChannelNumber + %(methodChannelOffset)s;
 %(paramSetters)s
     p->sendMessage(&msg);
-    return msg.response.response;
 };
 '''
 
 def indent(f, indentation):
     for i in xrange(indentation):
         f.write(' ')
+
+def capitalize(s):
+    return '%s%s' % (s[0].upper(), s[1:])
 
 class MethodMixin:
     def collectTypes(self):
@@ -70,11 +88,13 @@ class MethodMixin:
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
-        f.write('%s %s ( ' % (resultTypeName, cName(self.name)))
+        f.write('void %s ( ' % cName(self.name))
         print parentClassName, self.name
         f.write(', '.join([cName(p.type) for p in self.params]))
         f.write(' );\n');
     def emitCImplementation(self, f, className, namespace):
+        if not self.params:
+            return
         paramDeclarations = [ '%s %s' % (p.type.cName(), p.name) for p in self.params]
         paramStructDeclarations = [ '%s %s;\n' % (p.type.cName(), p.name) for p in self.params]
         ## fix Adapter.bsv to eliminate the need for this reversal
@@ -174,15 +194,14 @@ class InterfaceMixin:
         self.toplevel = (indentation == 0)
         name = cName(self.name)
         indent(f, indentation)
-        f.write('class %s {\n' % name)
-        indent(f, indentation)
-        f.write('public:\n')
-        if (not indentation):
-            indent(f, indentation+4)
-            f.write('static %(name)s *create%(name)s(const char *instanceName);\n'
-                    % {'name': name})
+        responseChannels=['%sResponseChannel' % capitalize(d.name)
+                          for d in self.decls if d.type=='Method' and not d.params]
+        f.write(classPrefixTemplate % {'className': name,
+                                       'namespace': namespace,
+                                       'responseChannels': ', '.join(responseChannels)})
         for d in self.decls:
-            d.emitCDeclaration(f, indentation + 4, name, namespace)
+            if d.params:
+                d.emitCDeclaration(f, indentation + 4, name, namespace)
         indent(f, indentation)
         f.write('private:\n')
         indent(f, indentation+4)

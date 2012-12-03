@@ -1,6 +1,8 @@
 
 #include <sys/types.h>
 
+class UshwInterface;
+
 struct UshwMessage {
     size_t size; // number of bytes
 };
@@ -12,7 +14,6 @@ public:
 
     int sendMessage(UshwMessage *msg);
     int receiveMessage(UshwMessage *msg);
-    int exec();
     void close();
 private:
     UshwInstance(const char *instanceName);
@@ -21,6 +22,21 @@ private:
 private:
     int fd;
     char *instanceName;
+    friend class UshwInterface;
 };
 UshwInstance *ushwOpen(const char *instanceName);
+
+class UshwInterface {
+public:
+    UshwInterface();
+    ~UshwInterface();
+    static int exec();
+    int registerInstance(UshwInstance *instance);
+private:
+    UshwInstance **instances;
+    struct pollfd *fds;
+    int numFds;
+};
+
+extern UshwInterface ushw;
 
