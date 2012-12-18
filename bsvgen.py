@@ -1,4 +1,6 @@
 import os
+import math
+
 import AST
 import newrt
 import syntax
@@ -8,11 +10,15 @@ preambleTemplate='''
 import GetPut::*;
 import Connectable::*;
 import Adapter::*;
+import FifoToAxi::*;
 %(extraImports)s
 
 interface DUTWrapper;
    interface Reg#(Bit#(32)) reqCount;
    interface Reg#(Bit#(32)) respCount;
+   interface Reg#(Bit#(32)) junkReqCount;
+   interface AxiMasterWrite#(64,8) axiw;
+   interface AxiMasterRead#(64) axir;
 endinterface
 
 '''
@@ -42,17 +48,48 @@ responseStructTemplate='''
 '''
 
 mkDutTemplate='''
-module mkDUTWrapper#(FromBit32#(DutRequest) requestFifo, ToBit32#(DutResponse) responseFifo)(DUTWrapper);
+module mkDUTWrapper#(FromBit32#(DutRequest) requestFifo, ToBit32#(DutResponse) responseFifo)(DUTWrapper) provisos(Bits#(DutRequest,drsize));
 
     DUT dut <- mkDUT();
     Reg#(Bit#(32)) requestFired <- mkReg(0);
     Reg#(Bit#(32)) responseFired <- mkReg(0);
+    Reg#(Bit#(32)) junkReqReg <- mkReg(0);
+    Reg#(Bit#(16)) requestTimerReg <- mkReg(0);
+    Reg#(Bit#(16)) requestTimeLimitReg <- mkReg(maxBound);
+    Reg#(Bit#(16)) responseTimerReg <- mkReg(0);
+    Reg#(Bit#(16)) responseTimeLimitReg <- mkReg(maxBound);
 
+    Bit#(%(tagBits)s) maxTag = %(maxTag)s;
+
+    rule handleJunkRequest if (pack(requestFifo.first)[%(tagBits)s+32-1:32] > maxTag);
+        requestFifo.deq;
+        junkReqReg <= junkReqReg + 1;
+    endrule
+
+    rule requestTimer if (requestFifo.notFull);
+        requestTimerReg <= requestTimerReg + 1;
+    endrule
+
+    rule discardBlockedRequests if (requestTimerReg > requestTimeLimitReg && requestFifo.notEmpty);
+        requestFifo.deq;
+        requestTimerReg <= 0;
+    endrule
+
+    rule responseTimer if (!responseFifo.notFull);
+        responseTimerReg <= responseTimerReg + 1;
+    endrule
+
+    rule discardBlockedResponses if (responseTimerReg > responseTimeLimitReg && !responseFifo.notFull);
+        responseFifo.deq;
+        responseTimerReg <= 0;
+    endrule
 %(responseRules)s
 %(requestRules)s
-
     interface Reg reqCount = requestFired;
     interface Reg respCount = responseFired;
+    interface Reg junkReqCount = junkReqReg;
+    interface AxiMasterWrite axiw = dut.axiw;
+    interface AxiMasterRead axir = dut.axir;
 endmodule
 '''
 
@@ -61,6 +98,7 @@ requestRuleTemplate='''
         requestFifo.deq;
         dut.%(methodName)s(%(paramsForCall)s);
         requestFired <= requestFired + 1;
+        requestTimerReg <= 0;
     endrule
 '''
 
@@ -72,6 +110,9 @@ responseRuleTemplate='''
         responseFired <= responseFired + 1;
     endrule
 '''
+
+def capitalize(s):
+    return '%s%s' % (s[0].upper(), s[1:])
 
 def emitPreamble(f, files):
     extraImports = ['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
@@ -96,7 +137,7 @@ class MethodMixin:
         else:
             rt = self.return_type.name
         d = {'methodName': self.name,
-             'MethodName': string.capitalize(self.name),
+             'MethodName': capitalize(self.name),
              'methodReturnType': rt}
         return d
 
@@ -132,6 +173,8 @@ class InterfaceMixin:
             'requestElements': ''.join(requestElements),
             'responseElements': ''.join(responseElements),
             'requestRules': ''.join(requestRules),
+            'maxTag': len(requestElements),
+            'tagBits': int(math.ceil(math.log(len(requestElements),2))),
             'responseRules': ''
             }
         f.write(dutRequestTemplate % substs)

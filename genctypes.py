@@ -9,7 +9,7 @@ classPrefixTemplate='''
 class %(namespace)s%(className)s {
 public:
     enum %(className)sResponseChannel {
-        %(responseChannels)s, %(className)sNumChannels
+        %(responseChannels)s%(className)sNumChannels
     };
     int connectHandler(%(className)sResponseChannel c, UshwInstance::MessageHandler h) {
         p->messageHandlers[c] = h;
@@ -170,6 +170,8 @@ class InterfaceMixin:
         return result
     def getSubinterface(self, name):
         subinterfaceName = name.replace(' ', '')
+        if not syntax.globalvars.has_key(subinterfaceName):
+            return None
         subinterface = syntax.globalvars[subinterfaceName]
         print 'subinterface', subinterface, subinterface
         return subinterface
@@ -184,9 +186,11 @@ class InterfaceMixin:
         for d in self.decls:
             if d.__class__ == AST.Interface:
                 i = self.getSubinterface(d.name)
+                if not i:
+                    continue
                 d.baseChannelNumber = channelNumber
                 channelNumber = channelNumber + i.channelCount 
-            elif d.__class__ == AST.Method:
+            elif d.__class__ == AST.Method and d.params:
                 d.channelNumber = channelNumber
                 channelNumber = channelNumber + 1
         self.channelCount = channelNumber
@@ -194,13 +198,15 @@ class InterfaceMixin:
         self.toplevel = (indentation == 0)
         name = cName(self.name)
         indent(f, indentation)
-        responseChannels=['%sResponseChannel' % capitalize(d.name)
+        responseChannels=['%sResponseChannel, ' % capitalize(d.name)
                           for d in self.decls if d.type=='Method' and not d.params]
         f.write(classPrefixTemplate % {'className': name,
                                        'namespace': namespace,
-                                       'responseChannels': ', '.join(responseChannels)})
+                                       'responseChannels': ''.join(responseChannels)})
         for d in self.decls:
-            if d.params:
+            if d.type == 'Interface':
+                continue
+            if d.type != 'Method' or d.params:
                 d.emitCDeclaration(f, indentation + 4, name, namespace)
         indent(f, indentation)
         f.write('private:\n')
@@ -219,9 +225,10 @@ class InterfaceMixin:
         ## dereference the interface, in case this is nested
         subinterface = self.getSubinterface(self.name)
         ## and declare our friends
-        for friend in subinterface.friends:
-            indent(f, indentation+4)
-            f.write('friend class %s;\n' % friend)
+        if subinterface:
+            for friend in subinterface.friends:
+                indent(f, indentation+4)
+                f.write('friend class %s;\n' % friend)
 
         indent(f, indentation)
         f.write('}')
@@ -235,6 +242,8 @@ class InterfaceMixin:
         className = cName(self.name)
         self.emitConstructorImplementation(f, className, namespace)
         for d in self.decls:
+            if d.type == 'Interface':
+                continue
             d.emitCImplementation(f, className, namespace)
     def emitConstructorImplementation(self, f, className, namespace):
         substitutions = {'namespace': namespace,
@@ -244,9 +253,10 @@ class InterfaceMixin:
         for d in self.decls:
             if d.__class__ == AST.Interface:
                 subinterfaces.append(d.subinterfacename)
-        if subinterfaces:
-            substitutions['initializers'] = (', %s'
-                                             % ', '.join([ '%s(p)' % i for i in subinterfaces]))
+        ## not generating code for subinterfaces for now
+        ## if subinterfaces:
+        ##     substitutions['initializers'] = (', %s'
+        ##                                      % ', '.join([ '%s(p)' % i for i in subinterfaces]))
         if self.toplevel:
             f.write(creatorTemplate % substitutions)
         f.write(constructorTemplate % substitutions)
