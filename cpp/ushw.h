@@ -3,9 +3,14 @@
 
 class UshwInterface;
 
-struct UshwMessage {
-    size_t size; // number of bytes
-};
+typedef struct UshwAlloc {
+    size_t size;
+    unsigned char *kptr;
+} UshwAlloc;
+
+typedef struct UshwMessage {
+    size_t size;
+} UshwMessage;
 
 class UshwInstance {
 public:
@@ -31,7 +36,9 @@ public:
     UshwInterface();
     ~UshwInterface();
     static int exec();
+    static unsigned long alloc(size_t size);
     int registerInstance(UshwInstance *instance);
+    int dumpRegs();
 private:
     UshwInstance **instances;
     struct pollfd *fds;
