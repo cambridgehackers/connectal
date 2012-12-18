@@ -509,11 +509,12 @@ parser HSDL:
     rule interface_declaration: {{ interfaceid = "" }}
         TOKINTERFACE ( CLASSVAR {{ print CLASSVAR; interfaceid = interfaceid + CLASSVAR }} )* 
         TYPEVAR {{ interfaceid = TYPEVAR; interfacevalue=[]; var=None }} [ VAR {{print VAR; var=VAR}} ]
+        [ LPAREN (TOKTYPE VAR) (COMMA TOKTYPE VAR)* RPAREN ]
             ( equal_value
             | [ SEMICOLON ]
                 ( method_declaration {{ interfacevalue.append(method_declaration) }}
                 | TOKINTERFACE {{subinterfaceid=""}} ( CLASSVAR {{ print CLASSVAR; subinterfaceid = subinterfaceid + CLASSVAR }} )* 
-                  TYPEVAR {{ subinterfaceid = TYPEVAR }} VAR {{subvar=VAR}} SEMICOLON
+                  TYPEVAR {{ subinterfaceid = TYPEVAR }} [ LPAREN (VAR|NUM) (COMMA (NUM|VAR))* RPAREN ] (VAR {{subvar=VAR}}) SEMICOLON
                   {{interfacevalue.append(Interface(subinterfaceid, [], subvar))}}
                 )*
                 TOKENDINTERFACE [ COLON VAR ]
