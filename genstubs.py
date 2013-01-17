@@ -11,7 +11,7 @@ public:
     enum %(className)sResponseChannel {
         %(responseChannels)s%(className)sNumChannels
     };
-    int connectHandler(%(className)sResponseChannel c, UshwInstance::MessageHandler h) {
+    int connectHandler(%(className)sResponseChannel c, PortalInstance::MessageHandler h) {
         p->messageHandlers[c] = h;
         return 0;
     }
@@ -20,9 +20,9 @@ public:
 '''
 classSuffixTemplate='''
 private:
-    %(className)s(UshwInstance *, int baseChannelNumber=0);
+    %(className)s(PortalInstance *, int baseChannelNumber=0);
     ~%(className)s();
-    UshwInstance *p;
+    PortalInstance *p;
     int baseChannelNumber;
 };
 '''
@@ -30,16 +30,16 @@ private:
 creatorTemplate = '''
 %(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName)
 {
-    UshwInstance *p = ushwOpen(instanceName);
+    PortalInstance *p = portalOpen(instanceName);
     %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(p);
     return instance;
 }
 '''
 constructorTemplate='''
-%(namespace)s%(className)s::%(className)s(UshwInstance *p, int baseChannelNumber)
+%(namespace)s%(className)s::%(className)s(PortalInstance *p, int baseChannelNumber)
  : p(p), baseChannelNumber(baseChannelNumber)%(initializers)s
 {
-  p->messageHandlers = new UshwInstance::MessageHandler [%(className)s::%(className)sNumChannels]();
+  p->messageHandlers = new PortalInstance::MessageHandler [%(className)s::%(className)sNumChannels]();
 }
 %(namespace)s%(className)s::~%(className)s()
 {
@@ -49,7 +49,7 @@ constructorTemplate='''
 '''
 
 methodTemplate='''
-struct %(className)s%(methodName)sMSG : public UshwMessage
+struct %(className)s%(methodName)sMSG : public PortalMessage
 {
 struct Request {
 //fix Adapter.bsv to unreverse these
@@ -211,11 +211,11 @@ class InterfaceMixin:
         indent(f, indentation)
         f.write('private:\n')
         indent(f, indentation+4)
-        f.write('%(name)s(UshwInstance *, int baseChannelNumber=0);\n' % {'name': name})
+        f.write('%(name)s(PortalInstance *, int baseChannelNumber=0);\n' % {'name': name})
         indent(f, indentation+4)
         f.write('~%(name)s();\n' % {'name': name})
         indent(f, indentation+4)
-        f.write('UshwInstance *p;\n')
+        f.write('PortalInstance *p;\n')
         indent(f, indentation+4)
         f.write('int baseChannelNumber;\n')
         if parentClassName:
