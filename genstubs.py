@@ -96,7 +96,7 @@ class MethodMixin:
         if not self.params:
             return
         paramDeclarations = [ '%s %s' % (p.type.cName(), p.name) for p in self.params]
-        paramStructDeclarations = [ '%s %s;\n' % (p.type.cName(), p.name) for p in self.params]
+        paramStructDeclarations = [ '%s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in self.params]
         ## fix Adapter.bsv to eliminate the need for this reversal
         paramStructDeclarations.reverse()
         paramSetters = [ 'msg.request.%s = %s;\n' % (p.name, p.name) for p in self.params]
@@ -117,6 +117,7 @@ class StructMemberMixin:
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         indent(f, indentation)
         f.write('%s %s' % (self.type.cName(), self.tag))
+        print 'emitCDeclaration: ', self.type, self.type.isBitField, self.type.cName(), self.tag
         if self.type.isBitField():
             f.write(' : %d' % self.type.bitWidth())
         f.write(';\n')
@@ -289,7 +290,13 @@ class TypeMixin:
             return int(self.params[0])
         else:
             return 0
-    
+    def bitSpec(self):
+        if self.isBitField():
+            bw = self.bitWidth()
+            if bw != 32:
+                return ':%d' % bw
+        return ''
+
 def cName(x):
     if type(x) == str:
         x = x.replace(' ', '')
