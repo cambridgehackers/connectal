@@ -10,17 +10,26 @@ preambleTemplate='''
 import GetPut::*;
 import Connectable::*;
 import Adapter::*;
-import FifoToAxi::*;
+import AxiMasterSlave::*;
+import HDMI::*;
+import Clocks::*;
 %(extraImports)s
 
 interface DUTWrapper;
+   method Bit#(32) requestSize();
+   method Bit#(32) responseSize();
    interface Reg#(Bit#(32)) reqCount;
    interface Reg#(Bit#(32)) respCount;
    interface Reg#(Bit#(32)) junkReqCount;
-   interface AxiMasterWrite#(64,8) axiw;
-   interface AxiMasterRead#(64) axir;
-endinterface
+   interface Reg#(Bit#(32)) blockedRequestsDiscardedCount;
+   interface Reg#(Bit#(32)) blockedResponsesDiscardedCount;
 
+   interface AxiMasterWrite#(64,8) axiw0;
+   interface AxiMasterRead#(64) axir0;
+   interface AxiMasterWrite#(64,8) axiw1;
+   interface AxiMasterRead#(64) axir1;
+   interface HDMI hdmi;
+endinterface
 '''
 
 dutRequestTemplate='''
@@ -48,9 +57,9 @@ responseStructTemplate='''
 '''
 
 mkDutTemplate='''
-module mkDUTWrapper#(FromBit32#(DutRequest) requestFifo, ToBit32#(DutResponse) responseFifo)(DUTWrapper) provisos(Bits#(DutRequest,drsize));
+module mkDUTWrapper#(Clock axis_clk, FromBit32#(DutRequest) requestFifo, ToBit32#(DutResponse) responseFifo)(DUTWrapper) provisos(Bits#(DutRequest,dutRequestSize),Bits#(DutResponse,dutResponseSize));
 
-    DUT dut <- mkDUT();
+    DUT dut <- mkDUT(axis_clk);
     Reg#(Bit#(32)) requestFired <- mkReg(0);
     Reg#(Bit#(32)) responseFired <- mkReg(0);
     Reg#(Bit#(32)) junkReqReg <- mkReg(0);
@@ -58,6 +67,8 @@ module mkDUTWrapper#(FromBit32#(DutRequest) requestFifo, ToBit32#(DutResponse) r
     Reg#(Bit#(16)) requestTimeLimitReg <- mkReg(maxBound);
     Reg#(Bit#(16)) responseTimerReg <- mkReg(0);
     Reg#(Bit#(16)) responseTimeLimitReg <- mkReg(maxBound);
+    Reg#(Bit#(32)) blockedRequestsDiscardedReg <- mkReg(0);
+    Reg#(Bit#(32)) blockedResponsesDiscardedReg <- mkReg(0);
 
     Bit#(%(tagBits)s) maxTag = %(maxTag)s;
 
@@ -72,6 +83,7 @@ module mkDUTWrapper#(FromBit32#(DutRequest) requestFifo, ToBit32#(DutResponse) r
 
     rule discardBlockedRequests if (requestTimerReg > requestTimeLimitReg && requestFifo.notEmpty);
         requestFifo.deq;
+        blockedRequestsDiscardedReg <= blockedRequestsDiscardedReg + 1;
         requestTimerReg <= 0;
     endrule
 
@@ -81,15 +93,28 @@ module mkDUTWrapper#(FromBit32#(DutRequest) requestFifo, ToBit32#(DutResponse) r
 
     rule discardBlockedResponses if (responseTimerReg > responseTimeLimitReg && !responseFifo.notFull);
         responseFifo.deq;
+        blockedResponsesDiscardedReg <= blockedResponsesDiscardedReg + 1;
         responseTimerReg <= 0;
     endrule
 %(responseRules)s
 %(requestRules)s
+    method Bit#(32) requestSize();
+        return pack(fromInteger(valueof(dutRequestSize)));
+    endmethod
+    method Bit#(32) responseSize();
+        return pack(fromInteger(valueof(dutResponseSize)));
+    endmethod
     interface Reg reqCount = requestFired;
     interface Reg respCount = responseFired;
     interface Reg junkReqCount = junkReqReg;
-    interface AxiMasterWrite axiw = dut.axiw;
-    interface AxiMasterRead axir = dut.axir;
+    interface Reg blockedRequestsDiscardedCount = blockedRequestsDiscardedReg;
+    interface Reg blockedResponsesDiscardedCount = blockedResponsesDiscardedReg;
+
+    interface AxiMasterWrite axiw0 = dut.axiw0;
+    interface AxiMasterRead axir0 = dut.axir0;
+    interface AxiMasterWrite axiw1 = dut.axiw1;
+    interface AxiMasterRead axir1 = dut.axir1;
+    interface HDMI hdmi = dut.hdmi;
 endmodule
 '''
 
