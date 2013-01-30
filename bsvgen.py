@@ -1,10 +1,15 @@
+##
+## Copyright (C) 2012-2013 Nokia, Inc
+##
 import os
 import math
+import re
 
 import AST
 import newrt
 import syntax
 import string
+import xst
 
 preambleTemplate='''
 import FIFO::*;
@@ -16,12 +21,16 @@ import HDMI::*;
 import Clocks::*;
 %(extraImports)s
 
-interface DUTWrapper;
+'''
+
+dutInterfaceTemplate='''
+interface %(Dut)sWrapper;
    method Bit#(1) interrupt();
-   interface AxiSlave#(32, 4) ctrl;
-   interface AxiSlave#(32, 4) fifo;
-   interface AxiMaster#(64,8) axihp0;
-   interface HDMI hdmi;
+   interface AxiSlave#(32,4) ctrl;
+   interface AxiSlave#(32,4) fifo;
+%(axiSlaveDeclarations)s
+%(axiMasterDeclarations)s
+%(hdmiDeclarations)s
 endinterface
 '''
 
@@ -29,7 +38,7 @@ dutRequestTemplate='''
 typedef union tagged {
 %(requestElements)s
   Bit#(0) DutRequestUnused;
-} DutRequest deriving (Bits);
+} %(Dut)sRequest deriving (Bits);
 '''
 
 requestStructTemplate='''
@@ -42,7 +51,7 @@ dutResponseTemplate='''
 typedef union tagged {
 %(responseElements)s
   Bit#(0) DutResponseUnused;
-} DutResponse deriving (Bits);
+} %(Dut)sResponse deriving (Bits);
 '''
 
 responseStructTemplate='''
@@ -50,14 +59,14 @@ responseStructTemplate='''
 '''
 
 mkDutTemplate='''
-typedef SizeOf#(DutRequest) DutRequestSize;
-typedef SizeOf#(DutResponse) DutResponseSize;
+typedef SizeOf#(%(Dut)sRequest) %(Dut)sRequestSize;
+typedef SizeOf#(%(Dut)sResponse) %(Dut)sResponseSize;
 
-module mkDUTWrapper#(Clock hdmi_clk)(DUTWrapper);
+module mk%(Dut)sWrapper#(Clock hdmi_clk)(%(Dut)sWrapper);
 
-    DUT dut <- mkDUT(hdmi_clk);
-    FromBit32#(DutRequest) requestFifo <- mkFromBit32();
-    ToBit32#(DutResponse) responseFifo <- mkToBit32();
+    %(Dut)s %(dut)s <- mk%(Dut)s(hdmi_clk);
+    FromBit32#(%(Dut)sRequest) requestFifo <- mkFromBit32();
+    ToBit32#(%(Dut)sResponse) responseFifo <- mkToBit32();
     Reg#(Bit#(32)) requestFired <- mkReg(0);
     Reg#(Bit#(32)) responseFired <- mkReg(0);
     Reg#(Bit#(32)) junkReqReg <- mkReg(0);
@@ -164,9 +173,9 @@ module mkDUTWrapper#(Clock hdmi_clk)(DUTWrapper);
                 if (addr == 12'h004)
                     v = interruptEnableReg;
                 if (addr == 12'h008)
-                    v = fromInteger(valueOf(DutRequestSize));
+                    v = fromInteger(valueOf(%(Dut)sRequestSize));
                 if (addr == 12'h00C)
-                    v = fromInteger(valueOf(DutResponseSize));
+                    v = fromInteger(valueOf(%(Dut)sResponseSize));
                 if (addr == 12'h010)
                     v = requestFired;
                 if (addr == 12'h014)
@@ -271,15 +280,16 @@ module mkDUTWrapper#(Clock hdmi_clk)(DUTWrapper);
             return 1'd0;
     endmethod
 
-    interface AxiMaster axihp0 = dut.axihp0;
-    interface HDMI hdmi = dut.hdmi;
+%(axiSlaveImplementations)s
+%(axiMasterImplementations)s
+%(hdmiImplementations)s
 endmodule
 '''
 
 requestRuleTemplate='''
     rule handle$%(methodName)s$request if (requestFifo.first matches tagged %(MethodName)s$Request .sp);
         requestFifo.deq;
-        dut.%(methodName)s(%(paramsForCall)s);
+        %(dut)s.%(methodName)s(%(paramsForCall)s);
         requestFired <= requestFired + 1;
         requestTimerReg <= 0;
     endrule
@@ -287,7 +297,7 @@ requestRuleTemplate='''
 
 responseRuleTemplate='''
     rule %(methodName)s$response;
-        %(methodReturnType)s r <- dut.%(methodName)s();
+        %(methodReturnType)s r <- %(dut)s.%(methodName)s();
         let response = tagged %(MethodName)s$Response r;
         responseFifo.enq(response);
         responseFired <= responseFired + 1;
@@ -296,9 +306,13 @@ responseRuleTemplate='''
 
 def capitalize(s):
     return '%s%s' % (s[0].upper(), s[1:])
+def decapitalize(s):
+    return '%s%s' % (s[0].lower(), s[1:])
 
 def emitPreamble(f, files):
     extraImports = ['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
+    #axiMasterDecarations = ['interface AxiMaster#(64,8) %s;' % axiMaster for axiMaster in axiMasterNames]
+    #axiSlaveDecarations = ['interface AxiSlave#(32,4) %s;' % axiSlave for axiSlave in axiSlaveNames]
     f.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
 
 class NullMixin:
@@ -314,74 +328,105 @@ class TypeMixin:
 class MethodMixin:
     def emitBsvImplementation(self, f):
         pass
-    def substs(self):
+    def substs(self, outerTypeName):
         if self.return_type.name == 'ActionValue#':
             rt = self.return_type.params[0].type.toBsvType()
         else:
             rt = self.return_type.name
-        d = {'methodName': self.name,
-             'MethodName': capitalize(self.name),
-             'methodReturnType': rt}
+        d = { 'dut': decapitalize(outerTypeName),
+              'Dut': capitalize(outerTypeName),
+              'methodName': self.name,
+              'MethodName': capitalize(self.name),
+              'methodReturnType': rt}
         return d
 
-    def collectRequestElement(self):
+    def collectRequestElement(self, outerTypeName):
         if not self.params:
             return None
-        substs = self.substs()
+        substs = self.substs(outerTypeName)
         paramStructDeclarations = ['        %s %s;' % (p.type.toBsvType(), p.name)
                                    for p in self.params]
         substs['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
         return requestStructTemplate % substs
 
-    def collectResponseElement(self):
-        if self.return_type.name == 'Action ':
+    def collectResponseElement(self, outerTypeName):
+        if self.return_type.name == 'Action':
             return None
-        return responseStructTemplate % self.substs()
+        return responseStructTemplate % self.substs(outerTypeName)
 
-    def collectRequestRule(self):
-        substs = self.substs()
-        if self.return_type.name == 'Action ':
+    def collectRequestRule(self, outerTypeName):
+        substs = self.substs(outerTypeName)
+        if self.return_type.name == 'Action':
             paramsForCall = ['sp.%s' % p.name for p in self.params]
             substs['paramsForCall'] = ', '.join(paramsForCall)
+
             return requestRuleTemplate % substs
         else:
             return responseRuleTemplate % substs
 
 class InterfaceMixin:
     def emitBsvImplementation(self, f):
-        requestElements = self.collectRequestElements()
-        responseElements = self.collectResponseElements()
-        requestRules = self.collectRequestRules()
+        print self.name
+        requestElements = self.collectRequestElements(self.name)
+        responseElements = self.collectResponseElements(self.name)
+        requestRules = self.collectRequestRules(self.name)
+        axiMasters = self.collectInterfaceNames('Axi3?Master#')
+        axiSlaves = self.collectInterfaceNames('AxiSlave#')
+        hdmiInterfaces = self.collectInterfaceNames('HDMI')
+        dutName = decapitalize(self.name)
         substs = {
+            'dut': dutName,
+            'Dut': capitalize(self.name),
             'requestElements': ''.join(requestElements),
             'responseElements': ''.join(responseElements),
             'requestRules': ''.join(requestRules),
             'maxTag': len(requestElements),
-            'tagBits': int(math.ceil(math.log(len(requestElements),2))),
+            'tagBits': int(math.ceil(math.log(len(requestElements)+1,2))),
+            'axiMasterDeclarations': '\n'.join(['    interface %s(%s,%s) %s;' % (t, params[0], params[1], axiMaster)
+                                                for (axiMaster,t,params) in axiMasters]),
+            'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
+                                               for (axiSlave,t,params) in axiSlaves]),
+            'hdmiDeclarations': '\n'.join(['    interface HDMI %s;' % hdmi
+                                           for (hdmi,t,params) in hdmiInterfaces]),
+            'axiMasterImplementations': '\n'.join(['    interface %s %s = %s.%s;' % (t[0:-1], axiMaster,dutName,axiMaster)
+                                                   for (axiMaster,t,params) in axiMasters]),
+            'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
+                                                  for (axiSlave,t,params) in axiSlaves]),
+            'hdmiImplementations': '\n'.join(['    interface HDMI %s = %s.%s;' % (hdmi, dutName, hdmi)
+                                              for (hdmi,t,params) in hdmiInterfaces]),
             'responseRules': ''
             }
         f.write(dutRequestTemplate % substs)
         f.write(dutResponseTemplate % substs)
+        f.write(dutInterfaceTemplate % substs)
         f.write(mkDutTemplate % substs)
-    def collectRequestElements(self):
+    def collectRequestElements(self, outerTypeName):
         requestElements = []
         for m in self.decls:
             if m.type == 'Method':
-                e = m.collectRequestElement()
+                e = m.collectRequestElement(outerTypeName)
                 if e:
                     requestElements.append(e)
         return requestElements
-    def collectResponseElements(self):
+    def collectResponseElements(self, outerTypeName):
         responseElements = []
         for m in self.decls:
             if m.type == 'Method':
-                e = m.collectResponseElement()
+                e = m.collectResponseElement(outerTypeName)
                 if e:
                     responseElements.append(e)
         return responseElements
-    def collectRequestRules(self):
+    def collectRequestRules(self,outerTypeName):
         requestRules = []
         for m in self.decls:
             if m.type == 'Method':
-                requestRules.append(m.collectRequestRule())
+                requestRules.append(m.collectRequestRule(outerTypeName))
         return requestRules
+    def collectInterfaceNames(self, name):
+        interfaceNames = []
+        for m in self.decls:
+            if m.type == 'Interface':
+                print ("interface name: {%s}" % (m.name)), m
+            if m.type == 'Interface' and re.match(name, m.name):
+                interfaceNames.append((m.subinterfacename, m.name, m.params))
+        return interfaceNames

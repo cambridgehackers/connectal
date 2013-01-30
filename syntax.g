@@ -514,11 +514,11 @@ parser HSDL:
             | [ SEMICOLON ]
                 ( method_declaration {{ interfacevalue.append(method_declaration) }}
                 | TOKINTERFACE {{subinterfaceid=""}} ( CLASSVAR {{ print CLASSVAR; subinterfaceid = subinterfaceid + CLASSVAR }} )* 
-                  TYPEVAR {{ subinterfaceid = TYPEVAR }} [ LPAREN (VAR|NUM) (COMMA (NUM|VAR))* RPAREN ] (VAR {{subvar=VAR}}) SEMICOLON
-                  {{interfacevalue.append(Interface(subinterfaceid, [], subvar))}}
+                  TYPEVAR {{ subinterfaceid = TYPEVAR; params=[] }} [ LPAREN (VAR{{params.append(VAR)}}|NUM{{params.append(NUM)}}) (COMMA (NUM{{params.append(NUM)}}|VAR{{params.append(VAR)}}))* RPAREN ] (VAR {{subvar=VAR}}) SEMICOLON
+                  {{interfacevalue.append(Interface(subinterfaceid, params, [], subvar))}}
                 )*
                 TOKENDINTERFACE [ COLON VAR ]
-            ) {{ i=Interface(interfaceid, interfacevalue, var); return i }}
+            ) {{ i=Interface(interfaceid, params, interfacevalue, var); return i }}
 
     rule import_arg:
         ( VAR | var_list )

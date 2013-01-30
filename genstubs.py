@@ -4,6 +4,7 @@ import AST
 import newrt
 import syntax
 import bsvgen
+import xstgen
 
 classPrefixTemplate='''
 class %(namespace)s%(className)s {
@@ -311,7 +312,7 @@ AST.EnumElement.__bases__ += (EnumElementMixin,)
 AST.Enum.__bases__ += (EnumMixin,bsvgen.NullMixin)
 AST.Type.__bases__ += (TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (ParamMixin,)
-AST.Interface.__bases__ += (InterfaceMixin,bsvgen.InterfaceMixin)
+AST.Interface.__bases__ += (InterfaceMixin,bsvgen.InterfaceMixin,xstgen.InterfaceMixin)
 
 if __name__=='__main__':
     newrt.printtrace = True
@@ -325,12 +326,21 @@ if __name__=='__main__':
         sys.exit(-1)
     h = open('%s.h' % sys.argv[2], 'w')
     cppname = '%s.cpp' % sys.argv[2]
-    bsvname = '%sWrapper.bsv' % sys.argv[2]
+    bsvname = 'hdl/verilog/%sWrapper.bsv' % sys.argv[2]
+    vhdname = 'hdl/vhdl/%s.vhd' % sys.argv[2]
+    mpdname = 'data/%s_v2_1_0.mpd' % sys.argv[2].lower()
+    paoname = 'data/%s_v2_1_0.pao' % sys.argv[2].lower()
     cpp = open(cppname, 'w')
     cpp.write('#include "ushw.h"\n')
     cpp.write('#include "%s.h"\n' % mainInterfaceName)
     bsv = open(bsvname, 'w')
     bsvgen.emitPreamble(bsv, sys.argv[1:])
+    mpd = open(mpdname, 'w')
+    if not os.path.exists(paoname):
+        pao = open(paoname, 'w')
+    else:
+        pao = None
+    vhd = open(vhdname, 'w')
 
     ## prepass
     for v in syntax.globaldecls:
@@ -347,6 +357,10 @@ if __name__=='__main__':
     if (syntax.globalvars.has_key(mainInterfaceName)):
         subinterface = syntax.globalvars[mainInterfaceName]
         subinterface.emitBsvImplementation(bsv)
+        subinterface.emitMpd(mpd)
+        if pao:
+            subinterface.emitPao(pao)
+        subinterface.emitVhd(vhd)
     if cppname:
         srcdir = os.path.dirname(sys.argv[0]) + '/cpp'
         dstdir = os.path.dirname(cppname)

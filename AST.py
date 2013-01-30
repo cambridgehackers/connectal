@@ -10,13 +10,14 @@ class Method:
         return '<method: %s %s %s>' % (self.name, self.return_type, sparams)
 
 class Interface:
-    def __init__(self, name, decls, subinterfacename=None):
+    def __init__(self, name, params, decls, subinterfacename=None):
         self.type = 'Interface'
         self.name = name
+        self.params = params
         self.decls = decls
         self.subinterfacename = subinterfacename
     def __repr__(self):
-        return '{interface: %s}' % self.name
+        return '{interface: %s (%s)}' % (self.name, ', '.join([str(p) for p in self.params]))
 
 class Module:
     def __init__(self, name, decls):

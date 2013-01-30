@@ -137,7 +137,7 @@ class Scanner:
                 best_match = len(m.group(0))
                 # lookahead past whitespace for '#' or '::'
                 self.pos = m.end()
-                self.skipwhitespace()
+                #self.skipwhitespace()
                 if self.pos < len(self.input):
                     if self.input[self.pos:self.pos+2] == '::':
                         best_pat = 'CLASSVAR'
