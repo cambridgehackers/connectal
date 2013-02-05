@@ -62,9 +62,9 @@ mkDutTemplate='''
 typedef SizeOf#(%(Dut)sRequest) %(Dut)sRequestSize;
 typedef SizeOf#(%(Dut)sResponse) %(Dut)sResponseSize;
 
-module mk%(Dut)sWrapper#(Clock hdmi_clk)(%(Dut)sWrapper);
+module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 
-    %(Dut)s %(dut)s <- mk%(Dut)s(hdmi_clk);
+    %(Dut)s %(dut)s <- mk%(Dut)s(%(dut_hdmi_clock_arg)s);
     FromBit32#(%(Dut)sRequest) requestFifo <- mkFromBit32();
     ToBit32#(%(Dut)sResponse) responseFifo <- mkToBit32();
     Reg#(Bit#(32)) requestFired <- mkReg(0);
@@ -390,6 +390,8 @@ class InterfaceMixin:
                                            for (hdmi,t,params) in hdmiInterfaces]),
             'axiMasterImplementations': '\n'.join(['    interface %s %s = %s.%s;' % (t[0:-1], axiMaster,dutName,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
+            'dut_hdmi_clock_param': '#(Clock hdmi_clk)' if len(hdmiInterfaces) else '',
+            'dut_hdmi_clock_arg': 'hdmi_clk' if len(hdmiInterfaces) else '',
             'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
                                                   for (axiSlave,t,params) in axiSlaves]),
             'hdmiImplementations': '\n'.join(['    interface HDMI %s = %s.%s;' % (hdmi, dutName, hdmi)
