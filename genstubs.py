@@ -328,6 +328,7 @@ if __name__=='__main__':
     cppname = '%s.cpp' % sys.argv[2]
     bsvname = 'hdl/verilog/%sWrapper.bsv' % sys.argv[2]
     vhdname = 'hdl/vhdl/%s.vhd' % sys.argv[2]
+    mhsname = '%s.mhs' % sys.argv[2].lower()
     mpdname = 'data/%s_v2_1_0.mpd' % sys.argv[2].lower()
     paoname = 'data/%s_v2_1_0.pao' % sys.argv[2].lower()
     cpp = open(cppname, 'w')
@@ -336,6 +337,7 @@ if __name__=='__main__':
     bsv = open(bsvname, 'w')
     bsvgen.emitPreamble(bsv, sys.argv[1:])
     mpd = open(mpdname, 'w')
+    mhs = open(mhsname, 'w')
     if not os.path.exists(paoname):
         pao = open(paoname, 'w')
     else:
@@ -358,6 +360,7 @@ if __name__=='__main__':
         subinterface = syntax.globalvars[mainInterfaceName]
         subinterface.emitBsvImplementation(bsv)
         subinterface.emitMpd(mpd)
+        subinterface.emitMhs(mhs)
         if pao:
             subinterface.emitPao(pao)
         subinterface.emitVhd(vhd)

@@ -1,6 +1,221 @@
 
 from bsvgen import capitalize, decapitalize
 
+mhs_template='''
+# ##############################################################################
+# Created by xstgen
+# Target Board:  xilinx.com zc702 Rev C
+# Family:    zynq
+# Device:    xc7z020
+# Package:   clg484
+# Speed Grade:  -1
+# ##############################################################################
+ PARAMETER VERSION = 2.1.0
+
+
+ PORT processing_system7_0_MIO = processing_system7_0_MIO, DIR = IO, VEC = [53:0]
+ PORT processing_system7_0_PS_SRSTB = processing_system7_0_PS_SRSTB, DIR = I
+ PORT processing_system7_0_PS_CLK = processing_system7_0_PS_CLK, DIR = I, SIGIS = CLK
+ PORT processing_system7_0_PS_PORB = processing_system7_0_PS_PORB, DIR = I
+ PORT processing_system7_0_DDR_Clk = processing_system7_0_DDR_Clk, DIR = IO, SIGIS = CLK
+ PORT processing_system7_0_DDR_Clk_n = processing_system7_0_DDR_Clk_n, DIR = IO, SIGIS = CLK
+ PORT processing_system7_0_DDR_CKE = processing_system7_0_DDR_CKE, DIR = IO
+ PORT processing_system7_0_DDR_CS_n = processing_system7_0_DDR_CS_n, DIR = IO
+ PORT processing_system7_0_DDR_RAS_n = processing_system7_0_DDR_RAS_n, DIR = IO
+ PORT processing_system7_0_DDR_CAS_n = processing_system7_0_DDR_CAS_n, DIR = IO
+ PORT processing_system7_0_DDR_WEB_pin = processing_system7_0_DDR_WEB, DIR = O
+ PORT processing_system7_0_DDR_BankAddr = processing_system7_0_DDR_BankAddr, DIR = IO, VEC = [2:0]
+ PORT processing_system7_0_DDR_Addr = processing_system7_0_DDR_Addr, DIR = IO, VEC = [14:0]
+ PORT processing_system7_0_DDR_ODT = processing_system7_0_DDR_ODT, DIR = IO
+ PORT processing_system7_0_DDR_DRSTB = processing_system7_0_DDR_DRSTB, DIR = IO, SIGIS = RST
+ PORT processing_system7_0_DDR_DQ = processing_system7_0_DDR_DQ, DIR = IO, VEC = [31:0]
+ PORT processing_system7_0_DDR_DM = processing_system7_0_DDR_DM, DIR = IO, VEC = [3:0]
+ PORT processing_system7_0_DDR_DQS = processing_system7_0_DDR_DQS, DIR = IO, VEC = [3:0]
+ PORT processing_system7_0_DDR_DQS_n = processing_system7_0_DDR_DQS_n, DIR = IO, VEC = [3:0]
+ PORT processing_system7_0_DDR_VRN = processing_system7_0_DDR_VRN, DIR = IO
+ PORT processing_system7_0_DDR_VRP = processing_system7_0_DDR_VRP, DIR = IO
+%(system_hdmi_ports)s
+
+BEGIN processing_system7
+ PARAMETER INSTANCE = processing_system7_0
+ PARAMETER HW_VER = 4.02.a
+ PARAMETER C_DDR_RAM_HIGHADDR = 0x3FFFFFFF
+ PARAMETER C_USE_M_AXI_GP0 = 1
+ PARAMETER C_EN_EMIO_CAN0 = 0
+ PARAMETER C_EN_EMIO_CAN1 = 0
+ PARAMETER C_EN_EMIO_ENET0 = 0
+ PARAMETER C_EN_EMIO_ENET1 = 0
+ PARAMETER C_EN_EMIO_I2C0 = 0
+ PARAMETER C_EN_EMIO_I2C1 = 0
+ PARAMETER C_EN_EMIO_PJTAG = 0
+ PARAMETER C_EN_EMIO_SDIO0 = 0
+ PARAMETER C_EN_EMIO_CD_SDIO0 = 0
+ PARAMETER C_EN_EMIO_WP_SDIO0 = 0
+ PARAMETER C_EN_EMIO_SDIO1 = 0
+ PARAMETER C_EN_EMIO_CD_SDIO1 = 0
+ PARAMETER C_EN_EMIO_WP_SDIO1 = 0
+ PARAMETER C_EN_EMIO_SPI0 = 0
+ PARAMETER C_EN_EMIO_SPI1 = 0
+ PARAMETER C_EN_EMIO_SRAM_INT = 0
+ PARAMETER C_EN_EMIO_TRACE = 0
+ PARAMETER C_EN_EMIO_TTC0 = 1
+ PARAMETER C_EN_EMIO_TTC1 = 0
+ PARAMETER C_EN_EMIO_UART0 = 0
+ PARAMETER C_EN_EMIO_UART1 = 0
+ PARAMETER C_EN_EMIO_MODEM_UART0 = 0
+ PARAMETER C_EN_EMIO_MODEM_UART1 = 0
+ PARAMETER C_EN_EMIO_WDT = 0
+ PARAMETER C_EN_QSPI = 1
+ PARAMETER C_EN_SMC = 0
+ PARAMETER C_EN_CAN0 = 0
+ PARAMETER C_EN_CAN1 = 0
+ PARAMETER C_EN_ENET0 = 1
+ PARAMETER C_EN_ENET1 = 0
+ PARAMETER C_EN_I2C0 = 0
+ PARAMETER C_EN_I2C1 = 0
+ PARAMETER C_EN_PJTAG = 0
+ PARAMETER C_EN_SDIO0 = 1
+ PARAMETER C_EN_SDIO1 = 0
+ PARAMETER C_EN_SPI0 = 0
+ PARAMETER C_EN_SPI1 = 0
+ PARAMETER C_EN_TRACE = 0
+ PARAMETER C_EN_TTC0 = 1
+ PARAMETER C_EN_TTC1 = 0
+ PARAMETER C_EN_UART0 = 0
+ PARAMETER C_EN_UART1 = 1
+ PARAMETER C_EN_MODEM_UART0 = 0
+ PARAMETER C_EN_MODEM_UART1 = 0
+ PARAMETER C_EN_USB0 = 1
+ PARAMETER C_EN_USB1 = 0
+ PARAMETER C_EN_WDT = 0
+ PARAMETER C_EN_DDR = 1
+ PARAMETER C_EN_GPIO = 1
+ PARAMETER C_FCLK_CLK0_FREQ = 100000000
+ PARAMETER C_FCLK_CLK1_FREQ = 142857132
+ PARAMETER C_FCLK_CLK2_FREQ = 50000000
+ PARAMETER C_FCLK_CLK3_FREQ = 50000000
+ PARAMETER C_USE_CR_FABRIC = 1
+ PARAMETER C_USE_M_AXI_GP1 = 0
+ PARAMETER C_USE_S_AXI_ACP = 0
+ PARAMETER C_EMIO_GPIO_WIDTH = 64
+ PORT MIO = processing_system7_0_MIO
+ PORT PS_SRSTB = processing_system7_0_PS_SRSTB
+ PORT PS_CLK = processing_system7_0_PS_CLK
+ PORT PS_PORB = processing_system7_0_PS_PORB
+ PORT DDR_Clk = processing_system7_0_DDR_Clk
+ PORT DDR_Clk_n = processing_system7_0_DDR_Clk_n
+ PORT DDR_CKE = processing_system7_0_DDR_CKE
+ PORT DDR_CS_n = processing_system7_0_DDR_CS_n
+ PORT DDR_RAS_n = processing_system7_0_DDR_RAS_n
+ PORT DDR_CAS_n = processing_system7_0_DDR_CAS_n
+ PORT DDR_WEB = processing_system7_0_DDR_WEB
+ PORT DDR_BankAddr = processing_system7_0_DDR_BankAddr
+ PORT DDR_Addr = processing_system7_0_DDR_Addr
+ PORT DDR_ODT = processing_system7_0_DDR_ODT
+ PORT DDR_DRSTB = processing_system7_0_DDR_DRSTB
+ PORT DDR_DQ = processing_system7_0_DDR_DQ
+ PORT DDR_DM = processing_system7_0_DDR_DM
+ PORT DDR_DQS = processing_system7_0_DDR_DQS
+ PORT DDR_DQS_n = processing_system7_0_DDR_DQS_n
+ PORT DDR_VRN = processing_system7_0_DDR_VRN
+ PORT DDR_VRP = processing_system7_0_DDR_VRP
+ PORT FCLK_CLK0 = processing_system7_0_FCLK_CLK0_0
+ PORT M_AXI_GP0_ACLK = processing_system7_0_FCLK_CLK0_0
+ PORT M_AXI_GP0_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
+ BUS_INTERFACE M_AXI_GP0 = axi_slave_interconnect_0
+
+%(ps7_axi_master_config)s
+
+ PORT IRQ_F2P = %(dut)s_0_interrupt
+END
+
+%(axi_master_interconnects)s
+%(axi_slave_interconnects)s
+
+BEGIN %(dut)s
+ PARAMETER INSTANCE = %(dut)s_0
+ PARAMETER HW_VER = 1.00.a
+ PORT clk = processing_system7_0_FCLK_CLK0_0
+ PORT rst_n = processing_system7_0_M_AXI_GP0_ARESETN
+ PORT interrupt = %(dut)s_0_interrupt
+%(dut_axi_master_config)s
+%(dut_axi_slave_config)s
+%(dut_hdmi_config)s
+END
+'''
+
+system_hdmi_port_mhs_template='''
+ PORT usr_clk_n_pin = %(dut)s_0_usr_clk_n, DIR = I
+ PORT usr_clk_p_pin = %(dut)s_0_usr_clk_p, DIR = I
+ PORT hdmi_vsync_pin = %(dut)s_0_hdmi_vsync, DIR = O
+ PORT hdmi_hsync_pin = %(dut)s_0_hdmi_hsync, DIR = O
+ PORT hdmi_de_pin = %(dut)s_0_hdmi_de, DIR = O
+ PORT hdmi_data_pin = %(dut)s_0_hdmi_data, DIR = O, VEC = [15:0]
+ PORT hdmi_clk_pin = %(dut)s_0_hdmi_clk, DIR = O, SIGIS = CLK
+ PORT xadc_gpio_0_pin = %(dut)s_0_xadc_gpio_0, DIR = O
+ PORT xadc_gpio_1_pin = %(dut)s_0_xadc_gpio_1, DIR = O
+ PORT xadc_gpio_2_pin = %(dut)s_0_xadc_gpio_2, DIR = O
+ PORT xadc_gpio_3_pin = %(dut)s_0_xadc_gpio_3, DIR = O
+'''
+
+ps7_axi_master_config_mhs_template='''
+ PARAMETER C_INTERCONNECT_S_AXI_HP%(busnumber)s_MASTERS = %(dut)s_0.%(BUSNAME)s
+ PARAMETER C_USE_S_AXI_HP%(busnumber)s = 1
+ BUS_INTERFACE S_AXI_HP%(busnumber)s = axi_master_interconnect_%(busnumber)s
+ PORT S_AXI_HP%(busnumber)s_ACLK = processing_system7_0_FCLK_CLK0_0
+ PORT S_AXI_HP%(busnumber)s_ARESETN = processing_system7_0_S_AXI_HP%(busnumber)s_ARESETN
+'''
+
+dut_axi_master_config_mhs_template='''
+ BUS_INTERFACE %(busname)s = axi_master_interconnect_%(busnumber)s
+ PORT %(busname)s_aclk = processing_system7_0_FCLK_CLK0_0
+'''
+
+dut_axi_slave_config_mhs_template='''
+ PARAMETER C_%(BUSNAME)s_MEM0_BASEADDR = %(busbase)s
+ PARAMETER C_%(BUSNAME)s_MEM0_HIGHADDR = %(bushigh)s
+ ## not needed for shared mode
+ ##PARAMETER C_INTERCONNECT_%(BUSNAME)s_MASTERS = processing_system7_0.M_AXI_GP0
+ BUS_INTERFACE %(BUSNAME)s = axi_slave_interconnect_%(busnumber)s
+ PORT %(BUSNAME)s_ACLK = processing_system7_0_FCLK_CLK0_0
+'''
+
+dut_hdmi_config_mhs_template='''
+ PORT usr_clk_p = %(dut)s_0_usr_clk_p
+ PORT usr_clk_n = %(dut)s_0_usr_clk_n
+ PORT hdmi_clk = %(dut)s_0_hdmi_clk
+ PORT hdmi_vsync = %(dut)s_0_hdmi_vsync
+ PORT hdmi_hsync = %(dut)s_0_hdmi_hsync
+ PORT hdmi_de = %(dut)s_0_hdmi_de
+ PORT hdmi_data = %(dut)s_0_hdmi_data
+ PORT xadc_gpio_0 = %(dut)s_0_xadc_gpio_0
+ PORT xadc_gpio_1 = %(dut)s_0_xadc_gpio_1
+ PORT xadc_gpio_2 = %(dut)s_0_xadc_gpio_2
+ PORT xadc_gpio_3 = %(dut)s_0_xadc_gpio_3
+'''
+
+axi_master_interconnect_mhs_template='''
+BEGIN axi_interconnect
+ PARAMETER INSTANCE = axi_master_interconnect_%(busnumber)s
+ PARAMETER HW_VER = 1.06.a
+ PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 1
+ PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0_0
+ PORT INTERCONNECT_ARESETN = processing_system7_0_S_AXI_HP%(busnumber)s_ARESETN
+END
+'''
+
+axi_slave_interconnect_mhs_template='''
+BEGIN axi_interconnect
+ PARAMETER INSTANCE = axi_slave_interconnect_%(busnumber)s
+ PARAMETER HW_VER = 1.06.a
+ ## use shared mode, crossbar mode does not work for our design
+ PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 0
+ PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0_0
+ PORT INTERCONNECT_ARESETN = processing_system7_0_M_AXI_GP%(busnumber)s_ARESETN
+END
+'''
+
+
 mpd_template='''###################################################################
 ##
 ## Name     : %(dut)s
@@ -20,7 +235,6 @@ OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
 
 ## Bus Interfaces
 %(bus_declarations)s
-IO_INTERFACE IO_IF = XADC_GPIO, IO_TYPE = XADC_GPIO
 
 ## Generics for VHDL or Parameters for Verilog
 %(parameter_declarations)s
@@ -30,13 +244,6 @@ PORT interrupt = "", DIR = O, SIGIS = INTERRUPT
 PORT clk = "", DIR = I, SIGIS = CLK, ASSIGNMENT=REQUIRE
 PORT rst_n = "", DIR = I, SIGIS = RST, RST_POLARITY=0, ASSIGNMENT=REQUIRE
 %(port_declarations)s
-
-PORT usr_clk_p = "", DIR = I
-PORT usr_clk_n = "", DIR = I
-PORT xadc_gpio_0 = "", DIR = O
-PORT xadc_gpio_1 = "", DIR = O
-PORT xadc_gpio_2 = "", DIR = O
-PORT xadc_gpio_3 = "", DIR = O
 END
 '''
 
@@ -158,6 +365,13 @@ PORT hdmi_vsync = "", DIR = O, IO_IF=%(busname)s
 PORT hdmi_hsync = "", DIR = O, IO_IF=%(busname)s
 PORT hdmi_de = "", DIR = O, IO_IF=%(busname)s
 PORT hdmi_data = "", DIR = O, VEC = [15:0], IO_IF=%(busname)s
+
+PORT usr_clk_p = "", DIR = I
+PORT usr_clk_n = "", DIR = I
+PORT xadc_gpio_0 = "", DIR = O
+PORT xadc_gpio_1 = "", DIR = O
+PORT xadc_gpio_2 = "", DIR = O
+PORT xadc_gpio_3 = "", DIR = O
 '''
 
 pao_template='''
@@ -225,7 +439,7 @@ begin
 
   %(Dut)sIMPLEMENTATION : entity mk%(Dut)sWrapper
     port map (
-      CLK_hdmi_clk => usr_clk,
+      %(dut_hdmi_clock_arg)s
       CLK => CLK,
       RST_N  => RST_N,
       %(axi_master_port_map)s
@@ -832,14 +1046,15 @@ hdmi_iobuf_vhd_template='''
 
 class InterfaceMixin:
     def axiMasterBusSubst(self, busname,t,params):
+        print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster#') else 'AXI3')
         return {
             'BUSNAME': busname.upper(),
             'busname': busname,
             'datawidth': params[0],
-            'burstlenwidth': 8 if (busname == 'AxiMaster#') else 4,
-            'protwidth': 3 if (busname == 'AxiMaster#') else 2,
-            'cachewidth': 4 if (busname == 'AxiMaster#') else 3,
-            'axiprotocol': 'AXI4' if (busname == 'AxiMaster#') else 'AXI3',
+            'burstlenwidth': 8 if (t == 'AxiMaster#') else 4,
+            'protwidth': 3 if (t == 'AxiMaster#') else 2,
+            'cachewidth': 4 if (t == 'AxiMaster#') else 3,
+            'axiprotocol': 'AXI4' if (t == 'AxiMaster#') else 'AXI3',
             }
     def emitMpd(self, f):
         dutName = decapitalize(self.name)
@@ -870,6 +1085,41 @@ class InterfaceMixin:
                                             for (busname,t,params) in hdmiBus])
             }
         f.write(mpd_template % substs)
+        return
+
+    def emitMhs(self, f):
+        dutName = self.name.lower()
+        axiMasters = self.collectInterfaceNames('Axi3?Master#')
+        axiSlaves = [('ctrl','AxiSlave#',[]), ('fifo','AxiSlave#',[])] + self.collectInterfaceNames('AxiSlave#')
+        hdmiBus = self.collectInterfaceNames('HDMI')
+        masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
+        substs = {
+            'dut': dutName,
+            'axi_master_interconnects': ''.join([ axi_master_interconnect_mhs_template 
+                                                  % {'busnumber': i} for i in range(len(axiMasters))]),
+            'axi_slave_interconnects': (axi_slave_interconnect_mhs_template 
+                                        % {'busnumber': 0}),
+            'dut_axi_master_config': ''.join([ dut_axi_master_config_mhs_template
+                                               % {'busnumber': i, 'busname': axiMasters[i][0]}
+                                               for i in range(len(axiMasters))]),
+            'dut_axi_slave_config': ''.join([ dut_axi_slave_config_mhs_template
+                                              % {'busnumber': 0, 
+                                                 'busname': axiSlaves[i][0],
+                                                 'BUSNAME': axiSlaves[i][0].upper(),
+                                                 'busbase': hex(0x6e400000 + 4096*i),
+                                                 'bushigh': hex(0x6e400FFF + 4096*i)}
+                                              for i in range(len(axiSlaves))]),
+            'ps7_axi_master_config': ''.join([ ps7_axi_master_config_mhs_template
+                                               % {'dut': dutName,
+                                                  'busnumber': i,
+                                                  'busname': axiMasters[i][0],
+                                                  'BUSNAME': axiMasters[i][0].upper()}
+                                               for i in range(len(axiMasters))]),
+            'dut_hdmi_config': ''.join([ dut_hdmi_config_mhs_template % {'dut':dutName} for v in hdmiBus]),
+            'system_hdmi_ports': ''.join([system_hdmi_port_mhs_template % {'dut':dutName} for v in hdmiBus])
+            }
+        print substs
+        f.write(mhs_template % substs)
         return
 
     def emitPao(self, f):
@@ -904,6 +1154,7 @@ class InterfaceMixin:
             'hdmi_ports':
                 ''.join([hdmi_port_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in hdmiBus]),
+            'dut_hdmi_clock_arg': '      CLK_hdmi_clk => usr_clk,' if len(hdmiBus) else '',
             'axi_master_port_map':
                 ''.join([axi_master_port_map_vhd_template % subst for subst in masterBusSubsts]),
             'axi_slave_port_map':
