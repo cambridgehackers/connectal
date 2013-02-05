@@ -194,7 +194,7 @@ parser HSDL:
         TYPEVAR {{typevar_param_list=[]}} [ typevar_param_list ] {{ return Type(TYPEVAR, typevar_param_list) }}
 
     rule Type_list:
-        ( type_decl
+        ( type_decl {{return type_decl}}
         | LPAREN type_decl (COMMA type_decl)* RPAREN
         )
 
@@ -232,7 +232,7 @@ parser HSDL:
                 RBRACE {{return Union(None, elts)}}
 
     rule single_type_definition:
-        (   Type_list [ type_decl | TOKENABLE ]
+        (   Type_list [ type_decl | TOKENABLE ] {{t=Type_list; print t}}
         |   ( enum_declaration {{t=enum_declaration}}
             | struct_declaration {{t=struct_declaration}}
             | union_declaration {{t=union_declaration}}
@@ -509,7 +509,7 @@ parser HSDL:
     rule interface_declaration: {{ interfaceid = "" }}
         TOKINTERFACE ( CLASSVAR {{ print CLASSVAR; interfaceid = interfaceid + CLASSVAR }} )* 
         TYPEVAR {{ interfaceid = TYPEVAR; interfacevalue=[]; var=None }} [ VAR {{print VAR; var=VAR}} ]
-        [ LPAREN (TOKTYPE VAR) (COMMA TOKTYPE VAR)* RPAREN ]
+        {{params=[]}} [ LPAREN (TOKTYPE VAR) (COMMA TOKTYPE VAR)* RPAREN ]
             ( equal_value
             | [ SEMICOLON ]
                 ( method_declaration {{ interfacevalue.append(method_declaration) }}
@@ -580,7 +580,7 @@ parser HSDL:
 
     rule goal:
         ( single_declaration
-        | TOKPACKAGE VAR SEMICOLON ( single_declaration )* TOKENDPACKAGE [ COLON  VAR]
+        | TOKPACKAGE TYPEVAR SEMICOLON ( single_declaration )* TOKENDPACKAGE [ COLON  VAR]
         )* ENDTOKEN {{ return globalvars }}
 
 %%
