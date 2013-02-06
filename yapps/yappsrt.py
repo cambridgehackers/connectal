@@ -272,6 +272,7 @@ def print_line_with_pointer(text, p):
     # 80-column line to stderr.
     
     # Now try printing part of the line
+    p = int(p)
     text = text[max(p-80, 0):p+80]
     p = p - max(p-80, 0)
 
@@ -309,8 +310,12 @@ def print_error(input, err, scanner):
     print >>sys.stderr, '%d:%d: %s' % (line_number, column_number, err.msg)
 
     context = err.context
+    errpos = err.charpos
+    if type(errpos) != int:
+        errpos = 0
+
     if not context:
-        print_line_with_pointer(input, err.charpos)
+        print_line_with_pointer(input, errpos)
         
     while context:
         # TODO: add line number
