@@ -283,6 +283,7 @@ class TypeMixin:
 def cName(x):
     if type(x) == str:
         x = x.replace(' ', '')
+        x = x.replace('.', '$')
         return x
     else:
         return x.cName()
