@@ -6,8 +6,6 @@ import math
 import re
 
 import AST
-import newrt
-import newsyntax as syntax
 import string
 import xst
 
