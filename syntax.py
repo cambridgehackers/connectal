@@ -217,8 +217,7 @@ def p_typeParams(p):
     if len(p) == 2:
         p[0] = [p[1]]
     elif len(p) == 4:
-        p[1].append(p[3])
-        p[0] = p[1]
+        p[0] = p[1] + [p[3]]
 
 def p_type(p):
     '''type : VAR
@@ -359,15 +358,26 @@ def p_exportDecls(p):
 def p_interfaceFormalParam(p):
     '''interfaceFormalParam : TOKTYPE VAR
                             | TOKNUMERIC TOKTYPE VAR'''
+    if len(p) == 3:
+        p[0] = p[2]
+    else:
+        p[0] = p[3]
 
 def p_interfaceFormalParams(p):
     '''interfaceFormalParams : interfaceFormalParam
                              | interfaceFormalParams COMMA interfaceFormalParam'''
+    if len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[3]]
 
 def p_interfaceHashParams(p):
     '''interfaceHashParams :
                            | HASH LPAREN interfaceFormalParams RPAREN'''
-    p[0] = ['fixme']
+    if len(p) == 5:
+        p[0] = p[3]
+    else:
+        p[0] = []
 
 def p_subinterfaceDecl(p):
     '''subinterfaceDecl : TOKINTERFACE type VAR SEMICOLON
@@ -401,8 +411,7 @@ def p_interfaceStmts(p):
     '''interfaceStmts :
                       | interfaceStmts interfaceStmt'''
     if len(p) == 3:
-        p[1].append(p[2])
-        p[0] = p[1]
+        p[0] = p[1] + [p[2]]
     else:
         p[0] = []
 
@@ -624,11 +633,12 @@ def p_moduleFormalParams(p):
     '''moduleFormalParams : formalParam
                           | moduleFormalParams COMMA formalParam
                           |'''
+    if len(p) == 1:
+        p[0] = []
     if len(p) == 2:
         p[0] = [p[1]]
     elif len(p) == 4:
-        p[1].append(p[3])
-        p[0] = p[1]
+        p[0] = p[1] + [p[3]]
 
 def p_moduleFormalArg(p):
     '''moduleFormalArg : instanceAttributes type
