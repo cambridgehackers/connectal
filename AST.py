@@ -9,6 +9,24 @@ class Method:
         sparams = map(str, self.params)
         return '<method: %s %s %s>' % (self.name, self.return_type, sparams)
 
+class Function:
+    def __init__(self, name, return_type, params):
+        self.type = 'Function'
+        self.name = name
+        self.return_type = return_type
+        self.params = params
+    def __repr__(self):
+        sparams = map(str, self.params)
+        return '<function: %s %s %s>' % (self.name, self.return_type, sparams)
+
+class Variable:
+    def __init__(self, name, t):
+        self.type = 'Variable'
+        self.name = name
+        self.type = t
+    def __repr__(self):
+        return '<variable: %s : %s>' % (self.name, self.type)
+
 class Interface:
     def __init__(self, name, params, decls, subinterfacename=None):
         self.type = 'Interface'

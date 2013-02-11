@@ -1046,20 +1046,20 @@ hdmi_iobuf_vhd_template='''
 
 class InterfaceMixin:
     def axiMasterBusSubst(self, busname,t,params):
-        print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster#') else 'AXI3')
+        print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3')
         return {
             'BUSNAME': busname.upper(),
             'busname': busname,
             'datawidth': params[0],
-            'burstlenwidth': 8 if (t == 'AxiMaster#') else 4,
-            'protwidth': 3 if (t == 'AxiMaster#') else 2,
-            'cachewidth': 4 if (t == 'AxiMaster#') else 3,
-            'axiprotocol': 'AXI4' if (t == 'AxiMaster#') else 'AXI3',
+            'burstlenwidth': 8 if (t == 'AxiMaster') else 4,
+            'protwidth': 3 if (t == 'AxiMaster') else 2,
+            'cachewidth': 4 if (t == 'AxiMaster') else 3,
+            'axiprotocol': 'AXI4' if (t == 'AxiMaster') else 'AXI3',
             }
     def emitMpd(self, f):
         dutName = decapitalize(self.name)
-        axiMasters = self.collectInterfaceNames('Axi3?Master#')
-        axiSlaves = [('ctrl','AxiSlave#',[]), ('fifo','AxiSlave#',[])] + self.collectInterfaceNames('AxiSlave#')
+        axiMasters = self.collectInterfaceNames('Axi3?Master')
+        axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
         substs = {
@@ -1089,8 +1089,8 @@ class InterfaceMixin:
 
     def emitMhs(self, f):
         dutName = self.name.lower()
-        axiMasters = self.collectInterfaceNames('Axi3?Master#')
-        axiSlaves = [('ctrl','AxiSlave#',[]), ('fifo','AxiSlave#',[])] + self.collectInterfaceNames('AxiSlave#')
+        axiMasters = self.collectInterfaceNames('Axi3?Master')
+        axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
         substs = {
@@ -1118,7 +1118,6 @@ class InterfaceMixin:
             'dut_hdmi_config': ''.join([ dut_hdmi_config_mhs_template % {'dut':dutName} for v in hdmiBus]),
             'system_hdmi_ports': ''.join([system_hdmi_port_mhs_template % {'dut':dutName} for v in hdmiBus])
             }
-        print substs
         f.write(mhs_template % substs)
         return
 
@@ -1134,8 +1133,8 @@ class InterfaceMixin:
 
     def emitVhd(self, f):
         dutName = decapitalize(self.name)
-        axiMasters = self.collectInterfaceNames('Axi3?Master#')
-        axiSlaves = [('ctrl','AxiSlave#',[]), ('fifo','AxiSlave#',[])] + self.collectInterfaceNames('AxiSlave#')
+        axiMasters = self.collectInterfaceNames('Axi3?Master')
+        axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
         substs = {

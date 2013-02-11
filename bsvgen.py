@@ -7,7 +7,7 @@ import re
 
 import AST
 import newrt
-import syntax
+import newsyntax as syntax
 import string
 import xst
 
@@ -321,7 +321,7 @@ class NullMixin:
 
 class TypeMixin:
     def toBsvType(self):
-        if self.name.find('#'):
+        if len(self.params):
             return '%s(%s)' % (self.name, self.params[0])
         else:
             return self.name
@@ -329,8 +329,8 @@ class MethodMixin:
     def emitBsvImplementation(self, f):
         pass
     def substs(self, outerTypeName):
-        if self.return_type.name == 'ActionValue#':
-            rt = self.return_type.params[0].type.toBsvType()
+        if self.return_type.name == 'ActionValue':
+            rt = self.return_type.params[0].toBsvType()
         else:
             rt = self.return_type.name
         d = { 'dut': decapitalize(outerTypeName),
@@ -370,8 +370,8 @@ class InterfaceMixin:
         requestElements = self.collectRequestElements(self.name)
         responseElements = self.collectResponseElements(self.name)
         requestRules = self.collectRequestRules(self.name)
-        axiMasters = self.collectInterfaceNames('Axi3?Master#')
-        axiSlaves = self.collectInterfaceNames('AxiSlave#')
+        axiMasters = self.collectInterfaceNames('Axi3?Master')
+        axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
         dutName = decapitalize(self.name)
         substs = {
@@ -429,6 +429,7 @@ class InterfaceMixin:
         for m in self.decls:
             if m.type == 'Interface':
                 print ("interface name: {%s}" % (m.name)), m
+                #print 'name', name, m.name
             if m.type == 'Interface' and re.match(name, m.name):
                 interfaceNames.append((m.subinterfacename, m.name, m.params))
         return interfaceNames

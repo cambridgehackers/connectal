@@ -1,4 +1,7 @@
 *~
 *.pyc
 *.o
-syntax.py
+lextab.py
+parselog.txt
+parser.out
+parsetab.py

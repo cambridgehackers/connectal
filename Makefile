@@ -1,6 +1,5 @@
 
-all:
-	./run_test.sh
+all: parsetab.py
 
-syntax.py: syntax.g
-	python yapps/yapps2.py syntax.g 
+parsetab.py: syntax.py
+	python syntax.py

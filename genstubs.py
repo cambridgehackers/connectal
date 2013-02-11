@@ -1,10 +1,9 @@
 #!/usr/bin/python
 import os, sys, shutil, string
 import AST
-import newrt
-import syntax
 import bsvgen
 import xstgen
+import syntax
 
 classPrefixTemplate='''
 class %(namespace)s%(className)s {
@@ -79,7 +78,7 @@ def capitalize(s):
 class MethodMixin:
     def collectTypes(self):
         result = [self.return_type]
-        result.append(AST.Type('Tuple#', self.params))
+        result.append(AST.Type('Tuple', self.params))
         return result
     def resultTypeName(self):
         if (self.return_type):
@@ -90,7 +89,7 @@ class MethodMixin:
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
         f.write('void %s ( ' % cName(self.name))
-        print parentClassName, self.name
+        #print parentClassName, self.name
         f.write(', '.join([cName(p.type) for p in self.params]))
         f.write(' );\n');
     def emitCImplementation(self, f, className, namespace):
@@ -118,7 +117,7 @@ class StructMemberMixin:
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         indent(f, indentation)
         f.write('%s %s' % (self.type.cName(), self.tag))
-        print 'emitCDeclaration: ', self.type, self.type.isBitField, self.type.cName(), self.tag
+        #print 'emitCDeclaration: ', self.type, self.type.isBitField, self.type.cName(), self.tag
         if self.type.isBitField():
             f.write(' : %d' % self.type.bitWidth())
         f.write(';\n')
@@ -171,18 +170,18 @@ class InterfaceMixin:
         result = [d.collectTypes() for d in self.decls]
         return result
     def getSubinterface(self, name):
-        subinterfaceName = name.replace(' ', '')
+        subinterfaceName = name
         if not syntax.globalvars.has_key(subinterfaceName):
             return None
         subinterface = syntax.globalvars[subinterfaceName]
-        print 'subinterface', subinterface, subinterface
+        #print 'subinterface', subinterface, subinterface
         return subinterface
     def assignFriends(self):
         self.friends = []
         for d in self.decls:
             if d.__class__ == AST.Interface:
                 i.friends.append(self.name)
-        print self.friends, self
+        #print self.friends, self
     def assignRequestResponseChannels(self):
         channelNumber = 0
         for d in self.decls:
@@ -271,24 +270,22 @@ class TypeMixin:
     def cName(self):
         cid = self.name
         cid = cid.replace(' ', '')
-        if cid == 'Bit#':
+        if cid == 'Bit':
             return 'unsigned int'
         elif cid == 'Action':
             return 'int'
-        elif cid == 'ActionValue#':
-            ## this is a Param but should be a Type
-            return self.params[0].type.cName()
-        cid = cid.replace('#', '_')
+        elif cid == 'ActionValue':
+            return self.params[0].cName()
         if self.params:
             name = '%sL_%s_P' % (cid, '_'.join([cName(t) for t in self.params if t]))
         else:
             name = cid
         return name
     def isBitField(self):
-        return self.name == 'Bit#'
+        return self.name == 'Bit'
     def bitWidth(self):
-        if self.name == 'Bit#':
-            return int(self.params[0])
+        if self.name == 'Bit':
+            return int(self.params[0].name)
         else:
             return 0
     def bitSpec(self):
@@ -301,7 +298,7 @@ class TypeMixin:
 def cName(x):
     if type(x) == str:
         x = x.replace(' ', '')
-        return x.replace('#', '_')
+        return x
     else:
         return x.cName()
 
@@ -315,17 +312,15 @@ AST.Param.__bases__ += (ParamMixin,)
 AST.Interface.__bases__ += (InterfaceMixin,bsvgen.InterfaceMixin,xstgen.InterfaceMixin)
 
 if __name__=='__main__':
-    newrt.printtrace = True
     s = open(sys.argv[1]).read() + '\n'
-    s1 = syntax.parse('goal', s)
-    print s1
+    s1 = syntax.parse(s)
     cppname = None
     if len(sys.argv) > 2:
         mainInterfaceName = os.path.basename(sys.argv[2])
     else:
         sys.exit(-1)
-    h = open('%s.h' % sys.argv[2], 'w')
-    cppname = '%s.cpp' % sys.argv[2]
+    h = open('driver/%s.h' % sys.argv[2], 'w')
+    cppname = 'driver/%s.cpp' % sys.argv[2]
     bsvname = 'hdl/verilog/%sWrapper.bsv' % sys.argv[2]
     vhdname = 'hdl/vhdl/%s.vhd' % sys.argv[2]
     mhsname = '%s.mhs' % sys.argv[2].lower()
@@ -352,8 +347,6 @@ if __name__=='__main__':
             print 'no assignFriends', v
     ## code generation pass
     for v in syntax.globaldecls:
-        print v.name
-        print v.collectTypes()
         v.emitCDeclaration(h)
         v.emitCImplementation(cpp)
     if (syntax.globalvars.has_key(mainInterfaceName)):
