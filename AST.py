@@ -98,6 +98,9 @@ class Param:
         self.type = t
     def __repr__(self):
         return '{param %s: %s}' % (self.name, self.type)
+    def instantiate(self, paramBindings):
+        return Param(self.name,
+                     self.type.instantiate(paramBindings))
 
 class Type:
     def __init__(self, name, params):
