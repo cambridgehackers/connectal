@@ -72,6 +72,12 @@ def indent(f, indentation):
 def capitalize(s):
     return '%s%s' % (s[0].upper(), s[1:])
 
+class NoCMixin:
+    def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
+        pass
+    def emitCImplementation(self, f):
+        pass
+
 class MethodMixin:
     def collectTypes(self):
         result = [self.return_type]

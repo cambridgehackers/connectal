@@ -119,3 +119,5 @@ class Type:
             return paramBindings[self.name]
         else:
             return Type(self.name, [p.instantiate(paramBindings) for p in self.params])
+    def numeric(self):
+        return int(self.name)

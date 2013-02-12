@@ -8,6 +8,7 @@ import re
 import AST
 import string
 import xst
+import util
 
 preambleTemplate='''
 import FIFO::*;
@@ -302,11 +303,6 @@ responseRuleTemplate='''
     endrule
 '''
 
-def capitalize(s):
-    return '%s%s' % (s[0].upper(), s[1:])
-def decapitalize(s):
-    return '%s%s' % (s[0].lower(), s[1:])
-
 def emitPreamble(f, files):
     extraImports = ['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
     #axiMasterDecarations = ['interface AxiMaster#(64,8) %s;' % axiMaster for axiMaster in axiMasterNames]
@@ -320,7 +316,7 @@ class NullMixin:
 class TypeMixin:
     def toBsvType(self):
         if len(self.params):
-            return '%s(%s)' % (self.name, self.params[0])
+            return '%s#(%s)' % (self.name, self.params[0].numeric())
         else:
             return self.name
 class MethodMixin:
@@ -331,10 +327,10 @@ class MethodMixin:
             rt = self.return_type.params[0].toBsvType()
         else:
             rt = self.return_type.name
-        d = { 'dut': decapitalize(outerTypeName),
-              'Dut': capitalize(outerTypeName),
+        d = { 'dut': util.decapitalize(outerTypeName),
+              'Dut': util.capitalize(outerTypeName),
               'methodName': self.name,
-              'MethodName': capitalize(self.name),
+              'MethodName': util.capitalize(self.name),
               'methodReturnType': rt}
         return d
 
@@ -371,16 +367,16 @@ class InterfaceMixin:
         axiMasters = self.collectInterfaceNames('Axi3?Master')
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
-        dutName = decapitalize(self.name)
+        dutName = util.decapitalize(self.name)
         substs = {
             'dut': dutName,
-            'Dut': capitalize(self.name),
+            'Dut': util.capitalize(self.name),
             'requestElements': ''.join(requestElements),
             'responseElements': ''.join(responseElements),
             'requestRules': ''.join(requestRules),
             'maxTag': len(requestElements),
             'tagBits': int(math.ceil(math.log(len(requestElements)+1,2))),
-            'axiMasterDeclarations': '\n'.join(['    interface %s(%s,%s) %s;' % (t, params[0], params[1], axiMaster)
+            'axiMasterDeclarations': '\n'.join(['    interface %s#(%s,%s) %s;' % (t, params[0].numeric(), params[1].numeric(), axiMaster)
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
                                                for (axiSlave,t,params) in axiSlaves]),
