@@ -33,91 +33,77 @@ endinterface
 '''
 
 dutRequestTemplate='''
-typedef union tagged {
 %(requestElements)s
-  Bit#(0) DutRequestUnused;
-} %(Dut)sRequest deriving (Bits);
 '''
 
 requestStructTemplate='''
-    struct {
+typedef struct {
 %(paramStructDeclarations)s
-    } %(MethodName)s$Request;
+} %(MethodName)s$Request deriving (Bits);
+typedef SizeOf#(%(MethodName)s$Request) %(MethodName)s$RequestSize;
+Bit#(8) %(methodName)s$Offset = %(channelNumber)s;
 '''
 
 dutResponseTemplate='''
-typedef union tagged {
 %(responseElements)s
-  Bit#(0) DutResponseUnused;
-} %(Dut)sResponse deriving (Bits);
 '''
 
 responseStructTemplate='''
-    %(methodReturnType)s %(MethodName)s$Response;
+typedef struct {
+    %(methodReturnType)s %(methodName)s$Response;
+} %(MethodName)s$Response deriving (Bits);
+typedef SizeOf#(%(MethodName)s$Response) %(MethodName)s$ResponseSize;
+Bit#(8) %(methodName)s$Offset = %(channelNumber)s;
 '''
 
 mkDutTemplate='''
-typedef SizeOf#(%(Dut)sRequest) %(Dut)sRequestSize;
-typedef SizeOf#(%(Dut)sResponse) %(Dut)sResponseSize;
 
 module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 
     %(Dut)s %(dut)s <- mk%(Dut)s(%(dut_hdmi_clock_arg)s);
-    FromBit32#(%(Dut)sRequest) requestFifo <- mkFromBit32();
-    ToBit32#(%(Dut)sResponse) responseFifo <- mkToBit32();
     Reg#(Bit#(32)) requestFired <- mkReg(0);
     Reg#(Bit#(32)) responseFired <- mkReg(0);
-    Reg#(Bit#(32)) junkReqReg <- mkReg(0);
-    Reg#(Bit#(16)) requestTimerReg <- mkReg(0);
-    Reg#(Bit#(16)) requestTimeLimitReg <- mkReg(maxBound);
-    Reg#(Bit#(16)) responseTimerReg <- mkReg(0);
-    Reg#(Bit#(16)) responseTimeLimitReg <- mkReg(maxBound);
-    Reg#(Bit#(32)) blockedRequestsDiscardedReg <- mkReg(0);
-    Reg#(Bit#(32)) blockedResponsesDiscardedReg <- mkReg(0);
 
-    Bit#(%(tagBits)s) maxTag = %(maxTag)s;
-
-    rule requestTimer if (requestFifo.notFull);
-        requestTimerReg <= requestTimerReg + 1;
-    endrule
-
-    rule responseTimer if (!responseFifo.notFull);
-        responseTimerReg <= responseTimerReg + 1;
-    endrule
-
-    //rule handleJunkRequest if (pack(requestFifo.first)[%(tagBits)s+32-1:32] > maxTag);
-    //    requestFifo.deq;
-    //    junkReqReg <= junkReqReg + 1;
-    //endrule
-%(responseRules)s
-%(requestRules)s
     Reg#(Bit#(32)) interruptEnableReg <- mkReg(0);
     Reg#(Bool) interrupted <- mkReg(False);
     Reg#(Bool) interruptCleared <- mkReg(False);
     Reg#(Bit#(32)) getWordCount <- mkReg(0);
     Reg#(Bit#(32)) putWordCount <- mkReg(0);
-    Reg#(Bit#(32)) word0Put  <- mkReg(0);
-    Reg#(Bit#(32)) word1Put  <- mkReg(0);
     Reg#(Bit#(32)) underflowCount <- mkReg(0);
     Reg#(Bit#(32)) overflowCount <- mkReg(0);
+    PulseWire interruptRequested <- mkPulseWireOR;
 
     rule interrupted_rule;
-        interrupted <= responseFifo.notEmpty;
+        interrupted <= interruptRequested;
     endrule
     rule reset_interrupt_cleared_rule if (!interrupted);
         interruptCleared <= False;
     endrule
 
     Reg#(Bit#(12)) ctrlReadAddrReg <- mkReg(0);
-    Reg#(Bit#(12)) fifoReadAddrReg <- mkReg(0);
+    Reg#(Bit#(20)) fifoReadAddrReg <- mkReg(0);
     Reg#(Bit#(12)) ctrlWriteAddrReg <- mkReg(0);
-    Reg#(Bit#(12)) fifoWriteAddrReg <- mkReg(0);
+    Reg#(Bit#(20)) fifoWriteAddrReg <- mkReg(0);
+    FIFO#(Bit#(8)) fifoWriteAddrFifo <- mkSizedFIFO(8);
+    FIFO#(Bit#(32)) fifoWriteDataFifo <- mkSizedFIFO(8);
+    FIFO#(Bit#(32)) fifoReadDataFifo <- mkFIFO1();
     Reg#(Bit#(8)) ctrlReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(8)) fifoReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(8)) ctrlWriteBurstCountReg <- mkReg(0);
     Reg#(Bit#(8)) fifoWriteBurstCountReg <- mkReg(0);
     FIFO#(Bit#(2)) ctrlBrespFifo <- mkFIFO();
     FIFO#(Bit#(2)) fifoBrespFifo <- mkFIFO();
+
+%(methodRules)s
+
+    rule outOfRangeWrite if (fifoWriteAddrFifo.first >= %(channelCount)s);
+        fifoWriteAddrFifo.deq;
+        fifoWriteDataFifo.deq;
+    endrule
+    rule outOfRangeRead if (fifoReadAddrReg[19:12] >= %(channelCount)s
+                            && fifoReadBurstCountReg != 0);
+        fifoReadDataFifo.enq(32'h00000000);
+    endrule
 
     interface AxiSlave ctrl;
         interface AxiSlaveWrite write;
@@ -166,14 +152,13 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
                 begin
                     v = 0;
                     v[0] = interrupted ? 1'd1 : 1'd0 ;
-                    v[16] = responseFifo.notFull ? 1'd1 : 1'd0;
                 end
                 if (addr == 12'h004)
                     v = interruptEnableReg;
                 if (addr == 12'h008)
-                    v = fromInteger(valueOf(%(Dut)sRequestSize));
+                    v = 0; // fromInteger(valueOf(%(Dut)sRequestSize));
                 if (addr == 12'h00C)
-                    v = fromInteger(valueOf(%(Dut)sResponseSize));
+                    v = 0; //fromInteger(valueOf(%(Dut)sResponseSize));
                 if (addr == 12'h010)
                     v = requestFired;
                 if (addr == 12'h014)
@@ -184,22 +169,23 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
                     v = overflowCount;
                 if (addr == 12'h020)
                     v = (32'h68470000
-                         | (responseFifo.notFull ? 32'h20 : 0) | (responseFifo.notEmpty ? 32'h10 : 0)
-                         | (requestFifo.notFull ? 32'h02 : 0) | (requestFifo.notEmpty ? 32'h01 : 0));
+                         //| (responseFifo.notFull ? 32'h20 : 0) | (responseFifo.notEmpty ? 32'h10 : 0)
+                         //| (requestFifo.notFull ? 32'h02 : 0) | (requestFifo.notEmpty ? 32'h01 : 0)
+                         );
                 if (addr == 12'h024)
                     v = putWordCount;
                 if (addr == 12'h028)
                     v = getWordCount;
                 if (addr == 12'h02C)
-                    v = word0Put;
+                    v = 0;
                 if (addr == 12'h030)
-                    v = word1Put;
+                    v = 0;
                 if (addr == 12'h034)
-                    v = junkReqReg;
+                    v = 0;
                 if (addr == 12'h038)
-                    v = blockedRequestsDiscardedReg;
+                    v = 0;
                 if (addr == 12'h03C)
-                    v = blockedResponsesDiscardedReg;
+                    v = 0;
                 return v;
             endmethod
         endinterface
@@ -216,20 +202,13 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
             method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last)
                           if (fifoWriteBurstCountReg > 0);
                 let addr = fifoWriteAddrReg;
-                fifoWriteAddrReg <= fifoWriteAddrReg + 12'd4;
+                fifoWriteAddrReg <= fifoWriteAddrReg + 20'd4;
                 fifoWriteBurstCountReg <= fifoWriteBurstCountReg - 1;
 
-                word0Put <= word1Put;
-                word1Put <= v;
-                if (requestFifo.notFull)
-                begin
-                    putWordCount <= putWordCount + 1;
-                    requestFifo.enq(v);
-                end
-                else
-                begin
-                    overflowCount <= overflowCount + 1;
-                end
+                fifoWriteAddrFifo.enq(fifoWriteAddrReg[19:12]);
+                fifoWriteDataFifo.enq(v);
+
+                putWordCount <= putWordCount + 1;
                 fifoBrespFifo.enq(0);
             endmethod
             method ActionValue#(Bit#(2)) writeResponse();
@@ -250,22 +229,13 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
             method ActionValue#(Bit#(32)) readData()
                           if (fifoReadBurstCountReg > 0);
                 let addr = fifoReadAddrReg;
-                fifoReadAddrReg <= fifoReadAddrReg + 12'd4;
+                fifoReadAddrReg <= fifoReadAddrReg + 20'd4;
                 fifoReadBurstCountReg <= fifoReadBurstCountReg - 1;
-                let v = 32'h050a050a;
-                if (responseFifo.notEmpty)
-                begin
-                    let r = responseFifo.first(); 
-                    if (r matches tagged Valid .b) begin
-                        v = b;
-                        responseFifo.deq;
-                        getWordCount <= getWordCount + 1;
-                    end
-                end
-                else
-                begin
-                    underflowCount <= underflowCount + 1;
-                end
+
+                let v = fifoReadDataFifo.first;
+                fifoReadDataFifo.deq;
+
+                getWordCount <= getWordCount + 1;
                 return v;
             endmethod
         endinterface
@@ -285,20 +255,53 @@ endmodule
 '''
 
 requestRuleTemplate='''
-    rule handle$%(methodName)s$request if (requestFifo.first matches tagged %(MethodName)s$Request .sp);
-        requestFifo.deq;
+    FromBit32#(%(MethodName)s$Request) %(methodName)s$requestFifo <- mkFromBit32();
+    rule fifoWrite$%(methodName)s if (fifoWriteAddrFifo.first == %(methodName)s$Offset);
+        fifoWriteAddrFifo.deq;
+        fifoWriteDataFifo.deq;
+        %(methodName)s$requestFifo.enq(fifoWriteDataFifo.first);
+    endrule
+    rule handle$%(methodName)s$request;
+        let request = %(methodName)s$requestFifo.first;
+        %(methodName)s$requestFifo.deq;
         %(dut)s.%(methodName)s(%(paramsForCall)s);
         requestFired <= requestFired + 1;
-        requestTimerReg <= 0;
+    endrule
+    rule %(methodName)s$fifoRead if (fifoReadAddrReg[19:12] == %(methodName)s$Offset
+                                     && fifoReadBurstCountReg != 0);
+        // nothing to read from a request fifo
+        fifoReadDataFifo.enq(32'h00000000);
     endrule
 '''
 
 responseRuleTemplate='''
+    ToBit32#(%(methodReturnType)s) %(methodName)s$responseFifo <- mkToBit32();
     rule %(methodName)s$response;
-        %(methodReturnType)s r <- %(dut)s.%(methodName)s();
-        let response = tagged %(MethodName)s$Response r;
-        responseFifo.enq(response);
+        %(methodReturnType)s response <- %(dut)s.%(methodName)s();
+        %(methodName)s$responseFifo.enq(response);
         responseFired <= responseFired + 1;
+    endrule
+    rule %(methodName)s$fifoRead if (fifoReadAddrReg[19:12] == %(methodName)s$Offset
+                                     && fifoReadBurstCountReg != 0);
+        let maybeResponse = %(methodName)s$responseFifo.first;
+        if (maybeResponse matches tagged Valid .response)
+        begin
+            fifoReadDataFifo.enq(response);
+            %(methodName)s$responseFifo.deq;
+        end
+        else
+        begin
+            fifoReadDataFifo.enq(32'h5abeef5a);
+            underflowCount <= underflowCount + 1;
+        end
+    endrule
+    rule interrupt$%(methodName)s$Response if (%(methodName)s$responseFifo.notEmpty);
+        interruptRequested.send();
+    endrule
+    rule fifoWrite$%(methodName)s if (fifoWriteAddrFifo.first == %(methodName)s$Offset);
+        fifoWriteAddrFifo.deq;
+        fifoWriteDataFifo.deq;
+        // ignore writes to response fifo
     endrule
 '''
 
@@ -330,6 +333,7 @@ class MethodMixin:
               'Dut': util.capitalize(outerTypeName),
               'methodName': self.name,
               'MethodName': util.capitalize(self.name),
+              'channelNumber': self.channelNumber,
               'methodReturnType': rt}
         return d
 
@@ -347,10 +351,10 @@ class MethodMixin:
             return None
         return responseStructTemplate % self.substs(outerTypeName)
 
-    def collectRequestRule(self, outerTypeName):
+    def collectMethodRule(self, outerTypeName):
         substs = self.substs(outerTypeName)
         if self.return_type.name == 'Action':
-            paramsForCall = ['sp.%s' % p.name for p in self.params]
+            paramsForCall = ['request.%s' % p.name for p in self.params]
             substs['paramsForCall'] = ', '.join(paramsForCall)
 
             return requestRuleTemplate % substs
@@ -362,7 +366,7 @@ class InterfaceMixin:
         print self.name
         requestElements = self.collectRequestElements(self.name)
         responseElements = self.collectResponseElements(self.name)
-        requestRules = self.collectRequestRules(self.name)
+        methodRules = self.collectMethodRules(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Master')
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
@@ -372,9 +376,8 @@ class InterfaceMixin:
             'Dut': util.capitalize(self.name),
             'requestElements': ''.join(requestElements),
             'responseElements': ''.join(responseElements),
-            'requestRules': ''.join(requestRules),
-            'maxTag': len(requestElements),
-            'tagBits': int(math.ceil(math.log(len(requestElements)+1,2))),
+            'methodRules': ''.join(methodRules),
+            'channelCount': self.channelCount,
             'axiMasterDeclarations': '\n'.join(['    interface %s#(%s,%s) %s;' % (t, params[0].numeric(), params[1].numeric(), axiMaster)
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
@@ -389,7 +392,6 @@ class InterfaceMixin:
                                                   for (axiSlave,t,params) in axiSlaves]),
             'hdmiImplementations': '\n'.join(['    interface HDMI %s = %s.%s;' % (hdmi, dutName, hdmi)
                                               for (hdmi,t,params) in hdmiInterfaces]),
-            'responseRules': ''
             }
         f.write(dutRequestTemplate % substs)
         f.write(dutResponseTemplate % substs)
@@ -411,12 +413,12 @@ class InterfaceMixin:
                 if e:
                     responseElements.append(e)
         return responseElements
-    def collectRequestRules(self,outerTypeName):
-        requestRules = []
+    def collectMethodRules(self,outerTypeName):
+        methodRules = []
         for m in self.decls:
             if m.type == 'Method':
-                requestRules.append(m.collectRequestRule(outerTypeName))
-        return requestRules
+                methodRules.append(m.collectMethodRule(outerTypeName))
+        return methodRules
     def collectInterfaceNames(self, name):
         interfaceNames = []
         for m in self.decls:

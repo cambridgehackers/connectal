@@ -1228,8 +1228,8 @@ class InterfaceMixin:
                                               % {'busnumber': 0, 
                                                  'busname': axiSlaves[i][0],
                                                  'BUSNAME': axiSlaves[i][0].upper(),
-                                                 'busbase': hex(0x6e400000 + 4096*i),
-                                                 'bushigh': hex(0x6e400FFF + 4096*i)}
+                                                 'busbase': hex(0x6e400000 + 0x80000*i),
+                                                 'bushigh': hex(0x6e400000 + 0x80000*i + 0x7FFFF)}
                                               for i in range(len(axiSlaves))]),
             'ps7_axi_master_config': ''.join([ ps7_axi_master_config_mhs_template
                                                % {'dut': dutName,

@@ -31,7 +31,7 @@ vfile=pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v
 paofile=pcores/%(corename)s/data/%(dut)s_v2_1_0.pao
 
 $(vfile): pcores/%(corename)s/hdl/verilog/%(Dut)sWrapper.bsv
-	cd pcores/%(corename)s/hdl/verilog; bsc -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
+	cd pcores/%(corename)s/hdl/verilog; bsc -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
 
 %(dut)s.make: %(dut)s.xmp
 	xps %(dut)s.xmp

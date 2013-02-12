@@ -188,7 +188,7 @@ class InterfaceMixin:
                     continue
                 d.baseChannelNumber = channelNumber
                 channelNumber = channelNumber + i.channelCount 
-            elif d.__class__ == AST.Method and d.params:
+            elif d.__class__ == AST.Method:
                 d.channelNumber = channelNumber
                 channelNumber = channelNumber + 1
         self.channelCount = channelNumber
