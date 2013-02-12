@@ -1,15 +1,19 @@
 
-The script genctypes.py will generate a C++ wrapper to interact with a
-BSV interface. 
+The script genxpsprojfrombsv enables you to take a Bluespec System
+Verilog (BSV) file and generate a bitstream for a Xilinx Zynq FPGA. 
 
-To run the generator:
-    genctypes.py test/dut.bsv test/dut
+It generates C++ and BSV stubs so that you can write code that runs on
+the Zynq's ARM CPUs to interact with your BSV componet.
 
-This produces test/dut.h and dut.cpp, which you can compile and link into
-your program.
+For example, to create an HDMI frame buffer from the example code:
 
-The only transport between userspace and hardware is in ushw.h,
-ushw.cpp, which uses an ioctl to put a request and get a response.
+    ./genxpsprojfrombsv -p xpsproj -b HdmiDisplay bsv/TypesAndInterfaces.bsv bsv/HdmiDisplay.bsv
 
+To generate the bitstream:
 
+    make -C xpsproj
+
+The first time, this will launch the XPS GUI, but only so that it will
+generate some makefiles. Quit from the XPS GUI once it has loaded the
+design and the build process will continue.
 
