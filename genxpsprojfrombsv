@@ -73,6 +73,8 @@ if __name__=='__main__':
                            '%s_v2_1_0.mpd' % namespace.interface.lower())
     paoname = os.path.join(project_dir, 'pcores', corename, 'data',
                            '%s_v2_1_0.pao' % namespace.interface.lower())
+    ucfname = os.path.join(project_dir, 'data',
+                           '%s.ucf' % namespace.interface.lower())
     print 'Writing CPP header', hname
     print 'Writing CPP wrapper', cppname
     cpp = util.createDirAndOpen(cppname, 'w')
@@ -109,6 +111,7 @@ if __name__=='__main__':
         subinterface.writeXmp(xmpname)
         subinterface.writePao(paoname)
         subinterface.writeVhd(vhdname)
+        subinterface.writeUcf(ucfname)
     if cppname:
         srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'cpp')
         dstdir = os.path.dirname(cppname)

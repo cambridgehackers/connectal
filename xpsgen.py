@@ -407,6 +407,80 @@ PORT xadc_gpio_2 = "", DIR = O
 PORT xadc_gpio_3 = "", DIR = O
 '''
 
+hdmi_ucf_template='''
+NET "hdmi_clk_pin" LOC = L16;
+NET "hdmi_clk_pin" IOSTANDARD = LVCMOS25;
+NET "hdmi_vsync_pin" LOC = H15;
+NET "hdmi_vsync_pin" IOSTANDARD = LVCMOS25;
+NET "hdmi_hsync_pin" LOC = R18;
+NET "hdmi_hsync_pin" IOSTANDARD = LVCMOS25;
+NET "hdmi_de_pin" LOC = T18;
+NET "hdmi_de_pin" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[0]" LOC = AB21;
+NET "hdmi_data_pin[0]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[1]" LOC = AA21;
+NET "hdmi_data_pin[1]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[2]" LOC = AB22;
+NET "hdmi_data_pin[2]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[3]" LOC = AA22;
+NET "hdmi_data_pin[3]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[4]" LOC = V19;
+NET "hdmi_data_pin[4]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[5]" LOC = V18;
+NET "hdmi_data_pin[5]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[6]" LOC = V20;
+NET "hdmi_data_pin[6]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[7]" LOC = U20;
+NET "hdmi_data_pin[7]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[8]" LOC = W21;
+NET "hdmi_data_pin[8]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[9]" LOC = W20;
+NET "hdmi_data_pin[9]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[10]" LOC = W18;
+NET "hdmi_data_pin[10]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[11]" LOC = T19;
+NET "hdmi_data_pin[11]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[12]" LOC = U19;
+NET "hdmi_data_pin[12]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[13]" LOC = R19;
+NET "hdmi_data_pin[13]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[14]" LOC = T17;
+NET "hdmi_data_pin[14]" IOSTANDARD = LVCMOS25;
+NET "hdmi_data_pin[15]" LOC = T16;
+NET "hdmi_data_pin[15]" IOSTANDARD = LVCMOS25;
+# NET hdmi_spdif_pin          LOC = R15 ;
+# NET hdmi_int_pin            LOC = U14 ;
+'''
+
+usr_clk_ucf_template='''
+NET "usr_clk_p_pin" LOC = Y9;
+NET "usr_clk_p_pin" IOSTANDARD = LVDS_25;
+NET "usr_clk_p_pin" DIFF_TERM = "TRUE";
+NET "usr_clk_n_pin" LOC = Y8;
+NET "usr_clk_n_pin" IOSTANDARD = LVDS_25;
+NET "usr_clk_n_pin" DIFF_TERM = "TRUE";
+NET "usr_clk_p_pin" TNM_NET = "usr_clk_p_pin";
+TIMESPEC TS_usr_clk_p_pin = PERIOD "usr_clk_p_pin" 165 MHz;
+NET "usr_clk_n_pin" TNM_NET = "usr_clk_n_pin";
+TIMESPEC TS_usr_clk_n_pin = PERIOD "usr_clk_n_pin" 165 MHz;
+'''
+
+xadc_ucf_template='''
+NET "xadc_gpio_0_pin" LOC = H17;
+NET "xadc_gpio_0_pin" IOSTANDARD = LVCMOS25;
+NET "xadc_gpio_1_pin" LOC = H22;
+NET "xadc_gpio_1_pin" IOSTANDARD = LVCMOS25;
+NET "xadc_gpio_2_pin" LOC = G22;
+NET "xadc_gpio_2_pin" IOSTANDARD = LVCMOS25;
+NET "xadc_gpio_3_pin" LOC = H18;
+NET "xadc_gpio_3_pin" IOSTANDARD = LVCMOS25;
+'''
+
+default_clk_ucf_template='''
+NET "processing_system7_0/FCLK_CLK0" TNM_NET = "processing_system7_0/FCLK_CLK0";
+TIMESPEC TS_FCLK0 = PERIOD "processing_system7_0/FCLK_CLK0" 133 MHz;
+'''
+
 pao_template='''
 lib proc_common_v3_00_a  all 
 lib %(dut)s_v1_00_a %(Dut)s vhdl
@@ -1248,4 +1322,19 @@ class InterfaceMixin:
                          for (busname,t,params) in hdmiBus]),
             }
         vhd.write(vhd_template % substs)
-        pass
+        vhd.close()
+        return
+
+    def writeUcf(self, ucfname, silent=False):
+        if not silent:
+            print 'Writing UCF file', ucfname
+        ucf = util.createDirAndOpen(ucfname, 'w')
+        dutName = util.decapitalize(self.name)
+        hdmiBus = self.collectInterfaceNames('HDMI')
+        if len(hdmiBus):
+            ucf.write(hdmi_ucf_template)
+            ucf.write(usr_clk_ucf_template)
+            ucf.write(xadc_ucf_template)
+        ucf.write(default_clk_ucf_template)
+        ucf.close()
+        return
