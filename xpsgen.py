@@ -1,6 +1,5 @@
 
 import os
-from bsvgen import capitalize, decapitalize
 import util
 
 xmp_template='''
@@ -1080,11 +1079,11 @@ hdmi_iobuf_vhd_template='''
 
 class InterfaceMixin:
     def axiMasterBusSubst(self, busname,t,params):
-        ##print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3')
+        print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3'), params[0].numeric()
         return {
             'BUSNAME': busname.upper(),
             'busname': busname,
-            'datawidth': params[0],
+            'datawidth': params[0].numeric(),
             'burstlenwidth': 8 if (t == 'AxiMaster') else 4,
             'protwidth': 3 if (t == 'AxiMaster') else 2,
             'cachewidth': 4 if (t == 'AxiMaster') else 3,
@@ -1094,14 +1093,14 @@ class InterfaceMixin:
         if not silent:
             print 'Writing MPD file', mpdname
         mpd = util.createDirAndOpen(mpdname, 'w')
-        dutName = decapitalize(self.name)
+        dutName = util.decapitalize(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Master')
         axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
         substs = {
             'dut': dutName,
-            'Dut': capitalize(self.name),
+            'Dut': util.capitalize(self.name),
             'bus_declarations': ''.join([axi_master_bus_mpd_template % subst for subst in masterBusSubsts ]
                                         + ['\n']
                                         + [axi_slave_bus_mpd_template % {'BUSNAME': busname.upper(), 'busname': busname}
@@ -1182,7 +1181,7 @@ class InterfaceMixin:
         dutName = self.name.lower()
         substs = {
             'dut': dutName,
-            'Dut': capitalize(self.name),
+            'Dut': util.capitalize(self.name),
             'DUT': self.name.upper(),
         }
         pao.write(pao_template % substs)
@@ -1192,14 +1191,14 @@ class InterfaceMixin:
         if not silent:
             print 'Writing wrapper VHDL file', vhdname
         vhd = util.createDirAndOpen(vhdname, 'w')
-        dutName = decapitalize(self.name)
+        dutName = util.decapitalize(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Master')
         axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
         substs = {
             'dut': dutName,
-            'Dut': capitalize(self.name),
+            'Dut': util.capitalize(self.name),
             'axi_master_parameters':
                 ''.join([axi_master_parameter_vhd_template % subst for subst in masterBusSubsts]),
             'axi_slave_parameters':
