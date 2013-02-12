@@ -481,6 +481,15 @@ NET "processing_system7_0/FCLK_CLK0" TNM_NET = "processing_system7_0/FCLK_CLK0";
 TIMESPEC TS_FCLK0 = PERIOD "processing_system7_0/FCLK_CLK0" 133 MHz;
 '''
 
+bif_template='''
+the_ROM_image:
+{
+	[bootloader]zynq_fsbl.elf
+	implementation/%(dut)s.bit
+	u-boot.elf
+}
+'''
+
 pao_template='''
 lib proc_common_v3_00_a  all 
 lib %(dut)s_v1_00_a %(Dut)s vhdl
@@ -1337,4 +1346,12 @@ class InterfaceMixin:
             ucf.write(xadc_ucf_template)
         ucf.write(default_clk_ucf_template)
         ucf.close()
+        return
+
+    def writeBif(self, bifname, silent=False):
+        if not silent:
+            print 'Writing BIF file', bifname
+        bif = util.createDirAndOpen(bifname, 'w')
+        bif.write(bif_template % {'dut': self.name.lower() })
+        bif.close()
         return

@@ -42,8 +42,14 @@ verilog: $(vfile)
 netlist: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
 	make -f %(dut)s.make netlist
 
-bits: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
+implementation/%(dut)s.bit: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
 	make -f %(dut)s.make bits
+
+bits: implementation/%(dut)s.bit
+
+boot.bin: implementation/%(dut)s.bit
+	if [ -f boot.bin ]; then mv -v boot.bin boot.bin.bak; fi
+	bootgen -image %(dut)s.bif -o i boot.bin
 '''
 
 if __name__=='__main__':
@@ -75,6 +81,8 @@ if __name__=='__main__':
                            '%s_v2_1_0.pao' % namespace.interface.lower())
     ucfname = os.path.join(project_dir, 'data',
                            '%s.ucf' % namespace.interface.lower())
+    bifname = os.path.join(project_dir, 
+                           '%s.bif' % namespace.interface.lower())
     print 'Writing CPP header', hname
     print 'Writing CPP wrapper', cppname
     cpp = util.createDirAndOpen(cppname, 'w')
@@ -112,6 +120,7 @@ if __name__=='__main__':
         subinterface.writePao(paoname)
         subinterface.writeVhd(vhdname)
         subinterface.writeUcf(ucfname)
+        subinterface.writeBif(bifname)
     if cppname:
         srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'cpp')
         dstdir = os.path.dirname(cppname)
