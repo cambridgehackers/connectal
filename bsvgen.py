@@ -7,7 +7,6 @@ import re
 
 import AST
 import string
-import xst
 import util
 
 preambleTemplate='''
