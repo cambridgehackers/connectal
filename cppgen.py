@@ -1,5 +1,6 @@
 import syntax
 import AST
+import util
 
 classPrefixTemplate='''
 class %(namespace)s%(className)s {

@@ -426,8 +426,9 @@ class InterfaceMixin:
         interfaceNames = []
         for m in self.decls:
             if m.type == 'Interface':
-                print ("interface name: {%s}" % (m.name)), m
+                #print ("interface name: {%s}" % (m.name)), m
                 #print 'name', name, m.name
+                pass
             if m.type == 'Interface' and re.match(name, m.name):
                 interfaceNames.append((m.subinterfacename, m.name, m.params))
         return interfaceNames
