@@ -28,7 +28,7 @@ argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps pro
 makefileTemplate='''
 BSVPATH = %(bsvpath)s
 vfile=pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v
-paofile=pcores/%(corename)s/data/%(corename)s_v2_1_0.pao
+paofile=pcores/%(corename)s/data/%(dut)s_v2_1_0.pao
 
 $(vfile): pcores/%(corename)s/hdl/verilog/%(Dut)sWrapper.bsv
 	cd pcores/%(corename)s/hdl/verilog; bsc -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv

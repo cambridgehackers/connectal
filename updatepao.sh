@@ -11,7 +11,7 @@ echo vinput $vinput
 echo pao $pao
 echo vdirs $vdirs
 
-destdir=`dirname $1`
+destdir=`dirname $vinput`
 
 vfiles=`grep '#(' $vinput | sed 's/#(.*//' | sort | uniq`
 for v in $vfiles; do
