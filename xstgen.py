@@ -1,5 +1,39 @@
 
+import os
 from bsvgen import capitalize, decapitalize
+import util
+
+xmp_template='''
+#Please do not modify this file by hand
+XmpVersion: 14.3
+VerMgmt: 14.3
+IntStyle: default
+Flow: ise
+MHS File: %(dut)s.mhs
+Architecture: zynq
+Device: xc7z020
+Package: clg484
+SpeedGrade: -1
+UserCmd1: 
+UserCmd1Type: 0
+UserCmd2: 
+UserCmd2Type: 0
+GenSimTB: 0
+SdkExportBmmBit: 1
+SdkExportDir: SDK/SDK_Export
+InsertNoPads: 1
+WarnForEAArch: 1
+HdlLang: verilog
+SimModel: STRUCTURAL
+ExternalMemSim: 0
+UcfFile: data/%(dut)s.ucf
+EnableParTimingError: 0
+ShowLicenseDialog: 1
+BInfo: 
+Processor: processing_system7_0
+ElfImp: 
+ElfSim: 
+'''
 
 mhs_template='''
 # ##############################################################################
@@ -1046,7 +1080,7 @@ hdmi_iobuf_vhd_template='''
 
 class InterfaceMixin:
     def axiMasterBusSubst(self, busname,t,params):
-        print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3')
+        ##print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3')
         return {
             'BUSNAME': busname.upper(),
             'busname': busname,
@@ -1056,7 +1090,10 @@ class InterfaceMixin:
             'cachewidth': 4 if (t == 'AxiMaster') else 3,
             'axiprotocol': 'AXI4' if (t == 'AxiMaster') else 'AXI3',
             }
-    def emitMpd(self, f):
+    def writeMpd(self, mpdname, silent=False):
+        if not silent:
+            print 'Writing MPD file', mpdname
+        mpd = util.createDirAndOpen(mpdname, 'w')
         dutName = decapitalize(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Master')
         axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
@@ -1084,10 +1121,13 @@ class InterfaceMixin:
                                          + [hdmi_port_declaration_mpd_template % {'BUSNAME': busname.upper(), 'busname': busname}
                                             for (busname,t,params) in hdmiBus])
             }
-        f.write(mpd_template % substs)
+        mpd.write(mpd_template % substs)
         return
 
-    def emitMhs(self, f):
+    def writeMhs(self, mhsname, silent=False):
+        if not silent:
+            print 'Writing MHS file', mhsname
+        mhs = util.createDirAndOpen(mhsname, 'w')
         dutName = self.name.lower()
         axiMasters = self.collectInterfaceNames('Axi3?Master')
         axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
@@ -1118,20 +1158,40 @@ class InterfaceMixin:
             'dut_hdmi_config': ''.join([ dut_hdmi_config_mhs_template % {'dut':dutName} for v in hdmiBus]),
             'system_hdmi_ports': ''.join([system_hdmi_port_mhs_template % {'dut':dutName} for v in hdmiBus])
             }
-        f.write(mhs_template % substs)
+        mhs.write(mhs_template % substs)
         return
 
-    def emitPao(self, f):
+    def writeXmp(self, xmpname, silent=False):
+        if not silent:
+            print 'Writing XPS project file', xmpname
+        xmp = util.createDirAndOpen(xmpname, 'w')
+        dutName = self.name.lower()
+        substs = {
+            'dut': dutName,
+            }
+        xmp.write(xmp_template % substs)
+        return
+
+    def writePao(self, paoname, silent=False):
+        if os.path.exists(paoname):
+            if not silent:
+                print 'Not overwriting PAO file', paoname
+            return
+        print 'Writing PAO file', paoname
+        pao = util.createDirAndOpen(paoname, 'w')
         dutName = self.name.lower()
         substs = {
             'dut': dutName,
             'Dut': capitalize(self.name),
             'DUT': self.name.upper(),
         }
-        f.write(pao_template % substs)
+        pao.write(pao_template % substs)
         return
 
-    def emitVhd(self, f):
+    def writeVhd(self, vhdname, silent=False):
+        if not silent:
+            print 'Writing wrapper VHDL file', vhdname
+        vhd = util.createDirAndOpen(vhdname, 'w')
         dutName = decapitalize(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Master')
         axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
@@ -1188,5 +1248,5 @@ class InterfaceMixin:
                 ''.join([hdmi_iobuf_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in hdmiBus]),
             }
-        f.write(vhd_template % substs)
+        vhd.write(vhd_template % substs)
         pass
