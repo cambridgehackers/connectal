@@ -37,7 +37,7 @@ $(vfile): pcores/%(corename)s/hdl/verilog/%(Dut)sWrapper.bsv
 	xps %(dut)s.xmp
 
 verilog: $(vfile)
-	./updatepao.sh $(vfile) $(paofile) $(BSVPATH)
+	./updatepao $(vfile) $(paofile) $(BSVPATH)
 
 netlist: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
 	make -f %(dut)s.make netlist
@@ -114,10 +114,10 @@ if __name__=='__main__':
         dstdir = os.path.dirname(cppname)
         for f in ['ushw.h', 'ushw.cpp']:
             shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
-    shutil.copyfile(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao.sh'),
-                    os.path.join(project_dir, 'updatepao.sh'))
-    shutil.copymode(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao.sh'),
-                    os.path.join(project_dir, 'updatepao.sh'))
+    shutil.copyfile(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao'),
+                    os.path.join(project_dir, 'updatepao'))
+    shutil.copymode(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao'),
+                    os.path.join(project_dir, 'updatepao'))
 
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
