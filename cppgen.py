@@ -2,6 +2,18 @@ import syntax
 import AST
 import util
 
+androidmk_template='''
+LOCAL_PATH:= $(call my-dir)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := %(ClassName)s.cpp portal.cpp test%(classname)s.cpp
+LOCAL_MODULE = test%(classname)s
+LOCAL_MODULE_TAGS := optional
+LOCAL_STATIC_LIBRARIES := libc libcutils liblog
+
+include $(BUILD_EXECUTABLE)
+'''
+
 classPrefixTemplate='''
 class %(namespace)s%(className)s {
 public:
@@ -253,6 +265,16 @@ class InterfaceMixin:
         if self.toplevel:
             f.write(creatorTemplate % substitutions)
         f.write(constructorTemplate % substitutions)
+        return
+    def writeAndroidMk(self, makename, silent=False):
+        f = util.createDirAndOpen(makename, 'w')
+        className = cName(self.name)
+        substs = {
+            'ClassName': className,
+            'classname': className.lower()
+        }
+        f.write(androidmk_template % substs)
+        f.close()
 
 class ParamMixin:
     def cName(self):
