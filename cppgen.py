@@ -9,71 +9,79 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := %(ClassName)s.cpp portal.cpp test%(classname)s.cpp
 LOCAL_MODULE = test%(classname)s
 LOCAL_MODULE_TAGS := optional
-LOCAL_STATIC_LIBRARIES := libc libcutils liblog
+LOCAL_STATIC_LIBRARIES := libc libcutils liblog libstdc++
 
 include $(BUILD_EXECUTABLE)
 '''
 
 classPrefixTemplate='''
-class %(namespace)s%(className)s {
+class %(namespace)s%(className)s : public PortalInstance {
 public:
-    enum %(className)sResponseChannel {
-        %(responseChannels)s%(className)sNumChannels
-    };
-    int connectHandler(%(className)sResponseChannel c, PortalInstance::MessageHandler h) {
-        p->messageHandlers[c] = h;
-        return 0;
-    }
-
     static %(className)s *create%(className)s(const char *instanceName);
 '''
 classSuffixTemplate='''
+protected:
+    void handleMessage(PortalMessage *msg);
 private:
-    %(className)s(PortalInstance *, int baseChannelNumber=0);
+    %(className)s(const char *instanceName);
     ~%(className)s();
-    PortalInstance *p;
-    int baseChannelNumber;
 };
 '''
 
 creatorTemplate = '''
 %(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName)
 {
-    PortalInstance *p = portalOpen(instanceName);
-    %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(p);
+    %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName);
     return instance;
 }
 '''
 constructorTemplate='''
-%(namespace)s%(className)s::%(className)s(PortalInstance *p, int baseChannelNumber)
- : p(p), baseChannelNumber(baseChannelNumber)%(initializers)s
+%(namespace)s%(className)s::%(className)s(const char *instanceName)
+ : PortalInstance(instanceName)%(initializers)s
 {
-  p->messageHandlers = new PortalInstance::MessageHandler [%(className)s::%(className)sNumChannels]();
 }
 %(namespace)s%(className)s::~%(className)s()
 {
-    p->close();
+    close();
 }
 
 '''
 
-methodTemplate='''
+handleMessageTemplate='''
+void %(namespace)s%(className)s::handleMessage(PortalMessage *msg)
+{
+    switch (msg->channel) {
+%(responseCases)s
+    default: break;
+    }
+}
+'''
+
+requestTemplate='''
 struct %(className)s%(methodName)sMSG : public PortalMessage
 {
-struct Request {
-//fix Adapter.bsv to unreverse these
+    struct Request {
+    //fix Adapter.bsv to unreverse these
 %(paramStructDeclarations)s
-} request;
-int channelNumber;
+    } request;
+    int channelNumber;
 };
 
 void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
     %(className)s%(methodName)sMSG msg;
-    msg.size = sizeof(msg.request) + sizeof(msg.channelNumber);
-    msg.channelNumber = baseChannelNumber + %(methodChannelOffset)s;
+    msg.size = sizeof(msg.request);
+    msg.channelNumber = %(methodChannelOffset)s;
 %(paramSetters)s
-    p->sendMessage(&msg);
+    sendMessage(&msg);
+};
+'''
+
+responseTemplate='''
+struct %(className)s%(methodName)sMSG : public PortalMessage
+{
+//fix Adapter.bsv to unreverse these
+%(paramStructDeclarations)s
 };
 '''
 
@@ -103,30 +111,47 @@ class MethodMixin:
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
+        if not self.params:
+            f.write('virtual ')
         f.write('void %s ( ' % cName(self.name))
         #print parentClassName, self.name
-        f.write(', '.join([cName(p.type) for p in self.params]))
-        f.write(' );\n');
+        if self.params:
+            f.write(', '.join([cName(p.type) for p in self.params]))
+        else:
+            f.write(resultTypeName)
+        f.write(' )')
+        if self.params:
+            f.write(';\n')
+        else:
+            f.write('{ }\n')
     def emitCImplementation(self, f, className, namespace):
-        if not self.params:
-            return
-        paramDeclarations = [ '%s %s' % (p.type.cName(), p.name) for p in self.params]
-        paramStructDeclarations = [ '%s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in self.params]
+        params = self.params
+        if not params:
+            print 'no params', self.params
+            print self.return_type
+            params = [ AST.Param('result', self.return_type) ]
+        paramDeclarations = [ '%s %s' % (p.type.cName(), p.name) for p in params]
+        paramStructDeclarations = [ '        %s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in params]
         ## fix Adapter.bsv to eliminate the need for this reversal
         paramStructDeclarations.reverse()
-        paramSetters = [ 'msg.request.%s = %s;\n' % (p.name, p.name) for p in self.params]
+        paramSetters = [ '    msg.request.%s = %s;\n' % (p.name, p.name) for p in params]
         resultTypeName = self.resultTypeName()
         substs = {
             'namespace': namespace,
             'className': className,
             'methodName': cName(self.name),
+            'MethodName': capitalize(cName(self.name)),
             'paramDeclarations': ', '.join(paramDeclarations),
             'paramStructDeclarations': ''.join(paramStructDeclarations),
             'paramSetters': ''.join(paramSetters),
+            'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
             'methodChannelOffset': self.channelNumber
             }
-        f.write(methodTemplate % substs)
+        if self.params:
+            f.write(requestTemplate % substs)
+        else:
+            f.write(responseTemplate % substs)
 
 class StructMemberMixin:
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
@@ -208,38 +233,15 @@ class InterfaceMixin:
         self.toplevel = (indentation == 0)
         name = cName(self.name)
         indent(f, indentation)
-        responseChannels=['%sResponseChannel, ' % capitalize(d.name)
-                          for d in self.decls if d.type=='Method' and not d.params]
         f.write(classPrefixTemplate % {'className': name,
-                                       'namespace': namespace,
-                                       'responseChannels': ''.join(responseChannels)})
+                                       'namespace': namespace})
         for d in self.decls:
             if d.type == 'Interface':
                 continue
-            if d.type != 'Method' or d.params:
-                d.emitCDeclaration(f, indentation + 4, name, namespace)
-        indent(f, indentation)
-        f.write('private:\n')
-        indent(f, indentation+4)
-        f.write('%(name)s(PortalInstance *, int baseChannelNumber=0);\n' % {'name': name})
-        indent(f, indentation+4)
-        f.write('~%(name)s();\n' % {'name': name})
-        indent(f, indentation+4)
-        f.write('PortalInstance *p;\n')
-        indent(f, indentation+4)
-        f.write('int baseChannelNumber;\n')
-        if parentClassName:
-            indent(f, indentation+4)
-            f.write('friend class %s%s;\n' % (namespace, parentClassName))
-
-        ## dereference the interface, in case this is nested
-        subinterface = self.getSubinterface(self.name)
-
-        indent(f, indentation)
-        f.write('}')
-        if self.subinterfacename:
-            f.write(' %s' % self.subinterfacename)
-        f.write(';\n');
+            d.emitCDeclaration(f, indentation + 4, name, namespace)
+        f.write(classSuffixTemplate % {'className': name,
+                                       'namespace': namespace})
+        return
     def emitCImplementation(self, f, parentClassName='', namespace=''):
         self.assignRequestResponseChannels()
         if parentClassName:
@@ -250,6 +252,15 @@ class InterfaceMixin:
             if d.type == 'Interface':
                 continue
             d.emitCImplementation(f, className, namespace)
+        substitutions = {'namespace': namespace,
+                         'className': className,
+                         'responseCases': ''.join([ '    case %d: %s(((%s%sMSG *)msg)->result); break;\n'
+                                                   % (d.channelNumber, d.name, className, d.name)
+                                                   for d in self.decls 
+                                                   if d.type == 'Method' and not d.params])
+                         }
+        f.write(handleMessageTemplate % substitutions)
+
     def emitConstructorImplementation(self, f, className, namespace):
         substitutions = {'namespace': namespace,
                          'className': className,
@@ -285,7 +296,13 @@ class TypeMixin:
         cid = self.name
         cid = cid.replace(' ', '')
         if cid == 'Bit':
-            return 'unsigned int'
+            print 'Bit', self.params[0]
+            if self.params[0].numeric() <= 32:
+                return 'unsigned long'
+            elif self.params[0].numeric() <= 64:
+                return 'unsigned long long'
+            else:
+                return 'std::bitset<%d>' % ((self.params[0].numeric() + 7) / 8)
         elif cid == 'Action':
             return 'int'
         elif cid == 'ActionValue':

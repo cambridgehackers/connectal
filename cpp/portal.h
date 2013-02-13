@@ -1,5 +1,6 @@
 
 #include <sys/types.h>
+#include <bitset>
 
 class PortalInterface;
 
@@ -15,6 +16,7 @@ typedef struct PortalAlloc {
 
 typedef struct PortalMessage {
     size_t size;
+    size_t channel;
 } PortalMessage;
 
 class PortalInstance {
@@ -23,9 +25,10 @@ public:
     MessageHandler *messageHandlers;
 
     int sendMessage(PortalMessage *msg);
-    int receiveMessage(PortalMessage *msg);
     void close();
-private:
+protected:
+    int receiveMessage(PortalMessage *msg);
+    virtual void handleMessage(PortalMessage *msg) { };
     PortalInstance(const char *instanceName);
     ~PortalInstance();
     friend PortalInstance *portalOpen(const char *instanceName);

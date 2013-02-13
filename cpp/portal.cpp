@@ -187,13 +187,7 @@ int PortalInterface::exec(idleFunc func)
             size_t size = msg->size;
             if (!size)
                 continue;
-            unsigned int channel = buf[4]; // channel number is last word of message
-
-            if (channel < 10) {
-                if (instance && instance->messageHandlers && instance->messageHandlers[channel]) {
-                    instance->messageHandlers[channel](msg);
-                }
-            }
+            instance->handleMessage(msg);
         }
         if (rc == 0) {
             if (0)
