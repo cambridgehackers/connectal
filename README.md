@@ -1,3 +1,5 @@
+XBSV
+====
 
 The script genxpsprojfrombsv enables you to take a Bluespec System
 Verilog (BSV) file and generate a bitstream for a Xilinx Zynq FPGA. 
@@ -5,7 +7,8 @@ Verilog (BSV) file and generate a bitstream for a Xilinx Zynq FPGA.
 It generates C++ and BSV stubs so that you can write code that runs on
 the Zynq's ARM CPUs to interact with your BSV componet.
 
-== Example
+Example
+-------
 
 For example, to create an HDMI frame buffer from the example code:
 
@@ -19,15 +22,27 @@ The first time, this will launch the XPS GUI, but only so that it will
 generate some makefiles. Quit from the XPS GUI once it has loaded the
 design and the build process will continue.
 
+
 The result .bit file for this example will be:
 
     xpsproj/data/hdmidisplay.bit
 
 
-== Installation
+Installation
+------------
 
 Install the python-ply package, e.g.,
 
     sudo apt-get install python-ply
 
 PLY's home is http://www.dabeaz.com/ply/
+
+
+
+A note on the use of the XPS GUI
+---------------------------------
+
+Not only is there not a working GUI-free design flow, but in order to
+change the processing clock from the default (50MHz) you have to use
+the GUI and change it in the Zynq tab by clicking on "Clock
+generation" and then configuring CLK0 in the "PL Clocks" section.
