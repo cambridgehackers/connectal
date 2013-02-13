@@ -33,6 +33,8 @@ function Bit#(a) rtruncate(Bit#(b) x) provisos(Add#(k,a,b));
 endfunction
 
 interface ToBit32#(type a);
+   method Bit#(32) depth32(); // size of a in 32-bit words
+   method Bit#(32) count32(); // number of words in the adapter
    method Action enq(a v);          
    method Maybe#(Bit#(32)) first;
    method Action deq();
@@ -41,6 +43,8 @@ interface ToBit32#(type a);
 endinterface
    
 interface FromBit32#(type a);
+   method Bit#(32) depth32(); // size of a in 32-bit words
+   method Bit#(32) count32(); // number of words in the adapter
    method Action enq(Bit#(32) v);
    method a first();
    method Action deq();
@@ -54,10 +58,18 @@ module mkToBit32(ToBit32#(a))
 	    Add#(32,asz,asz32));
    
    Bit#(32) size = fromInteger(valueOf(asz));
-   Bit#(32) max  = (size >> 5) + ((size[4:0] == 0) ? 0 : 1)-1;
+   Bit#(32) max  = ((size + 31) >> 5) - 1;
    
    FIFOF#(Bit#(asz))   fifo <- mkSizedBRAMFIFOF(8);
    Reg#(Bit#(32))      count <- mkReg(0);
+
+
+   method Bit#(32) depth32();
+       return max+1;
+   endmethod
+   method Bit#(32) count32();
+    return extend(max - count);
+   endmethod
 
    method Action enq(a val) if (fifo.notFull);
       fifo.enq(pack(val));   
@@ -102,12 +114,19 @@ module mkFromBit32(FromBit32#(a))
 
    Bit#(32) size   = fromInteger(valueOf(asz));
    Bit#(5)  offset = size[4:0];
-   Bit#(32) max    = (size >> 5) + ((offset == 0) ? 0 : 1) -1;
+   Bit#(32) max    = ((size + 31) >> 5) - 1;
    
    FIFOF#(Bit#(asz))   fifo <- mkSizedBRAMFIFOF(8);
    Reg#(Bit#(asz))    buff <- mkReg(0);
    Reg#(Bit#(32))    count <- mkReg(0);   
    
+   method Bit#(32) depth32();
+       return max+1;
+   endmethod
+   method Bit#(32) count32();
+    return extend(count);
+   endmethod
+
    method Action enq(Bit#(32) x) if (fifo.notFull);
       Bit#(asz32) concatedvalue = {x,buff};
       Bit#(asz) newval = rtruncate(concatedvalue);
