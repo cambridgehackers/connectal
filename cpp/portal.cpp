@@ -172,7 +172,7 @@ int PortalInterface::exec(idleFunc func)
 
     int rc;
     while ((rc = poll(portal.fds, portal.numFds, 100)) >= 0) {
-        fprintf(stderr, "pid %d poll rc=%d", getpid(), rc);
+        //fprintf(stderr, "pid %d poll rc=%d\n", getpid(), rc);
         for (int i = 0; i < portal.numFds; i++) {
             if (portal.fds[i].revents == 0)
                 continue;
@@ -182,9 +182,11 @@ int PortalInterface::exec(idleFunc func)
             PortalInstance *instance = portal.instances[i];
             memset(buf, 0, 1024);
             int messageReceived = instance->receiveMessage(msg);
+            //fprintf(stderr, "messageReceived=%d\n", messageReceived);
             if (!messageReceived)
                 continue;
             size_t size = msg->size;
+            //fprintf(stderr, "msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
             if (!size)
                 continue;
             instance->handleMessage(msg);
