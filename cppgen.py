@@ -67,14 +67,13 @@ struct %(className)s%(methodName)sMSG : public PortalMessage
     //fix Adapter.bsv to unreverse these
 %(paramStructDeclarations)s
     } request;
-    int channelNumber;
 };
 
 void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
     %(className)s%(methodName)sMSG msg;
     msg.size = sizeof(msg.request);
-    msg.channelNumber = %(methodChannelOffset)s;
+    msg.channel = %(methodChannelOffset)s;
 %(paramSetters)s
     sendMessage(&msg);
 };
