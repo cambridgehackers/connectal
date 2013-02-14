@@ -91,6 +91,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
     FIFO#(Bit#(32)) fifoWriteDataFifo <- mkSizedFIFO(4);
     FIFO#(Bit#(16)) fifoReadAddrFifo <- mkSizedFIFO(4);
     FIFO#(Bit#(32)) fifoReadDataFifo <- mkSizedFIFO(4);
+    FIFO#(Bit#(1)) fifoReadLastFifo <- mkSizedFIFO(4);
     Reg#(Bit#(8)) ctrlReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(8)) fifoReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(8)) ctrlWriteBurstCountReg <- mkReg(0);
@@ -109,9 +110,10 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         fifoReadDataFifo.enq(0);
     endrule
     rule fifoReadAddressGenerator if (fifoReadBurstCountReg != 0);
-        fifoReadAddrFifo.enq(fifoReadAddrReg[15:0]);
+        fifoReadAddrFifo.enq(truncate(fifoReadAddrReg));
         fifoReadAddrReg <= fifoReadAddrReg + 4;
         fifoReadBurstCountReg <= fifoReadBurstCountReg - 1;
+        fifoReadLastFifo.enq(fifoReadBurstCountReg == 1 ? 1 : 0);
     endrule
     interface AxiSlave ctrl;
         interface AxiSlaveWrite write;
@@ -164,9 +166,9 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
                 if (addr == 12'h004)
                     v = interruptEnableReg;
                 if (addr == 12'h008)
-                    v = %(channelCount)s;
+                    v = %(channelCount)s; // channelCount
                 if (addr == 12'h00C)
-                    v = 0; //fromInteger(valueOf(%(Dut)sResponseSize));
+                    v = 32'h00010000; // base fifo offset
                 if (addr == 12'h010)
                     v = requestFired;
                 if (addr == 12'h014)
@@ -179,6 +181,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
                     v = (32'h68470000
                          //| (responseFifo.notFull ? 32'h20 : 0) | (responseFifo.notEmpty ? 32'h10 : 0)
                          //| (requestFifo.notFull ? 32'h02 : 0) | (requestFifo.notEmpty ? 32'h01 : 0)
+                         | extend(fifoReadBurstCountReg)
                          );
                 if (addr == 12'h024)
                     v = putWordCount;
@@ -195,6 +198,11 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
                         Bit#(5) bitPos = truncate(i - baseQueueNumber);
                         v[bitPos] = interruptPulses[i] ? 1 : 0;
                     end
+                end
+                if (addr >= 12'h034 && addr <= (12'h034 + %(channelCount)s/4))
+                begin
+                    v = 0;
+                    %(queuesNotEmpty)s
                 end
                 return v;
             endmethod
@@ -234,12 +242,13 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
                 fifoReadAddrReg <= truncate(addr);
             endmethod
             method Bit#(1) last();
-                return (fifoReadBurstCountReg == 1) ? 1 : 0;
+                return fifoReadLastFifo.first;
             endmethod
             method ActionValue#(Bit#(32)) readData();
 
                 let v = fifoReadDataFifo.first;
                 fifoReadDataFifo.deq;
+                fifoReadLastFifo.deq;
 
                 getWordCount <= getWordCount + 1;
                 return v;
@@ -388,6 +397,7 @@ class InterfaceMixin:
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
         dutName = util.decapitalize(self.name)
+        methods = [d for d in self.decls if d.type == 'Method']
         substs = {
             'dut': dutName,
             'Dut': util.capitalize(self.name),
@@ -409,6 +419,9 @@ class InterfaceMixin:
                                                   for (axiSlave,t,params) in axiSlaves]),
             'hdmiImplementations': '\n'.join(['    interface HDMI %s = %s.%s;' % (hdmi, dutName, hdmi)
                                               for (hdmi,t,params) in hdmiInterfaces]),
+            'queuesNotEmpty': '\n'.join(['                    v[%d] = %s$%s.notEmpty ? 1 : 0;'
+                                        % (i, methods[i].name, 'requestFifo' if methods[i].params else 'responseFifo')
+                                         for i in range(len(methods))])
             }
         f.write(dutRequestTemplate % substs)
         f.write(dutResponseTemplate % substs)
