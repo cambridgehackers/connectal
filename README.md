@@ -7,8 +7,31 @@ Verilog (BSV) file and generate a bitstream for a Xilinx Zynq FPGA.
 It generates C++ and BSV stubs so that you can write code that runs on
 the Zynq's ARM CPUs to interact with your BSV componet.
 
-Example
--------
+Echo Example
+------------
+
+    ./genxpsprojfrombsv -p echoproj -b Echo examples/echo/Echo.bsv
+    cp examples/echo/testecho.cpp echoproj/jni
+    make -C echoproj boot.bin
+    ndkbuild -C echoproj
+
+    adb push echoproj/boot.bin /mnt/sdcard
+    adb push echoproj/libs/armeabi/testecho /data/local
+
+The first time, this will launch the XPS GUI, but only so that it will
+generate some makefiles. Quit from the XPS GUI once it has loaded the
+design and the build process will continue.
+
+When we run it on the device:
+    / # /data/local/testecho 
+    Mapped device fpga0 at 0xb6f4b000
+    Saying 42
+    PortalInterface::exec()
+    heard 42
+
+
+HDMI Example
+------------
 
 For example, to create an HDMI frame buffer from the example code:
 
@@ -17,11 +40,6 @@ For example, to create an HDMI frame buffer from the example code:
 To generate the bitstream:
 
     make -C xpsproj bits
-
-The first time, this will launch the XPS GUI, but only so that it will
-generate some makefiles. Quit from the XPS GUI once it has loaded the
-design and the build process will continue.
-
 
 The result .bit file for this example will be:
 
