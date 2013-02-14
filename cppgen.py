@@ -2,6 +2,10 @@ import syntax
 import AST
 import util
 
+applicationmk_template='''
+APP_STL                 := stlport_static
+'''
+
 androidmk_template='''
 LOCAL_PATH:= $(call my-dir)
 
@@ -9,7 +13,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := %(ClassName)s.cpp portal.cpp test%(classname)s.cpp
 LOCAL_MODULE = test%(classname)s
 LOCAL_MODULE_TAGS := optional
-LOCAL_STATIC_LIBRARIES := libc libcutils liblog libstdc++
+LOCAL_LDLIBS := -llog
 
 include $(BUILD_EXECUTABLE)
 '''
@@ -22,7 +26,6 @@ public:
 classSuffixTemplate='''
 protected:
     void handleMessage(PortalMessage *msg);
-private:
     %(className)s(const char *instanceName);
     ~%(className)s();
 };
@@ -277,14 +280,18 @@ class InterfaceMixin:
             f.write(creatorTemplate % substitutions)
         f.write(constructorTemplate % substitutions)
         return
-    def writeAndroidMk(self, makename, silent=False):
-        f = util.createDirAndOpen(makename, 'w')
+    def writeAndroidMk(self, androidmkname, applicationmkname, silent=False):
+        f = util.createDirAndOpen(androidmkname, 'w')
         className = cName(self.name)
         substs = {
             'ClassName': className,
             'classname': className.lower()
         }
         f.write(androidmk_template % substs)
+        f.close()
+        f = util.createDirAndOpen(applicationmkname, 'w')
+        className = cName(self.name)
+        f.write(applicationmk_template % substs)
         f.close()
 
 class ParamMixin:
@@ -296,7 +303,6 @@ class TypeMixin:
         cid = self.name
         cid = cid.replace(' ', '')
         if cid == 'Bit':
-            print 'Bit', self.params[0]
             if self.params[0].numeric() <= 32:
                 return 'unsigned long'
             elif self.params[0].numeric() <= 64:

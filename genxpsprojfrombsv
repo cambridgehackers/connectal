@@ -68,6 +68,7 @@ if __name__=='__main__':
     xmpname = os.path.join(project_dir, '%s.xmp' % namespace.interface.lower())
     mhsname = os.path.join(project_dir, '%s.mhs' % namespace.interface.lower())
 
+    applicationmkname = os.path.join(project_dir, 'jni', 'Application.mk')
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
     hname = os.path.join(project_dir, 'jni', '%s.h' % namespace.interface)
     cppname = os.path.join(project_dir, 'jni', '%s.cpp' % namespace.interface)
@@ -124,7 +125,8 @@ if __name__=='__main__':
         subinterface.writeUcf(ucfname)
         subinterface.writeBif(bifname)
         print 'Writing Android.mk', androidmkname
-        subinterface.writeAndroidMk(androidmkname)
+        print 'Writing Application.mk', applicationmkname
+        subinterface.writeAndroidMk(androidmkname, applicationmkname)
 
     if cppname:
         srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'cpp')
