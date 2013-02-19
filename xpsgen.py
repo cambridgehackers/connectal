@@ -1,11 +1,20 @@
 
+import sys
 import os
 import util
+import re
+
+edkversion = '14.3'
+edkversions = ['14.3', '14.4']
+if os.environ.has_key('XILINX_EDK'):
+    m = re.match('.*/(\d+.\d+)/ISE_DS/EDK$', os.environ['XILINX_EDK'])
+    if m:
+        edkversion = m.group(1)
 
 xmp_template='''
 #Please do not modify this file by hand
-XmpVersion: 14.3
-VerMgmt: 14.3
+XmpVersion: %(edkversion)s
+VerMgmt: %(edkversion)s
 IntStyle: default
 Flow: ise
 MHS File: %(dut)s.mhs
@@ -1250,6 +1259,7 @@ class InterfaceMixin:
         dutName = self.name.lower()
         substs = {
             'dut': dutName,
+            'edkversion': edkversion,
             }
         xmp.write(xmp_template % substs)
         return
