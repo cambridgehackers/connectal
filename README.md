@@ -69,9 +69,13 @@ Setting up the SD Card
 1. Download http://code.google.com/p/xbsv/downloads/detail?name=sdcard-130214.tar.bz
 2. tar -jxvf sdcard-130214.tar.bz
 3. Assuming the card shows up as /dev/sdc:
+
    sudo umount /dev/sdc
    sudo umount /dev/sdc1
    sudo mkdosfs -I -n zynq /dev/sdc
+
+It does not seem to boot from cards with a partition table.
+
 4. Unplug the card and plug it back in
 5. cd sdcard-130214; cp boot.bin devicetree.dtb ramdisk8M.image.gz zImage system.img /media/zynq
 5. sync
