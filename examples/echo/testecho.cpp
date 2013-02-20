@@ -8,7 +8,8 @@ public:
     TestEcho(const char *instanceName) : Echo(instanceName) {};
     
     void heard(unsigned long v) {
-        fprintf(stderr, "heard %d\n", v);
+        fprintf(stderr, "heard an echo: %d\n", v);
+        exit(0);
     }
 };
 
