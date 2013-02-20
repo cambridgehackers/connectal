@@ -1,0 +1,12 @@
+
+// bitset stub
+
+namespace std {
+template <int size> class bitset {
+public:
+    bitset() {};
+    ~bitset() {};
+private:
+    char data[(size+7)/8];
+};
+}

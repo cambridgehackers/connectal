@@ -144,9 +144,13 @@ module mkHdmiDisplay#(Clock hdmi_clk)(HdmiDisplay);
         waitingForVsync <= True;
     endmethod
 
-    method ActionValue#(Bit#(32)) vsyncReceived() if (sendVsyncIndication);
+    method ActionValue#(Bit#(64)) vsyncReceived() if (sendVsyncIndication);
         sendVsyncIndication <= False;
-        return vsyncPulseCountReg;
+        Bit#(64) v = 0;
+        v[31:0] = vsyncPulseCountReg;
+        v[47:32] = extend(pixelsReg);
+        v[63:48] = extend(linesReg);
+        return v;
     endmethod
 
     method Action beginTranslationTable(Bit#(8) index);

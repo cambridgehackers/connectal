@@ -133,7 +133,7 @@ BEGIN processing_system7
  PARAMETER C_EN_DDR = 1
  PARAMETER C_EN_GPIO = 1
  PARAMETER C_FCLK_CLK0_FREQ = 100000000
- PARAMETER C_FCLK_CLK1_FREQ = 142857132
+ PARAMETER C_FCLK_CLK1_FREQ = 165000000
  PARAMETER C_FCLK_CLK2_FREQ = 50000000
  PARAMETER C_FCLK_CLK3_FREQ = 50000000
  PARAMETER C_USE_CR_FABRIC = 1
@@ -162,6 +162,7 @@ BEGIN processing_system7
  PORT DDR_VRN = processing_system7_0_DDR_VRN
  PORT DDR_VRP = processing_system7_0_DDR_VRP
  PORT FCLK_CLK0 = processing_system7_0_FCLK_CLK0_0
+ PORT FCLK_CLK1 = processing_system7_0_FCLK_CLK1_0
  PORT M_AXI_GP0_ACLK = processing_system7_0_FCLK_CLK0_0
  PORT M_AXI_GP0_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
  BUS_INTERFACE M_AXI_GP0 = axi_slave_interconnect_0
@@ -187,8 +188,6 @@ END
 '''
 
 system_hdmi_port_mhs_template='''
- PORT usr_clk_n_pin = %(dut)s_0_usr_clk_n, DIR = I
- PORT usr_clk_p_pin = %(dut)s_0_usr_clk_p, DIR = I
  PORT hdmi_vsync_pin = %(dut)s_0_hdmi_vsync, DIR = O
  PORT hdmi_hsync_pin = %(dut)s_0_hdmi_hsync, DIR = O
  PORT hdmi_de_pin = %(dut)s_0_hdmi_de, DIR = O
@@ -223,8 +222,7 @@ dut_axi_slave_config_mhs_template='''
 '''
 
 dut_hdmi_config_mhs_template='''
- PORT usr_clk_p = %(dut)s_0_usr_clk_p
- PORT usr_clk_n = %(dut)s_0_usr_clk_n
+ PORT hdmi_clk_in = processing_system7_0_FCLK_CLK1_0 
  PORT hdmi_clk = %(dut)s_0_hdmi_clk
  PORT hdmi_vsync = %(dut)s_0_hdmi_vsync
  PORT hdmi_hsync = %(dut)s_0_hdmi_hsync
@@ -402,14 +400,13 @@ PORT %(BUSNAME)s_RLAST = RLAST, DIR = O, BUS = %(BUSNAME)s
 '''
 
 hdmi_port_declaration_mpd_template='''
+PORT hdmi_clk_in = "", DIR = I, SIGIS = CLK
 PORT hdmi_clk = "", DIR = O, SIGIS = CLK, IO_IF=%(busname)s
 PORT hdmi_vsync = "", DIR = O, IO_IF=%(busname)s
 PORT hdmi_hsync = "", DIR = O, IO_IF=%(busname)s
 PORT hdmi_de = "", DIR = O, IO_IF=%(busname)s
 PORT hdmi_data = "", DIR = O, VEC = [15:0], IO_IF=%(busname)s
 
-PORT usr_clk_p = "", DIR = I
-PORT usr_clk_n = "", DIR = I
 PORT xadc_gpio_0 = "", DIR = O
 PORT xadc_gpio_1 = "", DIR = O
 PORT xadc_gpio_2 = "", DIR = O
@@ -676,8 +673,7 @@ axi_slave_port_vhd_template='''
 '''
 
 hdmi_port_vhd_template='''
-    usr_clk_p : in std_logic;
-    usr_clk_n : in std_logic;
+    hdmi_clk_in : in std_logic;
     hdmi_clk : out std_logic;
     hdmi_vsync : out std_logic;
     hdmi_hsync : out std_logic;
@@ -836,9 +832,8 @@ axi_slave_signal_vhd_template='''
 '''
 
 hdmi_signal_vhd_template='''
-  signal usr_clk : std_logic;
-  attribute MAX_FANOUT of usr_clk : signal is "10000";
-  attribute SIGIS of usr_clk      : signal is "CLK";
+  attribute MAX_FANOUT of hdmi_clk_in : signal is "10000";
+  attribute SIGIS of hdmi_clk_in      : signal is "CLK";
   signal %(busname)s_vsync_unbuf, %(busname)s_hsync_unbuf, %(busname)s_de_unbuf : std_logic;
   signal %(busname)s_data_unbuf : std_logic_vector(15 downto 0);
 '''
@@ -886,19 +881,6 @@ axi_slave_scheduler_vhd_template='''
 '''
 
 hdmi_iobuf_vhd_template='''
-    IBUFGDS_usr_clk : IBUFGDS
-    generic map (
-    DIFF_TERM => FALSE,
-    IBUF_LOW_PWR => TRUE,
-    IOSTANDARD => "DEFAULT")
-    port map (
-    O => usr_clk,
-    -- Buffer output (connect directly to top-level port)
-    I => usr_clk_p,
-    IB => usr_clk_n
-    -- Buffer input
-    );
-
     OBUF_%(busname)s_clk : OBUF
     generic map (
     DRIVE => 12,
@@ -907,7 +889,7 @@ hdmi_iobuf_vhd_template='''
     port map (
     O => %(busname)s_clk,
     -- Buffer output (connect directly to top-level port)
-    I => usr_clk
+    I => hdmi_clk_in
     -- Buffer input
     );
 
@@ -1305,7 +1287,7 @@ class InterfaceMixin:
             'hdmi_ports':
                 ''.join([hdmi_port_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in hdmiBus]),
-            'dut_hdmi_clock_arg': '      CLK_hdmi_clk => usr_clk,' if len(hdmiBus) else '',
+            'dut_hdmi_clock_arg': '      CLK_hdmi_clk => hdmi_clk_in,' if len(hdmiBus) else '',
             'axi_master_port_map':
                 ''.join([axi_master_port_map_vhd_template % subst for subst in masterBusSubsts]),
             'axi_slave_port_map':
@@ -1352,7 +1334,7 @@ class InterfaceMixin:
         hdmiBus = self.collectInterfaceNames('HDMI')
         if len(hdmiBus):
             ucf.write(hdmi_ucf_template)
-            ucf.write(usr_clk_ucf_template)
+            #ucf.write(usr_clk_ucf_template)
             ucf.write(xadc_ucf_template)
         ucf.write(default_clk_ucf_template)
         ucf.close()

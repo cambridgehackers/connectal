@@ -34,7 +34,7 @@ interface HdmiDisplay;
     method Action startFrameBuffer1(Bit#(32) base);
 
     method Action waitForVsync(Bit#(32) unused);
-    method ActionValue#(Bit#(32)) vsyncReceived();
+    method ActionValue#(Bit#(64)) vsyncReceived();
 
     method Action hdmiLinesPixels(Bit#(32) value);
     method Action hdmiBlankLinesPixels(Bit#(32) value);
