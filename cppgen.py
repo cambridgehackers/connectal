@@ -307,7 +307,7 @@ class TypeMixin:
             elif self.params[0].numeric() <= 64:
                 return 'unsigned long long'
             else:
-                return 'std::bitset<%d>' % ((self.params[0].numeric() + 7) / 8)
+                return 'std::bitset<%d>' % (self.params[0].numeric())
         elif cid == 'Action':
             return 'int'
         elif cid == 'ActionValue':
