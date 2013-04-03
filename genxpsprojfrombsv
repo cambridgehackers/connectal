@@ -27,7 +27,8 @@ argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps pro
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 
 makefileTemplate='''
-BSVPATH = %(bsvpath)s
+XBSVTOP=$(PWD)/..
+BSVPATH = $(XBSVTOP)/%(bsvpath)s:$(XBSVTOP)/bsv
 vfile=pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v
 paofile=pcores/%(corename)s/data/%(dut)s_v2_1_0.pao
 
