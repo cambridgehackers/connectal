@@ -49,6 +49,10 @@ The result .bit file for this example will be:
 Installation
 ------------
 
+Install the bluespec compiler. Make sure the BLUESPECDIR environment
+variable is set:
+    export BLUESPECDIR=~/bluespec/Bluespec-2012.10.beta2/lib
+	
 Install the python-ply package, e.g.,
 
     sudo apt-get install python-ply
