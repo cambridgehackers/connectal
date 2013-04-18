@@ -7,6 +7,15 @@ Verilog (BSV) file and generate a bitstream for a Xilinx Zynq FPGA.
 It generates C++ and BSV stubs so that you can write code that runs on
 the Zynq's ARM CPUs to interact with your BSV componet.
 
+Preparation
+-----------
+1. Get xilinx tools
+2. Download ndk toolchain from: 
+     http://developer.android.com/tools/sdk/ndk/index.html
+     (actual file might be:
+         http://dl.google.com/android/ndk/android-ndk-r8e-linux-x86_64.tar.bz2
+     )
+
 Setting up the SD Card
 ----------------------
 
@@ -21,7 +30,10 @@ Setting up the SD Card
 It does not seem to boot from cards with a partition table.
 
 4. Unplug the card and plug it back in
-5. cd sdcard-130214; cp boot.bin devicetree.dtb ramdisk8M.image.gz zImage system.img /media/zynq
+5. Copy files
+   cd sdcard-130214
+   cp boot.bin devicetree.dtb ramdisk8M.image.gz zImage system.img /media/zynq
+   cp empty.img /media/zynq/userdata.img
 5. sync
    sudo umount /dev/sdc
 
