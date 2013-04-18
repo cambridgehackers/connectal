@@ -43,6 +43,9 @@ Echo Example
 ------------
 
     ./genxpsprojfrombsv -p echoproj -b Echo examples/echo/Echo.bsv
+    cd echoproj
+    make verilog
+    make bits
     cp examples/echo/testecho.cpp echoproj/jni
     make -C echoproj boot.bin
     ndkbuild -C echoproj
