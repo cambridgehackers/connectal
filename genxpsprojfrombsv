@@ -36,7 +36,7 @@ $(vfile): pcores/%(corename)s/hdl/verilog/%(Dut)sWrapper.bsv
 	cd pcores/%(corename)s/hdl/verilog; bsc -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
 
 %(dut)s.make: %(dut)s.xmp
-	xps %(dut)s.xmp
+	echo "save proj; exit" | xps -nw %(dut)s.xmp
 
 verilog: $(vfile)
 	./updatepao $(vfile) $(paofile) $(BSVPATH)
@@ -45,7 +45,8 @@ netlist: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
 	make -f %(dut)s.make netlist
 
 implementation/%(dut)s.bit: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
-	make -f %(dut)s.make bits
+	#  XIL_CG_LOAD_ALL_FAMILIES=true needed for "coregen fails" workaround
+	XIL_CG_LOAD_ALL_FAMILIES=true make -f %(dut)s.make bits
 
 bits: implementation/%(dut)s.bit
 
