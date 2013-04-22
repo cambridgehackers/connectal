@@ -37,6 +37,8 @@ $(vfile): pcores/%(corename)s/hdl/verilog/%(Dut)sWrapper.bsv
 
 %(dut)s.make: %(dut)s.xmp
 	echo "run resync; save proj; exit" | xps -nw %(dut)s.xmp
+	#sed -i.001 -e '/\\project/s/^/  <set param="PCW::FPGA0::PERIPHERAL::FREQMHZ" value="100.000000" \/>/' data/ps7_hdmidisplay_prj.xml
+	#sed -i.001 -e '/\\project/s/^/  <set param="PCW::FPGA1::PERIPHERAL::FREQMHZ" value="166.000000" \/>/' data/ps7_hdmidisplay_prj.xml
 
 verilog: $(vfile)
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
@@ -45,7 +47,7 @@ netlist: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
 	make -f %(dut)s.make netlist
 
 implementation/%(dut)s.bit: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
-	#  XIL_CG_LOAD_ALL_FAMILIES=true needed for "coregen fails" workaround
+	# bug workaround for 14.4: XIL_CG_LOAD_ALL_FAMILIES=true needed for "coregen fails" workaround
 	XIL_CG_LOAD_ALL_FAMILIES=true make -f %(dut)s.make bits
 
 bits: implementation/%(dut)s.bit
