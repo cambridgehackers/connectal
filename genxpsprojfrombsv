@@ -36,7 +36,7 @@ $(vfile): pcores/%(corename)s/hdl/verilog/%(Dut)sWrapper.bsv
 	cd pcores/%(corename)s/hdl/verilog; bsc -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
 
 %(dut)s.make: %(dut)s.xmp
-	echo "save proj; exit" | xps -nw %(dut)s.xmp
+	echo "run resync; save proj; exit" | xps -nw %(dut)s.xmp
 
 verilog: $(vfile)
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
