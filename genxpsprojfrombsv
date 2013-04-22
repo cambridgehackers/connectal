@@ -39,7 +39,7 @@ $(vfile): pcores/%(corename)s/hdl/verilog/%(Dut)sWrapper.bsv
 	echo "save proj; exit" | xps -nw %(dut)s.xmp
 
 verilog: $(vfile)
-	./updatepao $(vfile) $(paofile) $(BSVPATH)
+	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
 
 netlist: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
 	make -f %(dut)s.make netlist
