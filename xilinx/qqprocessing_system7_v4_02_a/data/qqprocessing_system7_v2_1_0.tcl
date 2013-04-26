@@ -120,7 +120,7 @@ proc zynqconfig_do { mhsinst update_params check_params generate_constraints add
                 #puts "FOO: $param .. $value .. $mhs_value " 
                 if { ! [ string equal $mhs_value {} ] } {
                     if { ! [ string equal $mhs_value $value] } {
-                        error "MHS file editing for Zynq related parameters is not allowed. Please use Zynq tab in XPS for PS configuration.\n Value of parameter $param ($mhs_value) in MHS conflicts with the setting in Zynq tab. Value of $param should be $value " "" mdt_error
+                        #error "MHS file editing for Zynq related parameters is not allowed. Please use Zynq tab in XPS for PS configuration.\n Value of parameter $param ($mhs_value) in MHS conflicts with the setting in Zynq tab. Value of $param should be $value " "" mdt_error
                     }
                 }
             }
