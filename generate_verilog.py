@@ -55,6 +55,7 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
     tmaster['BEGIN'] = []
     if not thismpd:
         tmaster['BEGIN'].append({'NAME': os.path.basename(troot)})
+    print('opening', afilename)
     data = open(afilename).read()
     # iterate through all lines in file
     for citem in data.split('\n'):
