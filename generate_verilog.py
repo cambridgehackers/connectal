@@ -40,7 +40,8 @@ def get_instance(master):
         return tname
     return master['BEGIN'][0]['NAME']
 
-def parse_file(afilename, tmaster, axifullbus, wirelist):
+def parse_file(afilename, axifullbus, wirelist):
+    tmaster = {}
     ipflag = False
     busflag = False
     localaxi = None
@@ -50,7 +51,7 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
     tmaster['FILENAME'] = afilename
     tmaster['HW_VER'] = ''
     troot, text = os.path.splitext(afilename)
-    for item in ['BEGIN', 'UNUSED', 'END', 'PORT', 'BUS_INTERFACE', 'IO_INTERFACE', 'OPTION', 'PARAMETER']:
+    for item in ['BEGIN', 'END', 'PORT', 'BUS_INTERFACE', 'IO_INTERFACE', 'OPTION', 'PARAMETER']:
         tmaster[item] = []
     if not thismpd:
         tmaster['BEGIN'].append({'NAME': os.path.basename(troot)})
@@ -68,6 +69,7 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
         line_name = ''
         lastind = 0
         parendepth = 0
+        append_item = True
         # split input line into comma separated 'attr=val' list
         for thisind in range(len(citem)):
             ch = citem[thisind]
@@ -95,11 +97,11 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
                     if not thismpd and line_name == 'BEGIN':
                         temp = item[iind+1:].strip()
                         tmaster[line_name].append({'NAME': temp})
-                        tmaster, tempaxi = parse_file(temp + version + '.mpd', {}, axifullbus, wirelist)
+                        tmaster, tempaxi = parse_file(temp + version + '.mpd', axifullbus, wirelist)
                         if tempaxi:
                             localaxi = tempaxi
                         component_definitions.append(tmaster)
-                        line_name = 'UNUSED'
+                        append_item = False
                     if not thismpd and line_name == 'END':
                         eval_itemlist(tmaster)
                         tmaster = saved_tmaster
@@ -114,9 +116,13 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
                             if tempitem['NAME'] == temp:
                                 tlist = tempitem
                                 tlist['IS_INSTANTIATED'] = 'TRUE'
+                                append_item = False
                                 break
                     if line_name == 'PORT' and not thismpd:
                         vname = 'ISCONNECTEDTO'
+                        if not wirelist.get(item):
+                            wirelist[item] = []
+                        wirelist[item].append([tmaster, tlist])
             elif iind > 0:
                 vname = item[0:iind].strip().upper()
             else:
@@ -126,10 +132,6 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
             if item == '""':
                 item = ''
             tlist[vname] = item
-            if vname == 'ISCONNECTEDTO':
-                if not wirelist.get(item):
-                    wirelist[item] = []
-                wirelist[item].append([tmaster, tlist])
         # now that we have gathered all the attributes into tlist, perform local processing
         tname = tlist.get('NAME')
         tval = tlist.get('VALUE')
@@ -158,7 +160,7 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
                 axifullbus[tname[0:2] + tval] = tlist
             if tlist.get('SIGIS') == 'CLK':
                 axifullbus[tname[0:2] + 'INTERNAL_SIGIS_CLK'] = tlist
-        if not tlist.get('IS_INSTANTIATED'):
+        if append_item:
             # now append the tlist item onto the correct list for this file and linetype
             tmaster[line_name].append(tlist)
     #########################################
@@ -304,7 +306,7 @@ def main():
     if len(sys.argv) != 2:
         print(sys.argv[0] + ' <inputfilename>', file = outputfile)
         sys.exit(1)
-    top_item, axiitem = parse_file(sys.argv[1], {}, axifullbus, wirelist)
+    top_item, axiitem = parse_file(sys.argv[1], axifullbus, wirelist)
 
     eval_itemlist(top_item)
     mhsfile = sys.argv[1][-4:] == '.mhs'
