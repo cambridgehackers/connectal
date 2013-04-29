@@ -34,6 +34,13 @@ def lookup_param(master, name):
             return item
     return None
 
+def bus_lookup(tmaster, titem):
+    if titem.get('BUS') and titem.get('EVALISVALID') != 'FALSE':
+        for bitem in tmaster['BUS_INTERFACE']:
+            if bitem.get('EVALISVALID') != 'FALSE' and bitem['NAME'] == titem['BUS']:
+                return bitem
+    return None
+
 def get_instance(master):
     tname = master.get('INSTANCE')
     if tname:
@@ -154,6 +161,14 @@ def parse_file(afilename, axifullbus, wirelist):
                 continue
             if tname == 'VERSION':
                 version = '_v' + tval.replace('.', '_')
+        if line_name == 'BUS_INTERFACE':
+            tprefix = ''
+            if tlist['BUS_TYPE'] == 'SLAVE':
+                tprefix = 'M_'
+            elif tlist['BUS_TYPE'] == 'MASTER':
+                tprefix = 'S_'
+            tlist['BUSPREFIX'] = tprefix
+            tlist['BUSLIST'] = {}
         if line_name == 'PORT' and localaxi == tmaster and tval:
             # create index for AXI bus wires
             if tval != '' and not axifullbus.get(tname[0:2] + tval):
@@ -184,10 +199,10 @@ def eval_item(arg_list, tmaster):
             arg_list['LSB'] = evalexpr.eval_expression(item[cind+1:rind].strip(), tmaster, lookup_param)
     item = arg_list.get('ISVALID')
     if item:
-        arg_list['ISVALID'] = evalexpr.eval_expression(item, tmaster, lookup_param)
+        arg_list['EVALISVALID'] = evalexpr.eval_expression(item, tmaster, lookup_param)
     item = arg_list.get('CONTRIBUTION')
     if item:
-        arg_list['CONTRIBUTION'] = evalexpr.eval_expression(item, tmaster, lookup_param)
+        arg_list['EVALCONTRIBUTION'] = evalexpr.eval_expression(item, tmaster, lookup_param)
 
 def eval_itemlist(tmaster):
     for arg_list in tmaster['PORT']:
@@ -241,7 +256,7 @@ def output_parameter(tmaster):
     print('\n  ' + tmaster['BEGIN'][0]['NAME'] + '\n    #(', file = outputfile)
     l = None
     for arg_list in tmaster['PARAMETER']:
-        if arg_list.get('TYPE') != 'NON_HDL' and arg_list.get('ISVALID') != 'FALSE':
+        if arg_list.get('TYPE') != 'NON_HDL' and arg_list.get('EVALISVALID') != 'FALSE':
             delim = ''
             if arg_list.get('DT') == 'STRING':
                 delim = '"'
@@ -280,19 +295,6 @@ def output_instance(tmaster, toplevel):
         print(l, file = outputfile)
     print('    );', file = outputfile)
 
-def bus_lookup(tmaster, titem):
-    if titem.get('BUS') and titem.get('ISVALID') != 'FALSE':
-        for bitem in tmaster['BUS_INTERFACE']:
-            if bitem.get('ISVALID') != 'FALSE' and bitem['NAME'] == titem['BUS']:
-                tprefix = ''
-                if bitem['BUS_TYPE'] == 'SLAVE':
-                    tprefix = 'M_'
-                elif bitem['BUS_TYPE'] == 'MASTER':
-                    tprefix = 'S_'
-                return tprefix, bitem
-    return '', None
-
-
 def main():
     global component_definitions, outputfile
     component_definitions = []
@@ -316,17 +318,17 @@ def main():
     else:
         for item in component_definitions:
             for titem in item['BUS_INTERFACE']:
-                if titem.get('ISVALID') != 'FALSE' and titem.get('BUS_STD') == 'AXIPT':
+                if titem.get('EVALISVALID') != 'FALSE' and titem.get('BUS_STD') == 'AXIPT':
                     if not axiitem.get(titem['BUS_TYPE']):
                         axiitem[titem['BUS_TYPE']] = 0
                     titem['BUS_OFFSET'] = axiitem[titem['BUS_TYPE']]
                     axiitem[titem['BUS_TYPE']] = axiitem[titem['BUS_TYPE']] + 1
             for titem in item['PORT']:
                 tval = titem.get('VALUE')
-                tprefix, tbus = bus_lookup(item, titem)
-                tval = tprefix + tval
-                if titem.get('ISVALID') == 'FALSE' or not tbus:
+                tbus = bus_lookup(item, titem)
+                if titem.get('EVALISVALID') == 'FALSE' or not tbus:
                     continue
+                tval = tbus['BUSPREFIX'] + tval
                 if tval not in axifullbus:
                     if titem.get('SIGIS') == 'CLK':
                         tclk = axifullbus[tval[0:2] + 'INTERNAL_SIGIS_CLK']
@@ -363,7 +365,7 @@ def main():
                 for item, titem in witem:
                     titem['ISCONNECTEDTO'] = ''
             for item, titem in witem:
-                tprefix, tbus = bus_lookup(item, titem)
+                tbus = bus_lookup(item, titem)
                 #print('item, tbus', titem, tbus)
                 tvec = titem.get('MSB') is not None or (tbus is not None and tbus['BUS_OFFSET'] != 0)
                 if tlast is not None and tlast != tvec:
@@ -394,30 +396,31 @@ def main():
                     tmsbv = int(tmsb)
                 else:
                     tmsbv = 0
-                tprefix, tbus = bus_lookup(item, titem)
+                tbus = bus_lookup(item, titem)
                 if tval == '' and titem.get('SIGIS') == 'CLK':
                     tval = 'INTERNAL_SIGIS_CLK'
-                tval = tprefix + tval
+                if tbus:
+                    tval = tbus['BUSPREFIX'] + tval
                 aitem = axifullbus.get(tval)
                 if tbus and not aitem:
                     print('Error: missing item', tbus, tval, titem, aitem)
                     sys.exit(1)
                 l = None
-                if titem.get('ISVALID') == 'FALSE' or item == axiitem:
+                if titem.get('EVALISVALID') == 'FALSE' or item == axiitem:
                     aitem = None
                 if titem.get('IS_INSTANTIATED') == 'TRUE':
                     continue
                 if item == axiitem and not titem.get('BUS') and tname[0] + '_' + tval in axibus:
                     # only instantiate AXI bus wires that are actually used
                     l = get_instance(item) + '_' + tname[0] + '_' + tval
-                    if titem.get('MSB') and int(titem.get('MSB')) == 0 and not titem.get('CONTRIBUTION'):
+                    if titem.get('MSB') and int(titem.get('MSB')) == 0 and not titem.get('EVALCONTRIBUTION'):
                         l = l + '[0:0]'
                 elif tbus and tbus.get('BUS_TYPE') == 'SLAVE' and pin_hasval(titem):
                     poffset = tmsbv + 1
                     if tbus and not aitem:
                         #print('Error: missing slave item', tbus, titem, aitem, item == axiitem)
                         continue
-                    pcontrib = aitem.get('CONTRIBUTION')
+                    pcontrib = aitem.get('EVALCONTRIBUTION')
                     if pcontrib:
                         poffset = int(pcontrib)
                     poffset = poffset * tbus['BUS_OFFSET']
@@ -430,7 +433,7 @@ def main():
                     if msbtemp and tmsb:
                         if tmsb != msbtemp:
                             msbtemp = tmsb
-                        elif aitem.get('CONTRIBUTION'):
+                        elif aitem.get('EVALCONTRIBUTION'):
                             msbtemp = None
                     if msbtemp is not None:
                         tval = tval + '[' + str(msbtemp)
