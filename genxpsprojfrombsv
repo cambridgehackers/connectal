@@ -42,6 +42,7 @@ $(vfile): pcores/%(corename)s/hdl/verilog/%(Dut)sWrapper.bsv
 
 verilog: $(vfile)
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
+	cp -r ../xilinx/* pcores/
 
 netlist: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
 	make -f %(dut)s.make netlist
