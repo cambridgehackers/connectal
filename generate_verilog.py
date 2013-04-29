@@ -29,11 +29,9 @@ import evalexpr
 outputfile = None
 
 def lookup_param(master, name):
-    thislist = master.get('PARAMETER')
-    if thislist:
-        for item in thislist:
-            if item['NAME'] == name:
-                return item
+    for item in master['PARAMETER']:
+        if item['NAME'] == name:
+            return item
     return None
 
 def get_instance(master):
@@ -52,7 +50,8 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
     tmaster['FILENAME'] = afilename
     tmaster['HW_VER'] = ''
     troot, text = os.path.splitext(afilename)
-    tmaster['BEGIN'] = []
+    for item in ['BEGIN', 'UNUSED', 'END', 'PORT', 'BUS_INTERFACE', 'IO_INTERFACE', 'OPTION', 'PARAMETER']:
+        tmaster[item] = []
     if not thismpd:
         tmaster['BEGIN'].append({'NAME': os.path.basename(troot)})
     print('opening', afilename)
@@ -100,7 +99,7 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
                         if tempaxi:
                             localaxi = tempaxi
                         component_definitions.append(tmaster)
-                        line_name = 'BEGIN_UNUSED'
+                        line_name = 'UNUSED'
                     if not thismpd and line_name == 'END':
                         eval_itemlist(tmaster)
                         tmaster = saved_tmaster
@@ -134,6 +133,8 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
         # now that we have gathered all the attributes into tlist, perform local processing
         tname = tlist.get('NAME')
         tval = tlist.get('VALUE')
+        if tlist.get('NAME') == 'CTRL_ACLK':
+            print('KKDD', tlist, line_name, thismpd)
         if line_name == 'OPTION':
             if tname == 'IPTYPE' and tval == 'BUS':
                 ipflag = True
@@ -157,10 +158,8 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
                 axifullbus[tname[0:2] + tval] = tlist
             if tlist.get('SIGIS') == 'CLK':
                 axifullbus[tname[0:2] + 'INTERNAL_SIGIS_CLK'] = tlist
-        # now append the tlist item onto the correct list for this file and linetype
-        if not tmaster.get(line_name):
-            tmaster[line_name] = []
         if not tlist.get('IS_INSTANTIATED'):
+            # now append the tlist item onto the correct list for this file and linetype
             tmaster[line_name].append(tlist)
     #########################################
     for item in valuemap.VALMAP:
@@ -169,6 +168,7 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
             #print('CHHHH', tmaster['BEGIN'], tlist['NAME'])
             tlist['VALUE']=valuemap.VALMAP[tlist['NAME']]
             tlist['CHANGEDBY']='SYSTEM'
+    print('leaving', afilename)
     return tmaster, localaxi
 
 def eval_item(arg_list, tmaster):
@@ -190,9 +190,8 @@ def eval_item(arg_list, tmaster):
 def eval_itemlist(tmaster):
     for arg_list in tmaster['PORT']:
         eval_item(arg_list, tmaster)
-    if tmaster.get('BUS_INTERFACE'):
-        for arg_list in tmaster['BUS_INTERFACE']:
-            eval_item(arg_list, tmaster)
+    for arg_list in tmaster['BUS_INTERFACE']:
+        eval_item(arg_list, tmaster)
 
 def pin_hasval(titem):
     dname = titem.get('DIR')
@@ -280,7 +279,7 @@ def output_instance(tmaster, toplevel):
     print('    );', file = outputfile)
 
 def bus_lookup(tmaster, titem):
-    if titem.get('BUS') and titem.get('ISVALID') != 'FALSE' and tmaster.get('BUS_INTERFACE'):
+    if titem.get('BUS') and titem.get('ISVALID') != 'FALSE':
         for bitem in tmaster['BUS_INTERFACE']:
             if bitem.get('ISVALID') != 'FALSE' and bitem['NAME'] == titem['BUS']:
                 tprefix = ''
@@ -333,7 +332,6 @@ def main():
                         if not titem.get('ISCONNECTEDTO'):
                             print('Error: ISCONNECTEDTO attribute missing', titem, tclk)
                         tval = titem['ISCONNECTEDTO'] + '[0:0]'
-                        temp = '[0:0] ' + titem['ISCONNECTEDTO']
                         if not tconn:
                             tclk['ISCONNECTEDTO'] = tval
                         else:
