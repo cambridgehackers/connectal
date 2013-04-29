@@ -59,6 +59,9 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
     data = open(afilename).read()
     # iterate through all lines in file
     for citem in data.split('\n'):
+        while(citem and (citem[0] == ' ' or citem[0] == '\t')):
+            # strip off leading whitespace
+            citem = citem[1:]
         if len(citem) == 0 or citem[0] == '#':
             continue
         itemsplit = []
@@ -134,7 +137,7 @@ def parse_file(afilename, tmaster, axifullbus, wirelist):
         if line_name == 'OPTION':
             if tname == 'IPTYPE' and tval == 'BUS':
                 ipflag = True
-            if tname == 'BUS_STD' and tval == 'AXI':
+            if tname == 'BUS_STD' and tval == 'AXIPT':
                 busflag = True
             if ipflag and busflag:
                 # we have located the AXI bus definition component
@@ -312,7 +315,7 @@ def main():
     else:
         for item in component_definitions:
             for titem in item['BUS_INTERFACE']:
-                if titem.get('ISVALID') != 'FALSE' and titem.get('BUS_STD') == 'AXI':
+                if titem.get('ISVALID') != 'FALSE' and titem.get('BUS_STD') == 'AXIPT':
                     if not axiitem.get(titem['BUS_TYPE']):
                         axiitem[titem['BUS_TYPE']] = 0
                     titem['BUS_OFFSET'] = axiitem[titem['BUS_TYPE']]
@@ -327,6 +330,8 @@ def main():
                     if titem.get('SIGIS') == 'CLK':
                         tclk = axifullbus[tval[0:2] + 'INTERNAL_SIGIS_CLK']
                         tconn = tclk.get('ISCONNECTEDTO')
+                        if not titem.get('ISCONNECTEDTO'):
+                            print('Error: ISCONNECTEDTO attribute missing', titem, tclk)
                         tval = titem['ISCONNECTEDTO'] + '[0:0]'
                         temp = '[0:0] ' + titem['ISCONNECTEDTO']
                         if not tconn:
@@ -359,6 +364,7 @@ def main():
                     titem['ISCONNECTEDTO'] = ''
             for item, titem in witem:
                 tprefix, tbus = bus_lookup(item, titem)
+                #print('item, tbus', titem, tbus)
                 tvec = titem.get('MSB') is not None or (tbus is not None and tbus['BUS_OFFSET'] != 0)
                 if tlast is not None and tlast != tvec:
                     tchanged = True
@@ -389,8 +395,13 @@ def main():
                 else:
                     tmsbv = 0
                 tprefix, tbus = bus_lookup(item, titem)
+                if tval == '' and titem.get('SIGIS') == 'CLK':
+                    tval = 'INTERNAL_SIGIS_CLK'
                 tval = tprefix + tval
                 aitem = axifullbus.get(tval)
+                if tbus and not aitem:
+                    print('Error: missing item', tbus, tval, titem, aitem)
+                    sys.exit(1)
                 l = None
                 if titem.get('ISVALID') == 'FALSE' or item == axiitem:
                     aitem = None
@@ -403,6 +414,9 @@ def main():
                         l = l + '[0:0]'
                 elif tbus and tbus.get('BUS_TYPE') == 'SLAVE' and pin_hasval(titem):
                     poffset = tmsbv + 1
+                    if tbus and not aitem:
+                        #print('Error: missing slave item', tbus, titem, aitem, item == axiitem)
+                        continue
                     pcontrib = aitem.get('CONTRIBUTION')
                     if pcontrib:
                         poffset = int(pcontrib)
