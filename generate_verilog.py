@@ -178,7 +178,6 @@ def parse_file(afilename, wirelist):
                 tbus['VALUE'] = 'INTERNAL_SIGIS_CLK'
             for tbus in tmaster['BUS_INTERFACE']:
                 if tbus['NAME'] == tlist['BUS']:
-                    #if not tbus['BUSLIST'].get(tval):
                     tbus['BUSLIST'][tval] = tlist
                     if tlist.get('SIGIS') == 'CLK':
                         tbus['BUSLIST']['INTERNAL_SIGIS_CLK'] = tlist
@@ -231,25 +230,25 @@ def output_arglist(tmaster, ismhs, istop):
 
     print('\nmodule ' + tname + '\n  (', file = outputfile)
     l = None
-    for arg_list in tmaster['PORT']:
-        dname = arg_list.get('DIR')
-        if pin_hasval(arg_list):
+    for titem in tmaster['PORT']:
+        dname = titem.get('DIR')
+        if pin_hasval(titem):
             if l:
                 print(l + ',', file = outputfile)
-            l = '    ' + arg_list['NAME']
+            l = '    ' + titem['NAME']
     if l:
         print(l, file = outputfile)
     print('  );', file = outputfile)
     DIRNAMES = {'O': 'output', 'I': 'input', 'IO': 'inout'}
-    for arg_list in tmaster['PORT']:
-        dname = arg_list.get('DIR')
-        if pin_hasval(arg_list):
+    for titem in tmaster['PORT']:
+        dname = titem.get('DIR')
+        if pin_hasval(titem):
             t = DIRNAMES[dname]
-            l = arg_list.get('MSB')
-            #print('l', l, arg_list)
+            l = titem.get('MSB')
+            #print('l', l, titem)
             if l:
-                t = t + ' [' + l + ':' + arg_list['LSB'] + ']'
-            print('  ' + t + ' ' + arg_list['NAME'] + ';', file = outputfile)
+                t = t + ' [' + l + ':' + titem['LSB'] + ']'
+            print('  ' + t + ' ' + titem['NAME'] + ';', file = outputfile)
 
 def output_parameter(tmaster):
     output_arglist(tmaster, False, True)
@@ -257,12 +256,12 @@ def output_parameter(tmaster):
         print('  ' + valuemap.P7TEXT, file = outputfile)
     print('\n  ' + tmaster['BEGIN'][0]['NAME'] + '\n    #(', file = outputfile)
     l = None
-    for arg_list in tmaster['PARAMETER']:
-        if arg_list.get('TYPE') != 'NON_HDL' and arg_list.get('EVALISVALID') != 'FALSE':
+    for titem in tmaster['PARAMETER']:
+        if titem.get('TYPE') != 'NON_HDL' and titem.get('EVALISVALID') != 'FALSE':
             delim = ''
-            if arg_list.get('DT') == 'STRING':
+            if titem.get('DT') == 'STRING':
                 delim = '"'
-            vitem = arg_list['VALUE']
+            vitem = titem['VALUE']
             vlen = len(vitem) - 2
             if vlen > 0:
                 if vitem[0:2] == '0x':
@@ -271,7 +270,7 @@ def output_parameter(tmaster):
                     vitem = str(vlen) + "'b" + vitem[2:]
             if l:
                 print(l + ',', file = outputfile)
-            l = '      .' + arg_list['NAME'] + ' ( ' + delim + vitem + delim + ' )'
+            l = '      .' + titem['NAME'] + ' ( ' + delim + vitem + delim + ' )'
     if l:
         print(l, file = outputfile)
     print('    )', file = outputfile)
@@ -281,17 +280,17 @@ def output_parameter(tmaster):
 def output_instance(tmaster, toplevel):
     l = None
     print('    ' + get_instance(tmaster) + ' (', file = outputfile)
-    for arg_list in tmaster['PORT']:
-        if pin_hasval(arg_list):
+    for titem in tmaster['PORT']:
+        if pin_hasval(titem):
             if l:
                 print(l + ',', file = outputfile)
-            l = '      .' + arg_list['NAME'] + ' ( '
+            l = '      .' + titem['NAME'] + ' ( '
             if toplevel:
-                l = l + arg_list['NAME']
-            elif arg_list.get('ISCONNECTEDTO'):
-                l = l + arg_list['ISCONNECTEDTO']
-            elif arg_list.get('IS_INSTANTIATED') == 'TRUE' and arg_list['VALUE'] != 'INTERNAL_SIGIS_CLK':
-                l = l + arg_list['VALUE']
+                l = l + titem['NAME']
+            elif titem.get('ISCONNECTEDTO'):
+                l = l + titem['ISCONNECTEDTO']
+            elif titem.get('IS_INSTANTIATED') == 'TRUE' and titem['VALUE'] != 'INTERNAL_SIGIS_CLK':
+                l = l + titem['VALUE']
             l = l + ' )'
     if l:
         print(l, file = outputfile)
