@@ -36,23 +36,20 @@ def lookup_param(master, name):
 
 def bus_lookup(tmaster, titem):
     if titem.get('BUS') and titem.get('EVALISVALID') != 'FALSE':
-        for bitem in tmaster['BUS_INTERFACE']:
-            if bitem.get('EVALISVALID') != 'FALSE' and bitem['NAME'] == titem['BUS']:
-                return bitem
+        for tbus in tmaster['BUS_INTERFACE']:
+            if tbus.get('EVALISVALID') != 'FALSE' and tbus['NAME'] == titem['BUS']:
+                return tbus
     return None
 
-def bus_match(aitem):
+def bus_match(aitem, aequal):
     global component_definitions
     for item in component_definitions:
-        if item.get('IPTYPE') != 'BUS':
-            continue;
-        if aitem:
-            if item['BUS_STD'] != aitem['BUS_STD']:
-                continue
-            #print('OOPPP', item.get('BUS_STD'), aitem['BUS_STD'], aitem['NAME'], aitem['BUS_TYPE'], len(aitem['BUSLIST']))
+        if item.get('IPTYPE') != 'BUS' or item['BUS_STD'] != aitem['BUS_STD']:
+            continue
+        #print('OOPPP', item.get('BUS_STD'), aitem['BUS_STD'], aitem['NAME'], aitem['BUS_TYPE'], len(aitem['BUSLIST']))
         for titem in item['BUS_INTERFACE']:
             #print('OOBBB', titem['NAME'], titem['BUS_TYPE'], len(titem['BUSLIST']))
-            if aitem and titem['BUS_TYPE'] == aitem['BUS_TYPE']:
+            if (titem['BUS_TYPE'] == aitem['BUS_TYPE']) == aequal:
                 #print('OOBBB', titem['NAME'], titem['BUS_TYPE'], len(titem['BUSLIST']), item.get('INSTANCE'), titem.get('VALUE'), aitem.get('VALUE'))
                 return titem
     return None
@@ -179,9 +176,9 @@ def parse_file(afilename, axifullbus, wirelist):
         if append_item and line_name == 'BUS_INTERFACE':
             tprefix = ''
             if tlist['BUS_TYPE'] == 'SLAVE':
-                tprefix = 'M_'
-            elif tlist['BUS_TYPE'] == 'MASTER':
                 tprefix = 'S_'
+            elif tlist['BUS_TYPE'] == 'MASTER':
+                tprefix = 'M_'
             tlist['BUSPREFIX'] = tprefix
             tlist['BUSLIST'] = {}
         if line_name == 'PORT' and localaxi == tmaster and tval:
@@ -357,12 +354,13 @@ def main():
             for titem in item['PORT']:
                 tval = titem.get('VALUE')
                 tbus = bus_lookup(item, titem)
+                if tbus:
+                    tmatch = bus_match(tbus, False)
                 if titem.get('EVALISVALID') == 'FALSE' or not tbus:
                     continue
-                tval = tbus['BUSPREFIX'] + tval
-                if tval not in axifullbus:
+                if titem.get('VALUE') == '':
                     if titem.get('SIGIS') == 'CLK':
-                        tclk = axifullbus[tval[0:2] + 'INTERNAL_SIGIS_CLK']
+                        tclk = tmatch['BUSLIST']['INTERNAL_SIGIS_CLK']
                         tconn = tclk.get('ISCONNECTEDTO')
                         if not titem.get('ISCONNECTEDTO'):
                             print('Error: ISCONNECTEDTO attribute missing', titem, tclk)
@@ -377,6 +375,9 @@ def main():
                     else:
                         print('Error: signal not found in bus', titem)
                 elif tval:
+                    tval = tmatch['BUSPREFIX'] + tval
+                    #if tval.endswith('WID'):
+                    #    print('AAAAA', tval, titem, tbus['NAME'], tmatch['NAME'])
                     # gather a list of AXI bus signal names that were actually used
                     if tval not in axibus and axiitem != item:
                         axibus.append(tval)
@@ -414,7 +415,7 @@ def main():
         for item in component_definitions:
             for titem in item['PORT']:
                 if titem.get('DIR') == 'O' and titem.get('ISCONNECTEDTO'):
-                    #print('OOOOO', titem)
+                    print('OOOOO', titem)
                     generated_wires.append(titem['ISCONNECTEDTO'])
 
         for item in component_definitions:
@@ -429,10 +430,12 @@ def main():
                 else:
                     tmsbv = 0
                 tbus = bus_lookup(item, titem)
+                if tbus:
+                    tmatch = bus_match(tbus, False)
                 if tval == '' and titem.get('SIGIS') == 'CLK':
                     tval = 'INTERNAL_SIGIS_CLK'
                 if tbus:
-                    tmatch = bus_match(tbus)
+                    tmatch = bus_match(tbus, False)
                     if tmatch:
                         tbus = tmatch
                     else:
@@ -454,7 +457,9 @@ def main():
                     l = get_instance(item) + '_' + tname[0] + '_' + tval
                     if titem.get('MSB') and int(titem.get('MSB')) == 0 and not titem.get('EVALCONTRIBUTION'):
                         l = l + '[0:0]'
-                elif tbus and (tbus.get('BUS_TYPE') == 'SLAVE' or item == axiitem) and pin_hasval(titem):
+                elif tbus and (tbus.get('BUS_TYPE') == 'MASTER' or item == axiitem) and pin_hasval(titem):
+                    #if tname == 'M_AXI_GP0_ARLEN' or tname == 'M_AXI_GP0_ARVALID' or tname == 'M_AXI_GP0_AWCACHE' or tname == 'M_AXI_GP0_ARID':
+                    #    print('MMSSS', titem, tbus['BUSLIST'].get(titem['VALUE']), tmsb)
                     poffset = tmsbv + 1
                     if tbus and not aitem:
                         #print('Error: missing slave item', tbus, titem, aitem, item == axiitem)
@@ -467,12 +472,12 @@ def main():
                     if tmsb:
                         pend = str(tmsbv+poffset) + ':' + str(int(titem['LSB'])+poffset)
                     l = tbus['VALUE'] + '_' + tval + '[' + pend + ']'
-                elif tbus and tbus.get('BUS_TYPE') == 'MASTER':
+                elif tbus and tbus.get('BUS_TYPE') == 'SLAVE':
                     msbtemp = aitem.get('MSB')
                     if aitem.get('EVALCONTRIBUTION'):
                         msbtemp = int(aitem['EVALCONTRIBUTION']) - 1
-                    if tname == 'M_AXI_GP0_ARLEN' or tname == 'M_AXI_GP0_ARVALID' or tname == 'M_AXI_GP0_AWCACHE':
-                        print('MM', titem, tbus['BUSLIST'].get(titem['VALUE']), tmsb, msbtemp)
+                    #if tname == 'M_AXI_GP0_ARLEN' or tname == 'M_AXI_GP0_ARVALID' or tname == 'M_AXI_GP0_AWCACHE' or tname == 'M_AXI_GP0_ARID':
+                    #    print('MM', titem, tbus['BUSLIST'].get(titem['VALUE']), tmsb, msbtemp)
                     if msbtemp:
                         if not tmsb:
                             msbtemp = 0
@@ -503,13 +508,27 @@ def main():
                     titem['IS_INSTANTIATED'] = 'TRUE'
 
         print('\n  // Internal signals\n', file = outputfile)
-        for item in sorted(axibus):
-             titem = axifullbus.get(item)
+        for aname in sorted(axibus):
+             titem = axifullbus.get(aname)
+             #if titem['NAME'].endswith('WID'):
+             #    print('WWWWW', aname, titem)
+             for item in component_definitions:
+                 if item.get('IPTYPE') != 'BUS' or item['BUS_STD'] != 'AXIPT':
+                     continue
+                 for litem in item['BUS_INTERFACE']:
+                     ##print('OOBBJJJB', aname, litem['NAME'], litem['BUS_TYPE'], len(litem['BUSLIST']), litem['BUSPREFIX'])
+                     #if litem['BUS_TYPE'] == aitem['BUS_TYPE']:
+                     for bkeyval,bitem in litem['BUSLIST'].items():
+                         #print('OOBBJJJB', bitem['NAME'], bkeyval, litem['BUSPREFIX'], aname, item.get('INSTANCE'), litem.get('VALUE'))
+                         if litem['BUSPREFIX'] + bkeyval == aname:
+                             #print('OOBBB', litem['NAME'], litem['BUS_TYPE'], len(litem['BUSLIST']), item.get('INSTANCE'), litem.get('VALUE'))
+                             ##print('OOBJJJBBFOUND', titem, bitem)
+                             pass
              if titem:
                  tval = titem.get('MSB')
                  if not tval:
                      tval = 0
-                 print('  wire [' + str(tval) + ':0] ' + get_instance(axiitem) + '_' + item + ';', file = outputfile)
+                 print('  wire [' + str(tval) + ':0] ' + get_instance(axiitem) + '_' + aname + ';', file = outputfile)
         for item in sorted(gndsizes):
             l = '  wire'
             if item != 0:
