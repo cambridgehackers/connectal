@@ -145,11 +145,11 @@ def parse_file(afilename, wirelist):
             if item == '""':
                 item = ''
             tlist[vname] = item
+        if line_name == 'PORT' and tlist.get('BUS') and tlist.get('VALUE') == '' and tlist.get('SIGIS') == 'CLK':
+            tlist['VALUE'] = 'INTERNAL_SIGIS_CLK'
         # now that we have gathered all the attributes into tlist, perform local processing
         tname = tlist.get('NAME')
         tval = tlist.get('VALUE')
-        if tlist.get('NAME') == 'CTRL_ACLK':
-            print('KKDD', tlist, line_name, thismpd)
         if line_name == 'OPTION':
             if tname == 'IPTYPE' or tname == 'BUS_STD':
                 tmaster[tname] = tval
@@ -174,11 +174,12 @@ def parse_file(afilename, wirelist):
             tlist['BUSPREFIX'] = tprefix
             tlist['BUSLIST'] = {}
         if line_name == 'PORT' and tlist.get('BUS'):
+            if tval == '' and tlist.get('SIGIS') == 'CLK':
+                tbus['VALUE'] = 'INTERNAL_SIGIS_CLK'
             for tbus in tmaster['BUS_INTERFACE']:
                 if tbus['NAME'] == tlist['BUS']:
-                    #print('YYY', tbus['NAME'], len(tbus['BUSLIST']), tname, tval)
-                    if tval != '' and not tbus['BUSLIST'].get(tval):
-                        tbus['BUSLIST'][tval] = tlist
+                    #if not tbus['BUSLIST'].get(tval):
+                    tbus['BUSLIST'][tval] = tlist
                     if tlist.get('SIGIS') == 'CLK':
                         tbus['BUSLIST']['INTERNAL_SIGIS_CLK'] = tlist
         if append_item:
@@ -289,7 +290,7 @@ def output_instance(tmaster, toplevel):
                 l = l + arg_list['NAME']
             elif arg_list.get('ISCONNECTEDTO'):
                 l = l + arg_list['ISCONNECTEDTO']
-            elif arg_list.get('IS_INSTANTIATED') == 'TRUE':
+            elif arg_list.get('IS_INSTANTIATED') == 'TRUE' and arg_list['VALUE'] != 'INTERNAL_SIGIS_CLK':
                 l = l + arg_list['VALUE']
             l = l + ' )'
     if l:
@@ -332,27 +333,23 @@ def main():
                     item[tname] = item[tname] + 1
                     print('BBB', item['BEGIN'][0]['NAME'], titem['NAME'], titem['BUSOFFSET'], titem['BUS_TYPE'], len(titem['BUSLIST']))
             for titem in item['PORT']:
-                tval = titem.get('VALUE')
                 tbus = bus_lookup(item, titem)
                 if titem.get('EVALISVALID') == 'FALSE' or not tbus:
                     continue
-                if titem.get('VALUE') == '':
-                    if titem.get('SIGIS') == 'CLK':
-                        tclk = tbus['BUSLIST']['INTERNAL_SIGIS_CLK']
-                        tconn = tclk.get('ISCONNECTEDTO')
-                        if not titem.get('ISCONNECTEDTO'):
-                            print('Error: ISCONNECTEDTO attribute missing', titem, tclk)
-                        tval = titem['ISCONNECTEDTO'] + '[0:0]'
-                        if not tconn:
-                            tclk['ISCONNECTEDTO'] = tval
-                        else:
-                            if not tconn.startswith('pgassign'):
-                                generated_names.append([tconn])
-                                tclk['ISCONNECTEDTO'] = 'pgassign' + str(len(generated_names))
-                            generated_names[int(tclk['ISCONNECTEDTO'][8:])-1].append(tval)
+                tval = titem.get('VALUE')
+                if tval == 'INTERNAL_SIGIS_CLK':
+                    tclk = tbus['BUSLIST']['INTERNAL_SIGIS_CLK']
+                    tconn = tclk.get('ISCONNECTEDTO')
+                    tval = titem['ISCONNECTEDTO'] + '[0:0]'
+                    #print('CCCCCCCC', tconn, tclk, titem['NAME'], tval)
+                    if not tconn:
+                        tclk['ISCONNECTEDTO'] = tval
                     else:
-                        print('Error: signal not found in bus', titem)
-                elif tval:
+                        if not tconn.startswith('pgassign'):
+                            generated_names.append([tconn])
+                            tclk['ISCONNECTEDTO'] = 'pgassign' + str(len(generated_names))
+                        generated_names[int(tclk['ISCONNECTEDTO'][8:])-1].append(tval)
+                else:
                     tval = tbus['BUSPREFIX'] + tval
                     # gather a list of AXI bus signal names that were actually used
                     if tval not in axibus and axiitem != item:
@@ -401,19 +398,13 @@ def main():
                 tval = titem.get('VALUE')
                 tiscon = titem.get('ISCONNECTEDTO')
                 tmsb = titem.get('MSB')
+                tmsbv = 0
                 if tmsb:
                     tmsbv = int(tmsb)
-                else:
-                    tmsbv = 0
                 tbus = bus_lookup(item, titem)
-                if tval == '' and titem.get('SIGIS') == 'CLK':
-                    tval = 'INTERNAL_SIGIS_CLK'
                 if tbus:
                     aitem = tbus['BUSLIST'][tval]
                     tval = tbus['BUSPREFIX'] + tval
-                if tbus and not aitem:
-                    print('Error: missing item', tbus, tval, titem, aitem)
-                    sys.exit(1)
                 l = None
                 if titem.get('EVALISVALID') == 'FALSE' or item == axiitem:
                     aitem = None
@@ -465,27 +456,17 @@ def main():
 
         print('\n  // Internal signals\n', file = outputfile)
         for aname in sorted(axibus):
-             titem = None
              for item in component_definitions:
                  if item.get('IPTYPE') != 'BUS' or item['BUS_STD'] != 'AXIPT':
                      continue
                  for litem in item['BUS_INTERFACE']:
-                     ##print('OOBBJJJB', aname, litem['NAME'], litem['BUS_TYPE'], len(litem['BUSLIST']), litem['BUSPREFIX'])
-                     #if litem['BUS_TYPE'] == aitem['BUS_TYPE']:
                      for bkeyval,bitem in litem['BUSLIST'].items():
-                         #print('OOBBJJJB', bitem['NAME'], bkeyval, litem['BUSPREFIX'], aname, item.get('INSTANCE'), litem.get('VALUE'))
                          if litem['BUSPREFIX'] + bkeyval == aname:
-                             #print('OOBBB', litem['NAME'], litem['BUS_TYPE'], len(litem['BUSLIST']), item.get('INSTANCE'), litem.get('VALUE'))
-                             titem = bitem
-                             tval = titem.get('MSB')
+                             tval = bitem.get('MSB')
                              if not tval:
                                  tval = 0
                              print('  wire [' + str(tval) + ':0] ' + get_instance(axiitem) + '_' + aname + ';', file = outputfile)
                              break
-                     if titem:
-                         break
-                 if titem:
-                     break
         for item in sorted(gndsizes):
             l = '  wire'
             if item != 0:
