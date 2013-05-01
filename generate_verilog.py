@@ -49,7 +49,6 @@ def get_instance(master):
 
 def parse_file(afilename, wirelist):
     tmaster = {}
-    localaxi = None
     version = ''
     thismpd = afilename[-4:] == '.mpd'
     saved_tmaster = tmaster
@@ -102,9 +101,7 @@ def parse_file(afilename, wirelist):
                     if not thismpd and line_name == 'BEGIN':
                         temp = item[iind+1:].strip()
                         tmaster[line_name].append({'NAME': temp})
-                        tmaster, tempaxi = parse_file(temp + version + '.mpd', wirelist)
-                        if tempaxi:
-                            localaxi = tempaxi
+                        tmaster = parse_file(temp + version + '.mpd', wirelist)
                         component_definitions.append(tmaster)
                         append_item = False
                     if not thismpd and line_name == 'END':
@@ -118,13 +115,13 @@ def parse_file(afilename, wirelist):
                         # in '.mpd' file, there is an extra keyword
                         vname = 'VALUE'
                         tlist['NAME'] = temp
-                    if tmaster.get(line_name):
-                        for tempitem in tmaster[line_name]:
-                            if tempitem['NAME'] == temp:
-                                tlist = tempitem
-                                tlist['IS_INSTANTIATED'] = 'TRUE'
-                                append_item = False
-                                break
+#                    if tmaster.get(line_name):
+                    for tempitem in tmaster[line_name]:
+                        if tempitem['NAME'] == temp:
+                            tlist = tempitem
+                            tlist['IS_INSTANTIATED'] = 'TRUE'
+                            append_item = False
+                            break
                     if line_name == 'PORT' and not thismpd:
                         vname = 'ISCONNECTEDTO'
                         if not wirelist.get(item):
@@ -147,9 +144,6 @@ def parse_file(afilename, wirelist):
         if line_name == 'OPTION':
             if tname == 'IPTYPE' or tname == 'BUS_STD':
                 tmaster[tname] = tval
-            if tmaster.get('IPTYPE') == 'BUS' and tmaster.get('BUS_STD') == 'AXIPT':
-                # we have located the AXI bus definition component
-                localaxi = tmaster
         if line_name == 'PARAMETER':
             if tname == 'INSTANCE':
                 tmaster['INSTANCE'] = tval
@@ -161,7 +155,6 @@ def parse_file(afilename, wirelist):
                 version = '_v' + tval.replace('.', '_')
         if append_item and line_name == 'BUS_INTERFACE':
             tprefix = ''
-            print('DDDDD', tlist)
             if tlist.get('BUS_TYPE') == 'SLAVE':
                 tprefix = 'S_'
             elif tlist.get('BUS_TYPE') == 'MASTER':
@@ -187,7 +180,7 @@ def parse_file(afilename, wirelist):
             tlist['VALUE']=valuemap.VALMAP[tlist['NAME']]
             tlist['CHANGEDBY']='SYSTEM'
     print('leaving', afilename)
-    return tmaster, localaxi
+    return tmaster
 
 def evaluate_symbolic(tmaster):
     # evaluate/bind all symbolic expressions in a line from mpd/mhs file
@@ -211,12 +204,12 @@ def pin_hasval(titem):
     return dname and (dname != 'IO' or titem.get('THREE_STATE') != 'TRUE')
 
 def output_arglist(tmaster, ismhs, istop, afilename):
-    global outputfile
+    global outputfile, topname
     if afilename is not None:
         outputfile = open(afilename, 'w')
     tname = get_instance(tmaster)
     if not ismhs:
-        tname = 'echo_' + tname + '_wrapper'
+        tname = topname + tname + '_wrapper'
     if istop:
         print('//-----------------------------------------------------------------------------', file = outputfile)
         print('// ' + tname + '.v', file = outputfile)
@@ -295,18 +288,22 @@ def output_instance(tmaster, toplevel):
     print('    );', file = outputfile)
 
 def main():
-    global component_definitions, outputfile
+    global component_definitions, outputfile, topname
     component_definitions = []
     generated_names = []
-    axiitem = None
     axibus = []
     gndsizes = []
     gndstr = []
     wirelist = {}
+    NAME_NET_GND = 'net_gnd'
+    NAME_ASSIGNED = 'pgassign'
     if len(sys.argv) != 2:
         print(sys.argv[0] + ' <inputfilename>', file = outputfile)
         sys.exit(1)
-    top_item, axiitem = parse_file(sys.argv[1], wirelist)
+    #topname = 'echo_'
+    topname, item =  os.path.splitext(os.path.basename(sys.argv[1]))
+    topname = topname + '_'
+    top_item = parse_file(sys.argv[1], wirelist)
 
     evaluate_symbolic(top_item)
     mhsfile = sys.argv[1][-4:] == '.mhs'
@@ -343,14 +340,14 @@ def main():
                     if not tconn:
                         tclk['ISCONNECTEDTO'] = tval
                     else:
-                        if not tconn.startswith('pgassign'):
+                        if not tconn.startswith(NAME_ASSIGNED):
                             generated_names.append([tconn])
-                            tclk['ISCONNECTEDTO'] = 'pgassign' + str(len(generated_names))
-                        generated_names[int(tclk['ISCONNECTEDTO'][8:])-1].append(tval)
+                            tclk['ISCONNECTEDTO'] = NAME_ASSIGNED + str(len(generated_names))
+                        generated_names[int(tclk['ISCONNECTEDTO'][len(NAME_ASSIGNED):])-1].append(tval)
                 else:
                     tval = tbus['BUSPREFIX'] + tval
                     # gather a list of AXI bus signal names that were actually used
-                    if tval not in axibus and axiitem != item:
+                    if tval not in axibus and item.get('BUS_STD') != 'AXIPT':
                         axibus.append(tval)
             output_parameter(item, 'foo.' + get_instance(item) + '.out')
             outputfile.close()
@@ -399,9 +396,10 @@ def main():
                     aitem = tbus['BUSLIST'][tval]
                     tval = tbus['BUSPREFIX'] + tval
                 l = None
-                if titem.get('EVALISVALID') == 'FALSE' or item == axiitem:
-                    aitem = None
-                if tbus and (tbus.get('BUS_TYPE') == 'MASTER' or item == axiitem) and pin_hasval(titem):
+                if titem.get('EVALISVALID') == 'FALSE' or item.get('BUS_STD') == 'AXIPT':
+                    #aitem = None
+                    tbus = None
+                if tbus and (tbus.get('BUS_TYPE') == 'MASTER' or item.get('BUS_STD') == 'AXIPT') and pin_hasval(titem):
                     poffset = tmsbv + 1
                     if tbus and not aitem:
                         #print('Error: missing slave item', tbus, titem, aitem)
@@ -435,7 +433,7 @@ def main():
                     # set all unassigned inputs to GND
                     if tmsb:
                         tmsbv = int(tmsb) + 1
-                    l = 'net_gnd' + str(tmsbv)
+                    l = NAME_NET_GND + str(tmsbv)
                     if tmsbv not in gndsizes:
                         gndsizes.append(tmsbv)
                         gndstr.append(l)
@@ -456,16 +454,17 @@ def main():
                              tval = bitem.get('MSB')
                              if not tval:
                                  tval = 0
-                             print('  wire [' + str(tval) + ':0] ' + get_instance(axiitem) + '_' + aname + ';', file = outputfile)
+                             #print('  wire [' + str(tval) + ':0] ' + get_instance(axiitem) + '_' + aname + ';', file = outputfile)
+                             print('  wire [' + str(tval) + ':0] ' + get_instance(item) + '_' + aname + ';', file = outputfile)
                              break
         for item in sorted(gndsizes):
             l = '  wire'
             if item != 0:
                 l = l + ' [' + str(item-1) + ':0]'
-            print(l + ' net_gnd' + str(item) + ';', file = outputfile)
+            print(l + ' ' + NAME_NET_GND + str(item) + ';', file = outputfile)
         l = 1
         for item in generated_names:
-            print('  wire [' + str(len(item) - 1) + ':0] pgassign' + str(l) + ';', file = outputfile)
+            print('  wire [' + str(len(item) - 1) + ':0] ' + NAME_ASSIGNED + str(l) + ';', file = outputfile)
             l = l + 1
         for item in sorted(generated_wires):
             ind = item.find('[')
@@ -480,10 +479,10 @@ def main():
         for item in generated_names:
             j = len(item) - 1
             for val in item:
-                print('  assign pgassign' + str(l) + '[' + str(j) + ':' + str(j) + '] = ' + val + ';', file = outputfile)
+                print('  assign ' + NAME_ASSIGNED + str(l) + '[' + str(j) + ':' + str(j) + '] = ' + val + ';', file = outputfile)
                 j = j - 1
         for sitem in sorted(gndstr):
-            item = int(sitem[7:])
+            item = int(sitem[len(NAME_NET_GND):])
             l = '  assign ' + sitem
             if item == 0:
                 item = 1
@@ -494,7 +493,7 @@ def main():
         for item in component_definitions:
             tname = get_instance(item)
             print('\n  (* BOX_TYPE = "user_black_box" *)', file = outputfile)
-            print('  echo_' + tname + '_wrapper', file = outputfile)
+            print('  ' + topname + tname + '_wrapper', file = outputfile)
             output_instance(item, False)
         print('\nendmodule', file = outputfile)
         for item in component_definitions:
