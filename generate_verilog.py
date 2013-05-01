@@ -22,11 +22,7 @@
 
 from __future__ import print_function
 import copy, glob, os, sys
-import valuemap
-import evalexpr
-
-###### main ######
-outputfile = None
+import evalexpr, valuemap
 
 def lookup_param(master, name):
     for item in master['PARAMETER']:
@@ -36,16 +32,14 @@ def lookup_param(master, name):
 
 def bus_lookup(tmaster, titem):
     global component_definitions
-    if titem.get('BUS') and titem.get('EVALISVALID') != 'FALSE':
-        for tbus in tmaster['BUS_INTERFACE']:
-            if tbus.get('EVALISVALID') != 'FALSE' and tbus['NAME'] == titem['BUS']:
-                for item in component_definitions:
-                    if item.get('IPTYPE') == 'BUS' and item['BUS_STD'] == tbus['BUS_STD']:
-                        for zitem in item['BUS_INTERFACE']:
-                            if zitem['BUS_TYPE'] != tbus['BUS_TYPE']:
-                                return zitem
+    for tbus in tmaster['BUS_INTERFACE']:
+        if tbus.get('EVALISVALID') != 'FALSE' and titem.get('EVALISVALID') != 'FALSE' and tbus['NAME'] == titem.get('BUS'):
+            for item in component_definitions:
+                if item.get('IPTYPE') == 'BUS' and item['BUS_STD'] == tbus['BUS_STD']:
+                    for zitem in item['BUS_INTERFACE']:
+                        if zitem['BUS_TYPE'] != tbus['BUS_TYPE']:
+                            return zitem
     return None
-    
 
 def get_instance(master):
     tname = master.get('INSTANCE')
@@ -116,7 +110,7 @@ def parse_file(afilename, wirelist):
                     if not thismpd and line_name == 'END':
                         # reevaluate all the items in the file we just included
                         # (the PARAMETER items may impact the evaluation results)
-                        eval_itemlist(tmaster)
+                        evaluate_symbolic(tmaster)
                         tmaster = saved_tmaster
                 elif nind > 0:
                     temp = item[nind:iind].strip()
@@ -167,9 +161,10 @@ def parse_file(afilename, wirelist):
                 version = '_v' + tval.replace('.', '_')
         if append_item and line_name == 'BUS_INTERFACE':
             tprefix = ''
-            if tlist['BUS_TYPE'] == 'SLAVE':
+            print('DDDDD', tlist)
+            if tlist.get('BUS_TYPE') == 'SLAVE':
                 tprefix = 'S_'
-            elif tlist['BUS_TYPE'] == 'MASTER':
+            elif tlist.get('BUS_TYPE') == 'MASTER':
                 tprefix = 'M_'
             tlist['BUSPREFIX'] = tprefix
             tlist['BUSLIST'] = {}
@@ -194,7 +189,7 @@ def parse_file(afilename, wirelist):
     print('leaving', afilename)
     return tmaster, localaxi
 
-def eval_itemlist(tmaster):
+def evaluate_symbolic(tmaster):
     # evaluate/bind all symbolic expressions in a line from mpd/mhs file
     for aname in ['PORT', 'BUS_INTERFACE']:
         for titem in tmaster[aname]:
@@ -215,7 +210,10 @@ def pin_hasval(titem):
     dname = titem.get('DIR')
     return dname and (dname != 'IO' or titem.get('THREE_STATE') != 'TRUE')
 
-def output_arglist(tmaster, ismhs, istop):
+def output_arglist(tmaster, ismhs, istop, afilename):
+    global outputfile
+    if afilename is not None:
+        outputfile = open(afilename, 'w')
     tname = get_instance(tmaster)
     if not ismhs:
         tname = 'echo_' + tname + '_wrapper'
@@ -250,8 +248,8 @@ def output_arglist(tmaster, ismhs, istop):
                 t = t + ' [' + l + ':' + titem['LSB'] + ']'
             print('  ' + t + ' ' + titem['NAME'] + ';', file = outputfile)
 
-def output_parameter(tmaster):
-    output_arglist(tmaster, False, True)
+def output_parameter(tmaster, afilename):
+    output_arglist(tmaster, False, True, afilename)
     if tmaster['BEGIN'][0]['NAME'] == 'processing_system7':
         print('  ' + valuemap.P7TEXT, file = outputfile)
     print('\n  ' + tmaster['BEGIN'][0]['NAME'] + '\n    #(', file = outputfile)
@@ -310,11 +308,10 @@ def main():
         sys.exit(1)
     top_item, axiitem = parse_file(sys.argv[1], wirelist)
 
-    eval_itemlist(top_item)
+    evaluate_symbolic(top_item)
     mhsfile = sys.argv[1][-4:] == '.mhs'
     if not mhsfile:
-        outputfile = open('foo.out', 'w')
-        output_parameter(top_item)
+        output_parameter(top_item, 'foo.out')
     else:
         for item in component_definitions:
             for titem in item['BUS_INTERFACE']:
@@ -339,8 +336,10 @@ def main():
                 if tval == 'INTERNAL_SIGIS_CLK':
                     tclk = tbus['BUSLIST']['INTERNAL_SIGIS_CLK']
                     tconn = tclk.get('ISCONNECTEDTO')
+                    if not titem.get('ISCONNECTEDTO'):
+                        print('Error: signal not connected', titem['NAME'])
+                        sys.exit(1)
                     tval = titem['ISCONNECTEDTO'] + '[0:0]'
-                    #print('CCCCCCCC', tconn, tclk, titem['NAME'], tval)
                     if not tconn:
                         tclk['ISCONNECTEDTO'] = tval
                     else:
@@ -353,14 +352,11 @@ def main():
                     # gather a list of AXI bus signal names that were actually used
                     if tval not in axibus and axiitem != item:
                         axibus.append(tval)
-            outputfile = open('foo.' + get_instance(item) + '.out', 'w')
-            output_parameter(item)
+            output_parameter(item, 'foo.' + get_instance(item) + '.out')
             outputfile.close()
 
-        outputfile = open('foo.out', 'w')
-        output_arglist(top_item, True, True)
+        output_arglist(top_item, True, True, 'foo.out')
         for key, witem in wirelist.items():
-            #print('WWWWWWW', key, len(witem))
             tchanged = False
             tlast = None
             if len(witem) == 1:
@@ -368,12 +364,10 @@ def main():
                     titem['ISCONNECTEDTO'] = ''
             for item, titem in witem:
                 tbus = bus_lookup(item, titem)
-                #print('item, tbus', titem, tbus)
                 tvec = titem.get('MSB') is not None or (tbus is not None and tbus['BUSOFFSET'] != 0)
                 if tlast is not None and tlast != tvec:
                     tchanged = True
                 tlast = tvec
-                #print('WWWWWWW', key, len(witem), titem['NAME'], tchanged, tvec)
             if tchanged:
                 for item, titem in witem:
                     if titem.get('MSB'):
@@ -410,7 +404,7 @@ def main():
                 if tbus and (tbus.get('BUS_TYPE') == 'MASTER' or item == axiitem) and pin_hasval(titem):
                     poffset = tmsbv + 1
                     if tbus and not aitem:
-                        #print('Error: missing slave item', tbus, titem, aitem, item == axiitem)
+                        #print('Error: missing slave item', tbus, titem, aitem)
                         continue
                     pcontrib = aitem.get('EVALCONTRIBUTION')
                     if pcontrib:
@@ -441,8 +435,6 @@ def main():
                     # set all unassigned inputs to GND
                     if tmsb:
                         tmsbv = int(tmsb) + 1
-                    else:
-                        tmsbv = 0
                     l = 'net_gnd' + str(tmsbv)
                     if tmsbv not in gndsizes:
                         gndsizes.append(tmsbv)
@@ -506,7 +498,7 @@ def main():
             output_instance(item, False)
         print('\nendmodule', file = outputfile)
         for item in component_definitions:
-            output_arglist(item, False, False)
+            output_arglist(item, False, False, None)
             print('endmodule', file = outputfile)
         print('', file = outputfile)
 
