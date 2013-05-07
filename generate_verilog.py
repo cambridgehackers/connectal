@@ -23,22 +23,39 @@
 from __future__ import print_function
 import copy, glob, os, sys
 import evalexpr, valuemap
+NAME_NET_GND = 'net_gnd'
+NAME_ASSIGNED = 'pgassign'
+SORT_ORDER_UNUSED  = '0:'
+SORT_ORDER_NAMES   = '1:'
+SORT_ORDER_GND     = '3:'
+SORT_ORDER_GENNAME = '5:'
+SORT_ORDER_GENWIRE = '6:'
+gndsizes = []
+gndstr = []
+buslists = []
+busnames = []
+wiredecl = {}
+LINE_TYPES = ['BEGIN', 'END', 'PORT', 'BUS_INTERFACE', 'IO_INTERFACE', 'OPTION', 'PARAMETER']
+
+        #tclk = buslists[tbus['BUSLIST']]['INTERNAL_SIGIS_CLK']
+        #tconn = tclk.get('ISCONNECTEDTO')
+        #tval = titem['ISCONNECTEDTO'] + '[0:0]'
+        #if not tconn:
+        #    pass
+        #else:
+        #    if not tconn.startswith(NAME_ASSIGNED):
+        #        generated_names.append([tconn])
+        #    generated_names[int(tclk['ISCONNECTEDTO'][len(NAME_ASSIGNED):])-1].append(tval)
+        #SORT_ORDER_GENNAME = '5:'
+        #l = 1
+        #for item in generated_names:
+        #    print('  wire [' + str(len(item) - 1) + ':0] ' + NAME_ASSIGNED + str(l) + ';', file = outputfile)
+        #    l = l + 1
 
 def lookup_param(master, name):
     for item in master['PARAMETER']:
         if item['NAME'] == name:
             return item
-    return None
-
-def bus_lookup(tmaster, titem):
-    global component_definitions
-    for tbus in tmaster['BUS_INTERFACE']:
-        if tbus.get('EVALISVALID') != 'FALSE' and titem.get('EVALISVALID') != 'FALSE' and tbus['NAME'] == titem.get('BUS'):
-            for item in component_definitions:
-                if item.get('IPTYPE') == 'BUS' and item['BUS_STD'] == tbus['BUS_STD']:
-                    for zitem in item['BUS_INTERFACE']:
-                        if zitem['BUS_TYPE'] != tbus['BUS_TYPE']:
-                            return zitem
     return None
 
 def get_instance(master):
@@ -47,7 +64,7 @@ def get_instance(master):
         return tname
     return master['BEGIN'][0]['NAME']
 
-def parse_file(afilename, wirelist):
+def parse_file(afilename):
     tmaster = {}
     version = ''
     thismpd = afilename[-4:] == '.mpd'
@@ -55,7 +72,7 @@ def parse_file(afilename, wirelist):
     tmaster['FILENAME'] = afilename
     tmaster['HW_VER'] = ''
     troot, text = os.path.splitext(afilename)
-    for item in ['BEGIN', 'END', 'PORT', 'BUS_INTERFACE', 'IO_INTERFACE', 'OPTION', 'PARAMETER']:
+    for item in LINE_TYPES:
         tmaster[item] = []
     if not thismpd:
         tmaster['BEGIN'].append({'NAME': os.path.basename(troot)})
@@ -88,20 +105,20 @@ def parse_file(afilename, wirelist):
         # now iterate through all items in list of 1 line
         for ind in range(len(itemsplit)):
             item = itemsplit[ind].strip()
-            iind = item.find('=')
+            equals_index = item.find('=')
+            space_index = item.find(' ')
+            vname = 'NAME'
             if ind == 0:
                 # syntax for processing first item on a line is a bit special
-                nind = item.find(' ')
-                vname = 'NAME'
                 line_name = item
-                if nind > 0:
-                    line_name = item[0:nind].upper()
-                if iind < 0:
-                    iind = nind
+                if space_index > 0:
+                    line_name = item[0:space_index].upper()
+                if equals_index < 0:
+                    equals_index = space_index
                     if not thismpd and line_name == 'BEGIN':
-                        temp = item[iind+1:].strip()
+                        temp = item[equals_index+1:].strip()
                         tmaster[line_name].append({'NAME': temp})
-                        tmaster = parse_file(temp + version + '.mpd', wirelist)
+                        tmaster = parse_file(temp + version + '.mpd')
                         component_definitions.append(tmaster)
                         append_item = False
                     if not thismpd and line_name == 'END':
@@ -109,30 +126,26 @@ def parse_file(afilename, wirelist):
                         # (the PARAMETER items may impact the evaluation results)
                         evaluate_symbolic(tmaster)
                         tmaster = saved_tmaster
-                elif nind > 0:
-                    temp = item[nind:iind].strip()
+                elif space_index > 0:
+                    temp = item[space_index:equals_index].strip()
                     if (line_name != 'BUS_INTERFACE' or temp != 'BUS') and (line_name != 'IO_INTERFACE' or temp != 'IO_IF'):
                         # in '.mpd' file, there is an extra keyword
                         vname = 'VALUE'
                         tlist['NAME'] = temp
-#                    if tmaster.get(line_name):
                     for tempitem in tmaster[line_name]:
-                        if tempitem['NAME'] == temp:
+                        if tempitem['NAME'].upper() == temp.upper():
                             tlist = tempitem
                             tlist['IS_INSTANTIATED'] = 'TRUE'
                             append_item = False
                             break
                     if line_name == 'PORT' and not thismpd:
                         vname = 'ISCONNECTEDTO'
-                        if not wirelist.get(item):
-                            wirelist[item] = []
-                        wirelist[item].append([tmaster, tlist])
-            elif iind > 0:
-                vname = item[0:iind].strip().upper()
+            elif equals_index > 0:
+                vname = item[0:equals_index].strip().upper()
             else:
                 print('Error: missing "=" in attribute assignment', citem)
                 continue
-            item = item[iind+1:].strip()
+            item = item[equals_index+1:].strip()
             if item == '""':
                 item = ''
             tlist[vname] = item
@@ -141,15 +154,14 @@ def parse_file(afilename, wirelist):
         # now that we have gathered all the attributes into tlist, perform local processing
         tname = tlist.get('NAME')
         tval = tlist.get('VALUE')
-        if line_name == 'OPTION':
-            if tname == 'IPTYPE' or tname == 'BUS_STD':
-                tmaster[tname] = tval
+        if line_name == 'OPTION' and (tname == 'IPTYPE' or tname == 'BUS_STD'):
+            tmaster[tname] = tval
         if line_name == 'PARAMETER':
             if tname == 'INSTANCE':
-                tmaster['INSTANCE'] = tval
+                tmaster[tname] = tval
                 continue
             if tname == 'HW_VER':
-                tmaster['HW_VER'] = '_v' + tval.replace('.', '_')
+                tmaster[tname] = '_v' + tval.replace('.', '_')
                 continue
             if tname == 'VERSION':
                 version = '_v' + tval.replace('.', '_')
@@ -160,15 +172,17 @@ def parse_file(afilename, wirelist):
             elif tlist.get('BUS_TYPE') == 'MASTER':
                 tprefix = 'M_'
             tlist['BUSPREFIX'] = tprefix
-            tlist['BUSLIST'] = {}
+            buslists.append({})
+            busnames.append([tmaster, tlist])
+            tlist['BUSLIST'] = len(buslists) - 1
         if line_name == 'PORT' and tlist.get('BUS'):
             if tval == '' and tlist.get('SIGIS') == 'CLK':
                 tbus['VALUE'] = 'INTERNAL_SIGIS_CLK'
             for tbus in tmaster['BUS_INTERFACE']:
                 if tbus['NAME'] == tlist['BUS']:
-                    tbus['BUSLIST'][tval] = tlist
+                    buslists[tbus['BUSLIST']][tval] = tlist
                     if tlist.get('SIGIS') == 'CLK':
-                        tbus['BUSLIST']['INTERNAL_SIGIS_CLK'] = tlist
+                        buslists[tbus['BUSLIST']]['INTERNAL_SIGIS_CLK'] = tlist
         if append_item:
             # now append the tlist item onto the correct list for this file and linetype
             tmaster[line_name].append(tlist)
@@ -176,7 +190,6 @@ def parse_file(afilename, wirelist):
     for item in valuemap.VALMAP:
         tlist = lookup_param(tmaster, item)
         if tlist:
-            #print('CHHHH', tmaster['BEGIN'], tlist['NAME'])
             tlist['VALUE']=valuemap.VALMAP[tlist['NAME']]
             tlist['CHANGEDBY']='SYSTEM'
     print('leaving', afilename)
@@ -184,7 +197,7 @@ def parse_file(afilename, wirelist):
 
 def evaluate_symbolic(tmaster):
     # evaluate/bind all symbolic expressions in a line from mpd/mhs file
-    for aname in ['PORT', 'BUS_INTERFACE']:
+    for aname in LINE_TYPES:
         for titem in tmaster[aname]:
             item = titem.get('VEC')
             if item and item[0] == '[':
@@ -199,9 +212,14 @@ def evaluate_symbolic(tmaster):
             if item:
                 titem['EVALCONTRIBUTION'] = evalexpr.eval_expression(item, tmaster, lookup_param)
 
-def pin_hasval(titem):
+def pin_hasval(tmaster, titem):
     dname = titem.get('DIR')
     return dname and (dname != 'IO' or titem.get('THREE_STATE') != 'TRUE')
+
+def commalist(itemlist):
+    for i in range(len(itemlist)-1):
+        print(itemlist[i] + ',', file = outputfile)
+    print(itemlist[len(itemlist) - 1], file = outputfile)
 
 def output_arglist(tmaster, ismhs, istop, afilename):
     global outputfile, topname
@@ -213,42 +231,34 @@ def output_arglist(tmaster, ismhs, istop, afilename):
     if istop:
         print('//-----------------------------------------------------------------------------', file = outputfile)
         print('// ' + tname + '.v', file = outputfile)
-        print('//-----------------------------------------------------------------------------\n', file = outputfile)
+        print('//-----------------------------------------------------------------------------', file = outputfile)
         if not ismhs:
-            print('(* x_core_info = "' + tmaster['BEGIN'][0]['NAME'] + tmaster['HW_VER'] + '" *)', file = outputfile)
+            print('\n(* x_core_info = "' + tmaster['BEGIN'][0]['NAME'] + tmaster['HW_VER'] + '" *)', file = outputfile)
             if tmaster['BEGIN'][0]['NAME'] == 'processing_system7':
                 print(valuemap.P7TEXT, file = outputfile)
 
+    foo = []
+    for titem in tmaster['PORT']:
+        if pin_hasval(tmaster, titem):
+            foo.append('    ' + titem['NAME'])
     print('\nmodule ' + tname + '\n  (', file = outputfile)
-    l = None
-    for titem in tmaster['PORT']:
-        dname = titem.get('DIR')
-        if pin_hasval(titem):
-            if l:
-                print(l + ',', file = outputfile)
-            l = '    ' + titem['NAME']
-    if l:
-        print(l, file = outputfile)
+    commalist(foo)
     print('  );', file = outputfile)
-    DIRNAMES = {'O': 'output', 'I': 'input', 'IO': 'inout'}
     for titem in tmaster['PORT']:
-        dname = titem.get('DIR')
-        if pin_hasval(titem):
-            t = DIRNAMES[dname]
+        if pin_hasval(tmaster, titem):
+            t = ''
             l = titem.get('MSB')
-            #print('l', l, titem)
             if l:
-                t = t + ' [' + l + ':' + titem['LSB'] + ']'
-            print('  ' + t + ' ' + titem['NAME'] + ';', file = outputfile)
+                t = ' [' + l + ':' + titem['LSB'] + ']'
+            print('  ' + {'O': 'output', 'I': 'input', 'IO': 'inout'}[titem['DIR']] + t + ' ' + titem['NAME'] + ';', file = outputfile)
 
 def output_parameter(tmaster, afilename):
     output_arglist(tmaster, False, True, afilename)
     if tmaster['BEGIN'][0]['NAME'] == 'processing_system7':
         print('  ' + valuemap.P7TEXT, file = outputfile)
-    print('\n  ' + tmaster['BEGIN'][0]['NAME'] + '\n    #(', file = outputfile)
-    l = None
+    foo = []
     for titem in tmaster['PARAMETER']:
-        if titem.get('TYPE') != 'NON_HDL' and titem.get('EVALISVALID') != 'FALSE':
+        if titem.get('TYPE') != 'NON_HDL':
             delim = ''
             if titem.get('DT') == 'STRING':
                 delim = '"'
@@ -259,51 +269,137 @@ def output_parameter(tmaster, afilename):
                     vitem = str(vlen*4) + "'h" + vitem[2:]
                 if vitem[0:2] == '0b':
                     vitem = str(vlen) + "'b" + vitem[2:]
-            if l:
-                print(l + ',', file = outputfile)
-            l = '      .' + titem['NAME'] + ' ( ' + delim + vitem + delim + ' )'
-    if l:
-        print(l, file = outputfile)
+            foo.append('      .' + titem['NAME'] + ' ( ' + delim + vitem + delim + ' )')
+    print('\n  ' + tmaster['BEGIN'][0]['NAME'] + '\n    #(', file = outputfile)
+    commalist(foo)
     print('    )', file = outputfile)
     output_instance(tmaster, True)
     print('\nendmodule\n', file = outputfile)
 
+def setwire(name, size, direction, aforce):
+    if name == 'hdmidisplay_0_interrupt':
+        print('SSS', name, size, direction, aforce)
+    if not wiredecl.get(name):
+        wiredecl[name] = {}
+        wiredecl[name] = {'SIZE':size, 'FORCE': False}
+    if wiredecl[name]['SIZE'] != size:
+        aforce = True
+    if wiredecl[name]['SIZE'] is None or (size is not None and int(wiredecl[name]['SIZE']) < int(size)):
+        wiredecl[name]['SIZE'] = size
+    wiredecl[name][direction] = True
+    wiredecl[name]['FORCE'] = aforce or wiredecl[name]['FORCE']
+
+def bind_wires(item):
+    for titem in item['PORT']:
+        tbus = None
+        tval = titem.get('VALUE')
+        twidth = titem.get('MSB')
+        if titem.get('EVALISVALID') != 'FALSE' and item.get('IPTYPE') != 'BUS':
+            for zbus in item['BUS_INTERFACE']:
+                if zbus['NAME'] == titem.get('BUS'):
+                    tbus = zbus['EVALBUSBIND']
+        if tval == 'INTERNAL_SIGIS_CLK':
+            tval = ''
+        l = titem.get('ISCONNECTEDTO')
+        if l:
+            ind = l.find('[')
+            if ind > 0:
+                twidth = l[ind+1:-1]
+                l = l[:ind]
+                nind = twidth.find(':')
+                if nind > 0:
+                    twidth = twidth[:nind]
+        elif tbus:
+            l = tbus['VALUE'] + '_' + tval
+        if l is not None and l != '':
+            if l == 'hdmidisplay_0_interrupt':
+                print('LLLLL', item['BEGIN'], l, twidth, titem, tbus)
+            setwire(l, twidth, titem['DIR'], False)
+
+def bind_value(item):
+    for titem in item['PORT']:
+        #if not pin_hasval(item, titem):
+        #    continue
+        tbus = None
+        aitem = None
+        tval = titem.get('VALUE')
+        tmsb = titem.get('MSB')
+        tlsb = titem.get('lSB')
+        tmsbv = 0
+        poffset = 0
+        if tmsb:
+            tmsbv = int(tmsb)
+        poffset = tmsbv + 1
+        if titem.get('EVALISVALID') != 'FALSE' and item.get('IPTYPE') != 'BUS':
+            for zbus in item['BUS_INTERFACE']:
+                if zbus['NAME'] == titem.get('BUS'):
+                    tbus = zbus['EVALBUSBIND']
+                    aitem = buslists[tbus['BUSLIST']][tval]
+        l = titem.get('ISCONNECTEDTO')
+        if l is not None:
+            witem = wiredecl[l]
+            if l == 'hdmidisplay_0_interrupt':
+                print('LLLKKKK', item['BEGIN'], l, tmsb, titem, tbus, witem)
+            if not tmsb and witem['SIZE'] != None:
+                titem['ISCONNECTEDTO'] = titem['ISCONNECTEDTO'] + '[0]'
+            if (witem.get('I') is None or witem.get('O') is None) and not witem['FORCE'] and not witem.get('TOPLEVELSIGNAL'):
+                titem['ISCONNECTEDTO'] = ''
+            continue
+        l = ''
+        if tbus:
+            pcontrib = aitem.get('EVALCONTRIBUTION')
+            if pcontrib:
+                poffset = int(pcontrib)
+            poffset = poffset * tbus['BUSOFFSET']
+            l = tbus['VALUE'] + '_' + tval
+            tlower = ''
+            if tmsb or tlsb is not None:
+                if tlsb is None:
+                    tlsb = 0
+                tlower = ':' + str(int(tlsb) + poffset)
+            if wiredecl[l]['SIZE'] is not None and int(wiredecl[l]['SIZE']) != tmsbv+poffset:
+                wiredecl[l]['FORCE'] = True
+                l = l + '[' + str(tmsbv+poffset) + tlower + ']'
+            elif (wiredecl[l].get('I') is None or wiredecl[l].get('O') is None) and not wiredecl[l]['FORCE']:
+                l = ''
+        if l == '' and titem.get('DIR') == 'I':
+            # set all unassigned inputs to GND
+            if tmsb is not None:
+                tmsbv = tmsbv + 1
+            l = NAME_NET_GND + str(tmsbv)
+            if tmsbv not in gndsizes:
+                gndsizes.append(tmsbv)
+                twidth = None
+                if tmsbv != 0:
+                    twidth = str(tmsbv - 1)
+                setwire(l, twidth, titem['DIR'], True)
+                gndstr.append(l)
+            if tmsbv == 1:
+                l = l + '[0:0]'
+        titem['ISCONNECTEDTO'] = l
+
 def output_instance(tmaster, toplevel):
-    l = None
-    print('    ' + get_instance(tmaster) + ' (', file = outputfile)
+    foo = []
     for titem in tmaster['PORT']:
-        if pin_hasval(titem):
-            if l:
-                print(l + ',', file = outputfile)
-            l = '      .' + titem['NAME'] + ' ( '
+        if pin_hasval(tmaster, titem):
             if toplevel:
-                l = l + titem['NAME']
-            elif titem.get('ISCONNECTEDTO'):
-                l = l + titem['ISCONNECTEDTO']
-            elif titem.get('IS_INSTANTIATED') == 'TRUE' and titem['VALUE'] != 'INTERNAL_SIGIS_CLK':
-                l = l + titem['VALUE']
-            l = l + ' )'
-    if l:
-        print(l, file = outputfile)
+                l = titem['NAME']
+            else:
+                l = titem['ISCONNECTEDTO']
+            foo.append('      .' + titem['NAME'] + ' ( ' + l + ' )')
+    print('    ' + get_instance(tmaster) + ' (', file = outputfile)
+    commalist(foo)
     print('    );', file = outputfile)
 
 def main():
     global component_definitions, outputfile, topname
     component_definitions = []
-    generated_names = []
-    axibus = []
-    gndsizes = []
-    gndstr = []
-    wirelist = {}
-    NAME_NET_GND = 'net_gnd'
-    NAME_ASSIGNED = 'pgassign'
     if len(sys.argv) != 2:
         print(sys.argv[0] + ' <inputfilename>', file = outputfile)
         sys.exit(1)
-    #topname = 'echo_'
     topname, item =  os.path.splitext(os.path.basename(sys.argv[1]))
     topname = topname + '_'
-    top_item = parse_file(sys.argv[1], wirelist)
+    top_item = parse_file(sys.argv[1])
 
     evaluate_symbolic(top_item)
     mhsfile = sys.argv[1][-4:] == '.mhs'
@@ -318,169 +414,61 @@ def main():
                     if titem.get('VALUE') or not item.get('INSTANCE'):
                         print('Error: bogus BUS definition')
                     titem['VALUE'] = item['INSTANCE']
-                if titem.get('BUS_STD') == 'AXIPT':
-                    tname = titem['BUS_STD'] + titem['BUS_TYPE']
-                    if not item.get(tname):
-                        item[tname] = 0
-                    titem['BUSOFFSET'] = item[tname]
-                    item[tname] = item[tname] + 1
-                    print('BBB', item['BEGIN'][0]['NAME'], titem['NAME'], titem['BUSOFFSET'], titem['BUS_TYPE'], len(titem['BUSLIST']))
-            for titem in item['PORT']:
-                tbus = bus_lookup(item, titem)
-                if titem.get('EVALISVALID') == 'FALSE' or not tbus:
-                    continue
-                tval = titem.get('VALUE')
-                if tval == 'INTERNAL_SIGIS_CLK':
-                    tclk = tbus['BUSLIST']['INTERNAL_SIGIS_CLK']
-                    tconn = tclk.get('ISCONNECTEDTO')
-                    if not titem.get('ISCONNECTEDTO'):
-                        print('Error: signal not connected', titem['NAME'])
-                        sys.exit(1)
-                    tval = titem['ISCONNECTEDTO'] + '[0:0]'
-                    if not tconn:
-                        tclk['ISCONNECTEDTO'] = tval
-                    else:
-                        if not tconn.startswith(NAME_ASSIGNED):
-                            generated_names.append([tconn])
-                            tclk['ISCONNECTEDTO'] = NAME_ASSIGNED + str(len(generated_names))
-                        generated_names[int(tclk['ISCONNECTEDTO'][len(NAME_ASSIGNED):])-1].append(tval)
                 else:
-                    tval = tbus['BUSPREFIX'] + tval
-                    # gather a list of AXI bus signal names that were actually used
-                    if tval not in axibus and item.get('BUS_STD') != 'AXIPT':
-                        axibus.append(tval)
+                    for aitem in component_definitions:
+                        for atitem in aitem['BUS_INTERFACE']:
+                            if aitem.get('INSTANCE') == titem['VALUE'] and atitem['BUS_TYPE'] == titem['BUS_TYPE']:
+                                titem['EVALBUSBIND'] = atitem
+                #print('BBB', item.get('BUS_STD'), item.get('INSTANCE'), titem)
+                tname = titem['BUS_STD'] + titem['BUS_TYPE']
+                if not item.get(tname):
+                    item[tname] = 0
+                titem['BUSOFFSET'] = item[tname]
+                item[tname] = item[tname] + 1
+
+        for item in component_definitions:
+            bind_wires(item)
+        for titem in top_item['PORT']:
+            temp = wiredecl.get(titem['NAME'])
+            if temp:
+                print('tople', titem['NAME'])
+                temp['TOPLEVELPIN'] = True
+            temp = titem.get('ISCONNECTEDTO')
+            if temp:
+                temp = wiredecl.get(temp)
+                if temp:
+                    temp['TOPLEVELSIGNAL'] = True
+                    temp['FORCE'] = True
+
+        for item in component_definitions:
+            bind_value(item)
             output_parameter(item, 'foo.' + get_instance(item) + '.out')
             outputfile.close()
 
         output_arglist(top_item, True, True, 'foo.out')
-        for key, witem in wirelist.items():
-            tchanged = False
-            tlast = None
-            if len(witem) == 1:
-                for item, titem in witem:
-                    titem['ISCONNECTEDTO'] = ''
-            for item, titem in witem:
-                tbus = bus_lookup(item, titem)
-                tvec = titem.get('MSB') is not None or (tbus is not None and tbus['BUSOFFSET'] != 0)
-                if tlast is not None and tlast != tvec:
-                    tchanged = True
-                tlast = tvec
-            if tchanged:
-                for item, titem in witem:
-                    if titem.get('MSB'):
-                        titem['ISCONNECTEDTO'] = titem['ISCONNECTEDTO'] + '[0:0]'
-                    else:
-                        titem['ISCONNECTEDTO'] = titem['ISCONNECTEDTO'] + '[0]'
-
-        generated_wires = []
-        for item in component_definitions:
-            for titem in item['PORT']:
-                if titem.get('DIR') == 'O' and titem.get('ISCONNECTEDTO'):
-                    print('OOOOO', titem)
-                    generated_wires.append(titem['ISCONNECTEDTO'])
-
-        for item in component_definitions:
-            for titem in item['PORT']:
-                if titem.get('IS_INSTANTIATED') == 'TRUE':
-                    continue
-                aitem = None
-                tname = titem['NAME']
-                tval = titem.get('VALUE')
-                tiscon = titem.get('ISCONNECTEDTO')
-                tmsb = titem.get('MSB')
-                tmsbv = 0
-                if tmsb:
-                    tmsbv = int(tmsb)
-                tbus = bus_lookup(item, titem)
-                if tbus:
-                    aitem = tbus['BUSLIST'][tval]
-                    tval = tbus['BUSPREFIX'] + tval
-                l = None
-                if titem.get('EVALISVALID') == 'FALSE' or item.get('BUS_STD') == 'AXIPT':
-                    #aitem = None
-                    tbus = None
-                if tbus and (tbus.get('BUS_TYPE') == 'MASTER' or item.get('BUS_STD') == 'AXIPT') and pin_hasval(titem):
-                    poffset = tmsbv + 1
-                    if tbus and not aitem:
-                        #print('Error: missing slave item', tbus, titem, aitem)
-                        continue
-                    pcontrib = aitem.get('EVALCONTRIBUTION')
-                    if pcontrib:
-                        poffset = int(pcontrib)
-                    poffset = poffset * tbus['BUSOFFSET']
-                    pend = str(poffset)
-                    if tmsb:
-                        pend = str(tmsbv+poffset) + ':' + str(int(titem['LSB'])+poffset)
-                    l = tbus['VALUE'] + '_' + tval + '[' + pend + ']'
-                elif tbus and tbus.get('BUS_TYPE') == 'SLAVE':
-                    msbtemp = aitem.get('MSB')
-                    if aitem.get('EVALCONTRIBUTION'):
-                        msbtemp = int(aitem['EVALCONTRIBUTION']) - 1
-                    if msbtemp:
-                        if not tmsb:
-                            msbtemp = 0
-                        elif int(tmsb) != int(msbtemp):
-                            msbtemp = tmsb
-                        else:
-                            msbtemp = None
-                    if msbtemp is not None:
-                        tval = tval + '[' + str(msbtemp)
-                        if int(aitem['LSB']) != int(msbtemp):
-                            tval = tval + ':' + str(aitem['LSB'])
-                        tval = tval + ']'
-                    l = tbus['VALUE'] + '_' + tval
-                elif titem.get('DIR') == 'I':
-                    # set all unassigned inputs to GND
-                    if tmsb:
-                        tmsbv = int(tmsb) + 1
-                    l = NAME_NET_GND + str(tmsbv)
-                    if tmsbv not in gndsizes:
-                        gndsizes.append(tmsbv)
-                        gndstr.append(l)
-                    if tmsbv == 1:
-                        l = l + '[0:0]'
-                if l:
-                    titem['VALUE'] = l
-                    titem['IS_INSTANTIATED'] = 'TRUE'
 
         print('\n  // Internal signals\n', file = outputfile)
-        for aname in sorted(axibus):
-             for item in component_definitions:
-                 if item.get('IPTYPE') != 'BUS' or item['BUS_STD'] != 'AXIPT':
-                     continue
-                 for litem in item['BUS_INTERFACE']:
-                     for bkeyval,bitem in litem['BUSLIST'].items():
-                         if litem['BUSPREFIX'] + bkeyval == aname:
-                             tval = bitem.get('MSB')
-                             if not tval:
-                                 tval = 0
-                             #print('  wire [' + str(tval) + ':0] ' + get_instance(axiitem) + '_' + aname + ';', file = outputfile)
-                             print('  wire [' + str(tval) + ':0] ' + get_instance(item) + '_' + aname + ';', file = outputfile)
-                             break
-        for item in sorted(gndsizes):
-            l = '  wire'
-            if item != 0:
-                l = l + ' [' + str(item-1) + ':0]'
-            print(l + ' ' + NAME_NET_GND + str(item) + ';', file = outputfile)
-        l = 1
-        for item in generated_names:
-            print('  wire [' + str(len(item) - 1) + ':0] ' + NAME_ASSIGNED + str(l) + ';', file = outputfile)
-            l = l + 1
-        for item in sorted(generated_wires):
-            ind = item.find('[')
-            if ind > 0:
-                item = '[0:0] ' + item[:ind]
-            print('  wire ' + item + ';', file = outputfile)
+        for wname, witem in sorted(wiredecl.iteritems()):
+            if wname == 'hdmidisplay_0_interrupt':
+                print('WWWW', witem)
+            if ((witem.get('I') and witem.get('O')) or witem['FORCE']) and not witem.get('TOPLEVELPIN'):
+                l = witem['SIZE']
+                if l != None:
+                    l = '[' + str(l) + ':0] '
+                else:
+                    l = ''
+                print('  wire ' + l + wname + ';', file = outputfile)
+
         print('\n  // Internal assignments\n', file = outputfile)
         for titem in top_item['PORT']:
             if titem.get('DIR') == 'O':
                 print('  assign ' + titem['NAME'] + ' = ' + titem['ISCONNECTEDTO'] + ';', file = outputfile)
-        l = 1
-        for item in generated_names:
-            j = len(item) - 1
-            for val in item:
-                print('  assign ' + NAME_ASSIGNED + str(l) + '[' + str(j) + ':' + str(j) + '] = ' + val + ';', file = outputfile)
-                j = j - 1
+        #l = 1
+        #for item in generated_names:
+        #    j = len(item) - 1
+        #    for val in item:
+        #        print('  assign ' + NAME_ASSIGNED + str(l) + '[' + str(j) + ':' + str(j) + '] = ' + val + ';', file = outputfile)
+        #        j = j - 1
         for sitem in sorted(gndstr):
             item = int(sitem[len(NAME_NET_GND):])
             l = '  assign ' + sitem
@@ -491,9 +479,8 @@ def main():
             print(l + ' = ' + str(item) + "'b" + '0' * item + ';', file = outputfile)
         print('\n  (* CORE_GENERATION_INFO = "processing_system7_0,processing_system7,{C_PRESET_FPGA_PARTNUMBER = xc7z020clg484-1,C_PRESET_FPGA_SPEED = -1,C_PRESET_GLOBAL_CONFIG = Default,C_PRESET_GLOBAL_DEFAULT = powerup}" *)', file = outputfile)
         for item in component_definitions:
-            tname = get_instance(item)
             print('\n  (* BOX_TYPE = "user_black_box" *)', file = outputfile)
-            print('  ' + topname + tname + '_wrapper', file = outputfile)
+            print('  ' + topname + get_instance(item) + '_wrapper', file = outputfile)
             output_instance(item, False)
         print('\nendmodule', file = outputfile)
         for item in component_definitions:
