@@ -154,5 +154,5 @@ if __name__=='__main__':
 
     print '############################################################'
     print '## To build:'
-    print '    cd %s; make bits' % (project_dir)
+    print '    cd %s; make verilog; make bits' % (project_dir)
     print '## You can use XPS to generate bit file or exit and let make complete the process.'
