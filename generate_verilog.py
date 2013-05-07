@@ -277,11 +277,8 @@ def output_parameter(tmaster, afilename):
     print('\nendmodule\n', file = outputfile)
 
 def setwire(name, size, direction, aforce):
-    if name == 'hdmidisplay_0_interrupt':
-        print('SSS', name, size, direction, aforce)
     if not wiredecl.get(name):
-        wiredecl[name] = {}
-        wiredecl[name] = {'SIZE':size, 'FORCE': False}
+        wiredecl[name] = {'SIZE':size, 'FORCE': aforce}
     if wiredecl[name]['SIZE'] != size:
         aforce = True
     if wiredecl[name]['SIZE'] is None or (size is not None and int(wiredecl[name]['SIZE']) < int(size)):
@@ -312,8 +309,6 @@ def bind_wires(item):
         elif tbus:
             l = tbus['VALUE'] + '_' + tval
         if l is not None and l != '':
-            if l == 'hdmidisplay_0_interrupt':
-                print('LLLLL', item['BEGIN'], l, twidth, titem, tbus)
             setwire(l, twidth, titem['DIR'], False)
 
 def bind_value(item):
@@ -338,11 +333,9 @@ def bind_value(item):
         l = titem.get('ISCONNECTEDTO')
         if l is not None:
             witem = wiredecl[l]
-            if l == 'hdmidisplay_0_interrupt':
-                print('LLLKKKK', item['BEGIN'], l, tmsb, titem, tbus, witem)
             if not tmsb and witem['SIZE'] != None:
                 titem['ISCONNECTEDTO'] = titem['ISCONNECTEDTO'] + '[0]'
-            if (witem.get('I') is None or witem.get('O') is None) and not witem['FORCE'] and not witem.get('TOPLEVELSIGNAL'):
+            if (witem.get('I') is None or witem.get('O') is None) and not witem['FORCE']:
                 titem['ISCONNECTEDTO'] = ''
             continue
         l = ''
@@ -406,6 +399,7 @@ def main():
     if not mhsfile:
         output_parameter(top_item, 'foo.out')
     else:
+        # bind all bus references to their instantiations
         for item in component_definitions:
             for titem in item['BUS_INTERFACE']:
                 if titem.get('EVALISVALID') == 'FALSE':
@@ -426,20 +420,28 @@ def main():
                 titem['BUSOFFSET'] = item[tname]
                 item[tname] = item[tname] + 1
 
+        # build declarations for all wires needed
+        # Note that wire widths can change depending on usage context, so this
+        # must be done in a pre-pass, before outputting references
         for item in component_definitions:
             bind_wires(item)
+
+        # top level wire names are a bit different:
+        #    1) when a top level pin matches a signal name, a wire definition is not needed
+        #    2) wires needed for top level pins are never optimized out from the design
+        #       (for lower level modules, wires that don't have both an input 'DIR=I' and
+        #       and an output 'DIR=O' pin attached are deleted)
         for titem in top_item['PORT']:
             temp = wiredecl.get(titem['NAME'])
             if temp:
-                print('tople', titem['NAME'])
                 temp['TOPLEVELPIN'] = True
             temp = titem.get('ISCONNECTEDTO')
             if temp:
                 temp = wiredecl.get(temp)
                 if temp:
-                    temp['TOPLEVELSIGNAL'] = True
                     temp['FORCE'] = True
 
+        # Now that we have wires, calculate final references from pins and output them
         for item in component_definitions:
             bind_value(item)
             output_parameter(item, 'foo.' + get_instance(item) + '.out')
@@ -447,10 +449,9 @@ def main():
 
         output_arglist(top_item, True, True, 'foo.out')
 
+        # Output wire definitions and assignments
         print('\n  // Internal signals\n', file = outputfile)
         for wname, witem in sorted(wiredecl.iteritems()):
-            if wname == 'hdmidisplay_0_interrupt':
-                print('WWWW', witem)
             if ((witem.get('I') and witem.get('O')) or witem['FORCE']) and not witem.get('TOPLEVELPIN'):
                 l = witem['SIZE']
                 if l != None:
