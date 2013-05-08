@@ -15,6 +15,11 @@ Preparation
      (actual file might be:
          http://dl.google.com/android/ndk/android-ndk-r8e-linux-x86_64.tar.bz2
      )
+3. Get the Zynq Base TRD files, which will contain zynq_fsbl.elf and u-boot.elf
+     See: http://www.wiki.xilinx.com/Zynq+Base+TRD+14.3
+     (this will require a xilinx login)
+   Or:
+      git clone git://github.com/cambridgehackers/zynq-axi-blue.git
 
 Setting up the SD Card
 ----------------------
