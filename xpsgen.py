@@ -78,7 +78,7 @@ mhs_template='''
  PORT processing_system7_0_DDR_VRP = processing_system7_0_DDR_VRP, DIR = IO
 %(system_hdmi_ports)s
 
-BEGIN processing_system7
+BEGIN qqprocessing_system7
  PARAMETER INSTANCE = processing_system7_0
  PARAMETER HW_VER = 4.02.a
  PARAMETER C_DDR_RAM_HIGHADDR = 0x3FFFFFFF
@@ -137,7 +137,7 @@ BEGIN processing_system7
  PARAMETER C_FCLK_CLK2_FREQ = 50000000
  PARAMETER C_FCLK_CLK3_FREQ = 50000000
  PARAMETER C_USE_CR_FABRIC = 1
- PARAMETER C_USE_M_AXI_GP1 = 0
+ PARAMETER C_USE_M_AXI_GP1 = 1
  PARAMETER C_USE_S_AXI_ACP = 0
  PARAMETER C_EMIO_GPIO_WIDTH = 64
  PARAMETER C_EN_EMIO_GPIO = 0
@@ -166,7 +166,10 @@ BEGIN processing_system7
  PORT FCLK_CLK1 = processing_system7_0_FCLK_CLK1_0
  PORT M_AXI_GP0_ACLK = processing_system7_0_FCLK_CLK0_0
  PORT M_AXI_GP0_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
+ PORT M_AXI_GP1_ACLK = processing_system7_0_FCLK_CLK1_0
+ PORT M_AXI_GP1_ARESETN = processing_system7_0_M_AXI_GP1_ARESETN
  BUS_INTERFACE M_AXI_GP0 = axi_slave_interconnect_0
+ BUS_INTERFACE M_AXI_GP1 = axi_slave_interconnect_1
 
 %(ps7_axi_master_config)s
 
@@ -201,7 +204,7 @@ system_hdmi_port_mhs_template='''
 '''
 
 ps7_axi_master_config_mhs_template='''
- PARAMETER C_INTERCONNECT_S_AXI_HP%(busnumber)s_MASTERS = %(dut)s_0.%(BUSNAME)s
+ ##PARAMETER C_INTERCONNECT_S_AXI_HP%(busnumber)s_MASTERS = %(dut)s_0.%(BUSNAME)s
  PARAMETER C_USE_S_AXI_HP%(busnumber)s = 1
  BUS_INTERFACE S_AXI_HP%(busnumber)s = axi_master_interconnect_%(busnumber)s
  PORT S_AXI_HP%(busnumber)s_ACLK = processing_system7_0_FCLK_CLK0_0
@@ -236,7 +239,7 @@ dut_hdmi_config_mhs_template='''
 '''
 
 axi_master_interconnect_mhs_template='''
-BEGIN axi_interconnect
+BEGIN axi_passthrough
  PARAMETER INSTANCE = axi_master_interconnect_%(busnumber)s
  PARAMETER HW_VER = 1.06.a
  PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 1
@@ -246,13 +249,14 @@ END
 '''
 
 axi_slave_interconnect_mhs_template='''
-BEGIN axi_interconnect
+BEGIN axi_passthrough
  PARAMETER INSTANCE = axi_slave_interconnect_%(busnumber)s
  PARAMETER HW_VER = 1.06.a
  ## use shared mode, crossbar mode does not work for our design
  PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 0
  PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0_0
- PORT INTERCONNECT_ARESETN = processing_system7_0_M_AXI_GP%(busnumber)s_ARESETN
+ #PORT INTERCONNECT_ARESETN = processing_system7_0_M_AXI_GP%(busnumber)s_ARESETN
+ PORT INTERCONNECT_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
 END
 '''
 
@@ -289,10 +293,10 @@ END
 '''
 
 axi_master_bus_mpd_template='''
-BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXI, BUS_TYPE = MASTER'''
+BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXIPT, BUS_TYPE = MASTER'''
 
 axi_slave_bus_mpd_template='''
-BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXI, BUS_TYPE = SLAVE'''
+BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXIPT, BUS_TYPE = SLAVE'''
 
 hdmi_bus_mpd_template='''
 IO_INTERFACE IO_IF = %(BUSNAME)s, IO_TYPE = HDMI'''
@@ -1211,13 +1215,13 @@ class InterfaceMixin:
             'dut': dutName,
             'axi_master_interconnects': ''.join([ axi_master_interconnect_mhs_template 
                                                   % {'busnumber': i} for i in range(len(axiMasters))]),
-            'axi_slave_interconnects': (axi_slave_interconnect_mhs_template 
-                                        % {'busnumber': 0}),
+            'axi_slave_interconnects': ''.join([ axi_slave_interconnect_mhs_template 
+                                        % {'busnumber': i} for i in range(len(axiSlaves)) ]),
             'dut_axi_master_config': ''.join([ dut_axi_master_config_mhs_template
                                                % {'busnumber': i, 'busname': axiMasters[i][0]}
                                                for i in range(len(axiMasters))]),
             'dut_axi_slave_config': ''.join([ dut_axi_slave_config_mhs_template
-                                              % {'busnumber': 0, 
+                                              % {'busnumber': i, 
                                                  'busname': axiSlaves[i][0],
                                                  'BUSNAME': axiSlaves[i][0].upper(),
                                                  'busbase': hex(0x6e400000 + 0x10000*i),
