@@ -273,7 +273,7 @@ begin %(dut)s
 ## Peripheral Options
 OPTION IPTYPE = PERIPHERAL
 OPTION IMP_NETLIST = TRUE
-OPTION HDL = VHDL
+OPTION HDL = VERILOG
 OPTION IP_GROUP = MICROBLAZE:USER
 OPTION DESC = %(dut)s
 OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
@@ -308,8 +308,6 @@ PARAMETER C_%(BUSNAME)s_PROT_WIDTH = %(protwidth)s, DT = INTEGER, BUS = %(BUSNAM
 PARAMETER C_%(BUSNAME)s_BURSTLEN_WIDTH = %(burstlenwidth)s, DT = INTEGER, BUS = %(BUSNAME)s, ASSIGNMENT = CONSTANT
 PARAMETER C_%(BUSNAME)s_CACHE_WIDTH = %(cachewidth)s, DT = INTEGER, BUS = %(BUSNAME)s, ASSIGNMENT = CONSTANT
 PARAMETER C_%(BUSNAME)s_ID_WIDTH = 1, DT = integer, BUS = %(BUSNAME)s
-PARAMETER C_%(BUSNAME)s_SUPPORTS_WRITE = 1, DT = INTEGER, BUS = %(BUSNAME)s
-PARAMETER C_%(BUSNAME)s_SUPPORTS_READ = 1, DT = INTEGER, BUS = %(BUSNAME)s
 PARAMETER C_%(BUSNAME)s_PROTOCOL = %(axiprotocol)s, TYPE = NON_HDL, ASSIGNMENT = CONSTANT, DT = STRING, BUS = %(BUSNAME)s
 '''
 
@@ -317,12 +315,8 @@ axi_slave_parameter_mpd_template='''
 PARAMETER C_%(BUSNAME)s_DATA_WIDTH = 32, DT = INTEGER, BUS = %(BUSNAME)s, ASSIGNMENT = CONSTANT
 PARAMETER C_%(BUSNAME)s_ADDR_WIDTH = 32, DT = INTEGER, BUS = %(BUSNAME)s, ASSIGNMENT = CONSTANT
 PARAMETER C_%(BUSNAME)s_ID_WIDTH = 4, DT = INTEGER, BUS = %(BUSNAME)s
-PARAMETER C_%(BUSNAME)s_NUM_ADDR_RANGES = 1, DT = INTEGER, BUS = %(BUSNAME)s
 PARAMETER C_%(BUSNAME)s_MEM0_BASEADDR = 0xffffffff, DT = std_logic_vector, PAIR = C_%(BUSNAME)s_MEM0_HIGHADDR, ADDRESS = BASE, CACHEABLE = FALSE, MIN_SIZE=0x1000, ADDR_TYPE=REGISTER, BUS = %(BUSNAME)s
 PARAMETER C_%(BUSNAME)s_MEM0_HIGHADDR = 0x00000000, DT = std_logic_vector, PAIR = C_%(BUSNAME)s_MEM0_BASEADDR, ADDRESS = HIGH, CACHEABLE = FALSE, MIN_SIZE=0x1000, ADDR_TYPE=REGISTER, BUS = %(BUSNAME)s
-PARAMETER C_%(BUSNAME)s_SUPPORTS_WRITE = 1, DT = INTEGER, BUS = %(BUSNAME)s
-PARAMETER C_%(BUSNAME)s_SUPPORTS_READ = 1, DT = INTEGER, BUS = %(BUSNAME)s
-PARAMETER C_%(BUSNAME)s_SUPPORTS_REORDERING = 0, DT = INTEGER, BUS = %(BUSNAME)s
 PARAMETER C_%(BUSNAME)s_PROTOCOL = AXI4, TYPE = NON_HDL, ASSIGNMENT = CONSTANT, DT = STRING, BUS = %(BUSNAME)s
 '''
 
@@ -503,655 +497,714 @@ the_ROM_image:
 
 pao_template='''
 lib proc_common_v3_00_a  all 
-lib %(dut)s_v1_00_a %(Dut)s vhdl
+lib %(dut)s_v1_00_a %(Dut)s verilog
 lib %(dut)s_v1_00_a mk%(Dut)sWrapper verilog
 '''
 
-vhd_template='''
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.std_logic_unsigned.all;
+verilog_template='''
+`uselib lib=unisims_ver
+`uselib lib=proc_common_v3_00_a
 
-Library UNISIM;
-use UNISIM.vcomponents.all;
+module %(dut)s
+(
+    clk,
+    rst_n,
 
-entity %(dut)s is
-  generic
-  (
-%(axi_master_parameters)s
-%(axi_slave_parameters)s
-    C_FAMILY                       : string               := "virtex6"
-  );
-  port
-  (
-    CLK : in std_logic;
-    RST_N : in std_logic;
-
-    xadc_gpio_0 : out std_logic;
-    xadc_gpio_1 : out std_logic;
-    xadc_gpio_2 : out std_logic;
-    xadc_gpio_3 : out std_logic;
+    xadc_gpio_0,
+    xadc_gpio_1,
+    xadc_gpio_2,
+    xadc_gpio_3,
 
 %(axi_master_ports)s
 %(axi_slave_ports)s
 %(hdmi_ports)s
 
-    interrupt : out std_logic
+    interrupt
   );
 
-  attribute MAX_FANOUT : string;
-  attribute SIGIS : string;
-  attribute MAX_FANOUT of CLK       : signal is "10000";
-  attribute MAX_FANOUT of RST_N       : signal is "10000";
-  attribute SIGIS of CLK       : signal is "Clk";
-  attribute SIGIS of RST_N       : signal is "Rst";
+%(axi_master_parameters)s
+%(axi_slave_parameters)s
+parameter C_FAMILY = "virtex6";
+
+input clk;
+input rst_n;
+output xadc_gpio_0;
+output xadc_gpio_1;
+output xadc_gpio_2;
+output xadc_gpio_3;
+
+%(axi_master_port_decls)s
+%(axi_slave_port_decls)s
+%(hdmi_port_decls)s
+
+output interrupt;
+
+
 
 %(axi_master_clocks)s
 %(axi_slave_clocks)s
 %(hdmi_clocks)s
-end entity %(dut)s;
-
-------------------------------------------------------------------------------
--- Architecture section
-------------------------------------------------------------------------------
-
-architecture IMP of %(dut)s is
 
 %(axi_master_signals)s
 %(axi_slave_signals)s
 %(hdmi_signals)s
 
-begin
-
-  %(Dut)sIMPLEMENTATION : entity mk%(Dut)sWrapper
-    port map (
+mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
       %(dut_hdmi_clock_arg)s
-      CLK => CLK,
-      RST_N  => RST_N,
+      .CLK(CLK),
+      .RST_N(RST_N),
       %(axi_master_port_map)s
       %(axi_slave_port_map)s
       %(hdmi_port_map)s
 
-      interrupt => interrupt
+      .interrupt(interrupt)
       );
 
 %(axi_master_scheduler)s
 %(axi_slave_scheduler)s
 %(hdmi_iobufs)s
-end IMP;
+endmodule
 '''
 
-axi_master_parameter_vhd_template='''
-    C_%(BUSNAME)s_DATA_WIDTH             : integer              := %(datawidth)s;
-    C_%(BUSNAME)s_ADDR_WIDTH             : integer              := 32;
-    C_%(BUSNAME)s_BURSTLEN_WIDTH         : integer              := %(burstlenwidth)s;
-    C_%(BUSNAME)s_PROT_WIDTH             : integer              := %(protwidth)s;
-    C_%(BUSNAME)s_CACHE_WIDTH            : integer              := %(cachewidth)s;
-    C_%(BUSNAME)s_ID_WIDTH               : integer              := 1;
+axi_master_parameter_verilog_template='''
+parameter C_%(BUSNAME)s_DATA_WIDTH = %(datawidth)s;
+parameter C_%(BUSNAME)s_ADDR_WIDTH = 32;
+parameter C_%(BUSNAME)s_BURSTLEN_WIDTH = %(burstlenwidth)s;
+parameter C_%(BUSNAME)s_PROT_WIDTH = %(protwidth)s;
+parameter C_%(BUSNAME)s_CACHE_WIDTH = %(cachewidth)s;
+parameter C_%(BUSNAME)s_ID_WIDTH = 1;
 '''
 
-axi_slave_parameter_vhd_template='''
-    C_%(BUSNAME)s_DATA_WIDTH             : integer              := 32;
-    C_%(BUSNAME)s_ADDR_WIDTH             : integer              := 32;
-    C_%(BUSNAME)s_ID_WIDTH               : integer              := 4;
-    C_%(BUSNAME)s_MEM0_BASEADDR          : std_logic_vector     := X"FFFFFFFF";
-    C_%(BUSNAME)s_MEM0_HIGHADDR          : std_logic_vector     := X"00000000";
+axi_slave_parameter_verilog_template='''
+parameter C_%(BUSNAME)s_DATA_WIDTH = 32;
+parameter C_%(BUSNAME)s_ADDR_WIDTH = 32;
+parameter C_%(BUSNAME)s_ID_WIDTH = 4;
+parameter C_%(BUSNAME)s_MEM0_BASEADDR = 32'hFFFFFFFF;
+parameter C_%(BUSNAME)s_MEM0_HIGHADDR = 32'h00000000;
 '''
 
-axi_master_port_vhd_template='''
-    %(busname)s_aclk                     : in  std_logic;
-    %(busname)s_aresetn                  : in  std_logic;
-    %(busname)s_arready                  : in  std_logic;
-    %(busname)s_arvalid                  : out std_logic;
-    %(busname)s_arid                     : out std_logic_vector(C_%(busname)s_ID_WIDTH-1 downto 0);
-    %(busname)s_araddr                   : out std_logic_vector(C_%(busname)s_ADDR_WIDTH-1 downto 0);
-    %(busname)s_arlen                    : out std_logic_vector(C_%(busname)s_BURSTLEN_WIDTH-1 downto 0);
-    %(busname)s_arsize                   : out std_logic_vector(2 downto 0);
-    %(busname)s_arburst                  : out std_logic_vector(1 downto 0);
-    %(busname)s_arprot                   : out std_logic_vector((C_%(BUSNAME)s_PROT_WIDTH-1) downto 0);
-    %(busname)s_arcache                  : out std_logic_vector((C_%(BUSNAME)s_CACHE_WIDTH-1) downto 0);
-    %(busname)s_rready                   : out std_logic;
-    %(busname)s_rvalid                   : in  std_logic;
-    %(busname)s_rid                      : in  std_logic_vector(C_%(busname)s_ID_WIDTH-1 downto 0);
-    %(busname)s_rdata                    : in  std_logic_vector(C_%(busname)s_DATA_WIDTH-1 downto 0);
-    %(busname)s_rresp                    : in  std_logic_vector(1 downto 0);
-    %(busname)s_rlast                    : in  std_logic;
-    %(busname)s_awready                  : in  std_logic;
-    %(busname)s_awvalid                  : out std_logic;
-    %(busname)s_awid                     : out std_logic_vector(C_%(busname)s_ID_WIDTH-1 downto 0);
-    %(busname)s_awaddr                   : out std_logic_vector(C_%(busname)s_ADDR_WIDTH-1 downto 0);
-    %(busname)s_awlen                    : out std_logic_vector(C_%(busname)s_BURSTLEN_WIDTH-1 downto 0);
-    %(busname)s_awsize                   : out std_logic_vector(2 downto 0);
-    %(busname)s_awburst                  : out std_logic_vector(1 downto 0);
-    %(busname)s_awprot                   : out std_logic_vector((C_%(BUSNAME)s_PROT_WIDTH-1) downto 0);
-    %(busname)s_awcache                  : out std_logic_vector((C_%(BUSNAME)s_CACHE_WIDTH-1) downto 0);
-    %(busname)s_wready                   : in  std_logic;
-    %(busname)s_wvalid                   : out std_logic;
-    %(busname)s_wdata                    : out std_logic_vector(C_%(busname)s_DATA_WIDTH-1 downto 0);
-    %(busname)s_wstrb                    : out std_logic_vector((C_%(busname)s_DATA_WIDTH)/8 - 1 downto 0);
-    %(busname)s_wlast                    : out std_logic;
-    %(busname)s_bready                   : out std_logic;
-    %(busname)s_bid                      : in std_logic_vector(C_%(busname)s_ID_WIDTH-1 downto 0);
-    %(busname)s_bvalid                   : in  std_logic;
-    %(busname)s_bresp                    : in  std_logic_vector(1 downto 0);
+axi_master_port_verilog_template='''
+//============ %(BUSNAME)s ============
+    %(busname)s_aclk,
+    %(busname)s_aresetn,
+    %(busname)s_arready,
+    %(busname)s_arvalid,
+    %(busname)s_arid,
+    %(busname)s_araddr,
+    %(busname)s_arlen,
+    %(busname)s_arsize,
+    %(busname)s_arburst,
+    %(busname)s_arprot,
+    %(busname)s_arcache,
+    %(busname)s_rready,
+    %(busname)s_rvalid,
+    %(busname)s_rid,
+    %(busname)s_rdata,
+    %(busname)s_rresp,
+    %(busname)s_rlast,
+    %(busname)s_awready,
+    %(busname)s_awvalid,
+    %(busname)s_awid,
+    %(busname)s_awaddr,
+    %(busname)s_awlen,
+    %(busname)s_awsize,
+    %(busname)s_awburst,
+    %(busname)s_awprot,
+    %(busname)s_awcache,
+    %(busname)s_wready,
+    %(busname)s_wvalid,
+    %(busname)s_wdata,
+    %(busname)s_wstrb,
+    %(busname)s_wlast,
+    %(busname)s_bready,
+    %(busname)s_bid,
+    %(busname)s_bvalid,
+    %(busname)s_bresp,
+//============ %(BUSNAME)s ============
 '''
 
-axi_slave_port_vhd_template='''
-    %(BUSNAME)s_ACLK                     : in  std_logic;
-    %(BUSNAME)s_ARESETN                  : in  std_logic;
-    %(BUSNAME)s_AWADDR                   : in  std_logic_vector(C_%(BUSNAME)s_ADDR_WIDTH-1 downto 0);
-    %(BUSNAME)s_AWVALID                  : in  std_logic;
-    %(BUSNAME)s_WDATA                    : in  std_logic_vector(C_%(BUSNAME)s_DATA_WIDTH-1 downto 0);
-    %(BUSNAME)s_WSTRB                    : in  std_logic_vector((C_%(BUSNAME)s_DATA_WIDTH/8)-1 downto 0);
-    %(BUSNAME)s_WVALID                   : in  std_logic;
-    %(BUSNAME)s_BREADY                   : in  std_logic;
-    %(BUSNAME)s_ARADDR                   : in  std_logic_vector(C_%(BUSNAME)s_ADDR_WIDTH-1 downto 0);
-    %(BUSNAME)s_ARVALID                  : in  std_logic;
-    %(BUSNAME)s_RREADY                   : in  std_logic;
-    %(BUSNAME)s_ARREADY                  : out std_logic;
-    %(BUSNAME)s_RDATA                    : out std_logic_vector(C_%(BUSNAME)s_DATA_WIDTH-1 downto 0);
-    %(BUSNAME)s_RRESP                    : out std_logic_vector(1 downto 0);
-    %(BUSNAME)s_RVALID                   : out std_logic;
-    %(BUSNAME)s_WREADY                   : out std_logic;
-    %(BUSNAME)s_BRESP                    : out std_logic_vector(1 downto 0);
-    %(BUSNAME)s_BVALID                   : out std_logic;
-    %(BUSNAME)s_AWREADY                  : out std_logic;
-    %(BUSNAME)s_AWID                     : in  std_logic_vector(C_%(BUSNAME)s_ID_WIDTH-1 downto 0);
-    %(BUSNAME)s_AWLEN                    : in  std_logic_vector(7 downto 0);
-    %(BUSNAME)s_AWSIZE                   : in  std_logic_vector(2 downto 0);
-    %(BUSNAME)s_AWBURST                  : in  std_logic_vector(1 downto 0);
-    %(BUSNAME)s_AWLOCK                   : in  std_logic;
-    %(BUSNAME)s_AWCACHE                  : in  std_logic_vector(3 downto 0);
-    %(BUSNAME)s_AWPROT                   : in  std_logic_vector(2 downto 0);
-    %(BUSNAME)s_WLAST                    : in  std_logic;
-    %(BUSNAME)s_BID                      : out std_logic_vector(C_%(BUSNAME)s_ID_WIDTH-1 downto 0);
-    %(BUSNAME)s_ARID                     : in  std_logic_vector(C_%(BUSNAME)s_ID_WIDTH-1 downto 0);
-    %(BUSNAME)s_ARLEN                    : in  std_logic_vector(7 downto 0);
-    %(BUSNAME)s_ARSIZE                   : in  std_logic_vector(2 downto 0);
-    %(BUSNAME)s_ARBURST                  : in  std_logic_vector(1 downto 0);
-    %(BUSNAME)s_ARLOCK                   : in  std_logic;
-    %(BUSNAME)s_ARCACHE                  : in  std_logic_vector(3 downto 0);
-    %(BUSNAME)s_ARPROT                   : in  std_logic_vector(2 downto 0);
-    %(BUSNAME)s_RID                      : out std_logic_vector(C_%(BUSNAME)s_ID_WIDTH-1 downto 0);
-    %(BUSNAME)s_RLAST                    : out std_logic;
+axi_slave_port_verilog_template='''
+//============ %(BUSNAME)s ============
+    %(BUSNAME)s_ACLK,
+    %(BUSNAME)s_ARESETN,
+    %(BUSNAME)s_AWADDR,
+    %(BUSNAME)s_AWVALID,
+    %(BUSNAME)s_WDATA,
+    %(BUSNAME)s_WSTRB,
+    %(BUSNAME)s_WVALID,
+    %(BUSNAME)s_BREADY,
+    %(BUSNAME)s_ARADDR,
+    %(BUSNAME)s_ARVALID,
+    %(BUSNAME)s_RREADY,
+    %(BUSNAME)s_ARREADY,
+    %(BUSNAME)s_RDATA,
+    %(BUSNAME)s_RRESP,
+    %(BUSNAME)s_RVALID,
+    %(BUSNAME)s_WREADY,
+    %(BUSNAME)s_BRESP,
+    %(BUSNAME)s_BVALID,
+    %(BUSNAME)s_AWREADY,
+    %(BUSNAME)s_AWID,
+    %(BUSNAME)s_AWLEN,
+    %(BUSNAME)s_AWSIZE,
+    %(BUSNAME)s_AWBURST,
+    %(BUSNAME)s_AWLOCK,
+    %(BUSNAME)s_AWCACHE,
+    %(BUSNAME)s_AWPROT,
+    %(BUSNAME)s_WLAST,
+    %(BUSNAME)s_BID,
+    %(BUSNAME)s_ARID,
+    %(BUSNAME)s_ARLEN,
+    %(BUSNAME)s_ARSIZE,
+    %(BUSNAME)s_ARBURST,
+    %(BUSNAME)s_ARLOCK,
+    %(BUSNAME)s_ARCACHE,
+    %(BUSNAME)s_ARPROT,
+    %(BUSNAME)s_RID,
+    %(BUSNAME)s_RLAST,
+//============ %(BUSNAME)s ============
 '''
 
-hdmi_port_vhd_template='''
-    hdmi_clk_in : in std_logic;
-    hdmi_clk : out std_logic;
-    hdmi_vsync : out std_logic;
-    hdmi_hsync : out std_logic;
-    hdmi_de : out std_logic;
-    hdmi_data : out std_logic_vector(15 downto 0);
+hdmi_port_verilog_template='''
+    hdmi_clk_in,
+    hdmi_clk,
+    hdmi_vsync,
+    hdmi_hsync,
+    hdmi_de,
+    hdmi_data,
 '''
 
-axi_clock_vhd_template='''
-  attribute MAX_FANOUT of %(BUSNAME)s_ACLK       : signal is "10000";
-  attribute MAX_FANOUT of %(BUSNAME)s_ARESETN       : signal is "10000";
-  attribute SIGIS of %(BUSNAME)s_ACLK       : signal is "Clk";
-  attribute SIGIS of %(BUSNAME)s_ARESETN       : signal is "Rst";
+
+axi_master_port_decl_verilog_template='''
+//============ %(BUSNAME)s ============
+input %(busname)s_aclk;
+input %(busname)s_aresetn;
+input %(busname)s_arready;
+output %(busname)s_arvalid;
+output [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(busname)s_arid;
+output [C_%(BUSNAME)s_ADDR_WIDTH-1 : 0] %(busname)s_araddr;
+output [C_%(BUSNAME)s_BURSTLEN_WIDTH-1 : 0] %(busname)s_arlen;
+output [2 : 0] %(busname)s_arsize;
+output [1 : 0] %(busname)s_arburst;
+output [(C_%(BUSNAME)s_PROT_WIDTH-1) : 0] %(busname)s_arprot;
+output [(C_%(BUSNAME)s_CACHE_WIDTH-1) : 0] %(busname)s_arcache;
+output %(busname)s_rready;
+input %(busname)s_rvalid;
+input [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(busname)s_rid;
+input [C_%(BUSNAME)s_DATA_WIDTH-1 : 0] %(busname)s_rdata;
+input [1 : 0] %(busname)s_rresp;
+input %(busname)s_rlast;
+input %(busname)s_awready;
+output %(busname)s_awvalid;
+output [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(busname)s_awid;
+output [C_%(BUSNAME)s_ADDR_WIDTH-1 : 0] %(busname)s_awaddr;
+output [C_%(BUSNAME)s_BURSTLEN_WIDTH-1 : 0] %(busname)s_awlen;
+output [2 : 0] %(busname)s_awsize;
+output [1 : 0] %(busname)s_awburst;
+output [(C_%(BUSNAME)s_PROT_WIDTH-1) : 0] %(busname)s_awprot;
+output [(C_%(BUSNAME)s_CACHE_WIDTH-1) : 0] %(busname)s_awcache;
+input %(busname)s_wready;
+output %(busname)s_wvalid;
+output %(busname)s_wdata;
+output [(C_%(BUSNAME)s_DATA_WIDTH)/8 - 1 : 0] %(busname)s_wstrb;
+output %(busname)s_wlast;
+output %(busname)s_bready;
+input [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(busname)s_bid;
+input %(busname)s_bvalid;
+input [1 : 0] %(busname)s_bresp;
+//============ %(BUSNAME)s ============
 '''
 
-hdmi_clock_vhd_template='''
-  attribute SIGIS of hdmi_clk : signal is "Clk";
+axi_slave_port_decl_verilog_template='''
+//============ %(BUSNAME)s ============
+input %(BUSNAME)s_ACLK;
+input %(BUSNAME)s_ARESETN;
+input [C_%(BUSNAME)s_ADDR_WIDTH-1 : 0] %(BUSNAME)s_AWADDR;
+input %(BUSNAME)s_AWVALID;
+input [C_%(BUSNAME)s_DATA_WIDTH-1 : 0] %(BUSNAME)s_WDATA;
+input [(C_%(BUSNAME)s_DATA_WIDTH/8)-1 : 0] %(BUSNAME)s_WSTRB;
+input %(BUSNAME)s_WVALID;
+input %(BUSNAME)s_BREADY;
+input [C_%(BUSNAME)s_ADDR_WIDTH-1 : 0] %(BUSNAME)s_ARADDR;
+input %(BUSNAME)s_ARVALID;
+input %(BUSNAME)s_RREADY;
+output %(BUSNAME)s_ARREADY;
+output [C_%(BUSNAME)s_DATA_WIDTH-1 : 0] %(BUSNAME)s_RDATA;
+output [1 : 0] %(BUSNAME)s_RRESP;
+output %(BUSNAME)s_RVALID;
+output %(BUSNAME)s_WREADY;
+output [1 : 0] %(BUSNAME)s_BRESP;
+output %(BUSNAME)s_BVALID;
+output %(BUSNAME)s_AWREADY;
+input [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(BUSNAME)s_AWID;
+input [7 : 0] %(BUSNAME)s_AWLEN;
+input [2 : 0] %(BUSNAME)s_AWSIZE;
+input [1 : 0] %(BUSNAME)s_AWBURST;
+input %(BUSNAME)s_AWLOCK;
+input [3 : 0] %(BUSNAME)s_AWCACHE;
+input [2 : 0] %(BUSNAME)s_AWPROT;
+input %(BUSNAME)s_WLAST;
+output [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(BUSNAME)s_BID;
+input [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(BUSNAME)s_ARID;
+input [7 : 0] %(BUSNAME)s_ARLEN;
+input [2 : 0] %(BUSNAME)s_ARSIZE;
+input [1 : 0] %(BUSNAME)s_ARBURST;
+input %(BUSNAME)s_ARLOCK;
+input [3 : 0] %(BUSNAME)s_ARCACHE;
+input [2 : 0] %(BUSNAME)s_ARPROT;
+output [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(BUSNAME)s_RID;
+output %(BUSNAME)s_RLAST;
+//============ %(BUSNAME)s ============
 '''
 
-axi_master_port_map_vhd_template='''
-      EN_%(busname)s_write_writeAddr => WILL_FIRE_%(busname)s_write_writeAddr,
-      %(busname)s_write_writeAddr => %(busname)s_awaddr,
-      %(busname)s_write_writeId => %(busname)s_awid(0),
-      RDY_%(busname)s_write_writeAddr => RDY_%(busname)s_write_writeAddr,
-
-      %(busname)s_write_writeBurstLen => %(busname)s_awlen,
-      -- RDY_%(busname)s_write_writeBurstLen,
-
-      %(busname)s_write_writeBurstWidth => %(busname)s_awsize,
-      -- RDY_%(busname)s_write_writeBurstWidth,
-
-      %(busname)s_write_writeBurstType => %(busname)s_awburst,
-      -- RDY_%(busname)s_write_writeBurstType,
-
-      %(busname)s_write_writeBurstProt => %(busname)s_awprot,
-      -- RDY_%(busname)s_write_writeBurstProt,
-
-      %(busname)s_write_writeBurstCache => %(busname)s_awcache,
-      -- RDY_%(busname)s_write_writeBurstCache,
-
-      EN_%(busname)s_write_writeData => WILL_FIRE_%(busname)s_write_writeData,
-      %(busname)s_write_writeData => %(busname)s_wdata,
-      RDY_%(busname)s_write_writeData => RDY_%(busname)s_write_writeData,
-
-      %(busname)s_write_writeDataByteEnable => %(busname)s_wstrb,
-      -- RDY_%(busname)s_write_writeDataByteEnable,
-
-      %(busname)s_write_writeLastDataBeat => %(busname)s_wlast,
-      -- RDY_%(busname)s_write_writeLastDataBeat,
-
-      EN_%(busname)s_write_writeResponse => WILL_FIRE_%(busname)s_write_writeResponse,
-      %(busname)s_write_writeResponse_responseCode => %(busname)s_bresp,
-      %(busname)s_write_writeResponse_id => %(busname)s_bid(0),
-      RDY_%(busname)s_write_writeResponse => RDY_%(busname)s_write_writeResponse,
-
-      EN_%(busname)s_read_readAddr => WILL_FIRE_%(busname)s_read_readAddr,
-      %(busname)s_read_readId => %(busname)s_arid(0),
-      %(busname)s_read_readAddr => %(busname)s_araddr,
-      RDY_%(busname)s_read_readAddr => RDY_%(busname)s_read_readAddr,
-
-      %(busname)s_read_readBurstLen => %(busname)s_arlen,
-      -- RDY_%(busname)s_read_readBurstLen,
-
-      %(busname)s_read_readBurstWidth => %(busname)s_arsize,
-      -- RDY_%(busname)s_read_readBurstWidth,
-
-      %(busname)s_read_readBurstType => %(busname)s_arburst,
-      -- RDY_%(busname)s_read_readBurstType,
-
-      %(busname)s_read_readBurstProt => %(busname)s_arprot,
-      -- RDY_%(busname)s_read_readBurstProt,
-
-      %(busname)s_read_readBurstCache => %(busname)s_arcache,
-      -- RDY_%(busname)s_read_readBurstCache,
-
-      %(busname)s_read_readData_data => %(busname)s_rdata,
-      %(busname)s_read_readData_resp => %(busname)s_rresp,
-      %(busname)s_read_readData_last => %(busname)s_rlast,
-      %(busname)s_read_readData_id => %(busname)s_rid(0),
-      EN_%(busname)s_read_readData => WILL_FIRE_%(busname)s_read_readData,
-      RDY_%(busname)s_read_readData => RDY_%(busname)s_read_readData,
+hdmi_port_decl_verilog_template='''
+input hdmi_clk_in;
+output hdmi_clk;
+output hdmi_vsync;
+output hdmi_hsync;
+output hdmi_de;
+output [15:0] hdmi_data;
+'''
+axi_clock_verilog_template='''
+  // attribute MAX_FANOUT of %(BUSNAME)s_ACLK       : signal is "10000";
+  // attribute MAX_FANOUT of %(BUSNAME)s_ARESETN       : signal is "10000";
+  // attribute SIGIS of %(BUSNAME)s_ACLK       : signal is "Clk";
+  // attribute SIGIS of %(BUSNAME)s_ARESETN       : signal is "Rst";
 '''
 
-axi_slave_port_map_vhd_template='''
-      %(busname)s_read_readAddr_addr => %(BUSNAME)s_ARADDR,
-      %(busname)s_read_readAddr_burstLen => %(BUSNAME)s_ARLEN,
-      %(busname)s_read_readAddr_burstWidth => %(BUSNAME)s_ARSIZE,
-      %(busname)s_read_readAddr_burstType => %(BUSNAME)s_ARBURST,
-      %(busname)s_read_readAddr_burstProt => %(BUSNAME)s_ARPROT,
-      %(busname)s_read_readAddr_burstCache => %(BUSNAME)s_ARCACHE,
-      EN_%(busname)s_read_readAddr => EN_%(busname)s_read_readAddr,
-      RDY_%(busname)s_read_readAddr => RDY_%(busname)s_read_readAddr,
-
-      %(busname)s_read_last => %(busname)s_read_last,
-      EN_%(busname)s_read_readData => EN_%(busname)s_read_readData,
-      %(busname)s_read_readData => %(busname)s_read_readData,
-      RDY_%(busname)s_read_readData => RDY_%(busname)s_read_readData,
-
-      %(busname)s_write_writeAddr_addr => %(BUSNAME)s_AWADDR,
-      %(busname)s_write_writeAddr_burstLen => %(BUSNAME)s_AWLEN,
-      %(busname)s_write_writeAddr_burstWidth => %(BUSNAME)s_AWSIZE,
-      %(busname)s_write_writeAddr_burstType => %(BUSNAME)s_AWBURST,
-      %(busname)s_write_writeAddr_burstProt => %(BUSNAME)s_AWPROT,
-      %(busname)s_write_writeAddr_burstCache => %(BUSNAME)s_AWCACHE,
-      EN_%(busname)s_write_writeAddr => EN_%(busname)s_write_writeAddr,
-      RDY_%(busname)s_write_writeAddr => RDY_%(busname)s_write_writeAddr,
-
-      %(busname)s_write_writeData_data => %(BUSNAME)s_WDATA,
-      %(busname)s_write_writeData_byteEnable => %(BUSNAME)s_WSTRB,
-      %(busname)s_write_writeData_last => %(BUSNAME)s_WLAST,
-      EN_%(busname)s_write_writeData => EN_%(busname)s_write_writeData,
-      RDY_%(busname)s_write_writeData => RDY_%(busname)s_write_writeData,
-
-      EN_%(busname)s_write_writeResponse => EN_%(busname)s_write_writeResponse,
-      RDY_%(busname)s_write_writeResponse => RDY_%(busname)s_write_writeResponse,
-      %(busname)s_write_writeResponse => %(busname)s_write_writeResponse,
+hdmi_clock_verilog_template='''
+  // attribute SIGIS of hdmi_clk : signal is "Clk";
 '''
 
-hdmi_port_map_vhd_template='''
-      %(busname)s_hdmi_vsync => hdmi_vsync_unbuf,
-      %(busname)s_hdmi_hsync => hdmi_hsync_unbuf,
-      %(busname)s_hdmi_de => hdmi_de_unbuf,
-      %(busname)s_hdmi_data => hdmi_data_unbuf,
+axi_master_port_map_verilog_template='''
+      .EN_%(busname)s_write_writeAddr(WILL_FIRE_%(busname)s_write_writeAddr),
+      .%(busname)s_write_writeAddr(%(busname)s_awaddr),
+      .%(busname)s_write_writeId(%(busname)s_awid[0]),
+      .RDY_%(busname)s_write_writeAddr(RDY_%(busname)s_write_writeAddr),
+
+      .%(busname)s_write_writeBurstLen(%(busname)s_awlen),
+      // RDY_%(busname)s_write_writeBurstLen,
+
+      .%(busname)s_write_writeBurstWidth(%(busname)s_awsize),
+      // RDY_%(busname)s_write_writeBurstWidth,
+
+      .%(busname)s_write_writeBurstType(%(busname)s_awburst),
+      // RDY_%(busname)s_write_writeBurstType,
+
+      .%(busname)s_write_writeBurstProt(%(busname)s_awprot),
+      // RDY_%(busname)s_write_writeBurstProt,
+
+      .%(busname)s_write_writeBurstCache(%(busname)s_awcache),
+      // RDY_%(busname)s_write_writeBurstCache,
+
+      .EN_%(busname)s_write_writeData(WILL_FIRE_%(busname)s_write_writeData),
+      .%(busname)s_write_writeData(%(busname)s_wdata),
+      .RDY_%(busname)s_write_writeData(RDY_%(busname)s_write_writeData),
+
+      .%(busname)s_write_writeDataByteEnable(%(busname)s_wstrb),
+      // RDY_%(busname)s_write_writeDataByteEnable,
+
+      .%(busname)s_write_writeLastDataBeat(%(busname)s_wlast),
+      // RDY_%(busname)s_write_writeLastDataBeat,
+
+      .EN_%(busname)s_write_writeResponse(WILL_FIRE_%(busname)s_write_writeResponse),
+      .%(busname)s_write_writeResponse_responseCode(%(busname)s_bresp),
+      .%(busname)s_write_writeResponse_id(%(busname)s_bid[0]),
+      .RDY_%(busname)s_write_writeResponse(RDY_%(busname)s_write_writeResponse),
+
+      .EN_%(busname)s_read_readAddr(WILL_FIRE_%(busname)s_read_readAddr),
+      .%(busname)s_read_readId(%(busname)s_arid[0]),
+      .%(busname)s_read_readAddr(%(busname)s_araddr),
+      .RDY_%(busname)s_read_readAddr(RDY_%(busname)s_read_readAddr),
+
+      .%(busname)s_read_readBurstLen(%(busname)s_arlen),
+      // RDY_%(busname)s_read_readBurstLen,
+
+      .%(busname)s_read_readBurstWidth(%(busname)s_arsize),
+      // RDY_%(busname)s_read_readBurstWidth,
+
+      .%(busname)s_read_readBurstType(%(busname)s_arburst),
+      // RDY_%(busname)s_read_readBurstType,
+
+      .%(busname)s_read_readBurstProt(%(busname)s_arprot),
+      // RDY_%(busname)s_read_readBurstProt,
+
+      .%(busname)s_read_readBurstCache(%(busname)s_arcache),
+      // RDY_%(busname)s_read_readBurstCache,
+
+      .%(busname)s_read_readData_data(%(busname)s_rdata),
+      .%(busname)s_read_readData_resp(%(busname)s_rresp),
+      .%(busname)s_read_readData_last(%(busname)s_rlast),
+      .%(busname)s_read_readData_id(%(busname)s_rid[0]),
+      .EN_%(busname)s_read_readData(WILL_FIRE_%(busname)s_read_readData),
+      .RDY_%(busname)s_read_readData(RDY_%(busname)s_read_readData),
 '''
 
-axi_master_signal_vhd_template='''
-  signal RDY_%(busname)s_write_writeAddr : std_logic;
-  signal RDY_%(busname)s_write_writeData : std_logic;
-  signal RDY_%(busname)s_write_writeResponse : std_logic;
-  signal RDY_%(busname)s_read_readAddr : std_logic;
-  signal RDY_%(busname)s_read_readData : std_logic;
-  signal WILL_FIRE_%(busname)s_write_writeAddr : std_logic;
-  signal WILL_FIRE_%(busname)s_write_writeData : std_logic;
-  signal WILL_FIRE_%(busname)s_write_writeResponse : std_logic;
-  signal WILL_FIRE_%(busname)s_read_readAddr : std_logic;
-  signal WILL_FIRE_%(busname)s_read_readData : std_logic;
+axi_slave_port_map_verilog_template='''
+      .%(busname)s_read_readAddr_addr(%(BUSNAME)s_ARADDR),
+      .%(busname)s_read_readAddr_burstLen(%(BUSNAME)s_ARLEN),
+      .%(busname)s_read_readAddr_burstWidth(%(BUSNAME)s_ARSIZE),
+      .%(busname)s_read_readAddr_burstType(%(BUSNAME)s_ARBURST),
+      .%(busname)s_read_readAddr_burstProt(%(BUSNAME)s_ARPROT),
+      .%(busname)s_read_readAddr_burstCache(%(BUSNAME)s_ARCACHE),
+      .EN_%(busname)s_read_readAddr(EN_%(busname)s_read_readAddr),
+      .RDY_%(busname)s_read_readAddr(RDY_%(busname)s_read_readAddr),
+
+      .%(busname)s_read_last(%(busname)s_read_last),
+      .EN_%(busname)s_read_readData(EN_%(busname)s_read_readData),
+      .%(busname)s_read_readData(%(busname)s_read_readData),
+      .RDY_%(busname)s_read_readData(RDY_%(busname)s_read_readData),
+
+      .%(busname)s_write_writeAddr_addr(%(BUSNAME)s_AWADDR),
+      .%(busname)s_write_writeAddr_burstLen(%(BUSNAME)s_AWLEN),
+      .%(busname)s_write_writeAddr_burstWidth(%(BUSNAME)s_AWSIZE),
+      .%(busname)s_write_writeAddr_burstType(%(BUSNAME)s_AWBURST),
+      .%(busname)s_write_writeAddr_burstProt(%(BUSNAME)s_AWPROT),
+      .%(busname)s_write_writeAddr_burstCache(%(BUSNAME)s_AWCACHE),
+      .EN_%(busname)s_write_writeAddr(EN_%(busname)s_write_writeAddr),
+      .RDY_%(busname)s_write_writeAddr(RDY_%(busname)s_write_writeAddr),
+
+      .%(busname)s_write_writeData_data(%(BUSNAME)s_WDATA),
+      .%(busname)s_write_writeData_byteEnable(%(BUSNAME)s_WSTRB),
+      .%(busname)s_write_writeData_last(%(BUSNAME)s_WLAST),
+      .EN_%(busname)s_write_writeData(EN_%(busname)s_write_writeData),
+      .RDY_%(busname)s_write_writeData(RDY_%(busname)s_write_writeData),
+
+      .EN_%(busname)s_write_writeResponse(EN_%(busname)s_write_writeResponse),
+      .RDY_%(busname)s_write_writeResponse(RDY_%(busname)s_write_writeResponse),
+      .%(busname)s_write_writeResponse(%(busname)s_write_writeResponse),
 '''
 
-axi_slave_signal_vhd_template='''
-  signal %(busname)s_mem0_araddr_matches : boolean;
-  signal %(busname)s_mem0_awaddr_matches : boolean;
-
-  signal %(busname)s_read_readData : std_logic_vector(C_%(BUSNAME)s_DATA_WIDTH-1 downto 0);
-  signal %(busname)s_write_writeResponse : std_logic_vector(1 downto 0);
-
-  signal EN_%(busname)s_read_readAddr : std_logic;
-  signal RDY_%(busname)s_read_readAddr : std_logic;
-  signal EN_%(busname)s_read_readData : std_logic;
-  signal RDY_%(busname)s_read_readData : std_logic;
-  signal EN_%(busname)s_write_writeAddr : std_logic;
-  signal RDY_%(busname)s_write_writeAddr : std_logic;
-  signal EN_%(busname)s_write_writeData : std_logic;
-  signal RDY_%(busname)s_write_writeData : std_logic;
-  signal EN_%(busname)s_write_writeResponse : std_logic;
-  signal RDY_%(busname)s_write_writeResponse : std_logic;
-  signal %(busname)s_read_last : std_logic;
+hdmi_port_map_verilog_template='''
+      .%(busname)s_hdmi_vsync(hdmi_vsync_unbuf),
+      .%(busname)s_hdmi_hsync(hdmi_hsync_unbuf),
+      .%(busname)s_hdmi_de(hdmi_de_unbuf),
+      .%(busname)s_hdmi_data(hdmi_data_unbuf),
 '''
 
-hdmi_signal_vhd_template='''
-  attribute MAX_FANOUT of hdmi_clk_in : signal is "10000";
-  attribute SIGIS of hdmi_clk_in      : signal is "CLK";
-  signal %(busname)s_vsync_unbuf, %(busname)s_hsync_unbuf, %(busname)s_de_unbuf : std_logic;
-  signal %(busname)s_data_unbuf : std_logic_vector(15 downto 0);
+axi_master_signal_verilog_template='''
+  wire RDY_%(busname)s_write_writeAddr;
+  wire RDY_%(busname)s_write_writeData;
+  wire RDY_%(busname)s_write_writeResponse;
+  wire RDY_%(busname)s_read_readAddr;
+  wire RDY_%(busname)s_read_readData;
+  wire WILL_FIRE_%(busname)s_write_writeAddr;
+  wire WILL_FIRE_%(busname)s_write_writeData;
+  wire WILL_FIRE_%(busname)s_write_writeResponse;
+  wire WILL_FIRE_%(busname)s_read_readAddr;
+  wire WILL_FIRE_%(busname)s_read_readData;
 '''
 
-axi_master_scheduler_vhd_template='''
-  WILL_FIRE_%(busname)s_read_readAddr <= (%(busname)s_arready and RDY_%(busname)s_read_readAddr);
-  WILL_FIRE_%(busname)s_read_readData <= (%(busname)s_rvalid and RDY_%(busname)s_read_readData);
-  %(busname)s_arvalid <= RDY_%(busname)s_read_readAddr;
-  %(busname)s_rready <= RDY_%(busname)s_read_readData;
+axi_slave_signal_verilog_template='''
+  wire %(busname)s_mem0_araddr_matches;
+  wire %(busname)s_mem0_awaddr_matches;
 
-  WILL_FIRE_%(busname)s_write_writeAddr <= (%(busname)s_awready and RDY_%(busname)s_write_writeAddr);
-  WILL_FIRE_%(busname)s_write_writeData <= (%(busname)s_wready and RDY_%(busname)s_write_writeData);
-  WILL_FIRE_%(busname)s_write_writeResponse <= (%(busname)s_bvalid and RDY_%(busname)s_write_writeResponse);
-  %(busname)s_awvalid <= RDY_%(busname)s_write_writeAddr;
-  %(busname)s_wvalid <= RDY_%(busname)s_write_writeData;
-  %(busname)s_bready <= RDY_%(busname)s_write_writeResponse;
+  wire [C_%(BUSNAME)s_DATA_WIDTH-1 : 0] %(busname)s_read_readData;
+  wire [1 : 0] %(busname)s_write_writeResponse;
+
+  wire EN_%(busname)s_read_readAddr;
+  wire RDY_%(busname)s_read_readAddr;
+  wire EN_%(busname)s_read_readData;
+  wire RDY_%(busname)s_read_readData;
+  wire EN_%(busname)s_write_writeAddr;
+  wire RDY_%(busname)s_write_writeAddr;
+  wire EN_%(busname)s_write_writeData;
+  wire RDY_%(busname)s_write_writeData;
+  wire EN_%(busname)s_write_writeResponse;
+  wire RDY_%(busname)s_write_writeResponse;
+  wire %(busname)s_read_last;
 '''
 
-axi_slave_scheduler_vhd_template='''
-  %(busname)s_mem0_araddr_matches <= (%(BUSNAME)s_ARADDR >= C_%(BUSNAME)s_MEM0_BASEADDR and %(BUSNAME)s_ARADDR <= C_%(BUSNAME)s_MEM0_HIGHADDR);
-  %(busname)s_mem0_awaddr_matches <= (%(BUSNAME)s_AWADDR >= C_%(BUSNAME)s_MEM0_BASEADDR and %(BUSNAME)s_AWADDR <= C_%(BUSNAME)s_MEM0_HIGHADDR);
-
-  %(BUSNAME)s_ARREADY  <= RDY_%(busname)s_read_readAddr when %(busname)s_mem0_araddr_matches else '0';
-  %(BUSNAME)s_RVALID <= EN_%(busname)s_read_readData;
-  %(BUSNAME)s_RRESP  <= "00";
-
-  %(BUSNAME)s_RDATA  <= %(busname)s_read_readData when EN_%(busname)s_read_readData = '1' else (others => '0');
-  %(BUSNAME)s_RLAST  <= %(busname)s_read_last when EN_%(busname)s_read_readData = '1' else '0';
-
-
-  %(BUSNAME)s_RID <= (others => '0');
-  %(BUSNAME)s_BID <= (others => '0');
-  %(BUSNAME)s_AWREADY  <= RDY_%(busname)s_write_writeAddr when %(busname)s_mem0_awaddr_matches else '0';
-  %(BUSNAME)s_WREADY <= RDY_%(busname)s_write_writeData;
-  %(BUSNAME)s_BVALID  <= EN_%(busname)s_write_writeResponse;
-  %(BUSNAME)s_BRESP <= %(busname)s_write_writeResponse when EN_%(busname)s_write_writeResponse = '1' else
-                 (others => '0');
-
-  EN_%(busname)s_read_readAddr <= RDY_%(busname)s_read_readAddr and %(BUSNAME)s_ARVALID when %(busname)s_mem0_araddr_matches else '0';
-  EN_%(busname)s_read_readData <= RDY_%(busname)s_read_readData and %(BUSNAME)s_RREADY;
-
-  EN_%(busname)s_write_writeAddr <= RDY_%(busname)s_write_writeAddr and %(BUSNAME)s_AWVALID when %(busname)s_mem0_awaddr_matches else '0';
-  EN_%(busname)s_write_writeData <= RDY_%(busname)s_write_writeData and %(BUSNAME)s_WVALID;
-  EN_%(busname)s_write_writeResponse <= RDY_%(busname)s_write_writeResponse and %(BUSNAME)s_BREADY;
+hdmi_signal_verilog_template='''
+  //attribute MAX_FANOUT of hdmi_clk_in : signal is "10000";
+  //attribute SIGIS of hdmi_clk_in      : signal is "CLK";
+  wire %(busname)s_vsync_unbuf, %(busname)s_hsync_unbuf, %(busname)s_de_unbuf;
+  wire [15 : 0] %(busname)s_data_unbuf;
 '''
 
-hdmi_iobuf_vhd_template='''
-    OBUF_%(busname)s_clk : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_clk,
-    -- Buffer output (connect directly to top-level port)
-    I => hdmi_clk_in
-    -- Buffer input
+axi_master_scheduler_verilog_template='''
+assign WILL_FIRE_%(busname)s_read_readAddr = (%(busname)s_arready & RDY_%(busname)s_read_readAddr);
+assign WILL_FIRE_%(busname)s_read_readData = (%(busname)s_rvalid & RDY_%(busname)s_read_readData);
+assign %(busname)s_arvalid = RDY_%(busname)s_read_readAddr;
+assign %(busname)s_rready = RDY_%(busname)s_read_readData;
+
+assign WILL_FIRE_%(busname)s_write_writeAddr = (%(busname)s_awready & RDY_%(busname)s_write_writeAddr);
+assign WILL_FIRE_%(busname)s_write_writeData = (%(busname)s_wready & RDY_%(busname)s_write_writeData);
+assign WILL_FIRE_%(busname)s_write_writeResponse = (%(busname)s_bvalid & RDY_%(busname)s_write_writeResponse);
+assign %(busname)s_awvalid = RDY_%(busname)s_write_writeAddr;
+assign %(busname)s_wvalid = RDY_%(busname)s_write_writeData;
+assign %(busname)s_bready = RDY_%(busname)s_write_writeResponse;
+'''
+
+axi_slave_scheduler_verilog_template='''
+assign %(busname)s_mem0_araddr_matches = (%(BUSNAME)s_ARADDR >= C_%(BUSNAME)s_MEM0_BASEADDR & %(BUSNAME)s_ARADDR <= C_%(BUSNAME)s_MEM0_HIGHADDR);
+assign %(busname)s_mem0_awaddr_matches = (%(BUSNAME)s_AWADDR >= C_%(BUSNAME)s_MEM0_BASEADDR & %(BUSNAME)s_AWADDR <= C_%(BUSNAME)s_MEM0_HIGHADDR);
+
+assign %(BUSNAME)s_ARREADY  = RDY_%(busname)s_read_readAddr & %(busname)s_mem0_araddr_matches;
+assign %(BUSNAME)s_RVALID = EN_%(busname)s_read_readData;
+assign %(BUSNAME)s_RRESP  = "00";
+
+assign %(BUSNAME)s_RDATA  = %(busname)s_read_readData & EN_%(busname)s_read_readData;
+assign %(BUSNAME)s_RLAST  = %(busname)s_read_last & EN_%(busname)s_read_readData;
+
+
+assign %(BUSNAME)s_RID = 0;
+assign %(BUSNAME)s_BID = 0;
+assign %(BUSNAME)s_AWREADY  = RDY_%(busname)s_write_writeAddr & %(busname)s_mem0_awaddr_matches;
+assign %(BUSNAME)s_WREADY = RDY_%(busname)s_write_writeData;
+assign %(BUSNAME)s_BVALID  = EN_%(busname)s_write_writeResponse;
+assign %(BUSNAME)s_BRESP = %(busname)s_write_writeResponse;
+
+assign EN_%(busname)s_read_readAddr = RDY_%(busname)s_read_readAddr & %(BUSNAME)s_ARVALID & %(busname)s_mem0_araddr_matches;
+assign EN_%(busname)s_read_readData = RDY_%(busname)s_read_readData & %(BUSNAME)s_RREADY;
+
+assign EN_%(busname)s_write_writeAddr = RDY_%(busname)s_write_writeAddr & %(BUSNAME)s_AWVALID&  %(busname)s_mem0_awaddr_matches;
+assign EN_%(busname)s_write_writeData = RDY_%(busname)s_write_writeData & %(BUSNAME)s_WVALID;
+assign EN_%(busname)s_write_writeResponse = RDY_%(busname)s_write_writeResponse & %(BUSNAME)s_BREADY;
+'''
+
+hdmi_iobuf_verilog_template='''
+    OBUF#(
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_%(busname)s_clk
+    (
+    .O(%(busname)s_clk),
+    // Buffer output (connect directly to top-level port)
+    .I( hdmi_clk_in)
+    // Buffer input
     );
 
-    OBUF_hsync : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_hsync,
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_hsync_unbuf
-    -- Buffer input
+    OBUF#(
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_hsync
+    (
+    .O(%(busname)s_hsync),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_hsync_unbuf)
+    // Buffer input
     );
-    OBUF_vsync : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_vsync,
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_vsync_unbuf
-    -- Buffer input
+    OBUF#(
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_vsync
+    (
+    .O(%(busname)s_vsync),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_vsync_unbuf)
+    // Buffer input
     );
-    OBUF_de : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_de,
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_de_unbuf
-    -- Buffer input
+    OBUF#(
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_de
+    (
+    .O(%(busname)s_de),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_de_unbuf)
+    // Buffer input
     );
 
-    OBUF_data_0 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(0),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(0)
-    -- Buffer input
+    OBUF#(
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_0
+    (
+    .O(%(busname)s_data[0]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[0])
+    // Buffer input
     );
-    OBUF_data_1 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(1),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(1)
-    -- Buffer input
+    OBUF #(
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_1
+    (
+    .O(%(busname)s_data[1]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[1])
+    // Buffer input
     );
-    OBUF_data_2 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(2),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(2)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_2
+    (
+    .O(%(busname)s_data[2]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[2])
+    // Buffer input
     );
-    OBUF_data_3 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(3),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(3)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_3
+    (
+    .O(%(busname)s_data[3]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[3])
+    // Buffer input
     );
-    OBUF_data_4 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(4),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(4)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_4
+    (
+    .O(%(busname)s_data[4]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[4])
+    // Buffer input
     );
-    OBUF_data_5 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(5),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(5)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_5
+    (
+    .O(%(busname)s_data[5]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[5])
+    // Buffer input
     );
-    OBUF_data_6 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(6),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(6)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_6
+    (
+    .O(%(busname)s_data[6]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[6])
+    // Buffer input
     );
-    OBUF_data_7 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(7),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(7)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_7
+    (
+    .O(%(busname)s_data[7]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[7])
+    // Buffer input
     );
-    OBUF_data_8 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(8),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(8)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_8
+    (
+    .O(%(busname)s_data[8]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[8])
+    // Buffer input
     );
-    OBUF_data_9 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(9),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(9)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_9
+    (
+    .O(%(busname)s_data[9]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[9])
+    // Buffer input
     );
-    OBUF_data_10 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(10),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(10)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_10
+    (
+    .O(%(busname)s_data[10]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[10])
+    // Buffer input
     );
-    OBUF_data_11 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(11),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(11)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_11
+    (
+    .O(%(busname)s_data[11]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[11])
+    // Buffer input
     );
-    OBUF_data_12 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(12),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(12)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_12
+    (
+    .O(%(busname)s_data[12]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[12])
+    // Buffer input
     );
-    OBUF_data_13 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(13),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(13)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_13
+    (
+    .O(%(busname)s_data[13]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[13])
+    // Buffer input
     );
-    OBUF_data_14 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(14),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(14)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_14
+    (
+    .O(%(busname)s_data[14]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[14])
+    // Buffer input
     );
-    OBUF_data_15 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => %(busname)s_data(15),
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_data_unbuf(15)
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_data_15
+    (
+    .O(%(busname)s_data[15]),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_data_unbuf[15])
+    // Buffer input
     );
 
-    OBUF_xadc_gpio_0 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => xadc_gpio_0,
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_vsync_unbuf
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_xadc_gpio_0
+    (
+    .O(xadc_gpio_0),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_vsync_unbuf)
+    // Buffer input
     );
-    OBUF_xadc_gpio_1 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => xadc_gpio_1,
-    -- Buffer output (connect directly to top-level port)
-    I => WILL_FIRE_m_axi_read_readAddr
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_xadc_gpio_1
+    (
+    .O(xadc_gpio_1),
+    // Buffer output (connect directly to top-level port)
+    .I(WILL_FIRE_m_axi_read_readAddr)
+    // Buffer input
     );
-    OBUF_xadc_gpio_2 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => xadc_gpio_2,
-    -- Buffer output (connect directly to top-level port)
-    I => WILL_FIRE_m_axi_read_readData
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_xadc_gpio_2 (
+    .O(xadc_gpio_2),
+    // Buffer output (connect directly to top-level port)
+    .I(WILL_FIRE_m_axi_read_readData)
+    // Buffer input
     );
-    OBUF_xadc_gpio_3 : OBUF
-    generic map (
-    DRIVE => 12,
-    IOSTANDARD => "LVCMOS25",
-    SLEW => "SLOW")
-    port map (
-    O => xadc_gpio_3,
-    -- Buffer output (connect directly to top-level port)
-    I => %(busname)s_de_unbuf
-    -- Buffer input
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_xadc_gpio_3
+    (
+    .O(xadc_gpio_3),
+    // Buffer output (connect directly to top-level port)
+    .I(%(busname)s_de_unbuf)
+    // Buffer input
     );
 
 '''
@@ -1267,68 +1320,76 @@ class InterfaceMixin:
         pao.write(pao_template % substs)
         return
 
-    def writeVhd(self, vhdname, silent=False):
+    def writeVerilog(self, verilogname, silent=False):
         if not silent:
-            print 'Writing wrapper VHDL file', vhdname
-        vhd = util.createDirAndOpen(vhdname, 'w')
+            print 'Writing wrapper Verilog file', verilogname
+        verilog = util.createDirAndOpen(verilogname, 'w')
         dutName = util.decapitalize(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Master')
         axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
         substs = {
-            'dut': dutName,
+            'dut': dutName.lower(),
             'Dut': util.capitalize(self.name),
             'axi_master_parameters':
-                ''.join([axi_master_parameter_vhd_template % subst for subst in masterBusSubsts]),
+                ''.join([axi_master_parameter_verilog_template % subst for subst in masterBusSubsts]),
             'axi_slave_parameters':
-                ''.join([axi_slave_parameter_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([axi_slave_parameter_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
             'axi_master_ports':
-                ''.join([axi_master_port_vhd_template % subst for subst in masterBusSubsts]),
+                ''.join([axi_master_port_verilog_template % subst for subst in masterBusSubsts]),
+            'axi_master_port_decls':
+                ''.join([axi_master_port_decl_verilog_template % subst for subst in masterBusSubsts]),
             'axi_slave_ports':
-                ''.join([axi_slave_port_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([axi_slave_port_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                         for (busname,t,params) in axiSlaves]),
+            'axi_slave_port_decls':
+                ''.join([axi_slave_port_decl_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
             'hdmi_ports':
-                ''.join([hdmi_port_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([hdmi_port_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in hdmiBus]),
-            'dut_hdmi_clock_arg': '      CLK_hdmi_clk => hdmi_clk_in,' if len(hdmiBus) else '',
+            'hdmi_port_decls':
+                ''.join([hdmi_port_decl_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                         for (busname,t,params) in hdmiBus]),
+            'dut_hdmi_clock_arg': '      .CLK_hdmi_clk(hdmi_clk_in),' if len(hdmiBus) else '',
             'axi_master_port_map':
-                ''.join([axi_master_port_map_vhd_template % subst for subst in masterBusSubsts]),
+                ''.join([axi_master_port_map_verilog_template % subst for subst in masterBusSubsts]),
             'axi_slave_port_map':
-                ''.join([axi_slave_port_map_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([axi_slave_port_map_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
             'hdmi_port_map':
-                ''.join([hdmi_port_map_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([hdmi_port_map_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in hdmiBus]),
             'axi_master_clocks':
-                ''.join([axi_clock_vhd_template % subst for subst in masterBusSubsts]),
+                ''.join([axi_clock_verilog_template % subst for subst in masterBusSubsts]),
             'axi_slave_clocks':
-                ''.join([axi_clock_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([axi_clock_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
             'hdmi_clocks':
-                ''.join([hdmi_clock_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([hdmi_clock_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in hdmiBus]),
             'iobufs': '',
             'axi_master_signals':
-                ''.join([axi_master_signal_vhd_template % subst for subst in masterBusSubsts]),
+                ''.join([axi_master_signal_verilog_template % subst for subst in masterBusSubsts]),
             'axi_slave_signals':
-                ''.join([axi_slave_signal_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([axi_slave_signal_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
             'hdmi_signals':
-                ''.join([hdmi_signal_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([hdmi_signal_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in hdmiBus]),
             'axi_master_scheduler':
-                ''.join([axi_master_scheduler_vhd_template % subst for subst in masterBusSubsts ]),
+                ''.join([axi_master_scheduler_verilog_template % subst for subst in masterBusSubsts ]),
             'axi_slave_scheduler':
-                ''.join([axi_slave_scheduler_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([axi_slave_scheduler_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
             'hdmi_iobufs':
-                ''.join([hdmi_iobuf_vhd_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                ''.join([hdmi_iobuf_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in hdmiBus]),
             }
-        vhd.write(vhd_template % substs)
-        vhd.close()
+        verilog.write(verilog_template % substs)
+        verilog.close()
         return
 
     def writeUcf(self, ucfname, silent=False):

@@ -82,8 +82,8 @@ if __name__=='__main__':
     cppname = os.path.join(project_dir, 'jni', '%s.cpp' % namespace.interface)
     bsvname = os.path.join(project_dir, 'pcores', corename, 'hdl', 'verilog',
                            '%sWrapper.bsv' % namespace.interface)
-    vhdname = os.path.join(project_dir, 'pcores', corename, 'hdl', 'vhdl',
-                           '%s.vhd' % namespace.interface)
+    verilogname = os.path.join(project_dir, 'pcores', corename, 'hdl', 'verilog',
+                               '%s.v' % namespace.interface)
     mpdname = os.path.join(project_dir, 'pcores', corename, 'data',
                            '%s_v2_1_0.mpd' % namespace.interface.lower())
     paoname = os.path.join(project_dir, 'pcores', corename, 'data',
@@ -129,7 +129,7 @@ if __name__=='__main__':
         subinterface.writeMhs(mhsname)
         subinterface.writeXmp(xmpname)
         subinterface.writePao(paoname)
-        subinterface.writeVhd(vhdname)
+        subinterface.writeVerilog(verilogname)
         subinterface.writeUcf(ucfname)
         subinterface.writeBif(bifname)
         print 'Writing Android.mk', androidmkname
