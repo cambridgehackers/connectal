@@ -1,0 +1,49 @@
+#/bin/bash
+set -x
+set -e
+#make verilog
+#make hdmidisplay.make
+#
+##########################   make -f hdmidisplay.make bits
+#echo platgen -p xc7z020clg484-1 -lang verilog -intstyle default   -toplevel no -ti hdmidisplay_i -msg __xps/ise/xmsgprops.lst hdmidisplay.mhs
+
+mkdir -p synthesis/xst_temp_dir implementation hdl
+cp ../after_platgen/synthesis/synthesis.sh synthesis/
+cp ../after_platgen/synthesis/*.scr synthesis/
+cp ../after_platgen/synthesis/*.prj synthesis/
+cp -r ../after_platgen/hdl/* hdl/
+cp ../after_platgen/implementation/hdmidisplay.bmm implementation/
+cd synthesis
+export SILEN="-intstyle silent"
+xst -ifn hdmidisplay_processing_system7_0_wrapper_xst.scr $(SILEN)
+xst -ifn hdmidisplay_axi_master_interconnect_0_wrapper_xst.scr $(SILEN)
+xst -ifn hdmidisplay_axi_slave_interconnect_0_wrapper_xst.scr $(SILEN)
+xst -ifn hdmidisplay_axi_slave_interconnect_1_wrapper_xst.scr $(SILEN)
+xst -ifn hdmidisplay_hdmidisplay_0_wrapper_xst.scr $(SILEN)
+cd ..
+#convert ngc file to edif
+ngc2edif implementation/hdmidisplay_axi_master_interconnect_0_wrapper.ngc
+rm implementation/hdmidisplay_axi_master_interconnect_0_wrapper.ngc
+edif2ngd implementation/hdmidisplay_axi_master_interconnect_0_wrapper.*
+#ngc2edif implementation/hdmidisplay_axi_slave_interconnect_0_wrapper.ngc
+#rm implementation/hdmidisplay_axi_slave_interconnect_0_wrapper.ngc
+#ngc2edif implementation/hdmidisplay_axi_slave_interconnect_1_wrapper.ngc
+#rm implementation/hdmidisplay_axi_slave_interconnect_1_wrapper.ngc
+
+############
+echo "Running synthesis..."
+###########bash -c "cd synthesis; ./synthesis.sh"
+(cd synthesis; xst -ifn "hdmidisplay_xst.scr" $(SILEN) )
+echo "*********************************************"
+echo "Running Xilinx Implementation tools.."
+echo "*********************************************"
+cp -f data/hdmidisplay.ucf implementation/hdmidisplay.ucf
+cp -f etc/fast_runtime.opt implementation/xflow.opt
+xflow -wd implementation -p xc7z020clg484-1 -implement xflow.opt hdmidisplay.ngc
+touch __xps/hdmidisplay_routed
+xilperl /home/jamey/Xilinx/14.3/ISE_DS/EDK/data/fpga_impl/observe_par.pl -error no implementation/hdmidisplay.par
+echo "*********************************************"
+echo "Running Bitgen.."
+echo "*********************************************"
+cp -f etc/bitgen.ut implementation/bitgen.ut
+(cd implementation ; bitgen -w -f bitgen.ut hdmidisplay )

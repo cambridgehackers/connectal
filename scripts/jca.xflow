@@ -1,0 +1,10 @@
+#
+#
+set -x
+set -e
+#xflow -wd implementation -p xc7z020clg484-1 -implement xflow.opt hdmidisplay.ngc
+cd implementation
+ngdbuild -p xc7z020clg484-1 -nt timestamp -bm hdmidisplay.bmm hdmidisplay.ngc -uc hdmidisplay.ucf hdmidisplay.ngd
+map -o hdmidisplay_map.ncd -w -pr b -ol high -timing -detail hdmidisplay.ngd hdmidisplay.pcf
+par -w -ol high hdmidisplay_map.ncd hdmidisplay.ncd hdmidisplay.pcf
+trce -e 3 -xml hdmidisplay.twx hdmidisplay.ncd hdmidisplay.pcf
