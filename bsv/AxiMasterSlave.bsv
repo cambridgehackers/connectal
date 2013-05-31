@@ -113,6 +113,27 @@ interface AxiSlave#(type busWidth, type busWidthBytes);
    interface AxiSlaveWrite#(busWidth, busWidthBytes) write;
 endinterface
 
+interface Axi3SlaveRead#(type busWidth, type busWidthBytes);
+   method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
+                          Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache);
+
+   method ActionValue#(Bit#(busWidth)) readData();
+   method Bit#(1) last();
+   // method Action readResponse(Bit#(2) responseCode);
+endinterface
+
+interface Axi3SlaveWrite#(type busWidth, type busWidthBytes);
+   method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
+                           Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache);
+   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last);
+   method ActionValue#(Bit#(2)) writeResponse();
+endinterface
+
+interface Axi3Slave#(type busWidth, type busWidthBytes);
+   interface Axi3SlaveRead#(busWidth, busWidthBytes) read;
+   interface Axi3SlaveWrite#(busWidth, busWidthBytes) write;
+endinterface
+
 interface AxiMasterServer#(type busWidth, type busWidthBytes, type tagSize);
    method Action readAddr(Bit#(32) addr, Bit#(8) numWords);
    method Action readAddrTagged(Bit#(32) addr, Bit#(8) numWords, Bit#(tagSize) tag);
