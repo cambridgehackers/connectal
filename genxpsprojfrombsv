@@ -55,7 +55,9 @@ bits: implementation/%(dut)s.bit
 
 boot.bin: implementation/%(dut)s.bit
 	if [ -f boot.bin ]; then mv -v boot.bin boot.bin.bak; fi
-	bootgen -image %(dut)s.bif -o i boot.bin
+	promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 implementation/%(dut)s.bit -data_width 32
+	gzip %(dut)s.bit.bin
+	#bootgen -image %(dut)s.bif -o i boot.bin
 '''
 
 if __name__=='__main__':
