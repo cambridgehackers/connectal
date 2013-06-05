@@ -13,6 +13,7 @@ cp -r ../after_platgen/hdl/* hdl/
 cp ../after_platgen/implementation/hdmidisplay.bmm implementation/
 cd synthesis
 export SILEN="-intstyle silent"
+# scr points to prj, which lists .v files from pao
 xst -ifn hdmidisplay_processing_system7_0_wrapper_xst.scr $(SILEN)
 xst -ifn hdmidisplay_axi_master_interconnect_0_wrapper_xst.scr $(SILEN)
 xst -ifn hdmidisplay_axi_slave_interconnect_0_wrapper_xst.scr $(SILEN)
