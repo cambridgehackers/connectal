@@ -115,18 +115,20 @@ endinterface
 
 interface Axi3SlaveRead#(type busWidth, type busWidthBytes);
    method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                          Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache);
+                          Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) arid);
 
    method ActionValue#(Bit#(busWidth)) readData();
    method Bit#(1) last();
+   method Bit#(12) rid();
    // method Action readResponse(Bit#(2) responseCode);
 endinterface
 
 interface Axi3SlaveWrite#(type busWidth, type busWidthBytes);
    method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                           Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache);
+                           Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) awid);
    method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last);
    method ActionValue#(Bit#(2)) writeResponse();
+   method ActionValue#(Bit#(12)) bid();
 endinterface
 
 interface Axi3Slave#(type busWidth, type busWidthBytes);
