@@ -76,9 +76,13 @@ mhs_template='''
  PORT processing_system7_0_DDR_DQS_n = processing_system7_0_DDR_DQS_n, DIR = IO, VEC = [3:0]
  PORT processing_system7_0_DDR_VRN = processing_system7_0_DDR_VRN, DIR = IO
  PORT processing_system7_0_DDR_VRP = processing_system7_0_DDR_VRP, DIR = IO
+ PORT xadc_gpio_0_pin = %(dut)s_0_xadc_gpio_0, DIR = O
+ PORT xadc_gpio_1_pin = %(dut)s_0_xadc_gpio_1, DIR = O
+ PORT xadc_gpio_2_pin = %(dut)s_0_xadc_gpio_2, DIR = O
+ PORT xadc_gpio_3_pin = %(dut)s_0_xadc_gpio_3, DIR = O
 %(system_hdmi_ports)s
 
-BEGIN qqprocessing_system7
+BEGIN processing_system7
  PARAMETER INSTANCE = processing_system7_0
  PARAMETER HW_VER = 4.02.a
  PARAMETER C_DDR_RAM_HIGHADDR = 0x3FFFFFFF
@@ -132,8 +136,8 @@ BEGIN qqprocessing_system7
  PARAMETER C_EN_WDT = 0
  PARAMETER C_EN_DDR = 1
  PARAMETER C_EN_GPIO = 0
- PARAMETER C_FCLK_CLK0_FREQ = 100000000
- PARAMETER C_FCLK_CLK1_FREQ = 166666672
+ PARAMETER C_FCLK_CLK0_FREQ = 50000000
+ PARAMETER C_FCLK_CLK1_FREQ = 50000000
  PARAMETER C_FCLK_CLK2_FREQ = 50000000
  PARAMETER C_FCLK_CLK3_FREQ = 50000000
  PARAMETER C_USE_CR_FABRIC = 1
@@ -182,12 +186,14 @@ END
 BEGIN %(dut)s
  PARAMETER INSTANCE = %(dut)s_0
  PARAMETER HW_VER = 1.00.a
- PORT clk = processing_system7_0_FCLK_CLK0_0
- PORT rst_n = processing_system7_0_M_AXI_GP0_ARESETN
  PORT interrupt = %(dut)s_0_interrupt
 %(dut_axi_master_config)s
 %(dut_axi_slave_config)s
 %(dut_hdmi_config)s
+ PORT xadc_gpio_0 = %(dut)s_0_xadc_gpio_0
+ PORT xadc_gpio_1 = %(dut)s_0_xadc_gpio_1
+ PORT xadc_gpio_2 = %(dut)s_0_xadc_gpio_2
+ PORT xadc_gpio_3 = %(dut)s_0_xadc_gpio_3
 END
 '''
 
@@ -197,10 +203,6 @@ system_hdmi_port_mhs_template='''
  PORT hdmi_de_pin = %(dut)s_0_hdmi_de, DIR = O
  PORT hdmi_data_pin = %(dut)s_0_hdmi_data, DIR = O, VEC = [15:0]
  PORT hdmi_clk_pin = %(dut)s_0_hdmi_clk, DIR = O, SIGIS = CLK
- PORT xadc_gpio_0_pin = %(dut)s_0_xadc_gpio_0, DIR = O
- PORT xadc_gpio_1_pin = %(dut)s_0_xadc_gpio_1, DIR = O
- PORT xadc_gpio_2_pin = %(dut)s_0_xadc_gpio_2, DIR = O
- PORT xadc_gpio_3_pin = %(dut)s_0_xadc_gpio_3, DIR = O
 '''
 
 ps7_axi_master_config_mhs_template='''
@@ -232,14 +234,10 @@ dut_hdmi_config_mhs_template='''
  PORT hdmi_hsync = %(dut)s_0_hdmi_hsync
  PORT hdmi_de = %(dut)s_0_hdmi_de
  PORT hdmi_data = %(dut)s_0_hdmi_data
- PORT xadc_gpio_0 = %(dut)s_0_xadc_gpio_0
- PORT xadc_gpio_1 = %(dut)s_0_xadc_gpio_1
- PORT xadc_gpio_2 = %(dut)s_0_xadc_gpio_2
- PORT xadc_gpio_3 = %(dut)s_0_xadc_gpio_3
 '''
 
 axi_master_interconnect_mhs_template='''
-BEGIN axi_passthrough
+BEGIN axi_interconnect
  PARAMETER INSTANCE = axi_master_interconnect_%(busnumber)s
  PARAMETER HW_VER = 1.06.a
  PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 1
@@ -249,7 +247,7 @@ END
 '''
 
 axi_slave_interconnect_mhs_template='''
-BEGIN axi_passthrough
+BEGIN axi_interconnect
  PARAMETER INSTANCE = axi_slave_interconnect_%(busnumber)s
  PARAMETER HW_VER = 1.06.a
  ## use shared mode, crossbar mode does not work for our design
@@ -286,17 +284,19 @@ OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
 
 ## Ports
 PORT interrupt = "", DIR = O, SIGIS = INTERRUPT
-PORT clk = "", DIR = I, SIGIS = CLK, ASSIGNMENT=REQUIRE
-PORT rst_n = "", DIR = I, SIGIS = RST, RST_POLARITY=0, ASSIGNMENT=REQUIRE
+PORT xadc_gpio_0 = "", DIR = O
+PORT xadc_gpio_1 = "", DIR = O
+PORT xadc_gpio_2 = "", DIR = O
+PORT xadc_gpio_3 = "", DIR = O
 %(port_declarations)s
 END
 '''
 
 axi_master_bus_mpd_template='''
-BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXIPT, BUS_TYPE = MASTER'''
+BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXI, BUS_TYPE = MASTER'''
 
 axi_slave_bus_mpd_template='''
-BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXIPT, BUS_TYPE = SLAVE'''
+BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXI, BUS_TYPE = SLAVE'''
 
 hdmi_bus_mpd_template='''
 IO_INTERFACE IO_IF = %(BUSNAME)s, IO_TYPE = HDMI'''
@@ -379,21 +379,21 @@ PORT %(BUSNAME)s_BRESP = BRESP, DIR = O, VEC = [1:0], BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_BVALID = BVALID, DIR = O, BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_AWREADY = AWREADY, DIR = O, BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_AWID = AWID, DIR = I, VEC = [(C_%(BUSNAME)s_ID_WIDTH-1):0], ENDIAN = LITTLE, BUS = %(BUSNAME)s
-PORT %(BUSNAME)s_AWLEN = AWLEN, DIR = I, VEC = [7:0], BUS = %(BUSNAME)s
+PORT %(BUSNAME)s_AWLEN = AWLEN, DIR = I, VEC = [4:0], BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_AWSIZE = AWSIZE, DIR = I, VEC = [2:0], BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_AWBURST = AWBURST, DIR = I, VEC = [1:0], BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_AWLOCK = AWLOCK, DIR = I, BUS = %(BUSNAME)s
-PORT %(BUSNAME)s_AWCACHE = AWCACHE, DIR = I, VEC = [3:0], BUS = %(BUSNAME)s
-PORT %(BUSNAME)s_AWPROT = AWPROT, DIR = I, VEC = [2:0], BUS = %(BUSNAME)s
+PORT %(BUSNAME)s_AWCACHE = AWCACHE, DIR = I, VEC = [2:0], BUS = %(BUSNAME)s
+PORT %(BUSNAME)s_AWPROT = AWPROT, DIR = I, VEC = [1:0], BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_WLAST = WLAST, DIR = I, BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_BID = BID, DIR = O, VEC = [(C_%(BUSNAME)s_ID_WIDTH-1):0], ENDIAN = LITTLE, BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_ARID = ARID, DIR = I, VEC = [(C_%(BUSNAME)s_ID_WIDTH-1):0], ENDIAN = LITTLE, BUS = %(BUSNAME)s
-PORT %(BUSNAME)s_ARLEN = ARLEN, DIR = I, VEC = [7:0], BUS = %(BUSNAME)s
+PORT %(BUSNAME)s_ARLEN = ARLEN, DIR = I, VEC = [3:0], BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_ARSIZE = ARSIZE, DIR = I, VEC = [2:0], BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_ARBURST = ARBURST, DIR = I, VEC = [1:0], BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_ARLOCK = ARLOCK, DIR = I, BUS = %(BUSNAME)s
-PORT %(BUSNAME)s_ARCACHE = ARCACHE, DIR = I, VEC = [3:0], BUS = %(BUSNAME)s
-PORT %(BUSNAME)s_ARPROT = ARPROT, DIR = I, VEC = [2:0], BUS = %(BUSNAME)s
+PORT %(BUSNAME)s_ARCACHE = ARCACHE, DIR = I, VEC = [2:0], BUS = %(BUSNAME)s
+PORT %(BUSNAME)s_ARPROT = ARPROT, DIR = I, VEC = [1:0], BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_RID = RID, DIR = O, VEC = [(C_%(BUSNAME)s_ID_WIDTH-1):0], ENDIAN = LITTLE, BUS = %(BUSNAME)s
 PORT %(BUSNAME)s_RLAST = RLAST, DIR = O, BUS = %(BUSNAME)s
 '''
@@ -491,7 +491,7 @@ the_ROM_image:
 {
 	[bootloader]zynq_fsbl.elf
 	implementation/%(dut)s.bit
-	u-boot.elf
+	zcomposite.elf
 }
 '''
 
@@ -507,9 +507,6 @@ verilog_template='''
 
 module %(dut)s
 (
-    clk,
-    rst_n,
-
     xadc_gpio_0,
     xadc_gpio_1,
     xadc_gpio_2,
@@ -526,8 +523,6 @@ module %(dut)s
 %(axi_slave_parameters)s
 parameter C_FAMILY = "virtex6";
 
-input clk;
-input rst_n;
 output xadc_gpio_0;
 output xadc_gpio_1;
 output xadc_gpio_2;
@@ -551,8 +546,8 @@ output interrupt;
 
 mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
       %(dut_hdmi_clock_arg)s
-      .CLK(CLK),
-      .RST_N(RST_N),
+      .CLK(CTRL_ACLK),
+      .RST_N(CTRL_ARESETN),
       %(axi_master_port_map)s
       %(axi_slave_port_map)s
       %(hdmi_port_map)s
@@ -563,7 +558,51 @@ mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
 %(axi_master_scheduler)s
 %(axi_slave_scheduler)s
 %(hdmi_iobufs)s
+
 endmodule
+'''
+
+## causes multiple source errors on other signals
+obuf_verilog_template='''
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_xadc_gpio_0
+    (
+    .O(xadc_gpio_0),
+    // Buffer output (connect directly to top-level port)
+    .I(CTRL_ACLK)
+    // Buffer input
+    );
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_xadc_gpio_1
+    (
+    .O(xadc_gpio_1),
+    // Buffer output (connect directly to top-level port)
+    .I(CTRL_ARREADY_unbuf)
+    // Buffer input
+    );
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_xadc_gpio_2 (
+    .O(xadc_gpio_2),
+    // Buffer output (connect directly to top-level port)
+    .I(CTRL_RVALID_unbuf)
+    // Buffer input
+    );
+    OBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) OBUF_xadc_gpio_3
+    (
+    .O(xadc_gpio_3),
+    // Buffer output (connect directly to top-level port)
+    .I(CTRL_AWVALID)
+    // Buffer input
+    );
 '''
 
 axi_master_parameter_verilog_template='''
@@ -729,29 +768,31 @@ input [C_%(BUSNAME)s_ADDR_WIDTH-1 : 0] %(BUSNAME)s_ARADDR;
 input %(BUSNAME)s_ARVALID;
 input %(BUSNAME)s_RREADY;
 output %(BUSNAME)s_ARREADY;
+wire %(BUSNAME)s_ARREADY_unbuf;
 output [C_%(BUSNAME)s_DATA_WIDTH-1 : 0] %(BUSNAME)s_RDATA;
 output [1 : 0] %(BUSNAME)s_RRESP;
 output %(BUSNAME)s_RVALID;
+wire %(BUSNAME)s_RVALID_unbuf;
 output %(BUSNAME)s_WREADY;
 output [1 : 0] %(BUSNAME)s_BRESP;
 output %(BUSNAME)s_BVALID;
 output %(BUSNAME)s_AWREADY;
 input [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(BUSNAME)s_AWID;
-input [7 : 0] %(BUSNAME)s_AWLEN;
+input [3 : 0] %(BUSNAME)s_AWLEN;
 input [2 : 0] %(BUSNAME)s_AWSIZE;
 input [1 : 0] %(BUSNAME)s_AWBURST;
 input %(BUSNAME)s_AWLOCK;
-input [3 : 0] %(BUSNAME)s_AWCACHE;
-input [2 : 0] %(BUSNAME)s_AWPROT;
+input [2 : 0] %(BUSNAME)s_AWCACHE;
+input [1 : 0] %(BUSNAME)s_AWPROT;
 input %(BUSNAME)s_WLAST;
 output [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(BUSNAME)s_BID;
 input [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(BUSNAME)s_ARID;
-input [7 : 0] %(BUSNAME)s_ARLEN;
+input [3 : 0] %(BUSNAME)s_ARLEN;
 input [2 : 0] %(BUSNAME)s_ARSIZE;
 input [1 : 0] %(BUSNAME)s_ARBURST;
 input %(BUSNAME)s_ARLOCK;
-input [3 : 0] %(BUSNAME)s_ARCACHE;
-input [2 : 0] %(BUSNAME)s_ARPROT;
+input [2 : 0] %(BUSNAME)s_ARCACHE;
+input [1 : 0] %(BUSNAME)s_ARPROT;
 output [C_%(BUSNAME)s_ID_WIDTH-1 : 0] %(BUSNAME)s_RID;
 output %(BUSNAME)s_RLAST;
 //============ %(BUSNAME)s ============
@@ -847,10 +888,12 @@ axi_slave_port_map_verilog_template='''
       .%(busname)s_read_readAddr_burstType(%(BUSNAME)s_ARBURST),
       .%(busname)s_read_readAddr_burstProt(%(BUSNAME)s_ARPROT),
       .%(busname)s_read_readAddr_burstCache(%(BUSNAME)s_ARCACHE),
+      .%(busname)s_read_readAddr_arid(%(BUSNAME)s_ARID),
       .EN_%(busname)s_read_readAddr(EN_%(busname)s_read_readAddr),
       .RDY_%(busname)s_read_readAddr(RDY_%(busname)s_read_readAddr),
 
       .%(busname)s_read_last(%(busname)s_read_last),
+      .%(busname)s_read_rid(%(BUSNAME)s_RID),
       .EN_%(busname)s_read_readData(EN_%(busname)s_read_readData),
       .%(busname)s_read_readData(%(busname)s_read_readData),
       .RDY_%(busname)s_read_readData(RDY_%(busname)s_read_readData),
@@ -861,6 +904,7 @@ axi_slave_port_map_verilog_template='''
       .%(busname)s_write_writeAddr_burstType(%(BUSNAME)s_AWBURST),
       .%(busname)s_write_writeAddr_burstProt(%(BUSNAME)s_AWPROT),
       .%(busname)s_write_writeAddr_burstCache(%(BUSNAME)s_AWCACHE),
+      .%(busname)s_write_writeAddr_awid(%(BUSNAME)s_AWID),
       .EN_%(busname)s_write_writeAddr(EN_%(busname)s_write_writeAddr),
       .RDY_%(busname)s_write_writeAddr(RDY_%(busname)s_write_writeAddr),
 
@@ -873,6 +917,9 @@ axi_slave_port_map_verilog_template='''
       .EN_%(busname)s_write_writeResponse(EN_%(busname)s_write_writeResponse),
       .RDY_%(busname)s_write_writeResponse(RDY_%(busname)s_write_writeResponse),
       .%(busname)s_write_writeResponse(%(busname)s_write_writeResponse),
+      .EN_%(busname)s_write_bid(EN_%(busname)s_write_writeResponse),
+      .RDY_%(busname)s_write_bid(RDY_%(busname)s_write_bid),
+      .%(busname)s_write_bid(%(BUSNAME)s_BID),
 '''
 
 hdmi_port_map_verilog_template='''
@@ -912,6 +959,7 @@ axi_slave_signal_verilog_template='''
   wire RDY_%(busname)s_write_writeData;
   wire EN_%(busname)s_write_writeResponse;
   wire RDY_%(busname)s_write_writeResponse;
+  wire RDY_%(busname)s_write_bid;
   wire %(busname)s_read_last;
 '''
 
@@ -940,16 +988,16 @@ axi_slave_scheduler_verilog_template='''
 assign %(busname)s_mem0_araddr_matches = (%(BUSNAME)s_ARADDR >= C_%(BUSNAME)s_MEM0_BASEADDR & %(BUSNAME)s_ARADDR <= C_%(BUSNAME)s_MEM0_HIGHADDR);
 assign %(busname)s_mem0_awaddr_matches = (%(BUSNAME)s_AWADDR >= C_%(BUSNAME)s_MEM0_BASEADDR & %(BUSNAME)s_AWADDR <= C_%(BUSNAME)s_MEM0_HIGHADDR);
 
-assign %(BUSNAME)s_ARREADY  = RDY_%(busname)s_read_readAddr & %(busname)s_mem0_araddr_matches;
-assign %(BUSNAME)s_RVALID = EN_%(busname)s_read_readData;
-assign %(BUSNAME)s_RRESP  = "00";
+assign %(BUSNAME)s_ARREADY_unbuf = RDY_%(busname)s_read_readAddr & %(BUSNAME)s_ARVALID & %(busname)s_mem0_araddr_matches;
+assign %(BUSNAME)s_ARREADY = %(BUSNAME)s_ARREADY_unbuf;
+assign %(BUSNAME)s_RVALID_unbuf = EN_%(busname)s_read_readData;
+assign %(BUSNAME)s_RVALID = %(BUSNAME)s_RVALID_unbuf;
+assign %(BUSNAME)s_RRESP[1:0]  = "00";
 
-assign %(BUSNAME)s_RDATA  = %(busname)s_read_readData & EN_%(busname)s_read_readData;
-assign %(BUSNAME)s_RLAST  = %(busname)s_read_last & EN_%(busname)s_read_readData;
+assign %(BUSNAME)s_RDATA  = %(busname)s_read_readData;
+assign %(BUSNAME)s_RLAST  = %(busname)s_read_last;
 
 
-assign %(BUSNAME)s_RID = 0;
-assign %(BUSNAME)s_BID = 0;
 assign %(BUSNAME)s_AWREADY  = RDY_%(busname)s_write_writeAddr & %(busname)s_mem0_awaddr_matches;
 assign %(BUSNAME)s_WREADY = RDY_%(busname)s_write_writeData;
 assign %(BUSNAME)s_BVALID  = EN_%(busname)s_write_writeResponse;
@@ -958,7 +1006,7 @@ assign %(BUSNAME)s_BRESP = %(busname)s_write_writeResponse;
 assign EN_%(busname)s_read_readAddr = RDY_%(busname)s_read_readAddr & %(BUSNAME)s_ARVALID & %(busname)s_mem0_araddr_matches;
 assign EN_%(busname)s_read_readData = RDY_%(busname)s_read_readData & %(BUSNAME)s_RREADY;
 
-assign EN_%(busname)s_write_writeAddr = RDY_%(busname)s_write_writeAddr & %(BUSNAME)s_AWVALID&  %(busname)s_mem0_awaddr_matches;
+assign EN_%(busname)s_write_writeAddr = RDY_%(busname)s_write_writeAddr & %(BUSNAME)s_AWVALID & %(busname)s_mem0_awaddr_matches;
 assign EN_%(busname)s_write_writeData = RDY_%(busname)s_write_writeData & %(BUSNAME)s_WVALID;
 assign EN_%(busname)s_write_writeResponse = RDY_%(busname)s_write_writeResponse & %(BUSNAME)s_BREADY;
 '''

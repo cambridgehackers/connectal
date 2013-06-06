@@ -24,8 +24,8 @@ import HDMI::*;
 dutInterfaceTemplate='''
 interface %(Dut)sWrapper;
    method Bit#(1) interrupt();
-   interface AxiSlave#(32,4) ctrl;
-   interface AxiSlave#(32,4) fifo;
+   interface Axi3Slave#(32,4) ctrl;
+   interface Axi3Slave#(32,4) fifo;
 %(axiSlaveDeclarations)s
 %(axiMasterDeclarations)s
 %(hdmiDeclarations)s
@@ -87,17 +87,23 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
     Reg#(Bit#(20)) fifoReadAddrReg <- mkReg(0);
     Reg#(Bit#(12)) ctrlWriteAddrReg <- mkReg(0);
     Reg#(Bit#(16)) fifoWriteAddrReg <- mkReg(0);
+    Reg#(Bit#(12)) ctrlReadIdReg <- mkReg(0);
+    Reg#(Bit#(12)) fifoReadIdReg <- mkReg(0);
+    Reg#(Bit#(12)) ctrlWriteIdReg <- mkReg(0);
+    Reg#(Bit#(12)) fifoWriteIdReg <- mkReg(0);
     FIFO#(Bit#(8)) fifoWriteAddrFifo <- mkSizedFIFO(4);
     FIFO#(Bit#(32)) fifoWriteDataFifo <- mkSizedFIFO(4);
     FIFO#(Bit#(16)) fifoReadAddrFifo <- mkSizedFIFO(4);
     FIFO#(Bit#(32)) fifoReadDataFifo <- mkSizedFIFO(4);
     FIFO#(Bit#(1)) fifoReadLastFifo <- mkSizedFIFO(4);
-    Reg#(Bit#(8)) ctrlReadBurstCountReg <- mkReg(0);
-    Reg#(Bit#(8)) fifoReadBurstCountReg <- mkReg(0);
-    Reg#(Bit#(8)) ctrlWriteBurstCountReg <- mkReg(0);
-    Reg#(Bit#(8)) fifoWriteBurstCountReg <- mkReg(0);
+    Reg#(Bit#(4)) ctrlReadBurstCountReg <- mkReg(0);
+    Reg#(Bit#(4)) fifoReadBurstCountReg <- mkReg(0);
+    Reg#(Bit#(4)) ctrlWriteBurstCountReg <- mkReg(0);
+    Reg#(Bit#(4)) fifoWriteBurstCountReg <- mkReg(0);
     FIFO#(Bit#(2)) ctrlBrespFifo <- mkFIFO();
     FIFO#(Bit#(2)) fifoBrespFifo <- mkFIFO();
+    FIFO#(Bit#(12)) ctrlBidFifo <- mkFIFO();
+    FIFO#(Bit#(12)) fifoBidFifo <- mkFIFO();
 
 %(methodRules)s
 
@@ -115,13 +121,15 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         fifoReadBurstCountReg <= fifoReadBurstCountReg - 1;
         fifoReadLastFifo.enq(fifoReadBurstCountReg == 1 ? 1 : 0);
     endrule
-    interface AxiSlave ctrl;
-        interface AxiSlaveWrite write;
-            method Action writeAddr(Bit#(32) addr, Bit#(8) burstLen, Bit#(3) burstWidth,
-                                     Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache)
+    interface Axi3Slave ctrl;
+        interface Axi3SlaveWrite write;
+            method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
+                                    Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache,
+                                    Bit#(12) awid)
                           if (ctrlWriteBurstCountReg == 0);
                 ctrlWriteBurstCountReg <= burstLen + 1;
                 ctrlWriteAddrReg <= truncate(addr);
+                ctrlWriteIdReg <= awid;
             endmethod
             method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last)
                           if (ctrlWriteBurstCountReg > 0);
@@ -135,21 +143,31 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
                 if (addr == 12'h004)
                     interruptEnableReg <= v;
                 ctrlBrespFifo.enq(0);
+                ctrlBidFifo.enq(ctrlWriteIdReg);
             endmethod
             method ActionValue#(Bit#(2)) writeResponse();
                 ctrlBrespFifo.deq;
                 return ctrlBrespFifo.first;
             endmethod
+            method ActionValue#(Bit#(12)) bid();
+                ctrlBidFifo.deq;
+                return ctrlBidFifo.first;
+            endmethod
         endinterface
-        interface AxiSlaveRead read;
-            method Action readAddr(Bit#(32) addr, Bit#(8) burstLen, Bit#(3) burstWidth,
-                                   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache)
+        interface Axi3SlaveRead read;
+            method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
+                                   Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache,
+                                   Bit#(12) arid)
                           if (ctrlReadBurstCountReg == 0);
                 ctrlReadBurstCountReg <= burstLen + 1;
                 ctrlReadAddrReg <= truncate(addr);
+                ctrlReadIdReg <= arid;
             endmethod
             method Bit#(1) last();
                 return (ctrlReadBurstCountReg == 1) ? 1 : 0;
+            endmethod
+            method Bit#(12) rid();
+                return ctrlReadIdReg;
             endmethod
             method ActionValue#(Bit#(32)) readData()
                           if (ctrlReadBurstCountReg > 0);
@@ -209,13 +227,15 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         endinterface
     endinterface
 
-    interface AxiSlave fifo;
-        interface AxiSlaveWrite write;
-            method Action writeAddr(Bit#(32) addr, Bit#(8) burstLen, Bit#(3) burstWidth,
-                                    Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache)
+    interface Axi3Slave fifo;
+        interface Axi3SlaveWrite write;
+            method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
+                                    Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache,
+                                    Bit#(12) awid)
                           if (fifoWriteBurstCountReg == 0);
                 fifoWriteBurstCountReg <= burstLen + 1;
                 fifoWriteAddrReg <= truncate(addr);
+                fifoWriteIdReg <= awid;
             endmethod
             method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last)
                           if (fifoWriteBurstCountReg > 0);
@@ -228,21 +248,31 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 
                 putWordCount <= putWordCount + 1;
                 fifoBrespFifo.enq(0);
+                fifoBidFifo.enq(fifoWriteIdReg);
             endmethod
             method ActionValue#(Bit#(2)) writeResponse();
                 fifoBrespFifo.deq;
                 return fifoBrespFifo.first;
             endmethod
+            method ActionValue#(Bit#(12)) bid();
+                fifoBidFifo.deq;
+                return fifoBidFifo.first;
+            endmethod
         endinterface
-        interface AxiSlaveRead read;
-            method Action readAddr(Bit#(32) addr, Bit#(8) burstLen, Bit#(3) burstWidth,
-                                   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache)
+        interface Axi3SlaveRead read;
+            method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
+                                   Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache,
+                                   Bit#(12) arid)
                           if (fifoReadBurstCountReg == 0);
                 fifoReadBurstCountReg <= burstLen + 1;
                 fifoReadAddrReg <= truncate(addr);
+                fifoReadIdReg <= arid;
             endmethod
             method Bit#(1) last();
                 return fifoReadLastFifo.first;
+            endmethod
+            method Bit#(12) rid();
+                return fifoReadIdReg;
             endmethod
             method ActionValue#(Bit#(32)) readData();
 
