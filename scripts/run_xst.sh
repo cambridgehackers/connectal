@@ -46,3 +46,4 @@ run\n-opt_mode speed\n-netlist_hierarchy as_optimized\n-opt_level 1
 -hierarchy_separator /\n-iobuf NO\n${MAXFANOUT}-sd {../implementation}
 -vlgincdir {\"$DIRNAME/pcores/\" \"$XILDIRNAME/XilinxBFMinterface/pcores/\" \"$XILDIRNAME/XilinxProcessorIPLib/pcores/\" }" >xx.tmp
 
+xst -ifn xx.tmp
