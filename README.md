@@ -47,7 +47,7 @@ Eject the card and plug it into the zc702 and boot.
 Echo Example
 ------------
 
-    ./genxpsprojfrombsv -p echoproj -b Echo examples/echo/Echo.bsv
+    ./genxpsprojfrombsv -B zedboard -p echoproj -b Echo examples/echo/Echo.bsv
     cd echoproj
     make verilog
     make bits
@@ -75,7 +75,7 @@ HDMI Example
 
 For example, to create an HDMI frame buffer from the example code:
 
-    ./genxpsprojfrombsv -p xpsproj -b HdmiDisplay bsv/TypesAndInterfaces.bsv bsv/HdmiDisplay.bsv
+    ./genxpsprojfrombsv -B zedboard -p xpsproj -b HdmiDisplay bsv/TypesAndInterfaces.bsv bsv/HdmiDisplay.bsv
 
 To generate the bitstream:
 

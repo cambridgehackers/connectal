@@ -22,6 +22,7 @@ AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin,xpsgen.I
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
 
 argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
+argparser.add_argument('-B', '--board', default='zc702', help='Board to generate stubs and ucf constraints for')
 argparser.add_argument('-b', '--interface', help='BSV interface to generate stubs for')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
@@ -71,6 +72,7 @@ if __name__=='__main__':
         s1 = syntax.parse(s)
 
     corename = '%s_v1_00_a' % namespace.interface.lower()
+    boardname = namespace.board.lower()
 
     makename = os.path.join(project_dir, 'Makefile')
     xmpname = os.path.join(project_dir, '%s.xmp' % namespace.interface.lower())
@@ -130,7 +132,7 @@ if __name__=='__main__':
         subinterface.writeXmp(xmpname)
         subinterface.writePao(paoname)
         subinterface.writeVerilog(verilogname)
-        subinterface.writeUcf(ucfname)
+        subinterface.writeUcf(ucfname, boardname)
         subinterface.writeBif(bifname)
         print 'Writing Android.mk', androidmkname
         print 'Writing Application.mk', applicationmkname
