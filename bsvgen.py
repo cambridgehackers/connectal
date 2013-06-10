@@ -25,7 +25,6 @@ dutInterfaceTemplate='''
 interface %(Dut)sWrapper;
    method Bit#(1) interrupt();
    interface Axi3Slave#(32,4) ctrl;
-   interface Axi3Slave#(32,4) fifo;
 %(axiSlaveDeclarations)s
 %(axiMasterDeclarations)s
 %(hdmiDeclarations)s
@@ -83,35 +82,108 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         interruptCleared <= False;
     endrule
 
-    Reg#(Bit#(12)) ctrlReadAddrReg <- mkReg(0);
-    Reg#(Bit#(20)) fifoReadAddrReg <- mkReg(0);
-    Reg#(Bit#(12)) ctrlWriteAddrReg <- mkReg(0);
-    Reg#(Bit#(16)) fifoWriteAddrReg <- mkReg(0);
-    Reg#(Bit#(12)) ctrlReadIdReg <- mkReg(0);
+    Reg#(Bit#(17)) fifoReadAddrReg <- mkReg(0);
+    Reg#(Bit#(17)) fifoWriteAddrReg <- mkReg(0);
     Reg#(Bit#(12)) fifoReadIdReg <- mkReg(0);
-    Reg#(Bit#(12)) ctrlWriteIdReg <- mkReg(0);
     Reg#(Bit#(12)) fifoWriteIdReg <- mkReg(0);
-    FIFO#(Bit#(8)) fifoWriteAddrFifo <- mkSizedFIFO(4);
+    FIFO#(Bit#(17)) fifoWriteAddrFifo <- mkSizedFIFO(4);
+    FIFO#(Bit#(17)) fifoReadAddrFifo <- mkSizedFIFO(4);
     FIFO#(Bit#(32)) fifoWriteDataFifo <- mkSizedFIFO(4);
-    FIFO#(Bit#(16)) fifoReadAddrFifo <- mkSizedFIFO(4);
     FIFO#(Bit#(32)) fifoReadDataFifo <- mkSizedFIFO(4);
     FIFO#(Bit#(1)) fifoReadLastFifo <- mkSizedFIFO(4);
-    Reg#(Bit#(4)) ctrlReadBurstCountReg <- mkReg(0);
+    FIFO#(Bit#(12)) fifoReadIdFifo <- mkSizedFIFO(4);
     Reg#(Bit#(4)) fifoReadBurstCountReg <- mkReg(0);
-    Reg#(Bit#(4)) ctrlWriteBurstCountReg <- mkReg(0);
     Reg#(Bit#(4)) fifoWriteBurstCountReg <- mkReg(0);
-    FIFO#(Bit#(2)) ctrlBrespFifo <- mkFIFO();
+    Reg#(Bit#(32)) outOfRangeReadCount <- mkReg(0);
+    Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
     FIFO#(Bit#(2)) fifoBrespFifo <- mkFIFO();
-    FIFO#(Bit#(12)) ctrlBidFifo <- mkFIFO();
     FIFO#(Bit#(12)) fifoBidFifo <- mkFIFO();
 
 %(methodRules)s
 
-    rule outOfRangeWrite if (fifoWriteAddrFifo.first >= %(channelCount)s);
+    rule writeCtrlReg if (fifoWriteAddrFifo.first[16] == 0);
+        fifoWriteAddrFifo.deq;
+        fifoWriteDataFifo.deq;
+	let addr = fifoWriteAddrFifo.first[11:0];
+	let v = fifoWriteDataFifo.first;
+	if (addr == 12'h000 && v[0] == 1'b1 && interrupted)
+	begin
+	    interruptCleared <= True;
+	end
+	if (addr == 12'h004)
+	    interruptEnableReg <= v;
+    endrule
+    rule readCtrlReg if (fifoReadAddrFifo.first[16] == 0);
+        fifoReadAddrFifo.deq;
+	let addr = fifoReadAddrFifo.first[11:0];
+
+	Bit#(32) v = 32'h05a05a0;
+	if (addr == 12'h000)
+	begin
+	    v = 0;
+	    v[0] = interrupted ? 1'd1 : 1'd0 ;
+	end
+	if (addr == 12'h004)
+	    v = interruptEnableReg;
+	if (addr == 12'h008)
+	    v = 2; // channelCount
+	if (addr == 12'h00C)
+	    v = 32'h00010000; // base fifo offset
+	if (addr == 12'h010)
+	    v = requestFired;
+	if (addr == 12'h014)
+	    v = responseFired;
+	if (addr == 12'h018)
+	    v = underflowCount;
+	if (addr == 12'h01C)
+	    v = overflowCount;
+	if (addr == 12'h020)
+	    v = (32'h68470000
+		 //| (responseFifo.notFull ? 32'h20 : 0) | (responseFifo.notEmpty ? 32'h10 : 0)
+		 //| (requestFifo.notFull ? 32'h02 : 0) | (requestFifo.notEmpty ? 32'h01 : 0)
+		 | extend(fifoReadBurstCountReg)
+		 );
+	if (addr == 12'h024)
+	    v = putWordCount;
+	if (addr == 12'h028)
+	    v = getWordCount;
+	if (addr == 12'h02C)
+	    v = 0;
+	if (addr >= 12'h030 && addr <= (12'h030 + %(channelCount)s/4))
+	begin
+	    v = 0;
+	    Bit#(7) baseQueueNumber = addr[9:3] << 5;
+	    for (Bit#(7) i = 0; i <= baseQueueNumber+31 && i < %(channelCount)s; i = i + 1)
+	    begin
+		Bit#(5) bitPos = truncate(i - baseQueueNumber);
+		v[bitPos] = interruptPulses[i] ? 1 : 0;
+	    end
+	end
+	if (addr >= 12'h034 && addr <= (12'h034 + %(channelCount)s/4))
+	begin
+	    v = 0;
+            %(queuesNotEmpty)s
+	end
+	if (addr == 12'h038)
+	begin
+	    v = 0;
+	end
+	if (addr == 12'h03c)
+	begin
+	    v = outOfRangeReadCount;
+	end
+	if (addr == 12'h040)
+	begin
+	    v = outOfRangeWriteCount;
+	end
+        fifoReadDataFifo.enq(v);
+    endrule
+
+    rule outOfRangeWrite if (fifoWriteAddrFifo.first[16] == 1 && fifoWriteAddrFifo.first[15:8] >= %(channelCount)s);
         fifoWriteAddrFifo.deq;
         fifoWriteDataFifo.deq;
     endrule
-    rule outOfRangeRead if (fifoReadAddrFifo.first[15:8] >= %(channelCount)s);
+    rule outOfRangeRead if (fifoReadAddrFifo.first[16] == 1 && fifoReadAddrFifo.first[15:8] >= %(channelCount)s);
         fifoReadAddrFifo.deq;
         fifoReadDataFifo.enq(0);
     endrule
@@ -120,122 +192,17 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         fifoReadAddrReg <= fifoReadAddrReg + 4;
         fifoReadBurstCountReg <= fifoReadBurstCountReg - 1;
         fifoReadLastFifo.enq(fifoReadBurstCountReg == 1 ? 1 : 0);
+        fifoReadIdFifo.enq(fifoReadIdReg);
     endrule
     interface Axi3Slave ctrl;
         interface Axi3SlaveWrite write;
             method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
                                     Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache,
-                                    Bit#(12) awid)
-                          if (ctrlWriteBurstCountReg == 0);
-                ctrlWriteBurstCountReg <= burstLen + 1;
-                ctrlWriteAddrReg <= truncate(addr);
-                ctrlWriteIdReg <= awid;
-            endmethod
-            method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last)
-                          if (ctrlWriteBurstCountReg > 0);
-                let addr = ctrlWriteAddrReg;
-                ctrlWriteAddrReg <= ctrlWriteAddrReg + 12'd4;
-                ctrlWriteBurstCountReg <= ctrlWriteBurstCountReg - 1;
-                if (addr == 12'h000 && v[0] == 1'b1 && interrupted)
-                begin
-                    interruptCleared <= True;
-                end
-                if (addr == 12'h004)
-                    interruptEnableReg <= v;
-                ctrlBrespFifo.enq(0);
-                ctrlBidFifo.enq(ctrlWriteIdReg);
-            endmethod
-            method ActionValue#(Bit#(2)) writeResponse();
-                ctrlBrespFifo.deq;
-                return ctrlBrespFifo.first;
-            endmethod
-            method ActionValue#(Bit#(12)) bid();
-                ctrlBidFifo.deq;
-                return ctrlBidFifo.first;
-            endmethod
-        endinterface
-        interface Axi3SlaveRead read;
-            method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                   Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache,
-                                   Bit#(12) arid)
-                          if (ctrlReadBurstCountReg == 0);
-                ctrlReadBurstCountReg <= burstLen + 1;
-                ctrlReadAddrReg <= truncate(addr);
-                ctrlReadIdReg <= arid;
-            endmethod
-            method Bit#(1) last();
-                return (ctrlReadBurstCountReg == 1) ? 1 : 0;
-            endmethod
-            method Bit#(12) rid();
-                return ctrlReadIdReg;
-            endmethod
-            method ActionValue#(Bit#(32)) readData()
-                          if (ctrlReadBurstCountReg > 0);
-                let addr = ctrlReadAddrReg;
-                ctrlReadAddrReg <= ctrlReadAddrReg + 12'd4;
-                ctrlReadBurstCountReg <= ctrlReadBurstCountReg - 1;
-
-                Bit#(32) v = 32'h05a05a0;
-                if (addr == 12'h000)
-                begin
-                    v = 0;
-                    v[0] = interrupted ? 1'd1 : 1'd0 ;
-                end
-                if (addr == 12'h004)
-                    v = interruptEnableReg;
-                if (addr == 12'h008)
-                    v = %(channelCount)s; // channelCount
-                if (addr == 12'h00C)
-                    v = 32'h00010000; // base fifo offset
-                if (addr == 12'h010)
-                    v = requestFired;
-                if (addr == 12'h014)
-                    v = responseFired;
-                if (addr == 12'h018)
-                    v = underflowCount;
-                if (addr == 12'h01C)
-                    v = overflowCount;
-                if (addr == 12'h020)
-                    v = (32'h68470000
-                         //| (responseFifo.notFull ? 32'h20 : 0) | (responseFifo.notEmpty ? 32'h10 : 0)
-                         //| (requestFifo.notFull ? 32'h02 : 0) | (requestFifo.notEmpty ? 32'h01 : 0)
-                         | extend(fifoReadBurstCountReg)
-                         );
-                if (addr == 12'h024)
-                    v = putWordCount;
-                if (addr == 12'h028)
-                    v = getWordCount;
-                if (addr == 12'h02C)
-                    v = 0;
-                if (addr >= 12'h030 && addr <= (12'h030 + %(channelCount)s/4))
-                begin
-                    v = 0;
-                    Bit#(7) baseQueueNumber = addr[9:3] << 5;
-                    for (Bit#(7) i = 0; i <= baseQueueNumber+31 && i < %(channelCount)s; i = i + 1)
-                    begin
-                        Bit#(5) bitPos = truncate(i - baseQueueNumber);
-                        v[bitPos] = interruptPulses[i] ? 1 : 0;
-                    end
-                end
-                if (addr >= 12'h034 && addr <= (12'h034 + %(channelCount)s/4))
-                begin
-                    v = 0;
-                    %(queuesNotEmpty)s
-                end
-                return v;
-            endmethod
-        endinterface
-    endinterface
-
-    interface Axi3Slave fifo;
-        interface Axi3SlaveWrite write;
-            method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                    Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache,
-                                    Bit#(12) awid)
+				    Bit#(12) awid)
                           if (fifoWriteBurstCountReg == 0);
                 fifoWriteBurstCountReg <= burstLen + 1;
                 fifoWriteAddrReg <= truncate(addr);
-                fifoWriteIdReg <= awid;
+		fifoWriteIdReg <= awid;
             endmethod
             method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last)
                           if (fifoWriteBurstCountReg > 0);
@@ -243,7 +210,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
                 fifoWriteAddrReg <= fifoWriteAddrReg + 4;
                 fifoWriteBurstCountReg <= fifoWriteBurstCountReg - 1;
 
-                fifoWriteAddrFifo.enq(fifoWriteAddrReg[15:8]);
+                fifoWriteAddrFifo.enq(fifoWriteAddrReg[16:0]);
                 fifoWriteDataFifo.enq(v);
 
                 putWordCount <= putWordCount + 1;
@@ -261,24 +228,24 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         endinterface
         interface Axi3SlaveRead read;
             method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                   Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache,
-                                   Bit#(12) arid)
+                                   Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) arid)
                           if (fifoReadBurstCountReg == 0);
                 fifoReadBurstCountReg <= burstLen + 1;
                 fifoReadAddrReg <= truncate(addr);
-                fifoReadIdReg <= arid;
+		fifoReadIdReg <= arid;
             endmethod
             method Bit#(1) last();
                 return fifoReadLastFifo.first;
             endmethod
             method Bit#(12) rid();
-                return fifoReadIdReg;
+                return fifoReadIdFifo.first;
             endmethod
             method ActionValue#(Bit#(32)) readData();
 
                 let v = fifoReadDataFifo.first;
                 fifoReadDataFifo.deq;
                 fifoReadLastFifo.deq;
+                fifoReadIdFifo.deq;
 
                 getWordCount <= getWordCount + 1;
                 return v;
@@ -301,7 +268,7 @@ endmodule
 
 requestRuleTemplate='''
     FromBit32#(%(MethodName)s$Request) %(methodName)s$requestFifo <- mkFromBit32();
-    rule fifoWrite$%(methodName)s if (fifoWriteAddrFifo.first == %(methodName)s$Offset);
+    rule fifoWrite$%(methodName)s if (fifoWriteAddrFifo.first[16] == 1 && fifoWriteAddrFifo.first[15:8] == %(methodName)s$Offset);
         fifoWriteAddrFifo.deq;
         fifoWriteDataFifo.deq;
         %(methodName)s$requestFifo.enq(fifoWriteDataFifo.first);
@@ -312,7 +279,7 @@ requestRuleTemplate='''
         %(dut)s.%(methodName)s(%(paramsForCall)s);
         requestFired <= requestFired + 1;
     endrule
-    rule %(methodName)s$fifoRead if (fifoReadAddrFifo.first[15:8] == %(methodName)s$Offset);
+    rule %(methodName)s$fifoRead if (fifoReadAddrFifo.first[16] == 1 && fifoReadAddrFifo.first[15:8] == %(methodName)s$Offset);
         fifoReadAddrFifo.deq;
         // nothing to read from a request fifo
         fifoReadDataFifo.enq(0);
@@ -326,7 +293,7 @@ responseRuleTemplate='''
         %(methodName)s$responseFifo.enq(response);
         responseFired <= responseFired + 1;
     endrule
-    rule %(methodName)s$fifoRead if (fifoReadAddrFifo.first[15:8] == %(methodName)s$Offset);
+    rule %(methodName)s$fifoRead if (fifoReadAddrFifo.first[16] == 1 && fifoReadAddrFifo.first[15:8] == %(methodName)s$Offset);
         fifoReadAddrFifo.deq;
         Bit#(8) offset = fifoReadAddrFifo.first[7:0];
         Bit#(32) response = 0;
@@ -354,7 +321,7 @@ responseRuleTemplate='''
         interruptPulses[%(channelNumber)s].send();
         interruptRequested.send();
     endrule
-    rule fifoWrite$%(methodName)s if (fifoWriteAddrFifo.first == %(methodName)s$Offset);
+    rule fifoWrite$%(methodName)s if (fifoWriteAddrFifo.first[16] == 1 && fifoWriteAddrFifo.first[15:8] == %(methodName)s$Offset);
         fifoWriteAddrFifo.deq;
         fifoWriteDataFifo.deq;
         // ignore writes to response fifo

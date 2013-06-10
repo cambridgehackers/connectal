@@ -141,7 +141,7 @@ BEGIN processing_system7
  PARAMETER C_FCLK_CLK2_FREQ = 50000000
  PARAMETER C_FCLK_CLK3_FREQ = 50000000
  PARAMETER C_USE_CR_FABRIC = 1
- PARAMETER C_USE_M_AXI_GP1 = 1
+ PARAMETER C_USE_M_AXI_GP1 = 0
  PARAMETER C_USE_S_AXI_ACP = 0
  PARAMETER C_EMIO_GPIO_WIDTH = 64
  PARAMETER C_EN_EMIO_GPIO = 0
@@ -167,13 +167,9 @@ BEGIN processing_system7
  PORT DDR_VRN = processing_system7_0_DDR_VRN
  PORT DDR_VRP = processing_system7_0_DDR_VRP
  PORT FCLK_CLK0 = processing_system7_0_FCLK_CLK0_0
- PORT FCLK_CLK1 = processing_system7_0_FCLK_CLK1_0
  PORT M_AXI_GP0_ACLK = processing_system7_0_FCLK_CLK0_0
  PORT M_AXI_GP0_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
- PORT M_AXI_GP1_ACLK = processing_system7_0_FCLK_CLK1_0
- PORT M_AXI_GP1_ARESETN = processing_system7_0_M_AXI_GP1_ARESETN
  BUS_INTERFACE M_AXI_GP0 = axi_slave_interconnect_0
- BUS_INTERFACE M_AXI_GP1 = axi_slave_interconnect_1
 
 %(ps7_axi_master_config)s
 
@@ -195,6 +191,23 @@ BEGIN %(dut)s
  PORT xadc_gpio_2 = %(dut)s_0_xadc_gpio_2
  PORT xadc_gpio_3 = %(dut)s_0_xadc_gpio_3
 END
+
+BEGIN chipscope_axi_monitor
+ PARAMETER INSTANCE = chipscope_axi_monitor_0
+ PARAMETER HW_VER = 3.05.a
+ PARAMETER C_USE_INTERFACE = 2
+ BUS_INTERFACE MON_AXI = %(dut)s_0.CTRL
+ PORT CHIPSCOPE_ICON_CONTROL = chipscope_icon_0_control0
+ PORT RESET = net_gnd
+ PORT MON_AXI_ACLK = processing_system7_0_FCLK_CLK0_0
+END
+
+BEGIN chipscope_icon
+ PARAMETER INSTANCE = chipscope_icon_0
+ PARAMETER HW_VER = 1.06.a
+ PARAMETER C_NUM_CONTROL_PORTS = 1
+ PORT control0 = chipscope_icon_0_control0
+END
 '''
 
 system_hdmi_port_mhs_template='''
@@ -206,7 +219,7 @@ system_hdmi_port_mhs_template='''
 '''
 
 ps7_axi_master_config_mhs_template='''
- ##PARAMETER C_INTERCONNECT_S_AXI_HP%(busnumber)s_MASTERS = %(dut)s_0.%(BUSNAME)s
+ PARAMETER C_INTERCONNECT_S_AXI_HP%(busnumber)s_MASTERS = %(dut)s_0.%(BUSNAME)s
  PARAMETER C_USE_S_AXI_HP%(busnumber)s = 1
  BUS_INTERFACE S_AXI_HP%(busnumber)s = axi_master_interconnect_%(busnumber)s
  PORT S_AXI_HP%(busnumber)s_ACLK = processing_system7_0_FCLK_CLK0_0
@@ -253,7 +266,6 @@ BEGIN axi_interconnect
  ## use shared mode, crossbar mode does not work for our design
  PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 0
  PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0_0
- #PORT INTERCONNECT_ARESETN = processing_system7_0_M_AXI_GP%(busnumber)s_ARESETN
  PORT INTERCONNECT_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
 END
 '''
@@ -489,7 +501,7 @@ TIMESPEC TS_FCLK0 = PERIOD "processing_system7_0/FCLK_CLK0" 133 MHz;
 bif_template='''
 the_ROM_image:
 {
-	[bootloader]zynq_fsbl.elf
+	[bootloader] zynq_fsbl.elf
 	implementation/%(dut)s.bit
 	zcomposite.elf
 }
@@ -1275,7 +1287,7 @@ class InterfaceMixin:
         mpd = util.createDirAndOpen(mpdname, 'w')
         dutName = util.decapitalize(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Master')
-        axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
+        axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
         substs = {
@@ -1309,7 +1321,7 @@ class InterfaceMixin:
         mhs = util.createDirAndOpen(mhsname, 'w')
         dutName = self.name.lower()
         axiMasters = self.collectInterfaceNames('Axi3?Master')
-        axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
+        axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
         substs = {
@@ -1325,8 +1337,8 @@ class InterfaceMixin:
                                               % {'busnumber': i, 
                                                  'busname': axiSlaves[i][0],
                                                  'BUSNAME': axiSlaves[i][0].upper(),
-                                                 'busbase': hex(0x6e400000 + 0x20000000*i),
-                                                 'bushigh': hex(0x6e400000 + 0x20000000*i + 0x0FFFF)}
+                                                 'busbase': hex(0x6e400000 + 0x00020000*i),
+                                                 'bushigh': hex(0x6e400000 + 0x00020000*i + 0x1FFFF)}
                                               for i in range(len(axiSlaves))]),
             'ps7_axi_master_config': ''.join([ ps7_axi_master_config_mhs_template
                                                % {'dut': dutName,
@@ -1374,7 +1386,7 @@ class InterfaceMixin:
         verilog = util.createDirAndOpen(verilogname, 'w')
         dutName = util.decapitalize(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Master')
-        axiSlaves = [('ctrl','AxiSlave',[]), ('fifo','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
+        axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
         substs = {
