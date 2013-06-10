@@ -167,6 +167,7 @@ BEGIN processing_system7
  PORT DDR_VRN = processing_system7_0_DDR_VRN
  PORT DDR_VRP = processing_system7_0_DDR_VRP
  PORT FCLK_CLK0 = processing_system7_0_FCLK_CLK0_0
+ PORT FCLK_CLK1 = processing_system7_0_FCLK_CLK1_0
  PORT M_AXI_GP0_ACLK = processing_system7_0_FCLK_CLK0_0
  PORT M_AXI_GP0_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
  BUS_INTERFACE M_AXI_GP0 = axi_slave_interconnect_0
