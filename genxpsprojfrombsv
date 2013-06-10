@@ -19,10 +19,13 @@ AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (cppgen.ParamMixin,)
 AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin,xpsgen.InterfaceMixin)
 
+supported_boards = ['zedboard', 'zc702']
+
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
 
 argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
-argparser.add_argument('-B', '--board', default='zc702', help='Board to generate stubs and ucf constraints for')
+argparser.add_argument('-B', '--board', default='zc702', choices=supported_boards,
+                       help='Board to generate stubs and ucf constraints for')
 argparser.add_argument('-b', '--interface', help='BSV interface to generate stubs for')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
