@@ -206,8 +206,9 @@ END
 BEGIN chipscope_icon
  PARAMETER INSTANCE = chipscope_icon_0
  PARAMETER HW_VER = 1.06.a
- PARAMETER C_NUM_CONTROL_PORTS = 1
+ PARAMETER C_NUM_CONTROL_PORTS = %(chipscopecount)s
  PORT control0 = chipscope_icon_0_control0
+%(chipscopecontrols)s
 END
 '''
 
@@ -257,6 +258,16 @@ BEGIN axi_interconnect
  PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 1
  PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0_0
  PORT INTERCONNECT_ARESETN = processing_system7_0_S_AXI_HP%(busnumber)s_ARESETN
+END
+
+BEGIN chipscope_axi_monitor
+ PARAMETER INSTANCE = chipscope_axi_monitor_%(chipscopenumber)s
+ PARAMETER HW_VER = 3.05.a
+ PARAMETER C_USE_INTERFACE = 2
+ BUS_INTERFACE MON_AXI = %(dut)s_0.%(BUSNAME)s
+ PORT CHIPSCOPE_ICON_CONTROL = chipscope_icon_0_control%(chipscopenumber)s
+ PORT RESET = net_gnd
+ PORT MON_AXI_ACLK = processing_system7_0_FCLK_CLK0_0
 END
 '''
 
@@ -1386,7 +1397,10 @@ class InterfaceMixin:
         substs = {
             'dut': dutName,
             'axi_master_interconnects': ''.join([ axi_master_interconnect_mhs_template 
-                                                  % {'busnumber': i} for i in range(len(axiMasters))]),
+                                                  % {'busnumber': i,
+                                                     'BUSNAME': axiMasters[i][0].upper(),
+                                                     'chipscopenumber': i+1,
+                                                     'dut': dutName } for i in range(len(axiMasters))]),
             'axi_slave_interconnects': ''.join([ axi_slave_interconnect_mhs_template 
                                         % {'busnumber': i} for i in range(len(axiSlaves)) ]),
             'dut_axi_master_config': ''.join([ dut_axi_master_config_mhs_template
@@ -1406,7 +1420,9 @@ class InterfaceMixin:
                                                   'BUSNAME': axiMasters[i][0].upper()}
                                                for i in range(len(axiMasters))]),
             'dut_hdmi_config': ''.join([ dut_hdmi_config_mhs_template % {'dut':dutName} for v in hdmiBus]),
-            'system_hdmi_ports': ''.join([system_hdmi_port_mhs_template % {'dut':dutName} for v in hdmiBus])
+            'system_hdmi_ports': ''.join([system_hdmi_port_mhs_template % {'dut':dutName} for v in hdmiBus]),
+            'chipscopecontrols': ''.join([ (' PORT control%d = chipscope_icon_0_control%d\n' % (i+1, i+1)) for i in range(len(axiMasters))]),
+            'chipscopecount': len(axiMasters)+1
             }
         mhs.write(mhs_template % substs)
         return
