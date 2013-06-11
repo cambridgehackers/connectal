@@ -48,6 +48,8 @@ Echo Example
 ------------
 
     ./genxpsprojfrombsv -B zedboard -p echoproj -b Echo examples/echo/Echo.bsv
+or
+    ./genxpsprojfrombsv -B zc702 -p echoproj -b Echo examples/echo/Echo.bsv
     cd echoproj
     make verilog
     make bits
@@ -76,6 +78,8 @@ HDMI Example
 For example, to create an HDMI frame buffer from the example code:
 
     ./genxpsprojfrombsv -B zedboard -p xpsproj -b HdmiDisplay bsv/TypesAndInterfaces.bsv bsv/HdmiDisplay.bsv
+or
+    ./genxpsprojfrombsv -B zc702 -p xpsproj -b HdmiDisplay bsv/TypesAndInterfaces.bsv bsv/HdmiDisplay.bsv
 
 To generate the bitstream:
 
