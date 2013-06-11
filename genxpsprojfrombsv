@@ -57,7 +57,7 @@ implementation/%(dut)s.bit: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %
 
 bits: implementation/%(dut)s.bit
 
-boot.bin: implementation/%(dut)s.bit imagefiles/zImage
+boot.bin: implementation/%(dut)s.bit
 	if [ -f boot.bin ]; then mv -v boot.bin boot.bin.bak; fi
 	promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 implementation/%(dut)s.bit -data_width 32
 	gzip -f %(dut)s.bit.bin
