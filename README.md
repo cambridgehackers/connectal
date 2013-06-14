@@ -105,10 +105,3 @@ Install the python-ply package, e.g.,
 
 PLY's home is http://www.dabeaz.com/ply/
 
-A note on the use of the XPS GUI
----------------------------------
-
-Not only is there not a working GUI-free design flow, but in order to
-change the processing clock from the default (50MHz) you have to use
-the GUI and change it in the Zynq tab by clicking on "Clock
-generation" and then configuring CLK0 in the "PL Clocks" section.
