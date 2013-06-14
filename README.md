@@ -77,8 +77,10 @@ HDMI Example
 
 For example, to create an HDMI frame buffer from the example code:
 
+To generate code for Zedboard:
     ./genxpsprojfrombsv -B zedboard -p xpsproj -b HdmiDisplay bsv/TypesAndInterfaces.bsv bsv/HdmiDisplay.bsv
-or
+
+To generate code for a ZC702 board:
     ./genxpsprojfrombsv -B zc702 -p xpsproj -b HdmiDisplay bsv/TypesAndInterfaces.bsv bsv/HdmiDisplay.bsv
 
 To generate the bitstream:
