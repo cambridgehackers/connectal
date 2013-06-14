@@ -43,7 +43,7 @@ function Put#(item_t) syncFifoToPut( SyncFIFOIfc#(item_t) f);
     );
 endfunction
 
-module mkHdmiDisplay#(Clock hdmi_clk)(HdmiDisplay);
+module mkHdmiDisplay#(Clock hdmi_clk, HdmiDisplayIndications indications)(HdmiDisplay);
 
     let busWidthBytes=8;
 
@@ -97,6 +97,24 @@ module mkHdmiDisplay#(Clock hdmi_clk)(HdmiDisplay);
         frameBuffer.startLine();
     endrule
 
+    rule vsyncReceived if (sendVsyncIndication);
+        sendVsyncIndication <= False;
+        Bit#(64) v = 0;
+        v[31:0] = vsyncPulseCountReg;
+        v[47:32] = extend(pixelsReg);
+        v[63:48] = extend(linesReg);
+        indications.vsync(v);
+    endrule
+
+    rule translationTableEntry;
+        translationEntryFifo.deq();
+        indications.translationTableEntry(translationEntryFifo.first());
+    endrule
+    rule fbReading if (False);
+        let v <- frameBuffer.reading();
+        indications.fbReading(v);
+    endrule
+
     method Action setPatternReg(Bit#(32) yuv422);
         commandFifo.enq(tagged PatternColor {yuv422: yuv422});
     endmethod
@@ -144,15 +162,6 @@ module mkHdmiDisplay#(Clock hdmi_clk)(HdmiDisplay);
         waitingForVsync <= True;
     endmethod
 
-    method ActionValue#(Bit#(64)) vsyncReceived() if (sendVsyncIndication);
-        sendVsyncIndication <= False;
-        Bit#(64) v = 0;
-        v[31:0] = vsyncPulseCountReg;
-        v[47:32] = extend(pixelsReg);
-        v[63:48] = extend(linesReg);
-        return v;
-    endmethod
-
     method Action beginTranslationTable(Bit#(8) index);
         segmentIndexReg <= index;
         segmentOffsetReg <= 0;
@@ -166,14 +175,6 @@ module mkHdmiDisplay#(Clock hdmi_clk)(HdmiDisplay);
         entry[63:32] = extend(segmentOffsetReg);
         entry[31:0] = extend(length);        
         translationEntryFifo.enq(entry);
-    endmethod
-    method ActionValue#(Bit#(96)) translationTableEntry();
-        translationEntryFifo.deq();
-        return translationEntryFifo.first();
-    endmethod
-    method ActionValue#(Bit#(96)) fbReading() if (False);
-        let v <- frameBuffer.reading();
-        return v;
     endmethod
 
     interface Axi3Master m_axi = frameBuffer.axi;

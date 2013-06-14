@@ -218,8 +218,7 @@ class InterfaceMixin:
         subinterface = syntax.globalvars[subinterfaceName]
         #print 'subinterface', subinterface, subinterface
         return subinterface
-    def assignRequestResponseChannels(self):
-        channelNumber = 0
+    def assignRequestResponseChannels(self, channelNumber=0):
         for d in self.decls:
             if d.__class__ == AST.Interface:
                 i = self.getSubinterface(d.name)

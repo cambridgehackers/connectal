@@ -5,6 +5,7 @@ import os
 import math
 import re
 
+import syntax
 import AST
 import string
 import util
@@ -57,18 +58,40 @@ Bit#(8) %(methodName)s$Offset = %(channelNumber)s;
 
 mkDutTemplate='''
 
+interface %(Dut)sIndicationsWrapper;
+    interface %(Dut)sIndications indications;
+    interface Reg#(Bit#(32)) underflowCount;
+    interface Reg#(Bit#(32)) responseFired;
+endinterface
+
+module mk%(Dut)sIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveWriteAddrFifo, FIFO#(Bit#(17)) axiSlaveReadAddrFifo,
+                                    FIFO#(Bit#(32)) axiSlaveWriteDataFifo, FIFO#(Bit#(32)) axiSlaveReadDataFifo,
+                                    PulseWire interruptRequested,
+                                    PulseWire interruptPulses[]
+                                   )
+                                   (%(Dut)sIndicationsWrapper);
+    Reg#(Bit#(32)) responseFiredReg <- mkReg(0);
+    Reg#(Bit#(32)) underflowCountReg <- mkReg(0);
+
+%(indicationMethodRules)s
+
+    interface %(Dut)sIndications indications;
+%(indicationMethods)s
+    endinterface
+
+    interface Reg responseFired = responseFiredReg;
+    interface Reg underflowCount = underflowCountReg;
+endmodule
+
 module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 
-    %(Dut)s %(dut)s <- mk%(Dut)s(%(dut_hdmi_clock_arg)s);
     Reg#(Bit#(32)) requestFired <- mkReg(0);
-    Reg#(Bit#(32)) responseFired <- mkReg(0);
 
     Reg#(Bit#(32)) interruptEnableReg <- mkReg(0);
     Reg#(Bool) interrupted <- mkReg(False);
     Reg#(Bool) interruptCleared <- mkReg(False);
     Reg#(Bit#(32)) getWordCount <- mkReg(0);
     Reg#(Bit#(32)) putWordCount <- mkReg(0);
-    Reg#(Bit#(32)) underflowCount <- mkReg(0);
     Reg#(Bit#(32)) overflowCount <- mkReg(0);
     PulseWire interruptRequested <- mkPulseWireOR;
     PulseWire interruptPulses[%(channelCount)s];
@@ -82,30 +105,36 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         interruptCleared <= False;
     endrule
 
-    Reg#(Bit#(17)) fifoReadAddrReg <- mkReg(0);
-    Reg#(Bit#(17)) fifoWriteAddrReg <- mkReg(0);
-    Reg#(Bit#(12)) fifoReadIdReg <- mkReg(0);
-    Reg#(Bit#(12)) fifoWriteIdReg <- mkReg(0);
-    FIFO#(Bit#(17)) fifoWriteAddrFifo <- mkSizedFIFO(4);
-    FIFO#(Bit#(17)) fifoReadAddrFifo <- mkSizedFIFO(4);
-    FIFO#(Bit#(32)) fifoWriteDataFifo <- mkSizedFIFO(4);
-    FIFO#(Bit#(32)) fifoReadDataFifo <- mkSizedFIFO(4);
-    FIFO#(Bit#(1)) fifoReadLastFifo <- mkSizedFIFO(4);
-    FIFO#(Bit#(12)) fifoReadIdFifo <- mkSizedFIFO(4);
-    Reg#(Bit#(4)) fifoReadBurstCountReg <- mkReg(0);
-    Reg#(Bit#(4)) fifoWriteBurstCountReg <- mkReg(0);
+    Reg#(Bit#(17)) axiSlaveReadAddrReg <- mkReg(0);
+    Reg#(Bit#(17)) axiSlaveWriteAddrReg <- mkReg(0);
+    Reg#(Bit#(12)) axiSlaveReadIdReg <- mkReg(0);
+    Reg#(Bit#(12)) axiSlaveWriteIdReg <- mkReg(0);
+    FIFO#(Bit#(17)) axiSlaveWriteAddrFifo <- mkSizedFIFO(4);
+    FIFO#(Bit#(17)) axiSlaveReadAddrFifo <- mkSizedFIFO(4);
+    FIFO#(Bit#(32)) axiSlaveWriteDataFifo <- mkSizedFIFO(4);
+    FIFO#(Bit#(32)) axiSlaveReadDataFifo <- mkSizedFIFO(4);
+    FIFO#(Bit#(1)) axiSlaveReadLastFifo <- mkSizedFIFO(4);
+    FIFO#(Bit#(12)) axiSlaveReadIdFifo <- mkSizedFIFO(4);
+    Reg#(Bit#(4)) axiSlaveReadBurstCountReg <- mkReg(0);
+    Reg#(Bit#(4)) axiSlaveWriteBurstCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeReadCount <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
-    FIFO#(Bit#(2)) fifoBrespFifo <- mkFIFO();
-    FIFO#(Bit#(12)) fifoBidFifo <- mkFIFO();
+    FIFO#(Bit#(2)) axiSlaveBrespFifo <- mkFIFO();
+    FIFO#(Bit#(12)) axiSlaveBidFifo <- mkFIFO();
 
+    %(Dut)sIndicationsWrapper indWrapper <- mk%(Dut)sIndicationsWrapper(axiSlaveWriteAddrFifo, axiSlaveReadAddrFifo,
+                                                                        axiSlaveWriteDataFifo, axiSlaveReadDataFifo,
+                                                                        interruptRequested, interruptPulses);
+    %(Dut)sIndications indications = indWrapper.indications;
+
+    %(Dut)s %(dut)s <- mk%(Dut)s(%(dut_hdmi_clock_arg)s indications);
 %(methodRules)s
 
-    rule writeCtrlReg if (fifoWriteAddrFifo.first[16] == 0);
-        fifoWriteAddrFifo.deq;
-        fifoWriteDataFifo.deq;
-	let addr = fifoWriteAddrFifo.first[11:0];
-	let v = fifoWriteDataFifo.first;
+    rule writeCtrlReg if (axiSlaveWriteAddrFifo.first[16] == 0);
+        axiSlaveWriteAddrFifo.deq;
+        axiSlaveWriteDataFifo.deq;
+	let addr = axiSlaveWriteAddrFifo.first[11:0];
+	let v = axiSlaveWriteDataFifo.first;
 	if (addr == 12'h000 && v[0] == 1'b1 && interrupted)
 	begin
 	    interruptCleared <= True;
@@ -113,9 +142,9 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	if (addr == 12'h004)
 	    interruptEnableReg <= v;
     endrule
-    rule readCtrlReg if (fifoReadAddrFifo.first[16] == 0);
-        fifoReadAddrFifo.deq;
-	let addr = fifoReadAddrFifo.first[11:0];
+    rule readCtrlReg if (axiSlaveReadAddrFifo.first[16] == 0);
+        axiSlaveReadAddrFifo.deq;
+	let addr = axiSlaveReadAddrFifo.first[11:0];
 
 	Bit#(32) v = 32'h05a05a0;
 	if (addr == 12'h000)
@@ -132,16 +161,16 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	if (addr == 12'h010)
 	    v = requestFired;
 	if (addr == 12'h014)
-	    v = responseFired;
+	    v = indWrapper.responseFired;
 	if (addr == 12'h018)
-	    v = underflowCount;
+	    v = indWrapper.underflowCount;
 	if (addr == 12'h01C)
 	    v = overflowCount;
 	if (addr == 12'h020)
 	    v = (32'h68470000
 		 //| (responseFifo.notFull ? 32'h20 : 0) | (responseFifo.notEmpty ? 32'h10 : 0)
 		 //| (requestFifo.notFull ? 32'h02 : 0) | (requestFifo.notEmpty ? 32'h01 : 0)
-		 | extend(fifoReadBurstCountReg)
+		 | extend(axiSlaveReadBurstCountReg)
 		 );
 	if (addr == 12'h024)
 	    v = putWordCount;
@@ -176,76 +205,76 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	begin
 	    v = outOfRangeWriteCount;
 	end
-        fifoReadDataFifo.enq(v);
+        axiSlaveReadDataFifo.enq(v);
     endrule
 
-    rule outOfRangeWrite if (fifoWriteAddrFifo.first[16] == 1 && fifoWriteAddrFifo.first[15:8] >= %(channelCount)s);
-        fifoWriteAddrFifo.deq;
-        fifoWriteDataFifo.deq;
+    rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[16] == 1 && axiSlaveWriteAddrFifo.first[15:8] >= %(channelCount)s);
+        axiSlaveWriteAddrFifo.deq;
+        axiSlaveWriteDataFifo.deq;
     endrule
-    rule outOfRangeRead if (fifoReadAddrFifo.first[16] == 1 && fifoReadAddrFifo.first[15:8] >= %(channelCount)s);
-        fifoReadAddrFifo.deq;
-        fifoReadDataFifo.enq(0);
+    rule outOfRangeRead if (axiSlaveReadAddrFifo.first[16] == 1 && axiSlaveReadAddrFifo.first[15:8] >= %(channelCount)s);
+        axiSlaveReadAddrFifo.deq;
+        axiSlaveReadDataFifo.enq(0);
     endrule
-    rule fifoReadAddressGenerator if (fifoReadBurstCountReg != 0);
-        fifoReadAddrFifo.enq(truncate(fifoReadAddrReg));
-        fifoReadAddrReg <= fifoReadAddrReg + 4;
-        fifoReadBurstCountReg <= fifoReadBurstCountReg - 1;
-        fifoReadLastFifo.enq(fifoReadBurstCountReg == 1 ? 1 : 0);
-        fifoReadIdFifo.enq(fifoReadIdReg);
+    rule axiSlaveReadAddressGenerator if (axiSlaveReadBurstCountReg != 0);
+        axiSlaveReadAddrFifo.enq(truncate(axiSlaveReadAddrReg));
+        axiSlaveReadAddrReg <= axiSlaveReadAddrReg + 4;
+        axiSlaveReadBurstCountReg <= axiSlaveReadBurstCountReg - 1;
+        axiSlaveReadLastFifo.enq(axiSlaveReadBurstCountReg == 1 ? 1 : 0);
+        axiSlaveReadIdFifo.enq(axiSlaveReadIdReg);
     endrule
     interface Axi3Slave ctrl;
         interface Axi3SlaveWrite write;
             method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
                                     Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache,
 				    Bit#(12) awid)
-                          if (fifoWriteBurstCountReg == 0);
-                fifoWriteBurstCountReg <= burstLen + 1;
-                fifoWriteAddrReg <= truncate(addr);
-		fifoWriteIdReg <= awid;
+                          if (axiSlaveWriteBurstCountReg == 0);
+                axiSlaveWriteBurstCountReg <= burstLen + 1;
+                axiSlaveWriteAddrReg <= truncate(addr);
+		axiSlaveWriteIdReg <= awid;
             endmethod
             method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last)
-                          if (fifoWriteBurstCountReg > 0);
-                let addr = fifoWriteAddrReg;
-                fifoWriteAddrReg <= fifoWriteAddrReg + 4;
-                fifoWriteBurstCountReg <= fifoWriteBurstCountReg - 1;
+                          if (axiSlaveWriteBurstCountReg > 0);
+                let addr = axiSlaveWriteAddrReg;
+                axiSlaveWriteAddrReg <= axiSlaveWriteAddrReg + 4;
+                axiSlaveWriteBurstCountReg <= axiSlaveWriteBurstCountReg - 1;
 
-                fifoWriteAddrFifo.enq(fifoWriteAddrReg[16:0]);
-                fifoWriteDataFifo.enq(v);
+                axiSlaveWriteAddrFifo.enq(axiSlaveWriteAddrReg[16:0]);
+                axiSlaveWriteDataFifo.enq(v);
 
                 putWordCount <= putWordCount + 1;
-                fifoBrespFifo.enq(0);
-                fifoBidFifo.enq(fifoWriteIdReg);
+                axiSlaveBrespFifo.enq(0);
+                axiSlaveBidFifo.enq(axiSlaveWriteIdReg);
             endmethod
             method ActionValue#(Bit#(2)) writeResponse();
-                fifoBrespFifo.deq;
-                return fifoBrespFifo.first;
+                axiSlaveBrespFifo.deq;
+                return axiSlaveBrespFifo.first;
             endmethod
             method ActionValue#(Bit#(12)) bid();
-                fifoBidFifo.deq;
-                return fifoBidFifo.first;
+                axiSlaveBidFifo.deq;
+                return axiSlaveBidFifo.first;
             endmethod
         endinterface
         interface Axi3SlaveRead read;
             method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
                                    Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) arid)
-                          if (fifoReadBurstCountReg == 0);
-                fifoReadBurstCountReg <= burstLen + 1;
-                fifoReadAddrReg <= truncate(addr);
-		fifoReadIdReg <= arid;
+                          if (axiSlaveReadBurstCountReg == 0);
+                axiSlaveReadBurstCountReg <= burstLen + 1;
+                axiSlaveReadAddrReg <= truncate(addr);
+		axiSlaveReadIdReg <= arid;
             endmethod
             method Bit#(1) last();
-                return fifoReadLastFifo.first;
+                return axiSlaveReadLastFifo.first;
             endmethod
             method Bit#(12) rid();
-                return fifoReadIdFifo.first;
+                return axiSlaveReadIdFifo.first;
             endmethod
             method ActionValue#(Bit#(32)) readData();
 
-                let v = fifoReadDataFifo.first;
-                fifoReadDataFifo.deq;
-                fifoReadLastFifo.deq;
-                fifoReadIdFifo.deq;
+                let v = axiSlaveReadDataFifo.first;
+                axiSlaveReadDataFifo.deq;
+                axiSlaveReadLastFifo.deq;
+                axiSlaveReadIdFifo.deq;
 
                 getWordCount <= getWordCount + 1;
                 return v;
@@ -268,10 +297,10 @@ endmodule
 
 requestRuleTemplate='''
     FromBit32#(%(MethodName)s$Request) %(methodName)s$requestFifo <- mkFromBit32();
-    rule fifoWrite$%(methodName)s if (fifoWriteAddrFifo.first[16] == 1 && fifoWriteAddrFifo.first[15:8] == %(methodName)s$Offset);
-        fifoWriteAddrFifo.deq;
-        fifoWriteDataFifo.deq;
-        %(methodName)s$requestFifo.enq(fifoWriteDataFifo.first);
+    rule axiSlaveWrite$%(methodName)s if (axiSlaveWriteAddrFifo.first[16] == 1 && axiSlaveWriteAddrFifo.first[15:8] == %(methodName)s$Offset);
+        axiSlaveWriteAddrFifo.deq;
+        axiSlaveWriteDataFifo.deq;
+        %(methodName)s$requestFifo.enq(axiSlaveWriteDataFifo.first);
     endrule
     rule handle$%(methodName)s$request;
         let request = %(methodName)s$requestFifo.first;
@@ -279,23 +308,18 @@ requestRuleTemplate='''
         %(dut)s.%(methodName)s(%(paramsForCall)s);
         requestFired <= requestFired + 1;
     endrule
-    rule %(methodName)s$fifoRead if (fifoReadAddrFifo.first[16] == 1 && fifoReadAddrFifo.first[15:8] == %(methodName)s$Offset);
-        fifoReadAddrFifo.deq;
+    rule %(methodName)s$axiSlaveRead if (axiSlaveReadAddrFifo.first[16] == 1 && axiSlaveReadAddrFifo.first[15:8] == %(methodName)s$Offset);
+        axiSlaveReadAddrFifo.deq;
         // nothing to read from a request fifo
-        fifoReadDataFifo.enq(0);
+        axiSlaveReadDataFifo.enq(0);
     endrule
 '''
 
-responseRuleTemplate='''
-    ToBit32#(%(methodReturnType)s) %(methodName)s$responseFifo <- mkToBit32();
-    rule %(methodName)s$response;
-        %(methodReturnType)s response <- %(dut)s.%(methodName)s();
-        %(methodName)s$responseFifo.enq(response);
-        responseFired <= responseFired + 1;
-    endrule
-    rule %(methodName)s$fifoRead if (fifoReadAddrFifo.first[16] == 1 && fifoReadAddrFifo.first[15:8] == %(methodName)s$Offset);
-        fifoReadAddrFifo.deq;
-        Bit#(8) offset = fifoReadAddrFifo.first[7:0];
+indicationRuleTemplate='''
+    ToBit32#(%(paramType)s) %(methodName)s$responseFifo <- mkToBit32();
+    rule %(methodName)s$axiSlaveRead if (axiSlaveReadAddrFifo.first[16] == 1 && axiSlaveReadAddrFifo.first[15:8] == %(methodName)s$Offset);
+        axiSlaveReadAddrFifo.deq;
+        Bit#(8) offset = axiSlaveReadAddrFifo.first[7:0];
         Bit#(32) response = 0;
         if (offset == 0)
             response = %(methodName)s$responseFifo.depth32();
@@ -312,21 +336,29 @@ responseRuleTemplate='''
             else
             begin
                 response = 32'h5abeef5a;
-                underflowCount <= underflowCount + 1;
+                underflowCountReg <= underflowCountReg + 1;
             end
         end
-        fifoReadDataFifo.enq(response);
+        axiSlaveReadDataFifo.enq(response);
     endrule
     rule interrupt$%(methodName)s$Response if (%(methodName)s$responseFifo.notEmpty);
         interruptPulses[%(channelNumber)s].send();
         interruptRequested.send();
     endrule
-    rule fifoWrite$%(methodName)s if (fifoWriteAddrFifo.first[16] == 1 && fifoWriteAddrFifo.first[15:8] == %(methodName)s$Offset);
-        fifoWriteAddrFifo.deq;
-        fifoWriteDataFifo.deq;
+    rule axiSlaveWrite$%(methodName)s if (axiSlaveWriteAddrFifo.first[16] == 1 && axiSlaveWriteAddrFifo.first[15:8] == %(methodName)s$Offset);
+        axiSlaveWriteAddrFifo.deq;
+        axiSlaveWriteDataFifo.deq;
         // ignore writes to response fifo
     endrule
 '''
+
+indicationMethodTemplate='''
+        method Action %(methodName)s(%(paramType)s v);
+            %(methodName)s$responseFifo.enq(v);
+            responseFiredReg <= responseFiredReg + 1;
+        endmethod
+'''
+
 
 def emitPreamble(f, files):
     extraImports = ['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
@@ -371,8 +403,9 @@ class MethodMixin:
 
     def collectResponseElement(self, outerTypeName):
         if self.return_type.name == 'Action':
+            return responseStructTemplate % self.substs(outerTypeName)
+        else:
             return None
-        return responseStructTemplate % self.substs(outerTypeName)
 
     def collectMethodRule(self, outerTypeName):
         substs = self.substs(outerTypeName)
@@ -384,12 +417,38 @@ class MethodMixin:
         else:
             return responseRuleTemplate % substs
 
+    def collectIndicationMethodRule(self, outerTypeName):
+        substs = self.substs(outerTypeName)
+        print 
+        if self.return_type.name == 'Action':
+            paramType = ['%s' % p.type.toBsvType() for p in self.params]
+            substs['paramType'] = ', '.join(paramType)
+            return indicationRuleTemplate % substs
+        else:
+            return None
+
+    def collectIndicationMethod(self, outerTypeName):
+        substs = self.substs(outerTypeName)
+        print 
+        if self.return_type.name == 'Action':
+            paramType = ['%s' % p.type.toBsvType() for p in self.params]
+            substs['paramType'] = ', '.join(paramType)
+            return indicationMethodTemplate % substs
+        else:
+            return None
+
 class InterfaceMixin:
     def emitBsvImplementation(self, f):
         print self.name
+        indicationInterfaceName = '%sIndications' % util.capitalize(self.name)
+        indicationInterface = syntax.globalvars[indicationInterfaceName]
+        indicationInterface.assignRequestResponseChannels(self.channelCount)
+
         requestElements = self.collectRequestElements(self.name)
-        responseElements = self.collectResponseElements(self.name)
+        responseElements = indicationInterface.collectResponseElements(self.name)
         methodRules = self.collectMethodRules(self.name)
+        indicationMethodRules = indicationInterface.collectIndicationMethodRules(self.name)
+        indicationMethods = indicationInterface.collectIndicationMethods(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Master')
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
@@ -401,7 +460,9 @@ class InterfaceMixin:
             'requestElements': ''.join(requestElements),
             'responseElements': ''.join(responseElements),
             'methodRules': ''.join(methodRules),
-            'channelCount': self.channelCount,
+            'indicationMethodRules': ''.join(indicationMethodRules),
+            'indicationMethods': ''.join(indicationMethods),
+            'channelCount': indicationInterface.channelCount, # includes self.channelCount
             'axiMasterDeclarations': '\n'.join(['    interface %s#(%s,%s) %s;' % (t, params[0].numeric(), params[1].numeric(), axiMaster)
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
@@ -411,7 +472,7 @@ class InterfaceMixin:
             'axiMasterImplementations': '\n'.join(['    interface %s %s = %s.%s;' % (t[0:-1], axiMaster,dutName,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
             'dut_hdmi_clock_param': '#(Clock hdmi_clk)' if len(hdmiInterfaces) else '',
-            'dut_hdmi_clock_arg': 'hdmi_clk' if len(hdmiInterfaces) else '',
+            'dut_hdmi_clock_arg': 'hdmi_clk,' if len(hdmiInterfaces) else '',
             'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
                                                   for (axiSlave,t,params) in axiSlaves]),
             'hdmiImplementations': '\n'.join(['    interface HDMI %s = %s.%s;' % (hdmi, dutName, hdmi)
@@ -446,6 +507,22 @@ class InterfaceMixin:
             if m.type == 'Method':
                 methodRules.append(m.collectMethodRule(outerTypeName))
         return methodRules
+    def collectIndicationMethodRules(self,outerTypeName):
+        methodRules = []
+        for m in self.decls:
+            if m.type == 'Method':
+                methodRule = m.collectIndicationMethodRule(outerTypeName)
+                if methodRule:
+                    methodRules.append(methodRule)
+        return methodRules
+    def collectIndicationMethods(self,outerTypeName):
+        methods = []
+        for m in self.decls:
+            if m.type == 'Method':
+                methodRule = m.collectIndicationMethod(outerTypeName)
+                if methodRule:
+                    methods.append(methodRule)
+        return methods
     def collectInterfaceNames(self, name):
         interfaceNames = []
         for m in self.decls:
