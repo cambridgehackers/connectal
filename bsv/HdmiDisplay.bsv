@@ -68,7 +68,6 @@ module mkHdmiDisplay#(Clock hdmi_clk, HdmiDisplayIndications indications)(HdmiDi
 
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
     Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
-    FIFOF#(Bit#(96)) translationEntryFifo <- mkFIFOF();
 
     Reg#(Bool) frameBufferEnabled <- mkReg(False);
     FrameBufferBram frameBuffer <- mkFrameBufferBram(hdmi_clk, hdmi_reset);
@@ -104,15 +103,6 @@ module mkHdmiDisplay#(Clock hdmi_clk, HdmiDisplayIndications indications)(HdmiDi
         v[47:32] = extend(pixelsReg);
         v[63:48] = extend(linesReg);
         indications.vsync(v);
-    endrule
-
-    rule translationTableEntry;
-        translationEntryFifo.deq();
-        indications.translationTableEntry(translationEntryFifo.first());
-    endrule
-    rule fbReading if (False);
-        let v <- frameBuffer.reading();
-        indications.fbReading(v);
     endrule
 
     method Action setPatternReg(Bit#(32) yuv422);
@@ -170,11 +160,6 @@ module mkHdmiDisplay#(Clock hdmi_clk, HdmiDisplayIndications indications)(HdmiDi
         frameBuffer.setSgEntry(segmentIndexReg, segmentOffsetReg, address, extend(length));
         segmentIndexReg <= segmentIndexReg + 1;
         segmentOffsetReg <= segmentOffsetReg + {length,12'd0};
-        Bit#(96) entry;
-        entry[95:64] = extend(address);
-        entry[63:32] = extend(segmentOffsetReg);
-        entry[31:0] = extend(length);        
-        translationEntryFifo.enq(entry);
     endmethod
 
     interface Axi3Master m_axi = frameBuffer.axi;

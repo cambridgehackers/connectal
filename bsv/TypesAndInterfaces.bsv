@@ -51,8 +51,6 @@ endinterface
 
 interface HdmiDisplayIndications;
     method Action vsync(Bit#(64) v);
-    method Action translationTableEntry(Bit#(96) entry);
-    method Action fbReading(Bit#(96) entry);
 endinterface
 
 endpackage

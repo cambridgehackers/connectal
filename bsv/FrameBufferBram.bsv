@@ -45,7 +45,6 @@ interface FrameBufferBram;
     method Action startFrame();
     method Action startLine();
     method Action setSgEntry(Bit#(8) index, Bit#(24) startingOffset, Bit#(20) address, Bit#(20) length);
-    method ActionValue#(Bit#(96)) reading();
     interface Axi3Master#(32,4) axi;
     interface BRAM#(Bit#(12), Bit#(32)) buffer;
 endinterface
@@ -61,7 +60,6 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
     Reg#(FrameBufferConfig) nextFbc <- mkReg(FrameBufferConfig {base: 0, lines: 0, pixels: 0, stridebytes: 0});
     Reg#(FrameBufferConfig) fbc <- mkReg(FrameBufferConfig {base: 0, lines: 0, pixels: 0, stridebytes: 0});
     Reg#(Bool) runningReg <- mkReg(False);
-    Reg#(Bool) traceReadingReg <- mkReg(False);
 
     //let burstCount = 16;
     let burstCount = 4;
@@ -92,8 +90,6 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
     SyncBRAM#(Bit#(12), Bit#(32)) syncBRAM <- mkSyncBRAM( 4096, displayClk, displayRst, clk, rst );
     //SyncBRAM#(Bit#(12), Bit#(32)) syncBRAM <- mkSimSyncBRAM( 4096, displayClk, displayRst, clk, rst );
     Reg#(Bit#(12)) pixelCountReg2 <- mkReg(0);
-    Reg#(Maybe#(Bit#(96))) readingReg
-        <- mkReg(tagged Invalid);
 
     Reg#(Bool) nextent2Enabled <- mkReg(False);
     Reg#(Bool) startFrameEnabled <- mkReg(False);
@@ -116,12 +112,6 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
         let segmentLimit = sgent.limitOffset;
         segmentOffsetReg <= segmentOffset;
         segmentLimitReg <= segmentLimit;
-
-        Bit#(96) reading;
-        reading[95:64] = segmentOffset;
-        reading[63:32] = extend(readAddrReg);
-        reading[31:0] = {extend(index), segmentLimit};
-        readingReg <= tagged Valid reading;
     endrule
 
     rule startFrameRule if (startFrameEnabled);
@@ -145,12 +135,6 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
         lineCountReg <= nextFbc.lines;
         pixelCountReg <= nextFbc.pixels;
 
-        Bit#(96) reading;
-        reading[95:64] = segmentOffset;
-        reading[63:32] = extend(24'hFFFFFF);
-        reading[31:0] = { extend(segmentIndex), segmentIndex };
-        readingReg <= tagged Valid reading;
-
         runningReg <= True;
     endrule
 
@@ -162,14 +146,8 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
         return fbc.base;
     endmethod
 
-    method ActionValue#(Bit#(96)) reading() if (traceReadingReg &&& readingReg matches tagged Valid .value);
-        readingReg <= tagged Invalid;
-        return value;
-    endmethod
-
     method Action configure(FrameBufferConfig newConfig);
         nextFbc <= newConfig;
-        traceReadingReg <= True;
     endmethod
 
     method Action setSgEntry(Bit#(8) index, Bit#(24) startingOffset, Bit#(20) address, Bit#(20) length);
@@ -209,21 +187,11 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
             readLimitReg <= readLimit;
             lineCountReg <= lineCount;
 
-            if (readAddrReg == 24'hFFFFFF)
-            begin
-                Bit#(96) reading;
-                reading[95:64] = segmentOffsetReg;
-                reading[63:32] = extend(lineAddr);
-                reading[31:0] = extend(segmentLimitReg);
-                readingReg <= tagged Valid reading;
-            end
-
             pixelCountReg2 <= 0;
 
             if (lineCount == 0)
             begin
                 runningReg <= False;
-                traceReadingReg <= False;
             end
         end
     endmethod
