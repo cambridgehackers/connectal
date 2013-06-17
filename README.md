@@ -24,8 +24,8 @@ Preparation
 Setting up the SD Card
 ----------------------
 
-1. Download http://xbsv.googlecode.com/files/sdcard-130214.tar.bz
-2. tar -jxvf sdcard-130214.tar.bz
+1. Download http://xbsv.googlecode.com/files/sdcard-130611.tar.bz
+2. tar -jxvf sdcard-130611.tar.bz
 3. Assuming the card shows up as /dev/sdc:
 
    sudo umount /dev/sdc
@@ -36,7 +36,7 @@ It does not seem to boot from cards with a partition table.
 
 4. Unplug the card and plug it back in
 5. Copy files
-   cd sdcard-130214
+   cd sdcard-130611
    cp boot.bin devicetree.dtb ramdisk8M.image.gz zImage system.img /media/zynq
    cp empty.img /media/zynq/userdata.img
 5. sync
