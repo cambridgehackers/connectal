@@ -23,20 +23,26 @@
 
 import FIFO::*;
 
-interface Echo;
-    method Action say(Bit#(32) v);
-    method ActionValue#(Bit#(32)) heard();
+interface EchoIndications;
+    method Action heard(Bit#(32) v);
 endinterface
 
-module mkEcho(Echo);
+interface Echo;
+    method Action say(Bit#(32) v);
+endinterface
+
+
+
+module mkEcho#(EchoIndications indications)(Echo);
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     
+    rule heard;
+        delay.deq;
+        indications.heard(delay.first);
+    endrule
+
     method Action say(Bit#(32) v);
         delay.enq(v);
     endmethod
 
-    method ActionValue#(Bit#(32)) heard();
-        delay.deq;
-        return delay.first;
-    endmethod
 endmodule

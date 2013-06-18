@@ -58,9 +58,9 @@ void PortalInstance::close()
     }    
 }
 
-PortalInstance::PortalInstance(const char *instanceName)
+PortalInstance::PortalInstance(const char *instanceName, PortalIndications *indications)
+  : instanceName(strdup(instanceName)), indications(indications)
 {
-    this->instanceName = strdup(instanceName);
     char path[128];
     snprintf(path, sizeof(path), "/dev/%s", instanceName);
     this->fd = open(path, O_RDWR);
@@ -189,7 +189,8 @@ int PortalInterface::exec(idleFunc func)
             //fprintf(stderr, "msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
             if (!size)
                 continue;
-            instance->handleMessage(msg);
+	    if (instance->indications)
+		instance->indications->handleMessage(msg);
         }
         if (rc == 0) {
             if (0)

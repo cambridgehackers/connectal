@@ -2,12 +2,9 @@
 #include "Echo.h"
 #include <stdio.h>
 
-class TestEcho : public Echo
+class TestEchoIndications : public EchoIndications
 {
-public:
-    TestEcho(const char *instanceName) : Echo(instanceName) {};
-    
-    void heard(unsigned long v) {
+    virtual void heard(unsigned long v) {
         fprintf(stderr, "heard an echo: %d\n", v);
         exit(0);
     }
@@ -15,7 +12,7 @@ public:
 
 int main(int argc, const char **argv)
 {
-    TestEcho *echo = new TestEcho("fpga0");
+    Echo *echo = Echo::createEcho("fpga0", new TestEchoIndications);
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     echo->say(v);

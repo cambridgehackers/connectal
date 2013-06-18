@@ -126,7 +126,16 @@ if __name__=='__main__':
                         sd.name = '%s.%s' % (d.name, sd.name)
                         subinterface.decls.append(sd)
 
+        indicationInterfaceName = '%sIndications' % util.capitalize(namespace.interface)
+        indicationInterface = syntax.globalvars[indicationInterfaceName]
+        subinterface.isIndication = False
+        indicationInterface.isIndication = True
+        subinterface.assignRequestResponseChannels()
+        indicationInterface.assignRequestResponseChannels(subinterface.channelCount)
+
+        indicationInterface.emitCDeclaration(h)
         subinterface.emitCDeclaration(h)
+        indicationInterface.emitCImplementation(cpp)
         subinterface.emitCImplementation(cpp)
 
         subinterface.emitBsvImplementation(bsv)

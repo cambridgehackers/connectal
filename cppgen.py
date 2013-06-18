@@ -21,33 +21,53 @@ include $(BUILD_EXECUTABLE)
 classPrefixTemplate='''
 class %(namespace)s%(className)s : public PortalInstance {
 public:
-    static %(className)s *create%(className)s(const char *instanceName);
+    static %(className)s *create%(className)s(const char *instanceName, %(className)sIndications *indications=0);
 '''
 classSuffixTemplate='''
 protected:
-    void handleMessage(PortalMessage *msg);
-    %(className)s(const char *instanceName);
+    %(className)s(const char *instanceName, %(className)sIndications *indications=0);
     ~%(className)s();
 };
 '''
 
+indicationClassPrefixTemplate='''
+class %(namespace)s%(className)s : public PortalIndications {
+public:
+    %(className)s();
+    virtual ~%(className)s();
+'''
+indicationClassSuffixTemplate='''
+protected:
+    virtual void handleMessage(PortalMessage *msg);
+    friend class PortalInstance;
+};
+'''
+
 creatorTemplate = '''
-%(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName)
+%(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName, %(className)sIndications *indications)
 {
-    %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName);
+    %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indications);
     return instance;
 }
 '''
 constructorTemplate='''
-%(namespace)s%(className)s::%(className)s(const char *instanceName)
- : PortalInstance(instanceName)%(initializers)s
+%(namespace)s%(className)s::%(className)s(const char *instanceName, %(className)sIndications *indications)
+ : PortalInstance(instanceName, indications)%(initializers)s
 {
 }
 %(namespace)s%(className)s::~%(className)s()
 {
     close();
 }
+'''
 
+indicationConstructorTemplate='''
+%(namespace)s%(className)s::%(className)s()
+{
+}
+%(namespace)s%(className)s::~%(className)s()
+{
+}
 '''
 
 handleMessageTemplate='''
@@ -113,7 +133,7 @@ class MethodMixin:
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
-        if not self.params:
+        if self.isIndication:
             f.write('virtual ')
         f.write('void %s ( ' % cName(self.name))
         #print parentClassName, self.name
@@ -122,7 +142,7 @@ class MethodMixin:
         else:
             f.write(resultTypeName)
         f.write(' )')
-        if self.params:
+        if not self.isIndication:
             f.write(';\n')
         else:
             f.write('{ }\n')
@@ -148,9 +168,9 @@ class MethodMixin:
             'paramSetters': ''.join(paramSetters),
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
-            'methodChannelOffset': self.channelNumber
+            'methodChannelOffset': self.channelNumber,
             }
-        if self.params:
+        if not self.isIndication:
             f.write(requestTemplate % substs)
         else:
             f.write(responseTemplate % substs)
@@ -234,14 +254,21 @@ class InterfaceMixin:
         self.toplevel = (indentation == 0)
         name = cName(self.name)
         indent(f, indentation)
-        f.write(classPrefixTemplate % {'className': name,
-                                       'namespace': namespace})
+        if self.isIndication:
+            prefixTemplate = indicationClassPrefixTemplate
+            suffixTemplate= indicationClassSuffixTemplate
+        else:
+            prefixTemplate = classPrefixTemplate
+            suffixTemplate = classSuffixTemplate
+        f.write(prefixTemplate % {'className': name,
+                                  'namespace': namespace})
         for d in self.decls:
             if d.type == 'Interface':
                 continue
+            d.isIndication = self.isIndication
             d.emitCDeclaration(f, indentation + 4, name, namespace)
-        f.write(classSuffixTemplate % {'className': name,
-                                       'namespace': namespace})
+        f.write(suffixTemplate % {'className': name,
+                                  'namespace': namespace})
         return
     def emitCImplementation(self, f, parentClassName='', namespace=''):
         self.assignRequestResponseChannels()
@@ -255,12 +282,17 @@ class InterfaceMixin:
             d.emitCImplementation(f, className, namespace)
         substitutions = {'namespace': namespace,
                          'className': className,
-                         'responseCases': ''.join([ '    case %d: %s(((%s%sMSG *)msg)->result); break;\n'
-                                                   % (d.channelNumber, d.name, className, d.name)
+                         'responseCases': ''.join([ '    case %(channelNumber)d: %(name)s(%(params)s); break;\n'
+                                                   % { 'channelNumber': d.channelNumber,
+                                                       'name': d.name,
+                                                       'className': className,
+                                                       'params': ', '.join(['((%s%sMSG *)msg)->%s' % (className, d.name, p.name) for p in d.params])}
                                                    for d in self.decls 
-                                                   if d.type == 'Method' and not d.params])
+                                                   if d.type == 'Method' and d.return_type.name == 'Action'
+                                                    ])
                          }
-        f.write(handleMessageTemplate % substitutions)
+        if self.isIndication:
+            f.write(handleMessageTemplate % substitutions)
 
     def emitConstructorImplementation(self, f, className, namespace):
         substitutions = {'namespace': namespace,
@@ -275,8 +307,12 @@ class InterfaceMixin:
         ##     substitutions['initializers'] = (', %s'
         ##                                      % ', '.join([ '%s(p)' % i for i in subinterfaces]))
         if self.toplevel:
-            f.write(creatorTemplate % substitutions)
-        f.write(constructorTemplate % substitutions)
+            if not self.isIndication:
+                f.write(creatorTemplate % substitutions)
+        if self.isIndication:
+            f.write(indicationConstructorTemplate % substitutions)
+        else:
+            f.write(constructorTemplate % substitutions)
         return
     def writeAndroidMk(self, androidmkname, applicationmkname, silent=False):
         f = util.createDirAndOpen(androidmkname, 'w')

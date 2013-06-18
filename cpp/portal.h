@@ -19,17 +19,20 @@ typedef struct PortalMessage {
     size_t channel;
 } PortalMessage;
 
+class PortalIndications {
+ public:
+    virtual void handleMessage(PortalMessage *msg) { };
+    virtual ~PortalIndications() {};
+};
+
 class PortalInstance {
 public:
-    typedef void (*MessageHandler)(PortalMessage *msg);
-    MessageHandler *messageHandlers;
-
     int sendMessage(PortalMessage *msg);
     void close();
 protected:
+    PortalIndications *indications;
     int receiveMessage(PortalMessage *msg);
-    virtual void handleMessage(PortalMessage *msg) { };
-    PortalInstance(const char *instanceName);
+    PortalInstance(const char *instanceName, PortalIndications *indications=0);
     ~PortalInstance();
     friend PortalInstance *portalOpen(const char *instanceName);
 private:
