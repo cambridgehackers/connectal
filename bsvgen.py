@@ -442,7 +442,6 @@ class InterfaceMixin:
         print self.name
         indicationInterfaceName = '%sIndications' % util.capitalize(self.name)
         indicationInterface = syntax.globalvars[indicationInterfaceName]
-        indicationInterface.assignRequestResponseChannels(self.channelCount)
 
         requestElements = self.collectRequestElements(self.name)
         responseElements = indicationInterface.collectResponseElements(self.name)

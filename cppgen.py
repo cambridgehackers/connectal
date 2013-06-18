@@ -271,7 +271,6 @@ class InterfaceMixin:
                                   'namespace': namespace})
         return
     def emitCImplementation(self, f, parentClassName='', namespace=''):
-        self.assignRequestResponseChannels()
         if parentClassName:
             namespace = '%s%s::' % (namespace, parentClassName)
         className = cName(self.name)
@@ -280,9 +279,10 @@ class InterfaceMixin:
             if d.type == 'Interface':
                 continue
             d.emitCImplementation(f, className, namespace)
+
         substitutions = {'namespace': namespace,
                          'className': className,
-                         'responseCases': ''.join([ '    case %(channelNumber)d: %(name)s(%(params)s); break;\n'
+                         'responseCases': ''.join([ '    case %(channelNumber)s: %(name)s(%(params)s); break;\n'
                                                    % { 'channelNumber': d.channelNumber,
                                                        'name': d.name,
                                                        'className': className,
