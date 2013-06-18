@@ -259,8 +259,8 @@ static int fb_setSwapInterval(struct framebuffer_device_t* dev,
     return 0;
 }
 
-class GrallocHdmiDisplay : public HdmiDisplay {
-    void vsyncReceived(unsigned long long v) {
+class GrallocHdmiDisplayIndications : public HdmiDisplayIndications {
+    virtual void vsyncReceived(unsigned long long v) {
         if (1)
             ALOGD("vsyncReceivedHandler %llx\n", v);
         pthread_mutex_lock(&gralloc_dev->vsync_lock);
@@ -268,9 +268,6 @@ class GrallocHdmiDisplay : public HdmiDisplay {
         pthread_cond_signal(&gralloc_dev->vsync_cond);
         pthread_mutex_unlock(&gralloc_dev->vsync_lock);
     }
-public:
-    GrallocHdmiDisplay(const char *instanceName) : HdmiDisplay(instanceName) {}
-    ~GrallocHdmiDisplay() {}
 };
 
 static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
@@ -345,7 +342,7 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
         pthread_condattr_t condattr;
         pthread_condattr_init(&condattr);
         pthread_cond_init(&dev->vsync_cond, &condattr);
-        dev->hdmiDisplay = new GrallocHdmiDisplay("fpga0");
+        dev->hdmiDisplay = createHdmiDisplay("fpga0", new GrallocHdmiDisplayIndications);
         dev->nextSegmentNumber = 0;
 
         status = 0;

@@ -47,7 +47,6 @@
 #define PORTAL_PUT _IOWR('B', 18, PortalMessage)
 #define PORTAL_GET _IOWR('B', 19, PortalMessage)
 #define PORTAL_REGS _IOWR('B', 20, PortalMessage)
-#define PORTAL_CLK_ROUND _IOWR('B', 40, PortalClockConfig)
 
 PortalInterface portal;
 
@@ -59,15 +58,14 @@ void PortalInstance::close()
     }    
 }
 
-PortalInstance::PortalInstance(const char *instanceName)
+PortalInstance::PortalInstance(const char *instanceName, PortalIndications *indications)
+  : instanceName(strdup(instanceName)), indications(indications)
 {
-    this->instanceName = strdup(instanceName);
     char path[128];
     snprintf(path, sizeof(path), "/dev/%s", instanceName);
     this->fd = open(path, O_RDWR);
     void *mappedAddress = mmap(0, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
     fprintf(stderr, "Mapped device %s at %p\n", instanceName, mappedAddress);
-    ALOGD("Mapped device %s at %p path=%s fd=%d\n", instanceName, mappedAddress, path, this->fd);
     portal.registerInstance(this);
 }
 
@@ -87,10 +85,10 @@ PortalInstance *portalOpen(const char *instanceName)
 int PortalInstance::sendMessage(PortalMessage *msg)
 {
     int rc = ioctl(fd, PORTAL_PUT, msg);
+    //ALOGD("sendmessage portal fd=%d rc=%d\n", fd, rc);
     if (rc)
-        ALOGE("PortalInstance::sendMessage fd=%d channel=%d rc=%d errno=%d:%s\n",
-              fd, msg->channel,
-              rc, errno, strerror(errno));
+        ALOGE("PortalInstance::sendMessage fd=%d rc=%d errno=%d:%s PUTGET=%x PUT=%x GET=%x\n", fd, rc, errno, strerror(errno),
+                PORTAL_PUTGET, PORTAL_PUT, PORTAL_GET);
     return rc;
 }
 
@@ -98,7 +96,7 @@ int PortalInstance::receiveMessage(PortalMessage *msg)
 {
     int status  = ioctl(fd, PORTAL_GET, msg);
     if (status) {
-        fprintf(stderr, "receiveMessage channel=%d rc=%d errno=%d:%s\n", msg->channel, status, errno, strerror(errno));
+        fprintf(stderr, "receiveMessage rc=%d errno=%d:%s\n", status, errno, strerror(errno));
         return -status;
     }
     return 1;
@@ -191,7 +189,8 @@ int PortalInterface::exec(idleFunc func)
             //fprintf(stderr, "msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
             if (!size)
                 continue;
-            instance->handleMessage(msg);
+	    if (instance->indications)
+		instance->indications->handleMessage(msg);
         }
         if (rc == 0) {
             if (0)
@@ -206,31 +205,5 @@ int PortalInterface::exec(idleFunc func)
         return rc;
     }
 
-    return 0;
-}
-
-static const char *si570path = "/sys/devices/amba.0/e0004000.i2c/i2c-0/i2c-1/1-005d/frequency";
-
-int PortalInstance::updateFrequency(long frequency)
-{
-    PortalClockConfig clockConfig;
-    clockConfig.clock = 1;
-    clockConfig.requested_frequency = frequency;
-    int status = ioctl(fd, PORTAL_CLK_ROUND, &clockConfig);
-    ALOGD("requested_frequency=%d granted_frequency=%d status=%d\n",
-          clockConfig.requested_frequency, clockConfig.granted_frequency, status);
-
-#if 0
-    int si570fd = open(si570path, O_RDWR);
-    fprintf(stderr, "updateFrequency fd=%d freq=%ld\n", si570fd, frequency);
-    if (si570fd < 0)
-        return errno;
-    char freqstring[32];
-    snprintf(freqstring, sizeof(freqstring), "%ld", frequency);
-    int rc = write(si570fd, freqstring, strlen(freqstring));
-    if (rc < 0)
-        return errno;
-    ::close(si570fd);
-#endif
     return 0;
 }

@@ -1,20 +1,42 @@
 #include "HdmiDisplay.h"
 
-HdmiDisplay *HdmiDisplay::createHdmiDisplay(const char *instanceName)
+HdmiDisplayIndications::HdmiDisplayIndications()
 {
-    HdmiDisplay *instance = new HdmiDisplay(instanceName);
+}
+HdmiDisplayIndications::~HdmiDisplayIndications()
+{
+}
+
+struct HdmiDisplayIndicationsvsyncMSG : public PortalMessage
+{
+//fix Adapter.bsv to unreverse these
+        unsigned long long v:64;
+
+};
+
+void HdmiDisplayIndications::handleMessage(PortalMessage *msg)
+{
+    switch (msg->channel) {
+    case 0: vsync(((HdmiDisplayIndicationsvsyncMSG *)msg)->v); break;
+
+    default: break;
+    }
+}
+
+HdmiDisplay *HdmiDisplay::createHdmiDisplay(const char *instanceName, HdmiDisplayIndications *indications)
+{
+    HdmiDisplay *instance = new HdmiDisplay(instanceName, indications);
     return instance;
 }
 
-HdmiDisplay::HdmiDisplay(const char *instanceName)
- : PortalInstance(instanceName)
+HdmiDisplay::HdmiDisplay(const char *instanceName, HdmiDisplayIndications *indications)
+ : PortalInstance(instanceName, indications)
 {
 }
 HdmiDisplay::~HdmiDisplay()
 {
     close();
 }
-
 
 struct HdmiDisplaysetPatternRegMSG : public PortalMessage
 {
@@ -92,13 +114,6 @@ void HdmiDisplay::waitForVsync ( unsigned long unused )
     sendMessage(&msg);
 };
 
-struct HdmiDisplayvsyncReceivedMSG : public PortalMessage
-{
-//fix Adapter.bsv to unreverse these
-        unsigned long long result;
-
-};
-
 struct HdmiDisplayhdmiLinesPixelsMSG : public PortalMessage
 {
     struct Request {
@@ -112,7 +127,7 @@ void HdmiDisplay::hdmiLinesPixels ( unsigned long value )
 {
     HdmiDisplayhdmiLinesPixelsMSG msg;
     msg.size = sizeof(msg.request);
-    msg.channel = 5;
+    msg.channel = 4;
     msg.request.value = value;
 
     sendMessage(&msg);
@@ -131,7 +146,7 @@ void HdmiDisplay::hdmiBlankLinesPixels ( unsigned long value )
 {
     HdmiDisplayhdmiBlankLinesPixelsMSG msg;
     msg.size = sizeof(msg.request);
-    msg.channel = 6;
+    msg.channel = 5;
     msg.request.value = value;
 
     sendMessage(&msg);
@@ -150,7 +165,7 @@ void HdmiDisplay::hdmiStrideBytes ( unsigned long strideBytes )
 {
     HdmiDisplayhdmiStrideBytesMSG msg;
     msg.size = sizeof(msg.request);
-    msg.channel = 7;
+    msg.channel = 6;
     msg.request.strideBytes = strideBytes;
 
     sendMessage(&msg);
@@ -169,7 +184,7 @@ void HdmiDisplay::hdmiLineCountMinMax ( unsigned long value )
 {
     HdmiDisplayhdmiLineCountMinMaxMSG msg;
     msg.size = sizeof(msg.request);
-    msg.channel = 8;
+    msg.channel = 7;
     msg.request.value = value;
 
     sendMessage(&msg);
@@ -188,7 +203,7 @@ void HdmiDisplay::hdmiPixelCountMinMax ( unsigned long value )
 {
     HdmiDisplayhdmiPixelCountMinMaxMSG msg;
     msg.size = sizeof(msg.request);
-    msg.channel = 9;
+    msg.channel = 8;
     msg.request.value = value;
 
     sendMessage(&msg);
@@ -207,7 +222,7 @@ void HdmiDisplay::hdmiSyncWidths ( unsigned long value )
 {
     HdmiDisplayhdmiSyncWidthsMSG msg;
     msg.size = sizeof(msg.request);
-    msg.channel = 10;
+    msg.channel = 9;
     msg.request.value = value;
 
     sendMessage(&msg);
@@ -226,7 +241,7 @@ void HdmiDisplay::beginTranslationTable ( unsigned long index )
 {
     HdmiDisplaybeginTranslationTableMSG msg;
     msg.size = sizeof(msg.request);
-    msg.channel = 11;
+    msg.channel = 10;
     msg.request.index = index;
 
     sendMessage(&msg);
@@ -246,34 +261,9 @@ void HdmiDisplay::addTranslationEntry ( unsigned long address, unsigned long len
 {
     HdmiDisplayaddTranslationEntryMSG msg;
     msg.size = sizeof(msg.request);
-    msg.channel = 12;
+    msg.channel = 11;
     msg.request.address = address;
     msg.request.length = length;
 
     sendMessage(&msg);
 };
-
-struct HdmiDisplaytranslationTableEntryMSG : public PortalMessage
-{
-//fix Adapter.bsv to unreverse these
-        std::bitset<96> result;
-
-};
-
-struct HdmiDisplayfbReadingMSG : public PortalMessage
-{
-//fix Adapter.bsv to unreverse these
-        std::bitset<96> result;
-
-};
-
-void HdmiDisplay::handleMessage(PortalMessage *msg)
-{
-    switch (msg->channel) {
-    case 4: vsyncReceived(((HdmiDisplayvsyncReceivedMSG *)msg)->result); break;
-    case 13: translationTableEntry(((HdmiDisplaytranslationTableEntryMSG *)msg)->result); break;
-    case 14: fbReading(((HdmiDisplayfbReadingMSG *)msg)->result); break;
-
-    default: break;
-    }
-}

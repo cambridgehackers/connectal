@@ -1,5 +1,3 @@
-#ifndef PORTAL_H
-#define PORTAL_H
 
 #include <sys/types.h>
 #include <bitset>
@@ -21,25 +19,21 @@ typedef struct PortalMessage {
     size_t channel;
 } PortalMessage;
 
-typedef struct PortalClockConfig {
-        int clock; // FPGA0, FPGA1, ... FPGA3
-        int requested_frequency;
-        int granted_frequency;
-} PortalClockConfig;
+class PortalIndications {
+ public:
+    virtual void handleMessage(PortalMessage *msg) { };
+    virtual ~PortalIndications() {};
+};
 
 class PortalInstance {
 public:
-    typedef void (*MessageHandler)(PortalMessage *msg);
-    MessageHandler *messageHandlers;
-
     int sendMessage(PortalMessage *msg);
     void close();
-    int updateFrequency(long frequency);
 protected:
+    PortalIndications *indications;
     int receiveMessage(PortalMessage *msg);
-    virtual void handleMessage(PortalMessage *msg) { };
-    PortalInstance(const char *instanceName);
-    virtual ~PortalInstance();
+    PortalInstance(const char *instanceName, PortalIndications *indications=0);
+    ~PortalInstance();
     friend PortalInstance *portalOpen(const char *instanceName);
 private:
     int fd;
@@ -66,4 +60,3 @@ private:
 
 extern PortalInterface portal;
 
-#endif
