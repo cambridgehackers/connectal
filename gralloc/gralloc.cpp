@@ -342,7 +342,7 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
         pthread_condattr_t condattr;
         pthread_condattr_init(&condattr);
         pthread_cond_init(&dev->vsync_cond, &condattr);
-        dev->hdmiDisplay = createHdmiDisplay("fpga0", new GrallocHdmiDisplayIndications);
+        dev->hdmiDisplay = HdmiDisplay::createHdmiDisplay("fpga0", new GrallocHdmiDisplayIndications);
         dev->nextSegmentNumber = 0;
 
         status = 0;
@@ -399,7 +399,7 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
             gralloc_dev->hdmiDisplay->hdmiStrideBytes(stridebytes);
             gralloc_dev->hdmiDisplay->hdmiLineCountMinMax(lmax << 16 | lmin);
             gralloc_dev->hdmiDisplay->hdmiPixelCountMinMax(pmax << 16 | pmin);
-            gralloc_dev->hdmiDisplay->updateFrequency(60l * (long)(pmin + npixels) * (long)(lmin + vsyncwidth + nlines));
+            //gralloc_dev->hdmiDisplay->updateFrequency(60l * (long)(pmin + npixels) * (long)(lmin + vsyncwidth + nlines));
 
             *device = &dev->common;
         }
