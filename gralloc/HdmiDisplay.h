@@ -4,7 +4,7 @@ class HdmiDisplayIndications : public PortalIndications {
 public:
     HdmiDisplayIndications();
     virtual ~HdmiDisplayIndications();
-    virtual void vsync ( unsigned long long );
+    virtual void vsync ( unsigned long long ){ }
 
 protected:
     virtual void handleMessage(PortalMessage *msg);
