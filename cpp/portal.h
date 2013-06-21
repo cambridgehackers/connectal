@@ -19,6 +19,12 @@ typedef struct PortalMessage {
     size_t channel;
 } PortalMessage;
 
+typedef struct PortalClockRequest {
+    int clknum;
+    long requested_rate;
+    long actual_rate;
+} PortalClockRequest;
+
 class PortalIndications {
  public:
     virtual void handleMessage(PortalMessage *msg) { };
@@ -50,6 +56,7 @@ public:
     static int exec(idleFunc func = 0);
     static int alloc(size_t size, int *fd, PortalAlloc *portalAlloc);
     static int free(int fd);
+    static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
     int registerInstance(PortalInstance *instance);
     int dumpRegs();
 private:

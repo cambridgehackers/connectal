@@ -47,6 +47,7 @@
 #define PORTAL_PUT _IOWR('B', 18, PortalMessage)
 #define PORTAL_GET _IOWR('B', 19, PortalMessage)
 #define PORTAL_REGS _IOWR('B', 20, PortalMessage)
+#define PORTAL_SET_FCLK_RATE _IOWR('B', 40, PortalClockRequest)
 
 PortalInterface portal;
 
@@ -149,6 +150,17 @@ int PortalInterface::alloc(size_t size, int *fd, PortalAlloc *portalAlloc)
 int PortalInterface::free(int fd)
 {
     return 0;
+}
+
+int PortalInterface::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
+{
+    PortalClockRequest request;
+    request.clknum = clkNum;
+    request.requested_rate = requestedFrequency;
+    int status = ioctl(portal.fds[0].fd, (long)&request);
+    if (status == 0 && actualFrequency)
+	*actualFrequency = request.actual_rate;
+    return status;
 }
 
 int PortalInterface::dumpRegs()
