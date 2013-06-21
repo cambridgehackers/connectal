@@ -399,7 +399,9 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
             gralloc_dev->hdmiDisplay->hdmiStrideBytes(stridebytes);
             gralloc_dev->hdmiDisplay->hdmiLineCountMinMax(lmax << 16 | lmin);
             gralloc_dev->hdmiDisplay->hdmiPixelCountMinMax(pmax << 16 | pmin);
-            //gralloc_dev->hdmiDisplay->updateFrequency(60l * (long)(pmin + npixels) * (long)(lmin + vsyncwidth + nlines));
+	    PortalInterface::setClockFrequency(1,
+					       60l * (long)(pmin + npixels) * (long)(lmin + vsyncwidth + nlines),
+					       0);
 
             *device = &dev->common;
         }
