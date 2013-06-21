@@ -50,7 +50,7 @@ dutResponseTemplate='''
 
 responseStructTemplate='''
 typedef struct {
-    %(methodReturnType)s %(methodName)s$Response;
+%(paramStructDeclarations)s
 } %(MethodName)s$Response deriving (Bits);
 typedef SizeOf#(%(MethodName)s$Response) %(MethodName)s$ResponseSize;
 Bit#(8) %(methodName)s$Offset = %(channelNumber)s;
@@ -316,7 +316,7 @@ requestRuleTemplate='''
 '''
 
 indicationRuleTemplate='''
-    ToBit32#(%(paramType)s) %(methodName)s$responseFifo <- mkToBit32();
+    ToBit32#(%(MethodName)s$Response) %(methodName)s$responseFifo <- mkToBit32();
     rule %(methodName)s$axiSlaveRead if (axiSlaveReadAddrFifo.first[16] == 1 && axiSlaveReadAddrFifo.first[15:8] == %(methodName)s$Offset);
         axiSlaveReadAddrFifo.deq;
         Bit#(8) offset = axiSlaveReadAddrFifo.first[7:0];
@@ -353,8 +353,8 @@ indicationRuleTemplate='''
 '''
 
 indicationMethodTemplate='''
-        method Action %(methodName)s(%(paramType)s v);
-            %(methodName)s$responseFifo.enq(v);
+        method Action %(methodName)s(%(formals)s);
+            %(methodName)s$responseFifo.enq(%(MethodName)s$Response {%(structElements)s});
             responseFiredReg <= responseFiredReg + 1;
         endmethod
 '''
@@ -402,10 +402,11 @@ class MethodMixin:
         return requestStructTemplate % substs
 
     def collectResponseElement(self, outerTypeName):
-        if self.return_type.name == 'Action':
-            return responseStructTemplate % self.substs(outerTypeName)
-        else:
-            return None
+        substs = self.substs(outerTypeName)
+        paramStructDeclarations = ['        %s %s;' % (p.type.toBsvType(), p.name)
+                                   for p in self.params]
+        substs['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
+        return responseStructTemplate % substs
 
     def collectMethodRule(self, outerTypeName):
         substs = self.substs(outerTypeName)
@@ -431,8 +432,10 @@ class MethodMixin:
         substs = self.substs(outerTypeName)
         print 
         if self.return_type.name == 'Action':
-            paramType = ['%s' % p.type.toBsvType() for p in self.params]
-            substs['paramType'] = ', '.join(paramType)
+            formal = ['%s %s' % (p.type.toBsvType(), p.name) for p in self.params]
+            substs['formals'] = ', '.join(formal)
+            structElements = ['%s: %s' % (p.name, p.name) for p in self.params]
+            substs['structElements'] = ', '.join(structElements)
             return indicationMethodTemplate % substs
         else:
             return None
