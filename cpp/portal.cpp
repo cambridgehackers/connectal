@@ -157,9 +157,11 @@ int PortalInterface::setClockFrequency(int clkNum, long requestedFrequency, long
     PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
-    int status = ioctl(portal.fds[0].fd, (long)&request);
+    int status = ioctl(portal.fds[0].fd, PORTAL_SET_FCLK_RATE, (long)&request);
     if (status == 0 && actualFrequency)
 	*actualFrequency = request.actual_rate;
+    if (status < 0)
+	status = errno;
     return status;
 }
 
