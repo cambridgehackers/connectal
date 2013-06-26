@@ -1356,7 +1356,7 @@ class InterfaceMixin:
             print 'Writing MPD file', mpdname
         mpd = util.createDirAndOpen(mpdname, 'w')
         dutName = util.decapitalize(self.name)
-        axiMasters = self.collectInterfaceNames('Axi3?Master')
+        axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
@@ -1390,7 +1390,7 @@ class InterfaceMixin:
             print 'Writing MHS file', mhsname
         mhs = util.createDirAndOpen(mhsname, 'w')
         dutName = self.name.lower()
-        axiMasters = self.collectInterfaceNames('Axi3?Master')
+        axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
@@ -1460,7 +1460,7 @@ class InterfaceMixin:
             print 'Writing wrapper Verilog file', verilogname
         verilog = util.createDirAndOpen(verilogname, 'w')
         dutName = util.decapitalize(self.name)
-        axiMasters = self.collectInterfaceNames('Axi3?Master')
+        axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
         masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]

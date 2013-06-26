@@ -17,6 +17,7 @@ import Connectable::*;
 import Clocks::*;
 import Adapter::*;
 import AxiMasterSlave::*;
+import AxiClientServer::*;
 import HDMI::*;
 %(extraImports)s
 
@@ -223,6 +224,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         axiSlaveReadLastFifo.enq(axiSlaveReadBurstCountReg == 1 ? 1 : 0);
         axiSlaveReadIdFifo.enq(axiSlaveReadIdReg);
     endrule
+%(axiMasterModules)s
     interface Axi3Slave ctrl;
         interface Axi3SlaveWrite write;
             method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
@@ -451,7 +453,7 @@ class InterfaceMixin:
         methodRules = self.collectMethodRules(self.name)
         indicationMethodRules = indicationInterface.collectIndicationMethodRules(self.name)
         indicationMethods = indicationInterface.collectIndicationMethods(self.name)
-        axiMasters = self.collectInterfaceNames('Axi3?Master')
+        axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
         dutName = util.decapitalize(self.name)
@@ -465,13 +467,16 @@ class InterfaceMixin:
             'indicationMethodRules': ''.join(indicationMethodRules),
             'indicationMethods': ''.join(indicationMethods),
             'channelCount': indicationInterface.channelCount, # includes self.channelCount
-            'axiMasterDeclarations': '\n'.join(['    interface %s#(%s,%s) %s;' % (t, params[0].numeric(), params[1].numeric(), axiMaster)
+            'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster)
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
                                                for (axiSlave,t,params) in axiSlaves]),
             'hdmiDeclarations': '\n'.join(['    interface HDMI %s;' % hdmi
                                            for (hdmi,t,params) in hdmiInterfaces]),
-            'axiMasterImplementations': '\n'.join(['    interface %s %s = %s.%s;' % (t[0:-1], axiMaster,dutName,axiMaster)
+            'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
+                                           % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster,dutName,axiMaster)
+                                                   for (axiMaster,t,params) in axiMasters]),
+            'axiMasterImplementations': '\n'.join(['    interface Axi3Master %s = %sMaster;' % (axiMaster,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
             'dut_hdmi_clock_param': '#(Clock hdmi_clk)' if len(hdmiInterfaces) else '',
             'dut_hdmi_clock_arg': 'hdmi_clk,' if len(hdmiInterfaces) else '',

@@ -28,6 +28,7 @@ import FIFOF::*;
 import Vector::*;
 import SpecialFIFOs::*;
 import AxiMasterSlave::*;
+import AxiClientServer::*;
 
 typedef struct {
     Bit#(32) base;
@@ -45,7 +46,7 @@ interface FrameBufferBram;
     method Action startFrame();
     method Action startLine();
     method Action setSgEntry(Bit#(8) index, Bit#(24) startingOffset, Bit#(20) address, Bit#(20) length);
-    interface Axi3Master#(32,4) axi;
+    interface Axi3Client#(32,4,1) axi;
     interface BRAM#(Bit#(12), Bit#(32)) buffer;
 endinterface
 
@@ -85,7 +86,7 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
     //Vector#(16, Reg#(ScatterGather)) sglist <- replicateM(mkReg(unpack(0)));
     SyncBRAM#(Bit#(8), ScatterGather) sglist <- mkSyncBRAM( 256, clk, rst, clk, rst);
 
-    Axi3Master#(32,4) nullAxiMaster <- mkNullAxi3Master();
+    //Axi3Master#(32,4,1) nullAxiMaster <- mkNullAxi3Master();
 
     SyncBRAM#(Bit#(12), Bit#(32)) syncBRAM <- mkSyncBRAM( 4096, displayClk, displayRst, clk, rst );
     //SyncBRAM#(Bit#(12), Bit#(32)) syncBRAM <- mkSimSyncBRAM( 4096, displayClk, displayRst, clk, rst );
@@ -196,51 +197,25 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
         end
     endmethod
 
-   interface Axi3Master axi;
-       interface Axi3MasterRead read;
-           method ActionValue#(Bit#(32)) readAddr() if (runningReg
-                                                        && readAddrReg != 24'hFFFFFF
-                                                        && readAddrReg < readLimitReg
-                                                        && readAddrReg <= segmentLimitReg
-                                                        );
+   interface Axi3Client axi;
+       interface Axi3ReadClient read;
+           method ActionValue#(Axi3ReadRequest#(1)) address() if (runningReg
+								  && readAddrReg != 24'hFFFFFF
+								  && readAddrReg < readLimitReg
+								  && readAddrReg <= segmentLimitReg
+								  );
                Bit#(32) addr = extend(readAddrReg) + segmentOffsetReg;
-               // $display("readAddr %h %h", readAddrReg, addr);
+	       Bit#(5) burstLen = burstCount-1;
                readAddrReg <= readAddrReg + burstCount*bytesPerWord;
-               return addr;
+               return Axi3ReadRequest { address: addr, burstLen: truncate(burstLen), id: 0} ;
            endmethod
-           method Bit#(4) readBurstLen();
-               Bit#(5) burstlen = burstCount-1;
-               return truncate(burstlen);
-           endmethod
-           method Bit#(3) readBurstWidth();
-               if (busWidth == 32)
-                   return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
-               else if (busWidth == 64)
-                   return 3'b011;
-               else
-                   return 3'b100;
-           endmethod
-           method Bit#(2) readBurstType();  // drive with 2'b01
-               return 2'b01;
-           endmethod
-           method Bit#(2) readBurstProt(); // drive with 3'b000
-               return 2'b00;
-           endmethod
-           method Bit#(3) readBurstCache(); // drive with 4'b0011
-               return 3'b011;
-           endmethod
-           method Bit#(1) readId();
-               return 0;
-           endmethod
-           method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(1) id);
-               let newPixelCount = pixelCountReg2 + pixelsPerWord;
-               pixelCountReg2 <= newPixelCount;
-
-               syncBRAM.portB.write(pixelCountReg2 / pixelsPerWord, data);
+           method Action data(Axi3ReadResponse#(32,1) response);
+               pixelCountReg2 <= pixelCountReg2 + pixelsPerWord;
+               syncBRAM.portB.write(pixelCountReg2 / pixelsPerWord, response.data);
            endmethod
        endinterface
 
-       interface Axi3MasterWrite write = nullAxiMaster.write;
+       //interface Axi3WriteClient write = nullAxiClient.write;
    endinterface
    interface NrccBRAM buffer = syncBRAM.portA;
 endmodule

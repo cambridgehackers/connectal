@@ -28,6 +28,7 @@ import GetPut::*;
 import Connectable::*;
 
 import AxiMasterSlave::*;
+import AxiClientServer::*;
 import HDMI::*;
 import FrameBufferBram::*;
 import YUV::*;
@@ -49,7 +50,7 @@ interface HdmiDisplay;
     method Action beginTranslationTable(Bit#(8) index);
     method Action addTranslationEntry(Bit#(20) address, Bit#(12) length); // shift address and length left 12 bits
 
-    interface Axi3Master#(32,4) m_axi;
+    interface Axi3Client#(32,4,1) m_axi;
     interface HDMI hdmi;
 endinterface
 
@@ -186,6 +187,6 @@ module mkHdmiDisplay#(Clock hdmi_clk, HdmiDisplayIndications indications)(HdmiDi
         segmentOffsetReg <= segmentOffsetReg + {length,12'd0};
     endmethod
 
-    interface Axi3Master m_axi = frameBuffer.axi;
+    interface Axi3Client m_axi = frameBuffer.axi;
     interface HDMI hdmi = hdmiGen.hdmi;
 endmodule
