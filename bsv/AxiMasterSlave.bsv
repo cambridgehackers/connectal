@@ -1,5 +1,6 @@
 
 // Copyright (c) 2012 Nokia, Inc.
+// Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -27,6 +28,7 @@ import FIFO::*;
 import FIFOF::*;
 import FIFOLevel::*;
 import SpecialFIFOs::*;
+import AxiClientServer::*;
 
 interface AxiMasterRead#(type busWidth);
    method ActionValue#(Bit#(32)) readAddr();
@@ -60,36 +62,36 @@ interface AxiMaster#(type busWidth, type busWidthBytes);
    interface AxiMasterWrite#(busWidth, busWidthBytes) write;
 endinterface
 
-interface Axi3MasterRead#(type busWidth);
+interface Axi3MasterRead#(type busWidth, type idWidth);
    method ActionValue#(Bit#(32)) readAddr();
    method Bit#(4) readBurstLen();
    method Bit#(3) readBurstWidth();
    method Bit#(2) readBurstType();  // drive with 2'b01
    method Bit#(2) readBurstProt(); // drive with 3'b000
    method Bit#(3) readBurstCache(); // drive with 4'b0011
-   method Bit#(1) readId();
+   method Bit#(idWidth) readId();
 
-   method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(1) id);
+   method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(idWidth) id);
 endinterface
 
-interface Axi3MasterWrite#(type busWidth, type busWidthBytes);
+interface Axi3MasterWrite#(type busWidth, type busWidthBytes, type idWidth);
    method ActionValue#(Bit#(32)) writeAddr();
    method Bit#(4) writeBurstLen();
    method Bit#(3) writeBurstWidth();
    method Bit#(2) writeBurstType();  // drive with 2'b01
    method Bit#(2) writeBurstProt(); // drive with 3'b000
    method Bit#(3) writeBurstCache(); // drive with 4'b0011
-   method Bit#(1) writeId();
+   method Bit#(idWidth) writeId();
 
    method ActionValue#(Bit#(busWidth)) writeData();
    method Bit#(busWidthBytes) writeDataByteEnable();
    method Bit#(1) writeLastDataBeat(); // last data beat
-   method Action writeResponse(Bit#(2) responseCode, Bit#(1) id);
+   method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
 endinterface
 
-interface Axi3Master#(type busWidth, type busWidthBytes);
-   interface Axi3MasterRead#(busWidth) read;
-   interface Axi3MasterWrite#(busWidth, busWidthBytes) write;
+interface Axi3Master#(type busWidth, type busWidthBytes, type idWidth);
+   interface Axi3MasterRead#(busWidth, idWidth) read;
+   interface Axi3MasterWrite#(busWidth, busWidthBytes, idWidth) write;
 endinterface
 
 interface AxiSlaveRead#(type busWidth, type busWidthBytes);
@@ -385,7 +387,7 @@ module mkNullAxiMaster(AxiMaster#(busWidth,busWidthBytes)) provisos(Div#(busWidt
    endinterface
 endmodule
 
-module mkNullAxi3Master(Axi3Master#(busWidth,busWidthBytes)) provisos(Div#(busWidth,8,busWidthBytes),Add#(1,a,busWidth));
+module mkNullAxi3Master(Axi3Master#(busWidth,busWidthBytes,idWidth)) provisos(Div#(busWidth,8,busWidthBytes),Add#(1,a,busWidth));
    interface Axi3MasterWrite write;
        method ActionValue#(Bit#(32)) writeAddr() if (False);
            return 0;
@@ -410,7 +412,7 @@ module mkNullAxi3Master(Axi3Master#(busWidth,busWidthBytes)) provisos(Div#(busWi
        method Bit#(3) writeBurstCache(); // drive with 4'b0011
            return 3'b011;
        endmethod
-       method Bit#(1) writeId();
+       method Bit#(idWidth) writeId();
            return 0;
        endmethod
 
@@ -424,7 +426,7 @@ module mkNullAxi3Master(Axi3Master#(busWidth,busWidthBytes)) provisos(Div#(busWi
            return 0;
        endmethod
 
-       method Action writeResponse(Bit#(2) responseCode, Bit#(1) id);
+       method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
        endmethod
    endinterface
 
@@ -452,10 +454,10 @@ module mkNullAxi3Master(Axi3Master#(busWidth,busWidthBytes)) provisos(Div#(busWi
        method Bit#(3) readBurstCache(); // drive with 4'b0011
            return 3'b011;
        endmethod
-       method Bit#(1) readId();
+       method Bit#(idWidth) readId();
            return 0;
        endmethod
-       method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(1) id);
+       method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(idWidth) id);
        endmethod
    endinterface
 endmodule
@@ -570,4 +572,93 @@ module mkMasterSlaveConnection#(AxiMasterWrite#(busWidth, busWidthBytes) axiw,
         let response <- axiSlave.write.writeResponse();
         axiw.writeResponse(response, 0);
     endrule
+endmodule
+
+module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Master#(busWidth,busWidthBytes,idWidth))
+	 provisos(Div#(busWidth,8,busWidthBytes),Add#(1,a,busWidth));
+
+    Wire#(Axi3ReadRequest#(idWidth))                      wReadRequest <- mkDWire(unpack(0));
+    Wire#(Axi3WriteRequest#(idWidth))                     wWriteRequest <- mkDWire(unpack(0));
+    Wire#(Axi3WriteData#(busWidth,busWidthBytes,idWidth)) wWriteData <- mkDWire(unpack(0));
+
+    interface Axi3MasterWrite write;
+	method ActionValue#(Bit#(32)) writeAddr() if (False);
+	    let r <- client.write.address();
+	    wWriteRequest <= r;
+	    return r.address;
+	endmethod
+	method Bit#(4) writeBurstLen();
+	    return wWriteRequest.burstLen;
+	endmethod
+	method Bit#(3) writeBurstWidth();
+	    if (valueOf(busWidth) == 32)
+		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+	    else if (valueOf(busWidth) == 64)
+		return 3'b011;
+	    else
+		return 3'b100;
+	endmethod
+	method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
+	    return 2'b01; // increment address
+	endmethod
+	method Bit#(2) writeBurstProt(); // drive with 3'b000
+	    return 2'b000;
+	endmethod
+	method Bit#(3) writeBurstCache(); // drive with 4'b0011
+	    return 3'b0011;
+	endmethod
+	method Bit#(idWidth) writeId();
+	    return wWriteRequest.id;
+	endmethod
+
+	method ActionValue#(Bit#(busWidth)) writeData();
+	    let d <- client.write.data();
+	    wWriteData <= d;
+	    return d.data;
+	endmethod
+	method Bit#(busWidthBytes) writeDataByteEnable();
+	    return maxBound;
+	endmethod
+	method Bit#(1) writeLastDataBeat(); // last data beat
+	    return wWriteData.last;
+	endmethod
+
+	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
+	    client.write.response(Axi3WriteResponse { response: responseCode, id: id});
+	endmethod
+    endinterface
+
+    interface Axi3MasterRead read;
+	method ActionValue#(Bit#(32)) readAddr();
+	    let r <- client.read.address();
+	    wReadRequest <= r;
+	    return r.address;
+	endmethod
+	method Bit#(4) readBurstLen();
+	    return wReadRequest.burstLen;
+	endmethod
+	method Bit#(3) readBurstWidth();
+	    if (valueOf(busWidth) == 32)
+		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+	    else if (valueOf(busWidth) == 64)
+		return 3'b011;
+	    else
+		return 3'b100;
+	endmethod
+	method Bit#(2) readBurstType();  // drive with 2'b01
+	    return 2'b01;
+	endmethod
+	method Bit#(2) readBurstProt(); // drive with 3'b000
+	    return 2'b000;
+	endmethod
+	method Bit#(3) readBurstCache(); // drive with 4'b0011
+	    return 3'b0011;
+	endmethod
+	method Bit#(idWidth) readId();
+	    return wReadRequest.id;
+	endmethod
+	method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(idWidth) id);
+	    client.read.data(Axi3ReadResponse { data: data, resp: resp, last: last, id: id});
+	endmethod
+   endinterface
 endmodule
