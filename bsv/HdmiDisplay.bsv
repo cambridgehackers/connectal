@@ -96,9 +96,9 @@ module mkHdmiDisplay#(Clock hdmi_clk, HdmiDisplayIndications indications)(HdmiDi
     Reg#(Bool) frameBufferEnabled <- mkReg(False);
     FrameBufferBram frameBuffer <- mkFrameBufferBram(hdmi_clk, hdmi_reset);
 
-    HdmiTestPatternGenerator hdmiTpg <- mkHdmiTestPatternGenerator(clocked_by hdmi_clk, reset_by hdmi_reset,
-                                                                   commandFifo, frameBuffer.buffer,
-                                                                   vsyncPulse, hsyncPulse);
+    HdmiGenerator hdmiGen <- mkHdmiGenerator(clocked_by hdmi_clk, reset_by hdmi_reset,
+                                             commandFifo, frameBuffer.buffer,
+					     vsyncPulse, hsyncPulse);
 
     (* descending_urgency = "vsync, hsync" *)
     rule vsync if (vsyncPulse.pulse());
@@ -187,5 +187,5 @@ module mkHdmiDisplay#(Clock hdmi_clk, HdmiDisplayIndications indications)(HdmiDi
     endmethod
 
     interface Axi3Master m_axi = frameBuffer.axi;
-    interface HDMI hdmi = hdmiTpg.hdmi;
+    interface HDMI hdmi = hdmiGen.hdmi;
 endmodule

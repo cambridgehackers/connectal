@@ -59,7 +59,7 @@ typedef union tagged {
     } SyncWidths;
 } HdmiCommand deriving (Bits);
 
-interface HdmiTestPatternGenerator;
+interface HdmiGenerator;
     method Action setHsyncWidth(Bit#(12) hsyncWidth);
     method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max);
     method Action setVsyncWidth(Bit#(11) vsyncWidth);
@@ -107,10 +107,10 @@ typedef struct {
     Bit#(16) data;
 } Yuv422Stage deriving (Bits);
 
-module mkHdmiTestPatternGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
+module mkHdmiGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
                                    BRAM#(Bit#(12), Bit#(32)) lineBuffer,
                                    SyncPulseIfc vsyncPulse,
-                                   SyncPulseIfc hsyncPulse)(HdmiTestPatternGenerator);
+                                   SyncPulseIfc hsyncPulse)(HdmiGenerator);
     // 1920 * 1080
     Reg#(Bit#(12)) hsyncWidth <- mkReg(44);
     Reg#(Bit#(12)) dePixelCountMinimum <- mkReg(192);
