@@ -55,14 +55,21 @@ or
     make bits
     cp examples/echo/testecho.cpp echoproj/jni
     make -C echoproj boot.bin
-    ndkbuild -C echoproj
+    ndk-build -C echoproj
 
-    adb push echoproj/boot.bin /mnt/sdcard
+    adb push echoproj/echo.bit.bin.gz /mnt/sdcard
     adb push echoproj/libs/armeabi/testecho /data/local
 
 The first time, this will launch the XPS GUI, but only so that it will
 generate some makefiles. Quit from the XPS GUI once it has loaded the
 design and the build process will continue.
+
+Loading the bitfile on the device:
+    mknod /dev/xdevcfg c 259 0
+    cat /sys/devices/amba.0/f8007000.devcfg/prog_done
+    zcat /mnt/sdcard/echo.bit.bin.gz > /dev/xdevcfg
+    cat /sys/devices/amba.0/f8007000.devcfg/prog_done
+    chmod agu+rwx /dev/fpga0
 
 When we run it on the device:
     / # /data/local/testecho 
