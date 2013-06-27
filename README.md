@@ -53,8 +53,10 @@ or
     cd echoproj
     make verilog
     make bits
-    cp examples/echo/testecho.cpp echoproj/jni
     make -C echoproj boot.bin
+
+    ## building the test executable
+    cp examples/echo/testecho.cpp echoproj/jni
     ndk-build -C echoproj
 
     adb push echoproj/echo.bit.bin.gz /mnt/sdcard
