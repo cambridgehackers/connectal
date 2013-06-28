@@ -582,7 +582,7 @@ module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Mas
     Wire#(Axi3WriteData#(busWidth,busWidthBytes,idWidth)) wWriteData <- mkDWire(unpack(0));
 
     interface Axi3MasterWrite write;
-	method ActionValue#(Bit#(32)) writeAddr() if (False);
+	method ActionValue#(Bit#(32)) writeAddr();
 	    let r <- client.write.address();
 	    wWriteRequest <= r;
 	    return r.address;
