@@ -395,11 +395,12 @@ class MethodMixin:
         return d
 
     def collectRequestElement(self, outerTypeName):
-        if not self.params:
-            return None
         substs = self.substs(outerTypeName)
         paramStructDeclarations = ['        %s %s;' % (p.type.toBsvType(), p.name)
                                    for p in self.params]
+        if not self.params:
+            paramStructDeclarations = ['        %s %s;' % ('Bit#(32)', 'padding')]
+
         substs['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
         return requestStructTemplate % substs
 
@@ -407,6 +408,8 @@ class MethodMixin:
         substs = self.substs(outerTypeName)
         paramStructDeclarations = ['        %s %s;' % (p.type.toBsvType(), p.name)
                                    for p in self.params]
+        if not self.params:
+            paramStructDeclarations = ['        %s %s;' % ('Bit#(32)', 'padding')]
         substs['paramStructDeclarations'] = '\n'.join(paramStructDeclarations)
         return responseStructTemplate % substs
 
@@ -485,7 +488,7 @@ class InterfaceMixin:
             'hdmiImplementations': '\n'.join(['    interface HDMI %s = %s.%s;' % (hdmi, dutName, hdmi)
                                               for (hdmi,t,params) in hdmiInterfaces]),
             'queuesNotEmpty': '\n'.join(['                    v[%d] = %s$%s.notEmpty ? 1 : 0;'
-                                        % (i, methods[i].name, 'requestFifo' if methods[i].params else 'responseFifo')
+                                        % (i, methods[i].name, 'requestFifo' if not self.isIndication else 'responseFifo')
                                          for i in range(len(methods))])
             }
         f.write(dutRequestTemplate % substs)

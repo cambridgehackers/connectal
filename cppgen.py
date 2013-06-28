@@ -137,10 +137,7 @@ class MethodMixin:
             f.write('virtual ')
         f.write('void %s ( ' % cName(self.name))
         #print parentClassName, self.name
-        if self.params:
-            f.write(', '.join([cName(p.type) for p in self.params]))
-        else:
-            f.write(resultTypeName)
+        f.write(', '.join([cName(p.type) for p in self.params]))
         f.write(' )')
         if not self.isIndication:
             f.write(';\n')
@@ -148,12 +145,10 @@ class MethodMixin:
             f.write('{ }\n')
     def emitCImplementation(self, f, className, namespace):
         params = self.params
-        if not params:
-            print 'no params', self.params
-            print self.return_type
-            params = [ AST.Param('result', self.return_type) ]
         paramDeclarations = [ '%s %s' % (p.type.cName(), p.name) for p in params]
         paramStructDeclarations = [ '        %s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in params]
+        if not params:
+            paramStructDeclarations = ['        int padding;\n']
         ## fix Adapter.bsv to eliminate the need for this reversal
         paramStructDeclarations.reverse()
         paramSetters = [ '    msg.request.%s = %s;\n' % (p.name, p.name) for p in params]
