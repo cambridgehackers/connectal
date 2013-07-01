@@ -1,0 +1,16 @@
+
+To compile the gralloc library:
+
+1. cd <top of android build tree>
+    (to build this tree, see: https://github.com/cambridgehackers/zynq-android4/wiki/ZynqAndroid4.1 )
+2. set environment variables from that build tree:
+    source ./build/envsetup.sh; lunch zedboard-userdebug
+3. cd <gralloc library directory (the directory containing this README file)
+4. Compile source:
+    TOP=<top of android build tree> mm
+    (Note that this will place the resulting library into the android build tree output directory,
+     probably in the file: out/target/product/zedboard/system/lib/hw/gralloc.portal.so )
+
+NOTE: the xilinx GLIBCXX libraries conflict with the gcc system libraries used by the GCC
+   cross compiler (xilinx versions are bad).
+   Because of this, the xilinx 'source xxxx' lines cannot be executed prior to compiling android.
