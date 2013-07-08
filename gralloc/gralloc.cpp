@@ -260,9 +260,9 @@ static int fb_setSwapInterval(struct framebuffer_device_t* dev,
 }
 
 class GrallocHdmiDisplayIndications : public HdmiDisplayIndications {
-    virtual void vsyncReceived(unsigned long long v) {
+    virtual void vsync(unsigned long long v) {
         if (1)
-            ALOGD("vsyncReceivedHandler %llx\n", v);
+            ALOGD("vsync %llx\n", v);
         pthread_mutex_lock(&gralloc_dev->vsync_lock);
         gralloc_dev->vsync = 1;
         pthread_cond_signal(&gralloc_dev->vsync_cond);
