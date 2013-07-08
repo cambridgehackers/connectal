@@ -26,6 +26,7 @@ void HdmiDisplayIndications::handleMessage(PortalMessage *msg)
 HdmiDisplay *HdmiDisplay::createHdmiDisplay(const char *instanceName, HdmiDisplayIndications *indications)
 {
     HdmiDisplay *instance = new HdmiDisplay(instanceName, indications);
+    instance->open();
     return instance;
 }
 

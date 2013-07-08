@@ -47,6 +47,7 @@ creatorTemplate = '''
 %(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName, %(className)sIndications *indications)
 {
     %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indications);
+    instance->open();
     return instance;
 }
 '''

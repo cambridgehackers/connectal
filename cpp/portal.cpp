@@ -60,14 +60,8 @@ void PortalInstance::close()
 }
 
 PortalInstance::PortalInstance(const char *instanceName, PortalIndications *indications)
-  : instanceName(strdup(instanceName)), indications(indications)
+    : indications(indications), fd(-1), instanceName(strdup(instanceName))
 {
-    char path[128];
-    snprintf(path, sizeof(path), "/dev/%s", instanceName);
-    this->fd = open(path, O_RDWR);
-    void *mappedAddress = mmap(0, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
-    fprintf(stderr, "Mapped device %s at %p\n", instanceName, mappedAddress);
-    portal.registerInstance(this);
 }
 
 PortalInstance::~PortalInstance()
@@ -77,15 +71,52 @@ PortalInstance::~PortalInstance()
         free(instanceName);
 }
 
+int PortalInstance::open()
+{
+    if (this->fd >= 0)
+	return 0;
+
+    FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
+    if (pgfile == 0) {
+	ALOGE("failed to open /sys/devices/amba.0/f8007000.devcfg/prog_done %d\n", errno);
+	return -1;
+    }
+    char line[128];
+    fgets(line, sizeof(line), pgfile);
+    if (line[0] != '1') {
+	ALOGE("FPGA not programmed: %s\n", line);
+	return -ENODEV;
+    }
+    fclose(pgfile);
+
+
+    char path[128];
+    snprintf(path, sizeof(path), "/dev/%s", instanceName);
+    this->fd = ::open(path, O_RDWR);
+    if (this->fd < 0) {
+	ALOGE("Failed to open %s fd=%d errno=%d\n", path, this->fd, path);
+	return -errno;
+    }
+    portal.registerInstance(this);
+    return 0;
+}
 
 PortalInstance *portalOpen(const char *instanceName)
 {
-    return new PortalInstance(instanceName);
+    PortalInstance *instance = new PortalInstance(instanceName);
+    instance->open();
+    return instance;
 }
 
 int PortalInstance::sendMessage(PortalMessage *msg)
 {
-    int rc = ioctl(fd, PORTAL_PUT, msg);
+    int rc = open();
+    if (rc != 0) {
+	ALOGD("PortalInstance::sendMessage fd=%d rc=%d\n", fd, rc);
+	return rc;
+    }
+
+    rc = ioctl(fd, PORTAL_PUT, msg);
     //ALOGD("sendmessage portal fd=%d rc=%d\n", fd, rc);
     if (rc)
         ALOGE("PortalInstance::sendMessage fd=%d rc=%d errno=%d:%s PUTGET=%x PUT=%x GET=%x\n", fd, rc, errno, strerror(errno),
@@ -95,6 +126,12 @@ int PortalInstance::sendMessage(PortalMessage *msg)
 
 int PortalInstance::receiveMessage(PortalMessage *msg)
 {
+    int rc = open();
+    if (rc != 0) {
+	ALOGD("PortalInstance::receiveMessage fd=%d rc=%d\n", fd, rc);
+	return 0;
+    }
+
     int status  = ioctl(fd, PORTAL_GET, msg);
     if (status) {
         fprintf(stderr, "receiveMessage rc=%d errno=%d:%s\n", status, errno, strerror(errno));
@@ -131,6 +168,11 @@ int PortalInterface::registerInstance(PortalInstance *instance)
 
 int PortalInterface::alloc(size_t size, int *fd, PortalAlloc *portalAlloc)
 {
+    if (!portal.numFds) {
+	ALOGE("%s No fds open\n", __FUNCTION__);
+	return -ENODEV;
+    }
+
     PortalAlloc alloc;
     memset(&alloc, 0, sizeof(alloc));
     void *ptr = 0;
@@ -154,6 +196,11 @@ int PortalInterface::free(int fd)
 
 int PortalInterface::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
+    if (!portal.numFds) {
+	ALOGE("%s No fds open\n", __FUNCTION__);
+	return -ENODEV;
+    }
+
     PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
@@ -167,6 +214,11 @@ int PortalInterface::setClockFrequency(int clkNum, long requestedFrequency, long
 
 int PortalInterface::dumpRegs()
 {
+    if (!portal.numFds) {
+	ALOGE("%s No fds open\n", __FUNCTION__);
+	return -ENODEV;
+    }
+
     int foo = 0;
     int rc = ioctl(portal.fds[0].fd, PORTAL_REGS, &foo);
     return rc;
@@ -176,11 +228,10 @@ int PortalInterface::exec(idleFunc func)
 {
     unsigned int *buf = new unsigned int[1024];
     PortalMessage *msg = (PortalMessage *)(buf);
-    fprintf(stderr, "PortalInterface::exec()\n");
     int messageReceived = 0;
 
     if (!portal.numFds) {
-        fprintf(stderr, "PortalInterface::exec No fds open\n");
+        ALOGE("PortalInterface::exec No fds open numFds=%d\n", portal.numFds);
         return -ENODEV;
     }
 

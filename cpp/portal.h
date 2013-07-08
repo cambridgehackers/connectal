@@ -40,6 +40,7 @@ protected:
     int receiveMessage(PortalMessage *msg);
     PortalInstance(const char *instanceName, PortalIndications *indications=0);
     ~PortalInstance();
+    int open();
     friend PortalInstance *portalOpen(const char *instanceName);
 private:
     int fd;
