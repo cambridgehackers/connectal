@@ -53,7 +53,7 @@ or
     cd echoproj
     make verilog
     make bits
-    make -C echoproj boot.bin
+    echo.bit.bin.gz
 
     ## building the test executable
     cp examples/echo/testecho.cpp echoproj/jni
@@ -94,11 +94,29 @@ To generate code for a ZC702 board:
 
 To generate the bitstream:
 
-    make -C xpsproj bits
+    make -C xpsproj bits hdmidisplay.bit.bin.gz
 
 The result .bit file for this example will be:
 
-    xpsproj/data/hdmidisplay.bit
+    xpsproj/hdmidisplay.bit.bin.gz
+
+Sending the bitfile:
+    adb push xpsproj/hdmidisplay.bit.bin.gz /mnt/sdcard
+
+Loading the bitfile on the device:
+    mknod /dev/xdevcfg c 259 0
+    cat /sys/devices/amba.0/f8007000.devcfg/prog_done
+    zcat /mnt/sdcard/hdmidisplay.bit.bin.gz > /dev/xdevcfg
+    cat /sys/devices/amba.0/f8007000.devcfg/prog_done
+    chmod agu+rwx /dev/fpga0
+
+On the zedboard, configure the adv7511:
+   echo RGB > /sys/bus/i2c/devices/1-0039/format
+On the zc702, configure the adv7511:
+   echo RGB > /sys/bus/i2c/devices/0-0039/format
+
+Restart surfaceflinger:
+   stop surfaceflinger; start surfaceflinger
 
 
 Installation
