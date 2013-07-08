@@ -17,7 +17,7 @@ struct HdmiDisplayIndicationsvsyncMSG : public PortalMessage
 void HdmiDisplayIndications::handleMessage(PortalMessage *msg)
 {
     switch (msg->channel) {
-    case 0: vsync(((HdmiDisplayIndicationsvsyncMSG *)msg)->v); break;
+    case 12: vsync(((HdmiDisplayIndicationsvsyncMSG *)msg)->v); break;
 
     default: break;
     }
