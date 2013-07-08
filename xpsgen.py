@@ -92,7 +92,7 @@ BEGIN processing_system7
  PARAMETER C_EN_EMIO_ENET0 = 0
  PARAMETER C_EN_EMIO_ENET1 = 0
  PARAMETER C_EN_EMIO_I2C0 = 0
- PARAMETER C_EN_EMIO_I2C1 = 0
+ PARAMETER C_EN_EMIO_I2C1 = 1
  PARAMETER C_EN_EMIO_PJTAG = 0
  PARAMETER C_EN_EMIO_SDIO0 = 0
  PARAMETER C_EN_EMIO_CD_SDIO0 = 0
@@ -118,7 +118,7 @@ BEGIN processing_system7
  PARAMETER C_EN_ENET0 = 0
  PARAMETER C_EN_ENET1 = 0
  PARAMETER C_EN_I2C0 = 0
- PARAMETER C_EN_I2C1 = 0
+ PARAMETER C_EN_I2C1 = 1
  PARAMETER C_EN_PJTAG = 0
  PARAMETER C_EN_SDIO0 = 0
  PARAMETER C_EN_SDIO1 = 0
@@ -171,6 +171,8 @@ BEGIN processing_system7
  PORT M_AXI_GP0_ACLK = processing_system7_0_FCLK_CLK0_0
  PORT M_AXI_GP0_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
  BUS_INTERFACE M_AXI_GP0 = axi_slave_interconnect_0
+ PORT I2C1_SCL = processing_system7_0_I2C1_SCL
+ PORT I2C1_SDA = processing_system7_0_I2C1_SDA
 
 %(ps7_axi_master_config)s
 
@@ -218,6 +220,8 @@ system_hdmi_port_mhs_template='''
  PORT hdmi_de_pin = %(dut)s_0_hdmi_de, DIR = O
  PORT hdmi_data_pin = %(dut)s_0_hdmi_data, DIR = O, VEC = [15:0]
  PORT hdmi_clk_pin = %(dut)s_0_hdmi_clk, DIR = O, SIGIS = CLK
+ PORT hdmidisplay_0_i2c_scl_pin = processing_system7_0_I2C1_SCL, DIR = IO
+ PORT hdmidisplay_0_i2c_sda_pin = processing_system7_0_I2C1_SDA, DIR = IO
 '''
 
 ps7_axi_master_config_mhs_template='''
@@ -480,6 +484,10 @@ NET "hdmi_data_pin[15]" LOC = T16;
 NET "hdmi_data_pin[15]" IOSTANDARD = LVCMOS25;
 # NET hdmi_spdif_pin          LOC = R15 ;
 # NET hdmi_int_pin            LOC = U14 ;
+NET "hdmidisplay_0_i2c_scl_pin" LOC = AA18;
+NET "hdmidisplay_0_i2c_scl_pin" IOSTANDARD = LVCMOS33;
+NET "hdmidisplay_0_i2c_sda_pin" LOC = Y16;
+NET "hdmidisplay_0_i2c_sda_pin" IOSTANDARD = LVCMOS33;
 ''',
     'zedboard':'''
 NET "hdmi_clk_pin" LOC = W18;
@@ -524,6 +532,10 @@ NET "hdmi_data_pin[15]" LOC = V13;
 NET "hdmi_data_pin[15]" IOSTANDARD = LVCMOS25;
 # NET hdmi_spdif_pin          LOC =  Y18;
 # NET hdmi_int_pin            LOC =  W16;
+NET "hdmidisplay_0_i2c_scl_pin" LOC = AA18;
+NET "hdmidisplay_0_i2c_scl_pin" IOSTANDARD = LVCMOS25;
+NET "hdmidisplay_0_i2c_sda_pin" LOC = Y16;
+NET "hdmidisplay_0_i2c_sda_pin" IOSTANDARD = LVCMOS25;
 '''
     }
 
