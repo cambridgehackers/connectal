@@ -135,7 +135,7 @@ int PortalInstance::receiveMessage(PortalMessage *msg)
     int status  = ioctl(fd, PORTAL_GET, msg);
     if (status) {
         fprintf(stderr, "receiveMessage rc=%d errno=%d:%s\n", status, errno, strerror(errno));
-        return -status;
+        return 0;
     }
     return 1;
 }
