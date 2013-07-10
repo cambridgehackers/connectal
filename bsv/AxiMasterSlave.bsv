@@ -528,6 +528,81 @@ module mkAxiSlaveRegFileLoad#(String fileName)(AxiSlave#(busWidth, busWidthBytes
        return axiSlave;
 endmodule
 
+module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
+                              (Axi3Slave#(busWidth, busWidthBytes)) provisos(Div#(busWidth,8,busWidthBytes),
+                                                                           Add#(nz, regFileBusWidth, 32));
+    Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
+    Reg#(Bit#(regFileBusWidth)) writeAddrReg <- mkReg(0);
+    Reg#(Bit#(12)) readIdReg <- mkReg(0);
+    Reg#(Bit#(12)) writeIdReg <- mkReg(0);
+    Reg#(Bit#(4)) readBurstCountReg <- mkReg(0);
+    Reg#(Bit#(4)) writeBurstCountReg <- mkReg(0);
+    FIFO#(Bit#(2)) writeRespFifo <- mkFIFO();
+    FIFO#(Bit#(12)) writeIdFifo <- mkFIFO();
+
+    Bool verbose = False;
+    interface Axi3SlaveRead read;
+        method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
+                               Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) id) if (readBurstCountReg == 0);
+            if (verbose) $display("axiSlave.read.readAddr %h bc %d", addr, burstLen+1);
+            readAddrReg <= truncate(addr/fromInteger(valueOf(busWidthBytes)));
+	    readIdReg <= id;
+            readBurstCountReg <= burstLen+1;
+        endmethod
+
+        method ActionValue#(Bit#(busWidth)) readData() if (readBurstCountReg > 0);
+            let data = rf.sub(readAddrReg);
+            if (verbose) $display("axiSlave.read.readData %h %h %d", readAddrReg, data, readBurstCountReg);
+            readBurstCountReg <= readBurstCountReg - 1;
+            readAddrReg <= readAddrReg + 1;
+            return data;
+        endmethod
+        method Bit#(1) last();
+            return (readBurstCountReg == 1) ? 1 : 0;
+        endmethod
+	method Bit#(12) rid();
+	    return readIdReg;
+	endmethod
+    endinterface
+
+    interface Axi3SlaveWrite write;
+       method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
+                               Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) id) if (writeBurstCountReg == 0);
+           if (verbose) $display("axiSlave.write.writeAddr %h bc %d", addr, burstLen+1);
+           writeAddrReg <= truncate(addr/fromInteger(valueOf(busWidthBytes)));
+	   writeIdReg <= id;
+           writeBurstCountReg <= burstLen+1;
+           writeIdFifo.enq(id);
+       endmethod
+
+       method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last) if (writeBurstCountReg > 0);
+           if (verbose) $display("writeData %h %h %d", writeAddrReg, data, writeBurstCountReg);
+           rf.upd(writeAddrReg, data);
+           writeAddrReg <= writeAddrReg + 1;
+           writeBurstCountReg <= writeBurstCountReg - 1;
+            if (verbose) $display("axiSlave.write.writeData %h %h %d", writeAddrReg, data, writeBurstCountReg);
+           if (writeBurstCountReg == 1)
+	   begin
+               writeRespFifo.enq(0);
+           end
+       endmethod
+       method ActionValue#(Bit#(2)) writeResponse();
+           writeRespFifo.deq;
+           return writeRespFifo.first;
+       endmethod
+	method ActionValue#(Bit#(12)) bid();
+	    writeIdFifo.deq;
+	    return writeIdFifo.first;
+	endmethod
+    endinterface
+endmodule
+
+module mkAxi3SlaveRegFile(Axi3Slave#(busWidth, busWidthBytes)) provisos(Div#(busWidth,8,busWidthBytes));
+       RegFile#(Bit#(21), Bit#(busWidth)) rf <- mkRegFileFull();
+       Axi3Slave#(busWidth, busWidthBytes) axiSlave <- mkAxi3SlaveFromRegFile(rf);
+       return axiSlave;
+endmodule
+
 module mkMasterSlaveConnection#(AxiMasterWrite#(busWidth, busWidthBytes) axiw,
                                 AxiMasterRead#(busWidth) axir,
                                 AxiSlave#(busWidth, busWidthBytes) axiSlave)
@@ -574,7 +649,65 @@ module mkMasterSlaveConnection#(AxiMasterWrite#(busWidth, busWidthBytes) axiw,
     endrule
 endmodule
 
-module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Master#(busWidth,busWidthBytes,idWidth))
+module mkClientSlaveConnection#(Axi3WriteClient#(busWidth, busWidthBytes,idWidth) axicw,
+                                Axi3ReadClient#(busWidth,idWidth) axicr,
+                                Axi3Slave#(busWidth, busWidthBytes) axiSlave)
+                                () provisos (Div#(busWidth, 8, busWidthBytes),
+				             Add#(1, a__, busWidth),
+					     Add#(busWidth, b__, 65),
+					     Add#(idWidth, 1, 13));
+       
+    Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
+    Bool verbose = False;
+
+    Axi3Client#(busWidth,busWidthBytes,idWidth) axic <- mkAxi3Client(axicw, axicr);
+    Axi3Master#(busWidth,busWidthBytes,idWidth) m_axiMaster <- mkAxi3Master(axic);
+    let axir = m_axiMaster.read;
+    let axiw = m_axiMaster.write;
+
+    rule readAddr;
+        Bit#(32) addr <-axir.readAddr;
+        let burstLen = axir.readBurstLen;
+        let burstWidth = axir.readBurstWidth;
+        let burstType = axir.readBurstType;
+        let burstProt = axir.readBurstProt;
+        let burstCache = axir.readBurstCache;
+	let id = axir.readId;
+        axiSlave.read.readAddr(addr, burstLen, burstWidth, burstType, burstProt, burstCache, id);
+	if (verbose) $display("        MasterSlaveConnection.readAddr %h %d", addr, burstLen+1);
+    endrule
+    rule readData;
+        let data <- axiSlave.read.readData();
+	let id = axiSlave.read.rid();
+        axir.readData(data, 2'b00, 0, id);
+        if (verbose) $display("        MasterSlaveConnection.readData %h", data);
+    endrule
+    rule writeAddr;
+        Bit#(32) addr <- axiw.writeAddr;
+        let burstLen = axiw.writeBurstLen;
+        let burstWidth = axiw.writeBurstWidth;
+        let burstType = axiw.writeBurstType;
+        let burstProt = axiw.writeBurstProt;
+        let burstCache = axiw.writeBurstCache;
+	let id = axiw.writeId;
+        axiSlave.write.writeAddr(addr, burstLen, burstWidth, burstType, burstProt, burstCache, id);
+        if (verbose) $display("        MasterSlaveConnection.writeAddr %h %d", addr, burstLen+1);
+    endrule
+    rule writeData;
+        let data <- axiw.writeData;
+        let byteEnable = axiw.writeDataByteEnable;
+        let last = axiw.writeLastDataBeat;
+        axiSlave.write.writeData(data, byteEnable, last);
+        if (verbose) $display("        MasterSlaveConnection.writeData %h", data);
+    endrule
+    rule writeResponse;
+        let response <- axiSlave.write.writeResponse();
+        let id <- axiSlave.write.bid();
+        axiw.writeResponse(response, id);
+    endrule
+endmodule
+
+module mkAxi3MasterWires#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Master#(busWidth,busWidthBytes,idWidth))
 	 provisos(Div#(busWidth,8,busWidthBytes),Add#(1,a,busWidth));
 
     Wire#(Axi3ReadRequest#(idWidth))                      wReadRequest <- mkDWire(unpack(0));
@@ -617,14 +750,14 @@ module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Mas
 	    return d.data;
 	endmethod
 	method Bit#(busWidthBytes) writeDataByteEnable();
-	    return maxBound;
+	    return wWriteData.byteEnable;
 	endmethod
 	method Bit#(1) writeLastDataBeat(); // last data beat
 	    return wWriteData.last;
 	endmethod
 
 	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
-	    client.write.response(Axi3WriteResponse { response: responseCode, id: id});
+	    client.write.response(Axi3WriteResponse { code: responseCode, id: id});
 	endmethod
     endinterface
 
@@ -657,8 +790,109 @@ module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Mas
 	method Bit#(idWidth) readId();
 	    return wReadRequest.id;
 	endmethod
-	method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(idWidth) id);
-	    client.read.data(Axi3ReadResponse { data: data, resp: resp, last: last, id: id});
+	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
+	    client.read.data(Axi3ReadResponse { data: data, code: code, last: last, id: id});
+	endmethod
+   endinterface
+endmodule
+
+module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Master#(busWidth,busWidthBytes,idWidth))
+	 provisos(Div#(busWidth,8,busWidthBytes),Add#(1,a,busWidth),Add#(busWidth,b,65));
+
+    FIFOF#(Axi3ReadRequest#(idWidth))                      fReadRequest <- mkSizedBRAMFIFOF(8);
+    FIFOF#(Axi3WriteRequest#(idWidth))                     fWriteRequest <- mkSizedBRAMFIFOF(8);
+    FIFOF#(Axi3WriteData#(busWidth,busWidthBytes,idWidth)) fWriteData <- mkSizedBRAMFIFOF(8);
+
+    rule writAddrRule;
+        let r <- client.write.address();
+	fWriteRequest.enq(r);
+    endrule
+
+    rule writeDataRule;
+        let d <- client.write.data();
+	fWriteData.enq(d);
+    endrule
+
+    rule readAddrRule;
+        let r <- client.read.address();
+	fReadRequest.enq(r);
+    endrule
+
+    interface Axi3MasterWrite write;
+	method ActionValue#(Bit#(32)) writeAddr();
+	    fWriteRequest.deq;
+	    return fWriteRequest.first.address;
+	endmethod
+	method Bit#(4) writeBurstLen();
+	    return fWriteRequest.first.burstLen;
+	endmethod
+	method Bit#(3) writeBurstWidth();
+	    if (valueOf(busWidth) == 32)
+		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+	    else if (valueOf(busWidth) == 64)
+		return 3'b011;
+	    else
+		return 3'b100;
+	endmethod
+	method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
+	    return 2'b01; // increment address
+	endmethod
+	method Bit#(2) writeBurstProt(); // drive with 3'b000
+	    return 2'b000;
+	endmethod
+	method Bit#(3) writeBurstCache(); // drive with 4'b0011
+	    return 3'b0011;
+	endmethod
+	method Bit#(idWidth) writeId();
+	    return fWriteRequest.first.id;
+	endmethod
+
+	method ActionValue#(Bit#(busWidth)) writeData();
+	    fWriteData.deq;
+	    return fWriteData.first.data;
+	endmethod
+	method Bit#(busWidthBytes) writeDataByteEnable();
+	    return fWriteData.first.byteEnable;
+	endmethod
+	method Bit#(1) writeLastDataBeat(); // last data beat
+	    return fWriteData.first.last;
+	endmethod
+
+	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
+	    client.write.response(Axi3WriteResponse { code: responseCode, id: id});
+	endmethod
+    endinterface
+
+    interface Axi3MasterRead read;
+	method ActionValue#(Bit#(32)) readAddr();
+	    fReadRequest.deq;
+	    return fReadRequest.first.address;
+	endmethod
+	method Bit#(4) readBurstLen();
+	    return fReadRequest.first.burstLen;
+	endmethod
+	method Bit#(3) readBurstWidth();
+	    if (valueOf(busWidth) == 32)
+		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+	    else if (valueOf(busWidth) == 64)
+		return 3'b011;
+	    else
+		return 3'b100;
+	endmethod
+	method Bit#(2) readBurstType();  // drive with 2'b01
+	    return 2'b01;
+	endmethod
+	method Bit#(2) readBurstProt(); // drive with 3'b000
+	    return 2'b000;
+	endmethod
+	method Bit#(3) readBurstCache(); // drive with 4'b0011
+	    return 3'b0011;
+	endmethod
+	method Bit#(idWidth) readId();
+	    return fReadRequest.first.id;
+	endmethod
+	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
+	    client.read.data(Axi3ReadResponse { data: data, code: code, last: last, id: id});
 	endmethod
    endinterface
 endmodule
