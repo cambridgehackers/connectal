@@ -24,9 +24,9 @@
 import RegFile::*;
 import BRAMFIFO::*;
 import FIFOF::*;
-import AxiMasterSlave::*;
+import AxiClientServer::*;
 
-interface FifoToAxi#(type busWidth, type busWidthBytes);
+interface FifoToAxi#(type busWidth, type busWidthBytes, type idWidth);
    interface Reg#(Bit#(32)) base;
    interface Reg#(Bit#(32)) bounds;
    interface Reg#(Bit#(32)) threshold;
@@ -39,12 +39,12 @@ interface FifoToAxi#(type busWidth, type busWidthBytes);
 
    method Bit#(32) readStatus(Bit#(12) addr);
 
-   interface AxiMasterWrite#(busWidth,busWidthBytes) axi;
+   interface Axi3WriteClient#(busWidth,busWidthBytes,idWidth) axi;
    method Action enq(Bit#(busWidth) value);
    method ActionValue#(Bit#(32)) getResponse();
 endinterface
 
-interface FifoFromAxi#(type busWidth);
+interface FifoFromAxi#(type busWidth, type idWidth);
    interface Reg#(Bit#(32)) base;
    interface Reg#(Bit#(32)) bounds;
    interface Reg#(Bit#(32)) threshold;
@@ -57,14 +57,14 @@ interface FifoFromAxi#(type busWidth);
 
    method Bit#(32) readStatus(Bit#(12) addr);
 
-   interface AxiMasterRead#(busWidth) axi;
+   interface Axi3ReadClient#(busWidth,idWidth) axi;
 
    method Action deq();
    method Bit#(busWidth) first();
    method ActionValue#(Bit#(32)) getResponse();
 endinterface
 
-module mkFifoToAxi(FifoToAxi#(busWidth,busWidthBytes)) provisos(Div#(busWidth,8,busWidthBytes),Add#(1,z,busWidth));
+module mkFifoToAxi(FifoToAxi#(busWidth,busWidthBytes,idWidth)) provisos(Div#(busWidth,8,busWidthBytes),Add#(1,z,busWidth));
    Reg#(Bool) enabledReg <- mkReg(False);
    Reg#(Bool) oneBeatAddressReg <- mkReg(True);
    Reg#(Bool) thirtyTwoBitTransferReg <- mkReg(False);
@@ -77,13 +77,13 @@ module mkFifoToAxi(FifoToAxi#(busWidth,busWidthBytes)) provisos(Div#(busWidth,8,
    Reg#(Bit#(32)) wordsEnqCount <- mkReg(0);
    Reg#(Bit#(32)) lastDataBeatCount <- mkReg(0);
    FIFOF#(Bit#(busWidth)) dfifo <- mkSizedBRAMFIFOF(8);
-   Reg#(Bit#(8)) burstCountReg <- mkReg(0);
+   Reg#(Bit#(4)) burstCountReg <- mkReg(0);
    Reg#(Bool) operationInProgress <- mkReg(False);
    Reg#(Bool) addressPresented <- mkReg(False);
    FIFOF#(Bit#(2)) axiBrespFifo <- mkSizedBRAMFIFOF(32);
 
    rule updateBurstCount if (!dfifo.notFull() && !operationInProgress && enabledReg);
-       burstCountReg <= 8'd8;
+       burstCountReg <= 4'd8;
        operationInProgress <= True;
        addressPresented <= False;
    endrule
@@ -165,39 +165,19 @@ module mkFifoToAxi(FifoToAxi#(busWidth,busWidthBytes)) provisos(Div#(busWidth,8,
    return v;
    endmethod
 
-   interface AxiMasterWrite axi;
-       method ActionValue#(Bit#(32)) writeAddr() if (operationInProgress && !addressPresented);
+   interface Axi3WriteClient axi;
+       method ActionValue#(Axi3WriteRequest#(idWidth)) address() if (operationInProgress && !addressPresented);
            addrsBeatCount <= addrsBeatCount + 1;
            if (oneBeatAddressReg)
                addressPresented <= True;
            let ptrValue = ptrReg;
-           return ptrReg;
-       endmethod
-       method Bit#(8) writeBurstLen();
-           return burstCountReg-1;
-       endmethod
-       method Bit#(3) writeBurstWidth();
-           if (valueOf(busWidth) == 32)
-               return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
-           else if (thirtyTwoBitTransferReg)
-               return 3'b010;
-           else
-               return 3'b011;
-       endmethod
-       method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
-           return 2'b01; // increment address
-       endmethod
-       method Bit#(3) writeBurstProt(); // drive with 3'b000
-           return 3'b000;
-       endmethod
-       method Bit#(4) writeBurstCache(); // drive with 4'b0011
-           return 4'b0011;
+           return Axi3WriteRequest { address: ptrValue, burstLen: burstCountReg-1, id: 1};
        endmethod
 
-       method ActionValue#(Bit#(busWidth)) writeData() if (operationInProgress && dfifo.notEmpty);
+       method ActionValue#(Axi3WriteData#(busWidth, busWidthBytes, idWidth)) data() if (operationInProgress && dfifo.notEmpty);
            ptrReg <= ptrReg + pack(fromInteger(valueOf(busWidth)/8));
            let bc = burstCountReg;
-           if (bc == 8'd1)
+           if (bc == 4'd1)
            begin
                operationInProgress <= False;
                lastDataBeatCount <= lastDataBeatCount + 1;
@@ -207,21 +187,13 @@ module mkFifoToAxi(FifoToAxi#(busWidth,busWidthBytes)) provisos(Div#(busWidth,8,
 
            let d = dfifo.first;
            dfifo.deq;
-           return d;
-       endmethod
-       method Bit#(busWidthBytes) writeDataByteEnable();
-           return maxBound;
-       endmethod
-       method Bit#(1) writeLastDataBeat(); // last data beat
-           if (burstCountReg == 8'd1)
-               return 1'b1;
-           else
-               return 1'b0;
+	   let last = (burstCountReg == 4'd1) ? 1'b1 : 1'b0;
+           return Axi3WriteData { data: d, byteEnable: maxBound, last: last, id: 1 };
        endmethod
 
-       method Action writeResponse(Bit#(2) responseCode, Bit#(1) id) if (axiBrespFifo.notFull);
-           if (responseCode != 2'b00)
-               axiBrespFifo.enq(responseCode);
+       method Action response(Axi3WriteResponse#(idWidth) resp);
+           if (resp.code != 2'b00)
+               axiBrespFifo.enq(resp.code);
        endmethod
    endinterface
 
@@ -236,7 +208,7 @@ module mkFifoToAxi(FifoToAxi#(busWidth,busWidthBytes)) provisos(Div#(busWidth,8,
 
 endmodule
 
-module mkFifoFromAxi(FifoFromAxi#(busWidth)) provisos (Add#(1,a,busWidth));
+module mkFifoFromAxi(FifoFromAxi#(busWidth,idWidth)) provisos (Add#(1,a,busWidth));
    Reg#(Bool) enabledReg <- mkReg(False);
    Reg#(Bool) oneBeatAddressReg <- mkReg(True);
    Reg#(Bool) thirtyTwoBitTransferReg <- mkReg(False);
@@ -249,13 +221,13 @@ module mkFifoFromAxi(FifoFromAxi#(busWidth)) provisos (Add#(1,a,busWidth));
    Reg#(Bit#(32)) wordsDeqCount <- mkReg(0);
    Reg#(Bit#(32)) lastDataBeatCount <- mkReg(0);
    FIFOF#(Bit#(busWidth)) rfifo <- mkSizedBRAMFIFOF(32);
-   Reg#(Bit#(8)) burstCountReg <- mkReg(0);
+   Reg#(Bit#(4)) burstCountReg <- mkReg(0);
    Reg#(Bool) operationInProgress <- mkReg(False);
    Reg#(Bool) addressPresented <- mkReg(False);
    FIFOF#(Bit#(2)) axiRrespFifo <- mkSizedBRAMFIFOF(32);
 
    rule updateBurstCount if (!rfifo.notEmpty && !operationInProgress && enabledReg && ptrReg < boundsReg);
-       burstCountReg <= 8'd8;
+       burstCountReg <= 4'd8;
        operationInProgress <= True;
        addressPresented <= False;
    endrule
@@ -339,52 +311,32 @@ module mkFifoFromAxi(FifoFromAxi#(busWidth)) provisos (Add#(1,a,busWidth));
        return v;
    endmethod
 
-   interface AxiMasterRead axi;
-       method ActionValue#(Bit#(32)) readAddr() if (operationInProgress && !addressPresented);
+   interface Axi3ReadClient axi;
+       method ActionValue#(Axi3ReadRequest#(idWidth)) address() if (operationInProgress && !addressPresented);
            addrsBeatCount <= addrsBeatCount + 1;
            if (oneBeatAddressReg)
                addressPresented <= True;
            let ptrValue = ptrReg;
-           return ptrReg;
+           return Axi3ReadRequest { address: ptrReg, burstLen: burstCountReg-1, id: 1 };
        endmethod
-       method Bit#(8) readBurstLen();
-           return burstCountReg-1;
-       endmethod
-       method Bit#(3) readBurstWidth();
-           if (valueOf(busWidth) == 32)
-               return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
-           else if (thirtyTwoBitTransferReg)
-               return 3'b010;
-           else
-               return 3'b011;
-       endmethod
-       method Bit#(2) readBurstType();  // drive with 2'b01
-           return 2'b01;
-       endmethod
-       method Bit#(3) readBurstProt(); // drive with 3'b000
-           return 3'b000;
-       endmethod
-       method Bit#(4) readBurstCache(); // drive with 4'b0011
-           return 4'b0011;
-       endmethod
-       method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(1) id) if (rfifo.notFull && operationInProgress);
+       method Action data(Axi3ReadResponse#(busWidth, idWidth) response) if (rfifo.notFull && operationInProgress);
            let bc = burstCountReg - 1;
            if (bc == 1)
                lastDataBeatCount <= lastDataBeatCount + 1;
 
-           if (resp == 2'b00)
+           if (response.code == 2'b00)
            begin
                burstCountReg <= bc;
                ptrReg <= ptrReg + pack(fromInteger(valueOf(busWidth)/8));
-               rfifo.enq(data);
+               rfifo.enq(response.data);
                wordsReceivedCount <= wordsReceivedCount + 1;
            end
            else
            begin
-               axiRrespFifo.enq(resp);
+               axiRrespFifo.enq(response.code);
            end
 
-           if (resp != 2'b00 || bc == 0)
+           if (response.code != 2'b00 || bc == 0)
                operationInProgress <= False;
        endmethod
    endinterface
