@@ -39,10 +39,10 @@ interface AxiTester;
     method ActionValue#(Bool) completed();
 endinterface
 
-module mkAxiTester#(FifoToAxi#(busWidth, busWidthBytes) fifoToAxi,
-                    FifoFromAxi#(busWidth) fifoFromAxi,
+module mkAxiTester#(FifoToAxi#(busWidth, busWidthBytes,12) fifoToAxi,
+                    FifoFromAxi#(busWidth,12) fifoFromAxi,
                     Bit#(32) numWords)
-                   (AxiTester);
+                   (AxiTester) provisos (Add#(16,a,busWidth));
 
     let verbose = False;
     Reg#(TbState) state <- mkReg(Idle);
@@ -50,21 +50,22 @@ module mkAxiTester#(FifoToAxi#(busWidth, busWidthBytes) fifoToAxi,
     Reg#(Bit#(32)) writeAddrReg <- mkReg(0);
     Reg#(Bit#(32)) readAddrReg <- mkReg(0);
 
-    Reg#(Bit#(32)) writeCountReg <- mkReg(0);
-    Reg#(Bit#(32)) readCountReg <- mkReg(0);
-    Reg#(Bit#(32)) numWordsReg <- mkReg(0);
+    Reg#(Bit#(16)) writeCountReg <- mkReg(0);
+    Reg#(Bit#(16)) readCountReg <- mkReg(0);
+    Reg#(Bit#(16)) numWordsReg <- mkReg(0);
     Reg#(Bit#(busWidth)) valueReg <- mkReg(13);
 
     RegFile#(Bit#(32), Bit#(busWidth)) testDataRegFile <- mkRegFile(0, numWords);
 
     rule enqTestData if (state == EnqWrites && writeCountReg < numWordsReg);
-        let v = valueReg << 3 + 17;
+        let v = ((valueReg << 8) + extend(writeCountReg));
         valueReg <= v;
         testDataRegFile.upd(writeAddrReg/fromInteger(valueOf(busWidthBytes)), v);
         writeAddrReg <= writeAddrReg + fromInteger(valueOf(busWidthBytes));
         if (writeCountReg == numWordsReg-1)
             state <= WaitForWriteCompletion;
         writeCountReg <= writeCountReg + 1;
+	$display("enq v %h", v);
         fifoToAxi.enq(v);
     endrule
 
@@ -99,7 +100,7 @@ module mkAxiTester#(FifoToAxi#(busWidth, busWidthBytes) fifoToAxi,
         writeCountReg <= 0;
         readCountReg <= 0;
         valueReg <= 13;
-        numWordsReg <= numWords;
+        numWordsReg <= truncate(numWords);
 
         fifoToAxi.base <= base;
         fifoFromAxi.base <= base;
@@ -138,10 +139,10 @@ module mkTbAxi();
     Bit#(32) busWidth = 64;
     Bit#(32) busWidthBytes = busWidth/8;
 
-    AxiSlave#(64,8) axiSlave <- mkAxiSlaveRegFile;
-    FifoToAxi#(64,8) fifoToAxi <- mkFifoToAxi();
-    FifoFromAxi#(64) fifoFromAxi <- mkFifoFromAxi();
-    mkMasterSlaveConnection(fifoToAxi.axi, fifoFromAxi.axi, axiSlave);
+    Axi3Slave#(64,8) axiSlave <- mkAxi3SlaveRegFile;
+    FifoToAxi#(64,8,12) fifoToAxi <- mkFifoToAxi();
+    FifoFromAxi#(64,12) fifoFromAxi <- mkFifoFromAxi();
+    mkClientSlaveConnection(fifoToAxi.axi, fifoFromAxi.axi, axiSlave);
 
     AxiTester axiTester <- mkAxiTester(fifoToAxi, fifoFromAxi, numWords);
 
@@ -149,7 +150,7 @@ module mkTbAxi();
 
     rule testStart if (state == TbAxiStart);
         state <= TbAxiRunning;
-
+        $display("Test 1 Starting");
         axiTester.start(0, numWords);
     endrule
 
