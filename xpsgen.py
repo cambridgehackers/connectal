@@ -838,7 +838,8 @@ output [(C_%(BUSNAME)s_PROT_WIDTH-1) : 0] %(busname)s_awprot;
 output [(C_%(BUSNAME)s_CACHE_WIDTH-1) : 0] %(busname)s_awcache;
 input %(busname)s_wready;
 output %(busname)s_wvalid;
-output %(busname)s_wdata;
+output [C_%(BUSNAME)s_DATA_WIDTH - 1 : 0] %(busname)s_wdata;
+wire [C_%(BUSNAME)s_DATA_WIDTH - 1 : 0] %(busname)s_wdata;
 output [(C_%(BUSNAME)s_DATA_WIDTH)/8 - 1 : 0] %(busname)s_wstrb;
 output %(busname)s_wlast;
 output %(busname)s_bready;
@@ -933,7 +934,7 @@ axi_master_port_map_verilog_template='''
       // RDY_%(busname)s_write_writeBurstCache,
 
       .EN_%(busname)s_write_writeData(WILL_FIRE_%(busname)s_write_writeData),
-      .%(busname)s_write_writeData(%(busname)s_wdata),
+      .%(busname)s_write_writeData(%(busname)s_wdata_wire),
       .RDY_%(busname)s_write_writeData(RDY_%(busname)s_write_writeData),
 
       .%(busname)s_write_writeDataByteEnable(%(busname)s_wstrb),
@@ -1076,6 +1077,7 @@ assign WILL_FIRE_%(busname)s_write_writeResponse = (%(busname)s_bvalid & RDY_%(b
 assign %(busname)s_awvalid = RDY_%(busname)s_write_writeAddr;
 assign %(busname)s_wvalid = RDY_%(busname)s_write_writeData;
 assign %(busname)s_bready = RDY_%(busname)s_write_writeResponse;
+assign %(busname)s_wdata = (RDY_%(busname)s_write_writeData == 1) ? %(busname)s_wdata_wire : 32'hdeadd00d;
 '''
 
 axi_slave_scheduler_verilog_template='''
