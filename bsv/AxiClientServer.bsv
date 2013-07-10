@@ -39,7 +39,7 @@ typedef struct {
 
 typedef struct {
     Bit#(busWidth) data;
-    Bit#(2) resp;
+    Bit#(2) code;
     Bit#(1) last;
     Bit#(idWidth) id;
 } Axi3ReadResponse#(type busWidth, type idWidth) deriving (Bits);
@@ -67,7 +67,7 @@ typedef struct {
 } Axi3WriteData#(type busWidth, type busWidthBytes, type idWidth) deriving (Bits);
 
 typedef struct {
-    Bit#(2) response;
+    Bit#(2) code;
     Bit#(idWidth) id;
 } Axi3WriteResponse#(type idWidth) deriving (Bits);
 
@@ -82,17 +82,9 @@ interface Axi3Client#(type busWidth, type busWidthBytes, type idWidth);
    interface Axi3WriteClient#(busWidth, busWidthBytes, idWidth) write;
 endinterface
 
-typedef enum {
-    Axi3BusWidth32 = 3'b010,
-    Axi3BusWidth64 = 3'b011,
-    Axi3BusWidth128 = 3'b100
-} Axi3BusWidth;
-
-function Axi3BusWidth busWidthEncoding(Integer busWidth);
-    if (busWidth == 32)
-	return Axi3BusWidth32;
-    else if (busWidth == 64)
-	return Axi3BusWidth64;
-    else
-	return Axi3BusWidth128;
-endfunction
+module mkAxi3Client#(Axi3WriteClient#(busWidth,busWidthBytes,idWidth) writeClient,
+                     Axi3ReadClient#(busWidth,idWidth) readClient)
+                    (Axi3Client#(busWidth, busWidthBytes, idWidth));
+    interface Axi3ReadClient read = readClient;
+    interface Axi3WriteClient write = writeClient;
+endmodule
