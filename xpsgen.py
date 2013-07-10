@@ -485,9 +485,9 @@ NET "hdmi_data_pin[15]" IOSTANDARD = LVCMOS25;
 # NET hdmi_spdif_pin          LOC = R15 ;
 # NET hdmi_int_pin            LOC = U14 ;
 NET "hdmidisplay_0_i2c_scl_pin" LOC = AA18;
-NET "hdmidisplay_0_i2c_scl_pin" IOSTANDARD = LVCMOS33;
+NET "hdmidisplay_0_i2c_scl_pin" IOSTANDARD = LVCMOS25;
 NET "hdmidisplay_0_i2c_sda_pin" LOC = Y16;
-NET "hdmidisplay_0_i2c_sda_pin" IOSTANDARD = LVCMOS33;
+NET "hdmidisplay_0_i2c_sda_pin" IOSTANDARD = LVCMOS25;
 ''',
     'zedboard':'''
 NET "hdmi_clk_pin" LOC = W18;
