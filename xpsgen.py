@@ -92,7 +92,6 @@ BEGIN processing_system7
  PARAMETER C_EN_EMIO_ENET0 = 0
  PARAMETER C_EN_EMIO_ENET1 = 0
  PARAMETER C_EN_EMIO_I2C0 = 0
- PARAMETER C_EN_EMIO_I2C1 = 1
  PARAMETER C_EN_EMIO_PJTAG = 0
  PARAMETER C_EN_EMIO_SDIO0 = 0
  PARAMETER C_EN_EMIO_CD_SDIO0 = 0
@@ -118,7 +117,6 @@ BEGIN processing_system7
  PARAMETER C_EN_ENET0 = 0
  PARAMETER C_EN_ENET1 = 0
  PARAMETER C_EN_I2C0 = 0
- PARAMETER C_EN_I2C1 = 1
  PARAMETER C_EN_PJTAG = 0
  PARAMETER C_EN_SDIO0 = 0
  PARAMETER C_EN_SDIO1 = 0
@@ -171,9 +169,7 @@ BEGIN processing_system7
  PORT M_AXI_GP0_ACLK = processing_system7_0_FCLK_CLK0_0
  PORT M_AXI_GP0_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
  BUS_INTERFACE M_AXI_GP0 = axi_slave_interconnect_0
- PORT I2C1_SCL = processing_system7_0_I2C1_SCL
- PORT I2C1_SDA = processing_system7_0_I2C1_SDA
-
+%(ps7_hdmi_config)s
 %(ps7_axi_master_config)s
 
  PORT IRQ_F2P = %(dut)s_0_interrupt
@@ -1433,6 +1429,13 @@ class InterfaceMixin:
                                                   'busname': axiMasters[i][0],
                                                   'BUSNAME': axiMasters[i][0].upper()}
                                                for i in range(len(axiMasters))]),
+            'ps7_hdmi_config': ''.join(['''
+ PARAMETER C_EN_EMIO_I2C1 = 1
+ PARAMETER C_EN_I2C1 = 1
+ PORT I2C1_SCL = processing_system7_0_I2C1_SCL
+ PORT I2C1_SDA = processing_system7_0_I2C1_SDA
+'''
+                                        for v in hdmiBus]),
             'dut_hdmi_config': ''.join([ dut_hdmi_config_mhs_template % {'dut':dutName} for v in hdmiBus]),
             'system_hdmi_ports': ''.join([system_hdmi_port_mhs_template % {'dut':dutName} for v in hdmiBus]),
             'chipscopecontrols': ''.join([ (' PORT control%d = chipscope_icon_0_control%d\n' % (i+1, i+1)) for i in range(len(axiMasters))]),
