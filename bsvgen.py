@@ -421,7 +421,7 @@ class MethodMixin:
 
             return requestRuleTemplate % substs
         else:
-            return responseRuleTemplate % substs
+            return None
 
     def collectIndicationMethodRule(self, outerTypeName):
         substs = self.substs(outerTypeName)
@@ -460,7 +460,7 @@ class InterfaceMixin:
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
         dutName = util.decapitalize(self.name)
-        methods = [d for d in self.decls if d.type == 'Method']
+        methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
         substs = {
             'dut': dutName,
             'Dut': util.capitalize(self.name),
@@ -515,7 +515,9 @@ class InterfaceMixin:
         methodRules = []
         for m in self.decls:
             if m.type == 'Method':
-                methodRules.append(m.collectMethodRule(outerTypeName))
+                methodRule = m.collectMethodRule(outerTypeName)
+                if methodRule:
+                    methodRules.append(methodRule)
         return methodRules
     def collectIndicationMethodRules(self,outerTypeName):
         methodRules = []
