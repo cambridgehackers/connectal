@@ -52,6 +52,7 @@ interface AxiMasterWrite#(type busWidth, type busWidthBytes);
    method Bit#(1) writeId();
 
    method ActionValue#(Bit#(busWidth)) writeData();
+   method Bit#(1) writeWid();
    method Bit#(busWidthBytes) writeDataByteEnable();
    method Bit#(1) writeLastDataBeat(); // last data beat
    method Action writeResponse(Bit#(2) responseCode, Bit#(1) id);
@@ -84,6 +85,7 @@ interface Axi3MasterWrite#(type busWidth, type busWidthBytes, type idWidth);
    method Bit#(idWidth) writeId();
 
    method ActionValue#(Bit#(busWidth)) writeData();
+   method Bit#(idWidth) writeWid();
    method Bit#(busWidthBytes) writeDataByteEnable();
    method Bit#(1) writeLastDataBeat(); // last data beat
    method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
@@ -103,6 +105,7 @@ interface AxiSlaveRead#(type busWidth, type busWidthBytes);
    // method Action readResponse(Bit#(2) responseCode);
 endinterface
 
+//FIXME: should have transaction ID's
 interface AxiSlaveWrite#(type busWidth, type busWidthBytes);
    method Action writeAddr(Bit#(32) addr, Bit#(8) burstLen, Bit#(3) burstWidth,
                            Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache);
@@ -260,6 +263,9 @@ module mkAxiMasterServer(AxiMasterServer#(busWidth,busWidthBytes,tagSize)) provi
                wfifo.deq;
                return d;
            endmethod
+           method Bit#(1) writeWid();
+               return writeIdReg;
+           endmethod
            method Bit#(busWidthBytes) writeDataByteEnable();
                return maxBound;
            endmethod
@@ -344,6 +350,9 @@ module mkNullAxiMaster(AxiMaster#(busWidth,busWidthBytes)) provisos(Div#(busWidt
        method ActionValue#(Bit#(busWidth)) writeData();
            return 0;
        endmethod
+       method Bit#(1) writeWid();
+           return 0;
+       endmethod
        method Bit#(busWidthBytes) writeDataByteEnable();
            return maxBound;
        endmethod
@@ -417,6 +426,9 @@ module mkNullAxi3Master(Axi3Master#(busWidth,busWidthBytes,idWidth)) provisos(Di
        endmethod
 
        method ActionValue#(Bit#(busWidth)) writeData();
+           return 0;
+       endmethod
+       method Bit#(idWidth) writeWid();
            return 0;
        endmethod
        method Bit#(busWidthBytes) writeDataByteEnable();
@@ -638,6 +650,7 @@ module mkMasterSlaveConnection#(AxiMasterWrite#(busWidth, busWidthBytes) axiw,
     endrule
     rule writeData;
         let data <- axiw.writeData;
+	let id = axiw.writeWid;
         let byteEnable = axiw.writeDataByteEnable;
         let last = axiw.writeLastDataBeat;
         axiSlave.write.writeData(data, byteEnable, last);
@@ -695,6 +708,7 @@ module mkClientSlaveConnection#(Axi3WriteClient#(busWidth, busWidthBytes,idWidth
     endrule
     rule writeData;
         let data <- axiw.writeData;
+        let id = axiw.writeWid;
         let byteEnable = axiw.writeDataByteEnable;
         let last = axiw.writeLastDataBeat;
         axiSlave.write.writeData(data, byteEnable, last);
@@ -748,6 +762,9 @@ module mkAxi3MasterWires#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Ax
 	    let d <- client.write.data();
 	    wWriteData <= d;
 	    return d.data;
+	endmethod
+	method Bit#(idWidth) writeWid();
+	    return wWriteData.id;
 	endmethod
 	method Bit#(busWidthBytes) writeDataByteEnable();
 	    return wWriteData.byteEnable;
@@ -851,6 +868,9 @@ module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Mas
 	    fWriteData.deq;
 	    return fWriteData.first.data;
 	endmethod
+        method Bit#(idWidth) writeWid();
+            return fWriteData.first.id;
+        endmethod
 	method Bit#(busWidthBytes) writeDataByteEnable();
 	    return fWriteData.first.byteEnable;
 	endmethod
