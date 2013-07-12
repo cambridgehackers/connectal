@@ -5,3 +5,4 @@ lextab.py
 parselog.txt
 parser.out
 parsetab.py
+*.bo
