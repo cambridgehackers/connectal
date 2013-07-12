@@ -336,14 +336,14 @@ PARAMETER C_%(BUSNAME)s_DATA_WIDTH = %(datawidth)s, DT = INTEGER, BUS = %(BUSNAM
 PARAMETER C_%(BUSNAME)s_PROT_WIDTH = %(protwidth)s, DT = INTEGER, BUS = %(BUSNAME)s, ASSIGNMENT = CONSTANT
 PARAMETER C_%(BUSNAME)s_BURSTLEN_WIDTH = %(burstlenwidth)s, DT = INTEGER, BUS = %(BUSNAME)s, ASSIGNMENT = CONSTANT
 PARAMETER C_%(BUSNAME)s_CACHE_WIDTH = %(cachewidth)s, DT = INTEGER, BUS = %(BUSNAME)s, ASSIGNMENT = CONSTANT
-PARAMETER C_%(BUSNAME)s_ID_WIDTH = 1, DT = integer, BUS = %(BUSNAME)s
+PARAMETER C_%(BUSNAME)s_ID_WIDTH = 6, DT = integer, BUS = %(BUSNAME)s
 PARAMETER C_%(BUSNAME)s_PROTOCOL = %(axiprotocol)s, TYPE = NON_HDL, ASSIGNMENT = CONSTANT, DT = STRING, BUS = %(BUSNAME)s
 '''
 
 axi_slave_parameter_mpd_template='''
 PARAMETER C_%(BUSNAME)s_DATA_WIDTH = 32, DT = INTEGER, BUS = %(BUSNAME)s, ASSIGNMENT = CONSTANT
 PARAMETER C_%(BUSNAME)s_ADDR_WIDTH = 32, DT = INTEGER, BUS = %(BUSNAME)s, ASSIGNMENT = CONSTANT
-PARAMETER C_%(BUSNAME)s_ID_WIDTH = 4, DT = INTEGER, BUS = %(BUSNAME)s
+PARAMETER C_%(BUSNAME)s_ID_WIDTH = 12, DT = INTEGER, BUS = %(BUSNAME)s
 PARAMETER C_%(BUSNAME)s_MEM0_BASEADDR = 0xffffffff, DT = std_logic_vector, PAIR = C_%(BUSNAME)s_MEM0_HIGHADDR, ADDRESS = BASE, CACHEABLE = FALSE, MIN_SIZE=0x1000, ADDR_TYPE=REGISTER, BUS = %(BUSNAME)s
 PARAMETER C_%(BUSNAME)s_MEM0_HIGHADDR = 0x00000000, DT = std_logic_vector, PAIR = C_%(BUSNAME)s_MEM0_BASEADDR, ADDRESS = HIGH, CACHEABLE = FALSE, MIN_SIZE=0x1000, ADDR_TYPE=REGISTER, BUS = %(BUSNAME)s
 PARAMETER C_%(BUSNAME)s_PROTOCOL = AXI4, TYPE = NON_HDL, ASSIGNMENT = CONSTANT, DT = STRING, BUS = %(BUSNAME)s
@@ -581,6 +581,75 @@ NET "processing_system7_0/FCLK_CLK0" TNM_NET = "processing_system7_0/FCLK_CLK0";
 TIMESPEC TS_FCLK0 = PERIOD "processing_system7_0/FCLK_CLK0" 133 MHz;
 '''
 
+xdc_template = '''
+set_property iostandard "%(iostandard)s" [get_ports "%(name)s"]
+set_property PACKAGE_PIN "%(pin)s" [get_ports "%(name)s"]
+set_property slew "SLOW" [get_ports "%(name)s"]
+set_property PIO_DIRECTION "%(direction)s" [get_ports "%(name)s"]
+'''
+
+led_pinout = {
+    'zc702': [],
+    'zedboard': [
+        ('GPIO_leds[0]', 'T22', 'LVCMOS33', 'OUTPUT'),
+        ('GPIO_leds[1]', 'T21', 'LVCMOS33', 'OUTPUT'),
+        ('GPIO_leds[2]', 'U22', 'LVCMOS33', 'OUTPUT'),
+        ('GPIO_leds[3]', 'U21', 'LVCMOS33', 'OUTPUT'),
+        ('GPIO_leds[4]', 'V22', 'LVCMOS33', 'OUTPUT'),
+        ('GPIO_leds[5]', 'W22', 'LVCMOS33', 'OUTPUT'),
+        ('GPIO_leds[6]', 'U19', 'LVCMOS33', 'OUTPUT'),
+        ('GPIO_leds[7]', 'U14', 'LVCMOS33', 'OUTPUT')]
+    }
+
+
+hdmi_pinout = {
+    'zc702': [
+        ( "hdmi_clk", 'W18', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_vsync", 'H15', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_de", 'T18', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[0]", 'AB21', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[1]", 'AA21', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[2]", 'AB22', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[3]", 'AA22', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[4]", 'V19', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[5]", 'V18', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[6]", 'V20', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[7]", 'U20', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[8]", 'W21', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[9]", 'W20', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[10]", 'W18', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[11]", 'T19', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[12]", 'U19', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[13]", 'R19', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[14]", 'T17', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_data[15]", 'T16', 'LVCMOS25', 'OUTPUT'),
+        ],
+    'zedboard':[
+        ( "hdmi_clk", 'W18', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_vsync", 'W17', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_hsync", 'V17', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_de", 'U16', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[0]", 'Y13', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[1]", 'AA13', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[2]", 'AA14', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[3]", 'Y14', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[4]", 'AB15', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[5]", 'AB16', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[6]", 'AA16', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[7]", 'AB17', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[8]", 'AA17', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[9]", 'Y15', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[10]", 'W13', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[11]", 'W15', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[12]", 'V15', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[13]", 'U17', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[14]", 'V14', 'LVCMOS33', 'OUTPUT'),
+        ( "hdmi_data[15]", 'V13', 'LVCMOS33', 'OUTPUT'),
+        ( "i2c1_scl", 'AA18', 'LVCMOS33', 'BIDIR'),
+        ( "i2c1_sda", 'Y16', 'LVCMOS33', 'BIDIR'),
+        ]
+    }
+
 bif_template='''
 the_ROM_image:
 {
@@ -622,6 +691,7 @@ module %(dut)s_top_1
     FIXED_IO_ps_clk,
     FIXED_IO_ps_porb,
     FIXED_IO_ps_srstb,
+%(top_hdmi_ports)s
     GPIO_leds);
   inout [14:0]DDR_Addr;
   inout [2:0]DDR_BankAddr;
@@ -645,6 +715,7 @@ module %(dut)s_top_1
   inout FIXED_IO_ps_porb;
   inout FIXED_IO_ps_srstb;
   output [7:0] GPIO_leds;
+%(top_hdmi_port_decls)s
 
   wire GND_1;
   wire %(dut)s_1_interrupt;
@@ -665,6 +736,7 @@ module %(dut)s_top_1
   wire processing_system7_1_ddr_RESET_N;
   wire processing_system7_1_ddr_WE_N;
   wire processing_system7_1_fclk_clk0;
+  wire processing_system7_1_fclk_clk1;
   wire processing_system7_1_fclk_reset0_n;
   wire processing_system7_1_fixed_io_DDR_VRN;
   wire processing_system7_1_fixed_io_DDR_VRP;
@@ -707,13 +779,19 @@ module %(dut)s_top_1
   wire processing_system7_1_m_axi_gp0_WREADY;
   wire [3:0]processing_system7_1_m_axi_gp0_WSTRB;
   wire processing_system7_1_m_axi_gp0_WVALID;
+  wire i2c1_scl_i;
+  wire i2c1_scl_o;
+  wire i2c1_scl_t;
+  wire i2c1_sda_i;
+  wire i2c1_sda_o;
+  wire i2c1_sda_t;
 
 GND GND
        (.G(GND_1));
 %(dut)s#(
 .C_CTRL_MEM0_BASEADDR (32'h6e400000),
 .C_CTRL_MEM0_HIGHADDR (32'h6e41ffff),
-.C_CTRL_ADDR_WIDTH(64),
+.C_CTRL_ADDR_WIDTH(32),
 .C_CTRL_ID_WIDTH(12),
 ) %(dut)s_1
        (.CTRL_ACLK(processing_system7_1_fclk_clk0),
@@ -754,6 +832,7 @@ GND GND
         .CTRL_WSTRB(processing_system7_1_m_axi_gp0_WSTRB),
         .CTRL_WVALID(processing_system7_1_m_axi_gp0_WVALID),
 %(top_dut_axi_master_port_map)s
+%(top_dut_hdmi_port_map)s
         .interrupt(%(dut)s_1_interrupt));
 
 
@@ -776,6 +855,7 @@ processing_system7 processing_system7_1
         .DDR_VRP(FIXED_IO_ddr_vrp),
         .DDR_WEB(DDR_WEB),
         .FCLK_CLK0(processing_system7_1_fclk_clk0),
+        .FCLK_CLK1(processing_system7_1_fclk_clk1),
         .FCLK_RESET0_N(processing_system7_1_fclk_reset0_n),
         .IRQ_F2P(%(dut)s_1_interrupt),
         .MIO(FIXED_IO_mio[53:0]),
@@ -816,10 +896,13 @@ processing_system7 processing_system7_1
         .M_AXI_GP0_WSTRB(processing_system7_1_m_axi_gp0_WSTRB),
         .M_AXI_GP0_WVALID(processing_system7_1_m_axi_gp0_WVALID),
 %(top_ps7_axi_master_port_map)s
+%(top_ps7_hdmi_port_map)s
         .PS_CLK(FIXED_IO_ps_clk),
         .PS_PORB(FIXED_IO_ps_porb),
         .PS_SRSTB(FIXED_IO_ps_srstb));
    
+%(hdmi_iobufs)s
+assign GPIO_leds = 8'haa;
 endmodule
 '''
 
@@ -999,7 +1082,6 @@ mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
 
 %(axi_master_scheduler)s
 %(axi_slave_scheduler)s
-%(hdmi_iobufs)s
 
 endmodule
 '''
@@ -1147,13 +1229,24 @@ axi_slave_port_verilog_template='''
 //============ %(BUSNAME)s ============
 '''
 
-hdmi_port_verilog_template='''
-    hdmi_clk_in,
+top_hdmi_port_verilog_template='''
     hdmi_clk,
     hdmi_vsync,
     hdmi_hsync,
     hdmi_de,
     hdmi_data,
+    i2c1_scl,
+    i2c1_sda,
+'''
+
+hdmi_port_verilog_template='''
+    hdmi_clk_in,
+    hdmi_vsync,
+    hdmi_hsync,
+    hdmi_de,
+    hdmi_data,
+    i2c1_scl,
+    i2c1_sda,
 '''
 
 
@@ -1243,14 +1336,51 @@ output %(BUSNAME)s_RLAST;
 //============ %(BUSNAME)s ============
 '''
 
-hdmi_port_decl_verilog_template='''
-input hdmi_clk_in;
-output hdmi_clk;
-output hdmi_vsync;
-output hdmi_hsync;
-output hdmi_de;
-output [15:0] hdmi_data;
+top_hdmi_port_decl_verilog_template='''
+  output hdmi_clk;
+  output hdmi_vsync;
+  output hdmi_hsync;
+  output hdmi_de;
+  output [15:0] hdmi_data;
+  wire hdmi_vsync_wire;
+  wire hdmi_hsync_wire;
+  wire hdmi_de_wire;
+  wire [15:0] hdmi_data_wire;
+  inout i2c1_scl;
+  inout i2c1_sda;
 '''
+
+hdmi_port_decl_verilog_template='''
+  input hdmi_clk_in;
+  output hdmi_vsync;
+  output hdmi_hsync;
+  output hdmi_de;
+  output [15:0] hdmi_data;
+  wire hdmi_vsync_wire;
+  wire hdmi_hsync_wire;
+  wire hdmi_de_wire;
+  wire [15:0] hdmi_data_wire;
+  inout i2c1_scl;
+  inout i2c1_sda;
+'''
+
+top_dut_hdmi_port_map = '''
+       .hdmi_clk_in(processing_system7_1_fclk_clk1),
+       .hdmi_vsync(hdmi_vsync_wire),
+       .hdmi_hsync(hdmi_hsync_wire),
+       .hdmi_de(hdmi_de_wire),
+       .hdmi_data(hdmi_data_wire),
+'''
+
+top_ps7_hdmi_port_map = '''
+       .I2C1_SCL_I(i2c1_scl_i),
+       .I2C1_SCL_O(i2c1_scl_o),
+       .I2C1_SCL_T(i2c1_scl_t),
+       .I2C1_SDA_I(i2c1_sda_i),
+       .I2C1_SDA_O(i2c1_sda_o),
+       .I2C1_SDA_T(i2c1_sda_t),
+'''
+
 axi_clock_verilog_template='''
   // attribute MAX_FANOUT of %(BUSNAME)s_ACLK       : signal is "10000";
   // attribute MAX_FANOUT of %(BUSNAME)s_ARESETN       : signal is "10000";
@@ -1370,10 +1500,10 @@ axi_slave_port_map_verilog_template='''
 '''
 
 hdmi_port_map_verilog_template='''
-      .%(busname)s_hdmi_vsync(hdmi_vsync_unbuf),
-      .%(busname)s_hdmi_hsync(hdmi_hsync_unbuf),
-      .%(busname)s_hdmi_de(hdmi_de_unbuf),
-      .%(busname)s_hdmi_data(hdmi_data_unbuf),
+      .%(busname)s_hdmi_vsync(hdmi_vsync),
+      .%(busname)s_hdmi_hsync(hdmi_hsync),
+      .%(busname)s_hdmi_de(hdmi_de),
+      .%(busname)s_hdmi_data(hdmi_data),
 '''
 
 axi_master_signal_verilog_template='''
@@ -1384,7 +1514,6 @@ axi_master_signal_verilog_template='''
   wire RDY_%(busname)s_read_readData;
   wire WILL_FIRE_%(busname)s_write_writeAddr;
   wire WILL_FIRE_%(busname)s_write_writeData;
-  wire [C_%(BUSNAME)s_DATA_WIDTH-1 : 0] %(busname)s_wdata_wire;
   wire WILL_FIRE_%(busname)s_write_writeResponse;
   wire WILL_FIRE_%(busname)s_read_readAddr;
   wire WILL_FIRE_%(busname)s_read_readData;
@@ -1479,7 +1608,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_hsync),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_hsync_unbuf)
+    .I(%(busname)s_hsync_wire)
     // Buffer input
     );
     OBUF#(
@@ -1489,7 +1618,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_vsync),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_vsync_unbuf)
+    .I(%(busname)s_vsync_wire)
     // Buffer input
     );
     OBUF#(
@@ -1499,7 +1628,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_de),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_de_unbuf)
+    .I(%(busname)s_de_wire)
     // Buffer input
     );
 
@@ -1510,7 +1639,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[0]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[0])
+    .I(%(busname)s_data_wire[0])
     // Buffer input
     );
     OBUF #(
@@ -1520,7 +1649,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[1]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[1])
+    .I(%(busname)s_data_wire[1])
     // Buffer input
     );
     OBUF # (
@@ -1530,7 +1659,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[2]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[2])
+    .I(%(busname)s_data_wire[2])
     // Buffer input
     );
     OBUF # (
@@ -1540,7 +1669,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[3]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[3])
+    .I(%(busname)s_data_wire[3])
     // Buffer input
     );
     OBUF # (
@@ -1550,7 +1679,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[4]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[4])
+    .I(%(busname)s_data_wire[4])
     // Buffer input
     );
     OBUF # (
@@ -1560,7 +1689,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[5]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[5])
+    .I(%(busname)s_data_wire[5])
     // Buffer input
     );
     OBUF # (
@@ -1570,7 +1699,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[6]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[6])
+    .I(%(busname)s_data_wire[6])
     // Buffer input
     );
     OBUF # (
@@ -1580,7 +1709,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[7]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[7])
+    .I(%(busname)s_data_wire[7])
     // Buffer input
     );
     OBUF # (
@@ -1590,7 +1719,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[8]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[8])
+    .I(%(busname)s_data_wire[8])
     // Buffer input
     );
     OBUF # (
@@ -1600,7 +1729,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[9]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[9])
+    .I(%(busname)s_data_wire[9])
     // Buffer input
     );
     OBUF # (
@@ -1610,7 +1739,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[10]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[10])
+    .I(%(busname)s_data_wire[10])
     // Buffer input
     );
     OBUF # (
@@ -1620,7 +1749,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[11]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[11])
+    .I(%(busname)s_data_wire[11])
     // Buffer input
     );
     OBUF # (
@@ -1630,7 +1759,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[12]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[12])
+    .I(%(busname)s_data_wire[12])
     // Buffer input
     );
     OBUF # (
@@ -1640,7 +1769,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[13]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[13])
+    .I(%(busname)s_data_wire[13])
     // Buffer input
     );
     OBUF # (
@@ -1650,7 +1779,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[14]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[14])
+    .I(%(busname)s_data_wire[14])
     // Buffer input
     );
     OBUF # (
@@ -1660,7 +1789,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(%(busname)s_data[15]),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_data_unbuf[15])
+    .I(%(busname)s_data_wire[15])
     // Buffer input
     );
 
@@ -1671,7 +1800,7 @@ hdmi_iobuf_verilog_template='''
     (
     .O(xadc_gpio_0),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_vsync_unbuf)
+    .I(%(busname)s_vsync_wire)
     // Buffer input
     );
     OBUF # (
@@ -1700,7 +1829,32 @@ hdmi_iobuf_verilog_template='''
     (
     .O(xadc_gpio_3),
     // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_de_unbuf)
+    .I(%(busname)s_de_wire)
+    // Buffer input
+    );
+
+    IOBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) i2c1_scl
+    (
+    .IO(i2c1_scl),
+    .O(i2c1_scl_o),
+    // Buffer output (connect directly to top-level port)
+    .I(i2c1_scl_i),
+    .T(i2c1_scl_t)
+    // Buffer input
+    );
+    IOBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) i2c1_sda
+    (
+    .IO(i2c1_sda),
+    .O(i2c1_sda_o),
+    // Buffer output (connect directly to top-level port)
+    .I(i2c1_sda_i),
+    .T(i2c1_sda_t)
     // Buffer input
     );
 
@@ -1848,6 +2002,21 @@ class InterfaceMixin:
             'top_axi_master_wires': ''.join([top_axi_master_wires_template % subst for subst in masterBusSubsts]),
             'top_dut_axi_master_port_map': ''.join([top_dut_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_master_port_map': ''.join([top_ps7_axi_master_port_map_template % subst for subst in masterBusSubsts]),
+            'top_hdmi_ports':
+                ''.join([top_hdmi_port_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                         for (busname,t,params) in hdmiBus]),
+            'top_hdmi_port_decls':
+                ''.join([top_hdmi_port_decl_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                         for (busname,t,params) in hdmiBus]),
+            'top_dut_hdmi_port_map': 
+                ''.join([top_dut_hdmi_port_map
+                         for (busname,t,params) in hdmiBus]),
+            'top_ps7_hdmi_port_map':
+                ''.join([top_ps7_hdmi_port_map
+                         for (busname,t,params) in hdmiBus]),
+            'hdmi_iobufs':
+                ''.join([hdmi_iobuf_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
+                         for (busname,t,params) in hdmiBus]),
             }
         topverilog.write(top_verilog_template % substs)
         topverilog.close()
@@ -1917,9 +2086,6 @@ class InterfaceMixin:
             'axi_slave_scheduler':
                 ''.join([axi_slave_scheduler_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
-            'hdmi_iobufs':
-                ''.join([hdmi_iobuf_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in hdmiBus]),
             }
         verilog.write(verilog_template % substs)
         verilog.close()
@@ -1937,6 +2103,23 @@ class InterfaceMixin:
             ucf.write(xadc_ucf_template[boardname])
         ucf.write(default_clk_ucf_template)
         ucf.close()
+        return
+
+    def writeXdc(self, xdcname, boardname='zc702', silent=False):
+        if not silent:
+            print 'Writing XDC file', xdcname
+        xdc = util.createDirAndOpen(xdcname, 'w')
+        dutName = util.decapitalize(self.name)
+        hdmiBus = self.collectInterfaceNames('HDMI')
+        if len(hdmiBus):
+            hdmi_pins = hdmi_pinout[boardname]
+            for (name, pin, iostandard, direction) in hdmi_pins:
+                xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
+            #xdc.write(xadc_xdc_template[boardname])
+        for (name, pin, iostandard, direction) in led_pinout[boardname]:
+            xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
+        #xdc.write(default_clk_xdc_template)
+        xdc.close()
         return
 
     def writeBif(self, bifname, silent=False):

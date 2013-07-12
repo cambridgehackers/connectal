@@ -34,7 +34,7 @@ tclfileTemplate='''
 create_project %(dut)s . -part xc7z020clg484-1
 add_files sources
 add_files -fileset constrs_1 -norecurse {constraints/design_1_processing_system7_1_0.xdc}
-#add_files -fileset constrs_1 -norecurse {constraints/%(dut)s.xdc}
+add_files -fileset constrs_1 -norecurse {constraints/%(dut)s.xdc}
 update_compile_order -fileset sources_1
 update_compile_order -fileset sources_1
 update_compile_order -fileset sim_1
@@ -70,7 +70,7 @@ verilog: $(vfile)
 %(dut)s.runs/impl_1/%(dut)s_top_1.bit: $(vfile)
 	vivado -mode batch -source %(dut)s.tcl
 
-bits: %(dut)s.runs/impl_1/%(dut)s_top.bit
+bits: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
 
 %(dut)s.bit.bin.gz: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
 	promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 %(dut)s.runs/impl_1/%(dut)s_top_1.bit -data_width 32
@@ -114,7 +114,7 @@ if __name__=='__main__':
     ucfname = os.path.join(project_dir, 'data',
                            '%s.ucf' % dutname)
     xdcname = os.path.join(project_dir, 'constraints',
-                           '%s.ucf' % dutname)
+                           '%s.xdc' % dutname)
     bifname = os.path.join(project_dir, 
                            '%s.bif' % dutname)
     print 'Writing CPP header', hname
@@ -167,6 +167,7 @@ if __name__=='__main__':
         subinterface.writeVerilog(verilogname)
         subinterface.writeTopVerilog(topverilogname)
         subinterface.writeUcf(ucfname, boardname)
+        subinterface.writeXdc(xdcname, boardname)
         subinterface.writeBif(bifname)
         print 'Writing Android.mk', androidmkname
         print 'Writing Application.mk', applicationmkname
