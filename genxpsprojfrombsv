@@ -67,16 +67,14 @@ verilog: $(vfile)
 	cp -r ../xilinx/sources/* sources/
 	cp -r ../xilinx/constraints .
 
-%(dut)s.runs/impl_1/%(dut)s_top.bit: $(vfile)
+%(dut)s.runs/impl_1/%(dut)s_top_1.bit: $(vfile)
 	vivado -mode batch -source %(dut)s.tcl
 
 bits: %(dut)s.runs/impl_1/%(dut)s_top.bit
 
-%(dut)s.bit.bin.gz: implementation/%(dut)s.bit
-	if [ -f boot.bin ]; then mv -v boot.bin boot.bin.bak; fi
-	promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 implementation/%(dut)s.bit -data_width 32
+%(dut)s.bit.bin.gz: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
+	promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 %(dut)s.runs/impl_1/%(dut)s_top_1.bit -data_width 32
 	gzip -f %(dut)s.bit.bin
-	#bootgen -image %(dut)s.bif -o i boot.bin
 
 boot.bin: %(dut)s.bit.bin.gz
 '''
