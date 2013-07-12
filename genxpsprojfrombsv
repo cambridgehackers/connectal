@@ -30,14 +30,32 @@ argparser.add_argument('-b', '--interface', help='BSV interface to generate stub
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 
+tclfileTemplate='''
+create_project %(dut)s . -part xc7z020clg484-1
+add_files sources
+add_files -fileset constrs_1 -norecurse {constraints/design_1_processing_system7_1_0.xdc}
+#add_files -fileset constrs_1 -norecurse {constraints/%(dut)s.xdc}
+update_compile_order -fileset sources_1
+update_compile_order -fileset sources_1
+update_compile_order -fileset sim_1
+reset_run impl_1
+launch_runs synth_1
+wait_on_run synth_1
+launch_runs impl_1
+wait_on_run impl_1
+#set_property STEPS.WRITE_BITSTREAM.ARGS.BIN_FILE true [get_runs impl_1]
+launch_runs impl_1 -to_step write_bitstream
+wait_on_run impl_1
+close_project
+'''
+
 makefileTemplate='''
 XBSVTOP=$(PWD)/..
 BSVPATH = $(XBSVTOP)/%(bsvpath)s:$(XBSVTOP)/bsv
-vfile=pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v
-paofile=pcores/%(corename)s/data/%(dut)s_v2_1_0.pao
+vfile=sources/%(dut)s/mk%(Dut)sWrapper.v
 
-$(vfile): pcores/%(corename)s/hdl/verilog/%(Dut)sWrapper.bsv
-	cd pcores/%(corename)s/hdl/verilog; bsc -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
+$(vfile): sources/%(dut)s/%(Dut)sWrapper.bsv
+	cd sources/%(dut)s; bsc -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
 
 %(dut)s.make: %(dut)s.xmp
 	echo "run resync; save proj; exit" | xps -nw %(dut)s.xmp
@@ -46,16 +64,13 @@ $(vfile): pcores/%(corename)s/hdl/verilog/%(Dut)sWrapper.bsv
 
 verilog: $(vfile)
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
-	cp -r ../xilinx/* pcores/
+	cp -r ../xilinx/sources/* sources/
+	cp -r ../xilinx/constraints .
 
-netlist: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
-	make -f %(dut)s.make netlist
+%(dut)s.runs/impl_1/%(dut)s_top.bit: $(vfile)
+	vivado -mode batch -source %(dut)s.tcl
 
-implementation/%(dut)s.bit: pcores/%(corename)s/hdl/verilog/mk%(Dut)sWrapper.v %(dut)s.make
-	# bug workaround for 14.4: XIL_CG_LOAD_ALL_FAMILIES=true needed for "coregen fails" workaround
-	XIL_CG_LOAD_ALL_FAMILIES=true make -f %(dut)s.make bits
-
-bits: implementation/%(dut)s.bit
+bits: %(dut)s.runs/impl_1/%(dut)s_top.bit
 
 %(dut)s.bit.bin.gz: implementation/%(dut)s.bit
 	if [ -f boot.bin ]; then mv -v boot.bin boot.bin.bak; fi
@@ -76,9 +91,11 @@ if __name__=='__main__':
         s = open(inputfile).read() + '\n'
         s1 = syntax.parse(s)
 
+    dutname = namespace.interface.lower()
     corename = '%s_v1_00_a' % namespace.interface.lower()
     boardname = namespace.board.lower()
 
+    tclname = os.path.join(project_dir, '%s.tcl' % namespace.interface.lower())
     makename = os.path.join(project_dir, 'Makefile')
     xmpname = os.path.join(project_dir, '%s.xmp' % namespace.interface.lower())
     mhsname = os.path.join(project_dir, '%s.mhs' % namespace.interface.lower())
@@ -87,18 +104,21 @@ if __name__=='__main__':
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
     hname = os.path.join(project_dir, 'jni', '%s.h' % namespace.interface)
     cppname = os.path.join(project_dir, 'jni', '%s.cpp' % namespace.interface)
-    bsvname = os.path.join(project_dir, 'pcores', corename, 'hdl', 'verilog',
+    bsvname = os.path.join(project_dir, 'sources', dutname,
                            '%sWrapper.bsv' % namespace.interface)
-    verilogname = os.path.join(project_dir, 'pcores', corename, 'hdl', 'verilog',
+    topverilogname = os.path.join(project_dir, 'sources', 'top.v')
+    verilogname = os.path.join(project_dir, 'sources', dutname,
                                '%s.v' % namespace.interface)
     mpdname = os.path.join(project_dir, 'pcores', corename, 'data',
-                           '%s_v2_1_0.mpd' % namespace.interface.lower())
+                           '%s_v2_1_0.mpd' % dutname)
     paoname = os.path.join(project_dir, 'pcores', corename, 'data',
-                           '%s_v2_1_0.pao' % namespace.interface.lower())
+                           '%s_v2_1_0.pao' % dutname)
     ucfname = os.path.join(project_dir, 'data',
-                           '%s.ucf' % namespace.interface.lower())
+                           '%s.ucf' % dutname)
+    xdcname = os.path.join(project_dir, 'constraints',
+                           '%s.ucf' % dutname)
     bifname = os.path.join(project_dir, 
-                           '%s.bif' % namespace.interface.lower())
+                           '%s.bif' % dutname)
     print 'Writing CPP header', hname
     h = util.createDirAndOpen(hname, 'w')
     h.write('#include "portal.h"\n')
@@ -147,6 +167,7 @@ if __name__=='__main__':
         subinterface.writeXmp(xmpname)
         subinterface.writePao(paoname)
         subinterface.writeVerilog(verilogname)
+        subinterface.writeTopVerilog(topverilogname)
         subinterface.writeUcf(ucfname, boardname)
         subinterface.writeBif(bifname)
         print 'Writing Android.mk', androidmkname
@@ -163,6 +184,14 @@ if __name__=='__main__':
     shutil.copymode(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao'),
                     os.path.join(project_dir, 'updatepao'))
 
+    print 'Writing tcl file', tclname
+    tcl = util.createDirAndOpen(tclname, 'w')
+    tcl.write(tclfileTemplate % {'dut': namespace.interface.lower(),
+                                 'Dut': util.capitalize(namespace.interface),
+                                 'project_dir': project_dir
+                                 })
+    tcl.close()
+
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
     make.write(makefileTemplate % {'corename': corename,
@@ -170,6 +199,7 @@ if __name__=='__main__':
                                    'Dut': util.capitalize(namespace.interface),
                                    'bsvpath': os.path.dirname(namespace.bsvfile[0])
                                    })
+    make.close()
 
     print '############################################################'
     print '## To build:'

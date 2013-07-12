@@ -596,6 +596,353 @@ lib %(dut)s_v1_00_a %(Dut)s verilog
 lib %(dut)s_v1_00_a mk%(Dut)sWrapper verilog
 '''
 
+top_verilog_template='''
+`timescale 1 ps / 1 ps
+// lib IP_Integrator_Lib
+(* CORE_GENERATION_INFO = "design_1,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLanguage=VERILOG}" *) 
+module %(dut)s_top_1
+   (DDR_Addr,
+    DDR_BankAddr,
+    DDR_CAS_n,
+    DDR_Clk_n,
+    DDR_Clk_p,
+    DDR_CKE,
+    DDR_CS_n,
+    DDR_DM,
+    DDR_DQ,
+    DDR_DQS_n,
+    DDR_DQS_p,
+    DDR_ODT,
+    DDR_RAS_n,
+    DDR_DRSTB,
+    DDR_WEB,
+    FIXED_IO_ddr_vrn,
+    FIXED_IO_ddr_vrp,
+    FIXED_IO_mio,
+    FIXED_IO_ps_clk,
+    FIXED_IO_ps_porb,
+    FIXED_IO_ps_srstb,
+    GPIO_leds);
+  inout [14:0]DDR_Addr;
+  inout [2:0]DDR_BankAddr;
+  inout DDR_CAS_n;
+  inout DDR_Clk_n;
+  inout DDR_Clk_p;
+  inout DDR_CKE;
+  inout DDR_CS_n;
+  inout [3:0]DDR_DM;
+  inout [31:0]DDR_DQ;
+  inout [3:0]DDR_DQS_n;
+  inout [3:0]DDR_DQS_p;
+  inout DDR_ODT;
+  inout DDR_RAS_n;
+  inout DDR_DRSTB;
+  inout DDR_WEB;
+  inout FIXED_IO_ddr_vrn;
+  inout FIXED_IO_ddr_vrp;
+  inout [53:0]FIXED_IO_mio;
+  inout FIXED_IO_ps_clk;
+  inout FIXED_IO_ps_porb;
+  inout FIXED_IO_ps_srstb;
+  output [7:0] GPIO_leds;
+
+  wire GND_1;
+  wire %(dut)s_1_interrupt;
+%(top_axi_master_wires)s
+  wire [14:0]processing_system7_1_ddr_ADDR;
+  wire [2:0]processing_system7_1_ddr_BA;
+  wire processing_system7_1_ddr_CAS_N;
+  wire processing_system7_1_ddr_CKE;
+  wire processing_system7_1_ddr_CK_N;
+  wire processing_system7_1_ddr_CK_P;
+  wire processing_system7_1_ddr_CS_N;
+  wire [3:0]processing_system7_1_ddr_DM;
+  wire [31:0]processing_system7_1_ddr_DQ;
+  wire [3:0]processing_system7_1_ddr_DQS_N;
+  wire [3:0]processing_system7_1_ddr_DQS_P;
+  wire processing_system7_1_ddr_ODT;
+  wire processing_system7_1_ddr_RAS_N;
+  wire processing_system7_1_ddr_RESET_N;
+  wire processing_system7_1_ddr_WE_N;
+  wire processing_system7_1_fclk_clk0;
+  wire processing_system7_1_fclk_reset0_n;
+  wire processing_system7_1_fixed_io_DDR_VRN;
+  wire processing_system7_1_fixed_io_DDR_VRP;
+  wire [53:0]processing_system7_1_fixed_io_MIO;
+  wire processing_system7_1_fixed_io_PS_CLK;
+  wire processing_system7_1_fixed_io_PS_PORB;
+  wire processing_system7_1_fixed_io_PS_SRSTB;
+  wire [31:0]processing_system7_1_m_axi_gp0_ARADDR;
+  wire [1:0]processing_system7_1_m_axi_gp0_ARBURST;
+  wire [3:0]processing_system7_1_m_axi_gp0_ARCACHE;
+  wire [11:0]processing_system7_1_m_axi_gp0_ARID;
+  wire [3:0]processing_system7_1_m_axi_gp0_ARLEN;
+  wire [1:0]processing_system7_1_m_axi_gp0_ARLOCK;
+  wire [2:0]processing_system7_1_m_axi_gp0_ARPROT;
+  wire processing_system7_1_m_axi_gp0_ARREADY;
+  wire [2:0]processing_system7_1_m_axi_gp0_ARSIZE;
+  wire processing_system7_1_m_axi_gp0_ARVALID;
+  wire [31:0]processing_system7_1_m_axi_gp0_AWADDR;
+  wire [1:0]processing_system7_1_m_axi_gp0_AWBURST;
+  wire [3:0]processing_system7_1_m_axi_gp0_AWCACHE;
+  wire [11:0]processing_system7_1_m_axi_gp0_AWID;
+  wire [3:0]processing_system7_1_m_axi_gp0_AWLEN;
+  wire [1:0]processing_system7_1_m_axi_gp0_AWLOCK;
+  wire [2:0]processing_system7_1_m_axi_gp0_AWPROT;
+  wire processing_system7_1_m_axi_gp0_AWREADY;
+  wire [2:0]processing_system7_1_m_axi_gp0_AWSIZE;
+  wire processing_system7_1_m_axi_gp0_AWVALID;
+  wire [11:0]processing_system7_1_m_axi_gp0_BID;
+  wire processing_system7_1_m_axi_gp0_BREADY;
+  wire [1:0]processing_system7_1_m_axi_gp0_BRESP;
+  wire processing_system7_1_m_axi_gp0_BVALID;
+  wire [31:0]processing_system7_1_m_axi_gp0_RDATA;
+  wire [11:0]processing_system7_1_m_axi_gp0_RID;
+  wire processing_system7_1_m_axi_gp0_RLAST;
+  wire processing_system7_1_m_axi_gp0_RREADY;
+  wire [1:0]processing_system7_1_m_axi_gp0_RRESP;
+  wire processing_system7_1_m_axi_gp0_RVALID;
+  wire [31:0]processing_system7_1_m_axi_gp0_WDATA;
+  wire processing_system7_1_m_axi_gp0_WLAST;
+  wire processing_system7_1_m_axi_gp0_WREADY;
+  wire [3:0]processing_system7_1_m_axi_gp0_WSTRB;
+  wire processing_system7_1_m_axi_gp0_WVALID;
+
+GND GND
+       (.G(GND_1));
+%(dut)s#(
+.C_CTRL_MEM0_BASEADDR (32'h6e400000),
+.C_CTRL_MEM0_HIGHADDR (32'h6e41ffff),
+.C_CTRL_ADDR_WIDTH(64),
+.C_CTRL_ID_WIDTH(12),
+) %(dut)s_1
+       (.CTRL_ACLK(processing_system7_1_fclk_clk0),
+        .CTRL_ARADDR(processing_system7_1_m_axi_gp0_ARADDR),
+        .CTRL_ARBURST(processing_system7_1_m_axi_gp0_ARBURST),
+        .CTRL_ARCACHE(processing_system7_1_m_axi_gp0_ARCACHE[2:0]),
+        .CTRL_ARESETN(processing_system7_1_fclk_reset0_n),
+        .CTRL_ARID(processing_system7_1_m_axi_gp0_ARID),
+        .CTRL_ARLEN(processing_system7_1_m_axi_gp0_ARLEN),
+        .CTRL_ARLOCK(processing_system7_1_m_axi_gp0_ARLOCK[0]),
+        .CTRL_ARPROT(processing_system7_1_m_axi_gp0_ARPROT[1:0]),
+        .CTRL_ARREADY(processing_system7_1_m_axi_gp0_ARREADY),
+        .CTRL_ARSIZE(processing_system7_1_m_axi_gp0_ARSIZE),
+        .CTRL_ARVALID(processing_system7_1_m_axi_gp0_ARVALID),
+        .CTRL_AWADDR(processing_system7_1_m_axi_gp0_AWADDR),
+        .CTRL_AWBURST(processing_system7_1_m_axi_gp0_AWBURST),
+        .CTRL_AWCACHE(processing_system7_1_m_axi_gp0_AWCACHE[2:0]),
+        .CTRL_AWID(processing_system7_1_m_axi_gp0_AWID),
+        .CTRL_AWLEN(processing_system7_1_m_axi_gp0_AWLEN),
+        .CTRL_AWLOCK(processing_system7_1_m_axi_gp0_AWLOCK[0]),
+        .CTRL_AWPROT(processing_system7_1_m_axi_gp0_AWPROT[1:0]),
+        .CTRL_AWREADY(processing_system7_1_m_axi_gp0_AWREADY),
+        .CTRL_AWSIZE(processing_system7_1_m_axi_gp0_AWSIZE),
+        .CTRL_AWVALID(processing_system7_1_m_axi_gp0_AWVALID),
+        .CTRL_BID(processing_system7_1_m_axi_gp0_BID),
+        .CTRL_BREADY(processing_system7_1_m_axi_gp0_BREADY),
+        .CTRL_BRESP(processing_system7_1_m_axi_gp0_BRESP),
+        .CTRL_BVALID(processing_system7_1_m_axi_gp0_BVALID),
+        .CTRL_RDATA(processing_system7_1_m_axi_gp0_RDATA),
+        .CTRL_RID(processing_system7_1_m_axi_gp0_RID),
+        .CTRL_RLAST(processing_system7_1_m_axi_gp0_RLAST),
+        .CTRL_RREADY(processing_system7_1_m_axi_gp0_RREADY),
+        .CTRL_RRESP(processing_system7_1_m_axi_gp0_RRESP),
+        .CTRL_RVALID(processing_system7_1_m_axi_gp0_RVALID),
+        .CTRL_WDATA(processing_system7_1_m_axi_gp0_WDATA),
+        .CTRL_WLAST(processing_system7_1_m_axi_gp0_WLAST),
+        .CTRL_WREADY(processing_system7_1_m_axi_gp0_WREADY),
+        .CTRL_WSTRB(processing_system7_1_m_axi_gp0_WSTRB),
+        .CTRL_WVALID(processing_system7_1_m_axi_gp0_WVALID),
+%(top_dut_axi_master_port_map)s
+        .interrupt(%(dut)s_1_interrupt));
+
+
+processing_system7 processing_system7_1
+       (.DDR_Addr(DDR_Addr[14:0]),
+        .DDR_BankAddr(DDR_BankAddr[2:0]),
+        .DDR_CAS_n(DDR_CAS_n),
+        .DDR_CKE(DDR_CKE),
+        .DDR_CS_n(DDR_CS_n),
+        .DDR_Clk(DDR_Clk_p),
+        .DDR_Clk_n(DDR_Clk_n),
+        .DDR_DM(DDR_DM[3:0]),
+        .DDR_DQ(DDR_DQ[31:0]),
+        .DDR_DQS(DDR_DQS_p[3:0]),
+        .DDR_DQS_n(DDR_DQS_n[3:0]),
+        .DDR_DRSTB(DDR_DRSTB),
+        .DDR_ODT(DDR_ODT),
+        .DDR_RAS_n(DDR_RAS_n),
+        .DDR_VRN(FIXED_IO_ddr_vrn),
+        .DDR_VRP(FIXED_IO_ddr_vrp),
+        .DDR_WEB(DDR_WEB),
+        .FCLK_CLK0(processing_system7_1_fclk_clk0),
+        .FCLK_RESET0_N(processing_system7_1_fclk_reset0_n),
+        .IRQ_F2P(%(dut)s_1_interrupt),
+        .MIO(FIXED_IO_mio[53:0]),
+        .M_AXI_GP0_ACLK(processing_system7_1_fclk_clk0),
+        .M_AXI_GP0_ARADDR(processing_system7_1_m_axi_gp0_ARADDR),
+        .M_AXI_GP0_ARBURST(processing_system7_1_m_axi_gp0_ARBURST),
+        .M_AXI_GP0_ARCACHE(processing_system7_1_m_axi_gp0_ARCACHE),
+        .M_AXI_GP0_ARID(processing_system7_1_m_axi_gp0_ARID),
+        .M_AXI_GP0_ARLEN(processing_system7_1_m_axi_gp0_ARLEN),
+        .M_AXI_GP0_ARLOCK(processing_system7_1_m_axi_gp0_ARLOCK),
+        .M_AXI_GP0_ARPROT(processing_system7_1_m_axi_gp0_ARPROT),
+        .M_AXI_GP0_ARREADY(processing_system7_1_m_axi_gp0_ARREADY),
+        .M_AXI_GP0_ARSIZE(processing_system7_1_m_axi_gp0_ARSIZE),
+        .M_AXI_GP0_ARVALID(processing_system7_1_m_axi_gp0_ARVALID),
+        .M_AXI_GP0_AWADDR(processing_system7_1_m_axi_gp0_AWADDR),
+        .M_AXI_GP0_AWBURST(processing_system7_1_m_axi_gp0_AWBURST),
+        .M_AXI_GP0_AWCACHE(processing_system7_1_m_axi_gp0_AWCACHE),
+        .M_AXI_GP0_AWID(processing_system7_1_m_axi_gp0_AWID),
+        .M_AXI_GP0_AWLEN(processing_system7_1_m_axi_gp0_AWLEN),
+        .M_AXI_GP0_AWLOCK(processing_system7_1_m_axi_gp0_AWLOCK),
+        .M_AXI_GP0_AWPROT(processing_system7_1_m_axi_gp0_AWPROT),
+        .M_AXI_GP0_AWREADY(processing_system7_1_m_axi_gp0_AWREADY),
+        .M_AXI_GP0_AWSIZE(processing_system7_1_m_axi_gp0_AWSIZE),
+        .M_AXI_GP0_AWVALID(processing_system7_1_m_axi_gp0_AWVALID),
+        .M_AXI_GP0_BID(processing_system7_1_m_axi_gp0_BID),
+        .M_AXI_GP0_BREADY(processing_system7_1_m_axi_gp0_BREADY),
+        .M_AXI_GP0_BRESP(processing_system7_1_m_axi_gp0_BRESP),
+        .M_AXI_GP0_BVALID(processing_system7_1_m_axi_gp0_BVALID),
+        .M_AXI_GP0_RDATA(processing_system7_1_m_axi_gp0_RDATA),
+        .M_AXI_GP0_RID(processing_system7_1_m_axi_gp0_RID),
+        .M_AXI_GP0_RLAST(processing_system7_1_m_axi_gp0_RLAST),
+        .M_AXI_GP0_RREADY(processing_system7_1_m_axi_gp0_RREADY),
+        .M_AXI_GP0_RRESP(processing_system7_1_m_axi_gp0_RRESP),
+        .M_AXI_GP0_RVALID(processing_system7_1_m_axi_gp0_RVALID),
+        .M_AXI_GP0_WDATA(processing_system7_1_m_axi_gp0_WDATA),
+        .M_AXI_GP0_WLAST(processing_system7_1_m_axi_gp0_WLAST),
+        .M_AXI_GP0_WREADY(processing_system7_1_m_axi_gp0_WREADY),
+        .M_AXI_GP0_WSTRB(processing_system7_1_m_axi_gp0_WSTRB),
+        .M_AXI_GP0_WVALID(processing_system7_1_m_axi_gp0_WVALID),
+%(top_ps7_axi_master_port_map)s
+        .PS_CLK(FIXED_IO_ps_clk),
+        .PS_PORB(FIXED_IO_ps_porb),
+        .PS_SRSTB(FIXED_IO_ps_srstb));
+   
+endmodule
+'''
+
+top_axi_master_wires_template='''
+  wire [31:0]%(dut)s_1_%(busname)s_ARADDR;
+  wire [1:0]%(dut)s_1_%(busname)s_ARBURST;
+  wire [2:0]%(dut)s_1_%(busname)s_ARCACHE;
+  wire [5:0]%(dut)s_1_%(busname)s_ARID;
+  wire [3:0]%(dut)s_1_%(busname)s_ARLEN;
+  wire [1:0]%(dut)s_1_%(busname)s_ARPROT;
+  wire %(dut)s_1_%(busname)s_ARREADY;
+  wire [2:0]%(dut)s_1_%(busname)s_ARSIZE;
+  wire %(dut)s_1_%(busname)s_ARVALID;
+  wire [31:0]%(dut)s_1_%(busname)s_AWADDR;
+  wire [1:0]%(dut)s_1_%(busname)s_AWBURST;
+  wire [2:0]%(dut)s_1_%(busname)s_AWCACHE;
+  wire [5:0]%(dut)s_1_%(busname)s_AWID;
+  wire [3:0]%(dut)s_1_%(busname)s_AWLEN;
+  wire [1:0]%(dut)s_1_%(busname)s_AWPROT;
+  wire %(dut)s_1_%(busname)s_AWREADY;
+  wire [2:0]%(dut)s_1_%(busname)s_AWSIZE;
+  wire %(dut)s_1_%(busname)s_AWVALID;
+  wire [5:0]%(dut)s_1_%(busname)s_BID;
+  wire %(dut)s_1_%(busname)s_BREADY;
+  wire [1:0]%(dut)s_1_%(busname)s_BRESP;
+  wire %(dut)s_1_%(busname)s_BVALID;
+  wire [63:0]%(dut)s_1_%(busname)s_RDATA;
+  wire [5:0]%(dut)s_1_%(busname)s_RID;
+  wire %(dut)s_1_%(busname)s_RLAST;
+  wire %(dut)s_1_%(busname)s_RREADY;
+  wire [1:0]%(dut)s_1_%(busname)s_RRESP;
+  wire %(dut)s_1_%(busname)s_RVALID;
+  wire [63:0]%(dut)s_1_%(busname)s_WDATA;
+  wire [5:0]%(dut)s_1_%(busname)s_WID;
+  wire %(dut)s_1_%(busname)s_WLAST;
+  wire %(dut)s_1_%(busname)s_WREADY;
+  wire [7:0]%(dut)s_1_%(busname)s_WSTRB;
+  wire %(dut)s_1_%(busname)s_WVALID;
+'''
+
+top_dut_axi_master_port_map_template='''
+        .%(busname)s_aclk(processing_system7_1_fclk_clk0),
+        .%(busname)s_araddr(%(dut)s_1_%(busname)s_ARADDR),
+        .%(busname)s_arburst(%(dut)s_1_%(busname)s_ARBURST),
+        .%(busname)s_arcache(%(dut)s_1_%(busname)s_ARCACHE),
+        .%(busname)s_aresetn(processing_system7_1_fclk_reset0_n),
+        .%(busname)s_arid(%(dut)s_1_%(busname)s_ARID),
+        .%(busname)s_arlen(%(dut)s_1_%(busname)s_ARLEN),
+        .%(busname)s_arprot(%(dut)s_1_%(busname)s_ARPROT),
+        .%(busname)s_arready(%(dut)s_1_%(busname)s_ARREADY),
+        .%(busname)s_arsize(%(dut)s_1_%(busname)s_ARSIZE),
+        .%(busname)s_arvalid(%(dut)s_1_%(busname)s_ARVALID),
+        .%(busname)s_awaddr(%(dut)s_1_%(busname)s_AWADDR),
+        .%(busname)s_awburst(%(dut)s_1_%(busname)s_AWBURST),
+        .%(busname)s_awcache(%(dut)s_1_%(busname)s_AWCACHE),
+        .%(busname)s_awid(%(dut)s_1_%(busname)s_AWID),
+        .%(busname)s_awlen(%(dut)s_1_%(busname)s_AWLEN),
+        .%(busname)s_awprot(%(dut)s_1_%(busname)s_AWPROT),
+        .%(busname)s_awready(%(dut)s_1_%(busname)s_AWREADY),
+        .%(busname)s_awsize(%(dut)s_1_%(busname)s_AWSIZE),
+        .%(busname)s_awvalid(%(dut)s_1_%(busname)s_AWVALID),
+        .%(busname)s_bid(%(dut)s_1_%(busname)s_BID),
+        .%(busname)s_bready(%(dut)s_1_%(busname)s_BREADY),
+        .%(busname)s_bresp(%(dut)s_1_%(busname)s_BRESP),
+        .%(busname)s_bvalid(%(dut)s_1_%(busname)s_BVALID),
+        .%(busname)s_rdata(%(dut)s_1_%(busname)s_RDATA),
+        .%(busname)s_rid(%(dut)s_1_%(busname)s_RID),
+        .%(busname)s_rlast(%(dut)s_1_%(busname)s_RLAST),
+        .%(busname)s_rready(%(dut)s_1_%(busname)s_RREADY),
+        .%(busname)s_rresp(%(dut)s_1_%(busname)s_RRESP),
+        .%(busname)s_rvalid(%(dut)s_1_%(busname)s_RVALID),
+        .%(busname)s_wdata(%(dut)s_1_%(busname)s_WDATA),
+        .%(busname)s_wid(%(dut)s_1_%(busname)s_WID),
+        .%(busname)s_wlast(%(dut)s_1_%(busname)s_WLAST),
+        .%(busname)s_wready(%(dut)s_1_%(busname)s_WREADY),
+        .%(busname)s_wstrb(%(dut)s_1_%(busname)s_WSTRB),
+        .%(busname)s_wvalid(%(dut)s_1_%(busname)s_WVALID),
+'''
+
+top_ps7_axi_master_port_map_template='''
+        .S_AXI_HP%(busnumber)s_ACLK(processing_system7_1_fclk_clk0),
+        .S_AXI_HP%(busnumber)s_ARADDR(%(dut)s_1_%(busname)s_ARADDR),
+        .S_AXI_HP%(busnumber)s_ARBURST(%(dut)s_1_%(busname)s_ARBURST),
+        .S_AXI_HP%(busnumber)s_ARCACHE(%(dut)s_1_%(busname)s_ARCACHE),
+        .S_AXI_HP%(busnumber)s_ARID(%(dut)s_1_%(busname)s_ARID),
+        .S_AXI_HP%(busnumber)s_ARLEN(%(dut)s_1_%(busname)s_ARLEN),
+        .S_AXI_HP%(busnumber)s_ARLOCK({GND_1,GND_1}),
+        .S_AXI_HP%(busnumber)s_ARPROT(%(dut)s_1_%(busname)s_ARPROT),
+        .S_AXI_HP%(busnumber)s_ARQOS({GND_1,GND_1,GND_1,GND_1}),
+        .S_AXI_HP%(busnumber)s_ARREADY(%(dut)s_1_%(busname)s_ARREADY),
+        .S_AXI_HP%(busnumber)s_ARSIZE(%(dut)s_1_%(busname)s_ARSIZE),
+        .S_AXI_HP%(busnumber)s_ARVALID(%(dut)s_1_%(busname)s_ARVALID),
+        .S_AXI_HP%(busnumber)s_AWADDR(%(dut)s_1_%(busname)s_AWADDR),
+        .S_AXI_HP%(busnumber)s_AWBURST(%(dut)s_1_%(busname)s_AWBURST),
+        .S_AXI_HP%(busnumber)s_AWCACHE(%(dut)s_1_%(busname)s_AWCACHE),
+        .S_AXI_HP%(busnumber)s_AWID(%(dut)s_1_%(busname)s_AWID),
+        .S_AXI_HP%(busnumber)s_AWLEN(%(dut)s_1_%(busname)s_AWLEN),
+        .S_AXI_HP%(busnumber)s_AWLOCK({GND_1,GND_1}),
+        .S_AXI_HP%(busnumber)s_AWPROT(%(dut)s_1_%(busname)s_AWPROT),
+        .S_AXI_HP%(busnumber)s_AWQOS({GND_1,GND_1,GND_1,GND_1}),
+        .S_AXI_HP%(busnumber)s_AWREADY(%(dut)s_1_%(busname)s_AWREADY),
+        .S_AXI_HP%(busnumber)s_AWSIZE(%(dut)s_1_%(busname)s_AWSIZE),
+        .S_AXI_HP%(busnumber)s_AWVALID(%(dut)s_1_%(busname)s_AWVALID),
+        .S_AXI_HP%(busnumber)s_BID(%(dut)s_1_%(busname)s_BID),
+        .S_AXI_HP%(busnumber)s_BREADY(%(dut)s_1_%(busname)s_BREADY),
+        .S_AXI_HP%(busnumber)s_BRESP(%(dut)s_1_%(busname)s_BRESP),
+        .S_AXI_HP%(busnumber)s_BVALID(%(dut)s_1_%(busname)s_BVALID),
+        .S_AXI_HP%(busnumber)s_RDATA(%(dut)s_1_%(busname)s_RDATA),
+        .S_AXI_HP%(busnumber)s_RDISSUECAP1_EN(GND_1),
+        .S_AXI_HP%(busnumber)s_RID(%(dut)s_1_%(busname)s_RID),
+        .S_AXI_HP%(busnumber)s_RLAST(%(dut)s_1_%(busname)s_RLAST),
+        .S_AXI_HP%(busnumber)s_RREADY(%(dut)s_1_%(busname)s_RREADY),
+        .S_AXI_HP%(busnumber)s_RRESP(%(dut)s_1_%(busname)s_RRESP),
+        .S_AXI_HP%(busnumber)s_RVALID(%(dut)s_1_%(busname)s_RVALID),
+        .S_AXI_HP%(busnumber)s_WDATA(%(dut)s_1_%(busname)s_WDATA),
+        .S_AXI_HP%(busnumber)s_WID(%(dut)s_1_%(busname)s_WID),
+        .S_AXI_HP%(busnumber)s_WLAST(%(dut)s_1_%(busname)s_WLAST),
+        .S_AXI_HP%(busnumber)s_WREADY(%(dut)s_1_%(busname)s_WREADY),
+        .S_AXI_HP%(busnumber)s_WRISSUECAP1_EN(GND_1),
+        .S_AXI_HP%(busnumber)s_WSTRB(%(dut)s_1_%(busname)s_WSTRB),
+        .S_AXI_HP%(busnumber)s_WVALID(%(dut)s_1_%(busname)s_WVALID),
+'''
+
 verilog_template='''
 `uselib lib=unisims_ver
 `uselib lib=proc_common_v3_00_a
@@ -706,13 +1053,13 @@ parameter C_%(BUSNAME)s_ADDR_WIDTH = 32;
 parameter C_%(BUSNAME)s_BURSTLEN_WIDTH = %(burstlenwidth)s;
 parameter C_%(BUSNAME)s_PROT_WIDTH = %(protwidth)s;
 parameter C_%(BUSNAME)s_CACHE_WIDTH = %(cachewidth)s;
-parameter C_%(BUSNAME)s_ID_WIDTH = 1;
+parameter C_%(BUSNAME)s_ID_WIDTH = 6;
 '''
 
 axi_slave_parameter_verilog_template='''
 parameter C_%(BUSNAME)s_DATA_WIDTH = 32;
 parameter C_%(BUSNAME)s_ADDR_WIDTH = 32;
-parameter C_%(BUSNAME)s_ID_WIDTH = 4;
+parameter C_%(BUSNAME)s_ID_WIDTH = 12;
 parameter C_%(BUSNAME)s_MEM0_BASEADDR = 32'hFFFFFFFF;
 parameter C_%(BUSNAME)s_MEM0_HIGHADDR = 32'h00000000;
 '''
@@ -747,6 +1094,7 @@ axi_master_port_verilog_template='''
     %(busname)s_awcache,
     %(busname)s_wready,
     %(busname)s_wvalid,
+    %(busname)s_wid,
     %(busname)s_wdata,
     %(busname)s_wstrb,
     %(busname)s_wlast,
@@ -839,8 +1187,9 @@ output [(C_%(BUSNAME)s_PROT_WIDTH-1) : 0] %(busname)s_awprot;
 output [(C_%(BUSNAME)s_CACHE_WIDTH-1) : 0] %(busname)s_awcache;
 input %(busname)s_wready;
 output %(busname)s_wvalid;
+output [C_%(BUSNAME)s_ID_WIDTH - 1 : 0] %(busname)s_wid;
 output [C_%(BUSNAME)s_DATA_WIDTH - 1 : 0] %(busname)s_wdata;
-wire [C_%(BUSNAME)s_DATA_WIDTH - 1 : 0] %(busname)s_wdata;
+wire [C_%(BUSNAME)s_DATA_WIDTH - 1 : 0] %(busname)s_wdata_wire;
 output [(C_%(BUSNAME)s_DATA_WIDTH)/8 - 1 : 0] %(busname)s_wstrb;
 output %(busname)s_wlast;
 output %(busname)s_bready;
@@ -916,7 +1265,7 @@ hdmi_clock_verilog_template='''
 axi_master_port_map_verilog_template='''
       .EN_%(busname)s_write_writeAddr(WILL_FIRE_%(busname)s_write_writeAddr),
       .%(busname)s_write_writeAddr(%(busname)s_awaddr),
-      .%(busname)s_write_writeId(%(busname)s_awid[0]),
+      .%(busname)s_write_writeId(%(busname)s_awid),
       .RDY_%(busname)s_write_writeAddr(RDY_%(busname)s_write_writeAddr),
 
       .%(busname)s_write_writeBurstLen(%(busname)s_awlen),
@@ -938,6 +1287,8 @@ axi_master_port_map_verilog_template='''
       .%(busname)s_write_writeData(%(busname)s_wdata_wire),
       .RDY_%(busname)s_write_writeData(RDY_%(busname)s_write_writeData),
 
+      .%(busname)s_write_writeWid(%(busname)s_wid),
+
       .%(busname)s_write_writeDataByteEnable(%(busname)s_wstrb),
       // RDY_%(busname)s_write_writeDataByteEnable,
 
@@ -946,11 +1297,11 @@ axi_master_port_map_verilog_template='''
 
       .EN_%(busname)s_write_writeResponse(WILL_FIRE_%(busname)s_write_writeResponse),
       .%(busname)s_write_writeResponse_responseCode(%(busname)s_bresp),
-      .%(busname)s_write_writeResponse_id(%(busname)s_bid[0]),
+      .%(busname)s_write_writeResponse_id(%(busname)s_bid),
       .RDY_%(busname)s_write_writeResponse(RDY_%(busname)s_write_writeResponse),
 
       .EN_%(busname)s_read_readAddr(WILL_FIRE_%(busname)s_read_readAddr),
-      .%(busname)s_read_readId(%(busname)s_arid[0]),
+      .%(busname)s_read_readId(%(busname)s_arid),
       .%(busname)s_read_readAddr(%(busname)s_araddr),
       .RDY_%(busname)s_read_readAddr(RDY_%(busname)s_read_readAddr),
 
@@ -972,7 +1323,7 @@ axi_master_port_map_verilog_template='''
       .%(busname)s_read_readData_data(%(busname)s_rdata),
       .%(busname)s_read_readData_resp(%(busname)s_rresp),
       .%(busname)s_read_readData_last(%(busname)s_rlast),
-      .%(busname)s_read_readData_id(%(busname)s_rid[0]),
+      .%(busname)s_read_readData_id(%(busname)s_rid),
       .EN_%(busname)s_read_readData(WILL_FIRE_%(busname)s_read_readData),
       .RDY_%(busname)s_read_readData(RDY_%(busname)s_read_readData),
 '''
@@ -1033,6 +1384,7 @@ axi_master_signal_verilog_template='''
   wire RDY_%(busname)s_read_readData;
   wire WILL_FIRE_%(busname)s_write_writeAddr;
   wire WILL_FIRE_%(busname)s_write_writeData;
+  wire [C_%(BUSNAME)s_DATA_WIDTH-1 : 0] %(busname)s_wdata_wire;
   wire WILL_FIRE_%(busname)s_write_writeResponse;
   wire WILL_FIRE_%(busname)s_read_readAddr;
   wire WILL_FIRE_%(busname)s_read_readData;
@@ -1355,11 +1707,15 @@ hdmi_iobuf_verilog_template='''
 '''
 
 class InterfaceMixin:
-    def axiMasterBusSubst(self, busname,t,params):
+    def axiMasterBusSubst(self, busnumber, businfo):
+        (busname,t,params) = businfo
         print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3'), params[0].numeric()
+        dutName = util.decapitalize(self.name)
         return {
+            'dut': dutName,
             'BUSNAME': busname.upper(),
             'busname': busname,
+            'busnumber': 0,
             'datawidth': params[0].numeric(),
             'burstlenwidth': 8 if (t == 'AxiMaster') else 4,
             'protwidth': 3 if (t == 'AxiMaster') else 2,
@@ -1374,7 +1730,7 @@ class InterfaceMixin:
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
-        masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
+        masterBusSubsts = [ self.axiMasterBusSubst(busnumber,axiMasters[busnumber]) for busnumber in range(len(axiMasters)) ]
         substs = {
             'dut': dutName,
             'Dut': util.capitalize(self.name),
@@ -1408,7 +1764,7 @@ class InterfaceMixin:
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
-        masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
+        masterBusSubsts = [ self.axiMasterBusSubst(busnumber,axiMasters[busnumber]) for busnumber in range(len(axiMasters))]
         substs = {
             'dut': dutName,
             'axi_master_interconnects': ''.join([ axi_master_interconnect_mhs_template 
@@ -1477,6 +1833,26 @@ class InterfaceMixin:
         pao.write(pao_template % substs)
         return
 
+    def writeTopVerilog(self, topverilogname, silent=False):
+        if not silent:
+            print 'Writing top Verilog file', topverilogname
+        topverilog = util.createDirAndOpen(topverilogname, 'w')
+        dutName = util.decapitalize(self.name)
+        axiMasters = self.collectInterfaceNames('Axi3?Client')
+        axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
+        hdmiBus = self.collectInterfaceNames('HDMI')
+        masterBusSubsts = [self.axiMasterBusSubst(busnumber,axiMasters[busnumber]) for busnumber in range(len(axiMasters))]
+        substs = {
+            'dut': dutName.lower(),
+            'Dut': util.capitalize(self.name),
+            'top_axi_master_wires': ''.join([top_axi_master_wires_template % subst for subst in masterBusSubsts]),
+            'top_dut_axi_master_port_map': ''.join([top_dut_axi_master_port_map_template % subst for subst in masterBusSubsts]),
+            'top_ps7_axi_master_port_map': ''.join([top_ps7_axi_master_port_map_template % subst for subst in masterBusSubsts]),
+            }
+        topverilog.write(top_verilog_template % substs)
+        topverilog.close()
+        return
+
     def writeVerilog(self, verilogname, silent=False):
         if not silent:
             print 'Writing wrapper Verilog file', verilogname
@@ -1485,7 +1861,7 @@ class InterfaceMixin:
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         hdmiBus = self.collectInterfaceNames('HDMI')
-        masterBusSubsts = [ self.axiMasterBusSubst(busname,t,params) for (busname,t,params) in axiMasters ]
+        masterBusSubsts = [self.axiMasterBusSubst(busnumber,axiMasters[busnumber]) for busnumber in range(len(axiMasters))]
         substs = {
             'dut': dutName.lower(),
             'Dut': util.capitalize(self.name),

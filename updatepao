@@ -20,6 +20,7 @@ def findVerilogModules(vinput):
     return modules.keys()
 
 def addPaoEntry(paoname, mod):
+    print paoname, mod
     component = None
     pao = open(paoname, 'r')
     for line in pao:
@@ -47,9 +48,10 @@ def updatePao(vinput, pao, libdirs):
             for libdir in libdirs:
                 if os.path.exists(os.path.join(libdir, modv)):
                     print 'found', os.path.join(libdir, modv)
+                    print 'copying to: ', os.path.join(destdir, modv)
                     shutil.copyfile(os.path.join(libdir, modv),
                                     os.path.join(destdir, modv))
-                    addPaoEntry(pao, mod)
+                    #addPaoEntry(pao, mod)
 
 if __name__=='__main__':
     updatePao(sys.argv[1], sys.argv[2], sys.argv[3:])
