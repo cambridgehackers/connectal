@@ -1,5 +1,6 @@
 
 // Copyright (c) 2013 Nokia, Inc.
+// Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
