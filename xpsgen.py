@@ -82,7 +82,7 @@ mhs_template='''
  PORT xadc_gpio_3_pin = %(dut)s_0_xadc_gpio_3, DIR = O
 %(system_hdmi_ports)s
 
-BEGIN processing_system7
+BEGIN qqprocessing_system7
  PARAMETER INSTANCE = processing_system7_0
  PARAMETER HW_VER = 4.02.a
  PARAMETER C_DDR_RAM_HIGHADDR = 0x3FFFFFFF
@@ -168,6 +168,7 @@ BEGIN processing_system7
  PORT FCLK_CLK1 = processing_system7_0_FCLK_CLK1_0
  PORT M_AXI_GP0_ACLK = processing_system7_0_FCLK_CLK0_0
  PORT M_AXI_GP0_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
+ PARAMETER C_S_AXI_GP0_ID_WIDTH = 6
  BUS_INTERFACE M_AXI_GP0 = axi_slave_interconnect_0
 %(ps7_hdmi_config)s
 %(ps7_axi_master_config)s
@@ -221,8 +222,9 @@ system_hdmi_port_mhs_template='''
 '''
 
 ps7_axi_master_config_mhs_template='''
- PARAMETER C_INTERCONNECT_S_AXI_HP%(busnumber)s_MASTERS = %(dut)s_0.%(BUSNAME)s
+ ##PARAMETER C_INTERCONNECT_S_AXI_HP%(busnumber)s_MASTERS = %(dut)s_0.%(BUSNAME)s
  PARAMETER C_USE_S_AXI_HP%(busnumber)s = 1
+ PARAMETER C_S_AXI_HP%(busnumber)s_ID_WIDTH = 6
  BUS_INTERFACE S_AXI_HP%(busnumber)s = axi_master_interconnect_%(busnumber)s
  PORT S_AXI_HP%(busnumber)s_ACLK = processing_system7_0_FCLK_CLK0_0
  PORT S_AXI_HP%(busnumber)s_ARESETN = processing_system7_0_S_AXI_HP%(busnumber)s_ARESETN
@@ -231,15 +233,18 @@ ps7_axi_master_config_mhs_template='''
 dut_axi_master_config_mhs_template='''
  BUS_INTERFACE %(busname)s = axi_master_interconnect_%(busnumber)s
  PORT %(busname)s_aclk = processing_system7_0_FCLK_CLK0_0
+ PORT %(busname)s_aresetn = processing_system7_0_S_AXI_HP%(busnumber)s_ARESETN
 '''
 
 dut_axi_slave_config_mhs_template='''
  PARAMETER C_%(BUSNAME)s_MEM0_BASEADDR = %(busbase)s
  PARAMETER C_%(BUSNAME)s_MEM0_HIGHADDR = %(bushigh)s
+ PARAMETER C_%(BUSNAME)s_ID_WIDTH = 6
  ## not needed for shared mode
  ##PARAMETER C_INTERCONNECT_%(BUSNAME)s_MASTERS = processing_system7_0.M_AXI_GP0
  BUS_INTERFACE %(BUSNAME)s = axi_slave_interconnect_%(busnumber)s
  PORT %(BUSNAME)s_ACLK = processing_system7_0_FCLK_CLK0_0
+ PORT %(BUSNAME)s_ARESETN = processing_system7_0_M_AXI_GP%(busnumber)s_ARESETN
 '''
 
 dut_hdmi_config_mhs_template='''
@@ -252,7 +257,7 @@ dut_hdmi_config_mhs_template='''
 '''
 
 axi_master_interconnect_mhs_template='''
-BEGIN axi_interconnect
+BEGIN axi_passthrough
  PARAMETER INSTANCE = axi_master_interconnect_%(busnumber)s
  PARAMETER HW_VER = 1.06.a
  PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 1
@@ -272,7 +277,7 @@ END
 '''
 
 axi_slave_interconnect_mhs_template='''
-BEGIN axi_interconnect
+BEGIN axi_passthrough
  PARAMETER INSTANCE = axi_slave_interconnect_%(busnumber)s
  PARAMETER HW_VER = 1.06.a
  ## use shared mode, crossbar mode does not work for our design
@@ -317,10 +322,10 @@ END
 '''
 
 axi_master_bus_mpd_template='''
-BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXI, BUS_TYPE = MASTER'''
+BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXIPT, BUS_TYPE = MASTER'''
 
 axi_slave_bus_mpd_template='''
-BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXI, BUS_TYPE = SLAVE'''
+BUS_INTERFACE BUS = %(BUSNAME)s, BUS_STD = AXIPT, BUS_TYPE = SLAVE'''
 
 hdmi_bus_mpd_template='''
 IO_INTERFACE IO_IF = %(BUSNAME)s, IO_TYPE = HDMI'''
