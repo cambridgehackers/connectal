@@ -260,9 +260,9 @@ axi_master_interconnect_mhs_template='''
 BEGIN axi_passthrough
  PARAMETER INSTANCE = axi_master_interconnect_%(busnumber)s
  PARAMETER HW_VER = 1.06.a
- PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 1
- PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0_0
- PORT INTERCONNECT_ARESETN = processing_system7_0_S_AXI_HP%(busnumber)s_ARESETN
+ #PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 1
+ #PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0_0
+ #PORT INTERCONNECT_ARESETN = processing_system7_0_S_AXI_HP%(busnumber)s_ARESETN
 END
 
 BEGIN chipscope_axi_monitor
@@ -281,9 +281,9 @@ BEGIN axi_passthrough
  PARAMETER INSTANCE = axi_slave_interconnect_%(busnumber)s
  PARAMETER HW_VER = 1.06.a
  ## use shared mode, crossbar mode does not work for our design
- PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 0
- PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0_0
- PORT INTERCONNECT_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
+ #PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 0
+ #PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0_0
+ #PORT INTERCONNECT_ARESETN = processing_system7_0_M_AXI_GP0_ARESETN
 END
 '''
 
