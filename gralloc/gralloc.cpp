@@ -382,6 +382,8 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
             unsigned short lmin = 40;
             unsigned short lmax = lmin + nlines;
             unsigned short pmin = 192;
+// this is the value from CEA-861-D needed for 480P
+pmin=138;
             unsigned short pmax = pmin + npixels;
 
             const_cast<uint32_t&>(dev->flags) = 0;
