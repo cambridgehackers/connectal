@@ -30,7 +30,7 @@ argparser.add_argument('-b', '--interface', help='BSV interface to generate stub
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 
-tclfileTemplate='''
+tclfileXprTemplate='''
 create_project %(dut)s . -part xc7z020clg484-1
 add_files sources
 add_files -fileset constrs_1 -norecurse {constraints/design_1_processing_system7_1_0.xdc}
@@ -38,6 +38,12 @@ add_files -fileset constrs_1 -norecurse {constraints/%(dut)s.xdc}
 update_compile_order -fileset sources_1
 update_compile_order -fileset sources_1
 update_compile_order -fileset sim_1
+close_project
+'''
+
+tclfileTemplate='''
+open_project %(dut)s
+reset_run synth_1
 reset_run impl_1
 launch_runs synth_1
 wait_on_run synth_1
@@ -67,7 +73,10 @@ verilog: $(vfile)
 	cp -r ../xilinx/sources/* sources/
 	cp -r ../xilinx/constraints .
 
-%(dut)s.runs/impl_1/%(dut)s_top_1.bit: $(vfile)
+%(dut)s.xpr:
+	vivado -mode batch -source %(dut)sxpr.tcl
+
+%(dut)s.runs/impl_1/%(dut)s_top_1.bit: $(vfile) %(dut)s.xpr
 	vivado -mode batch -source %(dut)s.tcl
 
 bits: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
@@ -94,6 +103,7 @@ if __name__=='__main__':
     boardname = namespace.board.lower()
 
     tclname = os.path.join(project_dir, '%s.tcl' % namespace.interface.lower())
+    tclxprname = os.path.join(project_dir, '%sxpr.tcl' % namespace.interface.lower())
     makename = os.path.join(project_dir, 'Makefile')
     xmpname = os.path.join(project_dir, '%s.xmp' % namespace.interface.lower())
     mhsname = os.path.join(project_dir, '%s.mhs' % namespace.interface.lower())
@@ -189,6 +199,12 @@ if __name__=='__main__':
                                  'Dut': util.capitalize(namespace.interface),
                                  'project_dir': project_dir
                                  })
+    tcl.close()
+    tcl = util.createDirAndOpen(tclxprname, 'w')
+    tcl.write(tclfileXprTemplate % {'dut': namespace.interface.lower(),
+                                    'Dut': util.capitalize(namespace.interface),
+                                    'project_dir': project_dir
+                                    })
     tcl.close()
 
     print 'Writing Makefile', makename
