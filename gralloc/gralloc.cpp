@@ -30,6 +30,7 @@
 #include <cutils/ashmem.h>
 #include <cutils/log.h>
 #include <cutils/atomic.h>
+#include <cutils/properties.h>
 
 #include <ion/ion.h>
 
@@ -374,18 +375,59 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
         //status = mapFrameBuffer(m);
         status = 0;
         if (status >= 0) {
+            /* This table is from CEA-861-D, Table 2: Video Format Timings */
+            static struct {
+               int code;
+               int hactive;
+               int vactive;
+               int hblank;
+               int vblank;
+            } screen_types[] = { /* table only contains progressive types */
+                { 1, 640, 480, 160, 45}, // Weird
+                { 2, 720, 480, 138, 45}, { 3, 720, 480, 138, 45},
+                { 4, 1280, 720, 370, 30},
+                { 8, 1440, 240, 276, 22}, { 9, 1440, 240, 276, 22},
+                {12, 2880, 240, 552, 22}, {13, 2880, 240, 552, 22}, // Weird
+                {14, 1440, 480, 276, 45}, {15, 1440, 480, 276, 45}, // Failed
+                {16, 1920, 1080, 280, 45},
+                {17, 720, 576, 144, 49}, {18, 720, 576, 144, 49},
+                {19, 1280, 720, 700, 30}, // Failed
+                {23, 1440, 288, 288, 24}, {24, 1440, 288, 288, 24}, // Weird
+                {27, 2880, 288, 576, 24}, {28, 2880, 288, 576, 24},
+                {29, 1440, 576, 288, 49}, {30, 1440, 576, 288, 49},
+                {31, 1920, 1080, 720, 45},
+                {32, 1920, 1080, 830, 45},
+                {33, 1920, 1080, 720, 45},
+                {34, 1920, 1080, 280, 45},
+                {35, 2880, 480, 552, 45}, {36, 2880, 480, 552, 45}, // Failed
+                {37, 2880, 576, 576, 49}, {38, 2880, 576, 576, 49}, // Failed
+                {41, 1280, 720, 700, 30}, // Failed
+                {42, 720, 576, 144, 49}, {43, 720, 576, 144, 49},
+                {47, 1280, 720, 370, 30}, // Weird
+                {48, 720, 480, 138, 45}, {49, 720, 480, 138, 45},
+                {52, 720, 576, 144, 49}, {53, 720, 576, 144, 49},
+                {56, 720, 480, 138, 45}, {57, 720, 480, 138, 45}, {0}};
             int format = HAL_PIXEL_FORMAT_RGBX_8888;
+            unsigned short vsyncwidth = 5;
+            static char screenprop[PROPERTY_VALUE_MAX];
+            int index = 0;
+
             unsigned short nlines = 480;
             unsigned short npixels = 720;
-            unsigned short vsyncwidth = 5;
+            unsigned short lmin = 45;
+            unsigned short pmin = 138;
+            property_get("rw.screencode", screenprop, "2");
+            int screen_code = atoi(screenprop);
+            while (screen_types[index].code && screen_types[index].code != screen_code)
+                index++;
+            if (screen_types[index].code) {
+                nlines = screen_types[index].vactive;
+                npixels = screen_types[index].hactive;
+                lmin = screen_types[index].vblank;
+                pmin = screen_types[index].hblank;
+            }
+            printf("[%s:%d] code %d: %d x %d blank %d x %d\n", __FUNCTION__, __LINE__, screen_types[index].code, nlines, npixels, lmin, pmin);
             unsigned short stridebytes = (npixels * 4 + 31) & ~31;
-            unsigned short lmin = 40;
-            unsigned short lmax = lmin + nlines;
-            unsigned short pmin = 192;
-// this is the value from CEA-861-D needed for 480P
-pmin=138;
-            unsigned short pmax = pmin + npixels;
-
             const_cast<uint32_t&>(dev->flags) = 0;
             const_cast<uint32_t&>(dev->width) = npixels;
             const_cast<uint32_t&>(dev->height) = nlines;
@@ -397,13 +439,13 @@ pmin=138;
             const_cast<int&>(dev->minSwapInterval) = 1;
             const_cast<int&>(dev->maxSwapInterval) = 1;
 
-            gralloc_dev->hdmiDisplay->hdmiLinesPixels((pmin + npixels) << 16 | (lmin + vsyncwidth + nlines));
+            gralloc_dev->hdmiDisplay->hdmiLinesPixels((pmin + npixels) << 16 | (lmin + nlines));
             gralloc_dev->hdmiDisplay->hdmiStrideBytes(stridebytes);
-            gralloc_dev->hdmiDisplay->hdmiLineCountMinMax(lmax << 16 | lmin);
-            gralloc_dev->hdmiDisplay->hdmiPixelCountMinMax(pmax << 16 | pmin);
-	    ALOGD("setting clock frequency %ld\n", 60l * (long)(pmin + npixels) * (long)(lmin + vsyncwidth + nlines));
+            gralloc_dev->hdmiDisplay->hdmiLineCountMinMax((lmin + nlines - vsyncwidth) << 16 | (lmin - vsyncwidth));
+            gralloc_dev->hdmiDisplay->hdmiPixelCountMinMax((pmin + npixels) << 16 | pmin);
+	    ALOGD("setting clock frequency %ld\n", 60l * (long)(pmin + npixels) * (long)(lmin + nlines));
 	    int status = PortalInterface::setClockFrequency(1,
-							    60l * (long)(pmin + npixels) * (long)(lmin + vsyncwidth + nlines),
+							    60l * (long)(pmin + npixels) * (long)(lmin + nlines),
 							    0);
 	    ALOGD("setClockFrequency returned %d", status);
             *device = &dev->common;
