@@ -542,7 +542,7 @@ def p_methodDef(p):
     returnType = p[2]
     name = p[3]
     params = []
-    print 'method', name
+    #print 'method', name
     p[0] = AST.Method(name, returnType, params)
 
 def p_methodBody(p):
@@ -564,10 +564,17 @@ def p_structMembers(p):
     '''structMembers :
                      | structMember
                      | structMembers structMember'''
+    if len(p) == 1:
+        p[0] = []
+    elif len(p) == 2:
+        p[0] = [p[1]]
+    elif len(p) == 3:
+        p[0] = p[1] + [p[2]]
 
 def p_structMember(p):
     '''structMember : type VAR SEMICOLON
                     | subUnion VAR SEMICOLON'''
+    p[0] = AST.StructMember(p[1], p[2])
 
 def p_subUnion(p):
     '''subUnion : TOKUNION TOKTAGGED LBRACE unionMembers RBRACE'''
@@ -582,7 +589,7 @@ def p_taggedUnionDef(p):
 
 def p_structDef(p):
     '''structDef : TOKSTRUCT LBRACE structMembers RBRACE VAR deriving'''
-    p[0] = AST.Struct(p[5], ['fixmestruct'])
+    p[0] = AST.Struct(p[5], p[3])
 
 def p_enumRange(p):
     '''enumRange : 
@@ -689,7 +696,7 @@ def p_packageStmt(p):
 def p_packageStmts(p):
     '''packageStmts :
                     | packageStmts packageStmt'''
-                  
+
 def p_beginPackage(p):
     '''beginPackage :
                     | TOKPACKAGE VAR SEMICOLON'''

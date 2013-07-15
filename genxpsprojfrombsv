@@ -111,9 +111,10 @@ if __name__=='__main__':
 
     ## code generation pass
     for v in syntax.globaldecls:
-        #v.emitCDeclaration(h)
+        if v.type == 'Struct':
+            v.emitCDeclaration(h)
         #v.emitCImplementation(cpp)
-        pass
+
     if (syntax.globalvars.has_key(namespace.interface)):
         subinterface = syntax.globalvars[namespace.interface]
 

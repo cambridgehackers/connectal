@@ -131,6 +131,8 @@ class MethodMixin:
             return self.return_type.cName()
         else:
             return int
+    def formalParameters(self, params):
+        return [ '%s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
@@ -138,7 +140,7 @@ class MethodMixin:
             f.write('virtual ')
         f.write('void %s ( ' % cName(self.name))
         #print parentClassName, self.name
-        f.write(', '.join([cName(p.type) for p in self.params]))
+        f.write(', '.join(self.formalParameters(self.params)))
         f.write(' )')
         if not self.isIndication:
             f.write(';\n')
@@ -146,7 +148,7 @@ class MethodMixin:
             f.write('{ }\n')
     def emitCImplementation(self, f, className, namespace):
         params = self.params
-        paramDeclarations = [ '%s %s' % (p.type.cName(), p.name) for p in params]
+        paramDeclarations = self.formalParameters(params)
         paramStructDeclarations = [ '        %s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in params]
         if not params:
             paramStructDeclarations = ['        int padding;\n']
@@ -181,6 +183,8 @@ class StructMemberMixin:
         f.write(';\n')
 
 class StructMixin:
+    def cName(self):
+        return self.name
     def collectTypes(self):
         result = [self]
         result.append(self.elements)
@@ -189,13 +193,13 @@ class StructMixin:
         indent(f, indentation)
         if (indentation == 0):
             f.write('typedef ')
-        f.write('struct %s {\n' % self.name.cName())
+        f.write('struct %s {\n' % self.cName())
         for e in self.elements:
             e.emitCDeclaration(f, indentation+4)
         indent(f, indentation)
         f.write('}')
         if (indentation == 0):
-            f.write(' %s;' % self.name.cName())
+            f.write(' %s;' % self.cName())
         f.write('\n')
     def emitCImplementation(self, f, className='', namespace=''):
         pass
@@ -327,8 +331,16 @@ class InterfaceMixin:
 class ParamMixin:
     def cName(self):
         return self.name
+    def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
+        indent(f, indentation)
+        f.write('s %s' % (self.type, self.name))
 
 class TypeMixin:
+    def refParam(self):
+        if (self.isBitField() and self.bitWidth() <= 64):
+            return ''
+        else:
+            return '&'
     def cName(self):
         cid = self.name
         cid = cid.replace(' ', '')
