@@ -6,3 +6,5 @@ parselog.txt
 parser.out
 parsetab.py
 *.bo
+*.so
+*.ba
