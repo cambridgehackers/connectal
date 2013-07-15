@@ -588,6 +588,21 @@ set_property slew "SLOW" [get_ports "%(name)s"]
 set_property PIO_DIRECTION "%(direction)s" [get_ports "%(name)s"]
 '''
 
+xadc_pinout= {
+    'zc702': [
+        ("XADC_gpio[0]", 'H17', 'LVCMOS25', 'OUTPUT'),
+        ("XADC_gpio[1]", 'H22', 'LVCMOS25', 'OUTPUT'),
+        ("XADC_gpio[2]", 'G22', 'LVCMOS25', 'OUTPUT'),
+        ("XADC_gpio[3]", 'H18', 'LVCMOS25', 'OUTPUT'),
+        ],
+    'zedboard': [
+        ("XADC_gpio[0]", 'H15', 'LVCMOS25', 'OUTPUT'),
+        ("XADC_gpio[1]", 'R15', 'LVCMOS25', 'OUTPUT'),
+        ("XADC_gpio[2]", 'K15', 'LVCMOS25', 'OUTPUT'),
+        ("XADC_gpio[3]", 'J15', 'LVCMOS25', 'OUTPUT'),
+        ]
+    }
+
 led_pinout = {
     'zc702': [],
     'zedboard': [
@@ -692,6 +707,7 @@ module %(dut)s_top_1
     FIXED_IO_ps_porb,
     FIXED_IO_ps_srstb,
 %(top_hdmi_ports)s
+    XADC_gpio,
     GPIO_leds);
   inout [14:0]DDR_Addr;
   inout [2:0]DDR_BankAddr;
@@ -714,6 +730,7 @@ module %(dut)s_top_1
   inout FIXED_IO_ps_clk;
   inout FIXED_IO_ps_porb;
   inout FIXED_IO_ps_srstb;
+  output [3:0] XADC_gpio;
   output [7:0] GPIO_leds;
 %(top_hdmi_port_decls)s
 
@@ -903,25 +920,26 @@ processing_system7 processing_system7_1
    
 %(hdmi_iobufs)s
 assign GPIO_leds = 8'haa;
+assign XADC_gpio = 4'ha;
 endmodule
 '''
 
 top_axi_master_wires_template='''
   wire [31:0]%(dut)s_1_%(busname)s_ARADDR;
   wire [1:0]%(dut)s_1_%(busname)s_ARBURST;
-  wire [2:0]%(dut)s_1_%(busname)s_ARCACHE;
+  wire [3:0]%(dut)s_1_%(busname)s_ARCACHE;
   wire [5:0]%(dut)s_1_%(busname)s_ARID;
   wire [3:0]%(dut)s_1_%(busname)s_ARLEN;
-  wire [1:0]%(dut)s_1_%(busname)s_ARPROT;
+  wire [2:0]%(dut)s_1_%(busname)s_ARPROT;
   wire %(dut)s_1_%(busname)s_ARREADY;
   wire [2:0]%(dut)s_1_%(busname)s_ARSIZE;
   wire %(dut)s_1_%(busname)s_ARVALID;
   wire [31:0]%(dut)s_1_%(busname)s_AWADDR;
   wire [1:0]%(dut)s_1_%(busname)s_AWBURST;
-  wire [2:0]%(dut)s_1_%(busname)s_AWCACHE;
+  wire [3:0]%(dut)s_1_%(busname)s_AWCACHE;
   wire [5:0]%(dut)s_1_%(busname)s_AWID;
   wire [3:0]%(dut)s_1_%(busname)s_AWLEN;
-  wire [1:0]%(dut)s_1_%(busname)s_AWPROT;
+  wire [2:0]%(dut)s_1_%(busname)s_AWPROT;
   wire %(dut)s_1_%(busname)s_AWREADY;
   wire [2:0]%(dut)s_1_%(busname)s_AWSIZE;
   wire %(dut)s_1_%(busname)s_AWVALID;
@@ -929,17 +947,17 @@ top_axi_master_wires_template='''
   wire %(dut)s_1_%(busname)s_BREADY;
   wire [1:0]%(dut)s_1_%(busname)s_BRESP;
   wire %(dut)s_1_%(busname)s_BVALID;
-  wire [63:0]%(dut)s_1_%(busname)s_RDATA;
+  wire [%(buswidth)s-1:0]%(dut)s_1_%(busname)s_RDATA;
   wire [5:0]%(dut)s_1_%(busname)s_RID;
   wire %(dut)s_1_%(busname)s_RLAST;
   wire %(dut)s_1_%(busname)s_RREADY;
   wire [1:0]%(dut)s_1_%(busname)s_RRESP;
   wire %(dut)s_1_%(busname)s_RVALID;
-  wire [63:0]%(dut)s_1_%(busname)s_WDATA;
+  wire [%(buswidth)s-1:0]%(dut)s_1_%(busname)s_WDATA;
   wire [5:0]%(dut)s_1_%(busname)s_WID;
   wire %(dut)s_1_%(busname)s_WLAST;
   wire %(dut)s_1_%(busname)s_WREADY;
-  wire [7:0]%(dut)s_1_%(busname)s_WSTRB;
+  wire [%(buswidthbytes)s-1:0]%(dut)s_1_%(busname)s_WSTRB;
   wire %(dut)s_1_%(busname)s_WVALID;
 '''
 
@@ -1011,7 +1029,6 @@ top_ps7_axi_master_port_map_template='''
         .S_AXI_%(ps7bustype)s%(busnumber)s_BRESP(%(dut)s_1_%(busname)s_BRESP),
         .S_AXI_%(ps7bustype)s%(busnumber)s_BVALID(%(dut)s_1_%(busname)s_BVALID),
         .S_AXI_%(ps7bustype)s%(busnumber)s_RDATA(%(dut)s_1_%(busname)s_RDATA),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_RDISSUECAP1_EN(GND_1),
         .S_AXI_%(ps7bustype)s%(busnumber)s_RID(%(dut)s_1_%(busname)s_RID),
         .S_AXI_%(ps7bustype)s%(busnumber)s_RLAST(%(dut)s_1_%(busname)s_RLAST),
         .S_AXI_%(ps7bustype)s%(busnumber)s_RREADY(%(dut)s_1_%(busname)s_RREADY),
@@ -1021,9 +1038,10 @@ top_ps7_axi_master_port_map_template='''
         .S_AXI_%(ps7bustype)s%(busnumber)s_WID(%(dut)s_1_%(busname)s_WID),
         .S_AXI_%(ps7bustype)s%(busnumber)s_WLAST(%(dut)s_1_%(busname)s_WLAST),
         .S_AXI_%(ps7bustype)s%(busnumber)s_WREADY(%(dut)s_1_%(busname)s_WREADY),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_WRISSUECAP1_EN(GND_1),
         .S_AXI_%(ps7bustype)s%(busnumber)s_WSTRB(%(dut)s_1_%(busname)s_WSTRB),
         .S_AXI_%(ps7bustype)s%(busnumber)s_WVALID(%(dut)s_1_%(busname)s_WVALID),
+        /* .S_AXI_%(ps7bustype)s%(busnumber)s_RDISSUECAP1_EN(GND_1), */
+        /* .S_AXI_%(ps7bustype)s%(busnumber)s_WRISSUECAP1_EN(GND_1), */
 '''
 
 verilog_template='''
@@ -1032,10 +1050,7 @@ verilog_template='''
 
 module %(dut)s
 (
-    xadc_gpio_0,
-    xadc_gpio_1,
-    xadc_gpio_2,
-    xadc_gpio_3,
+    XADC_gpio,
 
 %(axi_master_ports)s
 %(axi_slave_ports)s
@@ -1048,10 +1063,7 @@ module %(dut)s
 %(axi_slave_parameters)s
 parameter C_FAMILY = "virtex6";
 
-output xadc_gpio_0;
-output xadc_gpio_1;
-output xadc_gpio_2;
-output xadc_gpio_3;
+output [3:0] XADC_gpio;
 
 %(axi_master_port_decls)s
 %(axi_slave_port_decls)s
@@ -1093,7 +1105,7 @@ obuf_verilog_template='''
     .IOSTANDARD("LVCMOS25"),
     .SLEW("SLOW")) OBUF_xadc_gpio_0
     (
-    .O(xadc_gpio_0),
+    .O(xadc_gpio[0]),
     // Buffer output (connect directly to top-level port)
     .I(CTRL_ACLK)
     // Buffer input
@@ -1103,7 +1115,7 @@ obuf_verilog_template='''
     .IOSTANDARD("LVCMOS25"),
     .SLEW("SLOW")) OBUF_xadc_gpio_1
     (
-    .O(xadc_gpio_1),
+    .O(xadc_gpio[1]),
     // Buffer output (connect directly to top-level port)
     .I(CTRL_ARREADY_unbuf)
     // Buffer input
@@ -1112,7 +1124,7 @@ obuf_verilog_template='''
     .DRIVE(12),
     .IOSTANDARD("LVCMOS25"),
     .SLEW("SLOW")) OBUF_xadc_gpio_2 (
-    .O(xadc_gpio_2),
+    .O(xadc_gpio[2]),
     // Buffer output (connect directly to top-level port)
     .I(CTRL_RVALID_unbuf)
     // Buffer input
@@ -1122,7 +1134,7 @@ obuf_verilog_template='''
     .IOSTANDARD("LVCMOS25"),
     .SLEW("SLOW")) OBUF_xadc_gpio_3
     (
-    .O(xadc_gpio_3),
+    .O(xadc_gpio[3]),
     // Buffer output (connect directly to top-level port)
     .I(CTRL_AWVALID)
     // Buffer input
@@ -1863,9 +1875,11 @@ hdmi_iobuf_verilog_template='''
 class InterfaceMixin:
     def axiMasterBusSubst(self, busnumber, businfo):
         (busname,t,params) = businfo
-        print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3'), params[0].numeric()
+        buswidth = params[0].numeric()
+        buswidthbytes = buswidth / 8
+        print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3'), buswidth
         dutName = util.decapitalize(self.name)
-        if params[0].numeric() == 32:
+        if buswidth == 32:
             ps7bustype = 'GP'
         else:
             ps7bustype = 'HP'
@@ -1873,7 +1887,9 @@ class InterfaceMixin:
             'dut': dutName,
             'BUSNAME': busname.upper(),
             'busname': busname,
-            'busnumber': 0,
+            'busnumber': busnumber,
+            'buswidth': buswidth,
+            'buswidthbytes': buswidthbytes,
             'ps7bustype': ps7bustype,
             'datawidth': params[0].numeric(),
             'burstlenwidth': 8 if (t == 'AxiMaster') else 4,
@@ -2121,8 +2137,9 @@ class InterfaceMixin:
             for (name, pin, iostandard, direction) in hdmi_pins:
                 xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
             #xdc.write(xadc_xdc_template[boardname])
-        for (name, pin, iostandard, direction) in led_pinout[boardname]:
-            xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
+        for pins in [led_pinout[boardname], xadc_pinout[boardname]]:
+            for (name, pin, iostandard, direction) in pins:
+                xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
         #xdc.write(default_clk_xdc_template)
         xdc.close()
         return
