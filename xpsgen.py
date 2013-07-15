@@ -1836,24 +1836,24 @@ hdmi_iobuf_verilog_template='''
     IOBUF # (
     .DRIVE(12),
     .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) i2c1_scl
+    .SLEW("SLOW")) IOBUF_i2c1_scl
     (
     .IO(i2c1_scl),
-    .O(i2c1_scl_o),
     // Buffer output (connect directly to top-level port)
-    .I(i2c1_scl_i),
+    .O(i2c1_scl_i),
+    .I(i2c1_scl_o),
     .T(i2c1_scl_t)
     // Buffer input
     );
     IOBUF # (
     .DRIVE(12),
     .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) i2c1_sda
+    .SLEW("SLOW")) IOBUF_i2c1_sda
     (
     .IO(i2c1_sda),
-    .O(i2c1_sda_o),
     // Buffer output (connect directly to top-level port)
-    .I(i2c1_sda_i),
+    .O(i2c1_sda_i),
+    .I(i2c1_sda_o),
     .T(i2c1_sda_t)
     // Buffer input
     );
