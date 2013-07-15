@@ -50,7 +50,7 @@ interface HdmiDisplay;
     method Action beginTranslationTable(Bit#(8) index);
     method Action addTranslationEntry(Bit#(20) address, Bit#(12) length); // shift address and length left 12 bits
 
-    interface Axi3Client#(32,4,1) m_axi;
+    interface Axi3Client#(32,4,6) m_axi;
     interface HDMI hdmi;
 endinterface
 

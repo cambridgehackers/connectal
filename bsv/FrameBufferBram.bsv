@@ -46,7 +46,7 @@ interface FrameBufferBram;
     method Action startFrame();
     method Action startLine();
     method Action setSgEntry(Bit#(8) index, Bit#(24) startingOffset, Bit#(20) address, Bit#(20) length);
-    interface Axi3Client#(32,4,1) axi;
+    interface Axi3Client#(32,4,6) axi;
     interface BRAM#(Bit#(12), Bit#(32)) buffer;
 endinterface
 
@@ -86,7 +86,7 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
     //Vector#(16, Reg#(ScatterGather)) sglist <- replicateM(mkReg(unpack(0)));
     SyncBRAM#(Bit#(8), ScatterGather) sglist <- mkSyncBRAM( 256, clk, rst, clk, rst);
 
-    //Axi3Master#(32,4,1) nullAxiMaster <- mkNullAxi3Master();
+    //Axi3Master#(32,4,6) nullAxiMaster <- mkNullAxi3Master();
 
     SyncBRAM#(Bit#(12), Bit#(32)) syncBRAM <- mkSyncBRAM( 4096, displayClk, displayRst, clk, rst );
     //SyncBRAM#(Bit#(12), Bit#(32)) syncBRAM <- mkSimSyncBRAM( 4096, displayClk, displayRst, clk, rst );
@@ -199,7 +199,7 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
 
    interface Axi3Client axi;
        interface Axi3ReadClient read;
-           method ActionValue#(Axi3ReadRequest#(1)) address() if (runningReg
+           method ActionValue#(Axi3ReadRequest#(6)) address() if (runningReg
 								  && readAddrReg != 24'hFFFFFF
 								  && readAddrReg < readLimitReg
 								  && readAddrReg <= segmentLimitReg
@@ -209,7 +209,7 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
                readAddrReg <= readAddrReg + burstCount*bytesPerWord;
                return Axi3ReadRequest { address: addr, burstLen: truncate(burstLen), id: 0} ;
            endmethod
-           method Action data(Axi3ReadResponse#(32,1) response);
+           method Action data(Axi3ReadResponse#(32,6) response);
                pixelCountReg2 <= pixelCountReg2 + pixelsPerWord;
                syncBRAM.portB.write(pixelCountReg2 / pixelsPerWord, response.data);
            endmethod
