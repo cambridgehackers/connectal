@@ -57,8 +57,7 @@ or
     cd echoproj
     make verilog
 
-    ## edit "echo.tcl" to create a .bin file here instead of a .bit file
-    ## the .bit and .bin files will be in 
+    ## after 'make bits', the .bit and .bin files will be in:
     ##     echo.runs/impl_1/
     ##         echo_top_1.bit
     ##         echo_top_1.bin
