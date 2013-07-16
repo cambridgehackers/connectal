@@ -47,13 +47,25 @@ Eject the card and plug it into the zc702 and boot.
 Echo Example
 ------------
 
+    ## this has only been tested with the Vivado 2013.2 release
+    . Xilinx/Vivado/2013.2/settings64.sh
+
     ./genxpsprojfrombsv -B zedboard -p echoproj -b Echo examples/echo/Echo.bsv
 or
     ./genxpsprojfrombsv -B zc702 -p echoproj -b Echo examples/echo/Echo.bsv
+
     cd echoproj
     make verilog
+
+    ## edit "echo.tcl" to create a .bin file here instead of a .bit file
+    ## the .bit and .bin files will be in 
+    ##     echo.runs/impl_1/
+    ##         echo_top_1.bit
+    ##         echo_top_1.bin
     make bits
-    echo.bit.bin.gz
+
+    ## this step requires promgen from Xilinx ISE 14.3
+    make echo.bit.bin.gz
 
     ## building the test executable
     cp examples/echo/testecho.cpp echoproj/jni
@@ -118,6 +130,7 @@ On the zc702, configure the adv7511:
 Restart surfaceflinger:
    stop surfaceflinger; start surfaceflinger
 
+Sometimes multiple restarts are required.
 
 Installation
 ------------
