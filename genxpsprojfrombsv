@@ -83,7 +83,8 @@ verilog: $(vfile)
 bits: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
 
 %(dut)s.bit.bin.gz: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
-	promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 %(dut)s.runs/impl_1/%(dut)s_top_1.bit -data_width 32
+	#promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 %(dut)s.runs/impl_1/%(dut)s_top_1.bit -data_width 32
+	xxd %(dut)s.runs/impl_1/%(dut)s_top_1.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >%(dut)s.bit.bin
 	gzip -f %(dut)s.bit.bin
 
 boot.bin: %(dut)s.bit.bin.gz
