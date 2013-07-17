@@ -76,10 +76,6 @@ mhs_template='''
  PORT processing_system7_0_DDR_DQS_n = processing_system7_0_DDR_DQS_n, DIR = IO, VEC = [3:0]
  PORT processing_system7_0_DDR_VRN = processing_system7_0_DDR_VRN, DIR = IO
  PORT processing_system7_0_DDR_VRP = processing_system7_0_DDR_VRP, DIR = IO
- PORT xadc_gpio_0_pin = %(dut)s_0_xadc_gpio_0, DIR = O
- PORT xadc_gpio_1_pin = %(dut)s_0_xadc_gpio_1, DIR = O
- PORT xadc_gpio_2_pin = %(dut)s_0_xadc_gpio_2, DIR = O
- PORT xadc_gpio_3_pin = %(dut)s_0_xadc_gpio_3, DIR = O
 %(system_hdmi_ports)s
 
 BEGIN qqprocessing_system7
@@ -186,10 +182,6 @@ BEGIN %(dut)s
 %(dut_axi_master_config)s
 %(dut_axi_slave_config)s
 %(dut_hdmi_config)s
- PORT xadc_gpio_0 = %(dut)s_0_xadc_gpio_0
- PORT xadc_gpio_1 = %(dut)s_0_xadc_gpio_1
- PORT xadc_gpio_2 = %(dut)s_0_xadc_gpio_2
- PORT xadc_gpio_3 = %(dut)s_0_xadc_gpio_3
 END
 
 BEGIN chipscope_axi_monitor
@@ -313,10 +305,6 @@ OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
 
 ## Ports
 PORT interrupt = "", DIR = O, SIGIS = INTERRUPT
-PORT xadc_gpio_0 = "", DIR = O
-PORT xadc_gpio_1 = "", DIR = O
-PORT xadc_gpio_2 = "", DIR = O
-PORT xadc_gpio_3 = "", DIR = O
 %(port_declarations)s
 END
 '''
@@ -434,11 +422,6 @@ PORT hdmi_vsync = "", DIR = O, IO_IF=%(busname)s
 PORT hdmi_hsync = "", DIR = O, IO_IF=%(busname)s
 PORT hdmi_de = "", DIR = O, IO_IF=%(busname)s
 PORT hdmi_data = "", DIR = O, VEC = [15:0], IO_IF=%(busname)s
-
-PORT xadc_gpio_0 = "", DIR = O
-PORT xadc_gpio_1 = "", DIR = O
-PORT xadc_gpio_2 = "", DIR = O
-PORT xadc_gpio_3 = "", DIR = O
 '''
 
 hdmi_ucf_template= {
@@ -604,7 +587,16 @@ xadc_pinout= {
     }
 
 led_pinout = {
-    'zc702': [],
+    'zc702': [
+        ('GPIO_leds[0]', 'E15', 'LVCMOS25', 'OUTPUT'),
+        ('GPIO_leds[1]', 'D15', 'LVCMOS25', 'OUTPUT'),
+        ('GPIO_leds[2]', 'W17', 'LVCMOS25', 'OUTPUT'),
+        ('GPIO_leds[3]', 'W5', 'LVCMOS25', 'OUTPUT'),
+        ('GPIO_leds[4]', 'V7', 'LVCMOS25', 'OUTPUT'),
+        ('GPIO_leds[5]', 'W10', 'LVCMOS25', 'OUTPUT'),
+        ('GPIO_leds[6]', 'P18', 'LVCMOS25', 'OUTPUT'),
+        ('GPIO_leds[7]', 'P17', 'LVCMOS25', 'OUTPUT')
+    ],
     'zedboard': [
         ('GPIO_leds[0]', 'T22', 'LVCMOS33', 'OUTPUT'),
         ('GPIO_leds[1]', 'T21', 'LVCMOS33', 'OUTPUT'),
@@ -619,7 +611,8 @@ led_pinout = {
 
 hdmi_pinout = {
     'zc702': [
-        ( "hdmi_clk", 'W18', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_clk", 'L16', 'LVCMOS25', 'OUTPUT'),
+        ( "hdmi_hsync", 'R18', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_vsync", 'H15', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_de", 'T18', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_data[0]", 'AB21', 'LVCMOS25', 'OUTPUT'),
@@ -638,6 +631,8 @@ hdmi_pinout = {
         ( "hdmi_data[13]", 'R19', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_data[14]", 'T17', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_data[15]", 'T16', 'LVCMOS25', 'OUTPUT'),
+        ( "i2c1_scl", 'AA18', 'LVCMOS25', 'BIDIR'),
+        ( "i2c1_sda", 'Y16', 'LVCMOS25', 'BIDIR'),
         ],
     'zedboard':[
         ( "hdmi_clk", 'W18', 'LVCMOS33', 'OUTPUT'),
@@ -707,7 +702,6 @@ module %(dut)s_top_1
     FIXED_IO_ps_porb,
     FIXED_IO_ps_srstb,
 %(top_hdmi_ports)s
-    XADC_gpio,
     GPIO_leds);
   inout [14:0]DDR_Addr;
   inout [2:0]DDR_BankAddr;
@@ -730,7 +724,6 @@ module %(dut)s_top_1
   inout FIXED_IO_ps_clk;
   inout FIXED_IO_ps_porb;
   inout FIXED_IO_ps_srstb;
-  output [3:0] XADC_gpio;
   output [7:0] GPIO_leds;
 %(top_hdmi_port_decls)s
 
@@ -920,7 +913,6 @@ processing_system7 processing_system7_1
    
 %(hdmi_iobufs)s
 assign GPIO_leds = 8'haa;
-assign XADC_gpio = 4'ha;
 endmodule
 '''
 
@@ -1050,8 +1042,6 @@ verilog_template='''
 
 module %(dut)s
 (
-    XADC_gpio,
-
 %(axi_master_ports)s
 %(axi_slave_ports)s
 %(hdmi_ports)s
@@ -1062,8 +1052,6 @@ module %(dut)s
 %(axi_master_parameters)s
 %(axi_slave_parameters)s
 parameter C_FAMILY = "virtex6";
-
-output [3:0] XADC_gpio;
 
 %(axi_master_port_decls)s
 %(axi_slave_port_decls)s
@@ -1096,49 +1084,6 @@ mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
 %(axi_slave_scheduler)s
 
 endmodule
-'''
-
-## causes multiple source errors on other signals
-obuf_verilog_template='''
-    OBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) OBUF_xadc_gpio_0
-    (
-    .O(xadc_gpio[0]),
-    // Buffer output (connect directly to top-level port)
-    .I(CTRL_ACLK)
-    // Buffer input
-    );
-    OBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) OBUF_xadc_gpio_1
-    (
-    .O(xadc_gpio[1]),
-    // Buffer output (connect directly to top-level port)
-    .I(CTRL_ARREADY_unbuf)
-    // Buffer input
-    );
-    OBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) OBUF_xadc_gpio_2 (
-    .O(xadc_gpio[2]),
-    // Buffer output (connect directly to top-level port)
-    .I(CTRL_RVALID_unbuf)
-    // Buffer input
-    );
-    OBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) OBUF_xadc_gpio_3
-    (
-    .O(xadc_gpio[3]),
-    // Buffer output (connect directly to top-level port)
-    .I(CTRL_AWVALID)
-    // Buffer input
-    );
 '''
 
 axi_master_parameter_verilog_template='''
@@ -1805,46 +1750,6 @@ hdmi_iobuf_verilog_template='''
     // Buffer input
     );
 
-    OBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) OBUF_xadc_gpio_0
-    (
-    .O(xadc_gpio_0),
-    // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_vsync_wire)
-    // Buffer input
-    );
-    OBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) OBUF_xadc_gpio_1
-    (
-    .O(xadc_gpio_1),
-    // Buffer output (connect directly to top-level port)
-    .I(WILL_FIRE_m_axi_read_readAddr)
-    // Buffer input
-    );
-    OBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) OBUF_xadc_gpio_2 (
-    .O(xadc_gpio_2),
-    // Buffer output (connect directly to top-level port)
-    .I(WILL_FIRE_m_axi_read_readData)
-    // Buffer input
-    );
-    OBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) OBUF_xadc_gpio_3
-    (
-    .O(xadc_gpio_3),
-    // Buffer output (connect directly to top-level port)
-    .I(%(busname)s_de_wire)
-    // Buffer input
-    );
-
     IOBUF # (
     .DRIVE(12),
     .IOSTANDARD("LVCMOS25"),
@@ -2137,9 +2042,8 @@ class InterfaceMixin:
             for (name, pin, iostandard, direction) in hdmi_pins:
                 xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
             #xdc.write(xadc_xdc_template[boardname])
-        for pins in [led_pinout[boardname], xadc_pinout[boardname]]:
-            for (name, pin, iostandard, direction) in pins:
-                xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
+        for (name, pin, iostandard, direction) in led_pinout[boardname]:
+            xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
         #xdc.write(default_clk_xdc_template)
         xdc.close()
         return
