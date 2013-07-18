@@ -274,7 +274,8 @@ module %(dut)s_top_1
     inout FIXED_IO_ps_porb,
     inout FIXED_IO_ps_srstb,
 %(top_hdmi_ports)s
-%(top_led_ports)s);
+    output [7:0] GPIO_leds
+);
 
   wire GND_1;
   wire %(dut)s_1_interrupt;
@@ -462,6 +463,7 @@ processing_system7 processing_system7_1
         .PS_SRSTB(FIXED_IO_ps_srstb));
    
 %(hdmi_iobufs)s
+%(default_leds_assignment)s
 endmodule
 '''
 
@@ -750,8 +752,8 @@ hdmi_port_verilog_template='''
     output [15:0] hdmi_data,
 '''
 
+## not really needed
 top_led_port_verilog_template='''
-    output [7:0] GPIO_leds
 '''
 
 led_port_verilog_template='''
@@ -1070,6 +1072,10 @@ class InterfaceMixin:
         hdmiBus = self.collectInterfaceNames('HDMI')
         ledBus = self.collectInterfaceNames('LED')
         masterBusSubsts = [self.axiMasterBusSubst(busnumber,axiMasters[busnumber]) for busnumber in range(len(axiMasters))]
+        if len(ledBus):
+            default_leds_assignment = ''
+        else:
+            default_leds_assignment = '''assign GPIO_leds = 8'haa;'''
         substs = {
             'dut': dutName.lower(),
             'Dut': util.capitalize(self.name),
@@ -1094,6 +1100,7 @@ class InterfaceMixin:
             'hdmi_iobufs':
                 ''.join([hdmi_iobuf_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in hdmiBus]),
+            'default_leds_assignment': default_leds_assignment
             }
         topverilog.write(top_verilog_template % substs)
         topverilog.close()
@@ -1198,9 +1205,8 @@ class InterfaceMixin:
             for (name, pin, iostandard, direction) in hdmi_pins:
                 xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
             #xdc.write(xadc_xdc_template[boardname])
-        if len(ledBus):
-            for (name, pin, iostandard, direction) in led_pinout[boardname]:
-                xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
+        for (name, pin, iostandard, direction) in led_pinout[boardname]:
+            xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
         #xdc.write(default_clk_xdc_template)
         xdc.close()
         return
