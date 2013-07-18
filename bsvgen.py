@@ -20,9 +20,12 @@ import AxiMasterSlave::*;
 import AxiClientServer::*;
 import HDMI::*;
 import Zynq::*;
+import Imageon::*;
 %(extraImports)s
 
 '''
+
+exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita']
 
 dutInterfaceTemplate='''
 interface %(Dut)sWrapper;
@@ -30,8 +33,7 @@ interface %(Dut)sWrapper;
    interface Axi3Slave#(32,4) ctrl;
 %(axiSlaveDeclarations)s
 %(axiMasterDeclarations)s
-%(hdmiDeclarations)s
-%(ledDeclarations)s
+%(exposedInterfaceDeclarations)s
 endinterface
 '''
 
@@ -295,8 +297,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 
 %(axiSlaveImplementations)s
 %(axiMasterImplementations)s
-%(hdmiImplementations)s
-%(ledImplementations)s
+%(exposedInterfaceImplementations)s
 endmodule
 '''
 
@@ -465,6 +466,9 @@ class InterfaceMixin:
         ledInterfaces = self.collectInterfaceNames('LEDS')
         dutName = util.decapitalize(self.name)
         methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
+        buses = {}
+        for busType in exposedInterfaces:
+            buses[busType] = self.collectInterfaceNames(busType)
         substs = {
             'dut': dutName,
             'Dut': util.capitalize(self.name),
@@ -478,10 +482,10 @@ class InterfaceMixin:
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
                                                for (axiSlave,t,params) in axiSlaves]),
-            'hdmiDeclarations': '\n'.join(['    interface HDMI %s;' % hdmi
-                                           for (hdmi,t,params) in hdmiInterfaces]),
-            'ledDeclarations': '\n'.join(['    interface LEDS %s;' % led
-                                          for (led,t,params) in ledInterfaces]),
+            'exposedInterfaceDeclarations':
+                '\n'.join(['\n'.join(['    interface %s %s;' % (t, util.decapitalize(busname))
+                                      for (busname,t,params) in buses[busType]])
+                           for busType in exposedInterfaces]),
             'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
                                            % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster,dutName,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
@@ -491,10 +495,9 @@ class InterfaceMixin:
             'dut_hdmi_clock_arg': 'hdmi_clk,' if len(hdmiInterfaces) else '',
             'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
                                                   for (axiSlave,t,params) in axiSlaves]),
-            'hdmiImplementations': '\n'.join(['    interface HDMI %s = %s.%s;' % (hdmi, dutName, hdmi)
-                                              for (hdmi,t,params) in hdmiInterfaces]),
-            'ledImplementations': '\n'.join(['    interface LEDS %s = %s.%s;' % (led, dutName, led)
-                                              for (led,t,params) in ledInterfaces]),
+            'exposedInterfaceImplementations': '\n'.join(['\n'.join(['    interface %s %s = %s.%s;' % (t, busname, dutName, busname)
+                                                                     for (busname,t,params) in buses[busType]])
+                                                          for busType in exposedInterfaces]),
             'queuesNotEmpty': '\n'.join(['                    v[%d] = %s$%s.notEmpty ? 1 : 0;'
                                         % (i, methods[i].name, 'requestFifo' if not self.isIndication else 'responseFifo')
                                          for i in range(len(methods))])

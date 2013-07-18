@@ -247,6 +247,36 @@ hdmi_pinout = {
         ]
     }
 
+imageon_pinout = {
+    'zc702': [
+        ('imageon_reset_n', 'AA18', 'LVCMOS25', 'OUTPUT'),
+        ('imageon_trigger[2]', 'W22', 'LVCMOS25', 'OUTPUT'),
+        ('imageon_trigger[1]', 'T22', 'LVCMOS25', 'OUTPUT'),
+        ('imageon_trigger[0]', 'U22', 'LVCMOS25', 'OUTPUT'),
+        ('imageon_monitor[1]', 'AA13', 'LVCMOS25', 'INPUT'),
+        ('imageon_monitor[0]', 'Y13', 'LVCMOS25', 'INPUT'),
+        ('io_vita_spi_sclk', 'W15', 'LVCMOS25', 'OUTPUT'),
+        ('io_vita_spi_ssel_n', 'Y15', 'LVCMOS25', 'OUTPUT'),
+        ('io_vita_spi_mosi', 'Y14', 'LVCMOS25', 'OUTPUT'),
+        ('io_vita_spi_miso', 'AA14', 'LVCMOS25', 'INPUT'),
+        ('imageon_data_p[0]', 'U15', 'LVDS_25', 'INPUT'),
+        ('imageon_data_p[1]', 'T21', 'LVDS_25', 'INPUT'),
+        ('imageon_data_p[2]', 'AA17', 'LVDS_25', 'INPUT'),
+        ('imageon_data_p[3]', 'AB19', 'LVDS_25', 'INPUT'),
+        ('imageon_data_p[4]', 'V13', 'LVDS_25', 'INPUT'),
+        ('imageon_data_p[5]', 'U17', 'LVDS_25', 'INPUT'),
+        ('imageon_data_p[6]', 'AA16', 'LVDS_25', 'INPUT'),
+        ('imageon_data_p[7]', 'V14', 'LVDS_25', 'INPUT'),
+        ('imageon_data_n[0]', 'U16', 'LVDS_25', 'INPUT'),
+        ('imageon_data_n[1]', 'U21', 'LVDS_25', 'INPUT'),
+        ('imageon_data_n[2]', 'AB17', 'LVDS_25', 'INPUT'),
+        ('imageon_data_n[3]', 'AB20', 'LVDS_25', 'INPUT'),
+        ('imageon_data_n[4]', 'W13', 'LVDS_25', 'INPUT'),
+        ('imageon_data_n[5]', 'V17', 'LVDS_25', 'INPUT'),
+        ('imageon_data_n[6]', 'AB16', 'LVDS_25', 'INPUT'),
+        ('imageon_data_n[7]', 'V15', 'LVDS_25', 'INPUT'),
+        ]
+}
 top_verilog_template='''
 `timescale 1 ps / 1 ps
 // lib IP_Integrator_Lib
@@ -273,13 +303,14 @@ module %(dut)s_top_1
     inout FIXED_IO_ps_clk,
     inout FIXED_IO_ps_porb,
     inout FIXED_IO_ps_srstb,
-%(top_hdmi_ports)s
+%(top_bus_ports)s
     output [7:0] GPIO_leds
 );
 
   wire GND_1;
   wire %(dut)s_1_interrupt;
 %(top_axi_master_wires)s
+%(top_bus_wires)s
   wire [14:0]processing_system7_1_ddr_ADDR;
   wire [2:0]processing_system7_1_ddr_BA;
   wire processing_system7_1_ddr_CAS_N;
@@ -392,8 +423,7 @@ GND GND
         .CTRL_WSTRB(processing_system7_1_m_axi_gp0_WSTRB),
         .CTRL_WVALID(processing_system7_1_m_axi_gp0_WVALID),
 %(top_dut_axi_master_port_map)s
-%(top_dut_hdmi_port_map)s
-%(top_dut_led_port_map)s
+%(top_dut_bus_port_map)s
         .interrupt(%(dut)s_1_interrupt));
 
 
@@ -457,12 +487,12 @@ processing_system7 processing_system7_1
         .M_AXI_GP0_WSTRB(processing_system7_1_m_axi_gp0_WSTRB),
         .M_AXI_GP0_WVALID(processing_system7_1_m_axi_gp0_WVALID),
 %(top_ps7_axi_master_port_map)s
-%(top_ps7_hdmi_port_map)s
+%(top_ps7_bus_port_map)s
         .PS_CLK(FIXED_IO_ps_clk),
         .PS_PORB(FIXED_IO_ps_porb),
         .PS_SRSTB(FIXED_IO_ps_srstb));
    
-%(hdmi_iobufs)s
+%(top_bus_assignments)s
 %(default_leds_assignment)s
 endmodule
 '''
@@ -595,9 +625,7 @@ module %(dut)s
 (
 %(axi_master_ports)s
 %(axi_slave_ports)s
-%(hdmi_ports)s
-%(led_ports)s
-
+%(bus_ports)s
     output interrupt
   );
 
@@ -610,11 +638,10 @@ parameter C_FAMILY = "virtex6";
 
 %(axi_master_clocks)s
 %(axi_slave_clocks)s
-%(hdmi_clocks)s
 
 %(axi_master_signals)s
 %(axi_slave_signals)s
-%(hdmi_signals)s
+%(bus_wires)s
 
 mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
       %(dut_hdmi_clock_arg)s
@@ -622,14 +649,14 @@ mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
       .RST_N(CTRL_ARESETN),
       %(axi_master_port_map)s
       %(axi_slave_port_map)s
-      %(hdmi_port_map)s
-      %(led_port_map)s
+      %(dut_bus_port_map)s
 
       .interrupt(interrupt)
       );
 
 %(axi_master_scheduler)s
 %(axi_slave_scheduler)s
+%(bus_assignments)s
 
 endmodule
 '''
@@ -734,33 +761,6 @@ axi_slave_port_verilog_template='''
 //============ %(BUSNAME)s ============
 '''
 
-top_hdmi_port_verilog_template='''
-    output hdmi_clk,
-    output hdmi_vsync,
-    output hdmi_hsync,
-    output hdmi_de,
-    output [15:0] hdmi_data,
-    inout i2c1_scl,
-    inout i2c1_sda,
-'''
-
-hdmi_port_verilog_template='''
-    input hdmi_clk_in,
-    output hdmi_vsync,
-    output hdmi_hsync,
-    output hdmi_de,
-    output [15:0] hdmi_data,
-'''
-
-## not really needed
-top_led_port_verilog_template='''
-'''
-
-led_port_verilog_template='''
-    output [7:0] leds,
-'''
-
-
 axi_master_port_decl_verilog_template='''
 //============ %(BUSNAME)s ============
 wire [C_%(BUSNAME)s_DATA_WIDTH - 1 : 0] %(busname)s_wdata_wire;
@@ -774,36 +774,11 @@ wire %(BUSNAME)s_RVALID_unbuf;
 //============ %(BUSNAME)s ============
 '''
 
-top_dut_hdmi_port_map = '''
-       .hdmi_clk_in(processing_system7_1_fclk_clk1),
-       .hdmi_vsync(hdmi_vsync),
-       .hdmi_hsync(hdmi_hsync),
-       .hdmi_de(hdmi_de),
-       .hdmi_data(hdmi_data),
-'''
-
-top_ps7_hdmi_port_map = '''
-       .I2C1_SCL_I(i2c1_scl_i),
-       .I2C1_SCL_O(i2c1_scl_o),
-       .I2C1_SCL_T(i2c1_scl_t),
-       .I2C1_SDA_I(i2c1_sda_i),
-       .I2C1_SDA_O(i2c1_sda_o),
-       .I2C1_SDA_T(i2c1_sda_t),
-'''
-
-top_dut_led_port_map = '''
-       .leds(GPIO_leds),
-'''
-
 axi_clock_verilog_template='''
   // attribute MAX_FANOUT of %(BUSNAME)s_ACLK       : signal is "10000";
   // attribute MAX_FANOUT of %(BUSNAME)s_ARESETN       : signal is "10000";
   // attribute SIGIS of %(BUSNAME)s_ACLK       : signal is "Clk";
   // attribute SIGIS of %(BUSNAME)s_ARESETN       : signal is "Rst";
-'''
-
-hdmi_clock_verilog_template='''
-  // attribute SIGIS of hdmi_clk : signal is "Clk";
 '''
 
 axi_master_port_map_verilog_template='''
@@ -913,17 +888,6 @@ axi_slave_port_map_verilog_template='''
       .%(busname)s_write_bid(%(BUSNAME)s_BID),
 '''
 
-hdmi_port_map_verilog_template='''
-      .%(busname)s_hdmi_vsync(hdmi_vsync),
-      .%(busname)s_hdmi_hsync(hdmi_hsync),
-      .%(busname)s_hdmi_de(hdmi_de),
-      .%(busname)s_hdmi_data(hdmi_data),
-'''
-
-led_port_map_verilog_template='''
-      .%(busname)s_leds(leds),
-'''
-
 axi_master_signal_verilog_template='''
   wire RDY_%(busname)s_write_writeAddr;
   wire RDY_%(busname)s_write_writeData;
@@ -956,13 +920,6 @@ axi_slave_signal_verilog_template='''
   wire RDY_%(busname)s_write_writeResponse;
   wire RDY_%(busname)s_write_bid;
   wire %(busname)s_read_last;
-'''
-
-hdmi_signal_verilog_template='''
-  //attribute MAX_FANOUT of hdmi_clk_in : signal is "10000";
-  //attribute SIGIS of hdmi_clk_in      : signal is "CLK";
-  wire %(busname)s_vsync_unbuf, %(busname)s_hsync_unbuf, %(busname)s_de_unbuf;
-  wire [15 : 0] %(busname)s_data_unbuf;
 '''
 
 axi_master_scheduler_verilog_template='''
@@ -1007,7 +964,58 @@ assign EN_%(busname)s_write_writeData = RDY_%(busname)s_write_writeData & %(BUSN
 assign EN_%(busname)s_write_writeResponse = RDY_%(busname)s_write_writeResponse & %(BUSNAME)s_BREADY;
 '''
 
-hdmi_iobuf_verilog_template='''
+busHandlers={}
+
+class Hdmi:
+    def __init__(self):
+        busHandlers['HDMI'] = self
+    def top_bus_ports(self, busname,t,params):
+        return '''    output hdmi_clk,
+    output hdmi_vsync,
+    output hdmi_hsync,
+    output hdmi_de,
+    output [15:0] hdmi_data,
+    inout i2c1_scl,
+    inout i2c1_sda,
+'''
+    def top_bus_wires(self, busname,t,params):
+        return ''
+    def top_dut_bus_port_map(self, busname,t,params):
+        return '''
+       .hdmi_clk_in(processing_system7_1_fclk_clk1),
+       .hdmi_vsync(hdmi_vsync),
+       .hdmi_hsync(hdmi_hsync),
+       .hdmi_de(hdmi_de),
+       .hdmi_data(hdmi_data),
+'''
+    def top_ps7_bus_port_map(self,busname,t,params):
+        return '''
+       .I2C1_SCL_I(i2c1_scl_i),
+       .I2C1_SCL_O(i2c1_scl_o),
+       .I2C1_SCL_T(i2c1_scl_t),
+       .I2C1_SDA_I(i2c1_sda_i),
+       .I2C1_SDA_O(i2c1_sda_o),
+       .I2C1_SDA_T(i2c1_sda_t),
+'''
+    def bus_ports(self, busname,t,params):
+        return '''
+    input hdmi_clk_in,
+    output hdmi_vsync,
+    output hdmi_hsync,
+    output hdmi_de,
+    output [15:0] hdmi_data,
+'''
+    def bus_wires(self, busname,t,params):
+        return ''
+    def dut_bus_port_map(self, busname,t,params):
+        return '''
+      .%(busname)s_hdmi_vsync(hdmi_vsync),
+      .%(busname)s_hdmi_hsync(hdmi_hsync),
+      .%(busname)s_hdmi_de(hdmi_de),
+      .%(busname)s_hdmi_data(hdmi_data),
+''' % {'busname': busname}
+    def top_bus_assignments(self,busname,t,params):
+        return '''
     assign hdmi_clk = processing_system7_1_fclk_clk1;
 
     IOBUF # (
@@ -1034,8 +1042,103 @@ hdmi_iobuf_verilog_template='''
     .T(i2c1_sda_t)
     // Buffer input
     );
-
 '''
+    def bus_assignments(self,busname,t,params):
+        return ''
+Hdmi()
+
+class Leds:
+    def __init__(self):
+        busHandlers['LEDS'] = self
+    def top_bus_ports(self, busname,t,params):
+        return ''
+    def top_bus_wires(self, busname,t,params):
+        return ''
+    def top_dut_bus_port_map(self, busname,t,params):
+        return '''
+        .leds(GPIO_leds),
+'''
+    def top_ps7_bus_port_map(self,busname,t,params):
+        return ''
+    def bus_ports(self, busname,t,params):
+        return '''
+    output [7:0] leds,
+'''
+    def bus_wires(self, busname,t,params):
+        return ''
+    def dut_bus_port_map(self, busname,t,params):
+        return '''
+      .%(busname)s_leds(leds),
+''' % {'busname': busname}
+    def top_bus_assignments(self,busname,t,params):
+        return ''
+    def bus_assignments(self,busname,t,params):
+        return ''
+Leds()
+
+class ImageonVita:
+    def __init__(self):
+        busHandlers['ImageonVita'] = self
+    def top_bus_ports(self, busname,t,params):
+        return '''
+    output imageon_reset_n,
+    output [2:0] imageon_trigger,
+    input [1:0] imageon_monitor,
+    output io_vita_spi_sclk,
+    output io_vita_spi_ssel_n,
+    output io_vita_spi_mosi,
+    input io_vita_spi_miso,
+'''
+    def top_bus_wires(self, busname,t,params):
+        return ''
+    def top_dut_bus_port_map(self, busname,t,params):
+        return '''
+    .imageon_reset_n(imageon_reset_n),
+    .imageon_trigger(imageon_trigger),
+    .imageon_monitor(imageon_monitor),
+    .io_vita_spi_ssel_n(io_vita_spi_ssel_n),
+    .io_vita_spi_sclk(io_vita_spi_sclk),
+    .io_vita_spi_mosi(io_vita_spi_mosi),
+    .io_vita_spi_miso(io_vita_spi_miso),
+'''
+    def top_ps7_bus_port_map(self,busname,t,params):
+        return ''
+    def bus_ports(self, busname,t,params):
+        return '''
+    output imageon_reset_n,
+    output [2:0] imageon_trigger,
+    input [1:0] imageon_monitor,
+    output io_vita_spi_sclk,
+    output io_vita_spi_ssel_n,
+    output io_vita_spi_mosi,
+    input io_vita_spi_miso,
+'''
+    def bus_wires(self, busname,t,params):
+        return '''
+    wire EN_imageon_monitor;
+    wire RDY_imageon_monitor;
+'''
+    def dut_bus_port_map(self, busname,t,params):
+        return '''
+    .imageon_reset_n(imageon_reset_n),
+    .imageon_trigger(imageon_trigger),
+    .imageon_monitor_m(imageon_monitor),
+    .EN_imageon_monitor(EN_imageon_monitor),
+    .RDY_imageon_monitor(RDY_imageon_monitor),
+    .imageon_spiPins_SSEL(io_vita_spi_ssel_n),
+    .imageon_spiPins_SCK(io_vita_spi_sclk),
+    .imageon_spiPins_MOSI(io_vita_spi_mosi),
+    .imageon_spiPins_MISO(io_vita_spi_miso),
+'''
+    def top_bus_assignments(self,busname,t,params):
+        return ''
+    def bus_assignments(self,busname,t,params):
+        return '''
+    assign EN_imageon_monitor = RDY_imageon_monitor;
+'''
+    def pinout(self, board):
+        return imageon_pinout[board]
+ImageonVita()
 
 class InterfaceMixin:
     def axiMasterBusSubst(self, busnumber, businfo):
@@ -1069,10 +1172,12 @@ class InterfaceMixin:
         dutName = util.decapitalize(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
-        hdmiBus = self.collectInterfaceNames('HDMI')
-        ledBus = self.collectInterfaceNames('LED')
         masterBusSubsts = [self.axiMasterBusSubst(busnumber,axiMasters[busnumber]) for busnumber in range(len(axiMasters))]
-        if len(ledBus):
+        buses = {}
+        for busType in busHandlers:
+            b = self.collectInterfaceNames(busType)
+            buses[busType] = b
+        if len(buses['LEDS']):
             default_leds_assignment = ''
         else:
             default_leds_assignment = '''assign GPIO_leds = 8'haa;'''
@@ -1082,24 +1187,21 @@ class InterfaceMixin:
             'top_axi_master_wires': ''.join([top_axi_master_wires_template % subst for subst in masterBusSubsts]),
             'top_dut_axi_master_port_map': ''.join([top_dut_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_master_port_map': ''.join([top_ps7_axi_master_port_map_template % subst for subst in masterBusSubsts]),
-            'top_hdmi_ports':
-                ''.join([top_hdmi_port_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in hdmiBus]),
-            'top_led_ports':
-                ''.join([top_led_port_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in ledBus]),
-            'top_dut_hdmi_port_map': 
-                ''.join([top_dut_hdmi_port_map
-                         for (busname,t,params) in hdmiBus]),
-            'top_dut_led_port_map': 
-                ''.join([top_dut_led_port_map
-                         for (busname,t,params) in ledBus]),
-            'top_ps7_hdmi_port_map':
-                ''.join([top_ps7_hdmi_port_map
-                         for (busname,t,params) in hdmiBus]),
-            'hdmi_iobufs':
-                ''.join([hdmi_iobuf_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in hdmiBus]),
+            'top_bus_ports':
+                ''.join([''.join([busHandlers[busType].top_bus_ports(busname,t,params) for (busname,t,params) in buses[busType]])
+                         for busType in busHandlers]),
+            'top_bus_wires':
+                ''.join([''.join([busHandlers[busType].top_bus_wires(busname,t,params) for (busname,t,params) in buses[busType]])
+                         for busType in busHandlers]),
+            'top_dut_bus_port_map':
+                ''.join([''.join([busHandlers[busType].top_dut_bus_port_map(busname,t,params) for (busname,t,params) in buses[busType]])
+                         for busType in busHandlers]),
+            'top_ps7_bus_port_map':
+                ''.join([''.join([busHandlers[busType].top_ps7_bus_port_map(busname,t,params) for (busname,t,params) in buses[busType]])
+                         for busType in busHandlers]),
+            'top_bus_assignments': ''.join([''.join([busHandlers[busType].top_bus_assignments(busname,t,params)
+                                                     for (busname,t,params) in buses[busType]])
+                                            for busType in busHandlers]),
             'default_leds_assignment': default_leds_assignment
             }
         topverilog.write(top_verilog_template % substs)
@@ -1113,9 +1215,11 @@ class InterfaceMixin:
         dutName = util.decapitalize(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
-        hdmiBus = self.collectInterfaceNames('HDMI')
-        ledBus = self.collectInterfaceNames('LED')
         masterBusSubsts = [self.axiMasterBusSubst(busnumber,axiMasters[busnumber]) for busnumber in range(len(axiMasters))]
+        buses = {}
+        for busType in busHandlers:
+            b = self.collectInterfaceNames(busType)
+            buses[busType] = b
         substs = {
             'dut': dutName.lower(),
             'Dut': util.capitalize(self.name),
@@ -1134,46 +1238,43 @@ class InterfaceMixin:
             'axi_slave_port_decls':
                 ''.join([axi_slave_port_decl_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
-            'hdmi_ports':
-                ''.join([hdmi_port_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in hdmiBus]),
-            'dut_hdmi_clock_arg': '      .CLK_hdmi_clk(hdmi_clk_in),' if len(hdmiBus) else '',
-            'led_ports':
-                ''.join([led_port_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in ledBus]),
+            'bus_ports':
+                ''.join([''.join([busHandlers[busType].bus_ports(busname,t,params) for (busname,t,params) in buses[busType]])
+                         for busType in busHandlers]),
+            'dut_hdmi_clock_arg': '      .CLK_hdmi_clk(hdmi_clk_in),' if len(buses['HDMI']) else '',
             'axi_master_port_map':
                 ''.join([axi_master_port_map_verilog_template % subst for subst in masterBusSubsts]),
             'axi_slave_port_map':
                 ''.join([axi_slave_port_map_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
-            'hdmi_port_map':
-                ''.join([hdmi_port_map_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in hdmiBus]),
-            'led_port_map':
-                ''.join([led_port_map_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in ledBus]),
             'axi_master_clocks':
                 ''.join([axi_clock_verilog_template % subst for subst in masterBusSubsts]),
             'axi_slave_clocks':
                 ''.join([axi_clock_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
-            'hdmi_clocks':
-                ''.join([hdmi_clock_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in hdmiBus]),
             'iobufs': '',
             'axi_master_signals':
                 ''.join([axi_master_signal_verilog_template % subst for subst in masterBusSubsts]),
             'axi_slave_signals':
                 ''.join([axi_slave_signal_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
-            'hdmi_signals':
-                ''.join([hdmi_signal_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in hdmiBus]),
             'axi_master_scheduler':
                 ''.join([axi_master_scheduler_verilog_template % subst for subst in masterBusSubsts ]),
             'axi_slave_scheduler':
                 ''.join([axi_slave_scheduler_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
                          for (busname,t,params) in axiSlaves]),
+            'bus_ports': ''.join([''.join([busHandlers[busType].bus_ports(busname,t,params)
+                                           for (busname,t,params) in buses[busType]])
+                                  for busType in busHandlers]),
+            'bus_wires': ''.join([''.join([busHandlers[busType].bus_wires(busname,t,params)
+                                           for (busname,t,params) in buses[busType]])
+                                  for busType in busHandlers]),
+            'dut_bus_port_map': ''.join([''.join([busHandlers[busType].dut_bus_port_map(busname,t,params)
+                                                  for (busname,t,params) in buses[busType]])
+                                         for busType in busHandlers]),
+            'bus_assignments': ''.join([''.join([busHandlers[busType].bus_assignments(busname,t,params)
+                                                 for (busname,t,params) in buses[busType]])
+                                        for busType in busHandlers])
             }
         verilog.write(verilog_template % substs)
         verilog.close()
@@ -1199,7 +1300,6 @@ class InterfaceMixin:
         xdc = util.createDirAndOpen(xdcname, 'w')
         dutName = util.decapitalize(self.name)
         hdmiBus = self.collectInterfaceNames('HDMI')
-        ledBus = self.collectInterfaceNames('LEDS')
         if len(hdmiBus):
             hdmi_pins = hdmi_pinout[boardname]
             for (name, pin, iostandard, direction) in hdmi_pins:
