@@ -24,6 +24,8 @@
 
 import FIFO::*;
 
+import Zynq::*;
+
 interface EchoIndications;
     method Action heard(Bit#(32) v);
     method Action heard2(Bit#(16) a, Bit#(16) b);
@@ -32,6 +34,8 @@ endinterface
 interface Echo;
     method Action say(Bit#(32) v);
     method Action say2(Bit#(16) a, Bit#(16) b);
+    method Action setLeds(Bit#(8) v);
+    interface LEDS leds;
 endinterface
 
 typedef struct {
@@ -42,7 +46,8 @@ typedef struct {
 module mkEcho#(EchoIndications indications)(Echo);
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
-    
+    Reg#(Bit#(8)) ledsReg <- mkReg(0);
+
     rule heard;
         delay.deq;
         indications.heard(delay.first);
@@ -61,4 +66,13 @@ module mkEcho#(EchoIndications indications)(Echo);
         delay2.enq(EchoPair { a: a, b: b});
     endmethod
 
+    method Action setLeds(Bit#(8) v);
+        ledsReg <= v;
+    endmethod
+
+    interface LEDS leds;
+        method Bit#(8) leds();
+            return ledsReg;
+	endmethod
+    endinterface
 endmodule

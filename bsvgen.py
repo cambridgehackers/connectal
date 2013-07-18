@@ -19,6 +19,7 @@ import Adapter::*;
 import AxiMasterSlave::*;
 import AxiClientServer::*;
 import HDMI::*;
+import Zynq::*;
 %(extraImports)s
 
 '''
@@ -30,6 +31,7 @@ interface %(Dut)sWrapper;
 %(axiSlaveDeclarations)s
 %(axiMasterDeclarations)s
 %(hdmiDeclarations)s
+%(ledDeclarations)s
 endinterface
 '''
 
@@ -294,6 +296,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 %(axiSlaveImplementations)s
 %(axiMasterImplementations)s
 %(hdmiImplementations)s
+%(ledImplementations)s
 endmodule
 '''
 
@@ -459,6 +462,7 @@ class InterfaceMixin:
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
+        ledInterfaces = self.collectInterfaceNames('LEDS')
         dutName = util.decapitalize(self.name)
         methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
         substs = {
@@ -476,6 +480,8 @@ class InterfaceMixin:
                                                for (axiSlave,t,params) in axiSlaves]),
             'hdmiDeclarations': '\n'.join(['    interface HDMI %s;' % hdmi
                                            for (hdmi,t,params) in hdmiInterfaces]),
+            'ledDeclarations': '\n'.join(['    interface LEDS %s;' % led
+                                          for (led,t,params) in ledInterfaces]),
             'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
                                            % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster,dutName,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
@@ -487,6 +493,8 @@ class InterfaceMixin:
                                                   for (axiSlave,t,params) in axiSlaves]),
             'hdmiImplementations': '\n'.join(['    interface HDMI %s = %s.%s;' % (hdmi, dutName, hdmi)
                                               for (hdmi,t,params) in hdmiInterfaces]),
+            'ledImplementations': '\n'.join(['    interface LEDS %s = %s.%s;' % (led, dutName, led)
+                                              for (led,t,params) in ledInterfaces]),
             'queuesNotEmpty': '\n'.join(['                    v[%d] = %s$%s.notEmpty ? 1 : 0;'
                                         % (i, methods[i].name, 'requestFifo' if not self.isIndication else 'responseFifo')
                                          for i in range(len(methods))])

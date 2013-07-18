@@ -22,5 +22,6 @@ int main(int argc, const char **argv)
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     echo->say(v);
+    echo->setLeds(9);
     PortalInterface::exec();
 }
