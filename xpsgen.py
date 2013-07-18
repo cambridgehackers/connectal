@@ -1193,7 +1193,7 @@ wire %(BUSNAME)s_RVALID_unbuf;
 top_dut_hdmi_port_map = '''
        .hdmi_clk_in(processing_system7_1_fclk_clk1),
        .hdmi_vsync(hdmi_vsync),
-       .hdmi_hsync(hdmi_hsync_wire),
+       .hdmi_hsync(hdmi_hsync),
        .hdmi_de(hdmi_de),
        .hdmi_data(hdmi_data),
 '''
