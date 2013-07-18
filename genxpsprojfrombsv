@@ -64,11 +64,6 @@ vfile=sources/%(dut)s/mk%(Dut)sWrapper.v
 $(vfile): sources/%(dut)s/%(Dut)sWrapper.bsv
 	cd sources/%(dut)s; bsc -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
 
-%(dut)s.make: %(dut)s.xmp
-	echo "run resync; save proj; exit" | xps -nw %(dut)s.xmp
-	#sed -i.001 -e '/\\project/s/^/  <set param="PCW::FPGA0::PERIPHERAL::FREQMHZ" value="100.000000" \/>/' data/ps7_hdmidisplay_prj.xml
-	#sed -i.001 -e '/\\project/s/^/  <set param="PCW::FPGA1::PERIPHERAL::FREQMHZ" value="166.000000" \/>/' data/ps7_hdmidisplay_prj.xml
-
 verilog: $(vfile)
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
 	cp -r ../xilinx/sources/* sources/
@@ -107,8 +102,6 @@ if __name__=='__main__':
     tclname = os.path.join(project_dir, '%s.tcl' % namespace.interface.lower())
     tclxprname = os.path.join(project_dir, '%sxpr.tcl' % namespace.interface.lower())
     makename = os.path.join(project_dir, 'Makefile')
-    xmpname = os.path.join(project_dir, '%s.xmp' % namespace.interface.lower())
-    mhsname = os.path.join(project_dir, '%s.mhs' % namespace.interface.lower())
 
     applicationmkname = os.path.join(project_dir, 'jni', 'Application.mk')
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
@@ -119,16 +112,10 @@ if __name__=='__main__':
     topverilogname = os.path.join(project_dir, 'sources', 'top.v')
     verilogname = os.path.join(project_dir, 'sources', dutname,
                                '%s.v' % namespace.interface)
-    mpdname = os.path.join(project_dir, 'pcores', corename, 'data',
-                           '%s_v2_1_0.mpd' % dutname)
-    paoname = os.path.join(project_dir, 'pcores', corename, 'data',
-                           '%s_v2_1_0.pao' % dutname)
     ucfname = os.path.join(project_dir, 'data',
                            '%s.ucf' % dutname)
     xdcname = os.path.join(project_dir, 'constraints',
                            '%s.xdc' % dutname)
-    bifname = os.path.join(project_dir, 
-                           '%s.bif' % dutname)
     print 'Writing CPP header', hname
     h = util.createDirAndOpen(hname, 'w')
     h.write('#include "portal.h"\n')
@@ -172,15 +159,10 @@ if __name__=='__main__':
         subinterface.emitCImplementation(cpp)
 
         subinterface.emitBsvImplementation(bsv)
-        subinterface.writeMpd(mpdname)
-        subinterface.writeMhs(mhsname)
-        subinterface.writeXmp(xmpname)
-        subinterface.writePao(paoname)
         subinterface.writeVerilog(verilogname)
         subinterface.writeTopVerilog(topverilogname)
         subinterface.writeUcf(ucfname, boardname)
         subinterface.writeXdc(xdcname, boardname)
-        subinterface.writeBif(bifname)
         print 'Writing Android.mk', androidmkname
         print 'Writing Application.mk', applicationmkname
         subinterface.writeAndroidMk(androidmkname, applicationmkname)
