@@ -10,6 +10,8 @@ int srcFd = -1;
 int dstFd = -1;
 char *srcBuffer = 0;
 char *dstBuffer = 0;
+int phase = 0;
+int numWords = 32;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -48,15 +50,28 @@ class TestMemcpyIndications : public MemcpyIndications
     virtual void wData(unsigned long v) {
 	fprintf(stderr, "memcpy write data: %lx\n", v);
     }
+    virtual void readWordResult ( unsigned long addr, unsigned long long v ){
+      fprintf(stderr, "Read word %lx %llx\n", addr, v);
+    }
     virtual void done(unsigned long v) {
-        fprintf(stderr, "memcpy done: %lx\n", v);
-	size_t size=4096;
-	dstBuffer = (char *)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, dstFd, 0);
-	fprintf(stderr, "memcmp %lx %lx => %d\n",
-		srcBuffer, dstBuffer, memcmp(srcBuffer, dstBuffer, size));
-	dump("src", srcBuffer, size);
-	dump("dst", dstBuffer, size);
-	exit(0);
+	fprintf(stderr, "phase %d memcpy done: %lx\n", phase, v);
+	switch (phase++) {
+	case 0: {
+	    device->readWord(srcAlloc.entries[0].dma_address);
+	    device->memcpy(srcAlloc.entries[0].dma_address,
+			   dstAlloc.entries[0].dma_address,
+			   numWords);
+	} break;
+	default: {
+	    size_t size=4096;
+	    device->readWord(dstAlloc.entries[0].dma_address);
+	    dstBuffer = (char *)mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, dstFd, 0);
+	    fprintf(stderr, "memcmp %lx %lx => %d\n",
+		    srcBuffer, dstBuffer, memcmp(srcBuffer, dstBuffer, size));
+	    dump("src", srcBuffer, size);
+	    dump("dst", dstBuffer, size);
+	}
+	}
     }
 };
 
@@ -73,7 +88,6 @@ int main(int argc, const char **argv)
 
     //device->reset(8);
 
-    int numWords = 32;
     fprintf(stderr, "starting mempcy %x %x %x\n",
 	    dstAlloc.entries[0].dma_address,
 	    srcAlloc.entries[0].dma_address,
