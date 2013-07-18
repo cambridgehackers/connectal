@@ -21,8 +21,12 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Clocks::*;
+import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
+import Gray              ::*;
+import GrayCounter       ::*;
 
 interface BlueScope#(type dataWidth, type triggerWidth);
     method Action setTriggerMask(Bit#(triggerWidth) mask);
@@ -32,12 +36,13 @@ interface BlueScope#(type dataWidth, type triggerWidth);
     method Action dataIn(Bit#(dataWidth) d, Bit#(triggerWidth) t);
     method ActionValue#(Bit#(dataWidth)) dataOut;
     method Bit#(32) sampleCount();
+    method Bool triggered();
 endinterface
 
 typedef enum { Idle, Enabled, Running } State deriving (Bits,Eq);
 
 module mkBlueScope#(Integer samples)(BlueScope#(dataWidth, triggerWidth)) provisos (Add#(1,a,dataWidth));
-    FIFOF#(Bit#(dataWidth)) dfifo <- mkSizedBRAMFIFOF(samples);
+    FIFO#(Bit#(dataWidth)) dfifo <- mkSizedBRAMFIFO(samples);
     Reg#(Bit#(triggerWidth)) maskReg <- mkReg(0);
     Reg#(Bit#(triggerWidth)) valueReg <- mkReg(0);
 
@@ -77,5 +82,73 @@ module mkBlueScope#(Integer samples)(BlueScope#(dataWidth, triggerWidth)) provis
     endmethod
     method Bit#(32) sampleCount();
         return sampleCountReg;
+    endmethod
+endmodule
+
+module mkSyncBlueScope#(Integer samples, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth, triggerWidth)) provisos (Add#(1,a,dataWidth));
+    SyncFIFOIfc#(Bit#(dataWidth)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
+    Reg#(Bit#(triggerWidth)) maskReg <- mkSyncReg(0, dClk, dRst, sClk);
+    Reg#(Bit#(triggerWidth)) valueReg <- mkSyncReg(0, dClk, dRst, sClk);
+    Reg#(Bit#(1)) triggeredReg <- mkReg(0, clocked_by dClk, reset_by dRst);
+
+    SyncPulseIfc enablePulse <- mkSyncPulse(dClk, dRst, sClk);
+    SyncPulseIfc resetPulse <- mkSyncPulse(dClk, dRst, sClk);
+    SyncPulseIfc triggeredPulse <- mkSyncPulse(sClk, sRst, dClk);
+    Reg#(State) stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
+    GrayCounter#(32) sampleCountReg <- mkGrayCounter(unpack(0), dClk, dRst, clocked_by sClk, reset_by sRst);
+
+    rule reset if (resetPulse.pulse == True);
+        stateReg <= Idle;
+	sampleCountReg.sWriteBin(unpack(0));
+    endrule
+    rule enable if (enablePulse.pulse == True);
+        stateReg <= Enabled;
+    endrule
+    rule triggeredRule if (triggeredPulse.pulse == True);
+        triggeredReg <= 1;
+    endrule
+
+    method Action setTriggerMask(Bit#(triggerWidth) mask);
+        maskReg <= mask;
+    endmethod
+    method Action setTriggerValue(Bit#(triggerWidth) value);
+        valueReg <= value;
+    endmethod
+    method Action start();
+	enablePulse.send;
+    endmethod
+    method Action clear();
+        // not in SyncFIFOIfc dfifo.clear();
+	resetPulse.send;
+	triggeredReg <= 0;
+    endmethod
+    method Action dataIn(Bit#(dataWidth) d, Bit#(triggerWidth) t) if (stateReg != Idle);
+        State s = stateReg;
+	if (!dfifo.notFull)
+	begin
+	    s = Idle;
+	end
+
+        if (s == Enabled && ((t & maskReg) == (valueReg & maskReg)))
+	begin
+	    s = Running;
+	    triggeredPulse.send;
+        end
+	if (s == Running)
+	begin
+	    dfifo.enq(d);
+	    sampleCountReg.incr;
+	end
+	stateReg <= s;
+    endmethod
+    method ActionValue#(Bit#(dataWidth)) dataOut;
+        dfifo.deq;
+        return dfifo.first;
+    endmethod
+    method Bit#(32) sampleCount();
+        return sampleCountReg.dReadBin();
+    endmethod
+    method Bool triggered();
+        return triggeredReg() == 1 ? True : False;
     endmethod
 endmodule
