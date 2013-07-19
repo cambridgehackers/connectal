@@ -157,6 +157,9 @@ set_property PACKAGE_PIN "%(pin)s" [get_ports "%(name)s"]
 set_property slew "SLOW" [get_ports "%(name)s"]
 set_property PIO_DIRECTION "%(direction)s" [get_ports "%(name)s"]
 '''
+xdc_diff_term_template = '''
+set_property DIFF_TERM "TRUE" [get_ports "%(name)s"]
+'''
 
 xadc_pinout= {
     'zc702': [
@@ -249,6 +252,7 @@ hdmi_pinout = {
 
 imageon_pinout = {
     'zc702': [
+        ('imageon_clk_pll', 'V22', 'LVCMOS25', 'OUTPUT'),
         ('imageon_reset_n', 'AA18', 'LVCMOS25', 'OUTPUT'),
         ('imageon_trigger[2]', 'W22', 'LVCMOS25', 'OUTPUT'),
         ('imageon_trigger[1]', 'T22', 'LVCMOS25', 'OUTPUT'),
@@ -259,6 +263,10 @@ imageon_pinout = {
         ('io_vita_spi_ssel_n', 'Y15', 'LVCMOS25', 'OUTPUT'),
         ('io_vita_spi_mosi', 'Y14', 'LVCMOS25', 'OUTPUT'),
         ('io_vita_spi_miso', 'AA14', 'LVCMOS25', 'INPUT'),
+        ('imageon_clk_out_p', 'Y19', 'LVDS_25', 'INPUT'),
+        ('imageon_clk_out_n', 'AA19', 'LVDS_25', 'INPUT'),
+        ('imageon_sync_p', 'Y20', 'LVDS_25', 'INPUT'),
+        ('imageon_sync_n', 'Y21', 'LVDS_25', 'INPUT'),
         ('imageon_data_p[0]', 'U15', 'LVDS_25', 'INPUT'),
         ('imageon_data_p[1]', 'T21', 'LVDS_25', 'INPUT'),
         ('imageon_data_p[2]', 'AA17', 'LVDS_25', 'INPUT'),
@@ -328,6 +336,8 @@ module %(dut)s_top_1
   wire processing_system7_1_ddr_WE_N;
   wire processing_system7_1_fclk_clk0;
   wire processing_system7_1_fclk_clk1;
+  wire processing_system7_1_fclk_clk2;
+  wire processing_system7_1_fclk_clk3;
   wire processing_system7_1_fclk_reset0_n;
   wire processing_system7_1_fixed_io_DDR_VRN;
   wire processing_system7_1_fixed_io_DDR_VRP;
@@ -447,6 +457,8 @@ processing_system7 processing_system7_1
         .DDR_WEB(DDR_WEB),
         .FCLK_CLK0(processing_system7_1_fclk_clk0),
         .FCLK_CLK1(processing_system7_1_fclk_clk1),
+        .FCLK_CLK2(processing_system7_1_fclk_clk2),
+        .FCLK_CLK3(processing_system7_1_fclk_clk3),
         .FCLK_RESET0_N(processing_system7_1_fclk_reset0_n),
         .IRQ_F2P(%(dut)s_1_interrupt),
         .MIO(FIXED_IO_mio[53:0]),
@@ -1045,6 +1057,8 @@ class Hdmi:
 '''
     def bus_assignments(self,busname,t,params):
         return ''
+    def pinout(self, board):
+        return hdmi_pinout[board]
 Hdmi()
 
 class Leds:
@@ -1074,6 +1088,8 @@ class Leds:
         return ''
     def bus_assignments(self,busname,t,params):
         return ''
+    def pinout(self, board):
+        return led_pinout[board]
 Leds()
 
 class ImageonVita:
@@ -1299,14 +1315,18 @@ class InterfaceMixin:
             print 'Writing XDC file', xdcname
         xdc = util.createDirAndOpen(xdcname, 'w')
         dutName = util.decapitalize(self.name)
-        hdmiBus = self.collectInterfaceNames('HDMI')
-        if len(hdmiBus):
-            hdmi_pins = hdmi_pinout[boardname]
-            for (name, pin, iostandard, direction) in hdmi_pins:
+        if not len(self.collectInterfaceNames('LEDS')):
+            ## we always connect these pins to a default pattern
+            for (name, pin, iostandard, direction) in led_pinout[boardname]:
                 xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
-            #xdc.write(xadc_xdc_template[boardname])
-        for (name, pin, iostandard, direction) in led_pinout[boardname]:
-            xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
-        #xdc.write(default_clk_xdc_template)
+        for busType in busHandlers:
+            buses = self.collectInterfaceNames(busType)
+            if len(buses):
+                for (name, pin, iostandard, direction) in busHandlers[busType].pinout(boardname):
+                    xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
+                    if (iostandard == 'LVDS_25'):
+                        xdc.write(xdc_diff_term_template
+                                  % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
+
         xdc.close()
         return
