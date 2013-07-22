@@ -251,6 +251,39 @@ hdmi_pinout = {
     }
 
 imageon_pinout = {
+    'zedboard': [
+        ('imageon_clk_pll', 'L17', 'LVCMOS25', 'OUTPUT'), #LA13_p
+        ('imageon_reset_n', 'L19', 'LVCMOS25', 'OUTPUT'), # CLK0_M2C_n
+        ('imageon_trigger[2]', 'M17', 'LVCMOS25', 'OUTPUT'),#LA13_n
+        ('imageon_trigger[1]', 'K19', 'LVCMOS25', 'OUTPUT'),#LA14_p
+        ('imageon_trigger[0]', 'K20', 'LVCMOS25', 'OUTPUT'),#LA14_n
+        ('imageon_monitor[1]', 'J17', 'LVCMOS25', 'INPUT'),#LA15_n
+        ('imageon_monitor[0]', 'J16', 'LVCMOS25', 'INPUT'),#LA15_p
+        ('io_vita_spi_sclk', 'P20', 'LVCMOS25', 'OUTPUT'),#LA12_p
+        ('io_vita_spi_ssel_n', 'P21', 'LVCMOS25', 'OUTPUT'),#LA12_n
+        ('io_vita_spi_mosi', 'N17', 'LVCMOS25', 'OUTPUT'),#LA11_p
+        ('io_vita_spi_miso', 'N18', 'LVCMOS25', 'INPUT'),#LA11_n
+        ('imageon_clk_out_p', 'M19', 'LVDS_25', 'INPUT'),#LA00_p_CC
+        ('imageon_clk_out_n', 'M20', 'LVDS_25', 'INPUT'),#LA00_n_CC
+        ('imageon_sync_p', 'R19', 'LVDS_25', 'INPUT'), #LA10_p
+        ('imageon_sync_n', 'T19', 'LVDS_25', 'INPUT'), #LA10_n
+        ('imageon_data_p[0]', 'R20', 'LVDS_25', 'INPUT'),#LA09_p
+        ('imageon_data_p[1]', 'T16', 'LVDS_25', 'INPUT'),#LA07_p
+        ('imageon_data_p[2]', 'J21', 'LVDS_25', 'INPUT'),#LA08_p
+        ('imageon_data_p[3]', 'J18', 'LVDS_25', 'INPUT'),#LA05_p
+        ('imageon_data_p[4]', 'M21', 'LVDS_25', 'INPUT'),#LA04_p
+        ('imageon_data_p[5]', 'L21', 'LVDS_25', 'INPUT'),#LA06_p
+        ('imageon_data_p[6]', 'N22', 'LVDS_25', 'INPUT'),#LA03_p
+        ('imageon_data_p[7]', 'P17', 'LVDS_25', 'INPUT'),#LA02_p
+        ('imageon_data_n[0]', 'R21', 'LVDS_25', 'INPUT'),#LA09_n
+        ('imageon_data_n[1]', 'T17', 'LVDS_25', 'INPUT'),#LA07_n
+        ('imageon_data_n[2]', 'J22', 'LVDS_25', 'INPUT'),#LA08_n
+        ('imageon_data_n[3]', 'K18', 'LVDS_25', 'INPUT'),#LA05_n
+        ('imageon_data_n[4]', 'M22', 'LVDS_25', 'INPUT'),#LA04_n
+        ('imageon_data_n[5]', 'L22', 'LVDS_25', 'INPUT'),#LA06_n
+        ('imageon_data_n[6]', 'P22', 'LVDS_25', 'INPUT'),#LA03_n
+        ('imageon_data_n[7]', 'P18', 'LVDS_25', 'INPUT'),#LA02_n
+        ],
     'zc702': [
         ('imageon_clk_pll', 'V22', 'LVCMOS25', 'OUTPUT'),
         ('imageon_reset_n', 'AA18', 'LVCMOS25', 'OUTPUT'),
@@ -586,47 +619,47 @@ top_dut_axi_master_port_map_template='''
 '''
 
 top_ps7_axi_master_port_map_template='''
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ACLK(processing_system7_1_fclk_clk0),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARADDR(%(dut)s_1_%(busname)s_ARADDR),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARBURST(%(dut)s_1_%(busname)s_ARBURST),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARCACHE(%(dut)s_1_%(busname)s_ARCACHE),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARID(%(dut)s_1_%(busname)s_ARID),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARLEN(%(dut)s_1_%(busname)s_ARLEN),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARLOCK({GND_1,GND_1}),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARPROT(%(dut)s_1_%(busname)s_ARPROT),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARQOS({GND_1,GND_1,GND_1,GND_1}),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARREADY(%(dut)s_1_%(busname)s_ARREADY),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARSIZE(%(dut)s_1_%(busname)s_ARSIZE),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_ARVALID(%(dut)s_1_%(busname)s_ARVALID),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWADDR(%(dut)s_1_%(busname)s_AWADDR),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWBURST(%(dut)s_1_%(busname)s_AWBURST),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWCACHE(%(dut)s_1_%(busname)s_AWCACHE),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWID(%(dut)s_1_%(busname)s_AWID),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWLEN(%(dut)s_1_%(busname)s_AWLEN),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWLOCK({GND_1,GND_1}),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWPROT(%(dut)s_1_%(busname)s_AWPROT),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWQOS({GND_1,GND_1,GND_1,GND_1}),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWREADY(%(dut)s_1_%(busname)s_AWREADY),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWSIZE(%(dut)s_1_%(busname)s_AWSIZE),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_AWVALID(%(dut)s_1_%(busname)s_AWVALID),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_BID(%(dut)s_1_%(busname)s_BID),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_BREADY(%(dut)s_1_%(busname)s_BREADY),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_BRESP(%(dut)s_1_%(busname)s_BRESP),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_BVALID(%(dut)s_1_%(busname)s_BVALID),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_RDATA(%(dut)s_1_%(busname)s_RDATA),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_RID(%(dut)s_1_%(busname)s_RID),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_RLAST(%(dut)s_1_%(busname)s_RLAST),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_RREADY(%(dut)s_1_%(busname)s_RREADY),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_RRESP(%(dut)s_1_%(busname)s_RRESP),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_RVALID(%(dut)s_1_%(busname)s_RVALID),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_WDATA(%(dut)s_1_%(busname)s_WDATA),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_WID(%(dut)s_1_%(busname)s_WID),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_WLAST(%(dut)s_1_%(busname)s_WLAST),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_WREADY(%(dut)s_1_%(busname)s_WREADY),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_WSTRB(%(dut)s_1_%(busname)s_WSTRB),
-        .S_AXI_%(ps7bustype)s%(busnumber)s_WVALID(%(dut)s_1_%(busname)s_WVALID),
-        /* .S_AXI_%(ps7bustype)s%(busnumber)s_RDISSUECAP1_EN(GND_1), */
-        /* .S_AXI_%(ps7bustype)s%(busnumber)s_WRISSUECAP1_EN(GND_1), */
+        .S_AXI_%(ps7bus)s_ACLK(processing_system7_1_fclk_clk0),
+        .S_AXI_%(ps7bus)s_ARADDR(%(dut)s_1_%(busname)s_ARADDR),
+        .S_AXI_%(ps7bus)s_ARBURST(%(dut)s_1_%(busname)s_ARBURST),
+        .S_AXI_%(ps7bus)s_ARCACHE(%(dut)s_1_%(busname)s_ARCACHE),
+        .S_AXI_%(ps7bus)s_ARID(%(dut)s_1_%(busname)s_ARID),
+        .S_AXI_%(ps7bus)s_ARLEN(%(dut)s_1_%(busname)s_ARLEN),
+        .S_AXI_%(ps7bus)s_ARLOCK({GND_1,GND_1}),
+        .S_AXI_%(ps7bus)s_ARPROT(%(dut)s_1_%(busname)s_ARPROT),
+        .S_AXI_%(ps7bus)s_ARQOS({GND_1,GND_1,GND_1,GND_1}),
+        .S_AXI_%(ps7bus)s_ARREADY(%(dut)s_1_%(busname)s_ARREADY),
+        .S_AXI_%(ps7bus)s_ARSIZE(%(dut)s_1_%(busname)s_ARSIZE),
+        .S_AXI_%(ps7bus)s_ARVALID(%(dut)s_1_%(busname)s_ARVALID),
+        .S_AXI_%(ps7bus)s_AWADDR(%(dut)s_1_%(busname)s_AWADDR),
+        .S_AXI_%(ps7bus)s_AWBURST(%(dut)s_1_%(busname)s_AWBURST),
+        .S_AXI_%(ps7bus)s_AWCACHE(%(dut)s_1_%(busname)s_AWCACHE),
+        .S_AXI_%(ps7bus)s_AWID(%(dut)s_1_%(busname)s_AWID),
+        .S_AXI_%(ps7bus)s_AWLEN(%(dut)s_1_%(busname)s_AWLEN),
+        .S_AXI_%(ps7bus)s_AWLOCK({GND_1,GND_1}),
+        .S_AXI_%(ps7bus)s_AWPROT(%(dut)s_1_%(busname)s_AWPROT),
+        .S_AXI_%(ps7bus)s_AWQOS({GND_1,GND_1,GND_1,GND_1}),
+        .S_AXI_%(ps7bus)s_AWREADY(%(dut)s_1_%(busname)s_AWREADY),
+        .S_AXI_%(ps7bus)s_AWSIZE(%(dut)s_1_%(busname)s_AWSIZE),
+        .S_AXI_%(ps7bus)s_AWVALID(%(dut)s_1_%(busname)s_AWVALID),
+        .S_AXI_%(ps7bus)s_BID(%(dut)s_1_%(busname)s_BID),
+        .S_AXI_%(ps7bus)s_BREADY(%(dut)s_1_%(busname)s_BREADY),
+        .S_AXI_%(ps7bus)s_BRESP(%(dut)s_1_%(busname)s_BRESP),
+        .S_AXI_%(ps7bus)s_BVALID(%(dut)s_1_%(busname)s_BVALID),
+        .S_AXI_%(ps7bus)s_RDATA(%(dut)s_1_%(busname)s_RDATA),
+        .S_AXI_%(ps7bus)s_RID(%(dut)s_1_%(busname)s_RID),
+        .S_AXI_%(ps7bus)s_RLAST(%(dut)s_1_%(busname)s_RLAST),
+        .S_AXI_%(ps7bus)s_RREADY(%(dut)s_1_%(busname)s_RREADY),
+        .S_AXI_%(ps7bus)s_RRESP(%(dut)s_1_%(busname)s_RRESP),
+        .S_AXI_%(ps7bus)s_RVALID(%(dut)s_1_%(busname)s_RVALID),
+        .S_AXI_%(ps7bus)s_WDATA(%(dut)s_1_%(busname)s_WDATA),
+        .S_AXI_%(ps7bus)s_WID(%(dut)s_1_%(busname)s_WID),
+        .S_AXI_%(ps7bus)s_WLAST(%(dut)s_1_%(busname)s_WLAST),
+        .S_AXI_%(ps7bus)s_WREADY(%(dut)s_1_%(busname)s_WREADY),
+        .S_AXI_%(ps7bus)s_WSTRB(%(dut)s_1_%(busname)s_WSTRB),
+        .S_AXI_%(ps7bus)s_WVALID(%(dut)s_1_%(busname)s_WVALID),
+        /* .S_AXI_%(ps7bus)s_RDISSUECAP1_EN(GND_1), */
+        /* .S_AXI_%(ps7bus)s_WRISSUECAP1_EN(GND_1), */
 '''
 
 verilog_template='''
@@ -1228,8 +1261,13 @@ class InterfaceMixin:
         dutName = util.decapitalize(self.name)
         if buswidth == 32:
             ps7bustype = 'GP'
+            ps7bus = 'GP%s' % busnumber
+        elif busnumber == 0:
+            ps7bustype = 'ACP'
+            ps7bus = 'ACP'
         else:
             ps7bustype = 'HP'
+            ps7bus = 'HP%s' % (busnumber-1)
         return {
             'dut': dutName,
             'BUSNAME': busname.upper(),
@@ -1238,6 +1276,7 @@ class InterfaceMixin:
             'buswidth': buswidth,
             'buswidthbytes': buswidthbytes,
             'ps7bustype': ps7bustype,
+            'ps7bus': ps7bus,
             'datawidth': params[0].numeric(),
             'burstlenwidth': 8 if (t == 'AxiMaster') else 4,
             'protwidth': 3 if (t == 'AxiMaster') else 2,
