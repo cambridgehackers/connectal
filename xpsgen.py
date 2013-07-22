@@ -1128,18 +1128,18 @@ class ImageonVita:
 '''
     def top_ps7_bus_port_map(self,busname,t,params):
         return '''
-        .SPI1_SCLK_I(io_vita_spi_sclk_I),
-        .SPI1_SCLK_O(io_vita_spi_sclk_O),
-        .SPI1_SCLK_T(io_vita_spi_sclk_T),
-        .SPI1_MOSI_I(io_vita_spi_mosi_I),
-        .SPI1_MOSI_O(io_vita_spi_mosi_O),
-        .SPI1_MOSI_T(io_vita_spi_mosi_T),
-        .SPI1_MISO_I(io_vita_spi_miso_I),
-        .SPI1_MISO_O(io_vita_spi_miso_O),
-        .SPI1_MISO_T(io_vita_spi_miso_T),
-        .SPI1_SS_I(io_vita_spi_ssel_n_I),
-        .SPI1_SS_O(io_vita_spi_ssel_n_O),
-        .SPI1_SS_T(io_vita_spi_ssel_n_T),
+        .SPI0_SCLK_I(io_vita_spi_sclk_I),
+        .SPI0_SCLK_O(io_vita_spi_sclk_O),
+        .SPI0_SCLK_T(io_vita_spi_sclk_T),
+        .SPI0_MOSI_I(io_vita_spi_mosi_I),
+        .SPI0_MOSI_O(io_vita_spi_mosi_O),
+        .SPI0_MOSI_T(io_vita_spi_mosi_T),
+        .SPI0_MISO_I(io_vita_spi_miso_I),
+        .SPI0_MISO_O(io_vita_spi_miso_O),
+        .SPI0_MISO_T(io_vita_spi_miso_T),
+        .SPI0_SS_I(io_vita_spi_ssel_n_I),
+        .SPI0_SS_O(io_vita_spi_ssel_n_O),
+        .SPI0_SS_T(io_vita_spi_ssel_n_T),
 '''
     def bus_ports(self, busname,t,params):
         return '''
@@ -1165,7 +1165,7 @@ class ImageonVita:
     IOBUF # (
     .DRIVE(12),
     .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) IOBUF_spi1_sclk
+    .SLEW("SLOW")) IOBUF_spi0_sclk
     (
     .IO(io_vita_spi_sclk),
     // Buffer output (connect directly to top-level port)
@@ -1177,7 +1177,7 @@ class ImageonVita:
     IOBUF # (
     .DRIVE(12),
     .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) IOBUF_spi1_mosi
+    .SLEW("SLOW")) IOBUF_spi0_mosi
     (
     .IO(io_vita_spi_mosi),
     // Buffer output (connect directly to top-level port)
@@ -1189,7 +1189,7 @@ class ImageonVita:
     IOBUF # (
     .DRIVE(12),
     .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) IOBUF_spi1_miso
+    .SLEW("SLOW")) IOBUF_spi0_miso
     (
     .IO(io_vita_spi_miso),
     // Buffer output (connect directly to top-level port)
@@ -1201,7 +1201,7 @@ class ImageonVita:
     IOBUF # (
     .DRIVE(12),
     .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) IOBUF_spi1_ssel_n
+    .SLEW("SLOW")) IOBUF_spi0_ssel_n
     (
     .IO(io_vita_spi_ssel_n),
     // Buffer output (connect directly to top-level port)
