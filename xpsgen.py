@@ -1100,34 +1100,52 @@ class ImageonVita:
     output imageon_reset_n,
     output [2:0] imageon_trigger,
     input [1:0] imageon_monitor,
-    output io_vita_spi_sclk,
-    output io_vita_spi_ssel_n,
-    output io_vita_spi_mosi,
-    input io_vita_spi_miso,
+    inout io_vita_spi_sclk,
+    inout io_vita_spi_ssel_n,
+    inout io_vita_spi_mosi,
+    inout io_vita_spi_miso,
 '''
     def top_bus_wires(self, busname,t,params):
-        return ''
+        return '''
+    wire io_vita_spi_ssel_n_I;
+    wire io_vita_spi_ssel_n_O;
+    wire io_vita_spi_ssel_n_T;
+    wire io_vita_spi_sclk_I;
+    wire io_vita_spi_sclk_O;
+    wire io_vita_spi_sclk_T;
+    wire io_vita_spi_mosi_I;
+    wire io_vita_spi_mosi_O;
+    wire io_vita_spi_mosi_T;
+    wire io_vita_spi_miso_I;
+    wire io_vita_spi_miso_O;
+    wire io_vita_spi_miso_T;
+'''
     def top_dut_bus_port_map(self, busname,t,params):
         return '''
     .imageon_reset_n(imageon_reset_n),
     .imageon_trigger(imageon_trigger),
     .imageon_monitor(imageon_monitor),
-    .io_vita_spi_ssel_n(io_vita_spi_ssel_n),
-    .io_vita_spi_sclk(io_vita_spi_sclk),
-    .io_vita_spi_mosi(io_vita_spi_mosi),
-    .io_vita_spi_miso(io_vita_spi_miso),
 '''
     def top_ps7_bus_port_map(self,busname,t,params):
-        return ''
+        return '''
+        .SPI1_SCLK_I(io_vita_spi_sclk_I),
+        .SPI1_SCLK_O(io_vita_spi_sclk_O),
+        .SPI1_SCLK_T(io_vita_spi_sclk_T),
+        .SPI1_MOSI_I(io_vita_spi_mosi_I),
+        .SPI1_MOSI_O(io_vita_spi_mosi_O),
+        .SPI1_MOSI_T(io_vita_spi_mosi_T),
+        .SPI1_MISO_I(io_vita_spi_miso_I),
+        .SPI1_MISO_O(io_vita_spi_miso_O),
+        .SPI1_MISO_T(io_vita_spi_miso_T),
+        .SPI1_SS_I(io_vita_spi_ssel_n_I),
+        .SPI1_SS_O(io_vita_spi_ssel_n_O),
+        .SPI1_SS_T(io_vita_spi_ssel_n_T),
+'''
     def bus_ports(self, busname,t,params):
         return '''
     output imageon_reset_n,
     output [2:0] imageon_trigger,
     input [1:0] imageon_monitor,
-    output io_vita_spi_sclk,
-    output io_vita_spi_ssel_n,
-    output io_vita_spi_mosi,
-    input io_vita_spi_miso,
 '''
     def bus_wires(self, busname,t,params):
         return '''
@@ -1141,13 +1159,58 @@ class ImageonVita:
     .imageon_monitor_m(imageon_monitor),
     .EN_imageon_monitor(EN_imageon_monitor),
     .RDY_imageon_monitor(RDY_imageon_monitor),
-    .imageon_spiPins_SSEL(io_vita_spi_ssel_n),
-    .imageon_spiPins_SCK(io_vita_spi_sclk),
-    .imageon_spiPins_MOSI(io_vita_spi_mosi),
-    .imageon_spiPins_MISO(io_vita_spi_miso),
 '''
     def top_bus_assignments(self,busname,t,params):
-        return ''
+        return '''
+    IOBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) IOBUF_spi1_sclk
+    (
+    .IO(io_vita_spi_sclk),
+    // Buffer output (connect directly to top-level port)
+    .O(io_vita_spi_sclk_I),
+    .I(io_vita_spi_sclk_O),
+    .T(io_vita_spi_sclk_T)
+    // Buffer input
+    );
+    IOBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) IOBUF_spi1_mosi
+    (
+    .IO(io_vita_spi_mosi),
+    // Buffer output (connect directly to top-level port)
+    .O(io_vita_spi_mosi_I),
+    .I(io_vita_spi_mosi_O),
+    .T(io_vita_spi_mosi_T)
+    // Buffer input
+    );
+    IOBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) IOBUF_spi1_miso
+    (
+    .IO(io_vita_spi_miso),
+    // Buffer output (connect directly to top-level port)
+    .O(io_vita_spi_miso_I),
+    .I(io_vita_spi_miso_O),
+    .T(io_vita_spi_miso_T)
+    // Buffer input
+    );
+    IOBUF # (
+    .DRIVE(12),
+    .IOSTANDARD("LVCMOS25"),
+    .SLEW("SLOW")) IOBUF_spi1_ssel_n
+    (
+    .IO(io_vita_spi_ssel_n),
+    // Buffer output (connect directly to top-level port)
+    .O(io_vita_spi_ssel_n_I),
+    .I(io_vita_spi_ssel_n_O),
+    .T(io_vita_spi_ssel_n_T)
+    // Buffer input
+    );
+'''
     def bus_assignments(self,busname,t,params):
         return '''
     assign EN_imageon_monitor = RDY_imageon_monitor;
