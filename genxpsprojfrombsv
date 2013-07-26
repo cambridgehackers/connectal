@@ -29,6 +29,7 @@ argparser.add_argument('-B', '--board', default='zc702', choices=supported_board
 argparser.add_argument('-b', '--interface', help='BSV interface to generate stubs for')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
+argparser.add_argument('-C', '--coherent', help='Use ACP coherence port for first AXI master bus')
 
 tclfileXprTemplate='''
 create_project %(dut)s . -part xc7z020clg484-1
@@ -94,6 +95,10 @@ if __name__=='__main__':
     for inputfile in namespace.bsvfile:
         s = open(inputfile).read() + '\n'
         s1 = syntax.parse(s)
+
+    if namespace.coherent:
+        xpsgen.use_acp = 1
+        print 'Using ACP for coherent memory access'
 
     dutname = namespace.interface.lower()
     corename = '%s_v1_00_a' % namespace.interface.lower()
@@ -193,7 +198,8 @@ if __name__=='__main__':
     make.write(makefileTemplate % {'corename': corename,
                                    'dut': namespace.interface.lower(),
                                    'Dut': util.capitalize(namespace.interface),
-                                   'bsvpath': os.path.dirname(namespace.bsvfile[0])
+                                   'bsvpath': os.path.dirname(namespace.bsvfile[0]),
+                                   'bsvname': os.path.basename(namespace.bsvfile[0])
                                    })
     make.close()
 

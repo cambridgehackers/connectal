@@ -10,6 +10,7 @@ if os.environ.has_key('XILINX_EDK'):
     m = re.match('.*/(\d+.\d+)/ISE_DS/EDK$', os.environ['XILINX_EDK'])
     if m:
         edkversion = m.group(1)
+use_acp = 0
 
 hdmi_ucf_template= {
     'zc702': '''
@@ -1050,15 +1051,17 @@ class InterfaceMixin:
         buswidthbytes = buswidth / 8
         print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3'), buswidth
         dutName = util.decapitalize(self.name)
+        hpBusOffset = 0
         if buswidth == 32:
             ps7bustype = 'GP'
             ps7bus = 'GP%s' % busnumber
-        elif busnumber == 0:
+        elif use_acp and busnumber == 0:
             ps7bustype = 'ACP'
             ps7bus = 'ACP'
+            hpBusOffset = -1
         else:
             ps7bustype = 'HP'
-            ps7bus = 'HP%s' % (busnumber-1)
+            ps7bus = 'HP%s' % (busnumber + hpBusOffset)
         return {
             'dut': dutName,
             'BUSNAME': busname.upper(),
