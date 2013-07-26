@@ -10,12 +10,16 @@ test-echo/echo.bit.bin.gz: examples/echo/Echo.bsv
 	rm -fr test-echo
 	mkdir test-echo
 	(./genxpsprojfrombsv -B zedboard -p test-echo -b Echo examples/echo/Echo.bsv; cd test-echo; make verilog && make bits && make echo.bit.bin.gz) > test-echo/test-echo.log 2>&1
+	cp examples/echo/testecho.cpp test-echo/jni
+	(cd test-echo; ndk-build)
 	echo test-echo built successfully
 
 test-memcpy/memcpy.bit.bin.gz: examples/memcpy/Memcpy.bsv
 	rm -fr test-memcpy
 	mkdir test-memcpy
 	(./genxpsprojfrombsv -B zedboard -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv; cd test-memcpy; make verilog && make bits && make memcpy.bit.bin.gz) > test-memcpy/test-memcpy.log 2>&1
+	cp examples/memcpy/testmemcpy.cpp test-memcpy/jni
+	(cd test-memcpy; ndk-build)
 	echo test-memcpy built successfully
 
 test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
