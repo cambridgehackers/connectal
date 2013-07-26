@@ -72,7 +72,7 @@ verilog: $(vfile)
 %(dut)s.xpr:
 	vivado -mode batch -source %(dut)sxpr.tcl
 
-%(dut)s.runs/impl_1/%(dut)s_top_1.bit: $(vfile) %(dut)s.xpr
+%(dut)s.runs/impl_1/%(dut)s_top_1.bit: $(vfile) sources/top.v %(dut)s.xpr
 	vivado -mode batch -source %(dut)s.tcl
 
 bits: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
@@ -110,8 +110,6 @@ if __name__=='__main__':
     bsvname = os.path.join(project_dir, 'sources', dutname,
                            '%sWrapper.bsv' % namespace.interface)
     topverilogname = os.path.join(project_dir, 'sources', 'top.v')
-    verilogname = os.path.join(project_dir, 'sources', dutname,
-                               '%s.v' % namespace.interface)
     ucfname = os.path.join(project_dir, 'data',
                            '%s.ucf' % dutname)
     xdcname = os.path.join(project_dir, 'constraints',
@@ -159,7 +157,6 @@ if __name__=='__main__':
         subinterface.emitCImplementation(cpp)
 
         subinterface.emitBsvImplementation(bsv)
-        subinterface.writeVerilog(verilogname)
         subinterface.writeTopVerilog(topverilogname)
         subinterface.writeUcf(ucfname, boardname)
         subinterface.writeXdc(xdcname, boardname)
