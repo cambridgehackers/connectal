@@ -68,8 +68,8 @@ interface Axi3MasterRead#(type busWidth, type idWidth);
    method Bit#(4) readBurstLen();
    method Bit#(3) readBurstWidth();
    method Bit#(2) readBurstType();  // drive with 2'b01
-   method Bit#(2) readBurstProt(); // drive with 3'b000
-   method Bit#(3) readBurstCache(); // drive with 4'b0011
+   method Bit#(3) readBurstProt(); // drive with 3'b000
+   method Bit#(4) readBurstCache(); // drive with 4'b0011
    method Bit#(idWidth) readId();
 
    method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(idWidth) id);
@@ -80,8 +80,8 @@ interface Axi3MasterWrite#(type busWidth, type busWidthBytes, type idWidth);
    method Bit#(4) writeBurstLen();
    method Bit#(3) writeBurstWidth();
    method Bit#(2) writeBurstType();  // drive with 2'b01
-   method Bit#(2) writeBurstProt(); // drive with 3'b000
-   method Bit#(3) writeBurstCache(); // drive with 4'b0011
+   method Bit#(3) writeBurstProt(); // drive with 3'b000
+   method Bit#(4) writeBurstCache(); // drive with 4'b0011
    method Bit#(idWidth) writeId();
 
    method ActionValue#(Bit#(busWidth)) writeData();
@@ -120,7 +120,7 @@ endinterface
 
 interface Axi3SlaveRead#(type busWidth, type busWidthBytes);
    method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                          Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) arid);
+                          Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid);
 
    method ActionValue#(Bit#(busWidth)) readData();
    method Bit#(1) last();
@@ -130,7 +130,7 @@ endinterface
 
 interface Axi3SlaveWrite#(type busWidth, type busWidthBytes);
    method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                           Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) awid);
+                           Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid);
    method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last);
    method ActionValue#(Bit#(2)) writeResponse();
    method ActionValue#(Bit#(12)) bid();
@@ -415,11 +415,11 @@ module mkNullAxi3Master(Axi3Master#(busWidth,busWidthBytes,idWidth)) provisos(Di
        method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
            return 2'b01; // increment address
        endmethod
-       method Bit#(2) writeBurstProt(); // drive with 3'b000
-           return 2'b00;
+       method Bit#(3) writeBurstProt(); // drive with 3'b000
+           return 3'b000;
        endmethod
-       method Bit#(3) writeBurstCache(); // drive with 4'b0011
-           return 3'b011;
+       method Bit#(4) writeBurstCache(); // drive with 4'b0011
+           return 4'b0011;
        endmethod
        method Bit#(idWidth) writeId();
            return 0;
@@ -460,11 +460,11 @@ module mkNullAxi3Master(Axi3Master#(busWidth,busWidthBytes,idWidth)) provisos(Di
        method Bit#(2) readBurstType();  // drive with 2'b01
            return 2'b01;
        endmethod
-       method Bit#(2) readBurstProt(); // drive with 3'b000
-           return 2'b00;
+       method Bit#(3) readBurstProt(); // drive with 3'b000
+           return 3'b000;
        endmethod
-       method Bit#(3) readBurstCache(); // drive with 4'b0011
-           return 3'b011;
+       method Bit#(4) readBurstCache(); // drive with 4'b0011
+           return 4'b0011;
        endmethod
        method Bit#(idWidth) readId();
            return 0;
@@ -555,7 +555,7 @@ module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) r
     Bool verbose = False;
     interface Axi3SlaveRead read;
         method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                               Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) id) if (readBurstCountReg == 0);
+                               Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) id) if (readBurstCountReg == 0);
             if (verbose) $display("axiSlave.read.readAddr %h bc %d", addr, burstLen+1);
             readAddrReg <= truncate(addr/fromInteger(valueOf(busWidthBytes)));
 	    readIdReg <= id;
@@ -579,7 +579,7 @@ module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) r
 
     interface Axi3SlaveWrite write;
        method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                               Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) id) if (writeBurstCountReg == 0);
+                               Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) id) if (writeBurstCountReg == 0);
            if (verbose) $display("axiSlave.write.writeAddr %h bc %d", addr, burstLen+1);
            writeAddrReg <= truncate(addr/fromInteger(valueOf(busWidthBytes)));
 	   writeIdReg <= id;
@@ -748,11 +748,11 @@ module mkAxi3MasterWires#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Ax
 	method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
 	    return 2'b01; // increment address
 	endmethod
-	method Bit#(2) writeBurstProt(); // drive with 3'b000
-	    return 2'b000;
+	method Bit#(3) writeBurstProt(); // drive with 3'b000
+	    return 3'b000;
 	endmethod
-	method Bit#(3) writeBurstCache(); // drive with 4'b0011
-	    return 3'b0011;
+	method Bit#(4) writeBurstCache(); // drive with 4'b0011
+	    return 4'b0011;
 	endmethod
 	method Bit#(idWidth) writeId();
 	    return wWriteRequest.id;
@@ -798,11 +798,11 @@ module mkAxi3MasterWires#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Ax
 	method Bit#(2) readBurstType();  // drive with 2'b01
 	    return 2'b01;
 	endmethod
-	method Bit#(2) readBurstProt(); // drive with 3'b000
-	    return 2'b000;
+	method Bit#(3) readBurstProt(); // drive with 3'b000
+	    return 3'b000;
 	endmethod
-	method Bit#(3) readBurstCache(); // drive with 4'b0011
-	    return 3'b0011;
+	method Bit#(4) readBurstCache(); // drive with 4'b0011
+	    return 4'b0011;
 	endmethod
 	method Bit#(idWidth) readId();
 	    return wReadRequest.id;
@@ -854,11 +854,11 @@ module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Mas
 	method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
 	    return 2'b01; // increment address
 	endmethod
-	method Bit#(2) writeBurstProt(); // drive with 3'b000
-	    return 2'b000;
+	method Bit#(3) writeBurstProt(); // drive with 3'b000
+	    return 3'b000;
 	endmethod
-	method Bit#(3) writeBurstCache(); // drive with 4'b0011
-	    return 3'b0011;
+	method Bit#(4) writeBurstCache(); // drive with 4'b0011
+	    return 4'b0011;
 	endmethod
 	method Bit#(idWidth) writeId();
 	    return fWriteRequest.first.id;
@@ -902,11 +902,11 @@ module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Mas
 	method Bit#(2) readBurstType();  // drive with 2'b01
 	    return 2'b01;
 	endmethod
-	method Bit#(2) readBurstProt(); // drive with 3'b000
-	    return 2'b000;
+	method Bit#(3) readBurstProt(); // drive with 3'b000
+	    return 3'b000;
 	endmethod
-	method Bit#(3) readBurstCache(); // drive with 4'b0011
-	    return 3'b0011;
+	method Bit#(4) readBurstCache(); // drive with 4'b0011
+	    return 4'b0011;
 	endmethod
 	method Bit#(idWidth) readId();
 	    return fReadRequest.first.id;

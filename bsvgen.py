@@ -25,7 +25,7 @@ import Imageon::*;
 
 '''
 
-exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita']
+exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'FmcImageonInterface']
 
 dutInterfaceTemplate='''
 interface %(Dut)sWrapper;
@@ -232,7 +232,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
     interface Axi3Slave ctrl;
         interface Axi3SlaveWrite write;
             method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                    Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache,
+                                    Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache,
 				    Bit#(12) awid)
                           if (axiSlaveWriteBurstCountReg == 0);
                 axiSlaveWriteBurstCountReg <= burstLen + 1;
@@ -263,7 +263,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         endinterface
         interface Axi3SlaveRead read;
             method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                   Bit#(2) burstType, Bit#(2) burstProt, Bit#(3) burstCache, Bit#(12) arid)
+                                   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid)
                           if (axiSlaveReadBurstCountReg == 0);
                 axiSlaveReadBurstCountReg <= burstLen + 1;
                 axiSlaveReadAddrReg <= truncate(addr);
