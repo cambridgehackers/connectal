@@ -73,7 +73,6 @@ verilog: $(vfile)
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
 	cp -r ../xilinx/sources/* sources/
 	cp -r ../xilinx/constraints .
-
 %(dut)s.xpr:
 	vivado -mode batch -source %(dut)sxpr.tcl
 
@@ -92,11 +91,10 @@ boot.bin: %(dut)s.bit.bin.gz
 '''
 
 vivado_strategies={
-    'Strategy_manual_fsm.Vivado Synthesis 2013.psg':
-'''
-<?xml version="1.0"?>
+    'manual_fsm.Vivado Synthesis 2013.psg':
+'''<?xml version="1.0"?>
 <Strategy Version="1" Minor="2">
-	<StratHandle Name="Strategy_manual_fsm" Flow="Vivado Synthesis 2013">
+	<StratHandle Name="manual_fsm" Flow="Vivado Synthesis 2013">
 	</StratHandle>
 	<Step Id="synth_design">
 		<Option Id="FsmExtraction">0</Option>
