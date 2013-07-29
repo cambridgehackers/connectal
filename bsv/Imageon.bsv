@@ -159,6 +159,7 @@ interface ImageonControl;
     method Bit#(32) get_decoder_control();
     method Action set_crc_control(Bit#(32) v);
     method Bit#(32) get_crc_control();
+    method Bit#(32) get_crc_status();
     method Action set_remapper_control(Bit#(32) v);
     method Bit#(32) get_remapper_control();
     method Action set_triggen_control(Bit#(32) v);
@@ -669,6 +670,9 @@ module mkImageonVitaController(ImageonVitaController);
 	    v[0] = crc_reset_reg;
 	    v[1] = crc_initvalue_reg;
 	    return v;
+	endmethod
+	method Bit#(32) get_crc_status();
+	    return crc_status_wire;
 	endmethod
 // REMAPPER_CONTROL[7:0]
 //    [2:0] REMAPPER_WRITE_CFG

@@ -36,6 +36,7 @@ interface ImageCaptureIndications;
     method Action iserdes_control_value(Bit#(32) v);
     method Action decoder_control_value(Bit#(32) v);
     method Action crc_control_value(Bit#(32) v);
+    method Action crc_status_value(Bit#(32) v);
     method Action remapper_control_value(Bit#(32) v);
     method Action triggen_control_value(Bit#(32) v);
 
@@ -51,6 +52,7 @@ interface ImageCapture;
     method Action get_decoder_control();
     method Action set_crc_control(Bit#(32) v);
     method Action get_crc_control();
+    method Action get_crc_status();
     method Action set_remapper_control(Bit#(32) v);
     method Action get_remapper_control();
     method Action set_triggen_control(Bit#(32) v);
@@ -145,6 +147,10 @@ module mkImageCapture#(//Clock hdmi_clock,
     endmethod
     method Action get_crc_control();
         indications.crc_control_value(control.get_crc_control());
+    endmethod
+
+    method Action get_crc_status();
+        indications.crc_status_value(control.get_crc_status());
     endmethod
 
     method Action set_remapper_control(Bit#(32) v);
