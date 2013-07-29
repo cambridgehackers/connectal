@@ -155,7 +155,7 @@ TIMESPEC TS_FCLK0 = PERIOD "processing_system7_0/FCLK_CLK0" 133 MHz;
 xdc_template = '''
 set_property iostandard "%(iostandard)s" [get_ports "%(name)s"]
 set_property PACKAGE_PIN "%(pin)s" [get_ports "%(name)s"]
-set_property slew "SLOW" [get_ports "%(name)s"]
+# set_property slew "SLOW" [get_ports "%(name)s"]
 set_property PIO_DIRECTION "%(direction)s" [get_ports "%(name)s"]
 '''
 xdc_diff_term_template = '''
@@ -222,8 +222,8 @@ hdmi_pinout = {
         ( "hdmi_data[13]", 'R19', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_data[14]", 'T17', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_data[15]", 'T16', 'LVCMOS25', 'OUTPUT'),
-        ( "i2c1_scl", 'AA18', 'LVCMOS25', 'BIDIR'),
-        ( "i2c1_sda", 'Y16', 'LVCMOS25', 'BIDIR'),
+        ( "i2c1_scl", 'AB14', 'LVCMOS25', 'BIDIR'),
+        ( "i2c1_sda", 'AB15', 'LVCMOS25', 'BIDIR'),
         ],
     'zedboard':[
         ( "hdmi_clk", 'W18', 'LVCMOS33', 'OUTPUT'),
@@ -253,70 +253,75 @@ hdmi_pinout = {
 
 imageon_pinout = {
     'zedboard': [
-        ('imageon_clk_pll', 'L17', 'LVCMOS25', 'OUTPUT'), #LA13_p
-        ('imageon_reset_n', 'L19', 'LVCMOS25', 'OUTPUT'), # CLK0_M2C_n
-        ('imageon_trigger[2]', 'M17', 'LVCMOS25', 'OUTPUT'),#LA13_n
-        ('imageon_trigger[1]', 'K19', 'LVCMOS25', 'OUTPUT'),#LA14_p
-        ('imageon_trigger[0]', 'K20', 'LVCMOS25', 'OUTPUT'),#LA14_n
-        ('imageon_monitor[1]', 'J17', 'LVCMOS25', 'INPUT'),#LA15_n
-        ('imageon_monitor[0]', 'J16', 'LVCMOS25', 'INPUT'),#LA15_p
+        ('io_vita_clk_pll', 'L17', 'LVCMOS25', 'OUTPUT'), #LA13_p
+        ('io_vita_reset_n', 'L19', 'LVCMOS25', 'OUTPUT'), # CLK0_M2C_n
+        ('io_vita_trigger[2]', 'M17', 'LVCMOS25', 'OUTPUT'),#LA13_n
+        ('io_vita_trigger[1]', 'K19', 'LVCMOS25', 'OUTPUT'),#LA14_p
+        ('io_vita_trigger[0]', 'K20', 'LVCMOS25', 'OUTPUT'),#LA14_n
+        ('io_vita_monitor[1]', 'J17', 'LVCMOS25', 'INPUT'),#LA15_n
+        ('io_vita_monitor[0]', 'J16', 'LVCMOS25', 'INPUT'),#LA15_p
         ('io_vita_spi_sclk', 'P20', 'LVCMOS25', 'OUTPUT'),#LA12_p
         ('io_vita_spi_ssel_n', 'P21', 'LVCMOS25', 'OUTPUT'),#LA12_n
         ('io_vita_spi_mosi', 'N17', 'LVCMOS25', 'OUTPUT'),#LA11_p
         ('io_vita_spi_miso', 'N18', 'LVCMOS25', 'INPUT'),#LA11_n
-        ('imageon_clk_out_p', 'M19', 'LVDS_25', 'INPUT'),#LA00_p_CC
-        ('imageon_clk_out_n', 'M20', 'LVDS_25', 'INPUT'),#LA00_n_CC
-        ('imageon_sync_p', 'R19', 'LVDS_25', 'INPUT'), #LA10_p
-        ('imageon_sync_n', 'T19', 'LVDS_25', 'INPUT'), #LA10_n
-        ('imageon_data_p[0]', 'R20', 'LVDS_25', 'INPUT'),#LA09_p
-        ('imageon_data_p[1]', 'T16', 'LVDS_25', 'INPUT'),#LA07_p
-        ('imageon_data_p[2]', 'J21', 'LVDS_25', 'INPUT'),#LA08_p
-        ('imageon_data_p[3]', 'J18', 'LVDS_25', 'INPUT'),#LA05_p
-        ('imageon_data_p[4]', 'M21', 'LVDS_25', 'INPUT'),#LA04_p
-        ('imageon_data_p[5]', 'L21', 'LVDS_25', 'INPUT'),#LA06_p
-        ('imageon_data_p[6]', 'N22', 'LVDS_25', 'INPUT'),#LA03_p
-        ('imageon_data_p[7]', 'P17', 'LVDS_25', 'INPUT'),#LA02_p
-        ('imageon_data_n[0]', 'R21', 'LVDS_25', 'INPUT'),#LA09_n
-        ('imageon_data_n[1]', 'T17', 'LVDS_25', 'INPUT'),#LA07_n
-        ('imageon_data_n[2]', 'J22', 'LVDS_25', 'INPUT'),#LA08_n
-        ('imageon_data_n[3]', 'K18', 'LVDS_25', 'INPUT'),#LA05_n
-        ('imageon_data_n[4]', 'M22', 'LVDS_25', 'INPUT'),#LA04_n
-        ('imageon_data_n[5]', 'L22', 'LVDS_25', 'INPUT'),#LA06_n
-        ('imageon_data_n[6]', 'P22', 'LVDS_25', 'INPUT'),#LA03_n
-        ('imageon_data_n[7]', 'P18', 'LVDS_25', 'INPUT'),#LA02_n
+        ('io_vita_clk_out_p', 'M19', 'LVDS_25', 'INPUT'),#LA00_p_CC
+        ('io_vita_clk_out_n', 'M20', 'LVDS_25', 'INPUT'),#LA00_n_CC
+        ('io_vita_sync_p', 'R19', 'LVDS_25', 'INPUT'), #LA10_p
+        ('io_vita_sync_n', 'T19', 'LVDS_25', 'INPUT'), #LA10_n
+        ('io_vita_data_p[0]', 'R20', 'LVDS_25', 'INPUT'),#LA09_p
+        ('io_vita_data_p[1]', 'T16', 'LVDS_25', 'INPUT'),#LA07_p
+        ('io_vita_data_p[2]', 'J21', 'LVDS_25', 'INPUT'),#LA08_p
+        ('io_vita_data_p[3]', 'J18', 'LVDS_25', 'INPUT'),#LA05_p
+        ('io_vita_data_p[4]', 'M21', 'LVDS_25', 'INPUT'),#LA04_p
+        ('io_vita_data_p[5]', 'L21', 'LVDS_25', 'INPUT'),#LA06_p
+        ('io_vita_data_p[6]', 'N22', 'LVDS_25', 'INPUT'),#LA03_p
+        ('io_vita_data_p[7]', 'P17', 'LVDS_25', 'INPUT'),#LA02_p
+        ('io_vita_data_n[0]', 'R21', 'LVDS_25', 'INPUT'),#LA09_n
+        ('io_vita_data_n[1]', 'T17', 'LVDS_25', 'INPUT'),#LA07_n
+        ('io_vita_data_n[2]', 'J22', 'LVDS_25', 'INPUT'),#LA08_n
+        ('io_vita_data_n[3]', 'K18', 'LVDS_25', 'INPUT'),#LA05_n
+        ('io_vita_data_n[4]', 'M22', 'LVDS_25', 'INPUT'),#LA04_n
+        ('io_vita_data_n[5]', 'L22', 'LVDS_25', 'INPUT'),#LA06_n
+        ('io_vita_data_n[6]', 'P22', 'LVDS_25', 'INPUT'),#LA03_n
+        ('io_vita_data_n[7]', 'P18', 'LVDS_25', 'INPUT'),#LA02_n
         ],
     'zc702': [
-        ('imageon_clk_pll', 'V22', 'LVCMOS25', 'OUTPUT'),
-        ('imageon_reset_n', 'AA18', 'LVCMOS25', 'OUTPUT'),
-        ('imageon_trigger[2]', 'W22', 'LVCMOS25', 'OUTPUT'),
-        ('imageon_trigger[1]', 'T22', 'LVCMOS25', 'OUTPUT'),
-        ('imageon_trigger[0]', 'U22', 'LVCMOS25', 'OUTPUT'),
-        ('imageon_monitor[1]', 'AA13', 'LVCMOS25', 'INPUT'),
-        ('imageon_monitor[0]', 'Y13', 'LVCMOS25', 'INPUT'),
+        ("XADC_gpio[0]", 'H17', 'LVCMOS25', 'OUTPUT'),
+        ("XADC_gpio[1]", 'H22', 'LVCMOS25', 'OUTPUT'),
+        ("XADC_gpio[2]", 'G22', 'LVCMOS25', 'OUTPUT'),
+        ("XADC_gpio[3]", 'H18', 'LVCMOS25', 'OUTPUT'),
+
+        ('io_vita_clk_pll', 'V22', 'LVCMOS25', 'OUTPUT'),
+        ('io_vita_reset_n', 'AA18', 'LVCMOS25', 'OUTPUT'),
+        ('io_vita_trigger[2]', 'W22', 'LVCMOS25', 'OUTPUT'),
+        ('io_vita_trigger[1]', 'T22', 'LVCMOS25', 'OUTPUT'),
+        ('io_vita_trigger[0]', 'U22', 'LVCMOS25', 'OUTPUT'),
+        ('io_vita_monitor[1]', 'AA13', 'LVCMOS25', 'INPUT'),
+        ('io_vita_monitor[0]', 'Y13', 'LVCMOS25', 'INPUT'),
         ('io_vita_spi_sclk', 'W15', 'LVCMOS25', 'OUTPUT'),
         ('io_vita_spi_ssel_n', 'Y15', 'LVCMOS25', 'OUTPUT'),
         ('io_vita_spi_mosi', 'Y14', 'LVCMOS25', 'OUTPUT'),
         ('io_vita_spi_miso', 'AA14', 'LVCMOS25', 'INPUT'),
-        ('imageon_clk_out_p', 'Y19', 'LVDS_25', 'INPUT'),
-        ('imageon_clk_out_n', 'AA19', 'LVDS_25', 'INPUT'),
-        ('imageon_sync_p', 'Y20', 'LVDS_25', 'INPUT'),
-        ('imageon_sync_n', 'Y21', 'LVDS_25', 'INPUT'),
-        ('imageon_data_p[0]', 'U15', 'LVDS_25', 'INPUT'),
-        ('imageon_data_p[1]', 'T21', 'LVDS_25', 'INPUT'),
-        ('imageon_data_p[2]', 'AA17', 'LVDS_25', 'INPUT'),
-        ('imageon_data_p[3]', 'AB19', 'LVDS_25', 'INPUT'),
-        ('imageon_data_p[4]', 'V13', 'LVDS_25', 'INPUT'),
-        ('imageon_data_p[5]', 'U17', 'LVDS_25', 'INPUT'),
-        ('imageon_data_p[6]', 'AA16', 'LVDS_25', 'INPUT'),
-        ('imageon_data_p[7]', 'V14', 'LVDS_25', 'INPUT'),
-        ('imageon_data_n[0]', 'U16', 'LVDS_25', 'INPUT'),
-        ('imageon_data_n[1]', 'U21', 'LVDS_25', 'INPUT'),
-        ('imageon_data_n[2]', 'AB17', 'LVDS_25', 'INPUT'),
-        ('imageon_data_n[3]', 'AB20', 'LVDS_25', 'INPUT'),
-        ('imageon_data_n[4]', 'W13', 'LVDS_25', 'INPUT'),
-        ('imageon_data_n[5]', 'V17', 'LVDS_25', 'INPUT'),
-        ('imageon_data_n[6]', 'AB16', 'LVDS_25', 'INPUT'),
-        ('imageon_data_n[7]', 'V15', 'LVDS_25', 'INPUT'),
+        ('io_vita_clk_out_p', 'Y19', 'LVDS_25', 'INPUT'),
+        ('io_vita_clk_out_n', 'AA19', 'LVDS_25', 'INPUT'),
+        ('io_vita_sync_p', 'Y20', 'LVDS_25', 'INPUT'),
+        ('io_vita_sync_n', 'Y21', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_p[0]', 'U15', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_p[1]', 'T21', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_p[2]', 'AA17', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_p[3]', 'AB19', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_p[4]', 'V13', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_p[5]', 'U17', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_p[6]', 'AA16', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_p[7]', 'V14', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_n[0]', 'U16', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_n[1]', 'U21', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_n[2]', 'AB17', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_n[3]', 'AB20', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_n[4]', 'W13', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_n[5]', 'V17', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_n[6]', 'AB16', 'LVDS_25', 'INPUT'),
+        ('io_vita_data_n[7]', 'V15', 'LVDS_25', 'INPUT'),
         ]
 }
 top_verilog_template='''
@@ -939,107 +944,473 @@ class ImageonVita:
         busHandlers['ImageonVita'] = self
     def top_bus_ports(self, busname,t,params):
         return '''
-    output imageon_reset_n,
-    output [2:0] imageon_trigger,
-    input [1:0] imageon_monitor,
-    inout io_vita_spi_sclk,
-    inout io_vita_spi_ssel_n,
-    inout io_vita_spi_mosi,
-    inout io_vita_spi_miso,
+/* imageon vita *****************************************/
+    /* output fmc_imageon_iic_0_Rst_pin,
+       inout fmc_imageon_iic_0_Sda_pin,
+       inout fmc_imageon_iic_0_Scl_pin, */
+    input fmc_imageon_video_clk1,
+    output io_vita_clk_pll,
+    output io_vita_reset_n,
+    output [2:0] io_vita_trigger,
+    input [1:0] io_vita_monitor,
+    output io_vita_spi_sclk,
+    output io_vita_spi_ssel_n,
+    output io_vita_spi_mosi,
+    input io_vita_spi_miso,
+    input io_vita_clk_out_p,
+    input io_vita_clk_out_n,
+    input io_vita_sync_p,
+    input io_vita_sync_n,
+    input [3:0] io_vita_data_p,
+    input [3:0] io_vita_data_n,
+    output [3:0] XADC_gpio,
+/* imageon vita *****************************************/
 '''
     def top_bus_wires(self, busname,t,params):
-        return '''
-    wire io_vita_spi_ssel_n_I;
-    wire io_vita_spi_ssel_n_O;
-    wire io_vita_spi_ssel_n_T;
-    wire io_vita_spi_sclk_I;
-    wire io_vita_spi_sclk_O;
-    wire io_vita_spi_sclk_T;
-    wire io_vita_spi_mosi_I;
-    wire io_vita_spi_mosi_O;
-    wire io_vita_spi_mosi_T;
-    wire io_vita_spi_miso_I;
-    wire io_vita_spi_miso_O;
-    wire io_vita_spi_miso_T;
+         return '''
+     wire imageon_clk200;
+     wire imageon_clk;
+     wire imageon_host_oe;
+     wire host_vita_reset;
+    /* HOST Interface - SPI */
+     wire imageon_host_spi_clk;
+     wire imageon_host_spi_reset;
+     wire [15:0] imageon_host_spi_timing;
+     wire imageon_host_spi_status_busy;
+     wire imageon_host_spi_status_error;
+     wire imageon_host_spi_txfifo_clk;
+     wire imageon_host_spi_txfifo_wen;
+     wire [31:0] imageon_host_spi_txfifo_din;
+     wire imageon_host_spi_txfifo_full;
+     wire imageon_host_spi_rxfifo_clk;
+     wire imageon_host_spi_rxfifo_ren;
+     wire [31:0] imageon_host_spi_rxfifo_dout;
+     wire imageon_host_spi_rxfifo_empty;
+    /* HOST Interface - ISERDES */
+     wire imageon_host_iserdes_reset;
+     wire imageon_host_iserdes_auto_align;
+     wire imageon_host_iserdes_align_start;
+     wire imageon_host_iserdes_fifo_enable;
+     wire [9:0] imageon_host_iserdes_manual_tap;
+     wire [9:0] imageon_host_iserdes_training;
+     wire imageon_host_iserdes_clk_ready;
+     wire [15:0] imageon_host_iserdes_clk_status;
+     wire imageon_host_iserdes_align_busy;
+     wire imageon_host_iserdes_aligned;
+    /* HOST Interface - Sync Channel Decoder */
+     wire imageon_host_decoder_reset;
+     wire imageon_host_decoder_enable;
+     wire [31:0] imageon_host_decoder_startoddeven;
+     wire [9:0] imageon_host_decoder_code_ls;
+     wire [9:0] imageon_host_decoder_code_le;
+     wire [9:0] imageon_host_decoder_code_fs;
+     wire [9:0] imageon_host_decoder_code_fe;
+     wire [9:0] imageon_host_decoder_code_bl;
+     wire [9:0] imageon_host_decoder_code_img;
+     wire [9:0] imageon_host_decoder_code_tr;
+     wire [9:0] imageon_host_decoder_code_crc;
+     wire imageon_host_decoder_frame_start;
+     wire [31:0] imageon_host_decoder_cnt_black_lines;
+     wire [31:0] imageon_host_decoder_cnt_image_lines;
+     wire [31:0] imageon_host_decoder_cnt_black_pixels;
+     wire [31:0] imageon_host_decoder_cnt_image_pixels;
+     wire [31:0] imageon_host_decoder_cnt_frames;
+     wire [31:0] imageon_host_decoder_cnt_windows;
+     wire [31:0] imageon_host_decoder_cnt_clocks;
+     wire [31:0] imageon_host_decoder_cnt_start_lines;
+     wire [31:0] imageon_host_decoder_cnt_end_lines;
+     wire [31:0] imageon_host_decoder_cnt_monitor0high;
+     wire [31:0] imageon_host_decoder_cnt_monitor0low;
+     wire [31:0] imageon_host_decoder_cnt_monitor1high;
+     wire [31:0] imageon_host_decoder_cnt_monitor1low;
+    /* HOST Interface - CRC Checker */
+     wire imageon_host_crc_reset;
+     wire imageon_host_crc_initvalue;
+     wire [31:0] imageon_host_crc_status;
+    /* HOST Interface - Data Channel Remapper */
+     wire [2:0] imageon_host_remapper_write_cfg;
+     wire [2:0] imageon_host_remapper_mode;
+    /* HOST Interface - Trigger Generator */
+     wire [2:0] imageon_host_trigger_enable;
+     wire [2:0] imageon_host_trigger_sync2readout;
+     wire imageon_host_trigger_readouttrigger;
+     wire [31:0] imageon_host_trigger_default_freq;
+     wire [31:0] imageon_host_trigger_cnt_trigger0high;
+     wire [31:0] imageon_host_trigger_cnt_trigger0low;
+     wire [31:0] imageon_host_trigger_cnt_trigger1high;
+     wire [31:0] imageon_host_trigger_cnt_trigger1low;
+     wire [31:0] imageon_host_trigger_cnt_trigger2high;
+     wire [31:0] imageon_host_trigger_cnt_trigger2low;
+     wire [31:0] imageon_host_trigger_ext_debounce;
+     wire imageon_host_trigger_ext_polarity;
+     wire [2:0] imageon_host_trigger_gen_polarity;
+    /* HOST Interface - FPN/PRNU Correction */
+     wire [255:0] imageon_host_fpn_prnu_values;
+    /* HOST Interface - Sync Generator */
+     wire [15:0] imageon_host_syncgen_delay;
+     wire [15:0] imageon_host_syncgen_hactive;
+     wire [15:0] imageon_host_syncgen_hfporch;
+     wire [15:0] imageon_host_syncgen_hsync;
+     wire [15:0] imageon_host_syncgen_hbporch;
+     wire [15:0] imageon_host_syncgen_vactive;
+     wire [15:0] imageon_host_syncgen_vfporch;
+     wire [15:0] imageon_host_syncgen_vsync;
+     wire [15:0] imageon_host_syncgen_vbporch;
+    /* Trigger Port */
+     wire trigger1;
+    /* Frame Sync Port */
+     wire imageon_host_fsync;
+     /* XSVI Port */
+     wire imageon_xsvi_vsync;
+     wire imageon_xsvi_hsync;
+     wire imageon_xsvi_vblank;
+     wire imageon_xsvi_hblank;
+     wire imageon_xsvi_active_video;
+     wire [9:0] imageon_xsvi_video_data;
+     wire [95:0] debug_spi_o;
+     wire [229:0] debug_iserdes_o;
+     wire [186:0] debug_decoder_o;
+     wire [87:0] debug_crc_o;
+     wire [9:0] debug_triggen_o;
+     wire [31:0] debug_video_o;
 '''
+## uncomment the following if we decide to use the PS7 SPI controller
+#         return '''
+#     wire io_vita_spi_ssel_n_I;
+#     wire io_vita_spi_ssel_n_O;
+#     wire io_vita_spi_ssel_n_T;
+#     wire io_vita_spi_sclk_I;
+#     wire io_vita_spi_sclk_O;
+#     wire io_vita_spi_sclk_T;
+#     wire io_vita_spi_mosi_I;
+#     wire io_vita_spi_mosi_O;
+#     wire io_vita_spi_mosi_T;
+#     wire io_vita_spi_miso_I;
+#     wire io_vita_spi_miso_O;
+#     wire io_vita_spi_miso_T;
+# '''
     def ps7_bus_port_map(self,busname,t,params):
-        return '''
-        .SPI0_SCLK_I(io_vita_spi_sclk_I),
-        .SPI0_SCLK_O(io_vita_spi_sclk_O),
-        .SPI0_SCLK_T(io_vita_spi_sclk_T),
-        .SPI0_MOSI_I(io_vita_spi_mosi_I),
-        .SPI0_MOSI_O(io_vita_spi_mosi_O),
-        .SPI0_MOSI_T(io_vita_spi_mosi_T),
-        .SPI0_MISO_I(io_vita_spi_miso_I),
-        .SPI0_MISO_O(io_vita_spi_miso_O),
-        .SPI0_MISO_T(io_vita_spi_miso_T),
-        .SPI0_SS_I(io_vita_spi_ssel_n_I),
-        .SPI0_SS_O(io_vita_spi_ssel_n_O),
-        .SPI0_SS_T(io_vita_spi_ssel_n_T),
-'''
+        return ''
+## uncomment the following if we decide to use the PS7 SPI controller
+#         return '''
+#         .SPI0_SCLK_I(io_vita_spi_sclk_I),
+#         .SPI0_SCLK_O(io_vita_spi_sclk_O),
+#         .SPI0_SCLK_T(io_vita_spi_sclk_T),
+#         .SPI0_MOSI_I(io_vita_spi_mosi_I),
+#         .SPI0_MOSI_O(io_vita_spi_mosi_O),
+#         .SPI0_MOSI_T(io_vita_spi_mosi_T),
+#         .SPI0_MISO_I(io_vita_spi_miso_I),
+#         .SPI0_MISO_O(io_vita_spi_miso_O),
+#         .SPI0_MISO_T(io_vita_spi_miso_T),
+#         .SPI0_SS_I(io_vita_spi_ssel_n_I),
+#         .SPI0_SS_O(io_vita_spi_ssel_n_O),
+#         .SPI0_SS_T(io_vita_spi_ssel_n_T),
+# '''
     def dut_bus_port_map(self, busname,t,params):
         return '''
-    .imageon_reset_n(imageon_reset_n),
-    .imageon_trigger(imageon_trigger),
-    .imageon_monitor_m(imageon_monitor),
-    .EN_imageon_monitor(EN_imageon_monitor),
-    .RDY_imageon_monitor(RDY_imageon_monitor),
+    .imageon_host_oe(imageon_host_oe),
+    .imageon_fsync_fsync(imageon_host_fsync),
+    .imageon_host_vita_reset(imageon_host_vita_reset),
+    .imageon_spi_reset(imageon_host_spi_reset),
+    .imageon_spi_timing(imageon_host_spi_timing),
+    .imageon_spi_status_busy_busy(imageon_host_spi_status_busy),
+    .imageon_spi_status_error_error(imageon_host_spi_status_error),
+    .imageon_spi_txfifo_wen(imageon_host_spi_txfifo_wen),
+    .imageon_spi_txfifo_din(imageon_host_spi_txfifo_din),
+    .imageon_spi_txfifo_full_full(imageon_host_spi_txfifo_full),
+    .imageon_spi_rxfifo_ren(imageon_host_spi_rxfifo_ren),
+    .imageon_spi_rxfifo_dout_dout(imageon_host_spi_rxfifo_dout),
+    .imageon_spi_rxfifo_empty_empty(imageon_host_spi_rxfifo_empty),
+    .imageon_serdes_reset(imageon_host_iserdes_reset),
+    .imageon_serdes_auto_align(imageon_host_iserdes_auto_align),
+    .imageon_serdes_align_start(imageon_host_iserdes_align_start),
+    .imageon_serdes_fifo_enable(imageon_host_iserdes_fifo_enable),
+    .imageon_serdes_manual_tap(imageon_host_iserdes_manual_tap),
+    .imageon_serdes_training(imageon_host_iserdes_training),
+    .imageon_serdes_iserdes_clk_ready_ready(imageon_host_iserdes_clk_ready),
+    .imageon_serdes_iserdes_clk_status_status(imageon_host_iserdes_clk_status),
+    .imageon_serdes_iserdes_align_busy_busy(imageon_host_iserdes_align_busy),
+    .imageon_serdes_iserdes_aligned_aligned(imageon_host_iserdes_aligned),
+    .imageon_decoder_reset(imageon_host_decoder_reset),
+    .imageon_decoder_enable(imageon_host_decoder_enable),
+    .imageon_decoder_startoddeven(imageon_host_decoder_startoddeven),
+    .imageon_decoder_code_ls(imageon_host_decoder_code_ls),
+    .imageon_decoder_code_le(imageon_host_decoder_code_le),
+    .imageon_decoder_code_fs(imageon_host_decoder_code_fs),
+    .imageon_decoder_code_fe(imageon_host_decoder_code_fe),
+    .imageon_decoder_code_bl(imageon_host_decoder_code_bl),
+    .imageon_decoder_code_img(imageon_host_decoder_code_img),
+    .imageon_decoder_code_tr(imageon_host_decoder_code_tr),
+    .imageon_decoder_code_crc(imageon_host_decoder_code_crc),
+    .imageon_decoder_frame_start_start(imageon_host_decoder_frame_start),
+    .imageon_decoder_cnt_black_lines_lines(imageon_host_decoder_cnt_black_lines),
+    .imageon_decoder_cnt_image_lines_lines(imageon_host_decoder_cnt_image_lines),
+    .imageon_decoder_cnt_black_pixels_pixels(imageon_host_decoder_cnt_black_pixels),
+    .imageon_decoder_cnt_image_pixels_pixels(imageon_host_decoder_cnt_image_pixels),
+    .imageon_decoder_cnt_frames_frames(imageon_host_decoder_cnt_frames),
+    .imageon_decoder_cnt_windows_windows(imageon_host_decoder_cnt_windows),
+    .imageon_decoder_cnt_clocks_clocks(imageon_host_decoder_cnt_clocks),
+    .imageon_decoder_cnt_start_lines_lines(imageon_host_decoder_cnt_start_lines),
+    .imageon_decoder_cnt_end_lines_lines(imageon_host_decoder_cnt_end_lines),
+    .imageon_decoder_cnt_monitor0high_monitor0high(imageon_host_decoder_cnt_monitor0high),
+    .imageon_decoder_cnt_monitor0low_monitor0low(imageon_host_decoder_cnt_monitor0low),
+    .imageon_decoder_cnt_monitor1high_monitor1high(imageon_host_decoder_cnt_monitor1high),
+    .imageon_decoder_cnt_monitor1low_monitor1low(imageon_host_decoder_cnt_monitor1low),
+    .imageon_crc_reset(imageon_host_crc_reset),
+    .imageon_crc_initvalue(imageon_host_crc_initvalue),
+    .imageon_crc_crc_status_status(imageon_host_crc_status),
+    .imageon_remapper_write_cfg(imageon_host_remapper_write_cfg),
+    .imageon_remapper_mode(imageon_host_remapper_mode),
+    .imageon_trigger_enable(imageon_host_trigger_enable),
+    .imageon_trigger_sync2readout(imageon_host_trigger_sync2readout),
+    .imageon_trigger_readouttrigger(imageon_host_trigger_readouttrigger),
+    .imageon_trigger_default_freq(imageon_host_trigger_default_freq),
+    .imageon_trigger_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
+    .imageon_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
+    .imageon_trigger_cnt_trigger1high(imageon_host_trigger_cnt_trigger1high),
+    .imageon_trigger_cnt_trigger1low(imageon_host_trigger_cnt_trigger1low),
+    .imageon_trigger_cnt_trigger2high(imageon_host_trigger_cnt_trigger2high),
+    .imageon_trigger_cnt_trigger2low(imageon_host_trigger_cnt_trigger2low),
+    .imageon_trigger_ext_debounce(imageon_host_trigger_ext_debounce),
+    .imageon_trigger_ext_polarity(imageon_host_trigger_ext_polarity),
+    .imageon_trigger_gen_polarity(imageon_host_trigger_gen_polarity),
+    .imageon_fpnPrnu_prnu_values(imageon_host_fpn_prnu_values),
+    .imageon_syncgen_delay(imageon_host_syncgen_delay),
+    .imageon_syncgen_hactive(imageon_host_syncgen_hactive),
+    .imageon_syncgen_hfporch(imageon_host_syncgen_hfporch),
+    .imageon_syncgen_hsync(imageon_host_syncgen_hsync),
+    .imageon_syncgen_hbporch(imageon_host_syncgen_hbporch),
+    .imageon_syncgen_vactive(imageon_host_syncgen_vactive),
+    .imageon_syncgen_vfporch(imageon_host_syncgen_vfporch),
+    .imageon_syncgen_vsync(imageon_host_syncgen_vsync),
+    .imageon_syncgen_vbporch(imageon_host_syncgen_vbporch),
+    .imageon_xsvi_vsync_v(imageon_xsvi_vsync),
+    .imageon_xsvi_hsync_v(imageon_xsvi_hsync),
+    .imageon_xsvi_vblank_v(imageon_xsvi_vblank),
+    .imageon_xsvi_hblank_v(imageon_xsvi_hblank),
+    .imageon_xsvi_active_video_v(imageon_xsvi_active_video),
+    .imageon_xsvi_video_data_v(imageon_xsvi_video_data),
 '''
     def top_bus_assignments(self,busname,t,params):
         return '''
-    IOBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) IOBUF_spi0_sclk
-    (
-    .IO(io_vita_spi_sclk),
-    // Buffer output (connect directly to top-level port)
-    .O(io_vita_spi_sclk_I),
-    .I(io_vita_spi_sclk_O),
-    .T(io_vita_spi_sclk_T)
-    // Buffer input
-    );
-    IOBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) IOBUF_spi0_mosi
-    (
-    .IO(io_vita_spi_mosi),
-    // Buffer output (connect directly to top-level port)
-    .O(io_vita_spi_mosi_I),
-    .I(io_vita_spi_mosi_O),
-    .T(io_vita_spi_mosi_T)
-    // Buffer input
-    );
-    IOBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) IOBUF_spi0_miso
-    (
-    .IO(io_vita_spi_miso),
-    // Buffer output (connect directly to top-level port)
-    .O(io_vita_spi_miso_I),
-    .I(io_vita_spi_miso_O),
-    .T(io_vita_spi_miso_T)
-    // Buffer input
-    );
-    IOBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) IOBUF_spi0_ssel_n
-    (
-    .IO(io_vita_spi_ssel_n),
-    // Buffer output (connect directly to top-level port)
-    .O(io_vita_spi_ssel_n_I),
-    .I(io_vita_spi_ssel_n_O),
-    .T(io_vita_spi_ssel_n_T)
-    // Buffer input
-    );
+   wire clockfb;
+   wire imageon_clk4x_unbuf;
+   wire imageon_clk4_unbuf;
+
+    MMCME2_BASE# (
+        .BANDWIDTH("OPTIMIZED"),
+        .CLKFBOUT_MULT_F(5.0),
+        .DIVCLK_DIVIDE(1),
+        .CLKFBOUT_PHASE(0.0),
+        .CLKIN1_PERIOD(6.734),
+        .CLKOUT0_DIVIDE_F(5.0),
+        .CLKOUT1_DIVIDE(20))
+   MMCME2_inst(
+        .CLKIN1(processing_system7_1_fclk_clk3),
+        .CLKOUT0(imageon_clk4x_unbuf),
+        .CLKOUT1(imageon_clk_unbuf),
+        .CLKFBOUT(clockfb),
+        .CLKFBIN(clockfb),
+        .RST(GND_1)
+   );
+
+   BUFG bufg_clk4x(
+		   .I(imageon_clk4x_unbuf),
+		   .O(imageon_clk4x)
+		   );
+   BUFG bufg_clk(
+		 .I(imageon_clk_unbuf),
+		 .O(imageon_clk)
+		 );
+
+assign XADC_gpio[3] = debug_spi_o[imageon_host_oe];
+assign XADC_gpio[2] = debug_spi_o[18];
+assign XADC_gpio[1] = debug_spi_o[17];
+assign XADC_gpio[0] = debug_spi_o[16];
 '''
+#        return '''
+#     IOBUF # (
+#     .DRIVE(12),
+#     .IOSTANDARD("LVCMOS25"),
+#     .SLEW("SLOW")) IOBUF_spi0_sclk
+#     (
+#     .IO(io_vita_spi_sclk),
+#     // Buffer output (connect directly to top-level port)
+#     .O(io_vita_spi_sclk_I),
+#     .I(io_vita_spi_sclk_O),
+#     .T(io_vita_spi_sclk_T)
+#     // Buffer input
+#     );
+#     IOBUF # (
+#     .DRIVE(12),
+#     .IOSTANDARD("LVCMOS25"),
+#     .SLEW("SLOW")) IOBUF_spi0_mosi
+#     (
+#     .IO(io_vita_spi_mosi),
+#     // Buffer output (connect directly to top-level port)
+#     .O(io_vita_spi_mosi_I),
+#     .I(io_vita_spi_mosi_O),
+#     .T(io_vita_spi_mosi_T)
+#     // Buffer input
+#     );
+#     IOBUF # (
+#     .DRIVE(12),
+#     .IOSTANDARD("LVCMOS25"),
+#     .SLEW("SLOW")) IOBUF_spi0_miso
+#     (
+#     .IO(io_vita_spi_miso),
+#     // Buffer output (connect directly to top-level port)
+#     .O(io_vita_spi_miso_I),
+#     .I(io_vita_spi_miso_O),
+#     .T(io_vita_spi_miso_T)
+#     // Buffer input
+#     );
+#     IOBUF # (
+#     .DRIVE(12),
+#     .IOSTANDARD("LVCMOS25"),
+#     .SLEW("SLOW")) IOBUF_spi0_ssel_n
+#     (
+#     .IO(io_vita_spi_ssel_n),
+#     // Buffer output (connect directly to top-level port)
+#     .O(io_vita_spi_ssel_n_I),
+#     .I(io_vita_spi_ssel_n_O),
+#     .T(io_vita_spi_ssel_n_T)
+#     // Buffer input
+#     );
+# '''
     def bus_assignments(self,busname,t,params):
         return '''
-    assign EN_imageon_monitor = RDY_imageon_monitor;
-'''
+    assign imageon_clk200 = processing_system7_1_fclk_clk3;
+    assign imageon_clk = processing_system7_1_fclk_clk2; /* fixme */
+    /* assign imageon_clk4x = processing_system7_1_fclk_clk3; */ /* fixme */
+
+fmc_imageon_vita_core fmc_imageon_vita_core_1
+  (
+    .clk200(imageon_clk200),
+    .clk(imageon_clk),
+    .clk4x(imageon_clk4x),
+    .reset(imageon_reset),
+    .oe(imageon_host_oe), /* input */
+    /* HOST Interface - VITA */
+    .host_vita_reset(imageon_host_vita_reset),
+    /* HOST Interface - SPI */
+    .host_spi_clk(processing_system7_1_fclk_clk0),
+    .host_spi_reset(imageon_host_spi_reset),
+    .host_spi_timing(imageon_host_spi_timing),
+    .host_spi_status_busy(imageon_host_spi_status_busy),
+    .host_spi_status_error(imageon_host_spi_status_error),
+    .host_spi_txfifo_clk(processing_system7_1_fclk_clk0),
+    .host_spi_txfifo_wen(imageon_host_spi_txfifo_wen),
+    .host_spi_txfifo_din(imageon_host_spi_txfifo_din),
+    .host_spi_txfifo_full(imageon_host_spi_txfifo_full),
+    .host_spi_rxfifo_clk(processing_system7_1_fclk_clk0),
+    .host_spi_rxfifo_ren(imageon_host_spi_rxfifo_ren),
+    .host_spi_rxfifo_dout(imageon_host_spi_rxfifo_dout),
+    .host_spi_rxfifo_empty(imageon_host_spi_rxfifo_empty),
+    /* HOST Interface - ISERDES */
+    .host_iserdes_reset(imageon_host_iserdes_reset),
+    .host_iserdes_auto_align(imageon_host_iserdes_auto_align),
+    .host_iserdes_align_start(imageon_host_iserdes_align_start),
+    .host_iserdes_fifo_enable(imageon_host_iserdes_fifo_enable),
+    .host_iserdes_manual_tap(imageon_host_iserdes_manual_tap),
+    .host_iserdes_training(imageon_host_iserdes_training),
+    .host_iserdes_clk_ready(imageon_host_iserdes_clk_ready),
+    .host_iserdes_clk_status(imageon_host_iserdes_clk_status),
+    .host_iserdes_align_busy(imageon_host_iserdes_align_busy),
+    .host_iserdes_aligned(imageon_host_iserdes_aligned),
+    /* HOST Interface - Sync Channel Decoder */
+    .host_decoder_enable(imageon_host_decoder_enable),
+    .host_decoder_startoddeven(imageon_host_decoder_startoddeven),
+    .host_decoder_code_ls(imageon_host_decoder_code_ls),
+    .host_decoder_code_le(imageon_host_decoder_code_le),
+    .host_decoder_code_fs(imageon_host_decoder_code_fs),
+    .host_decoder_code_fe(imageon_host_decoder_code_fe),
+    .host_decoder_code_bl(imageon_host_decoder_code_bl),
+    .host_decoder_code_img(imageon_host_decoder_code_img),
+    .host_decoder_code_tr(imageon_host_decoder_code_tr),
+    .host_decoder_code_crc(imageon_host_decoder_code_crc),
+    .host_decoder_frame_start(imageon_host_decoder_frame_start),
+    .host_decoder_cnt_black_lines(imageon_host_decoder_cnt_black_lines),
+    .host_decoder_cnt_image_lines(imageon_host_decoder_cnt_image_lines),
+    .host_decoder_cnt_black_pixels(imageon_host_decoder_cnt_black_pixels),
+    .host_decoder_cnt_image_pixels(imageon_host_decoder_cnt_image_pixels),
+    .host_decoder_cnt_frames(imageon_host_decoder_cnt_frames),
+    .host_decoder_cnt_windows(imageon_host_decoder_cnt_windows),
+    .host_decoder_cnt_clocks(imageon_host_decoder_cnt_clocks),
+    .host_decoder_cnt_start_lines(imageon_host_decoder_cnt_start_lines),
+    .host_decoder_cnt_end_lines(imageon_host_decoder_cnt_end_lines),
+    .host_decoder_cnt_monitor0high(imageon_host_decoder_cnt_monitor0high),
+    .host_decoder_cnt_monitor0low(imageon_host_decoder_cnt_monitor0low),
+    .host_decoder_cnt_monitor1high(imageon_host_decoder_cnt_monitor1high),
+    .host_decoder_cnt_monitor1low(imageon_host_decoder_cnt_monitor1low),
+    /* HOST Interface - CRC .Checker */
+    .host_crc_reset(imageon_host_crc_reset),
+    .host_crc_initvalue(imageon_host_crc_initvalue),
+    .host_crc_status(imageon_host_crc_status),
+    /* HOST Interface - Data Channel Remapper */
+    .host_remapper_write_cfg(imageon_host_remapper_write_cfg),
+    .host_remapper_mode(imageon_host_remapper_mode),
+    /* HOST Interface - Trigger Generator */
+    .host_triggen_enable(imageon_host_trigger_enable),
+    .host_triggen_sync2readout(imageon_host_trigger_sync2readout),
+    .host_triggen_readouttrigger(imageon_host_trigger_readouttrigger),
+    .host_triggen_default_freq(imageon_host_trigger_default_freq),
+    .host_triggen_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
+    .host_triggen_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
+    .host_triggen_cnt_trigger1high(imageon_host_trigger_cnt_trigger1high),
+    .host_triggen_cnt_trigger1low(imageon_host_trigger_cnt_trigger1low),
+    .host_triggen_cnt_trigger2high(imageon_host_trigger_cnt_trigger2high),
+    .host_triggen_cnt_trigger2low(imageon_host_trigger_cnt_trigger2low),
+    .host_triggen_ext_debounce(imageon_host_trigger_ext_debounce),
+    .host_triggen_ext_polarity(imageon_host_trigger_ext_polarity),
+    .host_triggen_gen_polarity(imageon_host_trigger_gen_polarity),
+    /* HOST Interface - FPN/PRNU Correction */
+    .host_fpn_prnu_values(imageon_host_fpn_prnu_values),
+    /* HOST Interface - Sync Generator */
+    .host_syncgen_delay(imageon_host_syncgen_delay),
+    .host_syncgen_hactive(imageon_host_syncgen_hactive),
+    .host_syncgen_hfporch(imageon_host_syncgen_hfporch),
+    .host_syncgen_hsync(imageon_host_syncgen_hsync),
+    .host_syncgen_hbporch(imageon_host_syncgen_hbporch),
+    .host_syncgen_vactive(imageon_host_syncgen_vactive),
+    .host_syncgen_vfporch(imageon_host_syncgen_vfporch),
+    .host_syncgen_vsync(imageon_host_syncgen_vsync),
+    .host_syncgen_vbporch(imageon_host_syncgen_vbporch),
+    /* I/O pins */
+    .io_vita_clk_pll(io_vita_clk_pll),
+    .io_vita_reset_n(io_vita_reset_n),
+    .io_vita_trigger(io_vita_trigger),
+    .io_vita_monitor(io_vita_monitor),
+    .io_vita_spi_sclk(io_vita_spi_sclk),
+    .io_vita_spi_ssel_n(io_vita_spi_ssel_n),
+    .io_vita_spi_mosi(io_vita_spi_mosi),
+    .io_vita_spi_miso(io_vita_spi_miso),
+    .io_vita_clk_out_p(io_vita_clk_out_p),
+    .io_vita_clk_out_n(io_vita_clk_out_n),
+    .io_vita_sync_p(io_vita_sync_p),
+    .io_vita_sync_n(io_vita_sync_n),
+    .io_vita_data_p(io_vita_data_p),
+    .io_vita_data_n(io_vita_data_n),
+    /* Trigger Port */
+    .trigger1(imageon_trigger1),
+    /* Frame Sync Port */
+    .fsync(imageon_fsync),
+    /* XSVI Port */
+    .xsvi_vsync_o(imageon_xsvi_vsync),
+    .xsvi_hsync_o(imageon_xsvi_hsync),
+    .xsvi_vblank_o(imageon_xsvi_vblank),
+    .xsvi_hblank_o(imageon_xsvi_hblank),
+    .xsvi_active_video_o(imageon_xsvi_active_video),
+    .xsvi_video_data_o(imageon_xsvi_video_data),
+    /* Debug Ports */
+    .debug_spi_o(debug_spi_o),
+    .debug_iserdes_o(debug_iserdes_o),
+    .debug_decoder_o(debug_decoder_o),
+    .debug_crc_o(debug_crc_o),
+    .debug_triggen_o(debug_triggen_o),
+    .debug_video_o(debug_video_o)
+);
+ '''
     def pinout(self, board):
         return imageon_pinout[board]
 ImageonVita()
@@ -1172,11 +1543,14 @@ class InterfaceMixin:
         for busType in busHandlers:
             buses = self.collectInterfaceNames(busType)
             if len(buses):
-                for (name, pin, iostandard, direction) in busHandlers[busType].pinout(boardname):
-                    xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
-                    if (iostandard == 'LVDS_25'):
-                        xdc.write(xdc_diff_term_template
+                for entry in busHandlers[busType].pinout(boardname):
+                    if len(entry) == 4:
+                        (name, pin, iostandard, direction) = entry
+                        xdc.write(xdc_template
                                   % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
+                        if (iostandard == 'LVDS_25'):
+                            xdc.write(xdc_diff_term_template
+                                      % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
 
         xdc.close()
         return
