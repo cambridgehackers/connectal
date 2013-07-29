@@ -66,6 +66,8 @@ XBSVTOP=$(PWD)/..
 BSVPATH = $(XBSVTOP)/%(bsvpath)s:$(XBSVTOP)/bsv
 vfile=sources/%(dut)s/mk%(Dut)sWrapper.v
 
+all: bits exe
+
 $(vfile): sources/%(dut)s/%(Dut)sWrapper.bsv
 	cd sources/%(dut)s; bsc --wait-for-license -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
@@ -89,6 +91,9 @@ implementation: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
 
 bits: %(dut)s.bit.bin.gz
 boot.bin: %(dut)s.bit.bin.gz
+
+exe:
+	ndk-build
 '''
 
 vivado_strategies={
