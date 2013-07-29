@@ -63,8 +63,8 @@ interface ImageCapture;
 
     method Action set_spi_reset(Bit#(1) v);
     method Action set_spi_timing(Bit#(16) v);
-    method Action spi_txfifo_put(Bit#(32) v);
-    method Action spi_rxfifo_get();
+    method Action put_spi_txfifo(Bit#(32) v);
+    method Action get_spi_rxfifo();
 
     method Action set_serdes_reset(Bit#(1) v);
     method Action set_serdes_auto_align(Bit#(1) v);
@@ -180,10 +180,10 @@ module mkImageCapture#(//Clock hdmi_clock,
     method Action set_spi_timing(Bit#(16) v);
         control.set_spi_timing(v);
     endmethod
-    method Action spi_txfifo_put(Bit#(32) v);
+    method Action put_spi_txfifo(Bit#(32) v);
         control.txfifo.put(v);
     endmethod
-    method Action spi_rxfifo_get();
+    method Action get_spi_rxfifo();
         Bit#(32) v <- control.rxfifo.get();
         indications.rxfifo_value(v);
     endmethod
