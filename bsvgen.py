@@ -429,7 +429,6 @@ class MethodMixin:
 
     def collectIndicationMethodRule(self, outerTypeName):
         substs = self.substs(outerTypeName)
-        print 
         if self.return_type.name == 'Action':
             paramType = ['%s' % p.type.toBsvType() for p in self.params]
             substs['paramType'] = ', '.join(paramType)
@@ -439,7 +438,6 @@ class MethodMixin:
 
     def collectIndicationMethod(self, outerTypeName):
         substs = self.substs(outerTypeName)
-        print 
         if self.return_type.name == 'Action':
             formal = ['%s %s' % (p.type.toBsvType(), p.name) for p in self.params]
             substs['formals'] = ', '.join(formal)
