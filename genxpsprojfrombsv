@@ -182,8 +182,9 @@ if __name__=='__main__':
         indicationInterface = syntax.globalvars[indicationInterfaceName]
         subinterface.isIndication = False
         indicationInterface.isIndication = True
-        subinterface.assignRequestResponseChannels()
-        indicationInterface.assignRequestResponseChannels(subinterface.channelCount)
+        ## assign the indication methods to the lower channel numbers
+        indicationInterface.assignRequestResponseChannels()
+        subinterface.assignRequestResponseChannels(indicationInterface.channelCount)
 
         indicationInterface.emitCDeclaration(h)
         subinterface.emitCDeclaration(h)
