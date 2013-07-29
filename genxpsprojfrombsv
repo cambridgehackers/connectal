@@ -68,11 +68,12 @@ vfile=sources/%(dut)s/mk%(Dut)sWrapper.v
 
 $(vfile): sources/%(dut)s/%(Dut)sWrapper.bsv
 	cd sources/%(dut)s; bsc --wait-for-license -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
-
-verilog: $(vfile)
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
 	cp -r ../xilinx/sources/* sources/
 	cp -r ../xilinx/constraints .
+
+verilog: $(vfile)
+
 %(dut)s.xpr:
 	vivado -mode batch -source %(dut)sxpr.tcl
 
