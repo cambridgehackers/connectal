@@ -151,6 +151,19 @@ interface ImageonVita;
 endinterface
 
 interface ImageonControl;
+    method Action set_spi_control(Bit#(32) v);
+    method Bit#(32) get_spi_control();
+    method Action set_iserdes_control(Bit#(32) v);
+    method Bit#(32) get_iserdes_control();
+    method Action set_decoder_control(Bit#(32) v);
+    method Bit#(32) get_decoder_control();
+    method Action set_crc_control(Bit#(32) v);
+    method Bit#(32) get_crc_control();
+    method Action set_remapper_control(Bit#(32) v);
+    method Bit#(32) get_remapper_control();
+    method Action set_triggen_control(Bit#(32) v);
+    method Bit#(32) get_triggen_control();
+
     method Action set_host_vita_reset(Bit#(1) v);
     method Action set_host_oe(Bit#(1) v);
     method Action set_spi_reset(Bit#(1) v);
@@ -217,6 +230,8 @@ module mkImageonVitaController(ImageonVitaController);
     Reg#(Bit#(1)) spi_reset_reg <- mkReg(0);
     Reg#(Bit#(16)) spi_timing_reg <- mkReg(0);
 
+    Wire#(Bit#(1)) spi_status_busy_wire <- mkDWire(0);
+    Wire#(Bit#(1)) spi_status_error_wire <- mkDWire(0);
     Wire#(Bit#(1)) spi_txfifo_full_wire <- mkDWire(0);
     Wire#(Bit#(1)) spi_txfifo_wen_wire <- mkDWire(0);
     Wire#(Bit#(32)) spi_txfifo_din_wire <- mkDWire(0);
@@ -230,6 +245,11 @@ module mkImageonVitaController(ImageonVitaController);
     Reg#(Bit#(1)) serdes_fifo_enable_reg <- mkReg(0);
     Reg#(Bit#(10)) serdes_manual_tap_reg <- mkReg(0);
     Reg#(Bit#(10)) serdes_training_reg <- mkReg(0);
+    Wire#(Bit#(1)) serdes_clk_ready_wire <- mkDWire(0);
+    Wire#(Bit#(16)) serdes_clk_status_wire <- mkDWire(0);
+    Wire#(Bit#(1)) serdes_align_busy_wire <- mkDWire(0);
+    Wire#(Bit#(1)) serdes_aligned_wire <- mkDWire(0);
+
     Reg#(Bit#(1)) decoder_reset_reg <- mkReg(0);
     Reg#(Bit#(1)) decoder_enable_reg <- mkReg(0);
     Reg#(Bit#(32)) decoder_startoddeven_reg <- mkReg(0);
@@ -241,8 +261,26 @@ module mkImageonVitaController(ImageonVitaController);
     Reg#(Bit#(10)) decoder_code_img_reg <- mkReg(0);
     Reg#(Bit#(10)) decoder_code_tr_reg <- mkReg(0);
     Reg#(Bit#(10)) decoder_code_crc_reg <- mkReg(0);
+    Wire#(Bit#(1)) decoder_frame_start_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_black_lines_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_image_lines_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_black_pixels_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_image_pixels_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_frames_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_windows_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_clocks_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_start_lines_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_end_lines_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_monitor0high_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_monitor0low_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_monitor1high_wire <- mkDWire(0);
+    Wire#(Bit#(32)) decoder_cnt_monitor1low_wire <- mkDWire(0);
+
     Reg#(Bit#(1)) crc_reset_reg <- mkReg(0);
     Reg#(Bit#(1)) crc_initvalue_reg <- mkReg(0);
+    Wire#(Bit#(32)) crc_status_wire <- mkDWire(0);
+    Wire#(Bit#(10)) decoder_video_data_wire <- mkDWire(0);
+
     Reg#(Bit#(3)) remapper_write_cfg_reg <- mkReg(0);
     Reg#(Bit#(3)) remapper_mode_reg <- mkReg(0);
     Reg#(Bit#(3)) trigger_enable_reg <- mkReg(0);
@@ -273,6 +311,12 @@ module mkImageonVitaController(ImageonVitaController);
     Reg#(Bit#(32)) vblank_reg <- mkReg(0);
     Reg#(Bit#(32)) hblank_reg <- mkReg(0);
     Reg#(Bit#(32)) active_reg <- mkReg(0);
+    Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
+    Wire#(Bit#(1)) xsvi_vsync_wire <- mkDWire(0);
+    Wire#(Bit#(1)) xsvi_hsync_wire <- mkDWire(0);
+    Wire#(Bit#(1)) xsvi_vblank_wire <- mkDWire(0);
+    Wire#(Bit#(1)) xsvi_hblank_wire <- mkDWire(0);
+    Wire#(Bit#(1)) xsvi_active_video_wire <- mkDWire(0);
 
     interface ImageonVita host;
 	method Bit#(1) host_vita_reset();
@@ -291,8 +335,10 @@ module mkImageonVitaController(ImageonVitaController);
 		return spi_timing_reg;
 	    endmethod
 	    method Action status_busy(Bit#(1) busy);
+	        spi_status_busy_wire <= busy;
 	    endmethod
 	    method Action status_error(Bit#(1) error);
+	        spi_status_error_wire <= error;
 	    endmethod
 	    method Bit#(1) txfifo_wen();
 		return spi_txfifo_wen_wire;
@@ -333,12 +379,16 @@ module mkImageonVitaController(ImageonVitaController);
 		return serdes_training_reg;
 	    endmethod
 	    method Action iserdes_clk_ready(Bit#(1) ready);
+	        serdes_clk_ready_wire <= ready;
 	    endmethod
 	    method Action iserdes_clk_status(Bit#(16) status);
+	        serdes_clk_status_wire <= status;
 	    endmethod
 	    method Action iserdes_align_busy(Bit#(1) busy);
+	        serdes_align_busy_wire <= busy;
 	    endmethod
 	    method Action iserdes_aligned(Bit#(1) aligned);
+	        serdes_aligned_wire <= aligned;
 	    endmethod
 	endinterface
 	interface ImageonDecoder decoder;
@@ -376,32 +426,46 @@ module mkImageonVitaController(ImageonVitaController);
 		return decoder_code_crc_reg;
 	    endmethod
 	    method Action frame_start(Bit#(1) start);
+	        decoder_frame_start_wire <= start;
 	    endmethod
 	    method Action cnt_black_lines(Bit#(32) lines);
+	        decoder_cnt_black_lines_wire <= lines;
 	    endmethod
 	    method Action cnt_image_lines(Bit#(32) lines);
+	        decoder_cnt_image_lines_wire <= lines;
 	    endmethod
 	    method Action cnt_black_pixels(Bit#(32) pixels);
+	        decoder_cnt_black_pixels_wire <= pixels;
 	    endmethod
 	    method Action cnt_image_pixels(Bit#(32) pixels);
+	        decoder_cnt_image_pixels_wire <= pixels;
 	    endmethod
 	    method Action cnt_frames(Bit#(32) frames);
+	        decoder_cnt_frames_wire <= frames;
 	    endmethod
 	    method Action cnt_windows(Bit#(32) windows);
+	        decoder_cnt_windows_wire <= windows;
 	    endmethod
 	    method Action cnt_clocks(Bit#(32) clocks);
+	        decoder_cnt_clocks_wire <= clocks;
 	    endmethod
 	    method Action cnt_start_lines(Bit#(32) lines);
+	        decoder_cnt_start_lines_wire <= lines;
 	    endmethod
 	    method Action cnt_end_lines(Bit#(32) lines);
+	        decoder_cnt_end_lines_wire <= lines;
 	    endmethod
 	    method Action cnt_monitor0high(Bit#(32) monitor0high);
+	        decoder_cnt_monitor0high_wire <= monitor0high;
 	    endmethod
 	    method Action cnt_monitor0low(Bit#(32) monitor0low);
+	        decoder_cnt_monitor0low_wire <= monitor0low;
 	    endmethod
 	    method Action cnt_monitor1high(Bit#(32) monitor1high);
+	        decoder_cnt_monitor1high_wire <= monitor1high;
 	    endmethod
 	    method Action cnt_monitor1low(Bit#(32) monitor1low);
+	        decoder_cnt_monitor1low_wire <= monitor1low;
 	    endmethod
 	endinterface
 	interface ImageonCrc crc;
@@ -412,6 +476,7 @@ module mkImageonVitaController(ImageonVitaController);
 		return crc_initvalue_reg;
 	    endmethod
 	    method Action crc_status(Bit#(32) status);
+	        crc_status_wire <= status;
 	    endmethod
 	endinterface
 	interface ImageonRemapper remapper;
@@ -499,30 +564,153 @@ module mkImageonVitaController(ImageonVitaController);
 	endinterface
 	interface ImageonXsvi xsvi;
 	    method Action vsync(Bit#(1) v);
+	        xsvi_vsync_wire <= v;
 	        if (v == 1)
 	            vsync_reg <= vsync_reg + 1;
 	    endmethod
 	    method Action hsync(Bit#(1) v);
+	        xsvi_hsync_wire <= v;
 	        if (v == 1)
 	            hsync_reg <= hsync_reg + 1;
 	    endmethod
 	    method Action vblank(Bit#(1) v);
+	        xsvi_vblank_wire <= v;
 	        if (v == 1)
 	            vblank_reg <= vblank_reg + 1;
 	    endmethod
 	    method Action hblank(Bit#(1) v);
+	        xsvi_hblank_wire <= v;
 	        if (v == 1)
 	            hblank_reg <= hblank_reg + 1;
 	    endmethod
 	    method Action active_video(Bit#(1) v);
+	        xsvi_active_video_wire <= v;
 	        if (v == 1)
 	            active_reg <= active_reg + 1;
 	    endmethod
 	    method Action video_data(Bit#(10) v);
+	        xsvi_video_data_wire <= v;
 	    endmethod
 	endinterface
     endinterface
     interface ImageonControl control;
+// SPI_CONTROL
+//    [ 0] VITA_RESET
+//    [ 1] SPI_RESET
+//    [ 8] SPI_STATUS_BUSY
+//    [ 9] SPI_STATUS_ERROR
+//    [16] SPI_TXFIFO_FULL
+//    [24] SPI_RXFIFO_EMPTY
+	method Action set_spi_control(Bit#(32) v);
+            host_vita_reset_reg <= v[0];
+            spi_reset_reg <= v[1];
+	endmethod
+	method Bit#(32) get_spi_control();
+	    let v = 0;
+            v[0] = host_vita_reset_reg;
+	    v[1] = spi_reset_reg;
+	    v[8] = spi_status_busy_wire;
+	    v[9] = spi_status_error_wire;
+	    v[16] = spi_txfifo_full_wire;
+	    v[24] = spi_rxfifo_empty_wire;
+	    return v;
+	endmethod
+
+// ISERDES_CONTROL
+//    [ 0] ISERDES_RESET
+//    [ 1] ISERDES_AUTO_ALIGN
+//    [ 2] ISERDES_ALIGN_START
+//    [ 3] ISERDES_FIFO_ENABLE
+//    [ 8] ISERDES_CLK_READY
+//    [ 9] ISERDES_ALIGN_BUSY
+//    [10] ISERDES_ALIGNED
+// [23:16] ISERDES_TXCLK_STATUS
+// [31:24] ISERDES_RXCLK_STATUS
+	method Action set_iserdes_control(Bit#(32) v);
+	    serdes_reset_reg <= v[0];
+	    serdes_auto_align_reg <= v[1];
+	    serdes_align_start_reg <= v[2];
+	    serdes_fifo_enable_reg <= v[3];
+	endmethod
+	method Bit#(32) get_iserdes_control();
+	    let v = 0;
+	    v[0] = serdes_reset_reg;
+	    v[1] = serdes_auto_align_reg;
+	    v[2] = serdes_align_start_reg;
+	    v[3] = serdes_fifo_enable_reg;
+	    v[8] = serdes_clk_ready_wire;
+	    v[9] = serdes_align_busy_wire;
+	    v[10] = serdes_aligned_wire;
+	    v[31:16] = serdes_clk_status_wire;
+	    return v;
+	endmethod
+// DECODER_CONTROL[7:0]
+//    [0] DECODER_RESET
+//    [1] DECODER_ENABLE
+	method Action set_decoder_control(Bit#(32) v);
+	    decoder_reset_reg <= v[0];
+	    decoder_enable_reg <= v[1];
+	endmethod
+	method Bit#(32) get_decoder_control();
+	    let v = 0;
+	    v[0] = decoder_reset_reg;
+	    v[1] = decoder_enable_reg;
+	    return v;
+	endmethod
+// CRC_CONTROL[7:0]
+//    [0] CRC_RESET
+//    [1] CRC_INITVALUE
+	method Action set_crc_control(Bit#(32) v);
+	    crc_reset_reg <= v[0];
+	    crc_initvalue_reg <= v[1];
+	endmethod
+	method Bit#(32) get_crc_control();
+	    let v = 0;
+	    v[0] = crc_reset_reg;
+	    v[1] = crc_initvalue_reg;
+	    return v;
+	endmethod
+// REMAPPER_CONTROL[7:0]
+//    [2:0] REMAPPER_WRITE_CFG
+//    [6:4] REMAPPER_MODE
+	method Action set_remapper_control(Bit#(32) v);
+	    remapper_write_cfg_reg <= v[2:0];
+	    remapper_mode_reg <= v[6:4];
+	endmethod
+	method Bit#(32) get_remapper_control();
+	    let v = 0;
+	    v[2:0] = remapper_write_cfg_reg;
+	    v[6:4] = remapper_mode_reg;
+	    return v;
+	endmethod
+// TRIGGEN_CONTROL
+// [ 2: 0] TRIGGEN_ENABLE
+// [ 6: 4] TRIGGEN_SYNC2READOUT
+// [    8] TRIGGEN_READOUTTRIGGER
+// [   16] TRIGGEN_EXT_POLARITY
+// [   24] TRIGGEN_CNT_UPDATE
+// [30:28] TRIGGEN_GEN_POLARITY
+	method Action set_triggen_control(Bit#(32) v);
+	    trigger_enable_reg <= v[2:0];
+	    trigger_sync2readout_reg <= v[6:4];
+	    trigger_readouttrigger_reg <= v[8];
+	    trigger_ext_polarity_reg <= v[16];
+	    //FIXME
+	    //trigger_cnt_update_reg <= v[24];
+	    trigger_gen_polarity_reg <= v[30:28];
+	endmethod
+	method Bit#(32) get_triggen_control();
+	    let v = 0;
+	    v[2:0] = trigger_enable_reg;
+	    v[6:4] = trigger_sync2readout_reg;
+	    v[8] = trigger_readouttrigger_reg;
+	    v[16] = trigger_ext_polarity_reg;
+	    //FIXME
+	    //v[24] = trigger_cnt_update_reg;
+	    v[30:28] = trigger_gen_polarity_reg;
+	    return v;
+	endmethod
+
 	method Action set_host_vita_reset(Bit#(1) v);
 	    host_vita_reset_reg <= v;
 	endmethod

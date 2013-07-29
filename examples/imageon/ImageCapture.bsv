@@ -24,17 +24,38 @@
 
 import FIFO::*;
 import SPI::*;
+import GetPut::*;
 
 import Zynq::*;
 import Imageon::*;
 import HDMI::*;
-import GetPut::*;
+import BlueScope::*;
 
 interface ImageCaptureIndications;
+    method Action spi_control_value(Bit#(32) v);
+    method Action iserdes_control_value(Bit#(32) v);
+    method Action decoder_control_value(Bit#(32) v);
+    method Action crc_control_value(Bit#(32) v);
+    method Action remapper_control_value(Bit#(32) v);
+    method Action triggen_control_value(Bit#(32) v);
+
     method Action rxfifo_value(Bit#(32) v);
 endinterface
 
 interface ImageCapture;
+    method Action set_spi_control(Bit#(32) v);
+    method Action get_spi_control();
+    method Action set_iserdes_control(Bit#(32) v);
+    method Action get_iserdes_control();
+    method Action set_decoder_control(Bit#(32) v);
+    method Action get_decoder_control();
+    method Action set_crc_control(Bit#(32) v);
+    method Action get_crc_control();
+    method Action set_remapper_control(Bit#(32) v);
+    method Action get_remapper_control();
+    method Action set_triggen_control(Bit#(32) v);
+    method Action get_triggen_control();
+
     method Action set_host_vita_reset(Bit#(1) v);
     method Action set_host_oe(Bit#(1) v);
 
@@ -96,6 +117,50 @@ module mkImageCapture#(//Clock hdmi_clock,
        ImageCaptureIndications indications)(ImageCapture);
     ImageonVitaController imageonVita <- mkImageonVitaController();
     ImageonControl control = imageonVita.control;
+    //BlueScope#(96,96) spiBlueScope <- mkBlueScope(1024);
+
+    method Action set_spi_control(Bit#(32) v);
+        control.set_spi_control(v);
+    endmethod
+    method Action get_spi_control();
+        indications.spi_control_value(control.get_spi_control());
+    endmethod
+
+    method Action set_iserdes_control(Bit#(32) v);
+        control.set_iserdes_control(v);
+    endmethod
+    method Action get_iserdes_control();
+        indications.iserdes_control_value(control.get_iserdes_control());
+    endmethod
+
+    method Action set_decoder_control(Bit#(32) v);
+        control.set_decoder_control(v);
+    endmethod
+    method Action get_decoder_control();
+        indications.decoder_control_value(control.get_decoder_control());
+    endmethod
+
+    method Action set_crc_control(Bit#(32) v);
+        control.set_crc_control(v);
+    endmethod
+    method Action get_crc_control();
+        indications.crc_control_value(control.get_crc_control());
+    endmethod
+
+    method Action set_remapper_control(Bit#(32) v);
+        control.set_remapper_control(v);
+    endmethod
+    method Action get_remapper_control();
+        indications.remapper_control_value(control.get_remapper_control());
+    endmethod
+
+    method Action set_triggen_control(Bit#(32) v);
+        control.set_triggen_control(v);
+    endmethod
+    method Action get_triggen_control();
+        indications.triggen_control_value(control.get_triggen_control());
+    endmethod
+
 
     method Action set_host_vita_reset(Bit#(1) v);
         control.set_host_vita_reset(v);
@@ -218,8 +283,13 @@ module mkImageCapture#(//Clock hdmi_clock,
     method Action set_trigger_gen_polarity(Bit#(3) v);
         control.set_trigger_gen_polarity(v);
     endmethod
-    method Action set_prnu_values(Bit#(256) v);
-        control.set_prnu_values(v);
+    method Action set_prnu_values(Bit#(64) v0, Bit#(64) v1, Bit#(64) v2, Bit#(64) v3);
+        Bit#(256) bitvec;
+	bitvec[63:0] = v0;
+	bitvec[127:64] = v1;
+	bitvec[191:128] = v2;
+	bitvec[255:192] = v3;
+        control.set_prnu_values(bitvec);
     endmethod
     method Action set_syncgen_delay(Bit#(16) v);
         control.set_syncgen_delay(v);
