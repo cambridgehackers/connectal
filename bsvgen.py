@@ -196,7 +196,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	if (addr >= 12'h034 && addr <= (12'h034 + %(channelCount)s/4))
 	begin
 	    v = 0;
-            %(queuesNotEmpty)s
+// removed queues not empty thingy
 	end
 	if (addr == 12'h038)
 	begin
@@ -467,8 +467,15 @@ class InterfaceMixin:
         dutName = util.decapitalize(self.name)
         methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
         buses = {}
+        clknames = []
         for busType in exposedInterfaces:
-            buses[busType] = self.collectInterfaceNames(busType)
+            collected = self.collectInterfaceNames(busType)
+            if collected:
+                if busType == 'HDMI':
+                    clknames.append('hdmi_clk')
+            buses[busType] = collected
+        print 'clknames', clknames
+
         substs = {
             'dut': dutName,
             'Dut': util.capitalize(self.name),
@@ -491,8 +498,8 @@ class InterfaceMixin:
                                                    for (axiMaster,t,params) in axiMasters]),
             'axiMasterImplementations': '\n'.join(['    interface Axi3Master %s = %sMaster;' % (axiMaster,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
-            'dut_hdmi_clock_param': '#(Clock hdmi_clk)' if len(hdmiInterfaces) else '',
-            'dut_hdmi_clock_arg': 'hdmi_clk,' if len(hdmiInterfaces) else '',
+            'dut_hdmi_clock_param': '#(%s)' % ', '.join(['Clock %s' % name for name in clknames]) if len(clknames) else '',
+            'dut_hdmi_clock_arg': ' '.join(['%s,' % name for name in clknames]) if len(clknames) else '',
             'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
                                                   for (axiSlave,t,params) in axiSlaves]),
             'exposedInterfaceImplementations': '\n'.join(['\n'.join(['    interface %s %s = %s.%s;' % (t, busname, dutName, busname)
