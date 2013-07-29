@@ -1,6 +1,5 @@
 
 #include <sys/types.h>
-#include <bitset>
 
 class PortalInterface;
 
