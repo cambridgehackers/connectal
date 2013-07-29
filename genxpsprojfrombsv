@@ -6,6 +6,7 @@ import xpsgen
 import cppgen
 import syntax
 import argparse
+import subprocess
 import util
 
 AST.Function.__bases__ += (cppgen.NoCMixin,)
@@ -31,6 +32,7 @@ argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps pro
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 argparser.add_argument('-C', '--coherent', help='Use ACP coherence port for first AXI master bus')
 argparser.add_argument('-V', '--verilog', help='Additional verilog sources', nargs='+')
+argparser.add_argument('-M', '--make', help='Run make on the specified targets', nargs='+')
 
 tclfileXprTemplate='''
 create_project %(dut)s . -part xc7z020clg484-1
@@ -77,13 +79,14 @@ verilog: $(vfile)
 %(dut)s.runs/impl_1/%(dut)s_top_1.bit: $(vfile) sources/top.v %(dut)s.xpr
 	vivado -mode batch -source %(dut)s.tcl
 
-bits: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
+implementation: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
 
 %(dut)s.bit.bin.gz: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
 	#promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 %(dut)s.runs/impl_1/%(dut)s_top_1.bit -data_width 32
 	xxd %(dut)s.runs/impl_1/%(dut)s_top_1.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >%(dut)s.bit.bin
 	gzip -f %(dut)s.bit.bin
 
+bits: %(dut)s.bit.bin.gz
 boot.bin: %(dut)s.bit.bin.gz
 '''
 
@@ -170,6 +173,10 @@ if __name__=='__main__':
         print 'Writing Application.mk', applicationmkname
         subinterface.writeAndroidMk(androidmkname, applicationmkname)
 
+    bsv.close()
+    h.close()
+    cpp.close()
+
     if cppname:
         srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'cpp')
         dstdir = os.path.dirname(cppname)
@@ -194,10 +201,11 @@ if __name__=='__main__':
                                     })
     tcl.close()
 
-    for verilog in namespace.verilog:
-        print verilog
-        shutil.rmtree(os.path.join(project_dir, 'sources', os.path.basename(verilog)), ignore_errors=True)
-        shutil.copytree(verilog, os.path.join(project_dir, 'sources', os.path.basename(verilog)))
+    if namespace.verilog:
+        for verilog in namespace.verilog:
+            print verilog
+            shutil.rmtree(os.path.join(project_dir, 'sources', os.path.basename(verilog)), ignore_errors=True)
+            shutil.copytree(verilog, os.path.join(project_dir, 'sources', os.path.basename(verilog)))
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
     make.write(makefileTemplate % {'corename': corename,
@@ -212,3 +220,8 @@ if __name__=='__main__':
     print '## To build:'
     print '    cd %s; make verilog; make bits' % (project_dir)
     print '## You can use XPS to generate bit file or exit and let make complete the process.'
+
+    if namespace.make:
+        os.chdir(project_dir)
+        os.putenv('PWD', subprocess.check_output(['pwd'])[0:-1])
+        subprocess.call(['make'] + namespace.make)
