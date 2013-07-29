@@ -49,6 +49,7 @@ tclfileTemplate='''
 open_project %(dut)s
 reset_run synth_1
 reset_run impl_1
+set_property strategy manual_fsm [get_runs synth_1]
 launch_runs synth_1
 wait_on_run synth_1
 launch_runs impl_1
@@ -90,10 +91,35 @@ bits: %(dut)s.bit.bin.gz
 boot.bin: %(dut)s.bit.bin.gz
 '''
 
+vivado_strategies={
+    'Strategy_manual_fsm.Vivado Synthesis 2013.psg':
+'''
+<?xml version="1.0"?>
+<Strategy Version="1" Minor="2">
+	<StratHandle Name="Strategy_manual_fsm" Flow="Vivado Synthesis 2013">
+	</StratHandle>
+	<Step Id="synth_design">
+		<Option Id="FsmExtraction">0</Option>
+	</Step>
+</Strategy>
+'''
+}
+
+def write_vivado_strategies():
+    stratdir = os.path.join(os.environ['HOME'], '.Xilinx', 'Vivado', 'strategies')
+    if not os.path.exists(stratdir):
+        os.makedirs(stratdir)
+    for k in vivado_strategies:
+        print 'Writing vivado strategy file', k, ' to directory ', stratdir
+        f = open(os.path.join(stratdir, k), 'w')
+        f.write(vivado_strategies[k])
+        f.close()
+
 if __name__=='__main__':
     namespace = argparser.parse_args()
     print namespace
 
+    write_vivado_strategies()
     project_dir = os.path.expanduser(namespace.project_dir)
 
     for inputfile in namespace.bsvfile:
