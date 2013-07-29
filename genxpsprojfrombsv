@@ -30,6 +30,7 @@ argparser.add_argument('-b', '--interface', help='BSV interface to generate stub
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 argparser.add_argument('-C', '--coherent', help='Use ACP coherence port for first AXI master bus')
+argparser.add_argument('-V', '--verilog', help='Additional verilog sources', nargs='+')
 
 tclfileXprTemplate='''
 create_project %(dut)s . -part xc7z020clg484-1
@@ -193,6 +194,10 @@ if __name__=='__main__':
                                     })
     tcl.close()
 
+    for verilog in namespace.verilog:
+        print verilog
+        shutil.rmtree(os.path.join(project_dir, 'sources', os.path.basename(verilog)), ignore_errors=True)
+        shutil.copytree(verilog, os.path.join(project_dir, 'sources', os.path.basename(verilog)))
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
     make.write(makefileTemplate % {'corename': corename,
