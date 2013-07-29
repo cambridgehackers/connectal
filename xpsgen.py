@@ -1206,7 +1206,7 @@ class ImageonVita:
         .CLKOUT0_DIVIDE_F(5.0),
         .CLKOUT1_DIVIDE(20))
    MMCME2_inst(
-        .CLKIN1(processing_system7_1_fclk_clk3),
+        .CLKIN1(processing_system7_1_fclk_clk2),
         .CLKOUT0(imageon_clk4x_unbuf),
         .CLKOUT1(imageon_clk_unbuf),
         .CLKFBOUT(clockfb),
@@ -1281,8 +1281,6 @@ assign XADC_gpio[0] = debug_spi_o[16];
     def bus_assignments(self,busname,t,params):
         return '''
     assign imageon_clk200 = processing_system7_1_fclk_clk3;
-    assign imageon_clk = processing_system7_1_fclk_clk2; /* fixme */
-    /* assign imageon_clk4x = processing_system7_1_fclk_clk3; */ /* fixme */
 
 fmc_imageon_vita_core fmc_imageon_vita_core_1
   (
