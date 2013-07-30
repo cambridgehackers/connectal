@@ -19,7 +19,7 @@ int main(int argc, const char **argv)
     device->set_spi_reset(1);
     device->set_spi_reset(0);
     device->set_host_oe(1);
-    device->spi_txfifo_put(0xdeadbeef);
-    device->spi_rxfifo_get();
+    device->put_spi_txfifo(0xdeadbeef);
+    device->get_spi_rxfifo();
     PortalInterface::exec();
 }

@@ -134,10 +134,18 @@ interface ImageonXsvi;
     method Action video_data(Bit#(10) v);
 endinterface
 
+interface ImageonDebugSpi;
+    method Action debug_spi(Bit#(96) o);
+endinterface
+
 (* always_enabled *)
 interface ImageonVita;
     method Bit#(1) host_vita_reset();
     method Bit#(1) host_oe();
+    method Bit#(1) host_iic_reset();
+    method Bit#(1) host_clock_gen_reset();
+    method Bit#(1) host_clock_gen_select();
+    method Action host_clock_gen_locked(Bit#(1) locked);
     method Action fsync(Bit#(1) fsync);
     interface ImageonSpi spi;
     interface ImageonSerdes serdes;
@@ -148,6 +156,7 @@ interface ImageonVita;
     interface ImageonFpnPrnu fpnPrnu;
     interface ImageonSyncGen syncgen;
     interface ImageonXsvi xsvi;
+    interface ImageonDebugSpi debugSpi;
 endinterface
 
 interface ImageonControl;
@@ -167,6 +176,11 @@ interface ImageonControl;
 
     method Action set_host_vita_reset(Bit#(1) v);
     method Action set_host_oe(Bit#(1) v);
+    method Action set_iic_reset(Bit#(1) v);
+    method Action set_clock_gen_reset(Bit#(1) v);
+    method Action set_clock_gen_select(Bit#(1) v);
+    method Bit#(1) get_clock_gen_locked();
+
     method Action set_spi_reset(Bit#(1) v);
     method Action set_spi_timing(Bit#(16) v);
 
@@ -228,6 +242,10 @@ module mkImageonVitaController(ImageonVitaController);
 
     Reg#(Bit#(1)) host_vita_reset_reg <- mkReg(0);
     Reg#(Bit#(1)) host_oe_reg <- mkReg(0);
+    Reg#(Bit#(1)) host_iic_reset_reg <- mkReg(0);
+    Reg#(Bit#(1)) host_clock_gen_reset_reg <- mkReg(0);
+    Reg#(Bit#(1)) host_clock_gen_select_reg <- mkReg(0);
+    Wire#(Bit#(1)) host_clock_gen_locked_wire <- mkDWire(0);
     Reg#(Bit#(1)) spi_reset_reg <- mkReg(0);
     Reg#(Bit#(16)) spi_timing_reg <- mkReg(0);
 
@@ -318,6 +336,7 @@ module mkImageonVitaController(ImageonVitaController);
     Wire#(Bit#(1)) xsvi_vblank_wire <- mkDWire(0);
     Wire#(Bit#(1)) xsvi_hblank_wire <- mkDWire(0);
     Wire#(Bit#(1)) xsvi_active_video_wire <- mkDWire(0);
+    Wire#(Bit#(96)) debug_spi_wire <- mkDWire(0);
 
     interface ImageonVita host;
 	method Bit#(1) host_vita_reset();
@@ -325,6 +344,18 @@ module mkImageonVitaController(ImageonVitaController);
 	endmethod
 	method Bit#(1) host_oe();
 	    return host_oe_reg;
+	endmethod
+	method Bit#(1) host_iic_reset();
+	    return host_iic_reset_reg;
+	endmethod
+	method Bit#(1) host_clock_gen_reset();
+	    return host_clock_gen_reset_reg;
+	endmethod
+	method Bit#(1) host_clock_gen_select();
+	    return host_clock_gen_select_reg;
+	endmethod
+	method Action host_clock_gen_locked(Bit#(1) locked);
+	    host_clock_gen_locked_wire <= locked;
 	endmethod
 	method Action fsync(Bit#(1) sync);
 	endmethod
@@ -593,6 +624,11 @@ module mkImageonVitaController(ImageonVitaController);
 	        xsvi_video_data_wire <= v;
 	    endmethod
 	endinterface
+	interface ImageonDebugSpi debugSpi;
+	    method Action debug_spi(Bit#(96) o);
+	        debug_spi_wire <= o;
+	    endmethod
+	endinterface
     endinterface
     interface ImageonControl control;
 // SPI_CONTROL
@@ -721,6 +757,19 @@ module mkImageonVitaController(ImageonVitaController);
 	method Action set_host_oe(Bit#(1) v);
 	    host_oe_reg <= v;
 	endmethod
+	method Action set_iic_reset(Bit#(1) v);
+	    host_iic_reset_reg <= v[0];
+	endmethod
+	method Action set_clock_gen_reset(Bit#(1) v);
+	    host_clock_gen_reset_reg <= v[0];
+	endmethod
+	method Action set_clock_gen_select(Bit#(1) v);
+	    host_clock_gen_select_reg <= v[0];
+	endmethod
+	method Bit#(1) get_clock_gen_locked();
+	    return host_clock_gen_locked_wire;
+	endmethod
+
 	method Action set_spi_reset(Bit#(1) v);
 	    spi_reset_reg <= v;
 	endmethod

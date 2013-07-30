@@ -40,7 +40,8 @@ interface ImageCaptureIndications;
     method Action remapper_control_value(Bit#(32) v);
     method Action triggen_control_value(Bit#(32) v);
 
-    method Action rxfifo_value(Bit#(32) v);
+    method Action clock_gen_locked_value(Bit#(1) v);
+    method Action spi_rxfifo_value(Bit#(32) v);
 endinterface
 
 interface ImageCapture;
@@ -60,6 +61,9 @@ interface ImageCapture;
 
     method Action set_host_vita_reset(Bit#(1) v);
     method Action set_host_oe(Bit#(1) v);
+    method Action set_iic_reset(Bit#(1) v);
+    method Action set_clock_gen_reset(Bit#(1) v);
+    method Action get_clock_gen_locked();
 
     method Action set_spi_reset(Bit#(1) v);
     method Action set_spi_timing(Bit#(16) v);
@@ -174,6 +178,16 @@ module mkImageCapture#(//Clock hdmi_clock,
     method Action set_host_oe(Bit#(1) v);
         control.set_host_oe(v);
     endmethod
+    method Action set_iic_reset(Bit#(1) v);
+        control.set_iic_reset(v);
+    endmethod
+    method Action set_clock_gen_reset(Bit#(1) v);
+        control.set_clock_gen_reset(v);
+    endmethod
+    method Action get_clock_gen_locked();
+        indications.clock_gen_locked_value(control.get_clock_gen_locked());
+    endmethod
+
     method Action set_spi_reset(Bit#(1) v);
         control.set_spi_reset(v);
     endmethod
@@ -185,7 +199,7 @@ module mkImageCapture#(//Clock hdmi_clock,
     endmethod
     method Action get_spi_rxfifo();
         Bit#(32) v <- control.rxfifo.get();
-        indications.rxfifo_value(v);
+        indications.spi_rxfifo_value(v);
     endmethod
     method Action set_serdes_reset(Bit#(1) v);
         control.set_serdes_reset(v);
