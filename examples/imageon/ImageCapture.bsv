@@ -1,5 +1,4 @@
 
-// Copyright (c) 2013 Nokia, Inc.
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -30,6 +29,7 @@ import Zynq::*;
 import Imageon::*;
 import HDMI::*;
 import BlueScope::*;
+import SensorToVideo::*;
 
 interface ImageCaptureIndications;
     method Action spi_control_value(Bit#(32) v);
@@ -42,6 +42,8 @@ interface ImageCaptureIndications;
 
     method Action clock_gen_locked_value(Bit#(1) v);
     method Action spi_rxfifo_value(Bit#(32) v);
+    method Action spi_trace_sample_count_value(Bit#(32) v);
+    method Action spi_trace_sample_value(Bit#(64) v);
 endinterface
 
 interface ImageCapture;
@@ -69,6 +71,12 @@ interface ImageCapture;
     method Action set_spi_timing(Bit#(16) v);
     method Action put_spi_txfifo(Bit#(32) v);
     method Action get_spi_rxfifo();
+    method Action set_spi_trigger_mask(Bit#(64) mask);
+    method Action set_spi_trigger_value(Bit#(64) mask);
+    method Action start_spi_trace();
+    method Action clear_spi_trace();
+    method Action get_spi_trace_sample_count();
+    method Action get_spi_trace_data();
 
     method Action set_serdes_reset(Bit#(1) v);
     method Action set_serdes_auto_align(Bit#(1) v);
@@ -120,10 +128,34 @@ interface ImageCapture;
 endinterface
 
 module mkImageCapture#(//Clock hdmi_clock, 
-       ImageCaptureIndications indications)(ImageCapture);
+       ImageCaptureIndications indications)(ImageCapture) provisos (Bits#(XsviData,xsviDataWidth));
     ImageonVitaController imageonVita <- mkImageonVitaController();
     ImageonControl control = imageonVita.control;
-    //BlueScope#(96,96) spiBlueScope <- mkBlueScope(1024);
+    BlueScope#(64,64) spiBlueScope <- mkBlueScope(1024);
+    //BlueScope#(xsviDataWidth,xsviDataWidth) xsviBlueScope <- mkBlueScope(1024);
+    SensorToVideo converter <- mkSensorToVideo;
+
+    rule rxfifo_response;
+        let v <- control.rxfifo_response.get();
+        indications.spi_rxfifo_value(v);
+    endrule
+
+    // could use mkConnection here
+    rule xsviData;
+        let xsviData = control.xsviData();
+	converter.in.put(xsviData);
+	//xsviBlueScope.dataIn(pack(xsviData), pack(xsviData));
+    endrule
+
+    rule hdmiData;
+        let rgb888VideoData <- converter.out.get();
+	// now send to display 
+    endrule
+
+    rule spi_debug_rule;
+        Bit#(64) v = control.get_spi_debug[63:0];
+        spiBlueScope.dataIn(v, v);
+    endrule
 
     method Action set_spi_control(Bit#(32) v);
         control.set_spi_control(v);
@@ -198,9 +230,29 @@ module mkImageCapture#(//Clock hdmi_clock,
         control.txfifo.put(v);
     endmethod
     method Action get_spi_rxfifo();
-        Bit#(32) v <- control.rxfifo.get();
-        indications.spi_rxfifo_value(v);
+        control.rxfifo_request.put(32'hABBAABBA);
     endmethod
+
+    method Action set_spi_trigger_mask(Bit#(64) mask);
+        spiBlueScope.setTriggerMask(mask);
+    endmethod
+    method Action set_spi_trigger_value(Bit#(64) value);
+        spiBlueScope.setTriggerValue(value);
+    endmethod
+    method Action start_spi_trace();
+        spiBlueScope.start();
+    endmethod
+    method Action clear_spi_trace();
+        spiBlueScope.clear();
+    endmethod
+    method Action get_spi_trace_sample_count();
+        indications.spi_trace_sample_count_value(spiBlueScope.sampleCount());
+    endmethod
+    method Action get_spi_trace_data();
+        let v <- spiBlueScope.dataOut();
+        indications.spi_trace_sample_value(v);
+    endmethod
+
     method Action set_serdes_reset(Bit#(1) v);
         control.set_serdes_reset(v);
     endmethod
