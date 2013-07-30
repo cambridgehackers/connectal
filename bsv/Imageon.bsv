@@ -125,6 +125,26 @@ interface ImageonSyncGen;
     method Bit#(16) vbporch();
 endinterface
 
+typedef struct {
+    Bit#(1) vsync;
+    Bit#(1) hsync;
+    Bit#(1) vblank;
+    Bit#(1) hblank;
+    Bit#(1) active_video;
+    Bit#(10) video_data;
+} XsviData deriving (Bits);
+
+typedef struct {
+    Bit#(1) vsync;
+    Bit#(1) hsync;
+    Bit#(1) vblank;
+    Bit#(1) hblank;
+    Bit#(1) active_video;
+    Bit#(8) r;
+    Bit#(8) g;
+    Bit#(8) b;
+} Rgb888VideoData;
+
 interface ImageonXsvi;
     method Action vsync(Bit#(1) v);
     method Action hsync(Bit#(1) v);
@@ -233,6 +253,7 @@ interface ImageonControl;
     method Action set_syncgen_vfporch(Bit#(16) v);
     method Action set_syncgen_vsync(Bit#(16) v);
     method Action set_syncgen_vbporch(Bit#(16) v);
+    method XsviData xsviData();
 endinterface
 
 interface ImageonVitaController;
@@ -334,11 +355,11 @@ module mkImageonVitaController(ImageonVitaController);
     Reg#(Bit#(32)) hblank_reg <- mkReg(0);
     Reg#(Bit#(32)) active_reg <- mkReg(0);
     Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
-    Wire#(Bit#(1)) xsvi_vsync_wire <- mkDWire(0);
-    Wire#(Bit#(1)) xsvi_hsync_wire <- mkDWire(0);
-    Wire#(Bit#(1)) xsvi_vblank_wire <- mkDWire(0);
-    Wire#(Bit#(1)) xsvi_hblank_wire <- mkDWire(0);
-    Wire#(Bit#(1)) xsvi_active_video_wire <- mkDWire(0);
+    Wire#(Bit#(1))  xsvi_vsync_wire <- mkDWire(0);
+    Wire#(Bit#(1))  xsvi_hsync_wire <- mkDWire(0);
+    Wire#(Bit#(1))  xsvi_vblank_wire <- mkDWire(0);
+    Wire#(Bit#(1))  xsvi_hblank_wire <- mkDWire(0);
+    Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
     Wire#(Bit#(96)) debug_spi_wire <- mkDWire(0);
 
     interface ImageonVita host;
@@ -931,6 +952,16 @@ module mkImageonVitaController(ImageonVitaController);
 	endmethod
 	method Action set_syncgen_vbporch(Bit#(16) v);
 	    syncgen_vbporch_reg <= v;
+	endmethod
+	method XsviData xsviData();
+	    return XsviData {
+	        vsync: xsvi_vsync_wire,
+		hsync: xsvi_hsync_wire,
+		vblank: xsvi_vblank_wire,
+		hblank: xsvi_hblank_wire,
+		active_video: xsvi_active_video_wire,
+		video_data: xsvi_video_data_wire
+	    };
 	endmethod
     endinterface
 endmodule
