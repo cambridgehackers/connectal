@@ -183,9 +183,11 @@ interface ImageonControl;
 
     method Action set_spi_reset(Bit#(1) v);
     method Action set_spi_timing(Bit#(16) v);
+    method Bit#(96) get_spi_debug();
 
     interface Put#(Bit#(32)) txfifo;
-    interface Get#(Bit#(32)) rxfifo;
+    interface Put#(Bit#(32)) rxfifo_request;
+    interface Get#(Bit#(32)) rxfifo_response;
 
     method Action set_serdes_reset(Bit#(1) v);
     method Action set_serdes_auto_align(Bit#(1) v);
@@ -257,6 +259,7 @@ module mkImageonVitaController(ImageonVitaController);
     Wire#(Bit#(1)) spi_rxfifo_ren_wire <- mkDWire(0);
     Wire#(Bit#(32)) spi_rxfifo_dout_wire <- mkDWire(0);
     Wire#(Bit#(1)) spi_rxfifo_empty_wire <- mkDWire(0);
+    Reg#(Bool) spi_rxfifo_requested_reg <- mkReg(False);
 
     Reg#(Bit#(1)) serdes_reset_reg <- mkReg(0);
     Reg#(Bit#(1)) serdes_auto_align_reg <- mkReg(0);
@@ -782,12 +785,21 @@ module mkImageonVitaController(ImageonVitaController);
 		spi_txfifo_din_wire <= v;
 	    endmethod
 	endinterface
-	interface Get rxfifo;
-	    method ActionValue#(Bit#(32)) get() if (spi_rxfifo_empty_wire == 0);
+        interface Put rxfifo_request;
+	    method Action put(Bit#(32) v) if (!spi_rxfifo_requested_reg && (spi_rxfifo_empty_wire == 0));
+	        spi_rxfifo_requested_reg <= True;
 		spi_rxfifo_ren_wire <= 1;
+	    endmethod
+	endinterface
+	interface Get rxfifo_response;
+	    method ActionValue#(Bit#(32)) get() if (spi_rxfifo_requested_reg);
+	        spi_rxfifo_requested_reg <= False;
 		return spi_rxfifo_dout_wire;
 	    endmethod
 	endinterface
+	method Bit#(96) get_spi_debug();
+	    return debug_spi_wire;
+	endmethod
 	method Action set_serdes_reset(Bit#(1) v);
 	    serdes_reset_reg <= v;
 	endmethod
