@@ -28,6 +28,13 @@ import FIFOF::*;
 import YUV::*;
 import NrccSyncBRAM::*;
 
+typedef struct {
+    Bit#(1) vsync;
+    Bit#(1) hsync;
+    Bit#(1) de;
+    Bit#(16) data;
+} HdmiData deriving (Bits);
+
 interface HDMI;
     method Bit#(1) hdmi_vsync;
     method Bit#(1) hdmi_hsync;
