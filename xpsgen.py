@@ -155,7 +155,7 @@ TIMESPEC TS_FCLK0 = PERIOD "processing_system7_0/FCLK_CLK0" 133 MHz;
 xdc_template = '''
 set_property iostandard "%(iostandard)s" [get_ports "%(name)s"]
 set_property PACKAGE_PIN "%(pin)s" [get_ports "%(name)s"]
-# set_property slew "SLOW" [get_ports "%(name)s"]
+set_property slew "SLOW" [get_ports "%(name)s"]
 set_property PIO_DIRECTION "%(direction)s" [get_ports "%(name)s"]
 '''
 xdc_diff_term_template = '''
@@ -290,6 +290,11 @@ imageon_pinout = {
         ("XADC_gpio[1]", 'H22', 'LVCMOS25', 'OUTPUT'),
         ("XADC_gpio[2]", 'G22', 'LVCMOS25', 'OUTPUT'),
         ("XADC_gpio[3]", 'H18', 'LVCMOS25', 'OUTPUT'),
+
+        ('fmc_imageon_video_clk1', 'Y18', 'LVCMOS25', 'INPUT'),
+        ('fmc_imageon_iic_0_rst_pin', 'Y16', 'LVCMOS25', 'OUTPUT'),
+        ('fmc_imageon_iic_0_scl', 'AB14', 'LVCMOS25', 'BIDIR'),
+        ('fmc_imageon_iic_0_sda', 'AB15', 'LVCMOS25', 'BIDIR'),
 
         ('io_vita_clk_pll', 'V22', 'LVCMOS25', 'OUTPUT'),
         ('io_vita_reset_n', 'AA18', 'LVCMOS25', 'OUTPUT'),
@@ -945,9 +950,10 @@ class ImageonVita:
     def top_bus_ports(self, busname,t,params):
         return '''
 /* imageon vita *****************************************/
-    /* output fmc_imageon_iic_0_Rst_pin,
-       inout fmc_imageon_iic_0_Sda_pin,
-       inout fmc_imageon_iic_0_Scl_pin, */
+
+    inout fmc_imageon_iic_0_sda,
+    inout fmc_imageon_iic_0_scl,
+    output fmc_imageon_iic_0_rst_pin,
     input fmc_imageon_video_clk1,
     output io_vita_clk_pll,
     output io_vita_reset_n,
@@ -972,6 +978,9 @@ class ImageonVita:
      wire imageon_clk;
      wire imageon_host_oe;
      wire host_vita_reset;
+     wire imageon_clock_gen_select;
+     wire imageon_clock_gen_reset;
+     wire imageon_clock_gen_locked;
     /* HOST Interface - SPI */
      wire imageon_host_spi_clk;
      wire imageon_host_spi_reset;
@@ -1073,6 +1082,14 @@ class ImageonVita:
      wire [87:0] debug_crc_o;
      wire [9:0] debug_triggen_o;
      wire [31:0] debug_video_o;
+
+     /* IIC */
+     wire fmc_imageon_iic_0_scl_T;
+     wire fmc_imageon_iic_0_scl_O;
+     wire fmc_imageon_iic_0_scl_I;
+     wire fmc_imageon_iic_0_sda_T;
+     wire fmc_imageon_iic_0_sda_O;
+     wire fmc_imageon_iic_0_sda_I;
 '''
 ## uncomment the following if we decide to use the PS7 SPI controller
 #         return '''
@@ -1090,7 +1107,14 @@ class ImageonVita:
 #     wire io_vita_spi_miso_T;
 # '''
     def ps7_bus_port_map(self,busname,t,params):
-        return ''
+        return '''
+    .I2C1_SDA_I(fmc_imageon_iic_0_sda_I),
+    .I2C1_SDA_O(fmc_imageon_iic_0_sda_O),
+    .I2C1_SDA_T(fmc_imageon_iic_0_sda_T),
+    .I2C1_SCL_I(fmc_imageon_iic_0_scl_I),
+    .I2C1_SCL_O(fmc_imageon_iic_0_scl_O),
+    .I2C1_SCL_T(fmc_imageon_iic_0_scl_T),
+'''
 ## uncomment the following if we decide to use the PS7 SPI controller
 #         return '''
 #         .SPI0_SCLK_I(io_vita_spi_sclk_I),
@@ -1111,6 +1135,10 @@ class ImageonVita:
     .imageon_host_oe(imageon_host_oe),
     .imageon_fsync_fsync(imageon_host_fsync),
     .imageon_host_vita_reset(imageon_host_vita_reset),
+    .imageon_host_iic_reset(fmc_imageon_iic_0_rst_pin),
+    .imageon_host_clock_gen_reset(imageon_clock_gen_reset),
+    .imageon_host_clock_gen_locked_locked(imageon_clock_gen_locked),
+    .imageon_host_clock_gen_select(imageon_clock_gen_select),
     .imageon_spi_reset(imageon_host_spi_reset),
     .imageon_spi_timing(imageon_host_spi_timing),
     .imageon_spi_status_busy_busy(imageon_host_spi_status_busy),
@@ -1196,6 +1224,12 @@ class ImageonVita:
    wire clockfb;
    wire imageon_clk4x_unbuf;
    wire imageon_clk4_unbuf;
+   wire fmc_imageon_video_clk1_buf;
+
+    IBUFG ibufg_video_clk1 (
+        .I(fmc_imageon_video_clk1),
+        .O(fmc_imageon_video_clk1_buf)
+    );
 
     MMCME2_BASE# (
         .BANDWIDTH("OPTIMIZED"),
@@ -1206,12 +1240,17 @@ class ImageonVita:
         .CLKOUT0_DIVIDE_F(5.0),
         .CLKOUT1_DIVIDE(20))
    MMCME2_inst(
-        .CLKIN1(processing_system7_1_fclk_clk2),
+        .CLKIN1(fmc_imageon_video_clk1_buf), // default
+/*
+        .CLKIN2(processing_system7_1_fclk_clk2),
+        .CLKINSEL(imageon_clock_gen_select),
+*/
         .CLKOUT0(imageon_clk4x_unbuf),
         .CLKOUT1(imageon_clk_unbuf),
         .CLKFBOUT(clockfb),
         .CLKFBIN(clockfb),
-        .RST(GND_1)
+        .RST(imageon_clock_gen_reset),
+        .LOCKED(imageon_clock_gen_locked)
    );
 
    BUFG bufg_clk4x(
@@ -1223,10 +1262,36 @@ class ImageonVita:
 		 .O(imageon_clk)
 		 );
 
+     IOBUF # (
+     .DRIVE(12),
+     .IOSTANDARD("LVCMOS25"),
+     .SLEW("SLOW")) IOBUF_iic_scl
+     (
+     .IO(fmc_imageon_iic_0_scl),
+     // Buffer output (connect directly to top-level port)
+     .O(fmc_imageon_iic_0_scl_I),
+     .I(fmc_imageon_iic_0_scl_O),
+     .T(fmc_imageon_iic_0_scl_T)
+     // Buffer input
+     );
+
+     IOBUF # (
+     .DRIVE(12),
+     .IOSTANDARD("LVCMOS25"),
+     .SLEW("SLOW")) IOBUF_iic_sda
+     (
+     .IO(fmc_imageon_iic_0_sda),
+     // Buffer output (connect directly to top-level port)
+     .O(fmc_imageon_iic_0_sda_I),
+     .I(fmc_imageon_iic_0_sda_O),
+     .T(fmc_imageon_iic_0_sda_T)
+     // Buffer input
+     );
+
 assign XADC_gpio[3] = debug_spi_o[imageon_host_oe];
-assign XADC_gpio[2] = debug_spi_o[18];
-assign XADC_gpio[1] = debug_spi_o[17];
-assign XADC_gpio[0] = debug_spi_o[16];
+assign XADC_gpio[2] = debug_spi_o[19]; // miso
+assign XADC_gpio[1] = debug_spi_o[18]; // mosi
+assign XADC_gpio[0] = debug_spi_o[17]; // ssel_n
 '''
 #        return '''
 #     IOBUF # (
