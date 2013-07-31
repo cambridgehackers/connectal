@@ -420,7 +420,26 @@ mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
 %(axi_slave_scheduler)s
 %(bus_assignments)s
 
-processing_system7 processing_system7_1
+wire [15:0] irq_f2p;
+assign irq_f2p[15] = %(dut)s_1_interrupt;
+assign irq_f2p[14] = %(dut)s_1_interrupt;
+assign irq_f2p[13] = %(dut)s_1_interrupt;;
+assign irq_f2p[12] = %(dut)s_1_interrupt;
+assign irq_f2p[11] = %(dut)s_1_interrupt;;
+assign irq_f2p[10] = %(dut)s_1_interrupt;
+assign irq_f2p[9] = %(dut)s_1_interrupt;;
+assign irq_f2p[8] = %(dut)s_1_interrupt;
+assign irq_f2p[7] = %(dut)s_1_interrupt;;
+assign irq_f2p[6] = %(dut)s_1_interrupt;
+assign irq_f2p[5] = %(dut)s_1_interrupt;;
+assign irq_f2p[4] = %(dut)s_1_interrupt;
+assign irq_f2p[3] = %(dut)s_1_interrupt;;
+assign irq_f2p[2] = %(dut)s_1_interrupt;
+assign irq_f2p[1] = %(dut)s_1_interrupt;;
+assign irq_f2p[0] = %(dut)s_1_interrupt;
+
+processing_system7#(.C_NUM_F2P_INTR_INPUTS(16))
+ processing_system7_1
        (.DDR_Addr(DDR_Addr[14:0]),
         .DDR_BankAddr(DDR_BankAddr[2:0]),
         .DDR_CAS_n(DDR_CAS_n),
@@ -443,7 +462,7 @@ processing_system7 processing_system7_1
         .FCLK_CLK2(processing_system7_1_fclk_clk2),
         .FCLK_CLK3(processing_system7_1_fclk_clk3),
         .FCLK_RESET0_N(processing_system7_1_fclk_reset0_n),
-        .IRQ_F2P(%(dut)s_1_interrupt),
+        .IRQ_F2P(irq_f2p),
         .MIO(FIXED_IO_mio[53:0]),
 %(top_ps7_axi_slave_port_map)s
 %(top_ps7_axi_master_port_map)s
