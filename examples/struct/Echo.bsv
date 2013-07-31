@@ -28,22 +28,31 @@ typedef struct{
    Bit#(32) b;
    } S1 deriving (Bits);
 
+typedef struct{
+   Bit#(8) a;
+   Bit#(32) b;
+   Bit#(16) c;
+   } S2 deriving (Bits);
+
 interface EchoIndications;
     method Action heard1(Bit#(32) v);
     method Action heard2(Bit#(16) a, Bit#(16) b);
     method Action heard3(S1 v);
+    method Action heard4(S2 v);
 endinterface
 
 interface Echo;
     method Action say1(Bit#(32) v);
     method Action say2(Bit#(16) a, Bit#(16) b);
     method Action say3(S1 v);
+    method Action say4(S2 v);
 endinterface
 
 module mkEcho#(EchoIndications indications)(Echo);
    let delay1 <- mkSizedFIFO(8);
    let delay2 <- mkSizedFIFO(8);
    let delay3 <- mkSizedFIFO(8);
+   let delay4 <- mkSizedFIFO(8);
    
    rule heard1;
       delay1.deq;
@@ -60,6 +69,11 @@ module mkEcho#(EchoIndications indications)(Echo);
       delay3.deq;
       indications.heard3(delay3.first);
    endrule
+   
+   rule heard4;
+      delay4.deq;
+      indications.heard4(delay4.first);
+   endrule
 
    method Action say1(Bit#(32) v);
       delay1.enq(v);
@@ -71,6 +85,10 @@ module mkEcho#(EchoIndications indications)(Echo);
    
    method Action say3(S1 v);
       delay3.enq(v);
+   endmethod
+
+   method Action say4(S2 v);
+      delay4.enq(v);
    endmethod
    
 endmodule

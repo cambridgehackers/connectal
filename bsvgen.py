@@ -21,6 +21,7 @@ import AxiClientServer::*;
 import HDMI::*;
 import Zynq::*;
 import Imageon::*;
+import Vector::*;
 %(extraImports)s
 
 '''
@@ -71,9 +72,7 @@ endinterface
 
 module mk%(Dut)sIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveWriteAddrFifo, FIFO#(Bit#(17)) axiSlaveReadAddrFifo,
                                     FIFO#(Bit#(32)) axiSlaveWriteDataFifo, FIFO#(Bit#(32)) axiSlaveReadDataFifo,
-                                    PulseWire interruptRequested,
-                                    PulseWire interruptPulses[]
-                                   )
+                                    Vector#(%(channelCount)s, PulseWire) readOutstanding )
                                    (%(Dut)sIndicationsWrapper);
     Reg#(Bit#(32)) responseFiredReg <- mkReg(0);
     Reg#(Bit#(32)) underflowCountReg <- mkReg(0);
@@ -92,23 +91,9 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 
     Reg#(Bit#(32)) requestFired <- mkReg(0);
 
-    Reg#(Bit#(32)) interruptEnableReg <- mkReg(0);
-    Reg#(Bool) interrupted <- mkReg(False);
-    Reg#(Bool) interruptCleared <- mkReg(False);
     Reg#(Bit#(32)) getWordCount <- mkReg(0);
     Reg#(Bit#(32)) putWordCount <- mkReg(0);
     Reg#(Bit#(32)) overflowCount <- mkReg(0);
-    PulseWire interruptRequested <- mkPulseWireOR;
-    PulseWire interruptPulses[%(channelCount)s];
-    for (Bit#(7) i = 0; i < %(channelCount)s; i = i + 1)
-        interruptPulses[i] <- mkPulseWire;
-
-    rule interrupted_rule;
-        interrupted <= interruptRequested;
-    endrule
-    rule reset_interrupt_cleared_rule if (!interrupted);
-        interruptCleared <= False;
-    endrule
 
     Reg#(Bit#(17)) axiSlaveReadAddrReg <- mkReg(0);
     Reg#(Bit#(17)) axiSlaveWriteAddrReg <- mkReg(0);
@@ -127,12 +112,24 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
     FIFO#(Bit#(2)) axiSlaveBrespFifo <- mkFIFO();
     FIFO#(Bit#(12)) axiSlaveBidFifo <- mkFIFO();
 
+    Reg#(Bit#(32)) last_ctrl_reg_write_data <- mkReg(0);
+    Reg#(Bit#(32)) last_ctrl_reg_write_addr <- mkReg(0);    
+    
+    Vector#(%(channelCount)s, PulseWire) readOutstanding <- replicateM(mkPulseWire);
+    
     %(Dut)sIndicationsWrapper indWrapper <- mk%(Dut)sIndicationsWrapper(axiSlaveWriteAddrFifo, axiSlaveReadAddrFifo,
                                                                         axiSlaveWriteDataFifo, axiSlaveReadDataFifo,
-                                                                        interruptRequested, interruptPulses);
+                                                                        readOutstanding);
     %(Dut)sIndications indications = indWrapper.indications;
 
     %(Dut)s %(dut)s <- mk%(Dut)s(%(dut_hdmi_clock_arg)s indications);
+
+    function Bool my_or(Bool a, Bool b) = a || b;
+    function Bool read_wire (PulseWire a) = a._read;
+    
+    Reg#(Bool) interruptEnableReg <- mkReg(False);
+    let       interruptStatus = fold(my_or, map(read_wire, readOutstanding));
+
 %(methodRules)s
 
     rule writeCtrlReg if (axiSlaveWriteAddrFifo.first[16] == 0);
@@ -140,12 +137,12 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         axiSlaveWriteDataFifo.deq;
 	let addr = axiSlaveWriteAddrFifo.first[11:0];
 	let v = axiSlaveWriteDataFifo.first;
-	if (addr == 12'h000 && v[0] == 1'b1 && interrupted)
-	begin
-	    interruptCleared <= True;
-	end
+	if (addr == 12'h000)
+	    noAction; // interruptStatus is read-only
 	if (addr == 12'h004)
-	    interruptEnableReg <= v;
+	    interruptEnableReg <= v[0] == 1'd1; //reduceOr(v) == 1'd1;
+    last_ctrl_reg_write_addr <= zeroExtend(axiSlaveWriteAddrFifo.first);
+	last_ctrl_reg_write_data <= axiSlaveWriteDataFifo.first;
     endrule
     rule readCtrlReg if (axiSlaveReadAddrFifo.first[16] == 0);
         axiSlaveReadAddrFifo.deq;
@@ -153,12 +150,9 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 
 	Bit#(32) v = 32'h05a05a0;
 	if (addr == 12'h000)
-	begin
-	    v = 0;
-	    v[0] = interrupted ? 1'd1 : 1'd0 ;
-	end
+	    v = interruptStatus ? 32'd1 : 32'd0;
 	if (addr == 12'h004)
-	    v = interruptEnableReg;
+	    v = interruptEnableReg ? 32'd1 : 32'd0;
 	if (addr == 12'h008)
 	    v = 2; // channelCount
 	if (addr == 12'h00C)
@@ -183,34 +177,34 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	    v = getWordCount;
 	if (addr == 12'h02C)
 	    v = 0;
-	if (addr >= 12'h030 && addr <= (12'h030 + %(channelCount)s/4))
+    if (addr == 12'h030)
+	begin
+	    v = outOfRangeReadCount;
+	end
+	if (addr == 12'h034)
+	begin
+	    v = outOfRangeWriteCount;
+	end
+    if (addr == 12'h038)
+    begin
+        v = last_ctrl_reg_write_addr;
+    end
+    if (addr == 12'h03c)
+    begin
+        v = last_ctrl_reg_write_data;
+    end
+    if (addr >= 12'h040 && addr <= (12'h040 + %(channelCount)s/4))
 	begin
 	    v = 0;
 	    Bit#(7) baseQueueNumber = addr[9:3] << 5;
 	    for (Bit#(7) i = 0; i <= baseQueueNumber+31 && i < %(channelCount)s; i = i + 1)
 	    begin
 		Bit#(5) bitPos = truncate(i - baseQueueNumber);
-		v[bitPos] = interruptPulses[i] ? 1 : 0;
+		// drive value based on which HW->SW FIFOs have pending messages
+		v[bitPos] = readOutstanding[i] ? 1'd1 : 1'd0; 
 	    end
 	end
-	if (addr >= 12'h034 && addr <= (12'h034 + %(channelCount)s/4))
-	begin
-	    v = 0;
-// removed queues not empty thingy
-	end
-	if (addr == 12'h038)
-	begin
-	    v = 0;
-	end
-	if (addr == 12'h03c)
-	begin
-	    v = outOfRangeReadCount;
-	end
-	if (addr == 12'h040)
-	begin
-	    v = outOfRangeWriteCount;
-	end
-        axiSlaveReadDataFifo.enq(v);
+    axiSlaveReadDataFifo.enq(v);
     endrule
 
     rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[16] == 1 && axiSlaveWriteAddrFifo.first[15:8] >= %(channelCount)s);
@@ -289,8 +283,8 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
     endinterface
 
     method Bit#(1) interrupt();
-        if (interruptEnableReg[0] == 1'd1 && !interruptCleared)
-            return interrupted ? 1'd1 : 1'd0;
+        if (interruptEnableReg && interruptStatus)
+            return 1'd1;
         else
             return 1'd0;
     endmethod
@@ -319,6 +313,7 @@ requestRuleTemplate='''
         // nothing to read from a request fifo
         axiSlaveReadDataFifo.enq(0);
     endrule
+    
 '''
 
 indicationRuleTemplate='''
@@ -347,9 +342,8 @@ indicationRuleTemplate='''
         end
         axiSlaveReadDataFifo.enq(response);
     endrule
-    rule interrupt$%(methodName)s$Response if (%(methodName)s$responseFifo.notEmpty);
-        interruptPulses[%(channelNumber)s].send();
-        interruptRequested.send();
+    rule %(methodName)s$axiSlaveReadOutstanding if (%(methodName)s$responseFifo.notEmpty);
+        readOutstanding[%(channelNumber)s].send();
     endrule
     rule axiSlaveWrite$%(methodName)s if (axiSlaveWriteAddrFifo.first[16] == 1 && axiSlaveWriteAddrFifo.first[15:8] == %(methodName)s$Offset);
         axiSlaveWriteAddrFifo.deq;

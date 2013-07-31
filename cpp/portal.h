@@ -1,6 +1,7 @@
 
 #include <sys/types.h>
 
+
 class PortalInterface;
 
 typedef struct PortalAlloc {
@@ -43,6 +44,7 @@ protected:
     friend PortalInstance *portalOpen(const char *instanceName);
 private:
     int fd;
+    volatile unsigned int *hwregs;
     char *instanceName;
     friend class PortalInterface;
 };
@@ -63,6 +65,7 @@ private:
     PortalInstance **instances;
     struct pollfd *fds;
     int numFds;
+    int intCnt;
 };
 
 extern PortalInterface portal;

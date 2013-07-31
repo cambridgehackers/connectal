@@ -97,6 +97,11 @@ int PortalInstance::open()
 	ALOGE("Failed to open %s fd=%d errno=%d\n", path, this->fd, path);
 	return -errno;
     }
+    hwregs = (volatile unsigned int*)mmap(NULL, 2<<PAGE_SHIFT, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
+    if (hwregs == MAP_FAILED) {
+      ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
+      return -errno;
+    }  
     portal.registerInstance(this);
     return 0;
 }
@@ -142,7 +147,7 @@ int PortalInstance::receiveMessage(PortalMessage *msg)
 }
 
 PortalInterface::PortalInterface()
-    : fds(0), numFds(0)
+  : fds(0), numFds(0), intCnt(0)
 {
 }
 
@@ -227,6 +232,8 @@ int PortalInterface::dumpRegs()
 
 int PortalInterface::exec(idleFunc func)
 {
+    bool user_space_driver = true;
+
     unsigned int *buf = new unsigned int[1024];
     PortalMessage *msg = (PortalMessage *)(buf);
     int messageReceived = 0;
@@ -238,6 +245,7 @@ int PortalInterface::exec(idleFunc func)
 
     int rc;
     while ((rc = poll(portal.fds, portal.numFds, 100)) >= 0) {
+        portal.intCnt++;
         //fprintf(stderr, "pid %d poll rc=%d\n", getpid(), rc);
         for (int i = 0; i < portal.numFds; i++) {
             if (portal.fds[i].revents == 0)
@@ -248,15 +256,23 @@ int PortalInterface::exec(idleFunc func)
             PortalInstance *instance = portal.instances[i];
             memset(buf, 0, 1024);
             int messageReceived = instance->receiveMessage(msg);
-            //fprintf(stderr, "messageReceived=%d\n", messageReceived);
-            if (!messageReceived)
+	    int cnt = 0;
+	    while (messageReceived) {
+	      //fprintf(stderr, "messageReceived=%d\n", messageReceived);
+	      if (!messageReceived)
                 continue;
-            size_t size = msg->size;
-            //fprintf(stderr, "msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
-            if (!size)
-                continue;
-	    if (instance->indications)
+	      size_t size = msg->size;
+	      volatile unsigned int int_src = *(instance->hwregs+0x0);
+	      volatile unsigned int int_en  = *(instance->hwregs+0x1);
+	      fprintf(stderr, "msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
+	      fprintf(stderr, "cnt=%d intCnt=%d int_src=%08x int_en=%08x\n",cnt++, portal.intCnt,int_src,int_en);
+	      if (size && instance->indications)
 		instance->indications->handleMessage(msg);
+	      messageReceived = instance->receiveMessage(msg);
+	    }
+	    // interupt was disabled by portal_isr.  once all the 
+	    // HW->SW FIFOs have been cleared, we can re-enable it
+	    *(instance->hwregs+0x1) = 1;
         }
         if (rc == 0) {
             if (0)
