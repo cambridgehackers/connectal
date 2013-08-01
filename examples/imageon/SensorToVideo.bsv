@@ -26,6 +26,7 @@ import HDMI::*;
 import GetPut::*;
 import FIFO::*;
 import BRAMFIFO::*;
+import YUV::*;
 
 interface SensorToVideo;
     interface Put#(XsviData) in;

@@ -29,6 +29,17 @@ typedef struct {
 } Rgb888 deriving (Bits);
 
 typedef struct {
+    Bit#(1) vsync;
+    Bit#(1) hsync;
+    Bit#(1) vblank;
+    Bit#(1) hblank;
+    Bit#(1) active_video;
+    Bit#(8) r;
+    Bit#(8) g;
+    Bit#(8) b;
+} Rgb888VideoData;
+
+typedef struct {
     Bit#(8) y;
     Bit#(8) u;
     Bit#(8) v;

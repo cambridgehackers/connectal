@@ -25,6 +25,8 @@ import Vector::*;
 import Clocks::*;
 import FIFO::*;
 import FIFOF::*;
+import GetPut::*;
+
 import YUV::*;
 import NrccSyncBRAM::*;
 
@@ -389,6 +391,10 @@ endmodule
 module mkHdmiOut(HdmiOut);
 
     Wire#(Rgb888Stage) rgb888StageWire <- mkDWire(unpack(0));
+    Reg#(Yuv444IntermediatesStage) yuv444IntermediatesStageReg <- mkReg(Yuv444IntermediatesStage { vsync: 0, hsync: 0, de: False, data: unpack(0) });
+    Reg#(Yuv444Stage) yuv444StageReg <- mkReg(Yuv444Stage { vsync: 0, hsync: 0, de: False, data: unpack(0) });
+    Reg#(Yuv422Stage) yuv422StageReg <- mkReg(Yuv422Stage { vsync: 0, hsync: 0, de: False, data: unpack(0) });
+    Reg#(Bool) evenOddPixelReg <- mkReg(False);
 
     rule yuv444IntermediatesStage;
         let previous = rgb888StageWire;
@@ -430,8 +436,9 @@ module mkHdmiOut(HdmiOut);
             rgb888StageWire <= Rgb888Stage {
                 vsync: videoData.vsync,
                 hsync: videoData.hsync,
-                de: videoData.active_video,
-                pixel: Rgb888 { r: videoData.r, g: videoData.g, b: videoData.b, dataCount: 0 }
+                de: videoData.active_video == 1 ? True : False,
+                pixel: Rgb888 { r: videoData.r, g: videoData.g, b: videoData.b },
+		dataCount: 0
             };
         endmethod
     endinterface
