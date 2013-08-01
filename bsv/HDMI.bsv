@@ -42,6 +42,11 @@ interface HDMI;
     method Bit#(16) hdmi_data;
 endinterface
 
+interface HdmiOut;
+    interface Put#(Rgb888VideoData) rgb;
+    interface HDMI hdmi;
+endinterface
+
 typedef union tagged {
     struct {
         Bit#(32) yuv422;
@@ -379,4 +384,69 @@ module mkHdmiGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
         endmethod
     endinterface
 
+endmodule
+
+module mkHdmiOut(HdmiOut);
+
+    Wire#(Rgb888Stage) rgb888StageWire <- mkDWire(unpack(0));
+
+    rule yuv444IntermediatesStage;
+        let previous = rgb888StageWire;
+        let pixel = previous.pixel;
+        yuv444IntermediatesStageReg <= Yuv444IntermediatesStage {
+            vsync: previous.vsync,
+            hsync: previous.hsync,
+            de: previous.de,
+            data: (previous.de) ? rgbToYuvIntermediates(pixel) : unpack(0)
+        };
+    endrule
+
+    rule yuv444Stage;
+        let previous = yuv444IntermediatesStageReg;
+        yuv444StageReg <= Yuv444Stage {
+            vsync: previous.vsync,
+            hsync: previous.hsync,
+            de: previous.de,
+            data: (previous.de) ? yuvIntermediatesToYuv444(previous.data) : unpack(0)
+        };
+    endrule
+
+    rule yuv422stage;
+        let previous = yuv444StageReg;
+        if (previous.de)
+            evenOddPixelReg <= !evenOddPixelReg;
+        Bit#(16) data = { evenOddPixelReg ? previous.data.u : previous.data.v,
+                          previous.data.y };
+        yuv422StageReg <= Yuv422Stage {
+            vsync: previous.vsync,
+            hsync: previous.hsync,
+            de: previous.de,
+            data: data
+        };
+    endrule
+
+    interface Put rgb;
+        method Action put(Rgb888VideoData videoData);
+            rgb888StageWire <= Rgb888Stage {
+                vsync: videoData.vsync,
+                hsync: videoData.hsync,
+                de: videoData.active_video,
+                pixel: Rgb888 { r: videoData.r, g: videoData.g, b: videoData.b, dataCount: 0 }
+            };
+        endmethod
+    endinterface
+    interface HDMI hdmi;
+        method Bit#(1) hdmi_vsync;
+            return yuv422StageReg.vsync;
+        endmethod
+        method Bit#(1) hdmi_hsync;
+            return yuv422StageReg.hsync;
+        endmethod
+        method Bit#(1) hdmi_de;
+            return yuv422StageReg.de ? 1 : 0;
+        endmethod
+        method Bit#(16) hdmi_data;
+            return yuv422StageReg.data;
+        endmethod
+    endinterface
 endmodule

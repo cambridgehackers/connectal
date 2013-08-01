@@ -134,6 +134,7 @@ module mkImageCapture#(//Clock hdmi_clock,
     BlueScope#(64,64) spiBlueScope <- mkBlueScope(1024);
     //BlueScope#(xsviDataWidth,xsviDataWidth) xsviBlueScope <- mkBlueScope(1024);
     SensorToVideo converter <- mkSensorToVideo;
+    HdmiOut hdmiOut <- mkHdmiOut;
 
     rule rxfifo_response;
         let v <- control.rxfifo_response.get();
@@ -149,7 +150,7 @@ module mkImageCapture#(//Clock hdmi_clock,
 
     rule hdmiData;
         let rgb888VideoData <- converter.out.get();
-	// now send to display 
+        hdmiOut.rgb.put(rgb888VideoData);
     endrule
 
     rule spi_debug_rule;
