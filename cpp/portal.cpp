@@ -255,12 +255,12 @@ int PortalInterface::exec(idleFunc func)
 	// sanity check, to see the status of interrupt source and enable
 	volatile unsigned int int_src = *(instance->hwregs+0x0);
 	volatile unsigned int int_en  = *(instance->hwregs+0x1);
-	fprintf(stderr, "portal.instance[%d]: int_src=%08x int_en=%08x\n", i, int_src,int_en);
+	//fprintf(stderr, "portal.instance[%d]: int_src=%08x int_en=%08x\n", i, int_src,int_en);
 
 	// handle all messasges from this portal instance
 	int messageReceived = instance->receiveMessage(msg);
 	while (messageReceived) {
-	  fprintf(stderr, "messageReceived: msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
+	  //fprintf(stderr, "messageReceived: msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
 	  if (msg->size && instance->indications)
 	    instance->indications->handleMessage(msg);
 	  messageReceived = instance->receiveMessage(msg);
