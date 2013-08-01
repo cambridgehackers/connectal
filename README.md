@@ -132,8 +132,8 @@ Restart surfaceflinger:
 Sometimes multiple restarts are required.
 
 Imageon Example
-    git clone /lab/asic/imageon ../imagone
-    ./genxpsprojfrombsv -B zc702 -p fooproj -b ImageCapture --verilog=/scratch/jamey/zvik_camera/hw4.vivado/sources/fmc_imageon_vita_receiver_v1_13_a --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv
+    git clone /lab/asic/imageon ../imageon
+    ./genxpsprojfrombsv -B zc702 -p fooproj -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv
 
 Installation
 ------------
