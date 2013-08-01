@@ -147,7 +147,7 @@ int PortalInstance::receiveMessage(PortalMessage *msg)
 }
 
 PortalInterface::PortalInterface()
-  : fds(0), numFds(0), intCnt(0)
+  : fds(0), numFds(0)
 {
 }
 
@@ -232,11 +232,8 @@ int PortalInterface::dumpRegs()
 
 int PortalInterface::exec(idleFunc func)
 {
-    bool user_space_driver = true;
-
     unsigned int *buf = new unsigned int[1024];
     PortalMessage *msg = (PortalMessage *)(buf);
-    int messageReceived = 0;
 
     if (!portal.numFds) {
         ALOGE("PortalInterface::exec No fds open numFds=%d\n", portal.numFds);
@@ -244,48 +241,45 @@ int PortalInterface::exec(idleFunc func)
     }
 
     int rc;
-    while ((rc = poll(portal.fds, portal.numFds, 100)) >= 0) {
-        portal.intCnt++;
-        //fprintf(stderr, "pid %d poll rc=%d\n", getpid(), rc);
-        for (int i = 0; i < portal.numFds; i++) {
-            if (portal.fds[i].revents == 0)
-                continue;
-            if (!portal.instances) {
-                fprintf(stderr, "No instances but rc=%d revents=%d\n", rc, portal.fds[i].revents);
-            }
-            PortalInstance *instance = portal.instances[i];
-            memset(buf, 0, 1024);
-            int messageReceived = instance->receiveMessage(msg);
-	    int cnt = 0;
-	    while (messageReceived) {
-	      //fprintf(stderr, "messageReceived=%d\n", messageReceived);
-	      if (!messageReceived)
-                continue;
-	      size_t size = msg->size;
-	      volatile unsigned int int_src = *(instance->hwregs+0x0);
-	      volatile unsigned int int_en  = *(instance->hwregs+0x1);
-	      fprintf(stderr, "msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
-	      fprintf(stderr, "cnt=%d intCnt=%d int_src=%08x int_en=%08x\n",cnt++, portal.intCnt,int_src,int_en);
-	      if (size && instance->indications)
-		instance->indications->handleMessage(msg);
-	      messageReceived = instance->receiveMessage(msg);
-	    }
-	    // interupt was disabled by portal_isr.  once all the 
-	    // HW->SW FIFOs have been cleared, we can re-enable it
-	    *(instance->hwregs+0x1) = 1;
-        }
-        if (rc == 0) {
-            if (0)
-            ALOGD("poll returned rc=%d errno=%d:%s func=%p\n",
-                  rc, errno, strerror(errno), func);
-          if (func)
-            func();
-        }
-    }
-    if (rc < 0) {
-        fprintf(stderr, "poll returned rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-        return rc;
+    while ((rc = poll(portal.fds, portal.numFds, -1)) >= 0) {
+      for (int i = 0; i < portal.numFds; i++) {
+	if (portal.fds[i].revents == 0)
+	  continue;
+	if (!portal.instances) {
+	  fprintf(stderr, "No instances but rc=%d revents=%d\n", rc, portal.fds[i].revents);
+	}
+
+	PortalInstance *instance = portal.instances[i];
+	memset(buf, 0, 1024);
+	
+	// sanity check, to see the status of interrupt source and enable
+	volatile unsigned int int_src = *(instance->hwregs+0x0);
+	volatile unsigned int int_en  = *(instance->hwregs+0x1);
+	fprintf(stderr, "portal.instance[%d]: int_src=%08x int_en=%08x\n", i, int_src,int_en);
+
+	// handle all messasges from this portal instance
+	int messageReceived = instance->receiveMessage(msg);
+	while (messageReceived) {
+	  fprintf(stderr, "messageReceived: msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
+	  if (msg->size && instance->indications)
+	    instance->indications->handleMessage(msg);
+	  messageReceived = instance->receiveMessage(msg);
+	}
+
+	// re-enable interupt which was disabled by portal_isr
+	*(instance->hwregs+0x1) = 1;
+      }
+
+      // rc of 0 indicates timeout
+      if (rc == 0) {
+	if (0)
+	  ALOGD("poll timeout rc=%d errno=%d:%s func=%p\n", rc, errno, strerror(errno), func);
+	if (func)
+	  func();
+      }
     }
 
-    return 0;
+    // return only in error case
+    fprintf(stderr, "poll returned rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    return rc;
 }

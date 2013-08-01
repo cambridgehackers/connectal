@@ -145,7 +145,7 @@ class MethodMixin:
         if not self.isIndication:
             f.write(';\n')
         else:
-            f.write('{ }\n')
+            f.write('= 0;\n')
     def emitCImplementation(self, f, className, namespace):
         params = self.params
         paramDeclarations = self.formalParameters(params)

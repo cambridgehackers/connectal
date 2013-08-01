@@ -10,7 +10,7 @@ class TestEchoIndications : public EchoIndications
 public:
   static unsigned long cnt;
   static void incr_cnt(){
-    if (++cnt == 3)
+    if (++cnt == 4)
       exit(0);
   }
   virtual void heard1(unsigned long v) {
@@ -31,7 +31,7 @@ public:
   }
 };
 
-unsigned long TestEchoIndications::cnt = 3;
+unsigned long TestEchoIndications::cnt = 0;
 
 int main(int argc, const char **argv)
 {

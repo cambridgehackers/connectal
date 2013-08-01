@@ -65,7 +65,6 @@ private:
     PortalInstance **instances;
     struct pollfd *fds;
     int numFds;
-    int intCnt;
 };
 
 extern PortalInterface portal;
