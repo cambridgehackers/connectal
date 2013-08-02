@@ -41,6 +41,7 @@
 #include "gr.h"
 
 #include "HdmiDisplay.h"
+#include "i2chdmi.h"
 
 /*****************************************************************************/
 
@@ -318,6 +319,7 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
 {
     int status = -EINVAL;
     fprintf(stderr, "gralloc_device_open: name=%s\n", name);
+    init_i2c_hdmi();
     if (!strcmp(name, "gpu0")) {
         gralloc_context_t *dev;
         dev = (gralloc_context_t*)malloc(sizeof(*dev));
