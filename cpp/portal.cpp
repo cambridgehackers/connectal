@@ -181,13 +181,13 @@ int PortalInterface::alloc(size_t size, int *fd, PortalAlloc *portalAlloc)
 
     PortalAlloc alloc;
     memset(&alloc, 0, sizeof(alloc));
-    void *ptr = 0;
     alloc.size = size;
     int rc = ioctl(portal.fds[0].fd, PORTAL_ALLOC, &alloc);
-    if (rc)
+    if (rc){
+      fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
-    ptr = mmap(0, alloc.size, PROT_READ|PROT_WRITE, MAP_SHARED, alloc.fd, 0);
-    fprintf(stderr, "alloc size=%d rc=%d alloc.fd=%d ptr=%p\n", size, rc, alloc.fd, ptr);
+    }
+    fprintf(stderr, "alloc size=%d rc=%d alloc.fd=%d\n", size, rc, alloc.fd);
     if (fd)
       *fd = alloc.fd;
     if (portalAlloc)

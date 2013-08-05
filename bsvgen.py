@@ -74,16 +74,25 @@ module mk%(Dut)sIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveWriteAddrFifo, FIFO#
                                     FIFO#(Bit#(32)) axiSlaveWriteDataFifo, FIFO#(Bit#(32)) axiSlaveReadDataFifo,
                                     Vector#(%(channelCount)s, PulseWire) readOutstanding )
                                    (%(Dut)sIndicationsWrapper);
-    Reg#(Bit#(32)) responseFiredReg <- mkReg(0);
+    Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
+    Vector#(%(channelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
+
     Reg#(Bit#(32)) underflowCountReg <- mkReg(0);
 
+    function Bit#(32) read_wire (PulseWire a) = a._read ? 32'b1 : 32'b0;
+    function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
+    
+    rule increment_responseFiredCntReg;
+       responseFiredCntReg <= responseFiredCntReg + fold(my_add, map(read_wire, responseFiredWires));
+    endrule
+    
 %(indicationMethodRules)s
 
     interface %(Dut)sIndications indications;
 %(indicationMethods)s
     endinterface
 
-    interface Reg responseFired = responseFiredReg;
+    interface Reg responseFired = responseFiredCntReg;
     interface Reg underflowCount = underflowCountReg;
 endmodule
 
@@ -154,7 +163,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	if (addr == 12'h004)
 	    v = interruptEnableReg ? 32'd1 : 32'd0;
 	if (addr == 12'h008)
-	    v = 2; // channelCount
+	    v = %(channelCount)s; // channelCount
 	if (addr == 12'h00C)
 	    v = 32'h00010000; // base fifo offset
 	if (addr == 12'h010)
@@ -355,7 +364,7 @@ indicationRuleTemplate='''
 indicationMethodTemplate='''
         method Action %(methodName)s(%(formals)s);
             %(methodName)s$responseFifo.enq(%(MethodName)s$Response {%(structElements)s});
-            responseFiredReg <= responseFiredReg + 1;
+            responseFiredWires[%(channelNumber)s].send();
         endmethod
 '''
 

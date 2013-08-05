@@ -54,14 +54,15 @@ endinterface
 
 interface MemcpyIndications;
     method Action started();
+    method Action started1(Bit#(32) srcPhysReg, Bit#(32) srcLimitReg, Bit#(32) dstPhysReg, Bit#(32) dstLimitReg);
     method Action srcPhys(Bit#(32) srcPhysReg);
     method Action srcLimit(Bit#(32) srcLimitReg);
     method Action dstPhys(Bit#(32) dstPhysReg);
     method Action dstLimit(Bit#(32) dstLimitReg);
     method Action src(Bit#(32) srcPhysReg);
+    method Action dst(Bit#(32) dstPhysReg);
     method Action readWordResult(Bit#(32) phys, Bit#(64) v);
     method Action rData(Bit#(64) v);
-    method Action wData(Bit#(64) v);
     method Action done(Bit#(32) srcPhysReg);
     method Action traceData(Bit#(34) v);
     method Action sampleCount(Bit#(32) v);
@@ -145,12 +146,14 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
     endmethod
 
     method Action memcpy(Bit#(32) dstPhys, Bit#(32) srcPhys, Bit#(32) numWords) if (srcPhysReg == 0);
+        Bit#(32) srcLimit = srcPhys + (numWords << 2);
+        Bit#(32) dstLimit = dstPhys + (numWords << 2);
         dstPhysReg <= dstPhys;
-	dstLimitReg <= dstPhys + (numWords << 2);
+	dstLimitReg <= dstLimit;
         srcPhysReg <= srcPhys;
-	Bit#(32) srcLimit = srcPhys + (numWords << 2);
         srcLimitReg <= srcLimit;
-	indications.started();
+        indications.started();
+        indications.started1(srcPhys, srcLimit, dstPhys, dstLimit);
     endmethod
 
     method Action setTriggerMaskValue(Bit#(8) mask, Bit#(8) value);
@@ -183,16 +186,18 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
 		return Axi3ReadRequest { address: srcPhysReg, burstLen: burstLenReg-1, id: 0} ;
 	    endmethod
 	    method Action data(Axi3ReadResponse#(64,6) response) if (rBurstCountReg != 0);
-	        if (rBurstCountReg == 1)
-		begin
-		    indications.rData(response.data);
-		end
-		rBurstCountReg <= rBurstCountReg - 1;
-	        dataFifo.enq(response.data);
+	       indications.rData(response.data);
+	       if (rBurstCountReg == 1)
+		  begin
+		     noAction;
+		  end
+	       rBurstCountReg <= rBurstCountReg - 1;
+	       dataFifo.enq(response.data);
 	    endmethod
 	endinterface
 	interface Axi3WriteClient write;
-	    method ActionValue#(Axi3WriteRequest#(6)) address() if (dstPhysReg < dstLimitReg && wBurstCountReg == 0);
+	   method ActionValue#(Axi3WriteRequest#(6)) address() if (dstPhysReg < dstLimitReg && wBurstCountReg == 0);
+	        indications.dst(dstPhysReg);
 		dstPhysReg <= dstPhysReg + (extend(burstLenReg)<<2);
 		wBurstCountReg <= burstLenReg;
 	        return Axi3WriteRequest { address: dstPhysReg, burstLen: burstLenReg-1, id: 1 };
@@ -205,7 +210,6 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
 		if (wBurstCountReg == 1)
                 begin
 		    last = 1;
-		    indications.wData(v);
 		end
 		wBurstCountReg <= wBurstCountReg - 1;
 
@@ -226,16 +230,6 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
 		if (readPhysAddrReg != 0)
 		    indications.readWordResult(readPhysAddrReg, response.data);
 		readPhysAddrReg <= 0;
-	    endmethod
-	endinterface
-	interface Axi3WriteClient write;
-	    method ActionValue#(Axi3WriteRequest#(6)) address() if (False);
-	        return Axi3WriteRequest { address: 0, burstLen: burstLenReg-1, id: 1 };
-	    endmethod
-	    method ActionValue#(Axi3WriteData#(64, 8, 6)) data() if (False);
-	        return Axi3WriteData { data: 0, byteEnable: 0, last: 0, id: 0 };
-	    endmethod
-	    method Action response(Axi3WriteResponse#(6) resp);
 	    endmethod
 	endinterface
     endinterface
