@@ -54,8 +54,8 @@ class PortalInterface {
 public:
     PortalInterface();
     ~PortalInterface();
-    typedef void (*idleFunc)(void);
-    static int exec(idleFunc func = 0);
+    static void* exec(void* __x);
+    static int dCacheFlushInval(PortalAlloc *portalAlloc);
     static int alloc(size_t size, int *fd, PortalAlloc *portalAlloc);
     static int free(int fd);
     static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);

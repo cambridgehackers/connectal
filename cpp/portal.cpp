@@ -43,6 +43,7 @@
 #define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
 
 #define PORTAL_ALLOC _IOWR('B', 10, PortalAlloc)
+#define PORTAL_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalMessage)
 #define PORTAL_PUTGET _IOWR('B', 17, PortalMessage)
 #define PORTAL_PUT _IOWR('B', 18, PortalMessage)
 #define PORTAL_GET _IOWR('B', 19, PortalMessage)
@@ -172,6 +173,21 @@ int PortalInterface::registerInstance(PortalInstance *instance)
     return 0;
 }
 
+int PortalInterface::dCacheFlushInval(PortalAlloc *portalAlloc)
+{
+    if (!portal.numFds) {
+	ALOGE("%s No fds open\n", __FUNCTION__);
+	return -ENODEV;
+    }
+    int rc = ioctl(portal.fds[0].fd, PORTAL_DCACHE_FLUSH_INVAL, portalAlloc);
+    if (rc){
+      fprintf(stderr, "portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+      return rc;
+    }
+    //fprintf(stderr, "dcache flush\n");
+    return 0;
+}
+
 int PortalInterface::alloc(size_t size, int *fd, PortalAlloc *portalAlloc)
 {
     if (!portal.numFds) {
@@ -230,14 +246,14 @@ int PortalInterface::dumpRegs()
     return rc;
 }
 
-int PortalInterface::exec(idleFunc func)
+void* PortalInterface::exec(void* __x)
 {
     unsigned int *buf = new unsigned int[1024];
     PortalMessage *msg = (PortalMessage *)(buf);
 
     if (!portal.numFds) {
         ALOGE("PortalInterface::exec No fds open numFds=%d\n", portal.numFds);
-        return -ENODEV;
+        return (void*)-ENODEV;
     }
 
     int rc;
@@ -272,14 +288,11 @@ int PortalInterface::exec(idleFunc func)
 
       // rc of 0 indicates timeout
       if (rc == 0) {
-	if (0)
-	  ALOGD("poll timeout rc=%d errno=%d:%s func=%p\n", rc, errno, strerror(errno), func);
-	if (func)
-	  func();
+	// do something if we timeout??
       }
     }
 
     // return only in error case
     fprintf(stderr, "poll returned rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-    return rc;
+    return (void*)rc;
 }
