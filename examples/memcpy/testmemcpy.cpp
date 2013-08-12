@@ -1,4 +1,3 @@
-
 #include "Memcpy.h"
 #include <stdio.h>
 #include <sys/mman.h>
@@ -22,9 +21,13 @@ int numWords = 32;
 size_t size = numWords*sizeof(unsigned int);
 
 sem_t sem;
-bool fail = false;
-unsigned int dmv = false;
-unsigned int dmc=0;
+bool memcmp_fail = false;
+unsigned int memcmp_count = 0;
+bool check_word_fail = false;
+unsigned int check_word_count = 0;
+bool data_mismatch = false;
+unsigned int data_mismatch_count=0;
+
 unsigned int iterCnt=1024;
 
 typedef struct{
@@ -33,16 +36,15 @@ typedef struct{
 } ret_val;
 
 ret_val cwt;
-int cw_cnt = 0;
 unsigned int offset = 0;
 void check_word(unsigned long long v){
   if(!cwt.valid){
     cwt.data = v;
     cwt.valid = true;
   } else {
-    fail |= cwt.data != v;
-    if(!(cw_cnt++ % 128))
-      fprintf(stderr, "check_word: cw_cnt=%d offset=%d status=%s\n", cw_cnt, offset, cwt.data == v ? "pass" : "fail XXXXXXXXXXXXXXXXXX");
+    check_word_fail |= cwt.data != v;
+    if(0)
+      fprintf(stderr, "check_word: cw_cnt=%d offset=%d status=%s\n", check_word_count, offset, cwt.data == v ? "pass" : "fail XXXXXXXXXXXXXXXXXX");
     cwt.valid = false;
   }
 }
@@ -73,11 +75,14 @@ class TestMemcpyIndications : public MemcpyIndications
     fprintf(stderr, "srcPhys: %lx\n", src);
   }
   virtual void dataMismatch(unsigned long v){
-    if(!(dmc%128))
-      fprintf(stderr, "dataMismatch(%d): %lx\n", dmc,v);
-    dmv |= v;
-    if(++dmc >= iterCnt){
-      fprintf(stderr, "exiting test, result = %s, dmv=%d\n", fail ? "fail" : "pass",dmv);
+    if(0)
+      fprintf(stderr, "dataMismatch(%d): %lx\n", data_mismatch_count,v);
+    data_mismatch |= v;
+    if(++data_mismatch_count >= iterCnt){
+      PortalInterface::free(srcFd);
+      PortalInterface::free(dstFd);
+      sem_destroy(&sem);
+      fprintf(stderr, "exiting test, check_word_fail=%d, data_mismatch=%d, memcmp_fail=%d\n", check_word_fail,data_mismatch, memcmp_fail);
       exit(0);
     }
   }
@@ -112,10 +117,13 @@ class TestMemcpyIndications : public MemcpyIndications
     //fprintf(stderr, "memcpy done: %lx %d\n", v, offset);
     device->readWord(srcAlloc.entries[0].dma_address + offset*4);
     device->readWord(dstAlloc.entries[0].dma_address + offset*4);
-    // fprintf(stderr, "memcmp src=%lx dst=%lx success=%s\n",
-    // 	    srcBuffer, dstBuffer, memcmp(srcBuffer, dstBuffer, size) == 0 ? "yes" : "no");
-    // dump("src", srcBuffer, size);
-    // dump("dst", dstBuffer, size);
+    unsigned int mcf = memcmp(srcBuffer, dstBuffer, size);
+    memcmp_fail |= mcf;
+    if(!(memcmp_count++%128)){
+      fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, srcBuffer, dstBuffer, mcf == 0 ? "pass" : "fail");
+      dump("src", (char*)srcBuffer, size);
+      dump("dst", (char*)dstBuffer, size);
+    }
     sem_post(&sem);
   }
 };
@@ -168,30 +176,19 @@ int main(int argc, const char **argv)
     // at some point, invocations to cacheflush will be replaced by:
     // in order to do this, we first need to move this functionality
     // from cache-v7.S:ENTRY(v7_coherent_user_range) to portal.c
-    int rv = cacheflush(dstBuffer, dstBuffer+size, 0);
+    // int rv = cacheflush(dstBuffer, dstBuffer+size, 0);
     // fprintf(stderr, "cacheflush=%d\n", rv);
-    
-    PortalInterface::dCacheFlushInval(&dstAlloc);
-    //device->reset(8);
-
     // fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%x\n",
     // 	    srcAlloc.entries[0].dma_address,
     // 	    dstAlloc.entries[0].dma_address,
     // 	    numWords);
-    
-    //device->readWord(srcAlloc.entries[0].dma_address);
-    //device->readWord(srcAlloc.entries[0].dma_address + (numWords-1)*4);
 
+    PortalInterface::dCacheFlushInval(&srcAlloc);
+    PortalInterface::dCacheFlushInval(&dstAlloc);
+      
     device->memcpy(dstAlloc.entries[0].dma_address,
 		   srcAlloc.entries[0].dma_address,
 		   numWords);
-  }
-  
-  
-  // PortalInterface::free(srcFd);
-  // PortalInterface::free(dstFd);
-  // sem_destroy(&sem);
-  // fprintf(stderr, "leaving test, result=%s\n", fail ? "fail" : "pass");
-  // return 0;
+  }  
   while(1);
 }
