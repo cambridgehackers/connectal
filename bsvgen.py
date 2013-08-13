@@ -18,6 +18,7 @@ import Clocks::*;
 import Adapter::*;
 import AxiMasterSlave::*;
 import AxiClientServer::*;
+import AxiDrain::*;
 import HDMI::*;
 import Zynq::*;
 import Imageon::*;
@@ -139,6 +140,8 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
     Reg#(Bool) interruptEnableReg <- mkReg(False);
     let       interruptStatus = fold(my_or, map(read_wire, readOutstanding));
 
+    %(axiMasterDrainInstantiations)s
+    
 %(methodRules)s
 
     rule writeCtrlReg if (axiSlaveWriteAddrFifo.first[16] == 0);
@@ -150,6 +153,11 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	    noAction; // interruptStatus is read-only
 	if (addr == 12'h004)
 	    interruptEnableReg <= v[0] == 1'd1; //reduceOr(v) == 1'd1;
+    if (addr == 12'h008)
+        begin
+           Bool b = v[0] == 1'd1;
+           %(axiMasterSetDrainEnables)s
+        end
     last_ctrl_reg_write_addr <= zeroExtend(axiSlaveWriteAddrFifo.first);
 	last_ctrl_reg_write_data <= axiSlaveWriteDataFifo.first;
     endrule
@@ -488,14 +496,18 @@ class InterfaceMixin:
             'channelCount': indicationInterface.channelCount, # includes self.channelCount
             'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster)
                                                 for (axiMaster,t,params) in axiMasters]),
+            'axiMasterDrainInstantiations': '\n'.join(['    Axi3ClientDrain#(%s,%s,%s) %s_%s_drain <- mkAxiClientDrain;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), dutName, axiMaster)
+                                                for (axiMaster,t,params) in axiMasters]),
+            'axiMasterSetDrainEnables': '\n'.join(['    %s_%s_drain.enabled <= b;' % ( dutName, axiMaster)
+                                                for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
                                                for (axiSlave,t,params) in axiSlaves]),
             'exposedInterfaceDeclarations':
                 '\n'.join(['\n'.join(['    interface %s %s;' % (t, util.decapitalize(busname))
                                       for (busname,t,params) in buses[busType]])
                            for busType in exposedInterfaces]),
-            'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
-                                           % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster,dutName,axiMaster)
+            'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s) %sMaster <- mkAxi3MasterWDrain(%s.%s, %s_%s_drain);'
+                                           % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster,dutName,axiMaster, dutName,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
             'axiMasterImplementations': '\n'.join(['    interface Axi3Master %s = %sMaster;' % (axiMaster,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),

@@ -29,6 +29,7 @@ import FIFOF::*;
 import FIFOLevel::*;
 import SpecialFIFOs::*;
 import AxiClientServer::*;
+import AxiDrain::*;
 
 interface AxiMasterRead#(type busWidth);
    method ActionValue#(Bit#(32)) readAddr();
@@ -913,6 +914,130 @@ module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Mas
 	endmethod
 	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
 	    client.read.data(Axi3ReadResponse { data: data, code: code, last: last, id: id});
+	endmethod
+   endinterface
+endmodule
+
+module mkAxi3MasterWDrain#(Axi3Client#(busWidth,busWidthBytes,idWidth) client, Axi3ClientDrain#(busWidth,busWidthBytes,idWidth) drain)(Axi3Master#(busWidth,busWidthBytes,idWidth))
+	 provisos(Div#(busWidth,8,busWidthBytes),Add#(1,a,busWidth),Add#(busWidth,b,65));
+
+    FIFOF#(Axi3ReadRequest#(idWidth))                      fReadRequest <- mkSizedBRAMFIFOF(8);
+    FIFOF#(Axi3WriteRequest#(idWidth))                     fWriteRequest <- mkSizedBRAMFIFOF(8);
+    FIFOF#(Axi3WriteData#(busWidth,busWidthBytes,idWidth)) fWriteData <- mkSizedBRAMFIFOF(8);
+
+   rule writAddrRule_drain (drain.enabled);
+      let r <- drain.m_axi.write.address();
+      fWriteRequest.enq(r);
+   endrule
+   
+   rule writAddrRule (!drain.enabled);
+      let r <- client.write.address();
+      fWriteRequest.enq(r);
+   endrule
+
+   rule writeDataRule_drain (drain.enabled);
+      let d <- drain.m_axi.write.data();
+      fWriteData.enq(d);
+   endrule
+   
+   rule writeDataRule (!drain.enabled);
+      let d <- client.write.data();
+      fWriteData.enq(d);
+   endrule
+
+   rule readAddrRule_drain (drain.enabled);
+      let r <- drain.m_axi.read.address();
+      fReadRequest.enq(r);
+   endrule
+      
+   rule readAddrRule (!drain.enabled);
+      let r <- client.read.address();
+      fReadRequest.enq(r);
+   endrule
+
+    interface Axi3MasterWrite write;
+	method ActionValue#(Bit#(32)) writeAddr();
+	    fWriteRequest.deq;
+	    return fWriteRequest.first.address;
+	endmethod
+	method Bit#(4) writeBurstLen();
+	    return fWriteRequest.first.burstLen;
+	endmethod
+	method Bit#(3) writeBurstWidth();
+	    if (valueOf(busWidth) == 32)
+		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+	    else if (valueOf(busWidth) == 64)
+		return 3'b011;
+	    else
+		return 3'b100;
+	endmethod
+	method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
+	    return 2'b01; // increment address
+	endmethod
+	method Bit#(3) writeBurstProt(); // drive with 3'b000
+	    return 3'b000;
+	endmethod
+	method Bit#(4) writeBurstCache(); // drive with 4'b0011
+	    return 4'b0011;
+	endmethod
+	method Bit#(idWidth) writeId();
+	    return fWriteRequest.first.id;
+	endmethod
+
+	method ActionValue#(Bit#(busWidth)) writeData();
+	    fWriteData.deq;
+	    return fWriteData.first.data;
+	endmethod
+        method Bit#(idWidth) writeWid();
+            return fWriteData.first.id;
+        endmethod
+	method Bit#(busWidthBytes) writeDataByteEnable();
+	    return fWriteData.first.byteEnable;
+	endmethod
+	method Bit#(1) writeLastDataBeat(); // last data beat
+	    return fWriteData.first.last;
+	endmethod
+        method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
+	   if (drain.enabled)
+	      drain.m_axi.write.response(Axi3WriteResponse { code: responseCode, id: id});
+	   else
+	      client.write.response(Axi3WriteResponse { code: responseCode, id: id});
+	endmethod
+    endinterface
+
+    interface Axi3MasterRead read;
+	method ActionValue#(Bit#(32)) readAddr();
+	    fReadRequest.deq;
+	    return fReadRequest.first.address;
+	endmethod
+	method Bit#(4) readBurstLen();
+	    return fReadRequest.first.burstLen;
+	endmethod
+	method Bit#(3) readBurstWidth();
+	    if (valueOf(busWidth) == 32)
+		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+	    else if (valueOf(busWidth) == 64)
+		return 3'b011;
+	    else
+		return 3'b100;
+	endmethod
+	method Bit#(2) readBurstType();  // drive with 2'b01
+	    return 2'b01;
+	endmethod
+	method Bit#(3) readBurstProt(); // drive with 3'b000
+	    return 3'b000;
+	endmethod
+	method Bit#(4) readBurstCache(); // drive with 4'b0011
+	    return 4'b0011;
+	endmethod
+	method Bit#(idWidth) readId();
+	    return fReadRequest.first.id;
+	endmethod
+	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
+	   if (drain.enabled)
+	      drain.m_axi.read.data(Axi3ReadResponse { data: data, code: code, last: last, id: id});
+	   else
+	      client.read.data(Axi3ReadResponse { data: data, code: code, last: last, id: id});
 	endmethod
    endinterface
 endmodule

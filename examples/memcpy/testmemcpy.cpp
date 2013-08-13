@@ -7,8 +7,8 @@
 #include <semaphore.h>
 #include <pthread.h>
 
-#include <sys/syscall.h>
-#define cacheflush(a, b, c)    syscall(__ARM_NR_cacheflush, (a), (b), (c))
+// #include <sys/syscall.h>
+// #define cacheflush(a, b, c)    syscall(__ARM_NR_cacheflush, (a), (b), (c))
 
 Memcpy *device = 0;
 PortalAlloc srcAlloc;
@@ -28,7 +28,7 @@ unsigned int check_word_count = 0;
 bool data_mismatch = false;
 unsigned int data_mismatch_count=0;
 
-unsigned int iterCnt=1024;
+unsigned int iterCnt=2;
 
 typedef struct{
   unsigned long long data;
@@ -163,6 +163,9 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
+  device->flushDMAChannels();
+  device->reset(8);
+
   while (srcGen < iterCnt*numWords){
     sem_wait(&sem);
     for (int i = 0; i < numWords; i++){
@@ -172,12 +175,6 @@ int main(int argc, const char **argv)
     
     DATA_SYNC_BARRIER;
     
-    // I'm not sure that this actually invalidates the dstBuffer
-    // at some point, invocations to cacheflush will be replaced by:
-    // in order to do this, we first need to move this functionality
-    // from cache-v7.S:ENTRY(v7_coherent_user_range) to portal.c
-    // int rv = cacheflush(dstBuffer, dstBuffer+size, 0);
-    // fprintf(stderr, "cacheflush=%d\n", rv);
     // fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%x\n",
     // 	    srcAlloc.entries[0].dma_address,
     // 	    dstAlloc.entries[0].dma_address,

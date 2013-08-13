@@ -69,7 +69,7 @@ vfile=sources/%(dut)s/mk%(Dut)sWrapper.v
 all: bits exe
 
 $(vfile): sources/%(dut)s/%(Dut)sWrapper.bsv
-	cd sources/%(dut)s; bsc --wait-for-license -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
+	cd sources/%(dut)s; bsc --aggressive-conditions --wait-for-license -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Dut)sWrapper %(Dut)sWrapper.bsv
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
 	cp -r ../xilinx/sources/* sources/
 	cp -r ../xilinx/constraints .

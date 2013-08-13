@@ -202,12 +202,12 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
 	interface Axi3ReadClient read;
 	    method ActionValue#(Axi3ReadRequest#(6)) address() if (srcPhysReg < srcLimitReg && rBurstCountReg == 0);
 		srcPhysReg <= srcPhysReg + (extend(burstLenReg)<<3);
-		// indications.src(srcPhysReg);
+		indications.src(srcPhysReg);
 		rBurstCountReg <= burstLenReg;
 		return Axi3ReadRequest { address: srcPhysReg, burstLen: burstLenReg-1, id: 0} ;
 	    endmethod
 	    method Action data(Axi3ReadResponse#(64,6) response) if (rBurstCountReg != 0);
-	       // indications.rData(response.data);
+	       indications.rData(response.data);
 	       if (rBurstCountReg == 1)
 		  begin
 		     noAction;
@@ -222,7 +222,7 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
 	endinterface
 	interface Axi3WriteClient write;
 	   method ActionValue#(Axi3WriteRequest#(6)) address() if (dstPhysReg < dstLimitReg && wBurstCountReg == 0);
-		// indications.dst(dstPhysReg);
+		indications.dst(dstPhysReg);
 	        let new_dstPhysReg = dstPhysReg + (extend(burstLenReg)<<3);
 	        dstPhysReg <= new_dstPhysReg;
                 // The AXI spec indicates that transactions with the same ID must be comitted in order.

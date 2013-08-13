@@ -34,6 +34,7 @@ class PortalIndications {
 class PortalInstance {
 public:
     int sendMessage(PortalMessage *msg);
+    int flushDMAChannels();
     void close();
 protected:
     PortalIndications *indications;
