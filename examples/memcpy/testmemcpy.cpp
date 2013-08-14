@@ -163,9 +163,7 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
-  device->flushDMAChannels();
-  device->reset(8);
-
+  // device->reset(8);
   while (srcGen < iterCnt*numWords){
     sem_wait(&sem);
     for (int i = 0; i < numWords; i++){
@@ -175,10 +173,10 @@ int main(int argc, const char **argv)
     
     DATA_SYNC_BARRIER;
     
-    // fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%x\n",
-    // 	    srcAlloc.entries[0].dma_address,
-    // 	    dstAlloc.entries[0].dma_address,
-    // 	    numWords);
+    fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%x\n",
+    	    srcAlloc.entries[0].dma_address,
+    	    dstAlloc.entries[0].dma_address,
+    	    numWords);
 
     PortalInterface::dCacheFlushInval(&srcAlloc);
     PortalInterface::dCacheFlushInval(&dstAlloc);

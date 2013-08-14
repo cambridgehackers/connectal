@@ -208,10 +208,6 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
 	    endmethod
 	    method Action data(Axi3ReadResponse#(64,6) response) if (rBurstCountReg != 0);
 	       indications.rData(response.data);
-	       if (rBurstCountReg == 1)
-		  begin
-		     noAction;
-		  end
 	       rBurstCountReg <= rBurstCountReg - 1;
 	       dataFifo.enq(response.data);
 	       let misMatch0 = response.data[31:0] != srcGen;
@@ -236,12 +232,8 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
 	    endmethod
 	    method ActionValue#(Axi3WriteData#(64, 8, 6)) data() if (wBurstCountReg != 0);
 	        dataFifo.deq;
-		Bit#(1) last = 0;
+		Bit#(1) last = wBurstCountReg == 1 ? 1'd1 : 1'd0; 
 		let v = dataFifo.first;
-		if (wBurstCountReg == 1)
-                begin
-		    last = 1;
-		end
 		wBurstCountReg <= wBurstCountReg - 1;
 	        return Axi3WriteData { data: v, byteEnable: maxBound, last: last, id: 1 };
 	    endmethod

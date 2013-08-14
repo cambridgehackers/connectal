@@ -44,6 +44,7 @@
 
 #define PORTAL_ALLOC _IOWR('B', 10, PortalAlloc)
 #define PORTAL_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalMessage)
+#define PORTAL_AXI_RST _IOWR('B', 12, PortalMessage)
 #define PORTAL_PUTGET _IOWR('B', 17, PortalMessage)
 #define PORTAL_PUT _IOWR('B', 18, PortalMessage)
 #define PORTAL_GET _IOWR('B', 19, PortalMessage)
@@ -112,20 +113,6 @@ PortalInstance *portalOpen(const char *instanceName)
     PortalInstance *instance = new PortalInstance(instanceName);
     instance->open();
     return instance;
-}
-
-int PortalInstance::flushDMAChannels()
-{
-  *(hwregs+0x2) = 1;
-  volatile unsigned int lcr_addr = *(hwregs+0xe);
-  volatile unsigned int lcr_val  = *(hwregs+0xf);
-  fprintf(stderr, "flushDMAChannels %08x %08x\n", lcr_addr, lcr_val);
-  sleep(1);
-  *(hwregs+0x2) = 0;
-  lcr_addr = *(hwregs+0xe);
-  lcr_val  = *(hwregs+0xf);
-  fprintf(stderr, "flushDMAChannels %08x %08x\n", lcr_addr, lcr_val);
-  return 0;
 }
 
 int PortalInstance::sendMessage(PortalMessage *msg)
