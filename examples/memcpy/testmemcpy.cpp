@@ -43,8 +43,7 @@ void check_word(unsigned long long v){
     cwt.valid = true;
   } else {
     check_word_fail |= cwt.data != v;
-    if(0)
-      fprintf(stderr, "check_word: cw_cnt=%d offset=%d status=%s\n", check_word_count, offset, cwt.data == v ? "pass" : "fail XXXXXXXXXXXXXXXXXX");
+    fprintf(stderr, "check_word: cw_cnt=%d offset=%d status=%s\n", check_word_count, offset, cwt.data == v ? "pass" : "fail");
     cwt.valid = false;
   }
 }
@@ -75,8 +74,7 @@ class TestMemcpyIndications : public MemcpyIndications
     fprintf(stderr, "srcPhys: %lx\n", src);
   }
   virtual void dataMismatch(unsigned long v){
-    if(0)
-      fprintf(stderr, "dataMismatch(%d): %lx\n", data_mismatch_count,v);
+    fprintf(stderr, "dataMismatch(%d): %lx\n", data_mismatch_count,v);
     data_mismatch |= v;
     if(++data_mismatch_count >= iterCnt){
       PortalInterface::free(srcFd);
@@ -108,18 +106,18 @@ class TestMemcpyIndications : public MemcpyIndications
     dump("rData: ", (char*)&v, sizeof(v));
   }
   virtual void readWordResult ( unsigned long addr, unsigned long long v ){
-    // fprintf(stderr, "readWordResult (%lx): ", addr);
-    // dump("", (char*)&v, sizeof(v));
+    fprintf(stderr, "readWordResult (%lx): ", addr);
+    dump("", (char*)&v, sizeof(v));
     check_word(v);
   }
   virtual void done(unsigned long v) {
     offset = (rand() % numWords); // *sizeof(unsigned int);
-    //fprintf(stderr, "memcpy done: %lx %d\n", v, offset);
+    fprintf(stderr, "memcpy done: %lx %d\n", v, offset);
     device->readWord(srcAlloc.entries[0].dma_address + offset*4);
     device->readWord(dstAlloc.entries[0].dma_address + offset*4);
     unsigned int mcf = memcmp(srcBuffer, dstBuffer, size);
     memcmp_fail |= mcf;
-    if(!(memcmp_count++%128)){
+    if(!(memcmp_count++%1)){
       fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, srcBuffer, dstBuffer, mcf == 0 ? "pass" : "fail");
       dump("src", (char*)srcBuffer, size);
       dump("dst", (char*)dstBuffer, size);
