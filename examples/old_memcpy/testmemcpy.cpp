@@ -7,6 +7,9 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+// #include <sys/syscall.h>
+// #define cacheflush(a, b, c)    syscall(__ARM_NR_cacheflush, (a), (b), (c))
+
 Memcpy *device = 0;
 PortalAlloc srcAlloc;
 PortalAlloc dstAlloc;
@@ -20,8 +23,31 @@ size_t size = numWords*sizeof(unsigned int);
 sem_t sem;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
+bool check_word_fail = false;
+unsigned int check_word_count = 0;
+bool data_mismatch = false;
+unsigned int data_mismatch_count=0;
 
 unsigned int iterCnt=2;
+
+typedef struct{
+  unsigned long long data;
+  bool valid;
+} ret_val;
+
+ret_val cwt;
+unsigned int offset = 0;
+void check_word(unsigned long long v){
+  if(!cwt.valid){
+    cwt.data = v;
+    cwt.valid = true;
+  } else {
+    check_word_fail |= cwt.data != v;
+    fprintf(stderr, "check_word: cw_cnt=%d offset=%d status=%s\n", check_word_count, offset, cwt.data == v ? "pass" : "fail");
+    cwt.valid = false;
+  }
+}
+
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -33,27 +59,62 @@ void dump(const char *prefix, char *buf, size_t len)
 
 class TestMemcpyIndications : public MemcpyIndications
 {
-  virtual void readReq(unsigned long v){
-    fprintf(stderr, "readReq %lx\n", v);
+  virtual void started() {
+    // fprintf(stderr, "started\n");
   }
-  virtual void writeReq(unsigned long v){
-    fprintf(stderr, "writeReq %lx\n", v);
+  virtual void started1(unsigned long src, unsigned long srcLimit, unsigned long dst, unsigned long dstLimit){
+    // fprintf(stderr, "started1:  srcPhys=%lx\n", src);
+    // fprintf(stderr, "started1: srcLimit=%lx\n", srcLimit);
+    // fprintf(stderr, "started1:  dstPhys=%lx\n", dst);
+    // fprintf(stderr, "started1: dstLimit=%lx\n", dstLimit);
   }
-  virtual void writeAck(unsigned long v){
-    fprintf(stderr, "writeAck %lx\n", v);
+  virtual void traceData(long long unsigned int){}
+  virtual void sampleCount(long unsigned int){}
+  virtual void srcPhys(unsigned long src) {
+    fprintf(stderr, "srcPhys: %lx\n", src);
   }
-  virtual void started(unsigned long words){
-    fprintf(stderr, "started: words=%lx\n", words);
+  virtual void dataMismatch(unsigned long v){
+    fprintf(stderr, "dataMismatch(%d): %lx\n", data_mismatch_count,v);
+    data_mismatch |= v;
+    if(++data_mismatch_count >= iterCnt){
+      PortalInterface::free(srcFd);
+      PortalInterface::free(dstFd);
+      sem_destroy(&sem);
+      fprintf(stderr, "exiting test, check_word_fail=%d, data_mismatch=%d, memcmp_fail=%d\n", check_word_fail,data_mismatch, memcmp_fail);
+      exit(0);
+    }
   }
-  virtual void readWordResult ( unsigned long long v ){
-    dump("readWordResult: ", (char*)&v, sizeof(v));
+  virtual void dstCompPtr(unsigned long v){
+    fprintf(stderr, "dstCompPtr: %lx\n", v);
   }
-  virtual void rData ( unsigned long long v ){
+  virtual void srcLimit(unsigned long limit) {
+    fprintf(stderr, "srcLimit: %lx\n", limit);
+  }
+  virtual void dstPhys(unsigned long dst) {
+    fprintf(stderr, "dstPhys: %lx\n", dst);
+  }
+  virtual void dstLimit(unsigned long limit) {
+    fprintf(stderr, "dstLimit: %lx\n", limit);
+  }
+  virtual void src(unsigned long src) {
+    fprintf(stderr, "src: %lx\n", src);
+  }
+  virtual void dst(unsigned long dst) {
+    fprintf(stderr, "dst: %lx\n", dst);
+  }
+  virtual void rData(unsigned long long v) {
     dump("rData: ", (char*)&v, sizeof(v));
   }
+  virtual void readWordResult ( unsigned long addr, unsigned long long v ){
+    fprintf(stderr, "readWordResult (%lx): ", addr);
+    dump("", (char*)&v, sizeof(v));
+    check_word(v);
+  }
   virtual void done(unsigned long v) {
-    unsigned int offset = (rand() % numWords); 
+    offset = (rand() % numWords); // *sizeof(unsigned int);
     fprintf(stderr, "memcpy done: %lx %d\n", v, offset);
+    device->readWord(srcAlloc.entries[0].dma_address + offset*4);
+    device->readWord(dstAlloc.entries[0].dma_address + offset*4);
     unsigned int mcf = memcmp(srcBuffer, dstBuffer, size);
     memcmp_fail |= mcf;
     if(!(memcmp_count++%1)){
@@ -75,6 +136,7 @@ class TestMemcpyIndications : public MemcpyIndications
 
 int main(int argc, const char **argv)
 {
+  cwt.valid = false;
   unsigned int srcGen = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
@@ -109,7 +171,7 @@ int main(int argc, const char **argv)
     
     DATA_SYNC_BARRIER;
     
-    fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
+    fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%x\n",
     	    srcAlloc.entries[0].dma_address,
     	    dstAlloc.entries[0].dma_address,
     	    numWords);
@@ -117,16 +179,9 @@ int main(int argc, const char **argv)
     PortalInterface::dCacheFlushInval(&srcAlloc);
     PortalInterface::dCacheFlushInval(&dstAlloc);
       
-    // write channel 0 is dma destination
-    device->configDmaWriteChan(0, dstAlloc.entries[0].dma_address, 16);
-    // read channel 0 is dma source
-    device->configDmaReadChan(0, srcAlloc.entries[0].dma_address, 16);
-    // read channel 1 is readWord source
-    device->configDmaReadChan(1, srcAlloc.entries[0].dma_address, 2);
-
-    // initiate the transfer
-    device->startDMA(numWords);
-
+    device->memcpy(dstAlloc.entries[0].dma_address,
+		   srcAlloc.entries[0].dma_address,
+		   numWords);
   }  
   while(1);
 }
