@@ -25,8 +25,11 @@ import Clocks::*;
 import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
-import Gray              ::*;
-import GrayCounter       ::*;
+import Gray::*;
+import GrayCounter::*;
+
+import AxiDMA::*;
+import ClientServer::*;
 
 interface BlueScope#(type dataWidth, type triggerWidth);
     method Action setTriggerMask(Bit#(triggerWidth) mask);
@@ -41,48 +44,12 @@ endinterface
 
 typedef enum { Idle, Enabled, Running } State deriving (Bits,Eq);
 
-module mkBlueScope#(Integer samples)(BlueScope#(dataWidth, triggerWidth)) provisos (Add#(1,a,dataWidth));
-    FIFO#(Bit#(dataWidth)) dfifo <- mkSizedBRAMFIFO(samples);
-    Reg#(Bit#(triggerWidth)) maskReg <- mkReg(0);
-    Reg#(Bit#(triggerWidth)) valueReg <- mkReg(0);
-
-    Reg#(State) stateReg <- mkReg(Idle);
-    Reg#(Bit#(32)) sampleCountReg <- mkReg(0);
-
-    method Action setTriggerMask(Bit#(triggerWidth) mask);
-        maskReg <= mask;
-    endmethod
-    method Action setTriggerValue(Bit#(triggerWidth) value);
-        valueReg <= value;
-    endmethod
-    method Action start();
-        stateReg <= Enabled;
-    endmethod
-    method Action clear();
-        dfifo.clear();
-	stateReg <= Idle;
-	sampleCountReg <= 0;
-    endmethod
-    method Action dataIn(Bit#(dataWidth) d, Bit#(triggerWidth) t) if (stateReg != Idle);
-        State s = stateReg;
-        if (s == Enabled && ((t & maskReg) == (valueReg & maskReg)))
-	begin
-	    s = Running;
-	    stateReg <= s;
-        end
-	if (s == Running)
-	begin
-	    dfifo.enq(d);
-	    sampleCountReg <= sampleCountReg + 1;
-	end
-    endmethod
-    method ActionValue#(Bit#(dataWidth)) dataOut;
-        dfifo.deq;
-        return dfifo.first;
-    endmethod
-    method Bit#(32) sampleCount();
-        return sampleCountReg;
-    endmethod
+module mkBlueScope#(Integer samples, WriteChan wchan)(BlueScope#(dataWidth,triggerWidth)) 
+   provisos (Add#(1,a,dataWidth));   
+   let clk <- exposeCurrentClock;
+   let rst <- exposeCurrentReset;
+   let rv  <- mkSyncBlueScope(samples, clk, rst, clk,rst);
+   return rv;
 endmodule
 
 module mkSyncBlueScope#(Integer samples, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth, triggerWidth)) provisos (Add#(1,a,dataWidth));

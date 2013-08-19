@@ -39,17 +39,25 @@ typedef struct {
    Bit#(4) burstLen; 
    } DmaChannelContext deriving (Bits);
 
+interface ReadChan;
+   interface Get#(Bit#(64)) readData;
+   interface Put#(void)     readReq;
+endinterface
+
+interface WriteChan;
+   interface Put#(Bit#(64)) writeData;
+   interface Put#(void)     writeReq;
+   interface Get#(void)     writeDone;
+endinterface
+
 interface AxiDMARead;
    method Action configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);   
-   interface Vector#(NumDmaChannels, Get#(Bit#(64))) readData;
-   interface Vector#(NumDmaChannels, Put#(void))     readReq;
+   interface Vector#(NumDmaChannels, ReadChan) readChanels;
 endinterface
 
 interface AxiDMAWrite;
    method Action  configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);   
-   interface Vector#(NumDmaChannels, Put#(Bit#(64))) writeData;
-   interface Vector#(NumDmaChannels, Put#(void))     writeReq;
-   interface Vector#(NumDmaChannels, Get#(void))     writeDone;
+   interface Vector#(NumDmaChannels, WriteChan) writeChannels;
 endinterface
 
 interface AxiDMAWriteInternal;
@@ -82,6 +90,21 @@ function Get#(void) mkGetWhenTrue(Reg#(Bool) r);
 		 _when_ (r) (r._write(False));
 		 return ?;
 	      endmethod
+	   endinterface);
+endfunction
+
+function ReadChan mkReadChan(Get#(Bit#(64)) rd, Put#(void) rr);
+   return (interface ReadChan;
+	      interface Get readData = rd;
+	      interface Put readReq  = rr;
+	   endinterface);
+endfunction
+
+function WriteChan mkWriteChan(Put#(Bit#(64)) wd, Put#(void) wr, Get#(void) d);
+   return (interface WriteChan;
+	      interface Put writeData = wd;
+	      interface Put writeReq  = wr;
+	      interface Get writeDone = d;
 	   endinterface);
 endfunction
 
@@ -168,7 +191,7 @@ module mkSizedBRAMFIFOFCount#(Integer depth)(FIFOFCount#(data_sz, count_sz))
    
 endmodule
 
-typedef enum {Idle, Loading, Busy, Done} InternalState deriving(Eq,Bits);
+typedef enum {Idle, Loading, Address, Busy, Done} InternalState deriving(Eq,Bits);
 
 function Maybe#(DmaChannelId) selectChannel(Vector#(NumDmaChannels, Reg#(Bool)) v);
    Maybe#(DmaChannelId) chan = Nothing;
@@ -186,6 +209,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
    Vector#(NumDmaChannels, Reg#(Bool)) reqOutstanding <- replicateM(mkReg(False));
    BRAM1Port#(DmaChannelId, DmaChannelContext) ctxMem <- mkBRAM1Server(defaultValue);
    
+   Reg#(Bit#(32))         addrReg <- mkReg(0);
    Reg#(Bit#(4))         burstReg <- mkReg(0);   
    Reg#(DmaChannelId)  activeChan <- mkReg(0);
    Reg#(InternalState)   stateReg <- mkReg(Idle);
@@ -195,27 +219,38 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
       activeChan <= c;
       stateReg <= Loading;
    endrule
+   
+   rule loadChannel if (stateReg == Loading);
+      let rv <- ctxMem.portA.response.get;
+      if(readBuffers[activeChan].lowWater(zeroExtend(rv.burstLen)+1))
+	 begin
+	    reqOutstanding[activeChan] <= False;
+	    burstReg <= rv.burstLen;
+	    addrReg <= rv.physAddr;
+	    let new_addr = rv.physAddr + ((zeroExtend(rv.burstLen)+1) << 3);
+	    let upd_req = BRAMRequest{write:True, responseOnWrite:False, address:activeChan, 
+				      datain:(DmaChannelContext{physAddr:new_addr,burstLen:rv.burstLen})};
+	    ctxMem.portA.request.put(upd_req);
+	    stateReg <= Address;
+	 end
+      else
+	 begin
+	    stateReg <= Idle;
+	 end
+   endrule
       
    interface AxiDMARead read;
       method Action configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);
 	 let ctx = DmaChannelContext{physAddr:pa, burstLen:bsz};
 	 ctxMem.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:channelId,datain:ctx});
       endmethod
-      interface readData = map(toGet,readBuffers);
-      interface readReq = map(mkPutWhenFalse, reqOutstanding);
+      interface readChanels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
    endinterface
 
    interface Axi3ReadClient m_axi_read;
-      method ActionValue#(Axi3ReadRequest#(6)) address if (stateReg == Loading);
-	 let rv <- ctxMem.portA.response.get;
-	 burstReg <= rv.burstLen;
-	 let new_addr = rv.physAddr + ((zeroExtend(rv.burstLen)+1) << 3);
-	 let upd_req = BRAMRequest{write:True, responseOnWrite:False, address:activeChan, 
-				   datain:(DmaChannelContext{physAddr:new_addr,burstLen:rv.burstLen})};
-	 ctxMem.portA.request.put(upd_req);
-	 _when_ (readBuffers[activeChan].lowWater(zeroExtend(rv.burstLen)+1)) (reqOutstanding[activeChan]._write(False)); 
+      method ActionValue#(Axi3ReadRequest#(6)) address if (stateReg == Address);
 	 stateReg <= Busy;
-	 return Axi3ReadRequest{address:rv.physAddr, burstLen:rv.burstLen, id:1};
+	 return Axi3ReadRequest{address:addrReg, burstLen:burstReg, id:1};
       endmethod
       method Action data(Axi3ReadResponse#(64,6) response) if (stateReg == Busy);
 	 readBuffers[activeChan].fifo.enq(response.data);
@@ -233,6 +268,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
    Vector#(NumDmaChannels, Reg#(Bool)) writeRespRec   <- replicateM(mkReg(False));
    BRAM1Port#(DmaChannelId, DmaChannelContext) ctxMem <- mkBRAM1Server(defaultValue);
 
+   Reg#(Bit#(32))         addrReg <- mkReg(0);
    Reg#(Bit#(4))         burstReg <- mkReg(0);   
    Reg#(DmaChannelId)  activeChan <- mkReg(0);
    Reg#(InternalState)   stateReg <- mkReg(Idle);
@@ -243,27 +279,46 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
       stateReg <= Loading;
    endrule
    
+   rule loadChannel if (stateReg == Loading);
+      let rv <- ctxMem.portA.response.get;
+      if(writeBuffers[activeChan].highWater(zeroExtend(rv.burstLen)+1))
+	 begin
+	    reqOutstanding[activeChan] <= False;
+	    burstReg <= rv.burstLen;
+	    addrReg <= rv.physAddr;
+	    let new_addr = rv.physAddr + ((zeroExtend(rv.burstLen)+1) << 3);
+	    let upd_req = BRAMRequest{write:True, responseOnWrite:False, address:activeChan, 
+				      datain:(DmaChannelContext{physAddr:new_addr,burstLen:rv.burstLen})};
+	    ctxMem.portA.request.put(upd_req);
+	    stateReg <= Address;
+	 end
+      else
+	 begin
+	    stateReg <= Idle;
+	 end
+   endrule
+
    interface AxiDMAWrite write;
       method Action configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);
 	 let ctx = DmaChannelContext{physAddr:pa, burstLen:bsz};
 	 ctxMem.portA.request.put(BRAMRequest{write:True, responseOnWrite:False,address:channelId, datain:ctx});
       endmethod
-      interface writeData = map(toPut,writeBuffers);
-      interface writeReq  = map(mkPutWhenFalse, reqOutstanding);
-      interface writeDone = map(mkGetWhenTrue, writeRespRec);
+      interface writeChannels = zipWith3(mkWriteChan, map(toPut,writeBuffers), 
+					 map(mkPutWhenFalse, reqOutstanding),
+					 map(mkGetWhenTrue, writeRespRec));
    endinterface
 
    interface Axi3WriteClient m_axi_write;
-      method ActionValue#(Axi3WriteRequest#(6)) address if (stateReg == Loading);
-	 let rv <- ctxMem.portA.response.get;
-	 burstReg <= rv.burstLen;
-	 let new_addr = rv.physAddr + ((zeroExtend(rv.burstLen)+1) << 3);
-	 let upd_req = BRAMRequest{write:True, responseOnWrite:False, address:activeChan, 
-				   datain:(DmaChannelContext{physAddr:new_addr,burstLen:rv.burstLen})};
-	 ctxMem.portA.request.put(upd_req);
-	 _when_ (writeBuffers[activeChan].highWater(zeroExtend(rv.burstLen)+1)) (reqOutstanding[activeChan]._write(False)); 
+      method ActionValue#(Axi3WriteRequest#(6)) address if (stateReg == Address);
+	 // let rv <- ctxMem.portA.response.get;
+	 // burstReg <= rv.burstLen;
+	 // let new_addr = rv.physAddr + ((zeroExtend(rv.burstLen)+1) << 3);
+	 // let upd_req = BRAMRequest{write:True, responseOnWrite:False, address:activeChan, 
+	 // 			   datain:(DmaChannelContext{physAddr:new_addr,burstLen:rv.burstLen})};
+	 // ctxMem.portA.request.put(upd_req);
+	 // _when_ (writeBuffers[activeChan].highWater(zeroExtend(rv.burstLen)+1)) (reqOutstanding[activeChan]._write(False)); 
 	 stateReg <= Busy;
-	 return Axi3WriteRequest{address:rv.physAddr, burstLen:rv.burstLen, id:1};
+	 return Axi3WriteRequest{address:addrReg, burstLen:burstReg, id:1};
       endmethod
       method ActionValue#(Axi3WriteData#(64, 8, 6)) data if (stateReg == Busy);
 	 writeBuffers[activeChan].fifo.deq;

@@ -26,6 +26,7 @@ import GetPut::*;
 
 import AxiClientServer::*;
 import AxiDMA::*;
+import BlueScope::*;
 
 interface Memcpy;
    method Action startDMA(Bit#(32) numWords);
@@ -43,6 +44,7 @@ interface MemcpyIndications;
     method Action readReq(Bit#(32) v);
     method Action writeReq(Bit#(32) v);
     method Action writeAck(Bit#(32) v);
+    method Action triggerEvent(Bit#(32) v);
 endinterface
 
 module mkMemcpy#(MemcpyIndications indications)(Memcpy);
@@ -54,49 +56,54 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
    Reg#(Bool)     writeInProg <- mkReg(False);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
 
-   Get#(Bit#(64)) dma_stream_read_data = dma.read.readData[0];
-   Put#(void)     dma_stream_read_req  = dma.read.readReq[0];
 
-   Put#(Bit#(64)) dma_stream_write_data = dma.write.writeData[0];
-   Put#(void)     dma_stream_write_req  = dma.write.writeReq[0];
-   Get#(void)     dma_stream_write_done = dma.write.writeDone[0];
+   // dma read channel 0 is reserved for memcpy read path
+   ReadChan dma_stream_read_chan = dma.read.readChanels[0];
+
+   // dma write channel 0 is reserved for memcpy write path
+   WriteChan dma_stream_write_chan = dma.write.writeChannels[0];
    
-   Get#(Bit#(64)) dma_word_read_data = dma.read.readData[1];
-   Put#(void)     dma_word_read_req = dma.read.readReq[1];
+   // dma read channel 1 is reserved for debug read path
+   ReadChan dma_word_read_chan = dma.read.readChanels[1];
+
+   // dma write channel 1 is reserved for Bluescope output
+   WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
+   //BlueScope#(64,64) bs <- mkBlueScope(1024, dma_debug_write_chan);
+   
    
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt-16;
-      dma_stream_read_req.put(?);
-      // indications.readReq(streamRdCnt);
+      dma_stream_read_chan.readReq.put(?);
+      indications.readReq(streamRdCnt);
    endrule
 
    rule writeReq(streamWrCnt > 0 && !writeInProg);
       writeInProg <= True;
-      dma_stream_write_req.put(?);
-      // indications.writeReq(streamWrCnt);
+      dma_stream_write_chan.writeReq.put(?);
+      indications.writeReq(streamWrCnt);
    endrule
    
    rule writeAck(writeInProg);
       writeInProg <= False;
-      dma_stream_write_done.get;
+      dma_stream_write_chan.writeDone.get;
       streamWrCnt <= streamWrCnt-16;
-      // indications.writeAck(streamWrCnt);
+      indications.writeAck(streamWrCnt);
       if(streamWrCnt==16)
    	 indications.done(dataMismatch ? 32'd1 : 32'd0);
    endrule
    
 
    rule loopback;
-      let v <- dma_stream_read_data.get;
+      let v <- dma_stream_read_chan.readData.get;
       let misMatch0 = v[31:0] != srcGen;
       let misMatch1 = v[63:32] != srcGen+1;
       dataMismatch <= dataMismatch || misMatch0 || misMatch1;
-      dma_stream_write_data.put(v);
-      // indications.rData(v);
+      dma_stream_write_chan.writeData.put(v);
+      indications.rData(v);
    endrule
    
    rule readWordResp;
-      let v <- dma_word_read_data.get;
+      let v <- dma_word_read_chan.readData.get;
       indications.readWordResult(v);
    endrule
 
@@ -107,7 +114,7 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
    endmethod
    
    method Action readWord();
-      dma_word_read_req.put(?);
+      dma_word_read_chan.readReq.put(?);
    endmethod
    
    method Action configDmaWriteChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) bsz);
