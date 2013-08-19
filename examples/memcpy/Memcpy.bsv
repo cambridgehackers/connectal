@@ -67,31 +67,32 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt-16;
       dma_stream_read_req.put(?);
-      indications.readReq(streamRdCnt);
+      // indications.readReq(streamRdCnt);
    endrule
 
    rule writeReq(streamWrCnt > 0 && !writeInProg);
       writeInProg <= True;
       dma_stream_write_req.put(?);
-      indications.writeReq(streamWrCnt);
+      // indications.writeReq(streamWrCnt);
    endrule
    
    rule writeAck(writeInProg);
       writeInProg <= False;
       dma_stream_write_done.get;
       streamWrCnt <= streamWrCnt-16;
-      indications.writeAck(streamWrCnt);
+      // indications.writeAck(streamWrCnt);
       if(streamWrCnt==16)
    	 indications.done(dataMismatch ? 32'd1 : 32'd0);
    endrule
    
+
    rule loopback;
       let v <- dma_stream_read_data.get;
       let misMatch0 = v[31:0] != srcGen;
       let misMatch1 = v[63:32] != srcGen+1;
       dataMismatch <= dataMismatch || misMatch0 || misMatch1;
       dma_stream_write_data.put(v);
-      indications.rData(v);
+      // indications.rData(v);
    endrule
    
    rule readWordResp;
@@ -114,7 +115,9 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
    endmethod
 
    method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) bsz);
-      dma.read.configChan(truncate(chanId), pa, truncate((bsz>>1)-1));
+      Bit#(4) x = truncate((bsz>>1)-1);
+      DmaChannelId i = truncate(chanId);
+      dma.read.configChan(i, pa, x);
    endmethod
    
    interface Axi3Client m_axi = dma.m_axi;

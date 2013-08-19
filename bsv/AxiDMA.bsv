@@ -31,7 +31,7 @@ import BRAM::*;
 // XBSV Libraries
 import AxiClientServer::*;
 
-// In the future, this will be defined by the xbsv compiler
+// In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
 typedef 2 NumDmaChannels;
 typedef Bit#(TLog#(NumDmaChannels)) DmaChannelId;
 typedef struct {
@@ -168,7 +168,7 @@ module mkSizedBRAMFIFOFCount#(Integer depth)(FIFOFCount#(data_sz, count_sz))
    
 endmodule
 
-typedef enum {Idle, Busy, Done} InternalState deriving(Eq,Bits);
+typedef enum {Idle, Loading, Busy, Done} InternalState deriving(Eq,Bits);
 
 function Maybe#(DmaChannelId) selectChannel(Vector#(NumDmaChannels, Reg#(Bool)) v);
    Maybe#(DmaChannelId) chan = Nothing;
@@ -186,14 +186,14 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
    Vector#(NumDmaChannels, Reg#(Bool)) reqOutstanding <- replicateM(mkReg(False));
    BRAM1Port#(DmaChannelId, DmaChannelContext) ctxMem <- mkBRAM1Server(defaultValue);
    
-   Reg#(Bit#(4))         burstReg <- mkReg(8);   
+   Reg#(Bit#(4))         burstReg <- mkReg(0);   
    Reg#(DmaChannelId)  activeChan <- mkReg(0);
    Reg#(InternalState)   stateReg <- mkReg(Idle);
    
    rule selectChannel if (stateReg == Idle &&& selectChannel(reqOutstanding) matches tagged Valid .c);
       ctxMem.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:c, datain:?});
       activeChan <= c;
-      stateReg <= Busy;
+      stateReg <= Loading;
    endrule
       
    interface AxiDMARead read;
@@ -206,7 +206,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
    endinterface
 
    interface Axi3ReadClient m_axi_read;
-      method ActionValue#(Axi3ReadRequest#(6)) address;
+      method ActionValue#(Axi3ReadRequest#(6)) address if (stateReg == Loading);
 	 let rv <- ctxMem.portA.response.get;
 	 burstReg <= rv.burstLen;
 	 let new_addr = rv.physAddr + ((zeroExtend(rv.burstLen)+1) << 3);
@@ -214,9 +214,10 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
 				   datain:(DmaChannelContext{physAddr:new_addr,burstLen:rv.burstLen})};
 	 ctxMem.portA.request.put(upd_req);
 	 _when_ (readBuffers[activeChan].lowWater(zeroExtend(rv.burstLen)+1)) (reqOutstanding[activeChan]._write(False)); 
+	 stateReg <= Busy;
 	 return Axi3ReadRequest{address:rv.physAddr, burstLen:rv.burstLen, id:1};
       endmethod
-      method Action data(Axi3ReadResponse#(64,6) response);
+      method Action data(Axi3ReadResponse#(64,6) response) if (stateReg == Busy);
 	 readBuffers[activeChan].fifo.enq(response.data);
 	 if(burstReg == 0)
 	    stateReg <= Idle;
@@ -239,7 +240,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
    rule selectChannel if (stateReg == Idle &&& selectChannel(reqOutstanding) matches tagged Valid .c);
       ctxMem.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:c, datain:?});
       activeChan <= c;
-      stateReg <= Busy;
+      stateReg <= Loading;
    endrule
    
    interface AxiDMAWrite write;
@@ -253,7 +254,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
    endinterface
 
    interface Axi3WriteClient m_axi_write;
-      method ActionValue#(Axi3WriteRequest#(6)) address;
+      method ActionValue#(Axi3WriteRequest#(6)) address if (stateReg == Loading);
 	 let rv <- ctxMem.portA.response.get;
 	 burstReg <= rv.burstLen;
 	 let new_addr = rv.physAddr + ((zeroExtend(rv.burstLen)+1) << 3);
@@ -261,6 +262,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
 				   datain:(DmaChannelContext{physAddr:new_addr,burstLen:rv.burstLen})};
 	 ctxMem.portA.request.put(upd_req);
 	 _when_ (writeBuffers[activeChan].highWater(zeroExtend(rv.burstLen)+1)) (reqOutstanding[activeChan]._write(False)); 
+	 stateReg <= Busy;
 	 return Axi3WriteRequest{address:rv.physAddr, burstLen:rv.burstLen, id:1};
       endmethod
       method ActionValue#(Axi3WriteData#(64, 8, 6)) data if (stateReg == Busy);
@@ -273,7 +275,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
 	    burstReg <= burstReg-1;
 	 return Axi3WriteData { data: v, byteEnable: maxBound, last: last, id: 1 };
       endmethod
-      method Action response(Axi3WriteResponse#(6) resp);
+      method Action response(Axi3WriteResponse#(6) resp) if (stateReg == Done);
 	 writeRespRec[activeChan] <= True;
 	 stateReg <= Idle;
       endmethod

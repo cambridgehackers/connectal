@@ -21,7 +21,7 @@ sem_t sem;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
 
-unsigned int iterCnt=2;
+unsigned int iterCnt=256;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -43,7 +43,7 @@ class TestMemcpyIndications : public MemcpyIndications
     fprintf(stderr, "writeAck %lx\n", v);
   }
   virtual void started(unsigned long words){
-    fprintf(stderr, "started: words=%lx\n", words);
+    //fprintf(stderr, "started: words=%lx\n", words);
   }
   virtual void readWordResult ( unsigned long long v ){
     dump("readWordResult: ", (char*)&v, sizeof(v));
@@ -52,16 +52,15 @@ class TestMemcpyIndications : public MemcpyIndications
     dump("rData: ", (char*)&v, sizeof(v));
   }
   virtual void done(unsigned long v) {
-    unsigned int offset = (rand() % numWords); 
-    fprintf(stderr, "memcpy done: %lx %d\n", v, offset);
+    fprintf(stderr, "memcpy done: %lx\n", v);
     unsigned int mcf = memcmp(srcBuffer, dstBuffer, size);
     memcmp_fail |= mcf;
-    if(!(memcmp_count++%1)){
-      fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, srcBuffer, dstBuffer, mcf == 0 ? "pass" : "fail");
-      dump("src", (char*)srcBuffer, size);
-      dump("dst", (char*)dstBuffer, size);
-    }
+    fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, srcBuffer, dstBuffer, mcf == 0 ? "pass" : "fail");
+    dump("src", (char*)srcBuffer, size);
+    dump("dst", (char*)dstBuffer, size);
     sem_post(&sem);
+    if(iterCnt == ++memcmp_count)
+      exit(0);
   }
 };
 
@@ -108,15 +107,15 @@ int main(int argc, const char **argv)
     }
     
     DATA_SYNC_BARRIER;
-    
-    fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
-    	    srcAlloc.entries[0].dma_address,
-    	    dstAlloc.entries[0].dma_address,
-    	    numWords);
+
+    // fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
+    // 	    srcAlloc.entries[0].dma_address,
+    // 	    dstAlloc.entries[0].dma_address,
+    // 	    numWords);
 
     PortalInterface::dCacheFlushInval(&srcAlloc);
     PortalInterface::dCacheFlushInval(&dstAlloc);
-      
+          
     // write channel 0 is dma destination
     device->configDmaWriteChan(0, dstAlloc.entries[0].dma_address, 16);
     // read channel 0 is dma source
