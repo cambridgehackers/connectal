@@ -33,6 +33,9 @@ void dump(const char *prefix, char *buf, size_t len)
 
 class TestMemcpyIndications : public MemcpyIndications
 {
+  virtual void triggerEvent(unsigned long v){
+    fprintf(stderr, "triggerEvent %lx\n", v);
+  }
   virtual void readReq(unsigned long v){
     fprintf(stderr, "readReq %lx\n", v);
   }
@@ -52,15 +55,19 @@ class TestMemcpyIndications : public MemcpyIndications
     dump("rData: ", (char*)&v, sizeof(v));
   }
   virtual void done(unsigned long v) {
-    fprintf(stderr, "memcpy done: %lx\n", v);
     unsigned int mcf = memcmp(srcBuffer, dstBuffer, size);
     memcmp_fail |= mcf;
-    fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, srcBuffer, dstBuffer, mcf == 0 ? "pass" : "fail");
-    dump("src", (char*)srcBuffer, size);
-    dump("dst", (char*)dstBuffer, size);
+    if(true){
+      fprintf(stderr, "memcpy done: %lx\n", v);
+      fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, srcBuffer, dstBuffer, mcf == 0 ? "pass" : "fail");
+      dump("src", (char*)srcBuffer, size);
+      dump("dst", (char*)dstBuffer, size);
+    }
     sem_post(&sem);
-    if(iterCnt == ++memcmp_count)
+    if(iterCnt == ++memcmp_count){
+      fprintf(stderr, "testmemcpy complete %d\n", memcmp_count);
       exit(0);
+    }
   }
 };
 
@@ -90,6 +97,9 @@ int main(int argc, const char **argv)
   srcBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcFd, 0);
   dstBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstFd, 0);
 
+  // workaround for a latent bug somewhere in the SW stack
+  PortalInterface::dCacheFlushInval(&srcAlloc);
+  PortalInterface::dCacheFlushInval(&dstAlloc);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
