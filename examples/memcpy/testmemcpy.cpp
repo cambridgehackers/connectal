@@ -33,6 +33,9 @@ void dump(const char *prefix, char *buf, size_t len)
 
 class TestMemcpyIndications : public MemcpyIndications
 {
+  virtual void bluescopeTriggered(){
+    fprintf(stderr, "bluescopeTriggered\n");
+  }
   virtual void configResp(unsigned long chanId, unsigned long pa, unsigned long numWords){
     fprintf(stderr, "configResp %d, %lx, %d\n", chanId, pa, numWords);
   }

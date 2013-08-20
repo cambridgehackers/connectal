@@ -26,10 +26,12 @@ import GetPut::*;
 
 import AxiClientServer::*;
 import AxiDMA::*;
+import BlueScope::*;
 
 interface Memcpy;
    method Action startDMA(Bit#(32) numWords);
    method Action readWord();
+   method Action bluescopeConfig(Bit#(32) tm, Bit#(32) tv);
    method Action configDmaWriteChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
    method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
    interface Axi3Client#(64,8,6) m_axi;
@@ -44,6 +46,7 @@ interface MemcpyIndications;
     method Action writeReq(Bit#(32) v);
     method Action writeAck(Bit#(32) v);
     method Action configResp(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
+    method Action bluescopeTriggered(); 
 endinterface
 
 module mkMemcpy#(MemcpyIndications indications)(Memcpy);
@@ -65,9 +68,14 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
    ReadChan dma_word_read_chan = dma.read.readChanels[1];
 
    // dma write channel 1 is reserved for Bluescope output
-   //WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
-   //BlueScope#(64,64) bs <- mkBlueScope(1024, dma_debug_write_chan);
+   WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
+   BlueScope#(64,64) bs <- mkBlueScope(32, dma_debug_write_chan);
    
+   rule bluescope;
+      let rv <- bs.triggers.get;
+      indications.bluescopeTriggered;
+   endrule      
+
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt-16;
       dma_stream_read_chan.readReq.put(?);
@@ -102,6 +110,11 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
       let v <- dma_word_read_chan.readData.get;
       indications.readWordResult(v);
    endrule
+   
+   method Action bluescopeConfig(Bit#(32) tm, Bit#(32) tv);
+      bs.setTriggerMask(zeroExtend(tm));
+      bs.setTriggerValue(zeroExtend(tv));
+   endmethod
    
    method Action startDMA(Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
       streamRdCnt <= numWords;
