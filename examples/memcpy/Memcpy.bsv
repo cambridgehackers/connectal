@@ -31,7 +31,7 @@ import BlueScope::*;
 interface Memcpy;
    method Action startDMA(Bit#(32) numWords);
    method Action readWord();
-   method Action bluescopeConfig(Bit#(32) tm, Bit#(32) tv);
+   method Action configBluescope(Bit#(32) tm, Bit#(32) tv);
    method Action configDmaWriteChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
    method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
    interface Axi3Client#(64,8,6) m_axi;
@@ -103,6 +103,7 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
       let misMatch1 = v[63:32] != srcGen+1;
       dataMismatch <= dataMismatch || misMatch0 || misMatch1;
       dma_stream_write_chan.writeData.put(v);
+      bs.dataIn(v,v);
       //indications.rData(v);
    endrule
    
@@ -111,7 +112,8 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
       indications.readWordResult(v);
    endrule
    
-   method Action bluescopeConfig(Bit#(32) tm, Bit#(32) tv);
+   method Action configBluescope(Bit#(32) tm, Bit#(32) tv);
+      bs.reset;
       bs.setTriggerMask(zeroExtend(tm));
       bs.setTriggerValue(zeroExtend(tv));
    endmethod
@@ -119,6 +121,7 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
    method Action startDMA(Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
       streamRdCnt <= numWords;
       streamWrCnt <= numWords;
+      bs.start;
       //indications.started(numWords);
    endmethod
    

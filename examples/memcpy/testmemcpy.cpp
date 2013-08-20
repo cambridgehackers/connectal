@@ -10,17 +10,19 @@
 Memcpy *device = 0;
 PortalAlloc srcAlloc;
 PortalAlloc dstAlloc;
+PortalAlloc bsAlloc;
 int srcFd = -1;
 int dstFd = -1;
+int bsFd  = -1;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
+unsigned int *bsBuffer  = 0;
 int numWords = 32;
 size_t size = numWords*sizeof(unsigned int);
 
 sem_t sem;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
-
 unsigned int iterCnt=128;
 
 void dump(const char *prefix, char *buf, size_t len)
@@ -35,6 +37,8 @@ class TestMemcpyIndications : public MemcpyIndications
 {
   virtual void bluescopeTriggered(){
     fprintf(stderr, "bluescopeTriggered\n");
+    // sleep(1);
+    // dump("bluescope", (char*)bsBuffer, size);
   }
   virtual void configResp(unsigned long chanId, unsigned long pa, unsigned long numWords){
     fprintf(stderr, "configResp %d, %lx, %d\n", chanId, pa, numWords);
@@ -102,13 +106,16 @@ int main(int argc, const char **argv)
 
   PortalInterface::alloc(size, &srcFd, &srcAlloc);
   PortalInterface::alloc(size, &dstFd, &dstAlloc);
+  PortalInterface::alloc(size, &bsFd,  &bsAlloc);
 
   srcBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcFd, 0);
   dstBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstFd, 0);
+  bsBuffer  = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsFd, 0);
 
   // workaround for a latent bug somewhere in the SW stack
   PortalInterface::dCacheFlushInval(&srcAlloc);
   PortalInterface::dCacheFlushInval(&dstAlloc);
+  PortalInterface::dCacheFlushInval(&bsAlloc);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -131,6 +138,7 @@ int main(int argc, const char **argv)
 
     PortalInterface::dCacheFlushInval(&srcAlloc);
     PortalInterface::dCacheFlushInval(&dstAlloc);
+    PortalInterface::dCacheFlushInval(&bsAlloc);
     DATA_SYNC_BARRIER;
           
     // write channel 0 is dma destination
@@ -139,7 +147,12 @@ int main(int argc, const char **argv)
     device->configDmaReadChan(0, srcAlloc.entries[0].dma_address, numWords/2);
     // read channel 1 is readWord source
     device->configDmaReadChan(1, srcAlloc.entries[0].dma_address, 2);
-    
+    // write channel 1 is Bluescope desgination
+    device->configDmaWriteChan(1, bsAlloc.entries[0].dma_address, 4);
+
+    // trigger bluescope half-way through the DMA transfer
+    device->configBluescope(srcGen-(numWords/2), 0xFFFF);
+
     // initiate the transfer
     device->startDMA(numWords);
 

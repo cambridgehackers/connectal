@@ -34,7 +34,7 @@ interface BlueScope#(numeric type dataWidth, numeric type triggerWidth);
     method Action setTriggerMask(Bit#(triggerWidth) mask);
     method Action setTriggerValue(Bit#(triggerWidth) value);
     method Action start();
-    method Action clear();
+    method Action reset();
     method Action dataIn(Bit#(dataWidth) d, Bit#(triggerWidth) t);
     interface Get#(void) triggers;
 endinterface
@@ -87,7 +87,7 @@ module mkSyncBlueScope#(Integer samples, WriteChan wchan, Clock sClk, Reset sRst
       stateReg <= Enabled;
    endmethod
 
-   method Action clear();
+   method Action reset();
       stateReg <= Idle;
       countReg <= 0;
    endmethod
