@@ -26,13 +26,12 @@ import GetPut::*;
 
 import AxiClientServer::*;
 import AxiDMA::*;
-import BlueScope::*;
 
 interface Memcpy;
    method Action startDMA(Bit#(32) numWords);
    method Action readWord();
-   method Action configDmaWriteChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) bsz);
-   method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) bsz);
+   method Action configDmaWriteChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
+   method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
    interface Axi3Client#(64,8,6) m_axi;
 endinterface
 
@@ -44,7 +43,7 @@ interface MemcpyIndications;
     method Action readReq(Bit#(32) v);
     method Action writeReq(Bit#(32) v);
     method Action writeAck(Bit#(32) v);
-    method Action triggerEvent(Bit#(32) v);
+    method Action configResp(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
 endinterface
 
 module mkMemcpy#(MemcpyIndications indications)(Memcpy);
@@ -56,7 +55,6 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
    Reg#(Bool)     writeInProg <- mkReg(False);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
 
-
    // dma read channel 0 is reserved for memcpy read path
    ReadChan dma_stream_read_chan = dma.read.readChanels[0];
 
@@ -67,31 +65,29 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
    ReadChan dma_word_read_chan = dma.read.readChanels[1];
 
    // dma write channel 1 is reserved for Bluescope output
-   WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
+   //WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
    //BlueScope#(64,64) bs <- mkBlueScope(1024, dma_debug_write_chan);
-   
    
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt-16;
       dma_stream_read_chan.readReq.put(?);
-      indications.readReq(streamRdCnt);
+      //indications.readReq(streamRdCnt);
    endrule
 
    rule writeReq(streamWrCnt > 0 && !writeInProg);
       writeInProg <= True;
       dma_stream_write_chan.writeReq.put(?);
-      indications.writeReq(streamWrCnt);
+      //indications.writeReq(streamWrCnt);
    endrule
    
    rule writeAck(writeInProg);
       writeInProg <= False;
       dma_stream_write_chan.writeDone.get;
       streamWrCnt <= streamWrCnt-16;
-      indications.writeAck(streamWrCnt);
+      //indications.writeAck(streamWrCnt);
       if(streamWrCnt==16)
    	 indications.done(dataMismatch ? 32'd1 : 32'd0);
    endrule
-   
 
    rule loopback;
       let v <- dma_stream_read_chan.readData.get;
@@ -99,32 +95,32 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
       let misMatch1 = v[63:32] != srcGen+1;
       dataMismatch <= dataMismatch || misMatch0 || misMatch1;
       dma_stream_write_chan.writeData.put(v);
-      indications.rData(v);
+      //indications.rData(v);
    endrule
    
    rule readWordResp;
       let v <- dma_word_read_chan.readData.get;
       indications.readWordResult(v);
    endrule
-
+   
    method Action startDMA(Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
       streamRdCnt <= numWords;
       streamWrCnt <= numWords;
-      indications.started(numWords);
+      //indications.started(numWords);
    endmethod
    
    method Action readWord();
       dma_word_read_chan.readReq.put(?);
    endmethod
    
-   method Action configDmaWriteChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) bsz);
-      dma.write.configChan(truncate(chanId), pa, truncate((bsz>>1)-1));
+   method Action configDmaWriteChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
+      dma.write.configChan(truncate(chanId), pa, truncate((numWords>>1)-1));
+      //indications.configResp(chanId, pa, numWords);
    endmethod
 
-   method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) bsz);
-      Bit#(4) x = truncate((bsz>>1)-1);
-      DmaChannelId i = truncate(chanId);
-      dma.read.configChan(i, pa, x);
+   method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
+      dma.read.configChan(truncate(chanId), pa, truncate((numWords>>1)-1));
+      //indications.configResp(chanId, pa, numWords);
    endmethod
    
    interface Axi3Client m_axi = dma.m_axi;

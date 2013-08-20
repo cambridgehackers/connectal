@@ -256,7 +256,7 @@ void* PortalInterface::exec(void* __x)
         ALOGE("PortalInterface::exec No fds open numFds=%d\n", portal.numFds);
         return (void*)-ENODEV;
     }
-
+    
     int rc;
     while ((rc = poll(portal.fds, portal.numFds, -1)) >= 0) {
       for (int i = 0; i < portal.numFds; i++) {

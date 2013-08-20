@@ -21,18 +21,24 @@ sem_t sem;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
 
-unsigned int iterCnt=256;
+unsigned int iterCnt=128;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s: ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len); i++)
+    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
     fprintf(stderr, "\n");
 }
 
 class TestMemcpyIndications : public MemcpyIndications
 {
+  virtual void configResp(unsigned long chanId, unsigned long pa, unsigned long numWords){
+    fprintf(stderr, "configResp %d, %lx, %d\n", chanId, pa, numWords);
+  }
+  virtual void readAddr(unsigned long v){
+    fprintf(stderr, "readAddr %lx\n", v);
+  }
   virtual void triggerEvent(unsigned long v){
     fprintf(stderr, "triggerEvent %lx\n", v);
   }
@@ -46,7 +52,7 @@ class TestMemcpyIndications : public MemcpyIndications
     fprintf(stderr, "writeAck %lx\n", v);
   }
   virtual void started(unsigned long words){
-    //fprintf(stderr, "started: words=%lx\n", words);
+    fprintf(stderr, "started: words=%lx\n", words);
   }
   virtual void readWordResult ( unsigned long long v ){
     dump("readWordResult: ", (char*)&v, sizeof(v));
@@ -65,7 +71,7 @@ class TestMemcpyIndications : public MemcpyIndications
     }
     sem_post(&sem);
     if(iterCnt == ++memcmp_count){
-      fprintf(stderr, "testmemcpy complete %d\n", memcmp_count);
+      fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
       exit(0);
     }
   }
@@ -108,7 +114,6 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
-  // device->reset(8);
   while (srcGen < iterCnt*numWords){
     sem_wait(&sem);
     for (int i = 0; i < numWords; i++){
@@ -116,23 +121,22 @@ int main(int argc, const char **argv)
       dstBuffer[i] = 5;
     }
     
-    DATA_SYNC_BARRIER;
-
-    // fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
-    // 	    srcAlloc.entries[0].dma_address,
-    // 	    dstAlloc.entries[0].dma_address,
-    // 	    numWords);
+    fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
+    	    srcAlloc.entries[0].dma_address,
+    	    dstAlloc.entries[0].dma_address,
+    	    numWords);
 
     PortalInterface::dCacheFlushInval(&srcAlloc);
     PortalInterface::dCacheFlushInval(&dstAlloc);
+    DATA_SYNC_BARRIER;
           
     // write channel 0 is dma destination
-    device->configDmaWriteChan(0, dstAlloc.entries[0].dma_address, 16);
+    device->configDmaWriteChan(0, dstAlloc.entries[0].dma_address, numWords/2);
     // read channel 0 is dma source
-    device->configDmaReadChan(0, srcAlloc.entries[0].dma_address, 16);
+    device->configDmaReadChan(0, srcAlloc.entries[0].dma_address, numWords/2);
     // read channel 1 is readWord source
     device->configDmaReadChan(1, srcAlloc.entries[0].dma_address, 2);
-
+    
     // initiate the transfer
     device->startDMA(numWords);
 
