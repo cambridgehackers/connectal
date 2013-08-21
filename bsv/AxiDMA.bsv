@@ -27,10 +27,10 @@ import GetPut::*;
 import ClientServer::*;
 import BRAMFIFO::*;
 import BRAM::*;
-import FIFO::*;
 
 // XBSV Libraries
 import AxiClientServer::*;
+import BRAMFIFOFLevel::*;
 
 // In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
 typedef 2 NumDmaChannels;
@@ -109,93 +109,10 @@ function WriteChan mkWriteChan(Put#(Bit#(64)) wd, Put#(void) wr, Get#(void) d);
 	   endinterface);
 endfunction
 
-interface Counter#(type count_sz);
-   method Action reset();
-   method Action increment();
-   method Action decrement();
-   method Bit#(count_sz) read();
-endinterface
-
-module mkCounter#(Bit#(count_sz) init_val)(Counter#(count_sz));
-
-   PulseWire inc_wire <- mkPulseWire;
-   PulseWire dec_wire <- mkPulseWire;
-   PulseWire rst_wire <- mkPulseWire;
-   Reg#(Bit#(count_sz)) cnt <- mkReg(init_val);
-
-   (* fire_when_enabled *)
-   rule react;
-      if (rst_wire)
-	 cnt <= 0;
-      else if (inc_wire && dec_wire)
-	 noAction;
-      else if (inc_wire)
-	 cnt <= cnt+1;
-      else if (dec_wire)
-	 cnt <= cnt-1;
-      else
-	 noAction;
-   endrule
-
-   method Action increment = inc_wire.send;
-   method Action decrement = dec_wire.send;
-   method Action reset = rst_wire.send;
-   method Bit#(count_sz) read = cnt._read;
-
-endmodule
-
-interface FIFOFCount#(numeric type data_sz, numeric type count_sz);
-   interface FIFOF#(Bit#(data_sz)) fifo;
-   method Bool highWater(Bit#(count_sz) mark);
-   method Bool lowWater(Bit#(count_sz) mark);
-endinterface
-
-instance ToGet#(FIFOFCount#(a,b), Bit#(a));
-   function Get#(Bit#(a)) toGet(FIFOFCount#(a,b) f) = toGet(f.fifo);
-endinstance
-
-instance ToPut#(FIFOFCount#(a,b), Bit#(a));
-   function Put#(Bit#(a)) toPut(FIFOFCount#(a,b) f) = toPut(f.fifo);
-endinstance
-
-module mkSizedBRAMFIFOFCount#(Integer depth)(FIFOFCount#(data_sz, count_sz))
-   provisos (Add#(1, a__, data_sz));
-
-   Counter#(count_sz) cnt <- mkCounter(0);
-   FIFOF#(Bit#(data_sz))  fif <- mkSizedBRAMFIFOF(depth);
-   
-   method Bool highWater(Bit#(count_sz) mark);
-      return (cnt.read >= mark);
-   endmethod
-   
-   method Bool lowWater(Bit#(count_sz) mark);
-      return (fromInteger(depth)-cnt.read >= mark);
-   endmethod
-  
-   interface FIFOF fifo;
-      method Action enq (Bit#(data_sz) x);
-	 cnt.increment;
-	 fif.enq(x);
-      endmethod
-      method Action deq;
-	 cnt.decrement;
-	 fif.deq;
-      endmethod
-      method Action clear;
-	 cnt.reset;
-	 fif.clear;
-      endmethod
-      method Bit#(data_sz) first = fif.first;
-      method Bool notFull = fif.notFull;
-      method Bool notEmpty = fif.notEmpty;
-   endinterface
-   
-endmodule
-
 typedef enum {Idle, LoadCtxt, Address, Data, Done} InternalState deriving(Eq,Bits);
 
 module mkAxiDMAReadInternal(AxiDMAReadInternal);
-   Vector#(NumDmaChannels, FIFOFCount#(64, 16)) readBuffers  <- replicateM(mkSizedBRAMFIFOFCount(16));
+   Vector#(NumDmaChannels, FIFOFLevel#(Bit#(64), 16)) readBuffers  <- replicateM(mkBRAMFIFOFLevel);
    Vector#(NumDmaChannels, Reg#(Bool)) reqOutstanding <- replicateM(mkReg(False));
    BRAM1Port#(DmaChannelId, DmaChannelContext) ctxMem <- mkBRAM1Server(defaultValue);
    
@@ -258,7 +175,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
 endmodule
 
 module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
-   Vector#(NumDmaChannels, FIFOFCount#(64, 16)) writeBuffers <- replicateM(mkSizedBRAMFIFOFCount(16));
+   Vector#(NumDmaChannels, FIFOFLevel#(Bit#(64), 16)) writeBuffers <- replicateM(mkBRAMFIFOFLevel);
    Vector#(NumDmaChannels, Reg#(Bool)) reqOutstanding <- replicateM(mkReg(False));
    Vector#(NumDmaChannels, Reg#(Bool)) writeRespRec   <- replicateM(mkReg(False));
    BRAM1Port#(DmaChannelId, DmaChannelContext) ctxMem <- mkBRAM1Server(defaultValue);
