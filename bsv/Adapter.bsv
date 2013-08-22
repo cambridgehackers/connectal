@@ -23,8 +23,8 @@
 // SOFTWARE.
 
 import GetPut         ::*;
-import BRAMFIFO       ::*;
 import FIFOF          ::*;
+import SpecialFIFOs   ::*;
 
 function Bit#(a) rtruncate(Bit#(b) x) provisos(Add#(k,a,b));
    match {.v,.*} = split(x);
@@ -59,7 +59,7 @@ module mkToBit32(ToBit32#(a))
    Bit#(32) size = fromInteger(valueOf(asz));
    Bit#(32) max  = ((size + 31) >> 5) - 1;
    
-   FIFOF#(Bit#(asz)) fifo <- mkSizedBRAMFIFOF(16);
+   FIFOF#(Bit#(asz)) fifo <- mkPipelineFIFOF;
    Reg#(Bit#(32))   count <- mkReg(0);
 
 
@@ -115,7 +115,7 @@ module mkFromBit32(FromBit32#(a))
    Bit#(5)  offset = size[4:0];
    Bit#(32) max    = ((size + 31) >> 5) - 1;
    
-   FIFOF#(Bit#(asz))  fifo <- mkSizedBRAMFIFOF(16);
+   FIFOF#(Bit#(asz))  fifo <- mkPipelineFIFOF;
    Reg#(Bit#(asz))    buff <- mkReg(0);
    Reg#(Bit#(32))    count <- mkReg(0);   
    
@@ -179,7 +179,7 @@ module mkToBit64(ToBit64#(a))
    Bit#(64) size = fromInteger(valueOf(asz));
    Bit#(64) max  = (size >> 6) + ((size[5:0] == 0) ? 0 : 1)-1;
    
-   FIFOF#(Bit#(asz))   fifo <- mkSizedBRAMFIFOF(16);
+   FIFOF#(Bit#(asz))   fifo <- mkPipelineFIFOF;
    Reg#(Bit#(64))     count <- mkReg(0);
 
    method Action enq(a val) if (fifo.notFull);
@@ -227,7 +227,7 @@ module mkFromBit64(FromBit64#(a))
    Bit#(6)  offset = size[5:0];
    Bit#(64) max    = (size >> 6) + ((offset == 0) ? 0 : 1) -1;
    
-   FIFOF#(Bit#(asz))  fifo <- mkSizedBRAMFIFOF(16);
+   FIFOF#(Bit#(asz))  fifo <- mkPipelineFIFOF;
    Reg#(Bit#(asz))    buff <- mkReg(0);
    Reg#(Bit#(64))    count <- mkReg(0);   
    
