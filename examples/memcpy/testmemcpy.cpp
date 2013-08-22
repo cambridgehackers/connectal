@@ -23,7 +23,7 @@ size_t size = numWords*sizeof(unsigned int);
 sem_t sem;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
-unsigned int iterCnt=16;
+unsigned int iterCnt=128;
 
 void dump(const char *prefix, char *buf, size_t len)
 {

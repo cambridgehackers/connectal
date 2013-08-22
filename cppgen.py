@@ -240,7 +240,7 @@ class InterfaceMixin:
         subinterface = syntax.globalvars[subinterfaceName]
         #print 'subinterface', subinterface, subinterface
         return subinterface
-    def assignRequestResponseChannels(self, channelNumber=0):
+    def assignRequestResponseChannels(self, channelNumber=0, ord=0):
         for d in self.decls:
             if d.__class__ == AST.Interface:
                 i = self.getSubinterface(d.name)
@@ -251,6 +251,8 @@ class InterfaceMixin:
             elif d.__class__ == AST.Method:
                 d.channelNumber = channelNumber
                 channelNumber = channelNumber + 1
+            d.ord = ord
+            ord = ord+1
         self.channelCount = channelNumber
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         self.toplevel = (indentation == 0)

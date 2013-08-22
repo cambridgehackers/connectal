@@ -67,7 +67,7 @@ mkDutTemplate='''
 interface %(Dut)sIndicationsWrapper;
     interface %(Dut)sIndications indications;
     interface Reg#(Bit#(32)) underflowCount;
-    interface Reg#(Bit#(32)) responseFired;
+    interface Reg#(Bit#(32)) responseFiredCnt;
     interface Reg#(Bit#(32)) outOfRangeReadCount;
 endinterface
 
@@ -100,13 +100,14 @@ module mk%(Dut)sIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveReadAddrFifo,
 %(indicationMethods)s
     endinterface
     interface Reg outOfRangeReadCount = outOfRangeReadCountReg;
-    interface Reg responseFired = responseFiredCntReg;
+    interface Reg responseFiredCnt = responseFiredCntReg;
     interface Reg underflowCount = underflowCountReg;
 endmodule
 
 module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 
-    Reg#(Bit#(32)) requestFired <- mkReg(0);
+    Reg#(Bit#(32)) requestFiredCntReg <- mkReg(0);
+    Vector#(%(writeChannelCount)s, PulseWire) requestFiredWires <- replicateM(mkPulseWire);
 
     Reg#(Bit#(32)) getWordCount <- mkReg(0);
     Reg#(Bit#(32)) putWordCount <- mkReg(0);
@@ -146,6 +147,13 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
     Reg#(Bool) interruptEnableReg <- mkReg(False);
     let       interruptStatus = fold(my_or, map(read_wire, readOutstanding));
 
+    function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
+    function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
+
+    rule increment_requestFiredCntReg;
+       requestFiredCntReg <= requestFiredCntReg + fold(my_add, map(read_wire_cvt, requestFiredWires));
+    endrule
+
 %(methodRules)s
 
     rule writeCtrlReg if (axiSlaveWriteAddrFifo.first[16] == 0);
@@ -174,9 +182,9 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	if (addr == 12'h00C)
 	    v = 32'h00010000; // base fifo offset
 	if (addr == 12'h010)
-	    v = requestFired;
+	    v = requestFiredCntReg;
 	if (addr == 12'h014)
-	    v = indWrapper.responseFired;
+	    v = indWrapper.responseFiredCnt;
 	if (addr == 12'h018)
 	    v = indWrapper.underflowCount;
 	if (addr == 12'h01C)
@@ -215,7 +223,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
         axiSlaveReadDataFifo.enq(v);
     endrule
 
-    rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[16] == 1 && axiSlaveWriteAddrFifo.first[15:8] < %(indicationChannelCount)s && axiSlaveWriteAddrFifo.first[15:8] >= %(channelCount)s);
+    rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[16] == 1 && (axiSlaveWriteAddrFifo.first[15:8] < %(indicationChannelCount)s || axiSlaveWriteAddrFifo.first[15:8] >= %(channelCount)s));
         axiSlaveWriteAddrFifo.deq;
         axiSlaveWriteDataFifo.deq;
         outOfRangeWriteCount <= outOfRangeWriteCount+1;
@@ -311,7 +319,7 @@ requestRuleTemplate='''
         let request = %(methodName)s$requestFifo.first;
         %(methodName)s$requestFifo.deq;
         %(dut)s.%(methodName)s(%(paramsForCall)s);
-        requestFired <= requestFired + 1;
+        requestFiredWires[%(ord)s].send;
     endrule    
 '''
 
@@ -383,6 +391,7 @@ class MethodMixin:
               'methodName': self.name,
               'MethodName': util.capitalize(self.name),
               'channelNumber': self.channelNumber,
+              'ord': self.ord,
               'methodReturnType': rt}
         return d
 
@@ -472,6 +481,7 @@ class InterfaceMixin:
             'indicationMethods': ''.join(indicationMethods),
             'indicationChannelCount': indicationInterface.channelCount,
             'channelCount': self.channelCount,
+            'writeChannelCount': self.channelCount - indicationInterface.channelCount,
             'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster)
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
