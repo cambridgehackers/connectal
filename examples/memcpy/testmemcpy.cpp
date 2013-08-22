@@ -23,7 +23,7 @@ size_t size = numWords*sizeof(unsigned int);
 sem_t sem;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
-unsigned int iterCnt=128;
+unsigned int iterCnt=16;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -79,6 +79,7 @@ class TestMemcpyIndications : public MemcpyIndications
     sem_post(&sem);
     if(iterCnt == ++memcmp_count){
       fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
+      PortalInterface::displayStats();
       exit(0);
     }
   }
@@ -131,11 +132,6 @@ int main(int argc, const char **argv)
       dstBuffer[i] = 5;
     }
     
-    fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
-    	    srcAlloc.entries[0].dma_address,
-    	    dstAlloc.entries[0].dma_address,
-    	    numWords);
-
     PortalInterface::dCacheFlushInval(&srcAlloc);
     PortalInterface::dCacheFlushInval(&dstAlloc);
     PortalInterface::dCacheFlushInval(&bsAlloc);
@@ -152,6 +148,12 @@ int main(int argc, const char **argv)
 
     // trigger bluescope half-way through the DMA transfer
     device->configBluescope(srcGen-(numWords/2), 0xFFFF);
+
+
+    fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
+    	    srcAlloc.entries[0].dma_address,
+    	    dstAlloc.entries[0].dma_address,
+    	    numWords);
 
     // initiate the transfer
     device->startDMA(numWords);

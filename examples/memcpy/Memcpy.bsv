@@ -73,7 +73,7 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
    
    rule bluescope;
       let rv <- bs.triggers.get;
-      indications.bluescopeTriggered;
+      //indications.bluescopeTriggered;
    endrule      
 
    rule readReq(streamRdCnt > 0);
@@ -122,7 +122,7 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
       streamRdCnt <= numWords;
       streamWrCnt <= numWords;
       bs.start;
-      //indications.started(numWords);
+      indications.started(numWords);
    endmethod
    
    method Action readWord();

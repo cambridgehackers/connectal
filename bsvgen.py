@@ -68,14 +68,16 @@ interface %(Dut)sIndicationsWrapper;
     interface %(Dut)sIndications indications;
     interface Reg#(Bit#(32)) underflowCount;
     interface Reg#(Bit#(32)) responseFired;
+    interface Reg#(Bit#(32)) outOfRangeReadCount;
 endinterface
 
-module mk%(Dut)sIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveWriteAddrFifo, FIFO#(Bit#(17)) axiSlaveReadAddrFifo,
-                                    FIFO#(Bit#(32)) axiSlaveWriteDataFifo, FIFO#(Bit#(32)) axiSlaveReadDataFifo,
-                                    Vector#(%(channelCount)s, PulseWire) readOutstanding )
+module mk%(Dut)sIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveReadAddrFifo,
+                                    FIFO#(Bit#(32)) axiSlaveReadDataFifo,
+                                    Vector#(%(indicationChannelCount)s, PulseWire) readOutstanding )
                                    (%(Dut)sIndicationsWrapper);
     Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
-    Vector#(%(channelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
+    Vector#(%(indicationChannelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
+    Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
 
     Reg#(Bit#(32)) underflowCountReg <- mkReg(0);
 
@@ -88,10 +90,16 @@ module mk%(Dut)sIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveWriteAddrFifo, FIFO#
     
 %(indicationMethodRules)s
 
+    rule outOfRangeRead if (axiSlaveReadAddrFifo.first[16] == 1 && axiSlaveReadAddrFifo.first[15:8] >= %(indicationChannelCount)s);
+        axiSlaveReadAddrFifo.deq;
+        axiSlaveReadDataFifo.enq(0);
+        outOfRangeReadCountReg <= outOfRangeReadCountReg+1;
+    endrule
+
     interface %(Dut)sIndications indications;
 %(indicationMethods)s
     endinterface
-
+    interface Reg outOfRangeReadCount = outOfRangeReadCountReg;
     interface Reg responseFired = responseFiredCntReg;
     interface Reg underflowCount = underflowCountReg;
 endmodule
@@ -116,7 +124,6 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
     FIFO#(Bit#(12)) axiSlaveReadIdFifo <- mkSizedFIFO(4);
     Reg#(Bit#(4)) axiSlaveReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(4)) axiSlaveWriteBurstCountReg <- mkReg(0);
-    Reg#(Bit#(32)) outOfRangeReadCount <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
     FIFO#(Bit#(2)) axiSlaveBrespFifo <- mkFIFO();
     FIFO#(Bit#(12)) axiSlaveBidFifo <- mkFIFO();
@@ -124,10 +131,10 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
     Reg#(Bit#(32)) last_ctrl_reg_write_data <- mkReg(0);
     Reg#(Bit#(32)) last_ctrl_reg_write_addr <- mkReg(0);    
     
-    Vector#(%(channelCount)s, PulseWire) readOutstanding <- replicateM(mkPulseWire);
+    Vector#(%(indicationChannelCount)s, PulseWire) readOutstanding <- replicateM(mkPulseWire);
     
-    %(Dut)sIndicationsWrapper indWrapper <- mk%(Dut)sIndicationsWrapper(axiSlaveWriteAddrFifo, axiSlaveReadAddrFifo,
-                                                                        axiSlaveWriteDataFifo, axiSlaveReadDataFifo,
+    %(Dut)sIndicationsWrapper indWrapper <- mk%(Dut)sIndicationsWrapper(axiSlaveReadAddrFifo,
+                                                                        axiSlaveReadDataFifo,
                                                                         readOutstanding);
     %(Dut)sIndications indications = indWrapper.indications;
 
@@ -163,7 +170,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	if (addr == 12'h004)
 	    v = interruptEnableReg ? 32'd1 : 32'd0;
 	if (addr == 12'h008)
-	    v = %(channelCount)s; // channelCount
+	    v = %(indicationChannelCount)s; // indicationChannelCount
 	if (addr == 12'h00C)
 	    v = 32'h00010000; // base fifo offset
 	if (addr == 12'h010)
@@ -186,44 +193,32 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	    v = getWordCount;
 	if (addr == 12'h02C)
 	    v = 0;
-    if (addr == 12'h030)
-	begin
-	    v = outOfRangeReadCount;
-	end
+        if (addr == 12'h030)
+	    v = indWrapper.outOfRangeReadCount;
 	if (addr == 12'h034)
-	begin
 	    v = outOfRangeWriteCount;
-	end
-    if (addr == 12'h038)
-    begin
-        v = last_ctrl_reg_write_addr;
-    end
-    if (addr == 12'h03c)
-    begin
-        v = last_ctrl_reg_write_data;
-    end
-    if (addr >= 12'h040 && addr <= (12'h040 + %(channelCount)s/4))
+        if (addr == 12'h038)
+            v = last_ctrl_reg_write_addr;
+        if (addr == 12'h03c)
+            v = last_ctrl_reg_write_data;
+        if (addr >= 12'h040 && addr <= (12'h040 + %(indicationChannelCount)s/4))
 	begin
 	    v = 0;
 	    Bit#(7) baseQueueNumber = addr[9:3] << 5;
-	    for (Bit#(7) i = 0; i <= baseQueueNumber+31 && i < %(channelCount)s; i = i + 1)
+	    for (Bit#(7) i = 0; i <= baseQueueNumber+31 && i < %(indicationChannelCount)s; i = i + 1)
 	    begin
 		Bit#(5) bitPos = truncate(i - baseQueueNumber);
 		// drive value based on which HW->SW FIFOs have pending messages
 		v[bitPos] = readOutstanding[i] ? 1'd1 : 1'd0; 
 	    end
 	end
-
-    axiSlaveReadDataFifo.enq(v);
+        axiSlaveReadDataFifo.enq(v);
     endrule
 
-    rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[16] == 1 && axiSlaveWriteAddrFifo.first[15:8] >= %(channelCount)s);
+    rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[16] == 1 && axiSlaveWriteAddrFifo.first[15:8] < %(indicationChannelCount)s && axiSlaveWriteAddrFifo.first[15:8] >= %(channelCount)s);
         axiSlaveWriteAddrFifo.deq;
         axiSlaveWriteDataFifo.deq;
-    endrule
-    rule outOfRangeRead if (axiSlaveReadAddrFifo.first[16] == 1 && axiSlaveReadAddrFifo.first[15:8] >= %(channelCount)s);
-        axiSlaveReadAddrFifo.deq;
-        axiSlaveReadDataFifo.enq(0);
+        outOfRangeWriteCount <= outOfRangeWriteCount+1;
     endrule
     rule axiSlaveReadAddressGenerator if (axiSlaveReadBurstCountReg != 0);
         axiSlaveReadAddrFifo.enq(truncate(axiSlaveReadAddrReg));
@@ -317,13 +312,7 @@ requestRuleTemplate='''
         %(methodName)s$requestFifo.deq;
         %(dut)s.%(methodName)s(%(paramsForCall)s);
         requestFired <= requestFired + 1;
-    endrule
-    rule %(methodName)s$axiSlaveRead if (axiSlaveReadAddrFifo.first[16] == 1 && axiSlaveReadAddrFifo.first[15:8] == %(methodName)s$Offset);
-        axiSlaveReadAddrFifo.deq;
-        // nothing to read from a request fifo
-        axiSlaveReadDataFifo.enq(0);
-    endrule
-    
+    endrule    
 '''
 
 indicationRuleTemplate='''
@@ -354,11 +343,6 @@ indicationRuleTemplate='''
     endrule
     rule %(methodName)s$axiSlaveReadOutstanding if (%(methodName)s$responseFifo.notEmpty);
         readOutstanding[%(channelNumber)s].send();
-    endrule
-    rule axiSlaveWrite$%(methodName)s if (axiSlaveWriteAddrFifo.first[16] == 1 && axiSlaveWriteAddrFifo.first[15:8] == %(methodName)s$Offset);
-        axiSlaveWriteAddrFifo.deq;
-        axiSlaveWriteDataFifo.deq;
-        // ignore writes to response fifo
     endrule
 '''
 
@@ -486,7 +470,8 @@ class InterfaceMixin:
             'methodRules': ''.join(methodRules),
             'indicationMethodRules': ''.join(indicationMethodRules),
             'indicationMethods': ''.join(indicationMethods),
-            'channelCount': indicationInterface.channelCount, # includes self.channelCount
+            'indicationChannelCount': indicationInterface.channelCount,
+            'channelCount': self.channelCount,
             'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster)
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
@@ -515,6 +500,7 @@ class InterfaceMixin:
         f.write(dutResponseTemplate % substs)
         f.write(dutInterfaceTemplate % substs)
         f.write(mkDutTemplate % substs)
+
     def collectRequestElements(self, outerTypeName):
         requestElements = []
         for m in self.decls:

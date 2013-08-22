@@ -247,6 +247,16 @@ int PortalInterface::dumpRegs()
     return rc;
 }
 
+void PortalInterface::displayStats()
+{
+  for(int i = 0; i < portal.numFds; i++){
+    PortalInstance *instance = portal.instances[i];
+    for(int j = 0; j < 0x10; j++){
+      fprintf(stderr, "instance[%d].reg[%08x] = %08x\n", i, j*4, *(instance->hwregs+j));
+    }
+  }
+}
+
 void* PortalInterface::exec(void* __x)
 {
     unsigned int *buf = new unsigned int[1024];
