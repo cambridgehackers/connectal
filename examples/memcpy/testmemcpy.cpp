@@ -23,7 +23,7 @@ size_t size = numWords*sizeof(unsigned int);
 sem_t sem;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
-unsigned int iterCnt=128;
+unsigned int iterCnt=32;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -35,10 +35,12 @@ void dump(const char *prefix, char *buf, size_t len)
 
 class TestMemcpyIndications : public MemcpyIndications
 {
+  virtual void putFailed(unsigned long v){
+    fprintf(stderr, "putFailed: %s\n", Memcpy::methodNameMap(v));
+    exit(1);
+  }
   virtual void bluescopeTriggered(){
     fprintf(stderr, "bluescopeTriggered\n");
-    // sleep(1);
-    // dump("bluescope", (char*)bsBuffer, size);
   }
   virtual void configResp(unsigned long chanId, unsigned long pa, unsigned long numWords){
     fprintf(stderr, "configResp %d, %lx, %d\n", chanId, pa, numWords);

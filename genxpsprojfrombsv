@@ -187,6 +187,8 @@ if __name__=='__main__':
         indicationInterface = syntax.globalvars[indicationInterfaceName]
         subinterface.isIndication = False
         indicationInterface.isIndication = True
+        ## adding an error reporting channel to the indications interface for reporting 'put' errors
+        indicationInterface.insertPutErrorMethod();
         ## assign the indication methods to the lower channel numbers
         indicationInterface.assignRequestResponseChannels()
         subinterface.assignRequestResponseChannels(indicationInterface.channelCount)

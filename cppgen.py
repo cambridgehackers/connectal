@@ -24,6 +24,7 @@ classPrefixTemplate='''
 class %(namespace)s%(className)s : public PortalInstance {
 public:
     static %(className)s *create%(className)s(const char *instanceName, %(className)sIndications *indications=0);
+    static char* methodNameMap(unsigned long v);
 '''
 classSuffixTemplate='''
 protected:
@@ -45,6 +46,7 @@ protected:
 };
 '''
 
+
 creatorTemplate = '''
 %(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName, %(className)sIndications *indications)
 {
@@ -53,6 +55,19 @@ creatorTemplate = '''
     return instance;
 }
 '''
+
+methodNameMapTemplate = '''
+static char* methodNameStrings[] = 
+{
+   %(methodNames)s
+};
+
+char* %(namespace)s%(className)s::methodNameMap(unsigned long idx)
+{
+   return methodNameStrings[idx];
+}
+'''
+
 constructorTemplate='''
 %(namespace)s%(className)s::%(className)s(const char *instanceName, %(className)sIndications *indications)
  : PortalInstance(instanceName, indications)%(initializers)s
@@ -240,6 +255,11 @@ class InterfaceMixin:
         subinterface = syntax.globalvars[subinterfaceName]
         #print 'subinterface', subinterface, subinterface
         return subinterface
+    def insertPutErrorMethod(self):
+        meth_name = "putFailed"
+        meth_type = AST.Type("Action",[])
+        meth_formal_params = [AST.Param("v", AST.Type("Bit",[AST.Type(32,[])]))]
+        self.decls = self.decls + [AST.Method(meth_name, meth_type, meth_formal_params,True)]
     def assignRequestResponseChannels(self, channelNumber=0, ord=0):
         for d in self.decls:
             if d.__class__ == AST.Interface:
@@ -301,7 +321,8 @@ class InterfaceMixin:
     def emitConstructorImplementation(self, f, className, namespace):
         substitutions = {'namespace': namespace,
                          'className': className,
-                         'initializers': ''}
+                         'initializers': '',
+                         'methodNames': ', '.join('"%s"' % (d.name) for d in self.decls if d.__class__ == AST.Method )}
         subinterfaces = []
         for d in self.decls:
             if d.__class__ == AST.Interface:
@@ -313,6 +334,7 @@ class InterfaceMixin:
         if self.toplevel:
             if not self.isIndication:
                 f.write(creatorTemplate % substitutions)
+                f.write(methodNameMapTemplate % substitutions)
         if self.isIndication:
             f.write(indicationConstructorTemplate % substitutions)
         else:

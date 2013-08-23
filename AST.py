@@ -1,10 +1,11 @@
 
 class Method:
-    def __init__(self, name, return_type, params):
+    def __init__(self, name, return_type, params,aug):
         self.type = 'Method'
         self.name = name
         self.return_type = return_type
         self.params = params
+        self.aug = aug
     def __repr__(self):
         sparams = [p.__repr__() for p in self.params]
         return '<method: %s %s %s>' % (self.name, self.return_type, sparams)

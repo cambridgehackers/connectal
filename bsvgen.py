@@ -12,6 +12,7 @@ import util
 
 preambleTemplate='''
 import FIFO::*;
+import FIFOF::*;
 import GetPut::*;
 import Connectable::*;
 import Clocks::*;
@@ -64,8 +65,18 @@ Bit#(8) %(methodName)s$Offset = %(channelNumber)s;
 
 mkDutTemplate='''
 
+interface %(Dut)sIndications$Aug;
+%(indicationMethodDecls)s
+endinterface
+
+function %(Dut)sIndications strip$Aug(%(Dut)sIndications$Aug aug);
+return (interface %(Dut)sIndications;
+          %(indicationMethodStripAugs)s
+        endinterface);
+endfunction
+
 interface %(Dut)sIndicationsWrapper;
-    interface %(Dut)sIndications indications;
+    interface %(Dut)sIndications$Aug indications;
     interface Reg#(Bit#(32)) underflowCount;
     interface Reg#(Bit#(32)) responseFiredCnt;
     interface Reg#(Bit#(32)) outOfRangeReadCount;
@@ -95,8 +106,7 @@ module mk%(Dut)sIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveReadAddrFifo,
         axiSlaveReadDataFifo.enq(0);
         outOfRangeReadCountReg <= outOfRangeReadCountReg+1;
     endrule
-
-    interface %(Dut)sIndications indications;
+    interface %(Dut)sIndications$Aug indications;
 %(indicationMethods)s
     endinterface
     interface Reg outOfRangeReadCount = outOfRangeReadCountReg;
@@ -128,16 +138,15 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
     FIFO#(Bit#(2)) axiSlaveBrespFifo <- mkFIFO();
     FIFO#(Bit#(12)) axiSlaveBidFifo <- mkFIFO();
-
-    Reg#(Bit#(32)) last_ctrl_reg_write_data <- mkReg(0);
-    Reg#(Bit#(32)) last_ctrl_reg_write_addr <- mkReg(0);    
     
     Vector#(%(indicationChannelCount)s, PulseWire) readOutstanding <- replicateM(mkPulseWire);
     
     %(Dut)sIndicationsWrapper indWrapper <- mk%(Dut)sIndicationsWrapper(axiSlaveReadAddrFifo,
                                                                         axiSlaveReadDataFifo,
                                                                         readOutstanding);
-    %(Dut)sIndications indications = indWrapper.indications;
+    %(Dut)sIndications$Aug indications$Aug = indWrapper.indications;
+    %(Dut)sIndications     indications     = strip$Aug(indications$Aug);
+
 
     %(Dut)s %(dut)s <- mk%(Dut)s(%(dut_hdmi_clock_arg)s indications);
 
@@ -165,8 +174,6 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	    noAction; // interruptStatus is read-only
 	if (addr == 12'h004)
 	    interruptEnableReg <= v[0] == 1'd1; //reduceOr(v) == 1'd1;
-    last_ctrl_reg_write_addr <= zeroExtend(axiSlaveWriteAddrFifo.first);
-	last_ctrl_reg_write_data <= axiSlaveWriteDataFifo.first;
     endrule
     rule readCtrlReg if (axiSlaveReadAddrFifo.first[16] == 0);
         axiSlaveReadAddrFifo.deq;
@@ -206,9 +213,9 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	if (addr == 12'h034)
 	    v = outOfRangeWriteCount;
         if (addr == 12'h038)
-            v = last_ctrl_reg_write_addr;
+            v = 0; // unused
         if (addr == 12'h03c)
-            v = last_ctrl_reg_write_data;
+            v = 0; // unused
         if (addr >= 12'h040 && addr <= (12'h040 + %(indicationChannelCount)s/4))
 	begin
 	    v = 0;
@@ -318,7 +325,11 @@ requestRuleTemplate='''
     rule handle$%(methodName)s$request;
         let request = %(methodName)s$requestFifo.first;
         %(methodName)s$requestFifo.deq;
-        %(dut)s.%(methodName)s(%(paramsForCall)s);
+        let success = impCondOf(%(dut)s.%(methodName)s(%(paramsForCall)s));
+        if (success)
+          %(dut)s.%(methodName)s(%(paramsForCall)s);
+        else
+          indications$Aug.putFailed(%(ord)s);
         requestFiredWires[%(ord)s].send;
     endrule    
 '''
@@ -353,6 +364,12 @@ indicationRuleTemplate='''
         readOutstanding[%(channelNumber)s].send();
     endrule
 '''
+
+indicationMethodDeclTemplate='''
+        method Action %(methodName)s(%(formals)s);'''
+
+indicationMethodStripAugTemplate='''
+        method Action %(methodName)s(%(formals)s) = aug.%(methodName)s(%(args)s);'''
 
 indicationMethodTemplate='''
         method Action %(methodName)s(%(formals)s);
@@ -444,6 +461,31 @@ class MethodMixin:
         else:
             return None
 
+    def collectIndicationMethodDecl(self, outerTypeName):
+        substs = self.substs(outerTypeName)
+        if self.return_type.name == 'Action':
+            formal = ['%s %s' % (p.type.toBsvType(), p.name) for p in self.params]
+            substs['formals'] = ', '.join(formal)
+            structElements = ['%s: %s' % (p.name, p.name) for p in self.params]
+            substs['structElements'] = ', '.join(structElements)
+            return indicationMethodDeclTemplate % substs
+        else:
+            return None
+
+    def collectIndicationMethodStripAug(self,outerTypeName):
+        substs = self.substs(outerTypeName)
+        if (not self.aug):
+            formal = ['%s %s' % (p.type.toBsvType(), p.name) for p in self.params]
+            arg = ['%s' % (p.name) for p in self.params]
+            substs['formals'] = ', '.join(formal)
+            substs['args'] = ', '.join(arg)
+            structElements = ['%s: %s' % (p.name, p.name) for p in self.params]
+            substs['structElements'] = ', '.join(structElements)
+            return indicationMethodStripAugTemplate % substs
+        else:
+            return None
+        
+
 class InterfaceMixin:
     def emitBsvImplementation(self, f):
         print self.name
@@ -455,6 +497,8 @@ class InterfaceMixin:
         methodRules = self.collectMethodRules(self.name)
         indicationMethodRules = indicationInterface.collectIndicationMethodRules(self.name)
         indicationMethods = indicationInterface.collectIndicationMethods(self.name)
+        indicationMethodDecls = indicationInterface.collectIndicationMethodDecls(self.name)
+        indicationMethodStripAugs = indicationInterface.collectIndicationMethodStripAugs(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
@@ -479,6 +523,8 @@ class InterfaceMixin:
             'methodRules': ''.join(methodRules),
             'indicationMethodRules': ''.join(indicationMethodRules),
             'indicationMethods': ''.join(indicationMethods),
+            'indicationMethodDecls': ''.join(indicationMethodDecls),
+            'indicationMethodStripAugs': ''.join(indicationMethodStripAugs),
             'indicationChannelCount': indicationInterface.channelCount,
             'channelCount': self.channelCount,
             'writeChannelCount': self.channelCount - indicationInterface.channelCount,
@@ -548,6 +594,22 @@ class InterfaceMixin:
         for m in self.decls:
             if m.type == 'Method':
                 methodRule = m.collectIndicationMethod(outerTypeName)
+                if methodRule:
+                    methods.append(methodRule)
+        return methods
+    def collectIndicationMethodDecls(self,outerTypeName):
+        methods = []
+        for m in self.decls:
+            if m.type == 'Method':
+                methodRule = m.collectIndicationMethodDecl(outerTypeName)
+                if methodRule:
+                    methods.append(methodRule)
+        return methods
+    def collectIndicationMethodStripAugs(self,outerTypeName):
+        methods = []
+        for m in self.decls:
+            if m.type == 'Method':
+                methodRule = m.collectIndicationMethodStripAug(outerTypeName)
                 if methodRule:
                     methods.append(methodRule)
         return methods

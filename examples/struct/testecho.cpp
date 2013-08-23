@@ -9,6 +9,10 @@ class TestEchoIndications : public EchoIndications
 {  
 public:
   static unsigned long cnt;
+  virtual void putFailed(unsigned long v){
+    fprintf(stderr, "putFailed: %s\n", Echo::methodNameMap(v));
+    exit(1);
+  }
   static void incr_cnt(){
     if (++cnt == 4)
       exit(0);
@@ -53,5 +57,5 @@ int main(int argc, const char **argv)
   s2.c = 8;
   fprintf(stderr, "calling say4(S2{%c, %d,%d})\n", s2.a,s2.b,s2.c);
   echo->say4(s2);
-  PortalInterface::exec();
+  PortalInterface::exec(NULL);
 }
