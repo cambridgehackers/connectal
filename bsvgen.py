@@ -322,16 +322,23 @@ requestRuleTemplate='''
         axiSlaveWriteDataFifo.deq;
         %(methodName)s$requestFifo.enq(axiSlaveWriteDataFifo.first);
     endrule
+    (* descending_urgency = "handle$%(methodName)s$request, handle$%(methodName)s$requestFailure" *)
     rule handle$%(methodName)s$request;
         let request = %(methodName)s$requestFifo.first;
         %(methodName)s$requestFifo.deq;
-        let success = impCondOf(%(dut)s.%(methodName)s(%(paramsForCall)s));
-        if (success)
-          %(dut)s.%(methodName)s(%(paramsForCall)s);
-        else
-          indications$Aug.putFailed(%(ord)s);
+        %(dut)s.%(methodName)s(%(paramsForCall)s);
         requestFiredWires[%(ord)s].send;
-    endrule    
+        // support for impCondOf in bsc is questionable (mdk)
+        // let success = impCondOf(%(dut)s.%(methodName)s(%(paramsForCall)s));
+        // if (success)
+        // %(dut)s.%(methodName)s(%(paramsForCall)s);
+        // else
+        // indications$Aug.putFailed(%(ord)s);
+    endrule
+    rule handle$%(methodName)s$requestFailure;
+        indications$Aug.putFailed(%(ord)s);
+        %(methodName)s$requestFifo.deq;
+    endrule
 '''
 
 indicationRuleTemplate='''

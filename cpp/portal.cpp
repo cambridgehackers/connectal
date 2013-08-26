@@ -44,11 +44,8 @@
 
 #define PORTAL_ALLOC _IOWR('B', 10, PortalAlloc)
 #define PORTAL_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalMessage)
-#define PORTAL_AXI_RST _IOWR('B', 12, PortalMessage)
-#define PORTAL_PUTGET _IOWR('B', 17, PortalMessage)
 #define PORTAL_PUT _IOWR('B', 18, PortalMessage)
 #define PORTAL_GET _IOWR('B', 19, PortalMessage)
-#define PORTAL_REGS _IOWR('B', 20, PortalMessage)
 #define PORTAL_SET_FCLK_RATE _IOWR('B', 40, PortalClockRequest)
 
 PortalInterface portal;
@@ -126,8 +123,7 @@ int PortalInstance::sendMessage(PortalMessage *msg)
     rc = ioctl(fd, PORTAL_PUT, msg);
     //ALOGD("sendmessage portal fd=%d rc=%d\n", fd, rc);
     if (rc)
-        ALOGE("PortalInstance::sendMessage fd=%d rc=%d errno=%d:%s PUTGET=%x PUT=%x GET=%x\n", fd, rc, errno, strerror(errno),
-                PORTAL_PUTGET, PORTAL_PUT, PORTAL_GET);
+        ALOGE("PortalInstance::sendMessage fd=%d rc=%d errno=%d:%s PUT=%x GET=%x\n", fd, rc, errno, strerror(errno), PORTAL_PUT, PORTAL_GET);
     return rc;
 }
 
@@ -235,19 +231,7 @@ int PortalInterface::setClockFrequency(int clkNum, long requestedFrequency, long
     return status;
 }
 
-int PortalInterface::dumpRegs()
-{
-    if (!portal.numFds) {
-	ALOGE("%s No fds open\n", __FUNCTION__);
-	return -ENODEV;
-    }
-
-    int foo = 0;
-    int rc = ioctl(portal.fds[0].fd, PORTAL_REGS, &foo);
-    return rc;
-}
-
-void PortalInterface::displayStats()
+void PortalInterface::dumpRegs()
 {
   for(int i = 0; i < portal.numFds; i++){
     PortalInstance *instance = portal.instances[i];

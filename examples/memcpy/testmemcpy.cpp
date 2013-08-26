@@ -81,7 +81,7 @@ class TestMemcpyIndications : public MemcpyIndications
     sem_post(&sem);
     if(iterCnt == ++memcmp_count){
       fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
-      PortalInterface::displayStats();
+      PortalInterface::dumpRegs();
       exit(0);
     }
   }

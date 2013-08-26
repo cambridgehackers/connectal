@@ -59,9 +59,8 @@ public:
     static int alloc(size_t size, int *fd, PortalAlloc *portalAlloc);
     static int free(int fd);
     static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-    static void displayStats();
+    static void dumpRegs();
     int registerInstance(PortalInstance *instance);
-    int dumpRegs();
 private:
     PortalInstance **instances;
     struct pollfd *fds;
