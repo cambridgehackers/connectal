@@ -272,18 +272,18 @@ imageon_pinout = {
         ('io_vita_data_p[1]', 'T16', 'LVDS_25', 'INPUT'),#LA07_p
         ('io_vita_data_p[2]', 'J21', 'LVDS_25', 'INPUT'),#LA08_p
         ('io_vita_data_p[3]', 'J18', 'LVDS_25', 'INPUT'),#LA05_p
-        ('io_vita_data_p[4]', 'M21', 'LVDS_25', 'INPUT'),#LA04_p
-        ('io_vita_data_p[5]', 'L21', 'LVDS_25', 'INPUT'),#LA06_p
-        ('io_vita_data_p[6]', 'N22', 'LVDS_25', 'INPUT'),#LA03_p
-        ('io_vita_data_p[7]', 'P17', 'LVDS_25', 'INPUT'),#LA02_p
+        #('io_vita_data_p[4]', 'M21', 'LVDS_25', 'INPUT'),#LA04_p
+        #('io_vita_data_p[5]', 'L21', 'LVDS_25', 'INPUT'),#LA06_p
+        #('io_vita_data_p[6]', 'N22', 'LVDS_25', 'INPUT'),#LA03_p
+        #('io_vita_data_p[7]', 'P17', 'LVDS_25', 'INPUT'),#LA02_p
         ('io_vita_data_n[0]', 'R21', 'LVDS_25', 'INPUT'),#LA09_n
         ('io_vita_data_n[1]', 'T17', 'LVDS_25', 'INPUT'),#LA07_n
         ('io_vita_data_n[2]', 'J22', 'LVDS_25', 'INPUT'),#LA08_n
         ('io_vita_data_n[3]', 'K18', 'LVDS_25', 'INPUT'),#LA05_n
-        ('io_vita_data_n[4]', 'M22', 'LVDS_25', 'INPUT'),#LA04_n
-        ('io_vita_data_n[5]', 'L22', 'LVDS_25', 'INPUT'),#LA06_n
-        ('io_vita_data_n[6]', 'P22', 'LVDS_25', 'INPUT'),#LA03_n
-        ('io_vita_data_n[7]', 'P18', 'LVDS_25', 'INPUT'),#LA02_n
+        #('io_vita_data_n[4]', 'M22', 'LVDS_25', 'INPUT'),#LA04_n
+        #('io_vita_data_n[5]', 'L22', 'LVDS_25', 'INPUT'),#LA06_n
+        #('io_vita_data_n[6]', 'P22', 'LVDS_25', 'INPUT'),#LA03_n
+        #('io_vita_data_n[7]', 'P18', 'LVDS_25', 'INPUT'),#LA02_n
         ],
     'zc702': [
         ("XADC_gpio[0]", 'H17', 'LVCMOS25', 'OUTPUT'),
@@ -315,18 +315,18 @@ imageon_pinout = {
         ('io_vita_data_p[1]', 'T21', 'LVDS_25', 'INPUT'),
         ('io_vita_data_p[2]', 'AA17', 'LVDS_25', 'INPUT'),
         ('io_vita_data_p[3]', 'AB19', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_p[4]', 'V13', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_p[5]', 'U17', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_p[6]', 'AA16', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_p[7]', 'V14', 'LVDS_25', 'INPUT'),
+        #('io_vita_data_p[4]', 'V13', 'LVDS_25', 'INPUT'),
+        #('io_vita_data_p[5]', 'U17', 'LVDS_25', 'INPUT'),
+        #('io_vita_data_p[6]', 'AA16', 'LVDS_25', 'INPUT'),
+        #('io_vita_data_p[7]', 'V14', 'LVDS_25', 'INPUT'),
         ('io_vita_data_n[0]', 'U16', 'LVDS_25', 'INPUT'),
         ('io_vita_data_n[1]', 'U21', 'LVDS_25', 'INPUT'),
         ('io_vita_data_n[2]', 'AB17', 'LVDS_25', 'INPUT'),
         ('io_vita_data_n[3]', 'AB20', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_n[4]', 'W13', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_n[5]', 'V17', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_n[6]', 'AB16', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_n[7]', 'V15', 'LVDS_25', 'INPUT'),
+        #('io_vita_data_n[4]', 'W13', 'LVDS_25', 'INPUT'),
+        #('io_vita_data_n[5]', 'V17', 'LVDS_25', 'INPUT'),
+        #('io_vita_data_n[6]', 'AB16', 'LVDS_25', 'INPUT'),
+        #('io_vita_data_n[7]', 'V15', 'LVDS_25', 'INPUT'),
         ]
 }
 top_verilog_template='''
@@ -1375,22 +1375,7 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .host_decoder_code_fe(imageon_host_decoder_code_fe),
     .host_decoder_code_bl(imageon_host_decoder_code_bl),
     .host_decoder_code_img(imageon_host_decoder_code_img),
-    .host_decoder_code_tr(imageon_host_decoder_code_tr),
-    .host_decoder_code_crc(imageon_host_decoder_code_crc),
     .host_decoder_frame_start(imageon_host_decoder_frame_start),
-    .host_decoder_cnt_black_lines(imageon_host_decoder_cnt_black_lines),
-    .host_decoder_cnt_image_lines(imageon_host_decoder_cnt_image_lines),
-    .host_decoder_cnt_black_pixels(imageon_host_decoder_cnt_black_pixels),
-    .host_decoder_cnt_image_pixels(imageon_host_decoder_cnt_image_pixels),
-    .host_decoder_cnt_frames(imageon_host_decoder_cnt_frames),
-    .host_decoder_cnt_windows(imageon_host_decoder_cnt_windows),
-    .host_decoder_cnt_clocks(imageon_host_decoder_cnt_clocks),
-    .host_decoder_cnt_start_lines(imageon_host_decoder_cnt_start_lines),
-    .host_decoder_cnt_end_lines(imageon_host_decoder_cnt_end_lines),
-    .host_decoder_cnt_monitor0high(imageon_host_decoder_cnt_monitor0high),
-    .host_decoder_cnt_monitor0low(imageon_host_decoder_cnt_monitor0low),
-    .host_decoder_cnt_monitor1high(imageon_host_decoder_cnt_monitor1high),
-    .host_decoder_cnt_monitor1low(imageon_host_decoder_cnt_monitor1low),
     /* HOST Interface - CRC .Checker */
     .host_crc_reset(imageon_host_crc_reset),
     .host_crc_initvalue(imageon_host_crc_initvalue),
@@ -1399,21 +1384,9 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .host_remapper_write_cfg(imageon_host_remapper_write_cfg),
     .host_remapper_mode(imageon_host_remapper_mode),
     /* HOST Interface - Trigger Generator */
-    .host_triggen_enable(imageon_host_trigger_enable),
-    .host_triggen_sync2readout(imageon_host_trigger_sync2readout),
-    .host_triggen_readouttrigger(imageon_host_trigger_readouttrigger),
     .host_triggen_default_freq(imageon_host_trigger_default_freq),
     .host_triggen_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
     .host_triggen_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
-    .host_triggen_cnt_trigger1high(imageon_host_trigger_cnt_trigger1high),
-    .host_triggen_cnt_trigger1low(imageon_host_trigger_cnt_trigger1low),
-    .host_triggen_cnt_trigger2high(imageon_host_trigger_cnt_trigger2high),
-    .host_triggen_cnt_trigger2low(imageon_host_trigger_cnt_trigger2low),
-    .host_triggen_ext_debounce(imageon_host_trigger_ext_debounce),
-    .host_triggen_ext_polarity(imageon_host_trigger_ext_polarity),
-    .host_triggen_gen_polarity(imageon_host_trigger_gen_polarity),
-    /* HOST Interface - FPN/PRNU Correction */
-    .host_fpn_prnu_values(imageon_host_fpn_prnu_values),
     /* HOST Interface - Sync Generator */
     .host_syncgen_delay(imageon_host_syncgen_delay),
     .host_syncgen_hactive(imageon_host_syncgen_hactive),
@@ -1428,30 +1401,19 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_clk_pll(io_vita_clk_pll),
     .io_vita_reset_n(io_vita_reset_n),
     .io_vita_trigger(io_vita_trigger),
-    .io_vita_monitor(io_vita_monitor),
     .io_vita_clk_out_p(io_vita_clk_out_p),
     .io_vita_clk_out_n(io_vita_clk_out_n),
     .io_vita_sync_p(io_vita_sync_p),
     .io_vita_sync_n(io_vita_sync_n),
     .io_vita_data_p(io_vita_data_p),
     .io_vita_data_n(io_vita_data_n),
-    /* Trigger Port */
-    .trigger1(imageon_trigger1),
     /* Frame Sync Port */
     .fsync(imageon_fsync),
     /* XSVI Port */
     .xsvi_vsync_o(imageon_xsvi_vsync),
     .xsvi_hsync_o(imageon_xsvi_hsync),
-    .xsvi_vblank_o(imageon_xsvi_vblank),
-    .xsvi_hblank_o(imageon_xsvi_hblank),
     .xsvi_active_video_o(imageon_xsvi_active_video),
-    .xsvi_video_data_o(imageon_xsvi_video_data),
-    /* Debug Ports */
-    .debug_iserdes_o(debug_iserdes_o),
-    .debug_decoder_o(debug_decoder_o),
-    .debug_crc_o(debug_crc_o),
-    .debug_triggen_o(debug_triggen_o),
-    .debug_video_o(debug_video_o)
+    .xsvi_video_data_o(imageon_xsvi_video_data)
 );
  '''
     def pinout(self, board):

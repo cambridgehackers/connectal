@@ -28,6 +28,7 @@ import GetPut::*;
 import Zynq::*;
 import Imageon::*;
 import HDMI::*;
+import AxiDMA::*;
 import BlueScope::*;
 import SensorToVideo::*;
 
@@ -131,7 +132,12 @@ module mkImageCapture#(//Clock hdmi_clock,
        ImageCaptureIndications indications)(ImageCapture) provisos (Bits#(XsviData,xsviDataWidth));
     ImageonVitaController imageonVita <- mkImageonVitaController();
     ImageonControl control = imageonVita.control;
-    BlueScope#(64,64) spiBlueScope <- mkBlueScope(1024);
+    //jcaBlueScope#(64,64) spiBlueScope <- mkBlueScope(1024);
+   AxiDMA dma <- mkAxiDMA;
+   WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
+   BlueScope#(64,64) spiBlueScope <- mkBlueScope(32, dma_debug_write_chan);
+//module mkSyncBlueScope#(Integer samples, WriteChan wchan, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth, triggerWidth))
+
     //BlueScope#(xsviDataWidth,xsviDataWidth) xsviBlueScope <- mkBlueScope(1024);
     SensorToVideo converter <- mkSensorToVideo;
     HdmiOut hdmiOut <- mkHdmiOut;
@@ -244,14 +250,14 @@ module mkImageCapture#(//Clock hdmi_clock,
         spiBlueScope.start();
     endmethod
     method Action clear_spi_trace();
-        spiBlueScope.clear();
+        //jca spiBlueScope.clear();
     endmethod
     method Action get_spi_trace_sample_count();
-        indications.spi_trace_sample_count_value(spiBlueScope.sampleCount());
+        //jca indications.spi_trace_sample_count_value(spiBlueScope.sampleCount());
     endmethod
     method Action get_spi_trace_data();
-        let v <- spiBlueScope.dataOut();
-        indications.spi_trace_sample_value(v);
+        //jca let v <- spiBlueScope.dataOut();
+        //jca indications.spi_trace_sample_value(v);
     endmethod
 
     method Action set_serdes_reset(Bit#(1) v);
