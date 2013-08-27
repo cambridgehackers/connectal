@@ -64,8 +64,9 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     RXFN(remapper_control)
     RXFN(triggen_control)
     RXFN(clock_gen_locked)
-    void putFailed(long unsigned int v) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__, v);
+    void putFailed(unsigned long v){
+      fprintf(stderr, "putFailed: %s\n", ImageCapture::methodNameMap(v));
+      exit(1);
     }
 };
 
