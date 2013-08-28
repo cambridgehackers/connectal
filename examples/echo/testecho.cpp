@@ -1,6 +1,7 @@
 
 #include "Echo.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 Echo *echo = 0;
 
@@ -14,6 +15,9 @@ class TestEchoIndications : public EchoIndications
       fprintf(stderr, "heard an echo2: %d %d\n", a, b);
       exit(0);
     }
+    virtual void putFailed(long unsigned int v) {
+	fprintf(stderr, "putFailed %lx\n", v);
+    }
 };
 
 int main(int argc, const char **argv)
@@ -23,5 +27,5 @@ int main(int argc, const char **argv)
     fprintf(stderr, "Saying %d\n", v);
     echo->say(v);
     echo->setLeds(9);
-    PortalInterface::exec();
+    PortalInterface::exec(0);
 }
