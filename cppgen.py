@@ -24,7 +24,7 @@ classPrefixTemplate='''
 class %(namespace)s%(className)s : public PortalInstance {
 public:
     static %(className)s *create%(className)s(const char *instanceName, %(className)sIndications *indications=0);
-    static char* methodNameMap(unsigned long v);
+    static char* methodName(unsigned long v);
 '''
 classSuffixTemplate='''
 protected:
@@ -56,13 +56,13 @@ creatorTemplate = '''
 }
 '''
 
-methodNameMapTemplate = '''
+methodNameTemplate = '''
 static char* methodNameStrings[] = 
 {
    %(methodNames)s
 };
 
-char* %(namespace)s%(className)s::methodNameMap(unsigned long idx)
+char* %(namespace)s%(className)s::methodName(unsigned long idx)
 {
    return methodNameStrings[idx];
 }
@@ -86,6 +86,13 @@ indicationConstructorTemplate='''
 %(namespace)s%(className)s::~%(className)s()
 {
 }
+'''
+
+putFailedTemplate='''
+void %(namespace)s%(className)s::putFailed(unsigned long v){
+    fprintf(stderr, "putFailed: \\n", %(instName)s::methodName(v));
+    exit(1);
+  }
 '''
 
 handleMessageTemplate='''
@@ -159,10 +166,10 @@ class MethodMixin:
         #print parentClassName, self.name
         f.write(', '.join(self.formalParameters(self.params)))
         f.write(' )')
-        if not self.isIndication:
-            f.write(';\n')
-        else:
+        if (self.isIndication and not self.aug):
             f.write('= 0;\n')
+        else:
+            f.write(';\n')
     def emitCImplementation(self, f, className, namespace):
         params = self.params
         paramDeclarations = self.formalParameters(params)
@@ -306,6 +313,7 @@ class InterfaceMixin:
 
         substitutions = {'namespace': namespace,
                          'className': className,
+                         'instName' : className.replace('Indications', ''),
                          'responseCases': ''.join([ '    case %(channelNumber)s: %(name)s(%(params)s); break;\n'
                                                    % { 'channelNumber': d.channelNumber,
                                                        'name': d.name,
@@ -317,6 +325,7 @@ class InterfaceMixin:
                          }
         if self.isIndication:
             f.write(handleMessageTemplate % substitutions)
+            f.write(putFailedTemplate % substitutions)
 
     def emitConstructorImplementation(self, f, className, namespace):
         substitutions = {'namespace': namespace,
@@ -334,7 +343,7 @@ class InterfaceMixin:
         if self.toplevel:
             if not self.isIndication:
                 f.write(creatorTemplate % substitutions)
-                f.write(methodNameMapTemplate % substitutions)
+                f.write(methodNameTemplate % substitutions)
         if self.isIndication:
             f.write(indicationConstructorTemplate % substitutions)
         else:

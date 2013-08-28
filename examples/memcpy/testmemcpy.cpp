@@ -36,14 +36,11 @@ void dump(const char *prefix, char *buf, size_t len)
 class TestMemcpyIndications : public MemcpyIndications
 {
   virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
-			      unsigned long streamWrCnt, unsigned long writeInProg, unsigned long dataMismatch){
+			      unsigned long streamWrCnt, unsigned long writeInProg, 
+			      unsigned long dataMismatch){
     fprintf(stderr, "reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
   }  
-  virtual void putFailed(unsigned long v){
-    fprintf(stderr, "putFailed: %s\n", Memcpy::methodNameMap(v));
-    exit(1);
-  }
   virtual void bluescopeTriggered(){
     fprintf(stderr, "bluescopeTriggered\n");
   }

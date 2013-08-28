@@ -159,6 +159,8 @@ if __name__=='__main__':
     print 'Writing CPP wrapper', cppname
     cpp = util.createDirAndOpen(cppname, 'w')
     cpp.write('#include "%s.h"\n' % namespace.interface)
+    cpp.write('#include <stdio.h>\n')
+    cpp.write('#include <stdlib.h>\n')
     print 'Writing BSV wrapper', bsvname
     bsv = util.createDirAndOpen(bsvname, 'w')
     bsvgen.emitPreamble(bsv, namespace.bsvfile)

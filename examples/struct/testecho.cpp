@@ -9,10 +9,6 @@ class TestEchoIndications : public EchoIndications
 {  
 public:
   static unsigned long cnt;
-  virtual void putFailed(unsigned long v){
-    fprintf(stderr, "putFailed: %s\n", Echo::methodNameMap(v));
-    exit(1);
-  }
   static void incr_cnt(){
     if (++cnt == 4)
       exit(0);
