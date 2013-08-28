@@ -35,37 +35,31 @@ class PortalInstance {
 public:
     int sendMessage(PortalMessage *msg);
     void close();
+    void dumpRegs();
 protected:
     PortalIndications *indications;
     int receiveMessage(PortalMessage *msg);
     PortalInstance(const char *instanceName, PortalIndications *indications=0);
     ~PortalInstance();
     int open();
-    friend PortalInstance *portalOpen(const char *instanceName);
 private:
     int fd;
     volatile unsigned int *hwregs;
     char *instanceName;
-    friend class PortalInterface;
+    static int registerInstance(PortalInstance *instance);
+    static int unregisterInstance(PortalInstance *instance);
+    friend PortalInstance *portalOpen(const char *instanceName);
+    friend void* portalExec(void* __x);
+    static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 };
-PortalInstance *portalOpen(const char *instanceName);
 
-class PortalInterface {
-public:
-    PortalInterface();
-    ~PortalInterface();
-    static void* exec(void* __x);
+PortalInstance *portalOpen(const char *instanceName);
+void* portalExec(void* __x);
+
+class PortalMemory {
+ public:
     static int dCacheFlushInval(PortalAlloc *portalAlloc);
     static int alloc(size_t size, int *fd, PortalAlloc *portalAlloc);
-    static int free(int fd);
-    static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-    static void dumpRegs();
-    int registerInstance(PortalInstance *instance);
-private:
-    PortalInstance **instances;
-    struct pollfd *fds;
-    int numFds;
 };
 
-extern PortalInterface portal;
 

@@ -35,6 +35,11 @@ void dump(const char *prefix, char *buf, size_t len)
 
 class TestMemcpyIndications : public MemcpyIndications
 {
+  virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
+			      unsigned long streamWrCnt, unsigned long writeInProg, unsigned long dataMismatch){
+    fprintf(stderr, "reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
+	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
+  }  
   virtual void putFailed(unsigned long v){
     fprintf(stderr, "putFailed: %s\n", Memcpy::methodNameMap(v));
     exit(1);
@@ -81,7 +86,6 @@ class TestMemcpyIndications : public MemcpyIndications
     sem_post(&sem);
     if(iterCnt == ++memcmp_count){
       fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
-      PortalInterface::dumpRegs();
       exit(0);
     }
   }
@@ -107,26 +111,27 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  PortalInterface::alloc(size, &srcFd, &srcAlloc);
-  PortalInterface::alloc(size, &dstFd, &dstAlloc);
-  PortalInterface::alloc(size, &bsFd,  &bsAlloc);
+  PortalMemory::alloc(size, &srcFd, &srcAlloc);
+  PortalMemory::alloc(size, &dstFd, &dstAlloc);
+  PortalMemory::alloc(size, &bsFd,  &bsAlloc);
 
   srcBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcFd, 0);
   dstBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstFd, 0);
   bsBuffer  = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsFd, 0);
 
   // workaround for a latent bug somewhere in the SW stack
-  PortalInterface::dCacheFlushInval(&srcAlloc);
-  PortalInterface::dCacheFlushInval(&dstAlloc);
-  PortalInterface::dCacheFlushInval(&bsAlloc);
+  PortalMemory::dCacheFlushInval(&srcAlloc);
+  PortalMemory::dCacheFlushInval(&dstAlloc);
+  PortalMemory::dCacheFlushInval(&bsAlloc);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
-  if(pthread_create(&tid, NULL,  PortalInterface::exec, NULL)){
+  if(pthread_create(&tid, NULL,  portalExec, NULL)){
     fprintf(stderr, "error creating exec thread\n");
     exit(1);
   }
 
+  device->getStateDbg();
   while (srcGen < iterCnt*numWords){
     sem_wait(&sem);
     for (int i = 0; i < numWords; i++){
@@ -134,9 +139,9 @@ int main(int argc, const char **argv)
       dstBuffer[i] = 5;
     }
     
-    PortalInterface::dCacheFlushInval(&srcAlloc);
-    PortalInterface::dCacheFlushInval(&dstAlloc);
-    PortalInterface::dCacheFlushInval(&bsAlloc);
+    PortalMemory::dCacheFlushInval(&srcAlloc);
+    PortalMemory::dCacheFlushInval(&dstAlloc);
+    PortalMemory::dCacheFlushInval(&bsAlloc);
     DATA_SYNC_BARRIER;
           
     // write channel 0 is dma destination

@@ -34,6 +34,7 @@ interface Memcpy;
    method Action configBluescope(Bit#(32) tm, Bit#(32) tv);
    method Action configDmaWriteChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
    method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
+   method Action getStateDbg();
    interface Axi3Client#(64,8,6) m_axi;
 endinterface
 
@@ -47,6 +48,7 @@ interface MemcpyIndications;
     method Action writeAck(Bit#(32) v);
     method Action configResp(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
     method Action bluescopeTriggered(); 
+    method Action reportStateDbg(Bit#(32) srcGen, Bit#(32) streamRdCnt, Bit#(32) streamWrCnt, Bit#(32) writeInProg, Bit#(32) dataMismatch);
 endinterface
 
 module mkMemcpy#(MemcpyIndications indications)(Memcpy);
@@ -137,6 +139,10 @@ module mkMemcpy#(MemcpyIndications indications)(Memcpy);
    method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
       dma.read.configChan(truncate(chanId), pa, truncate((numWords>>1)-1));
       //indications.configResp(chanId, pa, numWords);
+   endmethod
+
+   method Action getStateDbg();
+      indications.reportStateDbg(srcGen, streamRdCnt, streamWrCnt, writeInProg ? 32'd1 : 32'd0, dataMismatch  ? 32'd1 : 32'd0);
    endmethod
    
    interface Axi3Client m_axi = dma.m_axi;

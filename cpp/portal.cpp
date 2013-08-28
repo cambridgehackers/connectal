@@ -48,7 +48,9 @@
 #define PORTAL_GET _IOWR('B', 19, PortalMessage)
 #define PORTAL_SET_FCLK_RATE _IOWR('B', 40, PortalClockRequest)
 
-PortalInterface portal;
+PortalInstance **portal_instances = 0;
+struct pollfd *portal_fds = 0;
+int numFds = 0;
 
 void PortalInstance::close()
 {
@@ -65,9 +67,10 @@ PortalInstance::PortalInstance(const char *instanceName, PortalIndications *indi
 
 PortalInstance::~PortalInstance()
 {
-    close();
-    if (instanceName)
-        free(instanceName);
+  close();
+  if (instanceName)
+    free(instanceName);
+  unregisterInstance(this);
 }
 
 int PortalInstance::open()
@@ -101,7 +104,7 @@ int PortalInstance::open()
       ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
       return -errno;
     }  
-    portal.registerInstance(this);
+    registerInstance(this);
     return 0;
 }
 
@@ -144,39 +147,47 @@ int PortalInstance::receiveMessage(PortalMessage *msg)
     return 1;
 }
 
-PortalInterface::PortalInterface()
-  : fds(0), numFds(0)
+
+int PortalInstance::unregisterInstance(PortalInstance *instance)
 {
+  int i = 0;
+  while(i < numFds)
+    if(portal_fds[i].fd == instance->fd)
+      break;
+    else
+      i++;
+
+  while(i < numFds-1){
+    portal_fds[i] = portal_fds[i+1];
+    portal_instances[i] = portal_instances[i+1];
+  }
+
+  numFds--;
+  portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
+  portal_instances = (PortalInstance **)realloc(portal_instances, numFds*sizeof(PortalInstance *));  
+  return 0;
 }
 
-PortalInterface::~PortalInterface()
-{
-    if (fds) {
-        ::free(fds);
-        fds = 0;
-    }
-}
-
-int PortalInterface::registerInstance(PortalInstance *instance)
+int PortalInstance::registerInstance(PortalInstance *instance)
 {
     numFds++;
-    instances = (PortalInstance **)realloc(instances, numFds*sizeof(PortalInstance *));
-    instances[numFds-1] = instance;
-    fds = (struct pollfd *)realloc(fds, numFds*sizeof(struct pollfd));
-    struct pollfd *pollfd = &fds[numFds-1];
+    portal_instances = (PortalInstance **)realloc(portal_instances, numFds*sizeof(PortalInstance *));
+    portal_instances[numFds-1] = instance;
+    portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
+    struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
     pollfd->fd = instance->fd;
     pollfd->events = POLLIN;
     return 0;
 }
 
-int PortalInterface::dCacheFlushInval(PortalAlloc *portalAlloc)
+int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc)
 {
-    if (!portal.numFds) {
+    if (!numFds) {
 	ALOGE("%s No fds open\n", __FUNCTION__);
 	return -ENODEV;
     }
-    int rc = ioctl(portal.fds[0].fd, PORTAL_DCACHE_FLUSH_INVAL, portalAlloc);
+    int rc = ioctl(portal_fds[0].fd, PORTAL_DCACHE_FLUSH_INVAL, portalAlloc);
     if (rc){
       fprintf(stderr, "portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
@@ -185,9 +196,9 @@ int PortalInterface::dCacheFlushInval(PortalAlloc *portalAlloc)
     return 0;
 }
 
-int PortalInterface::alloc(size_t size, int *fd, PortalAlloc *portalAlloc)
+int PortalMemory::alloc(size_t size, int *fd, PortalAlloc *portalAlloc)
 {
-    if (!portal.numFds) {
+    if (!numFds) {
 	ALOGE("%s No fds open\n", __FUNCTION__);
 	return -ENODEV;
     }
@@ -195,7 +206,7 @@ int PortalInterface::alloc(size_t size, int *fd, PortalAlloc *portalAlloc)
     PortalAlloc alloc;
     memset(&alloc, 0, sizeof(alloc));
     alloc.size = size;
-    int rc = ioctl(portal.fds[0].fd, PORTAL_ALLOC, &alloc);
+    int rc = ioctl(portal_fds[0].fd, PORTAL_ALLOC, &alloc);
     if (rc){
       fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
@@ -208,14 +219,9 @@ int PortalInterface::alloc(size_t size, int *fd, PortalAlloc *portalAlloc)
     return 0;
 }
 
-int PortalInterface::free(int fd)
+int PortalInstance::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
-    return 0;
-}
-
-int PortalInterface::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
-{
-    if (!portal.numFds) {
+    if (!numFds) {
 	ALOGE("%s No fds open\n", __FUNCTION__);
 	return -ENODEV;
     }
@@ -223,7 +229,7 @@ int PortalInterface::setClockFrequency(int clkNum, long requestedFrequency, long
     PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
-    int status = ioctl(portal.fds[0].fd, PORTAL_SET_FCLK_RATE, (long)&request);
+    int status = ioctl(portal_fds[0].fd, PORTAL_SET_FCLK_RATE, (long)&request);
     if (status == 0 && actualFrequency)
 	*actualFrequency = request.actual_rate;
     if (status < 0)
@@ -231,42 +237,38 @@ int PortalInterface::setClockFrequency(int clkNum, long requestedFrequency, long
     return status;
 }
 
-void PortalInterface::dumpRegs()
+void PortalInstance::dumpRegs()
 {
-  for(int i = 0; i < portal.numFds; i++){
-    PortalInstance *instance = portal.instances[i];
-    for(int j = 0; j < 0x10; j++){
-      fprintf(stderr, "instance[%d].reg[%08x] = %08x\n", i, j*4, *(instance->hwregs+j));
-    }
+  for(int j = 0; j < 0x10; j++){
+    fprintf(stderr, "reg[%08x] = %08x\n", j*4, *(hwregs+j));
   }
 }
 
-void* PortalInterface::exec(void* __x)
+void* portalExec(void* __x)
 {
     unsigned int *buf = new unsigned int[1024];
     PortalMessage *msg = (PortalMessage *)(buf);
 
-    if (!portal.numFds) {
-        ALOGE("PortalInterface::exec No fds open numFds=%d\n", portal.numFds);
+    if (!numFds) {
+        ALOGE("PortalMemory::exec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
     }
     
     int rc;
-    while ((rc = poll(portal.fds, portal.numFds, -1)) >= 0) {
-      for (int i = 0; i < portal.numFds; i++) {
-	if (portal.fds[i].revents == 0)
+    while ((rc = poll(portal_fds, numFds, -1)) >= 0) {
+      for (int i = 0; i < numFds; i++) {
+	if (portal_fds[i].revents == 0)
 	  continue;
-	if (!portal.instances) {
-	  fprintf(stderr, "No instances but rc=%d revents=%d\n", rc, portal.fds[i].revents);
+	if (!portal_instances) {
+	  fprintf(stderr, "No portal_instances but rc=%d revents=%d\n", rc, portal_fds[i].revents);
 	}
 
-	PortalInstance *instance = portal.instances[i];
+	PortalInstance *instance = portal_instances[i];
 	memset(buf, 0, 1024);
 	
 	// sanity check, to see the status of interrupt source and enable
 	volatile unsigned int int_src = *(instance->hwregs+0x0);
 	volatile unsigned int int_en  = *(instance->hwregs+0x1);
-	//fprintf(stderr, "portal.instance[%d]: int_src=%08x int_en=%08x\n", i, int_src,int_en);
 
 	// handle all messasges from this portal instance
 	int messageReceived = instance->receiveMessage(msg);
