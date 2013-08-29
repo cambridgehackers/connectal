@@ -300,7 +300,7 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 static pthread_t fb_thread;
 static void *fb_thread_routine(void *data)
 {
-    PortalInterface::exec(0);
+    portalExec(0);
     return data;
 }
 
@@ -446,9 +446,9 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
             gralloc_dev->hdmiDisplay->hdmiLineCountMinMax((lmin + nlines - vsyncwidth) << 16 | (lmin - vsyncwidth));
             gralloc_dev->hdmiDisplay->hdmiPixelCountMinMax((pmin + npixels) << 16 | pmin);
 	    ALOGD("setting clock frequency %ld\n", 60l * (long)(pmin + npixels) * (long)(lmin + nlines));
-	    int status = PortalInterface::setClockFrequency(1,
-							    60l * (long)(pmin + npixels) * (long)(lmin + nlines),
-							    0);
+	    int status = PortalInstance::setClockFrequency(1,
+							   60l * (long)(pmin + npixels) * (long)(lmin + nlines),
+							   0);
 	    ALOGD("setClockFrequency returned %d", status);
             *device = &dev->common;
         }

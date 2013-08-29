@@ -24,5 +24,5 @@ int main(int argc, const char **argv)
     fprintf(stderr, "Setting period %ld\n", v);
     periodic->setPeriod(v);
     periodic->start();
-    PortalInterface::exec();
+    portalExec(0);
 }

@@ -43,5 +43,5 @@ int main(int argc, const char **argv)
     device->startTrace();
     device->waitForVsync(0);
 
-    PortalInterface::exec();
+    portalExec();
 }
