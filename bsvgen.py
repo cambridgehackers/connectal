@@ -197,11 +197,7 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 	if (addr == 12'h01C)
 	    v = overflowCount;
 	if (addr == 12'h020)
-	    v = (32'h68470000
-		 //| (responseFifo.notFull ? 32'h20 : 0) | (responseFifo.notEmpty ? 32'h10 : 0)
-		 //| (requestFifo.notFull ? 32'h02 : 0) | (requestFifo.notEmpty ? 32'h01 : 0)
-		 | extend(axiSlaveReadBurstCountReg)
-		 );
+	    v = (32'h68470000 | extend(axiSlaveReadBurstCountReg));
 	if (addr == 12'h024)
 	    v = putWordCount;
 	if (addr == 12'h028)
@@ -315,6 +311,16 @@ module mk%(Dut)sWrapper%(dut_hdmi_clock_param)s(%(Dut)sWrapper);
 endmodule
 '''
 
+# this used to sit in the requestRuleTemplate, but
+# support for impCondOf in bsc is questionable (mdk)
+#
+# // let success = impCondOf(%(dut)s.%(methodName)s(%(paramsForCall)s));
+# // if (success)
+# // %(dut)s.%(methodName)s(%(paramsForCall)s);
+# // else
+# // indications$Aug.putFailed(%(ord)s);
+
+
 requestRuleTemplate='''
     FromBit32#(%(MethodName)s$Request) %(methodName)s$requestFifo <- mkFromBit32();
     rule axiSlaveWrite$%(methodName)s if (axiSlaveWriteAddrFifo.first[16] == 1 && axiSlaveWriteAddrFifo.first[15:8] == %(methodName)s$Offset);
@@ -328,12 +334,6 @@ requestRuleTemplate='''
         %(methodName)s$requestFifo.deq;
         %(dut)s.%(methodName)s(%(paramsForCall)s);
         requestFiredWires[%(ord)s].send;
-        // support for impCondOf in bsc is questionable (mdk)
-        // let success = impCondOf(%(dut)s.%(methodName)s(%(paramsForCall)s));
-        // if (success)
-        // %(dut)s.%(methodName)s(%(paramsForCall)s);
-        // else
-        // indications$Aug.putFailed(%(ord)s);
     endrule
     rule handle$%(methodName)s$requestFailure;
         indications$Aug.putFailed(%(ord)s);

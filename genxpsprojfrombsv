@@ -172,41 +172,41 @@ if __name__=='__main__':
         #v.emitCImplementation(cpp)
 
     if (syntax.globalvars.has_key(namespace.interface)):
-        subinterface = syntax.globalvars[namespace.interface]
+        portalInterface = syntax.globalvars[namespace.interface]
 
-        for d in subinterface.decls:
-            if d.type == 'Interface':
-                if syntax.globalvars.has_key(d.name):
-                    subintdef = syntax.globalvars[d.name]
-                    print d.params
-                    newint = subintdef.instantiate({'a': d.params[0]})
-                    print newint
-                    for sd in newint.decls:
-                        sd.name = '%s.%s' % (d.name, sd.name)
-                        subinterface.decls.append(sd)
+        # for now, we assume that all portal and indication interfaces are 
+        # contained within the interfaces <namespace.interaface> 
+        # and <namespace.interaface>Indications respectively.  All top-level
+        # methods are assigned to portal[0] and portalIndications[0] respectively
+        # and all other sub-interface portal/Indication pairs are assigned 
+        # portal/portalIndication objects. The Bluespec code will see the original
+        # interface structure, but the C++ will see separate Portal/Indications
+        # objects and will invoke the interfaces as completely separate objects
+
+        # TODO: imlement this strategy (mdk)
 
         indicationInterfaceName = '%sIndications' % util.capitalize(namespace.interface)
         indicationInterface = syntax.globalvars[indicationInterfaceName]
-        subinterface.isIndication = False
+        portalInterface.isIndication = False
         indicationInterface.isIndication = True
         ## adding an error reporting channel to the indications interface for reporting 'put' errors
         indicationInterface.insertPutErrorMethod();
         ## assign the indication methods to the lower channel numbers
         indicationInterface.assignRequestResponseChannels()
-        subinterface.assignRequestResponseChannels(indicationInterface.channelCount)
+        portalInterface.assignRequestResponseChannels(indicationInterface.channelCount)
 
         indicationInterface.emitCDeclaration(h)
-        subinterface.emitCDeclaration(h)
+        portalInterface.emitCDeclaration(h)
         indicationInterface.emitCImplementation(cpp)
-        subinterface.emitCImplementation(cpp)
+        portalInterface.emitCImplementation(cpp)
 
-        subinterface.emitBsvImplementation(bsv)
-        subinterface.writeTopVerilog(topverilogname)
-        subinterface.writeUcf(ucfname, boardname)
-        subinterface.writeXdc(xdcname, boardname)
+        portalInterface.emitBsvImplementation(bsv)
+        portalInterface.writeTopVerilog(topverilogname)
+        portalInterface.writeUcf(ucfname, boardname)
+        portalInterface.writeXdc(xdcname, boardname)
         print 'Writing Android.mk', androidmkname
         print 'Writing Application.mk', applicationmkname
-        subinterface.writeAndroidMk(androidmkname, applicationmkname)
+        portalInterface.writeAndroidMk(androidmkname, applicationmkname)
 
     bsv.close()
     h.close()

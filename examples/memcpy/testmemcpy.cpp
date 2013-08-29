@@ -41,9 +41,6 @@ class TestMemcpyIndications : public MemcpyIndications
     fprintf(stderr, "reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
   }  
-  virtual void bluescopeTriggered(){
-    fprintf(stderr, "bluescopeTriggered\n");
-  }
   virtual void configResp(unsigned long chanId, unsigned long pa, unsigned long numWords){
     fprintf(stderr, "configResp %d, %lx, %d\n", chanId, pa, numWords);
   }
@@ -149,10 +146,6 @@ int main(int argc, const char **argv)
     device->configDmaReadChan(1, srcAlloc.entries[0].dma_address, 2);
     // write channel 1 is Bluescope desgination
     device->configDmaWriteChan(1, bsAlloc.entries[0].dma_address, 4);
-
-    // trigger bluescope half-way through the DMA transfer
-    device->configBluescope(srcGen-(numWords/2), 0xFFFF);
-
 
     fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
     	    srcAlloc.entries[0].dma_address,

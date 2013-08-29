@@ -600,13 +600,19 @@ def p_enumRange(p):
 def p_enumElement(p):
     '''enumElement : VAR enumRange
                    | VAR enumRange EQUAL NUM'''
+    p[0] = p[1]
 
 def p_enumElements(p):
     '''enumElements : enumElement
                     | enumElements COMMA enumElement'''
+    if len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[3]]
 
 def p_enumDef(p):
     '''enumDef : TOKENUM LBRACE enumElements RBRACE VAR deriving'''
+    p[0] = AST.Enum(p[5], p[3])
 
 def p_vars(p):
     '''vars : VAR
