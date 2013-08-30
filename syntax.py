@@ -677,12 +677,23 @@ def p_moduleDef(p):
     '''moduleDef : instanceAttributes TOKMODULE VAR moduleParamsArgs provisos SEMICOLON expressionStmts TOKENDMODULE colonVar'''
     p[0] = AST.Module(p[3], ['fixmemoduledefs'])
 
+def p_instanceDeclStmt(p):
+    '''instanceDeclStmt : varAssign SEMICOLON
+                        | functionDef
+                        | moduleDef'''
+    p[0] = p[1]
+
+def p_instanceDecl(p):
+    '''instanceDecl : TOKINSTANCE VAR HASH LPAREN typeParams RPAREN provisos SEMICOLON instanceDeclStmt TOKENDINSTANCE'''
+    p[0] = AST.TypeclassInstance(p[2], p[5], p[7], p[8])
+
 globaldecls = []
 globalvars = {}
 
 def p_packageStmt(p):
     '''packageStmt : interfaceDecl
                    | functionDef
+                   | instanceDecl
                    | varDecl SEMICOLON
                    | varAssign SEMICOLON
                    | moduleDef

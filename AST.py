@@ -48,6 +48,14 @@ class Interface:
                                  self.subinterfacename)
         return newInterface
 
+class TypeclassInstance:
+    def __init__(self, name, params, provisos, decl):
+        self.name = name
+        self.params = params
+        self.provisos = provisos
+        self.decl = decl
+        self.type = 'TypeclassInstance'
+
 class Module:
     def __init__(self, name, decls):
         self.type = 'Module'
