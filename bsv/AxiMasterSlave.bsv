@@ -22,6 +22,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Connectable::*;
 import RegFile::*;
 import BRAMFIFO::*;
 import FIFO::*;
@@ -964,3 +965,46 @@ module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Mas
    endinterface
 endmodule
 
+instance Connectable#(Axi3Master#(busWidth,busWidthBytes,12), Axi3Slave#(busWidth,busWidthBytes));
+    module mkConnection#(Axi3Master#(busWidth,busWidthBytes,12) m, Axi3Slave#(busWidth,busWidthBytes) s)(Empty);
+	Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
+	Bool verbose = True;
+
+	rule readAddr;
+	    Bit#(32) addr <-m.read.readAddr;
+	    let burstLen = m.read.readBurstLen;
+	    let burstWidth = m.read.readBurstWidth;
+	    let burstType = m.read.readBurstType;
+	    let burstProt = m.read.readBurstProt;
+	    let burstCache = m.read.readBurstCache;
+	    let arid = m.read.readId;
+	    s.read.readAddr(addr, burstLen, burstWidth, burstType, burstProt, burstCache, arid);
+	    if (verbose) $display("        MasterSlaveConnection.readAddr %h %d", addr, burstLen+1);
+	endrule
+	rule readData;
+	    let data <- s.read.readData();
+	    m.read.readData(data, 2'b00, 0, 0);
+	endrule
+	rule writeAddr;
+	    Bit#(32) addr <- m.write.writeAddr;
+	    let burstLen = m.write.writeBurstLen;
+	    let burstWidth = m.write.writeBurstWidth;
+	    let burstType = m.write.writeBurstType;
+	    let burstProt = m.write.writeBurstProt;
+	    let burstCache = m.write.writeBurstCache;
+	    let awid = m.write.writeId;
+	    s.write.writeAddr(addr, burstLen, burstWidth, burstType, burstProt, burstCache, awid);
+	endrule
+	rule writeData;
+	    let data <- m.write.writeData;
+	    let id = m.write.writeWid;
+	    let byteEnable = m.write.writeDataByteEnable;
+	    let last = m.write.writeLastDataBeat;
+	    s.write.writeData(data, byteEnable, last);
+	endrule
+	rule writeResponse;
+	    let response <- s.write.writeResponse();
+	    m.write.writeResponse(response, 0);
+	endrule
+    endmodule: mkConnection
+endinstance
