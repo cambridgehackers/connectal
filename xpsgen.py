@@ -1432,7 +1432,7 @@ class InterfaceMixin:
         buswidth = params[0].numeric()
         buswidthbytes = buswidth / 8
         print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3'), buswidth
-        dutName = util.decapitalize(self.name)
+        dutName = util.decapitalize(self.base)
         hpBusOffset = 0
         if buswidth == 32:
             ps7bustype = 'GP'
@@ -1462,7 +1462,7 @@ class InterfaceMixin:
         if not silent:
             print 'Writing top Verilog file', topverilogname
         topverilog = util.createDirAndOpen(topverilogname, 'w')
-        dutName = util.decapitalize(self.name)
+        dutName = util.decapitalize(self.base)
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         masterBusSubsts = [self.axiMasterBusSubst(busnumber,axiMasters[busnumber]) for busnumber in range(len(axiMasters))]
@@ -1483,7 +1483,7 @@ class InterfaceMixin:
             default_leds_assignment = '''assign GPIO_leds = 8'haa;'''
         substs = {
             'dut': dutName.lower(),
-            'Dut': util.capitalize(self.name),
+            'Dut': util.capitalize(self.base),
             'axi_master_parameters':
                 ''.join([axi_master_parameter_verilog_template % subst for subst in masterBusSubsts]),
             'axi_slave_parameters':
@@ -1532,7 +1532,7 @@ class InterfaceMixin:
         if not silent:
             print 'Writing UCF file', ucfname
         ucf = util.createDirAndOpen(ucfname, 'w')
-        dutName = util.decapitalize(self.name)
+        dutName = util.decapitalize(self.base)
         hdmiBus = self.collectInterfaceNames('HDMI')
         if len(hdmiBus):
             ucf.write(hdmi_ucf_template[boardname])
@@ -1546,7 +1546,7 @@ class InterfaceMixin:
         if not silent:
             print 'Writing XDC file', xdcname
         xdc = util.createDirAndOpen(xdcname, 'w')
-        dutName = util.decapitalize(self.name)
+        dutName = util.decapitalize(self.base)
         if not len(self.collectInterfaceNames('LEDS')):
             ## we always connect these pins to a default pattern
             for (name, pin, iostandard, direction) in led_pinout[boardname]:

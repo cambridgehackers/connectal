@@ -60,8 +60,8 @@ void PortalInstance::close()
     }    
 }
 
-PortalInstance::PortalInstance(const char *instanceName, PortalIndications *indications)
-  : hwregs(NULL), indications(indications), fd(-1), instanceName(strdup(instanceName))
+PortalInstance::PortalInstance(const char *instanceName, PortalIndication *indication)
+  : hwregs(NULL), indication(indication), fd(-1), instanceName(strdup(instanceName))
 {
 }
 
@@ -274,8 +274,8 @@ void* portalExec(void* __x)
 	int messageReceived = instance->receiveMessage(msg);
 	while (messageReceived) {
 	  //fprintf(stderr, "messageReceived: msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
-	  if (msg->size && instance->indications)
-	    instance->indications->handleMessage(msg);
+	  if (msg->size && instance->indication)
+	    instance->indication->handleMessage(msg);
 	  messageReceived = instance->receiveMessage(msg);
 	}
 

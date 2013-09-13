@@ -25,10 +25,10 @@ typedef struct PortalClockRequest {
     long actual_rate;
 } PortalClockRequest;
 
-class PortalIndications {
+class PortalIndication {
  public:
     virtual void handleMessage(PortalMessage *msg) { };
-    virtual ~PortalIndications() {};
+    virtual ~PortalIndication() {};
 };
 
 class PortalInstance {
@@ -37,9 +37,9 @@ public:
     void close();
     void dumpRegs();
 protected:
-    PortalIndications *indications;
+    PortalIndication *indication;
     int receiveMessage(PortalMessage *msg);
-    PortalInstance(const char *instanceName, PortalIndications *indications=0);
+    PortalInstance(const char *instanceName, PortalIndication *indication=0);
     ~PortalInstance();
     int open();
 private:

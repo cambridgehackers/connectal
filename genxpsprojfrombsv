@@ -8,6 +8,7 @@ import syntax
 import argparse
 import subprocess
 import util
+import re
 
 AST.Function.__bases__ += (cppgen.NoCMixin,)
 AST.Module.__bases__ += (cppgen.NoCMixin,)
@@ -22,8 +23,10 @@ AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin,xpsgen.I
 
 supported_boards = ['zedboard', 'zc702']
 
-argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
+requestIfcs = []
+indicationIfcs = []
 
+argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
 argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
 argparser.add_argument('-B', '--board', default='zc702', choices=supported_boards,
                        help='Board to generate stubs and ucf constraints for')
@@ -117,7 +120,7 @@ def write_vivado_strategies():
         print 'Writing vivado strategy file', k, ' to directory ', stratdir
         f = open(os.path.join(stratdir, k), 'w')
         f.write(vivado_strategies[k])
-        f.close()
+        f.close()    
 
 if __name__=='__main__':
     namespace = argparser.parse_args()
@@ -146,8 +149,6 @@ if __name__=='__main__':
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
     hname = os.path.join(project_dir, 'jni', '%s.h' % namespace.interface)
     cppname = os.path.join(project_dir, 'jni', '%s.cpp' % namespace.interface)
-    bsvname = os.path.join(project_dir, 'sources', dutname,
-                           '%sWrapper.bsv' % namespace.interface)
     topverilogname = os.path.join(project_dir, 'sources', 'top.v')
     ucfname = os.path.join(project_dir, 'data',
                            '%s.ucf' % dutname)
@@ -161,9 +162,6 @@ if __name__=='__main__':
     cpp.write('#include "%s.h"\n' % namespace.interface)
     cpp.write('#include <stdio.h>\n')
     cpp.write('#include <stdlib.h>\n')
-    print 'Writing BSV wrapper', bsvname
-    bsv = util.createDirAndOpen(bsvname, 'w')
-    bsvgen.emitPreamble(bsv, namespace.bsvfile)
 
     ## code generation pass
     for v in syntax.globaldecls:
@@ -171,44 +169,107 @@ if __name__=='__main__':
             v.emitCDeclaration(h)
         #v.emitCImplementation(cpp)
 
-    if (syntax.globalvars.has_key(namespace.interface)):
-        portalInterface = syntax.globalvars[namespace.interface]
+    def create_bsv_package(pname, files=[]):
+        fname = os.path.join(project_dir, 'sources', dutname, '%s.bsv' % pname)
+        bsv_file = util.createDirAndOpen(fname, 'w')
+        bsv_file.write('package %s;\n' % pname)
+        bsvgen.emitPreamble(bsv_file, namespace.bsvfile+files)
+        print 'Writing bsv file ', fname
+        return bsv_file
 
-        # for now, we assume that all portal and indication interfaces are 
-        # contained within the interfaces <namespace.interaface> 
-        # and <namespace.interaface>Indications respectively.  All top-level
-        # methods are assigned to portal[0] and portalIndications[0] respectively
-        # and all other sub-interface portal/Indication pairs are assigned 
-        # portal/portalIndication objects. The Bluespec code will see the original
-        # interface structure, but the C++ will see separate Portal/Indications
-        # objects and will invoke the interfaces as completely separate objects
+    def close_bsv_package(bsv_file, pname):
+        bsv_file.write('endpackage: %s' % pname)
+        bsv_file.close()
 
-        # TODO: imlement this strategy (mdk)
+    topRequestIfcName = '%sRequest' % util.capitalize(namespace.interface)
+    topIndicationIfcName = '%sIndication' % util.capitalize(namespace.interface)
 
-        indicationInterfaceName = '%sIndications' % util.capitalize(namespace.interface)
-        indicationInterface = syntax.globalvars[indicationInterfaceName]
-        portalInterface.isIndication = False
-        indicationInterface.isIndication = True
-        ## adding an error reporting channel to the indications interface for reporting 'put' errors
-        indicationInterface.insertPutErrorMethod();
-        ## assign the indication methods to the lower channel numbers
-        indicationInterface.assignRequestResponseChannels()
-        portalInterface.assignRequestResponseChannels(indicationInterface.channelCount)
+    if (syntax.globalvars.has_key(topRequestIfcName)):
+        topRequestIfc = syntax.globalvars[topRequestIfcName]
+        topIndicationIfc = syntax.globalvars[topIndicationIfcName]
+        topRequestIfc.isIndication = False
+        topIndicationIfc.isIndication = True
+        topRequestIfc.top = True
+        topIndicationIfc.top = True
+        topRequestIfc.ind = topIndicationIfc
+        topRequestIfc.base = namespace.interface
 
-        indicationInterface.emitCDeclaration(h)
-        portalInterface.emitCDeclaration(h)
-        indicationInterface.emitCImplementation(cpp)
-        portalInterface.emitCImplementation(cpp)
+        # this is a primitive way of detecting the subinterfaces
+        # which will be assigned their own request interface.  In 
+        # the future I will add code which examines the actual type
+        for d in topRequestIfc.decls:
+            if d.type == 'Interface':
+                if syntax.globalvars.has_key(d.name):
+                    subintdef = syntax.globalvars[d.name]
+                    newint = subintdef.instantiate(dict(zip(subintdef.params, d.params)))
+                    newint.top = False
+                    newint.isIndication = False
+                    requestIfcs.append(newint)
 
-        portalInterface.emitBsvImplementation(bsv)
-        portalInterface.writeTopVerilog(topverilogname)
-        portalInterface.writeUcf(ucfname, boardname)
-        portalInterface.writeXdc(xdcname, boardname)
+        # same comment as above
+        for d in topIndicationIfc.decls:
+            if d.type == 'Interface':
+                if syntax.globalvars.has_key(d.name):
+                    subintdef = syntax.globalvars[d.name]
+                    newint = subintdef.instantiate(dict(zip(subintdef.params, d.params)))
+                    newint.top = False
+                    newint.isIndication = True
+                    indicationIfcs.append(newint)
+
+        # find the corresponding indication interafce.  we are currently relying
+        # on a naming convention, but we might relax this at some point
+        assert(len(indicationIfcs) == len(requestIfcs))
+        for d0 in requestIfcs:
+            base = re.sub('Request', '', d0.name)
+            for d1 in indicationIfcs:
+                if d1.name == ('%sIndication' % base ):
+                    d0.ind = d1
+                    break
+
+        wrapper_files = []
+        portalNum = 0;
+        for d in requestIfcs:
+            # adding an error reporting channel to the indication interface for reporting 'put' errors
+            d.ind.insertPutErrorMethod();
+            # assign the indication methods to the lower channel numbers
+            d.assignRequestResponseChannels()
+            d.ind.assignRequestResponseChannels()
+            
+            d.portalNum = portalNum
+            d.ind.portalNum = portalNum
+            portalNum = portalNum+1
+            
+            d.ind.emitCDeclaration(h)
+            d.emitCDeclaration(h)
+            d.ind.emitCImplementation(cpp)
+            d.emitCImplementation(cpp)            
+            
+            ind_pname = '%sWrapper' % d.ind.name
+            ind_wrapper_file = create_bsv_package(ind_pname)
+            d.ind.emitBsvImplementation(ind_wrapper_file)
+            close_bsv_package(ind_wrapper_file, ind_pname)
+            wrapper_files.append('%s.bsv' % ind_pname)
+
+            req_pname = '%sWrapper' % d.name
+            rec_wrapper_file = create_bsv_package(req_pname, ['%s.bsv' % ind_pname])
+            d.emitBsvImplementation(rec_wrapper_file)
+            close_bsv_package(rec_wrapper_file, req_pname)
+            wrapper_files.append('%s.bsv' % req_pname)
+
+        top_pname = '%sWrapper' % util.capitalize(namespace.interface)
+        top_bsv_file = create_bsv_package(top_pname, wrapper_files)
+        topRequestIfc.numPortals = portalNum
+        topRequestIfc.writeTopBsv(top_bsv_file)
+        close_bsv_package(top_bsv_file, top_pname)
+
+        topRequestIfc.writeTopVerilog(topverilogname)
+        topRequestIfc.writeUcf(ucfname, boardname)
+        topRequestIfc.writeXdc(xdcname, boardname)
         print 'Writing Android.mk', androidmkname
         print 'Writing Application.mk', applicationmkname
-        portalInterface.writeAndroidMk(androidmkname, applicationmkname)
+        topRequestIfc.writeAndroidMk(androidmkname, applicationmkname)
 
-    bsv.close()
+
     h.close()
     cpp.close()
 

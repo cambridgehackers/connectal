@@ -7,7 +7,8 @@
 #include <semaphore.h>
 #include <pthread.h>
 
-Memcpy *device = 0;
+CoreRequest *device = 0;
+BlueScopeRequest *bluescope = 0;
 PortalAlloc srcAlloc;
 PortalAlloc dstAlloc;
 PortalAlloc bsAlloc;
@@ -33,40 +34,13 @@ void dump(const char *prefix, char *buf, size_t len)
     fprintf(stderr, "\n");
 }
 
-class TestMemcpyIndications : public MemcpyIndications
+class TestCoreIndication : public CoreIndication
 {
-  virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
-			      unsigned long streamWrCnt, unsigned long writeInProg, 
-			      unsigned long dataMismatch){
-    fprintf(stderr, "reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
-	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
-  }  
-  virtual void configResp(unsigned long chanId, unsigned long pa, unsigned long numWords){
-    fprintf(stderr, "configResp %d, %lx, %d\n", chanId, pa, numWords);
-  }
-  virtual void readAddr(unsigned long v){
-    fprintf(stderr, "readAddr %lx\n", v);
-  }
-  virtual void triggerEvent(unsigned long v){
-    fprintf(stderr, "triggerEvent %lx\n", v);
-  }
-  virtual void readReq(unsigned long v){
-    fprintf(stderr, "readReq %lx\n", v);
-  }
-  virtual void writeReq(unsigned long v){
-    fprintf(stderr, "writeReq %lx\n", v);
-  }
-  virtual void writeAck(unsigned long v){
-    fprintf(stderr, "writeAck %lx\n", v);
-  }
   virtual void started(unsigned long words){
     fprintf(stderr, "started: words=%lx\n", words);
   }
   virtual void readWordResult ( unsigned long long v ){
     dump("readWordResult: ", (char*)&v, sizeof(v));
-  }
-  virtual void rData ( unsigned long long v ){
-    dump("rData: ", (char*)&v, sizeof(v));
   }
   virtual void done(unsigned long v) {
     unsigned int mcf = memcmp(srcBuffer, dstBuffer, size);
@@ -83,6 +57,34 @@ class TestMemcpyIndications : public MemcpyIndications
       exit(0);
     }
   }
+  virtual void rData ( unsigned long long v ){
+    dump("rData: ", (char*)&v, sizeof(v));
+  }
+  virtual void readReq(unsigned long v){
+    fprintf(stderr, "readReq %lx\n", v);
+  }
+  virtual void writeReq(unsigned long v){
+    fprintf(stderr, "writeReq %lx\n", v);
+  }
+  virtual void writeAck(unsigned long v){
+    fprintf(stderr, "writeAck %lx\n", v);
+  }
+  virtual void configResp(unsigned long chanId, unsigned long pa, unsigned long numWords){
+    fprintf(stderr, "configResp %d, %lx, %d\n", chanId, pa, numWords);
+  }
+  virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
+			      unsigned long streamWrCnt, unsigned long writeInProg, 
+			      unsigned long dataMismatch){
+    fprintf(stderr, "reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
+	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
+  }  
+};
+
+class TestBlueScopeIndication : public BlueScopeIndication
+{
+  virtual void triggerFired( ){
+    fprintf(stderr, "triggerFired\n");
+  }
 };
 
 // we can use the data synchronization barrier instead of flushing the 
@@ -98,7 +100,8 @@ int main(int argc, const char **argv)
   unsigned int srcGen = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  device = Memcpy::createMemcpy("fpga0", new TestMemcpyIndications);
+  device = CoreRequest::createCoreRequest("fpga0", new TestCoreIndication);
+  bluescope = BlueScopeRequest::createBlueScopeRequest("fpga0", new TestBlueScopeIndication);
 
   if(sem_init(&sem, 1, 1)){
     fprintf(stderr, "failed to init sem\n");

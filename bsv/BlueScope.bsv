@@ -30,41 +30,35 @@ import GetPut::*;
 import AxiDMA::*;
 import ClientServer::*;
 
-interface BlueScopeIndications;
+interface BlueScopeIndication;
    method Action triggerFired();
 endinterface
 
-interface BlueScope#(numeric type dataWidth, numeric type triggerWidth);
+interface BlueScopeRequest;
    method Action start();
    method Action reset();
-   method Action setTriggerMask(Bit#(triggerWidth) mask);
-   method Action setTriggerValue(Bit#(triggerWidth) value);
+   method Action setTriggerMask(Bit#(64) mask);
+   method Action setTriggerValue(Bit#(64) value);
 endinterface
 
-interface BlueScopeInternal#(numeric type dataWidth, numeric type triggerWidth);
-   method Action dataIn(Bit#(dataWidth) d, Bit#(triggerWidth) t);
-   interface BlueScope#(dataWidth, triggerWidth) portalIfc;
+interface BlueScopeInternal;
+   method Action dataIn(Bit#(64) d, Bit#(64) t);
+   interface BlueScopeRequest requestIfc;
 endinterface
 
 typedef enum { Idle, Enabled, Triggered } State deriving (Bits,Eq);
 
-module mkBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndications indications)(BlueScopeInternal#(dataWidth,triggerWidth))
-   provisos (Add#(dataWidth,0,64),
-	     Add#(triggerWidth,0,64));
+module mkBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndication indication)(BlueScopeInternal);
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
-   let rv  <- mkSyncBlueScopeInternal(samples, wchan, indications, clk, rst, clk,rst);
+   let rv  <- mkSyncBlueScopeInternal(samples, wchan, indication, clk, rst, clk,rst);
    return rv;
 endmodule
 
-module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndications indications, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScopeInternal#(dataWidth, triggerWidth)) 
-   provisos (Add#(dataWidth,0,64),
-	     Add#(triggerWidth,0,64));
-
-   SyncFIFOIfc#(Bit#(dataWidth)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
-
-   Reg#(Bit#(triggerWidth))    maskReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
-   Reg#(Bit#(triggerWidth))   valueReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
+module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScopeInternal);
+   SyncFIFOIfc#(Bit#(64)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
+   Reg#(Bit#(64))    maskReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
+   Reg#(Bit#(64))   valueReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
    Reg#(State)                stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
@@ -84,11 +78,11 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
    endrule
    
    rule trigger;
-      indications.triggerFired;
+      indication.triggerFired;
       tfifo.deq;
    endrule
    
-   method Action dataIn(Bit#(dataWidth) data, Bit#(triggerWidth) trigger) if (stateReg != Idle);
+   method Action dataIn(Bit#(64) data, Bit#(64) trigger) if (stateReg != Idle);
       let e = False;
       let s = stateReg;
       let c = countReg;
@@ -135,7 +129,7 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
       stateReg <= s;
    endmethod
    
-   interface BlueScope portalIfc;
+   interface BlueScopeRequest requestIfc;
       method Action start();
 	 stateReg <= Enabled;
       endmethod
@@ -145,11 +139,11 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
 	 countReg <= 0;
       endmethod
 
-      method Action setTriggerMask(Bit#(triggerWidth) mask);
+      method Action setTriggerMask(Bit#(64) mask);
 	 maskReg <= mask;
       endmethod
 
-      method Action setTriggerValue(Bit#(triggerWidth) value);
+      method Action setTriggerValue(Bit#(64) value);
 	 valueReg <= value;
       endmethod
    endinterface

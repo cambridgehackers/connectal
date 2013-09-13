@@ -23,18 +23,18 @@ include $(BUILD_EXECUTABLE)
 classPrefixTemplate='''
 class %(namespace)s%(className)s : public PortalInstance {
 public:
-    static %(className)s *create%(className)s(const char *instanceName, %(className)sIndications *indications=0);
+    static %(className)s *create%(className)s(const char *instanceName, %(indicationName)s *indication=0);
     static char* methodName(unsigned long v);
 '''
 classSuffixTemplate='''
 protected:
-    %(className)s(const char *instanceName, %(className)sIndications *indications=0);
+    %(className)s(const char *instanceName, %(indicationName)s *indication=0);
     ~%(className)s();
 };
 '''
 
 indicationClassPrefixTemplate='''
-class %(namespace)s%(className)s : public PortalIndications {
+class %(namespace)s%(className)s : public PortalIndication {
 public:
     %(className)s();
     virtual ~%(className)s();
@@ -48,29 +48,26 @@ protected:
 
 
 creatorTemplate = '''
-%(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName, %(className)sIndications *indications)
+%(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName, %(indicationName)s *indication)
 {
-    %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indications);
+    %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indication);
     instance->open();
     return instance;
 }
 '''
 
 methodNameTemplate = '''
-static char* methodNameStrings[] = 
-{
-   %(methodNames)s
-};
 
 char* %(namespace)s%(className)s::methodName(unsigned long idx)
 {
+   char* methodNameStrings[] = {%(methodNames)s};
    return methodNameStrings[idx];
 }
 '''
 
 constructorTemplate='''
-%(namespace)s%(className)s::%(className)s(const char *instanceName, %(className)sIndications *indications)
- : PortalInstance(instanceName, indications)%(initializers)s
+%(namespace)s%(className)s::%(className)s(const char *instanceName, %(indicationName)s *indication)
+ : PortalInstance(instanceName, indication)%(initializers)s
 {
 }
 %(namespace)s%(className)s::~%(className)s()
@@ -267,39 +264,32 @@ class InterfaceMixin:
         meth_type = AST.Type("Action",[])
         meth_formal_params = [AST.Param("v", AST.Type("Bit",[AST.Type(32,[])]))]
         self.decls = self.decls + [AST.Method(meth_name, meth_type, meth_formal_params,True)]
-    def assignRequestResponseChannels(self, channelNumber=0, ord=0):
+    def assignRequestResponseChannels(self, channelNumber=0):
         for d in self.decls:
-            if d.__class__ == AST.Interface:
-                i = self.getSubinterface(d.name)
-                if not i:
-                    continue
-                d.baseChannelNumber = channelNumber
-                channelNumber = channelNumber + i.channelCount 
-            elif d.__class__ == AST.Method:
+            if d.__class__ == AST.Method:
                 d.channelNumber = channelNumber
                 channelNumber = channelNumber + 1
-            d.ord = ord
-            ord = ord+1
         self.channelCount = channelNumber
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
         self.toplevel = (indentation == 0)
         name = cName(self.name)
         indent(f, indentation)
+        subs = {'className': name,
+                'namespace': namespace}
         if self.isIndication:
             prefixTemplate = indicationClassPrefixTemplate
             suffixTemplate= indicationClassSuffixTemplate
         else:
             prefixTemplate = classPrefixTemplate
             suffixTemplate = classSuffixTemplate
-        f.write(prefixTemplate % {'className': name,
-                                  'namespace': namespace})
+            subs['indicationName'] = self.ind.name
+        f.write(prefixTemplate % subs)
         for d in self.decls:
             if d.type == 'Interface':
                 continue
             d.isIndication = self.isIndication
             d.emitCDeclaration(f, indentation + 4, name, namespace)
-        f.write(suffixTemplate % {'className': name,
-                                  'namespace': namespace})
+        f.write(suffixTemplate % subs)
         return
     def emitCImplementation(self, f, parentClassName='', namespace=''):
         if parentClassName:
@@ -313,7 +303,8 @@ class InterfaceMixin:
 
         substitutions = {'namespace': namespace,
                          'className': className,
-                         'instName' : className.replace('Indications', ''),
+                         # this is a horrible hack (mdk)
+                         'instName' : className.replace('Indication', 'Request'),
                          'responseCases': ''.join([ '    case %(channelNumber)s: %(name)s(%(params)s); break;\n'
                                                    % { 'channelNumber': d.channelNumber,
                                                        'name': d.name,
@@ -342,6 +333,7 @@ class InterfaceMixin:
         ##                                      % ', '.join([ '%s(p)' % i for i in subinterfaces]))
         if self.toplevel:
             if not self.isIndication:
+                substitutions['indicationName'] = self.ind.name
                 f.write(creatorTemplate % substitutions)
                 f.write(methodNameTemplate % substitutions)
         if self.isIndication:
@@ -351,7 +343,7 @@ class InterfaceMixin:
         return
     def writeAndroidMk(self, androidmkname, applicationmkname, silent=False):
         f = util.createDirAndOpen(androidmkname, 'w')
-        className = cName(self.name)
+        className = cName(self.base)
         substs = {
             'ClassName': className,
             'classname': className.lower()

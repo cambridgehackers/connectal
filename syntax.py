@@ -417,7 +417,7 @@ def p_interfaceStmts(p):
 
 def p_interfaceDecl(p):
     '''interfaceDecl : instanceAttributes TOKINTERFACE VAR interfaceHashParams SEMICOLON interfaceStmts TOKENDINTERFACE colonVar'''
-    interface = AST.Interface(p[3], p[4], p[6])
+    interface = AST.Interface(p[3], p[4], p[6], None)
     p[0] = interface
 
 def p_varDecl(p):

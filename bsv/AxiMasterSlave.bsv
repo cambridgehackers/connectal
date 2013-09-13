@@ -121,7 +121,6 @@ endinterface
 interface Axi3SlaveRead#(type busWidth, type busWidthBytes);
    method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
                           Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid);
-
    method ActionValue#(Bit#(busWidth)) readData();
    method Bit#(1) last();
    method Bit#(12) rid();

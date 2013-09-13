@@ -10,10 +10,11 @@ class Method:
         sparams = [p.__repr__() for p in self.params]
         return '<method: %s %s %s>' % (self.name, self.return_type, sparams)
     def instantiate(self, paramBindings):
-        print 'instantiate method', self.name, self.params
+        #print 'instantiate method', self.name, self.params
         return Method(self.name,
                       self.return_type.instantiate(paramBindings),
-                      [ p.instantiate(paramBindings) for p in self.params])
+                      [ p.instantiate(paramBindings) for p in self.params],
+                      self.aug)
 
 class Function:
     def __init__(self, name, return_type, params):
@@ -34,12 +35,14 @@ class Variable:
         return '<variable: %s : %s>' % (self.name, self.type)
 
 class Interface:
-    def __init__(self, name, params, decls, subinterfacename=None):
+    def __init__(self, name, params, decls, subinterfacename):
         self.type = 'Interface'
         self.name = name
         self.params = params
         self.decls = decls
         self.subinterfacename = subinterfacename
+    def interfaceType(self):
+        return Type(self.name,self.params)
     def __repr__(self):
         return '{interface: %s (%s)}' % (self.name, [p.__repr__() for p in self.params])
     def instantiate(self, paramBindings):
@@ -123,7 +126,7 @@ class Type:
         sparams = map(str, self.params)
         return '{type: %s %s}' % (self.name, sparams)
     def instantiate(self, paramBindings):
-        print 'instantiate', self.name
+        #print 'instantiate', self.name
         if paramBindings.has_key(self.name):
             return paramBindings[self.name]
         else:
