@@ -17,6 +17,7 @@ typedef struct PortalAlloc {
 typedef struct PortalMessage {
     size_t size;
     size_t channel;
+    size_t portal_num;
 } PortalMessage;
 
 typedef struct PortalClockRequest {

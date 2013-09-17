@@ -29,6 +29,7 @@ import FIFOF::*;
 import FIFOLevel::*;
 import SpecialFIFOs::*;
 import AxiClientServer::*;
+import Vector::*;
 
 interface AxiMasterRead#(type busWidth);
    method ActionValue#(Bit#(32)) readAddr();
@@ -157,6 +158,53 @@ typedef struct {
     Bit#(32) addr;
     Bit#(8) numWords;
 } AddrBurst deriving (Bits);
+
+
+module mkAxiSlaveMux#(Vector#(numInputs,Axi3Slave#(busWidth,busWidthBytes)) inputs) (Axi3Slave#(busWidth, busWidthBytes))
+   provisos(Add#(a__, TLog#(numInputs), 4));
+
+   Reg#(Bit#(TLog#(numInputs))) ws <- mkReg(0);
+   Reg#(Bit#(TLog#(numInputs))) rs <- mkReg(0);
+   
+   interface Axi3SlaveWrite write;
+      method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
+			      Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache,
+			      Bit#(12) awid);
+	 Bit#(TLog#(numInputs)) wsv = truncate(addr[19:16]); 
+	 inputs[wsv].write.writeAddr(addr,burstLen,burstWidth,burstType,burstProt,burstCache,awid);
+	 ws <= wsv;
+      endmethod
+      method Action writeData(Bit#(busWidth) v, Bit#(busWidthBytes) byteEnable, Bit#(1) last);
+	 inputs[ws].write.writeData(v,byteEnable,last);
+      endmethod
+      method ActionValue#(Bit#(2)) writeResponse();
+	 let rv <- inputs[ws].write.writeResponse;
+	 return rv;
+      endmethod
+      method ActionValue#(Bit#(12)) bid();
+	 let rv <- inputs[ws].write.bid;
+	 return rv;
+      endmethod
+   endinterface
+   interface Axi3SlaveRead read;
+      method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
+			     Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid);
+	 Bit#(TLog#(numInputs)) rsv = truncate(addr[19:16]); 
+	 inputs[rsv].read.readAddr(addr,burstLen,burstWidth,burstType,burstProt,burstCache,arid);
+	 rs <= rsv;
+      endmethod
+      method Bit#(1) last();
+	 return inputs[rs].read.last;
+      endmethod
+      method Bit#(12) rid();
+         return inputs[rs].read.rid;
+      endmethod
+      method ActionValue#(Bit#(busWidth)) readData();
+	 let rv <- inputs[rs].read.readData;
+	 return rv;
+      endmethod
+   endinterface
+endmodule
 
 module mkAxiMasterServer(AxiMasterServer#(busWidth,busWidthBytes,tagSize)) provisos(Div#(busWidth,8,busWidthBytes),Add#(1,a,busWidth));
    Reg#(Bit#(32)) wAddrReg <- mkReg(0);
@@ -915,3 +963,4 @@ module mkAxi3Master#(Axi3Client#(busWidth,busWidthBytes,idWidth) client)(Axi3Mas
 	endmethod
    endinterface
 endmodule
+

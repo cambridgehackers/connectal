@@ -364,7 +364,8 @@ module %(dut)s_top_1
 parameter C_FAMILY = "virtex6";
 
   wire GND_1;
-  wire %(dut)s_1_interrupt;
+%(interrupt_wire_decls)s
+
 %(top_axi_master_wires)s
 %(top_axi_slave_wires)s
 %(top_bus_wires)s
@@ -412,8 +413,7 @@ mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
       %(dut_axi_master_port_map)s
       %(dut_axi_slave_port_map)s
       %(dut_bus_port_map)s
-
-      .interrupt(%(dut)s_1_interrupt)
+      %(dut_interrupt_map)s
       );
 
 %(axi_master_scheduler)s
@@ -421,22 +421,7 @@ mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
 %(bus_assignments)s
 
 wire [15:0] irq_f2p;
-assign irq_f2p[15] = %(dut)s_1_interrupt;
-assign irq_f2p[14] = %(dut)s_1_interrupt;
-assign irq_f2p[13] = %(dut)s_1_interrupt;;
-assign irq_f2p[12] = %(dut)s_1_interrupt;
-assign irq_f2p[11] = %(dut)s_1_interrupt;;
-assign irq_f2p[10] = %(dut)s_1_interrupt;
-assign irq_f2p[9] = %(dut)s_1_interrupt;;
-assign irq_f2p[8] = %(dut)s_1_interrupt;
-assign irq_f2p[7] = %(dut)s_1_interrupt;;
-assign irq_f2p[6] = %(dut)s_1_interrupt;
-assign irq_f2p[5] = %(dut)s_1_interrupt;;
-assign irq_f2p[4] = %(dut)s_1_interrupt;
-assign irq_f2p[3] = %(dut)s_1_interrupt;;
-assign irq_f2p[2] = %(dut)s_1_interrupt;
-assign irq_f2p[1] = %(dut)s_1_interrupt;;
-assign irq_f2p[0] = %(dut)s_1_interrupt;
+%(irq_f2p_assignments)s
 
 processing_system7#(.C_NUM_F2P_INTR_INPUTS(16))
  processing_system7_1
@@ -1522,11 +1507,26 @@ class InterfaceMixin:
             'bus_assignments': ''.join([''.join([busHandlers[busType].bus_assignments(busname,t,params)
                                                  for (busname,t,params) in buses[busType]])
                                         for busType in busHandlers]),
-            'default_leds_assignment': default_leds_assignment
+            'default_leds_assignment': default_leds_assignment,
+            'irq_f2p_assignments': ''.join(self.collectInterrupts()),
+            'dut_interrupt_map' : ''.join(util.intersperse(',\n      ', 
+                                                      ['.interrupts_%s__read(%s_%s_interrupt)' % (x,dutName,x) for x in range (0,self.numPortals)])),
+            'interrupt_wire_decls' : ''.join(['  wire %s_%s_interrupt;\n' % (dutName,x) for x in range(0,self.numPortals)])
             }
         topverilog.write(top_verilog_template % substs)
         topverilog.close()
         return
+    
+    def collectInterrupts(self):
+        dutName = util.decapitalize(self.base)
+        rv = []
+        for x in range(0,15):
+            if self.numPortals > x:
+                rv.append('assign irq_f2p[%s] = %s_%s_interrupt;\n' % (x,dutName,x))
+            else:
+                rv.append('assign irq_f2p[%s] = 0;\n' % (x))
+        return rv
+
 
     def writeUcf(self, ucfname, boardname='zc702', silent=False):
         if not silent:

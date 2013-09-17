@@ -33,7 +33,7 @@ exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'FmcImageonInterface']
 topInterfaceTemplate='''
 interface %(Base)sWrapper;
     interface Axi3Slave#(32,4) ctrl;
-    method Bit#(1) interrupt;
+    interface Vector#(%(numPortals)s,ReadOnly#(Bit#(1))) interrupts;
 %(axiSlaveDeclarations)s
 %(axiMasterDeclarations)s
 %(exposedInterfaceDeclarations)s
@@ -45,7 +45,6 @@ requestWrapperInterfaceTemplate='''
 interface %(Dut)sWrapper;
 %(axiSlaveDeclarations)s
 %(axiMasterDeclarations)s
-%(exposedInterfaceDeclarations)s
 endinterface
 '''
 
@@ -225,8 +224,11 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
                 axiSlaveWriteDataFifos[axiSlaveWS].enq(v);
 
                 putWordCount <= putWordCount + 1;
-                axiSlaveBrespFifo.enq(0);
-                axiSlaveBidFifo.enq(axiSlaveWriteIdReg);
+                if (last == 1'b1)
+                begin
+                    axiSlaveBrespFifo.enq(0);
+                    axiSlaveBidFifo.enq(axiSlaveWriteIdReg);
+                end
             endmethod
             method ActionValue#(Bit#(2)) writeResponse();
                 axiSlaveBrespFifo.deq;
@@ -333,21 +335,11 @@ module mk%(Dut)sWrapper#(%(Dut)s %(dut)s, %(Indication)sWrapper iw)(%(Dut)sWrapp
 %(axiMasterModules)s
 %(axiSlaveImplementations)s
 %(axiMasterImplementations)s
-%(exposedInterfaceImplementations)s
 endmodule
 '''
 
 mkTopTemplate='''
-
 module mk%(Base)sWrapper(%(Base)sWrapper);
-
-    // if the Bluespec compiler supported escaped primitive operators
-    // a they claim to, we could avoid these silly functions (mdk)
-    function Bit#(1) my_read(ReadOnly#(Bit#(1)) x) = x._read;
-    function Bit#(1) my_or(Bit#(1) a, Bit#(1) b) = a | b;
-
-
-
     Reg#(Bit#(TLog#(%(numPortals)s))) axiSlaveWS <- mkReg(0);
     Reg#(Bit#(TLog#(%(numPortals)s))) axiSlaveRS <- mkReg(0); 
 %(indicationWrappers)s
@@ -355,62 +347,16 @@ module mk%(Base)sWrapper(%(Base)sWrapper);
     %(Dut)s %(dut)s <- mk%(Dut)s(%(dut_hdmi_clock_arg)s indication);
 %(axiMasterModules)s
 %(requestWrappers)s
-
-    Vector#(%(numPortals)s,Axi3Slave#(32,4)) ctrls;
-    Vector#(%(numPortals)s,ReadOnly#(Bit#(1))) interrupts;
-
+    Vector#(%(numPortals)s,Axi3Slave#(32,4)) ctrls_v;
+    Vector#(%(numPortals)s,ReadOnly#(Bit#(1))) interrupts_v;
 %(connectIndicationCtrls)s
 %(connectIndicationInterrupts)s
+    let ctrl_mux <- mkAxiSlaveMux(ctrls_v);
 %(axiSlaveImplementations)s
 %(axiMasterImplementations)s
 %(exposedInterfaceImplementations)s
-
-
-    method Bit#(1) interrupt();
-        return fold(my_or, map(my_read,interrupts));
-    endmethod
-
-    interface Axi3Slave ctrl;
-        interface Axi3SlaveWrite write;
-            method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                    Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache,
-				    Bit#(12) awid);
-                Bit#(TLog#(%(numPortals)s)) ws = truncate(addr[19:16]);
-                axiSlaveWS <= ws;
-                ctrls[ws].write.writeAddr(addr, burstLen, burstWidth, burstType, burstProt, burstCache, awid);
-            endmethod
-            method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last);
-                ctrls[axiSlaveWS].write.writeData(v, byteEnable, last);
-            endmethod
-            method ActionValue#(Bit#(2)) writeResponse();
-                let rv <- ctrls[axiSlaveWS].write.writeResponse();
-                return rv;
-            endmethod
-            method ActionValue#(Bit#(12)) bid();
-                let rv <- ctrls[axiSlaveWS].write.bid();
-                return rv;
-            endmethod
-        endinterface
-        interface Axi3SlaveRead read;
-            method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid);
-                Bit#(TLog#(%(numPortals)s)) rs = truncate(addr[19:16]);
-                axiSlaveRS <= rs;
-                ctrls[rs].read.readAddr(addr, burstLen, burstWidth, burstType, burstProt, burstCache, arid);
-            endmethod
-            method Bit#(1) last();
-                return ctrls[axiSlaveRS].read.last();
-            endmethod
-            method Bit#(12) rid();
-                return ctrls[axiSlaveRS].read.rid();
-            endmethod
-            method ActionValue#(Bit#(32)) readData();
-                let rv <- ctrls[axiSlaveRS].read.readData();
-                return rv;
-            endmethod
-        endinterface
-    endinterface
-
+    interface ctrl = ctrl_mux;
+    interface Vector interrupts = interrupts_v;
 endmodule
 '''
 
@@ -619,9 +565,6 @@ class InterfaceMixin:
             'exposedInterfaceImplementations': '\n'.join(['\n'.join(['    interface %s %s = %s.%s;' % (t, busname, dutName, busname)
                                                                      for (busname,t,params) in buses[busType]])
                                                           for busType in exposedInterfaces]),
-            'queuesNotEmpty': '\n'.join(['                    v[%d] = %s$%s.notEmpty ? 1 : 0;'
-                                        % (i, methods[i].name, 'requestFifo' if not self.isIndication else 'responseFifo')
-                                         for i in range(len(methods))]),
             'Indication' : self.ind.name,
             'numPortals' : self.numPortals,
             'indicationWrappers' : ''.join(indicationWrappers),
@@ -642,7 +585,7 @@ class InterfaceMixin:
         portalNum = 0
         for d in self.ind.decls:
             if d.type == 'Interface':
-                rv.append('    interrupts[%s] = %sWrapper.interrupt;\n' % (portalNum, d.subinterfacename))
+                rv.append('    interrupts_v[%s] = %sWrapper.interrupt;\n' % (portalNum, d.subinterfacename))
                 portalNum = portalNum+1
         return ''.join(rv)
 
@@ -651,7 +594,7 @@ class InterfaceMixin:
         portalNum = 0
         for d in self.ind.decls:
             if d.type == 'Interface':
-                rv.append('    ctrls[%s] = %sWrapper.ctrl;\n' % (portalNum, d.subinterfacename))
+                rv.append('    ctrls_v[%s] = %sWrapper.ctrl;\n' % (portalNum, d.subinterfacename))
                 portalNum = portalNum+1
         return ''.join(rv)
 
@@ -698,16 +641,6 @@ class InterfaceMixin:
         ledInterfaces = self.collectInterfaceNames('LEDS')
         dutName = util.decapitalize(self.name)
         methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
-        buses = {}
-        clknames = []
-        for busType in exposedInterfaces:
-            collected = self.collectInterfaceNames(busType)
-            if collected:
-                if busType == 'HDMI':
-                    clknames.append('hdmi_clk')
-            buses[busType] = collected
-        # print 'clknames', clknames
-
         substs = {
             'dut': dutName,
             'Dut': util.capitalize(self.name),
@@ -719,25 +652,13 @@ class InterfaceMixin:
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
                                                for (axiSlave,t,params) in axiSlaves]),
-            'exposedInterfaceDeclarations':
-                '\n'.join(['\n'.join(['    interface %s %s;' % (t, util.decapitalize(busname))
-                                      for (busname,t,params) in buses[busType]])
-                           for busType in exposedInterfaces]),
             'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
                                            % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster,dutName,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
             'axiMasterImplementations': '\n'.join(['    interface Axi3Master %s = %sMaster;' % (axiMaster,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
-            'dut_hdmi_clock_param': '#(%s)' % ', '.join(['Clock %s' % name for name in clknames]) if len(clknames) else '',
-            'dut_hdmi_clock_arg': ' '.join(['%s,' % name for name in clknames]) if len(clknames) else '',
             'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
                                                   for (axiSlave,t,params) in axiSlaves]),
-            'exposedInterfaceImplementations': '\n'.join(['\n'.join(['    interface %s %s = %s.%s;' % (t, busname, dutName, busname)
-                                                                     for (busname,t,params) in buses[busType]])
-                                                          for busType in exposedInterfaces]),
-            'queuesNotEmpty': '\n'.join(['                    v[%d] = %s$%s.notEmpty ? 1 : 0;'
-                                        % (i, methods[i].name, 'requestFifo' if not self.isIndication else 'responseFifo')
-                                         for i in range(len(methods))]),
             'Indication' : self.ind.name
             }
         f.write(requestWrapperInterfaceTemplate % substs)
@@ -753,16 +674,6 @@ class InterfaceMixin:
         indicationMethodDeclsAug  = self.collectIndicationMethodDeclsAug(self.name)
         dutName = util.decapitalize(self.name)
         methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
-        buses = {}
-        clknames = []
-        for busType in exposedInterfaces:
-            collected = self.collectInterfaceNames(busType)
-            if collected:
-                if busType == 'HDMI':
-                    clknames.append('hdmi_clk')
-            buses[busType] = collected
-        # print 'clknames', clknames
-
         substs = {
             'dut': dutName,
             'Dut': util.capitalize(self.name),
@@ -773,19 +684,7 @@ class InterfaceMixin:
             'indicationMethodDeclsOrig' :''.join(indicationMethodDeclsOrig),
             'indicationMethodDeclsAug' :''.join(indicationMethodDeclsAug),
             'indicationChannelCount': self.channelCount,
-            'channelCount': self.channelCount,
-            'exposedInterfaceDeclarations':
-                '\n'.join(['\n'.join(['    interface %s %s;' % (t, util.decapitalize(busname))
-                                      for (busname,t,params) in buses[busType]])
-                           for busType in exposedInterfaces]),
-            'dut_hdmi_clock_param': '#(%s)' % ', '.join(['Clock %s' % name for name in clknames]) if len(clknames) else '',
-            'dut_hdmi_clock_arg': ' '.join(['%s,' % name for name in clknames]) if len(clknames) else '',
-            'exposedInterfaceImplementations': '\n'.join(['\n'.join(['    interface %s %s = %s.%s;' % (t, busname, dutName, busname)
-                                                                     for (busname,t,params) in buses[busType]])
-                                                          for busType in exposedInterfaces]),
-            'queuesNotEmpty': '\n'.join(['                    v[%d] = %s$%s.notEmpty ? 1 : 0;'
-                                        % (i, methods[i].name, 'requestFifo' if not self.isIndication else 'responseFifo')
-                                         for i in range(len(methods))])
+            'channelCount': self.channelCount
             }
         f.write(indicationWrapperInterfaceTemplate % substs)
         f.write(mkIndicationWrapperTemplate % substs)

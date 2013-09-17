@@ -24,7 +24,8 @@ classPrefixTemplate='''
 class %(namespace)s%(className)s : public PortalInstance {
 public:
     static %(className)s *create%(className)s(const char *instanceName, %(indicationName)s *indication=0);
-    static char* methodName(unsigned long v);
+    static void methodName(unsigned long v, char *dst);
+    int portalNum(){return %(portalNum)s;}
 '''
 classSuffixTemplate='''
 protected:
@@ -38,6 +39,7 @@ class %(namespace)s%(className)s : public PortalIndication {
 public:
     %(className)s();
     virtual ~%(className)s();
+    int portalNum(){return %(portalNum)s;}
 '''
 indicationClassSuffixTemplate='''
 protected:
@@ -58,10 +60,11 @@ creatorTemplate = '''
 
 methodNameTemplate = '''
 
-char* %(namespace)s%(className)s::methodName(unsigned long idx)
+void %(namespace)s%(className)s::methodName(unsigned long idx, char* dst)
 {
    char* methodNameStrings[] = {%(methodNames)s};
-   return methodNameStrings[idx];
+   char* src = methodNameStrings[idx];
+   strcpy(dst, src);
 }
 '''
 
@@ -87,7 +90,11 @@ indicationConstructorTemplate='''
 
 putFailedTemplate='''
 void %(namespace)s%(className)s::putFailed(unsigned long v){
-    fprintf(stderr, "putFailed: \\n", %(instName)s::methodName(v));
+    char buff[100];
+    %(instName)s::methodName(v, &(buff[0]));
+    fprintf(stderr, "putFailed: ");
+    fprintf(stderr, buff);
+    fprintf(stderr, "\\n");
     exit(1);
   }
 '''
@@ -116,6 +123,7 @@ void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
     %(className)s%(methodName)sMSG msg;
     msg.size = sizeof(msg.request);
     msg.channel = %(methodChannelOffset)s;
+    msg.portal_num = portalNum();
 %(paramSetters)s
     sendMessage(&msg);
 };
@@ -275,7 +283,8 @@ class InterfaceMixin:
         name = cName(self.name)
         indent(f, indentation)
         subs = {'className': name,
-                'namespace': namespace}
+                'namespace': namespace,
+                'portalNum': self.portalNum}
         if self.isIndication:
             prefixTemplate = indicationClassPrefixTemplate
             suffixTemplate= indicationClassSuffixTemplate

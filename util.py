@@ -12,3 +12,5 @@ def capitalize(s):
 def decapitalize(s):
     return '%s%s' % (s[0].lower(), s[1:])
 
+intersperse = lambda e,l: sum([[x, e] for x in l],[])[:-1]
+
