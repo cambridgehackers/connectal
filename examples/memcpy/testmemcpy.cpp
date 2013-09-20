@@ -28,7 +28,7 @@ unsigned int iterCnt=1;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
-    fprintf(stderr, "%s: ", prefix);
+    fprintf(stderr, "%s ", prefix);
     for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
     fprintf(stderr, "\n");
@@ -54,7 +54,7 @@ class TestCoreIndication : public CoreIndication
     sem_post(&sem);
     if(iterCnt == ++memcmp_count){
       fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
-      exit(0);
+      //exit(0);
     }
   }
   virtual void rData ( unsigned long long v ){
@@ -86,7 +86,10 @@ class TestBlueScopeIndication : public BlueScopeIndication
     fprintf(stderr, "BlueScope::triggerFired\n");
   }
   virtual void reportStateDbg(unsigned long long mask, unsigned long long value){
-    fprintf(stderr, "BlueScope::reportStateDbg mask=%016llx, value=%016llx\n", mask, value);
+    //fprintf(stderr, "BlueScope::reportStateDbg mask=%016llx, value=%016llx\n", mask, value);
+    fprintf(stderr, "BlueScope::reportStateDbg\n");
+    dump("    mask =", (char*)&mask, sizeof(mask));
+    dump("   value =", (char*)&value, sizeof(value));
   }
 };
 
@@ -146,16 +149,12 @@ int main(int argc, const char **argv)
           
     // write channel 0 is dma destination
     device->configDmaWriteChan(0, dstAlloc.entries[0].dma_address, numWords/2);
-    sleep(1);
     // read channel 0 is dma source
     device->configDmaReadChan(0, srcAlloc.entries[0].dma_address, numWords/2);
-    sleep(1);
     // read channel 1 is readWord source
     device->configDmaReadChan(1, srcAlloc.entries[0].dma_address, 2);
-    sleep(1);
     // write channel 1 is Bluescope desgination
     device->configDmaWriteChan(1, bsAlloc.entries[0].dma_address, 4);
-    sleep(1);
 
     fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
     	    srcAlloc.entries[0].dma_address,
@@ -163,8 +162,8 @@ int main(int argc, const char **argv)
     	    numWords);
 
     bluescope->reset();
-    bluescope->setTriggerMask (0x0);
-    bluescope->setTriggerValue(0x0);
+    bluescope->setTriggerMask (0xFFFFFFFF);
+    bluescope->setTriggerValue(0x00000000);
     bluescope->start();
 
     bluescope->getStateDbg();
