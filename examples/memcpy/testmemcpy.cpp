@@ -100,8 +100,8 @@ int main(int argc, const char **argv)
   unsigned int srcGen = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  device = CoreRequest::createCoreRequest("fpga0", new TestCoreIndication);
-  bluescope = BlueScopeRequest::createBlueScopeRequest("fpga0", new TestBlueScopeIndication);
+  device = CoreRequest::createCoreRequest(new TestCoreIndication);
+  bluescope = BlueScopeRequest::createBlueScopeRequest(new TestBlueScopeIndication);
 
   if(sem_init(&sem, 1, 1)){
     fprintf(stderr, "failed to init sem\n");
@@ -154,6 +154,11 @@ int main(int argc, const char **argv)
     	    srcAlloc.entries[0].dma_address,
     	    dstAlloc.entries[0].dma_address,
     	    numWords);
+
+    bluescope->reset();
+    bluescope->setTriggerMask(0xFFFFFFFF);
+    bluescope->setTriggerValue(srcGen-8);
+    bluescope->start();
 
     // initiate the transfer
     device->startDMA(numWords);

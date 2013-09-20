@@ -23,13 +23,12 @@ include $(BUILD_EXECUTABLE)
 classPrefixTemplate='''
 class %(namespace)s%(className)s : public PortalInstance {
 public:
-    static %(className)s *create%(className)s(const char *instanceName, %(indicationName)s *indication=0);
+    static %(className)s *create%(className)s(%(indicationName)s *indication);
     static void methodName(unsigned long v, char *dst);
-    int portalNum(){return %(portalNum)s;}
 '''
 classSuffixTemplate='''
 protected:
-    %(className)s(const char *instanceName, %(indicationName)s *indication=0);
+    %(className)s(const char *instanceName, %(indicationName)s *indication);
     ~%(className)s();
 };
 '''
@@ -39,19 +38,19 @@ class %(namespace)s%(className)s : public PortalIndication {
 public:
     %(className)s();
     virtual ~%(className)s();
-    int portalNum(){return %(portalNum)s;}
 '''
 indicationClassSuffixTemplate='''
 protected:
-    virtual void handleMessage(PortalMessage *msg);
+    virtual int handleMessage(int fd, unsigned int channel);
     friend class PortalInstance;
 };
 '''
 
 
 creatorTemplate = '''
-%(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(const char *instanceName, %(indicationName)s *indication)
+%(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(%(indicationName)s *indication)
 {
+    char *instanceName = \"fpga%(portalNum)s\"; 
     %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indication);
     instance->open();
     return instance;
@@ -100,12 +99,28 @@ void %(namespace)s%(className)s::putFailed(unsigned long v){
 '''
 
 handleMessageTemplate='''
-void %(namespace)s%(className)s::handleMessage(PortalMessage *msg)
+int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel)
 {
-    switch (msg->channel) {
+    
+    unsigned int *buf = new unsigned int[1024];
+    PortalMessage *msg = (PortalMessage *)(buf);
+    memset(buf, 0, 1024);
+    
+    switch (channel) {
+%(responseSzCases)s
+    }
+
+    int rc = ioctl(fd, PORTAL_GET, msg);
+    if(rc){
+        fprintf(stderr, "handleMessage failed\\n");
+        return -1;
+    }
+
+    switch (channel) {
 %(responseCases)s
     default: break;
     }
+    return 0;
 }
 '''
 
@@ -123,7 +138,6 @@ void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
     %(className)s%(methodName)sMSG msg;
     msg.size = sizeof(msg.request);
     msg.channel = %(methodChannelOffset)s;
-    msg.portal_num = portalNum();
 %(paramSetters)s
     sendMessage(&msg);
 };
@@ -317,12 +331,20 @@ class InterfaceMixin:
                          'responseCases': ''.join([ '    case %(channelNumber)s: %(name)s(%(params)s); break;\n'
                                                    % { 'channelNumber': d.channelNumber,
                                                        'name': d.name,
-                                                       'className': className,
                                                        'params': ', '.join(['((%s%sMSG *)msg)->%s' % (className, d.name, p.name) for p in d.params])}
+                                                   for d in self.decls 
+                                                   if d.type == 'Method' and d.return_type.name == 'Action'
+                                                    ]),
+                         'responseSzCases': ''.join([ '    case %(channelNumber)s: msg->size = sizeof(%(msg)s); break;\n'
+                                                   % { 'channelNumber': d.channelNumber,
+                                                       'msg': '%s%sMSG' % (className, d.name)}
                                                    for d in self.decls 
                                                    if d.type == 'Method' and d.return_type.name == 'Action'
                                                     ])
                          }
+
+
+
         if self.isIndication:
             f.write(handleMessageTemplate % substitutions)
             f.write(putFailedTemplate % substitutions)
@@ -330,6 +352,7 @@ class InterfaceMixin:
     def emitConstructorImplementation(self, f, className, namespace):
         substitutions = {'namespace': namespace,
                          'className': className,
+                         'portalNum': self.portalNum,
                          'initializers': '',
                          'methodNames': ', '.join('"%s"' % (d.name) for d in self.decls if d.__class__ == AST.Method )}
         subinterfaces = []

@@ -1,6 +1,13 @@
 
 #include <sys/types.h>
+#include <linux/ioctl.h>
+#include <sys/ioctl.h>
 
+#define PORTAL_ALLOC _IOWR('B', 10, PortalAlloc)
+#define PORTAL_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalMessage)
+#define PORTAL_PUT _IOWR('B', 18, PortalMessage)
+#define PORTAL_GET _IOWR('B', 19, PortalMessage)
+#define PORTAL_SET_FCLK_RATE _IOWR('B', 40, PortalClockRequest)
 
 class PortalInterface;
 
@@ -17,7 +24,6 @@ typedef struct PortalAlloc {
 typedef struct PortalMessage {
     size_t size;
     size_t channel;
-    size_t portal_num;
 } PortalMessage;
 
 typedef struct PortalClockRequest {
@@ -28,7 +34,7 @@ typedef struct PortalClockRequest {
 
 class PortalIndication {
  public:
-    virtual void handleMessage(PortalMessage *msg) { };
+    virtual int handleMessage(int fd, unsigned int channel) { };
     virtual ~PortalIndication() {};
 };
 
@@ -36,16 +42,15 @@ class PortalInstance {
 public:
     int sendMessage(PortalMessage *msg);
     void close();
-    void dumpRegs();
 protected:
     PortalIndication *indication;
-    int receiveMessage(PortalMessage *msg);
+    int receiveMessage(unsigned int queue_status);
     PortalInstance(const char *instanceName, PortalIndication *indication=0);
     ~PortalInstance();
     int open();
 private:
     int fd;
-    volatile unsigned int *hwregs;
+    volatile unsigned int *ind_hwregs;
     char *instanceName;
     static int registerInstance(PortalInstance *instance);
     static int unregisterInstance(PortalInstance *instance);

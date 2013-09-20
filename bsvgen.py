@@ -164,7 +164,7 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
 	    v = getWordCount;
         if (addr == 14'h01C)
 	    v = outOfRangeReadCountReg;
-        if (addr >= 14'h024 && addr <= (14'h024 + %(indicationChannelCount)s/4))
+        if (addr >= 14'h020 && addr <= (14'h024 + %(indicationChannelCount)s/4))
 	begin
 	    v = 0;
 	    Bit#(7) baseQueueNumber = addr[9:3] << 5;

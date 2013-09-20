@@ -42,12 +42,6 @@
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
 #define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
 
-#define PORTAL_ALLOC _IOWR('B', 10, PortalAlloc)
-#define PORTAL_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalMessage)
-#define PORTAL_PUT _IOWR('B', 18, PortalMessage)
-#define PORTAL_GET _IOWR('B', 19, PortalMessage)
-#define PORTAL_SET_FCLK_RATE _IOWR('B', 40, PortalClockRequest)
-
 PortalInstance **portal_instances = 0;
 struct pollfd *portal_fds = 0;
 int numFds = 0;
@@ -61,7 +55,7 @@ void PortalInstance::close()
 }
 
 PortalInstance::PortalInstance(const char *instanceName, PortalIndication *indication)
-  : hwregs(NULL), indication(indication), fd(-1), instanceName(strdup(instanceName))
+  : ind_hwregs(NULL), indication(indication), fd(-1), instanceName(strdup(instanceName))
 {
 }
 
@@ -99,11 +93,12 @@ int PortalInstance::open()
 	ALOGE("Failed to open %s fd=%d errno=%d\n", path, this->fd, path);
 	return -errno;
     }
-    hwregs = (volatile unsigned int*)mmap(NULL, 2<<PAGE_SHIFT, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
-    if (hwregs == MAP_FAILED) {
+    ind_hwregs = (volatile unsigned int*)mmap(NULL, 1<<PAGE_SHIFT, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
+    if (ind_hwregs == MAP_FAILED) {
       ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
       return -errno;
     }  
+    fprintf(stderr, "mmap returned %08x\n", ind_hwregs);
     registerInstance(this);
     return 0;
 }
@@ -130,7 +125,7 @@ int PortalInstance::sendMessage(PortalMessage *msg)
     return rc;
 }
 
-int PortalInstance::receiveMessage(PortalMessage *msg)
+int PortalInstance::receiveMessage(unsigned int queue_status)
 {
     int rc = open();
     if (rc != 0) {
@@ -138,7 +133,15 @@ int PortalInstance::receiveMessage(PortalMessage *msg)
 	return 0;
     }
 
-    int status  = ioctl(fd, PORTAL_GET, msg);
+    int status = -1;
+    for(int i = 0; i < 32; i++){
+      if(queue_status & 1<<i){
+	fprintf(stderr, "indication->handleMessage(%08x,%d)\n", fd,i);
+	status  = indication->handleMessage(fd,i);
+	break;
+      }
+    }
+
     if (status) {
         if (errno != EAGAIN)
             fprintf(stderr, "receiveMessage rc=%d errno=%d:%s\n", status, errno, strerror(errno));
@@ -237,25 +240,18 @@ int PortalInstance::setClockFrequency(int clkNum, long requestedFrequency, long 
     return status;
 }
 
-void PortalInstance::dumpRegs()
-{
-  for(int j = 0; j < 0x10; j++){
-    fprintf(stderr, "reg[%08x] = %08x\n", j*4, *(hwregs+j));
-  }
-}
-
 void* portalExec(void* __x)
 {
-    unsigned int *buf = new unsigned int[1024];
-    PortalMessage *msg = (PortalMessage *)(buf);
-
+    int rc;
+    int timeout = -1;
+    fprintf(stderr, "about to invoke poll(%x, %d, %d)\n", portal_fds, numFds, timeout);
     if (!numFds) {
         ALOGE("PortalMemory::exec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
     }
-    
-    int rc;
-    while ((rc = poll(portal_fds, numFds, -1)) >= 0) {
+
+    while ((rc = poll(portal_fds, numFds, timeout)) >= 0) {
+      fprintf(stderr, "poll returned rc=%d\n", rc);
       for (int i = 0; i < numFds; i++) {
 	if (portal_fds[i].revents == 0)
 	  continue;
@@ -264,23 +260,22 @@ void* portalExec(void* __x)
 	}
 
 	PortalInstance *instance = portal_instances[i];
-	memset(buf, 0, 1024);
 	
 	// sanity check, to see the status of interrupt source and enable
-	volatile unsigned int int_src = *(instance->hwregs+0x0);
-	volatile unsigned int int_en  = *(instance->hwregs+0x1);
+	volatile unsigned int int_src = *(instance->ind_hwregs+0x0);
+	volatile unsigned int int_en  = *(instance->ind_hwregs+0x1);
+
+	volatile unsigned int queue_status = *(instance->ind_hwregs+0x8);
+	fprintf(stderr, "about to receive messages %08x %08x %08x\n", int_src, int_en, queue_status);
 
 	// handle all messasges from this portal instance
-	int messageReceived = instance->receiveMessage(msg);
-	while (messageReceived) {
-	  //fprintf(stderr, "messageReceived: msg->size=%d msg->channel=%d\n", msg->size, msg->channel);
-	  if (msg->size && instance->indication)
-	    instance->indication->handleMessage(msg);
-	  messageReceived = instance->receiveMessage(msg);
+	while (queue_status) {
+	  instance->receiveMessage(queue_status);
+	  queue_status = *(instance->ind_hwregs+0x8);
 	}
 
 	// re-enable interupt which was disabled by portal_isr
-	*(instance->hwregs+0x1) = 1;
+	*(instance->ind_hwregs+0x1) = 1;
       }
 
       // rc of 0 indicates timeout

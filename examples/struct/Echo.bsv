@@ -29,26 +29,34 @@ typedef struct{
    } S1 deriving (Bits);
 
 typedef struct{
-   Bit#(8) a;
-   Bit#(32) b;
+   Bit#(32) a;
+   Bit#(16) b;
    Bit#(16) c;
    } S2 deriving (Bits);
 
-interface EchoIndications;
+interface CoreIndication;
     method Action heard1(Bit#(32) v);
     method Action heard2(Bit#(16) a, Bit#(16) b);
     method Action heard3(S1 v);
     method Action heard4(S2 v);
 endinterface
 
-interface Echo;
+interface CoreRequest;
     method Action say1(Bit#(32) v);
     method Action say2(Bit#(16) a, Bit#(16) b);
     method Action say3(S1 v);
     method Action say4(S2 v);
 endinterface
 
-module mkEcho#(EchoIndications indications)(Echo);
+interface EchoRequest;
+   interface CoreRequest coreRequest;
+endinterface
+
+interface EchoIndication;
+   interface CoreIndication coreIndication;
+endinterface
+
+module mkEchoRequest#(EchoIndication indication)(EchoRequest);
    let delay1 <- mkSizedFIFO(8);
    let delay2 <- mkSizedFIFO(8);
    let delay3 <- mkSizedFIFO(8);
@@ -56,39 +64,41 @@ module mkEcho#(EchoIndications indications)(Echo);
    
    rule heard1;
       delay1.deq;
-      indications.heard1(delay1.first);
+      indication.coreIndication.heard1(delay1.first);
    endrule
    
    rule heard2;
       delay2.deq;
       match {.a, .b} = delay2.first;
-      indications.heard2(a,b);
+      indication.coreIndication.heard2(a,b);
    endrule
    
    rule heard3;
       delay3.deq;
-      indications.heard3(delay3.first);
+      indication.coreIndication.heard3(delay3.first);
    endrule
    
    rule heard4;
       delay4.deq;
-      indications.heard4(delay4.first);
+      indication.coreIndication.heard4(delay4.first);
    endrule
 
-   method Action say1(Bit#(32) v);
-      delay1.enq(v);
-   endmethod
+   interface CoreRequest coreRequest; 
+      method Action say1(Bit#(32) v);
+	 delay1.enq(v);
+      endmethod
 
-   method Action say2(Bit#(16) a, Bit#(16) b);
-      delay2.enq(tuple2(a,b));
-   endmethod
+      method Action say2(Bit#(16) a, Bit#(16) b);
+	 delay2.enq(tuple2(a,b));
+      endmethod
    
-   method Action say3(S1 v);
-      delay3.enq(v);
-   endmethod
+      method Action say3(S1 v);
+	 delay3.enq(v);
+      endmethod
 
-   method Action say4(S2 v);
-      delay4.enq(v);
-   endmethod
-   
+      method Action say4(S2 v);
+	 delay4.enq(v);
+      endmethod
+   endinterface
+      
 endmodule
