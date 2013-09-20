@@ -118,7 +118,6 @@ int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel)
 
     switch (channel) {
 %(responseCases)s
-    default: break;
     }
     return 0;
 }

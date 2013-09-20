@@ -24,7 +24,7 @@ size_t size = numWords*sizeof(unsigned int);
 sem_t sem;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
-unsigned int iterCnt=32;
+unsigned int iterCnt=1;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -75,7 +75,7 @@ class TestCoreIndication : public CoreIndication
   virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
 			      unsigned long streamWrCnt, unsigned long writeInProg, 
 			      unsigned long dataMismatch){
-    fprintf(stderr, "reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
+    fprintf(stderr, "Core::reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
   }  
 };
@@ -83,7 +83,10 @@ class TestCoreIndication : public CoreIndication
 class TestBlueScopeIndication : public BlueScopeIndication
 {
   virtual void triggerFired( ){
-    fprintf(stderr, "triggerFired\n");
+    fprintf(stderr, "BlueScope::triggerFired\n");
+  }
+  virtual void reportStateDbg(unsigned long long mask, unsigned long long value){
+    fprintf(stderr, "BlueScope::reportStateDbg mask=%016llx, value=%016llx\n", mask, value);
   }
 };
 
@@ -121,6 +124,7 @@ int main(int argc, const char **argv)
   PortalMemory::dCacheFlushInval(&dstAlloc);
   PortalMemory::dCacheFlushInval(&bsAlloc);
 
+
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
   if(pthread_create(&tid, NULL,  portalExec, NULL)){
@@ -128,7 +132,6 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
-  device->getStateDbg();
   while (srcGen < iterCnt*numWords){
     sem_wait(&sem);
     for (int i = 0; i < numWords; i++){
@@ -143,12 +146,16 @@ int main(int argc, const char **argv)
           
     // write channel 0 is dma destination
     device->configDmaWriteChan(0, dstAlloc.entries[0].dma_address, numWords/2);
+    sleep(1);
     // read channel 0 is dma source
     device->configDmaReadChan(0, srcAlloc.entries[0].dma_address, numWords/2);
+    sleep(1);
     // read channel 1 is readWord source
     device->configDmaReadChan(1, srcAlloc.entries[0].dma_address, 2);
+    sleep(1);
     // write channel 1 is Bluescope desgination
     device->configDmaWriteChan(1, bsAlloc.entries[0].dma_address, 4);
+    sleep(1);
 
     fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
     	    srcAlloc.entries[0].dma_address,
@@ -156,9 +163,13 @@ int main(int argc, const char **argv)
     	    numWords);
 
     bluescope->reset();
-    bluescope->setTriggerMask(0xFFFFFFFF);
-    bluescope->setTriggerValue(srcGen-8);
+    bluescope->setTriggerMask (0x0);
+    bluescope->setTriggerValue(0x0);
     bluescope->start();
+
+    bluescope->getStateDbg();
+    device->getStateDbg();
+    sleep(1);
 
     // initiate the transfer
     device->startDMA(numWords);

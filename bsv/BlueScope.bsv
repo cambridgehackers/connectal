@@ -32,6 +32,7 @@ import ClientServer::*;
 
 interface BlueScopeIndication;
    method Action triggerFired();
+   method Action reportStateDbg(Bit#(64) mask, Bit#(64) value);
 endinterface
 
 interface BlueScopeRequest;
@@ -39,6 +40,7 @@ interface BlueScopeRequest;
    method Action reset();
    method Action setTriggerMask(Bit#(64) mask);
    method Action setTriggerValue(Bit#(64) value);
+   method Action getStateDbg();
 endinterface
 
 interface BlueScopeInternal;
@@ -146,6 +148,11 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
       method Action setTriggerValue(Bit#(64) value);
 	 valueReg <= value;
       endmethod
+
+      method Action getStateDbg();
+	 indication.reportStateDbg(maskReg,valueReg);
+      endmethod
+
    endinterface
 
 endmodule

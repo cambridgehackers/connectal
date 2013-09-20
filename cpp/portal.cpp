@@ -136,7 +136,7 @@ int PortalInstance::receiveMessage(unsigned int queue_status)
     int status = -1;
     for(int i = 0; i < 32; i++){
       if(queue_status & 1<<i){
-	fprintf(stderr, "indication->handleMessage(%08x,%d)\n", fd,i);
+	// fprintf(stderr, "indication->handleMessage(%08x,%d)\n", fd,i);
 	status  = indication->handleMessage(fd,i);
 	break;
       }
@@ -243,7 +243,7 @@ int PortalInstance::setClockFrequency(int clkNum, long requestedFrequency, long 
 void* portalExec(void* __x)
 {
     int rc;
-    int timeout = -1;
+    int timeout = 1000;
     fprintf(stderr, "about to invoke poll(%x, %d, %d)\n", portal_fds, numFds, timeout);
     if (!numFds) {
         ALOGE("PortalMemory::exec No fds open numFds=%d\n", numFds);
@@ -251,7 +251,7 @@ void* portalExec(void* __x)
     }
 
     while ((rc = poll(portal_fds, numFds, timeout)) >= 0) {
-      fprintf(stderr, "poll returned rc=%d\n", rc);
+      // fprintf(stderr, "poll returned rc=%d\n", rc);
       for (int i = 0; i < numFds; i++) {
 	if (portal_fds[i].revents == 0)
 	  continue;
@@ -266,7 +266,7 @@ void* portalExec(void* __x)
 	volatile unsigned int int_en  = *(instance->ind_hwregs+0x1);
 
 	volatile unsigned int queue_status = *(instance->ind_hwregs+0x8);
-	fprintf(stderr, "about to receive messages %08x %08x %08x\n", int_src, int_en, queue_status);
+	// fprintf(stderr, "about to receive messages %08x %08x %08x\n", int_src, int_en, queue_status);
 
 	// handle all messasges from this portal instance
 	while (queue_status) {

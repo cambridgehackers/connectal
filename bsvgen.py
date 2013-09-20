@@ -52,7 +52,6 @@ requestStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
 } %(MethodName)s$Request deriving (Bits);
-typedef SizeOf#(%(MethodName)s$Request) %(MethodName)s$RequestSize;
 Bit#(6) %(methodName)s$Offset = %(channelNumber)s;
 '''
 
@@ -77,7 +76,6 @@ responseStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
 } %(MethodName)s$Response deriving (Bits);
-typedef SizeOf#(%(MethodName)s$Response) %(MethodName)s$ResponseSize;
 Bit#(6) %(methodName)s$Offset = %(channelNumber)s;
 '''
 
