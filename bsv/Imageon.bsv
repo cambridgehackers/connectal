@@ -166,6 +166,8 @@ interface ImageonVita;
     interface ImageonSyncGen syncgen;
     interface ImageonXsvi xsvi;
     interface ImageonDebugSpi debugSpi;
+    method Bit#(32) get_debugreq();
+    method Action set_debugind(Bit#(32) v);
 endinterface
 
 interface ImageonControl;
@@ -646,6 +648,12 @@ module mkImageonVitaController(ImageonVitaController);
 	        debug_spi_wire <= o;
 	    endmethod
 	endinterface
+        method Bit#(32) get_debugreq();
+            return debugreq_value;
+	endmethod
+        method Action set_debugind(Bit#(32) v);
+            debugind_value <= v;
+	endmethod
     endinterface
     interface ImageonControl control;
 // SPI_CONTROL

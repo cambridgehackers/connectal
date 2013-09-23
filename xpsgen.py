@@ -1094,6 +1094,8 @@ class ImageonVita:
      wire fmc_imageon_iic_0_sda_T;
      wire fmc_imageon_iic_0_sda_O;
      wire fmc_imageon_iic_0_sda_I;
+     wire [31:0] debugreq_value;
+     wire [31:0] debugind_value;
 '''
 ## uncomment the following if we decide to use the PS7 SPI controller
 #         return '''
@@ -1217,6 +1219,8 @@ class ImageonVita:
     .imageon_xsvi_hblank_v(imageon_xsvi_hblank),
     .imageon_xsvi_active_video_v(imageon_xsvi_active_video),
     .imageon_xsvi_video_data_v(imageon_xsvi_video_data),
+    .imageon_get_debugreq(debugreq_value),
+    .imageon_set_debugind_v(debugind_value),
 '''
     def top_bus_assignments(self,busname,t,params):
         return '''
