@@ -13,45 +13,28 @@ import TieOff       :: *;
 import DefaultValue :: *;
 import XilinxPCIE   :: *;
 import XilinxCells  :: *;
-import BlueNoC      :: *;
+import BlueNoC :: *;
+import PCIEtoBNoCBridgeQrc::*;
 
-import SceMiDefines   :: *;
-import SceMiInternals :: *;
-import SceMiNoC       :: *;
+// from SceMiDefines
+typedef 4 BPB;
 
 // Interface wrapper for PCIE
-interface SceMiK7PCIEQrcIfc#(type i, numeric type lanes);
-   //interface i                orig_ifc;
+interface K7PCIEQrcIfc#(numeric type lanes);
    interface PCIE_EXP#(lanes) pcie;
-   //interface MsgPort#(BPB)    noc_cont;
    (* always_ready *)
    method Bool isLinkUp();
-   //(* always_ready *)
-   //method Bool isOutOfReset();
-   //(* always_ready *)
-   //method Bool isClockAdvancing();
 endinterface
-
-// Argument structure used for passing in PCIE clocks
-typedef struct {
-   Clock         pci_sys_clk_p;
-   Clock         pci_sys_clk_n;
-   Reset         pci_sys_reset;
-   Clock         ref_clk;
-   SceMiLinkType link_type;
-} SceMiK7PCIEArgs;
 
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
-module [Module] buildSceMiPCIEK7Qrc#(
-                                   Clock pci_sys_clk_p
-                                 , Clock pci_sys_clk_n
-                                 , Reset pci_sys_reset
-                                 , Clock ref_clk
-                                 , SceMiLinkType link_type
-                                 )
-                                 (SceMiK7PCIEQrcIfc#(i,lanes))
+module buildPCIEK7Qrc#( Clock pci_sys_clk_p
+		       , Clock pci_sys_clk_n
+		       , Reset pci_sys_reset
+		       , Clock ref_clk
+		       )
+		       (K7PCIEQrcIfc#(lanes))
    provisos(Add#(1,_,lanes), SelectKintex7PCIE#(lanes));
 
    if (valueOf(lanes) != 8)
@@ -139,43 +122,26 @@ module [Module] buildSceMiPCIEK7Qrc#(
    endrule: intr_ifc_ctl
 
    // Build the PCIe-to-NoC bridge
-   PCIEtoBNoC#(BPB)  bridge <- mkPCIEtoBNoC_4( 64'h05ce_0006_0008_6847
-                                             , my_id
-                                             , max_read_req_bytes
-                                             , max_payload_bytes
-                                             , rcb_mask
-                                             , msix_enable
-                                             , msix_masked
-                                             , False // no MSI, only MSI-X
-                                             , clocked_by epClock125, reset_by epReset125
-                                             );
+   PCIEtoBNoCQrc#(BPB)  bridge <- mkPCIEtoBNoCQrc_4( 64'h05ce_0006_0008_2323
+						   , my_id
+						   , max_read_req_bytes
+						   , max_payload_bytes
+						   , rcb_mask
+						   , msix_enable
+						   , msix_masked
+						   , False // no MSI, only MSI-X
+						   , clocked_by epClock125, reset_by epReset125
+						   );
    mkConnectionWithClocks(_ep.trn_rx, tpl_2(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
    mkConnectionWithClocks(_ep.trn_tx, tpl_1(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
-
-   // The reference clock is the base SCE-MI clock
-   Clock scemiClock = ref_clk;
-
-   // Propagate loss-of-partner as a reset to the SCE-MI
-   MakeResetIfc network_status <- mkReset(4, True, scemiClock, clocked_by epClock125, reset_by epReset125);
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule reset_scemi_if_network_is_inactive if (!bridge.is_activated());
-      network_status.assertReset();
-   endrule
-
-   Reset scemiReset = network_status.new_rst;
 
    //mkConnection(_dut.noc_src,bridge.noc);
    mkTieOff(bridge.noc);
 
-   // Pass along the required interface elements
-   //interface orig_ifc = _dut.orig_ifc;
    interface pcie     = _ep.pcie;
-   //interface noc_cont = _dut.noc_cont;
+
    method Bool isLinkUp         = link_is_up;
-   //method Bool isOutOfReset     = _dut.isOutOfReset;
-   //method Bool isClockAdvancing = _dut.isClockAdvancing;
    
-endmodule: buildSceMiPCIEK7Qrc
+endmodule: buildPCIEK7Qrc
 
 endpackage: SceMiKintex7PCIEQrc

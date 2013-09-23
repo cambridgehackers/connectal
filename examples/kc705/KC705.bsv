@@ -1,8 +1,7 @@
 import SceMi      :: *;
-import SceMiLayer :: *;
 import SceMiKintex7PCIEQrc:: *;
 
-// Setup for SCE-MI over PCIE to a Virtex6
+// Setup for PCIE to a Kintex7
 import Xilinx       :: *;
 import XilinxPCIE   :: *;
 import Clocks       :: *;
@@ -14,29 +13,6 @@ import Memory       :: *;
 import GetPut       :: *;
 import ClientServer :: *;
 import BUtils       :: *;
-
-// We need to get access to the uncontrolled clock and reset to hook up the DDR2
-interface MemSceMiLayerIfc;
-    interface SceMiLayer scemiLayer;
-    interface Clock uclock;
-    interface Reset ureset;
-endinterface
-
-module buildSceMiQrc#(SceMiModule#(i) mod, SceMiK7PCIEArgs args)
-		  (SceMiK7PCIEQrcIfc#(i,lanes))
-   provisos(Add#(1,_,lanes), SelectKintex7PCIE#(lanes));
-
-   // record link type parameter for infrastructure linkage tool
-   //let param_link_type <- mkSceMiLinkTypeParameter(args.link_type);
-
-   // Dispatch to builder for specific linkage type
-   let build = buildSceMiPCIEK7Qrc( args.pci_sys_clk_p, args.pci_sys_clk_n, args.pci_sys_reset, args.ref_clk, args.link_type );
-
-   (* hide *)
-   let _m <- liftModule(build);
-
-   return _m;
-endmodule
 
 (* synthesize, no_default_clock, no_default_reset *)
 module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
@@ -72,28 +48,12 @@ module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Clock ddr3clk = ddr3_ctrl.user.clock;
    Reset ddr3rstn = ddr3_ctrl.user.reset_n;
    
-   SceMiK7PCIEArgs pcie_args;
-   pcie_args.pci_sys_clk_p = pci_sys_clk_p;
-   pcie_args.pci_sys_clk_n = pci_sys_clk_n;
-   pcie_args.pci_sys_reset = pci_sys_reset_n;
-   pcie_args.ref_clk       = clk_gen.clkout0;
-   pcie_args.link_type     = PCIE_KINTEX7;
-
-   SceMiK7PCIEQrcIfc#(MemSceMiLayerIfc, 8) scemi <- buildSceMiQrc(mkMemSceMiLayerWrapper, pcie_args);
-   //MemSceMiLayerIfc scemiOrig =  scemi.orig_ifc;
-   //let uclock = scemiOrig.uclock;
-   //let ureset = scemiOrig.ureset;
-   //SceMiLayer scemiLayer = scemiOrig.scemiLayer;
-   
-   //mkTieOff(scemi.noc_cont);
+   K7PCIEQrcIfc#(8) k7pcie <- buildPCIEK7Qrc( pci_sys_clk_p, pci_sys_clk_n, pci_sys_reset_n, clk_gen.clkout0 );
    
    let uclock = clk;
    let ureset = rst_n;
    SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, uclock, ureset, ddr3clk);
    SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, uclock);
-   
-   //mkConnection(scemiLayer.memory.request,  toPut(fMemReq));
-   //mkConnection(scemiLayer.memory.response, toGet(fMemResp));
 
    let memclient = interface Client;
 		      interface request  = toGet(fMemReq);
@@ -102,10 +62,10 @@ module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 			 
    mkConnection( memclient, ddr3_ctrl.user, clocked_by ddr3clk, reset_by ddr3rstn );
 
-   ReadOnly#(Bool) _isLinkUp         <- mkNullCrossingWire(noClock, scemi.isLinkUp);
-   ReadOnly#(Bool) _isCalibrated     <- mkNullCrossingWire(noClock, ddr3_ctrl.user.init_done);
+   ReadOnly#(Bool) _isLinkUp         <- mkNullCrossing(noClock, k7pcie.isLinkUp);
+   ReadOnly#(Bool) _isCalibrated     <- mkNullCrossing(noClock, ddr3_ctrl.user.init_done);
    
-   interface pcie = scemi.pcie;
+   interface pcie = k7pcie.pcie;
    interface ddr3 = ddr3_ctrl.ddr3;
    method leds = zeroExtend({ pack(_isCalibrated)
 			     ,pack(False)
@@ -113,17 +73,6 @@ module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 			     ,pack(_isLinkUp)
 			     });
 endmodule: mkBridge
-
-module [SceMiModule] mkMemSceMiLayerWrapper(MemSceMiLayerIfc);
-
-    (*hide*) let _m <- mkSceMiLayer();
-    Clock uclk <- sceMiGetUClock;
-    Reset urst <- sceMiGetUReset;
-
-    interface scemiLayer = _m;
-    interface uclock = uclk;
-    interface ureset = urst;
-endmodule
 
 instance Connectable#(MemoryClient#(32, 256), DDR3_User_K7);
    module mkConnection#(MemoryClient#(32, 256) client, DDR3_User_K7 ddr3)(Empty);
