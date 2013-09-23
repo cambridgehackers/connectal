@@ -1,5 +1,5 @@
 import SceMi      :: *;
-import SceMiKintex7PCIEQrc:: *;
+import Kintex7PcieQrc:: *;
 
 // Setup for PCIE to a Kintex7
 import Xilinx       :: *;
@@ -48,12 +48,11 @@ module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Clock ddr3clk = ddr3_ctrl.user.clock;
    Reset ddr3rstn = ddr3_ctrl.user.reset_n;
    
-   K7PCIEQrcIfc#(8) k7pcie <- buildPCIEK7Qrc( pci_sys_clk_p, pci_sys_clk_n, pci_sys_reset_n, clk_gen.clkout0 );
+   K7PCIEQrcIfc#(8) k7pcie <- buildPCIEK7Qrc( pci_sys_clk_p, pci_sys_clk_n, pci_sys_reset_n, clk_gen.clkout0,
+                                              64'h05ce_0006_0008_2324 );
    
-   let uclock = clk;
-   let ureset = rst_n;
-   SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, uclock, ureset, ddr3clk);
-   SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, uclock);
+   SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, clk, rst_n, ddr3clk);
+   SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, clk);
 
    let memclient = interface Client;
 		      interface request  = toGet(fMemReq);

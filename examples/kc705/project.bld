@@ -1,5 +1,5 @@
 [DEFAULT]
-bsc-compile-options:           	-aggressive-conditions -keep-inlined-boundaries -keep-fires -steps-warn-interval 1000000 -suppress-warnings G0046
+bsc-compile-options:           	-aggressive-conditions -keep-inlined-boundaries -keep-fires -steps-warn-interval 1000000 -suppress-warnings G0046 -p +:../../bsv:../../examples/echo
 bsc-rts-options:               	-K1024M
 bsc-link-options:              	-keep-fires -parallel-sim-link 8
 bsv-source-directories:        	.

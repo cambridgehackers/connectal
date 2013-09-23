@@ -19,11 +19,14 @@ import MsgFormat     :: *;
 import ByteBuffer    :: *;
 import ByteCompactor :: *;
 
+import AxiMasterSlave :: *;
+
 // The top-level interface of the PCIe-to-NoC bridge
 interface PCIEtoBNoCQrc#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
    interface MsgPort#(bpb)         noc;  // to the NoC
+   interface Axi3Master#(32,4,12) portal0; // to the portal control
 
    // global network activation status
    (* always_ready *)
@@ -60,6 +63,7 @@ interface TLPDispatcher;
    // TLPs out to the bridge implementation
    interface Get#(TLPData#(16)) tlp_out_to_config;
    interface Get#(TLPData#(16)) tlp_out_to_dma;
+   interface Get#(TLPData#(16)) tlp_out_to_axi;
 
    // activity indicators
    (* always_ready *)
@@ -77,9 +81,11 @@ module mkTLPDispatcher(TLPDispatcher);
    FIFO#(TLPData#(16))  tlp_in_fifo     <- mkFIFO();
    FIFOF#(TLPData#(16)) tlp_in_cfg_fifo <- mkGFIFOF(True,False); // unguarded enq
    FIFOF#(TLPData#(16)) tlp_in_dma_fifo <- mkGFIFOF(True,False); // unguarded enq
+   FIFOF#(TLPData#(16)) tlp_in_axi_fifo <- mkGFIFOF(True,False); // unguarded enq
 
    Reg#(Bool) route_to_cfg <- mkReg(False);
    Reg#(Bool) route_to_dma <- mkReg(False);
+   Reg#(Bool) route_to_axi <- mkReg(False);
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
@@ -94,15 +100,31 @@ module mkTLPDispatcher(TLPDispatcher);
                                      || ((hdr_3dw.addr % 8192) == 1026)
                                      || ((hdr_3dw.addr % 8192) == 1027)
                                      ;
+      Bool in_axi_addr_range         =  ((hdr_3dw.addr % 8192) == 1032)
+                                     || ((hdr_3dw.addr % 8192) == 1040)
+                                     ;
       Bool is_config_read    =  tlp.sof
                              && (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
+                             && !in_axi_addr_range
                              ;
       Bool is_config_write   =  tlp.sof
                              && (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
                              && !in_dma_command_addr_range
+                             && !in_axi_addr_range
+                             ;
+      Bool is_axi_read       =  tlp.sof
+                             && (tlp.hit == 7'h01)
+                             && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
+                             && in_axi_addr_range
+                             ;
+      Bool is_axi_write      =  tlp.sof
+                             && (tlp.hit == 7'h01)
+                             && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
+                             && (hdr_3dw.pkttype != COMPLETION)
+                             && in_axi_addr_range
                              ;
       Bool is_dma_command    =  tlp.sof
                              && (tlp.hit == 7'h01)
@@ -125,6 +147,15 @@ module mkTLPDispatcher(TLPDispatcher);
                   route_to_cfg <= True;
             end
          end
+         else if (is_axi_read || is_axi_write) begin
+            // send to axi interface if it will accept
+            if (tlp_in_axi_fifo.notFull()) begin
+               tlp_in_fifo.deq();
+               tlp_in_axi_fifo.enq(tlp);
+               if (!tlp.eof)
+                  route_to_axi <= True;
+            end
+         end
          else if (is_dma_command || is_dma_completion) begin
             // send to DMA interface if it will accept
             if (tlp_in_dma_fifo.notFull()) begin
@@ -139,9 +170,9 @@ module mkTLPDispatcher(TLPDispatcher);
             tlp_in_fifo.deq();
          end
          // indicate activity type
-         if (is_config_read)                    is_read.send();
-         if (is_config_write || is_dma_command) is_write.send();
-         if (is_dma_completion)                 is_completion.send();
+         if (is_config_read || is_axi_read)                     is_read.send();
+         if (is_config_write || is_axi_write || is_dma_command) is_write.send();
+         if (is_dma_completion)                                 is_completion.send();
       end
       else begin
          // this is a continuation of a previous TLP packet, so route
@@ -153,6 +184,15 @@ module mkTLPDispatcher(TLPDispatcher);
                tlp_in_cfg_fifo.enq(tlp);
                if (tlp.eof)
                   route_to_cfg <= False;
+            end
+         end
+         else if (route_to_axi) begin
+            // send to config interface if it will accept
+            if (tlp_in_axi_fifo.notFull()) begin
+               tlp_in_fifo.deq();
+               tlp_in_axi_fifo.enq(tlp);
+               if (tlp.eof)
+                  route_to_axi <= False;
             end
          end
          else if (route_to_dma) begin
@@ -174,6 +214,7 @@ module mkTLPDispatcher(TLPDispatcher);
    interface Put tlp_in_from_bus    = toPut(tlp_in_fifo);
    interface Get tlp_out_to_config  = toGet(tlp_in_cfg_fifo);
    interface Get tlp_out_to_dma     = toGet(tlp_in_dma_fifo);
+   interface Get tlp_out_to_axi     = toGet(tlp_in_axi_fifo);
 
    method Bool read_tlp       = is_read;
    method Bool write_tlp      = is_write;
@@ -193,6 +234,7 @@ interface TLPArbiter;
    // TLPs in from the bridge implementation
    interface Put#(TLPData#(16)) tlp_in_from_config; // read completions
    interface Put#(TLPData#(16)) tlp_in_from_dma;    // read and write requests, interrupts
+   interface Put#(TLPData#(16)) tlp_in_from_axi;    // read and write requests
 
    // activity indicators
    (* always_ready *)
@@ -210,9 +252,11 @@ module mkTLPArbiter(TLPArbiter);
    FIFO#(TLPData#(16))  tlp_out_fifo     <- mkFIFO();
    FIFOF#(TLPData#(16)) tlp_out_cfg_fifo <- mkGFIFOF(False,True); // unguarded deq
    FIFOF#(TLPData#(16)) tlp_out_dma_fifo <- mkGFIFOF(False,True); // unguarded deq
+   FIFOF#(TLPData#(16)) tlp_out_axi_fifo <- mkGFIFOF(False,True); // unguarded deq
 
    Reg#(Bool) route_from_cfg <- mkReg(False);
    Reg#(Bool) route_from_dma <- mkReg(False);
+   Reg#(Bool) route_from_axi <- mkReg(False);
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
@@ -228,6 +272,16 @@ module mkTLPArbiter(TLPArbiter);
             tlp_out_fifo.enq(tlp);
             if (tlp.eof)
                route_from_cfg <= False;
+         end
+      end
+      else if (route_from_axi) begin
+         // continue taking from the axi FIFO until end-of-frame
+         if (tlp_out_axi_fifo.notEmpty()) begin
+            TLPData#(16) tlp = tlp_out_axi_fifo.first();
+            tlp_out_axi_fifo.deq();
+            tlp_out_fifo.enq(tlp);
+            if (tlp.eof)
+               route_from_axi <= False;
          end
       end
       else if (route_from_dma) begin
@@ -251,6 +305,17 @@ module mkTLPArbiter(TLPArbiter);
             is_completion.send();
          end
       end
+      else if (tlp_out_axi_fifo.notEmpty()) begin
+         // prioritize axi read completions over DMA traffic
+         TLPData#(16) tlp = tlp_out_axi_fifo.first();
+         tlp_out_axi_fifo.deq();
+         if (tlp.sof) begin
+            tlp_out_fifo.enq(tlp);
+            if (!tlp.eof)
+               route_from_axi <= True;
+            is_completion.send();
+         end
+      end
       else if (tlp_out_dma_fifo.notEmpty()) begin
          // take DMA traffic
          TLPData#(16) tlp = tlp_out_dma_fifo.first();
@@ -271,6 +336,7 @@ module mkTLPArbiter(TLPArbiter);
    interface Get tlp_out_to_bus     = toGet(tlp_out_fifo);
    interface Put tlp_in_from_config = toPut(tlp_out_cfg_fifo);
    interface Put tlp_in_from_dma    = toPut(tlp_out_dma_fifo);
+   interface Put tlp_in_from_axi    = toPut(tlp_out_axi_fifo);
 
    method Bool read_tlp       = is_read;
    method Bool write_tlp      = is_write;
@@ -1870,6 +1936,109 @@ module mkDMAEngine#( PciId my_id
 
 endmodule: mkDMAEngine
 
+interface AxiEngine#(numeric type bpb);
+    interface Put#(TLPData#(16))   tlp_in;
+    interface Get#(TLPData#(16))   tlp_out;
+    interface Axi3Master#(32,4,12) axi;
+endinterface
+
+module mkAxiEngine#(PciId my_id)(AxiEngine#(bpb));
+    Reg#(TLPMemoryIO3DWHeader) hdr_3dw <- mkReg(defaultValue);
+    Reg#(TLPLength) readLength <- mkReg(0);
+    FIFO#(TLPData#(16)) tlpFifo <- mkFIFO;
+    interface Put tlp_in;
+        method Action put(TLPData#(16) tlp) if (readLength == 0);
+	    $display("AxiEngine.put tlp=%h", tlp);
+	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
+	    readLength <= h.length;
+	    hdr_3dw <= unpack(tlp.data);
+	endmethod
+    endinterface
+    interface Get tlp_out = toGet(tlpFifo);
+    interface Axi3Master axi;
+	interface Axi3MasterWrite write;
+	    method ActionValue#(Bit#(32)) writeAddr() if (False);
+		return extend(hdr_3dw.addr) << 2;
+	    endmethod
+	    method Bit#(4) writeBurstLen();
+		return 0;
+	    endmethod
+	    method Bit#(3) writeBurstWidth();
+		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+	    endmethod
+	    method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
+		return 2'b01; // increment address
+	    endmethod
+	    method Bit#(3) writeBurstProt(); // drive with 3'b000
+		return 3'b000;
+	    endmethod
+	    method Bit#(4) writeBurstCache(); // drive with 4'b0011
+		return 4'b0011;
+	    endmethod
+	    method Bit#(12) writeId();
+		return extend(hdr_3dw.tag);
+	    endmethod
+
+	    method ActionValue#(Bit#(32)) writeData();
+		return hdr_3dw.data;
+	    endmethod
+	    method Bit#(12) writeWid();
+		return extend(hdr_3dw.tag);
+	    endmethod
+	    method Bit#(4) writeDataByteEnable();
+		return 4'b1111;
+	    endmethod
+	    method Bit#(1) writeLastDataBeat(); // last data beat
+		return 0;
+	    endmethod
+
+	    method Action writeResponse(Bit#(2) responseCode, Bit#(12) id);
+	    endmethod
+	endinterface: write
+
+	interface Axi3MasterRead read;
+	    method ActionValue#(Bit#(32)) readAddr() if (readLength > 0);
+	        readLength <= readLength - 4;
+		return extend(hdr_3dw.addr) << 2;
+	    endmethod
+	    method Bit#(4) readBurstLen();
+		return 0;
+	    endmethod
+	    method Bit#(3) readBurstWidth();
+		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+	    endmethod
+	    method Bit#(2) readBurstType();  // drive with 2'b01
+		return 2'b01;
+	    endmethod
+	    method Bit#(3) readBurstProt(); // drive with 3'b000
+		return 3'b000;
+	    endmethod
+	    method Bit#(4) readBurstCache(); // drive with 4'b0011
+		return 4'b0011;
+	    endmethod
+	    method Bit#(12) readId();
+		return extend(hdr_3dw.tag);
+	    endmethod
+	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id);
+	        $display("AxiEngine.readData data=%h", data);
+	        TLPCompletionHeader completion = defaultValue;
+		completion.length = 1;
+		completion.cmplid = my_id;
+		completion.tag = truncate(id);
+		completion.bytecount = 4;
+		completion.reqid = hdr_3dw.reqid;
+		completion.loweraddr = getLowerAddr(pack(hdr_3dw.addr), 15);
+		completion.data = data;
+	        TLPData#(16) tlp = defaultValue;
+		tlp.data = pack(completion);
+		tlp.sof = True;
+		tlp.eof = True;
+		tlp.be = 15;
+		tlpFifo.enq(tlp);		
+	    endmethod
+	endinterface: read
+    endinterface: axi
+endmodule: mkAxiEngine
 
 // The PCIe-to-NoC bridge puts all of the elements together
 (* synthesize *)
@@ -1962,12 +2131,16 @@ module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
                                                  , max_payload_bytes
                                                  );
 
+   AxiEngine#(bpb)      axiEngine <- mkAxiEngine( my_id );
+
    // connect the sub-components to each other
 
    mkConnection(dispatcher.tlp_out_to_config,    csr.csr_read_and_write_tlps);
    mkConnection(dispatcher.tlp_out_to_dma,       dma.dma_commands_and_completions);
+   mkConnection(dispatcher.tlp_out_to_axi,       axiEngine.tlp_in);
    mkConnection(csr.csr_read_completion_tlps,    arbiter.tlp_in_from_config);
    mkConnection(dma.dma_read_and_write_requests, arbiter.tlp_in_from_dma);
+   mkConnection(axiEngine.tlp_out,               arbiter.tlp_in_from_axi);
    mkConnection(dma.bytes_received,              csr.incr_wr_xfer_count);
    mkConnection(dma.bytes_sent,                  csr.incr_rd_xfer_count);
    mkConnection(csr.intr_to_send,                dma.next_interrupt);
@@ -2005,6 +2178,7 @@ module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
    interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
 
    interface MsgPort noc = dma.noc;
+   interface Axi3Master portal0 = axiEngine.axi;
 
    method Bool is_activated = csr.is_activated();
    method Bool rx_activity  = dispatcher.read_tlp() || dispatcher.write_tlp() || arbiter.completion_tlp();
