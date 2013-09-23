@@ -4,7 +4,7 @@
 
 package SceMiKintex7PCIEQrc;
 
-// This is an implementation of SceMi over PCI-Express for Kintex 7
+// PCI-Express for Kintex 7
 // FPGAs.
 
 import Clocks       :: *;
@@ -21,15 +21,15 @@ import SceMiNoC       :: *;
 
 // Interface wrapper for PCIE
 interface SceMiK7PCIEQrcIfc#(type i, numeric type lanes);
-   interface i                orig_ifc;
+   //interface i                orig_ifc;
    interface PCIE_EXP#(lanes) pcie;
-   interface MsgPort#(BPB)    noc_cont;
+   //interface MsgPort#(BPB)    noc_cont;
    (* always_ready *)
    method Bool isLinkUp();
-   (* always_ready *)
-   method Bool isOutOfReset();
-   (* always_ready *)
-   method Bool isClockAdvancing();
+   //(* always_ready *)
+   //method Bool isOutOfReset();
+   //(* always_ready *)
+   //method Bool isClockAdvancing();
 endinterface
 
 // Argument structure used for passing in PCIE clocks
@@ -44,8 +44,8 @@ typedef struct {
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
-module [Module] buildSceMiPCIEK7Qrc#( SceMiModule#(i) mod
-                                 , Clock pci_sys_clk_p
+module [Module] buildSceMiPCIEK7Qrc#(
+                                   Clock pci_sys_clk_p
                                  , Clock pci_sys_clk_n
                                  , Reset pci_sys_reset
                                  , Clock ref_clk
@@ -165,24 +165,16 @@ module [Module] buildSceMiPCIEK7Qrc#( SceMiModule#(i) mod
 
    Reset scemiReset = network_status.new_rst;
 
-   // Build the design with a NoC connection
-   SceMiNoCIfc#(i) _dut <- buildSceMiNoC( mod
-                                        , epClock125
-                                        , epReset125
-                                        , bridge.is_activated()
-                                        , link_type
-                                        , clocked_by scemiClock
-                                        , reset_by scemiReset
-                                        );
-   mkConnection(_dut.noc_src,bridge.noc);
+   //mkConnection(_dut.noc_src,bridge.noc);
+   mkTieOff(bridge.noc);
 
    // Pass along the required interface elements
-   interface orig_ifc = _dut.orig_ifc;
+   //interface orig_ifc = _dut.orig_ifc;
    interface pcie     = _ep.pcie;
-   interface noc_cont = _dut.noc_cont;
+   //interface noc_cont = _dut.noc_cont;
    method Bool isLinkUp         = link_is_up;
-   method Bool isOutOfReset     = _dut.isOutOfReset;
-   method Bool isClockAdvancing = _dut.isClockAdvancing;
+   //method Bool isOutOfReset     = _dut.isOutOfReset;
+   //method Bool isClockAdvancing = _dut.isClockAdvancing;
    
 endmodule: buildSceMiPCIEK7Qrc
 

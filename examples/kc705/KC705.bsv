@@ -30,7 +30,7 @@ module buildSceMiQrc#(SceMiModule#(i) mod, SceMiK7PCIEArgs args)
    //let param_link_type <- mkSceMiLinkTypeParameter(args.link_type);
 
    // Dispatch to builder for specific linkage type
-   let build = buildSceMiPCIEK7Qrc( mod, args.pci_sys_clk_p, args.pci_sys_clk_n, args.pci_sys_reset, args.ref_clk, args.link_type );
+   let build = buildSceMiPCIEK7Qrc( args.pci_sys_clk_p, args.pci_sys_clk_n, args.pci_sys_reset, args.ref_clk, args.link_type );
 
    (* hide *)
    let _m <- liftModule(build);
@@ -80,13 +80,15 @@ module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    pcie_args.link_type     = PCIE_KINTEX7;
 
    SceMiK7PCIEQrcIfc#(MemSceMiLayerIfc, 8) scemi <- buildSceMiQrc(mkMemSceMiLayerWrapper, pcie_args);
-   MemSceMiLayerIfc scemiOrig =  scemi.orig_ifc;
-   let uclock = scemiOrig.uclock;
-   let ureset = scemiOrig.ureset;
-   SceMiLayer scemiLayer = scemiOrig.scemiLayer;
+   //MemSceMiLayerIfc scemiOrig =  scemi.orig_ifc;
+   //let uclock = scemiOrig.uclock;
+   //let ureset = scemiOrig.ureset;
+   //SceMiLayer scemiLayer = scemiOrig.scemiLayer;
    
-   mkTieOff(scemi.noc_cont);
+   //mkTieOff(scemi.noc_cont);
    
+   let uclock = clk;
+   let ureset = rst_n;
    SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, uclock, ureset, ddr3clk);
    SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, uclock);
    
@@ -100,16 +102,14 @@ module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 			 
    mkConnection( memclient, ddr3_ctrl.user, clocked_by ddr3clk, reset_by ddr3rstn );
 
-   ReadOnly#(Bool) _isLinkUp         <- mkNullCrossing(noClock, scemi.isLinkUp);
-   ReadOnly#(Bool) _isOutOfReset     <- mkNullCrossing(noClock, scemi.isOutOfReset);
-   ReadOnly#(Bool) _isClockAdvancing <- mkNullCrossing(noClock, scemi.isClockAdvancing);
-   ReadOnly#(Bool) _isCalibrated     <- mkNullCrossing(noClock, ddr3_ctrl.user.init_done);
+   ReadOnly#(Bool) _isLinkUp         <- mkNullCrossingWire(noClock, scemi.isLinkUp);
+   ReadOnly#(Bool) _isCalibrated     <- mkNullCrossingWire(noClock, ddr3_ctrl.user.init_done);
    
    interface pcie = scemi.pcie;
    interface ddr3 = ddr3_ctrl.ddr3;
    method leds = zeroExtend({ pack(_isCalibrated)
-			     ,pack(_isClockAdvancing)
-			     ,pack(_isOutOfReset)
+			     ,pack(False)
+			     ,pack(False)
 			     ,pack(_isLinkUp)
 			     });
 endmodule: mkBridge
