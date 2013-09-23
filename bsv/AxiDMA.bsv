@@ -40,6 +40,14 @@ typedef struct {
    Bit#(4) burstLen; 
    } DmaChannelContext deriving (Bits);
 
+typedef struct {
+   Bit#(32) x;
+   Bit#(32) y;
+   Bit#(32) z;
+   Bit#(32) w;
+   } DmaDbgRec deriving(Bits);
+
+
 interface ReadChan;
    interface Get#(Bit#(64)) readData;
    interface Put#(void)     readReq;
@@ -52,13 +60,15 @@ interface WriteChan;
 endinterface
 
 interface AxiDMARead;
-   method Action configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);   
+   method Action configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);
    interface Vector#(NumDmaChannels, ReadChan) readChanels;
+   method DmaDbgRec dbg();
 endinterface
 
 interface AxiDMAWrite;
    method Action  configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);   
    interface Vector#(NumDmaChannels, WriteChan) writeChannels;
+   method DmaDbgRec dbg();
 endinterface
 
 interface AxiDMAWriteInternal;
@@ -157,6 +167,9 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
 	 ctxMem.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:channelId,datain:ctx});
       endmethod
       interface readChanels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
+      method DmaDbgRec dbg();
+	 return DmaDbgRec{x:addrReg, y:zeroExtend(burstReg), z:zeroExtend(activeChan), w:zeroExtend(pack(stateReg))};
+      endmethod
    endinterface
 
    interface Axi3ReadClient m_axi_read;
@@ -223,6 +236,9 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
       interface writeChannels = zipWith3(mkWriteChan, map(toPut,writeBuffers), 
 					 map(mkPutWhenFalse, reqOutstanding),
 					 map(mkGetWhenTrue, writeRespRec));
+      method DmaDbgRec dbg();
+	 return DmaDbgRec{x:addrReg, y:zeroExtend(burstReg), z:zeroExtend(activeChan), w:zeroExtend(pack(stateReg))};
+      endmethod
    endinterface
 
    interface Axi3WriteClient m_axi_write;
@@ -245,7 +261,6 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
 	 stateReg <= Idle;
       endmethod
    endinterface
-
 endmodule
 
 module mkAxiDMA(AxiDMA);

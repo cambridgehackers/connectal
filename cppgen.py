@@ -110,6 +110,7 @@ int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel)
 %(responseSzCases)s
     }
 
+    // fprintf(stderr, "about to call ioctl %%d\\n", msg->size);
     int rc = ioctl(fd, PORTAL_GET, msg);
     if(rc){
         fprintf(stderr, "handleMessage failed\\n");
@@ -145,8 +146,10 @@ void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 responseTemplate='''
 struct %(className)s%(methodName)sMSG : public PortalMessage
 {
-//fix Adapter.bsv to unreverse these
+    struct Request {
+    //fix Adapter.bsv to unreverse these
 %(paramStructDeclarations)s
+    } request;
 };
 '''
 
@@ -330,11 +333,15 @@ class InterfaceMixin:
                          'responseCases': ''.join([ '    case %(channelNumber)s: %(name)s(%(params)s); break;\n'
                                                    % { 'channelNumber': d.channelNumber,
                                                        'name': d.name,
-                                                       'params': ', '.join(['((%s%sMSG *)msg)->%s' % (className, d.name, p.name) for p in d.params])}
+                                                       'params': ', '.join(['((%s%sMSG *)msg)->request.%s' % (className, d.name, p.name) for p in d.params])}
                                                    for d in self.decls 
                                                    if d.type == 'Method' and d.return_type.name == 'Action'
                                                     ]),
-                         'responseSzCases': ''.join([ '    case %(channelNumber)s: msg->size = sizeof(%(msg)s); break;\n'
+                         'responseSzCases': ''.join([ ''.join(['    case %(channelNumber)s: {\n',
+                                                               '        %(msg)s dummy;\n',
+                                                               '        msg->size = sizeof(dummy.request);\n',
+                                                               '        break;\n',
+                                                               '    }\n'])
                                                    % { 'channelNumber': d.channelNumber,
                                                        'msg': '%s%sMSG' % (className, d.name)}
                                                    for d in self.decls 

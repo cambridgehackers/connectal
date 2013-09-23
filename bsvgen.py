@@ -24,6 +24,7 @@ import Zynq::*;
 import Imageon::*;
 import Vector::*;
 import SpecialFIFOs::*;
+import AxiDMA::*;
 %(extraImports)s
 
 '''
@@ -87,7 +88,6 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
     Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
     Vector#(%(indicationChannelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
-    Reg#(Bit#(32)) underflowCountReg <- mkReg(0);
     Vector#(%(indicationChannelCount)s, PulseWire) readOutstanding <- replicateM(mkPulseWire);
     
     function Bool my_or(Bool a, Bool b) = a || b;
@@ -153,7 +153,7 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
 	if (addr == 14'h008)
 	    v = responseFiredCntReg;
 	if (addr == 14'h00C)
-	    v = underflowCountReg;
+	    v = 0; // unused
 	if (addr == 14'h010)
 	    v = (32'h68470000 | extend(axiSlaveReadBurstCountReg));
 	if (addr == 14'h014)
@@ -393,18 +393,8 @@ indicationRuleTemplate='''
     rule %(methodName)s$axiSlaveRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
                                          axiSlaveReadAddrFifo.first[13:8] == %(methodName)s$Offset);
         axiSlaveReadAddrFifo.deq;
-        Bit#(32) response = 0;
-        if (%(methodName)s$responseFifo.first matches tagged Valid .v)
-        begin
-            response = v;
-            %(methodName)s$responseFifo.deq;
-        end
-        else
-        begin
-            response = 32'h5abeef5a;
-            underflowCountReg <= underflowCountReg + 1;
-        end
-        axiSlaveReadDataFifo.enq(response);
+        %(methodName)s$responseFifo.deq;
+        axiSlaveReadDataFifo.enq(%(methodName)s$responseFifo.first);
     endrule
     rule %(methodName)s$axiSlaveReadOutstanding if (%(methodName)s$responseFifo.notEmpty);
         readOutstanding[%(channelNumber)s].send();

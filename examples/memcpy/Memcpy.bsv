@@ -46,6 +46,7 @@ interface CoreIndication;
    method Action writeAck(Bit#(32) v);
    method Action configResp(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
    method Action reportStateDbg(Bit#(32) srcGen, Bit#(32) streamRdCnt, Bit#(32) streamWrCnt, Bit#(32) writeInProg, Bit#(32) dataMismatch);
+   method Action reportDmaDbg(Bit#(32) x, Bit#(32) y, Bit#(32) z, Bit#(32) w);
 endinterface
 
 interface MemcpyRequest;
@@ -85,6 +86,8 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
       streamRdCnt <= streamRdCnt-16;
       dma_stream_read_chan.readReq.put(?);
       indication.coreIndication.readReq(streamRdCnt);
+      let x = dma.write.dbg;
+      indication.coreIndication.reportDmaDbg(x.x, x.y, x.z, x.w);
    endrule
 
    rule writeReq(streamWrCnt > 0 && !writeInProg);

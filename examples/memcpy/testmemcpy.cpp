@@ -21,7 +21,9 @@ unsigned int *bsBuffer  = 0;
 int numWords = 32;
 size_t size = numWords*sizeof(unsigned int);
 
-sem_t sem;
+sem_t iter_sem;
+sem_t conf_sem;
+sem_t done_sem;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
 unsigned int iterCnt=1;
@@ -51,10 +53,10 @@ class TestCoreIndication : public CoreIndication
       dump("src", (char*)srcBuffer, size);
       dump("dst", (char*)dstBuffer, size);
     }
-    sem_post(&sem);
+    sem_post(&iter_sem);
     if(iterCnt == ++memcmp_count){
       fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
-      //exit(0);
+      exit(0);
     }
   }
   virtual void rData ( unsigned long long v ){
@@ -71,12 +73,16 @@ class TestCoreIndication : public CoreIndication
   }
   virtual void configResp(unsigned long chanId, unsigned long pa, unsigned long numWords){
     fprintf(stderr, "configResp %d, %lx, %d\n", chanId, pa, numWords);
+    sem_post(&conf_sem);
   }
   virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
 			      unsigned long streamWrCnt, unsigned long writeInProg, 
 			      unsigned long dataMismatch){
     fprintf(stderr, "Core::reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
+  }  
+  virtual void reportDmaDbg(unsigned long x, unsigned long y, unsigned long z, unsigned long w){
+    fprintf(stderr, "Core::reportDmaDbg: %08x %08x %08x %08x\n", x,y,z,w);
   }  
 };
 
@@ -109,8 +115,12 @@ int main(int argc, const char **argv)
   device = CoreRequest::createCoreRequest(new TestCoreIndication);
   bluescope = BlueScopeRequest::createBlueScopeRequest(new TestBlueScopeIndication);
 
-  if(sem_init(&sem, 1, 1)){
-    fprintf(stderr, "failed to init sem\n");
+  if(sem_init(&iter_sem, 1, 1)){
+    fprintf(stderr, "failed to init iter_sem\n");
+    return -1;
+  }
+  if(sem_init(&conf_sem, 1, 0)){
+    fprintf(stderr, "failed to init conf_sem\n");
     return -1;
   }
 
@@ -136,7 +146,7 @@ int main(int argc, const char **argv)
   }
 
   while (srcGen < iterCnt*numWords){
-    sem_wait(&sem);
+    sem_wait(&iter_sem);
     for (int i = 0; i < numWords; i++){
       srcBuffer[i] = srcGen++;
       dstBuffer[i] = 5;
@@ -149,12 +159,16 @@ int main(int argc, const char **argv)
           
     // write channel 0 is dma destination
     device->configDmaWriteChan(0, dstAlloc.entries[0].dma_address, numWords/2);
+    sem_wait(&conf_sem);
     // read channel 0 is dma source
     device->configDmaReadChan(0, srcAlloc.entries[0].dma_address, numWords/2);
+    sem_wait(&conf_sem);
     // read channel 1 is readWord source
     device->configDmaReadChan(1, srcAlloc.entries[0].dma_address, 2);
+    sem_wait(&conf_sem);
     // write channel 1 is Bluescope desgination
-    device->configDmaWriteChan(1, bsAlloc.entries[0].dma_address, 4);
+    device->configDmaWriteChan(1, bsAlloc.entries[0].dma_address, 2);
+    sem_wait(&conf_sem);
 
     fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
     	    srcAlloc.entries[0].dma_address,
@@ -163,7 +177,7 @@ int main(int argc, const char **argv)
 
     bluescope->reset();
     bluescope->setTriggerMask (0xFFFFFFFF);
-    bluescope->setTriggerValue(0x00000000);
+    bluescope->setTriggerValue(0x00000001);
     bluescope->start();
 
     bluescope->getStateDbg();
@@ -172,7 +186,6 @@ int main(int argc, const char **argv)
 
     // initiate the transfer
     device->startDMA(numWords);
-
-  }  
-  while(1);
+  } 
+  while(1){sleep(1);}
 }

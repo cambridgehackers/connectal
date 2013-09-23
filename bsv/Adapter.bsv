@@ -35,7 +35,7 @@ interface ToBit32#(type a);
    method Bit#(32) depth32(); // size of a in 32-bit words
    method Bit#(32) count32(); // number of words in the adapter
    method Action enq(a v);          
-   method Maybe#(Bit#(32)) first;
+   method Bit#(32) first;
    method Action deq();
    method Bool notEmpty();
    method Bool notFull();
@@ -74,34 +74,22 @@ module mkToBit32(ToBit32#(a))
       fifo.enq(pack(val));   
    endmethod
 
-   method Maybe#(Bit#(32)) first();
-    if (fifo.notEmpty)
-       begin 
-           let val = fifo.first();
-           Bit#(asz32) vx = zeroExtend(val >> (32 * count));
-           Bit#(32) x = vx[31:0];
-           return tagged Valid x;
-       end
-    else
-       begin
-           return tagged Invalid;
-       end
+   method Bit#(32) first();
+      let val = fifo.first();
+      Bit#(asz32) vx = zeroExtend(val >> (32 * count));
+      return vx[31:0];
    endmethod
    method Action deq();
-     if (fifo.notEmpty)
-     begin
-       if (count == max)
-          begin 
-             count <= 0;
-             fifo.deq();
-          end
-       else
-          begin
-             count <= count + 1;
-          end   
-     end
+      if (count == max)
+         begin 
+            count <= 0;
+            fifo.deq();
+         end
+      else
+         begin
+            count <= count + 1;
+         end   
    endmethod
-               
    method Bool notEmpty = fifo.notEmpty;
    method Bool notFull = fifo.notFull;
 endmodule
@@ -143,7 +131,7 @@ module mkFromBit32(FromBit32#(a))
          end
    endmethod
    
-   method a first if (fifo.notEmpty());
+   method a first;
        return unpack(fifo.first);
    endmethod
 
@@ -187,31 +175,20 @@ module mkToBit64(ToBit64#(a))
    endmethod
 
    method Bit#(64) first();
-    if (fifo.notEmpty)
-       begin 
-           let val = fifo.first();
-           Bit#(asz64) vx = zeroExtend(val >> (64 * count));
-           Bit#(64) x = vx[63:0];
-           return x;
-       end
-    else
-       begin
-           return 0;
-       end
+      let val = fifo.first();
+      Bit#(asz64) vx = zeroExtend(val >> (64 * count));
+      return vx[63:0];
    endmethod
    method Action deq();
-     if (fifo.notEmpty)
-     begin
-       if (count == max)
-          begin 
-             count <= 0;
-             fifo.deq();
-          end
-       else
-          begin
-             count <= count + 1;
-          end   
-     end
+      if (count == max)
+         begin 
+            count <= 0;
+            fifo.deq();
+         end
+      else
+         begin
+            count <= count + 1;
+         end   
    endmethod
                
    method Bool notEmpty = fifo.notEmpty;
@@ -248,7 +225,7 @@ module mkFromBit64(FromBit64#(a))
          end
    endmethod
    
-   method a first if (fifo.notEmpty());
+   method a first;
        return unpack(fifo.first);
    endmethod
 

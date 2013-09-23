@@ -66,7 +66,7 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
    FIFOF#(void)                  tfifo <- mkFIFOF(    clocked_by sClk, reset_by sRst);
    
-   rule writeReq if (stateReg == Enabled);
+   rule writeReq if (stateReg == Enabled && dfifo.notEmpty);
       wchan.writeReq.put(?);
    endrule
    
@@ -79,7 +79,7 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
       wchan.writeDone.get;
    endrule
    
-   rule trigger;
+   rule triggerRule;
       indication.triggerFired;
       tfifo.deq;
    endrule
