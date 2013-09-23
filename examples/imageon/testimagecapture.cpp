@@ -65,8 +65,11 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     RXFN(triggen_control)
     RXFN(clock_gen_locked)
     void putFailed(unsigned long v){
-      fprintf(stderr, "putFailed: %s\n", ImageCapture::methodNameMap(v));
+      fprintf(stderr, "putFailed: %x\n", v);
       exit(1);
+    }
+    void debugind(long long unsigned int v) {
+printf("[%s:%d] valu %llx\n", __FUNCTION__, __LINE__, v);
     }
 };
 
@@ -605,7 +608,7 @@ printf("[%s:%d] locked %ld\n", __FUNCTION__, __LINE__, read_clock_gen_locked());
 
 static void *pthread_worker(void *ptr)
 {
-    PortalInterface::exec(NULL);
+    portalExec(NULL);
     return NULL;
 }
 
@@ -619,6 +622,7 @@ int main(int argc, const char **argv)
     fmc_imageon_demo_init(argc, argv);
     usleep(200000);
     while (getchar() != EOF) {
+device->debugreq(1);
 printf("[%s:%d] iserdes %lx\n", __FUNCTION__, __LINE__, read_iserdes_control());
 printf("[%s:%d] decode %lx\n", __FUNCTION__, __LINE__, read_decoder_control());
 printf("[%s:%d] crccontrol %lx\n", __FUNCTION__, __LINE__, read_crc_control());
