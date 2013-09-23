@@ -1407,6 +1407,8 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_sync_n(io_vita_sync_n),
     .io_vita_data_p(io_vita_data_p),
     .io_vita_data_n(io_vita_data_n),
+.debreq(debugreq_value),
+.debind(debugind_value),
     /* Frame Sync Port */
     .fsync(imageon_fsync),
     /* XSVI Port */

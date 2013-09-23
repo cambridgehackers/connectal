@@ -68,8 +68,8 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
       fprintf(stderr, "putFailed: %x\n", v);
       exit(1);
     }
-    void debugind(long long unsigned int v) {
-printf("[%s:%d] valu %llx\n", __FUNCTION__, __LINE__, v);
+    void debugind(long unsigned int v) {
+printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
     }
 };
 
@@ -622,7 +622,8 @@ int main(int argc, const char **argv)
     fmc_imageon_demo_init(argc, argv);
     usleep(200000);
     while (getchar() != EOF) {
-device->debugreq(1);
+device->set_debugreq(1);
+device->get_debugind();
 printf("[%s:%d] iserdes %lx\n", __FUNCTION__, __LINE__, read_iserdes_control());
 printf("[%s:%d] decode %lx\n", __FUNCTION__, __LINE__, read_decoder_control());
 printf("[%s:%d] crccontrol %lx\n", __FUNCTION__, __LINE__, read_crc_control());

@@ -45,6 +45,7 @@ interface ImageCaptureIndications;
     method Action spi_rxfifo_value(Bit#(32) v);
     method Action spi_trace_sample_count_value(Bit#(32) v);
     method Action spi_trace_sample_value(Bit#(64) v);
+    method Action debugind(Bit#(32) v);
 endinterface
 
 interface ImageCapture;
@@ -125,6 +126,8 @@ interface ImageCapture;
     method Action set_syncgen_vbporch(Bit#(16) v);
 
     interface ImageonVita imageon;
+    method Action set_debugreq(Bit#(32) v);
+    method Action get_debugind();
 //    interface HDMI hdmi;
 endinterface
 
@@ -396,6 +399,12 @@ module mkImageCapture#(//Clock hdmi_clock,
     endmethod
     method Action set_syncgen_vbporch(Bit#(16) v);
         control.set_syncgen_vbporch(v);
+    endmethod
+    method Action set_debugreq(Bit#(32) v);
+        control.set_debugreq(v);
+    endmethod
+    method Action get_debugind();
+        indications.debugind(control.get_debugind());
     endmethod
 
     interface ImageonVita imageon = imageonVita.host;

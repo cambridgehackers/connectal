@@ -242,6 +242,8 @@ interface ImageonControl;
     method Action set_syncgen_vfporch(Bit#(16) v);
     method Action set_syncgen_vsync(Bit#(16) v);
     method Action set_syncgen_vbporch(Bit#(16) v);
+    method Action set_debugreq(Bit#(32) v);
+    method Bit#(32) get_debugind();
     method XsviData xsviData();
 endinterface
 
@@ -350,6 +352,8 @@ module mkImageonVitaController(ImageonVitaController);
     Wire#(Bit#(1))  xsvi_hblank_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
     Wire#(Bit#(96)) debug_spi_wire <- mkDWire(0);
+    Reg#(Bit#(32)) debugreq_value <- mkReg(0);
+    Reg#(Bit#(32)) debugind_value <- mkReg(0);
 
     interface ImageonVita host;
 	method Bit#(1) host_vita_reset();
@@ -941,6 +945,12 @@ module mkImageonVitaController(ImageonVitaController);
 	endmethod
 	method Action set_syncgen_vbporch(Bit#(16) v);
 	    syncgen_vbporch_reg <= v;
+	endmethod
+        method Action set_debugreq(Bit#(32) v);
+            debugreq_value <= v;
+	endmethod
+        method Bit#(32) get_debugind();
+            return debugind_value;
 	endmethod
 	method XsviData xsviData();
 	    return XsviData {
