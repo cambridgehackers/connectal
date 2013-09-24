@@ -49,7 +49,7 @@ module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Reset ddr3rstn = ddr3_ctrl.user.reset_n;
    
    K7PCIEQrcIfc#(8) k7pcie <- buildPCIEK7Qrc( pci_sys_clk_p, pci_sys_clk_n, pci_sys_reset_n, clk_gen.clkout0,
-                                              64'h05ce_0006_0008_2324 );
+                                              64'h05ce_0006_0008_2327 );
    
    SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, clk, rst_n, ddr3clk);
    SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, clk);

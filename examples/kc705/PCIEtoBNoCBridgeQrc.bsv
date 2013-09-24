@@ -20,6 +20,7 @@ import ByteBuffer    :: *;
 import ByteCompactor :: *;
 
 import AxiMasterSlave :: *;
+import Adapter        :: *;
 
 // The top-level interface of the PCIe-to-NoC bridge
 interface PCIEtoBNoCQrc#(numeric type bpb);
@@ -391,6 +392,14 @@ interface ControlAndStatusRegs;
 
 endinterface: ControlAndStatusRegs
 
+typedef struct {
+    Bit#(32) seqno;
+    TLPData#(16) tlp;
+} TimestampedTlpData deriving (Bits);
+typedef SizeOf#(TimestampedTlpData) TimestampedTlpDataSize;
+typedef SizeOf#(TLPData#(16)) TlpData16Size;
+typedef SizeOf#(TLPCompletionHeader) TLPCompletionHeaderSize;
+
 // This module encapsulates all of the logic for instantiating and
 // accessing the control and status registers. It defines the
 // registers, the address map, and how the registers respond to reads
@@ -465,6 +474,18 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Bool read_allowed  = !read_operation_in_progress && data_to_write;
    Bool write_allowed = !write_operation_in_progress && space_for_read;
 
+   FIFOF#(Bit#(32)) testFifo <- mkUGSizedFIFOF(32);
+   Reg#(Bit#(32)) enqCount <- mkReg(0);
+   ToBit32#(TimestampedTlpData) adapter <- mkToBit32();
+   FIFOF#(TimestampedTlpData) tlpDataFifo <- mkUGSizedFIFOF(32);
+   Reg#(Bit#(32)) tlpSeqno <- mkReg(0);
+
+   rule toAdapter if (tlpDataFifo.notEmpty);
+       let tlpData = tlpDataFifo.first;
+       tlpDataFifo.deq;
+       adapter.enq(tlpData);
+   endrule
+
    // Function to read from the CSR address space (using DW address)
    function Bit#(32) rd_csr(UInt#(30) addr);
       case (addr % 8192)
@@ -486,6 +507,26 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          513: return {23'd0,pack(write_allowed),pack(write_buffers_level == 16),pack(end_of_write_list),1'b0,pack(write_buffers_level)};
          514: return pack(rd_xfer_count);
          515: return pack(wr_xfer_count);
+         768: if (testFifo.notEmpty)
+	           return testFifo.first;
+	       else
+	           return 32'hdeadd00d;
+         769: return enqCount;		   
+         770: return testFifo.notEmpty ? 1 : 0;
+         771: return testFifo.notFull ? 1 : 0;
+	 772: if (adapter.notEmpty) begin
+	           Maybe#(Bit#(32)) v = adapter.first;
+		   if (v matches tagged Valid .d)
+	               return d;
+		   else
+		       return 32'hdead0000;
+	       end else begin
+	           return 32'hdeadbeef;
+	       end
+	 773: return tlpSeqno;
+	 774: return fromInteger(valueOf(TimestampedTlpDataSize));
+	 775: return fromInteger(valueOf(TlpData16Size));
+	 776: return fromInteger(valueOf(TLPCompletionHeaderSize));
          // 4-entry MSIx table
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
          4097: return msix_entry[0].addr_hi;            // entry 0 upper address
@@ -612,6 +653,14 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    // written.
    function Action do_write(UInt#(30) addr, Vector#(4,Tuple2#(Bit#(4),Bit#(32))) value);
       action
+         //FIXME
+         if ((addr % 8192) == 768 && testFifo.notFull) begin
+	     enqCount <= enqCount + 1;
+	     testFifo.enq(tpl_2(value[0]));
+	 end
+         if ((addr % 8192) == 772) begin
+	     enqCount <= enqCount + 1;
+	 end
          wr_csr(addr,  tpl_1(value[0]),tpl_2(value[0]));
          wr_csr(addr+1,tpl_1(value[1]),tpl_2(value[1]));
          wr_csr(addr+2,tpl_1(value[2]),tpl_2(value[2]));
@@ -684,6 +733,11 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    rule do_csr_read if (read_in_progress && (completion_tlp.valid_mask() != replicate(True)));
       UInt#(30) addr = rd_addr_queue.first();
       rd_addr_queue.deq();
+      // FIXME
+      if ((addr % 8192) == 768 && testFifo.notEmpty)
+          testFifo.deq;
+      if ((addr % 8192) == 772 && adapter.notEmpty)
+          adapter.deq;
       Vector#(4,Bit#(8)) result = unpack(byteSwap(rd_csr(addr)));
       Bit#(16) mask = pack(completion_tlp.valid_mask());
       // Note firstbe is already handled when the header is set up
@@ -909,6 +963,11 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
                dws_left_in_tlp <= dws_in_next_completion;
             end
          end
+	 if (tlpDataFifo.notFull) begin
+	     TimestampedTlpData ttd = TimestampedTlpData { seqno: tlpSeqno, tlp: tlp };
+	     tlpDataFifo.enq(ttd);
+	     tlpSeqno <= tlpSeqno + 1;
+	 end
          return tlp;
       endmethod
    endinterface
