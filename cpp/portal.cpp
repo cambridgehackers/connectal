@@ -55,7 +55,11 @@ void PortalInstance::close()
 }
 
 PortalInstance::PortalInstance(const char *instanceName, PortalIndication *indication)
-  : ind_hwregs(NULL), indication(indication), fd(-1), instanceName(strdup(instanceName))
+  : ind_reg_base(NULL), 
+    ind_fifo_base(NULL),
+    req_reg_base(NULL),
+    req_fifo_base(NULL),
+    indication(indication), fd(-1), instanceName(strdup(instanceName))
 {
 }
 
@@ -93,12 +97,15 @@ int PortalInstance::open()
 	ALOGE("Failed to open %s fd=%d errno=%d\n", path, this->fd, path);
 	return -errno;
     }
-    ind_hwregs = (volatile unsigned int*)mmap(NULL, 1<<PAGE_SHIFT, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
-    if (ind_hwregs == MAP_FAILED) {
+    volatile unsigned int *dev_base = (volatile unsigned int*)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
+    if (dev_base == MAP_FAILED) {
       ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
       return -errno;
     }  
-    fprintf(stderr, "mmap returned %08x\n", ind_hwregs);
+    ind_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(3<<14));
+    ind_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(2<<14));
+    req_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(1<<14));
+    req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
     registerInstance(this);
     return 0;
 }
@@ -112,17 +119,23 @@ PortalInstance *portalOpen(const char *instanceName)
 
 int PortalInstance::sendMessage(PortalMessage *msg)
 {
-    int rc = open();
-    if (rc != 0) {
-	ALOGD("PortalInstance::sendMessage fd=%d rc=%d\n", fd, rc);
-	return rc;
-    }
-
-    rc = ioctl(fd, PORTAL_PUT, msg);
-    //ALOGD("sendmessage portal fd=%d rc=%d\n", fd, rc);
-    if (rc)
-        ALOGE("PortalInstance::sendMessage fd=%d rc=%d errno=%d:%s PUT=%x GET=%x\n", fd, rc, errno, strerror(errno), PORTAL_PUT, PORTAL_GET);
+  int rc = open();
+  if (rc != 0) {
+    ALOGD("PortalInstance::sendMessage failure fd=%d rc=%d\n", fd, rc);
     return rc;
+  }
+
+  unsigned int* buf = (unsigned int*)(((unsigned int)msg)+sizeof(PortalMessage));
+  //fprintf(stderr, "sizeof(PortalMessage) = %d\n", sizeof(PortalMessage));
+  //mutex_lock(&portal_data->reg_mutex);
+  //mutex_unlock(&portal_data->reg_mutex);
+  for (int i = 0; i < msg->size / 4; i++){
+    unsigned int val = buf[(msg->size/4)-i-1];
+    // fprintf(stderr, "%08x\n", val);
+    *((volatile unsigned int*)(((unsigned int)req_fifo_base) + msg->channel * 256)) = val;
+  }
+  
+  return rc;
 }
 
 int PortalInstance::receiveMessage(unsigned int queue_status)
@@ -137,7 +150,7 @@ int PortalInstance::receiveMessage(unsigned int queue_status)
     for(int i = 0; i < 32; i++){
       if(queue_status & 1<<i){
 	// fprintf(stderr, "indication->handleMessage(%08x,%d)\n", fd,i);
-	status  = indication->handleMessage(fd,i);
+	status  = indication->handleMessage(fd,i,ind_fifo_base);
 	break;
       }
     }
@@ -244,6 +257,7 @@ void* portalExec(void* __x)
 {
     int rc;
     int timeout = 1000;
+    if(0)
     fprintf(stderr, "about to invoke poll(%x, %d, %d)\n", portal_fds, numFds, timeout);
     if (!numFds) {
         ALOGE("PortalMemory::exec No fds open numFds=%d\n", numFds);
@@ -262,20 +276,20 @@ void* portalExec(void* __x)
 	PortalInstance *instance = portal_instances[i];
 	
 	// sanity check, to see the status of interrupt source and enable
-	volatile unsigned int int_src = *(instance->ind_hwregs+0x0);
-	volatile unsigned int int_en  = *(instance->ind_hwregs+0x1);
-
-	volatile unsigned int queue_status = *(instance->ind_hwregs+0x8);
-	// fprintf(stderr, "about to receive messages %08x %08x %08x\n", int_src, int_en, queue_status);
+	volatile unsigned int int_src = *(instance->ind_reg_base+0x0);
+	volatile unsigned int int_en  = *(instance->ind_reg_base+0x1);
+	volatile unsigned int queue_status = *(instance->ind_reg_base+0x8);
+	if(0)
+	fprintf(stderr, "about to receive messages %08x %08x %08x\n", int_src, int_en, queue_status);
 
 	// handle all messasges from this portal instance
 	while (queue_status) {
 	  instance->receiveMessage(queue_status);
-	  queue_status = *(instance->ind_hwregs+0x8);
+	  queue_status = *(instance->ind_reg_base+0x8);
 	}
 
 	// re-enable interupt which was disabled by portal_isr
-	*(instance->ind_hwregs+0x1) = 1;
+	*(instance->ind_reg_base+0x1) = 1;
       }
 
       // rc of 0 indicates timeout

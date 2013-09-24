@@ -72,7 +72,7 @@ class TestCoreIndication : public CoreIndication
     fprintf(stderr, "writeAck %lx\n", v);
   }
   virtual void configResp(unsigned long chanId, unsigned long pa, unsigned long numWords){
-    fprintf(stderr, "configResp %d, %lx, %d\n", chanId, pa, numWords);
+    fprintf(stderr, "configResp %x, %x, %x\n", chanId, pa, numWords);
     sem_post(&conf_sem);
   }
   virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 

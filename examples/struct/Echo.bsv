@@ -39,6 +39,7 @@ interface CoreIndication;
     method Action heard2(Bit#(16) a, Bit#(16) b);
     method Action heard3(S1 v);
     method Action heard4(S2 v);
+    method Action heard5(Bit#(64) v);
 endinterface
 
 interface CoreRequest;
@@ -46,6 +47,7 @@ interface CoreRequest;
     method Action say2(Bit#(16) a, Bit#(16) b);
     method Action say3(S1 v);
     method Action say4(S2 v);
+    method Action say5(Bit#(64) v);
 endinterface
 
 interface EchoRequest;
@@ -61,6 +63,7 @@ module mkEchoRequest#(EchoIndication indication)(EchoRequest);
    let delay2 <- mkSizedFIFO(8);
    let delay3 <- mkSizedFIFO(8);
    let delay4 <- mkSizedFIFO(8);
+   let delay5 <- mkSizedFIFO(8);
    
    rule heard1;
       delay1.deq;
@@ -83,22 +86,34 @@ module mkEchoRequest#(EchoIndication indication)(EchoRequest);
       indication.coreIndication.heard4(delay4.first);
    endrule
 
+   rule heard5;
+      delay5.deq;
+      indication.coreIndication.heard5(delay5.first);
+   endrule
+
    interface CoreRequest coreRequest; 
       method Action say1(Bit#(32) v);
 	 delay1.enq(v);
       endmethod
 
       method Action say2(Bit#(16) a, Bit#(16) b);
-	 delay2.enq(tuple2(a,b));
+	 delay2.enq(tuple2(a+1,b));
       endmethod
    
       method Action say3(S1 v);
-	 delay3.enq(v);
+	 S1 rv = S1{a:v.a, b:v.b+1};
+	 delay3.enq(rv);
       endmethod
 
       method Action say4(S2 v);
-	 delay4.enq(v);
+	 S2 rv = S2{a:v.a+2, b:v.b+1, c:v.c};
+	 delay4.enq(rv);
       endmethod
+   
+      method Action say5(Bit#(64) v);
+	 delay5.enq(v);
+      endmethod
+
    endinterface
       
 endmodule

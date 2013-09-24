@@ -41,7 +41,7 @@ public:
 '''
 indicationClassSuffixTemplate='''
 protected:
-    virtual int handleMessage(int fd, unsigned int channel);
+    virtual int handleMessage(int fd, unsigned int channel, volatile unsigned int* ind_fifo_base);
     friend class PortalInstance;
 };
 '''
@@ -99,24 +99,25 @@ void %(namespace)s%(className)s::putFailed(unsigned long v){
 '''
 
 handleMessageTemplate='''
-int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel)
+int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel, volatile unsigned int* ind_fifo_base)
 {
     
-    unsigned int *buf = new unsigned int[1024];
-    PortalMessage *msg = (PortalMessage *)(buf);
+    unsigned int buf[1024];
+    unsigned int size;
     memset(buf, 0, 1024);
     
     switch (channel) {
 %(responseSzCases)s
     }
 
-    // fprintf(stderr, "about to call ioctl %%d\\n", msg->size);
-    int rc = ioctl(fd, PORTAL_GET, msg);
-    if(rc){
-        fprintf(stderr, "handleMessage failed\\n");
-        return -1;
+    // mutex_lock(&portal_data->reg_mutex);
+    // mutex_unlock(&portal_data->reg_mutex);
+    for (int i = 0; i < size/4; i++) {
+        unsigned int val = *((volatile unsigned int*)(((unsigned int)ind_fifo_base) + channel * 256));
+        buf[(size/4)-1-i] = val;
+        //fprintf(stderr, "%%08x\\n", val);
     }
-
+                       
     switch (channel) {
 %(responseCases)s
     }
@@ -144,12 +145,9 @@ void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 '''
 
 responseTemplate='''
-struct %(className)s%(methodName)sMSG : public PortalMessage
+struct %(className)s%(methodName)sMSG
 {
-    struct Request {
-    //fix Adapter.bsv to unreverse these
 %(paramStructDeclarations)s
-    } request;
 };
 '''
 
@@ -239,7 +237,7 @@ class StructMixin:
         if (indentation == 0):
             f.write('typedef ')
         f.write('struct %s {\n' % self.cName())
-        for e in self.elements:
+        for e in reversed(self.elements):
             e.emitCDeclaration(f, indentation+4)
         indent(f, indentation)
         f.write('}')
@@ -333,20 +331,16 @@ class InterfaceMixin:
                          'responseCases': ''.join([ '    case %(channelNumber)s: %(name)s(%(params)s); break;\n'
                                                    % { 'channelNumber': d.channelNumber,
                                                        'name': d.name,
-                                                       'params': ', '.join(['((%s%sMSG *)msg)->request.%s' % (className, d.name, p.name) for p in d.params])}
+                                                       'params': ', '.join(['((%s%sMSG *)(&buf[0]))->%s' % (className, d.name, p.name) for p in d.params])}
                                                    for d in self.decls 
                                                    if d.type == 'Method' and d.return_type.name == 'Action'
                                                     ]),
-                         'responseSzCases': ''.join([ ''.join(['    case %(channelNumber)s: {\n',
-                                                               '        %(msg)s dummy;\n',
-                                                               '        msg->size = sizeof(dummy.request);\n',
-                                                               '        break;\n',
-                                                               '    }\n'])
-                                                   % { 'channelNumber': d.channelNumber,
-                                                       'msg': '%s%sMSG' % (className, d.name)}
-                                                   for d in self.decls 
-                                                   if d.type == 'Method' and d.return_type.name == 'Action'
-                                                    ])
+                         'responseSzCases': ''.join(['    case %(channelNumber)s: { size = sizeof(%(msg)s); break; }\n'
+                                                     % { 'channelNumber': d.channelNumber,
+                                                         'msg': '%s%sMSG' % (className, d.name)}
+                                                     for d in self.decls 
+                                                     if d.type == 'Method' and d.return_type.name == 'Action'
+                                                     ])
                          }
 
 
