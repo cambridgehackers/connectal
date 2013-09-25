@@ -91,9 +91,7 @@ putFailedTemplate='''
 void %(namespace)s%(className)s::putFailed(unsigned long v){
     char buff[100];
     %(instName)s::methodName(v, &(buff[0]));
-    fprintf(stderr, "putFailed: ");
-    fprintf(stderr, buff);
-    fprintf(stderr, "\\n");
+    fprintf(stderr, "putFailed: %%s\\n", buff);
     exit(1);
   }
 '''
@@ -103,8 +101,8 @@ int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel, vola
 {
     
     unsigned int buf[1024];
-    unsigned int size;
     memset(buf, 0, 1024);
+    PortalMessage *msg = 0x0;
     
     switch (channel) {
 %(responseSzCases)s
@@ -112,43 +110,47 @@ int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel, vola
 
     // mutex_lock(&portal_data->reg_mutex);
     // mutex_unlock(&portal_data->reg_mutex);
-    for (int i = (size/4)-1; i >= 0; i--) {
+    for (int i = (msg->size()/4)-1; i >= 0; i--) {
         unsigned int val = *((volatile unsigned int*)(((unsigned int)ind_fifo_base) + channel * 256));
         buf[i] = val;
-        fprintf(stderr, "%%08x\\n", val);
+        //fprintf(stderr, "%%08x\\n", val);
     }
-                       
-    switch (channel) {
-%(responseCases)s
-    }
+    msg->demarshall(&(buf[0]));
+    msg->indicate(this);
+    delete msg;
     return 0;
 }
 '''
 
 requestTemplate='''
-struct %(className)s%(methodName)sMSG : public PortalMessage
-{
-    struct Request {
-%(paramStructDeclarations)s
-    } request;
-};
-
 void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
     %(className)s%(methodName)sMSG msg;
-    msg.size = sizeof(msg.request);
     msg.channel = %(methodChannelOffset)s;
 %(paramSetters)s
     sendMessage(&msg);
 };
 '''
 
-responseTemplate='''
-struct %(className)s%(methodName)sMSG
+msgTemplate='''
+class %(className)s%(methodName)sMSG : public PortalMessage
 {
+public:
+    struct {
 %(paramStructDeclarations)s
+    } payload;
+    size_t size(){return %(payloadSize)s;}
+    void marshall(unsigned int *buff) {
+        memcpy(buff,&payload,sizeof(payload));
+    }
+    void demarshall(unsigned int *buff){
+        memcpy(&payload,buff,sizeof(payload));
+    }
+    void indicate(void *ind){ %(responseCase)s }
 };
 '''
+
+
 
 def indent(f, indentation):
     for i in xrange(indentation):
@@ -196,7 +198,7 @@ class MethodMixin:
             paramStructDeclarations = ['        int padding;\n']
         # reversing order for bsv/c++ compatability
         paramStructDeclarations.reverse()
-        paramSetters = [ '    msg.request.%s = %s;\n' % (p.name, p.name) for p in params]
+        paramSetters = [ '    msg.payload.%s = %s;\n' % (p.name, p.name) for p in params]
         resultTypeName = self.resultTypeName()
         substs = {
             'namespace': namespace,
@@ -209,11 +211,20 @@ class MethodMixin:
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
             'methodChannelOffset': self.channelNumber,
+            # if message is empty, we still send an int of padding
+            'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
         if not self.isIndication:
+            substs['responseCase'] = 'assert(false);'
+            f.write(msgTemplate % substs)
             f.write(requestTemplate % substs)
         else:
-            f.write(responseTemplate % substs)
+            substs['responseCase'] = ('((%(className)s *)ind)->%(name)s(%(params)s);\n'
+                                      % { 'name': self.name,
+                                          'className' : className,
+                                          'params': ', '.join(['payload.%s' % (p.name) for p in self.params])})
+            f.write(msgTemplate % substs)
+
 
 class StructMemberMixin:
     def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
@@ -327,14 +338,7 @@ class InterfaceMixin:
                          'className': className,
                          # this is a horrible hack (mdk)
                          'instName' : className.replace('Indication', 'Request'),
-                         'responseCases': ''.join([ '    case %(channelNumber)s: %(name)s(%(params)s); break;\n'
-                                                   % { 'channelNumber': d.channelNumber,
-                                                       'name': d.name,
-                                                       'params': ', '.join(['((%s%sMSG *)(&buf[0]))->%s' % (className, d.name, p.name) for p in d.params])}
-                                                   for d in self.decls 
-                                                   if d.type == 'Method' and d.return_type.name == 'Action'
-                                                    ]),
-                         'responseSzCases': ''.join(['    case %(channelNumber)s: { size = sizeof(%(msg)s); break; }\n'
+                         'responseSzCases': ''.join(['    case %(channelNumber)s: { msg = new %(msg)s(); break; }\n'
                                                      % { 'channelNumber': d.channelNumber,
                                                          'msg': '%s%sMSG' % (className, d.name)}
                                                      for d in self.decls 

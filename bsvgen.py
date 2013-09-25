@@ -417,6 +417,10 @@ def emitPreamble(f, files):
     #axiSlaveDecarations = ['interface AxiSlave#(32,4) %s;' % axiSlave for axiSlave in axiSlaveNames]
     f.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
 
+class ParamMixin:
+    def numBitsBSV(self):
+        return self.type.numBitsBSV();
+
 class NullMixin:
     def emitBsvImplementation(self, f):
         pass
@@ -427,6 +431,13 @@ class TypeMixin:
             return '%s#(%s)' % (self.name, self.params[0].numeric())
         else:
             return self.name
+    def numBitsBSV(self):
+        if (self.name == 'Bit'):
+		return self.params[0].numeric()
+	sdef = syntax.globalvars[self.name]
+	return sum([e.type.numBitsBSV() for e in sdef.elements])
+
+
 class MethodMixin:
     def emitBsvImplementation(self, f):
         pass

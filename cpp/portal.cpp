@@ -125,11 +125,13 @@ int PortalInstance::sendMessage(PortalMessage *msg)
     return rc;
   }
 
-  unsigned int* buf = (unsigned int*)(((unsigned int)msg)+sizeof(PortalMessage));
-  //fprintf(stderr, "sizeof(PortalMessage) = %d\n", sizeof(PortalMessage));
-  //mutex_lock(&portal_data->reg_mutex);
-  //mutex_unlock(&portal_data->reg_mutex);
-  for (int i = (msg->size/4)-1; i >= 0; i--){
+  unsigned int buf[128];
+  msg->marshall(&(buf[0]));
+
+  // mutex_lock(&portal_data->reg_mutex);
+  // mutex_unlock(&portal_data->reg_mutex);
+  // fprintf(stderr, "msg->size() = %d\n", msg->size());
+  for (int i = (msg->size()/4)-1; i >= 0; i--){
     unsigned int val = buf[i];
     // fprintf(stderr, "%08x\n", val);
     *((volatile unsigned int*)(((unsigned int)req_fifo_base) + msg->channel * 256)) = val;
