@@ -11,6 +11,7 @@ import FIFOF        :: *;
 import Counter      :: *;
 import DefaultValue :: *;
 import XilinxPCIE   :: *;
+import BRAM         :: *;
 import BRAMFIFO     :: *;
 import ConfigReg    :: *;
 import DReg         :: *;
@@ -20,7 +21,6 @@ import ByteBuffer    :: *;
 import ByteCompactor :: *;
 
 import AxiMasterSlave :: *;
-import Adapter        :: *;
 
 // The top-level interface of the PCIe-to-NoC bridge
 interface PCIEtoBNoCQrc#(numeric type bpb);
@@ -101,7 +101,11 @@ module mkTLPDispatcher(TLPDispatcher);
                                      || ((hdr_3dw.addr % 8192) == 1026)
                                      || ((hdr_3dw.addr % 8192) == 1027)
                                      ;
-      Bool in_axi_addr_range         =  ((hdr_3dw.addr % 8192) == 1032)
+      Bool in_axi_addr_range         =  ((hdr_3dw.addr % 8192) == 1028)
+                                     || ((hdr_3dw.addr % 8192) == 1029)
+                                     || ((hdr_3dw.addr % 8192) == 1030)
+                                     || ((hdr_3dw.addr % 8192) == 1031)
+                                     || ((hdr_3dw.addr % 8192) == 1032)
                                      || ((hdr_3dw.addr % 8192) == 1040)
                                      ;
       Bool is_config_read    =  tlp.sof
@@ -353,6 +357,131 @@ interface MSIX_Entry;
    interface Reg#(Bool)     masked;
 endinterface
 
+interface AxiEngine;
+    interface Put#(TLPData#(16))   tlp_in;
+    interface Get#(TLPData#(16))   tlp_out;
+    interface Axi3Master#(32,4,12) axi;
+    method TLPLength readLength;
+    method Bit#(32) addressesRead;
+    method Bit#(32) wordsRead;
+endinterface
+
+module mkAxiEngine#(PciId my_id)(AxiEngine);
+    Reg#(TLPMemoryIO3DWHeader) hdr_3dw <- mkReg(defaultValue);
+    Reg#(TLPLength) readLengthReg <- mkReg(0);
+    Reg#(TLPLength) readLengthSnapshotReg <- mkReg(0);
+    Reg#(Bit#(32)) addressesReadReg <- mkReg(0);
+    Reg#(Bit#(32)) wordsReadReg <- mkReg(0);
+    FIFO#(TLPData#(16)) tlpFifo <- mkFIFO;
+    interface Put tlp_in;
+        method Action put(TLPData#(16) tlp) if (readLengthReg == 0);
+	    $display("AxiEngine.put tlp=%h", tlp);
+	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
+	    readLengthReg <= h.length << 2;
+	    readLengthSnapshotReg <= h.length << 2;
+	    hdr_3dw <= unpack(tlp.data);
+	endmethod
+    endinterface
+    interface Get tlp_out = toGet(tlpFifo);
+    interface Axi3Master axi;
+	interface Axi3MasterWrite write;
+	    method ActionValue#(Bit#(32)) writeAddr() if (False);
+		return extend(hdr_3dw.addr) << 2;
+	    endmethod
+	    method Bit#(4) writeBurstLen();
+		return 0;
+	    endmethod
+	    method Bit#(3) writeBurstWidth();
+		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+	    endmethod
+	    method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
+		return 2'b01; // increment address
+	    endmethod
+	    method Bit#(3) writeBurstProt(); // drive with 3'b000
+		return 3'b000;
+	    endmethod
+	    method Bit#(4) writeBurstCache(); // drive with 4'b0011
+		return 4'b0011;
+	    endmethod
+	    method Bit#(12) writeId();
+		return extend(hdr_3dw.tag);
+	    endmethod
+
+	    method ActionValue#(Bit#(32)) writeData();
+		return hdr_3dw.data;
+	    endmethod
+	    method Bit#(12) writeWid();
+		return extend(hdr_3dw.tag);
+	    endmethod
+	    method Bit#(4) writeDataByteEnable();
+		return 4'b1111;
+	    endmethod
+	    method Bit#(1) writeLastDataBeat(); // last data beat
+		return 0;
+	    endmethod
+
+	    method Action writeResponse(Bit#(2) responseCode, Bit#(12) id);
+	    endmethod
+	endinterface: write
+
+	interface Axi3MasterRead read;
+	    method ActionValue#(Bit#(32)) readAddr() if (readLengthReg > 0);
+	        readLengthReg <= readLengthReg - 4;
+		addressesReadReg <= addressesReadReg + 1;
+		return extend(hdr_3dw.addr) << 2;
+	    endmethod
+	    method Bit#(4) readBurstLen();
+		return 0;
+	    endmethod
+	    method Bit#(3) readBurstWidth();
+		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+	    endmethod
+	    method Bit#(2) readBurstType();  // drive with 2'b01
+		return 2'b01;
+	    endmethod
+	    method Bit#(3) readBurstProt(); // drive with 3'b000
+		return 3'b000;
+	    endmethod
+	    method Bit#(4) readBurstCache(); // drive with 4'b0011
+		return 4'b0011;
+	    endmethod
+	    method Bit#(12) readId();
+		return extend(hdr_3dw.tag);
+	    endmethod
+	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id);
+	        $display("AxiEngine.readData data=%h", data);
+		wordsReadReg <= wordsReadReg + 1;
+	        TLPCompletionHeader completion = defaultValue;
+		completion.format = MEM_READ_4DW_NO_DATA;
+		completion.pkttype = IO_REQUEST;
+		completion.length = 0;
+		completion.cmplid = my_id;
+		completion.tag = truncate(id);
+		completion.bytecount = 4;
+		completion.reqid = hdr_3dw.reqid;
+		completion.loweraddr = getLowerAddr(pack(hdr_3dw.addr), 15);
+		completion.data = data;
+	        TLPData#(16) tlp = defaultValue;
+		tlp.data = pack(completion);
+		tlp.sof = True;
+		tlp.eof = True;
+		tlp.be = 15;
+		tlpFifo.enq(tlp);
+	    endmethod
+	endinterface: read
+    endinterface: axi
+    method TLPLength readLength();
+        // length of last read req
+        return readLengthSnapshotReg;
+    endmethod
+    method Bit#(32) addressesRead();
+        return addressesReadReg;
+    endmethod
+    method Bit#(32) wordsRead();
+        return wordsReadReg;
+    endmethod
+endmodule: mkAxiEngine
+
 // The control and status registers which are accessible from the PCIe
 // bus.
 interface ControlAndStatusRegs;
@@ -390,6 +519,10 @@ interface ControlAndStatusRegs;
    (* always_ready *)
    method Action msi_interrupt_clear();
 
+   interface Reg#(Bool) tlpTracing;
+   interface Reg#(Bit#(32)) tlpSeqno;
+   method FIFOF#(TimestampedTlpData) getTlpDataFifo();
+   interface BRAMServer#(Bit#(6), TimestampedTlpData) tlpDataBram;
 endinterface: ControlAndStatusRegs
 
 typedef struct {
@@ -411,6 +544,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
                               , Bool      msix_enabled
                               , Bool      msix_mask_all_intr
                               , Bool      msi_enabled
+			      , AxiEngine axiEngine
                               )
                               (ControlAndStatusRegs);
 
@@ -474,17 +608,33 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Bool read_allowed  = !read_operation_in_progress && data_to_write;
    Bool write_allowed = !write_operation_in_progress && space_for_read;
 
-   FIFOF#(Bit#(32)) testFifo <- mkUGSizedFIFOF(32);
-   Reg#(Bit#(32)) enqCount <- mkReg(0);
-   ToBit32#(TimestampedTlpData) adapter <- mkToBit32();
+   Reg#(Bool) tlpTracingReg <- mkReg(False);
    FIFOF#(TimestampedTlpData) tlpDataFifo <- mkUGSizedFIFOF(32);
-   Reg#(Bit#(32)) tlpSeqno <- mkReg(0);
+   Reg#(Bit#(32)) tlpSeqnoReg <- mkReg(0);
+   BRAM_Configure bramCfg = defaultValue;
+   bramCfg.memorySize = 32;
+   BRAM1Port#(Bit#(6), TimestampedTlpData) tlpDataBram1Port <- mkBRAM1Server(bramCfg);
+   Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
 
-   rule toAdapter if (tlpDataFifo.notEmpty);
-       let tlpData = tlpDataFifo.first;
-       tlpDataFifo.deq;
-       adapter.enq(tlpData);
-   endrule
+   // Function to return a one-word slice of the tlpDataFifo.first
+   function tlpDataFifoFirstSlice(Bit#(3) i);
+       begin
+	   if (tlpDataFifo.notEmpty) begin
+		Bit#(192) v = extend(pack(tlpDataFifo.first));
+		return v[31 + (i*32) : 0 + (i*32)];
+	   end else begin
+		return 32'hdeadbf00 + i;
+	   end
+       end
+   endfunction
+
+   // Function to return a one-word slice of the tlpDataBramResponse
+   function tlpDataBramResponseSlice(Bit#(3) i);
+       begin
+           Bit#(192) v = extend(pack(tlpDataBramResponse));
+           return v[31 + (i*32) : 0 + (i*32)];
+       end
+   endfunction
 
    // Function to read from the CSR address space (using DW address)
    function Bit#(32) rd_csr(UInt#(30) addr);
@@ -507,26 +657,23 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          513: return {23'd0,pack(write_allowed),pack(write_buffers_level == 16),pack(end_of_write_list),1'b0,pack(write_buffers_level)};
          514: return pack(rd_xfer_count);
          515: return pack(wr_xfer_count);
-         768: if (testFifo.notEmpty)
-	           return testFifo.first;
-	       else
-	           return 32'hdeadd00d;
-         769: return enqCount;		   
-         770: return testFifo.notEmpty ? 1 : 0;
-         771: return testFifo.notFull ? 1 : 0;
-	 772: if (adapter.notEmpty) begin
-	           Maybe#(Bit#(32)) v = adapter.first;
-		   if (v matches tagged Valid .d)
-	               return d;
-		   else
-		       return 32'hdead0000;
-	       end else begin
-	           return 32'hdeadbeef;
-	       end
-	 773: return tlpSeqno;
-	 774: return fromInteger(valueOf(TimestampedTlpDataSize));
-	 775: return fromInteger(valueOf(TlpData16Size));
-	 776: return fromInteger(valueOf(TLPCompletionHeaderSize));
+	 768: return tlpDataFifoFirstSlice(0);
+	 769: return tlpDataFifoFirstSlice(1);
+	 770: return tlpDataFifoFirstSlice(2);
+	 771: return tlpDataFifoFirstSlice(3);
+	 772: return tlpDataFifoFirstSlice(4);
+	 773: return tlpDataFifoFirstSlice(5);
+	 774: return tlpSeqnoReg;
+	 775: return (tlpTracingReg ? 1 : 0);
+	 776: return tlpDataBramResponseSlice(0);
+	 777: return tlpDataBramResponseSlice(1);
+	 778: return tlpDataBramResponseSlice(2);
+	 779: return tlpDataBramResponseSlice(3);
+	 780: return tlpDataBramResponseSlice(4);
+	 781: return tlpDataBramResponseSlice(5);
+	 782: return extend(axiEngine.readLength);
+	 783: return axiEngine.addressesRead;
+	 784: return axiEngine.wordsRead;
          // 4-entry MSIx table
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
          4097: return msix_entry[0].addr_hi;            // entry 0 upper address
@@ -578,6 +725,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
             // DMA status
             512: if (be[0] == 1) reset_read_status.send();
             513: if (be[0] == 1) reset_write_status.send();
+	    774: tlpTracingReg <= (dword[0] != 0) ? True : False;
             // MSIx table entries
             4096: msix_entry[0].addr_lo  <= update_dword(msix_entry[0].addr_lo, be, (dword & 32'hfffffffc));
             4097: msix_entry[0].addr_hi  <= update_dword(msix_entry[0].addr_hi, be, dword);
@@ -649,17 +797,18 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
       endactionvalue
    endfunction: do_read
 
+   rule bramResponse;
+       let v <- tlpDataBram1Port.portA.response.get();
+       tlpDataBramResponse <= v;
+   endrule
+
    // Supply data (with dword granularity and byte enables) to be
    // written.
    function Action do_write(UInt#(30) addr, Vector#(4,Tuple2#(Bit#(4),Bit#(32))) value);
       action
-         //FIXME
-         if ((addr % 8192) == 768 && testFifo.notFull) begin
-	     enqCount <= enqCount + 1;
-	     testFifo.enq(tpl_2(value[0]));
-	 end
-         if ((addr % 8192) == 772) begin
-	     enqCount <= enqCount + 1;
+         if ((addr % 8192) == 768) begin
+	     if (tlpDataFifo.notEmpty) tlpDataFifo.deq;
+	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: False, address: truncate(tlpSeqnoReg), datain: unpack(0)});
 	 end
          wr_csr(addr,  tpl_1(value[0]),tpl_2(value[0]));
          wr_csr(addr+1,tpl_1(value[1]),tpl_2(value[1]));
@@ -734,10 +883,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
       UInt#(30) addr = rd_addr_queue.first();
       rd_addr_queue.deq();
       // FIXME
-      if ((addr % 8192) == 768 && testFifo.notEmpty)
-          testFifo.deq;
-      if ((addr % 8192) == 772 && adapter.notEmpty)
-          adapter.deq;
       Vector#(4,Bit#(8)) result = unpack(byteSwap(rd_csr(addr)));
       Bit#(16) mask = pack(completion_tlp.valid_mask());
       // Note firstbe is already handled when the header is set up
@@ -963,11 +1108,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
                dws_left_in_tlp <= dws_in_next_completion;
             end
          end
-	 if (tlpDataFifo.notFull) begin
-	     TimestampedTlpData ttd = TimestampedTlpData { seqno: tlpSeqno, tlp: tlp };
-	     tlpDataFifo.enq(ttd);
-	     tlpSeqno <= tlpSeqno + 1;
-	 end
          return tlp;
       endmethod
    endinterface
@@ -1023,6 +1163,12 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
       msi_intr_needed <= False;
    endmethod
 
+   interface Reg tlpTracing = tlpTracingReg;
+   interface Reg tlpSeqno = tlpSeqnoReg;
+   method FIFOF#(TimestampedTlpData) getTlpDataFifo();
+       return tlpDataFifo;
+   endmethod
+   interface BRAMServer tlpDataBram = tlpDataBram1Port.portA;
 endmodule: mkControlAndStatusRegs
 
 // The DMA engine receives DMA commands from the PCIe bus in the form
@@ -1995,110 +2141,6 @@ module mkDMAEngine#( PciId my_id
 
 endmodule: mkDMAEngine
 
-interface AxiEngine#(numeric type bpb);
-    interface Put#(TLPData#(16))   tlp_in;
-    interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Master#(32,4,12) axi;
-endinterface
-
-module mkAxiEngine#(PciId my_id)(AxiEngine#(bpb));
-    Reg#(TLPMemoryIO3DWHeader) hdr_3dw <- mkReg(defaultValue);
-    Reg#(TLPLength) readLength <- mkReg(0);
-    FIFO#(TLPData#(16)) tlpFifo <- mkFIFO;
-    interface Put tlp_in;
-        method Action put(TLPData#(16) tlp) if (readLength == 0);
-	    $display("AxiEngine.put tlp=%h", tlp);
-	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
-	    readLength <= h.length;
-	    hdr_3dw <= unpack(tlp.data);
-	endmethod
-    endinterface
-    interface Get tlp_out = toGet(tlpFifo);
-    interface Axi3Master axi;
-	interface Axi3MasterWrite write;
-	    method ActionValue#(Bit#(32)) writeAddr() if (False);
-		return extend(hdr_3dw.addr) << 2;
-	    endmethod
-	    method Bit#(4) writeBurstLen();
-		return 0;
-	    endmethod
-	    method Bit#(3) writeBurstWidth();
-		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
-	    endmethod
-	    method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
-		return 2'b01; // increment address
-	    endmethod
-	    method Bit#(3) writeBurstProt(); // drive with 3'b000
-		return 3'b000;
-	    endmethod
-	    method Bit#(4) writeBurstCache(); // drive with 4'b0011
-		return 4'b0011;
-	    endmethod
-	    method Bit#(12) writeId();
-		return extend(hdr_3dw.tag);
-	    endmethod
-
-	    method ActionValue#(Bit#(32)) writeData();
-		return hdr_3dw.data;
-	    endmethod
-	    method Bit#(12) writeWid();
-		return extend(hdr_3dw.tag);
-	    endmethod
-	    method Bit#(4) writeDataByteEnable();
-		return 4'b1111;
-	    endmethod
-	    method Bit#(1) writeLastDataBeat(); // last data beat
-		return 0;
-	    endmethod
-
-	    method Action writeResponse(Bit#(2) responseCode, Bit#(12) id);
-	    endmethod
-	endinterface: write
-
-	interface Axi3MasterRead read;
-	    method ActionValue#(Bit#(32)) readAddr() if (readLength > 0);
-	        readLength <= readLength - 4;
-		return extend(hdr_3dw.addr) << 2;
-	    endmethod
-	    method Bit#(4) readBurstLen();
-		return 0;
-	    endmethod
-	    method Bit#(3) readBurstWidth();
-		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
-	    endmethod
-	    method Bit#(2) readBurstType();  // drive with 2'b01
-		return 2'b01;
-	    endmethod
-	    method Bit#(3) readBurstProt(); // drive with 3'b000
-		return 3'b000;
-	    endmethod
-	    method Bit#(4) readBurstCache(); // drive with 4'b0011
-		return 4'b0011;
-	    endmethod
-	    method Bit#(12) readId();
-		return extend(hdr_3dw.tag);
-	    endmethod
-	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id);
-	        $display("AxiEngine.readData data=%h", data);
-	        TLPCompletionHeader completion = defaultValue;
-		completion.length = 1;
-		completion.cmplid = my_id;
-		completion.tag = truncate(id);
-		completion.bytecount = 4;
-		completion.reqid = hdr_3dw.reqid;
-		completion.loweraddr = getLowerAddr(pack(hdr_3dw.addr), 15);
-		completion.data = data;
-	        TLPData#(16) tlp = defaultValue;
-		tlp.data = pack(completion);
-		tlp.sof = True;
-		tlp.eof = True;
-		tlp.be = 15;
-		tlpFifo.enq(tlp);		
-	    endmethod
-	endinterface: read
-    endinterface: axi
-endmodule: mkAxiEngine
-
 // The PCIe-to-NoC bridge puts all of the elements together
 (* synthesize *)
 module mkPCIEtoBNoCQrc_4#( Bit#(64)  board_content_id
@@ -2175,6 +2217,8 @@ module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
    check_bytes_per_beat("mkPCIEtoBNoC", bytes_per_beat);
 
    // instantiate sub-components
+   AxiEngine            axiEngine <- mkAxiEngine( my_id );
+
    TLPDispatcher        dispatcher <- mkTLPDispatcher();
    TLPArbiter           arbiter    <- mkTLPArbiter();
    ControlAndStatusRegs csr        <- mkControlAndStatusRegs( board_content_id
@@ -2184,13 +2228,13 @@ module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
                                                             , msix_enabled
                                                             , msix_mask_all_intr
                                                             , msi_enabled
+							    , axiEngine
                                                             );
    DMAEngine#(bpb)      dma        <- mkDMAEngine( my_id
                                                  , max_read_req_bytes
                                                  , max_payload_bytes
                                                  );
 
-   AxiEngine#(bpb)      axiEngine <- mkAxiEngine( my_id );
 
    // connect the sub-components to each other
 
@@ -2199,7 +2243,24 @@ module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
    mkConnection(dispatcher.tlp_out_to_axi,       axiEngine.tlp_in);
    mkConnection(csr.csr_read_completion_tlps,    arbiter.tlp_in_from_config);
    mkConnection(dma.dma_read_and_write_requests, arbiter.tlp_in_from_dma);
-   mkConnection(axiEngine.tlp_out,               arbiter.tlp_in_from_axi);
+
+   //mkConnection(axiEngine.tlp_out,               arbiter.tlp_in_from_axi);
+   rule connectAndTraceAxiEngine;
+       let tlp <- axiEngine.tlp_out.get();
+       arbiter.tlp_in_from_axi.put(tlp);
+
+       if (csr.tlpTracing) begin
+	   TimestampedTlpData ttd = TimestampedTlpData { seqno: csr.tlpSeqno, tlp: tlp };
+	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpSeqno), datain: ttd });
+	   if (csr.getTlpDataFifo.notFull) begin
+	       csr.getTlpDataFifo.enq(ttd);
+	       csr.tlpSeqno <= csr.tlpSeqno + 1;
+	   end else begin
+	       csr.tlpTracing <= False;
+	   end
+       end
+   endrule
+
    mkConnection(dma.bytes_received,              csr.incr_wr_xfer_count);
    mkConnection(dma.bytes_sent,                  csr.incr_rd_xfer_count);
    mkConnection(csr.intr_to_send,                dma.next_interrupt);
