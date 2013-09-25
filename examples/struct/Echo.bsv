@@ -91,29 +91,49 @@ module mkEchoRequest#(EchoIndication indication)(EchoRequest);
       indication.coreIndication.heard5(delay5.first);
    endrule
 
-   interface CoreRequest coreRequest; 
+     interface CoreRequest coreRequest; 
       method Action say1(Bit#(32) v);
-	 delay1.enq(v);
+   	 delay1.enq(v);
       endmethod
 
       method Action say2(Bit#(16) a, Bit#(16) b);
-	 delay2.enq(tuple2(a+1,b));
+   	 delay2.enq(tuple2(a+1,b));
       endmethod
    
       method Action say3(S1 v);
-	 S1 rv = S1{a:v.a, b:v.b+1};
-	 delay3.enq(rv);
+   	 S1 rv = S1{a:v.a, b:v.b+1};
+   	 delay3.enq(rv);
       endmethod
 
       method Action say4(S2 v);
-	 S2 rv = S2{a:v.a+2, b:v.b+1, c:v.c};
-	 delay4.enq(rv);
+   	 S2 rv = S2{a:v.a+2, b:v.b+1, c:v.c};
+   	 delay4.enq(rv);
       endmethod
    
       method Action say5(Bit#(64) v);
-	 delay5.enq(v);
+   	 delay5.enq({v[63:4],4'h0});
       endmethod
 
    endinterface
+
+   //   interface CoreRequest coreRequest; 
+   //    method Action say1(Bit#(32) v);
+   // 	 delay1.enq(1);
+   //    endmethod
+   //    method Action say2(Bit#(16) a, Bit#(16) b);
+   // 	 delay2.enq(tuple2(2,3));
+   //    endmethod
+   //    method Action say3(S1 v);
+   // 	 S1 rv = S1{a:4, b:5};
+   // 	 delay3.enq(rv);
+   //    endmethod
+   //    method Action say4(S2 v);
+   // 	 S2 rv = S2{a:6, b:7, c:8};
+   // 	 delay4.enq(rv);
+   //    endmethod
+   //    method Action say5(Bit#(64) v);
+   // 	 delay5.enq(64'hDEADBEEFFECAFECA);
+   //    endmethod
+   // endinterface
       
 endmodule

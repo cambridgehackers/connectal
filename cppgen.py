@@ -112,10 +112,10 @@ int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel, vola
 
     // mutex_lock(&portal_data->reg_mutex);
     // mutex_unlock(&portal_data->reg_mutex);
-    for (int i = 0; i < size/4; i++) {
+    for (int i = (size/4)-1; i >= 0; i--) {
         unsigned int val = *((volatile unsigned int*)(((unsigned int)ind_fifo_base) + channel * 256));
-        buf[(size/4)-1-i] = val;
-        //fprintf(stderr, "%%08x\\n", val);
+        buf[i] = val;
+        fprintf(stderr, "%%08x\\n", val);
     }
                        
     switch (channel) {
@@ -129,7 +129,6 @@ requestTemplate='''
 struct %(className)s%(methodName)sMSG : public PortalMessage
 {
     struct Request {
-    //fix Adapter.bsv to unreverse these
 %(paramStructDeclarations)s
     } request;
 };
@@ -195,7 +194,7 @@ class MethodMixin:
         paramStructDeclarations = [ '        %s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in params]
         if not params:
             paramStructDeclarations = ['        int padding;\n']
-        ## fix Adapter.bsv to eliminate the need for this reversal
+        # reversing order for bsv/c++ compatability
         paramStructDeclarations.reverse()
         paramSetters = [ '    msg.request.%s = %s;\n' % (p.name, p.name) for p in params]
         resultTypeName = self.resultTypeName()

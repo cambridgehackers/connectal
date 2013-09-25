@@ -4,6 +4,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+typedef struct {
+  unsigned long a : 16;
+  unsigned long b : 16;
+} foo;
+
+typedef struct {
+  unsigned long a : 32;
+  unsigned long b : 32;
+} foo2;
+
 class TestCoreIndication : public CoreIndication
 {  
 public:
@@ -38,6 +48,27 @@ unsigned long TestCoreIndication::cnt = 0;
 
 int main(int argc, const char **argv)
 {
+  foo f;
+  f.a = 2;
+  f.b = 3;
+  unsigned int* fp = (unsigned int*)(&f);
+
+  foo2 f2;
+  f2.a = 2;
+  f2.b = 3;
+  unsigned long long* f2p = (unsigned long long*)(&f2);
+
+  fprintf(stderr, "%d\n", sizeof(f));
+  fprintf(stderr, "%08x\n", *fp);
+
+  fprintf(stderr, "%d\n", sizeof(f2));
+  fprintf(stderr, "%016llx\n", *f2p);
+
+  unsigned long long f3 = 0xDEADBEEFFECAFECA;
+  unsigned int* f3p = (unsigned int*)&f3;
+  fprintf(stderr, "%016llx\n", f3);
+  fprintf(stderr, "%08x, %08x\n", f3p[0], f3p[1]);
+
   CoreRequest* device = CoreRequest::createCoreRequest(new TestCoreIndication);
   int v = 42;
   fprintf(stderr, "calling say1(%d)\n", v);
