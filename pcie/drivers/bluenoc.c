@@ -51,7 +51,7 @@ MODULE_LICENSE ("Dual BSD/GPL");
 #define DEV_NAME "bluenoc"
 
 /* version string for the driver */
-#define DEV_VERSION "1.0"
+#define DEV_VERSION "1.0jeh1"
 
 /* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
@@ -1445,8 +1445,10 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
   /* basic sanity checks */
   if (_IOC_TYPE(cmd) != BNOC_IOC_MAGIC)
     return -ENOTTY;
-  if (_IOC_NR(cmd) > BNOC_IOC_MAXNR)
+  if (_IOC_NR(cmd) > BNOC_IOC_MAXNR) {
+    printk("cmd=%x io_nr=%d maxnr=%d\n", cmd, _IOC_NR(cmd), BNOC_IOC_MAXNR);
     return -ENOTTY;
+  }
   if (_IOC_DIR(cmd) & _IOC_READ)
     err = !access_ok(VERIFY_WRITE, (void __user *)arg, _IOC_SIZE(cmd));
   else if (_IOC_DIR(cmd) & _IOC_WRITE)
@@ -1605,6 +1607,64 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
         }
       }
       return 0;
+    }
+    case BNOC_IDENTIFY_PORTAL:
+    {
+      /* copy board identification info to a user-space struct */
+      tPortalInfo info;
+      long portal_csr_offset = 1024<<2;
+      info.interrupt_status = ioread32(this_board->bar0io + portal_csr_offset + 0x000);
+      info.interrupt_enable = ioread32(this_board->bar0io + portal_csr_offset + 0x004);
+      info.indication_channel_count = ioread32(this_board->bar0io + portal_csr_offset + 0x008);
+      info.base_fifo_offset = ioread32(this_board->bar0io + portal_csr_offset + 0x00C);
+      info.request_fired_count = ioread32(this_board->bar0io + portal_csr_offset + 0x010);
+      info.response_fired_count = ioread32(this_board->bar0io + portal_csr_offset + 0x014);
+      info.magic = ioread32(this_board->bar0io + portal_csr_offset + 0x020);
+      info.put_word_count = ioread32(this_board->bar0io + portal_csr_offset + 0x024);
+      info.get_word_count = ioread32(this_board->bar0io + portal_csr_offset + 0x028);
+      info.fifo_status = ioread32(this_board->bar0io + portal_csr_offset + 0x040);
+      err = copy_to_user((void __user *)arg, &info, sizeof(tPortalInfo));
+      if (err != 0)
+        return -EFAULT;
+      else
+        return 0;
+    }
+    case BNOC_GET_TLP:
+    {
+      /* copy board identification info to a user-space struct */
+      unsigned long tlp[6];
+      int i;
+      for (i = 0; i < 6; i++)
+	tlp[i] = ioread32(this_board->bar0io + (768<<2) + (i<<2));
+      // now deq the tlpDataFifo
+      iowrite32(0, this_board->bar0io + (768<<2) + 0);
+      printk("tlpseqno=%d\n",  ioread32(this_board->bar0io + (774<<2)));
+      err = copy_to_user((void __user *)arg, tlp, sizeof(tTlpData));
+      if (err != 0)
+        return -EFAULT;
+      else
+        return 0;
+    }
+    case BNOC_TRACE:
+    {
+      /* copy board identification info to a user-space struct */
+      unsigned trace, old_trace;
+      int tlpseqno = ioread32(this_board->bar0io + (774<<2));
+
+      err = copy_from_user(&trace, (void __user *)arg, sizeof(int));
+      if (err != 0)
+        return -EFAULT;
+
+      old_trace = ioread32(this_board->bar0io + (775<<2) + 0x000);
+      iowrite32(trace, this_board->bar0io + (775<<2) + 0x000);
+
+      printk("new trace=%d old trace=%d tlpseqno=%d\n", trace, old_trace, tlpseqno);
+
+      err = copy_to_user((void __user *)arg, &trace, sizeof(int));
+      if (err != 0)
+        return -EFAULT;
+      else
+        return 0;
     }
     default:
       return -ENOTTY;

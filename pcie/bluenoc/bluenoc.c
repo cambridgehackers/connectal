@@ -24,6 +24,9 @@ static void print_usage(const char* argv0)
   printf("       %s up      [ <file1> [ .. <fileN> ] ]\n", pgm);
   printf("       %s debug   ([+-]<debug_mode>)* [ <file1> [ .. <fileN> ] ]\n", pgm);
   printf("       %s profile <profile_command>   [ <file1> [ .. <fileN> ] ]\n", pgm);
+  printf("       %s portal  \n", pgm);
+  printf("       %s tlp  \n", pgm);
+  printf("       %s trace  \n", pgm);
   printf("\n");
   printf("Modes:\n");
   printf("  help    - Print usage information and exit.\n");
@@ -34,6 +37,7 @@ static void print_usage(const char* argv0)
   printf("  up      - Reactivate the BlueNoC target(s).\n");
   printf("  debug   - Control debugging output written to the kernel log.\n");
   printf("  profile - Start and stop profiling BlueNoC driver activity.\n");
+  printf("  portal  - Describe the portal target(s).\n");
   printf("\n");
   printf("File arguments:\n");
   printf("  <file> - Operate only on the named file.\n");
@@ -67,7 +71,7 @@ static void print_usage(const char* argv0)
   free(argv0_copy);
 }
 
-typedef enum { HELP, INFO, BUILD, RESET, DOWN, UP, DEBUG, PROFILE } tMode;
+typedef enum { HELP, INFO, BUILD, RESET, DOWN, UP, DEBUG, PROFILE, PORTAL, TLP, TRACE } tMode;
 
 static int is_bluenoc_file(const struct dirent* ent)
 {
@@ -234,6 +238,47 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
       }
       break;
     }
+  case PORTAL: {
+    tPortalInfo portal_info;
+    int res = ioctl(fd,BNOC_IDENTIFY_PORTAL,&portal_info);
+    if (res == -1) {
+      if (strict) {
+	perror("identify_portal ioctl");
+	ret = -1;
+      }
+      goto exit_process;
+    }
+    printf("  Portal interrupt_status %x\n", portal_info.interrupt_status);
+    printf("  Portal interrupt_enable %x\n", portal_info.interrupt_enable);
+    printf("  Portal indication_channel_count %x\n", portal_info.indication_channel_count);
+    printf("  Portal base_fifo_offset %x\n", portal_info.base_fifo_offset);
+    printf("  Portal request_fired_count %x\n", portal_info.request_fired_count);
+    printf("  Portal response_fired_count %x\n", portal_info.response_fired_count);
+    printf("  Portal magic %x\n", portal_info.magic);
+    printf("  Portal put_word_count %x\n", portal_info.put_word_count);
+    printf("  Portal get_word_count %x\n", portal_info.get_word_count);
+    printf("  Portal fifo_status %x\n", portal_info.fifo_status);
+    break;
+  }
+  case TLP: {
+    tTlpData tlp;
+    int res = ioctl(fd,BNOC_GET_TLP,&tlp);
+    int i;
+    if (res == -1) {
+      if (strict) {
+	perror("get_tlp ioctl");
+	ret = -1;
+      }
+      goto exit_process;
+    }
+    for (i = 0; i < 6; i++)
+      printf("[%d] %08x\n", i, *(((unsigned *)&tlp)+i));
+
+  } break;
+  case TRACE: {
+    int trace = 1;
+    int res = ioctl(fd,BNOC_TRACE,&trace);
+  } break;
   }
 
  exit_process:
@@ -365,6 +410,15 @@ int main(int argc, char* const argv[])
       print_usage(argv[0]);
       exit(1);
     }
+  } else if (strcmp("portal",argv[optind]) == 0) {
+    mode = PORTAL;
+    optind += 1;
+  } else if (strcmp("tlp",argv[optind]) == 0) {
+    mode = TLP;
+    optind += 1;
+  } else if (strcmp("trace",argv[optind]) == 0) {
+    mode = TRACE;
+    optind += 1;
   } else {
     /* not a recognized mode, assume it is a file name, and use INFO mode */
     mode = INFO;

@@ -32,3 +32,8 @@ uninstall:
 clean:
 	rm -rf bluenoc.ko bluenoc.o bluenoc.mod.*
 	rm -rf Module.symvers Module.markers modules.order
+
+.PHONY: insmod
+insmod:
+	sudo rmmod bluenoc || true
+	sudo insmod bluenoc.ko

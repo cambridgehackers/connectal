@@ -23,7 +23,22 @@ typedef struct {
   unsigned long long content_id;
 } tBoardInfo;
 
+typedef struct {
+  unsigned int interrupt_status;
+  unsigned int interrupt_enable;
+  unsigned int indication_channel_count;
+  unsigned int base_fifo_offset;
+  unsigned int request_fired_count;
+  unsigned int response_fired_count;
+  unsigned int magic;
+  unsigned int put_word_count;
+  unsigned int get_word_count;
+  unsigned int fifo_status;
+} tPortalInfo;
+
 typedef unsigned int tDebugLevel;
+
+typedef unsigned char tTlpData[16];
 
 const tDebugLevel DEBUG_OFF     =        0;
 const tDebugLevel DEBUG_CALLS   = (1 <<  0);
@@ -40,8 +55,11 @@ const tDebugLevel DEBUG_PROFILE = (1 << 31);
 #define BNOC_REACTIVATE      _IO(BNOC_IOC_MAGIC,3)
 #define BNOC_GET_DEBUG_LEVEL _IOR(BNOC_IOC_MAGIC,4,tDebugLevel*)
 #define BNOC_SET_DEBUG_LEVEL _IOW(BNOC_IOC_MAGIC,5,tDebugLevel*)
+#define BNOC_IDENTIFY_PORTAL _IOR(BNOC_IOC_MAGIC,6,tPortalInfo*)
+#define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
+#define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,int*)
 
 /* maximum valid IOCTL number */
-#define BNOC_IOC_MAXNR 5
+#define BNOC_IOC_MAXNR 8
 
 #endif /* __BLUENOC_H__ */
