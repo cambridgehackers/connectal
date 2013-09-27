@@ -162,7 +162,7 @@ if __name__=='__main__':
     cpp.write('#include "%s.h"\n' % namespace.interface)
     cpp.write('#include <stdio.h>\n')
     cpp.write('#include <stdlib.h>\n')
-    cpp.write('#include <assert.h>"\n')
+    cpp.write('#include <assert.h>\n')
 
 
     ## code generation pass
