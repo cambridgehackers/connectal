@@ -50,7 +50,7 @@ protected:
 creatorTemplate = '''
 %(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(%(indicationName)s *indication)
 {
-    char *instanceName = \"fpga%(portalNum)s\"; 
+    const char *instanceName = \"fpga%(portalNum)s\"; 
     %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indication);
     instance->open();
     return instance;
@@ -61,8 +61,8 @@ methodNameTemplate = '''
 
 void %(namespace)s%(className)s::methodName(unsigned long idx, char* dst)
 {
-   char* methodNameStrings[] = {%(methodNames)s};
-   char* src = methodNameStrings[idx];
+   const char* methodNameStrings[] = {%(methodNames)s};
+   const char* src = methodNameStrings[idx];
    strcpy(dst, src);
 }
 '''
