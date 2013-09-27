@@ -32,7 +32,7 @@ import AxiDMA::*;
 import BlueScope::*;
 import SensorToVideo::*;
 
-interface ImageCaptureIndications;
+interface CoreIndication;
     method Action spi_control_value(Bit#(32) v);
     method Action iserdes_control_value(Bit#(32) v);
     method Action decoder_control_value(Bit#(32) v);
@@ -48,7 +48,8 @@ interface ImageCaptureIndications;
     method Action debugind(Bit#(32) v);
 endinterface
 
-interface ImageCapture;
+
+interface CoreRequest;
     method Action set_spi_control(Bit#(32) v);
     method Action get_spi_control();
     method Action set_iserdes_control(Bit#(32) v);
@@ -73,12 +74,13 @@ interface ImageCapture;
     method Action set_spi_timing(Bit#(16) v);
     method Action put_spi_txfifo(Bit#(32) v);
     method Action get_spi_rxfifo();
-    method Action set_spi_trigger_mask(Bit#(64) mask);
-    method Action set_spi_trigger_value(Bit#(64) mask);
-    method Action start_spi_trace();
-    method Action clear_spi_trace();
-    method Action get_spi_trace_sample_count();
-    method Action get_spi_trace_data();
+    // mdk
+    // method Action set_spi_trigger_mask(Bit#(64) mask);
+    // method Action set_spi_trigger_value(Bit#(64) mask);
+    // method Action start_spi_trace();
+    // method Action clear_spi_trace();
+    // method Action get_spi_trace_sample_count();
+    // method Action get_spi_trace_data();
 
     method Action set_serdes_reset(Bit#(1) v);
     method Action set_serdes_auto_align(Bit#(1) v);
@@ -102,15 +104,17 @@ interface ImageCapture;
     method Action set_remapper_write_cfg(Bit#(3) v);
     method Action set_remapper_mode(Bit#(3) v);
     method Action set_trigger_enable(Bit#(3) v);
-    method Action set_trigger_sync2readout(Bit#(3) v);
+    // mdk
+    // method Action set_trigger_sync2readout(Bit#(3) v);
     method Action set_trigger_readouttrigger(Bit#(1) v);
     method Action set_trigger_default_freq(Bit#(32) v);
     method Action set_trigger_cnt_trigger0high(Bit#(32) v);
     method Action set_trigger_cnt_trigger0low(Bit#(32) v);
-    method Action set_trigger_cnt_trigger1high(Bit#(32) v);
-    method Action set_trigger_cnt_trigger1low(Bit#(32) v);
-    method Action set_trigger_cnt_trigger2high(Bit#(32) v);
-    method Action set_trigger_cnt_trigger2low(Bit#(32) v);
+    // mdk
+    // method Action set_trigger_cnt_trigger1high(Bit#(32) v);
+    // method Action set_trigger_cnt_trigger1low(Bit#(32) v);
+    // method Action set_trigger_cnt_trigger2high(Bit#(32) v);
+    // method Action set_trigger_cnt_trigger2low(Bit#(32) v);
     method Action set_trigger_ext_debounce(Bit#(32) v);
     method Action set_trigger_ext_polarity(Bit#(1) v);
     method Action set_trigger_gen_polarity(Bit#(3) v);
@@ -124,30 +128,41 @@ interface ImageCapture;
     method Action set_syncgen_vfporch(Bit#(16) v);
     method Action set_syncgen_vsync(Bit#(16) v);
     method Action set_syncgen_vbporch(Bit#(16) v);
-
-    interface ImageonVita imageon;
     method Action set_debugreq(Bit#(32) v);
     method Action get_debugind();
-//    interface HDMI hdmi;
 endinterface
 
-module mkImageCapture#(//Clock hdmi_clock, 
-       ImageCaptureIndications indications)(ImageCapture) provisos (Bits#(XsviData,xsviDataWidth));
+interface ImageCaptureIndication;
+    interface CoreIndication coreIndication;
+    interface BlueScopeIndication bsIndication;
+endinterface
+
+interface ImageCaptureRequest;
+   interface CoreRequest coreRequest;
+   interface BlueScopeRequest bsRequest;
+   interface ImageonVita imageon;
+   //interface HDMI hdmi;
+endinterface
+ 
+module mkImageCaptureRequest#(//Clock hdmi_clock, 
+    ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
     ImageonVitaController imageonVita <- mkImageonVitaController();
     ImageonControl control = imageonVita.control;
     //jcaBlueScope#(64,64) spiBlueScope <- mkBlueScope(1024);
+   
    AxiDMA dma <- mkAxiDMA;
    WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
-   BlueScope#(64,64) spiBlueScope <- mkBlueScope(32, dma_debug_write_chan);
-//module mkSyncBlueScope#(Integer samples, WriteChan wchan, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth, triggerWidth))
-
+   //BlueScope#(64,64) spiBlueScope <- mkBlueScope(32, dma_debug_write_chan);
+   //module mkSyncBlueScope#(Integer samples, WriteChan wchan, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth, triggerWidth))
+   BlueScopeInternal bsi <- mkBlueScopeInternal(32, dma_debug_write_chan, indication.bsIndication);
+   
     //BlueScope#(xsviDataWidth,xsviDataWidth) xsviBlueScope <- mkBlueScope(1024);
     SensorToVideo converter <- mkSensorToVideo;
     HdmiOut hdmiOut <- mkHdmiOut;
 
     rule rxfifo_response;
         let v <- control.rxfifo_response.get();
-        indications.spi_rxfifo_value(v);
+        indication.coreIndication.spi_rxfifo_value(v);
     endrule
 
     // could use mkConnection here
@@ -164,53 +179,54 @@ module mkImageCapture#(//Clock hdmi_clock,
 
     rule spi_debug_rule;
         Bit#(64) v = control.get_spi_debug[63:0];
-        spiBlueScope.dataIn(v, v);
+        bsi.dataIn(v, v);
     endrule
-
+   
+    interface CoreRequest coreRequest;
     method Action set_spi_control(Bit#(32) v);
         control.set_spi_control(v);
     endmethod
     method Action get_spi_control();
-        indications.spi_control_value(control.get_spi_control());
+        indication.coreIndication.spi_control_value(control.get_spi_control());
     endmethod
 
     method Action set_iserdes_control(Bit#(32) v);
         control.set_iserdes_control(v);
     endmethod
     method Action get_iserdes_control();
-        indications.iserdes_control_value(control.get_iserdes_control());
+        indication.coreIndication.iserdes_control_value(control.get_iserdes_control());
     endmethod
 
     method Action set_decoder_control(Bit#(32) v);
         control.set_decoder_control(v);
     endmethod
     method Action get_decoder_control();
-        indications.decoder_control_value(control.get_decoder_control());
+        indication.coreIndication.decoder_control_value(control.get_decoder_control());
     endmethod
 
     method Action set_crc_control(Bit#(32) v);
         control.set_crc_control(v);
     endmethod
     method Action get_crc_control();
-        indications.crc_control_value(control.get_crc_control());
+        indication.coreIndication.crc_control_value(control.get_crc_control());
     endmethod
 
     method Action get_crc_status();
-        indications.crc_status_value(control.get_crc_status());
+        indication.coreIndication.crc_status_value(control.get_crc_status());
     endmethod
 
     method Action set_remapper_control(Bit#(32) v);
         control.set_remapper_control(v);
     endmethod
     method Action get_remapper_control();
-        indications.remapper_control_value(control.get_remapper_control());
+        indication.coreIndication.remapper_control_value(control.get_remapper_control());
     endmethod
 
     method Action set_triggen_control(Bit#(32) v);
         control.set_triggen_control(v);
     endmethod
     method Action get_triggen_control();
-        indications.triggen_control_value(control.get_triggen_control());
+        indication.coreIndication.triggen_control_value(control.get_triggen_control());
     endmethod
 
 
@@ -227,7 +243,7 @@ module mkImageCapture#(//Clock hdmi_clock,
         control.set_clock_gen_reset(v);
     endmethod
     method Action get_clock_gen_locked();
-        indications.clock_gen_locked_value(control.get_clock_gen_locked());
+        indication.coreIndication.clock_gen_locked_value(control.get_clock_gen_locked());
     endmethod
 
     method Action set_spi_reset(Bit#(1) v);
@@ -243,25 +259,26 @@ module mkImageCapture#(//Clock hdmi_clock,
         control.rxfifo_request.put(32'hABBAABBA);
     endmethod
 
-    method Action set_spi_trigger_mask(Bit#(64) mask);
-        spiBlueScope.setTriggerMask(mask);
-    endmethod
-    method Action set_spi_trigger_value(Bit#(64) value);
-        spiBlueScope.setTriggerValue(value);
-    endmethod
-    method Action start_spi_trace();
-        spiBlueScope.start();
-    endmethod
-    method Action clear_spi_trace();
-        //jca spiBlueScope.clear();
-    endmethod
-    method Action get_spi_trace_sample_count();
-        //jca indications.spi_trace_sample_count_value(spiBlueScope.sampleCount());
-    endmethod
-    method Action get_spi_trace_data();
-        //jca let v <- spiBlueScope.dataOut();
-        //jca indications.spi_trace_sample_value(v);
-    endmethod
+    // mdk
+    // method Action set_spi_trigger_mask(Bit#(64) mask);
+    //     spiBlueScope.setTriggerMask(mask);
+    // endmethod
+    // method Action set_spi_trigger_value(Bit#(64) value);
+    //     spiBlueScope.setTriggerValue(value);
+    // endmethod
+    // method Action start_spi_trace();
+    //     spiBlueScope.start();
+    // endmethod
+    // method Action clear_spi_trace();
+    //     //jca spiBlueScope.clear();
+    // endmethod
+    // method Action get_spi_trace_sample_count();
+    //     //jca indication.coreIndication.spi_trace_sample_count_value(spiBlueScope.sampleCount());
+    // endmethod
+    // method Action get_spi_trace_data();
+    //     //jca let v <- spiBlueScope.dataOut();
+    //     //jca indication.coreIndication.spi_trace_sample_value(v);
+    // endmethod
 
     method Action set_serdes_reset(Bit#(1) v);
         control.set_serdes_reset(v);
@@ -329,9 +346,10 @@ module mkImageCapture#(//Clock hdmi_clock,
     method Action set_trigger_enable(Bit#(3) v);
         control.set_trigger_enable(v);
     endmethod
-    method Action set_trigger_sync2readout(Bit#(3) v);
-        control.set_trigger_sync2readout(v);
-    endmethod
+    // mdk
+    // method Action set_trigger_sync2readout(Bit#(3) v);
+    //     control.set_trigger_sync2readout(v);
+    // endmethod
     method Action set_trigger_readouttrigger(Bit#(1) v);
         control.set_trigger_readouttrigger(v);
     endmethod
@@ -344,18 +362,19 @@ module mkImageCapture#(//Clock hdmi_clock,
     method Action set_trigger_cnt_trigger0low(Bit#(32) v);
         control.set_trigger_cnt_trigger0low(v);
     endmethod
-    method Action set_trigger_cnt_trigger1high(Bit#(32) v);
-        control.set_trigger_cnt_trigger1high(v);
-    endmethod
-    method Action set_trigger_cnt_trigger1low(Bit#(32) v);
-        control.set_trigger_cnt_trigger1low(v);
-    endmethod
-    method Action set_trigger_cnt_trigger2high(Bit#(32) v);
-        control.set_trigger_cnt_trigger2high(v);
-    endmethod
-    method Action set_trigger_cnt_trigger2low(Bit#(32) v);
-        control.set_trigger_cnt_trigger2low(v);
-    endmethod
+    // mdk
+    // method Action set_trigger_cnt_trigger1high(Bit#(32) v);
+    //     control.set_trigger_cnt_trigger1high(v);
+    // endmethod
+    // method Action set_trigger_cnt_trigger1low(Bit#(32) v);
+    //     control.set_trigger_cnt_trigger1low(v);
+    // endmethod
+    // method Action set_trigger_cnt_trigger2high(Bit#(32) v);
+    //     control.set_trigger_cnt_trigger2high(v);
+    // endmethod
+    // method Action set_trigger_cnt_trigger2low(Bit#(32) v);
+    //     control.set_trigger_cnt_trigger2low(v);
+    // endmethod
     method Action set_trigger_ext_debounce(Bit#(32) v);
         control.set_trigger_ext_debounce(v);
     endmethod
@@ -404,8 +423,11 @@ module mkImageCapture#(//Clock hdmi_clock,
         control.set_debugreq(v);
     endmethod
     method Action get_debugind();
-        indications.debugind(control.get_debugind());
+        indication.coreIndication.debugind(control.get_debugind());
     endmethod
 
-    interface ImageonVita imageon = imageonVita.host;
+    endinterface
+   interface BlueScopeRequest bsRequest = bsi.requestIfc;
+   interface ImageonVita imageon = imageonVita.host;
+      
 endmodule

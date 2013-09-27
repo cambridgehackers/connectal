@@ -138,7 +138,7 @@ This is an example using the Avnet Imageon board and ZC702 (not tested with Zedb
 
 To generate code for a ZC702 board:
     git clone /lab/asic/imageon ../imageon
-    ./genxpsprojfrombsv -B zc702 -p fooproj -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv
+    ./genxpsprojfrombsv -B zc702 -p fooproj -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv
 
 Test program:
     cp examples/imageon/testimagecapture.cpp fooproj/jni
