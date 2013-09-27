@@ -12,9 +12,6 @@
 #include <semaphore.h>
 #include "i2chdmi.h"
 #include "i2ccamera.h"
-#include "/usr/include/linux/spi/spidev.h"
-
-#define SPIDEVICENAME "/dev/spidev2.0"
 
 static ImageCapture *device = 0;
 
@@ -22,12 +19,14 @@ static ImageCapture *device = 0;
     static sem_t sem_ ## A; \
     static unsigned long cv_ ## A;
 
+DECL(spi_control)
 DECL(iserdes_control)
 DECL(decoder_control)
 DECL(crc_control)
 DECL(crc_status)
 DECL(remapper_control)
 DECL(triggen_control)
+DECL(spi_rxfifo)
 DECL(clock_gen_locked)
 
 #define RXFN(A) \
@@ -51,18 +50,14 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     void spi_trace_sample_value(long long unsigned int) {
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     }
-    void spi_control_value(long unsigned int) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    }
-    void spi_rxfifo_value(long unsigned int) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    }
+    RXFN(spi_control)
     RXFN(iserdes_control)
     RXFN(decoder_control)
     RXFN(crc_control)
     RXFN(crc_status)
     RXFN(remapper_control)
     RXFN(triggen_control)
+    RXFN(spi_rxfifo)
     RXFN(clock_gen_locked)
     void putFailed(unsigned long v){
       fprintf(stderr, "putFailed: %x\n", v);
@@ -75,22 +70,39 @@ printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
 
 static void init_local_semaphores(void)
 {
+    sem_init(&sem_spi_control, 0, 0);
     sem_init(&sem_iserdes_control, 0, 0);
     sem_init(&sem_decoder_control, 0, 0);
     sem_init(&sem_crc_control, 0, 0);
     sem_init(&sem_remapper_control, 0, 0);
     sem_init(&sem_triggen_control, 0, 0);
+    sem_init(&sem_spi_rxfifo, 0, 0);
     sem_init(&sem_crc_status, 0, 0);
     sem_init(&sem_clock_gen_locked, 0, 0);
 }
+GETFN(spi_control)
 GETFN(iserdes_control)
 GETFN(decoder_control)
 GETFN(crc_control)
 GETFN(crc_status)
 GETFN(remapper_control)
 GETFN(triggen_control)
+GETFN(spi_rxfifo)
 GETFN(clock_gen_locked)
 
+//#define VITA_SPI_CONTROL_REG     0x0000
+   #define VITA_VITA_RESET_BIT       0x0001
+   #define VITA_SPI_RESET_BIT        0x0002
+   #define VITA_SPI_ERROR_BIT        0x0100
+   #define VITA_SPI_BUSY_BIT         0x0200
+   #define VITA_SPI_TXFIFO_FULL_BIT  0x00010000
+   #define VITA_SPI_RXFIFO_EMPTY_BIT 0x01000000
+//#define VITA_SPI_RXFIFO_REG      0x000C
+   #define VITA_SPI_SYNC2_BIT        0x80000000
+   #define VITA_SPI_SYNC1_BIT        0x40000000
+   #define VITA_SPI_NOP_BIT          0x20000000
+   #define VITA_SPI_READ_BIT         0x10000000
+   #define VITA_SPI_WRITE_BIT        0x0000
 //#define VITA_ISERDES_CONTROL_REG     0x0010
    #define VITA_ISERDES_RESET_BIT       0x0001
    #define VITA_ISERDES_AUTO_ALIGN_BIT  0x0002
@@ -226,45 +238,55 @@ static uint16_t vita_mult_timer_line_resolution_seq[VITA_MULT_TIMER_LINE_RESOLUT
    // R199[15:0] mult_timer = (1920+88+44+132)/4 = 2184/4 = 546 (0x0222)
    {199, 0xFFFF, 0x0222} };
 
-/************************ SPI ******************************/
-static int spidevicefd;
-static uint8_t spimode = 0;
-static uint8_t spibits = 8;
-static uint32_t speed = 50000;
-static uint16_t delay = 100;
-static uint16_t zynq_spi(uint32_t addr, uint32_t data)
-{
-    unsigned int ii;
-    uint8_t tx[sizeof(uint32_t)], rx[sizeof(uint32_t)];
-    uint32_t retval = 0;
-    static struct spi_ioc_transfer tr;
-    uint32_t command = addr << 23 | (data << 6);
-//printf("[%s:%d] addr %x data %x command %x\n", __FUNCTION__, __LINE__, addr, data, command);
-
-    for (ii = 0; ii < sizeof(uint32_t); ii++) {
-        tx[3-ii] = command;
-        command >>= 8;
-    }
-    tr.tx_buf = (unsigned long)tx;
-    tr.rx_buf = (unsigned long)rx;
-    tr.len = sizeof(tx);
-    tr.delay_usecs = delay;
-    tr.speed_hz = speed;
-    tr.bits_per_word = spibits;
-    if (ioctl(spidevicefd, SPI_IOC_MESSAGE(1), &tr) < 1)
-        printf("can't send spi message\n");
-    for (ii = 0; ii < sizeof(uint32_t); ii++)
-        retval = retval << 8 | rx[ii];
-    return (retval >> 5) & 0xffff;
-}
 static uint16_t vita_spi_read(uint32_t uAddr)
 {
-    return zynq_spi(uAddr, 0);
+   // Make sure the RXFIFO is empty
+   uint32_t uStatus = read_spi_control(), ret;
+   while ( !(uStatus & VITA_SPI_RXFIFO_EMPTY_BIT)) {
+       // Pop (previous) Response from RXFIFO
+       ret = read_spi_rxfifo();
+//printf("[%s:%d]\n", __FUNCTION__, __LINE__, ret);
+       uStatus = read_spi_control();
+   }
+
+   // Wait until TXFIFO is not full
+   int timeout = 99;
+   do {
+      uStatus = read_spi_control();
+   } while ( (uStatus & VITA_SPI_TXFIFO_FULL_BIT) && (--timeout));
+   uint32_t uRequest = VITA_SPI_READ_BIT | (((uint32_t)uAddr) << 16);
+   device->put_spi_txfifo(uRequest);
+   if ( !timeout) {
+       printf( "[vita_spi_read ] Timed out waiting for !TXFIFO_FULL\n\r");
+       return 0;
+   }
+   // Wait until RXFIFO is not empty
+   timeout = 99;
+   do {
+      uStatus = read_spi_control();
+   } while ( (uStatus & VITA_SPI_RXFIFO_EMPTY_BIT) && (--timeout));
+   if ( !timeout) {
+       printf( "[vita_spi_read ] Timed out waiting for !RXFIFO_EMPTY\n\r");
+       return 0;
+   }
+   ret = read_spi_rxfifo() & 0xffff;
+//printf("[%s:%d] return %x\n", __FUNCTION__, __LINE__, ret);
+   return ret;
 }
 static int vita_spi_write(uint32_t uAddr, uint16_t uData)
 {
-    zynq_spi(uAddr, 0x10000 | uData);
-    return 0;
+   uint32_t uStatus;
+   // Wait until TXFIFO is not full
+   int timeout = 99;
+   do {
+      uStatus = read_spi_control();
+   } while ( (uStatus & VITA_SPI_TXFIFO_FULL_BIT) && !(--timeout));
+   if ( !timeout) {
+       printf( "[vita_spi_write] Timed out waiting for !TXFIFO_FULL\n\r");
+       return 0;
+   }
+   device->put_spi_txfifo(VITA_SPI_WRITE_BIT | (((uint32_t)uAddr) << 16) | ((uint16_t)uData));
+   return 1;
 }
 
 /******************************************************************************
@@ -381,10 +403,8 @@ static void fmc_imageon_demo_enable_ipipe( void)
    device->set_crc_control( VITA_CRC_INITVALUE_BIT | VITA_CRC_RESET_BIT);
 
    usleep(10); // 10 usec
-#if 0
    printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
    device->set_spi_control( VITA_VITA_RESET_BIT);
-#endif
    usleep(10); // 10 usec
    printf( "VITA ISERDES - Releasing Reset\n\r");
    device->set_iserdes_control( 0);
@@ -393,10 +413,8 @@ static void fmc_imageon_demo_enable_ipipe( void)
    printf( "VITA CRC - Releasing Reset\n\r");
    device->set_crc_control( VITA_CRC_INITVALUE_BIT);
    sleep(1); // 1 sec (time to get clocks to lock)
-#if 0
    printf("VITA SPI Sequence 0 - Releasing RESET_N pin\n\r");
    device->set_spi_control( 0);
-#endif
    usleep(20); // 20 usec
    uData = vita_spi_read(0);
 printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
@@ -568,16 +586,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 2);
     device->set_host_oe(1);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-
-    spidevicefd = open(SPIDEVICENAME, O_RDWR);
-    if (spidevicefd < 0
-     || ioctl(spidevicefd, SPI_IOC_WR_MODE, &spimode) == -1
-     || ioctl(spidevicefd, SPI_IOC_RD_MODE, &spimode) == -1
-     || ioctl(spidevicefd, SPI_IOC_WR_BITS_PER_WORD, &spibits) == -1
-     || ioctl(spidevicefd, SPI_IOC_RD_BITS_PER_WORD, &spibits) == -1
-     || ioctl(spidevicefd, SPI_IOC_WR_MAX_SPEED_HZ, &speed) == -1
-     || ioctl(spidevicefd, SPI_IOC_RD_MAX_SPEED_HZ, &speed) == -1)
-        printf("Error: cannot open SPI device\n");
 
     device->set_iic_reset(0);
     device->set_iic_reset(1);
