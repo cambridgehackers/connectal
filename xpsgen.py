@@ -985,6 +985,20 @@ class ImageonVita:
      wire imageon_clock_gen_select;
      wire imageon_clock_gen_reset;
      wire imageon_clock_gen_locked;
+    /* HOST Interface - SPI */
+     wire imageon_host_spi_clk;
+     wire imageon_host_spi_reset;
+     wire [15:0] imageon_host_spi_timing;
+     wire imageon_host_spi_status_busy;
+     wire imageon_host_spi_status_error;
+     wire imageon_host_spi_txfifo_clk;
+     wire imageon_host_spi_txfifo_wen;
+     wire [31:0] imageon_host_spi_txfifo_din;
+     wire imageon_host_spi_txfifo_full;
+     wire imageon_host_spi_rxfifo_clk;
+     wire imageon_host_spi_rxfifo_ren;
+     wire [31:0] imageon_host_spi_rxfifo_dout;
+     wire imageon_host_spi_rxfifo_empty;
     /* HOST Interface - ISERDES */
      wire imageon_host_iserdes_reset;
      wire imageon_host_iserdes_auto_align;
@@ -1105,11 +1119,6 @@ class ImageonVita:
     .I2C1_SCL_I(fmc_imageon_iic_0_scl_I),
     .I2C1_SCL_O(fmc_imageon_iic_0_scl_O),
     .I2C1_SCL_T(fmc_imageon_iic_0_scl_T),
-    .SPI0_SCLK_O(io_vita_spi_sclk),
-    .SPI0_MOSI_O(io_vita_spi_mosi),
-    .SPI0_MISO_I(io_vita_spi_miso),
-    .SPI0_SS_O(io_vita_spi_ssel_n),
-    .SPI0_SS_I(1),
 '''
 ## uncomment the following if we decide to use the PS7 SPI controller
 #         return '''
@@ -1135,6 +1144,16 @@ class ImageonVita:
     .imageon_host_clock_gen_reset(imageon_clock_gen_reset),
     .imageon_host_clock_gen_locked_locked(imageon_clock_gen_locked),
     .imageon_host_clock_gen_select(imageon_clock_gen_select),
+    .imageon_spi_reset(imageon_host_spi_reset),
+    .imageon_spi_timing(imageon_host_spi_timing),
+    .imageon_spi_status_busy_busy(imageon_host_spi_status_busy),
+    .imageon_spi_status_error_error(imageon_host_spi_status_error),
+    .imageon_spi_txfifo_wen(imageon_host_spi_txfifo_wen),
+    .imageon_spi_txfifo_din(imageon_host_spi_txfifo_din),
+    .imageon_spi_txfifo_full_full(imageon_host_spi_txfifo_full),
+    .imageon_spi_rxfifo_ren(imageon_host_spi_rxfifo_ren),
+    .imageon_spi_rxfifo_dout_dout(imageon_host_spi_rxfifo_dout),
+    .imageon_spi_rxfifo_empty_empty(imageon_host_spi_rxfifo_empty),
     .imageon_serdes_reset(imageon_host_iserdes_reset),
     .imageon_serdes_auto_align(imageon_host_iserdes_auto_align),
     .imageon_serdes_align_start(imageon_host_iserdes_align_start),
@@ -1219,27 +1238,42 @@ class ImageonVita:
         .O(fmc_imageon_video_clk1_buf)
     );
 
-    MMCME2_BASE# (
+    MMCM_ADV# (
         .BANDWIDTH("OPTIMIZED"),
-        .CLKFBOUT_MULT_F(5.0),
-        .DIVCLK_DIVIDE(1),
+        .COMPENSATION("ZHOLD"),
+        .CLKFBOUT_MULT_F(8.000),
         .CLKFBOUT_PHASE(0.0),
-        .CLKIN1_PERIOD(6.734),
-        .CLKOUT0_DIVIDE_F(5.0),
-        .CLKOUT1_DIVIDE(20))
-   MMCME2_inst(
-        .CLKIN1(fmc_imageon_video_clk1_buf), // default
-/*
-        .CLKIN2(processing_system7_1_fclk_clk2),
-        .CLKINSEL(imageon_clock_gen_select),
-*/
+        .CLKIN1_PERIOD(6.734007),
+        .CLKIN2_PERIOD(6.734007),
+        .CLKOUT0_DIVIDE_F(8.000),
+        .CLKOUT0_DUTY_CYCLE(0.5),
+        .CLKOUT0_PHASE(0.0000),
+        .CLKOUT1_DIVIDE(32),
+        .CLKOUT1_DUTY_CYCLE(0.5),
+        .CLKOUT1_PHASE(0.0000),
+        .DIVCLK_DIVIDE(1),
+        .REF_JITTER1(0.010),
+        .REF_JITTER2(0.010))
+    MMCM_ADV_inst (
+        .CLKIN2(0), 
+        .CLKINSEL(1),
+        .DADDR("0000000"),
+        .DCLK(0),
+        .DEN(0),
+        .DI(0000000000000000),
+        .DWE(0),
+        .CLKFBOUT(clockfb),
+        /*.CLKFBOUTB(SIG_MMCM1_CLKFBOUTB),*/
         .CLKOUT0(imageon_clk4x_unbuf),
         .CLKOUT1(imageon_clk_unbuf),
-        .CLKFBOUT(clockfb),
         .CLKFBIN(clockfb),
-        .RST(imageon_clock_gen_reset),
-        .LOCKED(imageon_clock_gen_locked)
-   );
+        .CLKIN1(fmc_imageon_video_clk1_buf),
+        .PWRDWN(0),
+        .PSCLK(0),
+        .PSEN(0),
+        .PSINCDEC(0),
+        .RST(imageon_clock_gen_reset)
+        );
 
    BUFG bufg_clk4x(
 		   .I(imageon_clk4x_unbuf),
@@ -1344,6 +1378,20 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .oe(imageon_host_oe), /* input */
     /* HOST Interface - VITA */
     .host_vita_reset(imageon_host_vita_reset),
+    /* HOST Interface - SPI */
+    .host_spi_clk(processing_system7_1_fclk_clk0),
+    .host_spi_reset(imageon_host_spi_reset),
+    .host_spi_timing(imageon_host_spi_timing),
+    .host_spi_status_busy(imageon_host_spi_status_busy),
+    .host_spi_status_error(imageon_host_spi_status_error),
+    .host_spi_txfifo_clk(processing_system7_1_fclk_clk0),
+    .host_spi_txfifo_wen(imageon_host_spi_txfifo_wen),
+    .host_spi_txfifo_din(imageon_host_spi_txfifo_din),
+    .host_spi_txfifo_full(imageon_host_spi_txfifo_full),
+    .host_spi_rxfifo_clk(processing_system7_1_fclk_clk0),
+    .host_spi_rxfifo_ren(imageon_host_spi_rxfifo_ren),
+    .host_spi_rxfifo_dout(imageon_host_spi_rxfifo_dout),
+    .host_spi_rxfifo_empty(imageon_host_spi_rxfifo_empty),
     /* HOST Interface - ISERDES */
     .host_iserdes_reset(imageon_host_iserdes_reset),
     .host_iserdes_auto_align(imageon_host_iserdes_auto_align),
@@ -1390,6 +1438,10 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_clk_pll(io_vita_clk_pll),
     .io_vita_reset_n(io_vita_reset_n),
     .io_vita_trigger(io_vita_trigger),
+    .io_vita_spi_sclk(io_vita_spi_sclk),
+    .io_vita_spi_ssel_n(io_vita_spi_ssel_n),
+    .io_vita_spi_mosi(io_vita_spi_mosi),
+    .io_vita_spi_miso(io_vita_spi_miso),
     .io_vita_clk_out_p(io_vita_clk_out_p),
     .io_vita_clk_out_n(io_vita_clk_out_n),
     .io_vita_sync_p(io_vita_sync_p),
