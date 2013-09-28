@@ -1309,11 +1309,6 @@ class ImageonVita:
      .T(fmc_imageon_iic_0_sda_T)
      // Buffer input
      );
-
-assign XADC_gpio[3] = io_vita_spi_sclk;
-assign XADC_gpio[2] = io_vita_spi_miso;
-assign XADC_gpio[1] = io_vita_spi_mosi;
-assign XADC_gpio[0] = io_vita_spi_ssel_n;
 '''
 #        return '''
 #     IOBUF # (
