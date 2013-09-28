@@ -222,8 +222,8 @@ hdmi_pinout = {
         ( "hdmi_data[13]", 'R19', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_data[14]", 'T17', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_data[15]", 'T16', 'LVCMOS25', 'OUTPUT'),
-        ( "i2c1_scl", 'AB14', 'LVCMOS25', 'BIDIR'),
-        ( "i2c1_sda", 'AB15', 'LVCMOS25', 'BIDIR'),
+        #jca ( "i2c1_scl", 'AB14', 'LVCMOS25', 'BIDIR'),
+        #jca ( "i2c1_sda", 'AB15', 'LVCMOS25', 'BIDIR'),
         ],
     'zedboard':[
         ( "hdmi_clk", 'W18', 'LVCMOS33', 'OUTPUT'),
@@ -246,8 +246,8 @@ hdmi_pinout = {
         ( "hdmi_data[13]", 'U17', 'LVCMOS33', 'OUTPUT'),
         ( "hdmi_data[14]", 'V14', 'LVCMOS33', 'OUTPUT'),
         ( "hdmi_data[15]", 'V13', 'LVCMOS33', 'OUTPUT'),
-        ( "i2c1_scl", 'AA18', 'LVCMOS33', 'BIDIR'),
-        ( "i2c1_sda", 'Y16', 'LVCMOS33', 'BIDIR'),
+        #jca ( "i2c1_scl", 'AA18', 'LVCMOS33', 'BIDIR'),
+        #jca ( "i2c1_sda", 'Y16', 'LVCMOS33', 'BIDIR'),
         ]
     }
 
@@ -395,12 +395,12 @@ parameter C_FAMILY = "virtex6";
   wire processing_system7_1_fixed_io_PS_CLK;
   wire processing_system7_1_fixed_io_PS_PORB;
   wire processing_system7_1_fixed_io_PS_SRSTB;
-  wire i2c1_scl_i;
+  /*jca wire i2c1_scl_i;
   wire i2c1_scl_o;
   wire i2c1_scl_t;
   wire i2c1_sda_i;
   wire i2c1_sda_o;
-  wire i2c1_sda_t;
+  wire i2c1_sda_t; */
 
 GND GND
        (.G(GND_1));
@@ -871,19 +871,19 @@ class Hdmi:
     output hdmi_hsync,
     output hdmi_de,
     output [15:0] hdmi_data,
-    inout i2c1_scl,
-    inout i2c1_sda,
+    /*jca inout i2c1_scl,
+    inout i2c1_sda, */
 '''
     def top_bus_wires(self, busname,t,params):
         return ''
     def ps7_bus_port_map(self,busname,t,params):
         return '''
-       .I2C1_SCL_I(i2c1_scl_i),
+       /*jca .I2C1_SCL_I(i2c1_scl_i),
        .I2C1_SCL_O(i2c1_scl_o),
        .I2C1_SCL_T(i2c1_scl_t),
        .I2C1_SDA_I(i2c1_sda_i),
        .I2C1_SDA_O(i2c1_sda_o),
-       .I2C1_SDA_T(i2c1_sda_t),
+       .I2C1_SDA_T(i2c1_sda_t), */
 '''
     def dut_bus_port_map(self, busname,t,params):
         return '''
@@ -896,7 +896,7 @@ class Hdmi:
         return '''
     assign hdmi_clk = processing_system7_1_fclk_clk1;
 
-    IOBUF # (
+    /*jca IOBUF # (
     .DRIVE(12),
     .IOSTANDARD("LVCMOS25"),
     .SLEW("SLOW")) IOBUF_i2c1_scl
@@ -919,7 +919,7 @@ class Hdmi:
     .I(i2c1_sda_o),
     .T(i2c1_sda_t)
     // Buffer input
-    );
+    ); */
 '''
     def bus_assignments(self,busname,t,params):
         return ''

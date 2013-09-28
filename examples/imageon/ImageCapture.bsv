@@ -141,10 +141,10 @@ interface ImageCaptureRequest;
    interface CoreRequest coreRequest;
    interface BlueScopeRequest bsRequest;
    interface ImageonVita imageon;
-   //interface HDMI hdmi;
+   interface HDMI hdmi;
 endinterface
  
-module mkImageCaptureRequest#(//Clock hdmi_clock, 
+module mkImageCaptureRequest#(Clock hdmi_clock, 
     ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
     ImageonVitaController imageonVita <- mkImageonVitaController();
     ImageonControl control = imageonVita.control;
@@ -429,5 +429,6 @@ module mkImageCaptureRequest#(//Clock hdmi_clock,
     endinterface
    interface BlueScopeRequest bsRequest = bsi.requestIfc;
    interface ImageonVita imageon = imageonVita.host;
+   interface HDMI hdmi = hdmiOut.hdmi;
       
 endmodule

@@ -13,7 +13,7 @@
 #include "i2chdmi.h"
 #include "i2ccamera.h"
 
-static ImageCapture *device = 0;
+static CoreRequest *device = 0;
 
 #define DECL(A) \
     static sem_t sem_ ## A; \
@@ -43,7 +43,7 @@ DECL(clock_gen_locked)
         return cv_ ## A; \
     }
 
-class TestImageCaptureIndications : public ImageCaptureIndications {
+class TestImageCaptureIndications : public CoreIndication {
     void spi_trace_sample_count_value(long unsigned int) {
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     }
@@ -588,9 +588,13 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     device->set_iic_reset(0);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     device->set_iic_reset(1);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     init_i2c_camera();
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     init_i2c_hdmi();
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     //init_vclk();
 
     // Reset DCMs
@@ -624,7 +628,7 @@ int main(int argc, const char **argv)
 {
     pthread_t threaddata;
     init_local_semaphores();
-    device = ImageCapture::createImageCapture("fpga0", new TestImageCaptureIndications);
+    device = CoreRequest::createCoreRequest(new TestImageCaptureIndications);
 
     int rc = pthread_create(&threaddata, NULL, &pthread_worker, (void *)device);
     fmc_imageon_demo_init(argc, argv);
