@@ -894,7 +894,7 @@ class Hdmi:
 ''' % {'busname': busname}
     def top_bus_assignments(self,busname,t,params):
         return '''
-    assign hdmi_clk = processing_system7_1_fclk_clk1;
+    assign hdmi_clk = imageon_clk4x;
 
     /*jca IOBUF # (
     .DRIVE(12),
@@ -982,9 +982,6 @@ class ImageonVita:
      wire imageon_clk;
      wire imageon_host_oe;
      wire host_vita_reset;
-     wire imageon_clock_gen_select;
-     wire imageon_clock_gen_reset;
-     wire imageon_clock_gen_locked;
     /* HOST Interface - SPI */
      wire imageon_host_spi_clk;
      wire imageon_host_spi_reset;
@@ -1021,25 +1018,7 @@ class ImageonVita:
      wire [9:0] imageon_host_decoder_code_bl;
      wire [9:0] imageon_host_decoder_code_img;
      wire [9:0] imageon_host_decoder_code_tr;
-     wire [9:0] imageon_host_decoder_code_crc;
      wire imageon_host_decoder_frame_start;
-     wire [31:0] imageon_host_decoder_cnt_black_lines;
-     wire [31:0] imageon_host_decoder_cnt_image_lines;
-     wire [31:0] imageon_host_decoder_cnt_black_pixels;
-     wire [31:0] imageon_host_decoder_cnt_image_pixels;
-     wire [31:0] imageon_host_decoder_cnt_frames;
-     wire [31:0] imageon_host_decoder_cnt_windows;
-     wire [31:0] imageon_host_decoder_cnt_clocks;
-     wire [31:0] imageon_host_decoder_cnt_start_lines;
-     wire [31:0] imageon_host_decoder_cnt_end_lines;
-     wire [31:0] imageon_host_decoder_cnt_monitor0high;
-     wire [31:0] imageon_host_decoder_cnt_monitor0low;
-     wire [31:0] imageon_host_decoder_cnt_monitor1high;
-     wire [31:0] imageon_host_decoder_cnt_monitor1low;
-    /* HOST Interface - CRC Checker */
-     wire imageon_host_crc_reset;
-     wire imageon_host_crc_initvalue;
-     wire [31:0] imageon_host_crc_status;
     /* HOST Interface - Data Channel Remapper */
      wire [2:0] imageon_host_remapper_write_cfg;
      wire [2:0] imageon_host_remapper_mode;
@@ -1050,16 +1029,6 @@ class ImageonVita:
      wire [31:0] imageon_host_trigger_default_freq;
      wire [31:0] imageon_host_trigger_cnt_trigger0high;
      wire [31:0] imageon_host_trigger_cnt_trigger0low;
-     wire [31:0] imageon_host_trigger_cnt_trigger1high;
-     wire [31:0] imageon_host_trigger_cnt_trigger1low;
-     wire [31:0] imageon_host_trigger_cnt_trigger2high;
-     wire [31:0] imageon_host_trigger_cnt_trigger2low;
-     wire [31:0] imageon_host_trigger_ext_debounce;
-     wire imageon_host_trigger_ext_polarity;
-     wire [2:0] imageon_host_trigger_gen_polarity;
-    /* HOST Interface - FPN/PRNU Correction */
-     wire [255:0] imageon_host_fpn_prnu_values;
-    /* HOST Interface - Sync Generator */
      wire [15:0] imageon_host_syncgen_delay;
      wire [15:0] imageon_host_syncgen_hactive;
      wire [15:0] imageon_host_syncgen_hfporch;
@@ -1069,8 +1038,6 @@ class ImageonVita:
      wire [15:0] imageon_host_syncgen_vfporch;
      wire [15:0] imageon_host_syncgen_vsync;
      wire [15:0] imageon_host_syncgen_vbporch;
-    /* Trigger Port */
-     wire trigger1;
     /* Frame Sync Port */
      wire imageon_host_fsync;
      /* XSVI Port */
@@ -1140,10 +1107,6 @@ class ImageonVita:
     .imageon_host_oe(imageon_host_oe),
     .imageon_fsync_fsync(imageon_host_fsync),
     .imageon_host_vita_reset(imageon_host_vita_reset),
-    .imageon_host_iic_reset(fmc_imageon_iic_0_rst_pin),
-    .imageon_host_clock_gen_reset(imageon_clock_gen_reset),
-    .imageon_host_clock_gen_locked_locked(imageon_clock_gen_locked),
-    .imageon_host_clock_gen_select(imageon_clock_gen_select),
     .imageon_spi_reset(imageon_host_spi_reset),
     .imageon_spi_timing(imageon_host_spi_timing),
     .imageon_spi_status_busy_busy(imageon_host_spi_status_busy),
@@ -1176,22 +1139,6 @@ class ImageonVita:
     .imageon_decoder_code_tr(imageon_host_decoder_code_tr),
     .imageon_decoder_code_crc(imageon_host_decoder_code_crc),
     .imageon_decoder_frame_start_start(imageon_host_decoder_frame_start),
-    .imageon_decoder_cnt_black_lines_lines(imageon_host_decoder_cnt_black_lines),
-    .imageon_decoder_cnt_image_lines_lines(imageon_host_decoder_cnt_image_lines),
-    .imageon_decoder_cnt_black_pixels_pixels(imageon_host_decoder_cnt_black_pixels),
-    .imageon_decoder_cnt_image_pixels_pixels(imageon_host_decoder_cnt_image_pixels),
-    .imageon_decoder_cnt_frames_frames(imageon_host_decoder_cnt_frames),
-    .imageon_decoder_cnt_windows_windows(imageon_host_decoder_cnt_windows),
-    .imageon_decoder_cnt_clocks_clocks(imageon_host_decoder_cnt_clocks),
-    .imageon_decoder_cnt_start_lines_lines(imageon_host_decoder_cnt_start_lines),
-    .imageon_decoder_cnt_end_lines_lines(imageon_host_decoder_cnt_end_lines),
-    .imageon_decoder_cnt_monitor0high_monitor0high(imageon_host_decoder_cnt_monitor0high),
-    .imageon_decoder_cnt_monitor0low_monitor0low(imageon_host_decoder_cnt_monitor0low),
-    .imageon_decoder_cnt_monitor1high_monitor1high(imageon_host_decoder_cnt_monitor1high),
-    .imageon_decoder_cnt_monitor1low_monitor1low(imageon_host_decoder_cnt_monitor1low),
-    .imageon_crc_reset(imageon_host_crc_reset),
-    .imageon_crc_initvalue(imageon_host_crc_initvalue),
-    .imageon_crc_crc_status_status(imageon_host_crc_status),
     .imageon_remapper_write_cfg(imageon_host_remapper_write_cfg),
     .imageon_remapper_mode(imageon_host_remapper_mode),
     .imageon_trigger_enable(imageon_host_trigger_enable),
@@ -1200,14 +1147,6 @@ class ImageonVita:
     .imageon_trigger_default_freq(imageon_host_trigger_default_freq),
     .imageon_trigger_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
     .imageon_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
-    .imageon_trigger_cnt_trigger1high(imageon_host_trigger_cnt_trigger1high),
-    .imageon_trigger_cnt_trigger1low(imageon_host_trigger_cnt_trigger1low),
-    .imageon_trigger_cnt_trigger2high(imageon_host_trigger_cnt_trigger2high),
-    .imageon_trigger_cnt_trigger2low(imageon_host_trigger_cnt_trigger2low),
-    .imageon_trigger_ext_debounce(imageon_host_trigger_ext_debounce),
-    .imageon_trigger_ext_polarity(imageon_host_trigger_ext_polarity),
-    .imageon_trigger_gen_polarity(imageon_host_trigger_gen_polarity),
-    .imageon_fpnPrnu_prnu_values(imageon_host_fpn_prnu_values),
     .imageon_syncgen_delay(imageon_host_syncgen_delay),
     .imageon_syncgen_hactive(imageon_host_syncgen_hactive),
     .imageon_syncgen_hfporch(imageon_host_syncgen_hfporch),

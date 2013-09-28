@@ -74,13 +74,6 @@ interface CoreRequest;
     method Action set_spi_timing(Bit#(16) v);
     method Action put_spi_txfifo(Bit#(32) v);
     method Action get_spi_rxfifo();
-    // mdk
-    // method Action set_spi_trigger_mask(Bit#(64) mask);
-    // method Action set_spi_trigger_value(Bit#(64) mask);
-    // method Action start_spi_trace();
-    // method Action clear_spi_trace();
-    // method Action get_spi_trace_sample_count();
-    // method Action get_spi_trace_data();
 
     method Action set_serdes_reset(Bit#(1) v);
     method Action set_serdes_auto_align(Bit#(1) v);
@@ -104,17 +97,10 @@ interface CoreRequest;
     method Action set_remapper_write_cfg(Bit#(3) v);
     method Action set_remapper_mode(Bit#(3) v);
     method Action set_trigger_enable(Bit#(3) v);
-    // mdk
-    // method Action set_trigger_sync2readout(Bit#(3) v);
     method Action set_trigger_readouttrigger(Bit#(1) v);
     method Action set_trigger_default_freq(Bit#(32) v);
     method Action set_trigger_cnt_trigger0high(Bit#(32) v);
     method Action set_trigger_cnt_trigger0low(Bit#(32) v);
-    // mdk
-    // method Action set_trigger_cnt_trigger1high(Bit#(32) v);
-    // method Action set_trigger_cnt_trigger1low(Bit#(32) v);
-    // method Action set_trigger_cnt_trigger2high(Bit#(32) v);
-    // method Action set_trigger_cnt_trigger2low(Bit#(32) v);
     method Action set_trigger_ext_debounce(Bit#(32) v);
     method Action set_trigger_ext_polarity(Bit#(1) v);
     method Action set_trigger_gen_polarity(Bit#(3) v);
@@ -259,27 +245,6 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
         control.rxfifo_request.put(32'hABBAABBA);
     endmethod
 
-    // mdk
-    // method Action set_spi_trigger_mask(Bit#(64) mask);
-    //     spiBlueScope.setTriggerMask(mask);
-    // endmethod
-    // method Action set_spi_trigger_value(Bit#(64) value);
-    //     spiBlueScope.setTriggerValue(value);
-    // endmethod
-    // method Action start_spi_trace();
-    //     spiBlueScope.start();
-    // endmethod
-    // method Action clear_spi_trace();
-    //     //jca spiBlueScope.clear();
-    // endmethod
-    // method Action get_spi_trace_sample_count();
-    //     //jca indication.coreIndication.spi_trace_sample_count_value(spiBlueScope.sampleCount());
-    // endmethod
-    // method Action get_spi_trace_data();
-    //     //jca let v <- spiBlueScope.dataOut();
-    //     //jca indication.coreIndication.spi_trace_sample_value(v);
-    // endmethod
-
     method Action set_serdes_reset(Bit#(1) v);
         control.set_serdes_reset(v);
     endmethod
@@ -346,10 +311,6 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
     method Action set_trigger_enable(Bit#(3) v);
         control.set_trigger_enable(v);
     endmethod
-    // mdk
-    // method Action set_trigger_sync2readout(Bit#(3) v);
-    //     control.set_trigger_sync2readout(v);
-    // endmethod
     method Action set_trigger_readouttrigger(Bit#(1) v);
         control.set_trigger_readouttrigger(v);
     endmethod
@@ -362,19 +323,6 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
     method Action set_trigger_cnt_trigger0low(Bit#(32) v);
         control.set_trigger_cnt_trigger0low(v);
     endmethod
-    // mdk
-    // method Action set_trigger_cnt_trigger1high(Bit#(32) v);
-    //     control.set_trigger_cnt_trigger1high(v);
-    // endmethod
-    // method Action set_trigger_cnt_trigger1low(Bit#(32) v);
-    //     control.set_trigger_cnt_trigger1low(v);
-    // endmethod
-    // method Action set_trigger_cnt_trigger2high(Bit#(32) v);
-    //     control.set_trigger_cnt_trigger2high(v);
-    // endmethod
-    // method Action set_trigger_cnt_trigger2low(Bit#(32) v);
-    //     control.set_trigger_cnt_trigger2low(v);
-    // endmethod
     method Action set_trigger_ext_debounce(Bit#(32) v);
         control.set_trigger_ext_debounce(v);
     endmethod
