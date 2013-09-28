@@ -22,12 +22,8 @@ static CoreRequest *device = 0;
 DECL(spi_control)
 DECL(iserdes_control)
 DECL(decoder_control)
-DECL(crc_control)
-DECL(crc_status)
-DECL(remapper_control)
 DECL(triggen_control)
 DECL(spi_rxfifo)
-DECL(clock_gen_locked)
 
 #define RXFN(A) \
     virtual void A ## _value ( unsigned long v ){ \
@@ -53,12 +49,8 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     RXFN(spi_control)
     RXFN(iserdes_control)
     RXFN(decoder_control)
-    RXFN(crc_control)
-    RXFN(crc_status)
-    RXFN(remapper_control)
     RXFN(triggen_control)
     RXFN(spi_rxfifo)
-    RXFN(clock_gen_locked)
     void putFailed(unsigned long v){
       fprintf(stderr, "putFailed: %x\n", v);
       exit(1);
@@ -73,22 +65,14 @@ static void init_local_semaphores(void)
     sem_init(&sem_spi_control, 0, 0);
     sem_init(&sem_iserdes_control, 0, 0);
     sem_init(&sem_decoder_control, 0, 0);
-    sem_init(&sem_crc_control, 0, 0);
-    sem_init(&sem_remapper_control, 0, 0);
     sem_init(&sem_triggen_control, 0, 0);
     sem_init(&sem_spi_rxfifo, 0, 0);
-    sem_init(&sem_crc_status, 0, 0);
-    sem_init(&sem_clock_gen_locked, 0, 0);
 }
 GETFN(spi_control)
 GETFN(iserdes_control)
 GETFN(decoder_control)
-GETFN(crc_control)
-GETFN(crc_status)
-GETFN(remapper_control)
 GETFN(triggen_control)
 GETFN(spi_rxfifo)
-GETFN(clock_gen_locked)
 
 //#define VITA_SPI_CONTROL_REG     0x0000
    #define VITA_VITA_RESET_BIT       0x0001
@@ -391,16 +375,9 @@ static void fmc_imageon_demo_enable_ipipe( void)
    device->set_decoder_code_fe(0x032A);
    device->set_decoder_code_bl(0x0015);
    device->set_decoder_code_img(0x0035);
-   device->set_decoder_code_tr(0x03A6);
-   device->set_decoder_code_crc(0x0059);
 
-   printf( "VITA REMAPPER - Configuring for image lines in normal mode\n\r");
-   device->set_remapper_control( 1);
-   uint32_t uControl = read_remapper_control();
-   printf( "VITA REMAPPER - Control = 0x%08X\n\r", uControl);
    device->set_iserdes_control( VITA_ISERDES_RESET_BIT);
    device->set_decoder_control( VITA_DECODER_RESET_BIT);
-   device->set_crc_control( VITA_CRC_INITVALUE_BIT | VITA_CRC_RESET_BIT);
 
    usleep(10); // 10 usec
    printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
@@ -411,7 +388,6 @@ static void fmc_imageon_demo_enable_ipipe( void)
    printf( "VITA DECODER - Releasing Reset\n\r");
    device->set_decoder_control( 0);
    printf( "VITA CRC - Releasing Reset\n\r");
-   device->set_crc_control( VITA_CRC_INITVALUE_BIT);
    sleep(1); // 1 sec (time to get clocks to lock)
    printf("VITA SPI Sequence 0 - Releasing RESET_N pin\n\r");
    device->set_spi_control( 0);
@@ -518,13 +494,9 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    vita_spi_write_sequence(vita_spi_seq6, VITA_SPI_SEQ6_QTY);
    device->set_iserdes_control( VITA_ISERDES_FIFO_ENABLE_BIT);
    device->set_decoder_control(VITA_DECODER_ENABLE_BIT);
-   uControl = read_decoder_control();
+   uint32_t uControl = read_decoder_control();
    printf( "VITA DECODER - Control = 0x%08X\n\r", uControl);
-   uStatus = read_crc_status();
-   printf( "VITA CRC - Status = 0x%08X\n\r", uStatus);
    usleep(100);
-   uStatus = read_crc_status();
-   printf( "VITA CRC - Status = 0x%08X\n\r", uStatus);
    sleep(1);
    printf( "VITA 1080P60 - Disable Sequencer\n\r");
    vita_spi_write(192, 0); usleep(100); // 100 usec
@@ -587,30 +559,21 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     device->set_host_oe(1);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
-    device->set_iic_reset(0);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    device->set_iic_reset(1);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     init_i2c_camera();
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     init_i2c_hdmi();
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     //init_vclk();
 
     // Reset DCMs
     /* puts the DCM_0 PCORE into reset */
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 4);
-    device->set_clock_gen_reset(1);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     usleep(200000);
     /* releases the DCM_0 PCORE from reset */
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) & ~4);
-    device->set_clock_gen_reset(0);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     usleep(500000);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-printf("[%s:%d] locked %ld\n", __FUNCTION__, __LINE__, read_clock_gen_locked());
     // FMC-IMAGEON VITA Receiver Initialization
     printf( "FMC-IMAGEON VITA Receiver Initialization ...\n\r");
     uManualTap = 25;
@@ -638,9 +601,6 @@ device->set_debugreq(1);
 device->get_debugind();
 printf("[%s:%d] iserdes %lx\n", __FUNCTION__, __LINE__, read_iserdes_control());
 printf("[%s:%d] decode %lx\n", __FUNCTION__, __LINE__, read_decoder_control());
-printf("[%s:%d] crccontrol %lx\n", __FUNCTION__, __LINE__, read_crc_control());
-printf("[%s:%d] crcstatus %lx\n", __FUNCTION__, __LINE__, read_crc_status());
-printf("[%s:%d] remapper %lx\n", __FUNCTION__, __LINE__, read_remapper_control());
 printf("[%s:%d] triggen %lx\n", __FUNCTION__, __LINE__, read_triggen_control());
 static int regids[] = {24, 97, 186, 0};
 int i;

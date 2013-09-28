@@ -31,11 +31,9 @@ interface ImageonSpi;
     method Bit#(16) timing();
     method Action status_busy(Bit#(1) busy);
     method Action status_error(Bit#(1) error);
-    //method Bit#(1) txfifo_clk();
     method Bit#(1) txfifo_wen();
     method Bit#(32) txfifo_din();
     method Action txfifo_full(Bit#(1) full);
-    //method Bit#(1) rxfifo_clk();
     method Bit#(1) rxfifo_ren();
     method Action rxfifo_dout(Bit#(32) dout);
     method Action rxfifo_empty(Bit#(1) empty);
@@ -64,28 +62,7 @@ interface ImageonDecoder;
     method Bit#(10) code_fe();
     method Bit#(10) code_bl();
     method Bit#(10) code_img();
-    method Bit#(10) code_tr();
-    method Bit#(10) code_crc();
     method Action frame_start(Bit#(1) start);
-    method Action cnt_black_lines(Bit#(32) lines);
-    method Action cnt_image_lines(Bit#(32) lines);
-    method Action cnt_black_pixels(Bit#(32) pixels);
-    method Action cnt_image_pixels(Bit#(32) pixels);
-    method Action cnt_frames(Bit#(32) frames);
-    method Action cnt_windows(Bit#(32) windows);
-    method Action cnt_clocks(Bit#(32) clocks);
-    method Action cnt_start_lines(Bit#(32) lines);
-    method Action cnt_end_lines(Bit#(32) lines);
-    method Action cnt_monitor0high(Bit#(32) monitor0high);
-    method Action cnt_monitor0low(Bit#(32) monitor0low);
-    method Action cnt_monitor1high(Bit#(32) monitor1high);
-    method Action cnt_monitor1low(Bit#(32) monitor1low);
-endinterface
-
-interface ImageonCrc;
-    method Bit#(1) reset();
-    method Bit#(1) initvalue();
-    method Action crc_status(Bit#(32) status);
 endinterface
 
 interface ImageonRemapper;
@@ -95,22 +72,9 @@ endinterface
 
 interface ImageonTrigger;
     method Bit#(3) enable();
-    method Bit#(3) sync2readout();
-    method Bit#(1) readouttrigger();
     method Bit#(32) default_freq();
     method Bit#(32) cnt_trigger0high();
     method Bit#(32) cnt_trigger0low();
-    method Bit#(32) cnt_trigger1high();
-    method Bit#(32) cnt_trigger1low();
-    method Bit#(32) cnt_trigger2high();
-    method Bit#(32) cnt_trigger2low();
-    method Bit#(32) ext_debounce();
-    method Bit#(1) ext_polarity();
-    method Bit#(3) gen_polarity();
-endinterface
-
-interface ImageonFpnPrnu;
-    method Bit#(256) prnu_values();
 endinterface
 
 interface ImageonSyncGen;
@@ -128,8 +92,6 @@ endinterface
 typedef struct {
     Bit#(1) vsync;
     Bit#(1) hsync;
-    Bit#(1) vblank;
-    Bit#(1) hblank;
     Bit#(1) active_video;
     Bit#(10) video_data;
 } XsviData deriving (Bits);
@@ -137,8 +99,6 @@ typedef struct {
 interface ImageonXsvi;
     method Action vsync(Bit#(1) v);
     method Action hsync(Bit#(1) v);
-    method Action vblank(Bit#(1) v);
-    method Action hblank(Bit#(1) v);
     method Action active_video(Bit#(1) v);
     method Action video_data(Bit#(10) v);
 endinterface
@@ -151,18 +111,12 @@ endinterface
 interface ImageonVita;
     method Bit#(1) host_vita_reset();
     method Bit#(1) host_oe();
-    method Bit#(1) host_iic_reset();
-    method Bit#(1) host_clock_gen_reset();
-    method Bit#(1) host_clock_gen_select();
-    method Action host_clock_gen_locked(Bit#(1) locked);
     method Action fsync(Bit#(1) fsync);
     interface ImageonSpi spi;
     interface ImageonSerdes serdes;
     interface ImageonDecoder decoder;
-    interface ImageonCrc crc;
     interface ImageonRemapper remapper;
     interface ImageonTrigger trigger;
-    interface ImageonFpnPrnu fpnPrnu;
     interface ImageonSyncGen syncgen;
     interface ImageonXsvi xsvi;
     interface ImageonDebugSpi debugSpi;
@@ -177,20 +131,11 @@ interface ImageonControl;
     method Bit#(32) get_iserdes_control();
     method Action set_decoder_control(Bit#(32) v);
     method Bit#(32) get_decoder_control();
-    method Action set_crc_control(Bit#(32) v);
-    method Bit#(32) get_crc_control();
-    method Bit#(32) get_crc_status();
-    method Action set_remapper_control(Bit#(32) v);
-    method Bit#(32) get_remapper_control();
     method Action set_triggen_control(Bit#(32) v);
     method Bit#(32) get_triggen_control();
 
     method Action set_host_vita_reset(Bit#(1) v);
     method Action set_host_oe(Bit#(1) v);
-    method Action set_iic_reset(Bit#(1) v);
-    method Action set_clock_gen_reset(Bit#(1) v);
-    method Action set_clock_gen_select(Bit#(1) v);
-    method Bit#(1) get_clock_gen_locked();
 
     method Action set_spi_reset(Bit#(1) v);
     method Action set_spi_timing(Bit#(16) v);
@@ -215,26 +160,10 @@ interface ImageonControl;
     method Action set_decoder_code_fe(Bit#(10) v);
     method Action set_decoder_code_bl(Bit#(10) v);
     method Action set_decoder_code_img(Bit#(10) v);
-    method Action set_decoder_code_tr(Bit#(10) v);
-    method Action set_decoder_code_crc(Bit#(10) v);
-    method Action set_crc_reset(Bit#(1) v);
-    method Action set_crc_initvalue(Bit#(1) v);
-    method Action set_remapper_write_cfg(Bit#(3) v);
-    method Action set_remapper_mode(Bit#(3) v);
     method Action set_trigger_enable(Bit#(3) v);
-    method Action set_trigger_sync2readout(Bit#(3) v);
-    method Action set_trigger_readouttrigger(Bit#(1) v);
     method Action set_trigger_default_freq(Bit#(32) v);
     method Action set_trigger_cnt_trigger0high(Bit#(32) v);
     method Action set_trigger_cnt_trigger0low(Bit#(32) v);
-    method Action set_trigger_cnt_trigger1high(Bit#(32) v);
-    method Action set_trigger_cnt_trigger1low(Bit#(32) v);
-    method Action set_trigger_cnt_trigger2high(Bit#(32) v);
-    method Action set_trigger_cnt_trigger2low(Bit#(32) v);
-    method Action set_trigger_ext_debounce(Bit#(32) v);
-    method Action set_trigger_ext_polarity(Bit#(1) v);
-    method Action set_trigger_gen_polarity(Bit#(3) v);
-    method Action set_prnu_values(Bit#(256) v);
     method Action set_syncgen_delay(Bit#(16) v);
     method Action set_syncgen_hactive(Bit#(16) v);
     method Action set_syncgen_hfporch(Bit#(16) v);
@@ -258,9 +187,6 @@ module mkImageonVitaController(ImageonVitaController);
 
     Reg#(Bit#(1)) host_vita_reset_reg <- mkReg(0);
     Reg#(Bit#(1)) host_oe_reg <- mkReg(0);
-    Reg#(Bit#(1)) host_iic_reset_reg <- mkReg(0);
-    Reg#(Bit#(1)) host_clock_gen_reset_reg <- mkReg(0);
-    Reg#(Bit#(1)) host_clock_gen_select_reg <- mkReg(0);
     Wire#(Bit#(1)) host_clock_gen_locked_wire <- mkDWire(0);
     Reg#(Bit#(1)) spi_reset_reg <- mkReg(0);
     Reg#(Bit#(16)) spi_timing_reg <- mkReg(0);
@@ -295,26 +221,7 @@ module mkImageonVitaController(ImageonVitaController);
     Reg#(Bit#(10)) decoder_code_fe_reg <- mkReg(0);
     Reg#(Bit#(10)) decoder_code_bl_reg <- mkReg(0);
     Reg#(Bit#(10)) decoder_code_img_reg <- mkReg(0);
-    Reg#(Bit#(10)) decoder_code_tr_reg <- mkReg(0);
-    Reg#(Bit#(10)) decoder_code_crc_reg <- mkReg(0);
     Wire#(Bit#(1)) decoder_frame_start_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_black_lines_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_image_lines_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_black_pixels_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_image_pixels_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_frames_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_windows_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_clocks_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_start_lines_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_end_lines_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_monitor0high_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_monitor0low_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_monitor1high_wire <- mkDWire(0);
-    Wire#(Bit#(32)) decoder_cnt_monitor1low_wire <- mkDWire(0);
-
-    Reg#(Bit#(1)) crc_reset_reg <- mkReg(0);
-    Reg#(Bit#(1)) crc_initvalue_reg <- mkReg(0);
-    Wire#(Bit#(32)) crc_status_wire <- mkDWire(0);
     Wire#(Bit#(10)) decoder_video_data_wire <- mkDWire(0);
 
     Reg#(Bit#(3)) remapper_write_cfg_reg <- mkReg(0);
@@ -325,14 +232,6 @@ module mkImageonVitaController(ImageonVitaController);
     Reg#(Bit#(32)) trigger_default_freq_reg <- mkReg(0);
     Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkReg(0);
     Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkReg(0);
-    Reg#(Bit#(32)) trigger_cnt_trigger1high_reg <- mkReg(0);
-    Reg#(Bit#(32)) trigger_cnt_trigger1low_reg <- mkReg(0);
-    Reg#(Bit#(32)) trigger_cnt_trigger2high_reg <- mkReg(0);
-    Reg#(Bit#(32)) trigger_cnt_trigger2low_reg <- mkReg(0);
-    Reg#(Bit#(32)) trigger_ext_debounce_reg <- mkReg(0);
-    Reg#(Bit#(1)) trigger_ext_polarity_reg <- mkReg(0);
-    Reg#(Bit#(3)) trigger_gen_polarity_reg <- mkReg(0);
-    Reg#(Bit#(256)) prnu_values_reg <- mkReg(0);
     Reg#(Bit#(16)) syncgen_delay_reg <- mkReg(0);
     Reg#(Bit#(16)) syncgen_hactive_reg <- mkReg(0);
     Reg#(Bit#(16)) syncgen_hfporch_reg <- mkReg(0);
@@ -344,14 +243,10 @@ module mkImageonVitaController(ImageonVitaController);
     Reg#(Bit#(16)) syncgen_vbporch_reg <- mkReg(0);
     Reg#(Bit#(32)) vsync_reg <- mkReg(0);
     Reg#(Bit#(32)) hsync_reg <- mkReg(0);
-    Reg#(Bit#(32)) vblank_reg <- mkReg(0);
-    Reg#(Bit#(32)) hblank_reg <- mkReg(0);
     Reg#(Bit#(32)) active_reg <- mkReg(0);
     Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_vsync_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_hsync_wire <- mkDWire(0);
-    Wire#(Bit#(1))  xsvi_vblank_wire <- mkDWire(0);
-    Wire#(Bit#(1))  xsvi_hblank_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
     Wire#(Bit#(96)) debug_spi_wire <- mkDWire(0);
     Reg#(Bit#(32)) debugreq_value <- mkReg(0);
@@ -363,18 +258,6 @@ module mkImageonVitaController(ImageonVitaController);
 	endmethod
 	method Bit#(1) host_oe();
 	    return host_oe_reg;
-	endmethod
-	method Bit#(1) host_iic_reset();
-	    return host_iic_reset_reg;
-	endmethod
-	method Bit#(1) host_clock_gen_reset();
-	    return host_clock_gen_reset_reg;
-	endmethod
-	method Bit#(1) host_clock_gen_select();
-	    return host_clock_gen_select_reg;
-	endmethod
-	method Action host_clock_gen_locked(Bit#(1) locked);
-	    host_clock_gen_locked_wire <= locked;
 	endmethod
 	method Action fsync(Bit#(1) sync);
 	endmethod
@@ -470,64 +353,8 @@ module mkImageonVitaController(ImageonVitaController);
 	    method Bit#(10) code_img();
 		return decoder_code_img_reg;
 	    endmethod
-	    method Bit#(10) code_tr();
-		return decoder_code_tr_reg;
-	    endmethod
-	    method Bit#(10) code_crc();
-		return decoder_code_crc_reg;
-	    endmethod
 	    method Action frame_start(Bit#(1) start);
 	        decoder_frame_start_wire <= start;
-	    endmethod
-	    method Action cnt_black_lines(Bit#(32) lines);
-	        decoder_cnt_black_lines_wire <= lines;
-	    endmethod
-	    method Action cnt_image_lines(Bit#(32) lines);
-	        decoder_cnt_image_lines_wire <= lines;
-	    endmethod
-	    method Action cnt_black_pixels(Bit#(32) pixels);
-	        decoder_cnt_black_pixels_wire <= pixels;
-	    endmethod
-	    method Action cnt_image_pixels(Bit#(32) pixels);
-	        decoder_cnt_image_pixels_wire <= pixels;
-	    endmethod
-	    method Action cnt_frames(Bit#(32) frames);
-	        decoder_cnt_frames_wire <= frames;
-	    endmethod
-	    method Action cnt_windows(Bit#(32) windows);
-	        decoder_cnt_windows_wire <= windows;
-	    endmethod
-	    method Action cnt_clocks(Bit#(32) clocks);
-	        decoder_cnt_clocks_wire <= clocks;
-	    endmethod
-	    method Action cnt_start_lines(Bit#(32) lines);
-	        decoder_cnt_start_lines_wire <= lines;
-	    endmethod
-	    method Action cnt_end_lines(Bit#(32) lines);
-	        decoder_cnt_end_lines_wire <= lines;
-	    endmethod
-	    method Action cnt_monitor0high(Bit#(32) monitor0high);
-	        decoder_cnt_monitor0high_wire <= monitor0high;
-	    endmethod
-	    method Action cnt_monitor0low(Bit#(32) monitor0low);
-	        decoder_cnt_monitor0low_wire <= monitor0low;
-	    endmethod
-	    method Action cnt_monitor1high(Bit#(32) monitor1high);
-	        decoder_cnt_monitor1high_wire <= monitor1high;
-	    endmethod
-	    method Action cnt_monitor1low(Bit#(32) monitor1low);
-	        decoder_cnt_monitor1low_wire <= monitor1low;
-	    endmethod
-	endinterface
-	interface ImageonCrc crc;
-	    method Bit#(1) reset();
-		return crc_reset_reg;
-	    endmethod
-	    method Bit#(1) initvalue();
-		return crc_initvalue_reg;
-	    endmethod
-	    method Action crc_status(Bit#(32) status);
-	        crc_status_wire <= status;
 	    endmethod
 	endinterface
 	interface ImageonRemapper remapper;
@@ -542,12 +369,6 @@ module mkImageonVitaController(ImageonVitaController);
 	    method Bit#(3) enable();
 		return trigger_enable_reg;
 	    endmethod
-	    method Bit#(3) sync2readout();
-		return trigger_sync2readout_reg;
-	    endmethod
-	    method Bit#(1) readouttrigger();
-		return trigger_readouttrigger_reg;
-	    endmethod
 	    method Bit#(32) default_freq();
 		return trigger_default_freq_reg;
 	    endmethod
@@ -556,32 +377,6 @@ module mkImageonVitaController(ImageonVitaController);
 	    endmethod
 	    method Bit#(32) cnt_trigger0low();
 		return trigger_cnt_trigger0low_reg;
-	    endmethod
-	    method Bit#(32) cnt_trigger1high();
-		return trigger_cnt_trigger1high_reg;
-	    endmethod
-	    method Bit#(32) cnt_trigger1low();
-		return trigger_cnt_trigger1low_reg;
-	    endmethod
-	    method Bit#(32) cnt_trigger2high();
-		return trigger_cnt_trigger2high_reg;
-	    endmethod
-	    method Bit#(32) cnt_trigger2low();
-		return trigger_cnt_trigger2low_reg;
-	    endmethod
-	    method Bit#(32) ext_debounce();
-		return trigger_ext_debounce_reg;
-	    endmethod
-	    method Bit#(1) ext_polarity();
-		return trigger_ext_polarity_reg;
-	    endmethod
-	    method Bit#(3) gen_polarity();
-		return trigger_gen_polarity_reg;
-	    endmethod
-	endinterface
-	interface ImageonFpnPrnu fpnPrnu;
-	    method Bit#(256) prnu_values();
-		return prnu_values_reg;
 	    endmethod
 	endinterface
 	interface ImageonSyncGen syncgen;
@@ -623,16 +418,6 @@ module mkImageonVitaController(ImageonVitaController);
 	        xsvi_hsync_wire <= v;
 	        if (v == 1)
 	            hsync_reg <= hsync_reg + 1;
-	    endmethod
-	    method Action vblank(Bit#(1) v);
-	        xsvi_vblank_wire <= v;
-	        if (v == 1)
-	            vblank_reg <= vblank_reg + 1;
-	    endmethod
-	    method Action hblank(Bit#(1) v);
-	        xsvi_hblank_wire <= v;
-	        if (v == 1)
-	            hblank_reg <= hblank_reg + 1;
 	    endmethod
 	    method Action active_video(Bit#(1) v);
 	        xsvi_active_video_wire <= v;
@@ -719,35 +504,6 @@ module mkImageonVitaController(ImageonVitaController);
 	    v[1] = decoder_enable_reg;
 	    return v;
 	endmethod
-// CRC_CONTROL[7:0]
-//    [0] CRC_RESET
-//    [1] CRC_INITVALUE
-	method Action set_crc_control(Bit#(32) v);
-	    crc_reset_reg <= v[0];
-	    crc_initvalue_reg <= v[1];
-	endmethod
-	method Bit#(32) get_crc_control();
-	    let v = 0;
-	    v[0] = crc_reset_reg;
-	    v[1] = crc_initvalue_reg;
-	    return v;
-	endmethod
-	method Bit#(32) get_crc_status();
-	    return crc_status_wire;
-	endmethod
-// REMAPPER_CONTROL[7:0]
-//    [2:0] REMAPPER_WRITE_CFG
-//    [6:4] REMAPPER_MODE
-	method Action set_remapper_control(Bit#(32) v);
-	    remapper_write_cfg_reg <= v[2:0];
-	    remapper_mode_reg <= v[6:4];
-	endmethod
-	method Bit#(32) get_remapper_control();
-	    let v = 0;
-	    v[2:0] = remapper_write_cfg_reg;
-	    v[6:4] = remapper_mode_reg;
-	    return v;
-	endmethod
 // TRIGGEN_CONTROL
 // [ 2: 0] TRIGGEN_ENABLE
 // [ 6: 4] TRIGGEN_SYNC2READOUT
@@ -757,22 +513,10 @@ module mkImageonVitaController(ImageonVitaController);
 // [30:28] TRIGGEN_GEN_POLARITY
 	method Action set_triggen_control(Bit#(32) v);
 	    trigger_enable_reg <= v[2:0];
-	    trigger_sync2readout_reg <= v[6:4];
-	    trigger_readouttrigger_reg <= v[8];
-	    trigger_ext_polarity_reg <= v[16];
-	    //FIXME
-	    //trigger_cnt_update_reg <= v[24];
-	    trigger_gen_polarity_reg <= v[30:28];
 	endmethod
 	method Bit#(32) get_triggen_control();
 	    let v = 0;
 	    v[2:0] = trigger_enable_reg;
-	    v[6:4] = trigger_sync2readout_reg;
-	    v[8] = trigger_readouttrigger_reg;
-	    v[16] = trigger_ext_polarity_reg;
-	    //FIXME
-	    //v[24] = trigger_cnt_update_reg;
-	    v[30:28] = trigger_gen_polarity_reg;
 	    return v;
 	endmethod
 
@@ -781,18 +525,6 @@ module mkImageonVitaController(ImageonVitaController);
 	endmethod
 	method Action set_host_oe(Bit#(1) v);
 	    host_oe_reg <= v;
-	endmethod
-	method Action set_iic_reset(Bit#(1) v);
-	    host_iic_reset_reg <= v[0];
-	endmethod
-	method Action set_clock_gen_reset(Bit#(1) v);
-	    host_clock_gen_reset_reg <= v[0];
-	endmethod
-	method Action set_clock_gen_select(Bit#(1) v);
-	    host_clock_gen_select_reg <= v[0];
-	endmethod
-	method Bit#(1) get_clock_gen_locked();
-	    return host_clock_gen_locked_wire;
 	endmethod
 
 	method Action set_spi_reset(Bit#(1) v);
@@ -867,32 +599,8 @@ module mkImageonVitaController(ImageonVitaController);
 	method Action set_decoder_code_img(Bit#(10) v);
 	    decoder_code_img_reg <= v;
 	endmethod
-	method Action set_decoder_code_tr(Bit#(10) v);
-	    decoder_code_tr_reg <= v;
-	endmethod
-	method Action set_decoder_code_crc(Bit#(10) v);
-	    decoder_code_crc_reg <= v;
-	endmethod
-	method Action set_crc_reset(Bit#(1) v);
-	    crc_reset_reg <= v;
-	endmethod
-	method Action set_crc_initvalue(Bit#(1) v);
-	    crc_initvalue_reg <= v;
-	endmethod
-	method Action set_remapper_write_cfg(Bit#(3) v);
-	    remapper_write_cfg_reg <= v;
-	endmethod
-	method Action set_remapper_mode(Bit#(3) v);
-	    remapper_mode_reg <= v;
-	endmethod
 	method Action set_trigger_enable(Bit#(3) v);
 	    trigger_enable_reg <= v;
-	endmethod
-	method Action set_trigger_sync2readout(Bit#(3) v);
-	    trigger_sync2readout_reg <= v;
-	endmethod
-	method Action set_trigger_readouttrigger(Bit#(1) v);
-	    trigger_readouttrigger_reg <= v;
 	endmethod
 	method Action set_trigger_default_freq(Bit#(32) v);
 	    trigger_default_freq_reg <= v;
@@ -902,30 +610,6 @@ module mkImageonVitaController(ImageonVitaController);
 	endmethod
 	method Action set_trigger_cnt_trigger0low(Bit#(32) v);
 	    trigger_cnt_trigger0low_reg <= v;
-	endmethod
-	method Action set_trigger_cnt_trigger1high(Bit#(32) v);
-	    trigger_cnt_trigger1high_reg <= v;
-	endmethod
-	method Action set_trigger_cnt_trigger1low(Bit#(32) v);
-	    trigger_cnt_trigger1low_reg <= v;
-	endmethod
-	method Action set_trigger_cnt_trigger2high(Bit#(32) v);
-	    trigger_cnt_trigger2high_reg <= v;
-	endmethod
-	method Action set_trigger_cnt_trigger2low(Bit#(32) v);
-	    trigger_cnt_trigger2low_reg <= v;
-	endmethod
-	method Action set_trigger_ext_debounce(Bit#(32) v);
-	    trigger_ext_debounce_reg <= v;
-	endmethod
-	method Action set_trigger_ext_polarity(Bit#(1) v);
-	    trigger_ext_polarity_reg <= v;
-	endmethod
-	method Action set_trigger_gen_polarity(Bit#(3) v);
-	    trigger_gen_polarity_reg <= v;
-	endmethod
-	method Action set_prnu_values(Bit#(256) v);
-	    prnu_values_reg <= v;
 	endmethod
 	method Action set_syncgen_delay(Bit#(16) v);
 	    syncgen_delay_reg <= v;
@@ -964,8 +648,6 @@ module mkImageonVitaController(ImageonVitaController);
 	    return XsviData {
 	        vsync: xsvi_vsync_wire,
 		hsync: xsvi_hsync_wire,
-		vblank: xsvi_vblank_wire,
-		hblank: xsvi_hblank_wire,
 		active_video: xsvi_active_video_wire,
 		video_data: xsvi_video_data_wire
 	    };

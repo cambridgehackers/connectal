@@ -1043,15 +1043,8 @@ class ImageonVita:
      /* XSVI Port */
      wire imageon_xsvi_vsync;
      wire imageon_xsvi_hsync;
-     wire imageon_xsvi_vblank;
-     wire imageon_xsvi_hblank;
      wire imageon_xsvi_active_video;
      wire [9:0] imageon_xsvi_video_data;
-     wire [229:0] debug_iserdes_o;
-     wire [186:0] debug_decoder_o;
-     wire [87:0] debug_crc_o;
-     wire [9:0] debug_triggen_o;
-     wire [31:0] debug_video_o;
 
      /* IIC */
      wire fmc_imageon_iic_0_scl_T;
@@ -1136,14 +1129,8 @@ class ImageonVita:
     .imageon_decoder_code_fe(imageon_host_decoder_code_fe),
     .imageon_decoder_code_bl(imageon_host_decoder_code_bl),
     .imageon_decoder_code_img(imageon_host_decoder_code_img),
-    .imageon_decoder_code_tr(imageon_host_decoder_code_tr),
-    .imageon_decoder_code_crc(imageon_host_decoder_code_crc),
     .imageon_decoder_frame_start_start(imageon_host_decoder_frame_start),
-    .imageon_remapper_write_cfg(imageon_host_remapper_write_cfg),
-    .imageon_remapper_mode(imageon_host_remapper_mode),
     .imageon_trigger_enable(imageon_host_trigger_enable),
-    .imageon_trigger_sync2readout(imageon_host_trigger_sync2readout),
-    .imageon_trigger_readouttrigger(imageon_host_trigger_readouttrigger),
     .imageon_trigger_default_freq(imageon_host_trigger_default_freq),
     .imageon_trigger_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
     .imageon_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
@@ -1158,8 +1145,6 @@ class ImageonVita:
     .imageon_syncgen_vbporch(imageon_host_syncgen_vbporch),
     .imageon_xsvi_vsync_v(imageon_xsvi_vsync),
     .imageon_xsvi_hsync_v(imageon_xsvi_hsync),
-    .imageon_xsvi_vblank_v(imageon_xsvi_vblank),
-    .imageon_xsvi_hblank_v(imageon_xsvi_hblank),
     .imageon_xsvi_active_video_v(imageon_xsvi_active_video),
     .imageon_xsvi_video_data_v(imageon_xsvi_video_data),
     .imageon_get_debugreq(debugreq_value),
@@ -1202,7 +1187,6 @@ class ImageonVita:
         .DI(0000000000000000),
         .DWE(0),
         .CLKFBOUT(clockfb),
-        /*.CLKFBOUTB(SIG_MMCM1_CLKFBOUTB),*/
         .CLKOUT0(imageon_clk4x_unbuf),
         .CLKOUT1(imageon_clk_unbuf),
         .CLKFBIN(clockfb),
@@ -1347,13 +1331,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .host_decoder_code_bl(imageon_host_decoder_code_bl),
     .host_decoder_code_img(imageon_host_decoder_code_img),
     .host_decoder_frame_start(imageon_host_decoder_frame_start),
-    /* HOST Interface - CRC .Checker */
-    .host_crc_reset(imageon_host_crc_reset),
-    .host_crc_initvalue(imageon_host_crc_initvalue),
-    .host_crc_status(imageon_host_crc_status),
-    /* HOST Interface - Data Channel Remapper */
-    .host_remapper_write_cfg(imageon_host_remapper_write_cfg),
-    .host_remapper_mode(imageon_host_remapper_mode),
     /* HOST Interface - Trigger Generator */
     .host_triggen_default_freq(imageon_host_trigger_default_freq),
     .host_triggen_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),

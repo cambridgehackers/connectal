@@ -36,12 +36,8 @@ interface CoreIndication;
     method Action spi_control_value(Bit#(32) v);
     method Action iserdes_control_value(Bit#(32) v);
     method Action decoder_control_value(Bit#(32) v);
-    method Action crc_control_value(Bit#(32) v);
-    method Action crc_status_value(Bit#(32) v);
-    method Action remapper_control_value(Bit#(32) v);
     method Action triggen_control_value(Bit#(32) v);
 
-    method Action clock_gen_locked_value(Bit#(1) v);
     method Action spi_rxfifo_value(Bit#(32) v);
     method Action spi_trace_sample_count_value(Bit#(32) v);
     method Action spi_trace_sample_value(Bit#(64) v);
@@ -56,19 +52,11 @@ interface CoreRequest;
     method Action get_iserdes_control();
     method Action set_decoder_control(Bit#(32) v);
     method Action get_decoder_control();
-    method Action set_crc_control(Bit#(32) v);
-    method Action get_crc_control();
-    method Action get_crc_status();
-    method Action set_remapper_control(Bit#(32) v);
-    method Action get_remapper_control();
     method Action set_triggen_control(Bit#(32) v);
     method Action get_triggen_control();
 
     method Action set_host_vita_reset(Bit#(1) v);
     method Action set_host_oe(Bit#(1) v);
-    method Action set_iic_reset(Bit#(1) v);
-    method Action set_clock_gen_reset(Bit#(1) v);
-    method Action get_clock_gen_locked();
 
     method Action set_spi_reset(Bit#(1) v);
     method Action set_spi_timing(Bit#(16) v);
@@ -90,21 +78,10 @@ interface CoreRequest;
     method Action set_decoder_code_fe(Bit#(10) v);
     method Action set_decoder_code_bl(Bit#(10) v);
     method Action set_decoder_code_img(Bit#(10) v);
-    method Action set_decoder_code_tr(Bit#(10) v);
-    method Action set_decoder_code_crc(Bit#(10) v);
-    method Action set_crc_reset(Bit#(1) v);
-    method Action set_crc_initvalue(Bit#(1) v);
-    method Action set_remapper_write_cfg(Bit#(3) v);
-    method Action set_remapper_mode(Bit#(3) v);
     method Action set_trigger_enable(Bit#(3) v);
-    method Action set_trigger_readouttrigger(Bit#(1) v);
     method Action set_trigger_default_freq(Bit#(32) v);
     method Action set_trigger_cnt_trigger0high(Bit#(32) v);
     method Action set_trigger_cnt_trigger0low(Bit#(32) v);
-    method Action set_trigger_ext_debounce(Bit#(32) v);
-    method Action set_trigger_ext_polarity(Bit#(1) v);
-    method Action set_trigger_gen_polarity(Bit#(3) v);
-    method Action set_prnu_values(Bit#(64) v0, Bit#(64) v1, Bit#(64) v2, Bit#(64) v3);
     method Action set_syncgen_delay(Bit#(16) v);
     method Action set_syncgen_hactive(Bit#(16) v);
     method Action set_syncgen_hfporch(Bit#(16) v);
@@ -190,24 +167,6 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
         indication.coreIndication.decoder_control_value(control.get_decoder_control());
     endmethod
 
-    method Action set_crc_control(Bit#(32) v);
-        control.set_crc_control(v);
-    endmethod
-    method Action get_crc_control();
-        indication.coreIndication.crc_control_value(control.get_crc_control());
-    endmethod
-
-    method Action get_crc_status();
-        indication.coreIndication.crc_status_value(control.get_crc_status());
-    endmethod
-
-    method Action set_remapper_control(Bit#(32) v);
-        control.set_remapper_control(v);
-    endmethod
-    method Action get_remapper_control();
-        indication.coreIndication.remapper_control_value(control.get_remapper_control());
-    endmethod
-
     method Action set_triggen_control(Bit#(32) v);
         control.set_triggen_control(v);
     endmethod
@@ -221,15 +180,6 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
     endmethod
     method Action set_host_oe(Bit#(1) v);
         control.set_host_oe(v);
-    endmethod
-    method Action set_iic_reset(Bit#(1) v);
-        control.set_iic_reset(v);
-    endmethod
-    method Action set_clock_gen_reset(Bit#(1) v);
-        control.set_clock_gen_reset(v);
-    endmethod
-    method Action get_clock_gen_locked();
-        indication.coreIndication.clock_gen_locked_value(control.get_clock_gen_locked());
     endmethod
 
     method Action set_spi_reset(Bit#(1) v);
@@ -290,29 +240,8 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
     method Action set_decoder_code_img(Bit#(10) v);
         control.set_decoder_code_img(v);
     endmethod
-    method Action set_decoder_code_tr(Bit#(10) v);
-        control.set_decoder_code_tr(v);
-    endmethod
-    method Action set_decoder_code_crc(Bit#(10) v);
-        control.set_decoder_code_crc(v);
-    endmethod
-    method Action set_crc_reset(Bit#(1) v);
-        control.set_crc_reset(v);
-    endmethod
-    method Action set_crc_initvalue(Bit#(1) v);
-        control.set_crc_initvalue(v);
-    endmethod
-    method Action set_remapper_write_cfg(Bit#(3) v);
-        control.set_remapper_write_cfg(v);
-    endmethod
-    method Action set_remapper_mode(Bit#(3) v);
-        control.set_remapper_mode(v);
-    endmethod
     method Action set_trigger_enable(Bit#(3) v);
         control.set_trigger_enable(v);
-    endmethod
-    method Action set_trigger_readouttrigger(Bit#(1) v);
-        control.set_trigger_readouttrigger(v);
     endmethod
     method Action set_trigger_default_freq(Bit#(32) v);
         control.set_trigger_default_freq(v);
@@ -322,23 +251,6 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
     endmethod
     method Action set_trigger_cnt_trigger0low(Bit#(32) v);
         control.set_trigger_cnt_trigger0low(v);
-    endmethod
-    method Action set_trigger_ext_debounce(Bit#(32) v);
-        control.set_trigger_ext_debounce(v);
-    endmethod
-    method Action set_trigger_ext_polarity(Bit#(1) v);
-        control.set_trigger_ext_polarity(v);
-    endmethod
-    method Action set_trigger_gen_polarity(Bit#(3) v);
-        control.set_trigger_gen_polarity(v);
-    endmethod
-    method Action set_prnu_values(Bit#(64) v0, Bit#(64) v1, Bit#(64) v2, Bit#(64) v3);
-        Bit#(256) bitvec;
-	bitvec[63:0] = v0;
-	bitvec[127:64] = v1;
-	bitvec[191:128] = v2;
-	bitvec[255:192] = v3;
-        control.set_prnu_values(bitvec);
     endmethod
     method Action set_syncgen_delay(Bit#(16) v);
         control.set_syncgen_delay(v);
