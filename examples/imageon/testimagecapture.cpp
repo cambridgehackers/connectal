@@ -40,12 +40,6 @@ DECL(spi_rxfifo)
     }
 
 class TestImageCaptureIndications : public CoreIndication {
-    void spi_trace_sample_count_value(long unsigned int) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    }
-    void spi_trace_sample_value(long long unsigned int) {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    }
     RXFN(spi_control)
     RXFN(iserdes_control)
     RXFN(decoder_control)
@@ -368,7 +362,6 @@ static void fmc_imageon_demo_enable_ipipe( void)
    device->set_serdes_training(0x03A6);
    printf( "VITA ISERDES - Setting Manual Tap to 0x%08X\n\r", uManualTap);
    device->set_serdes_manual_tap(uManualTap);
-   device->set_decoder_startoddeven(0);
    device->set_decoder_code_ls(0x00AA);
    device->set_decoder_code_le(0x012A);
    device->set_decoder_code_fs(0x02AA);

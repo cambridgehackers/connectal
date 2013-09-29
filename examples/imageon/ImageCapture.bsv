@@ -37,10 +37,7 @@ interface CoreIndication;
     method Action iserdes_control_value(Bit#(32) v);
     method Action decoder_control_value(Bit#(32) v);
     method Action triggen_control_value(Bit#(32) v);
-
     method Action spi_rxfifo_value(Bit#(32) v);
-    method Action spi_trace_sample_count_value(Bit#(32) v);
-    method Action spi_trace_sample_value(Bit#(64) v);
     method Action debugind(Bit#(32) v);
 endinterface
 
@@ -71,7 +68,6 @@ interface CoreRequest;
     method Action set_serdes_training(Bit#(10) v);
     method Action set_decoder_reset(Bit#(1) v);
     method Action set_decoder_enable(Bit#(1) v);
-    method Action set_decoder_startoddeven(Bit#(32) v);
     method Action set_decoder_code_ls(Bit#(10) v);
     method Action set_decoder_code_le(Bit#(10) v);
     method Action set_decoder_code_fs(Bit#(10) v);
@@ -140,11 +136,6 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
         hdmiOut.rgb.put(rgb888VideoData);
     endrule
 
-    rule spi_debug_rule;
-        Bit#(64) v = control.get_spi_debug[63:0];
-        bsi.dataIn(v, v);
-    endrule
-   
     interface CoreRequest coreRequest;
     method Action set_spi_control(Bit#(32) v);
         control.set_spi_control(v);
@@ -173,7 +164,6 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
     method Action get_triggen_control();
         indication.coreIndication.triggen_control_value(control.get_triggen_control());
     endmethod
-
 
     method Action set_host_vita_reset(Bit#(1) v);
         control.set_host_vita_reset(v);
@@ -218,9 +208,6 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
     endmethod
     method Action set_decoder_enable(Bit#(1) v);
         control.set_decoder_enable(v);
-    endmethod
-    method Action set_decoder_startoddeven(Bit#(32) v);
-        control.set_decoder_startoddeven(v);
     endmethod
     method Action set_decoder_code_ls(Bit#(10) v);
         control.set_decoder_code_ls(v);

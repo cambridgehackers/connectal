@@ -55,7 +55,6 @@ endinterface
 interface ImageonDecoder;
     method Bit#(1) reset();
     method Bit#(1) enable();
-    method Bit#(32) startoddeven();
     method Bit#(10) code_ls();
     method Bit#(10) code_le();
     method Bit#(10) code_fs();
@@ -63,11 +62,6 @@ interface ImageonDecoder;
     method Bit#(10) code_bl();
     method Bit#(10) code_img();
     method Action frame_start(Bit#(1) start);
-endinterface
-
-interface ImageonRemapper;
-    method Bit#(3) write_cfg();
-    method Bit#(3) mode();
 endinterface
 
 interface ImageonTrigger;
@@ -103,10 +97,6 @@ interface ImageonXsvi;
     method Action video_data(Bit#(10) v);
 endinterface
 
-interface ImageonDebugSpi;
-    method Action debug_spi(Bit#(96) o);
-endinterface
-
 (* always_enabled *)
 interface ImageonVita;
     method Bit#(1) host_vita_reset();
@@ -115,11 +105,9 @@ interface ImageonVita;
     interface ImageonSpi spi;
     interface ImageonSerdes serdes;
     interface ImageonDecoder decoder;
-    interface ImageonRemapper remapper;
     interface ImageonTrigger trigger;
     interface ImageonSyncGen syncgen;
     interface ImageonXsvi xsvi;
-    interface ImageonDebugSpi debugSpi;
     method Bit#(32) get_debugreq();
     method Action set_debugind(Bit#(32) v);
 endinterface
@@ -139,7 +127,6 @@ interface ImageonControl;
 
     method Action set_spi_reset(Bit#(1) v);
     method Action set_spi_timing(Bit#(16) v);
-    method Bit#(96) get_spi_debug();
 
     interface Put#(Bit#(32)) txfifo;
     interface Put#(Bit#(32)) rxfifo_request;
@@ -153,7 +140,6 @@ interface ImageonControl;
     method Action set_serdes_training(Bit#(10) v);
     method Action set_decoder_reset(Bit#(1) v);
     method Action set_decoder_enable(Bit#(1) v);
-    method Action set_decoder_startoddeven(Bit#(32) v);
     method Action set_decoder_code_ls(Bit#(10) v);
     method Action set_decoder_code_le(Bit#(10) v);
     method Action set_decoder_code_fs(Bit#(10) v);
@@ -214,7 +200,6 @@ module mkImageonVitaController(ImageonVitaController);
 
     Reg#(Bit#(1)) decoder_reset_reg <- mkReg(0);
     Reg#(Bit#(1)) decoder_enable_reg <- mkReg(0);
-    Reg#(Bit#(32)) decoder_startoddeven_reg <- mkReg(0);
     Reg#(Bit#(10)) decoder_code_ls_reg <- mkReg(0);
     Reg#(Bit#(10)) decoder_code_le_reg <- mkReg(0);
     Reg#(Bit#(10)) decoder_code_fs_reg <- mkReg(0);
@@ -227,8 +212,6 @@ module mkImageonVitaController(ImageonVitaController);
     Reg#(Bit#(3)) remapper_write_cfg_reg <- mkReg(0);
     Reg#(Bit#(3)) remapper_mode_reg <- mkReg(0);
     Reg#(Bit#(3)) trigger_enable_reg <- mkReg(0);
-    Reg#(Bit#(3)) trigger_sync2readout_reg <- mkReg(0);
-    Reg#(Bit#(1)) trigger_readouttrigger_reg <- mkReg(0);
     Reg#(Bit#(32)) trigger_default_freq_reg <- mkReg(0);
     Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkReg(0);
     Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkReg(0);
@@ -248,7 +231,6 @@ module mkImageonVitaController(ImageonVitaController);
     Wire#(Bit#(1))  xsvi_vsync_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_hsync_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
-    Wire#(Bit#(96)) debug_spi_wire <- mkDWire(0);
     Reg#(Bit#(32)) debugreq_value <- mkReg(0);
     Reg#(Bit#(32)) debugind_value <- mkReg(0);
 
@@ -332,9 +314,6 @@ module mkImageonVitaController(ImageonVitaController);
 	    method Bit#(1) enable();
 		return decoder_enable_reg;
 	    endmethod
-	    method Bit#(32) startoddeven();
-		return decoder_startoddeven_reg;
-	    endmethod
 	    method Bit#(10) code_ls();
 		return decoder_code_ls_reg;
 	    endmethod
@@ -355,14 +334,6 @@ module mkImageonVitaController(ImageonVitaController);
 	    endmethod
 	    method Action frame_start(Bit#(1) start);
 	        decoder_frame_start_wire <= start;
-	    endmethod
-	endinterface
-	interface ImageonRemapper remapper;
-	    method Bit#(3) write_cfg();
-		return remapper_write_cfg_reg;
-	    endmethod
-	    method Bit#(3) mode();
-		return remapper_mode_reg;
 	    endmethod
 	endinterface
 	interface ImageonTrigger trigger;
@@ -426,11 +397,6 @@ module mkImageonVitaController(ImageonVitaController);
 	    endmethod
 	    method Action video_data(Bit#(10) v);
 	        xsvi_video_data_wire <= v;
-	    endmethod
-	endinterface
-	interface ImageonDebugSpi debugSpi;
-	    method Action debug_spi(Bit#(96) o);
-	        debug_spi_wire <= o;
 	    endmethod
 	endinterface
         method Bit#(32) get_debugreq();
@@ -551,9 +517,6 @@ module mkImageonVitaController(ImageonVitaController);
 		return spi_rxfifo_dout_wire;
 	    endmethod
 	endinterface
-	method Bit#(96) get_spi_debug();
-	    return debug_spi_wire;
-	endmethod
 	method Action set_serdes_reset(Bit#(1) v);
 	    serdes_reset_reg <= v;
 	endmethod
@@ -577,9 +540,6 @@ module mkImageonVitaController(ImageonVitaController);
 	endmethod
 	method Action set_decoder_enable(Bit#(1) v);
 	    decoder_enable_reg <= v;
-	endmethod
-	method Action set_decoder_startoddeven(Bit#(32) v);
-	    decoder_startoddeven_reg <= v;
 	endmethod
 	method Action set_decoder_code_ls(Bit#(10) v);
 	    decoder_code_ls_reg <= v;

@@ -48,11 +48,7 @@ module mkSensorToVideo(SensorToVideo);
 	    let v8 = v[9:2];
 	    return Rgb888VideoData {
 	        vsync: xsvi.vsync,
-		//vblank: xsvi.vblank,
-		vblank: 0,
 	        hsync: xsvi.hsync,
-		//hblank: xsvi.hblank,
-		hblank: 0,
 		active_video: xsvi.active_video,
 		r: v8,
 		g: v8,

@@ -1010,7 +1010,6 @@ class ImageonVita:
     /* HOST Interface - Sync Channel Decoder */
      wire imageon_host_decoder_reset;
      wire imageon_host_decoder_enable;
-     wire [31:0] imageon_host_decoder_startoddeven;
      wire [9:0] imageon_host_decoder_code_ls;
      wire [9:0] imageon_host_decoder_code_le;
      wire [9:0] imageon_host_decoder_code_fs;
@@ -1019,13 +1018,8 @@ class ImageonVita:
      wire [9:0] imageon_host_decoder_code_img;
      wire [9:0] imageon_host_decoder_code_tr;
      wire imageon_host_decoder_frame_start;
-    /* HOST Interface - Data Channel Remapper */
-     wire [2:0] imageon_host_remapper_write_cfg;
-     wire [2:0] imageon_host_remapper_mode;
     /* HOST Interface - Trigger Generator */
      wire [2:0] imageon_host_trigger_enable;
-     wire [2:0] imageon_host_trigger_sync2readout;
-     wire imageon_host_trigger_readouttrigger;
      wire [31:0] imageon_host_trigger_default_freq;
      wire [31:0] imageon_host_trigger_cnt_trigger0high;
      wire [31:0] imageon_host_trigger_cnt_trigger0low;
@@ -1122,7 +1116,6 @@ class ImageonVita:
     .imageon_serdes_iserdes_aligned_aligned(imageon_host_iserdes_aligned),
     .imageon_decoder_reset(imageon_host_decoder_reset),
     .imageon_decoder_enable(imageon_host_decoder_enable),
-    .imageon_decoder_startoddeven(imageon_host_decoder_startoddeven),
     .imageon_decoder_code_ls(imageon_host_decoder_code_ls),
     .imageon_decoder_code_le(imageon_host_decoder_code_le),
     .imageon_decoder_code_fs(imageon_host_decoder_code_fs),
@@ -1323,7 +1316,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .host_iserdes_aligned(imageon_host_iserdes_aligned),
     /* HOST Interface - Sync Channel Decoder */
     .host_decoder_enable(imageon_host_decoder_enable),
-    .host_decoder_startoddeven(imageon_host_decoder_startoddeven),
     .host_decoder_code_ls(imageon_host_decoder_code_ls),
     .host_decoder_code_le(imageon_host_decoder_code_le),
     .host_decoder_code_fs(imageon_host_decoder_code_fs),
