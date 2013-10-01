@@ -114,23 +114,10 @@ module mkEchoIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveReadAddrFifo,
         axiSlaveReadAddrFifo.deq;
         Bit#(8) offset = axiSlaveReadAddrFifo.first[7:0];
         Bit#(32) response = 0;
-        if (offset == 0)
-            response = heard$responseFifo.depth32();
-        if (offset == 4)
-            response = heard$responseFifo.count32();
         if (offset >= 128)
         begin
-            let maybeResponse = heard$responseFifo.first;
-            if (maybeResponse matches tagged Valid .v)
-            begin
-                response = v;
-                heard$responseFifo.deq;
-            end
-            else
-            begin
-                response = 32'h5abeef5a;
-                underflowCountReg <= underflowCountReg + 1;
-            end
+            response = heard$responseFifo.first;
+            heard$responseFifo.deq;
         end
         axiSlaveReadDataFifo.enq(response);
     endrule
@@ -143,23 +130,10 @@ module mkEchoIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveReadAddrFifo,
         axiSlaveReadAddrFifo.deq;
         Bit#(8) offset = axiSlaveReadAddrFifo.first[7:0];
         Bit#(32) response = 0;
-        if (offset == 0)
-            response = heard2$responseFifo.depth32();
-        if (offset == 4)
-            response = heard2$responseFifo.count32();
         if (offset >= 128)
         begin
-            let maybeResponse = heard2$responseFifo.first;
-            if (maybeResponse matches tagged Valid .v)
-            begin
-                response = v;
-                heard2$responseFifo.deq;
-            end
-            else
-            begin
-                response = 32'h5abeef5a;
-                underflowCountReg <= underflowCountReg + 1;
-            end
+            response = heard2$responseFifo.first;
+            heard2$responseFifo.deq;
         end
         axiSlaveReadDataFifo.enq(response);
     endrule
@@ -172,23 +146,10 @@ module mkEchoIndicationsWrapper#(FIFO#(Bit#(17)) axiSlaveReadAddrFifo,
         axiSlaveReadAddrFifo.deq;
         Bit#(8) offset = axiSlaveReadAddrFifo.first[7:0];
         Bit#(32) response = 0;
-        if (offset == 0)
-            response = putFailed$responseFifo.depth32();
-        if (offset == 4)
-            response = putFailed$responseFifo.count32();
         if (offset >= 128)
         begin
-            let maybeResponse = putFailed$responseFifo.first;
-            if (maybeResponse matches tagged Valid .v)
-            begin
-                response = v;
-                putFailed$responseFifo.deq;
-            end
-            else
-            begin
-                response = 32'h5abeef5a;
-                underflowCountReg <= underflowCountReg + 1;
-            end
+            response = putFailed$responseFifo.first;
+            putFailed$responseFifo.deq;
         end
         axiSlaveReadDataFifo.enq(response);
     endrule
@@ -266,6 +227,8 @@ module mkEchoWrapper(EchoWrapper);
     
     Reg#(Bool) interruptEnableReg <- mkReg(False);
     let       interruptStatus = fold(my_or, map(read_wire, readOutstanding));
+
+    Reg#(Bit#(32)) scratchpadReg <- mkReg(32'hd00df00d);
 
     function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
     function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
@@ -357,6 +320,8 @@ module mkEchoWrapper(EchoWrapper);
 	    noAction; // interruptStatus is read-only
 	if (addr == 12'h004)
 	    interruptEnableReg <= v[0] == 1'd1; //reduceOr(v) == 1'd1;
+	if (addr == 12'h03C)
+	    scratchpadReg <= v;
     endrule
     rule readCtrlReg if (axiSlaveReadAddrFifo.first[16] == 0);
         axiSlaveReadAddrFifo.deq;
@@ -398,7 +363,7 @@ module mkEchoWrapper(EchoWrapper);
         if (addr == 12'h038)
             v = 0; // unused
         if (addr == 12'h03c)
-            v = 0; // unused
+            v = scratchpadReg;
         if (addr >= 12'h040 && addr <= (12'h040 + 3/4))
 	begin
 	    v = 0;
@@ -491,11 +456,5 @@ module mkEchoWrapper(EchoWrapper);
         else
             return 1'd0;
     endmethod
-
-
-
-
     interface LEDS leds = echo.leds;
-
-
 endmodule

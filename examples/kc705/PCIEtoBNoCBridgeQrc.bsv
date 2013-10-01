@@ -72,6 +72,12 @@ interface TLPDispatcher;
    (* always_ready *)
    method Bool write_tlp();
    (* always_ready *)
+   method Bool axi_read_tlp();
+   (* always_ready *)
+   method Bool axi_write_tlp();
+   (* always_ready *)
+   method Bool axi_tlp();
+   (* always_ready *)
    method Bool completion_tlp();
 
 endinterface: TLPDispatcher
@@ -90,6 +96,9 @@ module mkTLPDispatcher(TLPDispatcher);
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
+   PulseWire is_axi_read_pw  <- mkPulseWire();
+   PulseWire is_axi_write_pw <- mkPulseWire();
+   PulseWire is_axi_tlp_pw <- mkPulseWire();
    PulseWire is_completion <- mkPulseWire();
 
    (* fire_when_enabled *)
@@ -106,6 +115,7 @@ module mkTLPDispatcher(TLPDispatcher);
                                      || ((hdr_3dw.addr % 8192) == 1030)
                                      || ((hdr_3dw.addr % 8192) == 1031)
                                      || ((hdr_3dw.addr % 8192) == 1032)
+                                     || ((hdr_3dw.addr % 8192) == 1039)
                                      || ((hdr_3dw.addr % 8192) == 1040)
                                      ;
       Bool is_config_read    =  tlp.sof
@@ -159,6 +169,7 @@ module mkTLPDispatcher(TLPDispatcher);
                tlp_in_axi_fifo.enq(tlp);
                if (!tlp.eof)
                   route_to_axi <= True;
+	       is_axi_tlp_pw.send();
             end
          end
          else if (is_dma_command || is_dma_completion) begin
@@ -175,9 +186,11 @@ module mkTLPDispatcher(TLPDispatcher);
             tlp_in_fifo.deq();
          end
          // indicate activity type
-         if (is_config_read || is_axi_read)                     is_read.send();
-         if (is_config_write || is_axi_write || is_dma_command) is_write.send();
-         if (is_dma_completion)                                 is_completion.send();
+         if (is_config_read)                     is_read.send();
+         if (is_config_write || is_dma_command)  is_write.send();
+         if (is_axi_read)                        is_axi_read_pw.send();
+         if (is_axi_write)                       is_axi_write_pw.send();
+         if (is_dma_completion)                  is_completion.send();
       end
       else begin
          // this is a continuation of a previous TLP packet, so route
@@ -223,6 +236,9 @@ module mkTLPDispatcher(TLPDispatcher);
 
    method Bool read_tlp       = is_read;
    method Bool write_tlp      = is_write;
+   method Bool axi_read_tlp   = is_axi_read_pw;
+   method Bool axi_write_tlp  = is_axi_write_pw;
+   method Bool axi_tlp        = is_axi_tlp_pw;
    method Bool completion_tlp = is_completion;
 
 endmodule: mkTLPDispatcher
@@ -361,32 +377,37 @@ interface AxiEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
     interface Axi3Master#(32,4,12) axi;
-    method TLPLength readLength;
-    method Bit#(32) addressesRead;
-    method Bit#(32) wordsRead;
 endinterface
 
 module mkAxiEngine#(PciId my_id)(AxiEngine);
-    Reg#(TLPMemoryIO3DWHeader) hdr_3dw <- mkReg(defaultValue);
+    Reg#(Bit#(7)) hitReg <- mkReg(0);
+    FIFO#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkFIFO;
+    FIFO#(TLPMemoryIO3DWHeader) readDataFifo <- mkFIFO;
+    FIFO#(TLPMemoryIO3DWHeader) writeHeaderFifo <- mkFIFO;
+    FIFO#(TLPMemoryIO3DWHeader) writeDataFifo <- mkFIFO;
     Reg#(TLPLength) readLengthReg <- mkReg(0);
-    Reg#(TLPLength) readLengthSnapshotReg <- mkReg(0);
-    Reg#(Bit#(32)) addressesReadReg <- mkReg(0);
-    Reg#(Bit#(32)) wordsReadReg <- mkReg(0);
     FIFO#(TLPData#(16)) tlpFifo <- mkFIFO;
     interface Put tlp_in;
         method Action put(TLPData#(16) tlp) if (readLengthReg == 0);
 	    $display("AxiEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
+	    hitReg <= tlp.hit;
 	    readLengthReg <= h.length << 2;
-	    readLengthSnapshotReg <= h.length << 2;
-	    hdr_3dw <= unpack(tlp.data);
+	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+	    if (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
+	        readHeaderFifo.enq(hdr_3dw);
+	    else
+	        writeHeaderFifo.enq(hdr_3dw);
 	endmethod
     endinterface
     interface Get tlp_out = toGet(tlpFifo);
     interface Axi3Master axi;
 	interface Axi3MasterWrite write;
-	    method ActionValue#(Bit#(32)) writeAddr() if (False);
-		return extend(hdr_3dw.addr) << 2;
+	    method ActionValue#(Bit#(32)) writeAddr();
+	        let hdr = writeHeaderFifo.first;
+	        writeHeaderFifo.deq;
+		writeDataFifo.enq(hdr);
+		return extend(writeHeaderFifo.first.addr) << 2;
 	    endmethod
 	    method Bit#(4) writeBurstLen();
 		return 0;
@@ -404,17 +425,18 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 		return 4'b0011;
 	    endmethod
 	    method Bit#(12) writeId();
-		return extend(hdr_3dw.tag);
+		return extend(writeHeaderFifo.first.tag);
 	    endmethod
 
 	    method ActionValue#(Bit#(32)) writeData();
-		return hdr_3dw.data;
+	        writeHeaderFifo.deq;
+		return writeHeaderFifo.first.data;
 	    endmethod
 	    method Bit#(12) writeWid();
-		return extend(hdr_3dw.tag);
+		return extend(writeHeaderFifo.first.tag);
 	    endmethod
 	    method Bit#(4) writeDataByteEnable();
-		return 4'b1111;
+		return writeHeaderFifo.first.firstbe;
 	    endmethod
 	    method Bit#(1) writeLastDataBeat(); // last data beat
 		return 0;
@@ -425,10 +447,11 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 	endinterface: write
 
 	interface Axi3MasterRead read;
-	    method ActionValue#(Bit#(32)) readAddr() if (readLengthReg > 0);
-	        readLengthReg <= readLengthReg - 4;
-		addressesReadReg <= addressesReadReg + 1;
-		return extend(hdr_3dw.addr) << 2;
+	    method ActionValue#(Bit#(32)) readAddr();
+	        let hdr = readHeaderFifo.first;
+	        readHeaderFifo.deq;
+		readDataFifo.enq(hdr);
+		return extend(readHeaderFifo.first.addr) << 2;
 	    endmethod
 	    method Bit#(4) readBurstLen();
 		return 0;
@@ -446,41 +469,44 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 		return 4'b0011;
 	    endmethod
 	    method Bit#(12) readId();
-		return extend(hdr_3dw.tag);
+		return extend(readHeaderFifo.first.tag);
 	    endmethod
 	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id);
+	        let hdr = readDataFifo.first;
+		//FIXME: assumes only 1 word read per request
+		readDataFifo.deq;
 	        $display("AxiEngine.readData data=%h", data);
-		wordsReadReg <= wordsReadReg + 1;
+
 	        TLPCompletionHeader completion = defaultValue;
-		completion.format = MEM_READ_4DW_NO_DATA;
-		completion.pkttype = IO_REQUEST;
-		completion.length = 0;
+		completion.format = MEM_WRITE_3DW_DATA;
+		completion.pkttype = COMPLETION;
+		completion.length = 1;
 		completion.cmplid = my_id;
 		completion.tag = truncate(id);
 		completion.bytecount = 4;
-		completion.reqid = hdr_3dw.reqid;
-		completion.loweraddr = getLowerAddr(pack(hdr_3dw.addr), 15);
+		completion.reqid = hdr.reqid;
+		completion.loweraddr = getLowerAddr(hdr.addr, 15);
 		completion.data = data;
 	        TLPData#(16) tlp = defaultValue;
 		tlp.data = pack(completion);
 		tlp.sof = True;
 		tlp.eof = True;
-		tlp.be = 15;
+		tlp.be = 16'hFFFF;
+		tlp.hit = hitReg;
 		tlpFifo.enq(tlp);
 	    endmethod
 	endinterface: read
     endinterface: axi
-    method TLPLength readLength();
-        // length of last read req
-        return readLengthSnapshotReg;
-    endmethod
-    method Bit#(32) addressesRead();
-        return addressesReadReg;
-    endmethod
-    method Bit#(32) wordsRead();
-        return wordsReadReg;
-    endmethod
 endmodule: mkAxiEngine
+
+typedef struct {
+    Bit#(32) seqno;
+    Bit#(7) unused;
+    TLPData#(16) tlp;
+} TimestampedTlpData deriving (Bits);
+typedef SizeOf#(TimestampedTlpData) TimestampedTlpDataSize;
+typedef SizeOf#(TLPData#(16)) TlpData16Size;
+typedef SizeOf#(TLPCompletionHeader) TLPCompletionHeaderSize;
 
 // The control and status registers which are accessible from the PCIe
 // bus.
@@ -520,18 +546,14 @@ interface ControlAndStatusRegs;
    method Action msi_interrupt_clear();
 
    interface Reg#(Bool) tlpTracing;
+   interface Reg#(Bit#(32)) tlpDataBramWrAddr;
    interface Reg#(Bit#(32)) tlpSeqno;
-   method FIFOF#(TimestampedTlpData) getTlpDataFifo();
-   interface BRAMServer#(Bit#(6), TimestampedTlpData) tlpDataBram;
+   interface Reg#(Bit#(32)) tlpOutCount;
+   interface Reg#(Bit#(32)) axiReadCount;
+   interface Reg#(Bit#(32)) axiWriteCount;
+   interface Reg#(Bit#(32)) axiTlpCount;
+   interface BRAMServer#(Bit#(7), TimestampedTlpData) tlpDataBram;
 endinterface: ControlAndStatusRegs
-
-typedef struct {
-    Bit#(32) seqno;
-    TLPData#(16) tlp;
-} TimestampedTlpData deriving (Bits);
-typedef SizeOf#(TimestampedTlpData) TimestampedTlpDataSize;
-typedef SizeOf#(TLPData#(16)) TlpData16Size;
-typedef SizeOf#(TLPCompletionHeader) TLPCompletionHeaderSize;
 
 // This module encapsulates all of the logic for instantiating and
 // accessing the control and status registers. It defines the
@@ -609,24 +631,18 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Bool write_allowed = !write_operation_in_progress && space_for_read;
 
    Reg#(Bool) tlpTracingReg <- mkReg(False);
-   FIFOF#(TimestampedTlpData) tlpDataFifo <- mkUGSizedFIFOF(32);
    Reg#(Bit#(32)) tlpSeqnoReg <- mkReg(0);
+   Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
+   Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
    BRAM_Configure bramCfg = defaultValue;
-   bramCfg.memorySize = 32;
-   BRAM1Port#(Bit#(6), TimestampedTlpData) tlpDataBram1Port <- mkBRAM1Server(bramCfg);
+   bramCfg.memorySize = 128;
+   BRAM1Port#(Bit#(7), TimestampedTlpData) tlpDataBram1Port <- mkBRAM1Server(bramCfg);
    Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
-
-   // Function to return a one-word slice of the tlpDataFifo.first
-   function tlpDataFifoFirstSlice(Bit#(3) i);
-       begin
-	   if (tlpDataFifo.notEmpty) begin
-		Bit#(192) v = extend(pack(tlpDataFifo.first));
-		return v[31 + (i*32) : 0 + (i*32)];
-	   end else begin
-		return 32'hdeadbf00 + i;
-	   end
-       end
-   endfunction
+   Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
+   Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
+   Reg#(Bit#(32)) axiReadCountReg <- mkReg(0);
+   Reg#(Bit#(32)) axiWriteCountReg <- mkReg(0);
+   Reg#(Bit#(32)) axiTlpCountReg <- mkReg(0);
 
    // Function to return a one-word slice of the tlpDataBramResponse
    function tlpDataBramResponseSlice(Bit#(3) i);
@@ -657,12 +673,12 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          513: return {23'd0,pack(write_allowed),pack(write_buffers_level == 16),pack(end_of_write_list),1'b0,pack(write_buffers_level)};
          514: return pack(rd_xfer_count);
          515: return pack(wr_xfer_count);
-	 768: return tlpDataFifoFirstSlice(0);
-	 769: return tlpDataFifoFirstSlice(1);
-	 770: return tlpDataFifoFirstSlice(2);
-	 771: return tlpDataFifoFirstSlice(3);
-	 772: return tlpDataFifoFirstSlice(4);
-	 773: return tlpDataFifoFirstSlice(5);
+	 768: return 0;
+	 769: return 0;
+	 770: return 0;
+	 771: return 0;
+	 772: return 0;
+	 773: return 0;
 	 774: return tlpSeqnoReg;
 	 775: return (tlpTracingReg ? 1 : 0);
 	 776: return tlpDataBramResponseSlice(0);
@@ -671,10 +687,19 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 779: return tlpDataBramResponseSlice(3);
 	 780: return tlpDataBramResponseSlice(4);
 	 781: return tlpDataBramResponseSlice(5);
-	 782: return extend(axiEngine.readLength);
-	 783: return axiEngine.addressesRead;
-	 784: return axiEngine.wordsRead;
+	 782: return 0;
+	 783: return 0;
+	 784: return 0;
+	 785: return 0;
+	 786: return 0;
+	 787: return 0;
+	 788: return tlpOutCountReg;
+	 789: return tlpDataBramRdAddrReg;
+	 790: return axiReadCountReg;
+	 791: return axiWriteCountReg;
+	 792: return tlpDataBramWrAddrReg;
          // 4-entry MSIx table
+	 793: return axiTlpCountReg;
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
          4097: return msix_entry[0].addr_hi;            // entry 0 upper address
          4098: return msix_entry[0].msg_data;           // entry 0 msg data
@@ -725,7 +750,18 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
             // DMA status
             512: if (be[0] == 1) reset_read_status.send();
             513: if (be[0] == 1) reset_write_status.send();
-	    774: tlpTracingReg <= (dword[0] != 0) ? True : False;
+	    774: tlpSeqnoReg <= dword;
+	    775: tlpTracingReg <= (dword != 0) ? True : False;
+	    776: tlpDataScratchpad[0] <= dword;
+	    777: tlpDataScratchpad[1] <= dword;
+	    778: tlpDataScratchpad[2] <= dword;
+	    779: tlpDataScratchpad[3] <= dword;
+	    780: tlpDataScratchpad[4] <= dword;
+	    781: tlpDataScratchpad[5] <= dword;
+
+	    789: tlpDataBramRdAddrReg <= dword;
+	    792: tlpDataBramWrAddrReg <= dword;
+
             // MSIx table entries
             4096: msix_entry[0].addr_lo  <= update_dword(msix_entry[0].addr_lo, be, (dword & 32'hfffffffc));
             4097: msix_entry[0].addr_hi  <= update_dword(msix_entry[0].addr_hi, be, dword);
@@ -807,9 +843,20 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action do_write(UInt#(30) addr, Vector#(4,Tuple2#(Bit#(4),Bit#(32))) value);
       action
          if ((addr % 8192) == 768) begin
-	     if (tlpDataFifo.notEmpty) tlpDataFifo.deq;
-	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: False, address: truncate(tlpSeqnoReg), datain: unpack(0)});
-	 end
+	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: False, address: truncate(tlpDataBramRdAddrReg), datain: unpack(0)});
+	     tlpDataBramRdAddrReg <= tlpDataBramRdAddrReg + 1;
+	 end else if ((addr % 8192) == 792) begin
+	     // update tplDataBramWrAddrReg and write back scratchpad
+	     Bit#(TimestampedTlpDataSize) ttd = 0;
+	     ttd[31+(0*32):0+(0*32)] = tlpDataScratchpad[0];
+	     ttd[31+(1*32):0+(1*32)] = tlpDataScratchpad[1];
+	     ttd[31+(2*32):0+(2*32)] = tlpDataScratchpad[2];
+	     ttd[31+(3*32):0+(3*32)] = tlpDataScratchpad[3];
+	     ttd[31+(4*32):0+(4*32)] = tlpDataScratchpad[4];
+	     ttd[24+(5*32):0+(5*32)] = tlpDataScratchpad[5][24:0];
+	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(tpl_2(value[0])),
+	                                                     datain: unpack(ttd)});
+         end
          wr_csr(addr,  tpl_1(value[0]),tpl_2(value[0]));
          wr_csr(addr+1,tpl_1(value[1]),tpl_2(value[1]));
          wr_csr(addr+2,tpl_1(value[2]),tpl_2(value[2]));
@@ -1164,10 +1211,12 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    endmethod
 
    interface Reg tlpTracing = tlpTracingReg;
+   interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
    interface Reg tlpSeqno = tlpSeqnoReg;
-   method FIFOF#(TimestampedTlpData) getTlpDataFifo();
-       return tlpDataFifo;
-   endmethod
+   interface Reg tlpOutCount = tlpOutCountReg;
+   interface Reg axiReadCount = axiReadCountReg;
+   interface Reg axiWriteCount = axiWriteCountReg;
+   interface Reg axiTlpCount = axiTlpCountReg;
    interface BRAMServer tlpDataBram = tlpDataBram1Port.portA;
 endmodule: mkControlAndStatusRegs
 
@@ -2236,28 +2285,73 @@ module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
                                                  );
 
 
+    rule axi_read_count if (dispatcher.axi_read_tlp());
+        csr.axiReadCount <= csr.axiReadCount + 1;
+    endrule
+    rule axi_write_count if (dispatcher.axi_write_tlp());
+        csr.axiWriteCount <= csr.axiWriteCount + 1;
+    endrule
+    rule axi_tlp_count if (dispatcher.axi_tlp());
+        csr.axiTlpCount <= csr.axiTlpCount + 1;
+    endrule
+
+   Reg#(Maybe#(TLPData#(16))) mtlp <- mkReg(tagged Invalid unpack(0));
+   rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 127);
+       csr.tlpTracing <= False;
+   endrule
+   rule traceTlps if (mtlp matches tagged Valid .tlp);
+       if (csr.tlpTracing) begin
+	   TimestampedTlpData ttd = TimestampedTlpData { seqno: csr.tlpSeqno, unused: 7'h2b, tlp: tlp };
+	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
+	   csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
+	   csr.tlpSeqno <= csr.tlpSeqno + 1;
+       end
+       mtlp <= tagged Invalid;
+   endrule
+
    // connect the sub-components to each other
 
-   mkConnection(dispatcher.tlp_out_to_config,    csr.csr_read_and_write_tlps);
+   //mkConnection(dispatcher.tlp_out_to_config,    csr.csr_read_and_write_tlps);
+   rule connectAndTraceConfigInput if (mtlp matches tagged Invalid);
+       let tlp <- dispatcher.tlp_out_to_config.get();
+       csr.csr_read_and_write_tlps.put(tlp);
+       if (csr.tlpTracing)
+           csr.tlpOutCount <= csr.tlpOutCount + 1;
+       if (csr.tlpTracing) begin
+	   mtlp <= tagged Valid tlp;
+       end
+   endrule
+
    mkConnection(dispatcher.tlp_out_to_dma,       dma.dma_commands_and_completions);
-   mkConnection(dispatcher.tlp_out_to_axi,       axiEngine.tlp_in);
-   mkConnection(csr.csr_read_completion_tlps,    arbiter.tlp_in_from_config);
+   //mkConnection(dispatcher.tlp_out_to_axi,       axiEngine.tlp_in);
+   rule connectAndTraceAxiInput if (mtlp matches tagged Invalid);
+       let tlp <- dispatcher.tlp_out_to_axi.get();
+       axiEngine.tlp_in.put(tlp);
+       if (csr.tlpTracing) begin
+           mtlp <= tagged Valid tlp;
+       end
+   endrule
+
+   //mkConnection(csr.csr_read_completion_tlps,    arbiter.tlp_in_from_config);
+   rule connectAndTraceConfigOutput if (mtlp matches tagged Invalid);
+       let tlp <- csr.csr_read_completion_tlps.get();
+       arbiter.tlp_in_from_config.put(tlp);
+       if (csr.tlpTracing)
+           csr.tlpOutCount <= csr.tlpOutCount + 1;
+       if (csr.tlpTracing) begin
+	   mtlp <= tagged Valid tlp;
+       end
+   endrule
+
    mkConnection(dma.dma_read_and_write_requests, arbiter.tlp_in_from_dma);
 
    //mkConnection(axiEngine.tlp_out,               arbiter.tlp_in_from_axi);
-   rule connectAndTraceAxiEngine;
+   rule connectAndTraceAxiEngine if (mtlp matches tagged Invalid);
        let tlp <- axiEngine.tlp_out.get();
        arbiter.tlp_in_from_axi.put(tlp);
 
        if (csr.tlpTracing) begin
-	   TimestampedTlpData ttd = TimestampedTlpData { seqno: csr.tlpSeqno, tlp: tlp };
-	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpSeqno), datain: ttd });
-	   if (csr.getTlpDataFifo.notFull) begin
-	       csr.getTlpDataFifo.enq(ttd);
-	       csr.tlpSeqno <= csr.tlpSeqno + 1;
-	   end else begin
-	       csr.tlpTracing <= False;
-	   end
+	   mtlp <= tagged Valid tlp;
        end
    endrule
 
@@ -2293,9 +2387,35 @@ module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
       csr.interrupt();
    endrule
 
+   FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
+   rule traceTlpFromBus;
+       let tlp = tlpFromBusFifo.first;
+       tlpFromBusFifo.deq();
+       dispatcher.tlp_in_from_bus.put(tlp);
+       if (csr.tlpTracing) begin
+	   TimestampedTlpData ttd = TimestampedTlpData { seqno: csr.tlpSeqno, unused: 7'h04, tlp: tlp };
+	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
+	   csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
+	   csr.tlpSeqno <= csr.tlpSeqno + 1;
+       end
+   endrule: traceTlpFromBus
+
+   FIFO#(TLPData#(16)) tlpToBusFifo <- mkFIFO();
+   rule traceTlpToBus;
+       let tlp <- arbiter.tlp_out_to_bus.get();
+       tlpToBusFifo.enq(tlp);
+       if (csr.tlpTracing) begin
+	   TimestampedTlpData ttd = TimestampedTlpData { seqno: csr.tlpSeqno, unused: 7'h08, tlp: tlp };
+	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
+	   csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
+	   csr.tlpSeqno <= csr.tlpSeqno + 1;
+       end
+   endrule: traceTlpToBus
+
    // route the interfaces to the sub-components
 
-   interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
+   //interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
+   interface GetPut tlps = tuple2(toGet(tlpToBusFifo),toPut(tlpFromBusFifo));
 
    interface MsgPort noc = dma.noc;
    interface Axi3Master portal0 = axiEngine.axi;
