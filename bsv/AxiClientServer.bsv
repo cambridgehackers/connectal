@@ -28,14 +28,14 @@ import FIFOLevel::*;
 import SpecialFIFOs::*;
 
 typedef struct {
-    Bit#(32) address;
+    Bit#(addrWidth) address;
     Bit#(4) burstLen;
     // Bit#(3) burstWidth; // assume matches bus width of Axi3Client
     // Bit#(2) readBurstType();  // drive with 2'b01
     // Bit#(2) readBurstProt(); // drive with 3'b000
     // Bit#(3) readBurstCache(); // drive with 4'b0011
     Bit#(idWidth) id;
-} Axi3ReadRequest#(type idWidth) deriving (Bits);
+} Axi3ReadRequest#(type addrWidth, type idWidth) deriving (Bits);
 
 typedef struct {
     Bit#(busWidth) data;
@@ -44,20 +44,20 @@ typedef struct {
     Bit#(idWidth) id;
 } Axi3ReadResponse#(type busWidth, type idWidth) deriving (Bits);
 
-interface Axi3ReadClient#(type busWidth, type idWidth);
-   method ActionValue#(Axi3ReadRequest#(idWidth)) address();
+interface Axi3ReadClient#(type addrWidth, type busWidth, type idWidth);
+   method ActionValue#(Axi3ReadRequest#(addrWidth, idWidth)) address();
    method Action data(Axi3ReadResponse#(busWidth, idWidth) response);
 endinterface
 
 typedef struct {
-    Bit#(32) address;
+    Bit#(addrWidth) address;
     Bit#(4) burstLen;
     // Bit#(3) burstWidth; // assume matches bus width of Axi3Client
     // Bit#(2) burstType;  // drive with 2'b01
     // Bit#(2) burstProt; // drive with 3'b000
     // Bit#(3) burstCache; // drive with 4'b0011
     Bit#(idWidth) id;
-} Axi3WriteRequest#(type idWidth) deriving (Bits);
+} Axi3WriteRequest#(type addrWidth, type idWidth) deriving (Bits);
 
 typedef struct {
     Bit#(busWidth) data;
@@ -71,36 +71,36 @@ typedef struct {
     Bit#(idWidth) id;
 } Axi3WriteResponse#(type idWidth) deriving (Bits);
 
-interface Axi3WriteClient#(type busWidth, type busWidthBytes, type idWidth);
-   method ActionValue#(Axi3WriteRequest#(idWidth)) address();
+interface Axi3WriteClient#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+   method ActionValue#(Axi3WriteRequest#(addrWidth, idWidth)) address();
    method ActionValue#(Axi3WriteData#(busWidth, busWidthBytes, idWidth)) data();
    method Action response(Axi3WriteResponse#(idWidth) response);
 endinterface
 
-interface Axi3Client#(type busWidth, type busWidthBytes, type idWidth);
-   interface Axi3ReadClient#(busWidth, idWidth) read;
-   interface Axi3WriteClient#(busWidth, busWidthBytes, idWidth) write;
+interface Axi3Client#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+   interface Axi3ReadClient#(addrWidth, busWidth, idWidth) read;
+   interface Axi3WriteClient#(addrWidth, busWidth, busWidthBytes, idWidth) write;
 endinterface
 
-module mkAxi3Client#(Axi3WriteClient#(busWidth,busWidthBytes,idWidth) writeClient,
-                     Axi3ReadClient#(busWidth,idWidth) readClient)
-                    (Axi3Client#(busWidth, busWidthBytes, idWidth));
+module mkAxi3Client#(Axi3WriteClient#(addrWidth, busWidth,busWidthBytes,idWidth) writeClient,
+                     Axi3ReadClient#(addrWidth, busWidth,idWidth) readClient)
+                    (Axi3Client#(addrWidth, busWidth, busWidthBytes, idWidth));
     interface Axi3ReadClient read = readClient;
     interface Axi3WriteClient write = writeClient;
 endmodule
 
-interface Axi3ReadServer#(type busWidth, type idWidth);
-   method Action address(Axi3ReadRequest#(idWidth) request);
+interface Axi3ReadServer#(type addrWidth, type busWidth, type idWidth);
+   method Action address(Axi3ReadRequest#(addrWidth, idWidth) request);
    method ActionValue#(Axi3ReadResponse#(busWidth, idWidth)) data();
 endinterface
 
-interface Axi3WriteServer#(type busWidth, type busWidthBytes, type idWidth);
-   method Action address(Axi3WriteRequest#(idWidth) request);
+interface Axi3WriteServer#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+   method Action address(Axi3WriteRequest#(addrWidth, idWidth) request);
    method Action data(Axi3WriteData#(busWidth, busWidthBytes, idWidth) data);
    method ActionValue#(Axi3WriteResponse#(idWidth)) response();
 endinterface
 
-interface Axi3Server#(type busWidth, type busWidthBytes, type idWidth);
-   interface Axi3ReadServer#(busWidth, idWidth) read;
-   interface Axi3WriteServer#(busWidth, busWidthBytes, idWidth) write;
+interface Axi3Server#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+   interface Axi3ReadServer#(addrWidth, busWidth, idWidth) read;
+   interface Axi3WriteServer#(addrWidth, busWidth, busWidthBytes, idWidth) write;
 endinterface
