@@ -379,20 +379,19 @@ interface AxiEngine;
     interface Axi3Master#(32,32,4,12) axi;
 endinterface
 
+(* synthesize *)
 module mkAxiEngine#(PciId my_id)(AxiEngine);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     FIFO#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkFIFO;
     FIFO#(TLPMemoryIO3DWHeader) readDataFifo <- mkFIFO;
     FIFO#(TLPMemoryIO3DWHeader) writeHeaderFifo <- mkFIFO;
     FIFO#(TLPMemoryIO3DWHeader) writeDataFifo <- mkFIFO;
-    Reg#(TLPLength) readLengthReg <- mkReg(0);
-    FIFO#(TLPData#(16)) tlpFifo <- mkFIFO;
+    FIFO#(TLPData#(16)) tlpOutFifo <- mkFIFO;
     interface Put tlp_in;
-        method Action put(TLPData#(16) tlp) if (readLengthReg == 0);
+        method Action put(TLPData#(16) tlp);
 	    $display("AxiEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
-	    readLengthReg <= h.length << 2;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
 	    if (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
 	        readHeaderFifo.enq(hdr_3dw);
@@ -400,7 +399,7 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 	        writeHeaderFifo.enq(hdr_3dw);
 	endmethod
     endinterface
-    interface Get tlp_out = toGet(tlpFifo);
+    interface Get tlp_out = toGet(tlpOutFifo);
     interface Axi3Master axi;
 	interface Axi3MasterWrite write;
 	    method ActionValue#(Bit#(32)) writeAddr();
@@ -485,7 +484,7 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 		completion.tag = truncate(id);
 		completion.bytecount = 4;
 		completion.reqid = hdr.reqid;
-		completion.loweraddr = getLowerAddr(hdr.addr, 15);
+		completion.loweraddr = truncate(hdr.addr << 2); // getLowerAddr(hdr.addr, hdr.firstbe);
 		completion.data = data;
 	        TLPData#(16) tlp = defaultValue;
 		tlp.data = pack(completion);
@@ -493,7 +492,7 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 		tlp.eof = True;
 		tlp.be = 16'hFFFF;
 		tlp.hit = hitReg;
-		tlpFifo.enq(tlp);
+		tlpOutFifo.enq(tlp);
 	    endmethod
 	endinterface: read
     endinterface: axi
@@ -843,7 +842,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action do_write(UInt#(30) addr, Vector#(4,Tuple2#(Bit#(4),Bit#(32))) value);
       action
          if ((addr % 8192) == 768) begin
-	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: False, address: truncate(tlpDataBramRdAddrReg), datain: unpack(0)});
+	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(tlpDataBramRdAddrReg), datain: unpack(0)});
 	     tlpDataBramRdAddrReg <= tlpDataBramRdAddrReg + 1;
 	 end else if ((addr % 8192) == 792) begin
 	     // update tplDataBramWrAddrReg and write back scratchpad
@@ -2295,65 +2294,19 @@ module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
         csr.axiTlpCount <= csr.axiTlpCount + 1;
     endrule
 
-   Reg#(Maybe#(TLPData#(16))) mtlp <- mkReg(tagged Invalid unpack(0));
    rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 127);
        csr.tlpTracing <= False;
-   endrule
-   rule traceTlps if (mtlp matches tagged Valid .tlp);
-       if (csr.tlpTracing) begin
-	   TimestampedTlpData ttd = TimestampedTlpData { seqno: csr.tlpSeqno, unused: 7'h2b, tlp: tlp };
-	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
-	   csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
-	   csr.tlpSeqno <= csr.tlpSeqno + 1;
-       end
-       mtlp <= tagged Invalid;
    endrule
 
    // connect the sub-components to each other
 
-   //mkConnection(dispatcher.tlp_out_to_config,    csr.csr_read_and_write_tlps);
-   rule connectAndTraceConfigInput if (mtlp matches tagged Invalid);
-       let tlp <- dispatcher.tlp_out_to_config.get();
-       csr.csr_read_and_write_tlps.put(tlp);
-       if (csr.tlpTracing)
-           csr.tlpOutCount <= csr.tlpOutCount + 1;
-       if (csr.tlpTracing) begin
-	   mtlp <= tagged Valid tlp;
-       end
-   endrule
-
+   mkConnection(dispatcher.tlp_out_to_config,    csr.csr_read_and_write_tlps);
    mkConnection(dispatcher.tlp_out_to_dma,       dma.dma_commands_and_completions);
-   //mkConnection(dispatcher.tlp_out_to_axi,       axiEngine.tlp_in);
-   rule connectAndTraceAxiInput if (mtlp matches tagged Invalid);
-       let tlp <- dispatcher.tlp_out_to_axi.get();
-       axiEngine.tlp_in.put(tlp);
-       if (csr.tlpTracing) begin
-           mtlp <= tagged Valid tlp;
-       end
-   endrule
+   mkConnection(dispatcher.tlp_out_to_axi,       axiEngine.tlp_in);
 
-   //mkConnection(csr.csr_read_completion_tlps,    arbiter.tlp_in_from_config);
-   rule connectAndTraceConfigOutput if (mtlp matches tagged Invalid);
-       let tlp <- csr.csr_read_completion_tlps.get();
-       arbiter.tlp_in_from_config.put(tlp);
-       if (csr.tlpTracing)
-           csr.tlpOutCount <= csr.tlpOutCount + 1;
-       if (csr.tlpTracing) begin
-	   mtlp <= tagged Valid tlp;
-       end
-   endrule
-
+   mkConnection(csr.csr_read_completion_tlps,    arbiter.tlp_in_from_config);
    mkConnection(dma.dma_read_and_write_requests, arbiter.tlp_in_from_dma);
-
-   //mkConnection(axiEngine.tlp_out,               arbiter.tlp_in_from_axi);
-   rule connectAndTraceAxiEngine if (mtlp matches tagged Invalid);
-       let tlp <- axiEngine.tlp_out.get();
-       arbiter.tlp_in_from_axi.put(tlp);
-
-       if (csr.tlpTracing) begin
-	   mtlp <= tagged Valid tlp;
-       end
-   endrule
+   mkConnection(axiEngine.tlp_out,               arbiter.tlp_in_from_axi);
 
    mkConnection(dma.bytes_received,              csr.incr_wr_xfer_count);
    mkConnection(dma.bytes_sent,                  csr.incr_rd_xfer_count);
