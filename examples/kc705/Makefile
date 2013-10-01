@@ -10,7 +10,10 @@ test:
 all: KC705.bsv
 	. $(SETTINGS_SH); build -v kc705 -f compile_for_verilog
 
-shortcut: KC705.bsv
+verilog: KC705.bsv
 	. $(SETTINGS_SH); build -v kc705 -f compile_for_verilog -t compile_for_verilog
-	. $(SETTINGS_SH); build -v kc705 -f vivado
 
+vivado: verilog
+	cp -f synth-impl.tcl .build/kc705/fpga/
+	echo create-subruns.pa.tcl for subruns
+	. $(SETTINGS_SH); cd .build/kc705/fpga; vivado -mode batch -source synth-impl.tcl
