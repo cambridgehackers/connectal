@@ -88,3 +88,19 @@ module mkAxi3Client#(Axi3WriteClient#(busWidth,busWidthBytes,idWidth) writeClien
     interface Axi3ReadClient read = readClient;
     interface Axi3WriteClient write = writeClient;
 endmodule
+
+interface Axi3ReadServer#(type busWidth, type idWidth);
+   method Action address(Axi3ReadRequest#(idWidth) request);
+   method ActionValue#(Axi3ReadResponse#(busWidth, idWidth)) data();
+endinterface
+
+interface Axi3WriteServer#(type busWidth, type busWidthBytes, type idWidth);
+   method Action address(Axi3WriteRequest#(idWidth) request);
+   method Action data(Axi3WriteData#(busWidth, busWidthBytes, idWidth) data);
+   method ActionValue#(Axi3WriteResponse#(idWidth)) response();
+endinterface
+
+interface Axi3Server#(type busWidth, type busWidthBytes, type idWidth);
+   interface Axi3ReadServer#(busWidth, idWidth) read;
+   interface Axi3WriteServer#(busWidth, busWidthBytes, idWidth) write;
+endinterface
