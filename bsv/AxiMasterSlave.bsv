@@ -972,7 +972,7 @@ instance Connectable#(Axi3Master#(addrWidth, busWidth,busWidthBytes,12), Axi3Sla
 	Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
 	Bool verbose = True;
 
-	rule readAddr;
+	rule connectionReadAddr;
 	    Bit#(addrWidth) addr <-m.read.readAddr;
 	    let burstLen = m.read.readBurstLen;
 	    let burstWidth = m.read.readBurstWidth;
@@ -983,11 +983,13 @@ instance Connectable#(Axi3Master#(addrWidth, busWidth,busWidthBytes,12), Axi3Sla
 	    s.read.readAddr(addr, burstLen, burstWidth, burstType, burstProt, burstCache, arid);
 	    if (verbose) $display("        MasterSlaveConnection.readAddr %h %d", addr, burstLen+1);
 	endrule
-	rule readData;
+	rule connectionReadData;
 	    let data <- s.read.readData();
-	    m.read.readData(data, 2'b00, 0, 0);
+	    let last = s.read.last();
+	    let rid = s.read.rid();
+	    m.read.readData(data, 2'b00, last, rid);
 	endrule
-	rule writeAddr;
+	rule connectionWriteAddr;
 	    Bit#(addrWidth) addr <- m.write.writeAddr;
 	    let burstLen = m.write.writeBurstLen;
 	    let burstWidth = m.write.writeBurstWidth;
@@ -997,14 +999,14 @@ instance Connectable#(Axi3Master#(addrWidth, busWidth,busWidthBytes,12), Axi3Sla
 	    let awid = m.write.writeId;
 	    s.write.writeAddr(addr, burstLen, burstWidth, burstType, burstProt, burstCache, awid);
 	endrule
-	rule writeData;
+	rule connectionWriteData;
 	    let data <- m.write.writeData;
 	    let id = m.write.writeWid;
 	    let byteEnable = m.write.writeDataByteEnable;
 	    let last = m.write.writeLastDataBeat;
 	    s.write.writeData(data, byteEnable, last);
 	endrule
-	rule writeResponse;
+	rule connectionWriteResponse;
 	    let response <- s.write.writeResponse();
 	    m.write.writeResponse(response, 0);
 	endrule
