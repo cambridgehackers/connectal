@@ -27,7 +27,7 @@ interface PCIEtoBNoCQrc#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
    interface MsgPort#(bpb)         noc;  // to the NoC
-   interface Axi3Master#(32,4,12) portal0; // to the portal control
+   interface Axi3Master#(32,32,4,12) portal0; // to the portal control
 
    // global network activation status
    (* always_ready *)
@@ -376,7 +376,7 @@ endinterface
 interface AxiEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Master#(32,4,12) axi;
+    interface Axi3Master#(32,32,4,12) axi;
 endinterface
 
 module mkAxiEngine#(PciId my_id)(AxiEngine);

@@ -59,7 +59,7 @@ Bit#(8) putFailed$Offset = 2;
 
 interface EchoWrapper;
    method Bit#(1) interrupt();
-   interface Axi3Slave#(32,4) ctrl;
+   interface Axi3Slave#(32,32,4) ctrl;
 
 
 
