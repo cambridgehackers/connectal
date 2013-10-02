@@ -65,6 +65,12 @@ interface AxiMaster#(type addrWidth, type busWidth, type busWidthBytes);
    interface AxiMasterWrite#(addrWidth, busWidth, busWidthBytes) write;
 endinterface
 
+typedef enum {
+    ReadBurstWidth32 = 3'b010,
+    ReadBurstWidth64 = 3'b011,
+    ReadBurstWidth128 = 3'b100
+} Axi3ReadBurstWidth deriving (Bits, Eq);
+
 interface Axi3MasterRead#(type addrWidth, type busWidth, type idWidth);
    method ActionValue#(Bit#(addrWidth)) readAddr();
    method Bit#(4) readBurstLen();
