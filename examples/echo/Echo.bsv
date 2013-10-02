@@ -26,49 +26,59 @@ import FIFO::*;
 
 import Zynq::*;
 
-interface EchoIndications;
+interface CoreEchoIndication;
     method Action heard(Bit#(32) v);
     method Action heard2(Bit#(16) a, Bit#(16) b);
 endinterface
 
-interface Echo;
+interface EchoIndication;
+    interface CoreEchoIndication coreIndication;
+endinterface
+
+interface CoreEchoRequest;
     method Action say(Bit#(32) v);
     method Action say2(Bit#(16) a, Bit#(16) b);
     method Action setLeds(Bit#(8) v);
+endinterface: CoreEchoRequest
+
+interface EchoRequest;
+    interface CoreEchoRequest coreRequest;
     interface LEDS leds;
-endinterface
+endinterface: EchoRequest
 
 typedef struct {
 	Bit#(16) a;
 	Bit#(16) b;
 } EchoPair deriving (Bits);
 
-module mkEcho#(EchoIndications indications)(Echo);
+module mkEchoRequest#(EchoIndication indication)(EchoRequest);
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
     Reg#(Bit#(8)) ledsReg <- mkReg(0);
 
     rule heard;
         delay.deq;
-        indications.heard(delay.first);
+        indication.coreIndication.heard(delay.first);
     endrule
 
     rule heard2;
         delay2.deq;
-        indications.heard2(delay2.first.b, delay2.first.a);
+        indication.coreIndication.heard2(delay2.first.b, delay2.first.a);
     endrule
 
-    method Action say(Bit#(32) v);
-        delay.enq(v);
-    endmethod
+    interface CoreEchoRequest coreRequest;
+	method Action say(Bit#(32) v);
+	    delay.enq(v);
+	endmethod
 
-    method Action say2(Bit#(16) a, Bit#(16) b);
-        delay2.enq(EchoPair { a: a, b: b});
-    endmethod
+	method Action say2(Bit#(16) a, Bit#(16) b);
+	    delay2.enq(EchoPair { a: a, b: b});
+	endmethod
 
-    method Action setLeds(Bit#(8) v);
-        ledsReg <= v;
-    endmethod
+	method Action setLeds(Bit#(8) v);
+	    ledsReg <= v;
+	endmethod
+    endinterface
 
     interface LEDS leds;
         method Bit#(8) leds();
