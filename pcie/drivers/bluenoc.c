@@ -23,6 +23,7 @@
 #include <linux/poll.h>        /* poll_table, etc. */
 #include <linux/time.h>        /* getnstimeofday, struct timespec, etc. */
 #include <asm/uaccess.h>       /* copy_to_user, copy_from_user */
+#include <asm/system.h>        /* mb(), wmb() */
 
 #include "bluenoc.h"
 
@@ -1613,16 +1614,39 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       /* copy board identification info to a user-space struct */
       tPortalInfo info;
       long portal_csr_offset = 1024<<2;
-      info.interrupt_status = ioread32(this_board->bar0io + portal_csr_offset + 0x000);
-      info.interrupt_enable = ioread32(this_board->bar0io + portal_csr_offset + 0x004);
-      info.indication_channel_count = ioread32(this_board->bar0io + portal_csr_offset + 0x008);
-      info.base_fifo_offset = ioread32(this_board->bar0io + portal_csr_offset + 0x00C);
-      info.request_fired_count = ioread32(this_board->bar0io + portal_csr_offset + 0x010);
-      info.response_fired_count = ioread32(this_board->bar0io + portal_csr_offset + 0x014);
-      info.magic = ioread32(this_board->bar0io + portal_csr_offset + 0x020);
-      info.put_word_count = ioread32(this_board->bar0io + portal_csr_offset + 0x024);
-      info.get_word_count = ioread32(this_board->bar0io + portal_csr_offset + 0x028);
-      info.fifo_status = ioread32(this_board->bar0io + portal_csr_offset + 0x040);
+      int i;
+      if (0) {
+	printk("writing to CSR\n");
+	iowrite32(0x27beef, this_board->bar0io + portal_csr_offset + (15 << 2));
+      }
+      if (1) {
+	// test axi master
+	printk("testing axi master\n");
+	iowrite32(0x00000005, this_board->bar0io + (784 << 2));
+	printk("upper addr: %08x\n", ioread32(this_board->bar0io + (784 << 2)));
+	iowrite32(0x40809070, this_board->bar0io + (783 << 2));
+	printk("lower addr: %08x\n", ioread32(this_board->bar0io + (783 << 2)));
+	printk("ok go\n");
+	iowrite32(0xf007, this_board->bar0io + (782 << 2));
+	printk("axi test enabled %08x\n", ioread32(this_board->bar0io + (782 << 2)));
+      }
+      if (1)
+      for (i = 0; i < 2; i++) {
+	info.interrupt_status = ioread32(this_board->bar0io + portal_csr_offset + (0 << 2));
+	info.interrupt_enable = ioread32(this_board->bar0io + portal_csr_offset + (1 << 2));
+	info.indication_channel_count = ioread32(this_board->bar0io + portal_csr_offset + (2 << 2));
+	info.base_fifo_offset = ioread32(this_board->bar0io + portal_csr_offset + (3 << 2));
+	info.request_fired_count = ioread32(this_board->bar0io + portal_csr_offset + (4 << 2));
+	info.response_fired_count = ioread32(this_board->bar0io + portal_csr_offset + (5 << 2));
+
+	info.magic = ioread32(this_board->bar0io + portal_csr_offset + (8 << 2));
+	info.scratchpad = ioread32(this_board->bar0io + portal_csr_offset + (15 << 2));
+	info.fifo_status = ioread32(this_board->bar0io + portal_csr_offset + (16 << 2));
+
+	// enable axi portal
+	iowrite32(0x27beef, this_board->bar0io + (788 << 2));
+	printk("axiEnabled=%x\n", ioread32(this_board->bar0io + (788 << 2)));
+      }
       err = copy_to_user((void __user *)arg, &info, sizeof(tPortalInfo));
       if (err != 0)
         return -EFAULT;
@@ -1632,13 +1656,29 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
     case BNOC_GET_TLP:
     {
       /* copy board identification info to a user-space struct */
-      unsigned long tlp[6];
+      unsigned int tlp[6];
       int i;
+      memset((char *)tlp, 0xbf, sizeof(tlp));
+      tlp[5] = ioread32(this_board->bar0io + (776<<2) + (5<<2));
+      mb();
+      tlp[0] = ioread32(this_board->bar0io + (776<<2) + (0<<2));
+      mb();
+      tlp[4] = ioread32(this_board->bar0io + (776<<2) + (4<<2));
+      mb();
+      tlp[1] = ioread32(this_board->bar0io + (776<<2) + (1<<2));
+      mb();
+      tlp[3] = ioread32(this_board->bar0io + (776<<2) + (3<<2));
+      mb();
+      tlp[2] = ioread32(this_board->bar0io + (776<<2) + (2<<2));
+
       for (i = 0; i < 6; i++)
-	tlp[i] = ioread32(this_board->bar0io + (768<<2) + (i<<2));
+	printk("tlp[%d] = %08x\n", i, tlp[i]);
       // now deq the tlpDataFifo
       iowrite32(0, this_board->bar0io + (768<<2) + 0);
       printk("tlpseqno=%d\n",  ioread32(this_board->bar0io + (774<<2)));
+      printk("trace=%d\n",  ioread32(this_board->bar0io + (775<<2)));
+      printk("tlpDataBramRdAddr=%d\n",  ioread32(this_board->bar0io + (789<<2)));
+      printk("tlpDataBramWrAddr=%d\n",  ioread32(this_board->bar0io + (792<<2)));
       err = copy_to_user((void __user *)arg, tlp, sizeof(tTlpData));
       if (err != 0)
         return -EFAULT;
@@ -1655,12 +1695,60 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       if (err != 0)
         return -EFAULT;
 
+      if (0) {
+	iowrite32(0, this_board->bar0io + (789<<2));
+	iowrite32(0x24244242, this_board->bar0io + (776<<2) + (0<<2));
+	iowrite32(0xfcfcfcfc, this_board->bar0io + (776<<2) + (1<<2));
+	iowrite32(0x68476823, this_board->bar0io + (776<<2) + (2<<2));
+	iowrite32(0xd00df00d, this_board->bar0io + (776<<2) + (3<<2));
+	iowrite32(0x80808080, this_board->bar0io + (776<<2) + (4<<2));
+	iowrite32(0x2323beef, this_board->bar0io + (776<<2) + (5<<2));
+      }
+
+      // update tlpBramWrAddr, which also writes the scratchpad to BRAM
+      iowrite32(0, this_board->bar0io + (792<<2));
+
+      // now, reread the tlp
+      iowrite32(0, this_board->bar0io + (768<<2));
+
       old_trace = ioread32(this_board->bar0io + (775<<2) + 0x000);
       iowrite32(trace, this_board->bar0io + (775<<2) + 0x000);
 
       printk("new trace=%d old trace=%d tlpseqno=%d\n", trace, old_trace, tlpseqno);
 
       err = copy_to_user((void __user *)arg, &trace, sizeof(int));
+      if (err != 0)
+        return -EFAULT;
+      else
+        return 0;
+    }
+    case BNOC_SEQNO:
+    {
+      /* copy board identification info to a user-space struct */
+      unsigned tlpseqno, bramRdAddr, old_bramRdAddr;
+    
+      err = copy_from_user(&bramRdAddr, (void __user *)arg, sizeof(int));
+      if (err != 0)
+        return -EFAULT;
+
+      tlpseqno = ioread32(this_board->bar0io + (774<<2));
+      old_bramRdAddr = ioread32(this_board->bar0io + (789<<2));
+      //iowrite32(tlpseqno, this_board->bar0io + (774<<2));
+      // write tlpDataBramRdAddrReg
+      iowrite32(0, this_board->bar0io + (789<<2));
+
+      // now, reread the tlp
+      iowrite32(bramRdAddr, this_board->bar0io + (768<<2));
+
+      // and set the bramRdAddr back to 0
+      iowrite32(0, this_board->bar0io + (789<<2));
+
+      printk("bramRdAddr=%d was %d tlpseqno=%d\n",
+	     ioread32(this_board->bar0io + (789<<2)),
+	     old_bramRdAddr,
+	     tlpseqno);
+
+      err = copy_to_user((void __user *)arg, &tlpseqno, sizeof(int));
       if (err != 0)
         return -EFAULT;
       else

@@ -33,12 +33,13 @@ typedef struct {
   unsigned int magic;
   unsigned int put_word_count;
   unsigned int get_word_count;
+  unsigned int scratchpad;
   unsigned int fifo_status;
 } tPortalInfo;
 
 typedef unsigned int tDebugLevel;
 
-typedef unsigned char tTlpData[16];
+typedef unsigned int tTlpData[6];
 
 const tDebugLevel DEBUG_OFF     =        0;
 const tDebugLevel DEBUG_CALLS   = (1 <<  0);
@@ -58,8 +59,9 @@ const tDebugLevel DEBUG_PROFILE = (1 << 31);
 #define BNOC_IDENTIFY_PORTAL _IOR(BNOC_IOC_MAGIC,6,tPortalInfo*)
 #define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
 #define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,int*)
+#define BNOC_SEQNO           _IOWR(BNOC_IOC_MAGIC,9,int*)
 
 /* maximum valid IOCTL number */
-#define BNOC_IOC_MAXNR 8
+#define BNOC_IOC_MAXNR 9
 
 #endif /* __BLUENOC_H__ */

@@ -27,6 +27,8 @@ static void print_usage(const char* argv0)
   printf("       %s portal  \n", pgm);
   printf("       %s tlp  \n", pgm);
   printf("       %s trace  \n", pgm);
+  printf("       %s notrace  \n", pgm);
+  printf("       %s seqno  \n", pgm);
   printf("\n");
   printf("Modes:\n");
   printf("  help    - Print usage information and exit.\n");
@@ -71,7 +73,7 @@ static void print_usage(const char* argv0)
   free(argv0_copy);
 }
 
-typedef enum { HELP, INFO, BUILD, RESET, DOWN, UP, DEBUG, PROFILE, PORTAL, TLP, TRACE } tMode;
+typedef enum { HELP, INFO, BUILD, RESET, DOWN, UP, DEBUG, PROFILE, PORTAL, TLP, TRACE, NOTRACE, SEQNO } tMode;
 
 static int is_bluenoc_file(const struct dirent* ent)
 {
@@ -261,23 +263,46 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
     break;
   }
   case TLP: {
-    tTlpData tlp;
-    int res = ioctl(fd,BNOC_GET_TLP,&tlp);
-    int i;
-    if (res == -1) {
-      if (strict) {
-	perror("get_tlp ioctl");
-	ret = -1;
-      }
-      goto exit_process;
-    }
-    for (i = 0; i < 6; i++)
-      printf("[%d] %08x\n", i, *(((unsigned *)&tlp)+i));
+    int trace = 0;
+    int seqno = 0;
+    int res, i;
 
+    // disable tracing
+    res = ioctl(fd,BNOC_TRACE,&trace);
+    // set pointer to 0
+    res = ioctl(fd,BNOC_SEQNO,&seqno);
+
+    for (i = 0; i < 128; i++) {
+      tTlpData tlp;
+      memset(&tlp, 0x5a, sizeof(tlp));
+      res = ioctl(fd,BNOC_GET_TLP,&tlp);
+      int i;
+      if (res == -1) {
+	if (strict) {
+	  perror("get_tlp ioctl");
+	  ret = -1;
+	}
+	goto exit_process;
+      }
+      for (i = 5; i >= 0; i--)
+	printf("%08x", *(((unsigned *)&tlp)+i));
+      printf("\n");
+    }
   } break;
   case TRACE: {
     int trace = 1;
     int res = ioctl(fd,BNOC_TRACE,&trace);
+    printf("old trace=%d\n", trace);
+  } break;
+  case NOTRACE: {
+    int trace = 0;
+    int res = ioctl(fd,BNOC_TRACE,&trace);
+    printf("old trace=%d\n", trace);
+  } break;
+  case SEQNO: {
+    int seqno = 0;
+    int res = ioctl(fd,BNOC_SEQNO,&seqno);
+    printf("old seqno=%d\n", seqno);
   } break;
   }
 
@@ -418,6 +443,12 @@ int main(int argc, char* const argv[])
     optind += 1;
   } else if (strcmp("trace",argv[optind]) == 0) {
     mode = TRACE;
+    optind += 1;
+  } else if (strcmp("notrace",argv[optind]) == 0) {
+    mode = NOTRACE;
+    optind += 1;
+  } else if (strcmp("seqno",argv[optind]) == 0) {
+    mode = SEQNO;
     optind += 1;
   } else {
     /* not a recognized mode, assume it is a file name, and use INFO mode */
