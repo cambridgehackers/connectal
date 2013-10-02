@@ -544,7 +544,7 @@ class InterfaceMixin:
             'Dut': util.capitalize(self.name),
             'base': util.decapitalize(self.base),
             'Base': self.base,
-            'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster)
+            'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(), axiMaster)
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
                                                for (axiSlave,t,params) in axiSlaves]),
@@ -552,8 +552,8 @@ class InterfaceMixin:
                 '\n'.join(['\n'.join(['    interface %s %s;' % (t, util.decapitalize(busname))
                                       for (busname,t,params) in buses[busType]])
                            for busType in exposedInterfaces]),
-            'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
-                                           % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster,dutName,axiMaster)
+            'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
+                                           % (params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(), axiMaster,dutName,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
             'axiMasterImplementations': '\n'.join(['    interface Axi3Master %s = %sMaster;' % (axiMaster,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
@@ -647,12 +647,12 @@ class InterfaceMixin:
             'methodRules': ''.join(methodRules),
             'channelCount': self.channelCount,
             'writeChannelCount': self.channelCount,
-            'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster)
+            'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(), axiMaster)
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
                                                for (axiSlave,t,params) in axiSlaves]),
-            'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
-                                           % (params[0].numeric(), params[1].numeric(), params[2].numeric(), axiMaster,dutName,axiMaster)
+            'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
+                                           % (params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(), axiMaster,dutName,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
             'axiMasterImplementations': '\n'.join(['    interface Axi3Master %s = %sMaster;' % (axiMaster,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),

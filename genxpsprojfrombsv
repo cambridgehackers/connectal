@@ -271,7 +271,8 @@ if __name__=='__main__':
         print 'Writing Application.mk', applicationmkname
         topRequestIfc.writeAndroidMk(androidmkname, applicationmkname)
 
-
+    else:
+        print 'No %s interface found' % topRequestIfcName
     h.close()
     cpp.close()
 

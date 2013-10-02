@@ -1369,7 +1369,8 @@ ImageonVita()
 class InterfaceMixin:
     def axiMasterBusSubst(self, busnumber, businfo):
         (busname,t,params) = businfo
-        buswidth = params[0].numeric()
+        addrwidth = params[0].numeric()
+        buswidth = params[1].numeric()
         buswidthbytes = buswidth / 8
         print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3'), buswidth
         dutName = util.decapitalize(self.base)
@@ -1389,6 +1390,7 @@ class InterfaceMixin:
             'BUSNAME': busname.upper(),
             'busname': busname,
             'busnumber': busnumber,
+            'addrwidth': addrwidth,
             'buswidth': buswidth,
             'buswidthbytes': buswidthbytes,
             'ps7bustype': ps7bustype,
