@@ -17,7 +17,7 @@ test-echo/echo.bit.bin.gz: examples/echo/Echo.bsv
 test-memcpy/memcpy.bit.bin.gz: examples/memcpy/Memcpy.bsv
 	rm -fr test-memcpy
 	mkdir test-memcpy
-	(./genxpsprojfrombsv -B zedboard -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv; cd test-memcpy; make verilog && make bits && make memcpy.bit.bin.gz) > test-memcpy/test-memcpy.log 2>&1
+	(./genxpsprojfrombsv -B zedboard -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv; cd test-memcpy; make verilog && make bits && make memcpy.bit.bin.gz) > test-memcpy/test-memcpy.log 2>&1
 	cp examples/memcpy/testmemcpy.cpp test-memcpy/jni
 	(cd test-memcpy; ndk-build)
 	echo test-memcpy built successfully
