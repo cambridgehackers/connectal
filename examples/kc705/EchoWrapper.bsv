@@ -11,10 +11,11 @@ import HDMI::*;
 import Zynq::*;
 import Imageon::*;
 import Vector::*;
+import PCIE::*;
 
 interface EchoWrapper;
    method Bit#(1) interrupt();
-   interface Axi3Slave#(32,32,4) ctrl;
+   interface Axi3Slave#(32,32,4,SizeOf#(TLPTag)) ctrl;
 endinterface: EchoWrapper
 
 module mkEchoWrapper(EchoWrapper);
@@ -23,19 +24,19 @@ module mkEchoWrapper(EchoWrapper);
 
     Reg#(Bit#(17)) axiSlaveReadAddrReg <- mkReg(0);
     Reg#(Bit#(17)) axiSlaveWriteAddrReg <- mkReg(0);
-    Reg#(Bit#(12)) axiSlaveReadIdReg <- mkReg(0);
-    Reg#(Bit#(12)) axiSlaveWriteIdReg <- mkReg(0);
+    Reg#(Bit#(SizeOf#(TLPTag))) axiSlaveReadIdReg <- mkReg(0);
+    Reg#(Bit#(SizeOf#(TLPTag))) axiSlaveWriteIdReg <- mkReg(0);
     Reg#(Bit#(4)) axiSlaveReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(4)) axiSlaveWriteBurstCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
     FIFO#(Bit#(2)) axiSlaveBrespFifo <- mkFIFO();
-    FIFO#(Bit#(12)) axiSlaveBidFifo <- mkFIFO();
+    FIFO#(Bit#(SizeOf#(TLPTag))) axiSlaveBidFifo <- mkFIFO();
 
     interface Axi3Slave ctrl;
         interface Axi3SlaveWrite write;
             method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
                                     Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache,
-				    Bit#(12) awid)
+				    Bit#(SizeOf#(TLPTag)) awid)
                           if (axiSlaveWriteBurstCountReg == 0);
                 axiSlaveWriteBurstCountReg <= burstLen + 1;
                 axiSlaveWriteAddrReg <= truncate(addr);
@@ -57,14 +58,14 @@ module mkEchoWrapper(EchoWrapper);
                 axiSlaveBrespFifo.deq;
                 return axiSlaveBrespFifo.first;
             endmethod
-            method ActionValue#(Bit#(12)) bid();
+            method ActionValue#(Bit#(SizeOf#(TLPTag))) bid();
                 axiSlaveBidFifo.deq;
                 return axiSlaveBidFifo.first;
             endmethod
         endinterface
         interface Axi3SlaveRead read;
             method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid)
+                                   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(SizeOf#(TLPTag)) arid)
                           if (axiSlaveReadBurstCountReg == 0);
                 axiSlaveReadBurstCountReg <= burstLen + 1;
                 axiSlaveReadAddrReg <= truncate(addr);
@@ -73,7 +74,7 @@ module mkEchoWrapper(EchoWrapper);
             method Bit#(1) last();
                 return axiSlaveReadBurstCountReg == 1 ? 1 : 0;
             endmethod
-            method Bit#(12) rid();
+            method Bit#(SizeOf#(TLPTag)) rid();
                 return axiSlaveReadIdReg;
             endmethod
             method ActionValue#(Bit#(32)) readData() if (axiSlaveReadBurstCountReg > 0);

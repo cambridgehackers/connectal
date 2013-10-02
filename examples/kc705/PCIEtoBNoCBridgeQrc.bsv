@@ -27,7 +27,7 @@ interface PCIEtoBNoCQrc#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
    interface MsgPort#(bpb)         noc;  // to the NoC
-   interface Axi3Master#(32,32,4,12) portal0; // to the portal control
+   interface Axi3Master#(32,32,4,SizeOf#(TLPTag)) portal0; // to the portal control
 
    // global network activation status
    (* always_ready *)
@@ -367,7 +367,7 @@ endinterface
 interface AxiEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Master#(32,32,4,12) axi;
+    interface Axi3Master#(32,32,4,SizeOf#(TLPTag)) axi;
     interface Reg#(Bool)           pipeliningEnabled;
 endinterface
 
@@ -419,7 +419,7 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 	    method Bit#(4) writeBurstCache(); // drive with 4'b0011
 		return 4'b0011;
 	    endmethod
-	    method Bit#(12) writeId();
+	    method Bit#(SizeOf#(TLPTag)) writeId();
 		return extend(writeHeaderFifo.first.tag);
 	    endmethod
 
@@ -428,7 +428,7 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 	        writeDataFifo.deq;
 		return writeDataFifo.first.data;
 	    endmethod
-	    method Bit#(12) writeWid();
+	    method Bit#(SizeOf#(TLPTag)) writeWid();
 		return extend(writeDataFifo.first.tag);
 	    endmethod
 	    method Bit#(4) writeDataByteEnable();
@@ -438,7 +438,7 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 		return 0;
 	    endmethod
 
-	    method Action writeResponse(Bit#(2) responseCode, Bit#(12) id);
+	    method Action writeResponse(Bit#(2) responseCode, Bit#(SizeOf#(TLPTag)) id);
 	    endmethod
 	endinterface: write
 
@@ -464,10 +464,10 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 	    method Bit#(4) readBurstCache(); // drive with 4'b0011
 		return 4'b0011;
 	    endmethod
-	    method Bit#(12) readId();
+	    method Bit#(SizeOf#(TLPTag)) readId();
 		return extend(readHeaderFifo.first.tag);
 	    endmethod
-	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id);
+	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(SizeOf#(TLPTag)) id);
 	        let hdr = readDataFifo.first;
 		//FIXME: assumes only 1 word read per request
 		readDataFifo.deq;
