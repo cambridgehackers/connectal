@@ -33,7 +33,7 @@ import HDMI::*;
 import FrameBufferBram::*;
 import YUV::*;
 
-interface HdmiDisplay;
+interface HdmiControlRequest;
     method Action setPatternReg(Bit#(32) yuv422);
     method Action startFrameBuffer0(Bit#(32) base);
     method Action startFrameBuffer1(Bit#(32) base);
@@ -49,13 +49,20 @@ interface HdmiDisplay;
 
     method Action beginTranslationTable(Bit#(8) index);
     method Action addTranslationEntry(Bit#(20) address, Bit#(12) length); // shift address and length left 12 bits
+endinterface
 
-    interface Axi3Client#(32,4,6) m_axi;
+interface HdmiDisplayRequest;
+    interface HdmiControlRequest coreRequest;
+    interface Axi3Client#(32,32,4,6) m_axi;
     interface HDMI hdmi;
 endinterface
 
-interface HdmiDisplayIndications;
+interface HdmiControlIndication;
     method Action vsync(Bit#(64) v);
+endinterface
+
+interface HdmiDisplayIndication;
+    interface HdmiControlIndication coreIndication;
 endinterface
 
 function Put#(item_t) syncFifoToPut( SyncFIFOIfc#(item_t) f);
@@ -68,7 +75,7 @@ function Put#(item_t) syncFifoToPut( SyncFIFOIfc#(item_t) f);
     );
 endfunction
 
-module mkHdmiDisplay#(Clock hdmi_clk, HdmiDisplayIndications indications)(HdmiDisplay);
+module mkHdmiDisplayRequest#(Clock hdmi_clk, HdmiDisplayIndication indication)(HdmiDisplayRequest);
 
     let busWidthBytes=8;
 
@@ -127,65 +134,67 @@ module mkHdmiDisplay#(Clock hdmi_clk, HdmiDisplayIndications indications)(HdmiDi
         v[31:0] = vsyncPulseCountReg;
         v[47:32] = extend(pixelsReg);
         v[63:48] = extend(linesReg);
-        indications.vsync(v);
+        indication.coreIndication.vsync(v);
     endrule
 
-    method Action setPatternReg(Bit#(32) yuv422);
-        commandFifo.enq(tagged PatternColor {yuv422: yuv422});
-    endmethod
-    method Action hdmiLinesPixels(Bit#(32) value);
-        linesReg <= value[10:0];
-        pixelsReg <= value[27:16];
-        commandFifo.enq(tagged LinesPixels {value: value});
-    endmethod
-    method Action hdmiStrideBytes(Bit#(32) value);
-        strideBytesReg <= value[13:0];
-    endmethod
-    method Action hdmiBlankLinesPixels(Bit#(32) value);
-        commandFifo.enq(tagged BlankLinesPixels {value: value});
-    endmethod
-    method Action hdmiLineCountMinMax(Bit#(32) value);
-        commandFifo.enq(tagged LineCountMinMax {value: value});
-    endmethod
-    method Action hdmiPixelCountMinMax(Bit#(32) value);
-        commandFifo.enq(tagged PixelCountMinMax {value: value});
-    endmethod
-    method Action hdmiSyncWidths(Bit#(32) value);
-        commandFifo.enq(tagged SyncWidths {value: value});
-    endmethod
+    interface HdmiControlRequest coreRequest;
+	method Action setPatternReg(Bit#(32) yuv422);
+	    commandFifo.enq(tagged PatternColor {yuv422: yuv422});
+	endmethod
+	method Action hdmiLinesPixels(Bit#(32) value);
+	    linesReg <= value[10:0];
+	    pixelsReg <= value[27:16];
+	    commandFifo.enq(tagged LinesPixels {value: value});
+	endmethod
+	method Action hdmiStrideBytes(Bit#(32) value);
+	    strideBytesReg <= value[13:0];
+	endmethod
+	method Action hdmiBlankLinesPixels(Bit#(32) value);
+	    commandFifo.enq(tagged BlankLinesPixels {value: value});
+	endmethod
+	method Action hdmiLineCountMinMax(Bit#(32) value);
+	    commandFifo.enq(tagged LineCountMinMax {value: value});
+	endmethod
+	method Action hdmiPixelCountMinMax(Bit#(32) value);
+	    commandFifo.enq(tagged PixelCountMinMax {value: value});
+	endmethod
+	method Action hdmiSyncWidths(Bit#(32) value);
+	    commandFifo.enq(tagged SyncWidths {value: value});
+	endmethod
 
-    method Action startFrameBuffer0(Bit#(32) base);
-        $display("startFrameBuffer %h", base);
-        frameBufferEnabled <= True;
-        FrameBufferConfig fbc;
-        fbc.base = base;
-        fbc.pixels = pixelsReg;
-        fbc.lines = linesReg;
-        Bit#(14) stridebytes = strideBytesReg;
-        $display("startFrameBuffer lines %d pixels %d bytesperpixel %d stridebytes %d",
-                 linesReg, pixelsReg, bytesperpixel, stridebytes);
-        fbc.stridebytes = stridebytes;
-        frameBuffer.configure(fbc);
-        commandFifo.enq(tagged TestPattern {enabled: False});
-        waitingForVsync <= True;
-    endmethod
+	method Action startFrameBuffer0(Bit#(32) base);
+	    $display("startFrameBuffer %h", base);
+	    frameBufferEnabled <= True;
+	    FrameBufferConfig fbc;
+	    fbc.base = base;
+	    fbc.pixels = pixelsReg;
+	    fbc.lines = linesReg;
+	    Bit#(14) stridebytes = strideBytesReg;
+	    $display("startFrameBuffer lines %d pixels %d bytesperpixel %d stridebytes %d",
+		     linesReg, pixelsReg, bytesperpixel, stridebytes);
+	    fbc.stridebytes = stridebytes;
+	    frameBuffer.configure(fbc);
+	    commandFifo.enq(tagged TestPattern {enabled: False});
+	    waitingForVsync <= True;
+	endmethod
 
-    method Action startFrameBuffer1(Bit#(32) base);
-    endmethod
+	method Action startFrameBuffer1(Bit#(32) base);
+	endmethod
 
-    method Action waitForVsync(Bit#(32) unused);
-        waitingForVsync <= True;
-    endmethod
+	method Action waitForVsync(Bit#(32) unused);
+	    waitingForVsync <= True;
+	endmethod
 
-    method Action beginTranslationTable(Bit#(8) index);
-        segmentIndexReg <= index;
-        segmentOffsetReg <= 0;
-    endmethod
-    method Action addTranslationEntry(Bit#(20) address, Bit#(12) length);
-        frameBuffer.setSgEntry(segmentIndexReg, segmentOffsetReg, address, extend(length));
-        segmentIndexReg <= segmentIndexReg + 1;
-        segmentOffsetReg <= segmentOffsetReg + {length,12'd0};
-    endmethod
+	method Action beginTranslationTable(Bit#(8) index);
+	    segmentIndexReg <= index;
+	    segmentOffsetReg <= 0;
+	endmethod
+	method Action addTranslationEntry(Bit#(20) address, Bit#(12) length);
+	    frameBuffer.setSgEntry(segmentIndexReg, segmentOffsetReg, address, extend(length));
+	    segmentIndexReg <= segmentIndexReg + 1;
+	    segmentOffsetReg <= segmentOffsetReg + {length,12'd0};
+	endmethod
+    endinterface: coreRequest
 
     interface Axi3Client m_axi = frameBuffer.axi;
     interface HDMI hdmi = hdmiGen.hdmi;
