@@ -46,7 +46,7 @@ interface FrameBufferBram;
     method Action startFrame();
     method Action startLine();
     method Action setSgEntry(Bit#(8) index, Bit#(24) startingOffset, Bit#(20) address, Bit#(20) length);
-    interface Axi3Client#(32,4,6) axi;
+    interface Axi3Client#(32,32,4,6) axi;
     interface BRAM#(Bit#(12), Bit#(32)) buffer;
 endinterface
 
@@ -199,7 +199,7 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
 
    interface Axi3Client axi;
        interface Axi3ReadClient read;
-           method ActionValue#(Axi3ReadRequest#(6)) address() if (runningReg
+           method ActionValue#(Axi3ReadRequest#(32,6)) address() if (runningReg
 								  && readAddrReg != 24'hFFFFFF
 								  && readAddrReg < readLimitReg
 								  && readAddrReg <= segmentLimitReg
