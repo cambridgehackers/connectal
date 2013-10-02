@@ -337,7 +337,7 @@ endmodule
 '''
 
 mkTopTemplate='''
-module mk%(Base)sWrapper(%(Base)sWrapper);
+module mk%(Base)sWrapper%(dut_hdmi_clock_param)s(%(Base)sWrapper);
     Reg#(Bit#(TLog#(%(numPortals)s))) axiSlaveWS <- mkReg(0);
     Reg#(Bit#(TLog#(%(numPortals)s))) axiSlaveRS <- mkReg(0); 
 %(indicationWrappers)s
