@@ -17,3 +17,6 @@ vivado: verilog
 	cp -f synth-impl.tcl .build/kc705/fpga/
 	echo create-subruns.pa.tcl for subruns
 	. $(SETTINGS_SH); cd .build/kc705/fpga; vivado -mode batch -source synth-impl.tcl
+
+program:
+	/scratch/jamey/bin/impact -batch impact.cmd
