@@ -8,3 +8,9 @@ parsetab.py
 *.bo
 *.so
 *.ba
+*.cmd
+*.mod.c
+*.ko
+Module.symvers
+*.jou
+*.log
