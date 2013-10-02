@@ -73,18 +73,18 @@ endinterface
 
 interface AxiDMAWriteInternal;
    interface AxiDMAWrite write;
-   interface Axi3WriteClient#(64,8,6) m_axi_write;
+   interface Axi3WriteClient#(32,64,8,6) m_axi_write;
 endinterface
 
 interface AxiDMAReadInternal;
    interface AxiDMARead read;
-   interface Axi3ReadClient#(64,6) m_axi_read;   
+   interface Axi3ReadClient#(32,64,6) m_axi_read;   
 endinterface
 
 interface AxiDMA;
    interface AxiDMAWrite write;
    interface AxiDMARead  read;
-   interface Axi3Client#(64,8,6) m_axi;
+   interface Axi3Client#(32,64,8,6) m_axi;
 endinterface
 
 function Put#(void) mkPutWhenFalse(Reg#(Bool) r);
@@ -173,7 +173,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
    endinterface
 
    interface Axi3ReadClient m_axi_read;
-      method ActionValue#(Axi3ReadRequest#(6)) address if (stateReg == Address);
+      method ActionValue#(Axi3ReadRequest#(32,6)) address if (stateReg == Address);
 	 stateReg <= Data;
 	 return Axi3ReadRequest{address:addrReg, burstLen:burstReg, id:1};
       endmethod
@@ -242,7 +242,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
    endinterface
 
    interface Axi3WriteClient m_axi_write;
-      method ActionValue#(Axi3WriteRequest#(6)) address if (stateReg == Address);
+      method ActionValue#(Axi3WriteRequest#(32,6)) address if (stateReg == Address);
 	 stateReg <= Data;
 	 return Axi3WriteRequest{address:addrReg, burstLen:burstReg, id:1};
       endmethod

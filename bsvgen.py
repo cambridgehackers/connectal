@@ -33,7 +33,7 @@ exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'FmcImageonInterface']
 
 topInterfaceTemplate='''
 interface %(Base)sWrapper;
-    interface Axi3Slave#(32,4) ctrl;
+    interface Axi3Slave#(32,32,4,12) ctrl;
     interface Vector#(%(numPortals)s,ReadOnly#(Bit#(1))) interrupts;
 %(axiSlaveDeclarations)s
 %(axiMasterDeclarations)s
@@ -66,7 +66,7 @@ interface RequestWrapperCommFIFOs;
 endinterface
 
 interface %(Dut)sWrapper;
-    interface Axi3Slave#(32,4) ctrl;
+    interface Axi3Slave#(32,32,4,12) ctrl;
     interface ReadOnly#(Bit#(1)) interrupt;
     interface %(Dut)s indication;
     interface RequestWrapperCommFIFOs rwCommFifos;%(indicationMethodDeclsAug)s
@@ -345,7 +345,7 @@ module mk%(Base)sWrapper(%(Base)sWrapper);
     %(Dut)s %(dut)s <- mk%(Dut)s(%(dut_hdmi_clock_arg)s indication);
 %(axiMasterModules)s
 %(requestWrappers)s
-    Vector#(%(numPortals)s,Axi3Slave#(32,4)) ctrls_v;
+    Vector#(%(numPortals)s,Axi3Slave#(32,32,4,12)) ctrls_v;
     Vector#(%(numPortals)s,ReadOnly#(Bit#(1))) interrupts_v;
 %(connectIndicationCtrls)s
 %(connectIndicationInterrupts)s
