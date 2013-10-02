@@ -72,13 +72,9 @@ interface TLPDispatcher;
    (* always_ready *)
    method Bool write_tlp();
    (* always_ready *)
-   method Bool axi_read_tlp();
-   (* always_ready *)
-   method Bool axi_write_tlp();
-   (* always_ready *)
-   method Bool axi_tlp();
-   (* always_ready *)
    method Bool completion_tlp();
+
+   interface Reg#(Bool) axiEnabled;
 
 endinterface: TLPDispatcher
 
@@ -94,11 +90,10 @@ module mkTLPDispatcher(TLPDispatcher);
    Reg#(Bool) route_to_dma <- mkReg(False);
    Reg#(Bool) route_to_axi <- mkReg(False);
 
+   Reg#(Bool) axiEnabledReg <- mkReg(False);
+
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
-   PulseWire is_axi_read_pw  <- mkPulseWire();
-   PulseWire is_axi_write_pw <- mkPulseWire();
-   PulseWire is_axi_tlp_pw <- mkPulseWire();
    PulseWire is_completion <- mkPulseWire();
 
    (* fire_when_enabled *)
@@ -121,25 +116,27 @@ module mkTLPDispatcher(TLPDispatcher);
       Bool is_config_read    =  tlp.sof
                              && (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
-                             && !in_axi_addr_range
+                             && (!axiEnabledReg || !in_axi_addr_range)
                              ;
       Bool is_config_write   =  tlp.sof
                              && (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
                              && !in_dma_command_addr_range
-                             && !in_axi_addr_range
+                             && (!axiEnabledReg || !in_axi_addr_range)
                              ;
       Bool is_axi_read       =  tlp.sof
                              && (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
                              && in_axi_addr_range
+			     && axiEnabledReg
                              ;
       Bool is_axi_write      =  tlp.sof
                              && (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
                              && in_axi_addr_range
+			     && axiEnabledReg
                              ;
       Bool is_dma_command    =  tlp.sof
                              && (tlp.hit == 7'h01)
@@ -169,7 +166,6 @@ module mkTLPDispatcher(TLPDispatcher);
                tlp_in_axi_fifo.enq(tlp);
                if (!tlp.eof)
                   route_to_axi <= True;
-	       is_axi_tlp_pw.send();
             end
          end
          else if (is_dma_command || is_dma_completion) begin
@@ -188,8 +184,6 @@ module mkTLPDispatcher(TLPDispatcher);
          // indicate activity type
          if (is_config_read)                     is_read.send();
          if (is_config_write || is_dma_command)  is_write.send();
-         if (is_axi_read)                        is_axi_read_pw.send();
-         if (is_axi_write)                       is_axi_write_pw.send();
          if (is_dma_completion)                  is_completion.send();
       end
       else begin
@@ -236,11 +230,8 @@ module mkTLPDispatcher(TLPDispatcher);
 
    method Bool read_tlp       = is_read;
    method Bool write_tlp      = is_write;
-   method Bool axi_read_tlp   = is_axi_read_pw;
-   method Bool axi_write_tlp  = is_axi_write_pw;
-   method Bool axi_tlp        = is_axi_tlp_pw;
    method Bool completion_tlp = is_completion;
-
+   interface Reg axiEnabled = axiEnabledReg;
 endmodule: mkTLPDispatcher
 
 // Multiple sources of TLP packets must all share the PCIe bus. There
@@ -377,10 +368,13 @@ interface AxiEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
     interface Axi3Master#(32,32,4,12) axi;
+    interface Reg#(Bool)           pipeliningEnabled;
 endinterface
 
 (* synthesize *)
 module mkAxiEngine#(PciId my_id)(AxiEngine);
+    Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
+    Reg#(Bool) busyReg <- mkReg(False);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     FIFO#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkFIFO;
     FIFO#(TLPMemoryIO3DWHeader) readDataFifo <- mkFIFO;
@@ -388,7 +382,7 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
     FIFO#(TLPMemoryIO3DWHeader) writeDataFifo <- mkFIFO;
     FIFO#(TLPData#(16)) tlpOutFifo <- mkFIFO;
     interface Put tlp_in;
-        method Action put(TLPData#(16) tlp);
+        method Action put(TLPData#(16) tlp) if (!busyReg);
 	    $display("AxiEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
@@ -397,8 +391,10 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 	        readHeaderFifo.enq(hdr_3dw);
 	    else
 	        writeHeaderFifo.enq(hdr_3dw);
+            if (!pipeliningEnabledReg)
+	        busyReg <= True;
 	endmethod
-    endinterface
+    endinterface: tlp_in
     interface Get tlp_out = toGet(tlpOutFifo);
     interface Axi3Master axi;
 	interface Axi3MasterWrite write;
@@ -428,14 +424,15 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 	    endmethod
 
 	    method ActionValue#(Bit#(32)) writeData();
-	        writeHeaderFifo.deq;
-		return writeHeaderFifo.first.data;
+	        busyReg <= False;
+	        writeDataFifo.deq;
+		return writeDataFifo.first.data;
 	    endmethod
 	    method Bit#(12) writeWid();
-		return extend(writeHeaderFifo.first.tag);
+		return extend(writeDataFifo.first.tag);
 	    endmethod
 	    method Bit#(4) writeDataByteEnable();
-		return writeHeaderFifo.first.firstbe;
+		return writeDataFifo.first.firstbe;
 	    endmethod
 	    method Bit#(1) writeLastDataBeat(); // last data beat
 		return 0;
@@ -493,9 +490,11 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 		tlp.be = 16'hFFFF;
 		tlp.hit = hitReg;
 		tlpOutFifo.enq(tlp);
+		busyReg <= False;
 	    endmethod
 	endinterface: read
     endinterface: axi
+    interface Reg pipeliningEnabled = pipeliningEnabledReg;
 endmodule: mkAxiEngine
 
 typedef struct {
@@ -545,9 +544,10 @@ interface ControlAndStatusRegs;
    method Action msi_interrupt_clear();
 
    interface Reg#(Bool) tlpTracing;
+   interface Reg#(Bool) axiEnabled;
+   interface Reg#(Bool) pipeliningEnabled;
    interface Reg#(Bit#(32)) tlpDataBramWrAddr;
    interface Reg#(Bit#(32)) tlpSeqno;
-   interface Reg#(Bit#(32)) tlpOutCount;
    interface Reg#(Bit#(32)) axiReadCount;
    interface Reg#(Bit#(32)) axiWriteCount;
    interface Reg#(Bit#(32)) axiTlpCount;
@@ -630,6 +630,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Bool write_allowed = !write_operation_in_progress && space_for_read;
 
    Reg#(Bool) tlpTracingReg <- mkReg(False);
+   Reg#(Bool) axiEnabledReg <- mkReg(False);
+   Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
    Reg#(Bit#(32)) tlpSeqnoReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
@@ -638,7 +640,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    BRAM1Port#(Bit#(7), TimestampedTlpData) tlpDataBram1Port <- mkBRAM1Server(bramCfg);
    Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
    Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
-   Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
    Reg#(Bit#(32)) axiReadCountReg <- mkReg(0);
    Reg#(Bit#(32)) axiWriteCountReg <- mkReg(0);
    Reg#(Bit#(32)) axiTlpCountReg <- mkReg(0);
@@ -691,8 +692,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 784: return 0;
 	 785: return 0;
 	 786: return 0;
-	 787: return 0;
-	 788: return tlpOutCountReg;
+	 787: return pipeliningEnabledReg ? 1 : 0;
+	 788: return axiEnabledReg ? 1 : 0;
 	 789: return tlpDataBramRdAddrReg;
 	 790: return axiReadCountReg;
 	 791: return axiWriteCountReg;
@@ -757,7 +758,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    779: tlpDataScratchpad[3] <= dword;
 	    780: tlpDataScratchpad[4] <= dword;
 	    781: tlpDataScratchpad[5] <= dword;
-
+	    787: pipeliningEnabledReg <= (dword != 0) ? True : False;
+	    788: axiEnabledReg <= (dword != 0) ? True : False;
 	    789: tlpDataBramRdAddrReg <= dword;
 	    792: tlpDataBramWrAddrReg <= dword;
 
@@ -1210,9 +1212,10 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    endmethod
 
    interface Reg tlpTracing = tlpTracingReg;
+   interface Reg axiEnabled = axiEnabledReg;
+   interface Reg pipeliningEnabled = pipeliningEnabledReg;
    interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
    interface Reg tlpSeqno = tlpSeqnoReg;
-   interface Reg tlpOutCount = tlpOutCountReg;
    interface Reg axiReadCount = axiReadCountReg;
    interface Reg axiWriteCount = axiWriteCountReg;
    interface Reg axiTlpCount = axiTlpCountReg;
@@ -2283,19 +2286,12 @@ module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
                                                  , max_payload_bytes
                                                  );
 
-
-    rule axi_read_count if (dispatcher.axi_read_tlp());
-        csr.axiReadCount <= csr.axiReadCount + 1;
-    endrule
-    rule axi_write_count if (dispatcher.axi_write_tlp());
-        csr.axiWriteCount <= csr.axiWriteCount + 1;
-    endrule
-    rule axi_tlp_count if (dispatcher.axi_tlp());
-        csr.axiTlpCount <= csr.axiTlpCount + 1;
-    endrule
-
    rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 127);
        csr.tlpTracing <= False;
+   endrule
+   rule axiEnabledRule;
+       dispatcher.axiEnabled <= csr.axiEnabled;
+       axiEngine.pipeliningEnabled <= csr.pipeliningEnabled;
    endrule
 
    // connect the sub-components to each other
