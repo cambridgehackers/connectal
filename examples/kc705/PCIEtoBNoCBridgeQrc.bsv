@@ -476,6 +476,7 @@ module mkAxiEngine#(PciId my_id)(AxiEngine);
 	        TLPCompletionHeader completion = defaultValue;
 		completion.format = MEM_WRITE_3DW_DATA;
 		completion.pkttype = COMPLETION;
+		completion.nosnoop = SNOOPING_REQD;
 		completion.length = 1;
 		completion.cmplid = my_id;
 		completion.tag = truncate(id);
