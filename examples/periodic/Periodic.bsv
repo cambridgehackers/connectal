@@ -26,19 +26,27 @@ import FIFO::*;
 
 import Zynq::*;
 
-interface PeriodicIndications;
+interface CorePeriodicRequest;
+    method Action setPeriod(Bit#(32) v);
+    method Action start();
+    method Action stop();
+endinterface
+
+interface PeriodicRequest;
+    interface CorePeriodicRequest coreRequest;
+    interface LEDS leds;
+endinterface
+
+interface CorePeriodicIndication;
     method Action fired(Bit#(8) leds);
     method Action timerUpdated(Bit#(32) v);
 endinterface
 
-interface Periodic;
-    method Action setPeriod(Bit#(32) v);
-    method Action start();
-    method Action stop();
-    interface LEDS leds;
+interface PeriodicIndication;
+    interface CorePeriodicIndication coreIndication;
 endinterface
 
-module mkPeriodic#(PeriodicIndications indications)(Periodic);
+module mkPeriodicRequest#(PeriodicIndication indication)(PeriodicRequest);
     Reg#(Bit#(8)) ledsReg <- mkReg(0);
     Reg#(Bit#(32)) counter <- mkReg(0);
     Reg#(Bit#(32)) limit <- mkReg(0);
@@ -49,24 +57,26 @@ module mkPeriodic#(PeriodicIndications indications)(Periodic);
 	if (count >= limit)
 	begin
 	    count = 0;
-	    indications.fired(ledsReg);
+	    indication.coreIndication.fired(ledsReg);
 	    ledsReg <= ledsReg + 1;
 	end
 	counter <= count;
     endrule
 
-    method Action start();
-        running <= True;
-    endmethod
+    interface CorePeriodicRequest coreRequest;
+	method Action start();
+	    running <= True;
+	endmethod
 
-    method Action stop();
-        running <= False;
-    endmethod
+	method Action stop();
+	    running <= False;
+	endmethod
 
-    method Action setPeriod(Bit#(32) v);
-        limit <= v;
-	indications.timerUpdated(v);
-    endmethod
+	method Action setPeriod(Bit#(32) v);
+	    limit <= v;
+	    indication.coreIndication.timerUpdated(v);
+	endmethod
+    endinterface: coreRequest
 
     interface LEDS leds;
         method Bit#(8) leds();
