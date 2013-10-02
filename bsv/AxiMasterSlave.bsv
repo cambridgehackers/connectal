@@ -126,26 +126,26 @@ interface AxiSlave#(type addrWidth, type busWidth, type busWidthBytes);
    interface AxiSlaveWrite#(addrWidth, busWidth, busWidthBytes) write;
 endinterface
 
-interface Axi3SlaveRead#(type addrWidth, type busWidth, type busWidthBytes);
+interface Axi3SlaveRead#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
    method Action readAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                          Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid);
+                          Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(idWidth) arid);
    method ActionValue#(Bit#(busWidth)) readData();
    method Bit#(1) last();
-   method Bit#(12) rid();
+   method Bit#(idWidth) rid();
    // method Action readResponse(Bit#(2) responseCode);
 endinterface
 
-interface Axi3SlaveWrite#(type addrWidth, type busWidth, type busWidthBytes);
+interface Axi3SlaveWrite#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
    method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                           Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid);
+                           Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(idWidth) awid);
    method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last);
    method ActionValue#(Bit#(2)) writeResponse();
-   method ActionValue#(Bit#(12)) bid();
+   method ActionValue#(Bit#(idWidth)) bid();
 endinterface
 
-interface Axi3Slave#(type addrWidth, type busWidth, type busWidthBytes);
-   interface Axi3SlaveRead#(addrWidth, busWidth, busWidthBytes) read;
-   interface Axi3SlaveWrite#(addrWidth, busWidth, busWidthBytes) write;
+interface Axi3Slave#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+   interface Axi3SlaveRead#(addrWidth, busWidth, busWidthBytes, idWidth) read;
+   interface Axi3SlaveWrite#(addrWidth, busWidth, busWidthBytes, idWidth) write;
 endinterface
 
 interface AxiMasterServer#(type addrWidth, type busWidth, type busWidthBytes, type tagSize);
@@ -167,7 +167,7 @@ typedef struct {
 } AddrBurst#(type addrWidth) deriving (Bits);
 
 
-module mkAxiSlaveMux#(Vector#(numInputs,Axi3Slave#(addrWidth, busWidth,busWidthBytes)) inputs) (Axi3Slave#(addrWidth, busWidth, busWidthBytes))
+module mkAxiSlaveMux#(Vector#(numInputs,Axi3Slave#(addrWidth, busWidth,busWidthBytes,idWidth)) inputs) (Axi3Slave#(addrWidth, busWidth, busWidthBytes, idWidth))
    provisos(Add#(nz, TLog#(numInputs), 4));
 
    Reg#(Bit#(TLog#(numInputs))) ws <- mkReg(0);
@@ -176,7 +176,7 @@ module mkAxiSlaveMux#(Vector#(numInputs,Axi3Slave#(addrWidth, busWidth,busWidthB
    interface Axi3SlaveWrite write;
       method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
 			      Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache,
-			      Bit#(12) awid);
+			      Bit#(idWidth) awid);
 	 Bit#(TLog#(numInputs)) wsv = truncate(addr[19:16]); 
 	 inputs[wsv].write.writeAddr(addr,burstLen,burstWidth,burstType,burstProt,burstCache,awid);
 	 ws <= wsv;
@@ -188,14 +188,14 @@ module mkAxiSlaveMux#(Vector#(numInputs,Axi3Slave#(addrWidth, busWidth,busWidthB
 	 let rv <- inputs[ws].write.writeResponse;
 	 return rv;
       endmethod
-      method ActionValue#(Bit#(12)) bid();
+      method ActionValue#(Bit#(idWidth)) bid();
 	 let rv <- inputs[ws].write.bid;
 	 return rv;
       endmethod
    endinterface
    interface Axi3SlaveRead read;
       method Action readAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-			     Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid);
+			     Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(idWidth) arid);
 	 Bit#(TLog#(numInputs)) rsv = truncate(addr[19:16]); 
 	 inputs[rsv].read.readAddr(addr,burstLen,burstWidth,burstType,burstProt,burstCache,arid);
 	 rs <= rsv;
@@ -203,7 +203,7 @@ module mkAxiSlaveMux#(Vector#(numInputs,Axi3Slave#(addrWidth, busWidth,busWidthB
       method Bit#(1) last();
 	 return inputs[rs].read.last;
       endmethod
-      method Bit#(12) rid();
+      method Bit#(idWidth) rid();
          return inputs[rs].read.rid;
       endmethod
       method ActionValue#(Bit#(busWidth)) readData();
@@ -596,22 +596,22 @@ module mkAxiSlaveRegFileLoad#(String fileName)(AxiSlave#(addrWidth, busWidth, bu
 endmodule
 
 module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
-                              (Axi3Slave#(addrWidth, busWidth, busWidthBytes))
+                              (Axi3Slave#(addrWidth, busWidth, busWidthBytes, idWidth))
                               provisos(Div#(busWidth,8,busWidthBytes),
                                        Add#(nz, regFileBusWidth, addrWidth));
     Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
     Reg#(Bit#(regFileBusWidth)) writeAddrReg <- mkReg(0);
-    Reg#(Bit#(12)) readIdReg <- mkReg(0);
-    Reg#(Bit#(12)) writeIdReg <- mkReg(0);
+    Reg#(Bit#(idWidth)) readIdReg <- mkReg(0);
+    Reg#(Bit#(idWidth)) writeIdReg <- mkReg(0);
     Reg#(Bit#(4)) readBurstCountReg <- mkReg(0);
     Reg#(Bit#(4)) writeBurstCountReg <- mkReg(0);
     FIFO#(Bit#(2)) writeRespFifo <- mkFIFO();
-    FIFO#(Bit#(12)) writeIdFifo <- mkFIFO();
+    FIFO#(Bit#(idWidth)) writeIdFifo <- mkFIFO();
 
     Bool verbose = False;
     interface Axi3SlaveRead read;
         method Action readAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                               Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) id) if (readBurstCountReg == 0);
+                               Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(idWidth) id) if (readBurstCountReg == 0);
             if (verbose) $display("axiSlave.read.readAddr %h bc %d", addr, burstLen+1);
             readAddrReg <= truncate(addr/fromInteger(valueOf(busWidthBytes)));
 	    readIdReg <= id;
@@ -628,14 +628,14 @@ module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) r
         method Bit#(1) last();
             return (readBurstCountReg == 1) ? 1 : 0;
         endmethod
-	method Bit#(12) rid();
+	method Bit#(idWidth) rid();
 	    return readIdReg;
 	endmethod
     endinterface
 
     interface Axi3SlaveWrite write;
        method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                               Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) id) if (writeBurstCountReg == 0);
+                               Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(idWidth) id) if (writeBurstCountReg == 0);
            if (verbose) $display("axiSlave.write.writeAddr %h bc %d", addr, burstLen+1);
            writeAddrReg <= truncate(addr/fromInteger(valueOf(busWidthBytes)));
 	   writeIdReg <= id;
@@ -658,16 +658,16 @@ module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) r
            writeRespFifo.deq;
            return writeRespFifo.first;
        endmethod
-	method ActionValue#(Bit#(12)) bid();
+	method ActionValue#(Bit#(idWidth)) bid();
 	    writeIdFifo.deq;
 	    return writeIdFifo.first;
 	endmethod
     endinterface
 endmodule
 
-module mkAxi3SlaveRegFile(Axi3Slave#(addrWidth, busWidth, busWidthBytes)) provisos(Div#(busWidth,8,busWidthBytes),Add#(a__, 21, addrWidth));
+module mkAxi3SlaveRegFile(Axi3Slave#(addrWidth, busWidth, busWidthBytes, idWidth)) provisos(Div#(busWidth,8,busWidthBytes),Add#(a__, 21, addrWidth));
        RegFile#(Bit#(21), Bit#(busWidth)) rf <- mkRegFileFull();
-       Axi3Slave#(addrWidth, busWidth, busWidthBytes) axiSlave <- mkAxi3SlaveFromRegFile(rf);
+       Axi3Slave#(addrWidth, busWidth, busWidthBytes, idWidth) axiSlave <- mkAxi3SlaveFromRegFile(rf);
        return axiSlave;
 endmodule
 
@@ -720,7 +720,7 @@ endmodule
 
 module mkClientSlaveConnection#(Axi3WriteClient#(addrWidth, busWidth, busWidthBytes,idWidth) axicw,
                                 Axi3ReadClient#(addrWidth, busWidth,idWidth) axicr,
-                                Axi3Slave#(addrWidth, busWidth, busWidthBytes) axiSlave)
+                                Axi3Slave#(addrWidth, busWidth, busWidthBytes, idWidth) axiSlave)
                                 () provisos (Div#(busWidth, 8, busWidthBytes),
 				             Add#(1, a__, busWidth),
 					     Add#(busWidth, b__, 65),
@@ -973,8 +973,8 @@ module mkAxi3Master#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
    endinterface
 endmodule
 
-instance Connectable#(Axi3Master#(addrWidth, busWidth,busWidthBytes,12), Axi3Slave#(addrWidth, busWidth,busWidthBytes));
-    module mkConnection#(Axi3Master#(addrWidth, busWidth,busWidthBytes,12) m, Axi3Slave#(addrWidth, busWidth,busWidthBytes) s)(Empty);
+instance Connectable#(Axi3Master#(addrWidth, busWidth,busWidthBytes,idWidth), Axi3Slave#(addrWidth, busWidth,busWidthBytes,idWidth));
+    module mkConnection#(Axi3Master#(addrWidth, busWidth,busWidthBytes,idWidth) m, Axi3Slave#(addrWidth, busWidth,busWidthBytes,idWidth) s)(Empty);
 	Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
 	Bool verbose = True;
 
