@@ -8,7 +8,7 @@ test:
 ## -f compile_for_verilog -t generate_scemi_parameters
 ##	. $(SETTINGS_SH); build -v -f vivado
 all: KC705.bsv
-	. $(SETTINGS_SH); build -v kc705 -f compile_for_verilog
+	. $(SETTINGS_SH); build -v kc705 -t vivado
 
 verilog: KC705.bsv
 	. $(SETTINGS_SH); build -v kc705 -f compile_for_verilog -t compile_for_verilog
