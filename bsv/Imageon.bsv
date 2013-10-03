@@ -21,8 +21,6 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import SPI::*;
-import I2C::*;
 import FIFO::*;
 import GetPut::*;
 
