@@ -2,6 +2,8 @@
 #include <sys/types.h>
 #include <linux/ioctl.h>
 #include <sys/ioctl.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define PORTAL_ALLOC _IOWR('B', 10, PortalAlloc)
 #define PORTAL_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalAlloc)

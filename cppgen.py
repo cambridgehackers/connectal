@@ -16,6 +16,7 @@ LOCAL_MODULE = test%(classname)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
 LOCAL_CPPFLAGS := "-march=armv7-a"
+LOCAL_CXXFLAGS := "-DZYNQ"
 
 include $(BUILD_EXECUTABLE)
 '''
@@ -111,8 +112,10 @@ int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel, vola
     // mutex_lock(&portal_data->reg_mutex);
     // mutex_unlock(&portal_data->reg_mutex);
     for (int i = (msg->size()/4)-1; i >= 0; i--) {
+#ifdef ZYNQ
         unsigned int val = *((volatile unsigned int*)(((unsigned int)ind_fifo_base) + channel * 256));
         buf[i] = val;
+#endif
         //fprintf(stderr, "%%08x\\n", val);
     }
     msg->demarshall(&(buf[0]));

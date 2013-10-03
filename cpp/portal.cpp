@@ -35,12 +35,19 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef ZYNQ
+#include <android/log.h>
+#endif
+
 #include "portal.h"
 
-#include <sys/cdefs.h>
-#include <android/log.h>
+#ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
 #define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
+#else
+#define ALOGD(fmt, ...) fprintf(stderr, "PORTAL", fmt, __VA_ARGS__)
+#define ALOGE(fmt, ...) fprintf(stderr, "PORTAL", fmt, __VA_ARGS__)
+#endif
 
 PortalInstance **portal_instances = 0;
 struct pollfd *portal_fds = 0;
@@ -134,7 +141,9 @@ int PortalInstance::sendMessage(PortalMessage *msg)
   for (int i = (msg->size()/4)-1; i >= 0; i--){
     unsigned int val = buf[i];
     // fprintf(stderr, "%08x\n", val);
+#ifdef ZYNQ
     *((volatile unsigned int*)(((unsigned int)req_fifo_base) + msg->channel * 256)) = val;
+#endif
   }
   
   return rc;
