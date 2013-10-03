@@ -31,6 +31,38 @@ import AxiDMA::*;
 
 exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'FmcImageonInterface']
 
+bsimTopTemplate='''
+import AxiMasterSlave::*;
+import %(Base)sWrapper::*;
+
+import "BDPI" function Bool                    writeReq();
+import "BDPI" function ActionValue#(Bit#(32)) writeAddr();
+import "BDPI" function ActionValue#(Bit#(32)) writeData();
+
+import "BDPI" function Bool                    readReq();
+import "BDPI" function ActionValue#(Bit#(32)) readAddr();
+import "BDPI" function Action       readData(Bit#(32) d);
+
+
+module mkBsimTop();
+    %(Base)sWrapper dut <- mk%(Base)sWrapper;
+    rule rdReq (readReq);
+        let ra <- readAddr;
+        dut.ctrl.read.readAddr(ra,0,0,0,0,0,0);
+    endrule
+    rule rdResp;
+        let rd <- dut.ctrl.read.readData;
+        readData(rd);
+    endrule
+    rule wrReq (writeReq);
+        let wa <- writeAddr;
+        let wd <- writeData;
+        dut.ctrl.write.writeAddr(wa,0,0,0,0,0,0);
+        dut.ctrl.write.writeData(wd,0,1);
+    endrule
+endmodule
+'''
+
 topInterfaceTemplate='''
 interface %(Base)sWrapper;
     interface Axi3Slave#(32,32,4,12) ctrl;
@@ -517,6 +549,12 @@ class MethodMixin:
 
 class InterfaceMixin:
 
+    def emitBsimTop(self,f):
+        substs = {
+		'Base' : self.base 
+		}
+        f.write(bsimTopTemplate % substs);
+
     def emitBsvImplementationRequestTop(self,f):
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = self.collectInterfaceNames('AxiSlave')
@@ -578,6 +616,13 @@ class InterfaceMixin:
     def writeTopBsv(self,f):
         assert(self.top and (not self.isIndication))
         self.emitBsvImplementationRequestTop(f)
+
+    def writeBsimTop(self,fname):
+        assert(self.top and (not self.isIndication))
+	f = util.createDirAndOpen(fname, 'w')
+        print 'Writing bsv file ', fname
+	self.emitBsimTop(f);
+	f.close()
 
     def collectIndicationInterrupts(self):
         rv = []

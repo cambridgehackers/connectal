@@ -77,6 +77,11 @@ $(vfile): sources/%(dut)s/%(Dut)sWrapper.bsv
 	cp -r ../xilinx/sources/* sources/
 	cp -r ../xilinx/constraints .
 
+bsim: 
+	cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop BsimTop.bsv
+	cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim *.ba $(XBSVTOP)/cpp/BsimTop.cxx
+
+
 verilog: $(vfile)
 
 %(dut)s.xpr:
@@ -264,13 +269,14 @@ if __name__=='__main__':
         topRequestIfc.writeTopBsv(top_bsv_file)
         close_bsv_package(top_bsv_file, top_pname)
 
+        bsim_name = os.path.join(project_dir, 'sources', 'BsimTop.bsv')
+        topRequestIfc.writeBsimTop(bsim_name)
         topRequestIfc.writeTopVerilog(topverilogname)
         topRequestIfc.writeUcf(ucfname, boardname)
         topRequestIfc.writeXdc(xdcname, boardname)
         print 'Writing Android.mk', androidmkname
         print 'Writing Application.mk', applicationmkname
         topRequestIfc.writeAndroidMk(androidmkname, applicationmkname)
-
     else:
         print 'No %s interface found' % topRequestIfcName
     h.close()
