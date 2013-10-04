@@ -1,43 +1,49 @@
 // Copyright (c) 2008- 2009 Bluespec, Inc.  All rights reserved.
 // $Revision$
 // $Date$
+// Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
-package Kintex7PcieQrc;
+package Kintex7PcieBridge;
 
 // PCI-Express for Kintex 7
 // FPGAs.
 
-import Clocks       :: *;
-import Connectable  :: *;
-import TieOff       :: *;
-import DefaultValue :: *;
-import XilinxPCIE   :: *;
-import XilinxCells  :: *;
-import BlueNoC      :: *;
-import PCIEtoBNoCBridgeQrc :: *;
-import EchoWrapper         :: *;
-
+import Clocks               :: *;
+import Connectable          :: *;
+import TieOff               :: *;
+import DefaultValue         :: *;
+import XilinxPCIE           :: *;
+import XilinxCells          :: *;
+import BlueNoC              :: *;
+import PcieToAxiBridge      :: *;
+import QrcXilinxKintex7Pcie :: *;
+import AxiMasterSlave       :: *;
 // from SceMiDefines
 typedef 4 BPB;
 
 // Interface wrapper for PCIE
-interface K7PCIEQrcIfc#(numeric type lanes);
+interface K7PcieBridgeIfc#(numeric type lanes);
    interface PCIE_EXP#(lanes) pcie;
    (* always_ready *)
    method Bool isLinkUp();
+   interface Clock clock250;
+   interface Reset reset250;
+   interface Clock clock125;
+   interface Reset reset125;
+   interface Axi3Master#(32,32,4,SizeOf#(TLPTag)) portal0;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
-module buildPCIEK7Qrc#( Clock pci_sys_clk_p
+module mkK7PcieBridge#( Clock pci_sys_clk_p
 		       , Clock pci_sys_clk_n
 		       , Reset pci_sys_reset
 		       , Clock ref_clk
                        , Bit#(64) contentId
 		       )
-		       (K7PCIEQrcIfc#(lanes))
-   provisos(Add#(1,_,lanes), SelectKintex7PCIE#(lanes));
+		       (K7PcieBridgeIfc#(lanes))
+   provisos(Add#(1,_,lanes), QrcXilinxKintex7Pcie::SelectKintex7PCIE#(lanes));
 
    if (valueOf(lanes) != 8)
       errorM("Only 8-lane PCIe is supported on K7.");
@@ -46,10 +52,11 @@ module buildPCIEK7Qrc#( Clock pci_sys_clk_p
    Clock sys_clk_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
 
    // Instantiate the PCIE endpoint
-   PCIExpressK7#(lanes) _ep <- mkPCIExpressEndpointK7( defaultValue
-                                                     , clocked_by sys_clk_buf
-                                                     , reset_by pci_sys_reset
-                                                     );
+   QrcXilinxKintex7Pcie::PCIExpressK7#(lanes) _ep
+       <- QrcXilinxKintex7Pcie::mkPCIExpressEndpointK7( defaultValue
+						      , clocked_by sys_clk_buf
+						      , reset_by pci_sys_reset
+						      );
    mkTieOff(_ep.cfg);
    mkTieOff(_ep.cfg_interrupt);
    mkTieOff(_ep.cfg_err);
@@ -124,29 +131,31 @@ module buildPCIEK7Qrc#( Clock pci_sys_clk_p
    endrule: intr_ifc_ctl
 
    // Build the PCIe-to-NoC bridge
-   PCIEtoBNoCQrc#(BPB)  bridge <- mkPCIEtoBNoCQrc_4( contentId
-						   , my_id
-						   , max_read_req_bytes
-						   , max_payload_bytes
-						   , rcb_mask
-						   , msix_enable
-						   , msix_masked
-						   , False // no MSI, only MSI-X
-						   , clocked_by epClock125, reset_by epReset125
-						   );
+   PcieToAxiBridge#(BPB)  bridge <- mkPcieToAxiBridge_4( contentId
+						       , my_id
+						       , max_read_req_bytes
+						       , max_payload_bytes
+						       , rcb_mask
+						       , msix_enable
+						       , msix_masked
+						       , False // no MSI, only MSI-X
+						       , clocked_by epClock125, reset_by epReset125
+						       );
    mkConnectionWithClocks(_ep.trn_rx, tpl_2(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
    mkConnectionWithClocks(_ep.trn_tx, tpl_1(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
 
    //mkConnection(_dut.noc_src,bridge.noc);
    mkTieOff(bridge.noc);
 
-   EchoWrapper echoWrapper <- mkEchoWrapper(clocked_by epClock125, reset_by epReset125);
-   mkConnection(bridge.portal0, echoWrapper.ctrl, clocked_by epClock125, reset_by epReset125);
-
    interface pcie     = _ep.pcie;
+   interface portal0  = bridge.portal0;
+   interface clock250 = epClock250;
+   interface reset250 = epReset250;
+   interface clock125 = epClock125;
+   interface reset125 = epReset125;
 
    method Bool isLinkUp         = link_is_up;
    
-endmodule: buildPCIEK7Qrc
+endmodule: mkK7PcieBridge
 
-endpackage: Kintex7PcieQrc
+endpackage: Kintex7PcieBridge

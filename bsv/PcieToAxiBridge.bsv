@@ -1,4 +1,4 @@
-package PCIEtoBNoCBridgeQrc;
+package PcieToAxiBridge;
 
 // This is a package which acts as a bridge between a TLP-based PCIe
 // interface on one side and message-based NoC interface on the other.
@@ -23,7 +23,7 @@ import ByteCompactor :: *;
 import AxiMasterSlave :: *;
 
 // The top-level interface of the PCIe-to-NoC bridge
-interface PCIEtoBNoCQrc#(numeric type bpb);
+interface PcieToAxiBridge#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
    interface MsgPort#(bpb)         noc;  // to the NoC
@@ -45,7 +45,7 @@ interface PCIEtoBNoCQrc#(numeric type bpb);
    (* always_ready *)
    method Action msi_interrupt_clear();
 
-endinterface
+endinterface: PcieToAxiBridge
 
 // When TLP packets come in from the PCIe bus, they are dispatched to
 // either the configuration register block or the DMA controller
@@ -424,31 +424,31 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
         timerReg <= timerReg - 1;
     endrule
 
-    rule txnTimeout if (busyReg && timerReg == 0);
-	let hdr = readDataFifo.first;
-	//FIXME: assumes only 1 word read per request
-	readDataFifo.deq;
+//     rule txnTimeout if (busyReg && timerReg == 0);
+// 	let hdr = readDataFifo.first;
+// 	//FIXME: assumes only 1 word read per request
+// 	readDataFifo.deq;
 
-	TLPCompletionHeader completion = defaultValue;
-	completion.format = MEM_WRITE_3DW_DATA;
-	completion.pkttype = COMPLETION;
-	completion.nosnoop = SNOOPING_REQD;
-	completion.length = 1;
-	completion.cmplid = my_id;
-	completion.tag = truncate(hdr.tag);
-	completion.bytecount = 4;
-	completion.reqid = hdr.reqid;
-	completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
-	completion.data = byteSwap(32'h0badfeed);
-	TLPData#(16) tlp = defaultValue;
-	tlp.data = pack(completion);
-	tlp.sof = True;
-	tlp.eof = True;
-	tlp.be = 16'hFFFF;
-	tlp.hit = hitReg;
-	tlpOutFifo.enq(tlp);
-	busyReg <= False;
-    endrule
+// 	TLPCompletionHeader completion = defaultValue;
+// 	completion.format = MEM_WRITE_3DW_DATA;
+// 	completion.pkttype = COMPLETION;
+// 	completion.nosnoop = SNOOPING_REQD;
+// 	completion.length = 1;
+// 	completion.cmplid = my_id;
+// 	completion.tag = truncate(hdr.tag);
+// 	completion.bytecount = 4;
+// 	completion.reqid = hdr.reqid;
+// 	completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
+// 	completion.data = byteSwap(32'h0badfeed);
+// 	TLPData#(16) tlp = defaultValue;
+// 	tlp.data = pack(completion);
+// 	tlp.sof = True;
+// 	tlp.eof = True;
+// 	tlp.be = 16'hFFFF;
+// 	tlp.hit = hitReg;
+// 	tlpOutFifo.enq(tlp);
+// 	busyReg <= False;
+//     endrule
 
     interface Put tlp_in;
         method Action put(TLPData#(16) tlp) if (!busyReg);
@@ -2417,69 +2417,69 @@ endmodule: mkDMAEngine
 
 // The PCIe-to-NoC bridge puts all of the elements together
 (* synthesize *)
-module mkPCIEtoBNoCQrc_4#( Bit#(64)  board_content_id
-		      , PciId     my_id
-		      , UInt#(13) max_read_req_bytes
-		      , UInt#(13) max_payload_bytes
-		      , Bit#(7)   rcb_mask
-		      , Bool      msix_enabled
-		      , Bool      msix_mask_all_intr
-		      , Bool      msi_enabled
-		      )
-                      (PCIEtoBNoCQrc#(4));
+module mkPcieToAxiBridge_4#( Bit#(64)  board_content_id
+			   , PciId     my_id
+			   , UInt#(13) max_read_req_bytes
+			   , UInt#(13) max_payload_bytes
+			   , Bit#(7)   rcb_mask
+			   , Bool      msix_enabled
+			   , Bool      msix_mask_all_intr
+			   , Bool      msi_enabled
+			   )
+			   (PcieToAxiBridge#(4));
 
-   let pbb <- mkPCIEtoBNoCQrc(board_content_id, my_id, max_read_req_bytes, 
+   let pbb <- mkPcieToAxiBridge(board_content_id, my_id, max_read_req_bytes, 
 					max_payload_bytes, rcb_mask, msix_enabled, 
 					msix_mask_all_intr, msi_enabled);
    return pbb;
 endmodule
 
 //(* synthesize *)
-module mkPCIEtoBNoCQrc_8#( Bit#(64)  board_content_id
-		      , PciId     my_id
-		      , UInt#(13) max_read_req_bytes
-		      , UInt#(13) max_payload_bytes
-		      , Bit#(7)   rcb_mask
-		      , Bool      msix_enabled
-		      , Bool      msix_mask_all_intr
-		      , Bool      msi_enabled
-		      )
-                      (PCIEtoBNoCQrc#(8));
+module mkPcieToAxiBridge_8#( Bit#(64)  board_content_id
+			   , PciId     my_id
+			   , UInt#(13) max_read_req_bytes
+			   , UInt#(13) max_payload_bytes
+			   , Bit#(7)   rcb_mask
+			   , Bool      msix_enabled
+			   , Bool      msix_mask_all_intr
+			   , Bool      msi_enabled
+			   )
+			   (PcieToAxiBridge#(8));
 
-   let pbb <- mkPCIEtoBNoCQrc(board_content_id, my_id, max_read_req_bytes, 
+   let pbb <- mkPcieToAxiBridge(board_content_id, my_id, max_read_req_bytes, 
 					max_payload_bytes, rcb_mask, msix_enabled, 
 					msix_mask_all_intr, msi_enabled);
    return pbb;
 endmodule
 
 //(* synthesize *)
-module mkPCIEtoBNoCQrc_16#( Bit#(64)  board_content_id
-		      , PciId     my_id
-		      , UInt#(13) max_read_req_bytes
-		      , UInt#(13) max_payload_bytes
-		      , Bit#(7)   rcb_mask
-		      , Bool      msix_enabled
-		      , Bool      msix_mask_all_intr
-		      , Bool      msi_enabled
-		      )
-                      (PCIEtoBNoCQrc#(16));
+module mkPcieToAxiBridge_16#( Bit#(64)  board_content_id
+			   , PciId     my_id
+			   , UInt#(13) max_read_req_bytes
+			   , UInt#(13) max_payload_bytes
+			   , Bit#(7)   rcb_mask
+			   , Bool      msix_enabled
+			   , Bool      msix_mask_all_intr
+			   , Bool      msi_enabled
+			   )
+			   (PcieToAxiBridge#(16));
 
-   let pbb <- mkPCIEtoBNoCQrc(board_content_id, my_id, max_read_req_bytes, 
+   let pbb <- mkPcieToAxiBridge(board_content_id, my_id, max_read_req_bytes, 
 					max_payload_bytes, rcb_mask, msix_enabled, 
 					msix_mask_all_intr, msi_enabled);
    return pbb;
 endmodule
 
-module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
-                    , PciId     my_id
-                    , UInt#(13) max_read_req_bytes
-                    , UInt#(13) max_payload_bytes
-                    , Bit#(7)   rcb_mask
-                    , Bool      msix_enabled
-                    , Bool      msix_mask_all_intr
-                    , Bool      msi_enabled
-                    )
-                    (PCIEtoBNoCQrc#(bpb))
+module mkPcieToAxiBridge#( Bit#(64)  board_content_id
+			 , PciId     my_id
+			 , UInt#(13) max_read_req_bytes
+			 , UInt#(13) max_payload_bytes
+			 , Bit#(7)   rcb_mask
+			 , Bool      msix_enabled
+			 , Bool      msix_mask_all_intr
+			 , Bool      msi_enabled
+			 )
+			 (PcieToAxiBridge#(bpb))
    provisos( Add#(1, __1, TDiv#(bpb,4))
            // the compiler should be able to figure these out ...
            , Log#(TAdd#(1,bpb), TLog#(TAdd#(bpb,1)))
@@ -2617,6 +2617,7 @@ module mkPCIEtoBNoCQrc#( Bit#(64)  board_content_id
    method Bool   msi_interrupt_req   = csr.msi_interrupt_req;
    method Action msi_interrupt_clear = csr.msi_interrupt_clear;
 
-endmodule: mkPCIEtoBNoCQrc
+endmodule: mkPcieToAxiBridge
 
-endpackage: PCIEtoBNoCBridgeQrc
+endpackage: PcieToAxiBridge
+
