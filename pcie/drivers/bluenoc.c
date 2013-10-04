@@ -73,6 +73,8 @@ MODULE_LICENSE ("Dual BSD/GPL");
 typedef struct tBoard {
   /* bars */
   void __iomem* bar0io;
+  void __iomem* bar1io;
+  void __iomem* bar2io;
   /* pci device pointer */
   struct pci_dev* pci_dev;
   unsigned int    board_number;
@@ -199,6 +201,10 @@ static void deactivate(tBoard* this_board)
     case BARS_MAPPED:        { /* unmap PCI BARs */
                                if (this_board->bar0io != NULL)
                                  pci_iounmap(this_board->pci_dev, this_board->bar0io);
+                               if (this_board->bar1io != NULL)
+                                 pci_iounmap(this_board->pci_dev, this_board->bar1io);
+                               if (this_board->bar2io != NULL)
+                                 pci_iounmap(this_board->pci_dev, this_board->bar2io);
                              } /* fall through */
     case BARS_ALLOCATED:     { /* release PCI memory regions */
                                pci_release_regions(this_board->pci_dev);
@@ -248,18 +254,50 @@ static int activate(tBoard* this_board)
                                 this_board->activation_level = PCI_DEV_ENABLED;
                               } /* fall through */
     case PCI_DEV_ENABLED:     { /* reserve PCI memory regions */
-                                if (pci_request_region(this_board->pci_dev, 0, "bar0") != 0) {
+                                int rc0;
+				{
+				  int i;
+				  for (i = 0; i < 5; i++)
+				    printk("pci bar %d start=%08x end=%08x flags=%x\n",
+					   i,
+					   this_board->pci_dev->resource[i].start,
+					   this_board->pci_dev->resource[i].end,
+					   this_board->pci_dev->resource[i].flags);
+				}
+
+                                if ((rc0 = pci_request_region(this_board->pci_dev, 0, "bar0")) != 0) {
+				  printk("failed to request region bar0 rc=%d\n", rc0);
                                   deactivate(this_board);
                                   return -EBUSY;
                                 }
+				{ int rc = pci_request_region(this_board->pci_dev, 1, "bar1");
+				  printk("reserving region bar1 rc=%d\n", rc);
+				}
+				{ int rc = pci_request_region(this_board->pci_dev, 2, "bar2");
+				  printk("reserving region bar2 rc=%d\n", rc);
+				}
                                 this_board->activation_level = BARS_ALLOCATED;
                               } /* fall through */
     case BARS_ALLOCATED:      { /* map BARs */
                                 this_board->bar0io = pci_iomap(this_board->pci_dev, 0, 0);
+				printk("bar0io=%p\n", this_board->bar0io);
+
+                                this_board->bar1io = pci_iomap(this_board->pci_dev, 1, 0);
+				printk("bar1io=%p\n", this_board->bar1io);
+				if (this_board->bar1io == 0) {
+				  this_board->bar1io = pci_iomap(this_board->pci_dev, 1, 8192);
+				  printk("bar1io=%p\n", this_board->bar1io);
+				}
+                                this_board->bar2io = pci_iomap(this_board->pci_dev, 2, 0);
+				printk("bar2io=%p\n", this_board->bar2io);
+
                                 if (NULL == this_board->bar0io) {
+				  printk("failed to map bar0\n");
                                   deactivate(this_board);
                                   return -EFAULT;
                                 }
+
+
                                 this_board->activation_level = BARS_MAPPED;
                               } /* fall through */
     case BARS_MAPPED:         { /* check the magic number in BAR 0 */
@@ -1615,10 +1653,6 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       tPortalInfo info;
       long portal_csr_offset = 1024<<2;
       int i;
-      if (0) {
-	printk("writing to CSR\n");
-	iowrite32(0x27beef, this_board->bar0io + portal_csr_offset + (15 << 2));
-      }
       if (1) {
 	// test axi master
 	printk("testing axi master\n");
@@ -1632,20 +1666,28 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       }
       if (1)
       for (i = 0; i < 2; i++) {
-	info.interrupt_status = ioread32(this_board->bar0io + portal_csr_offset + (0 << 2));
-	info.interrupt_enable = ioread32(this_board->bar0io + portal_csr_offset + (1 << 2));
-	info.indication_channel_count = ioread32(this_board->bar0io + portal_csr_offset + (2 << 2));
-	info.base_fifo_offset = ioread32(this_board->bar0io + portal_csr_offset + (3 << 2));
-	info.request_fired_count = ioread32(this_board->bar0io + portal_csr_offset + (4 << 2));
-	info.response_fired_count = ioread32(this_board->bar0io + portal_csr_offset + (5 << 2));
+	void __iomem* axi_io = 0;
+	if (NULL == this_board->bar2io) {
+	  axi_io = this_board->bar0io;
+	  portal_csr_offset = 1024<<2;
+	} else {
+	  axi_io = this_board->bar2io;
+	  portal_csr_offset = 0xc000;
+	}
+	info.interrupt_status = ioread32(axi_io + portal_csr_offset + (0 << 2));
+	info.interrupt_enable = ioread32(axi_io + portal_csr_offset + (1 << 2));
+	info.indication_channel_count = ioread32(axi_io + portal_csr_offset + (2 << 2));
+	info.base_fifo_offset = ioread32(axi_io + portal_csr_offset + (3 << 2));
+	info.request_fired_count = ioread32(axi_io + portal_csr_offset + (4 << 2));
+	info.response_fired_count = ioread32(axi_io + portal_csr_offset + (5 << 2));
 
-	info.magic = ioread32(this_board->bar0io + portal_csr_offset + (8 << 2));
-	info.scratchpad = ioread32(this_board->bar0io + portal_csr_offset + (15 << 2));
-	info.fifo_status = ioread32(this_board->bar0io + portal_csr_offset + (16 << 2));
+	info.magic = ioread32(axi_io + portal_csr_offset + (8 << 2));
+	info.scratchpad = ioread32(axi_io + portal_csr_offset + (15 << 2));
+	info.fifo_status = ioread32(axi_io + portal_csr_offset + (16 << 2));
 
 	// enable axi portal
-	iowrite32(0x27beef, this_board->bar0io + (788 << 2));
-	printk("axiEnabled=%x\n", ioread32(this_board->bar0io + (788 << 2)));
+	iowrite32(0x27beef, this_board->bar1io + (788 << 2));
+	printk("axiEnabled=%x\n", ioread32(this_board->bar1io + (788 << 2)));
       }
       err = copy_to_user((void __user *)arg, &info, sizeof(tPortalInfo));
       if (err != 0)
@@ -1671,8 +1713,6 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       mb();
       tlp[2] = ioread32(this_board->bar0io + (776<<2) + (2<<2));
 
-      for (i = 0; i < 6; i++)
-	printk("tlp[%d] = %08x\n", i, tlp[i]);
       // now deq the tlpDataFifo
       iowrite32(0, this_board->bar0io + (768<<2) + 0);
       printk("tlpseqno=%d\n",  ioread32(this_board->bar0io + (774<<2)));
@@ -1695,21 +1735,8 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       if (err != 0)
         return -EFAULT;
 
-      if (0) {
-	iowrite32(0, this_board->bar0io + (789<<2));
-	iowrite32(0x24244242, this_board->bar0io + (776<<2) + (0<<2));
-	iowrite32(0xfcfcfcfc, this_board->bar0io + (776<<2) + (1<<2));
-	iowrite32(0x68476823, this_board->bar0io + (776<<2) + (2<<2));
-	iowrite32(0xd00df00d, this_board->bar0io + (776<<2) + (3<<2));
-	iowrite32(0x80808080, this_board->bar0io + (776<<2) + (4<<2));
-	iowrite32(0x2323beef, this_board->bar0io + (776<<2) + (5<<2));
-      }
-
       // update tlpBramWrAddr, which also writes the scratchpad to BRAM
       iowrite32(0, this_board->bar0io + (792<<2));
-
-      // now, reread the tlp
-      iowrite32(0, this_board->bar0io + (768<<2));
 
       old_trace = ioread32(this_board->bar0io + (775<<2) + 0x000);
       iowrite32(trace, this_board->bar0io + (775<<2) + 0x000);
