@@ -108,38 +108,24 @@ module mkTLPDispatcher(TLPDispatcher);
                                      || ((hdr_3dw.addr % 8192) == 1026)
                                      || ((hdr_3dw.addr % 8192) == 1027)
                                      ;
-      Bool in_axi_addr_range         =  ((hdr_3dw.addr % 8192) == 1028)
-                                     || ((hdr_3dw.addr % 8192) == 1029)
-                                     || ((hdr_3dw.addr % 8192) == 1030)
-                                     || ((hdr_3dw.addr % 8192) == 1031)
-                                     || ((hdr_3dw.addr % 8192) == 1032)
-                                     || ((hdr_3dw.addr % 8192) == 1039)
-                                     || ((hdr_3dw.addr % 8192) == 1040)
-                                     ;
       Bool is_config_read    =  tlp.sof
                              && (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
-                             && (!axiEnabledReg || !in_axi_addr_range)
                              ;
       Bool is_config_write   =  tlp.sof
                              && (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
                              && !in_dma_command_addr_range
-                             && (!axiEnabledReg || !in_axi_addr_range)
                              ;
       Bool is_axi_read       =  tlp.sof
-                             && (tlp.hit == 7'h01)
+                             && (tlp.hit != 7'h01)
                              && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
-                             && in_axi_addr_range
-			     && axiEnabledReg
                              ;
       Bool is_axi_write      =  tlp.sof
-                             && (tlp.hit == 7'h01)
+                             && (tlp.hit != 7'h01)
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
-                             && in_axi_addr_range
-			     && axiEnabledReg
                              ;
       Bool is_dma_command    =  tlp.sof
                              && (tlp.hit == 7'h01)
@@ -427,11 +413,43 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
     Reg#(Bool) busyReg <- mkReg(False);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
+    Reg#(Bit#(4)) timerReg <- mkReg(0);
     FIFO#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkFIFO;
     FIFO#(TLPMemoryIO3DWHeader) readDataFifo <- mkFIFO;
     FIFO#(TLPMemoryIO3DWHeader) writeHeaderFifo <- mkFIFO;
     FIFO#(TLPMemoryIO3DWHeader) writeDataFifo <- mkFIFO;
     FIFO#(TLPData#(16)) tlpOutFifo <- mkFIFO;
+
+    rule txnTimer if (timerReg > 0);
+        timerReg <= timerReg - 1;
+    endrule
+
+    rule txnTimeout if (busyReg && timerReg == 0);
+	let hdr = readDataFifo.first;
+	//FIXME: assumes only 1 word read per request
+	readDataFifo.deq;
+
+	TLPCompletionHeader completion = defaultValue;
+	completion.format = MEM_WRITE_3DW_DATA;
+	completion.pkttype = COMPLETION;
+	completion.nosnoop = SNOOPING_REQD;
+	completion.length = 1;
+	completion.cmplid = my_id;
+	completion.tag = truncate(hdr.tag);
+	completion.bytecount = 4;
+	completion.reqid = hdr.reqid;
+	completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
+	completion.data = byteSwap(32'h0badfeed);
+	TLPData#(16) tlp = defaultValue;
+	tlp.data = pack(completion);
+	tlp.sof = True;
+	tlp.eof = True;
+	tlp.be = 16'hFFFF;
+	tlp.hit = hitReg;
+	tlpOutFifo.enq(tlp);
+	busyReg <= False;
+    endrule
+
     interface Put tlp_in;
         method Action put(TLPData#(16) tlp) if (!busyReg);
 	    $display("PortalEngine.put tlp=%h", tlp);
@@ -444,6 +462,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	        writeHeaderFifo.enq(hdr_3dw);
             if (!pipeliningEnabledReg)
 	        busyReg <= True;
+            timerReg <= truncate(32'hFFFFFFFF);
 	endmethod
     endinterface: tlp_in
     interface Get tlp_out = toGet(tlpOutFifo);
@@ -453,7 +472,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	        let hdr = writeHeaderFifo.first;
 	        writeHeaderFifo.deq;
 		writeDataFifo.enq(hdr);
-		return extend(writeHeaderFifo.first.addr) << 2;
+		return byteSwap(extend(writeHeaderFifo.first.addr) << 2);
 	    endmethod
 	    method Bit#(4) writeBurstLen();
 		return 0;
@@ -477,7 +496,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    method ActionValue#(Bit#(32)) writeData();
 	        busyReg <= False;
 	        writeDataFifo.deq;
-		return writeDataFifo.first.data;
+		return byteSwap(writeDataFifo.first.data);
 	    endmethod
 	    method Bit#(SizeOf#(TLPTag)) writeWid();
 		return extend(writeDataFifo.first.tag);
@@ -498,7 +517,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	        let hdr = readHeaderFifo.first;
 	        readHeaderFifo.deq;
 		readDataFifo.enq(hdr);
-		return extend(readHeaderFifo.first.addr) << 2;
+		return byteSwap(extend(readHeaderFifo.first.addr) << 2);
 	    endmethod
 	    method Bit#(4) readBurstLen();
 		return 0;
@@ -533,8 +552,8 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		completion.tag = truncate(id);
 		completion.bytecount = 4;
 		completion.reqid = hdr.reqid;
-		completion.loweraddr = truncate(hdr.addr << 2); // getLowerAddr(hdr.addr, hdr.firstbe);
-		completion.data = data;
+		completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
+		completion.data = byteSwap(data);
 	        TLPData#(16) tlp = defaultValue;
 		tlp.data = pack(completion);
 		tlp.sof = True;
@@ -839,10 +858,11 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
 
    // Function to return a one-word slice of the tlpDataBramResponse
-   function tlpDataBramResponseSlice(Bit#(3) i);
+   function Bit#(32) tlpDataBramResponseSlice(Bit#(3) i);
+       Bit#(8) i8 = zeroExtend(i);
        begin
            Bit#(192) v = extend(pack(tlpDataBramResponse));
-           return v[31 + (i*32) : 0 + (i*32)];
+           return v[31 + (i8*32) : 0 + (i8*32)];
        end
    endfunction
 
