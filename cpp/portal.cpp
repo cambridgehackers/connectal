@@ -133,15 +133,15 @@ int PortalInstance::sendMessage(PortalMessage *msg)
   }
 
   unsigned int buf[128];
-  msg->marshall(&(buf[0]));
+  msg->marshall(buf);
 
   // mutex_lock(&portal_data->reg_mutex);
   // mutex_unlock(&portal_data->reg_mutex);
   // fprintf(stderr, "msg->size() = %d\n", msg->size());
   for (int i = (msg->size()/4)-1; i >= 0; i--){
+#ifdef ZYNQ
     unsigned int val = buf[i];
     // fprintf(stderr, "%08x\n", val);
-#ifdef ZYNQ
     *((volatile unsigned int*)(((unsigned int)req_fifo_base) + msg->channel * 256)) = val;
 #endif
   }
@@ -267,7 +267,7 @@ int PortalInstance::setClockFrequency(int clkNum, long requestedFrequency, long 
 void* portalExec(void* __x)
 {
     int rc;
-    int timeout = 1000;
+    int timeout = -1;
     if(0)
     fprintf(stderr, "about to invoke poll(%x, %d, %d)\n", portal_fds, numFds, timeout);
     if (!numFds) {

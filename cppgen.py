@@ -91,7 +91,7 @@ indicationConstructorTemplate='''
 putFailedTemplate='''
 void %(namespace)s%(className)s::putFailed(unsigned long v){
     char buff[100];
-    %(instName)s::methodName(v, &(buff[0]));
+    %(instName)s::methodName(v, buff);
     fprintf(stderr, "putFailed: %%s\\n", buff);
     exit(1);
   }
@@ -118,7 +118,7 @@ int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel, vola
 #endif
         //fprintf(stderr, "%%08x\\n", val);
     }
-    msg->demarshall(&(buf[0]));
+    msg->demarshall(buf);
     msg->indicate(this);
     delete msg;
     return 0;
