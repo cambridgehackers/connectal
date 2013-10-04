@@ -7,13 +7,13 @@ test:
 
 ## -f compile_for_verilog -t generate_scemi_parameters
 ##	. $(SETTINGS_SH); build -v -f vivado
-all: KC705.bsv .build/kc705
+all: TopKC705.bsv .build/kc705
 	. $(SETTINGS_SH); build -v kc705 -f compile_for_verilog -t vivado
 
 .build/kc705:
 	build -v kc705 -t make_build_dirs
 
-verilog: KC705.bsv
+verilog: TopKC705.bsv
 	. $(SETTINGS_SH); build -v kc705 -f compile_for_verilog -t compile_for_verilog
 
 .build/kc705/fpga/mkBridge/mkBridge.xpr: 
