@@ -42,7 +42,11 @@ public:
 '''
 indicationClassSuffixTemplate='''
 protected:
-    virtual int handleMessage(int fd, unsigned int channel, volatile unsigned int* ind_fifo_base);
+#ifdef ZYNQ
+    virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base);
+#else
+    virtual int handleMessage(unsigned int channel, int s, const char* id);
+#endif
     friend class PortalInstance;
 };
 '''
@@ -98,9 +102,9 @@ void %(namespace)s%(className)s::putFailed(unsigned long v){
 '''
 
 handleMessageTemplate='''
-int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel, volatile unsigned int* ind_fifo_base)
-{
-    
+#ifdef ZYNQ
+int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base)
+{    
     unsigned int buf[1024];
     memset(buf, 0, 1024);
     PortalMessage *msg = 0x0;
@@ -112,10 +116,8 @@ int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel, vola
     // mutex_lock(&portal_data->reg_mutex);
     // mutex_unlock(&portal_data->reg_mutex);
     for (int i = (msg->size()/4)-1; i >= 0; i--) {
-#ifdef ZYNQ
         unsigned int val = *((volatile unsigned int*)(((unsigned int)ind_fifo_base) + channel * 256));
         buf[i] = val;
-#endif
         //fprintf(stderr, "%%08x\\n", val);
     }
     msg->demarshall(buf);
@@ -123,6 +125,32 @@ int %(namespace)s%(className)s::handleMessage(int fd, unsigned int channel, vola
     delete msg;
     return 0;
 }
+#else
+int %(namespace)s%(className)s::handleMessage(unsigned int channel, int s, const char* id)
+{    
+    unsigned int buf[1024];
+    memset(buf, 0, 1024);
+    PortalMessage *msg = 0x0;
+    
+    switch (channel) {
+%(responseSzCases)s
+    }
+
+    for (int i = (msg->size()/4)-1; i >= 0; i--) {
+        unsigned int val;
+	if(recv(s, &val, sizeof(val), 0) == -1){
+	  fprintf(stderr, "(%%s) recv error\\n", id);
+	  exit(1);	  
+	}
+        buf[i] = val;
+    }
+    msg->demarshall(buf);
+    msg->indicate(this);
+    delete msg;
+    return 0;
+}
+#endif
+
 '''
 
 requestTemplate='''

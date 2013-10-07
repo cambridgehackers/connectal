@@ -32,20 +32,31 @@ import AxiDMA::*;
 exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'FmcImageonInterface']
 
 bsimTopTemplate='''
+import StmtFSM::*;
 import AxiMasterSlave::*;
 import %(Base)sWrapper::*;
+
+
+import "BDPI" function Action      initPortal(Bit#(32) d);
 
 import "BDPI" function Bool                    writeReq();
 import "BDPI" function ActionValue#(Bit#(32)) writeAddr();
 import "BDPI" function ActionValue#(Bit#(32)) writeData();
 
-import "BDPI" function Bool                    readReq();
-import "BDPI" function ActionValue#(Bit#(32)) readAddr();
-import "BDPI" function Action       readData(Bit#(32) d);
+import "BDPI" function Bool                     readReq();
+import "BDPI" function ActionValue#(Bit#(32))  readAddr();
+import "BDPI" function Action        readData(Bit#(32) d);
 
 
 module mkBsimTop();
     %(Base)sWrapper dut <- mk%(Base)sWrapper;
+    let init_seq = (action 
+                        %(initBsimPortals)s
+                    endaction);
+    let init_fsm <- mkOnce(init_seq);
+    rule init_rule;
+        init_fsm.start;
+    endrule
     rule rdReq (readReq);
         let ra <- readAddr;
         dut.ctrl.read.readAddr(ra,0,0,0,0,0,0);
@@ -551,7 +562,8 @@ class InterfaceMixin:
 
     def emitBsimTop(self,f):
         substs = {
-		'Base' : self.base 
+		'Base' : self.base ,
+		'initBsimPortals' : ''.join(util.intersperse((' '*23,'\n'), ['initPortal(%d);' % j for j in range(len(self.ind.decls))]))
 		}
         f.write(bsimTopTemplate % substs);
 
