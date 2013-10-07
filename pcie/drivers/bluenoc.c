@@ -1651,7 +1651,7 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
     {
       /* copy board identification info to a user-space struct */
       tPortalInfo info;
-      long portal_csr_offset = 1024<<2;
+      long portal_csr_offset = (1 << 16);
       int i;
       if (1) {
 	// test axi master
@@ -1666,11 +1666,9 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       }
       if (1)
       for (i = 0; i < 2; i++) {
-	void __iomem* axi_io = 0;
-	if (NULL == this_board->bar2io) {
-	  axi_io = this_board->bar0io;
-	  portal_csr_offset = 1024<<2;
-	} else {
+	void __iomem* axi_io = this_board->bar0io;
+
+	if (0 && (NULL != this_board->bar2io)) {
 	  axi_io = this_board->bar2io;
 	  portal_csr_offset = 0xc000;
 	}
