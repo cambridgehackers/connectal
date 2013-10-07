@@ -15,6 +15,7 @@ import ClientServer   :: *;
 import BUtils         :: *;
 import AxiMasterSlave :: *;
 import EchoWrapper    :: *;
+import AxiScratchPad  :: *;
 
 (* synthesize, no_default_clock, no_default_reset *)
 module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
@@ -51,7 +52,7 @@ module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Reset ddr3rstn = ddr3_ctrl.user.reset_n;
    
    K7PcieBridgeIfc#(8) k7pcie <- mkK7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, pci_sys_reset_n, clk_gen.clkout0,
-                                                 64'h05ce_0006_7050_2600 );
+                                                 64'h05ce_0006_7050_2602 );
    
    SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, clk, rst_n, ddr3clk);
    SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, clk);
@@ -66,7 +67,7 @@ module mkBridge #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    ReadOnly#(Bool) _isLinkUp         <- mkNullCrossing(noClock, k7pcie.isLinkUp);
    ReadOnly#(Bool) _isCalibrated     <- mkNullCrossing(noClock, ddr3_ctrl.user.init_done);
    
-   EchoWrapper echoWrapper <- mkEchoWrapper(clocked_by k7pcie.clock125, reset_by k7pcie.reset125);
+   AxiScratchPad echoWrapper <- mkAxiScratchPad(clocked_by k7pcie.clock125, reset_by k7pcie.reset125);
    mkConnection(k7pcie.portal0, echoWrapper.ctrl, clocked_by k7pcie.clock125, reset_by k7pcie.reset125);
 
    interface pcie = k7pcie.pcie;
