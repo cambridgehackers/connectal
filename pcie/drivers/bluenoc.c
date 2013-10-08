@@ -143,6 +143,7 @@ static unsigned int bluenoc_poll(struct file* filp, poll_table* wait);
 static loff_t bluenoc_llseek(struct file* filp, loff_t off, int whence);
 
 static long bluenoc_ioctl(struct file* file, unsigned int cmd, unsigned long arg);
+static int portal_mmap(struct file *filep, struct vm_area_struct *vma);
 
 #if USE_INTR_PT_REGS_ARG
 static irqreturn_t intr_handler(int irq, void* brd, struct pt_regs* unused);
@@ -428,7 +429,8 @@ static const struct file_operations bluenoc_fops = {
   .llseek         = bluenoc_llseek,
   .poll           = bluenoc_poll,
   .unlocked_ioctl = bluenoc_ioctl,
-  .compat_ioctl   = bluenoc_ioctl
+  .compat_ioctl   = bluenoc_ioctl,
+  .mmap           = portal_mmap
 };
 
 /* PCI ID pattern table */
@@ -741,6 +743,9 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
     /* log the operation */
     printk(KERN_INFO "%s_%d: Opened device file\n", DEV_NAME, this_board_number);
   }
+
+  // FIXME: why does the kernel think this device is RDONLY?
+  filp->f_mode |= FMODE_WRITE;
 
   goto exit_bluenoc_open;
 
@@ -1783,3 +1788,24 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       return -ENOTTY;
   }
 }
+
+static int portal_mmap(struct file *filep, struct vm_area_struct *vma)
+{
+  tBoard* this_board = (tBoard*) filep->private_data;
+
+  unsigned long req_len = vma->vm_end - vma->vm_start + (vma->vm_pgoff << PAGE_SHIFT);
+
+  if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
+    return -EINVAL;
+  off_t off = this_board->pci_dev->resource[2].start;
+
+  vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+  vma->vm_pgoff = off >> PAGE_SHIFT;
+  vma->vm_flags |= VM_IO | VM_RESERVED;
+  if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
+			 vma->vm_end - vma->vm_start, vma->vm_page_prot))
+    return -EAGAIN;
+
+  return 0;
+}
+
