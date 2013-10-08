@@ -571,7 +571,7 @@ class InterfaceMixin:
     def emitBsimTop(self,f):
         substs = {
 		'Base' : self.base ,
-		'initBsimPortals' : ''.join(util.intersperse((' '*23,'\n'), ['initPortal(%d);' % j for j in range(len(self.ind.decls))]))
+		'initBsimPortals' : ''.join(util.intersperse(('\n'+' '*24), ['initPortal(%d);' % j for j in range(len(self.ind.decls))]))
 		}
         f.write(bsimTopTemplate % substs);
 

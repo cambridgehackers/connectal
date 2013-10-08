@@ -105,7 +105,7 @@ class TestBlueScopeIndication : public BlueScopeIndication
 // an opc2 of '4' and CRm of 'c10' encodes "CP15DSB, Data Synchronization Barrier 
 // operation". this is a legal instruction to execute in non-privileged mode (mdk)
 //
-#define DATA_SYNC_BARRIER   __asm __volatile( "MCR p15, 0, %0, c7, c10, 4" ::  "r" (0) );
+// #define DATA_SYNC_BARRIER   __asm __volatile( "MCR p15, 0, %0, c7, c10, 4" ::  "r" (0) );
 
 int main(int argc, const char **argv)
 {
@@ -155,7 +155,7 @@ int main(int argc, const char **argv)
     PortalMemory::dCacheFlushInval(&srcAlloc);
     PortalMemory::dCacheFlushInval(&dstAlloc);
     PortalMemory::dCacheFlushInval(&bsAlloc);
-    DATA_SYNC_BARRIER;
+    // DATA_SYNC_BARRIER;
           
     // write channel 0 is dma destination
     device->configDmaWriteChan(0, dstAlloc.entries[0].dma_address, numWords/2);
