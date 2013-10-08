@@ -1,0 +1,29 @@
+BSVFLAGS = -aggressive-conditions -keep-fires -steps-warn-interval 1000000 -p +:../../bsv
+SETTINGS_SH=/scratch/Xilinx/Vivado/2013.2/settings64.sh
+
+test:
+	bsc -sim -u -g mkTestBench $(BSVFLAGS) TestBench.bsv
+	bsc -sim -o mkTestBench -e mkTestBench mkTestBench.ba
+
+## -f compile_for_verilog -t generate_scemi_parameters
+##	. $(SETTINGS_SH); build -v -f vivado
+all: TopKC705.bsv .build/kc705
+	. $(SETTINGS_SH); build -v kc705 -f compile_for_verilog -t vivado
+
+.build/kc705:
+	build -v kc705 -t make_build_dirs
+
+verilog: TopKC705.bsv
+	. $(SETTINGS_SH); build -v kc705 -f compile_for_verilog -t compile_for_verilog
+
+.build/kc705/fpga/mkEchoTop/mkEchoTop.xpr: 
+	build -v kc705 -f create_bspec_file -t prepare_project_files
+
+vivado: .build/kc705/fpga/mkEchoTop/mkEchoTop.xpr
+	. $(SETTINGS_SH); build -v kc705 -f vivado -t vivado
+
+program:
+	/scratch/jamey/bin/impact -batch impact.cmd
+
+clean:
+	rm -fr .build *.bo
