@@ -94,46 +94,31 @@ module mkEchoRequest#(EchoIndication indication)(EchoRequest);
      interface CoreRequest coreRequest; 
       method Action say1(Bit#(32) v);
    	 delay1.enq(v);
+	 $display("say1");
       endmethod
 
       method Action say2(Bit#(16) a, Bit#(16) b);
    	 delay2.enq(tuple2(a+1,b));
+	 $display("say2");
       endmethod
    
       method Action say3(S1 v);
    	 S1 rv = S1{a:v.a, b:v.b+1};
    	 delay3.enq(rv);
+	 $display("say3");
       endmethod
 
       method Action say4(S2 v);
    	 S2 rv = S2{a:v.a+2, b:v.b+1, c:v.c};
    	 delay4.enq(rv);
+	 $display("say4");
       endmethod
    
       method Action say5(Bit#(64) v);
    	 delay5.enq({v[63:4],4'h0});
+	 $display("say5");
       endmethod
 
    endinterface
 
-   //   interface CoreRequest coreRequest; 
-   //    method Action say1(Bit#(32) v);
-   // 	 delay1.enq(1);
-   //    endmethod
-   //    method Action say2(Bit#(16) a, Bit#(16) b);
-   // 	 delay2.enq(tuple2(2,3));
-   //    endmethod
-   //    method Action say3(S1 v);
-   // 	 S1 rv = S1{a:4, b:5};
-   // 	 delay3.enq(rv);
-   //    endmethod
-   //    method Action say4(S2 v);
-   // 	 S2 rv = S2{a:6, b:7, c:8};
-   // 	 delay4.enq(rv);
-   //    endmethod
-   //    method Action say5(Bit#(64) v);
-   // 	 delay5.enq(64'hDEADBEEFFECAFECA);
-   //    endmethod
-   // endinterface
-      
 endmodule

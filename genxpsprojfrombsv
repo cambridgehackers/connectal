@@ -78,11 +78,11 @@ $(vfile): sources/%(dut)s/%(Dut)sWrapper.bsv
 	cp -r ../xilinx/constraints .
 
 x86_exe:
-	cd jni; g++ *.cpp
+	cd jni; g++ *.cpp -pthread
 
 bsim: x86_exe
 	cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop BsimTop.bsv
-	cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim *.ba $(XBSVTOP)/cpp/BsimTop.cxx
+	export BSC_CXXFLAGS="-I$(XBSVTOP)/cpp" ; cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim *.ba $(XBSVTOP)/cpp/BsimTop.cxx
 
 verilog: $(vfile)
 

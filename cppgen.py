@@ -45,7 +45,7 @@ protected:
 #ifdef ZYNQ
     virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base);
 #else
-    virtual int handleMessage(unsigned int channel, int s, const char* id);
+    virtual int handleMessage(unsigned int channel, PortalInstance* instance);
 #endif
     friend class PortalInstance;
 };
@@ -57,7 +57,6 @@ creatorTemplate = '''
 {
     const char *instanceName = \"fpga%(portalNum)s\"; 
     %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indication);
-    instance->open();
     return instance;
 }
 '''
@@ -126,7 +125,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile uns
     return 0;
 }
 #else
-int %(namespace)s%(className)s::handleMessage(unsigned int channel, int s, const char* id)
+int %(namespace)s%(className)s::handleMessage(unsigned int channel, PortalInstance* instance)
 {    
     unsigned int buf[1024];
     memset(buf, 0, 1024);
@@ -137,11 +136,19 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, int s, const
     }
 
     for (int i = (msg->size()/4)-1; i >= 0; i--) {
+	unsigned int addr = instance->ind_fifo_base + (channel * 256);
+	struct memrequest foo = {false,addr,0};
+        //fprintf(stderr, "xxx %%08x\\n", addr);
+	if (send(instance->p.read.s2, &foo, sizeof(foo), 0) != sizeof(foo)) {
+	  fprintf(stderr, "(%%s) send error\\n", instance->instanceName);
+	  exit(1);
+	}
         unsigned int val;
-	if(recv(s, &val, sizeof(val), 0) == -1){
-	  fprintf(stderr, "(%%s) recv error\\n", id);
+	if(recv(instance->p.read.s2, &val, sizeof(val), 0) != sizeof(val)){
+	  fprintf(stderr, "(%%s) recv error\\n", instance->instanceName);
 	  exit(1);	  
 	}
+        //fprintf(stderr, "%%08x\\n", val);
         buf[i] = val;
     }
     msg->demarshall(buf);

@@ -34,6 +34,8 @@ exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'FmcImageonInterface']
 bsimTopTemplate='''
 import StmtFSM::*;
 import AxiMasterSlave::*;
+import FIFO::*;
+import SpecialFIFOs::*;
 import %(Base)sWrapper::*;
 
 
@@ -50,6 +52,7 @@ import "BDPI" function Action        readData(Bit#(32) d);
 
 module mkBsimTop();
     %(Base)sWrapper dut <- mk%(Base)sWrapper;
+    let wf <- mkPipelineFIFO;
     let init_seq = (action 
                         %(initBsimPortals)s
                     endaction);
@@ -57,19 +60,23 @@ module mkBsimTop();
     rule init_rule;
         init_fsm.start;
     endrule
-    rule rdReq (readReq);
+    rule wrReq (writeReq());
+        let wa <- writeAddr;
+        let wd <- writeData;
+        dut.ctrl.write.writeAddr(wa,0,0,0,0,0,0);
+        wf.enq(wd);
+    endrule
+    rule wrData;
+        wf.deq;
+        dut.ctrl.write.writeData(wf.first,0,0);
+    endrule
+    rule rdReq (readReq());
         let ra <- readAddr;
         dut.ctrl.read.readAddr(ra,0,0,0,0,0,0);
     endrule
     rule rdResp;
         let rd <- dut.ctrl.read.readData;
         readData(rd);
-    endrule
-    rule wrReq (writeReq);
-        let wa <- writeAddr;
-        let wd <- writeData;
-        dut.ctrl.write.writeAddr(wa,0,0,0,0,0,0);
-        dut.ctrl.write.writeData(wd,0,1);
     endrule
 endmodule
 '''
@@ -428,6 +435,7 @@ requestRuleTemplate='''
     rule handle$%(methodName)s$requestFailure;
         iw.putFailed(%(ord)s);
         %(methodName)s$requestFifo.deq;
+        $display("%(methodName)s$requestFailure");
     endrule
 '''
 

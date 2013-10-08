@@ -8,46 +8,46 @@
 #include <sys/un.h>
 #include <pthread.h>
 #include <assert.h>
-
-static int s1[16];
-static int s2[16];
-static struct sockaddr_un local[16];
-static bool connected[16] = {false,false,false,false,false,false,false,false,
-			 false,false,false,false,false,false,false,false};
+#include <portal.h>
 
 
-struct memrequest{
-  bool write;
-  unsigned int addr;
-  unsigned int data;
-};
+static struct portal iport = {{0,0,{},false},
+			      {0,0,{},false}};
+
+
+static struct portal portals[16] = {iport,iport,iport,iport,iport,iport,
+				    iport,iport,iport,iport,iport,iport,
+				    iport,iport,iport,iport};
 
 struct queuestatus{
   struct memrequest req;
-  unsigned int portal;
+  unsigned int pnum;
   bool valid;
   bool inflight;
 };
 
-static struct queuestatus head = 
-  { 
-    {false,0,0},
-    0,
-    false,
-    false,
-  };
+static struct queuestatus  read_head = {{},0,false,false,};
+static struct queuestatus write_head = {{},0,false,false,};
 
-
-static void recv_request(void)
+static void recv_request(bool rr)
 {
-  if (!head.valid){
+  struct queuestatus* head = rr ? &read_head : &write_head;
+  if (!head->valid && !head->inflight){
     for(int i = 0; i < 16; i++){
-      if(connected[i]){
-	if(recv(s2[i], &head.req, sizeof(memrequest), MSG_DONTWAIT)){
-	  head.portal = i;
-	  head.valid = true;
-	  head.inflight = false;
-	  head.req.addr |= i << 16;
+      struct channel* chan = rr ? &(portals[i].read) : & (portals[i].write);
+      if(chan->connected){
+	int rv = recv(chan->s2, &(head->req), sizeof(memrequest), MSG_DONTWAIT);
+	if(rv > 0){
+	  //fprintf(stderr, "recv size %d\n", rv);
+	  assert(rv == sizeof(memrequest));
+	  head->pnum = i;
+	  head->valid = true;
+	  head->inflight = rr ? false : true;
+	  head->req.addr |= i << 16;
+	  if(0)
+	  fprintf(stderr, "recv_request(i=%d,rr=%d) {%d,%08x, %08x}\n", 
+		  i, rr, head->req.write, head->req.addr, head->req.data);
+	  break;
 	}
       }
     }
@@ -56,47 +56,54 @@ static void recv_request(void)
 
 static void* init_socket(void* _xx)
 {
-  int id = (int)_xx;
+  int msg = (int)_xx;
+  int id  = msg & 0x7FFFFFFF;
+  int rr  = msg & 0x80000000;
   assert(id < 16);
-  char str[100];
 
-  printf("(%d) init_socket\n",id);
-  if ((s1[id] = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "(%d) socket error", id);
+  char str[100];
+  struct channel* c = rr ? &(portals[id].read) : &(portals[id].write); 
+
+  printf("(%08x) init_socket\n",msg);
+  if ((c->s1 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    fprintf(stderr, "(%08x) socket error", msg);
     exit(1);
   }
   
-  sprintf(str,"/tmp/fpga%d", id);
-  local[id].sun_family = AF_UNIX;
-  strcpy(local[id].sun_path, str);
-  unlink(local[id].sun_path);
-  int len = strlen(local[id].sun_path) + sizeof(local[id].sun_family);
-  if (bind(s1[id], (struct sockaddr *)&local[id], len) == -1) {
-    fprintf(stderr, "(%d) bind error", id);
+  sprintf(str,"/tmp/fpga%d%s", id, rr ? "_rc" : "_wc");
+  c->local.sun_family = AF_UNIX;
+  strcpy(c->local.sun_path, str);
+  unlink(c->local.sun_path);
+  int len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
+  if (bind(c->s1, (struct sockaddr *)&c->local, len) == -1) {
+    fprintf(stderr, "(%08x) bind error", msg);
     exit(1);
   }
   
-  if (listen(s1[id], 5) == -1) {
-    fprintf(stderr, "(%d) listen error", id);
+  if (listen(c->s1, 5) == -1) {
+    fprintf(stderr, "(%08x) listen error", msg);
     exit(1);
   }
   
-  printf("(%d) waiting for a connection...\n", id);
-  if ((s2[id] = accept(s1[id], NULL, NULL)) == -1) {
-    fprintf(stderr, "(%d) accept error", id);
+  fprintf(stderr, "(%08x) waiting for a connection...\n", msg);
+  if ((c->s2 = accept(c->s1, NULL, NULL)) == -1) {
+    fprintf(stderr, "(%08x) accept error", msg);
     exit(1);
   }
   
-  printf("(%d) connected\n",id);
-  connected[id] = true;
+  fprintf(stderr, "(%08x) connected\n",msg);
+  c->connected = true;
   return _xx;
 }
 
 
 extern "C" {
-
   void initPortal(int id){
     pthread_t tid;
+    if(pthread_create(&tid, NULL,  init_socket, (void*)(id|0x80000000))){
+      fprintf(stderr, "error creating init thread\n");
+      exit(1);
+    }
     if(pthread_create(&tid, NULL,  init_socket, (void*)id)){
       fprintf(stderr, "error creating init thread\n");
       exit(1);
@@ -104,35 +111,39 @@ extern "C" {
   }
 
   bool writeReq(){
-    recv_request();
-    return (head.req.write && head.valid && !head.inflight);
+    recv_request(false);
+    return (write_head.req.write && write_head.valid && write_head.inflight);
   }
   
   unsigned int writeAddr(){
-    return head.req.addr;
+    //fprintf(stderr, "writeAddr()\n");
+    write_head.inflight = false;
+    return write_head.req.addr;
   }
   
   unsigned int writeData(){
-    head.valid = false;
-    head.inflight = false;
-    return head.req.data;
+    //fprintf(stderr, "writeData()\n");
+    write_head.valid = false;
+    return write_head.req.data;
   }
   
   bool readReq(){
-    recv_request();
-    return (!head.req.write && head.valid && !head.inflight);
+    recv_request(true);
+    return (!read_head.req.write && read_head.valid && !read_head.inflight);
   }
   
   unsigned int readAddr(){
-    head.inflight = true;
-    return head.req.addr;
+    //fprintf(stderr, "readAddr()\n");
+    read_head.inflight = true;
+    return read_head.req.addr;
   }
   
   void readData(unsigned int x){
-    head.valid = false;
-    head.inflight = false;
-    if(send(s2[head.portal], &x, sizeof(x), 0) < 0){
-      fprintf(stderr, "(%d) send failure", head.portal);
+    //fprintf(stderr, "readData()\n");
+    read_head.valid = false;
+    read_head.inflight = false;
+    if(send(portals[read_head.pnum].read.s2, &x, sizeof(x), 0) == -1){
+      fprintf(stderr, "(%d) send failure", read_head.pnum);
       exit(1);
     }
   }

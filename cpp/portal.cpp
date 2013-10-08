@@ -35,6 +35,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <semaphore.h>
+#include <assert.h>
 
 #ifdef ZYNQ
 #include <android/log.h>
@@ -50,11 +52,6 @@
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL", fmt, __VA_ARGS__)
 #endif
 
-struct memrequest{
-  bool write;
-  unsigned int addr;
-  unsigned int data;
-};
 
 PortalInstance **portal_instances = 0;
 struct pollfd *portal_fds = 0;
@@ -73,8 +70,12 @@ PortalInstance::PortalInstance(const char *instanceName, PortalIndication *indic
     ind_fifo_base(NULL),
     req_reg_base(NULL),
     req_fifo_base(NULL),
-    indication(indication), fd(-1), s(-1), instanceName(strdup(instanceName))
+    indication(indication), fd(-1), instanceName(strdup(instanceName))
 {
+  int rc = open();
+  if (rc != 0) {
+    ALOGD("PortalInstance::PortalInstance failure rc=%d\n", rc);
+  }
 }
 
 PortalInstance::~PortalInstance()
@@ -85,12 +86,34 @@ PortalInstance::~PortalInstance()
   unregisterInstance(this);
 }
 
+
+static void init_socket(channel *c, const char* path)
+{
+  int len;
+  if ((c->s2 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    fprintf(stderr, "(%s) socket error", path);
+    exit(1);
+  }
+  
+  printf("(%s) trying to connect...\n", path);
+  
+  c->local.sun_family = AF_UNIX;
+  strcpy(c->local.sun_path, path);
+  len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
+  if (connect(c->s2, (struct sockaddr *)&(c->local), len) == -1) {
+    fprintf(stderr,"(%s) connect error", path);
+    exit(1); 
+  }
+  // int sockbuffsz = sizeof(memrequest);
+  // setsockopt(c->s2, SOL_SOCKET, SO_SNDBUF, &sockbuffsz, sizeof(sockbuffsz));
+  // sockbuffsz = sizeof(unsigned int);
+  // setsockopt(c->s2, SOL_SOCKET, SO_RCVBUF, &sockbuffsz, sizeof(sockbuffsz));
+  fprintf(stderr, "(%s) connected\n", path);
+}
+
 int PortalInstance::open()
 {
 #ifdef ZYNQ
-    if (this->fd >= 0)
-	return 0;
-
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
     if (pgfile == 0) {
 	ALOGE("failed to open /sys/devices/amba.0/f8007000.devcfg/prog_done %d\n", errno);
@@ -124,46 +147,24 @@ int PortalInstance::open()
     registerInstance(this);
     return 0;
 #else
-    if(this->s >= 0)
-      return 0;
-
-    int len;
-
-    if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-      fprintf(stderr, "(%s) socket error", instanceName);
-      exit(1);
-    }
-
-    printf("(%s) trying to connect...\n", instanceName);
-
-    remote.sun_family = AF_UNIX;
-    strcpy(remote.sun_path, instanceName);
-    len = strlen(remote.sun_path) + sizeof(remote.sun_family);
-    if (connect(s, (struct sockaddr *)&remote, len) == -1) {
-      fprintf(stderr,"(%s) connect error", instanceName);
-      exit(1);
-    }
-    
-    fprintf(stderr, "(%s) connected\n", instanceName);
+    char path[128];
+    snprintf(path, sizeof(path), "/tmp/%s_rc", instanceName);
+    init_socket(&(p.read),path);
+    snprintf(path, sizeof(path), "/tmp/%s_wc", instanceName);
+    init_socket(&(p.write),path);
 
     unsigned long dev_base = 0;
     ind_reg_base   = dev_base+(3<<14);
     ind_fifo_base  = dev_base+(2<<14);
     req_reg_base   = dev_base+(1<<14);
     req_fifo_base  = dev_base+(0<<14);
+    registerInstance(this);
     return 0;
 #endif
 }
 
-
 int PortalInstance::sendMessage(PortalMessage *msg)
 {
-  int rc = open();
-  if (rc != 0) {
-    ALOGD("PortalInstance::sendMessage failure fd=%d rc=%d\n", fd, rc);
-    return rc;
-  }
-
   unsigned int buf[128];
   msg->marshall(buf);
 
@@ -179,25 +180,19 @@ int PortalInstance::sendMessage(PortalMessage *msg)
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
     struct memrequest foo = {true,addr,data};
-    if (send(s, &foo, sizeof(foo), 0) == -1) {
+    if (send(p.write.s2, &foo, sizeof(foo), 0) == -1) {
       fprintf(stderr, "(%s) send error\n", instanceName);
       exit(1);
     }
+    //fprintf(stderr, "(%s) sendMessage\n", instanceName);
 #endif
   }
-  
-  return rc;
+  return 0;
 }
 
 #ifdef ZYNQ
 int PortalInstance::receiveMessage(unsigned int queue_status)
 {
-    int rc = open();
-    if (rc != 0) {
-	ALOGD("PortalInstance::receiveMessage fd=%d rc=%d\n", fd, rc);
-	return 0;
-    }
-
     int status = -1;
     for(int i = 0; i < 32; i++){
       if(queue_status & 1<<i){
@@ -353,15 +348,30 @@ void* portalExec(void* __x)
     fprintf(stderr, "poll returned rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return (void*)rc;
 #else
+    fprintf(stderr, "about to enter while(true)\n");
     while (true){
+      sleep(0);
       for(int i = 0; i < numFds; i++){
 	PortalInstance *instance = portal_instances[i];
-	unsigned int channel;
-	if(recv(instance->s, &channel, sizeof(channel), 0) == -1){
+	unsigned int addr = instance->ind_reg_base+0x20;
+	struct memrequest foo = {false,addr,0};
+	//fprintf(stderr, "sending read request\n");
+	if (send(instance->p.read.s2, &foo, sizeof(foo), 0) == -1) {
+	  fprintf(stderr, "(%s) send error\n", instance->instanceName);
+	  exit(1);
+	}
+	unsigned int queue_status;
+	//fprintf(stderr, "about to get read response\n");
+	if(recv(instance->p.read.s2, &queue_status, sizeof(queue_status), 0) == -1){
 	  fprintf(stderr, "(%s) recv error\n", instance->instanceName);
 	  exit(1);	  
 	}
-	instance->indication->handleMessage(channel, instance->s, instance->instanceName);
+	//fprintf(stderr, "(%s) queue_status : %08x\n", instance->instanceName, queue_status);
+	for(int j = 0; j < 32; j++){
+	  if(queue_status & 1<<j){
+	    instance->indication->handleMessage(j, instance);
+	  }
+	}
       }
     }
 #endif

@@ -1,4 +1,5 @@
 
+#include <semaphore.h>
 #include <sys/types.h>
 #include <linux/ioctl.h>
 #include <sys/ioctl.h>
@@ -11,8 +12,6 @@
 #define PORTAL_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalAlloc)
 #define PORTAL_SET_FCLK_RATE _IOWR('B', 40, PortalClockRequest)
 
-class PortalInterface;
-
 typedef struct PortalAlloc {
         size_t size;
         int fd;
@@ -22,6 +21,24 @@ typedef struct PortalAlloc {
         } entries[64];
         int numEntries;
 } PortalAlloc;
+
+struct channel{
+  int s1;
+  int s2;
+  struct sockaddr_un local;
+  bool connected;
+};
+
+struct portal{
+  struct channel read;
+  struct channel write;
+};
+
+struct memrequest{
+  bool write;
+  unsigned int addr;
+  unsigned int data;
+};
 
 class PortalMessage {
  public:
@@ -36,6 +53,8 @@ class PortalMessage {
   virtual void indicate(void* ind) = 0;
 }; 
 
+class PortalInstance;
+
 typedef struct PortalClockRequest {
     int clknum;
     long requested_rate;
@@ -47,7 +66,7 @@ class PortalIndication {
 #ifdef ZYNQ
   virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base) {};
 #else
-  virtual int handleMessage(unsigned int channel, int s, const char* id) {};
+  virtual int handleMessage(unsigned int channel, PortalInstance* instance) {};
 #endif
   virtual ~PortalIndication() {};
 };
@@ -62,10 +81,9 @@ protected:
     PortalInstance(const char *instanceName, PortalIndication *indication=0);
     ~PortalInstance();
     int open();
-private:
+ public:
     int fd;
-    int s;
-    struct sockaddr_un remote;
+    struct portal p;
 #ifdef ZYNQ
     volatile unsigned int *ind_reg_base;
     volatile unsigned int *ind_fifo_base;
