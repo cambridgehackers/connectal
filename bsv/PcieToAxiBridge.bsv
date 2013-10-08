@@ -153,10 +153,10 @@ module mkTLPDispatcher(TLPDispatcher);
             end
          end
          else if (is_axi_read || is_axi_write) begin
-            // send to axi interface if it will accept
-            if (tlp_in_axi_fifo.notFull()) begin
+            // send to portal interface if it will accept
+            if (tlp_in_portal_fifo.notFull()) begin
                tlp_in_fifo.deq();
-               tlp_in_axi_fifo.enq(tlp);
+               tlp_in_portal_fifo.enq(tlp);
                if (!tlp.eof)
                   route_to_portal <= True;
             end
@@ -201,10 +201,10 @@ module mkTLPDispatcher(TLPDispatcher);
             end
          end
          else if (route_to_portal) begin
-            // send to config interface if it will accept
-            if (tlp_in_axi_fifo.notFull()) begin
+            // send to portal interface if it will accept
+            if (tlp_in_portal_fifo.notFull()) begin
                tlp_in_fifo.deq();
-               tlp_in_axi_fifo.enq(tlp);
+               tlp_in_portal_fifo.enq(tlp);
                if (tlp.eof)
                   route_to_portal <= False;
             end
