@@ -8,6 +8,8 @@
 #include <libgen.h>
 #include <dirent.h>
 #include <time.h>
+#include <sys/mman.h>
+#include <errno.h>
 
 #include "../drivers/bluenoc.h"
 
@@ -29,6 +31,7 @@ static void print_usage(const char* argv0)
   printf("       %s trace  \n", pgm);
   printf("       %s notrace  \n", pgm);
   printf("       %s seqno  \n", pgm);
+  printf("       %s mmap  \n", pgm);
   printf("\n");
   printf("Modes:\n");
   printf("  help    - Print usage information and exit.\n");
@@ -73,7 +76,7 @@ static void print_usage(const char* argv0)
   free(argv0_copy);
 }
 
-typedef enum { HELP, INFO, BUILD, RESET, DOWN, UP, DEBUG, PROFILE, PORTAL, TLP, TRACE, NOTRACE, SEQNO } tMode;
+typedef enum { HELP, INFO, BUILD, RESET, DOWN, UP, DEBUG, PROFILE, PORTAL, TLP, TRACE, NOTRACE, SEQNO, MMAP } tMode;
 
 static int is_bluenoc_file(const struct dirent* ent)
 {
@@ -304,6 +307,14 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
     int res = ioctl(fd,BNOC_SEQNO,&seqno);
     printf("old seqno=%d\n", seqno);
   } break;
+  case MMAP: {
+    int *portal = (int *)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+    if ((void*)-1 == portal) {
+      printf("failed to map portal %d:%s\n", errno, strerror(errno));
+    }
+    printf("mmap portal=%p\n", portal);
+    printf("%x %x\n", portal[0], portal[1]);
+  } break;
   }
 
  exit_process:
@@ -449,6 +460,9 @@ int main(int argc, char* const argv[])
     optind += 1;
   } else if (strcmp("seqno",argv[optind]) == 0) {
     mode = SEQNO;
+    optind += 1;
+  } else if (strcmp("mmap",argv[optind]) == 0) {
+    mode = MMAP;
     optind += 1;
   } else {
     /* not a recognized mode, assume it is a file name, and use INFO mode */
