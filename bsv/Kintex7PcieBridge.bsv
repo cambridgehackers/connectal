@@ -12,11 +12,17 @@ import Clocks               :: *;
 import Connectable          :: *;
 import TieOff               :: *;
 import DefaultValue         :: *;
+import BUtils               :: *;
+import Xilinx               :: *;
 import XilinxPCIE           :: *;
 import XilinxCells          :: *;
+import GetPut               :: *;
+import ClientServer         :: *;
+import Memory               :: *;
 import BlueNoC              :: *;
 import PcieToAxiBridge      :: *;
 import QrcXilinxKintex7Pcie :: *;
+import XilinxKintex7DDR3    :: *;
 import AxiMasterSlave       :: *;
 // from SceMiDefines
 typedef 4 BPB;
@@ -26,20 +32,22 @@ interface K7PcieBridgeIfc#(numeric type lanes);
    interface PCIE_EXP#(lanes) pcie;
    (* always_ready *)
    method Bool isLinkUp();
+   method Bool isCalibrated();
    interface Clock clock250;
    interface Reset reset250;
    interface Clock clock125;
    interface Reset reset125;
+   (* prefix = "" *)
+   interface DDR3_Pins_K7      ddr3;
    interface Axi3Master#(32,32,4,SizeOf#(TLPTag)) portal0;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
-module mkK7PcieBridge#( Clock pci_sys_clk_p
-		       , Clock pci_sys_clk_n
+module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
+		       , Clock sys_clk_p,    Clock sys_clk_n
 		       , Reset pci_sys_reset
-		       , Clock ref_clk
                        , Bit#(64) contentId
 		       )
 		       (K7PcieBridgeIfc#(lanes))
@@ -48,6 +56,32 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p
    if (valueOf(lanes) != 8)
       errorM("Only 8-lane PCIe is supported on K7.");
 
+   Clock sys_clk <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
+
+   ClockGenerator7Params clk_params = defaultValue();
+   clk_params.clkin1_period     = 5.000;       // 200 MHz reference
+   clk_params.clkin_buffer      = False;       // necessary buffer is instanced above
+   clk_params.reset_stages      = 0;           // no sync on reset so input clock has pll as only load
+   clk_params.clkfbout_mult_f   = 5.000;       // 1000 MHz VCO
+   clk_params.clkout0_divide_f  = `SCEMI_CLOCK_PERIOD;
+   clk_params.clkout1_divide    = 5;           // ddr3 reference clock (200 MHz)
+
+   ClockGenerator7 clk_gen <- mkClockGenerator7(clk_params, clocked_by sys_clk, reset_by pci_sys_reset);
+
+   Clock clk = clk_gen.clkout0;
+   Reset rst_n <- mkAsyncReset( 1, pci_sys_reset, clk );
+   Reset ddr3ref_rst_n <- mkAsyncReset( 1, rst_n, clk_gen.clkout1 );
+   
+   DDR3_Configure_K7 ddr3_cfg;
+   ddr3_cfg.num_reads_in_flight = 2;   // adjust as needed
+   ddr3_cfg.fast_train_sim_only = False; // adjust if simulating
+   
+   DDR3_Controller_K7 ddr3_ctrl <- mkKintex7DDR3Controller(ddr3_cfg, clocked_by clk_gen.clkout1, reset_by ddr3ref_rst_n);
+
+   // ddr3_ctrl.user needs to connect to user logic and should use ddr3clk and ddr3rstn
+   Clock ddr3clk = ddr3_ctrl.user.clock;
+   Reset ddr3rstn = ddr3_ctrl.user.reset_n;
+   
    // Buffer clocks and reset before they are used
    Clock sys_clk_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
 
@@ -147,7 +181,18 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p
    //mkConnection(_dut.noc_src,bridge.noc);
    mkTieOff(bridge.noc);
 
+   SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, clk, rst_n, ddr3clk);
+   SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, clk);
+
+   let memclient = interface Client;
+		      interface request  = toGet(fMemReq);
+		      interface response = toPut(fMemResp);
+		   endinterface;
+			 
+   mkConnection( memclient, ddr3_ctrl.user, clocked_by ddr3clk, reset_by ddr3rstn );
+
    interface pcie     = _ep.pcie;
+   interface ddr3     = ddr3_ctrl.ddr3;
    interface portal0  = bridge.portal0;
    interface clock250 = epClock250;
    interface reset250 = epReset250;
@@ -155,7 +200,33 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p
    interface reset125 = epReset125;
 
    method Bool isLinkUp         = link_is_up;
+   method Bool isCalibrated     = ddr3_ctrl.user.init_done;
+   
    
 endmodule: mkK7PcieBridge
+
+instance Connectable#(MemoryClient#(32, 256), DDR3_User_K7);
+   module mkConnection#(MemoryClient#(32, 256) client, DDR3_User_K7 ddr3)(Empty);
+      rule connect_requests;
+	 let request <- client.request.get;
+	 Bit#(28) address = truncate(request.address) << 2;
+	 Bool     addrhi  = unpack(request.address[0]);
+	 Bit#(64) writeen = addrhi ? zeroExtend(request.byteen) << 32 : zeroExtend(request.byteen);
+	 Bit#(512) datain = duplicate(request.data);
+	 if (request.write) begin
+	    ddr3.request(address, writeen, datain);
+	 end
+	 else begin
+	    ddr3.request(address, 0, ?);
+	 end
+      endrule
+      
+      rule connect_responses;
+	 let response <- ddr3.read_data;
+	 Bit#(256) data = truncate(response);
+	 client.response.put(unpack(data));
+      endrule
+   endmodule
+endinstance
 
 endpackage: Kintex7PcieBridge
