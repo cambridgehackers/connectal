@@ -77,7 +77,6 @@ public:
     void close();
 protected:
     PortalIndication *indication;
-    int receiveMessage(unsigned int queue_status);
     PortalInstance(const char *instanceName, PortalIndication *indication=0);
     ~PortalInstance();
     int open();

@@ -138,12 +138,12 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
     Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
     Vector#(%(indicationChannelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
-    Vector#(%(indicationChannelCount)s, PulseWire) readOutstanding <- replicateM(mkPulseWire);
+    FIFOF#(Bit#(32)) readOutstanding <- mkSizedFIFOF(8);
     
     function Bool my_or(Bool a, Bool b) = a || b;
     function Bool read_wire (PulseWire a) = a._read;    
     Reg#(Bool) interruptEnableReg <- mkReg(False);
-    let       interruptStatus = fold(my_or, map(read_wire, readOutstanding));
+    let       interruptStatus = readOutstanding.notEmpty;
     function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
     function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
 
@@ -212,16 +212,17 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
 	    v = getWordCount;
         if (addr == 14'h01C)
 	    v = outOfRangeReadCountReg;
-        if (addr >= 14'h020 && addr <= (14'h024 + %(indicationChannelCount)s/4))
+        if (addr == 14'h020)
 	begin
-	    v = 0;
-	    Bit#(7) baseQueueNumber = addr[9:3] << 5;
-	    for (Bit#(7) i = 0; i <= baseQueueNumber+31 && i < %(indicationChannelCount)s; i = i + 1)
-	    begin
-		Bit#(5) bitPos = truncate(i - baseQueueNumber);
-		// drive value based on which HW->SW FIFOs have pending messages
-		v[bitPos] = readOutstanding[i] ? 1'd1 : 1'd0; 
-	    end
+            if (readOutstanding.notEmpty)
+            begin
+                readOutstanding.deq;
+	        v = readOutstanding.first+1;
+            end
+            else
+            begin
+                v = 0;
+            end
 	end
         axiSlaveReadDataFifo.enq(v);
     endrule
@@ -447,9 +448,6 @@ indicationRuleTemplate='''
         %(methodName)s$responseFifo.deq;
         axiSlaveReadDataFifo.enq(%(methodName)s$responseFifo.first);
     endrule
-    rule %(methodName)s$axiSlaveReadOutstanding if (%(methodName)s$responseFifo.notEmpty);
-        readOutstanding[%(channelNumber)s].send();
-    endrule
 '''
 
 indicationMethodDeclTemplate='''
@@ -459,6 +457,7 @@ indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
         %(methodName)s$responseFifo.enq(%(MethodName)s$Response {%(structElements)s});
         responseFiredWires[%(channelNumber)s].send();
+        readOutstanding.enq(zeroExtend(%(methodName)s$Offset));
     endmethod'''
 
 

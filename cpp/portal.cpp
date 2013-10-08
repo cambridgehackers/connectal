@@ -190,27 +190,6 @@ int PortalInstance::sendMessage(PortalMessage *msg)
   return 0;
 }
 
-#ifdef ZYNQ
-int PortalInstance::receiveMessage(unsigned int queue_status)
-{
-    int status = -1;
-    for(int i = 0; i < 32; i++){
-      if(queue_status & 1<<i){
-	status  = indication->handleMessage(i,ind_fifo_base);
-	break;
-      }
-    }
-
-    if (status) {
-        if (errno != EAGAIN)
-            fprintf(stderr, "receiveMessage rc=%d errno=%d:%s\n", status, errno, strerror(errno));
-        return 0;
-    }
-    return 1;
-}
-#endif
-
-
 int PortalInstance::unregisterInstance(PortalInstance *instance)
 {
   int i = 0;
@@ -332,7 +311,7 @@ void* portalExec(void* __x)
 
 	// handle all messasges from this portal instance
 	while (queue_status) {
-	  instance->receiveMessage(queue_status);
+	  instance->indication->handleMessage(queue_status-1, instance->ind_fifo_base);
 	  queue_status = *(instance->ind_reg_base+0x8);
 	}
 	
@@ -367,10 +346,8 @@ void* portalExec(void* __x)
 	  exit(1);	  
 	}
 	//fprintf(stderr, "(%s) queue_status : %08x\n", instance->instanceName, queue_status);
-	for(int j = 0; j < 32; j++){
-	  if(queue_status & 1<<j){
-	    instance->indication->handleMessage(j, instance);
-	  }
+	if (queue_status){
+	  instance->indication->handleMessage(queue_status-1, instance);	
 	}
       }
     }
