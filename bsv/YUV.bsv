@@ -35,7 +35,7 @@ typedef struct {
     Bit#(8) r;
     Bit#(8) g;
     Bit#(8) b;
-} Rgb888VideoData;
+} Rgb888VideoData deriving (Bits);
 
 typedef struct {
     Bit#(8) y;
