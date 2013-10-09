@@ -87,7 +87,7 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
       dma_stream_read_chan.readReq.put(?);
       indication.coreIndication.readReq(streamRdCnt);
       let x = dma.write.dbg;
-      indication.coreIndication.reportDmaDbg(x.x, x.y, x.z, x.w);
+      //indication.coreIndication.reportDmaDbg(x.x, x.y, x.z, x.w);
    endrule
 
    rule writeReq(streamWrCnt > 0 && !writeInProg);
@@ -100,7 +100,7 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
       writeInProg <= False;
       dma_stream_write_chan.writeDone.get;
       streamWrCnt <= streamWrCnt-16;
-      indication.coreIndication.writeAck(streamWrCnt);
+      //indication.coreIndication.writeAck(streamWrCnt);
       if(streamWrCnt==16)
    	 indication.coreIndication.done(dataMismatch ? 32'd1 : 32'd0);
    endrule
