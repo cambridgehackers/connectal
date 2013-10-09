@@ -74,7 +74,9 @@ PortalInstance::PortalInstance(const char *instanceName, PortalIndication *indic
 {
   int rc = open();
   if (rc != 0) {
+printf("[%s:%d] failed to open PortalInstance %s\n", __FUNCTION__, __LINE__, instanceName);
     ALOGD("PortalInstance::PortalInstance failure rc=%d\n", rc);
+    exit(1);
   }
 }
 
