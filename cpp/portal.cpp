@@ -117,14 +117,20 @@ int PortalInstance::open()
 {
 #ifdef ZYNQ
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
+    if (!pgfile) {
+        // 3.9 kernel uses amba.2
+        pgfile = fopen("/sys/devices/amba.2/f8007000.devcfg/prog_done", "r");
+    }
     if (pgfile == 0) {
-	ALOGE("failed to open /sys/devices/amba.0/f8007000.devcfg/prog_done %d\n", errno);
+	ALOGE("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
+	printf("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
 	return -1;
     }
     char line[128];
     fgets(line, sizeof(line), pgfile);
     if (line[0] != '1') {
 	ALOGE("FPGA not programmed: %s\n", line);
+	printf("FPGA not programmed: %s\n", line);
 	return -ENODEV;
     }
     fclose(pgfile);
