@@ -82,6 +82,7 @@ interface ImageonSyncGen;
 endinterface
 
 typedef struct {
+    Bit#(1) fsync;
     Bit#(1) vsync;
     Bit#(1) hsync;
     Bit#(1) active_video;
@@ -207,8 +208,6 @@ module mkImageonVitaController(ImageonVitaController);
     Wire#(Bit#(1)) decoder_frame_start_wire <- mkDWire(0);
     Wire#(Bit#(10)) decoder_video_data_wire <- mkDWire(0);
 
-    Reg#(Bit#(3)) remapper_write_cfg_reg <- mkReg(0);
-    Reg#(Bit#(3)) remapper_mode_reg <- mkReg(0);
     Reg#(Bit#(3)) trigger_enable_reg <- mkReg(0);
     Reg#(Bit#(32)) trigger_default_freq_reg <- mkReg(0);
     Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkReg(0);
@@ -222,13 +221,11 @@ module mkImageonVitaController(ImageonVitaController);
     Reg#(Bit#(16)) syncgen_vfporch_reg <- mkReg(0);
     Reg#(Bit#(16)) syncgen_vsync_reg <- mkReg(0);
     Reg#(Bit#(16)) syncgen_vbporch_reg <- mkReg(0);
-    Reg#(Bit#(32)) vsync_reg <- mkReg(0);
-    Reg#(Bit#(32)) hsync_reg <- mkReg(0);
-    Reg#(Bit#(32)) active_reg <- mkReg(0);
     Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_vsync_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_hsync_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
+    Wire#(Bit#(1))  xsvi_fsync_wire <- mkDWire(0);
     Reg#(Bit#(32)) debugreq_value <- mkReg(0);
     Reg#(Bit#(32)) debugind_value <- mkReg(0);
 
@@ -240,6 +237,7 @@ module mkImageonVitaController(ImageonVitaController);
 	    return host_oe_reg;
 	endmethod
 	method Action fsync(Bit#(1) sync);
+	    xsvi_fsync_wire <= sync;
 	endmethod
 	interface ImageonSpi spi;
 	    method Bit#(1) reset();
@@ -380,18 +378,12 @@ module mkImageonVitaController(ImageonVitaController);
 	interface ImageonXsvi xsvi;
 	    method Action vsync(Bit#(1) v);
 	        xsvi_vsync_wire <= v;
-	        if (v == 1)
-	            vsync_reg <= vsync_reg + 1;
 	    endmethod
 	    method Action hsync(Bit#(1) v);
 	        xsvi_hsync_wire <= v;
-	        if (v == 1)
-	            hsync_reg <= hsync_reg + 1;
 	    endmethod
 	    method Action active_video(Bit#(1) v);
 	        xsvi_active_video_wire <= v;
-	        if (v == 1)
-	            active_reg <= active_reg + 1;
 	    endmethod
 	    method Action video_data(Bit#(10) v);
 	        xsvi_video_data_wire <= v;
@@ -604,6 +596,7 @@ module mkImageonVitaController(ImageonVitaController);
 	endmethod
 	method XsviData xsviData();
 	    return XsviData {
+	        fsync: xsvi_fsync_wire,
 	        vsync: xsvi_vsync_wire,
 		hsync: xsvi_hsync_wire,
 		active_video: xsvi_active_video_wire,
