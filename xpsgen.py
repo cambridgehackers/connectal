@@ -1032,12 +1032,9 @@ class ImageonVita:
      wire [15:0] imageon_host_syncgen_vfporch;
      wire [15:0] imageon_host_syncgen_vsync;
      wire [15:0] imageon_host_syncgen_vbporch;
-     /* XSVI Port */
-     wire imageon_xsvi_fsync;
-     wire imageon_xsvi_vsync;
-     wire imageon_xsvi_hsync;
-     wire imageon_xsvi_active_video;
-     wire [9:0] imageon_xsvi_video_data;
+     /* Sensor Port */
+     wire imageon_sensor_fsync;
+     wire [39:0] imageon_sensor_video_data;
 
      /* IIC */
      wire fmc_imageon_iic_0_scl_T;
@@ -1046,6 +1043,10 @@ class ImageonVita:
      wire fmc_imageon_iic_0_sda_T;
      wire fmc_imageon_iic_0_sda_O;
      wire fmc_imageon_iic_0_sda_I;
+     wire imageon_xsvi_fsync;
+     wire RDY_imageon_xsvi_fsync;
+     wire [39:0] imageon_xsvi_video_data;
+     wire RDY_imageon_xsvi_video_data;
      wire [31:0] debugreq_value;
      wire [31:0] debugind_value;
 '''
@@ -1134,11 +1135,12 @@ class ImageonVita:
     .imageon_syncgen_vfporch(imageon_host_syncgen_vfporch),
     .imageon_syncgen_vsync(imageon_host_syncgen_vsync),
     .imageon_syncgen_vbporch(imageon_host_syncgen_vbporch),
-    .xsvi_fsync_v(imageon_xsvi_fsync),
-    .xsvi_vsync_v(imageon_xsvi_vsync),
-    .xsvi_hsync_v(imageon_xsvi_hsync),
-    .xsvi_active_video_v(imageon_xsvi_active_video),
-    .xsvi_video_data_v(imageon_xsvi_video_data),
+
+    .sensor_data_framestart_v(imageon_xsvi_fsync),
+    .RDY_sensor_data_framestart(RDY_imageon_xsvi_fsync),
+    .sensor_data_video_data_v(imageon_xsvi_video_data),
+    .RDY_sensor_data_video_data(RDY_imageon_xsvi_video_data),
+
     .imageon_get_debugreq(debugreq_value),
     .imageon_set_debugind_v(debugind_value),
 '''
@@ -1148,6 +1150,8 @@ class ImageonVita:
    wire imageon_clk4x_unbuf;
    wire imageon_clk4_unbuf;
    wire fmc_imageon_video_clk1_buf;
+   assign RDY_imageon_xsvi_video_data = 1;
+   assign RDY_imageon_xsvi_fsync = 1;
 
     IBUFG ibufg_video_clk1 (
         .I(fmc_imageon_video_clk1),
@@ -1352,11 +1356,8 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_data_n(io_vita_data_n),
 .debreq(debugreq_value),
 .debind(debugind_value),
-    .fsync(imageon_xsvi_fsync),
     /* XSVI Port */
-    .xsvi_vsync_o(imageon_xsvi_vsync),
-    .xsvi_hsync_o(imageon_xsvi_hsync),
-    .xsvi_active_video_o(imageon_xsvi_active_video),
+    .fsync(imageon_xsvi_fsync),
     .xsvi_video_data_o(imageon_xsvi_video_data)
 );
  '''

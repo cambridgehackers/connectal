@@ -103,7 +103,7 @@ interface ImageCaptureRequest;
    interface CoreRequest coreRequest;
    //interface BlueScopeRequest bsRequest;
    interface ImageonVita imageon;
-   interface ImageonXsvi xsvi;
+   interface ImageonSensorData sensor_data;
    interface HDMI hdmi;
 endinterface
  
@@ -116,7 +116,7 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
 
     ImageonVitaController imageonVita <- mkImageonVitaController();
     ImageonControl control = imageonVita.control;
-    ImageonXsviInput xsviInput <- mkImageonXsviInput(clocked_by hdmi_clock, reset_by hdmi_reset);
+    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(hdmi_clock, hdmi_reset);
     //jcaBlueScope#(64,64) spiBlueScope <- mkBlueScope(1024);
    
    AxiDMA dma <- mkAxiDMA;
@@ -130,7 +130,7 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
 
     mkConnection(control.rxfifo_response.get, indication.coreIndication.spi_rxfifo_value);
     // hdmi clock domain
-    mkConnection(xsviInput.out, converter.in);
+    mkConnection(xsviFromSensor.out, converter.in);
     // hdmi clock domain
     mkConnection(converter.out, hdmiOut.rgb);
 
@@ -274,7 +274,7 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
     endinterface
    //interface BlueScopeRequest bsRequest = bsi.requestIfc;
    interface ImageonVita imageon = imageonVita.host;
-   interface ImageonXsviInput xsvi = xsviInput.in;
+   interface ImageonSensorData sensor_data = xsviFromSensor.in;
    interface HDMI hdmi = hdmiOut.hdmi;
       
 endmodule

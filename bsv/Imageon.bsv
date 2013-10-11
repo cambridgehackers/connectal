@@ -21,8 +21,10 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Vector::*;
 import FIFO::*;
 import GetPut::*;
+import Gearbox::*;
 
 interface ImageonSpi;
     method Bit#(1) reset();
@@ -96,6 +98,11 @@ interface ImageonXsvi;
     method Action hsync(Bit#(1) v);
     method Action active_video(Bit#(1) v);
     method Action video_data(Bit#(10) v);
+endinterface
+
+interface ImageonSensorData;
+    method Action framestart(Bit#(1) v);
+    method Action video_data(Bit#(40) v);
 endinterface
 
 (* always_enabled *)
@@ -625,4 +632,47 @@ module mkImageonXsviInput(ImageonXsviInput);
 	endmethod
     endinterface
 
+endmodule
+
+interface ImageonXsviFromSensor;
+    interface ImageonSensorData in;
+    interface Get#(XsviData) out;
+endinterface
+
+module mkImageonXsviFromSensor#(Clock hdmi_clock, Reset hdmi_reset)(ImageonXsviFromSensor);
+    Clock defaultClock <- exposeCurrentClock();
+    Reset defaultReset <- exposeCurrentReset();
+    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset); 
+    Gearbox#(4, 1, Bit#(1))  syncGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset); 
+
+    Reg#(Bit#(1)) vsync_reg <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
+    Reg#(Bit#(1)) hsync_reg <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
+    Reg#(Bit#(1)) active_video_reg <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
+
+    interface ImageonSensorData in;
+	method Action framestart(Bit#(1) v);
+	    Vector#(4, Bit#(1)) in = replicate(0);
+	    // zero'th element shifted out first
+	    in[0] = v;
+	    syncGearbox.enq(in);
+	endmethod
+	method Action video_data(Bit#(40) v);
+	    // least signifcant 10 bits shifted out first
+	    Vector#(4, Bit#(10)) in = unpack(v);
+	    dataGearbox.enq(in);
+	endmethod
+    endinterface
+    interface Get out;
+	method ActionValue#(XsviData) get();
+	    dataGearbox.deq;
+	    syncGearbox.deq;
+	    return XsviData {
+		fsync: syncGearbox.first[0],
+		vsync: vsync_reg,
+		hsync: hsync_reg,
+		active_video: active_video_reg,
+		video_data: dataGearbox.first[0]
+	    };
+	endmethod
+    endinterface
 endmodule
