@@ -2,6 +2,7 @@
 import ply.lex as lex
 import AST
 import sys
+import os
 
 tokens = (
     'AMPER',
@@ -425,6 +426,7 @@ def p_interfaceDecl(p):
 def p_varDecl(p):
     '''varDecl : type VAR'''
     p[0] = AST.Variable(p[2], p[1])
+    
 
 def p_lvalue(p):
     '''lvalue : VAR
@@ -585,12 +587,11 @@ def p_unionMembers(p):
                     | unionMembers unionMember'''
 
 def p_taggedUnionDef(p):
-    '''taggedUnionDef : TOKUNION TOKTAGGED LBRACE unionMembers RBRACE VAR deriving
-                      | TOKUNION TOKTAGGED LBRACE unionMembers RBRACE VAR interfaceHashParams  deriving'''
+    '''taggedUnionDef : TOKUNION TOKTAGGED LBRACE unionMembers RBRACE'''
 
 def p_structDef(p):
-    '''structDef : TOKSTRUCT LBRACE structMembers RBRACE VAR deriving'''
-    p[0] = AST.Struct(p[5], p[3])
+    '''structDef : TOKSTRUCT LBRACE structMembers RBRACE'''
+    p[0] = AST.Struct(p[3])
 
 def p_enumRange(p):
     '''enumRange : 
@@ -612,26 +613,41 @@ def p_enumElements(p):
         p[0] = p[1] + [p[3]]
 
 def p_enumDef(p):
-    '''enumDef : TOKENUM LBRACE enumElements RBRACE VAR deriving'''
-    p[0] = AST.Enum(p[5], p[3])
+    '''enumDef : TOKENUM LBRACE enumElements RBRACE'''
+    p[0] = AST.Enum(p[3])
 
 def p_vars(p):
     '''vars : VAR
             | vars COMMA VAR'''
+    if len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[3]]
 
 def p_deriving(p):
     '''deriving : 
                 | TOKDERIVING LPAREN vars RPAREN'''
+    if len(p) == 5:
+        p[0] = p[3]
+    else:
+        p[0] = []
 
 def p_macroDef(p):
     '''macroDef : TOKTICKDEFINE VAR expression'''
 
+
+def p_typeDefBody(p):
+    '''typeDefBody : taggedUnionDef
+                   | structDef
+                   | enumDef
+                   | type'''
+    p[0] = p[1]
+
 def p_typeDef(p):
-    '''typeDef : TOKTYPEDEF taggedUnionDef SEMICOLON
-               | TOKTYPEDEF structDef SEMICOLON
-               | TOKTYPEDEF enumDef SEMICOLON
-               | TOKTYPEDEF varDecl SEMICOLON'''
-    p[0] = p[2]
+    '''typeDef : TOKTYPEDEF typeDefBody VAR deriving SEMICOLON
+               | TOKTYPEDEF typeDefBody VAR interfaceHashParams deriving SEMICOLON'''
+    p[0] = AST.TypeDef(p[2], p[3])
+
 
 def p_interfaceDef(p):
     '''interfaceDef : TOKINTERFACE type VAR SEMICOLON expressionStmts TOKENDINTERFACE colonVar

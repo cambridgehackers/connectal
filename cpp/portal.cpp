@@ -246,26 +246,25 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc)
     return 0;
 }
 
-int PortalMemory::alloc(size_t size, int *fd, PortalAlloc *portalAlloc)
+PARef PortalInstance::reference(PortalAlloc* pa)
+{
+  return pa->entries[0].dma_address;
+}
+
+int PortalMemory::alloc(size_t size, PortalAlloc *portalAlloc)
 {
     if (!numFds) {
 	ALOGE("%s No fds open\n", __FUNCTION__);
 	return -ENODEV;
     }
-
-    PortalAlloc alloc;
-    memset(&alloc, 0, sizeof(alloc));
-    alloc.size = size;
-    int rc = ioctl(portal_fds[0].fd, PORTAL_ALLOC, &alloc);
+    memset(portalAlloc, 0, sizeof(PortalAlloc));
+    portalAlloc->size = size;
+    int rc = ioctl(portal_fds[0].fd, PORTAL_ALLOC, portalAlloc);
     if (rc){
       fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
     }
-    fprintf(stderr, "alloc size=%d rc=%d alloc.fd=%d\n", size, rc, alloc.fd);
-    if (fd)
-      *fd = alloc.fd;
-    if (portalAlloc)
-      *portalAlloc = alloc;
+    fprintf(stderr, "alloc size=%d rc=%d fd=%d numEntries=%d\n", size, rc, portalAlloc->fd, portalAlloc->numEntries);
     return 0;
 }
 

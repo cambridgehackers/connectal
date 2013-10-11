@@ -273,24 +273,27 @@ class StructMemberMixin:
             f.write(' : %d' % self.type.bitWidth())
         f.write(';\n')
 
+class TypeDefMixin:
+    def emitCDeclaration(self,f,indentation=0, parentClassName=0, namespace=''):
+        if self.tdtype.type == 'Struct':
+            self.tdtype.emitCDeclaration(self.name,f,indentation,parentClassName,namespace)
+
 class StructMixin:
-    def cName(self):
-        return self.name
     def collectTypes(self):
         result = [self]
         result.append(self.elements)
         return result
-    def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
+    def emitCDeclaration(self, name, f, indentation=0, parentClassName='', namespace=''):
         indent(f, indentation)
         if (indentation == 0):
             f.write('typedef ')
-        f.write('struct %s {\n' % self.cName())
+        f.write('struct %s {\n' % name)
         for e in reversed(self.elements):
             e.emitCDeclaration(f, indentation+4)
         indent(f, indentation)
         f.write('}')
         if (indentation == 0):
-            f.write(' %s;' % self.cName())
+            f.write(' %s;' % name)
         f.write('\n')
     def emitCImplementation(self, f, className='', namespace=''):
         pass

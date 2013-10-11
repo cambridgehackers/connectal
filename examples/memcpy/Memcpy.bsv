@@ -27,12 +27,13 @@ import GetPut::*;
 import AxiClientServer::*;
 import AxiDMA::*;
 import BlueScope::*;
+import PortalMemory::*;
 
 interface CoreRequest;
    method Action startDMA(Bit#(32) numWords);
    method Action readWord();
-   method Action configDmaWriteChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
-   method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
+   method Action configDmaWriteChan(Bit#(32) chanId, PARef pa, Bit#(32) numWords);
+   method Action configDmaReadChan(Bit#(32) chanId, PARef pa, Bit#(32) numWords);
    method Action getStateDbg();   
 endinterface
 
@@ -131,12 +132,12 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
 	 dma_word_read_chan.readReq.put(?);
       endmethod
       
-      method Action configDmaWriteChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
+      method Action configDmaWriteChan(Bit#(32) chanId, PARef pa, Bit#(32) numWords);
 	 dma.write.configChan(truncate(chanId), pa, truncate((numWords>>1)-1));
 	 indication.coreIndication.configResp(chanId, pa, numWords);
       endmethod
    
-      method Action configDmaReadChan(Bit#(32) chanId, Bit#(32) pa, Bit#(32) numWords);
+      method Action configDmaReadChan(Bit#(32) chanId, PARef pa, Bit#(32) numWords);
 	 dma.read.configChan(truncate(chanId), pa, truncate((numWords>>1)-1));
 	 indication.coreIndication.configResp(chanId, pa, numWords);
       endmethod

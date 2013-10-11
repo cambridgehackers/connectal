@@ -78,19 +78,17 @@ class Module:
 
 class EnumElement:
     def __init__(self, name, qualifiers, value):
-        self.name = name
         self.qualifiers = qualifiers
         self.value = value
     def __repr__(self):
         return '{enumelt: %s}' % (self.name)
 
 class Enum:
-    def __init__(self, name, elements):
+    def __init__(self, elements):
         self.type = 'Enum'
-        self.name = name
         self.elements = elements
     def __repr__(self):
-        return '{enum: %s %s}' % (self.name, self.elements)
+        return '{enum: %s}' % (self.elements)
 
 class StructMember:
     def __init__(self, t, tag):
@@ -100,12 +98,20 @@ class StructMember:
         return '{field: %s %s}' % (self.type, self.tag)
 
 class Struct:
-    def __init__(self, name, elements):
+    def __init__(self, elements):
         self.type = 'Struct'
-        self.name = name
         self.elements = elements
     def __repr__(self):
-        return '{struct: %s %s}' % (self.name, self.elements)
+        return '{struct: %s}' % (self.elements)
+
+
+class TypeDef:
+    def __init__(self, tdtype, name):
+        self.name = name
+        self.tdtype = tdtype
+        self.type = 'TypeDef'
+    def __repr__(self):
+        return '{typedef: %s %s}' % (self.tdtype, self.name)
 
 class Param:
     def __init__(self, name, t):

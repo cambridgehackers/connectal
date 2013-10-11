@@ -12,9 +12,6 @@ BlueScopeRequest *bluescope = 0;
 PortalAlloc srcAlloc;
 PortalAlloc dstAlloc;
 PortalAlloc bsAlloc;
-int srcFd = -1;
-int dstFd = -1;
-int bsFd  = -1;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
@@ -124,19 +121,14 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  PortalMemory::alloc(size, &srcFd, &srcAlloc);
-  PortalMemory::alloc(size, &dstFd, &dstAlloc);
-  PortalMemory::alloc(size, &bsFd,  &bsAlloc);
+  unsigned int sz = size;
+  PortalMemory::alloc(sz, &srcAlloc);
+  PortalMemory::alloc(sz, &dstAlloc);
+  PortalMemory::alloc(sz, &bsAlloc);
 
-  srcBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcFd, 0);
-  dstBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstFd, 0);
-  bsBuffer  = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsFd, 0);
-
-  // workaround for a latent bug somewhere in the SW stack
-  PortalMemory::dCacheFlushInval(&srcAlloc);
-  PortalMemory::dCacheFlushInval(&dstAlloc);
-  PortalMemory::dCacheFlushInval(&bsAlloc);
-
+  srcBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc.fd, 0);
+  dstBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.fd, 0);
+  bsBuffer  = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsAlloc.fd, 0);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -145,7 +137,12 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
+  PARef ref_srcAlloc = device->reference(&srcAlloc);
+  PARef ref_dstAlloc = device->reference(&dstAlloc);
+  PARef ref_bsAlloc  = device->reference(&bsAlloc);
+
   while (srcGen < iterCnt*numWords){
+
     sem_wait(&iter_sem);
     for (int i = 0; i < numWords; i++){
       srcBuffer[i] = srcGen++;
@@ -155,25 +152,24 @@ int main(int argc, const char **argv)
     PortalMemory::dCacheFlushInval(&srcAlloc);
     PortalMemory::dCacheFlushInval(&dstAlloc);
     PortalMemory::dCacheFlushInval(&bsAlloc);
-    // DATA_SYNC_BARRIER;
-          
+    
+
+    fprintf(stderr, "flush and invalidate complete\n");
+      
     // write channel 0 is dma destination
-    device->configDmaWriteChan(0, dstAlloc.entries[0].dma_address, numWords/2);
+    device->configDmaWriteChan(0, ref_dstAlloc, numWords/2);
     sem_wait(&conf_sem);
     // read channel 0 is dma source
-    device->configDmaReadChan(0, srcAlloc.entries[0].dma_address, numWords/2);
+    device->configDmaReadChan(0, ref_srcAlloc, numWords/2);
     sem_wait(&conf_sem);
     // read channel 1 is readWord source
-    device->configDmaReadChan(1, srcAlloc.entries[0].dma_address, 2);
+    device->configDmaReadChan(1, ref_srcAlloc, 2);
     sem_wait(&conf_sem);
     // write channel 1 is Bluescope desgination
-    device->configDmaWriteChan(1, bsAlloc.entries[0].dma_address, 2);
+    device->configDmaWriteChan(1, ref_bsAlloc, 2);
     sem_wait(&conf_sem);
 
-    fprintf(stderr, "starting mempcy src:%x dst:%x numWords:%d\n",
-    	    srcAlloc.entries[0].dma_address,
-    	    dstAlloc.entries[0].dma_address,
-    	    numWords);
+    fprintf(stderr, "starting mempcy numWords:%d\n", numWords);
 
     bluescope->reset();
     bluescope->setTriggerMask (0xFFFFFFFF);

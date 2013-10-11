@@ -513,9 +513,11 @@ class TypeMixin:
     def numBitsBSV(self):
         if (self.name == 'Bit'):
 		return self.params[0].numeric()
-	sdef = syntax.globalvars[self.name]
-	return sum([e.type.numBitsBSV() for e in sdef.elements])
-
+	sdef = syntax.globalvars[self.name].tdtype
+        if (sdef.type == 'Struct'):
+            return sum([e.type.numBitsBSV() for e in sdef.elements])
+        else:
+            assert(False)
 
 class MethodMixin:
     def emitBsvImplementation(self, f):

@@ -12,6 +12,8 @@
 #define PORTAL_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalAlloc)
 #define PORTAL_SET_FCLK_RATE _IOWR('B', 40, PortalClockRequest)
 
+typedef unsigned int PARef;
+
 typedef struct PortalAlloc {
         size_t size;
         int fd;
@@ -75,6 +77,7 @@ class PortalInstance {
 public:
     int sendMessage(PortalMessage *msg);
     void close();
+    PARef reference(PortalAlloc* pa);
 protected:
     PortalIndication *indication;
     PortalInstance(const char *instanceName, PortalIndication *indication=0);
@@ -106,7 +109,7 @@ void* portalExec(void* __x);
 class PortalMemory {
  public:
     static int dCacheFlushInval(PortalAlloc *portalAlloc);
-    static int alloc(size_t size, int *fd, PortalAlloc *portalAlloc);
+    static int alloc(size_t size, PortalAlloc *portalAlloc);
 };
 
 
