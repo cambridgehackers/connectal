@@ -10,14 +10,17 @@ interface SpiPins;
     method Bit#(1) dout();
     method Bit#(1) sel();
     method Action din(Bit#(1) v);
+   // inverted clock
    interface Clock clk; 
 endinterface: SpiPins
 
 interface SPI#(type a);
-    interface Put#(a) request;
-    interface Get#(a) response;
-    interface SpiPins pins;
+   interface Put#(a) request;
+   interface Get#(a) response;
+   interface SpiPins pins;
+   // Clock used by SPI internal state
    interface Clock clock;
+   // Reset used by SPI internal state
    interface Reset reset;
 endinterface
 
