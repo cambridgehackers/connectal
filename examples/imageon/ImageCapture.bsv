@@ -103,6 +103,7 @@ interface ImageCaptureRequest;
    interface CoreRequest coreRequest;
    //interface BlueScopeRequest bsRequest;
    interface ImageonVita imageon;
+   interface ImageonXsvi xsvi;
    interface HDMI hdmi;
 endinterface
  
@@ -111,10 +112,11 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
-    Reset hdmi_reset <- mkSyncReset(2, defaultReset, hdmi_clock);
+    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
     ImageonVitaController imageonVita <- mkImageonVitaController();
     ImageonControl control = imageonVita.control;
+    ImageonXsviInput xsviInput <- mkImageonXsviInput(clocked_by hdmi_clock, reset_by hdmi_reset);
     //jcaBlueScope#(64,64) spiBlueScope <- mkBlueScope(1024);
    
    AxiDMA dma <- mkAxiDMA;
@@ -123,13 +125,14 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
    //module mkSyncBlueScope#(Integer samples, WriteChan wchan, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth, triggerWidth))
    //BlueScopeInternal bsi <- mkBlueScopeInternal(32, dma_debug_write_chan, indication.bsIndication);
    
-    //BlueScope#(xsviDataWidth,xsviDataWidth) xsviBlueScope <- mkBlueScope(1024);
-    SensorToVideo converter <- mkSensorToVideo;
+    SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);
     HdmiOut hdmiOut <- mkHdmiOut(clocked_by hdmi_clock, reset_by hdmi_reset);
 
     mkConnection(control.rxfifo_response.get, indication.coreIndication.spi_rxfifo_value);
-    mkConnection(control.xsviData, converter.in.put);
-    mkConnectionWithClocks(converter.out, hdmiOut.rgb, defaultClock, defaultReset, hdmi_clock, hdmi_reset); // second reset is not used
+    // hdmi clock domain
+    mkConnection(xsviInput.out, converter.in);
+    // hdmi clock domain
+    mkConnection(converter.out, hdmiOut.rgb);
 
     interface CoreRequest coreRequest;
     method Action set_spi_control(Bit#(32) v);
@@ -271,6 +274,7 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
     endinterface
    //interface BlueScopeRequest bsRequest = bsi.requestIfc;
    interface ImageonVita imageon = imageonVita.host;
+   interface ImageonXsviInput xsvi = xsviInput.in;
    interface HDMI hdmi = hdmiOut.hdmi;
       
 endmodule

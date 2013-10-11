@@ -1032,9 +1032,8 @@ class ImageonVita:
      wire [15:0] imageon_host_syncgen_vfporch;
      wire [15:0] imageon_host_syncgen_vsync;
      wire [15:0] imageon_host_syncgen_vbporch;
-    /* Frame Sync Port */
-     wire imageon_host_fsync;
      /* XSVI Port */
+     wire imageon_xsvi_fsync;
      wire imageon_xsvi_vsync;
      wire imageon_xsvi_hsync;
      wire imageon_xsvi_active_video;
@@ -1092,7 +1091,6 @@ class ImageonVita:
     def dut_bus_port_map(self, busname,t,params):
         return '''
     .imageon_host_oe(imageon_host_oe),
-    .imageon_fsync_fsync(imageon_host_fsync),
     .imageon_host_vita_reset(imageon_host_vita_reset),
     .imageon_spi_reset(imageon_host_spi_reset),
     .imageon_spi_timing(imageon_host_spi_timing),
@@ -1136,10 +1134,11 @@ class ImageonVita:
     .imageon_syncgen_vfporch(imageon_host_syncgen_vfporch),
     .imageon_syncgen_vsync(imageon_host_syncgen_vsync),
     .imageon_syncgen_vbporch(imageon_host_syncgen_vbporch),
-    .imageon_xsvi_vsync_v(imageon_xsvi_vsync),
-    .imageon_xsvi_hsync_v(imageon_xsvi_hsync),
-    .imageon_xsvi_active_video_v(imageon_xsvi_active_video),
-    .imageon_xsvi_video_data_v(imageon_xsvi_video_data),
+    .xsvi_fsync_v(imageon_xsvi_fsync),
+    .xsvi_vsync_v(imageon_xsvi_vsync),
+    .xsvi_hsync_v(imageon_xsvi_hsync),
+    .xsvi_active_video_v(imageon_xsvi_active_video),
+    .xsvi_video_data_v(imageon_xsvi_video_data),
     .imageon_get_debugreq(debugreq_value),
     .imageon_set_debugind_v(debugind_value),
 '''
@@ -1353,8 +1352,7 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_data_n(io_vita_data_n),
 .debreq(debugreq_value),
 .debind(debugind_value),
-    /* Frame Sync Port */
-    .fsync(imageon_fsync),
+    .fsync(imageon_xsvi_fsync),
     /* XSVI Port */
     .xsvi_vsync_o(imageon_xsvi_vsync),
     .xsvi_hsync_o(imageon_xsvi_hsync),
