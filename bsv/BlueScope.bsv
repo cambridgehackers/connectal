@@ -59,14 +59,21 @@ endmodule
 
 module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScopeInternal);
    SyncFIFOIfc#(Bit#(64)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
-   Reg#(Bit#(64))    maskReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
-   Reg#(Bit#(64))   valueReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
+   Reg#(Bit#(64))    maskReg <- mkSyncReg(0, dClk, dRst, sClk);
+   Reg#(Bit#(64))   valueReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
    Reg#(State)                stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
-   FIFOF#(void)                  tfifo <- mkFIFOF(    clocked_by sClk, reset_by sRst);
+   //FIFOF#(void)                  tfifo <- mkFIFOF(    clocked_by sClk, reset_by sRst);
+   SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);
+   SyncPulseIfc         triggeredPulse <- mkSyncPulse(sClk, sRst, dClk);
    
-   rule writeReq if (stateReg == Enabled && dfifo.notEmpty);
+   rule resetState if (resetPulse.pulse);
+      stateReg <= Idle;
+      countReg <= 0;
+   endrule
+
+   rule writeReq if (dfifo.notEmpty);
       wchan.writeReq.put(?);
    endrule
    
@@ -79,9 +86,8 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
       wchan.writeDone.get;
    endrule
    
-   rule triggerRule;
+   rule triggerRule if (triggeredPulse.pulse);
       indication.triggerFired;
-      tfifo.deq;
    endrule
    
    method Action dataIn(Bit#(64) data, Bit#(64) trigger) if (stateReg != Idle);
@@ -125,8 +131,8 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
    
       if(e && dfifo.notFull)
 	 dfifo.enq(data);
-      if(t && tfifo.notFull)
-	 tfifo.enq(?);
+      if(t)
+	 triggeredPulse.send();
       countReg <= c;
       stateReg <= s;
    endmethod
@@ -137,8 +143,7 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
       endmethod
 
       method Action reset();
-	 stateReg <= Idle;
-	 countReg <= 0;
+          resetPulse.send();
       endmethod
 
       method Action setTriggerMask(Bit#(64) mask);
