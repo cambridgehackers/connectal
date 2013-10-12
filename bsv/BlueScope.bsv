@@ -32,7 +32,7 @@ import ClientServer::*;
 
 interface BlueScopeIndication;
    method Action triggerFired();
-   method Action reportStateDbg(Bit#(64) mask, Bit#(64) value);
+//   method Action reportStateDbg(Bit#(64) mask, Bit#(64) value);
 endinterface
 
 interface BlueScopeRequest;
@@ -40,7 +40,8 @@ interface BlueScopeRequest;
    method Action reset();
    method Action setTriggerMask(Bit#(64) mask);
    method Action setTriggerValue(Bit#(64) value);
-   method Action getStateDbg();
+// accesses dataIn clock domain without synchronizer
+//   method Action getStateDbg();
 endinterface
 
 interface BlueScopeInternal;
@@ -65,6 +66,7 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
    Reg#(State)                stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
    //FIFOF#(void)                  tfifo <- mkFIFOF(    clocked_by sClk, reset_by sRst);
+   SyncPulseIfc             startPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc         triggeredPulse <- mkSyncPulse(sClk, sRst, dClk);
    
@@ -73,6 +75,9 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
       countReg <= 0;
    endrule
 
+   rule startState if (startPulse.pulse);
+      stateReg <= Enabled;
+   endrule
    rule writeReq if (dfifo.notEmpty);
       wchan.writeReq.put(?);
    endrule
@@ -139,7 +144,7 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
    
    interface BlueScopeRequest requestIfc;
       method Action start();
-	 stateReg <= Enabled;
+	 startPulse.send();
       endmethod
 
       method Action reset();
@@ -154,9 +159,10 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
 	 valueReg <= value;
       endmethod
 
-      method Action getStateDbg();
-	 indication.reportStateDbg(maskReg,valueReg);
-      endmethod
+// accesses dataIn clock domain without synchronizer
+//      method Action getStateDbg();
+//	 indication.reportStateDbg(maskReg,valueReg);
+//      endmethod
 
    endinterface
 
