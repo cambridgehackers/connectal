@@ -116,7 +116,7 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
 
     ImageonVitaController imageonVita <- mkImageonVitaController();
     ImageonControl control = imageonVita.control;
-    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(hdmi_clock, hdmi_reset);
+    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(defaultClock, defaultReset, clocked_by hdmi_clock, reset_by hdmi_reset);
    
     AxiDMA dma <- mkAxiDMA;
     WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
@@ -128,13 +128,7 @@ module mkImageCaptureRequest#(Clock hdmi_clock,
 
     mkConnection(control.rxfifo_response.get, indication.coreIndication.spi_rxfifo_value);
     // hdmi clock domain
-    //mkConnection(xsviFromSensor.out, converter.in);
-    rule xsviConnection;
-        let xsvi <- xsviFromSensor.out.get();
-
-        bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
-	converter.in.put(xsvi);
-    endrule
+    mkConnection(xsviFromSensor.out, converter.in);
     // hdmi clock domain
     mkConnection(converter.out, hdmiOut.rgb);
 

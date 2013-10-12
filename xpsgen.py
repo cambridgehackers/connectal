@@ -1033,8 +1033,11 @@ class ImageonVita:
      wire [15:0] imageon_host_syncgen_vsync;
      wire [15:0] imageon_host_syncgen_vbporch;
      /* Sensor Port */
-     wire imageon_sensor_fsync;
-     wire [39:0] imageon_sensor_video_data;
+     wire imageon_xsvi_framestart_old;
+     wire imageon_xsvi_hsync;
+     wire imageon_xsvi_vsync;
+     wire imageon_xsvi_active_video;
+     wire [9:0] imageon_xsvi_video_data_old;
 
      /* IIC */
      wire fmc_imageon_iic_0_scl_T;
@@ -1136,10 +1139,20 @@ class ImageonVita:
     .imageon_syncgen_vsync(imageon_host_syncgen_vsync),
     .imageon_syncgen_vbporch(imageon_host_syncgen_vbporch),
 
+    .EN_sensor_data_fsync(1),
+    .sensor_data_fsync_v(imageon_xsvi_framestart_old),
+    .EN_sensor_data_hsync(1),
+    .sensor_data_hsync_v(imageon_xsvi_hsync),
+    .EN_sensor_data_vsync(1),
+    .sensor_data_vsync_v(imageon_xsvi_vsync),
+    .EN_sensor_data_active_video(1),
+    .sensor_data_active_video_v(imageon_xsvi_active_video),
+    .EN_sensor_data_video_data_old(1),
+    .sensor_data_video_data_old_v(imageon_xsvi_video_data_old),
+    .EN_sensor_data_framestart(RDY_imageon_xsvi_fsync),
     .sensor_data_framestart_v(imageon_xsvi_fsync),
-    .RDY_sensor_data_framestart(RDY_imageon_xsvi_fsync),
+    .EN_sensor_data_video_data(RDY_imageon_xsvi_video_data),
     .sensor_data_video_data_v(imageon_xsvi_video_data),
-    .RDY_sensor_data_video_data(RDY_imageon_xsvi_video_data),
 
     .imageon_get_debugreq(debugreq_value),
     .imageon_set_debugind_v(debugind_value),
@@ -1357,6 +1370,11 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
 .debreq(debugreq_value),
 .debind(debugind_value),
     /* XSVI Port */
+    .framestart_o(imageon_xsvi_framestart_old),
+    .xsvi_vsync_o(imageon_xsvi_vsync),
+    .xsvi_hsync_o(imageon_xsvi_hsync),
+    .xsvi_active_video_o(imageon_xsvi_active_video),
+    .video_data_out(imageon_xsvi_video_data_old),
     .fsync(imageon_xsvi_fsync),
     .xsvi_video_data_o(imageon_xsvi_video_data)
 );

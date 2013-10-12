@@ -101,6 +101,11 @@ interface ImageonXsvi;
 endinterface
 
 interface ImageonSensorData;
+    method Action fsync(Bit#(1) v);
+    method Action hsync(Bit#(1) v);
+    method Action vsync(Bit#(1) v);
+    method Action active_video(Bit#(1) v);
+    method Action video_data_old(Bit#(10) v);
     method Action framestart(Bit#(1) v);
     method Action video_data(Bit#(40) v);
 endinterface
@@ -639,17 +644,37 @@ interface ImageonXsviFromSensor;
     interface Get#(XsviData) out;
 endinterface
 
-module mkImageonXsviFromSensor#(Clock hdmi_clock, Reset hdmi_reset)(ImageonXsviFromSensor);
+module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset)(ImageonXsviFromSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
-    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset); 
-    Gearbox#(4, 1, Bit#(1))  syncGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset); 
+    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(slow_clock, slow_reset, defaultClock, defaultReset); 
+    Gearbox#(4, 1, Bit#(1))  syncGearbox <- mkNto1Gearbox(slow_clock, slow_reset, defaultClock, defaultReset); 
 
-    Reg#(Bit#(1)) vsync_reg <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
-    Reg#(Bit#(1)) hsync_reg <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
-    Reg#(Bit#(1)) active_video_reg <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
+    Reg#(Bit#(1)) vsync_reg <- mkReg(0);
+    Reg#(Bit#(1)) hsync_reg <- mkReg(0);
+    Reg#(Bit#(1)) active_video_reg <- mkReg(0);
+    Wire#(Bit#(1))  xsvi_framestart_old_wire <- mkDWire(0);
+    Wire#(Bit#(1))  xsvi_hsync_wire <- mkDWire(0);
+    Wire#(Bit#(1))  xsvi_vsync_wire <- mkDWire(0);
+    Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
+    Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
 
     interface ImageonSensorData in;
+        method Action fsync(Bit#(1) v);
+	    xsvi_framestart_old_wire <= v;
+	endmethod
+        method Action hsync(Bit#(1) v);
+	    xsvi_hsync_wire <= v;
+	endmethod
+        method Action vsync(Bit#(1) v);
+	    xsvi_vsync_wire <= v;
+	endmethod
+        method Action active_video(Bit#(1) v);
+            xsvi_active_video_wire <= v;
+        endmethod
+	method Action video_data_old(Bit#(10) v);
+            xsvi_video_data_wire <= v;
+	endmethod
 	method Action framestart(Bit#(1) v);
 	    Vector#(4, Bit#(1)) in = replicate(0);
 	    // zero'th element shifted out first
@@ -664,14 +689,14 @@ module mkImageonXsviFromSensor#(Clock hdmi_clock, Reset hdmi_reset)(ImageonXsviF
     endinterface
     interface Get out;
 	method ActionValue#(XsviData) get();
-	    dataGearbox.deq;
-	    syncGearbox.deq;
+	    //dataGearbox.deq;
+	    //syncGearbox.deq;
 	    return XsviData {
-		fsync: syncGearbox.first[0],
-		vsync: vsync_reg,
-		hsync: hsync_reg,
-		active_video: active_video_reg,
-		video_data: dataGearbox.first[0]
+		fsync: xsvi_framestart_old_wire, //syncGearbox.first[0],
+		vsync: xsvi_vsync_wire,
+		hsync: xsvi_hsync_wire,
+		active_video: xsvi_active_video_wire, //active_video_reg,
+		video_data: xsvi_video_data_wire //dataGearbox.first[0]
 	    };
 	endmethod
     endinterface
