@@ -91,15 +91,6 @@ typedef struct {
     Bit#(10) video_data;
 } XsviData deriving (Bits);
 
-(* always_enabled *)
-interface ImageonXsvi;
-    method Action fsync(Bit#(1) v);
-    method Action vsync(Bit#(1) v);
-    method Action hsync(Bit#(1) v);
-    method Action active_video(Bit#(1) v);
-    method Action video_data(Bit#(10) v);
-endinterface
-
 interface ImageonSensorData;
     method Action fsync(Bit#(1) v);
     method Action hsync(Bit#(1) v);
@@ -586,59 +577,6 @@ module mkImageonVitaController(ImageonVitaController);
     endinterface
 endmodule
 
-interface ImageonXsviInput;
-    interface ImageonXsvi in;
-    interface Get#(XsviData) out;
-endinterface
-
-module mkImageonXsviInput(ImageonXsviInput);
-
-    Reg#(Bit#(32)) vsync_reg <- mkReg(0);
-    Reg#(Bit#(32)) hsync_reg <- mkReg(0);
-    Reg#(Bit#(32)) active_reg <- mkReg(0);
-    Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
-    Wire#(Bit#(1))  xsvi_fsync_wire <- mkDWire(0);
-    Wire#(Bit#(1))  xsvi_vsync_wire <- mkDWire(0);
-    Wire#(Bit#(1))  xsvi_hsync_wire <- mkDWire(0);
-    Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
-
-    interface ImageonXsvi in;
-	method Action fsync(Bit#(1) v);
-	    xsvi_fsync_wire <= v;
-	endmethod
-	method Action vsync(Bit#(1) v);
-	    xsvi_vsync_wire <= v;
-	    if (v == 1)
-		vsync_reg <= vsync_reg + 1;
-	endmethod
-	method Action hsync(Bit#(1) v);
-	    xsvi_hsync_wire <= v;
-	    if (v == 1)
-		hsync_reg <= hsync_reg + 1;
-	endmethod
-	method Action active_video(Bit#(1) v);
-	    xsvi_active_video_wire <= v;
-	    if (v == 1)
-		active_reg <= active_reg + 1;
-	endmethod
-	method Action video_data(Bit#(10) v);
-	    xsvi_video_data_wire <= v;
-	endmethod
-    endinterface
-    interface Get out;
-	method ActionValue#(XsviData) get();
-	    return XsviData {
-		fsync: xsvi_fsync_wire,
-		vsync: xsvi_vsync_wire,
-		hsync: xsvi_hsync_wire,
-		active_video: xsvi_active_video_wire,
-		video_data: xsvi_video_data_wire
-	    };
-	endmethod
-    endinterface
-
-endmodule
-
 interface ImageonXsviFromSensor;
     interface ImageonSensorData in;
     interface Get#(XsviData) out;
@@ -695,7 +633,7 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset)(ImageonXsviF
 		fsync: xsvi_framestart_old_wire, //syncGearbox.first[0],
 		vsync: xsvi_vsync_wire,
 		hsync: xsvi_hsync_wire,
-		active_video: xsvi_active_video_wire, //active_video_reg,
+		active_video: xsvi_active_video_wire,
 		video_data: xsvi_video_data_wire //dataGearbox.first[0]
 	    };
 	endmethod
