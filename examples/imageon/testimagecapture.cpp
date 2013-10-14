@@ -217,6 +217,7 @@ static uint16_t vita_mult_timer_line_resolution_seq[VITA_MULT_TIMER_LINE_RESOLUT
    // R199[15:0] mult_timer = (1920+88+44+132)/4 = 2184/4 = 546 (0x0222)
    {199, 0xFFFF, 0x0222} };
 
+#if 1
 static uint16_t vita_spi_read_internal(uint32_t uAddr)
 {
    // Make sure the RXFIFO is empty
@@ -250,15 +251,6 @@ static uint16_t vita_spi_read_internal(uint32_t uAddr)
    }
    return read_spi_rxfifo() & 0xffff;
 }
-
-static uint16_t vita_spi_read(uint32_t uAddr)
-{
-uint32_t ret = vita_spi_read_internal(uAddr);
-if (trace_spi)
-printf("SPIREAD: [%x] %x\n", uAddr, ret);
-//printf("[%s:%d] return %x\n", __FUNCTION__, __LINE__, ret);
-   return ret;
-}
 static int vita_spi_write(uint32_t uAddr, uint16_t uData)
 {
    uint32_t uStatus, prev = 0;
@@ -277,6 +269,32 @@ if (trace_spi)
 if (trace_spi)
 printf("SPIWRITE: [%x] %x -> %x %x\n", uAddr, prev, uData, vita_spi_read_internal(uAddr));
    return 1;
+}
+#else
+static uint16_t vita_spi_read_internal(uint32_t uAddr)
+{
+printf("[%s:%d] new read goes here: **********************************************\n", __FUNCTION__, __LINE__);
+     return 0;
+}
+static int vita_spi_write(uint32_t uAddr, uint16_t uData)
+{
+   uint32_t prev = 0;
+if (trace_spi)
+   prev = vita_spi_read_internal(uAddr);
+printf("[%s:%d] new WRITE goes here: **********************************************\n", __FUNCTION__, __LINE__);
+if (trace_spi)
+printf("SPIWRITE: [%x] %x -> %x %x\n", uAddr, prev, uData, vita_spi_read_internal(uAddr));
+   return 1;
+}
+#endif
+
+static uint16_t vita_spi_read(uint32_t uAddr)
+{
+uint32_t ret = vita_spi_read_internal(uAddr);
+if (trace_spi)
+printf("SPIREAD: [%x] %x\n", uAddr, ret);
+//printf("[%s:%d] return %x\n", __FUNCTION__, __LINE__, ret);
+   return ret;
 }
 
 /******************************************************************************
