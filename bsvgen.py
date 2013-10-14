@@ -29,7 +29,7 @@ import AxiDMA::*;
 
 '''
 
-exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonSensorData', 'FmcImageonInterface']
+exposedInterfaces = ['LEDS', 'ImageonVita', 'ImageonSensorData', 'FmcImageonInterface', 'HDMI']
 
 bsimTopTemplate='''
 import StmtFSM::*;
