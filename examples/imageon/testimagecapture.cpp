@@ -14,6 +14,7 @@
 #include "i2ccamera.h"
 
 static CoreRequest *device = 0;
+static int trace_spi = 0;
 
 #define DECL(A) \
     static sem_t sem_ ## A; \
@@ -216,7 +217,7 @@ static uint16_t vita_mult_timer_line_resolution_seq[VITA_MULT_TIMER_LINE_RESOLUT
    // R199[15:0] mult_timer = (1920+88+44+132)/4 = 2184/4 = 546 (0x0222)
    {199, 0xFFFF, 0x0222} };
 
-static uint16_t vita_spi_read(uint32_t uAddr)
+static uint16_t vita_spi_read_internal(uint32_t uAddr)
 {
    // Make sure the RXFIFO is empty
    uint32_t uStatus = read_spi_control(), ret;
@@ -247,13 +248,20 @@ static uint16_t vita_spi_read(uint32_t uAddr)
        printf( "[vita_spi_read ] Timed out waiting for !RXFIFO_EMPTY\n\r");
        return 0;
    }
-   ret = read_spi_rxfifo() & 0xffff;
+   return read_spi_rxfifo() & 0xffff;
+}
+
+static uint16_t vita_spi_read(uint32_t uAddr)
+{
+uint32_t ret = vita_spi_read_internal(uAddr);
+if (trace_spi)
+printf("SPIREAD: [%x] %x\n", uAddr, ret);
 //printf("[%s:%d] return %x\n", __FUNCTION__, __LINE__, ret);
    return ret;
 }
 static int vita_spi_write(uint32_t uAddr, uint16_t uData)
 {
-   uint32_t uStatus;
+   uint32_t uStatus, prev = 0;
    // Wait until TXFIFO is not full
    int timeout = 99;
    do {
@@ -263,7 +271,11 @@ static int vita_spi_write(uint32_t uAddr, uint16_t uData)
        printf( "[vita_spi_write] Timed out waiting for !TXFIFO_FULL\n\r");
        return 0;
    }
+if (trace_spi)
+   prev = vita_spi_read_internal(uAddr);
    device->put_spi_txfifo(VITA_SPI_WRITE_BIT | (((uint32_t)uAddr) << 16) | ((uint16_t)uData));
+if (trace_spi)
+printf("SPIWRITE: [%x] %x -> %x %x\n", uAddr, prev, uData, vita_spi_read_internal(uAddr));
    return 1;
 }
 
