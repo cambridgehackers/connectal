@@ -988,11 +988,9 @@ class ImageonVita:
      wire [15:0] imageon_host_spi_timing;
      wire imageon_host_spi_status_busy;
      wire imageon_host_spi_status_error;
-     wire imageon_host_spi_txfifo_clk;
      wire imageon_host_spi_txfifo_wen;
      wire [31:0] imageon_host_spi_txfifo_din;
      wire imageon_host_spi_txfifo_full;
-     wire imageon_host_spi_rxfifo_clk;
      wire imageon_host_spi_rxfifo_ren;
      wire [31:0] imageon_host_spi_rxfifo_dout;
      wire imageon_host_spi_rxfifo_empty;
@@ -1303,21 +1301,19 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .clk200(imageon_clk200),
     .clk(imageon_clk),
     .clk4x(imageon_clk4x),
+    .host_interface_clk(processing_system7_1_fclk_clk0),
     .reset(imageon_reset),
     .oe(imageon_host_oe), /* input */
     /* HOST Interface - VITA */
     .host_vita_reset(imageon_host_vita_reset),
     /* HOST Interface - SPI */
-    .host_spi_clk(processing_system7_1_fclk_clk0),
     .host_spi_reset(imageon_host_spi_reset),
     .host_spi_timing(imageon_host_spi_timing),
     .host_spi_status_busy(imageon_host_spi_status_busy),
     .host_spi_status_error(imageon_host_spi_status_error),
-    .host_spi_txfifo_clk(processing_system7_1_fclk_clk0),
     .host_spi_txfifo_wen(imageon_host_spi_txfifo_wen),
     .host_spi_txfifo_din(imageon_host_spi_txfifo_din),
     .host_spi_txfifo_full(imageon_host_spi_txfifo_full),
-    .host_spi_rxfifo_clk(processing_system7_1_fclk_clk0),
     .host_spi_rxfifo_ren(imageon_host_spi_rxfifo_ren),
     .host_spi_rxfifo_dout(imageon_host_spi_rxfifo_dout),
     .host_spi_rxfifo_empty(imageon_host_spi_rxfifo_empty),
