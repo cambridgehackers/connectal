@@ -129,7 +129,12 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
 
     mkConnection(control.rxfifo_response.get, indication.coreIndication.spi_rxfifo_value);
     // hdmi clock domain
-    mkConnection(xsviFromSensor.out, converter.in);
+    //mkConnection(xsviFromSensor.out, converter.in);
+    rule xsviConnection;
+        let xsvi <- xsviFromSensor.out.get();
+        //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
+        converter.in.put(xsvi);
+    endrule
     // hdmi clock domain
     mkConnection(converter.out, hdmiOut.rgb);
 
