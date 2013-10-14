@@ -122,7 +122,12 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     ImageonVitaController imageonVita <- mkImageonVitaController();
     ImageonControl control = imageonVita.control;
     ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, clocked_by hdmi_clock, reset_by hdmi_reset);
-   
+
+    Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, hdmi_clock, hdmi_reset, defaultClock);
+    rule copydebugval;
+        debugind_value <= xsviFromSensor.in.get_debugind();
+    endrule
+
     AxiDMA dma <- mkAxiDMA;
     WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
     BlueScopeInternal bsi <- mkSyncBlueScopeInternal(32, dma_debug_write_chan, indication.bsIndication,
@@ -280,7 +285,8 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
         control.set_debugreq(v);
     endmethod
     method Action get_debugind();
-        indication.coreIndication.debugind(control.get_debugind());
+        //indication.coreIndication.debugind(control.get_debugind());
+        indication.coreIndication.debugind(debugind_value);
     endmethod
     method Action put_spi_request(Bit#(26) v);
         spiController.request.put(v);

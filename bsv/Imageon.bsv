@@ -99,6 +99,7 @@ interface ImageonSensorData;
     method Action video_data_old(Bit#(10) v);
     method Action framestart(Bit#(1) v);
     method Action video_data(Bit#(40) v);
+    method Bit#(32) get_debugind();
 endinterface
 
 (* always_enabled *)
@@ -611,6 +612,7 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset)(ImageonXsviF
     Reg#(Bit#(16))    host_syncgen_vactive <- mkReg(0);
     Reg#(Bit#(16))    host_syncgen_vfporch <- mkReg(0);
     Reg#(Bit#(16))    host_syncgen_vsync <- mkReg(0);
+    Reg#(Bit#(32))    debugind_value <- mkReg(0);
     
     rule start_fsm if (framestart == 1);
         vsync_count <= 0;
@@ -696,11 +698,15 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset)(ImageonXsviF
 	    Vector#(4, Bit#(10)) in = unpack(v);
 	    dataGearbox.enq(in);
 	endmethod
+        method Bit#(32) get_debugind();
+            return debugind_value;
+	endmethod
     endinterface
     interface Get out;
 	method ActionValue#(XsviData) get();
 	    dataGearbox.deq;
 	    syncGearbox.deq;
+            debugind_value <= { 'hab, xsvi_hsync_wire, xsvi_vsync_wire, pack(hstate), pack(vstate), hsync_count[7:0], vsync_count[7:0] } ;
 	    return XsviData {
 		fsync: xsvi_framestart_old_wire, //syncGearbox.first[0],
 		vsync: xsvi_vsync_wire,
