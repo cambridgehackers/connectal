@@ -14,7 +14,7 @@
 #include "i2ccamera.h"
 
 static CoreRequest *device = 0;
-static int trace_spi = 0;
+static int trace_spi = 1;
 
 #define DECL(A) \
     static sem_t sem_ ## A; \
@@ -25,6 +25,7 @@ DECL(iserdes_control)
 DECL(decoder_control)
 DECL(triggen_control)
 DECL(spi_rxfifo)
+DECL(spi_response)
 
 #define RXFN(A) \
     virtual void A ## _value ( unsigned long v ){ \
@@ -50,6 +51,11 @@ class TestImageCaptureIndications : public CoreIndication {
       fprintf(stderr, "putFailed: %x\n", v);
       exit(1);
     }
+    void spi_response(unsigned long v){
+      fprintf(stderr, "spi_response: %x\n", v);
+      cv_spi_response = v;
+      sem_post(&sem_spi_response);
+    }
     void debugind(long unsigned int v) {
 printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
     }
@@ -62,6 +68,7 @@ static void init_local_semaphores(void)
     sem_init(&sem_decoder_control, 0, 0);
     sem_init(&sem_triggen_control, 0, 0);
     sem_init(&sem_spi_rxfifo, 0, 0);
+    sem_init(&sem_spi_response, 0, 0);
 }
 GETFN(spi_control)
 GETFN(iserdes_control)
@@ -217,7 +224,7 @@ static uint16_t vita_mult_timer_line_resolution_seq[VITA_MULT_TIMER_LINE_RESOLUT
    // R199[15:0] mult_timer = (1920+88+44+132)/4 = 2184/4 = 546 (0x0222)
    {199, 0xFFFF, 0x0222} };
 
-#if 1
+#if 0
 static uint16_t vita_spi_read_internal(uint32_t uAddr)
 {
    // Make sure the RXFIFO is empty
@@ -271,20 +278,29 @@ printf("SPIWRITE: [%x] %x -> %x %x\n", uAddr, prev, uData, vita_spi_read_interna
    return 1;
 }
 #else
+static unsigned long spi_transfer (uint32_t v) \
+{
+    if (trace_spi)
+        printf("SPITRANSFER: %x\n", v);
+    device->put_spi_request(v);
+    sem_wait(&sem_spi_response);
+    return cv_spi_response;
+}
 static uint16_t vita_spi_read_internal(uint32_t uAddr)
 {
-printf("[%s:%d] new read goes here: **********************************************\n", __FUNCTION__, __LINE__);
-     return 0;
+//printf("[%s:%d] new read goes here: **********************************************\n", __FUNCTION__, __LINE__);
+    return spi_transfer(uAddr<<17);
 }
 static int vita_spi_write(uint32_t uAddr, uint16_t uData)
 {
-   uint32_t prev = 0;
-if (trace_spi)
-   prev = vita_spi_read_internal(uAddr);
-printf("[%s:%d] new WRITE goes here: **********************************************\n", __FUNCTION__, __LINE__);
-if (trace_spi)
-printf("SPIWRITE: [%x] %x -> %x %x\n", uAddr, prev, uData, vita_spi_read_internal(uAddr));
-   return 1;
+    uint32_t prev = 0;
+    if (trace_spi)
+        prev = vita_spi_read_internal(uAddr);
+//printf("[%s:%d] new WRITE goes here: **********************************************\n", __FUNCTION__, __LINE__);
+    spi_transfer(uAddr<<17 | 1 <<16 | uData);
+    if (trace_spi)
+        printf("SPIWRITE: [%x] %x -> %x %x\n", uAddr, prev, uData, vita_spi_read_internal(uAddr));
+    return 1;
 }
 #endif
 
