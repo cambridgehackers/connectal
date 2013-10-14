@@ -70,14 +70,16 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
    SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc         triggeredPulse <- mkSyncPulse(sClk, sRst, dClk);
    
+   (* descending_urgency = "resetState, startState" *)
    rule resetState if (resetPulse.pulse);
       stateReg <= Idle;
       countReg <= 0;
    endrule
 
-   rule startState if (startPulse.pulse);
+   rule startState if (startPulse.pulse && !resetPulse.pulse);
       stateReg <= Enabled;
    endrule
+
    rule writeReq if (dfifo.notEmpty);
       wchan.writeReq.put(?);
    endrule
