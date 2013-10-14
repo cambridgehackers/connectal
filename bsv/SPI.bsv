@@ -10,8 +10,8 @@ interface SpiPins;
     method Bit#(1) dout();
     method Bit#(1) sel();
     method Action din(Bit#(1) v);
-   // inverted clock
-   interface Clock clk; 
+    interface Clock clock;
+    interface Clock invertedClock;
 endinterface: SpiPins
 
 interface SPI#(type a);
@@ -26,6 +26,7 @@ endinterface
 
 module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log#(awidth,logawidth));
 
+   Clock defaultClock <- exposeCurrentClock;
    ClockDividerIfc clockInverter <- mkClockInverter;
    Clock spiClock = clockInverter.slowClock;
    Reset spiReset <-  mkAsyncResetFromCR(2, clockInverter.slowClock);
@@ -58,14 +59,15 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
       endmethod
       method Action din(Bit#(1) v) if (countreg > 0);
 	 countreg <= countreg - 1;
-         Bit#(awidth) newshiftreg = { v, shiftreg[valueOf(awidth)-1:1] };
+	 Bit#(awidth) newshiftreg = { v, shiftreg[valueOf(awidth)-1:1] };
 	 shiftreg <= newshiftreg;
-         if (countreg == 1) begin
+	 if (countreg == 1) begin
 	    resultFifo.enq(unpack(newshiftreg));
 	    selreg <= 1;
 	 end
       endmethod
-   interface Clock clk = spiClock;
+      interface Clock clock = defaultClock;
+      interface Clock invertedClock = clockInverter.slowClock;
    endinterface: pins
    interface clock = clockInverter.slowClock;
    interface reset = spiReset;
