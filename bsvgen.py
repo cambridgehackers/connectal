@@ -19,9 +19,7 @@ import Clocks::*;
 import Adapter::*;
 import AxiMasterSlave::*;
 import AxiClientServer::*;
-import HDMI::*;
 import Zynq::*;
-import Imageon::*;
 import Vector::*;
 import SpecialFIFOs::*;
 import AxiDMA::*;
@@ -492,7 +490,8 @@ indicationMethodTemplate='''
 
 
 def emitPreamble(f, files):
-    extraImports = ['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
+    extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
+                   + ['import %s::*;\n' % i for i in syntax.globalimports ])
     #axiMasterDecarations = ['interface AxiMaster#(64,8) %s;' % axiMaster for axiMaster in axiMasterNames]
     #axiSlaveDecarations = ['interface AxiSlave#(32,4) %s;' % axiSlave for axiSlave in axiSlaveNames]
     f.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
