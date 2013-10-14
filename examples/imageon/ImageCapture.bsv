@@ -26,6 +26,7 @@ import GetPut::*;
 import Connectable :: *;
 import PCIE :: *; // ConnectableWithClocks
 import Clocks :: *;
+import SPI :: *;
 
 import GetPutWithClocks :: *;
 import Zynq::*;
@@ -42,6 +43,7 @@ interface CoreIndication;
     method Action triggen_control_value(Bit#(32) v);
     method Action spi_rxfifo_value(Bit#(32) v);
     method Action debugind(Bit#(32) v);
+    method Action spi_response(Bit#(26) v);
 endinterface
 
 
@@ -92,6 +94,7 @@ interface CoreRequest;
     method Action set_syncgen_vbporch(Bit#(16) v);
     method Action set_debugreq(Bit#(32) v);
     method Action get_debugind();
+    method Action put_spi_request(Bit#(26) v);
 endinterface
 
 interface ImageCaptureIndication;
@@ -105,6 +108,7 @@ interface ImageCaptureRequest;
    interface ImageonVita imageon;
    interface ImageonSensorData sensor_data;
    interface HDMI hdmi;
+   interface SpiPins spi;
 endinterface
  
 module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock, 
@@ -124,6 +128,8 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     BlueScopeInternal bsi <- mkSyncBlueScopeInternal(32, dma_debug_write_chan, indication.bsIndication,
 					             hdmi_clock, hdmi_reset, defaultClock, defaultReset);
    
+    SPI#(Bit#(26)) spiController <- mkSPI(1000);
+
     SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);
     HdmiOut hdmiOut <- mkHdmiOut(clocked_by hdmi_clock, reset_by hdmi_reset);
 
@@ -137,6 +143,8 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     endrule
     // hdmi clock domain
     mkConnection(converter.out, hdmiOut.rgb);
+
+    mkConnection(spiController.response.get(), indication.coreIndication.spi_response);
 
     interface CoreRequest coreRequest;
     method Action set_spi_control(Bit#(32) v);
@@ -274,10 +282,14 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     method Action get_debugind();
         indication.coreIndication.debugind(control.get_debugind());
     endmethod
+    method Action put_spi_request(Bit#(26) v);
+        spiController.request.put(v);
+    endmethod
 
     endinterface
    interface BlueScopeRequest bsRequest = bsi.requestIfc;
    interface ImageonVita imageon = imageonVita.host;
    interface ImageonSensorData sensor_data = xsviFromSensor.in;
    interface HDMI hdmi = hdmiOut.hdmi;
+   interface SpiPins spi = spiController.pins;
 endmodule
