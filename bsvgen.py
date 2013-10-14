@@ -138,7 +138,9 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
     // indication-specific state
     Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
     Vector#(%(indicationChannelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
+    Reg#(Bit#(32)) underflowReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
+    Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
     FIFOF#(Bit#(32)) readOutstanding <- mkSizedFIFOF(8);
     
     function Bool my_or(Bool a, Bool b) = a || b;
@@ -194,6 +196,11 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
 	if (addr == 14'h008)
 	    putEnableReg <= v[0] == 1'd1;
     endrule
+    rule writeIndicatorFifo if (axiSlaveWriteAddrFifo.first[14] == 0);
+        axiSlaveWriteAddrFifo.deq;
+        axiSlaveWriteDataFifo.deq;
+        outOfRangeWriteCount <= outOfRangeWriteCount + 1;
+    endrule
 
     rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
 
@@ -229,6 +236,10 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
                 v = 0;
             end
 	end
+	if (addr == 14'h034)
+	    v = outOfRangeWriteCount;
+	if (addr == 14'h038)
+	    v = underflowReadCountReg;
         axiSlaveReadDataFifo.enq(v);
     endrule
 
@@ -378,6 +389,10 @@ module mk%(Dut)sWrapper#(%(Dut)s %(dut)s, %(Indication)sWrapper iw)(%(Dut)sWrapp
 	    v = outOfRangeWriteCount;
         axiSlaveReadDataFifo.enq(v);
     endrule
+    rule readWriteFifo if (axiSlaveReadAddrFifo.first[14] == 0);
+        axiSlaveReadAddrFifo.deq;
+        axiSlaveReadDataFifo.enq(32'h05b05b0);
+    endrule
 
 %(methodRules)s
 
@@ -451,8 +466,15 @@ indicationRuleTemplate='''
     rule %(methodName)s$axiSlaveRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
                                          axiSlaveReadAddrFifo.first[13:8] == %(methodName)s$Offset);
         axiSlaveReadAddrFifo.deq;
-        %(methodName)s$responseFifo.deq;
-        axiSlaveReadDataFifo.enq(%(methodName)s$responseFifo.first);
+        let v = 32'hbad0dada;
+        if (%(methodName)s$responseFifo.notEmpty) begin
+            %(methodName)s$responseFifo.deq;
+            v = %(methodName)s$responseFifo.first;
+        end
+        else begin
+            underflowReadCountReg <= underflowReadCountReg + 1;
+        end
+        axiSlaveReadDataFifo.enq(v);
     endrule
 '''
 
