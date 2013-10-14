@@ -36,6 +36,18 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
    Reg#(Bit#(logawidth)) countreg <- mkReg(0);
    FIFOF#(a) resultFifo <- mkFIFOF;
 
+   Wire#(Bit#(1)) misoWire <- mkDWire(0);
+
+   rule running if (countreg > 0);
+      countreg <= countreg - 1;
+      Bit#(awidth) newshiftreg = { misoWire, shiftreg[valueOf(awidth)-1:1] };
+      shiftreg <= newshiftreg;
+      if (countreg == 1 && resultFifo.notFull) begin
+	 resultFifo.enq(unpack(newshiftreg));
+	 selreg <= 1;
+      end
+   endrule
+
    interface Put request;
       method Action put(a v) if (countreg == 0);
 	 selreg <= 0;
@@ -59,15 +71,7 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
 	 return selreg;
       endmethod
       method Action miso(Bit#(1) v);
-         if (countreg > 0) begin
-	     countreg <= countreg - 1;
-	     Bit#(awidth) newshiftreg = { v, shiftreg[valueOf(awidth)-1:1] };
-	     shiftreg <= newshiftreg;
-	     if (countreg == 1 && resultFifo.notFull) begin
-		resultFifo.enq(unpack(newshiftreg));
-		selreg <= 1;
-	     end
-	 end
+         misoWire <= v;
       endmethod
       interface Clock clock = defaultClock;
       interface Clock invertedClock = clockInverter.slowClock;
