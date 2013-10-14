@@ -342,6 +342,8 @@ def p_patterns(p):
 
 def p_importDecl(p):
     'importDecl : TOKIMPORT VAR COLONCOLON STAR SEMICOLON'
+    globalimports.append(p[2])
+    p[0] = p[2]
 
 def p_importDecls(p):
     '''importDecls : 
@@ -542,7 +544,6 @@ def p_methodDef(p):
     returnType = p[2]
     name = p[3]
     params = []
-    #print 'method', name
     p[0] = AST.Method(name, returnType, params,False)
 
 def p_methodBody(p):
@@ -706,6 +707,7 @@ def p_instanceDecl(p):
 
 globaldecls = []
 globalvars = {}
+globalimports = []
 
 def p_packageStmt(p):
     '''packageStmt : interfaceDecl
