@@ -107,16 +107,17 @@ interface ImageCaptureRequest;
    interface HDMI hdmi;
 endinterface
  
-module mkImageCaptureRequest#(Clock hdmi_clock, 
+module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock, 
     ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
+    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
     ImageonVitaController imageonVita <- mkImageonVitaController();
     ImageonControl control = imageonVita.control;
-    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(defaultClock, defaultReset, clocked_by hdmi_clock, reset_by hdmi_reset);
+    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, clocked_by hdmi_clock, reset_by hdmi_reset);
    
     AxiDMA dma <- mkAxiDMA;
     WriteChan dma_debug_write_chan = dma.write.writeChannels[1];

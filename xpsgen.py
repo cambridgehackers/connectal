@@ -1047,9 +1047,9 @@ class ImageonVita:
      wire fmc_imageon_iic_0_sda_O;
      wire fmc_imageon_iic_0_sda_I;
      wire imageon_xsvi_fsync;
-     wire RDY_imageon_xsvi_fsync;
+     wire EN_imageon_xsvi_fsync;
      wire [39:0] imageon_xsvi_video_data;
-     wire RDY_imageon_xsvi_video_data;
+     wire EN_imageon_xsvi_video_data;
      wire [31:0] debugreq_value;
      wire [31:0] debugind_value;
 '''
@@ -1149,9 +1149,11 @@ class ImageonVita:
     .sensor_data_active_video_v(imageon_xsvi_active_video),
     .EN_sensor_data_video_data_old(1),
     .sensor_data_video_data_old_v(imageon_xsvi_video_data_old),
-    .EN_sensor_data_framestart(RDY_imageon_xsvi_fsync),
+    .EN_sensor_data_framestart(EN_imageon_xsvi_fsync),
+    .RDY_sensor_data_framestart(RDY_imageon_xsvi_fsync),
     .sensor_data_framestart_v(imageon_xsvi_fsync),
-    .EN_sensor_data_video_data(RDY_imageon_xsvi_video_data),
+    .EN_sensor_data_video_data(EN_imageon_xsvi_video_data),
+    .RDY_sensor_data_video_data(RDY_imageon_xsvi_video_data),
     .sensor_data_video_data_v(imageon_xsvi_video_data),
 
     .imageon_get_debugreq(debugreq_value),
@@ -1163,8 +1165,8 @@ class ImageonVita:
    wire imageon_clk4x_unbuf;
    wire imageon_clk4_unbuf;
    wire fmc_imageon_video_clk1_buf;
-   assign RDY_imageon_xsvi_video_data = 1;
-   assign RDY_imageon_xsvi_fsync = 1;
+   assign EN_imageon_xsvi_video_data = 1;
+   assign EN_imageon_xsvi_fsync = 1;
 
     IBUFG ibufg_video_clk1 (
         .I(fmc_imageon_video_clk1),
@@ -1370,13 +1372,7 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
 .debreq(debugreq_value),
 .debind(debugind_value),
     /* XSVI Port */
-    .framestart_o(imageon_xsvi_framestart_old),
-    .xsvi_vsync_o(imageon_xsvi_vsync),
-    .xsvi_hsync_o(imageon_xsvi_hsync),
-    .xsvi_active_video_o(imageon_xsvi_active_video),
-    .video_data_out(imageon_xsvi_video_data_old),
-    .fsync(imageon_xsvi_fsync),
-    .xsvi_video_data_o(imageon_xsvi_video_data)
+    .fsync(imageon_xsvi_fsync)
 );
  '''
     def pinout(self, board):
@@ -1452,7 +1448,7 @@ class InterfaceMixin:
             'top_dut_axi_master_port_map': ''.join([top_dut_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_master_port_map': ''.join([top_ps7_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_slave_port_map': ''.join([top_ps7_axi_slave_port_map_template % subst for subst in slaveBusSubsts]),
-            'dut_hdmi_clock_arg': '      .CLK_hdmi_clk(hdmi_clk),' if len(buses['HDMI']) else '',
+            'dut_hdmi_clock_arg': '      .CLK_imageon_clock(imageon_clk),\n       .CLK_hdmi_clock(hdmi_clk),' if len(buses['ImageonVita']) else '       .CLK_hdmi_clock(hdmi_clk)' if len(buses['HDMI']) else '',
             'top_bus_ports':
                 ''.join([''.join([busHandlers[busType].top_bus_ports(busname,t,params) for (busname,t,params) in buses[busType]])
                          for busType in busHandlers]),

@@ -591,8 +591,10 @@ class InterfaceMixin:
         for busType in exposedInterfaces:
             collected = self.collectInterfaceNames(busType)
             if collected:
+                if busType == 'ImageonVita':
+                    clknames.append('imageon_clock')
                 if busType == 'HDMI':
-                    clknames.append('hdmi_clk')
+                    clknames.append('hdmi_clock')
             buses[busType] = collected
         # print 'clknames', clknames
 
