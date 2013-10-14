@@ -1,15 +1,16 @@
 
 import Clocks      :: *;
 import GetPut      :: *;
-import FIFO        :: *;
+import FIFOF       :: *;
 import Connectable :: *;
 import StmtFSM     :: *;
 import SpecialFIFOs:: *;
 
+(* always_enabled *)
 interface SpiPins;
-    method Bit#(1) dout();
-    method Bit#(1) sel();
-    method Action din(Bit#(1) v);
+    method Bit#(1) mosi();
+    method Bit#(1) sel_n();
+    method Action miso(Bit#(1) v);
     interface Clock clock;
     interface Clock invertedClock;
 endinterface: SpiPins
@@ -33,7 +34,7 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
    Reg#(Bit#(awidth)) shiftreg <- mkReg(unpack(0));
    Reg#(Bit#(1)) selreg <- mkReg(1);
    Reg#(Bit#(logawidth)) countreg <- mkReg(0);
-   FIFO#(a) resultFifo <- mkFIFO;
+   FIFOF#(a) resultFifo <- mkFIFOF;
 
    interface Put request;
       method Action put(a v) if (countreg == 0);
@@ -51,19 +52,21 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
    endinterface: response
 
    interface SpiPins pins;
-      method Bit#(1) dout();
+      method Bit#(1) mosi();
          return shiftreg[0];
       endmethod
-      method Bit#(1) sel() if (countreg > 0);
+      method Bit#(1) sel_n();
 	 return selreg;
       endmethod
-      method Action din(Bit#(1) v) if (countreg > 0);
-	 countreg <= countreg - 1;
-	 Bit#(awidth) newshiftreg = { v, shiftreg[valueOf(awidth)-1:1] };
-	 shiftreg <= newshiftreg;
-	 if (countreg == 1) begin
-	    resultFifo.enq(unpack(newshiftreg));
-	    selreg <= 1;
+      method Action miso(Bit#(1) v);
+         if (countreg > 0) begin
+	     countreg <= countreg - 1;
+	     Bit#(awidth) newshiftreg = { v, shiftreg[valueOf(awidth)-1:1] };
+	     shiftreg <= newshiftreg;
+	     if (countreg == 1 && resultFifo.notFull) begin
+		resultFifo.enq(unpack(newshiftreg));
+		selreg <= 1;
+	     end
 	 end
       endmethod
       interface Clock clock = defaultClock;
@@ -106,15 +109,15 @@ module mkSpiTestBench(Empty);
    Reg#(Bit#(20)) slaveValue <- mkReg(slaveV, clocked_by spi.clock, reset_by spi.reset);
    Reg#(Bit#(20)) responseValue <- mkReg(0, clocked_by spi.clock, reset_by spi.reset);
 
-   rule slaveIn if (spi.pins.sel == 0);
-      spi.pins.din(slaveValue[0]);
+   rule slaveIn if (spi.pins.sel_n == 0);
+      spi.pins.miso(slaveValue[0]);
       slaveCount <= slaveCount - 1;
       slaveValue <= (slaveValue >> 1);
    endrule
 
-   rule spipins if (spi.pins.sel == 0);
-      $display("din=%d dout=%d sel=%d", slaveValue[0], spi.pins.dout, spi.pins.sel);
-      responseValue <= { spi.pins.dout, responseValue[19:1] };
+   rule spipins if (spi.pins.sel_n == 0);
+      $display("din=%d mosi=%d sel=%d", slaveValue[0], spi.pins.mosi, spi.pins.sel_n);
+      responseValue <= { spi.pins.mosi, responseValue[19:1] };
    endrule
 
    rule displaySlaveValue if (slaveCount == 0);
