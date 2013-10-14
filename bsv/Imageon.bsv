@@ -699,8 +699,8 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset)(ImageonXsviF
     endinterface
     interface Get out;
 	method ActionValue#(XsviData) get();
-	    //dataGearbox.deq;
-	    //syncGearbox.deq;
+	    dataGearbox.deq;
+	    syncGearbox.deq;
 	    return XsviData {
 		fsync: xsvi_framestart_old_wire, //syncGearbox.first[0],
 		vsync: xsvi_vsync_wire,
