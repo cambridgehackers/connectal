@@ -26,7 +26,7 @@ import GetPut::*;
 import Connectable :: *;
 import PCIE :: *; // ConnectableWithClocks
 import Clocks :: *;
-import SPI :: *;
+import XbsvSpi :: *;
 
 import GetPutWithClocks :: *;
 import Zynq::*;
