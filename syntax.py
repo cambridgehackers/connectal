@@ -661,12 +661,23 @@ def p_moduleFormalArgs(p):
     '''moduleFormalArgs :
                         | moduleFormalArg
                         | moduleFormalArgs COMMA moduleFormalArg'''
+    if len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[3]]
 
 def p_moduleParamsArgs(p):
     '''moduleParamsArgs :
                         | HASH LPAREN moduleFormalParams RPAREN
                         | HASH LPAREN moduleFormalParams RPAREN LPAREN moduleFormalArgs RPAREN
                         | LPAREN moduleFormalArgs RPAREN'''
+    if len(p) == 8:
+        p[0] = [ p[3], p[6] ]
+    elif len(p) == 5:
+        p[0] = [ p[3], None ]
+    else:
+        p[0] = [ None, p[2] ]
+
 def p_attrSpec(p):
     '''attrSpec : VAR
                 | VAR EQUAL expression'''
@@ -681,7 +692,7 @@ def p_instanceAttributes(p):
 
 def p_moduleDef(p):
     '''moduleDef : instanceAttributes TOKMODULE VAR moduleParamsArgs provisos SEMICOLON expressionStmts TOKENDMODULE colonVar'''
-    p[0] = AST.Module(p[3], ['fixmemoduledefs'])
+    p[0] = AST.Module(p[3], p[4][0], p[4][1], p[5], p[7])
 
 def p_instanceDeclStmt(p):
     '''instanceDeclStmt : varAssign SEMICOLON

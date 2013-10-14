@@ -60,9 +60,12 @@ class TypeclassInstance:
         self.type = 'TypeclassInstance'
 
 class Module:
-    def __init__(self, name, decls):
+    def __init__(self, name, params, interface, provisos, decls):
         self.type = 'Module'
         self.name = name
+        self.interface = interface
+        self.params = params
+        self.provisos = provisos
         self.decls = decls
     def __repr__(self):
         return '{module: %s %s}' % (self.name, self.decls)
