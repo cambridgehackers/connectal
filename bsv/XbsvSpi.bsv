@@ -41,7 +41,8 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
 
    rule running if (countreg > 0);
       countreg <= countreg - 1;
-      Bit#(awidth) newshiftreg = { shiftreg[valueOf(awidth)-1:1], misoWire };
+      Bit#(awidth) newshiftreg = { shiftreg[valueOf(awidth)-2:0], misoWire };
+      $display("newshiftreg = %08h", newshiftreg);
       shiftreg <= newshiftreg;
       if (countreg == 1 && resultFifo.notFull) begin
 	 resultFifo.enq(unpack(newshiftreg));
@@ -115,14 +116,14 @@ module mkSpiTestBench(Empty);
    Reg#(Bit#(20)) responseValue <- mkReg(0, clocked_by spi.clock, reset_by spi.reset);
 
    rule slaveIn if (spi.pins.sel_n == 0);
-      spi.pins.miso(slaveValue[0]);
+      spi.pins.miso(slaveValue[19]);
       slaveCount <= slaveCount - 1;
-      slaveValue <= (slaveValue >> 1);
+      slaveValue <= (slaveValue << 1);
    endrule
 
    rule spipins if (spi.pins.sel_n == 0);
-      $display("din=%d mosi=%d sel=%d", slaveValue[0], spi.pins.mosi, spi.pins.sel_n);
-      responseValue <= { spi.pins.mosi, responseValue[19:1] };
+      $display("miso=%d mosi=%d sel=%d", slaveValue[19], spi.pins.mosi, spi.pins.sel_n);
+      responseValue <= { responseValue[18:0], spi.pins.mosi };
    endrule
 
    rule displaySlaveValue if (slaveCount == 0);
