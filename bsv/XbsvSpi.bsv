@@ -28,6 +28,7 @@ endinterface
 module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log#(awidth,logawidth));
 
    Clock defaultClock <- exposeCurrentClock;
+   Reset defaultReset <- exposeCurrentReset;
    ClockDividerIfc clockInverter <- mkClockInverter;
    Clock spiClock = clockInverter.slowClock;
    Reset spiReset <-  mkAsyncResetFromCR(2, clockInverter.slowClock);
@@ -40,7 +41,7 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
 
    rule running if (countreg > 0);
       countreg <= countreg - 1;
-      Bit#(awidth) newshiftreg = { misoWire, shiftreg[valueOf(awidth)-1:1] };
+      Bit#(awidth) newshiftreg = { shiftreg[valueOf(awidth)-1:1], misoWire };
       shiftreg <= newshiftreg;
       if (countreg == 1 && resultFifo.notFull) begin
 	 resultFifo.enq(unpack(newshiftreg));
@@ -65,7 +66,7 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
 
    interface SpiPins pins;
       method Bit#(1) mosi();
-         return shiftreg[0];
+         return shiftreg[valueOf(awidth)-1];
       endmethod
       method Bit#(1) sel_n();
 	 return selreg;
