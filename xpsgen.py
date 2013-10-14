@@ -1156,6 +1156,11 @@ class ImageonVita:
 
     .imageon_get_debugreq(debugreq_value),
     .imageon_set_debugind_v(debugind_value),
+    /* SPI port */
+    .CLK_spi_clock(io_vita_spi_sclk),
+    .spi_sel_n(io_vita_spi_ssel_n),
+    .spi_mosi(io_vita_spi_mosi),
+    .spi_miso_v(io_vita_spi_miso),
 '''
     def top_bus_assignments(self,busname,t,params):
         return '''
@@ -1355,10 +1360,10 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_clk_pll(io_vita_clk_pll),
     .io_vita_reset_n(io_vita_reset_n),
     .io_vita_trigger(io_vita_trigger),
-    .io_vita_spi_sclk(io_vita_spi_sclk),
-    .io_vita_spi_ssel_n(io_vita_spi_ssel_n),
-    .io_vita_spi_mosi(io_vita_spi_mosi),
-    .io_vita_spi_miso(io_vita_spi_miso),
+    // .io_vita_spi_sclk(io_vita_spi_sclk),
+    // .io_vita_spi_ssel_n(io_vita_spi_ssel_n),
+    // .io_vita_spi_mosi(io_vita_spi_mosi),
+    // .io_vita_spi_miso(io_vita_spi_miso),
     .io_vita_clk_out_p(io_vita_clk_out_p),
     .io_vita_clk_out_n(io_vita_clk_out_n),
     .io_vita_sync_p(io_vita_sync_p),
