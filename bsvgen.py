@@ -117,6 +117,7 @@ endinterface
 
 interface %(Dut)sWrapper;
     interface Axi3Slave#(32,32,4,12) ctrl;
+    interface ReadOnly#(Bool) putEnable;
     interface ReadOnly#(Bit#(1)) interrupt;
     interface %(Dut)s indication;
     interface RequestWrapperCommFIFOs rwCommFifos;%(indicationMethodDeclsAug)s
@@ -142,6 +143,8 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
     
     function Bool my_or(Bool a, Bool b) = a || b;
     function Bool read_wire (PulseWire a) = a._read;    
+    // this is here to disable the warning that the put failed rule can never fire
+    Reg#(Bool) putEnableReg <- mkReg(True);
     Reg#(Bool) interruptEnableReg <- mkReg(False);
     let       interruptStatus = readOutstanding.notEmpty;
     function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
@@ -188,6 +191,8 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
 	    noAction; // interruptStatus is read-only
 	if (addr == 14'h004)
 	    interruptEnableReg <= v[0] == 1'd1;
+	if (addr == 14'h008)
+	    putEnableReg <= v[0] == 1'd1;
     endrule
 
     rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
@@ -316,6 +321,7 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
         endinterface
     endinterface
 
+    interface ReadOnly putEnable = regToReadOnly(putEnableReg);
     interface ReadOnly interrupt;
         method Bit#(1) _read();
             if (interruptEnableReg && interruptStatus)
@@ -427,7 +433,7 @@ requestRuleTemplate='''
         %(methodName)s$requestFifo.enq(axiSlaveWriteDataFifo.first);
     endrule
     (* descending_urgency = "handle$%(methodName)s$request, handle$%(methodName)s$requestFailure" *)
-    rule handle$%(methodName)s$request;
+    rule handle$%(methodName)s$request if (iw.putEnable); // iw.putEnable is always True
         let request = %(methodName)s$requestFifo.first;
         %(methodName)s$requestFifo.deq;
         %(dut)s.%(methodName)s(%(paramsForCall)s);
