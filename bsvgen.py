@@ -29,7 +29,7 @@ import AxiDMA::*;
 
 '''
 
-exposedInterfaces = ['LEDS', 'ImageonVita', 'ImageonSensorData', 'FmcImageonInterface', 'HDMI']
+exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonSensorData', 'FmcImageonInterface']
 
 bsimTopTemplate='''
 import StmtFSM::*;
@@ -574,6 +574,12 @@ class InterfaceMixin:
 		}
         f.write(bsimTopTemplate % substs);
 
+    def getClockArgNames(self, m):
+        print m
+        print m.params
+        print [ p.name for p in m.params if p.type.name == 'Clock']
+        return [ p.name for p in m.params if p.type.name == 'Clock']
+
     def emitBsvImplementationRequestTop(self,f):
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = self.collectInterfaceNames('AxiSlave')
@@ -598,6 +604,7 @@ class InterfaceMixin:
             buses[busType] = collected
         # print 'clknames', clknames
 
+        dut_clknames = self.getClockArgNames(syntax.globalvars['mk%s' % self.name])
         substs = {
             'dut': dutName,
             'Dut': util.capitalize(self.name),
@@ -617,7 +624,7 @@ class InterfaceMixin:
             'axiMasterImplementations': '\n'.join(['    interface Axi3Master %s = %sMaster;' % (axiMaster,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
             'dut_hdmi_clock_param': '#(%s)' % ', '.join(['Clock %s' % name for name in clknames]) if len(clknames) else '',
-            'dut_hdmi_clock_arg': ' '.join(['%s,' % name for name in clknames]) if len(clknames) else '',
+            'dut_hdmi_clock_arg': ' '.join(['%s,' % name for name in dut_clknames]) if len(clknames) else '',
             'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
                                                   for (axiSlave,t,params) in axiSlaves]),
             'exposedInterfaceImplementations': '\n'.join(['\n'.join(['    interface %s %s = %s.%s;' % (t, busname, dutName, busname)
