@@ -582,6 +582,8 @@ interface ImageonXsviFromSensor;
     interface Get#(XsviData) out;
 endinterface
 
+typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
+
 module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset)(ImageonXsviFromSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
@@ -596,6 +598,76 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset)(ImageonXsviF
     Wire#(Bit#(1))  xsvi_vsync_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
     Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
+
+    Reg#(Bit#(1))     framestart <- mkReg(0);
+    Reg#(State)       hstate <- mkReg(Idle);
+    Reg#(State)       vstate <- mkReg(Idle);
+    Reg#(Bit#(16))    vsync_count <- mkReg(0);
+    Reg#(Bit#(16))    hsync_count <- mkReg(0);
+    Reg#(Bit#(16))    host_syncgen_hactive <- mkReg(0);
+    Reg#(Bit#(16))    host_syncgen_hfporch <- mkReg(0);
+    Reg#(Bit#(16))    host_syncgen_hbporch <- mkReg(0);
+    Reg#(Bit#(16))    host_syncgen_hsync <- mkReg(0);
+    Reg#(Bit#(16))    host_syncgen_vactive <- mkReg(0);
+    Reg#(Bit#(16))    host_syncgen_vfporch <- mkReg(0);
+    Reg#(Bit#(16))    host_syncgen_vsync <- mkReg(0);
+    
+    rule start_fsm if (framestart == 1);
+        vsync_count <= 0;
+        hsync_count <= 0;
+        hstate <= Active;
+        vstate <= Active;
+    endrule
+ 
+    rule sync_fsm if (framestart != 1);
+        let hs = hstate;
+        let vs = vstate;
+        let hc = hsync_count;
+        let vc = vsync_count;
+  
+        hc = hc + 1;
+        if (hstate == FrontP && hsync_count >= host_syncgen_hfporch - 1)
+            begin
+            hc = 0;
+            hs = Sync;
+            vc = vc + 1;
+            if (vstate == Active && vsync_count >= host_syncgen_vactive - 1)
+                begin
+                vc = 0;
+                vs = FrontP;
+                end
+            if (vstate == FrontP && vsync_count >= host_syncgen_vfporch - 1)
+                begin
+                vc = 0;
+                vs = Sync;
+                end
+            if (vstate == Sync && vsync_count >= host_syncgen_vsync - 1)
+                begin
+                vc = 0;
+                vs = BackP;
+                end
+            end
+        if (hstate == Sync && hsync_count >= host_syncgen_hsync - 1)
+            begin
+            hc = 0;
+            hs = BackP;
+            end
+        if (hstate == BackP && hsync_count >= host_syncgen_hbporch - 1)
+            begin
+            hc = 0;
+            hs = Active;
+            end
+        if (hstate == Active && hsync_count >= host_syncgen_hactive - 1)
+            begin
+            hc = 0;
+            hs = FrontP;
+            end
+    
+        hstate <= hs;
+        vstate <= vs;
+        hsync_count <= hc;
+        vsync_count <= vc;
+    endrule
 
     interface ImageonSensorData in;
         method Action fsync(Bit#(1) v);
