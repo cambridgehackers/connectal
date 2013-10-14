@@ -133,6 +133,7 @@ Bit#(6) %(methodName)s$Offset = %(channelNumber)s;
 
 mkIndicationWrapperTemplate='''
 
+(* mutually_exclusive = "%(indicationMethodRuleNames)s" *)
 module mk%(Dut)sWrapper(%(Dut)sWrapper);
 
     // indication-specific state
@@ -353,6 +354,7 @@ endmodule
 mkRequestWrapperTemplate='''
 
 
+(* mutually_exclusive = "%(methodRuleNames)s" *)
 module mk%(Dut)sWrapper#(%(Dut)s %(dut)s, %(Indication)sWrapper iw)(%(Dut)sWrapper);
 
     // request-specific state
@@ -734,6 +736,7 @@ class InterfaceMixin:
     def emitBsvImplementationRequest(self,f):
         # print self.name
         requestElements = self.collectRequestElements(self.name)
+        methodRuleNames = self.collectMethodRuleNames(self.name)
         methodRules = self.collectMethodRules(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Client')
         axiSlaves = self.collectInterfaceNames('AxiSlave')
@@ -745,6 +748,7 @@ class InterfaceMixin:
             'dut': dutName,
             'Dut': util.capitalize(self.name),
             'requestElements': ''.join(requestElements),
+            'methodRuleNames': ', '.join(methodRuleNames),
             'methodRules': ''.join(methodRules),
             'channelCount': self.channelCount,
             'writeChannelCount': self.channelCount,
@@ -767,6 +771,7 @@ class InterfaceMixin:
     def emitBsvImplementationIndication(self,f):
 
         responseElements = self.collectResponseElements(self.name)
+        indicationMethodRuleNames = self.collectIndicationMethodRuleNames(self.name)
         indicationMethodRules = self.collectIndicationMethodRules(self.name)
         indicationMethodsOrig = self.collectIndicationMethodsOrig(self.name)
         indicationMethodsAug = self.collectIndicationMethodsAug(self.name)
@@ -778,6 +783,7 @@ class InterfaceMixin:
             'dut': dutName,
             'Dut': util.capitalize(self.name),
             'responseElements': ''.join(responseElements),
+            'indicationMethodRuleNames': ', '.join(indicationMethodRuleNames),
             'indicationMethodRules': ''.join(indicationMethodRules),
             'indicationMethodsOrig': ''.join(indicationMethodsOrig),
             'indicationMethodsAug' : ''.join(indicationMethodsAug),
@@ -818,6 +824,22 @@ class InterfaceMixin:
                 if methodRule:
                     methodRules.append(methodRule)
         return methodRules
+    def collectMethodRuleNames(self,outerTypeName):
+        methodRuleNames = []
+        for m in self.decls:
+            if m.type == 'Method':
+                methodRule = m.collectMethodRule(outerTypeName)
+                if methodRule:
+                    methodRuleNames.append('axiSlaveWrite$%s' % m.name)
+        return methodRuleNames
+    def collectIndicationMethodRuleNames(self,outerTypeName):
+        methodRuleNames = []
+        for m in self.decls:
+            if m.type == 'Method':
+                methodRule = m.collectIndicationMethodRule(outerTypeName)
+                if methodRule:
+                    methodRuleNames.append("%s$axiSlaveRead" % m.name)
+        return methodRuleNames
     def collectIndicationMethodRules(self,outerTypeName):
         methodRules = []
         for m in self.decls:
