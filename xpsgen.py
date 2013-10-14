@@ -1372,7 +1372,13 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
 .debreq(debugreq_value),
 .debind(debugind_value),
     /* XSVI Port */
-    .fsync(imageon_xsvi_fsync)
+    .framestart_o(imageon_xsvi_framestart_old),
+    .xsvi_vsync_o(imageon_xsvi_vsync),
+    .xsvi_hsync_o(imageon_xsvi_hsync),
+    .xsvi_active_video_o(imageon_xsvi_active_video),
+    .video_data_out(imageon_xsvi_video_data_old),
+    .fsync(imageon_xsvi_fsync),
+    .xsvi_video_data_o(imageon_xsvi_video_data)
 );
  '''
     def pinout(self, board):
