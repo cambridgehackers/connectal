@@ -13,6 +13,7 @@ interface SpiPins;
     method Action miso(Bit#(1) v);
     interface Clock clock;
     interface Clock invertedClock;
+    interface Reset reset;
 endinterface: SpiPins
 
 interface SPI#(type a);
@@ -77,6 +78,7 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
       endmethod
       interface Clock clock = defaultClock;
       interface Clock invertedClock = clockInverter.slowClock;
+      interface Reset reset = defaultReset;
    endinterface: pins
    interface clock = clockInverter.slowClock;
    interface reset = spiReset;

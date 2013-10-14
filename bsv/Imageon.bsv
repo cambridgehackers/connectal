@@ -100,6 +100,8 @@ interface ImageonSensorData;
     method Action framestart(Bit#(1) v);
     method Action video_data(Bit#(40) v);
     method Bit#(32) get_debugind();
+    interface Reset reset;
+    interface Reset slowReset;
 endinterface
 
 (* always_enabled *)
@@ -113,6 +115,7 @@ interface ImageonVita;
     interface ImageonSyncGen syncgen;
     method Bit#(32) get_debugreq();
     method Action set_debugind(Bit#(32) v);
+    interface Reset reset;
 endinterface
 
 interface ImageonControl;
@@ -172,7 +175,7 @@ interface ImageonVitaController;
 endinterface
 
 module mkImageonVitaController(ImageonVitaController);
-
+    Reset defaultReset <- exposeCurrentReset;
     Reg#(Bit#(1)) host_vita_reset_reg <- mkReg(0);
     Reg#(Bit#(1)) host_oe_reg <- mkReg(0);
     Wire#(Bit#(1)) host_clock_gen_locked_wire <- mkDWire(0);
@@ -376,7 +379,8 @@ module mkImageonVitaController(ImageonVitaController);
         method Action set_debugind(Bit#(32) v);
             debugind_value <= v;
 	endmethod
-    endinterface
+        interface Reset reset = defaultReset;
+    endinterface: host
     interface ImageonControl control;
 // SPI_CONTROL
 //    [ 0] VITA_RESET
@@ -701,7 +705,9 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset)(ImageonXsviF
         method Bit#(32) get_debugind();
             return debugind_value;
 	endmethod
-    endinterface
+	interface Reset reset = defaultReset;
+	interface Reset slowReset = slow_reset;
+    endinterface: in
     interface Get out;
 	method ActionValue#(XsviData) get();
 	    dataGearbox.deq;
@@ -715,5 +721,5 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset)(ImageonXsviF
 		video_data: xsvi_video_data_wire //dataGearbox.first[0]
 	    };
 	endmethod
-    endinterface
+    endinterface: out
 endmodule
