@@ -43,7 +43,7 @@ interface CoreIndication;
     method Action triggen_control_value(Bit#(32) v);
     method Action spi_rxfifo_value(Bit#(32) v);
     method Action debugind(Bit#(32) v);
-    method Action spi_response(Bit#(26) v);
+    method Action spi_response(Bit#(32) v);
 endinterface
 
 
@@ -94,7 +94,7 @@ interface CoreRequest;
     method Action set_syncgen_vbporch(Bit#(16) v);
     method Action set_debugreq(Bit#(32) v);
     method Action get_debugind();
-    method Action put_spi_request(Bit#(26) v);
+    method Action put_spi_request(Bit#(32) v);
 endinterface
 
 interface ImageCaptureIndication;
@@ -149,7 +149,10 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     // hdmi clock domain
     mkConnection(converter.out, hdmiOut.rgb);
 
-    mkConnection(spiController.response.get(), indication.coreIndication.spi_response);
+    rule spiControllerResponse;
+       Bit#(26) v <- spiController.response.get();
+       indication.coreIndication.spi_response(extend(v));
+    endrule
 
     interface CoreRequest coreRequest;
     method Action set_spi_control(Bit#(32) v);
@@ -288,8 +291,8 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
         //indication.coreIndication.debugind(control.get_debugind());
         indication.coreIndication.debugind(debugind_value);
     endmethod
-    method Action put_spi_request(Bit#(26) v);
-        spiController.request.put(v);
+    method Action put_spi_request(Bit#(32) v);
+        spiController.request.put(truncate(v));
     endmethod
 
     endinterface
