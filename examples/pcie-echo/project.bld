@@ -51,7 +51,7 @@ bsv-define:                     BSIM SIMULATION
 [kc705_dut]
 hide-target
 extends-target:                 dut
-top-file:                       ./EchoWrapper.bsv
+top-file:                       ./EchoTop.bsv
 build-for:                      kc705
 scemi-clock-period:             30.0
 bsc-compile-options:            -opt-undetermined-vals -unspecified-to 0 -remove-dollar -verilog-filter ${BLUESPECDIR}/bin/basicinout
@@ -71,7 +71,7 @@ shared-lib:                     .build/${BUILD_TARGET}/libbsdebug.so
 [kc705_tb]
 hide-target
 extends-target:                 tb_tcl
-top-file:                       ./EchoWrapper.bsv
+top-file:                       ./EchoTop.bsv
 post-targets:                   sw
 scemi-type:                     PCIE_KINTEX7
 
