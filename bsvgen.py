@@ -360,12 +360,16 @@ module mk%(Dut)sWrapper#(%(Dut)s %(dut)s, %(Indication)sWrapper iw)(%(Dut)sWrapp
     Reg#(Bit#(32)) requestFiredCount <- mkReg(0);
     Reg#(Bit#(32)) overflowCount <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
+    PulseWire requestFiredPulse <- mkPulseWireOR();
 
     let axiSlaveWriteAddrFifo = iw.rwCommFifos.axiSlaveWriteAddrFifo;
     let axiSlaveReadAddrFifo  = iw.rwCommFifos.axiSlaveReadAddrFifo;
     let axiSlaveWriteDataFifo = iw.rwCommFifos.axiSlaveWriteDataFifo;
     let axiSlaveReadDataFifo  = iw.rwCommFifos.axiSlaveReadDataFifo; 
 
+    rule requestFiredIncrement if (requestFiredPulse);
+        requestFiredCount <= requestFiredCount+1;
+    endrule
 
     rule writeCtrlReg if (axiSlaveWriteAddrFifo.first[14] == 1);
         axiSlaveWriteAddrFifo.deq;
@@ -397,6 +401,7 @@ module mk%(Dut)sWrapper#(%(Dut)s %(dut)s, %(Indication)sWrapper iw)(%(Dut)sWrapp
 
 %(methodRules)s
 
+    (* descending_urgency = "%(requestFailureRuleNames)s" *)
     rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[14] == 0 && 
                              axiSlaveWriteAddrFifo.first[13:8] >= %(channelCount)s);
         axiSlaveWriteAddrFifo.deq;
@@ -453,7 +458,7 @@ requestRuleTemplate='''
         let request = %(methodName)s$requestFifo.first;
         %(methodName)s$requestFifo.deq;
         %(dut)s.%(methodName)s(%(paramsForCall)s);
-        requestFiredCount <= requestFiredCount+1;
+        requestFiredPulse.send();
     endrule
     rule handle$%(methodName)s$requestFailure;
         iw.putFailed(%(ord)s);
@@ -741,6 +746,7 @@ class InterfaceMixin:
     def emitBsvImplementationRequest(self,f):
         # print self.name
         requestElements = self.collectRequestElements(self.name)
+        methodNames = self.collectMethodNames(self.name)
         methodRuleNames = self.collectMethodRuleNames(self.name)
         methodRules = self.collectMethodRules(self.name)
         axiMasters = self.collectInterfaceNames('Axi3?Client', True)
@@ -755,6 +761,7 @@ class InterfaceMixin:
             'requestElements': ''.join(requestElements),
             'mutexRuleList': '(* mutually_exclusive = "' + (', '.join(methodRuleNames)) + '" *)' if (len(methodRuleNames) > 1) else '',
             'methodRules': ''.join(methodRules),
+            'requestFailureRuleNames': ', '.join(['handle$%s$requestFailure' % n for n in methodNames]),
             'channelCount': self.channelCount,
             'writeChannelCount': self.channelCount,
             'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(), axiMaster)
@@ -836,6 +843,16 @@ class InterfaceMixin:
                 methodRule = m.collectMethodRule(outerTypeName)
                 if methodRule:
                     methodRuleNames.append('axiSlaveWrite$%s' % m.name)
+        return methodRuleNames
+    def collectMethodNames(self,outerTypeName):
+        methodRuleNames = []
+        for m in self.decls:
+            if m.type == 'Method':
+                methodRule = m.collectMethodRule(outerTypeName)
+                if methodRule:
+                    methodRuleNames.append(m.name)
+                else:
+                    print 'method %s has no rule' % n.name
         return methodRuleNames
     def collectIndicationMethodRuleNames(self,outerTypeName):
         methodRuleNames = []
