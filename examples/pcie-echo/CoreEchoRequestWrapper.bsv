@@ -8,14 +8,14 @@ import Clocks::*;
 import Adapter::*;
 import AxiMasterSlave::*;
 import AxiClientServer::*;
-import HDMI::*;
 import Zynq::*;
-import Imageon::*;
 import Vector::*;
 import SpecialFIFOs::*;
 import AxiDMA::*;
 import Echo::*;
 import CoreEchoIndicationWrapper::*;
+import FIFO::*;
+import Zynq::*;
 
 
 
@@ -43,6 +43,7 @@ endinterface
 
 
 
+(* mutually_exclusive = "axiSlaveWrite$say, axiSlaveWrite$say2, axiSlaveWrite$setLeds" *)
 module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndicationWrapper iw)(CoreEchoRequestWrapper);
 
     // request-specific state
@@ -79,6 +80,10 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
 	    v = outOfRangeWriteCount;
         axiSlaveReadDataFifo.enq(v);
     endrule
+    rule readWriteFifo if (axiSlaveReadAddrFifo.first[14] == 0);
+        axiSlaveReadAddrFifo.deq;
+        axiSlaveReadDataFifo.enq(32'h05b05b0);
+    endrule
 
 
     FromBit32#(Say$Request) say$requestFifo <- mkFromBit32();
@@ -88,7 +93,7 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
         say$requestFifo.enq(axiSlaveWriteDataFifo.first);
     endrule
     (* descending_urgency = "handle$say$request, handle$say$requestFailure" *)
-    rule handle$say$request;
+    rule handle$say$request if (iw.putEnable); // iw.putEnable is always True
         let request = say$requestFifo.first;
         say$requestFifo.deq;
         coreEchoRequest.say(request.v);
@@ -97,6 +102,7 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
     rule handle$say$requestFailure;
         iw.putFailed(0);
         say$requestFifo.deq;
+        $display("say$requestFailure");
     endrule
 
     FromBit32#(Say2$Request) say2$requestFifo <- mkFromBit32();
@@ -106,7 +112,7 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
         say2$requestFifo.enq(axiSlaveWriteDataFifo.first);
     endrule
     (* descending_urgency = "handle$say2$request, handle$say2$requestFailure" *)
-    rule handle$say2$request;
+    rule handle$say2$request if (iw.putEnable); // iw.putEnable is always True
         let request = say2$requestFifo.first;
         say2$requestFifo.deq;
         coreEchoRequest.say2(request.a, request.b);
@@ -115,6 +121,7 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
     rule handle$say2$requestFailure;
         iw.putFailed(1);
         say2$requestFifo.deq;
+        $display("say2$requestFailure");
     endrule
 
     FromBit32#(SetLeds$Request) setLeds$requestFifo <- mkFromBit32();
@@ -124,7 +131,7 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
         setLeds$requestFifo.enq(axiSlaveWriteDataFifo.first);
     endrule
     (* descending_urgency = "handle$setLeds$request, handle$setLeds$requestFailure" *)
-    rule handle$setLeds$request;
+    rule handle$setLeds$request if (iw.putEnable); // iw.putEnable is always True
         let request = setLeds$requestFifo.first;
         setLeds$requestFifo.deq;
         coreEchoRequest.setLeds(request.v);
@@ -133,6 +140,7 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
     rule handle$setLeds$requestFailure;
         iw.putFailed(2);
         setLeds$requestFifo.deq;
+        $display("setLeds$requestFailure");
     endrule
 
 

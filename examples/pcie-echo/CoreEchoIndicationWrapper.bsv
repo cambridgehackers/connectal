@@ -8,14 +8,14 @@ import Clocks::*;
 import Adapter::*;
 import AxiMasterSlave::*;
 import AxiClientServer::*;
-import HDMI::*;
 import Zynq::*;
-import Imageon::*;
 import Vector::*;
 import SpecialFIFOs::*;
 import AxiDMA::*;
 import Echo::*;
-import PCIE::*;
+import FIFO::*;
+import Zynq::*;
+
 
 
 
@@ -43,7 +43,8 @@ interface RequestWrapperCommFIFOs;
 endinterface
 
 interface CoreEchoIndicationWrapper;
-    interface Axi3Slave#(32,32,4,SizeOf#(TLPTag)) ctrl;
+    interface Axi3Slave#(32,32,4,12) ctrl;
+    interface ReadOnly#(Bool) putEnable;
     interface ReadOnly#(Bit#(1)) interrupt;
     interface CoreEchoIndication indication;
     interface RequestWrapperCommFIFOs rwCommFifos;
@@ -51,18 +52,23 @@ interface CoreEchoIndicationWrapper;
 endinterface
 
 
+(* mutually_exclusive = "heard$axiSlaveRead, heard2$axiSlaveRead, putFailed$axiSlaveRead" *)
 module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
 
     // indication-specific state
     Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
     Vector#(3, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
+    Reg#(Bit#(32)) underflowReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
-    Vector#(3, PulseWire) readOutstanding <- replicateM(mkPulseWire);
+    Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
+    FIFOF#(Bit#(32)) readOutstanding <- mkSizedFIFOF(8);
     
     function Bool my_or(Bool a, Bool b) = a || b;
     function Bool read_wire (PulseWire a) = a._read;    
+    // this is here to disable the warning that the put failed rule can never fire
+    Reg#(Bool) putEnableReg <- mkReg(True);
     Reg#(Bool) interruptEnableReg <- mkReg(False);
-    let       interruptStatus = fold(my_or, map(read_wire, readOutstanding));
+    let       interruptStatus = readOutstanding.notEmpty;
     function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
     function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
 
@@ -71,14 +77,14 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
     Reg#(Bit#(32)) putWordCount <- mkReg(0);
     Reg#(Bit#(15)) axiSlaveReadAddrReg <- mkReg(0);
     Reg#(Bit#(15)) axiSlaveWriteAddrReg <- mkReg(0);
-    Reg#(Bit#(SizeOf#(TLPTag))) axiSlaveReadIdReg <- mkReg(0);
-    Reg#(Bit#(SizeOf#(TLPTag))) axiSlaveWriteIdReg <- mkReg(0);
+    Reg#(Bit#(12)) axiSlaveReadIdReg <- mkReg(0);
+    Reg#(Bit#(12)) axiSlaveWriteIdReg <- mkReg(0);
     FIFO#(Bit#(1)) axiSlaveReadLastFifo <- mkPipelineFIFO;
-    FIFO#(Bit#(SizeOf#(TLPTag))) axiSlaveReadIdFifo <- mkPipelineFIFO;
+    FIFO#(Bit#(12)) axiSlaveReadIdFifo <- mkPipelineFIFO;
     Reg#(Bit#(4)) axiSlaveReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(4)) axiSlaveWriteBurstCountReg <- mkReg(0);
     FIFO#(Bit#(2)) axiSlaveBrespFifo <- mkFIFO();
-    FIFO#(Bit#(SizeOf#(TLPTag))) axiSlaveBidFifo <- mkFIFO();
+    FIFO#(Bit#(12)) axiSlaveBidFifo <- mkFIFO();
 
     Vector#(2,FIFO#(Bit#(15))) axiSlaveWriteAddrFifos <- replicateM(mkPipelineFIFO);
     Vector#(2,FIFO#(Bit#(15))) axiSlaveReadAddrFifos <- replicateM(mkPipelineFIFO);
@@ -107,6 +113,13 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
 	    noAction; // interruptStatus is read-only
 	if (addr == 14'h004)
 	    interruptEnableReg <= v[0] == 1'd1;
+	if (addr == 14'h008)
+	    putEnableReg <= v[0] == 1'd1;
+    endrule
+    rule writeIndicatorFifo if (axiSlaveWriteAddrFifo.first[14] == 0);
+        axiSlaveWriteAddrFifo.deq;
+        axiSlaveWriteDataFifo.deq;
+        outOfRangeWriteCount <= outOfRangeWriteCount + 1;
     endrule
 
     rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
@@ -131,17 +144,22 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
 	    v = getWordCount;
         if (addr == 14'h01C)
 	    v = outOfRangeReadCountReg;
-        if (addr >= 14'h020 && addr <= (14'h024 + 3/4))
+        if (addr == 14'h020)
 	begin
-	    v = 0;
-	    Bit#(7) baseQueueNumber = addr[9:3] << 5;
-	    for (Bit#(7) i = 0; i <= baseQueueNumber+31 && i < 3; i = i + 1)
-	    begin
-		Bit#(5) bitPos = truncate(i - baseQueueNumber);
-		// drive value based on which HW->SW FIFOs have pending messages
-		v[bitPos] = readOutstanding[i] ? 1'd1 : 1'd0; 
-	    end
+            if (readOutstanding.notEmpty)
+            begin
+                readOutstanding.deq;
+	        v = readOutstanding.first+1;
+            end
+            else
+            begin
+                v = 0;
+            end
 	end
+	if (addr == 14'h034)
+	    v = outOfRangeWriteCount;
+	if (addr == 14'h038)
+	    v = underflowReadCountReg;
         axiSlaveReadDataFifo.enq(v);
     endrule
 
@@ -150,33 +168,45 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
     rule heard$axiSlaveRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
                                          axiSlaveReadAddrFifo.first[13:8] == heard$Offset);
         axiSlaveReadAddrFifo.deq;
-        heard$responseFifo.deq;
-        axiSlaveReadDataFifo.enq(heard$responseFifo.first);
-    endrule
-    rule heard$axiSlaveReadOutstanding if (heard$responseFifo.notEmpty);
-        readOutstanding[0].send();
+        let v = 32'hbad0dada;
+        if (heard$responseFifo.notEmpty) begin
+            heard$responseFifo.deq;
+            v = heard$responseFifo.first;
+        end
+        else begin
+            underflowReadCountReg <= underflowReadCountReg + 1;
+        end
+        axiSlaveReadDataFifo.enq(v);
     endrule
 
     ToBit32#(Heard2$Response) heard2$responseFifo <- mkToBit32();
     rule heard2$axiSlaveRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
                                          axiSlaveReadAddrFifo.first[13:8] == heard2$Offset);
         axiSlaveReadAddrFifo.deq;
-        heard2$responseFifo.deq;
-        axiSlaveReadDataFifo.enq(heard2$responseFifo.first);
-    endrule
-    rule heard2$axiSlaveReadOutstanding if (heard2$responseFifo.notEmpty);
-        readOutstanding[1].send();
+        let v = 32'hbad0dada;
+        if (heard2$responseFifo.notEmpty) begin
+            heard2$responseFifo.deq;
+            v = heard2$responseFifo.first;
+        end
+        else begin
+            underflowReadCountReg <= underflowReadCountReg + 1;
+        end
+        axiSlaveReadDataFifo.enq(v);
     endrule
 
     ToBit32#(PutFailed$Response) putFailed$responseFifo <- mkToBit32();
     rule putFailed$axiSlaveRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
                                          axiSlaveReadAddrFifo.first[13:8] == putFailed$Offset);
         axiSlaveReadAddrFifo.deq;
-        putFailed$responseFifo.deq;
-        axiSlaveReadDataFifo.enq(putFailed$responseFifo.first);
-    endrule
-    rule putFailed$axiSlaveReadOutstanding if (putFailed$responseFifo.notEmpty);
-        readOutstanding[2].send();
+        let v = 32'hbad0dada;
+        if (putFailed$responseFifo.notEmpty) begin
+            putFailed$responseFifo.deq;
+            v = putFailed$responseFifo.first;
+        end
+        else begin
+            underflowReadCountReg <= underflowReadCountReg + 1;
+        end
+        axiSlaveReadDataFifo.enq(v);
     endrule
 
 
@@ -207,7 +237,7 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
         interface Axi3SlaveWrite write;
             method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
                                     Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache,
-				    Bit#(SizeOf#(TLPTag)) awid)
+				    Bit#(12) awid)
                           if (axiSlaveWriteBurstCountReg == 0);
                  axiSlaveWS <= addr[15];
                  axiSlaveWriteBurstCountReg <= burstLen + 1;
@@ -234,14 +264,14 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
                 axiSlaveBrespFifo.deq;
                 return axiSlaveBrespFifo.first;
             endmethod
-            method ActionValue#(Bit#(SizeOf#(TLPTag))) bid();
+            method ActionValue#(Bit#(12)) bid();
                 axiSlaveBidFifo.deq;
                 return axiSlaveBidFifo.first;
             endmethod
         endinterface
         interface Axi3SlaveRead read;
             method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(SizeOf#(TLPTag)) arid)
+                                   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid)
                           if (axiSlaveReadBurstCountReg == 0);
                  axiSlaveRS <= addr[15];
                  axiSlaveReadBurstCountReg <= burstLen + 1;
@@ -251,7 +281,7 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
             method Bit#(1) last();
                 return axiSlaveReadLastFifo.first;
             endmethod
-            method Bit#(SizeOf#(TLPTag)) rid();
+            method Bit#(12) rid();
                 return axiSlaveReadIdFifo.first;
             endmethod
             method ActionValue#(Bit#(32)) readData();
@@ -267,6 +297,7 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
         endinterface
     endinterface
 
+    interface ReadOnly putEnable = regToReadOnly(putEnableReg);
     interface ReadOnly interrupt;
         method Bit#(1) _read();
             if (interruptEnableReg && interruptStatus)
@@ -280,16 +311,19 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
     method Action heard(Bit#(32) v);
         heard$responseFifo.enq(Heard$Response {v: v});
         responseFiredWires[0].send();
+        readOutstanding.enq(zeroExtend(heard$Offset));
     endmethod
     method Action heard2(Bit#(16) a, Bit#(16) b);
         heard2$responseFifo.enq(Heard2$Response {a: a, b: b});
         responseFiredWires[1].send();
+        readOutstanding.enq(zeroExtend(heard2$Offset));
     endmethod
     endinterface
 
     method Action putFailed(Bit#(32) v);
         putFailed$responseFifo.enq(PutFailed$Response {v: v});
         responseFiredWires[2].send();
+        readOutstanding.enq(zeroExtend(putFailed$Offset));
     endmethod
 
 endmodule
