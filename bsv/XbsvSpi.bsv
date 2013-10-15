@@ -5,7 +5,6 @@ import FIFOF       :: *;
 import Connectable :: *;
 import StmtFSM     :: *;
 import SpecialFIFOs:: *;
-import Probe       :: *;
 
 (* always_enabled *)
 interface SpiPins;
@@ -39,21 +38,13 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
    Reg#(Bit#(logawidth)) countreg <- mkReg(0);
    FIFOF#(a) resultFifo <- mkFIFOF;
 
-   Probe#(Bit#(awidth)) shiftprobe <- mkProbe();
-   Probe#(Bit#(1)) selprobe <- mkProbe();
-
    Wire#(Bit#(1)) misoWire <- mkDWire(0);
-
-   rule selproberule;
-       selprobe <= selreg;
-   endrule
 
    rule running if (countreg > 0);
       countreg <= countreg - 1;
       Bit#(awidth) newshiftreg = { shiftreg[valueOf(awidth)-2:0], misoWire };
       $display("newshiftreg = %08h", newshiftreg);
       shiftreg <= newshiftreg;
-      shiftprobe <= newshiftreg;
       if (countreg == 1 && resultFifo.notFull) begin
 	 resultFifo.enq(unpack(newshiftreg));
 	 selreg <= 1;
@@ -64,7 +55,6 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
       method Action put(a v) if (countreg == 0);
 	 selreg <= 0;
 	 shiftreg <= pack(v);
-	 shiftprobe <= pack(v);
 	 countreg <= fromInteger(valueOf(awidth));
       endmethod
    endinterface: request
@@ -123,28 +113,13 @@ module mkSpiTestBench(Empty);
    Bit#(20) masterV = 20'h8baeb;
 
    SPI#(Bit#(20)) spi <- mkSPI(4);
-   Reg#(Bit#(20)) slaveCount <- mkReg(20, clocked_by spi.pins.invertedClock, reset_by spi.pins.reset);
-   Reg#(Bit#(20)) slaveValue <- mkReg(slaveV, clocked_by spi.pins.invertedClock, reset_by spi.pins.reset);
-   Reg#(Bit#(20)) responseValue <- mkReg(0, clocked_by spi.pins.invertedClock, reset_by spi.pins.reset);
-
-   Probe#(Bit#(20)) slaveProbe <- mkProbe(clocked_by spi.pins.invertedClock, reset_by spi.pins.reset);
-
-   Probe#(Bit#(1)) misoProbe <-  mkProbe(clocked_by spi.pins.invertedClock, reset_by spi.pins.reset);
-   Probe#(Bit#(1)) mosiProbe <-  mkProbe(clocked_by spi.pins.invertedClock, reset_by spi.pins.reset);
-   Probe#(Bit#(1)) selProbe <-  mkProbe(clocked_by spi.pins.invertedClock, reset_by spi.pins.reset);
-
-   Probe#(Bit#(20)) responseProbe <- mkProbe();
-
-   rule probe;
-       misoProbe <= slaveValue[19];
-       mosiProbe <= spi.pins.mosi;
-       selProbe <= spi.pins.sel_n;
-   endrule
+   Reg#(Bit#(20)) slaveCount <- mkReg(20, clocked_by spi.pins.clock, reset_by spi.pins.reset);
+   Reg#(Bit#(20)) slaveValue <- mkReg(slaveV, clocked_by spi.pins.clock, reset_by spi.pins.reset);
+   Reg#(Bit#(20)) responseValue <- mkReg(0, clocked_by spi.pins.clock, reset_by spi.pins.reset);
 
    rule slaveIn if (spi.pins.sel_n == 0);
       slaveCount <= slaveCount - 1;
       slaveValue <= (slaveValue << 1);
-      slaveProbe <= (slaveValue << 1);
    endrule
 
    rule miso if (spi.pins.sel_n == 0);
@@ -165,7 +140,6 @@ module mkSpiTestBench(Empty);
    rule finished;
       let result <- spi.response.get();
       $display("master received %h", result);
-      responseProbe <= result;
       if (result == slaveV)
 	 $finish(0);
       else
