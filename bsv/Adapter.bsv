@@ -52,39 +52,40 @@ endinterface
 module mkToBit32(ToBit32#(a))
    provisos(Bits#(a,asz),
             Add#(1, z, asz),
-	    Add#(32,asz,asz32));
+            Div#(asz,32,nwords),
+            Mul#(32,nwords,asz32),
+            Add#(32,a__,asz32),
+            Add#(asz,paddingsz,asz32));
    
    Bit#(32) size = fromInteger(valueOf(asz));
-   Bit#(32) max  = ((size + 31) >> 5) - 1;
-   
-   Reg#(Bool)       valid <- mkReg(False);
-   Reg#(Bit#(asz32)) buff <- mkReg(0);
+   Bit#(32) max  = fromInteger(valueOf(nwords)) - 1;
+   Bit#(paddingsz) padding = 0;
+
+   FIFOF#(Bit#(asz32)) fifo <- mkFIFOF1();
    Reg#(Bit#(32))   count <- mkReg(0);
 
 
-   method Action enq(a val) if (!valid);
-      buff <= {pack(val),32'b0};
-      valid <= True;
+   method Action enq(a val);
+       fifo.enq({pack(val),padding});
    endmethod
 
-   method Bit#(32) first() if (valid);
-      return rtruncate(buff);
+   method Bit#(32) first() if (fifo.notEmpty);
+      return rtruncate(fifo.first << (count*32));
    endmethod
 
-   method Action deq() if (valid);
+   method Action deq() if (fifo.notEmpty);
       if (count == max)
          begin 
             count <= 0;
-            valid <= False;
+            fifo.deq;
          end
       else
          begin
             count <= count + 1;
-	    buff <= buff << 32;
          end   
    endmethod
-   method Bool notEmpty = valid;
-   method Bool notFull = !valid;
+   method Bool notEmpty = fifo.notEmpty;
+   method Bool notFull = fifo.notFull;
 endmodule
 
 module mkFromBit32(FromBit32#(a))
