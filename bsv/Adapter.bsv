@@ -25,6 +25,8 @@
 import GetPut         ::*;
 import FIFOF          ::*;
 import SpecialFIFOs   ::*;
+import StmtFSM        ::*;
+import Assert         ::*;
 
 function Bit#(a) rtruncate(Bit#(b) x) provisos(Add#(k,a,b));
    match {.v,.*} = split(x);
@@ -123,3 +125,28 @@ module mkFromBit32(FromBit32#(a))
    method Bool notFull() = !valid;
 endmodule
 
+module mkAdapterTb(Empty);
+   ToBit32#(Bit#(72)) adapter72 <- mkToBit32();
+   ToBit32#(Bit#(17)) adapter17 <- mkToBit32();
+   
+   mkAutoFSM(
+   seq
+       adapter72.enq(72'h090807060504030201);
+       dynamicAssert(adapter72.notEmpty && !adapter72.notFull, "Adapter not empty and full");
+       $display("adapter72 notEmpty %d notFull %d", adapter72.notEmpty, adapter72.notFull);
+       $display("adapter72 word 0 %h", adapter72.first());
+       dynamicAssert(adapter72.first == 32'h09080706, "expecting 09080706");
+       adapter72.deq;
+       $display("adapter72 word 1 %h", adapter72.first());
+       dynamicAssert(adapter72.first == 32'h05040302, "expecting 05040302");
+       adapter72.deq;
+       $display("adapter72 word 2 %h", adapter72.first());
+       dynamicAssert(adapter72.first == 32'h01000000, "expecting 01000000");
+       adapter72.deq;
+       dynamicAssert(!adapter72.notEmpty && adapter72.notFull, "Adapter empty and not full");
+       $display("adapter72 notEmpty %d notFull %d", adapter72.notEmpty, adapter72.notFull);
+       $finish(0);
+   endseq    
+   );
+
+endmodule
