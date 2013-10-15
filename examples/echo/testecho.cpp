@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-Echo *echo = 0;
+CoreEchoRequest *echo = 0;
 
-class TestEchoIndications : public EchoIndications
+class TestEchoIndications : public CoreEchoIndication
 {
     virtual void heard(unsigned long v) {
         fprintf(stderr, "heard an echo: %d\n", v);
@@ -22,7 +22,7 @@ class TestEchoIndications : public EchoIndications
 
 int main(int argc, const char **argv)
 {
-    echo = Echo::createEcho("fpga0", new TestEchoIndications);
+    echo = CoreEchoRequest::createCoreEchoRequest(new TestEchoIndications);
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     echo->say(v);
