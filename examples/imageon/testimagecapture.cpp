@@ -14,7 +14,7 @@
 #include "i2ccamera.h"
 
 static CoreRequest *device = 0;
-static int trace_spi = 1;
+static int trace_spi = 0;
 
 #define DECL(A) \
     static sem_t sem_ ## A; \
@@ -225,7 +225,7 @@ static uint16_t vita_mult_timer_line_resolution_seq[VITA_MULT_TIMER_LINE_RESOLUT
    {199, 0xFFFF, 0x0222} };
 
 #if 0
-static uint16_t vita_spi_read_internal(uint32_t uAddr)
+static uint32_t vita_spi_read_internal(uint32_t uAddr)
 {
    // Make sure the RXFIFO is empty
    uint32_t uStatus = read_spi_control(), ret;
@@ -278,7 +278,7 @@ printf("SPIWRITE: [%x] %x -> %x %x\n", uAddr, prev, uData, vita_spi_read_interna
    return 1;
 }
 #else
-static unsigned long spi_transfer (uint32_t v) \
+static uint32_t spi_transfer (uint32_t v) \
 {
     if (trace_spi)
         printf("SPITRANSFER: %x\n", v);
@@ -286,9 +286,8 @@ static unsigned long spi_transfer (uint32_t v) \
     sem_wait(&sem_spi_response);
     return cv_spi_response;
 }
-static uint16_t vita_spi_read_internal(uint32_t uAddr)
+static uint32_t vita_spi_read_internal(uint32_t uAddr)
 {
-//printf("[%s:%d] new read goes here: **********************************************\n", __FUNCTION__, __LINE__);
     return spi_transfer(uAddr<<17);
 }
 static int vita_spi_write(uint32_t uAddr, uint16_t uData)
@@ -296,7 +295,6 @@ static int vita_spi_write(uint32_t uAddr, uint16_t uData)
     uint32_t prev = 0;
     if (trace_spi)
         prev = vita_spi_read_internal(uAddr);
-//printf("[%s:%d] new WRITE goes here: **********************************************\n", __FUNCTION__, __LINE__);
     spi_transfer(uAddr<<17 | 1 <<16 | uData);
     if (trace_spi)
         printf("SPIWRITE: [%x] %x -> %x %x\n", uAddr, prev, uData, vita_spi_read_internal(uAddr));
