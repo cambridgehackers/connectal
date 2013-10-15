@@ -222,8 +222,6 @@ hdmi_pinout = {
         ( "hdmi_data[13]", 'R19', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_data[14]", 'T17', 'LVCMOS25', 'OUTPUT'),
         ( "hdmi_data[15]", 'T16', 'LVCMOS25', 'OUTPUT'),
-        #jca ( "i2c1_scl", 'AB14', 'LVCMOS25', 'BIDIR'),
-        #jca ( "i2c1_sda", 'AB15', 'LVCMOS25', 'BIDIR'),
         ],
     'zedboard':[
         ( "hdmi_clk", 'W18', 'LVCMOS33', 'OUTPUT'),
@@ -246,8 +244,6 @@ hdmi_pinout = {
         ( "hdmi_data[13]", 'U17', 'LVCMOS33', 'OUTPUT'),
         ( "hdmi_data[14]", 'V14', 'LVCMOS33', 'OUTPUT'),
         ( "hdmi_data[15]", 'V13', 'LVCMOS33', 'OUTPUT'),
-        #jca ( "i2c1_scl", 'AA18', 'LVCMOS33', 'BIDIR'),
-        #jca ( "i2c1_sda", 'Y16', 'LVCMOS33', 'BIDIR'),
         ]
     }
 
@@ -395,12 +391,6 @@ parameter C_FAMILY = "virtex6";
   wire processing_system7_1_fixed_io_PS_CLK;
   wire processing_system7_1_fixed_io_PS_PORB;
   wire processing_system7_1_fixed_io_PS_SRSTB;
-  /*jca wire i2c1_scl_i;
-  wire i2c1_scl_o;
-  wire i2c1_scl_t;
-  wire i2c1_sda_i;
-  wire i2c1_sda_o;
-  wire i2c1_sda_t; */
 
 GND GND
        (.G(GND_1));
@@ -871,19 +861,11 @@ class Hdmi:
     output hdmi_hsync,
     output hdmi_de,
     output [15:0] hdmi_data,
-    /*jca inout i2c1_scl,
-    inout i2c1_sda, */
 '''
     def top_bus_wires(self, busname,t,params):
         return ''
     def ps7_bus_port_map(self,busname,t,params):
         return '''
-       /*jca .I2C1_SCL_I(i2c1_scl_i),
-       .I2C1_SCL_O(i2c1_scl_o),
-       .I2C1_SCL_T(i2c1_scl_t),
-       .I2C1_SDA_I(i2c1_sda_i),
-       .I2C1_SDA_O(i2c1_sda_o),
-       .I2C1_SDA_T(i2c1_sda_t), */
 '''
     def dut_bus_port_map(self, busname,t,params):
         return '''
@@ -895,31 +877,6 @@ class Hdmi:
     def top_bus_assignments(self,busname,t,params):
         return '''
     assign hdmi_clk = imageon_clk4x;
-
-    /*jca IOBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) IOBUF_i2c1_scl
-    (
-    .IO(i2c1_scl),
-    // Buffer output (connect directly to top-level port)
-    .O(i2c1_scl_i),
-    .I(i2c1_scl_o),
-    .T(i2c1_scl_t)
-    // Buffer input
-    );
-    IOBUF # (
-    .DRIVE(12),
-    .IOSTANDARD("LVCMOS25"),
-    .SLEW("SLOW")) IOBUF_i2c1_sda
-    (
-    .IO(i2c1_sda),
-    // Buffer output (connect directly to top-level port)
-    .O(i2c1_sda_i),
-    .I(i2c1_sda_o),
-    .T(i2c1_sda_t)
-    // Buffer input
-    ); */
 '''
     def bus_assignments(self,busname,t,params):
         return ''
@@ -981,19 +938,6 @@ class ImageonVita:
      wire imageon_clk200;
      wire imageon_clk;
      wire imageon_host_oe;
-     wire host_vita_reset;
-    /* HOST Interface - SPI */
-     wire imageon_host_spi_clk;
-     wire imageon_host_spi_reset;
-     wire [15:0] imageon_host_spi_timing;
-     wire imageon_host_spi_status_busy;
-     wire imageon_host_spi_status_error;
-     wire imageon_host_spi_txfifo_wen;
-     wire [31:0] imageon_host_spi_txfifo_din;
-     wire imageon_host_spi_txfifo_full;
-     wire imageon_host_spi_rxfifo_ren;
-     wire [31:0] imageon_host_spi_rxfifo_dout;
-     wire imageon_host_spi_rxfifo_empty;
     /* HOST Interface - ISERDES */
      wire imageon_host_iserdes_reset;
      wire imageon_host_iserdes_auto_align;
@@ -1051,21 +995,6 @@ class ImageonVita:
      wire [31:0] debugreq_value;
      wire [31:0] debugind_value;
 '''
-## uncomment the following if we decide to use the PS7 SPI controller
-#         return '''
-#     wire io_vita_spi_ssel_n_I;
-#     wire io_vita_spi_ssel_n_O;
-#     wire io_vita_spi_ssel_n_T;
-#     wire io_vita_spi_sclk_I;
-#     wire io_vita_spi_sclk_O;
-#     wire io_vita_spi_sclk_T;
-#     wire io_vita_spi_mosi_I;
-#     wire io_vita_spi_mosi_O;
-#     wire io_vita_spi_mosi_T;
-#     wire io_vita_spi_miso_I;
-#     wire io_vita_spi_miso_O;
-#     wire io_vita_spi_miso_T;
-# '''
     def ps7_bus_port_map(self,busname,t,params):
         return '''
     .I2C1_SDA_I(fmc_imageon_iic_0_sda_I),
@@ -1075,35 +1004,9 @@ class ImageonVita:
     .I2C1_SCL_O(fmc_imageon_iic_0_scl_O),
     .I2C1_SCL_T(fmc_imageon_iic_0_scl_T),
 '''
-## uncomment the following if we decide to use the PS7 SPI controller
-#         return '''
-#         .SPI0_SCLK_I(io_vita_spi_sclk_I),
-#         .SPI0_SCLK_O(io_vita_spi_sclk_O),
-#         .SPI0_SCLK_T(io_vita_spi_sclk_T),
-#         .SPI0_MOSI_I(io_vita_spi_mosi_I),
-#         .SPI0_MOSI_O(io_vita_spi_mosi_O),
-#         .SPI0_MOSI_T(io_vita_spi_mosi_T),
-#         .SPI0_MISO_I(io_vita_spi_miso_I),
-#         .SPI0_MISO_O(io_vita_spi_miso_O),
-#         .SPI0_MISO_T(io_vita_spi_miso_T),
-#         .SPI0_SS_I(io_vita_spi_ssel_n_I),
-#         .SPI0_SS_O(io_vita_spi_ssel_n_O),
-#         .SPI0_SS_T(io_vita_spi_ssel_n_T),
-# '''
     def dut_bus_port_map(self, busname,t,params):
         return '''
     .imageon_host_oe(imageon_host_oe),
-    .imageon_host_vita_reset(imageon_host_vita_reset),
-    .imageon_spi_reset(imageon_host_spi_reset),
-    .imageon_spi_timing(imageon_host_spi_timing),
-    .imageon_spi_status_busy_busy(imageon_host_spi_status_busy),
-    .imageon_spi_status_error_error(imageon_host_spi_status_error),
-    .imageon_spi_txfifo_wen(imageon_host_spi_txfifo_wen),
-    .imageon_spi_txfifo_din(imageon_host_spi_txfifo_din),
-    .imageon_spi_txfifo_full_full(imageon_host_spi_txfifo_full),
-    .imageon_spi_rxfifo_ren(imageon_host_spi_rxfifo_ren),
-    .imageon_spi_rxfifo_dout_dout(imageon_host_spi_rxfifo_dout),
-    .imageon_spi_rxfifo_empty_empty(imageon_host_spi_rxfifo_empty),
     .imageon_serdes_reset(imageon_host_iserdes_reset),
     .imageon_serdes_auto_align(imageon_host_iserdes_auto_align),
     .imageon_serdes_align_start(imageon_host_iserdes_align_start),
@@ -1247,56 +1150,6 @@ class ImageonVita:
      // Buffer input
      );
 '''
-#        return '''
-#     IOBUF # (
-#     .DRIVE(12),
-#     .IOSTANDARD("LVCMOS25"),
-#     .SLEW("SLOW")) IOBUF_spi0_sclk
-#     (
-#     .IO(io_vita_spi_sclk),
-#     // Buffer output (connect directly to top-level port)
-#     .O(io_vita_spi_sclk_I),
-#     .I(io_vita_spi_sclk_O),
-#     .T(io_vita_spi_sclk_T)
-#     // Buffer input
-#     );
-#     IOBUF # (
-#     .DRIVE(12),
-#     .IOSTANDARD("LVCMOS25"),
-#     .SLEW("SLOW")) IOBUF_spi0_mosi
-#     (
-#     .IO(io_vita_spi_mosi),
-#     // Buffer output (connect directly to top-level port)
-#     .O(io_vita_spi_mosi_I),
-#     .I(io_vita_spi_mosi_O),
-#     .T(io_vita_spi_mosi_T)
-#     // Buffer input
-#     );
-#     IOBUF # (
-#     .DRIVE(12),
-#     .IOSTANDARD("LVCMOS25"),
-#     .SLEW("SLOW")) IOBUF_spi0_miso
-#     (
-#     .IO(io_vita_spi_miso),
-#     // Buffer output (connect directly to top-level port)
-#     .O(io_vita_spi_miso_I),
-#     .I(io_vita_spi_miso_O),
-#     .T(io_vita_spi_miso_T)
-#     // Buffer input
-#     );
-#     IOBUF # (
-#     .DRIVE(12),
-#     .IOSTANDARD("LVCMOS25"),
-#     .SLEW("SLOW")) IOBUF_spi0_ssel_n
-#     (
-#     .IO(io_vita_spi_ssel_n),
-#     // Buffer output (connect directly to top-level port)
-#     .O(io_vita_spi_ssel_n_I),
-#     .I(io_vita_spi_ssel_n_O),
-#     .T(io_vita_spi_ssel_n_T)
-#     // Buffer input
-#     );
-# '''
     def bus_assignments(self,busname,t,params):
         return '''
     assign imageon_clk200 = processing_system7_1_fclk_clk3;
@@ -1306,22 +1159,8 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .clk200(imageon_clk200),
     .clk(imageon_clk),
     .clk4x(imageon_clk4x),
-    .host_interface_clk(processing_system7_1_fclk_clk0),
     .reset(imageon_reset),
     .oe(imageon_host_oe), /* input */
-    /* HOST Interface - VITA */
-    .host_vita_reset(imageon_host_vita_reset),
-    /* HOST Interface - SPI */
-    .host_spi_reset(imageon_host_spi_reset),
-    .host_spi_timing(imageon_host_spi_timing),
-    .host_spi_status_busy(imageon_host_spi_status_busy),
-    .host_spi_status_error(imageon_host_spi_status_error),
-    .host_spi_txfifo_wen(imageon_host_spi_txfifo_wen),
-    .host_spi_txfifo_din(imageon_host_spi_txfifo_din),
-    .host_spi_txfifo_full(imageon_host_spi_txfifo_full),
-    .host_spi_rxfifo_ren(imageon_host_spi_rxfifo_ren),
-    .host_spi_rxfifo_dout(imageon_host_spi_rxfifo_dout),
-    .host_spi_rxfifo_empty(imageon_host_spi_rxfifo_empty),
     /* HOST Interface - ISERDES */
     .host_iserdes_reset(imageon_host_iserdes_reset),
     .host_iserdes_auto_align(imageon_host_iserdes_auto_align),
@@ -1360,10 +1199,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_clk_pll(io_vita_clk_pll),
     .io_vita_reset_n(io_vita_reset_n),
     .io_vita_trigger(io_vita_trigger),
-    // .io_vita_spi_sclk(io_vita_spi_sclk),
-    // .io_vita_spi_ssel_n(io_vita_spi_ssel_n),
-    // .io_vita_spi_mosi(io_vita_spi_mosi),
-    // .io_vita_spi_miso(io_vita_spi_miso),
     .io_vita_clk_out_p(io_vita_clk_out_p),
     .io_vita_clk_out_n(io_vita_clk_out_n),
     .io_vita_sync_p(io_vita_sync_p),

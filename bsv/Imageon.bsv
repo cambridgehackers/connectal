@@ -26,19 +26,6 @@ import FIFO::*;
 import GetPut::*;
 import Gearbox::*;
 
-interface ImageonSpi;
-    method Bit#(1) reset();
-    method Bit#(16) timing();
-    method Action status_busy(Bit#(1) busy);
-    method Action status_error(Bit#(1) error);
-    method Bit#(1) txfifo_wen();
-    method Bit#(32) txfifo_din();
-    method Action txfifo_full(Bit#(1) full);
-    method Bit#(1) rxfifo_ren();
-    method Action rxfifo_dout(Bit#(32) dout);
-    method Action rxfifo_empty(Bit#(1) empty);
-endinterface
-
 interface ImageonSerdes;
     method Bit#(1) reset();
     method Bit#(1) auto_align();
@@ -108,7 +95,6 @@ endinterface
 interface ImageonVita;
     method Bit#(1) host_vita_reset();
     method Bit#(1) host_oe();
-    interface ImageonSpi spi;
     interface ImageonSerdes serdes;
     interface ImageonDecoder decoder;
     interface ImageonTrigger trigger;
@@ -237,38 +223,6 @@ module mkImageonVitaController(ImageonVitaController);
 	method Bit#(1) host_oe();
 	    return host_oe_reg;
 	endmethod
-	interface ImageonSpi spi;
-	    method Bit#(1) reset();
-		return spi_reset_reg;
-	    endmethod
-	    method Bit#(16) timing();
-		return spi_timing_reg;
-	    endmethod
-	    method Action status_busy(Bit#(1) busy);
-	        spi_status_busy_wire <= busy;
-	    endmethod
-	    method Action status_error(Bit#(1) error);
-	        spi_status_error_wire <= error;
-	    endmethod
-	    method Bit#(1) txfifo_wen();
-		return spi_txfifo_wen_wire;
-	    endmethod
-	    method Bit#(32) txfifo_din();
-		return spi_txfifo_din_wire;
-	    endmethod
-	    method Action txfifo_full(Bit#(1) full);
-	        spi_txfifo_full_wire <= full;
-	    endmethod
-	    method Bit#(1) rxfifo_ren();
-		return spi_rxfifo_ren_wire;
-	    endmethod
-	    method Action rxfifo_dout(Bit#(32) dout);
-	        spi_rxfifo_dout_wire <= dout;
-	    endmethod
-	    method Action rxfifo_empty(Bit#(1) empty);
-	        spi_rxfifo_empty_wire <= empty;
-	    endmethod
-	endinterface
 	interface ImageonSerdes serdes;
 	    method Bit#(1) reset();
 		return serdes_reset_reg;

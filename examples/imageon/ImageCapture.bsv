@@ -37,19 +37,15 @@ import BlueScope::*;
 import SensorToVideo::*;
 
 interface CoreIndication;
-    method Action spi_control_value(Bit#(32) v);
     method Action iserdes_control_value(Bit#(32) v);
     method Action decoder_control_value(Bit#(32) v);
     method Action triggen_control_value(Bit#(32) v);
-    method Action spi_rxfifo_value(Bit#(32) v);
     method Action debugind(Bit#(32) v);
     method Action spi_response(Bit#(32) v);
 endinterface
 
 
 interface CoreRequest;
-    method Action set_spi_control(Bit#(32) v);
-    method Action get_spi_control();
     method Action set_iserdes_control(Bit#(32) v);
     method Action get_iserdes_control();
     method Action set_decoder_control(Bit#(32) v);
@@ -59,11 +55,6 @@ interface CoreRequest;
 
     method Action set_host_vita_reset(Bit#(1) v);
     method Action set_host_oe(Bit#(1) v);
-
-    method Action set_spi_reset(Bit#(1) v);
-    method Action set_spi_timing(Bit#(16) v);
-    method Action put_spi_txfifo(Bit#(32) v);
-    method Action get_spi_rxfifo();
 
     method Action set_serdes_reset(Bit#(1) v);
     method Action set_serdes_auto_align(Bit#(1) v);
@@ -138,7 +129,6 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);
     HdmiOut hdmiOut <- mkHdmiOut(clocked_by hdmi_clock, reset_by hdmi_reset);
 
-    mkConnection(control.rxfifo_response.get, indication.coreIndication.spi_rxfifo_value);
     // hdmi clock domain
     //mkConnection(xsviFromSensor.out, converter.in);
     rule xsviConnection;
@@ -155,12 +145,6 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     endrule
 
     interface CoreRequest coreRequest;
-    method Action set_spi_control(Bit#(32) v);
-        control.set_spi_control(v);
-    endmethod
-    method Action get_spi_control();
-        indication.coreIndication.spi_control_value(control.get_spi_control());
-    endmethod
 
     method Action set_iserdes_control(Bit#(32) v);
         control.set_iserdes_control(v);
@@ -188,19 +172,6 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     endmethod
     method Action set_host_oe(Bit#(1) v);
         control.set_host_oe(v);
-    endmethod
-
-    method Action set_spi_reset(Bit#(1) v);
-        control.set_spi_reset(v);
-    endmethod
-    method Action set_spi_timing(Bit#(16) v);
-        control.set_spi_timing(v);
-    endmethod
-    method Action put_spi_txfifo(Bit#(32) v);
-        control.txfifo.put(v);
-    endmethod
-    method Action get_spi_rxfifo();
-        control.rxfifo_request.put(32'hABBAABBA);
     endmethod
 
     method Action set_serdes_reset(Bit#(1) v);

@@ -20,11 +20,9 @@ static int trace_spi = 0;
     static sem_t sem_ ## A; \
     static unsigned long cv_ ## A;
 
-DECL(spi_control)
 DECL(iserdes_control)
 DECL(decoder_control)
 DECL(triggen_control)
-DECL(spi_rxfifo)
 DECL(spi_response)
 
 #define RXFN(A) \
@@ -42,17 +40,15 @@ DECL(spi_response)
     }
 
 class TestImageCaptureIndications : public CoreIndication {
-    RXFN(spi_control)
     RXFN(iserdes_control)
     RXFN(decoder_control)
     RXFN(triggen_control)
-    RXFN(spi_rxfifo)
     void putFailed(unsigned long v){
       fprintf(stderr, "putFailed: %x\n", v);
       exit(1);
     }
     void spi_response(unsigned long v){
-      fprintf(stderr, "spi_response: %x\n", v);
+      //fprintf(stderr, "spi_response: %x\n", v);
       cv_spi_response = v;
       sem_post(&sem_spi_response);
     }
@@ -63,18 +59,14 @@ printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
 
 static void init_local_semaphores(void)
 {
-    sem_init(&sem_spi_control, 0, 0);
     sem_init(&sem_iserdes_control, 0, 0);
     sem_init(&sem_decoder_control, 0, 0);
     sem_init(&sem_triggen_control, 0, 0);
-    sem_init(&sem_spi_rxfifo, 0, 0);
     sem_init(&sem_spi_response, 0, 0);
 }
-GETFN(spi_control)
 GETFN(iserdes_control)
 GETFN(decoder_control)
 GETFN(triggen_control)
-GETFN(spi_rxfifo)
 
 //#define VITA_SPI_CONTROL_REG     0x0000
    #define VITA_VITA_RESET_BIT       0x0001
@@ -413,13 +405,15 @@ static void fmc_imageon_demo_enable_ipipe( void)
    device->set_decoder_code_bl(0x0015);
    device->set_decoder_code_img(0x0035);
 
+   printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
    device->set_iserdes_control( VITA_ISERDES_RESET_BIT);
    device->set_decoder_control( VITA_DECODER_RESET_BIT);
 
    usleep(10); // 10 usec
-   printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
+#if 0
    device->set_spi_control( VITA_VITA_RESET_BIT);
    usleep(10); // 10 usec
+#endif
    printf( "VITA ISERDES - Releasing Reset\n\r");
    device->set_iserdes_control( 0);
    printf( "VITA DECODER - Releasing Reset\n\r");
@@ -427,7 +421,11 @@ static void fmc_imageon_demo_enable_ipipe( void)
    printf( "VITA CRC - Releasing Reset\n\r");
    sleep(1); // 1 sec (time to get clocks to lock)
    printf("VITA SPI Sequence 0 - Releasing RESET_N pin\n\r");
+#if 0
    device->set_spi_control( 0);
+#else
+   device->set_iserdes_control(0);
+#endif
    usleep(20); // 20 usec
    uData = vita_spi_read(0);
 printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
@@ -614,7 +612,9 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     // FMC-IMAGEON VITA Receiver Initialization
     printf( "FMC-IMAGEON VITA Receiver Initialization ...\n\r");
     uManualTap = 25;
+#if 0
     device->set_spi_timing((100/10));
+#endif
     fmc_imageon_demo_enable_ipipe();
 }
 
