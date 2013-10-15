@@ -108,9 +108,10 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
 
     ImageonVitaController imageonVita <- mkImageonVitaController(hdmi_clock, hdmi_reset);
     ImageonControl control = imageonVita.control;
-    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, clocked_by hdmi_clock, reset_by hdmi_reset);
-
     let imageon_vita_clock_binder <- mkClockBinder(imageonVita.host, clocked_by hdmi_clock);
+
+    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
+        clocked_by hdmi_clock, reset_by hdmi_reset);
 
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, hdmi_clock, hdmi_reset, defaultClock);
     rule copydebugval;
