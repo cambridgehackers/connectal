@@ -180,7 +180,7 @@ int main(int argc, const char **argv)
     bluescope->setTriggerValue(0x00000001);
     bluescope->start();
 
-    bluescope->getStateDbg();
+    //bluescope->getStateDbg();
     device->getStateDbg();
     sleep(1);
 
