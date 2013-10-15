@@ -90,39 +90,42 @@ endmodule
 module mkFromBit32(FromBit32#(a))
    provisos(Bits#(a,asz),
             Add#(1,z,asz),
-	    Add#(32,asz,asz32));
+            Div#(asz,32,nwords),
+            Mul#(32,nwords,asz32),
+            Add#(32,a__,asz32),
+            Add#(asz,paddingsz,asz32));
 
    Bit#(32) size   = fromInteger(valueOf(asz));
-   Bit#(32) max    = ((size + 31) >> 5) - 1;
-   
-   Reg#(Bool)        valid <- mkReg(False);
-   Reg#(Bit#(asz))    buff <- mkReg(0);
-   Reg#(Bit#(32))    count <- mkReg(0);   
-   
-   method Action enq(Bit#(32) x) if (!valid);
-      Bit#(asz32) concatedvalue = {buff,x};
-      buff  <= truncate(concatedvalue);
+   Bit#(32) max    = fromInteger(valueOf(nwords))-1;
+
+   Reg#(Bit#(asz32)) fb32buff <- mkReg(0);
+   Reg#(Bit#(32))    count <- mkReg(0);
+   FIFOF#(Bit#(asz)) fifo <- mkFIFOF1;
+
+   method Action enq(Bit#(32) x) if (count < max || fifo.notFull);
+      Bit#(asz32) newbuff = truncate({fb32buff,x});
+      fb32buff <= newbuff;
       if (count == max)
-         begin 
+         begin
             count <= 0;
-	    valid <= True;
+            fifo.enq(truncate(newbuff));
          end
       else
          begin
             count <= count+1;
          end
    endmethod
-   
-   method a first if (valid);
-       return unpack(buff);
+
+   method a first if (fifo.notEmpty);
+       return unpack(fifo.first);
    endmethod
 
-   method Action deq if (valid);
-       valid <= False;
+   method Action deq if (fifo.notEmpty);
+       fifo.deq;
    endmethod
-   
-   method Bool notEmpty() = valid;
-   method Bool notFull() = !valid;
+
+   method Bool notEmpty() = fifo.notEmpty;
+   method Bool notFull() = fifo.notFull;
 endmodule
 
 module mkAdapterTb(Empty);
