@@ -38,8 +38,6 @@ import SensorToVideo::*;
 
 interface CoreIndication;
     method Action iserdes_control_value(Bit#(32) v);
-    method Action decoder_control_value(Bit#(32) v);
-    method Action triggen_control_value(Bit#(32) v);
     method Action debugind(Bit#(32) v);
     method Action spi_response(Bit#(32) v);
 endinterface
@@ -49,11 +47,8 @@ interface CoreRequest;
     method Action set_iserdes_control(Bit#(32) v);
     method Action get_iserdes_control();
     method Action set_decoder_control(Bit#(32) v);
-    method Action get_decoder_control();
     method Action set_triggen_control(Bit#(32) v);
-    method Action get_triggen_control();
 
-    method Action set_host_vita_reset(Bit#(1) v);
     method Action set_host_oe(Bit#(1) v);
 
     method Action set_serdes_reset(Bit#(1) v);
@@ -109,10 +104,13 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     Reset defaultReset <- exposeCurrentReset();
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
+   
 
-    ImageonVitaController imageonVita <- mkImageonVitaController();
+    ImageonVitaController imageonVita <- mkImageonVitaController(hdmi_clock, hdmi_reset);
     ImageonControl control = imageonVita.control;
     ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, clocked_by hdmi_clock, reset_by hdmi_reset);
+
+    let imageon_vita_clock_binder <- mkClockBinder(imageonVita.host, clocked_by hdmi_clock);
 
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, hdmi_clock, hdmi_reset, defaultClock);
     rule copydebugval;
@@ -156,20 +154,11 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     method Action set_decoder_control(Bit#(32) v);
         control.set_decoder_control(v);
     endmethod
-    method Action get_decoder_control();
-        indication.coreIndication.decoder_control_value(control.get_decoder_control());
-    endmethod
 
     method Action set_triggen_control(Bit#(32) v);
         control.set_triggen_control(v);
     endmethod
-    method Action get_triggen_control();
-        indication.coreIndication.triggen_control_value(control.get_triggen_control());
-    endmethod
 
-    method Action set_host_vita_reset(Bit#(1) v);
-        control.set_host_vita_reset(v);
-    endmethod
     method Action set_host_oe(Bit#(1) v);
         control.set_host_oe(v);
     endmethod
@@ -268,7 +257,7 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
 
     endinterface
    interface BlueScopeRequest bsRequest = bsi.requestIfc;
-   interface ImageonVita imageon = imageonVita.host;
+   interface ImageonVita imageon = imageon_vita_clock_binder;
    interface ImageonSensorData sensor_data = xsviFromSensor.in;
    interface HDMI hdmi = hdmiOut.hdmi;
    interface SpiPins spi = spiController.pins;

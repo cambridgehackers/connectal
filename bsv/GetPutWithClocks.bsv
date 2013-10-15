@@ -41,3 +41,8 @@ instance ConnectableWithClocks#(Get#(a), Put#(a)) provisos (Bits#(a, awidth));
        endrule
    endmodule: mkConnectionWithClocks
 endinstance: ConnectableWithClocks
+
+
+module mkClockBinder#(a ifc) (a);
+   return ifc;
+endmodule

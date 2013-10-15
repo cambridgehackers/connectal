@@ -21,8 +21,6 @@ static int trace_spi = 0;
     static unsigned long cv_ ## A;
 
 DECL(iserdes_control)
-DECL(decoder_control)
-DECL(triggen_control)
 DECL(spi_response)
 
 #define RXFN(A) \
@@ -41,8 +39,6 @@ DECL(spi_response)
 
 class TestImageCaptureIndications : public CoreIndication {
     RXFN(iserdes_control)
-    RXFN(decoder_control)
-    RXFN(triggen_control)
     void putFailed(unsigned long v){
       fprintf(stderr, "putFailed: %x\n", v);
       exit(1);
@@ -60,13 +56,9 @@ printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
 static void init_local_semaphores(void)
 {
     sem_init(&sem_iserdes_control, 0, 0);
-    sem_init(&sem_decoder_control, 0, 0);
-    sem_init(&sem_triggen_control, 0, 0);
     sem_init(&sem_spi_response, 0, 0);
 }
 GETFN(iserdes_control)
-GETFN(decoder_control)
-GETFN(triggen_control)
 
 //#define VITA_ISERDES_CONTROL_REG     0x0010
    #define VITA_ISERDES_RESET_BIT       0x0001
@@ -449,9 +441,6 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    vita_spi_write_sequence(vita_spi_seq6, VITA_SPI_SEQ6_QTY);
    device->set_iserdes_control( VITA_ISERDES_FIFO_ENABLE_BIT);
    device->set_decoder_control(VITA_DECODER_ENABLE_BIT);
-   uint32_t uControl = read_decoder_control();
-   printf( "VITA DECODER - Control = 0x%08X\n\r", uControl);
-   usleep(100);
    sleep(1);
    printf( "VITA 1080P60 - Disable Sequencer\n\r");
    vita_spi_write(192, 0); usleep(100); // 100 usec
@@ -514,7 +503,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     device->set_host_oe(1);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     init_i2c_camera();
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     init_i2c_hdmi();
@@ -554,8 +542,6 @@ int main(int argc, const char **argv)
 device->set_debugreq(1);
 device->get_debugind();
 printf("[%s:%d] iserdes %lx\n", __FUNCTION__, __LINE__, read_iserdes_control());
-printf("[%s:%d] decode %lx\n", __FUNCTION__, __LINE__, read_decoder_control());
-printf("[%s:%d] triggen %lx\n", __FUNCTION__, __LINE__, read_triggen_control());
 static int regids[] = {24, 97, 186, 0};
 int i;
 for (i = 0; regids[i]; i++)

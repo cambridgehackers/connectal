@@ -25,6 +25,7 @@ import Vector::*;
 import FIFO::*;
 import GetPut::*;
 import Gearbox::*;
+import Clocks :: *;
 
 interface ImageonSerdes;
     method Bit#(1) reset();
@@ -93,7 +94,6 @@ endinterface
 
 (* always_enabled *)
 interface ImageonVita;
-    method Bit#(1) host_vita_reset();
     method Bit#(1) host_oe();
     interface ImageonSerdes serdes;
     interface ImageonDecoder decoder;
@@ -105,24 +105,12 @@ interface ImageonVita;
 endinterface
 
 interface ImageonControl;
-    method Action set_spi_control(Bit#(32) v);
-    method Bit#(32) get_spi_control();
     method Action set_iserdes_control(Bit#(32) v);
     method Bit#(32) get_iserdes_control();
     method Action set_decoder_control(Bit#(32) v);
-    method Bit#(32) get_decoder_control();
     method Action set_triggen_control(Bit#(32) v);
-    method Bit#(32) get_triggen_control();
 
-    method Action set_host_vita_reset(Bit#(1) v);
     method Action set_host_oe(Bit#(1) v);
-
-    method Action set_spi_reset(Bit#(1) v);
-    method Action set_spi_timing(Bit#(16) v);
-
-    interface Put#(Bit#(32)) txfifo;
-    interface Put#(Bit#(32)) rxfifo_request;
-    interface Get#(Bit#(32)) rxfifo_response;
 
     method Action set_serdes_reset(Bit#(1) v);
     method Action set_serdes_auto_align(Bit#(1) v);
@@ -160,66 +148,51 @@ interface ImageonVitaController;
     interface ImageonControl control;
 endinterface
 
-module mkImageonVitaController(ImageonVitaController);
+module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset)(ImageonVitaController);
+    Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset;
-    Reg#(Bit#(1)) host_vita_reset_reg <- mkReg(0);
-    Reg#(Bit#(1)) host_oe_reg <- mkReg(0);
+    Reg#(Bit#(1)) host_oe_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Wire#(Bit#(1)) host_clock_gen_locked_wire <- mkDWire(0);
-    Reg#(Bit#(1)) spi_reset_reg <- mkReg(0);
-    Reg#(Bit#(16)) spi_timing_reg <- mkReg(0);
 
-    Wire#(Bit#(1)) spi_status_busy_wire <- mkDWire(0);
-    Wire#(Bit#(1)) spi_status_error_wire <- mkDWire(0);
-    Wire#(Bit#(1)) spi_txfifo_full_wire <- mkDWire(0);
-    Wire#(Bit#(1)) spi_txfifo_wen_wire <- mkDWire(0);
-    Wire#(Bit#(32)) spi_txfifo_din_wire <- mkDWire(0);
-    Wire#(Bit#(1)) spi_rxfifo_ren_wire <- mkDWire(0);
-    Wire#(Bit#(32)) spi_rxfifo_dout_wire <- mkDWire(0);
-    Wire#(Bit#(1)) spi_rxfifo_empty_wire <- mkDWire(0);
-    Reg#(Bool) spi_rxfifo_requested_reg <- mkReg(False);
-
-    Reg#(Bit#(1)) serdes_reset_reg <- mkReg(0);
-    Reg#(Bit#(1)) serdes_auto_align_reg <- mkReg(0);
-    Reg#(Bit#(1)) serdes_align_start_reg <- mkReg(0);
-    Reg#(Bit#(1)) serdes_fifo_enable_reg <- mkReg(0);
-    Reg#(Bit#(10)) serdes_manual_tap_reg <- mkReg(0);
-    Reg#(Bit#(10)) serdes_training_reg <- mkReg(0);
+    Reg#(Bit#(1)) serdes_reset_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(1)) serdes_auto_align_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(1)) serdes_align_start_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(1)) serdes_fifo_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(10)) serdes_manual_tap_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(10)) serdes_training_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Wire#(Bit#(1)) serdes_clk_ready_wire <- mkDWire(0);
     Wire#(Bit#(16)) serdes_clk_status_wire <- mkDWire(0);
     Wire#(Bit#(1)) serdes_align_busy_wire <- mkDWire(0);
     Wire#(Bit#(1)) serdes_aligned_wire <- mkDWire(0);
 
-    Reg#(Bit#(1)) decoder_reset_reg <- mkReg(0);
-    Reg#(Bit#(1)) decoder_enable_reg <- mkReg(0);
-    Reg#(Bit#(10)) decoder_code_ls_reg <- mkReg(0);
-    Reg#(Bit#(10)) decoder_code_le_reg <- mkReg(0);
-    Reg#(Bit#(10)) decoder_code_fs_reg <- mkReg(0);
-    Reg#(Bit#(10)) decoder_code_fe_reg <- mkReg(0);
-    Reg#(Bit#(10)) decoder_code_bl_reg <- mkReg(0);
-    Reg#(Bit#(10)) decoder_code_img_reg <- mkReg(0);
+    Reg#(Bit#(1)) decoder_reset_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(1)) decoder_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(10)) decoder_code_ls_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(10)) decoder_code_le_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(10)) decoder_code_fs_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(10)) decoder_code_fe_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(10)) decoder_code_bl_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(10)) decoder_code_img_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Wire#(Bit#(1)) decoder_frame_start_wire <- mkDWire(0);
     Wire#(Bit#(10)) decoder_video_data_wire <- mkDWire(0);
 
-    Reg#(Bit#(3)) trigger_enable_reg <- mkReg(0);
-    Reg#(Bit#(32)) trigger_default_freq_reg <- mkReg(0);
-    Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkReg(0);
-    Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkReg(0);
-    Reg#(Bit#(16)) syncgen_delay_reg <- mkReg(0);
-    Reg#(Bit#(16)) syncgen_hactive_reg <- mkReg(0);
-    Reg#(Bit#(16)) syncgen_hfporch_reg <- mkReg(0);
-    Reg#(Bit#(16)) syncgen_hsync_reg <- mkReg(0);
-    Reg#(Bit#(16)) syncgen_hbporch_reg <- mkReg(0);
-    Reg#(Bit#(16)) syncgen_vactive_reg <- mkReg(0);
-    Reg#(Bit#(16)) syncgen_vfporch_reg <- mkReg(0);
-    Reg#(Bit#(16)) syncgen_vsync_reg <- mkReg(0);
-    Reg#(Bit#(16)) syncgen_vbporch_reg <- mkReg(0);
-    Reg#(Bit#(32)) debugreq_value <- mkReg(0);
-    Reg#(Bit#(32)) debugind_value <- mkReg(0);
+    Reg#(Bit#(3)) trigger_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(32)) trigger_default_freq_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(16)) syncgen_delay_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(16)) syncgen_hactive_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(16)) syncgen_hfporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(16)) syncgen_hsync_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(16)) syncgen_hbporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(16)) syncgen_vactive_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(16)) syncgen_vfporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(16)) syncgen_vsync_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(16)) syncgen_vbporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(32)) debugreq_value <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(32)) debugind_value <- mkReg(0); //, defaultClock, defaultReset, hdmi_clock);
 
     interface ImageonVita host;
-	method Bit#(1) host_vita_reset();
-	    return host_vita_reset_reg;
-	endmethod
 	method Bit#(1) host_oe();
 	    return host_oe_reg;
 	endmethod
@@ -336,28 +309,6 @@ module mkImageonVitaController(ImageonVitaController);
         interface Reset reset = defaultReset;
     endinterface: host
     interface ImageonControl control;
-// SPI_CONTROL
-//    [ 0] VITA_RESET
-//    [ 1] SPI_RESET
-//    [ 8] SPI_STATUS_BUSY
-//    [ 9] SPI_STATUS_ERROR
-//    [16] SPI_TXFIFO_FULL
-//    [24] SPI_RXFIFO_EMPTY
-	method Action set_spi_control(Bit#(32) v);
-            host_vita_reset_reg <= v[0];
-            spi_reset_reg <= v[1];
-	endmethod
-	method Bit#(32) get_spi_control();
-	    let v = 0;
-            v[0] = host_vita_reset_reg;
-	    v[1] = spi_reset_reg;
-	    v[8] = spi_status_busy_wire;
-	    v[9] = spi_status_error_wire;
-	    v[16] = spi_txfifo_full_wire;
-	    v[24] = spi_rxfifo_empty_wire;
-	    return v;
-	endmethod
-
 // ISERDES_CONTROL
 //    [ 0] ISERDES_RESET
 //    [ 1] ISERDES_AUTO_ALIGN
@@ -376,10 +327,6 @@ module mkImageonVitaController(ImageonVitaController);
 	endmethod
 	method Bit#(32) get_iserdes_control();
 	    let v = 0;
-	    v[0] = serdes_reset_reg;
-	    v[1] = serdes_auto_align_reg;
-	    v[2] = serdes_align_start_reg;
-	    v[3] = serdes_fifo_enable_reg;
 	    v[8] = serdes_clk_ready_wire;
 	    v[9] = serdes_align_busy_wire;
 	    v[10] = serdes_aligned_wire;
@@ -393,12 +340,6 @@ module mkImageonVitaController(ImageonVitaController);
 	    decoder_reset_reg <= v[0];
 	    decoder_enable_reg <= v[1];
 	endmethod
-	method Bit#(32) get_decoder_control();
-	    let v = 0;
-	    v[0] = decoder_reset_reg;
-	    v[1] = decoder_enable_reg;
-	    return v;
-	endmethod
 // TRIGGEN_CONTROL
 // [ 2: 0] TRIGGEN_ENABLE
 // [ 6: 4] TRIGGEN_SYNC2READOUT
@@ -409,43 +350,11 @@ module mkImageonVitaController(ImageonVitaController);
 	method Action set_triggen_control(Bit#(32) v);
 	    trigger_enable_reg <= v[2:0];
 	endmethod
-	method Bit#(32) get_triggen_control();
-	    let v = 0;
-	    v[2:0] = trigger_enable_reg;
-	    return v;
-	endmethod
 
-	method Action set_host_vita_reset(Bit#(1) v);
-	    host_vita_reset_reg <= v;
-	endmethod
 	method Action set_host_oe(Bit#(1) v);
 	    host_oe_reg <= v;
 	endmethod
 
-	method Action set_spi_reset(Bit#(1) v);
-	    spi_reset_reg <= v;
-	endmethod
-	method Action set_spi_timing(Bit#(16) v);
-	    spi_timing_reg <= v;
-	endmethod
-	interface Put txfifo;
-	    method Action put(Bit#(32) v) if (spi_txfifo_full_wire == 0);
-	        spi_txfifo_wen_wire <= 1;
-		spi_txfifo_din_wire <= v;
-	    endmethod
-	endinterface
-        interface Put rxfifo_request;
-	    method Action put(Bit#(32) v) if (!spi_rxfifo_requested_reg && (spi_rxfifo_empty_wire == 0));
-	        spi_rxfifo_requested_reg <= True;
-		spi_rxfifo_ren_wire <= 1;
-	    endmethod
-	endinterface
-	interface Get rxfifo_response;
-	    method ActionValue#(Bit#(32)) get() if (spi_rxfifo_requested_reg);
-	        spi_rxfifo_requested_reg <= False;
-		return spi_rxfifo_dout_wire;
-	    endmethod
-	endinterface
 	method Action set_serdes_reset(Bit#(1) v);
 	    serdes_reset_reg <= v;
 	endmethod
