@@ -18,8 +18,7 @@ mkGearboxTb.v: GearboxTb.bsv
 testAdapter: Adapter.bsv
 	bsc -check-assert -sim -u -g mkAdapterTb Adapter.bsv
 	bsc -check-assert -sim -u -e mkAdapterTb -o testAdapter mkAdapterTb.ba
+	./testAdapter
 
 mkSPI20.v: XbsvSpi.bsv
 	bsc -verilog -u -g mkSPI20 XbsvSpi.bsv
-
-
