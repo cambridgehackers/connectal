@@ -33,13 +33,15 @@ interface K7PcieBridgeIfc#(numeric type lanes);
    (* always_ready *)
    method Bool isLinkUp();
    method Bool isCalibrated();
+   (* always_ready *)
+   method Action interrupt();
    interface Clock clock250;
    interface Reset reset250;
    interface Clock clock125;
    interface Reset reset125;
    (* prefix = "" *)
    interface DDR3_Pins_K7      ddr3;
-   interface Axi3Master#(32,32,4,SizeOf#(TLPTag)) portal0;
+   interface Axi3Master#(32,32,4,12) portal0;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
@@ -201,7 +203,7 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 
    method Bool isLinkUp         = link_is_up;
    method Bool isCalibrated     = ddr3_ctrl.user.init_done;
-   
+   method Action interrupt      = bridge.interrupt;   
    
 endmodule: mkK7PcieBridge
 

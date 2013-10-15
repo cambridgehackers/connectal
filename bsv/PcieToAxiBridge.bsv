@@ -27,7 +27,7 @@ interface PcieToAxiBridge#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
    interface MsgPort#(bpb)         noc;  // to the NoC
-   interface Axi3Master#(32,32,4,SizeOf#(TLPTag)) portal0; // to the portal control
+   interface Axi3Master#(32,32,4,12) portal0; // to the portal control
 
    // global network activation status
    (* always_ready *)
@@ -39,6 +39,8 @@ interface PcieToAxiBridge#(numeric type bpb);
    (* always_ready *)
    method Bool tx_activity();
 
+   (* always_ready *)
+   method Action interrupt();
    // methods for MSI interrupts
    (* always_ready *)
    method Bool msi_interrupt_req();
@@ -404,7 +406,7 @@ endinterface
 interface PortalEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Master#(32,32,4,SizeOf#(TLPTag)) portal;
+    interface Axi3Master#(32,32,4,12) portal;
     interface Reg#(Bool)           pipeliningEnabled;
 endinterface
 
@@ -452,7 +454,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 
     interface Put tlp_in;
         method Action put(TLPData#(16) tlp) if (!busyReg);
-	    $display("PortalEngine.put tlp=%h", tlp);
+	    //$display("PortalEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
@@ -472,7 +474,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	        let hdr = writeHeaderFifo.first;
 	        writeHeaderFifo.deq;
 		writeDataFifo.enq(hdr);
-		return byteSwap(extend(writeHeaderFifo.first.addr) << 2);
+		return (extend(writeHeaderFifo.first.addr) << 2);
 	    endmethod
 	    method Bit#(4) writeBurstLen();
 		return 0;
@@ -489,7 +491,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    method Bit#(4) writeBurstCache(); // drive with 4'b0011
 		return 4'b0011;
 	    endmethod
-	    method Bit#(SizeOf#(TLPTag)) writeId();
+	    method Bit#(12) writeId();
 		return extend(writeHeaderFifo.first.tag);
 	    endmethod
 
@@ -498,7 +500,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	        writeDataFifo.deq;
 		return byteSwap(writeDataFifo.first.data);
 	    endmethod
-	    method Bit#(SizeOf#(TLPTag)) writeWid();
+	    method Bit#(12) writeWid();
 		return extend(writeDataFifo.first.tag);
 	    endmethod
 	    method Bit#(4) writeDataByteEnable();
@@ -508,7 +510,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		return 0;
 	    endmethod
 
-	    method Action writeResponse(Bit#(2) responseCode, Bit#(SizeOf#(TLPTag)) id);
+	    method Action writeResponse(Bit#(2) responseCode, Bit#(12) id);
 	    endmethod
 	endinterface: write
 
@@ -517,7 +519,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	        let hdr = readHeaderFifo.first;
 	        readHeaderFifo.deq;
 		readDataFifo.enq(hdr);
-		return byteSwap(extend(readHeaderFifo.first.addr) << 2);
+		return (extend(readHeaderFifo.first.addr) << 2);
 	    endmethod
 	    method Bit#(4) readBurstLen();
 		return 0;
@@ -534,14 +536,13 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    method Bit#(4) readBurstCache(); // drive with 4'b0011
 		return 4'b0011;
 	    endmethod
-	    method Bit#(SizeOf#(TLPTag)) readId();
+	    method Bit#(12) readId();
 		return extend(readHeaderFifo.first.tag);
 	    endmethod
-	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(SizeOf#(TLPTag)) id);
+	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id);
 	        let hdr = readDataFifo.first;
 		//FIXME: assumes only 1 word read per request
 		readDataFifo.deq;
-	        $display("PortalEngine.readData data=%h", data);
 
 	        TLPCompletionHeader completion = defaultValue;
 		completion.format = MEM_WRITE_3DW_DATA;
@@ -553,7 +554,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		completion.bytecount = 4;
 		completion.reqid = hdr.reqid;
 		completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
-		completion.data = byteSwap(data);
+		completion.data = data;
 	        TLPData#(16) tlp = defaultValue;
 		tlp.data = pack(completion);
 		tlp.sof = True;
@@ -571,7 +572,7 @@ endmodule: mkPortalEngine
 interface AxiSlaveEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Slave#(40,32,4,SizeOf#(TLPTag))  slave;
+    interface Axi3Slave#(40,32,4,12)  slave;
 endinterface: AxiSlaveEngine
 
 module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
@@ -593,20 +594,20 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
     interface Axi3Slave slave;
 	interface Axi3SlaveWrite write;
 	   method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(SizeOf#(TLPTag)) awid);
+				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid);
            endmethod: writeAddr
 	   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last);
            endmethod: writeData
 	   method ActionValue#(Bit#(2)) writeResponse();
 	       return 0;
            endmethod: writeResponse
-	   method ActionValue#(Bit#(SizeOf#(TLPTag))) bid();
+	   method ActionValue#(Bit#(12)) bid();
 	       return 0;
            endmethod: bid
 	endinterface
 	interface Axi3SlaveRead read;
 	   method Action readAddr(Bit#(40) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-				  Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(SizeOf#(TLPTag)) arid);
+				  Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid);
                TLPMemory4DWHeader hdr_4dw = defaultValue;
 	       hdr_4dw.format = MEM_READ_4DW_NO_DATA;
 	       hdr_4dw.tag = truncate(arid);
@@ -632,7 +633,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
 	   method Bit#(1) last();
 	       return 1;
            endmethod: last
-	   method Bit#(SizeOf#(TLPTag)) rid();
+	   method Bit#(12) rid();
 	       return zeroExtend(completionFifo.first.tag);
            endmethod: rid
 	   // method Action readResponse(Bit#(2) responseCode);
@@ -648,7 +649,7 @@ typedef enum {
 } AxiSlaveTestState deriving (Bits,Eq);
 
 interface AxiSlaveTest;
-    interface Axi3Master#(40,32,4,SizeOf#(TLPTag)) master;
+    interface Axi3Master#(40,32,4,12) master;
     interface Reg#(Bit#(40)) addr;
     interface Reg#(Bit#(32)) result;
     interface Reg#(AxiSlaveTestState) state;
@@ -685,7 +686,7 @@ module mkAxiSlaveTest(AxiSlaveTest);
 	   method Bit#(idWidth) readId();
 	       return 22;
 	   endmethod
-	   method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(SizeOf#(TLPTag)) id) if (stateReg == WaitingForData);
+	   method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id) if (stateReg == WaitingForData);
 	       resultReg <= data;
 	       stateReg <= Done;
 	   endmethod
@@ -909,11 +910,12 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 787: return pipeliningEnabledReg ? 1 : 0;
 	 788: return axiEnabledReg ? 1 : 0;
 	 789: return tlpDataBramRdAddrReg;
-	 790: return 0;
-	 791: return 0;
+	 790: return msix_enabled ? 1 : 0;
+	 791: return msix_mask_all_intr ? 1 : 0;
 	 792: return tlpDataBramWrAddrReg;
+	 793: return msi_enabled ? 1 : 0;
+
          // 4-entry MSIx table
-	 793: return 0;
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
          4097: return msix_entry[0].addr_hi;            // entry 0 upper address
          4098: return msix_entry[0].msg_data;           // entry 0 msg data
@@ -2510,6 +2512,8 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
                                                  , max_payload_bytes
                                                  );
 
+   Reg#(Bool) interruptRequested <- mkReg(False);
+
    rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 127);
        csr.tlpTracing <= False;
    endrule
@@ -2558,8 +2562,10 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    endrule
 
    (* fire_when_enabled, no_implicit_conditions *)
-   rule intr_req if (dma.request_interrupt);
+   rule intr_req if (dma.request_interrupt || interruptRequested);
       csr.interrupt();
+      if (interruptRequested)
+         interruptRequested <= False;
    endrule
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
@@ -2567,6 +2573,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
        let tlp = tlpFromBusFifo.first;
        tlpFromBusFifo.deq();
        dispatcher.tlp_in_from_bus.put(tlp);
+       $display("tlp in: %h\n", tlp);
        if (csr.tlpTracing) begin
 	   TimestampedTlpData ttd = TimestampedTlpData { seqno: csr.tlpSeqno, unused: 7'h04, tlp: tlp };
 	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
@@ -2614,6 +2621,9 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    method Bool rx_activity  = dispatcher.read_tlp() || dispatcher.write_tlp() || arbiter.completion_tlp();
    method Bool tx_activity  = arbiter.read_tlp()    || arbiter.write_tlp()    || dispatcher.completion_tlp();
 
+   method Action interrupt();
+       interruptRequested <= True;
+   endmethod
    method Bool   msi_interrupt_req   = csr.msi_interrupt_req;
    method Action msi_interrupt_clear = csr.msi_interrupt_clear;
 
