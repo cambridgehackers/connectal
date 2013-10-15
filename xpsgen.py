@@ -1157,7 +1157,7 @@ class ImageonVita:
     .imageon_get_debugreq(debugreq_value),
     .imageon_set_debugind_v(debugind_value),
     /* SPI port */
-    .CLK_spi_clock(io_vita_spi_sclk),
+    .CLK_spi_invertedClock(io_vita_spi_sclk),
     .spi_sel_n(io_vita_spi_ssel_n),
     .spi_mosi(io_vita_spi_mosi),
     .spi_miso_v(io_vita_spi_miso),
