@@ -3,8 +3,8 @@
 test: testspi testAdapter
 
 testspi: XbsvSpi.bsv
-	bsc -sim -u -g mkSpiTestBench XbsvSpi.bsv
-	bsc -sim -u -e mkSpiTestBench -o spiTestBench mkSpiTestBench.ba
+	bsc -check-assert -sim -u -g mkSpiTestBench XbsvSpi.bsv
+	bsc -check-assert -sim -u -e mkSpiTestBench -o spiTestBench mkSpiTestBench.ba
 	./spiTestBench -V spi.vcd
 
 testgearbox: GearboxTb.bsv

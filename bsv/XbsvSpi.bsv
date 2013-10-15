@@ -3,8 +3,9 @@ import Clocks      :: *;
 import GetPut      :: *;
 import FIFOF       :: *;
 import Connectable :: *;
-import StmtFSM     :: *;
 import SpecialFIFOs:: *;
+import StmtFSM     :: *;
+import Assert      :: *;
 
 (* always_enabled *)
 interface SpiPins;
@@ -133,17 +134,14 @@ module mkSpiTestBench(Empty);
 
    rule displaySlaveValue if (slaveCount == 0);
       $display("slave received %h", responseValue);
-      if (responseValue != masterV)
-	 $finish(-1);
+      dynamicAssert(responseValue == masterV, "wrong value received by slave");
    endrule
 
    rule finished;
       let result <- spi.response.get();
       $display("master received %h", result);
-      if (result == slaveV)
-	 $finish(0);
-      else
-	 $finish(-2);
+      dynamicAssert(result == slaveV, "wrong value received by master");
+      $finish(0);
    endrule
 
    let once <- mkOnce(action
