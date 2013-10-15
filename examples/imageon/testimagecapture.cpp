@@ -68,19 +68,6 @@ GETFN(iserdes_control)
 GETFN(decoder_control)
 GETFN(triggen_control)
 
-//#define VITA_SPI_CONTROL_REG     0x0000
-   #define VITA_VITA_RESET_BIT       0x0001
-   #define VITA_SPI_RESET_BIT        0x0002
-   #define VITA_SPI_ERROR_BIT        0x0100
-   #define VITA_SPI_BUSY_BIT         0x0200
-   #define VITA_SPI_TXFIFO_FULL_BIT  0x00010000
-   #define VITA_SPI_RXFIFO_EMPTY_BIT 0x01000000
-//#define VITA_SPI_RXFIFO_REG      0x000C
-   #define VITA_SPI_SYNC2_BIT        0x80000000
-   #define VITA_SPI_SYNC1_BIT        0x40000000
-   #define VITA_SPI_NOP_BIT          0x20000000
-   #define VITA_SPI_READ_BIT         0x10000000
-   #define VITA_SPI_WRITE_BIT        0x0000
 //#define VITA_ISERDES_CONTROL_REG     0x0010
    #define VITA_ISERDES_RESET_BIT       0x0001
    #define VITA_ISERDES_AUTO_ALIGN_BIT  0x0002
@@ -89,10 +76,6 @@ GETFN(triggen_control)
 //#define VITA_DECODER_CONTROL_REG           0x0020
    #define VITA_DECODER_RESET_BIT            0x0001
    #define VITA_DECODER_ENABLE_BIT           0x0002
-//#define VITA_CRC_CONTROL_REG               0x0070
-   #define VITA_CRC_RESET_BIT              0x0001
-   #define VITA_CRC_INITVALUE_BIT          0x0002
-//#define VITA_CRC_STATUS_REG                0x0074
 
 static uint32_t uManualTap;
 static struct {
@@ -216,60 +199,6 @@ static uint16_t vita_mult_timer_line_resolution_seq[VITA_MULT_TIMER_LINE_RESOLUT
    // R199[15:0] mult_timer = (1920+88+44+132)/4 = 2184/4 = 546 (0x0222)
    {199, 0xFFFF, 0x0222} };
 
-#if 0
-static uint32_t vita_spi_read_internal(uint32_t uAddr)
-{
-   // Make sure the RXFIFO is empty
-   uint32_t uStatus = read_spi_control(), ret;
-   while ( !(uStatus & VITA_SPI_RXFIFO_EMPTY_BIT)) {
-       // Pop (previous) Response from RXFIFO
-       ret = read_spi_rxfifo();
-//printf("[%s:%d]\n", __FUNCTION__, __LINE__, ret);
-       uStatus = read_spi_control();
-   }
-
-   // Wait until TXFIFO is not full
-   int timeout = 99;
-   do {
-      uStatus = read_spi_control();
-   } while ( (uStatus & VITA_SPI_TXFIFO_FULL_BIT) && (--timeout));
-   uint32_t uRequest = VITA_SPI_READ_BIT | (((uint32_t)uAddr) << 16);
-   device->put_spi_txfifo(uRequest);
-   if ( !timeout) {
-       printf( "[vita_spi_read ] Timed out waiting for !TXFIFO_FULL\n\r");
-       return 0;
-   }
-   // Wait until RXFIFO is not empty
-   timeout = 99;
-   do {
-      uStatus = read_spi_control();
-   } while ( (uStatus & VITA_SPI_RXFIFO_EMPTY_BIT) && (--timeout));
-   if ( !timeout) {
-       printf( "[vita_spi_read ] Timed out waiting for !RXFIFO_EMPTY\n\r");
-       return 0;
-   }
-   return read_spi_rxfifo() & 0xffff;
-}
-static int vita_spi_write(uint32_t uAddr, uint16_t uData)
-{
-   uint32_t uStatus, prev = 0;
-   // Wait until TXFIFO is not full
-   int timeout = 99;
-   do {
-      uStatus = read_spi_control();
-   } while ( (uStatus & VITA_SPI_TXFIFO_FULL_BIT) && !(--timeout));
-   if ( !timeout) {
-       printf( "[vita_spi_write] Timed out waiting for !TXFIFO_FULL\n\r");
-       return 0;
-   }
-if (trace_spi)
-   prev = vita_spi_read_internal(uAddr);
-   device->put_spi_txfifo(VITA_SPI_WRITE_BIT | (((uint32_t)uAddr) << 16) | ((uint16_t)uData));
-if (trace_spi)
-printf("SPIWRITE: [%x] %x -> %x %x\n", uAddr, prev, uData, vita_spi_read_internal(uAddr));
-   return 1;
-}
-#else
 static uint32_t spi_transfer (uint32_t v) \
 {
     if (trace_spi)
@@ -292,7 +221,6 @@ static int vita_spi_write(uint32_t uAddr, uint16_t uData)
         printf("SPIWRITE: [%x] %x -> %x %x\n", uAddr, prev, uData, vita_spi_read_internal(uAddr));
     return 1;
 }
-#endif
 
 static uint16_t vita_spi_read(uint32_t uAddr)
 {
@@ -410,10 +338,6 @@ static void fmc_imageon_demo_enable_ipipe( void)
    device->set_decoder_control( VITA_DECODER_RESET_BIT);
 
    usleep(10); // 10 usec
-#if 0
-   device->set_spi_control( VITA_VITA_RESET_BIT);
-   usleep(10); // 10 usec
-#endif
    printf( "VITA ISERDES - Releasing Reset\n\r");
    device->set_iserdes_control( 0);
    printf( "VITA DECODER - Releasing Reset\n\r");
@@ -421,11 +345,7 @@ static void fmc_imageon_demo_enable_ipipe( void)
    printf( "VITA CRC - Releasing Reset\n\r");
    sleep(1); // 1 sec (time to get clocks to lock)
    printf("VITA SPI Sequence 0 - Releasing RESET_N pin\n\r");
-#if 0
-   device->set_spi_control( 0);
-#else
    device->set_iserdes_control(0);
-#endif
    usleep(20); // 20 usec
    uData = vita_spi_read(0);
 printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
@@ -612,9 +532,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     // FMC-IMAGEON VITA Receiver Initialization
     printf( "FMC-IMAGEON VITA Receiver Initialization ...\n\r");
     uManualTap = 25;
-#if 0
-    device->set_spi_timing((100/10));
-#endif
     fmc_imageon_demo_enable_ipipe();
 }
 
