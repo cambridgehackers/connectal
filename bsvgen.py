@@ -321,7 +321,7 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
             method ActionValue#(Bit#(32)) readData();
 
                 let v = axiSlaveReadDataFifos[axiSlaveRS].first;
-                axiSlaveReadDataFifo.deq;
+                axiSlaveReadDataFifos[axiSlaveRS].deq;
                 axiSlaveReadLastFifo.deq;
                 axiSlaveReadIdFifo.deq;
 
