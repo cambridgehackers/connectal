@@ -15,13 +15,13 @@
 typedef unsigned int PARef;
 
 typedef struct PortalAlloc {
-        size_t size;
-        int fd;
-        struct {
-                unsigned long dma_address;
-                unsigned long length;
-        } entries[64];
-        int numEntries;
+  size_t size;
+  int fd;
+  struct {
+    unsigned long dma_address;
+    unsigned long length;
+  } entries[64];
+  int numEntries;
 } PortalAlloc;
 
 struct channel{

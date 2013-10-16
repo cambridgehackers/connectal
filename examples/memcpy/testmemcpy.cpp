@@ -9,14 +9,16 @@
 
 CoreRequest *device = 0;
 BlueScopeRequest *bluescope = 0;
+DMARequest *dma = 0;
 PortalAlloc srcAlloc;
 PortalAlloc dstAlloc;
 PortalAlloc bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 32;
-size_t size = numWords*sizeof(unsigned int);
+int numWords = 1<<10;
+size_t test_sz  = numWords*sizeof(unsigned int);
+size_t alloc_sz = test_sz;
 
 sem_t iter_sem;
 sem_t conf_sem;
@@ -33,6 +35,17 @@ void dump(const char *prefix, char *buf, size_t len)
     fprintf(stderr, "\n");
 }
 
+class TestDMAIndication : public DMAIndication
+{
+  virtual void reportStateDbg(DmaDbgRec& rec){
+    fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
+  }
+  virtual void configResp(unsigned long channelId){
+    fprintf(stderr, "configResp: %x\n", channelId);
+    sem_post(&conf_sem);
+  }
+};
+
 class TestCoreIndication : public CoreIndication
 {
   virtual void started(unsigned long words){
@@ -42,13 +55,13 @@ class TestCoreIndication : public CoreIndication
     dump("readWordResult: ", (char*)&v, sizeof(v));
   }
   virtual void done(unsigned long v) {
-    unsigned int mcf = memcmp(srcBuffer, dstBuffer, size);
+    unsigned int mcf = memcmp(srcBuffer, dstBuffer, test_sz);
     memcmp_fail |= mcf;
     if(true){
       fprintf(stderr, "memcpy done: %lx\n", v);
       fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, srcBuffer, dstBuffer, mcf == 0 ? "pass" : "fail");
-      dump("src", (char*)srcBuffer, size);
-      dump("dst", (char*)dstBuffer, size);
+      // dump("src", (char*)srcBuffer, size);
+      // dump("dst", (char*)dstBuffer, size);
     }
     sem_post(&iter_sem);
     if(iterCnt == ++memcmp_count){
@@ -60,26 +73,19 @@ class TestCoreIndication : public CoreIndication
     dump("rData: ", (char*)&v, sizeof(v));
   }
   virtual void readReq(unsigned long v){
-    fprintf(stderr, "readReq %lx\n", v);
+    //fprintf(stderr, "readReq %lx\n", v);
   }
   virtual void writeReq(unsigned long v){
-    fprintf(stderr, "writeReq %lx\n", v);
+    //fprintf(stderr, "writeReq %lx\n", v);
   }
   virtual void writeAck(unsigned long v){
     fprintf(stderr, "writeAck %lx\n", v);
-  }
-  virtual void configResp(unsigned long chanId, unsigned long pa, unsigned long numWords){
-    fprintf(stderr, "configResp %x, %x, %x\n", chanId, pa, numWords);
-    sem_post(&conf_sem);
   }
   virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
 			      unsigned long streamWrCnt, unsigned long writeInProg, 
 			      unsigned long dataMismatch){
     fprintf(stderr, "Core::reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
-  }  
-  virtual void reportDmaDbg(unsigned long x, unsigned long y, unsigned long z, unsigned long w){
-    fprintf(stderr, "Core::reportDmaDbg: %08x %08x %08x %08x\n", x,y,z,w);
   }  
 };
 
@@ -111,6 +117,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = CoreRequest::createCoreRequest(new TestCoreIndication);
   bluescope = BlueScopeRequest::createBlueScopeRequest(new TestBlueScopeIndication);
+  dma = DMARequest::createDMARequest(new TestDMAIndication);
 
   if(sem_init(&iter_sem, 1, 1)){
     fprintf(stderr, "failed to init iter_sem\n");
@@ -121,14 +128,15 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  unsigned int sz = size;
-  PortalMemory::alloc(sz, &srcAlloc);
-  PortalMemory::alloc(sz, &dstAlloc);
-  PortalMemory::alloc(sz, &bsAlloc);
+  fprintf(stderr, "allocating memory...\n");
 
-  srcBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc.fd, 0);
-  dstBuffer = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.fd, 0);
-  bsBuffer  = (unsigned int *)mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsAlloc.fd, 0);
+  PortalMemory::alloc(alloc_sz, &srcAlloc);
+  PortalMemory::alloc(alloc_sz, &dstAlloc);
+  PortalMemory::alloc(alloc_sz, &bsAlloc);
+
+  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc.fd, 0);
+  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.fd, 0);
+  bsBuffer  = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsAlloc.fd, 0);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -156,24 +164,24 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "flush and invalidate complete\n");
       
-    // write channel 0 is dma destination
-    device->configDmaWriteChan(0, ref_dstAlloc, numWords/2);
+    // write channel 0 is copy destination
+    dma->configWriteChan(0, ref_dstAlloc, 16);
     sem_wait(&conf_sem);
-    // read channel 0 is dma source
-    device->configDmaReadChan(0, ref_srcAlloc, numWords/2);
+    // read channel 0 is copy source
+    dma->configReadChan(0, ref_srcAlloc, 16);
     sem_wait(&conf_sem);
     // read channel 1 is readWord source
-    device->configDmaReadChan(1, ref_srcAlloc, 2);
+    dma->configReadChan(1, ref_srcAlloc, 2);
     sem_wait(&conf_sem);
-    // write channel 1 is Bluescope desgination
-    device->configDmaWriteChan(1, ref_bsAlloc, 2);
+    // write channel 1 is Bluescope destination
+    dma->configWriteChan(1, ref_bsAlloc, 2);
     sem_wait(&conf_sem);
 
     fprintf(stderr, "starting mempcy numWords:%d\n", numWords);
 
     bluescope->reset();
     bluescope->setTriggerMask (0xFFFFFFFF);
-    bluescope->setTriggerValue(0x00000001);
+    bluescope->setTriggerValue(0x00000000);
     bluescope->start();
 
     //bluescope->getStateDbg();
@@ -181,7 +189,7 @@ int main(int argc, const char **argv)
     sleep(1);
 
     // initiate the transfer
-    device->startDMA(numWords);
+    device->startCopy(numWords);
   } 
   while(1){sleep(1);}
 }

@@ -517,7 +517,7 @@ class TypeMixin:
         if (sdef.type == 'Struct'):
             return sum([e.type.numBitsBSV() for e in sdef.elements])
         else:
-            assert(False)
+            return sdef.numBitsBSV();
 
 class MethodMixin:
     def emitBsvImplementation(self, f):

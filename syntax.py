@@ -762,8 +762,8 @@ if 0:
         print tok
 
 def parse(data):
-    lexer = lex.lex()
-    parser = yacc.yacc(optimize=1)
+    lexer = lex.lex(errorlog=lex.NullLogger())
+    parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger())
     return parser.parse(data)
 
 if __name__=='__main__':

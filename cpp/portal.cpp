@@ -264,7 +264,8 @@ int PortalMemory::alloc(size_t size, PortalAlloc *portalAlloc)
       fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
     }
-    fprintf(stderr, "alloc size=%d rc=%d fd=%d numEntries=%d\n", size, rc, portalAlloc->fd, portalAlloc->numEntries);
+    fprintf(stderr, "alloc size=%d rc=%d fd=%d numEntries=%d\n", 
+	    portalAlloc->size, rc, portalAlloc->fd, portalAlloc->numEntries);
     return 0;
 }
 
@@ -318,6 +319,8 @@ void* portalExec(void* __x)
 
 	// handle all messasges from this portal instance
 	while (queue_status) {
+	  if(0)
+	  fprintf(stderr, "queue_status %d\n", queue_status);
 	  instance->indication->handleMessage(queue_status-1, instance->ind_fifo_base);
 	  queue_status = *(instance->ind_reg_base+0x8);
 	}

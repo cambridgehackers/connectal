@@ -32,14 +32,6 @@ import BRAM::*;
 import AxiClientServer::*;
 import BRAMFIFOFLevel::*;
 
-// In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
-typedef 2 NumDmaChannels;
-typedef Bit#(TLog#(NumDmaChannels)) DmaChannelId;
-typedef struct {
-   Bit#(32) physAddr;
-   Bit#(4) burstLen; 
-   } DmaChannelContext deriving (Bits);
-
 typedef struct {
    Bit#(32) x;
    Bit#(32) y;
@@ -47,6 +39,25 @@ typedef struct {
    Bit#(32) w;
    } DmaDbgRec deriving(Bits);
 
+interface DMAIndication;
+   method Action reportStateDbg(DmaDbgRec rec);
+   method Action configResp(Bit#(32) channelId);
+endinterface
+
+interface DMARequest;
+   method Action configReadChan(Bit#(32) channelId, Bit#(32) pa, Bit#(32) bsz);
+   method Action configWriteChan(Bit#(32) channelId, Bit#(32) pa, Bit#(32) bsz);
+   method Action getReadStateDbg();
+   method Action getWriteStateDbg();
+endinterface
+
+// In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
+typedef 2 NumDmaChannels;
+typedef Bit#(TLog#(NumDmaChannels)) DmaChannelId;
+typedef struct {
+   Bit#(32) physAddr;
+   Bit#(4) burstLen; 
+   } DmaChannelContext deriving (Bits);
 
 interface ReadChan;
    interface Get#(Bit#(64)) readData;
@@ -82,6 +93,7 @@ interface AxiDMAReadInternal;
 endinterface
 
 interface AxiDMA;
+   interface DMARequest request;
    interface AxiDMAWrite write;
    interface AxiDMARead  read;
    interface Axi3Client#(32,64,8,6) m_axi;
@@ -263,9 +275,25 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
    endinterface
 endmodule
 
-module mkAxiDMA(AxiDMA);
+module mkAxiDMA#(DMAIndication indication)(AxiDMA);
    AxiDMAWriteInternal writer <- mkAxiDMAWriteInternal;
    AxiDMAReadInternal  reader <- mkAxiDMAReadInternal;
+   interface DMARequest request;
+      method Action configReadChan(Bit#(32) channelId, Bit#(32) pa, Bit#(32) numWords);
+	 reader.read.configChan(pack(truncate(channelId)), pa, truncate((numWords>>1)-1));
+	 indication.configResp(channelId);
+      endmethod
+      method Action configWriteChan(Bit#(32) channelId, Bit#(32) pa, Bit#(32) numWords);
+	 writer.write.configChan(pack(truncate(channelId)), pa, truncate((numWords>>1)-1));
+	 indication.configResp(channelId);
+      endmethod
+      method Action getReadStateDbg();
+	 indication.reportStateDbg(reader.read.dbg());
+      endmethod
+      method Action getWriteStateDbg();
+	 indication.reportStateDbg(writer.write.dbg());
+      endmethod
+   endinterface
    interface AxiDMAWrite write = writer.write;
    interface AxiDMARead  read  = reader.read;
    interface Axi3Client m_axi;
