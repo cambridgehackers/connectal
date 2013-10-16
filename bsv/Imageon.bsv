@@ -81,9 +81,7 @@ typedef struct {
 
 interface ImageonSensorData;
     method Action fsync(Bit#(1) v);
-    method Action hsync(Bit#(1) v);
-    method Action vsync(Bit#(1) v);
-    method Action active_video(Bit#(1) v);
+    method Bit#(1) active_video();
     method Action video_data_old(Bit#(10) v);
     method Action framestart(Bit#(1) v);
     method Action video_data(Bit#(40) v);
@@ -462,7 +460,6 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     Reg#(Bit#(1)) hsync_reg <- mkReg(0);
     Reg#(Bit#(1)) active_video_reg <- mkReg(0);
     Wire#(Bit#(1))  xsvi_framestart_old_wire <- mkDWire(0);
-    Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
     Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
 
     Reg#(Bit#(1))     framestart <- mkReg(0);
@@ -535,12 +532,8 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
         method Action fsync(Bit#(1) v);
 	    xsvi_framestart_old_wire <= v;
 	endmethod
-        method Action hsync(Bit#(1) v);
-	endmethod
-        method Action vsync(Bit#(1) v);
-	endmethod
-        method Action active_video(Bit#(1) v);
-            xsvi_active_video_wire <= v;
+        method Bit#(1) active_video();
+            return active_video_reg;
         endmethod
 	method Action video_data_old(Bit#(10) v);
             xsvi_video_data_wire <= v;
@@ -570,14 +563,12 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
             let new_vsync = pack(vstate == Sync);
             active_video_reg <= pack(hstate == Active && vstate == Active);
 	    //jca framestart <= syncGearbox.first[0];
-            if (active_video_reg != xsvi_active_video_wire)
-                hdiff <= hdiff + 1;
             debugind_value <= { 4'ha, new_hsync, new_vsync, vdiff, hdiff, hsync_count[7:0], vsync_count[7:0] } ;
 	    return XsviData {
 		fsync: xsvi_framestart_old_wire, //syncGearbox.first[0],
 		vsync: new_vsync,
 		hsync: new_hsync,
-		active_video: xsvi_active_video_wire,
+		active_video: active_video_reg,
 		video_data: xsvi_video_data_wire //dataGearbox.first[0]
 	    };
 	endmethod
