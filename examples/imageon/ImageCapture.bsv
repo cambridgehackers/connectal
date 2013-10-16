@@ -104,9 +104,8 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     Reset defaultReset <- exposeCurrentReset();
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
-   
 
-    ImageonVitaController imageonVita <- mkImageonVitaController(hdmi_clock, hdmi_reset);
+    ImageonVitaController imageonVita <- mkImageonVitaController(hdmi_clock);
     ImageonControl control = imageonVita.control;
     let imageon_vita_clock_binder <- mkClockBinder(imageonVita.host, clocked_by hdmi_clock);
 

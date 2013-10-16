@@ -148,7 +148,7 @@ interface ImageonVitaController;
     interface ImageonControl control;
 endinterface
 
-module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset)(ImageonVitaController);
+module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset;
     Reg#(Bit#(1)) host_oe_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
@@ -190,7 +190,7 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset)(ImageonVitaC
     Reg#(Bit#(16)) syncgen_vsync_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(16)) syncgen_vbporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(32)) debugreq_value <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(32)) debugind_value <- mkReg(0); //, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(32)) debugind_value <- mkReg(0);
 
     interface ImageonVita host;
 	method Bit#(1) host_oe();
@@ -466,6 +466,8 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     Wire#(Bit#(1))  xsvi_vsync_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
     Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
+    Wire#(Bit#(1)) new_vsync <- mkDWire(0);
+    Wire#(Bit#(1)) new_hsync <- mkDWire(0);
 
     Reg#(Bit#(1))     framestart <- mkReg(0);
     Reg#(State)       hstate <- mkReg(Idle);
@@ -473,15 +475,17 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     Reg#(Bit#(16))    vsync_count <- mkReg(0);
     Reg#(Bit#(16))    hsync_count <- mkReg(0);
     Reg#(Bit#(32))    debugind_value <- mkReg(0);
+    Reg#(Bit#(5))     hdiff <- mkReg(0);
+    Reg#(Bit#(5))     vdiff <- mkReg(0);
     
-    rule start_fsm if (framestart == 1);
+    rule start_fsm if (xsvi_framestart_old_wire == 1);
         vsync_count <= 0;
         hsync_count <= 0;
         hstate <= Active;
         vstate <= Active;
     endrule
  
-    rule sync_fsm if (framestart != 1);
+    rule sync_fsm if (xsvi_framestart_old_wire != 1);
         let hs = hstate;
         let vs = vstate;
         let hc = hsync_count;
@@ -529,6 +533,15 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
         vstate <= vs;
         hsync_count <= hc;
         vsync_count <= vc;
+
+        let nh = pack(hstate == Sync);
+        let nv = pack(vstate == Sync);
+        if (nh != xsvi_hsync_wire)
+            hdiff <= hdiff + 1;
+        if (nv != xsvi_vsync_wire)
+            vdiff <= vdiff + 1;
+        new_hsync <= nh;
+        new_vsync <= nv;
     endrule
 
     interface ImageonSensorData in;
@@ -569,7 +582,7 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
 	    dataGearbox.deq;
 	    syncGearbox.deq;
 	    //jca framestart <= syncGearbox.first[0];
-            debugind_value <= { 'hab, xsvi_hsync_wire, xsvi_vsync_wire, pack(hstate), pack(vstate), hsync_count[7:0], vsync_count[7:0] } ;
+            debugind_value <= { 4'ha, xsvi_hsync_wire, xsvi_vsync_wire, vdiff, hdiff, hsync_count[7:0], vsync_count[7:0] } ;
 	    return XsviData {
 		fsync: xsvi_framestart_old_wire, //syncGearbox.first[0],
 		vsync: xsvi_vsync_wire,
