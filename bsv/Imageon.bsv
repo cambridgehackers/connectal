@@ -462,12 +462,8 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     Reg#(Bit#(1)) hsync_reg <- mkReg(0);
     Reg#(Bit#(1)) active_video_reg <- mkReg(0);
     Wire#(Bit#(1))  xsvi_framestart_old_wire <- mkDWire(0);
-    Wire#(Bit#(1))  xsvi_hsync_wire <- mkDWire(0);
-    Wire#(Bit#(1))  xsvi_vsync_wire <- mkDWire(0);
     Wire#(Bit#(1))  xsvi_active_video_wire <- mkDWire(0);
     Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
-    Wire#(Bit#(1)) new_vsync <- mkDWire(0);
-    Wire#(Bit#(1)) new_hsync <- mkDWire(0);
 
     Reg#(Bit#(1))     framestart <- mkReg(0);
     Reg#(State)       hstate <- mkReg(Idle);
@@ -533,15 +529,6 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
         vstate <= vs;
         hsync_count <= hc;
         vsync_count <= vc;
-
-        let nh = pack(hstate == Sync);
-        let nv = pack(vstate == Sync);
-        if (nh != xsvi_hsync_wire)
-            hdiff <= hdiff + 1;
-        if (nv != xsvi_vsync_wire)
-            vdiff <= vdiff + 1;
-        new_hsync <= nh;
-        new_vsync <= nv;
     endrule
 
     interface ImageonSensorData in;
@@ -549,10 +536,8 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
 	    xsvi_framestart_old_wire <= v;
 	endmethod
         method Action hsync(Bit#(1) v);
-	    xsvi_hsync_wire <= v;
 	endmethod
         method Action vsync(Bit#(1) v);
-	    xsvi_vsync_wire <= v;
 	endmethod
         method Action active_video(Bit#(1) v);
             xsvi_active_video_wire <= v;
@@ -581,12 +566,17 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
 	method ActionValue#(XsviData) get();
 	    dataGearbox.deq;
 	    syncGearbox.deq;
+            let new_hsync = pack(hstate == Sync);
+            let new_vsync = pack(vstate == Sync);
+            active_video_reg <= pack(hstate == Active && vstate == Active);
 	    //jca framestart <= syncGearbox.first[0];
-            debugind_value <= { 4'ha, xsvi_hsync_wire, xsvi_vsync_wire, vdiff, hdiff, hsync_count[7:0], vsync_count[7:0] } ;
+            if (active_video_reg != xsvi_active_video_wire)
+                hdiff <= hdiff + 1;
+            debugind_value <= { 4'ha, new_hsync, new_vsync, vdiff, hdiff, hsync_count[7:0], vsync_count[7:0] } ;
 	    return XsviData {
 		fsync: xsvi_framestart_old_wire, //syncGearbox.first[0],
-		vsync: xsvi_vsync_wire,
-		hsync: xsvi_hsync_wire,
+		vsync: new_vsync,
+		hsync: new_hsync,
 		active_video: xsvi_active_video_wire,
 		video_data: xsvi_video_data_wire //dataGearbox.first[0]
 	    };
