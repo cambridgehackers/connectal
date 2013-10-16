@@ -35,7 +35,6 @@ interface ImageonSerdes;
     method Bit#(10) manual_tap();
     method Bit#(10) training();
     method Action iserdes_clk_ready(Bit#(1) ready);
-    method Action iserdes_clk_status(Bit#(16) status);
     method Action iserdes_align_busy(Bit#(1) busy);
     method Action iserdes_aligned(Bit#(1) aligned);
 endinterface
@@ -159,7 +158,6 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
     Reg#(Bit#(10)) serdes_manual_tap_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(10)) serdes_training_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Wire#(Bit#(1)) serdes_clk_ready_wire <- mkDWire(0);
-    Wire#(Bit#(16)) serdes_clk_status_wire <- mkDWire(0);
     Wire#(Bit#(1)) serdes_align_busy_wire <- mkDWire(0);
     Wire#(Bit#(1)) serdes_aligned_wire <- mkDWire(0);
 
@@ -215,9 +213,6 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
 	    endmethod
 	    method Action iserdes_clk_ready(Bit#(1) ready);
 	        serdes_clk_ready_wire <= ready;
-	    endmethod
-	    method Action iserdes_clk_status(Bit#(16) status);
-	        serdes_clk_status_wire <= status;
 	    endmethod
 	    method Action iserdes_align_busy(Bit#(1) busy);
 	        serdes_align_busy_wire <= busy;
@@ -328,7 +323,6 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
 	    v[8] = serdes_clk_ready_wire;
 	    v[9] = serdes_align_busy_wire;
 	    v[10] = serdes_aligned_wire;
-	    v[31:16] = serdes_clk_status_wire;
 	    return v;
 	endmethod
 // DECODER_CONTROL[7:0]
@@ -468,8 +462,6 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     Reg#(Bit#(16))    vsync_count <- mkReg(0);
     Reg#(Bit#(16))    hsync_count <- mkReg(0);
     Reg#(Bit#(32))    debugind_value <- mkReg(0);
-    Reg#(Bit#(5))     hdiff <- mkReg(0);
-    Reg#(Bit#(5))     vdiff <- mkReg(0);
     
     rule start_fsm if (xsvi_framestart_old_wire == 1);
         vsync_count <= 0;
@@ -559,15 +551,13 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
 	method ActionValue#(XsviData) get();
 	    dataGearbox.deq;
 	    syncGearbox.deq;
-            let new_hsync = pack(hstate == Sync);
-            let new_vsync = pack(vstate == Sync);
             active_video_reg <= pack(hstate == Active && vstate == Active);
 	    //jca framestart <= syncGearbox.first[0];
-            debugind_value <= { 4'ha, new_hsync, new_vsync, vdiff, hdiff, hsync_count[7:0], vsync_count[7:0] } ;
+            debugind_value <= { 16'habcd, hsync_count[7:0], vsync_count[7:0] } ;
 	    return XsviData {
 		fsync: xsvi_framestart_old_wire, //syncGearbox.first[0],
-		vsync: new_vsync,
-		hsync: new_hsync,
+		vsync: pack(vstate == Sync),
+		hsync: pack(hstate == Sync),
 		active_video: active_video_reg,
 		video_data: xsvi_video_data_wire //dataGearbox.first[0]
 	    };

@@ -946,7 +946,6 @@ class ImageonVita:
      wire [9:0] imageon_host_iserdes_manual_tap;
      wire [9:0] imageon_host_iserdes_training;
      wire imageon_host_iserdes_clk_ready;
-     wire [15:0] imageon_host_iserdes_clk_status;
      wire imageon_host_iserdes_align_busy;
      wire imageon_host_iserdes_aligned;
     /* HOST Interface - Sync Channel Decoder */
@@ -966,14 +965,6 @@ class ImageonVita:
      wire [31:0] imageon_host_trigger_cnt_trigger0high;
      wire [31:0] imageon_host_trigger_cnt_trigger0low;
      wire [15:0] imageon_host_syncgen_delay;
-     wire [15:0] imageon_host_syncgen_hactive;
-     wire [15:0] imageon_host_syncgen_hfporch;
-     wire [15:0] imageon_host_syncgen_hsync;
-     wire [15:0] imageon_host_syncgen_hbporch;
-     wire [15:0] imageon_host_syncgen_vactive;
-     wire [15:0] imageon_host_syncgen_vfporch;
-     wire [15:0] imageon_host_syncgen_vsync;
-     wire [15:0] imageon_host_syncgen_vbporch;
      /* Sensor Port */
      wire imageon_xsvi_framestart_old;
      wire imageon_xsvi_active_video;
@@ -1012,7 +1003,6 @@ class ImageonVita:
     .imageon_serdes_manual_tap(imageon_host_iserdes_manual_tap),
     .imageon_serdes_training(imageon_host_iserdes_training),
     .imageon_serdes_iserdes_clk_ready_ready(imageon_host_iserdes_clk_ready),
-    .imageon_serdes_iserdes_clk_status_status(imageon_host_iserdes_clk_status),
     .imageon_serdes_iserdes_align_busy_busy(imageon_host_iserdes_align_busy),
     .imageon_serdes_iserdes_aligned_aligned(imageon_host_iserdes_aligned),
     .imageon_decoder_reset(imageon_host_decoder_reset),
@@ -1029,14 +1019,6 @@ class ImageonVita:
     .imageon_trigger_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
     .imageon_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
     .imageon_syncgen_delay(imageon_host_syncgen_delay),
-    .imageon_syncgen_hactive(imageon_host_syncgen_hactive),
-    .imageon_syncgen_hfporch(imageon_host_syncgen_hfporch),
-    .imageon_syncgen_hsync(imageon_host_syncgen_hsync),
-    .imageon_syncgen_hbporch(imageon_host_syncgen_hbporch),
-    .imageon_syncgen_vactive(imageon_host_syncgen_vactive),
-    .imageon_syncgen_vfporch(imageon_host_syncgen_vfporch),
-    .imageon_syncgen_vsync(imageon_host_syncgen_vsync),
-    .imageon_syncgen_vbporch(imageon_host_syncgen_vbporch),
 
     .EN_sensor_data_fsync(1),
     .sensor_data_fsync_v(imageon_xsvi_framestart_old),
@@ -1162,7 +1144,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .host_iserdes_manual_tap(imageon_host_iserdes_manual_tap),
     .host_iserdes_training(imageon_host_iserdes_training),
     .host_iserdes_clk_ready(imageon_host_iserdes_clk_ready),
-    .host_iserdes_clk_status(imageon_host_iserdes_clk_status),
     .host_iserdes_align_busy(imageon_host_iserdes_align_busy),
     .host_iserdes_aligned(imageon_host_iserdes_aligned),
     /* HOST Interface - Sync Channel Decoder */
@@ -1180,14 +1161,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .host_triggen_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
     /* HOST Interface - Sync Generator */
     .host_syncgen_delay(imageon_host_syncgen_delay),
-    .host_syncgen_hactive(imageon_host_syncgen_hactive),
-    .host_syncgen_hfporch(imageon_host_syncgen_hfporch),
-    .host_syncgen_hsync(imageon_host_syncgen_hsync),
-    .host_syncgen_hbporch(imageon_host_syncgen_hbporch),
-    .host_syncgen_vactive(imageon_host_syncgen_vactive),
-    .host_syncgen_vfporch(imageon_host_syncgen_vfporch),
-    .host_syncgen_vsync(imageon_host_syncgen_vsync),
-    .host_syncgen_vbporch(imageon_host_syncgen_vbporch),
     /* I/O pins */
     .io_vita_clk_pll(io_vita_clk_pll),
     .io_vita_reset_n(io_vita_reset_n),
@@ -1198,8 +1171,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_sync_n(io_vita_sync_n),
     .io_vita_data_p(io_vita_data_p),
     .io_vita_data_n(io_vita_data_n),
-.debreq(debugreq_value),
-.debind(debugind_value),
     /* XSVI Port */
     .framestart_o(imageon_xsvi_framestart_old),
     .xsvi_active_video_o(imageon_xsvi_active_video),
