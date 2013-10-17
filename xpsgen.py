@@ -966,7 +966,6 @@ class ImageonVita:
      wire [31:0] imageon_host_trigger_cnt_trigger0low;
      wire [15:0] imageon_host_syncgen_delay;
      /* Sensor Port */
-     wire imageon_xsvi_framestart_old;
      wire imageon_xsvi_active_video;
      wire [9:0] imageon_xsvi_video_data_old;
 
@@ -1020,8 +1019,6 @@ class ImageonVita:
     .imageon_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
     .imageon_syncgen_delay(imageon_host_syncgen_delay),
 
-    .EN_sensor_data_fsync(1),
-    .sensor_data_fsync_v(imageon_xsvi_framestart_old),
     .sensor_data_active_video(imageon_xsvi_active_video),
     .EN_sensor_data_video_data_old(1),
     .sensor_data_video_data_old_v(imageon_xsvi_video_data_old),
@@ -1172,7 +1169,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_data_p(io_vita_data_p),
     .io_vita_data_n(io_vita_data_n),
     /* XSVI Port */
-    .framestart_o(imageon_xsvi_framestart_old),
     .xsvi_active_video_o(imageon_xsvi_active_video),
     .video_data_out(imageon_xsvi_video_data_old),
     .fsync(imageon_xsvi_fsync),
