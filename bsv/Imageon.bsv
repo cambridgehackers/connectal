@@ -45,9 +45,6 @@ interface ImageonDecoder;
     method Bit#(10) code_ls();
     method Bit#(10) code_le();
     method Bit#(10) code_fs();
-    method Bit#(10) code_fe();
-    method Bit#(10) code_bl();
-    method Bit#(10) code_img();
     method Action frame_start(Bit#(1) start);
 endinterface
 
@@ -165,9 +162,6 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
     Reg#(Bit#(10)) decoder_code_ls_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(10)) decoder_code_le_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(10)) decoder_code_fs_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(10)) decoder_code_fe_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(10)) decoder_code_bl_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(10)) decoder_code_img_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Wire#(Bit#(1)) decoder_frame_start_wire <- mkDWire(0);
     Wire#(Bit#(10)) decoder_video_data_wire <- mkDWire(0);
 
@@ -236,15 +230,6 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
 	    method Bit#(10) code_fs();
 		return decoder_code_fs_reg;
 	    endmethod
-	    method Bit#(10) code_fe();
-		return decoder_code_fe_reg;
-	    endmethod
-	    method Bit#(10) code_bl();
-		return decoder_code_bl_reg;
-	    endmethod
-	    method Bit#(10) code_img();
-		return decoder_code_img_reg;
-	    endmethod
 	    method Action frame_start(Bit#(1) start);
 	        decoder_frame_start_wire <= start;
 	    endmethod
@@ -301,16 +286,6 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
         interface Reset reset = defaultReset;
     endinterface: host
     interface ImageonControl control;
-// ISERDES_CONTROL
-//    [ 0] ISERDES_RESET
-//    [ 1] ISERDES_AUTO_ALIGN
-//    [ 2] ISERDES_ALIGN_START
-//    [ 3] ISERDES_FIFO_ENABLE
-//    [ 8] ISERDES_CLK_READY
-//    [ 9] ISERDES_ALIGN_BUSY
-//    [10] ISERDES_ALIGNED
-// [23:16] ISERDES_TXCLK_STATUS
-// [31:24] ISERDES_RXCLK_STATUS
 	method Action set_iserdes_control(Bit#(32) v);
 	    serdes_reset_reg <= v[0];
 	    serdes_auto_align_reg <= v[1];
@@ -324,9 +299,6 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
 	    v[10] = serdes_aligned_wire;
 	    return v;
 	endmethod
-// DECODER_CONTROL[7:0]
-//    [0] DECODER_RESET
-//    [1] DECODER_ENABLE
 	method Action set_decoder_control(Bit#(32) v);
 	    decoder_reset_reg <= v[0];
 	    decoder_enable_reg <= v[1];
@@ -380,13 +352,10 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
 	    decoder_code_fs_reg <= v;
 	endmethod
 	method Action set_decoder_code_fe(Bit#(10) v);
-	    decoder_code_fe_reg <= v;
 	endmethod
 	method Action set_decoder_code_bl(Bit#(10) v);
-	    decoder_code_bl_reg <= v;
 	endmethod
 	method Action set_decoder_code_img(Bit#(10) v);
-	    decoder_code_img_reg <= v;
 	endmethod
 	method Action set_trigger_enable(Bit#(3) v);
 	    trigger_enable_reg <= v;
@@ -459,6 +428,7 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     Reg#(Bit#(16))    hsync_count <- mkReg(0);
     Reg#(Bit#(32))    debugind_value <- mkReg(0);
     Reg#(Bit#(32))    diff <- mkReg(0);
+    Reg#(Bit#(10))    videodata <- mkReg(0);
     Reg#(Bit#(1))     framestart_reg <- mkReg(0, clocked_by slow_clock, reset_by slow_reset);
     Reg#(Bit#(1))     framestart_delay_reg <- mkReg(0, clocked_by slow_clock, reset_by slow_reset);
     Reg#(Bit#(1))     framestart_new <- mkReg(0);
@@ -524,6 +494,13 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     rule update_framestart;
 	syncGearbox.deq;
         framestart_new <= syncGearbox.first[0];
+    endrule
+    rule update_videodata;
+	dataGearbox.deq;
+        videodata <= dataGearbox.first[0];
+    endrule
+
+    rule update_debug;
         let dval = diff;
         //dval = {diff[28:0], framestart_wire, xsvi_framestart_old_wire, framestart_new};
         if (diff[29] == 1)
@@ -563,13 +540,12 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     endinterface: in
     interface Get out;
 	method ActionValue#(XsviData) get();
-	    dataGearbox.deq;
 	    return XsviData {
 		fsync: framestart_new,
 		vsync: pack(vstate == Sync),
 		hsync: pack(hstate == Sync),
 		active_video: active_video_reg,
-		video_data: xsvi_video_data_wire //dataGearbox.first[0]
+		video_data: xsvi_video_data_wire //videodata
 	    };
 	endmethod
     endinterface: out

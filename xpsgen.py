@@ -954,9 +954,6 @@ class ImageonVita:
      wire [9:0] imageon_host_decoder_code_ls;
      wire [9:0] imageon_host_decoder_code_le;
      wire [9:0] imageon_host_decoder_code_fs;
-     wire [9:0] imageon_host_decoder_code_fe;
-     wire [9:0] imageon_host_decoder_code_bl;
-     wire [9:0] imageon_host_decoder_code_img;
      wire [9:0] imageon_host_decoder_code_tr;
      wire imageon_host_decoder_frame_start;
     /* HOST Interface - Trigger Generator */
@@ -1009,9 +1006,6 @@ class ImageonVita:
     .imageon_decoder_code_ls(imageon_host_decoder_code_ls),
     .imageon_decoder_code_le(imageon_host_decoder_code_le),
     .imageon_decoder_code_fs(imageon_host_decoder_code_fs),
-    .imageon_decoder_code_fe(imageon_host_decoder_code_fe),
-    .imageon_decoder_code_bl(imageon_host_decoder_code_bl),
-    .imageon_decoder_code_img(imageon_host_decoder_code_img),
     .imageon_decoder_frame_start_start(imageon_host_decoder_frame_start),
     .imageon_trigger_enable(imageon_host_trigger_enable),
     .imageon_trigger_default_freq(imageon_host_trigger_default_freq),
@@ -1148,9 +1142,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .host_decoder_code_ls(imageon_host_decoder_code_ls),
     .host_decoder_code_le(imageon_host_decoder_code_le),
     .host_decoder_code_fs(imageon_host_decoder_code_fs),
-    .host_decoder_code_fe(imageon_host_decoder_code_fe),
-    .host_decoder_code_bl(imageon_host_decoder_code_bl),
-    .host_decoder_code_img(imageon_host_decoder_code_img),
     .host_decoder_frame_start(imageon_host_decoder_frame_start),
     /* HOST Interface - Trigger Generator */
     .host_triggen_default_freq(imageon_host_trigger_default_freq),
