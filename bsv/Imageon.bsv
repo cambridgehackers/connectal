@@ -76,8 +76,6 @@ typedef struct {
 } XsviData deriving (Bits);
 
 interface ImageonSensorData;
-    method Bit#(1) active_video();
-    method Action video_data_old(Bit#(10) v);
     method Action framestart(Bit#(1) v);
     method Action video_data(Bit#(40) v);
     method Bit#(32) get_debugind();
@@ -163,7 +161,6 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
     Reg#(Bit#(10)) decoder_code_le_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(10)) decoder_code_fs_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Wire#(Bit#(1)) decoder_frame_start_wire <- mkDWire(0);
-    Wire#(Bit#(10)) decoder_video_data_wire <- mkDWire(0);
 
     Reg#(Bit#(3)) trigger_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(32)) trigger_default_freq_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
@@ -417,7 +414,6 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     Reset defaultReset <- exposeCurrentReset();
 
     Reg#(Bit#(1)) active_video_reg <- mkReg(0);
-    Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
 
     Reg#(State)       hstate <- mkReg(Idle);
     Reg#(State)       vstate <- mkReg(Idle);
@@ -512,12 +508,6 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     endrule
 
     interface ImageonSensorData in;
-        method Bit#(1) active_video();
-            return active_video_reg;
-        endmethod
-	method Action video_data_old(Bit#(10) v);
-            xsvi_video_data_wire <= v;
-	endmethod
 	method Action framestart(Bit#(1) v);
             framestart_reg <= v;
             framestart_delay_reg <= framestart_reg;
@@ -526,7 +516,7 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
 	    in[1] = framestart_delay_reg;
 	    syncGearbox.enq(in);
 	endmethod
-	method Action video_data(Bit#(40) v);// if (active_video_reg == 1);
+	method Action video_data(Bit#(40) v);
 	    // least signifcant 10 bits shifted out first
 	    Vector#(4, Bit#(10)) in = unpack(v);
 	    dataGearbox.enq(in);
