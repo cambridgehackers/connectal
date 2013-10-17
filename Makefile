@@ -34,6 +34,6 @@ test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
 test-imageon/imageon.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	rm -fr test-imageon
 	mkdir test-imageon
-	./genxpsprojfrombsv -B zedboard -p test-imageon -b ImageCapture examples/imageon/ImageCapture.bsv
+	./genxpsprojfrombsv -B zedboard -p test-imageon -b ImageCapture examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv
 	cd test-imageon; make verilog && make bits && make imageon.bit.bin.gz
 	echo test-imageon built successfully
