@@ -520,6 +520,20 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
         vstate <= vs;
         hsync_count <= hc;
         vsync_count <= vc;
+        active_video_reg <= pack(hstate == Active && vstate == Active);
+    endrule
+
+    rule update_framestart;
+	syncGearbox.deq;
+        framestart_new <= syncGearbox.first[0];
+        let dval = diff;
+        dval = {diff[28:0], framestart_wire, xsvi_framestart_old_wire, framestart_new};
+        if (diff[29] == 1)
+            begin
+            debugind_value <= diff;
+            dval = 0;
+            end
+        diff <= dval;
     endrule
 
     interface ImageonSensorData in;
@@ -536,9 +550,9 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
             framestart_wire <= v;
             framestart_reg <= v;
             framestart_delay_reg <= framestart_reg;
-	    Vector#(4, Bit#(1)) in = replicate(0);
+	    Vector#(4, Bit#(1)) in = replicate(framestart_delay_reg);
 	    // zero'th element shifted out first
-	    in[1] = framestart_delay_reg;
+	    //in[1] = framestart_delay_reg;
 	    syncGearbox.enq(in);
 	endmethod
 	method Action video_data(Bit#(40) v);
@@ -555,17 +569,6 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     interface Get out;
 	method ActionValue#(XsviData) get();
 	    dataGearbox.deq;
-	    syncGearbox.deq;
-            active_video_reg <= pack(hstate == Active && vstate == Active);
-            framestart_new <= syncGearbox.first[0];
-            let dval = diff;
-            dval = {diff[28:0], framestart_wire, xsvi_framestart_old_wire, framestart_new};
-            if (diff[8] == 1)
-                begin
-                debugind_value <= diff;
-                dval = 0;
-                end
-            diff <= dval;
 	    return XsviData {
 		fsync: xsvi_framestart_old_wire, //framestart_new,
 		vsync: pack(vstate == Sync),

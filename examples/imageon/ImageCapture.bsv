@@ -86,6 +86,7 @@ endinterface
 interface ImageCaptureIndication;
     interface CoreIndication coreIndication;
     interface BlueScopeIndication bsIndication;
+    interface DMAIndication dmaIndication;
 endinterface
 
 interface ImageCaptureRequest;
@@ -117,7 +118,7 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
         debugind_value <= xsviFromSensor.in.get_debugind();
     endrule
 
-    AxiDMA dma <- mkAxiDMA;
+    AxiDMA dma <- mkAxiDMA(indication.dmaIndication);
     WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
     BlueScopeInternal bsi <- mkSyncBlueScopeInternal(32, dma_debug_write_chan, indication.bsIndication,
 					             hdmi_clock, hdmi_reset, defaultClock, defaultReset);
