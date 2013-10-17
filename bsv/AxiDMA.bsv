@@ -102,7 +102,7 @@ endinterface
 function Put#(void) mkPutWhenFalse(Reg#(Bool) r);
    return (interface Put;
 	      method Action put(void v);
-		 (_when_ (!r) (r._write(True)));
+		 _when_ (!r) (r._write(True));
 	      endmethod
 	   endinterface);
 endfunction

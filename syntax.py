@@ -121,6 +121,7 @@ reserved = {
     'SBR': 'TOKSBR',
     'schedule': 'TOKSCHEDULE',
     'seq': 'TOKSEQ',
+    '_when_': 'TOKWHEN',
     'struct': 'TOKSTRUCT',
     'tagged': 'TOKTAGGED',
     'type': 'TOKTYPE',
@@ -482,11 +483,15 @@ def p_caseStmt(p):
 def p_forStmt(p):
     '''forStmt : TOKFOR LPAREN varAssign SEMICOLON expression SEMICOLON varAssign RPAREN expressionStmt'''
 
+def p_whenStmt(p):
+    '''whenStmt : TOKWHEN LPAREN expression RPAREN LPAREN expression RPAREN SEMICOLON'''
+
 def p_beginStmt(p):
     '''beginStmt : TOKBEGIN expressionStmts TOKEND'''
 
 def p_expressionStmt(p):
     '''expressionStmt : TOKRETURN expression SEMICOLON
+                      | whenStmt
                       | lvalue SEMICOLON
                       | lvalue LPAREN expressions RPAREN SEMICOLON
                       | BUILTINVAR LPAREN expressions RPAREN SEMICOLON
