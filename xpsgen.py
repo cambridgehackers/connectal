@@ -1231,7 +1231,7 @@ class InterfaceMixin:
             slaveBusSubsts.append({'busname': busname,
                                    'BUSNAME': busname.upper(),
                                    'busbase': '%08x' % (0x6e400000 + 0x00020000*i),
-                                   'bushigh': '%08x' % (0x6e400000 + 0x00020000*i + 0x1FFFF)})
+                                   'bushigh': '%08x' % (0x6e400000 + 0x00020000*i + 0xFFFFF)})
         buses = {}
         for busType in busHandlers:
             b = self.collectInterfaceNames(busType)
