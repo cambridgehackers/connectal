@@ -96,6 +96,7 @@ interface ImageCaptureRequest;
    interface ImageonSensorData sensor_data;
    interface HDMI hdmi;
    interface SpiPins spi;
+   interface DMARequest dmaRequest;
 endinterface
  
 module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock, 
