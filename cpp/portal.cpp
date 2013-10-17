@@ -152,6 +152,11 @@ int PortalInstance::open()
     ind_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(2<<14));
     req_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(1<<14));
     req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
+
+    // enable interrupts
+    fprintf(stderr, "enabling interrupts %s\n", instanceName);
+    *(ind_reg_base+0x1) = 1;
+
     registerInstance(this);
     return 0;
 #else

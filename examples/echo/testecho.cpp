@@ -15,9 +15,6 @@ class TestEchoIndications : public CoreEchoIndication
       fprintf(stderr, "heard an echo2: %d %d\n", a, b);
       exit(0);
     }
-    virtual void putFailed(long unsigned int v) {
-	fprintf(stderr, "putFailed %lx\n", v);
-    }
 };
 
 int main(int argc, const char **argv)

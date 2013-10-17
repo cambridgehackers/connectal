@@ -131,7 +131,7 @@ Bit#(6) %(methodName)s$Offset = %(channelNumber)s;
 
 mkIndicationWrapperTemplate='''
 
-(* mutually_exclusive = "%(indicationMethodRuleNames)s" *)
+%(mutexRuleList)s
 module mk%(Dut)sWrapper(%(Dut)sWrapper);
 
     // indication-specific state
@@ -352,7 +352,7 @@ endmodule
 mkRequestWrapperTemplate='''
 
 
-(* mutually_exclusive = "%(methodRuleNames)s" *)
+%(mutexRuleList)s
 module mk%(Dut)sWrapper#(%(Dut)s %(dut)s, %(Indication)sWrapper iw)(%(Dut)sWrapper);
 
     // request-specific state
@@ -749,7 +749,7 @@ class InterfaceMixin:
             'dut': dutName,
             'Dut': util.capitalize(self.name),
             'requestElements': ''.join(requestElements),
-            'methodRuleNames': ', '.join(methodRuleNames),
+            'mutexRuleList': '(* mutually_exclusive = "' + (', '.join(methodRuleNames)) + '" *)' if (len(methodRuleNames) > 1) else '',
             'methodRules': ''.join(methodRules),
             'channelCount': self.channelCount,
             'writeChannelCount': self.channelCount,
@@ -784,7 +784,7 @@ class InterfaceMixin:
             'dut': dutName,
             'Dut': util.capitalize(self.name),
             'responseElements': ''.join(responseElements),
-            'indicationMethodRuleNames': ', '.join(indicationMethodRuleNames),
+            'mutexRuleList': '(* mutually_exclusive = "' + (', '.join(indicationMethodRuleNames)) + '" *)' if (len(indicationMethodRuleNames) > 1) else '',
             'indicationMethodRules': ''.join(indicationMethodRules),
             'indicationMethodsOrig': ''.join(indicationMethodsOrig),
             'indicationMethodsAug' : ''.join(indicationMethodsAug),
