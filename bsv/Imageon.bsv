@@ -450,18 +450,20 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(slow_clock, slow_reset, defaultClock, defaultReset); 
     Gearbox#(4, 1, Bit#(1))  syncGearbox <- mkNto1Gearbox(slow_clock, slow_reset, defaultClock, defaultReset); 
 
-    Reg#(Bit#(1)) vsync_reg <- mkReg(0);
-    Reg#(Bit#(1)) hsync_reg <- mkReg(0);
     Reg#(Bit#(1)) active_video_reg <- mkReg(0);
     Wire#(Bit#(1))  xsvi_framestart_old_wire <- mkDWire(0);
     Wire#(Bit#(10)) xsvi_video_data_wire <- mkDWire(0);
+    Reg#(Bit#(1))  framestart_wire <- mkSyncReg(0, slow_clock, slow_reset, defaultClock);
 
-    Reg#(Bit#(1))     framestart <- mkReg(0);
     Reg#(State)       hstate <- mkReg(Idle);
     Reg#(State)       vstate <- mkReg(Idle);
     Reg#(Bit#(16))    vsync_count <- mkReg(0);
     Reg#(Bit#(16))    hsync_count <- mkReg(0);
     Reg#(Bit#(32))    debugind_value <- mkReg(0);
+    Reg#(Bit#(32))    diff <- mkReg(0);
+    Reg#(Bit#(1))     framestart_reg <- mkReg(0, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(1))     framestart_delay_reg <- mkReg(0, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(1))     framestart_new <- mkReg(0);
     
     rule start_fsm if (xsvi_framestart_old_wire == 1);
         vsync_count <= 0;
@@ -522,8 +524,8 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
 
     interface ImageonSensorData in;
         method Action fsync(Bit#(1) v);
-	    xsvi_framestart_old_wire <= v;
-	endmethod
+            xsvi_framestart_old_wire <= v;
+        endmethod
         method Bit#(1) active_video();
             return active_video_reg;
         endmethod
@@ -531,9 +533,12 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
             xsvi_video_data_wire <= v;
 	endmethod
 	method Action framestart(Bit#(1) v);
+            framestart_wire <= v;
+            framestart_reg <= v;
+            framestart_delay_reg <= framestart_reg;
 	    Vector#(4, Bit#(1)) in = replicate(0);
 	    // zero'th element shifted out first
-	    in[0] = v;
+	    in[1] = framestart_delay_reg;
 	    syncGearbox.enq(in);
 	endmethod
 	method Action video_data(Bit#(40) v);
@@ -552,10 +557,17 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
 	    dataGearbox.deq;
 	    syncGearbox.deq;
             active_video_reg <= pack(hstate == Active && vstate == Active);
-	    //jca framestart <= syncGearbox.first[0];
-            debugind_value <= { 16'habcd, hsync_count[7:0], vsync_count[7:0] } ;
+            framestart_new <= syncGearbox.first[0];
+            let dval = diff;
+            dval = {diff[28:0], framestart_wire, xsvi_framestart_old_wire, framestart_new};
+            if (diff[8] == 1)
+                begin
+                debugind_value <= diff;
+                dval = 0;
+                end
+            diff <= dval;
 	    return XsviData {
-		fsync: xsvi_framestart_old_wire, //syncGearbox.first[0],
+		fsync: xsvi_framestart_old_wire, //framestart_new,
 		vsync: pack(vstate == Sync),
 		hsync: pack(hstate == Sync),
 		active_video: active_video_reg,
