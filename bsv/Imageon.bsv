@@ -77,7 +77,6 @@ typedef struct {
 
 interface ImageonSensorData;
     method Action framestart(Bit#(1) v);
-    method Action sframe(Bit#(1) v);
     method Action video_data(Bit#(40) v);
     method Bit#(32) get_debugind();
     interface Reset reset;
@@ -86,6 +85,7 @@ endinterface
 
 interface ImageonSensorControl;
     method Action framestart(Bit#(1) v);
+    method Action sframe(Bit#(1) v);
     interface Reset reset;
     interface Reset hdmiReset;
 endinterface
@@ -431,6 +431,7 @@ endinterface
 interface ImageonSensor;
     interface ImageonSensorControl in;
     interface Get#(Bit#(1)) out;
+    method Bit#(1)get_framesync();
 endinterface
 
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
@@ -442,15 +443,13 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
 
     Reg#(TState)   tstate <- mkReg(TIdle);
     Reg#(Bit#(32)) debugind_value <- mkReg(0);
-    Reg#(Bit#(32)) tdebugind_value <- mkReg(0); //mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
-    Reg#(Bit#(32)) diff <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(10)) videodata <- mkReg(0);
-    Reg#(Bit#(1))  framestart_reg <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(1))  framestart_reg <- mkReg(0);
     Wire#(Bit#(1)) sframe_wire <- mkDWire(0);
     Wire#(Bit#(1)) fs2 <- mkDWire(0);
-    Reg#(Bit#(16)) delay_limit <- mkReg(0); //mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
-    Reg#(Bit#(16)) frame_delay <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
-    Reg#(Bit#(1))  frame_run <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(16)) delay_limit <- mkReg(0);
+    Reg#(Bit#(16)) frame_delay <- mkReg(0);
+    Reg#(Bit#(1))  frame_run <- mkReg(0);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     
     rule tcalc;
@@ -494,9 +493,9 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     endrule
 
     interface ImageonSensorControl in;
-	//method Action sframe(Bit#(1) v);
-            //sframe_wire <= v;
-	//endmethod
+	method Action sframe(Bit#(1) v);
+            sframe_wire <= v;
+	endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
     endinterface: in
@@ -505,9 +504,12 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
 	    return 1;
 	endmethod
     endinterface: out
+    method Bit#(1)get_framesync();
+        return fs2;
+    endmethod
 endmodule
 
-module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, ImageonVita host)(ImageonXsviFromSensor);
+module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, ImageonVita host, ImageonSensor sensor)(ImageonXsviFromSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -521,18 +523,16 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
     Reg#(Bit#(16)) vsync_count <- mkReg(0);
     Reg#(Bit#(16)) hsync_count <- mkReg(0);
     Reg#(Bit#(32)) debugind_value <- mkReg(0);
-    Reg#(Bit#(32)) tdebugind_value <- mkReg(0); //mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
-    Reg#(Bit#(32)) diff <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(32)) diff <- mkReg(0);
     Reg#(Bit#(10)) videodata <- mkReg(0);
     Reg#(Bit#(1))  framestart_reg <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(1))  framestart_new <- mkReg(0);
-    Wire#(Bit#(1)) sframe_wire <- mkDWire(0);
-    Wire#(Bit#(1)) fs2 <- mkDWire(0);
+    Reg#(Bit#(1))  fs2 <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
     Reg#(Bit#(1))  framestart_wire <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
-    Reg#(Bit#(16)) delay_limit <- mkReg(0); //mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
-    Reg#(Bit#(16)) frame_delay <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
-    Reg#(Bit#(1))  frame_run <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(16)) delay_limit <- mkReg(0);
+    Reg#(Bit#(16)) frame_delay <- mkReg(0);
+    Reg#(Bit#(1))  frame_run <- mkReg(0);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     
     rule start_fsm if (framestart_new == 1);
@@ -608,17 +608,17 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
         dval = {diff[29:0], framestart_wire, fs2};
         if (diff[17] == 1)
             begin
-            tdebugind_value <= diff;
+            debugind_value <= diff;
             dval = 0;
             end
         diff <= dval;
-debugind_value <= tdebugind_value;
+    endrule
+
+    rule update_fs2;
+        fs2 <= sensor.get_framesync();
     endrule
 
     interface ImageonSensorData in;
-	method Action sframe(Bit#(1) v);
-            sframe_wire <= v;
-	endmethod
 	method Action framestart(Bit#(1) v);
             framestart_wire <= v;
             framestart_reg <= v;

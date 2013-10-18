@@ -114,10 +114,11 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     let imageon_vita_clock_binder <- mkClockBinder(imageonVita.host, clocked_by hdmi_clock);
     let imageon_vitas_clock_binder <- mkClockBinder(imageonVita.hosts, clocked_by imageon_clock);
 
-    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
-        clocked_by hdmi_clock, reset_by hdmi_reset);
     ImageonSensor fromSensor <- mkImageonSensor(hdmi_clock, hdmi_reset, imageon_vitas_clock_binder,
         clocked_by imageon_clock, reset_by imageon_reset);
+    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
+        fromSensor,
+        clocked_by hdmi_clock, reset_by hdmi_reset);
 
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, hdmi_clock, hdmi_reset, defaultClock);
     rule copydebugval;

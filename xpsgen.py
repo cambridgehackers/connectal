@@ -1012,7 +1012,7 @@ class ImageonVita:
     .EN_sensor_data_framestart(1),
     .RDY_sensor_data_framestart(RDY_imageon_xsvi_fsync),
     .sensor_data_framestart_v(imageon_xsvi_fsync),
-    .sensor_data_sframe_v(imageon_xsvi_sframe),
+    .sensor_sframe_v(imageon_xsvi_sframe),
     .EN_sensor_data_video_data(1),
     .RDY_sensor_data_video_data(RDY_imageon_xsvi_video_data),
     .sensor_data_video_data_v(imageon_xsvi_video_data),
