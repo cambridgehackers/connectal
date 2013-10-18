@@ -31,9 +31,9 @@ test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
 	cd test-hdmi; make verilog && make bits && make hdmidisplay.bit.bin.gz
 	echo test-hdmi built successfully
 
-test-imageon/imageon.bit.bin.gz: examples/imageon/ImageCapture.bsv
+test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	rm -fr test-imageon
 	mkdir test-imageon
 	./genxpsprojfrombsv -B zc702 -p test-imageon -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv
-	cd test-imageon; make verilog && make bits && make imageon.bit.bin.gz
+	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
 	echo test-imageon built successfully
