@@ -606,9 +606,9 @@ class InterfaceMixin:
         f.write(bsimTopTemplate % substs);
 
     def getClockArgNames(self, m):
-        print m
-        print m.params
-        print [ p.name for p in m.params if p.type.name == 'Clock']
+        #print m
+        #print m.params
+        #print [ p.name for p in m.params if p.type.name == 'Clock']
         return [ p.name for p in m.params if p.type.name == 'Clock']
 
     def emitBsvImplementationRequestTop(self,f):

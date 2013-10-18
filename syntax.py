@@ -722,9 +722,21 @@ def p_instanceDeclStmt(p):
                         | moduleDef'''
     p[0] = p[1]
 
+def p_instanceDeclStmts(p):
+    '''instanceDeclStmts : 
+                         | instanceDeclStmt
+                         | instanceDeclStmts instanceDeclStmt'''
+
 def p_instanceDecl(p):
-    '''instanceDecl : TOKINSTANCE VAR HASH LPAREN typeParams RPAREN provisos SEMICOLON instanceDeclStmt TOKENDINSTANCE'''
-    p[0] = AST.TypeclassInstance(p[2], p[5], p[7], p[8])
+    '''instanceDecl : TOKINSTANCE VAR HASH LPAREN typeParams RPAREN provisos SEMICOLON instanceDeclStmts TOKENDINSTANCE'''
+    p[0] = AST.TypeclassInstance(p[2], p[5], p[7], p[9])
+
+def p_typeClassDeclStmts(p):
+    '''typeClassDeclStmts : '''
+
+def p_typeClassDecl(p):
+    '''typeClassDecl : TOKTYPECLASS VAR HASH LPAREN interfaceFormalParams RPAREN provisos SEMICOLON typeClassDeclStmts TOKENDTYPECLASS'''
+    p[0] = AST.Typeclass(p[2])
 
 globaldecls = []
 globalvars = {}
@@ -732,6 +744,7 @@ globalimports = []
 
 def p_packageStmt(p):
     '''packageStmt : interfaceDecl
+                   | typeClassDecl
                    | functionDef
                    | instanceDecl
                    | varDecl SEMICOLON

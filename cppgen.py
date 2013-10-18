@@ -22,7 +22,7 @@ include $(BUILD_EXECUTABLE)
 '''
 
 classPrefixTemplate='''
-class %(namespace)s%(className)s : public PortalInstance {
+class %(namespace)s%(className)s : public %(parentClass)s {
 public:
     static %(className)s *create%(className)s(%(indicationName)s *indication);
     static void methodName(unsigned long v, char *dst);
@@ -35,7 +35,7 @@ protected:
 '''
 
 indicationClassPrefixTemplate='''
-class %(namespace)s%(className)s : public PortalIndication {
+class %(namespace)s%(className)s : public %(parentClass)s {
 public:
     %(className)s();
     virtual ~%(className)s();
@@ -45,9 +45,9 @@ protected:
 #ifdef ZYNQ
     virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base);
 #else
-    virtual int handleMessage(unsigned int channel, PortalInstance* instance);
+    virtual int handleMessage(unsigned int channel, PortalRequest* instance);
 #endif
-    friend class PortalInstance;
+    friend class PortalRequest;
 };
 '''
 
@@ -73,7 +73,7 @@ void %(namespace)s%(className)s::methodName(unsigned long idx, char* dst)
 
 constructorTemplate='''
 %(namespace)s%(className)s::%(className)s(const char *instanceName, %(indicationName)s *indication)
- : PortalInstance(instanceName, indication)%(initializers)s
+ : %(parentClass)s(instanceName, indication)%(initializers)s
 {
 }
 %(namespace)s%(className)s::~%(className)s()
@@ -125,7 +125,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile uns
     return 0;
 }
 #else
-int %(namespace)s%(className)s::handleMessage(unsigned int channel, PortalInstance* instance)
+int %(namespace)s%(className)s::handleMessage(unsigned int channel, PortalRequest* instance)
 {    
     unsigned int buf[1024];
     memset(buf, 0, 1024);
@@ -198,7 +198,7 @@ def capitalize(s):
     return '%s%s' % (s[0].upper(), s[1:])
 
 class NoCMixin:
-    def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
+    def emitCDeclaration(self, f, indentation=0, namespace=''):
         pass
     def emitCImplementation(self, f):
         pass
@@ -215,13 +215,12 @@ class MethodMixin:
             return int
     def formalParameters(self, params):
         return [ '%s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
-    def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
+    def emitCDeclaration(self, f, indentation=0, namespace=''):
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
         if self.isIndication:
             f.write('virtual ')
         f.write('void %s ( ' % cName(self.name))
-        #print parentClassName, self.name
         f.write(', '.join(self.formalParameters(self.params)))
         f.write(' )')
         if (self.isIndication and not self.aug):
@@ -265,7 +264,7 @@ class MethodMixin:
 
 
 class StructMemberMixin:
-    def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
+    def emitCDeclaration(self, f, indentation=0, namespace=''):
         indent(f, indentation)
         f.write('%s %s' % (self.type.cName(), self.tag))
         #print 'emitCDeclaration: ', self.type, self.type.isBitField, self.type.cName(), self.tag
@@ -274,16 +273,16 @@ class StructMemberMixin:
         f.write(';\n')
 
 class TypeDefMixin:
-    def emitCDeclaration(self,f,indentation=0, parentClassName=0, namespace=''):
+    def emitCDeclaration(self,f,indentation=0, namespace=''):
         if self.tdtype.type == 'Struct':
-            self.tdtype.emitCDeclaration(self.name,f,indentation,parentClassName,namespace)
+            self.tdtype.emitCDeclaration(self.name,f,indentation,namespace)
 
 class StructMixin:
     def collectTypes(self):
         result = [self]
         result.append(self.elements)
         return result
-    def emitCDeclaration(self, name, f, indentation=0, parentClassName='', namespace=''):
+    def emitCDeclaration(self, name, f, indentation=0, namespace=''):
         indent(f, indentation)
         if (indentation == 0):
             f.write('typedef ')
@@ -306,7 +305,7 @@ class EnumMixin:
     def collectTypes(self):
         result = [self]
         return result
-    def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
+    def emitCDeclaration(self, f, indentation=0, namespace=''):
         indent(f, indentation)
         if (indentation == 0):
             f.write('typedef ')
@@ -343,7 +342,7 @@ class InterfaceMixin:
                 d.channelNumber = channelNumber
                 channelNumber = channelNumber + 1
         self.channelCount = channelNumber
-    def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
+    def emitCDeclaration(self, f, indentation=0, namespace=''):
         self.toplevel = (indentation == 0)
         name = cName(self.name)
         indent(f, indentation)
@@ -353,21 +352,21 @@ class InterfaceMixin:
         if self.isIndication:
             prefixTemplate = indicationClassPrefixTemplate
             suffixTemplate= indicationClassSuffixTemplate
+            subs['parentClass'] =  'PortalIndication'
         else:
             prefixTemplate = classPrefixTemplate
             suffixTemplate = classSuffixTemplate
             subs['indicationName'] = self.ind.name
+            subs['parentClass'] =  'PortalRequest' if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
         f.write(prefixTemplate % subs)
         for d in self.decls:
             if d.type == 'Interface':
                 continue
             d.isIndication = self.isIndication
-            d.emitCDeclaration(f, indentation + 4, name, namespace)
+            d.emitCDeclaration(f, indentation + 4, namespace)
         f.write(suffixTemplate % subs)
         return
-    def emitCImplementation(self, f, parentClassName='', namespace=''):
-        if parentClassName:
-            namespace = '%s%s::' % (namespace, parentClassName)
+    def emitCImplementation(self, f, namespace=''):
         className = cName(self.name)
         self.emitConstructorImplementation(f, className, namespace)
         for d in self.decls:
@@ -415,6 +414,7 @@ class InterfaceMixin:
         if self.isIndication:
             f.write(indicationConstructorTemplate % substitutions)
         else:
+            substitutions['parentClass'] =  'PortalRequest' if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
             f.write(constructorTemplate % substitutions)
         return
     def writeAndroidMk(self, androidmkname, applicationmkname, silent=False):
@@ -434,7 +434,7 @@ class InterfaceMixin:
 class ParamMixin:
     def cName(self):
         return self.name
-    def emitCDeclaration(self, f, indentation=0, parentClassName='', namespace=''):
+    def emitCDeclaration(self, f, indentation=0, namespace=''):
         indent(f, indentation)
         f.write('s %s' % (self.type, self.name))
 

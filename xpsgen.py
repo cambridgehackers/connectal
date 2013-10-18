@@ -1164,7 +1164,7 @@ class InterfaceMixin:
         addrwidth = params[0].numeric()
         buswidth = params[1].numeric()
         buswidthbytes = buswidth / 8
-        print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3'), buswidth
+        # print 'bustype: ', t, ('AXI4' if (t == 'AxiMaster') else 'AXI3'), buswidth
         dutName = util.decapitalize(self.base)
         hpBusOffset = 0
         if buswidth == 32:

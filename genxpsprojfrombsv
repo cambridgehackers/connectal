@@ -185,6 +185,14 @@ if __name__=='__main__':
             v.emitCDeclaration(h)
         #v.emitCImplementation(cpp)
 
+
+    # this is an ugly misuse of typeclassinstance (mdk)
+    for v in syntax.globaldecls:
+        if (v.type == 'TypeclassInstance' and v.name == 'PortalMemory'):
+            assert (len(v.params) == 1)
+            syntax.globalvars[v.params[0].name].typeClassInstances.append(v.name)
+            # print syntax.globalvars[v.params[0].name]
+
     def create_bsv_package(pname, files=[]):
         fname = os.path.join(project_dir, 'sources', dutname, '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')

@@ -41,15 +41,24 @@ class Interface:
         self.params = params
         self.decls = decls
         self.subinterfacename = subinterfacename
+        self.typeClassInstances = []
     def interfaceType(self):
         return Type(self.name,self.params)
     def __repr__(self):
-        return '{interface: %s (%s)}' % (self.name, [p.__repr__() for p in self.params])
+        return '{interface: %s (%s) : %s}' % (self.name, self.params, self.typeClassInstances)
     def instantiate(self, paramBindings):
         newInterface = Interface(self.name, [],
                                  [d.instantiate(paramBindings) for d in self.decls],
                                  self.subinterfacename)
+        newInterface.typeClassInstances = self.typeClassInstances
         return newInterface
+
+class Typeclass:
+    def __init__(self, name):
+        self.name = name
+        self.type = 'TypeClass'
+    def __repr__(self):
+        return '{typeclass %s}' % (self.name)
 
 class TypeclassInstance:
     def __init__(self, name, params, provisos, decl):
@@ -58,6 +67,8 @@ class TypeclassInstance:
         self.provisos = provisos
         self.decl = decl
         self.type = 'TypeclassInstance'
+    def __repr__(self):
+        return '{typeclassinstance %s %s}' % (self.name, self.params)
 
 class Module:
     def __init__(self, name, params, interface, provisos, decls):

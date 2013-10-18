@@ -12,8 +12,6 @@
 #define PORTAL_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalAlloc)
 #define PORTAL_SET_FCLK_RATE _IOWR('B', 40, PortalClockRequest)
 
-typedef unsigned int PARef;
-
 typedef struct PortalAlloc {
   size_t size;
   int fd;
@@ -55,7 +53,7 @@ class PortalMessage {
   virtual void indicate(void* ind) = 0;
 }; 
 
-class PortalInstance;
+class PortalRequest;
 
 typedef struct PortalClockRequest {
     int clknum;
@@ -68,20 +66,19 @@ class PortalIndication {
 #ifdef ZYNQ
   virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base) {};
 #else
-  virtual int handleMessage(unsigned int channel, PortalInstance* instance) {};
+  virtual int handleMessage(unsigned int channel, PortalRequest* request) {};
 #endif
   virtual ~PortalIndication() {};
 };
 
-class PortalInstance {
+class PortalRequest {
 public:
     int sendMessage(PortalMessage *msg);
     void close();
-    PARef reference(PortalAlloc* pa);
 protected:
     PortalIndication *indication;
-    PortalInstance(const char *instanceName, PortalIndication *indication=0);
-    ~PortalInstance();
+    PortalRequest(const char *name, PortalIndication *indication=0);
+    ~PortalRequest();
     int open();
  public:
     int fd;
@@ -97,19 +94,29 @@ protected:
     unsigned int req_reg_base;
     unsigned int req_fifo_base;
 #endif
-    char *instanceName;
-    static int registerInstance(PortalInstance *instance);
-    static int unregisterInstance(PortalInstance *instance);
+    char *name;
+    static int registerInstance(PortalRequest *request);
+    static int unregisterInstance(PortalRequest *request);
     friend void* portalExec(void* __x);
     static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 };
 
 void* portalExec(void* __x);
 
-class PortalMemory {
+class PortalMemory : public PortalRequest {
+ private:
+  int handle;
+ protected:
+  PortalMemory(const char* name, PortalIndication *indication=0);
  public:
-    static int dCacheFlushInval(PortalAlloc *portalAlloc);
-    static int alloc(size_t size, PortalAlloc *portalAlloc);
+  static int dCacheFlushInval(PortalAlloc *portalAlloc);
+  static int alloc(size_t size, PortalAlloc *portalAlloc);
+  int reference(PortalAlloc* pa);
+  virtual void sglist(unsigned long off, unsigned long addr, unsigned long len) = 0;
 };
+
+
+// ugly hack (mdk)
+typedef int SGListId;
 
 

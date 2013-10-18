@@ -16,7 +16,7 @@ PortalAlloc bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 1<<10;
+int numWords = 16 << 6;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 
@@ -145,9 +145,9 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
-  PARef ref_srcAlloc = device->reference(&srcAlloc);
-  PARef ref_dstAlloc = device->reference(&dstAlloc);
-  PARef ref_bsAlloc  = device->reference(&bsAlloc);
+  unsigned int ref_srcAlloc = dma->reference(&srcAlloc);
+  unsigned int ref_dstAlloc = dma->reference(&dstAlloc);
+  unsigned int ref_bsAlloc  = dma->reference(&bsAlloc);
 
   while (srcGen < iterCnt*numWords){
 
@@ -160,8 +160,6 @@ int main(int argc, const char **argv)
     PortalMemory::dCacheFlushInval(&srcAlloc);
     PortalMemory::dCacheFlushInval(&dstAlloc);
     PortalMemory::dCacheFlushInval(&bsAlloc);
-    
-
     fprintf(stderr, "flush and invalidate complete\n");
       
     // write channel 0 is copy destination
@@ -178,7 +176,6 @@ int main(int argc, const char **argv)
     sem_wait(&conf_sem);
 
     fprintf(stderr, "starting mempcy numWords:%d\n", numWords);
-
     bluescope->reset();
     bluescope->setTriggerMask (0xFFFFFFFF);
     bluescope->setTriggerValue(0x00000000);
