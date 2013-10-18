@@ -22,6 +22,15 @@ import ByteCompactor :: *;
 
 import AxiMasterSlave :: *;
 
+typedef struct {
+    Bit#(32) seqno;
+    Bit#(7) unused;
+    TLPData#(16) tlp;
+} TimestampedTlpData deriving (Bits);
+typedef SizeOf#(TimestampedTlpData) TimestampedTlpDataSize;
+typedef SizeOf#(TLPData#(16)) TlpData16Size;
+typedef SizeOf#(TLPCompletionHeader) TLPCompletionHeaderSize;
+
 // The top-level interface of the PCIe-to-NoC bridge
 interface PcieToAxiBridge#(numeric type bpb);
 
@@ -46,6 +55,8 @@ interface PcieToAxiBridge#(numeric type bpb);
    method Bool msi_interrupt_req();
    (* always_ready *)
    method Action msi_interrupt_clear();
+
+   interface Put#(TimestampedTlpData) trace;
 
 endinterface: PcieToAxiBridge
 
@@ -704,15 +715,6 @@ module mkAxiSlaveTest(AxiSlaveTest);
     endmethod
 endmodule: mkAxiSlaveTest
 
-
-typedef struct {
-    Bit#(32) seqno;
-    Bit#(7) unused;
-    TLPData#(16) tlp;
-} TimestampedTlpData deriving (Bits);
-typedef SizeOf#(TimestampedTlpData) TimestampedTlpDataSize;
-typedef SizeOf#(TLPData#(16)) TlpData16Size;
-typedef SizeOf#(TLPCompletionHeader) TLPCompletionHeaderSize;
 
 // The control and status registers which are accessible from the PCIe
 // bus.
@@ -2626,6 +2628,15 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    endmethod
    method Bool   msi_interrupt_req   = csr.msi_interrupt_req;
    method Action msi_interrupt_clear = csr.msi_interrupt_clear;
+
+   interface Put trace;
+       method Action put(TimestampedTlpData ttd);
+	   if (csr.tlpTracing) begin
+	       csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
+	       csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
+	   end
+       endmethod
+   endinterface: trace
 
 endmodule: mkPcieToAxiBridge
 

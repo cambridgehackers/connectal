@@ -40,8 +40,9 @@ interface K7PcieBridgeIfc#(numeric type lanes);
    interface Clock clock125;
    interface Reset reset125;
    (* prefix = "" *)
-   interface DDR3_Pins_K7      ddr3;
+   //interface DDR3_Pins_K7      ddr3;
    interface Axi3Master#(32,32,4,12) portal0;
+   interface Put#(TimestampedTlpData) trace;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
@@ -78,19 +79,19 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    ddr3_cfg.num_reads_in_flight = 2;   // adjust as needed
    ddr3_cfg.fast_train_sim_only = False; // adjust if simulating
    
-   DDR3_Controller_K7 ddr3_ctrl <- mkKintex7DDR3Controller(ddr3_cfg, clocked_by clk_gen.clkout1, reset_by ddr3ref_rst_n);
+   //DDR3_Controller_K7 ddr3_ctrl <- mkKintex7DDR3Controller(ddr3_cfg, clocked_by clk_gen.clkout1, reset_by ddr3ref_rst_n);
 
    // ddr3_ctrl.user needs to connect to user logic and should use ddr3clk and ddr3rstn
-   Clock ddr3clk = ddr3_ctrl.user.clock;
-   Reset ddr3rstn = ddr3_ctrl.user.reset_n;
+   //Clock ddr3clk = ddr3_ctrl.user.clock;
+   //Reset ddr3rstn = ddr3_ctrl.user.reset_n;
    
    // Buffer clocks and reset before they are used
-   Clock sys_clk_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
+   Clock pci_sys_clk_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
 
    // Instantiate the PCIE endpoint
    QrcXilinxKintex7Pcie::PCIExpressK7#(lanes) _ep
        <- QrcXilinxKintex7Pcie::mkPCIExpressEndpointK7( defaultValue
-						      , clocked_by sys_clk_buf
+						      , clocked_by pci_sys_clk_buf
 						      , reset_by pci_sys_reset
 						      );
    mkTieOff(_ep.cfg);
@@ -183,26 +184,27 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    //mkConnection(_dut.noc_src,bridge.noc);
    mkTieOff(bridge.noc);
 
-   SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, clk, rst_n, ddr3clk);
-   SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, clk);
+   //SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, clk, rst_n, ddr3clk);
+   //SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, clk);
 
-   let memclient = interface Client;
-		      interface request  = toGet(fMemReq);
-		      interface response = toPut(fMemResp);
-		   endinterface;
+   //let memclient = interface Client;
+   //		      interface request  = toGet(fMemReq);
+   //		      interface response = toPut(fMemResp);
+   //		   endinterface;
 			 
-   mkConnection( memclient, ddr3_ctrl.user, clocked_by ddr3clk, reset_by ddr3rstn );
+   //mkConnection( memclient, ddr3_ctrl.user, clocked_by ddr3clk, reset_by ddr3rstn );
 
    interface pcie     = _ep.pcie;
-   interface ddr3     = ddr3_ctrl.ddr3;
+   //interface ddr3     = ddr3_ctrl.ddr3;
    interface portal0  = bridge.portal0;
+   interface trace  = bridge.trace;
    interface clock250 = epClock250;
    interface reset250 = epReset250;
    interface clock125 = epClock125;
    interface reset125 = epReset125;
 
    method Bool isLinkUp         = link_is_up;
-   method Bool isCalibrated     = ddr3_ctrl.user.init_done;
+//   method Bool isCalibrated     = ddr3_ctrl.user.init_done;
    method Action interrupt      = bridge.interrupt;   
    
 endmodule: mkK7PcieBridge
