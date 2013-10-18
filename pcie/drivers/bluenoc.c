@@ -1718,10 +1718,6 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
 
       // now deq the tlpDataFifo
       iowrite32(0, this_board->bar0io + (768<<2) + 0);
-      printk("tlpseqno=%d\n",  ioread32(this_board->bar0io + (774<<2)));
-      printk("trace=%d\n",  ioread32(this_board->bar0io + (775<<2)));
-      printk("tlpDataBramRdAddr=%d\n",  ioread32(this_board->bar0io + (789<<2)));
-      printk("tlpDataBramWrAddr=%d\n",  ioread32(this_board->bar0io + (792<<2)));
       err = copy_to_user((void __user *)arg, tlp, sizeof(tTlpData));
       if (err != 0)
         return -EFAULT;
