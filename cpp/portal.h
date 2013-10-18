@@ -46,7 +46,7 @@ class PortalRequest;
 
 class PortalIndication {
  public:
-#ifdef ZYNQ
+#ifdef MMAP_HW
   virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base) {};
 #else
   virtual int handleMessage(unsigned int channel, PortalRequest* request) {};
@@ -66,7 +66,7 @@ protected:
  public:
     int fd;
     struct portal p;
-#ifdef ZYNQ
+#ifdef MMAP_HW
     volatile unsigned int *ind_reg_base;
     volatile unsigned int *ind_fifo_base;
     volatile unsigned int *req_reg_base;

@@ -16,10 +16,18 @@ LOCAL_MODULE = test%(classname)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CXXFLAGS := "-DZYNQ"
+LOCAL_CXXFLAGS := "-DZYNQ -DMMAP_HW"
 
 include $(BUILD_EXECUTABLE)
 '''
+
+linuxmakefile_template='''
+CFLAGS = -DMMAP_HW -O -g -I.
+
+testecho: %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/echo/test%(classname)s.cpp
+	g++ $(CFLAGS) -o %(classname)s %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/echo/test%(classname)s.cpp
+'''
+
 
 classPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
@@ -42,7 +50,7 @@ public:
 '''
 indicationClassSuffixTemplate='''
 protected:
-#ifdef ZYNQ
+#ifdef MMAP_HW
     virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base);
 #else
     virtual int handleMessage(unsigned int channel, PortalRequest* instance);
@@ -55,7 +63,11 @@ protected:
 creatorTemplate = '''
 %(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(%(indicationName)s *indication)
 {
+#ifdef ZYNQ
     const char *instanceName = \"fpga%(portalNum)s\"; 
+#else
+    const char *instanceName = \"bluenoc_1\"; 
+#endif
     %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indication);
     return instance;
 }
@@ -101,7 +113,7 @@ void %(namespace)s%(className)s::putFailed(unsigned long v){
 '''
 
 handleMessageTemplate='''
-#ifdef ZYNQ
+#ifdef MMAP_HW
 int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base)
 {    
     unsigned int buf[1024];
@@ -115,7 +127,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile uns
     // mutex_lock(&portal_data->reg_mutex);
     // mutex_unlock(&portal_data->reg_mutex);
     for (int i = (msg->size()/4)-1; i >= 0; i--) {
-        unsigned int val = *((volatile unsigned int*)(((unsigned int)ind_fifo_base) + channel * 256));
+        unsigned int val = *((volatile unsigned int*)(((unsigned long)ind_fifo_base) + channel * 256));
         buf[i] = val;
         //fprintf(stderr, "%%08x\\n", val);
     }
@@ -136,7 +148,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, PortalReques
     }
 
     for (int i = (msg->size()/4)-1; i >= 0; i--) {
-	unsigned int addr = instance->ind_fifo_base + (channel * 256);
+	unsigned long addr = instance->ind_fifo_base + (channel * 256);
 	struct memrequest foo = {false,addr,0};
         //fprintf(stderr, "xxx %%08x\\n", addr);
 	if (send(instance->p.read.s2, &foo, sizeof(foo), 0) != sizeof(foo)) {
@@ -429,6 +441,15 @@ class InterfaceMixin:
         f = util.createDirAndOpen(applicationmkname, 'w')
         className = cName(self.name)
         f.write(applicationmk_template % substs)
+        f.close()
+    def writeLinuxMk(self, linuxmkname, silent=False):
+        f = util.createDirAndOpen(linuxmkname, 'w')
+        className = cName(self.base)
+        substs = {
+            'ClassName': className,
+            'classname': className.lower()
+        }
+        f.write(linuxmakefile_template % substs)
         f.close()
 
 class ParamMixin:

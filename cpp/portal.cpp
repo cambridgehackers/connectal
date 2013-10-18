@@ -47,8 +47,8 @@
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
 #define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
 #else
-#define ALOGD(fmt, ...) fprintf(stderr, "PORTAL", fmt, __VA_ARGS__)
-#define ALOGE(fmt, ...) fprintf(stderr, "PORTAL", fmt, __VA_ARGS__)
+#define ALOGD(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
+#define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
 
 
@@ -133,13 +133,19 @@ int PortalRequest::open()
 	return -ENODEV;
     }
     fclose(pgfile);
-
+#endif
+#ifdef MMAP_HW
 
     char path[128];
-    snprintf(path, sizeof(path), "/dev/%s", name);
+    snprintf(path, sizeof(path), "/dev/%s", instanceName);
+#ifdef ZYNQ
     this->fd = ::open(path, O_RDWR);
+#else
+    // FIXME: bluenoc driver only opens readonly for some reason
+    this->fd = ::open(path, O_RDONLY);
+#endif
     if (this->fd < 0) {
-	ALOGE("Failed to open %s fd=%d errno=%d\n", path, this->fd, path);
+	ALOGE("Failed to open %s fd=%d errno=%d\n", path, this->fd, errno);
 	return -errno;
     }
     volatile unsigned int *dev_base = (volatile unsigned int*)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
@@ -180,12 +186,11 @@ int PortalRequest::sendMessage(PortalMessage *msg)
 
   // mutex_lock(&portal_data->reg_mutex);
   // mutex_unlock(&portal_data->reg_mutex);
-  // fprintf(stderr, "msg->size() = %d\n", msg->size());
-  for (int i = (msg->size()/4)-1; i >= 0; i--){
+  for (int i = (msg->size()/4)-1; i >= 0; i--) {
     unsigned int data = buf[i];
-#ifdef ZYNQ
-    // fprintf(stderr, "%08x\n", val);
-    unsigned int addr = ((unsigned int)req_fifo_base) + msg->channel * 256;
+#ifdef MMAP_HW
+    unsigned long addr = ((unsigned long)req_fifo_base) + msg->channel * 256;
+    fprintf(stderr, "%08lx %08x\n", addr, data);
     *((volatile unsigned int*)addr) = data;
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
@@ -281,7 +286,7 @@ int PortalMemory::alloc(size_t size, PortalAlloc *portalAlloc)
       fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
     }
-    fprintf(stderr, "alloc size=%d rc=%d fd=%d numEntries=%d\n", 
+    fprintf(stderr, "alloc size=%ld rc=%d fd=%d numEntries=%d\n", 
 	    portalAlloc->size, rc, portalAlloc->fd, portalAlloc->numEntries);
     return 0;
 }
@@ -306,11 +311,11 @@ int PortalRequest::setClockFrequency(int clkNum, long requestedFrequency, long *
 
 void* portalExec(void* __x)
 {
-#ifdef ZYNQ
-    int rc;
+#ifdef MMAP_HW
+    long rc;
     int timeout = -1;
     if(0)
-    fprintf(stderr, "about to invoke poll(%x, %d, %d)\n", portal_fds, numFds, timeout);
+    fprintf(stderr, "about to invoke poll(%p, %d, %d)\n", portal_fds, numFds, timeout);
     if (!numFds) {
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
@@ -321,7 +326,7 @@ void* portalExec(void* __x)
 	if (portal_fds[i].revents == 0)
 	  continue;
 	if (!portal_requests) {
-	  fprintf(stderr, "No portal_requests but rc=%d revents=%d\n", rc, portal_fds[i].revents);
+	  fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
 	}
 	
 	PortalRequest *instance = portal_requests[i];
@@ -351,7 +356,7 @@ void* portalExec(void* __x)
       }
     }
     // return only in error case
-    fprintf(stderr, "poll returned rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
     return (void*)rc;
 #else
     fprintf(stderr, "about to enter while(true)\n");
