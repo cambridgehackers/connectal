@@ -27,7 +27,7 @@ import AxiDMA::*;
 
 '''
 
-exposedInterfaces = ['^HDMI$', '^LEDS$', '^ImageonVita$', '^ImageonSensorData$', '^FmcImageonInterface$', '^SpiPins$']
+exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVitaSensor', 'ImageonSensorData', 'FmcImageonInterface', 'SpiPins']
 
 bsimTopTemplate='''
 import StmtFSM::*;
@@ -612,7 +612,7 @@ class InterfaceMixin:
         return [ p.name for p in m.params if p.type.name == 'Clock']
 
     def emitBsvImplementationRequestTop(self,f):
-        axiMasters = self.collectInterfaceNames('Axi3?Client')
+        axiMasters = self.collectInterfaceNames('Axi3?Client', True)
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
         ledInterfaces = self.collectInterfaceNames('LEDS')
@@ -739,7 +739,7 @@ class InterfaceMixin:
         requestElements = self.collectRequestElements(self.name)
         methodRuleNames = self.collectMethodRuleNames(self.name)
         methodRules = self.collectMethodRules(self.name)
-        axiMasters = self.collectInterfaceNames('Axi3?Client')
+        axiMasters = self.collectInterfaceNames('Axi3?Client', True)
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
         ledInterfaces = self.collectInterfaceNames('LEDS')
@@ -881,13 +881,17 @@ class InterfaceMixin:
                 if methodRule:
                     methods.append(methodRule)
         return methods
-    def collectInterfaceNames(self, name):
+    def collectInterfaceNames(self, name, use_regex=False):
         interfaceNames = []
         for m in self.decls:
             if m.type == 'Interface':
                 #print ("interface name: {%s}" % (m.name)), m
                 #print 'name', name, m.name
                 pass
-            if m.type == 'Interface' and re.match(name, m.name):
+            if use_regex:
+                matches = re.match(name, m.name)
+            else:
+                matches = (name == m.name)
+            if m.type == 'Interface' and matches:
                 interfaceNames.append((m.subinterfacename, m.name, m.params))
         return interfaceNames
