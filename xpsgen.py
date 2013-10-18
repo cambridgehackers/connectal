@@ -971,9 +971,8 @@ class ImageonVita:
      wire fmc_imageon_iic_0_sda_O;
      wire fmc_imageon_iic_0_sda_I;
      wire imageon_xsvi_fsync;
-     wire EN_imageon_xsvi_fsync;
+     wire imageon_xsvi_sframe;
      wire [39:0] imageon_xsvi_video_data;
-     wire EN_imageon_xsvi_video_data;
      wire [31:0] debugreq_value;
      wire [31:0] debugind_value;
 '''
@@ -1010,10 +1009,11 @@ class ImageonVita:
     .imageon_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
     .imageon_syncgen_delay(imageon_host_syncgen_delay),
 
-    .EN_sensor_data_framestart(EN_imageon_xsvi_fsync),
+    .EN_sensor_data_framestart(1),
     .RDY_sensor_data_framestart(RDY_imageon_xsvi_fsync),
     .sensor_data_framestart_v(imageon_xsvi_fsync),
-    .EN_sensor_data_video_data(EN_imageon_xsvi_video_data),
+    .sensor_data_sframe_v(imageon_xsvi_sframe),
+    .EN_sensor_data_video_data(1),
     .RDY_sensor_data_video_data(RDY_imageon_xsvi_video_data),
     .sensor_data_video_data_v(imageon_xsvi_video_data),
 
@@ -1031,8 +1031,6 @@ class ImageonVita:
    wire imageon_clk4x_unbuf;
    wire imageon_clk4_unbuf;
    wire fmc_imageon_video_clk1_buf;
-   assign EN_imageon_xsvi_video_data = 1;
-   assign EN_imageon_xsvi_fsync = 1;
 
     IBUFG ibufg_video_clk1 (
         .I(fmc_imageon_video_clk1),
@@ -1154,6 +1152,7 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_data_n(io_vita_data_n),
     /* XSVI Port */
     .fsync(imageon_xsvi_fsync),
+    .sframe(imageon_xsvi_sframe),
     .xsvi_video_data_o(imageon_xsvi_video_data)
 );
  '''

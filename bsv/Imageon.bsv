@@ -77,6 +77,7 @@ typedef struct {
 
 interface ImageonSensorData;
     method Action framestart(Bit#(1) v);
+    method Action sframe(Bit#(1) v);
     method Action video_data(Bit#(40) v);
     method Bit#(32) get_debugind();
     interface Reset reset;
@@ -408,26 +409,76 @@ interface ImageonXsviFromSensor;
 endinterface
 
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
+typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
 module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita host)(ImageonXsviFromSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
-    Reg#(Bit#(1)) active_video_reg <- mkReg(0);
-
-    Reg#(State)       hstate <- mkReg(Idle);
-    Reg#(State)       vstate <- mkReg(Idle);
-    Reg#(Bit#(16))    vsync_count <- mkReg(0);
-    Reg#(Bit#(16))    hsync_count <- mkReg(0);
-    Reg#(Bit#(32))    debugind_value <- mkReg(0);
-    Reg#(Bit#(32))    diff <- mkReg(0);
-    Reg#(Bit#(10))    videodata <- mkReg(0);
-    Reg#(Bit#(1))     framestart_reg <- mkReg(0, clocked_by slow_clock, reset_by slow_reset);
-    Reg#(Bit#(1))     framestart_delay_reg <- mkReg(0, clocked_by slow_clock, reset_by slow_reset);
-    Reg#(Bit#(1))     framestart_new <- mkReg(0);
     Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(slow_clock, slow_reset, defaultClock, defaultReset); 
     Gearbox#(4, 1, Bit#(1))  syncGearbox <- mkNto1Gearbox(slow_clock, slow_reset, defaultClock, defaultReset); 
+
+    Reg#(State)    hstate <- mkReg(Idle);
+    Reg#(State)    vstate <- mkReg(Idle);
+    Reg#(TState)   tstate <- mkReg(TIdle);
+    Reg#(Bit#(1))  active_video_reg <- mkReg(0);
+    Reg#(Bit#(16)) vsync_count <- mkReg(0);
+    Reg#(Bit#(16)) hsync_count <- mkReg(0);
+    Reg#(Bit#(32)) debugind_value <- mkReg(0);
+    Reg#(Bit#(32)) tdebugind_value <- mkReg(0); //mkSyncReg(0, slow_clock, slow_reset, defaultClock);
+    Reg#(Bit#(32)) diff <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(10)) videodata <- mkReg(0);
+    Reg#(Bit#(1))  framestart_reg <- mkReg(0, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(1))  framestart_new <- mkReg(0);
+    Wire#(Bit#(1)) sframe_wire <- mkDWire(0);
+    Wire#(Bit#(1)) fs2 <- mkDWire(0);
+    Reg#(Bit#(1))  framestart_wire <- mkSyncReg(0, slow_clock, slow_reset, defaultClock);
+    Reg#(Bit#(16)) delay_limit <- mkReg(0); //mkSyncReg(0, defaultClock, defaultReset, slow_clock);
+    Reg#(Bit#(16)) frame_delay <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(1))  frame_run <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(32)) tcounter <- mkReg(0);
     
+    rule tcalc;
+        let tc = tcounter - 1;
+        let ts = tstate;
+        if (tstate == TIdle && tcounter == 0)
+            begin
+            tc = host.trigger.cnt_trigger0high();
+            ts = TSend;
+            end
+        if (tstate == TSend && tcounter == 0)
+            begin
+            tc = host.trigger.cnt_trigger0low();
+            ts = TWait;
+            end
+        if (tstate == TWait && tcounter == 0)
+            begin
+            ts = TIdle;
+            tc = host.trigger.default_freq();
+            end
+        tcounter  <= tc;
+        tstate  <= ts;
+    endrule
+
+    rule sframe_calc;
+        delay_limit <= host.syncgen.delay();
+        let fd = frame_delay+1;
+        let fr = frame_run;
+        if (sframe_wire == 1)
+            begin
+            fr = 1;
+            fd = 0;
+            end
+        if (frame_run == 1 && frame_delay == delay_limit -1 )
+            begin
+            fr = 0;
+            fs2 <= 1;
+            end
+        frame_delay <= fd;
+        frame_run <= fr;
+    endrule
+
     rule start_fsm if (framestart_new == 1);
         vsync_count <= 0;
         hsync_count <= 0;
@@ -498,17 +549,22 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
 
     rule update_debug;
         let dval = diff;
-        //dval = {diff[28:0], framestart_wire, xsvi_framestart_old_wire, framestart_new};
-        if (diff[29] == 1)
+        dval = {diff[29:0], framestart_wire, fs2};
+        if (diff[17] == 1)
             begin
-            debugind_value <= diff;
+            tdebugind_value <= diff;
             dval = 0;
             end
         diff <= dval;
+debugind_value <= tdebugind_value;
     endrule
 
     interface ImageonSensorData in;
+	method Action sframe(Bit#(1) v);
+            sframe_wire <= v;
+	endmethod
 	method Action framestart(Bit#(1) v);
+            framestart_wire <= v;
             framestart_reg <= v;
             framestart_delay_reg <= framestart_reg;
 	    Vector#(4, Bit#(1)) in = replicate(0);
