@@ -23,6 +23,7 @@ import Zynq::*;
 import Vector::*;
 import SpecialFIFOs::*;
 import AxiDMA::*;
+import XbsvReadyQueue::*;
 %(extraImports)s
 
 '''
@@ -133,7 +134,7 @@ Bit#(6) %(methodName)s$Offset = %(channelNumber)s;
 mkIndicationWrapperTemplate='''
 
 %(mutexRuleList)s
-module mk%(Dut)sWrapper(%(Dut)sWrapper);
+module mk%(Dut)sWrapper(%(Dut)sWrapper) provisos (Log#(%(indicationChannelCount)s,iccsz));
 
     // indication-specific state
     Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
@@ -141,14 +142,14 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
     Reg#(Bit#(32)) underflowReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
-    FIFOF#(Bit#(32)) readOutstanding <- mkSizedFIFOF(8);
+    ReadyQueue#(%(indicationChannelCount)s, Bit#(iccsz), Bit#(iccsz)) rq <- mkFirstReadyQueue();
     
     function Bool my_or(Bool a, Bool b) = a || b;
     function Bool read_wire (PulseWire a) = a._read;    
     // this is here to disable the warning that the put failed rule can never fire
     Reg#(Bool) putEnableReg <- mkReg(True);
     Reg#(Bool) interruptEnableReg <- mkReg(False);
-    let       interruptStatus = readOutstanding.notEmpty;
+    let       interruptStatus = tpl_2(rq.maxPriorityRequest) != 0;
     function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
     function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
 
@@ -226,10 +227,9 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper);
 	    v = outOfRangeReadCountReg;
         if (addr == 14'h020)
 	begin
-            if (readOutstanding.notEmpty)
+            if (tpl_2(rq.maxPriorityRequest) != 0)
             begin
-                readOutstanding.deq;
-	        v = readOutstanding.first+1;
+	        v = extend(tpl_1(rq.maxPriorityRequest)) + 1;
             end
             else
             begin
@@ -482,6 +482,9 @@ indicationRuleTemplate='''
         end
         axiSlaveReadDataFifo.enq(v);
     endrule
+    rule %(methodName)s$ReadyBit;
+        rq.readyBits[%(methodName)s$Offset] <= %(methodName)s$responseFifo.notEmpty();
+    endrule
 '''
 
 indicationMethodDeclTemplate='''
@@ -491,7 +494,6 @@ indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
         %(methodName)s$responseFifo.enq(%(MethodName)s$Response {%(structElements)s});
         responseFiredWires[%(channelNumber)s].send();
-        readOutstanding.enq(zeroExtend(%(methodName)s$Offset));
     endmethod'''
 
 
