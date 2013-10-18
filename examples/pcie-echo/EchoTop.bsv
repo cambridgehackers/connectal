@@ -10,7 +10,7 @@ module mkEchoTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 		  Clock sys_clk_p,     Clock sys_clk_n,
 		  Clock user_clk_p, Clock user_clk_n,
 		  Reset pci_sys_reset_n)
-                 (KC705_FPGA_DDR3);
+                 (KC705_FPGA);
 
    Clock user_clk <- mkClockIBUFDS(user_clk_p, user_clk_n);
 
@@ -19,9 +19,10 @@ module mkEchoTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    
    EchoWrapper echoWrapper <- mkEchoWrapper(clocked_by k7pcie.clock125, reset_by k7pcie.reset125);
    mkConnection(k7pcie.portal0, echoWrapper.ctrl, clocked_by k7pcie.clock125, reset_by k7pcie.reset125);
+   mkConnection(echoWrapper.trace, k7pcie.trace);
 
    interface pcie = k7pcie.pcie;
-   interface ddr3 = k7pcie.ddr3;
+   //interface ddr3 = k7pcie.ddr3;
    method leds = zeroExtend({ pack(k7pcie.isCalibrated)
 			     ,pack(False)
 			     ,pack(False)

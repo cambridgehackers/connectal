@@ -17,20 +17,14 @@ import CoreEchoIndicationWrapper::*;
 import CoreEchoRequestWrapper::*;
 import FIFO::*;
 import Zynq::*;
-
+import PcieToAxiBridge::*;
 
 
 interface EchoWrapper;
     interface Axi3Slave#(32,32,4,12) ctrl;
     interface Vector#(1,ReadOnly#(Bit#(1))) interrupts;
-
-
-
     interface LEDS leds;
-
-
-
-
+    interface Get#(TimestampedTlpData) trace;
 endinterface
 
 module mkEchoWrapper(EchoWrapper);
@@ -63,5 +57,6 @@ module mkEchoWrapper(EchoWrapper);
 
     interface ctrl = ctrl_mux;
     interface Vector interrupts = interrupts_v;
+    interface trace = coreIndicationWrapper.trace;
 endmodule
 endpackage: EchoWrapper

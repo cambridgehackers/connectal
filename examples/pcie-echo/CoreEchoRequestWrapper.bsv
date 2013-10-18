@@ -16,7 +16,7 @@ import Echo::*;
 import CoreEchoIndicationWrapper::*;
 import FIFO::*;
 import Zynq::*;
-
+import PcieToAxiBridge::*;
 
 
 
@@ -50,12 +50,16 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
     Reg#(Bit#(32)) requestFiredCount <- mkReg(0);
     Reg#(Bit#(32)) overflowCount <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
+    PulseWire requestFiredPulse <- mkPulseWireOR();
 
     let axiSlaveWriteAddrFifo = iw.rwCommFifos.axiSlaveWriteAddrFifo;
     let axiSlaveReadAddrFifo  = iw.rwCommFifos.axiSlaveReadAddrFifo;
     let axiSlaveWriteDataFifo = iw.rwCommFifos.axiSlaveWriteDataFifo;
     let axiSlaveReadDataFifo  = iw.rwCommFifos.axiSlaveReadDataFifo; 
 
+    rule requestFiredIncrement if (requestFiredPulse);
+        requestFiredCount <= requestFiredCount+1;
+    endrule
 
     rule writeCtrlReg if (axiSlaveWriteAddrFifo.first[14] == 1);
         axiSlaveWriteAddrFifo.deq;
@@ -83,6 +87,10 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
     rule readWriteFifo if (axiSlaveReadAddrFifo.first[14] == 0);
         axiSlaveReadAddrFifo.deq;
         axiSlaveReadDataFifo.enq(32'h05b05b0);
+       TimestampedTlpData ttd = TimestampedTlpData {
+	  seqno: 22, unused: 7'h70, tlp: unpack(extend(axiSlaveReadAddrFifo.first))
+	  };
+       iw.tracein.put(ttd);
     endrule
 
 
@@ -97,7 +105,7 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
         let request = say$requestFifo.first;
         say$requestFifo.deq;
         coreEchoRequest.say(request.v);
-        requestFiredCount <= requestFiredCount+1;
+        requestFiredPulse.send();
     endrule
     rule handle$say$requestFailure;
         iw.putFailed(0);
@@ -116,7 +124,7 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
         let request = say2$requestFifo.first;
         say2$requestFifo.deq;
         coreEchoRequest.say2(request.a, request.b);
-        requestFiredCount <= requestFiredCount+1;
+        requestFiredPulse.send();
     endrule
     rule handle$say2$requestFailure;
         iw.putFailed(1);
@@ -135,7 +143,7 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
         let request = setLeds$requestFifo.first;
         setLeds$requestFifo.deq;
         coreEchoRequest.setLeds(request.v);
-        requestFiredCount <= requestFiredCount+1;
+        requestFiredPulse.send();
     endrule
     rule handle$setLeds$requestFailure;
         iw.putFailed(2);
@@ -144,6 +152,7 @@ module mkCoreEchoRequestWrapper#(CoreEchoRequest coreEchoRequest, CoreEchoIndica
     endrule
 
 
+    (* descending_urgency = "handle$say$requestFailure, handle$say2$requestFailure, handle$setLeds$requestFailure" *)
     rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[14] == 0 && 
                              axiSlaveWriteAddrFifo.first[13:8] >= 3);
         axiSlaveWriteAddrFifo.deq;

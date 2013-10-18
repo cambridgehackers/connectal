@@ -15,7 +15,7 @@ import AxiDMA::*;
 import Echo::*;
 import FIFO::*;
 import Zynq::*;
-
+import PcieToAxiBridge::*;
 
 
 
@@ -49,11 +49,16 @@ interface CoreEchoIndicationWrapper;
     interface CoreEchoIndication indication;
     interface RequestWrapperCommFIFOs rwCommFifos;
     method Action putFailed(Bit#(32) v);
+    interface Put#(TimestampedTlpData) tracein;
+    interface Get#(TimestampedTlpData) trace;
 endinterface
 
 
 (* mutually_exclusive = "heard$axiSlaveRead, heard2$axiSlaveRead, putFailed$axiSlaveRead" *)
-module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
+module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper)
+    provisos (Log#(3,iccsz));
+
+    FIFO#(TimestampedTlpData) traceFifo <- mkPipelineFIFO;
 
     // indication-specific state
     Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
@@ -61,14 +66,30 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
     Reg#(Bit#(32)) underflowReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
-    FIFOF#(Bit#(32)) readOutstanding <- mkSizedFIFOF(8);
-    
+    Reg#(Vector#(3, Bit#(3))) priorities <- mkReg(replicate(0));
+    function Bit#(3) maxPriority(); return fold(max, priorities); endfunction
+    function Tuple2#(Bit#(iccsz), Bit#(3)) getMaxPriorityRequest();
+        function Bit#(iccsz) channelNumber(Integer i); UInt#(iccsz) c = fromInteger(i); return pack(c); endfunction
+        Vector#(3, Bit#(iccsz)) requests = genWith(channelNumber);
+        function Tuple2#(Bit#(iccsz),Bit#(3)) maxreq(Tuple2#(Bit#(iccsz),Bit#(3)) a, Tuple2#(Bit#(iccsz),Bit#(3)) b);
+           if (tpl_2(a) > tpl_2(b))
+               return a;
+           else
+               return b;
+        endfunction
+        return fold(maxreq, zip(requests, priorities));
+    endfunction
+    Reg#(Tuple2#(Bit#(iccsz),Bit#(3))) maxPriorityRequest <- mkReg(tuple2(0,0));
+    rule updateMaxPriorityRequest;
+        maxPriorityRequest <= getMaxPriorityRequest();
+    endrule
+
     function Bool my_or(Bool a, Bool b) = a || b;
     function Bool read_wire (PulseWire a) = a._read;    
     // this is here to disable the warning that the put failed rule can never fire
     Reg#(Bool) putEnableReg <- mkReg(True);
     Reg#(Bool) interruptEnableReg <- mkReg(False);
-    let       interruptStatus = readOutstanding.notEmpty;
+    let       interruptStatus = (maxPriority() > 0);
     function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
     function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
 
@@ -146,10 +167,10 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
 	    v = outOfRangeReadCountReg;
         if (addr == 14'h020)
 	begin
-            if (readOutstanding.notEmpty)
+            let maxp = tpl_2(maxPriorityRequest);
+            if (maxp > 0)
             begin
-                readOutstanding.deq;
-	        v = readOutstanding.first+1;
+	        v = extend(tpl_1(maxPriorityRequest))+1;
             end
             else
             begin
@@ -287,7 +308,7 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
             method ActionValue#(Bit#(32)) readData();
 
                 let v = axiSlaveReadDataFifos[axiSlaveRS].first;
-                axiSlaveReadDataFifo.deq;
+                axiSlaveReadDataFifos[axiSlaveRS].deq;
                 axiSlaveReadLastFifo.deq;
                 axiSlaveReadIdFifo.deq;
 
@@ -311,20 +332,30 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper);
     method Action heard(Bit#(32) v);
         heard$responseFifo.enq(Heard$Response {v: v});
         responseFiredWires[0].send();
-        readOutstanding.enq(zeroExtend(heard$Offset));
     endmethod
     method Action heard2(Bit#(16) a, Bit#(16) b);
         heard2$responseFifo.enq(Heard2$Response {a: a, b: b});
         responseFiredWires[1].send();
-        readOutstanding.enq(zeroExtend(heard2$Offset));
     endmethod
     endinterface
 
     method Action putFailed(Bit#(32) v);
         putFailed$responseFifo.enq(PutFailed$Response {v: v});
         responseFiredWires[2].send();
-        readOutstanding.enq(zeroExtend(putFailed$Offset));
     endmethod
+
+    interface Put tracein;
+       method Action put(TimestampedTlpData ttd);
+	  traceFifo.enq(ttd);
+       endmethod
+    endinterface: tracein
+
+    interface Get trace;
+       method ActionValue#(TimestampedTlpData) get();
+	  traceFifo.deq;
+	  return traceFifo.first;
+       endmethod
+   endinterface: trace
 
 endmodule
 
