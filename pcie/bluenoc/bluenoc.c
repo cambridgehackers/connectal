@@ -312,8 +312,30 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
     if ((void*)-1 == portal) {
       printf("failed to map portal %d:%s\n", errno, strerror(errno));
     }
-    printf("mmap portal=%p\n", portal);
-    printf("%x %x\n", portal[0], portal[1]);
+    printf("mmap portal=%p -1-\n", portal);
+    if (0) {
+      printf("%x %x\n", portal[0], portal[1]);
+      portal[0] = 0x0000f00d;
+      printf("portal[16]=%08x\n", portal[16]);
+      portal[128] = 0xdeadbeef;
+      printf("portal[256]=%08x\n", portal[256]);
+    }
+    if (1) {
+      int *channel0 = portal;
+      int *channel2 = (int *)(((unsigned long)portal) + 2*256);
+      //*channel0 = 42;
+      //*channel2 = 9;
+
+      int *regbase = (int *)(((unsigned long)portal) + (1<<14));
+      fprintf(stderr, "should be 6847xxxx = %x\n", *(int *)(((unsigned long)portal) + (1 << 15) + (1<<14) + 0x10));
+      fprintf(stderr, "should be bad0dada = %x\n", *(int *)(((unsigned long)portal) + (1 << 15) + (0<<14) + 0x00));
+      fprintf(stderr, "should be 05a005a0 = %x\n", *(int *)(((unsigned long)portal) + (0 << 15) + (1<<14) + 0x00));
+      fprintf(stderr, "should be bad07ead = %x\n", *(int *)(((unsigned long)portal) + (0 << 15) + (0<<14) + 0x00));
+
+      fprintf(stderr, "regbase[0] = %x\n", regbase[0]);
+      fprintf(stderr, "foo\n");
+    }
+      fprintf(stderr, "bar\n");
   } break;
   }
 
