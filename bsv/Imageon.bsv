@@ -56,7 +56,7 @@ interface ImageonTrigger;
 endinterface
 
 interface ImageonSyncGen;
-    method Bit#(16) delay();
+    //method Bit#(16) delay();
     method Bit#(16) hactive();
     method Bit#(16) hfporch();
     method Bit#(16) hsync();
@@ -84,16 +84,28 @@ interface ImageonSensorData;
     interface Reset slowReset;
 endinterface
 
+interface ImageonSensorControl;
+    method Action framestart(Bit#(1) v);
+    interface Reset reset;
+    interface Reset hdmiReset;
+endinterface
+
 (* always_enabled *)
 interface ImageonVita;
     method Bit#(1) host_oe();
     interface ImageonSerdes serdes;
     interface ImageonDecoder decoder;
-    interface ImageonTrigger trigger;
     interface ImageonSyncGen syncgen;
     method Bit#(32) get_debugreq();
     method Action set_debugind(Bit#(32) v);
     interface Reset reset;
+endinterface
+
+(* always_enabled *)
+interface ImageonVSensor;
+    method Bit#(1) foo();
+    interface ImageonTrigger trigger;
+    method Bit#(16) syncgen_delay();
 endinterface
 
 interface ImageonControl;
@@ -137,10 +149,11 @@ endinterface
 
 interface ImageonVitaController;
     interface ImageonVita host;
+    interface ImageonVSensor hosts;
     interface ImageonControl control;
 endinterface
 
-module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
+module mkImageonVitaController#(Clock hdmi_clock, Clock slow_clock)(ImageonVitaController);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset;
     Reg#(Bit#(1)) host_oe_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
@@ -163,11 +176,11 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
     Reg#(Bit#(10)) decoder_code_fs_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Wire#(Bit#(1)) decoder_frame_start_wire <- mkDWire(0);
 
-    Reg#(Bit#(3)) trigger_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(32)) trigger_default_freq_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(16)) syncgen_delay_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(3)) trigger_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, slow_clock);
+    Reg#(Bit#(32)) trigger_default_freq_reg <- mkSyncReg(0, defaultClock, defaultReset, slow_clock);
+    Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkSyncReg(0, defaultClock, defaultReset, slow_clock);
+    Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkSyncReg(0, defaultClock, defaultReset, slow_clock);
+    Reg#(Bit#(16)) syncgen_delay_reg <- mkSyncReg(0, defaultClock, defaultReset, slow_clock);
     Reg#(Bit#(16)) syncgen_hactive_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(16)) syncgen_hfporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(16)) syncgen_hsync_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
@@ -232,24 +245,7 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
 	        decoder_frame_start_wire <= start;
 	    endmethod
 	endinterface
-	interface ImageonTrigger trigger;
-	    method Bit#(3) enable();
-		return trigger_enable_reg;
-	    endmethod
-	    method Bit#(32) default_freq();
-		return trigger_default_freq_reg;
-	    endmethod
-	    method Bit#(32) cnt_trigger0high();
-		return trigger_cnt_trigger0high_reg;
-	    endmethod
-	    method Bit#(32) cnt_trigger0low();
-		return trigger_cnt_trigger0low_reg;
-	    endmethod
-	endinterface
 	interface ImageonSyncGen syncgen;
-	    method Bit#(16) delay();
-		return syncgen_delay_reg;
-	    endmethod
 	    method Bit#(16) hactive();
 		return syncgen_hactive_reg;
 	    endmethod
@@ -283,6 +279,30 @@ module mkImageonVitaController#(Clock hdmi_clock)(ImageonVitaController);
 	endmethod
         interface Reset reset = defaultReset;
     endinterface: host
+
+    interface ImageonVSensor hosts;
+	method Bit#(1) foo();
+	    return 1;
+	endmethod
+	interface ImageonTrigger trigger;
+	    method Bit#(3) enable();
+		return trigger_enable_reg;
+	    endmethod
+	    method Bit#(32) default_freq();
+		return trigger_default_freq_reg;
+	    endmethod
+	    method Bit#(32) cnt_trigger0high();
+		return trigger_cnt_trigger0high_reg;
+	    endmethod
+	    method Bit#(32) cnt_trigger0low();
+		return trigger_cnt_trigger0low_reg;
+	    endmethod
+	endinterface
+	method Bit#(16) syncgen_delay();
+	    return syncgen_delay_reg;
+	endmethod
+    endinterface: hosts
+
     interface ImageonControl control;
 	method Action set_iserdes_control(Bit#(32) v);
 	    serdes_reset_reg <= v[0];
@@ -408,8 +428,84 @@ interface ImageonXsviFromSensor;
     interface Get#(XsviData) out;
 endinterface
 
+interface ImageonSensor;
+    interface ImageonSensorControl in;
+    interface Get#(Bit#(1)) out;
+endinterface
+
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
+
+module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)(ImageonSensor);
+    Clock defaultClock <- exposeCurrentClock();
+    Reset defaultReset <- exposeCurrentReset();
+
+    Reg#(TState)   tstate <- mkReg(TIdle);
+    Reg#(Bit#(32)) debugind_value <- mkReg(0);
+    Reg#(Bit#(32)) tdebugind_value <- mkReg(0); //mkSyncReg(0, slow_clock, slow_reset, defaultClock);
+    Reg#(Bit#(32)) diff <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(10)) videodata <- mkReg(0);
+    Reg#(Bit#(1))  framestart_reg <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Wire#(Bit#(1)) sframe_wire <- mkDWire(0);
+    Wire#(Bit#(1)) fs2 <- mkDWire(0);
+    Reg#(Bit#(16)) delay_limit <- mkReg(0); //mkSyncReg(0, defaultClock, defaultReset, slow_clock);
+    Reg#(Bit#(16)) frame_delay <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(1))  frame_run <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(32)) tcounter <- mkReg(0);
+    
+    rule tcalc;
+        let tc = tcounter - 1;
+        let ts = tstate;
+        if (tstate == TIdle && tcounter == 0)
+            begin
+            tc = host.trigger.cnt_trigger0high();
+            ts = TSend;
+            end
+        if (tstate == TSend && tcounter == 0)
+            begin
+            tc = host.trigger.cnt_trigger0low();
+            ts = TWait;
+            end
+        if (tstate == TWait && tcounter == 0)
+            begin
+            ts = TIdle;
+            tc = host.trigger.default_freq();
+            end
+        tcounter  <= tc;
+        tstate  <= ts;
+    endrule
+
+    rule sframe_calc;
+        delay_limit <= host.syncgen_delay();
+        let fd = frame_delay+1;
+        let fr = frame_run;
+        if (sframe_wire == 1)
+            begin
+            fr = 1;
+            fd = 0;
+            end
+        if (frame_run == 1 && frame_delay == delay_limit -1 )
+            begin
+            fr = 0;
+            fs2 <= 1;
+            end
+        frame_delay <= fd;
+        frame_run <= fr;
+    endrule
+
+    interface ImageonSensorControl in;
+	//method Action sframe(Bit#(1) v);
+            //sframe_wire <= v;
+	//endmethod
+	interface Reset reset = defaultReset;
+	interface Reset hdmiReset = hdmi_reset;
+    endinterface: in
+    interface Get out;
+	method ActionValue#(Bit#(1)) get();
+	    return 1;
+	endmethod
+    endinterface: out
+endmodule
 
 module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita host)(ImageonXsviFromSensor);
     Clock defaultClock <- exposeCurrentClock();
@@ -439,46 +535,6 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     Reg#(Bit#(1))  frame_run <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     
-    rule tcalc;
-        let tc = tcounter - 1;
-        let ts = tstate;
-        if (tstate == TIdle && tcounter == 0)
-            begin
-            tc = host.trigger.cnt_trigger0high();
-            ts = TSend;
-            end
-        if (tstate == TSend && tcounter == 0)
-            begin
-            tc = host.trigger.cnt_trigger0low();
-            ts = TWait;
-            end
-        if (tstate == TWait && tcounter == 0)
-            begin
-            ts = TIdle;
-            tc = host.trigger.default_freq();
-            end
-        tcounter  <= tc;
-        tstate  <= ts;
-    endrule
-
-    rule sframe_calc;
-        delay_limit <= host.syncgen.delay();
-        let fd = frame_delay+1;
-        let fr = frame_run;
-        if (sframe_wire == 1)
-            begin
-            fr = 1;
-            fd = 0;
-            end
-        if (frame_run == 1 && frame_delay == delay_limit -1 )
-            begin
-            fr = 0;
-            fs2 <= 1;
-            end
-        frame_delay <= fd;
-        frame_run <= fr;
-    endrule
-
     rule start_fsm if (framestart_new == 1);
         vsync_count <= 0;
         hsync_count <= 0;

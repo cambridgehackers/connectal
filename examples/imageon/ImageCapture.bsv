@@ -93,7 +93,9 @@ interface ImageCaptureRequest;
    interface CoreRequest coreRequest;
    interface BlueScopeRequest bsRequest;
    interface ImageonVita imageon;
+   interface ImageonVSensor imageons;
    interface ImageonSensorData sensor_data;
+   interface ImageonSensorControl sensor;
    interface HDMI hdmi;
    interface SpiPins spi;
    interface DMARequest dmaRequest;
@@ -107,12 +109,15 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
-    ImageonVitaController imageonVita <- mkImageonVitaController(hdmi_clock);
+    ImageonVitaController imageonVita <- mkImageonVitaController(hdmi_clock, imageon_clock);
     ImageonControl control = imageonVita.control;
     let imageon_vita_clock_binder <- mkClockBinder(imageonVita.host, clocked_by hdmi_clock);
+    let imageon_vitas_clock_binder <- mkClockBinder(imageonVita.hosts, clocked_by imageon_clock);
 
     ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
         clocked_by hdmi_clock, reset_by hdmi_reset);
+    ImageonSensor fromSensor <- mkImageonSensor(hdmi_clock, hdmi_reset, imageon_vitas_clock_binder,
+        clocked_by imageon_clock, reset_by imageon_reset);
 
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, hdmi_clock, hdmi_reset, defaultClock);
     rule copydebugval;
@@ -260,7 +265,9 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     endinterface
    interface BlueScopeRequest bsRequest = bsi.requestIfc;
    interface ImageonVita imageon = imageon_vita_clock_binder;
+   interface ImageonVSensor imageons = imageon_vitas_clock_binder;
    interface ImageonSensorData sensor_data = xsviFromSensor.in;
+   interface ImageonSensorControl sensor = fromSensor.in;
    interface HDMI hdmi = hdmiOut.hdmi;
    interface SpiPins spi = spiController.pins;
 endmodule
