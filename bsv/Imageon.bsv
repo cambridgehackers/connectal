@@ -153,7 +153,7 @@ interface ImageonVitaController;
     interface ImageonControl control;
 endinterface
 
-module mkImageonVitaController#(Clock hdmi_clock, Clock slow_clock)(ImageonVitaController);
+module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageon_clock, Reset imageon_reset)(ImageonVitaController);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset;
     Reg#(Bit#(1)) host_oe_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
@@ -176,11 +176,11 @@ module mkImageonVitaController#(Clock hdmi_clock, Clock slow_clock)(ImageonVitaC
     Reg#(Bit#(10)) decoder_code_fs_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Wire#(Bit#(1)) decoder_frame_start_wire <- mkDWire(0);
 
-    Reg#(Bit#(3)) trigger_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, slow_clock);
-    Reg#(Bit#(32)) trigger_default_freq_reg <- mkSyncReg(0, defaultClock, defaultReset, slow_clock);
-    Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkSyncReg(0, defaultClock, defaultReset, slow_clock);
-    Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkSyncReg(0, defaultClock, defaultReset, slow_clock);
-    Reg#(Bit#(16)) syncgen_delay_reg <- mkSyncReg(0, defaultClock, defaultReset, slow_clock);
+    Reg#(Bit#(3)) trigger_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    Reg#(Bit#(32)) trigger_default_freq_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    Reg#(Bit#(16)) syncgen_delay_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(16)) syncgen_hactive_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(16)) syncgen_hfporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(16)) syncgen_hsync_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
@@ -442,15 +442,15 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
 
     Reg#(TState)   tstate <- mkReg(TIdle);
     Reg#(Bit#(32)) debugind_value <- mkReg(0);
-    Reg#(Bit#(32)) tdebugind_value <- mkReg(0); //mkSyncReg(0, slow_clock, slow_reset, defaultClock);
-    Reg#(Bit#(32)) diff <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(32)) tdebugind_value <- mkReg(0); //mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
+    Reg#(Bit#(32)) diff <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(10)) videodata <- mkReg(0);
-    Reg#(Bit#(1))  framestart_reg <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(1))  framestart_reg <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
     Wire#(Bit#(1)) sframe_wire <- mkDWire(0);
     Wire#(Bit#(1)) fs2 <- mkDWire(0);
-    Reg#(Bit#(16)) delay_limit <- mkReg(0); //mkSyncReg(0, defaultClock, defaultReset, slow_clock);
-    Reg#(Bit#(16)) frame_delay <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
-    Reg#(Bit#(1))  frame_run <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(16)) delay_limit <- mkReg(0); //mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    Reg#(Bit#(16)) frame_delay <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(1))  frame_run <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     
     rule tcalc;
@@ -507,12 +507,12 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     endinterface: out
 endmodule
 
-module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita host)(ImageonXsviFromSensor);
+module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, ImageonVita host)(ImageonXsviFromSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
-    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(slow_clock, slow_reset, defaultClock, defaultReset); 
-    Gearbox#(4, 1, Bit#(1))  syncGearbox <- mkNto1Gearbox(slow_clock, slow_reset, defaultClock, defaultReset); 
+    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(imageon_clock, imageon_reset, defaultClock, defaultReset); 
+    Gearbox#(4, 1, Bit#(1))  syncGearbox <- mkNto1Gearbox(imageon_clock, imageon_reset, defaultClock, defaultReset); 
 
     Reg#(State)    hstate <- mkReg(Idle);
     Reg#(State)    vstate <- mkReg(Idle);
@@ -521,18 +521,18 @@ module mkImageonXsviFromSensor#(Clock slow_clock, Reset slow_reset, ImageonVita 
     Reg#(Bit#(16)) vsync_count <- mkReg(0);
     Reg#(Bit#(16)) hsync_count <- mkReg(0);
     Reg#(Bit#(32)) debugind_value <- mkReg(0);
-    Reg#(Bit#(32)) tdebugind_value <- mkReg(0); //mkSyncReg(0, slow_clock, slow_reset, defaultClock);
-    Reg#(Bit#(32)) diff <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(32)) tdebugind_value <- mkReg(0); //mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
+    Reg#(Bit#(32)) diff <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(10)) videodata <- mkReg(0);
-    Reg#(Bit#(1))  framestart_reg <- mkReg(0, clocked_by slow_clock, reset_by slow_reset);
-    Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(1))  framestart_reg <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(1))  framestart_new <- mkReg(0);
     Wire#(Bit#(1)) sframe_wire <- mkDWire(0);
     Wire#(Bit#(1)) fs2 <- mkDWire(0);
-    Reg#(Bit#(1))  framestart_wire <- mkSyncReg(0, slow_clock, slow_reset, defaultClock);
-    Reg#(Bit#(16)) delay_limit <- mkReg(0); //mkSyncReg(0, defaultClock, defaultReset, slow_clock);
-    Reg#(Bit#(16)) frame_delay <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
-    Reg#(Bit#(1))  frame_run <- mkReg(0); //, clocked_by slow_clock, reset_by slow_reset);
+    Reg#(Bit#(1))  framestart_wire <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
+    Reg#(Bit#(16)) delay_limit <- mkReg(0); //mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    Reg#(Bit#(16)) frame_delay <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(1))  frame_run <- mkReg(0); //, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     
     rule start_fsm if (framestart_new == 1);
@@ -637,7 +637,7 @@ debugind_value <= tdebugind_value;
             return debugind_value;
 	endmethod
 	interface Reset reset = defaultReset;
-	interface Reset slowReset = slow_reset;
+	interface Reset slowReset = imageon_reset;
     endinterface: in
     interface Get out;
 	method ActionValue#(XsviData) get();
