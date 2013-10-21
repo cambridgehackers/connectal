@@ -1,7 +1,7 @@
 CC ?= gcc
 
 bluenoc: bluenoc.c ../drivers/bluenoc.h
-	$(CC) -O2 -o bluenoc bluenoc.c
+	$(CC) -g -O2 -o bluenoc bluenoc.c
 
 .PHONY: install
 install: bluenoc
