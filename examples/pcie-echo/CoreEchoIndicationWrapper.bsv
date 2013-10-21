@@ -16,7 +16,7 @@ import Echo::*;
 import FIFO::*;
 import Zynq::*;
 import PcieToAxiBridge::*;
-
+import XbsvReadyQueue::*;
 
 
 typedef struct {
@@ -66,30 +66,12 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper)
     Reg#(Bit#(32)) underflowReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
-    Reg#(Vector#(3, Bit#(3))) priorities <- mkReg(replicate(0));
-    function Bit#(3) maxPriority(); return fold(max, priorities); endfunction
-    function Tuple2#(Bit#(iccsz), Bit#(3)) getMaxPriorityRequest();
-        function Bit#(iccsz) channelNumber(Integer i); UInt#(iccsz) c = fromInteger(i); return pack(c); endfunction
-        Vector#(3, Bit#(iccsz)) requests = genWith(channelNumber);
-        function Tuple2#(Bit#(iccsz),Bit#(3)) maxreq(Tuple2#(Bit#(iccsz),Bit#(3)) a, Tuple2#(Bit#(iccsz),Bit#(3)) b);
-           if (tpl_2(a) > tpl_2(b))
-               return a;
-           else
-               return b;
-        endfunction
-        return fold(maxreq, zip(requests, priorities));
-    endfunction
-    Reg#(Tuple2#(Bit#(iccsz),Bit#(3))) maxPriorityRequest <- mkReg(tuple2(0,0));
-    rule updateMaxPriorityRequest;
-        maxPriorityRequest <= getMaxPriorityRequest();
-    endrule
+    ReadyQueue#(3, Bit#(3), Bit#(3)) readyQueue <- mkFirstReadyQueue();
 
-    function Bool my_or(Bool a, Bool b) = a || b;
-    function Bool read_wire (PulseWire a) = a._read;    
     // this is here to disable the warning that the put failed rule can never fire
     Reg#(Bool) putEnableReg <- mkReg(True);
     Reg#(Bool) interruptEnableReg <- mkReg(False);
-    let       interruptStatus = (maxPriority() > 0);
+    let       interruptStatus = (tpl_2(readyQueue.maxPriorityRequest()) > 0);
     function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
     function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
 
@@ -119,6 +101,10 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper)
     let axiSlaveReadAddrFifo  = axiSlaveReadAddrFifos[1];
     let axiSlaveWriteDataFifo = axiSlaveWriteDataFifos[1];
     let axiSlaveReadDataFifo  = axiSlaveReadDataFifos[1];
+
+    ToBit32#(Heard$Response) heard$responseFifo <- mkToBit32();
+    ToBit32#(Heard2$Response) heard2$responseFifo <- mkToBit32();
+    ToBit32#(PutFailed$Response) putFailed$responseFifo <- mkToBit32();
 
     // count the number of times indication methods are invoked
     rule increment_responseFiredCntReg;
@@ -166,17 +152,15 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper)
         if (addr == 14'h01C)
 	    v = outOfRangeReadCountReg;
         if (addr == 14'h020)
-	begin
-            let maxp = tpl_2(maxPriorityRequest);
-            if (maxp > 0)
-            begin
-	        v = extend(tpl_1(maxPriorityRequest))+1;
-            end
-            else
-            begin
-                v = 0;
-            end
-	end
+	    v = extend(tpl_1(readyQueue.maxPriorityRequest)); // request number
+        if (addr == 14'h024)
+            v = extend(tpl_2(readyQueue.maxPriorityRequest)); // request prio
+	if (addr == 14'h028)
+	   v = extend(pack(heard$responseFifo.notEmpty()));
+	if (addr == 14'h02c)
+	   v = extend(pack(heard2$responseFifo.notEmpty()));
+	if (addr == 14'h030)
+	   v = extend(pack(putFailed$responseFifo.notEmpty()));
 	if (addr == 14'h034)
 	    v = outOfRangeWriteCount;
 	if (addr == 14'h038)
@@ -185,7 +169,6 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper)
     endrule
 
 
-    ToBit32#(Heard$Response) heard$responseFifo <- mkToBit32();
     rule heard$axiSlaveRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
                                          axiSlaveReadAddrFifo.first[13:8] == heard$Offset);
         axiSlaveReadAddrFifo.deq;
@@ -199,8 +182,10 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper)
         end
         axiSlaveReadDataFifo.enq(v);
     endrule
+   rule readybits0;
+    readyQueue.readyBits[0] <= heard$responseFifo.notEmpty();
+   endrule
 
-    ToBit32#(Heard2$Response) heard2$responseFifo <- mkToBit32();
     rule heard2$axiSlaveRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
                                          axiSlaveReadAddrFifo.first[13:8] == heard2$Offset);
         axiSlaveReadAddrFifo.deq;
@@ -214,8 +199,10 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper)
         end
         axiSlaveReadDataFifo.enq(v);
     endrule
+   rule readybits1;
+      readyQueue.readyBits[1] <= heard2$responseFifo.notEmpty();
+   endrule
 
-    ToBit32#(PutFailed$Response) putFailed$responseFifo <- mkToBit32();
     rule putFailed$axiSlaveRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
                                          axiSlaveReadAddrFifo.first[13:8] == putFailed$Offset);
         axiSlaveReadAddrFifo.deq;
@@ -229,6 +216,9 @@ module mkCoreEchoIndicationWrapper(CoreEchoIndicationWrapper)
         end
         axiSlaveReadDataFifo.enq(v);
     endrule
+   rule readybits2;
+      readyQueue.readyBits[2] <= putFailed$responseFifo.notEmpty();
+   endrule
 
 
     rule outOfRangeRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
