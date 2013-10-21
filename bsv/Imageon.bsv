@@ -464,7 +464,8 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     Reset defaultReset <- exposeCurrentReset();
 
     Reg#(TState)   tstate <- mkReg(TIdle);
-    Wire#(Bit#(1)) sframe_wire <- mkDWire(0);
+    Reg#(Bit#(1)) sframe_wire <- mkReg(0);
+    Reg#(Bit#(1)) sframe_new_wire <- mkReg(0);
     Reg#(Bit#(1))  fs2 <- mkReg(0);
     Reg#(Bit#(16)) frame_delay <- mkReg(0);
     Reg#(Bit#(1))  frame_run <- mkReg(0);
@@ -481,9 +482,7 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     Reg#(Bit#(1)) raw_empty_reg <- mkReg(0);
     Reg#(Bit#(1)) remapkernel_reg <- mkReg(0);
     Reg#(Bit#(1)) imgdatavalid_reg <- mkReg(0);
-    //Wire#(Bit#(1)) startframe_wire <- mkDWire(0);
-    //Wire#(Bit#(1)) startimageline_wire <- mkDWire(0);
-    //Wire#(Bit#(1)) endimageline_wire <- mkDWire(0);
+    Reg#(Bit#(8)) dcount <- mkReg(0);
     
     rule tcalc;
         let tc = tcounter - 1;
@@ -511,12 +510,12 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
         let fd = frame_delay+1;
         let fr = frame_run;
         let fstemp = 0;
-        if (sframe_wire == 1)
+        if (sframe_new_wire == 1)
             begin
             fr = 1;
             fd = 0;
             end
-        if (frame_run == 1 && frame_delay == host.syncgen_delay() + 1 )
+        if (frame_run == 1 && frame_delay == host.syncgen_delay() )
             begin
             fr = 0;
             fstemp = 1;
@@ -527,8 +526,13 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     endrule
 
     rule update_debug;
+        //let startframe_wire     = pack(raw_data_delay_reg[9:0] == host.decoder.code_fs() && raw_data_reg[9:0] == 10'h0);
         let dval = diff;
-        //dval = {diff[29:0], framestart_reg, fs2};
+        dval = {dcount, diff[21:0], sframe_wire, sframe_new_wire};
+        if (sframe_wire != sframe_new_wire)
+            begin
+            dcount <= dcount + 1;
+            end
         if (diff[17] == 1)
             begin
             debugind_value <= diff;
@@ -547,7 +551,6 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     endrule
 
     rule calculate_framedata;
-        let startframe_wire     = pack(raw_data_delay_reg[9:0] == host.decoder.code_fs() && raw_data_reg[9:0] == 10'h0);
         let startimageline_wire = pack(raw_data_delay_reg[9:0] == host.decoder.code_ls());
         let endimageline_wire   = pack(raw_data_delay_reg[9:0] == host.decoder.code_le());
         let datain_temp = raw_data_reg[49:10];
@@ -586,6 +589,7 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
                 end
         imgdatavalid_reg <= idv;
         dataout_reg <= dor;
+        sframe_new_wire <= pack(raw_data_delay_reg[9:0] == host.decoder.code_fs() && raw_data_reg[9:0] == 10'h0);
     endrule
 
     interface ImageonSensorControl in;
