@@ -442,12 +442,10 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     Reset defaultReset <- exposeCurrentReset();
 
     Reg#(TState)   tstate <- mkReg(TIdle);
-    Reg#(Bit#(10)) videodata <- mkReg(0);
     Reg#(Bit#(1))  framestart_reg <- mkReg(0);
     Wire#(Bit#(1)) sframe_wire <- mkDWire(0);
     Wire#(Bit#(1)) fs2 <- mkDWire(0);
     Wire#(Bit#(1)) framestart_wire <- mkDWire(0);
-    Reg#(Bit#(16)) delay_limit <- mkReg(0);
     Reg#(Bit#(16)) frame_delay <- mkReg(0);
     Reg#(Bit#(1))  frame_run <- mkReg(0);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
@@ -477,7 +475,6 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     endrule
 
     rule sframe_calc;
-        delay_limit <= host.syncgen_delay();
         let fd = frame_delay+1;
         let fr = frame_run;
         if (sframe_wire == 1)
@@ -485,7 +482,7 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
             fr = 1;
             fd = 0;
             end
-        if (frame_run == 1 && frame_delay == delay_limit -1 )
+        if (frame_run == 1 && frame_delay == host.syncgen_delay() -1 )
             begin
             fr = 0;
             fs2 <= 1;
@@ -496,7 +493,7 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
 
     rule update_debug;
         let dval = diff;
-        dval = {diff[29:0], framestart_wire, fs2};
+        dval = {diff[29:0], framestart_reg, fs2};
         if (diff[17] == 1)
             begin
             debugind_value <= diff;
@@ -526,7 +523,7 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     endinterface: out
 
     method Bit#(1)get_framesync();
-        return framestart_wire;
+        return framestart_reg;
     endmethod
 endmodule
 
@@ -539,18 +536,12 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
 
     Reg#(State)    hstate <- mkReg(Idle);
     Reg#(State)    vstate <- mkReg(Idle);
-    Reg#(TState)   tstate <- mkReg(TIdle);
     Reg#(Bit#(1))  active_video_reg <- mkReg(0);
     Reg#(Bit#(16)) vsync_count <- mkReg(0);
     Reg#(Bit#(16)) hsync_count <- mkReg(0);
     Reg#(Bit#(10)) videodata <- mkReg(0);
-    Reg#(Bit#(1))  framestart_reg <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(1))  framestart_new <- mkReg(0);
-    Reg#(Bit#(16)) delay_limit <- mkReg(0);
-    Reg#(Bit#(16)) frame_delay <- mkReg(0);
-    Reg#(Bit#(1))  frame_run <- mkReg(0);
-    Reg#(Bit#(32)) tcounter <- mkReg(0);
     
     rule start_fsm if (framestart_new == 1);
         vsync_count <= 0;
@@ -621,8 +612,7 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
     endrule
 
     rule receive_framestart;
-        framestart_reg <= sensor.get_framesync();
-        framestart_delay_reg <= framestart_reg;
+        framestart_delay_reg <= sensor.get_framesync();
 	Vector#(4, Bit#(1)) in = replicate(0);
 	// zero'th element shifted out first
 	in[1] = framestart_delay_reg;
