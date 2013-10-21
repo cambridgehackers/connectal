@@ -83,7 +83,6 @@ endinterface
 
 (* always_enabled *)
 interface ImageonSensorControl;
-    method Action framestart(Bit#(1) v);
     method Bit#(32) get_debugind();
     method Action sframe(Bit#(1) v);
     interface Reset reset;
@@ -333,7 +332,7 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 	endmethod
 
 	method Action set_host_oe(Bit#(1) v);
-	    host_oe_reg <= v;
+	    host_oe_reg <= ~v;
 	endmethod
 
 	method Action set_serdes_reset(Bit#(1) v);
@@ -442,14 +441,13 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     Reset defaultReset <- exposeCurrentReset();
 
     Reg#(TState)   tstate <- mkReg(TIdle);
-    Reg#(Bit#(1))  framestart_reg <- mkReg(0);
     Wire#(Bit#(1)) sframe_wire <- mkDWire(0);
-    Wire#(Bit#(1)) fs2 <- mkDWire(0);
-    Wire#(Bit#(1)) framestart_wire <- mkDWire(0);
+    Reg#(Bit#(1))  fs2 <- mkReg(0);
     Reg#(Bit#(16)) frame_delay <- mkReg(0);
     Reg#(Bit#(1))  frame_run <- mkReg(0);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     Reg#(Bit#(32)) diff <- mkReg(0);
+    Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0);
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     
     rule tcalc;
@@ -477,23 +475,25 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     rule sframe_calc;
         let fd = frame_delay+1;
         let fr = frame_run;
+        let fstemp = 0;
         if (sframe_wire == 1)
             begin
             fr = 1;
             fd = 0;
             end
-        if (frame_run == 1 && frame_delay == host.syncgen_delay() -1 )
+        if (frame_run == 1 && frame_delay == host.syncgen_delay() + 1 )
             begin
             fr = 0;
-            fs2 <= 1;
+            fstemp = 1;
             end
         frame_delay <= fd;
         frame_run <= fr;
+        fs2 <= fstemp;
     endrule
 
     rule update_debug;
         let dval = diff;
-        dval = {diff[29:0], framestart_reg, fs2};
+        //dval = {diff[29:0], framestart_reg, fs2};
         if (diff[17] == 1)
             begin
             debugind_value <= diff;
@@ -509,10 +509,6 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
         method Bit#(32) get_debugind();
             return debugind_value;
 	endmethod
-        method Action framestart(Bit#(1) v);
-            framestart_wire <= v;
-            framestart_reg <= v;
-	endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
     endinterface: in
@@ -523,7 +519,7 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     endinterface: out
 
     method Bit#(1)get_framesync();
-        return framestart_reg;
+        return fs2;
     endmethod
 endmodule
 
@@ -540,7 +536,6 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
     Reg#(Bit#(16)) vsync_count <- mkReg(0);
     Reg#(Bit#(16)) hsync_count <- mkReg(0);
     Reg#(Bit#(10)) videodata <- mkReg(0);
-    Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(1))  framestart_new <- mkReg(0);
     
     rule start_fsm if (framestart_new == 1);
@@ -612,10 +607,9 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
     endrule
 
     rule receive_framestart;
-        framestart_delay_reg <= sensor.get_framesync();
 	Vector#(4, Bit#(1)) in = replicate(0);
 	// zero'th element shifted out first
-	in[1] = framestart_delay_reg;
+	in[1] = sensor.get_framesync();
 	syncGearbox.enq(in);
     endrule
 

@@ -970,7 +970,6 @@ class ImageonVita:
      wire fmc_imageon_iic_0_sda_T;
      wire fmc_imageon_iic_0_sda_O;
      wire fmc_imageon_iic_0_sda_I;
-     wire imageon_xsvi_fsync;
      wire imageon_xsvi_sframe;
      wire [39:0] imageon_xsvi_video_data;
      wire [31:0] debugreq_value;
@@ -1009,7 +1008,6 @@ class ImageonVita:
     .imageons_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
     .imageons_syncgen_delay(imageon_host_syncgen_delay),
 
-    .sensor_framestart_v(imageon_xsvi_fsync),
     .sensor_sframe_v(imageon_xsvi_sframe),
     .EN_sensor_data_video_data(1),
     .RDY_sensor_data_video_data(RDY_imageon_xsvi_video_data),
@@ -1115,7 +1113,7 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .clk200(imageon_clk200),
     .clk(imageon_clk),
     .reset(imageon_reset),
-    .oe(imageon_host_oe), /* input */
+    .oe_n(imageon_host_oe), /* input */
     /* HOST Interface - ISERDES */
     .host_iserdes_reset(imageon_host_iserdes_reset),
     .host_iserdes_auto_align(imageon_host_iserdes_auto_align),
@@ -1149,7 +1147,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_data_p(io_vita_data_p),
     .io_vita_data_n(io_vita_data_n),
     /* XSVI Port */
-    .fsync(imageon_xsvi_fsync),
     .sframe(imageon_xsvi_sframe),
     .xsvi_video_data_o(imageon_xsvi_video_data)
 );
