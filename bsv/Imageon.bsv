@@ -76,13 +76,13 @@ typedef struct {
 } XsviData deriving (Bits);
 
 interface ImageonSensorData;
-    method Action framestart(Bit#(1) v);
     method Action video_data(Bit#(40) v);
     method Bit#(32) get_debugind();
     interface Reset reset;
     interface Reset slowReset;
 endinterface
 
+(* always_enabled *)
 interface ImageonSensorControl;
     method Action framestart(Bit#(1) v);
     method Action sframe(Bit#(1) v);
@@ -486,13 +486,16 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
         if (frame_run == 1 && frame_delay == delay_limit -1 )
             begin
             fr = 0;
-            fs2 <= 1;
+            //fs2 <= 1;
             end
         frame_delay <= fd;
         frame_run <= fr;
     endrule
 
     interface ImageonSensorControl in;
+    method Action framestart(Bit#(1) v);
+            fs2 <= v;
+	endmethod
 	method Action sframe(Bit#(1) v);
             sframe_wire <= v;
 	endmethod
@@ -615,19 +618,16 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
     endrule
 
     rule update_fs2;
-        fs2 <= sensor.get_framesync();
-    endrule
-
-    interface ImageonSensorData in;
-	method Action framestart(Bit#(1) v);
-            framestart_wire <= v;
-            framestart_reg <= v;
+            framestart_wire <= sensor.get_framesync();
+            framestart_reg <= sensor.get_framesync();
             framestart_delay_reg <= framestart_reg;
 	    Vector#(4, Bit#(1)) in = replicate(0);
 	    // zero'th element shifted out first
 	    in[1] = framestart_delay_reg;
 	    syncGearbox.enq(in);
-	endmethod
+    endrule
+
+    interface ImageonSensorData in;
 	method Action video_data(Bit#(40) v);
 	    // least signifcant 10 bits shifted out first
 	    Vector#(4, Bit#(10)) in = unpack(v);
