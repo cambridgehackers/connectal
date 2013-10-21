@@ -314,15 +314,44 @@ void* portalExec(void* __x)
 #ifdef MMAP_HW
     long rc;
     int timeout = -1;
-    if(0)
-    fprintf(stderr, "about to invoke poll(%p, %d, %d)\n", portal_fds, numFds, timeout);
+#ifndef ZYNQ
+    timeout = 1; // interrupts not working yet on PCIe
+#endif
     if (!numFds) {
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
     }
     while ((rc = poll(portal_fds, numFds, timeout)) >= 0) {
-      // fprintf(stderr, "poll returned rc=%d\n", rc);
+      if (0)
+      fprintf(stderr, "poll returned rc=%ld\n", rc);
+#ifndef ZYNQ
+      // PCIE interrupts not working
+      if (0)
+      {
+	PortalInstance *instance = portal_instances[0];
+	unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
+	unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
+	unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
+	unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
+	unsigned int queue_prio = *(volatile int *)(instance->ind_reg_base+0x9);
+	unsigned int heard = *(volatile int *)(instance->ind_reg_base+0xA);
+	unsigned int heard2 = *(volatile int *)(instance->ind_reg_base+0xB);
+	unsigned int putFailed = *(volatile int *)(instance->ind_reg_base+0xC);
+	if (0)
+	fprintf(stderr, "int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x prio=%08x heard=%08x heard2=%08x putFailed=%08x\n",
+		int_src, int_en, ind_count, queue_status, queue_prio, heard, heard2, putFailed);
+
+	for (int i = 0; i < 3; i++) {
+	  unsigned int fifov = *(volatile int *)(instance->ind_fifo_base+i*256/4);
+	  printf("fifo[i] = %08x\n", fifov);
+	}
+      }
+#endif      
       for (int i = 0; i < numFds; i++) {
+#ifndef ZYNQ
+      // PCIE interrupts not working
+	if (0)
+#endif
 	if (portal_fds[i].revents == 0)
 	  continue;
 	if (!portal_requests) {
@@ -332,19 +361,21 @@ void* portalExec(void* __x)
 	PortalRequest *instance = portal_requests[i];
 	
 	// sanity check, to see the status of interrupt source and enable
-	volatile unsigned int int_src = *(instance->ind_reg_base+0x0);
-	volatile unsigned int int_en  = *(instance->ind_reg_base+0x1);
-	volatile unsigned int queue_status = *(instance->ind_reg_base+0x8);
+	unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
+	unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
+	unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
+	unsigned int queue_priority = *(volatile int *)(instance->ind_reg_base+0x9);
 	if(0)
-	fprintf(stderr, "(%d) about to receive messages %08x %08x %08x\n", i, int_src, int_en, queue_status);
+	  fprintf(stderr, "(%d) about to receive messages %08x %08x %08x %08x\n", i, int_src, int_en, queue_status, queue_priority);
 
 
 	// handle all messasges from this portal instance
-	while (queue_status) {
-	  if(0)
-	  fprintf(stderr, "queue_status %d\n", queue_status);
-	  instance->indication->handleMessage(queue_status-1, instance->ind_fifo_base);
+	while (queue_priority) {
+	  if(1)
+	    fprintf(stderr, "queue_status %d queue_priority %d\n", queue_status, queue_priority);
+	  instance->indication->handleMessage(queue_status, instance->ind_fifo_base);
 	  queue_status = *(instance->ind_reg_base+0x8);
+	  queue_priority = *(instance->ind_reg_base+0x9);
 	}
 	
 	// rc of 0 indicates timeout
