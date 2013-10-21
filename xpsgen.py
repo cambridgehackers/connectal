@@ -972,6 +972,8 @@ class ImageonVita:
      wire fmc_imageon_iic_0_sda_T;
      wire fmc_imageon_iic_0_sda_O;
      wire fmc_imageon_iic_0_sda_I;
+     wire [49:0] imageon_xsvi_raw_data;
+     wire imageon_xsvi_raw_empty;
      wire imageon_xsvi_sframe;
      wire [39:0] imageon_xsvi_video_data;
      wire [31:0] debugreq_value;
@@ -1011,6 +1013,8 @@ class ImageonVita:
     .imageons_syncgen_delay(imageon_host_syncgen_delay),
 
     .sensor_sframe_v(imageon_xsvi_sframe),
+    .sensor_raw_data_v(imageon_xsvi_raw_data),
+    .sensor_raw_empty_v(imageon_xsvi_raw_empty),
     .EN_sensor_data_video_data(1),
     .RDY_sensor_data_video_data(RDY_imageon_xsvi_video_data),
     .sensor_data_video_data_v(imageon_xsvi_video_data),
@@ -1169,6 +1173,8 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_data_n(io_vita_data_n),
     /* XSVI Port */
     .sframe(imageon_xsvi_sframe),
+    .FIFO_EMPTY_o(imageon_xsvi_raw_empty),
+    .FIFO_DATAOUT_o(imageon_xsvi_raw_data),
     .xsvi_video_data_o(imageon_xsvi_video_data)
 );
  '''

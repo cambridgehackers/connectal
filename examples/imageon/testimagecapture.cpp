@@ -295,14 +295,11 @@ static void fmc_imageon_demo_enable_ipipe( void)
  #else
    uint32_t h_bporch    =  132;
  #endif
-   uint32_t h_syncpol   =    1;
-   //v_active    = 1080;
    uint32_t v_active    = 1080+1;
    uint32_t v_fporch    =    4;
    uint32_t v_syncwidth =    5;
    //v_bporch    =   36;
    uint32_t v_bporch    =  300;
-   uint32_t v_syncpol   =    1;
    // Horizontal settings
    device->set_syncgen_delay(((1920+88+44+148)>>2)*6); // approx. 6 lines of delay
    device->set_syncgen_hactive(h_active);

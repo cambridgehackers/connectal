@@ -85,6 +85,8 @@ endinterface
 interface ImageonSensorControl;
     method Bit#(32) get_debugind();
     method Action sframe(Bit#(1) v);
+    method Action raw_data(Bit#(50) v);
+    method Action raw_empty(Bit#(1) v);
     interface Reset reset;
     interface Reset hdmiReset;
 endinterface
@@ -104,6 +106,7 @@ endinterface
 interface ImageonVSensor;
     method Bit#(1) foo();
     interface ImageonTrigger trigger;
+    interface ImageonDecoder decoder;
     method Bit#(16) syncgen_delay();
 endinterface
 
@@ -173,6 +176,9 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
     Reg#(Bit#(10)) decoder_code_ls_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(10)) decoder_code_le_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(10)) decoder_code_fs_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(10)) decoder_code_ls_regs <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    Reg#(Bit#(10)) decoder_code_le_regs <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    Reg#(Bit#(10)) decoder_code_fs_regs <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Wire#(Bit#(1)) decoder_frame_start_wire <- mkDWire(0);
 
     Reg#(Bit#(3)) trigger_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
@@ -297,6 +303,26 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 		return trigger_cnt_trigger0low_reg;
 	    endmethod
 	endinterface
+	interface ImageonDecoder decoder;
+	    //method Bit#(1) reset();
+		//return decoder_reset_reg;
+	    //endmethod
+	    //method Bit#(1) enable();
+		//return decoder_enable_reg;
+	    //endmethod
+	    method Bit#(10) code_ls();
+		return decoder_code_ls_regs;
+	    endmethod
+	    method Bit#(10) code_le();
+		return decoder_code_le_regs;
+	    endmethod
+	    method Bit#(10) code_fs();
+		return decoder_code_fs_regs;
+	    endmethod
+	    //method Action frame_start(Bit#(1) start);
+	        //decoder_frame_start_wire <= start;
+	    //endmethod
+	endinterface
 	method Bit#(16) syncgen_delay();
 	    return syncgen_delay_reg;
 	endmethod
@@ -361,12 +387,15 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 	endmethod
 	method Action set_decoder_code_ls(Bit#(10) v);
 	    decoder_code_ls_reg <= v;
+	    decoder_code_ls_regs <= v;
 	endmethod
 	method Action set_decoder_code_le(Bit#(10) v);
 	    decoder_code_le_reg <= v;
+	    decoder_code_le_regs <= v;
 	endmethod
 	method Action set_decoder_code_fs(Bit#(10) v);
 	    decoder_code_fs_reg <= v;
+	    decoder_code_fs_regs <= v;
 	endmethod
 	method Action set_decoder_code_fe(Bit#(10) v);
 	endmethod
@@ -431,6 +460,7 @@ interface ImageonSensor;
     interface ImageonSensorControl in;
     interface Get#(Bit#(1)) out;
     method Bit#(1)get_framesync();
+    method Bit#(40)get_data();
 endinterface
 
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
@@ -449,6 +479,18 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     Reg#(Bit#(32)) diff <- mkReg(0);
     Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0);
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(10)) sync_delay_reg <- mkReg(0);
+    Wire#(Bit#(50)) raw_data_wire <- mkDWire(0);
+    Reg#(Bit#(50)) raw_data_reg <- mkReg(0);
+    Reg#(Bit#(40)) dataout_reg <- mkReg(0);
+    Reg#(Bit#(50)) raw_data_delay_reg <- mkReg(0);
+    Wire#(Bit#(1)) raw_empty_wire <- mkDWire(0);
+    Reg#(Bit#(1)) raw_empty_reg <- mkReg(0);
+    Reg#(Bit#(1)) remapkernel_reg <- mkReg(0);
+    Reg#(Bit#(1)) imgdatavalid_reg <- mkReg(0);
+    //Wire#(Bit#(1)) startframe_wire <- mkDWire(0);
+    //Wire#(Bit#(1)) startimageline_wire <- mkDWire(0);
+    //Wire#(Bit#(1)) endimageline_wire <- mkDWire(0);
     
     rule tcalc;
         let tc = tcounter - 1;
@@ -502,9 +544,66 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
         diff <= dval;
     endrule
 
+    rule data_pipeline;
+        if (raw_empty_wire == 0)
+            begin
+            raw_data_reg <= raw_data_wire;
+            raw_data_delay_reg <= raw_data_reg;
+            end
+        raw_empty_reg <= raw_empty_wire;
+    endrule
+
+    rule calculate_framedata;
+        let startframe_wire     = pack(raw_data_delay_reg[9:0] == host.decoder.code_fs() && raw_data_reg[9:0] == 10'h0);
+        let startimageline_wire = pack(raw_data_delay_reg[9:0] == host.decoder.code_ls());
+        let endimageline_wire   = pack(raw_data_delay_reg[9:0] == host.decoder.code_le());
+        let datain_temp = raw_data_reg[49:10];
+        let idv = imgdatavalid_reg;
+        let dor = dataout_reg;
+            //WRITE_DATA <= 0;
+            if (raw_empty_reg == 0)
+                begin
+                if (imgdatavalid_reg == 1)
+                    begin
+                    if (remapkernel_reg == 0)
+                        begin
+                        dor[39: 30] = datain_temp[9: 0];
+                        dor[29: 20] = datain_temp[19: 10];
+                        dor[19: 10] = datain_temp[29: 20];
+                        dor[ 9:  0] = datain_temp[39: 30];
+                        end
+                    else
+                        begin
+                        dor[39: 30] = datain_temp[39: 30];
+                        dor[29: 20] = datain_temp[29: 20];
+                        dor[19: 10] = datain_temp[19: 10];
+                        dor[ 9:  0] = datain_temp[9: 0];
+                        end
+                    //WRITE_DATA <= 1;
+                    remapkernel_reg <= ~ remapkernel_reg;
+                    if (endimageline_wire == 1 && startimageline_wire == 0)
+                        begin
+                        idv = 0;
+                        end
+                    end
+                else if (startimageline_wire == 1)
+                    begin
+                    idv = 1;
+                    end
+                end
+        imgdatavalid_reg <= idv;
+        dataout_reg <= dor;
+    endrule
+
     interface ImageonSensorControl in;
 	method Action sframe(Bit#(1) v);
             sframe_wire <= v;
+	endmethod
+        method Action raw_data(Bit#(50) v);
+            raw_data_wire <= v;
+	endmethod
+        method Action raw_empty(Bit#(1) v);
+            raw_empty_wire <= v;
 	endmethod
         method Bit#(32) get_debugind();
             return debugind_value;
@@ -520,6 +619,9 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
 
     method Bit#(1)get_framesync();
         return fs2;
+    endmethod
+    method Bit#(40)get_data();
+        return dataout_reg;
     endmethod
 endmodule
 
@@ -613,11 +715,17 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
 	syncGearbox.enq(in);
     endrule
 
+    rule receive_data;
+	    // least signifcant 10 bits shifted out first
+	    Vector#(4, Bit#(10)) in = unpack(sensor.get_data());
+	    dataGearbox.enq(in);
+    endrule
+
     interface ImageonSensorData in;
 	method Action video_data(Bit#(40) v);
 	    // least signifcant 10 bits shifted out first
-	    Vector#(4, Bit#(10)) in = unpack(v);
-	    dataGearbox.enq(in);
+	    //Vector#(4, Bit#(10)) in = unpack(v);
+	    //dataGearbox.enq(in);
 	endmethod
 	interface Reset reset = defaultReset;
 	interface Reset slowReset = imageon_reset;
