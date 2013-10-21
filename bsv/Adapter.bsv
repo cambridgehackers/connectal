@@ -117,11 +117,11 @@ module mkFromBit32(FromBit32#(a))
          end
    endmethod
 
-   method a first if (fifo.notEmpty);
+   method a first;
        return unpack(fifo.first);
    endmethod
 
-   method Action deq if (fifo.notEmpty);
+   method Action deq;
        fifo.deq;
    endmethod
 
