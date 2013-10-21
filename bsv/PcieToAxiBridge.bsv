@@ -419,11 +419,13 @@ interface PortalEngine;
     interface Get#(TLPData#(16))   tlp_out;
     interface Axi3Master#(32,32,4,12) portal;
     interface Reg#(Bool)           pipeliningEnabled;
+    interface Reg#(Bool)           byteSwap;
 endinterface
 
 (* synthesize *)
 module mkPortalEngine#(PciId my_id)(PortalEngine);
     Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
+    Reg#(Bool) byteSwapReg <- mkReg(True);
     Reg#(Bool) busyReg <- mkReg(False);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bit#(4)) timerReg <- mkReg(0);
@@ -509,7 +511,10 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    method ActionValue#(Bit#(32)) writeData();
 	        busyReg <= False;
 	        writeDataFifo.deq;
-		return byteSwap(writeDataFifo.first.data);
+		if (byteSwapReg)
+		    return byteSwap(writeDataFifo.first.data);
+		else
+		    return writeDataFifo.first.data;
 	    endmethod
 	    method Bit#(12) writeWid();
 		return extend(writeDataFifo.first.tag);
@@ -565,7 +570,10 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		completion.bytecount = 4;
 		completion.reqid = hdr.reqid;
 		completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
-		completion.data = data;
+		if (byteSwapReg)
+		    completion.data = byteSwap(data);
+		else
+		    completion.data = data;
 	        TLPData#(16) tlp = defaultValue;
 		tlp.data = pack(completion);
 		tlp.sof = True;
@@ -578,6 +586,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	endinterface: read
     endinterface: portal
     interface Reg pipeliningEnabled = pipeliningEnabledReg;
+    interface Reg byteSwap = byteSwapReg;
 endmodule: mkPortalEngine
 
 interface AxiSlaveEngine;
@@ -756,6 +765,7 @@ interface ControlAndStatusRegs;
    interface Reg#(Bool) tlpTracing;
    interface Reg#(Bool) axiEnabled;
    interface Reg#(Bool) pipeliningEnabled;
+   interface Reg#(Bool) byteSwap;
    interface Reg#(Bool) axiTestEnabled;
    interface Reg#(Bit#(32)) addrLowerWord;
    interface Reg#(Bit#(32)) addrUpperWord;
@@ -845,6 +855,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bool) tlpTracingReg <- mkReg(False);
    Reg#(Bool) axiEnabledReg <- mkReg(False);
    Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
+   Reg#(Bool) byteSwapReg <- mkReg(False);
    Reg#(Bool) axiTestEnabledReg <- mkReg(False);
    Reg#(Bit#(32)) addrLowerWordReg <- mkReg(0);
    Reg#(Bit#(32)) addrUpperWordReg <- mkReg(0);
@@ -916,6 +927,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 791: return msix_mask_all_intr ? 1 : 0;
 	 792: return tlpDataBramWrAddrReg;
 	 793: return msi_enabled ? 1 : 0;
+	 794: return byteSwapReg ? 1 : 0;
 
          // 4-entry MSIx table
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
@@ -986,6 +998,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    788: axiEnabledReg <= (dword != 0) ? True : False;
 	    789: tlpDataBramRdAddrReg <= dword;
 	    792: tlpDataBramWrAddrReg <= dword;
+	    794: byteSwapReg <= (dword != 0) ? True : False;
 
             // MSIx table entries
             4096: msix_entry[0].addr_lo  <= update_dword(msix_entry[0].addr_lo, be, (dword & 32'hfffffffc));
@@ -1438,6 +1451,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface Reg tlpTracing = tlpTracingReg;
    interface Reg axiEnabled = axiEnabledReg;
    interface Reg pipeliningEnabled = pipeliningEnabledReg;
+   interface Reg byteSwap = byteSwapReg;
    interface Reg axiTestEnabled = axiTestEnabledReg;
    interface Reg addrLowerWord = addrLowerWordReg;
    interface Reg addrUpperWord = addrUpperWordReg;
@@ -2522,6 +2536,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    rule axiEnabledRule;
        dispatcher.axiEnabled <= csr.axiEnabled;
        portalEngine.pipeliningEnabled <= csr.pipeliningEnabled;
+       portalEngine.byteSwap <= csr.byteSwap;
    endrule
 
    // connect the sub-components to each other
