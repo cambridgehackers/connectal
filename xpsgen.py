@@ -962,6 +962,8 @@ class ImageonVita:
      wire [31:0] imageon_host_trigger_cnt_trigger0high;
      wire [31:0] imageon_host_trigger_cnt_trigger0low;
      wire [15:0] imageon_host_syncgen_delay;
+     wire vita_clk_pll_o;
+     wire vita_clk_pll_t;
 
      /* IIC */
      wire fmc_imageon_iic_0_scl_T;
@@ -1103,6 +1105,26 @@ class ImageonVita:
      .T(fmc_imageon_iic_0_sda_T)
      // Buffer input
      );
+     ODDR#(
+         .DDR_CLK_EDGE("SAME_EDGE"),
+         .INIT(1),
+         .SRTYPE("ASYNC"))
+         ODDR_vita_clk_pll_o (
+             .Q(vita_clk_pll_o), .C(imageon_clk),
+             .CE(1), .D1(0), .D2(1),
+             .R(0), .S(0));
+     ODDR#(
+         .DDR_CLK_EDGE("SAME_EDGE"),
+         .INIT(1),
+         .SRTYPE("ASYNC"))
+         ODDR_vita_clk_pll_t (
+             .Q(vita_clk_pll_t), .C(imageon_clk),
+             .CE(1), .D1(imageon_host_oe), .D2(imageon_host_oe),
+             .R(0), .S(0));
+     OBUFT OBUFT_vita_clk_pll(
+         .O(io_vita_clk_pll),
+         .I(vita_clk_pll_o),
+         .T(vita_clk_pll_t));
 '''
     def bus_assignments(self,busname,t,params):
         return '''
@@ -1137,7 +1159,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     /* HOST Interface - Sync Generator */
     .host_syncgen_delay(imageon_host_syncgen_delay),
     /* I/O pins */
-    .io_vita_clk_pll(io_vita_clk_pll),
     .io_vita_reset_n(io_vita_reset_n),
     .io_vita_trigger(io_vita_trigger),
     .io_vita_clk_out_p(io_vita_clk_out_p),
