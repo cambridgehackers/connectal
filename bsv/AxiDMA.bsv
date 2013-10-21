@@ -44,6 +44,7 @@ typedef struct {
 interface DMAIndication;
    method Action reportStateDbg(DmaDbgRec rec);
    method Action configResp(Bit#(32) channelId);
+   method Action sglistResp(Bit#(32) v);
 endinterface
 
 interface DMARequest;
@@ -308,6 +309,7 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA);
       method Action sglist(Bit#(32) off, Bit#(32) addr, Bit#(32) len);
 	 writer.sglist(off, addr, len);
 	 reader.sglist(off, addr, len);
+	 indication.sglistResp(off);
       endmethod
    endinterface
    interface AxiDMAWrite write = writer.write;

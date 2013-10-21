@@ -35,7 +35,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <semaphore.h>
 #include <assert.h>
 
 #ifdef ZYNQ
@@ -154,7 +153,7 @@ int PortalRequest::open()
     req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
 
     // enable interrupts
-    fprintf(stderr, "enabling interrupts %s\n", name);
+    fprintf(stderr, "PortalRequest::enabling interrupts %s\n", name);
     *(ind_reg_base+0x1) = 1;
 
 #else
@@ -258,12 +257,18 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc)
 int PortalMemory::reference(PortalAlloc* pa)
 {
   int id = handle++;
-  assert(pa->numEntries < 32);
-  for(int i = 0; i < pa->numEntries; i++){
-    sglist((id*32)+i, pa->entries[i].dma_address, pa->entries[i].length);
+  int ne = pa->numEntries;
+  assert(ne < 32);
+  pa->entries[ne].dma_address = 0;
+  pa->entries[ne].length = 0;
+  pa->numEntries;
+  for(int i = 0; i <= pa->numEntries; i++){
+    int offset = (id*32)+i;
+    fprintf(stderr, "PortalMemory::sglist(%08x, %08x, %08x)\n", offset, pa->entries[i].dma_address, pa->entries[i].length);
+    sglist(offset, pa->entries[i].dma_address, pa->entries[i].length);
+    sleep(1);
   }
-  sglist((id*32)+pa->numEntries, 0, 0);
-  return handle;
+  return id;
 }
 
 int PortalMemory::alloc(size_t size, PortalAlloc *portalAlloc)
@@ -328,8 +333,8 @@ void* portalExec(void* __x)
 	volatile unsigned int int_src = *(instance->ind_reg_base+0x0);
 	volatile unsigned int int_en  = *(instance->ind_reg_base+0x1);
 	volatile unsigned int queue_status = *(instance->ind_reg_base+0x8);
-	if(0)
-	fprintf(stderr, "about to receive messages %08x %08x %08x\n", int_src, int_en, queue_status);
+	//if(0)
+	fprintf(stderr, "(%d) about to receive messages %08x %08x %08x\n", i, int_src, int_en, queue_status);
 
 
 	// handle all messasges from this portal instance

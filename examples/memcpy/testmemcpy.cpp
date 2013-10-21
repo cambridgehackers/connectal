@@ -44,6 +44,9 @@ class TestDMAIndication : public DMAIndication
     fprintf(stderr, "configResp: %x\n", channelId);
     sem_post(&conf_sem);
   }
+  virtual void sglistResp(unsigned long channelId){
+    fprintf(stderr, "sglistResp: %x\n", channelId);
+  }
 };
 
 class TestCoreIndication : public CoreIndication
@@ -141,8 +144,8 @@ int main(int argc, const char **argv)
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
   if(pthread_create(&tid, NULL,  portalExec, NULL)){
-    fprintf(stderr, "error creating exec thread\n");
-    exit(1);
+   fprintf(stderr, "error creating exec thread\n");
+   exit(1);
   }
 
   unsigned int ref_srcAlloc = dma->reference(&srcAlloc);

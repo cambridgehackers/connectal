@@ -29,6 +29,7 @@ import AxiDMA::*;
 
 exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonVSensor', 'ImageonSensorData', 'ImageonSensorControl', 'FmcImageonInterface', 'SpiPins']
 
+
 bsimTopTemplate='''
 import StmtFSM::*;
 import AxiMasterSlave::*;
@@ -884,14 +885,12 @@ class InterfaceMixin:
     def collectInterfaceNames(self, name, use_regex=False):
         interfaceNames = []
         for m in self.decls:
-            if m.type == 'Interface':
-                #print ("interface name: {%s}" % (m.name)), m
-                #print 'name', name, m.name
-                pass
             if use_regex:
                 matches = re.match(name, m.name)
             else:
                 matches = (name == m.name)
             if m.type == 'Interface' and matches:
+                # print ("interface name: {%s}" % (m.name)), m
+                # print 'name', name, m.name
                 interfaceNames.append((m.subinterfacename, m.name, m.params))
         return interfaceNames

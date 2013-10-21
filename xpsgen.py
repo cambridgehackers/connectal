@@ -1197,7 +1197,7 @@ class InterfaceMixin:
             print 'Writing top Verilog file', topverilogname
         topverilog = util.createDirAndOpen(topverilogname, 'w')
         dutName = util.decapitalize(self.base)
-        axiMasters = self.collectInterfaceNames('Axi3?Client')
+        axiMasters = self.collectInterfaceNames('Axi3?Client', True)
         axiSlaves = [('ctrl','AxiSlave',[])] + self.collectInterfaceNames('AxiSlave')
         masterBusSubsts = [self.axiMasterBusSubst(busnumber,axiMasters[busnumber]) for busnumber in range(len(axiMasters))]
         slaveBusSubsts = []

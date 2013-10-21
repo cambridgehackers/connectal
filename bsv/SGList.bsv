@@ -55,9 +55,10 @@ module mkSGListManager(SGListManager);
 
    function m#(Reg#(SGListPointer)) foo(Integer x)
       provisos (IsModule#(m,__a));
-      return mkReg(unpack(fromInteger(x)));
+      let p = SGListPointer{entry:fromInteger(x*valueOf(SGListMaxLen)),offset:0};
+      return mkReg(p);
    endfunction
-
+   
    BRAM1Port#(SGListIdx, SGListEntry)         listMem <- mkBRAM1Server(defaultValue);
    Vector#(NumSGLists, Reg#(SGListPointer))  listPtrs <- genWithM(foo);
    FIFOF#(SGListId)                          loadReqs <- mkFIFOF;
@@ -71,7 +72,9 @@ module mkSGListManager(SGListManager);
       listMem.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:listPtrs[id].entry, datain:?});
       loadReqs.enq(id);
    endmethod
-  
+   
+   // I should think of a better way of handling the case of mis-alignment 
+   // between burst lengths and the sizes of the blocks in the SG list (mdk)
    method ActionValue#(Bit#(32)) nextAddr(Bit#(4) burstLen);
       loadReqs.deq;
       let rv <- listMem.portA.response.get;
