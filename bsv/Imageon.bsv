@@ -75,12 +75,6 @@ typedef struct {
     Bit#(10) video_data;
 } XsviData deriving (Bits);
 
-interface ImageonSensorData;
-    method Action video_data(Bit#(40) v);
-    interface Reset reset;
-    interface Reset slowReset;
-endinterface
-
 (* always_enabled *)
 interface ImageonSensorControl;
     method Bit#(32) get_debugind();
@@ -452,7 +446,6 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 endmodule
 
 interface ImageonXsviFromSensor;
-    interface ImageonSensorData in;
     interface Get#(XsviData) out;
 endinterface
 
@@ -721,15 +714,6 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
 	    dataGearbox.enq(in);
     endrule
 
-    interface ImageonSensorData in;
-	method Action video_data(Bit#(40) v);
-	    // least signifcant 10 bits shifted out first
-	    //Vector#(4, Bit#(10)) in = unpack(v);
-	    //dataGearbox.enq(in);
-	endmethod
-	interface Reset reset = defaultReset;
-	interface Reset slowReset = imageon_reset;
-    endinterface: in
     interface Get out;
 	method ActionValue#(XsviData) get();
 	    return XsviData {

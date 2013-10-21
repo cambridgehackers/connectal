@@ -94,7 +94,6 @@ interface ImageCaptureRequest;
    interface BlueScopeRequest bsRequest;
    interface ImageonVita imageon;
    interface ImageonVSensor imageons;
-   interface ImageonSensorData sensor_data;
    interface ImageonSensorControl sensor;
    interface HDMI hdmi;
    interface SpiPins spi;
@@ -267,7 +266,6 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
    interface BlueScopeRequest bsRequest = bsi.requestIfc;
    interface ImageonVita imageon = imageon_vita_clock_binder;
    interface ImageonVSensor imageons = imageon_vitas_clock_binder;
-   interface ImageonSensorData sensor_data = xsviFromSensor.in;
    interface ImageonSensorControl sensor = fromSensor.in;
    interface HDMI hdmi = hdmiOut.hdmi;
    interface SpiPins spi = spiController.pins;

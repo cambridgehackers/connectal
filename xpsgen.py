@@ -975,7 +975,6 @@ class ImageonVita:
      wire [49:0] imageon_xsvi_raw_data;
      wire imageon_xsvi_raw_empty;
      wire imageon_xsvi_sframe;
-     wire [39:0] imageon_xsvi_video_data;
      wire [31:0] debugreq_value;
      wire [31:0] debugind_value;
 '''
@@ -1015,9 +1014,6 @@ class ImageonVita:
     .sensor_sframe_v(imageon_xsvi_sframe),
     .sensor_raw_data_v(imageon_xsvi_raw_data),
     .sensor_raw_empty_v(imageon_xsvi_raw_empty),
-    .EN_sensor_data_video_data(1),
-    .RDY_sensor_data_video_data(RDY_imageon_xsvi_video_data),
-    .sensor_data_video_data_v(imageon_xsvi_video_data),
 
     .imageon_get_debugreq(debugreq_value),
     .imageon_set_debugind_v(debugind_value),
@@ -1174,8 +1170,7 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     /* XSVI Port */
     .sframe(imageon_xsvi_sframe),
     .FIFO_EMPTY_o(imageon_xsvi_raw_empty),
-    .FIFO_DATAOUT_o(imageon_xsvi_raw_data),
-    .xsvi_video_data_o(imageon_xsvi_video_data)
+    .FIFO_DATAOUT_o(imageon_xsvi_raw_data)
 );
  '''
     def pinout(self, board):
