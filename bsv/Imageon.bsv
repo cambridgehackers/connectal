@@ -77,7 +77,6 @@ typedef struct {
 
 interface ImageonSensorData;
     method Action video_data(Bit#(40) v);
-    method Bit#(32) get_debugind();
     interface Reset reset;
     interface Reset slowReset;
 endinterface
@@ -85,6 +84,7 @@ endinterface
 (* always_enabled *)
 interface ImageonSensorControl;
     method Action framestart(Bit#(1) v);
+    method Bit#(32) get_debugind();
     method Action sframe(Bit#(1) v);
     interface Reset reset;
     interface Reset hdmiReset;
@@ -442,15 +442,17 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     Reset defaultReset <- exposeCurrentReset();
 
     Reg#(TState)   tstate <- mkReg(TIdle);
-    Reg#(Bit#(32)) debugind_value <- mkReg(0);
     Reg#(Bit#(10)) videodata <- mkReg(0);
     Reg#(Bit#(1))  framestart_reg <- mkReg(0);
     Wire#(Bit#(1)) sframe_wire <- mkDWire(0);
     Wire#(Bit#(1)) fs2 <- mkDWire(0);
+    Wire#(Bit#(1)) framestart_wire <- mkDWire(0);
     Reg#(Bit#(16)) delay_limit <- mkReg(0);
     Reg#(Bit#(16)) frame_delay <- mkReg(0);
     Reg#(Bit#(1))  frame_run <- mkReg(0);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
+    Reg#(Bit#(32)) diff <- mkReg(0);
+    Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     
     rule tcalc;
         let tc = tcounter - 1;
@@ -486,18 +488,33 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
         if (frame_run == 1 && frame_delay == delay_limit -1 )
             begin
             fr = 0;
-            //fs2 <= 1;
+            fs2 <= 1;
             end
         frame_delay <= fd;
         frame_run <= fr;
     endrule
 
+    rule update_debug;
+        let dval = diff;
+        dval = {diff[29:0], framestart_wire, fs2};
+        if (diff[17] == 1)
+            begin
+            debugind_value <= diff;
+            dval = 0;
+            end
+        diff <= dval;
+    endrule
+
     interface ImageonSensorControl in;
-    method Action framestart(Bit#(1) v);
-            fs2 <= v;
-	endmethod
 	method Action sframe(Bit#(1) v);
             sframe_wire <= v;
+	endmethod
+        method Bit#(32) get_debugind();
+            return debugind_value;
+	endmethod
+        method Action framestart(Bit#(1) v);
+            framestart_wire <= v;
+            framestart_reg <= v;
 	endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
@@ -507,8 +524,9 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
 	    return 1;
 	endmethod
     endinterface: out
+
     method Bit#(1)get_framesync();
-        return fs2;
+        return framestart_wire;
     endmethod
 endmodule
 
@@ -525,14 +543,10 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
     Reg#(Bit#(1))  active_video_reg <- mkReg(0);
     Reg#(Bit#(16)) vsync_count <- mkReg(0);
     Reg#(Bit#(16)) hsync_count <- mkReg(0);
-    Reg#(Bit#(32)) debugind_value <- mkReg(0);
-    Reg#(Bit#(32)) diff <- mkReg(0);
     Reg#(Bit#(10)) videodata <- mkReg(0);
     Reg#(Bit#(1))  framestart_reg <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(1))  framestart_new <- mkReg(0);
-    Reg#(Bit#(1))  fs2 <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
-    Reg#(Bit#(1))  framestart_wire <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
     Reg#(Bit#(16)) delay_limit <- mkReg(0);
     Reg#(Bit#(16)) frame_delay <- mkReg(0);
     Reg#(Bit#(1))  frame_run <- mkReg(0);
@@ -606,25 +620,13 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
         videodata <= dataGearbox.first[0];
     endrule
 
-    rule update_debug;
-        let dval = diff;
-        dval = {diff[29:0], framestart_wire, fs2};
-        if (diff[17] == 1)
-            begin
-            debugind_value <= diff;
-            dval = 0;
-            end
-        diff <= dval;
-    endrule
-
-    rule update_fs2;
-            framestart_wire <= sensor.get_framesync();
-            framestart_reg <= sensor.get_framesync();
-            framestart_delay_reg <= framestart_reg;
-	    Vector#(4, Bit#(1)) in = replicate(0);
-	    // zero'th element shifted out first
-	    in[1] = framestart_delay_reg;
-	    syncGearbox.enq(in);
+    rule receive_framestart;
+        framestart_reg <= sensor.get_framesync();
+        framestart_delay_reg <= framestart_reg;
+	Vector#(4, Bit#(1)) in = replicate(0);
+	// zero'th element shifted out first
+	in[1] = framestart_delay_reg;
+	syncGearbox.enq(in);
     endrule
 
     interface ImageonSensorData in;
@@ -632,9 +634,6 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
 	    // least signifcant 10 bits shifted out first
 	    Vector#(4, Bit#(10)) in = unpack(v);
 	    dataGearbox.enq(in);
-	endmethod
-        method Bit#(32) get_debugind();
-            return debugind_value;
 	endmethod
 	interface Reset reset = defaultReset;
 	interface Reset slowReset = imageon_reset;

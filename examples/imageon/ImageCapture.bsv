@@ -122,7 +122,7 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
 
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, hdmi_clock, hdmi_reset, defaultClock);
     rule copydebugval;
-        debugind_value <= xsviFromSensor.in.get_debugind();
+        debugind_value <= fromSensor.in.get_debugind();
     endrule
 
     AxiDMA dma <- mkAxiDMA(indication.dmaIndication);
