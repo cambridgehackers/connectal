@@ -24,8 +24,8 @@ include $(BUILD_EXECUTABLE)
 linuxmakefile_template='''
 CFLAGS = -DMMAP_HW -O -g -I.
 
-testecho: %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/echo/test%(classname)s.cpp
-	g++ $(CFLAGS) -o %(classname)s %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/echo/test%(classname)s.cpp
+test%(classname)s: %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/%(classname)s/test%(classname)s.cpp
+	g++ $(CFLAGS) -o %(classname)s %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/%(classname)s/test%(classname)s.cpp
 '''
 
 

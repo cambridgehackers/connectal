@@ -162,6 +162,7 @@ if __name__=='__main__':
 
     applicationmkname = os.path.join(project_dir, 'jni', 'Application.mk')
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
+    linuxmkname = os.path.join(project_dir, 'jni', 'Makefile')
     hname = os.path.join(project_dir, 'jni', '%s.h' % namespace.interface)
     cppname = os.path.join(project_dir, 'jni', '%s.cpp' % namespace.interface)
     topverilogname = os.path.join(project_dir, 'sources', 'top.v')
@@ -294,6 +295,7 @@ if __name__=='__main__':
         print 'Writing Android.mk', androidmkname
         print 'Writing Application.mk', applicationmkname
         topRequestIfc.writeAndroidMk(androidmkname, applicationmkname)
+        topRequestIfc.writeLinuxMk(linuxmkname)
     else:
         print 'No %s interface found' % topRequestIfcName
     h.close()
