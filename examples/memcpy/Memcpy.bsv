@@ -68,13 +68,13 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
 
    // dma read channel 0 is reserved for memcpy read path
-   ReadChan dma_stream_read_chan = dma.read.readChanels[0];
+   ReadChan dma_stream_read_chan = dma.read.readChannels[0];
 
    // dma write channel 0 is reserved for memcpy write path
    WriteChan dma_stream_write_chan = dma.write.writeChannels[0];
    
    // dma read channel 1 is reserved for debug read path
-   ReadChan dma_word_read_chan = dma.read.readChanels[1];
+   ReadChan dma_word_read_chan = dma.read.readChannels[1];
 
    // dma write channel 1 is reserved for Bluescope output
    WriteChan dma_debug_write_chan = dma.write.writeChannels[1];

@@ -1,4 +1,4 @@
-#include "Memread.h"
+#include "Memwrite.h"
 #include <stdio.h>
 #include <sys/mman.h>
 #include <string.h>
@@ -8,8 +8,8 @@
 
 CoreRequest *device = 0;
 DMARequest *dma = 0;
-PortalAlloc srcAlloc;
-unsigned int *srcBuffer = 0;
+PortalAlloc dstAlloc;
+unsigned int *dstBuffer = 0;
 
 int numWords = 16 << 8;
 size_t test_sz  = numWords*sizeof(unsigned int);
@@ -38,62 +38,62 @@ class TestDMAIndication : public DMAIndication
 
 class TestCoreIndication : public CoreIndication
 {
-  unsigned int rDataCnt;
-  virtual void readReq(unsigned long v){
-    fprintf(stderr, "Core::readReq %lx\n", v);
+  virtual void writeReq(unsigned long v){
+    fprintf(stderr, "Core::writeReq %lx\n", v);
   }
   virtual void started(unsigned long words){
     fprintf(stderr, "Core::started: words=%lx\n", words);
   }
-  virtual void rData ( unsigned long long v ){
-    fprintf(stderr, "rData (%08x): ", rDataCnt++);
-    dump("", (char*)&v, sizeof(v));
+  virtual void writeDone ( unsigned long srcGen ){
+    fprintf(stderr, "Core::writeDone (%08x): ", srcGen);
+    unsigned int sg = 0;
+    bool mismatch = false;
+    for (int i = 0; i < numWords; i++){
+      mismatch |= (dstBuffer[i] != sg++);
+    }
+    fprintf(stderr, "Core::writeDone mismatch=%d\n", mismatch);
+    
   }
-  virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
-    fprintf(stderr, "Core::reportStateDbg: streamRdCnt=%08x dataMismatch=%d\n", streamRdCnt, dataMismatch);
+  virtual void reportStateDbg(unsigned long streamWrCnt, unsigned long srcGen){
+    fprintf(stderr, "Core::reportStateDbg: streamWrCnt=%08x srcGen=%d\n", streamWrCnt, srcGen);
   }  
-public:
-  TestCoreIndication()
-    : rDataCnt(0){}
 };
 
 int main(int argc, const char **argv)
 {
-  unsigned int srcGen = 0;
-
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
   device = CoreRequest::createCoreRequest(new TestCoreIndication);
   dma = DMARequest::createDMARequest(new TestDMAIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  PortalMemory::alloc(alloc_sz, &srcAlloc);
-  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc.fd, 0);
+  PortalMemory::alloc(alloc_sz, &dstAlloc);
+  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.fd, 0);
 
   pthread_t tid;
-  fprintf(stderr, "Main::creating exec thread\n");
+  fprintf(stderr, "Main::creating exec thwrite\n");
   if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thread\n");
+   fprintf(stderr, "error creating exec thwrite\n");
    exit(1);
   }
 
-  unsigned int ref_srcAlloc = dma->reference(&srcAlloc);
+  unsigned int ref_dstAlloc = dma->reference(&dstAlloc);
 
   for (int i = 0; i < numWords; i++){
-    srcBuffer[i] = srcGen++;
+    dstBuffer[i] = 0xDEADBEEF;
   }
     
-  PortalMemory::dCacheFlushInval(&srcAlloc);
+  PortalMemory::dCacheFlushInval(&dstAlloc);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
-  // read channel 0 is read source
-  dma->configReadChan(0, ref_srcAlloc, 16);
+  // write channel 0 is write source
+  dma->configWriteChan(0, ref_dstAlloc, 16);
   sleep(2);
 
-  fprintf(stderr, "Main::starting read %08x\n", numWords);
-  device->startRead(numWords);
+  fprintf(stderr, "Main::starting write %08x\n", numWords);
+  device->startWrite(numWords);
 
   while(1){
-    //dma->getReadStateDbg();
+    //dma->getWriteStateDbg();
     device->getStateDbg();
     sleep(1);
   }

@@ -27,62 +27,59 @@ import AxiClientServer::*;
 import AxiDMA::*;
 
 interface CoreRequest;
-   method Action startRead(Bit#(32) numWords);
+   method Action startWrite(Bit#(32) numWords);
    method Action getStateDbg();   
 endinterface
 
 interface CoreIndication;
    method Action started(Bit#(32) numWords);
-   method Action rData(Bit#(64) v);
-   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) dataMismatch);
-   method Action readReq(Bit#(32) v);
+   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) srcGen);
+   method Action writeReq(Bit#(32) v);
+   method Action writeDone(Bit#(32) v);
 endinterface
 
-interface MemreadRequest;
+interface MemwriteRequest;
    interface Axi3Client#(32,64,8,6) m_axi;
    interface CoreRequest coreRequest;
    interface DMARequest dmaRequest;
 endinterface
 
-interface MemreadIndication;
+interface MemwriteIndication;
    interface CoreIndication coreIndication;
    interface DMAIndication dmaIndication;
 endinterface
 
-module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
+module mkMemwriteRequest#(MemwriteIndication indication)(MemwriteRequest);
 
    AxiDMA                 dma <- mkAxiDMA(indication.dmaIndication);
-   Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
-   Reg#(Bool)    dataMismatch <- mkReg(False);  
+   Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
 
-   // dma read channel 0 is reserved for memread read path
-   ReadChan dma_stream_read_chan = dma.read.readChannels[0];
+   // dma write channel 0 is reserved for memwrite write path
+   WriteChan dma_stream_write_chan = dma.write.writeChannels[0];
 
-   rule consume;
-      let v <- dma_stream_read_chan.readData.get;
-      let misMatch0 = v[31:0] != srcGen;
-      let misMatch1 = v[63:32] != srcGen+1;
-      dataMismatch <= dataMismatch || misMatch0 || misMatch1;
+   rule produce;
+      dma_stream_write_chan.writeData.put({srcGen+1,srcGen});
       srcGen <= srcGen+2;
-      // indication.coreIndication.rData(v);
    endrule
    
-   rule readReq(streamRdCnt > 0);
-      streamRdCnt <= streamRdCnt-16;
-      dma_stream_read_chan.readReq.put(?);
-      if (streamRdCnt[5:0] == 6'b0)
-	 indication.coreIndication.readReq(streamRdCnt);
+   rule writeReq(streamWrCnt > 0);
+      streamWrCnt <= streamWrCnt-16;
+      dma_stream_write_chan.writeReq.put(?);
+      if (streamWrCnt[5:0] == 6'b0)
+	 indication.coreIndication.writeReq(streamWrCnt);
+      if (streamWrCnt == 16)
+	 indication.coreIndication.writeDone(srcGen);
    endrule
 
    interface CoreRequest coreRequest;
-      method Action startRead(Bit#(32) numWords) if (streamRdCnt == 0);
-	 streamRdCnt <= numWords;
+      method Action startWrite(Bit#(32) numWords) if (streamWrCnt == 0);
+	 streamWrCnt <= numWords;
 	 indication.coreIndication.started(numWords);
       endmethod
       
       method Action getStateDbg();
-	 indication.coreIndication.reportStateDbg(streamRdCnt, dataMismatch ? 32'd1 : 32'd0);
+	 indication.coreIndication.reportStateDbg(streamWrCnt, srcGen);
       endmethod
    endinterface
    interface Axi3Client m_axi = dma.m_axi;

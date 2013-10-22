@@ -79,7 +79,7 @@ endinterface
 
 interface AxiDMARead;
    method Action configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);
-   interface Vector#(NumDmaChannels, ReadChan) readChanels;
+   interface Vector#(NumDmaChannels, ReadChan) readChannels;
    method DmaDbgRec dbg();
 endinterface
 
@@ -189,7 +189,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
       method Action configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);
 	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pa), burstLen:bsz};
       endmethod
-      interface readChanels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
+      interface readChannels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
       method DmaDbgRec dbg();
 	 return DmaDbgRec{x:addrReg, y:zeroExtend(burstReg), z:zeroExtend(pack(readVReg(reqOutstanding))), w:zeroExtend(pack(stateReg))};
       endmethod
@@ -247,6 +247,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
       else
 	 begin
 	    stateReg <= Idle;
+	    sgl.dropCtx;
 	 end
    endrule
    
