@@ -957,6 +957,8 @@ class ImageonVita:
      wire [31:0] imageon_host_trigger_cnt_trigger0low;
      wire vita_clk_pll_o;
      wire vita_clk_pll_t;
+     wire [2:0] vita_trigger_o;
+     wire vita_reset_n_o;
 
      /* IIC */
      wire fmc_imageon_iic_0_scl_T;
@@ -1107,6 +1109,15 @@ class ImageonVita:
          .O(io_vita_clk_pll),
          .I(vita_clk_pll_o),
          .T(vita_clk_pll_t));
+
+      OBUFT OBUFT_vita_trigger0 (
+         .O(io_vita_trigger[0]), .I(vita_trigger_o[0]), .T(imageon_host_oe));
+      OBUFT OBUFT_vita_trigger1 (
+         .O(io_vita_trigger[1]), .I(vita_trigger_o[1]), .T(imageon_host_oe));
+      OBUFT OBUFT_vita_trigger2 (
+         .O(io_vita_trigger[2]), .I(vita_trigger_o[2]), .T(imageon_host_oe));
+   OBUFT OBUFT_vita_reset_n (
+      .O(io_vita_reset_n), .I(vita_reset_n_o), .T(imageon_host_oe));
 '''
     def bus_assignments(self,busname,t,params):
         return '''
@@ -1116,9 +1127,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
   (
     .clk200(imageon_clk200),
     .clk(imageon_clk),
-    .reset(imageon_reset),
-    .oe_n(imageon_host_oe), /* input */
-    /* HOST Interface - ISERDES */
     .host_iserdes_reset(imageon_host_iserdes_reset),
     .host_iserdes_auto_align(imageon_host_iserdes_auto_align),
     .host_iserdes_align_start(imageon_host_iserdes_align_start),
@@ -1132,16 +1140,14 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .host_triggen_default_freq(imageon_host_trigger_default_freq),
     .host_triggen_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
     .host_triggen_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
-    /* I/O pins */
-    .io_vita_reset_n(io_vita_reset_n),
-    .io_vita_trigger(io_vita_trigger),
+    .vita_reset_n_o(vita_reset_n_o),
+    .vita_trigger_o(vita_trigger_o),
     .io_vita_clk_out_p(io_vita_clk_out_p),
     .io_vita_clk_out_n(io_vita_clk_out_n),
     .io_vita_sync_p(io_vita_sync_p),
     .io_vita_sync_n(io_vita_sync_n),
     .io_vita_data_p(io_vita_data_p),
     .io_vita_data_n(io_vita_data_n),
-    /* XSVI Port */
     .FIFO_EMPTY_o(imageon_xsvi_raw_empty),
     .FIFO_DATAOUT_o(imageon_xsvi_raw_data)
 );
