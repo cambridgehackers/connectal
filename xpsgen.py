@@ -968,8 +968,6 @@ class ImageonVita:
      wire [49:0] imageon_xsvi_raw_data;
      wire imageon_xsvi_raw_empty;
      wire imageon_xsvi_sframe;
-     wire [31:0] debugreq_value;
-     wire [31:0] debugind_value;
 '''
     def ps7_bus_port_map(self,busname,t,params):
         return '''
@@ -982,28 +980,25 @@ class ImageonVita:
 '''
     def dut_bus_port_map(self, busname,t,params):
         return '''
-    .imageons_host_oe(imageon_host_oe),
-    .imageons_serdes_reset(imageon_host_iserdes_reset),
-    .imageons_serdes_auto_align(imageon_host_iserdes_auto_align),
-    .imageons_serdes_align_start(imageon_host_iserdes_align_start),
-    .imageons_serdes_fifo_enable(imageon_host_iserdes_fifo_enable),
-    .imageons_serdes_manual_tap(imageon_host_iserdes_manual_tap),
-    .imageons_serdes_training(imageon_host_iserdes_training),
-    .imageons_serdes_iserdes_clk_ready_ready(imageon_host_iserdes_clk_ready),
-    .imageons_serdes_iserdes_align_busy_busy(imageon_host_iserdes_align_busy),
-    .imageons_serdes_iserdes_aligned_aligned(imageon_host_iserdes_aligned),
-    .imageons_decoder_enable(imageon_host_decoder_enable),
-    .imageons_trigger_enable(imageon_host_trigger_enable),
-    .imageons_trigger_default_freq(imageon_host_trigger_default_freq),
-    .imageons_trigger_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
-    .imageons_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
+    .imageon_host_oe(imageon_host_oe),
+    .imageon_serdes_reset(imageon_host_iserdes_reset),
+    .imageon_serdes_auto_align(imageon_host_iserdes_auto_align),
+    .imageon_serdes_align_start(imageon_host_iserdes_align_start),
+    .imageon_serdes_fifo_enable(imageon_host_iserdes_fifo_enable),
+    .imageon_serdes_manual_tap(imageon_host_iserdes_manual_tap),
+    .imageon_serdes_training(imageon_host_iserdes_training),
+    .imageon_serdes_iserdes_clk_ready_ready(imageon_host_iserdes_clk_ready),
+    .imageon_serdes_iserdes_align_busy_busy(imageon_host_iserdes_align_busy),
+    .imageon_serdes_iserdes_aligned_aligned(imageon_host_iserdes_aligned),
+    .imageon_decoder_enable(imageon_host_decoder_enable),
+    .imageon_trigger_enable(imageon_host_trigger_enable),
+    .imageon_trigger_default_freq(imageon_host_trigger_default_freq),
+    .imageon_trigger_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
+    .imageon_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
 
     .sensor_sframe_v(imageon_xsvi_sframe),
     .sensor_raw_data_v(imageon_xsvi_raw_data),
     .sensor_raw_empty_v(imageon_xsvi_raw_empty),
-
-    .imageon_get_debugreq(debugreq_value),
-    .imageon_set_debugind_v(debugind_value),
     /* SPI port */
     .CLK_spi_invertedClock(io_vita_spi_sclk),
     .spi_sel_n(io_vita_spi_ssel_n),

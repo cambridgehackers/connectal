@@ -86,7 +86,7 @@ interface ImageonSensorControl;
 endinterface
 
 (* always_enabled *)
-interface ImageonVita;
+interface ImageonFast;
     interface ImageonSyncGen syncgen;
     method Bit#(32) get_debugreq();
     method Action set_debugind(Bit#(32) v);
@@ -94,7 +94,7 @@ interface ImageonVita;
 endinterface
 
 (* always_enabled *)
-interface ImageonVSensor;
+interface ImageonVita;
     method Bit#(1) host_oe();
     interface ImageonSerdes serdes;
     interface ImageonTrigger trigger;
@@ -142,8 +142,8 @@ interface ImageonControl;
 endinterface
 
 interface ImageonVitaController;
-    interface ImageonVita host;
-    interface ImageonVSensor hosts;
+    interface ImageonFast host;
+    interface ImageonVita hosts;
     interface ImageonControl control;
 endinterface
 
@@ -186,7 +186,7 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
     Reg#(Bit#(32)) debugreq_value <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(32)) debugind_value <- mkReg(0);
 
-    interface ImageonVita host;
+    interface ImageonFast host;
 	interface ImageonSyncGen syncgen;
 	    method Bit#(16) hactive();
 		return syncgen_hactive_reg;
@@ -222,7 +222,7 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
         interface Reset reset = defaultReset;
     endinterface: host
 
-    interface ImageonVSensor hosts;
+    interface ImageonVita hosts;
 	method Bit#(1) host_oe();
 	    return host_oe_reg;
 	endmethod
@@ -428,7 +428,7 @@ endinterface
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
-module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)(ImageonSensor);
+module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -591,7 +591,7 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVSensor host)
     endmethod
 endmodule
 
-module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, ImageonVita host, ImageonSensor sensor)(ImageonXsviFromSensor);
+module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, ImageonFast host, ImageonSensor sensor)(ImageonXsviFromSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 

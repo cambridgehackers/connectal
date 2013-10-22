@@ -93,7 +93,6 @@ interface ImageCaptureRequest;
    interface CoreRequest coreRequest;
    interface BlueScopeRequest bsRequest;
    interface ImageonVita imageon;
-   interface ImageonVSensor imageons;
    interface ImageonSensorControl sensor;
    interface HDMI hdmi;
    interface SpiPins spi;
@@ -255,7 +254,6 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
         control.set_debugreq(v);
     endmethod
     method Action get_debugind();
-        //indication.coreIndication.debugind(control.get_debugind());
         indication.coreIndication.debugind(debugind_value);
     endmethod
     method Action put_spi_request(Bit#(32) v);
@@ -264,8 +262,7 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
 
     endinterface
    interface BlueScopeRequest bsRequest = bsi.requestIfc;
-   interface ImageonVita imageon = imageon_vita_clock_binder;
-   interface ImageonVSensor imageons = imageon_vitas_clock_binder;
+   interface ImageonVita imageon = imageon_vitas_clock_binder;
    interface ImageonSensorControl sensor = fromSensor.in;
    interface HDMI hdmi = hdmiOut.hdmi;
    interface SpiPins spi = spiController.pins;
