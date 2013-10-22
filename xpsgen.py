@@ -952,13 +952,12 @@ class ImageonVita:
      wire imageon_host_decoder_enable;
     /* HOST Interface - Trigger Generator */
      wire [2:0] imageon_host_trigger_enable;
-     wire [31:0] imageon_host_trigger_default_freq;
-     wire [31:0] imageon_host_trigger_cnt_trigger0high;
-     wire [31:0] imageon_host_trigger_cnt_trigger0low;
      wire vita_clk_pll_o;
      wire vita_clk_pll_t;
      wire [2:0] vita_trigger_o;
      wire vita_reset_n_o;
+     wire [4:0] vita_data_p;
+     wire [4:0] vita_data_n;
 
      /* IIC */
      wire fmc_imageon_iic_0_scl_T;
@@ -994,9 +993,6 @@ class ImageonVita:
     .imageon_serdes_iserdes_aligned_aligned(imageon_host_iserdes_aligned),
     .imageon_decoder_enable(imageon_host_decoder_enable),
     .imageon_trigger_enable(imageon_host_trigger_enable),
-    .imageon_trigger_default_freq(imageon_host_trigger_default_freq),
-    .imageon_trigger_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
-    .imageon_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
 
     .sensor_sframe_v(imageon_xsvi_sframe),
     .sensor_raw_data_v(imageon_xsvi_raw_data),
@@ -1124,32 +1120,38 @@ class ImageonVita:
     def bus_assignments(self,busname,t,params):
         return '''
     assign imageon_clk200 = processing_system7_1_fclk_clk3;
+    assign vita_data_p[4] = io_vita_data_p[3];
+    assign vita_data_p[3] = io_vita_data_p[2];
+    assign vita_data_p[2] = io_vita_data_p[1];
+    assign vita_data_p[1] = io_vita_data_p[0];
+    assign vita_data_p[0] = io_vita_sync_p;
 
-fmc_imageon_vita_core fmc_imageon_vita_core_1
+    assign vita_data_n[4] = io_vita_data_n[3];
+    assign vita_data_n[3] = io_vita_data_n[2];
+    assign vita_data_n[2] = io_vita_data_n[1];
+    assign vita_data_n[1] = io_vita_data_n[0];
+    assign vita_data_n[0] = io_vita_sync_n;
+
+iserdes_interface iserdes_interface_1
   (
     .clk200(imageon_clk200),
-    .clk(imageon_clk),
-    .host_iserdes_reset(imageon_host_iserdes_reset),
-    .host_iserdes_auto_align(imageon_host_iserdes_auto_align),
-    .host_iserdes_align_start(imageon_host_iserdes_align_start),
-    .host_iserdes_fifo_enable(imageon_host_iserdes_fifo_enable),
-    .host_iserdes_manual_tap(imageon_host_iserdes_manual_tap),
-    .host_iserdes_training(imageon_host_iserdes_training),
-    .host_iserdes_clk_ready(imageon_host_iserdes_clk_ready),
-    .host_iserdes_align_busy(imageon_host_iserdes_align_busy),
-    .host_iserdes_aligned(imageon_host_iserdes_aligned),
-    .host_decoder_enable(imageon_host_decoder_enable),
-    .host_triggen_default_freq(imageon_host_trigger_default_freq),
-    .host_triggen_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
-    .host_triggen_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
-    .io_vita_clk_out_p(io_vita_clk_out_p),
-    .io_vita_clk_out_n(io_vita_clk_out_n),
-    .io_vita_sync_p(io_vita_sync_p),
-    .io_vita_sync_n(io_vita_sync_n),
-    .io_vita_data_p(io_vita_data_p),
-    .io_vita_data_n(io_vita_data_n),
-    .FIFO_EMPTY_o(imageon_xsvi_raw_empty),
-    .FIFO_DATAOUT_o(imageon_xsvi_raw_data)
+    .clock(imageon_clk),
+    .reset(imageon_host_iserdes_reset),
+    .autoalign(imageon_host_iserdes_auto_align),
+    .align_start(imageon_host_iserdes_align_start),
+    .fifo_en(imageon_host_iserdes_fifo_enable),
+    .manual_tap(imageon_host_iserdes_manual_tap),
+    .training(imageon_host_iserdes_training),
+    .clk_rdy(imageon_host_iserdes_clk_ready),
+    .align_busy(imageon_host_iserdes_align_busy),
+    .aligned(imageon_host_iserdes_aligned),
+    .fifo_rden(imageon_host_decoder_enable),
+    .hs_in_clk(io_vita_clk_out_p),
+    .hs_in_clkb(io_vita_clk_out_n),
+    .sdatap(vita_data_p),
+    .sdatan(vita_data_n),
+    .FIFO_EMPTY(imageon_xsvi_raw_empty),
+    .FIFO_DATAOUT(imageon_xsvi_raw_data)
 );
  '''
     def pinout(self, board):
