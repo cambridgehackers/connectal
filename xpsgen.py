@@ -949,19 +949,12 @@ class ImageonVita:
      wire imageon_host_iserdes_align_busy;
      wire imageon_host_iserdes_aligned;
     /* HOST Interface - Sync Channel Decoder */
-     wire imageon_host_decoder_reset;
      wire imageon_host_decoder_enable;
-     wire [9:0] imageon_host_decoder_code_ls;
-     wire [9:0] imageon_host_decoder_code_le;
-     wire [9:0] imageon_host_decoder_code_fs;
-     wire [9:0] imageon_host_decoder_code_tr;
-     wire imageon_host_decoder_frame_start;
     /* HOST Interface - Trigger Generator */
      wire [2:0] imageon_host_trigger_enable;
      wire [31:0] imageon_host_trigger_default_freq;
      wire [31:0] imageon_host_trigger_cnt_trigger0high;
      wire [31:0] imageon_host_trigger_cnt_trigger0low;
-     wire [15:0] imageon_host_syncgen_delay;
      wire vita_clk_pll_o;
      wire vita_clk_pll_t;
 
@@ -999,17 +992,11 @@ class ImageonVita:
     .imageon_serdes_iserdes_clk_ready_ready(imageon_host_iserdes_clk_ready),
     .imageon_serdes_iserdes_align_busy_busy(imageon_host_iserdes_align_busy),
     .imageon_serdes_iserdes_aligned_aligned(imageon_host_iserdes_aligned),
-    .imageon_decoder_reset(imageon_host_decoder_reset),
     .imageon_decoder_enable(imageon_host_decoder_enable),
-    .imageon_decoder_code_ls(imageon_host_decoder_code_ls),
-    .imageon_decoder_code_le(imageon_host_decoder_code_le),
-    .imageon_decoder_code_fs(imageon_host_decoder_code_fs),
-    .imageon_decoder_frame_start_start(imageon_host_decoder_frame_start),
     .imageons_trigger_enable(imageon_host_trigger_enable),
     .imageons_trigger_default_freq(imageon_host_trigger_default_freq),
     .imageons_trigger_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
     .imageons_trigger_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
-    .imageons_syncgen_delay(imageon_host_syncgen_delay),
 
     .sensor_sframe_v(imageon_xsvi_sframe),
     .sensor_raw_data_v(imageon_xsvi_raw_data),
@@ -1146,18 +1133,10 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .host_iserdes_clk_ready(imageon_host_iserdes_clk_ready),
     .host_iserdes_align_busy(imageon_host_iserdes_align_busy),
     .host_iserdes_aligned(imageon_host_iserdes_aligned),
-    /* HOST Interface - Sync Channel Decoder */
     .host_decoder_enable(imageon_host_decoder_enable),
-    .host_decoder_code_ls(imageon_host_decoder_code_ls),
-    .host_decoder_code_le(imageon_host_decoder_code_le),
-    .host_decoder_code_fs(imageon_host_decoder_code_fs),
-    .host_decoder_frame_start(imageon_host_decoder_frame_start),
-    /* HOST Interface - Trigger Generator */
     .host_triggen_default_freq(imageon_host_trigger_default_freq),
     .host_triggen_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
     .host_triggen_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
-    /* HOST Interface - Sync Generator */
-    .host_syncgen_delay(imageon_host_syncgen_delay),
     /* I/O pins */
     .io_vita_reset_n(io_vita_reset_n),
     .io_vita_trigger(io_vita_trigger),
@@ -1168,7 +1147,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .io_vita_data_p(io_vita_data_p),
     .io_vita_data_n(io_vita_data_n),
     /* XSVI Port */
-    .sframe(imageon_xsvi_sframe),
     .FIFO_EMPTY_o(imageon_xsvi_raw_empty),
     .FIFO_DATAOUT_o(imageon_xsvi_raw_data)
 );
