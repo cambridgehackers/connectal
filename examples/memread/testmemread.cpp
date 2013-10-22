@@ -11,7 +11,7 @@ DMARequest *dma = 0;
 PortalAlloc srcAlloc;
 unsigned int *srcBuffer = 0;
 
-int numWords = 16 << 6;
+int numWords = 16 << 8;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 
@@ -38,6 +38,7 @@ class TestDMAIndication : public DMAIndication
 
 class TestCoreIndication : public CoreIndication
 {
+  unsigned int rDataCnt;
   virtual void readReq(unsigned long v){
     fprintf(stderr, "Core::readReq %lx\n", v);
   }
@@ -45,11 +46,15 @@ class TestCoreIndication : public CoreIndication
     fprintf(stderr, "Core::started: words=%lx\n", words);
   }
   virtual void rData ( unsigned long long v ){
-    dump("rData: ", (char*)&v, sizeof(v));
+    fprintf(stderr, "rData (%08x): ", rDataCnt++);
+    dump("", (char*)&v, sizeof(v));
   }
-  virtual void reportStateDbg(unsigned long streamRdCnt){
-    fprintf(stderr, "Core::reportStateDbg: streamRdCnt=%08x\n", streamRdCnt);
+  virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
+    fprintf(stderr, "Core::reportStateDbg: streamRdCnt=%08x dataMismatch=%d\n", streamRdCnt, dataMismatch);
   }  
+public:
+  TestCoreIndication()
+    : rDataCnt(0){}
 };
 
 int main(int argc, const char **argv)
@@ -82,15 +87,14 @@ int main(int argc, const char **argv)
 
   // read channel 0 is read source
   dma->configReadChan(0, ref_srcAlloc, 16);
+  sleep(2);
 
-  device->getStateDbg();
-  sleep(1);
-
-  fprintf(stderr, "Main::starting read\n");
+  fprintf(stderr, "Main::starting read %d\n", numWords);
   device->startRead(numWords);
 
   while(1){
-    dma->getReadStateDbg();
+    //dma->getReadStateDbg();
+    device->getStateDbg();
     sleep(1);
   }
 }

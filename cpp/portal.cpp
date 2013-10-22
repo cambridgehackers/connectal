@@ -333,7 +333,7 @@ void* portalExec(void* __x)
 	volatile unsigned int int_src = *(instance->ind_reg_base+0x0);
 	volatile unsigned int int_en  = *(instance->ind_reg_base+0x1);
 	volatile unsigned int queue_status = *(instance->ind_reg_base+0x8);
-	//if(0)
+	if(0)
 	fprintf(stderr, "(%d) about to receive messages %08x %08x %08x\n", i, int_src, int_en, queue_status);
 
 

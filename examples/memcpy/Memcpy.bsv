@@ -110,6 +110,7 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
       dataMismatch <= dataMismatch || misMatch0 || misMatch1;
       dma_stream_write_chan.writeData.put(v);
       bsi.dataIn(v,v);
+      srcGen <= srcGen+2;
       // indication.coreIndication.rData(v);
    endrule
    

@@ -49,6 +49,7 @@ interface SGListManager;
    method Action sglist(Bit#(32) off, Bit#(32) addr, Bit#(32) len);
    method Action loadCtx(SGListId id);
    method ActionValue#(Bit#(32)) nextAddr(Bit#(4) burstLen);
+   method Action dropCtx();
 endinterface
 
 module mkSGListManager(SGListManager);
@@ -91,5 +92,9 @@ module mkSGListManager(SGListManager);
 	 $display("going off the end of SG list");
       return rv.address + lp.offset;
    endmethod
- 
+   
+   method Action dropCtx();
+      let rv <- listMem.portA.response.get;
+      loadReqs.deq;
+   endmethod
 endmodule

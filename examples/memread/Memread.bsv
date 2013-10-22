@@ -34,7 +34,7 @@ endinterface
 interface CoreIndication;
    method Action started(Bit#(32) numWords);
    method Action rData(Bit#(64) v);
-   method Action reportStateDbg(Bit#(32) streamRdCnt);
+   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) dataMismatch);
    method Action readReq(Bit#(32) v);
 endinterface
 
@@ -53,19 +53,26 @@ module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
 
    AxiDMA                 dma <- mkAxiDMA(indication.dmaIndication);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
+   Reg#(Bool)    dataMismatch <- mkReg(False);  
+   Reg#(Bit#(32))      srcGen <- mkReg(0);
 
    // dma read channel 0 is reserved for memread read path
    ReadChan dma_stream_read_chan = dma.read.readChanels[0];
 
    rule consume;
       let v <- dma_stream_read_chan.readData.get;
-      indication.coreIndication.rData(v);
+      let misMatch0 = v[31:0] != srcGen;
+      let misMatch1 = v[63:32] != srcGen+1;
+      dataMismatch <= dataMismatch || misMatch0 || misMatch1;
+      srcGen <= srcGen+2;
+      // indication.coreIndication.rData(v);
    endrule
    
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt-16;
       dma_stream_read_chan.readReq.put(?);
-      indication.coreIndication.readReq(streamRdCnt);
+      if (streamRdCnt[5:0] == 6'b0)
+	 indication.coreIndication.readReq(streamRdCnt);
       let x = dma.write.dbg;
    endrule
 
@@ -76,7 +83,7 @@ module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
       endmethod
       
       method Action getStateDbg();
-	 indication.coreIndication.reportStateDbg(streamRdCnt);
+	 indication.coreIndication.reportStateDbg(streamRdCnt, dataMismatch ? 32'd1 : 32'd0);
       endmethod
    endinterface
    interface Axi3Client m_axi = dma.m_axi;

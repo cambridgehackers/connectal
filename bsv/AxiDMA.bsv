@@ -177,6 +177,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
       else
 	 begin
 	    stateReg <= Idle;
+	    sgl.dropCtx;
 	 end
    endrule
    
@@ -190,7 +191,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
       endmethod
       interface readChanels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
       method DmaDbgRec dbg();
-	 return DmaDbgRec{x:addrReg, y:zeroExtend(burstReg), z:zeroExtend(activeChan), w:zeroExtend(pack(stateReg))};
+	 return DmaDbgRec{x:addrReg, y:zeroExtend(burstReg), z:zeroExtend(pack(readVReg(reqOutstanding))), w:zeroExtend(pack(stateReg))};
       endmethod
    endinterface
 
