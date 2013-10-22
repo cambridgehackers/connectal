@@ -969,6 +969,9 @@ class ImageonVita:
      wire [49:0] imageon_xsvi_raw_data;
      wire imageon_xsvi_raw_empty;
      wire imageon_xsvi_sframe;
+     wire imageon_clk_tmp;
+     wire imageon_clkdiv_c;
+     wire hsinclk_tmp_wire;
 '''
     def ps7_bus_port_map(self,busname,t,params):
         return '''
@@ -1116,6 +1119,17 @@ class ImageonVita:
          .O(io_vita_trigger[2]), .I(vita_trigger_o[2]), .T(imageon_host_oe));
    OBUFT OBUFT_vita_reset_n (
       .O(io_vita_reset_n), .I(vita_reset_n_o), .T(imageon_host_oe));
+    IDELAYCTRL u_idelayctrl(
+          .RDY(open), .REFCLK(imageon_clk200), .RST(imageon_host_iserdes_reset));
+    IBUFDS#(
+        .CAPACITANCE("DONT_CARE"), .DIFF_TERM(1),
+        .IBUF_DELAY_VALUE("0"), .IFD_DELAY_VALUE("AUTO"), .IOSTANDARD("DEFAULT"))
+        IBUFDS_inst(
+            .O(hsinclk_tmp_wire), .I(io_vita_clk_out_p), .IB(io_vita_clk_out_n));
+    BUFIO BUFIO_regional_hs_clk_in( .O(imageon_clk_tmp), .I(hsinclk_tmp_wire));
+    BUFR#(.BUFR_DIVIDE("5"))
+        BUFR_regional_hs_clk_in(
+            .O(imageon_clkdiv_c), .CE(1), .CLR(0), .I(hsinclk_tmp_wire));
 '''
     def bus_assignments(self,busname,t,params):
         return '''
@@ -1132,22 +1146,21 @@ class ImageonVita:
     assign vita_data_n[1] = io_vita_data_n[0];
     assign vita_data_n[0] = io_vita_sync_n;
 
+    assign imageon_host_iserdes_clk_ready = 1;
 iserdes_interface iserdes_interface_1
   (
-    .clk200(imageon_clk200),
     .clock(imageon_clk),
+    .clk_tmp(imageon_clk_tmp),
+    .clkdiv_c(imageon_clkdiv_c),
     .reset(imageon_host_iserdes_reset),
     .autoalign(imageon_host_iserdes_auto_align),
     .align_start(imageon_host_iserdes_align_start),
     .fifo_en(imageon_host_iserdes_fifo_enable),
     .manual_tap(imageon_host_iserdes_manual_tap),
     .training(imageon_host_iserdes_training),
-    .clk_rdy(imageon_host_iserdes_clk_ready),
     .align_busy(imageon_host_iserdes_align_busy),
     .aligned(imageon_host_iserdes_aligned),
     .fifo_rden(imageon_host_decoder_enable),
-    .hs_in_clk(io_vita_clk_out_p),
-    .hs_in_clkb(io_vita_clk_out_n),
     .sdatap(vita_data_p),
     .sdatan(vita_data_n),
     .FIFO_EMPTY(imageon_xsvi_raw_empty),
