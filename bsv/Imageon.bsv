@@ -81,6 +81,8 @@ interface ImageonSensorControl;
     method Action sframe(Bit#(1) v);
     method Action raw_data(Bit#(50) v);
     method Action raw_empty(Bit#(1) v);
+    method Bit#(3) vita_trigger();
+    method Bit#(1) vita_reset();
     interface Reset reset;
     interface Reset hdmiReset;
 endinterface
@@ -420,9 +422,8 @@ endinterface
 
 interface ImageonSensor;
     interface ImageonSensorControl in;
-    interface Get#(Bit#(1)) out;
-    method Bit#(1)get_framesync();
-    method Bit#(40)get_data();
+    method Bit#(1) get_framesync();
+    method Bit#(40) get_data();
 endinterface
 
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
@@ -438,6 +439,7 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
     Reg#(Bit#(1))  fs2 <- mkReg(0);
     Reg#(Bit#(16)) frame_delay <- mkReg(0);
     Reg#(Bit#(1))  frame_run <- mkReg(0);
+    Reg#(Bit#(32)) tperiod <- mkReg(0);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     Reg#(Bit#(32)) diff <- mkReg(0);
     Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0);
@@ -454,23 +456,28 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
     Reg#(Bit#(8)) dcount <- mkReg(0);
     
     rule tcalc;
+        let tp = tperiod - 1;
         let tc = tcounter - 1;
         let ts = tstate;
-        if (tstate == TIdle && tcounter == 0)
+        if (tperiod == 0)
             begin
-            tc = host.trigger.cnt_trigger0high();
+            tp = host.trigger.default_freq();
+            end
+        if (tstate == TIdle && tperiod == 0)
+            begin
+            tc = host.trigger.cnt_trigger0high() + 1;
             ts = TSend;
             end
         if (tstate == TSend && tcounter == 0)
             begin
-            tc = host.trigger.cnt_trigger0low();
+            tc = host.trigger.cnt_trigger0low() + 1;
             ts = TWait;
             end
         if (tstate == TWait && tcounter == 0)
             begin
             ts = TIdle;
-            tc = host.trigger.default_freq();
             end
+        tperiod  <= tp;
         tcounter  <= tc;
         tstate  <= ts;
     endrule
@@ -574,19 +581,19 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
         method Bit#(32) get_debugind();
             return debugind_value;
 	endmethod
+        method Bit#(3) vita_trigger();
+	    return {1'b0, 1'b1, pack(tstate != TSend)};
+        endmethod
+        method Bit#(1) vita_reset();
+            return ~host.serdes.reset();
+        endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
     endinterface: in
-    interface Get out;
-	method ActionValue#(Bit#(1)) get();
-	    return 1;
-	endmethod
-    endinterface: out
-
-    method Bit#(1)get_framesync();
+    method Bit#(1) get_framesync();
         return fs2;
     endmethod
-    method Bit#(40)get_data();
+    method Bit#(40) get_data();
         return dataout_reg;
     endmethod
 endmodule

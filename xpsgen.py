@@ -1001,6 +1001,8 @@ class ImageonVita:
     .sensor_sframe_v(imageon_xsvi_sframe),
     .sensor_raw_data_v(imageon_xsvi_raw_data),
     .sensor_raw_empty_v(imageon_xsvi_raw_empty),
+    .sensor_vita_reset(vita_reset_n_o),
+    .sensor_vita_trigger(vita_trigger_o),
     /* SPI port */
     .CLK_spi_invertedClock(io_vita_spi_sclk),
     .spi_sel_n(io_vita_spi_ssel_n),
@@ -1140,8 +1142,6 @@ fmc_imageon_vita_core fmc_imageon_vita_core_1
     .host_triggen_default_freq(imageon_host_trigger_default_freq),
     .host_triggen_cnt_trigger0high(imageon_host_trigger_cnt_trigger0high),
     .host_triggen_cnt_trigger0low(imageon_host_trigger_cnt_trigger0low),
-    .vita_reset_n_o(vita_reset_n_o),
-    .vita_trigger_o(vita_trigger_o),
     .io_vita_clk_out_p(io_vita_clk_out_p),
     .io_vita_clk_out_n(io_vita_clk_out_n),
     .io_vita_sync_p(io_vita_sync_p),
