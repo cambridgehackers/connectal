@@ -82,7 +82,6 @@ typedef struct {
 interface ImageonSensorControl;
     method Bit#(32) get_debugind();
     method Action raw_data(Bit#(50) v);
-    method Action raw_empty(Bit#(1) v);
     method Action delay_wren(Bit#(1) v);
     method Bit#(3) vita_trigger();
     method Bit#(1) vita_reset();
@@ -458,7 +457,6 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
     Reg#(Bit#(50)) raw_data_reg <- mkReg(0);
     Reg#(Bit#(40)) dataout_reg <- mkReg(0);
     Reg#(Bit#(50)) raw_data_delay_reg <- mkReg(0);
-    Wire#(Bit#(1)) raw_empty_wire <- mkDWire(0);
     Wire#(Bit#(1)) new_raw_empty_wire <- mkDWire(0);
     Reg#(Bit#(1)) raw_empty_reg <- mkReg(0);
     Reg#(Bit#(1)) remapkernel_reg <- mkReg(0);
@@ -537,8 +535,8 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
 
     rule update_debug;
         let dval = diff;
-        dval = {dcount, diff[21:0], raw_empty_wire, new_raw_empty_wire};
-        if (raw_empty_wire != new_raw_empty_wire)
+        dval = {dcount, diff[21:0], old_delay_wren, delay_wren_r_reg};
+        if (old_delay_wren != delay_wren_r_reg)
             begin
             dcount <= dcount + 1;
             end
@@ -604,9 +602,6 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
     interface ImageonSensorControl in;
         method Action raw_data(Bit#(50) v);
             raw_data_wire <= v;
-	endmethod
-        method Action raw_empty(Bit#(1) v);
-            raw_empty_wire <= v;
 	endmethod
         method Action delay_wren(Bit#(1) v);
             old_delay_wren <= v;

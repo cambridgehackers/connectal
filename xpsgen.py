@@ -961,7 +961,6 @@ class ImageonVita:
      wire fmc_imageon_iic_0_sda_O;
      wire fmc_imageon_iic_0_sda_I;
      wire [49:0] imageon_xsvi_raw_data;
-     wire imageon_xsvi_raw_empty;
      wire imageon_clk_tmp;
      wire imageon_clkdiv_c;
      wire hsinclk_tmp_wire;
@@ -1002,7 +1001,6 @@ class ImageonVita:
     .sensor_sampleinOTHERBIT_v(imageon_SAMPLEINOTHERBIT),
     .sensor_delay_wren_r(imageon_DELAY_WREN_r),
     .sensor_raw_data_v(imageon_xsvi_raw_data),
-    .sensor_raw_empty_v(imageon_xsvi_raw_empty),
     .sensor_vita_reset(vita_reset_n_o),
     .sensor_vita_trigger(vita_trigger_o),
     /* SPI port */
@@ -1170,7 +1168,6 @@ iserdes_interface iserdes_interface_1
     .SAMPLEINLASTBIT(imageon_SAMPLEINLASTBIT),
     .SAMPLEINOTHERBIT(imageon_SAMPLEINOTHERBIT),
     .DELAY_WREN_r(imageon_DELAY_WREN_r),
-    .FIFO_EMPTY(imageon_xsvi_raw_empty),
     .FIFO_DATAOUT(imageon_xsvi_raw_data)
 );
  '''
