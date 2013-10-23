@@ -685,21 +685,27 @@ static irqreturn_t intr_handler(int irq, void* brd)
   if (this_board->debug_level & DEBUG_PROFILE)
     this_board->interrupt_count += 1;
 
-  update_dma_buffer_status(this_board);
-
   if (this_board->debug_level & DEBUG_INTR) {
-    printk(KERN_INFO "%s_%d: interrupt!  buffer levels: %0d wr / %0d rd\n",
-           DEV_NAME, this_board->board_number, this_board->write_buffers_level, this_board->read_buffers_level);
-    printk(KERN_INFO "%s_%d:             read is%s allowed   write is%s allowed\n",
-           DEV_NAME, this_board->board_number, this_board->read_ok ? "" : " not", this_board->write_ok ? "" : " not");
-    if (this_board->write_completed)
-      printk(KERN_INFO "%s_%d:   WRITE TRANSFER COMPLETED!\n", DEV_NAME, this_board->board_number);
-    if (this_board->read_completed)
-      printk(KERN_INFO "%s_%d:   READ TRANSFER COMPLETED!\n", DEV_NAME, this_board->board_number);
-    if (this_board->read_flushed)
-      printk(KERN_INFO "%s_%d:   READ TRANSFER FLUSHED!\n", DEV_NAME, this_board->board_number);
+      printk(KERN_INFO "%s_%d: interrupt!\n",
+	     DEV_NAME, this_board->board_number);
   }
 
+  if (0) {
+    update_dma_buffer_status(this_board);
+
+    if (this_board->debug_level & DEBUG_INTR) {
+      printk(KERN_INFO "%s_%d: interrupt!  buffer levels: %0d wr / %0d rd\n",
+	     DEV_NAME, this_board->board_number, this_board->write_buffers_level, this_board->read_buffers_level);
+      printk(KERN_INFO "%s_%d:             read is%s allowed   write is%s allowed\n",
+	     DEV_NAME, this_board->board_number, this_board->read_ok ? "" : " not", this_board->write_ok ? "" : " not");
+      if (this_board->write_completed)
+	printk(KERN_INFO "%s_%d:   WRITE TRANSFER COMPLETED!\n", DEV_NAME, this_board->board_number);
+      if (this_board->read_completed)
+	printk(KERN_INFO "%s_%d:   READ TRANSFER COMPLETED!\n", DEV_NAME, this_board->board_number);
+      if (this_board->read_flushed)
+	printk(KERN_INFO "%s_%d:   READ TRANSFER FLUSHED!\n", DEV_NAME, this_board->board_number);
+    }
+  }
   wake_up_interruptible(&(this_board->intr_wq));
 
   return IRQ_HANDLED;
@@ -1518,6 +1524,15 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       info.timestamp      = this_board->timestamp;
       info.bytes_per_beat = this_board->bytes_per_beat;
       info.content_id     = this_board->content_id;
+
+      if (1) {
+	// msix info
+	printk("msix_entry[0].addr %08x %08x data %08x\n",
+	       ioread32(this_board->bar0io + (4097 << 2)),
+	       ioread32(this_board->bar0io + (4096 << 2)),
+	       ioread32(this_board->bar0io + (4098 << 2)));
+      }
+
       err = copy_to_user((void __user *)arg, &info, sizeof(tBoardInfo));
       if (err != 0)
         return -EFAULT;
@@ -1658,7 +1673,7 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       tPortalInfo info;
       long portal_csr_offset = (1 << 16);
       int i;
-      if (1) {
+      if (0) {
 	// test axi master
 	printk("testing axi master\n");
 	iowrite32(0x00000005, this_board->bar0io + (784 << 2));
@@ -1669,7 +1684,7 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
 	iowrite32(0xf007, this_board->bar0io + (782 << 2));
 	printk("axi test enabled %08x\n", ioread32(this_board->bar0io + (782 << 2)));
       }
-      if (1)
+      if (0)
       for (i = 0; i < 2; i++) {
 	void __iomem* axi_io = this_board->bar0io;
 
@@ -1689,8 +1704,14 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
 	info.fifo_status = ioread32(axi_io + portal_csr_offset + (16 << 2));
 
 	// enable axi portal
-	iowrite32(0x27beef, this_board->bar1io + (788 << 2));
+	//iowrite32(0x27beef, this_board->bar1io + (788 << 2));
 	printk("axiEnabled=%x\n", ioread32(this_board->bar1io + (788 << 2)));
+
+
+      }
+      if (1) {
+	// enable portal engine interrupts
+	iowrite32(-1, this_board->bar0io + (795 << 2));
       }
       err = copy_to_user((void __user *)arg, &info, sizeof(tPortalInfo));
       if (err != 0)

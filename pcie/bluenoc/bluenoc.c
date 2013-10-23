@@ -313,7 +313,7 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
       printf("failed to map portal %d:%s\n", errno, strerror(errno));
     }
     printf("mmap portal=%p -1-\n", portal);
-    if (0) {
+    if (1) {
       printf("%x %x\n", portal[0], portal[1]);
       portal[0] = 0x0000f00d;
       printf("portal[16]=%08x\n", portal[16]);
