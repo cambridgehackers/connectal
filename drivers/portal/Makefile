@@ -2,6 +2,9 @@ obj-m += portal.o
 
 export KROOT=$(DEVICE_XILINX_KERNEL)
 
+default: portal.ko
+	cp portal.ko ~/adb_scripts/
+
 portal.ko: portal.h portal.c
 	@$(MAKE) ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- -C $(KROOT) xilinx_zynq_portal_defconfig  
 	@$(MAKE) ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- -C $(KROOT) oldconfig
