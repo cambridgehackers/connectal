@@ -118,7 +118,7 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
         fromSensor,
         clocked_by hdmi_clock, reset_by hdmi_reset);
 
-    Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, hdmi_clock, hdmi_reset, defaultClock);
+    Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
     rule copydebugval;
         debugind_value <= fromSensor.in.get_debugind();
     endrule

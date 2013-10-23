@@ -938,19 +938,13 @@ class ImageonVita:
      wire imageon_clk200;
      wire imageon_clk;
      wire imageon_host_oe;
-    /* HOST Interface - ISERDES */
      wire imageon_host_iserdes_reset;
      wire imageon_host_iserdes_auto_align;
      wire imageon_host_iserdes_align_start;
      wire imageon_host_iserdes_fifo_enable;
      wire [9:0] imageon_host_iserdes_manual_tap;
      wire [9:0] imageon_host_iserdes_training;
-     wire imageon_host_iserdes_clk_ready;
-     wire imageon_host_iserdes_align_busy;
-     wire imageon_host_iserdes_aligned;
-    /* HOST Interface - Sync Channel Decoder */
      wire imageon_host_decoder_enable;
-    /* HOST Interface - Trigger Generator */
      wire [2:0] imageon_host_trigger_enable;
      wire vita_clk_pll_o;
      wire vita_clk_pll_t;
@@ -968,10 +962,16 @@ class ImageonVita:
      wire fmc_imageon_iic_0_sda_I;
      wire [49:0] imageon_xsvi_raw_data;
      wire imageon_xsvi_raw_empty;
-     wire imageon_xsvi_sframe;
      wire imageon_clk_tmp;
      wire imageon_clkdiv_c;
      wire hsinclk_tmp_wire;
+     wire [4:0] imageon_ALIGN_BUSY_d;
+     wire [4:0] imageon_ALIGNED_d;
+     wire [4:0] imageon_FIFO_EMPTY_d;
+     wire [4:0] imageon_SAMPLEINFIRSTBIT;
+     wire [4:0] imageon_SAMPLEINLASTBIT;
+     wire [4:0] imageon_SAMPLEINOTHERBIT;
+     wire imageon_DELAY_WREN_r;
 '''
     def ps7_bus_port_map(self,busname,t,params):
         return '''
@@ -991,13 +991,16 @@ class ImageonVita:
     .imageon_serdes_fifo_enable(imageon_host_iserdes_fifo_enable),
     .imageon_serdes_manual_tap(imageon_host_iserdes_manual_tap),
     .imageon_serdes_training(imageon_host_iserdes_training),
-    .imageon_serdes_iserdes_clk_ready_ready(imageon_host_iserdes_clk_ready),
-    .imageon_serdes_iserdes_align_busy_busy(imageon_host_iserdes_align_busy),
-    .imageon_serdes_iserdes_aligned_aligned(imageon_host_iserdes_aligned),
     .imageon_decoder_enable(imageon_host_decoder_enable),
     .imageon_trigger_enable(imageon_host_trigger_enable),
 
-    .sensor_sframe_v(imageon_xsvi_sframe),
+    .sensor_align_BUSY_d_v(imageon_ALIGN_BUSY_d),
+    .sensor_alignED_d_v(imageon_ALIGNED_d),
+    .sensor_fifo_EMPTY_d_v(imageon_FIFO_EMPTY_d),
+    .sensor_sampleinFIRSTBIT_v(imageon_SAMPLEINFIRSTBIT),
+    .sensor_sampleinLASTBIT_v(imageon_SAMPLEINLASTBIT),
+    .sensor_sampleinOTHERBIT_v(imageon_SAMPLEINOTHERBIT),
+    .sensor_delay_wren_r(imageon_DELAY_WREN_r),
     .sensor_raw_data_v(imageon_xsvi_raw_data),
     .sensor_raw_empty_v(imageon_xsvi_raw_empty),
     .sensor_vita_reset(vita_reset_n_o),
@@ -1146,7 +1149,6 @@ class ImageonVita:
     assign vita_data_n[1] = io_vita_data_n[0];
     assign vita_data_n[0] = io_vita_sync_n;
 
-    assign imageon_host_iserdes_clk_ready = 1;
 iserdes_interface iserdes_interface_1
   (
     .clock(imageon_clk),
@@ -1158,11 +1160,16 @@ iserdes_interface iserdes_interface_1
     .fifo_en(imageon_host_iserdes_fifo_enable),
     .manual_tap(imageon_host_iserdes_manual_tap),
     .training(imageon_host_iserdes_training),
-    .align_busy(imageon_host_iserdes_align_busy),
-    .aligned(imageon_host_iserdes_aligned),
     .fifo_rden(imageon_host_decoder_enable),
     .sdatap(vita_data_p),
     .sdatan(vita_data_n),
+    .ALIGN_BUSY_d(imageon_ALIGN_BUSY_d),
+    .ALIGNED_d(imageon_ALIGNED_d),
+    .FIFO_EMPTY_d(imageon_FIFO_EMPTY_d),
+    .SAMPLEINFIRSTBIT(imageon_SAMPLEINFIRSTBIT),
+    .SAMPLEINLASTBIT(imageon_SAMPLEINLASTBIT),
+    .SAMPLEINOTHERBIT(imageon_SAMPLEINOTHERBIT),
+    .DELAY_WREN_r(imageon_DELAY_WREN_r),
     .FIFO_EMPTY(imageon_xsvi_raw_empty),
     .FIFO_DATAOUT(imageon_xsvi_raw_data)
 );

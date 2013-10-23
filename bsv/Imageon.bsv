@@ -34,9 +34,12 @@ interface ImageonSerdes;
     method Bit#(1) fifo_enable();
     method Bit#(10) manual_tap();
     method Bit#(10) training();
-    method Action iserdes_clk_ready(Bit#(1) ready);
-    method Action iserdes_align_busy(Bit#(1) busy);
-    method Action iserdes_aligned(Bit#(1) aligned);
+endinterface
+
+interface ImageonSerdesIndication;
+    method Action clk_ready(Bit#(1) ready);
+    method Action align_busy(Bit#(1) busy);
+    method Action alignedbit(Bit#(1) aligned);
 endinterface
 
 interface ImageonDecoder;
@@ -78,11 +81,18 @@ typedef struct {
 (* always_enabled *)
 interface ImageonSensorControl;
     method Bit#(32) get_debugind();
-    method Action sframe(Bit#(1) v);
     method Action raw_data(Bit#(50) v);
     method Action raw_empty(Bit#(1) v);
+    method Action delay_wren(Bit#(1) v);
     method Bit#(3) vita_trigger();
     method Bit#(1) vita_reset();
+    method Action align_BUSY_d(Bit#(5) v);
+    method Action alignED_d(Bit#(5) v);
+    method Action fifo_EMPTY_d(Bit#(5) v);
+    method Action sampleinFIRSTBIT(Bit#(5) v);
+    method Action sampleinLASTBIT(Bit#(5) v);
+    method Action sampleinOTHERBIT(Bit#(5) v);
+    method Bit#(1) delay_wren_r();
     interface Reset reset;
     interface Reset hdmiReset;
 endinterface
@@ -90,8 +100,6 @@ endinterface
 (* always_enabled *)
 interface ImageonFast;
     interface ImageonSyncGen syncgen;
-    method Bit#(32) get_debugreq();
-    method Action set_debugind(Bit#(32) v);
     interface Reset reset;
 endinterface
 
@@ -99,6 +107,7 @@ endinterface
 interface ImageonVita;
     method Bit#(1) host_oe();
     interface ImageonSerdes serdes;
+    interface ImageonSerdesIndication serdesind;
     interface ImageonTrigger trigger;
     interface ImageonDecoder decoder;
     method Bit#(16) syncgen_delay();
@@ -140,7 +149,6 @@ interface ImageonControl;
     method Action set_syncgen_vsync(Bit#(16) v);
     method Action set_syncgen_vbporch(Bit#(16) v);
     method Action set_debugreq(Bit#(32) v);
-    method Bit#(32) get_debugind();
 endinterface
 
 interface ImageonVitaController;
@@ -161,9 +169,12 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
     Reg#(Bit#(1)) serdes_fifo_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(10)) serdes_manual_tap_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(10)) serdes_training_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
-    Wire#(Bit#(1)) serdes_clk_ready_wire <- mkDWire(0);
-    Wire#(Bit#(1)) serdes_align_busy_wire <- mkDWire(0);
-    Wire#(Bit#(1)) serdes_aligned_wire <- mkDWire(0);
+    Reg#(Bit#(1)) serdes_clk_ready_temp <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(1)) serdes_clk_ready_reg <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
+    Reg#(Bit#(1)) serdes_align_busy_temp <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(1)) serdes_align_busy_reg <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
+    Reg#(Bit#(1)) serdes_aligned_temp <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
+    Reg#(Bit#(1)) serdes_aligned_reg <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
 
     Reg#(Bit#(1)) decoder_reset_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(1)) decoder_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
@@ -186,7 +197,12 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
     Reg#(Bit#(16)) syncgen_vsync_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(16)) syncgen_vbporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(32)) debugreq_value <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(32)) debugind_value <- mkReg(0);
+
+    rule serdes_copybits;
+        serdes_aligned_reg <= serdes_aligned_temp;
+        serdes_align_busy_reg <= serdes_align_busy_temp;
+        serdes_clk_ready_reg <= serdes_clk_ready_temp;
+    endrule
 
     interface ImageonFast host;
 	interface ImageonSyncGen syncgen;
@@ -215,12 +231,6 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 		return syncgen_vbporch_reg;
 	    endmethod
 	endinterface
-        method Bit#(32) get_debugreq();
-            return debugreq_value;
-	endmethod
-        method Action set_debugind(Bit#(32) v);
-            debugind_value <= v;
-	endmethod
         interface Reset reset = defaultReset;
     endinterface: host
 
@@ -247,14 +257,16 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 	    method Bit#(10) training();
 		return serdes_training_reg;
 	    endmethod
-	    method Action iserdes_clk_ready(Bit#(1) ready);
-	        serdes_clk_ready_wire <= ready;
+	endinterface
+	interface ImageonSerdesIndication serdesind;
+	    method Action clk_ready(Bit#(1) ready);
+	        serdes_clk_ready_temp <= ready;
 	    endmethod
-	    method Action iserdes_align_busy(Bit#(1) busy);
-	        serdes_align_busy_wire <= busy;
+	    method Action align_busy(Bit#(1) busy);
+	        serdes_align_busy_temp <= busy;
 	    endmethod
-	    method Action iserdes_aligned(Bit#(1) aligned);
-	        serdes_aligned_wire <= aligned;
+	    method Action alignedbit(Bit#(1) aligned);
+	        serdes_aligned_temp <= aligned;
 	    endmethod
 	endinterface
 	interface ImageonTrigger trigger;
@@ -305,9 +317,9 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 	endmethod
 	method Bit#(32) get_iserdes_control();
 	    let v = 0;
-	    v[8] = serdes_clk_ready_wire;
-	    v[9] = serdes_align_busy_wire;
-	    v[10] = serdes_aligned_wire;
+	    v[8] = serdes_clk_ready_reg;
+	    v[9] = serdes_align_busy_reg;
+	    v[10] = serdes_aligned_reg;
 	    return v;
 	endmethod
 	method Action set_decoder_control(Bit#(32) v);
@@ -410,9 +422,6 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
         method Action set_debugreq(Bit#(32) v);
             debugreq_value <= v;
 	endmethod
-        method Bit#(32) get_debugind();
-            return debugind_value;
-	endmethod
     endinterface
 endmodule
 
@@ -443,18 +452,43 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     Reg#(Bit#(32)) diff <- mkReg(0);
     Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0);
-    Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
+    Reg#(Bit#(32)) debugind_value <- mkReg('hfd);
     Reg#(Bit#(10)) sync_delay_reg <- mkReg(0);
     Wire#(Bit#(50)) raw_data_wire <- mkDWire(0);
     Reg#(Bit#(50)) raw_data_reg <- mkReg(0);
     Reg#(Bit#(40)) dataout_reg <- mkReg(0);
     Reg#(Bit#(50)) raw_data_delay_reg <- mkReg(0);
     Wire#(Bit#(1)) raw_empty_wire <- mkDWire(0);
+    Wire#(Bit#(1)) new_raw_empty_wire <- mkDWire(0);
     Reg#(Bit#(1)) raw_empty_reg <- mkReg(0);
     Reg#(Bit#(1)) remapkernel_reg <- mkReg(0);
     Reg#(Bit#(1)) imgdatavalid_reg <- mkReg(0);
-    Reg#(Bit#(8)) dcount <- mkReg(0);
+    Reg#(Bit#(8)) dcount <- mkReg('hab);
+    Wire#(Bit#(5)) align_BUSY_d_wire <- mkDWire(0);
+    Wire#(Bit#(5)) alignED_d_wire <- mkDWire(0);
+    Wire#(Bit#(5)) fifo_EMPTY_d_wire <- mkDWire(0);
+    Wire#(Bit#(5)) sampleinFIRSTBIT_wire <- mkDWire(0);
+    Wire#(Bit#(5)) sampleinLASTBIT_wire <- mkDWire(0);
+    Wire#(Bit#(5)) sampleinOTHERBIT_wire <- mkDWire(0);
+    Reg#(Bit#(1)) delay_wren_r_reg <-mkReg(0);
+    Wire#(Bit#(1)) old_delay_wren <-mkDWire(0);
     
+    rule serdes_calc;
+        host.serdesind.clk_ready(1);
+        host.serdesind.align_busy(pack(align_BUSY_d_wire != 0));
+        host.serdesind.alignedbit(pack(alignED_d_wire == 5'b11111));
+    endrule
+
+    rule serdes_reset if (host.serdes.reset() == 1);
+        new_raw_empty_wire <= 0;
+        delay_wren_r_reg <= 0;
+    endrule
+
+    rule serdes_calc2 if (host.serdes.reset() == 0);
+        new_raw_empty_wire <= pack(fifo_EMPTY_d_wire != 0);
+        delay_wren_r_reg <= pack(sampleinOTHERBIT_wire == 0 && sampleinFIRSTBIT_wire != 0 && sampleinLASTBIT_wire != 0);
+    endrule
+
     rule tcalc;
         let tp = tperiod - 1;
         let tc = tcounter - 1;
@@ -502,14 +536,13 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
     endrule
 
     rule update_debug;
-        //let startframe_wire     = pack(raw_data_delay_reg[9:0] == host.decoder.code_fs() && raw_data_reg[9:0] == 10'h0);
         let dval = diff;
-        dval = {dcount, diff[21:0], sframe_wire, sframe_new_wire};
-        if (sframe_wire != sframe_new_wire)
+        dval = {dcount, diff[21:0], raw_empty_wire, new_raw_empty_wire};
+        if (raw_empty_wire != new_raw_empty_wire)
             begin
             dcount <= dcount + 1;
             end
-        if (diff[17] == 1)
+        if (diff[17] == 1 || (diff[31:24] != 'hab && diff[31:24] != 0))
             begin
             debugind_value <= diff;
             dval = 0;
@@ -518,12 +551,12 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
     endrule
 
     rule data_pipeline;
-        if (raw_empty_wire == 0)
+        if (new_raw_empty_wire == 0)
             begin
             raw_data_reg <= raw_data_wire;
             raw_data_delay_reg <= raw_data_reg;
             end
-        raw_empty_reg <= raw_empty_wire;
+        raw_empty_reg <= new_raw_empty_wire;
     endrule
 
     rule calculate_framedata;
@@ -569,14 +602,14 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
     endrule
 
     interface ImageonSensorControl in;
-	method Action sframe(Bit#(1) v);
-            sframe_wire <= v;
-	endmethod
         method Action raw_data(Bit#(50) v);
             raw_data_wire <= v;
 	endmethod
         method Action raw_empty(Bit#(1) v);
             raw_empty_wire <= v;
+	endmethod
+        method Action delay_wren(Bit#(1) v);
+            old_delay_wren <= v;
 	endmethod
         method Bit#(32) get_debugind();
             return debugind_value;
@@ -586,6 +619,27 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, ImageonVita host)(Im
         endmethod
         method Bit#(1) vita_reset();
             return ~host.serdes.reset();
+        endmethod
+        method Action align_BUSY_d(Bit#(5) v);
+              align_BUSY_d_wire <= v;
+        endmethod
+        method Action alignED_d(Bit#(5) v);
+              alignED_d_wire <= v;
+        endmethod
+        method Action fifo_EMPTY_d(Bit#(5) v);
+              fifo_EMPTY_d_wire <= v;
+        endmethod
+        method Action sampleinFIRSTBIT(Bit#(5) v);
+              sampleinFIRSTBIT_wire <= v;
+        endmethod
+        method Action sampleinLASTBIT(Bit#(5) v);
+              sampleinLASTBIT_wire <= v;
+        endmethod
+        method Action sampleinOTHERBIT(Bit#(5) v);
+              sampleinOTHERBIT_wire <= v;
+        endmethod
+        method Bit#(1) delay_wren_r();
+              return delay_wren_r_reg;
         endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
