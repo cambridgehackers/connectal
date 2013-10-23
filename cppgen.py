@@ -16,7 +16,7 @@ LOCAL_MODULE = test%(classname)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CXXFLAGS := "-DZYNQ -DMMAP_HW"
+LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW
 
 include $(BUILD_EXECUTABLE)
 '''
