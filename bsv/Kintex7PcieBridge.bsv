@@ -203,9 +203,9 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface clock125 = epClock125;
    interface reset125 = epReset125;
 
-   method Bool isLinkUp         = link_is_up;
-//   method Bool isCalibrated     = ddr3_ctrl.user.init_done;
-   method Action interrupt      = bridge.interrupt;   
+   method Bool isLinkUp        = link_is_up;
+//   method Bool isCalibrated  = ddr3_ctrl.user.init_done;
+   method Action interrupt     = bridge.interrupt;
    
 endmodule: mkK7PcieBridge
 

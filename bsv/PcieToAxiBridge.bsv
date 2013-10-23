@@ -50,11 +50,6 @@ interface PcieToAxiBridge#(numeric type bpb);
 
    (* always_ready *)
    method Action interrupt();
-   // methods for MSI interrupts
-   (* always_ready *)
-   method Bool msi_interrupt_req();
-   (* always_ready *)
-   method Action msi_interrupt_clear();
 
    interface Put#(TimestampedTlpData) trace;
 
@@ -420,6 +415,9 @@ interface PortalEngine;
     interface Axi3Master#(32,32,4,12) portal;
     interface Reg#(Bool)           pipeliningEnabled;
     interface Reg#(Bool)           byteSwap;
+    interface Reg#(Bool)           interruptRequested;
+    interface Reg#(Bit#(64))       interruptAddr;
+    interface Reg#(Bit#(32))       interruptData;
 endinterface
 
 (* synthesize *)
@@ -427,13 +425,18 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
     Reg#(Bool) byteSwapReg <- mkReg(True);
     Reg#(Bool) busyReg <- mkReg(False);
+    Reg#(Bool) interruptRequestedReg <- mkReg(False);
+    Reg#(Bool) interruptSecondHalf <- mkReg(False);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bit#(4)) timerReg <- mkReg(0);
+    Reg#(Bit#(64)) interruptAddrReg <- mkReg(0);
+    Reg#(Bit#(32)) interruptDataReg <- mkReg(0);
     FIFO#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkFIFO;
     FIFO#(TLPMemoryIO3DWHeader) readDataFifo <- mkFIFO;
     FIFO#(TLPMemoryIO3DWHeader) writeHeaderFifo <- mkFIFO;
     FIFO#(TLPMemoryIO3DWHeader) writeDataFifo <- mkFIFO;
     FIFO#(TLPData#(16)) tlpOutFifo <- mkFIFO;
+    Reg#(TLPTag) tlpTag <- mkReg(0);
 
     rule txnTimer if (timerReg > 0);
         timerReg <= timerReg - 1;
@@ -465,6 +468,62 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 // 	busyReg <= False;
 //     endrule
 
+    rule interruptTlpOut if (interruptRequestedReg // && !interruptSecondHalf
+       );
+       TLPData#(16) tlp = defaultValue;
+       tlp.sof = True;
+       tlp.eof = False;
+       tlp.hit = 7'h00;
+       tlp.be = 16'hffff;
+
+       if (interruptAddrReg[63:32] == '0) begin
+          TLPMemoryIO3DWHeader hdr_3dw = defaultValue();
+          hdr_3dw.format = MEM_WRITE_3DW_DATA;
+	  //hdr_3dw.pkttype = MEM_READ_WRITE;
+          hdr_3dw.tag = tlpTag;
+          hdr_3dw.reqid = my_id;
+          hdr_3dw.length = 1;
+          hdr_3dw.firstbe = '1;
+          hdr_3dw.lastbe = '0;
+          hdr_3dw.addr = interruptAddrReg[31:2];
+	  hdr_3dw.data = byteSwap(interruptDataReg);
+	  tlp.data = pack(hdr_3dw);
+	  tlp.eof = True;
+	  interruptRequestedReg <= False;
+       end
+       else begin
+	  TLPMemory4DWHeader hdr_4dw = defaultValue;
+	  hdr_4dw.format = MEM_WRITE_4DW_DATA;
+	  //hdr_4dw.pkttype = MEM_READ_WRITE;
+	  hdr_4dw.tag = tlpTag;
+	  hdr_4dw.reqid = my_id;
+	  hdr_4dw.nosnoop = SNOOPING_REQD;
+	  hdr_4dw.addr = interruptAddrReg[40-1:2];
+	  hdr_4dw.length = 1;
+	  hdr_4dw.firstbe = 4'hf;
+	  hdr_4dw.lastbe = 0;
+	  tlp.data = pack(hdr_4dw);
+
+	  interruptSecondHalf <= True;
+       end
+
+       tlpTag <= tlpTag + 1;
+
+       tlpOutFifo.enq(tlp);
+    endrule
+
+//    rule interruptTlpDataOut if (interruptSecondHalf);
+//       TLPData#(16) tlp = defaultValue;
+//       tlp.sof = False;
+//       tlp.eof = True;
+//       tlp.hit = 7'h00;
+//       tlp.be = 16'hf000;
+//       tlp.data[7+8*15:8*12] = byteSwap(interruptDataReg);
+//       tlpOutFifo.enq(tlp);
+//       interruptSecondHalf <= False;
+//       interruptRequestedReg <= False;
+//    endrule
+
     interface Put tlp_in;
         method Action put(TLPData#(16) tlp) if (!busyReg);
 	    //$display("PortalEngine.put tlp=%h", tlp);
@@ -483,7 +542,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     interface Get tlp_out = toGet(tlpOutFifo);
     interface Axi3Master portal;
 	interface Axi3MasterWrite write;
-	    method ActionValue#(Bit#(32)) writeAddr();
+	    method ActionValue#(Bit#(32)) writeAddr() if (!interruptSecondHalf);
 	        let hdr = writeHeaderFifo.first;
 	        writeHeaderFifo.deq;
 		writeDataFifo.enq(hdr);
@@ -555,7 +614,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    method Bit#(12) readId();
 		return extend(readHeaderFifo.first.tag);
 	    endmethod
-	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id);
+	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id) if (!interruptSecondHalf);
 	        let hdr = readDataFifo.first;
 		//FIXME: assumes only 1 word read per request
 		readDataFifo.deq;
@@ -585,8 +644,11 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    endmethod
 	endinterface: read
     endinterface: portal
-    interface Reg pipeliningEnabled = pipeliningEnabledReg;
-    interface Reg byteSwap = byteSwapReg;
+    interface Reg pipeliningEnabled  = pipeliningEnabledReg;
+    interface Reg byteSwap           = byteSwapReg;
+    interface Reg interruptRequested = interruptRequestedReg;
+    interface Reg interruptAddr      = interruptAddrReg;
+    interface Reg interruptData      = interruptDataReg;
 endmodule: mkPortalEngine
 
 interface AxiSlaveEngine;
@@ -599,6 +661,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
     FIFO#(TLPData#(16)) tlpOutFifo <- mkFIFO;
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
+
     FIFO#(TLPMemoryIO3DWHeader) completionFifo <- mkFIFO;
     interface Put tlp_in;
         method Action put(TLPData#(16) tlp);
@@ -756,11 +819,8 @@ interface ControlAndStatusRegs;
    method Action interrupt();
    interface Get#(Tuple2#(Bit#(64),Bit#(32))) intr_to_send;
 
-   // Used to generate MSI interrupts through the PCIe endpoint
-   (* always_ready *)
-   method Bool msi_interrupt_req();
-   (* always_ready *)
-   method Action msi_interrupt_clear();
+   interface ReadOnly#(Bit#(64)) interruptAddr;
+   interface ReadOnly#(Bit#(32)) interruptData;
 
    interface Reg#(Bool) tlpTracing;
    interface Reg#(Bool) axiEnabled;
@@ -1442,11 +1502,12 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
       endmethod
    endinterface
 
-   method Bool msi_interrupt_req = msi_intr_needed;
-
-   method Action msi_interrupt_clear();
-      msi_intr_needed <= False;
-   endmethod
+   interface ReadOnly interruptAddr;
+      method Bit#(64) _read();
+	 return { msix_entry[0].addr_hi, msix_entry[0].addr_lo };
+      endmethod
+   endinterface
+   interface ReadOnly interruptData = regToReadOnly(msix_entry[0].msg_data);
 
    interface Reg tlpTracing = tlpTracingReg;
    interface Reg axiEnabled = axiEnabledReg;
@@ -2528,18 +2589,21 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
                                                  , max_payload_bytes
                                                  );
 
-   Reg#(Bool) interruptRequested <- mkReg(False);
-
    rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 127);
        csr.tlpTracing <= False;
    endrule
-   rule axiEnabledRule;
+   rule connectEnables;
        dispatcher.axiEnabled <= csr.axiEnabled;
        portalEngine.pipeliningEnabled <= csr.pipeliningEnabled;
        portalEngine.byteSwap <= csr.byteSwap;
    endrule
 
    // connect the sub-components to each other
+
+   rule interruptConfig;
+      portalEngine.interruptAddr <= csr.interruptAddr;
+      portalEngine.interruptData <= csr.interruptData;
+   endrule
 
    mkConnection(dispatcher.tlp_out_to_config,    csr.csr_read_and_write_tlps);
    mkConnection(dispatcher.tlp_out_to_dma,       dma.dma_commands_and_completions);
@@ -2579,10 +2643,8 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    endrule
 
    (* fire_when_enabled, no_implicit_conditions *)
-   rule intr_req if (dma.request_interrupt || interruptRequested);
+   rule intr_req if (dma.request_interrupt);
       csr.interrupt();
-      if (interruptRequested)
-         interruptRequested <= False;
    endrule
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
@@ -2639,10 +2701,8 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    method Bool tx_activity  = arbiter.read_tlp()    || arbiter.write_tlp()    || dispatcher.completion_tlp();
 
    method Action interrupt();
-       interruptRequested <= True;
+       portalEngine.interruptRequested <= True;
    endmethod
-   method Bool   msi_interrupt_req   = csr.msi_interrupt_req;
-   method Action msi_interrupt_clear = csr.msi_interrupt_clear;
 
    interface Put trace;
        method Action put(TimestampedTlpData ttd);
