@@ -66,7 +66,7 @@ int main(int argc, const char **argv)
   dma = DMARequest::createDMARequest(new TestDMAIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  PortalMemory::alloc(alloc_sz, &dstAlloc);
+  dma->alloc(alloc_sz, &dstAlloc);
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.fd, 0);
 
   pthread_t tid;
@@ -82,7 +82,7 @@ int main(int argc, const char **argv)
     dstBuffer[i] = 0xDEADBEEF;
   }
     
-  PortalMemory::dCacheFlushInval(&dstAlloc);
+  dma->dCacheFlushInval(&dstAlloc);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   // write channel 0 is write source

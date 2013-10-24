@@ -237,15 +237,16 @@ PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
   : handle(0),
     PortalRequest(name,indication)
 {
+  const char* path = "/dev/portalalloc";
+  this->pa_fd = ::open(path, O_RDWR);
+  if (this->pa_fd < 0){
+    ALOGE("Failed to open %s pa_fd=%d errno=%d\n", path, this->pa_fd, path);
+  }
 }
 
 int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc)
 {
-    if (!numFds) {
-	ALOGE("%s No fds open\n", __FUNCTION__);
-	return -ENODEV;
-    }
-    int rc = ioctl(portal_fds[0].fd, PORTAL_DCACHE_FLUSH_INVAL, portalAlloc);
+    int rc = ioctl(this->pa_fd, PORTAL_DCACHE_FLUSH_INVAL, portalAlloc);
     if (rc){
       fprintf(stderr, "portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
@@ -273,13 +274,9 @@ int PortalMemory::reference(PortalAlloc* pa)
 
 int PortalMemory::alloc(size_t size, PortalAlloc *portalAlloc)
 {
-    if (!numFds) {
-	ALOGE("%s No fds open\n", __FUNCTION__);
-	return -ENODEV;
-    }
     memset(portalAlloc, 0, sizeof(PortalAlloc));
     portalAlloc->size = size;
-    int rc = ioctl(portal_fds[0].fd, PORTAL_ALLOC, portalAlloc);
+    int rc = ioctl(this->pa_fd, PORTAL_ALLOC, portalAlloc);
     if (rc){
       fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
@@ -315,7 +312,7 @@ void* portalExec(void* __x)
     if(0)
     fprintf(stderr, "about to invoke poll(%x, %d, %d)\n", portal_fds, numFds, timeout);
     if (!numFds) {
-        ALOGE("PortalMemory::exec No fds open numFds=%d\n", numFds);
+        ALOGE("portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
     }
     while ((rc = poll(portal_fds, numFds, timeout)) >= 0) {

@@ -9,6 +9,7 @@
 #include <sys/un.h>
 
 #include "../../drivers/portal/portal.h"
+#include "../../drivers/alloc/portalalloc.h"
 
 struct channel{
   int s1;
@@ -88,11 +89,12 @@ void* portalExec(void* __x);
 class PortalMemory : public PortalRequest {
  private:
   int handle;
+  int pa_fd;
  protected:
   PortalMemory(const char* name, PortalIndication *indication=0);
  public:
-  static int dCacheFlushInval(PortalAlloc *portalAlloc);
-  static int alloc(size_t size, PortalAlloc *portalAlloc);
+  int dCacheFlushInval(PortalAlloc *portalAlloc);
+  int alloc(size_t size, PortalAlloc *portalAlloc);
   int reference(PortalAlloc* pa);
   virtual void sglist(unsigned long off, unsigned long addr, unsigned long len) = 0;
 };

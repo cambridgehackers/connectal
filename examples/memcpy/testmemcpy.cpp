@@ -133,9 +133,9 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "allocating memory...\n");
 
-  PortalMemory::alloc(alloc_sz, &srcAlloc);
-  PortalMemory::alloc(alloc_sz, &dstAlloc);
-  PortalMemory::alloc(alloc_sz, &bsAlloc);
+  dma->alloc(alloc_sz, &srcAlloc);
+  dma->alloc(alloc_sz, &dstAlloc);
+  dma->alloc(alloc_sz, &bsAlloc);
 
   srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc.fd, 0);
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.fd, 0);
@@ -160,9 +160,9 @@ int main(int argc, const char **argv)
       dstBuffer[i] = 5;
     }
     
-    PortalMemory::dCacheFlushInval(&srcAlloc);
-    PortalMemory::dCacheFlushInval(&dstAlloc);
-    PortalMemory::dCacheFlushInval(&bsAlloc);
+    dma->dCacheFlushInval(&srcAlloc);
+    dma->dCacheFlushInval(&dstAlloc);
+    dma->dCacheFlushInval(&bsAlloc);
     fprintf(stderr, "flush and invalidate complete\n");
       
     // write channel 0 is copy destination
