@@ -158,3 +158,19 @@ Install the python-ply package, e.g.,
 
 PLY's home is http://www.dabeaz.com/ply/
 
+Portal Driver
+-------------
+
+To Build the portal driver, Makefile needs to be pointed to the root of the kernel source tree:
+   export DEVICE_XILINX_KERNEL=/scratch/mdk/device_xilinx_kernel/
+
+The driver sources are located in the xbsv project:
+   cd xbsv/drivers/portal && make portal.ko
+
+To update the driver running on the Zync platform, set ADB_PORT appropriately and run the following commands:
+   adb -s $ADB_PORT push portal.ko /mnt/sdcard/
+   adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs rm -rf"
+   adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mkdir"
+   adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mv portal.ko"
+   adb -s $ADB_PORT shell "modprobe -r portal"
+   adb -s $ADB_PORT shell "modprobe portal"
