@@ -328,7 +328,7 @@ void* portalExec(void* __x)
       // PCIE interrupts not working
       if (1)
 	{
-	  PortalInstance *instance = portal_instances[0];
+	  PortalRequest *instance = portal_requests[0];
 	  unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
 	  unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	  unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
@@ -388,7 +388,7 @@ void* portalExec(void* __x)
     // PCIE interrupts not working
     if (1)
       {
-	PortalInstance *instance = portal_instances[0];
+	PortalRequest *instance = portal_requests[0];
 	unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
 	unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);

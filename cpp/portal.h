@@ -96,7 +96,7 @@ class PortalMemory : public PortalRequest {
   int dCacheFlushInval(PortalAlloc *portalAlloc);
   int alloc(size_t size, PortalAlloc *portalAlloc);
   int reference(PortalAlloc* pa);
-  virtual void sglist(unsigned long off, unsigned long addr, unsigned long len) = 0;
+  virtual void sglist(unsigned long off, unsigned long long addr, unsigned long len) = 0;
 };
 
 
