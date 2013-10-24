@@ -10,32 +10,35 @@
 #include <linux/cdev.h>
 
 #include "portalalloc.h"
- 
-static dev_t first; // Global variable for the first device number 
-static struct cdev c_dev; // Global variable for the character device structure
-static struct class *cl; // Global variable for the device class
+
+static struct miscdevice miscdev;
+
 static int pa_open(struct inode *i, struct file *f)
 {
-  printk(KERN_INFO "PortalAlloc: open()\n");
+  printk("PortalAlloc: open()\n");
   return 0;
 }
+
 static int pa_close(struct inode *i, struct file *f)
 {
-  printk(KERN_INFO "PortalAlloc: close()\n");
+  printk("PortalAlloc: close()\n");
   return 0;
 }
+
 static ssize_t pa_read(struct file *f, char __user *buf, size_t
 		       len, loff_t *off)
 {
-  printk(KERN_INFO "PortalAlloc: read()\n");
+  printk("PortalAlloc: read()\n");
   return 0;
 }
+
 static ssize_t pa_write(struct file *f, const char __user *buf,
 			size_t len, loff_t *off)
 {
-  printk(KERN_INFO "PortalAlloc: write()\n");
+  printk("PortalAlloc: write()\n");
   return len;
 }
+
 static struct file_operations pa_fops =
   {
     .owner = THIS_MODULE,
@@ -47,34 +50,21 @@ static struct file_operations pa_fops =
  
 static int __init pa_init(void)
 {
-  if (alloc_chrdev_region(&first, 0, 1, "portalalloc") < 0){
-    return -1;
-  }
-  if ((cl = class_create(THIS_MODULE, "portalalloc")) == NULL){
-    unregister_chrdev_region(first, 1);
-    return -1;
-  }
-  if (device_create(cl, NULL, first, NULL, "portalalloc") == NULL){
-    class_destroy(cl);
-    unregister_chrdev_region(first, 1);
-    return -1;
-  }
-  cdev_init(&c_dev, &pa_fops);
-  if (cdev_add(&c_dev, first, 1) == -1){
-    device_destroy(cl, first);
-    class_destroy(cl);
-    unregister_chrdev_region(first, 1);
-    return -1;
-  }
+  struct miscdevice *md = &miscdev;
+  printk("PortalAlloc: pa_init\n");
+  md->minor = MISC_DYNAMIC_MINOR;
+  md->name = "portalalloc";
+  md->fops = &pa_fops;
+  md->parent = NULL;
+  misc_register(md);
   return 0;
 }
  
 static void __exit pa_exit(void)
 {
-  cdev_del(&c_dev);
-  device_destroy(cl, first);
-  class_destroy(cl);
-  unregister_chrdev_region(first, 1);
+  struct miscdevice *md = &miscdev;
+  printk("PortalAlloc: pa_exit\n");
+  misc_deregister(md);
 }
  
 module_init(pa_init);
