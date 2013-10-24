@@ -42,6 +42,7 @@ interface K7PcieBridgeIfc#(numeric type lanes);
    (* prefix = "" *)
    //interface DDR3_Pins_K7      ddr3;
    interface Axi3Master#(32,32,4,12) portal0;
+   interface Axi3Slave#(40,64,8,12) slave; // to the axi slave engine
    interface Put#(TimestampedTlpData) trace;
 endinterface
 
@@ -197,7 +198,8 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface pcie     = _ep.pcie;
    //interface ddr3     = ddr3_ctrl.ddr3;
    interface portal0  = bridge.portal0;
-   interface trace  = bridge.trace;
+   interface slave    = bridge.slave;
+   interface trace    = bridge.trace;
    interface clock250 = epClock250;
    interface reset250 = epReset250;
    interface clock125 = epClock125;

@@ -37,6 +37,7 @@ interface PcieToAxiBridge#(numeric type bpb);
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
    interface MsgPort#(bpb)         noc;  // to the NoC
    interface Axi3Master#(32,32,4,12) portal0; // to the portal control
+   interface Axi3Slave#(40,64,8,12) slave; // to the axi slave engine
 
    // global network activation status
    (* always_ready *)
@@ -654,11 +655,12 @@ endmodule: mkPortalEngine
 interface AxiSlaveEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Slave#(40,32,4,12)  slave;
+    interface Axi3Slave#(40,64,8,12)  slave;
+    method Bool tlpOutFifoNotEmpty();
 endinterface: AxiSlaveEngine
 
 module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
-    FIFO#(TLPData#(16)) tlpOutFifo <- mkFIFO;
+    FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
 
@@ -708,10 +710,10 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
 	       tlp.be = 16'hffff;
 	       tlpOutFifo.enq(tlp);
            endmethod: readAddr
-	   method ActionValue#(Bit#(32)) readData();
+	   method ActionValue#(Bit#(64)) readData();
 	       let hdr = completionFifo.first;
 	       completionFifo.deq;
-	       return hdr.data;
+	       return extend(hdr.data);
            endmethod: readData
 	   method Bit#(1) last();
 	       return 1;
@@ -722,6 +724,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
 	   // method Action readResponse(Bit#(2) responseCode);
 	endinterface: read
     endinterface: slave
+   method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
 endmodule: mkAxiSlaveEngine
 
 typedef enum {
@@ -732,7 +735,7 @@ typedef enum {
 } AxiSlaveTestState deriving (Bits,Eq);
 
 interface AxiSlaveTest;
-    interface Axi3Master#(40,32,4,12) master;
+    interface Axi3Master#(40,64,8,12) master;
     interface Reg#(Bit#(40)) addr;
     interface Reg#(Bit#(32)) result;
     interface Reg#(AxiSlaveTestState) state;
@@ -769,8 +772,8 @@ module mkAxiSlaveTest(AxiSlaveTest);
 	   method Bit#(idWidth) readId();
 	       return 22;
 	   endmethod
-	   method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id) if (stateReg == WaitingForData);
-	       resultReg <= data;
+	   method Action readData(Bit#(64) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id) if (stateReg == WaitingForData);
+	       resultReg <= truncate(data);
 	       stateReg <= Done;
 	   endmethod
 	endinterface
@@ -826,7 +829,7 @@ interface ControlAndStatusRegs;
    interface Reg#(Bool) axiEnabled;
    interface Reg#(Bool) pipeliningEnabled;
    interface Reg#(Bool) byteSwap;
-   interface Reg#(Bool) axiTestEnabled;
+   interface Reg#(Bit#(32)) axiTestEnabled;
    interface Reg#(Bit#(32)) addrLowerWord;
    interface Reg#(Bit#(32)) addrUpperWord;
    interface Reg#(Bit#(32)) testResult;
@@ -842,13 +845,14 @@ endinterface: ControlAndStatusRegs
 // registers, the address map, and how the registers respond to reads
 // and writes.
 module mkControlAndStatusRegs#( Bit#(64)  board_content_id
-                              , PciId     my_id
-                              , Integer   bytes_per_beat
-                              , Bit#(7)   rcb_mask
-                              , Bool      msix_enabled
-                              , Bool      msix_mask_all_intr
-                              , Bool      msi_enabled
-			      , PortalEngine portalEngine
+			       , PciId     my_id
+			       , Integer   bytes_per_beat
+			       , Bit#(7)   rcb_mask
+			       , Bool      msix_enabled
+			       , Bool      msix_mask_all_intr
+			       , Bool      msi_enabled
+			       , PortalEngine portalEngine
+			       , AxiSlaveEngine axiSlaveEngine
                               )
                               (ControlAndStatusRegs);
 
@@ -916,7 +920,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bool) axiEnabledReg <- mkReg(False);
    Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
    Reg#(Bool) byteSwapReg <- mkReg(False);
-   Reg#(Bool) axiTestEnabledReg <- mkReg(False);
+   Reg#(Bit#(32)) axiTestEnabledReg <- mkReg(0);
    Reg#(Bit#(32)) addrLowerWordReg <- mkReg(0);
    Reg#(Bit#(32)) addrUpperWordReg <- mkReg(0);
    Reg#(Bit#(32)) testResultReg <- mkReg(0);
@@ -975,7 +979,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 779: return tlpDataBramResponseSlice(3);
 	 780: return tlpDataBramResponseSlice(4);
 	 781: return tlpDataBramResponseSlice(5);
-	 782: return axiTestEnabledReg ? 1 : 0;
+	 782: return axiTestEnabledReg;
 	 783: return addrLowerWordReg;
 	 784: return addrUpperWordReg;
 	 785: return testResultReg;
@@ -988,6 +992,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 792: return tlpDataBramWrAddrReg;
 	 793: return msi_enabled ? 1 : 0;
 	 794: return byteSwapReg ? 1 : 0;
+	 795: return axiSlaveEngine.tlpOutFifoNotEmpty ? 1 : 0;
 
          // 4-entry MSIx table
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
@@ -1048,7 +1053,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    779: tlpDataScratchpad[3] <= dword;
 	    780: tlpDataScratchpad[4] <= dword;
 	    781: tlpDataScratchpad[5] <= dword;
-	    782: axiTestEnabledReg <= (dword != 0) ? True : False;
+	    782: axiTestEnabledReg <= dword;
 	    783: addrLowerWordReg <= dword;
 	    784: addrUpperWordReg <= dword;
 	    785: testResultReg <= dword;
@@ -2583,6 +2588,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
                                                             , msix_mask_all_intr
                                                             , msi_enabled
 							    , portalEngine
+							    , axiSlaveEngine
                                                             );
    DMAEngine#(bpb)      dma        <- mkDMAEngine( my_id
                                                  , max_read_req_bytes
@@ -2673,20 +2679,22 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
        end
    endrule: traceTlpToBus
 
-   AxiSlaveTest            axiSlaveTest <- mkAxiSlaveTest();
-   mkConnection(axiSlaveTest.master, axiSlaveEngine.slave);
-   rule axiSlaveAddrStart;
-       Bit#(40) addr = 0;
-       addr[31:0] = csr.addrLowerWord;
-       addr[39:32] = truncate(csr.addrUpperWord);
-       axiSlaveTest.addr <= addr;
-       if (csr.axiTestEnabled)
-           axiSlaveTest.start();
-   endrule
-   rule axiSlaveOutput;
-       csr.testResult <= axiSlaveTest.result;
-       csr.testState <= zeroExtend(pack(axiSlaveTest.state));
-   endrule
+//    AxiSlaveTest            axiSlaveTest <- mkAxiSlaveTest();
+//    mkConnection(axiSlaveTest.master, axiSlaveEngine.slave);
+//    rule axiSlaveAddrStart;
+//        Bit#(40) addr = 0;
+//        addr[31:0] = csr.addrLowerWord;
+//        addr[39:32] = truncate(csr.addrUpperWord);
+//        axiSlaveTest.addr <= addr;
+//        if (csr.axiTestEnabled == 1) begin
+//           axiSlaveTest.start();
+// 	  csr.axiTestEnabled <= 32'h00f00dee;
+//        end
+//    endrule
+//    rule axiSlaveOutput;
+//        csr.testResult <= axiSlaveTest.result;
+//        csr.testState <= zeroExtend(pack(axiSlaveTest.state));
+//    endrule
 
    // route the interfaces to the sub-components
 
@@ -2695,6 +2703,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 
    interface MsgPort noc = dma.noc;
    interface Axi3Master portal0 = portalEngine.portal;
+   interface Axi3Slave slave = axiSlaveEngine.slave;
 
    method Bool is_activated = csr.is_activated();
    method Bool rx_activity  = dispatcher.read_tlp() || dispatcher.write_tlp() || arbiter.completion_tlp();
