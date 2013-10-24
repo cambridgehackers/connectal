@@ -39,10 +39,6 @@ DECL(spi_response)
 
 class TestImageCaptureIndications : public CoreIndication {
     RXFN(iserdes_control)
-    void putFailed(unsigned long v){
-      fprintf(stderr, "putFailed: %x\n", v);
-      exit(1);
-    }
     void spi_response(unsigned long v){
       //fprintf(stderr, "spi_response: %x\n", v);
       cv_spi_response = v;
