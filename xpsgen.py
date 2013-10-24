@@ -987,7 +987,7 @@ class ImageonVita:
     .serdes_reset(imageon_host_iserdes_reset),
     .serdes_auto_align(imageon_host_iserdes_auto_align),
     .serdes_align_start(imageon_host_iserdes_align_start),
-    .serdes_fifo_enable(imageon_host_iserdes_fifo_enable),
+    .sensor_fifo_enable(imageon_host_iserdes_fifo_enable),
     .serdes_manual_tap(imageon_host_iserdes_manual_tap),
     .serdes_training(imageon_host_iserdes_training),
     .imageon_decoder_enable(imageon_host_decoder_enable),

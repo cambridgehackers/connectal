@@ -658,7 +658,8 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
               sampleinOTHERBIT_wire <= v;
         endmethod
         method Bit#(1) delay_wren_r();
-              return delay_wren_r_reg;
+              //return delay_wren_r_reg;
+              return delay_wren_c_reg;
         endmethod
         method Bit#(1) fifo_enable();
               return fifo_wren_c_reg;
