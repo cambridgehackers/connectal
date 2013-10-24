@@ -34,8 +34,7 @@
 #define DRIVER_VERSION "0.1"
 
 static struct miscdevice miscdev;
-struct ion_device *portal_ion_device;
-struct ion_client *portal_ion_client;
+struct ion_device *portal_ion_device = 0x0;
 
 /////////////////////////////////////////////////////////////
 // copied from ion_priv.h
@@ -946,6 +945,7 @@ void portal_ion_release(void)
 
 long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
+        struct ion_client *portal_ion_client = filep->private_data;
         switch (cmd) {
 	case PORTAL_DCACHE_FLUSH_INVAL: {
 	  struct PortalAlloc alloc;
@@ -1018,14 +1018,14 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 static int pa_open(struct inode *i, struct file *f)
 {
   printk("PortalAlloc: open()\n");
-  portal_ion_client = ion_client_create(portal_ion_device, "portalalloc_client");
+  f->private_data = ion_client_create(portal_ion_device, "");
   return 0;
 }
 
 static int pa_close(struct inode *i, struct file *f)
 {
   printk("PortalAlloc: close()\n");
-  ion_client_destroy(portal_ion_client);
+  ion_client_destroy(f->private_data);
   return 0;
 }
 
