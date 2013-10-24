@@ -167,6 +167,10 @@ To Build the portal driver, Makefile needs to be pointed to the root of the kern
 The driver sources are located in the xbsv project:
    cd xbsv/drivers/portal && make portal.ko
 
+[ an alternate way to write command line:
+   (cd drivers/portal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portal.ko)
+]
+
 To update the driver running on the Zync platform, set ADB_PORT appropriately and run the following commands:
    adb -s $ADB_PORT push portal.ko /mnt/sdcard/
    adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs rm -rf"
