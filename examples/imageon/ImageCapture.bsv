@@ -93,27 +93,31 @@ interface ImageCaptureRequest;
    interface CoreRequest coreRequest;
    interface BlueScopeRequest bsRequest;
    interface ImageonVita imageon;
+   interface ImageonSerdes serdes;
    interface ImageonSensorControl sensor;
    interface HDMI hdmi;
    interface SpiPins spi;
    interface DMARequest dmaRequest;
 endinterface
  
-module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock, 
+module mkImageCaptureRequest#(Clock imageon_clock, Clock serdes_clock, Clock hdmi_clock, 
     ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
+    //Reset serdes_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
+    Reset serdes_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
     ImageonVitaController imageonVita <- mkImageonVitaController(hdmi_clock, hdmi_reset, imageon_clock, imageon_reset);
     ImageonControl control = imageonVita.control;
     let imageon_vita_clock_binder <- mkClockBinder(imageonVita.host, clocked_by hdmi_clock);
     let imageon_vitas_clock_binder <- mkClockBinder(imageonVita.hosts, clocked_by imageon_clock);
+    let imageon_serdes_clock_binder <- mkClockBinder(imageonVita.serdes, clocked_by imageon_clock);
 
-    ImageonSensor fromSensor <- mkImageonSensor(hdmi_clock, hdmi_reset, imageon_vitas_clock_binder,
-        clocked_by imageon_clock, reset_by imageon_reset);
+    ImageonSensor fromSensor <- mkImageonSensor(hdmi_clock, hdmi_reset, serdes_clock, serdes_reset, imageon_vitas_clock_binder,
+        imageon_serdes_clock_binder, clocked_by imageon_clock, reset_by imageon_reset);
     ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
         fromSensor,
         clocked_by hdmi_clock, reset_by hdmi_reset);
@@ -263,6 +267,7 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock hdmi_clock,
     endinterface
    interface BlueScopeRequest bsRequest = bsi.requestIfc;
    interface ImageonVita imageon = imageon_vitas_clock_binder;
+   interface ImageonSerdes serdes = imageonVita.serdes;
    interface ImageonSensorControl sensor = fromSensor.in;
    interface HDMI hdmi = hdmiOut.hdmi;
    interface SpiPins spi = spiController.pins;

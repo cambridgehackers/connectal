@@ -27,7 +27,7 @@ import AxiDMA::*;
 
 '''
 
-exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonVSensor', 'ImageonSensorData', 'ImageonSensorControl', 'FmcImageonInterface', 'SpiPins']
+exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonVSensor', 'ImageonSensorControl', 'ImageonSerdes', 'FmcImageonInterface', 'SpiPins']
 
 
 bsimTopTemplate='''
@@ -631,6 +631,7 @@ class InterfaceMixin:
             if collected:
                 if busType == 'ImageonVita':
                     clknames.append('imageon_clock')
+                    clknames.append('serdes_clock')
                 if busType == 'HDMI':
                     clknames.append('hdmi_clock')
             buses[busType] = collected

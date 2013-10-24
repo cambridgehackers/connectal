@@ -984,12 +984,12 @@ class ImageonVita:
     def dut_bus_port_map(self, busname,t,params):
         return '''
     .imageon_host_oe(imageon_host_oe),
-    .imageon_serdes_reset(imageon_host_iserdes_reset),
-    .imageon_serdes_auto_align(imageon_host_iserdes_auto_align),
-    .imageon_serdes_align_start(imageon_host_iserdes_align_start),
-    .imageon_serdes_fifo_enable(imageon_host_iserdes_fifo_enable),
-    .imageon_serdes_manual_tap(imageon_host_iserdes_manual_tap),
-    .imageon_serdes_training(imageon_host_iserdes_training),
+    .serdes_reset(imageon_host_iserdes_reset),
+    .serdes_auto_align(imageon_host_iserdes_auto_align),
+    .serdes_align_start(imageon_host_iserdes_align_start),
+    .serdes_fifo_enable(imageon_host_iserdes_fifo_enable),
+    .serdes_manual_tap(imageon_host_iserdes_manual_tap),
+    .serdes_training(imageon_host_iserdes_training),
     .imageon_decoder_enable(imageon_host_decoder_enable),
     .imageon_trigger_enable(imageon_host_trigger_enable),
 
@@ -1244,7 +1244,7 @@ class InterfaceMixin:
             'top_dut_axi_master_port_map': ''.join([top_dut_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_master_port_map': ''.join([top_ps7_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_slave_port_map': ''.join([top_ps7_axi_slave_port_map_template % subst for subst in slaveBusSubsts]),
-            'dut_hdmi_clock_arg': '      .CLK_imageon_clock(imageon_clk),\n       .CLK_hdmi_clock(imageon_clk4x),' if len(buses['ImageonVita']) else '       .CLK_hdmi_clock(imageon_clk4x)' if len(buses['HDMI']) else '',
+            'dut_hdmi_clock_arg': '      .CLK_imageon_clock(imageon_clk),\n       .CLK_serdes_clock(imageon_clkdiv_c),\n       .CLK_hdmi_clock(imageon_clk4x),' if len(buses['ImageonVita']) else '       .CLK_hdmi_clock(imageon_clk4x)' if len(buses['HDMI']) else '',
             'top_bus_ports':
                 ''.join([''.join([busHandlers[busType].top_bus_ports(busname,t,params) for (busname,t,params) in buses[busType]])
                          for busType in busHandlers]),
