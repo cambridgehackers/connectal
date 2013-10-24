@@ -987,7 +987,7 @@ class ImageonVita:
     .serdes_reset(imageon_host_iserdes_reset),
     .serdes_auto_align(imageon_host_iserdes_auto_align),
     .serdes_align_start(imageon_host_iserdes_align_start),
-    .serdes_fifo_enable(imageon_host_iserdes_fifo_enable),
+    .sensor_fifo_enable(imageon_host_iserdes_fifo_enable),
     .serdes_manual_tap(imageon_host_iserdes_manual_tap),
     .serdes_training(imageon_host_iserdes_training),
     .imageon_decoder_enable(imageon_host_decoder_enable),
@@ -1147,29 +1147,36 @@ class ImageonVita:
     assign vita_data_n[1] = io_vita_data_n[0];
     assign vita_data_n[0] = io_vita_sync_n;
 
-iserdes_interface iserdes_interface_1
-  (
-    .clock(imageon_clk),
-    .clk_tmp(imageon_clk_tmp),
-    .clkdiv_c(imageon_clkdiv_c),
-    .reset(imageon_host_iserdes_reset),
-    .autoalign(imageon_host_iserdes_auto_align),
-    .align_start(imageon_host_iserdes_align_start),
-    .fifo_en(imageon_host_iserdes_fifo_enable),
-    .manual_tap(imageon_host_iserdes_manual_tap),
-    .training(imageon_host_iserdes_training),
-    .fifo_rden(imageon_host_decoder_enable),
-    .sdatap(vita_data_p),
-    .sdatan(vita_data_n),
-    .ALIGN_BUSY_d(imageon_ALIGN_BUSY_d),
-    .ALIGNED_d(imageon_ALIGNED_d),
-    .FIFO_EMPTY_d(imageon_FIFO_EMPTY_d),
-    .SAMPLEINFIRSTBIT(imageon_SAMPLEINFIRSTBIT),
-    .SAMPLEINLASTBIT(imageon_SAMPLEINLASTBIT),
-    .SAMPLEINOTHERBIT(imageon_SAMPLEINOTHERBIT),
-    .DELAY_WREN_r(imageon_DELAY_WREN_r),
-    .FIFO_DATAOUT(imageon_xsvi_raw_data)
-);
+    genvar j;
+    generate
+    for(j=0; j <= 4; j=j+1)
+        begin
+        iserdes_datadeser (
+            .clock(imageon_clk),
+            .reset(imageon_host_iserdes_reset),
+            .clk(imageon_clk_tmp),
+            .clkb(imageon_clk_tmp),
+            .clkdiv(imageon_clkdiv_c),
+            .sdatap(vita_data_p[j]),
+            .sdatan(vita_data_n[j]),
+            .clk_div_reset(imageon_host_iserdes_reset),
+            .align_start(imageon_host_iserdes_align_start),
+            .align_busy(imageon_ALIGN_BUSY_d[j]),
+            .aligned(imageon_ALIGNED_d[j]),
+            .sampleinfirstbit(imageon_SAMPLEINFIRSTBIT[j]),
+            .sampleinlastbit(imageon_SAMPLEINLASTBIT[j]),
+            .sampleinotherbit(imageon_SAMPLEINOTHERBIT[j]),
+            .autoalign(imageon_host_iserdes_auto_align),
+            .training(imageon_host_iserdes_training),
+            .manual_tap(imageon_host_iserdes_manual_tap),
+            .fifo_wren(imageon_host_iserdes_fifo_enable),
+            .delay_wren(imageon_DELAY_WREN_r),
+            .fifo_rden(imageon_host_decoder_enable),
+            .fifo_empty(imageon_FIFO_EMPTY_d[j]),
+            .fifo_dataout(imageon_xsvi_raw_data[((j+1)*10)-1:j*10])
+         );
+        end
+    endgenerate
  '''
     def pinout(self, board):
         return imageon_pinout[board]
