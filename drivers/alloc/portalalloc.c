@@ -33,17 +33,12 @@
 #define DRIVER_DESCRIPTION "Memory management between HW and SW processes"
 #define DRIVER_VERSION "0.1"
 
-
 static struct miscdevice miscdev;
 struct ion_device *portal_ion_device;
 struct ion_client *portal_ion_client;
 
 /////////////////////////////////////////////////////////////
 // copied from ion_priv.h
-
-
-struct ion_client;
-struct ion_buffer;
 
 /**
  * struct ion_device - the metadata of the ion device node
@@ -54,7 +49,6 @@ struct ion_buffer;
  * @user_clients:	list of all the clients created from userspace
  */
 struct ion_device {
-	struct miscdevice dev;
 	struct rb_root buffers;
 	struct mutex buffer_lock;
 	struct rw_semaphore lock;
@@ -686,54 +680,14 @@ static int ion_get_dma_buf(struct ion_client *client, struct ion_handle *handle)
 }
 
 
-static int ion_release(struct inode *inode, struct file *file)
-{
-	struct ion_client *client = file->private_data;
-	pr_debug("%s: %d\n", __func__, __LINE__);
-	ion_client_destroy(client);
-	return 0;
-}
-
-static int ion_open(struct inode *inode, struct file *file)
-{
-	struct miscdevice *miscdev = file->private_data;
-	struct ion_device *dev = container_of(miscdev, struct ion_device, dev);
-	struct ion_client *client;
-
-	pr_debug("%s: %d\n", __func__, __LINE__);
-	client = ion_client_create(dev, "user");
-	if (IS_ERR_OR_NULL(client))
-		return PTR_ERR(client);
-	file->private_data = client;
-
-	return 0;
-}
-
-static const struct file_operations ion_fops = {
-	.owner          = THIS_MODULE,
-	.open           = ion_open,
-	.release        = ion_release,
-};
-
-
 static struct ion_device *ion_device_create(void)
 {
 	struct ion_device *idev;
-	int ret;
 
 	idev = kzalloc(sizeof(struct ion_device), GFP_KERNEL);
 	if (!idev)
 		return ERR_PTR(-ENOMEM);
 
-	idev->dev.minor = MISC_DYNAMIC_MINOR;
-	idev->dev.name = "ion";
-	idev->dev.fops = &ion_fops;
-	idev->dev.parent = NULL;
-	ret = misc_register(&idev->dev);
-	if (ret) {
-		pr_err("ion: failed to register misc device.\n");
-		return ERR_PTR(ret);
-	}
 	idev->buffers = RB_ROOT;
 	mutex_init(&idev->buffer_lock);
 	init_rwsem(&idev->lock);
@@ -743,7 +697,6 @@ static struct ion_device *ion_device_create(void)
 
 static void ion_device_destroy(struct ion_device *dev)
 {
-	misc_deregister(&dev->dev);
 	/* XXX need to free the and clients ? */
 	kfree(dev);
 }
@@ -933,7 +886,7 @@ void ion_system_heap_free(struct ion_buffer *buffer)
 	struct scatterlist *sg;
 	LIST_HEAD(pages);
 	int i;
-	//printk("portal: ion_system_heap_free\n");
+	printk("portal: ion_system_heap_free\n");
 	for_each_sg(table->sgl, sg, table->nents, i){
 	  free_buffer_page(buffer, sg_page(sg), get_order(sg_dma_len(sg)));
 	}
