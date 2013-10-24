@@ -6,14 +6,12 @@
 #include <unistd.h>
 #include <pthread.h>
 
-CoreRequest *device = 0;
-DMARequest *dma = 0;
-PortalAlloc dstAlloc;
-unsigned int *dstBuffer = 0;
+#include "../../cpp/sock_fd.h"
 
-int numWords = 16 << 8;
+int numWords = 16 << 6;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
+sem_t done_sem;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -45,32 +43,53 @@ class TestCoreIndication : public CoreIndication
     fprintf(stderr, "Core::started: words=%lx\n", words);
   }
   virtual void writeDone ( unsigned long srcGen ){
-    fprintf(stderr, "Core::writeDone (%08x): ", srcGen);
-    unsigned int sg = 0;
-    bool mismatch = false;
-    for (int i = 0; i < numWords; i++){
-      mismatch |= (dstBuffer[i] != sg++);
-    }
-    fprintf(stderr, "Core::writeDone mismatch=%d\n", mismatch);
-    
+    fprintf(stderr, "Core::writeDone (%08x)\n", srcGen);
+    sem_post(&done_sem);    
   }
   virtual void reportStateDbg(unsigned long streamWrCnt, unsigned long srcGen){
     fprintf(stderr, "Core::reportStateDbg: streamWrCnt=%08x srcGen=%d\n", streamWrCnt, srcGen);
   }  
 };
 
-int main(int argc, const char **argv)
+void child(int rd_sock, int wr_sock)
 {
-  fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
+  int fd;
+  char    buf[16];
+  sock_fd_read(rd_sock, buf, sizeof(buf), &fd);
+
+  unsigned int *dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+  fprintf(stderr, "child::dstBuffer = %08x\n", dstBuffer);
+
+  unsigned int sg = 0;
+  bool mismatch = false;
+  for (int i = 0; i < numWords; i++){
+    mismatch |= (dstBuffer[i] != sg++);
+  }
+  fprintf(stderr, "child::writeDone mismatch=%d\n", mismatch);
+}
+
+void parent(int rd_sock, int wr_sock)
+{
+  CoreRequest *device = 0;
+  DMARequest *dma = 0;
+  PortalAlloc dstAlloc;
+  unsigned int *dstBuffer = 0;
+
+  if(sem_init(&done_sem, 1, 0)){
+    fprintf(stderr, "failed to init done_sem\n");
+    exit(1);
+  }
+
+  fprintf(stderr, "parent::%s %s\n", __DATE__, __TIME__);
   device = CoreRequest::createCoreRequest(new TestCoreIndication);
   dma = DMARequest::createDMARequest(new TestDMAIndication);
 
-  fprintf(stderr, "Main::allocating memory...\n");
+  fprintf(stderr, "parent::allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.fd, 0);
 
   pthread_t tid;
-  fprintf(stderr, "Main::creating exec thwrite\n");
+  fprintf(stderr, "parent::creating exec thwrite\n");
   if(pthread_create(&tid, NULL,  portalExec, NULL)){
    fprintf(stderr, "error creating exec thwrite\n");
    exit(1);
@@ -83,18 +102,40 @@ int main(int argc, const char **argv)
   }
     
   dma->dCacheFlushInval(&dstAlloc);
-  fprintf(stderr, "Main::flush and invalidate complete\n");
+  fprintf(stderr, "parent::flush and invalidate complete\n");
 
   // write channel 0 is write source
   dma->configWriteChan(0, ref_dstAlloc, 16);
-  sleep(2);
+  sleep(1);
 
-  fprintf(stderr, "Main::starting write %08x\n", numWords);
+  fprintf(stderr, "parent::starting write %08x\n", numWords);
   device->startWrite(numWords);
 
-  while(1){
-    //dma->getWriteStateDbg();
-    device->getStateDbg();
-    sleep(1);
+  sem_wait(&done_sem);
+  
+  int i;
+  char buf[] = "1";
+  sock_fd_write(wr_sock, (void*)buf, 1, dstAlloc.fd);
+}
+
+int main(int argc, const char **argv)
+{
+  int sv[2];
+  int pid;
+  
+  if (socketpair(AF_LOCAL, SOCK_STREAM, 0, sv) < 0) {
+    perror("socketpair");
+    exit(1);
+  }
+  switch ((pid = fork())) {
+  case 0:
+    child(sv[1],sv[0]);
+    break;
+  case -1:
+    perror("fork");
+    exit(1);
+  default:
+    parent(sv[1],sv[0]);
+    break;
   }
 }

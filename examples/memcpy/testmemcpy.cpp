@@ -22,7 +22,6 @@ size_t alloc_sz = test_sz;
 
 sem_t iter_sem;
 sem_t conf_sem;
-sem_t done_sem;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
 unsigned int iterCnt=1;
