@@ -30,6 +30,7 @@ import Clocks :: *;
 (* always_enabled *)
 interface ImageonSerdes;
     method Bit#(1) reset();
+    method Bit#(1) resets();
     method Bit#(1) auto_align();
     method Bit#(1) align_start();
     method Bit#(1) fifo_enable();
@@ -92,6 +93,7 @@ interface ImageonSensorControl;
     method Action sampleinLASTBIT(Bit#(5) v);
     method Action sampleinOTHERBIT(Bit#(5) v);
     method Bit#(1) delay_wren_r();
+    method Bit#(1) fifo_enable();
     interface Reset reset;
     interface Reset hdmiReset;
 endinterface
@@ -156,18 +158,22 @@ interface ImageonVitaController;
     interface ImageonControl control;
 endinterface
 
-module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageon_clock, Reset imageon_reset)(ImageonVitaController);
+module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageon_clock,
+        Reset imageon_reset, Clock serdes_clock, Reset serdes_reset)(ImageonVitaController);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset;
     Reg#(Bit#(1)) host_oe_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Wire#(Bit#(1)) host_clock_gen_locked_wire <- mkDWire(0);
 
     Reg#(Bit#(1)) serdes_reset_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    ReadOnly#(Bit#(1)) serdes_reset_null <- mkNullCrossingWire(serdes_clock, serdes_reset_reg);
     Reg#(Bit#(1)) serdes_auto_align_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(1)) serdes_align_start_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(1)) serdes_fifo_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+    ReadOnly#(Bit#(1)) serdes_fifo_enable_null <- mkNullCrossingWire(serdes_clock, serdes_fifo_enable_reg);
     Reg#(Bit#(10)) serdes_manual_tap_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(10)) serdes_training_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
+
     Reg#(Bit#(1)) serdes_clk_ready_temp <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
     Reg#(Bit#(1)) serdes_clk_ready_reg <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
     Reg#(Bit#(1)) serdes_align_busy_temp <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
@@ -289,6 +295,9 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 
     interface ImageonSerdes serdes;
         method Bit#(1) reset();
+            return serdes_reset_null;
+        endmethod
+        method Bit#(1) resets();
             return serdes_reset_reg;
         endmethod
         method Bit#(1) auto_align();
@@ -298,7 +307,7 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
             return serdes_align_start_reg;
         endmethod
         method Bit#(1) fifo_enable();
-            return serdes_fifo_enable_reg;
+            return serdes_fifo_enable_null;
         endmethod
         method Bit#(10) manual_tap();
             return serdes_manual_tap_reg;
@@ -470,6 +479,10 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
     Wire#(Bit#(5)) sampleinLASTBIT_wire <- mkDWire(0);
     Wire#(Bit#(5)) sampleinOTHERBIT_wire <- mkDWire(0);
     Reg#(Bit#(1)) delay_wren_r_reg <-mkReg(0);
+    Reg#(Bit#(1)) delay_wren_r2_reg <- mkSyncReg(0, defaultClock, defaultReset, serdes_clock);
+    Reg#(Bit#(1)) delay_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(Bit#(1)) fifo_wren_r2_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(Bit#(1)) fifo_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     
     rule serdes_calc;
         host.serdesind.clk_ready(1);
@@ -477,14 +490,28 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
         host.serdesind.alignedbit(pack(alignED_d_wire == 5'b11111));
     endrule
 
-    rule serdes_reset if (serdes.reset() == 1);
+    rule serdes_reset if (serdes.resets() == 1);
         new_raw_empty_wire <= 0;
         delay_wren_r_reg <= 0;
+        delay_wren_r2_reg <= 0;
     endrule
 
-    rule serdes_calc2 if (serdes.reset() == 0);
+    rule serdes_resetc if (serdes.reset() == 1);
+        delay_wren_c_reg <= 0;
+        fifo_wren_r2_reg <= 0;
+        fifo_wren_c_reg <= 0;
+    endrule
+
+    rule serdes_calc2 if (serdes.resets() == 0);
         new_raw_empty_wire <= pack(fifo_EMPTY_d_wire != 0);
         delay_wren_r_reg <= pack(sampleinOTHERBIT_wire == 0 && sampleinFIRSTBIT_wire != 0 && sampleinLASTBIT_wire != 0);
+        delay_wren_r2_reg <= delay_wren_r_reg;
+    endrule
+
+    rule serdes_calc2c if (serdes.reset() == 0);
+        delay_wren_c_reg <= delay_wren_r2_reg;
+        fifo_wren_r2_reg <= serdes.fifo_enable();
+        fifo_wren_c_reg <= fifo_wren_r2_reg;
     endrule
 
     rule tcalc;
@@ -632,6 +659,9 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
         endmethod
         method Bit#(1) delay_wren_r();
               return delay_wren_r_reg;
+        endmethod
+        method Bit#(1) fifo_enable();
+              return fifo_wren_c_reg;
         endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
