@@ -8,19 +8,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#define PORTAL_ALLOC _IOWR('B', 10, PortalAlloc)
-#define PORTAL_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalAlloc)
-#define PORTAL_SET_FCLK_RATE _IOWR('B', 40, PortalClockRequest)
-
-typedef struct PortalAlloc {
-  size_t size;
-  int fd;
-  struct {
-    unsigned long dma_address;
-    unsigned long length;
-  } entries[64];
-  int numEntries;
-} PortalAlloc;
+#include "../../drivers/portal/portal.h"
 
 struct channel{
   int s1;
@@ -54,12 +42,6 @@ class PortalMessage {
 }; 
 
 class PortalRequest;
-
-typedef struct PortalClockRequest {
-    int clknum;
-    long requested_rate;
-    long actual_rate;
-} PortalClockRequest;
 
 class PortalIndication {
  public:
