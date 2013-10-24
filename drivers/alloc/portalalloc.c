@@ -317,7 +317,9 @@ static struct ion_handle *ion_handle_create(struct ion_client *client,
 	if (!handle)
 		return ERR_PTR(-ENOMEM);
 	kref_init(&handle->ref);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
 	rb_init_node(&handle->node);
+#endif
 	handle->client = client;
 	ion_buffer_get(buffer);
 	ion_buffer_add_to_handle(buffer);
