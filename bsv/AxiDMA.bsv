@@ -48,11 +48,11 @@ interface DMAIndication;
 endinterface
 
 interface DMARequest;
-   method Action configReadChan(Bit#(32) channelId, Bit#(32) pa, Bit#(32) bsz);
-   method Action configWriteChan(Bit#(32) channelId, Bit#(32) pa, Bit#(32) bsz);
+   method Action configReadChan(Bit#(32) channelId, Bit#(40) pa, Bit#(32) bsz);
+   method Action configWriteChan(Bit#(32) channelId, Bit#(40) pa, Bit#(32) bsz);
    method Action getReadStateDbg();
    method Action getWriteStateDbg();
-   method Action sglist(Bit#(32) off, Bit#(32) addr, Bit#(32) len);
+   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
 endinterface
 
 instance PortalMemory#(DMARequest);
@@ -78,34 +78,34 @@ interface WriteChan;
 endinterface
 
 interface AxiDMARead;
-   method Action configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);
+   method Action configChan(DmaChannelId channelId, Bit#(40) pa, Bit#(4) bsz);
    interface Vector#(NumDmaChannels, ReadChan) readChannels;
    method DmaDbgRec dbg();
 endinterface
 
 interface AxiDMAWrite;
-   method Action  configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);   
+   method Action  configChan(DmaChannelId channelId, Bit#(40) pa, Bit#(4) bsz);   
    interface Vector#(NumDmaChannels, WriteChan) writeChannels;
    method DmaDbgRec dbg();
 endinterface
 
 interface AxiDMAWriteInternal;
    interface AxiDMAWrite write;
-   interface Axi3WriteClient#(32,64,8,6) m_axi_write;
-   method Action sglist(Bit#(32) off, Bit#(32) addr, Bit#(32) len);
+   interface Axi3WriteClient#(40,64,8,12) m_axi_write;
+   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
 endinterface
 
 interface AxiDMAReadInternal;
    interface AxiDMARead read;
-   interface Axi3ReadClient#(32,64,6) m_axi_read;   
-   method Action sglist(Bit#(32) off, Bit#(32) addr, Bit#(32) len);
+   interface Axi3ReadClient#(40,64,12) m_axi_read;   
+   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
 endinterface
 
 interface AxiDMA;
    interface DMARequest request;
    interface AxiDMAWrite write;
    interface AxiDMARead  read;
-   interface Axi3Client#(32,64,8,6) m_axi;
+   interface Axi3Client#(40,64,8,12) m_axi;
 endinterface
 
 function Put#(void) mkPutWhenFalse(Reg#(Bool) r);
@@ -148,7 +148,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
    Vector#(NumDmaChannels, Reg#(DmaChannelPtr)) ctxtPtrs <- replicateM(mkReg(unpack(0)));
    SGListManager sgl <- mkSGListManager();
    
-   Reg#(Bit#(32))         addrReg <- mkReg(0);
+   Reg#(Bit#(40))         addrReg <- mkReg(0);
    Reg#(Bit#(4))         burstReg <- mkReg(0);   
    Reg#(DmaChannelId)  activeChan <- mkReg(0);
    Reg#(InternalState)   stateReg <- mkReg(Idle);
@@ -181,26 +181,26 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
 	 end
    endrule
    
-   method Action sglist(Bit#(32) off, Bit#(32) addr, Bit#(32) len);
+   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
       sgl.sglist(off, addr, len);
    endmethod
    
    interface AxiDMARead read;
-      method Action configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);
+      method Action configChan(DmaChannelId channelId, Bit#(40) pa, Bit#(4) bsz);
 	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pa), burstLen:bsz};
       endmethod
       interface readChannels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
       method DmaDbgRec dbg();
-	 return DmaDbgRec{x:addrReg, y:zeroExtend(burstReg), z:zeroExtend(pack(readVReg(reqOutstanding))), w:zeroExtend(pack(stateReg))};
+	 return DmaDbgRec{x:truncate(addrReg), y:zeroExtend(burstReg), z:zeroExtend(pack(readVReg(reqOutstanding))), w:zeroExtend(pack(stateReg))};
       endmethod
    endinterface
 
    interface Axi3ReadClient m_axi_read;
-      method ActionValue#(Axi3ReadRequest#(32,6)) address if (stateReg == Address);
+      method ActionValue#(Axi3ReadRequest#(40,12)) address if (stateReg == Address);
 	 stateReg <= Data;
 	 return Axi3ReadRequest{address:addrReg, burstLen:burstReg, id:1};
       endmethod
-      method Action data(Axi3ReadResponse#(64,6) response) if (stateReg == Data);
+      method Action data(Axi3ReadResponse#(64,12) response) if (stateReg == Data);
 	 readBuffers[activeChan].fifo.enq(response.data);
 	 if(burstReg == 0)
 	    stateReg <= Idle;
@@ -218,7 +218,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
    Vector#(NumDmaChannels, Reg#(DmaChannelPtr)) ctxtPtrs <- replicateM(mkReg(unpack(0)));
    SGListManager sgl <- mkSGListManager();
 
-   Reg#(Bit#(32))         addrReg <- mkReg(0);
+   Reg#(Bit#(40))         addrReg <- mkReg(0);
    Reg#(Bit#(4))         burstReg <- mkReg(0);   
    Reg#(DmaChannelId)  activeChan <- mkReg(0);
    Reg#(InternalState)   stateReg <- mkReg(Idle);
@@ -252,28 +252,28 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
    endrule
    
    
-   method Action sglist(Bit#(32) off, Bit#(32) addr, Bit#(32) len);
+   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
       sgl.sglist(off, addr, len);
    endmethod
 
    interface AxiDMAWrite write;
-      method Action configChan(DmaChannelId channelId, Bit#(32) pa, Bit#(4) bsz);
+      method Action configChan(DmaChannelId channelId, Bit#(40) pa, Bit#(4) bsz);
 	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pa), burstLen:bsz};
       endmethod
       interface writeChannels = zipWith3(mkWriteChan, map(toPut,writeBuffers), 
 					 map(mkPutWhenFalse, reqOutstanding),
 					 map(mkGetWhenTrue, writeRespRec));
       method DmaDbgRec dbg();
-	 return DmaDbgRec{x:addrReg, y:zeroExtend(burstReg), z:zeroExtend(activeChan), w:zeroExtend(pack(stateReg))};
+	 return DmaDbgRec{x:truncate(addrReg), y:zeroExtend(burstReg), z:zeroExtend(activeChan), w:zeroExtend(pack(stateReg))};
       endmethod
    endinterface
 
    interface Axi3WriteClient m_axi_write;
-      method ActionValue#(Axi3WriteRequest#(32,6)) address if (stateReg == Address);
+      method ActionValue#(Axi3WriteRequest#(40,12)) address if (stateReg == Address);
 	 stateReg <= Data;
 	 return Axi3WriteRequest{address:addrReg, burstLen:burstReg, id:1};
       endmethod
-      method ActionValue#(Axi3WriteData#(64, 8, 6)) data if (stateReg == Data);
+      method ActionValue#(Axi3WriteData#(64, 8, 12)) data if (stateReg == Data);
 	 writeBuffers[activeChan].fifo.deq;
 	 let v = writeBuffers[activeChan].fifo.first;
 	 Bit#(1) last = burstReg == 0 ? 1'b1 : 1'b0;
@@ -283,7 +283,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
 	    burstReg <= burstReg-1;
 	 return Axi3WriteData { data: v, byteEnable: maxBound, last: last, id: 1 };
       endmethod
-      method Action response(Axi3WriteResponse#(6) resp) if (stateReg == Done);
+      method Action response(Axi3WriteResponse#(12) resp) if (stateReg == Done);
 	 writeRespRec[activeChan] <= True;
 	 stateReg <= Idle;
       endmethod
@@ -294,11 +294,11 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA);
    AxiDMAWriteInternal writer <- mkAxiDMAWriteInternal;
    AxiDMAReadInternal  reader <- mkAxiDMAReadInternal;
    interface DMARequest request;
-      method Action configReadChan(Bit#(32) channelId, Bit#(32) pa, Bit#(32) numWords);
+      method Action configReadChan(Bit#(32) channelId, Bit#(40) pa, Bit#(32) numWords);
 	 reader.read.configChan(pack(truncate(channelId)), pa, truncate((numWords>>1)-1));
 	 indication.configResp(channelId);
       endmethod
-      method Action configWriteChan(Bit#(32) channelId, Bit#(32) pa, Bit#(32) numWords);
+      method Action configWriteChan(Bit#(32) channelId, Bit#(40) pa, Bit#(32) numWords);
 	 writer.write.configChan(pack(truncate(channelId)), pa, truncate((numWords>>1)-1));
 	 indication.configResp(channelId);
       endmethod
@@ -308,7 +308,7 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA);
       method Action getWriteStateDbg();
 	 indication.reportStateDbg(writer.write.dbg());
       endmethod
-      method Action sglist(Bit#(32) off, Bit#(32) addr, Bit#(32) len);
+      method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
 	 writer.sglist(off, addr, len);
 	 reader.sglist(off, addr, len);
 	 indication.sglistResp(off);

@@ -36,7 +36,7 @@ typedef 32 SGListMaxLen;
 typedef Bit#(TLog#(TMul#(NumSGLists, SGListMaxLen))) SGListIdx;
 
 typedef struct {
-   Bit#(32) address;
+   Bit#(40) address;
    Bit#(32) length;
    } SGListEntry deriving (Bits);
 
@@ -46,9 +46,9 @@ typedef struct {
    } SGListPointer deriving (Bits);
 
 interface SGListManager;
-   method Action sglist(Bit#(32) off, Bit#(32) addr, Bit#(32) len);
+   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
    method Action loadCtx(SGListId id);
-   method ActionValue#(Bit#(32)) nextAddr(Bit#(4) burstLen);
+   method ActionValue#(Bit#(40)) nextAddr(Bit#(4) burstLen);
    method Action dropCtx();
 endinterface
 
@@ -64,7 +64,7 @@ module mkSGListManager(SGListManager);
    Vector#(NumSGLists, Reg#(SGListPointer))  listPtrs <- genWithM(foo);
    FIFOF#(SGListId)                          loadReqs <- mkFIFOF;
    
-   method Action sglist(Bit#(32) off, Bit#(32) addr, Bit#(32) len);
+   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
       let entry = SGListEntry{address:addr, length:len};
       listMem.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(off), datain:entry});
    endmethod
@@ -76,7 +76,7 @@ module mkSGListManager(SGListManager);
    
    // I should think of a better way of handling the case of mis-alignment 
    // between burst lengths and the sizes of the blocks in the SG list (mdk)
-   method ActionValue#(Bit#(32)) nextAddr(Bit#(4) burstLen);
+   method ActionValue#(Bit#(40)) nextAddr(Bit#(4) burstLen);
       loadReqs.deq;
       let rv <- listMem.portA.response.get;
       let id = loadReqs.first;
@@ -90,7 +90,7 @@ module mkSGListManager(SGListManager);
 	 $display("burst crosses SG list boundry");
       else if(rv.length == 0)
 	 $display("going off the end of SG list");
-      return rv.address + lp.offset;
+      return rv.address + extend(lp.offset);
    endmethod
    
    method Action dropCtx();
