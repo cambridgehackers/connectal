@@ -226,16 +226,9 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper) provisos (Log#(%(indicationChannelCount)
         if (addr == 14'h01C)
 	    v = outOfRangeReadCountReg;
         if (addr == 14'h020)
-	begin
-            if (tpl_2(rq.maxPriorityRequest) != 0)
-            begin
-	        v = extend(tpl_1(rq.maxPriorityRequest)) + 1;
-            end
-            else
-            begin
-                v = 0;
-            end
-	end
+            v = extend(tpl_1(rq.maxPriorityRequest)); // request number
+        if (addr == 14'h024)
+            v = extend(tpl_2(rq.maxPriorityRequest)); // request prio
 	if (addr == 14'h034)
 	    v = outOfRangeWriteCount;
 	if (addr == 14'h038)
