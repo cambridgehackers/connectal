@@ -632,6 +632,7 @@ class InterfaceMixin:
                 if busType == 'ImageonVita':
                     clknames.append('imageon_clock')
                     clknames.append('serdes_clock')
+                    clknames.append('serdest_clock')
                 if busType == 'HDMI':
                     clknames.append('hdmi_clock')
             buses[busType] = collected

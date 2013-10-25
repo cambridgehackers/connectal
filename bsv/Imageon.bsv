@@ -93,6 +93,7 @@ interface ImageonSensorControl;
     method Action sampleinFIRSTBIT(Bit#(5) v);
     method Action sampleinLASTBIT(Bit#(5) v);
     method Action sampleinOTHERBIT(Bit#(5) v);
+    method Action ibufds_out(Bit#(5) v);
     method Bit#(1) delay_wren_r();
     method Bit#(1) fifo_enable();
     interface Reset reset;
@@ -448,7 +449,7 @@ endinterface
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
-module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, Reset serdes_reset, ImageonVita host, ImageonSerdes serdes)(ImageonSensor);
+module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset, ImageonVita host, ImageonSerdes serdes)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -484,6 +485,7 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
     Reg#(Bit#(1)) delay_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_wren_r2_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+//jca SensorDiffData foo <- mkGetSensorDiffData(defaultClock, serdes_clock);
     
     rule serdes_calc;
         host.serdesind.clk_ready(1);
@@ -786,26 +788,69 @@ endmodule
 
 (* always_ready, always_enabled *)
 interface SensorDiffData;
-   interface Vector#(4, IbufdsOut) in;
-   interface Vector#(4, IserdesControl) control;
-   interface Vector#(4, IserdesWren) wren;
-   interface Vector#(4, IserdesFifo) fifo;
+   interface Vector#(5, IbufdsOut) in;
+   interface Vector#(5, IserdesControl) control;
+   interface Vector#(5, IserdesWren) wren;
+   interface Vector#(5, IserdesFifo) fifo;
 endinterface
 
 module mkGetSensorDiffData#(Clock clk, Clock clkdiv)(SensorDiffData);
 
-   Vector#(4, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(clk, clkdiv));
+   Vector#(5, IserdesDatadeser) serdes_v;
+   for (Bit#(3) i = 0; i < 5; i = i+1) begin
+       serdes_v[i] <- mkIserdesDatadeser(clk, clkdiv);
+/*
+.clock(imageon_clk),
+.clk(imageon_clk_tmp),
+.clkdiv(imageon_clkdiv_c),
+    //.CLK_imageon_clock(imageon_clk),
+    //.CLK_serdes_clock(imageon_clkdiv_c),
+    //.CLK_hdmi_clock(imageon_clk4x),
+.reset(imageon_host_iserdes_reset),
+    //.serdes_reset(imageon_host_iserdes_reset),
+.ibufds_out(ibufds_out[j]),
+    //.sensor_ibufds_out_v(ibufds_out),
+.align_start(imageon_host_iserdes_align_start),
+    //.serdes_align_start(imageon_host_iserdes_align_start),
+.align_busy(imageon_ALIGN_BUSY_d[j]),
+    //.sensor_align_BUSY_d_v(imageon_ALIGN_BUSY_d),
+.aligned(imageon_ALIGNED_d[j]),
+    //.sensor_alignED_d_v(imageon_ALIGNED_d),
+.sampleinfirstbit(imageon_SAMPLEINFIRSTBIT[j]),
+    //.sensor_sampleinFIRSTBIT_v(imageon_SAMPLEINFIRSTBIT),
+.sampleinlastbit(imageon_SAMPLEINLASTBIT[j]),
+    //.sensor_sampleinLASTBIT_v(imageon_SAMPLEINLASTBIT),
+.sampleinotherbit(imageon_SAMPLEINOTHERBIT[j]),
+    //.sensor_sampleinOTHERBIT_v(imageon_SAMPLEINOTHERBIT),
+.autoalign(imageon_host_iserdes_auto_align),
+    //.serdes_auto_align(imageon_host_iserdes_auto_align),
+.training(imageon_host_iserdes_training),
+    //.serdes_training(imageon_host_iserdes_training),
+.manual_tap(imageon_host_iserdes_manual_tap),
+    //.serdes_manual_tap(imageon_host_iserdes_manual_tap),
+.fifo_wren(imageon_host_iserdes_fifo_enable),
+    //.sensor_fifo_enable(imageon_host_iserdes_fifo_enable),
+.delay_wren(imageon_DELAY_WREN_r),
+    //.sensor_delay_wren_r(imageon_DELAY_WREN_r),
+.fifo_rden(imageon_host_decoder_enable),
+    //.imageon_decoder_enable(imageon_host_decoder_enable),
+.fifo_empty(imageon_FIFO_EMPTY_d[j]),
+    //.sensor_fifo_EMPTY_d_v(imageon_FIFO_EMPTY_d),
+.fifo_dataout(imageon_xsvi_raw_data[((j+1)*10)-1:j*10])
+    //.sensor_raw_data_v(imageon_xsvi_raw_data),
+*/
+   end
 
-   Vector#(4, IserdesControl) control_v;
-   for (Bit#(3) i = 0; i < 4; i = i+1) begin
+   Vector#(5, IserdesControl) control_v;
+   for (Bit#(3) i = 0; i < 5; i = i+1) begin
       control_v[i] = serdes_v[i].control;
    end
-   Vector#(4, IserdesWren) wren_v;
-   for (Bit#(3) i = 0; i < 4; i = i+1) begin
+   Vector#(5, IserdesWren) wren_v;
+   for (Bit#(3) i = 0; i < 5; i = i+1) begin
       wren_v[i] = serdes_v[i].wren;
    end
-   Vector#(4, IserdesFifo) fifo_v;
-   for (Bit#(3) i = 0; i < 4; i = i+1) begin
+   Vector#(5, IserdesFifo) fifo_v;
+   for (Bit#(3) i = 0; i < 5; i = i+1) begin
       fifo_v[i] = serdes_v[i].fifo;
    end
 

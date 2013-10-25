@@ -100,13 +100,14 @@ interface ImageCaptureRequest;
    interface DMARequest dmaRequest;
 endinterface
  
-module mkImageCaptureRequest#(Clock imageon_clock, Clock serdes_clock, Clock hdmi_clock, 
+module mkImageCaptureRequest#(Clock imageon_clock, Clock serdes_clock, Clock serdest_clock, Clock hdmi_clock, 
     ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset serdes_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
+    Reset serdest_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
     ImageonVitaController imageonVita <- mkImageonVitaController(hdmi_clock, hdmi_reset, imageon_clock, imageon_reset, serdes_clock, serdes_reset);
@@ -115,7 +116,7 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock serdes_clock, Clock hdm
     let imageon_vitas_clock_binder <- mkClockBinder(imageonVita.hosts, clocked_by imageon_clock);
     let imageon_serdes_clock_binder <- mkClockBinder(imageonVita.serdes, clocked_by serdes_clock);
 
-    ImageonSensor fromSensor <- mkImageonSensor(hdmi_clock, hdmi_reset, serdes_clock, serdes_reset, imageon_vitas_clock_binder,
+    ImageonSensor fromSensor <- mkImageonSensor(hdmi_clock, hdmi_reset, serdes_clock, serdes_reset, serdest_clock, serdest_reset, imageon_vitas_clock_binder,
         imageon_serdes_clock_binder, clocked_by imageon_clock, reset_by imageon_reset);
     ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
         fromSensor,
