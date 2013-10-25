@@ -26,6 +26,7 @@ import FIFO::*;
 import GetPut::*;
 import Gearbox::*;
 import Clocks :: *;
+import IserdesDatadeser::*;
 
 (* always_enabled *)
 interface ImageonSerdes;
@@ -781,4 +782,37 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
 	    };
 	endmethod
     endinterface: out
+endmodule
+
+(* always_ready, always_enabled *)
+interface SensorDiffData;
+   interface Vector#(4, IbufdsOut) in;
+   interface Vector#(4, IserdesControl) control;
+   interface Vector#(4, IserdesWren) wren;
+   interface Vector#(4, IserdesFifo) fifo;
+endinterface
+
+module mkGetSensorDiffData#(Clock clk, Clock clkdiv)(SensorDiffData);
+
+   Vector#(4, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(clk, clkdiv));
+
+   Vector#(4, IserdesControl) control_v;
+   for (Bit#(3) i = 0; i < 4; i = i+1) begin
+      control_v[i] = serdes_v[i].control;
+   end
+   Vector#(4, IserdesWren) wren_v;
+   for (Bit#(3) i = 0; i < 4; i = i+1) begin
+      wren_v[i] = serdes_v[i].wren;
+   end
+   Vector#(4, IserdesFifo) fifo_v;
+   for (Bit#(3) i = 0; i < 4; i = i+1) begin
+      fifo_v[i] = serdes_v[i].fifo;
+   end
+
+   function IbufdsOut ibufdsOut(IserdesDatadeser d); return d.ibufdsOut; endfunction   
+   interface Vector in = map(ibufdsOut, serdes_v);
+   interface Vector control = control_v;
+   interface Vector wren = wren_v;
+   interface Vector fifo = fifo_v;
+   
 endmodule
