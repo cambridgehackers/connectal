@@ -113,11 +113,45 @@ endmodule
 
 ////////////////////////////////////////////////////////////
 typedef struct {
+   String data_rate;
+   Integer data_width;
+   String dyn_clk_inv_en;
+   String dyn_clkdiv_inv_en;
+   Integer init_q1;
+   Integer init_q2;
+   Integer init_q3;
+   Integer init_q4;
+   String interface_type;
+   String iobdelay;
+   Integer num_ce;
+   String ofb_used;
+   String serdes_mode;
+   Integer srval_q1;
+   Integer srval_q2;
+   Integer srval_q3;
+   Integer srval_q4;
 }  ISERDESE2_Config;
 
 instance DefaultValue#(ISERDESE2_Config);
    defaultValue =
    ISERDESE2_Config {
+      data_rate: "DDR",
+      data_width: 8,
+      dyn_clk_inv_en: "FALSE",
+      dyn_clkdiv_inv_en: "FALSE",
+      init_q1: 0,
+      init_q2: 0,
+      init_q3: 0,
+      init_q4: 0,
+      interface_type: "NETWORKING",
+      iobdelay: "IBUF",
+      num_ce: 1,
+      ofb_used: "FALSE",
+      serdes_mode: "MASTER",
+      srval_q1: 0,
+      srval_q2: 0,
+      srval_q3: 0,
+      srval_q4: 0
       };
 endinstance
 
@@ -155,7 +189,23 @@ module mkISERDESE2#(ISERDESE2_Config cfg, Clock clk, Clock clkb)(IserdesE2);
    default_clock clkdiv(CLKDIV);
    default_reset rst(RST);
 
-   //parameter CINVCTRL_SEL = cfg.cinvctrl_sel;
+   parameter DATA_RATE = cfg.data_rate;
+   parameter DATA_WIDTH = cfg.data_width;
+   parameter DYN_CLK_INV_EN = cfg.dyn_clk_inv_en;
+   parameter DYN_CLKDIV_INV_EN = cfg.dyn_clkdiv_inv_en;
+   parameter INIT_Q1 = cfg.init_q1;
+   parameter INIT_Q2 = cfg.init_q2;
+   parameter INIT_Q3 = cfg.init_q3;
+   parameter INIT_Q4 = cfg.init_q4;
+   parameter INTERFACE_TYPE = cfg.interface_type;
+   parameter IOBDELAY = cfg.iobdelay;
+   parameter NUM_CE = cfg.num_ce;
+   parameter OFB_USED = cfg.ofb_used;
+   parameter SERDES_MODE = cfg.serdes_mode;
+   parameter SRVAL_Q1 = cfg.srval_q1;
+   parameter SRVAL_Q2 = cfg.srval_q2;
+   parameter SRVAL_Q3 = cfg.srval_q3;
+   parameter SRVAL_Q4 = cfg.srval_q4;
 
    port CLKDIVP = 0; // unused
    path (D, O);
