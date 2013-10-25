@@ -952,6 +952,7 @@ class ImageonVita:
      wire vita_reset_n_o;
      wire [4:0] vita_data_p;
      wire [4:0] vita_data_n;
+     wire [4:0] ibufds_out;
 
      /* IIC */
      wire fmc_imageon_iic_0_scl_T;
@@ -1151,15 +1152,15 @@ class ImageonVita:
     generate
     for(j=0; j <= 4; j=j+1)
         begin
+        IBUFDS#( .CAPACITANCE("DONT_CARE"), .DIFF_TERM(1),
+             .IBUF_DELAY_VALUE(0), .IFD_DELAY_VALUE("AUTO"), .IOSTANDARD("DEFAULT"))
+            ( .O(ibufds_out[j]), .I(vita_data_p[j]), .IB(vita_data_n[j]));
         iserdes_datadeser (
             .clock(imageon_clk),
             .reset(imageon_host_iserdes_reset),
             .clk(imageon_clk_tmp),
-            .clkb(imageon_clk_tmp),
             .clkdiv(imageon_clkdiv_c),
-            .sdatap(vita_data_p[j]),
-            .sdatan(vita_data_n[j]),
-            .clk_div_reset(imageon_host_iserdes_reset),
+            .ibufds_out(ibufds_out[j]),
             .align_start(imageon_host_iserdes_align_start),
             .align_busy(imageon_ALIGN_BUSY_d[j]),
             .aligned(imageon_ALIGNED_d[j]),
