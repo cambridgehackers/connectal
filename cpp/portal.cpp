@@ -245,7 +245,7 @@ PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
   const char* path = "/dev/portalalloc";
   this->pa_fd = ::open(path, O_RDWR);
   if (this->pa_fd < 0){
-    ALOGE("Failed to open %s pa_fd=%d errno=%d\n", path, this->pa_fd, path);
+    ALOGE("Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);
   }
 }
 
@@ -270,7 +270,7 @@ int PortalMemory::reference(PortalAlloc* pa)
   pa->numEntries;
   for(int i = 0; i <= pa->numEntries; i++){
     int offset = (id*32)+i;
-    fprintf(stderr, "PortalMemory::sglist(%08x, %08x, %08x)\n", offset, pa->entries[i].dma_address, pa->entries[i].length);
+    fprintf(stderr, "PortalMemory::sglist(%08x, %08lx, %08lx)\n", offset, pa->entries[i].dma_address, pa->entries[i].length);
     sglist(offset, pa->entries[i].dma_address, pa->entries[i].length);
     sleep(1);
   }
