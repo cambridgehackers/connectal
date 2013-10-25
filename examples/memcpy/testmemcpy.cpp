@@ -37,14 +37,14 @@ void dump(const char *prefix, char *buf, size_t len)
 class TestDMAIndication : public DMAIndication
 {
   virtual void reportStateDbg(DmaDbgRec& rec){
-    fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
+    fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "configResp: %x\n", channelId);
+    fprintf(stderr, "configResp: %lx\n", channelId);
     sem_post(&conf_sem);
   }
   virtual void sglistResp(unsigned long channelId){
-    fprintf(stderr, "sglistResp: %x\n", channelId);
+    fprintf(stderr, "sglistResp: %lx\n", channelId);
   }
 };
 
@@ -61,7 +61,7 @@ class TestCoreIndication : public CoreIndication
     memcmp_fail |= mcf;
     if(true){
       fprintf(stderr, "memcpy done: %lx\n", v);
-      fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, srcBuffer, dstBuffer, mcf == 0 ? "pass" : "fail");
+      fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
       // dump("src", (char*)srcBuffer, size);
       // dump("dst", (char*)dstBuffer, size);
     }
@@ -86,7 +86,7 @@ class TestCoreIndication : public CoreIndication
   virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
 			      unsigned long streamWrCnt, unsigned long writeInProg, 
 			      unsigned long dataMismatch){
-    fprintf(stderr, "Core::reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
+    fprintf(stderr, "Core::reportStateDbg: srcGen=%ld, streamRdCnt=%ld, streamWrCnt=%ld, writeInProg=%ld, dataMismatch=%ld\n", 
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
   }  
 };
