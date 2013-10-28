@@ -27,6 +27,7 @@ import GetPut::*;
 import Gearbox::*;
 import Clocks :: *;
 import IserdesDatadeser::*;
+import GetPutWithClocks :: *;
 
 (* always_enabled *)
 interface ImageonSerdes;
@@ -94,6 +95,7 @@ interface ImageonSensorControl;
     method Action sampleinLASTBIT(Bit#(5) v);
     method Action sampleinOTHERBIT(Bit#(5) v);
     method Action ibufds_out(Bit#(5) v);
+    method Bit#(5) ibufds_out_value();
     method Bit#(1) delay_wren_r();
     method Bit#(1) fifo_enable();
     interface Reset reset;
@@ -480,12 +482,12 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
     Wire#(Bit#(5)) sampleinFIRSTBIT_wire <- mkDWire(0);
     Wire#(Bit#(5)) sampleinLASTBIT_wire <- mkDWire(0);
     Wire#(Bit#(5)) sampleinOTHERBIT_wire <- mkDWire(0);
+    Wire#(Bit#(5)) ibufds_out_wire <- mkDWire(0);
     Reg#(Bit#(1)) delay_wren_r_reg <-mkReg(0);
     Reg#(Bit#(1)) delay_wren_r2_reg <- mkSyncReg(0, defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) delay_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_wren_r2_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-//jca SensorDiffData foo <- mkGetSensorDiffData(defaultClock, serdes_clock);
     
     rule serdes_calc;
         host.serdesind.clk_ready(1);
@@ -666,6 +668,12 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
         method Bit#(1) fifo_enable();
               return fifo_wren_c_reg;
         endmethod
+        method Action ibufds_out(Bit#(5) v);
+            ibufds_out_wire <= v;
+        endmethod
+        method Bit#(5) ibufds_out_value();
+            return ibufds_out_wire;
+        endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
     endinterface: in
@@ -788,76 +796,98 @@ endmodule
 
 (* always_ready, always_enabled *)
 interface SensorDiffData;
-   interface Vector#(5, IbufdsOut) in;
-   interface Vector#(5, IserdesControl) control;
-   interface Vector#(5, IserdesWren) wren;
+   //interface Vector#(5, IbufdsOut) in;
+   //interface Vector#(5, IserdesControl) control;
+   //interface Vector#(5, IserdesWren) wren;
    interface Vector#(5, IserdesFifo) fifo;
 endinterface
 
-module mkGetSensorDiffData#(Clock clk, Clock clkdiv)(SensorDiffData);
+module mkGetSensorDiffData#(Clock clkdiv,
+   ImageonSensorControl sensor, ImageonVita host, ImageonSerdes serdes)(SensorDiffData);
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
 
-   Vector#(5, IserdesDatadeser) serdes_v;
-   for (Bit#(3) i = 0; i < 5; i = i+1) begin
-       serdes_v[i] <- mkIserdesDatadeser(clk, clkdiv);
+   Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(clkdiv));
+   Wire#(Bit#(5)) align_BUSY_d_wire <- mkDWire(0);
+   Wire#(Bit#(5)) alignED_d_wire <- mkDWire(0);
+   Wire#(Bit#(5)) sampleinFIRSTBIT_wire <- mkDWire(0);
+   Wire#(Bit#(5)) sampleinLASTBIT_wire <- mkDWire(0);
+   Wire#(Bit#(5)) sampleinOTHERBIT_wire <- mkDWire(0);
+   Wire#(Bit#(5)) fifo_EMPTY_d_wire <- mkDWire(0);
+   Wire#(Bit#(50)) raw_data_wire <- mkDWire(0);
+   //ReadOnly#(Bit#(1)) reset_wire <- mkNullCrossingWire(defaultClock, serdes.reset());
+   //Reg#(Bit#(1)) reset_wire <- mkReg(0);
+   //rule sendup_reset;
+       //reset_wire <= serdes.reset();
+   //endrule
+
+   Vector#(5, IserdesWren) clkdivif;
+   for (Bit#(8) i = 0; i < 5; i = i+1) begin
+      clkdivif[i] <- mkClockBinder(serdes_v[i].wren, clocked_by clkdiv);
+   end
+
+   rule sendup_init;
+   endrule
+
+   rule sendup_connect;
+       sensor.align_BUSY_d(align_BUSY_d_wire);
+       sensor.alignED_d(alignED_d_wire);
+       sensor.sampleinFIRSTBIT(sampleinFIRSTBIT_wire);
+       sensor.sampleinLASTBIT(sampleinLASTBIT_wire);
+       sensor.sampleinOTHERBIT(sampleinOTHERBIT_wire);
+       sensor.fifo_EMPTY_d(fifo_EMPTY_d_wire);
+       sensor.raw_data(raw_data_wire);
+   endrule
+
+   rule sendup;
+   Bit#(5) emptyw = 0;
+   Bit#(5) firstw = 0;
+   Bit#(5) lastw = 0;
+   //Bit#(5) otherw = 0;
+   Bit#(5) alignedw = 0;
+   Bit#(5) alignbusyw = 0;
+   Bit#(50) rawdataw = 0;
+   for (Bit#(8) i = 0; i < 5; i = i+1) begin
+      serdes_v[i].control.align_start(serdes.align_start());
+      alignbusyw[i] = serdes_v[i].control.align_busy();
+      alignedw[i] = serdes_v[i].control.aligned();
+      serdes_v[i].control.autoalign(serdes.auto_align());
+      serdes_v[i].control.training(serdes.training());
+      serdes_v[i].control.manual_tap(serdes.manual_tap());
+      firstw[i] = serdes_v[i].control.sampleinfirstbit();
+      lastw[i] = serdes_v[i].control.sampleinlastbit();
+      //sampleinOTHERBIT_wire[i:i] <= serdes_v[i].control.sampleinotherbit();
+      serdes_v[i].ibufdsOut.ibufds_out(sensor.ibufds_out_value()[i]);
+      emptyw[i] = serdes_v[i].fifo.empty();
+      rawdataw[(i+1)*10-1: i*10] = serdes_v[i].fifo.dataout();
+      serdes_v[i].fifo.rden(host.decoder.enable());
 /*
-.clock(imageon_clk),
 .clk(imageon_clk_tmp),
-.clkdiv(imageon_clkdiv_c),
-    //.CLK_imageon_clock(imageon_clk),
-    //.CLK_serdes_clock(imageon_clkdiv_c),
-    //.CLK_hdmi_clock(imageon_clk4x),
-.reset(imageon_host_iserdes_reset),
-    //.serdes_reset(imageon_host_iserdes_reset),
-.ibufds_out(ibufds_out[j]),
-    //.sensor_ibufds_out_v(ibufds_out),
-.align_start(imageon_host_iserdes_align_start),
-    //.serdes_align_start(imageon_host_iserdes_align_start),
-.align_busy(imageon_ALIGN_BUSY_d[j]),
-    //.sensor_align_BUSY_d_v(imageon_ALIGN_BUSY_d),
-.aligned(imageon_ALIGNED_d[j]),
-    //.sensor_alignED_d_v(imageon_ALIGNED_d),
-.sampleinfirstbit(imageon_SAMPLEINFIRSTBIT[j]),
-    //.sensor_sampleinFIRSTBIT_v(imageon_SAMPLEINFIRSTBIT),
-.sampleinlastbit(imageon_SAMPLEINLASTBIT[j]),
-    //.sensor_sampleinLASTBIT_v(imageon_SAMPLEINLASTBIT),
-.sampleinotherbit(imageon_SAMPLEINOTHERBIT[j]),
-    //.sensor_sampleinOTHERBIT_v(imageon_SAMPLEINOTHERBIT),
-.autoalign(imageon_host_iserdes_auto_align),
-    //.serdes_auto_align(imageon_host_iserdes_auto_align),
-.training(imageon_host_iserdes_training),
-    //.serdes_training(imageon_host_iserdes_training),
-.manual_tap(imageon_host_iserdes_manual_tap),
-    //.serdes_manual_tap(imageon_host_iserdes_manual_tap),
-.fifo_wren(imageon_host_iserdes_fifo_enable),
-    //.sensor_fifo_enable(imageon_host_iserdes_fifo_enable),
-.delay_wren(imageon_DELAY_WREN_r),
-    //.sensor_delay_wren_r(imageon_DELAY_WREN_r),
-.fifo_rden(imageon_host_decoder_enable),
-    //.imageon_decoder_enable(imageon_host_decoder_enable),
-.fifo_empty(imageon_FIFO_EMPTY_d[j]),
-    //.sensor_fifo_EMPTY_d_v(imageon_FIFO_EMPTY_d),
-.fifo_dataout(imageon_xsvi_raw_data[((j+1)*10)-1:j*10])
-    //.sensor_raw_data_v(imageon_xsvi_raw_data),
 */
    end
-
-   Vector#(5, IserdesControl) control_v;
+   fifo_EMPTY_d_wire <= emptyw;
+   align_BUSY_d_wire <= alignbusyw;
+   alignED_d_wire <= alignedw;
+   sampleinFIRSTBIT_wire <= firstw;
+   sampleinLASTBIT_wire <= lastw;
+   //sampleinOTHERBIT_wire <= otherw;
+   sampleinOTHERBIT_wire <= 
+      { serdes_v[4].control.sampleinotherbit(),
+      serdes_v[3].control.sampleinotherbit(),
+      serdes_v[2].control.sampleinotherbit(),
+      serdes_v[1].control.sampleinotherbit(),
+      serdes_v[0].control.sampleinotherbit()};
+   raw_data_wire <= rawdataw;
+   endrule
+   rule sendup2;
    for (Bit#(3) i = 0; i < 5; i = i+1) begin
-      control_v[i] = serdes_v[i].control;
+      serdes_v[i].control.reset(serdes.resets());
    end
-   Vector#(5, IserdesWren) wren_v;
+   endrule
+   rule sendup3;
    for (Bit#(3) i = 0; i < 5; i = i+1) begin
-      wren_v[i] = serdes_v[i].wren;
+      clkdivif[i].delay_wren(sensor.delay_wren_r());
+      clkdivif[i].fifo_wren(serdes.fifo_enable());
    end
-   Vector#(5, IserdesFifo) fifo_v;
-   for (Bit#(3) i = 0; i < 5; i = i+1) begin
-      fifo_v[i] = serdes_v[i].fifo;
-   end
-
-   function IbufdsOut ibufdsOut(IserdesDatadeser d); return d.ibufdsOut; endfunction   
-   interface Vector in = map(ibufdsOut, serdes_v);
-   interface Vector control = control_v;
-   interface Vector wren = wren_v;
-   interface Vector fifo = fifo_v;
-   
+   endrule
 endmodule
