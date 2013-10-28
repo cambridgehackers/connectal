@@ -994,6 +994,7 @@ class ImageonVita:
     .imageon_decoder_enable(imageon_host_decoder_enable),
     .imageon_trigger_enable(imageon_host_trigger_enable),
 
+    .EN_sensor_ibufds_out(1),
     .sensor_ibufds_out_v(ibufds_out),
     .sensor_align_BUSY_d_v(imageon_ALIGN_BUSY_d),
     .sensor_alignED_d_v(imageon_ALIGNED_d),
@@ -1156,27 +1157,6 @@ class ImageonVita:
         IBUFDS#( .CAPACITANCE("DONT_CARE"), .DIFF_TERM(1),
              .IBUF_DELAY_VALUE(0), .IFD_DELAY_VALUE("AUTO"), .IOSTANDARD("DEFAULT"))
             ( .O(ibufds_out[j]), .I(vita_data_p[j]), .IB(vita_data_n[j]));
-        iserdes_datadeser (
-            .clock(imageon_clk),
-            .reset(imageon_host_iserdes_reset),
-            .clk(imageon_clk_tmp),
-            .clkdiv(imageon_clkdiv_c),
-            .ibufds_out(ibufds_out[j]),
-            .align_start(imageon_host_iserdes_align_start),
-            .align_busy(imageon_ALIGN_BUSY_d[j]),
-            .aligned(imageon_ALIGNED_d[j]),
-            .sampleinfirstbit(imageon_SAMPLEINFIRSTBIT[j]),
-            .sampleinlastbit(imageon_SAMPLEINLASTBIT[j]),
-            .sampleinotherbit(imageon_SAMPLEINOTHERBIT[j]),
-            .autoalign(imageon_host_iserdes_auto_align),
-            .training(imageon_host_iserdes_training),
-            .manual_tap(imageon_host_iserdes_manual_tap),
-            .fifo_wren(imageon_host_iserdes_fifo_enable),
-            .delay_wren(imageon_DELAY_WREN_r),
-            .fifo_rden(imageon_host_decoder_enable),
-            .fifo_empty(imageon_FIFO_EMPTY_d[j]),
-            .fifo_dataout(imageon_xsvi_raw_data[((j+1)*10)-1:j*10])
-         );
         end
     endgenerate
  '''

@@ -60,11 +60,11 @@ interface IserdesDatadeser;
 endinterface: IserdesDatadeser
 
 import "BVI" iserdes_datadeser = 
-module mkIserdesDatadeser#(Clock clkdiv)(IserdesDatadeser);
+module mkIserdesDatadeser#(Clock clkdiv, Clock serdest)(IserdesDatadeser);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
 
-   input_clock clk (CLK) = defaultClock;
+   input_clock clk (CLK) = serdest;
    input_clock clkdiv (CLKDIV) = clkdiv;
    default_clock clock(CLOCK);
    interface IbufdsOut ibufdsOut;

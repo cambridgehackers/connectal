@@ -121,7 +121,7 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock serdes_clock, Clock ser
     ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
         fromSensor,
         clocked_by hdmi_clock, reset_by hdmi_reset);
-SensorDiffData foo <- mkGetSensorDiffData(serdes_clock, fromSensor.in, imageon_vitas_clock_binder,
+SensorDiffData foo <- mkGetSensorDiffData(serdes_clock, serdest_clock, fromSensor.in, imageon_vitas_clock_binder,
         imageon_serdes_clock_binder, clocked_by imageon_clock, reset_by imageon_reset);
 
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);

@@ -790,26 +790,16 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
     endinterface: out
 endmodule
 
-//(* always_ready, always_enabled *)
 interface SensorDiffData;
-   //interface Vector#(5, IbufdsOut) in;
-   //interface Vector#(5, IserdesControl) control;
-   //interface Vector#(5, IserdesWren) wren;
    interface Vector#(5, IserdesFifo) fifo;
 endinterface
 
-module mkGetSensorDiffData#(Clock clkdiv,
+module mkGetSensorDiffData#(Clock clkdiv, Clock serdest,
    ImageonSensorControl sensor, ImageonVita host, ImageonSerdes serdes)(SensorDiffData);
-   Clock defaultClock <- exposeCurrentClock();
-   Reset defaultReset <- exposeCurrentReset();
+   //Clock defaultClock <- exposeCurrentClock();
+   //Reset defaultReset <- exposeCurrentReset();
 
-   Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(clkdiv));
-   //ReadOnly#(Bit#(1)) reset_wire <- mkNullCrossingWire(defaultClock, serdes.reset());
-   //Reg#(Bit#(1)) reset_wire <- mkReg(0);
-   //rule sendup_reset;
-       //reset_wire <= serdes.reset();
-   //endrule
-
+   Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(clkdiv, serdest));
    Vector#(5, IserdesWren) clkdivif;
    for (Bit#(8) i = 0; i < 5; i = i+1) begin
       clkdivif[i] <- mkClockBinder(serdes_v[i].wren, clocked_by clkdiv);
