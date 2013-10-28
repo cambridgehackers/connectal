@@ -53,6 +53,7 @@ interface PcieToAxiBridge#(numeric type bpb);
    method Action interrupt();
 
    interface Put#(TimestampedTlpData) trace;
+   interface Reg#(Bit#(4)) numPortals;
 
 endinterface: PcieToAxiBridge
 
@@ -829,6 +830,7 @@ interface ControlAndStatusRegs;
    interface Reg#(Bool) axiEnabled;
    interface Reg#(Bool) pipeliningEnabled;
    interface Reg#(Bool) byteSwap;
+   interface Reg#(Bit#(4)) numPortals;
    interface Reg#(Bit#(32)) axiTestEnabled;
    interface Reg#(Bit#(32)) addrLowerWord;
    interface Reg#(Bit#(32)) addrUpperWord;
@@ -920,6 +922,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bool) axiEnabledReg <- mkReg(False);
    Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
    Reg#(Bool) byteSwapReg <- mkReg(False);
+   Reg#(Bit#(4)) numPortalsReg <- mkReg(1);
    Reg#(Bit#(32)) axiTestEnabledReg <- mkReg(0);
    Reg#(Bit#(32)) addrLowerWordReg <- mkReg(0);
    Reg#(Bit#(32)) addrUpperWordReg <- mkReg(0);
@@ -993,6 +996,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 793: return msi_enabled ? 1 : 0;
 	 794: return byteSwapReg ? 1 : 0;
 	 795: return axiSlaveEngine.tlpOutFifoNotEmpty ? 1 : 0;
+	 796: return extend(numPortalsReg);
 
          // 4-entry MSIx table
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
@@ -1064,6 +1068,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    789: tlpDataBramRdAddrReg <= dword;
 	    792: tlpDataBramWrAddrReg <= dword;
 	    794: byteSwapReg <= (dword != 0) ? True : False;
+	    796: numPortalsReg <= truncate(dword);
 
             // MSIx table entries
             4096: msix_entry[0].addr_lo  <= update_dword(msix_entry[0].addr_lo, be, (dword & 32'hfffffffc));
@@ -1519,6 +1524,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface Reg pipeliningEnabled = pipeliningEnabledReg;
    interface Reg byteSwap = byteSwapReg;
    interface Reg axiTestEnabled = axiTestEnabledReg;
+   interface Reg numPortals = numPortalsReg;
    interface Reg addrLowerWord = addrLowerWordReg;
    interface Reg addrUpperWord = addrUpperWordReg;
    interface Reg testResult = testResultReg;
@@ -2704,6 +2710,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    interface MsgPort noc = dma.noc;
    interface Axi3Master portal0 = portalEngine.portal;
    interface Axi3Slave slave = axiSlaveEngine.slave;
+   interface Reg numPortals = csr.numPortals;
 
    method Bool is_activated = csr.is_activated();
    method Bool rx_activity  = dispatcher.read_tlp() || dispatcher.write_tlp() || arbiter.completion_tlp();

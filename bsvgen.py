@@ -88,6 +88,7 @@ interface %(Base)sWrapper;
 %(axiSlaveDeclarations)s
 %(axiMasterDeclarations)s
 %(exposedInterfaceDeclarations)s
+    interface ReadOnly#(Bit#(4)) numPortals;
 endinterface
 '''
 
@@ -339,7 +340,7 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper) provisos (Log#(%(indicationChannelCount)
     endinterface
 %(indicationMethodsAug)s
 
-endmodule
+endmodule: mk%(Dut)sWrapper
 
 '''
 
@@ -404,7 +405,7 @@ module mk%(Dut)sWrapper#(%(Dut)s %(dut)s, %(Indication)sWrapper iw)(%(Dut)sWrapp
 %(axiMasterModules)s
 %(axiSlaveImplementations)s
 %(axiMasterImplementations)s
-endmodule
+endmodule: mk%(Dut)sWrapper
 '''
 
 mkTopTemplate='''
@@ -426,7 +427,12 @@ module mk%(Base)sWrapper%(dut_hdmi_clock_param)s(%(Base)sWrapper);
 %(exposedInterfaceImplementations)s
     interface ctrl = ctrl_mux;
     interface Vector interrupts = interrupts_v;
-endmodule
+    interface numPortals;
+        method Bit#(4) _read();
+            return %(numPortals)s;
+        endmethod
+    endinterface
+endmodule: mk%(Base)sWrapper
 '''
 
 # this used to sit in the requestRuleTemplate, but
