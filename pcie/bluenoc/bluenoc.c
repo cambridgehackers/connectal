@@ -275,7 +275,7 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
     // set pointer to 0
     res = ioctl(fd,BNOC_SEQNO,&seqno);
 
-    for (i = 0; i < 128; i++) {
+    for (i = 0; i < 1024; i++) {
       tTlpData tlp;
       memset(&tlp, 0x5a, sizeof(tlp));
       res = ioctl(fd,BNOC_GET_TLP,&tlp);

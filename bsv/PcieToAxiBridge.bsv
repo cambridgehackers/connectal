@@ -837,7 +837,7 @@ interface ControlAndStatusRegs;
    interface Reg#(Bit#(32)) tlpDataBramWrAddr;
    interface Reg#(Bit#(32)) tlpSeqno;
    interface Reg#(Bit#(32)) tlpOutCount;
-   interface BRAMServer#(Bit#(7), TimestampedTlpData) tlpDataBram;
+   interface BRAMServer#(Bit#(10), TimestampedTlpData) tlpDataBram;
 endinterface: ControlAndStatusRegs
 
 // This module encapsulates all of the logic for instantiating and
@@ -929,8 +929,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
    BRAM_Configure bramCfg = defaultValue;
-   bramCfg.memorySize = 128;
-   BRAM1Port#(Bit#(7), TimestampedTlpData) tlpDataBram1Port <- mkBRAM1Server(bramCfg);
+   bramCfg.memorySize = 1024;
+   BRAM1Port#(Bit#(10), TimestampedTlpData) tlpDataBram1Port <- mkBRAM1Server(bramCfg);
    Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
    Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
    Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
@@ -2595,7 +2595,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
                                                  , max_payload_bytes
                                                  );
 
-   rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 127);
+   rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 1023);
        csr.tlpTracing <= False;
    endrule
    rule connectEnables;
