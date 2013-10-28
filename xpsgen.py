@@ -939,13 +939,6 @@ class ImageonVita:
      wire imageon_clk;
      wire imageon_host_oe;
      wire imageon_host_iserdes_reset;
-     wire imageon_host_iserdes_auto_align;
-     wire imageon_host_iserdes_align_start;
-     wire imageon_host_iserdes_fifo_enable;
-     wire [9:0] imageon_host_iserdes_manual_tap;
-     wire [9:0] imageon_host_iserdes_training;
-     wire imageon_host_decoder_enable;
-     wire [2:0] imageon_host_trigger_enable;
      wire vita_clk_pll_o;
      wire vita_clk_pll_t;
      wire [2:0] vita_trigger_o;
@@ -965,13 +958,6 @@ class ImageonVita:
      wire imageon_clk_tmp;
      wire imageon_clkdiv_c;
      wire hsinclk_tmp_wire;
-     wire [4:0] imageon_ALIGN_BUSY_d;
-     wire [4:0] imageon_ALIGNED_d;
-     wire [4:0] imageon_FIFO_EMPTY_d;
-     wire [4:0] imageon_SAMPLEINFIRSTBIT;
-     wire [4:0] imageon_SAMPLEINLASTBIT;
-     wire [4:0] imageon_SAMPLEINOTHERBIT;
-     wire imageon_DELAY_WREN_r;
 '''
     def ps7_bus_port_map(self,busname,t,params):
         return '''
@@ -986,24 +972,9 @@ class ImageonVita:
         return '''
     .imageon_host_oe(imageon_host_oe),
     .serdes_reset(imageon_host_iserdes_reset),
-    .serdes_auto_align(imageon_host_iserdes_auto_align),
-    .serdes_align_start(imageon_host_iserdes_align_start),
-    .sensor_fifo_enable(imageon_host_iserdes_fifo_enable),
-    .serdes_manual_tap(imageon_host_iserdes_manual_tap),
-    .serdes_training(imageon_host_iserdes_training),
-    .imageon_decoder_enable(imageon_host_decoder_enable),
-    .imageon_trigger_enable(imageon_host_trigger_enable),
 
     .EN_sensor_ibufds_out(1),
     .sensor_ibufds_out_v(ibufds_out),
-    .sensor_align_BUSY_d_v(imageon_ALIGN_BUSY_d),
-    .sensor_alignED_d_v(imageon_ALIGNED_d),
-    .sensor_fifo_EMPTY_d_v(imageon_FIFO_EMPTY_d),
-    .sensor_sampleinFIRSTBIT_v(imageon_SAMPLEINFIRSTBIT),
-    .sensor_sampleinLASTBIT_v(imageon_SAMPLEINLASTBIT),
-    .sensor_sampleinOTHERBIT_v(imageon_SAMPLEINOTHERBIT),
-    .sensor_delay_wren_r(imageon_DELAY_WREN_r),
-    .sensor_raw_data_v(imageon_xsvi_raw_data),
     .sensor_vita_reset(vita_reset_n_o),
     .sensor_vita_trigger(vita_trigger_o),
     /* SPI port */
