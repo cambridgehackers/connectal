@@ -203,7 +203,7 @@ if __name__=='__main__':
         return bsv_file
 
     def close_bsv_package(bsv_file, pname):
-        bsv_file.write('endpackage: %s' % pname)
+        bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
 
     topRequestIfcName = '%sRequest' % util.capitalize(namespace.interface)
