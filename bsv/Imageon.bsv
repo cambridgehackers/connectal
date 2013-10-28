@@ -29,7 +29,7 @@ import Clocks :: *;
 import IserdesDatadeser::*;
 import GetPutWithClocks :: *;
 
-(* always_enabled *)
+//(* always_ready *)
 interface ImageonSerdes;
     method Bit#(1) reset();
     method Bit#(1) resets();
@@ -82,7 +82,7 @@ typedef struct {
     Bit#(10) video_data;
 } XsviData deriving (Bits);
 
-(* always_enabled *)
+//(* always_ready *)
 interface ImageonSensorControl;
     method Bit#(32) get_debugind();
     method Action raw_data(Bit#(50) v);
@@ -102,13 +102,13 @@ interface ImageonSensorControl;
     interface Reset hdmiReset;
 endinterface
 
-(* always_enabled *)
+//(* always_enabled *)
 interface ImageonFast;
     interface ImageonSyncGen syncgen;
     interface Reset reset;
 endinterface
 
-(* always_enabled *)
+//(* always_enabled *)
 interface ImageonVita;
     method Bit#(1) host_oe();
     interface ImageonSerdesIndication serdesind;
@@ -476,8 +476,6 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
     Reg#(Bit#(1)) remapkernel_reg <- mkReg(0);
     Reg#(Bit#(1)) imgdatavalid_reg <- mkReg(0);
     Reg#(Bit#(8)) dcount <- mkReg('hab);
-    Wire#(Bit#(5)) align_BUSY_d_wire <- mkDWire(0);
-    Wire#(Bit#(5)) alignED_d_wire <- mkDWire(0);
     Wire#(Bit#(5)) fifo_EMPTY_d_wire <- mkDWire(0);
     Wire#(Bit#(5)) sampleinFIRSTBIT_wire <- mkDWire(0);
     Wire#(Bit#(5)) sampleinLASTBIT_wire <- mkDWire(0);
@@ -491,8 +489,6 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
     
     rule serdes_calc;
         host.serdesind.clk_ready(1);
-        host.serdesind.align_busy(pack(align_BUSY_d_wire != 0));
-        host.serdesind.alignedbit(pack(alignED_d_wire == 5'b11111));
     endrule
 
     rule serdes_reset if (serdes.resets() == 1);
@@ -645,10 +641,10 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
             return ~serdes.reset();
         endmethod
         method Action align_BUSY_d(Bit#(5) v);
-              align_BUSY_d_wire <= v;
+            host.serdesind.align_busy(pack(v != 0));
         endmethod
         method Action alignED_d(Bit#(5) v);
-              alignED_d_wire <= v;
+            host.serdesind.alignedbit(pack(v == 5'b11111));
         endmethod
         method Action fifo_EMPTY_d(Bit#(5) v);
               fifo_EMPTY_d_wire <= v;
@@ -794,7 +790,7 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
     endinterface: out
 endmodule
 
-(* always_ready, always_enabled *)
+//(* always_ready, always_enabled *)
 interface SensorDiffData;
    //interface Vector#(5, IbufdsOut) in;
    //interface Vector#(5, IserdesControl) control;
@@ -808,13 +804,6 @@ module mkGetSensorDiffData#(Clock clkdiv,
    Reset defaultReset <- exposeCurrentReset();
 
    Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(clkdiv));
-   Wire#(Bit#(5)) align_BUSY_d_wire <- mkDWire(0);
-   Wire#(Bit#(5)) alignED_d_wire <- mkDWire(0);
-   Wire#(Bit#(5)) sampleinFIRSTBIT_wire <- mkDWire(0);
-   Wire#(Bit#(5)) sampleinLASTBIT_wire <- mkDWire(0);
-   Wire#(Bit#(5)) sampleinOTHERBIT_wire <- mkDWire(0);
-   Wire#(Bit#(5)) fifo_EMPTY_d_wire <- mkDWire(0);
-   Wire#(Bit#(50)) raw_data_wire <- mkDWire(0);
    //ReadOnly#(Bit#(1)) reset_wire <- mkNullCrossingWire(defaultClock, serdes.reset());
    //Reg#(Bit#(1)) reset_wire <- mkReg(0);
    //rule sendup_reset;
@@ -829,55 +818,40 @@ module mkGetSensorDiffData#(Clock clkdiv,
    rule sendup_init;
    endrule
 
-   rule sendup_connect;
-       sensor.align_BUSY_d(align_BUSY_d_wire);
-       sensor.alignED_d(alignED_d_wire);
-       sensor.sampleinFIRSTBIT(sampleinFIRSTBIT_wire);
-       sensor.sampleinLASTBIT(sampleinLASTBIT_wire);
-       sensor.sampleinOTHERBIT(sampleinOTHERBIT_wire);
-       sensor.fifo_EMPTY_d(fifo_EMPTY_d_wire);
-       sensor.raw_data(raw_data_wire);
-   endrule
-
    rule sendup;
-   Bit#(5) emptyw = 0;
-   Bit#(5) firstw = 0;
-   Bit#(5) lastw = 0;
-   //Bit#(5) otherw = 0;
-   Bit#(5) alignedw = 0;
-   Bit#(5) alignbusyw = 0;
-   Bit#(50) rawdataw = 0;
-   for (Bit#(8) i = 0; i < 5; i = i+1) begin
-      serdes_v[i].control.align_start(serdes.align_start());
-      alignbusyw[i] = serdes_v[i].control.align_busy();
-      alignedw[i] = serdes_v[i].control.aligned();
-      serdes_v[i].control.autoalign(serdes.auto_align());
-      serdes_v[i].control.training(serdes.training());
-      serdes_v[i].control.manual_tap(serdes.manual_tap());
-      firstw[i] = serdes_v[i].control.sampleinfirstbit();
-      lastw[i] = serdes_v[i].control.sampleinlastbit();
-      //sampleinOTHERBIT_wire[i:i] <= serdes_v[i].control.sampleinotherbit();
-      serdes_v[i].ibufdsOut.ibufds_out(sensor.ibufds_out_value()[i]);
-      emptyw[i] = serdes_v[i].fifo.empty();
-      rawdataw[(i+1)*10-1: i*10] = serdes_v[i].fifo.dataout();
-      serdes_v[i].fifo.rden(host.decoder.enable());
-/*
-.clk(imageon_clk_tmp),
-*/
-   end
-   fifo_EMPTY_d_wire <= emptyw;
-   align_BUSY_d_wire <= alignbusyw;
-   alignED_d_wire <= alignedw;
-   sampleinFIRSTBIT_wire <= firstw;
-   sampleinLASTBIT_wire <= lastw;
-   //sampleinOTHERBIT_wire <= otherw;
-   sampleinOTHERBIT_wire <= 
-      { serdes_v[4].control.sampleinotherbit(),
-      serdes_v[3].control.sampleinotherbit(),
-      serdes_v[2].control.sampleinotherbit(),
-      serdes_v[1].control.sampleinotherbit(),
-      serdes_v[0].control.sampleinotherbit()};
-   raw_data_wire <= rawdataw;
+      Bit#(5) emptyw = 0;
+      Bit#(5) firstw = 0;
+      Bit#(5) lastw = 0;
+      Bit#(5) otherw = 0;
+      Bit#(5) alignedw = 0;
+      Bit#(5) alignbusyw = 0;
+      Bit#(50) rawdataw = 0;
+      for (Bit#(8) i = 0; i < 5; i = i+1) begin
+	 serdes_v[i].control.align_start(serdes.align_start());
+	 alignbusyw[i] = serdes_v[i].control.align_busy();
+	 alignedw[i] = serdes_v[i].control.aligned();
+	 serdes_v[i].control.autoalign(serdes.auto_align());
+	 serdes_v[i].control.training(serdes.training());
+	 serdes_v[i].control.manual_tap(serdes.manual_tap());
+	 firstw[i] = serdes_v[i].control.sampleinfirstbit();
+	 lastw[i] = serdes_v[i].control.sampleinlastbit();
+	 otherw[i] = serdes_v[i].control.sampleinotherbit();
+	 //sampleinOTHERBIT_wire[i:i] <= serdes_v[i].control.sampleinotherbit();
+	 serdes_v[i].ibufdsOut.ibufds_out(sensor.ibufds_out_value()[i]);
+	 emptyw[i] = serdes_v[i].fifo.empty();
+	 rawdataw[(i+1)*10-1: i*10] = serdes_v[i].fifo.dataout();
+	 serdes_v[i].fifo.rden(host.decoder.enable());
+	 /*
+	 .clk(imageon_clk_tmp),
+	 */
+      end
+      sensor.align_BUSY_d(alignbusyw);
+      sensor.alignED_d(alignedw);
+      sensor.sampleinFIRSTBIT(firstw);
+      sensor.sampleinLASTBIT(lastw);
+      sensor.sampleinOTHERBIT(otherw);
+      sensor.fifo_EMPTY_d(emptyw);
+      sensor.raw_data(rawdataw);
    endrule
    rule sendup2;
    for (Bit#(3) i = 0; i < 5; i = i+1) begin
