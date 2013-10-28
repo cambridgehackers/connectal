@@ -37,6 +37,7 @@ interface IserdesControl;
    method Action                 autoalign(Bit#(1) v);
    method Action                 training(Bit#(10) v);
    method Action                 manual_tap(Bit#(10) v);
+   method Action                 reset(Bit#(1) v);
 endinterface
 
 // ports in the "CLKDIV" clock domain
@@ -48,7 +49,7 @@ endinterface
 interface IserdesFifo;
    method Action                 rden(Bit#(1) v);
    method Bit#(1)                empty();
-   method ActionValue#(Bit#(10)) dataout();
+   method Bit#(10)               dataout();
 endinterface
 
 interface IserdesDatadeser;
@@ -59,12 +60,13 @@ interface IserdesDatadeser;
 endinterface: IserdesDatadeser
 
 import "BVI" iserdes_datadeser = 
-module mkIserdesDatadeser#(Clock clk, Clock clkdiv)(IserdesDatadeser);
+module mkIserdesDatadeser#(Clock clkdiv)(IserdesDatadeser);
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
 
-   input_clock clk (CLK) = clk;
+   input_clock clk (CLK) = defaultClock;
    input_clock clkdiv (CLKDIV) = clkdiv;
    default_clock clock(CLOCK);
-   default_reset reset(RESET);
    interface IbufdsOut ibufdsOut;
        method              ibufds_out(IBUFDS_OUT) enable((*inhigh*) en0); // clocked_by () reset_by ()
    endinterface: ibufdsOut
@@ -80,6 +82,7 @@ module mkIserdesDatadeser#(Clock clk, Clock clkdiv)(IserdesDatadeser);
       method                  autoalign(AUTOALIGN) enable((*inhigh*) en7) clocked_by (clock);
       method                  training(TRAINING) enable((*inhigh*) en8) clocked_by (clock);
       method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
+      method                  reset(RESET) enable((*inhigh*) en16) clocked_by (clock);
    endinterface
 
    interface IserdesWren wren;
@@ -90,7 +93,7 @@ module mkIserdesDatadeser#(Clock clk, Clock clkdiv)(IserdesDatadeser);
    interface IserdesFifo         fifo;
       method               rden(FIFO_RDEN) enable((*inhigh*) en12) clocked_by (clock);
       method FIFO_EMPTY    empty() clocked_by (clock);
-      method FIFO_DATAOUT  dataout() enable((*inhigh*) en14) clocked_by(clock);
+      method FIFO_DATAOUT  dataout() clocked_by(clock);
    endinterface
 
       schedule (wren_fifo_wren) CF (wren_delay_wren);
