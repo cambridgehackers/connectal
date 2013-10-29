@@ -64,8 +64,10 @@ TlpPacketFormat = [
     'MEM_WRITE_4DW_DATA'
 ]
 
-def pktClassification(pktformat, pkttype, portnum):
-    if portnum == 4:
+def pktClassification(tlpsof, tlpeof, pktformat, pkttype, portnum):
+    if tlpsof == 0:
+        return 'continuation'
+    elif portnum == 4:
         if pkttype == 10: # COMPLETION
             return 'Master Response'
         else:
@@ -98,8 +100,7 @@ def print_tlp(tlpdata):
     
     print tlpdata
     print '   seqno:', int(tlpdata[-48:-40],16)
-    if tlpsof:
-        print '   ', pktClassification(pktformat, pkttype, portnum)
+    print '   ', pktClassification(tlpsof, tlpeof, pktformat, pkttype, portnum)
     print '    foo:', tlpdata[-40:-38], hex(int(tlpdata[-40:-38],16) >> 1)
     print '  format:', tlpdata[-32:-31], pktformat, TlpPacketFormat[pktformat]
     print '  pkttype:', tlpdata[-32:-30], pkttype, TlpPacketType[pkttype]
@@ -108,7 +109,9 @@ def print_tlp(tlpdata):
     print '    tlpeof:', tlpeof
     print '    tlpsof:', tlpsof
 
-    if TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMPLETION':
+    if tlpsof == 0:
+        print '     data:', tlpdata[-32:]
+    elif TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMPLETION':
         print '      tag:', tlpdata[-12:-10]
         print '    reqid:', tlpdata[-16:-12]
         print '   cmplid:', tlpdata[-24:-20]
