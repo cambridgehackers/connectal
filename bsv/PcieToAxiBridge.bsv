@@ -8,6 +8,7 @@ import Connectable  :: *;
 import Vector       :: *;
 import FIFO         :: *;
 import FIFOF        :: *;
+import MIMO         :: *;
 import Counter      :: *;
 import DefaultValue :: *;
 import XilinxPCIE   :: *;
@@ -509,7 +510,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	  interruptSecondHalf <= True;
        end
 
-       tlpTag <= tlpTag + 1;
+       //tlpTag <= tlpTag + 1;
 
        tlpOutFifo.enq(tlp);
     endrule
@@ -658,22 +659,56 @@ interface AxiSlaveEngine;
     interface Get#(TLPData#(16))   tlp_out;
     interface Axi3Slave#(40,64,8,12)  slave;
     method Bool tlpOutFifoNotEmpty();
+    interface Reg#(Bool) use4dw;
 endinterface: AxiSlaveEngine
 
 module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
+    Reg#(Bool) use4dwReg <- mkReg(True);
 
-    FIFO#(TLPMemoryIO3DWHeader) completionFifo <- mkFIFO;
+    MIMOConfiguration mimoCfg = defaultValue;
+    MIMO#(4,2,8,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
+    MIMO#(4,2,8,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
+    Reg#(TLPTag) lastTag <- mkReg(0);
+    function LUInt#(4) tlpWordCount(TLPData#(16) tlp);
+       if (tlp.be == 16'h0000)
+	  return 0;
+       else if (tlp.be == 16'h000f || tlp.be == 16'hf000)
+	  return 1;
+       else if (tlp.be == 16'h00ff || tlp.be == 16'hff00)
+	  return 2;
+       else if (tlp.be == 16'h0fff || tlp.be == 16'hfff0)
+	  return 3;
+       else if (tlp.be == 16'hffff)
+	  return 4;
+       else
+	  return 0;
+    endfunction
     interface Put tlp_in;
         method Action put(TLPData#(16) tlp);
-	    $display("AxiSlaveEngine.put tlp=%h", tlp);
-	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
-	    hitReg <= tlp.hit;
-	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-	    if (hdr_3dw.format == MEM_WRITE_3DW_DATA)
-	        completionFifo.enq(hdr_3dw);
+	   $display("AxiSlaveEngine.put tlp=%h", tlp);
+	   TLPMemoryIO3DWHeader h = unpack(tlp.data);
+	   hitReg <= tlp.hit;
+	   TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+	   Vector#(4, Bit#(32)) vec = unpack(0);
+	   if (!tlp.sof) begin
+	      for (Integer i = 0; i < 4; i = i+1) begin
+		 if (tlp.be[(i+1)*4-1:i*4] == 4'hf) begin
+		    vec[i] = tlp.data[(i+1)*32-1:i*32];
+		 end
+	      end
+	      let count = tlpWordCount(tlp);
+	      completionMimo.enq(count, vec);
+	      completionTagMimo.enq(count, replicate(lastTag));
+	   end
+	   else if (hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype == COMPLETION) begin
+	      vec[0] = hdr_3dw.data;
+	      completionMimo.enq(1, vec);
+	      lastTag <= hdr_3dw.tag;
+	      completionTagMimo.enq(1, replicate(hdr_3dw.tag));
+	    end
 	endmethod
     endinterface: tlp_in
     interface Get tlp_out = toGet(tlpOutFifo);
@@ -694,38 +729,59 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
 	interface Axi3SlaveRead read;
 	   method Action readAddr(Bit#(40) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
 				  Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid);
-               TLPMemory4DWHeader hdr_4dw = defaultValue;
-	       hdr_4dw.format = MEM_READ_4DW_NO_DATA;
-	       hdr_4dw.tag = truncate(arid);
-	       hdr_4dw.reqid = my_id;
-	       hdr_4dw.nosnoop = SNOOPING_REQD;
-	       hdr_4dw.addr = addr[40-1:2];
-	       hdr_4dw.length = 1;
-	       hdr_4dw.firstbe = 4'hf;
-	       hdr_4dw.lastbe = 0;
 	       TLPData#(16) tlp = defaultValue;
-	       tlp.data = pack(hdr_4dw);
 	       tlp.sof = True;
 	       tlp.eof = True;
 	       tlp.hit = 7'h00;
-	       tlp.be = 16'hffff;
+	       TLPLength tlplen = 2*(extend(burstLen) + 1);
+	       if (True || use4dwReg) begin
+		   TLPMemory4DWHeader hdr_4dw = defaultValue;
+		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
+		   hdr_4dw.tag = truncate(arid);
+		   hdr_4dw.reqid = my_id;
+		   hdr_4dw.nosnoop = SNOOPING_REQD;
+		   hdr_4dw.addr = addr[40-1:2];
+		   hdr_4dw.length = tlplen;
+		   hdr_4dw.firstbe = 4'hf;
+		   hdr_4dw.lastbe = 4'hf;
+		   tlp.data = pack(hdr_4dw);
+		   tlp.be = 16'hffff;
+	       end
+	       else begin
+		   TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
+		   hdr_3dw.format = MEM_READ_3DW_NO_DATA;
+		   hdr_3dw.tag = truncate(arid);
+		   hdr_3dw.reqid = my_id;
+		   hdr_3dw.nosnoop = SNOOPING_REQD;
+		   hdr_3dw.addr = addr[32-1:2];
+		   hdr_3dw.length = tlplen;
+		   hdr_3dw.firstbe = 4'hf;
+		   hdr_3dw.lastbe = 4'hf;
+		   tlp.data = pack(hdr_3dw);
+		   tlp.be = 16'hfff0;
+	       end
 	       tlpOutFifo.enq(tlp);
            endmethod: readAddr
 	   method ActionValue#(Bit#(64)) readData();
-	       let hdr = completionFifo.first;
-	       completionFifo.deq;
-	       return extend(hdr.data);
+	      let data_v = completionMimo.first;
+	      completionMimo.deq(2);
+	      completionTagMimo.deq(2);
+              Bit#(64) v;
+	      v[31:0] = byteSwap(data_v[0]);
+	      v[63:32] = byteSwap(data_v[1]);
+	      return extend(v);
            endmethod: readData
 	   method Bit#(1) last();
 	       return 1;
            endmethod: last
 	   method Bit#(12) rid();
-	       return zeroExtend(completionFifo.first.tag);
+	       return zeroExtend(completionTagMimo.first[0]);
            endmethod: rid
 	   // method Action readResponse(Bit#(2) responseCode);
 	endinterface: read
     endinterface: slave
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
+   interface Reg use4dw = use4dwReg;
 endmodule: mkAxiSlaveEngine
 
 typedef enum {
@@ -830,6 +886,7 @@ interface ControlAndStatusRegs;
    interface Reg#(Bool) axiEnabled;
    interface Reg#(Bool) pipeliningEnabled;
    interface Reg#(Bool) byteSwap;
+   interface Reg#(Bool) use4dw;
    interface Reg#(Bit#(4)) numPortals;
    interface Reg#(Bit#(32)) axiTestEnabled;
    interface Reg#(Bit#(32)) addrLowerWord;
@@ -922,6 +979,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bool) axiEnabledReg <- mkReg(False);
    Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
    Reg#(Bool) byteSwapReg <- mkReg(False);
+   Reg#(Bool) use4dwReg <- mkReg(True);
    Reg#(Bit#(4)) numPortalsReg <- mkReg(1);
    Reg#(Bit#(32)) axiTestEnabledReg <- mkReg(0);
    Reg#(Bit#(32)) addrLowerWordReg <- mkReg(0);
@@ -997,6 +1055,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 794: return byteSwapReg ? 1 : 0;
 	 795: return axiSlaveEngine.tlpOutFifoNotEmpty ? 1 : 0;
 	 796: return extend(numPortalsReg);
+	 797: return extend(pack(use4dwReg));
 
          // 4-entry MSIx table
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
@@ -1069,6 +1128,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    792: tlpDataBramWrAddrReg <= dword;
 	    794: byteSwapReg <= (dword != 0) ? True : False;
 	    796: numPortalsReg <= truncate(dword);
+	    797: use4dwReg <= unpack(truncate(dword));
 
             // MSIx table entries
             4096: msix_entry[0].addr_lo  <= update_dword(msix_entry[0].addr_lo, be, (dword & 32'hfffffffc));
@@ -1523,6 +1583,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface Reg axiEnabled = axiEnabledReg;
    interface Reg pipeliningEnabled = pipeliningEnabledReg;
    interface Reg byteSwap = byteSwapReg;
+   interface Reg use4dw = use4dwReg;
    interface Reg axiTestEnabled = axiTestEnabledReg;
    interface Reg numPortals = numPortalsReg;
    interface Reg addrLowerWord = addrLowerWordReg;
@@ -2605,9 +2666,10 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
        csr.tlpTracing <= False;
    endrule
    rule connectEnables;
-       dispatcher.axiEnabled <= csr.axiEnabled;
-       portalEngine.pipeliningEnabled <= csr.pipeliningEnabled;
-       portalEngine.byteSwap <= csr.byteSwap;
+      dispatcher.axiEnabled <= csr.axiEnabled;
+      portalEngine.pipeliningEnabled <= csr.pipeliningEnabled;
+      portalEngine.byteSwap <= csr.byteSwap;
+      axiSlaveEngine.use4dw <= csr.use4dw;
    endrule
 
    // connect the sub-components to each other
