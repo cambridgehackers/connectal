@@ -98,6 +98,7 @@ interface ImageCaptureRequest;
    interface HDMI hdmi;
    interface SpiPins spi;
    interface DMARequest dmaRequest;
+   interface ImageonPins pins;
 endinterface
  
 module mkImageCaptureRequest#(Clock imageon_clock, Clock serdes_clock, Clock serdest_clock, Clock hdmi_clock, 
@@ -121,8 +122,6 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock serdes_clock, Clock ser
     ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
         fromSensor,
         clocked_by hdmi_clock, reset_by hdmi_reset);
-    SensorDiffData foo <- mkGetSensorDiffData(serdes_clock, serdest_clock, fromSensor.in,
-        imageon_serdes_clock_binder, clocked_by imageon_clock, reset_by imageon_reset);
 
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
     rule copydebugval;
@@ -273,4 +272,5 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock serdes_clock, Clock ser
    interface ImageonSensorControl sensor = fromSensor.in;
    interface HDMI hdmi = hdmiOut.hdmi;
    interface SpiPins spi = spiController.pins;
+   interface ImageonPins pins = fromSensor.pins;
 endmodule

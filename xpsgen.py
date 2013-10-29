@@ -945,7 +945,7 @@ class ImageonVita:
      wire vita_reset_n_o;
      wire [4:0] vita_data_p;
      wire [4:0] vita_data_n;
-     wire [4:0] ibufds_out;
+     //wire [4:0] ibufds_out;
 
      /* IIC */
      wire fmc_imageon_iic_0_scl_T;
@@ -973,10 +973,14 @@ class ImageonVita:
     .imageon_host_oe(imageon_host_oe),
     .serdes_reset(imageon_host_iserdes_reset),
 
-    .EN_sensor_ibufds_out(1),
-    .sensor_ibufds_out_v(ibufds_out),
+    //.EN_sensor_ibufds_out(1),
+    //.sensor_ibufds_out_v(ibufds_out),
     .sensor_vita_reset(vita_reset_n_o),
     .sensor_vita_trigger(vita_trigger_o),
+    .pins_io_vita_sync_p_v(io_vita_sync_p),
+    .pins_io_vita_sync_n_v(io_vita_sync_n),
+    .pins_io_vita_data_p_v(io_vita_data_p),
+    .pins_io_vita_data_n_v(io_vita_data_n),
     /* SPI port */
     .CLK_spi_invertedClock(io_vita_spi_sclk),
     .spi_sel_n(io_vita_spi_ssel_n),
@@ -1109,27 +1113,6 @@ class ImageonVita:
     def bus_assignments(self,busname,t,params):
         return '''
     assign imageon_clk200 = processing_system7_1_fclk_clk3;
-    assign vita_data_p[4] = io_vita_data_p[3];
-    assign vita_data_p[3] = io_vita_data_p[2];
-    assign vita_data_p[2] = io_vita_data_p[1];
-    assign vita_data_p[1] = io_vita_data_p[0];
-    assign vita_data_p[0] = io_vita_sync_p;
-
-    assign vita_data_n[4] = io_vita_data_n[3];
-    assign vita_data_n[3] = io_vita_data_n[2];
-    assign vita_data_n[2] = io_vita_data_n[1];
-    assign vita_data_n[1] = io_vita_data_n[0];
-    assign vita_data_n[0] = io_vita_sync_n;
-
-    genvar j;
-    generate
-    for(j=0; j <= 4; j=j+1)
-        begin
-        IBUFDS#( .CAPACITANCE("DONT_CARE"), .DIFF_TERM(1),
-             .IBUF_DELAY_VALUE(0), .IFD_DELAY_VALUE("AUTO"), .IOSTANDARD("DEFAULT"))
-            ( .O(ibufds_out[j]), .I(vita_data_p[j]), .IB(vita_data_n[j]));
-        end
-    endgenerate
  '''
     def pinout(self, board):
         return imageon_pinout[board]

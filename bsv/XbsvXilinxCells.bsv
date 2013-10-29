@@ -29,7 +29,11 @@ module mkIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ReadOnly#(one_bit)) provis
    default_clock clk();
    default_reset rstn();
 
+   parameter CAPACITANCE = "DONT_CARE";
    parameter DIFF_TERM = 1;
+   parameter IBUF_DELAY_VALUE = 0;
+   parameter IFD_DELAY_VALUE = "AUTO";
+   parameter IOSTANDARD = "DEFAULT";
 
    port I = i;
    port IB = ib;

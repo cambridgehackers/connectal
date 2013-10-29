@@ -27,7 +27,37 @@ import GetPut::*;
 import Gearbox::*;
 import Clocks :: *;
 import IserdesDatadeser::*;
+import XbsvXilinxCells::*;
 import GetPutWithClocks :: *;
+
+(* always_enabled *)
+interface ImageonPins;
+    //method Bit#(8) gpio_leds();
+    //method Bit#(4) xadc_gpio();
+    //method Action fmc_imageon_video_clk1(Bit#(1) v);
+    //method Bit#(1) fmc_imageon_iic_0_rst_pin();
+    //method Bit#(1) fmc_imageon_iic_0_scl();
+    //method Bit#(1) fmc_imageon_iic_0_sda();
+    //method Bit#(1) io_vita_clk_pll();
+    //method Bit#(1) io_vita_reset_n();
+    //method Bit#(3) io_vita_trigger();
+    //method Bit#(2) io_vita_monitor();
+    //method Bit#(1) io_vita_spi_sclk();
+    //method Bit#(1) io_vita_spi_ssel_n();
+    //method Bit#(1) io_vita_spi_mosi();
+    //method Action io_vita_spi_miso(Bit#(1) v);
+    //method Bit#(1) io_vita_clk_out_p();
+    //method Bit#(1) io_vita_clk_out_n();
+    method Action io_vita_sync_p(Bit#(1) v);
+    method Action io_vita_sync_n(Bit#(1) v);
+    method Action io_vita_data_p(Bit#(4) v);
+    method Action io_vita_data_n(Bit#(4) v);
+    //method Bit#(1) hdmi_clk();
+    //method Bit#(1) hdmi_hsync();
+    //method Bit#(1) hdmi_vsync();
+    //method Bit#(1) hdmi_de();
+    //method Bit#(16) hdmi_data();
+endinterface
 
 interface ImageonSerdes;
     method Bit#(1) reset();
@@ -440,6 +470,7 @@ endinterface
 
 interface ImageonSensor;
     interface ImageonSensorControl in;
+    interface ImageonPins pins;
     method Bit#(1) get_framesync();
     method Bit#(40) get_data();
 endinterface
@@ -447,7 +478,9 @@ endinterface
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
-module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset, ImageonVita host, ImageonSerdes serdes)(ImageonSensor);
+module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset,
+     Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset,
+     ImageonVita host, ImageonSerdes serdes)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -476,12 +509,61 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
     Wire#(Bit#(5)) sampleinFIRSTBIT_wire <- mkDWire(0);
     Wire#(Bit#(5)) sampleinLASTBIT_wire <- mkDWire(0);
     Wire#(Bit#(5)) sampleinOTHERBIT_wire <- mkDWire(0);
-    Wire#(Bit#(5)) ibufds_out_wire <- mkDWire(0);
+    //Wire#(Bit#(5)) ibufds_out_wire <- mkDWire(0);
     Reg#(Bit#(1)) delay_wren_r_reg <-mkReg(0);
     Reg#(Bit#(1)) delay_wren_r2_reg <- mkSyncReg(0, defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) delay_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_wren_r2_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdest_clock));
+    Vector#(5, Wire#(Bit#(1))) vita_data_p <- replicateM(mkDWire(0));
+    Vector#(5, Wire#(Bit#(1))) vita_data_n <- replicateM(mkDWire(0));
+    Vector#(5, ReadOnly#(Bit#(1))) ibufds_v;
+    for (Integer i = 0; i < 5; i = i + 1)
+        ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
+
+    rule sendup_imageon_clock;
+       Bit#(5) alignbusyw = 0;
+       Bit#(5) alignedw = 0;
+       Bit#(5) firstw = 0;
+       Bit#(5) lastw = 0;
+       Bit#(5) otherw = 0;
+       Bit#(5) emptyw = 0;
+       Bit#(50) rawdataw = 0;
+       for (Bit#(8) i = 0; i < 5; i = i+1) begin
+	  serdes_v[i].control.align_start(serdes.align_start());
+	  serdes_v[i].control.autoalign(serdes.auto_align());
+	  serdes_v[i].control.training(serdes.training());
+	  serdes_v[i].control.manual_tap(serdes.manual_tap());
+	  serdes_v[i].control.rden(serdes.decoder_enable());
+
+	  //serdes_v[i].ibufdsOut.ibufds_out(ibufds_out_wire[i]);
+	  serdes_v[i].ibufdsOut.ibufds_out(ibufds_v[i]);
+
+	  alignbusyw[i] = serdes_v[i].control.align_busy();
+	  alignedw[i] = serdes_v[i].control.aligned();
+	  firstw[i] = serdes_v[i].control.sampleinfirstbit();
+	  lastw[i] = serdes_v[i].control.sampleinlastbit();
+	  otherw[i] = serdes_v[i].control.sampleinotherbit();
+	  emptyw[i] = serdes_v[i].fifo.empty();
+	  rawdataw[(i+1)*10-1: i*10] = serdes_v[i].fifo.dataout();
+       end
+       host.serdesind.align_busy(pack(alignbusyw != 0));
+       host.serdesind.alignedbit(pack(alignedw == 5'b11111));
+       sampleinFIRSTBIT_wire <= firstw;
+       sampleinLASTBIT_wire <= lastw;
+       sampleinOTHERBIT_wire <= otherw;
+       fifo_EMPTY_d_wire <= emptyw;
+       raw_data_wire <= rawdataw;
+    endrule
+
+    rule sendup_serdes_clock;
+    for (Bit#(8) i = 0; i < 5; i = i+1) begin
+       serdes_v[i].wren.reset(serdes.reset());
+       serdes_v[i].wren.delay_wren(delay_wren_c_reg);
+       serdes_v[i].wren.fifo_wren(serdes.fifo_enable());
+    end
+    endrule
     
     rule serdes_calc;
         host.serdesind.clk_ready(1);
@@ -660,12 +742,12 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
         method Bit#(1) fifo_enable();
               return fifo_wren_c_reg;
         endmethod
-        method Action ibufds_out(Bit#(5) v);
-            ibufds_out_wire <= v;
-        endmethod
-        method Bit#(5) ibufds_out_value();
-            return ibufds_out_wire;
-        endmethod
+        //method Action ibufds_out(Bit#(5) v);
+            //ibufds_out_wire <= v;
+        //endmethod
+        //method Bit#(5) ibufds_out_value();
+            //return ibufds_out_wire;
+        //endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
     endinterface: in
@@ -675,6 +757,43 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset, Clock serdes_clock, 
     method Bit#(40) get_data();
         return dataout_reg;
     endmethod
+    interface ImageonPins pins;
+        //method Bit#(8) gpio_leds();
+        //method Bit#(4) xadc_gpio();
+        //method Action fmc_imageon_video_clk1(Bit#(1) v);
+        //method Bit#(1) fmc_imageon_iic_0_rst_pin();
+        //method Bit#(1) fmc_imageon_iic_0_scl();
+        //method Bit#(1) fmc_imageon_iic_0_sda();
+        //method Bit#(1) io_vita_clk_pll();
+        //method Bit#(1) io_vita_reset_n();
+        //method Bit#(3) io_vita_trigger();
+        //method Bit#(2) io_vita_monitor();
+        //method Bit#(1) io_vita_spi_sclk();
+        //method Bit#(1) io_vita_spi_ssel_n();
+        //method Bit#(1) io_vita_spi_mosi();
+        //method Action io_vita_spi_miso(Bit#(1) v);
+        //method Bit#(1) io_vita_clk_out_p();
+        //method Bit#(1) io_vita_clk_out_n();
+        method Action io_vita_sync_p(Bit#(1) v);
+            vita_data_p[0] <= v;
+        endmethod
+        method Action io_vita_sync_n(Bit#(1) v);
+            vita_data_n[0] <= v;
+        endmethod
+        method Action io_vita_data_p(Bit#(4) v);
+            for (Integer i = 0; i < 4; i = i + 1)
+                vita_data_p[i+1] <= v[i];
+        endmethod
+        method Action io_vita_data_n(Bit#(4) v);
+            for (Integer i = 0; i < 4; i = i + 1)
+                vita_data_n[i+1] <= v[i];
+        endmethod
+        //method Bit#(1) hdmi_clk();
+        //method Bit#(1) hdmi_hsync();
+        //method Bit#(1) hdmi_vsync();
+        //method Bit#(1) hdmi_de();
+        //method Bit#(16) hdmi_data();
+    endinterface
 endmodule
 
 module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, ImageonFast host, ImageonSensor sensor)(ImageonXsviFromSensor);
@@ -789,49 +908,3 @@ endmodule
 interface SensorDiffData;
    interface Vector#(5, IserdesFifo) fifo;
 endinterface
-
-module mkGetSensorDiffData#(Clock clkdiv, Clock serdest,
-        ImageonSensorControl sensor, ImageonSerdes serdes)(SensorDiffData);
-   Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(clkdiv, serdest));
-
-   rule sendup_imageon_clock;
-      Bit#(5) alignbusyw = 0;
-      Bit#(5) alignedw = 0;
-      Bit#(5) firstw = 0;
-      Bit#(5) lastw = 0;
-      Bit#(5) otherw = 0;
-      Bit#(5) emptyw = 0;
-      Bit#(50) rawdataw = 0;
-      for (Bit#(8) i = 0; i < 5; i = i+1) begin
-	 serdes_v[i].control.align_start(serdes.align_start());
-	 serdes_v[i].control.autoalign(serdes.auto_align());
-	 serdes_v[i].control.training(serdes.training());
-	 serdes_v[i].control.manual_tap(serdes.manual_tap());
-	 serdes_v[i].control.rden(serdes.decoder_enable());
-
-	 serdes_v[i].ibufdsOut.ibufds_out(sensor.ibufds_out_value()[i]);
-
-	 alignbusyw[i] = serdes_v[i].control.align_busy();
-	 alignedw[i] = serdes_v[i].control.aligned();
-	 firstw[i] = serdes_v[i].control.sampleinfirstbit();
-	 lastw[i] = serdes_v[i].control.sampleinlastbit();
-	 otherw[i] = serdes_v[i].control.sampleinotherbit();
-	 emptyw[i] = serdes_v[i].fifo.empty();
-	 rawdataw[(i+1)*10-1: i*10] = serdes_v[i].fifo.dataout();
-      end
-      sensor.align_BUSY_d(alignbusyw);
-      sensor.alignED_d(alignedw);
-      sensor.sampleinFIRSTBIT(firstw);
-      sensor.sampleinLASTBIT(lastw);
-      sensor.sampleinOTHERBIT(otherw);
-      sensor.fifo_EMPTY_d(emptyw);
-      sensor.raw_data(rawdataw);
-   endrule
-   rule sendup_clkdiv;
-   for (Bit#(8) i = 0; i < 5; i = i+1) begin
-      serdes_v[i].wren.reset(serdes.reset());
-      serdes_v[i].wren.delay_wren(sensor.delay_wren_r());
-      serdes_v[i].wren.fifo_wren(serdes.fifo_enable());
-   end
-   endrule
-endmodule
