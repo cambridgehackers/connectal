@@ -427,7 +427,7 @@ module mk%(Base)sWrapper%(dut_hdmi_clock_param)s(%(Base)sWrapper);
 %(exposedInterfaceImplementations)s
     interface ctrl = ctrl_mux;
     interface Vector interrupts = interrupts_v;
-    interface numPortals;
+    interface ReadOnly numPortals;
         method Bit#(4) _read();
             return %(numPortals)s;
         endmethod
