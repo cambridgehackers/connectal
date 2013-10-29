@@ -1684,34 +1684,9 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
 	iowrite32(0xf007, this_board->bar0io + (782 << 2));
 	printk("axi test enabled %08x\n", ioread32(this_board->bar0io + (782 << 2)));
       }
-      if (0)
-      for (i = 0; i < 2; i++) {
-	void __iomem* axi_io = this_board->bar0io;
-
-	if (0 && (NULL != this_board->bar2io)) {
-	  axi_io = this_board->bar2io;
-	  portal_csr_offset = 0xc000;
-	}
-	info.interrupt_status = ioread32(axi_io + portal_csr_offset + (0 << 2));
-	info.interrupt_enable = ioread32(axi_io + portal_csr_offset + (1 << 2));
-	info.indication_channel_count = ioread32(axi_io + portal_csr_offset + (2 << 2));
-	info.base_fifo_offset = ioread32(axi_io + portal_csr_offset + (3 << 2));
-	info.request_fired_count = ioread32(axi_io + portal_csr_offset + (4 << 2));
-	info.response_fired_count = ioread32(axi_io + portal_csr_offset + (5 << 2));
-
-	info.magic = ioread32(axi_io + portal_csr_offset + (8 << 2));
-	info.scratchpad = ioread32(axi_io + portal_csr_offset + (15 << 2));
-	info.fifo_status = ioread32(axi_io + portal_csr_offset + (16 << 2));
-
-	// enable axi portal
-	//iowrite32(0x27beef, this_board->bar1io + (788 << 2));
-	printk("axiEnabled=%x\n", ioread32(this_board->bar1io + (788 << 2)));
-
-
-      }
       if (1) {
-	// enable portal engine interrupts
-	iowrite32(-1, this_board->bar0io + (795 << 2));
+	// enable 4dw read/write from AXI masters
+	iowrite32(-1, this_board->bar0io + (797 << 2));
       }
       err = copy_to_user((void __user *)arg, &info, sizeof(tPortalInfo));
       if (err != 0)
