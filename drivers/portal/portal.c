@@ -199,7 +199,6 @@ int portal_mmap(struct file *filep, struct vm_area_struct *vma)
         if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
                                vma->vm_end - vma->vm_start, vma->vm_page_prot))
                 return -EAGAIN;
-
         printk("%s req_len=%lx off=%lx\n", __FUNCTION__, req_len, off);
 	if(0)
 	  dump_ind_regs(__FUNCTION__, portal_data);

@@ -66,6 +66,9 @@ void child(int rd_sock, int wr_sock)
     mismatch |= (dstBuffer[i] != sg++);
   }
   fprintf(stderr, "child::writeDone mismatch=%d\n", mismatch);
+  munmap(dstBuffer, alloc_sz);
+  close(fd);
+  while(1){sleep(1);}
 }
 
 void parent(int rd_sock, int wr_sock)
@@ -74,39 +77,38 @@ void parent(int rd_sock, int wr_sock)
   DMARequest *dma = 0;
   PortalAlloc dstAlloc;
   unsigned int *dstBuffer = 0;
-
+  
   if(sem_init(&done_sem, 1, 0)){
     fprintf(stderr, "failed to init done_sem\n");
     exit(1);
   }
-
+  
   fprintf(stderr, "parent::%s %s\n", __DATE__, __TIME__);
   device = CoreRequest::createCoreRequest(new TestCoreIndication);
   dma = DMARequest::createDMARequest(new TestDMAIndication);
-
+  
   fprintf(stderr, "parent::allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.fd, 0);
-
+  
   pthread_t tid;
   fprintf(stderr, "parent::creating exec thwrite\n");
   if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thwrite\n");
-   exit(1);
+    fprintf(stderr, "error creating exec thwrite\n");
+    exit(1);
   }
-
+  
   unsigned int ref_dstAlloc = dma->reference(&dstAlloc);
-
+  
   for (int i = 0; i < numWords; i++){
     dstBuffer[i] = 0xDEADBEEF;
   }
-    
+  
   dma->dCacheFlushInval(&dstAlloc);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   // write channel 0 is write source
   dma->configWriteChan(0, ref_dstAlloc, 16);
-  sleep(1);
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);
   device->startWrite(numWords);
@@ -116,6 +118,9 @@ void parent(int rd_sock, int wr_sock)
   int i;
   char buf[] = "1";
   sock_fd_write(wr_sock, (void*)buf, 1, dstAlloc.fd);
+  munmap(dstBuffer, alloc_sz);
+  close(dstAlloc.fd);
+  while(1){sleep(1);}
 }
 
 int main(int argc, const char **argv)

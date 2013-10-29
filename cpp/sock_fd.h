@@ -1,6 +1,8 @@
 #ifndef __SOCK_FD_H__
 #define __SOCK_FD_H__
 
+// functions copied from keithp.com
+
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <linux/ioctl.h>

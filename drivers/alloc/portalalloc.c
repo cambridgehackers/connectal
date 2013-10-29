@@ -34,7 +34,6 @@
 #define DRIVER_VERSION "0.1"
 
 static struct miscdevice miscdev;
-struct ion_device *portal_ion_device = 0x0;
 
 /////////////////////////////////////////////////////////////
 // copied from ion_priv.h
@@ -262,11 +261,13 @@ static void ion_buffer_destroy(struct kref *kref)
 
 static void ion_buffer_get(struct ion_buffer *buffer)
 {
+  printk("ion_buffer_get\n");
   kref_get(&buffer->ref);
 }
 
 static int ion_buffer_put(struct ion_buffer *buffer)
 {
+  printk("ion_buffer_put\n");
   return kref_put(&buffer->ref, ion_buffer_destroy);
 }
 
@@ -329,6 +330,7 @@ static void ion_handle_destroy(struct kref *kref)
 	struct ion_client *client = handle->client;
 	struct ion_buffer *buffer = handle->buffer;
 
+	printk("ion_handle_destroy\n");
 
 	mutex_lock(&buffer->lock);
 	while (handle->kmap_cnt)
@@ -461,6 +463,8 @@ static void ion_handle_kmap_put(struct ion_handle *handle)
 {
 	struct ion_buffer *buffer = handle->buffer;
 
+	printk("ion_handle_kmap_put\n");
+
 	handle->kmap_cnt--;
 	if (!handle->kmap_cnt)
 		ion_buffer_kmap_put(buffer);
@@ -575,6 +579,8 @@ static int ion_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 	struct ion_buffer *buffer = dmabuf->priv;
 	int ret = 0;
 
+	printk("ion_mmap %08x %d\n", dmabuf->file, dmabuf->file->f_count);
+	
 	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 	mutex_lock(&buffer->lock);
@@ -592,6 +598,7 @@ static int ion_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 static void ion_dma_buf_release(struct dma_buf *dmabuf)
 {
 	struct ion_buffer *buffer = dmabuf->priv;
+	printk("PortalAlloc::ion_dma_buf_release %08x %d\n", dmabuf->file, dmabuf->file->f_count);
 	ion_buffer_put(buffer);
 }
 
@@ -666,6 +673,7 @@ static int ion_get_dma_buf(struct ion_client *client, struct ion_handle *handle)
 
 	buffer = handle->buffer;
 	// ion_buffer_get(buffer);
+	// ion_buffer_put(buffer); 
 	dmabuf = dma_buf_export(buffer, &dma_buf_ops, buffer->size, O_RDWR);
 	if (IS_ERR(dmabuf)) {
 		ion_buffer_put(buffer);
@@ -675,6 +683,7 @@ static int ion_get_dma_buf(struct ion_client *client, struct ion_handle *handle)
 	if (fd < 0)
 		dma_buf_put(dmabuf);
 
+	printk("ion_get_dma_buf %08x %d\n", dmabuf->file, dmabuf->file->f_count);
 	return fd;
 }
 
@@ -885,7 +894,7 @@ void ion_system_heap_free(struct ion_buffer *buffer)
 	struct scatterlist *sg;
 	LIST_HEAD(pages);
 	int i;
-	printk("portal: ion_system_heap_free\n");
+	printk("PortalAlloc::ion_system_heap_free\n");
 	for_each_sg(table->sgl, sg, table->nents, i){
 	  free_buffer_page(buffer, sg_page(sg), get_order(sg_dma_len(sg)));
 	}
@@ -927,8 +936,9 @@ int ion_system_heap_map_user(struct ion_buffer *buffer,
 //
 /////////////////////////////////////////////////////////////
 
-void portal_init_ion(void)
+static void portal_init_ion(void)
 {
+        printk("PortalAlloc::portal_init_ion\n");
         if (portal_ion_device == NULL) {
                 printk("creating ion_device for portal\n");
                 portal_ion_device = ion_device_create();
@@ -936,14 +946,15 @@ void portal_init_ion(void)
 	}
 }
 
-void portal_ion_release(void)
+static void portal_ion_release(void)
 {
+        printk("PortalAlloc::portal_ion_release\n");
         ion_device_destroy(portal_ion_device);
         portal_ion_device = NULL;
 }
 
 
-long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+static long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
         struct ion_client *portal_ion_client = filep->private_data;
         switch (cmd) {
@@ -962,8 +973,8 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 	}
         case PORTAL_ALLOC: {
                 struct PortalAlloc alloc;
-                struct dma_buf *dma_buf = 0;
-                struct dma_buf_attachment *attachment = 0;
+                /* struct dma_buf *dma_buf = 0; */
+                /* struct dma_buf_attachment *attachment = 0; */
                 struct sg_table *sg_table = 0;
                 struct scatterlist *sg;
 		struct ion_handle* handle;
@@ -978,9 +989,16 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 if (IS_ERR_VALUE((long)handle))
                         return -EINVAL;
 		alloc.fd = ion_get_dma_buf(portal_ion_client, handle);
-                dma_buf = dma_buf_get(alloc.fd);
-                attachment = dma_buf_attach(dma_buf, miscdev.this_device);
-                sg_table = dma_buf_map_attachment(attachment, DMA_TO_DEVICE);
+
+		// the following three function calls can be replaced by
+		// the simple assignment.  I don't know if this is strictly
+		// "by the book", but it seems to work (mdk)
+
+                /* dma_buf = dma_buf_get(alloc.fd); */
+                /* attachment = dma_buf_attach(dma_buf, miscdev.this_device); */
+                /* sg_table = dma_buf_map_attachment(attachment, DMA_TO_DEVICE); */
+		sg_table = handle->buffer->sg_table;
+		
 		if (0)
 		printk("sg_table %p nents %d\n", sg_table, sg_table->nents);
                 if (sg_table->nents > 1) {
@@ -1017,46 +1035,30 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 
 static int pa_open(struct inode *i, struct file *f)
 {
-  printk("PortalAlloc: open()\n");
+  printk("PortalAlloc::open()\n");
   f->private_data = ion_client_create(portal_ion_device, "");
   return 0;
 }
 
-static int pa_close(struct inode *i, struct file *f)
+static int pa_release(struct inode *i, struct file *f)
 {
-  printk("PortalAlloc: close()\n");
+  printk("PortalAlloc::release() %d\n", f->f_count);
   ion_client_destroy(f->private_data);
   return 0;
-}
-
-static ssize_t pa_read(struct file *f, char __user *buf, size_t
-		       len, loff_t *off)
-{
-  printk("PortalAlloc: read()\n");
-  return 0;
-}
-
-static ssize_t pa_write(struct file *f, const char __user *buf,
-			size_t len, loff_t *off)
-{
-  printk("PortalAlloc: write()\n");
-  return len;
 }
 
 static struct file_operations pa_fops =
   {
     .owner = THIS_MODULE,
     .open = pa_open,
-    .release = pa_close,
-    .read = pa_read,
-    .write = pa_write,
+    .release = pa_release,
     .unlocked_ioctl = portal_unlocked_ioctl
   };
  
 static int __init pa_init(void)
 {
   struct miscdevice *md = &miscdev;
-  printk("PortalAlloc: pa_init\n");
+  printk("PortalAlloc::pa_init\n");
   md->minor = MISC_DYNAMIC_MINOR;
   md->name = "portalalloc";
   md->fops = &pa_fops;
@@ -1069,7 +1071,7 @@ static int __init pa_init(void)
 static void __exit pa_exit(void)
 {
   struct miscdevice *md = &miscdev;
-  printk("PortalAlloc: pa_exit\n");
+  printk("PortalAlloc::pa_exit\n");
   misc_deregister(md);
   portal_ion_release();
 }
@@ -1080,4 +1082,3 @@ module_exit(pa_exit);
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
 MODULE_VERSION(DRIVER_VERSION);
-

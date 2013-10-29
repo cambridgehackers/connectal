@@ -89,10 +89,10 @@ void* portalExec(void* __x);
 class PortalMemory : public PortalRequest {
  private:
   int handle;
-  int pa_fd;
  protected:
   PortalMemory(const char* name, PortalIndication *indication=0);
  public:
+  int pa_fd;
   int dCacheFlushInval(PortalAlloc *portalAlloc);
   int alloc(size_t size, PortalAlloc *portalAlloc);
   int reference(PortalAlloc* pa);
