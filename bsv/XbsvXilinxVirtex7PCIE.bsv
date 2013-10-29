@@ -217,6 +217,10 @@ module vMkVirtex7PCIExpress#(PCIEParams params)(PCIE_V7#(lanes))
    
    parameter PL_FAST_TRAIN = (params.fast_train_sim_only) ? "TRUE" : "FALSE";
    parameter PCIE_EXT_CLK  = "TRUE";
+   parameter BAR0 = 32'hFFF00004;
+   parameter BAR1 = 32'hFFFFFFFF;
+   parameter BAR2 = 32'hFFF00004;
+   parameter BAR3 = 32'hFFFFFFFF;
    
    interface PCIE_EXP pcie;
       method                            rxp(pci_exp_rxp) enable((*inhigh*)en0)                              reset_by(no_reset);
