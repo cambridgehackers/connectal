@@ -36,27 +36,6 @@
 static struct miscdevice miscdev;
 
 /////////////////////////////////////////////////////////////
-// copied from ion_priv.h
-
-/**
- * ion_handle - a client local reference to a buffer
- * @ref:		reference count
- * @client:		back pointer to the client the buffer resides in
- * @buffer:		pointer to the buffer
- * @node:		node in the client's handle rbtree
- * @kmap_cnt:		count of times this client has mapped to kernel
- *
- * Modifications to node, map_cnt or mapping should be protected by the
- * lock in the client.  Other fields are never changed after initialization.
- */
-struct ion_handle {
-	struct ion_buffer *buffer;
-};
-
-// 
-/////////////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////////////
 // copied from ion.c
 
 /**
@@ -198,24 +177,9 @@ static void ion_buffer_add_to_handle(struct ion_buffer *buffer)
 }
 
 
-static struct ion_handle *ion_handle_create(struct ion_buffer *buffer)
-{
-	struct ion_handle *handle;
-
-	handle = kzalloc(sizeof(struct ion_handle), GFP_KERNEL);
-	if (!handle)
-		return ERR_PTR(-ENOMEM);
-	ion_buffer_get(buffer);
-	ion_buffer_add_to_handle(buffer);
-	handle->buffer = buffer;
-
-	return handle;
-}
-
-static struct ion_handle *ion_alloc(size_t len,
+static struct ion_buffer *ion_alloc(size_t len,
 				    size_t align)
 {
-	struct ion_handle *handle;
 	struct ion_buffer *buffer = NULL;
 
 	pr_debug("%s: len %d align %d\n", __func__, len,
@@ -234,19 +198,7 @@ static struct ion_handle *ion_alloc(size_t len,
 	if (IS_ERR(buffer))
 		return ERR_PTR(PTR_ERR(buffer));
 
-	handle = ion_handle_create(buffer);
-
-	/*
-	 * ion_buffer_create will create a buffer with a ref_cnt of 1,
-	 * and ion_handle_create will take a second reference, drop one here
-	 */
-	ion_buffer_put(buffer);
-
-	if (!IS_ERR(handle)) {
-	}
-
-
-	return handle;
+	return buffer;
 }
 
 
@@ -383,15 +335,11 @@ static struct dma_buf_ops dma_buf_ops = {
 	.kunmap = ion_dma_buf_kunmap,
 };
 
-static int ion_get_dma_buf(struct ion_handle *handle)
+static int ion_get_dma_buf(struct ion_buffer *buffer)
 {
-	struct ion_buffer *buffer;
 	struct dma_buf *dmabuf;
 	int fd;
 
-	buffer = handle->buffer;
-	// ion_buffer_get(buffer);
-	// ion_buffer_put(buffer); 
 	dmabuf = dma_buf_export(buffer, &dma_buf_ops, buffer->size, O_RDWR);
 	if (IS_ERR(dmabuf)) {
 		ion_buffer_put(buffer);
@@ -662,21 +610,16 @@ static long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned
 	}
         case PORTAL_ALLOC: {
                 struct PortalAlloc alloc;
-                /* struct dma_buf *dma_buf = 0; */
-                /* struct dma_buf_attachment *attachment = 0; */
                 struct sg_table *sg_table = 0;
                 struct scatterlist *sg;
-		struct ion_handle* handle;
+		struct ion_buffer *buffer;
                 int i;
 
 		if (copy_from_user(&alloc, (void __user *)arg, sizeof(alloc)))
 			return -EFAULT;
                 printk("%s, alloc.size=%d\n", __FUNCTION__, alloc.size);
                 alloc.size = round_up(alloc.size, 4096);
-                handle = ion_alloc(alloc.size, 4096);
-                printk("allocated ion_handle %p size %d\n", handle, alloc.size);
-                if (IS_ERR_VALUE((long)handle))
-                        return -EINVAL;
+                buffer = ion_alloc(alloc.size, 4096);
 		alloc.fd = ion_get_dma_buf(handle);
 
 		// the following three function calls can be replaced by
@@ -686,7 +629,7 @@ static long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned
                 /* dma_buf = dma_buf_get(alloc.fd); */
                 /* attachment = dma_buf_attach(dma_buf, miscdev.this_device); */
                 /* sg_table = dma_buf_map_attachment(attachment, DMA_TO_DEVICE); */
-		sg_table = handle->buffer->sg_table;
+		sg_table = buffer->sg_table;
 		
 		if (0)
 		printk("sg_table %p nents %d\n", sg_table, sg_table->nents);
