@@ -37,17 +37,17 @@ interface IserdesControl;
    method Action                 autoalign(Bit#(1) v);
    method Action                 training(Bit#(10) v);
    method Action                 manual_tap(Bit#(10) v);
-   method Action                 reset(Bit#(1) v);
+   method Action                 rden(Bit#(1) v);
 endinterface
 
 // ports in the "CLKDIV" clock domain
 interface IserdesWren;
    method Action                 delay_wren(Bit#(1) v);
    method Action                 fifo_wren(Bit#(1) v);
+   method Action                 reset(Bit#(1) v);
 endinterface
 
 interface IserdesFifo;
-   method Action                 rden(Bit#(1) v);
    method Bit#(1)                empty();
    method Bit#(10)               dataout();
 endinterface
@@ -82,21 +82,21 @@ module mkIserdesDatadeser#(Clock clkdiv, Clock serdest)(IserdesDatadeser);
       method                  autoalign(AUTOALIGN) enable((*inhigh*) en7) clocked_by (clock);
       method                  training(TRAINING) enable((*inhigh*) en8) clocked_by (clock);
       method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
-      method                  reset(RESET) enable((*inhigh*) en16) clocked_by (clock);
+      method                  rden(FIFO_RDEN) enable((*inhigh*) en12) clocked_by (clock);
    endinterface
 
    interface IserdesWren wren;
       method                  fifo_wren(FIFO_WREN) enable((*inhigh*) en10) clocked_by (clkdiv);
       method                  delay_wren(DELAY_WREN) enable((*inhigh*) en11) clocked_by (clkdiv);
+      method                  reset(RESET) enable((*inhigh*) en16) clocked_by (clkdiv);
    endinterface
 
    interface IserdesFifo         fifo;
-      method               rden(FIFO_RDEN) enable((*inhigh*) en12) clocked_by (clock);
       method FIFO_EMPTY    empty() clocked_by (clock);
       method FIFO_DATAOUT  dataout() clocked_by(clock);
    endinterface
 
-      schedule (wren_fifo_wren) CF (wren_delay_wren);
-   schedule (ibufdsOut_ibufds_out, control_align_start, control_autoalign, control_training, control_manual_tap, fifo_rden, fifo_dataout)
-      CF (ibufdsOut_ibufds_out, control_align_start, control_autoalign, control_training, control_manual_tap, fifo_rden, fifo_dataout);
+   schedule (wren_fifo_wren, wren_reset, wren_delay_wren) CF (wren_fifo_wren, wren_reset, wren_delay_wren);
+   schedule (ibufdsOut_ibufds_out, control_align_start, control_autoalign, control_training, control_manual_tap, control_rden, fifo_dataout)
+      CF (ibufdsOut_ibufds_out, control_align_start, control_autoalign, control_training, control_manual_tap, control_rden, fifo_dataout);
 endmodule: mkIserdesDatadeser

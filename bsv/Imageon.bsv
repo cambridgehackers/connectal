@@ -29,7 +29,6 @@ import Clocks :: *;
 import IserdesDatadeser::*;
 import GetPutWithClocks :: *;
 
-//(* always_ready *)
 interface ImageonSerdes;
     method Bit#(1) reset();
     method Bit#(1) resets();
@@ -82,7 +81,6 @@ typedef struct {
     Bit#(10) video_data;
 } XsviData deriving (Bits);
 
-//(* always_ready *)
 interface ImageonSensorControl;
     method Bit#(32) get_debugind();
     method Action raw_data(Bit#(50) v);
@@ -102,13 +100,11 @@ interface ImageonSensorControl;
     interface Reset hdmiReset;
 endinterface
 
-//(* always_enabled *)
 interface ImageonFast;
     interface ImageonSyncGen syncgen;
     interface Reset reset;
 endinterface
 
-//(* always_enabled *)
 interface ImageonVita;
     method Bit#(1) host_oe();
     interface ImageonSerdesIndication serdesind;
@@ -796,44 +792,36 @@ endinterface
 
 module mkGetSensorDiffData#(Clock clkdiv, Clock serdest,
    ImageonSensorControl sensor, ImageonVita host, ImageonSerdes serdes)(SensorDiffData);
-   //Clock defaultClock <- exposeCurrentClock();
-   //Reset defaultReset <- exposeCurrentReset();
-
    Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(clkdiv, serdest));
    Vector#(5, IserdesWren) clkdivif;
    for (Bit#(8) i = 0; i < 5; i = i+1) begin
       clkdivif[i] <- mkClockBinder(serdes_v[i].wren, clocked_by clkdiv);
    end
 
-   rule sendup_init;
-   endrule
-
    rule sendup;
-      Bit#(5) emptyw = 0;
+      Bit#(5) alignbusyw = 0;
+      Bit#(5) alignedw = 0;
       Bit#(5) firstw = 0;
       Bit#(5) lastw = 0;
       Bit#(5) otherw = 0;
-      Bit#(5) alignedw = 0;
-      Bit#(5) alignbusyw = 0;
+      Bit#(5) emptyw = 0;
       Bit#(50) rawdataw = 0;
       for (Bit#(8) i = 0; i < 5; i = i+1) begin
 	 serdes_v[i].control.align_start(serdes.align_start());
-	 alignbusyw[i] = serdes_v[i].control.align_busy();
-	 alignedw[i] = serdes_v[i].control.aligned();
 	 serdes_v[i].control.autoalign(serdes.auto_align());
 	 serdes_v[i].control.training(serdes.training());
 	 serdes_v[i].control.manual_tap(serdes.manual_tap());
+	 serdes_v[i].control.rden(host.decoder.enable());
+
+	 serdes_v[i].ibufdsOut.ibufds_out(sensor.ibufds_out_value()[i]);
+
+	 alignbusyw[i] = serdes_v[i].control.align_busy();
+	 alignedw[i] = serdes_v[i].control.aligned();
 	 firstw[i] = serdes_v[i].control.sampleinfirstbit();
 	 lastw[i] = serdes_v[i].control.sampleinlastbit();
 	 otherw[i] = serdes_v[i].control.sampleinotherbit();
-	 //sampleinOTHERBIT_wire[i:i] <= serdes_v[i].control.sampleinotherbit();
-	 serdes_v[i].ibufdsOut.ibufds_out(sensor.ibufds_out_value()[i]);
 	 emptyw[i] = serdes_v[i].fifo.empty();
 	 rawdataw[(i+1)*10-1: i*10] = serdes_v[i].fifo.dataout();
-	 serdes_v[i].fifo.rden(host.decoder.enable());
-	 /*
-	 .clk(imageon_clk_tmp),
-	 */
       end
       sensor.align_BUSY_d(alignbusyw);
       sensor.alignED_d(alignedw);
@@ -844,12 +832,13 @@ module mkGetSensorDiffData#(Clock clkdiv, Clock serdest,
       sensor.raw_data(rawdataw);
    endrule
    rule sendup2;
-   for (Bit#(3) i = 0; i < 5; i = i+1) begin
-      serdes_v[i].control.reset(serdes.resets());
+   for (Bit#(8) i = 0; i < 5; i = i+1) begin
+      //serdes_v[i].control.reset(serdes.resets());
    end
    endrule
    rule sendup3;
-   for (Bit#(3) i = 0; i < 5; i = i+1) begin
+   for (Bit#(8) i = 0; i < 5; i = i+1) begin
+      clkdivif[i].reset(serdes.reset());
       clkdivif[i].delay_wren(sensor.delay_wren_r());
       clkdivif[i].fifo_wren(serdes.fifo_enable());
    end
