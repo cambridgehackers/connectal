@@ -14,3 +14,12 @@ parsetab.py
 Module.symvers
 *.jou
 *.log
+.build
+mk*.cxx
+mk*.h
+*.bspec
+model_*.cxx
+model_*.h
+mk*.sched
+mk*.v
+modules.order
