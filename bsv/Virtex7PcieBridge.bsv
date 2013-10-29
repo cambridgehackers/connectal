@@ -3,9 +3,9 @@
 // $Date$
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
-package Kintex7PcieBridge;
+package Virtex7PcieBridge;
 
-// PCI-Express for Kintex 7
+// PCI-Express for Virtex 7
 // FPGAs.
 
 import Clocks               :: *;
@@ -21,14 +21,14 @@ import ClientServer         :: *;
 import Memory               :: *;
 import BlueNoC              :: *;
 import PcieToAxiBridge      :: *;
-import XbsvXilinxKintex7Pcie :: *;
-import XilinxKintex7DDR3    :: *;
+import XbsvXilinxVirtex7Pcie :: *;
+import XilinxVirtex7DDR3    :: *;
 import AxiMasterSlave       :: *;
 // from SceMiDefines
 typedef 4 BPB;
 
 // Interface wrapper for PCIE
-interface K7PcieBridgeIfc#(numeric type lanes);
+interface V7PcieBridgeIfc#(numeric type lanes);
    interface PCIE_EXP#(lanes) pcie;
    (* always_ready *)
    method Bool isLinkUp();
@@ -40,7 +40,7 @@ interface K7PcieBridgeIfc#(numeric type lanes);
    interface Clock clock125;
    interface Reset reset125;
    (* prefix = "" *)
-   //interface DDR3_Pins_K7      ddr3;
+   //interface DDR3_Pins_V7      ddr3;
    interface Axi3Master#(32,32,4,12) portal0;
    interface Axi3Slave#(40,64,8,12) slave; // to the axi slave engine
    interface Put#(TimestampedTlpData) trace;
@@ -50,16 +50,16 @@ endinterface
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
-module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
+module mkV7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 		       , Clock sys_clk_p,    Clock sys_clk_n
 		       , Reset pci_sys_reset
                        , Bit#(64) contentId
 		       )
-		       (K7PcieBridgeIfc#(lanes))
-   provisos(Add#(1,_,lanes), XbsvXilinxKintex7Pcie::SelectKintex7PCIE#(lanes));
+		       (V7PcieBridgeIfc#(lanes))
+   provisos(Add#(1,_,lanes), XbsvXilinxVirtex7Pcie::SelectVirtex7PCIE#(lanes));
 
    if (valueOf(lanes) != 8)
-      errorM("Only 8-lane PCIe is supported on K7.");
+      errorM("Only 8-lane PCIe is supported on V7.");
 
    Clock sys_clk <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
 
@@ -77,11 +77,11 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    Reset rst_n <- mkAsyncReset( 1, pci_sys_reset, clk );
    Reset ddr3ref_rst_n <- mkAsyncReset( 1, rst_n, clk_gen.clkout1 );
    
-   DDR3_Configure_K7 ddr3_cfg;
+   DDR3_Configure_V7 ddr3_cfg;
    ddr3_cfg.num_reads_in_flight = 2;   // adjust as needed
    ddr3_cfg.fast_train_sim_only = False; // adjust if simulating
    
-   //DDR3_Controller_K7 ddr3_ctrl <- mkKintex7DDR3Controller(ddr3_cfg, clocked_by clk_gen.clkout1, reset_by ddr3ref_rst_n);
+   //DDR3_Controller_V7 ddr3_ctrl <- mkVirtex7DDR3Controller(ddr3_cfg, clocked_by clk_gen.clkout1, reset_by ddr3ref_rst_n);
 
    // ddr3_ctrl.user needs to connect to user logic and should use ddr3clk and ddr3rstn
    //Clock ddr3clk = ddr3_ctrl.user.clock;
@@ -91,8 +91,8 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    Clock pci_sys_clk_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
 
    // Instantiate the PCIE endpoint
-   XbsvXilinxKintex7Pcie::PCIExpressK7#(lanes) _ep
-       <- XbsvXilinxKintex7Pcie::mkPCIExpressEndpointK7( defaultValue
+   XbsvXilinxVirtex7Pcie::PCIExpressV7#(lanes) _ep
+       <- XbsvXilinxVirtex7Pcie::mkPCIExpressEndpointV7( defaultValue
 						      , clocked_by pci_sys_clk_buf
 						      , reset_by pci_sys_reset
 						      );
@@ -211,10 +211,10 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 //   method Bool isCalibrated  = ddr3_ctrl.user.init_done;
    method Action interrupt     = bridge.interrupt;
    
-endmodule: mkK7PcieBridge
+endmodule: mkV7PcieBridge
 
-instance Connectable#(MemoryClient#(32, 256), DDR3_User_K7);
-   module mkConnection#(MemoryClient#(32, 256) client, DDR3_User_K7 ddr3)(Empty);
+instance Connectable#(MemoryClient#(32, 256), DDR3_User_V7);
+   module mkConnection#(MemoryClient#(32, 256) client, DDR3_User_V7 ddr3)(Empty);
       rule connect_requests;
 	 let request <- client.request.get;
 	 Bit#(28) address = truncate(request.address) << 2;
@@ -237,4 +237,4 @@ instance Connectable#(MemoryClient#(32, 256), DDR3_User_K7);
    endmodule
 endinstance
 
-endpackage: Kintex7PcieBridge
+endpackage: Virtex7PcieBridge

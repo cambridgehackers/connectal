@@ -4,7 +4,7 @@
 //  Filename      : XilinxVirtex7PCIE.bsv
 //  Description   : 
 ////////////////////////////////////////////////////////////////////////////////
-package XilinxVirtex7PCIE;
+package XbsvXilinxVirtex7Pcie;
 
 // Notes :
 
@@ -926,5 +926,5 @@ instance TieOff#(PCIE_PL_V7);
    endmodule
 endinstance
 
-endpackage: XilinxVirtex7PCIE
+endpackage: XbsvXilinxVirtex7Pcie
 

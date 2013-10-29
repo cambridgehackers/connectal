@@ -54,8 +54,19 @@ extends-target:                 dut
 top-file:                       ./LoadStoreTop.bsv
 build-for:                      kc705
 scemi-clock-period:             30.0
-bsc-compile-options:            -opt-undetermined-vals -unspecified-to 0 -remove-dollar -verilog-filter ${BLUESPECDIR}/bin/basicinout
+bsc-compile-options:            -D Kintex7 -opt-undetermined-vals -unspecified-to 0 -remove-dollar -verilog-filter ${BLUESPECDIR}/bin/basicinout
 scemi-type:                     PCIE_KINTEX7
+sodimm-style:                   DDR3
+bsv-define:                     DDR3
+
+[vc707_dut]
+hide-target
+extends-target:                 dut
+top-file:                       ./LoadStoreTop.bsv
+build-for:                      vc707
+scemi-clock-period:             30.0
+bsc-compile-options:            -D Virtex7 -opt-undetermined-vals -unspecified-to 0 -remove-dollar -verilog-filter ${BLUESPECDIR}/bin/basicinout
+scemi-type:                     PCIE_VIRTEX7
 sodimm-style:                   DDR3
 bsv-define:                     DDR3
 
@@ -75,6 +86,13 @@ top-file:                       ./LoadStoreTop.bsv
 post-targets:                   sw
 scemi-type:                     PCIE_KINTEX7
 
+[vc707_tb]
+hide-target
+extends-target:                 tb_tcl
+top-file:                       ./LoadStoreTop.bsv
+post-targets:                   sw
+scemi-type:                     PCIE_VIRTEX7
+
 ################################################################################
 [bluesim]
 sub-targets:                    bsim_dut bsim_tb
@@ -84,3 +102,6 @@ sub-targets:                    vlog_dut vlog_tb
 
 [kc705]
 sub-targets:                    kc705_dut kc705_tb
+
+[vc707]
+sub-targets:                    vc707_dut vc707_tb

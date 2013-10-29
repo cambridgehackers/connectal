@@ -8,7 +8,7 @@
 // Added BAR0..BAR3 parameters. jamey.hicks@qrclab.com. 10/3/2013.
 // Requires modified xilinx_k7_pcie_wrapper.v
 //
-package QrcXilinxKintex7Pcie;
+package XbsvXilinxKintex7Pcie;
 
 // Notes :
 
@@ -930,5 +930,5 @@ instance TieOff#(PCIE_PL_K7);
    endmodule
 endinstance
 
-endpackage: QrcXilinxKintex7Pcie
+endpackage: XbsvXilinxKintex7Pcie
 
