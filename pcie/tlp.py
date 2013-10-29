@@ -22,6 +22,62 @@ tlpdatalog = [
     '000000100984fff0000000010018000fdf5000000f52fd62',
 ]
 
+TlpPacketType = [
+    'MEMORY_READ_WRITE',
+    'MEMORY_READ_LOCKED',
+    'IO_REQUEST',
+    'UNKNOWN_TYPE_3',
+    'CONFIG_0_READ_WRITE',
+    'CONFIG_1_READ_WRITE',
+    'UNKNOWN_TYPE_6',
+    'UNKNOWN_TYPE_7',
+    'UNKNOWN_TYPE_8',
+    'UNKNOWN_TYPE_9',
+    'COMPLETION',
+    'COMPLETION_LOCKED',
+    'UNKNOWN_TYPE_12',
+    'UNKNOWN_TYPE_13',
+    'UNKNOWN_TYPE_14',
+    'UNKNOWN_TYPE_15',
+    'MSG_ROUTED_TO_ROOT',
+    'MSG_ROUTED_BY_ADDR',
+    'MSG_ROUTED_BY_ID',
+    'MSG_ROOT_BROADCAST',
+    'MSG_LOCAL',
+    'MSG_GATHER',
+    'UNKNOWN_TYPE_22',
+    'UNKNOWN_TYPE_23',
+    'UNKNOWN_TYPE_24',
+    'UNKNOWN_TYPE_25',
+    'UNKNOWN_TYPE_26',
+    'UNKNOWN_TYPE_27',
+    'UNKNOWN_TYPE_28',
+    'UNKNOWN_TYPE_29',
+    'UNKNOWN_TYPE_30',
+    'UNKNOWN_TYPE_31'
+]
+
+TlpPacketFormat = [
+    'MEM_READ_3DW_NO_DATA',
+    'MEM_READ_4DW_NO_DATA',
+    'MEM_WRITE_3DW_DATA',
+    'MEM_WRITE_4DW_DATA'
+]
+
+def pktClassification(pktformat, pkttype, portnum):
+    if portnum == 4:
+        if pkttype == 10: # COMPLETION
+            return 'Master Response'
+        else:
+            return 'Slave Request'
+    elif portnum == 8:
+        if pkttype == 10: # COMPLETION
+            return 'Slave Response'
+        else:
+            return 'Master Request'
+    else:
+        return 'Misc'
+
 def print_tlp(tlpdata):
     def segment(i):
         return tlpdata[i*8:i*8+8]
@@ -31,66 +87,26 @@ def print_tlp(tlpdata):
         return ''.join(map(byte, [3,2,1,0]))
 
     words = map(segment, [0,1,2,3,4,5])
-    ##print words
-    ##print map(byteswap, words)
-    #tlpdata = ''.join(map(byteswap, map(segment, [0,1,2,3])))
 
-    l = len(tlpdata)
-
-    TlpPacketType = [
-        'MEMORY_READ_WRITE',
-        'MEMORY_READ_LOCKED',
-        'IO_REQUEST',
-        'UNKNOWN_TYPE_3',
-        'CONFIG_0_READ_WRITE',
-        'CONFIG_1_READ_WRITE',
-        'UNKNOWN_TYPE_6',
-        'UNKNOWN_TYPE_7',
-        'UNKNOWN_TYPE_8',
-        'UNKNOWN_TYPE_9',
-        'COMPLETION',
-        'COMPLETION_LOCKED',
-        'UNKNOWN_TYPE_12',
-        'UNKNOWN_TYPE_13',
-        'UNKNOWN_TYPE_14',
-        'UNKNOWN_TYPE_15',
-        'MSG_ROUTED_TO_ROOT',
-        'MSG_ROUTED_BY_ADDR',
-        'MSG_ROUTED_BY_ID',
-        'MSG_ROOT_BROADCAST',
-        'MSG_LOCAL',
-        'MSG_GATHER',
-        'UNKNOWN_TYPE_22',
-        'UNKNOWN_TYPE_23',
-        'UNKNOWN_TYPE_24',
-        'UNKNOWN_TYPE_25',
-        'UNKNOWN_TYPE_26',
-        'UNKNOWN_TYPE_27',
-        'UNKNOWN_TYPE_28',
-        'UNKNOWN_TYPE_29',
-        'UNKNOWN_TYPE_30',
-        'UNKNOWN_TYPE_31'
-    ]
-
-    TlpPacketFormat = [
-        'MEM_READ_3DW_NO_DATA',
-        'MEM_READ_4DW_NO_DATA',
-        'MEM_WRITE_3DW_DATA',
-        'MEM_WRITE_4DW_DATA'
-    ]
-
+    tlpsof = int(tlpdata[-39:-38],16) & 1
+    tlpeof = int(tlpdata[-38:-36],16) & 0x80
+    tlphit = int(tlpdata[-38:-36],16) & 0x7f
     pktformat = (int(tlpdata[-32:-31],16) >> 1) & 3
     pkttype = (int(tlpdata[-32:-30],16) & 0x1f)
 
+    portnum = int(tlpdata[-40:-38],16) >> 1
+    
     print tlpdata
     print '   seqno:', int(tlpdata[-48:-40],16)
+    if tlpsof:
+        print '   ', pktClassification(pktformat, pkttype, portnum)
     print '    foo:', tlpdata[-40:-38], hex(int(tlpdata[-40:-38],16) >> 1)
     print '  format:', tlpdata[-32:-31], pktformat, TlpPacketFormat[pktformat]
     print '  pkttype:', tlpdata[-32:-30], pkttype, TlpPacketType[pkttype]
     print '    tlpbe:', tlpdata[-36:-32]
-    print '    tlphit:', int(tlpdata[-38:-36],16) & 0x7f
-    print '    tlpeof:', int(tlpdata[-38:-36],16) & 0x80
-    print '    tlpbof:', int(tlpdata[-39:-38],16) & 1
+    print '    tlphit:', tlphit
+    print '    tlpeof:', tlpeof
+    print '    tlpsof:', tlpsof
 
     if TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMPLETION':
         print '      tag:', tlpdata[-12:-10]
@@ -147,5 +163,4 @@ def print_tlp_log(tlplog):
 
 if __name__ == '__main__':
     tlplog = subprocess.check_output(['bluenoc', 'tlp']).split('\n')
-    print_tlp_log(tlplog[1:-1])
-
+    print_tlp_log(tlplog[0:-1])
