@@ -117,7 +117,7 @@ module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    %(Dut)sWrapper %(dut)sWrapper <- mk%(Dut)sWrapper(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(x7pcie.portal0, %(dut)sWrapper.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    //mkConnection(%(dut)sWrapper.trace, x7pcie.trace);
-   mkConnection(%(dut)sWrapper.m_axi, x7pcie.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+%(axiMasterConnections)s
    rule numPortals;
        x7pcie.numPortals <= %(dut)sWrapper.numPortals;
    endrule
@@ -139,6 +139,11 @@ module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 			     });
 endmodule: mk%(Dut)sPcieTop
 '''
+
+axiMasterConnectionTemplate='''
+   mkConnection(%(dut)sWrapper.%(busname)s, x7pcie.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+'''
+
 
 topInterfaceTemplate='''
 interface %(Base)sWrapper;
@@ -781,9 +786,12 @@ class InterfaceMixin:
         f.write(bsimTopTemplate % substs);
 
     def emitPcieTop(self,f):
+        axiMasterConnections = [axiMasterConnectionTemplate % {'dut': util.decapitalize(self.base), 'busname': busname }
+                                for (busname,t,params) in self.collectInterfaceNames('Axi3Client')]
         substs = {
 		'Dut' : self.base ,
-		'dut' : util.decapitalize(self.base)
+		'dut' : util.decapitalize(self.base),
+                'axiMasterConnections': '\n'.join(axiMasterConnections)
 		}
         f.write(pcieTopTemplate % substs);
 
