@@ -46,7 +46,7 @@ interface CoreIndication;
 endinterface
 
 interface MemcpyRequest;
-   interface Axi3Client#(32,64,8,6) m_axi;
+   interface Axi3Client#(40,64,8,12) m_axi;
    interface CoreRequest coreRequest;
    interface BlueScopeRequest bsRequest;
    interface DMARequest dmaRequest;
