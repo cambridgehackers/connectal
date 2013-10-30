@@ -35,20 +35,23 @@ argparser.add_argument('-B', '--board', default='zc702', choices=supported_board
 argparser.add_argument('-b', '--interface', help='BSV interface to generate stubs for')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
-argparser.add_argument('-C', '--coherent', help='Use ACP coherence port for first AXI master bus')
+argparser.add_argument('-c', '--coherent', help='Use ACP coherence port for first AXI master bus')
 argparser.add_argument('-V', '--verilog', help='Additional verilog sources', nargs='+')
+argparser.add_argument('-C', '--constraint', help='Additional constraint files', nargs='+')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', nargs='+')
 
 tclfileXprTemplate='''
-create_project %(dut)s . -part xc7z020clg484-1
+create_project %(dut)s . -part %(partname)s
 add_files sources
-add_files -fileset constrs_1 -norecurse {constraints/design_1_processing_system7_1_0.xdc}
+%(tclfileAdditionalConstraints)s
 add_files -fileset constrs_1 -norecurse {constraints/%(dut)s.xdc}
 update_compile_order -fileset sources_1
 update_compile_order -fileset sources_1
 update_compile_order -fileset sim_1
 close_project
 '''
+
+tclfileAdditionalConstraintTemplate='''add_files -fileset constrs_1 -norecurse {constraints/%(xdcname)s}'''
 
 tclfileTemplate='''
 open_project %(dut)s
@@ -76,7 +79,6 @@ all: bits exe
 $(vfile): sources/%(dut)s/%(Top)s.bsv
 	cd sources/%(dut)s; bsc %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Top)s %(Top)s.bsv
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
-	cp -r ../xilinx/constraints .
 
 x86_exe:
 	cd jni; g++ *.cpp -pthread
@@ -319,6 +321,33 @@ if __name__=='__main__':
     shutil.copymode(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao'),
                     os.path.join(project_dir, 'updatepao'))
 
+    if not namespace.constraint:
+        namespace.constraint = []
+    if not namespace.verilog:
+        namespace.verilog = []
+    bsvdefines = ''
+    if boardname == 'kc705':
+        partname = 'xc7k325tffg900-2'
+        topSuffix = 'PcieTop'
+        bsvdefines = '-D SCEMI_CLOCK_PERIOD=10 -D Kintex7'
+        namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
+                                              'board_support', 'bluenoc', 'xilinx', 'KC705', 'verilog', 'k7_pcie_v1_6', 'source'))
+        namespace.verilog.append(os.path.join('.', 'xilinx', 'kc705', 'pcie', 'source'))
+        namespace.constraint.append('xilinx/constraints/kc705.xdc')
+    elif boardname == 'vc707':
+        partname = 'xc7vx485tffg1761-2'
+        topSuffix = 'PcieTop'
+        bsvdefines = '-D SCEMI_CLOCK_PERIOD=10 -D Virtex7'
+        namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
+                                              'board_support', 'bluenoc', 'xilinx', 'VC707', 'verilog', 'v7_pcie_v1_7', 'source'))
+        namespace.verilog.append(os.path.join('.', 'xilinx', 'vc707', 'pcie', 'source'))
+        namespace.constraint.append('xilinx/constraints/vc707.xdc')
+    else:
+        partname = 'xc7z020clg484-1'
+        topSuffix = 'Wrapper'
+        namespace.verilog.append(os.path.join('.', 'xilinx', 'sources', 'processing_system7'))
+        namespace.constraint.append('xilinx/constraints/design_1_processing_system7_1_0.xdc')
+
     print 'Writing tcl file', tclname
     tcl = util.createDirAndOpen(tclname, 'w')
     tcl.write(tclfileTemplate % {'dut': namespace.interface.lower(),
@@ -329,28 +358,13 @@ if __name__=='__main__':
     tcl = util.createDirAndOpen(tclxprname, 'w')
     tcl.write(tclfileXprTemplate % {'dut': namespace.interface.lower(),
                                     'Dut': util.capitalize(namespace.interface),
-                                    'project_dir': project_dir
+                                    'partname': partname,
+                                    'project_dir': project_dir,
+                                    'tclfileAdditionalConstraints': '\n'.join([tclfileAdditionalConstraintTemplate
+                                                                               % { 'xdcname': os.path.basename(f) }
+                                                                               for f in namespace.constraint ])
                                     })
     tcl.close()
-
-    if not namespace.verilog:
-        namespace.verilog = []
-    bsvdefines = ''
-    if boardname == 'kc705':
-        topSuffix = 'PcieTop'
-        bsvdefines = '-D SCEMI_CLOCK_PERIOD=10 -D Kintex7'
-        namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
-                                              'board_support', 'bluenoc', 'xilinx', 'KC705', 'verilog', 'k7_pcie_v1_6', 'source'))
-        namespace.verilog.append(os.path.join('.', 'xilinx', 'kc705', 'pcie', 'source'))
-    elif boardname == 'vc707':
-        topSuffix = 'PcieTop'
-        bsvdefines = '-D SCEMI_CLOCK_PERIOD=10 -D Virtex7'
-        namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
-                                              'board_support', 'bluenoc', 'xilinx', 'VC707', 'verilog', 'v7_pcie_v1_7', 'source'))
-        namespace.verilog.append(os.path.join('.', 'xilinx', 'vc707', 'pcie', 'source'))
-    else:
-        topSuffix = 'Wrapper'
-        namespace.verilog.append(os.path.join('.', 'xilinx', 'sources', 'processing_system7'))
 
     if namespace.verilog:
         for verilog in namespace.verilog:
@@ -367,6 +381,12 @@ if __name__=='__main__':
                         shutil.copytree(f, dstpath)
             else:
                 shutil.copytree(verilog, os.path.join(project_dir, 'sources', os.path.basename(verilog)))
+    if namespace.constraint:
+        for constraint in namespace.constraint:
+            print 'Copying constraint file from', constraint
+            dstconstraint = os.path.join(project_dir, 'constraints', os.path.basename(constraint))
+            ## this path is here so we can overwrite sources
+            shutil.copyfile(constraint, dstconstraint)
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
     make.write(makefileTemplate % {'corename': corename,
