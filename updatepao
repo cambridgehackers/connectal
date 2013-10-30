@@ -37,6 +37,7 @@ def addPaoEntry(paoname, mod):
 def updatePao(vinput, pao, libdirs):
     destdir = os.path.dirname(vinput)
     if os.environ.has_key('BLUESPECDIR'):
+        libdirs.append(os.path.join(os.environ['BLUESPECDIR'], 'Verilog.Vivado'))
         libdirs.append(os.path.join(os.environ['BLUESPECDIR'], 'Verilog'))
     print 'destdir', destdir
     print 'libdirs', libdirs
