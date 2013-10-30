@@ -39,7 +39,7 @@ interface CoreIndication;
 endinterface
 
 interface MemwriteRequest;
-   interface Axi3Client#(32,64,8,6) m_axi;
+   interface Axi3Client#(40,64,8,12) m_axi;
    interface CoreRequest coreRequest;
    interface DMARequest dmaRequest;
 endinterface

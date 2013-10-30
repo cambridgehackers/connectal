@@ -200,7 +200,7 @@ static int pa_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   struct pa_buffer *buffer = dmabuf->priv;
   int ret = 0;
 
-  printk("pa_mmap %08x %d\n", dmabuf->file, dmabuf->file->f_count);
+  printk("pa_mmap %08x %d\n", (unsigned int)(dmabuf->file), dmabuf->file->f_count.counter);
 	
   vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
@@ -219,7 +219,7 @@ static int pa_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 static void pa_dma_buf_release(struct dma_buf *dmabuf)
 {
   struct pa_buffer *buffer = dmabuf->priv;
-  printk("PortalAlloc::pa_dma_buf_release %08x %d\n", dmabuf->file, dmabuf->file->f_count);
+  printk("PortalAlloc::pa_dma_buf_release %08x %d\n", (unsigned int)(dmabuf->file), dmabuf->file->f_count.counter);
   pa_buffer_free(buffer);
 }
 
@@ -291,7 +291,7 @@ static int pa_get_dma_buf(struct pa_buffer *buffer)
   if (fd < 0)
     dma_buf_put(dmabuf);
 
-  printk("pa_get_dma_buf %08x %d\n", dmabuf->file, dmabuf->file->f_count);
+  printk("pa_get_dma_buf %08x %d\n", (unsigned int)(dmabuf->file), dmabuf->file->f_count.counter);
   return fd;
 }
 

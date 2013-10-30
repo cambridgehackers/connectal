@@ -256,7 +256,7 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc)
       fprintf(stderr, "portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
     }
-    //fprintf(stderr, "dcache flush\n");
+    fprintf(stderr, "dcache flush\n");
     return 0;
 }
 
