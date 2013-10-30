@@ -12,9 +12,6 @@ Preparation
 -----------
 1. Get xilinx tools
 2. Get bluespec tools
-3. Patch bluespec using the file bluespec-pcie.patch
-
-    patch -p1 -d $(BLUESPECDIR)/.. < bluespec-pcie.patch
 
 LoadStore Example
 ------------
@@ -22,7 +19,9 @@ LoadStore Example
     ## this has only been tested with the Vivado 2013.2 release
     . Xilinx/Vivado/2013.2/settings64.sh
 
-    ./genxpsprojfrombsv -B zedboard -p loadstoreproj -b LoadStore examples/loadstore/LoadStore.bsv
+    ./genxpsprojfrombsv -B kc705 -p loadstoreproj -b LoadStore examples/loadstore/LoadStore.bsv
+or
+    ./genxpsprojfrombsv -B vc707 -p loadstoreproj -b LoadStore examples/loadstore/LoadStore.bsv
 
     ## building the test executable
     cd loadstoreproj/jni

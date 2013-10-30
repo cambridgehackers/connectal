@@ -26,6 +26,15 @@ test-memcpy/memcpy.bit.bin.gz: examples/memcpy/Memcpy.bsv
 	(cd test-memcpy; ndk-build)
 	echo test-memcpy built successfully
 
+test-loadstore/loadstore.bit.bin.gz: examples/loadstore/LoadStore.bsv
+	rm -fr test-loadstore
+	mkdir test-loadstore
+	./genxpsprojfrombsv -B $(BOARD) -p test-loadstore -b LoadStore examples/loadstore/LoadStore.bsv
+	cd test-loadstore; make verilog && make bits && make loadstore.bit.bin.gz
+	cp examples/loadstore/testloadstore.cpp test-loadstore/jni
+	(cd test-loadstore; ndk-build)
+	echo test-loadstore built successfully
+
 test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
 	rm -fr test-hdmi
 	mkdir test-hdmi
