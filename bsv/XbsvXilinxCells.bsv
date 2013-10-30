@@ -23,6 +23,7 @@
 
 import Clocks       :: *;
 import DefaultValue :: *;
+import Vector       :: *;
 
 import "BVI" IBUFDS =
 module mkIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ReadOnly#(one_bit)) provisos(Bits#(one_bit,1));
@@ -45,6 +46,22 @@ module mkIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ReadOnly#(one_bit)) provis
    schedule _read  CF _read;
 
 endmodule: mkIBUFDS
+
+import "BVI" OBUFT =
+module mkOBUFT#(Wire#(one_bit) i, Wire#(one_bit) t)(ReadOnly#(one_bit)) provisos(Bits#(one_bit,1));
+   default_clock clk();
+   default_reset rstn();
+
+   port I = i;
+   port T = t;
+   method O    _read;
+
+   path(I, O);
+   path(T, O);
+
+   schedule _read  CF _read;
+
+endmodule: mkOBUFT
 
 typedef struct {
    String cinvctrl_sel;           // "TRUE" to enable dynamic clock inversion, "FALSE" otherwise
@@ -248,6 +265,73 @@ module mkISERDESE2#(ISERDESE2_Config cfg, Clock clk, Clock clkb)(IserdesE2);
    schedule (d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel)
       CF (d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel);   
 endmodule
+import "BVI" BUFR =
+module vMkBUFR5(Wire#(one_bit))
+   provisos(Bits#(one_bit, 1));
+  
+   default_clock clk();
+   default_reset rstn();
+  
+   parameter BUFR_DIVIDE = "5";
+  
+   method       _write(I) enable((*inhigh*)en);
+   method O     _read;
+
+   port   CE = True;
+   port   CLR = False;
+
+   path(I, O);
+  
+   schedule _write SB _read;
+   schedule _write C  _write;
+   schedule _read  CF _read;
+endmodule
+
+module mkBUFR5(Wire#(a))
+   provisos(Bits#(a, sa));
+
+   Vector#(sa, Wire#(Bit#(1))) _bufr <- replicateM(vMkBUFR5);
+  
+   method a _read;
+      return unpack(pack(readVReg(_bufr)));
+   endmethod
+  
+   method Action _write(a x);
+      writeVReg(_bufr, unpack(pack(x)));
+   endmethod
+endmodule
+
+import "BVI" BUFIO =
+module vMkBUFIO(Wire#(one_bit))
+   provisos(Bits#(one_bit, 1));
+  
+   default_clock clk();
+   default_reset rstn();
+  
+   method       _write(I) enable((*inhigh*)en);
+   method O     _read;
+
+   path(I, O);
+  
+   schedule _write SB _read;
+   schedule _write C  _write;
+   schedule _read  CF _read;
+endmodule
+
+module mkBUFIO(Wire#(a))
+   provisos(Bits#(a, sa));
+
+   Vector#(sa, Wire#(Bit#(1))) _bufr <- replicateM(vMkBUFIO);
+  
+   method a _read;
+      return unpack(pack(readVReg(_bufr)));
+   endmethod
+  
+   method Action _write(a x);
+      writeVReg(_bufr, unpack(pack(x)));
+   endmethod
+endmodule
+
 
 ////////////////////////////////////////////////////////////
 
