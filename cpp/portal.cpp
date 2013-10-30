@@ -251,7 +251,7 @@ PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
 
 int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc)
 {
-    int rc = ioctl(this->pa_fd, PORTAL_DCACHE_FLUSH_INVAL, portalAlloc);
+    int rc = ioctl(this->pa_fd, PA_DCACHE_FLUSH_INVAL, portalAlloc);
     if (rc){
       fprintf(stderr, "portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
@@ -281,7 +281,7 @@ int PortalMemory::alloc(size_t size, PortalAlloc *portalAlloc)
 {
     memset(portalAlloc, 0, sizeof(PortalAlloc));
     portalAlloc->size = size;
-    int rc = ioctl(this->pa_fd, PORTAL_ALLOC, portalAlloc);
+    int rc = ioctl(this->pa_fd, PA_ALLOC, portalAlloc);
     if (rc){
       fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;

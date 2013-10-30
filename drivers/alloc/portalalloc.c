@@ -513,10 +513,10 @@ int pa_system_heap_map_user(struct pa_buffer *buffer,
   return 0;
 }
 
-static long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   switch (cmd) {
-  case PORTAL_DCACHE_FLUSH_INVAL: {
+  case PA_DCACHE_FLUSH_INVAL: {
     struct PortalAlloc alloc;
     int i;
     if (copy_from_user(&alloc, (void __user *)arg, sizeof(alloc)))
@@ -529,7 +529,7 @@ static long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned
     }
     return 0;
   }
-  case PORTAL_ALLOC: {
+  case PA_ALLOC: {
     struct PortalAlloc alloc;
     struct sg_table *sg_table = 0;
     struct scatterlist *sg;
@@ -571,7 +571,7 @@ static long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned
     return 0;
   } break;
   default:
-    printk("portal_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
+    printk("pa_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
     return -ENOTTY;
   }
 
@@ -581,7 +581,7 @@ static long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned
 static struct file_operations pa_fops =
   {
     .owner = THIS_MODULE,
-    .unlocked_ioctl = portal_unlocked_ioctl
+    .unlocked_ioctl = pa_unlocked_ioctl
   };
  
 static int __init pa_init(void)
