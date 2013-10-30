@@ -7,7 +7,7 @@
 
 module xilinx_v7_pcie_wrapper #(
                                 parameter            PL_FAST_TRAIN = "FALSE",
-                                parameter            PCIE_EXT_CLK  = "TRUE"
+                                parameter            PCIE_EXT_CLK  = "TRUE",
 // xbsv
 				parameter [31:0]  BAR0 = 32'hFFFF8000,
 				parameter [31:0]  BAR1 = 32'h00000000,
