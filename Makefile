@@ -1,6 +1,8 @@
 
 all: parsetab.py
 
+BOARD=zedboard
+
 parsetab.py: syntax.py
 	python syntax.py
 
@@ -9,7 +11,7 @@ test: test-echo/echo.bit.bin.gz test-memcpy/memcpy.bit.bin.gz test-hdmi/hdmidisp
 test-echo/echo.bit.bin.gz: examples/echo/Echo.bsv
 	rm -fr test-echo
 	mkdir test-echo
-	./genxpsprojfrombsv -B zedboard -p test-echo -b Echo examples/echo/Echo.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-echo -b Echo examples/echo/Echo.bsv
 	cd test-echo; make verilog && make bits && make echo.bit.bin.gz
 	cp examples/echo/testecho.cpp test-echo/jni
 	(cd test-echo; ndk-build)
@@ -18,7 +20,7 @@ test-echo/echo.bit.bin.gz: examples/echo/Echo.bsv
 test-memcpy/memcpy.bit.bin.gz: examples/memcpy/Memcpy.bsv
 	rm -fr test-memcpy
 	mkdir test-memcpy
-	./genxpsprojfrombsv -B zedboard -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv
 	cd test-memcpy; make verilog && make bits && make memcpy.bit.bin.gz
 	cp examples/memcpy/testmemcpy.cpp test-memcpy/jni
 	(cd test-memcpy; ndk-build)
@@ -27,7 +29,7 @@ test-memcpy/memcpy.bit.bin.gz: examples/memcpy/Memcpy.bsv
 test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
 	rm -fr test-hdmi
 	mkdir test-hdmi
-	./genxpsprojfrombsv -B zedboard -p test-hdmi -b HdmiDisplay bsv/HdmiDisplay.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-hdmi -b HdmiDisplay bsv/HdmiDisplay.bsv
 	cd test-hdmi; make verilog && make bits && make hdmidisplay.bit.bin.gz
 	echo test-hdmi built successfully
 
