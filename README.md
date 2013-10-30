@@ -53,6 +53,10 @@ Echo Example
     ./genxpsprojfrombsv -B zedboard -p echoproj -b Echo examples/echo/Echo.bsv
 or
     ./genxpsprojfrombsv -B zc702 -p echoproj -b Echo examples/echo/Echo.bsv
+or
+    ./genxpsprojfrombsv -B kc705 -p echoproj -b Echo examples/echo/Echo.bsv
+or
+    ./genxpsprojfrombsv -B vc707 -p echoproj -b Echo examples/echo/Echo.bsv
 
     cd echoproj
     make verilog
