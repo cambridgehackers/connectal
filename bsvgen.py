@@ -81,6 +81,65 @@ module mkBsimTop();
 endmodule
 '''
 
+pcieTopTemplate='''
+import Clocks            :: *;
+import Connectable       :: *;
+import Assert            :: *;
+import Xilinx            :: *;
+import XilinxPCIE        :: *;
+import Kintex7PcieBridge :: *;
+import Virtex7PcieBridge :: *;
+import %(Dut)sWrapper       :: *;
+
+(* synthesize, no_default_clock, no_default_reset *)
+module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
+                          Clock sys_clk_p,     Clock sys_clk_n,
+                          Clock user_clk_p, Clock user_clk_n,
+                          Reset pci_sys_reset_n)
+                         (KC705_FPGA);
+
+   Clock user_clk <- mkClockIBUFDS(user_clk_p, user_clk_n);
+
+   let contentId = 64'h05ce_0006_4c53_260d;
+
+`ifdef Kintex7
+   K7PcieBridgeIfc#(8) x7pcie <- mkK7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
+                                                 contentId );
+`elsif Virtex7
+   V7PcieBridgeIfc#(8) x7pcie <- mkV7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
+                                                 contentId );
+`else
+   staticAssert(False, "Define preprocessor macro Virtex7 or Kintex7 to configure platform.");
+`endif
+
+   
+   Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   %(Dut)sWrapper %(dut)sWrapper <- mk%(Dut)sWrapper(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(x7pcie.portal0, %(dut)sWrapper.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   //mkConnection(%(dut)sWrapper.trace, x7pcie.trace);
+   mkConnection(%(dut)sWrapper.m_axi, x7pcie.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   rule numPortals;
+       x7pcie.numPortals <= %(dut)sWrapper.numPortals;
+   endrule
+   
+
+   rule requestInterrupt;
+      Bool interrupt = (%(dut)sWrapper.interrupts[0] == 1);
+      if (interrupt && !interruptRequested)
+	 x7pcie.interrupt();
+      interruptRequested <= interrupt;
+   endrule
+
+   interface pcie = x7pcie.pcie;
+   //interface ddr3 = x7pcie.ddr3;
+   method leds = zeroExtend({ pack(x7pcie.isCalibrated)
+			     ,pack(False)
+			     ,pack(False)
+			     ,pack(x7pcie.isLinkUp)
+			     });
+endmodule: mk%(Dut)sPcieTop
+'''
+
 topInterfaceTemplate='''
 interface %(Base)sWrapper;
     interface Axi3Slave#(32,32,4,12) ctrl;
@@ -495,6 +554,115 @@ indicationMethodTemplate='''
         responseFiredWires[%(channelNumber)s].send();
     endmethod'''
 
+projectBldTemplate='''
+[DEFAULT]
+bsc-compile-options:           	-aggressive-conditions -show-schedule -keep-inlined-boundaries -keep-fires -steps-warn-interval 1000000 -suppress-warnings G0046 -p +%(srcdirs)s:%(projectdir)s:%(projectdir)s/sources:%(projectdir)s/sources/%(base)s:../bsv
+bsc-rts-options:               	-K1024M
+bsc-link-options:              	-keep-fires -parallel-sim-link 8
+bsv-source-directories:        	.
+c++-header-aliases
+verilog-simulator:             	cvc
+log-directory:                 	.build/${BUILD_TARGET}/logs
+c++-header-directory:          	.build/${BUILD_TARGET}/cpp
+verilog-directory:             	.build/${BUILD_TARGET}/rtl
+binary-directory:              	.build/${BUILD_TARGET}/obj
+simulation-directory:          	.build/${BUILD_TARGET}/sim
+info-directory:                	.build/${BUILD_TARGET}/info
+exe-file:                      	.build/${BUILD_TARGET}/dut
+scemi-parameters-file:         	.build/${BUILD_TARGET}/scemi.params
+altera-directory:              	.build/${BUILD_TARGET}/fpga
+xilinx-directory:              	.build/${BUILD_TARGET}/fpga
+design-editor-output-directory: .build/${BUILD_TARGET}/rtl_mod
+design-editor-output-params:    .build/${BUILD_TARGET}/scemi.params
+workstation-project-file:       ${BUILD_TARGET}.bspec
+design-editor-edit-params
+design-editor-options:          --batch -bsvmodule mk%(Base)sPcieTop --blackbox 4
+xilinx-use-planahead
+xilinx-use-precompiled
+scemi-tcp-port:                 4321
+top-module:                     mk%(Base)sPcieTop
+
+[mv_vlog_lib]
+hide-target
+run-shell-mv_vlog_lib-0:        mv ${PROJECT_ROOT}/directc_*.so .build/${BUILD_TARGET}/.
+run-shell-mv_vlog_lib-1:        cd ${PROJECT_ROOT}/.build/${BUILD_TARGET} && ln -s ../../.build .build
+
+[sw]
+hide-target
+run-shell-sw-0:                 cd sw && make clean && make
+run-shell-sw-1:                 cd sw/bluenocd && make clean && make
+
+[dut]
+hide-target
+verilog-define:                 BSV_TIMESCALE=1ns/100ps BSV_DUMP_LEVEL=0
+scemi-type:                     TCP
+create-workstation-project
+
+[bsim_dut]
+hide-target
+extends-target:                 dut
+top-file:                       ./Simulation.bsv
+build-for:                      bluesim
+bsv-define:                     BSIM SIMULATION
+
+[kc705_dut]
+hide-target
+extends-target:                 dut
+top-file:                       ./sources/%(base)s/%(Base)sPcieTop.bsv
+build-for:                      kc705
+scemi-clock-period:             30.0
+bsc-compile-options:            -D Kintex7 -opt-undetermined-vals -unspecified-to 0 -remove-dollar -verilog-filter ${BLUESPECDIR}/bin/basicinout
+scemi-type:                     PCIE_KINTEX7
+sodimm-style:                   DDR3
+bsv-define:                     DDR3
+
+[vc707_dut]
+hide-target
+extends-target:                 dut
+top-file:                       ./sources/%(base)s/%(Base)sPcieTop.bsv
+build-for:                      vc707
+scemi-clock-period:             30.0
+bsc-compile-options:            -D Virtex7 -opt-undetermined-vals -unspecified-to 0 -remove-dollar -verilog-filter ${BLUESPECDIR}/bin/basicinout
+scemi-type:                     PCIE_VIRTEX7
+sodimm-style:                   DDR3
+bsv-define:                     DDR3
+
+[tb_tcl]
+hide-target
+scemi-tb
+uses-tcl
+build-for:                      c++
+c++-options:                    -I${BLUESPECDIR}/SceMi/bsvxactors -I${BLUESPECDIR}/tcllib/include -g -O0
+c++-files:                      ${PROJECT_ROOT}/sw/TclTb.cpp ${BLUESPECDIR}/tcllib/include/bsdebug_common.cpp
+shared-lib:                     .build/${BUILD_TARGET}/libbsdebug.so
+
+[kc705_tb]
+hide-target
+extends-target:                 tb_tcl
+top-file:                       ./sources/%(base)s/%(Base)sPcieTop.bsv
+post-targets:                   sw
+scemi-type:                     PCIE_KINTEX7
+
+[vc707_tb]
+hide-target
+extends-target:                 tb_tcl
+top-file:                       ./sources/%(base)s/%(Base)sPcieTop.bsv
+post-targets:                   sw
+scemi-type:                     PCIE_VIRTEX7
+
+################################################################################
+[bluesim]
+sub-targets:                    bsim_dut bsim_tb
+
+[verilog]
+sub-targets:                    vlog_dut vlog_tb
+
+[kc705]
+sub-targets:                    kc705_dut kc705_tb
+
+[vc707]
+sub-targets:                    vc707_dut vc707_tb
+'''
 
 def emitPreamble(f, files):
     extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
@@ -612,6 +780,13 @@ class InterfaceMixin:
 		}
         f.write(bsimTopTemplate % substs);
 
+    def emitPcieTop(self,f):
+        substs = {
+		'Dut' : self.base ,
+		'dut' : util.decapitalize(self.base)
+		}
+        f.write(pcieTopTemplate % substs);
+
     def getClockArgNames(self, m):
         #print m
         #print m.params
@@ -691,6 +866,27 @@ class InterfaceMixin:
 	f = util.createDirAndOpen(fname, 'w')
         print 'Writing bsv file ', fname
 	self.emitBsimTop(f);
+	f.close()
+
+    def writePcieTop(self,fname):
+        assert(self.top and (not self.isIndication))
+	f = util.createDirAndOpen(fname, 'w')
+        print 'Writing bsv file ', fname
+	self.emitPcieTop(f);
+	f.close()
+
+    def writeProjectBld(self,projectdirname,srcdirs=[]):
+        assert(self.top and (not self.isIndication))
+        fname = os.path.join(projectdirname, 'project.bld')
+	f = util.createDirAndOpen(fname, 'w')
+        print 'Writing project.bld file ', fname
+        base = self.name.replace('Request','')                           
+        subst = { 'Base': base, 'base': base.lower(), 'projectdir': os.path.abspath(projectdirname)}
+        if srcdirs:
+            subst['srcdirs'] = ':%s' % ':'.join([os.path.abspath(srcdir) for srcdir in srcdirs])
+        else:
+            subst['srcdirs'] = ''
+        f.write(projectBldTemplate % subst)
 	f.close()
 
     def collectIndicationInterrupts(self):
