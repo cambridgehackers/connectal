@@ -94,13 +94,10 @@ import %(Dut)sWrapper       :: *;
 (* synthesize, no_default_clock, no_default_reset *)
 module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
                           Clock sys_clk_p,     Clock sys_clk_n,
-                          Clock user_clk_p, Clock user_clk_n,
                           Reset pci_sys_reset_n)
                          (KC705_FPGA);
 
-   Clock user_clk <- mkClockIBUFDS(user_clk_p, user_clk_n);
-
-   let contentId = 64'h05ce_0006_4c53_260d;
+   let contentId = 64'h05ce_0006_4c53_260e;
 
 `ifdef Kintex7
    K7PcieBridgeIfc#(8) x7pcie <- mkK7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
