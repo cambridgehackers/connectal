@@ -9,6 +9,7 @@ import argparse
 import subprocess
 import util
 import re
+import glob
 
 AST.TypeDef.__bases__ += (cppgen.TypeDefMixin,)
 AST.Function.__bases__ += (cppgen.NoCMixin,)
@@ -353,9 +354,19 @@ if __name__=='__main__':
 
     if namespace.verilog:
         for verilog in namespace.verilog:
-            print verilog
-            shutil.rmtree(os.path.join(project_dir, 'sources', os.path.basename(verilog)), ignore_errors=True)
-            shutil.copytree(verilog, os.path.join(project_dir, 'sources', os.path.basename(verilog)))
+            print 'Copying verilog sources from', verilog
+            dstverilog = os.path.join(project_dir, 'sources', os.path.basename(verilog))
+            ## this path is here so we can overwrite sources
+            if os.path.exists(dstverilog):
+                for f in glob.glob(os.path.join(verilog, '*')):
+                    print f, os.path.basename(f)
+                    dstpath = os.path.join(project_dir, 'sources', os.path.basename(verilog), os.path.basename(f))
+                    if os.path.isfile(f):
+                        shutil.copyfile(f, dstpath)
+                    else:
+                        shutil.copytree(f, dstpath)
+            else:
+                shutil.copytree(verilog, os.path.join(project_dir, 'sources', os.path.basename(verilog)))
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
     make.write(makefileTemplate % {'corename': corename,
