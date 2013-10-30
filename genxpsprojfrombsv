@@ -349,7 +349,7 @@ if __name__=='__main__':
         namespace.verilog.append(os.path.join('.', 'xilinx', 'vc707', 'pcie', 'source'))
     else:
         topSuffix = 'Wrapper'
-        namespace.verilog.append(os.path.join('.', 'sources', 'processing_system7'))
+        namespace.verilog.append(os.path.join('.', 'xilinx', 'sources', 'processing_system7'))
 
     if namespace.verilog:
         for verilog in namespace.verilog:
