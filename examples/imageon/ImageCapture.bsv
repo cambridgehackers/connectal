@@ -101,7 +101,7 @@ interface ImageCaptureRequest;
    interface ImageonPins pins;
 endinterface
  
-module mkImageCaptureRequest#(Clock imageon_clock, Clock serdes_clock, Clock serdest_clock, Clock hdmi_clock, 
+module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock imageon_clock, Clock serdes_clock, Clock serdest_clock, Clock hdmi_clock, 
     ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
 
     Clock defaultClock <- exposeCurrentClock();
@@ -117,7 +117,7 @@ module mkImageCaptureRequest#(Clock imageon_clock, Clock serdes_clock, Clock ser
     let imageon_vitas_clock_binder <- mkClockBinder(imageonVita.hosts, clocked_by imageon_clock);
     let imageon_serdes_clock_binder <- mkClockBinder(imageonVita.serdes, clocked_by serdes_clock);
 
-    ImageonSensor fromSensor <- mkImageonSensor(hdmi_clock, hdmi_reset, serdes_clock, serdes_reset, serdest_clock, serdest_reset, imageon_vitas_clock_binder,
+    ImageonSensor fromSensor <- mkImageonSensor(fmc_imageon_video_clk1, hdmi_clock, hdmi_reset, serdes_clock, serdes_reset, serdest_clock, serdest_reset, imageon_vitas_clock_binder,
         imageon_serdes_clock_binder, clocked_by imageon_clock, reset_by imageon_reset);
     ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
         fromSensor,

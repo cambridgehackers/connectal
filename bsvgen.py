@@ -630,6 +630,7 @@ class InterfaceMixin:
             collected = self.collectInterfaceNames(busType)
             if collected:
                 if busType == 'ImageonVita':
+                    clknames.append('fmc_imageon_video_clk1')
                     clknames.append('imageon_clock')
                     clknames.append('serdes_clock')
                     clknames.append('serdest_clock')

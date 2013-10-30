@@ -27,6 +27,7 @@ import GetPut::*;
 import Gearbox::*;
 import Clocks :: *;
 import IserdesDatadeser::*;
+import XilinxCells::*;
 import XbsvXilinxCells::*;
 import GetPutWithClocks :: *;
 
@@ -34,11 +35,12 @@ import GetPutWithClocks :: *;
 interface ImageonPins;
     //method Bit#(8) gpio_leds();
     //method Bit#(4) xadc_gpio();
-    //method Action fmc_imageon_video_clk1(Bit#(1) v);
     //method Bit#(1) fmc_imageon_iic_0_rst_pin();
     //method Bit#(1) fmc_imageon_iic_0_scl();
     //method Bit#(1) fmc_imageon_iic_0_sda();
-    //method Bit#(1) io_vita_clk_pll();
+    method Bit#(1) io_vita_clk_pll();
+    method Bit#(1) imageon_clk();
+    method Bit#(1) imageon_clk4x();
     //method Bit#(1) io_vita_reset_n();
     //method Bit#(3) io_vita_trigger();
     //method Bit#(2) io_vita_monitor();
@@ -122,8 +124,6 @@ interface ImageonSensorControl;
     method Action sampleinFIRSTBIT(Bit#(5) v);
     method Action sampleinLASTBIT(Bit#(5) v);
     method Action sampleinOTHERBIT(Bit#(5) v);
-    method Action ibufds_out(Bit#(5) v);
-    method Bit#(5) ibufds_out_value();
     method Bit#(1) delay_wren_r();
     method Bit#(1) fifo_enable();
     interface Reset reset;
@@ -478,7 +478,7 @@ endinterface
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
-module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset,
+module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock hdmi_clock, Reset hdmi_reset,
      Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset,
      ImageonVita host, ImageonSerdes serdes)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
@@ -509,7 +509,6 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset,
     Wire#(Bit#(5)) sampleinFIRSTBIT_wire <- mkDWire(0);
     Wire#(Bit#(5)) sampleinLASTBIT_wire <- mkDWire(0);
     Wire#(Bit#(5)) sampleinOTHERBIT_wire <- mkDWire(0);
-    //Wire#(Bit#(5)) ibufds_out_wire <- mkDWire(0);
     Reg#(Bit#(1)) delay_wren_r_reg <-mkReg(0);
     Reg#(Bit#(1)) delay_wren_r2_reg <- mkSyncReg(0, defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) delay_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
@@ -521,6 +520,31 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset,
     Vector#(5, ReadOnly#(Bit#(1))) ibufds_v;
     for (Integer i = 0; i < 5; i = i + 1)
         ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
+    Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by fmc_imageon_video_clk1);
+    Wire#(Bit#(1)) imageon_clk_unbuf <- mkDWire(0);
+    Wire#(Bit#(1)) imageon_clk4x_unbuf <- mkDWire(0);
+    Wire#(Bit#(1)) clockfb <- mkDWire(0);
+    Wire#(Bit#(1)) clock_reset <- mkDWire(0);
+    MMCME2 mmcmadv <- mkMMCM(MMCMParams {
+        use_same_family:False,
+        bandwidth:"OPTIMIZED", compensation:"ZHOLD",
+        clkfbout_mult_f:8.000, clkfbout_phase:0.0,
+        clkin1_period:6.734007, clkin2_period:6.734007,
+        clkout0_divide_f:8.000, clkout0_duty_cycle:0.5, clkout0_phase:0.0000,
+        clkout1_divide:32, clkout1_duty_cycle:0.5, clkout1_phase:0.0000,
+        divclk_divide:1, ref_jitter1:0.010, ref_jitter2:0.010,
+        clkfbout_use_fine_ps:"FALSE",
+        clkout0_use_fine_ps: "FALSE", clkout1_use_fine_ps:"FALSE",
+        clkout2_use_fine_ps: "FALSE", clkout3_use_fine_ps:"FALSE",
+        clkout4_cascade:     "FALSE", clkout4_use_fine_ps:"FALSE",
+        clkout5_use_fine_ps: "FALSE", clkout6_use_fine_ps:"FALSE",
+        clock_hold:          "FALSE", startup_wait:       "FALSE", 
+        clkout2_divide: 0, clkout2_duty_cycle: 0, clkout2_phase: 0,
+        clkout3_divide: 0, clkout3_duty_cycle: 0, clkout3_phase: 0,
+        clkout4_divide: 0, clkout4_duty_cycle: 0, clkout4_phase: 0,
+        clkout5_divide: 0, clkout5_duty_cycle: 0, clkout5_phase: 0,
+        clkout6_divide: 0, clkout6_duty_cycle: 0, clkout6_phase: 0
+    }, clocked_by imageon_video_clk1_buf_wire);
 
     rule sendup_imageon_clock;
        Bit#(5) alignbusyw = 0;
@@ -537,7 +561,6 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset,
 	  serdes_v[i].control.manual_tap(serdes.manual_tap());
 	  serdes_v[i].control.rden(serdes.decoder_enable());
 
-	  //serdes_v[i].ibufdsOut.ibufds_out(ibufds_out_wire[i]);
 	  serdes_v[i].ibufdsOut.ibufds_out(ibufds_v[i]);
 
 	  alignbusyw[i] = serdes_v[i].control.align_busy();
@@ -742,12 +765,6 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset,
         method Bit#(1) fifo_enable();
               return fifo_wren_c_reg;
         endmethod
-        //method Action ibufds_out(Bit#(5) v);
-            //ibufds_out_wire <= v;
-        //endmethod
-        //method Bit#(5) ibufds_out_value();
-            //return ibufds_out_wire;
-        //endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
     endinterface: in
@@ -760,11 +777,17 @@ module mkImageonSensor#(Clock hdmi_clock, Reset hdmi_reset,
     interface ImageonPins pins;
         //method Bit#(8) gpio_leds();
         //method Bit#(4) xadc_gpio();
-        //method Action fmc_imageon_video_clk1(Bit#(1) v);
         //method Bit#(1) fmc_imageon_iic_0_rst_pin();
         //method Bit#(1) fmc_imageon_iic_0_scl();
         //method Bit#(1) fmc_imageon_iic_0_sda();
         //method Bit#(1) io_vita_clk_pll();
+        //endmethod
+        method Bit#(1) imageon_clk();
+            return ?; //mmcmadv.clkout0;
+        endmethod
+        method Bit#(1) imageon_clk4x();
+            return ?; //mmcmadv.clkout1;
+        endmethod
         //method Bit#(1) io_vita_reset_n();
         //method Bit#(3) io_vita_trigger();
         //method Bit#(2) io_vita_monitor();
@@ -904,7 +927,3 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
 	endmethod
     endinterface: out
 endmodule
-
-interface SensorDiffData;
-   interface Vector#(5, IserdesFifo) fifo;
-endinterface
