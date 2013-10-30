@@ -937,7 +937,7 @@ class ImageonVita:
 '''
     def top_bus_wires(self, busname,t,params):
          return '''
-     wire imageon_clk200;
+     //wire imageon_clk200;
      wire imageon_clk;
      wire imageon_host_oe;
      wire imageon_host_iserdes_reset;
@@ -996,11 +996,7 @@ class ImageonVita:
    wire imageon_clk4_unbuf;
    wire fmc_imageon_video_clk1_buf;
 
-    IBUFG ibufg_video_clk1 (
-        .I(fmc_imageon_video_clk1),
-        .O(fmc_imageon_video_clk1_buf)
-    );
-
+    IBUFG(.I(fmc_imageon_video_clk1), .O(fmc_imageon_video_clk1_buf)); 
     MMCM_ADV# (
         .BANDWIDTH("OPTIMIZED"),
         .COMPENSATION("ZHOLD"),
@@ -1037,26 +1033,17 @@ class ImageonVita:
         .RST(imageon_clock_gen_reset)
         );
 
-   BUFG bufg_clk4x(
-		   .I(imageon_clk4x_unbuf),
-		   .O(imageon_clk4x)
-		   );
-   BUFG bufg_clk(
-		 .I(imageon_clk_unbuf),
-		 .O(imageon_clk)
-		 );
-
+   BUFG ( .I(imageon_clk4x_unbuf), .O(imageon_clk4x));
+   BUFG ( .I(imageon_clk_unbuf), .O(imageon_clk)); 
      IOBUF # (
      .DRIVE(12),
      .IOSTANDARD("LVCMOS25"),
      .SLEW("SLOW")) IOBUF_iic_scl
      (
      .IO(fmc_imageon_iic_0_scl),
-     // Buffer output (connect directly to top-level port)
      .O(fmc_imageon_iic_0_scl_I),
      .I(fmc_imageon_iic_0_scl_O),
      .T(fmc_imageon_iic_0_scl_T)
-     // Buffer input
      );
 
      IOBUF # (
@@ -1065,56 +1052,37 @@ class ImageonVita:
      .SLEW("SLOW")) IOBUF_iic_sda
      (
      .IO(fmc_imageon_iic_0_sda),
-     // Buffer output (connect directly to top-level port)
      .O(fmc_imageon_iic_0_sda_I),
      .I(fmc_imageon_iic_0_sda_O),
      .T(fmc_imageon_iic_0_sda_T)
-     // Buffer input
      );
-     ODDR#(
-         .DDR_CLK_EDGE("SAME_EDGE"),
-         .INIT(1),
-         .SRTYPE("ASYNC"))
-         ODDR_vita_clk_pll_o (
-             .Q(vita_clk_pll_o), .C(imageon_clk),
-             .CE(1), .D1(0), .D2(1),
-             .R(0), .S(0));
-     ODDR#(
-         .DDR_CLK_EDGE("SAME_EDGE"),
-         .INIT(1),
-         .SRTYPE("ASYNC"))
-         ODDR_vita_clk_pll_t (
-             .Q(vita_clk_pll_t), .C(imageon_clk),
-             .CE(1), .D1(imageon_host_oe), .D2(imageon_host_oe),
-             .R(0), .S(0));
-     OBUFT OBUFT_vita_clk_pll(
-         .O(io_vita_clk_pll),
-         .I(vita_clk_pll_o),
-         .T(vita_clk_pll_t));
 
-      OBUFT OBUFT_vita_trigger0 (
-         .O(io_vita_trigger[0]), .I(vita_trigger_o[0]), .T(imageon_host_oe));
-      OBUFT OBUFT_vita_trigger1 (
-         .O(io_vita_trigger[1]), .I(vita_trigger_o[1]), .T(imageon_host_oe));
-      OBUFT OBUFT_vita_trigger2 (
-         .O(io_vita_trigger[2]), .I(vita_trigger_o[2]), .T(imageon_host_oe));
-   OBUFT OBUFT_vita_reset_n (
-      .O(io_vita_reset_n), .I(vita_reset_n_o), .T(imageon_host_oe));
-    IDELAYCTRL u_idelayctrl(
-          .RDY(open), .REFCLK(imageon_clk200), .RST(imageon_host_iserdes_reset));
+     ODDR#(
+         .DDR_CLK_EDGE("SAME_EDGE"), .INIT(1), .SRTYPE("ASYNC"))
+         ( .Q(vita_clk_pll_o), .C(imageon_clk),
+         .CE(1), .D1(0), .D2(1), .R(0), .S(0));
+     ODDR#(
+         .DDR_CLK_EDGE("SAME_EDGE"), .INIT(1), .SRTYPE("ASYNC"))
+         ( .Q(vita_clk_pll_t), .C(imageon_clk),
+         .CE(1), .D1(imageon_host_oe), .D2(imageon_host_oe), .R(0), .S(0));
+    OBUFT(.O(io_vita_clk_pll), .I(vita_clk_pll_o), .T(vita_clk_pll_t)); 
+    OBUFT(.O(io_vita_trigger[0]), .I(vita_trigger_o[0]), .T(imageon_host_oe));
+    OBUFT(.O(io_vita_trigger[1]), .I(vita_trigger_o[1]), .T(imageon_host_oe));
+    OBUFT(.O(io_vita_trigger[2]), .I(vita_trigger_o[2]), .T(imageon_host_oe));
+    OBUFT(.O(io_vita_reset_n), .I(vita_reset_n_o), .T(imageon_host_oe)); 
     IBUFDS#(
         .CAPACITANCE("DONT_CARE"), .DIFF_TERM(1),
         .IBUF_DELAY_VALUE("0"), .IFD_DELAY_VALUE("AUTO"), .IOSTANDARD("DEFAULT"))
         IBUFDS_inst(
-            .O(hsinclk_tmp_wire), .I(io_vita_clk_out_p), .IB(io_vita_clk_out_n));
+          .O(hsinclk_tmp_wire), .I(io_vita_clk_out_p), .IB(io_vita_clk_out_n));
     BUFIO BUFIO_regional_hs_clk_in( .O(imageon_clk_tmp), .I(hsinclk_tmp_wire));
     BUFR#(.BUFR_DIVIDE("5"))
         BUFR_regional_hs_clk_in(
-            .O(imageon_clkdiv_c), .CE(1), .CLR(0), .I(hsinclk_tmp_wire));
+          .O(imageon_clkdiv_c), .CE(1), .CLR(0), .I(hsinclk_tmp_wire));
 '''
     def bus_assignments(self,busname,t,params):
         return '''
-    assign imageon_clk200 = processing_system7_1_fclk_clk3;
+    //assign imageon_clk200 = processing_system7_1_fclk_clk3;
  '''
     def pinout(self, board):
         return imageon_pinout[board]
@@ -1189,7 +1157,7 @@ class InterfaceMixin:
             'top_dut_axi_master_port_map': ''.join([top_dut_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_master_port_map': ''.join([top_ps7_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_slave_port_map': ''.join([top_ps7_axi_slave_port_map_template % subst for subst in slaveBusSubsts]),
-            'dut_hdmi_clock_arg': '      .CLK_imageon_clock(imageon_clk),\n       .CLK_fmc_imageon_video_clk1(fmc_imageon_video_clk1),\n       .CLK_serdes_clock(imageon_clkdiv_c),\n       .CLK_serdest_clock(imageon_clk_tmp),\n       .CLK_hdmi_clock(imageon_clk4x),' if len(buses['ImageonVita']) else '       .CLK_hdmi_clock(imageon_clk4x)' if len(buses['HDMI']) else '',
+            'dut_hdmi_clock_arg': '      .CLK_imageon_clock(imageon_clk),\n       .CLK_fmc_imageon_video_clk1(fmc_imageon_video_clk1),\n       .CLK_processing_system7_1_fclk_clk3(processing_system7_1_fclk_clk3),\n       .CLK_serdes_clock(imageon_clkdiv_c),\n       .CLK_serdest_clock(imageon_clk_tmp),\n       .CLK_hdmi_clock(imageon_clk4x),' if len(buses['ImageonVita']) else '       .CLK_hdmi_clock(imageon_clk4x)' if len(buses['HDMI']) else '',
             'top_bus_ports':
                 ''.join([''.join([busHandlers[busType].top_bus_ports(busname,t,params) for (busname,t,params) in buses[busType]])
                          for busType in busHandlers]),

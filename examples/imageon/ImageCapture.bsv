@@ -101,7 +101,7 @@ interface ImageCaptureRequest;
    interface ImageonPins pins;
 endinterface
  
-module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock imageon_clock, Clock serdes_clock, Clock serdest_clock, Clock hdmi_clock, 
+module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3, Clock imageon_clock, Clock serdes_clock, Clock serdest_clock, Clock hdmi_clock, 
     ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
 
     Clock defaultClock <- exposeCurrentClock();
@@ -116,16 +116,29 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock imageon_clock,
     let imageon_vita_clock_binder <- mkClockBinder(imageonVita.host, clocked_by hdmi_clock);
     let imageon_vitas_clock_binder <- mkClockBinder(imageonVita.hosts, clocked_by imageon_clock);
     let imageon_serdes_clock_binder <- mkClockBinder(imageonVita.serdes, clocked_by serdes_clock);
+    Reg#(Bit#(1)) serdes_reset_sync_reg <- mkSyncReg(1, serdes_clock, serdes_reset, defaultClock);
+    MakeResetIfc serdes_reset_ifc <- mkReset(2, True, processing_system7_1_fclk_clk3);
 
-    ImageonSensor fromSensor <- mkImageonSensor(fmc_imageon_video_clk1, hdmi_clock, hdmi_reset, serdes_clock, serdes_reset, serdest_clock, serdest_reset, imageon_vitas_clock_binder,
+    ImageonSensor fromSensor <- mkImageonSensor(fmc_imageon_video_clk1, processing_system7_1_fclk_clk3,
+        serdes_reset_ifc.new_rst,
+        hdmi_clock, hdmi_reset, serdes_clock, serdes_reset, serdest_clock, serdest_reset, imageon_vitas_clock_binder,
         imageon_serdes_clock_binder, clocked_by imageon_clock, reset_by imageon_reset);
     ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
         fromSensor,
         clocked_by hdmi_clock, reset_by hdmi_reset);
 
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
+
+    rule serdes_rule;
+        serdes_reset_sync_reg <= imageon_serdes_clock_binder.reset();
+    endrule
+
     rule copydebugval;
         debugind_value <= fromSensor.in.get_debugind();
+    endrule
+
+    rule bozo_reset if (serdes_reset_sync_reg != 0);
+        serdes_reset_ifc.assertReset();
     endrule
 
     AxiDMA dma <- mkAxiDMA(indication.dmaIndication);

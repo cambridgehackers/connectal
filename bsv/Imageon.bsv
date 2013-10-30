@@ -39,17 +39,19 @@ interface ImageonPins;
     //method Bit#(1) fmc_imageon_iic_0_scl();
     //method Bit#(1) fmc_imageon_iic_0_sda();
     method Bit#(1) io_vita_clk_pll();
-    method Bit#(1) imageon_clk();
-    method Bit#(1) imageon_clk4x();
-    //method Bit#(1) io_vita_reset_n();
-    //method Bit#(3) io_vita_trigger();
+    method Clock imageon_clk();
+    method Clock imageon_clk4x();
+    method Bit#(1) imageon_clk_tmp();
+    method Bit#(1) imageon_clkdiv_c();
+    method Bit#(1) io_vita_reset_n();
+    method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
     //method Bit#(2) io_vita_monitor();
     //method Bit#(1) io_vita_spi_sclk();
     //method Bit#(1) io_vita_spi_ssel_n();
     //method Bit#(1) io_vita_spi_mosi();
     //method Action io_vita_spi_miso(Bit#(1) v);
-    //method Bit#(1) io_vita_clk_out_p();
-    //method Bit#(1) io_vita_clk_out_n();
+    method Action io_vita_clk_p(Bit#(1) v);
+    method Action io_vita_clk_n(Bit#(1) v);
     method Action io_vita_sync_p(Bit#(1) v);
     method Action io_vita_sync_n(Bit#(1) v);
     method Action io_vita_data_p(Bit#(4) v);
@@ -478,7 +480,9 @@ endinterface
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
-module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock hdmi_clock, Reset hdmi_reset,
+module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
+     Reset serdes_reset_ifc,
+     Clock hdmi_clock, Reset hdmi_reset,
      Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset,
      ImageonVita host, ImageonSerdes serdes)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
@@ -518,13 +522,14 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock hdmi_clock, Reset hd
     Vector#(5, Wire#(Bit#(1))) vita_data_p <- replicateM(mkDWire(0));
     Vector#(5, Wire#(Bit#(1))) vita_data_n <- replicateM(mkDWire(0));
     Vector#(5, ReadOnly#(Bit#(1))) ibufds_v;
+    Wire#(Bit#(1)) vita_clk_p <- mkDWire(0);
+    Wire#(Bit#(1)) vita_clk_n <- mkDWire(0);
+    ReadOnly#(Bit#(1)) ibufds_clk <- mkIBUFDS(vita_clk_p, vita_clk_n);
+    Wire#(Bit#(1)) imageon_clkdiv_clk_tmp <- mkBUFIO();
+    Wire#(Bit#(1)) imageon_clkdiv_clkdiv <- mkBUFR5();
     for (Integer i = 0; i < 5; i = i + 1)
         ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
     Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by fmc_imageon_video_clk1);
-    Wire#(Bit#(1)) imageon_clk_unbuf <- mkDWire(0);
-    Wire#(Bit#(1)) imageon_clk4x_unbuf <- mkDWire(0);
-    Wire#(Bit#(1)) clockfb <- mkDWire(0);
-    Wire#(Bit#(1)) clock_reset <- mkDWire(0);
     MMCME2 mmcmadv <- mkMMCM(MMCMParams {
         use_same_family:False,
         bandwidth:"OPTIMIZED", compensation:"ZHOLD",
@@ -544,7 +549,32 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock hdmi_clock, Reset hd
         clkout4_divide: 0, clkout4_duty_cycle: 0, clkout4_phase: 0,
         clkout5_divide: 0, clkout5_duty_cycle: 0, clkout5_phase: 0,
         clkout6_divide: 0, clkout6_duty_cycle: 0, clkout6_phase: 0
-    }, clocked_by imageon_video_clk1_buf_wire);
+        }, clocked_by imageon_video_clk1_buf_wire);
+    Clock imageon_clk_buf <- mkClockIBUFG(clocked_by mmcmadv.clkout0);
+    Clock imageon_clk4x_buf <- mkClockIBUFG(clocked_by mmcmadv.clkout1);
+    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by processing_system7_1_fclk_clk3, reset_by serdes_reset_ifc);
+    Reg#(Bit#(1)) vita_reset_n_o <- mkReg(0);
+    Reg#(Bit#(1)) imageon_oe <- mkReg(0);
+    Wire#(Bit#(1)) zero_wire <- mkDWire(0);
+    Wire#(Bit#(1)) one_wire <- mkDWire(1);
+    Wire#(Bit#(1)) trigger_wire <- mkDWire(0);
+    Vector#(3, ReadOnly#(Bit#(1))) vita_trigger_wire;
+    vita_trigger_wire[0] <- mkOBUFT(zero_wire, imageon_oe);
+    vita_trigger_wire[1] <- mkOBUFT(one_wire, imageon_oe);
+    vita_trigger_wire[2] <- mkOBUFT(trigger_wire, imageon_oe);
+    //ReadOnly#(Bit#(1)) vita_reset_n_wire;
+    ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(vita_reset_n_o, imageon_oe);
+    Wire#(Bit#(1)) vita_clk_pll <- mkDWire(0);
+
+    rule trigger_rule;
+    trigger_wire <= pack(tstate != TSend);
+    imageon_oe <= host.host_oe();
+    endrule
+
+    rule bozo;
+        imageon_clkdiv_clkdiv <= ibufds_clk;
+        imageon_clkdiv_clk_tmp <= ibufds_clk;
+    endrule
 
     rule sendup_imageon_clock;
        Bit#(5) alignbusyw = 0;
@@ -780,23 +810,38 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock hdmi_clock, Reset hd
         //method Bit#(1) fmc_imageon_iic_0_rst_pin();
         //method Bit#(1) fmc_imageon_iic_0_scl();
         //method Bit#(1) fmc_imageon_iic_0_sda();
-        //method Bit#(1) io_vita_clk_pll();
-        //endmethod
-        method Bit#(1) imageon_clk();
-            return ?; //mmcmadv.clkout0;
+        method Bit#(1) io_vita_clk_pll();
+            return vita_clk_pll;
         endmethod
-        method Bit#(1) imageon_clk4x();
-            return ?; //mmcmadv.clkout1;
+        method Clock imageon_clk();
+            return imageon_clk_buf;
         endmethod
-        //method Bit#(1) io_vita_reset_n();
-        //method Bit#(3) io_vita_trigger();
+        method Clock imageon_clk4x();
+            return imageon_clk4x_buf;
+        endmethod
+        method Bit#(1) imageon_clkdiv_c();
+            return imageon_clkdiv_clkdiv;
+        endmethod
+        method Bit#(1) imageon_clk_tmp();
+            return imageon_clkdiv_clk_tmp;
+        endmethod
+        method Bit#(1) io_vita_reset_n();
+            return vita_reset_n_wire;
+        endmethod
+        method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
+            return vita_trigger_wire;
+        endmethod
         //method Bit#(2) io_vita_monitor();
         //method Bit#(1) io_vita_spi_sclk();
         //method Bit#(1) io_vita_spi_ssel_n();
         //method Bit#(1) io_vita_spi_mosi();
         //method Action io_vita_spi_miso(Bit#(1) v);
-        //method Bit#(1) io_vita_clk_out_p();
-        //method Bit#(1) io_vita_clk_out_n();
+        method Action io_vita_clk_p(Bit#(1) v);
+            vita_clk_p <= v;
+        endmethod
+        method Action io_vita_clk_n(Bit#(1) v);
+            vita_clk_n <= v;
+        endmethod
         method Action io_vita_sync_p(Bit#(1) v);
             vita_data_p[0] <= v;
         endmethod
