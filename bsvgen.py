@@ -139,7 +139,9 @@ endmodule: mk%(Dut)sPcieTop
 '''
 
 axiMasterConnectionTemplate='''
-   AxiSlaveEngine axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   AxiSlaveEngine#(%(buswidth)s,%(buswidthbytes)s) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(%(dut)sWrapper.%(busname)s, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 '''
 
@@ -785,7 +787,10 @@ class InterfaceMixin:
         f.write(bsimTopTemplate % substs);
 
     def emitPcieTop(self,f):
-        axiMasterConnections = [axiMasterConnectionTemplate % {'dut': util.decapitalize(self.base), 'busname': busname }
+        axiMasterConnections = [axiMasterConnectionTemplate % {'dut': util.decapitalize(self.base),
+                                                               'busname': busname,
+                                                               'buswidth': params[1].numeric(),
+                                                               'buswidthbytes': params[1].numeric()/8}
                                 for (busname,t,params) in self.collectInterfaceNames('Axi3Client')]
         substs = {
 		'Dut' : self.base ,

@@ -654,22 +654,29 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     interface Reg interruptData      = interruptDataReg;
 endmodule: mkPortalEngine
 
-interface AxiSlaveEngine;
+interface AxiSlaveEngine#(type buswidth, type buswidthbytes);
     interface GetPut#(TLPData#(16))   tlps;
-    interface Axi3Slave#(40,64,8,12)  slave;
+    interface Axi3Slave#(40,buswidth,buswidthbytes,12)  slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: AxiSlaveEngine
 
-module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
+module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, buswidthbytes))
+   provisos (Div#(buswidth, 8, buswidthbytes),
+	     Div#(buswidth, 32, buswidthwords),
+	     Add#(aaa, 32, buswidth),
+	     Add#(bbb, TMul#(8, buswidthwords), 64),
+	     Add#(ccc, TMul#(32, buswidthwords), 256),
+	     Add#(ddd, buswidthwords, 8));
+
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bool) use4dwReg <- mkReg(True);
 
     MIMOConfiguration mimoCfg = defaultValue;
-    MIMO#(4,2,8,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
-    MIMO#(4,2,8,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
+    MIMO#(4,buswidthwords,8,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
+    MIMO#(4,buswidthwords,8,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
     Reg#(TLPTag) lastTag <- mkReg(0);
     function LUInt#(4) tlpWordCount(TLPData#(16) tlp);
        if (tlp.be == 16'h0000)
@@ -762,14 +769,14 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
 	       end
 	       tlpOutFifo.enq(tlp);
            endmethod: readAddr
-	   method ActionValue#(Bit#(64)) readData();
+	   method ActionValue#(Bit#(buswidth)) readData();
 	      let data_v = completionMimo.first;
-	      completionMimo.deq(2);
-	      completionTagMimo.deq(2);
-              Bit#(64) v;
-	      v[31:0] = byteSwap(data_v[0]);
-	      v[63:32] = byteSwap(data_v[1]);
-	      return extend(v);
+	      completionMimo.deq(fromInteger(valueOf(buswidthwords)));
+	      completionTagMimo.deq(fromInteger(valueOf(buswidthwords)));
+              Bit#(buswidth) v = 0;
+	      for (Integer i = 0; i < valueOf(buswidthwords); i = i+1)
+		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
+	      return v;
            endmethod: readData
 	   method Bit#(1) last();
 	       return 1;
