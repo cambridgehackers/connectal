@@ -314,9 +314,9 @@ static void fmc_imageon_demo_enable_ipipe( void)
    device->set_decoder_code_ls(0xAA);
    device->set_decoder_code_le(0x012A);
    device->set_decoder_code_fs(0x02AA);
-   device->set_decoder_code_fe(0x032A);
-   device->set_decoder_code_bl(0x15);
-   device->set_decoder_code_img(0x35);
+   //device->set_decoder_code_fe(0x032A);
+   //device->set_decoder_code_bl(0x15);
+   //device->set_decoder_code_img(0x35);
 
    printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
    device->set_iserdes_control( VITA_ISERDES_RESET_BIT);
@@ -469,8 +469,8 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    device->set_trigger_default_freq(vitaTrigGenDefaultFreq);
    device->set_trigger_cnt_trigger0high((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100); // negative polarity
    device->set_trigger_cnt_trigger0low(1);
-   device->set_triggen_control(0x31000011); // invert trigger[2:0], internal trigger, enable trigger[0], update triggen_cnt registers
-   device->set_triggen_control(0x30000011); // invert trigger[2:0], internal trigger, enable trigger[0]
+   //device->set_triggen_control(0x31000011); // invert trigger[2:0], internal trigger, enable trigger[0], update triggen_cnt registers
+   //device->set_triggen_control(0x30000011); // invert trigger[2:0], internal trigger, enable trigger[0]
    printf("VITA 1080P60 - Exposure related settings\n\r");
    vita_spi_write(194, 0x0400);
    vita_spi_write(0x29, 0x0700);

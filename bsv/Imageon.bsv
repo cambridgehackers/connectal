@@ -57,13 +57,6 @@ interface ImageonSerdesIndication;
     method Action alignedbit(Bit#(1) aligned);
 endinterface
 
-interface ImageonTrigger;
-    method Bit#(3) enable();
-    method Bit#(32) default_freq();
-    method Bit#(32) cnt_trigger0high();
-    method Bit#(32) cnt_trigger0low();
-endinterface
-
 typedef struct {
     Bit#(1) fsync;
     Bit#(1) vsync;
@@ -88,141 +81,17 @@ interface ImageonSensorControl;
     method Action set_serdes_fifo_enable(Bit#(1) v);
     method Action set_serdes_manual_tap(Bit#(10) v);
     method Action set_serdes_training(Bit#(10) v);
+    method Action set_syncgen_delay(Bit#(16) v);
+    method Action set_trigger_default_freq(Bit#(32) v);
+    method Action set_trigger_cnt_trigger0high(Bit#(32) v);
+    method Action set_trigger_cnt_trigger0low(Bit#(32) v);
+    method Bit#(32) get_iserdes_control();
     interface Reset reset;
     interface Reset hdmiReset;
 endinterface
 
-interface ImageonFast;
-    interface Reset reset;
-endinterface
-
 interface ImageonVita;
-    interface ImageonSerdesIndication serdesind;
-    interface ImageonTrigger trigger;
-    method Bit#(16) syncgen_delay();
 endinterface
-
-interface ImageonControl;
-    method Bit#(32) get_iserdes_control();
-    method Action set_triggen_control(Bit#(32) v);
-    method Action set_trigger_enable(Bit#(3) v);
-    method Action set_trigger_default_freq(Bit#(32) v);
-    method Action set_trigger_cnt_trigger0high(Bit#(32) v);
-    method Action set_trigger_cnt_trigger0low(Bit#(32) v);
-    method Action set_syncgen_delay(Bit#(16) v);
-    method Action set_debugreq(Bit#(32) v);
-endinterface
-
-interface ImageonVitaController;
-    interface ImageonFast host;
-    interface ImageonVita hosts;
-    interface ImageonControl control;
-endinterface
-
-module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageon_clock,
-        Reset imageon_reset, Clock serdes_clock, Reset serdes_reset)(ImageonVitaController);
-    Clock defaultClock <- exposeCurrentClock();
-    Reset defaultReset <- exposeCurrentReset;
-    Wire#(Bit#(1)) host_clock_gen_locked_wire <- mkDWire(0);
-
-    Reg#(Bit#(1)) serdes_clk_ready_temp <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
-    Reg#(Bit#(1)) serdes_clk_ready_reg <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
-    Reg#(Bit#(1)) serdes_align_busy_temp <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
-    Reg#(Bit#(1)) serdes_align_busy_reg <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
-    Reg#(Bit#(1)) serdes_aligned_temp <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
-    Reg#(Bit#(1)) serdes_aligned_reg <- mkSyncReg(0, imageon_clock, imageon_reset, defaultClock);
-
-    Wire#(Bit#(1)) decoder_frame_start_wire <- mkDWire(0);
-
-    Reg#(Bit#(3)) trigger_enable_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
-    Reg#(Bit#(32)) trigger_default_freq_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
-    Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
-    Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
-    Reg#(Bit#(16)) syncgen_delay_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
-    Reg#(Bit#(32)) debugreq_value <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-
-    rule serdes_copybits;
-        serdes_aligned_reg <= serdes_aligned_temp;
-        serdes_align_busy_reg <= serdes_align_busy_temp;
-        serdes_clk_ready_reg <= serdes_clk_ready_temp;
-    endrule
-
-    interface ImageonFast host;
-        interface Reset reset = defaultReset;
-    endinterface: host
-
-    interface ImageonVita hosts;
-	interface ImageonSerdesIndication serdesind;
-	    method Action clk_ready(Bit#(1) ready);
-	        serdes_clk_ready_temp <= ready;
-	    endmethod
-	    method Action align_busy(Bit#(1) busy);
-	        serdes_align_busy_temp <= busy;
-	    endmethod
-	    method Action alignedbit(Bit#(1) aligned);
-	        serdes_aligned_temp <= aligned;
-	    endmethod
-	endinterface
-	interface ImageonTrigger trigger;
-	    method Bit#(3) enable();
-		return trigger_enable_reg;
-	    endmethod
-	    method Bit#(32) default_freq();
-		return trigger_default_freq_reg;
-	    endmethod
-	    method Bit#(32) cnt_trigger0high();
-		return trigger_cnt_trigger0high_reg;
-	    endmethod
-	    method Bit#(32) cnt_trigger0low();
-		return trigger_cnt_trigger0low_reg;
-	    endmethod
-	endinterface
-	method Bit#(16) syncgen_delay();
-	    return syncgen_delay_reg;
-	endmethod
-    endinterface: hosts
-
-    interface ImageonControl control;
-	method Bit#(32) get_iserdes_control();
-	    let v = 0;
-	    v[8] = serdes_clk_ready_reg;
-	    v[9] = serdes_align_busy_reg;
-	    v[10] = serdes_aligned_reg;
-	    return v;
-	endmethod
-// TRIGGEN_CONTROL
-// [ 2: 0] TRIGGEN_ENABLE
-// [ 6: 4] TRIGGEN_SYNC2READOUT
-// [    8] TRIGGEN_READOUTTRIGGER
-// [   16] TRIGGEN_EXT_POLARITY
-// [   24] TRIGGEN_CNT_UPDATE
-// [30:28] TRIGGEN_GEN_POLARITY
-	method Action set_triggen_control(Bit#(32) v);
-	    trigger_enable_reg <= v[2:0];
-	endmethod
-	//method Action set_decoder_reset(Bit#(1) v);
-	    //decoder_reset_reg <= v;
-	//endmethod
-	method Action set_trigger_enable(Bit#(3) v);
-	    trigger_enable_reg <= v;
-	endmethod
-	method Action set_trigger_default_freq(Bit#(32) v);
-	    trigger_default_freq_reg <= v;
-	endmethod
-	method Action set_trigger_cnt_trigger0high(Bit#(32) v);
-	    trigger_cnt_trigger0high_reg <= v;
-	endmethod
-	method Action set_trigger_cnt_trigger0low(Bit#(32) v);
-	    trigger_cnt_trigger0low_reg <= v;
-	endmethod
-	method Action set_syncgen_delay(Bit#(16) v);
-	    syncgen_delay_reg <= v;
-	endmethod
-        method Action set_debugreq(Bit#(32) v);
-            debugreq_value <= v;
-	endmethod
-    endinterface
-endmodule
 
 interface ImageonXsviControl;
     method Action set_syncgen_hactive(Bit#(16) v);
@@ -247,14 +116,22 @@ interface ImageonSensor;
     method Bit#(40) get_data();
 endinterface
 
+interface ImageonVitaController;
+endinterface
+
+module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageon_clock,
+        Reset imageon_reset, Clock serdes_clock, Reset serdes_reset)(ImageonVitaController);
+    Clock defaultClock <- exposeCurrentClock();
+    Reset defaultReset <- exposeCurrentReset;
+endmodule
+
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
 module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
      Clock axi_clock, Reset axi_reset,
      Clock hdmi_clock, Reset hdmi_reset,
-     Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset,
-     ImageonVita host)(ImageonSensor);
+     Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -271,6 +148,10 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     Reg#(Bit#(10)) serdes_training_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(1)) serdes_reset_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     ReadOnly#(Bit#(1)) serdes_reset_null <- mkNullCrossingWire(serdes_clock, serdes_reset_reg);
+    Reg#(Bit#(16)) syncgen_delay_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(32)) trigger_default_freq_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
 
     Reg#(TState)   tstate <- mkReg(TIdle);
     Reg#(Bit#(1)) sframe_wire <- mkReg(0);
@@ -339,6 +220,18 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     Wire#(Bit#(1)) poutq <- mkDWire(0);
     Wire#(Bit#(1)) ptq <- mkDWire(0);
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
+    Reg#(Bit#(1)) serdes_clk_ready_temp <- mkReg(0);
+    Reg#(Bit#(1)) serdes_clk_ready_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
+    Reg#(Bit#(1)) serdes_align_busy_temp <- mkReg(0);
+    Reg#(Bit#(1)) serdes_align_busy_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
+    Reg#(Bit#(1)) serdes_aligned_temp <- mkReg(0);
+    Reg#(Bit#(1)) serdes_aligned_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
+
+    rule serdes_copybits;
+        serdes_aligned_reg <= serdes_aligned_temp;
+        serdes_align_busy_reg <= serdes_align_busy_temp;
+        serdes_clk_ready_reg <= serdes_clk_ready_temp;
+    endrule
 
     rule pll_rule;
         poutq <= pll_out.q();
@@ -389,8 +282,8 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
 	  emptyw[i] = serdes_v[i].fifo.empty();
 	  rawdataw[(i+1)*10-1: i*10] = serdes_v[i].fifo.dataout();
        end
-       host.serdesind.align_busy(pack(alignbusyw != 0));
-       host.serdesind.alignedbit(pack(alignedw == 5'b11111));
+       serdes_align_busy_temp <= pack(alignbusyw != 0);
+       serdes_aligned_temp <= pack(alignedw == 5'b11111);
        sampleinFIRSTBIT_wire <= firstw;
        sampleinLASTBIT_wire <= lastw;
        sampleinOTHERBIT_wire <= otherw;
@@ -407,7 +300,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     endrule
     
     rule serdes_calc;
-        host.serdesind.clk_ready(1);
+	serdes_clk_ready_temp <= 1;
     endrule
 
     rule serdes_reset if (serdes_reset_reg == 1);
@@ -440,16 +333,16 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
         let ts = tstate;
         if (tperiod == 0)
             begin
-            tp = host.trigger.default_freq();
+            tp = trigger_default_freq_reg;
             end
         if (tstate == TIdle && tperiod == 0)
             begin
-            tc = host.trigger.cnt_trigger0high() + 1;
+            tc = trigger_cnt_trigger0high_reg + 1;
             ts = TSend;
             end
         if (tstate == TSend && tcounter == 0)
             begin
-            tc = host.trigger.cnt_trigger0low() + 1;
+            tc = trigger_cnt_trigger0low_reg + 1;
             ts = TWait;
             end
         if (tstate == TWait && tcounter == 0)
@@ -470,7 +363,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
             fr = 1;
             fd = 0;
             end
-        if (frame_run == 1 && frame_delay == host.syncgen_delay() )
+        if (frame_run == 1 && frame_delay == syncgen_delay_reg )
             begin
             fr = 0;
             fstemp = 1;
@@ -547,6 +440,13 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     endrule
 
     interface ImageonSensorControl in;
+	method Bit#(32) get_iserdes_control();
+	    let v = 0;
+	    v[8] = serdes_clk_ready_reg;
+	    v[9] = serdes_align_busy_reg;
+	    v[10] = serdes_aligned_reg;
+	    return v;
+	endmethod
         method Action raw_data(Bit#(50) v);
             raw_data_wire <= v;
 	endmethod
@@ -593,8 +493,19 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
 	    serdes_fifo_enable_reg <= v[3];
 	endmethod
 	method Action set_decoder_control(Bit#(32) v);
-	    //decoder_reset_reg <= v[0];
 	    decoder_enable_reg <= v[1];
+	endmethod
+	method Action set_syncgen_delay(Bit#(16) v);
+	    syncgen_delay_reg <= v;
+	endmethod
+	method Action set_trigger_default_freq(Bit#(32) v);
+	    trigger_default_freq_reg <= v;
+	endmethod
+	method Action set_trigger_cnt_trigger0high(Bit#(32) v);
+	    trigger_cnt_trigger0high_reg <= v;
+	endmethod
+	method Action set_trigger_cnt_trigger0low(Bit#(32) v);
+	    trigger_cnt_trigger0low_reg <= v;
 	endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
@@ -657,7 +568,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     endinterface
 endmodule
 
-module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock, Reset axi_reset, ImageonFast host, ImageonSensor sensor)(ImageonXsviFromSensor);
+module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock, Reset axi_reset, ImageonSensor sensor)(ImageonXsviFromSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
