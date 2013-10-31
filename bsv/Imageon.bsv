@@ -35,9 +35,6 @@ import GetPutWithClocks :: *;
 interface ImageonPins;
     //method Bit#(8) gpio_leds();
     //method Bit#(4) xadc_gpio();
-    //method Bit#(1) fmc_imageon_iic_0_rst_pin();
-    //method Bit#(1) fmc_imageon_iic_0_scl();
-    //method Bit#(1) fmc_imageon_iic_0_sda();
     method Bit#(1) io_vita_clk_pll();
     method Clock imageon_clk();
     method Clock imageon_clk4x();
@@ -562,16 +559,34 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     Wire#(Bit#(1)) one_wire <- mkDWire(1);
     Wire#(Bit#(1)) trigger_wire <- mkDWire(0);
     Vector#(3, ReadOnly#(Bit#(1))) vita_trigger_wire;
-    vita_trigger_wire[0] <- mkOBUFT(zero_wire, imageon_oe);
+    vita_trigger_wire[2] <- mkOBUFT(zero_wire, imageon_oe);
     vita_trigger_wire[1] <- mkOBUFT(one_wire, imageon_oe);
-    vita_trigger_wire[2] <- mkOBUFT(trigger_wire, imageon_oe);
-    //ReadOnly#(Bit#(1)) vita_reset_n_wire;
+    vita_trigger_wire[0] <- mkOBUFT(trigger_wire, imageon_oe);
     ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(vita_reset_n_o, imageon_oe);
-    Wire#(Bit#(1)) vita_clk_pll <- mkDWire(0);
+    ODDR#(Bit#(1)) pll_out <- mkODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
+//, 0, 1);
+    ODDR#(Bit#(1)) pll_t <- mkODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
+//, imageon_oe, imageon_oe);
+    Wire#(Bit#(1)) poutq <- mkDWire(0);
+    Wire#(Bit#(1)) ptq <- mkDWire(0);
+    ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
+
+    rule pll_rule;
+        poutq <= pll_out.q();
+        ptq <= pll_t.q();
+        pll_out.d1(0);
+        pll_out.d2(1);
+        pll_t.d1(imageon_oe);
+        pll_t.d2(imageon_oe);
+    endrule
 
     rule trigger_rule;
-    trigger_wire <= pack(tstate != TSend);
-    imageon_oe <= host.host_oe();
+        trigger_wire <= pack(tstate != TSend);
+        imageon_oe <= host.host_oe();
+    endrule
+
+    rule vr_rule;
+        vita_reset_n_o <= ~serdes.resets();
     endrule
 
     rule bozo;
@@ -810,9 +825,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     interface ImageonPins pins;
         //method Bit#(8) gpio_leds();
         //method Bit#(4) xadc_gpio();
-        //method Bit#(1) fmc_imageon_iic_0_rst_pin();
-        //method Bit#(1) fmc_imageon_iic_0_scl();
-        //method Bit#(1) fmc_imageon_iic_0_sda();
         method Bit#(1) io_vita_clk_pll();
             return vita_clk_pll;
         endmethod
