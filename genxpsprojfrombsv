@@ -302,6 +302,8 @@ if __name__=='__main__':
         else:
             topRequestIfc.writeTopVerilog(topverilogname)
         topRequestIfc.writeXdc(xdcname, boardname)
+        if os != 'android':
+            topRequestIfc.writeImpactCmd(os.path.join(project_dir, 'impact.cmd'))
         print 'Writing Android.mk', androidmkname
         print 'Writing Application.mk', applicationmkname
         topRequestIfc.writeAndroidMk(androidmkname, applicationmkname)

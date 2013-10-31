@@ -162,6 +162,14 @@ xdc_diff_term_template = '''
 set_property DIFF_TERM "TRUE" [get_ports "%(name)s"]
 '''
 
+impactCmdTemplate = '''
+setMode -bscan
+setCable -p auto
+addDevice -p 1 -file ./%(base)s.runs/impl_1/mk%(Base)sPcieTop.bit
+program -p 1
+quit
+'''
+
 xadc_pinout= {
     'zc702': [
         ("XADC_gpio[0]", 'H17', 'LVCMOS25', 'OUTPUT'),
@@ -1167,3 +1175,7 @@ class InterfaceMixin:
                                       % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
         xdc.close()
         return
+    def writeImpactCmd(self, impactcmdname):
+        f = util.createDirAndOpen(impactcmdname, 'w')
+        f.write(impactCmdTemplate % { 'base': self.base.lower(), 'Base': self.base })
+        f.close()
