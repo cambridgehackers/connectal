@@ -64,21 +64,31 @@ TlpPacketFormat = [
     'MEM_WRITE_4DW_DATA'
 ]
 
-def pktClassification(tlpsof, tlpeof, pktformat, pkttype, portnum):
+def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
+    if tlpbe == '0000':
+        return 'trace'
     if tlpsof == 0:
         return 'continuation'
-    elif portnum == 4:
+    if portnum == 4:
         if pkttype == 10: # COMPLETION
             return 'Master Response'
         else:
-            return 'Slave Request'
+            if pktformat == 2 or pktformat == 3:
+                return 'Slave Write Request'
+            else:
+                return 'Slave Request'
     elif portnum == 8:
         if pkttype == 10: # COMPLETION
             return 'Slave Response'
         else:
-            return 'Master Request'
+            if pktformat == 2 or pktformat == 3:
+                return 'Master Write Request'
+            else:
+                return 'Master Request'
     else:
         return 'Misc'
+
+classCounts = {}
 
 def print_tlp(tlpdata):
     def segment(i):
@@ -92,19 +102,25 @@ def print_tlp(tlpdata):
 
     tlpsof = int(tlpdata[-39:-38],16) & 1
     tlpeof = int(tlpdata[-38:-36],16) & 0x80
+    tlpbe  = tlpdata[-36:-32]
     tlphit = int(tlpdata[-38:-36],16) & 0x7f
     pktformat = (int(tlpdata[-32:-31],16) >> 1) & 3
     pkttype = (int(tlpdata[-32:-30],16) & 0x1f)
 
     portnum = int(tlpdata[-40:-38],16) >> 1
-    
+    pktclass = pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum)
+    if classCounts.has_key(pktclass):
+       classCounts[pktclass] += 1
+    else:
+       classCounts[pktclass] = 1
+
     print tlpdata
     print '   seqno:', int(tlpdata[-48:-40],16)
-    print '   ', pktClassification(tlpsof, tlpeof, pktformat, pkttype, portnum)
+    print '   ', pktclass
     print '    foo:', tlpdata[-40:-38], hex(int(tlpdata[-40:-38],16) >> 1)
     print '  format:', tlpdata[-32:-31], pktformat, TlpPacketFormat[pktformat]
     print '  pkttype:', tlpdata[-32:-30], pkttype, TlpPacketType[pkttype]
-    print '    tlpbe:', tlpdata[-36:-32]
+    print '    tlpbe:', tlpbe
     print '    tlphit:', tlphit
     print '    tlpeof:', tlpeof
     print '    tlpsof:', tlpsof
@@ -167,3 +183,4 @@ def print_tlp_log(tlplog):
 if __name__ == '__main__':
     tlplog = subprocess.check_output(['bluenoc', 'tlp']).split('\n')
     print_tlp_log(tlplog[0:-1])
+    print classCounts
