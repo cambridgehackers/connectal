@@ -334,7 +334,7 @@ void* portalExec(void* __x)
 	  unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
 	  unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
 	  unsigned int queue_priority = *(volatile int *)(instance->ind_reg_base+0x9);
-	  if (1)
+	  if (0)
 	    fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x prio=%08x\n",
 		    __LINE__, int_src, int_en, ind_count, queue_status, queue_priority);
 	}
@@ -363,7 +363,7 @@ void* portalExec(void* __x)
 
 	// handle all messasges from this portal instance
 	while (queue_priority) {
-	  if(1)
+	  if(0)
 	    fprintf(stderr, "queue_status %d queue_priority %d\n", queue_status, queue_priority);
 	  instance->indication->handleMessage(queue_status, instance->ind_fifo_base);
 	  int_src = *(volatile int *)(instance->ind_reg_base+0x0);
@@ -371,7 +371,7 @@ void* portalExec(void* __x)
 	  ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
 	  queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
 	  queue_priority = *(volatile int *)(instance->ind_reg_base+0x9);
-	  if (1)
+	  if (0)
 	    fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x prio=%08x\n",
 		    __LINE__, int_src, int_en, ind_count, queue_status, queue_priority);
 	}
@@ -384,29 +384,6 @@ void* portalExec(void* __x)
 	*(instance->ind_reg_base+0x1) = 1;
       }
     }
-#ifndef ZYNQ
-    // PCIE interrupts not working
-    if (1)
-      {
-	PortalRequest *instance = portal_requests[0];
-	unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
-	unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
-	unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
-	unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
-	unsigned int queue_prio = *(volatile int *)(instance->ind_reg_base+0x9);
-	unsigned int heard = *(volatile int *)(instance->ind_reg_base+0xA);
-	unsigned int heard2 = *(volatile int *)(instance->ind_reg_base+0xB);
-	unsigned int putFailed = *(volatile int *)(instance->ind_reg_base+0xC);
-	if (1)
-	  fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x prio=%08x heard=%08x heard2=%08x putFailed=%08x\n",
-		  __LINE__, int_src, int_en, ind_count, queue_status, queue_prio, heard, heard2, putFailed);
-
-	for (int i = 0; i < 3; i++) {
-	  unsigned int fifov = *(volatile int *)(instance->ind_fifo_base+i*256/4);
-	  printf("fifo[i] = %08x\n", fifov);
-	}
-      }
-#endif      
     // return only in error case
     fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
     return (void*)rc;
