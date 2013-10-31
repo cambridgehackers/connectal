@@ -937,7 +937,6 @@ class ImageonVita:
 '''
     def top_bus_wires(self, busname,t,params):
          return '''
-     //wire imageon_clk200;
      wire imageon_clk;
      wire imageon_host_oe;
      wire imageon_host_iserdes_reset;
@@ -947,9 +946,6 @@ class ImageonVita:
      wire vita_reset_n_o;
      wire [4:0] vita_data_p;
      wire [4:0] vita_data_n;
-     //wire [4:0] ibufds_out;
-
-     /* IIC */
      wire fmc_imageon_iic_0_scl_T;
      wire fmc_imageon_iic_0_scl_O;
      wire fmc_imageon_iic_0_scl_I;
@@ -960,6 +956,7 @@ class ImageonVita:
      wire imageon_clk_tmp;
      wire imageon_clkdiv_c;
      wire hsinclk_tmp_wire;
+     wire fbbozo;
 '''
     def ps7_bus_port_map(self,busname,t,params):
         return '''
@@ -974,15 +971,16 @@ class ImageonVita:
         return '''
     .imageon_host_oe(imageon_host_oe),
     .serdes_reset(imageon_host_iserdes_reset),
-
-    //.EN_sensor_ibufds_out(1),
-    //.sensor_ibufds_out_v(ibufds_out),
     .sensor_vita_reset(vita_reset_n_o),
     .sensor_vita_trigger(vita_trigger_o),
     .pins_io_vita_sync_p_v(io_vita_sync_p),
     .pins_io_vita_sync_n_v(io_vita_sync_n),
     .pins_io_vita_data_p_v(io_vita_data_p),
     .pins_io_vita_data_n_v(io_vita_data_n),
+    .CLK_pins_imageon_clk(imageon_clk),
+    .CLK_pins_imageon_clk4x(imageon_clk4x),
+    .pins_fbbozoin_v(fbbozo),
+    .CLK_pins_fbbozo(fbbozo),
     /* SPI port */
     .CLK_spi_invertedClock(io_vita_spi_sclk),
     .spi_sel_n(io_vita_spi_ssel_n),
@@ -991,99 +989,34 @@ class ImageonVita:
 '''
     def top_bus_assignments(self,busname,t,params):
         return '''
-   wire clockfb;
-   wire imageon_clk4x_unbuf;
-   wire imageon_clk4_unbuf;
-   wire fmc_imageon_video_clk1_buf;
+     IOBUF#(.DRIVE(12), .IOSTANDARD("LVCMOS25"), .SLEW("SLOW")) (
+     .IO(fmc_imageon_iic_0_scl), .O(fmc_imageon_iic_0_scl_I),
+     .I(fmc_imageon_iic_0_scl_O), .T(fmc_imageon_iic_0_scl_T)); 
+     IOBUF#(.DRIVE(12), .IOSTANDARD("LVCMOS25"), .SLEW("SLOW")) (
+     .IO(fmc_imageon_iic_0_sda), .O(fmc_imageon_iic_0_sda_I),
+     .I(fmc_imageon_iic_0_sda_O), .T(fmc_imageon_iic_0_sda_T));
 
-    IBUFG(.I(fmc_imageon_video_clk1), .O(fmc_imageon_video_clk1_buf)); 
-    MMCM_ADV# (
-        .BANDWIDTH("OPTIMIZED"),
-        .COMPENSATION("ZHOLD"),
-        .CLKFBOUT_MULT_F(8.000),
-        .CLKFBOUT_PHASE(0.0),
-        .CLKIN1_PERIOD(6.734007),
-        .CLKIN2_PERIOD(6.734007),
-        .CLKOUT0_DIVIDE_F(8.000),
-        .CLKOUT0_DUTY_CYCLE(0.5),
-        .CLKOUT0_PHASE(0.0000),
-        .CLKOUT1_DIVIDE(32),
-        .CLKOUT1_DUTY_CYCLE(0.5),
-        .CLKOUT1_PHASE(0.0000),
-        .DIVCLK_DIVIDE(1),
-        .REF_JITTER1(0.010),
-        .REF_JITTER2(0.010))
-    MMCM_ADV_inst (
-        .CLKIN2(0), 
-        .CLKINSEL(1),
-        .DADDR("0000000"),
-        .DCLK(0),
-        .DEN(0),
-        .DI(0000000000000000),
-        .DWE(0),
-        .CLKFBOUT(clockfb),
-        .CLKOUT0(imageon_clk4x_unbuf),
-        .CLKOUT1(imageon_clk_unbuf),
-        .CLKFBIN(clockfb),
-        .CLKIN1(fmc_imageon_video_clk1_buf),
-        .PWRDWN(0),
-        .PSCLK(0),
-        .PSEN(0),
-        .PSINCDEC(0),
-        .RST(imageon_clock_gen_reset)
-        );
-
-   BUFG ( .I(imageon_clk4x_unbuf), .O(imageon_clk4x));
-   BUFG ( .I(imageon_clk_unbuf), .O(imageon_clk)); 
-     IOBUF # (
-     .DRIVE(12),
-     .IOSTANDARD("LVCMOS25"),
-     .SLEW("SLOW")) IOBUF_iic_scl
-     (
-     .IO(fmc_imageon_iic_0_scl),
-     .O(fmc_imageon_iic_0_scl_I),
-     .I(fmc_imageon_iic_0_scl_O),
-     .T(fmc_imageon_iic_0_scl_T)
-     );
-
-     IOBUF # (
-     .DRIVE(12),
-     .IOSTANDARD("LVCMOS25"),
-     .SLEW("SLOW")) IOBUF_iic_sda
-     (
-     .IO(fmc_imageon_iic_0_sda),
-     .O(fmc_imageon_iic_0_sda_I),
-     .I(fmc_imageon_iic_0_sda_O),
-     .T(fmc_imageon_iic_0_sda_T)
-     );
-
-     ODDR#(
-         .DDR_CLK_EDGE("SAME_EDGE"), .INIT(1), .SRTYPE("ASYNC"))
-         ( .Q(vita_clk_pll_o), .C(imageon_clk),
+     ODDR#(.DDR_CLK_EDGE("SAME_EDGE"), .INIT(1), .SRTYPE("ASYNC"))
+         (.Q(vita_clk_pll_o), .C(imageon_clk),
          .CE(1), .D1(0), .D2(1), .R(0), .S(0));
-     ODDR#(
-         .DDR_CLK_EDGE("SAME_EDGE"), .INIT(1), .SRTYPE("ASYNC"))
-         ( .Q(vita_clk_pll_t), .C(imageon_clk),
+     ODDR#(.DDR_CLK_EDGE("SAME_EDGE"), .INIT(1), .SRTYPE("ASYNC"))
+         (.Q(vita_clk_pll_t), .C(imageon_clk),
          .CE(1), .D1(imageon_host_oe), .D2(imageon_host_oe), .R(0), .S(0));
     OBUFT(.O(io_vita_clk_pll), .I(vita_clk_pll_o), .T(vita_clk_pll_t)); 
     OBUFT(.O(io_vita_trigger[0]), .I(vita_trigger_o[0]), .T(imageon_host_oe));
     OBUFT(.O(io_vita_trigger[1]), .I(vita_trigger_o[1]), .T(imageon_host_oe));
     OBUFT(.O(io_vita_trigger[2]), .I(vita_trigger_o[2]), .T(imageon_host_oe));
     OBUFT(.O(io_vita_reset_n), .I(vita_reset_n_o), .T(imageon_host_oe)); 
-    IBUFDS#(
-        .CAPACITANCE("DONT_CARE"), .DIFF_TERM(1),
+    IBUFDS#( .CAPACITANCE("DONT_CARE"), .DIFF_TERM(1),
         .IBUF_DELAY_VALUE("0"), .IFD_DELAY_VALUE("AUTO"), .IOSTANDARD("DEFAULT"))
-        IBUFDS_inst(
-          .O(hsinclk_tmp_wire), .I(io_vita_clk_out_p), .IB(io_vita_clk_out_n));
+        (.O(hsinclk_tmp_wire), .I(io_vita_clk_out_p), .IB(io_vita_clk_out_n));
     BUFIO BUFIO_regional_hs_clk_in( .O(imageon_clk_tmp), .I(hsinclk_tmp_wire));
     BUFR#(.BUFR_DIVIDE("5"))
-        BUFR_regional_hs_clk_in(
-          .O(imageon_clkdiv_c), .CE(1), .CLR(0), .I(hsinclk_tmp_wire));
+        (.O(imageon_clkdiv_c), .CE(1), .CLR(0), .I(hsinclk_tmp_wire));
 '''
     def bus_assignments(self,busname,t,params):
         return '''
-    //assign imageon_clk200 = processing_system7_1_fclk_clk3;
- '''
+'''
     def pinout(self, board):
         return imageon_pinout[board]
 ImageonVita()

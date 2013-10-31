@@ -23,6 +23,7 @@
 
 import Clocks       :: *;
 import DefaultValue :: *;
+import XilinxCells  :: *;
 import Vector       :: *;
 
 import "BVI" IBUFDS =
@@ -330,6 +331,66 @@ module mkBUFIO(Wire#(a))
    method Action _write(a x);
       writeVReg(_bufr, unpack(pack(x)));
    endmethod
+endmodule
+
+interface XbsvMMCME2;
+   interface Clock     clkout0;
+   //interface Clock     clkout0_n;
+   interface Clock     clkout1;
+   //interface Clock     clkout1_n;
+   //interface Clock     clkout2;
+   //interface Clock     clkout2_n;
+   //interface Clock     clkout3;
+   //interface Clock     clkout3_n;
+   //interface Clock     clkout4;
+   //interface Clock     clkout5;
+   //interface Clock     clkout6;
+   interface Clock     clkfbout;
+   (* always_ready, always_enabled *)
+   method    Bool      locked;
+   (* always_enabled *)
+   method    Action    clkfbin(Bit#(1) v);
+endinterface
+
+import "BVI" MMCM_ADV =
+module mkXbsvMMCM#(MMCMParams params)(XbsvMMCME2);
+   //Reset reset <- exposeCurrentReset;
+   //default_reset rst() = reset;
+   no_reset;
+   default_clock clk1(CLKIN1);
+   parameter BANDWIDTH            = params.bandwidth;
+   parameter COMPENSATION         = params.compensation;
+   parameter CLKFBOUT_MULT_F      = params.clkfbout_mult_f;
+   parameter CLKFBOUT_PHASE       = params.clkfbout_phase;
+   parameter CLKIN1_PERIOD        = params.clkin1_period;
+   parameter CLKIN2_PERIOD        = params.clkin2_period;
+   parameter DIVCLK_DIVIDE        = params.divclk_divide;
+   parameter CLKOUT0_DIVIDE_F     = params.clkout0_divide_f;
+   parameter CLKOUT0_DUTY_CYCLE   = params.clkout0_duty_cycle;
+   parameter CLKOUT0_PHASE        = params.clkout0_phase;
+   parameter CLKOUT1_DIVIDE       = params.clkout1_divide;
+   parameter CLKOUT1_DUTY_CYCLE   = params.clkout1_duty_cycle;
+   parameter CLKOUT1_PHASE        = params.clkout1_phase;
+   parameter REF_JITTER1          = params.ref_jitter1;
+   parameter REF_JITTER2          = params.ref_jitter2;
+   port CLKIN2       = Bit#(1)'(0);
+   port CLKINSEL     = Bit#(1)'(1);
+   port DADDR        = Bit#(7)'(0);
+   port DCLK         = Bit#(1)'(0);
+   port DEN          = Bit#(1)'(0);
+   port DI           = Bit#(16)'(0);
+   port DWE          = Bit#(1)'(0);
+   port PSCLK        = Bit#(1)'(0);
+   port PSEN         = Bit#(1)'(0);
+   port PSINCDEC     = Bit#(1)'(0);
+   port PWRDWN       = Bit#(1)'(0);
+   output_clock clkfbout(CLKFBOUT);
+   output_clock clkout0(CLKOUT0);
+   output_clock clkout1(CLKOUT1);
+   method LOCKED     locked()     clocked_by(no_clock) reset_by(no_reset);
+   method            clkfbin(CLKFBIN) enable((*inhigh*)en1);
+   schedule clkfbin C clkfbin;
+   schedule locked CF (clkfbin, locked);
 endmodule
 
 

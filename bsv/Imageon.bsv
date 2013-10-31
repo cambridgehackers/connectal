@@ -61,6 +61,8 @@ interface ImageonPins;
     //method Bit#(1) hdmi_vsync();
     //method Bit#(1) hdmi_de();
     //method Bit#(16) hdmi_data();
+    method Clock fbbozo();
+    method Action fbbozoin(Bit#(1) v);
 endinterface
 
 interface ImageonSerdes;
@@ -480,6 +482,7 @@ endinterface
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
+//(* always_ready = "pins.fbbozoin" *)
 module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
      Reset serdes_reset_ifc,
      Clock hdmi_clock, Reset hdmi_reset,
@@ -530,28 +533,28 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     for (Integer i = 0; i < 5; i = i + 1)
         ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
     Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by fmc_imageon_video_clk1);
-    MMCME2 mmcmadv <- mkMMCM(MMCMParams {
-        use_same_family:False,
+    XbsvMMCME2 mmcmadv <- mkXbsvMMCM(MMCMParams {
+        //use_same_family:False,
         bandwidth:"OPTIMIZED", compensation:"ZHOLD",
         clkfbout_mult_f:8.000, clkfbout_phase:0.0,
         clkin1_period:6.734007, clkin2_period:6.734007,
         clkout0_divide_f:8.000, clkout0_duty_cycle:0.5, clkout0_phase:0.0000,
         clkout1_divide:32, clkout1_duty_cycle:0.5, clkout1_phase:0.0000,
-        divclk_divide:1, ref_jitter1:0.010, ref_jitter2:0.010,
-        clkfbout_use_fine_ps:"FALSE",
-        clkout0_use_fine_ps: "FALSE", clkout1_use_fine_ps:"FALSE",
-        clkout2_use_fine_ps: "FALSE", clkout3_use_fine_ps:"FALSE",
-        clkout4_cascade:     "FALSE", clkout4_use_fine_ps:"FALSE",
-        clkout5_use_fine_ps: "FALSE", clkout6_use_fine_ps:"FALSE",
-        clock_hold:          "FALSE", startup_wait:       "FALSE", 
-        clkout2_divide: 0, clkout2_duty_cycle: 0, clkout2_phase: 0,
-        clkout3_divide: 0, clkout3_duty_cycle: 0, clkout3_phase: 0,
-        clkout4_divide: 0, clkout4_duty_cycle: 0, clkout4_phase: 0,
-        clkout5_divide: 0, clkout5_duty_cycle: 0, clkout5_phase: 0,
-        clkout6_divide: 0, clkout6_duty_cycle: 0, clkout6_phase: 0
+        divclk_divide:1, ref_jitter1:0.010, ref_jitter2:0.010
+        //clkfbout_use_fine_ps:"FALSE",
+        //clkout0_use_fine_ps: "FALSE", clkout1_use_fine_ps:"FALSE",
+        //clkout2_use_fine_ps: "FALSE", clkout3_use_fine_ps:"FALSE",
+        //clkout4_cascade:     "FALSE", clkout4_use_fine_ps:"FALSE",
+        //clkout5_use_fine_ps: "FALSE", clkout6_use_fine_ps:"FALSE",
+        //clock_hold:          "FALSE", startup_wait:       "FALSE", 
+        //clkout2_divide: 0, clkout2_duty_cycle: 0, clkout2_phase: 0,
+        //clkout3_divide: 0, clkout3_duty_cycle: 0, clkout3_phase: 0,
+        //clkout4_divide: 0, clkout4_duty_cycle: 0, clkout4_phase: 0,
+        //clkout5_divide: 0, clkout5_duty_cycle: 0, clkout5_phase: 0,
+        //clkout6_divide: 0, clkout6_duty_cycle: 0, clkout6_phase: 0
         }, clocked_by imageon_video_clk1_buf_wire);
-    Clock imageon_clk_buf <- mkClockIBUFG(clocked_by mmcmadv.clkout0);
-    Clock imageon_clk4x_buf <- mkClockIBUFG(clocked_by mmcmadv.clkout1);
+    Clock imageon_clk4x_buf <- mkClockBUFG(clocked_by mmcmadv.clkout0);
+    Clock imageon_clk_buf <- mkClockBUFG(clocked_by mmcmadv.clkout1);
     IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by processing_system7_1_fclk_clk3, reset_by serdes_reset_ifc);
     Reg#(Bit#(1)) vita_reset_n_o <- mkReg(0);
     Reg#(Bit#(1)) imageon_oe <- mkReg(0);
@@ -827,6 +830,12 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
         endmethod
         method Bit#(1) io_vita_reset_n();
             return vita_reset_n_wire;
+        endmethod
+        method Clock fbbozo();
+            return mmcmadv.clkfbout;
+        endmethod
+        method Action fbbozoin(Bit#(1) v);
+            mmcmadv.clkfbin(v);
         endmethod
         method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
             return vita_trigger_wire;
