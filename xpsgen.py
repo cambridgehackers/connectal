@@ -948,15 +948,12 @@ class ImageonVita:
      wire imageon_clk;
      wire imageon_clk_tmp;
      wire imageon_clkdiv_c;
-     wire imageon_host_oe;
-     wire imageon_host_iserdes_reset;
      wire fmc_imageon_iic_0_scl_T;
      wire fmc_imageon_iic_0_scl_O;
      wire fmc_imageon_iic_0_scl_I;
      wire fmc_imageon_iic_0_sda_T;
      wire fmc_imageon_iic_0_sda_O;
      wire fmc_imageon_iic_0_sda_I;
-     wire [49:0] imageon_xsvi_raw_data;
      wire fbbozo;
 '''
     def ps7_bus_port_map(self,busname,t,params):
@@ -970,8 +967,6 @@ class ImageonVita:
 '''
     def dut_bus_port_map(self, busname,t,params):
         return '''
-    .imageon_host_oe(imageon_host_oe),
-    .serdes_reset(imageon_host_iserdes_reset),
     .pins_io_vita_clk_p_v(io_vita_clk_out_p),
     .pins_io_vita_clk_n_v(io_vita_clk_out_n),
     .pins_io_vita_sync_p_v(io_vita_sync_p),

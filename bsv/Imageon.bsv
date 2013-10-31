@@ -83,18 +83,6 @@ interface ImageonTrigger;
     method Bit#(32) cnt_trigger0low();
 endinterface
 
-interface ImageonSyncGen;
-    //method Bit#(16) delay();
-    method Bit#(16) hactive();
-    method Bit#(16) hfporch();
-    method Bit#(16) hsync();
-    method Bit#(16) hbporch();
-    method Bit#(16) vactive();
-    method Bit#(16) vfporch();
-    method Bit#(16) vsync();
-    method Bit#(16) vbporch();
-endinterface
-
 typedef struct {
     Bit#(1) fsync;
     Bit#(1) vsync;
@@ -106,17 +94,16 @@ typedef struct {
 interface ImageonSensorControl;
     method Bit#(32) get_debugind();
     method Action raw_data(Bit#(50) v);
+    method Action set_host_oe(Bit#(1) v);
     interface Reset reset;
     interface Reset hdmiReset;
 endinterface
 
 interface ImageonFast;
-    interface ImageonSyncGen syncgen;
     interface Reset reset;
 endinterface
 
 interface ImageonVita;
-    method Bit#(1) host_oe();
     interface ImageonSerdesIndication serdesind;
     interface ImageonTrigger trigger;
     interface ImageonDecoder decoder;
@@ -128,9 +115,6 @@ interface ImageonControl;
     method Bit#(32) get_iserdes_control();
     method Action set_decoder_control(Bit#(32) v);
     method Action set_triggen_control(Bit#(32) v);
-
-    method Action set_host_oe(Bit#(1) v);
-
     method Action set_serdes_reset(Bit#(1) v);
     method Action set_serdes_auto_align(Bit#(1) v);
     method Action set_serdes_align_start(Bit#(1) v);
@@ -147,14 +131,6 @@ interface ImageonControl;
     method Action set_trigger_cnt_trigger0high(Bit#(32) v);
     method Action set_trigger_cnt_trigger0low(Bit#(32) v);
     method Action set_syncgen_delay(Bit#(16) v);
-    method Action set_syncgen_hactive(Bit#(16) v);
-    method Action set_syncgen_hfporch(Bit#(16) v);
-    method Action set_syncgen_hsync(Bit#(16) v);
-    method Action set_syncgen_hbporch(Bit#(16) v);
-    method Action set_syncgen_vactive(Bit#(16) v);
-    method Action set_syncgen_vfporch(Bit#(16) v);
-    method Action set_syncgen_vsync(Bit#(16) v);
-    method Action set_syncgen_vbporch(Bit#(16) v);
     method Action set_debugreq(Bit#(32) v);
 endinterface
 
@@ -169,7 +145,6 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
         Reset imageon_reset, Clock serdes_clock, Reset serdes_reset)(ImageonVitaController);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset;
-    Reg#(Bit#(1)) host_oe_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Wire#(Bit#(1)) host_clock_gen_locked_wire <- mkDWire(0);
 
     Reg#(Bit#(1)) serdes_reset_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
@@ -200,14 +175,6 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
     Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(16)) syncgen_delay_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
-    Reg#(Bit#(16)) syncgen_hactive_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(16)) syncgen_hfporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(16)) syncgen_hsync_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(16)) syncgen_hbporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(16)) syncgen_vactive_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(16)) syncgen_vfporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(16)) syncgen_vsync_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
-    Reg#(Bit#(16)) syncgen_vbporch_reg <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
     Reg#(Bit#(32)) debugreq_value <- mkSyncReg(0, defaultClock, defaultReset, hdmi_clock);
 
     rule serdes_copybits;
@@ -217,39 +184,10 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
     endrule
 
     interface ImageonFast host;
-	interface ImageonSyncGen syncgen;
-	    method Bit#(16) hactive();
-		return syncgen_hactive_reg;
-	    endmethod
-	    method Bit#(16) hfporch();
-		return syncgen_hfporch_reg;
-	    endmethod
-	    method Bit#(16) hsync();
-		return syncgen_hsync_reg;
-	    endmethod
-	    method Bit#(16) hbporch();
-		return syncgen_hbporch_reg;
-	    endmethod
-	    method Bit#(16) vactive();
-		return syncgen_vactive_reg;
-	    endmethod
-	    method Bit#(16) vfporch();
-		return syncgen_vfporch_reg;
-	    endmethod
-	    method Bit#(16) vsync();
-		return syncgen_vsync_reg;
-	    endmethod
-	    method Bit#(16) vbporch();
-		return syncgen_vbporch_reg;
-	    endmethod
-	endinterface
         interface Reset reset = defaultReset;
     endinterface: host
 
     interface ImageonVita hosts;
-	method Bit#(1) host_oe();
-	    return host_oe_reg;
-	endmethod
 	interface ImageonSerdesIndication serdesind;
 	    method Action clk_ready(Bit#(1) ready);
 	        serdes_clk_ready_temp <= ready;
@@ -352,11 +290,6 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 	method Action set_triggen_control(Bit#(32) v);
 	    trigger_enable_reg <= v[2:0];
 	endmethod
-
-	method Action set_host_oe(Bit#(1) v);
-	    host_oe_reg <= ~v;
-	endmethod
-
 	method Action set_serdes_reset(Bit#(1) v);
 	    serdes_reset_reg <= v;
 	endmethod
@@ -405,38 +338,26 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 	method Action set_syncgen_delay(Bit#(16) v);
 	    syncgen_delay_reg <= v;
 	endmethod
-	method Action set_syncgen_hactive(Bit#(16) v);
-	    syncgen_hactive_reg <= v;
-	endmethod
-	method Action set_syncgen_hfporch(Bit#(16) v);
-	    syncgen_hfporch_reg <= v;
-	endmethod
-	method Action set_syncgen_hsync(Bit#(16) v);
-	    syncgen_hsync_reg <= v;
-	endmethod
-	method Action set_syncgen_hbporch(Bit#(16) v);
-	    syncgen_hbporch_reg <= v;
-	endmethod
-	method Action set_syncgen_vactive(Bit#(16) v);
-	    syncgen_vactive_reg <= v;
-	endmethod
-	method Action set_syncgen_vfporch(Bit#(16) v);
-	    syncgen_vfporch_reg <= v;
-	endmethod
-	method Action set_syncgen_vsync(Bit#(16) v);
-	    syncgen_vsync_reg <= v;
-	endmethod
-	method Action set_syncgen_vbporch(Bit#(16) v);
-	    syncgen_vbporch_reg <= v;
-	endmethod
         method Action set_debugreq(Bit#(32) v);
             debugreq_value <= v;
 	endmethod
     endinterface
 endmodule
 
+interface ImageonXsviControl;
+    method Action set_syncgen_hactive(Bit#(16) v);
+    method Action set_syncgen_hfporch(Bit#(16) v);
+    method Action set_syncgen_hsync(Bit#(16) v);
+    method Action set_syncgen_hbporch(Bit#(16) v);
+    method Action set_syncgen_vactive(Bit#(16) v);
+    method Action set_syncgen_vfporch(Bit#(16) v);
+    method Action set_syncgen_vsync(Bit#(16) v);
+    method Action set_syncgen_vbporch(Bit#(16) v);
+endinterface
+
 interface ImageonXsviFromSensor;
     interface Get#(XsviData) out;
+    interface ImageonXsviControl control;
 endinterface
 
 interface ImageonSensor;
@@ -449,8 +370,8 @@ endinterface
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
-//(* always_ready = "pins.fbbozoin" *)
 module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
+     Clock axi_clock, Reset axi_reset,
      Reset serdes_reset_ifc,
      Clock hdmi_clock, Reset hdmi_reset,
      Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset,
@@ -512,7 +433,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     Clock imageon_clk_buf <- mkClockBUFG(clocked_by mmcmadv.clkout1);
     IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by processing_system7_1_fclk_clk3, reset_by serdes_reset_ifc);
     Reg#(Bit#(1)) vita_reset_n_o <- mkReg(0);
-    Reg#(Bit#(1)) imageon_oe <- mkReg(0);
+    Reg#(Bit#(1)) imageon_oe <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Wire#(Bit#(1)) zero_wire <- mkDWire(0);
     Wire#(Bit#(1)) one_wire <- mkDWire(1);
     Wire#(Bit#(1)) trigger_wire <- mkDWire(0);
@@ -540,7 +461,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
 
     rule trigger_rule;
         trigger_wire <= pack(tstate != TSend);
-        imageon_oe <= host.host_oe();
     endrule
 
     rule vr_rule;
@@ -741,6 +661,9 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
         method Bit#(32) get_debugind();
             return debugind_value;
 	endmethod
+	method Action set_host_oe(Bit#(1) v);
+	    imageon_oe <= ~v;
+	endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
     endinterface: in
@@ -802,7 +725,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     endinterface
 endmodule
 
-module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, ImageonFast host, ImageonSensor sensor)(ImageonXsviFromSensor);
+module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock, Reset axi_reset, ImageonFast host, ImageonSensor sensor)(ImageonXsviFromSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -816,6 +739,14 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
     Reg#(Bit#(16)) hsync_count <- mkReg(0);
     Reg#(Bit#(10)) videodata <- mkReg(0);
     Reg#(Bit#(1))  framestart_new <- mkReg(0);
+    Reg#(Bit#(16)) syncgen_hactive_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(16)) syncgen_hfporch_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(16)) syncgen_hsync_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(16)) syncgen_hbporch_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(16)) syncgen_vactive_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(16)) syncgen_vfporch_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(16)) syncgen_vsync_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(16)) syncgen_vbporch_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     
     rule start_fsm if (framestart_new == 1);
         vsync_count <= 0;
@@ -831,38 +762,38 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
         let vc = vsync_count;
   
         hc = hc + 1;
-        if (hstate == FrontP && hsync_count >= host.syncgen.hfporch() - 1)
+        if (hstate == FrontP && hsync_count >= syncgen_hfporch_reg - 1)
             begin
             hc = 0;
             hs = Sync;
             vc = vc + 1;
-            if (vstate == Active && vsync_count >= host.syncgen.vactive() - 1)
+            if (vstate == Active && vsync_count >= syncgen_vactive_reg - 1)
                 begin
                 vc = 0;
                 vs = FrontP;
                 end
-            if (vstate == FrontP && vsync_count >= host.syncgen.vfporch() - 1)
+            if (vstate == FrontP && vsync_count >= syncgen_vfporch_reg - 1)
                 begin
                 vc = 0;
                 vs = Sync;
                 end
-            if (vstate == Sync && vsync_count >= host.syncgen.vsync() - 1)
+            if (vstate == Sync && vsync_count >= syncgen_vsync_reg - 1)
                 begin
                 vc = 0;
                 vs = BackP;
                 end
             end
-        if (hstate == Sync && hsync_count >= host.syncgen.hsync() - 1)
+        if (hstate == Sync && hsync_count >= syncgen_hsync_reg - 1)
             begin
             hc = 0;
             hs = BackP;
             end
-        if (hstate == BackP && hsync_count >= host.syncgen.hbporch() - 1)
+        if (hstate == BackP && hsync_count >= syncgen_hbporch_reg - 1)
             begin
             hc = 0;
             hs = Active;
             end
-        if (hstate == Active && hsync_count >= host.syncgen.hactive() - 1)
+        if (hstate == Active && hsync_count >= syncgen_hactive_reg - 1)
             begin
             hc = 0;
             hs = FrontP;
@@ -898,6 +829,32 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Imageo
 	dataGearbox.enq(in);
     endrule
 
+    interface ImageonXsviControl control;
+	method Action set_syncgen_hactive(Bit#(16) v);
+	    syncgen_hactive_reg <= v;
+	endmethod
+	method Action set_syncgen_hfporch(Bit#(16) v);
+	    syncgen_hfporch_reg <= v;
+	endmethod
+	method Action set_syncgen_hsync(Bit#(16) v);
+	    syncgen_hsync_reg <= v;
+	endmethod
+	method Action set_syncgen_hbporch(Bit#(16) v);
+	    syncgen_hbporch_reg <= v;
+	endmethod
+	method Action set_syncgen_vactive(Bit#(16) v);
+	    syncgen_vactive_reg <= v;
+	endmethod
+	method Action set_syncgen_vfporch(Bit#(16) v);
+	    syncgen_vfporch_reg <= v;
+	endmethod
+	method Action set_syncgen_vsync(Bit#(16) v);
+	    syncgen_vsync_reg <= v;
+	endmethod
+	method Action set_syncgen_vbporch(Bit#(16) v);
+	    syncgen_vbporch_reg <= v;
+	endmethod
+    endinterface
     interface Get out;
 	method ActionValue#(XsviData) get();
 	    return XsviData {

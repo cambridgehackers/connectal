@@ -120,10 +120,11 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     MakeResetIfc serdes_reset_ifc <- mkReset(2, True, processing_system7_1_fclk_clk3);
 
     ImageonSensor fromSensor <- mkImageonSensor(fmc_imageon_video_clk1, processing_system7_1_fclk_clk3,
+        defaultClock, defaultReset,
         serdes_reset_ifc.new_rst,
         hdmi_clock, hdmi_reset, serdes_clock, serdes_reset, serdest_clock, serdest_reset, imageon_vitas_clock_binder,
         imageon_serdes_clock_binder, clocked_by imageon_clock, reset_by imageon_reset);
-    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, imageon_vita_clock_binder,
+    ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, defaultClock, defaultReset, imageon_vita_clock_binder,
         fromSensor,
         clocked_by hdmi_clock, reset_by hdmi_reset);
 
@@ -166,26 +167,21 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     endrule
 
     interface CoreRequest coreRequest;
-
     method Action set_iserdes_control(Bit#(32) v);
         control.set_iserdes_control(v);
     endmethod
     method Action get_iserdes_control();
         indication.coreIndication.iserdes_control_value(control.get_iserdes_control());
     endmethod
-
     method Action set_decoder_control(Bit#(32) v);
         control.set_decoder_control(v);
     endmethod
-
     method Action set_triggen_control(Bit#(32) v);
         control.set_triggen_control(v);
     endmethod
-
     method Action set_host_oe(Bit#(1) v);
-        control.set_host_oe(v);
+        fromSensor.in.set_host_oe(v);
     endmethod
-
     method Action set_serdes_reset(Bit#(1) v);
         control.set_serdes_reset(v);
     endmethod
@@ -241,28 +237,28 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
         control.set_syncgen_delay(v);
     endmethod
     method Action set_syncgen_hactive(Bit#(16) v);
-        control.set_syncgen_hactive(v);
+        xsviFromSensor.control.set_syncgen_hactive(v);
     endmethod
     method Action set_syncgen_hfporch(Bit#(16) v);
-        control.set_syncgen_hfporch(v);
+        xsviFromSensor.control.set_syncgen_hfporch(v);
     endmethod
     method Action set_syncgen_hsync(Bit#(16) v);
-        control.set_syncgen_hsync(v);
+        xsviFromSensor.control.set_syncgen_hsync(v);
     endmethod
     method Action set_syncgen_hbporch(Bit#(16) v);
-        control.set_syncgen_hbporch(v);
+        xsviFromSensor.control.set_syncgen_hbporch(v);
     endmethod
     method Action set_syncgen_vactive(Bit#(16) v);
-        control.set_syncgen_vactive(v);
+        xsviFromSensor.control.set_syncgen_vactive(v);
     endmethod
     method Action set_syncgen_vfporch(Bit#(16) v);
-        control.set_syncgen_vfporch(v);
+        xsviFromSensor.control.set_syncgen_vfporch(v);
     endmethod
     method Action set_syncgen_vsync(Bit#(16) v);
-        control.set_syncgen_vsync(v);
+        xsviFromSensor.control.set_syncgen_vsync(v);
     endmethod
     method Action set_syncgen_vbporch(Bit#(16) v);
-        control.set_syncgen_vbporch(v);
+        xsviFromSensor.control.set_syncgen_vbporch(v);
     endmethod
     method Action set_debugreq(Bit#(32) v);
         control.set_debugreq(v);
