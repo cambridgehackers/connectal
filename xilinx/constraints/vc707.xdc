@@ -162,36 +162,29 @@ set_property LOC RAMB36_X14Y19 [get_cells {*/v7_pcie_v1_7_i/pcie_top_i/pcie_7x_i
 # TIMING CONSTRAINTS
 ######################################################################################################
 
-# clocks
-create_clock -name pci_refclk -period 10 [get_pins *_sys_clk_buf/O]
-create_clock -name sys_clk -period 5 [get_pins sys_clk/O]
+# # clocks
+create_clock -name pci_refclk -period 10 [get_pins x7pcie_pci_sys_clk_buf/O]
+create_clock -name sys_clk -period 5 [get_pins x7pcie_sys_clk/O]
+create_clock -name user_clk -period 4 [get_pins user_clk/O]
 
-create_generated_clock -name clk_125mhz -source [get_pins *_sys_clk_buf/O] -edges {1 2 3} -edge_shift {0 -1 -2} [get_pins */ext_clk.pipe_clock_i/mmcm_i/CLKOUT0]
-create_generated_clock -name clk_250mhz -source [get_pins *_sys_clk_buf/O] -edges {1 2 3} -edge_shift {0 -3 -6} [get_pins */ext_clk.pipe_clock_i/mmcm_i/CLKOUT1]
+create_clock -name txoutclk -period 10 [get_pins {x7pcie_pcie_ep/ext_clk.pipe_clock_i/PIPE_TXOUTCLK_OUT}]
 
-create_generated_clock -name clk_userclk -source [get_pins *_sys_clk_buf/O] -edges {1 2 3} -edge_shift {0 -3 -6} [get_pins */ext_clk.pipe_clock_i/mmcm_i/CLKOUT2]
-create_generated_clock -name clk_userclk2 -source [get_pins *_sys_clk_buf/O] -edges {1 2 3} -edge_shift {0 -3 -6} [get_pins */ext_clk.pipe_clock_i/mmcm_i/CLKOUT3]
-create_generated_clock -name noc_clk -source [get_pins */ext_clk.pipe_clock_i/mmcm_i/CLKOUT3] -divide_by 2 [get_pins {*_clkgen_pll/CLKOUT0}]
-create_generated_clock -name core_clock -source [get_pins sys_clk/O] -multiply_by 5 -divide_by [expr int(30.000)] [get_pins clk_gen_pll/CLKOUT0]
-create_generated_clock -name uclock -source [get_pins clk_gen_pll/CLKOUT0] -divide_by 2 [get_nets -hier -filter { NAME =~ *uclkgen/*current_clk* }]
-create_generated_clock -name cclock -source [get_pins clk_gen_pll/CLKOUT0] -divide_by 2 [get_nets -hier -filter { NAME =~ *_clkgen/*current_clk* }]
-
-# False Paths
-set_false_path -from [get_ports { RST_N_pci_sys_reset_n }]
+# # False Paths
+# set_false_path -from [get_ports { RST_N_pci_sys_reset_n }]
 set_false_path -through [get_pins -hierarchical {*pcie_block_i/PLPHYLNKUPN*}]
 set_false_path -through [get_pins -hierarchical {*pcie_block_i/PLRECEIVEDHOTRST*}]
 
-set_false_path -through [get_nets {*/v7_pcie_v1_7_i/gt_top_i/pipe_wrapper_i/user_resetdone*}]
-set_false_path -through [get_nets {*/v7_pcie_v1_7_i/gt_top_i/pipe_wrapper_i/pipe_lane[0].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/v7_pcie_v1_7_i/gt_top_i/pipe_wrapper_i/pipe_lane[1].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/v7_pcie_v1_7_i/gt_top_i/pipe_wrapper_i/pipe_lane[2].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/v7_pcie_v1_7_i/gt_top_i/pipe_wrapper_i/pipe_lane[3].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/v7_pcie_v1_7_i/gt_top_i/pipe_wrapper_i/pipe_lane[4].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/v7_pcie_v1_7_i/gt_top_i/pipe_wrapper_i/pipe_lane[5].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/v7_pcie_v1_7_i/gt_top_i/pipe_wrapper_i/pipe_lane[6].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/v7_pcie_v1_7_i/gt_top_i/pipe_wrapper_i/pipe_lane[7].pipe_rate.pipe_rate_i/*}]
+#set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/user_resetdone*}]
+set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[0].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[1].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[2].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[3].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[4].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[5].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[6].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[7].pipe_rate.pipe_rate_i/*}]
 
-set_false_path -through [get_cells {*/v7_pcie_v1_7_i/gt_top_i/pipe_wrapper_i/pipe_reset.pipe_reset_i/cpllreset_reg*}]
+set_false_path -through [get_cells {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_reset.pipe_reset_i/cpllreset_reg*}]
 
 set_false_path -through [get_nets {*/ext_clk.pipe_clock_i/pclk_sel*}]
 
@@ -200,9 +193,7 @@ set_case_analysis 0 [get_pins {*/ext_clk.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/S
 
 set_clock_groups -name ___clk_groups_generated_0_1_0_0_0 -physically_exclusive -group [get_clocks clk_125mhz] -group [get_clocks clk_250mhz]
 
-set_clock_groups -name async_sysclk_coreclk -asynchronous -group [get_clocks -include_generated_clocks sys_clk] -group [get_clocks -include_generated_clocks pci_refclk]
-
-set_clock_groups -name async_nocclk_coreclk -asynchronous -group { noc_clk } -group { cclock uclock core_clock }
+set_clock_groups -name async_sysclk_coreclk -asynchronous -group [get_clocks -include_generated_clocks sys_clk] -group [get_clocks -include_generated_clocks user_clk] -group [get_clocks -include_generated_clocks pci_refclk]
 
 set_max_delay -from [get_clocks noc_clk] -to [get_clocks clk_userclk2] 8.000 -datapath_only
 set_max_delay -from [get_clocks clk_userclk2] -to [get_clocks noc_clk] 8.000 -datapath_only
@@ -210,7 +201,3 @@ set_max_delay -from [get_clocks cclock] -to [get_clocks core_clock] 20.000 -data
 set_max_delay -from [get_clocks uclock] -to [get_clocks core_clock] 20.000 -datapath_only
 set_max_delay -from [get_clocks core_clock] -to [get_clocks cclock] 20.000 -datapath_only
 set_max_delay -from [get_clocks core_clock] -to [get_clocks uclock] 20.000 -datapath_only
-set_max_delay -from [get_clocks uclock] -to [get_clocks cclock] 20.000 -datapath_only
-set_max_delay -from [get_clocks cclock] -to [get_clocks uclock] 20.000 -datapath_only
-
-set_min_delay -from [get_clocks uclock] -to [get_clocks cclock] 5.000 
