@@ -51,12 +51,6 @@ interface ImageonPins;
     method Action fbbozoin(Bit#(1) v);
 endinterface
 
-interface ImageonSerdesIndication;
-    method Action clk_ready(Bit#(1) ready);
-    method Action align_busy(Bit#(1) busy);
-    method Action alignedbit(Bit#(1) aligned);
-endinterface
-
 typedef struct {
     Bit#(1) fsync;
     Bit#(1) vsync;
@@ -65,7 +59,7 @@ typedef struct {
     Bit#(10) video_data;
 } XsviData deriving (Bits);
 
-interface ImageonSensorControl;
+interface ImageonVita;
     method Bit#(32) get_debugind();
     method Action raw_data(Bit#(50) v);
     method Action set_host_oe(Bit#(1) v);
@@ -86,11 +80,8 @@ interface ImageonSensorControl;
     method Action set_trigger_cnt_trigger0high(Bit#(32) v);
     method Action set_trigger_cnt_trigger0low(Bit#(32) v);
     method Bit#(32) get_iserdes_control();
-    interface Reset reset;
-    interface Reset hdmiReset;
-endinterface
-
-interface ImageonVita;
+    //interface Reset reset;
+    //interface Reset hdmiReset;
 endinterface
 
 interface ImageonXsviControl;
@@ -110,27 +101,17 @@ interface ImageonXsviFromSensor;
 endinterface
 
 interface ImageonSensor;
-    interface ImageonSensorControl in;
+    interface ImageonVita in;
     interface ImageonPins pins;
     method Bit#(1) get_framesync();
     method Bit#(40) get_data();
 endinterface
 
-interface ImageonVitaController;
-endinterface
-
-module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageon_clock,
-        Reset imageon_reset, Clock serdes_clock, Reset serdes_reset)(ImageonVitaController);
-    Clock defaultClock <- exposeCurrentClock();
-    Reset defaultReset <- exposeCurrentReset;
-endmodule
-
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
-module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
+module mkImageonSensor#(Clock fmc_imageon_video_clk1,
      Clock axi_clock, Reset axi_reset,
-     Clock hdmi_clock, Reset hdmi_reset,
      Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
@@ -205,7 +186,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
         }, clocked_by imageon_video_clk1_buf_wire);
     Clock imageon_clk4x_buf <- mkClockBUFG(clocked_by mmcmadv.clkout0);
     Clock imageon_clk_buf <- mkClockBUFG(clocked_by mmcmadv.clkout1);
-    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by processing_system7_1_fclk_clk3);
     Reg#(Bit#(1)) vita_reset_n_o <- mkReg(0);
     Wire#(Bit#(1)) zero_wire <- mkDWire(0);
     Wire#(Bit#(1)) one_wire <- mkDWire(1);
@@ -439,7 +419,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
         sframe_new_wire <= pack(raw_data_delay_reg[9:0] == decoder_code_fs_reg && raw_data_reg[9:0] == 10'h0);
     endrule
 
-    interface ImageonSensorControl in;
+    interface ImageonVita in;
 	method Bit#(32) get_iserdes_control();
 	    let v = 0;
 	    v[8] = serdes_clk_ready_reg;
@@ -507,8 +487,8 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
 	method Action set_trigger_cnt_trigger0low(Bit#(32) v);
 	    trigger_cnt_trigger0low_reg <= v;
 	endmethod
-	interface Reset reset = defaultReset;
-	interface Reset hdmiReset = hdmi_reset;
+	//interface Reset reset = defaultReset;
+	//interface Reset hdmiReset = hdmi_reset;
     endinterface: in
     method Bit#(1) get_framesync();
         return fs2;

@@ -35,6 +35,8 @@ import HDMI::*;
 import AxiDMA::*;
 import BlueScope::*;
 import SensorToVideo::*;
+import XilinxCells::*;
+import XbsvXilinxCells::*;
 
 interface CoreIndication;
     method Action iserdes_control_value(Bit#(32) v);
@@ -83,15 +85,15 @@ endinterface
 interface ImageCaptureRequest;
    interface CoreRequest coreRequest;
    interface BlueScopeRequest bsRequest;
-   interface ImageonVita imageon;
-   interface ImageonSensorControl sensor;
+   interface ImageonVita sensor;
    interface HDMI hdmi;
    interface SpiPins spi;
    interface DMARequest dmaRequest;
    interface ImageonPins pins;
 endinterface
  
-module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3, Clock imageon_clock, Clock serdes_clock, Clock serdest_clock, Clock hdmi_clock, 
+module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
+    Clock imageon_clock, Clock serdes_clock, Clock serdest_clock, Clock hdmi_clock, 
     ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
 
     Clock defaultClock <- exposeCurrentClock();
@@ -101,10 +103,9 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     Reset serdest_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
-    ImageonVitaController imageonVita <- mkImageonVitaController(hdmi_clock, hdmi_reset, imageon_clock, imageon_reset, serdes_clock, serdes_reset);
-    ImageonSensor fromSensor <- mkImageonSensor(fmc_imageon_video_clk1, processing_system7_1_fclk_clk3,
-        defaultClock, defaultReset,
-        hdmi_clock, hdmi_reset, serdes_clock, serdes_reset, serdest_clock, serdest_reset,
+    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by processing_system7_1_fclk_clk3);
+    ImageonSensor fromSensor <- mkImageonSensor(fmc_imageon_video_clk1,
+        defaultClock, defaultReset, serdes_clock, serdes_reset, serdest_clock, serdest_reset,
         clocked_by imageon_clock, reset_by imageon_reset);
     ImageonXsviFromSensor xsviFromSensor <- mkImageonXsviFromSensor(imageon_clock, imageon_reset, defaultClock, defaultReset,
         fromSensor, clocked_by hdmi_clock, reset_by hdmi_reset);
@@ -228,7 +229,7 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
 
     endinterface
    interface BlueScopeRequest bsRequest = bsi.requestIfc;
-   interface ImageonSensorControl sensor = fromSensor.in;
+   interface ImageonVita sensor = fromSensor.in;
    interface HDMI hdmi = hdmiOut.hdmi;
    interface SpiPins spi = spiController.pins;
    interface ImageonPins pins = fromSensor.pins;
