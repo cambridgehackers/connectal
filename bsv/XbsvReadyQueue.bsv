@@ -9,14 +9,13 @@ endinterface
 
 module mkFirstReadyQueue(ReadyQueue#(nports,Bit#(tagtypesz),Bit#(priotypesz)))
    provisos (Add#(1,s,nports));
+
     Reg#(Vector#(nports, Bit#(priotypesz))) priorities <- mkReg(replicate(0));
+    Reg#(Tuple2#(Bit#(tagtypesz),Bit#(priotypesz))) maxPriorityRequestReg <- mkReg(tuple2(0,0));
     Vector#(nports, Reg#(Bool)) readyBitsRegs <- replicateM(mkReg(False));
 
-    function Bit#(priotypesz) maxPriority(); return fold(max, priorities); endfunction
-
     function Tuple2#(Bit#(tagtypesz), Bit#(priotypesz)) getMaxPriorityRequest();
-        function Bit#(tagtypesz) channelNumber(Integer i); UInt#(tagtypesz) c = fromInteger(i); return pack(c); endfunction
-        Vector#(nports, Bit#(tagtypesz)) requests = genWith(channelNumber);
+        Vector#(nports, Bit#(tagtypesz)) requests = genWith(fromInteger);
         function Tuple2#(Bit#(tagtypesz),Bit#(priotypesz)) maxreq(Tuple2#(Bit#(tagtypesz),Bit#(priotypesz)) a, Tuple2#(Bit#(tagtypesz),Bit#(priotypesz)) b);
            if (tpl_2(a) != 0)
                return a;
@@ -26,20 +25,9 @@ module mkFirstReadyQueue(ReadyQueue#(nports,Bit#(tagtypesz),Bit#(priotypesz)))
         return fold(maxreq, zip(requests, priorities));
     endfunction
 
-    Reg#(Tuple2#(Bit#(tagtypesz),Bit#(priotypesz))) maxPriorityRequestReg <- mkReg(tuple2(0,0));
 
     rule updatePriorities;
-       function Bit#(a) add(Bit#(a) x, Bit#(a) y); return x + y; endfunction
-
-       function Bit#(priotypesz) newPrio(Tuple2#(Bit#(priotypesz), Reg#(Bool)) pair);
-           if (tpl_2(pair)._read && tpl_1(pair) == 0)
-	      return 1;
-	   else
-	      return 0;
-       endfunction
-
        Vector#(nports, Tuple2#(Bit#(priotypesz), Reg#(Bool))) zipped = zip(priorities, readyBitsRegs);
-
        function Bit#(priotypesz) updatePrio(Tuple2#(Bit#(priotypesz), Reg#(Bool)) pair);
 	  Bool b = tpl_2(pair)._read;
 	  if (b) begin
@@ -54,8 +42,9 @@ module mkFirstReadyQueue(ReadyQueue#(nports,Bit#(tagtypesz),Bit#(priotypesz)))
 	  end
        endfunction
        priorities <= map(updatePrio, zipped);
-       $display("priorities=%h", priorities);
+       //$display("priorities=%h", priorities);
     endrule
+
     rule updateMaxPriorityRequest;
         maxPriorityRequestReg <= getMaxPriorityRequest();
     endrule

@@ -81,11 +81,11 @@ $(vfile): sources/%(dut)s/%(Top)s.bsv
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
 
 x86_exe:
-	cd jni; g++ *.cpp -pthread
+	cd jni; g++ *.cpp -pthread -I../.. -I../../cpp -DBSIM
 
 bsim: x86_exe
 	cd sources; bsc %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop BsimTop.bsv
-	export BSC_CXXFLAGS="-I$(XBSVTOP)/cpp" ; cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim *.ba $(XBSVTOP)/cpp/BsimTop.cxx
+	export BSC_CXXFLAGS="-I$(XBSVTOP)/cpp -I../.. -DBSIM" ; cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim *.ba $(XBSVTOP)/cpp/BsimTop.cxx
 
 verilog: $(vfile)
 
@@ -316,7 +316,7 @@ if __name__=='__main__':
     if cppname:
         srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'cpp')
         dstdir = os.path.dirname(cppname)
-        for f in ['portal.h', 'portal.cpp']:
+        for f in ['portal.cpp']:
             shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
     shutil.copyfile(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao'),
                     os.path.join(project_dir, 'updatepao'))

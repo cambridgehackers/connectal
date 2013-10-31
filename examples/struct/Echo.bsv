@@ -39,7 +39,7 @@ interface CoreIndication;
     method Action heard2(Bit#(16) a, Bit#(16) b);
     method Action heard3(S1 v);
     method Action heard4(S2 v);
-    method Action heard5(Bit#(64) v);
+    method Action heard5(Bit#(32) _x, Bit#(64) v, Bit#(32) _y);
 endinterface
 
 interface CoreRequest;
@@ -47,7 +47,7 @@ interface CoreRequest;
     method Action say2(Bit#(16) a, Bit#(16) b);
     method Action say3(S1 v);
     method Action say4(S2 v);
-    method Action say5(Bit#(64) v);
+    method Action say5(Bit#(32)_x, Bit#(64) v, Bit#(32) _y);
 endinterface
 
 interface EchoRequest;
@@ -59,66 +59,35 @@ interface EchoIndication;
 endinterface
 
 module mkEchoRequest#(EchoIndication indication)(EchoRequest);
-   let delay1 <- mkSizedFIFO(8);
-   let delay2 <- mkSizedFIFO(8);
-   let delay3 <- mkSizedFIFO(8);
-   let delay4 <- mkSizedFIFO(8);
-   let delay5 <- mkSizedFIFO(8);
-   
-   rule heard1;
-      delay1.deq;
-      indication.coreIndication.heard1(delay1.first);
-   endrule
-   
-   rule heard2;
-      delay2.deq;
-      match {.a, .b} = delay2.first;
-      indication.coreIndication.heard2(a,b);
-   endrule
-   
-   rule heard3;
-      delay3.deq;
-      indication.coreIndication.heard3(delay3.first);
-   endrule
-   
-   rule heard4;
-      delay4.deq;
-      indication.coreIndication.heard4(delay4.first);
-   endrule
 
-   rule heard5;
-      delay5.deq;
-      indication.coreIndication.heard5(delay5.first);
-   endrule
-
-     interface CoreRequest coreRequest; 
-      method Action say1(Bit#(32) v);
-   	 delay1.enq(v);
-	 $display("say1");
-      endmethod
-
-      method Action say2(Bit#(16) a, Bit#(16) b);
-   	 delay2.enq(tuple2(a+1,b));
-	 $display("say2");
-      endmethod
+   interface CoreRequest coreRequest; 
+   method Action say1(Bit#(32) v);
+      indication.coreIndication.heard1(v);
+      $display("(hw) say1 %h", v);
+   endmethod
    
-      method Action say3(S1 v);
-   	 S1 rv = S1{a:v.a, b:v.b+1};
-   	 delay3.enq(rv);
-	 $display("say3");
-      endmethod
-
-      method Action say4(S2 v);
-   	 S2 rv = S2{a:v.a+2, b:v.b+1, c:v.c};
-   	 delay4.enq(rv);
-	 $display("say4");
-      endmethod
+   method Action say2(Bit#(16) a, Bit#(16) b);
+      indication.coreIndication.heard2(a+1,b);
+      $display("(hw) say2 %h %h", a, b);
+   endmethod
+      
+   method Action say3(S1 v);
+      S1 rv = S1{a:v.a, b:v.b+1};
+      indication.coreIndication.heard3(rv);
+      $display("(hw) say3 %h", v);
+   endmethod
    
-      method Action say5(Bit#(64) v);
-   	 delay5.enq({v[63:4],4'h0});
-	 $display("say5");
-      endmethod
-
+   method Action say4(S2 v);
+      S2 rv = S2{a:v.a+2, b:v.b+1, c:v.c};
+      indication.coreIndication.heard4(rv);
+      $display("(hw) say4 %h", v);
+   endmethod
+      
+   method Action say5(Bit#(32) _x, Bit#(64) v, Bit#(32) _y);
+      //indication.coreIndication.heard5(_x, {v[63:4],4'h0}, _y);
+      indication.coreIndication.heard5(_x, 64'h5a5a5a5a5a5a5a5a, _y);
+      $display("(hw) say5 %h %h %h", _x, v, _y);
+   endmethod
    endinterface
 
 endmodule

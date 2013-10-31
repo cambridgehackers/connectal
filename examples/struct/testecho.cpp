@@ -38,8 +38,8 @@ public:
     fprintf(stderr, "heard4(S2{a:%d,b:%d,c:%d})\n", s.a,s.b,s.c);
     TestCoreIndication::incr_cnt();
   }
-  virtual void heard5(unsigned long long v) {
-    fprintf(stderr, "heard5(%016llx)\n", v);
+  virtual void heard5(unsigned long _x, unsigned long long v, unsigned long _y) {
+    fprintf(stderr, "heard5(%08x, %016llx, %08x)\n", _x, v, _y);
     TestCoreIndication::incr_cnt();
   }
 };
@@ -69,7 +69,7 @@ int main(int argc, const char **argv)
   device->say4(s2);
   unsigned long long v5 = 0xDEADBEEFFECAFECA;
   fprintf(stderr, "calling say5(%016llx)\n", v5);
-  device->say5(v5);  
+  device->say5(0, v5, 1);  
   fprintf(stderr, "about to invoke portalExec\n");
   portalExec(NULL);
 }

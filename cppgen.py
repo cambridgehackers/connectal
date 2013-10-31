@@ -16,7 +16,8 @@ LOCAL_MODULE = test%(classname)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW
+LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I.. -I../cpp
+
 
 include $(BUILD_EXECUTABLE)
 '''
@@ -25,7 +26,7 @@ linuxmakefile_template='''
 CFLAGS = -DMMAP_HW -O -g -I. -I../../cpp
 
 test%(classname)s: %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/%(classname)s/test%(classname)s.cpp
-	g++ $(CFLAGS) -o %(classname)s %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/%(classname)s/test%(classname)s.cpp -pthread
+	g++ $(CFLAGS) -o %(classname)s %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/%(classname)s/test%(classname)s.cpp -pthread 
 '''
 
 
@@ -66,7 +67,11 @@ creatorTemplate = '''
 #ifdef ZYNQ
     const char *instanceName = \"fpga%(portalNum)s\"; 
 #else
+#ifdef BSIM
+    const char *instanceName = \"fpga%(portalNum)s\";
+#else
     const char *instanceName = \"bluenoc_1\"; 
+#endif
 #endif
     %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indication);
     return instance;
@@ -152,12 +157,12 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, PortalReques
 	struct memrequest foo = {false,addr,0};
         //fprintf(stderr, "xxx %%08x\\n", addr);
 	if (send(instance->p.read.s2, &foo, sizeof(foo), 0) != sizeof(foo)) {
-	  fprintf(stderr, "(%%s) send error\\n", instance->instanceName);
+	  fprintf(stderr, "(%%s) send error\\n", instance->name);
 	  exit(1);
 	}
         unsigned int val;
 	if(recv(instance->p.read.s2, &val, sizeof(val), 0) != sizeof(val)){
-	  fprintf(stderr, "(%%s) recv error\\n", instance->instanceName);
+	  fprintf(stderr, "(%%s) recv error\\n", instance->name);
 	  exit(1);	  
 	}
         //fprintf(stderr, "%%08x\\n", val);

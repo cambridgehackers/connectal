@@ -8,8 +8,9 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "../../drivers/portal/portal.h"
-#include "../../drivers/alloc/portalalloc.h"
+#include "drivers/alloc/portalalloc.h"
+#include "drivers/portal/portal.h"
+
 
 struct channel{
   int s1;

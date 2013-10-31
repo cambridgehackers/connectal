@@ -80,13 +80,13 @@ endinterface
 interface AxiDMARead;
    method Action configChan(DmaChannelId channelId, Bit#(40) pa, Bit#(4) bsz);
    interface Vector#(NumDmaChannels, ReadChan) readChannels;
-   method DmaDbgRec dbg();
+   method ActionValue#(DmaDbgRec) dbg();
 endinterface
 
 interface AxiDMAWrite;
    method Action  configChan(DmaChannelId channelId, Bit#(40) pa, Bit#(4) bsz);   
    interface Vector#(NumDmaChannels, WriteChan) writeChannels;
-   method DmaDbgRec dbg();
+   method ActionValue#(DmaDbgRec) dbg();
 endinterface
 
 interface AxiDMAWriteInternal;
@@ -190,7 +190,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
 	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pa), burstLen:bsz};
       endmethod
       interface readChannels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
-      method DmaDbgRec dbg();
+      method ActionValue#(DmaDbgRec) dbg();
 	 return DmaDbgRec{x:truncate(addrReg), y:zeroExtend(burstReg), z:zeroExtend(pack(readVReg(reqOutstanding))), w:zeroExtend(pack(stateReg))};
       endmethod
    endinterface
@@ -263,7 +263,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
       interface writeChannels = zipWith3(mkWriteChan, map(toPut,writeBuffers), 
 					 map(mkPutWhenFalse, reqOutstanding),
 					 map(mkGetWhenTrue, writeRespRec));
-      method DmaDbgRec dbg();
+      method ActionValue#(DmaDbgRec) dbg();
 	 return DmaDbgRec{x:truncate(addrReg), y:zeroExtend(burstReg), z:zeroExtend(activeChan), w:zeroExtend(pack(stateReg))};
       endmethod
    endinterface
@@ -303,15 +303,17 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA);
 	 indication.configResp(channelId);
       endmethod
       method Action getReadStateDbg();
-	 indication.reportStateDbg(reader.read.dbg());
+	 let rv <- reader.read.dbg;
+	 indication.reportStateDbg(rv);
       endmethod
       method Action getWriteStateDbg();
-	 indication.reportStateDbg(writer.write.dbg());
+	 let rv <- writer.write.dbg;
+	 indication.reportStateDbg(rv);
       endmethod
       method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
 	 writer.sglist(off, addr, len);
 	 reader.sglist(off, addr, len);
-	 indication.sglistResp(off);
+	 indication.sglistResp(truncate(addr));
       endmethod
    endinterface
    interface AxiDMAWrite write = writer.write;

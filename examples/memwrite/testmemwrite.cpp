@@ -8,7 +8,7 @@
 
 #include "../../cpp/sock_fd.h"
 
-int numWords = 16 << 6;
+int numWords = 16 << 2;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 sem_t done_sem;

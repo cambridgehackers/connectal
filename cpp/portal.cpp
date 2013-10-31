@@ -190,7 +190,7 @@ int PortalRequest::sendMessage(PortalMessage *msg)
     unsigned int data = buf[i];
 #ifdef MMAP_HW
     unsigned long addr = ((unsigned long)req_fifo_base) + msg->channel * 256;
-    fprintf(stderr, "%08lx %08x\n", addr, data);
+    //fprintf(stderr, "%08lx %08x\n", addr, data);
     *((volatile unsigned int*)addr) = data;
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
@@ -333,10 +333,9 @@ void* portalExec(void* __x)
 	  unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	  unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
 	  unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
-	  unsigned int queue_priority = *(volatile int *)(instance->ind_reg_base+0x9);
 	  if (0)
-	    fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x prio=%08x\n",
-		    __LINE__, int_src, int_en, ind_count, queue_status, queue_priority);
+	    fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
+		    __LINE__, int_src, int_en, ind_count, queue_status);
 	}
 #endif      
       for (int i = 0; i < numFds; i++) {
@@ -357,23 +356,21 @@ void* portalExec(void* __x)
 	unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
 	unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
-	unsigned int queue_priority = *(volatile int *)(instance->ind_reg_base+0x9);
 	if(0)
-	  fprintf(stderr, "(%d) about to receive messages %08x %08x %08x %08x\n", i, int_src, int_en, queue_status, queue_priority);
+	  fprintf(stderr, "(%d) about to receive messages %08x %08x %08x\n", i, int_src, int_en, queue_status);
 
 	// handle all messasges from this portal instance
-	while (queue_priority) {
+	while (queue_status) {
 	  if(0)
-	    fprintf(stderr, "queue_status %d queue_priority %d\n", queue_status, queue_priority);
-	  instance->indication->handleMessage(queue_status, instance->ind_fifo_base);
+	    fprintf(stderr, "queue_status %d\n", queue_status);
+	  instance->indication->handleMessage(queue_status-1, instance->ind_fifo_base);
 	  int_src = *(volatile int *)(instance->ind_reg_base+0x0);
 	  int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	  ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
 	  queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
-	  queue_priority = *(volatile int *)(instance->ind_reg_base+0x9);
 	  if (0)
-	    fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x prio=%08x\n",
-		    __LINE__, int_src, int_en, ind_count, queue_status, queue_priority);
+	    fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
+		    __LINE__, int_src, int_en, ind_count, queue_status);
 	}
 	
 	// rc of 0 indicates timeout
@@ -387,7 +384,7 @@ void* portalExec(void* __x)
     // return only in error case
     fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
     return (void*)rc;
-#else
+#else // BSIM
     fprintf(stderr, "about to enter while(true)\n");
     while (true){
       sleep(0);
