@@ -42,9 +42,10 @@ interface V7PcieBridgeIfc#(numeric type lanes);
    (* prefix = "" *)
    //interface DDR3_Pins_V7      ddr3;
    interface Axi3Master#(32,32,4,12) portal0;
-   interface Axi3Slave#(40,64,8,12) slave; // to the axi slave engine
+   interface GetPut#(TLPData#(16)) slave; // to the axi slave engine
    interface Put#(TimestampedTlpData) trace;
    interface Reg#(Bit#(4)) numPortals;
+   interface ReadOnly#(PciId) pciId;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
@@ -202,6 +203,11 @@ module mkV7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface slave    = bridge.slave;
    interface trace    = bridge.trace;
    interface numPortals = bridge.numPortals;
+   interface ReadOnly pciId;
+      method PciId _read();
+         return my_id;
+      endmethod
+   endinterface
    interface clock250 = epClock250;
    interface reset250 = epReset250;
    interface clock125 = epClock125;

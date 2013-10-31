@@ -38,7 +38,7 @@ interface PcieToAxiBridge#(numeric type bpb);
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
    interface MsgPort#(bpb)         noc;  // to the NoC
    interface Axi3Master#(32,32,4,12) portal0; // to the portal control
-   interface Axi3Slave#(40,64,8,12) slave; // to the axi slave engine
+   interface GetPut#(TLPData#(16)) slave;
 
    // global network activation status
    (* always_ready *)
@@ -655,8 +655,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 endmodule: mkPortalEngine
 
 interface AxiSlaveEngine;
-    interface Put#(TLPData#(16))   tlp_in;
-    interface Get#(TLPData#(16))   tlp_out;
+    interface GetPut#(TLPData#(16))   tlps;
     interface Axi3Slave#(40,64,8,12)  slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
@@ -686,32 +685,33 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine);
        else
 	  return 0;
     endfunction
-    interface Put tlp_in;
-        method Action put(TLPData#(16) tlp);
-	   $display("AxiSlaveEngine.put tlp=%h", tlp);
-	   TLPMemoryIO3DWHeader h = unpack(tlp.data);
-	   hitReg <= tlp.hit;
-	   TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-	   Vector#(4, Bit#(32)) vec = unpack(0);
-	   if (!tlp.sof) begin
-	      for (Integer i = 0; i < 4; i = i+1) begin
-		 if (tlp.be[(i+1)*4-1:i*4] == 4'hf) begin
-		    vec[i] = tlp.data[(i+1)*32-1:i*32];
-		 end
-	      end
-	      let count = tlpWordCount(tlp);
-	      completionMimo.enq(count, vec);
-	      completionTagMimo.enq(count, replicate(lastTag));
-	   end
-	   else if (hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype == COMPLETION) begin
-	      vec[0] = hdr_3dw.data;
-	      completionMimo.enq(1, vec);
-	      lastTag <= hdr_3dw.tag;
-	      completionTagMimo.enq(1, replicate(hdr_3dw.tag));
-	    end
-	endmethod
-    endinterface: tlp_in
-    interface Get tlp_out = toGet(tlpOutFifo);
+    interface GetPut tlps = tuple2(
+              toGet(tlpOutFifo),
+	      (interface Put;
+		  method Action put(TLPData#(16) tlp);
+		     $display("AxiSlaveEngine.put tlp=%h", tlp);
+		     TLPMemoryIO3DWHeader h = unpack(tlp.data);
+		     hitReg <= tlp.hit;
+		     TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+		     Vector#(4, Bit#(32)) vec = unpack(0);
+		     if (!tlp.sof) begin
+			for (Integer i = 0; i < 4; i = i+1) begin
+			   if (tlp.be[(i+1)*4-1:i*4] == 4'hf) begin
+			      vec[i] = tlp.data[(i+1)*32-1:i*32];
+			   end
+			end
+			let count = tlpWordCount(tlp);
+			completionMimo.enq(count, vec);
+			completionTagMimo.enq(count, replicate(lastTag));
+		     end
+		     else if (hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype == COMPLETION) begin
+			vec[0] = hdr_3dw.data;
+			completionMimo.enq(1, vec);
+			lastTag <= hdr_3dw.tag;
+			completionTagMimo.enq(1, replicate(hdr_3dw.tag));
+		      end
+		  endmethod
+	      endinterface));
     interface Axi3Slave slave;
 	interface Axi3SlaveWrite write;
 	   method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
@@ -911,7 +911,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 			       , Bool      msix_mask_all_intr
 			       , Bool      msi_enabled
 			       , PortalEngine portalEngine
-			       , AxiSlaveEngine axiSlaveEngine
                               )
                               (ControlAndStatusRegs);
 
@@ -1053,9 +1052,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 792: return tlpDataBramWrAddrReg;
 	 793: return msi_enabled ? 1 : 0;
 	 794: return byteSwapReg ? 1 : 0;
-	 795: return axiSlaveEngine.tlpOutFifoNotEmpty ? 1 : 0;
+	 795: return 0;
 	 796: return extend(numPortalsReg);
-	 797: return extend(pack(use4dwReg));
 
          // 4-entry MSIx table
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
@@ -1128,7 +1126,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    792: tlpDataBramWrAddrReg <= dword;
 	    794: byteSwapReg <= (dword != 0) ? True : False;
 	    796: numPortalsReg <= truncate(dword);
-	    797: use4dwReg <= unpack(truncate(dword));
 
             // MSIx table entries
             4096: msix_entry[0].addr_lo  <= update_dword(msix_entry[0].addr_lo, be, (dword & 32'hfffffffc));
@@ -2643,7 +2640,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 
    // instantiate sub-components
    PortalEngine            portalEngine <- mkPortalEngine( my_id );
-   AxiSlaveEngine          axiSlaveEngine <- mkAxiSlaveEngine( my_id );
 
    TLPDispatcher        dispatcher <- mkTLPDispatcher();
    TLPArbiter           arbiter    <- mkTLPArbiter();
@@ -2655,7 +2651,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
                                                             , msix_mask_all_intr
                                                             , msi_enabled
 							    , portalEngine
-							    , axiSlaveEngine
                                                             );
    DMAEngine#(bpb)      dma        <- mkDMAEngine( my_id
                                                  , max_read_req_bytes
@@ -2669,7 +2664,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
       dispatcher.axiEnabled <= csr.axiEnabled;
       portalEngine.pipeliningEnabled <= csr.pipeliningEnabled;
       portalEngine.byteSwap <= csr.byteSwap;
-      axiSlaveEngine.use4dw <= csr.use4dw;
    endrule
 
    // connect the sub-components to each other
@@ -2682,12 +2676,10 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    mkConnection(dispatcher.tlp_out_to_config,    csr.csr_read_and_write_tlps);
    mkConnection(dispatcher.tlp_out_to_dma,       dma.dma_commands_and_completions);
    mkConnection(dispatcher.tlp_out_to_portal,    portalEngine.tlp_in);
-   mkConnection(dispatcher.tlp_out_to_axi,       axiSlaveEngine.tlp_in);
 
    mkConnection(csr.csr_read_completion_tlps,    arbiter.tlp_in_from_config);
    mkConnection(dma.dma_read_and_write_requests, arbiter.tlp_in_from_dma);
    mkConnection(portalEngine.tlp_out,            arbiter.tlp_in_from_portal);
-   mkConnection(axiSlaveEngine.tlp_out,          arbiter.tlp_in_from_axi);
 
    mkConnection(dma.bytes_received,              csr.incr_wr_xfer_count);
    mkConnection(dma.bytes_sent,                  csr.incr_rd_xfer_count);
@@ -2747,23 +2739,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
        end
    endrule: traceTlpToBus
 
-//    AxiSlaveTest            axiSlaveTest <- mkAxiSlaveTest();
-//    mkConnection(axiSlaveTest.master, axiSlaveEngine.slave);
-//    rule axiSlaveAddrStart;
-//        Bit#(40) addr = 0;
-//        addr[31:0] = csr.addrLowerWord;
-//        addr[39:32] = truncate(csr.addrUpperWord);
-//        axiSlaveTest.addr <= addr;
-//        if (csr.axiTestEnabled == 1) begin
-//           axiSlaveTest.start();
-// 	  csr.axiTestEnabled <= 32'h00f00dee;
-//        end
-//    endrule
-//    rule axiSlaveOutput;
-//        csr.testResult <= axiSlaveTest.result;
-//        csr.testState <= zeroExtend(pack(axiSlaveTest.state));
-//    endrule
-
    // route the interfaces to the sub-components
 
    //interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
@@ -2771,7 +2746,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 
    interface MsgPort noc = dma.noc;
    interface Axi3Master portal0 = portalEngine.portal;
-   interface Axi3Slave slave = axiSlaveEngine.slave;
+   interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
    interface Reg numPortals = csr.numPortals;
 
    method Bool is_activated = csr.is_activated();

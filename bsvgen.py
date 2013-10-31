@@ -89,6 +89,7 @@ import Xilinx            :: *;
 import XilinxPCIE        :: *;
 import Kintex7PcieBridge :: *;
 import Virtex7PcieBridge :: *;
+import PcieToAxiBridge   :: *;
 import %(Dut)sWrapper       :: *;
 
 (* synthesize, no_default_clock, no_default_reset *)
@@ -122,8 +123,8 @@ module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    rule requestInterrupt;
       Bool interrupt = (%(dut)sWrapper.interrupts[0] == 1);
-      if (interrupt && !interruptRequested)
-	 x7pcie.interrupt();
+//      if (interrupt && !interruptRequested)
+//	 x7pcie.interrupt();
       interruptRequested <= interrupt;
    endrule
 
@@ -138,7 +139,8 @@ endmodule: mk%(Dut)sPcieTop
 '''
 
 axiMasterConnectionTemplate='''
-   mkConnection(%(dut)sWrapper.%(busname)s, x7pcie.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   AxiSlaveEngine axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(%(dut)sWrapper.%(busname)s, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 '''
 
 
