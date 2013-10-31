@@ -20,8 +20,9 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import FIFO::*;
-import AxiClientServer::*;
+import FIFO            :: *;
+import AxiClientServer :: *;
+import PortalMemory    :: *;
 
 interface CoreIndication;
     method Action loadValue(Bit#(64) value);
@@ -31,6 +32,9 @@ interface CoreRequest;
     method Action load(Bit#(40) addr, Bit#(4) length);
     method Action store(Bit#(40) addr, Bit#(64) value);
 endinterface
+
+instance PortalMemory#(CoreRequest);
+endinstance
 
 interface LoadStoreIndication;
     interface CoreIndication coreIndication;

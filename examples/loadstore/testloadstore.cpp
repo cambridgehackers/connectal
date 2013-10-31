@@ -29,12 +29,38 @@ class TestCoreIndication : public CoreIndication
   }
 };
 
+class TestCoreRequest : public CoreRequest
+{
+public:
+
+  virtual void sglist(unsigned long off, unsigned long long addr, unsigned long len) {
+  }
+
+  static TestCoreRequest *createTestCoreRequest(CoreIndication *indication) {
+#ifdef ZYNQ
+    const char *instanceName = "fpga0"; 
+#else
+    const char *instanceName = "bluenoc_1"; 
+#endif
+    TestCoreRequest *instance = new TestCoreRequest(instanceName, indication);
+    return instance;
+  }
+
+protected:
+  TestCoreRequest(const char *instanceName, CoreIndication *indication)
+    : CoreRequest(instanceName, indication)
+  {
+  }
+
+  ~TestCoreRequest() {}
+};
+
 int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  device = CoreRequest::createCoreRequest(new TestCoreIndication);
+  device = TestCoreRequest::createTestCoreRequest(new TestCoreIndication);
 
   fprintf(stderr, "allocating memory...\n");
 
