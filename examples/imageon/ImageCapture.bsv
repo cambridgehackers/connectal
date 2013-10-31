@@ -152,7 +152,6 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     HdmiOut hdmiOut <- mkHdmiOut(clocked_by hdmi_clock, reset_by hdmi_reset);
 
     // hdmi clock domain
-    //mkConnection(xsviFromSensor.out, converter.in);
     rule xsviConnection;
         let xsvi <- xsviFromSensor.out.get();
         //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
@@ -221,13 +220,10 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
         control.set_decoder_code_fs(v);
     endmethod
     method Action set_decoder_code_fe(Bit#(10) v);
-        control.set_decoder_code_fe(v);
     endmethod
     method Action set_decoder_code_bl(Bit#(10) v);
-        control.set_decoder_code_bl(v);
     endmethod
     method Action set_decoder_code_img(Bit#(10) v);
-        control.set_decoder_code_img(v);
     endmethod
     method Action set_trigger_enable(Bit#(3) v);
         control.set_trigger_enable(v);

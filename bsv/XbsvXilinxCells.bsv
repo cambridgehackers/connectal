@@ -393,6 +393,83 @@ module mkXbsvMMCM#(MMCMParams params)(XbsvMMCME2);
    schedule locked CF (clkfbin, locked);
 endmodule
 
+import "BVI" ODDR =
+module vMkXbsvODDR#(ODDRParams#(a) params)(ODDR#(a))
+   provisos(Bits#(a, 1), DefaultValue#(a));
+
+   if (params.srtype != "SYNC" &&
+       params.srtype != "ASYNC")
+      error("There are only two modes of reset of the ODDR cell SYNC and ASYNC.  Please specify one of those.");
+
+   if (params.ddr_clk_edge != "OPPOSITE_EDGE" &&
+       params.ddr_clk_edge != "SAME_EDGE")
+      error("There are only two modes of operation of the ODDR cell OPPOSITE_EDGE and SAME_EDGE.  Please specify one of those.");
+
+   no_reset;
+   default_clock clk(C);
+   //default_reset rst(R);
+   port R = 0;
+
+   parameter DDR_CLK_EDGE = params.ddr_clk_edge;
+   parameter INIT         = pack(params.init);
+   parameter SRTYPE       = params.srtype;
+
+   method Q   q reset_by(no_reset);
+   method     s(S)     enable((*inhigh*)en0) reset_by(no_reset);
+   method     ce(CE)   enable((*inhigh*)en1) reset_by(no_reset);
+   method     d1(D1)   enable((*inhigh*)en2) reset_by(no_reset);
+   method     d2(D2)   enable((*inhigh*)en3) reset_by(no_reset);
+
+   schedule (q)      SB (d1, d2);
+   schedule (d1)     CF (d2);
+   schedule (d1)     C  (d1);
+   schedule (d2)     C  (d2);
+   schedule (q)      CF (q);
+   schedule (ce, s)  CF (ce, s);
+   schedule (ce, s)  SB (d1, d2, q);
+endmodule: vMkXbsvODDR
+
+module mkXbsvODDR#(ODDRParams#(a) params)(ODDR#(a))
+   provisos(Bits#(a, sa), DefaultValue#(a));
+   //Reset reset <- invertCurrentReset;
+   Vector#(sa, ODDRParams#(Bit#(1))) _params = ?;
+   for(Integer i = 0; i < valueof(sa); i = i + 1) begin
+      _params[i].ddr_clk_edge = params.ddr_clk_edge;
+      _params[i].init         = pack(params.init)[i];
+      _params[i].srtype       = params.srtype;
+   end
+   Vector#(sa, ODDR#(Bit#(1))) _oddr  = ?;
+   for(Integer i = 0; i < valueof(sa); i = i + 1) begin
+      _oddr[i] <- vMkXbsvODDR(_params[i]); //, reset_by reset);
+   end
+   function Bit#(1) getQ(ODDR#(Bit#(1)) ddr);
+      return ddr.q;
+   endfunction
+   method a q();
+      return unpack(pack(map(getQ, _oddr)));
+   endmethod
+   method Action s(Bool x);
+      for(Integer i = 0; i < valueof(sa); i = i + 1) begin
+         _oddr[i].s(x);
+      end
+   endmethod
+   method Action ce(Bool x);
+      for(Integer i = 0; i < valueof(sa); i = i + 1) begin
+         _oddr[i].ce(x);
+      end
+   endmethod
+   method Action d1(a x);
+      for(Integer i = 0; i < valueof(sa); i = i + 1) begin
+         _oddr[i].d1(pack(x)[i]);
+      end
+   endmethod
+   method Action d2(a x);
+      for(Integer i = 0; i < valueof(sa); i = i + 1) begin
+         _oddr[i].d2(pack(x)[i]);
+      end
+   endmethod
+endmodule: mkXbsvODDR
+
 
 ////////////////////////////////////////////////////////////
 

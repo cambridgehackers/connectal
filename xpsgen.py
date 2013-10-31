@@ -982,6 +982,7 @@ class ImageonVita:
     .pins_io_vita_trigger_0__read(io_vita_trigger[0]),
     .pins_io_vita_trigger_1__read(io_vita_trigger[1]),
     .pins_io_vita_trigger_2__read(io_vita_trigger[2]),
+    .pins_io_vita_clk_pll(io_vita_clk_pll),
     .CLK_pins_imageon_clk(imageon_clk),
     .CLK_pins_imageon_clk4x(imageon_clk4x),
     .pins_imageon_clkdiv_c(imageon_clkdiv_c),
@@ -996,22 +997,12 @@ class ImageonVita:
 '''
     def top_bus_assignments(self,busname,t,params):
         return '''
-     wire vita_clk_pll_o;
-     wire vita_clk_pll_t;
      IOBUF#(.DRIVE(12), .IOSTANDARD("LVCMOS25"), .SLEW("SLOW")) (
      .IO(fmc_imageon_iic_0_scl), .O(fmc_imageon_iic_0_scl_I),
      .I(fmc_imageon_iic_0_scl_O), .T(fmc_imageon_iic_0_scl_T)); 
      IOBUF#(.DRIVE(12), .IOSTANDARD("LVCMOS25"), .SLEW("SLOW")) (
      .IO(fmc_imageon_iic_0_sda), .O(fmc_imageon_iic_0_sda_I),
      .I(fmc_imageon_iic_0_sda_O), .T(fmc_imageon_iic_0_sda_T));
-
-     ODDR#(.DDR_CLK_EDGE("SAME_EDGE"), .INIT(1), .SRTYPE("ASYNC"))
-         (.Q(vita_clk_pll_o), .C(imageon_clk),
-         .CE(1), .D1(0), .D2(1), .R(0), .S(0));
-     ODDR#(.DDR_CLK_EDGE("SAME_EDGE"), .INIT(1), .SRTYPE("ASYNC"))
-         (.Q(vita_clk_pll_t), .C(imageon_clk),
-         .CE(1), .D1(imageon_host_oe), .D2(imageon_host_oe), .R(0), .S(0));
-    OBUFT(.O(io_vita_clk_pll), .I(vita_clk_pll_o), .T(vita_clk_pll_t)); 
 '''
     def bus_assignments(self,busname,t,params):
         return '''

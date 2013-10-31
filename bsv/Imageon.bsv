@@ -33,8 +33,6 @@ import GetPutWithClocks :: *;
 
 (* always_enabled *)
 interface ImageonPins;
-    //method Bit#(8) gpio_leds();
-    //method Bit#(4) xadc_gpio();
     method Bit#(1) io_vita_clk_pll();
     method Clock imageon_clk();
     method Clock imageon_clk4x();
@@ -43,21 +41,12 @@ interface ImageonPins;
     method Bit#(1) io_vita_reset_n();
     method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
     //method Bit#(2) io_vita_monitor();
-    //method Bit#(1) io_vita_spi_sclk();
-    //method Bit#(1) io_vita_spi_ssel_n();
-    //method Bit#(1) io_vita_spi_mosi();
-    //method Action io_vita_spi_miso(Bit#(1) v);
     method Action io_vita_clk_p(Bit#(1) v);
     method Action io_vita_clk_n(Bit#(1) v);
     method Action io_vita_sync_p(Bit#(1) v);
     method Action io_vita_sync_n(Bit#(1) v);
     method Action io_vita_data_p(Bit#(4) v);
     method Action io_vita_data_n(Bit#(4) v);
-    //method Bit#(1) hdmi_clk();
-    //method Bit#(1) hdmi_hsync();
-    //method Bit#(1) hdmi_vsync();
-    //method Bit#(1) hdmi_de();
-    //method Bit#(16) hdmi_data();
     method Clock fbbozo();
     method Action fbbozoin(Bit#(1) v);
 endinterface
@@ -117,16 +106,6 @@ typedef struct {
 interface ImageonSensorControl;
     method Bit#(32) get_debugind();
     method Action raw_data(Bit#(50) v);
-    method Bit#(3) vita_trigger();
-    method Bit#(1) vita_reset();
-    method Action align_BUSY_d(Bit#(5) v);
-    method Action alignED_d(Bit#(5) v);
-    method Action fifo_EMPTY_d(Bit#(5) v);
-    method Action sampleinFIRSTBIT(Bit#(5) v);
-    method Action sampleinLASTBIT(Bit#(5) v);
-    method Action sampleinOTHERBIT(Bit#(5) v);
-    method Bit#(1) delay_wren_r();
-    method Bit#(1) fifo_enable();
     interface Reset reset;
     interface Reset hdmiReset;
 endinterface
@@ -163,9 +142,6 @@ interface ImageonControl;
     method Action set_decoder_code_ls(Bit#(10) v);
     method Action set_decoder_code_le(Bit#(10) v);
     method Action set_decoder_code_fs(Bit#(10) v);
-    method Action set_decoder_code_fe(Bit#(10) v);
-    method Action set_decoder_code_bl(Bit#(10) v);
-    method Action set_decoder_code_img(Bit#(10) v);
     method Action set_trigger_enable(Bit#(3) v);
     method Action set_trigger_default_freq(Bit#(32) v);
     method Action set_trigger_cnt_trigger0high(Bit#(32) v);
@@ -414,12 +390,6 @@ module mkImageonVitaController#(Clock hdmi_clock, Reset hdmi_reset, Clock imageo
 	method Action set_decoder_code_fs(Bit#(10) v);
 	    decoder_code_fs_reg <= v;
 	endmethod
-	method Action set_decoder_code_fe(Bit#(10) v);
-	endmethod
-	method Action set_decoder_code_bl(Bit#(10) v);
-	endmethod
-	method Action set_decoder_code_img(Bit#(10) v);
-	endmethod
 	method Action set_trigger_enable(Bit#(3) v);
 	    trigger_enable_reg <= v;
 	endmethod
@@ -531,24 +501,12 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
         ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
     Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by fmc_imageon_video_clk1);
     XbsvMMCME2 mmcmadv <- mkXbsvMMCM(MMCMParams {
-        //use_same_family:False,
         bandwidth:"OPTIMIZED", compensation:"ZHOLD",
         clkfbout_mult_f:8.000, clkfbout_phase:0.0,
         clkin1_period:6.734007, clkin2_period:6.734007,
         clkout0_divide_f:8.000, clkout0_duty_cycle:0.5, clkout0_phase:0.0000,
         clkout1_divide:32, clkout1_duty_cycle:0.5, clkout1_phase:0.0000,
         divclk_divide:1, ref_jitter1:0.010, ref_jitter2:0.010
-        //clkfbout_use_fine_ps:"FALSE",
-        //clkout0_use_fine_ps: "FALSE", clkout1_use_fine_ps:"FALSE",
-        //clkout2_use_fine_ps: "FALSE", clkout3_use_fine_ps:"FALSE",
-        //clkout4_cascade:     "FALSE", clkout4_use_fine_ps:"FALSE",
-        //clkout5_use_fine_ps: "FALSE", clkout6_use_fine_ps:"FALSE",
-        //clock_hold:          "FALSE", startup_wait:       "FALSE", 
-        //clkout2_divide: 0, clkout2_duty_cycle: 0, clkout2_phase: 0,
-        //clkout3_divide: 0, clkout3_duty_cycle: 0, clkout3_phase: 0,
-        //clkout4_divide: 0, clkout4_duty_cycle: 0, clkout4_phase: 0,
-        //clkout5_divide: 0, clkout5_duty_cycle: 0, clkout5_phase: 0,
-        //clkout6_divide: 0, clkout6_duty_cycle: 0, clkout6_phase: 0
         }, clocked_by imageon_video_clk1_buf_wire);
     Clock imageon_clk4x_buf <- mkClockBUFG(clocked_by mmcmadv.clkout0);
     Clock imageon_clk_buf <- mkClockBUFG(clocked_by mmcmadv.clkout1);
@@ -563,10 +521,8 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
     vita_trigger_wire[1] <- mkOBUFT(one_wire, imageon_oe);
     vita_trigger_wire[0] <- mkOBUFT(trigger_wire, imageon_oe);
     ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(vita_reset_n_o, imageon_oe);
-    ODDR#(Bit#(1)) pll_out <- mkODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-//, 0, 1);
-    ODDR#(Bit#(1)) pll_t <- mkODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-//, imageon_oe, imageon_oe);
+    ODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
+    ODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
     Wire#(Bit#(1)) poutq <- mkDWire(0);
     Wire#(Bit#(1)) ptq <- mkDWire(0);
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
@@ -576,8 +532,10 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
         ptq <= pll_t.q();
         pll_out.d1(0);
         pll_out.d2(1);
+        pll_out.ce(True);
         pll_t.d1(imageon_oe);
         pll_t.d2(imageon_oe);
+        pll_t.ce(True);
     endrule
 
     rule trigger_rule;
@@ -783,36 +741,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
         method Bit#(32) get_debugind();
             return debugind_value;
 	endmethod
-        method Bit#(3) vita_trigger();
-	    return {1'b0, 1'b1, pack(tstate != TSend)};
-        endmethod
-        method Bit#(1) vita_reset();
-            return ~serdes.reset();
-        endmethod
-        method Action align_BUSY_d(Bit#(5) v);
-            host.serdesind.align_busy(pack(v != 0));
-        endmethod
-        method Action alignED_d(Bit#(5) v);
-            host.serdesind.alignedbit(pack(v == 5'b11111));
-        endmethod
-        method Action fifo_EMPTY_d(Bit#(5) v);
-              fifo_EMPTY_d_wire <= v;
-        endmethod
-        method Action sampleinFIRSTBIT(Bit#(5) v);
-              sampleinFIRSTBIT_wire <= v;
-        endmethod
-        method Action sampleinLASTBIT(Bit#(5) v);
-              sampleinLASTBIT_wire <= v;
-        endmethod
-        method Action sampleinOTHERBIT(Bit#(5) v);
-              sampleinOTHERBIT_wire <= v;
-        endmethod
-        method Bit#(1) delay_wren_r();
-              return delay_wren_c_reg;
-        endmethod
-        method Bit#(1) fifo_enable();
-              return fifo_wren_c_reg;
-        endmethod
 	interface Reset reset = defaultReset;
 	interface Reset hdmiReset = hdmi_reset;
     endinterface: in
@@ -823,8 +751,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
         return dataout_reg;
     endmethod
     interface ImageonPins pins;
-        //method Bit#(8) gpio_leds();
-        //method Bit#(4) xadc_gpio();
         method Bit#(1) io_vita_clk_pll();
             return vita_clk_pll;
         endmethod
@@ -853,10 +779,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
             return vita_trigger_wire;
         endmethod
         //method Bit#(2) io_vita_monitor();
-        //method Bit#(1) io_vita_spi_sclk();
-        //method Bit#(1) io_vita_spi_ssel_n();
-        //method Bit#(1) io_vita_spi_mosi();
-        //method Action io_vita_spi_miso(Bit#(1) v);
         method Action io_vita_clk_p(Bit#(1) v);
             vita_clk_p <= v;
         endmethod
@@ -877,11 +799,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock processing_system7_1
             for (Integer i = 0; i < 4; i = i + 1)
                 vita_data_n[i+1] <= v[i];
         endmethod
-        //method Bit#(1) hdmi_clk();
-        //method Bit#(1) hdmi_hsync();
-        //method Bit#(1) hdmi_vsync();
-        //method Bit#(1) hdmi_de();
-        //method Bit#(16) hdmi_data();
     endinterface
 endmodule
 
