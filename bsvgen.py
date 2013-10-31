@@ -123,8 +123,8 @@ module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    rule requestInterrupt;
       Bool interrupt = (%(dut)sWrapper.interrupts[0] == 1);
-//      if (interrupt && !interruptRequested)
-//	 x7pcie.interrupt();
+      if (interrupt && !interruptRequested)
+	 x7pcie.interrupt();
       interruptRequested <= interrupt;
    endrule
 

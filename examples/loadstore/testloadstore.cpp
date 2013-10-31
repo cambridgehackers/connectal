@@ -23,7 +23,7 @@ void dump(const char *prefix, char *buf, size_t len)
 
 class TestCoreIndication : public CoreIndication
 {
-  virtual void loadValue ( unsigned long value ) {
+  virtual void loadValue ( unsigned long long value ) {
     fprintf(stderr, "loadValue value=%lx, loading %lx\n", value, srcAlloc.entries[0].dma_address);
     device->load(srcAlloc.entries[0].dma_address, 1);
   }
