@@ -102,11 +102,11 @@ class Enum:
         return '{enum: %s}' % (self.elements)
 
 class StructMember:
-    def __init__(self, t, tag):
+    def __init__(self, t, name):
         self.type = t
-        self.tag = tag
+        self.name = name
     def __repr__(self):
-        return '{field: %s %s}' % (self.type, self.tag)
+        return '{field: %s %s}' % (self.type, self.name)
 
 class Struct:
     def __init__(self, elements):

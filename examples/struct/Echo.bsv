@@ -39,7 +39,7 @@ interface CoreIndication;
     method Action heard2(Bit#(16) a, Bit#(16) b);
     method Action heard3(S1 v);
     method Action heard4(S2 v);
-    method Action heard5(Bit#(32) _x, Bit#(64) v, Bit#(32) _y);
+    method Action heard5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
 endinterface
 
 interface CoreRequest;
@@ -47,7 +47,7 @@ interface CoreRequest;
     method Action say2(Bit#(16) a, Bit#(16) b);
     method Action say3(S1 v);
     method Action say4(S2 v);
-    method Action say5(Bit#(32)_x, Bit#(64) v, Bit#(32) _y);
+    method Action say5(Bit#(32)a, Bit#(64) b, Bit#(32) c);
 endinterface
 
 interface EchoRequest;
@@ -63,30 +63,27 @@ module mkEchoRequest#(EchoIndication indication)(EchoRequest);
    interface CoreRequest coreRequest; 
    method Action say1(Bit#(32) v);
       indication.coreIndication.heard1(v);
-      $display("(hw) say1 %h", v);
+      $display("(hw) say1 %d", v);
    endmethod
    
    method Action say2(Bit#(16) a, Bit#(16) b);
-      indication.coreIndication.heard2(a+1,b);
-      $display("(hw) say2 %h %h", a, b);
+      indication.coreIndication.heard2(a,b);
+      $display("(hw) say2 %d %d", a, b);
    endmethod
       
    method Action say3(S1 v);
-      S1 rv = S1{a:v.a, b:v.b+1};
-      indication.coreIndication.heard3(rv);
-      $display("(hw) say3 %h", v);
+      indication.coreIndication.heard3(v);
+      $display("(hw) say3 S1{a:%d, b:%d}", v.a, v.b);
    endmethod
    
    method Action say4(S2 v);
-      S2 rv = S2{a:v.a+2, b:v.b+1, c:v.c};
-      indication.coreIndication.heard4(rv);
-      $display("(hw) say4 %h", v);
+      indication.coreIndication.heard4(v);
+      $display("(hw) say4 S1{a:%d, b:%d, c:%d}", v.a, v.b, v.c);
    endmethod
       
-   method Action say5(Bit#(32) _x, Bit#(64) v, Bit#(32) _y);
-      //indication.coreIndication.heard5(_x, {v[63:4],4'h0}, _y);
-      indication.coreIndication.heard5(_x, 64'h5a5a5a5a5a5a5a5a, _y);
-      $display("(hw) say5 %h %h %h", _x, v, _y);
+   method Action say5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
+      indication.coreIndication.heard5(a, b, c);
+      $display("(hw) say5 %d %h %d", a, b, c);
    endmethod
    endinterface
 

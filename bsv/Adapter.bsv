@@ -65,7 +65,7 @@ module mkToBit32(ToBit32#(a))
    Reg#(Bit#(32))   count <- mkReg(0);
 
    method Action enq(a val);
-       fifo.enq({padding,pack(val)});
+      fifo.enq({padding,pack(val)});
    endmethod
 
    method Bit#(32) first() if (fifo.notEmpty);

@@ -1,6 +1,7 @@
 import syntax
 import AST
 import util
+import functools
 
 applicationmk_template='''
 APP_STL                 := stlport_static
@@ -121,6 +122,7 @@ handleMessageTemplate='''
 #ifdef MMAP_HW
 int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base)
 {    
+    // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
     unsigned int buf[1024];
     memset(buf, 0, 1024);
     PortalMessage *msg = 0x0;
@@ -144,6 +146,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile uns
 #else
 int %(namespace)s%(className)s::handleMessage(unsigned int channel, PortalRequest* instance)
 {    
+    // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
     unsigned int buf[1024];
     memset(buf, 0, 1024);
     PortalMessage *msg = 0x0;
@@ -196,10 +199,14 @@ public:
     } payload;
     size_t size(){return %(payloadSize)s;}
     void marshall(unsigned int *buff) {
-        memcpy(buff,&payload,sizeof(payload));
+        int i = 0;
+%(paramStructMarshall)s
     }
     void demarshall(unsigned int *buff){
-        memcpy(&payload,buff,sizeof(payload));
+        int i = 0;
+        // I will eventually get rid of this memset (mdk)
+        memset(&payload, 0, sizeof(payload));
+%(paramStructDemarshall)s
     }
     void indicate(void *ind){ %(responseCase)s }
 };
@@ -245,13 +252,62 @@ class MethodMixin:
         else:
             f.write(';\n')
     def emitCImplementation(self, f, className, namespace):
+
+        def collectMembers(scope, member):
+            tn = member.type.name
+            if tn == 'Bit':
+                return [('%s.%s'%(scope,member.name),member.type)]
+            else:
+                td = syntax.globalvars[tn]
+                ns = '%s.%s' % (scope,member.name)
+                rv = map(functools.partial(collectMembers, ns), td.tdtype.elements)
+                return sum(rv,[])
+
+        def accumWords(s, pro, atoms):
+            if len(atoms) == 0:
+                return [] if len(s) == 0 else [s]
+            w = sum([x[1]-x[2] for x in s])
+            a = atoms[0]
+            aw = a[1].bitWidth();
+            if (aw-pro+w == 32):
+                ns = s+[(a[0],aw-pro,0,a[1])]
+                return [ns]+accumWords([],0,atoms[1:])
+            if (aw-pro+w < 32):
+                ns = s+[(a[0],aw-pro,0,a[1])]
+                return accumWords(ns,0,atoms[1:])
+            else:
+                ns = s+[(a[0],aw-pro,aw-pro-(32-w),a[1])]
+                return [ns]+accumWords([],pro+(32-w), atoms)
+
         params = self.params
         paramDeclarations = self.formalParameters(params)
         paramStructDeclarations = [ '        %s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in params]
+        
+        argAtoms = sum(map(functools.partial(collectMembers, 'payload'), params), [])
+        argWords  = accumWords([], 0, argAtoms)
+
+        def marshall(w):
+            off = 0
+            word = []
+            for e in reversed(w):
+                word.append('((' + e[0] + '>>%s)'%(e[2]) + '<<%s)'%(off))
+                off = off+e[1]-e[2]
+            return '        buff[i++] = %s;\n' % (''.join(util.intersperse('|', word)))
+
+        def demarshall(w):
+            off = 0
+            word = []
+            for e in reversed(w):
+                word.append('        %s |= ((%s)(buff[i]>>%s))<<%s;\n'%(e[0],e[3].cName(),off,e[2]))
+                off = off+e[1]-e[2]
+            word.append('        i++;\n');
+            return ''.join(word)
+
+        paramStructMarshall = map(marshall, argWords)
+        paramStructDemarshall = map(demarshall, reversed(argWords))
+
         if not params:
             paramStructDeclarations = ['        int padding;\n']
-        # reversing order for bsv/c++ compatability
-        paramStructDeclarations.reverse()
         paramSetters = [ '    msg.payload.%s = %s;\n' % (p.name, p.name) for p in params]
         resultTypeName = self.resultTypeName()
         substs = {
@@ -261,6 +317,8 @@ class MethodMixin:
             'MethodName': capitalize(cName(self.name)),
             'paramDeclarations': ', '.join(paramDeclarations),
             'paramStructDeclarations': ''.join(paramStructDeclarations),
+            'paramStructMarshall': ''.join(paramStructMarshall),
+            'paramStructDemarshall': ''.join(paramStructDemarshall),
             'paramSetters': ''.join(paramSetters),
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
@@ -283,8 +341,7 @@ class MethodMixin:
 class StructMemberMixin:
     def emitCDeclaration(self, f, indentation=0, namespace=''):
         indent(f, indentation)
-        f.write('%s %s' % (self.type.cName(), self.tag))
-        #print 'emitCDeclaration: ', self.type, self.type.isBitField, self.type.cName(), self.tag
+        f.write('%s %s' % (self.type.cName(), self.name))
         if self.type.isBitField():
             f.write(' : %d' % self.type.bitWidth())
         f.write(';\n')
@@ -304,7 +361,7 @@ class StructMixin:
         if (indentation == 0):
             f.write('typedef ')
         f.write('struct %s {\n' % name)
-        for e in reversed(self.elements):
+        for e in self.elements:
             e.emitCDeclaration(f, indentation+4)
         indent(f, indentation)
         f.write('}')
@@ -499,8 +556,7 @@ class TypeMixin:
     def bitSpec(self):
         if self.isBitField():
             bw = self.bitWidth()
-            if bw != 32:
-                return ':%d' % bw
+            return ':%d' % bw
         return ''
 
 def cName(x):
