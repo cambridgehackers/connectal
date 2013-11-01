@@ -45,10 +45,6 @@ interface ImageonPins;
     method Action io_vita_sync_n(Bit#(1) v);
     method Action io_vita_data_p(Bit#(4) v);
     method Action io_vita_data_n(Bit#(4) v);
-    method Clock imageon_clk();
-    method Clock imageon_clk4x();
-    method Clock fbbozo();
-    method Action fbbozoin(Bit#(1) v);
     interface Clock imageon_clock_if;
 endinterface
 
@@ -179,17 +175,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
     Wire#(Bit#(1)) imageon_clkdiv_clkdiv <- mkBUFR5();
     for (Integer i = 0; i < 5; i = i + 1)
         ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
-    Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by fmc_imageon_video_clk1);
-    XbsvMMCME2 mmcmadv <- mkXbsvMMCM(MMCMParams {
-        bandwidth:"OPTIMIZED", compensation:"ZHOLD",
-        clkfbout_mult_f:8.000, clkfbout_phase:0.0,
-        clkin1_period:6.734007, clkin2_period:6.734007,
-        clkout0_divide_f:8.000, clkout0_duty_cycle:0.5, clkout0_phase:0.0000,
-        clkout1_divide:32, clkout1_duty_cycle:0.5, clkout1_phase:0.0000,
-        divclk_divide:1, ref_jitter1:0.010, ref_jitter2:0.010
-        }, clocked_by imageon_video_clk1_buf_wire);
-    Clock imageon_clk4x_buf <- mkClockBUFG(clocked_by mmcmadv.clkout0);
-    Clock imageon_clk_buf <- mkClockBUFG(clocked_by mmcmadv.clkout1);
     Reg#(Bit#(1)) vita_reset_n_o <- mkReg(0);
     Wire#(Bit#(1)) zero_wire <- mkDWire(0);
     Wire#(Bit#(1)) one_wire <- mkDWire(1);
@@ -510,18 +495,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
         endmethod
         method Bit#(1) io_vita_reset_n();
             return vita_reset_n_wire;
-        endmethod
-        method Clock imageon_clk();
-            return imageon_clk_buf;
-        endmethod
-        method Clock imageon_clk4x();
-            return imageon_clk4x_buf;
-        endmethod
-        method Clock fbbozo();
-            return mmcmadv.clkfbout;
-        endmethod
-        method Action fbbozoin(Bit#(1) v);
-            mmcmadv.clkfbin(v);
         endmethod
         method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
             return vita_trigger_wire;

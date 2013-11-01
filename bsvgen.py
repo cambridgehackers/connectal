@@ -28,7 +28,7 @@ import XbsvReadyQueue::*;
 
 '''
 
-exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonVSensor', 'ImageonSensorControl', 'ImageonSerdes', 'FmcImageonInterface', 'SpiPins', 'ImageonPins']
+exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonSensorControl', 'ImageonSerdes', 'FmcImageonInterface', 'SpiPins', 'ImageonPins']
 
 
 bsimTopTemplate='''
@@ -827,7 +827,6 @@ class InterfaceMixin:
                 if busType == 'ImageonVita':
                     clknames.append('fmc_imageon_video_clk1')
                     clknames.append('processing_system7_1_fclk_clk3')
-                    clknames.append('imageon_clock')
                     clknames.append('serdes_clock')
                     clknames.append('serdest_clock')
                 if busType == 'HDMI':

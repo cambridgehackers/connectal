@@ -886,7 +886,6 @@ class Hdmi:
 ''' % {'busname': busname}
     def top_bus_assignments(self,busname,t,params):
         return '''
-    assign hdmi_clk = imageon_clk4x;
 '''
     def bus_assignments(self,busname,t,params):
         return ''
@@ -978,12 +977,11 @@ class ImageonVita:
     .pins_io_vita_trigger_1__read(io_vita_trigger[1]),
     .pins_io_vita_trigger_2__read(io_vita_trigger[2]),
     .pins_io_vita_clk_pll(io_vita_clk_pll),
-    .CLK_pins_imageon_clk(imageon_clk),
-    .CLK_pins_imageon_clk4x(imageon_clk4x),
     .pins_imageon_clkdiv_c(imageon_clkdiv_c),
     .pins_imageon_clk_tmp(imageon_clk_tmp),
-    .pins_fbbozoin_v(fbbozo),
-    .CLK_pins_fbbozo(fbbozo),
+    .toppins_fbbozoin_v(fbbozo),
+    .CLK_toppins_fbbozo(fbbozo),
+    .CLK_hdmi_hdmi_clock_if(hdmi_clk),
     /* SPI port */
     .CLK_spi_invertedClock(io_vita_spi_sclk),
     .spi_sel_n(io_vita_spi_ssel_n),
@@ -1075,7 +1073,7 @@ class InterfaceMixin:
             'top_dut_axi_master_port_map': ''.join([top_dut_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_master_port_map': ''.join([top_ps7_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_slave_port_map': ''.join([top_ps7_axi_slave_port_map_template % subst for subst in slaveBusSubsts]),
-            'dut_hdmi_clock_arg': '      .CLK_imageon_clock(imageon_clk),\n       .CLK_fmc_imageon_video_clk1(fmc_imageon_video_clk1),\n       .CLK_processing_system7_1_fclk_clk3(processing_system7_1_fclk_clk3),\n       .CLK_serdes_clock(imageon_clkdiv_c),\n       .CLK_serdest_clock(imageon_clk_tmp),\n       .CLK_hdmi_clock(imageon_clk4x),' if len(buses['ImageonVita']) else '       .CLK_hdmi_clock(imageon_clk4x)' if len(buses['HDMI']) else '',
+            'dut_hdmi_clock_arg': '       .CLK_fmc_imageon_video_clk1(fmc_imageon_video_clk1),\n       .CLK_processing_system7_1_fclk_clk3(processing_system7_1_fclk_clk3),\n       .CLK_serdes_clock(imageon_clkdiv_c),\n       .CLK_serdest_clock(imageon_clk_tmp),' if len(buses['ImageonVita']) else '       .CLK_hdmi_clock(imageon_clk4x)' if len(buses['HDMI']) else '',
             'top_bus_ports':
                 ''.join([''.join([busHandlers[busType].top_bus_ports(busname,t,params) for (busname,t,params) in buses[busType]])
                          for busType in busHandlers]),

@@ -90,20 +90,27 @@ interface ImageCaptureRequest;
    interface SpiPins spi;
    interface DMARequest dmaRequest;
    interface ImageonPins pins;
+   interface ImageonSensorControl toppins;
 endinterface
  
 module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
-    Clock imageon_clock, Clock serdes_clock, Clock serdest_clock, Clock hdmi_clock, 
+    Clock serdes_clock, Clock serdest_clock,
     ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
+
+    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by processing_system7_1_fclk_clk3);
+    Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by fmc_imageon_video_clk1);
+    MMCMHACK mmcmhack <- mkMMCMHACK(clocked_by imageon_video_clk1_buf_wire);
+    Clock hdmi_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout0);
+    Clock imageon_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout1);
+
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset serdes_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
     Reset serdest_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
-    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by processing_system7_1_fclk_clk3);
     ImageonSensor fromSensor <- mkImageonSensor(fmc_imageon_video_clk1,
         defaultClock, defaultReset, serdes_clock, serdes_reset, serdest_clock, serdest_reset,
         clocked_by imageon_clock, reset_by imageon_reset);
@@ -226,7 +233,14 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     method Action put_spi_request(Bit#(32) v);
         spiController.request.put(truncate(v));
     endmethod
-
+    endinterface
+    interface ImageonSensorControl toppins;
+        method Clock fbbozo();
+            return mmcmhack.mmcmadv.clkfbout;
+        endmethod
+        method Action fbbozoin(Bit#(1) v);
+            mmcmhack.mmcmadv.clkfbin(v);
+        endmethod
     endinterface
    interface BlueScopeRequest bsRequest = bsi.requestIfc;
    interface ImageonVita sensor = fromSensor.in;
