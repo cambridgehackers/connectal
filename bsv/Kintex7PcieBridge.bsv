@@ -62,17 +62,17 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    if (valueOf(lanes) != 8)
       errorM("Only 8-lane PCIe is supported on K7.");
 
-   Clock sys_clk <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
+   Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
 
    ClockGenerator7Params clk_params = defaultValue();
    clk_params.clkin1_period     = 5.000;       // 200 MHz reference
    clk_params.clkin_buffer      = False;       // necessary buffer is instanced above
    clk_params.reset_stages      = 0;           // no sync on reset so input clock has pll as only load
    clk_params.clkfbout_mult_f   = 5.000;       // 1000 MHz VCO
-   clk_params.clkout0_divide_f  = `SCEMI_CLOCK_PERIOD;
+   clk_params.clkout0_divide_f  = 10;          // unused 100mhz output
    clk_params.clkout1_divide    = 5;           // ddr3 reference clock (200 MHz)
 
-   ClockGenerator7 clk_gen <- mkClockGenerator7(clk_params, clocked_by sys_clk, reset_by pci_sys_reset);
+   ClockGenerator7 clk_gen <- mkClockGenerator7(clk_params, clocked_by sys_clk_200mhz, reset_by pci_sys_reset);
 
    Clock clk = clk_gen.clkout0;
    Reset rst_n <- mkAsyncReset( 1, pci_sys_reset, clk );
@@ -89,12 +89,12 @@ module mkK7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    //Reset ddr3rstn = ddr3_ctrl.user.reset_n;
    
    // Buffer clocks and reset before they are used
-   Clock pci_sys_clk_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
+   Clock pci_clk_100mhz_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
 
    // Instantiate the PCIE endpoint
    XbsvXilinxKintex7Pcie::PCIExpressK7#(lanes) _ep
        <- XbsvXilinxKintex7Pcie::mkPCIExpressEndpointK7( defaultValue
-						      , clocked_by pci_sys_clk_buf
+						      , clocked_by pci_clk_100mhz_buf
 						      , reset_by pci_sys_reset
 						      );
    mkTieOff(_ep.cfg);
