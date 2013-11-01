@@ -353,7 +353,7 @@ if __name__=='__main__':
                 namespace.contentid = '''64'h0000_0000_0000_0000'''
                 namespace.contentid = '''64'h%s''' % ''.join(map((lambda c: '%02x' % ord(c)), namespace.interface[0:8]))
             print 'contentid', namespace.contentid
-            topRequestIfc.writePcieTop(pcie_name, namespace.contentid)
+            topRequestIfc.writePcieTop(pcie_name, namespace.board, namespace.contentid)
             topRequestIfc.writeProjectBld(project_dir, srcdirs)
         else:
             topRequestIfc.writeTopVerilog(topverilogname)

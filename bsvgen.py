@@ -96,7 +96,7 @@ import %(Dut)sWrapper       :: *;
 module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
                           Clock sys_clk_p,     Clock sys_clk_n,
                           Reset pci_sys_reset_n)
-                         (KC705_FPGA);
+                         (%(fpga_interface)s);
 
    let contentId = %(contentid)s;
 
@@ -788,17 +788,22 @@ class InterfaceMixin:
 		}
         f.write(bsimTopTemplate % substs);
 
-    def emitPcieTop(self,f,contentid):
+    def emitPcieTop(self,f,boardname,contentid):
         axiMasterConnections = [axiMasterConnectionTemplate % {'dut': util.decapitalize(self.base),
                                                                'busname': busname,
                                                                'buswidth': params[1].numeric(),
                                                                'buswidthbytes': params[1].numeric()/8}
                                 for (busname,t,params) in self.collectInterfaceNames('Axi3Client')]
+        if boardname == 'kc705':
+            fpga_interface = 'KC705_FPGA'
+        else:
+            fpga_interface = 'VC707_FPGA'
         substs = {
 		'Dut' : self.base ,
 		'dut' : util.decapitalize(self.base),
                 'axiMasterConnections': '\n'.join(axiMasterConnections),
-                'contentid' : contentid
+                'contentid' : contentid,
+                'fpga_interface': fpga_interface
 		}
         f.write(pcieTopTemplate % substs);
 
@@ -883,11 +888,11 @@ class InterfaceMixin:
 	self.emitBsimTop(f);
 	f.close()
 
-    def writePcieTop(self,fname,contentid):
+    def writePcieTop(self,fname,boardname,contentid):
         assert(self.top and (not self.isIndication))
 	f = util.createDirAndOpen(fname, 'w')
         print 'Writing bsv file ', fname
-	self.emitPcieTop(f,contentid);
+	self.emitPcieTop(f,boardname,contentid);
 	f.close()
 
     def writeProjectBld(self,projectdirname,srcdirs=[]):
