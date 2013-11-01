@@ -48,6 +48,29 @@ module mkIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ReadOnly#(one_bit)) provis
 
 endmodule: mkIBUFDS
 
+import "BVI" IBUFDS =
+module vMkClockIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ClockGenIfc) provisos(Bits#(one_bit,1));
+   default_clock clk();
+   default_reset rstn();
+   parameter CAPACITANCE = "DONT_CARE";
+   parameter DIFF_TERM = 1;
+   parameter IBUF_DELAY_VALUE = 0;
+   parameter IFD_DELAY_VALUE = "AUTO";
+   parameter IOSTANDARD = "DEFAULT";
+   port I = i;
+   port IB = ib;
+   //method O    _read;
+   output_clock gen_clk(O);
+   path(I, O);
+   path(IB, O);
+   //schedule _read  CF _read;
+endmodule: vMkClockIBUFDS
+
+module mkClockIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(Clock) provisos(Bits#(one_bit,1));
+   let _m <- vMkClockIBUFDS(i, ib);
+   return _m.gen_clk;
+endmodule: mkClockIBUFDS
+
 import "BVI" OBUFT =
 module mkOBUFT#(Wire#(one_bit) i, Wire#(one_bit) t)(ReadOnly#(one_bit)) provisos(Bits#(one_bit,1));
    default_clock clk();
@@ -266,85 +289,33 @@ module mkISERDESE2#(ISERDESE2_Config cfg, Clock clk, Clock clkb)(IserdesE2);
    schedule (d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel)
       CF (d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel);   
 endmodule
+
 import "BVI" BUFR =
-module vMkBUFR5(Wire#(one_bit))
-   provisos(Bits#(one_bit, 1));
-  
-   default_clock clk();
+module mkBUFR5#(Clock clk)(ClockGenIfc);
+   default_clock clkunused();
    default_reset rstn();
   
    parameter BUFR_DIVIDE = "5";
   
-   method       _write(I) enable((*inhigh*)en);
-   method O     _read;
-
+   input_clock clk(I) = clk;
+   output_clock gen_clk(O);
    port   CE = True;
    port   CLR = False;
-
    path(I, O);
-  
-   schedule _write SB _read;
-   schedule _write C  _write;
-   schedule _read  CF _read;
-endmodule
-
-module mkBUFR5(Wire#(a))
-   provisos(Bits#(a, sa));
-
-   Vector#(sa, Wire#(Bit#(1))) _bufr <- replicateM(vMkBUFR5);
-  
-   method a _read;
-      return unpack(pack(readVReg(_bufr)));
-   endmethod
-  
-   method Action _write(a x);
-      writeVReg(_bufr, unpack(pack(x)));
-   endmethod
 endmodule
 
 import "BVI" BUFIO =
-module vMkBUFIO(Wire#(one_bit))
-   provisos(Bits#(one_bit, 1));
-  
-   default_clock clk();
+module mkBUFIO#(Clock clk)(ClockGenIfc);
+   default_clock clkunused();
    default_reset rstn();
-  
-   method       _write(I) enable((*inhigh*)en);
-   method O     _read;
-
+   input_clock clk(I) = clk;
+   output_clock gen_clk(O);
    path(I, O);
-  
-   schedule _write SB _read;
-   schedule _write C  _write;
-   schedule _read  CF _read;
-endmodule
-
-module mkBUFIO(Wire#(a))
-   provisos(Bits#(a, sa));
-
-   Vector#(sa, Wire#(Bit#(1))) _bufr <- replicateM(vMkBUFIO);
-  
-   method a _read;
-      return unpack(pack(readVReg(_bufr)));
-   endmethod
-  
-   method Action _write(a x);
-      writeVReg(_bufr, unpack(pack(x)));
-   endmethod
 endmodule
 
 interface XbsvMMCME2;
    interface Clock     clkout0;
-   //interface Clock     clkout0_n;
    interface Clock     clkout1;
-   //interface Clock     clkout1_n;
-   //interface Clock     clkout2;
-   //interface Clock     clkout2_n;
-   //interface Clock     clkout3;
-   //interface Clock     clkout3_n;
-   //interface Clock     clkout4;
-   //interface Clock     clkout5;
-   //interface Clock     clkout6;
    interface Clock     clkfbout;
    (* always_ready, always_enabled *)
    method    Bool      locked;

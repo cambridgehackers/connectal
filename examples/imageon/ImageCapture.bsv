@@ -88,7 +88,6 @@ interface ImageCaptureRequest;
 endinterface
  
 module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
-    Clock serdes_clock, Clock serdest_clock,
     ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
 
     Clock defaultClock <- exposeCurrentClock();
@@ -101,13 +100,10 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     Clock imageon_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout1);
 
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
-    Reset serdes_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
-    Reset serdest_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
     ImageonSensor fromSensor <- mkImageonSensor(fmc_imageon_video_clk1,
-        defaultClock, defaultReset, serdes_clock, serdes_reset, serdest_clock, serdest_reset,
-        clocked_by imageon_clock, reset_by imageon_reset);
+        defaultClock, defaultReset, clocked_by imageon_clock, reset_by imageon_reset);
     ImageonVideo xsviFromSensor <- mkImageonVideo(imageon_clock, imageon_reset, defaultClock, defaultReset,
         fromSensor, clocked_by hdmi_clock, reset_by hdmi_reset);
 

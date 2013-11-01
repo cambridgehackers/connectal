@@ -34,8 +34,6 @@ import GetPutWithClocks :: *;
 (* always_enabled *)
 interface ImageonVita;
     method Bit#(1) io_vita_clk_pll();
-    method Bit#(1) imageon_clk_tmp();
-    method Bit#(1) imageon_clkdiv_c();
     method Bit#(1) io_vita_reset_n();
     method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
     //method Bit#(2) io_vita_monitor();
@@ -106,9 +104,7 @@ endinterface
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
-module mkImageonSensor#(Clock fmc_imageon_video_clk1,
-     Clock axi_clock, Reset axi_reset,
-     Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset)(ImageonSensor);
+module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock axi_clock, Reset axi_reset)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -116,15 +112,18 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
     Vector#(5, Wire#(Bit#(1))) vita_data_n <- replicateM(mkDWire(0));
     Wire#(Bit#(1)) vita_clk_p <- mkDWire(0);
     Wire#(Bit#(1)) vita_clk_n <- mkDWire(0);
-    ReadOnly#(Bit#(1)) ibufds_clk <- mkIBUFDS(vita_clk_p, vita_clk_n);
-    Wire#(Bit#(1)) imageon_clkdiv_clk_tmp <- mkBUFIO();
-    Wire#(Bit#(1)) imageon_clkdiv_clkdiv <- mkBUFR5();
+    Clock ibufds_clk <- mkClockIBUFDS(vita_clk_p, vita_clk_n);
+    ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
+    ClockGenIfc serdes_clk <- mkBUFR5(ibufds_clk);
+    Clock serdest_clock = serdest_clk.gen_clk;
+    Clock serdes_clock = serdes_clk.gen_clk;
     ODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
     ODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
     Wire#(Bit#(1)) poutq <- mkDWire(0);
     Wire#(Bit#(1)) ptq <- mkDWire(0);
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
-
+    Reset serdes_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
+    Reset serdest_reset <- mkAsyncReset(2, defaultReset, serdes_clock);
     Reg#(Bit#(1)) imageon_oe <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(10)) decoder_code_ls_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(10)) decoder_code_le_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
@@ -218,11 +217,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
         vita_reset_n_o <= ~serdes_reset_reg;
     endrule
 
-    rule bozo;
-        imageon_clkdiv_clkdiv <= ibufds_clk;
-        imageon_clkdiv_clk_tmp <= ibufds_clk;
-    endrule
-
     rule sendup_imageon_clock;
        Bit#(5) alignbusyw = 0;
        Bit#(5) alignedw = 0;
@@ -265,13 +259,13 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
     end
     endrule
     
-    rule serdes_reset if (serdes_reset_reg == 1);
+    rule serdes_reset_rule if (serdes_reset_reg == 1);
         new_raw_empty_wire <= 0;
         delay_wren_r_reg <= 0;
         delay_wren_r2_reg <= 0;
     endrule
 
-    rule serdes_resetc if (serdes_reset_null == 1);
+    rule serdes_resetc_rule if (serdes_reset_null == 1);
         delay_wren_c_reg <= 0;
         fifo_wren_r2_reg <= 0;
         fifo_wren_c_reg <= 0;
@@ -464,12 +458,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
     interface ImageonVita pins;
         method Bit#(1) io_vita_clk_pll();
             return vita_clk_pll;
-        endmethod
-        method Bit#(1) imageon_clkdiv_c();
-            return imageon_clkdiv_clkdiv;
-        endmethod
-        method Bit#(1) imageon_clk_tmp();
-            return imageon_clkdiv_clk_tmp;
         endmethod
         method Bit#(1) io_vita_reset_n();
             return vita_reset_n_wire;
