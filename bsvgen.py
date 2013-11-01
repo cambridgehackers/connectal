@@ -28,7 +28,7 @@ import XbsvReadyQueue::*;
 
 '''
 
-exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonSensorControl', 'ImageonSerdes', 'FmcImageonInterface', 'SpiPins', 'ImageonPins']
+exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonTopPins', 'ImageonSerdes', 'FmcImageonInterface', 'SpiPins', 'ImageonPins']
 
 
 bsimTopTemplate='''

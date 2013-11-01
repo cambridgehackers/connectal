@@ -43,6 +43,7 @@ interface HDMI;
     method Bit#(1) hdmi_de;
     method Bit#(16) hdmi_data;
     interface Clock hdmi_clock_if;
+    interface Reset hdmi_reset_if;
 endinterface
 
 interface HdmiOut;
@@ -127,6 +128,7 @@ module mkHdmiGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
                                    SyncPulseIfc vsyncPulse,
                                    SyncPulseIfc hsyncPulse)(HdmiGenerator);
     Clock defaultClock <- exposeCurrentClock();
+    Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
     Reg#(Bit#(12)) hsyncWidth <- mkReg(44);
     Reg#(Bit#(12)) dePixelCountMinimum <- mkReg(192);
@@ -387,6 +389,7 @@ module mkHdmiGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
             return yuv422StageReg.data;
         endmethod
         interface hdmi_clock_if = defaultClock;
+        interface hdmi_reset_if = defaultReset;
     endinterface
 
 endmodule
@@ -394,6 +397,7 @@ endmodule
 module mkHdmiOut(HdmiOut);
 
     Clock defaultClock <- exposeCurrentClock();
+    Reset defaultReset <- exposeCurrentReset();
     Wire#(Rgb888Stage) rgb888StageWire <- mkDWire(unpack(0));
     Reg#(Yuv444IntermediatesStage) yuv444IntermediatesStageReg <- mkReg(Yuv444IntermediatesStage { vsync: 0, hsync: 0, de: False, data: unpack(0) });
     Reg#(Yuv444Stage) yuv444StageReg <- mkReg(Yuv444Stage { vsync: 0, hsync: 0, de: False, data: unpack(0) });
@@ -460,5 +464,6 @@ module mkHdmiOut(HdmiOut);
             return yuv422StageReg.data;
         endmethod
         interface hdmi_clock_if = defaultClock;
+        interface hdmi_reset_if = defaultReset;
     endinterface
 endmodule

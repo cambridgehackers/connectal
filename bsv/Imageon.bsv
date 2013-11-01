@@ -32,7 +32,7 @@ import XbsvXilinxCells::*;
 import GetPutWithClocks :: *;
 
 (* always_enabled *)
-interface ImageonPins;
+interface ImageonVita;
     method Bit#(1) io_vita_clk_pll();
     method Bit#(1) imageon_clk_tmp();
     method Bit#(1) imageon_clkdiv_c();
@@ -46,6 +46,7 @@ interface ImageonPins;
     method Action io_vita_data_p(Bit#(4) v);
     method Action io_vita_data_n(Bit#(4) v);
     interface Clock imageon_clock_if;
+    interface Reset imageon_reset_if;
 endinterface
 
 typedef struct {
@@ -56,7 +57,7 @@ typedef struct {
     Bit#(10) video_data;
 } XsviData deriving (Bits);
 
-interface ImageonVita;
+interface ImageonSensorControl;
     method Bit#(32) get_debugind();
     method Action raw_data(Bit#(50) v);
     method Action set_host_oe(Bit#(1) v);
@@ -64,12 +65,7 @@ interface ImageonVita;
     method Action set_decoder_code_ls(Bit#(10) v);
     method Action set_decoder_code_le(Bit#(10) v);
     method Action set_decoder_code_fs(Bit#(10) v);
-    method Action set_decoder_enable(Bit#(1) v);
     method Action set_iserdes_control(Bit#(32) v);
-    method Action set_serdes_reset(Bit#(1) v);
-    method Action set_serdes_auto_align(Bit#(1) v);
-    method Action set_serdes_align_start(Bit#(1) v);
-    method Action set_serdes_fifo_enable(Bit#(1) v);
     method Action set_serdes_manual_tap(Bit#(10) v);
     method Action set_serdes_training(Bit#(10) v);
     method Action set_syncgen_delay(Bit#(16) v);
@@ -90,19 +86,19 @@ interface ImageonXsviControl;
     method Action set_syncgen_vbporch(Bit#(16) v);
 endinterface
 
-interface ImageonXsviFromSensor;
+interface ImageonVideo;
     interface Get#(XsviData) out;
     interface ImageonXsviControl control;
 endinterface
 
 interface ImageonSensor;
-    interface ImageonVita in;
-    interface ImageonPins pins;
+    interface ImageonSensorControl control;
+    interface ImageonVita pins;
     method Bit#(1) get_framesync();
     method Bit#(40) get_data();
 endinterface
 
-interface ImageonSensorControl;
+interface ImageonTopPins;
     method Clock fbbozo();
     method Action fbbozoin(Bit#(1) v);
 endinterface
@@ -144,7 +140,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     Reg#(Bit#(32)) diff <- mkReg(0);
     Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0);
-    Reg#(Bit#(32)) debugind_value <- mkReg('hfd);
+    Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(10)) sync_delay_reg <- mkReg(0);
     Wire#(Bit#(50)) raw_data_wire <- mkDWire(0);
     Reg#(Bit#(50)) raw_data_reg <- mkReg(0);
@@ -408,7 +404,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
         sframe_new_wire <= pack(raw_data_delay_reg[9:0] == decoder_code_fs_reg && raw_data_reg[9:0] == 10'h0);
     endrule
 
-    interface ImageonVita in;
+    interface ImageonSensorControl control;
 	method Bit#(32) get_iserdes_control();
 	    let v = 0;
 	    v[8] = serdes_clk_ready_reg;
@@ -433,21 +429,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
 	endmethod
 	method Action set_decoder_code_fs(Bit#(10) v);
 	    decoder_code_fs_reg <= v;
-	endmethod
-	method Action set_decoder_enable(Bit#(1) v);
-	    decoder_enable_reg <= v;
-	endmethod
-	method Action set_serdes_reset(Bit#(1) v);
-	    serdes_reset_reg <= v;
-	endmethod
-	method Action set_serdes_auto_align(Bit#(1) v);
-	    serdes_auto_align_reg <= v;
-	endmethod
-	method Action set_serdes_align_start(Bit#(1) v);
-	    serdes_align_start_reg <= v;
-	endmethod
-	method Action set_serdes_fifo_enable(Bit#(1) v);
-	    serdes_fifo_enable_reg <= v;
 	endmethod
 	method Action set_serdes_manual_tap(Bit#(10) v);
 	    serdes_manual_tap_reg <= v;
@@ -476,14 +457,14 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
 	method Action set_trigger_cnt_trigger0low(Bit#(32) v);
 	    trigger_cnt_trigger0low_reg <= v;
 	endmethod
-    endinterface: in
+    endinterface: control
     method Bit#(1) get_framesync();
         return fs2;
     endmethod
     method Bit#(40) get_data();
         return dataout_reg;
     endmethod
-    interface ImageonPins pins;
+    interface ImageonVita pins;
         method Bit#(1) io_vita_clk_pll();
             return vita_clk_pll;
         endmethod
@@ -521,10 +502,11 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
                 vita_data_n[i+1] <= v[i];
         endmethod
         interface imageon_clock_if = defaultClock;
+        interface imageon_reset_if = defaultReset;
     endinterface
 endmodule
 
-module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock, Reset axi_reset, ImageonSensor sensor)(ImageonXsviFromSensor);
+module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock, Reset axi_reset, ImageonSensor sensor)(ImageonVideo);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
