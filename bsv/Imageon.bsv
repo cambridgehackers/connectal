@@ -34,8 +34,6 @@ import GetPutWithClocks :: *;
 (* always_enabled *)
 interface ImageonPins;
     method Bit#(1) io_vita_clk_pll();
-    method Clock imageon_clk();
-    method Clock imageon_clk4x();
     method Bit#(1) imageon_clk_tmp();
     method Bit#(1) imageon_clkdiv_c();
     method Bit#(1) io_vita_reset_n();
@@ -47,8 +45,11 @@ interface ImageonPins;
     method Action io_vita_sync_n(Bit#(1) v);
     method Action io_vita_data_p(Bit#(4) v);
     method Action io_vita_data_n(Bit#(4) v);
+    method Clock imageon_clk();
+    method Clock imageon_clk4x();
     method Clock fbbozo();
     method Action fbbozoin(Bit#(1) v);
+    interface Clock imageon_clock_if;
 endinterface
 
 typedef struct {
@@ -80,8 +81,6 @@ interface ImageonVita;
     method Action set_trigger_cnt_trigger0high(Bit#(32) v);
     method Action set_trigger_cnt_trigger0low(Bit#(32) v);
     method Bit#(32) get_iserdes_control();
-    //interface Reset reset;
-    //interface Reset hdmiReset;
 endinterface
 
 interface ImageonXsviControl;
@@ -105,6 +104,11 @@ interface ImageonSensor;
     interface ImageonPins pins;
     method Bit#(1) get_framesync();
     method Bit#(40) get_data();
+endinterface
+
+interface ImageonSensorControl;
+    method Clock fbbozo();
+    method Action fbbozoin(Bit#(1) v);
 endinterface
 
 typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
@@ -487,8 +491,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
 	method Action set_trigger_cnt_trigger0low(Bit#(32) v);
 	    trigger_cnt_trigger0low_reg <= v;
 	endmethod
-	//interface Reset reset = defaultReset;
-	//interface Reset hdmiReset = hdmi_reset;
     endinterface: in
     method Bit#(1) get_framesync();
         return fs2;
@@ -500,12 +502,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
         method Bit#(1) io_vita_clk_pll();
             return vita_clk_pll;
         endmethod
-        method Clock imageon_clk();
-            return imageon_clk_buf;
-        endmethod
-        method Clock imageon_clk4x();
-            return imageon_clk4x_buf;
-        endmethod
         method Bit#(1) imageon_clkdiv_c();
             return imageon_clkdiv_clkdiv;
         endmethod
@@ -514,6 +510,12 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
         endmethod
         method Bit#(1) io_vita_reset_n();
             return vita_reset_n_wire;
+        endmethod
+        method Clock imageon_clk();
+            return imageon_clk_buf;
+        endmethod
+        method Clock imageon_clk4x();
+            return imageon_clk4x_buf;
         endmethod
         method Clock fbbozo();
             return mmcmadv.clkfbout;
@@ -545,6 +547,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
             for (Integer i = 0; i < 4; i = i + 1)
                 vita_data_n[i+1] <= v[i];
         endmethod
+        interface imageon_clock_if = defaultClock;
     endinterface
 endmodule
 
@@ -689,4 +692,18 @@ module mkImageonXsviFromSensor#(Clock imageon_clock, Reset imageon_reset, Clock 
 	    };
 	endmethod
     endinterface: out
+endmodule
+interface MMCMHACK;
+    interface XbsvMMCME2 mmcmadv;
+endinterface
+module mkMMCMHACK(MMCMHACK);
+    XbsvMMCME2 mm <- mkXbsvMMCM(MMCMParams {
+        bandwidth:"OPTIMIZED", compensation:"ZHOLD",
+        clkfbout_mult_f:8.000, clkfbout_phase:0.0,
+        clkin1_period:6.734007, clkin2_period:6.734007,
+        clkout0_divide_f:8.000, clkout0_duty_cycle:0.5, clkout0_phase:0.0000,
+        clkout1_divide:32, clkout1_duty_cycle:0.5, clkout1_phase:0.0000,
+        divclk_divide:1, ref_jitter1:0.010, ref_jitter2:0.010
+        });
+    interface XbsvMMCME2 mmcmadv = mm;
 endmodule
