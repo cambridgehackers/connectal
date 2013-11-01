@@ -98,7 +98,7 @@ module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
                           Reset pci_sys_reset_n)
                          (KC705_FPGA);
 
-   let contentId = 64'h05ce_0006_4c53_260e;
+   let contentId = %(contentid)s;
 
 `ifdef Kintex7
    K7PcieBridgeIfc#(8) x7pcie <- mkK7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
@@ -788,7 +788,7 @@ class InterfaceMixin:
 		}
         f.write(bsimTopTemplate % substs);
 
-    def emitPcieTop(self,f):
+    def emitPcieTop(self,f,contentid):
         axiMasterConnections = [axiMasterConnectionTemplate % {'dut': util.decapitalize(self.base),
                                                                'busname': busname,
                                                                'buswidth': params[1].numeric(),
@@ -797,7 +797,8 @@ class InterfaceMixin:
         substs = {
 		'Dut' : self.base ,
 		'dut' : util.decapitalize(self.base),
-                'axiMasterConnections': '\n'.join(axiMasterConnections)
+                'axiMasterConnections': '\n'.join(axiMasterConnections),
+                'contentid' : contentid
 		}
         f.write(pcieTopTemplate % substs);
 
@@ -882,11 +883,11 @@ class InterfaceMixin:
 	self.emitBsimTop(f);
 	f.close()
 
-    def writePcieTop(self,fname):
+    def writePcieTop(self,fname,contentid):
         assert(self.top and (not self.isIndication))
 	f = util.createDirAndOpen(fname, 'w')
         print 'Writing bsv file ', fname
-	self.emitPcieTop(f);
+	self.emitPcieTop(f,contentid);
 	f.close()
 
     def writeProjectBld(self,projectdirname,srcdirs=[]):
