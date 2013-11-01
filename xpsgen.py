@@ -170,6 +170,16 @@ program -p 1
 quit
 '''
 
+programTclTemplate = '''
+connect_hw_server
+open_hw_target 
+set fpga [lindex [get_hw_devices] 0]
+set file ./%(base)s.runs/impl_1/mk%(Base)sPcieTop.bit
+set_property PROGRAM.FILE $file $fpga
+puts "fpga is $fpga, bit file size is [exec ls -sh $file]"
+program_hw_devices $fpga
+'''
+
 xadc_pinout= {
     'zc702': [
         ("XADC_gpio[0]", 'H17', 'LVCMOS25', 'OUTPUT'),
@@ -1162,4 +1172,8 @@ class InterfaceMixin:
     def writeImpactCmd(self, impactcmdname):
         f = util.createDirAndOpen(impactcmdname, 'w')
         f.write(impactCmdTemplate % { 'base': self.base.lower(), 'Base': self.base })
+        f.close()
+    def writeProgramTcl(self, programtclname):
+        f = util.createDirAndOpen(programtclname, 'w')
+        f.write(programTclTemplate % { 'base': self.base.lower(), 'Base': self.base })
         f.close()

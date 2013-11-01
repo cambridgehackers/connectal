@@ -97,6 +97,9 @@ verilog: $(vfile)
 
 implementation: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
 
+program: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
+	vivado -mode batch -source %(dut)s-program.tcl
+
 %(dut)s.bit.bin.gz: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
 	#promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 %(dut)s.runs/impl_1/%(dut)s_top_1.bit -data_width 32
 	xxd %(dut)s.runs/impl_1/%(dut)s_top_1.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >%(dut)s.bit.bin
@@ -304,6 +307,7 @@ if __name__=='__main__':
         topRequestIfc.writeXdc(xdcname, boardname)
         if os != 'android':
             topRequestIfc.writeImpactCmd(os.path.join(project_dir, 'impact.cmd'))
+            topRequestIfc.writeProgramTcl(os.path.join(project_dir, '%s-program.tcl' % namespace.interface.lower()))
         print 'Writing Android.mk', androidmkname
         print 'Writing Application.mk', applicationmkname
         topRequestIfc.writeAndroidMk(androidmkname, applicationmkname)
