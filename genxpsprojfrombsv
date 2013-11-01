@@ -24,6 +24,7 @@ AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
 AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin,xpsgen.InterfaceMixin)
 
 supported_boards = ['zedboard', 'zc702', 'kc705', 'vc707']
+supported_os = ['android', 'ubuntu']
 
 requestIfcs = []
 indicationIfcs = []
@@ -32,10 +33,13 @@ argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interf
 argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
 argparser.add_argument('-B', '--board', default='zc702', choices=supported_boards,
                        help='Board to generate stubs and ucf constraints for')
+argparser.add_argument('-O', '--OS', default=None, choices=supported_os,
+                       help='Target operating system')
 argparser.add_argument('-b', '--interface', help='BSV interface to generate stubs for')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 argparser.add_argument('-c', '--coherent', help='Use ACP coherence port for first AXI master bus')
+argparser.add_argument('-I', '--contentid', help='Specify 64-bit contentid for PCIe designs')
 argparser.add_argument('-V', '--verilog', help='Additional verilog sources', nargs='+')
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', nargs='+')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', nargs='+')
@@ -74,7 +78,16 @@ XBSVTOP=$(PWD)/..
 BSVPATH = $(XBSVTOP)/%(bsvpath)s:$(XBSVTOP)/bsv
 vfile=sources/%(dut)s/mk%(Top)s.v
 
-all: bits exe
+BOARD=%(boardname)s
+OS=%(OS)s
+ifeq ($(OS),android)
+ALLTARGETS=bits exe
+else
+ALLTARGETS=implementation ubuntu_exe
+endif
+
+
+all: $(ALLTARGETS)
 
 $(vfile): sources/%(dut)s/%(Top)s.bsv
 	cd sources/%(dut)s; bsc %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Top)s %(Top)s.bsv
@@ -82,6 +95,10 @@ $(vfile): sources/%(dut)s/%(Top)s.bsv
 
 x86_exe:
 	cd jni; g++ *.cpp -pthread -I../.. -I../../cpp -DBSIM
+
+ubuntu_exe:
+	cd jni; make
+
 
 bsim: x86_exe
 	cd sources; bsc %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop BsimTop.bsv
@@ -163,6 +180,38 @@ if __name__=='__main__':
     dutname = namespace.interface.lower()
     corename = '%s_v1_00_a' % namespace.interface.lower()
     boardname = namespace.board.lower()
+
+    if not namespace.constraint:
+        namespace.constraint = []
+    if not namespace.verilog:
+        namespace.verilog = []
+    bsvdefines = ''
+    if boardname == 'kc705':
+        if not 'os' in namespace: namespace.os = 'ubuntu'
+        partname = 'xc7k325tffg900-2'
+        topSuffix = 'PcieTop'
+        bsvdefines = '-D Kintex7'
+        namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
+                                              'board_support', 'bluenoc', 'xilinx', 'KC705', 'verilog', 'k7_pcie_v1_6', 'source'))
+        namespace.verilog.append(os.path.join('.', 'xilinx', 'kc705', 'pcie', 'source'))
+        namespace.constraint.append('xilinx/constraints/kc705.xdc')
+    elif boardname == 'vc707':
+        if not 'os' in namespace: namespace.os = 'ubuntu'
+        partname = 'xc7vx485tffg1761-2'
+        topSuffix = 'PcieTop'
+        bsvdefines = '-D Virtex7'
+        namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
+                                              'board_support', 'bluenoc', 'xilinx', 'VC707', 'verilog', 'v7_pcie_v1_7', 'source'))
+        namespace.verilog.append(os.path.join('.', 'xilinx', 'vc707', 'pcie', 'source'))
+        namespace.constraint.append('xilinx/constraints/vc707.xdc')
+    else:
+        print dir(namespace)
+        if not 'os' in namespace: namespace.os = 'android'
+        partname = 'xc7z020clg484-1'
+        topSuffix = 'Wrapper'
+        namespace.verilog.append(os.path.join('.', 'xilinx', 'sources', 'processing_system7'))
+        namespace.constraint.append('xilinx/constraints/design_1_processing_system7_1_0.xdc')
+
 
     tclname = os.path.join(project_dir, '%s.tcl' % namespace.interface.lower())
     tclxprname = os.path.join(project_dir, '%sxpr.tcl' % namespace.interface.lower())
@@ -300,7 +349,11 @@ if __name__=='__main__':
         if (boardname == 'kc705' or boardname == 'vc707'):
             pcie_name = os.path.join(project_dir, 'sources', namespace.interface.lower(),
                                      '%sPcieTop.bsv' % util.capitalize(namespace.interface))
-            topRequestIfc.writePcieTop(pcie_name)
+            if not namespace.contentid:
+                namespace.contentid = '''64'h0000_0000_0000_0000'''
+                namespace.contentid = '''64'h%s''' % ''.join(map((lambda c: '%02x' % ord(c)), namespace.interface[0:8]))
+            print 'contentid', namespace.contentid
+            topRequestIfc.writePcieTop(pcie_name, namespace.contentid)
             topRequestIfc.writeProjectBld(project_dir, srcdirs)
         else:
             topRequestIfc.writeTopVerilog(topverilogname)
@@ -326,33 +379,6 @@ if __name__=='__main__':
                     os.path.join(project_dir, 'updatepao'))
     shutil.copymode(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao'),
                     os.path.join(project_dir, 'updatepao'))
-
-    if not namespace.constraint:
-        namespace.constraint = []
-    if not namespace.verilog:
-        namespace.verilog = []
-    bsvdefines = ''
-    if boardname == 'kc705':
-        partname = 'xc7k325tffg900-2'
-        topSuffix = 'PcieTop'
-        bsvdefines = '-D SCEMI_CLOCK_PERIOD=10 -D Kintex7'
-        namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
-                                              'board_support', 'bluenoc', 'xilinx', 'KC705', 'verilog', 'k7_pcie_v1_6', 'source'))
-        namespace.verilog.append(os.path.join('.', 'xilinx', 'kc705', 'pcie', 'source'))
-        namespace.constraint.append('xilinx/constraints/kc705.xdc')
-    elif boardname == 'vc707':
-        partname = 'xc7vx485tffg1761-2'
-        topSuffix = 'PcieTop'
-        bsvdefines = '-D SCEMI_CLOCK_PERIOD=10 -D Virtex7'
-        namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
-                                              'board_support', 'bluenoc', 'xilinx', 'VC707', 'verilog', 'v7_pcie_v1_7', 'source'))
-        namespace.verilog.append(os.path.join('.', 'xilinx', 'vc707', 'pcie', 'source'))
-        namespace.constraint.append('xilinx/constraints/vc707.xdc')
-    else:
-        partname = 'xc7z020clg484-1'
-        topSuffix = 'Wrapper'
-        namespace.verilog.append(os.path.join('.', 'xilinx', 'sources', 'processing_system7'))
-        namespace.constraint.append('xilinx/constraints/design_1_processing_system7_1_0.xdc')
 
     print 'Writing tcl file', tclname
     tcl = util.createDirAndOpen(tclname, 'w')
@@ -401,7 +427,9 @@ if __name__=='__main__':
                                    'Top': '%s%s' % (util.capitalize(namespace.interface), topSuffix),
                                    'bsvpath': os.path.dirname(namespace.bsvfile[0]),
                                    'bsvname': os.path.basename(namespace.bsvfile[0]),
-                                   'bsvdefines': bsvdefines
+                                   'bsvdefines': bsvdefines,
+                                   'boardname': boardname,
+                                   'OS': namespace.os
                                    })
     make.close()
 
