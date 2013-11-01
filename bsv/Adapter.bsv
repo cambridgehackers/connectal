@@ -64,9 +64,8 @@ module mkToBit32(ToBit32#(a))
    FIFOF#(Bit#(asz32)) fifo <- mkFIFOF1();
    Reg#(Bit#(32))   count <- mkReg(0);
 
-
    method Action enq(a val);
-       fifo.enq({pack(val),padding});
+       fifo.enq({padding,pack(val)});
    endmethod
 
    method Bit#(32) first() if (fifo.notEmpty);
@@ -130,8 +129,8 @@ module mkFromBit32(FromBit32#(a))
 endmodule
 
 module mkAdapterTb(Empty);
-   ToBit32#(Bit#(72)) adapter72 <- mkToBit32();
-   ToBit32#(Bit#(17)) adapter17 <- mkToBit32();
+   ToBit32#(Bit#(72)) tb32_72 <- mkToBit32();
+   ToBit32#(Bit#(17)) tb32_17 <- mkToBit32();
 
    FromBit32#(Bit#(72)) fb32_72 <- mkFromBit32();
    FromBit32#(Bit#(17)) fb32_17 <- mkFromBit32();
@@ -139,66 +138,62 @@ module mkAdapterTb(Empty);
    Reg#(Bit#(10)) timer <- mkReg(0);
    rule timeout;
        timer <= timer+1;
-       dynamicAssert(timer < 64, "Timeout");
+       dynamicAssert(timer < 128, "Timeout");
    endrule
 
    mkAutoFSM(
-   seq
-       adapter72.enq(72'h090807060504030201);
-       dynamicAssert(adapter72.notEmpty, "Adapter not empty");
-       dynamicAssert(!adapter72.notFull, "Adapter full");
-       $display("adapter72 notEmpty %d notFull %d", adapter72.notEmpty, adapter72.notFull);
-       $display("adapter72 word 0 %h", adapter72.first());
-       dynamicAssert(adapter72.first == 32'h09080706, "expecting 09080706");
-       adapter72.deq;
-       $display("adapter72 word 1 %h", adapter72.first());
-       dynamicAssert(adapter72.first == 32'h05040302, "expecting 05040302");
-       adapter72.deq;
-       $display("adapter72 word 2 %h", adapter72.first());
-       dynamicAssert(adapter72.first == 32'h01000000, "expecting 01000000");
-       adapter72.deq;
-       dynamicAssert(!adapter72.notEmpty && adapter72.notFull, "Adapter empty and not full");
-       $display("adapter72 notEmpty %d notFull %d", adapter72.notEmpty, adapter72.notFull);
+      seq
+      
+       // test to bit-32
+       tb32_72.enq(72'h090807060504030201);
+       dynamicAssert(tb32_72.notEmpty, "Adapter not empty");
+       dynamicAssert(!tb32_72.notFull, "Adapter full");
+       $display("tb32_72 notEmpty %d notFull %d", tb32_72.notEmpty, tb32_72.notFull);
+       $display("tb32_72 word 0 %h", tb32_72.first());
+       dynamicAssert(tb32_72.first == 32'h00000009, "expecting 00000009");
+       tb32_72.deq;
+       $display("tb32_72 word 1 %h", tb32_72.first());
+       dynamicAssert(tb32_72.first == 32'h08070605, "expecting 08070605");
+       tb32_72.deq;
+       $display("tb32_72 word 2 %h", tb32_72.first());
+       dynamicAssert(tb32_72.first == 32'h04030201, "expecting 04030201");
+       tb32_72.deq;
+       dynamicAssert(!tb32_72.notEmpty && tb32_72.notFull, "Adapter empty and not full");
+       $display("tb32_72 notEmpty %d notFull %d", tb32_72.notEmpty, tb32_72.notFull);
+       dynamicAssert(!tb32_17.notEmpty, "tb32_17 empty");
+       dynamicAssert(tb32_17.notFull, "tb32_17 !full");
+       tb32_17.enq(17'h10203);
+       dynamicAssert(tb32_17.notEmpty, "tb32_17 not empty");
+       dynamicAssert(!tb32_17.notFull, "tb32_17 full");
+       $display("tb32_17.first %h", tb32_17.first);
+       dynamicAssert(tb32_17.first == (32'h00010203), "Expected 00010203");
+       tb32_17.deq;
+       dynamicAssert(!tb32_17.notEmpty, "tb32_17 empty");
+       dynamicAssert(tb32_17.notFull, "tb32_17 !full");
 
-       dynamicAssert(!adapter17.notEmpty, "adapter17 empty");
-       dynamicAssert(adapter17.notFull, "adapter17 !full");
-       adapter17.enq(17'h10203);
-       dynamicAssert(adapter17.notEmpty, "adapter17 not empty");
-       dynamicAssert(!adapter17.notFull, "adapter17 full");
-       $display("adapter17.first %h", adapter17.first);
-       dynamicAssert(adapter17.first == (32'h10203<<(32-17)), "Expected 10203<<15");
-       adapter17.deq;
-       dynamicAssert(!adapter17.notEmpty, "adapter17 empty");
-       dynamicAssert(adapter17.notFull, "adapter17 !full");
-
+       //test from bit-32
        dynamicAssert(!fb32_72.notEmpty, "Adapter empty");
        dynamicAssert(fb32_72.notFull, "Adapter not full");
        $display("fb32_72 notEmpty %d notFull %d", fb32_72.notEmpty, fb32_72.notFull);
-
-
        fb32_72.enq(32'h00000009);
        fb32_72.enq(32'h08070605);
        fb32_72.enq(32'h04030201);
        $display("fb32_72.first %h", fb32_72.first);
        dynamicAssert(fb32_72.first == 72'h090807060504030201, "Expected 090807060504030201");
        fb32_72.deq;
-
        fb32_72.enq(32'h09080706);
        dynamicAssert(!fb32_72.notEmpty, "Adapter not empty");
        dynamicAssert(fb32_72.notFull, "Adapter not full");
-
        fb32_72.enq(32'h05040302);
        fb32_72.enq(32'h01000000);
        dynamicAssert(fb32_72.notEmpty, "Adapter not empty");
        dynamicAssert(!fb32_72.notFull, "Adapter full");
-
        $display("fb32_72.first %h", fb32_72.first);
        dynamicAssert(fb32_72.first == 72'h060504030201000000, "Expected 060504030201000000");
        fb32_72.deq;
        $display("fb32_72 notEmpty %d notFull %d", fb32_72.notEmpty, fb32_72.notFull);
        dynamicAssert(!fb32_72.notEmpty, "Adapter empty");
        dynamicAssert(fb32_72.notFull, "Adapter not full");
-
        fb32_17.enq(32'h10203);
        dynamicAssert(fb32_17.notEmpty, "Adapter not empty");
        dynamicAssert(!fb32_17.notFull, "Adapter full");
@@ -208,6 +203,24 @@ module mkAdapterTb(Empty);
        dynamicAssert(!fb32_17.notEmpty, "Adapter empty");
        dynamicAssert(fb32_17.notFull, "Adapter not full");
 
+
+       // they should be duals
+       tb32_72.enq(72'h090807060504030201);
+       fb32_72.enq(tb32_72.first);
+       tb32_72.deq;
+       fb32_72.enq(tb32_72.first);
+       tb32_72.deq;
+       fb32_72.enq(tb32_72.first);
+       tb32_72.deq;
+       dynamicAssert(fb32_72.first == 72'h090807060504030201, "Expected 090807060504030201");
+       fb32_72.deq;
+             
+       tb32_17.enq(17'h10203);
+       fb32_17.enq(tb32_17.first);
+       tb32_17.deq;
+       dynamicAssert(fb32_17.first == 17'h10203, "Expected 10203");
+       fb32_17.deq;
+       	     
        $finish(0);
    endseq
    );
