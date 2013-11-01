@@ -76,14 +76,14 @@ interface ImageonSensorControl;
 endinterface
 
 interface ImageonXsviControl;
-    method Action set_syncgen_hactive(Bit#(16) v);
-    method Action set_syncgen_hfporch(Bit#(16) v);
-    method Action set_syncgen_hsync(Bit#(16) v);
-    method Action set_syncgen_hbporch(Bit#(16) v);
-    method Action set_syncgen_vactive(Bit#(16) v);
-    method Action set_syncgen_vfporch(Bit#(16) v);
-    method Action set_syncgen_vsync(Bit#(16) v);
-    method Action set_syncgen_vbporch(Bit#(16) v);
+    method Action hactive(Bit#(16) v);
+    method Action hfporch(Bit#(16) v);
+    method Action hsync(Bit#(16) v);
+    method Action hbporch(Bit#(16) v);
+    method Action vactive(Bit#(16) v);
+    method Action vfporch(Bit#(16) v);
+    method Action vsync(Bit#(16) v);
+    method Action vbporch(Bit#(16) v);
 endinterface
 
 interface ImageonVideo;
@@ -111,6 +111,19 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
      Clock serdes_clock, Reset serdes_reset, Clock serdest_clock, Reset serdest_reset)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
+
+    Vector#(5, Wire#(Bit#(1))) vita_data_p <- replicateM(mkDWire(0));
+    Vector#(5, Wire#(Bit#(1))) vita_data_n <- replicateM(mkDWire(0));
+    Wire#(Bit#(1)) vita_clk_p <- mkDWire(0);
+    Wire#(Bit#(1)) vita_clk_n <- mkDWire(0);
+    ReadOnly#(Bit#(1)) ibufds_clk <- mkIBUFDS(vita_clk_p, vita_clk_n);
+    Wire#(Bit#(1)) imageon_clkdiv_clk_tmp <- mkBUFIO();
+    Wire#(Bit#(1)) imageon_clkdiv_clkdiv <- mkBUFR5();
+    ODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
+    ODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
+    Wire#(Bit#(1)) poutq <- mkDWire(0);
+    Wire#(Bit#(1)) ptq <- mkDWire(0);
+    ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
 
     Reg#(Bit#(1)) imageon_oe <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(10)) decoder_code_ls_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
@@ -160,17 +173,12 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
     Reg#(Bit#(1)) delay_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_wren_r2_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdest_clock));
-    Vector#(5, Wire#(Bit#(1))) vita_data_p <- replicateM(mkDWire(0));
-    Vector#(5, Wire#(Bit#(1))) vita_data_n <- replicateM(mkDWire(0));
+
     Vector#(5, ReadOnly#(Bit#(1))) ibufds_v;
-    Wire#(Bit#(1)) vita_clk_p <- mkDWire(0);
-    Wire#(Bit#(1)) vita_clk_n <- mkDWire(0);
-    ReadOnly#(Bit#(1)) ibufds_clk <- mkIBUFDS(vita_clk_p, vita_clk_n);
-    Wire#(Bit#(1)) imageon_clkdiv_clk_tmp <- mkBUFIO();
-    Wire#(Bit#(1)) imageon_clkdiv_clkdiv <- mkBUFR5();
     for (Integer i = 0; i < 5; i = i + 1)
         ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
+    Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdest_clock));
+
     Reg#(Bit#(1)) vita_reset_n_o <- mkReg(0);
     Wire#(Bit#(1)) zero_wire <- mkDWire(0);
     Wire#(Bit#(1)) one_wire <- mkDWire(1);
@@ -180,13 +188,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
     vita_trigger_wire[1] <- mkOBUFT(one_wire, imageon_oe);
     vita_trigger_wire[0] <- mkOBUFT(trigger_wire, imageon_oe);
     ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(vita_reset_n_o, imageon_oe);
-    ODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-    ODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-    Wire#(Bit#(1)) poutq <- mkDWire(0);
-    Wire#(Bit#(1)) ptq <- mkDWire(0);
-    ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
-    Reg#(Bit#(1)) serdes_clk_ready_temp <- mkReg(0);
-    Reg#(Bit#(1)) serdes_clk_ready_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
+
     Reg#(Bit#(1)) serdes_align_busy_temp <- mkReg(0);
     Reg#(Bit#(1)) serdes_align_busy_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(1)) serdes_aligned_temp <- mkReg(0);
@@ -195,7 +197,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
     rule serdes_copybits;
         serdes_aligned_reg <= serdes_aligned_temp;
         serdes_align_busy_reg <= serdes_align_busy_temp;
-        serdes_clk_ready_reg <= serdes_clk_ready_temp;
     endrule
 
     rule pll_rule;
@@ -264,10 +265,6 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
     end
     endrule
     
-    rule serdes_calc;
-	serdes_clk_ready_temp <= 1;
-    endrule
-
     rule serdes_reset if (serdes_reset_reg == 1);
         new_raw_empty_wire <= 0;
         delay_wren_r_reg <= 0;
@@ -407,7 +404,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1,
     interface ImageonSensorControl control;
 	method Bit#(32) get_iserdes_control();
 	    let v = 0;
-	    v[8] = serdes_clk_ready_reg;
+	    v[8] = 1;
 	    v[9] = serdes_align_busy_reg;
 	    v[10] = serdes_aligned_reg;
 	    return v;
@@ -611,28 +608,28 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
     endrule
 
     interface ImageonXsviControl control;
-	method Action set_syncgen_hactive(Bit#(16) v);
+	method Action hactive(Bit#(16) v);
 	    syncgen_hactive_reg <= v;
 	endmethod
-	method Action set_syncgen_hfporch(Bit#(16) v);
+	method Action hfporch(Bit#(16) v);
 	    syncgen_hfporch_reg <= v;
 	endmethod
-	method Action set_syncgen_hsync(Bit#(16) v);
+	method Action hsync(Bit#(16) v);
 	    syncgen_hsync_reg <= v;
 	endmethod
-	method Action set_syncgen_hbporch(Bit#(16) v);
+	method Action hbporch(Bit#(16) v);
 	    syncgen_hbporch_reg <= v;
 	endmethod
-	method Action set_syncgen_vactive(Bit#(16) v);
+	method Action vactive(Bit#(16) v);
 	    syncgen_vactive_reg <= v;
 	endmethod
-	method Action set_syncgen_vfporch(Bit#(16) v);
+	method Action vfporch(Bit#(16) v);
 	    syncgen_vfporch_reg <= v;
 	endmethod
-	method Action set_syncgen_vsync(Bit#(16) v);
+	method Action vsync(Bit#(16) v);
 	    syncgen_vsync_reg <= v;
 	endmethod
-	method Action set_syncgen_vbporch(Bit#(16) v);
+	method Action vbporch(Bit#(16) v);
 	    syncgen_vbporch_reg <= v;
 	endmethod
     endinterface
@@ -648,9 +645,11 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
 	endmethod
     endinterface: out
 endmodule
+
 interface MMCMHACK;
     interface XbsvMMCME2 mmcmadv;
 endinterface
+
 module mkMMCMHACK(MMCMHACK);
     XbsvMMCME2 mm <- mkXbsvMMCM(MMCMParams {
         bandwidth:"OPTIMIZED", compensation:"ZHOLD",

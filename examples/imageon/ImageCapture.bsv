@@ -174,28 +174,28 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
         fromSensor.control.set_syncgen_delay(v);
     endmethod
     method Action set_syncgen_hactive(Bit#(16) v);
-        xsviFromSensor.control.set_syncgen_hactive(v);
+        xsviFromSensor.control.hactive(v);
     endmethod
     method Action set_syncgen_hfporch(Bit#(16) v);
-        xsviFromSensor.control.set_syncgen_hfporch(v);
+        xsviFromSensor.control.hfporch(v);
     endmethod
     method Action set_syncgen_hsync(Bit#(16) v);
-        xsviFromSensor.control.set_syncgen_hsync(v);
+        xsviFromSensor.control.hsync(v);
     endmethod
     method Action set_syncgen_hbporch(Bit#(16) v);
-        xsviFromSensor.control.set_syncgen_hbporch(v);
+        xsviFromSensor.control.hbporch(v);
     endmethod
     method Action set_syncgen_vactive(Bit#(16) v);
-        xsviFromSensor.control.set_syncgen_vactive(v);
+        xsviFromSensor.control.vactive(v);
     endmethod
     method Action set_syncgen_vfporch(Bit#(16) v);
-        xsviFromSensor.control.set_syncgen_vfporch(v);
+        xsviFromSensor.control.vfporch(v);
     endmethod
     method Action set_syncgen_vsync(Bit#(16) v);
-        xsviFromSensor.control.set_syncgen_vsync(v);
+        xsviFromSensor.control.vsync(v);
     endmethod
     method Action set_syncgen_vbporch(Bit#(16) v);
-        xsviFromSensor.control.set_syncgen_vbporch(v);
+        xsviFromSensor.control.vbporch(v);
     endmethod
     method Action set_debugreq(Bit#(32) v);
     endmethod
