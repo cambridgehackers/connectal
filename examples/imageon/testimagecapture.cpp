@@ -298,14 +298,14 @@ static void fmc_imageon_demo_enable_ipipe( void)
    uint32_t v_bporch    =  300;
    // Horizontal settings
    device->set_syncgen_delay(((1920+88+44+148)>>2)*6); // approx. 6 lines of delay
-   device->set_syncgen_hactive(h_active);
-   device->set_syncgen_hfporch(h_fporch);
-   device->set_syncgen_hsync((h_syncwidth)<<0);
-   device->set_syncgen_hbporch(h_bporch);
+   device->set_syncgen_hactive(h_active-1);
+   device->set_syncgen_hfporch(h_fporch-1);
+   device->set_syncgen_hsync(((h_syncwidth)<<0) - 1);
+   device->set_syncgen_hbporch(h_bporch - 1);
    // Vertical settings
-   device->set_syncgen_vactive(v_active);
-   device->set_syncgen_vfporch(v_fporch);
-   device->set_syncgen_vsync ((v_syncwidth)<<0);
+   device->set_syncgen_vactive(v_active-1);
+   device->set_syncgen_vfporch(v_fporch-1);
+   device->set_syncgen_vsync (((v_syncwidth)<<0) - 1);
    device->set_syncgen_vbporch(v_bporch);
    printf( "VITA ISERDES - Setting Training Sequence to 0x03A6\n\r");
    device->set_serdes_training(0x03A6);
@@ -443,18 +443,18 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    printf( "VITA 1080P60 - Tolerate 6 lines of jitter (required for programmable exposure)\n\r");
    device->set_syncgen_delay(0x0CE4);
    printf( "VITA 1080P60 - Adjust line spacing in sync generator\n\r");
-   device->set_syncgen_hactive(0x0780);
-   device->set_syncgen_hfporch(0x58);
-   device->set_syncgen_hsync(0x2C);
-   device->set_syncgen_hbporch(0x94);
+   device->set_syncgen_hactive(0x077f);
+   device->set_syncgen_hfporch(0x57);
+   device->set_syncgen_hsync(0x2b);
+   device->set_syncgen_hbporch(0x93);
    printf( "VITA 1080P60 - Adjust frame spacing in VITA\n\r");
    vita_spi_write(199, 0x01); usleep(100); // 100 usec
    vita_spi_write(200, 0); usleep(100); // 100 usec
    vita_spi_write(194, 0); usleep(100); // 100 usec
    printf( "VITA 1080P60 - Adjust frame spacing in sync generator\n\r");
-   device->set_syncgen_vactive (0x0438);
-   device->set_syncgen_vfporch (0x04);
-   device->set_syncgen_vsync(5);
+   device->set_syncgen_vactive (0x0437);
+   device->set_syncgen_vfporch (0x03);
+   device->set_syncgen_vsync(4);
    device->set_syncgen_vbporch(0x24);
    printf( "VITA 1080P60 - Crop ROI0 from 1920x1200 to 1920x1080\n\r");
    vita_spi_write(257, 0x3C); usleep(100); // 100 usec
@@ -467,8 +467,8 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    uint32_t trigDutyCycle    = 90; // exposure time is 90% of frame time (ie. 15msec)
    uint32_t vitaTrigGenDefaultFreq = (((1920+88+44+148)*(1080+4+5+36))>>2) - 2;
    device->set_trigger_default_freq(vitaTrigGenDefaultFreq);
-   device->set_trigger_cnt_trigger0high((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100); // negative polarity
-   device->set_trigger_cnt_trigger0low(1);
+   device->set_trigger_cnt_trigger0high((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1); // negative polarity
+   device->set_trigger_cnt_trigger0low(2);
    //device->set_triggen_control(0x31000011); // invert trigger[2:0], internal trigger, enable trigger[0], update triggen_cnt registers
    //device->set_triggen_control(0x30000011); // invert trigger[2:0], internal trigger, enable trigger[0]
    printf("VITA 1080P60 - Exposure related settings\n\r");

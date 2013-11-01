@@ -101,10 +101,9 @@ interface ImageonTopPins;
     method Action fbbozoin(Bit#(1) v);
 endinterface
 
-typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
 typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
 
-module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock axi_clock, Reset axi_reset)(ImageonSensor);
+module mkImageonSensor#(Clock axi_clock, Reset axi_reset)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -113,9 +112,7 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock axi_clock, Reset axi
     Wire#(Bit#(1)) vita_clk_p <- mkDWire(0);
     Wire#(Bit#(1)) vita_clk_n <- mkDWire(0);
     Clock ibufds_clk <- mkClockIBUFDS(vita_clk_p, vita_clk_n);
-    ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
     ClockGenIfc serdes_clk <- mkBUFR5(ibufds_clk);
-    Clock serdest_clock = serdest_clk.gen_clk;
     Clock serdes_clock = serdes_clk.gen_clk;
     ODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
     ODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
@@ -163,20 +160,19 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock axi_clock, Reset axi
     Reg#(Bit#(1)) remapkernel_reg <- mkReg(0);
     Reg#(Bit#(1)) imgdatavalid_reg <- mkReg(0);
     Reg#(Bit#(8)) dcount <- mkReg('hab);
-    Wire#(Bit#(5)) fifo_EMPTY_d_wire <- mkDWire(0);
-    Wire#(Bit#(5)) sampleinFIRSTBIT_wire <- mkDWire(0);
-    Wire#(Bit#(5)) sampleinLASTBIT_wire <- mkDWire(0);
-    Wire#(Bit#(5)) sampleinOTHERBIT_wire <- mkDWire(0);
+    Wire#(Bit#(1)) empty_wire <- mkDWire(0);
+    Wire#(Bit#(1)) bittest_wire <- mkDWire(0);
     Reg#(Bit#(1)) delay_wren_r_reg <-mkReg(0);
     Reg#(Bit#(1)) delay_wren_r2_reg <- mkSyncReg(0, defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) delay_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_wren_r2_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_wren_c_reg <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
 
+    ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
     Vector#(5, ReadOnly#(Bit#(1))) ibufds_v;
     for (Integer i = 0; i < 5; i = i + 1)
         ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
-    Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdest_clock));
+    Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdest_clk.gen_clk));
 
     Reg#(Bit#(1)) vita_reset_n_o <- mkReg(0);
     Wire#(Bit#(1)) zero_wire <- mkDWire(0);
@@ -244,14 +240,12 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock axi_clock, Reset axi
        end
        serdes_align_busy_temp <= pack(alignbusyw != 0);
        serdes_aligned_temp <= pack(alignedw == 5'b11111);
-       sampleinFIRSTBIT_wire <= firstw;
-       sampleinLASTBIT_wire <= lastw;
-       sampleinOTHERBIT_wire <= otherw;
-       fifo_EMPTY_d_wire <= emptyw;
+       bittest_wire <= pack(otherw == 0 && firstw != 0 && lastw != 0);
+       empty_wire <= pack(emptyw != 0);
        raw_data_wire <= rawdataw;
     endrule
 
-    rule sendup_serdes_clock;
+    rule sendup_sdes_clock;
     for (Bit#(8) i = 0; i < 5; i = i+1) begin
        serdes_v[i].wren.reset(serdes_reset_null);
        serdes_v[i].wren.delay_wren(delay_wren_c_reg);
@@ -272,8 +266,8 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock axi_clock, Reset axi
     endrule
 
     rule serdes_calc2 if (serdes_reset_reg == 0);
-        new_raw_empty_wire <= pack(fifo_EMPTY_d_wire != 0);
-        delay_wren_r_reg <= pack(sampleinOTHERBIT_wire == 0 && sampleinFIRSTBIT_wire != 0 && sampleinLASTBIT_wire != 0);
+        new_raw_empty_wire <= empty_wire;
+        delay_wren_r_reg <= bittest_wire;
         delay_wren_r2_reg <= delay_wren_r_reg;
     endrule
 
@@ -293,12 +287,12 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock axi_clock, Reset axi
             end
         if (tstate == TIdle && tperiod == 0)
             begin
-            tc = trigger_cnt_trigger0high_reg + 1;
+            tc = trigger_cnt_trigger0high_reg;
             ts = TSend;
             end
         if (tstate == TSend && tcounter == 0)
             begin
-            tc = trigger_cnt_trigger0low_reg + 1;
+            tc = trigger_cnt_trigger0low_reg;
             ts = TWait;
             end
         if (tstate == TWait && tcounter == 0)
@@ -491,6 +485,8 @@ module mkImageonSensor#(Clock fmc_imageon_video_clk1, Clock axi_clock, Reset axi
     endinterface
 endmodule
 
+typedef enum { Idle, Active, FrontP, Sync, BackP} State deriving (Bits,Eq);
+
 module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock, Reset axi_reset, ImageonSensor sensor)(ImageonVideo);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
@@ -528,38 +524,38 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
         let vc = vsync_count;
   
         hc = hc + 1;
-        if (hstate == FrontP && hsync_count >= syncgen_hfporch_reg - 1)
+        if (hstate == FrontP && hsync_count >= syncgen_hfporch_reg)
             begin
             hc = 0;
             hs = Sync;
             vc = vc + 1;
-            if (vstate == Active && vsync_count >= syncgen_vactive_reg - 1)
+            if (vstate == Active && vsync_count >= syncgen_vactive_reg)
                 begin
                 vc = 0;
                 vs = FrontP;
                 end
-            if (vstate == FrontP && vsync_count >= syncgen_vfporch_reg - 1)
+            if (vstate == FrontP && vsync_count >= syncgen_vfporch_reg)
                 begin
                 vc = 0;
                 vs = Sync;
                 end
-            if (vstate == Sync && vsync_count >= syncgen_vsync_reg - 1)
+            if (vstate == Sync && vsync_count >= syncgen_vsync_reg)
                 begin
                 vc = 0;
                 vs = BackP;
                 end
             end
-        if (hstate == Sync && hsync_count >= syncgen_hsync_reg - 1)
+        if (hstate == Sync && hsync_count >= syncgen_hsync_reg)
             begin
             hc = 0;
             hs = BackP;
             end
-        if (hstate == BackP && hsync_count >= syncgen_hbporch_reg - 1)
+        if (hstate == BackP && hsync_count >= syncgen_hbporch_reg)
             begin
             hc = 0;
             hs = Active;
             end
-        if (hstate == Active && hsync_count >= syncgen_hactive_reg - 1)
+        if (hstate == Active && hsync_count >= syncgen_hactive_reg)
             begin
             hc = 0;
             hs = FrontP;
@@ -574,12 +570,12 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
 
     rule update_framestart;
 	syncGearbox.deq;
-        framestart_new <= syncGearbox.first[0];
+	framestart_new <= syncGearbox.first[0];
     endrule
 
     rule update_videodata if (active_video_reg == 1);
 	dataGearbox.deq;
-        videodata <= dataGearbox.first[0];
+	videodata <= dataGearbox.first[0];
     endrule
 
     rule receive_framestart;

@@ -102,8 +102,7 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
-    ImageonSensor fromSensor <- mkImageonSensor(fmc_imageon_video_clk1,
-        defaultClock, defaultReset, clocked_by imageon_clock, reset_by imageon_reset);
+    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, clocked_by imageon_clock, reset_by imageon_reset);
     ImageonVideo xsviFromSensor <- mkImageonVideo(imageon_clock, imageon_reset, defaultClock, defaultReset,
         fromSensor, clocked_by hdmi_clock, reset_by hdmi_reset);
 
