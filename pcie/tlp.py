@@ -101,7 +101,7 @@ def print_tlp(tlpdata):
     words = map(segment, [0,1,2,3,4,5])
 
     tlpsof = int(tlpdata[-39:-38],16) & 1
-    tlpeof = int(tlpdata[-38:-36],16) & 0x80
+    tlpeof = int(tlpdata[-38:-36],16) >> 7
     tlpbe  = tlpdata[-36:-32]
     tlphit = int(tlpdata[-38:-36],16) & 0x7f
     pktformat = (int(tlpdata[-32:-31],16) >> 1) & 3
