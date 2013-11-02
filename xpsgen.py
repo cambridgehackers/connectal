@@ -974,12 +974,12 @@ class ImageonVita:
 '''
     def dut_bus_port_map(self, busname,t,params):
         return '''
-    .pins_io_vita_clk_p_v(io_vita_clk_out_p),
-    .pins_io_vita_clk_n_v(io_vita_clk_out_n),
-    .pins_io_vita_sync_p_v(io_vita_sync_p),
-    .pins_io_vita_sync_n_v(io_vita_sync_n),
-    .pins_io_vita_data_p_v(io_vita_data_p),
-    .pins_io_vita_data_n_v(io_vita_data_n),
+    .serpins_io_vita_clk_p_v(io_vita_clk_out_p),
+    .serpins_io_vita_clk_n_v(io_vita_clk_out_n),
+    .serpins_io_vita_sync_p_v(io_vita_sync_p),
+    .serpins_io_vita_sync_n_v(io_vita_sync_n),
+    .serpins_io_vita_data_p_v(io_vita_data_p),
+    .serpins_io_vita_data_n_v(io_vita_data_n),
     .pins_io_vita_reset_n(io_vita_reset_n),
     .pins_io_vita_trigger_0__read(io_vita_trigger[0]),
     .pins_io_vita_trigger_1__read(io_vita_trigger[1]),

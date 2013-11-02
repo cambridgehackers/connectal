@@ -31,6 +31,7 @@ import XbsvSpi :: *;
 import GetPutWithClocks :: *;
 import Zynq::*;
 import Imageon::*;
+import IserdesDatadeser::*;
 import HDMI::*;
 import AxiDMA::*;
 import BlueScope::*;
@@ -85,6 +86,7 @@ interface ImageCaptureRequest;
    interface DMARequest dmaRequest;
    interface ImageonVita pins;
    interface ImageonTopPins toppins;
+   interface ImageonSerdesPins serpins;
 endinterface
  
 module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
@@ -102,7 +104,8 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
-    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, clocked_by imageon_clock, reset_by imageon_reset);
+    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, clocked_by imageon_clock, reset_by imageon_reset);
+    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, clocked_by imageon_clock, reset_by imageon_reset);
     ImageonVideo xsviFromSensor <- mkImageonVideo(imageon_clock, imageon_reset, defaultClock, defaultReset,
         fromSensor, clocked_by hdmi_clock, reset_by hdmi_reset);
 
@@ -130,22 +133,22 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
 
     interface CoreRequest coreRequest;
     method Action set_iserdes_control(Bit#(32) v);
-        fromSensor.control.set_iserdes_control(v);
+        serdes.control.set_iserdes_control(v);
     endmethod
     method Action get_iserdes_control();
-        indication.coreIndication.iserdes_control_value(fromSensor.control.get_iserdes_control());
+        indication.coreIndication.iserdes_control_value(serdes.control.get_iserdes_control());
     endmethod
     method Action set_decoder_control(Bit#(32) v);
-        fromSensor.control.set_decoder_control(v);
+        serdes.control.set_decoder_control(v);
     endmethod
     method Action set_host_oe(Bit#(1) v);
         fromSensor.control.set_host_oe(v);
     endmethod
     method Action set_serdes_manual_tap(Bit#(10) v);
-        fromSensor.control.set_serdes_manual_tap(v);
+        serdes.control.set_serdes_manual_tap(v);
     endmethod
     method Action set_serdes_training(Bit#(10) v);
-        fromSensor.control.set_serdes_training(v);
+        serdes.control.set_serdes_training(v);
     endmethod
     method Action set_decoder_code_ls(Bit#(10) v);
         fromSensor.control.set_decoder_code_ls(v);
@@ -209,8 +212,9 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
             mmcmhack.mmcmadv.clkfbin(v);
         endmethod
     endinterface
-   interface BlueScopeRequest bsRequest = bsi.requestIfc;
-   interface HDMI hdmi = hdmiOut.hdmi;
-   interface SpiPins spi = spiController.pins;
-   interface ImageonVita pins = fromSensor.pins;
+    interface BlueScopeRequest bsRequest = bsi.requestIfc;
+    interface HDMI hdmi = hdmiOut.hdmi;
+    interface SpiPins spi = spiController.pins;
+    interface ImageonVita pins = fromSensor.pins;
+    interface ImageonSerdesPins serpins = serdes.pins;
 endmodule
