@@ -132,7 +132,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset)(ImageonSensor);
     ReadOnly#(Bit#(1)) serdes_fifo_enable_null <- mkNullCrossingWire(serdes_clock, serdes_fifo_enable_reg);
     Reg#(Bit#(10)) serdes_manual_tap_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(10)) serdes_training_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(1)) serdes_reset_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(1)) serdes_reset_reg <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     ReadOnly#(Bit#(1)) serdes_reset_null <- mkNullCrossingWire(serdes_clock, serdes_reset_reg);
     Reg#(Bit#(16)) syncgen_delay_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(32)) trigger_default_freq_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
@@ -174,15 +174,14 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset)(ImageonSensor);
         ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
     Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdest_clk.gen_clk));
 
-    Reg#(Bit#(1)) vita_reset_n_o <- mkReg(0);
     Wire#(Bit#(1)) zero_wire <- mkDWire(0);
     Wire#(Bit#(1)) one_wire <- mkDWire(1);
-    Wire#(Bit#(1)) trigger_wire <- mkDWire(0);
+    Wire#(Bit#(1)) trigger_wire <- mkDWire(pack(tstate != TSend));
     Vector#(3, ReadOnly#(Bit#(1))) vita_trigger_wire;
     vita_trigger_wire[2] <- mkOBUFT(zero_wire, imageon_oe);
     vita_trigger_wire[1] <- mkOBUFT(one_wire, imageon_oe);
     vita_trigger_wire[0] <- mkOBUFT(trigger_wire, imageon_oe);
-    ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(vita_reset_n_o, imageon_oe);
+    ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(serdes_reset_reg, imageon_oe);
 
     Reg#(Bit#(1)) serdes_align_busy_temp <- mkReg(0);
     Reg#(Bit#(1)) serdes_align_busy_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
@@ -203,14 +202,6 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset)(ImageonSensor);
         pll_t.d1(imageon_oe);
         pll_t.d2(imageon_oe);
         pll_t.ce(True);
-    endrule
-
-    rule trigger_rule;
-        trigger_wire <= pack(tstate != TSend);
-    endrule
-
-    rule vr_rule;
-        vita_reset_n_o <= ~serdes_reset_reg;
     endrule
 
     rule sendup_imageon_clock;
@@ -247,31 +238,31 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset)(ImageonSensor);
 
     rule sendup_sdes_clock;
     for (Bit#(8) i = 0; i < 5; i = i+1) begin
-       serdes_v[i].wren.reset(serdes_reset_null);
+       serdes_v[i].wren.reset(~serdes_reset_null);
        serdes_v[i].wren.delay_wren(delay_wren_c_reg);
        serdes_v[i].wren.fifo_wren(serdes_fifo_enable_null);
     end
     endrule
     
-    rule serdes_reset_rule if (serdes_reset_reg == 1);
+    rule serdes_reset_rule if (serdes_reset_reg == 0);
         new_raw_empty_wire <= 0;
         delay_wren_r_reg <= 0;
         delay_wren_r2_reg <= 0;
     endrule
 
-    rule serdes_resetc_rule if (serdes_reset_null == 1);
+    rule serdes_resetc_rule if (serdes_reset_null == 0);
         delay_wren_c_reg <= 0;
         fifo_wren_r2_reg <= 0;
         fifo_wren_c_reg <= 0;
     endrule
 
-    rule serdes_calc2 if (serdes_reset_reg == 0);
+    rule serdes_calc2 if (serdes_reset_reg == 1);
         new_raw_empty_wire <= empty_wire;
         delay_wren_r_reg <= bittest_wire;
         delay_wren_r2_reg <= delay_wren_r_reg;
     endrule
 
-    rule serdes_calc2c if (serdes_reset_null == 0);
+    rule serdes_calc2c if (serdes_reset_null == 1);
         delay_wren_c_reg <= delay_wren_r2_reg;
         fifo_wren_r2_reg <= serdes_fifo_enable_null;
         fifo_wren_c_reg <= fifo_wren_r2_reg;
@@ -422,7 +413,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset)(ImageonSensor);
 	    serdes_training_reg <= v;
 	endmethod
 	method Action set_iserdes_control(Bit#(32) v);
-	    serdes_reset_reg <= v[0];
+	    serdes_reset_reg <= ~v[0];
 	    serdes_auto_align_reg <= v[1];
 	    serdes_align_start_reg <= v[2];
 	    serdes_fifo_enable_reg <= v[3];
