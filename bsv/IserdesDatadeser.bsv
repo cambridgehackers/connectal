@@ -22,21 +22,12 @@
 // SOFTWARE.
 
 import Vector::*;
-//import FIFO::*;
-//import GetPut::*;
-//import Gearbox::*;
 import Clocks :: *;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
-//import GetPutWithClocks :: *;
 
-interface IbufdsOut;
-   (* prefix = "" *)
+interface IserdesDatadeser;
    method Action                 ibufds_out(Bit#(1) v);
-endinterface: IbufdsOut
-
-// ports in the "CLOCK" clock domain
-interface IserdesControl;
    method Action                 align_start(Bit#(1) v);
    method Bit#(1)                align_busy();
    method Bit#(1)                aligned();
@@ -47,25 +38,11 @@ interface IserdesControl;
    method Action                 training(Bit#(10) v);
    method Action                 manual_tap(Bit#(10) v);
    method Action                 rden(Bit#(1) v);
-endinterface
-
-// ports in the "CLKDIV" clock domain
-interface IserdesWren;
    method Action                 delay_wren(Bit#(1) v);
    method Action                 fifo_wren(Bit#(1) v);
    method Action                 reset(Bit#(1) v);
-endinterface
-
-interface IserdesFifo;
    method Bit#(1)                empty();
    method Bit#(10)               dataout();
-endinterface
-
-interface IserdesDatadeser;
-   interface IbufdsOut           ibufdsOut;
-   interface IserdesControl      control;
-   interface IserdesWren         wren;
-   interface IserdesFifo         fifo;
 endinterface: IserdesDatadeser
 
 import "BVI" iserdes_datadeser = 
@@ -76,12 +53,7 @@ module mkIserdesDatadeser#(Clock clkdiv, Clock serdest)(IserdesDatadeser);
    input_clock clk (CLK) = serdest;
    input_clock clkdiv (CLKDIV) = clkdiv;
    default_clock clock(CLOCK);
-   interface IbufdsOut ibufdsOut;
        method              ibufds_out(IBUFDS_OUT) enable((*inhigh*) en0); // clocked_by () reset_by ()
-   endinterface: ibufdsOut
-   //method sdatan(SDATAN); // unused
-
-   interface IserdesControl control;
       method                  align_start(ALIGN_START) enable((*inhigh*) en1) clocked_by (clock);
       method ALIGN_BUSY       align_busy() clocked_by (clock);
       method ALIGNED          aligned() clocked_by (clock);
@@ -92,22 +64,14 @@ module mkIserdesDatadeser#(Clock clkdiv, Clock serdest)(IserdesDatadeser);
       method                  training(TRAINING) enable((*inhigh*) en8) clocked_by (clock);
       method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
       method                  rden(FIFO_RDEN) enable((*inhigh*) en12) clocked_by (clock);
-   endinterface
-
-   interface IserdesWren wren;
       method                  fifo_wren(FIFO_WREN) enable((*inhigh*) en10) clocked_by (clkdiv);
       method                  delay_wren(DELAY_WREN) enable((*inhigh*) en11) clocked_by (clkdiv);
       method                  reset(RESET) enable((*inhigh*) en16) clocked_by (clkdiv);
-   endinterface
-
-   interface IserdesFifo         fifo;
       method FIFO_EMPTY    empty() clocked_by (clock);
       method FIFO_DATAOUT  dataout() clocked_by(clock);
-   endinterface
-
-   schedule (wren_fifo_wren, wren_reset, wren_delay_wren) CF (wren_fifo_wren, wren_reset, wren_delay_wren);
-   schedule (ibufdsOut_ibufds_out, control_align_start, control_autoalign, control_training, control_manual_tap, control_rden, fifo_dataout)
-      CF (ibufdsOut_ibufds_out, control_align_start, control_autoalign, control_training, control_manual_tap, control_rden, fifo_dataout);
+   schedule (fifo_wren, reset, delay_wren) CF (fifo_wren, reset, delay_wren);
+   schedule (ibufds_out, align_start, autoalign, training, manual_tap, rden, dataout)
+      CF (ibufds_out, align_start, autoalign, training, manual_tap, rden, dataout);
 endmodule: mkIserdesDatadeser
 
 (* always_enabled *)
@@ -199,21 +163,21 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
        Bit#(5) emptyw = 0;
        Bit#(50) rawdataw = 0;
        for (Bit#(8) i = 0; i < 5; i = i+1) begin
-	  serdes_v[i].control.align_start(serdes_align_start_reg);
-	  serdes_v[i].control.autoalign(serdes_auto_align_reg);
-	  serdes_v[i].control.training(serdes_training_reg);
-	  serdes_v[i].control.manual_tap(serdes_manual_tap_reg);
-	  serdes_v[i].control.rden(decoder_enable_reg);
+	  serdes_v[i].align_start(serdes_align_start_reg);
+	  serdes_v[i].autoalign(serdes_auto_align_reg);
+	  serdes_v[i].training(serdes_training_reg);
+	  serdes_v[i].manual_tap(serdes_manual_tap_reg);
+	  serdes_v[i].rden(decoder_enable_reg);
 
-	  serdes_v[i].ibufdsOut.ibufds_out(ibufds_v[i]);
+	  serdes_v[i].ibufds_out(ibufds_v[i]);
 
-	  alignbusyw[i] = serdes_v[i].control.align_busy();
-	  alignedw[i] = serdes_v[i].control.aligned();
-	  firstw[i] = serdes_v[i].control.sampleinfirstbit();
-	  lastw[i] = serdes_v[i].control.sampleinlastbit();
-	  otherw[i] = serdes_v[i].control.sampleinotherbit();
-	  emptyw[i] = serdes_v[i].fifo.empty();
-	  rawdataw[(i+1)*10-1: i*10] = serdes_v[i].fifo.dataout();
+	  alignbusyw[i] = serdes_v[i].align_busy();
+	  alignedw[i] = serdes_v[i].aligned();
+	  firstw[i] = serdes_v[i].sampleinfirstbit();
+	  lastw[i] = serdes_v[i].sampleinlastbit();
+	  otherw[i] = serdes_v[i].sampleinotherbit();
+	  emptyw[i] = serdes_v[i].empty();
+	  rawdataw[(i+1)*10-1: i*10] = serdes_v[i].dataout();
        end
        serdes_align_busy_temp <= pack(alignbusyw != 0);
        serdes_aligned_temp <= pack(alignedw == 5'b11111);
@@ -224,9 +188,9 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
 
     rule sendup_sdes_clock;
     for (Bit#(8) i = 0; i < 5; i = i+1) begin
-       serdes_v[i].wren.reset(~serdes_reset_null);
-       serdes_v[i].wren.delay_wren(delay_wren_c_reg);
-       serdes_v[i].wren.fifo_wren(serdes_fifo_enable_null);
+       serdes_v[i].reset(~serdes_reset_null);
+       serdes_v[i].delay_wren(delay_wren_c_reg);
+       serdes_v[i].fifo_wren(serdes_fifo_enable_null);
     end
     endrule
     
