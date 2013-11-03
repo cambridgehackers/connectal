@@ -46,7 +46,7 @@ interface IserdesDatadeser;
 endinterface: IserdesDatadeser
 
 import "BVI" iserdes_datadeser = 
-module mkIserdesDatadeser#(Clock clkdiv, Clock serdest)(IserdesDatadeser);
+module mkIserdesbvi#(Clock clkdiv, Clock serdest)(IserdesDatadeser);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
 
@@ -72,6 +72,51 @@ module mkIserdesDatadeser#(Clock clkdiv, Clock serdest)(IserdesDatadeser);
    schedule (fifo_wren, reset, delay_wren) CF (fifo_wren, reset, delay_wren);
    schedule (ibufds_out, align_start, autoalign, training, manual_tap, rden, dataout)
       CF (ibufds_out, align_start, autoalign, training, manual_tap, rden, dataout);
+endmodule: mkIserdesbvi
+
+module mkIserdesDatadeser#(Clock clkdiv, Clock serdest, Bit#(1) align_start,
+   Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, Bit#(1) rden)(IserdesDatadeser);
+    IserdesDatadeser serdes_v <- mkIserdesbvi(clkdiv, serdest);
+    rule serdesrule;
+    serdes_v.align_start(align_start);
+    serdes_v.autoalign(autoalign);
+    serdes_v.training(training);
+    serdes_v.manual_tap(manual_tap);
+    serdes_v.rden(rden);
+    endrule
+    method Action ibufds_out(Bit#(1) v);
+        serdes_v.ibufds_out(v);
+    endmethod
+    method Bit#(1)                align_busy();
+        return serdes_v.align_busy();
+    endmethod
+    method Bit#(1)                aligned();
+        return serdes_v.aligned();
+    endmethod
+    method Bit#(1)                sampleinfirstbit();
+        return serdes_v.sampleinfirstbit();
+    endmethod
+    method Bit#(1)                sampleinlastbit();
+        return serdes_v.sampleinlastbit();
+    endmethod
+    method Bit#(1)                sampleinotherbit();
+        return serdes_v.sampleinotherbit();
+    endmethod
+    method Action                 delay_wren(Bit#(1) v);
+        serdes_v.delay_wren(v);
+    endmethod
+    method Action                 fifo_wren(Bit#(1) v);
+        serdes_v.fifo_wren(v);
+    endmethod
+    method Action                 reset(Bit#(1) v);
+        serdes_v.reset(v);
+    endmethod
+    method Bit#(1)                empty();
+        return serdes_v.empty();
+    endmethod
+    method Bit#(10)               dataout();
+        return serdes_v.dataout();
+    endmethod
 endmodule: mkIserdesDatadeser
 
 (* always_enabled *)
@@ -141,13 +186,14 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
     Vector#(5, ReadOnly#(Bit#(1))) ibufds_v;
     for (Integer i = 0; i < 5; i = i + 1)
         ibufds_v[i] <- mkIBUFDS(vita_data_p[i], vita_data_n[i]);
-    Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdest_clk.gen_clk));
     Reg#(Bit#(1)) serdes_align_busy_temp <- mkReg(0);
     Reg#(Bit#(1)) serdes_align_busy_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(1)) serdes_aligned_temp <- mkReg(0);
     Reg#(Bit#(1)) serdes_aligned_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
-
     Wire#(Bit#(1)) new_raw_empty_wire <- mkDWire(0);
+    Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdest_clk.gen_clk,
+	  serdes_align_start_reg, serdes_auto_align_reg, serdes_training_reg,
+	  serdes_manual_tap_reg, decoder_enable_reg));
 
     rule serdes_copybits;
         serdes_aligned_reg <= serdes_aligned_temp;
@@ -163,14 +209,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
        Bit#(5) emptyw = 0;
        Bit#(50) rawdataw = 0;
        for (Bit#(8) i = 0; i < 5; i = i+1) begin
-	  serdes_v[i].align_start(serdes_align_start_reg);
-	  serdes_v[i].autoalign(serdes_auto_align_reg);
-	  serdes_v[i].training(serdes_training_reg);
-	  serdes_v[i].manual_tap(serdes_manual_tap_reg);
-	  serdes_v[i].rden(decoder_enable_reg);
-
 	  serdes_v[i].ibufds_out(ibufds_v[i]);
-
 	  alignbusyw[i] = serdes_v[i].align_busy();
 	  alignedw[i] = serdes_v[i].aligned();
 	  firstw[i] = serdes_v[i].sampleinfirstbit();
