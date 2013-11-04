@@ -188,7 +188,7 @@ int PortalRequest::sendMessage(PortalMessage *msg)
 
   // mutex_lock(&portal_data->reg_mutex);
   // mutex_unlock(&portal_data->reg_mutex);
-  for (int i = 0; i < msg->size()/4; i++) {
+  for (int i = msg->size()/4-1; i >= 0; i--) {
     unsigned int data = buf[i];
 #ifdef MMAP_HW
     unsigned long addr = ((unsigned long)req_fifo_base) + msg->channel * 256;

@@ -40,6 +40,7 @@ interface CoreIndication;
     method Action heard3(S1 v);
     method Action heard4(S2 v);
     method Action heard5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
+    method Action heard6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
 endinterface
 
 interface CoreRequest;
@@ -48,6 +49,7 @@ interface CoreRequest;
     method Action say3(S1 v);
     method Action say4(S2 v);
     method Action say5(Bit#(32)a, Bit#(64) b, Bit#(32) c);
+    method Action say6(Bit#(32)a, Bit#(40) b, Bit#(32) c);
 endinterface
 
 interface EchoRequest;
@@ -57,6 +59,13 @@ endinterface
 interface EchoIndication;
    interface CoreIndication coreIndication;
 endinterface
+
+typedef struct {
+    Bit#(32) a;
+    Bit#(40) b;
+    Bit#(32) c;
+} Say6ReqStruct deriving (Bits);
+
 
 module mkEchoRequest#(EchoIndication indication)(EchoRequest);
 
@@ -83,7 +92,15 @@ module mkEchoRequest#(EchoIndication indication)(EchoRequest);
       
    method Action say5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
       indication.coreIndication.heard5(a, b, c);
-      $display("(hw) say5 %d %h %d", a, b, c);
+      $display("(hw) say5 %h %h %h", a, b, c);
+   endmethod
+
+   method Action say6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
+      indication.coreIndication.heard6(a, b, c);
+      $display("(hw) say6 %h %h %h", a, b, c);
+      // Say6ReqStruct rs = Say6ReqStruct{a:32'hBBBBBBBB, b:40'hEFFECAFECA, c:32'hCCCCCCCC};
+      // $display("(hw) say6 %h", pack(rs));
+      // indication.coreIndication.heard6(rs.a, rs.b, rs.c);
    endmethod
    endinterface
 

@@ -124,7 +124,6 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile uns
 {    
     // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
     unsigned int buf[1024];
-    memset(buf, 0, 1024);
     PortalMessage *msg = 0x0;
     
     switch (channel) {
@@ -148,7 +147,6 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, PortalReques
 {    
     // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
     unsigned int buf[1024];
-    memset(buf, 0, 1024);
     PortalMessage *msg = 0x0;
     
     switch (channel) {
@@ -204,8 +202,6 @@ public:
     }
     void demarshall(unsigned int *buff){
         int i = 0;
-        // I will eventually get rid of this memset (mdk)
-        memset(&payload, 0, sizeof(payload));
 %(paramStructDemarshall)s
     }
     void indicate(void *ind){ %(responseCase)s }
@@ -253,6 +249,7 @@ class MethodMixin:
             f.write(';\n')
     def emitCImplementation(self, f, className, namespace):
 
+        # resurse interface types and flattening all structs into a list of types
         def collectMembers(scope, member):
             tn = member.type.name
             if tn == 'Bit':
@@ -263,20 +260,29 @@ class MethodMixin:
                 rv = map(functools.partial(collectMembers, ns), td.tdtype.elements)
                 return sum(rv,[])
 
+        # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or 
+        # crosses a 32-bit boundary, it will appear in more than one bin (though with different ranges).  
+        # This is intended to mimick exactly Bluespec struct packing.  The padding must match the code 
+        # in Adapter.bsv.  the argument s is a list of bins, atoms is the flattened list, and pro represents
+        # the number of bits already consumed from atoms[0].
         def accumWords(s, pro, atoms):
             if len(atoms) == 0:
                 return [] if len(s) == 0 else [s]
             w = sum([x[1]-x[2] for x in s])
             a = atoms[0]
             aw = a[1].bitWidth();
+            #print '%d %d %d' %(aw, pro, w)
             if (aw-pro+w == 32):
-                ns = s+[(a[0],aw-pro,0,a[1])]
+                ns = s+[(a[0],aw,pro,a[1],pro==0)]
+                #print '%s (0)'% (a[0])
                 return [ns]+accumWords([],0,atoms[1:])
             if (aw-pro+w < 32):
-                ns = s+[(a[0],aw-pro,0,a[1])]
+                ns = s+[(a[0],aw,pro,a[1],pro==0)]
+                #print '%s (1)'% (a[0])
                 return accumWords(ns,0,atoms[1:])
             else:
-                ns = s+[(a[0],aw-pro,aw-pro-(32-w),a[1])]
+                ns = s+[(a[0],pro+(32-w),pro,a[1],pro==0)]
+                #print '%s (2)'% (a[0])
                 return [ns]+accumWords([],pro+(32-w), atoms)
 
         params = self.params
@@ -284,12 +290,23 @@ class MethodMixin:
         paramStructDeclarations = [ '        %s %s%s;\n' % (p.type.cName(), p.name, p.type.bitSpec()) for p in params]
         
         argAtoms = sum(map(functools.partial(collectMembers, 'payload'), params), [])
+
+        # for a in argAtoms:
+        #     print a[0]
+        # print ''
+
+        argAtoms.reverse();
         argWords  = accumWords([], 0, argAtoms)
+
+        # for a in argWords:
+        #     for b in a:
+        #         print '%s[%d:%d]' % (b[0], b[1], b[2])
+        # print ''
 
         def marshall(w):
             off = 0
             word = []
-            for e in reversed(w):
+            for e in w:
                 word.append('((' + e[0] + '>>%s)'%(e[2]) + '<<%s)'%(off))
                 off = off+e[1]-e[2]
             return '        buff[i++] = %s;\n' % (''.join(util.intersperse('|', word)))
@@ -297,14 +314,17 @@ class MethodMixin:
         def demarshall(w):
             off = 0
             word = []
-            for e in reversed(w):
-                word.append('        %s |= ((%s)(buff[i]>>%s))<<%s;\n'%(e[0],e[3].cName(),off,e[2]))
+            for e in w:
+                # print e[0]+' (d)'
+                ass = '=' if e[4] else '|='
+                word.append('        %s %s ((%s)(buff[i]>>%s))<<%s;\n'%(e[0],ass,e[3].cName(),off,e[2]))
                 off = off+e[1]-e[2]
             word.append('        i++;\n');
+            # print ''
             return ''.join(word)
 
         paramStructMarshall = map(marshall, argWords)
-        paramStructDemarshall = map(demarshall, reversed(argWords))
+        paramStructDemarshall = map(demarshall, argWords)
 
         if not params:
             paramStructDeclarations = ['        int padding;\n']
