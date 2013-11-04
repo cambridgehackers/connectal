@@ -27,8 +27,8 @@ import XilinxCells::*;
 import XbsvXilinxCells::*;
 
 interface Iserdesbvi;
-   method Action                 ibufds_out(Bit#(1) v);
    method Action                 align_start(Bit#(1) v);
+   method Action                 idelay_out(Bit#(1) v);
    method Bit#(1)                align_busy();
    method Bit#(1)                aligned();
    method Bit#(3)                samplein();
@@ -53,7 +53,7 @@ module mkIserdesbvi#(Clock clkdiv, Clock serdest)(Iserdesbvi);
    input_clock clk (CLK) = serdest;
    input_clock clkdiv (CLKDIV) = clkdiv;
    default_clock clock(CLOCK);
-       method              ibufds_out(IBUFDS_OUT) enable((*inhigh*) en0); // clocked_by () reset_by ()
+      method                  idelay_out(idelay_out) enable((*inhigh*) en14) clocked_by (clkdiv);
       method                  align_start(ALIGN_START) enable((*inhigh*) en1) clocked_by (clock);
       method ALIGN_BUSY       align_busy() clocked_by (clock);
       method ALIGNED          aligned() clocked_by (clock);
@@ -69,9 +69,8 @@ module mkIserdesbvi#(Clock clkdiv, Clock serdest)(Iserdesbvi);
       method                  delay_wren(DELAY_WREN) enable((*inhigh*) en11) clocked_by (clkdiv);
       method                  reset(RESET) enable((*inhigh*) en16) clocked_by (clkdiv);
       method FIFO_DATAOUT  dataout() clocked_by(clock);
-   schedule (fifo_wren, reset, delay_wren) CF (fifo_wren, reset, delay_wren);
-   schedule (ibufds_out, align_start, autoalign, training, manual_tap, dataout)
-      CF (ibufds_out, align_start, autoalign, training, manual_tap, dataout);
+   schedule (idelay_out, fifo_wren, reset, delay_wren, dataout, iodelay_reset_inc_ce, bitslip, align_busy, aligned, samplein, fifo_wren_sync, align_start, autoalign, training, manual_tap, bitslip)
+         CF (idelay_out, fifo_wren, reset, delay_wren, dataout, iodelay_reset_inc_ce, bitslip, align_busy, aligned, samplein, fifo_wren_sync, align_start, autoalign, training, manual_tap, bitslip);
 endmodule: mkIserdesbvi
 
 interface IserdesDatadeser;
@@ -116,7 +115,7 @@ module mkFIFO18#(Clock clkdiv)(FIFO18);
     method          wren(WREN) enable((*inhigh*) en3); // clocked_by () reset_by ()
     method DO       dataout() clocked_by(clock);
     method EMPTY    empty() clocked_by(clock);
-   schedule (di, rden, wren) CF (di, rden, wren);
+   schedule (di, rden, wren, dataout, empty) CF (di, rden, wren, dataout, empty);
 endmodule: mkFIFO18
 
 module mkIserdesDatadeser#(Clock clkdiv, Reset clkdiv_reset, Clock serdest, Bit#(1) align_start,
@@ -125,6 +124,32 @@ module mkIserdesDatadeser#(Clock clkdiv, Reset clkdiv_reset, Clock serdest, Bit#
     Clock defaultClock <- exposeCurrentClock();
     Iserdesbvi serbvi <- mkIserdesbvi(clkdiv, serdest);
     FIFO18 dfifo <- mkFIFO18(clkdiv, reset_by serbvi.fifo_reset);
+    MakeResetIfc iodelay_reset <- mkReset(2, True, clkdiv, clocked_by clkdiv, reset_by clkdiv_reset);
+
+    rule resetrule if (serbvi.iodelay_reset_inc_ce()[2] == 1);
+        iodelay_reset.assertReset();
+    endrule
+    IdelayE2 delaye2 <- mkIDELAYE2(IDELAYE2_Config {
+        cinvctrl_sel: "FALSE", delay_src: "IDATAIN",
+        high_performance_mode: "TRUE",
+        idelay_type: "VARIABLE", idelay_value: 0,
+        pipe_sel: "FALSE", refclk_frequency: 200, signal_pattern: "DATA"},
+        defaultClock,
+        clocked_by clkdiv, reset_by iodelay_reset.new_rst);
+
+    rule delaye2_rule;
+        delaye2.cinvctrl(0);
+        delaye2.cntvaluein(0);
+        delaye2.ld(0);
+        delaye2.ldpipeen(0);
+        delaye2.datain(0);
+        delaye2.inc(serbvi.iodelay_reset_inc_ce()[1] == 1);
+        delaye2.ce(serbvi.iodelay_reset_inc_ce()[0]);
+    endrule
+
+    rule idelayout_rule;
+        serbvi.idelay_out(delaye2.dataout());
+    endrule
 
     rule ssrule;
         dfifo.di({6'b0,serbvi.dataout()});
@@ -140,7 +165,7 @@ module mkIserdesDatadeser#(Clock clkdiv, Reset clkdiv_reset, Clock serdest, Bit#
     endrule
 
     method Action ibufdso(Bit#(1) v);
-        serbvi.ibufds_out(v);
+        delaye2.idatain(v);
     endmethod
     method Bit#(1)                align_busy();
         return serbvi.align_busy();
