@@ -112,22 +112,25 @@ instance DefaultValue#(IDELAYE2_Config);
       };
 endinstance
 
+(* always_ready, always_enabled *)
 interface IdelayE2;
    method Bit#(5) cntvalueout();
    method Action cinvctrl(Bit#(1) v);
    method Action cntvaluein(Bit#(5) v);
-   method Action ld();
-   method Action ldpipeen();
+   method Action ld(Bit#(1) v);
+   method Action ldpipeen(Bit#(1) v);
    method Action inc(Bool inc);
+   method Action ce(Bit#(1) v);
    method Action datain(Bit#(1) v);
    method Action idatain(Bit#(1) v);
    method Bit#(1) dataout();
 endinterface
 
 import "BVI" IDELAYE2 =
-module mkIDELAYE2#(IDELAYE2_Config cfg)(IdelayE2);
+module mkIDELAYE2#(IDELAYE2_Config cfg, Clock serdes_clock)(IdelayE2);
    default_clock clk(C);
    default_reset rst(REGRST);
+   input_clock serdes ()= serdes_clock;
 
    parameter CINVCTRL_SEL = cfg.cinvctrl_sel;
    parameter DELAY_SRC = cfg.delay_src;
@@ -142,18 +145,19 @@ module mkIDELAYE2#(IDELAYE2_Config cfg)(IdelayE2);
    method cinvctrl(CINVCTRL) enable((*inhigh*) en0);
    method cntvaluein(CNTVALUEIN) enable((*inhigh*) en1);
 
-   method ld() enable(LD);
+   method ld(LD) enable((*inhigh*) en20);
 
    // is LDPIPEEN the enable for DATAIN?
-   method ldpipeen() enable(LDPIPEEN);
+   method ldpipeen(LDPIPEEN) enable((*inhigh*) en21);
 
    method DATAOUT dataout();
-   method inc(INC) enable(CE);
+   method inc(INC) enable((*inhigh*) en5);
+   method ce(CE) enable((*inhigh*) en4);
    method datain(DATAIN) enable((*inhigh*) en2);
-   method idatain(IDATAIN) enable((*inhigh*) en3);
+   method idatain(IDATAIN) enable((*inhigh*) en3) clocked_by(serdes);
 
-   schedule (datain, idatain, inc) CF (datain, idatain, inc);
-   schedule (cntvalueout, dataout) CF (cntvalueout, dataout);
+   schedule (datain, idatain, inc, ce) CF (datain, idatain, inc, ce);
+   schedule (cntvalueout, dataout, ld, datain, ldpipeen, inc, cinvctrl, cntvaluein, ce, idatain) CF (cntvalueout, dataout, ld, datain, ldpipeen, inc, cinvctrl, cntvaluein, ce, idatain);
 endmodule
 
 ////////////////////////////////////////////////////////////
@@ -200,6 +204,7 @@ instance DefaultValue#(ISERDESE2_Config);
       };
 endinstance
 
+(* always_ready, always_enabled *)
 interface IserdesE2;
    (* prefix = "" *)
    method Action d(Bit#(1) d);
@@ -223,8 +228,8 @@ interface IserdesE2;
    method Action ofb(Bit#(1) ofb);
    method Action dynclkdivsel(Bit#(1) dynclkdivsel);
    method Action dynclksel(Bit#(1) dynclksel);
-   interface ClockGenIfc oclk;
-   interface ClockGenIfc oclkb;
+   method Action oclk(Bit#(1) v);
+   method Action oclkb(Bit#(1) v);
 endinterface
 
 import "BVI" ISERDESE2 =
@@ -274,20 +279,13 @@ module mkISERDESE2#(ISERDESE2_Config cfg, Clock clk, Clock clkb)(IserdesE2);
    method SHIFTOUT1 shiftout1();
    method SHIFTOUT2 shiftout2();
    method ofb(OFB) enable ((*inhigh*) en6);
+   method oclk(OCLK) enable ((*inhigh*) en10);
+   method oclkb(OCLKB) enable ((*inhigh*) en11);
    method dynclkdivsel(DYNCLKDIVSEL) enable ((*inhigh*) en7);
    method dynclksel(DYNCLKSEL) enable ((*inhigh*) en8);
 
-   interface ClockGenIfc oclk;
-      output_clock gen_clk(OCLK);
-   endinterface
-   interface ClockGenIfc oclkb;
-      output_clock gen_clk(OCLKB);
-   endinterface
-
-   schedule (o, q1, q2, q3, q4, q5, q6, q7, q8, shiftout1, shiftout2) 
-      CF (o, q1, q2, q3, q4, q5, q6, q7, q8, shiftout1, shiftout2);
-   schedule (d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel)
-      CF (d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel);   
+   schedule (o, q1, q2, q3, q4, q5, q6, q7, q8, shiftout1, shiftout2, d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel, oclk, oclkb)
+         CF (o, q1, q2, q3, q4, q5, q6, q7, q8, shiftout1, shiftout2, d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel, oclk, oclkb);
 endmodule
 
 import "BVI" BUFR =
@@ -323,8 +321,26 @@ interface XbsvMMCME2;
    method    Action    clkfbin(Bit#(1) v);
 endinterface
 
+typedef struct {
+   String      bandwidth;
+   String      compensation;
+   Real        clkfbout_mult_f;
+   Real        clkfbout_phase;
+   Real        clkin1_period;
+   Real        clkin2_period;
+   Integer     divclk_divide;
+   Real        clkout0_divide_f;
+   Real        clkout0_duty_cycle;
+   Real        clkout0_phase;
+   Integer     clkout1_divide;
+   Real        clkout1_duty_cycle;
+   Real        clkout1_phase;
+   Real        ref_jitter1;
+   Real        ref_jitter2;
+} XbsvMMCMParams deriving (Bits, Eq);
+
 import "BVI" MMCM_ADV =
-module mkXbsvMMCM#(MMCMParams params)(XbsvMMCME2);
+module mkXbsvMMCM#(XbsvMMCMParams params)(XbsvMMCME2);
    //Reset reset <- exposeCurrentReset;
    //default_reset rst() = reset;
    no_reset;
@@ -364,8 +380,17 @@ module mkXbsvMMCM#(MMCMParams params)(XbsvMMCME2);
    schedule locked CF (clkfbin, locked);
 endmodule
 
+(* always_ready, always_enabled *)
+interface XbsvODDR#(type a);
+   method    a            q();
+   method    Action       s(Bool i);
+   method    Action       ce(Bool i);
+   method    Action       d1(a i);
+   method    Action       d2(a i);
+endinterface: XbsvODDR
+
 import "BVI" ODDR =
-module vMkXbsvODDR#(ODDRParams#(a) params)(ODDR#(a))
+module mkXbsvODDR#(ODDRParams#(a) params)(XbsvODDR#(a))
    provisos(Bits#(a, 1), DefaultValue#(a));
 
    if (params.srtype != "SYNC" &&
@@ -398,47 +423,6 @@ module vMkXbsvODDR#(ODDRParams#(a) params)(ODDR#(a))
    schedule (q)      CF (q);
    schedule (ce, s)  CF (ce, s);
    schedule (ce, s)  SB (d1, d2, q);
-endmodule: vMkXbsvODDR
-
-module mkXbsvODDR#(ODDRParams#(a) params)(ODDR#(a))
-   provisos(Bits#(a, sa), DefaultValue#(a));
-   //Reset reset <- invertCurrentReset;
-   Vector#(sa, ODDRParams#(Bit#(1))) _params = ?;
-   for(Integer i = 0; i < valueof(sa); i = i + 1) begin
-      _params[i].ddr_clk_edge = params.ddr_clk_edge;
-      _params[i].init         = pack(params.init)[i];
-      _params[i].srtype       = params.srtype;
-   end
-   Vector#(sa, ODDR#(Bit#(1))) _oddr  = ?;
-   for(Integer i = 0; i < valueof(sa); i = i + 1) begin
-      _oddr[i] <- vMkXbsvODDR(_params[i]); //, reset_by reset);
-   end
-   function Bit#(1) getQ(ODDR#(Bit#(1)) ddr);
-      return ddr.q;
-   endfunction
-   method a q();
-      return unpack(pack(map(getQ, _oddr)));
-   endmethod
-   method Action s(Bool x);
-      for(Integer i = 0; i < valueof(sa); i = i + 1) begin
-         _oddr[i].s(x);
-      end
-   endmethod
-   method Action ce(Bool x);
-      for(Integer i = 0; i < valueof(sa); i = i + 1) begin
-         _oddr[i].ce(x);
-      end
-   endmethod
-   method Action d1(a x);
-      for(Integer i = 0; i < valueof(sa); i = i + 1) begin
-         _oddr[i].d1(pack(x)[i]);
-      end
-   endmethod
-   method Action d2(a x);
-      for(Integer i = 0; i < valueof(sa); i = i + 1) begin
-         _oddr[i].d2(pack(x)[i]);
-      end
-   endmethod
 endmodule: mkXbsvODDR
 
 

@@ -96,8 +96,8 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
-    ODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-    ODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
+    XbsvODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
+    XbsvODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
     Wire#(Bit#(1)) poutq <- mkDWire(0);
     Wire#(Bit#(1)) ptq <- mkDWire(0);
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
@@ -142,6 +142,8 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
     rule pll_rule;
         poutq <= pll_out.q();
         ptq <= pll_t.q();
+        pll_t.s(False);
+        pll_out.s(False);
         pll_out.d1(0);
         pll_out.d2(1);
         pll_out.ce(True);
@@ -463,7 +465,7 @@ interface MMCMHACK;
 endinterface
 
 module mkMMCMHACK(MMCMHACK);
-    XbsvMMCME2 mm <- mkXbsvMMCM(MMCMParams {
+    XbsvMMCME2 mm <- mkXbsvMMCM(XbsvMMCMParams {
         bandwidth:"OPTIMIZED", compensation:"ZHOLD",
         clkfbout_mult_f:8.000, clkfbout_phase:0.0,
         clkin1_period:6.734007, clkin2_period:6.734007,
