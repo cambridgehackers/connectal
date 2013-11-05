@@ -230,6 +230,7 @@ interface IserdesE2;
    method Action dynclksel(Bit#(1) dynclksel);
    method Action oclk(Bit#(1) v);
    method Action oclkb(Bit#(1) v);
+   method Action reset(Bit#(1) d);
 endinterface
 
 import "BVI" ISERDESE2 =
@@ -237,7 +238,7 @@ module mkISERDESE2#(ISERDESE2_Config cfg, Clock clk, Clock clkb)(IserdesE2);
    input_clock clk(CLK) = clk;
    input_clock clkb(CLKB) = clkb;
    default_clock clkdiv(CLKDIV);
-   default_reset rst(RST);
+   no_reset;
 
    parameter DATA_RATE = cfg.data_rate;
    parameter DATA_WIDTH = cfg.data_width;
@@ -283,9 +284,10 @@ module mkISERDESE2#(ISERDESE2_Config cfg, Clock clk, Clock clkb)(IserdesE2);
    method oclkb(OCLKB) enable ((*inhigh*) en11);
    method dynclkdivsel(DYNCLKDIVSEL) enable ((*inhigh*) en7);
    method dynclksel(DYNCLKSEL) enable ((*inhigh*) en8);
+   method reset(RST) enable ((*inhigh*) en14);
 
-   schedule (o, q1, q2, q3, q4, q5, q6, q7, q8, shiftout1, shiftout2, d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel, oclk, oclkb)
-         CF (o, q1, q2, q3, q4, q5, q6, q7, q8, shiftout1, shiftout2, d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel, oclk, oclkb);
+   schedule (reset, o, q1, q2, q3, q4, q5, q6, q7, q8, shiftout1, shiftout2, d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel, oclk, oclkb)
+         CF (reset, o, q1, q2, q3, q4, q5, q6, q7, q8, shiftout1, shiftout2, d, bitslip, ce1, ce2, ddly, shiftin1, shiftin2, ofb, dynclkdivsel, dynclksel, oclk, oclkb);
 endmodule
 
 import "BVI" BUFR =

@@ -43,7 +43,7 @@ interface Iserdesbvi;
    method Action                 serreset(Bit#(1) v);
    method Bit#(1)                fifo_wren_sync();
    method Bit#(1)                fifo_reset();
-   method Bit#(10)               dataout();
+   method Action                 dataout(Bit#(10) v);
 endinterface: Iserdesbvi
 
 import "BVI" iserdes_datadeser = 
@@ -71,7 +71,7 @@ module mkIserdesbvi#(Clock clkdiv, Clock serdest, Clock not_clk, Clock host_cloc
       method                  delay_wren(DELAY_WREN) enable((*inhigh*) en11) clocked_by (clkdiv);
       method                  reset(RESET) enable((*inhigh*) en17) clocked_by (clkdiv);
       method                  serreset(SERRESET) enable((*inhigh*) en16) clocked_by (clkdiv);
-      method FIFO_DATAOUT  dataout() clocked_by(clkdiv);
+      method                  dataout(ISERDES_DATA) enable((*inhigh*) en18) clocked_by(clkdiv);
    schedule (serreset, fifo_reset, idelay_out, fifo_wren, reset, delay_wren, dataout, iodelay_reset_inc_ce, bitslip, align_busy, aligned, samplein, fifo_wren_sync, align_start, autoalign, training, manual_tap, bitslip)
          CF (serreset, fifo_reset, idelay_out, fifo_wren, reset, delay_wren, dataout, iodelay_reset_inc_ce, bitslip, align_busy, aligned, samplein, fifo_wren_sync, align_start, autoalign, training, manual_tap, bitslip);
 endmodule: mkIserdesbvi
@@ -168,7 +168,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         init_q1: 0, init_q2: 0, init_q3: 0, init_q4: 0,
         srval_q1: 0, srval_q2: 0, srval_q3: 0, srval_q4: 0,
         serdes_mode: "MASTER", iobdelay: "IFD"},
-        serdest, serdest_inverted.slowClock); //, clocked_by serdes_clock, reset_by iodelay_reset.new_rst);
+        serdest, serdest_inverted.slowClock, clocked_by serdes_clock);//, reset_by iodelay_reset.new_rst);
     IserdesE2 slave_data <- mkISERDESE2( ISERDESE2_Config{
         data_rate: "DDR", data_width: 10,
         dyn_clk_inv_en: "FALSE", dyn_clkdiv_inv_en: "FALSE",
@@ -176,14 +176,14 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         init_q1: 0, init_q2: 0, init_q3: 0, init_q4: 0,
         srval_q1: 0, srval_q2: 0, srval_q3: 0, srval_q4: 0,
         serdes_mode: "SLAVE", iobdelay: "NONE"},
-        serdest, serdest_inverted.slowClock); //, clocked_by serdes_clock, reset_by iodelay_reset.new_rst);
+        serdest, serdest_inverted.slowClock, clocked_by serdes_clock);//, reset_by iodelay_reset.new_rst);
     rule serdesdata_rule;
         let dout = 10'b0;
         master_data.d(0);
-        //master_data.bitslip(serbvi.bitslip());
+        master_data.bitslip(serbvi.bitslip());
         master_data.ce1(1);
         master_data.ce2(1);
-        //master_data.ddly(delaye2.dataout());
+        master_data.ddly(delaye2.dataout());
         master_data.ofb(0);
         master_data.dynclkdivsel(0);
         master_data.dynclksel(0);
@@ -191,6 +191,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         master_data.shiftin2(0);
         master_data.oclk(0);
         master_data.oclkb(0);
+        master_data.reset(serbvi.iodelay_reset_inc_ce()[2]);
         dout[0] = master_data.q1();
         dout[1] = master_data.q2();
         dout[2] = master_data.q3();
@@ -200,7 +201,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         dout[6] = master_data.q7();
         dout[7] = master_data.q8();
         slave_data.d(0);
-        //slave_data.bitslip(serbvi.bitslip());
+        slave_data.bitslip(serbvi.bitslip());
         slave_data.ce1(1);
         slave_data.ce2(1);
         slave_data.ddly(0);
@@ -213,16 +214,13 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         dout[9] = slave_data.q4();
         slave_data.oclk(0);
         slave_data.oclkb(0);
-        //serbvi.dataout(dout);
-        //dfifo.di({6'b0,dout});
+        slave_data.reset(serbvi.iodelay_reset_inc_ce()[2]);
+        serbvi.dataout(dout);
+        dfifo.di({6'b0,dout});
     endrule
 
     rule ssrule;
         serbvi.idelay_out(delaye2.dataout());
-    endrule
-
-    rule dfifo_ruledi;
-        dfifo.di({6'b0,serbvi.dataout()});
     endrule
 
     rule wren_dfifo_rule;
