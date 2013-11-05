@@ -28,7 +28,6 @@ import XbsvXilinxCells::*;
 
 interface Iserdesbvi;
    method Action                 align_start(Bit#(1) v);
-   method Action                 idelay_out(Bit#(1) v);
    method Bit#(1)                align_busy();
    method Bit#(1)                aligned();
    method Bit#(3)                samplein();
@@ -46,21 +45,15 @@ interface Iserdesbvi;
 endinterface: Iserdesbvi
 
 import "BVI" iserdes_datadeser = 
-module mkIserdesbvi#(Clock clkdiv, Clock serdest, Clock not_clk, Clock host_clock)(Iserdesbvi);
-   Clock defaultClock <- exposeCurrentClock();
-   Reset defaultReset <- exposeCurrentReset();
-
-   input_clock clk (CLK) = serdest;
-   input_clock not_clk (not_clk) = not_clk;
+module mkIserdesbvi#(Clock clkdiv)(Iserdesbvi);
    input_clock clkdiv (CLKDIV) = clkdiv;
    default_clock clock(CLOCK);
-      method                  idelay_out(idelay_out) enable((*inhigh*) en14) clocked_by (clkdiv);
       method                  align_start(ALIGN_START) enable((*inhigh*) en1) clocked_by (clock);
       method ALIGN_BUSY       align_busy() clocked_by (clock);
       method ALIGNED          aligned() clocked_by (clock);
-      method ISERDES_BITSLIP_o  bitslip() clocked_by (clkdiv);
+      method ISERDES_BITSLIP  bitslip() clocked_by (clkdiv);
       method SAMPLEIN samplein() clocked_by (clock);
-      method IODELAY_RESET_INC_CE_o iodelay_reset_inc_ce() clocked_by (clkdiv);
+      method IODELAY_RESET_INC_CE iodelay_reset_inc_ce() clocked_by (clkdiv);
       method                  autoalign(AUTOALIGN) enable((*inhigh*) en7) clocked_by (clock);
       method                  training(TRAINING) enable((*inhigh*) en8) clocked_by (clock);
       method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
@@ -70,8 +63,8 @@ module mkIserdesbvi#(Clock clkdiv, Clock serdest, Clock not_clk, Clock host_cloc
       method                  delay_wren(DELAY_WREN) enable((*inhigh*) en11) clocked_by (clkdiv);
       method                  reset(RESET) enable((*inhigh*) en17) clocked_by (clkdiv);
       method                  dataout(ISERDES_DATA) enable((*inhigh*) en18) clocked_by(clkdiv);
-   schedule (fifo_reset, idelay_out, fifo_wren, reset, delay_wren, dataout, iodelay_reset_inc_ce, bitslip, align_busy, aligned, samplein, fifo_wren_sync, align_start, autoalign, training, manual_tap, bitslip)
-         CF (fifo_reset, idelay_out, fifo_wren, reset, delay_wren, dataout, iodelay_reset_inc_ce, bitslip, align_busy, aligned, samplein, fifo_wren_sync, align_start, autoalign, training, manual_tap, bitslip);
+   schedule (fifo_reset, fifo_wren, reset, delay_wren, dataout, iodelay_reset_inc_ce, bitslip, align_busy, aligned, samplein, fifo_wren_sync, align_start, autoalign, training, manual_tap, bitslip)
+         CF (fifo_reset, fifo_wren, reset, delay_wren, dataout, iodelay_reset_inc_ce, bitslip, align_busy, aligned, samplein, fifo_wren_sync, align_start, autoalign, training, manual_tap, bitslip);
 endmodule: mkIserdesbvi
 
 interface IserdesDatadeser;
@@ -126,8 +119,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
-    ClockDividerIfc serdest_inverted <- mkClockInverter(clocked_by serdest);
-    Iserdesbvi serbvi <- mkIserdesbvi(serdes_clock, serdest, serdest_inverted.slowClock, defaultClock);
+    Iserdesbvi serbvi <- mkIserdesbvi(serdes_clock);
     FIFO18 dfifo <- mkFIFO18(serdes_clock);
     IdelayE2 delaye2 <- mkIDELAYE2(IDELAYE2_Config {
         cinvctrl_sel: "FALSE", delay_src: "IDATAIN",
@@ -135,6 +127,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         idelay_type: "VARIABLE", idelay_value: 0,
         pipe_sel: "FALSE", refclk_frequency: 200, signal_pattern: "DATA"},
         defaultClock, clocked_by serdes_clock);
+    ClockDividerIfc serdest_inverted <- mkClockInverter(clocked_by serdest);
     IserdesE2 master_data <- mkISERDESE2( ISERDESE2_Config{
         data_rate: "DDR", data_width: 10,
         dyn_clk_inv_en: "FALSE", dyn_clkdiv_inv_en: "FALSE",
@@ -197,7 +190,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         slave_data.reset(serbvi.iodelay_reset_inc_ce()[2]);
         serbvi.dataout(dout);
         dfifo.di({6'b0,dout});
-        serbvi.idelay_out(delaye2.dataout());
     endrule
 
     rule wren_dfifo_rule;
