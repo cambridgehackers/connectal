@@ -181,6 +181,7 @@ def print_tlp_log(tlplog):
         print_tlp(tlpdata)
 
 if __name__ == '__main__':
-    tlplog = subprocess.check_output(['bluenoc', 'tlp']).split('\n')
+    tlplog = subprocess.check_output(['bluenoc', 'tlp', '/dev/fpga0']).split('\n')
     print_tlp_log(tlplog[0:-1])
     print classCounts
+    print sum([ classCounts[k] for k in classCounts])
