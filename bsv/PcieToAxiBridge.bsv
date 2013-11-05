@@ -654,20 +654,22 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     interface Reg interruptData      = interruptDataReg;
 endmodule: mkPortalEngine
 
-interface AxiSlaveEngine#(type buswidth, type buswidthbytes);
+interface AxiSlaveEngine#(type buswidth, type busWidthBytes);
     interface GetPut#(TLPData#(16))   tlps;
-    interface Axi3Slave#(40,buswidth,buswidthbytes,12)  slave;
+    interface Axi3Slave#(40,buswidth,busWidthBytes,12)  slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: AxiSlaveEngine
 
-module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, buswidthbytes))
-   provisos (Div#(buswidth, 8, buswidthbytes),
-	     Div#(buswidth, 32, buswidthwords),
+module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
+   provisos (Div#(buswidth, 8, busWidthBytes),
+	     Div#(buswidth, 32, busWidthWords),
+	     Bits#(Vector#(busWidthWords, Bit#(32)), buswidth),
 	     Add#(aaa, 32, buswidth),
-	     Add#(bbb, TMul#(8, buswidthwords), 64),
-	     Add#(ccc, TMul#(32, buswidthwords), 256),
-	     Add#(ddd, buswidthwords, 8));
+	     Add#(bbb, buswidth, 256),
+	     Add#(ccc, TMul#(8, busWidthWords), 64),
+	     Add#(ddd, TMul#(32, busWidthWords), 256),
+	     Add#(eee, busWidthWords, 8));
 
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
 
@@ -675,9 +677,14 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, buswidthbytes))
     Reg#(Bool) use4dwReg <- mkReg(True);
 
     MIMOConfiguration mimoCfg = defaultValue;
-    MIMO#(4,buswidthwords,8,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
-    MIMO#(4,buswidthwords,8,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
+    MIMO#(4,busWidthWords,8,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
+    MIMO#(4,busWidthWords,8,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
+    MIMO#(busWidthWords,4,8,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(TLPTag) lastTag <- mkReg(0);
+    Reg#(Bit#(5)) writeBurstCount <- mkReg(0);
+    Reg#(Bit#(5)) writeDwCount <- mkReg(0);
+    Reg#(TLPTag) writeTag <- mkReg(0);
+
     function LUInt#(4) tlpWordCount(TLPData#(16) tlp);
        if (tlp.be == 16'h0000)
 	  return 0;
@@ -692,6 +699,35 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, buswidthbytes))
        else
 	  return 0;
     endfunction
+   rule writeTlps if (writeDwCount > 0);
+      TLPData#(16) tlp = defaultValue;
+      tlp.sof = False;
+      Vector#(4, Bit#(32)) v = unpack(0);
+      if (writeDwCount > 4) begin
+	 v = writeDataMimo.first();
+	 writeDataMimo.deq(4);
+	 writeDwCount <= writeDwCount - 4;
+	 tlp.eof = True;
+	 tlp.be = 16'hffff;
+      end
+      else begin
+	 v = writeDataMimo.first();
+	 writeDataMimo.deq(unpack(truncate(writeDwCount)));
+	 writeDwCount <= 0;
+	 tlp.eof = True;
+	 if (writeDwCount == 4)
+	    tlp.be = 16'hffff;
+	 else if (writeDwCount == 3)
+	    tlp.be = 16'hfff0;
+	 else if (writeDwCount == 2)
+	    tlp.be = 16'hff00;
+	 else if (writeDwCount == 1)
+	    tlp.be = 16'hf000;
+      end
+      tlp.data = pack(v);
+      tlpOutFifo.enq(tlp);
+   endrule
+
     interface GetPut tlps = tuple2(
               toGet(tlpOutFifo),
 	      (interface Put;
@@ -722,9 +758,33 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, buswidthbytes))
     interface Axi3Slave slave;
 	interface Axi3SlaveWrite write;
 	   method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid);
+				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid) if (writeBurstCount == 0);
+	      TLPLength tlplen = 2*(extend(burstLen) + 1);
+	      TLPMemory4DWHeader hdr_4dw = defaultValue;
+	      hdr_4dw.format = MEM_WRITE_4DW_DATA;
+	      hdr_4dw.tag = truncate(awid);
+	      hdr_4dw.reqid = my_id;
+	      hdr_4dw.nosnoop = SNOOPING_REQD;
+	      hdr_4dw.addr = addr[40-1:2];
+	      hdr_4dw.length = tlplen;
+	      hdr_4dw.firstbe = 4'hf;
+	      hdr_4dw.lastbe = 4'hf;
+	      TLPData#(16) tlp = defaultValue;
+	      tlp.sof = True;
+	      tlp.eof = False;
+	      tlp.hit = 7'h00;
+	      tlp.data = pack(hdr_4dw);
+	      tlp.be = 16'hffff;
+	      tlpOutFifo.enq(tlp);
+	      writeBurstCount <= zeroExtend(burstLen)+1;
+	      writeDwCount <= zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
+	      writeTag <= truncate(awid);
            endmethod: writeAddr
-	   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last);
+	   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last)
+	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0);
+	      writeBurstCount <= writeBurstCount - 1;
+	      Vector#(busWidthWords, Bit#(32)) v = unpack(data);
+	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
            endmethod: writeData
 	   method ActionValue#(Bit#(2)) writeResponse();
 	       return 0;
@@ -735,7 +795,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, buswidthbytes))
 	endinterface
 	interface Axi3SlaveRead read;
 	   method Action readAddr(Bit#(40) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-				  Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid);
+				  Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid) if (writeDwCount == 0);
 	       TLPData#(16) tlp = defaultValue;
 	       tlp.sof = True;
 	       tlp.eof = True;
@@ -771,10 +831,10 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, buswidthbytes))
            endmethod: readAddr
 	   method ActionValue#(Bit#(buswidth)) readData();
 	      let data_v = completionMimo.first;
-	      completionMimo.deq(fromInteger(valueOf(buswidthwords)));
-	      completionTagMimo.deq(fromInteger(valueOf(buswidthwords)));
+	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
+	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
               Bit#(buswidth) v = 0;
-	      for (Integer i = 0; i < valueOf(buswidthwords); i = i+1)
+	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
 	      return v;
            endmethod: readData
@@ -903,7 +963,7 @@ interface ControlAndStatusRegs;
    interface Reg#(Bit#(32)) tlpDataBramWrAddr;
    interface Reg#(Bit#(32)) tlpSeqno;
    interface Reg#(Bit#(32)) tlpOutCount;
-   interface BRAMServer#(Bit#(10), TimestampedTlpData) tlpDataBram;
+   interface BRAMServer#(Bit#(11), TimestampedTlpData) tlpDataBram;
 endinterface: ControlAndStatusRegs
 
 // This module encapsulates all of the logic for instantiating and
@@ -996,8 +1056,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
    BRAM_Configure bramCfg = defaultValue;
-   bramCfg.memorySize = 1024;
-   BRAM1Port#(Bit#(10), TimestampedTlpData) tlpDataBram1Port <- mkBRAM1Server(bramCfg);
+   bramCfg.memorySize = 2048;
+   BRAM1Port#(Bit#(11), TimestampedTlpData) tlpDataBram1Port <- mkBRAM1Server(bramCfg);
    Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
    Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
    Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
@@ -2664,7 +2724,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
                                                  , max_payload_bytes
                                                  );
 
-   rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 1023);
+   rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 2047);
        csr.tlpTracing <= False;
    endrule
    rule connectEnables;
