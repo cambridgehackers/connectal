@@ -65,15 +65,17 @@ void PortalRequest::close()
 }
 
 PortalRequest::PortalRequest(const char *name, PortalIndication *indication)
-  : ind_reg_base(NULL), 
-    ind_fifo_base(NULL),
-    req_reg_base(NULL),
-    req_fifo_base(NULL),
-    indication(indication), fd(-1), name(strdup(name))
+  : ind_reg_base(0x0), 
+    ind_fifo_base(0x0),
+    req_reg_base(0x0),
+    req_fifo_base(0x0),
+    indication(indication), 
+    fd(-1),
+    name((char*)strdup(name))
 {
   int rc = open();
   if (rc != 0) {
-printf("[%s:%d] failed to open PortalRequest %s\n", __FUNCTION__, __LINE__, name);
+    printf("[%s:%d] failed to open PortalRequest %s\n", __FUNCTION__, __LINE__, name);
     ALOGD("PortalRequest::PortalRequest failure rc=%d\n", rc);
     exit(1);
   }

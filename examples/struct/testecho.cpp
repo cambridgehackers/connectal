@@ -37,33 +37,33 @@ public:
     TestCoreIndication::incr_cnt();
   }
   virtual void heard2(unsigned long a, unsigned long b) {
-    fprintf(stderr, "heard2(%d %d)\n", a, b);
+    fprintf(stderr, "heard2(%ld %ld)\n", a, b);
     assert(a == v2a);
     assert(b == v2b);
     TestCoreIndication::incr_cnt();
   }
   virtual void heard3(S1& s){
-    fprintf(stderr, "heard3(S1{a:%d,b:%d})\n", s.a, s.b);
+    fprintf(stderr, "heard3(S1{a:%ld,b:%ld})\n", s.a, s.b);
     assert(s.a == s1.a);
     assert(s.b == s1.b);
     TestCoreIndication::incr_cnt();
   }
   virtual void heard4(S2& s){
-    fprintf(stderr, "heard4(S2{a:%d,b:%d,c:%d})\n", s.a,s.b,s.c);
+    fprintf(stderr, "heard4(S2{a:%ld,b:%ld,c:%ld})\n", s.a,s.b,s.c);
     assert(s.a == s2.a);
     assert(s.b == s2.b);
     assert(s.c == s2.c);
     TestCoreIndication::incr_cnt();
   }
   virtual void heard5(unsigned long a, unsigned long long b, unsigned long c) {
-    fprintf(stderr, "heard5(%08x, %016llx, %08x)\n", a, b, c);
+    fprintf(stderr, "heard5(%08lx, %016llx, %08lx)\n", a, b, c);
     assert(a == v5a);
     assert(b == v5b);
     assert(c == v5c);
     TestCoreIndication::incr_cnt();
   }
   virtual void heard6(unsigned long a, unsigned long long b, unsigned long c) {
-    fprintf(stderr, "heard6(%08x, %016llx, %08x)\n", a, b, c);
+    fprintf(stderr, "heard6(%08lx, %016llx, %08lx)\n", a, b, c);
     assert(a == v6a);
     assert(b == v6b);
     assert(c == v6c);
@@ -80,13 +80,13 @@ int main(int argc, const char **argv)
   device->say1(v1a);  
   fprintf(stderr, "calling say2(%d, %d)\n", v2a,v2b);
   device->say2(v2a,v2b);
-  fprintf(stderr, "calling say3(S1{a:%d,b:%d})\n", s1.a,s1.b);
+  fprintf(stderr, "calling say3(S1{a:%ld,b:%ld})\n", s1.a,s1.b);
   device->say3(s1);
-  fprintf(stderr, "calling say4(S2{a:%d,b:%d,c:%d})\n", s2.a,s2.b,s2.c);
+  fprintf(stderr, "calling say4(S2{a:%ld,b:%ld,c:%ld})\n", s2.a,s2.b,s2.c);
   device->say4(s2);
-  fprintf(stderr, "calling say5(%08x, %016llx, %08x)\n", v5a, v5b, v5c);
+  fprintf(stderr, "calling say5(%08lx, %016llx, %08lx)\n", v5a, v5b, v5c);
   device->say5(v5a, v5b, v5c);  
-  fprintf(stderr, "calling say6(%08x, %016llx, %08x)\n", v6a, v6b, v6c);
+  fprintf(stderr, "calling say6(%08lx, %016llx, %08lx)\n", v6a, v6b, v6c);
   device->say6(v6a, v6b, v6c);  
   fprintf(stderr, "about to invoke portalExec\n");
   portalExec(NULL);

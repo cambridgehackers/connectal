@@ -56,49 +56,49 @@ static void recv_request(bool rr)
 
 static void* init_socket(void* _xx)
 {
-  int msg = (int)_xx;
-  int id  = msg & 0x7FFFFFFF;
-  int rr  = msg & 0x80000000;
+  unsigned long msg = (unsigned long)_xx;
+  unsigned long id  = msg & 0x7FFFFFFF;
+  unsigned long rr  = msg & 0x80000000;
   assert(id < 16);
 
   char str[100];
   struct channel* c = rr ? &(portals[id].read) : &(portals[id].write); 
 
-  printf("(%08x) init_socket\n",msg);
+  printf("(%08lx) init_socket\n",msg);
   if ((c->s1 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "(%08x) socket error", msg);
+    fprintf(stderr, "(%08lx) socket error", msg);
     exit(1);
   }
   
-  sprintf(str,"/tmp/fpga%d%s", id, rr ? "_rc" : "_wc");
+  sprintf(str,"/tmp/fpga%ld%s", id, rr ? "_rc" : "_wc");
   c->local.sun_family = AF_UNIX;
   strcpy(c->local.sun_path, str);
   unlink(c->local.sun_path);
   int len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
   if (bind(c->s1, (struct sockaddr *)&c->local, len) == -1) {
-    fprintf(stderr, "(%08x) bind error", msg);
+    fprintf(stderr, "(%08lx) bind error", msg);
     exit(1);
   }
   
   if (listen(c->s1, 5) == -1) {
-    fprintf(stderr, "(%08x) listen error", msg);
+    fprintf(stderr, "(%08lx) listen error", msg);
     exit(1);
   }
   
-  fprintf(stderr, "(%08x) waiting for a connection...\n", msg);
+  fprintf(stderr, "(%08lx) waiting for a connection...\n", msg);
   if ((c->s2 = accept(c->s1, NULL, NULL)) == -1) {
-    fprintf(stderr, "(%08x) accept error", msg);
+    fprintf(stderr, "(%08lx) accept error", msg);
     exit(1);
   }
   
-  fprintf(stderr, "(%08x) connected\n",msg);
+  fprintf(stderr, "(%08lx) connected\n",msg);
   c->connected = true;
   return _xx;
 }
 
 
 extern "C" {
-  void initPortal(int id){
+  void initPortal(unsigned long id){
     pthread_t tid;
     if(pthread_create(&tid, NULL,  init_socket, (void*)(id|0x80000000))){
       fprintf(stderr, "error creating init thread\n");
