@@ -123,13 +123,15 @@ interface IdelayE2;
    method Action ce(Bit#(1) v);
    method Action datain(Bit#(1) v);
    method Action idatain(Bit#(1) v);
+   method Action reset(Bit#(1) v);
    method Bit#(1) dataout();
 endinterface
 
 import "BVI" IDELAYE2 =
 module mkIDELAYE2#(IDELAYE2_Config cfg, Clock serdes_clock)(IdelayE2);
    default_clock clk(C);
-   default_reset rst(REGRST);
+   //default_reset rst(REGRST);
+   no_reset;
    input_clock serdes ()= serdes_clock;
 
    parameter CINVCTRL_SEL = cfg.cinvctrl_sel;
@@ -153,11 +155,12 @@ module mkIDELAYE2#(IDELAYE2_Config cfg, Clock serdes_clock)(IdelayE2);
    method DATAOUT dataout();
    method inc(INC) enable((*inhigh*) en5);
    method ce(CE) enable((*inhigh*) en4);
+   method reset(REGRST) enable((*inhigh*) en7);
    method datain(DATAIN) enable((*inhigh*) en2);
    method idatain(IDATAIN) enable((*inhigh*) en3) clocked_by(serdes);
 
    schedule (datain, idatain, inc, ce) CF (datain, idatain, inc, ce);
-   schedule (cntvalueout, dataout, ld, datain, ldpipeen, inc, cinvctrl, cntvaluein, ce, idatain) CF (cntvalueout, dataout, ld, datain, ldpipeen, inc, cinvctrl, cntvaluein, ce, idatain);
+   schedule (reset, cntvalueout, dataout, ld, datain, ldpipeen, inc, cinvctrl, cntvaluein, ce, idatain) CF (reset, cntvalueout, dataout, ld, datain, ldpipeen, inc, cinvctrl, cntvaluein, ce, idatain);
 endmodule
 
 ////////////////////////////////////////////////////////////

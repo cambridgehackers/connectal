@@ -67,7 +67,7 @@ module mkIserdesbvi#(Clock clkdiv, Clock serdest, Clock not_clk, Clock host_cloc
       method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
       method                  fifo_wren(FIFO_WREN) enable((*inhigh*) en10) clocked_by (clkdiv);
       method FIFO_WREN_SYNC   fifo_wren_sync() clocked_by (clock);
-      method FIFO_RESET       fifo_reset() clocked_by(clock);
+      method FIFO_RESET       fifo_reset() clocked_by(clkdiv);
       method                  delay_wren(DELAY_WREN) enable((*inhigh*) en11) clocked_by (clkdiv);
       method                  reset(RESET) enable((*inhigh*) en17) clocked_by (clkdiv);
       method                  serreset(SERRESET) enable((*inhigh*) en16) clocked_by (clkdiv);
@@ -114,7 +114,7 @@ module mkFIFO18#(Clock clkdiv)(FIFO18);
     no_reset;
     port DIP = 0;
 
-    method          reset(RST) enable((*inhigh*) en9) clocked_by (clock);
+    method          reset(RST) enable((*inhigh*) en9) clocked_by (clkdiv);
     method          di(DI) enable((*inhigh*) en0) clocked_by (clkdiv);
     method          rden(RDEN) enable((*inhigh*) en2) clocked_by (clock);
     method          wren(WREN) enable((*inhigh*) en3) clocked_by (clock);
@@ -132,16 +132,12 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Iserdesbvi serbvi <- mkIserdesbvi(serdes_clock, serdest, serdest_inverted.slowClock,
         defaultClock);
     FIFO18 dfifo <- mkFIFO18(serdes_clock);
-    MakeResetIfc iodelay_reset <- mkReset(2, True, serdes_clock, clocked_by serdes_clock, reset_by serdes_reset);
 
-    rule dfifo_reset_rule;
-        dfifo.reset(serbvi.fifo_reset);
-    endrule
     rule setrule;
         serbvi.serreset(serbvi.iodelay_reset_inc_ce()[2]);
     endrule
-    rule resetrule if (serbvi.iodelay_reset_inc_ce()[2] == 1);
-        iodelay_reset.assertReset();
+    rule setrule9;
+        dfifo.reset(serbvi.iodelay_reset_inc_ce()[2]);
     endrule
     IdelayE2 delaye2 <- mkIDELAYE2(IDELAYE2_Config {
         cinvctrl_sel: "FALSE", delay_src: "IDATAIN",
@@ -149,7 +145,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         idelay_type: "VARIABLE", idelay_value: 0,
         pipe_sel: "FALSE", refclk_frequency: 200, signal_pattern: "DATA"},
         defaultClock,
-        clocked_by serdes_clock, reset_by iodelay_reset.new_rst);
+        clocked_by serdes_clock);
 
     rule delaye2_rule;
         delaye2.cinvctrl(0);
@@ -168,7 +164,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         init_q1: 0, init_q2: 0, init_q3: 0, init_q4: 0,
         srval_q1: 0, srval_q2: 0, srval_q3: 0, srval_q4: 0,
         serdes_mode: "MASTER", iobdelay: "IFD"},
-        serdest, serdest_inverted.slowClock, clocked_by serdes_clock);//, reset_by iodelay_reset.new_rst);
+        serdest, serdest_inverted.slowClock, clocked_by serdes_clock);
     IserdesE2 slave_data <- mkISERDESE2( ISERDESE2_Config{
         data_rate: "DDR", data_width: 10,
         dyn_clk_inv_en: "FALSE", dyn_clkdiv_inv_en: "FALSE",
@@ -176,7 +172,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         init_q1: 0, init_q2: 0, init_q3: 0, init_q4: 0,
         srval_q1: 0, srval_q2: 0, srval_q3: 0, srval_q4: 0,
         serdes_mode: "SLAVE", iobdelay: "NONE"},
-        serdest, serdest_inverted.slowClock, clocked_by serdes_clock);//, reset_by iodelay_reset.new_rst);
+        serdest, serdest_inverted.slowClock, clocked_by serdes_clock);
     rule serdesdata_rule;
         let dout = 10'b0;
         master_data.d(0);
