@@ -14,6 +14,7 @@
 
 typedef struct {
   unsigned int       board_number;
+  unsigned int       portal_number;
   unsigned int       is_active;
   unsigned int       major_rev;
   unsigned int       minor_rev;
@@ -60,6 +61,7 @@ const tDebugLevel DEBUG_PROFILE = (1 << 31);
 #define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
 #define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,int*)
 #define BNOC_SEQNO           _IOWR(BNOC_IOC_MAGIC,9,int*)
+#define BNOC_SYNC            _IOWR(BNOC_IOC_MAGIC,10,long)
 
 /* maximum valid IOCTL number */
 #define BNOC_IOC_MAXNR 9

@@ -49,7 +49,7 @@ MODULE_LICENSE ("Dual BSD/GPL");
  */
 
 /* stem used for module and device names */
-#define DEV_NAME "bluenoc"
+#define DEV_NAME "fpga"
 
 /* version string for the driver */
 #define DEV_VERSION "1.0jeh1"
@@ -62,13 +62,19 @@ MODULE_LICENSE ("Dual BSD/GPL");
 
 /* Number of boards to support */
 #define NUM_BOARDS 16
-#define UNASSIGNED 0
+#define UNASSIGNED -1
 
 /*
  * Per-device data
  */
 
 /* per-device data that persists from probe to remove */
+
+struct tBoard;
+typedef struct tPortal {
+  unsigned int portal_number;
+  struct tBoard *board;
+} tPortal;
 
 typedef struct tBoard {
   /* bars */
@@ -78,8 +84,9 @@ typedef struct tBoard {
   /* pci device pointer */
   struct pci_dev* pci_dev;
   unsigned int    board_number;
-  /* cdev structure */
-  struct cdev cdev;
+  /* per-portal cdev structure */
+  struct cdev cdev[16];
+  struct tPortal portal[16];
   /* board identification fields */
   unsigned int       major_rev;
   unsigned int       minor_rev;
@@ -143,7 +150,7 @@ static unsigned int bluenoc_poll(struct file* filp, poll_table* wait);
 static loff_t bluenoc_llseek(struct file* filp, loff_t off, int whence);
 
 static long bluenoc_ioctl(struct file* file, unsigned int cmd, unsigned long arg);
-static int portal_mmap(struct file *filep, struct vm_area_struct *vma);
+static int portal_mmap(struct file *filp, struct vm_area_struct *vma);
 
 #if USE_INTR_PT_REGS_ARG
 static irqreturn_t intr_handler(int irq, void* brd, struct pt_regs* unused);
@@ -226,7 +233,7 @@ static int activate(tBoard* this_board)
   /* Note: this makes use of C's fall-through switch semantics */
   switch(this_board->activation_level) {
     case PROBED:              { /* assign a board number */
-                                unsigned int board_number = 1;
+                                unsigned int board_number = 0;
                                 while (board_number <= NUM_BOARDS) {
                                   tBoard* brd = board_list;
                                   unsigned int collision = 0;
@@ -259,10 +266,10 @@ static int activate(tBoard* this_board)
 				{
 				  int i;
 				  for (i = 0; i < 5; i++)
-				    printk("pci bar %d start=%08x end=%08x flags=%x\n",
+				    printk("pci bar %d start=%08lx end=%08lx flags=%lx\n",
 					   i,
-					   this_board->pci_dev->resource[i].start,
-					   this_board->pci_dev->resource[i].end,
+					   (unsigned long)this_board->pci_dev->resource[i].start,
+					   (unsigned long)this_board->pci_dev->resource[i].end,
 					   this_board->pci_dev->resource[i].flags);
 				}
 
@@ -532,7 +539,7 @@ static int __init bluenoc_init(void)
   /* log the fact that we loaded the driver module */
   printk(KERN_INFO "%s: Registered Bluespec BlueNoC driver %s\n", DEV_NAME, DEV_VERSION);
   printk(KERN_INFO "%s: Major = %d  Minors = %d to %d\n",
-         DEV_NAME, MAJOR(device_number), MINOR(device_number), MINOR(device_number) + NUM_BOARDS - 1);
+         DEV_NAME, MAJOR(device_number), MINOR(device_number), MINOR(device_number) + NUM_BOARDS*16 - 1);
 
   return 0; /* success */
 }
@@ -600,26 +607,32 @@ static int __devinit bluenoc_probe(struct pci_dev* dev, const struct pci_device_
 
   /* activate the board */
   if ((err = activate(this_board)) >= 0) {
-    dev_t this_device_number = MKDEV(MAJOR(device_number),this_board->board_number);
-    open_count[this_board->board_number] = 0;
+    int dn;
+    for (dn = 0; dn < 16 && err >= 0; dn++) {
+      dev_t this_device_number = MKDEV(MAJOR(device_number),MINOR(device_number)+this_board->board_number*16+dn);
+      open_count[this_board->board_number] = 0;
 
-    /* add the device operations */
-    cdev_init(&this_board->cdev,&bluenoc_fops);
-    if (cdev_add(&this_board->cdev,this_device_number,1) != 0) {
-      printk(KERN_ERR "%s: cdev_add failed\n", DEV_NAME);
-      deactivate(this_board);
-      err = -EFAULT;
-    } else {
-      /* create a device node via udev */
+      this_board->portal[dn].portal_number = dn;
+      this_board->portal[dn].board = this_board;
+    
+      /* add the device operations */
+      cdev_init(&this_board->cdev[dn],&bluenoc_fops);
+      if (cdev_add(&this_board->cdev[dn],this_device_number,1) != 0) {
+	printk(KERN_ERR "%s: cdev_add %x failed\n", DEV_NAME, this_device_number);
+	deactivate(this_board);
+	err = -EFAULT;
+      } else {
+	/* create a device node via udev */
+
 #if DEVICE_CREATE_HAS_DRVDATA_ARG
-      device_create(bluenoc_class, NULL, this_device_number, NULL, "%s_%d", DEV_NAME, this_board->board_number);
+	device_create(bluenoc_class, NULL, this_device_number, NULL, "%s%d", DEV_NAME, this_board->board_number*16+dn);
 #else
-      device_create(bluenoc_class, NULL, this_device_number, "%s_%d", DEV_NAME, this_board->board_number);
+	device_create(bluenoc_class, NULL, this_device_number, "%s%d", DEV_NAME, this_board->board_number*16+dn);
 #endif
-      printk(KERN_INFO "%s: /dev/%s_%d device file created\n", DEV_NAME, DEV_NAME, this_board->board_number);
+	printk(KERN_INFO "%s: /dev/%s%d device file created\n", DEV_NAME, DEV_NAME, this_board->board_number*16+dn);
+      }
     }
   }
-
   if (err < 0) {
     /* remove the board from the list */
     board_list = this_board->next;
@@ -649,12 +662,17 @@ static void __devexit bluenoc_remove(struct pci_dev* dev)
   deactivate(this_board);
 
   /* remove device node in udev */
-  this_device_number = MKDEV(MAJOR(device_number),this_board->board_number);
-  device_destroy(bluenoc_class,this_device_number);
-  printk(KERN_INFO "%s: /dev/%s_%d device file removed\n", DEV_NAME, DEV_NAME, MINOR(this_device_number));
+  {
+    int dn;
+    for (dn = 0; dn < 16; dn++) {
+      this_device_number = MKDEV(MAJOR(device_number),this_board->board_number*16+dn);
+      device_destroy(bluenoc_class,this_device_number);
+      printk(KERN_INFO "%s: /dev/%s_%d device file removed\n", DEV_NAME, DEV_NAME, MINOR(this_device_number));
 
-  /* remove device */
-  cdev_del(&this_board->cdev);
+      /* remove device */
+      cdev_del(&this_board->cdev[dn]);
+    }
+  }
 
   /* free the board structure */
   if (prev_board)
@@ -690,7 +708,7 @@ static irqreturn_t intr_handler(int irq, void* brd)
 	     DEV_NAME, this_board->board_number);
   }
 
-  if (0) {
+  if (1) {
     update_dma_buffer_status(this_board);
 
     if (this_board->debug_level & DEBUG_INTR) {
@@ -722,16 +740,23 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
 {
   int err = 0;
   unsigned int this_board_number = UNASSIGNED;
+  unsigned int this_portal_number = UNASSIGNED;
   tBoard* this_board = NULL;
   tBoard* tmp_board = NULL;
+  tPortal* this_portal = NULL;
+
+  int minor = iminor(inode) - MINOR(device_number);
 
   /* figure out the board number */
-  this_board_number = iminor(inode);
+  this_board_number = minor >> 4;
+  this_portal_number = minor & 0xF;
+  printk("bluenoc_open: device_number=%x board_number=%d portal_number=%d\n", device_number, this_board_number, this_portal_number);
 
   /* store the board pointer for easy access */
   for (tmp_board = board_list; tmp_board != NULL; tmp_board = tmp_board->next) {
     if (tmp_board->board_number == this_board_number) {
       this_board = tmp_board;
+      this_portal = &this_board->portal[this_portal_number];
       break;
     }
   }
@@ -740,7 +765,7 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
     err = -ENXIO;
     goto exit_bluenoc_open;
   }
-  filp->private_data = (void*) this_board;
+  filp->private_data = (void*) this_portal;
 
   /* increment the open file count */
   open_count[this_board_number] += 1;
@@ -763,6 +788,7 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
 static int bluenoc_release (struct inode *inode, struct file *filp)
 {
   unsigned int this_board_number = UNASSIGNED;
+  tPortal* this_portal = NULL;
   tBoard* this_board;
 
   /* figure out the board number */
@@ -772,7 +798,8 @@ static int bluenoc_release (struct inode *inode, struct file *filp)
   open_count[this_board_number] -= 1;
 
   /* access the tBoard structure for this file */
-  this_board = (tBoard*) filp->private_data;
+  this_portal = (tPortal*) filp->private_data;
+  this_board = this_portal->board;
 
   if (this_board->debug_level & DEBUG_CALLS) {
     /* log the operation */
@@ -794,6 +821,7 @@ static ssize_t bluenoc_read(struct file* filp, char __user* buf, size_t count, l
   unsigned int last_page_len;
   int num_pages;
   struct page** pages;
+  tPortal* this_portal = NULL;
   tBoard* this_board;
   int n;
 #if USE_CHAINED_SGLIST_API
@@ -812,7 +840,8 @@ static ssize_t bluenoc_read(struct file* filp, char __user* buf, size_t count, l
   unsigned long long ns;
 
   /* access the tBoard structure for this file */
-  this_board = (tBoard*) filp->private_data;
+  this_portal = (tPortal*) filp->private_data;
+  this_board = this_portal->board;
 
   if (this_board->debug_level & (DEBUG_CALLS | DEBUG_DMA)) {
     /* log the operation */
@@ -1139,6 +1168,7 @@ static ssize_t bluenoc_write(struct file* filp, const char __user* buf, size_t c
   unsigned int last_page_len;
   int num_pages;
   struct page** pages;
+  tPortal* this_portal = NULL;
   tBoard* this_board;
   int n;
 #if USE_CHAINED_SGLIST_API
@@ -1157,7 +1187,8 @@ static ssize_t bluenoc_write(struct file* filp, const char __user* buf, size_t c
   unsigned long long ns;
 
   /* access the tBoard structure for this file */
-  this_board = (tBoard*) filp->private_data;
+  this_portal = (tPortal*) filp->private_data;
+  this_board = this_portal->board;
 
   if (this_board->debug_level & (DEBUG_CALLS | DEBUG_DMA))
     printk( KERN_INFO "%s_%d: write %0llu from %p\n"
@@ -1446,11 +1477,13 @@ static ssize_t bluenoc_write(struct file* filp, const char __user* buf, size_t c
 /* poll operation to predict blocking of reads & writes */
 static unsigned int bluenoc_poll(struct file* filp, poll_table* wait)
 {
+  tPortal* this_portal = NULL;
   tBoard* this_board = NULL;
   unsigned int mask = 0;
 
   /* access the tBoard structure for this file */
-  this_board = (tBoard*) filp->private_data;
+  this_portal = (tPortal*) filp->private_data;
+  this_board = this_portal->board;
 
   if (this_board->debug_level & DEBUG_CALLS)
     printk(KERN_INFO "%s_%d: poll function called\n", DEV_NAME, this_board->board_number);
@@ -1489,6 +1522,7 @@ static loff_t bluenoc_llseek(struct file* filp, loff_t off, int whence)
 
 static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg)
 {
+  tPortal* this_portal = NULL;
   tBoard* this_board = NULL;
   int err = 0;
 
@@ -1507,7 +1541,8 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
     return -EFAULT;
 
   /* access the tBoard structure for this file */
-  this_board = (tBoard*) filp->private_data;
+  this_portal = (tPortal*) filp->private_data;
+  this_board = this_portal->board;
 
   /* execute the requested action */
   switch (cmd)
@@ -1517,6 +1552,7 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       /* copy board identification info to a user-space struct */
       tBoardInfo info;
       info.is_active      = (this_board->activation_level == BLUENOC_ACTIVE) ? 1 : 0;
+      info.portal_number   = this_portal->portal_number;
       info.board_number   = this_board->board_number;
       info.major_rev      = this_board->major_rev;
       info.minor_rev      = this_board->minor_rev;
@@ -1671,23 +1707,7 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
     {
       /* copy board identification info to a user-space struct */
       tPortalInfo info;
-      long portal_csr_offset = (1 << 16);
-      int i;
-      if (0) {
-	// test axi master
-	printk("testing axi master\n");
-	iowrite32(0x00000005, this_board->bar0io + (784 << 2));
-	printk("upper addr: %08x\n", ioread32(this_board->bar0io + (784 << 2)));
-	iowrite32(0x40809070, this_board->bar0io + (783 << 2));
-	printk("lower addr: %08x\n", ioread32(this_board->bar0io + (783 << 2)));
-	printk("ok go\n");
-	iowrite32(0xf007, this_board->bar0io + (782 << 2));
-	printk("axi test enabled %08x\n", ioread32(this_board->bar0io + (782 << 2)));
-      }
-      if (1) {
-	// enable 4dw read/write from AXI masters
-	iowrite32(-1, this_board->bar0io + (797 << 2));
-      }
+      memset(&info, 0, sizeof(info));
       err = copy_to_user((void __user *)arg, &info, sizeof(tPortalInfo));
       if (err != 0)
         return -EFAULT;
@@ -1698,7 +1718,6 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
     {
       /* copy board identification info to a user-space struct */
       unsigned int tlp[6];
-      int i;
       memset((char *)tlp, 0xbf, sizeof(tlp));
       tlp[5] = ioread32(this_board->bar0io + (776<<2) + (5<<2));
       mb();
@@ -1776,20 +1795,29 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       else
         return 0;
     }
+    case BNOC_SYNC: {
+      //pci_dma_sync_single(this_board->pci_dev, arg, 4096, PCI_DMA_FROM_DEVICE);
+    }
     default:
       return -ENOTTY;
   }
 }
 
-static int portal_mmap(struct file *filep, struct vm_area_struct *vma)
+static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-  tBoard* this_board = (tBoard*) filep->private_data;
+  tPortal *this_portal = (tPortal*) filp->private_data;
+  tBoard *this_board = this_portal->board;
 
   unsigned long req_len = vma->vm_end - vma->vm_start + (vma->vm_pgoff << PAGE_SHIFT);
+  off_t off = 0;
 
   if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
     return -EINVAL;
-  off_t off = this_board->pci_dev->resource[2].start;
+  off = this_board->pci_dev->resource[2].start + 1024*1024*this_portal->portal_number;
+  printk("portal_mmap portal_number=%d board_start=%012lx portal_start=%012lx\n",
+	 this_portal->portal_number,
+	 this_board->pci_dev->resource[2].start,
+	 this_board->pci_dev->resource[2].start+1024*1024*this_portal->portal_number);
 
   vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
   vma->vm_pgoff = off >> PAGE_SHIFT;
