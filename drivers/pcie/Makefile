@@ -42,9 +42,12 @@ clean:
 	rm -rf *.ko *.o *.mod.*
 	rm -rf Module.symvers Module.markers modules.order
 
-.PHONY: insmod
-insmod:
+.PHONY: rmmod
+rmmod:
 	sudo rmmod portalalloc || true
 	sudo rmmod pcie-portal || true
+
+.PHONY: insmod
+insmod: rmmod
 	sudo insmod pcie-portal.ko
 	sudo insmod portalalloc.ko
