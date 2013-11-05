@@ -65,15 +65,7 @@ protected:
 creatorTemplate = '''
 %(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(%(indicationName)s *indication)
 {
-#ifdef ZYNQ
     const char *instanceName = \"fpga%(portalNum)s\"; 
-#else
-#ifdef BSIM
-    const char *instanceName = \"fpga%(portalNum)s\";
-#else
-    const char *instanceName = \"bluenoc_1\"; 
-#endif
-#endif
     %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indication);
     return instance;
 }

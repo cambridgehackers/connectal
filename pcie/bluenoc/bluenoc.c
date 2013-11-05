@@ -11,7 +11,7 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-#include "../drivers/bluenoc.h"
+#include "../../drivers/pcie/bluenoc.h"
 
 static void print_usage(const char* argv0)
 {
@@ -80,7 +80,7 @@ typedef enum { HELP, INFO, BUILD, RESET, DOWN, UP, DEBUG, PROFILE, PORTAL, TLP, 
 
 static int is_bluenoc_file(const struct dirent* ent)
 {
-  if (strncmp(ent->d_name,"bluenoc_",8) == 0)
+  if (strncmp(ent->d_name,"fpga",4) == 0)
     return 1;
   else
     return 0;
@@ -131,6 +131,7 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
     case INFO: {
       printf("Found BlueNoC device at %s\n", file);
       printf("  Board number:     %d\n", board_info.board_number);
+      printf("  Portal number:    %d\n", board_info.portal_number);
       if (board_info.is_active) {
         time_t t = board_info.timestamp;
         printf("  BlueNoC revision: %d.%d\n", board_info.major_rev, board_info.minor_rev);
@@ -275,7 +276,7 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
     // set pointer to 0
     res = ioctl(fd,BNOC_SEQNO,&seqno);
 
-    for (i = 0; i < 1024; i++) {
+    for (i = 0; i < 2048; i++) {
       tTlpData tlp;
       memset(&tlp, 0x5a, sizeof(tlp));
       res = ioctl(fd,BNOC_GET_TLP,&tlp);
@@ -500,7 +501,7 @@ int main(int argc, char* const argv[])
 
   process_failed = 0;
   if (optind == argc) {
-    /* no file arguments given, so look for all /dev/bluenoc_* */
+    /* no file arguments given, so look for all /dev/fpga* */
     struct dirent **eps;
     int res;
 
