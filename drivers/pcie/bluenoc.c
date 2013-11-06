@@ -23,7 +23,7 @@
 #include <linux/poll.h>        /* poll_table, etc. */
 #include <linux/time.h>        /* getnstimeofday, struct timespec, etc. */
 #include <asm/uaccess.h>       /* copy_to_user, copy_from_user */
-#include <asm/system.h>        /* mb(), wmb() */
+//#include <asm/system.h>        /* mb(), wmb() */
 
 #include "bluenoc.h"
 
@@ -136,8 +136,8 @@ static tBoard* board_list = NULL;
 
 /* forward declarations of driver routines */
 
-static int __devinit bluenoc_probe(struct pci_dev* dev, const struct pci_device_id* id);
-static void __devexit bluenoc_remove(struct pci_dev* dev);
+static int __init bluenoc_probe(struct pci_dev* dev, const struct pci_device_id* id);
+static void __exit bluenoc_remove(struct pci_dev* dev);
 
 static int bluenoc_open(struct inode* inode, struct file* filp);
 static int bluenoc_release(struct inode* inode, struct file* filp);
@@ -457,7 +457,7 @@ static struct pci_driver bluenoc_driver = {
   .name     = DEV_NAME,
   .id_table = bluenoc_id_table,
   .probe    = bluenoc_probe,
-  .remove   = __devexit_p(bluenoc_remove)
+  .remove   = __exit_p(bluenoc_remove)
 };
 
 /* utility routine to clear the status register and DMA status fields
@@ -563,7 +563,7 @@ module_exit(bluenoc_exit);
 
 /* driver PCI operations */
 
-static int __devinit bluenoc_probe(struct pci_dev* dev, const struct pci_device_id* id)
+static int __init bluenoc_probe(struct pci_dev* dev, const struct pci_device_id* id)
 {
   int err = 0;
   tBoard* this_board = NULL;
@@ -643,7 +643,7 @@ static int __devinit bluenoc_probe(struct pci_dev* dev, const struct pci_device_
   return err;
 }
 
-static void __devexit bluenoc_remove(struct pci_dev* dev)
+static void __exit bluenoc_remove(struct pci_dev* dev)
 {
   tBoard* this_board = NULL;
   tBoard* prev_board = NULL;
@@ -1816,12 +1816,13 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
   off = this_board->pci_dev->resource[2].start + 1024*1024*this_portal->portal_number;
   printk("portal_mmap portal_number=%d board_start=%012lx portal_start=%012lx\n",
 	 this_portal->portal_number,
-	 this_board->pci_dev->resource[2].start,
-	 this_board->pci_dev->resource[2].start+1024*1024*this_portal->portal_number);
+	 (long)this_board->pci_dev->resource[2].start,
+	 (long)this_board->pci_dev->resource[2].start+1024*1024*this_portal->portal_number);
 
   vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
   vma->vm_pgoff = off >> PAGE_SHIFT;
-  vma->vm_flags |= VM_IO | VM_RESERVED;
+  //vma->vm_flags |= VM_IO | VM_RESERVED;
+  vma->vm_flags |= VM_IO;
   if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
 			 vma->vm_end - vma->vm_start, vma->vm_page_prot))
     return -EAGAIN;

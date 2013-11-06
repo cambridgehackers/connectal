@@ -9,7 +9,8 @@ default: pcie-portal.ko portalalloc.ko
 
 EXTRA_CFLAGS = -I$(PWD)
 cflags-y += -I$(PWD)
-pcie-portal-y = bluenoc.o dma-buf.o
+#pcie-portal-y = bluenoc.o dma-buf.o
+pcie-portal-y = bluenoc.o
 
 portalalloc.o: ../../drivers/alloc/portalalloc.c ../../drivers/alloc/portalalloc.h
 
