@@ -299,7 +299,14 @@ class MethodMixin:
             off = 0
             word = []
             for e in w:
-                word.append('((' + e[0] + '>>%s)'%(e[2]) + '<<%s)'%(off))
+                field = e[0];
+                if e[2]:
+                    field = '(%s>>%s)' % (field, e[2])
+                if off:
+                    field = '(%s<<%s)' % (field, off)
+                if e[3].params[0].numeric() > 64:
+                    field = '(%s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e[3].params[0].numeric())
+                word.append(field)
                 off = off+e[1]-e[2]
             return '        buff[i++] = %s;\n' % (''.join(util.intersperse('|', word)))
 
@@ -568,7 +575,11 @@ class TypeMixin:
     def bitSpec(self):
         if self.isBitField():
             bw = self.bitWidth()
-            return ':%d' % bw
+            if bw <= 64:
+                return ':%d' % bw
+            else:
+                ## not compatible with use of std::bitset
+                return ''
         return ''
 
 def cName(x):
