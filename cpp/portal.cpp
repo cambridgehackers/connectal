@@ -268,12 +268,12 @@ int PortalMemory::reference(PortalAlloc* pa)
 {
   int id = handle++;
 #ifdef MMAP_HW
-  int ne = pa->numEntries;
+  int ne = pa->header.numEntries;
   assert(ne < 32);
   pa->entries[ne].dma_address = 0;
   pa->entries[ne].length = 0;
-  pa->numEntries;
-  for(int i = 0; i <= pa->numEntries; i++){
+  pa->header.numEntries;
+  for(int i = 0; i <= pa->header.numEntries; i++){
     int offset = (id*32)+i;
     fprintf(stderr, "PortalMemory::sglist(%08x, %08lx, %08lx)\n", offset, pa->entries[i].dma_address, pa->entries[i].length);
     sglist(offset, pa->entries[i].dma_address, pa->entries[i].length);

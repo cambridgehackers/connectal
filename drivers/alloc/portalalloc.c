@@ -202,12 +202,7 @@ static int pa_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   struct pa_buffer *buffer = dmabuf->priv;
   int ret = 0;
 
-<<<<<<< HEAD
-  printk("pa_mmap %08lx %ld\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
-=======
   printk("pa_mmap %08lx %zd\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
->>>>>>> refactor PortalAlloc structure to reduce stack frame size in portalalloc driver
-	
   vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
   mutex_lock(&buffer->lock);
@@ -225,11 +220,7 @@ static int pa_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 static void pa_dma_buf_release(struct dma_buf *dmabuf)
 {
   struct pa_buffer *buffer = dmabuf->priv;
-<<<<<<< HEAD
-  printk("PortalAlloc::pa_dma_buf_release %08lx %ld\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
-=======
   printk("PortalAlloc::pa_dma_buf_release %08lx %zd\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
->>>>>>> refactor PortalAlloc structure to reduce stack frame size in portalalloc driver
   pa_buffer_free(buffer);
 }
 
@@ -301,11 +292,7 @@ static int pa_get_dma_buf(struct pa_buffer *buffer)
   if (fd < 0)
     dma_buf_put(dmabuf);
 
-<<<<<<< HEAD
-  printk("pa_get_dma_buf %08lx %ld\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
-=======
   printk("pa_get_dma_buf %08lx %zd\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
->>>>>>> refactor PortalAlloc structure to reduce stack frame size in portalalloc driver
   return fd;
 }
 
@@ -535,24 +522,17 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
     struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
     unsigned long start_addr;
     unsigned long length;
+    unsigned long end_addr;
     int i;
     if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
       return -EFAULT;
-<<<<<<< HEAD
-#ifdef __ARM__
-    for(i = 0; i < alloc.numEntries; i++){
-      unsigned int start_addr = alloc.entries[i].dma_address;
-      unsigned int end_addr = start_addr + alloc.entries[i].length;
-=======
-
     for(i = 0; i < header.numEntries; i++){
       if (copy_from_user(&start_addr, (void __user *)&(palloc->entries[i].dma_address), sizeof(palloc->entries[i].dma_address)))
 	return -EFAULT;
       if (copy_from_user(&length, (void __user *)&(palloc->entries[i].length), sizeof(palloc->entries[i].length)))
 	return -EFAULT;
+      end_addr = start_addr+length;
 #if defined(__arm__)
-      unsigned long end_addr = start_addr+length;
->>>>>>> refactor PortalAlloc structure to reduce stack frame size in portalalloc driver
       outer_clean_range(start_addr, end_addr);
       outer_inv_range(start_addr, end_addr);
 #elif defined(__i386__) || defined(__x86_64__)
@@ -561,7 +541,6 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
 #error("PA_DCACHE_FLUSH_INVAL architecture undefined");
 #endif
     }
-#endif
     return 0;
   }
   case PA_ALLOC: {

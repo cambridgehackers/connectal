@@ -46,6 +46,9 @@ class TestDMAIndication : public DMAIndication
   virtual void sglistResp(unsigned long channelId){
     fprintf(stderr, "sglistResp: %lx\n", channelId);
   }
+  virtual void parefResp(unsigned long channelId){
+    fprintf(stderr, "parefResp: %lx\n", channelId);
+  }
 };
 
 class TestCoreIndication : public CoreIndication
@@ -136,9 +139,9 @@ int main(int argc, const char **argv)
   dma->alloc(alloc_sz, &dstAlloc);
   dma->alloc(alloc_sz, &bsAlloc);
 
-  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc.fd, 0);
-  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.fd, 0);
-  bsBuffer  = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsAlloc.fd, 0);
+  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc.header.fd, 0);
+  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
+  bsBuffer  = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsAlloc.header.fd, 0);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
