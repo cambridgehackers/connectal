@@ -184,24 +184,28 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         //fifo_wren_sync_wire <= fifo_wren_sync;
         fifo_wren_sync_wire <= serbvi.fifo_wren_sync();
     endrule
+    rule wrensync_rule;
+        let fwsync = 0;
+        dfifo_wren_r <= bvi_fifo_wren_wire;
+        if (bvi_delay_wren_wire == 1 && samplein_null[2] == 1)
+            fwsync = dfifo_wren_r;
+        else
+            fwsync = bvi_fifo_wren_wire;
+        fifo_wren_sync <= fwsync;
+    endrule
+
     rule clkdiv_rule if (bvi_reset_reg != 0);
         let ds = dstate;
         let dc = dcounter;
         let da = dackint;
         let sric = sync_reset_inc_ce;
         let sbs = 0;
-        let fwsync = 0;
   
         dc = dc - 1;
         dreqpipe0 <= serbvi.itemreq();
         dreqpipe1 <= dreqpipe0;
         dfifo_reset_r <= serbvi.ctrl_fifo_reset();
         fifo_reset <= dfifo_reset_r;
-        dfifo_wren_r <= bvi_fifo_wren_wire;
-        if (bvi_delay_wren_wire == 1 && samplein_null[2] == 1)
-            fwsync = dfifo_wren_r;
-        else
-            fwsync = bvi_fifo_wren_wire;
         sric[0] = 0;
         sric[1] = 0;
         //iodelay_reset_inc_ce <= sync_reset_inc_ce;
@@ -230,7 +234,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         dackint <= da;
         sync_reset_inc_ce <= sric;
         sync_bitslip <= sbs;
-        fifo_wren_sync <= fwsync;
     endrule
     rule dackint_rule;
         serbvi.dackint(dackint);
