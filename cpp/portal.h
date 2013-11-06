@@ -97,7 +97,11 @@ class PortalMemory : public PortalRequest {
   int dCacheFlushInval(PortalAlloc *portalAlloc);
   int alloc(size_t size, PortalAlloc *portalAlloc);
   int reference(PortalAlloc* pa);
+#ifdef MMAP_HW
   virtual void sglist(unsigned long off, unsigned long long addr, unsigned long len) = 0;
+#else
+  virtual void paref(unsigned long off, unsigned long long ref) = 0;
+#endif
 };
 
 

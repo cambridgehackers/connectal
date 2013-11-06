@@ -59,7 +59,7 @@ interface MemcpyIndication;
 endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
-
+   
    AxiDMA                 dma <- mkAxiDMA(indication.dmaIndication);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);

@@ -267,6 +267,7 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc)
 int PortalMemory::reference(PortalAlloc* pa)
 {
   int id = handle++;
+#ifdef MMAP_HW
   int ne = pa->numEntries;
   assert(ne < 32);
   pa->entries[ne].dma_address = 0;
@@ -278,20 +279,23 @@ int PortalMemory::reference(PortalAlloc* pa)
     sglist(offset, pa->entries[i].dma_address, pa->entries[i].length);
     sleep(1);
   }
+#else
+  paref(id, pa->header.fd);
+#endif
   return id;
 }
 
 int PortalMemory::alloc(size_t size, PortalAlloc *portalAlloc)
 {
     memset(portalAlloc, 0, sizeof(PortalAlloc));
-    portalAlloc->size = size;
+    portalAlloc->header.size = size;
     int rc = ioctl(this->pa_fd, PA_ALLOC, portalAlloc);
     if (rc){
       fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
       return rc;
     }
     fprintf(stderr, "alloc size=%ld rc=%d fd=%d numEntries=%d\n", 
-	    portalAlloc->size, rc, portalAlloc->fd, portalAlloc->numEntries);
+	    portalAlloc->header.size, rc, portalAlloc->header.fd, portalAlloc->header.numEntries);
     return 0;
 }
 

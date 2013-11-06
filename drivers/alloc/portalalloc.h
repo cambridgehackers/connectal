@@ -2,14 +2,18 @@
 #ifndef __PORTALALLOC_H__
 #define __PORTALALLOC_H__
 
+typedef struct PortalAllocHeader {
+    size_t size;
+    int fd;
+    int numEntries;
+} PortalAllocHeader;
+
 typedef struct PortalAlloc {
-  size_t size;
-  int fd;
+  PortalAllocHeader header;
   struct {
     unsigned long dma_address;
     unsigned long length;
   } entries[64];
-  int numEntries;
 } PortalAlloc;
 
 #define PA_ALLOC _IOWR('B', 10, PortalAlloc)

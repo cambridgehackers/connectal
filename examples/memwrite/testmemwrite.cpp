@@ -24,13 +24,16 @@ void dump(const char *prefix, char *buf, size_t len)
 class TestDMAIndication : public DMAIndication
 {
   virtual void reportStateDbg(DmaDbgRec& rec){
-    fprintf(stderr, "DMA::reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
+    fprintf(stderr, "DMA::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "DMA::configResp: %x\n", channelId);
+    fprintf(stderr, "DMA::configResp: %lx\n", channelId);
   }
   virtual void sglistResp(unsigned long channelId){
-    fprintf(stderr, "DMA::sglistResp: %x\n", channelId);
+    fprintf(stderr, "DMA::sglistResp: %lx\n", channelId);
+  }
+  virtual void parefResp(unsigned long channelId){
+    fprintf(stderr, "DMA::parefResp: %lx\n", channelId);
   }
 };
 
@@ -43,11 +46,11 @@ class TestCoreIndication : public CoreIndication
     fprintf(stderr, "Core::started: words=%lx\n", words);
   }
   virtual void writeDone ( unsigned long srcGen ){
-    fprintf(stderr, "Core::writeDone (%08x)\n", srcGen);
+    fprintf(stderr, "Core::writeDone (%08lx)\n", srcGen);
     sem_post(&done_sem);    
   }
   virtual void reportStateDbg(unsigned long streamWrCnt, unsigned long srcGen){
-    fprintf(stderr, "Core::reportStateDbg: streamWrCnt=%08x srcGen=%d\n", streamWrCnt, srcGen);
+    fprintf(stderr, "Core::reportStateDbg: streamWrCnt=%08lx srcGen=%ld\n", streamWrCnt, srcGen);
   }  
 };
 
@@ -58,7 +61,7 @@ void child(int rd_sock, int wr_sock)
   sock_fd_read(rd_sock, buf, sizeof(buf), &fd);
 
   unsigned int *dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
-  fprintf(stderr, "child::dstBuffer = %08x\n", dstBuffer);
+  fprintf(stderr, "child::dstBuffer = %08lx\n", (unsigned long)dstBuffer);
 
   unsigned int sg = 0;
   bool mismatch = false;
@@ -89,7 +92,7 @@ void parent(int rd_sock, int wr_sock)
   
   fprintf(stderr, "parent::allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);
-  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.fd, 0);
+  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
   
   pthread_t tid;
   fprintf(stderr, "parent::creating exec thwrite\n");
@@ -117,9 +120,9 @@ void parent(int rd_sock, int wr_sock)
   
   int i;
   char buf[] = "1";
-  sock_fd_write(wr_sock, (void*)buf, 1, dstAlloc.fd);
+  sock_fd_write(wr_sock, (void*)buf, 1, dstAlloc.header.fd);
   munmap(dstBuffer, alloc_sz);
-  close(dstAlloc.fd);
+  close(dstAlloc.header.fd);
   while(1){sleep(1);}
 }
 

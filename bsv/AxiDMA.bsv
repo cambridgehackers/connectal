@@ -45,6 +45,7 @@ interface DMAIndication;
    method Action reportStateDbg(DmaDbgRec rec);
    method Action configResp(Bit#(32) channelId);
    method Action sglistResp(Bit#(32) v);
+   method Action parefResp(Bit#(32) v);
 endinterface
 
 interface DMARequest;
@@ -53,6 +54,7 @@ interface DMARequest;
    method Action getReadStateDbg();
    method Action getWriteStateDbg();
    method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
+   method Action paref(Bit#(32) off, Bit#(64) pref);
 endinterface
 
 instance PortalMemory#(DMARequest);
@@ -314,6 +316,9 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA);
 	 writer.sglist(off, addr, len);
 	 reader.sglist(off, addr, len);
 	 indication.sglistResp(truncate(addr));
+      endmethod
+      method Action paref(Bit#(32) off, Bit#(64) pref);
+	 indication.parefResp(off);
       endmethod
    endinterface
    interface AxiDMAWrite write = writer.write;

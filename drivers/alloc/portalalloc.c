@@ -18,6 +18,8 @@
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 
+#include <asm/cacheflush.h>
+
 #include "portalalloc.h"
 
 #ifdef DEBUG // was KERN_DEBUG
@@ -124,7 +126,7 @@ static struct pa_buffer *pa_alloc(size_t len,
 {
   struct pa_buffer *buffer = NULL;
 
-  pr_debug("%s: len %ld align %ld\n", __func__, len,
+  pr_debug("%s: len %zd align %zd\n", __func__, len,
 	   align);
 
   if (WARN_ON(!len))
@@ -200,7 +202,11 @@ static int pa_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   struct pa_buffer *buffer = dmabuf->priv;
   int ret = 0;
 
+<<<<<<< HEAD
   printk("pa_mmap %08lx %ld\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
+=======
+  printk("pa_mmap %08lx %zd\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
+>>>>>>> refactor PortalAlloc structure to reduce stack frame size in portalalloc driver
 	
   vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
@@ -219,7 +225,11 @@ static int pa_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 static void pa_dma_buf_release(struct dma_buf *dmabuf)
 {
   struct pa_buffer *buffer = dmabuf->priv;
+<<<<<<< HEAD
   printk("PortalAlloc::pa_dma_buf_release %08lx %ld\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
+=======
+  printk("PortalAlloc::pa_dma_buf_release %08lx %zd\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
+>>>>>>> refactor PortalAlloc structure to reduce stack frame size in portalalloc driver
   pa_buffer_free(buffer);
 }
 
@@ -291,7 +301,11 @@ static int pa_get_dma_buf(struct pa_buffer *buffer)
   if (fd < 0)
     dma_buf_put(dmabuf);
 
+<<<<<<< HEAD
   printk("pa_get_dma_buf %08lx %ld\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
+=======
+  printk("pa_get_dma_buf %08lx %zd\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
+>>>>>>> refactor PortalAlloc structure to reduce stack frame size in portalalloc driver
   return fd;
 }
 
@@ -517,33 +531,53 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
 {
   switch (cmd) {
   case PA_DCACHE_FLUSH_INVAL: {
-    struct PortalAlloc alloc;
+    struct PortalAllocHeader header;
+    struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
+    unsigned long start_addr;
+    unsigned long length;
     int i;
-    if (copy_from_user(&alloc, (void __user *)arg, sizeof(alloc)))
+    if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
       return -EFAULT;
+<<<<<<< HEAD
 #ifdef __ARM__
     for(i = 0; i < alloc.numEntries; i++){
       unsigned int start_addr = alloc.entries[i].dma_address;
       unsigned int end_addr = start_addr + alloc.entries[i].length;
+=======
+
+    for(i = 0; i < header.numEntries; i++){
+      if (copy_from_user(&start_addr, (void __user *)&(palloc->entries[i].dma_address), sizeof(palloc->entries[i].dma_address)))
+	return -EFAULT;
+      if (copy_from_user(&length, (void __user *)&(palloc->entries[i].length), sizeof(palloc->entries[i].length)))
+	return -EFAULT;
+#if defined(__arm__)
+      unsigned long end_addr = start_addr+length;
+>>>>>>> refactor PortalAlloc structure to reduce stack frame size in portalalloc driver
       outer_clean_range(start_addr, end_addr);
       outer_inv_range(start_addr, end_addr);
+#elif defined(__i386__) || defined(__x86_64__)
+      clflush_cache_range((void *)start_addr, length);
+#else
+#error("PA_DCACHE_FLUSH_INVAL architecture undefined");
+#endif
     }
 #endif
     return 0;
   }
   case PA_ALLOC: {
-    struct PortalAlloc alloc;
+    struct PortalAllocHeader header;
+    struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
     struct sg_table *sg_table = 0;
     struct scatterlist *sg;
     struct pa_buffer *buffer;
     int i;
-
-    if (copy_from_user(&alloc, (void __user *)arg, sizeof(alloc)))
+    if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
       return -EFAULT;
-    printk("%s, alloc.size=%d\n", __FUNCTION__, alloc.size);
-    alloc.size = round_up(alloc.size, 4096);
-    buffer = pa_alloc(alloc.size, 4096);
-    alloc.fd = pa_get_dma_buf(buffer);
+
+    printk("%s, header.size=%zd\n", __FUNCTION__, header.size);
+    header.size = round_up(header.size, 4096);
+    buffer = pa_alloc(header.size, 4096);
+    header.fd = pa_get_dma_buf(buffer);
     sg_table = buffer->sg_table;
 		
     if (0)
@@ -558,17 +592,19 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
       }
     }
                 
-    memset(&alloc.entries, 0, sizeof(alloc.entries));
-    alloc.numEntries = sg_table->nents;
+    header.numEntries = sg_table->nents;
     for_each_sg(sg_table->sgl, sg, sg_table->nents, i) {
-      alloc.entries[i].dma_address = sg_phys(sg);
-      alloc.entries[i].length = sg->length;
+      unsigned long p = sg_phys(sg);
+      if (copy_to_user((void __user *)&(palloc->entries[i].dma_address), &(p), sizeof(p)))
+	return -EFAULT;
+      if (copy_to_user((void __user *)&(palloc->entries[i].length), &(sg->length), sizeof(sg->length)))
+	return -EFAULT;
     }
 
     //sg_free_table(sg_table);
     //dma_buf_detach(dma_buf, attachment);
 
-    if (copy_to_user((void __user *)arg, &alloc, sizeof(alloc)))
+    if (copy_to_user((void __user *)arg, &header, sizeof(header)))
       return -EFAULT;
     return 0;
   } break;
