@@ -124,7 +124,7 @@ static struct pa_buffer *pa_alloc(size_t len,
 {
   struct pa_buffer *buffer = NULL;
 
-  pr_debug("%s: len %d align %d\n", __func__, len,
+  pr_debug("%s: len %ld align %ld\n", __func__, len,
 	   align);
 
   if (WARN_ON(!len))
@@ -200,7 +200,7 @@ static int pa_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   struct pa_buffer *buffer = dmabuf->priv;
   int ret = 0;
 
-  printk("pa_mmap %08x %d\n", (unsigned int)(dmabuf->file), dmabuf->file->f_count.counter);
+  printk("pa_mmap %08lx %ld\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
 	
   vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
@@ -219,7 +219,7 @@ static int pa_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 static void pa_dma_buf_release(struct dma_buf *dmabuf)
 {
   struct pa_buffer *buffer = dmabuf->priv;
-  printk("PortalAlloc::pa_dma_buf_release %08x %d\n", (unsigned int)(dmabuf->file), dmabuf->file->f_count.counter);
+  printk("PortalAlloc::pa_dma_buf_release %08lx %ld\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
   pa_buffer_free(buffer);
 }
 
@@ -291,7 +291,7 @@ static int pa_get_dma_buf(struct pa_buffer *buffer)
   if (fd < 0)
     dma_buf_put(dmabuf);
 
-  printk("pa_get_dma_buf %08x %d\n", (unsigned int)(dmabuf->file), dmabuf->file->f_count.counter);
+  printk("pa_get_dma_buf %08lx %ld\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
   return fd;
 }
 
@@ -521,12 +521,14 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
     int i;
     if (copy_from_user(&alloc, (void __user *)arg, sizeof(alloc)))
       return -EFAULT;
+#ifdef __ARM__
     for(i = 0; i < alloc.numEntries; i++){
       unsigned int start_addr = alloc.entries[i].dma_address;
       unsigned int end_addr = start_addr + alloc.entries[i].length;
       outer_clean_range(start_addr, end_addr);
       outer_inv_range(start_addr, end_addr);
     }
+#endif
     return 0;
   }
   case PA_ALLOC: {
