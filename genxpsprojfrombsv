@@ -89,7 +89,7 @@ endif
 
 all: $(ALLTARGETS)
 
-$(vfile): sources/%(dut)s/%(Top)s.bsv
+$(vfile): sources/%(dut)s/%(Top)s.bsv %(bsvfiles)s
 	cd sources/%(dut)s; bsc %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Top)s %(Top)s.bsv
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
 
@@ -429,7 +429,8 @@ if __name__=='__main__':
                                    'bsvname': os.path.basename(namespace.bsvfile[0]),
                                    'bsvdefines': bsvdefines,
                                    'boardname': boardname,
-                                   'OS': namespace.os
+                                   'OS': namespace.os,
+                                   'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in namespace.bsvfile])
                                    })
     make.close()
 
