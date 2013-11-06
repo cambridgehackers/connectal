@@ -162,9 +162,9 @@ int main(int argc, const char **argv)
       dstBuffer[i] = 5;
     }
     
-    dma->dCacheFlushInval(&srcAlloc);
-    dma->dCacheFlushInval(&dstAlloc);
-    dma->dCacheFlushInval(&bsAlloc);
+    dma->dCacheFlushInval(&srcAlloc, srcBuffer);
+    dma->dCacheFlushInval(&dstAlloc, dstBuffer);
+    dma->dCacheFlushInval(&bsAlloc,  bsBuffer);
     fprintf(stderr, "flush and invalidate complete\n");
       
     // write channel 0 is copy destination

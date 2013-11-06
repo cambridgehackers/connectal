@@ -26,6 +26,7 @@ import GetPut::*;
 
 import AxiClientServer::*;
 import AxiDMA::*;
+import PortalMemory::*;
 import BlueScope::*;
 
 interface CoreRequest;

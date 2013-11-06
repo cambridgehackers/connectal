@@ -25,6 +25,7 @@ import BRAMFIFO::*;
 import GetPut::*;
 import AxiClientServer::*;
 import AxiDMA::*;
+import PortalMemory::*;
 
 interface CoreRequest;
    method Action startRead(Bit#(32) numWords);

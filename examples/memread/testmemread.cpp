@@ -34,6 +34,9 @@ class TestDMAIndication : public DMAIndication
   virtual void sglistResp(unsigned long channelId){
     fprintf(stderr, "DMA::sglistResp: %x\n", channelId);
   }
+  virtual void parefResp(unsigned long channelId){
+    fprintf(stderr, "DMA::parefResp: %x\n", channelId);
+  }
 };
 
 class TestCoreIndication : public CoreIndication
@@ -67,7 +70,7 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(alloc_sz, &srcAlloc);
-  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc.fd, 0);
+  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc.header.fd, 0);
 
   pthread_t tid;
   fprintf(stderr, "Main::creating exec thread\n");
@@ -82,7 +85,7 @@ int main(int argc, const char **argv)
     srcBuffer[i] = srcGen++;
   }
     
-  dma->dCacheFlushInval(&srcAlloc);
+  dma->dCacheFlushInval(&srcAlloc, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   // read channel 0 is read source
