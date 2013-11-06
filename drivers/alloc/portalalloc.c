@@ -518,6 +518,7 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
 {
   switch (cmd) {
   case PA_DCACHE_FLUSH_INVAL: {
+#if defined(__arm__)
     struct PortalAllocHeader header;
     struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
     unsigned long start_addr;
@@ -532,16 +533,15 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
       if (copy_from_user(&length, (void __user *)&(palloc->entries[i].length), sizeof(palloc->entries[i].length)))
 	return -EFAULT;
       end_addr = start_addr+length;
-#if defined(__arm__)
       outer_clean_range(start_addr, end_addr);
       outer_inv_range(start_addr, end_addr);
+    }
+    return 0;
 #elif defined(__i386__) || defined(__x86_64__)
-      clflush_cache_range((void *)start_addr, length);
+    return -EFAULT;
 #else
 #error("PA_DCACHE_FLUSH_INVAL architecture undefined");
 #endif
-    }
-    return 0;
   }
   case PA_ALLOC: {
     struct PortalAllocHeader header;

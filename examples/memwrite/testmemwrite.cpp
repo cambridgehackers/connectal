@@ -107,7 +107,7 @@ void parent(int rd_sock, int wr_sock)
     dstBuffer[i] = 0xDEADBEEF;
   }
   
-  dma->dCacheFlushInval(&dstAlloc);
+  dma->dCacheFlushInval(&dstAlloc, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   // write channel 0 is write source

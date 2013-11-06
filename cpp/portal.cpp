@@ -253,15 +253,21 @@ PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
   }
 }
 
-int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc)
+int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 {
-    int rc = ioctl(this->pa_fd, PA_DCACHE_FLUSH_INVAL, portalAlloc);
-    if (rc){
-      fprintf(stderr, "portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-      return rc;
-    }
-    fprintf(stderr, "dcache flush\n");
-    return 0;
+#if defined(__arm__)
+  int rc = ioctl(this->pa_fd, PA_DCACHE_FLUSH_INVAL, portalAlloc);
+  if (rc){
+    fprintf(stderr, "portal dcache flush failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    return rc;
+  }
+#elif defined(__i386__) || defined(__x86_64__)
+  asm volatile("clflush %0" : "+m" (*(volatile char __force *)__p));
+#else
+#error("dCAcheFlush not defined for unspecified architecture")
+#endif
+  fprintf(stderr, "dcache flush\n");
+  return 0;
 }
 
 int PortalMemory::reference(PortalAlloc* pa)
