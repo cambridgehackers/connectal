@@ -367,7 +367,9 @@ static void free_buffer_page(struct pa_buffer *buffer,
 			     struct page *page,
 			     unsigned int order)
 {
-  __free_pages(page, order);
+  // this is causing kernel panic on x86
+  // i'll leave it commented out for now
+  //__free_pages(page, order);
 }
 
 

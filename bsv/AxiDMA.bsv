@@ -35,112 +35,28 @@ import PortalMemory::*;
 import SGList::*;
 
 typedef struct {
-   Bit#(32) x;
-   Bit#(32) y;
-   Bit#(32) z;
-   Bit#(32) w;
-   } DmaDbgRec deriving(Bits);
-
-interface DMAIndication;
-   method Action reportStateDbg(DmaDbgRec rec);
-   method Action configResp(Bit#(32) channelId);
-   method Action sglistResp(Bit#(32) v);
-   method Action parefResp(Bit#(32) v);
-endinterface
-
-interface DMARequest;
-   method Action configReadChan(Bit#(32) channelId, Bit#(40) pa, Bit#(32) bsz);
-   method Action configWriteChan(Bit#(32) channelId, Bit#(40) pa, Bit#(32) bsz);
-   method Action getReadStateDbg();
-   method Action getWriteStateDbg();
-   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
-   method Action paref(Bit#(32) off, Bit#(64) pref);
-endinterface
-
-instance PortalMemory#(DMARequest);
-endinstance
-		       
-// In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
-typedef 2 NumDmaChannels;
-typedef Bit#(TLog#(NumDmaChannels)) DmaChannelId;
-typedef struct {
    SGListId   sglid;
    Bit#(4) burstLen; 
    } DmaChannelPtr deriving (Bits);
 
-interface ReadChan;
-   interface Get#(Bit#(64)) readData;
-   interface Put#(void)     readReq;
-endinterface
-
-interface WriteChan;
-   interface Put#(Bit#(64)) writeData;
-   interface Put#(void)     writeReq;
-   interface Get#(void)     writeDone;
-endinterface
-
-interface AxiDMARead;
-   method Action configChan(DmaChannelId channelId, Bit#(40) pa, Bit#(4) bsz);
-   interface Vector#(NumDmaChannels, ReadChan) readChannels;
-   method ActionValue#(DmaDbgRec) dbg();
-endinterface
-
-interface AxiDMAWrite;
-   method Action  configChan(DmaChannelId channelId, Bit#(40) pa, Bit#(4) bsz);   
-   interface Vector#(NumDmaChannels, WriteChan) writeChannels;
-   method ActionValue#(DmaDbgRec) dbg();
-endinterface
-
 interface AxiDMAWriteInternal;
-   interface AxiDMAWrite write;
+   interface DMAWrite write;
    interface Axi3WriteClient#(40,64,8,12) m_axi_write;
    method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
 endinterface
 
 interface AxiDMAReadInternal;
-   interface AxiDMARead read;
+   interface DMARead read;
    interface Axi3ReadClient#(40,64,12) m_axi_read;   
    method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
 endinterface
 
 interface AxiDMA;
    interface DMARequest request;
-   interface AxiDMAWrite write;
-   interface AxiDMARead  read;
+   interface DMAWrite write;
+   interface DMARead  read;
    interface Axi3Client#(40,64,8,12) m_axi;
 endinterface
-
-function Put#(void) mkPutWhenFalse(Reg#(Bool) r);
-   return (interface Put;
-	      method Action put(void v);
-		 _when_ (!r) (r._write(True));
-	      endmethod
-	   endinterface);
-endfunction
-
-function Get#(void) mkGetWhenTrue(Reg#(Bool) r);
-   return (interface Get;
-	      method ActionValue#(void) get;
-		 _when_ (r) (r._write(False));
-		 return ?;
-	      endmethod
-	   endinterface);
-endfunction
-
-function ReadChan mkReadChan(Get#(Bit#(64)) rd, Put#(void) rr);
-   return (interface ReadChan;
-	      interface Get readData = rd;
-	      interface Put readReq  = rr;
-	   endinterface);
-endfunction
-
-function WriteChan mkWriteChan(Put#(Bit#(64)) wd, Put#(void) wr, Get#(void) d);
-   return (interface WriteChan;
-	      interface Put writeData = wd;
-	      interface Put writeReq  = wr;
-	      interface Get writeDone = d;
-	   endinterface);
-endfunction
 
 typedef enum {Idle, LoadCtxt, Address, Data, Done} InternalState deriving(Eq,Bits);
 
@@ -187,9 +103,9 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
       sgl.sglist(off, addr, len);
    endmethod
    
-   interface AxiDMARead read;
-      method Action configChan(DmaChannelId channelId, Bit#(40) pa, Bit#(4) bsz);
-	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pa), burstLen:bsz};
+   interface DMARead read;
+      method Action configChan(DmaChannelId channelId, Bit#(32) pref, Bit#(4) bsz);
+	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pref), burstLen:bsz};
       endmethod
       interface readChannels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
       method ActionValue#(DmaDbgRec) dbg();
@@ -253,14 +169,13 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
 	 end
    endrule
    
-   
    method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
       sgl.sglist(off, addr, len);
    endmethod
 
-   interface AxiDMAWrite write;
-      method Action configChan(DmaChannelId channelId, Bit#(40) pa, Bit#(4) bsz);
-	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pa), burstLen:bsz};
+   interface DMAWrite write;
+      method Action configChan(DmaChannelId channelId, Bit#(32) pref, Bit#(4) bsz);
+	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pref), burstLen:bsz};
       endmethod
       interface writeChannels = zipWith3(mkWriteChan, map(toPut,writeBuffers), 
 					 map(mkPutWhenFalse, reqOutstanding),
@@ -296,12 +211,12 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA);
    AxiDMAWriteInternal writer <- mkAxiDMAWriteInternal;
    AxiDMAReadInternal  reader <- mkAxiDMAReadInternal;
    interface DMARequest request;
-      method Action configReadChan(Bit#(32) channelId, Bit#(40) pa, Bit#(32) numWords);
-	 reader.read.configChan(pack(truncate(channelId)), pa, truncate((numWords>>1)-1));
+      method Action configReadChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) numWords);
+	 reader.read.configChan(pack(truncate(channelId)), pref, truncate((numWords>>1)-1));
 	 indication.configResp(channelId);
       endmethod
-      method Action configWriteChan(Bit#(32) channelId, Bit#(40) pa, Bit#(32) numWords);
-	 writer.write.configChan(pack(truncate(channelId)), pa, truncate((numWords>>1)-1));
+      method Action configWriteChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) numWords);
+	 writer.write.configChan(pack(truncate(channelId)), pref, truncate((numWords>>1)-1));
 	 indication.configResp(channelId);
       endmethod
       method Action getReadStateDbg();
@@ -316,9 +231,6 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA);
 	 writer.sglist(off, addr, len);
 	 reader.sglist(off, addr, len);
 	 indication.sglistResp(truncate(addr));
-      endmethod
-      method Action paref(Bit#(32) off, Bit#(64) pref);
-	 indication.parefResp(off);
       endmethod
    endinterface
    interface AxiDMAWrite write = writer.write;

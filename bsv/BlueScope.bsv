@@ -28,6 +28,7 @@ import BRAMFIFO::*;
 import GetPut::*;
 
 import AxiDMA::*;
+import PortalMemory::*;
 import ClientServer::*;
 
 interface BlueScopeIndication;

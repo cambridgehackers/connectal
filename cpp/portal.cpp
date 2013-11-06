@@ -262,7 +262,8 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
     return rc;
   }
 #elif defined(__i386__) || defined(__x86_64__)
-  asm volatile("clflush %0" : "+m" (*(volatile char __force *)__p));
+  char foo = *((volatile char *)__p);
+  asm volatile("clflush %0" :: "m" (foo));
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
