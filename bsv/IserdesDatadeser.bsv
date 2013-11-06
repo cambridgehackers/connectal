@@ -31,15 +31,10 @@ interface Iserdesbvi;
     method Bit#(1)          align_busy();
     method Bit#(1)          aligned();
     method Bit#(3)          samplein();
-    method Bit#(3)          iodelay_reset_inc_ce();
-    method Bit#(1)          bitslip();
     method Action           autoalign(Bit#(1) v);
     method Action           training(Bit#(10) v);
     method Action           manual_tap(Bit#(10) v);
-    method Action           delay_wren(Bit#(1) v);
-    method Action           fifo_wren(Bit#(1) v);
     method Action           reset(Bit#(1) v);
-    method Bit#(1)          fifo_wren_sync();
     method Action           dataout(Bit#(10) v);
     method Bit#(1)          itemreq();
     method Bit#(1)          ctrl_bitslip();
@@ -50,21 +45,16 @@ endinterface: Iserdesbvi
 
 import "BVI" iserdes_datadeser = 
 module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
-    input_clock clkdiv (CLKDIV) = clkdiv;
+    input_clock clkdiv () = clkdiv;
     default_clock clock(CLOCK);
     input_reset clkdiv_reset() clocked_by(clkdiv) = clkdiv_reset;
     method                  align_start(ALIGN_START) enable((*inhigh*) en1) clocked_by (clock);
     method ALIGN_BUSY       align_busy() clocked_by (clock);
     method ALIGNED          aligned() clocked_by (clock);
-    method ISERDES_BITSLIP  bitslip() clocked_by (clkdiv) reset_by(clkdiv_reset);
     method SAMPLEIN samplein() clocked_by (clock);
-    method IODELAY_RESET_INC_CE iodelay_reset_inc_ce() clocked_by (clkdiv) reset_by(clkdiv_reset);
     method                  autoalign(AUTOALIGN) enable((*inhigh*) en7) clocked_by (clock);
     method                  training(TRAINING) enable((*inhigh*) en8) clocked_by (clock);
     method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
-    method                  fifo_wren(FIFO_WREN) enable((*inhigh*) en10) clocked_by (clkdiv) reset_by(clkdiv_reset);
-    method FIFO_WREN_SYNC   fifo_wren_sync() clocked_by (clock);
-    method                  delay_wren(DELAY_WREN) enable((*inhigh*) en11) clocked_by (clkdiv) reset_by(clkdiv_reset);
     method                  reset(RESET) enable((*inhigh*) en17) clocked_by (clkdiv) reset_by(clkdiv_reset);
     method                  dataout(ISERDES_DATA) enable((*inhigh*) en18) clocked_by(clkdiv) reset_by(clkdiv_reset);
     method ITEMREQ_o        itemreq() clocked_by(clkdiv) reset_by(clkdiv_reset);
@@ -72,8 +62,8 @@ module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
     method CTRL_FIFO_RESET_o   ctrl_fifo_reset() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_RESET_INC_CE_o ctrl_reset_inc_ce() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method                  dackint(DACKINT) enable((*inhigh*) en19) clocked_by(clkdiv) reset_by(clkdiv_reset);
-    schedule (dackint, ctrl_reset_inc_ce, itemreq, ctrl_bitslip, ctrl_fifo_reset, fifo_wren, reset, delay_wren, dataout, iodelay_reset_inc_ce, bitslip, align_busy, aligned, samplein, fifo_wren_sync, align_start, autoalign, training, manual_tap, bitslip)
-         CF (dackint, ctrl_reset_inc_ce, itemreq, ctrl_bitslip, ctrl_fifo_reset, fifo_wren, reset, delay_wren, dataout, iodelay_reset_inc_ce, bitslip, align_busy, aligned, samplein, fifo_wren_sync, align_start, autoalign, training, manual_tap, bitslip);
+    schedule (dackint, ctrl_reset_inc_ce, itemreq, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
+         CF (dackint, ctrl_reset_inc_ce, itemreq, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
 endmodule: mkIserdesbvi
 
 interface IserdesDatadeser;
@@ -169,18 +159,19 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(1)) fifo_wren_sync <- mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
     Reg#(Bit#(1)) sync_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) sync_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    //outputs
     Reg#(Bit#(1)) dackint <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     ReadOnly#(Bit#(3)) samplein_null <- mkNullCrossingWire(serdes_clock, serbvi.samplein());
 
-    //Reg#(Bit#(1)) iserdes_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    //Reg#(Bit#(3)) iodelay_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Wire#(Bit#(1)) iserdes_bitslip <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Wire#(Bit#(3)) iodelay_reset_inc_ce <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(Bit#(1)) iserdes_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(Bit#(3)) iodelay_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
 
     rule wrensyncr_rule if (bvi_reset_reg == 0);
         dfifo_wren_r <= 0;
         fifo_wren_sync <= 0;
+        iserdes_bitslip <= 0;
+        iodelay_reset_inc_ce <= 0;
+        dstate <= DIdle;
+        dackint <= 0;
     endrule
     rule wrensync_rule if (bvi_reset_reg != 0);
         let fwsync = 0;
@@ -190,6 +181,10 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         else
             fwsync = bvi_fifo_wren_wire;
         fifo_wren_sync <= fwsync;
+        iodelay_reset_inc_ce <= sync_reset_inc_ce;
+    endrule
+    rule wren_dfifo_rule;
+        dfifo.wren(fifo_wren_sync);
     endrule
 
     rule clkdiv_rule if (bvi_reset_reg != 0);
@@ -206,10 +201,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         fifo_reset <= dfifo_reset_r;
         sric[0] = 0;
         sric[1] = 0;
-        //iodelay_reset_inc_ce <= sync_reset_inc_ce;
-        //iserdes_bitslip <= sync_bitslip;
-        iodelay_reset_inc_ce <= serbvi.iodelay_reset_inc_ce();
-        iserdes_bitslip <= serbvi.bitslip();
+        iserdes_bitslip <= sync_bitslip;
         if (dstate == DIdle && dreqpipe1 == 1)
             begin
             sric = serbvi.ctrl_reset_inc_ce();
@@ -285,10 +277,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         dfifo.di({6'b0,dout});
     endrule
 
-    rule wren_dfifo_rule;
-        dfifo.wren(fifo_wren_sync);
-    endrule
-
     rule serdesrule;
         serbvi.align_start(align_start);
         serbvi.autoalign(autoalign);
@@ -317,11 +305,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endmethod
     method Action                 delay_wren(Bit#(1) v);
         bvi_delay_wren_wire <= v;
-        serbvi.delay_wren(v);
     endmethod
     method Action                 fifo_wren(Bit#(1) v);
         bvi_fifo_wren_wire <= v;
-        serbvi.fifo_wren(v);
     endmethod
     method Action                 reset(Bit#(1) v);
         bvi_reset_reg <= v;
