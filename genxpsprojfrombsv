@@ -142,6 +142,48 @@ vivado_strategies={
 '''
 }
 
+def preprocess(source, defs):
+    
+    stack = [(True,True)]
+
+    def pp(s):
+        cond  = stack[-1][0]
+        valid = stack[-1][1]
+        i = re.search('\n`', s)
+        if i == None:
+            return s
+        pre = s[:i.end()-1]
+        s = s[i.end():]
+        j = re.search('\s', s)
+        tok = s[:j.start()]
+        s = s[j.end():]
+        if tok == 'ifdef':
+            k = re.search('\s', s)
+            sym = s[:k.start()]
+            s = s[k.end():]
+            new_cond = sym in defs
+            new_valid = new_cond and valid
+            stack.append((new_cond,new_valid))
+        elif tok == 'ifndef':
+            k = re.search('\s', s)
+            sym = s[:k.start()]
+            s = s[k.end():]
+            new_cond = not sym in defs
+            new_valid = valid and new_cond
+            stack.append((new_cond,new_valid))
+        elif tok == 'else':
+            new_cond = not cond
+            stack.pop()
+            stack.append((new_cond,valid))
+        elif tok == 'endif':
+            stack.pop()
+        else:
+            assert(false)
+        prv = pre if valid and cond else ''
+        return prv+pp('\n'+s)
+
+    return pp(source)
+
 def write_vivado_strategies():
     stratdir = os.path.join(os.environ['HOME'], '.Xilinx', 'Vivado', 'strategies')
     if not os.path.exists(stratdir):
@@ -166,31 +208,38 @@ if __name__=='__main__':
     os.path.exists('./parsetab.pyc') and os.remove('./parsetab.pyc')
     os.path.exists('./parsetab.py')  and os.remove('./parsetab.py')
 
+    dutname = namespace.interface.lower()
+    corename = '%s_v1_00_a' % namespace.interface.lower()
+    boardname = namespace.board.lower()
+
+    bsvdefines = ['BSIM'] if 'bsim' in namespace.make else []
+    if boardname == 'kc705':
+        bsvdefines += ['Kintex7']
+    elif boardname == 'vc707':
+        bsvdefines += ['Virtex7']
+    
     for inputfile in namespace.bsvfile:
         inputdir = os.path.dirname(inputfile)
         if not inputdir in srcdirs:
             srcdirs.append(inputdir)
-        s = open(inputfile).read() + '\n'
-        s1 = syntax.parse(s)
+        s0 = open(inputfile).read() + '\n'
+        s1 = preprocess(s0, bsvdefines)
+        print s1
+        exit(0)
+        s2 = syntax.parse(s1)
 
     if namespace.coherent:
         xpsgen.use_acp = 1
         print 'Using ACP for coherent memory access'
 
-    dutname = namespace.interface.lower()
-    corename = '%s_v1_00_a' % namespace.interface.lower()
-    boardname = namespace.board.lower()
-
     if not namespace.constraint:
         namespace.constraint = []
     if not namespace.verilog:
         namespace.verilog = []
-    bsvdefines = ''
     if boardname == 'kc705':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7k325tffg900-2'
         topSuffix = 'PcieTop'
-        bsvdefines = '-D Kintex7'
         namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
                                               'board_support', 'bluenoc', 'xilinx', 'KC705', 'verilog', 'k7_pcie_v1_6', 'source'))
         namespace.verilog.append(os.path.join('.', 'xilinx', 'kc705', 'pcie', 'source'))
@@ -199,7 +248,6 @@ if __name__=='__main__':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
         topSuffix = 'PcieTop'
-        bsvdefines = '-D Virtex7'
         namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
                                               'board_support', 'bluenoc', 'xilinx', 'VC707', 'verilog', 'v7_pcie_v1_7', 'source'))
         namespace.verilog.append(os.path.join('.', 'xilinx', 'vc707', 'pcie', 'source'))
@@ -427,7 +475,7 @@ if __name__=='__main__':
                                    'Top': '%s%s' % (util.capitalize(namespace.interface), topSuffix),
                                    'bsvpath': os.path.dirname(namespace.bsvfile[0]),
                                    'bsvname': os.path.basename(namespace.bsvfile[0]),
-                                   'bsvdefines': bsvdefines,
+                                   'bsvdefines': util.foldl((lambda e,a: '-D '+e+' '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': namespace.os,
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in namespace.bsvfile])
