@@ -224,8 +224,6 @@ if __name__=='__main__':
             srcdirs.append(inputdir)
         s0 = open(inputfile).read() + '\n'
         s1 = preprocess(s0, bsvdefines)
-        print s1
-        exit(0)
         s2 = syntax.parse(s1)
 
     if namespace.coherent:
