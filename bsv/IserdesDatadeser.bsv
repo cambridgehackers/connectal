@@ -56,12 +56,12 @@ module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
     method                  training(TRAINING) enable((*inhigh*) en8) clocked_by (clock);
     method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
     method                  reset(RESET) enable((*inhigh*) en17) clocked_by (clkdiv) reset_by(clkdiv_reset);
-    method                  dataout(ISERDES_DATA) enable((*inhigh*) en18) clocked_by(clkdiv) reset_by(clkdiv_reset);
+    method                  dataout(ISERDES_DATA) enable((*inhigh*) en18) clocked_by(clock);
     method ITEMREQ_o        itemreq() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_BITSLIP_o   ctrl_bitslip() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_FIFO_RESET_o   ctrl_fifo_reset() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_RESET_INC_CE_o ctrl_reset_inc_ce() clocked_by(clkdiv) reset_by(clkdiv_reset);
-    method                  dackint(DACKINT) enable((*inhigh*) en19) clocked_by(clkdiv) reset_by(clkdiv_reset);
+    method                  dackint(DACKINT) enable((*inhigh*) en19) clocked_by(clock);
     schedule (dackint, ctrl_reset_inc_ce, itemreq, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
          CF (dackint, ctrl_reset_inc_ce, itemreq, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
 endmodule: mkIserdesbvi
@@ -149,7 +149,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Wire#(Bit#(1)) bvi_reset_reg <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     Wire#(Bit#(1)) bvi_fifo_wren_wire <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) dcounter <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Reg#(Bit#(10)) iserdes_data <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(Bit#(10)) iserdes_data <-  mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
     Reg#(DState)  dstate <- mkReg(DIdle, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) dreqpipe0 <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) dreqpipe1 <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
@@ -159,7 +159,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(1)) fifo_wren_sync <- mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
     Reg#(Bit#(1)) sync_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) sync_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Reg#(Bit#(1)) dackint <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(Bit#(1)) dackint <- mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
     ReadOnly#(Bit#(3)) samplein_null <- mkNullCrossingWire(serdes_clock, serbvi.samplein());
 
     Reg#(Bit#(1)) iserdes_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
@@ -190,7 +190,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule clkdiv_rule if (bvi_reset_reg != 0);
         let ds = dstate;
         let dc = dcounter;
-        let da = dackint;
         let sric = sync_reset_inc_ce;
         let sbs = 0;
   
@@ -211,22 +210,22 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             end
         if (dstate == DValid && dcounter[2] == 1)
             begin
-            da = 1;
             ds = DLow;
             end
         if (dstate == DLow && dreqpipe1 == 0)
             begin
-            da = 0;
             ds = DIdle;
             end
         dstate <= ds;
         dcounter <= dc;
-        dackint <= da;
         sync_reset_inc_ce <= sric;
         sync_bitslip <= sbs;
     endrule
-    rule dackint_rule;
-        serbvi.dackint(dackint);
+    rule state1_rule (dstate == DValid && dcounter[2] == 1);
+        dackint <= 1;
+    endrule
+    rule state2_rule if (dstate == DLow && dreqpipe1 == 0);
+        dackint <= 0;
     endrule
 
     rule setrule;
@@ -273,8 +272,12 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         slave_data.oclkb(0);
         slave_data.reset(iodelay_reset_inc_ce[2]);
         iserdes_data <= dout;
-        serbvi.dataout(iserdes_data);
         dfifo.di({6'b0,dout});
+    endrule
+
+    rule dackint_rule;
+        serbvi.dataout(iserdes_data);
+        serbvi.dackint(dackint);
     endrule
 
     rule serdesrule;

@@ -34,6 +34,7 @@ import Imageon::*;
 import IserdesDatadeser::*;
 import HDMI::*;
 import AxiDMA::*;
+import PortalMemory::*;
 import BlueScope::*;
 import SensorToVideo::*;
 import XilinxCells::*;
