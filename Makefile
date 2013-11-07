@@ -20,7 +20,7 @@ test-echo/echo.bit.bin.gz: examples/echo/Echo.bsv
 test-memcpy/memcpy.bit.bin.gz: examples/memcpy/Memcpy.bsv
 	rm -fr test-memcpy
 	mkdir test-memcpy
-	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv bsv/PortalMemory.bsv
 	cd test-memcpy; make verilog && make bits && make memcpy.bit.bin.gz
 	cp examples/memcpy/testmemcpy.cpp test-memcpy/jni
 	(cd test-memcpy; ndk-build)
@@ -45,6 +45,6 @@ test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
 test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	rm -fr test-imageon
 	mkdir test-imageon
-	./genxpsprojfrombsv -B zc702 -p test-imageon -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv
+	./genxpsprojfrombsv -B zc702 -p test-imageon -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv bsv/PortalMemory.bsv
 	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
 	echo test-imageon built successfully
