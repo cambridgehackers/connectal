@@ -56,7 +56,7 @@ module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
     method                  training(TRAINING) enable((*inhigh*) en8) clocked_by (clock);
     method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
     method                  reset(RESET) enable((*inhigh*) en17) clocked_by (clkdiv) reset_by(clkdiv_reset);
-    method                  dataout(ISERDES_DATA) enable((*inhigh*) en18) clocked_by(clock);
+    method                  dataout(CTRL_DATA) enable((*inhigh*) en18) clocked_by(clock);
     method ITEMREQ_o        itemreq() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_BITSLIP_o   ctrl_bitslip() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_FIFO_RESET_o   ctrl_fifo_reset() clocked_by(clkdiv) reset_by(clkdiv_reset);
@@ -162,11 +162,11 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBitToCC(serdes_clock, serdes_reset);
     Vector#(10, SyncBitIfc#(Bit#(1))) iserdes_data <-  replicateM(mkSyncBitToCC(serdes_clock, serdes_reset));
     SyncBitIfc#(Bit#(1)) dackint <- mkSyncBitToCC(serdes_clock, serdes_reset);
-    //Reg#(Bit#(10)) iserdes_data0 <-  mkReg(0);
-    //Reg#(Bit#(1)) dackint0 <- mkReg(0);
+    Reg#(Bit#(1)) dackint_last <- mkReg(0);
 
     Reg#(Bit#(1)) iserdes_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) iodelay_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(Bit#(10)) ctrl_data <- mkReg(0);
 
     rule wrensyncr_rule if (bvi_reset_reg == 0);
         dfifo_wren_r <= 0;
@@ -205,7 +205,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             begin
             sric = serbvi.ctrl_reset_inc_ce();
             sbs = serbvi.ctrl_bitslip();
-            dc = 3'b011;
+            dc = 3;
             ds = DValid;
             end
         if (dstate == DValid && dcounter[2] == 1)
@@ -267,8 +267,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         slave_data.oclk(0);
         slave_data.oclkb(0);
         slave_data.reset(iodelay_reset_inc_ce[2]);
-    //endrule
-    //rule dout_rule;
         let dout = {slave_data.q4(), slave_data.q3(), master_data.q8(),
            master_data.q7(), master_data.q6(), master_data.q5(),
            master_data.q4(), master_data.q3(), master_data.q2(), master_data.q1()};
@@ -277,8 +275,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     rule dackint_rule;
-        //iserdes_data0 <= iserdes_data;
-        //dackint0 <= dackint;
         //let dout = 10'b0;
         //for (Integer i = 0; i < 10; i = i + 1)
             //dout[i] = iserdes_data[i].read();
@@ -286,6 +282,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             iserdes_data[6].read(), iserdes_data[5].read(), iserdes_data[4].read(),
             iserdes_data[3].read(), iserdes_data[2].read(), iserdes_data[1].read(),
             iserdes_data[0].read()};
+        dackint_last <= dackint.read();
+        if (dackint.read() == 1 && dackint_last == 0)
+            ctrl_data <= dout;
         serbvi.dataout(dout);
         serbvi.dackint(dackint.read());
         dfifo.di({6'b0,dout});
