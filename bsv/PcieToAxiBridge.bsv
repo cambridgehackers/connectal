@@ -852,70 +852,6 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
    interface Reg use4dw = use4dwReg;
 endmodule: mkAxiSlaveEngine
 
-typedef enum {
-    Idle,
-    SendAddress,
-    WaitingForData,
-    Done
-} AxiSlaveTestState deriving (Bits,Eq);
-
-interface AxiSlaveTest;
-    interface Axi3Master#(40,64,8,12) master;
-    interface Reg#(Bit#(40)) addr;
-    interface Reg#(Bit#(32)) result;
-    interface Reg#(AxiSlaveTestState) state;
-    method Action start();
-    method ActionValue#(Bit#(32)) done();
-endinterface: AxiSlaveTest
-
-module mkAxiSlaveTest(AxiSlaveTest);
-    Reg#(Bit#(40)) addrReg <- mkReg(0);
-    Reg#(Bit#(32)) resultReg <- mkReg(0);
-    Reg#(AxiSlaveTestState) stateReg <- mkReg(Idle);
-
-    interface Axi3Master master;
-	interface Axi3MasterRead read;
-	   method ActionValue#(Bit#(40)) readAddr() if (stateReg == SendAddress);
-	       stateReg <= WaitingForData;
-	       return addrReg;
-	   endmethod
-	   method Bit#(4) readBurstLen();
-	       return 0;
-	   endmethod
-	   method Bit#(3) readBurstWidth();
-	       return pack(ReadBurstWidth32);
-	   endmethod
-	   method Bit#(2) readBurstType();  // drive with 2'b01
-	       return 2'b01;
-	   endmethod
-	   method Bit#(3) readBurstProt(); // drive with 3'b000
-	       return 3'b000;
-	   endmethod
-	   method Bit#(4) readBurstCache(); // drive with 4'b0011
-	       return 4'b0011;
-	   endmethod
-	   method Bit#(idWidth) readId();
-	       return 22;
-	   endmethod
-	   method Action readData(Bit#(64) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id) if (stateReg == WaitingForData);
-	       resultReg <= truncate(data);
-	       stateReg <= Done;
-	   endmethod
-	endinterface
-    endinterface
-    interface Reg addr = addrReg;
-    interface Reg result = resultReg;
-    interface Reg state = stateReg;
-    method Action start() if (stateReg == Idle);
-        stateReg <= SendAddress;
-    endmethod
-    method ActionValue#(Bit#(32)) done() if (stateReg == Done);
-        stateReg <= Idle;
-	return resultReg;
-    endmethod
-endmodule: mkAxiSlaveTest
-
-
 // The control and status registers which are accessible from the PCIe
 // bus.
 interface ControlAndStatusRegs;
@@ -956,11 +892,6 @@ interface ControlAndStatusRegs;
    interface Reg#(Bool) byteSwap;
    interface Reg#(Bool) use4dw;
    interface Reg#(Bit#(4)) numPortals;
-   interface Reg#(Bit#(32)) axiTestEnabled;
-   interface Reg#(Bit#(32)) addrLowerWord;
-   interface Reg#(Bit#(32)) addrUpperWord;
-   interface Reg#(Bit#(32)) testResult;
-   interface Reg#(Bit#(32)) testState;
    interface Reg#(Bit#(32)) tlpDataBramWrAddr;
    interface Reg#(Bit#(32)) tlpSeqno;
    interface Reg#(Bit#(32)) tlpOutCount;
@@ -1048,11 +979,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bool) byteSwapReg <- mkReg(False);
    Reg#(Bool) use4dwReg <- mkReg(True);
    Reg#(Bit#(4)) numPortalsReg <- mkReg(1);
-   Reg#(Bit#(32)) axiTestEnabledReg <- mkReg(0);
-   Reg#(Bit#(32)) addrLowerWordReg <- mkReg(0);
-   Reg#(Bit#(32)) addrUpperWordReg <- mkReg(0);
-   Reg#(Bit#(32)) testResultReg <- mkReg(0);
-   Reg#(Bit#(32)) testStateReg <- mkReg(0);
    Reg#(Bit#(32)) tlpSeqnoReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
@@ -1107,11 +1033,11 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 779: return tlpDataBramResponseSlice(3);
 	 780: return tlpDataBramResponseSlice(4);
 	 781: return tlpDataBramResponseSlice(5);
-	 782: return axiTestEnabledReg;
-	 783: return addrLowerWordReg;
-	 784: return addrUpperWordReg;
-	 785: return testResultReg;
-	 786: return testStateReg;
+	 782: return 0;
+	 783: return 0;
+	 784: return 0;
+	 785: return 0;
+	 786: return 0;
 	 787: return pipeliningEnabledReg ? 1 : 0;
 	 788: return axiEnabledReg ? 1 : 0;
 	 789: return tlpDataBramRdAddrReg;
@@ -1182,11 +1108,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    779: tlpDataScratchpad[3] <= dword;
 	    780: tlpDataScratchpad[4] <= dword;
 	    781: tlpDataScratchpad[5] <= dword;
-	    782: axiTestEnabledReg <= dword;
-	    783: addrLowerWordReg <= dword;
-	    784: addrUpperWordReg <= dword;
-	    785: testResultReg <= dword;
-	    786: testStateReg <= dword;
 
 	    787: pipeliningEnabledReg <= (dword != 0) ? True : False;
 	    788: axiEnabledReg <= (dword != 0) ? True : False;
@@ -1649,12 +1570,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface Reg pipeliningEnabled = pipeliningEnabledReg;
    interface Reg byteSwap = byteSwapReg;
    interface Reg use4dw = use4dwReg;
-   interface Reg axiTestEnabled = axiTestEnabledReg;
    interface Reg numPortals = numPortalsReg;
-   interface Reg addrLowerWord = addrLowerWordReg;
-   interface Reg addrUpperWord = addrUpperWordReg;
-   interface Reg testResult = testResultReg;
-   interface Reg testState = testStateReg;
    interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
    interface Reg tlpSeqno = tlpSeqnoReg;
    interface Reg tlpOutCount = tlpOutCountReg;
