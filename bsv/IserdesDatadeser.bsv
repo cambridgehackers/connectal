@@ -105,7 +105,7 @@ module mkFIFO18#(Clock clkdiv)(FIFO18);
     port DIP = 0;
 
     method          reset(RST) enable((*inhigh*) en9) clocked_by (clkdiv);
-    method          di(DI) enable((*inhigh*) en0) clocked_by (clkdiv);
+    method          di(DI) enable((*inhigh*) en0) clocked_by (clock); //clkdiv);
     method          rden(RDEN) enable((*inhigh*) en2) clocked_by (clock);
     method          wren(WREN) enable((*inhigh*) en3) clocked_by (clock);
     method DO       dataout() clocked_by(clock);
@@ -185,9 +185,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             fwsync = bvi_fifo_wren_wire;
         fifo_wren_sync.send(fwsync);
         iodelay_reset_inc_ce <= sync_reset_inc_ce;
-    endrule
-    rule wren_dfifo_rule;
-        dfifo.wren(fifo_wren_sync.read());
     endrule
 
     rule clkdiv_rule if (bvi_reset_reg != 0);
@@ -270,30 +267,29 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         slave_data.oclk(0);
         slave_data.oclkb(0);
         slave_data.reset(iodelay_reset_inc_ce[2]);
-    endrule
-    rule dout_rule;
+    //endrule
+    //rule dout_rule;
         let dout = {slave_data.q4(), slave_data.q3(), master_data.q8(),
            master_data.q7(), master_data.q6(), master_data.q5(),
            master_data.q4(), master_data.q3(), master_data.q2(), master_data.q1()};
         for (Integer i = 0; i < 10; i = i + 1)
             iserdes_data[i].send(dout[i]);
-        dfifo.di({6'b0,dout});
     endrule
 
     rule dackint_rule;
         //iserdes_data0 <= iserdes_data;
         //dackint0 <= dackint;
-        //let val = 10'b0;
+        //let dout = 10'b0;
         //for (Integer i = 0; i < 10; i = i + 1)
-            //val[i] = iserdes_data[i].read();
-        //serbvi.dataout(val);
-        serbvi.dataout(
-            {iserdes_data[9].read(), iserdes_data[8].read(), iserdes_data[7].read(),
+            //dout[i] = iserdes_data[i].read();
+        let dout = {iserdes_data[9].read(), iserdes_data[8].read(), iserdes_data[7].read(),
             iserdes_data[6].read(), iserdes_data[5].read(), iserdes_data[4].read(),
             iserdes_data[3].read(), iserdes_data[2].read(), iserdes_data[1].read(),
-            iserdes_data[0].read()});
-//iserdes_data.read());
+            iserdes_data[0].read()};
+        serbvi.dataout(dout);
         serbvi.dackint(dackint.read());
+        dfifo.di({6'b0,dout});
+        dfifo.wren(fifo_wren_sync.read());
     endrule
 
     rule serdesrule;
