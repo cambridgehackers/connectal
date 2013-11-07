@@ -699,6 +699,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
        else
 	  return 0;
     endfunction
+
    rule writeTlps if (writeDwCount > 0);
       TLPData#(16) tlp = defaultValue;
       tlp.sof = False;
@@ -759,7 +760,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	interface Axi3SlaveWrite write;
 	   method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
 				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid) if (writeBurstCount == 0);
-	      TLPLength tlplen = 2*(extend(burstLen) + 1);
+	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
 	      TLPMemory4DWHeader hdr_4dw = defaultValue;
 	      hdr_4dw.format = MEM_WRITE_4DW_DATA;
 	      hdr_4dw.tag = truncate(awid);
