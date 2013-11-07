@@ -166,11 +166,20 @@ if __name__=='__main__':
     os.path.exists('./parsetab.pyc') and os.remove('./parsetab.pyc')
     os.path.exists('./parsetab.py')  and os.remove('./parsetab.py')
 
+    boardname = namespace.board.lower()
+    bsvdefines = []
+    if boardname == 'kc705':
+        bsvdefines += ['-D', 'Kintex7', '-D']
+    elif boardname == 'vc707':
+        bsvdefines += ['-D', 'Virtex7', '-D']
+    if namespace.make == ['bsim']:
+        bsvdefines += ['-D', 'BSIM']
+
     for inputfile in namespace.bsvfile:
         inputdir = os.path.dirname(inputfile)
         if not inputdir in srcdirs:
             srcdirs.append(inputdir)
-        s = open(inputfile).read() + '\n'
+        s = subprocess.check_output(['bsc'] + bsvdefines + ['-E', inputfile]) #, '|', 'grep', '-v', '^`line'])
         s1 = syntax.parse(s)
 
     if namespace.coherent:
@@ -179,18 +188,15 @@ if __name__=='__main__':
 
     dutname = namespace.interface.lower()
     corename = '%s_v1_00_a' % namespace.interface.lower()
-    boardname = namespace.board.lower()
 
     if not namespace.constraint:
         namespace.constraint = []
     if not namespace.verilog:
         namespace.verilog = []
-    bsvdefines = ''
     if boardname == 'kc705':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7k325tffg900-2'
         topSuffix = 'PcieTop'
-        bsvdefines = '-D Kintex7'
         namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
                                               'board_support', 'bluenoc', 'xilinx', 'KC705', 'verilog', 'k7_pcie_v1_6', 'source'))
         namespace.verilog.append(os.path.join('.', 'xilinx', 'kc705', 'pcie', 'source'))
@@ -199,7 +205,6 @@ if __name__=='__main__':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
         topSuffix = 'PcieTop'
-        bsvdefines = '-D Virtex7'
         namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
                                               'board_support', 'bluenoc', 'xilinx', 'VC707', 'verilog', 'v7_pcie_v1_7', 'source'))
         namespace.verilog.append(os.path.join('.', 'xilinx', 'vc707', 'pcie', 'source'))
@@ -427,7 +432,7 @@ if __name__=='__main__':
                                    'Top': '%s%s' % (util.capitalize(namespace.interface), topSuffix),
                                    'bsvpath': os.path.dirname(namespace.bsvfile[0]),
                                    'bsvname': os.path.basename(namespace.bsvfile[0]),
-                                   'bsvdefines': bsvdefines,
+                                   'bsvdefines': ' '.join(bsvdefines),
                                    'boardname': boardname,
                                    'OS': namespace.os,
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in namespace.bsvfile])

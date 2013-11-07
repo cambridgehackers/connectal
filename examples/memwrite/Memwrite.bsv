@@ -53,7 +53,11 @@ endinterface
 
 module mkMemwriteRequest#(MemwriteIndication indication)(MemwriteRequest);
 
-   AxiDMA                 dma <- mkAxiDMA(indication.dmaIndication);
+`ifdef BSIM
+   BsimDMA             dma <- mkBsimDMA(indication.dmaIndication);
+`else
+   AxiDMA              dma <- mkAxiDMA(indication.dmaIndication);
+`endif
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
 
@@ -84,6 +88,8 @@ module mkMemwriteRequest#(MemwriteIndication indication)(MemwriteRequest);
 	 indication.coreIndication.reportStateDbg(streamWrCnt, srcGen);
       endmethod
    endinterface
+`ifndef BSIM
    interface Axi3Client m_axi = dma.m_axi;
+`endif
    interface DMARequest dmaRequest = dma.request;
 endmodule

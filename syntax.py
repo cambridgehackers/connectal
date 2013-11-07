@@ -68,6 +68,7 @@ reserved = {
     'default_clock': 'TOKDEFAULT_CLOCK',
     'default_reset': 'TOKDEFAULT_RESET',
     '`define': 'TOKTICKDEFINE',
+    '`line': 'TOKTICKLINE',
     'dependencies': 'TOKDEPENDENCIES',
     'deriving': 'TOKDERIVING',
     'determines': 'TOKDETERMINES',
@@ -506,6 +507,7 @@ def p_expressionStmt(p):
                       | methodDef
                       | moduleDef
                       | typeDef
+                      | preprocLine
                       | instanceAttributes rule'''
 
 def p_expressionStmts(p):
@@ -640,6 +642,21 @@ def p_deriving(p):
 def p_macroDef(p):
     '''macroDef : TOKTICKDEFINE VAR expression'''
 
+def p_filePath(p):
+    '''filePath : SLASH VAR filePath
+                | SLASH VAR DOT VAR
+                | SLASH VAR'''
+    if len(p) == 4:
+        p[0] = [p[2]]+p[3]
+    else:
+        p[0] = [''.join(p[2:])]
+
+# this is a horrid hack, since file-paths sometimes have '//' in them, the lexer
+# treats this as a comment and discards the token.  since we don't care about preproc
+# lines, I'm just leaving it be untill it comes back us to bite us in the arse :)
+def p_preprocLine(p):
+    '''preprocLine : TOKTICKLINE LPAREN filePath COMMA NUM COMMA NUM COMMA NUM RPAREN
+                   | TOKTICKLINE LPAREN filePath'''
 
 def p_typeDefBody(p):
     '''typeDefBody : taggedUnionDef
