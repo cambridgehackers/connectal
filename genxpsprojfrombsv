@@ -212,7 +212,7 @@ if __name__=='__main__':
     corename = '%s_v1_00_a' % namespace.interface.lower()
     boardname = namespace.board.lower()
 
-    bsvdefines = ['BSIM'] if 'bsim' in namespace.make else []
+    bsvdefines = ['BSIM'] if namespace.make and ('bsim' in namespace.make) else []
     if boardname == 'kc705':
         bsvdefines += ['Kintex7']
     elif boardname == 'vc707':
