@@ -28,6 +28,10 @@ import PortalMemory::*;
 import AxiDMA::*;
 import BsimDMA::*;
 
+
+
+
+
 interface CoreRequest;
    method Action startWrite(Bit#(32) numWords);
    method Action getStateDbg();   
@@ -88,8 +92,12 @@ module mkMemwriteRequest#(MemwriteIndication indication)(MemwriteRequest);
 	 indication.coreIndication.reportStateDbg(streamWrCnt, srcGen);
       endmethod
    endinterface
+
 `ifndef BSIM
    interface Axi3Client m_axi = dma.m_axi;
+`ifdef BSIM
+   fark;
+`endif
 `endif
    interface DMARequest dmaRequest = dma.request;
 endmodule
