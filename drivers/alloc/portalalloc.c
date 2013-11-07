@@ -479,7 +479,7 @@ void pa_system_heap_free(struct pa_buffer *buffer)
   int i;
   printk("PortalAlloc::pa_system_heap_free\n");
   for_each_sg(table->sgl, sg, table->nents, i){
-    free_buffer_page(buffer, sg_page(sg), get_order(sg_dma_len(sg)));
+    free_buffer_page(buffer, sg_page(sg), get_order(sg->length));
   }
   sg_free_table(table);
   kfree(table);
