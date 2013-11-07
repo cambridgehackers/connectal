@@ -41,6 +41,8 @@ interface Iserdesbvi;
     method Bit#(1)          ctrl_fifo_reset();
     method Bit#(3)          ctrl_reset_inc_ce();
     method Action           dackint(Bit#(1) v);
+    method Action           endhandshake(Bit#(1) v);
+    method Bit#(1)          starthandshake();
 endinterface: Iserdesbvi
 
 import "BVI" iserdes_datadeser = 
@@ -62,8 +64,10 @@ module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
     method CTRL_FIFO_RESET_o   ctrl_fifo_reset() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_RESET_INC_CE_o ctrl_reset_inc_ce() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method                  dackint(DACKINT) enable((*inhigh*) en19) clocked_by(clock);
-    schedule (dackint, ctrl_reset_inc_ce, itemreq, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
-         CF (dackint, ctrl_reset_inc_ce, itemreq, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
+    method                  endhandshake(end_handshake) enable((*inhigh*) en20) clocked_by(clock);
+    method start_handshake_o starthandshake();
+    schedule (endhandshake, starthandshake, dackint, ctrl_reset_inc_ce, itemreq, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
+         CF (endhandshake, starthandshake, dackint, ctrl_reset_inc_ce, itemreq, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
 endmodule: mkIserdesbvi
 
 interface IserdesDatadeser;
@@ -114,6 +118,7 @@ module mkFIFO18#(Clock clkdiv)(FIFO18);
 endmodule: mkFIFO18
 
 typedef enum { DIdle, DValid, DLow} DState deriving (Bits,Eq);
+typedef enum { HIdle, HHigh, HLow} HState deriving (Bits,Eq);
 
 module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest, Bit#(1) align_start,
     Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, Bit#(1) rden)(IserdesDatadeser);
@@ -147,6 +152,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         serdest, serdest_inverted.slowClock, clocked_by serdes_clock);
     Wire#(Bit#(1)) bvi_delay_wren_wire <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     Wire#(Bit#(1)) bvi_reset_reg <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
+    SyncBitIfc#(Bit#(1)) bvi_resets_reg <- mkSyncBitToCC(serdes_clock, serdes_reset);
     Wire#(Bit#(1)) bvi_fifo_wren_wire <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) dcounter <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(DState)  dstate <- mkReg(DIdle, clocked_by serdes_clock, reset_by serdes_reset);
@@ -167,6 +173,13 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(1)) iserdes_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) iodelay_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) ctrl_data <- mkReg(0);
+    Reg#(HState)  hstate <- mkReg(HIdle);
+    Reg#(Bit#(6)) hcounter <- mkReg(0);
+    SyncBitIfc#(Bit#(1)) item_req_wire <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
+
+    rule reset_clock_rule;
+        bvi_resets_reg.send(bvi_reset_reg);
+    endrule
 
     rule wrensyncr_rule if (bvi_reset_reg == 0);
         dfifo_wren_r <= 0;
@@ -194,7 +207,8 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         let sbs = 0;
   
         dc = dc - 1;
-        dreqpipe0 <= serbvi.itemreq();
+        //dreqpipe0 <= serbvi.itemreq();
+        dreqpipe0 <= item_req_wire.read();
         dreqpipe1 <= dreqpipe0;
         dfifo_reset_r <= serbvi.ctrl_fifo_reset();
         fifo_reset <= dfifo_reset_r;
@@ -289,6 +303,49 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         serbvi.dackint(dackint.read());
         dfifo.di({6'b0,dout});
         dfifo.wren(fifo_wren_sync.read());
+    endrule
+
+    rule handinit_rule if (bvi_resets_reg.read() == 0);
+        hstate <= HIdle;
+        hcounter <= 0;
+        item_req_wire.send(0);
+        serbvi.endhandshake(0);
+    endrule
+
+    rule hand_rule if (bvi_resets_reg.read() != 0);
+        let hs = hstate;
+        let hend = 0;
+        let hc = hcounter;
+        hc = hc + 1;
+        if (hstate == HIdle && serbvi.starthandshake() == 1)
+            begin
+            hc = 0;
+            hs = HHigh;
+            end
+        if (hstate == HHigh && dackint.read() == 1)
+            begin
+            hc = 0;
+            hs = HLow;
+            end
+        if (hstate == HHigh && hcounter >= 'h20)
+            begin
+            hend = 1;
+            hs = HIdle;
+            end
+        if (hstate == HLow && (dackint.read() == 0 || hcounter >= 'h20))
+            begin
+            hend = 1;
+            hs = HIdle;
+            end
+        serbvi.endhandshake(hend);
+        hstate <= hs;
+        hcounter <= hc;
+    endrule
+    rule hstate1_rule if (bvi_resets_reg.read() != 0 && hstate == HIdle && serbvi.starthandshake() == 1);
+        item_req_wire.send(1);
+    endrule
+    rule hstate2_rule if (bvi_resets_reg.read() != 0 && hstate == HHigh && dackint.read() == 1);
+        item_req_wire.send(0);
     endrule
 
     rule serdesrule;
