@@ -29,9 +29,6 @@ import XbsvXilinxCells::*;
 typedef Vector#(10, Reg#(Bit#(10))) TrainRotate;
 
 interface Iserdesbvi;
-    method Action           align_start(Bit#(1) v);
-    method Bit#(1)          align_busy();
-    method Bit#(1)          aligned();
     method Bit#(3)          samplein();
     method Action           autoalign(Bit#(1) v);
     method Action           training(Bit#(10) v);
@@ -63,10 +60,7 @@ module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
     input_clock clkdiv () = clkdiv;
     default_clock clock(CLOCK);
     input_reset clkdiv_reset() clocked_by(clkdiv) = clkdiv_reset;
-    method                  align_start(ALIGN_START) enable((*inhigh*) en1) clocked_by (clock);
-    method ALIGN_BUSY       align_busy() clocked_by (clock);
-    method ALIGNED          aligned() clocked_by (clock);
-    method CTRL_SAMPLEIN    samplein() clocked_by (clock);
+    method CTRL_SAMPLEIN_i    samplein() clocked_by (clock);
     method                  autoalign(AUTOALIGN) enable((*inhigh*) en7) clocked_by (clock);
     method                  training(TRAINING) enable((*inhigh*) en8) clocked_by (clock);
     method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
@@ -88,12 +82,12 @@ module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
     method CTRL_RESET_INC_CE ctrl_reset_inc_ce() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method                  endhandshake(end_handshake) enable((*inhigh*) en20) clocked_by(clock);
     method start_handshake starthandshake();
-    method busy_align_o busy_align_i();
-    method                  start_align_i(start_align_o) enable((*inhigh*) en22) clocked_by(clock);
+    method busy_align_i busy_align_i();
+    method                  start_align_i(start_align_i) enable((*inhigh*) en22) clocked_by(clock);
     schedule (busy_align_i, start_align_i, train0, train1, train2, train3, train4, train5, train6, train7, train8, train9,
-              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
+              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, reset, dataout, samplein, autoalign, training, manual_tap)
          CF (busy_align_i, start_align_i, train0, train1, train2, train3, train4, train5, train6, train7, train8, train9,
-              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
+              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, reset, dataout, samplein, autoalign, training, manual_tap);
 endmodule: mkIserdesbvi
 
 interface IserdesDatadeser;
@@ -146,6 +140,7 @@ endmodule: mkFIFO18
 typedef enum { DIdle, DValid, DLow} DState deriving (Bits,Eq);
 typedef enum { HIdle, HHigh, HLow} HState deriving (Bits,Eq);
 typedef enum { QIdle, QTrain, QOn, QOff} QState deriving (Bits,Eq);
+
 module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest, Bit#(1) align_start,
     Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, Bit#(1) rden, TrainRotate trainrot)(IserdesDatadeser);
 
@@ -189,9 +184,8 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(1)) dfifo_wren_r <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) sync_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) sync_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Wire#(Bit#(3)) ctrl_sample <- mkDWire(0);
+    Reg#(Bit#(3)) ctrl_sample <- mkReg(0);
     SyncBitIfc#(Bit#(1)) samplein_reset_null <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
-    ReadOnly#(Bit#(3)) samplein_null <- mkNullCrossingWire(serdes_clock, serbvi.samplein());
 
     SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     Vector#(10, SyncBitIfc#(Bit#(1))) iserdes_data <-  replicateM(mkSyncBit(serdes_clock, serdes_reset, defaultClock));
@@ -206,6 +200,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(1)) edge_intor_reg <- mkReg(0);
     SyncBitIfc#(Bit#(1)) item_req_wire <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) this_aligned_reg <- mkReg(0);
+    Wire#(Bit#(1)) this_align_busy_wire <- mkDWire(0);
     Reg#(Bit#(1)) this_start_align_reg <- mkReg(0);
     Reg#(Bit#(16)) serdes_counter <- mkReg(0);
     Reg#(QState)  qstate <- mkReg(QIdle);
@@ -222,21 +217,22 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         serbvi.train8(trainrot[8]);
         serbvi.train9(trainrot[9]);
     endrule
-    rule clkdivreset_rule if (bvi_resets_reg.read() != 0);
-        dfifo_reset_r.send(serbvi.align_busy());
-    endrule
+    //rule clkdivreset_rule if (bvi_resets_reg.read() != 0);
+        //dfifo_reset_r.send(this_align_busy_wire);
+    //endrule
     rule qfsmreset_rule if (bvi_resets_reg.read() == 0);
         this_aligned_reg <= 0;
         qstate <= QIdle;
         serdes_counter <= 0;
-        //ctrl_sample <= 0;
+        ctrl_sample <= 0;
         this_start_align_reg <= 0;
     endrule
     rule qfsmall;
-        //serbvi.start_align_i(this_start_align_reg);
-        //dfifo_reset_r.send(this_start_align_reg);
-        //samplein_reset_null.send(ctrl_sample[2]);
-        ctrl_sample <= serbvi.samplein();
+        serbvi.start_align_i(this_start_align_reg);
+        let abusy = pack(qstate != QIdle);
+        dfifo_reset_r.send(abusy);
+        this_align_busy_wire <= abusy;
+        samplein_reset_null.send(ctrl_sample[2]);
     endrule
     rule qfsm_rule if (bvi_resets_reg.read() != 0);
         let qs = qstate;
@@ -254,8 +250,8 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             qs = QOff;
         if (qstate == QOff && serbvi.busy_align_i() == 0)
             begin
-            //ctrl_sample <= serbvi.samplein();
-            if (serdes_counter >= 'h8000)
+            ctrl_sample <= serbvi.samplein();
+            if (serdes_counter <= 'h7fff)
                 begin
                 this_aligned_reg <= 1;
                 qs = QIdle;
@@ -287,7 +283,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule wrensync_rule if (bvi_reset_reg != 0);
         let fwsync = 0;
         dfifo_wren_r <= bvi_fifo_wren_wire;
-        if (bvi_delay_wren_wire == 1 && samplein_null[2] == 1)
+        if (bvi_delay_wren_wire == 1 && samplein_reset_null.read() == 1)
             fwsync = dfifo_wren_r;
         else
             fwsync = bvi_fifo_wren_wire;
@@ -444,7 +440,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     rule serdesrule;
-        serbvi.align_start(align_start);
         serbvi.autoalign(autoalign);
         serbvi.training(training);
         serbvi.manual_tap(manual_tap);
@@ -455,19 +450,19 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         delaye2.idatain(v);
     endmethod
     method Bit#(1)                align_busy();
-        return serbvi.align_busy();
+        return this_align_busy_wire;
     endmethod
     method Bit#(1)                aligned();
-        return serbvi.aligned();
+        return this_aligned_reg;
     endmethod
     method Bit#(1)                sampleinfirstbit();
-        return serbvi.samplein()[2];
+        return ctrl_sample[2];
     endmethod
     method Bit#(1)                sampleinlastbit();
-        return serbvi.samplein()[1];
+        return ctrl_sample[1];
     endmethod
     method Bit#(1)                sampleinotherbit();
-        return serbvi.samplein()[0];
+        return ctrl_sample[0];
     endmethod
     method Action                 delay_wren(Bit#(1) v);
         bvi_delay_wren_wire <= v;
