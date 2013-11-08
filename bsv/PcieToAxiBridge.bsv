@@ -24,7 +24,7 @@ import ByteCompactor :: *;
 import AxiMasterSlave :: *;
 
 typedef struct {
-    Bit#(32) seqno;
+    Bit#(32) timestamp;
     Bit#(7) unused;
     TLPData#(16) tlp;
 } TimestampedTlpData deriving (Bits);
@@ -2612,6 +2612,10 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
                                                  , max_payload_bytes
                                                  );
 
+   Reg#(Bit#(32)) timestamp <- mkReg(0);
+   rule incTimestamp;
+       timestamp <= timestamp + 1;
+   endrule
    rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 2047);
        csr.tlpTracing <= False;
    endrule
@@ -2669,16 +2673,28 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    endrule
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
+   Reg#(Bool) skippingIncomingTlps <- mkReg(False);
    rule traceTlpFromBus;
        let tlp = tlpFromBusFifo.first;
        tlpFromBusFifo.deq();
        dispatcher.tlp_in_from_bus.put(tlp);
        $display("tlp in: %h\n", tlp);
        if (csr.tlpTracing) begin
-	   TimestampedTlpData ttd = TimestampedTlpData { seqno: csr.tlpSeqno, unused: 7'h04, tlp: tlp };
-	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
-	   csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
-	   csr.tlpSeqno <= csr.tlpSeqno + 1;
+           TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+           // skip root_broadcast_messages sent to tlp.hit 0                                                                                                  
+           if (tlp.sof && tlp.hit == 0 && hdr_3dw.pkttype != COMPLETION) begin
+ 	      skippingIncomingTlps <= True;
+	   end
+	   else if (skippingIncomingTlps && !tlp.sof) begin
+	      // do nothing
+	   end
+	   else begin
+	       TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, unused: 7'h04, tlp: tlp };
+	       csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
+	       csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
+	       csr.tlpSeqno <= csr.tlpSeqno + 1;
+	       skippingIncomingTlps <= False;
+	   end
        end
    endrule: traceTlpFromBus
 
@@ -2687,7 +2703,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
        let tlp <- arbiter.tlp_out_to_bus.get();
        tlpToBusFifo.enq(tlp);
        if (csr.tlpTracing) begin
-	   TimestampedTlpData ttd = TimestampedTlpData { seqno: csr.tlpSeqno, unused: 7'h08, tlp: tlp };
+	   TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, unused: 7'h08, tlp: tlp };
 	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
 	   csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
 	   csr.tlpSeqno <= csr.tlpSeqno + 1;
@@ -2715,6 +2731,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    interface Put trace;
        method Action put(TimestampedTlpData ttd);
 	   if (csr.tlpTracing) begin
+	       ttd.timestamp = timestamp;
 	       csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
 	       csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
 	   end
