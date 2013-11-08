@@ -594,8 +594,10 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	        TLPCompletionHeader completion = defaultValue;
 		completion.format = MEM_WRITE_3DW_DATA;
 		completion.pkttype = COMPLETION;
-		completion.nosnoop = SNOOPING_REQD;
+		completion.relaxed = hdr.relaxed;
+		completion.nosnoop = hdr.nosnoop;
 		completion.length = 1;
+		completion.tclass = hdr.tclass;
 		completion.cmplid = my_id;
 		completion.tag = truncate(arid);
 		completion.bytecount = 4;
@@ -768,7 +770,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	       tlp.sof = True;
 	       tlp.eof = True;
 	       tlp.hit = 7'h00;
-	       TLPLength tlplen = 2*(extend(burstLen) + 1);
+	       TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
 	       if (True || use4dwReg) begin
 		   TLPMemory4DWHeader hdr_4dw = defaultValue;
 		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
