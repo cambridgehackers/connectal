@@ -36,6 +36,8 @@ interface Iserdesbvi;
     method Action           manual_tap(Bit#(10) v);
     method Action           reset(Bit#(1) v);
     method Action           dataout(Bit#(10) v);
+    method Action           edgeint(Bit#(10) v);
+    method Action           edgeintor(Bit#(1) v);
     method Bit#(1)          ctrl_bitslip();
     method Bit#(1)          ctrl_fifo_reset();
     method Bit#(3)          ctrl_reset_inc_ce();
@@ -57,13 +59,15 @@ module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
     method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
     method                  reset(RESET) enable((*inhigh*) en17) clocked_by (clkdiv) reset_by(clkdiv_reset);
     method                  dataout(CTRL_DATA) enable((*inhigh*) en18) clocked_by(clock);
+    method                  edgeint(EDGE_INT) enable((*inhigh*) en19) clocked_by(clock);
+    method                  edgeintor(EDGE_INT_OR) enable((*inhigh*) en21) clocked_by(clock);
     method CTRL_BITSLIP     ctrl_bitslip() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_FIFO_RESET   ctrl_fifo_reset() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_RESET_INC_CE ctrl_reset_inc_ce() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method                  endhandshake(end_handshake) enable((*inhigh*) en20) clocked_by(clock);
-    method start_handshake_o starthandshake();
-    schedule (endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
-         CF (endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
+    method start_handshake starthandshake();
+    schedule (edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
+         CF (edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
 endmodule: mkIserdesbvi
 
 interface IserdesDatadeser;
@@ -171,6 +175,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(10)) ctrl_data <- mkReg(0);
     Reg#(HState)  hstate <- mkReg(HIdle);
     Reg#(Bit#(6)) hcounter <- mkReg(0);
+    Reg#(Bit#(1)) edge_intor_reg <- mkReg(0);
     SyncBitIfc#(Bit#(1)) item_req_wire <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
 
     rule reset_clock_rule;
@@ -285,12 +290,19 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
 
     rule dackint_rule;
         Bit#(10) dout = 0;
+        Bit#(10) edgeo = 0;
         for (Integer i = 0; i < 10; i = i + 1)
             dout[i] = iserdes_data[i].read();
         dackint_last <= dackint.read();
         if (dackint.read() == 1 && dackint_last == 0)
             ctrl_data <= dout;
         serbvi.dataout(dout);
+        for (Integer i = 0; i < 9; i = i + 1)
+            edgeo[i] = dout[i] ^ dout[i+1];
+        edgeo[9] = dout[0] ^ dout[9];
+        serbvi.edgeint(edgeo);
+        edge_intor_reg <= pack(serbvi.starthandshake() == 0 && edgeo != 0);
+        serbvi.edgeintor(edge_intor_reg);
         dfifo.di({6'b0,dout});
         dfifo.wren(fifo_wren_sync.read());
     endrule
