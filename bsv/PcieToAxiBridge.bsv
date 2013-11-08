@@ -416,7 +416,6 @@ interface PortalEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
     interface Axi3Master#(32,32,4,12) portal;
-    interface Reg#(Bool)           pipeliningEnabled;
     interface Reg#(Bool)           byteSwap;
     interface Reg#(Bool)           interruptRequested;
     interface Reg#(Bit#(64))       interruptAddr;
@@ -857,7 +856,6 @@ interface ControlAndStatusRegs;
 
    interface Reg#(Bool) tlpTracing;
    interface Reg#(Bool) axiEnabled;
-   interface Reg#(Bool) pipeliningEnabled;
    interface Reg#(Bool) byteSwap;
    interface Reg#(Bool) use4dw;
    interface Reg#(Bit#(4)) numPortals;
@@ -946,7 +944,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 
    Reg#(Bool) tlpTracingReg <- mkReg(False);
    Reg#(Bool) axiEnabledReg <- mkReg(False);
-   Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
    Reg#(Bool) byteSwapReg <- mkReg(False);
    Reg#(Bool) use4dwReg <- mkReg(True);
    Reg#(Bit#(4)) numPortalsReg <- mkReg(1);
@@ -1009,7 +1006,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 784: return zeroExtend(pack(max_payload_bytes));
 	 785: return 0;
 	 786: return 0;
-	 787: return pipeliningEnabledReg ? 1 : 0;
+	 787: return 0;
 	 788: return axiEnabledReg ? 1 : 0;
 	 789: return tlpDataBramRdAddrReg;
 	 790: return msix_enabled ? 1 : 0;
@@ -1080,7 +1077,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    780: tlpDataScratchpad[4] <= dword;
 	    781: tlpDataScratchpad[5] <= dword;
 
-	    787: pipeliningEnabledReg <= (dword != 0) ? True : False;
 	    788: axiEnabledReg <= (dword != 0) ? True : False;
 	    789: tlpDataBramRdAddrReg <= dword;
 	    792: tlpDataBramWrAddrReg <= dword;
@@ -1538,7 +1534,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 
    interface Reg tlpTracing = tlpTracingReg;
    interface Reg axiEnabled = axiEnabledReg;
-   interface Reg pipeliningEnabled = pipeliningEnabledReg;
    interface Reg byteSwap = byteSwapReg;
    interface Reg use4dw = use4dwReg;
    interface Reg numPortals = numPortalsReg;
@@ -2623,7 +2618,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    endrule
    rule connectEnables;
       dispatcher.axiEnabled <= csr.axiEnabled;
-      portalEngine.pipeliningEnabled <= csr.pipeliningEnabled;
       portalEngine.byteSwap <= csr.byteSwap;
    endrule
 
