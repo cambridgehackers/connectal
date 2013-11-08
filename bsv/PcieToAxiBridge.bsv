@@ -130,11 +130,11 @@ module mkTLPDispatcher(TLPDispatcher);
                              && !in_dma_command_addr_range
                              ;
       Bool is_axi_read       =  tlp.sof
-                             && (tlp.hit != 7'h01)
+                             && (tlp.hit == 7'h04)
                              && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
                              ;
       Bool is_axi_write      =  tlp.sof
-                             && (tlp.hit != 7'h01)
+                             && (tlp.hit == 7'h04)
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
                              ;
@@ -425,9 +425,7 @@ endinterface
 
 (* synthesize *)
 module mkPortalEngine#(PciId my_id)(PortalEngine);
-    Reg#(Bool) pipeliningEnabledReg <- mkReg(False);
     Reg#(Bool) byteSwapReg <- mkReg(True);
-    Reg#(Bool) busyReg <- mkReg(False);
     Reg#(Bool) interruptRequestedReg <- mkReg(False);
     Reg#(Bool) interruptSecondHalf <- mkReg(False);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
@@ -444,32 +442,6 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     rule txnTimer if (timerReg > 0);
         timerReg <= timerReg - 1;
     endrule
-
-//     rule txnTimeout if (busyReg && timerReg == 0);
-// 	let hdr = readDataFifo.first;
-// 	//FIXME: assumes only 1 word read per request
-// 	readDataFifo.deq;
-
-// 	TLPCompletionHeader completion = defaultValue;
-// 	completion.format = MEM_WRITE_3DW_DATA;
-// 	completion.pkttype = COMPLETION;
-// 	completion.nosnoop = SNOOPING_REQD;
-// 	completion.length = 1;
-// 	completion.cmplid = my_id;
-// 	completion.tag = truncate(hdr.tag);
-// 	completion.bytecount = 4;
-// 	completion.reqid = hdr.reqid;
-// 	completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
-// 	completion.data = byteSwap(32'h0badfeed);
-// 	TLPData#(16) tlp = defaultValue;
-// 	tlp.data = pack(completion);
-// 	tlp.sof = True;
-// 	tlp.eof = True;
-// 	tlp.be = 16'hFFFF;
-// 	tlp.hit = hitReg;
-// 	tlpOutFifo.enq(tlp);
-// 	busyReg <= False;
-//     endrule
 
     rule interruptTlpOut if (interruptRequestedReg // && !interruptSecondHalf
        );
@@ -528,7 +500,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 //    endrule
 
     interface Put tlp_in;
-        method Action put(TLPData#(16) tlp) if (!busyReg);
+        method Action put(TLPData#(16) tlp);
 	    //$display("PortalEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
@@ -537,8 +509,6 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	        readHeaderFifo.enq(hdr_3dw);
 	    else
 	        writeHeaderFifo.enq(hdr_3dw);
-            if (!pipeliningEnabledReg)
-	        busyReg <= True;
             timerReg <= truncate(32'hFFFFFFFF);
 	endmethod
     endinterface: tlp_in
@@ -571,7 +541,6 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    endmethod
 
 	    method ActionValue#(Bit#(32)) writeData();
-	        busyReg <= False;
 	        writeDataFifo.deq;
 		if (byteSwapReg)
 		    return byteSwap(writeDataFifo.first.data);
@@ -617,7 +586,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    method Bit#(12) readId();
 		return extend(readHeaderFifo.first.tag);
 	    endmethod
-	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) id) if (!interruptSecondHalf);
+	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) arid) if (!interruptSecondHalf);
 	        let hdr = readDataFifo.first;
 		//FIXME: assumes only 1 word read per request
 		readDataFifo.deq;
@@ -628,7 +597,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		completion.nosnoop = SNOOPING_REQD;
 		completion.length = 1;
 		completion.cmplid = my_id;
-		completion.tag = truncate(id);
+		completion.tag = truncate(arid);
 		completion.bytecount = 4;
 		completion.reqid = hdr.reqid;
 		completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
@@ -643,11 +612,9 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		tlp.be = 16'hFFFF;
 		tlp.hit = hitReg;
 		tlpOutFifo.enq(tlp);
-		busyReg <= False;
 	    endmethod
 	endinterface: read
     endinterface: portal
-    interface Reg pipeliningEnabled  = pipeliningEnabledReg;
     interface Reg byteSwap           = byteSwapReg;
     interface Reg interruptRequested = interruptRequestedReg;
     interface Reg interruptAddr      = interruptAddrReg;
@@ -905,6 +872,8 @@ endinterface: ControlAndStatusRegs
 module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 			       , PciId     my_id
 			       , Integer   bytes_per_beat
+			       , UInt#(13) max_read_req_bytes
+			       , UInt#(13) max_payload_bytes
 			       , Bit#(7)   rcb_mask
 			       , Bool      msix_enabled
 			       , Bool      msix_mask_all_intr
@@ -1033,9 +1002,9 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 779: return tlpDataBramResponseSlice(3);
 	 780: return tlpDataBramResponseSlice(4);
 	 781: return tlpDataBramResponseSlice(5);
-	 782: return 0;
-	 783: return 0;
-	 784: return 0;
+	 782: return zeroExtend(rcb_mask);
+	 783: return zeroExtend(pack(max_read_req_bytes));
+	 784: return zeroExtend(pack(max_payload_bytes));
 	 785: return 0;
 	 786: return 0;
 	 787: return pipeliningEnabledReg ? 1 : 0;
@@ -2630,6 +2599,8 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    ControlAndStatusRegs csr        <- mkControlAndStatusRegs( board_content_id
                                                             , my_id
                                                             , bytes_per_beat
+							    , max_read_req_bytes
+							    , max_payload_bytes
                                                             , rcb_mask
                                                             , msix_enabled
                                                             , msix_mask_all_intr
