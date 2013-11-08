@@ -114,7 +114,7 @@ verilog: $(vfile)
 
 implementation: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
 
-program: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
+program:
 	vivado -mode batch -source %(dut)s-program.tcl
 
 %(dut)s.bit.bin.gz: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
