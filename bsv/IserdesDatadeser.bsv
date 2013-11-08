@@ -284,13 +284,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     rule dackint_rule;
-        //let dout = 10'b0;
-        //for (Integer i = 0; i < 10; i = i + 1)
-            //dout[i] = iserdes_data[i].read();
-        let dout = {iserdes_data[9].read(), iserdes_data[8].read(), iserdes_data[7].read(),
-            iserdes_data[6].read(), iserdes_data[5].read(), iserdes_data[4].read(),
-            iserdes_data[3].read(), iserdes_data[2].read(), iserdes_data[1].read(),
-            iserdes_data[0].read()};
+        Bit#(10) dout = 0;
+        for (Integer i = 0; i < 10; i = i + 1)
+            dout[i] = iserdes_data[i].read();
         dackint_last <= dackint.read();
         if (dackint.read() == 1 && dackint_last == 0)
             ctrl_data <= dout;
