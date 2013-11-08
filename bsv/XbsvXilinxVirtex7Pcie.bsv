@@ -219,7 +219,7 @@ module vMkVirtex7PCIExpress#(PCIEParams params)(PCIE_V7#(lanes))
    parameter PCIE_EXT_CLK  = "TRUE";
    parameter BAR0 = 32'hFFF00004;
    parameter BAR1 = 32'hFFFFFFFF;
-   parameter BAR2 = 32'hFFF00004;
+   parameter BAR2 = 32'hFF000004;
    parameter BAR3 = 32'hFFFFFFFF;
    
    interface PCIE_EXP pcie;
