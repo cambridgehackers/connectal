@@ -54,9 +54,9 @@ Echo Example
 or
     ./genxpsprojfrombsv -B zc702 -p echoproj -b Echo examples/echo/Echo.bsv
 or
-    ./genxpsprojfrombsv -B kc705 -p echoproj -b Echo examples/echo/Echo.bsv
+    ./genxpsprojfrombsv -B kc705 -p k7echoproj --make=verilog -b Echo examples/echo/Echo.bsv
 or
-    ./genxpsprojfrombsv -B vc707 -p echoproj -b Echo examples/echo/Echo.bsv
+    ./genxpsprojfrombsv -B vc707 -p v7echoproj --make=verilog -b Echo examples/echo/Echo.bsv
 
     cd echoproj
     make verilog
@@ -95,6 +95,12 @@ When we run it on the device:
     PortalInterface::exec()
     heard 42
 
+Memcpy Example
+--------------
+
+    ./genxpsprojfrombsv -B vc707 -p memcpyproj -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv
+
+
 LoadStore Example
 ------------
 
@@ -124,6 +130,14 @@ or
 
     ## run the example
     ./loadstoreproj/jni/loadstore
+
+ReadBW
+------
+
+    ./genxpsprojfrombsv -B vc707 -p readbwproj -b ReadBW examples/readbw/ReadBW.bsv
+or
+    ./genxpsprojfrombsv -B kc705 -p readbwproj -b ReadBW examples/readbw/ReadBW.bsv
+
 
 HDMI Example
 ------------
