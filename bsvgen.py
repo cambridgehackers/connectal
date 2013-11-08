@@ -83,6 +83,7 @@ endmodule
 '''
 
 pcieTopTemplate='''
+import Vector            :: *;
 import Clocks            :: *;
 import Connectable       :: *;
 import Assert            :: *;
@@ -121,9 +122,11 @@ module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
        x7pcie.numPortals <= %(dut)sWrapper.numPortals;
    endrule
    
+   function Bool my_read(ReadOnly#(Bool) r); return r._read; endfunction
+   function Bool my_or (Bool a, Bool b); return a || b; endfunction
 
    rule requestInterrupt;
-      Bool interrupt = (%(dut)sWrapper.interrupts[0] == 1);
+      Bool interrupt = fold(my_or, map(my_read, %(dut)sWrapper.interrupts));
       if (interrupt && !interruptRequested)
 	 x7pcie.interrupt();
       interruptRequested <= interrupt;
@@ -131,11 +134,12 @@ module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    interface pcie = x7pcie.pcie;
    //interface ddr3 = x7pcie.ddr3;
-   method leds = zeroExtend({ pack(x7pcie.isCalibrated)
-			     ,pack(False)
-			     ,pack(False)
-			     ,pack(x7pcie.isLinkUp)
+   method leds = zeroExtend({  pack(x7pcie.isCalibrated)
+			     , pack(True)
+			     , pack(False)
+			     , pack(x7pcie.isLinkUp)
 			     });
+
 endmodule: mk%(Dut)sPcieTop
 '''
 
@@ -150,7 +154,7 @@ axiMasterConnectionTemplate='''
 topInterfaceTemplate='''
 interface %(Base)sWrapper;
     interface Axi3Slave#(32,32,4,12) ctrl;
-    interface Vector#(%(numPortals)s,ReadOnly#(Bit#(1))) interrupts;
+    interface Vector#(%(numPortals)s,ReadOnly#(Bool)) interrupts;
 %(axiSlaveDeclarations)s
 %(axiMasterDeclarations)s
 %(exposedInterfaceDeclarations)s
@@ -185,7 +189,7 @@ endinterface
 interface %(Dut)sWrapper;
     interface Axi3Slave#(32,32,4,12) ctrl;
     interface ReadOnly#(Bool) putEnable;
-    interface ReadOnly#(Bit#(1)) interrupt;
+    interface ReadOnly#(Bool) interrupt;
     interface %(Dut)s indication;
     interface RequestWrapperCommFIFOs rwCommFifos;%(indicationMethodDeclsAug)s
 endinterface
@@ -396,11 +400,8 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper) provisos (Log#(%(indicationChannelCount)
 
     interface ReadOnly putEnable = regToReadOnly(putEnableReg);
     interface ReadOnly interrupt;
-        method Bit#(1) _read();
-            if (interruptEnableReg && interruptStatus)
-                return 1'd1;
-            else
-                return 1'd0;
+        method Bool _read();
+            return (interruptEnableReg && interruptStatus);
         endmethod
     endinterface
     interface %(Dut)s indication;
@@ -486,7 +487,7 @@ module mk%(Base)sWrapper%(dut_hdmi_clock_param)s(%(Base)sWrapper);
 %(axiMasterModules)s
 %(requestWrappers)s
     Vector#(%(numPortals)s,Axi3Slave#(32,32,4,12)) ctrls_v;
-    Vector#(%(numPortals)s,ReadOnly#(Bit#(1))) interrupts_v;
+    Vector#(%(numPortals)s,ReadOnly#(Bool)) interrupts_v;
 %(connectIndicationCtrls)s
 %(connectIndicationInterrupts)s
     let ctrl_mux <- mkAxiSlaveMux(ctrls_v);
