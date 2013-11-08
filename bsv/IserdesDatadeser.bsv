@@ -37,6 +37,16 @@ interface Iserdesbvi;
     method Action           reset(Bit#(1) v);
     method Action           dataout(Bit#(10) v);
     method Action           edgeint(Bit#(10) v);
+    method Action           train0(Bit#(10) v);
+    method Action           train1(Bit#(10) v);
+    method Action           train2(Bit#(10) v);
+    method Action           train3(Bit#(10) v);
+    method Action           train4(Bit#(10) v);
+    method Action           train5(Bit#(10) v);
+    method Action           train6(Bit#(10) v);
+    method Action           train7(Bit#(10) v);
+    method Action           train8(Bit#(10) v);
+    method Action           train9(Bit#(10) v);
     method Action           edgeintor(Bit#(1) v);
     method Bit#(1)          ctrl_bitslip();
     method Bit#(1)          ctrl_fifo_reset();
@@ -60,14 +70,26 @@ module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
     method                  reset(RESET) enable((*inhigh*) en17) clocked_by (clkdiv) reset_by(clkdiv_reset);
     method                  dataout(CTRL_DATA) enable((*inhigh*) en18) clocked_by(clock);
     method                  edgeint(EDGE_INT) enable((*inhigh*) en19) clocked_by(clock);
+    method                  train0(TRAIN0) enable((*inhigh*) en30) clocked_by(clock);
+    method                  train1(TRAIN1) enable((*inhigh*) en31) clocked_by(clock);
+    method                  train2(TRAIN2) enable((*inhigh*) en32) clocked_by(clock);
+    method                  train3(TRAIN3) enable((*inhigh*) en33) clocked_by(clock);
+    method                  train4(TRAIN4) enable((*inhigh*) en34) clocked_by(clock);
+    method                  train5(TRAIN5) enable((*inhigh*) en35) clocked_by(clock);
+    method                  train6(TRAIN6) enable((*inhigh*) en36) clocked_by(clock);
+    method                  train7(TRAIN7) enable((*inhigh*) en37) clocked_by(clock);
+    method                  train8(TRAIN8) enable((*inhigh*) en38) clocked_by(clock);
+    method                  train9(TRAIN9) enable((*inhigh*) en39) clocked_by(clock);
     method                  edgeintor(EDGE_INT_OR) enable((*inhigh*) en21) clocked_by(clock);
     method CTRL_BITSLIP     ctrl_bitslip() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_FIFO_RESET   ctrl_fifo_reset() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_RESET_INC_CE ctrl_reset_inc_ce() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method                  endhandshake(end_handshake) enable((*inhigh*) en20) clocked_by(clock);
     method start_handshake starthandshake();
-    schedule (edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
-         CF (edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
+    schedule (train0, train1, train2, train3, train4, train5, train6, train7, train8, train9,
+              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
+         CF (train0, train1, train2, train3, train4, train5, train6, train7, train8, train9,
+              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
 endmodule: mkIserdesbvi
 
 interface IserdesDatadeser;
@@ -177,6 +199,22 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(6)) hcounter <- mkReg(0);
     Reg#(Bit#(1)) edge_intor_reg <- mkReg(0);
     SyncBitIfc#(Bit#(1)) item_req_wire <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
+Vector#(10, Reg#(Bit#(10))) trainrot <- replicateM(mkReg(0));
+
+    rule trainrot_rule;
+        for (UInt#(4) i = 0; i < 10; i = i + 1)
+            trainrot[i] <= rotateBitsBy(training, i+6);
+        serbvi.train0(trainrot[0]);
+        serbvi.train1(trainrot[1]);
+        serbvi.train2(trainrot[2]);
+        serbvi.train3(trainrot[3]);
+        serbvi.train4(trainrot[4]);
+        serbvi.train5(trainrot[5]);
+        serbvi.train6(trainrot[6]);
+        serbvi.train7(trainrot[7]);
+        serbvi.train8(trainrot[8]);
+        serbvi.train9(trainrot[9]);
+    endrule
 
     rule reset_clock_rule;
         bvi_resets_reg.send(bvi_reset_reg);
