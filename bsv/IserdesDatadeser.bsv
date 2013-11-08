@@ -26,6 +26,8 @@ import Clocks :: *;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 
+typedef Vector#(10, Reg#(Bit#(10))) TrainRotate;
+
 interface Iserdesbvi;
     method Action           align_start(Bit#(1) v);
     method Bit#(1)          align_busy();
@@ -49,7 +51,6 @@ interface Iserdesbvi;
     method Action           train9(Bit#(10) v);
     method Action           edgeintor(Bit#(1) v);
     method Bit#(1)          ctrl_bitslip();
-    method Bit#(1)          ctrl_fifo_reset();
     method Bit#(3)          ctrl_reset_inc_ce();
     method Action           endhandshake(Bit#(1) v);
     method Bit#(1)          starthandshake();
@@ -82,14 +83,13 @@ module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
     method                  train9(TRAIN9) enable((*inhigh*) en39) clocked_by(clock);
     method                  edgeintor(EDGE_INT_OR) enable((*inhigh*) en21) clocked_by(clock);
     method CTRL_BITSLIP     ctrl_bitslip() clocked_by(clkdiv) reset_by(clkdiv_reset);
-    method CTRL_FIFO_RESET   ctrl_fifo_reset() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method CTRL_RESET_INC_CE ctrl_reset_inc_ce() clocked_by(clkdiv) reset_by(clkdiv_reset);
     method                  endhandshake(end_handshake) enable((*inhigh*) en20) clocked_by(clock);
     method start_handshake starthandshake();
     schedule (train0, train1, train2, train3, train4, train5, train6, train7, train8, train9,
-              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
+              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap)
          CF (train0, train1, train2, train3, train4, train5, train6, train7, train8, train9,
-              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, ctrl_fifo_reset, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
+              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, reset, dataout, align_busy, aligned, samplein, align_start, autoalign, training, manual_tap);
 endmodule: mkIserdesbvi
 
 interface IserdesDatadeser;
@@ -143,7 +143,7 @@ typedef enum { DIdle, DValid, DLow} DState deriving (Bits,Eq);
 typedef enum { HIdle, HHigh, HLow} HState deriving (Bits,Eq);
 
 module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest, Bit#(1) align_start,
-    Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, Bit#(1) rden)(IserdesDatadeser);
+    Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, Bit#(1) rden, TrainRotate trainrot)(IserdesDatadeser);
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
@@ -174,22 +174,22 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         serdest, serdest_inverted.slowClock, clocked_by serdes_clock);
     Wire#(Bit#(1)) bvi_delay_wren_wire <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     Wire#(Bit#(1)) bvi_reset_reg <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
-    SyncBitIfc#(Bit#(1)) bvi_resets_reg <- mkSyncBitToCC(serdes_clock, serdes_reset);
+    SyncBitIfc#(Bit#(1)) bvi_resets_reg <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     Wire#(Bit#(1)) bvi_fifo_wren_wire <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) dcounter <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(DState)  dstate <- mkReg(DIdle, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) dreqpipe0 <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) dreqpipe1 <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_reset <- mkReg(1, clocked_by serdes_clock, reset_by serdes_reset);
-    Reg#(Bit#(1)) dfifo_reset_r <- mkReg(1, clocked_by serdes_clock, reset_by serdes_reset);
+    SyncBitIfc#(Bit#(1)) dfifo_reset_r <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) dfifo_wren_r <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) sync_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) sync_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     ReadOnly#(Bit#(3)) samplein_null <- mkNullCrossingWire(serdes_clock, serbvi.samplein());
 
-    SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBitToCC(serdes_clock, serdes_reset);
-    Vector#(10, SyncBitIfc#(Bit#(1))) iserdes_data <-  replicateM(mkSyncBitToCC(serdes_clock, serdes_reset));
-    SyncBitIfc#(Bit#(1)) dackint <- mkSyncBitToCC(serdes_clock, serdes_reset);
+    SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
+    Vector#(10, SyncBitIfc#(Bit#(1))) iserdes_data <-  replicateM(mkSyncBit(serdes_clock, serdes_reset, defaultClock));
+    SyncBitIfc#(Bit#(1)) dackint <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     Reg#(Bit#(1)) dackint_last <- mkReg(0);
 
     Reg#(Bit#(1)) iserdes_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
@@ -199,11 +199,8 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(6)) hcounter <- mkReg(0);
     Reg#(Bit#(1)) edge_intor_reg <- mkReg(0);
     SyncBitIfc#(Bit#(1)) item_req_wire <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
-Vector#(10, Reg#(Bit#(10))) trainrot <- replicateM(mkReg(0));
 
     rule trainrot_rule;
-        for (UInt#(4) i = 0; i < 10; i = i + 1)
-            trainrot[i] <= rotateBitsBy(training, i+6);
         serbvi.train0(trainrot[0]);
         serbvi.train1(trainrot[1]);
         serbvi.train2(trainrot[2]);
@@ -239,6 +236,10 @@ Vector#(10, Reg#(Bit#(10))) trainrot <- replicateM(mkReg(0));
         iodelay_reset_inc_ce <= sync_reset_inc_ce;
     endrule
 
+    rule clkdivreset_rule if (bvi_resets_reg.read() != 0);
+        dfifo_reset_r.send(serbvi.align_busy());
+    endrule
+
     rule clkdiv_rule if (bvi_reset_reg != 0);
         let ds = dstate;
         let dc = dcounter;
@@ -248,8 +249,7 @@ Vector#(10, Reg#(Bit#(10))) trainrot <- replicateM(mkReg(0));
         dc = dc - 1;
         dreqpipe0 <= item_req_wire.read();
         dreqpipe1 <= dreqpipe0;
-        dfifo_reset_r <= serbvi.ctrl_fifo_reset();
-        fifo_reset <= dfifo_reset_r;
+        fifo_reset <= dfifo_reset_r.read();
         sric[0] = 0;
         sric[1] = 0;
         iserdes_bitslip <= sync_bitslip;
@@ -504,9 +504,15 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
     Reg#(Bit#(1)) serdes_aligned_temp <- mkReg(0);
     Reg#(Bit#(1)) serdes_aligned_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
     Wire#(Bit#(1)) new_raw_empty_wire <- mkDWire(0);
+    TrainRotate trainrot <- replicateM(mkReg(0));
     Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdes_reset, serdest_clk.gen_clk,
 	  serdes_align_start_reg, serdes_auto_align_reg, serdes_training_reg,
-	  serdes_manual_tap_reg, decoder_enable_reg));
+	  serdes_manual_tap_reg, decoder_enable_reg, trainrot));
+
+    rule trainrotgen_rule;
+        for (UInt#(4) i = 0; i < 10; i = i + 1)
+            trainrot[i] <= rotateBitsBy(serdes_training_reg, i+6);
+    endrule
 
     rule serdes_copybits;
         serdes_aligned_reg <= serdes_aligned_temp;
