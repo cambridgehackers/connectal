@@ -1708,6 +1708,12 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       /* copy board identification info to a user-space struct */
       tPortalInfo info;
       memset(&info, 0, sizeof(info));
+
+      printk("rcb_mask=%x max_read_req_bytes=%x max_payload_bytes=%x\n",
+	     ioread32(this_board->bar0io + (782<<2)),
+	     ioread32(this_board->bar0io + (783<<2)),
+	     ioread32(this_board->bar0io + (784<<2)));
+
       err = copy_to_user((void __user *)arg, &info, sizeof(tPortalInfo));
       if (err != 0)
         return -EFAULT;
@@ -1783,11 +1789,6 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
 
       // and set the bramRdAddr back to 0
       iowrite32(0, this_board->bar0io + (789<<2));
-
-      printk("bramRdAddr=%d was %d tlpseqno=%d\n",
-	     ioread32(this_board->bar0io + (789<<2)),
-	     old_bramRdAddr,
-	     tlpseqno);
 
       err = copy_to_user((void __user *)arg, &tlpseqno, sizeof(int));
       if (err != 0)
