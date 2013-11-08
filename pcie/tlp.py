@@ -89,8 +89,10 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
         return 'Misc'
 
 classCounts = {}
+last_seqno = -1
 
 def print_tlp(tlpdata):
+    global last_seqno
     def segment(i):
         return tlpdata[i*8:i*8+8]
     def byteswap(w):
@@ -100,6 +102,7 @@ def print_tlp(tlpdata):
 
     words = map(segment, [0,1,2,3,4,5])
 
+    seqno = int(tlpdata[-48:-40],16)
     tlpsof = int(tlpdata[-39:-38],16) & 1
     tlpeof = int(tlpdata[-38:-36],16) >> 7
     tlpbe  = tlpdata[-36:-32]
@@ -115,15 +118,19 @@ def print_tlp(tlpdata):
        classCounts[pktclass] = 1
 
     print tlpdata
-    print '   seqno:', int(tlpdata[-48:-40],16)
+    print '   seqno:', seqno
+    if pktclass != 'trace' and last_seqno >= 0 and seqno != last_seqno + 1:
+        print '   last_seqno:', last_seqno
+    last_seqno = seqno
     print '   ', pktclass
     print '    foo:', tlpdata[-40:-38], hex(int(tlpdata[-40:-38],16) >> 1)
-    print '  format:', tlpdata[-32:-31], pktformat, TlpPacketFormat[pktformat]
-    print '  pkttype:', tlpdata[-32:-30], pkttype, TlpPacketType[pkttype]
     print '    tlpbe:', tlpbe
     print '    tlphit:', tlphit
     print '    tlpeof:', tlpeof
     print '    tlpsof:', tlpsof
+    if tlpsof:
+        print '    format:', tlpdata[-32:-31], pktformat, TlpPacketFormat[pktformat]
+        print '   pkttype:', tlpdata[-32:-30], pkttype, TlpPacketType[pkttype]
 
     if tlpsof == 0:
         print '     data:', tlpdata[-32:]
@@ -146,7 +153,7 @@ def print_tlp(tlpdata):
         print '  length:', int(tlpdata[-27:-24],16) & 0x3ff
         if TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
             print '    data:', tlpdata[-8:]
-    elif TlpPacketFormat[pktformat] == 'MEM_READ_4DW_NO_DATA':
+    elif TlpPacketFormat[pktformat] == 'MEM_READ_4DW_NO_DATA' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
         print ' address:', tlpdata[-16:]
         print '  1st be:', tlpdata[-17:-16]
         print ' last be:', tlpdata[-18:-17]
@@ -154,7 +161,6 @@ def print_tlp(tlpdata):
         print '   reqid:', tlpdata[-24:-20]
         print '  length:', int(tlpdata[-27:-24],16) & 0x3ff
     else:
-        print l
         print '  tlp data:', tlpdata[-8:]
         print 'lower addr:', tlpdata[-10:-8]
         print '       tag:', tlpdata[-12:-10]
