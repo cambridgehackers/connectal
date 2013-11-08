@@ -103,6 +103,10 @@ def print_tlp(tlpdata):
     words = map(segment, [0,1,2,3,4,5])
 
     seqno = int(tlpdata[-48:-40],16)
+    if last_seqno >= 0:
+        delta = seqno - last_seqno
+    else:
+        delta = 0
     tlpsof = int(tlpdata[-39:-38],16) & 1
     tlpeof = int(tlpdata[-38:-36],16) >> 7
     tlpbe  = tlpdata[-36:-32]
@@ -118,9 +122,8 @@ def print_tlp(tlpdata):
        classCounts[pktclass] = 1
 
     print tlpdata
-    print '   seqno:', seqno
-    if pktclass != 'trace' and last_seqno >= 0 and seqno != last_seqno + 1:
-        print '   last_seqno:', last_seqno
+    print 'timestamp:', seqno
+    print '    delta:', delta
     last_seqno = seqno
     print '   ', pktclass
     print '    foo:', tlpdata[-40:-38], hex(int(tlpdata[-40:-38],16) >> 1)
