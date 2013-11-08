@@ -31,6 +31,9 @@ typedef struct {
 typedef SizeOf#(TimestampedTlpData) TimestampedTlpDataSize;
 typedef SizeOf#(TLPData#(16)) TlpData16Size;
 typedef SizeOf#(TLPCompletionHeader) TLPCompletionHeaderSize;
+interface TlpTrace;
+   interface Get#(TimestampedTlpData) tlp;
+endinterface
 
 // The top-level interface of the PCIe-to-NoC bridge
 interface PcieToAxiBridge#(numeric type bpb);

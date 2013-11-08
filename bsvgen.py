@@ -29,7 +29,7 @@ import PortalMemory::*;
 
 '''
 
-exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonTopPins', 'ImageonSerdesPins', 'FmcImageonInterface', 'SpiPins', 'ImageonPins']
+exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonTopPins', 'ImageonSerdesPins', 'FmcImageonInterface', 'SpiPins', 'ImageonPins', 'TlpTrace']
 
 
 bsimTopTemplate='''
@@ -116,7 +116,7 @@ module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    %(Dut)sWrapper %(dut)sWrapper <- mk%(Dut)sWrapper(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(x7pcie.portal0, %(dut)sWrapper.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   //mkConnection(%(dut)sWrapper.trace, x7pcie.trace);
+   %(tlpTraceConnection)s
 %(axiMasterConnections)s
    rule numPortals;
        x7pcie.numPortals <= %(dut)sWrapper.numPortals;
@@ -148,6 +148,9 @@ axiMasterConnectionTemplate='''
    mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(%(dut)sWrapper.%(busname)s, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+'''
+tlpTraceConnectionTemplate='''
+   mkConnection(%(dut)sWrapper.%(busname)s.tlp, x7pcie.trace);
 '''
 
 
@@ -796,6 +799,9 @@ class InterfaceMixin:
                                                                'buswidth': params[1].numeric(),
                                                                'buswidthbytes': params[1].numeric()/8}
                                 for (busname,t,params) in self.collectInterfaceNames('Axi3Client')]
+        tlpTraceConnections = [tlpTraceConnectionTemplate % {'dut': util.decapitalize(self.base),
+                                                             'busname': busname}
+                               for (busname,t,params) in self.collectInterfaceNames('TlpTrace')]
         if boardname == 'kc705':
             fpga_interface = 'KC705_FPGA'
         else:
@@ -804,6 +810,7 @@ class InterfaceMixin:
 		'Dut' : self.base ,
 		'dut' : util.decapitalize(self.base),
                 'axiMasterConnections': '\n'.join(axiMasterConnections),
+                'tlpTraceConnection': '\n'.join(tlpTraceConnections),
                 'contentid' : contentid,
                 'fpga_interface': fpga_interface
 		}

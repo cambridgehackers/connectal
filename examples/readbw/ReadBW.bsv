@@ -21,7 +21,9 @@
 // SOFTWARE.
 
 import FIFO::*;
+import GetPut::*;
 import AxiClientServer::*;
+import PcieToAxiBridge::*;
 import PortalMemory::*;
 import SGList::*;
 
@@ -44,6 +46,7 @@ endinterface
 interface ReadBWRequest;
    interface CoreRequest coreRequest;
    interface Axi3Client#(40,128,16,12) m_axi;
+   interface TlpTrace trace;
 endinterface
 
 instance PortalMemory#(CoreRequest);
@@ -58,6 +61,7 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
     FIFO#(Bit#(40)) writeAddrFifo <- mkFIFO;
     FIFO#(Bit#(128)) writeDataFifo <- mkFIFO;
     FIFO#(Tuple2#(Bit#(128),Bit#(32))) readDataFifo <- mkSizedFIFO(32);
+    FIFO#(TimestampedTlpData) ttdFifo <- mkFIFO;
 
     Reg#(Bit#(4)) readBurstCount <- mkReg(0);
     Reg#(Bit#(32)) readStartTime <- mkReg(0);
@@ -98,6 +102,14 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	endinterface: write
 	interface Axi3ReadClient read;
 	   method ActionValue#(Axi3ReadRequest#(40, 12)) address() if (readBurstCount == 0);
+	       TimestampedTlpData ttd = unpack(0);
+	       ttd.unused = 1;
+	       Bit#(153) trace = 0;
+	       trace[127:64] = zeroExtend(readLenFifo.first + 1);
+	       trace[31:0] = 0;
+	       ttd.tlp = unpack(trace);
+	       ttdFifo.enq(ttd);
+
 	       readAddrFifo.deq;
 	       readLenFifo.deq;
 	       readStartTime <= timer;
@@ -105,10 +117,29 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	       return Axi3ReadRequest { address: readAddrFifo.first, burstLen: readLenFifo.first, id: 0};
 	   endmethod
 	   method Action data(Axi3ReadResponse#(128, 12) response) if (readBurstCount > 0);
+	      let latency = timer - readStartTime;
+
+	      TimestampedTlpData ttd = unpack(0);
+	      ttd.unused = 2;
+	      Bit#(153) trace = 0;
+	      trace[127:96] = response.data[127:96];
+	      trace[95:64] = latency;
+	      trace[31:0] = zeroExtend(readBurstCount);
+	      ttd.tlp = unpack(trace);
+	      ttdFifo.enq(ttd);
+
 	       readBurstCount <= readBurstCount - 1;
 	       if (readBurstCount == 1)
-	           readDataFifo.enq(tuple2(response.data, timer - readStartTime));
+	           readDataFifo.enq(tuple2(response.data, latency));
 	   endmethod
 	endinterface: read
     endinterface: m_axi
+   interface TlpTrace trace;
+      interface Get tlp;
+	  method ActionValue#(TimestampedTlpData) get();
+	     ttdFifo.deq;
+	     return ttdFifo.first();
+	  endmethod
+      endinterface: tlp
+   endinterface: trace
 endmodule: mkReadBWRequest
