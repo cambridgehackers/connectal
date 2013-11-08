@@ -723,7 +723,7 @@ module mkClientSlaveConnection#(Axi3WriteClient#(addrWidth, busWidth, busWidthBy
                                 Axi3Slave#(addrWidth, busWidth, busWidthBytes, idWidth) axiSlave)
                                 () provisos (Div#(busWidth, 8, busWidthBytes),
 				             Add#(1, a__, busWidth),
-					     Add#(busWidth, b__, 65),
+					     Add#(busWidth, ccc, 128),
 					     Add#(idWidth, 1, 13));
        
     Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
@@ -870,7 +870,7 @@ module mkAxi3MasterWires#(Axi3Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 endmodule
 
 module mkAxi3Master#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) client)(Axi3Master#(addrWidth, busWidth,busWidthBytes,idWidth))
-	 provisos(Div#(busWidth,8,busWidthBytes),Add#(1,a,busWidth),Add#(busWidth,b,65));
+	 provisos(Div#(busWidth,8,busWidthBytes),Add#(1,a,busWidth),Add#(busWidth,b,128));
 
     FIFOF#(Axi3ReadRequest#(addrWidth, idWidth))                      fReadRequest <- mkSizedBRAMFIFOF(8);
     FIFOF#(Axi3WriteRequest#(addrWidth, idWidth))                     fWriteRequest <- mkSizedBRAMFIFOF(8);
