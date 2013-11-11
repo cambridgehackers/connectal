@@ -6,11 +6,15 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <errno.h>
+#include "../../drivers/pcie/bluenoc.h"
 
 CoreRequest *device = 0;
 PortalAlloc srcAlloc;
 unsigned int *srcBuffer = 0;
 size_t alloc_sz = 8192;
+
+int storeCount = 0;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -25,13 +29,20 @@ class TestCoreIndication : public CoreIndication
 {
   virtual void storeAddress ( unsigned long long addr ) {
     fprintf(stderr, "storeAddress addr=%08llx\n", addr);
-    device->load(srcAlloc.entries[0].dma_address+16, 1);
+    if (storeCount < 16) {
+      device->store(srcAlloc.entries[0].dma_address+storeCount*8, 0xd00df00ddeadbeefULL);
+      storeCount++;
+    } else {
+      device->load(srcAlloc.entries[0].dma_address, 3);
+    }
   }
   virtual void loadAddress ( unsigned long long addr ) {
     fprintf(stderr, "loadAddress addr=%08llx\n", addr);
   }
   virtual void loadValue ( std::bitset<128> &value, unsigned long cycles ) {
     fprintf(stderr, "loadValue value=%08lx%08lx cycles=%ld\n", (value >> 64).to_ulong(), value.to_ulong(), cycles);
+    fprintf(stderr, "srcBuffer[0] = %08lx\n", *(long *)srcBuffer);
+    //device->load(srcAlloc.entries[0].dma_address, 7);
   }
 };
 
@@ -80,14 +91,27 @@ int main(int argc, const char **argv)
 
 
     fprintf(stderr, "srcBuffer=%p\n", srcBuffer);
-    *srcBuffer = 0x69abba72;
+    memset(srcBuffer, 0xba, alloc_sz);
+    fprintf(stderr, "srcBuffer[0]=%x\n", srcBuffer[0]);
 
-    asm volatile ("clflush %0" :: "m" (srcBuffer));
+    for (int cl = 0; cl < alloc_sz/4; cl++) {
+      asm volatile ("clflush %0" : "+m" (*(long *)(srcBuffer+cl)));
+    }
     //rc = device->dCacheFlushInval(&srcAlloc, srcBuffer);
     fprintf(stderr, "cache flushed rc=%d\n", rc);
   }
 
-  //device->store(srcAlloc.entries[0].dma_address+16, 0xd00df00ddeadbeefULL);
-  device->load(srcAlloc.entries[0].dma_address, 15);
+  device->store(srcAlloc.entries[0].dma_address, 0xd00df00ddeadbeefULL);
+  if (0) {
+    tPortalInfo portal_info;
+    int res = ioctl(device->fd, BNOC_IDENTIFY_PORTAL, &portal_info);
+    fprintf(stderr, "scratchpad=%08x\n", portal_info.scratchpad);
+    srcAlloc.entries[0].dma_address = portal_info.scratchpad;
+  } else {
+    int rc = ioctl(device->fd, BNOC_DMA_MAP, srcAlloc.header.fd);
+    fprintf(stderr, "BNOC_DMA_MAP rc=%d errno=%d\n", rc, errno);
+  }
+  //device->load(srcAlloc.entries[0].dma_address, 3);
   portalExec(0);
+
 }

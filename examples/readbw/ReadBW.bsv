@@ -29,6 +29,7 @@ import SGList::*;
 
 interface CoreIndication;
     method Action loadValue(Bit#(128) value, Bit#(32) cycles);
+    method Action storeAddress(Bit#(64) addr);
 endinterface
 
 interface CoreRequest;
@@ -91,6 +92,7 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	interface Axi3WriteClient write;
 	   method ActionValue#(Axi3WriteRequest#(40, 12)) address();
 	       writeAddrFifo.deq;
+	      ind.coreIndication.storeAddress(zeroExtend(writeAddrFifo.first));
 	       return Axi3WriteRequest { address: writeAddrFifo.first, burstLen: 0, id: 0 };
 	   endmethod
 	   method ActionValue#(Axi3WriteData#(128, 16, 12)) data();
@@ -114,6 +116,7 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	       readLenFifo.deq;
 	       readStartTime <= timer;
 	       readBurstCount <= readLenFifo.first + 1;
+
 	       return Axi3ReadRequest { address: readAddrFifo.first, burstLen: readLenFifo.first, id: 0};
 	   endmethod
 	   method Action data(Axi3ReadResponse#(128, 12) response) if (readBurstCount > 0);
