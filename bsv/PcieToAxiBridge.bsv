@@ -801,7 +801,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	       end
 	       tlpOutFifo.enq(tlp);
            endmethod: readAddr
-	   method ActionValue#(Bit#(buswidth)) readData();
+	   method ActionValue#(Bit#(buswidth)) readData() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
 	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
 	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
