@@ -38,6 +38,12 @@ typedef struct {
   unsigned int fifo_status;
 } tPortalInfo;
 
+typedef struct {
+  unsigned int size;
+  void *virt;
+  dma_addr_t dma_handle;
+} tPciAlloc;
+
 typedef unsigned int tDebugLevel;
 
 typedef unsigned int tTlpData[6];
@@ -61,9 +67,10 @@ const tDebugLevel DEBUG_PROFILE = (1 << 31);
 #define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
 #define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,int*)
 #define BNOC_SEQNO           _IOWR(BNOC_IOC_MAGIC,9,int*)
-#define BNOC_SYNC            _IOWR(BNOC_IOC_MAGIC,10,long)
+#define BNOC_DMA_MAP         _IOWR(BNOC_IOC_MAGIC,10,long)
+#define BNOC_PCI_ALLOC       _IOWR(BNOC_IOC_MAGIC,11,tPciAlloc*)
 
 /* maximum valid IOCTL number */
-#define BNOC_IOC_MAXNR 9
+#define BNOC_IOC_MAXNR 11
 
 #endif /* __BLUENOC_H__ */

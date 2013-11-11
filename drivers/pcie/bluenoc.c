@@ -24,6 +24,8 @@
 #include <linux/time.h>        /* getnstimeofday, struct timespec, etc. */
 #include <asm/uaccess.h>       /* copy_to_user, copy_from_user */
 //#include <asm/system.h>        /* mb(), wmb() */
+#include <asm/dma-mapping.h>
+#include <linux/dma-buf.h>
 
 #include "bluenoc.h"
 
@@ -1796,10 +1798,35 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       else
         return 0;
     }
-    case BNOC_SYNC: {
-      //pci_dma_sync_single(this_board->pci_dev, arg, 4096, PCI_DMA_FROM_DEVICE);
+    case BNOC_DMA_MAP: {
+      int i;
+      int fd = arg;
+      struct dma_buf *dma_buf = dma_buf_get(fd);
+      struct dma_buf_attachment *attachment = dma_buf_attach(dma_buf, &this_board->pci_dev->dev);
+      struct sg_table *sg_table = dma_buf_map_attachment(attachment, DMA_TO_DEVICE);
+      int rc = dma_map_sg(&this_board->pci_dev->dev, sg_table->sgl, sg_table->nents, DMA_BIDIRECTIONAL);
+      printk("dma_map_sg returned rc=%d\n", rc);
+      for (i = 0; i < sg_table->nents; i++)
+	printk("sg_table->sgl[%d].dma_address=%p\n", i, (void *)sg_table->sgl[i].dma_address);
+      return 0;
     }
-    default:
+  case BNOC_PCI_ALLOC: {
+    tPciAlloc pciAlloc;
+    int err = copy_from_user(&pciAlloc, (void __user *)arg, sizeof(pciAlloc));
+    if (err != 0)
+      return -EFAULT;
+
+    pciAlloc.virt = dma_alloc_coherent(&this_board->pci_dev->dev, pciAlloc.size, &pciAlloc.dma_handle, GFP_KERNEL);
+    printk("dma_alloc_coherent virt=%p dma_handle=%p\n", pciAlloc.virt, (void*)pciAlloc.dma_handle);
+    memset(pciAlloc.virt, 0xfa, pciAlloc.size);
+    //asm volatile ("clflush %0" : "+m" (*(long *)(pciAlloc.virt)));
+    err = copy_to_user((void __user *)arg, &pciAlloc, sizeof(tPciAlloc));
+    if (err != 0)
+      return -EFAULT;
+    else
+      return 0;
+  }
+  default:
       return -ENOTTY;
   }
 }
@@ -1809,7 +1836,6 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
   tPortal *this_portal = (tPortal*) filp->private_data;
   tBoard *this_board = this_portal->board;
 
-  unsigned long req_len = vma->vm_end - vma->vm_start + (vma->vm_pgoff << PAGE_SHIFT);
   off_t off = 0;
 
   if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
