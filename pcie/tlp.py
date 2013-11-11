@@ -68,7 +68,10 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
     if tlpbe == '0000':
         return 'trace'
     if tlpsof == 0:
-        return 'continuation'
+        if portnum == 4:
+            return 'master continuation'
+        else:
+            return 'slave continuation'
     if portnum == 4:
         if pkttype == 10: # COMPLETION
             return 'Master Response'
