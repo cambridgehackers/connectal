@@ -455,7 +455,7 @@ static DEFINE_PCI_DEVICE_TABLE(bluenoc_id_table) = {
 MODULE_DEVICE_TABLE(pci, bluenoc_id_table);
 
 /* PCI driver operations pointers */
-static struct pci_driver bluenoc_driver = {
+static struct pci_driver bluenoc_ops = {
   .name     = DEV_NAME,
   .id_table = bluenoc_id_table,
   .probe    = bluenoc_probe,
@@ -532,7 +532,7 @@ static int __init bluenoc_init(void)
   board_list = NULL;
 
   /* register the driver with the PCI subsystem */
-  status = pci_register_driver(&bluenoc_driver);
+  status = pci_register_driver(&bluenoc_ops);
   if (status < 0) {
     printk(KERN_ERR "%s: failed to register PCI driver\n", DEV_NAME);
     return status;
@@ -550,7 +550,7 @@ static int __init bluenoc_init(void)
 static void __exit bluenoc_exit (void)
 {
   /* unregister the driver with the PCI subsystem */
-  pci_unregister_driver(&bluenoc_driver);
+  pci_unregister_driver(&bluenoc_ops);
 
   /* release reserved device numbers */
   unregister_chrdev_region(device_number, NUM_BOARDS);
