@@ -41,7 +41,7 @@ typedef struct {
 typedef struct {
   unsigned int size;
   void *virt;
-  dma_addr_t dma_handle;
+  unsigned long dma_handle;
 } tPciAlloc;
 
 typedef unsigned int tDebugLevel;
