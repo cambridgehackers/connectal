@@ -31,15 +31,15 @@ import BRAM::*;
 // XBSV Libraries
 import BRAMFIFOFLevel::*;
 import PortalMemory::*;
+
+import "BDPI" function Action pareff(Bit#(32) off, Bit#(32) pref);
 		       
 interface BsimDMAWriteInternal;
    interface DMAWrite write;
-   method Action paref(Bit#(32) off, Bit#(32) pref);
 endinterface
 
 interface BsimDMAReadInternal;
    interface DMARead read;
-   method Action paref(Bit#(32) off, Bit#(32) pref);
 endinterface
 
 interface BsimDMA;
@@ -48,15 +48,13 @@ interface BsimDMA;
    interface DMARead  read;
 endinterface
 
+
+
 module mkBsimDMAReadInternal(BsimDMAReadInternal);
    
    Vector#(NumDmaChannels, FIFOFLevel#(Bit#(64), 16)) readBuffers  <- replicateM(mkBRAMFIFOFLevel);
    Vector#(NumDmaChannels, Reg#(Bool)) reqOutstanding <- replicateM(mkReg(False));
 
-   method Action paref(Bit#(32) off, Bit#(32) pref);
-      noAction;
-   endmethod
-   
    interface DMARead read;
       method Action configChan(DmaChannelId channelId, Bit#(32) pref, Bit#(4) bsz);
 	 noAction;
@@ -75,10 +73,6 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
    Vector#(NumDmaChannels, FIFOFLevel#(Bit#(64), 16)) writeBuffers <- replicateM(mkBRAMFIFOFLevel);
    Vector#(NumDmaChannels, Reg#(Bool)) reqOutstanding <- replicateM(mkReg(False));
    Vector#(NumDmaChannels, Reg#(Bool)) writeRespRec   <- replicateM(mkReg(False));
-
-   method Action paref(Bit#(32) off, Bit#(32) pref);
-      noAction;
-   endmethod
 
    interface DMAWrite write;
       method Action configChan(DmaChannelId channelId, Bit#(32) pref, Bit#(4) bsz);
@@ -115,8 +109,7 @@ module mkBsimDMA#(DMAIndication indication)(BsimDMA);
 	 indication.reportStateDbg(rv);
       endmethod
       method Action paref(Bit#(32) off, Bit#(32) pref);
-	 writer.paref(off, pref);
-	 reader.paref(off, pref);
+	 pareff(off, pref); 
 	 indication.parefResp(off);
       endmethod
    endinterface

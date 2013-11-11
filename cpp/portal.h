@@ -1,3 +1,5 @@
+#ifndef _PORTAL_H_
+#define _PORTAL_H_
 
 #include <semaphore.h>
 #include <sys/types.h>
@@ -11,12 +13,12 @@
 #include "drivers/alloc/portalalloc.h"
 #include "drivers/portal/portal.h"
 
-
 struct channel{
   int s1;
   int s2;
   struct sockaddr_un local;
   bool connected;
+  char path[100];
 };
 
 struct portal{
@@ -105,3 +107,4 @@ class PortalMemory : public PortalRequest {
 typedef int SGListId;
 
 
+#endif // _PORTAL_H_

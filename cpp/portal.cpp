@@ -34,7 +34,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/socket.h>
 #include <assert.h>
 
 #ifdef ZYNQ
@@ -42,6 +41,7 @@
 #endif
 
 #include "portal.h"
+#include "sock_utils.h"
 
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
@@ -90,29 +90,7 @@ PortalRequest::~PortalRequest()
 }
 
 
-static void init_socket(channel *c, const char* path)
-{
-  int len;
-  if ((c->s2 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "(%s) socket error", path);
-    exit(1);
-  }
-  
-  printf("(%s) trying to connect...\n", path);
-  
-  c->local.sun_family = AF_UNIX;
-  strcpy(c->local.sun_path, path);
-  len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
-  if (connect(c->s2, (struct sockaddr *)&(c->local), len) == -1) {
-    fprintf(stderr,"(%s) connect error", path);
-    exit(1); 
-  }
-  // int sockbuffsz = sizeof(memrequest);
-  // setsockopt(c->s2, SOL_SOCKET, SO_SNDBUF, &sockbuffsz, sizeof(sockbuffsz));
-  // sockbuffsz = sizeof(unsigned int);
-  // setsockopt(c->s2, SOL_SOCKET, SO_RCVBUF, &sockbuffsz, sizeof(sockbuffsz));
-  fprintf(stderr, "(%s) connected\n", path);
-}
+
 
 int PortalRequest::open()
 {
@@ -165,11 +143,11 @@ int PortalRequest::open()
     *(ind_reg_base+0x1) = 1;
 
 #else
-    char path[128];
-    snprintf(path, sizeof(path), "/tmp/%s_rc", name);
-    init_socket(&(p.read),path);
-    snprintf(path, sizeof(path), "/tmp/%s_wc", name);
-    init_socket(&(p.write),path);
+    
+    snprintf(p.read.path, sizeof(p.read.path), "/tmp/%s_rc", name);
+    connect_socket(&(p.read));
+    snprintf(p.write.path, sizeof(p.read.path), "/tmp/%s_wc", name);
+    connect_socket(&(p.write));
 
     unsigned long dev_base = 0;
     ind_reg_base   = dev_base+(3<<14);

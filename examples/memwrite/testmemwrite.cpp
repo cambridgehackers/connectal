@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "../../cpp/sock_fd.h"
+#include "sock_fd.h"
 
 int numWords = 16 << 2;
 size_t test_sz  = numWords*sizeof(unsigned int);
@@ -54,7 +54,7 @@ class TestCoreIndication : public CoreIndication
   }  
 };
 
-void child(int rd_sock, int wr_sock)
+void child(int rd_sock)
 {
   int fd;
   char    buf[16];
@@ -137,7 +137,8 @@ int main(int argc, const char **argv)
   }
   switch ((pid = fork())) {
   case 0:
-    child(sv[1],sv[0]);
+    close(sv[0]);
+    child(sv[1]);
     break;
   case -1:
     perror("fork");
