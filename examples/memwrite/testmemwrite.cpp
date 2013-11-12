@@ -13,6 +13,8 @@ size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 sem_t done_sem;
 
+bool mt_sw = true;
+
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s ", prefix);
@@ -117,7 +119,7 @@ void parent(int rd_sock, int wr_sock)
 
   sem_wait(&done_sem);
   
-  if(false){
+  if(mt_sw){
     sock_fd_write(wr_sock, dstAlloc.header.fd);
     munmap(dstBuffer, alloc_sz);
     close(dstAlloc.header.fd);
@@ -127,7 +129,6 @@ void parent(int rd_sock, int wr_sock)
     unsigned int sg = 0;
     for (int i = 0; i < numWords; i++){
       mismatch |= (dstBuffer[i] != sg++);
-      fprintf(stderr, "%08x, %08x\n", dstBuffer[i], sg);
     }
     fprintf(stderr, "parent::writeDone mismatch=%d\n", mismatch);
     munmap(dstBuffer, alloc_sz);
@@ -146,7 +147,7 @@ int main(int argc, const char **argv)
   switch ((pid = fork())) {
   case 0:
     close(sv[0]);
-    if(false)
+    if(mt_sw)
       child(sv[1]);
     break;
   case -1:
