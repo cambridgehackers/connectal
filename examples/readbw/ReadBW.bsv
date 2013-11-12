@@ -47,7 +47,7 @@ endinterface
 
 interface ReadBWRequest;
    interface CoreRequest coreRequest;
-   interface Axi3Client#(40,128,16,12) m_axi;
+   interface Axi4Client#(40,128,16,12) m_axi;
    interface TlpTrace trace;
 endinterface
 
@@ -59,16 +59,16 @@ endinstance
 module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 
     FIFO#(Bit#(40)) readAddrFifo <- mkFIFO;
-    FIFO#(Bit#(4)) readLenFifo <- mkFIFO;
+    FIFO#(Bit#(8)) readLenFifo <- mkFIFO;
     FIFO#(Bit#(40)) writeAddrFifo <- mkFIFO;
     FIFO#(Bit#(128)) writeDataFifo <- mkFIFO;
     FIFO#(TimestampedTlpData) ttdFifo <- mkFIFO;
 
-    Reg#(Bit#(5)) readBurstCount <- mkReg(0);
-    FIFO#(Tuple2#(Bit#(5),Bit#(32))) readBurstCountStartTimeFifo <- mkSizedFIFO(2);
+    Reg#(Bit#(9)) readBurstCount <- mkReg(0);
+    FIFO#(Tuple2#(Bit#(9),Bit#(32))) readBurstCountStartTimeFifo <- mkSizedFIFO(2);
 
    Reg#(Bit#(40)) readMultipleAddr <- mkReg(0);
-   Reg#(Bit#(4)) readMultipleLen <- mkReg(0);
+   Reg#(Bit#(8)) readMultipleLen <- mkReg(0);
    Reg#(Bit#(16)) readMultipleCount <- mkReg(0);
 
     Reg#(Bit#(32)) timer <- mkReg(0);
@@ -106,36 +106,37 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	endmethod: store
     endinterface: coreRequest
 
-    interface Axi3Client m_axi;
-	interface Axi3WriteClient write;
-	   method ActionValue#(Axi3WriteRequest#(40, 12)) address();
+    interface Axi4Client m_axi;
+	interface Axi4WriteClient write;
+	   method ActionValue#(Axi4WriteRequest#(40, 12)) address();
 	       writeAddrFifo.deq;
 	      ind.coreIndication.storeAddress(zeroExtend(writeAddrFifo.first));
-	       return Axi3WriteRequest { address: writeAddrFifo.first, burstLen: 0, id: 0 };
+	       return Axi4WriteRequest { address: writeAddrFifo.first, burstLen: 0, id: 0 };
 	   endmethod
-	   method ActionValue#(Axi3WriteData#(128, 16, 12)) data();
+	   method ActionValue#(Axi4WriteData#(128, 16, 12)) data();
 	       writeDataFifo.deq;
-	       return Axi3WriteData { data: writeDataFifo.first, byteEnable: 16'hffff, last: 1, id: 0 };
+	       return Axi4WriteData { data: writeDataFifo.first, byteEnable: 16'hffff, last: 1, id: 0 };
 	   endmethod
-	   method Action response(Axi3WriteResponse#(12) r);
+	   method Action response(Axi4WriteResponse#(12) r);
 	   endmethod
 	endinterface: write
-	interface Axi3ReadClient read;
-	   method ActionValue#(Axi3ReadRequest#(40, 12)) address();
+	interface Axi4ReadClient read;
+	   method ActionValue#(Axi4ReadRequest#(40, 12)) address();
+	       Bit#(9) numWords = zeroExtend(readLenFifo.first) + 1;
 	       TimestampedTlpData ttd = unpack(0);
 	       ttd.unused = 1;
 	       Bit#(153) trace = 0;
-	       trace[127:64] = zeroExtend(readLenFifo.first + 1);
+	       trace[127:64] = zeroExtend(numWords);
 	       trace[31:0] = readAddrFifo.first[31:0];
 	       ttd.tlp = unpack(trace);
 	       ttdFifo.enq(ttd);
 
 	       readAddrFifo.deq;
 	       readLenFifo.deq;
-	       readBurstCountStartTimeFifo.enq(tuple2(zeroExtend(readLenFifo.first)+1, timer));
-	       return Axi3ReadRequest { address: readAddrFifo.first, burstLen: readLenFifo.first, id: 0};
+	       readBurstCountStartTimeFifo.enq(tuple2(numWords, timer));
+	       return Axi4ReadRequest { address: readAddrFifo.first, burstLen: readLenFifo.first, id: 0};
 	   endmethod
-	   method Action data(Axi3ReadResponse#(128, 12) response);
+	   method Action data(Axi4ReadResponse#(128, 12) response);
 
 	      let rbc = readBurstCount;
 	      if (rbc == 0) begin
