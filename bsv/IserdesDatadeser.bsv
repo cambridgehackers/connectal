@@ -133,7 +133,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(10)) data_init <- mkReg(0);
     Reg#(Bit#(10)) edge_init <- mkReg(0);
     Reg#(Bit#(10)) edge_int <- mkReg(0);
-    Reg#(HState)  hstate <- mkReg(HIdle);
     Reg#(Bit#(1)) edge_intor_reg <- mkReg(0);
     SyncFIFOIfc#(Bit#(1)) item_req_wire <- mkSyncFIFO(2, defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) this_aligned_reg <- mkReg(0);
@@ -626,23 +625,17 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     rule handinit_rule if (bvi_resets_reg.read() == 0);
-        hstate <= HIdle;
         end_handshake.clear();
     endrule
 
-    rule handidle_rule if (bvi_resets_reg.read() != 0 && hstate == HIdle);
+    rule handidle_rule;
         start_handshake.deq();
-        hstate <= HHigh;
         item_req_wire.enq(1);
     endrule
-    rule handhigh1_rule if (bvi_resets_reg.read() != 0 && hstate == HHigh);
+    rule handhigh1_rule;
         dackint.deq();
         ctrl_data <= ctrl_data_temp;
-        hstate <= HLow;
-    endrule
-    rule handlow_rule if (bvi_resets_reg.read() != 0 && hstate == HLow);
         end_handshake.enq(1);
-        hstate <= HIdle;
     endrule
 
     rule serdesrule;
