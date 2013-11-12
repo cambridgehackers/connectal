@@ -40,9 +40,12 @@ class TestCoreIndication : public CoreIndication
     fprintf(stderr, "loadAddress addr=%08llx\n", addr);
   }
   virtual void loadValue ( std::bitset<128> &value, unsigned long cycles ) {
-    fprintf(stderr, "loadValue value=%08lx%08lx cycles=%ld\n", (value >> 64).to_ulong(), value.to_ulong(), cycles);
+    fprintf(stderr, "loadValue value=%08lx%08lx cycles=%ld\n",
+	    ((value >> 64) & std::bitset<128>(0xFFFFFFFFFFFFFFFFul)).to_ulong(),
+	    (value & std::bitset<128>(0xFFFFFFFFFFFFFFFFul)).to_ulong(),
+	    cycles);
     fprintf(stderr, "srcBuffer[0] = %08lx\n", *(long *)srcBuffer);
-    //device->load(srcAlloc.entries[0].dma_address, 7);
+    device->load(srcAlloc.entries[0].dma_address, 3);
   }
 };
 
@@ -95,7 +98,8 @@ int main(int argc, const char **argv)
     fprintf(stderr, "srcBuffer[0]=%x\n", srcBuffer[0]);
 
     for (int cl = 0; cl < alloc_sz/4; cl++) {
-      asm volatile ("clflush %0" : "+m" (*(long *)(srcBuffer+cl)));
+      unsigned int *line = srcBuffer+cl;
+      asm volatile ("clflush %0" : "+m" (line));
     }
     //rc = device->dCacheFlushInval(&srcAlloc, srcBuffer);
     fprintf(stderr, "cache flushed rc=%d\n", rc);

@@ -61,16 +61,17 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
     FIFO#(Bit#(4)) readLenFifo <- mkFIFO;
     FIFO#(Bit#(40)) writeAddrFifo <- mkFIFO;
     FIFO#(Bit#(128)) writeDataFifo <- mkFIFO;
-    FIFO#(Tuple2#(Bit#(128),Bit#(32))) readDataFifo <- mkSizedFIFO(32);
     FIFO#(TimestampedTlpData) ttdFifo <- mkFIFO;
 
-    Reg#(Bit#(4)) readBurstCount <- mkReg(0);
-    Reg#(Bit#(32)) readStartTime <- mkReg(0);
+    Reg#(Bit#(5)) readBurstCount <- mkReg(0);
+    FIFO#(Tuple2#(Bit#(5),Bit#(32))) readBurstCountStartTimeFifo <- mkSizedFIFO(2);
+
     Reg#(Bit#(32)) timer <- mkReg(0);
     rule updateTimer;
         timer <= timer + 1;
     endrule
 
+   FIFO#(Tuple2#(Bit#(128),Bit#(32))) readDataFifo <- mkSizedFIFO(32);
    rule receivedData;
       let v = readDataFifo.first;
       readDataFifo.deq;
@@ -103,23 +104,28 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	   endmethod
 	endinterface: write
 	interface Axi3ReadClient read;
-	   method ActionValue#(Axi3ReadRequest#(40, 12)) address() if (readBurstCount == 0);
+	   method ActionValue#(Axi3ReadRequest#(40, 12)) address();
 	       TimestampedTlpData ttd = unpack(0);
 	       ttd.unused = 1;
 	       Bit#(153) trace = 0;
 	       trace[127:64] = zeroExtend(readLenFifo.first + 1);
-	       trace[31:0] = 0;
+	       trace[31:0] = readAddrFifo.first[31:0];
 	       ttd.tlp = unpack(trace);
 	       ttdFifo.enq(ttd);
 
 	       readAddrFifo.deq;
 	       readLenFifo.deq;
-	       readStartTime <= timer;
-	       readBurstCount <= readLenFifo.first + 1;
-
+	       readBurstCountStartTimeFifo.enq(tuple2(zeroExtend(readLenFifo.first)+1, timer));
 	       return Axi3ReadRequest { address: readAddrFifo.first, burstLen: readLenFifo.first, id: 0};
 	   endmethod
-	   method Action data(Axi3ReadResponse#(128, 12) response) if (readBurstCount > 0);
+	   method Action data(Axi3ReadResponse#(128, 12) response);
+
+	      let rbc = readBurstCount;
+	      if (rbc == 0) begin
+		 rbc = tpl_1(readBurstCountStartTimeFifo.first);
+	      end
+
+	      let readStartTime = tpl_2(readBurstCountStartTimeFifo.first);
 	      let latency = timer - readStartTime;
 
 	      TimestampedTlpData ttd = unpack(0);
@@ -127,13 +133,18 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	      Bit#(153) trace = 0;
 	      trace[127:96] = response.data[127:96];
 	      trace[95:64] = latency;
-	      trace[31:0] = zeroExtend(readBurstCount);
+	      trace[31:0] = zeroExtend(rbc);
 	      ttd.tlp = unpack(trace);
 	      ttdFifo.enq(ttd);
 
-	       readBurstCount <= readBurstCount - 1;
-	       if (readBurstCount == 1)
-	           readDataFifo.enq(tuple2(response.data, latency));
+	      if (rbc == 1) begin
+	         readDataFifo.enq(tuple2(response.data, latency));
+		 // this request is done, dequeue its information
+		 readBurstCountStartTimeFifo.deq;
+	      end
+
+	      readBurstCount <= rbc - 1;
+
 	   endmethod
 	endinterface: read
     endinterface: m_axi
