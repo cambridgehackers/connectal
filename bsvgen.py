@@ -147,7 +147,7 @@ axiMasterConnectionTemplate='''
    AxiSlaveEngine#(%(buswidth)s,%(buswidthbytes)s) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(%(dut)sWrapper.%(busname)s, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(%(dut)sWrapper.%(busname)s, axiSlaveEngine.slave%(axiversion)s, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 '''
 tlpTraceConnectionTemplate='''
    mkConnection(%(dut)sWrapper.%(busname)s.tlp, x7pcie.trace);
@@ -348,7 +348,7 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper) provisos (Log#(%(indicationChannelCount)
                  axiSlaveWriteAddrReg <= truncate(addr);
 		 axiSlaveWriteIdReg <= awid;
             endmethod
-            method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last)
+            method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last, Bit#(12) wid)
                           if (axiSlaveWriteBurstCountReg > 0);
                 let addr = axiSlaveWriteAddrReg;
                 axiSlaveWriteAddrReg <= axiSlaveWriteAddrReg + 4;
@@ -361,7 +361,7 @@ module mk%(Dut)sWrapper(%(Dut)sWrapper) provisos (Log#(%(indicationChannelCount)
                 if (last == 1'b1)
                 begin
                     axiSlaveBrespFifo.enq(0);
-                    axiSlaveBidFifo.enq(axiSlaveWriteIdReg);
+                    axiSlaveBidFifo.enq(wid);
                 end
             endmethod
             method ActionValue#(Bit#(2)) writeResponse();
@@ -794,11 +794,13 @@ class InterfaceMixin:
         f.write(bsimTopTemplate % substs);
 
     def emitPcieTop(self,f,boardname,contentid):
+        print self.collectInterfaceNames('^Axi[34]Client$', True)
         axiMasterConnections = [axiMasterConnectionTemplate % {'dut': util.decapitalize(self.base),
                                                                'busname': busname,
                                                                'buswidth': params[1].numeric(),
-                                                               'buswidthbytes': params[1].numeric()/8}
-                                for (busname,t,params) in self.collectInterfaceNames('Axi3Client')]
+                                                               'buswidthbytes': params[1].numeric()/8,
+                                                               'axiversion': 4 if (t == 'Axi4Client') else 3}
+                                for (busname,t,params) in self.collectInterfaceNames('^Axi[34]Client$', True)]
         tlpTraceConnections = [tlpTraceConnectionTemplate % {'dut': util.decapitalize(self.base),
                                                              'busname': busname}
                                for (busname,t,params) in self.collectInterfaceNames('TlpTrace')]
@@ -823,7 +825,7 @@ class InterfaceMixin:
         return [ p.name for p in m.params if p.type.name == 'Clock']
 
     def emitBsvImplementationRequestTop(self,f):
-        axiMasters = self.collectInterfaceNames('Axi3?Client', True)
+        axiMasters = self.collectInterfaceNames('Axi[34]Client', True)
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
         ledInterfaces = self.collectInterfaceNames('LEDS')
@@ -855,7 +857,9 @@ class InterfaceMixin:
             'Dut': util.capitalize(self.name),
             'base': util.decapitalize(self.base),
             'Base': self.base,
-            'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(), axiMaster)
+            'axiMasterDeclarations': '\n'.join(['    interface Axi%sMaster#(%s,%s,%s,%s) %s;' % (4 if t == 'Axi4Client' else 3,
+                                                                                                 params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(),
+                                                                                                 axiMaster)
                                                 for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
                                                for (axiSlave,t,params) in axiSlaves]),
@@ -863,10 +867,16 @@ class InterfaceMixin:
                 '\n'.join(['\n'.join(['    interface %s %s;' % (t, util.decapitalize(busname))
                                       for (busname,t,params) in buses[busType]])
                            for busType in exposedInterfaces]),
-            'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
-                                           % (params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(), axiMaster,dutName,axiMaster)
-                                                   for (axiMaster,t,params) in axiMasters]),
-            'axiMasterImplementations': '\n'.join(['    interface Axi3Master %s = %sMaster;' % (axiMaster,axiMaster)
+            'axiMasterModules': '\n'.join(['    Axi%(axiversion)sMaster#(%(addrWidth)s,%(busWidth)s,%(busWidthBytes)s,%(idWidth)s) %(axiMaster)sMaster <- mkAxi%(axiversion)sMaster(%(dutName)s.%(axiMaster)s);'
+                                           % { 'axiversion': 4 if t == 'Axi4Client' else 3,
+                                               'addrWidth': params[0].numeric(),
+                                               'busWidth': params[1].numeric(),
+                                               'busWidthBytes': params[2].numeric(),
+                                               'idWidth': params[3].numeric(),
+                                               'axiMaster': axiMaster,
+                                               'dutName': dutName }
+                                           for (axiMaster,t,params) in axiMasters]),
+            'axiMasterImplementations': '\n'.join(['    interface Axi%sMaster %s = %sMaster;' % (4 if t == 'Axi4Client' else 3, axiMaster,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
             'dut_hdmi_clock_param': '#(%s)' % ', '.join(['Clock %s' % name for name in clknames]) if len(clknames) else '',
             'dut_hdmi_clock_arg': ' '.join(['%s,' % name for name in dut_clknames]) if len(clknames) else '',
@@ -975,7 +985,7 @@ class InterfaceMixin:
         methodNames = self.collectMethodNames(self.name)
         methodRuleNames = self.collectMethodRuleNames(self.name)
         methodRules = self.collectMethodRules(self.name)
-        axiMasters = self.collectInterfaceNames('Axi3?Client', True)
+        axiMasters = self.collectInterfaceNames('Axi[34]Client', True)
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         hdmiInterfaces = self.collectInterfaceNames('HDMI')
         ledInterfaces = self.collectInterfaceNames('LEDS')
