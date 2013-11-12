@@ -11,10 +11,6 @@
 
 #include "sock_utils.h"
 
-static struct portal iport = {{0,0,{},false},
-			      {0,0,{},false}};
-
-
 static struct portal portals[16] = {iport,iport,iport,iport,iport,iport,
 				    iport,iport,iport,iport,iport,iport,
 				    iport,iport,iport,iport};
@@ -68,7 +64,7 @@ extern "C" {
     wc = &(portals[id].write);
 
     snprintf(rc->path, sizeof(rc->path), "/tmp/fpga%ld_rc", id);
-    snprintf(wc->path, sizeof(rc->path), "/tmp/fpga%ld_wc", id);
+    snprintf(wc->path, sizeof(wc->path), "/tmp/fpga%ld_wc", id);
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)rc)){
       fprintf(stderr, "error creating init thread\n");

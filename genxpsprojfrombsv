@@ -94,7 +94,7 @@ $(vfile): sources/%(dut)s/%(Top)s.bsv %(bsvfiles)s
 	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
 
 x86_exe:
-	cd jni; g++ *.cpp -pthread -I../.. -I../../cpp -DBSIM
+	cd jni; g++ *.cpp *.cxx -pthread -I../.. -I../../cpp -DBSIM 
 
 ubuntu_exe:
 	cd jni; make
@@ -102,7 +102,7 @@ ubuntu_exe:
 
 bsim: x86_exe
 	cd sources; bsc %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop BsimTop.bsv 
-	export BSC_CXXFLAGS="-I$(XBSVTOP)/cpp -I../.. -DBSIM" ; cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim *.ba $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx
+	export BSC_CXXFLAGS="-I$(XBSVTOP)/cpp -I../.. -DBSIM" ; cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim *.ba $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
 
 verilog: $(vfile)
 
@@ -419,7 +419,7 @@ if __name__=='__main__':
     if cppname:
         srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'cpp')
         dstdir = os.path.dirname(cppname)
-        for f in ['portal.cpp']:
+        for f in ['portal.cpp', 'sock_utils.cxx', 'sock_fd.cxx']:
             shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
     shutil.copyfile(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao'),
                     os.path.join(project_dir, 'updatepao'))

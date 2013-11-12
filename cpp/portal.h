@@ -13,18 +13,7 @@
 #include "drivers/alloc/portalalloc.h"
 #include "drivers/portal/portal.h"
 
-struct channel{
-  int s1;
-  int s2;
-  struct sockaddr_un local;
-  bool connected;
-  char path[100];
-};
-
-struct portal{
-  struct channel read;
-  struct channel write;
-};
+#include "sock_utils.h"
 
 struct memrequest{
   bool write;
@@ -92,6 +81,7 @@ void* portalExec(void* __x);
 class PortalMemory : public PortalRequest {
  private:
   int handle;
+  portal p_fd;
  protected:
   PortalMemory(const char* name, PortalIndication *indication=0);
  public:

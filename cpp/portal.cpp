@@ -42,6 +42,7 @@
 
 #include "portal.h"
 #include "sock_utils.h"
+#include "sock_fd.h"
 
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
@@ -224,6 +225,11 @@ PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
   : handle(0),
     PortalRequest(name,indication)
 {
+  snprintf(p_fd.read.path, sizeof(p_fd.read.path), "/tmp/fd_sock_rc");
+  connect_socket(&(p_fd.read));
+  snprintf(p_fd.write.path, sizeof(p_fd.write.path), "/tmp/fd_sock_wc");
+  connect_socket(&(p_fd.write));
+
   const char* path = "/dev/portalalloc";
   this->pa_fd = ::open(path, O_RDWR);
   if (this->pa_fd < 0){
@@ -265,7 +271,8 @@ int PortalMemory::reference(PortalAlloc* pa)
     sleep(1);
   }
 #else
-  paref(id, pa->header.fd);
+  sock_fd_write(p_fd.write.s2, pa_fd);
+  paref(id, id);
 #endif
   return id;
 }

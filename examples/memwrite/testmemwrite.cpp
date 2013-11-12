@@ -57,8 +57,7 @@ class TestCoreIndication : public CoreIndication
 void child(int rd_sock)
 {
   int fd;
-  char    buf[16];
-  sock_fd_read(rd_sock, buf, sizeof(buf), &fd);
+  sock_fd_read(rd_sock, &fd);
 
   unsigned int *dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
   fprintf(stderr, "child::dstBuffer = %08lx\n", (unsigned long)dstBuffer);
@@ -119,8 +118,7 @@ void parent(int rd_sock, int wr_sock)
   sem_wait(&done_sem);
   
   int i;
-  char buf[] = "1";
-  sock_fd_write(wr_sock, (void*)buf, 1, dstAlloc.header.fd);
+  sock_fd_write(wr_sock, dstAlloc.header.fd);
   munmap(dstBuffer, alloc_sz);
   close(dstAlloc.header.fd);
   while(1){sleep(1);}

@@ -1,15 +1,14 @@
-#include "sock_fd_test.h"
+#include "sock_fd.h"
 
 void
 child(int sock)
 {
     int fd;
-    char    buf[16];
     ssize_t size;
 
     sleep(1);
     for (;;) {
-        size = sock_fd_read(sock, buf, sizeof(buf), &fd);
+        size = sock_fd_read(sock, &fd);
         if (size <= 0)
             break;
         printf ("read %d\n", size);
@@ -28,8 +27,7 @@ parent(int sock)
     int fd;
 
     fd = 1;
-    char buf[] = "1";
-    size = sock_fd_write(sock, (void*)buf, 1, fd);
+    size = sock_fd_write(sock, fd);
     printf ("wrote %d\n", size);
 }
 
