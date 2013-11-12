@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import subprocess
+from gmpy import mpz
 
 # 64-bit BAR
 tlpdatalog = [
@@ -64,6 +65,74 @@ TlpPacketFormat = [
     'MEM_WRITE_4DW_DATA'
 ]
 
+first_vcd_timestamp = mpz(0)
+last_vcd_timestamp = mpz(0)
+last_vcd_pktclass_code = None
+
+pktclassCodes = {
+#    'Slave Request': 'S',
+#    'Slave Write Request': 'T',
+#    'Slave Response': 's',
+#    'slave continuation': 'c',
+#    'Master Write Request': 'W',
+    'Master Request': 'M',
+    'Master Response': 'm',
+    'master continuation': 'C',
+    'trace': 't',
+}
+
+vcd_header_template='''
+$version
+   tlp.py
+$end
+$comment
+$end
+$timescale 125ns $end
+$scope module logic $end
+%(vars)s
+$upscope $end
+$enddefinitions $end
+'''
+
+unused='''
+$dumpvars
+%(dumpvars)s
+$end
+'''
+
+def emit_vcd_header(f):
+    f.write(vcd_header_template
+            % { 'vars': '\n'.join(['$var wire 1 %s %s $end' % (pktclassCodes[k], k.lower().replace(' ', '_')) for k in pktclassCodes]),
+                'dumpvars': '\n'.join(['0%s' % pktclassCodes[k] for k in pktclassCodes])
+            })
+
+def emit_vcd_entry(f, timestamp, pktclass):
+    global first_vcd_timestamp, last_vcd_timestamp, last_vcd_pktclass_code
+    if not timestamp:
+        return
+    if not first_vcd_timestamp:
+        first_vcd_timestamp = timestamp
+    print last_vcd_timestamp, timestamp, (timestamp < last_vcd_timestamp)
+    if last_vcd_timestamp and (timestamp < last_vcd_timestamp):
+        f.write('$comment %s %s %s $end\n' % (hex(last_vcd_timestamp), hex(timestamp), hex(timestamp + mpz('100000000', 16))))
+        timestamp = timestamp + mpz('100000000', 16)
+        f.write('$comment %s %s $end\n' % (hex(timestamp), hex(timestamp - first_vcd_timestamp)))
+
+    #timestamp = timestamp - first_vcd_timestamp
+
+    if last_vcd_timestamp and timestamp > (last_vcd_timestamp+1):
+        f.write('#%s\n0%s\n' % ((last_vcd_timestamp+mpz(1)), last_vcd_pktclass_code))
+    if pktclassCodes.has_key(pktclass):
+        pktclass_code = pktclassCodes[pktclass]
+        f.write('#%s\n' % timestamp)
+        f.write('1%s\n' % pktclass_code)
+        if last_vcd_pktclass_code and last_vcd_pktclass_code != pktclass_code:
+            f.write('0%s\n' % last_vcd_pktclass_code)
+        last_vcd_pktclass_code = pktclass_code
+        last_vcd_timestamp = timestamp
+    else:
+        f.write('$comment %s $end\n' % pktclass)
+
 def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
     if tlpbe == '0000':
         return 'trace'
@@ -92,9 +161,9 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
         return 'Misc'
 
 classCounts = {}
-last_seqno = -1
+last_seqno = mpz(-1)
 
-def print_tlp(tlpdata):
+def print_tlp(tlpdata, f=None):
     global last_seqno
     def segment(i):
         return tlpdata[i*8:i*8+8]
@@ -105,7 +174,7 @@ def print_tlp(tlpdata):
 
     words = map(segment, [0,1,2,3,4,5])
 
-    seqno = int(tlpdata[-48:-40],16)
+    seqno = mpz(tlpdata[-48:-40],16)
     if last_seqno >= 0:
         delta = seqno - last_seqno
     else:
@@ -123,6 +192,9 @@ def print_tlp(tlpdata):
        classCounts[pktclass] += 1
     else:
        classCounts[pktclass] = 1
+
+    if f:
+        emit_vcd_entry(f, seqno, pktclass)
 
     print tlpdata
     print 'timestamp:', seqno
@@ -186,14 +258,17 @@ def print_tlp(tlpdata):
         print '  format:', (int(tlpdata[-26:-24],16) >> 1) & 3, TlpPacketFormat[(int(tlpdata[-26:-24],16) >> 1) & 3]
     print
 
-def print_tlp_log(tlplog):
+def print_tlp_log(tlplog, f=None):
+    if f:
+        emit_vcd_header(f)
     for tlpdata in tlplog:
         if tlpdata == '000000000000000000000000000000000000000000000000':
             continue
-        print_tlp(tlpdata)
+        print_tlp(tlpdata, f)
 
 if __name__ == '__main__':
     tlplog = subprocess.check_output(['bluenoc', 'tlp', '/dev/fpga0']).split('\n')
-    print_tlp_log(tlplog[0:-1])
+    f = open('tlp.vcd', 'w')
+    print_tlp_log(tlplog[0:-1], f)
     print classCounts
     print sum([ classCounts[k] for k in classCounts])
