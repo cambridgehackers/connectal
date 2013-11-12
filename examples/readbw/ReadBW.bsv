@@ -33,6 +33,7 @@ interface CoreIndication;
 endinterface
 
 interface CoreRequest;
+    method Action loadMultiple(Bit#(64) addr, Bit#(32) length, Bit#(32) repetitions);
     method Action load(Bit#(64) addr, Bit#(32) length);
     method Action store(Bit#(64) addr, Bit#(64) value);
 
@@ -66,10 +67,21 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
     Reg#(Bit#(5)) readBurstCount <- mkReg(0);
     FIFO#(Tuple2#(Bit#(5),Bit#(32))) readBurstCountStartTimeFifo <- mkSizedFIFO(2);
 
+   Reg#(Bit#(40)) readMultipleAddr <- mkReg(0);
+   Reg#(Bit#(4)) readMultipleLen <- mkReg(0);
+   Reg#(Bit#(16)) readMultipleCount <- mkReg(0);
+
     Reg#(Bit#(32)) timer <- mkReg(0);
     rule updateTimer;
         timer <= timer + 1;
     endrule
+
+   rule readMultipleAddrGenerator if (readMultipleCount > 0);
+      readAddrFifo.enq(readMultipleAddr);
+      readLenFifo.enq(readMultipleLen);
+
+      readMultipleCount <= readMultipleCount - 1;
+   endrule
 
    FIFO#(Tuple2#(Bit#(128),Bit#(32))) readDataFifo <- mkSizedFIFO(32);
    rule receivedData;
@@ -83,6 +95,11 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
     	    readAddrFifo.enq(truncate(addr));
 	    readLenFifo.enq(truncate(len));
 	endmethod: load
+        method Action loadMultiple(Bit#(64) addr, Bit#(32) len, Bit#(32) count) if (readMultipleCount == 0);
+    	   readMultipleAddr <= truncate(addr);
+	   readMultipleLen <= truncate(len);
+	   readMultipleCount <= truncate(count);
+	endmethod: loadMultiple
         method Action store(Bit#(64) addr, Bit#(64) value);
 	    writeAddrFifo.enq(truncate(addr));
 	    writeDataFifo.enq({value,value});

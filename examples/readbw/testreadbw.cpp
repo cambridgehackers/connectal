@@ -33,7 +33,7 @@ class TestCoreIndication : public CoreIndication
       device->store(srcAlloc.entries[0].dma_address+storeCount*8, 0xd00df00ddeadbeefULL);
       storeCount++;
     } else {
-      device->load(srcAlloc.entries[0].dma_address, 3);
+      device->loadMultiple(srcAlloc.entries[0].dma_address, 15, 8);
     }
   }
   virtual void loadAddress ( unsigned long long addr ) {
@@ -45,7 +45,7 @@ class TestCoreIndication : public CoreIndication
 	    (value & std::bitset<128>(0xFFFFFFFFFFFFFFFFul)).to_ulong(),
 	    cycles);
     fprintf(stderr, "srcBuffer[0] = %08lx\n", *(long *)srcBuffer);
-    device->load(srcAlloc.entries[0].dma_address, 3);
+    //device->load(srcAlloc.entries[0].dma_address, 3);
   }
 };
 
