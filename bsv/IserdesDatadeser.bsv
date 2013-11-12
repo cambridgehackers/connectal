@@ -637,8 +637,16 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         edgeo[9] = dout[0] ^ dout[9];
         edge_int <= edgeo;
         edge_intor_reg <= pack(edgeo != 0);
-        dfifo.di({6'b0,dout});
-        dfifo.wren(fifo_wren_sync.read());
+        if (fifo_wren_sync.read() == 1)
+            begin
+            dfifo.di({6'b0,dout});
+            dfifo.wren(1);
+            end
+        else
+            begin
+            dfifo.di(16'b0);
+            dfifo.wren(0);
+            end
     endrule
 
     rule handinit_rule if (bvi_resets_reg.read() == 0);
@@ -675,10 +683,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             end
         hcounter <= hcounter + 1;
     endrule
-
-    //rule hstate2_rule if (bvi_resets_reg.read() != 0 && hstate == HHigh && dackint.read() == 1);
-        //item_req_wire.send(0);
-    //endrule
 
     rule serdesrule;
         dfifo.rden(rden);
@@ -806,6 +810,11 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
         serdes_align_busy_reg <= serdes_align_busy_temp;
     endrule
 
+    rule sendup_ibufdso;
+       for (Bit#(8) i = 0; i < 5; i = i+1)
+	  serdes_v[i].ibufdso(ibufds_v[i]);
+    endrule
+
     rule sendup_imageon_clock;
        Bit#(5) alignbusyw = 0;
        Bit#(5) alignedw = 0;
@@ -815,7 +824,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
        Bit#(5) emptyw = 0;
        Bit#(50) rawdataw = 0;
        for (Bit#(8) i = 0; i < 5; i = i+1) begin
-	  serdes_v[i].ibufdso(ibufds_v[i]);
+	  //serdes_v[i].ibufdso(ibufds_v[i]);
 	  alignbusyw[i] = serdes_v[i].align_busy();
 	  alignedw[i] = serdes_v[i].aligned();
 	  firstw[i] = serdes_v[i].sampleinfirstbit();
