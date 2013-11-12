@@ -627,7 +627,8 @@ endmodule: mkPortalEngine
 
 interface AxiSlaveEngine#(type buswidth, type busWidthBytes);
     interface GetPut#(TLPData#(16))   tlps;
-    interface Axi3Slave#(40,buswidth,busWidthBytes,12)  slave;
+    interface Axi3Slave#(40,buswidth,busWidthBytes,12)  slave3;
+    interface Axi4Slave#(40,buswidth,busWidthBytes,12)  slave4;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: AxiSlaveEngine
@@ -652,8 +653,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
     MIMO#(4,busWidthWords,8,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
     MIMO#(busWidthWords,4,8,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(TLPTag) lastTag <- mkReg(0);
-    Reg#(Bit#(5)) writeBurstCount <- mkReg(0);
-    Reg#(Bit#(5)) writeDwCount <- mkReg(0);
+    Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
+    Reg#(Bit#(9)) writeDwCount <- mkReg(0);
     Reg#(TLPTag) writeTag <- mkReg(0);
 
     function LUInt#(4) tlpWordCount(TLPData#(16) tlp);
@@ -727,7 +728,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 		      end
 		  endmethod
 	      endinterface));
-    interface Axi3Slave slave;
+    interface Axi3Slave slave3;
 	interface Axi3SlaveWrite write;
 	   method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
 				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid) if (writeBurstCount == 0);
@@ -752,7 +753,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      writeDwCount <= zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
 	      writeTag <= truncate(awid);
            endmethod: writeAddr
-	   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last)
+	   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last, Bit#(idWidth) wid)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0);
 	      writeBurstCount <= writeBurstCount - 1;
 	      Vector#(busWidthWords, Bit#(32)) v = unpack(data);
@@ -818,7 +819,99 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
            endmethod: rid
 	   // method Action readResponse(Bit#(2) responseCode);
 	endinterface: read
-    endinterface: slave
+    endinterface: slave3
+    interface Axi4Slave slave4;
+	interface Axi4SlaveWrite write;
+	   method Action writeAddr(Bit#(addrWidth) addr, Bit#(8) burstLen, Bit#(3) burstWidth,
+				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid) if (writeBurstCount == 0);
+	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
+	      TLPMemory4DWHeader hdr_4dw = defaultValue;
+	      hdr_4dw.format = MEM_WRITE_4DW_DATA;
+	      hdr_4dw.tag = truncate(awid);
+	      hdr_4dw.reqid = my_id;
+	      hdr_4dw.nosnoop = SNOOPING_REQD;
+	      hdr_4dw.addr = addr[40-1:2];
+	      hdr_4dw.length = tlplen;
+	      hdr_4dw.firstbe = 4'hf;
+	      hdr_4dw.lastbe = 4'hf;
+	      TLPData#(16) tlp = defaultValue;
+	      tlp.sof = True;
+	      tlp.eof = False;
+	      tlp.hit = 7'h00;
+	      tlp.data = pack(hdr_4dw);
+	      tlp.be = 16'hffff;
+	      tlpOutFifo.enq(tlp);
+	      writeBurstCount <= zeroExtend(burstLen)+1;
+	      writeDwCount <= zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
+	      writeTag <= truncate(awid);
+           endmethod: writeAddr
+	   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last, Bit#(idWidth) wid)
+	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0);
+	      writeBurstCount <= writeBurstCount - 1;
+	      Vector#(busWidthWords, Bit#(32)) v = unpack(data);
+	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
+           endmethod: writeData
+	   method ActionValue#(Bit#(2)) writeResponse();
+	       return 0;
+           endmethod: writeResponse
+	   method ActionValue#(Bit#(12)) bid();
+	       return 0;
+           endmethod: bid
+	endinterface
+	interface Axi4SlaveRead read;
+	   method Action readAddr(Bit#(40) addr, Bit#(8) burstLen, Bit#(3) burstWidth,
+				  Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid) if (writeDwCount == 0);
+	       TLPData#(16) tlp = defaultValue;
+	       tlp.sof = True;
+	       tlp.eof = True;
+	       tlp.hit = 7'h00;
+	       TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
+	       if (True || use4dwReg) begin
+		   TLPMemory4DWHeader hdr_4dw = defaultValue;
+		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
+		   hdr_4dw.tag = truncate(arid);
+		   hdr_4dw.reqid = my_id;
+		   hdr_4dw.nosnoop = SNOOPING_REQD;
+		   hdr_4dw.addr = addr[40-1:2];
+		   hdr_4dw.length = tlplen;
+		   hdr_4dw.firstbe = 4'hf;
+		   hdr_4dw.lastbe = 4'hf;
+		   tlp.data = pack(hdr_4dw);
+		   tlp.be = 16'hffff;
+	       end
+	       else begin
+		   TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
+		   hdr_3dw.format = MEM_READ_3DW_NO_DATA;
+		   hdr_3dw.tag = truncate(arid);
+		   hdr_3dw.reqid = my_id;
+		   hdr_3dw.nosnoop = SNOOPING_REQD;
+		   hdr_3dw.addr = addr[32-1:2];
+		   hdr_3dw.length = tlplen;
+		   hdr_3dw.firstbe = 4'hf;
+		   hdr_3dw.lastbe = 4'hf;
+		   tlp.data = pack(hdr_3dw);
+		   tlp.be = 16'hfff0;
+	       end
+	       tlpOutFifo.enq(tlp);
+           endmethod: readAddr
+	   method ActionValue#(Bit#(buswidth)) readData() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
+	      let data_v = completionMimo.first;
+	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
+	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
+              Bit#(buswidth) v = 0;
+	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
+		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
+	      return v;
+           endmethod: readData
+	   method Bit#(1) last();
+	       return 1;
+           endmethod: last
+	   method Bit#(12) rid();
+	       return zeroExtend(completionTagMimo.first[0]);
+           endmethod: rid
+	   // method Action readResponse(Bit#(2) responseCode);
+	endinterface: read
+    endinterface: slave4
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
    interface Reg use4dw = use4dwReg;
 endmodule: mkAxiSlaveEngine
