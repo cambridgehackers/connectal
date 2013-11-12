@@ -225,10 +225,13 @@ PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
   : handle(0),
     PortalRequest(name,indication)
 {
+
+#ifndef MMAP_HW
   snprintf(p_fd.read.path, sizeof(p_fd.read.path), "/tmp/fd_sock_rc");
   connect_socket(&(p_fd.read));
   snprintf(p_fd.write.path, sizeof(p_fd.write.path), "/tmp/fd_sock_wc");
   connect_socket(&(p_fd.write));
+#endif
 
   const char* path = "/dev/portalalloc";
   this->pa_fd = ::open(path, O_RDWR);

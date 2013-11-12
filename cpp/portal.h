@@ -81,7 +81,9 @@ void* portalExec(void* __x);
 class PortalMemory : public PortalRequest {
  private:
   int handle;
+#ifndef MMAP_HW
   portal p_fd;
+#endif
  protected:
   PortalMemory(const char* name, PortalIndication *indication=0);
  public:
