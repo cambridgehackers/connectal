@@ -124,17 +124,17 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
 
     SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     Vector#(10, SyncBitIfc#(Bit#(1))) iserdes_data <-  replicateM(mkSyncBit(serdes_clock, serdes_reset, defaultClock));
-    SyncFIFOIfc#(Bit#(1)) dackint <- mkSyncFIFO(2, serdes_clock, serdes_reset, defaultClock);
+    SyncFIFOIfc#(Bit#(1)) end_handshake <- mkSyncFIFO(2, serdes_clock, serdes_reset, defaultClock);
 
     Reg#(Bit#(1)) iserdes_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) iodelay_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Reg#(Bit#(10)) ctrl_data <- mkReg(0);
-    Reg#(Bit#(10)) ctrl_data_temp <- mkReg(0);
+    Reg#(Bit#(10)) ctrl_data <- mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
+    Reg#(Bit#(10)) ctrl_data_temp <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) data_init <- mkReg(0);
     Reg#(Bit#(10)) edge_init <- mkReg(0);
     Reg#(Bit#(10)) edge_int <- mkReg(0);
     Reg#(Bit#(1)) edge_intor_reg <- mkReg(0);
-    SyncFIFOIfc#(Bit#(1)) item_req_wire <- mkSyncFIFO(2, defaultClock, defaultReset, serdes_clock);
+    SyncFIFOIfc#(Bit#(1)) start_handshake <- mkSyncFIFO(2, defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) this_aligned_reg <- mkReg(0);
     Wire#(Bit#(1)) this_align_busy_wire <- mkDWire(0);
     Reg#(Bit#(16)) serdes_counter <- mkReg(0);
@@ -146,8 +146,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(16)) retrycounter <- mkReg(0);
     Reg#(Bit#(16)) gencounter <- mkReg(0);
     FIFO#(Bit#(1)) this_start_align_reg <- mkFIFO();
-    FIFO#(Bit#(1)) start_handshake <- mkFIFO();
-    FIFO#(Bit#(1)) end_handshake <- mkFIFO();
     Reg#(Bit#(1)) ctrl_bitslip <- mkReg(0);
     Reg#(Bit#(3)) ctrl_reset_inc_ce <- mkReg(0);
     Vector#(3, SyncBitIfc#(Bit#(1))) ctrl_reset_inc_ce_serdes <- replicateM(mkSyncBit(defaultClock, defaultReset, serdes_clock));
@@ -160,7 +158,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     rule afsminit_rule if (bvi_resets_reg.read() == 0);
-        start_handshake.clear();
         ctrl_reset_inc_ce <= 3'b100;
         ctrl_bitslip <= 0;
         ctrl_samplein_i <= 3'b000;
@@ -530,7 +527,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     rule clkdividle_rule if (bvi_reset_reg != 0 && dstate == DIdle);
-        item_req_wire.deq();
+        start_handshake.deq();
         Bit#(3) sric = 0;
         for (Integer i = 0; i < 3; i = i + 1)
             sric[i] = ctrl_reset_inc_ce_serdes[i].read();
@@ -543,7 +540,8 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         dcounter <= dcounter - 1;
         if (dcounter[2] == 1)
             begin
-            dackint.enq(1);
+            ctrl_data <= ctrl_data_temp;
+            end_handshake.enq(1);
             dstate <= DLow;
             end
         sync_reset_inc_ce <= {sync_reset_inc_ce[2], 2'b0};
@@ -594,19 +592,21 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         slave_data.oclk(0);
         slave_data.oclkb(0);
         slave_data.reset(iodelay_reset_inc_ce[2]);
+    endrule
+    rule serdesda2_rule;
         let dout = {slave_data.q4(), slave_data.q3(), master_data.q8(),
            master_data.q7(), master_data.q6(), master_data.q5(),
            master_data.q4(), master_data.q3(), master_data.q2(), master_data.q1()};
+        ctrl_data_temp <= dout;
         for (Integer i = 0; i < 10; i = i + 1)
             iserdes_data[i].send(dout[i]);
     endrule
 
-    rule dackint_rule;
+    rule datain_rule;
         Bit#(10) dout = 0;
         Bit#(10) edgeo = 0;
         for (Integer i = 0; i < 10; i = i + 1)
             dout[i] = iserdes_data[i].read();
-        ctrl_data_temp <= dout;
         for (Integer i = 0; i < 9; i = i + 1)
             edgeo[i] = dout[i] ^ dout[i+1];
         edgeo[9] = dout[0] ^ dout[9];
@@ -622,20 +622,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             dfifo.di(16'b0);
             dfifo.wren(0);
             end
-    endrule
-
-    rule handinit_rule if (bvi_resets_reg.read() == 0);
-        end_handshake.clear();
-    endrule
-
-    rule handidle_rule;
-        start_handshake.deq();
-        item_req_wire.enq(1);
-    endrule
-    rule handhigh1_rule;
-        dackint.deq();
-        ctrl_data <= ctrl_data_temp;
-        end_handshake.enq(1);
     endrule
 
     rule serdesrule;
