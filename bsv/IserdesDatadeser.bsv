@@ -23,72 +23,11 @@
 
 import Vector::*;
 import Clocks :: *;
+import FIFO::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 
 typedef Vector#(10, Reg#(Bit#(10))) TrainRotate;
-
-interface Iserdesbvi;
-    method Bit#(3)          samplein();
-    method Action           autoalign(Bit#(1) v);
-    method Action           training(Bit#(10) v);
-    method Action           manual_tap(Bit#(10) v);
-    method Action           reset(Bit#(1) v);
-    method Action           dataout(Bit#(10) v);
-    method Action           edgeint(Bit#(10) v);
-    method Action           train0(Bit#(10) v);
-    method Action           train1(Bit#(10) v);
-    method Action           train2(Bit#(10) v);
-    method Action           train3(Bit#(10) v);
-    method Action           train4(Bit#(10) v);
-    method Action           train5(Bit#(10) v);
-    method Action           train6(Bit#(10) v);
-    method Action           train7(Bit#(10) v);
-    method Action           train8(Bit#(10) v);
-    method Action           train9(Bit#(10) v);
-    method Action           edgeintor(Bit#(1) v);
-    method Bit#(1)          ctrl_bitslip();
-    method Bit#(3)          ctrl_reset_inc_ce();
-    method Action           endhandshake(Bit#(1) v);
-    method Bit#(1)          starthandshake();
-    method Bit#(1)          busy_align_i();
-    method Action           start_align_i(Bit#(1) v);
-endinterface: Iserdesbvi
-
-import "BVI" iserdes_datadeser = 
-module mkIserdesbvi#(Clock clkdiv, Reset clkdiv_reset)(Iserdesbvi);
-    input_clock clkdiv () = clkdiv;
-    default_clock clock(CLOCK);
-    input_reset clkdiv_reset() clocked_by(clkdiv) = clkdiv_reset;
-    method CTRL_SAMPLEIN_i    samplein() clocked_by (clock);
-    method                  autoalign(AUTOALIGN) enable((*inhigh*) en7) clocked_by (clock);
-    method                  training(TRAINING) enable((*inhigh*) en8) clocked_by (clock);
-    method                  manual_tap(MANUAL_TAP) enable((*inhigh*) en9) clocked_by (clock);
-    method                  reset(RESET) enable((*inhigh*) en17) clocked_by (clkdiv) reset_by(clkdiv_reset);
-    method                  dataout(CTRL_DATA) enable((*inhigh*) en18) clocked_by(clock);
-    method                  edgeint(EDGE_INT) enable((*inhigh*) en19) clocked_by(clock);
-    method                  train0(TRAIN0) enable((*inhigh*) en30) clocked_by(clock);
-    method                  train1(TRAIN1) enable((*inhigh*) en31) clocked_by(clock);
-    method                  train2(TRAIN2) enable((*inhigh*) en32) clocked_by(clock);
-    method                  train3(TRAIN3) enable((*inhigh*) en33) clocked_by(clock);
-    method                  train4(TRAIN4) enable((*inhigh*) en34) clocked_by(clock);
-    method                  train5(TRAIN5) enable((*inhigh*) en35) clocked_by(clock);
-    method                  train6(TRAIN6) enable((*inhigh*) en36) clocked_by(clock);
-    method                  train7(TRAIN7) enable((*inhigh*) en37) clocked_by(clock);
-    method                  train8(TRAIN8) enable((*inhigh*) en38) clocked_by(clock);
-    method                  train9(TRAIN9) enable((*inhigh*) en39) clocked_by(clock);
-    method                  edgeintor(EDGE_INT_OR) enable((*inhigh*) en21) clocked_by(clock);
-    method CTRL_BITSLIP     ctrl_bitslip() clocked_by(clkdiv) reset_by(clkdiv_reset);
-    method CTRL_RESET_INC_CE ctrl_reset_inc_ce() clocked_by(clkdiv) reset_by(clkdiv_reset);
-    method                  endhandshake(end_handshake) enable((*inhigh*) en20) clocked_by(clock);
-    method start_handshake starthandshake();
-    method busy_align_i busy_align_i();
-    method                  start_align_i(start_align_i) enable((*inhigh*) en22) clocked_by(clock);
-    schedule (busy_align_i, start_align_i, train0, train1, train2, train3, train4, train5, train6, train7, train8, train9,
-              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, reset, dataout, samplein, autoalign, training, manual_tap)
-         CF (busy_align_i, start_align_i, train0, train1, train2, train3, train4, train5, train6, train7, train8, train9,
-              edgeintor, edgeint, endhandshake, starthandshake, ctrl_reset_inc_ce, ctrl_bitslip, reset, dataout, samplein, autoalign, training, manual_tap);
-endmodule: mkIserdesbvi
 
 interface IserdesDatadeser;
     method Action           ibufdso(Bit#(1) v);
@@ -140,13 +79,13 @@ endmodule: mkFIFO18
 typedef enum { DIdle, DValid, DLow} DState deriving (Bits,Eq);
 typedef enum { HIdle, HHigh, HLow} HState deriving (Bits,Eq);
 typedef enum { QIdle, QTrain, QOn, QOff} QState deriving (Bits,Eq);
+typedef enum { AIdle, ADelay, AWDelay, AEdge, ACEdge, AWait, ACompare, AValid, A1Changed, A1Stable, ASecond, AFound, AResetman, AStart, AAlign, ADone } AState deriving (Bits,Eq);
 
 module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest, Bit#(1) align_start,
     Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, Bit#(1) rden, TrainRotate trainrot)(IserdesDatadeser);
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
-    Iserdesbvi serbvi <- mkIserdesbvi(serdes_clock, serdes_reset);
     FIFO18 dfifo <- mkFIFO18(serdes_clock);
     IdelayE2 delaye2 <- mkIDELAYE2(IDELAYE2_Config {
         cinvctrl_sel: "FALSE", delay_src: "IDATAIN",
@@ -195,77 +134,384 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(1)) iserdes_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) iodelay_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) ctrl_data <- mkReg(0);
+    Reg#(Bit#(10)) data_init <- mkReg(0);
+    Reg#(Bit#(10)) edge_init <- mkReg(0);
+    Reg#(Bit#(10)) edge_int <- mkReg(0);
     Reg#(HState)  hstate <- mkReg(HIdle);
     Reg#(Bit#(6)) hcounter <- mkReg(0);
     Reg#(Bit#(1)) edge_intor_reg <- mkReg(0);
     SyncBitIfc#(Bit#(1)) item_req_wire <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) this_aligned_reg <- mkReg(0);
     Wire#(Bit#(1)) this_align_busy_wire <- mkDWire(0);
-    Reg#(Bit#(1)) this_start_align_reg <- mkReg(0);
+    FIFO#(Bit#(1)) this_start_align_reg <- mkFIFO();
     Reg#(Bit#(16)) serdes_counter <- mkReg(0);
     Reg#(QState)  qstate <- mkReg(QIdle);
+    Reg#(AState)  astate <- mkReg(AIdle);
+    Reg#(Bit#(11)) maxcount <- mkReg(0);
+    Reg#(Bit#(10)) windowcount <- mkReg(0);
+    Reg#(Bit#(3)) ctrl_samplein_i <- mkReg(0);
+    Reg#(Bit#(16)) retrycounter <- mkReg(0);
+    Reg#(Bit#(16)) gencounter <- mkReg(0);
+///
+    FIFO#(Bit#(1)) start_handshake <- mkFIFO();
+    FIFO#(Bit#(1)) end_handshake <- mkFIFO();
+    Reg#(Bit#(1)) ctrl_bitslip <- mkReg(0);
+    Reg#(Bit#(3)) ctrl_reset_inc_ce <- mkReg(0);
+    Vector#(3, SyncBitIfc#(Bit#(1))) ctrl_reset_inc_ce_serdes <- replicateM(mkSyncBit(defaultClock, defaultReset, serdes_clock));
+    SyncBitIfc#(Bit#(1)) ctrl_bitslip_serdes <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
 
-    rule trainrot_rule;
-        serbvi.train0(trainrot[0]);
-        serbvi.train1(trainrot[1]);
-        serbvi.train2(trainrot[2]);
-        serbvi.train3(trainrot[3]);
-        serbvi.train4(trainrot[4]);
-        serbvi.train5(trainrot[5]);
-        serbvi.train6(trainrot[6]);
-        serbvi.train7(trainrot[7]);
-        serbvi.train8(trainrot[8]);
-        serbvi.train9(trainrot[9]);
+    rule controlserdes_rule;
+        for (Integer i = 0; i < 3; i = i + 1)
+            ctrl_reset_inc_ce_serdes[i].send(ctrl_reset_inc_ce[i]);
+        ctrl_bitslip_serdes.send(ctrl_bitslip);
     endrule
-    //rule clkdivreset_rule if (bvi_resets_reg.read() != 0);
-        //dfifo_reset_r.send(this_align_busy_wire);
-    //endrule
+
+    rule afsminit_rule if (bvi_resets_reg.read() == 0);
+        start_handshake.clear();
+        //busy_align_i <= 0;
+        ctrl_reset_inc_ce <= 3'b100;
+        ctrl_bitslip <= 0;
+        ctrl_samplein_i <= 3'b000;
+        edge_init <= 0;
+        data_init <= 0;
+        maxcount <= -1;
+        windowcount <= 0;
+        retrycounter <= -1;
+        gencounter <= -1;
+        astate <= AIdle;
+    endrule
+
+    rule afsmidle2_rule if (bvi_resets_reg.read() != 0 && astate == AIdle);
+        this_start_align_reg.deq();
+        windowcount <= 0;
+        retrycounter <= 32765;
+        start_handshake.enq(1);
+        ctrl_reset_inc_ce <= 3'b100;
+        maxcount <= 31;
+        ctrl_samplein_i <= 3'b000;
+        let as = ADelay;
+        if (autoalign != 1)
+            begin
+            gencounter <= {6'b000000, manual_tap};
+            as = AResetman;
+            end
+        astate <= as;
+    endrule
+    rule afsmdelay_rule if (bvi_resets_reg.read() != 0 && astate == ADelay);
+        end_handshake.deq();
+        gencounter <= 15;
+        astate <= AWDelay;
+    endrule
+    rule afsmwdelay_rule if (bvi_resets_reg.read() != 0 && astate == AWDelay);
+        start_handshake.enq(1);
+        ctrl_reset_inc_ce <= 3'b000;
+        astate <= AEdge;
+    endrule
+    rule afsmedge_rule if (bvi_resets_reg.read() != 0 && astate == AEdge);
+        end_handshake.deq();
+        astate <= ACEdge;
+    endrule
+    rule afsmcedge_rule if (bvi_resets_reg.read() != 0 && astate == ACEdge);
+        let as = AIdle;
+        let mc = maxcount;
+        if (retrycounter >= 'h8000)
+            begin
+            let cric = 3'b011;
+            retrycounter <= retrycounter - 1;
+            start_handshake.enq(1);
+            //if (start_handshake == 0 && edge_intor_reg == 1)
+            if (edge_intor_reg == 1)
+                begin
+                data_init <= ctrl_data;
+                edge_init <= edge_int;
+                cric = 3'b000;
+                as = AWait;
+                end
+            else if (maxcount[10] == 1)
+                begin
+                cric = 3'b100;
+                mc = 31;
+                as = ADelay;
+                end
+            else
+                begin
+                mc = mc - 1;
+                as = AEdge;
+                end
+            ctrl_reset_inc_ce <= cric;
+            end
+        astate <= as;
+        maxcount <= mc;
+    endrule
+    rule afsmwait_rule if (bvi_resets_reg.read() != 0 && astate == AWait);
+        end_handshake.deq();
+        let as = astate;
+        let gc = gencounter;
+        if (gencounter >= 'h8000)
+            begin
+            gc = 9;
+            as = ACompare;
+            end
+        else
+            begin
+            let cric = 3'b000;
+            start_handshake.enq(1);
+            if (edge_init != edge_int)
+                begin
+                let mc = maxcount;
+                retrycounter <= retrycounter - 1;
+                if (maxcount[10] == 1)
+                    begin
+                    cric = 3'b100;
+                    mc = 31;
+                    as = ADelay;
+                    end
+                else
+                    begin
+                    cric = 3'b011;
+                    mc = mc - 1;
+                    gc = 14;
+                    as = AEdge;
+                    end
+                maxcount <= mc;
+                end
+            else
+                begin
+                gc = gc - 1;
+                end
+            ctrl_reset_inc_ce <= cric;
+            end
+        astate <= as;
+        gencounter <= gc;
+    endrule
+    rule afsmcompare_rule if (bvi_resets_reg.read() != 0 && astate == ACompare);
+        let as = astate;
+        let gc = gencounter;
+        if (gencounter >= 'h8000)
+            begin
+            let mc = maxcount;
+            let cric = ctrl_reset_inc_ce;
+            start_handshake.enq(1);
+            if (maxcount[10] == 1)
+                begin
+                cric = 3'b100;
+                mc = 31;
+                as = ADelay;
+                end
+            else
+                begin
+                retrycounter <= retrycounter - 1;
+                cric = 3'b011;
+                mc = mc - 1;
+                gc = 14;
+                as = AEdge;
+                end
+            maxcount <= mc;
+            ctrl_reset_inc_ce <= cric;
+            end
+        else
+            begin
+            if (ctrl_data == trainrot[gencounter])
+                begin
+                let csami = 3'b001;
+                if (gencounter == 9)
+                    csami = 3'b010;
+                else if (gencounter == 8)
+                    csami = 3'b100;
+                ctrl_samplein_i <= csami;
+                as = AValid;
+                end
+            gc = gc - 1;
+            end
+        astate <= as;
+        gencounter <= gc;
+    endrule
+    rule afsmvalid_rule if (bvi_resets_reg.read() != 0 && astate == AValid);
+        start_handshake.enq(1);
+        ctrl_reset_inc_ce <= 3'b011;
+        maxcount <= maxcount - 1;
+        astate <= A1Changed;
+    endrule
+    rule afsm1changed_rule if (bvi_resets_reg.read() != 0 && astate == A1Changed);
+        end_handshake.deq();
+        let as = astate;
+        let cric = 3'b000;
+        start_handshake.enq(1);
+        if (ctrl_data == rotateBitsBy(data_init, 10-1))
+            begin
+            gencounter <= 15;
+            as = A1Stable;
+            end
+        else
+            begin
+            let mc = maxcount;
+            if (maxcount[10] == 1)
+                begin
+                cric = 3'b100;
+                mc = 31;
+                as = ADelay;
+                end
+            else
+                begin
+                cric = 3'b011;
+                mc = mc - 1;
+                end
+            maxcount <= mc;
+            end
+        astate <= as;
+        ctrl_reset_inc_ce <= cric;
+    endrule
+    rule afsm1stable_rule if (bvi_resets_reg.read() != 0 && astate == A1Stable);
+        end_handshake.deq();
+        let as = astate;
+        let mc = maxcount;
+        let cric = 3'b011;
+        start_handshake.enq(1);
+        if (gencounter >= 'h8000)
+            begin
+            windowcount <= windowcount + 1;
+            mc = mc - 1;
+            as = ASecond;
+            end
+        else
+            begin
+            let gc = gencounter - 1;
+            if (ctrl_data == rotateBitsBy(data_init, 10-1))
+                cric = 3'b000;
+            else
+                begin
+                cric = 3'b011;
+                mc = mc - 1;
+                gc = 15;
+                as = A1Changed;
+                end
+            gencounter <= gc;
+            end
+        astate <= as;
+        maxcount <= mc;
+        ctrl_reset_inc_ce <= cric;
+    endrule
+    rule afsmsecond_rule if (bvi_resets_reg.read() != 0 && astate == ASecond);
+        end_handshake.deq();
+        let as = astate;
+        let cric = 3'b001;
+        start_handshake.enq(1);
+        if (ctrl_data == rotateBitsBy(data_init, 10-2))
+            begin
+            gencounter <= {7'b0, windowcount[9:1]} - 16'b10;
+            as = AFound;
+            end
+        else
+            begin
+            if (maxcount[10] == 1)
+                begin
+                cric = 3'b100;
+                as = ADelay;
+                end
+            else
+                begin
+                windowcount <= windowcount + 1;
+                cric = 3'b011;
+                maxcount <= maxcount - 1;
+                end
+            end
+        astate <= as;
+        ctrl_reset_inc_ce <= cric;
+    endrule
+    rule afsmfound_rule if (bvi_resets_reg.read() != 0 && astate == AFound);
+        end_handshake.deq();
+        if (gencounter >= 'h8000)
+            astate <= AStart;
+        else
+            begin
+            start_handshake.enq(1);
+            ctrl_reset_inc_ce <= 3'b001;
+            gencounter <= gencounter - 1;
+            end
+    endrule
+    rule afsmresetman_rule if (bvi_resets_reg.read() != 0 && astate == AResetman);
+        end_handshake.deq();
+        if (gencounter >= 'h8000)
+            astate <= AStart;
+        else
+            begin
+            start_handshake.enq(1);
+            ctrl_reset_inc_ce <= 3'b011;
+            gencounter <= gencounter - 1;
+            end
+    endrule
+    rule afsmstart_rule if (bvi_resets_reg.read() != 0 && astate == AStart);
+        let as = ADone;
+        if (ctrl_data != training)
+            begin
+            start_handshake.enq(1);
+            ctrl_reset_inc_ce <= 3'b000;
+            gencounter <= 8;
+            ctrl_bitslip <= 1;
+            as = AAlign;
+            end
+        astate <= as;
+    endrule
+    rule afsmalign_rule if (bvi_resets_reg.read() != 0 && astate == AAlign);
+        end_handshake.deq();
+        let as = astate;
+        if (ctrl_data == training)
+            as = ADone;
+        else
+            begin
+            if (gencounter >= 'h8000)
+                as = AIdle;
+            else
+                begin
+                start_handshake.enq(1);
+                ctrl_bitslip <= 1;
+                gencounter <= gencounter - 1;
+                end
+            end
+        astate <= as;
+    endrule
+    rule afsmdone_rule if (bvi_resets_reg.read() != 0 && astate == ADone);
+        ctrl_reset_inc_ce <= 3'b000;
+        ctrl_bitslip <= 0;
+        astate <= AIdle;
+    endrule
+
     rule qfsmreset_rule if (bvi_resets_reg.read() == 0);
         this_aligned_reg <= 0;
         qstate <= QIdle;
         serdes_counter <= 0;
         ctrl_sample <= 0;
-        this_start_align_reg <= 0;
+        this_start_align_reg.clear();
     endrule
     rule qfsmall;
-        serbvi.start_align_i(this_start_align_reg);
         let abusy = pack(qstate != QIdle);
         dfifo_reset_r.send(abusy);
         this_align_busy_wire <= abusy;
         samplein_reset_null.send(ctrl_sample[2]);
     endrule
-    rule qfsm_rule if (bvi_resets_reg.read() != 0);
-        let qs = qstate;
-        let scount = serdes_counter;
-        let sa = 0;
-        if (qstate == QIdle && align_start == 1)
-            begin
-            scount = 0;
-            sa = 1;
-            qs = QTrain;
-            end
-        if (qstate == QTrain)
-            qs = QOn;
-        if (qstate == QOn && serbvi.busy_align_i() == 1)
-            qs = QOff;
-        if (qstate == QOff && serbvi.busy_align_i() == 0)
-            begin
-            ctrl_sample <= serbvi.samplein();
-            if (serdes_counter <= 'h7fff)
-                begin
-                this_aligned_reg <= 1;
-                qs = QIdle;
-                end
-            else
-                begin
-                scount = scount + 1;
-                sa = 1;
-                qs = QTrain;
-                end
-            end
-        qstate <= qs;
-        serdes_counter <= scount;
-        this_start_align_reg <= sa;
+
+    rule qfsmidle_rule if (bvi_resets_reg.read() != 0 && qstate == QIdle && align_start == 1);
+        serdes_counter <= 0;
+        qstate <= QTrain;
+    endrule
+    rule qfsmqtrain_rule if (bvi_resets_reg.read() != 0 && qstate == QTrain);
+        this_start_align_reg.enq(1);
+        qstate <= QOn;
+    endrule
+    rule qfsmqon_rule if (bvi_resets_reg.read() != 0 && qstate == QOn);
+// && busy_align_i == 1);
+        qstate <= QOff;
+    endrule
+    rule qfsmqoff1_rule if (bvi_resets_reg.read() != 0 && qstate == QOff && serdes_counter <= 'h7fff);
+//&& busy_align_i == 0 
+        ctrl_sample <= ctrl_samplein_i;
+        this_aligned_reg <= 1;
+        qstate <= QIdle;
+    endrule
+    rule qfsmqoff2_rule if (bvi_resets_reg.read() != 0 && qstate == QOff && serdes_counter > 'h7fff);
+//&& busy_align_i == 0 
+        serdes_counter <= serdes_counter + 1;
+        qstate <= QTrain;
     endrule
 
     rule reset_clock_rule;
@@ -294,7 +540,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule clkdiv_rule if (bvi_reset_reg != 0);
         let ds = dstate;
         let dc = dcounter;
-        let sric = sync_reset_inc_ce;
+        Bit#(3) sric = sync_reset_inc_ce;
         let sbs = 0;
   
         dc = dc - 1;
@@ -306,8 +552,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         iserdes_bitslip <= sync_bitslip;
         if (dstate == DIdle && dreqpipe1 == 1)
             begin
-            sric = serbvi.ctrl_reset_inc_ce();
-            sbs = serbvi.ctrl_bitslip();
+            for (Integer i = 0; i < 3; i = i + 1)
+                sric[i] = ctrl_reset_inc_ce_serdes[i].read();
+            sbs = ctrl_bitslip_serdes.read();
             dc = 3;
             ds = DValid;
             end
@@ -385,13 +632,11 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         dackint_last <= dackint.read();
         if (dackint.read() == 1 && dackint_last == 0)
             ctrl_data <= dout;
-        serbvi.dataout(dout);
         for (Integer i = 0; i < 9; i = i + 1)
             edgeo[i] = dout[i] ^ dout[i+1];
         edgeo[9] = dout[0] ^ dout[9];
-        serbvi.edgeint(edgeo);
-        edge_intor_reg <= pack(serbvi.starthandshake() == 0 && edgeo != 0);
-        serbvi.edgeintor(edge_intor_reg);
+        edge_int <= edgeo;
+        edge_intor_reg <= pack(edgeo != 0);
         dfifo.di({6'b0,dout});
         dfifo.wren(fifo_wren_sync.read());
     endrule
@@ -400,49 +645,42 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         hstate <= HIdle;
         hcounter <= 0;
         item_req_wire.send(0);
-        serbvi.endhandshake(0);
+        end_handshake.clear();
     endrule
 
-    rule hand_rule if (bvi_resets_reg.read() != 0);
-        let hs = hstate;
-        let hend = 0;
-        let hc = hcounter;
-        hc = hc + 1;
-        if (hstate == HIdle && serbvi.starthandshake() == 1)
-            begin
-            hc = 0;
-            hs = HHigh;
-            end
-        if (hstate == HHigh && dackint.read() == 1)
-            begin
-            hc = 0;
-            hs = HLow;
-            end
-        if (hstate == HHigh && hcounter >= 'h20)
-            begin
-            hend = 1;
-            hs = HIdle;
-            end
-        if (hstate == HLow && (dackint.read() == 0 || hcounter >= 'h20))
-            begin
-            hend = 1;
-            hs = HIdle;
-            end
-        serbvi.endhandshake(hend);
-        hstate <= hs;
-        hcounter <= hc;
-    endrule
-    rule hstate1_rule if (bvi_resets_reg.read() != 0 && hstate == HIdle && serbvi.starthandshake() == 1);
+    rule handidle_rule if (bvi_resets_reg.read() != 0 && hstate == HIdle);
+        start_handshake.deq();
+        hcounter <= 0;
+        hstate <= HHigh;
         item_req_wire.send(1);
     endrule
-    rule hstate2_rule if (bvi_resets_reg.read() != 0 && hstate == HHigh && dackint.read() == 1);
+    rule handhigh2_rule if (bvi_resets_reg.read() != 0 && hstate == HHigh && dackint.read() == 0);
+        if (hcounter >= 'h20)
+            begin
+            end_handshake.enq(1);
+            hstate <= HIdle;
+            end
+        hcounter <= hcounter + 1;
+    endrule
+    rule handhigh1_rule if (bvi_resets_reg.read() != 0 && hstate == HHigh && dackint.read() == 1);
+        hcounter <= 0;
+        hstate <= HLow;
         item_req_wire.send(0);
     endrule
+    rule handlow_rule if (bvi_resets_reg.read() != 0 && hstate == HLow);
+        if (dackint.read() == 0 || hcounter >= 'h20)
+            begin
+            end_handshake.enq(1);
+            hstate <= HIdle;
+            end
+        hcounter <= hcounter + 1;
+    endrule
+
+    //rule hstate2_rule if (bvi_resets_reg.read() != 0 && hstate == HHigh && dackint.read() == 1);
+        //item_req_wire.send(0);
+    //endrule
 
     rule serdesrule;
-        serbvi.autoalign(autoalign);
-        serbvi.training(training);
-        serbvi.manual_tap(manual_tap);
         dfifo.rden(rden);
     endrule
 
@@ -472,7 +710,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endmethod
     method Action                 reset(Bit#(1) v);
         bvi_reset_reg <= v;
-        serbvi.reset(v);
     endmethod
     method Bit#(1)                empty();
         return dfifo.empty();
