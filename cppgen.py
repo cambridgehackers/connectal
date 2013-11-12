@@ -12,7 +12,7 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
-LOCAL_SRC_FILES := %(ClassName)s.cpp portal.cpp test%(classname)s.cpp
+LOCAL_SRC_FILES := %(ClassName)s.cpp portal.cpp test%(classname)s.cpp sock_fd.cxx
 LOCAL_MODULE = test%(classname)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog

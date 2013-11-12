@@ -117,11 +117,21 @@ void parent(int rd_sock, int wr_sock)
 
   sem_wait(&done_sem);
   
-  int i;
-  sock_fd_write(wr_sock, dstAlloc.header.fd);
-  munmap(dstBuffer, alloc_sz);
-  close(dstAlloc.header.fd);
-  while(1){sleep(1);}
+  if(false){
+    sock_fd_write(wr_sock, dstAlloc.header.fd);
+    munmap(dstBuffer, alloc_sz);
+    close(dstAlloc.header.fd);
+    while(1){sleep(1);}
+  } else {
+    bool mismatch = false;
+    unsigned int sg = 0;
+    for (int i = 0; i < numWords; i++){
+      mismatch |= (dstBuffer[i] != sg++);
+      fprintf(stderr, "%08x, %08x\n", dstBuffer[i], sg);
+    }
+    fprintf(stderr, "parent::writeDone mismatch=%d\n", mismatch);
+    munmap(dstBuffer, alloc_sz);
+  }
 }
 
 int main(int argc, const char **argv)
@@ -136,7 +146,8 @@ int main(int argc, const char **argv)
   switch ((pid = fork())) {
   case 0:
     close(sv[0]);
-    child(sv[1]);
+    if(false)
+      child(sv[1]);
     break;
   case -1:
     perror("fork");

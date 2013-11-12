@@ -60,8 +60,8 @@ sock_fd_write(int sock, int fd)
 ssize_t
 sock_fd_read(int sock, int *fd)
 {
-    char buf[] = "1";
-    ssize_t buflen = 1;
+    char buf[16];
+    ssize_t buflen = 16;
 
     ssize_t size;
 
