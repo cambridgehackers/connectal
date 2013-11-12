@@ -68,6 +68,7 @@ void child(int rd_sock)
   bool mismatch = false;
   for (int i = 0; i < numWords; i++){
     mismatch |= (dstBuffer[i] != sg++);
+    //fprintf(stderr, "%08x, %08x\n", dstBuffer[i], sg-1);
   }
   fprintf(stderr, "child::writeDone mismatch=%d\n", mismatch);
   munmap(dstBuffer, alloc_sz);
@@ -96,7 +97,7 @@ void parent(int rd_sock, int wr_sock)
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
   
   pthread_t tid;
-  fprintf(stderr, "parent::creating exec thwrite\n");
+  fprintf(stderr, "parent::creating portalExec thread\n");
   if(pthread_create(&tid, NULL,  portalExec, NULL)){
     fprintf(stderr, "error creating exec thwrite\n");
     exit(1);
@@ -129,6 +130,7 @@ void parent(int rd_sock, int wr_sock)
     unsigned int sg = 0;
     for (int i = 0; i < numWords; i++){
       mismatch |= (dstBuffer[i] != sg++);
+      //fprintf(stderr, "%08x, %08x\n", dstBuffer[i], sg-1);
     }
     fprintf(stderr, "parent::writeDone mismatch=%d\n", mismatch);
     munmap(dstBuffer, alloc_sz);

@@ -274,7 +274,7 @@ int PortalMemory::reference(PortalAlloc* pa)
     sleep(1);
   }
 #else
-  sock_fd_write(p_fd.write.s2, pa_fd);
+  sock_fd_write(p_fd.write.s2, pa->header.fd);
   paref(id, id);
 #endif
   return id;
@@ -403,7 +403,7 @@ void* portalExec(void* __x)
 	unsigned int queue_status;
 	//fprintf(stderr, "about to get read response\n");
 	if(recv(instance->p.read.s2, &queue_status, sizeof(queue_status), 0) == -1){
-	  fprintf(stderr, "(%s) recv error\n", instance->name);
+	  fprintf(stderr, "portalExec recv error (%s)\n", instance->name);
 	  exit(1);	  
 	}
 	//fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);

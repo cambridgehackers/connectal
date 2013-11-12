@@ -54,7 +54,8 @@ typedef enum {Idle, LoadCtxt, Data, Done} InternalState deriving(Eq,Bits);
 		 
 typedef struct {
    Bit#(32)  offset;
-   Bit#(4) burstLen; 
+   Bit#(4) burstLen;
+   Bool cfg;
    } DmaChannelPtr deriving (Bits);
 		 
 module mkBsimDMAReadInternal(BsimDMAReadInternal);
@@ -87,7 +88,7 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
    Reg#(DmaChannelId)  activeChan <- mkReg(0);
    Reg#(InternalState)   stateReg <- mkReg(Idle);
    Reg#(DmaChannelId)   selectReg <- mkReg(0);
-
+   
    rule incSelectReg;
       selectReg <= selectReg+1;
    endrule
@@ -98,14 +99,16 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
    endrule
    
    rule loadChannel if (stateReg == LoadCtxt);
-      let bl = ctxtPtrs[activeChan].burstLen;
-      if(writeBuffers[activeChan].highWater(zeroExtend(bl)+1))
+      let ctx = ctxtPtrs[activeChan];
+      let bl = ctx.burstLen;
+      if(writeBuffers[activeChan].highWater(zeroExtend(bl)+1) && ctx.cfg)
 	 begin
 	    reqOutstanding[activeChan] <= False;
-	    let  offset = ctxtPtrs[activeChan].offset;
+	    let  ofs = ctx.offset;
 	    burstReg <= bl;
-	    addrReg <= offset;
+	    addrReg <= ofs;
 	    stateReg <= Data;
+	    ctxtPtrs[activeChan] <= DmaChannelPtr{offset:ofs+zeroExtend(bl)+1, burstLen:bl, cfg:True};
 	 end
       else
 	 begin
@@ -114,9 +117,9 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
    endrule
    
    rule writeData if (stateReg == Data);
+      addrReg <= addrReg+1;
       writeBuffers[activeChan].fifo.deq;
       let v = writeBuffers[activeChan].fifo.first;
-      Bit#(1) last = burstReg == 0 ? 1'b1 : 1'b0;
       if(burstReg == 0)
 	 stateReg <= Done;
       else
@@ -131,7 +134,7 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
 
    interface DMAWrite write;
       method Action configChan(DmaChannelId channelId, Bit#(32) pref, Bit#(4) bsz);
-   	 ctxtPtrs[channelId] <= DmaChannelPtr{offset:0, burstLen:bsz};
+   	 ctxtPtrs[channelId] <= DmaChannelPtr{offset:0, burstLen:bsz, cfg:True};
       endmethod
       interface writeChannels = zipWith3(mkWriteChan, map(toPut,writeBuffers), 
 					 map(mkPutWhenFalse, reqOutstanding),
