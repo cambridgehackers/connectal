@@ -104,3 +104,81 @@ interface Axi3Server#(type addrWidth, type busWidth, type busWidthBytes, type id
    interface Axi3ReadServer#(addrWidth, busWidth, idWidth) read;
    interface Axi3WriteServer#(addrWidth, busWidth, busWidthBytes, idWidth) write;
 endinterface
+
+typedef struct {
+    Bit#(addrWidth) address;
+    Bit#(8) burstLen;
+    // Bit#(3) burstWidth; // assume matches bus width of Axi4Client
+    // Bit#(2) readBurstType();  // drive with 2'b01
+    // Bit#(2) readBurstProt(); // drive with 3'b000
+    // Bit#(3) readBurstCache(); // drive with 4'b0011
+    Bit#(idWidth) id;
+} Axi4ReadRequest#(type addrWidth, type idWidth) deriving (Bits);
+
+typedef struct {
+    Bit#(busWidth) data;
+    Bit#(2) code;
+    Bit#(1) last;
+    Bit#(idWidth) id;
+} Axi4ReadResponse#(type busWidth, type idWidth) deriving (Bits);
+
+interface Axi4ReadClient#(type addrWidth, type busWidth, type idWidth);
+   method ActionValue#(Axi4ReadRequest#(addrWidth, idWidth)) address();
+   method Action data(Axi4ReadResponse#(busWidth, idWidth) response);
+endinterface
+
+typedef struct {
+    Bit#(addrWidth) address;
+    Bit#(8) burstLen;
+    // Bit#(3) burstWidth; // assume matches bus width of Axi4Client
+    // Bit#(2) burstType;  // drive with 2'b01
+    // Bit#(2) burstProt; // drive with 3'b000
+    // Bit#(3) burstCache; // drive with 4'b0011
+    Bit#(idWidth) id;
+} Axi4WriteRequest#(type addrWidth, type idWidth) deriving (Bits);
+
+typedef struct {
+    Bit#(busWidth) data;
+    Bit#(busWidthBytes) byteEnable;
+    Bit#(1)        last;
+    Bit#(idWidth) id;
+} Axi4WriteData#(type busWidth, type busWidthBytes, type idWidth) deriving (Bits);
+
+typedef struct {
+    Bit#(2) code;
+    Bit#(idWidth) id;
+} Axi4WriteResponse#(type idWidth) deriving (Bits);
+
+interface Axi4WriteClient#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+   method ActionValue#(Axi4WriteRequest#(addrWidth, idWidth)) address();
+   method ActionValue#(Axi4WriteData#(busWidth, busWidthBytes, idWidth)) data();
+   method Action response(Axi4WriteResponse#(idWidth) response);
+endinterface
+
+interface Axi4Client#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+   interface Axi4ReadClient#(addrWidth, busWidth, idWidth) read;
+   interface Axi4WriteClient#(addrWidth, busWidth, busWidthBytes, idWidth) write;
+endinterface
+
+module mkAxi4Client#(Axi4WriteClient#(addrWidth, busWidth,busWidthBytes,idWidth) writeClient,
+                     Axi4ReadClient#(addrWidth, busWidth,idWidth) readClient)
+                    (Axi4Client#(addrWidth, busWidth, busWidthBytes, idWidth));
+    interface Axi4ReadClient read = readClient;
+    interface Axi4WriteClient write = writeClient;
+endmodule
+
+interface Axi4ReadServer#(type addrWidth, type busWidth, type idWidth);
+   method Action address(Axi4ReadRequest#(addrWidth, idWidth) request);
+   method ActionValue#(Axi4ReadResponse#(busWidth, idWidth)) data();
+endinterface
+
+interface Axi4WriteServer#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+   method Action address(Axi4WriteRequest#(addrWidth, idWidth) request);
+   method Action data(Axi4WriteData#(busWidth, busWidthBytes, idWidth) data);
+   method ActionValue#(Axi4WriteResponse#(idWidth)) response();
+endinterface
+
+interface Axi4Server#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+   interface Axi4ReadServer#(addrWidth, busWidth, idWidth) read;
+   interface Axi4WriteServer#(addrWidth, busWidth, busWidthBytes, idWidth) write;
+endinterface
