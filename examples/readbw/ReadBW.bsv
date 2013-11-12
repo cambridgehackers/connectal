@@ -65,7 +65,7 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
     FIFO#(TimestampedTlpData) ttdFifo <- mkFIFO;
 
     Reg#(Bit#(9)) readBurstCount <- mkReg(0);
-    FIFO#(Tuple2#(Bit#(9),Bit#(32))) readBurstCountStartTimeFifo <- mkSizedFIFO(2);
+   FIFO#(Tuple2#(Bit#(9),Bit#(32))) readBurstCountStartTimeFifo <- mkSizedFIFO(4);
 
    Reg#(Bit#(40)) readMultipleAddr <- mkReg(0);
    Reg#(Bit#(8)) readMultipleLen <- mkReg(0);
@@ -153,9 +153,10 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	      trace[95:64] = latency;
 	      trace[31:0] = zeroExtend(rbc);
 	      ttd.tlp = unpack(trace);
-	      ttdFifo.enq(ttd);
 
 	      if (rbc == 1) begin
+		 ttdFifo.enq(ttd);
+
 	         readDataFifo.enq(tuple2(response.data, latency));
 		 // this request is done, dequeue its information
 		 readBurstCountStartTimeFifo.deq;
