@@ -24,6 +24,7 @@
 import Vector::*;
 import Clocks :: *;
 import FIFO::*;
+import FIFOF::*;
 import SyncBits::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
@@ -42,39 +43,6 @@ interface IserdesDatadeser;
     method Bit#(10)         dataout();
 endinterface: IserdesDatadeser
 
-interface FIFO18;
-   method Action            di(Bit#(16) v);
-   method Action            rden(Bit#(1) v);
-   method Action            wren(Bit#(1) v);
-   method Action            reset(Bit#(1) v);
-   method Bit#(16)          dataout();
-   method Bit#(1)           empty();
-endinterface: FIFO18
-
-import "BVI" FIFO18 = 
-module mkFIFO18#(Clock clkdiv)(FIFO18);
-    parameter ALMOST_FULL_OFFSET = 'h80;
-    parameter ALMOST_EMPTY_OFFSET = 'h80;
-    parameter DATA_WIDTH = 18;
-    parameter DO_REG = 1;
-    parameter EN_SYN = 0;
-    parameter FIRST_WORD_FALL_THROUGH = 0;
-    parameter SIM_MODE = "SAFE";
-
-    default_clock clock(RDCLK);
-    input_clock clkdiv (WRCLK) = clkdiv;
-    no_reset;
-    port DIP = 0;
-
-    method          reset(RST) enable((*inhigh*) en9) clocked_by (clkdiv);
-    method          di(DI) enable((*inhigh*) en0) clocked_by (clock); //clkdiv);
-    method          rden(RDEN) enable((*inhigh*) en2) clocked_by (clock);
-    method          wren(WREN) enable((*inhigh*) en3) clocked_by (clock);
-    method DO       dataout() clocked_by(clock);
-    method EMPTY    empty() clocked_by(clock);
-    schedule (reset, di, rden, wren, dataout, empty) CF (reset, di, rden, wren, dataout, empty);
-endmodule: mkFIFO18
-
 typedef enum { QIdle, QTrain, QOff} QState deriving (Bits,Eq);
 typedef enum { AIdle, ADelay, AWDelay, AEdge, ACEdge, AWait, ACompare, AValid,
      A1Changed, A1Stable, ASecond, AFound, AResetman, AStart, AAlign, ADone } AState deriving (Bits,Eq);
@@ -84,7 +52,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
-    FIFO18 dfifo <- mkFIFO18(serdes_clock);
+    FIFOF#(Bit#(10)) dfifo <- mkFIFOF(clocked_by serdes_clock, reset_by serdes_reset);
+    SyncBitIfc#(Bit#(10)) dfifo_data <-  mkSyncBits(serdes_clock, serdes_reset, defaultClock);
+    SyncBitIfc#(Bit#(1)) dfifo_empty <-  mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     IdelayE2 delaye2 <- mkIDELAYE2(IDELAYE2_Config {
         cinvctrl_sel: "FALSE", delay_src: "IDATAIN",
         high_performance_mode: "TRUE",
@@ -117,10 +87,11 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     SyncBitIfc#(Bit#(1)) fifo_reset_sync <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) sync_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) sync_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(Bit#(1)) reset_hack <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) ctrl_sample <- mkReg(0);
     SyncBitIfc#(Bit#(1)) samplein_reset_null <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
 
-    SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
+    SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBit(serdes_clock, serdes_reset, serdes_clock);
     SyncBitIfc#(Bit#(10)) iserdes_data <-  mkSyncBits(serdes_clock, serdes_reset, defaultClock);
     SyncFIFOIfc#(Bit#(1)) serdes_end <- mkSyncFIFO(2, serdes_clock, serdes_reset, defaultClock);
 
@@ -491,9 +462,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     //*************************** serdes setting FSM *****************
     rule serdes_idle_rule if (bvi_reset_reg != 0 && serdes_running == 0);
         serdes_setting.deq();
-        //Bit#(3) sric = 0;
-        //for (Integer i = 0; i < 3; i = i + 1)
-            //sric[i] = serdes_reset_inc_ce[i].read();
         sync_reset_inc_ce <= serdes_reset_inc_ce.read();
         sync_bitslip <= serdes_bitslip.read();
         serdes_running <= 1;
@@ -518,8 +486,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     rule controlserdes_rule;
-        //for (Integer i = 0; i < 3; i = i + 1)
-            //serdes_reset_inc_ce[i].send(ctrl_reset_inc_ce[i]);
         serdes_reset_inc_ce.send(ctrl_reset_inc_ce);
     endrule
 
@@ -536,8 +502,10 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         fifo_reset <= fifo_reset_sync.read();
     endrule
 
+    rule clear_fifo if (sync_reset_inc_ce[2] == 1);
+        dfifo.clear();
+    endrule
     rule setrule;
-        dfifo.reset(sync_reset_inc_ce[2]);
         delaye2.reset(sync_reset_inc_ce[2]);
         delaye2.cinvctrl(0);
         delaye2.cntvaluein(0);
@@ -579,26 +547,22 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
            master_data.q7(), master_data.q6(), master_data.q5(),
            master_data.q4(), master_data.q3(), master_data.q2(), master_data.q1()};
         ctrl_data_temp <= dout;
-        iserdes_data.send(dout);
     endrule
 
-    rule datain_rule;
-        Bit#(10) dout = 0;
-        dout = iserdes_data.read();
+    rule serdesda2bozo_rule;
+        let dout = {slave_data.q4(), slave_data.q3(), master_data.q8(),
+           master_data.q7(), master_data.q6(), master_data.q5(),
+           master_data.q4(), master_data.q3(), master_data.q2(), master_data.q1()};
         if (fifo_wren_sync.read() == 1)
-            begin
-            dfifo.di({6'b0,dout});
-            dfifo.wren(1);
-            end
-        else
-            begin
-            dfifo.di(16'b0);
-            dfifo.wren(0);
-            end
+            dfifo.enq(dout);
     endrule
 
     rule serdesrule;
-        dfifo.rden(rden);
+        dfifo_data.send(dfifo.first);
+        dfifo.deq();
+    endrule
+    rule fifoe_rule;
+        dfifo_empty.send(pack(!dfifo.notEmpty()));
     endrule
 
     method Action ibufdso(Bit#(1) v);
@@ -623,10 +587,10 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         bvi_reset_reg <= v;
     endmethod
     method Bit#(1)                empty();
-        return dfifo.empty();
+        return dfifo_empty.read();
     endmethod
     method Bit#(10)               dataout();
-        return dfifo.dataout()[9:0];
+        return dfifo_data.read();
     endmethod
 endmodule: mkIserdesDatadeser
 
