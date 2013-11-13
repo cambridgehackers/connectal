@@ -23,9 +23,9 @@
 #include <linux/poll.h>        /* poll_table, etc. */
 #include <linux/time.h>        /* getnstimeofday, struct timespec, etc. */
 #include <asm/uaccess.h>       /* copy_to_user, copy_from_user */
-//#include <asm/system.h>        /* mb(), wmb() */
 #include <asm/dma-mapping.h>
 #include <linux/dma-buf.h>
+#include <linux/pci.h>
 
 #include "bluenoc.h"
 
@@ -76,6 +76,8 @@ struct tBoard;
 typedef struct tPortal {
   unsigned int portal_number;
   struct tBoard *board;
+  void *virt;
+  dma_addr_t dma_handle;
 } tPortal;
 
 typedef struct tBoard {
@@ -586,6 +588,7 @@ static int __init bluenoc_probe(struct pci_dev* dev, const struct pci_device_id*
     err = -EINVAL;
     goto exit_bluenoc_probe;
   }
+  memset(this_board, 0, sizeof(tBoard));
 
   /* if this is the first, create the udev class */
   if (NULL == bluenoc_class)
@@ -1711,7 +1714,7 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       tPortalInfo info;
       memset(&info, 0, sizeof(info));
 
-      printk("rcb_mask=%x max_read_req_bytes=%x max_payload_bytes=%x\n",
+      printk("rcb_mask=%#x max_read_req_bytes=%#x max_payload_bytes=%#x\n",
 	     ioread32(this_board->bar0io + (782<<2)),
 	     ioread32(this_board->bar0io + (783<<2)),
 	     ioread32(this_board->bar0io + (784<<2)));
@@ -1816,9 +1819,17 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
     if (err != 0)
       return -EFAULT;
 
-    pciAlloc.virt = dma_alloc_coherent(&this_board->pci_dev->dev, pciAlloc.size, &pciAlloc.dma_handle, GFP_KERNEL);
-    printk("dma_alloc_coherent virt=%p dma_handle=%p\n", pciAlloc.virt, (void*)pciAlloc.dma_handle);
-    memset(pciAlloc.virt, 0xfa, pciAlloc.size);
+    if (0) {
+      pciAlloc.virt = dma_alloc_coherent(&this_board->pci_dev->dev, pciAlloc.size, &pciAlloc.dma_handle, GFP_KERNEL);
+      printk("dma_alloc_coherent virt=%p dma_handle=%p\n", pciAlloc.virt, (void*)pciAlloc.dma_handle);
+      memset(pciAlloc.virt, 0xfa, pciAlloc.size);
+    } else {
+      long dma_handle = 0;
+      pciAlloc.virt = this_portal->virt;
+      pciAlloc.dma_handle = this_portal->dma_handle;
+      dma_handle = dma_map_single(&this_board->pci_dev->dev, pciAlloc.virt, 1<<16, DMA_BIDIRECTIONAL);
+      printk("dma_map_single returned %lx old dma_handle=%lx\n", dma_handle, pciAlloc.dma_handle);
+    }
     //asm volatile ("clflush %0" : "+m" (*(long *)(pciAlloc.virt)));
     err = copy_to_user((void __user *)arg, &pciAlloc, sizeof(tPciAlloc));
     if (err != 0)
@@ -1836,24 +1847,40 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
   tPortal *this_portal = (tPortal*) filp->private_data;
   tBoard *this_board = this_portal->board;
 
-  off_t off = 0;
-
   if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
     return -EINVAL;
-  off = this_board->pci_dev->resource[2].start + 1024*1024*this_portal->portal_number;
-  printk("portal_mmap portal_number=%d board_start=%012lx portal_start=%012lx\n",
-	 this_portal->portal_number,
-	 (long)this_board->pci_dev->resource[2].start,
-	 (long)this_board->pci_dev->resource[2].start+1024*1024*this_portal->portal_number);
+  printk("vma->vm_pgoff=%lx\n", vma->vm_pgoff);
+  if (vma->vm_pgoff < 16) {
+    off_t off = this_board->pci_dev->resource[2].start + 1024*1024*this_portal->portal_number;
+    printk("portal_mmap portal_number=%d board_start=%012lx portal_start=%012lx\n",
+	   this_portal->portal_number,
+	   (long)this_board->pci_dev->resource[2].start,
+	   (long)this_board->pci_dev->resource[2].start+1024*1024*this_portal->portal_number);
 
-  vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-  vma->vm_pgoff = off >> PAGE_SHIFT;
-  //vma->vm_flags |= VM_IO | VM_RESERVED;
-  vma->vm_flags |= VM_IO;
-  if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
-			 vma->vm_end - vma->vm_start, vma->vm_page_prot))
-    return -EAGAIN;
+    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+    vma->vm_pgoff = off >> PAGE_SHIFT;
+    //vma->vm_flags |= VM_IO | VM_RESERVED;
+    vma->vm_flags |= VM_IO;
+    if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
+			   vma->vm_end - vma->vm_start, vma->vm_page_prot))
+      return -EAGAIN;
 
-  return 0;
+    return 0;
+  } else {
+    if (this_portal->virt == 0) {
+      this_portal->virt = dma_alloc_coherent(&this_board->pci_dev->dev, vma->vm_end - vma->vm_start, &this_portal->dma_handle, GFP_ATOMIC);
+      //this_portal->virt = pci_alloc_consistent(this_board->pci_dev, 1<<16, &this_portal->dma_handle);
+      printk("dma_alloc_coherent virt=%p dma_handle=%p\n", this_portal->virt, (void*)this_portal->dma_handle);
+    }
+
+    //vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
+    vma->vm_flags |= VM_IO;
+    if (io_remap_pfn_range(vma, vma->vm_start, this_portal->dma_handle >> PAGE_SHIFT,
+			   vma->vm_end - vma->vm_start, vma->vm_page_prot))
+      return -EAGAIN;
+
+    return 0;
+  }
 }
 
