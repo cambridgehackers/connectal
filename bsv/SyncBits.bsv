@@ -1,6 +1,6 @@
 
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
-
+//
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
 // files (the "Software"), to deal in the Software without
@@ -21,36 +21,51 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+
 import Vector::*;
 import Clocks::*;
 
-module mkSyncBits#(Clock sClkIn, Reset sRst, Clock dClkIn)(SyncBitIfc#(a))
+module mkSyncBits#(a initValue, Clock sClkIn, Reset sRst, Clock dClkIn, Reset dRst)(SyncBitIfc#(a))
    provisos (Bits#(a,awidth));
-   Vector#(awidth, SyncBitIfc#(Bit#(1))) bits <- replicateM(mkSyncBit(sClkIn, sRst, dClkIn));
+   
+   Reg#(a) ff0 <- mkReg(initValue, clocked_by sClkIn, reset_by sRst);
+   Reg#(a) ff1 <- mkReg(initValue, clocked_by dClkIn, reset_by dRst);
+   Reg#(a) ff2 <- mkReg(initValue, clocked_by dClkIn, reset_by dRst);
+
+   ReadOnly#(a) ff0cross <- mkNullCrossingWire(dClkIn, ff0);
+
+   rule update;
+      ff1 <= ff0cross;
+      ff2 <= ff1;
+   endrule
 
    method a read();
-      function Bit#(1) readBit(SyncBitIfc#(Bit#(1)) syncBit); return syncBit.read(); endfunction
-      return unpack(pack(map(readBit, bits)));
+      return ff2;
    endmethod: read
+
    method Action send(a value);
-      Bit#(awidth) abits = pack(value);
-      for (Integer i = 0; i < valueOf(awidth); i = i + 1) begin
-	 bits[i].send(abits[i]);
-      end
+      ff0 <= value;
    endmethod: send
 endmodule
 
-module mkSyncBitsFromCC#(Clock dClkIn)(SyncBitIfc#(a))
+module mkSyncBitsFromCC#(a initValue, Clock dClkIn, Reset dRst)(SyncBitIfc#(a))
    provisos (Bits#(a,awidth));
    Clock sClkIn <- exposeCurrentClock();
    Reset sRst <- exposeCurrentReset();
-   SyncBitIfc#(a) syncbits <- mkSyncBits(sClkIn, sRst, dClkIn);
+   SyncBitIfc#(a) syncbits <- mkSyncBits(initValue, sClkIn, sRst, dClkIn, dRst);
    return syncbits;
 endmodule
 
-module mkSyncBitsToCC#(Clock sClkIn, Reset sRst)(SyncBitIfc#(a))
+module mkSyncBitsToCC#(a initValue, Clock sClkIn, Reset sRst)(SyncBitIfc#(a))
    provisos (Bits#(a,awidth));
    Clock dClkIn <- exposeCurrentClock();
-   SyncBitIfc#(a) syncbits <- mkSyncBits(sClkIn, sRst, dClkIn);
+   Reset dRst <- exposeCurrentReset();
+   SyncBitIfc#(a) syncbits <- mkSyncBits(initValue, sClkIn, sRst, dClkIn, dRst);
    return syncbits;
 endmodule
+
+module mkSyncBits128#(Clock sClkIn, Reset sRst, Clock dClkIn, Reset dRst)(SyncBitIfc#(Bit#(128)));
+   SyncBitIfc#(Bit#(128)) sbits <- mkSyncBits(0, sClkIn, sRst, dClkIn, dRst);
+   method read = sbits.read;
+   method send = sbits.send;
+endmodule: mkSyncBits128
