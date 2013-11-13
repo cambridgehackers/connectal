@@ -1,8 +1,15 @@
 obj-m = portalalloc.o
 
 KVERSION = $(shell uname -r)
+UTILDIR = ../../cpp/
+BASEDIR = ../../
 
 default:
 	make -C /lib/modules/$(KVERSION)/build M=$(PWD) modules
+
+testpa:
+	g++ -I$(BASEDIR) testpa.cpp $(UTILDIR)/portal.cpp $(UTILDIR)/sock_fd.cxx $(UTILDIR)/sock_utils.cxx -pthread
+
 clean:
 	make -C /lib/modules/$(KVERSION)/build M=$(PWD) clean
+	rm -f a.out

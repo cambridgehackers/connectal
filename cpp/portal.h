@@ -1,7 +1,6 @@
 #ifndef _PORTAL_H_
 #define _PORTAL_H_
 
-#include <semaphore.h>
 #include <sys/types.h>
 #include <linux/ioctl.h>
 #include <sys/ioctl.h>
@@ -53,6 +52,7 @@ public:
 protected:
     PortalIndication *indication;
     PortalRequest(const char *name, PortalIndication *indication=0);
+    PortalRequest();
     ~PortalRequest();
     int open();
  public:
@@ -86,6 +86,7 @@ class PortalMemory : public PortalRequest {
 #endif
  protected:
   PortalMemory(const char* name, PortalIndication *indication=0);
+  PortalMemory();
  public:
   int pa_fd;
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);

@@ -82,6 +82,17 @@ PortalRequest::PortalRequest(const char *name, PortalIndication *indication)
   }
 }
 
+PortalRequest::PortalRequest()
+  : ind_reg_base(0x0), 
+    ind_fifo_base(0x0),
+    req_reg_base(0x0),
+    req_fifo_base(0x0),
+    indication(NULL), 
+    fd(-1),
+    name(NULL)
+{
+}
+
 PortalRequest::~PortalRequest()
 {
   close();
@@ -221,18 +232,26 @@ int PortalRequest::registerInstance(PortalRequest *instance)
     return 0;
 }
 
+PortalMemory::PortalMemory()
+  : handle(0)
+{
+  const char* path = "/dev/portalalloc";
+  this->pa_fd = ::open(path, O_RDWR);
+  if (this->pa_fd < 0){
+    ALOGE("Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);
+  }
+}
+
 PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
   : handle(0),
     PortalRequest(name,indication)
 {
-
 #ifndef MMAP_HW
   snprintf(p_fd.read.path, sizeof(p_fd.read.path), "/tmp/fd_sock_rc");
   connect_socket(&(p_fd.read));
   snprintf(p_fd.write.path, sizeof(p_fd.write.path), "/tmp/fd_sock_wc");
   connect_socket(&(p_fd.write));
 #endif
-
   const char* path = "/dev/portalalloc";
   this->pa_fd = ::open(path, O_RDWR);
   if (this->pa_fd < 0){
@@ -249,8 +268,10 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
     return rc;
   }
 #elif defined(__i386__) || defined(__x86_64__)
-  char foo = *((volatile char *)__p);
-  asm volatile("clflush %0" :: "m" (foo));
+  for(int i = 0; i < portalAlloc->header.size; i++){
+    char foo = *(((volatile char *)__p)+i);
+    asm volatile("clflush %0" :: "m" (foo));
+  }
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
