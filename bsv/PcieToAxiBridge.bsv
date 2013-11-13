@@ -731,26 +731,52 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
     interface Axi3Slave slave3;
 	interface Axi3SlaveWrite write;
 	   method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid) if (writeBurstCount == 0);
+				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid)
+	      provisos (Add#(zzz,32,addrWidth))
+	      if (writeBurstCount == 0);
+
 	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
-	      TLPMemory4DWHeader hdr_4dw = defaultValue;
-	      hdr_4dw.format = MEM_WRITE_4DW_DATA;
-	      hdr_4dw.tag = truncate(awid);
-	      hdr_4dw.reqid = my_id;
-	      hdr_4dw.nosnoop = SNOOPING_REQD;
-	      hdr_4dw.addr = addr[40-1:2];
-	      hdr_4dw.length = tlplen;
-	      hdr_4dw.firstbe = 4'hf;
-	      hdr_4dw.lastbe = 4'hf;
 	      TLPData#(16) tlp = defaultValue;
 	      tlp.sof = True;
 	      tlp.eof = False;
 	      tlp.hit = 7'h00;
-	      tlp.data = pack(hdr_4dw);
 	      tlp.be = 16'hffff;
+	      Bit#(9) dwCount = zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
+	      if ((addr >> 32) != 0) begin
+		 TLPMemory4DWHeader hdr_4dw = defaultValue;
+		 hdr_4dw.format = MEM_WRITE_4DW_DATA;
+		 hdr_4dw.tag = truncate(awid);
+		 hdr_4dw.reqid = my_id;
+		 hdr_4dw.nosnoop = SNOOPING_REQD;
+		 hdr_4dw.addr = addr[40-1:2];
+		 hdr_4dw.length = tlplen;
+		 hdr_4dw.firstbe = 4'hf;
+		 hdr_4dw.lastbe = 4'hf;
+		 tlp.data = pack(hdr_4dw);
+	      end
+	      else begin
+		 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
+		 hdr_3dw.format = MEM_WRITE_3DW_DATA;
+		 hdr_3dw.tag = truncate(awid);
+		 hdr_3dw.reqid = my_id;
+		 hdr_3dw.nosnoop = SNOOPING_REQD;
+		 hdr_3dw.addr = addr[32-1:2];
+		 hdr_3dw.length = tlplen;
+		 hdr_3dw.firstbe = 4'hf;
+		 hdr_3dw.lastbe = 4'hf;
+		 
+		 // this would cause a deadlock
+		 //Vector#(busWidthWords, Bit#(32)) v = writeDataMimo.deq(1);
+		 //hdr_3dw.data = v[0];
+		 //dwCount = dwCount - 1;
+
+		 tlp.be = 16'hfff0; // no data word in this TLP
+
+		 tlp.data = pack(hdr_3dw);
+	      end
 	      tlpOutFifo.enq(tlp);
 	      writeBurstCount <= zeroExtend(burstLen)+1;
-	      writeDwCount <= zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
+	      writeDwCount <= dwCount;
 	      writeTag <= truncate(awid);
            endmethod: writeAddr
 	   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last, Bit#(idWidth) wid)
@@ -774,7 +800,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	       tlp.eof = True;
 	       tlp.hit = 7'h00;
 	       TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
-	       if (True || use4dwReg) begin
+	       if (addr[39:32] != 0) begin
 		   TLPMemory4DWHeader hdr_4dw = defaultValue;
 		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
 		   hdr_4dw.tag = truncate(arid);
@@ -823,23 +849,50 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
     interface Axi4Slave slave4;
 	interface Axi4SlaveWrite write;
 	   method Action writeAddr(Bit#(addrWidth) addr, Bit#(8) burstLen, Bit#(3) burstWidth,
-				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid) if (writeBurstCount == 0);
+				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid)
+	      provisos (Add#(zzz,32,addrWidth))
+	      if (writeBurstCount == 0);
+
 	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
-	      TLPMemory4DWHeader hdr_4dw = defaultValue;
-	      hdr_4dw.format = MEM_WRITE_4DW_DATA;
-	      hdr_4dw.tag = truncate(awid);
-	      hdr_4dw.reqid = my_id;
-	      hdr_4dw.nosnoop = SNOOPING_REQD;
-	      hdr_4dw.addr = addr[40-1:2];
-	      hdr_4dw.length = tlplen;
-	      hdr_4dw.firstbe = 4'hf;
-	      hdr_4dw.lastbe = 4'hf;
 	      TLPData#(16) tlp = defaultValue;
 	      tlp.sof = True;
 	      tlp.eof = False;
 	      tlp.hit = 7'h00;
-	      tlp.data = pack(hdr_4dw);
 	      tlp.be = 16'hffff;
+
+	      Bit#(9) dwCount = zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
+	      if ((addr >> 32) != 0) begin
+		 TLPMemory4DWHeader hdr_4dw = defaultValue;
+		 hdr_4dw.format = MEM_WRITE_4DW_DATA;
+		 hdr_4dw.tag = truncate(awid);
+		 hdr_4dw.reqid = my_id;
+		 hdr_4dw.nosnoop = SNOOPING_REQD;
+		 hdr_4dw.addr = addr[40-1:2];
+		 hdr_4dw.length = tlplen;
+		 hdr_4dw.firstbe = 4'hf;
+		 hdr_4dw.lastbe = 4'hf;
+		 tlp.data = pack(hdr_4dw);
+	      end
+	      else begin
+		 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
+		 hdr_3dw.format = MEM_WRITE_3DW_DATA;
+		 hdr_3dw.tag = truncate(awid);
+		 hdr_3dw.reqid = my_id;
+		 hdr_3dw.nosnoop = SNOOPING_REQD;
+		 hdr_3dw.addr = addr[32-1:2];
+		 hdr_3dw.length = tlplen;
+		 hdr_3dw.firstbe = 4'hf;
+		 hdr_3dw.lastbe = 4'hf;
+		 
+		 // this would cause a deadlock
+		 //Vector#(busWidthWords, Bit#(32)) v = writeDataMimo.deq(1);
+		 //hdr_3dw.data = v[0];
+		 //dwCount = dwCount - 1;
+
+		 tlp.be = 16'hfff0; // no data word in this TLP
+
+		 tlp.data = pack(hdr_3dw);
+	      end
 	      tlpOutFifo.enq(tlp);
 	      writeBurstCount <= zeroExtend(burstLen)+1;
 	      writeDwCount <= zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
@@ -866,7 +919,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	       tlp.eof = True;
 	       tlp.hit = 7'h00;
 	       TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
-	       if (True || use4dwReg) begin
+	       if (addr[39:32] != 0) begin
 		   TLPMemory4DWHeader hdr_4dw = defaultValue;
 		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
 		   hdr_4dw.tag = truncate(arid);
