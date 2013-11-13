@@ -74,8 +74,7 @@ module mkFIFO18#(Clock clkdiv)(FIFO18);
     schedule (reset, di, rden, wren, dataout, empty) CF (reset, di, rden, wren, dataout, empty);
 endmodule: mkFIFO18
 
-typedef enum { DIdle, DValid} DState deriving (Bits,Eq);
-typedef enum { QIdle, QTrain, QOn, QOff} QState deriving (Bits,Eq);
+typedef enum { QIdle, QTrain, QOff} QState deriving (Bits,Eq);
 typedef enum { AIdle, ADelay, AWDelay, AEdge, ACEdge, AWait, ACompare, AValid,
      A1Changed, A1Stable, ASecond, AFound, AResetman, AStart, AAlign, ADone } AState deriving (Bits,Eq);
 
@@ -111,12 +110,10 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Wire#(Bit#(1)) bvi_delay_wren_wire <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     Wire#(Bit#(1)) bvi_reset_reg <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     SyncBitIfc#(Bit#(1)) bvi_resets_reg <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
-    Wire#(Bit#(1)) bvi_fifo_wren_wire <- mkDWire(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) dcounter <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
-    Reg#(DState)  dstate <- mkReg(DIdle, clocked_by serdes_clock, reset_by serdes_reset);
+    Reg#(Bit#(1)) serdes_running <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) fifo_reset <- mkReg(1, clocked_by serdes_clock, reset_by serdes_reset);
     SyncBitIfc#(Bit#(1)) dfifo_reset_r <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
-    Reg#(Bit#(1)) dfifo_wren_r <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(1)) sync_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) sync_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) ctrl_sample <- mkReg(0);
@@ -130,12 +127,11 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(10)) ctrl_data_temp <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) data_init <- mkReg(0);
     Reg#(Bit#(10)) edge_init <- mkReg(0);
-    Reg#(Bit#(10)) edge_int <- mkReg(0);
-    Reg#(Bit#(1)) edge_intor_reg <- mkReg(0);
+    Reg#(Bit#(10)) edge_int <- mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
     SyncFIFOIfc#(Bit#(1)) serdes_setting <- mkSyncFIFO(2, defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) this_aligned_reg <- mkReg(0);
     Wire#(Bit#(1)) this_align_busy_wire <- mkDWire(0);
-    Reg#(Bit#(16)) serdes_counter <- mkReg(0);
+    Reg#(Bit#(16)) top_align_counter <- mkReg(0);
     Reg#(QState)  qstate <- mkReg(QIdle);
     Reg#(AState)  astate <- mkReg(AIdle);
     Reg#(Bit#(11)) maxcount <- mkReg(0);
@@ -152,30 +148,27 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule qfsmreset_rule if (bvi_resets_reg.read() == 0);
         this_aligned_reg <= 0;
         qstate <= QIdle;
-        serdes_counter <= 0;
+        top_align_counter <= 0;
         ctrl_sample <= 0;
         start_alignment_fsm.clear();
     endrule
 
     rule qfsmidle_rule if (bvi_resets_reg.read() != 0 && qstate == QIdle
              && align_start == 1);
-        serdes_counter <= 0;
+        top_align_counter <= 0;
         qstate <= QTrain;
     endrule
     rule qfsmqtrain_rule if (bvi_resets_reg.read() != 0 && qstate == QTrain);
         start_alignment_fsm.enq(1);
-        qstate <= QOn;
-    endrule
-    rule qfsmqon_rule if (bvi_resets_reg.read() != 0 && qstate == QOn);
         qstate <= QOff;
     endrule
-    rule qfsmqoff1_rule if (bvi_resets_reg.read() != 0 && qstate == QOff && serdes_counter <= 'h7fff);
+    rule qfsmqoff1_rule if (bvi_resets_reg.read() != 0 && qstate == QOff && top_align_counter <= 'h7fff);
         ctrl_sample <= ctrl_samplein_i;
         this_aligned_reg <= 1;
         qstate <= QIdle;
     endrule
-    rule qfsmqoff2_rule if (bvi_resets_reg.read() != 0 && qstate == QOff && serdes_counter > 'h7fff);
-        serdes_counter <= serdes_counter + 1;
+    rule qfsmqoff2_rule if (bvi_resets_reg.read() != 0 && qstate == QOff && top_align_counter > 'h7fff);
+        top_align_counter <= top_align_counter + 1;
         qstate <= QTrain;
     endrule
 
@@ -238,7 +231,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             let cric = 3'b011;
             retrycounter <= retrycounter - 1;
             serdes_setting.enq(1);
-            if (edge_intor_reg == 1)
+            if (edge_int != 0)
                 begin
                 data_init <= ctrl_data;
                 edge_init <= edge_int;
@@ -495,24 +488,29 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     //*************************** serdes setting FSM *****************
-    rule clkdividle_rule if (bvi_reset_reg != 0 && dstate == DIdle);
+    rule serdes_idle_rule if (bvi_reset_reg != 0 && serdes_running == 0);
         serdes_setting.deq();
         Bit#(3) sric = 0;
         for (Integer i = 0; i < 3; i = i + 1)
             sric[i] = serdes_reset_inc_ce[i].read();
         sync_reset_inc_ce <= sric;
         sync_bitslip <= serdes_bitslip.read();
-        dstate <= DValid;
+        serdes_running <= 1;
         dcounter <= 3;
     endrule
 
-    rule clkdivvalid_rule if (bvi_reset_reg != 0 && dstate == DValid);
+    rule serdes_running_rule if (bvi_reset_reg != 0 && serdes_running == 1);
         dcounter <= dcounter - 1;
         if (dcounter[2] == 1)
             begin
             ctrl_data <= ctrl_data_temp;
+            Bit#(10) edgeo = 0;
+            for (Integer i = 0; i < 9; i = i + 1)
+                edgeo[i] = ctrl_data_temp[i] ^ ctrl_data_temp[i+1];
+            edgeo[9] = ctrl_data_temp[0] ^ ctrl_data_temp[9];
+            edge_int <= edgeo;
             serdes_end.enq(1);
-            dstate <= DIdle;
+            serdes_running <= 0;
             end
         sync_reset_inc_ce <= {sync_reset_inc_ce[2], 2'b0};
         sync_bitslip <= 0;
@@ -528,14 +526,11 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     rule wrensyncr_rule if (bvi_reset_reg == 0);
-        dfifo_wren_r <= 0;
-        fifo_wren_sync.send(0);
         sync_bitslip <= 0;
         sync_reset_inc_ce <= 0;
-        dstate <= DIdle;
+        serdes_running <= 0;
     endrule
     rule wrensync_rule if (bvi_reset_reg != 0);
-        fifo_wren_sync.send(bvi_fifo_wren_wire);
         fifo_reset <= dfifo_reset_r.read();
     endrule
 
@@ -588,14 +583,8 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
 
     rule datain_rule;
         Bit#(10) dout = 0;
-        Bit#(10) edgeo = 0;
         for (Integer i = 0; i < 10; i = i + 1)
             dout[i] = iserdes_data[i].read();
-        for (Integer i = 0; i < 9; i = i + 1)
-            edgeo[i] = dout[i] ^ dout[i+1];
-        edgeo[9] = dout[0] ^ dout[9];
-        edge_int <= edgeo;
-        edge_intor_reg <= pack(edgeo != 0);
         if (fifo_wren_sync.read() == 1)
             begin
             dfifo.di({6'b0,dout});
@@ -628,7 +617,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         bvi_delay_wren_wire <= v;
     endmethod
     method Action                 fifo_wren(Bit#(1) v);
-        bvi_fifo_wren_wire <= v;
+        fifo_wren_sync.send(v);
     endmethod
     method Action                 reset(Bit#(1) v);
         bvi_reset_reg <= v;
