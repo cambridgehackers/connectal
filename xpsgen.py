@@ -540,6 +540,7 @@ top_axi_slave_wires_template='''
   wire %(busname)s_awready;
   wire [2:0]%(busname)s_awsize;
   wire %(busname)s_awvalid;
+  wire [11:0]%(busname)s_wid;
   wire [11:0]%(busname)s_bid;
   wire %(busname)s_bready;
   wire [1:0]%(busname)s_bresp;
@@ -692,6 +693,7 @@ top_ps7_axi_slave_port_map_template='''
         .M_AXI_GP0_RVALID(%(busname)s_rvalid),
         .M_AXI_GP0_WDATA(%(busname)s_wdata),
         .M_AXI_GP0_WLAST(%(busname)s_wlast),
+        .M_AXI_GP0_WID(%(busname)s_wid),
         .M_AXI_GP0_WREADY(%(busname)s_wready),
         .M_AXI_GP0_WSTRB(%(busname)s_wstrb),
         .M_AXI_GP0_WVALID(%(busname)s_wvalid),
@@ -821,6 +823,7 @@ axi_slave_port_map_verilog_template='''
       .%(busname)s_write_writeData_data(%(busname)s_wdata),
       .%(busname)s_write_writeData_byteEnable(%(busname)s_wstrb),
       .%(busname)s_write_writeData_last(%(busname)s_wlast),
+      .%(busname)s_write_writeData_wid(%(busname)s_wid),
       .EN_%(busname)s_write_writeData(EN_%(busname)s_write_writeData),
       .RDY_%(busname)s_write_writeData(RDY_%(busname)s_write_writeData),
 
