@@ -69,7 +69,7 @@ module mkBsimTop();
     endrule
     rule wrData;
         wf.deq;
-        dut.ctrl.write.writeData(wf.first,0,0);
+        dut.ctrl.write.writeData(wf.first,0,0,0);
     endrule
     rule rdReq (readReq());
         let ra <- readAddr;
