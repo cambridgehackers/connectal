@@ -747,23 +747,19 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
     rule sendup_imageon_clock;
        Bit#(5) alignbusyw = 0;
        Bit#(5) alignedw = 0;
-       Bit#(5) firstw = 0;
-       Bit#(5) lastw = 0;
-       Bit#(5) otherw = 0;
        Bit#(5) emptyw = 0;
+       Bit#(3) samplein = 0;
        Bit#(50) rawdataw = 0;
        for (Bit#(8) i = 0; i < 5; i = i+1) begin
 	  alignbusyw[i] = serdes_v[i].align_busy();
 	  alignedw[i] = serdes_v[i].aligned();
-	  firstw[i] = serdes_v[i].samplein()[2];
-	  lastw[i] = serdes_v[i].samplein()[1];
-	  otherw[i] = serdes_v[i].samplein()[0];
+          samplein = samplein | serdes_v[i].samplein();
 	  emptyw[i] = serdes_v[i].empty();
 	  rawdataw[(i+1)*10-1: i*10] = serdes_v[i].dataout();
        end
        serdes_align_busy_temp <= pack(alignbusyw != 0);
        serdes_aligned_temp <= pack(alignedw == 5'b11111);
-       bittest_wire <= pack(otherw == 0 && firstw != 0 && lastw != 0);
+       bittest_wire <= pack(samplein == 3'b110);
        empty_wire <= pack(emptyw != 0);
        raw_data_wire <= rawdataw;
     endrule
