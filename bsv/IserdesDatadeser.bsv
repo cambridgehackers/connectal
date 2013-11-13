@@ -53,7 +53,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     FIFOF#(Bit#(10)) dfifo <- mkFIFOF(clocked_by serdes_clock, reset_by serdes_reset);
-    SyncBitIfc#(Bit#(10)) dfifo_data <-  mkSyncBits(serdes_clock, serdes_reset, defaultClock);
+    SyncBitIfc#(Bit#(10)) dfifo_data <-  mkSyncBits(0, serdes_clock, serdes_reset, defaultClock, defaultReset);
     SyncBitIfc#(Bit#(1)) dfifo_empty <-  mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     IdelayE2 delaye2 <- mkIDELAYE2(IDELAYE2_Config {
         cinvctrl_sel: "FALSE", delay_src: "IDATAIN",
@@ -92,7 +92,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     SyncBitIfc#(Bit#(1)) samplein_reset_null <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
 
     SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBit(serdes_clock, serdes_reset, serdes_clock);
-    SyncBitIfc#(Bit#(10)) iserdes_data <-  mkSyncBits(serdes_clock, serdes_reset, defaultClock);
+    SyncBitIfc#(Bit#(10)) iserdes_data <-  mkSyncBits(0, serdes_clock, serdes_reset, defaultClock, defaultReset);
     SyncFIFOIfc#(Bit#(1)) serdes_end <- mkSyncFIFO(2, serdes_clock, serdes_reset, defaultClock);
 
     Reg#(Bit#(10)) ctrl_data <- mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
@@ -113,7 +113,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(16)) gencounter <- mkReg(0);
     FIFO#(Bit#(1)) start_alignment_fsm <- mkFIFO();
     Reg#(Bit#(3)) ctrl_reset_inc_ce <- mkReg(0);
-    SyncBitIfc#(Bit#(3)) serdes_reset_inc_ce <- mkSyncBits(defaultClock, defaultReset, serdes_clock);
+    SyncBitIfc#(Bit#(3)) serdes_reset_inc_ce <- mkSyncBits(0, defaultClock, defaultReset, serdes_clock, serdes_reset);
     SyncBitIfc#(Bit#(1)) serdes_bitslip <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
 
     //*************************** top align FSM *****************
