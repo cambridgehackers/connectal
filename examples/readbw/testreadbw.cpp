@@ -28,9 +28,11 @@ void dump(const char *prefix, char *buf, size_t len)
 class TestCoreIndication : public CoreIndication
 {
   virtual void storeAddress ( unsigned long long addr ) {
-    fprintf(stderr, "storeAddress addr=%08llx\n", addr);
+    //fprintf(stderr, "storeAddress addr=%08llx *(long*)srcBuffer=%lx\n", addr, *(long*)srcBuffer);
     if (storeCount < 16) {
-      device->store(srcAlloc.entries[0].dma_address+storeCount*8, 0xd00df00ddeadbeefULL);
+      std::bitset<128>     value128(0xD00DF00DDEADBEEFul);
+      value128 |= (std::bitset<128>(0xAAAABBBBCCCCDDDDul) << 64);
+      device->store(srcAlloc.entries[0].dma_address+storeCount*8, value128);
       storeCount++;
     } else {
       device->loadMultiple(srcAlloc.entries[0].dma_address, 63, 8);
@@ -40,6 +42,9 @@ class TestCoreIndication : public CoreIndication
     fprintf(stderr, "loadAddress addr=%08llx\n", addr);
   }
   virtual void loadValue ( std::bitset<128> &value, unsigned long cycles ) {
+    if (!srcBuffer) {
+      srcBuffer = (unsigned int *)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, device->fd, 1<<16);
+    }
     fprintf(stderr, "loadValue value=%08lx%08lx cycles=%ld\n",
 	    ((value >> 64) & std::bitset<128>(0xFFFFFFFFFFFFFFFFul)).to_ulong(),
 	    (value & std::bitset<128>(0xFFFFFFFFFFFFFFFFul)).to_ulong(),
@@ -86,7 +91,7 @@ int main(int argc, const char **argv)
   memset(&srcAlloc, 0, sizeof(srcAlloc));
 
 
-  for (int i = 0; i < 1; i++) {
+  if (1) {
     int rc = device->alloc(alloc_sz, &srcAlloc);
     fprintf(stderr, "alloc rc=%d fd=%d dma_address=%08lx\n", rc, srcAlloc.header.fd, srcAlloc.entries[0].dma_address);
 
@@ -103,19 +108,35 @@ int main(int argc, const char **argv)
     }
     //rc = device->dCacheFlushInval(&srcAlloc, srcBuffer);
     fprintf(stderr, "cache flushed rc=%d\n", rc);
+  } 
+  if (1) {
+    tPciAlloc pciAlloc;
+    srcBuffer = (unsigned int *)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, device->fd, 1<<16);
+    int rc = ioctl(device->fd, BNOC_PCI_ALLOC, &pciAlloc);
+    fprintf(stderr, "BNOC_PCI_ALLOC rc=%d errno=%d\n", rc, errno);
+    fprintf(stderr, "srcBuffer=%p virt=%p dma_handle=%lx\n", srcBuffer, pciAlloc.virt, pciAlloc.dma_handle);
+
+    srcAlloc.entries[0].dma_address = pciAlloc.dma_handle;
+    memset(srcBuffer, 0xda, 8192);
+    asm volatile ("clflush %0" : "+m" (srcBuffer[0]));
+    munmap(srcBuffer, 1<<16);
+    srcBuffer = 0;
   }
 
-  device->store(srcAlloc.entries[0].dma_address, 0xd00df00ddeadbeefULL);
   if (0) {
     tPortalInfo portal_info;
     int res = ioctl(device->fd, BNOC_IDENTIFY_PORTAL, &portal_info);
     fprintf(stderr, "scratchpad=%08x\n", portal_info.scratchpad);
     srcAlloc.entries[0].dma_address = portal_info.scratchpad;
-  } else {
+  }
+  if (0) {
     int rc = ioctl(device->fd, BNOC_DMA_MAP, srcAlloc.header.fd);
     fprintf(stderr, "BNOC_DMA_MAP rc=%d errno=%d\n", rc, errno);
   }
-  //device->load(srcAlloc.entries[0].dma_address, 3);
+  std::bitset<128>     value128(0xD00DF00DDEADBEEFul);
+  value128 |= (std::bitset<128>(0xAAAABBBBCCCCDDDDul) << 64);
+  device->store(srcAlloc.entries[0].dma_address, value128);
+  //device->loadMultiple(srcAlloc.entries[0].dma_address, 3, 1);
   portalExec(0);
 
 }

@@ -35,7 +35,7 @@ endinterface
 interface CoreRequest;
     method Action loadMultiple(Bit#(64) addr, Bit#(32) length, Bit#(32) repetitions);
     method Action load(Bit#(64) addr, Bit#(32) length);
-    method Action store(Bit#(64) addr, Bit#(64) value);
+    method Action store(Bit#(64) addr, Bit#(128) value);
 
     method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
     method Action paref(Bit#(32) addr, Bit#(32) len);
@@ -100,9 +100,9 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	   readMultipleLen <= truncate(len);
 	   readMultipleCount <= truncate(count);
 	endmethod: loadMultiple
-        method Action store(Bit#(64) addr, Bit#(64) value);
+        method Action store(Bit#(64) addr, Bit#(128) value);
 	    writeAddrFifo.enq(truncate(addr));
-	    writeDataFifo.enq({value,value});
+	    writeDataFifo.enq(value);
 	endmethod: store
     endinterface: coreRequest
 
