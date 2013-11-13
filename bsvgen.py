@@ -467,7 +467,7 @@ module mk%(Dut)sWrapper#(%(Dut)s %(dut)s, %(Indication)sWrapper iw)(%(Dut)sWrapp
 
 %(methodRules)s
 
-    (* descending_urgency = "%(requestFailureRuleNames)s" *)
+    %(requestFailureRuleNames)s
     rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[14] == 0 && 
                              axiSlaveWriteAddrFifo.first[13:8] >= %(channelCount)s);
         axiSlaveWriteAddrFifo.deq;
@@ -997,7 +997,7 @@ class InterfaceMixin:
             'requestElements': ''.join(requestElements),
             'mutexRuleList': '(* mutually_exclusive = "' + (', '.join(methodRuleNames)) + '" *)' if (len(methodRuleNames) > 1) else '',
             'methodRules': ''.join(methodRules),
-            'requestFailureRuleNames': ', '.join(['handle$%s$requestFailure' % n for n in methodNames]),
+            'requestFailureRuleNames': "" if len(methodNames) == 0 else '(* descending_urgency = "'+', '.join(['handle$%s$requestFailure' % n for n in methodNames])+'*)',
             'channelCount': self.channelCount,
             'writeChannelCount': self.channelCount,
             'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(), axiMaster)
