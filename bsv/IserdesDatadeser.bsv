@@ -124,9 +124,8 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
 
     SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBit(serdes_clock, serdes_reset, defaultClock);
     Vector#(10, SyncBitIfc#(Bit#(1))) iserdes_data <-  replicateM(mkSyncBit(serdes_clock, serdes_reset, defaultClock));
-    SyncFIFOIfc#(Bit#(1)) end_handshake <- mkSyncFIFO(2, serdes_clock, serdes_reset, defaultClock);
+    SyncFIFOIfc#(Bit#(1)) serdes_end <- mkSyncFIFO(2, serdes_clock, serdes_reset, defaultClock);
 
-    Reg#(Bit#(3)) iodelay_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) ctrl_data <- mkSyncReg(0, serdes_clock, serdes_reset, defaultClock);
     Reg#(Bit#(10)) ctrl_data_temp <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(10)) data_init <- mkReg(0);
@@ -144,7 +143,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(3)) ctrl_samplein_i <- mkReg(0);
     Reg#(Bit#(16)) retrycounter <- mkReg(0);
     Reg#(Bit#(16)) gencounter <- mkReg(0);
-    FIFO#(Bit#(1)) this_start_align_reg <- mkFIFO();
+    FIFO#(Bit#(1)) start_alignment_fsm <- mkFIFO();
     Reg#(Bit#(3)) ctrl_reset_inc_ce <- mkReg(0);
     Vector#(3, SyncBitIfc#(Bit#(1))) serdes_reset_inc_ce <- replicateM(mkSyncBit(defaultClock, defaultReset, serdes_clock));
     SyncBitIfc#(Bit#(1)) serdes_bitslip <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
@@ -155,7 +154,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         qstate <= QIdle;
         serdes_counter <= 0;
         ctrl_sample <= 0;
-        this_start_align_reg.clear();
+        start_alignment_fsm.clear();
     endrule
 
     rule qfsmidle_rule if (bvi_resets_reg.read() != 0 && qstate == QIdle
@@ -164,7 +163,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         qstate <= QTrain;
     endrule
     rule qfsmqtrain_rule if (bvi_resets_reg.read() != 0 && qstate == QTrain);
-        this_start_align_reg.enq(1);
+        start_alignment_fsm.enq(1);
         qstate <= QOn;
     endrule
     rule qfsmqon_rule if (bvi_resets_reg.read() != 0 && qstate == QOn);
@@ -202,7 +201,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
 
     rule afsmidle2_rule if (bvi_resets_reg.read() != 0 && astate == AIdle);
-        this_start_align_reg.deq();
+        start_alignment_fsm.deq();
         windowcount <= 0;
         retrycounter <= 32765;
         serdes_setting.enq(1);
@@ -218,7 +217,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         astate <= as;
     endrule
     rule afsmdelay_rule if (bvi_resets_reg.read() != 0 && astate == ADelay);
-        end_handshake.deq();
+        serdes_end.deq();
         gencounter <= 15;
         astate <= AWDelay;
     endrule
@@ -228,7 +227,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         astate <= AEdge;
     endrule
     rule afsmedge_rule if (bvi_resets_reg.read() != 0 && astate == AEdge);
-        end_handshake.deq();
+        serdes_end.deq();
         astate <= ACEdge;
     endrule
     rule afsmcedge_rule if (bvi_resets_reg.read() != 0 && astate == ACEdge);
@@ -263,7 +262,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         astate <= as;
     endrule
     rule afsmwait_rule if (bvi_resets_reg.read() != 0 && astate == AWait);
-        end_handshake.deq();
+        serdes_end.deq();
         let as = astate;
         let gc = gencounter;
         if (gencounter >= 'h8000)
@@ -352,7 +351,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         astate <= A1Changed;
     endrule
     rule afsm1changed_rule if (bvi_resets_reg.read() != 0 && astate == A1Changed);
-        end_handshake.deq();
+        serdes_end.deq();
         let as = astate;
         let cric = 3'b000;
         serdes_setting.enq(1);
@@ -381,7 +380,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         ctrl_reset_inc_ce <= cric;
     endrule
     rule afsm1stable_rule if (bvi_resets_reg.read() != 0 && astate == A1Stable);
-        end_handshake.deq();
+        serdes_end.deq();
         let as = astate;
         let mc = maxcount;
         let cric = 3'b011;
@@ -411,7 +410,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         ctrl_reset_inc_ce <= cric;
     endrule
     rule afsmsecond_rule if (bvi_resets_reg.read() != 0 && astate == ASecond);
-        end_handshake.deq();
+        serdes_end.deq();
         let as = astate;
         let cric = 3'b001;
         serdes_setting.enq(1);
@@ -438,7 +437,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         ctrl_reset_inc_ce <= cric;
     endrule
     rule afsmfound_rule if (bvi_resets_reg.read() != 0 && astate == AFound);
-        end_handshake.deq();
+        serdes_end.deq();
         if (gencounter >= 'h8000)
             astate <= AStart;
         else
@@ -449,7 +448,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             end
     endrule
     rule afsmresetman_rule if (bvi_resets_reg.read() != 0 && astate == AResetman);
-        end_handshake.deq();
+        serdes_end.deq();
         if (gencounter >= 'h8000)
             astate <= AStart;
         else
@@ -472,7 +471,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         astate <= as;
     endrule
     rule afsmalign_rule if (bvi_resets_reg.read() != 0 && astate == AAlign);
-        end_handshake.deq();
+        serdes_end.deq();
         let as = astate;
         if (ctrl_data == training)
             as = ADone;
@@ -512,7 +511,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         if (dcounter[2] == 1)
             begin
             ctrl_data <= ctrl_data_temp;
-            end_handshake.enq(1);
+            serdes_end.enq(1);
             dstate <= DIdle;
             end
         sync_reset_inc_ce <= {sync_reset_inc_ce[2], 2'b0};
@@ -532,34 +531,24 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         dfifo_wren_r <= 0;
         fifo_wren_sync.send(0);
         sync_bitslip <= 0;
-        iodelay_reset_inc_ce <= 0;
+        sync_reset_inc_ce <= 0;
         dstate <= DIdle;
     endrule
     rule wrensync_rule if (bvi_reset_reg != 0);
-        let fwsync = 0;
-        dfifo_wren_r <= bvi_fifo_wren_wire;
-        if (bvi_delay_wren_wire == 1 && samplein_reset_null.read() == 1)
-            fwsync = dfifo_wren_r;
-        else
-            fwsync = bvi_fifo_wren_wire;
-        fifo_wren_sync.send(fwsync);
-        iodelay_reset_inc_ce <= sync_reset_inc_ce;
-    endrule
-
-    rule clkdiv_rule if (bvi_reset_reg != 0);
+        fifo_wren_sync.send(bvi_fifo_wren_wire);
         fifo_reset <= dfifo_reset_r.read();
     endrule
 
     rule setrule;
-        dfifo.reset(iodelay_reset_inc_ce[2]);
-        delaye2.reset(iodelay_reset_inc_ce[2]);
+        dfifo.reset(sync_reset_inc_ce[2]);
+        delaye2.reset(sync_reset_inc_ce[2]);
         delaye2.cinvctrl(0);
         delaye2.cntvaluein(0);
         delaye2.ld(0);
         delaye2.ldpipeen(0);
         delaye2.datain(0);
-        delaye2.inc(iodelay_reset_inc_ce[1] == 1);
-        delaye2.ce(iodelay_reset_inc_ce[0]);
+        delaye2.inc(sync_reset_inc_ce[1] == 1);
+        delaye2.ce(sync_reset_inc_ce[0]);
         master_data.d(0);
         master_data.bitslip(sync_bitslip);
         master_data.ce1(1);
@@ -572,7 +561,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         master_data.shiftin2(0);
         master_data.oclk(0);
         master_data.oclkb(0);
-        master_data.reset(iodelay_reset_inc_ce[2]);
+        master_data.reset(sync_reset_inc_ce[2]);
         slave_data.d(0);
         slave_data.bitslip(sync_bitslip);
         slave_data.ce1(1);
@@ -585,7 +574,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         slave_data.shiftin2(master_data.shiftout2());
         slave_data.oclk(0);
         slave_data.oclkb(0);
-        slave_data.reset(iodelay_reset_inc_ce[2]);
+        slave_data.reset(sync_reset_inc_ce[2]);
     endrule
 
     rule serdesda2_rule;
@@ -745,22 +734,22 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
     endrule
 
     rule sendup_imageon_clock;
-       Bit#(5) alignbusyw = 0;
-       Bit#(5) alignedw = 0;
-       Bit#(5) emptyw = 0;
+       Bit#(1) alignedw = 1;
+       Bit#(1) alignbusyw = 0;
+       Bit#(1) emptyw = 0;
        Bit#(3) samplein = 0;
        Bit#(50) rawdataw = 0;
        for (Bit#(8) i = 0; i < 5; i = i+1) begin
-	  alignbusyw[i] = serdes_v[i].align_busy();
-	  alignedw[i] = serdes_v[i].aligned();
+	  alignedw = alignedw & serdes_v[i].aligned();
+	  alignbusyw = alignbusyw | serdes_v[i].align_busy();
+	  emptyw = emptyw | serdes_v[i].empty();
           samplein = samplein | serdes_v[i].samplein();
-	  emptyw[i] = serdes_v[i].empty();
 	  rawdataw[(i+1)*10-1: i*10] = serdes_v[i].dataout();
        end
-       serdes_align_busy_temp <= pack(alignbusyw != 0);
-       serdes_aligned_temp <= pack(alignedw == 5'b11111);
+       serdes_align_busy_temp <= alignbusyw;
+       serdes_aligned_temp <= alignedw;
        bittest_wire <= pack(samplein == 3'b110);
-       empty_wire <= pack(emptyw != 0);
+       empty_wire <= emptyw;
        raw_data_wire <= rawdataw;
     endrule
 
