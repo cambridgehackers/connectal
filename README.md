@@ -216,6 +216,7 @@ The driver sources are located in the xbsv project:
 
 [ an alternate way to write command line:
    (cd drivers/portal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portal.ko)
+   adb push drivers/portal/portal.ko /mnt/sdcard
 ]
 
 To update the driver running on the Zync platform, set ADB_PORT appropriately and run the following commands:
