@@ -644,6 +644,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	     Add#(eee, busWidthWords, 8));
 
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
+    FIFOF#(TLPData#(16)) tlpWriteHeaderFifo <- mkFIFOF;
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bool) use4dwReg <- mkReg(True);
@@ -656,6 +657,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
     Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
     Reg#(Bit#(9)) writeDwCount <- mkReg(0);
     Reg#(TLPTag) writeTag <- mkReg(0);
+   Reg#(Bool) writeHeaderSent <- mkReg(False);
 
     function LUInt#(4) tlpWordCount(TLPData#(16) tlp);
        if (tlp.be == 16'h0000)
@@ -672,18 +674,49 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	  return 0;
     endfunction
 
-   rule writeTlps if (writeDwCount > 0);
+   rule writeHeaderTlp if (writeDwCount > 0 && !writeHeaderSent);
+      let tlp = tlpWriteHeaderFifo.first;
+      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+      Bool sendit = False;
+      if (hdr_3dw.format == MEM_WRITE_3DW_DATA && writeDataMimo.deqReadyN(1)) begin
+	 Vector#(4, Bit#(32)) v = writeDataMimo.first();
+	 writeDataMimo.deq(1);
+	 hdr_3dw.data = byteSwap(v[0]);
+	 tlp.be = 16'hffff;
+	 if (writeDwCount == 1)
+	    tlp.eof = True;
+	 writeDwCount <= writeDwCount - 1;
+	 tlp.data = pack(hdr_3dw);
+	 sendit = True;
+      end
+      else if (hdr_3dw.format == MEM_WRITE_3DW_DATA) begin
+	 // retry until the data is available in writeDataMimo
+      end
+      else begin
+	 sendit = True;
+      end
+      if (sendit) begin
+	 tlpWriteHeaderFifo.deq();
+	 tlpOutFifo.enq(tlp);
+	 writeHeaderSent <= True;
+      end
+   endrule
+
+   rule writeTlps if (writeDwCount > 0 && writeHeaderSent);
       TLPData#(16) tlp = defaultValue;
       tlp.sof = False;
       Vector#(4, Bit#(32)) v = unpack(0);
-      if (writeDwCount > 4) begin
+      Bool sendit = False;
+      if (writeDwCount > 4 && writeDataMimo.deqReadyN(4)) begin
 	 v = writeDataMimo.first();
+
 	 writeDataMimo.deq(4);
 	 writeDwCount <= writeDwCount - 4;
 	 tlp.eof = True;
 	 tlp.be = 16'hffff;
+	 sendit = True;
       end
-      else begin
+      else if (writeDataMimo.deqReadyN(unpack(truncate(writeDwCount)))) begin
 	 v = writeDataMimo.first();
 	 writeDataMimo.deq(unpack(truncate(writeDwCount)));
 	 writeDwCount <= 0;
@@ -696,9 +729,16 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	    tlp.be = 16'hff00;
 	 else if (writeDwCount == 1)
 	    tlp.be = 16'hf000;
+	 sendit = True;
       end
-      tlp.data = pack(v);
-      tlpOutFifo.enq(tlp);
+      else begin
+	 // wait for more data in writeDataMimo
+      end
+      if (sendit) begin
+	 for (Integer i = 0; i < 4; i = i + 1)
+	    tlp.data[(i+1)*32-1:i*32] = byteSwap(v[3-i]);
+	 tlpOutFifo.enq(tlp);
+      end
    endrule
 
     interface GetPut tlps = tuple2(
@@ -733,7 +773,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	   method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
 				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid)
 	      provisos (Add#(zzz,32,addrWidth))
-	      if (writeBurstCount == 0);
+	      if (writeBurstCount == 0 && writeDwCount == 0);
 
 	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
 	      TLPData#(16) tlp = defaultValue;
@@ -893,10 +933,11 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 
 		 tlp.data = pack(hdr_3dw);
 	      end
-	      tlpOutFifo.enq(tlp);
+	      tlpWriteHeaderFifo.enq(tlp);
 	      writeBurstCount <= zeroExtend(burstLen)+1;
 	      writeDwCount <= zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
 	      writeTag <= truncate(awid);
+	      writeHeaderSent <= False;
            endmethod: writeAddr
 	   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last, Bit#(idWidth) wid)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0);
