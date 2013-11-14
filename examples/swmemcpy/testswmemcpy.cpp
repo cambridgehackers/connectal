@@ -30,17 +30,13 @@ void* child(void* prd_sock)
   unsigned int *dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
   //fprintf(stderr, "child::mmap %08x\n", dstBuffer);  
 
-  int j = 0;
-  do{
-    unsigned int sg = 0;
-    bool mismatch = false;
-    for (int i = 0; i < numWords; i++){
-      mismatch |= (dstBuffer[i] != sg++);
-      fprintf(stderr, "%08x, %08x\n", dstBuffer[i], sg-1);
-    }
-    fprintf(stderr, "child::writeDone mismatch=%d (%d)\n", mismatch, j++);
-  }while(false);
-
+  unsigned int sg = 0;
+  bool mismatch = false;
+  for (int i = 0; i < numWords; i++){
+    mismatch |= (dstBuffer[i] != sg++);
+    fprintf(stderr, "%08x, %08x\n", dstBuffer[i], sg-1);
+  }
+  fprintf(stderr, "child::writeDone mismatch=%d\n", mismatch);
   munmap(dstBuffer, alloc_sz);
   close(fd);
   return NULL;
@@ -52,12 +48,13 @@ void* parent(void* pwr_sock)
   int wr_sock = *((int*)pwr_sock);
   PortalAlloc dstAlloc;
   unsigned int *dstBuffer = 0;
+  unsigned int *dba = 0;
   class TestPM *pm = new TestPM();
   
   fprintf(stderr, "parent::allocating memory...\n");
   pm->alloc(alloc_sz, &dstAlloc);
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
-  //fprintf(stderr, "parent::mmap %08x\n", dstBuffer);  
+  fprintf(stderr, "parent::mmap %08lx\n", (unsigned long)dstBuffer);  
 
   for (int i = 0; i < numWords; i++){
     dstBuffer[i] = i;
@@ -68,6 +65,17 @@ void* parent(void* pwr_sock)
 
   int rc = ioctl(pm->pa_fd, PA_DEBUG_PK, &dstAlloc);
   fprintf(stderr, "parent::debug ioctl complete (%d)\n",rc);
+
+  dba = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
+  fprintf(stderr, "parent::mmap %08lx\n", (unsigned long)dba);  
+
+  unsigned int sg = 0;
+  bool mismatch = false;
+  for (int i = 0; i < numWords; i++){
+    mismatch |= (dba[i] != sg++);
+    fprintf(stderr, "%08x, %08x\n", dba[i], dstBuffer[i]);
+  }
+  fprintf(stderr, "parent::writeDone mismatch=%d\n", mismatch);
 
   sock_fd_write(wr_sock, dstAlloc.header.fd);
   munmap(dstBuffer, alloc_sz);

@@ -1,0 +1,5 @@
+#! /bin/bash
+make -f Makefile.x86 
+sudo rmmod portalalloc
+sudo insmod ./portalalloc.ko
+sudo chmod 777 /dev/portalalloc

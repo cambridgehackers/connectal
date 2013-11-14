@@ -494,20 +494,28 @@ int pa_system_heap_map_user(struct pa_buffer *buffer,
   struct scatterlist *sg;
   int i;
 
+  //printk("(0) pa_system_heap_map_user %08lx %08lx %08lx\n", vma->vm_start, vma->vm_end, offset);
+
   for_each_sg(table->sgl, sg, table->nents, i) {
     struct page *page = sg_page(sg);
     unsigned long remainder = vma->vm_end - addr;
-    unsigned long len = sg_dma_len(sg);
+    unsigned long len = sg->length;
 
-    if (offset >= sg_dma_len(sg)) {
-      offset -= sg_dma_len(sg);
+    //printk("pa_system_heap_map_user %08x %08x\n", sg->length, sg_dma_len(sg));
+
+    //printk("(1) pa_system_heap_map_user %08lx %08lx %08lx\n", (unsigned long) page, remainder, len);
+
+    if (offset >= (sg->length)) {
+      //printk("feck %08lx %08x\n", offset, (sg->length));
+      offset -= (sg->length);
       continue;
     } else if (offset) {
       page += offset / PAGE_SIZE;
-      len = sg_dma_len(sg) - offset;
+      len = (sg->length) - offset;
       offset = 0;
     }
     len = min(len, remainder);
+    //printk("(2) pa_system_heap_map_user %08lx %08lx %08lx\n", addr, (unsigned long)page, page_to_pfn(page));
     remap_pfn_range(vma, addr, page_to_pfn(page), len,
 		    vma->vm_page_prot);
     addr += len;
@@ -535,6 +543,7 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
       for(j = 0; j < 6; j++)
       	printk("PA_DEBUG_PK: %08x\n", pva[j]);
     }
+    return 0;
   }
   case PA_DCACHE_FLUSH_INVAL: {
 #if defined(__arm__)
@@ -557,6 +566,14 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
     }
     return 0;
 #elif defined(__i386__) || defined(__x86_64__)
+    /* struct PortalAllocHeader header; */
+    /* struct vm_area_struct *vma; */
+    /* if (copy_from_user(&header, (void __user *)arg, sizeof(header))) */
+    /*   return -EFAULT; */
+    /* vma = find_vma(current->mm, header.addr); */
+    /* printk("PA_DCACHE_FLUSH_INVAL %08lx\n", (unsigned long)vma); */
+    /* flush_cache_range(vma, header.addr, header.addr+header.size); */
+    /* clflush_cache_range((void*)header.addr, header.size); */
     return -EFAULT;
 #else
 #error("PA_DCACHE_FLUSH_INVAL architecture undefined");

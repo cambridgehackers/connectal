@@ -268,15 +268,18 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
     return rc;
   }
 #elif defined(__i386__) || defined(__x86_64__)
+  // not sure any of this is necessary (mdk)
   for(int i = 0; i < portalAlloc->header.size; i++){
     char foo = *(((volatile char *)__p)+i);
     asm volatile("clflush %0" :: "m" (foo));
   }
+  asm volatile("mfence");
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
   fprintf(stderr, "dcache flush\n");
   return 0;
+
 }
 
 int PortalMemory::reference(PortalAlloc* pa)
