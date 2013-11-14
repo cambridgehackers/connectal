@@ -85,6 +85,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(1)) fifo_reset <- mkReg(1, clocked_by serdes_clock, reset_by serdes_reset);
     SyncBitIfc#(Bit#(1)) fifo_reset_sync <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
     SyncBitIfc#(Bit#(1)) astate_idle <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
+    SyncBitIfc#(Bit#(1)) astate_bitslip <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
     Reg#(Bit#(1)) sync_bitslip <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(2)) sync_reset_inc_ce <- mkReg(0, clocked_by serdes_clock, reset_by serdes_reset);
     Reg#(Bit#(3)) ctrl_sample <- mkReg(0);
@@ -110,7 +111,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     Reg#(Bit#(16)) retrycounter <- mkReg(0);
     Reg#(Bit#(16)) gencounter <- mkReg(0);
     FIFO#(Bit#(1)) start_alignment_fsm <- mkFIFO();
-    SyncBitIfc#(Bit#(1)) serdes_bitslip <- mkSyncBit(defaultClock, defaultReset, serdes_clock);
 
     //*************************** top align FSM *****************
     rule qfsmreset_rule if (bvi_resets_reg.read() == 0);
@@ -145,11 +145,11 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule qfsmall;
         fifo_reset_sync.send(pack(qstate != QIdle));
         astate_idle.send(pack(astate == ADelay || astate == AManual));
+        astate_bitslip.send(pack(astate == AAlign));
     endrule
 
     //*************************** alignment operation FSM *****************
     rule afsminit_rule if (bvi_resets_reg.read() == 0);
-        serdes_bitslip.send(0);
         ctrl_samplein_i <= 0;
         edge_init <= 0;
         data_init <= 0;
@@ -409,7 +409,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             begin
             gencounter <= 8;
             as = AAlign;
-            serdes_bitslip.send(1);
             serdes_start.enq(0);
             end
         astate <= as;
@@ -426,14 +425,12 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             else
                 begin
                 gencounter <= gencounter - 1;
-                serdes_bitslip.send(1);
                 serdes_start.enq(0);
                 end
             end
         astate <= as;
     endrule
     rule afsmdone_rule if (bvi_resets_reg.read() != 0 && astate == ADone);
-        serdes_bitslip.send(0);
         astate <= AIdle;
     endrule
 
@@ -441,7 +438,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule serdes_idle_rule if (bvi_reset_reg != 0 && serdes_running == 0);
         serdes_start.deq();
         sync_reset_inc_ce <= serdes_start.first;
-        sync_bitslip <= serdes_bitslip.read();
+        sync_bitslip <= astate_bitslip.read();
         serdes_running <= 1;
         dcounter <= 3;
     endrule
