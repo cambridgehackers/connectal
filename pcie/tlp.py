@@ -70,11 +70,11 @@ last_vcd_timestamp = mpz(0)
 last_vcd_pktclass_code = None
 
 pktclassCodes = {
-#    'Slave Request': 'S',
-#    'Slave Write Request': 'T',
-#    'Slave Response': 's',
-#    'slave continuation': 'c',
-#    'Master Write Request': 'W',
+    'Slave Request': 'S',
+    'Slave Write Request': 'T',
+    'Slave Response': 's',
+    'slave continuation': 'c',
+    'Master Write Request': 'W',
     'Master Request': 'M',
     'Master Response': 'm',
     'master continuation': 'C',
