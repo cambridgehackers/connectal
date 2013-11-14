@@ -43,8 +43,8 @@ interface IserdesDatadeser;
 endinterface: IserdesDatadeser
 
 typedef enum { QIdle, QTrain, QOff} QState deriving (Bits,Eq);
-typedef enum { AIdle, ADelay, AEdge, ACEdge, AWait, ACompare,
-     A1Changed, A1Stable, ASecond, AFound, AAlign, ADone } AState deriving (Bits,Eq);
+typedef enum { AIdle, ADelay, ACEdge, AWait, ACompare,
+     A1Changed, A1Stable, ASecond, AFound, AAlign} AState deriving (Bits,Eq);
 
 module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest, Bit#(1) align_start,
     Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, TrainRotate trainrot)(IserdesDatadeser);
@@ -176,22 +176,20 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         serdes_end.deq();
         maxcount <= 31;
         gencounter <= 15;
-        astate <= AEdge;
-        serdes_start.enq(0);
-    endrule
-    rule afsmedge_rule if (bvi_resets_reg.read() != 0 && astate == AEdge);
-        serdes_end.deq();
         astate <= ACEdge;
+        serdes_start.enq(0);
     endrule
     rule afsmcedge1_rule if (bvi_resets_reg.read() != 0 && astate == ACEdge
             && retrycounter < 'h8000);
+        serdes_end.deq();
         astate <= AIdle;
     endrule
     rule afsmcedge2_rule if (bvi_resets_reg.read() != 0 && astate == ACEdge
             && retrycounter >= 'h8000);
+        serdes_end.deq();
         let mc = maxcount;
         let cric = 2'b11;
-        let as = AEdge;
+        let as = ACEdge;
         retrycounter <= retrycounter - 1;
         if (edge_int != 0)
             begin
@@ -225,18 +223,16 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             let cric = 2'b00;
             if (edge_init != edge_int)
                 begin
-                let mc = maxcount;
                 retrycounter <= retrycounter - 1;
                 if (maxcount[10] == 1)
                     as = ADelay;
                 else
                     begin
                     cric = 2'b11;
-                    mc = mc - 1;
                     gc = 14;
-                    as = AEdge;
+                    as = ACEdge;
                     end
-                maxcount <= mc;
+                maxcount <= maxcount - 1;
                 end
             else
                 gc = gc - 1;
@@ -247,8 +243,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
     rule afsmcompare_rule if (bvi_resets_reg.read() != 0 && astate == ACompare);
         let as = astate;
-        let gc = gencounter;
-        let mc = maxcount;
+        let gc = gencounter - 1;
         if (gencounter >= 'h8000)
             begin
             let cric = 2'b11;
@@ -260,31 +255,25 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             else
                 begin
                 retrycounter <= retrycounter - 1;
-                mc = mc - 1;
                 gc = 14;
-                as = AEdge;
+                as = ACEdge;
                 end
             serdes_start.enq(cric);
             end
-        else
+        else if (ctrl_data == trainrot[gencounter])
             begin
-            if (ctrl_data == trainrot[gencounter])
-                begin
-                let csamplein = 3'b001;
-                if (gencounter == 9)
-                    csamplein = 3'b010;
-                else if (gencounter == 8)
-                    csamplein = 3'b100;
-                ctrl_sample <= csamplein;
-                mc = mc - 1;
-                as = A1Changed;
-                serdes_start.enq(2'b11);
-                end
-            gc = gc - 1;
+            let csamplein = 3'b001;
+            if (gencounter == 9)
+                csamplein = 3'b010;
+            else if (gencounter == 8)
+                csamplein = 3'b100;
+            ctrl_sample <= csamplein;
+            as = A1Changed;
+            serdes_start.enq(2'b11);
             end
         astate <= as;
         gencounter <= gc;
-        maxcount <= mc;
+        maxcount <= maxcount - 1;
     endrule
     rule afsm1changed_rule if (bvi_resets_reg.read() != 0 && astate == A1Changed);
         serdes_end.deq();
@@ -357,11 +346,11 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         serdes_start.enq(cric);
     endrule
     rule afsmfound_rule if (bvi_resets_reg.read() != 0 && astate == AFound);
-        let gc = gencounter;
         serdes_end.deq();
+        let gc = gencounter;
         if (gencounter >= 'h8000)
             begin
-            let as = ADone;
+            let as = AIdle;
             if (ctrl_data != training)
                 begin
                 gc = 8;
@@ -380,9 +369,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule afsmalign_rule if (bvi_resets_reg.read() != 0 && astate == AAlign);
         serdes_end.deq();
         let as = astate;
-        if (ctrl_data == training)
-            as = ADone;
-        else if (gencounter >= 'h8000)
+        if (ctrl_data == training || gencounter >= 'h8000)
             as = AIdle;
         else
             begin
@@ -390,9 +377,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             serdes_start.enq(0);
             end
         astate <= as;
-    endrule
-    rule afsmdone_rule if (bvi_resets_reg.read() != 0 && astate == ADone);
-        astate <= AIdle;
     endrule
 
     //*************************** serdes setting FSM *****************
