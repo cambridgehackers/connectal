@@ -28,7 +28,7 @@ void dump(const char *prefix, char *buf, size_t len)
 class TestCoreIndication : public CoreIndication
 {
   virtual void storeAddress ( unsigned long long addr ) {
-    //fprintf(stderr, "storeAddress addr=%08llx *(long*)srcBuffer=%lx\n", addr, *(long*)srcBuffer);
+    fprintf(stderr, "storeAddress addr=%08llx *(long*)srcBuffer=%lx\n", addr, *(long*)srcBuffer);
     if (storeCount < 16) {
       std::bitset<128>     value128(0xD00DF00DDEADBEEFul);
       value128 |= (std::bitset<128>(0xAAAABBBBCCCCDDDDul) << 64);
@@ -119,8 +119,8 @@ int main(int argc, const char **argv)
     srcAlloc.entries[0].dma_address = pciAlloc.dma_handle;
     memset(srcBuffer, 0xda, 8192);
     asm volatile ("clflush %0" : "+m" (srcBuffer[0]));
-    munmap(srcBuffer, 1<<16);
-    srcBuffer = 0;
+    //munmap(srcBuffer, 1<<16);
+    //srcBuffer = 0;
   }
 
   if (0) {
