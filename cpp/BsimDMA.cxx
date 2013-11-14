@@ -20,9 +20,6 @@ static int fd[16];
 static unsigned long long *buffer[16];
 static int ptr[16];
 
-// TODO: get rid of this
-static unsigned int size_hack = (16 << 2) * sizeof(unsigned int);
-
 extern "C" {
 
   void init_pareff(){
@@ -54,22 +51,20 @@ extern "C" {
 
   void write_pareff(unsigned long pref, unsigned long offset, unsigned long long data){
     buffer[pref][offset] = data;
-    // TODO: get rid of this
-    if (offset+1  == 32){
-      munmap(buffer[pref], size_hack);
-      close(fd[pref]);
-      fprintf(stderr, "closing fd");
-    }
   }
 
-  void pareff(unsigned long off, unsigned long pref){
+  unsigned long long read_pareff(unsigned long pref, unsigned long offset){
+    return buffer[pref][offset];
+  }
+
+  void pareff(unsigned long off, unsigned long pref, unsigned long size){
     assert(off < 16);
     assert(off == pref);
 
     sock_fd_read(p_fd.write.s2, &(fd[off]));
     fprintf(stderr, "BsimDMA::pareff fd[%ld]=%d\n", off, fd[off]);
     
-    buffer[off] = (unsigned long long *)mmap(0, size_hack, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[off], 0);
+    buffer[off] = (unsigned long long *)mmap(0, size, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[off], 0);
     // fprintf(stderr, "BsimDMA::pareff off=%ld, buffer=%08lx\n", off, buffer[off]);
     ptr[off] = 0;
   }

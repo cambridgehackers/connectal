@@ -16,7 +16,7 @@ PortalAlloc bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 16 << 8;
+int numWords = 16 << 2;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 
@@ -29,7 +29,7 @@ unsigned int iterCnt=1;
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
+    for (int i = 0; i < (len > 2056 ? 2056 : len) ; i++)
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
     fprintf(stderr, "\n");
 }
@@ -65,8 +65,8 @@ class TestCoreIndication : public CoreIndication
     if(true){
       fprintf(stderr, "memcpy done: %lx\n", v);
       fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
-      // dump("src", (char*)srcBuffer, size);
-      // dump("dst", (char*)dstBuffer, size);
+      dump("src", (char*)srcBuffer, test_sz);
+      dump("dst", (char*)dstBuffer, test_sz);
     }
     sem_post(&iter_sem);
     if(iterCnt == ++memcmp_count){

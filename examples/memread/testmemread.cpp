@@ -26,16 +26,16 @@ void dump(const char *prefix, char *buf, size_t len)
 class TestDMAIndication : public DMAIndication
 {
   virtual void reportStateDbg(DmaDbgRec& rec){
-    fprintf(stderr, "DMA::reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
+    fprintf(stderr, "DMA::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "DMA::configResp: %x\n", channelId);
+    fprintf(stderr, "DMA::configResp: %lx\n", channelId);
   }
   virtual void sglistResp(unsigned long channelId){
-    fprintf(stderr, "DMA::sglistResp: %x\n", channelId);
+    fprintf(stderr, "DMA::sglistResp: %lx\n", channelId);
   }
   virtual void parefResp(unsigned long channelId){
-    fprintf(stderr, "DMA::parefResp: %x\n", channelId);
+    fprintf(stderr, "DMA::parefResp: %lx\n", channelId);
   }
 };
 
@@ -45,6 +45,10 @@ class TestCoreIndication : public CoreIndication
   virtual void readReq(unsigned long v){
     fprintf(stderr, "Core::readReq %lx\n", v);
   }
+  virtual void readDone(unsigned long v){
+    fprintf(stderr, "Core::readDone %lx\n", v);
+    exit(0);
+  }
   virtual void started(unsigned long words){
     fprintf(stderr, "Core::started: words=%lx\n", words);
   }
@@ -53,7 +57,7 @@ class TestCoreIndication : public CoreIndication
     dump("", (char*)&v, sizeof(v));
   }
   virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
-    fprintf(stderr, "Core::reportStateDbg: streamRdCnt=%08x dataMismatch=%d\n", streamRdCnt, dataMismatch);
+    fprintf(stderr, "Core::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
   }  
 public:
   TestCoreIndication()
@@ -95,9 +99,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::starting read %08x\n", numWords);
   device->startRead(numWords);
 
-  while(1){
-    //dma->getReadStateDbg();
-    device->getStateDbg();
-    sleep(1);
-  }
+  //dma->getReadStateDbg();
+  device->getStateDbg();
+  while(true){sleep(1);}
 }

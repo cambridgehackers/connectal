@@ -25,6 +25,7 @@ import BRAMFIFO::*;
 import GetPut::*;
 import AxiClientServer::*;
 import AxiDMA::*;
+import BsimDMA::*;
 import PortalMemory::*;
 
 interface CoreRequest;
@@ -37,6 +38,7 @@ interface CoreIndication;
    method Action rData(Bit#(64) v);
    method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) dataMismatch);
    method Action readReq(Bit#(32) v);
+   method Action readDone(Bit#(32) dataMismatch);
 endinterface
 
 interface MemreadRequest;
@@ -52,7 +54,11 @@ endinterface
 
 module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
 
-   AxiDMA                 dma <- mkAxiDMA(indication.dmaIndication);
+`ifdef BSIM
+   BsimDMA             dma <- mkBsimDMA(indication.dmaIndication);
+`else
+   AxiDMA              dma <- mkAxiDMA(indication.dmaIndication);
+`endif
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
    Reg#(Bit#(32))      srcGen <- mkReg(0);
@@ -72,7 +78,9 @@ module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt-16;
       dma_stream_read_chan.readReq.put(?);
-      if (streamRdCnt[5:0] == 6'b0)
+      if (streamRdCnt == 16)
+	 indication.coreIndication.readDone(zeroExtend(pack(dataMismatch)));
+      else if (streamRdCnt[5:0] == 6'b0)
 	 indication.coreIndication.readReq(streamRdCnt);
    endrule
 
@@ -86,6 +94,8 @@ module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
 	 indication.coreIndication.reportStateDbg(streamRdCnt, dataMismatch ? 32'd1 : 32'd0);
       endmethod
    endinterface
+`ifndef BSIM
    interface Axi3Client m_axi = dma.m_axi;
+`endif
    interface DMARequest dmaRequest = dma.request;
 endmodule

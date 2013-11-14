@@ -26,6 +26,7 @@ import GetPut::*;
 
 import AxiClientServer::*;
 import AxiDMA::*;
+import BsimDMA::*;
 import PortalMemory::*;
 import BlueScope::*;
 
@@ -61,7 +62,11 @@ endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
    
-   AxiDMA                 dma <- mkAxiDMA(indication.dmaIndication);
+`ifdef BSIM
+   BsimDMA             dma <- mkBsimDMA(indication.dmaIndication);
+`else
+   AxiDMA              dma <- mkAxiDMA(indication.dmaIndication);
+`endif
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
@@ -86,7 +91,6 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
       dma_stream_read_chan.readReq.put(?);
       indication.coreIndication.readReq(streamRdCnt);
       let x = dma.write.dbg;
-      //indication.coreIndication.reportDmaDbg(x.x, x.y, x.z, x.w);
    endrule
 
    rule writeReq(streamWrCnt > 0 && !writeInProg);
@@ -99,7 +103,7 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
       writeInProg <= False;
       dma_stream_write_chan.writeDone.get;
       streamWrCnt <= streamWrCnt-16;
-      //indication.coreIndication.writeAck(streamWrCnt);
+      indication.coreIndication.writeAck(streamWrCnt);
       if(streamWrCnt==16)
    	 indication.coreIndication.done(dataMismatch ? 32'd1 : 32'd0);
    endrule
@@ -112,6 +116,7 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
       dma_stream_write_chan.writeData.put(v);
       bsi.dataIn(v,v);
       srcGen <= srcGen+2;
+      // $display("%h", v);
       // indication.coreIndication.rData(v);
    endrule
    
@@ -136,6 +141,8 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
       endmethod
    endinterface
    interface BlueScopeRequest bsRequest = bsi.requestIfc;
+`ifndef BSIM
    interface Axi3Client m_axi = dma.m_axi;
+`endif
    interface DMARequest dmaRequest = dma.request;
 endmodule

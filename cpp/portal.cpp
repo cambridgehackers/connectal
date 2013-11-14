@@ -299,7 +299,8 @@ int PortalMemory::reference(PortalAlloc* pa)
   }
 #else
   sock_fd_write(p_fd.write.s2, pa->header.fd);
-  paref(id, id);
+  paref(id, id, pa->header.size);
+  sleep(1);
 #endif
   return id;
 }

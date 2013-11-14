@@ -95,9 +95,6 @@ module mkMemwriteRequest#(MemwriteIndication indication)(MemwriteRequest);
 
 `ifndef BSIM
    interface Axi3Client m_axi = dma.m_axi;
-`ifdef BSIM
-   fark;
-`endif
 `endif
    interface DMARequest dmaRequest = dma.request;
 endmodule
