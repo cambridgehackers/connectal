@@ -30,6 +30,7 @@ import SGList::*;
 interface CoreIndication;
     method Action loadValue(Bit#(128) value, Bit#(32) cycles);
     method Action storeAddress(Bit#(64) addr);
+    method Action loadMultipleLatency(Bit#(32) busWidth, Bit#(32) length, Bit#(32) count, Bit#(32) startTime, Bit#(32) endTime);
 endinterface
 
 interface CoreRequest;
@@ -69,19 +70,23 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 
    Reg#(Bit#(40)) readMultipleAddr <- mkReg(0);
    Reg#(Bit#(8)) readMultipleLen <- mkReg(0);
-   Reg#(Bit#(16)) readMultipleCount <- mkReg(0);
+   Reg#(Bit#(8)) readMultipleCount <- mkReg(0);
 
     Reg#(Bit#(32)) timer <- mkReg(0);
     rule updateTimer;
         timer <= timer + 1;
     endrule
 
-   rule readMultipleAddrGenerator if (readMultipleCount > 0);
+   Reg#(Bit#(16)) addrCount <- mkReg(0);
+   rule readMultipleAddrGenerator if (addrCount > 0);
       readAddrFifo.enq(readMultipleAddr);
       readLenFifo.enq(readMultipleLen);
 
-      readMultipleCount <= readMultipleCount - 1;
+      addrCount <= addrCount - 1;
    endrule
+
+   Reg#(Bit#(32)) loadMultipleStartTime <- mkReg(0);
+   Reg#(Bit#(16)) completedCount <- mkReg(0);
 
    FIFO#(Tuple2#(Bit#(128),Bit#(32))) readDataFifo <- mkSizedFIFO(32);
    rule receivedData;
@@ -95,10 +100,13 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
     	    readAddrFifo.enq(truncate(addr));
 	    readLenFifo.enq(truncate(len));
 	endmethod: load
-        method Action loadMultiple(Bit#(64) addr, Bit#(32) len, Bit#(32) count) if (readMultipleCount == 0);
+        method Action loadMultiple(Bit#(64) addr, Bit#(32) len, Bit#(32) count) if (completedCount == 0);
+	   loadMultipleStartTime <= timer;
     	   readMultipleAddr <= truncate(addr);
 	   readMultipleLen <= truncate(len);
 	   readMultipleCount <= truncate(count);
+	   addrCount <= truncate(count);
+	   completedCount <= truncate(count);
 	endmethod: loadMultiple
         method Action store(Bit#(64) addr, Bit#(128) value);
 	    writeAddrFifo.enq(truncate(addr));
@@ -160,6 +168,13 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	         readDataFifo.enq(tuple2(response.data, latency));
 		 // this request is done, dequeue its information
 		 readBurstCountStartTimeFifo.deq;
+
+		 if (completedCount == 1)
+		    ind.coreIndication.loadMultipleLatency(128, zeroExtend(readMultipleLen), zeroExtend(readMultipleCount), loadMultipleStartTime, timer);
+
+		 if (completedCount > 0)
+		    completedCount <= completedCount - 1;
+
 	      end
 
 	      readBurstCount <= rbc - 1;

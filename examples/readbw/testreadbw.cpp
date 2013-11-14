@@ -35,7 +35,7 @@ class TestCoreIndication : public CoreIndication
       device->store(srcAlloc.entries[0].dma_address+storeCount*8, value128);
       storeCount++;
     } else {
-      device->loadMultiple(srcAlloc.entries[0].dma_address, 63, 8);
+      device->loadMultiple(srcAlloc.entries[0].dma_address, 63, 64);
     }
   }
   virtual void loadAddress ( unsigned long long addr ) {
@@ -52,6 +52,18 @@ class TestCoreIndication : public CoreIndication
     fprintf(stderr, "srcBuffer[0] = %08lx\n", *(long *)srcBuffer);
     //device->load(srcAlloc.entries[0].dma_address, 3);
   }
+  virtual void loadMultipleLatency ( unsigned long busWidth, unsigned long beatsPerRead, unsigned long numReads,
+				     unsigned long startTime, unsigned long endTime )
+  {
+    unsigned long numBytes = beatsPerRead * numReads * busWidth / 8;
+    unsigned long numCycles = endTime - startTime;
+    double numMicroSeconds = numCycles / 125.0;
+    double megabytesPerSecond = numBytes / numMicroSeconds;
+
+    fprintf(stderr, "loadMultiple  %ld bytes latency=%ld cycles %f us %f MB/s\n",
+	    numBytes, numCycles, numMicroSeconds, megabytesPerSecond);
+  }
+
 };
 
 class TestCoreRequest : public CoreRequest
