@@ -47,7 +47,7 @@ typedef enum { AIdle, ADelay, AWDelay, AEdge, ACEdge, AWait, ACompare, AValid,
      A1Changed, A1Stable, ASecond, AFound, AResetman, AStart, AAlign, ADone } AState deriving (Bits,Eq);
 
 module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest, Bit#(1) align_start,
-    Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, Bit#(1) rden, TrainRotate trainrot)(IserdesDatadeser);
+    Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, TrainRotate trainrot)(IserdesDatadeser);
 
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
@@ -161,8 +161,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         start_alignment_fsm.deq();
         windowcount <= 0;
         retrycounter <= 32765;
-        serdes_setting.enq(1);
-        ctrl_reset_inc_ce <= 3'b100;
         maxcount <= 31;
         ctrl_samplein_i <= 3'b000;
         let as = ADelay;
@@ -172,6 +170,8 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             as = AResetman;
             end
         astate <= as;
+        ctrl_reset_inc_ce <= 3'b100;
+        serdes_setting.enq(1);
     endrule
     rule afsmdelay_rule if (bvi_resets_reg.read() != 0 && astate == ADelay);
         serdes_end.deq();
@@ -179,9 +179,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         astate <= AWDelay;
     endrule
     rule afsmwdelay_rule if (bvi_resets_reg.read() != 0 && astate == AWDelay);
-        serdes_setting.enq(1);
-        ctrl_reset_inc_ce <= 3'b000;
         astate <= AEdge;
+        ctrl_reset_inc_ce <= 3'b000;
+        serdes_setting.enq(1);
     endrule
     rule afsmedge_rule if (bvi_resets_reg.read() != 0 && astate == AEdge);
         serdes_end.deq();
@@ -194,7 +194,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             let mc = maxcount;
             let cric = 3'b011;
             retrycounter <= retrycounter - 1;
-            serdes_setting.enq(1);
             if (edge_int != 0)
                 begin
                 data_init <= ctrl_data;
@@ -213,8 +212,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
                 mc = mc - 1;
                 as = AEdge;
                 end
-            ctrl_reset_inc_ce <= cric;
             maxcount <= mc;
+            ctrl_reset_inc_ce <= cric;
+            serdes_setting.enq(1);
             end
         astate <= as;
     endrule
@@ -230,7 +230,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         else
             begin
             let cric = 3'b000;
-            serdes_setting.enq(1);
             if (edge_init != edge_int)
                 begin
                 let mc = maxcount;
@@ -255,6 +254,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
                 gc = gc - 1;
                 end
             ctrl_reset_inc_ce <= cric;
+            serdes_setting.enq(1);
             end
         astate <= as;
         gencounter <= gc;
@@ -266,7 +266,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             begin
             let mc = maxcount;
             let cric;
-            serdes_setting.enq(1);
             if (maxcount[10] == 1)
                 begin
                 cric = 3'b100;
@@ -283,6 +282,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
                 end
             maxcount <= mc;
             ctrl_reset_inc_ce <= cric;
+            serdes_setting.enq(1);
             end
         else
             begin
@@ -302,16 +302,15 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         gencounter <= gc;
     endrule
     rule afsmvalid_rule if (bvi_resets_reg.read() != 0 && astate == AValid);
-        serdes_setting.enq(1);
-        ctrl_reset_inc_ce <= 3'b011;
         maxcount <= maxcount - 1;
         astate <= A1Changed;
+        ctrl_reset_inc_ce <= 3'b011;
+        serdes_setting.enq(1);
     endrule
     rule afsm1changed_rule if (bvi_resets_reg.read() != 0 && astate == A1Changed);
         serdes_end.deq();
         let as = astate;
         let cric = 3'b000;
-        serdes_setting.enq(1);
         if (ctrl_data == rotateBitsBy(data_init, 10-1))
             begin
             gencounter <= 15;
@@ -335,13 +334,13 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             end
         astate <= as;
         ctrl_reset_inc_ce <= cric;
+        serdes_setting.enq(1);
     endrule
     rule afsm1stable_rule if (bvi_resets_reg.read() != 0 && astate == A1Stable);
         serdes_end.deq();
         let as = astate;
         let mc = maxcount;
         let cric = 3'b011;
-        serdes_setting.enq(1);
         if (gencounter >= 'h8000)
             begin
             windowcount <= windowcount + 1;
@@ -365,12 +364,12 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         astate <= as;
         maxcount <= mc;
         ctrl_reset_inc_ce <= cric;
+        serdes_setting.enq(1);
     endrule
     rule afsmsecond_rule if (bvi_resets_reg.read() != 0 && astate == ASecond);
         serdes_end.deq();
         let as = astate;
         let cric = 3'b001;
-        serdes_setting.enq(1);
         if (ctrl_data == rotateBitsBy(data_init, 10-2))
             begin
             gencounter <= {7'b0, windowcount[9:1]} - 16'b10;
@@ -392,6 +391,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             end
         astate <= as;
         ctrl_reset_inc_ce <= cric;
+        serdes_setting.enq(1);
     endrule
     rule afsmfound_rule if (bvi_resets_reg.read() != 0 && astate == AFound);
         serdes_end.deq();
@@ -399,9 +399,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             astate <= AStart;
         else
             begin
-            serdes_setting.enq(1);
-            ctrl_reset_inc_ce <= 3'b001;
             gencounter <= gencounter - 1;
+            ctrl_reset_inc_ce <= 3'b001;
+            serdes_setting.enq(1);
             end
     endrule
     rule afsmresetman_rule if (bvi_resets_reg.read() != 0 && astate == AResetman);
@@ -410,20 +410,20 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             astate <= AStart;
         else
             begin
-            serdes_setting.enq(1);
-            ctrl_reset_inc_ce <= 3'b011;
             gencounter <= gencounter - 1;
+            ctrl_reset_inc_ce <= 3'b011;
+            serdes_setting.enq(1);
             end
     endrule
     rule afsmstart_rule if (bvi_resets_reg.read() != 0 && astate == AStart);
         let as = ADone;
         if (ctrl_data != training)
             begin
-            serdes_setting.enq(1);
-            ctrl_reset_inc_ce <= 3'b000;
             gencounter <= 8;
             serdes_bitslip.send(1);
             as = AAlign;
+            ctrl_reset_inc_ce <= 3'b000;
+            serdes_setting.enq(1);
             end
         astate <= as;
     endrule
@@ -438,9 +438,9 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
                 as = AIdle;
             else
                 begin
-                serdes_setting.enq(1);
                 serdes_bitslip.send(1);
                 gencounter <= gencounter - 1;
+                serdes_setting.enq(1);
                 end
             end
         astate <= as;
@@ -648,7 +648,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
     TrainRotate trainrot <- replicateM(mkReg(0));
     Vector#(5, IserdesDatadeser) serdes_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdes_reset, serdest_clk.gen_clk,
 	  serdes_align_start_reg, serdes_auto_align_reg, serdes_training_reg,
-	  serdes_manual_tap_reg, decoder_enable_reg, trainrot));
+	  serdes_manual_tap_reg, trainrot));
 
     rule trainrotgen_rule;
         for (UInt#(4) i = 0; i < 10; i = i + 1)
