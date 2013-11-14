@@ -28,7 +28,7 @@ void* child(void* prd_sock)
   sock_fd_read(rd_sock, &fd);
 
   unsigned int *dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
-  fprintf(stderr, "child::mmap %08x\n", dstBuffer);  
+  //fprintf(stderr, "child::mmap %08x\n", dstBuffer);  
 
   int j = 0;
   do{
@@ -57,7 +57,7 @@ void* parent(void* pwr_sock)
   fprintf(stderr, "parent::allocating memory...\n");
   pm->alloc(alloc_sz, &dstAlloc);
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
-  fprintf(stderr, "parent::mmap %08x\n", dstBuffer);  
+  //fprintf(stderr, "parent::mmap %08x\n", dstBuffer);  
 
   for (int i = 0; i < numWords; i++){
     dstBuffer[i] = i;
@@ -65,6 +65,9 @@ void* parent(void* pwr_sock)
   
   pm->dCacheFlushInval(&dstAlloc, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
+
+  int rc = ioctl(pm->pa_fd, PA_DEBUG_PK, &dstAlloc);
+  fprintf(stderr, "parent::debug ioctl complete (%d)\n",rc);
 
   sock_fd_write(wr_sock, dstAlloc.header.fd);
   munmap(dstBuffer, alloc_sz);

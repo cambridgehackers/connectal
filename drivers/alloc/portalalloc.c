@@ -484,6 +484,7 @@ void pa_system_heap_free(struct pa_buffer *buffer)
   sg_free_table(table);
   kfree(table);
 }
+
 int pa_system_heap_map_user(struct pa_buffer *buffer,
 			    struct vm_area_struct *vma)
 {
@@ -519,6 +520,22 @@ int pa_system_heap_map_user(struct pa_buffer *buffer,
 static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   switch (cmd) {
+  case PA_DEBUG_PK: {
+    unsigned long start_addr;
+    unsigned long length;
+    unsigned int i,j,*pva;
+    struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
+    printk("PA_DEBUG_PK starting\n");
+    for(i = 0; i < 1; i++){
+      if (copy_from_user(&start_addr, (void __user *)&(palloc->entries[i].dma_address), sizeof(palloc->entries[i].dma_address)))
+    	return -EFAULT;
+      if (copy_from_user(&length, (void __user *)&(palloc->entries[i].length), sizeof(palloc->entries[i].length)))
+    	return -EFAULT;
+      pva = phys_to_virt(start_addr);
+      for(j = 0; j < 6; j++)
+      	printk("PA_DEBUG_PK: %08x\n", pva[j]);
+    }
+  }
   case PA_DCACHE_FLUSH_INVAL: {
 #if defined(__arm__)
     struct PortalAllocHeader header;

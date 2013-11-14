@@ -18,5 +18,6 @@ typedef struct PortalAlloc {
 
 #define PA_ALLOC _IOWR('B', 10, PortalAlloc)
 #define PA_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalAlloc)
+#define PA_DEBUG_PK _IOWR('B', 12, PortalAlloc)
 
 #endif /* __PORTALALLOC_H__ */

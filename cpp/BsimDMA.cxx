@@ -70,7 +70,7 @@ extern "C" {
     fprintf(stderr, "BsimDMA::pareff fd[%ld]=%d\n", off, fd[off]);
     
     buffer[off] = (unsigned long long *)mmap(0, size_hack, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[off], 0);
-    fprintf(stderr, "BsimDMA::pareff off=%ld, buffer=%08lx\n", off, buffer[off]);
+    // fprintf(stderr, "BsimDMA::pareff off=%ld, buffer=%08lx\n", off, buffer[off]);
     ptr[off] = 0;
   }
 
