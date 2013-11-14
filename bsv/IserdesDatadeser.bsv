@@ -212,7 +212,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule afsmwait_rule if (bvi_resets_reg.read() != 0 && astate == AWait);
         serdes_end.deq();
         let as = astate;
-        let gc = gencounter;
+        let gc = gencounter - 1;
         if (gencounter >= 'h8000)
             begin
             gc = 9;
@@ -234,8 +234,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
                     end
                 maxcount <= maxcount - 1;
                 end
-            else
-                gc = gc - 1;
             serdes_start.enq(cric);
             end
         astate <= as;
@@ -338,8 +336,8 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             end
         else
             begin
-            windowcount <= windowcount + 1;
             cric = 2'b11;
+            windowcount <= windowcount + 1;
             maxcount <= maxcount - 1;
             end
         astate <= as;
@@ -368,15 +366,13 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     endrule
     rule afsmalign_rule if (bvi_resets_reg.read() != 0 && astate == AAlign);
         serdes_end.deq();
-        let as = astate;
         if (ctrl_data == training || gencounter >= 'h8000)
-            as = AIdle;
+            astate <= AIdle;
         else
             begin
             gencounter <= gencounter - 1;
             serdes_start.enq(0);
             end
-        astate <= as;
     endrule
 
     //*************************** serdes setting FSM *****************
