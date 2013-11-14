@@ -44,7 +44,7 @@ endinterface: IserdesDatadeser
 
 typedef enum { QIdle, QTrain, QOff} QState deriving (Bits,Eq);
 typedef enum { AIdle, ADelay, AEdge, ACEdge, AWait, ACompare,
-     A1Changed, A1Stable, ASecond, AFound, AManual, AStart, AAlign, ADone } AState deriving (Bits,Eq);
+     A1Changed, A1Stable, ASecond, AFound, AAlign, ADone } AState deriving (Bits,Eq);
 
 module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest, Bit#(1) align_start,
     Bit#(1) autoalign, Bit#(10) training, Bit#(10) manual_tap, TrainRotate trainrot)(IserdesDatadeser);
@@ -140,7 +140,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
 
     rule qfsmall;
         fifo_reset_sync.send(pack(qstate != QIdle));
-        astate_idle.send(pack(astate == ADelay || astate == AManual));
+        astate_idle.send(pack(astate == ADelay || (astate == AFound && autoalign == 1)));
         astate_bitslip.send(pack(astate == AAlign));
     endrule
 
@@ -167,7 +167,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             begin
             gencounter <= {6'b0, manual_tap};
             maxcount <= 31;
-            as = AManual;
+            as = AFound;
             end
         astate <= as;
         serdes_start.enq(0);
@@ -295,20 +295,12 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
             gencounter <= 15;
             as = A1Stable;
             end
+        else if (maxcount[10] == 1)
+            as = ADelay;
         else
             begin
-            let mc = maxcount;
-            if (maxcount[10] == 1)
-                begin
-                cric = 2'b00;
-                as = ADelay;
-                end
-            else
-                begin
-                cric = 2'b11;
-                mc = mc - 1;
-                end
-            maxcount <= mc;
+            cric = 2'b11;
+            maxcount <= maxcount - 1;
             end
         astate <= as;
         serdes_start.enq(cric);
@@ -365,34 +357,25 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         serdes_start.enq(cric);
     endrule
     rule afsmfound_rule if (bvi_resets_reg.read() != 0 && astate == AFound);
+        let gc = gencounter;
         serdes_end.deq();
         if (gencounter >= 'h8000)
-            astate <= AStart;
+            begin
+            let as = ADone;
+            if (ctrl_data != training)
+                begin
+                gc = 8;
+                as = AAlign;
+                serdes_start.enq(0);
+                end
+            astate <= as;
+            end
         else
             begin
-            gencounter <= gencounter - 1;
-            serdes_start.enq(2'b01);
+            gc = gc - 1;
+            serdes_start.enq({autoalign, 1'b1});
             end
-    endrule
-    rule afsmresetman_rule if (bvi_resets_reg.read() != 0 && astate == AManual);
-        serdes_end.deq();
-        if (gencounter >= 'h8000)
-            astate <= AStart;
-        else
-            begin
-            gencounter <= gencounter - 1;
-            serdes_start.enq(2'b11);
-            end
-    endrule
-    rule afsmstart_rule if (bvi_resets_reg.read() != 0 && astate == AStart);
-        let as = ADone;
-        if (ctrl_data != training)
-            begin
-            gencounter <= 8;
-            as = AAlign;
-            serdes_start.enq(0);
-            end
-        astate <= as;
+        gencounter <= gc;
     endrule
     rule afsmalign_rule if (bvi_resets_reg.read() != 0 && astate == AAlign);
         serdes_end.deq();
