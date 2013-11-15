@@ -837,19 +837,9 @@ class InterfaceMixin:
         dutName = util.decapitalize(self.name)
         methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
         buses = {}
-        clknames = []
         for busType in exposedInterfaces:
             collected = self.collectInterfaceNames(busType)
-            if collected:
-                if busType == 'ImageonVita':
-                    clknames.append('fmc_imageon_video_clk1')
-                    clknames.append('processing_system7_1_fclk_clk3')
-                    clknames.append('serdes_clock')
-                    clknames.append('serdest_clock')
-                if busType == 'HDMI':
-                    clknames.append('hdmi_clock')
             buses[busType] = collected
-        # print 'clknames', clknames
 
         dut_clknames = self.getClockArgNames(syntax.globalvars['mk%s' % self.name])
         substs = {
@@ -878,8 +868,8 @@ class InterfaceMixin:
                                            for (axiMaster,t,params) in axiMasters]),
             'axiMasterImplementations': '\n'.join(['    interface Axi%sMaster %s = %sMaster;' % (4 if t == 'Axi4Client' else 3, axiMaster,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
-            'dut_hdmi_clock_param': '#(%s)' % ', '.join(['Clock %s' % name for name in clknames]) if len(clknames) else '',
-            'dut_hdmi_clock_arg': ' '.join(['%s,' % name for name in dut_clknames]) if len(clknames) else '',
+            'dut_hdmi_clock_param': '#(%s)' % ', '.join(['Clock %s' % name for name in dut_clknames]),
+            'dut_hdmi_clock_arg': ' '.join(['%s,' % name for name in dut_clknames]),
             'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
                                                   for (axiSlave,t,params) in axiSlaves]),
             'exposedInterfaceImplementations': '\n'.join(['\n'.join(['    interface %s %s = %s.%s;' % (t, busname, dutName, busname)

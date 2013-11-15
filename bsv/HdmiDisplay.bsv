@@ -79,8 +79,8 @@ function Put#(item_t) syncFifoToPut( SyncFIFOIfc#(item_t) f);
     );
 endfunction
 
-module mkHdmiDisplayRequest#(Clock hdmi_clock, HdmiDisplayIndication indication)(HdmiDisplayRequest);
-
+module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIndication indication)(HdmiDisplayRequest);
+    Clock hdmi_clock = processing_system7_1_fclk_clk1;
     let busWidthBytes=8;
 
     Reg#(Bit#(32)) vsyncPulseCountReg <- mkReg(0);
