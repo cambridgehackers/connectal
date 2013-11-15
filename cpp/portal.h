@@ -32,6 +32,7 @@ class PortalMessage {
   virtual void demarshall(unsigned int *buff) = 0;
   // invoke the corresponding indication message
   virtual void indicate(void* ind) = 0;
+  virtual ~PortalMessage() {};
 }; 
 
 class PortalRequest;
@@ -54,7 +55,7 @@ protected:
     PortalIndication *indication;
     PortalRequest(const char *name, PortalIndication *indication=0);
     PortalRequest();
-    ~PortalRequest();
+    virtual ~PortalRequest();
     int open();
  public:
     int fd;
