@@ -51,7 +51,7 @@ struct gralloc_context_t {
     volatile int vsync;
     pthread_mutex_t vsync_lock;
     pthread_cond_t vsync_cond;
-    HdmiDisplay *hdmiDisplay;
+    HdmiDisplayRequest *hdmiDisplay;
     uint32_t nextSegmentNumber;
 };
 
@@ -261,7 +261,7 @@ static int fb_setSwapInterval(struct framebuffer_device_t* dev,
     return 0;
 }
 
-class GrallocHdmiDisplayIndications : public HdmiDisplayIndications {
+class GrallocHdmiDisplayIndications : public HdmiControlIndication {
     virtual void vsync(unsigned long long v) {
         if (1)
             ALOGD("vsync %llx\n", v);
