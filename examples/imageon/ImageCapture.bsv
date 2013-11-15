@@ -57,8 +57,7 @@ interface CoreRequest;
     method Action set_decoder_code_le(Bit#(10) v);
     method Action set_decoder_code_fs(Bit#(10) v);
     method Action set_trigger_default_freq(Bit#(32) v);
-    method Action set_trigger_cnt_trigger0high(Bit#(32) v);
-    method Action set_trigger_cnt_trigger0low(Bit#(32) v);
+    method Action set_trigger_cnt_trigger(Bit#(32) v);
     method Action set_syncgen_delay(Bit#(16) v);
     method Action set_syncgen_hactive(Bit#(16) v);
     method Action set_syncgen_hfporch(Bit#(16) v);
@@ -67,7 +66,6 @@ interface CoreRequest;
     method Action set_syncgen_vactive(Bit#(16) v);
     method Action set_syncgen_vfporch(Bit#(16) v);
     method Action set_syncgen_vsync(Bit#(16) v);
-    method Action set_syncgen_vbporch(Bit#(16) v);
     method Action set_debugreq(Bit#(32) v);
     method Action get_debugind();
     method Action put_spi_request(Bit#(32) v);
@@ -163,11 +161,8 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     method Action set_trigger_default_freq(Bit#(32) v);
         fromSensor.control.set_trigger_default_freq(v);
     endmethod
-    method Action set_trigger_cnt_trigger0high(Bit#(32) v);
-        fromSensor.control.set_trigger_cnt_trigger0high(v);
-    endmethod
-    method Action set_trigger_cnt_trigger0low(Bit#(32) v);
-        fromSensor.control.set_trigger_cnt_trigger0low(v);
+    method Action set_trigger_cnt_trigger(Bit#(32) v);
+        fromSensor.control.set_trigger_cnt_trigger(v);
     endmethod
     method Action set_syncgen_delay(Bit#(16) v);
         fromSensor.control.set_syncgen_delay(v);
@@ -192,9 +187,6 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     endmethod
     method Action set_syncgen_vsync(Bit#(16) v);
         xsviFromSensor.control.vsync(v);
-    endmethod
-    method Action set_syncgen_vbporch(Bit#(16) v);
-        xsviFromSensor.control.vbporch(v);
     endmethod
     method Action set_debugreq(Bit#(32) v);
     endmethod

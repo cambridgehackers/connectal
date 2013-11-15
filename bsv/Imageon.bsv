@@ -36,7 +36,6 @@ interface ImageonVita;
     method Bit#(1) io_vita_clk_pll();
     method Bit#(1) io_vita_reset_n();
     method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
-    //method Bit#(2) io_vita_monitor();
     interface Clock imageon_clock_if;
     interface Reset imageon_reset_if;
 endinterface
@@ -57,8 +56,7 @@ interface ImageonSensorControl;
     method Action set_decoder_code_fs(Bit#(10) v);
     method Action set_syncgen_delay(Bit#(16) v);
     method Action set_trigger_default_freq(Bit#(32) v);
-    method Action set_trigger_cnt_trigger0high(Bit#(32) v);
-    method Action set_trigger_cnt_trigger0low(Bit#(32) v);
+    method Action set_trigger_cnt_trigger(Bit#(32) v);
 endinterface
 
 interface ImageonXsviControl;
@@ -69,7 +67,6 @@ interface ImageonXsviControl;
     method Action vactive(Bit#(16) v);
     method Action vfporch(Bit#(16) v);
     method Action vsync(Bit#(16) v);
-    method Action vbporch(Bit#(16) v);
 endinterface
 
 interface ImageonVideo;
@@ -90,7 +87,7 @@ interface ImageonTopPins;
     method Action fbbozoin(Bit#(1) v);
 endinterface
 
-typedef enum { TIdle, TSend, TWait} TState deriving (Bits,Eq);
+typedef enum { TIdle, TSend} TState deriving (Bits,Eq);
 
 module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
@@ -107,22 +104,19 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
     Reg#(Bit#(10)) decoder_code_fs_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(16)) syncgen_delay_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(32)) trigger_default_freq_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(32)) trigger_cnt_trigger0high_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(32)) trigger_cnt_trigger0low_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(32)) trigger_cnt_trigger_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
 
     Reg#(Bit#(40)) dataout_reg <- mkReg(0);
     Reg#(Bit#(50)) raw_data_delay_reg <- mkReg(0);
     Reg#(Bit#(50)) raw_data_reg <- mkReg(0);
     Reg#(Bit#(1)) raw_empty_reg <- mkReg(0);
     Reg#(TState)   tstate <- mkReg(TIdle);
-    Reg#(Bit#(1)) sframe_wire <- mkReg(0);
-    Reg#(Bit#(1)) sframe_new_wire <- mkReg(0);
-    Reg#(Bit#(1))  fs2 <- mkReg(0);
+    Reg#(Bit#(1)) sframe_reg <- mkReg(0);
+    Reg#(Bit#(1))  output_framesync_reg <- mkReg(0);
     Reg#(Bit#(16)) frame_delay <- mkReg(0);
     Reg#(Bit#(1))  frame_run <- mkReg(0);
     Reg#(Bit#(32)) tperiod <- mkReg(0);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
-    Reg#(Bit#(32)) diff <- mkReg(0);
     Reg#(Bit#(1))  framestart_delay_reg <- mkReg(0);
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(10)) sync_delay_reg <- mkReg(0);
@@ -162,15 +156,10 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
             end
         if (tstate == TIdle && tperiod == 0)
             begin
-            tc = trigger_cnt_trigger0high_reg;
+            tc = trigger_cnt_trigger_reg;
             ts = TSend;
             end
         if (tstate == TSend && tcounter == 0)
-            begin
-            tc = trigger_cnt_trigger0low_reg;
-            ts = TWait;
-            end
-        if (tstate == TWait && tcounter == 0)
             begin
             ts = TIdle;
             end
@@ -183,7 +172,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
         let fd = frame_delay+1;
         let fr = frame_run;
         let fstemp = 0;
-        if (sframe_new_wire == 1)
+        if (sframe_reg == 1)
             begin
             fr = 1;
             fd = 0;
@@ -195,9 +184,10 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
             end
         frame_delay <= fd;
         frame_run <= fr;
-        fs2 <= fstemp;
+        output_framesync_reg <= fstemp;
     endrule
 
+    Reg#(Bit#(32)) diff <- mkReg(0);
     rule update_debug;
         let dval = diff;
         //dval = {dcount, diff[21:0], 1'b0, delay_wren_r_reg};
@@ -228,40 +218,36 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
         let datain_temp = raw_data_reg[49:10];
         let idv = imgdatavalid_reg;
         let dor = dataout_reg;
-            //WRITE_DATA <= 0;
-            if (raw_empty_reg == 0)
+        //WRITE_DATA <= 0;
+        if (raw_empty_reg == 0)
+            begin
+            if (imgdatavalid_reg == 1)
                 begin
-                if (imgdatavalid_reg == 1)
+                if (remapkernel_reg == 0)
                     begin
-                    if (remapkernel_reg == 0)
-                        begin
-                        dor[39: 30] = datain_temp[9: 0];
-                        dor[29: 20] = datain_temp[19: 10];
-                        dor[19: 10] = datain_temp[29: 20];
-                        dor[ 9:  0] = datain_temp[39: 30];
-                        end
-                    else
-                        begin
-                        dor[39: 30] = datain_temp[39: 30];
-                        dor[29: 20] = datain_temp[29: 20];
-                        dor[19: 10] = datain_temp[19: 10];
-                        dor[ 9:  0] = datain_temp[9: 0];
-                        end
-                    //WRITE_DATA <= 1;
-                    remapkernel_reg <= ~ remapkernel_reg;
-                    if (endimageline_wire == 1 && startimageline_wire == 0)
-                        begin
-                        idv = 0;
-                        end
+                    dor[39: 30] = datain_temp[9: 0];
+                    dor[29: 20] = datain_temp[19: 10];
+                    dor[19: 10] = datain_temp[29: 20];
+                    dor[ 9:  0] = datain_temp[39: 30];
                     end
-                else if (startimageline_wire == 1)
+                else
                     begin
-                    idv = 1;
+                    dor[39: 30] = datain_temp[39: 30];
+                    dor[29: 20] = datain_temp[29: 20];
+                    dor[19: 10] = datain_temp[19: 10];
+                    dor[ 9:  0] = datain_temp[9: 0];
                     end
+                //WRITE_DATA <= 1;
+                remapkernel_reg <= ~ remapkernel_reg;
+                if (endimageline_wire == 1 && startimageline_wire == 0)
+                    idv = 0;
                 end
+            else if (startimageline_wire == 1)
+                idv = 1;
+            end
         imgdatavalid_reg <= idv;
         dataout_reg <= dor;
-        sframe_new_wire <= pack(raw_data_delay_reg[9:0] == decoder_code_fs_reg && raw_data_reg[9:0] == 10'h0);
+        sframe_reg <= pack(raw_data_delay_reg[9:0] == decoder_code_fs_reg && raw_data_reg[9:0] == 10'h0);
     endrule
 
     interface ImageonSensorControl control;
@@ -286,15 +272,12 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
 	method Action set_trigger_default_freq(Bit#(32) v);
 	    trigger_default_freq_reg <= v;
 	endmethod
-	method Action set_trigger_cnt_trigger0high(Bit#(32) v);
-	    trigger_cnt_trigger0high_reg <= v;
-	endmethod
-	method Action set_trigger_cnt_trigger0low(Bit#(32) v);
-	    trigger_cnt_trigger0low_reg <= v;
+	method Action set_trigger_cnt_trigger(Bit#(32) v);
+	    trigger_cnt_trigger_reg <= v;
 	endmethod
     endinterface: control
     method Bit#(1) get_framesync();
-        return fs2;
+        return output_framesync_reg;
     endmethod
     method Bit#(40) get_data();
         return dataout_reg;
@@ -309,7 +292,6 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
         method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
             return vita_trigger_wire;
         endmethod
-        //method Bit#(2) io_vita_monitor();
         interface imageon_clock_if = defaultClock;
         interface imageon_reset_if = defaultReset;
     endinterface
@@ -338,7 +320,6 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
     Reg#(Bit#(16)) syncgen_vactive_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(16)) syncgen_vfporch_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(16)) syncgen_vsync_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(16)) syncgen_vbporch_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     
     rule start_fsm if (framestart_new == 1);
         vsync_count <= 0;
@@ -442,9 +423,6 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
 	endmethod
 	method Action vsync(Bit#(16) v);
 	    syncgen_vsync_reg <= v;
-	endmethod
-	method Action vbporch(Bit#(16) v);
-	    syncgen_vbporch_reg <= v;
 	endmethod
     endinterface
     interface Get out;

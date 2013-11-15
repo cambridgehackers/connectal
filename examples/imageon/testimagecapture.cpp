@@ -199,11 +199,11 @@ static int vita_spi_write(uint32_t uAddr, uint16_t uData)
 
 static uint16_t vita_spi_read(uint32_t uAddr)
 {
-uint32_t ret = vita_spi_read_internal(uAddr);
-if (trace_spi)
-printf("SPIREAD: [%x] %x\n", uAddr, ret);
-//printf("[%s:%d] return %x\n", __FUNCTION__, __LINE__, ret);
-   return ret;
+    uint32_t ret = vita_spi_read_internal(uAddr);
+    if (trace_spi)
+        printf("SPIREAD: [%x] %x\n", uAddr, ret);
+    //printf("[%s:%d] return %x\n", __FUNCTION__, __LINE__, ret);
+    return ret;
 }
 
 /******************************************************************************
@@ -227,7 +227,7 @@ static void vita_spi_write_sequence(uint16_t pConfig[][3], uint32_t uLength)
          uData = vita_spi_read(pConfig[i][0]) & ~pConfig[i][1];
          uData |=  pConfig[i][2];
       }
-      vita_spi_write(pConfig[i][0], uData); usleep(100); // 100 usec
+      vita_spi_write(pConfig[i][0], uData); usleep(100);
    }
 }
 
@@ -342,35 +342,33 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    device->set_iserdes_control( VITA_ISERDES_FIFO_ENABLE_BIT);
    device->set_decoder_control(VITA_DECODER_ENABLE_BIT);
    sleep(1);
-   vita_spi_write(192, 0); usleep(100); // 100 usec
-   vita_spi_write(193, 0x0400); usleep(100); // 100 usec
-   vita_spi_write(192, 0x40); usleep(100); // 100 usec
+   vita_spi_write(192, 0); usleep(100);
+   vita_spi_write(193, 0x0400); usleep(100);
+   vita_spi_write(192, 0x40); usleep(100);
    device->set_syncgen_delay(0x0CE4);
    device->set_syncgen_hactive(0x077f);
    device->set_syncgen_hfporch(0x57);
    device->set_syncgen_hsync(0x2b);
    device->set_syncgen_hbporch(0x93);
-   vita_spi_write(199, 0x01); usleep(100); // 100 usec
-   vita_spi_write(200, 0); usleep(100); // 100 usec
-   vita_spi_write(194, 0); usleep(100); // 100 usec
+   vita_spi_write(199, 0x01); usleep(100);
+   vita_spi_write(200, 0); usleep(100);
+   vita_spi_write(194, 0); usleep(100);
    device->set_syncgen_vactive (0x0437);
    device->set_syncgen_vfporch (0x03);
    device->set_syncgen_vsync(4);
-   device->set_syncgen_vbporch(0x24);
-   vita_spi_write(257, 0x3C); usleep(100); // 100 usec
-   vita_spi_write(258, 0x0474); usleep(100); // 100 usec
+   vita_spi_write(257, 0x3C); usleep(100);
+   vita_spi_write(258, 0x0474); usleep(100);
 
-   vita_spi_write(160, 0x10); usleep(100); // 100 usec
+   vita_spi_write(160, 0x10); usleep(100);
 
    uint32_t trigDutyCycle    = 90; // exposure time is 90% of frame time (ie. 15msec)
    uint32_t vitaTrigGenDefaultFreq = (((1920+88+44+148)*(1080+4+5+36))>>2) - 2;
-   device->set_trigger_default_freq(vitaTrigGenDefaultFreq);
-   device->set_trigger_cnt_trigger0high((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1); // negative polarity
-   device->set_trigger_cnt_trigger0low(2);
+   device->set_trigger_default_freq(vitaTrigGenDefaultFreq+2);
+   device->set_trigger_cnt_trigger((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1);
    vita_spi_write(194, 0x0400);
    vita_spi_write(0x29, 0x0700);
-   uint16_t vspi_data = vita_spi_read(192) | 0x71; usleep(100); // 100 usec
-   vita_spi_write(192, vspi_data); usleep(100); // 100 usec
+   uint16_t vspi_data = vita_spi_read(192) | 0x71; usleep(100);
+   vita_spi_write(192, vspi_data); usleep(100);
    usleep(10000);
 }
 
@@ -412,10 +410,10 @@ static void *pthread_worker(void *ptr)
 int main(int argc, const char **argv)
 {
     pthread_t threaddata;
+
     init_local_semaphores();
     device = CoreRequest::createCoreRequest(new TestImageCaptureIndications);
-
-    int rc = pthread_create(&threaddata, NULL, &pthread_worker, (void *)device);
+    pthread_create(&threaddata, NULL, &pthread_worker, (void *)device);
     fmc_imageon_demo_init(argc, argv);
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     usleep(200000);
@@ -428,5 +426,5 @@ int main(int argc, const char **argv)
         for (i = 0; regids[i]; i++)
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
     }
-return 0;
+    return 0;
 }
