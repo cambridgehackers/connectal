@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <bitset>
 
 #include "drivers/alloc/portalalloc.h"
 #include "drivers/portal/portal.h"
