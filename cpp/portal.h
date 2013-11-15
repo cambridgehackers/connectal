@@ -39,9 +39,9 @@ class PortalRequest;
 class PortalIndication {
  public:
 #ifdef MMAP_HW
-  virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base) {};
+  virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base) { return 0; };
 #else
-  virtual int handleMessage(unsigned int channel, PortalRequest* request) {};
+  virtual int handleMessage(unsigned int channel, PortalRequest* request) { return 0; };
 #endif
   virtual ~PortalIndication() {};
 };

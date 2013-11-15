@@ -66,12 +66,12 @@ void PortalRequest::close()
 }
 
 PortalRequest::PortalRequest(const char *name, PortalIndication *indication)
-  : ind_reg_base(0x0), 
+  : indication(indication), 
+    fd(-1),
+    ind_reg_base(0x0), 
     ind_fifo_base(0x0),
     req_reg_base(0x0),
     req_fifo_base(0x0),
-    indication(indication), 
-    fd(-1),
     name((char*)strdup(name))
 {
   int rc = open();
@@ -83,12 +83,12 @@ PortalRequest::PortalRequest(const char *name, PortalIndication *indication)
 }
 
 PortalRequest::PortalRequest()
-  : ind_reg_base(0x0), 
+  : indication(NULL), 
+    fd(-1),
+    ind_reg_base(0x0), 
     ind_fifo_base(0x0),
     req_reg_base(0x0),
     req_fifo_base(0x0),
-    indication(NULL), 
-    fd(-1),
     name(NULL)
 {
 }
@@ -243,8 +243,8 @@ PortalMemory::PortalMemory()
 }
 
 PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
-  : handle(0),
-    PortalRequest(name,indication)
+  : PortalRequest(name,indication),
+    handle(0)
 {
 #ifndef MMAP_HW
   snprintf(p_fd.read.path, sizeof(p_fd.read.path), "/tmp/fd_sock_rc");
@@ -321,7 +321,7 @@ int PortalMemory::alloc(size_t size, PortalAlloc *portalAlloc)
       return rc;
     }
     fprintf(stderr, "alloc size=%ld rc=%d fd=%d numEntries=%d\n", 
-	    portalAlloc->header.size, rc, portalAlloc->header.fd, portalAlloc->header.numEntries);
+	    (long)portalAlloc->header.size, rc, portalAlloc->header.fd, portalAlloc->header.numEntries);
     return 0;
 }
 
