@@ -43,6 +43,22 @@
 #include "HdmiDisplay.h"
 #include "i2chdmi.h"
 
+class TestDMAIndication : public DMAIndication
+{
+  virtual void reportStateDbg(DmaDbgRec& rec){
+    fprintf(stderr, "DMA::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
+  }
+  virtual void configResp(unsigned long channelId){
+    fprintf(stderr, "DMA::configResp: %lx\n", channelId);
+  }
+  virtual void sglistResp(unsigned long channelId){
+    fprintf(stderr, "DMA::sglistResp: %lx\n", channelId);
+  }
+  virtual void parefResp(unsigned long channelId){
+    fprintf(stderr, "DMA::parefResp: %lx\n", channelId);
+  }
+};
+
 /*****************************************************************************/
 
 struct gralloc_context_t {
@@ -51,7 +67,8 @@ struct gralloc_context_t {
     volatile int vsync;
     pthread_mutex_t vsync_lock;
     pthread_cond_t vsync_cond;
-    HdmiDisplayRequest *hdmiDisplay;
+    HdmiControlRequest *hdmiDisplay;
+    DMARequest *dma;
     uint32_t nextSegmentNumber;
 };
 
@@ -127,7 +144,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
     if (ctx->hdmiDisplay != 0) {
         PortalAlloc portalAlloc;
         memset(&portalAlloc, 0, sizeof(portalAlloc));
-        portal.alloc(size, &fd, &portalAlloc);
+        ctx->dma->alloc(size, &portalAlloc);
 
         if (usage & GRALLOC_USAGE_HW_FB) {
             ALOGD("adding translation table entries\n");
@@ -226,7 +243,7 @@ static int gralloc_free(alloc_device_t* dev,
     private_handle_t *private_handle = const_cast<private_handle_t*>(hnd);
     if (ctx->hdmiDisplay) {
         ALOGD("freeing ion buffer fd %d\n", private_handle->fd);
-        portal.free(private_handle->fd);
+        //ctx->dma->free(private_handle->fd);
     } else {
         ALOGD("freeing ashmem buffer %p\n", private_handle);
         terminateBuffer(module, private_handle);
@@ -313,7 +330,6 @@ static int fb_close(struct hw_device_t *dev)
     return 0;
 }
 
-
 int gralloc_device_open(const hw_module_t* module, const char* name,
         hw_device_t** device)
 {
@@ -345,7 +361,8 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
         pthread_condattr_t condattr;
         pthread_condattr_init(&condattr);
         pthread_cond_init(&dev->vsync_cond, &condattr);
-        dev->hdmiDisplay = HdmiDisplay::createHdmiDisplay("fpga0", new GrallocHdmiDisplayIndications);
+        dev->hdmiDisplay = HdmiControlRequest::createHdmiControlRequest(new GrallocHdmiDisplayIndications);
+        dev->dma = DMARequest::createDMARequest(new TestDMAIndication);
         dev->nextSegmentNumber = 0;
 
         status = 0;

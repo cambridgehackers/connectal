@@ -26,6 +26,8 @@ import BRAMFIFO::*;
 import Clocks::*;
 import GetPut::*;
 import Connectable::*;
+import PortalMemory::*;
+import AxiDMA::*;
 
 import AxiMasterSlave::*;
 import AxiClientServer::*;
@@ -53,6 +55,7 @@ endinterface
 
 interface HdmiDisplayRequest;
     interface HdmiControlRequest coreRequest;
+    interface DMARequest dmaRequest;
     interface Axi3Client#(32,32,4,6) m_axi;
     interface HDMI hdmi;
 endinterface
@@ -63,6 +66,7 @@ endinterface
 
 interface HdmiDisplayIndication;
     interface HdmiControlIndication coreIndication;
+    interface DMAIndication dmaIndication;
 endinterface
 
 function Put#(item_t) syncFifoToPut( SyncFIFOIfc#(item_t) f);

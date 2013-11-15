@@ -10,6 +10,6 @@ LOCAL_SRC_FILES := 	\
 
 LOCAL_MODULE_TAGS = optional
 LOCAL_MODULE := gralloc.portal
-LOCAL_CFLAGS:= -DLOG_TAG=\"gralloc\" -I$(LOCAL_PATH)/../cpp -I$(LOCAL_PATH)/.. -I$(LOCAL_PATH)/../xpsproj/jni
+LOCAL_CFLAGS:= -DMMAP_HW -DLOG_TAG=\"gralloc\" -I$(LOCAL_PATH)/../cpp -I$(LOCAL_PATH)/.. -I$(LOCAL_PATH)/../xpsproj/jni
 
 include $(BUILD_SHARED_LIBRARY)
