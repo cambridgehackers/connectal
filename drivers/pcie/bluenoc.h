@@ -42,7 +42,7 @@ typedef struct {
   unsigned int size;
   void *virt;
   unsigned long dma_handle;
-} tPciAlloc;
+} tDmaMap;
 
 typedef unsigned int tDebugLevel;
 
@@ -67,8 +67,8 @@ const tDebugLevel DEBUG_PROFILE = (1 << 31);
 #define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
 #define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,int*)
 #define BNOC_SEQNO           _IOWR(BNOC_IOC_MAGIC,9,int*)
-#define BNOC_DMA_MAP         _IOWR(BNOC_IOC_MAGIC,10,long)
-#define BNOC_PCI_ALLOC       _IOWR(BNOC_IOC_MAGIC,11,tPciAlloc*)
+#define BNOC_DMA_BUF_MAP     _IOWR(BNOC_IOC_MAGIC,10,long)
+#define BNOC_DMA_MAP         _IOWR(BNOC_IOC_MAGIC,11,tDmaMap*)
 
 /* maximum valid IOCTL number */
 #define BNOC_IOC_MAXNR 11

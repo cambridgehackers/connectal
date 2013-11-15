@@ -1801,7 +1801,7 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
       else
         return 0;
     }
-    case BNOC_DMA_MAP: {
+    case BNOC_DMA_BUF_MAP: {
       int i;
       int fd = arg;
       struct dma_buf *dma_buf = dma_buf_get(fd);
@@ -1813,25 +1813,20 @@ static long bluenoc_ioctl(struct file* filp, unsigned int cmd, unsigned long arg
 	printk("sg_table->sgl[%d].dma_address=%p\n", i, (void *)sg_table->sgl[i].dma_address);
       return 0;
     }
-  case BNOC_PCI_ALLOC: {
-    tPciAlloc pciAlloc;
-    int err = copy_from_user(&pciAlloc, (void __user *)arg, sizeof(pciAlloc));
+  case BNOC_DMA_MAP: {
+    tDmaMap dmaMap;
+    int err = copy_from_user(&dmaMap, (void __user *)arg, sizeof(dmaMap));
     if (err != 0)
       return -EFAULT;
 
-    if (0) {
-      pciAlloc.virt = dma_alloc_coherent(&this_board->pci_dev->dev, pciAlloc.size, &pciAlloc.dma_handle, GFP_KERNEL);
-      printk("dma_alloc_coherent virt=%p dma_handle=%p\n", pciAlloc.virt, (void*)pciAlloc.dma_handle);
-      memset(pciAlloc.virt, 0xfa, pciAlloc.size);
-    } else {
-      long dma_handle = 0;
-      pciAlloc.virt = this_portal->virt;
-      pciAlloc.dma_handle = this_portal->dma_handle;
-      dma_handle = dma_map_single(&this_board->pci_dev->dev, pciAlloc.virt, 1<<16, DMA_BIDIRECTIONAL);
-      printk("dma_map_single returned %lx old dma_handle=%lx\n", dma_handle, pciAlloc.dma_handle);
-    }
-    //asm volatile ("clflush %0" : "+m" (*(long *)(pciAlloc.virt)));
-    err = copy_to_user((void __user *)arg, &pciAlloc, sizeof(tPciAlloc));
+    long dma_handle = 0;
+    dmaMap.virt = this_portal->virt;
+    dmaMap.dma_handle = this_portal->dma_handle;
+    dma_handle = dma_map_single(&this_board->pci_dev->dev, dmaMap.virt, 1<<16, DMA_BIDIRECTIONAL);
+    printk("dma_map_single returned %lx old dma_handle=%lx\n", dma_handle, dmaMap.dma_handle);
+
+    //asm volatile ("clflush %0" : "+m" (*(long *)(dmaMap.virt)));
+    err = copy_to_user((void __user *)arg, &dmaMap, sizeof(tDmaMap));
     if (err != 0)
       return -EFAULT;
     else
