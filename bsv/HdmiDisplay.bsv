@@ -75,7 +75,7 @@ function Put#(item_t) syncFifoToPut( SyncFIFOIfc#(item_t) f);
     );
 endfunction
 
-module mkHdmiDisplayRequest#(Clock hdmi_clk, HdmiDisplayIndication indication)(HdmiDisplayRequest);
+module mkHdmiDisplayRequest#(Clock hdmi_clock, HdmiDisplayIndication indication)(HdmiDisplayRequest);
 
     let busWidthBytes=8;
 
@@ -88,23 +88,23 @@ module mkHdmiDisplayRequest#(Clock hdmi_clk, HdmiDisplayIndication indication)(H
     Clock clock <- exposeCurrentClock;
     Reset reset <- exposeCurrentReset;
 
-    Reset hdmi_reset <- mkAsyncReset(2, reset, hdmi_clk);
+    Reset hdmi_reset <- mkAsyncReset(2, reset, hdmi_clock);
 
     Reg#(Bit#(11)) linesReg <- mkReg(1080);
     Reg#(Bit#(12)) pixelsReg <- mkReg(1920);
     Reg#(Bit#(14)) strideBytesReg <- mkReg(1920*4);
 
-    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clk, hdmi_reset, clock);
-    SyncPulseIfc hsyncPulse <- mkSyncHandshake(hdmi_clk, hdmi_reset, clock);
-    SyncFIFOIfc#(HdmiCommand) commandFifo <- mkSyncFIFOFromCC(1, hdmi_clk);
+    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, clock);
+    SyncPulseIfc hsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, clock);
+    SyncFIFOIfc#(HdmiCommand) commandFifo <- mkSyncFIFOFromCC(1, hdmi_clock);
 
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
     Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
 
     Reg#(Bool) frameBufferEnabled <- mkReg(False);
-    FrameBufferBram frameBuffer <- mkFrameBufferBram(hdmi_clk, hdmi_reset);
+    FrameBufferBram frameBuffer <- mkFrameBufferBram(hdmi_clock, hdmi_reset);
 
-    HdmiGenerator hdmiGen <- mkHdmiGenerator(clocked_by hdmi_clk, reset_by hdmi_reset,
+    HdmiGenerator hdmiGen <- mkHdmiGenerator(clocked_by hdmi_clock, reset_by hdmi_reset,
                                              commandFifo, frameBuffer.buffer,
 					     vsyncPulse, hsyncPulse);
 
