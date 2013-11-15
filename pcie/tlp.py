@@ -87,7 +87,7 @@ $version
 $end
 $comment
 $end
-$timescale 125ns $end
+$timescale 8ns $end
 $scope module logic $end
 %(vars)s
 $upscope $end
