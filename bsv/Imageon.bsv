@@ -107,8 +107,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
     Reg#(Bit#(32)) trigger_cnt_trigger_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
 
     Reg#(Bit#(40)) dataout_reg <- mkReg(0);
-    Reg#(Bit#(50)) raw_data_delay_reg <- mkReg(0);
-    Reg#(Bit#(50)) raw_data_reg <- mkReg(0);
+    Reg#(Bit#(10)) raw_data_delay_reg <- mkReg(0);
     Reg#(Bit#(1)) raw_empty_reg <- mkReg(0);
     Reg#(TState)   tstate <- mkReg(TIdle);
     Reg#(Bit#(1)) sframe_reg <- mkReg(0);
@@ -177,7 +176,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
             fr = 1;
             fd = 0;
             end
-        if (frame_run == 1 && frame_delay == syncgen_delay_reg )
+        if (frame_run == 1 && frame_delay == syncgen_delay_reg)
             begin
             fr = 0;
             fstemp = 1;
@@ -185,6 +184,37 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
         frame_delay <= fd;
         frame_run <= fr;
         output_framesync_reg <= fstemp;
+    endrule
+
+    rule data_pipeline;
+        raw_empty_reg <= serdes.raw_empty();
+    endrule
+
+    rule calculate_framedata;
+        if (raw_empty_reg == 0)
+            begin
+            let idv = imgdatavalid_reg;
+            raw_data_delay_reg <= serdes.raw_data()[9:0];
+            if (imgdatavalid_reg == 1)
+                begin
+                let dor = serdes.raw_data()[49:10];
+                if (remapkernel_reg == 0)
+                    begin
+                    dor[39: 30] = serdes.raw_data()[19: 10];
+                    dor[29: 20] = serdes.raw_data()[29: 20];
+                    dor[19: 10] = serdes.raw_data()[39: 30];
+                    dor[ 9:  0] = serdes.raw_data()[49: 40];
+                    end
+                remapkernel_reg <= ~ remapkernel_reg;
+                if (raw_data_delay_reg == decoder_code_le_reg)
+                    idv = 0;
+                dataout_reg <= dor;
+                end
+            else if (raw_data_delay_reg == decoder_code_ls_reg)
+                idv = 1;
+            imgdatavalid_reg <= idv;
+            end
+        sframe_reg <= pack(raw_data_delay_reg == decoder_code_fs_reg && serdes.raw_data()[9:0] == 10'h0);
     endrule
 
     Reg#(Bit#(32)) diff <- mkReg(0);
@@ -201,53 +231,6 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
             dval = 0;
             end
         diff <= dval;
-    endrule
-
-    rule data_pipeline;
-        if (serdes.raw_empty() == 0)
-            begin
-            raw_data_reg <= serdes.raw_data();
-            raw_data_delay_reg <= raw_data_reg;
-            end
-        raw_empty_reg <= serdes.raw_empty();
-    endrule
-
-    rule calculate_framedata;
-        let startimageline_wire = pack(raw_data_delay_reg[9:0] == decoder_code_ls_reg);
-        let endimageline_wire   = pack(raw_data_delay_reg[9:0] == decoder_code_le_reg);
-        let datain_temp = raw_data_reg[49:10];
-        let idv = imgdatavalid_reg;
-        let dor = dataout_reg;
-        //WRITE_DATA <= 0;
-        if (raw_empty_reg == 0)
-            begin
-            if (imgdatavalid_reg == 1)
-                begin
-                if (remapkernel_reg == 0)
-                    begin
-                    dor[39: 30] = datain_temp[9: 0];
-                    dor[29: 20] = datain_temp[19: 10];
-                    dor[19: 10] = datain_temp[29: 20];
-                    dor[ 9:  0] = datain_temp[39: 30];
-                    end
-                else
-                    begin
-                    dor[39: 30] = datain_temp[39: 30];
-                    dor[29: 20] = datain_temp[29: 20];
-                    dor[19: 10] = datain_temp[19: 10];
-                    dor[ 9:  0] = datain_temp[9: 0];
-                    end
-                //WRITE_DATA <= 1;
-                remapkernel_reg <= ~ remapkernel_reg;
-                if (endimageline_wire == 1 && startimageline_wire == 0)
-                    idv = 0;
-                end
-            else if (startimageline_wire == 1)
-                idv = 1;
-            end
-        imgdatavalid_reg <= idv;
-        dataout_reg <= dor;
-        sframe_reg <= pack(raw_data_delay_reg[9:0] == decoder_code_fs_reg && raw_data_reg[9:0] == 10'h0);
     endrule
 
     interface ImageonSensorControl control;
