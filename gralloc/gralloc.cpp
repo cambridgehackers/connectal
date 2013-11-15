@@ -132,9 +132,9 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
         if (usage & GRALLOC_USAGE_HW_FB) {
             ALOGD("adding translation table entries\n");
             segmentNumber = ctx->nextSegmentNumber;
-            ctx->nextSegmentNumber += portalAlloc.numEntries;
+            ctx->nextSegmentNumber += portalAlloc.header.numEntries;
             ctx->hdmiDisplay->beginTranslationTable(segmentNumber);
-            for (int i = 0; i < portalAlloc.numEntries; i++) {
+            for (int i = 0; i < portalAlloc.header.numEntries; i++) {
                 ALOGD("adding translation entry %lx %lx", portalAlloc.entries[i].dma_address, portalAlloc.entries[i].length);
                 ctx->hdmiDisplay->addTranslationEntry(portalAlloc.entries[i].dma_address >> 12,
                                               portalAlloc.entries[i].length >> 12);
@@ -408,7 +408,7 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
                 {47, 1280, 720, 370, 30}, // Weird
                 {48, 720, 480, 138, 45}, {49, 720, 480, 138, 45},
                 {52, 720, 576, 144, 49}, {53, 720, 576, 144, 49},
-                {56, 720, 480, 138, 45}, {57, 720, 480, 138, 45}, {0}};
+                {56, 720, 480, 138, 45}, {57, 720, 480, 138, 45}, {0, 0, 0, 0, 0}};
             int format = HAL_PIXEL_FORMAT_RGBX_8888;
             unsigned short vsyncwidth = 5;
             static char screenprop[PROPERTY_VALUE_MAX];
@@ -446,7 +446,7 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
             gralloc_dev->hdmiDisplay->hdmiLineCountMinMax((lmin + nlines - vsyncwidth) << 16 | (lmin - vsyncwidth));
             gralloc_dev->hdmiDisplay->hdmiPixelCountMinMax((pmin + npixels) << 16 | pmin);
 	    ALOGD("setting clock frequency %ld\n", 60l * (long)(pmin + npixels) * (long)(lmin + nlines));
-	    int status = PortalInstance::setClockFrequency(1,
+	    int status = PortalRequest::setClockFrequency(1,
 							   60l * (long)(pmin + npixels) * (long)(lmin + nlines),
 							   0);
 	    ALOGD("setClockFrequency returned %d", status);
