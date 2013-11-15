@@ -1,6 +1,6 @@
 #include "portal.h"
 
-class HdmiDisplayIndications : public PortalIndications {
+class HdmiDisplayIndications : public PortalIndication {
 public:
     HdmiDisplayIndications();
     virtual ~HdmiDisplayIndications();
@@ -8,10 +8,10 @@ public:
 
 protected:
     virtual void handleMessage(PortalMessage *msg);
-    friend class PortalInstance;
+    friend class PortalRequest;
 };
 
-class HdmiDisplay : public PortalInstance {
+class HdmiDisplay : public PortalRequest {
 public:
     static HdmiDisplay *createHdmiDisplay(const char *instanceName, HdmiDisplayIndications *indications=0);
     void setPatternReg ( unsigned long );
