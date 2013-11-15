@@ -35,7 +35,7 @@ class TestCoreIndication : public CoreIndication
       device->store(srcAlloc.entries[0].dma_address+storeCount*8, value128);
       storeCount++;
     } else {
-      device->loadMultiple(srcAlloc.entries[0].dma_address, 63, 64);
+      device->loadMultiple(srcAlloc.entries[0].dma_address, 63, 16);
     }
   }
   virtual void loadAddress ( unsigned long long addr ) {
