@@ -89,6 +89,7 @@ class PortalMemory : public PortalRequest {
   PortalMemory();
  public:
   int pa_fd;
+  void *mmap(PortalAlloc *portalAlloc);
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
   int alloc(size_t size, PortalAlloc *portalAlloc);
   int reference(PortalAlloc* pa);

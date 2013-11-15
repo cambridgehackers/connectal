@@ -259,6 +259,12 @@ PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
   }
 }
 
+void *PortalMemory::mmap(PortalAlloc *portalAlloc)
+{
+  void *virt = ::mmap(0, portalAlloc->header.size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, portalAlloc->header.fd, 0);
+  return virt;
+}
+
 int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 {
 #if defined(__arm__)
