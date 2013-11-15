@@ -1082,7 +1082,7 @@ class InterfaceMixin:
             'top_dut_axi_master_port_map': ''.join([top_dut_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_master_port_map': ''.join([top_ps7_axi_master_port_map_template % subst for subst in masterBusSubsts]),
             'top_ps7_axi_slave_port_map': ''.join([top_ps7_axi_slave_port_map_template % subst for subst in slaveBusSubsts]),
-            'dut_hdmi_clock_arg': '       .CLK_fmc_imageon_video_clk1(fmc_imageon_video_clk1),\n       .CLK_processing_system7_1_fclk_clk3(processing_system7_1_fclk_clk3),' if len(buses['ImageonVita']) else '       .CLK_hdmi_clock(imageon_clk4x)' if len(buses['HDMI']) else '',
+            'dut_hdmi_clock_arg': '       .CLK_fmc_imageon_video_clk1(fmc_imageon_video_clk1),\n       .CLK_processing_system7_1_fclk_clk3(processing_system7_1_fclk_clk3),' if len(buses['ImageonVita']) else '       .CLK_hdmi_clock(imageon_clk4x),' if len(buses['HDMI']) else '',
             'top_bus_ports':
                 ''.join([''.join([busHandlers[busType].top_bus_ports(busname,t,params) for (busname,t,params) in buses[busType]])
                          for busType in busHandlers]),
