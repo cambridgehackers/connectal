@@ -294,7 +294,6 @@ static void fmc_imageon_demo_enable_ipipe( void)
    uint32_t v_active    = 1080+1;
    uint32_t v_fporch    =    4;
    uint32_t v_syncwidth =    5;
-   //v_bporch    =   36;
    uint32_t v_bporch    =  300;
    // Horizontal settings
    device->set_syncgen_delay(((1920+88+44+148)>>2)*6); // approx. 6 lines of delay
@@ -314,9 +313,6 @@ static void fmc_imageon_demo_enable_ipipe( void)
    device->set_decoder_code_ls(0xAA);
    device->set_decoder_code_le(0x012A);
    device->set_decoder_code_fs(0x02AA);
-   //device->set_decoder_code_fe(0x032A);
-   //device->set_decoder_code_bl(0x15);
-   //device->set_decoder_code_img(0x35);
 
    printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
    device->set_iserdes_control( VITA_ISERDES_RESET_BIT);
@@ -385,16 +381,6 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
    uStatus = read_iserdes_control();
    printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
-   timeout = 9;
-   while ( !(uStatus & 0x0100) && --timeout) {
-      uStatus = read_iserdes_control();
-      printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
-      usleep(1);
-   }
-   if ( !timeout) {
-      printf( "\tTimed Out !!!\n\r");
-      return;
-   }
    printf( "VITA ISERDES - Align Start\n\r");
    device->set_iserdes_control( VITA_ISERDES_ALIGN_START_BIT);
    printf( "VITA ISERDES - Waiting for ALIGN_BUSY to assert\n\r");
@@ -469,8 +455,6 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    device->set_trigger_default_freq(vitaTrigGenDefaultFreq);
    device->set_trigger_cnt_trigger0high((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1); // negative polarity
    device->set_trigger_cnt_trigger0low(2);
-   //device->set_triggen_control(0x31000011); // invert trigger[2:0], internal trigger, enable trigger[0], update triggen_cnt registers
-   //device->set_triggen_control(0x30000011); // invert trigger[2:0], internal trigger, enable trigger[0]
    printf("VITA 1080P60 - Exposure related settings\n\r");
    vita_spi_write(194, 0x0400);
    vita_spi_write(0x29, 0x0700);
@@ -532,13 +516,13 @@ int main(int argc, const char **argv)
     fmc_imageon_demo_init(argc, argv);
     usleep(200000);
     while (getchar() != EOF) {
-device->set_debugreq(1);
-device->get_debugind();
-printf("[%s:%d] iserdes %lx\n", __FUNCTION__, __LINE__, read_iserdes_control());
-static int regids[] = {24, 97, 186, 0};
-int i;
-for (i = 0; regids[i]; i++)
-    printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
+        device->set_debugreq(1);
+        device->get_debugind();
+        printf("[%s:%d] iserdes %lx\n", __FUNCTION__, __LINE__, read_iserdes_control());
+        static int regids[] = {24, 97, 186, 0};
+        int i;
+        for (i = 0; regids[i]; i++)
+            printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
     }
 return 0;
 }

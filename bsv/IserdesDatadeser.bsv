@@ -34,7 +34,6 @@ typedef Vector#(10, Reg#(Bit#(10))) TrainRotate;
 interface IserdesDatadeser;
     method Action           ibufdso(Bit#(1) v);
     method Bit#(1)          align_busy();
-    method Bit#(1)          aligned();
     method Bit#(3)          samplein();
     method Action           fifo_wren(Bit#(1) v);
     method Action           reset(Bit#(1) v);
@@ -86,7 +85,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     SyncBitIfc#(Bit#(1)) fifo_wren_sync <- mkSyncBit(serdes_clock, serdes_reset, serdes_clock);
 
     Reg#(QState)  qstate <- mkReg(QIdle);
-    Reg#(Bit#(1)) unaligned_reg <- mkReg(0);
     Reg#(Bit#(16)) top_align_counter <- mkReg(0);
     FIFO#(Bit#(1)) start_alignment_fsm <- mkFIFO();
 
@@ -115,7 +113,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
 
     //*************************** top align FSM *****************
     rule qfsmreset_rule if (bvi_resets_reg.read() == 0);
-        unaligned_reg <= 1;
         qstate <= QIdle;
         top_align_counter <= 0;
         start_alignment_fsm.clear();
@@ -131,12 +128,11 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
         qstate <= QOff;
     endrule
     rule qfsmqoff1_rule if (bvi_resets_reg.read() != 0 && qstate == QOff
-             && top_align_counter <= 'h7fff);
-        unaligned_reg <= 0;
+             && top_align_counter < 'h8000);
         qstate <= QIdle;
     endrule
     rule qfsmqoff2_rule if (bvi_resets_reg.read() != 0 && qstate == QOff
-             && top_align_counter > 'h7fff);
+             && top_align_counter >= 'h8000);
         top_align_counter <= top_align_counter + 1;
         qstate <= QTrain;
     endrule
@@ -164,7 +160,7 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     rule afsmidle2_rule if (bvi_resets_reg.read() != 0 && astate == AIdle);
         start_alignment_fsm.deq();
         windowcount <= 0;
-        retrycounter <= 32765;
+        retrycounter <= 'h7ffd;
         ctrl_sample <= 0;
         astate <= AReset;
         serdes_start.enq(0);
@@ -473,9 +469,6 @@ module mkIserdesDatadeser#(Clock serdes_clock, Reset serdes_reset, Clock serdest
     method Bit#(1)                align_busy();
         return pack(qstate != QIdle);
     endmethod
-    method Bit#(1)                aligned();
-        return unaligned_reg;
-    endmethod
     method Bit#(3)                samplein();
         return ctrl_sample;
     endmethod
@@ -551,8 +544,6 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
     ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
     Reg#(Bit#(1)) serdes_align_busy_temp <- mkReg(0);
     Reg#(Bit#(1)) serdes_align_busy_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
-    Reg#(Bit#(1)) serdes_aligned_temp <- mkReg(0);
-    Reg#(Bit#(1)) serdes_aligned_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
     Wire#(Bit#(1)) new_raw_empty_wire <- mkDWire(0);
     TrainRotate trainrot <- replicateM(mkReg(0));
     Vector#(5, IserdesDatadeser) pin_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdes_reset, serdest_clk.gen_clk,
@@ -565,7 +556,6 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
     endrule
 
     rule serdes_copybits;
-        serdes_aligned_reg <= serdes_aligned_temp;
         serdes_align_busy_reg <= serdes_align_busy_temp;
     endrule
 
@@ -578,20 +568,17 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
     endrule
 
     rule sendup_imageon_clock;
-       Bit#(1) unalignedw = 1;
        Bit#(1) alignbusyw = 0;
        Bit#(1) emptyw = 0;
        Bit#(3) samplein = 0;
        Bit#(50) rawdataw = 0;
        for (Bit#(8) i = 0; i < 5; i = i+1) begin
-	  unalignedw = unalignedw | pin_v[i].aligned();
 	  alignbusyw = alignbusyw | pin_v[i].align_busy();
 	  emptyw = emptyw | pin_v[i].empty();
           samplein = samplein | pin_v[i].samplein();
 	  rawdataw[(i+1)*10-1: i*10] = pin_v[i].dataout();
        end
        serdes_align_busy_temp <= alignbusyw;
-       serdes_aligned_temp <= unalignedw;
        //bittest_wire <= pack(samplein == 3'b110);
        empty_wire <= emptyw;
        raw_data_wire <= rawdataw;
@@ -628,9 +615,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
 	endmethod
 	method Bit#(32) get_iserdes_control();
 	    let v = 0;
-	    v[8] = 1;
 	    v[9] = serdes_align_busy_reg;
-	    v[10] = ~serdes_aligned_reg;
 	    return v;
 	endmethod
 	method Action set_decoder_control(Bit#(32) v);
