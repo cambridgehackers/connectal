@@ -51,6 +51,7 @@ extern "C" {
 
   void write_pareff(unsigned long pref, unsigned long offset, unsigned long long data){
     buffer[pref][offset] = data;
+    //fprintf(stderr, "write_pareff(%08lx, %08lx, %016llx) [%ld]\n", pref, offset, data, fd[pref]);
   }
 
   unsigned long long read_pareff(unsigned long pref, unsigned long offset){

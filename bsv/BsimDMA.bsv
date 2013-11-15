@@ -34,8 +34,8 @@ import PortalMemory::*;
 
 import "BDPI" function Action pareff(Bit#(32) off, Bit#(32) pref, Bit#(32) size);
 import "BDPI" function Action init_pareff();
-import "BDPI" function Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
-import "BDPI" function ActionValue#(Bit#(64)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+import "BDPI" function Action write_pareff(Bit#(32) pref, Bit#(32) addr, Bit#(64) v);
+import "BDPI" function ActionValue#(Bit#(64)) read_pareff(Bit#(32) pref, Bit#(32) addr);
 		       
 interface BsimDMAWriteInternal;
    interface DMAWrite write;
@@ -54,6 +54,7 @@ endinterface
 typedef enum {Idle, LoadCtxt, Data, Done} InternalState deriving(Eq,Bits);
 		 
 typedef struct {
+   Bit#(32)  pref;
    Bit#(32)  offset;
    Bit#(4) burstLen;
    Bool cfg;
@@ -90,7 +91,7 @@ module mkBsimDMAReadInternal(BsimDMAReadInternal);
 	    burstReg <= bl;
 	    addrReg <= ofs;
 	    stateReg <= Data;
-	    ctxtPtrs[activeChan] <= DmaChannelPtr{offset:ofs+zeroExtend(bl)+1, burstLen:bl, cfg:True};
+	    ctxtPtrs[activeChan] <= DmaChannelPtr{pref:ctx.pref, offset:ofs+zeroExtend(bl)+1, burstLen:bl, cfg:True};
 	 end
       else
 	 begin
@@ -100,7 +101,7 @@ module mkBsimDMAReadInternal(BsimDMAReadInternal);
    
    rule readData if (stateReg == Data);
       addrReg <= addrReg+1;
-      let v <- read_pareff(zeroExtend(activeChan), addrReg);
+      let v <- read_pareff(ctxtPtrs[activeChan].pref, addrReg);
       readBuffers[activeChan].fifo.enq(v);
       if(burstReg == 0)
 	 stateReg <= Idle;
@@ -110,7 +111,7 @@ module mkBsimDMAReadInternal(BsimDMAReadInternal);
 
    interface DMARead read;
       method Action configChan(DmaChannelId channelId, Bit#(32) pref, Bit#(4) bsz);
-   	 ctxtPtrs[channelId] <= DmaChannelPtr{offset:0, burstLen:bsz, cfg:True};
+   	 ctxtPtrs[channelId] <= DmaChannelPtr{pref:pref, offset:0, burstLen:bsz, cfg:True};
       endmethod
       interface readChannels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
       method ActionValue#(DmaDbgRec) dbg();
@@ -153,7 +154,7 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
 	    burstReg <= bl;
 	    addrReg <= ofs;
 	    stateReg <= Data;
-	    ctxtPtrs[activeChan] <= DmaChannelPtr{offset:ofs+zeroExtend(bl)+1, burstLen:bl, cfg:True};
+	    ctxtPtrs[activeChan] <= DmaChannelPtr{pref:ctx.pref, offset:ofs+zeroExtend(bl)+1, burstLen:bl, cfg:True};
 	 end
       else
 	 begin
@@ -169,7 +170,8 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
 	 stateReg <= Done;
       else
 	 burstReg <= burstReg-1;
-      write_pareff(zeroExtend(activeChan), addrReg, v);
+      // $display("%h", v);
+      write_pareff(ctxtPtrs[activeChan].pref, addrReg, v);
    endrule
    
    rule response if (stateReg == Done);
@@ -179,7 +181,7 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
 
    interface DMAWrite write;
       method Action configChan(DmaChannelId channelId, Bit#(32) pref, Bit#(4) bsz);
-   	 ctxtPtrs[channelId] <= DmaChannelPtr{offset:0, burstLen:bsz, cfg:True};
+   	 ctxtPtrs[channelId] <= DmaChannelPtr{pref:pref, offset:0, burstLen:bsz, cfg:True};
       endmethod
       interface writeChannels = zipWith3(mkWriteChan, map(toPut,writeBuffers), 
 					 map(mkPutWhenFalse, reqOutstanding),
@@ -205,10 +207,12 @@ module mkBsimDMA#(DMAIndication indication)(BsimDMA);
       method Action configReadChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) numWords);
 	 reader.read.configChan(pack(truncate(channelId)), pref, truncate((numWords>>1)-1));
 	 indication.configResp(channelId);
+	 $display("configReadChan(%d %d %d)", channelId, pref, numWords);
       endmethod
       method Action configWriteChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) numWords);
 	 writer.write.configChan(pack(truncate(channelId)), pref, truncate((numWords>>1)-1));
 	 indication.configResp(channelId);
+	 $display("configWriteChan(%d %d %d)", channelId, pref, numWords);
       endmethod
       method Action getReadStateDbg();
 	 let rv <- reader.read.dbg;
