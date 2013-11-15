@@ -66,19 +66,6 @@ GETFN(iserdes_control)
    #define VITA_DECODER_ENABLE_BIT           0x02
 
 static uint32_t uManualTap;
-static struct {
-   // Sync Channel Decoder status
-   uint32_t cntBlackLines;
-   uint32_t cntImageLines;
-   uint32_t cntBlackPixels;
-   uint32_t cntImagePixels;
-   uint32_t cntFrames;
-   uint32_t cntWindows;
-   uint32_t cntStartLines;
-   uint32_t cntEndLines;
-   uint32_t cntClocks;
-   uint32_t crcStatus;
-} vita_status_t2;
 
 #define VITA_SPI_SEQ1_QTY  8
 /* Table 6. enable clock management register upload - part 1 */
@@ -244,22 +231,6 @@ static void vita_spi_write_sequence(uint16_t pConfig[][3], uint32_t uLength)
    }
 }
 
-static struct {
-    const char *pName;
-    uint32_t VActiveVideo;
-    uint32_t VFrontPorch;
-    uint32_t VSyncWidth;
-    uint32_t VBackPorch;
-    uint32_t VSyncPolarity;
-    uint32_t HActiveVideo;
-    uint32_t HFrontPorch;
-    uint32_t HSyncWidth;
-    uint32_t HBackPorch;
-    uint32_t HSyncPolarity;
-} vres = {
-   "1080P", 1080,    4,    5,   36,    1, 1920,   88,   44,  148,    1 // VIDEO_RESOLUTION_1080P
-};
-
 static void fmc_imageon_demo_enable_ipipe( void)
 {
    // VITA-2000 Initialization
@@ -267,27 +238,6 @@ static void fmc_imageon_demo_enable_ipipe( void)
    uint16_t uData;
    uint32_t uStatus;
    int timeout;
-   uint32_t h_active    = 1920;
-   uint32_t h_fporch    =   88;
-   uint32_t h_syncwidth =   44;
- #if defined(STRETCH_VITA_HTIMING)
-   uint32_t h_bporch    =  148;
- #else
-   uint32_t h_bporch    =  132;
- #endif
-   uint32_t v_active    = 1080+1;
-   uint32_t v_fporch    =    4;
-   uint32_t v_syncwidth =    5;
-   uint32_t v_bporch    =  300;
-   //device->set_syncgen_delay(((1920+88+44+148)>>2)*6); // approx. 6 lines of delay
-   //device->set_syncgen_hactive(h_active-1);
-   //device->set_syncgen_hfporch(h_fporch-1);
-   //device->set_syncgen_hsync(((h_syncwidth)<<0) - 1);
-   //device->set_syncgen_hbporch(h_bporch - 1);
-   //device->set_syncgen_vactive(v_active-1);
-   //device->set_syncgen_vfporch(v_fporch-1);
-   //device->set_syncgen_vsync (((v_syncwidth)<<0) - 1);
-   //device->set_syncgen_vbporch(v_bporch);
    device->set_serdes_training(0x03A6);
    printf( "VITA ISERDES - Setting Manual Tap to 0x%08X\n\r", uManualTap);
    device->set_serdes_manual_tap(uManualTap);
@@ -300,11 +250,8 @@ static void fmc_imageon_demo_enable_ipipe( void)
    device->set_decoder_control( VITA_DECODER_RESET_BIT);
 
    usleep(10); // 10 usec
-   printf( "VITA ISERDES - Releasing Reset\n\r");
    device->set_iserdes_control( 0);
-   printf( "VITA DECODER - Releasing Reset\n\r");
    device->set_decoder_control( 0);
-   printf( "VITA CRC - Releasing Reset\n\r");
    sleep(1); // 1 sec (time to get clocks to lock)
    uData = vita_spi_read(0);
 printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
@@ -395,7 +342,6 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    device->set_iserdes_control( VITA_ISERDES_FIFO_ENABLE_BIT);
    device->set_decoder_control(VITA_DECODER_ENABLE_BIT);
    sleep(1);
-   printf( "VITA 1080P60 - Disable Sequencer\n\r");
    vita_spi_write(192, 0); usleep(100); // 100 usec
    vita_spi_write(193, 0x0400); usleep(100); // 100 usec
    vita_spi_write(192, 0x40); usleep(100); // 100 usec
@@ -404,38 +350,27 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    device->set_syncgen_hfporch(0x57);
    device->set_syncgen_hsync(0x2b);
    device->set_syncgen_hbporch(0x93);
-   printf( "VITA 1080P60 - Adjust frame spacing in VITA\n\r");
    vita_spi_write(199, 0x01); usleep(100); // 100 usec
    vita_spi_write(200, 0); usleep(100); // 100 usec
    vita_spi_write(194, 0); usleep(100); // 100 usec
-   printf( "VITA 1080P60 - Adjust frame spacing in sync generator\n\r");
    device->set_syncgen_vactive (0x0437);
    device->set_syncgen_vfporch (0x03);
    device->set_syncgen_vsync(4);
    device->set_syncgen_vbporch(0x24);
-   printf( "VITA 1080P60 - Crop ROI0 from 1920x1200 to 1920x1080\n\r");
    vita_spi_write(257, 0x3C); usleep(100); // 100 usec
    vita_spi_write(258, 0x0474); usleep(100); // 100 usec
 
-   printf( "VITA 1080P60 - Disable auto-exposure\n\r");
    vita_spi_write(160, 0x10); usleep(100); // 100 usec
 
-   printf( "VITA 1080P60 - Enable trig generator\n\r");
    uint32_t trigDutyCycle    = 90; // exposure time is 90% of frame time (ie. 15msec)
    uint32_t vitaTrigGenDefaultFreq = (((1920+88+44+148)*(1080+4+5+36))>>2) - 2;
    device->set_trigger_default_freq(vitaTrigGenDefaultFreq);
    device->set_trigger_cnt_trigger0high((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1); // negative polarity
    device->set_trigger_cnt_trigger0low(2);
-   printf("VITA 1080P60 - Exposure related settings\n\r");
    vita_spi_write(194, 0x0400);
    vita_spi_write(0x29, 0x0700);
    uint16_t vspi_data = vita_spi_read(192) | 0x71; usleep(100); // 100 usec
    vita_spi_write(192, vspi_data); usleep(100); // 100 usec
-   uint32_t lastframes = vita_status_t2.cntFrames;
-   printf("VITA Status = \n\r\tImage Width  = %d\n\r", vita_status_t2.cntImagePixels * 4);
-   printf("\tImage Height = %d\n\r", vita_status_t2.cntImageLines);
-   printf("\tFrame Rate   = %d frames/sec\n\r", vita_status_t2.cntFrames - lastframes);
-   printf("Initializing iPipe cores ... done!\r\n");
    usleep(10000);
 }
 
@@ -482,6 +417,7 @@ int main(int argc, const char **argv)
 
     int rc = pthread_create(&threaddata, NULL, &pthread_worker, (void *)device);
     fmc_imageon_demo_init(argc, argv);
+    printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     usleep(200000);
     while (getchar() != EOF) {
         device->set_debugreq(1);
