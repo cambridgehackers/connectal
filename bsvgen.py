@@ -868,7 +868,7 @@ class InterfaceMixin:
                                            for (axiMaster,t,params) in axiMasters]),
             'axiMasterImplementations': '\n'.join(['    interface Axi%sMaster %s = %sMaster;' % (4 if t == 'Axi4Client' else 3, axiMaster,axiMaster)
                                                    for (axiMaster,t,params) in axiMasters]),
-            'dut_hdmi_clock_param': '#(%s)' % ', '.join(['Clock %s' % name for name in dut_clknames]),
+            'dut_hdmi_clock_param': '#(%s)' % ', '.join(['Clock %s' % name for name in dut_clknames]) if len(dut_clknames) else '',
             'dut_hdmi_clock_arg': ' '.join(['%s,' % name for name in dut_clknames]),
             'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
                                                   for (axiSlave,t,params) in axiSlaves]),
