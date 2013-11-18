@@ -14,8 +14,8 @@ struct portal{
   struct channel write;
 };
 
-static struct portal iport = {{0,0,{},false},
-			      {0,0,{},false}};
+static struct portal iport = {{0,0,{0,""},false, ""},
+			      {0,0,{0,""},false, ""}};
 
 void* init_socket(void* _xx);
 void connect_socket(channel *c);
