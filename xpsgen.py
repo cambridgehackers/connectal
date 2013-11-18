@@ -13,145 +13,6 @@ if os.environ.has_key('XILINX_EDK'):
         edkversion = m.group(1)
 use_acp = 0
 
-hdmi_ucf_template= {
-    'zc702': '''
-NET "hdmi_clk_pin" LOC = L16;
-NET "hdmi_clk_pin" IOSTANDARD = LVCMOS25;
-NET "hdmi_vsync_pin" LOC = H15;
-NET "hdmi_vsync_pin" IOSTANDARD = LVCMOS25;
-NET "hdmi_hsync_pin" LOC = R18;
-NET "hdmi_hsync_pin" IOSTANDARD = LVCMOS25;
-NET "hdmi_de_pin" LOC = T18;
-NET "hdmi_de_pin" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[0]" LOC = AB21;
-NET "hdmi_data_pin[0]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[1]" LOC = AA21;
-NET "hdmi_data_pin[1]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[2]" LOC = AB22;
-NET "hdmi_data_pin[2]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[3]" LOC = AA22;
-NET "hdmi_data_pin[3]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[4]" LOC = V19;
-NET "hdmi_data_pin[4]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[5]" LOC = V18;
-NET "hdmi_data_pin[5]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[6]" LOC = V20;
-NET "hdmi_data_pin[6]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[7]" LOC = U20;
-NET "hdmi_data_pin[7]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[8]" LOC = W21;
-NET "hdmi_data_pin[8]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[9]" LOC = W20;
-NET "hdmi_data_pin[9]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[10]" LOC = W18;
-NET "hdmi_data_pin[10]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[11]" LOC = T19;
-NET "hdmi_data_pin[11]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[12]" LOC = U19;
-NET "hdmi_data_pin[12]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[13]" LOC = R19;
-NET "hdmi_data_pin[13]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[14]" LOC = T17;
-NET "hdmi_data_pin[14]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[15]" LOC = T16;
-NET "hdmi_data_pin[15]" IOSTANDARD = LVCMOS25;
-# NET hdmi_spdif_pin          LOC = R15 ;
-# NET hdmi_int_pin            LOC = U14 ;
-NET "hdmidisplay_0_i2c_scl_pin" LOC = AA18;
-NET "hdmidisplay_0_i2c_scl_pin" IOSTANDARD = LVCMOS25;
-NET "hdmidisplay_0_i2c_sda_pin" LOC = Y16;
-NET "hdmidisplay_0_i2c_sda_pin" IOSTANDARD = LVCMOS25;
-''',
-    'zedboard':'''
-NET "hdmi_clk_pin" LOC = W18;
-NET "hdmi_clk_pin" IOSTANDARD = LVCMOS25;
-NET "hdmi_vsync_pin" LOC = W17;
-NET "hdmi_vsync_pin" IOSTANDARD = LVCMOS25;
-NET "hdmi_hsync_pin" LOC = V17;
-NET "hdmi_hsync_pin" IOSTANDARD = LVCMOS25;
-NET "hdmi_de_pin" LOC = U16;
-NET "hdmi_de_pin" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[0]" LOC = Y13;
-NET "hdmi_data_pin[0]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[1]" LOC = AA13;
-NET "hdmi_data_pin[1]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[2]" LOC = AA14;
-NET "hdmi_data_pin[2]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[3]" LOC = Y14;
-NET "hdmi_data_pin[3]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[4]" LOC = AB15;
-NET "hdmi_data_pin[4]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[5]" LOC = AB16;
-NET "hdmi_data_pin[5]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[6]" LOC = AA16;
-NET "hdmi_data_pin[6]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[7]" LOC = AB17;
-NET "hdmi_data_pin[7]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[8]" LOC = AA17;
-NET "hdmi_data_pin[8]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[9]" LOC = Y15;
-NET "hdmi_data_pin[9]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[10]" LOC = W13;
-NET "hdmi_data_pin[10]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[11]" LOC = W15;
-NET "hdmi_data_pin[11]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[12]" LOC = V15;
-NET "hdmi_data_pin[12]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[13]" LOC = U17;
-NET "hdmi_data_pin[13]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[14]" LOC = V14;
-NET "hdmi_data_pin[14]" IOSTANDARD = LVCMOS25;
-NET "hdmi_data_pin[15]" LOC = V13;
-NET "hdmi_data_pin[15]" IOSTANDARD = LVCMOS25;
-# NET hdmi_spdif_pin          LOC =  Y18;
-# NET hdmi_int_pin            LOC =  W16;
-NET "hdmidisplay_0_i2c_scl_pin" LOC = AA18;
-NET "hdmidisplay_0_i2c_scl_pin" IOSTANDARD = LVCMOS25;
-NET "hdmidisplay_0_i2c_sda_pin" LOC = Y16;
-NET "hdmidisplay_0_i2c_sda_pin" IOSTANDARD = LVCMOS25;
-'''
-    }
-
-usr_clk_ucf_template='''
-NET "usr_clk_p_pin" LOC = Y9;
-NET "usr_clk_p_pin" IOSTANDARD = LVDS_25;
-NET "usr_clk_p_pin" DIFF_TERM = "TRUE";
-NET "usr_clk_n_pin" LOC = Y8;
-NET "usr_clk_n_pin" IOSTANDARD = LVDS_25;
-NET "usr_clk_n_pin" DIFF_TERM = "TRUE";
-NET "usr_clk_p_pin" TNM_NET = "usr_clk_p_pin";
-TIMESPEC TS_usr_clk_p_pin = PERIOD "usr_clk_p_pin" 165 MHz;
-NET "usr_clk_n_pin" TNM_NET = "usr_clk_n_pin";
-TIMESPEC TS_usr_clk_n_pin = PERIOD "usr_clk_n_pin" 165 MHz;
-'''
-
-xadc_ucf_template= {
-    'zc702': '''
-NET "xadc_gpio_0_pin" LOC = H17;
-NET "xadc_gpio_0_pin" IOSTANDARD = LVCMOS25;
-NET "xadc_gpio_1_pin" LOC = H22;
-NET "xadc_gpio_1_pin" IOSTANDARD = LVCMOS25;
-NET "xadc_gpio_2_pin" LOC = G22;
-NET "xadc_gpio_2_pin" IOSTANDARD = LVCMOS25;
-NET "xadc_gpio_3_pin" LOC = H18;
-NET "xadc_gpio_3_pin" IOSTANDARD = LVCMOS25;
-''',
-    'zedboard': '''
-NET "xadc_gpio_0_pin" LOC = H15;
-NET "xadc_gpio_0_pin" IOSTANDARD = LVCMOS25;
-NET "xadc_gpio_1_pin" LOC = R15;
-NET "xadc_gpio_1_pin" IOSTANDARD = LVCMOS25;
-NET "xadc_gpio_2_pin" LOC = K15;
-NET "xadc_gpio_2_pin" IOSTANDARD = LVCMOS25;
-NET "xadc_gpio_3_pin" LOC = J15;
-NET "xadc_gpio_3_pin" IOSTANDARD = LVCMOS25;
-'''
-    }
-
-default_clk_ucf_template='''
-NET "processing_system7_0/FCLK_CLK0" TNM_NET = "processing_system7_0/FCLK_CLK0";
-TIMESPEC TS_FCLK0 = PERIOD "processing_system7_0/FCLK_CLK0" 133 MHz;
-'''
 
 xdc_template = '''
 set_property iostandard "%(iostandard)s" [get_ports "%(name)s"]
@@ -181,171 +42,21 @@ puts "fpga is $fpga, bit file size is [exec ls -sh $file]"
 program_hw_devices $fpga
 '''
 
-xadc_pinout= {
-    'zc702': [
-        ("XADC_gpio[0]", 'H17', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[1]", 'H22', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[2]", 'G22', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[3]", 'H18', 'LVCMOS25', 'OUTPUT'),
-        ],
-    'zedboard': [
-        ("XADC_gpio[0]", 'H15', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[1]", 'R15', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[2]", 'K15', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[3]", 'J15', 'LVCMOS25', 'OUTPUT'),
-        ]
-    }
+#xadc_pinout= {
+#    'zc702': [
+#        ("XADC_gpio[0]", 'H17', 'LVCMOS25', 'OUTPUT'),
+#        ("XADC_gpio[1]", 'H22', 'LVCMOS25', 'OUTPUT'),
+#        ("XADC_gpio[2]", 'G22', 'LVCMOS25', 'OUTPUT'),
+#        ("XADC_gpio[3]", 'H18', 'LVCMOS25', 'OUTPUT'),
+#        ],
+#    'zedboard': [
+#        ("XADC_gpio[0]", 'H15', 'LVCMOS25', 'OUTPUT'),
+#        ("XADC_gpio[1]", 'R15', 'LVCMOS25', 'OUTPUT'),
+#        ("XADC_gpio[2]", 'K15', 'LVCMOS25', 'OUTPUT'),
+#        ("XADC_gpio[3]", 'J15', 'LVCMOS25', 'OUTPUT'),
+#        ]
+#    }
 
-led_pinout = {
-    'zc702': [
-        ('GPIO_leds[0]', 'E15', 'LVCMOS25', 'OUTPUT'),
-        ('GPIO_leds[1]', 'D15', 'LVCMOS25', 'OUTPUT'),
-        ('GPIO_leds[2]', 'W17', 'LVCMOS25', 'OUTPUT'),
-        ('GPIO_leds[3]', 'W5', 'LVCMOS25', 'OUTPUT'),
-        ('GPIO_leds[4]', 'V7', 'LVCMOS25', 'OUTPUT'),
-        ('GPIO_leds[5]', 'W10', 'LVCMOS25', 'OUTPUT'),
-        ('GPIO_leds[6]', 'P18', 'LVCMOS25', 'OUTPUT'),
-        ('GPIO_leds[7]', 'P17', 'LVCMOS25', 'OUTPUT')
-    ],
-    'zedboard': [
-        ('GPIO_leds[0]', 'T22', 'LVCMOS33', 'OUTPUT'),
-        ('GPIO_leds[1]', 'T21', 'LVCMOS33', 'OUTPUT'),
-        ('GPIO_leds[2]', 'U22', 'LVCMOS33', 'OUTPUT'),
-        ('GPIO_leds[3]', 'U21', 'LVCMOS33', 'OUTPUT'),
-        ('GPIO_leds[4]', 'V22', 'LVCMOS33', 'OUTPUT'),
-        ('GPIO_leds[5]', 'W22', 'LVCMOS33', 'OUTPUT'),
-        ('GPIO_leds[6]', 'U19', 'LVCMOS33', 'OUTPUT'),
-        ('GPIO_leds[7]', 'U14', 'LVCMOS33', 'OUTPUT')],
-    'kc705': [],
-    'vc707': [],
-    }
-
-
-hdmi_pinout = {
-    'zc702': [
-        ( "hdmi_clk", 'L16', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_hsync", 'R18', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_vsync", 'H15', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_de", 'T18', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[0]", 'AB21', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[1]", 'AA21', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[2]", 'AB22', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[3]", 'AA22', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[4]", 'V19', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[5]", 'V18', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[6]", 'V20', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[7]", 'U20', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[8]", 'W21', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[9]", 'W20', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[10]", 'W18', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[11]", 'T19', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[12]", 'U19', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[13]", 'R19', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[14]", 'T17', 'LVCMOS25', 'OUTPUT'),
-        ( "hdmi_data[15]", 'T16', 'LVCMOS25', 'OUTPUT'),
-        ],
-    'zedboard':[
-        ( "hdmi_clk", 'W18', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_vsync", 'W17', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_hsync", 'V17', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_de", 'U16', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[0]", 'Y13', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[1]", 'AA13', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[2]", 'AA14', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[3]", 'Y14', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[4]", 'AB15', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[5]", 'AB16', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[6]", 'AA16', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[7]", 'AB17', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[8]", 'AA17', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[9]", 'Y15', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[10]", 'W13', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[11]", 'W15', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[12]", 'V15', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[13]", 'U17', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[14]", 'V14', 'LVCMOS33', 'OUTPUT'),
-        ( "hdmi_data[15]", 'V13', 'LVCMOS33', 'OUTPUT'),
-        ]
-    }
-
-imageon_pinout = {
-    'zedboard': [
-        ('io_vita_clk_pll', 'L17', 'LVCMOS25', 'OUTPUT'), #LA13_p
-        ('io_vita_reset_n', 'L19', 'LVCMOS25', 'OUTPUT'), # CLK0_M2C_n
-        ('io_vita_trigger[2]', 'M17', 'LVCMOS25', 'OUTPUT'),#LA13_n
-        ('io_vita_trigger[1]', 'K19', 'LVCMOS25', 'OUTPUT'),#LA14_p
-        ('io_vita_trigger[0]', 'K20', 'LVCMOS25', 'OUTPUT'),#LA14_n
-        ('io_vita_monitor[1]', 'J17', 'LVCMOS25', 'INPUT'),#LA15_n
-        ('io_vita_monitor[0]', 'J16', 'LVCMOS25', 'INPUT'),#LA15_p
-        ('io_vita_spi_sclk', 'P20', 'LVCMOS25', 'OUTPUT'),#LA12_p
-        ('io_vita_spi_ssel_n', 'P21', 'LVCMOS25', 'OUTPUT'),#LA12_n
-        ('io_vita_spi_mosi', 'N17', 'LVCMOS25', 'OUTPUT'),#LA11_p
-        ('io_vita_spi_miso', 'N18', 'LVCMOS25', 'INPUT'),#LA11_n
-        ('io_vita_clk_out_p', 'M19', 'LVDS_25', 'INPUT'),#LA00_p_CC
-        ('io_vita_clk_out_n', 'M20', 'LVDS_25', 'INPUT'),#LA00_n_CC
-        ('io_vita_sync_p', 'R19', 'LVDS_25', 'INPUT'), #LA10_p
-        ('io_vita_sync_n', 'T19', 'LVDS_25', 'INPUT'), #LA10_n
-        ('io_vita_data_p[0]', 'R20', 'LVDS_25', 'INPUT'),#LA09_p
-        ('io_vita_data_p[1]', 'T16', 'LVDS_25', 'INPUT'),#LA07_p
-        ('io_vita_data_p[2]', 'J21', 'LVDS_25', 'INPUT'),#LA08_p
-        ('io_vita_data_p[3]', 'J18', 'LVDS_25', 'INPUT'),#LA05_p
-        #('io_vita_data_p[4]', 'M21', 'LVDS_25', 'INPUT'),#LA04_p
-        #('io_vita_data_p[5]', 'L21', 'LVDS_25', 'INPUT'),#LA06_p
-        #('io_vita_data_p[6]', 'N22', 'LVDS_25', 'INPUT'),#LA03_p
-        #('io_vita_data_p[7]', 'P17', 'LVDS_25', 'INPUT'),#LA02_p
-        ('io_vita_data_n[0]', 'R21', 'LVDS_25', 'INPUT'),#LA09_n
-        ('io_vita_data_n[1]', 'T17', 'LVDS_25', 'INPUT'),#LA07_n
-        ('io_vita_data_n[2]', 'J22', 'LVDS_25', 'INPUT'),#LA08_n
-        ('io_vita_data_n[3]', 'K18', 'LVDS_25', 'INPUT'),#LA05_n
-        #('io_vita_data_n[4]', 'M22', 'LVDS_25', 'INPUT'),#LA04_n
-        #('io_vita_data_n[5]', 'L22', 'LVDS_25', 'INPUT'),#LA06_n
-        #('io_vita_data_n[6]', 'P22', 'LVDS_25', 'INPUT'),#LA03_n
-        #('io_vita_data_n[7]', 'P18', 'LVDS_25', 'INPUT'),#LA02_n
-        ],
-    'zc702': [
-        ("XADC_gpio[0]", 'H17', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[1]", 'H22', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[2]", 'G22', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[3]", 'H18', 'LVCMOS25', 'OUTPUT'),
-
-        ('fmc_imageon_video_clk1', 'Y18', 'LVCMOS25', 'INPUT'),
-        ('fmc_imageon_iic_0_rst_pin', 'Y16', 'LVCMOS25', 'OUTPUT'),
-        ('fmc_imageon_iic_0_scl', 'AB14', 'LVCMOS25', 'BIDIR'),
-        ('fmc_imageon_iic_0_sda', 'AB15', 'LVCMOS25', 'BIDIR'),
-
-        ('io_vita_clk_pll', 'V22', 'LVCMOS25', 'OUTPUT'),
-        ('io_vita_reset_n', 'AA18', 'LVCMOS25', 'OUTPUT'),
-        ('io_vita_trigger[2]', 'W22', 'LVCMOS25', 'OUTPUT'),
-        ('io_vita_trigger[1]', 'T22', 'LVCMOS25', 'OUTPUT'),
-        ('io_vita_trigger[0]', 'U22', 'LVCMOS25', 'OUTPUT'),
-        ('io_vita_monitor[1]', 'AA13', 'LVCMOS25', 'INPUT'),
-        ('io_vita_monitor[0]', 'Y13', 'LVCMOS25', 'INPUT'),
-        ('io_vita_spi_sclk', 'W15', 'LVCMOS25', 'OUTPUT'),
-        ('io_vita_spi_ssel_n', 'Y15', 'LVCMOS25', 'OUTPUT'),
-        ('io_vita_spi_mosi', 'Y14', 'LVCMOS25', 'OUTPUT'),
-        ('io_vita_spi_miso', 'AA14', 'LVCMOS25', 'INPUT'),
-        ('io_vita_clk_out_p', 'Y19', 'LVDS_25', 'INPUT'),
-        ('io_vita_clk_out_n', 'AA19', 'LVDS_25', 'INPUT'),
-        ('io_vita_sync_p', 'Y20', 'LVDS_25', 'INPUT'),
-        ('io_vita_sync_n', 'Y21', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_p[0]', 'U15', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_p[1]', 'T21', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_p[2]', 'AA17', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_p[3]', 'AB19', 'LVDS_25', 'INPUT'),
-        #('io_vita_data_p[4]', 'V13', 'LVDS_25', 'INPUT'),
-        #('io_vita_data_p[5]', 'U17', 'LVDS_25', 'INPUT'),
-        #('io_vita_data_p[6]', 'AA16', 'LVDS_25', 'INPUT'),
-        #('io_vita_data_p[7]', 'V14', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_n[0]', 'U16', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_n[1]', 'U21', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_n[2]', 'AB17', 'LVDS_25', 'INPUT'),
-        ('io_vita_data_n[3]', 'AB20', 'LVDS_25', 'INPUT'),
-        #('io_vita_data_n[4]', 'W13', 'LVDS_25', 'INPUT'),
-        #('io_vita_data_n[5]', 'V17', 'LVDS_25', 'INPUT'),
-        #('io_vita_data_n[6]', 'AB16', 'LVDS_25', 'INPUT'),
-        #('io_vita_data_n[7]', 'V15', 'LVDS_25', 'INPUT'),
-        ]
-}
 top_verilog_template='''
 `timescale 1 ps / 1 ps
 // lib IP_Integrator_Lib
@@ -876,143 +587,12 @@ assign EN_%(busname)s_write_writeResponse = RDY_%(busname)s_write_writeResponse 
 
 busHandlers={}
 
-class Hdmi:
-    def __init__(self):
-        busHandlers['HDMI'] = self
-    def top_bus_ports(self, busname,t,params):
-        return '''    output hdmi_clk,
-    output hdmi_vsync,
-    output hdmi_hsync,
-    output hdmi_de,
-    output [15:0] hdmi_data,
-'''
-    def top_bus_wires(self, busname,t,params):
-        return ''
-    def ps7_bus_port_map(self,busname,t,params):
-        return '''
-'''
-    def dut_bus_port_map(self, busname,t,params):
-        return '''
-      .%(busname)s_hdmi_vsync(hdmi_vsync),
-      .%(busname)s_hdmi_hsync(hdmi_hsync),
-      .%(busname)s_hdmi_de(hdmi_de),
-      .%(busname)s_hdmi_data(hdmi_data),
-      .CLK_%(busname)s_hdmi_clock_if(hdmi_clk),
-''' % {'busname': busname}
-    def top_bus_assignments(self,busname,t,params):
-        return '''
-'''
-    def bus_assignments(self,busname,t,params):
-        return ''
-    def pinout(self, board):
-        return hdmi_pinout[board]
-Hdmi()
-
-class Leds:
-    def __init__(self):
-        busHandlers['LEDS'] = self
-    def top_bus_ports(self, busname,t,params):
-        return ''
-    def top_bus_wires(self, busname,t,params):
-        return ''
-    def ps7_bus_port_map(self,busname,t,params):
-        return ''
-    def dut_bus_port_map(self, busname,t,params):
-        return '''
-      .%(busname)s_leds(GPIO_leds),
-''' % {'busname': busname}
-    def top_bus_assignments(self,busname,t,params):
-        return ''
-    def bus_assignments(self,busname,t,params):
-        return ''
-    def pinout(self, board):
-        return led_pinout[board]
-Leds()
-
-class ImageonVita:
-    def __init__(self):
-        busHandlers['ImageonVita'] = self
-    def top_bus_ports(self, busname,t,params):
-        return '''
-/* imageon vita *****************************************/
-
-    inout fmc_imageon_iic_0_sda,
-    inout fmc_imageon_iic_0_scl,
-    output fmc_imageon_iic_0_rst_pin,
-    input fmc_imageon_video_clk1,
-    output io_vita_clk_pll,
-    output io_vita_reset_n,
-    output [2:0] io_vita_trigger,
-    input [1:0] io_vita_monitor,
-    output io_vita_spi_sclk,
-    output io_vita_spi_ssel_n,
-    output io_vita_spi_mosi,
-    input io_vita_spi_miso,
-    input io_vita_clk_out_p,
-    input io_vita_clk_out_n,
-    input io_vita_sync_p,
-    input io_vita_sync_n,
-    input [3:0] io_vita_data_p,
-    input [3:0] io_vita_data_n,
-    output [3:0] XADC_gpio,
-/* imageon vita *****************************************/
-'''
-    def top_bus_wires(self, busname,t,params):
-         return '''
-     wire imageon_clk;
-     wire fmc_imageon_iic_0_scl_T;
-     wire fmc_imageon_iic_0_scl_O;
-     wire fmc_imageon_iic_0_scl_I;
-     wire fmc_imageon_iic_0_sda_T;
-     wire fmc_imageon_iic_0_sda_O;
-     wire fmc_imageon_iic_0_sda_I;
-     wire fbbozo;
-'''
-    def ps7_bus_port_map(self,busname,t,params):
-        return '''
-    .I2C1_SDA_I(fmc_imageon_iic_0_sda_I),
-    .I2C1_SDA_O(fmc_imageon_iic_0_sda_O),
-    .I2C1_SDA_T(fmc_imageon_iic_0_sda_T),
-    .I2C1_SCL_I(fmc_imageon_iic_0_scl_I),
-    .I2C1_SCL_O(fmc_imageon_iic_0_scl_O),
-    .I2C1_SCL_T(fmc_imageon_iic_0_scl_T),
-'''
-    def dut_bus_port_map(self, busname,t,params):
-        return '''
-    .serpins_io_vita_clk_p_v(io_vita_clk_out_p),
-    .serpins_io_vita_clk_n_v(io_vita_clk_out_n),
-    .serpins_io_vita_sync_p_v(io_vita_sync_p),
-    .serpins_io_vita_sync_n_v(io_vita_sync_n),
-    .serpins_io_vita_data_p_v(io_vita_data_p),
-    .serpins_io_vita_data_n_v(io_vita_data_n),
-    .pins_io_vita_reset_n(io_vita_reset_n),
-    .pins_io_vita_trigger_0__read(io_vita_trigger[0]),
-    .pins_io_vita_trigger_1__read(io_vita_trigger[1]),
-    .pins_io_vita_trigger_2__read(io_vita_trigger[2]),
-    .pins_io_vita_clk_pll(io_vita_clk_pll),
-    .toppins_fbbozoin_v(fbbozo),
-    .CLK_toppins_fbbozo(fbbozo),
-    /* SPI port */
-    .CLK_spi_invertedClock(io_vita_spi_sclk),
-    .spi_sel_n(io_vita_spi_ssel_n),
-    .spi_mosi(io_vita_spi_mosi),
-    .spi_miso_v(io_vita_spi_miso),
-'''
-    def top_bus_assignments(self,busname,t,params):
-        return '''
-     IOBUF#(.DRIVE(12), .IOSTANDARD("LVCMOS25"), .SLEW("SLOW")) (
-     .IO(fmc_imageon_iic_0_scl), .O(fmc_imageon_iic_0_scl_I),
-     .I(fmc_imageon_iic_0_scl_O), .T(fmc_imageon_iic_0_scl_T)); 
-     IOBUF#(.DRIVE(12), .IOSTANDARD("LVCMOS25"), .SLEW("SLOW")) (
-     .IO(fmc_imageon_iic_0_sda), .O(fmc_imageon_iic_0_sda_I),
-     .I(fmc_imageon_iic_0_sda_O), .T(fmc_imageon_iic_0_sda_T));
-'''
-    def bus_assignments(self,busname,t,params):
-        return '''
-'''
-    def pinout(self, board):
-        return imageon_pinout[board]
-ImageonVita()
+import busdefs.define_hdmi
+busdefs.define_hdmi.Hdmi(busHandlers)
+import busdefs.define_leds
+busdefs.define_leds.Leds(busHandlers)
+import busdefs.define_imageon
+busdefs.define_imageon.ImageonVita(busHandlers)
 
 class InterfaceMixin:
     def axiMasterBusSubst(self, busnumber, businfo):
@@ -1133,21 +713,6 @@ class InterfaceMixin:
                 rv.append('assign irq_f2p[%s] = 0;\n' % (x))
         return rv
 
-
-    def writeUcf(self, ucfname, boardname='zc702', silent=False):
-        if not silent:
-            print 'Writing UCF file', ucfname
-        ucf = util.createDirAndOpen(ucfname, 'w')
-        dutName = util.decapitalize(self.base)
-        hdmiBus = self.collectInterfaceNames('HDMI')
-        if len(hdmiBus):
-            ucf.write(hdmi_ucf_template[boardname])
-            #ucf.write(usr_clk_ucf_template)
-            ucf.write(xadc_ucf_template[boardname])
-        ucf.write(default_clk_ucf_template)
-        ucf.close()
-        return
-
     def writeXdc(self, xdcname, boardname='zc702', silent=False):
         if not silent:
             print 'Writing XDC file', xdcname
@@ -1155,7 +720,7 @@ class InterfaceMixin:
         dutName = util.decapitalize(self.base)
         if not len(self.collectInterfaceNames('LEDS')):
             ## we always connect these pins to a default pattern
-            for (name, pin, iostandard, direction) in led_pinout[boardname]:
+            for (name, pin, iostandard, direction) in busHandlers['LEDS'].pinout(boardname):
                 xdc.write(xdc_template % { 'name': name, 'pin': pin, 'iostandard': iostandard, 'direction': direction })
         for busType in busHandlers:
             buses = self.collectInterfaceNames(busType)
