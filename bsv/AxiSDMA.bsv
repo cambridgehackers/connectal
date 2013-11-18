@@ -32,6 +32,7 @@ import BRAM::*;
 import AxiClientServer::*;
 import BRAMFIFOFLevel::*;
 import PortalMemory::*;
+import PortalSMemory::*;
 import SGList::*;
 
 typedef struct {
@@ -62,7 +63,7 @@ typedef enum {Idle, LoadCtxt, Address, Data, Done} InternalState deriving(Eq,Bit
 
 module mkAxiDMAReadInternal(AxiDMAReadInternal);
    Vector#(NumDmaChannels, FIFOFLevel#(Bit#(64), 16)) readBuffers  <- replicateM(mkBRAMFIFOFLevel);
-   Vector#(NumDmaChannels, Reg#(Bool)) reqOutstanding <- replicateM(mkReg(False));
+   Vector#(NumDmaChannels, FIFOF#(void)) reqOutstanding <- replicateM(mkSizedFIFOF(1));
    Vector#(NumDmaChannels, Reg#(DmaChannelPtr)) ctxtPtrs <- replicateM(mkReg(unpack(0)));
    SGListManager sgl <- mkSGListManager();
    
@@ -76,7 +77,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
       selectReg <= selectReg+1;
    endrule
 
-   rule selectChannel if (stateReg == Idle && reqOutstanding[selectReg]);
+   rule selectChannel if (stateReg == Idle && reqOutstanding[selectReg].notEmpty);
       activeChan <= selectReg;
       sgl.loadCtx(ctxtPtrs[selectReg].sglid);
       stateReg <= LoadCtxt;
@@ -86,7 +87,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
       let bl = ctxtPtrs[activeChan].burstLen;
       if(readBuffers[activeChan].lowWater(zeroExtend(bl)+1))
 	 begin
-	    reqOutstanding[activeChan] <= False;
+	    reqOutstanding[activeChan].deq;
 	    let phys_addr <- sgl.nextAddr(bl);
 	    burstReg <= bl;
 	    addrReg <= phys_addr;
@@ -107,9 +108,9 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
       method Action configChan(DmaChannelId channelId, Bit#(32) pref, Bit#(4) bsz);
 	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pref), burstLen:bsz};
       endmethod
-      interface readChannels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
+      interface readChannels = zipWith(mkReadChan, map(toGet,readBuffers), map(toPut, reqOutstanding));
       method ActionValue#(DmaDbgRec) dbg();
-	 return DmaDbgRec{x:truncate(addrReg), y:zeroExtend(burstReg), z:zeroExtend(pack(readVReg(reqOutstanding))), w:zeroExtend(pack(stateReg))};
+	 return DmaDbgRec{x:truncate(addrReg), y:zeroExtend(burstReg), z:0, w:zeroExtend(pack(stateReg))};
       endmethod
    endinterface
 
@@ -131,8 +132,8 @@ endmodule
 
 module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
    Vector#(NumDmaChannels, FIFOFLevel#(Bit#(64), 16)) writeBuffers <- replicateM(mkBRAMFIFOFLevel);
-   Vector#(NumDmaChannels, Reg#(Bool)) reqOutstanding <- replicateM(mkReg(False));
-   Vector#(NumDmaChannels, Reg#(Bool)) writeRespRec   <- replicateM(mkReg(False));
+   Vector#(NumDmaChannels, FIFOF#(void)) reqOutstanding <- replicateM(mkSizedFIFOF(1));
+   Vector#(NumDmaChannels, FIFOF#(void)) writeRespRec   <- replicateM(mkSizedFIFOF(1));
    Vector#(NumDmaChannels, Reg#(DmaChannelPtr)) ctxtPtrs <- replicateM(mkReg(unpack(0)));
    SGListManager sgl <- mkSGListManager();
 
@@ -146,7 +147,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
       selectReg <= selectReg+1;
    endrule
 
-   rule selectChannel if (stateReg == Idle && reqOutstanding[selectReg]);
+   rule selectChannel if (stateReg == Idle && reqOutstanding[selectReg].notEmpty);
       activeChan <= selectReg;
       sgl.loadCtx(ctxtPtrs[selectReg].sglid);
       stateReg <= LoadCtxt;
@@ -156,7 +157,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
       let bl = ctxtPtrs[activeChan].burstLen;
       if(writeBuffers[activeChan].highWater(zeroExtend(bl)+1))
 	 begin
-	    reqOutstanding[activeChan] <= False;
+	    reqOutstanding[activeChan].deq;
 	    let phys_addr <- sgl.nextAddr(bl);
 	    burstReg <= bl;
 	    addrReg <= phys_addr;
@@ -178,8 +179,8 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
 	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pref), burstLen:bsz};
       endmethod
       interface writeChannels = zipWith3(mkWriteChan, map(toPut,writeBuffers), 
-					 map(mkPutWhenFalse, reqOutstanding),
-					 map(mkGetWhenTrue, writeRespRec));
+					 map(toPut, reqOutstanding),
+					 map(toGet, writeRespRec));
       method ActionValue#(DmaDbgRec) dbg();
 	 return DmaDbgRec{x:truncate(addrReg), y:zeroExtend(burstReg), z:zeroExtend(activeChan), w:zeroExtend(pack(stateReg))};
       endmethod
@@ -201,7 +202,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
 	 return Axi3WriteData { data: v, byteEnable: maxBound, last: last, id: 1 };
       endmethod
       method Action response(Axi3WriteResponse#(12) resp) if (stateReg == Done);
-	 writeRespRec[activeChan] <= True;
+	 writeRespRec[activeChan].enq(?);
 	 stateReg <= Idle;
       endmethod
    endinterface

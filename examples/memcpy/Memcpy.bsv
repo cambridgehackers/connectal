@@ -25,9 +25,10 @@ import BRAMFIFO::*;
 import GetPut::*;
 
 import AxiClientServer::*;
-import AxiDMA::*;
-import BsimDMA::*;
+import AxiSDMA::*;
+import BsimSDMA::*;
 import PortalMemory::*;
+import PortalSMemory::*;
 import BlueScope::*;
 
 interface CoreRequest;

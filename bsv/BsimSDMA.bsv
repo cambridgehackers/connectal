@@ -31,6 +31,7 @@ import BRAM::*;
 // XBSV Libraries
 import BRAMFIFOFLevel::*;
 import PortalMemory::*;
+import PortalSMemory::*;
 
 import "BDPI" function Action pareff(Bit#(32) off, Bit#(32) pref, Bit#(32) size);
 import "BDPI" function Action init_pareff();
@@ -63,7 +64,7 @@ typedef struct {
 module mkBsimDMAReadInternal(BsimDMAReadInternal);
    
    Vector#(NumDmaChannels, FIFOFLevel#(Bit#(64), 16)) readBuffers  <- replicateM(mkBRAMFIFOFLevel);
-   Vector#(NumDmaChannels, Reg#(Bool)) reqOutstanding <- replicateM(mkReg(False));
+   Vector#(NumDmaChannels, FIFOF#(void)) reqOutstanding <- replicateM(mkSizedFIFOF(1));
    Vector#(NumDmaChannels, Reg#(DmaChannelPtr)) ctxtPtrs <- replicateM(mkReg(unpack(0)));
 
    Reg#(Bit#(32))         addrReg <- mkReg(0);
@@ -76,7 +77,7 @@ module mkBsimDMAReadInternal(BsimDMAReadInternal);
       selectReg <= selectReg+1;
    endrule
 
-   rule selectChannel if (stateReg == Idle && reqOutstanding[selectReg]);
+   rule selectChannel if (stateReg == Idle && reqOutstanding[selectReg].notEmpty);
       activeChan <= selectReg;
       stateReg <= LoadCtxt;
    endrule
@@ -86,7 +87,7 @@ module mkBsimDMAReadInternal(BsimDMAReadInternal);
       let bl = ctx.burstLen;
       if(readBuffers[activeChan].lowWater(zeroExtend(bl)+1) && ctx.cfg)
 	 begin
-	    reqOutstanding[activeChan] <= False;
+	    reqOutstanding[activeChan].deq;
 	    let  ofs = ctx.offset;
 	    burstReg <= bl;
 	    addrReg <= ofs;
@@ -113,7 +114,7 @@ module mkBsimDMAReadInternal(BsimDMAReadInternal);
       method Action configChan(DmaChannelId channelId, Bit#(32) pref, Bit#(4) bsz);
    	 ctxtPtrs[channelId] <= DmaChannelPtr{pref:pref, offset:0, burstLen:bsz, cfg:True};
       endmethod
-      interface readChannels = zipWith(mkReadChan, map(toGet,readBuffers), map(mkPutWhenFalse, reqOutstanding));
+      interface readChannels = zipWith(mkReadChan, map(toGet,readBuffers), map(toPut, reqOutstanding));
       method ActionValue#(DmaDbgRec) dbg();
 	 return ?;
       endmethod
@@ -125,8 +126,8 @@ endmodule
 module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
 
    Vector#(NumDmaChannels, FIFOFLevel#(Bit#(64), 16)) writeBuffers <- replicateM(mkBRAMFIFOFLevel);
-   Vector#(NumDmaChannels, Reg#(Bool)) reqOutstanding <- replicateM(mkReg(False));
-   Vector#(NumDmaChannels, Reg#(Bool)) writeRespRec   <- replicateM(mkReg(False));
+   Vector#(NumDmaChannels, FIFOF#(void)) reqOutstanding <- replicateM(mkSizedFIFOF(1));
+   Vector#(NumDmaChannels, FIFOF#(void)) writeRespRec   <- replicateM(mkSizedFIFOF(1));
    Vector#(NumDmaChannels, Reg#(DmaChannelPtr)) ctxtPtrs <- replicateM(mkReg(unpack(0)));
 
    Reg#(Bit#(32))         addrReg <- mkReg(0);
@@ -139,7 +140,7 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
       selectReg <= selectReg+1;
    endrule
 
-   rule selectChannel if (stateReg == Idle && reqOutstanding[selectReg]);
+   rule selectChannel if (stateReg == Idle && reqOutstanding[selectReg].notEmpty);
       activeChan <= selectReg;
       stateReg <= LoadCtxt;
    endrule
@@ -149,7 +150,7 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
       let bl = ctx.burstLen;
       if(writeBuffers[activeChan].highWater(zeroExtend(bl)+1) && ctx.cfg)
 	 begin
-	    reqOutstanding[activeChan] <= False;
+	    reqOutstanding[activeChan].deq;
 	    let  ofs = ctx.offset;
 	    burstReg <= bl;
 	    addrReg <= ofs;
@@ -175,7 +176,7 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
    endrule
    
    rule response if (stateReg == Done);
-      writeRespRec[activeChan] <= True;
+      writeRespRec[activeChan].enq(?);
       stateReg <= Idle;
    endrule
 
@@ -184,8 +185,8 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
    	 ctxtPtrs[channelId] <= DmaChannelPtr{pref:pref, offset:0, burstLen:bsz, cfg:True};
       endmethod
       interface writeChannels = zipWith3(mkWriteChan, map(toPut,writeBuffers), 
-					 map(mkPutWhenFalse, reqOutstanding),
-					 map(mkGetWhenTrue, writeRespRec));
+					 map(toPut, reqOutstanding),
+					 map(toGet, writeRespRec));
       method ActionValue#(DmaDbgRec) dbg();
 	 return ?;
       endmethod

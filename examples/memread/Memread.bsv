@@ -24,9 +24,10 @@ import FIFOF::*;
 import BRAMFIFO::*;
 import GetPut::*;
 import AxiClientServer::*;
-import AxiDMA::*;
-import BsimDMA::*;
+import AxiSDMA::*;
+import BsimSDMA::*;
 import PortalMemory::*;
+import PortalSMemory::*;
 
 interface CoreRequest;
    method Action startRead(Bit#(32) numWords);

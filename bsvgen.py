@@ -22,7 +22,6 @@ import AxiClientServer::*;
 import Zynq::*;
 import Vector::*;
 import SpecialFIFOs::*;
-import AxiDMA::*;
 import XbsvReadyQueue::*;
 import PortalMemory::*;
 %(extraImports)s

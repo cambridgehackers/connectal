@@ -23,35 +23,43 @@
 
 import GetPut::*;
 import Vector::*;
+import PortalMemory::*;
 
-typedef 2 NumDmaChannels;
-typedef Bit#(TLog#(NumDmaChannels)) DmaChannelId;
+function ReadChan mkReadChan(Get#(Bit#(64)) rd, Put#(void) rr);
+   return (interface ReadChan;
+	      interface Get readData = rd;
+	      interface Put readReq  = rr;
+	   endinterface);
+endfunction
 
-typedef struct {
-   Bit#(32) x;
-   Bit#(32) y;
-   Bit#(32) z;
-   Bit#(32) w;
-   } DmaDbgRec deriving(Bits);
+function WriteChan mkWriteChan(Put#(Bit#(64)) wd, Put#(void) wr, Get#(void) d);
+   return (interface WriteChan;
+	      interface Put writeData = wd;
+	      interface Put writeReq  = wr;
+	      interface Get writeDone = d;
+	   endinterface);
+endfunction
 
-interface DMAIndication;
-   method Action reportStateDbg(DmaDbgRec rec);
-   method Action configResp(Bit#(32) channelId);
-   method Action sglistResp(Bit#(32) v);
-   method Action parefResp(Bit#(32) v);
+interface ReadChan#(Type t);
+   interface Get#(t)        readData;
+   interface Put#(Bit#(40)) readReq;
 endinterface
 
-interface DMARequest;
-   method Action configReadChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) bsz);
-   method Action configWriteChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) bsz);
-   method Action getReadStateDbg();
-   method Action getWriteStateDbg();
-   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
-   method Action paref(Bit#(32) off, Bit#(32) pref, Bit#(32) size);
+interface WriteChan;
+   interface Put#(t)        writeData;
+   interface Put#(Bit#(40)) writeReq;
+   interface Get#(void)     writeDone;
 endinterface
 
-typeclass PortalMemory#(type a);
-endtypeclass
+interface DMARead;
+   method Action configChan(DmaChannelId channelId, Bit#(32) pref);
+   interface Vector#(NumDmaChannels, ReadChan) readChannels;
+   method ActionValue#(DmaDbgRec) dbg();
+endinterface
 
-instance PortalMemory#(DMARequest);
-endinstance
+interface DMAWrite;
+   method Action  configChan(DmaChannelId channelId, Bit#(32) pref);   
+   interface Vector#(NumDmaChannels, WriteChan) writeChannels;
+   method ActionValue#(DmaDbgRec) dbg();
+endinterface
+
