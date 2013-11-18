@@ -5,6 +5,17 @@ import util
 import re
 import syntax
 
+busHandlers={}
+
+import busdefs.define_hdmi
+busdefs.define_hdmi.Register(busHandlers)
+import busdefs.define_leds
+busdefs.define_leds.Register(busHandlers)
+import busdefs.define_xadc
+busdefs.define_xadc.Register(busHandlers)
+import busdefs.define_imageon
+busdefs.define_imageon.Register(busHandlers)
+
 edkversion = '14.3'
 edkversions = ['14.3', '14.4']
 if os.environ.has_key('XILINX_EDK'):
@@ -41,21 +52,6 @@ set_property PROGRAM.FILE $file $fpga
 puts "fpga is $fpga, bit file size is [exec ls -sh $file]"
 program_hw_devices $fpga
 '''
-
-#xadc_pinout= {
-#    'zc702': [
-#        ("XADC_gpio[0]", 'H17', 'LVCMOS25', 'OUTPUT'),
-#        ("XADC_gpio[1]", 'H22', 'LVCMOS25', 'OUTPUT'),
-#        ("XADC_gpio[2]", 'G22', 'LVCMOS25', 'OUTPUT'),
-#        ("XADC_gpio[3]", 'H18', 'LVCMOS25', 'OUTPUT'),
-#        ],
-#    'zedboard': [
-#        ("XADC_gpio[0]", 'H15', 'LVCMOS25', 'OUTPUT'),
-#        ("XADC_gpio[1]", 'R15', 'LVCMOS25', 'OUTPUT'),
-#        ("XADC_gpio[2]", 'K15', 'LVCMOS25', 'OUTPUT'),
-#        ("XADC_gpio[3]", 'J15', 'LVCMOS25', 'OUTPUT'),
-#        ]
-#    }
 
 top_verilog_template='''
 `timescale 1 ps / 1 ps
@@ -584,15 +580,6 @@ assign EN_%(busname)s_write_writeAddr = RDY_%(busname)s_write_writeAddr & %(busn
 assign EN_%(busname)s_write_writeData = RDY_%(busname)s_write_writeData & %(busname)s_wvalid;
 assign EN_%(busname)s_write_writeResponse = RDY_%(busname)s_write_writeResponse & %(busname)s_bready;
 '''
-
-busHandlers={}
-
-import busdefs.define_hdmi
-busdefs.define_hdmi.Hdmi(busHandlers)
-import busdefs.define_leds
-busdefs.define_leds.Leds(busHandlers)
-import busdefs.define_imageon
-busdefs.define_imageon.ImageonVita(busHandlers)
 
 class InterfaceMixin:
     def axiMasterBusSubst(self, busnumber, businfo):

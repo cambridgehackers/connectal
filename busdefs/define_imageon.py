@@ -79,7 +79,7 @@ imageon_pinout = {
         ]
 }
 
-class ImageonVita:
+class Register:
     def __init__(self, busHandlers):
         busHandlers['ImageonVita'] = self
     def top_bus_ports(self, busname,t,params):

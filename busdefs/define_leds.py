@@ -24,7 +24,7 @@ led_pinout = {
     'vc707': [],
     }
 
-class Leds:
+class Register:
     def __init__(self, busHandlers):
         busHandlers['LEDS'] = self
     def top_bus_ports(self, busname,t,params):

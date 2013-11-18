@@ -47,7 +47,7 @@ hdmi_pinout = {
         ]
     }
 
-class Hdmi:
+class Register:
     def __init__(self, busHandlers):
         busHandlers['HDMI'] = self
     def top_bus_ports(self, busname,t,params):
