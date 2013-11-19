@@ -68,21 +68,14 @@ module %(dut)s_top_1(
 %(axi_slave_parameters)s
 parameter C_FAMILY = "virtex6";
 
-  wire GND_1;
-%(interrupt_wire_decls)s
-
+%(top_interrupt_wires)s
 %(top_axi_master_wires)s
 %(top_axi_slave_wires)s
 %(top_bus_wires)s
 
-GND GND
-       (.G(GND_1));
-
 /* dut goes here */
 mk%(Dut)sWrapper %(Dut)sIMPLEMENTATION (
       %(dut_clock_arg)s
-      .CLK(processing_system7_1_fclk_clk0),
-      .RST_N(processing_system7_1_fclk_reset0_n),
       %(dut_axi_master_port_map)s
       %(dut_axi_slave_port_map)s
       %(dut_bus_port_map)s
@@ -101,9 +94,7 @@ processing_system7#(.C_NUM_F2P_INTR_INPUTS(16))
 %(top_ps7_axi_slave_port_map)s
 %(top_ps7_axi_master_port_map)s
 %(ps7_bus_port_map)s
-        .PS_CLK(FIXED_IO_ps_clk),
-        .PS_PORB(FIXED_IO_ps_porb),
-        .PS_SRSTB(FIXED_IO_ps_srstb));
+        .PS_CLK(FIXED_IO_ps_clk));
    
 %(top_bus_assignments)s
 %(default_leds_assignment)s
@@ -576,48 +567,64 @@ class InterfaceMixin:
             'dut': dutName.lower(),
             'Dut': util.capitalize(self.base),
             'axi_master_parameters':
-                ''.join([axi_master_parameter_verilog_template % subst for subst in masterBusSubsts]),
+                ''.join([axi_master_parameter_verilog_template
+                  % subst for subst in masterBusSubsts]),
             'axi_slave_parameters':
-                ''.join([axi_slave_parameter_verilog_template % subst for subst in slaveBusSubsts]),
-            'top_axi_master_wires': ''.join([top_axi_master_wires_template % subst for subst in masterBusSubsts]),
-            'top_axi_slave_wires': ''.join([top_axi_slave_wires_template % subst for subst in slaveBusSubsts]),
-            'top_dut_axi_master_port_map': ''.join([top_dut_axi_master_port_map_template % subst for subst in masterBusSubsts]),
-            'top_ps7_axi_master_port_map': ''.join([top_ps7_axi_master_port_map_template % subst for subst in masterBusSubsts]),
-            'top_ps7_axi_slave_port_map': ''.join([top_ps7_axi_slave_port_map_template % subst for subst in slaveBusSubsts]),
-            'dut_clock_arg': '\n'.join(['.CLK_%s(%s),' % (clk,clk) for clk in dut_clknames]),
+                ''.join([axi_slave_parameter_verilog_template
+                  % subst for subst in slaveBusSubsts]),
+            'top_axi_master_wires': ''.join([top_axi_master_wires_template
+                  % subst for subst in masterBusSubsts]),
+            'top_axi_slave_wires': ''.join([top_axi_slave_wires_template
+                  % subst for subst in slaveBusSubsts]),
+            'top_dut_axi_master_port_map': ''.join([top_dut_axi_master_port_map_template
+                  % subst for subst in masterBusSubsts]),
+            'top_ps7_axi_master_port_map': ''.join([top_ps7_axi_master_port_map_template
+                  % subst for subst in masterBusSubsts]),
+            'top_ps7_axi_slave_port_map': ''.join([top_ps7_axi_slave_port_map_template
+                  % subst for subst in slaveBusSubsts]),
+            'dut_clock_arg': '\n'.join(['.CLK_%s(%s),'
+                  % (clk,clk) for clk in dut_clknames]),
             'top_bus_ports':
-                ''.join([''.join([busHandlers[busType].top_bus_ports(busname,t,params) for (busname,t,params) in buses[busType]])
-                         for busType in busHandlers]),
+                ''.join([''.join([busHandlers[busType].top_bus_ports(busname,t,params)
+                  for (busname,t,params) in buses[busType]])
+                  for busType in busHandlers]),
             'top_bus_wires':
-                ''.join([''.join([busHandlers[busType].top_bus_wires(busname,t,params) for (busname,t,params) in buses[busType]])
-                         for busType in busHandlers]),
-            'dut_axi_master_port_map': ''.join([axi_master_port_map_verilog_template % subst for subst in masterBusSubsts]),
-
+                ''.join([''.join([busHandlers[busType].top_bus_wires(busname,t,params)
+                  for (busname,t,params) in buses[busType]])
+                  for busType in busHandlers]),
+            'dut_axi_master_port_map': ''.join([axi_master_port_map_verilog_template
+                  % subst for subst in masterBusSubsts]),
             'dut_axi_slave_port_map':
-                ''.join([axi_slave_port_map_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in axiSlaves]),
+                ''.join([axi_slave_port_map_verilog_template
+                  % {'BUSNAME': busname.upper(), 'busname': busname}
+                  for (busname,t,params) in axiSlaves]),
             'dut_bus_port_map': ''.join([''.join([busHandlers[busType].dut_bus_port_map(busname,t,params)
-                                                  for (busname,t,params) in buses[busType]])
-                                         for busType in busHandlers]),
+                  for (busname,t,params) in buses[busType]])
+                  for busType in busHandlers]),
             'axi_master_scheduler':
-                ''.join([axi_master_scheduler_verilog_template % subst for subst in masterBusSubsts ]),
+                ''.join([axi_master_scheduler_verilog_template
+                  % subst for subst in masterBusSubsts ]),
             'axi_slave_scheduler':
-                ''.join([axi_slave_scheduler_verilog_template % {'BUSNAME': busname.upper(), 'busname': busname}
-                         for (busname,t,params) in axiSlaves]),
+                ''.join([axi_slave_scheduler_verilog_template
+                  % {'BUSNAME': busname.upper(), 'busname': busname}
+                  for (busname,t,params) in axiSlaves]),
             'ps7_bus_port_map':
-                ''.join([''.join([busHandlers[busType].ps7_bus_port_map(busname,t,params) for (busname,t,params) in buses[busType]])
-                         for busType in busHandlers]),
+                ''.join([''.join([busHandlers[busType].ps7_bus_port_map(busname,t,params)
+                  for (busname,t,params) in buses[busType]])
+                  for busType in busHandlers]),
             'top_bus_assignments': ''.join([''.join([busHandlers[busType].top_bus_assignments(busname,t,params)
-                                                     for (busname,t,params) in buses[busType]])
-                                            for busType in busHandlers]),
+                  for (busname,t,params) in buses[busType]])
+                  for busType in busHandlers]),
             'bus_assignments': ''.join([''.join([busHandlers[busType].bus_assignments(busname,t,params)
-                                                 for (busname,t,params) in buses[busType]])
-                                        for busType in busHandlers]),
+                  for (busname,t,params) in buses[busType]])
+                  for busType in busHandlers]),
             'default_leds_assignment': default_leds_assignment,
             'irq_f2p_assignments': ''.join(self.collectInterrupts()),
             'dut_interrupt_map' : ''.join(util.intersperse(',\n      ', 
-                                                      ['.interrupts_%s__read(%s_%s_interrupt)' % (x,dutName,x) for x in range (0,self.numPortals)])),
-            'interrupt_wire_decls' : ''.join(['  wire %s_%s_interrupt;\n' % (dutName,x) for x in range(0,self.numPortals)])
+                  ['.interrupts_%s__read(%s_%s_interrupt)'
+                  % (x,dutName,x) for x in range (0,self.numPortals)])),
+            'top_interrupt_wires' : ''.join(['  wire %s_%s_interrupt;\n'
+                  % (dutName,x) for x in range(0,self.numPortals)])
             }
         topverilog.write(top_verilog_template % substs)
         topverilog.close()

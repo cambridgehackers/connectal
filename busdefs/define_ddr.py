@@ -54,6 +54,9 @@ class Register:
   wire processing_system7_1_fixed_io_PS_CLK;
   wire processing_system7_1_fixed_io_PS_PORB;
   wire processing_system7_1_fixed_io_PS_SRSTB;
+  wire GND_1;
+GND GND
+       (.G(GND_1));
 '''
     def ps7_bus_port_map(self,busname,t,params):
         return '''
@@ -81,9 +84,13 @@ class Register:
         .FCLK_RESET0_N(processing_system7_1_fclk_reset0_n),
         .IRQ_F2P(irq_f2p),
         .MIO(FIXED_IO_mio[53:0]),
+        .PS_PORB(FIXED_IO_ps_porb),
+        .PS_SRSTB(FIXED_IO_ps_srstb),
 '''
     def dut_bus_port_map(self, busname,t,params):
         return '''
+      .CLK(processing_system7_1_fclk_clk0),
+      .RST_N(processing_system7_1_fclk_reset0_n),
 ''' % {'busname': busname}
     def top_bus_assignments(self,busname,t,params):
         return '''
