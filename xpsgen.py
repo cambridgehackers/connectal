@@ -7,6 +7,8 @@ import syntax
 
 busHandlers={}
 
+import busdefs.define_ddr
+busdefs.define_ddr.Register(busHandlers)
 import busdefs.define_hdmi
 busdefs.define_hdmi.Register(busHandlers)
 import busdefs.define_leds
@@ -57,28 +59,7 @@ top_verilog_template='''
 `timescale 1 ps / 1 ps
 // lib IP_Integrator_Lib
 (* CORE_GENERATION_INFO = "design_1,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLanguage=VERILOG}" *) 
-module %(dut)s_top_1
-   (inout [14:0]DDR_Addr,
-    inout [2:0]DDR_BankAddr,
-    inout DDR_CAS_n,
-    inout DDR_Clk_n,
-    inout DDR_Clk_p,
-    inout DDR_CKE,
-    inout DDR_CS_n,
-    inout [3:0]DDR_DM,
-    inout [31:0]DDR_DQ,
-    inout [3:0]DDR_DQS_n,
-    inout [3:0]DDR_DQS_p,
-    inout DDR_ODT,
-    inout DDR_RAS_n,
-    inout DDR_DRSTB,
-    inout DDR_WEB,
-    inout FIXED_IO_ddr_vrn,
-    inout FIXED_IO_ddr_vrp,
-    inout [53:0]FIXED_IO_mio,
-    inout FIXED_IO_ps_clk,
-    inout FIXED_IO_ps_porb,
-    inout FIXED_IO_ps_srstb,
+module %(dut)s_top_1(
 %(top_bus_ports)s
     output [7:0] GPIO_leds
 );
@@ -93,32 +74,6 @@ parameter C_FAMILY = "virtex6";
 %(top_axi_master_wires)s
 %(top_axi_slave_wires)s
 %(top_bus_wires)s
-  wire [14:0]processing_system7_1_ddr_ADDR;
-  wire [2:0]processing_system7_1_ddr_BA;
-  wire processing_system7_1_ddr_CAS_N;
-  wire processing_system7_1_ddr_CKE;
-  wire processing_system7_1_ddr_CK_N;
-  wire processing_system7_1_ddr_CK_P;
-  wire processing_system7_1_ddr_CS_N;
-  wire [3:0]processing_system7_1_ddr_DM;
-  wire [31:0]processing_system7_1_ddr_DQ;
-  wire [3:0]processing_system7_1_ddr_DQS_N;
-  wire [3:0]processing_system7_1_ddr_DQS_P;
-  wire processing_system7_1_ddr_ODT;
-  wire processing_system7_1_ddr_RAS_N;
-  wire processing_system7_1_ddr_RESET_N;
-  wire processing_system7_1_ddr_WE_N;
-  wire processing_system7_1_fclk_clk0;
-  wire processing_system7_1_fclk_clk1;
-  wire processing_system7_1_fclk_clk2;
-  wire processing_system7_1_fclk_clk3;
-  wire processing_system7_1_fclk_reset0_n;
-  wire processing_system7_1_fixed_io_DDR_VRN;
-  wire processing_system7_1_fixed_io_DDR_VRP;
-  wire [53:0]processing_system7_1_fixed_io_MIO;
-  wire processing_system7_1_fixed_io_PS_CLK;
-  wire processing_system7_1_fixed_io_PS_PORB;
-  wire processing_system7_1_fixed_io_PS_SRSTB;
 
 GND GND
        (.G(GND_1));
@@ -142,31 +97,7 @@ wire [15:0] irq_f2p;
 %(irq_f2p_assignments)s
 
 processing_system7#(.C_NUM_F2P_INTR_INPUTS(16))
- processing_system7_1
-       (.DDR_Addr(DDR_Addr[14:0]),
-        .DDR_BankAddr(DDR_BankAddr[2:0]),
-        .DDR_CAS_n(DDR_CAS_n),
-        .DDR_CKE(DDR_CKE),
-        .DDR_CS_n(DDR_CS_n),
-        .DDR_Clk(DDR_Clk_p),
-        .DDR_Clk_n(DDR_Clk_n),
-        .DDR_DM(DDR_DM[3:0]),
-        .DDR_DQ(DDR_DQ[31:0]),
-        .DDR_DQS(DDR_DQS_p[3:0]),
-        .DDR_DQS_n(DDR_DQS_n[3:0]),
-        .DDR_DRSTB(DDR_DRSTB),
-        .DDR_ODT(DDR_ODT),
-        .DDR_RAS_n(DDR_RAS_n),
-        .DDR_VRN(FIXED_IO_ddr_vrn),
-        .DDR_VRP(FIXED_IO_ddr_vrp),
-        .DDR_WEB(DDR_WEB),
-        .FCLK_CLK0(processing_system7_1_fclk_clk0),
-        .FCLK_CLK1(processing_system7_1_fclk_clk1),
-        .FCLK_CLK2(processing_system7_1_fclk_clk2),
-        .FCLK_CLK3(processing_system7_1_fclk_clk3),
-        .FCLK_RESET0_N(processing_system7_1_fclk_reset0_n),
-        .IRQ_F2P(irq_f2p),
-        .MIO(FIXED_IO_mio[53:0]),
+ processing_system7_1(
 %(top_ps7_axi_slave_port_map)s
 %(top_ps7_axi_master_port_map)s
 %(ps7_bus_port_map)s
@@ -634,6 +565,8 @@ class InterfaceMixin:
         for busType in busHandlers:
             b = self.collectInterfaceNames(busType)
             buses[busType] = b
+        # hack to force generation of DDR definitions. jca
+        buses['DDR'] = [('a', 'b', 'c')]
         if len(buses['LEDS']):
             default_leds_assignment = ''
         else:
