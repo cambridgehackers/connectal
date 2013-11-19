@@ -698,12 +698,14 @@ class NullMixin:
 class TypeMixin:
     def toBsvType(self):
         if len(self.params):
-            return '%s#(%s)' % (self.name, self.params[0].numeric())
+            return '%s#(%s)' % (self.name, ','.join([str(p.toBsvType()) for p in self.params]))
         else:
             return self.name
     def numBitsBSV(self):
         if (self.name == 'Bit'):
-		return self.params[0].numeric()
+            return self.params[0].numeric()
+        if (self.name == 'Vector'):
+            return self.params[0].numeric() * self.params[1].numBitsBSV()
 	sdef = syntax.globalvars[self.name].tdtype
         if (sdef.type == 'Struct'):
             return sum([e.type.numBitsBSV() for e in sdef.elements])
