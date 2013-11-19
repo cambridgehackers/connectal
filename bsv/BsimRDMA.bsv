@@ -34,7 +34,7 @@ import PortalMemory::*;
 import PortalRMemory::*;
 import Adapter::*;
 
-import "BDPI" function Action pareff(Bit#(32) off, Bit#(32) pref, Bit#(32) size);
+import "BDPI" function Action pareff(Bit#(32) pref, Bit#(32) size);
 import "BDPI" function Action init_pareff();
 import "BDPI" function Action write_pareff(Bit#(32) pref, Bit#(32) addr, Bit#(64) v);
 import "BDPI" function ActionValue#(Bit#(64)) read_pareff(Bit#(32) pref, Bit#(32) addr);

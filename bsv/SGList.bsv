@@ -114,11 +114,36 @@ interface SGListMMU;
    method ActionValue#(Bit#(40)) addrResp();
 endinterface
 
+// is 1 K pages enough (probably not) 
+typedef 1024 SGListMaxPages;
+typedef Bit#(TLog#(SGListMaxPages)) PageIdx;
+// these numbers have only been tested on the Zynq platform
+typedef 12 SGListPageShift;
 
 // if this structure becomes too expensive, we can switch to a multi-level structure
 module mkSGListMMU(SGListMMU);
 
-   Vector#(NumSGLists, BRAM1Port#(SGListIdx, SGListEntry)) pageTables <- replicateM(mkBRAM1Server(defaultValue));
-   FIFOF#(SGListId) loadReqs <- mkFIFOF;
+   Vector#(NumSGLists, BRAM1Port#(PageIdx, Bit#(TSub#(40,SGListPageShift)))) pageTables <- replicateM(mkBRAM1Server(defaultValue));
+   FIFOF#(Bit#(SGListPageShift)) offs <- mkFIFOF;
+   FIFOF#(SGListId) ids  <- mkFIFOF;
+   
+   let page_shift = fromInteger(valueOf(SGListPageShift));
+
+   method Action page(SGListId id, Bit#(32) off, Bit#(40) addr);
+      pageTables[id].portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(off), datain:truncate(addr)});
+   endmethod
+
+   method Action addrReq(SGListId id, Bit#(40) off);
+      ids.enq(id);
+      offs.enq(truncate(off));
+      pageTables[id].portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(off >> page_shift), datain:?});
+   endmethod
+   
+   method ActionValue#(Bit#(40)) addrResp();
+      ids.deq;
+      offs.deq;
+      let rv <- pageTables[ids.first].portA.response.get;
+      return {rv,offs.first};
+   endmethod
    
 endmodule

@@ -235,8 +235,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal#(t))
       endmethod
    endinterface
 endmodule
-		 
-		 	 
+
 module mkAxiDMA#(DMAIndication indication)(AxiDMA#(t))
    provisos(Bits#(t,__a),
 	    Add#(1, a__, __a),
@@ -247,6 +246,21 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA#(t))
 	    
    AxiDMAWriteInternal#(t) writer <- mkAxiDMAWriteInternal;
    AxiDMAReadInternal#(t)  reader <- mkAxiDMAReadInternal;
+   Reg#(Bit#(40)) addrReg         <- mkReg(0);
+   Reg#(Bit#(32)) prefReg         <- mkReg(0);
+   Reg#(Bit#(32))  lenReg         <- mkReg(0);
+   Reg#(Bit#(32))  idxReg         <- mkReg(0);
+   
+   let page_shift = fromInteger(valueOf(SGListPageShift));
+
+   rule write_pages(idxReg < lenReg);
+      idxReg <= idxReg + 1;
+      addrReg <= addrReg + 1;
+      writer.page(prefReg,idxReg,addrReg);
+      reader.page(prefReg,idxReg,addrReg);
+      if(idxReg+1 == lenReg)
+	 indication.sglistResp(prefReg);
+   endrule
    
    interface DMARequest request;
       method Action configReadChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) __ignored);
@@ -265,10 +279,13 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA#(t))
 	 let rv <- writer.write.dbg;
 	 indication.reportStateDbg(rv);
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
-	 writer.page(pref,0,addr);
-	 reader.page(pref,0,addr);
-	 indication.sglistResp(pref);
+      method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len) if (idxReg == lenReg);
+	 addrReg <= addr >> page_shift;
+	 lenReg  <= len >> page_shift;
+	 prefReg <= pref;
+	 idxReg  <= 0;
+	 if (addr == 0 && len == 0)
+	    indication.sglistResp(pref);
       endmethod
    endinterface
    interface AxiDMAWrite write = writer.write;

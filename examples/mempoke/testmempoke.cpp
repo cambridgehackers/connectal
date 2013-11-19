@@ -11,7 +11,7 @@ CoreRequest *device = 0;
 DMARequest *dma = 0;
 PortalAlloc dstAlloc;
 unsigned int *dstBuffer = 0;
-int numWords = 16 << 8;
+int numWords = 16 << 2;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 sem_t conf_sem;
@@ -90,11 +90,15 @@ int main(int argc, const char **argv)
   dma->configReadChan(0, ref_dstAlloc, 2);
   sem_wait(&conf_sem);
 
+  fprintf(stderr, "main about to issue requests\n");
+
   device->readWord(5);
   sleep(1);
   S0 s = {3,4};
   device->writeWord(6,s);
   sleep(1);
   device->readWord(6);
+  
+  fprintf(stderr, "main going to sleep\n");
   while(true){sleep(1);}
 }
