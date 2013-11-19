@@ -207,7 +207,7 @@ Bit#(6) %(methodName)s$Offset = %(channelNumber)s;
 mkIndicationWrapperTemplate='''
 
 %(mutexRuleList)s
-module mk%(Dut)sWrapper(%(Dut)sWrapper) provisos (Log#(%(indicationChannelCount)s,iccsz));
+module %(moduleContext)s mk%(Dut)sWrapper(%(Dut)sWrapper) provisos (Log#(%(indicationChannelCount)s,iccsz));
 
     // indication-specific state
     Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
@@ -480,7 +480,7 @@ endmodule: mk%(Dut)sWrapper
 '''
 
 mkTopTemplate='''
-module mk%(Base)sWrapper%(dut_hdmi_clock_param)s(%(Base)sWrapper);
+module %(moduleContext)s mk%(Base)sWrapper%(dut_hdmi_clock_param)s(%(Base)sWrapper);
     Reg#(Bit#(TLog#(%(numPortals)s))) axiSlaveWS <- mkReg(0);
     Reg#(Bit#(TLog#(%(numPortals)s))) axiSlaveRS <- mkReg(0); 
 %(indicationWrappers)s
@@ -840,7 +840,10 @@ class InterfaceMixin:
             collected = self.collectInterfaceNames(busType)
             buses[busType] = collected
 
-        dut_clknames = self.getClockArgNames(syntax.globalvars['mk%s' % self.name])
+        constructor = syntax.globalvars['mk%s' % self.name]
+        dut_clknames = self.getClockArgNames(constructor)
+        moduleContext = constructor.moduleContext
+
         substs = {
             'dut': dutName,
             'Dut': util.capitalize(self.name),
@@ -880,7 +883,8 @@ class InterfaceMixin:
             'requestWrappers' : ''.join(requestWrappers),
             'indicationIfc' : indicationIfc,
             'connectIndicationCtrls' : connectIndicationCtrls,
-            'connectIndicationInterrupts' : connectIndicationInterrupts
+            'connectIndicationInterrupts' : connectIndicationInterrupts,
+            'moduleContext': '[%s]' % moduleContext if moduleContext else ''
             }
         f.write(topInterfaceTemplate % substs)
         f.write(mkTopTemplate % substs)
@@ -1027,7 +1031,8 @@ class InterfaceMixin:
             'indicationMethodDeclsOrig' :''.join(indicationMethodDeclsOrig),
             'indicationMethodDeclsAug' :''.join(indicationMethodDeclsAug),
             'indicationChannelCount': self.channelCount,
-            'channelCount': self.channelCount
+            'channelCount': self.channelCount,
+            'moduleContext': ''
             }
         f.write(indicationWrapperInterfaceTemplate % substs)
         f.write(mkIndicationWrapperTemplate % substs)
