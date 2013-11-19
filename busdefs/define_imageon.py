@@ -35,11 +35,6 @@ imageon_pinout = {
         #('io_vita_data_n[7]', 'P18', 'LVDS_25', 'INPUT'),#LA02_n
         ],
     'zc702': [
-        ("XADC_gpio[0]", 'H17', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[1]", 'H22', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[2]", 'G22', 'LVCMOS25', 'OUTPUT'),
-        ("XADC_gpio[3]", 'H18', 'LVCMOS25', 'OUTPUT'),
-
         ('fmc_imageon_video_clk1', 'Y18', 'LVCMOS25', 'INPUT'),
         ('fmc_imageon_iic_1_rst_pin', 'Y16', 'LVCMOS25', 'OUTPUT'),
         ('fmc_imageon_iic_1_scl', 'AB14', 'LVCMOS25', 'BIDIR'),
@@ -84,8 +79,6 @@ class Register:
         busHandlers['ImageonVita'] = self
     def top_bus_ports(self, busname,t,params):
         return '''
-/* imageon vita *****************************************/
-
     inout fmc_imageon_iic_1_sda,
     inout fmc_imageon_iic_1_scl,
     output fmc_imageon_iic_1_rst_pin,
@@ -104,8 +97,6 @@ class Register:
     input io_vita_sync_n,
     input [3:0] io_vita_data_p,
     input [3:0] io_vita_data_n,
-    output [3:0] XADC_gpio,
-/* imageon vita *****************************************/
 '''
     def top_bus_wires(self, busname,t,params):
          return '''
