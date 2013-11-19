@@ -32,12 +32,12 @@ import PortalRMemory::*;
 
 interface CoreRequest;
    method Action readWord(Bit#(40) addr);
-   method Action writeWord(Bit#(40) addr, Bit#(64) data);
+   method Action writeWord(Bit#(40) addr, S0 data);
 endinterface
 
 interface CoreIndication;
-   method Action readWordResult(Bit#(64) v);
-   method Action writeWordResult(Bit#(64) v);
+   method Action readWordResult(S0 v);
+   method Action writeWordResult(S0 v);
 endinterface
 
 interface MempokeRequest;
@@ -51,20 +51,25 @@ interface MempokeIndication;
    interface DMAIndication dmaIndication;
 endinterface
 
+typedef struct{
+   Bit#(32) a;
+   Bit#(32) b;
+   } S0 deriving (Bits);
+
 module mkMempokeRequest#(MempokeIndication indication)(MempokeRequest);
    
 `ifdef BSIM
-   BsimDMA#(Bit#(64))  dma <- mkBsimDMA(indication.dmaIndication);
+   BsimDMA#(S0)  dma <- mkBsimDMA(indication.dmaIndication);
 `else
-   AxiDMA#(Bit#(64))   dma <- mkAxiDMA(indication.dmaIndication);
+   AxiDMA#(S0)   dma <- mkAxiDMA(indication.dmaIndication);
 `endif
 
-   ReadChan#(Bit#(64))   dma_read_chan = dma.read.readChannels[0];
-   WriteChan#(Bit#(64)) dma_write_chan = dma.write.writeChannels[0];
+   ReadChan#(S0)   dma_read_chan = dma.read.readChannels[0];
+   WriteChan#(S0) dma_write_chan = dma.write.writeChannels[0];
    
    rule writeRule;
       dma_write_chan.writeDone.get;
-      indication.coreIndication.writeWordResult(0);
+      indication.coreIndication.writeWordResult(unpack(0));
    endrule
 
    rule readRule;
@@ -76,7 +81,7 @@ module mkMempokeRequest#(MempokeIndication indication)(MempokeRequest);
       method Action readWord(Bit#(40) addr);
 	 dma_read_chan.readReq.put(addr);
       endmethod
-      method Action writeWord(Bit#(40) addr, Bit#(64) data);
+      method Action writeWord(Bit#(40) addr, S0 data);
 	 dma_write_chan.writeReq.put(addr);
 	 dma_write_chan.writeData.put(data);
       endmethod         

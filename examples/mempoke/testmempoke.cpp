@@ -43,11 +43,11 @@ class TestDMAIndication : public DMAIndication
 
 class TestCoreIndication : public CoreIndication
 {
-  virtual void readWordResult ( unsigned long long v ){
-    dump("readWordResult: ", (char*)&v, sizeof(v));
+  virtual void readWordResult (S0 &s){
+    fprintf(stderr, "readWordResult(S0{a:%ld,b:%ld})\n", s.a, s.b);
   }
-  virtual void writeWordResult ( unsigned long long v ){
-    dump("writeWordResult: ", (char*)&v, sizeof(v));
+  virtual void writeWordResult (S0 &s){
+    fprintf(stderr, "writeWordResult(S0{a:%ld,b:%ld})\n", s.a, s.b);
   }
 };
 
@@ -92,7 +92,8 @@ int main(int argc, const char **argv)
 
   device->readWord(5);
   sleep(1);
-  device->writeWord(6,8);
+  S0 s = {3,4};
+  device->writeWord(6,s);
   sleep(1);
   device->readWord(6);
   while(true){sleep(1);}
