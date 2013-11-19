@@ -74,8 +74,8 @@ close_project
 '''
 
 makefileTemplate='''
-XBSVTOP=$(PWD)/..
-BSVPATH = $(XBSVTOP)/%(bsvpath)s:$(XBSVTOP)/bsv
+XBSVTOP=%(xbsvdir)s
+BSVPATH = %(bsvpath)s
 vfile=sources/%(dut)s/mk%(Top)s.v
 
 BOARD=%(boardname)s
@@ -195,6 +195,8 @@ def write_vivado_strategies():
         f.close()    
 
 if __name__=='__main__':
+    exename = os.path.abspath(sys.argv[0])
+    xbsvdir = os.path.dirname(exename)
     namespace = argparser.parse_args()
     print namespace
 
@@ -240,23 +242,23 @@ if __name__=='__main__':
         topSuffix = 'PcieTop'
         namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
                                               'board_support', 'bluenoc', 'xilinx', 'KC705', 'verilog', 'k7_pcie_v1_6', 'source'))
-        namespace.verilog.append(os.path.join('.', 'xilinx', 'kc705', 'pcie', 'source'))
-        namespace.constraint.append('xilinx/constraints/kc705.xdc')
+        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'kc705', 'pcie', 'source'))
+        namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/kc705.xdc'))
     elif boardname == 'vc707':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
         topSuffix = 'PcieTop'
         namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
                                               'board_support', 'bluenoc', 'xilinx', 'VC707', 'verilog', 'v7_pcie_v1_7', 'source'))
-        namespace.verilog.append(os.path.join('.', 'xilinx', 'vc707', 'pcie', 'source'))
-        namespace.constraint.append('xilinx/constraints/vc707.xdc')
+        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'vc707', 'pcie', 'source'))
+        namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/vc707.xdc'))
     else:
         print dir(namespace)
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z020clg484-1'
         topSuffix = 'Wrapper'
-        namespace.verilog.append(os.path.join('.', 'xilinx', 'sources', 'processing_system7'))
-        namespace.constraint.append('xilinx/constraints/design_1_processing_system7_1_0.xdc')
+        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
+        namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/design_1_processing_system7_1_0.xdc'))
 
 
     tclname = os.path.join(project_dir, '%s.tcl' % namespace.interface.lower())
@@ -462,16 +464,20 @@ if __name__=='__main__':
     if namespace.constraint:
         for constraint in namespace.constraint:
             print 'Copying constraint file from', constraint
-            dstconstraint = os.path.join(project_dir, 'constraints', os.path.basename(constraint))
+            dstconstraintdir = os.path.join(project_dir, 'constraints')
+            if not os.path.exists(dstconstraintdir):
+                os.makedirs(dstconstraintdir)
             ## this path is here so we can overwrite sources
-            shutil.copyfile(constraint, dstconstraint)
+            shutil.copy(constraint, dstconstraintdir)
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
     make.write(makefileTemplate % {'corename': corename,
                                    'dut': namespace.interface.lower(),
                                    'Dut': util.capitalize(namespace.interface),
                                    'Top': '%s%s' % (util.capitalize(namespace.interface), topSuffix),
-                                   'bsvpath': os.path.dirname(namespace.bsvfile[0]),
+                                   'xbsvdir': xbsvdir,
+                                   'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in namespace.bsvfile]
+                                                                + [os.path.join(xbsvdir, 'bsv')]))),
                                    'bsvname': os.path.basename(namespace.bsvfile[0]),
                                    'bsvdefines': util.foldl((lambda e,a: '-D '+e+' '+a), '', bsvdefines),
                                    'boardname': boardname,
