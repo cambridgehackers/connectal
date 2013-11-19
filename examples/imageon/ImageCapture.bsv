@@ -33,7 +33,8 @@ import Leds::*;
 import Imageon::*;
 import IserdesDatadeser::*;
 import HDMI::*;
-import AxiDMA::*;
+import AxiSDMA::*;
+import PortalSMemory::*;
 import PortalMemory::*;
 import BlueScope::*;
 import SensorToVideo::*;
@@ -81,11 +82,8 @@ interface ImageCaptureRequest;
    interface CoreRequest coreRequest;
    interface BlueScopeRequest bsRequest;
    interface HDMI hdmi;
-   interface SpiPins spi;
    interface DMARequest dmaRequest;
-   interface ImageonVita pins;
-   interface ImageonTopPins toppins;
-   interface ImageonSerdesPins serpins;
+   interface ImageonVita vita;
 endinterface
  
 module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
@@ -197,17 +195,19 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
         spiController.request.put(truncate(v));
     endmethod
     endinterface
-    interface ImageonTopPins toppins;
-        method Clock fbbozo();
-            return mmcmhack.mmcmadv.clkfbout;
-        endmethod
-        method Action fbbozoin(Bit#(1) v);
-            mmcmhack.mmcmadv.clkfbin(v);
-        endmethod
-    endinterface
     interface BlueScopeRequest bsRequest = bsi.requestIfc;
     interface HDMI hdmi = hdmiOut.hdmi;
-    interface SpiPins spi = spiController.pins;
-    interface ImageonVita pins = fromSensor.pins;
-    interface ImageonSerdesPins serpins = serdes.pins;
+    interface ImageonVita vita;
+        interface ImageonTopPins toppins;
+            method Clock fbbozo();
+                return mmcmhack.mmcmadv.clkfbout;
+            endmethod
+            method Action fbbozoin(Bit#(1) v);
+                mmcmhack.mmcmadv.clkfbin(v);
+            endmethod
+        endinterface
+        interface SpiPins spi = spiController.pins;
+        interface ImageonSensorPins pins = fromSensor.pins;
+        interface ImageonSerdesPins serpins = serdes.pins;
+    endinterface
 endmodule

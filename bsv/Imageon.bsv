@@ -30,9 +30,10 @@ import IserdesDatadeser::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 import GetPutWithClocks :: *;
+import XbsvSpi :: *;
 
 (* always_enabled *)
-interface ImageonVita;
+interface ImageonSensorPins;
     method Bit#(1) io_vita_clk_pll();
     method Bit#(1) io_vita_reset_n();
     method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
@@ -76,7 +77,7 @@ endinterface
 
 interface ImageonSensor;
     interface ImageonSensorControl control;
-    interface ImageonVita pins;
+    interface ImageonSensorPins pins;
     method Bit#(1) get_framesync();
     method Bit#(40) get_data();
 endinterface
@@ -85,6 +86,13 @@ endinterface
 interface ImageonTopPins;
     method Clock fbbozo();
     method Action fbbozoin(Bit#(1) v);
+endinterface
+
+interface ImageonVita;
+   interface SpiPins spi;
+   interface ImageonSensorPins pins;
+   interface ImageonTopPins toppins;
+   interface ImageonSerdesPins serpins;
 endinterface
 
 typedef enum { TIdle, TSend} TState deriving (Bits,Eq);
@@ -265,7 +273,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
     method Bit#(40) get_data();
         return dataout_reg;
     endmethod
-    interface ImageonVita pins;
+    interface ImageonSensorPins pins;
         method Bit#(1) io_vita_clk_pll();
             return vita_clk_pll;
         endmethod

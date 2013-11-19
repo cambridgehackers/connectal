@@ -184,8 +184,7 @@ Imageon Example
 This is an example using the Avnet Imageon board and ZC702 (not tested with Zedboard yet):
 
 To generate code for a ZC702 board:
-    git clone /lab/asic/imageon ../imageon
-    ./genxpsprojfrombsv  -B zc702 -p fooproj -x HDMI LEDS ImageonVita ImageonTopPins ImageonSerdesPins FmcImageonInterface SpiPins ImageonPins -b ImageCapture examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv
+    ./genxpsprojfrombsv  -B zc702 -p fooproj -x HDMI ImageonVita -b ImageCapture examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv bsv/AxiSDMA.bsv
 
 Test program:
     cp examples/imageon/testimagecapture.cpp fooproj/jni

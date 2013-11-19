@@ -120,24 +120,24 @@ class Register:
 '''
     def dut_bus_port_map(self, busname,t,params):
         return '''
-    .serpins_io_vita_clk_p_v(io_vita_clk_out_p),
-    .serpins_io_vita_clk_n_v(io_vita_clk_out_n),
-    .serpins_io_vita_sync_p_v(io_vita_sync_p),
-    .serpins_io_vita_sync_n_v(io_vita_sync_n),
-    .serpins_io_vita_data_p_v(io_vita_data_p),
-    .serpins_io_vita_data_n_v(io_vita_data_n),
-    .pins_io_vita_reset_n(io_vita_reset_n),
-    .pins_io_vita_trigger_0__read(io_vita_trigger[0]),
-    .pins_io_vita_trigger_1__read(io_vita_trigger[1]),
-    .pins_io_vita_trigger_2__read(io_vita_trigger[2]),
-    .pins_io_vita_clk_pll(io_vita_clk_pll),
-    .toppins_fbbozoin_v(fbbozo),
-    .CLK_toppins_fbbozo(fbbozo),
+    .vita_serpins_io_vita_clk_p_v(io_vita_clk_out_p),
+    .vita_serpins_io_vita_clk_n_v(io_vita_clk_out_n),
+    .vita_serpins_io_vita_sync_p_v(io_vita_sync_p),
+    .vita_serpins_io_vita_sync_n_v(io_vita_sync_n),
+    .vita_serpins_io_vita_data_p_v(io_vita_data_p),
+    .vita_serpins_io_vita_data_n_v(io_vita_data_n),
+    .vita_pins_io_vita_reset_n(io_vita_reset_n),
+    .vita_pins_io_vita_trigger_0__read(io_vita_trigger[0]),
+    .vita_pins_io_vita_trigger_1__read(io_vita_trigger[1]),
+    .vita_pins_io_vita_trigger_2__read(io_vita_trigger[2]),
+    .vita_pins_io_vita_clk_pll(io_vita_clk_pll),
+    .vita_toppins_fbbozoin_v(fbbozo),
+    .CLK_vita_toppins_fbbozo(fbbozo),
     /* SPI port */
-    .CLK_spi_invertedClock(io_vita_spi_sclk),
-    .spi_sel_n(io_vita_spi_ssel_n),
-    .spi_mosi(io_vita_spi_mosi),
-    .spi_miso_v(io_vita_spi_miso),
+    .CLK_vita_spi_invertedClock(io_vita_spi_sclk),
+    .vita_spi_sel_n(io_vita_spi_ssel_n),
+    .vita_spi_mosi(io_vita_spi_mosi),
+    .vita_spi_miso_v(io_vita_spi_miso),
 '''
     def top_bus_assignments(self,busname,t,params):
         return '''
