@@ -517,7 +517,7 @@ endmodule: mk%(Base)sWrapper
 
 
 requestRuleTemplate='''
-    FromBit32#(%(MethodName)s$Request) %(methodName)s$requestFifo <- mkFromBit32();
+    FromBit#(32,%(MethodName)s$Request) %(methodName)s$requestFifo <- mkFromBit();
     rule axiSlaveWrite$%(methodName)s if (axiSlaveWriteAddrFifo.first[14] == 0 && axiSlaveWriteAddrFifo.first[13:8] == %(methodName)s$Offset);
         axiSlaveWriteAddrFifo.deq;
         axiSlaveWriteDataFifo.deq;
@@ -538,7 +538,7 @@ requestRuleTemplate='''
 '''
 
 indicationRuleTemplate='''
-    ToBit32#(%(MethodName)s$Response) %(methodName)s$responseFifo <- mkToBit32();
+    ToBit#(32,%(MethodName)s$Response) %(methodName)s$responseFifo <- mkToBit();
     rule %(methodName)s$axiSlaveRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
                                          axiSlaveReadAddrFifo.first[13:8] == %(methodName)s$Offset);
         axiSlaveReadAddrFifo.deq;

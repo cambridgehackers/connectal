@@ -33,43 +33,70 @@ function Bit#(a) rtruncate(Bit#(b) x) provisos(Add#(k,a,b));
    return v;
 endfunction
 
-interface ToBit32#(type a);
+interface ToBit#(numeric type n, type a);
    method Action enq(a v);          
-   method Bit#(32) first;
+   method Bit#(n) first;
    method Action deq();
    method Bool notEmpty();
    method Bool notFull();
 endinterface
    
-interface FromBit32#(type a);
-   method Action enq(Bit#(32) v);
+interface FromBit#(numeric type n, type a);
+   method Action enq(Bit#(n) v);
    method a first();
    method Action deq();
    method Bool notEmpty();
    method Bool notFull();
 endinterface
 
-module mkToBit32(ToBit32#(a))
+instance ToGet#(FromBit#(n,a),a);
+   function Get#(a) toGet(FromBit#(n,a) x);
+      return (interface Get
+		 method get();
+		    actionvalue
+		       x.deq;
+		       return x.first;
+		    endactionvalue
+		 endmethod
+	      endinterface);
+   endfunction
+endinstance
+
+instance ToPut#(ToBit#(n,a),a);
+   function Put#(a) toPut(ToBit#(n,a) x);
+      return (interface Put
+		 method put(a v);
+		    action
+		       x.enq(v);
+		    endaction
+		 endmethod
+	      endinterface);
+   endfunction
+endinstance
+
+
+module mkToBit(ToBit#(n,a))
    provisos(Bits#(a,asz),
             Add#(1, z, asz),
-            Div#(asz,32,nwords),
-            Mul#(32,nwords,asz32),
-            Add#(32,a__,asz32),
-            Add#(asz,paddingsz,asz32));
+            Div#(asz,n,nwords),
+            Mul#(n,nwords,aszn),
+            Add#(n,a__,aszn),
+            Add#(asz,paddingsz,aszn));
    
-   Bit#(32) size = fromInteger(valueOf(asz));
    Bit#(32) max  = fromInteger(valueOf(nwords)) - 1;
    Bit#(paddingsz) padding = 0;
 
-   FIFOF#(Bit#(asz32)) fifo <- mkFIFOF1();
+   FIFOF#(Bit#(aszn)) fifo <- mkFIFOF1();
    Reg#(Bit#(32))   count <- mkReg(0);
-
+   
+   let nv = valueOf(n);
+   
    method Action enq(a val);
       fifo.enq({padding,pack(val)});
    endmethod
 
-   method Bit#(32) first() if (fifo.notEmpty);
-      return rtruncate(fifo.first << (count*32));
+   method Bit#(n) first() if (fifo.notEmpty);
+      return rtruncate(fifo.first << (count*fromInteger(nv)));
    endmethod
 
    method Action deq() if (fifo.notEmpty);
@@ -87,24 +114,23 @@ module mkToBit32(ToBit32#(a))
    method Bool notFull = fifo.notFull;
 endmodule
 
-module mkFromBit32(FromBit32#(a))
+module mkFromBit(FromBit#(n,a))
    provisos(Bits#(a,asz),
             Add#(1,z,asz),
-            Div#(asz,32,nwords),
-            Mul#(32,nwords,asz32),
-            Add#(32,a__,asz32),
-            Add#(asz,paddingsz,asz32));
+            Div#(asz,n,nwords),
+            Mul#(n,nwords,aszn),
+            Add#(n,a__,aszn),
+            Add#(asz,paddingsz,aszn));
 
-   Bit#(32) size   = fromInteger(valueOf(asz));
    Bit#(32) max    = fromInteger(valueOf(nwords))-1;
 
-   Reg#(Bit#(asz32)) fb32buff <- mkReg(0);
+   Reg#(Bit#(aszn)) fbnbuff <- mkReg(0);
    Reg#(Bit#(32))    count <- mkReg(0);
    FIFOF#(Bit#(asz)) fifo <- mkFIFOF1;
 
-   method Action enq(Bit#(32) x) if (count < max || fifo.notFull);
-      Bit#(asz32) newbuff = truncate({fb32buff,x});
-      fb32buff <= newbuff;
+   method Action enq(Bit#(n) x) if (count < max || fifo.notFull);
+      Bit#(aszn) newbuff = truncate({fbnbuff,x});
+      fbnbuff <= newbuff;
       if (count == max)
          begin
             count <= 0;
@@ -129,11 +155,11 @@ module mkFromBit32(FromBit32#(a))
 endmodule
 
 module mkAdapterTb(Empty);
-   ToBit32#(Bit#(72)) tb32_72 <- mkToBit32();
-   ToBit32#(Bit#(17)) tb32_17 <- mkToBit32();
+   ToBit#(32,Bit#(72)) tb32_72 <- mkToBit();
+   ToBit#(32,Bit#(17)) tb32_17 <- mkToBit();
 
-   FromBit32#(Bit#(72)) fb32_72 <- mkFromBit32();
-   FromBit32#(Bit#(17)) fb32_17 <- mkFromBit32();
+   FromBit#(32,Bit#(72)) fb32_72 <- mkFromBit();
+   FromBit#(32,Bit#(17)) fb32_17 <- mkFromBit();
 
    Reg#(Bit#(10)) timer <- mkReg(0);
    rule timeout;

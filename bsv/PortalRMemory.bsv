@@ -25,14 +25,14 @@ import GetPut::*;
 import Vector::*;
 import PortalMemory::*;
 
-function ReadChan mkReadChan(Get#(Bit#(64)) rd, Put#(void) rr);
+function ReadChan#(t) mkReadChan(Get#(t) rd, Put#(Bit#(40)) rr);
    return (interface ReadChan;
 	      interface Get readData = rd;
 	      interface Put readReq  = rr;
 	   endinterface);
 endfunction
 
-function WriteChan mkWriteChan(Put#(Bit#(64)) wd, Put#(void) wr, Get#(void) d);
+function WriteChan#(t) mkWriteChan(Put#(t) wd, Put#(Bit#(40)) wr, Get#(void) d);
    return (interface WriteChan;
 	      interface Put writeData = wd;
 	      interface Put writeReq  = wr;
@@ -40,26 +40,26 @@ function WriteChan mkWriteChan(Put#(Bit#(64)) wd, Put#(void) wr, Get#(void) d);
 	   endinterface);
 endfunction
 
-interface ReadChan#(Type t);
+interface ReadChan#(type t);
    interface Get#(t)        readData;
    interface Put#(Bit#(40)) readReq;
 endinterface
 
-interface WriteChan;
+interface WriteChan#(type t);
    interface Put#(t)        writeData;
    interface Put#(Bit#(40)) writeReq;
    interface Get#(void)     writeDone;
 endinterface
 
-interface DMARead;
+interface DMARead#(type t);
    method Action configChan(DmaChannelId channelId, Bit#(32) pref);
-   interface Vector#(NumDmaChannels, ReadChan) readChannels;
+   interface Vector#(NumDmaChannels, ReadChan#(t)) readChannels;
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 
-interface DMAWrite;
+interface DMAWrite#(type t);
    method Action  configChan(DmaChannelId channelId, Bit#(32) pref);   
-   interface Vector#(NumDmaChannels, WriteChan) writeChannels;
+   interface Vector#(NumDmaChannels, WriteChan#(t)) writeChannels;
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 
