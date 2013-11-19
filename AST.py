@@ -71,9 +71,10 @@ class TypeclassInstance:
         return '{typeclassinstance %s %s}' % (self.name, self.params)
 
 class Module:
-    def __init__(self, name, params, interface, provisos, decls):
+    def __init__(self, moduleContext, name, params, interface, provisos, decls):
         self.type = 'Module'
         self.name = name
+        self.moduleContext = moduleContext
         self.interface = interface
         self.params = params
         self.provisos = provisos

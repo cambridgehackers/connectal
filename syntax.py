@@ -712,9 +712,16 @@ def p_instanceAttributes(p):
     '''instanceAttributes :
                           | instanceAttributes LPARENSTAR attrSpecs RPARENSTAR'''
 
+def p_moduleContext(p):
+    '''moduleContext : 
+                     | LBRACKET VAR RBRACKET'''
+    if len(p) > 2:
+        print 'ModuleContext', p[2]
+        p[0] = p[2]
+
 def p_moduleDef(p):
-    '''moduleDef : instanceAttributes TOKMODULE VAR moduleParamsArgs provisos SEMICOLON expressionStmts TOKENDMODULE colonVar'''
-    p[0] = AST.Module(p[3], p[4][0], p[4][1], p[5], p[7])
+    '''moduleDef : instanceAttributes TOKMODULE moduleContext VAR moduleParamsArgs provisos SEMICOLON expressionStmts TOKENDMODULE colonVar'''
+    p[0] = AST.Module(p[3], p[4], p[5][0], p[5][1], p[6], p[8])
 
 def p_instanceDeclStmt(p):
     '''instanceDeclStmt : varAssign SEMICOLON
