@@ -43,6 +43,7 @@ argparser.add_argument('-I', '--contentid', help='Specify 64-bit contentid for P
 argparser.add_argument('-V', '--verilog', help='Additional verilog sources', nargs='+')
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', nargs='+')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', nargs='+')
+argparser.add_argument('-x', '--export', help='Promote/export named interface from top module', nargs='+')
 
 tclfileXprTemplate='''
 create_project %(dut)s . -part %(partname)s
@@ -236,6 +237,8 @@ if __name__=='__main__':
         namespace.constraint = []
     if not namespace.verilog:
         namespace.verilog = []
+    if namespace.export:
+        bsvgen.exposeInterfaces(namespace.export)
     if boardname == 'kc705':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7k325tffg900-2'

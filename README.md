@@ -145,10 +145,10 @@ HDMI Example
 For example, to create an HDMI frame buffer from the example code:
 
 To generate code for Zedboard:
-    ./genxpsprojfrombsv -B zedboard -p xpsproj -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/AxiDMA.bsv bsv/PortalMemory.bsv
+    ./genxpsprojfrombsv -B zedboard -p xpsproj -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/PortalMemory.bsv
 
 To generate code for a ZC702 board:
-    ./genxpsprojfrombsv -B zc702 -p xpsproj -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/AxiDMA.bsv bsv/PortalMemory.bsv
+    ./genxpsprojfrombsv -B zc702 -p xpsproj -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/PortalMemory.bsv
 
 To generate the bitstream:
 
@@ -185,7 +185,7 @@ This is an example using the Avnet Imageon board and ZC702 (not tested with Zedb
 
 To generate code for a ZC702 board:
     git clone /lab/asic/imageon ../imageon
-    ./genxpsprojfrombsv  -B zc702 -p fooproj -b ImageCapture examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv bsv/PortalMemory.bsv
+    ./genxpsprojfrombsv  -B zc702 -p fooproj -x HDMI LEDS ImageonVita ImageonTopPins ImageonSerdesPins FmcImageonInterface SpiPins ImageonPins -b ImageCapture examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv
 
 Test program:
     cp examples/imageon/testimagecapture.cpp fooproj/jni

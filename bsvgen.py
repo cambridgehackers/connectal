@@ -28,7 +28,8 @@ import PortalMemory::*;
 
 '''
 
-exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonTopPins', 'ImageonSerdesPins', 'FmcImageonInterface', 'SpiPins', 'ImageonPins', 'TlpTrace']
+#exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonTopPins', 'ImageonSerdesPins', 'FmcImageonInterface', 'SpiPins', 'ImageonPins', 'TlpTrace']
+exposedInterfaces = []
 
 
 bsimTopTemplate='''
@@ -682,6 +683,9 @@ def emitPreamble(f, files):
     #axiMasterDecarations = ['interface AxiMaster#(64,8) %s;' % axiMaster for axiMaster in axiMasterNames]
     #axiSlaveDecarations = ['interface AxiSlave#(32,4) %s;' % axiSlave for axiSlave in axiSlaveNames]
     f.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
+
+def exposeInterfaces(ilist):
+    exposedInterfaces.extend(ilist)
 
 class ParamMixin:
     def numBitsBSV(self):
