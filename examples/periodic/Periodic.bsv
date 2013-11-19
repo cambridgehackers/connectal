@@ -24,7 +24,7 @@
 
 import FIFO::*;
 
-import Zynq::*;
+import Leds::*;
 
 interface CorePeriodicRequest;
     method Action setPeriod(Bit#(32) v);

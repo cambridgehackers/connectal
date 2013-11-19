@@ -19,7 +19,7 @@ import Clocks::*;
 import Adapter::*;
 import AxiMasterSlave::*;
 import AxiClientServer::*;
-import Zynq::*;
+import Leds::*;
 import Vector::*;
 import SpecialFIFOs::*;
 import XbsvReadyQueue::*;

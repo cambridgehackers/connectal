@@ -8,7 +8,7 @@ import Adapter::*;
 import AxiMasterSlave::*;
 import AxiClientServer::*;
 import HDMI::*;
-import Zynq::*;
+import Leds::*;
 import Imageon::*;
 import Vector::*;
 import PCIE::*;

@@ -23,7 +23,7 @@
 // SOFTWARE.
 
 import FIFO::*;
-import Zynq::*;
+import Leds::*;
 
 interface Core0Indication;
     method Action heard(Bit#(32) v);

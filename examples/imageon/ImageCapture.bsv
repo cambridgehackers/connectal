@@ -29,7 +29,7 @@ import Clocks :: *;
 import XbsvSpi :: *;
 
 import GetPutWithClocks :: *;
-import Zynq::*;
+import Leds::*;
 import Imageon::*;
 import IserdesDatadeser::*;
 import HDMI::*;

@@ -24,7 +24,7 @@
 
 import FIFO::*;
 
-import Zynq::*;
+import Leds::*;
 
 interface CoreEchoIndication;
     method Action heard(Bit#(32) v);
