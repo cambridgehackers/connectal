@@ -95,8 +95,8 @@ class PortalMemory : public PortalRequest {
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
   int alloc(size_t size, PortalAlloc *portalAlloc);
   int reference(PortalAlloc* pa);
-  virtual void sglist(unsigned long off, unsigned long long addr, unsigned long len) = 0;
-  virtual void paref(unsigned long off, unsigned long ref, unsigned long size) = 0;
+  virtual void sglist(unsigned long pref, unsigned long long addr, unsigned long len) = 0;
+  virtual void paref(unsigned long pref, unsigned long size) = 0;
 };
 
 // ugly hack (mdk)

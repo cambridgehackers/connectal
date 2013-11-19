@@ -58,16 +58,12 @@ extern "C" {
     return buffer[pref][offset];
   }
 
-  void pareff(unsigned long off, unsigned long pref, unsigned long size){
-    assert(off < 16);
-    assert(off == pref);
-
-    sock_fd_read(p_fd.write.s2, &(fd[off]));
-    fprintf(stderr, "BsimDMA::pareff fd[%ld]=%d\n", off, fd[off]);
-    
-    buffer[off] = (unsigned long long *)mmap(0, size, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[off], 0);
-    // fprintf(stderr, "BsimDMA::pareff off=%ld, buffer=%08lx\n", off, buffer[off]);
-    ptr[off] = 0;
+  void pareff(unsigned long pref, unsigned long size){
+    assert(pref < 16);
+    sock_fd_read(p_fd.write.s2, &(fd[pref]));
+    buffer[pref] = (unsigned long long *)mmap(0, size, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref], 0);
+    // fprintf(stderr, "BsimDMA::pareff pref=%ld, buffer=%08lx\n", pref, buffer[pref]);
+    ptr[pref] = 0;
   }
 
 }

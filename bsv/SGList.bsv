@@ -45,26 +45,35 @@ typedef struct {
    Bit#(32) offset;
    } SGListPointer deriving (Bits);
 
-interface SGListManager;
+interface SGListStreamer;
    method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
    method Action loadCtx(SGListId id);
    method ActionValue#(Bit#(40)) nextAddr(Bit#(4) burstLen);
    method Action dropCtx();
 endinterface
 
-module mkSGListManager(SGListManager);
+module mkSGListStreamer(SGListStreamer);
 
    function m#(Reg#(SGListPointer)) foo(Integer x)
       provisos (IsModule#(m,__a));
       let p = SGListPointer{entry:fromInteger(x*valueOf(SGListMaxLen)),offset:0};
       return mkReg(p);
    endfunction
+
+   function m#(Reg#(SGListIdx)) bar(Integer x)
+      provisos (IsModule#(m,__a));
+      let p = fromInteger(x*valueOf(SGListMaxLen));
+      return mkReg(p);
+   endfunction
    
    BRAM1Port#(SGListIdx, SGListEntry)         listMem <- mkBRAM1Server(defaultValue);
    Vector#(NumSGLists, Reg#(SGListPointer))  listPtrs <- genWithM(foo);
+   Vector#(NumSGLists, Reg#(SGListIdx))      listEnds <- genWithM(bar);
    FIFOF#(SGListId)                          loadReqs <- mkFIFOF;
    
-   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
+   method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
+      let off = listEnds[pref];
+      listEnds[pref] <= off+1;
       let entry = SGListEntry{address:addr, length:len};
       listMem.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(off), datain:entry});
    endmethod
@@ -97,4 +106,19 @@ module mkSGListManager(SGListManager);
       let rv <- listMem.portA.response.get;
       loadReqs.deq;
    endmethod
+endmodule
+
+interface SGListMMU;
+   method Action page(SGListId id, Bit#(32) off, Bit#(40) addr);
+   method Action addrReq(SGListId id, Bit#(40) off);
+   method ActionValue#(Bit#(40)) addrResp();
+endinterface
+
+
+// if this structure becomes too expensive, we can switch to a multi-level structure
+module mkSGListMMU(SGListMMU);
+
+   Vector#(NumSGLists, BRAM1Port#(SGListIdx, SGListEntry)) pageTables <- replicateM(mkBRAM1Server(defaultValue));
+   FIFOF#(SGListId) loadReqs <- mkFIFOF;
+   
 endmodule

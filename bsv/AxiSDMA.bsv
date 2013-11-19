@@ -43,13 +43,13 @@ typedef struct {
 interface AxiDMAWriteInternal;
    interface DMAWrite write;
    interface Axi3WriteClient#(40,64,8,12) m_axi_write;
-   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
+   method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
 endinterface
 
 interface AxiDMAReadInternal;
    interface DMARead read;
    interface Axi3ReadClient#(40,64,12) m_axi_read;   
-   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
+   method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
 endinterface
 
 interface AxiDMA;
@@ -65,7 +65,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
    Vector#(NumDmaChannels, FIFOFLevel#(Bit#(64), 16)) readBuffers  <- replicateM(mkBRAMFIFOFLevel);
    Vector#(NumDmaChannels, FIFOF#(void)) reqOutstanding <- replicateM(mkSizedFIFOF(1));
    Vector#(NumDmaChannels, Reg#(DmaChannelPtr)) ctxtPtrs <- replicateM(mkReg(unpack(0)));
-   SGListManager sgl <- mkSGListManager();
+   SGListStreamer sgl <- mkSGListStreamer();
    
    Reg#(Bit#(40))         addrReg <- mkReg(0);
    Reg#(Bit#(4))         burstReg <- mkReg(0);   
@@ -100,8 +100,8 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal);
 	 end
    endrule
    
-   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
-      sgl.sglist(off, addr, len);
+   method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
+      sgl.sglist(pref, addr, len);
    endmethod
    
    interface DMARead read;
@@ -135,7 +135,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
    Vector#(NumDmaChannels, FIFOF#(void)) reqOutstanding <- replicateM(mkSizedFIFOF(1));
    Vector#(NumDmaChannels, FIFOF#(void)) writeRespRec   <- replicateM(mkSizedFIFOF(1));
    Vector#(NumDmaChannels, Reg#(DmaChannelPtr)) ctxtPtrs <- replicateM(mkReg(unpack(0)));
-   SGListManager sgl <- mkSGListManager();
+   SGListStreamer sgl <- mkSGListStreamer();
 
    Reg#(Bit#(40))         addrReg <- mkReg(0);
    Reg#(Bit#(4))         burstReg <- mkReg(0);   
@@ -170,8 +170,8 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal);
 	 end
    endrule
    
-   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
-      sgl.sglist(off, addr, len);
+   method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
+      sgl.sglist(pref, addr, len);
    endmethod
 
    interface DMAWrite write;
@@ -228,9 +228,9 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA);
 	 let rv <- writer.write.dbg;
 	 indication.reportStateDbg(rv);
       endmethod
-      method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
-	 writer.sglist(off, addr, len);
-	 reader.sglist(off, addr, len);
+      method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
+	 writer.sglist(pref, addr, len);
+	 reader.sglist(pref, addr, len);
 	 indication.sglistResp(truncate(addr));
       endmethod
    endinterface

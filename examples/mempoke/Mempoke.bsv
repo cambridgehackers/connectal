@@ -25,7 +25,7 @@ import BRAMFIFO::*;
 import GetPut::*;
 
 import AxiClientServer::*;
-//import AxiRDMA::*;
+import AxiRDMA::*;
 import BsimRDMA::*;
 import PortalMemory::*;
 import PortalRMemory::*;

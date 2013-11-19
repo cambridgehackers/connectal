@@ -29,38 +29,39 @@ import BRAMFIFO::*;
 import BRAM::*;
 
 // XBSV Libraries
+import AxiClientServer::*;
 import BRAMFIFOFLevel::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 import Adapter::*;
+import SGList::*;
 
-import "BDPI" function Action pareff(Bit#(32) off, Bit#(32) pref, Bit#(32) size);
-import "BDPI" function Action init_pareff();
-import "BDPI" function Action write_pareff(Bit#(32) pref, Bit#(32) addr, Bit#(64) v);
-import "BDPI" function ActionValue#(Bit#(64)) read_pareff(Bit#(32) pref, Bit#(32) addr);
-		       
-interface BsimDMAWriteInternal#(type t);
+interface AxiDMAWriteInternal#(type t);
    interface DMAWrite#(t) write;
+   interface Axi3WriteClient#(40,64,8,12) m_axi_write;
+   method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr);
 endinterface
 
-interface BsimDMAReadInternal#(type t);
+interface AxiDMAReadInternal#(type t);
    interface DMARead#(t) read;
+   interface Axi3ReadClient#(40,64,12) m_axi_read;
+   method Action page(Bit#(32) tabel, Bit#(32) off, Bit#(40) addr);
 endinterface
 
-interface BsimDMA#(type t);
+interface AxiDMA#(type t);
    interface DMARequest request;
    interface DMAWrite#(t) write;
    interface DMARead#(t)   read;
+   interface Axi3Client#(40,64,8,12) m_axi;
 endinterface
 
-typedef enum {Idle, LoadCtxt, Data, Done} InternalState deriving(Eq,Bits);
+typedef enum {Idle, LoadCtxt, Address, Data, Done} InternalState deriving(Eq,Bits);
 		 
 typedef struct {
-   Bit#(32)  pref;
-   Bool cfg;
+   SGListId  sglid;
    } DmaChannelPtr deriving (Bits);
 		 
-module mkBsimDMAReadInternal(BsimDMAReadInternal#(t))
+module mkAxiDMAReadInternal(AxiDMAReadInternal#(t))
    provisos(Bits#(t,tsz),
 	    Add#(1,a__,tsz),
 	    Mul#(n,64,tsz),
@@ -72,8 +73,9 @@ module mkBsimDMAReadInternal(BsimDMAReadInternal#(t))
    Vector#(NumDmaChannels, FIFOFLevel#(Bit#(64), 16)) readBuffers <- replicateM(mkBRAMFIFOFLevel);
    Vector#(NumDmaChannels, FIFOF#(Bit#(40)))       reqOutstanding <- replicateM(mkSizedFIFOF(1));
    Vector#(NumDmaChannels, Reg#(DmaChannelPtr))          ctxtPtrs <- replicateM(mkReg(unpack(0)));
-
-   Reg#(Bit#(32))         addrReg <- mkReg(0);
+   SGListMMU sgl <- mkSGListMMU();
+   
+   Reg#(Bit#(40))         addrReg <- mkReg(0);
    Reg#(Bit#(4))         burstReg <- mkReg(0);   
    Reg#(DmaChannelId)  activeChan <- mkReg(0);
    Reg#(InternalState)   stateReg <- mkReg(Idle);
@@ -91,17 +93,19 @@ module mkBsimDMAReadInternal(BsimDMAReadInternal#(t))
 
    rule selectChannel if (stateReg == Idle && reqOutstanding[selectReg].notEmpty);
       activeChan <= selectReg;
+      sgl.addrReq(ctxtPtrs[selectReg].sglid,reqOutstanding[selectReg].first);
       stateReg <= LoadCtxt;
    endrule
    
    rule loadChannel if (stateReg == LoadCtxt);
       let ctx = ctxtPtrs[activeChan];
       Bit#(4) bl = fromInteger(valueOf(n))-1;
-      if(readBuffers[activeChan].lowWater(zeroExtend(bl)+1) && ctx.cfg)
+      let phys_addr <- sgl.addrResp;
+      if(readBuffers[activeChan].lowWater(zeroExtend(bl)+1))
 	 begin
 	    reqOutstanding[activeChan].deq;
-	    addrReg <= truncate(reqOutstanding[activeChan].first);
-	    stateReg <= Data;
+	    addrReg <= phys_addr;
+	    stateReg <= Address;
 	    burstReg <= bl;
 	 end
       else
@@ -110,30 +114,37 @@ module mkBsimDMAReadInternal(BsimDMAReadInternal#(t))
 	 end
    endrule
    
-   rule readData if (stateReg == Data);
-      addrReg <= addrReg+1;
-      let v <- read_pareff(ctxtPtrs[activeChan].pref, addrReg);
-      readBuffers[activeChan].fifo.enq(v);
-      if(burstReg == 0)
-	 stateReg <= Idle;
-      else
-	 burstReg <= burstReg-1;
-   endrule
+   method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr);
+      sgl.page(truncate(tabsel), off, addr);
+   endmethod
    
    interface DMARead read;
       method Action configChan(DmaChannelId channelId, Bit#(32) pref);
-   	 ctxtPtrs[channelId] <= DmaChannelPtr{pref:pref, cfg:True};
+   	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pref)};
       endmethod
       interface readChannels = zipWith(mkReadChan, map(toGet,readAdapters), map(toPut, reqOutstanding));
       method ActionValue#(DmaDbgRec) dbg();
 	 return ?;
       endmethod
    endinterface
-   
+
+   interface Axi3ReadClient m_axi_read;
+      method ActionValue#(Axi3ReadRequest#(40,12)) address if (stateReg == Address);
+	 stateReg <= Data;
+	 return Axi3ReadRequest{address:addrReg, burstLen:burstReg, id:1};
+      endmethod
+      method Action data(Axi3ReadResponse#(64,12) response) if (stateReg == Data);
+	 readBuffers[activeChan].fifo.enq(response.data);
+	 if(burstReg == 0)
+	    stateReg <= Idle;
+	 else
+	    burstReg <= burstReg-1;
+      endmethod
+   endinterface   
 endmodule
 
 
-module mkBsimDMAWriteInternal(BsimDMAWriteInternal#(t))
+module mkAxiDMAWriteInternal(AxiDMAWriteInternal#(t))
    provisos(Bits#(t,tsz),
 	    Add#(1,a__,tsz),
 	    Mul#(n,64,tsz),
@@ -146,8 +157,9 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal#(t))
    Vector#(NumDmaChannels, FIFOF#(Bit#(40)))        reqOutstanding <- replicateM(mkSizedFIFOF(1));
    Vector#(NumDmaChannels, FIFOF#(void))              writeRespRec <- replicateM(mkSizedFIFOF(1));
    Vector#(NumDmaChannels, Reg#(DmaChannelPtr))           ctxtPtrs <- replicateM(mkReg(unpack(0)));
-
-   Reg#(Bit#(32))         addrReg <- mkReg(0);
+   SGListMMU sgl <- mkSGListMMU();
+   
+   Reg#(Bit#(40))         addrReg <- mkReg(0);
    Reg#(Bit#(4))         burstReg <- mkReg(0);   
    Reg#(DmaChannelId)  activeChan <- mkReg(0);
    Reg#(InternalState)   stateReg <- mkReg(Idle);
@@ -165,17 +177,19 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal#(t))
 
    rule selectChannel if (stateReg == Idle && reqOutstanding[selectReg].notEmpty);
       activeChan <= selectReg;
+      sgl.addrReq(ctxtPtrs[selectReg].sglid,reqOutstanding[selectReg].first);
       stateReg <= LoadCtxt;
    endrule
    
    rule loadChannel if (stateReg == LoadCtxt);
       let ctx = ctxtPtrs[activeChan];
       Bit#(4) bl = fromInteger(valueOf(n))-1;
-      if(writeBuffers[activeChan].highWater(zeroExtend(bl)+1) && ctx.cfg)
+      let phys_addr <- sgl.addrResp;
+      if(writeBuffers[activeChan].highWater(zeroExtend(bl)+1))
 	 begin
 	    reqOutstanding[activeChan].deq;
-	    addrReg <= truncate(reqOutstanding[activeChan].first);
-	    stateReg <= Data;
+	    addrReg <= phys_addr;
+	    stateReg <= Address;
 	    burstReg <= bl;
 	 end
       else
@@ -184,25 +198,13 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal#(t))
 	 end
    endrule
    
-   rule writeData if (stateReg == Data);
-      addrReg <= addrReg+1;
-      writeBuffers[activeChan].fifo.deq;
-      let v = writeBuffers[activeChan].fifo.first;
-      if(burstReg == 0)
-	 stateReg <= Done;
-      else
-	 burstReg <= burstReg-1;
-      write_pareff(ctxtPtrs[activeChan].pref, addrReg, v);
-   endrule
-   
-   rule response if (stateReg == Done);
-      writeRespRec[activeChan].enq(?);
-      stateReg <= Idle;
-   endrule
+   method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr);
+      sgl.page(truncate(tabsel), off, addr);
+   endmethod
 
    interface DMAWrite write;
       method Action configChan(DmaChannelId channelId, Bit#(32) pref);
-   	 ctxtPtrs[channelId] <= DmaChannelPtr{pref:pref, cfg:True};
+   	 ctxtPtrs[channelId] <= DmaChannelPtr{sglid:truncate(pref)};
       endmethod
       interface writeChannels = zipWith3(mkWriteChan, map(toPut,writeAdapters), 
 					 map(toPut, reqOutstanding),
@@ -212,10 +214,30 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal#(t))
       endmethod
    endinterface
 
+   interface Axi3WriteClient m_axi_write;
+      method ActionValue#(Axi3WriteRequest#(40,12)) address if (stateReg == Address);
+	 stateReg <= Data;
+	 return Axi3WriteRequest{address:addrReg, burstLen:burstReg, id:1};
+      endmethod
+      method ActionValue#(Axi3WriteData#(64, 8, 12)) data if (stateReg == Data);
+	 writeBuffers[activeChan].fifo.deq;
+	 let v = writeBuffers[activeChan].fifo.first;
+	 Bit#(1) last = burstReg == 0 ? 1'b1 : 1'b0;
+	 if(burstReg == 0)
+	    stateReg <= Done;
+	 else
+	    burstReg <= burstReg-1;
+	 return Axi3WriteData { data: v, byteEnable: maxBound, last: last, id: 1 };
+      endmethod
+      method Action response(Axi3WriteResponse#(12) resp) if (stateReg == Done);
+	 writeRespRec[activeChan].enq(?);
+	 stateReg <= Idle;
+      endmethod
+   endinterface
 endmodule
 		 
 		 	 
-module mkBsimDMA#(DMAIndication indication)(BsimDMA#(t))
+module mkAxiDMA#(DMAIndication indication)(AxiDMA#(t))
    provisos(Bits#(t,__a),
 	    Add#(1, a__, __a),
 	    Add#(64, b__, TMul#(64, TDiv#(__a, 64))),
@@ -223,14 +245,8 @@ module mkBsimDMA#(DMAIndication indication)(BsimDMA#(t))
 	    Mul#(d__, 64, __a),
 	    Max#(d__, 16, 16));
 	    
-   BsimDMAWriteInternal#(t) writer <- mkBsimDMAWriteInternal;
-   BsimDMAReadInternal#(t)  reader <- mkBsimDMAReadInternal;
-   Reg#(Bool) inited <- mkReg(False);
-
-   rule initialize(!inited);
-      inited <= True;
-      init_pareff();
-   endrule
+   AxiDMAWriteInternal#(t) writer <- mkAxiDMAWriteInternal;
+   AxiDMAReadInternal#(t)  reader <- mkAxiDMAReadInternal;
    
    interface DMARequest request;
       method Action configReadChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) __ignored);
@@ -249,11 +265,12 @@ module mkBsimDMA#(DMAIndication indication)(BsimDMA#(t))
 	 let rv <- writer.write.dbg;
 	 indication.reportStateDbg(rv);
       endmethod
-      method Action paref(Bit#(32) pref, Bit#(32) size);
-	 pareff(pref, size); 
-	 indication.parefResp(pref);
+      method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
+	 writer.page(pref,0,addr);
+	 reader.page(pref,0,addr);
+	 indication.sglistResp(pref);
       endmethod
    endinterface
-   interface BsimDMAWrite write = writer.write;
-   interface BsimDMARead  read  = reader.read;
+   interface AxiDMAWrite write = writer.write;
+   interface AxiDMARead  read  = reader.read;
 endmodule

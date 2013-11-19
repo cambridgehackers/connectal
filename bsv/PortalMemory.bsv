@@ -46,8 +46,8 @@ interface DMARequest;
    method Action configWriteChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) bsz);
    method Action getReadStateDbg();
    method Action getWriteStateDbg();
-   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
-   method Action paref(Bit#(32) off, Bit#(32) pref, Bit#(32) size);
+   method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
+   method Action paref(Bit#(32) pref, Bit#(32) size);
 endinterface
 
 typeclass PortalMemory#(type a);

@@ -298,15 +298,15 @@ int PortalMemory::reference(PortalAlloc* pa)
   pa->entries[ne].length = 0;
   pa->header.numEntries;
   for(int i = 0; i <= pa->header.numEntries; i++){
-    int offset = (id*32)+i;
-    fprintf(stderr, "PortalMemory::sglist(%08x, %08lx, %08lx)\n", offset, pa->entries[i].dma_address, pa->entries[i].length);
-    sglist(offset, pa->entries[i].dma_address, pa->entries[i].length);
-    sleep(1);
+    assert(i<32); // the HW has defined SGListMaxLen as 32
+    fprintf(stderr, "PortalMemory::sglist(%08x, %08lx, %08lx)\n", id, pa->entries[i].dma_address, pa->entries[i].length);
+    sglist(id, pa->entries[i].dma_address, pa->entries[i].length);
+    sleep(1); // ugly hack.  should use a semaphore for flow-control (mdk)
   }
 #else
   sock_fd_write(p_fd.write.s2, pa->header.fd);
-  paref(id, id, pa->header.size);
-  sleep(1);
+  paref(id, pa->header.size);
+  sleep(1); // ugly hack.  should use a semaphore for flow-control (mdk)
 #endif
   return id;
 }

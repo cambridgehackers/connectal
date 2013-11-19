@@ -33,7 +33,7 @@ import BRAMFIFOFLevel::*;
 import PortalMemory::*;
 import PortalSMemory::*;
 
-import "BDPI" function Action pareff(Bit#(32) off, Bit#(32) pref, Bit#(32) size);
+import "BDPI" function Action pareff(Bit#(32) pref, Bit#(32) size);
 import "BDPI" function Action init_pareff();
 import "BDPI" function Action write_pareff(Bit#(32) pref, Bit#(32) addr, Bit#(64) v);
 import "BDPI" function ActionValue#(Bit#(64)) read_pareff(Bit#(32) pref, Bit#(32) addr);
@@ -223,9 +223,9 @@ module mkBsimDMA#(DMAIndication indication)(BsimDMA);
 	 let rv <- writer.write.dbg;
 	 indication.reportStateDbg(rv);
       endmethod
-      method Action paref(Bit#(32) off, Bit#(32) pref, Bit#(32) size);
-	 pareff(off, pref, size); 
-	 indication.parefResp(off);
+      method Action paref(Bit#(32) pref, Bit#(32) size);
+	 pareff(pref, size); 
+	 indication.parefResp(pref);
       endmethod
    endinterface
    interface BsimDMAWrite write = writer.write;
