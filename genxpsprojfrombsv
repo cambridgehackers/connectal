@@ -92,7 +92,7 @@ all: $(ALLTARGETS)
 
 $(vfile): sources/%(dut)s/%(Top)s.bsv %(bsvfiles)s
 	cd sources/%(dut)s; bsc %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Top)s %(Top)s.bsv
-	./updatepao $(vfile) $(paofile) $(subst :, ,$(BSVPATH))
+	$(XBSVTOP)/scripts/copy_verilog.py $(vfile) $(subst :, ,$(BSVPATH))
 
 x86_exe:
 	cd jni; g++ *.cpp *.cxx -pthread -I../.. -I../../cpp -DBSIM 
@@ -426,10 +426,6 @@ if __name__=='__main__':
         dstdir = os.path.dirname(cppname)
         for f in ['portal.cpp', 'sock_utils.cxx', 'sock_fd.cxx']:
             shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
-    shutil.copyfile(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao'),
-                    os.path.join(project_dir, 'updatepao'))
-    shutil.copymode(os.path.join(os.path.dirname(sys.argv[0]), 'updatepao'),
-                    os.path.join(project_dir, 'updatepao'))
 
     print 'Writing tcl file', tclname
     tcl = util.createDirAndOpen(tclname, 'w')

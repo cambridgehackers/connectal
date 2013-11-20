@@ -34,7 +34,7 @@ def addPaoEntry(paoname, mod):
     pao.write('lib %s %s verilog\n' % (component, mod))
     pao.close()
 
-def updatePao(vinput, pao, libdirs):
+def updatePao(vinput, libdirs):
     destdir = os.path.dirname(vinput)
     if os.environ.has_key('BLUESPECDIR'):
         libdirs.append(os.path.join(os.environ['BLUESPECDIR'], 'Verilog.Vivado'))
@@ -58,4 +58,4 @@ def updatePao(vinput, pao, libdirs):
                             modules.append(n)
 
 if __name__=='__main__':
-    updatePao(sys.argv[1], sys.argv[2], sys.argv[3:])
+    updatePao(sys.argv[1], sys.argv[2:])

@@ -27,7 +27,6 @@ import Clocks::*;
 import GetPut::*;
 import Connectable::*;
 import PortalMemory::*;
-import AxiDMA::*;
 
 import AxiMasterSlave::*;
 import AxiClientServer::*;
