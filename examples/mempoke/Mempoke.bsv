@@ -68,8 +68,8 @@ module mkMempokeRequest#(MempokeIndication indication)(MempokeRequest);
    WriteChan#(S0) dma_write_chan = dma.write.writeChannels[0];
    
    rule writeRule;
-      dma_write_chan.writeDone.get;
-      indication.coreIndication.writeWordResult(unpack(0));
+      let v <- dma_write_chan.writeDone.get;
+      indication.coreIndication.writeWordResult(unpack({0,v}));
    endrule
 
    rule readRule;

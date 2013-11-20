@@ -124,7 +124,7 @@ module mkAxiDMAReadInternal(AxiDMAReadInternal#(t))
       endmethod
       interface readChannels = zipWith(mkReadChan, map(toGet,readAdapters), map(toPut, reqOutstanding));
       method ActionValue#(DmaDbgRec) dbg();
-	 return ?;
+	 return DmaDbgRec{x:truncate(addrReg), y:zeroExtend(burstReg), z:zeroExtend(activeChan), w:zeroExtend(pack(stateReg))};
       endmethod
    endinterface
 
@@ -210,7 +210,7 @@ module mkAxiDMAWriteInternal(AxiDMAWriteInternal#(t))
 					 map(toPut, reqOutstanding),
 					 map(toGet, writeRespRec));
       method ActionValue#(DmaDbgRec) dbg();
-	 return ?;
+	 return DmaDbgRec{x:truncate(addrReg), y:zeroExtend(burstReg), z:zeroExtend(activeChan), w:zeroExtend(pack(stateReg))};
       endmethod
    endinterface
 
@@ -246,6 +246,7 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA#(t))
 	    
    AxiDMAWriteInternal#(t) writer <- mkAxiDMAWriteInternal;
    AxiDMAReadInternal#(t)  reader <- mkAxiDMAReadInternal;
+
    Reg#(Bit#(40)) addrReg         <- mkReg(0);
    Reg#(Bit#(32)) prefReg         <- mkReg(0);
    Reg#(Bit#(32))  lenReg         <- mkReg(0);
@@ -284,10 +285,14 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA#(t))
 	 lenReg  <= len >> page_shift;
 	 prefReg <= pref;
 	 idxReg  <= 0;
-	 if (addr == 0 && len == 0)
+	 if (addr == 0 && len == 0) // sw marks end-of-list with zeros
 	    indication.sglistResp(pref);
       endmethod
    endinterface
    interface AxiDMAWrite write = writer.write;
    interface AxiDMARead  read  = reader.read;
+   interface Axi3Client m_axi;
+      interface Axi3WriteClient write = writer.m_axi_write;
+      interface Axi3ReadClient read = reader.m_axi_read;
+   endinterface
 endmodule
