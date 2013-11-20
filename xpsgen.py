@@ -192,7 +192,7 @@ top_ps7_axi_master_port_map_template='''
 
 for item in axi_signal_list:
     top_ps7_axi_master_port_map_template = top_ps7_axi_master_port_map_template \
-        + '        .S_AXI_%(ps7bus)s_' + item[0] + '(%(busname)s_' + item[0] + '),\n'
+        + '        .S_AXI_%(ps7bus)s_' + item[0].upper() + '(%(busname)s_' + item[0] + '),\n'
 
 top_ps7_axi_slave_port_map_template='''
         .M_AXI_GP0_ACLK(processing_system7_1_fclk_clk0),
