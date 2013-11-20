@@ -377,8 +377,6 @@ void* portalExec(void* __x)
 	// PCIE interrupts not working
 	if (0)
 #endif
-	if (portal_fds[i].revents == 0)
-	  continue;
 	if (!portal_requests) {
 	  fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
 	}
