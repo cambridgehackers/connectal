@@ -21,15 +21,13 @@ class Register:
     def __init__(self, busHandlers):
         busHandlers['XADC'] = self
     def top_bus_ports(self, busname,t,params):
-        return ''
+        return '    output [3:0] XADC_gpio,\n'
     def top_bus_wires(self, busname,t,params):
         return ''
     def ps7_bus_port_map(self,busname,t,params):
         return ''
     def dut_bus_port_map(self, busname,t,params):
-        return '''
-      .%(busname)s_xadc(XADC_gpio),
-''' % {'busname': busname}
+        return ' .%(busname)s_gpio(XADC_gpio),\n' % {'busname': busname}
     def top_bus_assignments(self,busname,t,params):
         return ''
     def bus_assignments(self,busname,t,params):

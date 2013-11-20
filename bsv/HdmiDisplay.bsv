@@ -31,6 +31,7 @@ import PortalMemory::*;
 import AxiMasterSlave::*;
 import AxiClientServer::*;
 import HDMI::*;
+import XADC::*;
 import FrameBufferBram::*;
 import YUV::*;
 
@@ -57,6 +58,7 @@ interface HdmiDisplayRequest;
     interface DMARequest dmaRequest;
     interface Axi3Client#(32,32,4,6) m_axi;
     interface HDMI hdmi;
+    interface XADC xadc;
 endinterface
 
 interface HdmiControlIndication;
@@ -101,6 +103,7 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     SyncPulseIfc hsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, clock);
     SyncFIFOIfc#(HdmiCommand) commandFifo <- mkSyncFIFOFromCC(1, hdmi_clock);
 
+    Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
     Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
 
@@ -138,6 +141,10 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
         v[47:32] = extend(pixelsReg);
         v[63:48] = extend(linesReg);
         indication.coreIndication.vsync(v);
+    endrule
+
+    rule bozobit_rule;
+        bozobit <= ~bozobit;
     endrule
 
     interface HdmiControlRequest coreRequest;
@@ -201,4 +208,11 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 
     interface Axi3Client m_axi = frameBuffer.axi;
     interface HDMI hdmi = hdmiGen.hdmi;
+    interface XADC xadc;
+        method Bit#(4) gpio;
+            return { bozobit, hdmiGen.hdmi.hdmi_vsync,
+                hdmiGen.hdmi.hdmi_hsync, hdmiGen.hdmi.hdmi_de};
+            //method Bit#(16) hdmi_data;
+        endmethod
+    endinterface: xadc
 endmodule
