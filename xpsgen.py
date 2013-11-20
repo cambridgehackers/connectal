@@ -101,42 +101,22 @@ processing_system7#(.C_NUM_F2P_INTR_INPUTS(16))
 endmodule
 '''
 
+axi_signal_list=[
+    ['araddr', 31], ['arburst', 1], ['arcache', 3], ['arid', 99], ['arlen', 3],
+    ['arprot', 2], ['arready', 0], ['arsize', 2], ['arvalid', 0],
+    ['awaddr', 31], ['awburst', 1], ['awcache', 3], ['awid', 99], ['awlen', 3],
+    ['awprot', 2], ['awready', 0], ['awsize', 2], ['awvalid', 0],
+    ['bid', 99], ['bready', 0], ['bresp', 1], ['bvalid', 0],
+    ['rdata', -31], ['rid', 99], ['rlast', 0], ['rready', 0],
+    ['rresp', 1], ['rvalid', 0],
+    ['wdata', -31], ['wid', 99], ['wlast', 0], ['wready', 0],
+    ['wstrb', -3], ['wvalid', 0]];
+
 top_axi_master_wires_template='''
-  wire [31:0]%(busname)s_araddr;
-  wire [1:0]%(busname)s_arburst;
-  wire [3:0]%(busname)s_arcache;
-  wire [5:0]%(busname)s_arid;
-  wire [3:0]%(busname)s_arlen;
-  wire [2:0]%(busname)s_arprot;
-  wire %(busname)s_arready;
-  wire [2:0]%(busname)s_arsize;
-  wire %(busname)s_arvalid;
-  wire [31:0]%(busname)s_awaddr;
-  wire [1:0]%(busname)s_awburst;
-  wire [3:0]%(busname)s_awcache;
-  wire [5:0]%(busname)s_awid;
-  wire [3:0]%(busname)s_awlen;
-  wire [2:0]%(busname)s_awprot;
-  wire %(busname)s_awready;
-  wire [2:0]%(busname)s_awsize;
-  wire %(busname)s_awvalid;
-  wire [5:0]%(busname)s_bid;
-  wire %(busname)s_bready;
-  wire [1:0]%(busname)s_bresp;
-  wire %(busname)s_bvalid;
   wire [C_%(BUSNAME)s_DATA_WIDTH-1:0]%(busname)s_rdata;
-  wire [5:0]%(busname)s_rid;
-  wire %(busname)s_rlast;
-  wire %(busname)s_rready;
-  wire [1:0]%(busname)s_rresp;
-  wire %(busname)s_rvalid;
   wire [C_%(BUSNAME)s_DATA_WIDTH-1:0]%(busname)s_wdata;
   wire [C_%(BUSNAME)s_DATA_WIDTH-1 : 0] %(busname)s_wdata_wire;
-  wire [5:0]%(busname)s_wid;
-  wire %(busname)s_wlast;
-  wire %(busname)s_wready;
   wire [(C_%(BUSNAME)s_DATA_WIDTH/8)-1:0]%(busname)s_wstrb;
-  wire %(busname)s_wvalid;
   wire RDY_%(busname)s_write_writeAddr;
   wire RDY_%(busname)s_write_writeData;
   wire RDY_%(busname)s_write_writeResponse;
@@ -149,50 +129,25 @@ top_axi_master_wires_template='''
   wire WILL_FIRE_%(busname)s_read_readData;
 '''
 
-top_axi_slave_wires_template='''
-  wire [31:0]%(busname)s_araddr;
-  wire [1:0]%(busname)s_arburst;
-  wire [3:0]%(busname)s_arcache;
-  wire [11:0]%(busname)s_arid;
-  wire [3:0]%(busname)s_arlen;
-  wire [1:0]%(busname)s_arlock;
-  wire [2:0]%(busname)s_arprot;
-  wire %(busname)s_arready;
-  wire [2:0]%(busname)s_arsize;
-  wire %(busname)s_arvalid;
-  wire [31:0]%(busname)s_awaddr;
-  wire [1:0]%(busname)s_awburst;
-  wire [3:0]%(busname)s_awcache;
-  wire [11:0]%(busname)s_awid;
-  wire [3:0]%(busname)s_awlen;
-  wire [1:0]%(busname)s_awlock;
-  wire [2:0]%(busname)s_awprot;
-  wire %(busname)s_awready;
-  wire [2:0]%(busname)s_awsize;
-  wire %(busname)s_awvalid;
-  wire [11:0]%(busname)s_wid;
-  wire [11:0]%(busname)s_bid;
-  wire %(busname)s_bready;
-  wire [1:0]%(busname)s_bresp;
-  wire %(busname)s_bvalid;
-  wire [31:0]%(busname)s_rdata;
-  wire [11:0]%(busname)s_rid;
-  wire %(busname)s_rlast;
-  wire %(busname)s_rready;
-  wire [1:0]%(busname)s_rresp;
-  wire %(busname)s_rvalid;
-  wire [31:0]%(busname)s_wdata;
-  wire %(busname)s_wlast;
-  wire %(busname)s_wready;
-  wire [3:0]%(busname)s_wstrb;
-  wire %(busname)s_wvalid;
+for item in axi_signal_list:
+    t = ''
+    if item[1] < 0:
+        continue
+    if item[1] != 0:
+        thislen = item[1]
+        if thislen == 99:
+            thislen = 5
+        t = '[' + str(thislen) + ':0]'
+    top_axi_master_wires_template = top_axi_master_wires_template \
+        + '  wire ' + t + '%(busname)s_' + item[0] + ';\n'
 
+top_axi_slave_wires_template='''
+  wire [1:0]%(busname)s_arlock;
+  wire [1:0]%(busname)s_awlock;
   wire %(busname)s_mem0_araddr_matches;
   wire %(busname)s_mem0_awaddr_matches;
-
   wire [C_%(BUSNAME)s_DATA_WIDTH-1 : 0] %(busname)s_read_readData;
   wire [1 : 0] %(busname)s_write_writeResponse;
-
   wire EN_%(busname)s_read_readAddr;
   wire RDY_%(busname)s_read_readAddr;
   wire EN_%(busname)s_read_readData;
@@ -206,128 +161,48 @@ top_axi_slave_wires_template='''
   wire RDY_%(busname)s_write_bid;
 '''
 
+for item in axi_signal_list:
+    t = ''
+    if item[1] != 0:
+        thislen = abs(item[1])
+        if thislen == 99:
+            thislen = 11
+        t = '[' + str(thislen) + ':0]'
+    top_axi_slave_wires_template = top_axi_slave_wires_template \
+        + '  wire ' + t + '%(busname)s_' + item[0] + ';\n'
+
 top_dut_axi_master_port_map_template='''
         .%(busname)s_aclk(processing_system7_fclk_clk0),
-        .%(busname)s_araddr(%(busname)s_araddr),
-        .%(busname)s_arburst(%(busname)s_arburst),
-        .%(busname)s_arcache(%(busname)s_arcache),
         .%(busname)s_aresetn(processing_system7_fclk_reset0_n),
-        .%(busname)s_arid(%(busname)s_arid),
-        .%(busname)s_arlen(%(busname)s_arlen),
-        .%(busname)s_arprot(%(busname)s_arprot),
-        .%(busname)s_arready(%(busname)s_arready),
-        .%(busname)s_arsize(%(busname)s_arsize),
-        .%(busname)s_arvalid(%(busname)s_arvalid),
-        .%(busname)s_awaddr(%(busname)s_awaddr),
-        .%(busname)s_awburst(%(busname)s_awburst),
-        .%(busname)s_awcache(%(busname)s_awcache),
-        .%(busname)s_awid(%(busname)s_awid),
-        .%(busname)s_awlen(%(busname)s_awlen),
-        .%(busname)s_awprot(%(busname)s_awprot),
-        .%(busname)s_awready(%(busname)s_awready),
-        .%(busname)s_awsize(%(busname)s_awsize),
-        .%(busname)s_awvalid(%(busname)s_awvalid),
-        .%(busname)s_bid(%(busname)s_bid),
-        .%(busname)s_bready(%(busname)s_bready),
-        .%(busname)s_bresp(%(busname)s_bresp),
-        .%(busname)s_bvalid(%(busname)s_bvalid),
-        .%(busname)s_rdata(%(busname)s_rdata),
-        .%(busname)s_rid(%(busname)s_rid),
-        .%(busname)s_rlast(%(busname)s_rlast),
-        .%(busname)s_rready(%(busname)s_rready),
-        .%(busname)s_rresp(%(busname)s_rresp),
-        .%(busname)s_rvalid(%(busname)s_rvalid),
-        .%(busname)s_wdata(%(busname)s_wdata),
-        .%(busname)s_wid(%(busname)s_wid),
-        .%(busname)s_wlast(%(busname)s_wlast),
-        .%(busname)s_wready(%(busname)s_wready),
-        .%(busname)s_wstrb(%(busname)s_wstrb),
-        .%(busname)s_wvalid(%(busname)s_wvalid),
 '''
+
+for item in axi_signal_list:
+    top_dut_axi_master_port_map_template = top_dut_axi_master_port_map_template \
+        + '        .%(busname)s_' + item[0] + '(%(busname)s_' + item[0] + '),\n'
 
 top_ps7_axi_master_port_map_template='''
         .S_AXI_%(ps7bus)s_ACLK(processing_system7_1_fclk_clk0),
-        .S_AXI_%(ps7bus)s_ARADDR(%(busname)s_araddr),
-        .S_AXI_%(ps7bus)s_ARBURST(%(busname)s_arburst),
-        .S_AXI_%(ps7bus)s_ARCACHE(%(busname)s_arcache),
-        .S_AXI_%(ps7bus)s_ARID(%(busname)s_arid),
-        .S_AXI_%(ps7bus)s_ARLEN(%(busname)s_arlen),
         .S_AXI_%(ps7bus)s_ARLOCK({GND_1,GND_1}),
-        .S_AXI_%(ps7bus)s_ARPROT(%(busname)s_arprot),
         .S_AXI_%(ps7bus)s_ARQOS({GND_1,GND_1,GND_1,GND_1}),
-        .S_AXI_%(ps7bus)s_ARREADY(%(busname)s_arready),
-        .S_AXI_%(ps7bus)s_ARSIZE(%(busname)s_arsize),
-        .S_AXI_%(ps7bus)s_ARVALID(%(busname)s_arvalid),
-        .S_AXI_%(ps7bus)s_AWADDR(%(busname)s_awaddr),
-        .S_AXI_%(ps7bus)s_AWBURST(%(busname)s_awburst),
-        .S_AXI_%(ps7bus)s_AWCACHE(%(busname)s_awcache),
-        .S_AXI_%(ps7bus)s_AWID(%(busname)s_awid),
-        .S_AXI_%(ps7bus)s_AWLEN(%(busname)s_awlen),
         .S_AXI_%(ps7bus)s_AWLOCK({GND_1,GND_1}),
-        .S_AXI_%(ps7bus)s_AWPROT(%(busname)s_awprot),
         .S_AXI_%(ps7bus)s_AWQOS({GND_1,GND_1,GND_1,GND_1}),
-        .S_AXI_%(ps7bus)s_AWREADY(%(busname)s_awready),
-        .S_AXI_%(ps7bus)s_AWSIZE(%(busname)s_awsize),
-        .S_AXI_%(ps7bus)s_AWVALID(%(busname)s_awvalid),
-        .S_AXI_%(ps7bus)s_BID(%(busname)s_bid),
-        .S_AXI_%(ps7bus)s_BREADY(%(busname)s_bready),
-        .S_AXI_%(ps7bus)s_BRESP(%(busname)s_bresp),
-        .S_AXI_%(ps7bus)s_BVALID(%(busname)s_bvalid),
-        .S_AXI_%(ps7bus)s_RDATA(%(busname)s_rdata),
-        .S_AXI_%(ps7bus)s_RID(%(busname)s_rid),
-        .S_AXI_%(ps7bus)s_RLAST(%(busname)s_rlast),
-        .S_AXI_%(ps7bus)s_RREADY(%(busname)s_rready),
-        .S_AXI_%(ps7bus)s_RRESP(%(busname)s_rresp),
-        .S_AXI_%(ps7bus)s_RVALID(%(busname)s_rvalid),
-        .S_AXI_%(ps7bus)s_WDATA(%(busname)s_wdata),
-        .S_AXI_%(ps7bus)s_WID(%(busname)s_wid),
-        .S_AXI_%(ps7bus)s_WLAST(%(busname)s_wlast),
-        .S_AXI_%(ps7bus)s_WREADY(%(busname)s_wready),
-        .S_AXI_%(ps7bus)s_WSTRB(%(busname)s_wstrb),
-        .S_AXI_%(ps7bus)s_WVALID(%(busname)s_wvalid),
         /* .S_AXI_%(ps7bus)s_RDISSUECAP1_EN(GND_1), */
         /* .S_AXI_%(ps7bus)s_WRISSUECAP1_EN(GND_1), */
 '''
 
+for item in axi_signal_list:
+    top_ps7_axi_master_port_map_template = top_ps7_axi_master_port_map_template \
+        + '        .S_AXI_%(ps7bus)s_' + item[0] + '(%(busname)s_' + item[0] + '),\n'
+
 top_ps7_axi_slave_port_map_template='''
         .M_AXI_GP0_ACLK(processing_system7_1_fclk_clk0),
-        .M_AXI_GP0_ARADDR(%(busname)s_araddr),
-        .M_AXI_GP0_ARBURST(%(busname)s_arburst),
-        .M_AXI_GP0_ARCACHE(%(busname)s_arcache),
-        .M_AXI_GP0_ARID(%(busname)s_arid),
-        .M_AXI_GP0_ARLEN(%(busname)s_arlen),
         .M_AXI_GP0_ARLOCK(%(busname)s_arlock),
-        .M_AXI_GP0_ARPROT(%(busname)s_arprot),
-        .M_AXI_GP0_ARREADY(%(busname)s_arready),
-        .M_AXI_GP0_ARSIZE(%(busname)s_arsize),
-        .M_AXI_GP0_ARVALID(%(busname)s_arvalid),
-        .M_AXI_GP0_AWADDR(%(busname)s_awaddr),
-        .M_AXI_GP0_AWBURST(%(busname)s_awburst),
-        .M_AXI_GP0_AWCACHE(%(busname)s_awcache),
-        .M_AXI_GP0_AWID(%(busname)s_awid),
-        .M_AXI_GP0_AWLEN(%(busname)s_awlen),
         .M_AXI_GP0_AWLOCK(%(busname)s_awlock),
-        .M_AXI_GP0_AWPROT(%(busname)s_awprot),
-        .M_AXI_GP0_AWREADY(%(busname)s_awready),
-        .M_AXI_GP0_AWSIZE(%(busname)s_awsize),
-        .M_AXI_GP0_AWVALID(%(busname)s_awvalid),
-        .M_AXI_GP0_BID(%(busname)s_bid),
-        .M_AXI_GP0_BREADY(%(busname)s_bready),
-        .M_AXI_GP0_BRESP(%(busname)s_bresp),
-        .M_AXI_GP0_BVALID(%(busname)s_bvalid),
-        .M_AXI_GP0_RDATA(%(busname)s_rdata),
-        .M_AXI_GP0_RID(%(busname)s_rid),
-        .M_AXI_GP0_RLAST(%(busname)s_rlast),
-        .M_AXI_GP0_RREADY(%(busname)s_rready),
-        .M_AXI_GP0_RRESP(%(busname)s_rresp),
-        .M_AXI_GP0_RVALID(%(busname)s_rvalid),
-        .M_AXI_GP0_WDATA(%(busname)s_wdata),
-        .M_AXI_GP0_WLAST(%(busname)s_wlast),
-        .M_AXI_GP0_WID(%(busname)s_wid),
-        .M_AXI_GP0_WREADY(%(busname)s_wready),
-        .M_AXI_GP0_WSTRB(%(busname)s_wstrb),
-        .M_AXI_GP0_WVALID(%(busname)s_wvalid),
 '''
+
+for item in axi_signal_list:
+    top_ps7_axi_slave_port_map_template = top_ps7_axi_slave_port_map_template \
+        + '        .M_AXI_GP0_' + item[0].upper() + '(%(busname)s_' + item[0] + '),\n'
 
 axi_master_parameter_verilog_template='''
 parameter C_%(BUSNAME)s_DATA_WIDTH = %(buswidth)s;
