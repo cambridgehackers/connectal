@@ -413,8 +413,9 @@ int main(int argc, const char **argv)
 
     init_local_semaphores();
     device = CoreRequest::createCoreRequest(new TestImageCaptureIndications);
-    // for surfaceflinger int status = PortalRequest::setClockFrequency(1, 160000000, 0);
-    int status = PortalRequest::setClockFrequency(1, 200000000, 0);
+    // for surfaceflinger 
+    int status = PortalRequest::setClockFrequency(1, 160000000, 0);
+    //int status = PortalRequest::setClockFrequency(1, 200000000, 0);
     pthread_create(&threaddata, NULL, &pthread_worker, (void *)device);
     fmc_imageon_demo_init(argc, argv);
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
