@@ -46,17 +46,24 @@
 class TestDMAIndication : public DMAIndication
 {
   virtual void reportStateDbg(DmaDbgRec& rec){
-    fprintf(stderr, "DMA::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
+    ALOGD("DMA::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "DMA::configResp: %lx\n", channelId);
+    ALOGD("DMA::configResp: %lx\n", channelId);
   }
   virtual void sglistResp(unsigned long channelId){
-    fprintf(stderr, "DMA::sglistResp: %lx\n", channelId);
+    ALOGD("DMA::sglistResp: %lx\n", channelId);
   }
   virtual void parefResp(unsigned long channelId){
-    fprintf(stderr, "DMA::parefResp: %lx\n", channelId);
+    ALOGD("DMA::parefResp: %lx\n", channelId);
   }
+};
+
+class TestHdmiIndication : public HdmiControlIndication {
+public:
+    virtual void vsync ( unsigned long long v ) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    }
 };
 
 /*****************************************************************************/
@@ -144,9 +151,10 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
     if (ctx->hdmiDisplay != 0) {
         PortalAlloc portalAlloc;
         memset(&portalAlloc, 0, sizeof(portalAlloc));
-        ctx->dma->alloc(size, &portalAlloc);
+        err = ctx->dma->alloc(size, &portalAlloc);
+        fd = portalAlloc.header.fd;
 
-        if (usage & GRALLOC_USAGE_HW_FB) {
+        if ((!err) && (usage & GRALLOC_USAGE_HW_FB)) {
             ALOGD("adding translation table entries\n");
             segmentNumber = ctx->nextSegmentNumber;
             ctx->nextSegmentNumber += portalAlloc.header.numEntries;
@@ -161,11 +169,8 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
 
     }
     if (fd < 0) {
-        fd = ashmem_create_region("gralloc-buffer", size);
-        if (fd < 0) {
-            ALOGE("couldn't create ashmem (%s)", strerror(-errno));
-            err = -errno;
-        }
+        ALOGE("couldn't create ashmem (%s)", strerror(-errno));
+        err = -errno;
     }
 
     if (err == 0) {
@@ -233,6 +238,7 @@ static int gralloc_alloc(alloc_device_t* dev,
 static int gralloc_free(alloc_device_t* dev,
                         buffer_handle_t handle)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     if (private_handle_t::validate(handle) < 0)
         return -EINVAL;
 
@@ -243,7 +249,7 @@ static int gralloc_free(alloc_device_t* dev,
     private_handle_t *private_handle = const_cast<private_handle_t*>(hnd);
     if (ctx->hdmiDisplay) {
         ALOGD("freeing ion buffer fd %d\n", private_handle->fd);
-        //ctx->dma->free(private_handle->fd);
+        close(private_handle->fd);
     } else {
         ALOGD("freeing ashmem buffer %p\n", private_handle);
         terminateBuffer(module, private_handle);
@@ -258,6 +264,7 @@ static int gralloc_free(alloc_device_t* dev,
 
 static int gralloc_close(struct hw_device_t *dev)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     gralloc_context_t* ctx = reinterpret_cast<gralloc_context_t*>(dev);
     if (ctx) {
         /* TODO: keep a list of all buffer_handle_t created, and free them
@@ -271,6 +278,7 @@ static int gralloc_close(struct hw_device_t *dev)
 static int fb_setSwapInterval(struct framebuffer_device_t* dev,
             int interval)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     framebuffer_device_t* ctx = (framebuffer_device_t*)dev;
     if (interval < dev->minSwapInterval || interval > dev->maxSwapInterval)
         return -EINVAL;
@@ -280,6 +288,7 @@ static int fb_setSwapInterval(struct framebuffer_device_t* dev,
 
 class GrallocHdmiDisplayIndications : public HdmiControlIndication {
     virtual void vsync(unsigned long long v) {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         if (1)
             ALOGD("vsync %llx\n", v);
         pthread_mutex_lock(&gralloc_dev->vsync_lock);
@@ -291,6 +300,7 @@ class GrallocHdmiDisplayIndications : public HdmiControlIndication {
 
 static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     if (private_handle_t::validate(buffer) < 0)
         return -EINVAL;
 
@@ -317,12 +327,14 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 static pthread_t fb_thread;
 static void *fb_thread_routine(void *data)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     portalExec(0);
     return data;
 }
 
 static int fb_close(struct hw_device_t *dev)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pthread_kill(fb_thread, SIGTERM);
     if (dev) {
         free(dev);
@@ -333,8 +345,9 @@ static int fb_close(struct hw_device_t *dev)
 int gralloc_device_open(const hw_module_t* module, const char* name,
         hw_device_t** device)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     int status = -EINVAL;
-    fprintf(stderr, "gralloc_device_open: name=%s\n", name);
+    ALOGD( "gralloc_device_open: name=%s\n", name);
     init_i2c_hdmi();
     if (!strcmp(name, "gpu0")) {
         gralloc_context_t *dev;
@@ -361,7 +374,7 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
         pthread_condattr_t condattr;
         pthread_condattr_init(&condattr);
         pthread_cond_init(&dev->vsync_cond, &condattr);
-        dev->hdmiDisplay = HdmiControlRequest::createHdmiControlRequest(new GrallocHdmiDisplayIndications);
+        dev->hdmiDisplay = HdmiControlRequest::createHdmiControlRequest(new TestHdmiIndication);
         dev->dma = DMARequest::createDMARequest(new TestDMAIndication);
         dev->nextSegmentNumber = 0;
 
