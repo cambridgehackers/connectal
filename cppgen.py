@@ -1,3 +1,4 @@
+import os
 import syntax
 import AST
 import util
@@ -24,10 +25,10 @@ include $(BUILD_EXECUTABLE)
 '''
 
 linuxmakefile_template='''
-CFLAGS = -DMMAP_HW -O -g -I. -I../../cpp -I../..
+CFLAGS = -DMMAP_HW -O -g -I. -I%(xbsvdir)s/cpp -I%(xbsvdir)s %(sourceincludes)s
 
-test%(classname)s: %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/%(classname)s/test%(classname)s.cpp
-	g++ $(CFLAGS) -o %(classname)s %(ClassName)s.cpp ../../cpp/portal.cpp ../../examples/%(classname)s/test%(classname)s.cpp -pthread 
+test%(classname)s: %(ClassName)s.cpp %(xbsvdir)s/cpp/portal.cpp %(source)s
+	g++ $(CFLAGS) -o %(classname)s %(ClassName)s.cpp %(xbsvdir)s/cpp/portal.cpp %(source)s -pthread 
 '''
 
 
@@ -245,6 +246,9 @@ class MethodMixin:
         def collectMembers(scope, member):
             tn = member.type.name
             if tn == 'Bit':
+                return [('%s.%s'%(scope,member.name),member.type)]
+            elif tn == 'Vector':
+                print ('%s.%s'%(scope,member.name),member.type)
                 return [('%s.%s'%(scope,member.name),member.type)]
             else:
                 td = syntax.globalvars[tn]
@@ -523,12 +527,15 @@ class InterfaceMixin:
         className = cName(self.name)
         f.write(applicationmk_template % substs)
         f.close()
-    def writeLinuxMk(self, linuxmkname, silent=False):
+    def writeLinuxMk(self, linuxmkname, xbsvdir, sourcefiles):
         f = util.createDirAndOpen(linuxmkname, 'w')
         className = cName(self.base)
         substs = {
             'ClassName': className,
-            'classname': className.lower()
+            'classname': className.lower(),
+            'xbsvdir': xbsvdir,
+            'source': ' '.join([os.path.abspath(sf) for sf in sourcefiles]) if sourcefiles else '',
+            'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in sourcefiles]) if sourcefiles else ''
         }
         f.write(linuxmakefile_template % substs)
         f.close()
@@ -556,6 +563,8 @@ class TypeMixin:
                 return 'unsigned long long'
             else:
                 return 'std::bitset<%d>' % (self.params[0].numeric())
+        elif cid == 'Vector':
+            return 'bsvvector<%d,%s>' % (self.params[0].numeric(), self.params[1].cName())
         elif cid == 'Action':
             return 'int'
         elif cid == 'ActionValue':
