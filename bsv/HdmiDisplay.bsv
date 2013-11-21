@@ -38,17 +38,12 @@ import YUV::*;
 interface HdmiControlRequest;
     method Action setPatternReg(Bit#(32) yuv422);
     method Action startFrameBuffer0(Bit#(32) base);
-    method Action startFrameBuffer1(Bit#(32) base);
-
     method Action waitForVsync(Bit#(32) unused);
-
     method Action hdmiLinesPixels(Bit#(32) value);
-    method Action hdmiBlankLinesPixels(Bit#(32) value);
     method Action hdmiStrideBytes(Bit#(32) strideBytes);
     method Action hdmiLineCountMinMax(Bit#(32) value);
     method Action hdmiPixelCountMinMax(Bit#(32) value);
     method Action hdmiSyncWidths(Bit#(32) value);
-
     method Action beginTranslationTable(Bit#(8) index);
     method Action addTranslationEntry(Bit#(20) address, Bit#(12) length); // shift address and length left 12 bits
 endinterface
@@ -101,7 +96,6 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, clock);
     SyncPulseIfc hsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, clock);
-    SyncFIFOIfc#(HdmiCommand) commandFifo <- mkSyncFIFOFromCC(1, hdmi_clock);
 
     Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
@@ -110,9 +104,8 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     Reg#(Bool) frameBufferEnabled <- mkReg(False);
     FrameBufferBram frameBuffer <- mkFrameBufferBram(hdmi_clock, hdmi_reset);
 
-    HdmiGenerator hdmiGen <- mkHdmiGenerator(clocked_by hdmi_clock, reset_by hdmi_reset,
-                                             commandFifo, frameBuffer.buffer,
-					     vsyncPulse, hsyncPulse);
+    HdmiGenerator hdmiGen <- mkHdmiGenerator(clocked_by hdmi_clock, reset_by hdmi_reset, clock, reset,
+                                             frameBuffer.buffer, vsyncPulse, hsyncPulse);
 
     (* descending_urgency = "vsync, hsync" *)
     rule vsync if (vsyncPulse.pulse());
@@ -149,29 +142,27 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 
     interface HdmiControlRequest coreRequest;
 	method Action setPatternReg(Bit#(32) yuv422);
-	    commandFifo.enq(tagged PatternColor {yuv422: yuv422});
+            hdmiGen.setPatternColor(yuv422);
 	endmethod
 	method Action hdmiLinesPixels(Bit#(32) value);
 	    linesReg <= value[10:0];
 	    pixelsReg <= value[27:16];
-	    commandFifo.enq(tagged LinesPixels {value: value});
+            hdmiGen.setNumberOfLines(linesReg);
+            hdmiGen.setNumberOfPixels(pixelsReg);
 	endmethod
 	method Action hdmiStrideBytes(Bit#(32) value);
 	    strideBytesReg <= value[13:0];
 	endmethod
-	method Action hdmiBlankLinesPixels(Bit#(32) value);
-	    commandFifo.enq(tagged BlankLinesPixels {value: value});
-	endmethod
 	method Action hdmiLineCountMinMax(Bit#(32) value);
-	    commandFifo.enq(tagged LineCountMinMax {value: value});
+            hdmiGen.setDeLineCountMinMax(value[10:0], value[26:16]);
 	endmethod
 	method Action hdmiPixelCountMinMax(Bit#(32) value);
-	    commandFifo.enq(tagged PixelCountMinMax {value: value});
+            hdmiGen.setDePixelCountMinMax(value[11:0], value[27:16]);
 	endmethod
 	method Action hdmiSyncWidths(Bit#(32) value);
-	    commandFifo.enq(tagged SyncWidths {value: value});
+            hdmiGen.setHsyncWidth(value[27:16]);
+            hdmiGen.setVsyncWidth(value[10:0]);
 	endmethod
-
 	method Action startFrameBuffer0(Bit#(32) base);
 	    $display("startFrameBuffer %h", base);
 	    frameBufferEnabled <= True;
@@ -184,17 +175,12 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 		     linesReg, pixelsReg, bytesperpixel, stridebytes);
 	    fbc.stridebytes = stridebytes;
 	    frameBuffer.configure(fbc);
-	    commandFifo.enq(tagged TestPattern {enabled: False});
+	    hdmiGen.setTestPattern(False);
 	    waitingForVsync <= True;
 	endmethod
-
-	method Action startFrameBuffer1(Bit#(32) base);
-	endmethod
-
 	method Action waitForVsync(Bit#(32) unused);
 	    waitingForVsync <= True;
 	endmethod
-
 	method Action beginTranslationTable(Bit#(8) index);
 	    segmentIndexReg <= index;
 	    segmentOffsetReg <= 0;

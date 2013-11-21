@@ -51,36 +51,13 @@ interface HdmiOut;
     interface HDMI hdmi;
 endinterface
 
-typedef union tagged {
-    struct {
-        Bit#(32) yuv422;
-    } PatternColor;
-    struct {
-        Bool enabled;
-    } TestPattern;
-    struct {
-        Bit#(32) value;
-    } LinesPixels;
-    struct {
-        Bit#(32) value;
-    } BlankLinesPixels;
-    struct {
-        Bit#(32) value;
-    } LineCountMinMax;
-    struct {
-        Bit#(32) value;
-    } PixelCountMinMax;
-    struct {
-        Bit#(32) value;
-    } SyncWidths;
-} HdmiCommand deriving (Bits);
-
 interface HdmiGenerator;
+    method Action setTestPattern(Bool v);
+    method Action setPatternColor(Bit#(32) v);
     method Action setHsyncWidth(Bit#(12) hsyncWidth);
     method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max);
     method Action setVsyncWidth(Bit#(11) vsyncWidth);
     method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max);
-
     method Action setNumberOfLines(Bit#(11) lines);
     method Action setNumberOfPixels(Bit#(12) pixels);
 
@@ -123,24 +100,24 @@ typedef struct {
     Bit#(16) data;
 } Yuv422Stage deriving (Bits);
 
-module mkHdmiGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
+module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
                                    BRAM#(Bit#(12), Bit#(32)) lineBuffer,
                                    SyncPulseIfc vsyncPulse,
                                    SyncPulseIfc hsyncPulse)(HdmiGenerator);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
-    Reg#(Bit#(12)) hsyncWidth <- mkReg(44);
-    Reg#(Bit#(12)) dePixelCountMinimum <- mkReg(192);
-    Reg#(Bit#(12)) dePixelCountMaximum <- mkReg(2112);
-    Reg#(Bit#(12)) pixelMidpoint <- mkReg(1152);
-    Reg#(Bit#(11)) vsyncWidth <- mkReg(5);
-    Reg#(Bit#(11)) deLineCountMinimum <- mkReg(41);
-    Reg#(Bit#(11)) deLineCountMaximum <- mkReg(1121);
-    Reg#(Bit#(11)) lineMidpoint <- mkReg(581);
+    Reg#(Bit#(12)) hsyncWidth <- mkSyncReg(44, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelCountMinimum <- mkSyncReg(192, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelCountMaximum <- mkSyncReg(2112, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) pixelMidpoint <- mkSyncReg(1152, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) vsyncWidth <- mkSyncReg(5, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineCountMinimum <- mkSyncReg(41, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineCountMaximum <- mkSyncReg(1121, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) lineMidpoint <- mkSyncReg(581, axi_clock, axi_reset, defaultClock);
 
-    Reg#(Bit#(11)) numberOfLines <- mkReg(1125);
-    Reg#(Bit#(12)) numberOfPixels <- mkReg(2200);
+    Reg#(Bit#(11)) numberOfLines <- mkSyncReg(1125, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) numberOfPixels <- mkSyncReg(2200, axi_clock, axi_reset, defaultClock);
 
     Reg#(Bit#(11)) lineCount <- mkReg(0);
     Reg#(Bit#(12)) pixelCount <- mkReg(0);
@@ -153,11 +130,11 @@ module mkHdmiGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
 
     Reg#(Bit#(12)) dataCount <- mkReg(0);
-    Reg#(Bit#(32)) patternReg0 <- mkReg(32'h00FFFFFF); // white
+    Reg#(Bit#(32)) patternReg0 <- mkSyncReg(32'h00FFFFFF, axi_clock, axi_reset, defaultClock); // white
 
     Vector#(4, Reg#(Bit#(32))) patternRegs <- replicateM(mkReg(0));
 
-    Reg#(Bool) shadowTestPatternEnabled <- mkReg(True);
+    Reg#(Bool) shadowTestPatternEnabled <- mkSyncReg(True, axi_clock, axi_reset, defaultClock);
     Reg#(Bool) testPatternEnabled <- mkReg(True);
 
     let vsync = (lineCount < vsyncWidth) ? 1 : 0;
@@ -187,44 +164,6 @@ module mkHdmiGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
         return LinePixelCount { line: newLineCount, pixel: newPixelCount };
     endfunction
 
-
-    rule updatePatternReg0 if (commandFifo.first matches tagged PatternColor .x);
-        patternReg0 <= x.yuv422;
-        commandFifo.deq;
-    endrule
-
-    rule updateTestPatternEnabledReg if (commandFifo.first matches tagged TestPattern .x);
-        shadowTestPatternEnabled <= x.enabled;
-        commandFifo.deq;
-    endrule
-
-    rule updateLinesPixels if (commandFifo.first matches tagged LinesPixels .x);
-        numberOfLines  <= x.value[10:0];
-        numberOfPixels <= x.value[27:16];
-        commandFifo.deq;
-    endrule
-    rule updateBlankLinesPixels if (commandFifo.first matches tagged BlankLinesPixels .x);
-        commandFifo.deq;
-    endrule
-    rule updateLineCountMinMax if (commandFifo.first matches tagged LineCountMinMax .x);
-        deLineCountMinimum <= x.value[10:0];
-        deLineCountMaximum <= x.value[26:16];
-        lineMidpoint <= (x.value[10:0] + x.value[26:16]) / 2;
-        commandFifo.deq;
-    endrule
-    rule updatePixelCountMinMax if (commandFifo.first matches tagged PixelCountMinMax .x);
-        dePixelCountMinimum <= x.value[11:0];
-        dePixelCountMaximum <= x.value[27:16];
-        pixelMidpoint <= (x.value[11:0] + x.value[27:16]) / 2;
-        commandFifo.deq;
-    endrule
-    rule updateSyncWidths if (commandFifo.first matches tagged SyncWidths .x);
-        vsyncWidth  <= x.value[10:0];
-        hsyncWidth <= x.value[27:16];
-        commandFifo.deq;
-    endrule
-
-
     // vsyncPulse is a SyncHandshake to a slow clock domain
     // so it is not ready every cycle.
     // Therefore, we send to it from a different rule so it does not block the fbRule
@@ -232,6 +171,7 @@ module mkHdmiGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
         $display("vsync pulse sent");
         vsyncPulse.send();
     endrule
+
     rule sendHsyncPulse (isActiveLine && pixelCount == 0);
         //$display("hsync pulse sent");
         hsyncPulse.send();
@@ -351,6 +291,12 @@ module mkHdmiGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
         };
     endrule
 
+    method Action setPatternColor(Bit#(32) v);
+        patternReg0 <= v;
+    endmethod
+    method Action setTestPattern(Bool v);
+        shadowTestPatternEnabled <= v;
+    endmethod
     method Action setHsyncWidth(Bit#(12) width);
         hsyncWidth <= width;
     endmethod
@@ -367,7 +313,6 @@ module mkHdmiGenerator#(SyncFIFOIfc#(HdmiCommand) commandFifo,
         deLineCountMaximum <= max;
         lineMidpoint <= (min + max) / 2;
     endmethod
-
     method Action setNumberOfLines(Bit#(11) lines);
         numberOfLines <= lines;
     endmethod
