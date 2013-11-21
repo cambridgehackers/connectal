@@ -314,6 +314,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         gralloc_dev->vsync = 0;
         gralloc_dev->hdmiDisplay->waitForVsync(0);
         gralloc_dev->hdmiDisplay->startFrameBuffer0(hnd->segmentNumber);
+        gralloc_dev->hdmiDisplay->waitForVsync(0);
         while (!gralloc_dev->vsync) {
             pthread_cond_wait(&gralloc_dev->vsync_cond, &gralloc_dev->vsync_lock);
         }

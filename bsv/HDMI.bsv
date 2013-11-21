@@ -60,9 +60,9 @@ interface HdmiGenerator;
     method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max);
     method Action setNumberOfLines(Bit#(11) lines);
     method Action setNumberOfPixels(Bit#(12) pixels);
-
-    method Bool vsync();
-    method Bool hsync();
+//
+    //method Bool vsync();
+    //method Bool hsync();
     interface HDMI hdmi;
 endinterface
 

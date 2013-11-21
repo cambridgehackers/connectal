@@ -65,37 +65,24 @@ interface HdmiDisplayIndication;
     interface DMAIndication dmaIndication;
 endinterface
 
-function Put#(item_t) syncFifoToPut( SyncFIFOIfc#(item_t) f);
-    return (
-        interface Put;
-            method Action put (item_t item);
-                f.enq(item);
-            endmethod
-        endinterface
-    );
-endfunction
-
 module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIndication indication)(HdmiDisplayRequest);
-    Clock hdmi_clock = processing_system7_1_fclk_clk1;
     let busWidthBytes=8;
 
+    Clock defaultClock <- exposeCurrentClock;
+    Reset defaultReset <- exposeCurrentReset;
+    Clock hdmi_clock = processing_system7_1_fclk_clk1;
+    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
     Reg#(Bit#(32)) vsyncPulseCountReg <- mkReg(0);
     Reg#(Bit#(32)) frameCountReg <- mkReg(0);
-
     Reg#(Bool) waitingForVsync <- mkReg(False);
     Reg#(Bool) sendVsyncIndication <- mkReg(False);
-
-    Clock clock <- exposeCurrentClock;
-    Reset reset <- exposeCurrentReset;
-
-    Reset hdmi_reset <- mkAsyncReset(2, reset, hdmi_clock);
 
     Reg#(Bit#(11)) linesReg <- mkReg(1080);
     Reg#(Bit#(12)) pixelsReg <- mkReg(1920);
     Reg#(Bit#(14)) strideBytesReg <- mkReg(1920*4);
 
-    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, clock);
-    SyncPulseIfc hsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, clock);
+    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
+    SyncPulseIfc hsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
 
     Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
@@ -104,8 +91,8 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     Reg#(Bool) frameBufferEnabled <- mkReg(False);
     FrameBufferBram frameBuffer <- mkFrameBufferBram(hdmi_clock, hdmi_reset);
 
-    HdmiGenerator hdmiGen <- mkHdmiGenerator(clocked_by hdmi_clock, reset_by hdmi_reset, clock, reset,
-                                             frameBuffer.buffer, vsyncPulse, hsyncPulse);
+    HdmiGenerator hdmiGen <- mkHdmiGenerator(clocked_by hdmi_clock, reset_by hdmi_reset,
+        defaultClock, defaultReset, frameBuffer.buffer, vsyncPulse, hsyncPulse);
 
     (* descending_urgency = "vsync, hsync" *)
     rule vsync if (vsyncPulse.pulse());
@@ -176,7 +163,6 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 	    fbc.stridebytes = stridebytes;
 	    frameBuffer.configure(fbc);
 	    hdmiGen.setTestPattern(False);
-	    waitingForVsync <= True;
 	endmethod
 	method Action waitForVsync(Bit#(32) unused);
 	    waitingForVsync <= True;
