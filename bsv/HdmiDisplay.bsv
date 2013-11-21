@@ -211,8 +211,8 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     interface XADC xadc;
         method Bit#(4) gpio;
             return { bozobit, hdmiGen.hdmi.hdmi_vsync,
-                hdmiGen.hdmi.hdmi_hsync, hdmiGen.hdmi.hdmi_de};
-            //method Bit#(16) hdmi_data;
+                hdmiGen.hdmi.hdmi_data[8], hdmiGen.hdmi.hdmi_data[0]};
+                //hdmiGen.hdmi.hdmi_hsync, hdmi_de};
         endmethod
     endinterface: xadc
 endmodule

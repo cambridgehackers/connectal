@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <sys/mman.h>
 
-HdmiDisplay *device = 0;
+HdmiControlRequest *device = 0;
 PortalAlloc srcAlloc;
 PortalAlloc dstAlloc;
 int srcFd = -1;
@@ -19,7 +19,7 @@ void dump(const char *prefix, char *buf, size_t len)
     fprintf(stderr, "\n");
 }
 
-class TestHdmiDisplayIndications : public HdmiDisplayIndications
+class TestHdmiDisplayIndications : public HdmiControlIndication
 {
     virtual void vsync ( unsigned long long v){
       fprintf(stderr, "vsync %lld\n", v);
@@ -34,14 +34,9 @@ class TestHdmiDisplayIndications : public HdmiDisplayIndications
 
 int main(int argc, const char **argv)
 {
-    device = HdmiDisplay::createHdmiDisplay("fpga0", new TestHdmiDisplayIndications);
+    //device = HdmiDisplay::createHdmiDisplay("fpga0", new TestHdmiDisplayIndications);
+    device = HdmiControlRequest::createHdmiControlRequest(new TestHdmiDisplayIndications);
 
-    //device->reset(8);
-
-    device->resetTrace();
-    device->setTriggerMaskValue(0x70000, 0x70000);
-    device->startTrace();
-    device->waitForVsync(0);
-
-    portalExec();
+    int status = PortalRequest::setClockFrequency(1, 160000000, 0);
+    //portalExec();
 }
