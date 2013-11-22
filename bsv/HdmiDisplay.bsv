@@ -157,11 +157,11 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 	    fbc.base = base;
 	    fbc.pixels = pixelsReg;
 	    fbc.lines = linesReg;
-	    Bit#(14) stridebytes = strideBytesReg;
-	    $display("startFrameBuffer lines %d pixels %d bytesperpixel %d stridebytes %d",
-		     linesReg, pixelsReg, bytesperpixel, stridebytes);
-	    fbc.stridebytes = stridebytes;
+	    //Bit#(14) stridebytes = strideBytesReg;
+	    fbc.stridebytes = strideBytesReg;
 	    frameBuffer.configure(fbc);
+	    $display("startFrameBuffer lines %d pixels %d bytesperpixel %d stridebytes %d",
+		     linesReg, pixelsReg, bytesperpixel, strideBytesReg);
 	    hdmiGen.setTestPattern(False);
 	endmethod
 	method Action waitForVsync(Bit#(32) unused);
