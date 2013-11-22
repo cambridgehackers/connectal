@@ -120,22 +120,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
     let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
 
-    function LinePixelCount newCounts(Bit#(11) lc, Bit#(12) pc);
-        let newLineCount = lc;
-        let newPixelCount = pc;
-        if (pc == numberOfPixels-1)
-           begin
-           newPixelCount = 0; 
-           if (lc == numberOfLines-1)
-               newLineCount = 0;
-           else
-               newLineCount = lc+1;
-           end
-        else
-            newPixelCount = pc + 1;
-        return LinePixelCount { line: newLineCount, pixel: newPixelCount };
-    endfunction
-
     // vsyncPulse is a SyncHandshake to a slow clock domain
     // so it is not ready every cycle.
     // Therefore, we send to it from a different rule so it does not block the fbRule
@@ -157,55 +141,43 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         //patternRegs[1] <= 32'h80ff80ff; // yuv422 white
         //patternRegs[2] <= 32'h2c961596; // yuv422 green
         //patternRegs[3] <= 32'hff1d6b1d; // yuv422 red
+        if (lineCount == 0 && pixelCount == 0)
+            begin
+            $display("testPatternEnabled %d", shadowTestPatternEnabled);
+            testPatternEnabled <= shadowTestPatternEnabled;
+            end
+        if (pixelCount == numberOfPixels-1)
+           begin
+           pixelCount <= 0; 
+           if (lineCount == numberOfLines-1)
+               lineCount <= 0;
+           else
+               lineCount <= lineCount+1;
+           end
+        else
+            pixelCount <= pixelCount + 1;
     endrule
 
     rule data if (testPatternEnabled);
-        LinePixelCount counts = newCounts(lineCount, pixelCount);
-        lineCount <= counts.line;
-        pixelCount <= counts.pixel;
-        if (lineCount == 0 && pixelCount == 0)
-        begin
-            $display("testPatternEnabled %d", shadowTestPatternEnabled);
-            testPatternEnabled <= shadowTestPatternEnabled;
-        end
-
         Bit#(2) index = {pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)};
-        //if (pixelCount >= pixelMidpoint)
-            //index[0] = 1;
-        //if (lineCount >= lineMidpoint)
-            //index[1] = 1;
-        //Bit#(32) data = patternRegs[index];
-
-        if (hsync == 1)
-            dataCount <= 0;
-        else if (dataEnable)
-            dataCount <= dataCount + 1;
-        bramOutStageFifo.enq(Rgb888Stage { vsync: vsync, hsync: hsync, de: dataEnable, pixel: unpack(truncate(patternRegs[index]))});
+        bramOutStageFifo.enq(Rgb888Stage { vsync: vsync, hsync: hsync, de: dataEnable,
+            pixel: unpack(truncate(patternRegs[index]))});
         lineBuffer.readAddr(0);
     endrule
 
     rule fbRule if (!testPatternEnabled);
-        LinePixelCount counts = newCounts(lineCount, pixelCount);
-        lineCount <= counts.line;
-        pixelCount <= counts.pixel;
-
-        if (lineCount == 0 && pixelCount == 0)
-        begin
-            $display("testPatternEnabled %d", shadowTestPatternEnabled);
-            testPatternEnabled <= shadowTestPatternEnabled;
-        end
-
         if (hsync == 1)
             dataCount <= 0;
         else if (dataEnable)
             dataCount <= dataCount + 1;
-        bramOutStageFifo.enq(Rgb888Stage { vsync: vsync, hsync: hsync, de: dataEnable, pixel: Rgb888{r:0,g:0,b:0}});
+        bramOutStageFifo.enq(Rgb888Stage { vsync: vsync, hsync: hsync, de: dataEnable,
+            pixel: Rgb888{r:0,g:0,b:0}});
         lineBuffer.readAddr(dataCount);
     endrule
 
     rule bramOutStage;
-        bramOutStageFifo.deq;
-        let d <- lineBuffer.readData;
+        bramOutStageFifo.deq();
+        let d <- lineBuffer.readData();
         let stageData = bramOutStageFifo.first;
 
         if (!testPatternEnabled)
@@ -262,9 +234,7 @@ module mkHdmiOut(HdmiOut);
         let previous = rgb888StageReg;
         let pixel = previous.pixel;
         yuv444IntermediatesStageReg <= Yuv444IntermediatesStage {
-            vsync: previous.vsync,
-            hsync: previous.hsync,
-            de: previous.de,
+            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
             data: (previous.de) ? rgbToYuvIntermediates(pixel) : unpack(0)
         };
     endrule
@@ -272,9 +242,7 @@ module mkHdmiOut(HdmiOut);
     rule yuv444Stage;
         let previous = yuv444IntermediatesStageReg;
         yuv444StageReg <= Yuv444Stage {
-            vsync: previous.vsync,
-            hsync: previous.hsync,
-            de: previous.de,
+            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
             data: (previous.de) ? yuvIntermediatesToYuv444(previous.data) : unpack(0)
         };
     endrule
@@ -286,17 +254,14 @@ module mkHdmiOut(HdmiOut);
         Bit#(16) data = { evenOddPixelReg ? previous.data.u : previous.data.v,
                           previous.data.y };
         yuv422StageReg <= Yuv422Stage {
-            vsync: previous.vsync,
-            hsync: previous.hsync,
-            de: previous.de,
+            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
             data: data
         };
     endrule
 
     method Action rgb(Rgb888VideoData videoData);
         rgb888StageReg <= Rgb888Stage {
-            vsync: videoData.vsync,
-            hsync: videoData.hsync,
+            vsync: videoData.vsync, hsync: videoData.hsync,
             de: videoData.active_video == 1 ? True : False,
             pixel: Rgb888 { r: videoData.r, g: videoData.g, b: videoData.b}};
     endmethod
