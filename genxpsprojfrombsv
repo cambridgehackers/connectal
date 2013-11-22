@@ -245,17 +245,15 @@ if __name__=='__main__':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7k325tffg900-2'
         topSuffix = 'PcieTop'
-        namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
-                                              'board_support', 'bluenoc', 'xilinx', 'KC705', 'verilog', 'k7_pcie_v1_6', 'source'))
-        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'kc705', 'pcie', 'source'))
+        namespace.verilog.append(os.path.join(xbsvdir, '..', 'pcie_7x_0', 'pcie_7x_0', 'source'))
+        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/kc705.xdc'))
     elif boardname == 'vc707':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
         topSuffix = 'PcieTop'
-        namespace.verilog.append(os.path.join(os.getenv('BLUESPECDIR'),
-                                              'board_support', 'bluenoc', 'xilinx', 'VC707', 'verilog', 'v7_pcie_v1_7', 'source'))
-        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'vc707', 'pcie', 'source'))
+        namespace.verilog.append(os.path.join(xbsvdir, '..', 'pcie_7x_0', 'pcie_7x_0', 'source'))
+        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/vc707.xdc'))
     else:
         print dir(namespace)

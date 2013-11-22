@@ -161,14 +161,14 @@ set_property LOC PCIE_X0Y0 [get_cells -hierarchical -regexp {.*pcie_7x_i/pcie_bl
 #
 # BlockRAM placement
 #
-set_property LOC RAMB36_X4Y35 [get_cells {*/k7_pcie_v1_6_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_rx/brams[3].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
-set_property LOC RAMB36_X4Y34 [get_cells {*/k7_pcie_v1_6_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_rx/brams[2].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
-set_property LOC RAMB36_X4Y33 [get_cells {*/k7_pcie_v1_6_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_rx/brams[1].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
-set_property LOC RAMB36_X4Y32 [get_cells {*/k7_pcie_v1_6_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_rx/brams[0].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
-set_property LOC RAMB36_X4Y31 [get_cells {*/k7_pcie_v1_6_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[0].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
-set_property LOC RAMB36_X4Y30 [get_cells {*/k7_pcie_v1_6_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[1].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
-set_property LOC RAMB36_X4Y29 [get_cells {*/k7_pcie_v1_6_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[2].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
-set_property LOC RAMB36_X4Y28 [get_cells {*/k7_pcie_v1_6_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[3].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
+set_property LOC RAMB36_X4Y35 [get_cells {*/pcie_7x_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_rx/brams[3].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
+set_property LOC RAMB36_X4Y34 [get_cells {*/pcie_7x_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_rx/brams[2].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
+set_property LOC RAMB36_X4Y33 [get_cells {*/pcie_7x_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_rx/brams[1].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
+set_property LOC RAMB36_X4Y32 [get_cells {*/pcie_7x_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_rx/brams[0].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
+set_property LOC RAMB36_X4Y31 [get_cells {*/pcie_7x_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[0].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
+set_property LOC RAMB36_X4Y30 [get_cells {*/pcie_7x_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[1].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
+set_property LOC RAMB36_X4Y29 [get_cells {*/pcie_7x_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[2].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
+set_property LOC RAMB36_X4Y28 [get_cells {*/pcie_7x_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[3].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
 
 ######################################################################################################
 # AREA GROUPS
@@ -204,17 +204,17 @@ create_clock -name txoutclk -period 10 [get_pins {x7pcie_pcie_ep/ext_clk.pipe_cl
 set_false_path -through [get_pins -hierarchical {*pcie_block_i/PLPHYLNKUPN*}]
 set_false_path -through [get_pins -hierarchical {*pcie_block_i/PLRECEIVEDHOTRST*}]
 
-#set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/user_resetdone*}]
-set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[0].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[1].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[2].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[3].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[4].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[5].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[6].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_lane[7].pipe_rate.pipe_rate_i/*}]
+#set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/user_resetdone*}]
+set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[0].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[1].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[2].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[3].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[4].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[5].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[6].pipe_rate.pipe_rate_i/*}]
+set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[7].pipe_rate.pipe_rate_i/*}]
 
-set_false_path -through [get_cells {*/k7_pcie_v1_6_i/gt_top_i/pipe_wrapper_i/pipe_reset.pipe_reset_i/cpllreset_reg*}]
+set_false_path -through [get_cells {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_reset.pipe_reset_i/cpllreset_reg*}]
 
 set_false_path -through [get_nets {*/ext_clk.pipe_clock_i/pclk_sel*}]
 

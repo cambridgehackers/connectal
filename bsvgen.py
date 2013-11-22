@@ -88,8 +88,7 @@ import Connectable       :: *;
 import Assert            :: *;
 import Xilinx            :: *;
 import XilinxPCIE        :: *;
-import Kintex7PcieBridge :: *;
-import Virtex7PcieBridge :: *;
+import Xilinx7PcieBridge :: *;
 import PcieToAxiBridge   :: *;
 import %(Dut)sWrapper       :: *;
 
@@ -101,16 +100,8 @@ module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    let contentId = %(contentid)s;
 
-`ifdef Kintex7
-   K7PcieBridgeIfc#(8) x7pcie <- mkK7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
+   X7PcieBridgeIfc#(8) x7pcie <- mkX7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
                                                  contentId );
-`elsif Virtex7
-   V7PcieBridgeIfc#(8) x7pcie <- mkV7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
-                                                 contentId );
-`else
-   staticAssert(False, "Define preprocessor macro Virtex7 or Kintex7 to configure platform.");
-`endif
-
    
    Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    %(Dut)sWrapper %(dut)sWrapper <- mk%(Dut)sWrapper(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
