@@ -72,7 +72,7 @@ interface ImageonXsviControl;
 endinterface
 
 interface ImageonVideo;
-    method Rgb888VideoData get();
+    method XsviData get();
     interface ImageonXsviControl control;
 endinterface
 
@@ -417,14 +417,14 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
 	    syncgen_vsync_reg <= v;
 	endmethod
     endinterface
-    method Rgb888VideoData get();
-	return Rgb888VideoData{
-	    //fsync: framestart_new,
-	    vsync: pack(vstate == Sync),
-	    hsync: pack(hstate == Sync),
-	    active_video: active_video_reg,
-	    //video_data: videodata
-            r: videodata[9:2], g: videodata[9:2], b: videodata[9:2]};
+    method XsviData get();
+            return XsviData {
+                fsync: framestart_new,
+                vsync: pack(vstate == Sync),
+                hsync: pack(hstate == Sync),
+                active_video: active_video_reg,
+                video_data: videodata
+            };
     endmethod
 endmodule
 

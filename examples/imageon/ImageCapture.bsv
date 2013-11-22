@@ -40,6 +40,7 @@ import BlueScope::*;
 import SensorToVideo::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
+import YUV::*;
 
 interface CoreIndication;
     method Action iserdes_control_value(Bit#(32) v);
@@ -116,14 +117,15 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);
     HdmiOut hdmiOut <- mkHdmiOut(clocked_by hdmi_clock, reset_by hdmi_reset);
 
-    //rule xsviConnection;
-        //let xsvi <- xsviFromSensor.out.get();
-        ////bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
+    rule xsviConnection;
+        let xsvi = xsviFromSensor.get();
+        //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
         //converter.in.put(xsvi);
-    //endrule
-    //mkConnection(converter.out, hdmiOut.rgb);
-    rule connectme;
-        hdmiOut.rgb(xsviFromSensor.get());
+        //let xvideo <- converter.out.get();
+        //hdmiOut.rgb(xvideo);
+        hdmiOut.rgb(Rgb888VideoData{ active_video: xsvi.active_video,
+            vsync: xsvi.vsync, hsync: xsvi.hsync,
+            r: xsvi.video_data[9:2], g: xsvi.video_data[9:2], b: xsvi.video_data[9:2]});
     endrule
 
     rule spiControllerResponse;
