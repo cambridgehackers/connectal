@@ -40,7 +40,7 @@ interface HDMI;
 endinterface
 
 interface HdmiOut;
-    interface Put#(Rgb888VideoData) rgb;
+    method Action rgb(Rgb888VideoData videoData);
     interface HDMI hdmi;
 endinterface
 
@@ -223,14 +223,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 
     endrule
 
-    Reg#(Rgb888Stage) rgb888StageReg <- mkReg(unpack(0));
-    Reg#(Yuv444IntermediatesStage) yuv444IntermediatesStageReg <- mkReg(
-        Yuv444IntermediatesStage { vsync: 0, hsync: 0, de: False, data: unpack(0) });
-    Reg#(Yuv444Stage) yuv444StageReg <- mkReg(
-        Yuv444Stage { vsync: 0, hsync: 0, de: False, data: unpack(0) });
-    Reg#(Yuv422Stage) yuv422StageReg <- mkReg(
-        Yuv422Stage { vsync: 0, hsync: 0, de: False, data: unpack(0) });
-    Reg#(Bool) evenOddPixelReg <- mkReg(False);
+    HdmiOut hdmioutput <- mkHdmiOut();
 
     rule bramOutStage;
         let d <- lineBuffer.readData;
@@ -240,68 +233,15 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         if (!testPatternEnabled)
         begin
             let pixel = stageData.pixel;
-            //let pixelSelect = 0; //stageData.dataCount[0];
-            //if (pixelSelect == 0)
-                pixel = unpack(d[23:0]);
-            //else
-                //pixel = unpack(d[55:32]);
+            pixel = unpack(d[23:0]);
             stageData.pixel = pixel;
         end
-        rgb888StageReg <= stageData;
+        hdmioutput.rgb(Rgb888VideoData{active_video: pack(stageData.de),
+            vsync: stageData.vsync, hsync: stageData.hsync,
+            r: stageData.pixel.r, g: stageData.pixel.g, b: stageData.pixel.b });
     endrule
 
-    rule yuv444IntermediatesStage;
-        let previous = rgb888StageReg;
-        let pixel = previous.pixel;
-        yuv444IntermediatesStageReg <= Yuv444IntermediatesStage {
-            vsync: previous.vsync,
-            hsync: previous.hsync,
-            de: previous.de,
-            data: (previous.de) ? rgbToYuvIntermediates(pixel) : unpack(0)
-        };
-    endrule
-
-    rule yuv444Stage;
-        let previous = yuv444IntermediatesStageReg;
-        yuv444StageReg <= Yuv444Stage {
-            vsync: previous.vsync,
-            hsync: previous.hsync,
-            de: previous.de,
-            data: (previous.de) ? yuvIntermediatesToYuv444(previous.data) : unpack(0)
-        };
-    endrule
-
-    rule yuv422stage;
-        let previous = yuv444StageReg;
-        if (previous.de)
-            evenOddPixelReg <= !evenOddPixelReg;
-        Bit#(16) data = { evenOddPixelReg ? previous.data.u : previous.data.v,
-                          previous.data.y };
-        yuv422StageReg <= Yuv422Stage {
-            vsync: previous.vsync,
-            hsync: previous.hsync,
-            de: previous.de,
-            data: data
-        };
-    endrule
-
-    interface HDMI hdmi;
-        method Bit#(1) hdmi_vsync;
-            return yuv422StageReg.vsync;
-        endmethod
-        method Bit#(1) hdmi_hsync;
-            return yuv422StageReg.hsync;
-        endmethod
-        method Bit#(1) hdmi_de;
-            return yuv422StageReg.de ? 1 : 0;
-        endmethod
-        method Bit#(16) hdmi_data;
-            return yuv422StageReg.data;
-        endmethod
-        interface hdmi_clock_if = defaultClock;
-        interface hdmi_reset_if = defaultReset;
-    endinterface
-
+    interface hdmi = hdmioutput.hdmi;
     method Action setPatternColor(Bit#(32) v);
         patternReg0 <= v;
     endmethod
@@ -379,17 +319,14 @@ module mkHdmiOut(HdmiOut);
         };
     endrule
 
-    interface Put rgb;
-        method Action put(Rgb888VideoData videoData);
-            rgb888StageReg <= Rgb888Stage {
-                vsync: videoData.vsync,
-                hsync: videoData.hsync,
-                de: videoData.active_video == 1 ? True : False,
-                pixel: Rgb888 { r: videoData.r, g: videoData.g, b: videoData.b },
-		dataCount: 0
-            };
-        endmethod
-    endinterface
+    method Action rgb(Rgb888VideoData videoData);
+        rgb888StageReg <= Rgb888Stage {
+            vsync: videoData.vsync,
+            hsync: videoData.hsync,
+            de: videoData.active_video == 1 ? True : False,
+            pixel: Rgb888 { r: videoData.r, g: videoData.g, b: videoData.b },
+            dataCount: 0 };
+    endmethod
     interface HDMI hdmi;
         method Bit#(1) hdmi_vsync;
             return yuv422StageReg.vsync;

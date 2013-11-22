@@ -116,12 +116,15 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);
     HdmiOut hdmiOut <- mkHdmiOut(clocked_by hdmi_clock, reset_by hdmi_reset);
 
-    rule xsviConnection;
-        let xsvi <- xsviFromSensor.out.get();
-        //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
-        converter.in.put(xsvi);
+    //rule xsviConnection;
+        //let xsvi <- xsviFromSensor.out.get();
+        ////bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
+        //converter.in.put(xsvi);
+    //endrule
+    //mkConnection(converter.out, hdmiOut.rgb);
+    rule connectme;
+        hdmiOut.rgb(xsviFromSensor.get());
     endrule
-    mkConnection(converter.out, hdmiOut.rgb);
 
     rule spiControllerResponse;
        Bit#(26) v <- spiController.response.get();
