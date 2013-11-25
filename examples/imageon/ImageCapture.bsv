@@ -31,6 +31,7 @@ import XbsvSpi :: *;
 import GetPutWithClocks :: *;
 import Leds::*;
 import Imageon::*;
+import ImageonVideo::*;
 import IserdesDatadeser::*;
 import HDMI::*;
 import AxiSDMA::*;
