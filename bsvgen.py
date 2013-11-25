@@ -1088,7 +1088,7 @@ class InterfaceMixin:
                 if methodRule:
                     methodRuleNames.append(m.name)
                 else:
-                    print 'method %s has no rule' % n.name
+                    print 'method %s has no rule' % m.name
         return methodRuleNames
     def collectIndicationMethodRuleNames(self,outerTypeName):
         methodRuleNames = []
