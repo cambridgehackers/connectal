@@ -222,6 +222,9 @@ if __name__=='__main__':
         bsvdefines += ['Kintex7']
     elif boardname == 'vc707':
         bsvdefines += ['Virtex7']
+    if namespace.export:
+        bsvgen.exposeInterfaces(namespace.export)
+        syntax.exposeInterfaces(namespace.export)
     
     for inputfile in namespace.bsvfile:
         inputdir = os.path.dirname(inputfile)
@@ -239,8 +242,6 @@ if __name__=='__main__':
         namespace.constraint = []
     if not namespace.verilog:
         namespace.verilog = []
-    if namespace.export:
-        bsvgen.exposeInterfaces(namespace.export)
     if boardname == 'kc705':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7k325tffg900-2'
@@ -334,7 +335,7 @@ if __name__=='__main__':
         # the future I will add code which examines the actual type
         for d in topRequestIfc.decls:
             if d.type == 'Interface':
-                if syntax.globalvars.has_key(d.name) and d.name not in namespace.export:
+                if syntax.globalvars.has_key(d.name):
                     subintdef = syntax.globalvars[d.name]
                     newint = subintdef.instantiate(dict(zip(subintdef.params, d.params)))
                     newint.top = False
