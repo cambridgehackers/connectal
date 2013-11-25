@@ -353,7 +353,11 @@ if __name__=='__main__':
 
         # find the corresponding indication interafce.  we are currently relying
         # on a naming convention, but we might relax this at some point
-        assert(len(indicationIfcs) == len(requestIfcs))
+        if len(indicationIfcs) != len(requestIfcs):
+            print 'The number of Request interface definitions', len(requestIfcs), 'must match the number of Indication interface definitions', len(indicationIfcs)
+            print 'Request definitions', requestIfcs
+            print 'Indication definitions', indicationIfcs
+            assert(len(indicationIfcs) == len(requestIfcs))
         for d0 in requestIfcs:
             base = re.sub('Request', '', d0.name)
             for d1 in indicationIfcs:
