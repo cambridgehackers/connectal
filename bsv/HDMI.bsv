@@ -44,8 +44,8 @@ interface HdmiOut;
     interface HDMI hdmi;
 endinterface
 
-interface HdmiGenerator;
-    method Action setTestPattern(Bool v);
+interface HdmiInternalRequest;
+    method Action setTestPattern(Bit#(1) v);
     method Action setPatternColor(Bit#(32) v);
     method Action setHsyncWidth(Bit#(12) hsyncWidth);
     method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max);
@@ -53,6 +53,13 @@ interface HdmiGenerator;
     method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max);
     method Action setNumberOfLines(Bit#(11) lines);
     method Action setNumberOfPixels(Bit#(12) pixels);
+endinterface
+
+interface HdmiInternalIndication;
+    method Action vsync(Bit#(64) v);
+endinterface
+interface HdmiGenerator;
+    interface HdmiInternalRequest control;
     interface HDMI hdmi;
 endinterface
 
@@ -61,37 +68,9 @@ typedef struct {
     Bit#(12) pixel;
 } LinePixelCount;
 
-typedef struct {
-    Bit#(1) vsync;
-    Bit#(1) hsync;
-    Bit#(1) de;
-    Rgb888 pixel;
-} Rgb888Stage deriving (Bits);
-
-typedef struct {
-    Bit#(1) vsync;
-    Bit#(1) hsync;
-    Bit#(1) de;
-    Yuv444Intermediates data;
-} Yuv444IntermediatesStage deriving (Bits);
-
-typedef struct {
-    Bit#(1) vsync;
-    Bit#(1) hsync;
-    Bit#(1) de;
-    Yuv444 data;
-} Yuv444Stage deriving (Bits);
-
-typedef struct {
-    Bit#(1) vsync;
-    Bit#(1) hsync;
-    Bit#(1) de;
-    Bit#(16) data;
-} Yuv422Stage deriving (Bits);
-
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         BRAM#(Bit#(12), Bit#(32)) lineBuffer,
-        SyncPulseIfc vsyncPulse, SyncPulseIfc hsyncPulse)(HdmiGenerator);
+        SyncPulseIfc vsyncPulse, SyncPulseIfc hsyncPulse, HdmiInternalIndication indication)(HdmiGenerator);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
@@ -182,11 +161,12 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     interface hdmi = hdmioutput.hdmi;
+    interface HdmiInternalRequest control;
     method Action setPatternColor(Bit#(32) v);
         patternReg0 <= v;
     endmethod
-    method Action setTestPattern(Bool v);
-        shadowTestPatternEnabled <= v;
+    method Action setTestPattern(Bit#(1) v);
+        shadowTestPatternEnabled <= (v != 0);
     endmethod
     method Action setHsyncWidth(Bit#(12) width);
         hsyncWidth <= width;
@@ -210,6 +190,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     method Action setNumberOfPixels(Bit#(12) pixels);
         numberOfPixels <= pixels;
     endmethod
+    endinterface
 endmodule
 
 module mkHdmiOut(HdmiOut);

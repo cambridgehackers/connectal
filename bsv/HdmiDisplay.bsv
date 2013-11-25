@@ -36,20 +36,17 @@ import FrameBufferBram::*;
 import YUV::*;
 
 interface HdmiControlRequest;
-    method Action setPatternReg(Bit#(32) yuv422);
     method Action startFrameBuffer0(Bit#(32) base);
     method Action waitForVsync(Bit#(32) unused);
     method Action hdmiLinesPixels(Bit#(32) value);
     method Action hdmiStrideBytes(Bit#(32) strideBytes);
-    method Action hdmiLineCountMinMax(Bit#(32) value);
-    method Action hdmiPixelCountMinMax(Bit#(32) value);
-    method Action hdmiSyncWidths(Bit#(32) value);
     method Action beginTranslationTable(Bit#(8) index);
     method Action addTranslationEntry(Bit#(20) address, Bit#(12) length); // shift address and length left 12 bits
 endinterface
 
 interface HdmiDisplayRequest;
     interface HdmiControlRequest coreRequest;
+    interface HdmiInternalRequest coRequest;
     interface DMARequest dmaRequest;
     interface Axi3Client#(32,32,4,6) m_axi;
     interface HDMI hdmi;
@@ -57,11 +54,11 @@ interface HdmiDisplayRequest;
 endinterface
 
 interface HdmiControlIndication;
-    method Action vsync(Bit#(64) v);
 endinterface
 
 interface HdmiDisplayIndication;
     interface HdmiControlIndication coreIndication;
+    interface HdmiInternalIndication coIndication;
     interface DMAIndication dmaIndication;
 endinterface
 
@@ -91,8 +88,8 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     Reg#(Bool) frameBufferEnabled <- mkReg(False);
     FrameBufferBram frameBuffer <- mkFrameBufferBram(hdmi_clock, hdmi_reset);
 
-    HdmiGenerator hdmiGen <- mkHdmiGenerator(clocked_by hdmi_clock, reset_by hdmi_reset,
-        defaultClock, defaultReset, frameBuffer.buffer, vsyncPulse, hsyncPulse);
+    HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
+        frameBuffer.buffer, vsyncPulse, hsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
 
     (* descending_urgency = "vsync, hsync" *)
     rule vsync if (vsyncPulse.pulse());
@@ -114,41 +111,28 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
         frameBuffer.startLine();
     endrule
 
-    rule vsyncReceived if (sendVsyncIndication);
-        sendVsyncIndication <= False;
-        Bit#(64) v = 0;
-        v[31:0] = vsyncPulseCountReg;
-        v[47:32] = extend(pixelsReg);
-        v[63:48] = extend(linesReg);
-        indication.coreIndication.vsync(v);
-    endrule
+    //rule vsyncReceived if (sendVsyncIndication);
+        //sendVsyncIndication <= False;
+        //Bit#(64) v = 0;
+        //v[31:0] = vsyncPulseCountReg;
+        //v[47:32] = extend(pixelsReg);
+        //v[63:48] = extend(linesReg);
+        //indication.coreIndication.vsync(v);
+    //endrule
 
     rule bozobit_rule;
         bozobit <= ~bozobit;
     endrule
 
     interface HdmiControlRequest coreRequest;
-	method Action setPatternReg(Bit#(32) yuv422);
-            hdmiGen.setPatternColor(yuv422);
-	endmethod
 	method Action hdmiLinesPixels(Bit#(32) value);
 	    linesReg <= value[10:0];
 	    pixelsReg <= value[27:16];
-            hdmiGen.setNumberOfLines(linesReg);
-            hdmiGen.setNumberOfPixels(pixelsReg);
+            hdmiGen.control.setNumberOfLines(linesReg);
+            hdmiGen.control.setNumberOfPixels(pixelsReg);
 	endmethod
 	method Action hdmiStrideBytes(Bit#(32) value);
 	    strideBytesReg <= value[13:0];
-	endmethod
-	method Action hdmiLineCountMinMax(Bit#(32) value);
-            hdmiGen.setDeLineCountMinMax(value[10:0], value[26:16]);
-	endmethod
-	method Action hdmiPixelCountMinMax(Bit#(32) value);
-            hdmiGen.setDePixelCountMinMax(value[11:0], value[27:16]);
-	endmethod
-	method Action hdmiSyncWidths(Bit#(32) value);
-            hdmiGen.setHsyncWidth(value[27:16]);
-            hdmiGen.setVsyncWidth(value[10:0]);
 	endmethod
 	method Action startFrameBuffer0(Bit#(32) base);
 	    $display("startFrameBuffer %h", base);
@@ -157,16 +141,15 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 	    fbc.base = base;
 	    fbc.pixels = pixelsReg;
 	    fbc.lines = linesReg;
-	    //Bit#(14) stridebytes = strideBytesReg;
 	    fbc.stridebytes = strideBytesReg;
 	    frameBuffer.configure(fbc);
 	    $display("startFrameBuffer lines %d pixels %d bytesperpixel %d stridebytes %d",
 		     linesReg, pixelsReg, bytesperpixel, strideBytesReg);
-	    hdmiGen.setTestPattern(False);
+	    hdmiGen.control.setTestPattern(0);
 	endmethod
-	method Action waitForVsync(Bit#(32) unused);
-	    waitingForVsync <= True;
-	endmethod
+	//method Action waitForVsync(Bit#(32) unused);
+	    //waitingForVsync <= True;
+	//endmethod
 	method Action beginTranslationTable(Bit#(8) index);
 	    segmentIndexReg <= index;
 	    segmentOffsetReg <= 0;
@@ -180,6 +163,7 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 
     interface Axi3Client m_axi = frameBuffer.axi;
     interface HDMI hdmi = hdmiGen.hdmi;
+    interface HdmiInternalRequest coRequest = hdmiGen.control;
     interface XADC xadc;
         method Bit#(4) gpio;
             return { bozobit, hdmiGen.hdmi.hdmi_vsync,

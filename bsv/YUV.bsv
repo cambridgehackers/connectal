@@ -74,6 +74,34 @@ typedef struct {
     Bit#(16) v3;
 } Yuv444Intermediates deriving (Bits);
 
+typedef struct {
+    Bit#(1) vsync;
+    Bit#(1) hsync;
+    Bit#(1) de;
+    Rgb888 pixel;
+} Rgb888Stage deriving (Bits);
+
+typedef struct {
+    Bit#(1) vsync;
+    Bit#(1) hsync;
+    Bit#(1) de;
+    Yuv444Intermediates data;
+} Yuv444IntermediatesStage deriving (Bits);
+
+typedef struct {
+    Bit#(1) vsync;
+    Bit#(1) hsync;
+    Bit#(1) de;
+    Yuv444 data;
+} Yuv444Stage deriving (Bits);
+
+typedef struct {
+    Bit#(1) vsync;
+    Bit#(1) hsync;
+    Bit#(1) de;
+    Bit#(16) data;
+} Yuv422Stage deriving (Bits);
+
 function Yuv444Intermediates rgbToYuvIntermediates(Rgb888 rgb);
     return Yuv444Intermediates {
                y1: 77*extend(rgb.r), y2: 150 * extend(rgb.g), y3: 29 * extend(rgb.b),

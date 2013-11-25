@@ -59,7 +59,7 @@ class TestDMAIndication : public DMAIndication
   }
 };
 
-class TestHdmiIndication : public HdmiControlIndication {
+class TestHdmiIndication : public HdmiInternalIndication {
 public:
     virtual void vsync ( unsigned long long v ) {
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
@@ -75,6 +75,7 @@ struct gralloc_context_t {
     pthread_mutex_t vsync_lock;
     pthread_cond_t vsync_cond;
     HdmiControlRequest *hdmiDisplay;
+    HdmiInternalRequest *hdmiInternal;
     DMARequest *dma;
     uint32_t nextSegmentNumber;
 };
@@ -375,7 +376,8 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         pthread_condattr_t condattr;
         pthread_condattr_init(&condattr);
         pthread_cond_init(&dev->vsync_cond, &condattr);
-        dev->hdmiDisplay = HdmiControlRequest::createHdmiControlRequest(new TestHdmiIndication);
+        dev->hdmiDisplay = HdmiControlRequest::createHdmiControlRequest(new HdmiControlIndication);
+        dev->hdmiInternal = HdmiInternalRequest::createHdmiInternalRequest(new TestHdmiIndication);
         dev->dma = DMARequest::createDMARequest(new TestDMAIndication);
         dev->nextSegmentNumber = 0;
 
@@ -472,10 +474,15 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
             const_cast<int&>(dev->minSwapInterval) = 1;
             const_cast<int&>(dev->maxSwapInterval) = 1;
 
-            gralloc_dev->hdmiDisplay->hdmiLinesPixels((pmin + npixels) << 16 | (lmin + nlines));
+            gralloc_dev->hdmiInternal->setNumberOfLines(lmin + nlines);
+            gralloc_dev->hdmiInternal->setNumberOfPixels(pmin + npixels);
             gralloc_dev->hdmiDisplay->hdmiStrideBytes(stridebytes);
-            gralloc_dev->hdmiDisplay->hdmiLineCountMinMax((lmin + nlines - vsyncwidth) << 16 | (lmin - vsyncwidth));
-            gralloc_dev->hdmiDisplay->hdmiPixelCountMinMax((pmin + npixels) << 16 | pmin);
+            //gralloc_dev->hdmiInternal->setTestPattern ( unsigned long v );
+            //gralloc_dev->hdmiInternal->setPatternColor ( unsigned long v );
+            //gralloc_dev->hdmiInternal->setHsyncWidth ( unsigned long hsyncWidth );
+            //gralloc_dev->hdmiInternal->setVsyncWidth ( unsigned long vsyncWidth );
+            gralloc_dev->hdmiInternal->setDeLineCountMinMax (lmin - vsyncwidth, lmin + nlines - vsyncwidth);
+            gralloc_dev->hdmiInternal->setDePixelCountMinMax (pmin, pmin + npixels);
 	    ALOGD("setting clock frequency %ld\n", 60l * (long)(pmin + npixels) * (long)(lmin + nlines));
 	    int status = PortalRequest::setClockFrequency(1,
 							   60l * (long)(pmin + npixels) * (long)(lmin + nlines),
