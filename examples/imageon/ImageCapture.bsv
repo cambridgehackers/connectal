@@ -76,12 +76,16 @@ endinterface
 
 interface ImageCaptureIndication;
     interface CoreIndication coreIndication;
+    //interface ImageonSensorIndication isIndication;
+    //interface ImageonXsviIndication ivIndication;
     interface BlueScopeIndication bsIndication;
     interface DMAIndication dmaIndication;
 endinterface
 
 interface ImageCaptureRequest;
    interface CoreRequest coreRequest;
+   //interface ImageonSensorRequest isRequest;
+   //interface ImageonXsviRequest ivRequest;
    interface BlueScopeRequest bsRequest;
    interface HDMI hdmi;
    interface DMARequest dmaRequest;
@@ -201,6 +205,8 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
         spiController.request.put(truncate(v));
     endmethod
     endinterface
+    //interface ImageonSensorRequest isRequest = fromSensor.control;
+    //interface ImageonVideoRequest ivRequest = xsviFromSensor.control;
     interface BlueScopeRequest bsRequest = bsi.requestIfc;
     interface HDMI hdmi = hdmiOut.hdmi;
     interface ImageonVita vita;
