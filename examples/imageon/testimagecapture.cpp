@@ -16,6 +16,7 @@
 static CoreRequest *device = 0;
 static ImageonSensorRequest *sensordevice;
 static ImageonXsviRequest *videodevice;
+static ImageonSerdesRequest *serdesdevice;
 static int trace_spi = 0;
 
 #define DECL(A) \
@@ -34,13 +35,16 @@ DECL(spi_response)
 #define GETFN(A) \
     static unsigned long read_ ## A (void) \
     { \
-        device->get_ ## A(); \
+        serdesdevice->get_ ## A(); \
         sem_wait(&sem_ ## A); \
         return cv_ ## A; \
     }
 
-class TestImageCaptureIndications : public CoreIndication {
+class TestImageonSerdesIndication : public ImageonSerdesIndication {
     RXFN(iserdes_control)
+};
+
+class TestImageCaptureIndications : public CoreIndication {
     void spi_response(unsigned long v){
       //fprintf(stderr, "spi_response: %x\n", v);
       cv_spi_response = v;
@@ -240,20 +244,20 @@ static void fmc_imageon_demo_enable_ipipe( void)
    uint16_t uData;
    uint32_t uStatus;
    int timeout;
-   device->set_serdes_training(0x03A6);
+   serdesdevice->set_serdes_training(0x03A6);
    printf( "VITA ISERDES - Setting Manual Tap to 0x%08X\n\r", uManualTap);
-   device->set_serdes_manual_tap(uManualTap);
+   serdesdevice->set_serdes_manual_tap(uManualTap);
    sensordevice->set_decoder_code_ls(0xAA);
    sensordevice->set_decoder_code_le(0x012A);
    sensordevice->set_decoder_code_fs(0x02AA);
 
    printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
-   device->set_iserdes_control( VITA_ISERDES_RESET_BIT);
-   device->set_decoder_control( VITA_DECODER_RESET_BIT);
+   serdesdevice->set_iserdes_control( VITA_ISERDES_RESET_BIT);
+   serdesdevice->set_decoder_control( VITA_DECODER_RESET_BIT);
 
    usleep(10); // 10 usec
-   device->set_iserdes_control( 0);
-   device->set_decoder_control( 0);
+   serdesdevice->set_iserdes_control( 0);
+   serdesdevice->set_decoder_control( 0);
    sleep(1); // 1 sec (time to get clocks to lock)
    uData = vita_spi_read(0);
 printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
@@ -309,7 +313,7 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    uStatus = read_iserdes_control();
    printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
    printf( "VITA ISERDES - Align Start\n\r");
-   device->set_iserdes_control( VITA_ISERDES_ALIGN_START_BIT);
+   serdesdevice->set_iserdes_control( VITA_ISERDES_ALIGN_START_BIT);
    printf( "VITA ISERDES - Waiting for ALIGN_BUSY to assert\n\r");
    uStatus = read_iserdes_control();
    printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
@@ -323,7 +327,7 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
       printf( "\tTimed Out !!!\n\r");
       return;
    }
-   device->set_iserdes_control( 0);
+   serdesdevice->set_iserdes_control( 0);
    printf( "VITA ISERDES - Waiting for ALIGN_BUSY to de-assert\n\r");
    uStatus = read_iserdes_control();
    printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
@@ -341,8 +345,8 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    vita_spi_write_sequence(vita_mult_timer_line_resolution_seq, VITA_MULT_TIMER_LINE_RESOLUTION_QTY);
    vita_spi_write_sequence(vita_autoexp_on_seq, VITA_AUTOEXP_ON_QTY);
    vita_spi_write_sequence(vita_spi_seq6, VITA_SPI_SEQ6_QTY);
-   device->set_iserdes_control( VITA_ISERDES_FIFO_ENABLE_BIT);
-   device->set_decoder_control(VITA_DECODER_ENABLE_BIT);
+   serdesdevice->set_iserdes_control( VITA_ISERDES_FIFO_ENABLE_BIT);
+   serdesdevice->set_decoder_control(VITA_DECODER_ENABLE_BIT);
    sleep(1);
    vita_spi_write(192, 0); usleep(100);
    vita_spi_write(193, 0x0400); usleep(100);
@@ -417,6 +421,7 @@ int main(int argc, const char **argv)
     device = CoreRequest::createCoreRequest(new TestImageCaptureIndications);
     sensordevice = ImageonSensorRequest::createImageonSensorRequest(new ImageonSensorIndication);
     videodevice = ImageonXsviRequest::createImageonXsviRequest(new ImageonXsviIndication);
+    serdesdevice = ImageonSerdesRequest::createImageonSerdesRequest(new TestImageonSerdesIndication);
     // for surfaceflinger 
     int status = PortalRequest::setClockFrequency(1, 160000000, 0);
     //int status = PortalRequest::setClockFrequency(1, 200000000, 0);

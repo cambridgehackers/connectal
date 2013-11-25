@@ -44,17 +44,11 @@ import XbsvXilinxCells::*;
 import YUV::*;
 
 interface CoreIndication;
-    method Action iserdes_control_value(Bit#(32) v);
     method Action debugind(Bit#(32) v);
     method Action spi_response(Bit#(32) v);
 endinterface
 
 interface CoreRequest;
-    method Action set_iserdes_control(Bit#(32) v);
-    method Action get_iserdes_control();
-    method Action set_decoder_control(Bit#(32) v);
-    method Action set_serdes_manual_tap(Bit#(10) v);
-    method Action set_serdes_training(Bit#(10) v);
     method Action set_debugreq(Bit#(32) v);
     method Action get_debugind();
     method Action put_spi_request(Bit#(32) v);
@@ -95,7 +89,7 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
-    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, clocked_by imageon_clock, reset_by imageon_reset);
+    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, indication.idIndication, clocked_by imageon_clock, reset_by imageon_reset);
     ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, clocked_by imageon_clock, reset_by imageon_reset);
     ImageonVideo xsviFromSensor <- mkImageonVideo(imageon_clock, imageon_reset, defaultClock, defaultReset,
         fromSensor, clocked_by hdmi_clock, reset_by hdmi_reset);
@@ -127,21 +121,6 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     endrule
 
     interface CoreRequest coreRequest;
-    method Action set_iserdes_control(Bit#(32) v);
-        serdes.control.set_iserdes_control(v);
-    endmethod
-    method Action get_iserdes_control();
-        indication.coreIndication.iserdes_control_value(serdes.control.get_iserdes_control());
-    endmethod
-    method Action set_decoder_control(Bit#(32) v);
-        serdes.control.set_decoder_control(v);
-    endmethod
-    method Action set_serdes_manual_tap(Bit#(10) v);
-        serdes.control.set_serdes_manual_tap(v);
-    endmethod
-    method Action set_serdes_training(Bit#(10) v);
-        serdes.control.set_serdes_training(v);
-    endmethod
     method Action set_debugreq(Bit#(32) v);
     endmethod
     method Action get_debugind();

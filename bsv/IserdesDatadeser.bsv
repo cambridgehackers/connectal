@@ -472,9 +472,10 @@ interface ImageonSerdesRequest;
     method Action set_iserdes_control(Bit#(32) v);
     method Action set_serdes_manual_tap(Bit#(10) v);
     method Action set_serdes_training(Bit#(10) v);
-    method Bit#(32) get_iserdes_control();
+    method Action get_iserdes_control();
 endinterface
 interface ImageonSerdesIndication;
+    method Action iserdes_control_value(Bit#(32) v);
 endinterface
 
 interface SerdesData;
@@ -489,7 +490,7 @@ interface ISerdes;
     interface SerdesData data;
 endinterface
 
-module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
+module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indication)(ISerdes);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -586,10 +587,10 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
 	    serdes_align_start_reg <= v[2];
 	    serdes_fifo_enable_reg <= v[3];
 	endmethod
-	method Bit#(32) get_iserdes_control();
+        method Action get_iserdes_control();
 	    let v = 0;
 	    v[9] = serdes_align_busy_reg;
-	    return v;
+            indication.iserdes_control_value(v);
 	endmethod
 	method Action set_decoder_control(Bit#(32) v);
 	    decoder_enable_reg <= v[1];
