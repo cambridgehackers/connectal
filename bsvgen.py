@@ -28,7 +28,6 @@ import PortalMemory::*;
 
 '''
 
-#exposedInterfaces = ['HDMI', 'LEDS', 'ImageonVita', 'ImageonTopPins', 'ImageonSerdesPins', 'FmcImageonInterface', 'SpiPins', 'ImageonPins', 'TlpTrace']
 exposedInterfaces = []
 
 
@@ -832,8 +831,6 @@ class InterfaceMixin:
     def emitBsvImplementationRequestTop(self,f):
         axiMasters = self.collectInterfaceNames('Axi[34]Client', True)
         axiSlaves = self.collectInterfaceNames('AxiSlave')
-        hdmiInterfaces = self.collectInterfaceNames('HDMI')
-        ledInterfaces = self.collectInterfaceNames('LEDS')
         indicationWrappers = self.collectIndicationWrappers()
         connectIndicationCtrls = self.collectIndicationCtrls()
         connectIndicationInterrupts = self.collectIndicationInterrupts()
@@ -986,8 +983,6 @@ class InterfaceMixin:
         methodRules = self.collectMethodRules(self.name)
         axiMasters = self.collectInterfaceNames('Axi[34]Client', True)
         axiSlaves = self.collectInterfaceNames('AxiSlave')
-        hdmiInterfaces = self.collectInterfaceNames('HDMI')
-        ledInterfaces = self.collectInterfaceNames('LEDS')
         dutName = util.decapitalize(self.name)
         methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
         substs = {
