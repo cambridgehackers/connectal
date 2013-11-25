@@ -53,8 +53,6 @@ class TestCoreIndication : public CoreIndication
 
 int main(int argc, const char **argv)
 {
-  unsigned int srcGen = 0;
-
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = CoreRequest::createCoreRequest(new TestCoreIndication);
   dma = DMARequest::createDMARequest(new TestDMAIndication);

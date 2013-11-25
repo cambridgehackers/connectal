@@ -705,6 +705,8 @@ class TypeMixin:
             return self.params[0].numeric()
         if (self.name == 'Vector'):
             return self.params[0].numeric() * self.params[1].numBitsBSV()
+        if (self.name == 'Int'):
+            return self.params[0].numeric()
 	sdef = syntax.globalvars[self.name].tdtype
         if (sdef.type == 'Struct'):
             return sum([e.type.numBitsBSV() for e in sdef.elements])

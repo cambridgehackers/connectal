@@ -247,6 +247,8 @@ class MethodMixin:
             tn = member.type.name
             if tn == 'Bit':
                 return [('%s.%s'%(scope,member.name),member.type)]
+            elif tn == 'Int':
+                return [('%s.%s'%(scope,member.name),member.type)]
             elif tn == 'Vector':
                 print ('%s.%s'%(scope,member.name),member.type)
                 return [('%s.%s'%(scope,member.name),member.type)]
@@ -563,6 +565,11 @@ class TypeMixin:
                 return 'unsigned long long'
             else:
                 return 'std::bitset<%d>' % (self.params[0].numeric())
+        elif cid == 'Int':
+            if self.params[0].numeric() == 32:
+                return 'int'
+            else:
+                assert(false)
         elif cid == 'Vector':
             return 'bsvvector<%d,%s>' % (self.params[0].numeric(), self.params[1].cName())
         elif cid == 'Action':
@@ -575,9 +582,9 @@ class TypeMixin:
             name = cid
         return name
     def isBitField(self):
-        return self.name == 'Bit'
+        return self.name == 'Bit' or self.name == 'Int'
     def bitWidth(self):
-        if self.name == 'Bit':
+        if self.name == 'Bit' or self.name == 'Int':
             return int(self.params[0].name)
         else:
             return 0
