@@ -52,6 +52,8 @@ interface ImageonSensorRequest;
     method Action set_trigger_default_freq(Bit#(32) v);
     method Action set_trigger_cnt_trigger(Bit#(32) v);
 endinterface
+interface ImageonSensorIndication;
+endinterface
 
 interface ImageonSensor;
     interface ImageonSensorRequest control;
@@ -264,20 +266,4 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes)(Ima
         interface imageon_clock_if = defaultClock;
         interface imageon_reset_if = defaultReset;
     endinterface
-endmodule
-
-interface MMCMHACK;
-    interface XbsvMMCME2 mmcmadv;
-endinterface
-
-module mkMMCMHACK(MMCMHACK);
-    XbsvMMCME2 mm <- mkXbsvMMCM(XbsvMMCMParams {
-        bandwidth:"OPTIMIZED", compensation:"ZHOLD",
-        clkfbout_mult_f:8.000, clkfbout_phase:0.0,
-        clkin1_period:6.734007, clkin2_period:6.734007,
-        clkout0_divide_f:8.000, clkout0_duty_cycle:0.5, clkout0_phase:0.0000,
-        clkout1_divide:32, clkout1_duty_cycle:0.5, clkout1_phase:0.0000,
-        divclk_divide:1, ref_jitter1:0.010, ref_jitter2:0.010
-        });
-    interface XbsvMMCME2 mmcmadv = mm;
 endmodule

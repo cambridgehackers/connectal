@@ -52,6 +52,9 @@ interface ImageonXsviRequest;
     method Action vsync(Bit#(16) v);
 endinterface
 
+interface ImageonXsviIndication;
+endinterface
+
 interface ImageonVideo;
     method XsviData get();
     interface ImageonXsviRequest control;
