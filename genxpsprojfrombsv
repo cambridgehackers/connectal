@@ -341,6 +341,12 @@ if __name__=='__main__':
                     newint.top = False
                     newint.isIndication = False
                     requestIfcs.append(newint)
+                    indname = re.sub('Request', 'Indication', d.name)
+                    if not syntax.globalvars.has_key(indname):
+                        newind = AST.Interface(indname, [], [], None);
+                        print 'Creating empty Indication interface', indname
+                        syntax.globalvars[indname] = newind
+                        topIndicationIfc.decls.append(AST.Interface(indname, [], [], indname.lower()))
 
         # same comment as above
         for d in topIndicationIfc.decls:
