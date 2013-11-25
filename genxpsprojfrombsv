@@ -334,7 +334,7 @@ if __name__=='__main__':
         # the future I will add code which examines the actual type
         for d in topRequestIfc.decls:
             if d.type == 'Interface':
-                if syntax.globalvars.has_key(d.name):
+                if syntax.globalvars.has_key(d.name) and d.name not in namespace.export:
                     subintdef = syntax.globalvars[d.name]
                     newint = subintdef.instantiate(dict(zip(subintdef.params, d.params)))
                     newint.top = False
