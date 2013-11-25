@@ -467,12 +467,14 @@ interface ImageonSerdesPins;
     method Action io_vita_clk_n(Bit#(1) v);
 endinterface
 
-interface ImageonSerdesControl;
+interface ImageonSerdesRequest;
     method Action set_decoder_control(Bit#(32) v);
     method Action set_iserdes_control(Bit#(32) v);
     method Action set_serdes_manual_tap(Bit#(10) v);
     method Action set_serdes_training(Bit#(10) v);
     method Bit#(32) get_iserdes_control();
+endinterface
+interface ImageonSerdesIndication;
 endinterface
 
 interface SerdesData;
@@ -482,7 +484,7 @@ interface SerdesData;
 endinterface
 
 interface ISerdes;
-    interface ImageonSerdesControl control;
+    interface ImageonSerdesRequest control;
     interface ImageonSerdesPins pins;
     interface SerdesData data;
 endinterface
@@ -571,7 +573,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset)(ISerdes);
         new_raw_empty_wire <= empty_wire;
     endrule
 
-    interface ImageonSerdesControl control;
+    interface ImageonSerdesRequest control;
 	method Action set_serdes_manual_tap(Bit#(10) v);
 	    serdes_manual_tap_reg <= v;
 	endmethod

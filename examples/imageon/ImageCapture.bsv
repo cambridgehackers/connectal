@@ -53,22 +53,8 @@ interface CoreRequest;
     method Action set_iserdes_control(Bit#(32) v);
     method Action get_iserdes_control();
     method Action set_decoder_control(Bit#(32) v);
-    method Action set_host_oe(Bit#(1) v);
     method Action set_serdes_manual_tap(Bit#(10) v);
     method Action set_serdes_training(Bit#(10) v);
-    method Action set_decoder_code_ls(Bit#(10) v);
-    method Action set_decoder_code_le(Bit#(10) v);
-    method Action set_decoder_code_fs(Bit#(10) v);
-    method Action set_trigger_default_freq(Bit#(32) v);
-    method Action set_trigger_cnt_trigger(Bit#(32) v);
-    method Action set_syncgen_delay(Bit#(16) v);
-    method Action set_syncgen_hactive(Bit#(16) v);
-    method Action set_syncgen_hfporch(Bit#(16) v);
-    method Action set_syncgen_hsync(Bit#(16) v);
-    method Action set_syncgen_hbporch(Bit#(16) v);
-    method Action set_syncgen_vactive(Bit#(16) v);
-    method Action set_syncgen_vfporch(Bit#(16) v);
-    method Action set_syncgen_vsync(Bit#(16) v);
     method Action set_debugreq(Bit#(32) v);
     method Action get_debugind();
     method Action put_spi_request(Bit#(32) v);
@@ -78,18 +64,20 @@ interface ImageCaptureIndication;
     interface CoreIndication coreIndication;
     interface ImageonSensorIndication isIndication;
     interface ImageonXsviIndication ivIndication;
+    interface ImageonSerdesIndication idIndication;
     interface BlueScopeIndication bsIndication;
     interface DMAIndication dmaIndication;
 endinterface
 
 interface ImageCaptureRequest;
-   interface CoreRequest coreRequest;
-   interface ImageonSensorRequest isRequest;
-   interface ImageonXsviRequest ivRequest;
-   interface BlueScopeRequest bsRequest;
-   interface HDMI hdmi;
-   interface DMARequest dmaRequest;
-   interface ImageonVita vita;
+    interface CoreRequest coreRequest;
+    interface ImageonSensorRequest isRequest;
+    interface ImageonXsviRequest ivRequest;
+    interface ImageonSerdesRequest idRequest;
+    interface BlueScopeRequest bsRequest;
+    interface HDMI hdmi;
+    interface DMARequest dmaRequest;
+    interface ImageonVita vita;
 endinterface
  
 module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
@@ -148,53 +136,11 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     method Action set_decoder_control(Bit#(32) v);
         serdes.control.set_decoder_control(v);
     endmethod
-    method Action set_host_oe(Bit#(1) v);
-        fromSensor.control.set_host_oe(v);
-    endmethod
     method Action set_serdes_manual_tap(Bit#(10) v);
         serdes.control.set_serdes_manual_tap(v);
     endmethod
     method Action set_serdes_training(Bit#(10) v);
         serdes.control.set_serdes_training(v);
-    endmethod
-    method Action set_decoder_code_ls(Bit#(10) v);
-        fromSensor.control.set_decoder_code_ls(v);
-    endmethod
-    method Action set_decoder_code_le(Bit#(10) v);
-        fromSensor.control.set_decoder_code_le(v);
-    endmethod
-    method Action set_decoder_code_fs(Bit#(10) v);
-        fromSensor.control.set_decoder_code_fs(v);
-    endmethod
-    method Action set_trigger_default_freq(Bit#(32) v);
-        fromSensor.control.set_trigger_default_freq(v);
-    endmethod
-    method Action set_trigger_cnt_trigger(Bit#(32) v);
-        fromSensor.control.set_trigger_cnt_trigger(v);
-    endmethod
-    method Action set_syncgen_delay(Bit#(16) v);
-        fromSensor.control.set_syncgen_delay(v);
-    endmethod
-    method Action set_syncgen_hactive(Bit#(16) v);
-        xsviFromSensor.control.hactive(v);
-    endmethod
-    method Action set_syncgen_hfporch(Bit#(16) v);
-        xsviFromSensor.control.hfporch(v);
-    endmethod
-    method Action set_syncgen_hsync(Bit#(16) v);
-        xsviFromSensor.control.hsync(v);
-    endmethod
-    method Action set_syncgen_hbporch(Bit#(16) v);
-        xsviFromSensor.control.hbporch(v);
-    endmethod
-    method Action set_syncgen_vactive(Bit#(16) v);
-        xsviFromSensor.control.vactive(v);
-    endmethod
-    method Action set_syncgen_vfporch(Bit#(16) v);
-        xsviFromSensor.control.vfporch(v);
-    endmethod
-    method Action set_syncgen_vsync(Bit#(16) v);
-        xsviFromSensor.control.vsync(v);
     endmethod
     method Action set_debugreq(Bit#(32) v);
     endmethod
@@ -207,6 +153,7 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     endinterface
     interface ImageonSensorRequest isRequest = fromSensor.control;
     interface ImageonVideoRequest ivRequest = xsviFromSensor.control;
+    interface ImageonSerdesRequest idRequest = serdes.control;
     interface BlueScopeRequest bsRequest = bsi.requestIfc;
     interface HDMI hdmi = hdmiOut.hdmi;
     interface ImageonVita vita;

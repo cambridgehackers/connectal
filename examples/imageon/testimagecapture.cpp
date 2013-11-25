@@ -14,6 +14,8 @@
 #include "i2ccamera.h"
 
 static CoreRequest *device = 0;
+static ImageonSensorRequest *sensordevice;
+static ImageonXsviRequest *videodevice;
 static int trace_spi = 0;
 
 #define DECL(A) \
@@ -241,9 +243,9 @@ static void fmc_imageon_demo_enable_ipipe( void)
    device->set_serdes_training(0x03A6);
    printf( "VITA ISERDES - Setting Manual Tap to 0x%08X\n\r", uManualTap);
    device->set_serdes_manual_tap(uManualTap);
-   device->set_decoder_code_ls(0xAA);
-   device->set_decoder_code_le(0x012A);
-   device->set_decoder_code_fs(0x02AA);
+   sensordevice->set_decoder_code_ls(0xAA);
+   sensordevice->set_decoder_code_le(0x012A);
+   sensordevice->set_decoder_code_fs(0x02AA);
 
    printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
    device->set_iserdes_control( VITA_ISERDES_RESET_BIT);
@@ -345,17 +347,17 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    vita_spi_write(192, 0); usleep(100);
    vita_spi_write(193, 0x0400); usleep(100);
    vita_spi_write(192, 0x40); usleep(100);
-   device->set_syncgen_delay(0x0CE4);
-   device->set_syncgen_hactive(0x077f);
-   device->set_syncgen_hfporch(0x57);
-   device->set_syncgen_hsync(0x2b);
-   device->set_syncgen_hbporch(0x93);
+   sensordevice->set_syncgen_delay(0x0CE4);
+   videodevice->hactive(0x077f);
+   videodevice->hfporch(0x57);
+   videodevice->hsync(0x2b);
+   videodevice->hbporch(0x93);
    vita_spi_write(199, 0x01); usleep(100);
    vita_spi_write(200, 0); usleep(100);
    vita_spi_write(194, 0); usleep(100);
-   device->set_syncgen_vactive (0x0437);
-   device->set_syncgen_vfporch (0x03);
-   device->set_syncgen_vsync(4);
+   videodevice->vactive (0x0437);
+   videodevice->vfporch (0x03);
+   videodevice->vsync(4);
    vita_spi_write(257, 0x3C); usleep(100);
    vita_spi_write(258, 0x0474); usleep(100);
 
@@ -363,8 +365,8 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
 
    uint32_t trigDutyCycle    = 90; // exposure time is 90% of frame time (ie. 15msec)
    uint32_t vitaTrigGenDefaultFreq = (((1920+88+44+148)*(1080+4+5+36))>>2) - 2;
-   device->set_trigger_default_freq(vitaTrigGenDefaultFreq+2);
-   device->set_trigger_cnt_trigger((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1);
+   sensordevice->set_trigger_default_freq(vitaTrigGenDefaultFreq+2);
+   sensordevice->set_trigger_cnt_trigger((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1);
    vita_spi_write(194, 0x0400);
    vita_spi_write(0x29, 0x0700);
    uint16_t vspi_data = vita_spi_read(192) | 0x71; usleep(100);
@@ -378,7 +380,7 @@ static void fmc_imageon_demo_init(int argc, const char **argv)
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     //ret = fmc_iic_axi_init(uBaseAddr_IIC_FmcImageon);
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 2);
-    device->set_host_oe(1);
+    sensordevice->set_host_oe(1);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     init_i2c_camera();
@@ -413,6 +415,8 @@ int main(int argc, const char **argv)
 
     init_local_semaphores();
     device = CoreRequest::createCoreRequest(new TestImageCaptureIndications);
+    sensordevice = ImageonSensorRequest::createImageonSensorRequest(new ImageonSensorIndication);
+    videodevice = ImageonXsviRequest::createImageonXsviRequest(new ImageonXsviIndication);
     // for surfaceflinger 
     int status = PortalRequest::setClockFrequency(1, 160000000, 0);
     //int status = PortalRequest::setClockFrequency(1, 200000000, 0);
