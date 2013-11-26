@@ -182,7 +182,7 @@ def preprocess(source, defs):
             stack.pop()
         else:
             assert(false)
-        prv = pre if valid and cond else ''
+        prv = pre if valid and cond else '\n\n'
         return prv+pp('\n'+s)
 
     return pp(source)
