@@ -74,7 +74,6 @@ instance ToPut#(ToBit#(n,a),a);
    endfunction
 endinstance
 
-
 module mkToBit(ToBit#(n,a))
    provisos(Bits#(a,asz),
             Add#(1, z, asz),
@@ -113,6 +112,36 @@ module mkToBit(ToBit#(n,a))
    method Bool notEmpty = fifo.notEmpty;
    method Bool notFull = fifo.notFull;
 endmodule
+
+module mkFromBitR(FromBit#(n,a))
+   provisos(Bits#(a,asz),
+	    Div#(n, asz, na),
+	    Mul#(na, asz, n),
+	    Add#(a__, asz, n));
+
+   FIFOF#(a) fifo <- mkFIFOF1;
+   Reg#(Bit#(32)) count <- mkReg(0);
+   Reg#(Bit#(n)) fbnbuff <- mkReg(0);
+      
+   rule cvt (count > 0);
+      fifo.enq(unpack(truncate(fbnbuff)));
+      count <= count-1;
+      fbnbuff <= fbnbuff << fromInteger(valueOf(asz));
+   endrule
+
+   method Action enq(Bit#(n) x) if (count == 0);
+      fbnbuff <= x;
+      count <= fromInteger(valueOf(na));
+   endmethod
+   
+   method a first = fifo.first;
+   method Action deq;
+      fifo.deq;
+   endmethod
+   method Bool notEmpty() = fifo.notEmpty;
+   method Bool notFull() = fifo.notFull;
+endmodule
+
 
 module mkFromBit(FromBit#(n,a))
    provisos(Bits#(a,asz),
@@ -160,7 +189,7 @@ module mkAdapterTb(Empty);
 
    FromBit#(32,Bit#(72)) fb32_72 <- mkFromBit();
    FromBit#(32,Bit#(17)) fb32_17 <- mkFromBit();
-
+   
    Reg#(Bit#(10)) timer <- mkReg(0);
    rule timeout;
        timer <= timer+1;

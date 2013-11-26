@@ -72,14 +72,14 @@ module mkSGListStreamer(SGListStreamer);
    FIFOF#(SGListId)                          loadReqs <- mkFIFOF;
    
    method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
-      let off = listEnds[pref];
-      listEnds[pref] <= off+1;
+      let off = listEnds[pref-1];
+      listEnds[pref-1] <= off+1;
       let entry = SGListEntry{address:addr, length:len};
       listMem.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(off), datain:entry});
    endmethod
    
    method Action loadCtx(SGListId id);
-      listMem.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:listPtrs[id].entry, datain:?});
+      listMem.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:listPtrs[id-1].entry, datain:?});
       loadReqs.enq(id);
    endmethod
    
@@ -89,12 +89,12 @@ module mkSGListStreamer(SGListStreamer);
       loadReqs.deq;
       let rv <- listMem.portA.response.get;
       let id = loadReqs.first;
-      let lp = listPtrs[id];
+      let lp = listPtrs[id-1];
       let new_offset = ((zeroExtend(burstLen)+1) << 3) + lp.offset;
       if(new_offset < rv.length)
-	 listPtrs[id] <= SGListPointer{entry:lp.entry, offset:new_offset};
+	 listPtrs[id-1] <= SGListPointer{entry:lp.entry, offset:new_offset};
       else if (new_offset == rv.length)
-	 listPtrs[id] <= SGListPointer{entry:lp.entry+1, offset:0};
+	 listPtrs[id-1] <= SGListPointer{entry:lp.entry+1, offset:0};
       else if(new_offset > rv.length)
 	 $display("burst crosses SG list boundry");
       else if(rv.length == 0)

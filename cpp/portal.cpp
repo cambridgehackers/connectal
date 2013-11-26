@@ -233,7 +233,7 @@ int PortalRequest::registerInstance(PortalRequest *instance)
 }
 
 PortalMemory::PortalMemory()
-  : handle(0)
+  : handle(1)
 {
   const char* path = "/dev/portalalloc";
   this->pa_fd = ::open(path, O_RDWR);
@@ -244,7 +244,7 @@ PortalMemory::PortalMemory()
 
 PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
   : PortalRequest(name,indication),
-    handle(0)
+    handle(1)
 {
 #ifndef MMAP_HW
   snprintf(p_fd.read.path, sizeof(p_fd.read.path), "/tmp/fd_sock_rc");

@@ -24,7 +24,7 @@
 import GetPut::*;
 import Vector::*;
 
-typedef 2 NumDmaChannels;
+typedef 4 NumDmaChannels;
 typedef Bit#(TLog#(NumDmaChannels)) DmaChannelId;
 
 typedef struct {

@@ -11,6 +11,7 @@ CoreRequest *device = 0;
 DMARequest *dma = 0;
 PortalAlloc needleAlloc;
 PortalAlloc haystackAlloc;
+PortalAlloc mpNextAlloc;
 unsigned int alloc_len = 16 << 2;
 
 class TestDMAIndication : public DMAIndication
@@ -96,6 +97,8 @@ int main(int argc, const char **argv)
   char *needle = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc.header.fd, 0);
   dma->alloc(alloc_len, &haystackAlloc);
   char *haystack = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc.header.fd, 0);
+  dma->alloc(alloc_len, &mpNextAlloc);
+  int *mpNext = (int *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc.header.fd, 0);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -106,28 +109,34 @@ int main(int argc, const char **argv)
 
   unsigned int ref_needleAlloc = dma->reference(&needleAlloc);
   unsigned int ref_haystackAlloc = dma->reference(&haystackAlloc);
+  unsigned int ref_mpNextAlloc = dma->reference(&mpNextAlloc);
 
   // simple hand-crafted tests
   {
-    sprintf(needle, "ababab", alloc_len);
-    strncpy(haystack, "acabcabacababacabababc", alloc_len);
+    const char *needle_text = "ababab";
+    const char *haystack_text = "acabcabacababacabababc";
+    
+    assert(strlen(haystack_text) < alloc_len);
+    assert(strlen(needle_text)*4 < alloc_len);
+
+    strncpy(needle, needle_text, alloc_len);
+    strncpy(haystack, haystack_text, alloc_len);
+
     int needle_len = strlen(needle);
     int haystack_len = strlen(haystack);
-    int MP_next[needle_len+1];
     int border[needle_len+1];
 
     compute_borders(needle, border, needle_len);
-    compute_MP_next(needle, MP_next, needle_len);
+    compute_MP_next(needle, mpNext, needle_len);
     
-    assert(MP_next[1] == 0);
+    assert(mpNext[1] == 0);
     assert(border[1] == 0);
     for(int i = 2; i < needle_len+1; i++)
-      assert(MP_next[i] == border[i-1]+1);
+      assert(mpNext[i] == border[i-1]+1);
 
-    int loc = MP(needle, haystack, MP_next, needle_len, haystack_len);
+    int loc = MP(needle, haystack, mpNext, needle_len, haystack_len);
     if(loc > 0)
       fprintf(stderr, "loc=%d\n", loc);
-    
     
     dma->configReadChan(0, ref_haystackAlloc, 2);
     sem_wait(&conf_sem);
@@ -135,7 +144,10 @@ int main(int argc, const char **argv)
     dma->configReadChan(1, ref_needleAlloc, 2);
     sem_wait(&conf_sem);
 
-    device->search();
+    dma->configReadChan(2, ref_mpNextAlloc, 2);
+    sem_wait(&conf_sem);
+
+    device->search(needle_len, haystack_len);
   }
   while(true) sleep(1);
 }
