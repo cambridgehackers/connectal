@@ -42,6 +42,7 @@ class Interface:
         self.decls = decls
         self.subinterfacename = subinterfacename
         self.typeClassInstances = []
+        self.hasSource = True
     def interfaceType(self):
         return Type(self.name,self.params)
     def __repr__(self):
@@ -50,6 +51,7 @@ class Interface:
         newInterface = Interface(self.name, [],
                                  [d.instantiate(paramBindings) for d in self.decls],
                                  self.subinterfacename)
+        newInterface.hasSource = self.hasSource
         newInterface.typeClassInstances = self.typeClassInstances
         return newInterface
 

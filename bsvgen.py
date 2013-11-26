@@ -188,6 +188,7 @@ interface RequestWrapperCommFIFOs;
     interface FIFO#(Bit#(32)) axiSlaveReadDataFifo;
 endinterface
 
+%(indicationInterfaces)s
 interface %(Dut)sWrapper;
     interface Axi3Slave#(32,32,4,12) ctrl;
     interface ReadOnly#(Bool) putEnable;
@@ -535,6 +536,12 @@ requestRuleTemplate='''
         %(methodName)s$requestFifo.deq;
         $display("%(methodName)s$requestFailure");
     endrule
+'''
+
+indicationTemplate='''
+interface %(Indication)s;
+    // no indication methods
+endinterface
 '''
 
 indicationRuleTemplate='''
@@ -951,7 +958,7 @@ class InterfaceMixin:
         ind_bsv_name = 'indication'
         rv.append('    %s %s = (interface %s;' % (ind_bsv_type, ind_bsv_name, ind_bsv_type))
         for d in self.ind.decls:
-            if d.type == 'Interface':
+            if d.type == 'Interface' and d.hasSource:
                 bsv_type = d.interfaceType().toBsvType()
                 rv.append('\n        interface %s %s = %sWrapper.indication;' % (bsv_type, d.subinterfacename, d.subinterfacename))
         rv.append('\n    endinterface);\n')
@@ -961,11 +968,12 @@ class InterfaceMixin:
         rv = []
         for d in self.decls:
             if d.type == 'Interface' and  syntax.globalvars.has_key(d.name):
+                interface = syntax.globalvars[d.name]
                 bsv_type = d.interfaceType().toBsvType()
                 request = '%s.%s' % (util.decapitalize(self.name), util.decapitalize(d.subinterfacename))
                 # this is a horrible hack (mdk)
-                indication = '%sWrapper' % re.sub('Request', 'Indication', (util.decapitalize(d.subinterfacename)))
-                rv.append('    %sWrapper %sWrapper <- mk%sWrapper(%s,%s);\n' % (bsv_type, d.subinterfacename, bsv_type, request, indication))
+                indicationWrapper = '%sWrapper' % re.sub('Request', 'Indication', (util.decapitalize(d.subinterfacename)))
+                rv.append('    %sWrapper %sWrapper <- mk%sWrapper(%s,%s);\n' % (bsv_type, d.subinterfacename, bsv_type, request, indicationWrapper))
         return rv
             
 
@@ -1035,7 +1043,8 @@ class InterfaceMixin:
             'indicationMethodDeclsAug' :''.join(indicationMethodDeclsAug),
             'indicationChannelCount': self.channelCount,
             'channelCount': self.channelCount,
-            'moduleContext': ''
+            'moduleContext': '',
+            'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': self.name }) if not self.hasSource else ''
             }
         f.write(indicationWrapperInterfaceTemplate % substs)
         f.write(mkIndicationWrapperTemplate % substs)

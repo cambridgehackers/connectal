@@ -344,9 +344,14 @@ if __name__=='__main__':
                     indname = re.sub('Request', 'Indication', d.name)
                     if not syntax.globalvars.has_key(indname):
                         newind = AST.Interface(indname, [], [], None);
-                        print 'Creating empty Indication interface', indname
+                        newind.hasSource = False
+                        print 'Creating empty Indication interface', indname, newind
                         syntax.globalvars[indname] = newind
-                        topIndicationIfc.decls.append(AST.Interface(indname, [], [], indname.lower()))
+                        ## this matches the horrible hack in bsvgen.py
+                        newdecl = AST.Interface(indname, [], [], d.subinterfacename.replace('Request','Indication'))
+                        newdecl.hasSource = False
+                        print newdecl
+                        topIndicationIfc.decls.append(newdecl)
 
         # same comment as above
         for d in topIndicationIfc.decls:
