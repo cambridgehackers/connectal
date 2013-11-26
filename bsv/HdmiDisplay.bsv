@@ -37,7 +37,6 @@ import YUV::*;
 
 interface HdmiControlRequest;
     method Action startFrameBuffer0(Bit#(32) base);
-    method Action waitForVsync(Bit#(32) unused);
     method Action hdmiLinesPixels(Bit#(32) value);
     method Action hdmiStrideBytes(Bit#(32) strideBytes);
     method Action beginTranslationTable(Bit#(8) index);
@@ -69,56 +68,32 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     Reset defaultReset <- exposeCurrentReset;
     Clock hdmi_clock = processing_system7_1_fclk_clk1;
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
-    Reg#(Bit#(32)) vsyncPulseCountReg <- mkReg(0);
-    Reg#(Bit#(32)) frameCountReg <- mkReg(0);
-    Reg#(Bool) waitingForVsync <- mkReg(False);
     Reg#(Bool) sendVsyncIndication <- mkReg(False);
-
     Reg#(Bit#(11)) linesReg <- mkReg(1080);
     Reg#(Bit#(12)) pixelsReg <- mkReg(1920);
     Reg#(Bit#(14)) strideBytesReg <- mkReg(1920*4);
-
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
     SyncPulseIfc hsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
-
     Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
     Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
-
     Reg#(Bool) frameBufferEnabled <- mkReg(False);
     FrameBufferBram frameBuffer <- mkFrameBufferBram(hdmi_clock, hdmi_reset);
-
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
         frameBuffer.buffer, vsyncPulse, hsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
 
     (* descending_urgency = "vsync, hsync" *)
     rule vsync if (vsyncPulse.pulse());
         $display("vsync pulse received %h", frameBufferEnabled);
-        vsyncPulseCountReg <= vsyncPulseCountReg + 1;
-        if (waitingForVsync)
-        begin
-            waitingForVsync <= False;
-            sendVsyncIndication <= True;
-        end
         if (frameBufferEnabled)
         begin
             $display("frame started");
-            frameCountReg <= frameCountReg + 1;
             frameBuffer.startFrame();
         end
     endrule
     rule hsync if (hsyncPulse.pulse());
         frameBuffer.startLine();
     endrule
-
-    //rule vsyncReceived if (sendVsyncIndication);
-        //sendVsyncIndication <= False;
-        //Bit#(64) v = 0;
-        //v[31:0] = vsyncPulseCountReg;
-        //v[47:32] = extend(pixelsReg);
-        //v[63:48] = extend(linesReg);
-        //indication.coreIndication.vsync(v);
-    //endrule
 
     rule bozobit_rule;
         bozobit <= ~bozobit;
@@ -147,9 +122,6 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 		     linesReg, pixelsReg, bytesperpixel, strideBytesReg);
 	    hdmiGen.control.setTestPattern(0);
 	endmethod
-	//method Action waitForVsync(Bit#(32) unused);
-	    //waitingForVsync <= True;
-	//endmethod
 	method Action beginTranslationTable(Bit#(8) index);
 	    segmentIndexReg <= index;
 	    segmentOffsetReg <= 0;

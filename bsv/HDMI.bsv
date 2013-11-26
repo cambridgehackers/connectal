@@ -53,6 +53,7 @@ interface HdmiInternalRequest;
     method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max);
     method Action setNumberOfLines(Bit#(11) lines);
     method Action setNumberOfPixels(Bit#(12) pixels);
+    method Action waitForVsync(Bit#(32) unused);
 endinterface
 
 interface HdmiInternalIndication;
@@ -62,11 +63,6 @@ interface HdmiGenerator;
     interface HdmiInternalRequest control;
     interface HDMI hdmi;
 endinterface
-
-typedef struct {
-    Bit#(11) line;
-    Bit#(12) pixel;
-} LinePixelCount;
 
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         BRAM#(Bit#(12), Bit#(32)) lineBuffer,
@@ -88,16 +84,14 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(12)) pixelCount <- mkReg(0);
     FIFOF#(Rgb888Stage) bramOutStageFifo <- mkSizedFIFOF(8);
     Reg#(Bit#(12)) dataCount <- mkReg(0);
-    Reg#(Bit#(32)) patternReg0 <- mkSyncReg(32'h00FFFFFF, axi_clock, axi_reset, defaultClock); // white
-    Vector#(4, Reg#(Bit#(32))) patternRegs <- replicateM(mkReg(0));
+    Vector#(4, Reg#(Bit#(32))) patternRegs <- replicateM(mkSyncReg(32'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bool) shadowTestPatternEnabled <- mkSyncReg(True, axi_clock, axi_reset, defaultClock);
     Reg#(Bool) testPatternEnabled <- mkReg(True);
     HdmiOut hdmioutput <- mkHdmiOut();
+    Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
+    SyncPulseIfc sendVsyncIndication <- mkSyncPulse(defaultClock, defaultReset, axi_clock);
 
-    let vsync = (lineCount < vsyncWidth) ? 1 : 0;
-    let hsync = (pixelCount < hsyncWidth) ? 1 : 0;
     let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
-    let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
 
     // vsyncPulse is a SyncHandshake to a slow clock domain
     // so it is not ready every cycle.
@@ -106,20 +100,50 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         $display("vsync pulse sent");
         vsyncPulse.send();
     endrule
+    rule sendVsyncPulse2 (lineCount == 0 && pixelCount == 0);
+        if (waitingForVsync)
+        begin
+            //waitingForVsync <= False;
+            sendVsyncIndication.send();
+        end
+    endrule
 
     rule sendHsyncPulse (isActiveLine && pixelCount == 0);
         //$display("hsync pulse sent");
         hsyncPulse.send();
     endrule
 
+    rule vsyncReceived if (sendVsyncIndication.pulse());
+        Bit#(64) v = 0;
+        //v[31:0] = vsyncPulseCountReg;
+        //v[47:32] = extend(numberOfPixels);
+        //v[63:48] = extend(numberOfLines);
+        indication.vsync(v);
+        waitingForVsync <= False;
+    endrule
+
     rule init_pattern;
-        patternRegs[0] <= patternReg0; 
         patternRegs[1] <= 32'h00FF0000; // blue
         patternRegs[2] <= 32'h0000FF00; // green
         patternRegs[3] <= 32'h000000FF; // red
         //patternRegs[1] <= 32'h80ff80ff; // yuv422 white
         //patternRegs[2] <= 32'h2c961596; // yuv422 green
         //patternRegs[3] <= 32'hff1d6b1d; // yuv422 red
+    endrule
+    let vsync = (lineCount < vsyncWidth) ? 1 : 0;
+    let hsync = (pixelCount < hsyncWidth) ? 1 : 0;
+    let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
+
+    rule data;
+        if (hsync == 1)
+            dataCount <= 0;
+        else if (dataEnable)
+            dataCount <= dataCount + 1;
+        bramOutStageFifo.enq(Rgb888Stage {}); // vsync: vsync, hsync: hsync, de: pack(dataEnable)});
+        lineBuffer.readAddr(dataCount);
+    endrule
+
+    rule inc_counters;
         if (lineCount == 0 && pixelCount == 0)
             begin
             $display("testPatternEnabled %d", shadowTestPatternEnabled);
@@ -135,35 +159,27 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
            end
         else
             pixelCount <= pixelCount + 1;
-    endrule
+    //endrule
 
-    rule data;
-        if (hsync == 1)
-            dataCount <= 0;
-        else if (dataEnable)
-            dataCount <= dataCount + 1;
-        Bit#(2) index = {pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)};
-        bramOutStageFifo.enq(Rgb888Stage { vsync: vsync, hsync: hsync, de: pack(dataEnable),
-            pixel: unpack(truncate(patternRegs[index]))});
-        lineBuffer.readAddr(dataCount);
-    endrule
-
-    rule bramOutStage;
+    //rule bramOutStage;
         bramOutStageFifo.deq();
         let d <- lineBuffer.readData();
         let stageData = bramOutStageFifo.first;
+        Bit#(2) index = {pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)};
 
-        if (!testPatternEnabled)
+        if (testPatternEnabled)
+            stageData.pixel = unpack(truncate(patternRegs[index]));
+        else
             stageData.pixel = unpack(d[23:0]);
-        hdmioutput.rgb(Rgb888VideoData{active_video: stageData.de,
-            vsync: stageData.vsync, hsync: stageData.hsync,
+        hdmioutput.rgb(Rgb888VideoData{active_video: pack(dataEnable),
+            vsync: vsync, hsync: hsync,
             r: stageData.pixel.r, g: stageData.pixel.g, b: stageData.pixel.b });
     endrule
 
     interface hdmi = hdmioutput.hdmi;
     interface HdmiInternalRequest control;
     method Action setPatternColor(Bit#(32) v);
-        patternReg0 <= v;
+        patternRegs[0] <= v; 
     endmethod
     method Action setTestPattern(Bit#(1) v);
         shadowTestPatternEnabled <= (v != 0);
@@ -189,6 +205,9 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endmethod
     method Action setNumberOfPixels(Bit#(12) pixels);
         numberOfPixels <= pixels;
+    endmethod
+    method Action waitForVsync(Bit#(32) unused);
+        waitingForVsync <= True;
     endmethod
     endinterface
 endmodule
