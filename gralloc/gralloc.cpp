@@ -77,6 +77,7 @@ struct gralloc_context_t {
     HdmiControlRequest *hdmiDisplay;
     HdmiInternalRequest *hdmiInternal;
     DMARequest *dma;
+    unsigned int ref_srcAlloc;
     uint32_t nextSegmentNumber;
 };
 
@@ -153,21 +154,9 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
         PortalAlloc portalAlloc;
         memset(&portalAlloc, 0, sizeof(portalAlloc));
         err = ctx->dma->alloc(size, &portalAlloc);
+        ctx->ref_srcAlloc = ctx->dma->reference(&portalAlloc);
         fd = portalAlloc.header.fd;
-
-        if ((!err) && (usage & GRALLOC_USAGE_HW_FB)) {
-            ALOGD("adding translation table entries\n");
-            segmentNumber = ctx->nextSegmentNumber;
-            ctx->nextSegmentNumber += portalAlloc.header.numEntries;
-            ctx->hdmiDisplay->beginTranslationTable(segmentNumber);
-            for (int i = 0; i < portalAlloc.header.numEntries; i++) {
-                ALOGD("adding translation entry %lx %lx", portalAlloc.entries[i].dma_address, portalAlloc.entries[i].length);
-                ctx->hdmiDisplay->addTranslationEntry(portalAlloc.entries[i].dma_address >> 12,
-                                              portalAlloc.entries[i].length >> 12);
-            }
-        }
         //ptr = mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-
     }
     if (fd < 0) {
         ALOGE("couldn't create ashmem (%s)", strerror(-errno));
@@ -314,7 +303,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         pthread_mutex_lock(&gralloc_dev->vsync_lock);
         gralloc_dev->vsync = 0;
         gralloc_dev->hdmiInternal->waitForVsync(0);
-        gralloc_dev->hdmiDisplay->startFrameBuffer0(hnd->segmentNumber);
+        gralloc_dev->hdmiDisplay->startFrameBuffer0(gralloc_dev->ref_srcAlloc);
         gralloc_dev->hdmiInternal->waitForVsync(0);
         while (!gralloc_dev->vsync) {
             pthread_cond_wait(&gralloc_dev->vsync_cond, &gralloc_dev->vsync_lock);
@@ -476,7 +465,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
             gralloc_dev->hdmiInternal->setNumberOfLines(lmin + nlines);
             gralloc_dev->hdmiInternal->setNumberOfPixels(pmin + npixels);
-            gralloc_dev->hdmiDisplay->hdmiStrideBytes(stridebytes);
+            //gralloc_dev->hdmiDisplay->hdmiStrideBytes(stridebytes);
             //gralloc_dev->hdmiInternal->setTestPattern ( unsigned long v );
             //gralloc_dev->hdmiInternal->setPatternColor ( unsigned long v );
             //gralloc_dev->hdmiInternal->setHsyncWidth ( unsigned long hsyncWidth );

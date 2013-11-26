@@ -27,6 +27,9 @@ import Clocks::*;
 import GetPut::*;
 import Connectable::*;
 import PortalMemory::*;
+import AxiSDMA::*;
+import BsimSDMA::*;
+import PortalSMemory::*;
 
 import AxiMasterSlave::*;
 import AxiClientServer::*;
@@ -36,23 +39,21 @@ import FrameBufferBram::*;
 import YUV::*;
 
 interface HdmiControlRequest;
-    method Action startFrameBuffer0(Bit#(32) base);
+    method Action startFrameBuffer0(Int#(32) base);
     method Action hdmiLinesPixels(Bit#(32) value);
-    method Action hdmiStrideBytes(Bit#(32) strideBytes);
-    method Action beginTranslationTable(Bit#(8) index);
-    method Action addTranslationEntry(Bit#(20) address, Bit#(12) length); // shift address and length left 12 bits
+endinterface
+
+interface HdmiControlIndication;
 endinterface
 
 interface HdmiDisplayRequest;
     interface HdmiControlRequest coreRequest;
     interface HdmiInternalRequest coRequest;
     interface DMARequest dmaRequest;
-    interface Axi3Client#(32,32,4,6) m_axi;
+    //old interface Axi3Client#(32,32,4,6) m_axi;
+    interface Axi3Client#(40,64,8,12) m_axi;
     interface HDMI hdmi;
     interface XADC xadc;
-endinterface
-
-interface HdmiControlIndication;
 endinterface
 
 interface HdmiDisplayIndication;
@@ -69,30 +70,36 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     Clock hdmi_clock = processing_system7_1_fclk_clk1;
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
     Reg#(Bool) sendVsyncIndication <- mkReg(False);
-    Reg#(Bit#(11)) linesReg <- mkReg(1080);
-    Reg#(Bit#(12)) pixelsReg <- mkReg(1920);
-    Reg#(Bit#(14)) strideBytesReg <- mkReg(1920*4);
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
-    SyncPulseIfc hsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
     Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
     Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
-    Reg#(Bool) frameBufferEnabled <- mkReg(False);
-    FrameBufferBram frameBuffer <- mkFrameBufferBram(hdmi_clock, hdmi_reset);
-    HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
-        frameBuffer.buffer, vsyncPulse, hsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
+`ifdef BSIM
+    BsimDMA    dma <- mkBsimDMA(indication.dmaIndication);
+`else
+    AxiDMA     dma <- mkAxiDMA(indication.dmaIndication);
+`endif
+    ReadChan dma_stream_read_chan = dma.read.readChannels[0];
+    Reg#(Int#(32)) referenceReg <- mkReg(-1);
+    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
 
-    (* descending_urgency = "vsync, hsync" *)
-    rule vsync if (vsyncPulse.pulse());
-        $display("vsync pulse received %h", frameBufferEnabled);
-        if (frameBufferEnabled)
-        begin
-            $display("frame started");
-            frameBuffer.startFrame();
-        end
+    HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
+        vsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
+   
+    rule readReq if(referenceReg != 0 && False);
+        streamRdCnt <= streamRdCnt-16;
+        dma_stream_read_chan.readReq.put(?);
     endrule
-    rule hsync if (hsyncPulse.pulse());
-        frameBuffer.startLine();
+    rule consume;
+        let v <- dma_stream_read_chan.readData.get;
+        hdmiGen.putData(v[31:0]);
+        //hdmiGen.putData(v[63:32]);
+    endrule
+
+    //(* descending_urgency = "vsyncrule, hsyncrule" *)
+    rule vsyncrule if (vsyncPulse.pulse() && referenceReg != 0 && False);
+        $display("frame started");
+        dma.request.configReadChan(0, pack(referenceReg), 16);
     endrule
 
     rule bozobit_rule;
@@ -100,40 +107,17 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     endrule
 
     interface HdmiControlRequest coreRequest;
-	method Action hdmiLinesPixels(Bit#(32) value);
-	    linesReg <= value[10:0];
-	    pixelsReg <= value[27:16];
-            hdmiGen.control.setNumberOfLines(linesReg);
-            hdmiGen.control.setNumberOfPixels(pixelsReg);
-	endmethod
-	method Action hdmiStrideBytes(Bit#(32) value);
-	    strideBytesReg <= value[13:0];
-	endmethod
-	method Action startFrameBuffer0(Bit#(32) base);
+	method Action startFrameBuffer0(Int#(32) base);
 	    $display("startFrameBuffer %h", base);
-	    frameBufferEnabled <= True;
-	    FrameBufferConfig fbc;
-	    fbc.base = base;
-	    fbc.pixels = pixelsReg;
-	    fbc.lines = linesReg;
-	    fbc.stridebytes = strideBytesReg;
-	    frameBuffer.configure(fbc);
-	    $display("startFrameBuffer lines %d pixels %d bytesperpixel %d stridebytes %d",
-		     linesReg, pixelsReg, bytesperpixel, strideBytesReg);
+            referenceReg <= base;
 	    hdmiGen.control.setTestPattern(0);
-	endmethod
-	method Action beginTranslationTable(Bit#(8) index);
-	    segmentIndexReg <= index;
-	    segmentOffsetReg <= 0;
-	endmethod
-	method Action addTranslationEntry(Bit#(20) address, Bit#(12) length);
-	    frameBuffer.setSgEntry(segmentIndexReg, segmentOffsetReg, address, extend(length));
-	    segmentIndexReg <= segmentIndexReg + 1;
-	    segmentOffsetReg <= segmentOffsetReg + {length,12'd0};
 	endmethod
     endinterface: coreRequest
 
-    interface Axi3Client m_axi = frameBuffer.axi;
+`ifndef BSIM
+    interface Axi3Client m_axi = dma.m_axi;
+`endif
+    interface DMARequest dmaRequest = dma.request;
     interface HDMI hdmi = hdmiGen.hdmi;
     interface HdmiInternalRequest coRequest = hdmiGen.control;
     interface XADC xadc;
