@@ -293,6 +293,8 @@ module xilinx_x7_pcie_wrapper #(
 	          .C_DATA_WIDTH        ( 64 ),
 		  .CLASS_CODE          ( 24'h050000 ), 
 		  .LINK_CAP_MAX_LINK_WIDTH (8),
+                  .LINK_CAP_ASPM_OPTIONALITY ("TRUE"),
+	          .LINK_CAP_ASPM_SUPPORT ( 0),
 // xbsv
 		  .BAR0                ( BAR0 ),
 		  .BAR1                ( BAR1 ),
