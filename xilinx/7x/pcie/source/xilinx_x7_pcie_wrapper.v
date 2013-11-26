@@ -221,7 +221,7 @@ module xilinx_x7_pcie_wrapper #(
  
  
  input wire           sys_clk,
- input wire           sys_reset
+ input wire           sys_reset_n
  );
    
    // Wires used for external clocking connectivity
@@ -561,7 +561,7 @@ module xilinx_x7_pcie_wrapper #(
       
       
       .sys_clk                                    ( sys_clk ),
-      .sys_rst_n                                  ( sys_reset )
+      .sys_rst_n                                  ( sys_reset_n )
       );
    
    

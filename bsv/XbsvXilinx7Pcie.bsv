@@ -211,10 +211,11 @@ import "BVI" xilinx_x7_pcie_wrapper =
 module vMkXilinx7PCIExpress#(PCIEParams params)(PCIE_X7#(lanes))
    provisos( Add#(1, z, lanes));
    
-   let sys_reset <- invertCurrentReset;
+   // PCIe wrapper takes active low reset
+   let sys_reset_n <- exposeCurrentReset;
    
    default_clock clk(sys_clk); // 100 MHz refclk
-   default_reset rstn(sys_reset) = sys_reset;
+   default_reset rstn(sys_reset_n) = sys_reset_n;
    
    parameter PL_FAST_TRAIN = (params.fast_train_sim_only) ? "TRUE" : "FALSE";
    parameter PCIE_EXT_CLK  = "TRUE";
@@ -420,6 +421,7 @@ interface PCIE_TRN_COMMON_X7;
    interface Clock       clk2;
    interface Reset       reset_n;
    method    Bool        link_up;
+   method    Bool        app_ready;
 endinterface
     
 interface PCIE_TRN_XMIT_X7;
@@ -568,6 +570,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       interface clk2    = user_clk_half;
       interface reset_n = user_reset_n;
       method    link_up = pcie_ep.trn.lnk_up;
+      method    app_ready = pcie_ep.trn.app_rdy;
    endinterface
       
    interface PCIE_TRN_XMIT_X7 trn_tx;
