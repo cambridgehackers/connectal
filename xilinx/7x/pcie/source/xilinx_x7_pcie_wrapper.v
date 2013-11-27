@@ -283,18 +283,32 @@ module xilinx_x7_pcie_wrapper #(
    
    
   pcie_7x_v2_1_core_top #(
+// bluenoc vend/dev id			  
 		  .CFG_VEND_ID         (16'h1BE7),
 		  .CFG_DEV_ID          (16'hB100),
 		  .CFG_REV_ID          (8'h00),
 		  .CFG_SUBSYS_VEND_ID  (16'h1BE7),
 		  .CFG_SUBSYS_ID       (16'hA705),
+// configured gen1 x8 with msix etc
                   .PL_FAST_TRAIN       ( PL_FAST_TRAIN ),
                   .PCIE_EXT_CLK        ( PCIE_EXT_CLK ),
 	          .C_DATA_WIDTH        ( 64 ),
+		  .PIPE_PIPELINE_STAGES( 1 ),
 		  .CLASS_CODE          ( 24'h050000 ), 
-		  .LINK_CAP_MAX_LINK_WIDTH (8),
-                  .LINK_CAP_ASPM_OPTIONALITY ("TRUE"),
-	          .LINK_CAP_ASPM_SUPPORT ( 0),
+		  .DSN_CAP_NEXTPTR     ( 12'hffc ),
+                  .LINK_CAP_ASPM_OPTIONALITY ( "TRUE" ),
+	          .LINK_CAP_ASPM_SUPPORT ( 0 ),
+		  .LINK_CAP_MAX_LINK_WIDTH ( 6'h8 ),
+                  .LTSSM_MAX_LINK_WIDTH( 6'h8 ),
+		  .MSIX_CAP_ON         ( "TRUE" ),
+		  .MSIX_CAP_PBA_OFFSET ( 29'ha00 ),
+		  .MSIX_CAP_TABLE_OFFSET ( 29'h800 ),
+		  .MSIX_CAP_TABLE_SIZE ( 11'h003 ),
+		  .PCIE_CAP_NEXTPTR    ( 8'h9C ),
+		  .USER_CLK_FREQ       ( 3 ), // 250 MHz
+// add 26 to replay timeout
+		  .LL_REPLAY_TIMEOUT   ( 15'h001a ),
+		  .LL_REPLAY_TIMEOUT_EN ( "TRUE" ),
 // xbsv
 		  .BAR0                ( BAR0 ),
 		  .BAR1                ( BAR1 ),
