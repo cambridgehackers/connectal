@@ -41,8 +41,13 @@ interface CoreEchoRequest;
     method Action setLeds(Bit#(8) v);
 endinterface: CoreEchoRequest
 
+interface NonEchoRequest;
+   method Action swallow(Bit#(32) v);
+endinterface
+
 interface EchoRequest;
     interface CoreEchoRequest coreRequest;
+    interface NonEchoRequest otherRequest;
     interface LEDS leds;
 endinterface: EchoRequest
 
