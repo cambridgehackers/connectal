@@ -24,10 +24,12 @@
 import GetPut::*;
 import BRAM::*;
 import FIFO::*;
+import Vector::*;
+import Gearbox::*;
 
 import PortalMemory::*;
 import PortalSMemory::*;
-import Adapter::*;
+
 
 interface ReadChan2BRAM#(type a);
    method Action start(a x);
@@ -42,38 +44,54 @@ module mkReadChan2BRAM#(ReadChan rc, BRAM1Port#(a,d) br)(ReadChan2BRAM#(a))
 	    Ord#(a),
 	    Arith#(a),
 	    Bits#(a,b__),
+	    Add#(1, c__, nd),
 	    Add#(a__, dsz, 64));
    
+   Clock clk <- exposeCurrentClock;
+   Reset rst <- exposeCurrentReset;
+   
    FIFO#(void) f <- mkSizedFIFO(1);
-   FromBit#(64, d) fbr <- mkFromBitR;
+   Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst); 
    Reg#(a) i <- mkReg(0);
+   Reg#(Bool) iv <- mkReg(False);
    Reg#(a) j <- mkReg(0);
+   Reg#(Bool) jv <- mkReg(False);
    Reg#(a) n <- mkReg(0);
 
-   rule loadReq(i < n);
+   rule loadReq(iv);
       rc.readReq.put(?);
       i <= i+fromInteger(valueOf(nd));
+      iv <= (i < n);
    endrule
    
    rule loadNeedleResp;
       let rv <- rc.readData.get;
-      fbr.enq(rv);
+      Vector#(nd,d) rvv = unpack(rv);
+      gb.enq(rvv);
    endrule
    
-   rule loadNeedle;
-      br.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:j, datain:fbr.first});
-      fbr.deq;
+   rule loadNeedle(jv);
+      br.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:j, datain:gb.first[0]});
+      gb.deq;
+      jv <= (j < n);
       j <= j+1;
+      if (j == n)
+	 f.enq(?);
+   endrule
+   
+   rule discard(!jv);
+      gb.deq;
    endrule
    
    method Action start(a x);
-      n <= x;
-      f.enq(?);
+      iv <= True;
+      jv <= True;
       i <= 0;
+      j <= 0;
+      n <= x;
    endmethod
    
-   method ActionValue#(Bool) finished() if (j == n);
-      j <= 0;
+   method ActionValue#(Bool) finished();
       f.deq;
       return True;
    endmethod

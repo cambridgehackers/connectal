@@ -79,7 +79,9 @@ module mkStrstrRequest#(StrstrIndication indication)(StrstrRequest);
    Reg#(Stage) stage <- mkReg(Idle);
    Reg#(Bit#(32)) needleLenReg <- mkReg(0);
    Reg#(Bit#(32)) haystackLenReg <- mkReg(0);
-      
+   Reg#(Bit#(32)) i <- mkReg(0);
+   Reg#(Bit#(32)) j <- mkReg(0);
+   
    ReadChan2BRAM#(NeedleIdx) n2b <- mkReadChan2BRAM(needle_read_chan, needle);
    ReadChan2BRAM#(NeedleIdx) mp2b <- mkReadChan2BRAM(mp_next_read_chan, mpNext);
    
@@ -87,6 +89,20 @@ module mkStrstrRequest#(StrstrIndication indication)(StrstrRequest);
       let x <- n2b.finished;
       let y <- mp2b.finished;
       stage <= Run;
+      i <= 0;
+      j <= 0;
+   endrule
+
+   rule runReq (stage == Run && i < needleLenReg);
+      i <= i+1;
+      needle.portA.request.put(BRAMRequest{write:False,address:truncate(i)});
+      mpNext.portA.request.put(BRAMRequest{write:False,address:truncate(i)});
+   endrule
+   
+   rule runResp;
+      Char nv <- needle.portA.response.get;
+      Int#(32) mv <- mpNext.portA.response.get;
+      $display ("runResp: %c, %d", nv, mv);
    endrule
    
    interface CoreRequest coreRequest;

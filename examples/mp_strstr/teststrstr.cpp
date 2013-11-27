@@ -134,10 +134,16 @@ int main(int argc, const char **argv)
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
+    for(int i = 0; i < needle_len+1; i++)
+      fprintf(stderr, "mpNext[%d]=%d\n", i, mpNext[i]);
+
     int loc = MP(needle, haystack, mpNext, needle_len, haystack_len);
     if(loc > 0)
       fprintf(stderr, "loc=%d\n", loc);
     
+    dma->dCacheFlushInval(&needleAlloc, needle);
+    dma->dCacheFlushInval(&mpNextAlloc, mpNext);
+
     dma->configReadChan(0, ref_haystackAlloc, 2);
     sem_wait(&conf_sem);
 
