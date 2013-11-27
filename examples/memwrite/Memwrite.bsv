@@ -75,16 +75,17 @@ module mkMemwriteRequest#(MemwriteIndication indication)(MemwriteRequest);
    endrule
    
    rule writeReq(streamWrCnt > 0);
+      $display("writeReq %d", streamWrCnt);
       streamWrCnt <= streamWrCnt-16;
       dma_stream_write_chan.writeReq.put(?);
-      if (streamWrCnt[5:0] == 6'b0)
-	 indication.coreIndication.writeReq(streamWrCnt);
+      indication.coreIndication.writeReq(streamWrCnt);
       if (streamWrCnt == 16)
 	 indication.coreIndication.writeDone(srcGen);
    endrule
 
    interface CoreRequest coreRequest;
       method Action startWrite(Bit#(32) numWords) if (streamWrCnt == 0);
+	 $display("startWrite %d", numWords);
 	 streamWrCnt <= numWords;
 	 indication.coreIndication.started(numWords);
       endmethod

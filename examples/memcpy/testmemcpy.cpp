@@ -84,7 +84,7 @@ class TestCoreIndication : public CoreIndication
     //fprintf(stderr, "writeReq %lx\n", v);
   }
   virtual void writeAck(unsigned long v){
-    fprintf(stderr, "writeAck %lx\n", v);
+    //fprintf(stderr, "writeAck %lx\n", v);
   }
   virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
 			      unsigned long streamWrCnt, unsigned long writeInProg, 

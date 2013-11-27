@@ -43,7 +43,7 @@ class TestCoreIndication : public CoreIndication
 {
   unsigned int rDataCnt;
   virtual void readReq(unsigned long v){
-    fprintf(stderr, "Core::readReq %lx\n", v);
+    //fprintf(stderr, "Core::readReq %lx\n", v);
   }
   virtual void readDone(unsigned long v){
     fprintf(stderr, "Core::readDone %lx\n", v);

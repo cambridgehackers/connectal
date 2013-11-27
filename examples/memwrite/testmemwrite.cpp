@@ -9,10 +9,11 @@
 
 #include "sock_fd.h"
 
-int numWords = 16 << 2;
+int numWords = 16 << 3;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 sem_t done_sem;
+sem_t conf_sem;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -29,6 +30,7 @@ class TestDMAIndication : public DMAIndication
   }
   virtual void configResp(unsigned long channelId){
     fprintf(stderr, "DMA::configResp: %lx\n", channelId);
+    sem_post(&conf_sem);
   }
   virtual void sglistResp(unsigned long channelId){
     fprintf(stderr, "DMA::sglistResp: %lx\n", channelId);
@@ -85,7 +87,11 @@ void parent(int rd_sock, int wr_sock)
     fprintf(stderr, "failed to init done_sem\n");
     exit(1);
   }
-  
+  if(sem_init(&conf_sem, 1, 0)){
+    fprintf(stderr, "failed to init conf_sem\n");
+    exit(1);
+  }
+
   fprintf(stderr, "parent::%s %s\n", __DATE__, __TIME__);
   device = CoreRequest::createCoreRequest(new TestCoreIndication);
   dma = DMARequest::createDMARequest(new TestDMAIndication);
@@ -112,6 +118,7 @@ void parent(int rd_sock, int wr_sock)
 
   // write channel 0 is write source
   dma->configWriteChan(0, ref_dstAlloc, 16);
+  sem_wait(&conf_sem);
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);
   device->startWrite(numWords);

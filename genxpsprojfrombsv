@@ -102,8 +102,7 @@ x86_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
 ubuntu_exe:
 	cd jni; make
 
-
-bsim: x86_exe
+bsim:
 	cd sources; bsc %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop BsimTop.bsv 
 	export BSC_CXXFLAGS="-I$(XBSVTOP)/cpp -I$(XBSVTOP) -DBSIM" ; cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim *.ba $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
 
