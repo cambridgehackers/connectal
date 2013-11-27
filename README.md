@@ -50,13 +50,13 @@ Echo Example
     ## this has only been tested with the Vivado 2013.2 release
     . Xilinx/Vivado/2013.2/settings64.sh
 
-    ./genxpsprojfrombsv -B zedboard -p echoproj -b Echo examples/echo/Echo.bsv
+    ./genxpsprojfrombsv -B zedboard -p echoproj-s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv
 or
-    ./genxpsprojfrombsv -B zc702 -p echoproj -b Echo examples/echo/Echo.bsv
+    ./genxpsprojfrombsv -B zc702 -p echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv
 or
-    ./genxpsprojfrombsv -B kc705 -p k7echoproj --make=verilog -b Echo examples/echo/Echo.bsv
+    ./genxpsprojfrombsv -B kc705 -p k7echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv
 or
-    ./genxpsprojfrombsv -B vc707 -p v7echoproj --make=verilog -b Echo examples/echo/Echo.bsv
+    ./genxpsprojfrombsv -B vc707 -p v7echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv
 
     cd echoproj
     make verilog
