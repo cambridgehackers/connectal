@@ -190,12 +190,9 @@ module mkHdmiOut(HdmiOut);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     Reg#(Rgb888Stage) rgb888StageReg <- mkReg(unpack(0));
-    Reg#(Yuv444IntermediatesStage) yuv444IntermediatesStageReg <- mkReg(
-        Yuv444IntermediatesStage { vsync: 0, hsync: 0, de: 0, data: unpack(0) });
-    Reg#(Yuv444Stage) yuv444StageReg <- mkReg(
-        Yuv444Stage { vsync: 0, hsync: 0, de: 0, data: unpack(0) });
-    Reg#(Yuv422Stage) yuv422StageReg <- mkReg(
-        Yuv422Stage { vsync: 0, hsync: 0, de: 0, data: unpack(0) });
+    Reg#(Yuv444IntermediatesStage) yuv444IntermediatesStageReg <- mkReg(unpack(0));
+    Reg#(Yuv444Stage) yuv444StageReg <- mkReg(unpack(0));
+    Reg#(Yuv422Stage) yuv422StageReg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
 
     rule yuv444IntermediatesStage;

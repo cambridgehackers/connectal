@@ -39,7 +39,6 @@ import YUV::*;
 
 interface HdmiControlRequest;
     method Action startFrameBuffer0(Int#(32) base);
-    method Action hdmiLinesPixels(Bit#(32) value);
 endinterface
 interface HdmiControlIndication;
 endinterface
@@ -84,12 +83,9 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
         streamRdCnt <= streamRdCnt - 16;
         dma_stream_read_chan.readReq.put(?);
     endrule
-    rule consume;
-        let v <- dma_stream_read_chan.readData.get;
-    endrule
+    mkConnectionWithClocks(dma_stream_read_chan.readData, hdmiGen.request, defaultClock, defaultReset, hdmi_clock, hdmi_reset);
 
     rule vsyncrule if (vsyncPulse.pulse() && referenceReg >= 0);
-        $display("frame started");
         dma.request.configReadChan(0, pack(referenceReg), 16);
     endrule
 
