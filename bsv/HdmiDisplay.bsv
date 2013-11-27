@@ -22,27 +22,25 @@
 // SOFTWARE.
 
 import FIFOF::*;
-import BRAMFIFO::*;
 import Clocks::*;
 import GetPut::*;
+import PCIE::*;
+import GetPutWithClocks::*;
 import Connectable::*;
 import PortalMemory::*;
+import PortalSMemory::*;
 import AxiSDMA::*;
 import BsimSDMA::*;
-import PortalSMemory::*;
-
 import AxiMasterSlave::*;
 import AxiClientServer::*;
 import HDMI::*;
 import XADC::*;
-import FrameBufferBram::*;
 import YUV::*;
 
 interface HdmiControlRequest;
     method Action startFrameBuffer0(Int#(32) base);
     method Action hdmiLinesPixels(Bit#(32) value);
 endinterface
-
 interface HdmiControlIndication;
 endinterface
 
@@ -50,12 +48,10 @@ interface HdmiDisplayRequest;
     interface HdmiControlRequest coreRequest;
     interface HdmiInternalRequest coRequest;
     interface DMARequest dmaRequest;
-    //old interface Axi3Client#(32,32,4,6) m_axi;
     interface Axi3Client#(40,64,8,12) m_axi;
     interface HDMI hdmi;
     interface XADC xadc;
 endinterface
-
 interface HdmiDisplayIndication;
     interface HdmiControlIndication coreIndication;
     interface HdmiInternalIndication coIndication;
@@ -63,8 +59,6 @@ interface HdmiDisplayIndication;
 endinterface
 
 module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIndication indication)(HdmiDisplayRequest);
-    let busWidthBytes=8;
-
     Clock defaultClock <- exposeCurrentClock;
     Reset defaultReset <- exposeCurrentReset;
     Clock hdmi_clock = processing_system7_1_fclk_clk1;
@@ -86,18 +80,15 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
         vsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
    
-    rule readReq if(referenceReg != 0 && False);
-        streamRdCnt <= streamRdCnt-16;
+    rule readReq if(referenceReg >= 0);
+        streamRdCnt <= streamRdCnt - 16;
         dma_stream_read_chan.readReq.put(?);
     endrule
     rule consume;
         let v <- dma_stream_read_chan.readData.get;
-        hdmiGen.putData(v[31:0]);
-        //hdmiGen.putData(v[63:32]);
     endrule
 
-    //(* descending_urgency = "vsyncrule, hsyncrule" *)
-    rule vsyncrule if (vsyncPulse.pulse() && referenceReg != 0 && False);
+    rule vsyncrule if (vsyncPulse.pulse() && referenceReg >= 0);
         $display("frame started");
         dma.request.configReadChan(0, pack(referenceReg), 16);
     endrule

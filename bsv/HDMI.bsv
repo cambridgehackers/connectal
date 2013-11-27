@@ -27,9 +27,7 @@ import FIFO::*;
 import FIFOF::*;
 import GetPut::*;
 import SyncBits::*;
-
 import YUV::*;
-import NrccSyncBRAM::*;
 
 interface HDMI;
     method Bit#(1) hdmi_vsync;
@@ -38,11 +36,6 @@ interface HDMI;
     method Bit#(16) hdmi_data;
     interface Clock hdmi_clock_if;
     interface Reset hdmi_reset_if;
-endinterface
-
-interface HdmiOut;
-    method Action rgb(Rgb888VideoData videoData);
-    interface HDMI hdmi;
 endinterface
 
 interface HdmiInternalRequest;
@@ -56,14 +49,19 @@ interface HdmiInternalRequest;
     method Action setNumberOfPixels(Bit#(12) pixels);
     method Action waitForVsync(Bit#(32) unused);
 endinterface
-
 interface HdmiInternalIndication;
     method Action vsync(Bit#(64) v);
 endinterface
+
+interface HdmiOut;
+    method Action rgb(Rgb888VideoData videoData);
+    interface HDMI hdmi;
+endinterface
+
 interface HdmiGenerator;
-    method Action putData(Bit#(32) v);
     interface HdmiInternalRequest control;
     interface HDMI hdmi;
+    interface Put#(Bit#(64)) request;
 endinterface
 
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
@@ -83,7 +81,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(12)) numberOfPixels <- mkSyncReg(1920 + 192 + 44 + 44, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) lineCount <- mkReg(0);
     Reg#(Bit#(12)) pixelCount <- mkReg(0);
-    //FIFOF#(Bit#(1)) bramOutStageFifo <- mkSizedFIFOF(8);
     Reg#(Bit#(12)) dataCount <- mkReg(0);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
@@ -91,7 +88,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     HdmiOut hdmioutput <- mkHdmiOut();
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
     SyncPulseIfc sendVsyncIndication <- mkSyncPulse(defaultClock, defaultReset, axi_clock);
-    SyncBitIfc#(Bit#(32)) pixelData <- mkSyncBits(0, axi_clock, axi_reset, defaultClock, defaultReset);
+    Reg#(Bit#(24)) pixelData <- mkReg(24'h00ff00ff);
 
     rule vsyncReceived if (sendVsyncIndication.pulse());
         Bit#(64) v = 0;
@@ -112,7 +109,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule inc_counters;
-        //bramOutStageFifo.deq();
         let vsync = (lineCount < vsyncWidth) ? 1 : 0;
         let hsync = (pixelCount < hsyncWidth) ? 1 : 0;
         let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
@@ -139,22 +135,20 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
            end
         else
             pixelCount <= pixelCount + 1;
-        //let d <- lineBuffer.readData();
-        //d = d[23:0];
         Bit#(24) d = 0;
 
-        //Bit#(2) index = {pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)};
         if (testPatternEnabled != 0)
-            d = patternRegs[//index];
-        {pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}];
+            d = patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}];
         Rgb888 pixel = unpack(d);
         hdmioutput.rgb(Rgb888VideoData{active_video: pack(dataEnable),
-            vsync: vsync, hsync: hsync,
-            r: pixel.r, g: pixel.g, b: pixel.b });
+            vsync: vsync, hsync: hsync, r: pixel.r, g: pixel.g, b: pixel.b });
     endrule
-    method Action putData(Bit#(32) v);
-         pixelData.send(v);
-    endmethod
+
+    interface Put request;
+        method Action put(Bit#(64) v) if (testPatternEnabled == 0);
+	    //pixelData <= v[23:0];
+        endmethod
+    endinterface: request
 
     interface hdmi = hdmioutput.hdmi;
     interface HdmiInternalRequest control;
