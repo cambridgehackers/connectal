@@ -109,14 +109,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule inc_counters;
-        let vsync = (lineCount < vsyncWidth) ? 1 : 0;
-        let hsync = (pixelCount < hsyncWidth) ? 1 : 0;
-        let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
-        let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
-        if (hsync == 1)
-            dataCount <= 0;
-        else if (dataEnable)
-            dataCount <= dataCount + 1;
 
         if (lineCount == 0 && pixelCount == 0)
             begin
@@ -135,18 +127,29 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
            end
         else
             pixelCount <= pixelCount + 1;
-        Bit#(24) d = 0;
+    endrule
 
-        if (testPatternEnabled != 0)
-            d = patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}];
-        Rgb888 pixel = unpack(d);
+    rule output_data_rule;
+        let hsync = (pixelCount < hsyncWidth) ? 1 : 0;
+        let vsync = (lineCount < vsyncWidth) ? 1 : 0;
+        let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
+        let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
+        if (hsync == 1)
+            dataCount <= 0;
+        else if (dataEnable)
+            dataCount <= dataCount + 1;
+        Rgb888 pixel = unpack(pixelData);
         hdmioutput.rgb(Rgb888VideoData{active_video: pack(dataEnable),
             vsync: vsync, hsync: hsync, r: pixel.r, g: pixel.g, b: pixel.b });
     endrule
 
+    rule test_rule if (testPatternEnabled != 0);
+        pixelData <= patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}];
+    endrule
+
     interface Put request;
         method Action put(Bit#(64) v) if (testPatternEnabled == 0);
-	    //pixelData <= v[23:0];
+	    pixelData <= v[23:0];
         endmethod
     endinterface: request
 
