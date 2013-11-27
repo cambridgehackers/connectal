@@ -54,7 +54,7 @@ interface HdmiInternalIndication;
 endinterface
 
 interface HdmiOut;
-    method Action rgb(Rgb888VideoData videoData);
+    method Action rgb(Rgb888Stage videoData);
     interface HDMI hdmi;
 endinterface
 
@@ -81,7 +81,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(12)) numberOfPixels <- mkSyncReg(1920 + 192 + 44 + 44, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) lineCount <- mkReg(0);
     Reg#(Bit#(12)) pixelCount <- mkReg(0);
-    Reg#(Bit#(12)) dataCount <- mkReg(0);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
@@ -109,7 +108,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule inc_counters;
-
         if (lineCount == 0 && pixelCount == 0)
             begin
             vsyncPulse.send();
@@ -134,13 +132,9 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         let vsync = (lineCount < vsyncWidth) ? 1 : 0;
         let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
         let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
-        if (hsync == 1)
-            dataCount <= 0;
-        else if (dataEnable)
-            dataCount <= dataCount + 1;
         Rgb888 pixel = unpack(pixelData);
-        hdmioutput.rgb(Rgb888VideoData{active_video: pack(dataEnable),
-            vsync: vsync, hsync: hsync, r: pixel.r, g: pixel.g, b: pixel.b });
+        hdmioutput.rgb(Rgb888Stage{de: pack(dataEnable),
+            vsync: vsync, hsync: hsync, pixel: pixel });
     endrule
 
     rule test_rule if (testPatternEnabled != 0);
@@ -155,37 +149,37 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 
     interface hdmi = hdmioutput.hdmi;
     interface HdmiInternalRequest control;
-    method Action setPatternColor(Bit#(32) v);
-        patternRegs[0] <= v[23:0]; 
-    endmethod
-    method Action setTestPattern(Bit#(1) v);
-        shadowTestPatternEnabled <= v;
-    endmethod
-    method Action setHsyncWidth(Bit#(12) width);
-        hsyncWidth <= width;
-    endmethod
-    method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max);
-        dePixelCountMinimum <= min;
-        dePixelCountMaximum <= max;
-        pixelMidpoint <= (min + max) / 2;
-    endmethod
-    method Action setVsyncWidth(Bit#(11) width);
-        vsyncWidth <= width;
-    endmethod
-    method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max);
-        deLineCountMinimum <= min;
-        deLineCountMaximum <= max;
-        lineMidpoint <= (min + max) / 2;
-    endmethod
-    method Action setNumberOfLines(Bit#(11) lines);
-        numberOfLines <= lines;
-    endmethod
-    method Action setNumberOfPixels(Bit#(12) pixels);
-        numberOfPixels <= pixels;
-    endmethod
-    method Action waitForVsync(Bit#(32) unused);
-        waitingForVsync <= True;
-    endmethod
+        method Action setPatternColor(Bit#(32) v);
+            patternRegs[0] <= v[23:0]; 
+        endmethod
+        method Action setTestPattern(Bit#(1) v);
+            shadowTestPatternEnabled <= v;
+        endmethod
+        method Action setHsyncWidth(Bit#(12) width);
+            hsyncWidth <= width;
+        endmethod
+        method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max);
+            dePixelCountMinimum <= min;
+            dePixelCountMaximum <= max;
+            pixelMidpoint <= (min + max) / 2;
+        endmethod
+        method Action setVsyncWidth(Bit#(11) width);
+            vsyncWidth <= width;
+        endmethod
+        method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max);
+            deLineCountMinimum <= min;
+            deLineCountMaximum <= max;
+            lineMidpoint <= (min + max) / 2;
+        endmethod
+        method Action setNumberOfLines(Bit#(11) lines);
+            numberOfLines <= lines;
+        endmethod
+        method Action setNumberOfPixels(Bit#(12) pixels);
+            numberOfPixels <= pixels;
+        endmethod
+        method Action waitForVsync(Bit#(32) unused);
+            waitingForVsync <= True;
+        endmethod
     endinterface
 endmodule
 
@@ -227,11 +221,8 @@ module mkHdmiOut(HdmiOut);
         };
     endrule
 
-    method Action rgb(Rgb888VideoData videoData);
-        rgb888StageReg <= Rgb888Stage {
-            vsync: videoData.vsync, hsync: videoData.hsync,
-            de: videoData.active_video,
-            pixel: Rgb888 { r: videoData.r, g: videoData.g, b: videoData.b}};
+    method Action rgb(Rgb888Stage videoData);
+        rgb888StageReg <= videoData;
     endmethod
     interface HDMI hdmi;
         method Bit#(1) hdmi_vsync;

@@ -110,9 +110,9 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
         //converter.in.put(xsvi);
         //let xvideo <- converter.out.get();
         //hdmiOut.rgb(xvideo);
-        hdmiOut.rgb(Rgb888VideoData{ active_video: xsvi.active_video,
-            vsync: xsvi.vsync, hsync: xsvi.hsync,
-            r: xsvi.video_data[9:2], g: xsvi.video_data[9:2], b: xsvi.video_data[9:2]});
+        Rgb888 pixel = Rgb888{r: xsvi.video_data[9:2], g: xsvi.video_data[9:2], b: xsvi.video_data[9:2]};
+        hdmiOut.rgb(Rgb888Stage{ de: xsvi.active_video,
+            vsync: xsvi.vsync, hsync: xsvi.hsync, pixel: pixel});
     endrule
 
     rule spiControllerResponse;
