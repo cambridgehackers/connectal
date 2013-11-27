@@ -78,3 +78,9 @@ test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/tes
 	test-memwrite/sources/bsim &
 	test-memwrite/jni/memwrite
 
+xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
+	rm -fr proj_pcie
+	vivado -mode batch -source scripts/generate-pcie.tcl
+	mv ./proj_pcie/proj_pcie.srcs/sources_1/ip/pcie_7x_0 xilinx/pcie_7x_v2_1
+	rm -fr ./proj_pcie
+

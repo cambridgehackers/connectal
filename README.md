@@ -9,13 +9,18 @@ the Zynq's ARM CPUs to interact with your BSV componet.
 
 Preparation
 -----------
-1. Get xilinx tools
-2. Download ndk toolchain from: 
+
+1. Get Vivado 2013.2
+
+Preparation for Zynq
+--------------------
+
+1. Download ndk toolchain from: 
      http://developer.android.com/tools/sdk/ndk/index.html
      (actual file might be:
          http://dl.google.com/android/ndk/android-ndk-r8e-linux-x86_64.tar.bz2
      )
-3. Get the Zynq Base TRD files, which will contain zynq_fsbl.elf and u-boot.elf
+2. Get the Zynq Base TRD files, which will contain zynq_fsbl.elf and u-boot.elf
      See: http://www.wiki.xilinx.com/Zynq+Base+TRD+14.3
      (this will require a xilinx login)
    Or:
@@ -111,15 +116,10 @@ LoadStore Example
 or
     ./genxpsprojfrombsv -B vc707 -p loadstoreproj -b LoadStore examples/loadstore/LoadStore.bsv
 
+    cd loadstoreproj; make verilog implementation
+
     ## building the test executable
-    cd loadstoreproj/jni
-    make
-
-    ## that generates wrappers in directory "loadstoreproj", which we've packaged with PCIe specific bits
-
-    cd examples/pcie-loadstore
-    make verilog
-    make vivado
+    cd loadstoreproj/jni; make
 
     ## to install the bitfile
     make program

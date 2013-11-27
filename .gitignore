@@ -23,3 +23,4 @@ model_*.h
 mk*.sched
 mk*.v
 modules.order
+xilinx/pcie_7x_v2_1

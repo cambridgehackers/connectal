@@ -237,6 +237,7 @@ if __name__=='__main__':
         xpsgen.use_acp = 1
         print 'Using ACP for coherent memory access'
 
+    needs_pcie_7x_v2_1 = False
     if not namespace.constraint:
         namespace.constraint = []
     if not namespace.verilog:
@@ -245,14 +246,16 @@ if __name__=='__main__':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7k325tffg900-2'
         topSuffix = 'PcieTop'
-        namespace.verilog.append(os.path.join(xbsvdir, '..', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
+        needs_pcie_7x_v2_1 = True
+        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/kc705.xdc'))
     elif boardname == 'vc707':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
         topSuffix = 'PcieTop'
-        namespace.verilog.append(os.path.join(xbsvdir, '..', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
+        needs_pcie_7x_v2_1 = True
+        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/vc707.xdc'))
     else:
@@ -262,6 +265,11 @@ if __name__=='__main__':
         topSuffix = 'Wrapper'
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/design_1_processing_system7_1_0.xdc'))
+
+    if needs_pcie_7x_v2_1:
+        os.chdir(xbsvdir)
+        os.putenv('PWD', subprocess.check_output(['pwd'])[0:-1])
+        subprocess.call(['make', 'xilinx/pcie_7x_v2_1'])
 
 
     tclname = os.path.join(project_dir, '%s.tcl' % namespace.interface.lower())
