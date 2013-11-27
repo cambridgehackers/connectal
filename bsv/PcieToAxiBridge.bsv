@@ -434,11 +434,11 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     Reg#(Bit#(4)) timerReg <- mkReg(0);
     Reg#(Bit#(64)) interruptAddrReg <- mkReg(0);
     Reg#(Bit#(32)) interruptDataReg <- mkReg(0);
-    FIFO#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkFIFO;
-    FIFO#(TLPMemoryIO3DWHeader) readDataFifo <- mkFIFO;
-    FIFO#(TLPMemoryIO3DWHeader) writeHeaderFifo <- mkFIFO;
-    FIFO#(TLPMemoryIO3DWHeader) writeDataFifo <- mkFIFO;
-    FIFO#(TLPData#(16)) tlpOutFifo <- mkFIFO;
+    FIFOF#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkFIFOF;
+    FIFOF#(TLPMemoryIO3DWHeader) readDataFifo <- mkFIFOF;
+    FIFOF#(TLPMemoryIO3DWHeader) writeHeaderFifo <- mkFIFOF;
+    FIFOF#(TLPMemoryIO3DWHeader) writeDataFifo <- mkFIFOF;
+    FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
     Reg#(TLPTag) tlpTag <- mkReg(0);
 
     rule txnTimer if (timerReg > 0);
@@ -507,10 +507,17 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-	    if (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
-	        readHeaderFifo.enq(hdr_3dw);
-	    else
-	        writeHeaderFifo.enq(hdr_3dw);
+	    if (hdr_3dw.format == MEM_READ_3DW_NO_DATA) begin
+	       if (readHeaderFifo.notFull())
+	          readHeaderFifo.enq(hdr_3dw);
+	       else begin
+		  // FIXME: should generate a response or host will lock up
+	       end
+	    end
+	    else begin
+	       if (writeHeaderFifo.notFull())
+		  writeHeaderFifo.enq(hdr_3dw);
+	    end
             timerReg <= truncate(32'hFFFFFFFF);
 	endmethod
     endinterface: tlp_in
