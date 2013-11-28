@@ -251,7 +251,6 @@ static void fmc_imageon_demo_enable_ipipe( void)
    serdesdevice->set_serdes_manual_tap(uManualTap);
    sensordevice->set_decoder_code_ls(0xAA);
    sensordevice->set_decoder_code_le(0x012A);
-   sensordevice->set_decoder_code_fs(0x02AA);
 
    printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
    serdesdevice->set_iserdes_control( VITA_ISERDES_RESET_BIT);
@@ -363,7 +362,6 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
 
    uint32_t trigDutyCycle    = 90; // exposure time is 90% of frame time (ie. 15msec)
    uint32_t vitaTrigGenDefaultFreq = (((1920+88+44+148)*(1080+4+5+36))>>2) - 2;
-   sensordevice->set_trigger_default_freq(vitaTrigGenDefaultFreq+2);
    sensordevice->set_trigger_cnt_trigger((vitaTrigGenDefaultFreq * (100-trigDutyCycle))/100 + 1);
    vita_spi_write(194, 0x0400);
    vita_spi_write(0x29, 0x0700);
