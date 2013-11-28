@@ -57,7 +57,6 @@ endinterface
 interface ImageCaptureIndication;
     interface CoreIndication coreIndication;
     interface ImageonSensorIndication isIndication;
-    interface ImageonXsviIndication ivIndication;
     interface ImageonSerdesIndication idIndication;
     interface HdmiInternalIndication coIndication;
     interface BlueScopeIndication bsIndication;
@@ -67,7 +66,6 @@ endinterface
 interface ImageCaptureRequest;
     interface CoreRequest coreRequest;
     interface ImageonSensorRequest isRequest;
-    interface ImageonXsviRequest ivRequest;
     interface ImageonSerdesRequest idRequest;
     interface HdmiInternalRequest coRequest;
     interface BlueScopeRequest bsRequest;
@@ -133,7 +131,6 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     endmethod
     endinterface
     interface ImageonSensorRequest isRequest = fromSensor.control;
-    interface ImageonVideoRequest ivRequest = xsviFromSensor.control;
     interface ImageonSerdesRequest idRequest = serdes.control;
     interface BlueScopeRequest bsRequest = bsi.requestIfc;
     interface HDMI hdmi = hdmiGen.hdmi;

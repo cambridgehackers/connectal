@@ -15,7 +15,6 @@
 
 static CoreRequest *device = 0;
 static ImageonSensorRequest *sensordevice;
-static ImageonXsviRequest *videodevice;
 static ImageonSerdesRequest *serdesdevice;
 static HdmiInternalRequest *hdmidevice;
 static int trace_spi = 0;
@@ -355,7 +354,6 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    vita_spi_write(193, 0x0400); usleep(100);
    vita_spi_write(192, 0x40); usleep(100);
    sensordevice->set_syncgen_delay(3300);
-   videodevice->active(100, 1919, 1079);
    vita_spi_write(199, 1); usleep(100);
    vita_spi_write(200, 0); usleep(100);
    vita_spi_write(194, 0); usleep(100);
@@ -416,7 +414,6 @@ int main(int argc, const char **argv)
     init_local_semaphores();
     device = CoreRequest::createCoreRequest(new TestImageCaptureIndications);
     sensordevice = ImageonSensorRequest::createImageonSensorRequest(new ImageonSensorIndication);
-    videodevice = ImageonXsviRequest::createImageonXsviRequest(new ImageonXsviIndication);
     serdesdevice = ImageonSerdesRequest::createImageonSerdesRequest(new TestImageonSerdesIndication);
     //hdmidevice = HdmiInternalRequest::createHdmiInternalRequest(new TestHdmiInternal);
     // for surfaceflinger 
