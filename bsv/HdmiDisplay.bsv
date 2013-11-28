@@ -97,7 +97,7 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 	method Action startFrameBuffer0(Int#(32) base);
 	    $display("startFrameBuffer %h", base);
             referenceReg <= base;
-	    hdmiGen.control.setTestPattern(0, 0);
+	    hdmiGen.control.setTestPattern(0);
 	endmethod
     endinterface: coreRequest
 

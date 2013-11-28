@@ -109,9 +109,9 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
         //converter.in.put(xsvi);
         //let xvideo <- converter.out.get();
         //hdmiGen.rgb(xvideo);
-        Rgb888 pixel = Rgb888{r: xsvi.video_data[9:2], g: xsvi.video_data[9:2], b: xsvi.video_data[9:2]};
-        hdmiGen.rgb(Rgb888Stage{ de: xsvi.active_video,
-            vsync: xsvi.vsync, hsync: xsvi.hsync, pixel: pixel});
+        Bit#(64) pixel = {40'b0, xsvi.video_data[9:2], xsvi.video_data[9:2], xsvi.video_data[9:2]};
+        if (xsvi.active_video != 0)
+            hdmiGen.request.put(pixel);
     endrule
 
     rule spiControllerResponse;
@@ -120,7 +120,7 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     endrule
 
     rule setdirect_rule;
-        hdmiGen.control.setTestPattern(0, 1);
+        hdmiGen.control.setTestPattern(0);
     endrule
 
     interface CoreRequest coreRequest;

@@ -39,7 +39,7 @@ interface HDMI;
 endinterface
 
 interface HdmiInternalRequest;
-    method Action setTestPattern(Bit#(1) v, Bit#(1) direct);
+    method Action setTestPattern(Bit#(1) v);
     method Action setPatternColor(Bit#(32) v);
     method Action setHsyncWidth(Bit#(12) hsyncWidth);
     method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max);
@@ -53,16 +53,10 @@ interface HdmiInternalIndication;
     method Action vsync(Bit#(64) v);
 endinterface
 
-interface HdmiOut;
-    method Action rgb(Rgb888Stage videoData);
-    interface HDMI hdmi;
-endinterface
-
 interface HdmiGenerator;
     interface HdmiInternalRequest control;
     interface HDMI hdmi;
     interface Put#(Bit#(64)) request;
-    method Action rgb(Rgb888Stage videoData);
 endinterface
 
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
@@ -85,7 +79,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
-    Reg#(Bit#(1)) directOutput <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
     SyncPulseIfc sendVsyncIndication <- mkSyncPulse(defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(24)) pixelData <- mkReg(24'h00ff00ff);
@@ -144,7 +137,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
             vsync: vsync, hsync: hsync, pixel: pixel };
     endrule
 
-    rule test_rule if (testPatternEnabled != 0 && directOutput == 0);
+    rule test_rule if (testPatternEnabled != 0);
         pixelData <= patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}];
     endrule
 
@@ -182,19 +175,13 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	    pixelData <= v[23:0];
         endmethod
     endinterface: request
-    method Action rgb(Rgb888Stage videoData) if (directOutput != 0);
-        //rgb888StageReg <= videoData;
-        if (videoData.de != 0)
-            pixelData <= pack(videoData.pixel);
-    endmethod
 
     interface HdmiInternalRequest control;
         method Action setPatternColor(Bit#(32) v);
             patternRegs[0] <= v[23:0]; 
         endmethod
-        method Action setTestPattern(Bit#(1) v, Bit#(1) direct);
+        method Action setTestPattern(Bit#(1) v);
             shadowTestPatternEnabled <= v;
-            directOutput <= direct;
         endmethod
         method Action setHsyncWidth(Bit#(12) width);
             hsyncWidth <= width;
