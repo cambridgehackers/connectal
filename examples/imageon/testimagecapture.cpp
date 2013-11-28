@@ -355,7 +355,7 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    vita_spi_write(193, 0x0400); usleep(100);
    vita_spi_write(192, 0x40); usleep(100);
    sensordevice->set_syncgen_delay(3300);
-   videodevice->active(277, 1919, 1079);
+   videodevice->active(100, 1919, 1079);
    vita_spi_write(199, 1); usleep(100);
    vita_spi_write(200, 0); usleep(100);
    vita_spi_write(194, 0); usleep(100);

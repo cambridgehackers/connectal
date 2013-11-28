@@ -89,7 +89,8 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     ISerdes serdes <- mkISerdes(defaultClock, defaultReset, indication.idIndication,
         clocked_by imageon_clock, reset_by imageon_reset);
-    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data,
+    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
+    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
         clocked_by imageon_clock, reset_by imageon_reset);
     ImageonVideo xsviFromSensor <- mkImageonVideo(imageon_clock, imageon_reset,
         defaultClock, defaultReset, fromSensor, clocked_by hdmi_clock, reset_by hdmi_reset);
@@ -99,7 +100,6 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
 		hdmi_clock, hdmi_reset, defaultClock, defaultReset);
     SPI#(Bit#(26)) spiController <- mkSPI(1000);
     SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);
-    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
         vsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
 

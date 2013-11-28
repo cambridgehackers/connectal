@@ -32,6 +32,7 @@ import XilinxCells::*;
 import XbsvXilinxCells::*;
 import GetPutWithClocks :: *;
 import XbsvSpi :: *;
+import SyncBits::*;
 import YUV::*;
 
 interface ImageonXsviRequest;
@@ -55,6 +56,7 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
     Reg#(Bit#(16)) vsync_count <- mkReg(0);
     Reg#(Bit#(16)) hsync_count <- mkReg(0);
     Reg#(Bit#(1))  framestart_new <- mkReg(0);
+    SyncBitIfc#(Bit#(10)) sync_data_reg <-  mkSyncBits(0, imageon_clock, imageon_reset, defaultClock, defaultReset);
     Reg#(Bit#(16)) syncgen_hactive_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(16)) syncgen_hlength_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(16)) syncgen_vactive_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
@@ -87,7 +89,9 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
 
     rule receive_data;
 	// least signifcant 10 bits shifted out first
-	Vector#(4, Bit#(10)) in = unpack(sensor.get_data());
+        let v = sensor.get_data();
+        sync_data_reg.send(v[49:40]);
+	Vector#(4, Bit#(10)) in = unpack(v[39:0]);
 	dataGearbox.enq(in);
     endrule
 
