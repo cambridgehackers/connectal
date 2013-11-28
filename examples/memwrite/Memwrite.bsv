@@ -68,24 +68,26 @@ module mkMemwriteRequest#(MemwriteIndication indication)(MemwriteRequest);
 
    // dma write channel 0 is reserved for memwrite write path
    WriteChan dma_stream_write_chan = dma.write.writeChannels[0];
-
+   
+   rule resp;
+      dma_stream_write_chan.writeDone.get;
+   endrule
+   
    rule produce;
       dma_stream_write_chan.writeData.put({srcGen+1,srcGen});
       srcGen <= srcGen+2;
    endrule
    
    rule writeReq(streamWrCnt > 0);
-      $display("writeReq %d", streamWrCnt);
-      streamWrCnt <= streamWrCnt-16;
+      streamWrCnt <= streamWrCnt-8;
       dma_stream_write_chan.writeReq.put(?);
       indication.coreIndication.writeReq(streamWrCnt);
-      if (streamWrCnt == 16)
+      if (streamWrCnt == 8)
 	 indication.coreIndication.writeDone(srcGen);
    endrule
 
    interface CoreRequest coreRequest;
       method Action startWrite(Bit#(32) numWords) if (streamWrCnt == 0);
-	 $display("startWrite %d", numWords);
 	 streamWrCnt <= numWords;
 	 indication.coreIndication.started(numWords);
       endmethod

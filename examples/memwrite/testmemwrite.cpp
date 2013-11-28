@@ -43,7 +43,7 @@ class TestDMAIndication : public DMAIndication
 class TestCoreIndication : public CoreIndication
 {
   virtual void writeReq(unsigned long v){
-    fprintf(stderr, "Core::writeReq %lx\n", v);
+    //fprintf(stderr, "Core::writeReq %lx\n", v);
   }
   virtual void started(unsigned long words){
     fprintf(stderr, "Core::started: words=%lx\n", words);
@@ -117,7 +117,7 @@ void parent(int rd_sock, int wr_sock)
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   // write channel 0 is write source
-  dma->configWriteChan(0, ref_dstAlloc, 16);
+  dma->configWriteChan(0, ref_dstAlloc, 8);
   sem_wait(&conf_sem);
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);

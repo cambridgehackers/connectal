@@ -171,7 +171,6 @@ module mkBsimDMAWriteInternal(BsimDMAWriteInternal);
 	 stateReg <= Done;
       else
 	 burstReg <= burstReg-1;
-      // $display("%h", v);
       write_pareff(ctxtPtrs[activeChan].pref, addrReg, v);
    endrule
    
