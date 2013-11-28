@@ -17,6 +17,7 @@ static CoreRequest *device = 0;
 static ImageonSensorRequest *sensordevice;
 static ImageonXsviRequest *videodevice;
 static ImageonSerdesRequest *serdesdevice;
+static HdmiInternalRequest *hdmidevice;
 static int trace_spi = 0;
 
 #define DECL(A) \
@@ -25,12 +26,6 @@ static int trace_spi = 0;
 
 DECL(iserdes_control)
 DECL(spi_response)
-
-#define RXFN(A) \
-    virtual void A ## _value ( unsigned long v ){ \
-        cv_ ## A = v; \
-        sem_post(&sem_ ## A); \
-    }
 
 #define GETFN(A) \
     static unsigned long read_ ## A (void) \
@@ -41,7 +36,10 @@ DECL(spi_response)
     }
 
 class TestImageonSerdesIndication : public ImageonSerdesIndication {
-    RXFN(iserdes_control)
+    virtual void iserdes_control_value ( unsigned long v ){
+        cv_iserdes_control = v;
+        sem_post(&sem_iserdes_control);
+    }
 };
 
 class TestImageCaptureIndications : public CoreIndication {
@@ -52,6 +50,11 @@ class TestImageCaptureIndications : public CoreIndication {
     }
     void debugind(long unsigned int v) {
 printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
+    }
+};
+class TestHdmiInternal: public HdmiInternalIndication {
+    virtual void vsync ( unsigned long long v ){
+//printf("[%s:%d] %lx\n", __FUNCTION__, __LINE__, v);
     }
 };
 
@@ -422,10 +425,12 @@ int main(int argc, const char **argv)
     sensordevice = ImageonSensorRequest::createImageonSensorRequest(new ImageonSensorIndication);
     videodevice = ImageonXsviRequest::createImageonXsviRequest(new ImageonXsviIndication);
     serdesdevice = ImageonSerdesRequest::createImageonSerdesRequest(new TestImageonSerdesIndication);
+    //hdmidevice = HdmiInternalRequest::createHdmiInternalRequest(new TestHdmiInternal);
     // for surfaceflinger 
     int status = PortalRequest::setClockFrequency(1, 160000000, 0);
     //int status = PortalRequest::setClockFrequency(1, 200000000, 0);
     pthread_create(&threaddata, NULL, &pthread_worker, (void *)device);
+    //hdmidevice->setTestPattern(0, 1);
     fmc_imageon_demo_init(argc, argv);
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     usleep(200000);

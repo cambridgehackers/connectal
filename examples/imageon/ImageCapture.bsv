@@ -119,6 +119,10 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
        indication.coreIndication.spi_response(extend(v));
     endrule
 
+    rule setdirect_rule;
+        hdmiGen.control.setTestPattern(0, 1);
+    endrule
+
     interface CoreRequest coreRequest;
     method Action set_debugreq(Bit#(32) v);
     endmethod
