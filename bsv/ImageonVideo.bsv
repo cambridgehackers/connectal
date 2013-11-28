@@ -37,7 +37,6 @@ import YUV::*;
 interface ImageonXsviRequest;
     method Action hactive(Bit#(16) v);
     method Action hfporch(Bit#(16) v);
-    method Action hbporch(Bit#(16) v);
     method Action vactive(Bit#(16) v);
 endinterface
 interface ImageonXsviIndication;
@@ -48,8 +47,6 @@ interface ImageonVideo;
     interface ImageonXsviRequest control;
 endinterface
 
-typedef enum { Idle, Active, FrontP, BackP} State deriving (Bits,Eq);
-
 module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock, Reset axi_reset, ImageonSensor sensor)(ImageonVideo);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
@@ -57,56 +54,37 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
     Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(imageon_clock, imageon_reset, defaultClock, defaultReset); 
     Gearbox#(4, 1, Bit#(1))  syncGearbox <- mkNto1Gearbox(imageon_clock, imageon_reset, defaultClock, defaultReset); 
 
-    Reg#(State)    hstate <- mkReg(Idle);
-    Reg#(State)    vstate <- mkReg(Idle);
+    Reg#(Bit#(1))  hstate <- mkReg(0);
     Reg#(Bit#(16)) vsync_count <- mkReg(0);
     Reg#(Bit#(16)) hsync_count <- mkReg(0);
     Reg#(Bit#(1))  framestart_new <- mkReg(0);
     Reg#(Bit#(16)) syncgen_hactive_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(16)) syncgen_hfporch_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(16)) syncgen_hbporch_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(16)) syncgen_vactive_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     
     rule start_fsm if (framestart_new == 1);
         vsync_count <= 0;
         hsync_count <= 0;
-        hstate <= Active;
-        vstate <= Active;
+        hstate <= 1;
     endrule
  
     rule sync_fsm if (framestart_new != 1);
         let hs = hstate;
-        let vs = vstate;
-        let hc = hsync_count;
-        let vc = vsync_count;
+        let hc = hsync_count + 1;
   
-        hc = hc + 1;
-        if (hstate == FrontP && hsync_count >= syncgen_hfporch_reg)
+        if (hstate == 0 && hsync_count >= syncgen_hfporch_reg)
             begin
             hc = 0;
-            hs = BackP;
-            vc = vc + 1;
-            if (vstate == Active && vsync_count >= syncgen_vactive_reg)
-                begin
-                vc = 0;
-                vs = FrontP;
-                end
+            hs = 1;
+            vsync_count <= vsync_count + 1;
             end
-        if (hstate == BackP && hsync_count >= syncgen_hbporch_reg)
+        if (hstate == 1 && hsync_count >= syncgen_hactive_reg)
             begin
             hc = 0;
-            hs = Active;
+            hs = 0;
             end
-        if (hstate == Active && hsync_count >= syncgen_hactive_reg)
-            begin
-            hc = 0;
-            hs = FrontP;
-            end
-    
         hstate <= hs;
-        vstate <= vs;
         hsync_count <= hc;
-        vsync_count <= vc;
     endrule
 
     rule update_framestart;
@@ -134,14 +112,11 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
 	method Action hfporch(Bit#(16) v);
 	    syncgen_hfporch_reg <= v;
 	endmethod
-	method Action hbporch(Bit#(16) v);
-	    syncgen_hbporch_reg <= v;
-	endmethod
 	method Action vactive(Bit#(16) v);
 	    syncgen_vactive_reg <= v;
 	endmethod
     endinterface
-    method ActionValue#(Bit#(10)) get() if (hstate == Active && vstate == Active);
+    method ActionValue#(Bit#(10)) get() if (hsync_count >= syncgen_hfporch_reg && vsync_count < syncgen_vactive_reg);
 	dataGearbox.deq;
 	return dataGearbox.first[0];
     endmethod
