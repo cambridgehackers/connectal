@@ -35,9 +35,7 @@ import XbsvSpi :: *;
 import YUV::*;
 
 interface ImageonXsviRequest;
-    method Action hactive(Bit#(16) v);
-    method Action hfporch(Bit#(16) v);
-    method Action vactive(Bit#(16) v);
+    method Action active(Bit#(16) hactive, Bit#(16) hlength, Bit#(16)vactive);
 endinterface
 interface ImageonXsviIndication;
 endinterface
@@ -72,16 +70,16 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
         let hs = hstate;
         let hc = hsync_count + 1;
   
-        if (hstate == 0 && hsync_count >= syncgen_hfporch_reg)
+        if (hstate == 0 && hsync_count >= syncgen_hactive_reg)
             begin
-            hc = 0;
+            //hc = 0;
             hs = 1;
-            vsync_count <= vsync_count + 1;
             end
-        if (hstate == 1 && hsync_count >= syncgen_hactive_reg)
+        if (hstate == 1 && hsync_count >= syncgen_hfporch_reg)
             begin
             hc = 0;
             hs = 0;
+            vsync_count <= vsync_count + 1;
             end
         hstate <= hs;
         hsync_count <= hc;
@@ -106,17 +104,13 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
     endrule
 
     interface ImageonXsviRequest control;
-	method Action hactive(Bit#(16) v);
-	    syncgen_hactive_reg <= v;
-	endmethod
-	method Action hfporch(Bit#(16) v);
-	    syncgen_hfporch_reg <= v;
-	endmethod
-	method Action vactive(Bit#(16) v);
-	    syncgen_vactive_reg <= v;
+	method Action active(Bit#(16) hactive, Bit#(16) hlength, Bit#(16)vactive);
+	    syncgen_hactive_reg <= hactive;
+	    syncgen_hfporch_reg <= hlength;
+	    syncgen_vactive_reg <= vactive;
 	endmethod
     endinterface
-    method ActionValue#(Bit#(10)) get() if (hsync_count >= syncgen_hfporch_reg && vsync_count < syncgen_vactive_reg);
+    method ActionValue#(Bit#(10)) get() if (hsync_count < syncgen_hfporch_reg && vsync_count < syncgen_vactive_reg);
 	dataGearbox.deq;
 	return dataGearbox.first[0];
     endmethod
