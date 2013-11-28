@@ -30,12 +30,12 @@ import SyncBits::*;
 import YUV::*;
 
 interface HDMI;
-    method Bit#(1) hdmi_vsync;
-    method Bit#(1) hdmi_hsync;
-    method Bit#(1) hdmi_de;
-    method Bit#(16) hdmi_data;
-    interface Clock hdmi_clock_if;
-    interface Reset hdmi_reset_if;
+    method Bit#(1) vsync;
+    method Bit#(1) hsync;
+    method Bit#(1) de;
+    method Bit#(16) data;
+    interface Clock clock_if;
+    interface Reset reset_if;
 endinterface
 
 interface HdmiInternalRequest;
@@ -62,6 +62,7 @@ interface HdmiGenerator;
     interface HdmiInternalRequest control;
     interface HDMI hdmi;
     interface Put#(Bit#(64)) request;
+    method Action rgb(Rgb888Stage videoData);
 endinterface
 
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
@@ -84,6 +85,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
+    Reg#(Bit#(1)) directOutput <- mkReg(1);
     HdmiOut hdmioutput <- mkHdmiOut();
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
     SyncPulseIfc sendVsyncIndication <- mkSyncPulse(defaultClock, defaultReset, axi_clock);
@@ -127,7 +129,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
             pixelCount <= pixelCount + 1;
     endrule
 
-    rule output_data_rule;
+    rule output_data_rule if (directOutput == 0);
         let hsync = (pixelCount < hsyncWidth) ? 1 : 0;
         let vsync = (lineCount < vsyncWidth) ? 1 : 0;
         let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
@@ -146,6 +148,9 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	    pixelData <= v[23:0];
         endmethod
     endinterface: request
+    method Action rgb(Rgb888Stage videoData) if (directOutput != 0);
+        hdmioutput.rgb(videoData);
+    endmethod
 
     interface hdmi = hdmioutput.hdmi;
     interface HdmiInternalRequest control;
@@ -225,19 +230,19 @@ module mkHdmiOut(HdmiOut);
         rgb888StageReg <= videoData;
     endmethod
     interface HDMI hdmi;
-        method Bit#(1) hdmi_vsync;
+        method Bit#(1) vsync;
             return yuv422StageReg.vsync;
         endmethod
-        method Bit#(1) hdmi_hsync;
+        method Bit#(1) hsync;
             return yuv422StageReg.hsync;
         endmethod
-        method Bit#(1) hdmi_de;
+        method Bit#(1) de;
             return yuv422StageReg.de;
         endmethod
-        method Bit#(16) hdmi_data;
+        method Bit#(16) data;
             return yuv422StageReg.data;
         endmethod
-        interface hdmi_clock_if = defaultClock;
-        interface hdmi_reset_if = defaultReset;
+        interface clock_if = defaultClock;
+        interface reset_if = defaultReset;
     endinterface
 endmodule

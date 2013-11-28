@@ -109,9 +109,9 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     interface HdmiInternalRequest coRequest = hdmiGen.control;
     interface XADC xadc;
         method Bit#(4) gpio;
-            return { bozobit, hdmiGen.hdmi.hdmi_vsync,
-                hdmiGen.hdmi.hdmi_data[8], hdmiGen.hdmi.hdmi_data[0]};
-                //hdmiGen.hdmi.hdmi_hsync, hdmi_de};
+            return { bozobit, hdmiGen.hdmi.vsync,
+                hdmiGen.hdmi.data[8], hdmiGen.hdmi.data[0]};
+                //hdmiGen.hdmi.hsync, hdmi_de};
         endmethod
     endinterface: xadc
 endmodule

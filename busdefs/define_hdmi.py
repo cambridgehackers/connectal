@@ -64,11 +64,11 @@ class Register:
 '''
     def dut_bus_port_map(self, busname,t,params):
         return '''
-      .%(busname)s_hdmi_vsync(hdmi_vsync),
-      .%(busname)s_hdmi_hsync(hdmi_hsync),
-      .%(busname)s_hdmi_de(hdmi_de),
-      .%(busname)s_hdmi_data(hdmi_data),
-      .CLK_%(busname)s_hdmi_clock_if(hdmi_clk),
+      .%(busname)s_vsync(hdmi_vsync),
+      .%(busname)s_hsync(hdmi_hsync),
+      .%(busname)s_de(hdmi_de),
+      .%(busname)s_data(hdmi_data),
+      .CLK_%(busname)s_clock_if(hdmi_clk),
 ''' % {'busname': busname}
     def top_bus_assignments(self,busname,t,params):
         return '''

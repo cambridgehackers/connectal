@@ -59,6 +59,7 @@ interface ImageCaptureIndication;
     interface ImageonSensorIndication isIndication;
     interface ImageonXsviIndication ivIndication;
     interface ImageonSerdesIndication idIndication;
+    interface HdmiInternalIndication coIndication;
     interface BlueScopeIndication bsIndication;
     interface DMAIndication dmaIndication;
 endinterface
@@ -68,6 +69,7 @@ interface ImageCaptureRequest;
     interface ImageonSensorRequest isRequest;
     interface ImageonXsviRequest ivRequest;
     interface ImageonSerdesRequest idRequest;
+    interface HdmiInternalRequest coRequest;
     interface BlueScopeRequest bsRequest;
     interface HDMI hdmi;
     interface DMARequest dmaRequest;
@@ -76,42 +78,39 @@ endinterface
  
 module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
     ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
-
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
-
     IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by processing_system7_1_fclk_clk3);
     Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by fmc_imageon_video_clk1);
     MMCMHACK mmcmhack <- mkMMCMHACK(clocked_by imageon_video_clk1_buf_wire);
     Clock hdmi_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout0);
     Clock imageon_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout1);
-
-    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
-
-    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, indication.idIndication, clocked_by imageon_clock, reset_by imageon_reset);
-    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, clocked_by imageon_clock, reset_by imageon_reset);
-    ImageonVideo xsviFromSensor <- mkImageonVideo(imageon_clock, imageon_reset, defaultClock, defaultReset,
-        fromSensor, clocked_by hdmi_clock, reset_by hdmi_reset);
-
+    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
+    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, indication.idIndication,
+        clocked_by imageon_clock, reset_by imageon_reset);
+    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data,
+        clocked_by imageon_clock, reset_by imageon_reset);
+    ImageonVideo xsviFromSensor <- mkImageonVideo(imageon_clock, imageon_reset,
+        defaultClock, defaultReset, fromSensor, clocked_by hdmi_clock, reset_by hdmi_reset);
     AxiDMA dma <- mkAxiDMA(indication.dmaIndication);
     WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
     BlueScopeInternal bsi <- mkSyncBlueScopeInternal(32, dma_debug_write_chan, indication.bsIndication,
 		hdmi_clock, hdmi_reset, defaultClock, defaultReset);
-   
     SPI#(Bit#(26)) spiController <- mkSPI(1000);
-
     SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);
-    HdmiOut hdmiOut <- mkHdmiOut(clocked_by hdmi_clock, reset_by hdmi_reset);
+    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
+    HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
+        vsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
 
     rule xsviConnection;
         let xsvi = xsviFromSensor.get();
         //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
         //converter.in.put(xsvi);
         //let xvideo <- converter.out.get();
-        //hdmiOut.rgb(xvideo);
+        //hdmiGen.rgb(xvideo);
         Rgb888 pixel = Rgb888{r: xsvi.video_data[9:2], g: xsvi.video_data[9:2], b: xsvi.video_data[9:2]};
-        hdmiOut.rgb(Rgb888Stage{ de: xsvi.active_video,
+        hdmiGen.rgb(Rgb888Stage{ de: xsvi.active_video,
             vsync: xsvi.vsync, hsync: xsvi.hsync, pixel: pixel});
     endrule
 
@@ -134,7 +133,8 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     interface ImageonVideoRequest ivRequest = xsviFromSensor.control;
     interface ImageonSerdesRequest idRequest = serdes.control;
     interface BlueScopeRequest bsRequest = bsi.requestIfc;
-    interface HDMI hdmi = hdmiOut.hdmi;
+    interface HDMI hdmi = hdmiGen.hdmi;
+    interface HdmiInternalRequest coRequest = hdmiGen.control;
     interface ImageonVita vita;
         interface ImageonTopPins toppins;
             method Clock fbbozo();
