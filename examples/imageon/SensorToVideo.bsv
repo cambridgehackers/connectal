@@ -29,31 +29,23 @@ import BRAMFIFO::*;
 import YUV::*;
 
 interface SensorToVideo;
-    interface Put#(XsviData) in;
-    interface Get#(Rgb888VideoData) out;
+    interface Put#(Bit#(10)) in;
+    interface Get#(Bit#(24)) out;
 endinterface
 
 module mkSensorToVideo(SensorToVideo);
-    FIFO#(XsviData) xsviFifo <- mkSizedBRAMFIFO(64);
+    FIFO#(Bit#(10)) xsviFifo <- mkSizedBRAMFIFO(64);
     interface Put in;
-        method Action put(XsviData xsvi);
+        method Action put(Bit#(10) xsvi);
 	    xsviFifo.enq(xsvi);
 	endmethod
     endinterface
     interface Get out;
-        method ActionValue#(Rgb888VideoData) get();
-	    XsviData xsvi = xsviFifo.first;
+        method ActionValue#(Bit#(24)) get();
+	    Bit#(10) v = xsviFifo.first;
 	    xsviFifo.deq;
-	    Bit#(10) v = xsvi.video_data;
 	    let v8 = v[9:2];
-	    return Rgb888VideoData {
-	        vsync: xsvi.vsync,
-	        hsync: xsvi.hsync,
-		active_video: xsvi.active_video,
-		r: v8,
-		g: v8,
-		b: v8
-            };
+	    return {v8, v8, v8};
 	endmethod
     endinterface
 endmodule

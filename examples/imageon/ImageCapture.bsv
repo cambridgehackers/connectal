@@ -77,7 +77,7 @@ interface ImageCaptureRequest;
 endinterface
  
 module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_system7_1_fclk_clk3,
-    ImageCaptureIndication indication)(ImageCaptureRequest) provisos (Bits#(XsviData,xsviDataWidth));
+    ImageCaptureIndication indication)(ImageCaptureRequest);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by processing_system7_1_fclk_clk3);
@@ -104,19 +104,18 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
         vsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
 
     rule xsviConnection;
-        let xsvi = xsviFromSensor.get();
+        let xsvi <- xsviFromSensor.get();
         //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
         //converter.in.put(xsvi);
         //let xvideo <- converter.out.get();
         //hdmiGen.rgb(xvideo);
-        Bit#(64) pixel = {40'b0, xsvi.video_data[9:2], xsvi.video_data[9:2], xsvi.video_data[9:2]};
-        if (xsvi.active_video != 0)
-            hdmiGen.request.put(pixel);
+        Bit#(64) pixel = {40'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
+        hdmiGen.request.put(pixel);
     endrule
 
     rule spiControllerResponse;
-       Bit#(26) v <- spiController.response.get();
-       indication.coreIndication.spi_response(extend(v));
+        Bit#(26) v <- spiController.response.get();
+        indication.coreIndication.spi_response(extend(v));
     endrule
 
     rule setdirect_rule;

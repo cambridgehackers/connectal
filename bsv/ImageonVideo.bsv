@@ -34,14 +34,6 @@ import GetPutWithClocks :: *;
 import XbsvSpi :: *;
 import YUV::*;
 
-typedef struct {
-    Bit#(1) fsync;
-    Bit#(1) vsync;
-    Bit#(1) hsync;
-    Bit#(1) active_video;
-    Bit#(10) video_data;
-} XsviData deriving (Bits);
-
 interface ImageonXsviRequest;
     method Action hactive(Bit#(16) v);
     method Action hfporch(Bit#(16) v);
@@ -51,12 +43,11 @@ interface ImageonXsviRequest;
     method Action vfporch(Bit#(16) v);
     method Action vsync(Bit#(16) v);
 endinterface
-
 interface ImageonXsviIndication;
 endinterface
 
 interface ImageonVideo;
-    method XsviData get();
+    method ActionValue#(Bit#(10)) get();
     interface ImageonXsviRequest control;
 endinterface
 
@@ -71,10 +62,8 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
 
     Reg#(State)    hstate <- mkReg(Idle);
     Reg#(State)    vstate <- mkReg(Idle);
-    Reg#(Bit#(1))  active_video_reg <- mkReg(0);
     Reg#(Bit#(16)) vsync_count <- mkReg(0);
     Reg#(Bit#(16)) hsync_count <- mkReg(0);
-    Reg#(Bit#(10)) videodata <- mkReg(0);
     Reg#(Bit#(1))  framestart_new <- mkReg(0);
     Reg#(Bit#(16)) syncgen_hactive_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(16)) syncgen_hfporch_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
@@ -139,17 +128,11 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
         vstate <= vs;
         hsync_count <= hc;
         vsync_count <= vc;
-        active_video_reg <= pack(hstate == Active && vstate == Active);
     endrule
 
     rule update_framestart;
 	syncGearbox.deq;
 	framestart_new <= syncGearbox.first[0];
-    endrule
-
-    rule update_videodata if (active_video_reg == 1);
-	dataGearbox.deq;
-	videodata <= dataGearbox.first[0];
     endrule
 
     rule receive_framestart;
@@ -188,13 +171,8 @@ module mkImageonVideo#(Clock imageon_clock, Reset imageon_reset, Clock axi_clock
 	    syncgen_vsync_reg <= v;
 	endmethod
     endinterface
-    method XsviData get();
-            return XsviData {
-                fsync: framestart_new,
-                vsync: pack(vstate == Sync),
-                hsync: pack(hstate == Sync),
-                active_video: active_video_reg,
-                video_data: videodata
-            };
+    method ActionValue#(Bit#(10)) get() if (hstate == Active && vstate == Active);
+	dataGearbox.deq;
+	return dataGearbox.first[0];
     endmethod
 endmodule
