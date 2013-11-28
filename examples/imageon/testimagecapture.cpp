@@ -354,20 +354,16 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    vita_spi_write(192, 0); usleep(100);
    vita_spi_write(193, 0x0400); usleep(100);
    vita_spi_write(192, 0x40); usleep(100);
-   sensordevice->set_syncgen_delay(0x0CE4);
-   videodevice->hactive(0x077f);
-   videodevice->hfporch(0x57);
-   videodevice->hsync(0x2b);
-   videodevice->hbporch(0x93);
-   vita_spi_write(199, 0x01); usleep(100);
+   sensordevice->set_syncgen_delay(3300);
+   videodevice->hactive(1919);
+   videodevice->hfporch(87);
+   videodevice->hbporch(190);
+   vita_spi_write(199, 1); usleep(100);
    vita_spi_write(200, 0); usleep(100);
    vita_spi_write(194, 0); usleep(100);
-   videodevice->vactive (0x0437);
-   videodevice->vfporch (0x03);
-   videodevice->vsync(4);
+   videodevice->vactive (1079);
    vita_spi_write(257, 0x3C); usleep(100);
    vita_spi_write(258, 0x0474); usleep(100);
-
    vita_spi_write(160, 0x10); usleep(100);
 
    uint32_t trigDutyCycle    = 90; // exposure time is 90% of frame time (ie. 15msec)
