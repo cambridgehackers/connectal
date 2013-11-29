@@ -91,7 +91,6 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(1))  remapkernel_reg <- mkReg(0);
-    Reg#(Bit#(1))  imgdatavalid_reg <- mkReg(0);
 
     Wire#(Bit#(1)) zero_wire <- mkDWire(0);
     Wire#(Bit#(1)) one_wire <- mkDWire(1);
@@ -134,10 +133,10 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 
     rule calculate_framedata if (raw_empty_reg == 0);
         sync_channel_reg <= serdes.raw_data()[9:0];
-        if (imgdatavalid_reg == 1)
+        if (sync_channel_reg == 10'h035)
             begin
             let dor = serdes.raw_data()[49:10];
-            if (remapkernel_reg == 0)
+            if (remapkernel_reg != 0)
                 begin
                 dor[39: 30] = serdes.raw_data()[19: 10];
                 dor[29: 20] = serdes.raw_data()[29: 20];
@@ -145,16 +144,11 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
                 dor[ 9:  0] = serdes.raw_data()[49: 40];
                 end
             remapkernel_reg <= ~ remapkernel_reg;
-            if (sync_channel_reg == decoder_code_le_reg)
-                imgdatavalid_reg <= 0;
-            if (sync_channel_reg == 10'h035)
-                begin
-                Vector#(4, Bit#(10)) in = unpack(dor[39:0]);
-                dataGearbox.enq(in);
-                end
+            Vector#(4, Bit#(10)) in = unpack(dor[39:0]);
+            dataGearbox.enq(in);
             end
         else if (sync_channel_reg == decoder_code_ls_reg)
-            imgdatavalid_reg <= 1;
+            remapkernel_reg <= 0;
     endrule
 
     interface ImageonSensorRequest control;
