@@ -22,8 +22,6 @@
 // SOFTWARE.
 
 import Vector::*;
-import Gearbox::*;
-import FIFO::*;
 import GetPut::*;
 import Connectable :: *;
 import PCIE :: *; // ConnectableWithClocks
@@ -90,8 +88,7 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
         clocked_by imageon_clock, reset_by imageon_reset);
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
     ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
-        clocked_by imageon_clock, reset_by imageon_reset);
-    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(imageon_clock, imageon_reset, hdmi_clock, hdmi_reset);
+        hdmi_clock, hdmi_reset, clocked_by imageon_clock, reset_by imageon_reset);
     AxiDMA dma <- mkAxiDMA(indication.dmaIndication);
     WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
     BlueScopeInternal bsi <- mkSyncBlueScopeInternal(32, dma_debug_write_chan, indication.bsIndication,
@@ -101,17 +98,8 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
         vsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
 
-    rule receive_data;
-        // least signifcant 10 bits shifted out first
-        let v = fromSensor.get_data();
-        Vector#(4, Bit#(10)) in = unpack(v[39:0]);
-        if (v[49:40] == 10'h035)
-            dataGearbox.enq(in);
-    endrule
-
     rule xsviConnection;
-        dataGearbox.deq;
-        let xsvi = dataGearbox.first[0];
+        let xsvi <- fromSensor.get_data();
         //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
         //converter.in.put(xsvi);
         //let xvideo <- converter.out.get();

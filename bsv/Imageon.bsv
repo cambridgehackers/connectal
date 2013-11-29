@@ -56,7 +56,7 @@ endinterface
 interface ImageonSensor;
     interface ImageonSensorRequest control;
     interface ImageonSensorPins pins;
-    method Bit#(50) get_data();
+    method ActionValue#(Bit#(10)) get_data();
 endinterface
 
 (* always_enabled *)
@@ -72,7 +72,7 @@ interface ImageonVita;
    interface ImageonSerdesPins serpins;
 endinterface
 
-module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Bool send_trigger)(ImageonSensor);
+module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Bool send_trigger, Clock hdmi_clock, Reset hdmi_reset)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -105,6 +105,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     vita_trigger_wire[1] <- mkOBUFT(one_wire, imageon_oe);
     vita_trigger_wire[0] <- mkOBUFT(trigger_wire, imageon_oe);
     ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(serdes.reset(), imageon_oe);
+    Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset);
 
     rule pll_rule;
         poutq <= pll_out.q();
@@ -153,7 +154,12 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
                 remapkernel_reg <= ~ remapkernel_reg;
                 if (sync_channel_reg == decoder_code_le_reg)
                     idv = 0;
-                dataout_reg <= {sync_channel_reg, dor};
+                if (sync_channel_reg == 10'h035)
+                    begin
+                    Vector#(4, Bit#(10)) in = unpack(dor[39:0]);
+                    dataGearbox.enq(in);
+                    end
+                //dataout_reg <= {sync_channel_reg, dor};
                 end
             else if (sync_channel_reg == decoder_code_ls_reg)
                 idv = 1;
@@ -178,8 +184,9 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 	    trigger_cnt_trigger_reg <= v;
 	endmethod
     endinterface: control
-    method Bit#(50) get_data();
-        return dataout_reg;
+    method ActionValue#(Bit#(10)) get_data();
+        dataGearbox.deq;
+        return dataGearbox.first[0];
     endmethod
     interface ImageonSensorPins pins;
         method Bit#(1) io_vita_clk_pll();
