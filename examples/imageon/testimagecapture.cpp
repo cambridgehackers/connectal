@@ -249,8 +249,6 @@ static void fmc_imageon_demo_enable_ipipe( void)
    serdesdevice->set_serdes_training(0x03A6);
    printf( "VITA ISERDES - Setting Manual Tap to 0x%08X\n\r", uManualTap);
    serdesdevice->set_serdes_manual_tap(uManualTap);
-   sensordevice->set_decoder_code_ls(0xAA);
-   sensordevice->set_decoder_code_le(0x012A);
 
    printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
    serdesdevice->set_iserdes_control( VITA_ISERDES_RESET_BIT);

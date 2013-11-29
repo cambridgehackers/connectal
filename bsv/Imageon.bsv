@@ -45,8 +45,6 @@ endinterface
 interface ImageonSensorRequest;
     method Bit#(32) get_debugind();
     method Action set_host_oe(Bit#(1) v);
-    method Action set_decoder_code_ls(Bit#(10) v);
-    method Action set_decoder_code_le(Bit#(10) v);
     method Action set_trigger_cnt_trigger(Bit#(32) v);
 endinterface
 interface ImageonSensorIndication;
@@ -81,12 +79,8 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     Wire#(Bit#(1)) ptq <- mkDWire(0);
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
     Reg#(Bit#(1)) imageon_oe <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(10)) decoder_code_ls_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(10)) decoder_code_le_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(32)) trigger_cnt_trigger_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
 
-    Reg#(Bit#(10)) sync_channel_reg <- mkReg(0);
-    Reg#(Bit#(1))  raw_empty_reg <- mkReg(0);
     Reg#(Bool)     tstate <- mkReg(False);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
     Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
@@ -127,27 +121,23 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
             tstate <= False;
     endrule
 
-    rule data_pipeline;
-        raw_empty_reg <= serdes.raw_empty();
-    endrule
-
-    rule calculate_framedata if (raw_empty_reg == 0);
-        sync_channel_reg <= serdes.raw_data()[9:0];
+    rule calculate_framedata;
+        Vector#(5, Bit#(10)) v = serdes.raw_data();
+        Bit#(10) sync_channel_reg = v[0];
         if (sync_channel_reg == 10'h035)
             begin
-            let dor = serdes.raw_data()[49:10];
+            Vector#(4, Bit#(10)) dor;
+            for (Integer i = 0; i < 4; i = i + 1)
+                dor[i] = v[i+1];
             if (remapkernel_reg != 0)
                 begin
-                dor[39: 30] = serdes.raw_data()[19: 10];
-                dor[29: 20] = serdes.raw_data()[29: 20];
-                dor[19: 10] = serdes.raw_data()[39: 30];
-                dor[ 9:  0] = serdes.raw_data()[49: 40];
+                for (Integer i = 0; i < 4; i = i + 1)
+                    dor[i] = v[4-i];
                 end
-            remapkernel_reg <= ~ remapkernel_reg;
-            Vector#(4, Bit#(10)) in = unpack(dor[39:0]);
-            dataGearbox.enq(in);
+            remapkernel_reg <= ~remapkernel_reg;
+            dataGearbox.enq(dor);
             end
-        else if (sync_channel_reg == decoder_code_ls_reg)
+        else
             remapkernel_reg <= 0;
     endrule
 
@@ -157,12 +147,6 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 	endmethod
 	method Action set_host_oe(Bit#(1) v);
 	    imageon_oe <= ~v;
-	endmethod
-	method Action set_decoder_code_ls(Bit#(10) v);
-	    decoder_code_ls_reg <= v;
-	endmethod
-	method Action set_decoder_code_le(Bit#(10) v);
-	    decoder_code_le_reg <= v;
 	endmethod
 	method Action set_trigger_cnt_trigger(Bit#(32) v);
 	    trigger_cnt_trigger_reg <= v;

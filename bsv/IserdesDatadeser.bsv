@@ -480,8 +480,7 @@ endinterface
 
 interface SerdesData;
     method Wire#(Bit#(1)) reset();
-    method Bit#(1) raw_empty();
-    method Bit#(50) raw_data();
+    method Vector#(5, Bit#(10)) raw_data();
 endinterface
 
 interface ISerdes;
@@ -518,7 +517,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
     Reg#(Bit#(1)) serdes_align_busy_temp <- mkReg(0);
     Reg#(Bit#(1)) serdes_align_busy_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
-    Wire#(Bit#(1)) new_raw_empty_wire <- mkDWire(0);
+    Reg#(Bit#(1)) new_raw_empty_reg <- mkReg(0);
     TrainRotate trainrot <- replicateM(mkReg(0));
     Vector#(5, IserdesDatadeser) pin_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdes_reset, serdest_clk.gen_clk,
 	  serdes_align_start_reg, serdes_auto_align_reg, serdes_training_reg,
@@ -567,11 +566,11 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     endrule
     
     rule serdes_reset_rule if (serdes_reset_reg == 0);
-        new_raw_empty_wire <= 0;
+        new_raw_empty_reg <= 0;
     endrule
 
     rule serdes_calc2 if (serdes_reset_reg == 1);
-        new_raw_empty_wire <= empty_wire;
+        new_raw_empty_reg <= empty_wire;
     endrule
 
     interface ImageonSerdesRequest control;
@@ -623,11 +622,9 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
         method Wire#(Bit#(1)) reset();
             return serdes_reset_reg;
         endmethod
-        method Bit#(1) raw_empty();
-            return new_raw_empty_wire;
-        endmethod
-        method Bit#(50) raw_data();
-            return raw_data_wire;
+        method Vector#(5, Bit#(10)) raw_data() if (new_raw_empty_reg == 0 && serdes_reset_reg != 0);
+            Vector#(5, Bit#(10)) in = unpack(raw_data_wire);
+            return in;
 	endmethod
     endinterface
 endmodule
