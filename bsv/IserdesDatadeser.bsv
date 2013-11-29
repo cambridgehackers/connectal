@@ -516,7 +516,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
 
     ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
     SyncBitIfc#(Bit#(1)) serdes_align_busy_reg <- mkSyncBit(defaultClock, defaultReset, axi_clock);
-    Reg#(Bit#(1)) new_raw_empty_reg <- mkReg(0);
+    Reg#(Bit#(1)) new_raw_empty_reg <- mkReg(1);
     TrainRotate trainrot <- replicateM(mkSyncReg(0, axi_clock, axi_reset, defaultClock));
     Vector#(5, IserdesDatadeser) pin_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdes_reset, serdest_clk.gen_clk,
 	  serdes_align_start_reg, serdes_auto_align_reg, serdes_training_reg,
