@@ -22,16 +22,12 @@
 // SOFTWARE.
 
 import Vector::*;
-import FIFO::*;
-import GetPut::*;
 import Gearbox::*;
 import Clocks::*;
 import IserdesDatadeser::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
-import GetPutWithClocks::*;
 import XbsvSpi::*;
-import YUV::*;
 import HDMI::*;
 
 (* always_enabled *)
@@ -83,18 +79,16 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     Reg#(Bit#(1)) imageon_oe <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(32)) trigger_cnt_trigger_reg <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
 
-    Reg#(Bool)     tstate <- mkReg(False);
+    Reg#(Bit#(1))  trigger_active <- mkReg(1);
     Reg#(Bit#(32)) tcounter <- mkReg(0);
-    Reg#(Bit#(32)) debugind_value <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(1))  remapkernel_reg <- mkReg(0);
 
     Wire#(Bit#(1)) zero_wire <- mkDWire(0);
     Wire#(Bit#(1)) one_wire <- mkDWire(1);
-    Wire#(Bit#(1)) trigger_wire <- mkDWire(pack(!tstate));
     Vector#(3, ReadOnly#(Bit#(1))) vita_trigger_wire;
     vita_trigger_wire[2] <- mkOBUFT(zero_wire, imageon_oe);
     vita_trigger_wire[1] <- mkOBUFT(one_wire, imageon_oe);
-    vita_trigger_wire[0] <- mkOBUFT(trigger_wire, imageon_oe);
+    vita_trigger_wire[0] <- mkOBUFT(trigger_active, imageon_oe);
     ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(serdes.reset(), imageon_oe);
     Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset);
 
@@ -112,30 +106,27 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     endrule
 
     rule tcalc;
-        if (!tstate && send_trigger)
+        if (trigger_active == 1 && send_trigger)
             begin
             tcounter <= trigger_cnt_trigger_reg;
-            tstate <= True;
+            trigger_active <= 0;
             end
         else
             tcounter <= tcounter - 1;
-        if (tstate && tcounter == 0)
-            tstate <= False;
+        if (trigger_active == 0 && tcounter == 0)
+            trigger_active <= 1;
     endrule
 
     rule calculate_framedata;
         Vector#(5, Bit#(10)) v = serdes.raw_data();
-        Bit#(10) sync_channel_reg = v[0];
-        if (sync_channel_reg == 10'h035)
+        if (v[0] == 10'h035)
             begin
             Vector#(4, Bit#(10)) dor;
             for (Integer i = 0; i < 4; i = i + 1)
-                dor[i] = v[i+1];
-            if (remapkernel_reg != 0)
-                begin
-                for (Integer i = 0; i < 4; i = i + 1)
+                if (remapkernel_reg == 0)
+                    dor[i] = v[i+1];
+                else
                     dor[i] = v[4-i];
-                end
             remapkernel_reg <= ~remapkernel_reg;
             dataGearbox.enq(dor);
             end
@@ -145,7 +136,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 
     interface ImageonSensorRequest control;
         method Bit#(32) get_debugind();
-            return debugind_value;
+            return 0;
 	endmethod
 	method Action set_host_oe(Bit#(1) v);
 	    imageon_oe <= ~v;
