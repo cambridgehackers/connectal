@@ -29,7 +29,7 @@ extern "C" {
     struct channel* rc;
     struct channel* wc;
 
-    fprintf(stderr, "BsimDMA::init_pareff()");
+    fprintf(stderr, "BsimDMA::init_pareff()\n");
 
     rc = &(p_fd.read);
     snprintf(rc->path, sizeof(rc->path), "/tmp/fd_sock_rc");

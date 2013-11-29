@@ -50,6 +50,7 @@ test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	echo test-imageon built successfully
 
 test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.cpp
+	-pkill bluetcl
 	rm -fr test-memcpy
 	mkdir test-memcpy
 	./genxpsprojfrombsv -M bsim -B $(BOARD) -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv
@@ -60,6 +61,7 @@ test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.
 
 
 test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmemread.cpp
+	-pkill bluetcl
 	rm -fr test-memread
 	mkdir test-memread
 	./genxpsprojfrombsv -M bsim -B $(BOARD) -p test-memread -b Memread examples/memread/Memread.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv
@@ -70,11 +72,18 @@ test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmem
 
 
 test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/testmemwrite.cpp
+	-pkill bluetcl
 	rm -fr test-memwrite
 	mkdir test-memwrite
 	./genxpsprojfrombsv -M bsim -B $(BOARD) -p test-memwrite -b Memwrite examples/memwrite/Memwrite.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv
 	cp examples/memwrite/testmemwrite.cpp test-memwrite/jni/
 	cd test-memwrite; make x86_exe; cd ..
+	test-memwrite/sources/bsim &
+	test-memwrite/jni/memwrite
+
+
+mw:
+	-pkill bluetcl
 	test-memwrite/sources/bsim &
 	test-memwrite/jni/memwrite
 

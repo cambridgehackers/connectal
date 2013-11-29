@@ -190,7 +190,7 @@ int PortalRequest::sendMessage(PortalMessage *msg)
     unsigned int addr = req_fifo_base + msg->channel * 256;
     struct memrequest foo = {true,addr,data};
     if (send(p.write.s2, &foo, sizeof(foo), 0) == -1) {
-      fprintf(stderr, "(%s) send error\n", name);
+      fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
       exit(1);
     }
     //fprintf(stderr, "(%s) sendMessage\n", name);
@@ -426,7 +426,7 @@ void* portalExec(void* __x)
 	struct memrequest foo = {false,addr,0};
 	//fprintf(stderr, "sending read request\n");
 	if (send(instance->p.read.s2, &foo, sizeof(foo), 0) == -1) {
-	  fprintf(stderr, "(%s) send error\n", instance->name);
+	  fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, instance->name);
 	  exit(1);
 	}
 	unsigned int queue_status;
