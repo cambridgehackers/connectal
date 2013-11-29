@@ -515,22 +515,12 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     Wire#(Bit#(1)) empty_wire <- mkDWire(0);
 
     ClockGenIfc serdest_clk <- mkBUFIO(ibufds_clk);
-    Reg#(Bit#(1)) serdes_align_busy_temp <- mkReg(0);
-    Reg#(Bit#(1)) serdes_align_busy_reg <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
+    SyncBitIfc#(Bit#(1)) serdes_align_busy_reg <- mkSyncBit(defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(1)) new_raw_empty_reg <- mkReg(0);
-    TrainRotate trainrot <- replicateM(mkReg(0));
+    TrainRotate trainrot <- replicateM(mkSyncReg(0, axi_clock, axi_reset, defaultClock));
     Vector#(5, IserdesDatadeser) pin_v <- replicateM(mkIserdesDatadeser(serdes_clock, serdes_reset, serdest_clk.gen_clk,
 	  serdes_align_start_reg, serdes_auto_align_reg, serdes_training_reg,
 	  serdes_manual_tap_reg, trainrot));
-
-    rule trainrotgen_rule;
-        for (UInt#(4) i = 0; i < 10; i = i + 1)
-            trainrot[i] <= rotateBitsBy(serdes_training_reg, i+6);
-    endrule
-
-    rule serdes_copybits;
-        serdes_align_busy_reg <= serdes_align_busy_temp;
-    endrule
 
     Vector#(5, ReadOnly#(Bit#(1))) ibufds_v;
     for (Integer i = 0; i < 5; i = i + 1)
@@ -551,7 +541,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
           samplein = samplein | pin_v[i].samplein();
 	  rawdataw[(i+1)*10-1: i*10] = pin_v[i].dataout();
        end
-       serdes_align_busy_temp <= alignbusyw;
+       serdes_align_busy_reg.send(alignbusyw);
        //bittest_wire <= pack(samplein == 3'b110);
        empty_wire <= emptyw;
        raw_data_wire <= rawdataw;
@@ -560,16 +550,11 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
     rule sendup_sdes_clock;
     for (Bit#(8) i = 0; i < 5; i = i+1) begin
        pin_v[i].reset(serdes_reset_null);
-       //pin_v[i].delay_wren(delay_wren_c_reg);
        pin_v[i].fifo_wren(serdes_fifo_enable_null);
     end
     endrule
     
-    rule serdes_reset_rule if (serdes_reset_reg == 0);
-        new_raw_empty_reg <= 0;
-    endrule
-
-    rule serdes_calc2 if (serdes_reset_reg == 1);
+    rule serdes_calc2;
         new_raw_empty_reg <= empty_wire;
     endrule
 
@@ -579,6 +564,8 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
 	endmethod
 	method Action set_serdes_training(Bit#(10) v);
 	    serdes_training_reg <= v;
+            for (UInt#(4) i = 0; i < 10; i = i + 1)
+                trainrot[i] <= rotateBitsBy(v, i+6);
 	endmethod
 	method Action set_iserdes_control(Bit#(32) v);
 	    serdes_reset_reg <= ~v[0];
@@ -588,7 +575,7 @@ module mkISerdes#(Clock axi_clock, Reset axi_reset, ImageonSerdesIndication indi
 	endmethod
         method Action get_iserdes_control();
 	    let v = 0;
-	    v[9] = serdes_align_busy_reg;
+	    v[9] = serdes_align_busy_reg.read();
             indication.iserdes_control_value(v);
 	endmethod
 	method Action set_decoder_control(Bit#(32) v);

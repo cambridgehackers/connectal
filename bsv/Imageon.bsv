@@ -32,6 +32,7 @@ import XbsvXilinxCells::*;
 import GetPutWithClocks::*;
 import XbsvSpi::*;
 import YUV::*;
+import HDMI::*;
 
 (* always_enabled *)
 interface ImageonSensorPins;
@@ -69,7 +70,8 @@ interface ImageonVita;
    interface ImageonSerdesPins serpins;
 endinterface
 
-module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Bool send_trigger, Clock hdmi_clock, Reset hdmi_reset)(ImageonSensor);
+module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Bool send_trigger,
+        HdmiInternalRequest hdmicontrol, Clock hdmi_clock, Reset hdmi_reset)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -147,6 +149,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 	endmethod
 	method Action set_host_oe(Bit#(1) v);
 	    imageon_oe <= ~v;
+            hdmicontrol.setTestPattern(0);
 	endmethod
 	method Action set_trigger_cnt_trigger(Bit#(32) v);
 	    trigger_cnt_trigger_reg <= v;
