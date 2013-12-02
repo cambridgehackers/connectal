@@ -64,13 +64,13 @@ module mkReadChan2BRAM#(ReadChan rc, BRAM1Port#(a,d) br)(ReadChan2BRAM#(a))
       iv <= (i < n);
    endrule
    
-   rule loadNeedleResp;
+   rule loadResp;
       let rv <- rc.readData.get;
       Vector#(nd,d) rvv = unpack(rv);
       gb.enq(rvv);
    endrule
    
-   rule loadNeedle(jv);
+   rule load(jv);
       br.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:j, datain:gb.first[0]});
       gb.deq;
       jv <= (j < n);

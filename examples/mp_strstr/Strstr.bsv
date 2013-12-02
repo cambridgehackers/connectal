@@ -20,7 +20,8 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import FIFOF::*;
+import FIFO::*;
+import SpecialFIFOs::*;
 import GetPut::*;
 import Vector::*;
 import BRAM::*;
@@ -82,24 +83,27 @@ module mkStrstrRequest#(StrstrIndication indication)(StrstrRequest);
    Reg#(Stage) stage <- mkReg(Idle);
    Reg#(Bit#(32)) needleLenReg <- mkReg(0);
    Reg#(Bit#(32)) haystackLenReg <- mkReg(0);
-   Reg#(Bit#(32)) i <- mkReg(0);
-   Reg#(Bit#(32)) j <- mkReg(0);
+   Reg#(Bit#(32)) iReg <- mkReg(0);
+   Reg#(Bit#(32)) jReg <- mkReg(0);
    
    ReadChan2BRAM#(NeedleIdx) n2b <- mkReadChan2BRAM(needle_read_chan, needle);
    ReadChan2BRAM#(NeedleIdx) mp2b <- mkReadChan2BRAM(mp_next_read_chan, mpNext);
 
-   Reg#(Bit#(2)) epoch <- mkReg(0);
-   FIFOF#(Bit#(2)) efifo <- mkSizedFIFOF(2);
+   Reg#(Bit#(2)) epochReg <- mkReg(0);
+   FIFO#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFO(2);
+   Reg#(Bit#(32)) cycle <- mkReg(0);
    
-   rule start;
+   rule start (stage == Init);
       let x <- n2b.finished;
       let y <- mp2b.finished;
       stage <= Run;
-      i <= 0;
-      j <= 0;
+      iReg <= 1;
+      jReg <= 1;
    endrule
+
+   (* descending_urgency = "mp2b_load, n2b_load, matchNeedleResp, matchNeedleReq" *)
    
-   rule haystackReq(stage == Run);
+   rule haystackReq (stage == Run);
       haystack_read_chan.readReq.put(?);
    endrule
    
@@ -114,28 +118,45 @@ module mkStrstrRequest#(StrstrIndication indication)(StrstrRequest);
    endrule
  
    rule matchNeedleReq(stage == Run);
-      needle.portA.request.put(BRAMRequest{write:False, address:truncate(i)});
-      mpNext.portA.request.put(BRAMRequest{write:False, address:truncate(i+1)});
-      efifo.enq(epoch);
-      i <= i+1;
+      needle.portA.request.put(BRAMRequest{write:False, address:truncate(iReg-1)});
+      mpNext.portA.request.put(BRAMRequest{write:False, address:truncate(iReg)});
+      efifo.enq(tuple2(epochReg,iReg));
+      iReg <= iReg+1;
+   endrule
+   
+   rule hb (stage==Run);
+      $display("cycle %h", cycle);
+      cycle <= cycle+1;
    endrule
    
    rule matchNeedleResp(stage == Run);
-      let m = haystackLenReg;
+      let n = haystackLenReg;
+      let m = needleLenReg;
       let nv <- needle.portA.response.get;
       let mp <- mpNext.portA.response.get;
       let hv = haystack.first;
+      let epoch = tpl_1(efifo.first);
+      let i = tpl_2(efifo.first);
+      let j = jReg;
       efifo.deq;
-      if (efifo.first == epoch) begin
-	 if (i==m+1) begin
-	    indication.coreIndication.searchResult(unpack(j)-1);
+      if (epoch == epochReg) begin
+	 if (j > n) begin
+	    indication.coreIndication.searchResult(-1);
+	    $display("no match found");
+	 end
+	 else if (i==m+1) begin
+	    $display("string match %d", j);
+	    indication.coreIndication.searchResult(unpack(j-i));
+	    stage <= Idle;
 	 end
 	 else if ((i==m+1) || ((i>0) && (nv != hv[0]))) begin
-	    epoch <= epoch+1;
-	    i <= mp;
+	    epochReg <= epochReg + 1;
+	    iReg <= mp;
+	    $display("char mismatch %d %d MP_Next[i]=%d", i, j, mp);
 	 end
 	 else begin
-	    j <= j+1;
+	    $display("   char match %d %d", i, j);
+	    jReg <= j+1;
 	    haystack.deq;
 	 end
       end

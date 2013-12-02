@@ -68,9 +68,10 @@ int MP(const char *x, const char *t, int *MP_next, int m, int n)
   int j = 1;
   while (j <= n) {
     while ((i==m+1) || ((i>0) && (x[i-1] != t[j-1]))){
-      fprintf(stderr, "mismatch: i=%d, j=%d MP_next[i]=%d\n", i,j,MP_next[i]);
+      fprintf(stderr, "char mismatch %d %d MP_next[i]=%d\n", i,j,MP_next[i]);
       i = MP_next[i];
     }
+    fprintf(stderr, "   char match %d %d\n", i, j);
     i = i+1;
     j = j+1;
     if (i==m+1){
@@ -78,6 +79,7 @@ int MP(const char *x, const char *t, int *MP_next, int m, int n)
       return j-i;
     }
   }
+  fprintf(stderr, "no match found\n");
   return -1;
 }
 

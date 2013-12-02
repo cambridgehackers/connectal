@@ -89,8 +89,8 @@ test-mp_strstr/sources/bsim: examples/mp_strstr/Strstr.bsv examples/mp_strstr/te
 	./genxpsprojfrombsv -M bsim -B $(BOARD) -p test-mp_strstr -b Strstr examples/mp_strstr/Strstr.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv
 	cp examples/mp_strstr/teststrstr.cpp test-mp_strstr/jni/
 	cd test-mp_strstr; make x86_exe; cd ..
-#	test-mp_strstr/sources/bsim &
-#	test-mp_strstr/jni/strstr
+	test-mp_strstr/sources/bsim &
+	test-mp_strstr/jni/strstr
 
 
 xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
