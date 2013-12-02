@@ -168,16 +168,16 @@ int main(int argc, const char **argv)
     fprintf(stderr, "flush and invalidate complete\n");
       
     // write channel 0 is copy destination
-    dma->configWriteChan(0, ref_dstAlloc, 16);
+    dma->configChan(1, 0, ref_dstAlloc, 16);
     sem_wait(&conf_sem);
     // read channel 0 is copy source
-    dma->configReadChan(0, ref_srcAlloc, 16);
+    dma->configChan(0, 0, ref_srcAlloc, 16);
     sem_wait(&conf_sem);
     // read channel 1 is readWord source
-    dma->configReadChan(1, ref_srcAlloc, 2);
+    dma->configChan(0, 1, ref_srcAlloc, 2);
     sem_wait(&conf_sem);
     // write channel 1 is Bluescope destination
-    dma->configWriteChan(1, ref_bsAlloc, 2);
+    dma->configChan(1, 1, ref_bsAlloc, 2);
     sem_wait(&conf_sem);
 
     fprintf(stderr, "starting mempcy numWords:%d\n", numWords);

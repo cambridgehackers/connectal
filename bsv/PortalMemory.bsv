@@ -42,10 +42,8 @@ interface DMAIndication;
 endinterface
 
 interface DMARequest;
-   method Action configReadChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) bsz);
-   method Action configWriteChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) bsz);
-   method Action getReadStateDbg();
-   method Action getWriteStateDbg();
+   method Action configChan(Bit#(32) rc, Bit#(32) channelId, Bit#(32) pref, Bit#(32) bsz);
+   method Action getStateDbg(Bit#(32) rc);
    method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
    method Action paref(Bit#(32) pref, Bit#(32) size);
 endinterface

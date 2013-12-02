@@ -144,13 +144,13 @@ int main(int argc, const char **argv)
     dma->dCacheFlushInval(&needleAlloc, needle);
     dma->dCacheFlushInval(&mpNextAlloc, mpNext);
 
-    dma->configReadChan(0, ref_haystackAlloc, 2);
+    dma->configChan(0, 0, ref_haystackAlloc, 2);
     sem_wait(&conf_sem);
 
-    dma->configReadChan(1, ref_needleAlloc, 2);
+    dma->configChan(0, 1, ref_needleAlloc, 2);
     sem_wait(&conf_sem);
 
-    dma->configReadChan(2, ref_mpNextAlloc, 2);
+    dma->configChan(0, 2, ref_mpNextAlloc, 2);
     sem_wait(&conf_sem);
 
     device->search(needle_len, haystack_len);

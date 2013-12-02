@@ -69,7 +69,7 @@ module mkMempokeRequest#(MempokeIndication indication)(MempokeRequest);
    
    rule writeRule;
       let v <- dma_write_chan.writeDone.get;
-      indication.coreIndication.writeWordResult(unpack({0,v}));
+      indication.coreIndication.writeWordResult(unpack(0));
    endrule
 
    rule readRule;

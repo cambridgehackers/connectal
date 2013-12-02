@@ -117,7 +117,7 @@ void parent(int rd_sock, int wr_sock)
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   // write channel 0 is write source
-  dma->configWriteChan(0, ref_dstAlloc, 8);
+  dma->configChan(1, 0, ref_dstAlloc, 8);
   sem_wait(&conf_sem);
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);

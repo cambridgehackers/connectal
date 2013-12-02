@@ -93,7 +93,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   // read channel 0 is read source
-  dma->configReadChan(0, ref_srcAlloc, 16);
+  dma->configChan(0, 0, ref_srcAlloc, 16);
   sleep(2);
 
   fprintf(stderr, "Main::starting read %08x\n", numWords);

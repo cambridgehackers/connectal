@@ -82,10 +82,10 @@ int main(int argc, const char **argv)
   dma->dCacheFlushInval(&dstAlloc, dstBuffer);
   fprintf(stderr, "flush and invalidate complete\n");
       
-  dma->configWriteChan(0, ref_dstAlloc, 2);
+  dma->configChan(1, 0, ref_dstAlloc, 2);
   sem_wait(&conf_sem);
   
-  dma->configReadChan(0, ref_dstAlloc, 2);
+  dma->configChan(0, 0, ref_dstAlloc, 2);
   sem_wait(&conf_sem);
 
   fprintf(stderr, "main about to issue requests\n");

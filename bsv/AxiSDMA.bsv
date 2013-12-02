@@ -212,20 +212,19 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA);
    AxiDMAWriteInternal writer <- mkAxiDMAWriteInternal;
    AxiDMAReadInternal  reader <- mkAxiDMAReadInternal;
    interface DMARequest request;
-      method Action configReadChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) numWords);
-	 reader.read.configChan(pack(truncate(channelId)), pref, truncate((numWords>>1)-1));
+      method Action configChan(Bit#(32) rc, Bit#(32) channelId, Bit#(32) pref, Bit#(32) numWords);
+	 if (rc == 0)
+	    reader.read.configChan(pack(truncate(channelId)), pref, truncate((numWords>>1)-1));
+	 else if (rc==1)
+	    writer.write.configChan(pack(truncate(channelId)), pref, truncate((numWords>>1)-1));
 	 indication.configResp(channelId);
       endmethod
-      method Action configWriteChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) numWords);
-	 writer.write.configChan(pack(truncate(channelId)), pref, truncate((numWords>>1)-1));
-	 indication.configResp(channelId);
-      endmethod
-      method Action getReadStateDbg();
-	 let rv <- reader.read.dbg;
-	 indication.reportStateDbg(rv);
-      endmethod
-      method Action getWriteStateDbg();
-	 let rv <- writer.write.dbg;
+      method Action getStateDbg(Bit#(32) rc);
+	 let rv = ?;
+	 if (rc == 0)
+	    rv <- reader.read.dbg;
+	 else if (rc == 1)
+	    rv <- writer.write.dbg;
 	 indication.reportStateDbg(rv);
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);

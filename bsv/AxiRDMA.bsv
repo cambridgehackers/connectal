@@ -264,20 +264,19 @@ module mkAxiDMA#(DMAIndication indication)(AxiDMA#(t))
    endrule
    
    interface DMARequest request;
-      method Action configReadChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) __ignored);
-	 reader.read.configChan(pack(truncate(channelId)), pref);
+      method Action configChan(Bit#(32) rc, Bit#(32) channelId, Bit#(32) pref, Bit#(32) __ignored);
+	 if (rc == 0)
+	    reader.read.configChan(pack(truncate(channelId)), pref);
+	 else if (rc == 1)
+	    writer.write.configChan(pack(truncate(channelId)), pref);
 	 indication.configResp(channelId);
       endmethod
-      method Action configWriteChan(Bit#(32) channelId, Bit#(32) pref, Bit#(32) __ignored);
-	 writer.write.configChan(pack(truncate(channelId)), pref);
-	 indication.configResp(channelId);
-      endmethod
-      method Action getReadStateDbg();
-	 let rv <- reader.read.dbg;
-	 indication.reportStateDbg(rv);
-      endmethod
-      method Action getWriteStateDbg();
-	 let rv <- writer.write.dbg;
+      method Action getStateDbg(Bit#(32) rc);
+	 let rv = ?;
+	 if (rc == 0)
+	    rv <- reader.read.dbg;
+	 else if (rc == 1)
+	    rv <- writer.write.dbg;
 	 indication.reportStateDbg(rv);
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len) if (idxReg == lenReg);

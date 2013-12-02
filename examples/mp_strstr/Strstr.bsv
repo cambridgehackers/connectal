@@ -21,10 +21,10 @@
 // SOFTWARE.
 
 import FIFOF::*;
-import BRAMFIFO::*;
 import GetPut::*;
 import Vector::*;
 import BRAM::*;
+import Gearbox::*;
 
 import AxiClientServer::*;
 import AxiSDMA::*;
@@ -73,8 +73,11 @@ module mkStrstrRequest#(StrstrIndication indication)(StrstrRequest);
    ReadChan     needle_read_chan = dma.read.readChannels[1];
    ReadChan    mp_next_read_chan = dma.read.readChannels[2];
    
+   Clock clk <- exposeCurrentClock;
+   Reset rst <- exposeCurrentReset;
    BRAM1Port#(NeedleIdx, Char) needle  <- mkBRAM1Server(defaultValue);
-   BRAM1Port#(NeedleIdx, Int#(32)) mpNext <- mkBRAM1Server(defaultValue);
+   BRAM1Port#(NeedleIdx, Bit#(32)) mpNext <- mkBRAM1Server(defaultValue);
+   Gearbox#(8,1,Char) haystack <- mkNto1Gearbox(clk,rst,clk,rst);
    
    Reg#(Stage) stage <- mkReg(Idle);
    Reg#(Bit#(32)) needleLenReg <- mkReg(0);
@@ -84,6 +87,9 @@ module mkStrstrRequest#(StrstrIndication indication)(StrstrRequest);
    
    ReadChan2BRAM#(NeedleIdx) n2b <- mkReadChan2BRAM(needle_read_chan, needle);
    ReadChan2BRAM#(NeedleIdx) mp2b <- mkReadChan2BRAM(mp_next_read_chan, mpNext);
+
+   Reg#(Bit#(2)) epoch <- mkReg(0);
+   FIFOF#(Bit#(2)) efifo <- mkSizedFIFOF(2);
    
    rule start;
       let x <- n2b.finished;
@@ -92,17 +98,47 @@ module mkStrstrRequest#(StrstrIndication indication)(StrstrRequest);
       i <= 0;
       j <= 0;
    endrule
-
-   rule runReq (stage == Run && i < needleLenReg);
-      i <= i+1;
-      needle.portA.request.put(BRAMRequest{write:False,address:truncate(i)});
-      mpNext.portA.request.put(BRAMRequest{write:False,address:truncate(i)});
+   
+   rule haystackReq(stage == Run);
+      haystack_read_chan.readReq.put(?);
    endrule
    
-   rule runResp;
-      Char nv <- needle.portA.response.get;
-      Int#(32) mv <- mpNext.portA.response.get;
-      $display ("runResp: %c, %d", nv, mv);
+   rule haystackResp;
+      let rv <- haystack_read_chan.readData.get;
+      Vector#(8,Char) pv = unpack(rv);
+      haystack.enq(pv);
+   endrule
+
+   rule haystackDrain(stage != Run);
+      haystack.deq;
+   endrule
+ 
+   rule matchNeedleReq(stage == Run);
+      needle.portA.request.put(BRAMRequest{write:False, address:truncate(i)});
+      mpNext.portA.request.put(BRAMRequest{write:False, address:truncate(i+1)});
+      efifo.enq(epoch);
+      i <= i+1;
+   endrule
+   
+   rule matchNeedleResp(stage == Run);
+      let m = haystackLenReg;
+      let nv <- needle.portA.response.get;
+      let mp <- mpNext.portA.response.get;
+      let hv = haystack.first;
+      efifo.deq;
+      if (efifo.first == epoch) begin
+	 if (i==m+1) begin
+	    indication.coreIndication.searchResult(unpack(j)-1);
+	 end
+	 else if ((i==m+1) || ((i>0) && (nv != hv[0]))) begin
+	    epoch <= epoch+1;
+	    i <= mp;
+	 end
+	 else begin
+	    j <= j+1;
+	    haystack.deq;
+	 end
+      end
    endrule
    
    interface CoreRequest coreRequest;
