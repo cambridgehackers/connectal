@@ -80,7 +80,7 @@ void parent(int rd_sock, int wr_sock)
 {
   CoreRequest *device = 0;
   DMARequest *dma = 0;
-  PortalAlloc dstAlloc;
+  PortalAlloc *dstAlloc;
   unsigned int *dstBuffer = 0;
   
   if(sem_init(&done_sem, 1, 0)){
@@ -98,7 +98,7 @@ void parent(int rd_sock, int wr_sock)
   
   fprintf(stderr, "parent::allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);
-  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
+  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc->header.fd, 0);
   
   pthread_t tid;
   fprintf(stderr, "parent::creating portalExec thread\n");
@@ -107,13 +107,13 @@ void parent(int rd_sock, int wr_sock)
     exit(1);
   }
   
-  unsigned int ref_dstAlloc = dma->reference(&dstAlloc);
+  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   
   for (int i = 0; i < numWords; i++){
     dstBuffer[i] = 0xDEADBEEF;
   }
   
-  dma->dCacheFlushInval(&dstAlloc, dstBuffer);
+  dma->dCacheFlushInval(dstAlloc, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   // write channel 0 is write source
@@ -125,9 +125,9 @@ void parent(int rd_sock, int wr_sock)
 
   sem_wait(&done_sem);
   
-  sock_fd_write(wr_sock, dstAlloc.header.fd);
+  sock_fd_write(wr_sock, dstAlloc->header.fd);
   munmap(dstBuffer, alloc_sz);
-  close(dstAlloc.header.fd);
+  close(dstAlloc->header.fd);
 }
 
 int main(int argc, const char **argv)

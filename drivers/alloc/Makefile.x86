@@ -6,7 +6,11 @@ BASEDIR = ../../
 
 default:
 	make -C /lib/modules/$(KVERSION)/build M=$(PWD) modules
+	sudo rmmod portalalloc
+	sudo insmod ./portalalloc.ko
+	sudo chmod 777 /dev/portalalloc
 
 clean:
 	make -C /lib/modules/$(KVERSION)/build M=$(PWD) clean
 	rm -f a.out
+

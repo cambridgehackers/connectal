@@ -10,9 +10,9 @@
 CoreRequest *device = 0;
 BlueScopeRequest *bluescope = 0;
 DMARequest *dma = 0;
-PortalAlloc srcAlloc;
-PortalAlloc dstAlloc;
-PortalAlloc bsAlloc;
+PortalAlloc *srcAlloc;
+PortalAlloc *dstAlloc;
+PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
@@ -139,9 +139,9 @@ int main(int argc, const char **argv)
   dma->alloc(alloc_sz, &dstAlloc);
   dma->alloc(alloc_sz, &bsAlloc);
 
-  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc.header.fd, 0);
-  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
-  bsBuffer  = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsAlloc.header.fd, 0);
+  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc->header.fd, 0);
+  bsBuffer  = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsAlloc->header.fd, 0);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -150,9 +150,9 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  unsigned int ref_srcAlloc = dma->reference(&srcAlloc);
-  unsigned int ref_dstAlloc = dma->reference(&dstAlloc);
-  unsigned int ref_bsAlloc  = dma->reference(&bsAlloc);
+  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
+  unsigned int ref_bsAlloc  = dma->reference(bsAlloc);
 
   while (srcGen < iterCnt*numWords){
 
@@ -162,9 +162,9 @@ int main(int argc, const char **argv)
       dstBuffer[i] = 5;
     }
     
-    dma->dCacheFlushInval(&srcAlloc, srcBuffer);
-    dma->dCacheFlushInval(&dstAlloc, dstBuffer);
-    dma->dCacheFlushInval(&bsAlloc,  bsBuffer);
+    dma->dCacheFlushInval(srcAlloc, srcBuffer);
+    dma->dCacheFlushInval(dstAlloc, dstBuffer);
+    dma->dCacheFlushInval(bsAlloc,  bsBuffer);
     fprintf(stderr, "flush and invalidate complete\n");
       
     // write channel 0 is copy destination

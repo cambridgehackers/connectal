@@ -105,21 +105,21 @@ int main(int argc, const char **argv)
 
   {
     fprintf(stderr, "simple tests\n");
-    PortalAlloc needleAlloc;
-    PortalAlloc haystackAlloc;
-    PortalAlloc mpNextAlloc;
+    PortalAlloc *needleAlloc;
+    PortalAlloc *haystackAlloc;
+    PortalAlloc *mpNextAlloc;
     unsigned int alloc_len = 16 << 2;
 
     dma->alloc(alloc_len, &needleAlloc);
-    char *needle = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc.header.fd, 0);
+    char *needle = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc->header.fd, 0);
     dma->alloc(alloc_len, &haystackAlloc);
-    char *haystack = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc.header.fd, 0);
+    char *haystack = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc->header.fd, 0);
     dma->alloc(alloc_len, &mpNextAlloc);
-    int *mpNext = (int *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc.header.fd, 0);
+    int *mpNext = (int *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc->header.fd, 0);
     
-    unsigned int ref_needleAlloc = dma->reference(&needleAlloc);
-    unsigned int ref_haystackAlloc = dma->reference(&haystackAlloc);
-    unsigned int ref_mpNextAlloc = dma->reference(&mpNextAlloc);
+    unsigned int ref_needleAlloc = dma->reference(needleAlloc);
+    unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);
+    unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
 
     const char *needle_text = "ababab";
     const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
@@ -147,8 +147,8 @@ int main(int argc, const char **argv)
 
     MP(needle, haystack, mpNext, needle_len, haystack_len);
     
-    dma->dCacheFlushInval(&needleAlloc, needle);
-    dma->dCacheFlushInval(&mpNextAlloc, mpNext);
+    dma->dCacheFlushInval(needleAlloc, needle);
+    dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
     dma->configChan(0, 0, ref_haystackAlloc, 2);
     sem_wait(&conf_sem);
@@ -168,9 +168,9 @@ int main(int argc, const char **argv)
     fprintf(stderr, "benchmarks\n");
     unsigned int BENCHMARK_INPUT_SIZE = 200 * 1024 * 1024;
     
-    PortalAlloc needleAlloc;
-    PortalAlloc haystackAlloc;
-    PortalAlloc mpNextAlloc;
+    PortalAlloc *needleAlloc;
+    PortalAlloc *haystackAlloc;
+    PortalAlloc *mpNextAlloc;
     unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
 
     const char *needle_text = "I have control\n";
@@ -179,15 +179,15 @@ int main(int argc, const char **argv)
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
 
     dma->alloc(needle_alloc_len, &needleAlloc);
-    char *needle = (char *)mmap(0, needle_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc.header.fd, 0);
+    char *needle = (char *)mmap(0, needle_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc->header.fd, 0);
     dma->alloc(haystack_alloc_len, &haystackAlloc);
-    char *haystack = (char *)mmap(0, haystack_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc.header.fd, 0);
+    char *haystack = (char *)mmap(0, haystack_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc->header.fd, 0);
     dma->alloc(mpNext_alloc_len, &mpNextAlloc);
-    int *mpNext = (int *)mmap(0, mpNext_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc.header.fd, 0);
+    int *mpNext = (int *)mmap(0, mpNext_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc->header.fd, 0);
     
-    unsigned int ref_needleAlloc = dma->reference(&needleAlloc);
-    unsigned int ref_haystackAlloc = dma->reference(&haystackAlloc);
-    unsigned int ref_mpNextAlloc = dma->reference(&mpNextAlloc);
+    unsigned int ref_needleAlloc = dma->reference(needleAlloc);
+    unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);
+    unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
 
     dma->configChan(0, 0, ref_haystackAlloc, 2);
     sem_wait(&conf_sem);
@@ -198,7 +198,7 @@ int main(int argc, const char **argv)
     dma->configChan(0, 2, ref_mpNextAlloc, 2);
     sem_wait(&conf_sem);
     
-
+    exit(0);
   }
 
   while(true) sleep(1);

@@ -528,23 +528,6 @@ int pa_system_heap_map_user(struct pa_buffer *buffer,
 static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   switch (cmd) {
-  case PA_DEBUG_PK: {
-    unsigned long start_addr;
-    unsigned long length;
-    unsigned int i,j,*pva;
-    struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
-    printk("PA_DEBUG_PK starting\n");
-    for(i = 0; i < 1; i++){
-      if (copy_from_user(&start_addr, (void __user *)&(palloc->entries[i].dma_address), sizeof(palloc->entries[i].dma_address)))
-    	return -EFAULT;
-      if (copy_from_user(&length, (void __user *)&(palloc->entries[i].length), sizeof(palloc->entries[i].length)))
-    	return -EFAULT;
-      pva = phys_to_virt(start_addr);
-      for(j = 0; j < 6; j++)
-      	printk("PA_DEBUG_PK: %08x\n", pva[j]);
-    }
-    return 0;
-  }
   case PA_DCACHE_FLUSH_INVAL: {
 #if defined(__arm__)
     struct PortalAllocHeader header;
@@ -566,14 +549,6 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
     }
     return 0;
 #elif defined(__i386__) || defined(__x86_64__)
-    /* struct PortalAllocHeader header; */
-    /* struct vm_area_struct *vma; */
-    /* if (copy_from_user(&header, (void __user *)arg, sizeof(header))) */
-    /*   return -EFAULT; */
-    /* vma = find_vma(current->mm, header.addr); */
-    /* printk("PA_DCACHE_FLUSH_INVAL %08lx\n", (unsigned long)vma); */
-    /* flush_cache_range(vma, header.addr, header.addr+header.size); */
-    /* clflush_cache_range((void*)header.addr, header.size); */
     return -EFAULT;
 #else
 #error("PA_DCACHE_FLUSH_INVAL architecture undefined");
@@ -581,11 +556,8 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
   }
   case PA_ALLOC: {
     struct PortalAllocHeader header;
-    struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
     struct sg_table *sg_table = 0;
-    struct scatterlist *sg;
     struct pa_buffer *buffer;
-    int i;
     if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
       return -EFAULT;
 
@@ -593,36 +565,43 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
     header.size = round_up(header.size, 4096);
     buffer = pa_alloc(header.size, 4096);
     header.fd = pa_get_dma_buf(buffer);
-    sg_table = buffer->sg_table;
-		
-    if (0)
-      printk("sg_table %p nents %d\n", sg_table, sg_table->nents);
-    if (sg_table->nents > 1) {
-      if(0)
-	printk("sg_is_chain=%ld sg_is_last=%ld\n",
-	       sg_is_chain(sg_table->sgl), sg_is_last(sg_table->sgl));
-      for_each_sg(sg_table->sgl, sg, sg_table->nents, i) {
-	printk("sg[%d] sg=%p phys=%lx offset=%08x length=%x\n",
-	       i, sg, (long)sg_phys(sg), sg->offset, sg->length);
-      }
-    }
-                
+    sg_table = buffer->sg_table;                
     header.numEntries = sg_table->nents;
-    for_each_sg(sg_table->sgl, sg, sg_table->nents, i) {
-      unsigned long p = sg_phys(sg);
-      if (copy_to_user((void __user *)&(palloc->entries[i].dma_address), &(p), sizeof(p)))
-	return -EFAULT;
-      if (copy_to_user((void __user *)&(palloc->entries[i].length), &(sg->length), sizeof(sg->length)))
-	return -EFAULT;
-    }
-
-    //sg_free_table(sg_table);
-    //dma_buf_detach(dma_buf, attachment);
 
     if (copy_to_user((void __user *)arg, &header, sizeof(header)))
       return -EFAULT;
     return 0;
   } break;
+  case PA_DMA_ADDRESSES: {
+
+    struct PortalAllocHeader header;
+    struct file *f;
+    struct dma_buf *dmabuf;
+    struct pa_buffer *pabuffer;
+    struct sg_table *sgtable;
+    struct scatterlist *sg;
+    int i;
+    struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
+
+    if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
+      return -EFAULT;
+
+    f = fget(header.fd);
+    dmabuf = f->private_data;
+    pabuffer = dmabuf->priv;
+    sgtable = pabuffer->sg_table;
+
+    for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
+      unsigned long p = sg_phys(sg);
+      if (copy_to_user((void __user *)&(palloc->entries[i].dma_address), &(p), sizeof(p)))
+    	return -EFAULT;
+      if (copy_to_user((void __user *)&(palloc->entries[i].length), &(sg->length), sizeof(sg->length)))
+    	return -EFAULT;
+    }
+
+    fput(f);
+    return 0;
+  }
   default:
     printk("pa_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
     return -ENOTTY;

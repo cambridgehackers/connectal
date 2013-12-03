@@ -311,18 +311,26 @@ int PortalMemory::reference(PortalAlloc* pa)
   return id;
 }
 
-int PortalMemory::alloc(size_t size, PortalAlloc *portalAlloc)
+int PortalMemory::alloc(size_t size, PortalAlloc **ppa)
 {
-    memset(portalAlloc, 0, sizeof(PortalAlloc));
-    portalAlloc->header.size = size;
-    int rc = ioctl(this->pa_fd, PA_ALLOC, portalAlloc);
-    if (rc){
-      fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
-      return rc;
-    }
-    fprintf(stderr, "alloc size=%ld rc=%d fd=%d numEntries=%d\n", 
-	    (long)portalAlloc->header.size, rc, portalAlloc->header.fd, portalAlloc->header.numEntries);
-    return 0;
+  PortalAlloc *portalAlloc = (PortalAlloc *)malloc(sizeof(PortalAlloc));
+  memset(portalAlloc, 0, sizeof(PortalAlloc));
+  portalAlloc->header.size = size;
+  int rc = ioctl(this->pa_fd, PA_ALLOC, portalAlloc);
+  if (rc){
+    fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    return rc;
+  }
+  fprintf(stderr, "alloc size=%ld rc=%d fd=%d numEntries=%d\n", 
+	  (long)portalAlloc->header.size, rc, portalAlloc->header.fd, portalAlloc->header.numEntries);
+  portalAlloc = (PortalAlloc *)realloc(portalAlloc, sizeof(PortalAlloc)+(portalAlloc->header.numEntries*sizeof(DMAEntry)));
+  rc = ioctl(this->pa_fd, PA_DMA_ADDRESSES, portalAlloc);
+  if (rc){
+    fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
+    return rc;
+  }
+  *ppa = portalAlloc;
+  return 0;
 }
 
 int PortalRequest::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)

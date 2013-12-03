@@ -8,16 +8,19 @@ typedef struct PortalAllocHeader {
     int numEntries;
 } PortalAllocHeader;
 
+typedef struct DMAEntry {
+  unsigned long dma_address;
+  unsigned long length;
+} DMAEntry;
+
+
 typedef struct PortalAlloc {
   PortalAllocHeader header;
-  struct {
-    unsigned long dma_address;
-    unsigned long length;
-  } entries[64];
+  DMAEntry entries[0];
 } PortalAlloc;
 
 #define PA_ALLOC _IOWR('B', 10, PortalAlloc)
 #define PA_DCACHE_FLUSH_INVAL _IOWR('B', 11, PortalAlloc)
-#define PA_DEBUG_PK _IOWR('B', 12, PortalAlloc)
+#define PA_DMA_ADDRESSES _IOWR('B', 13, PortalAlloc)
 
 #endif /* __PORTALALLOC_H__ */
