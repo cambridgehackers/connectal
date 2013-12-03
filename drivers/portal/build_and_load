@@ -1,8 +1,0 @@
-#! /bin/bash
-make -f Makefile.x86 
-sudo rmmod portal
-sudo insmod ./portal.ko
-sudo chmod 777 /dev/fpga0
-sudo chmod 777 /dev/fpga1
-sudo chmod 777 /dev/fpga2
-sudo chmod 777 /dev/fpga3
