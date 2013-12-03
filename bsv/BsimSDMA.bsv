@@ -210,7 +210,7 @@ module mkBsimDMA#(DMAIndication indication)(BsimDMA);
 	 else if (rc==1)
 	    writer.write.configChan(pack(truncate(channelId)), pref, truncate((numWords>>1)-1));
 	 indication.configResp(channelId);
-	 $display("configChan(%d, %d %d %d)", rc, channelId, pref, numWords);
+	 //$display("configChan(%d, %d %d %d)", rc, channelId, pref, numWords);
       endmethod
       method Action getStateDbg(Bit#(32) rc);
 	 let rv = ?;

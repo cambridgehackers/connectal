@@ -36,7 +36,7 @@ interface ReadChan2BRAM#(type a);
    method ActionValue#(Bool) finished();
 endinterface
 
-module mkReadChan2BRAM#(ReadChan rc, BRAM1Port#(a,d) br)(ReadChan2BRAM#(a))
+module mkReadChan2BRAM#(ReadChan rc, BRAMServer#(a,d) br)(ReadChan2BRAM#(a))
    provisos(Bits#(d,dsz),
 	    Div#(64,dsz,nd),
 	    Mul#(nd,dsz,64),
@@ -71,7 +71,7 @@ module mkReadChan2BRAM#(ReadChan rc, BRAM1Port#(a,d) br)(ReadChan2BRAM#(a))
    endrule
    
    rule load(jv);
-      br.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:j, datain:gb.first[0]});
+      br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:j, datain:gb.first[0]});
       gb.deq;
       jv <= (j < n);
       j <= j+1;

@@ -7,12 +7,9 @@
 #include <semaphore.h>
 
 sem_t conf_sem;
+sem_t test_sem;
 CoreRequest *device = 0;
 DMARequest *dma = 0;
-PortalAlloc needleAlloc;
-PortalAlloc haystackAlloc;
-PortalAlloc mpNextAlloc;
-unsigned int alloc_len = 16 << 2;
 
 class TestDMAIndication : public DMAIndication
 {
@@ -35,7 +32,9 @@ class TestCoreIndication : public CoreIndication
 {
   virtual void searchResult (int v){
     fprintf(stderr, "searchResult = %d\n", v);
-    exit(0);
+    if (v == -1){
+      sem_post(&test_sem);
+    }
   }
 };
 
@@ -62,25 +61,23 @@ void compute_MP_next(const char *x, int *MP_next, int m)
   }
 }
 
-int MP(const char *x, const char *t, int *MP_next, int m, int n)
+void MP(const char *x, const char *t, int *MP_next, int m, int n)
 {
   int i = 1;
   int j = 1;
   while (j <= n) {
     while ((i==m+1) || ((i>0) && (x[i-1] != t[j-1]))){
-      fprintf(stderr, "char mismatch %d %d MP_next[i]=%d\n", i,j,MP_next[i]);
+      //fprintf(stderr, "char mismatch %d %d MP_next[i]=%d\n", i,j,MP_next[i]);
       i = MP_next[i];
     }
-    fprintf(stderr, "   char match %d %d\n", i, j);
+    //fprintf(stderr, "   char match %d %d\n", i, j);
     i = i+1;
     j = j+1;
     if (i==m+1){
       fprintf(stderr, "%s occurs in t at position %d\n", x, j-i);
-      return j-i;
+      i = 1;
     }
   }
-  fprintf(stderr, "no match found\n");
-  return -1;
 }
 
 int main(int argc, const char **argv)
@@ -94,13 +91,10 @@ int main(int argc, const char **argv)
     fprintf(stderr, "failed to init conf_sem\n");
     return -1;
   }
-
-  dma->alloc(alloc_len, &needleAlloc);
-  char *needle = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc.header.fd, 0);
-  dma->alloc(alloc_len, &haystackAlloc);
-  char *haystack = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc.header.fd, 0);
-  dma->alloc(alloc_len, &mpNextAlloc);
-  int *mpNext = (int *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc.header.fd, 0);
+  if(sem_init(&test_sem, 1, 0)){
+    fprintf(stderr, "failed to init test_sem\n");
+    return -1;
+  }
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -109,14 +103,26 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  unsigned int ref_needleAlloc = dma->reference(&needleAlloc);
-  unsigned int ref_haystackAlloc = dma->reference(&haystackAlloc);
-  unsigned int ref_mpNextAlloc = dma->reference(&mpNextAlloc);
-
-  // simple hand-crafted tests
   {
+    fprintf(stderr, "simple tests\n");
+    PortalAlloc needleAlloc;
+    PortalAlloc haystackAlloc;
+    PortalAlloc mpNextAlloc;
+    unsigned int alloc_len = 16 << 2;
+
+    dma->alloc(alloc_len, &needleAlloc);
+    char *needle = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc.header.fd, 0);
+    dma->alloc(alloc_len, &haystackAlloc);
+    char *haystack = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc.header.fd, 0);
+    dma->alloc(alloc_len, &mpNextAlloc);
+    int *mpNext = (int *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc.header.fd, 0);
+    
+    unsigned int ref_needleAlloc = dma->reference(&needleAlloc);
+    unsigned int ref_haystackAlloc = dma->reference(&haystackAlloc);
+    unsigned int ref_mpNextAlloc = dma->reference(&mpNextAlloc);
+
     const char *needle_text = "ababab";
-    const char *haystack_text = "acabcabacababacabababc";
+    const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
     
     assert(strlen(haystack_text) < alloc_len);
     assert(strlen(needle_text)*4 < alloc_len);
@@ -139,9 +145,7 @@ int main(int argc, const char **argv)
     for(int i = 0; i < needle_len+1; i++)
       fprintf(stderr, "mpNext[%d]=%d\n", i, mpNext[i]);
 
-    int loc = MP(needle, haystack, mpNext, needle_len, haystack_len);
-    if(loc > 0)
-      fprintf(stderr, "loc=%d\n", loc);
+    MP(needle, haystack, mpNext, needle_len, haystack_len);
     
     dma->dCacheFlushInval(&needleAlloc, needle);
     dma->dCacheFlushInval(&mpNextAlloc, mpNext);
@@ -157,5 +161,45 @@ int main(int argc, const char **argv)
 
     device->search(needle_len, haystack_len);
   }
+
+  sem_wait(&test_sem);
+  
+  {
+    fprintf(stderr, "benchmarks\n");
+    unsigned int BENCHMARK_INPUT_SIZE = 200 * 1024 * 1024;
+    
+    PortalAlloc needleAlloc;
+    PortalAlloc haystackAlloc;
+    PortalAlloc mpNextAlloc;
+    unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
+
+    const char *needle_text = "I have control\n";
+    unsigned int needle_alloc_len = strlen(needle_text);
+
+    unsigned int mpNext_alloc_len = needle_alloc_len*4;
+
+    dma->alloc(needle_alloc_len, &needleAlloc);
+    char *needle = (char *)mmap(0, needle_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc.header.fd, 0);
+    dma->alloc(haystack_alloc_len, &haystackAlloc);
+    char *haystack = (char *)mmap(0, haystack_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc.header.fd, 0);
+    dma->alloc(mpNext_alloc_len, &mpNextAlloc);
+    int *mpNext = (int *)mmap(0, mpNext_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc.header.fd, 0);
+    
+    unsigned int ref_needleAlloc = dma->reference(&needleAlloc);
+    unsigned int ref_haystackAlloc = dma->reference(&haystackAlloc);
+    unsigned int ref_mpNextAlloc = dma->reference(&mpNextAlloc);
+
+    dma->configChan(0, 0, ref_haystackAlloc, 2);
+    sem_wait(&conf_sem);
+
+    dma->configChan(0, 1, ref_needleAlloc, 2);
+    sem_wait(&conf_sem);
+
+    dma->configChan(0, 2, ref_mpNextAlloc, 2);
+    sem_wait(&conf_sem);
+    
+
+  }
+
   while(true) sleep(1);
 }

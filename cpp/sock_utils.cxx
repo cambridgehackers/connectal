@@ -63,12 +63,11 @@ void connect_socket(channel *c)
   strcpy(c->local.sun_path, c->path);
   len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
   while (connect(c->s2, (struct sockaddr *)&(c->local), len) == -1) {
-    if(connect_attempts++ > 100){
+    if(connect_attempts++ > 10){
       fprintf(stderr,"%s (%s) connect error\n",__FUNCTION__, c->path);
       exit(1);
     }
     sleep(1);
-    //usleep(1);
   }
   // int sockbuffsz = sizeof(memrequest);
   // setsockopt(c->s2, SOL_SOCKET, SO_SNDBUF, &sockbuffsz, sizeof(sockbuffsz));
