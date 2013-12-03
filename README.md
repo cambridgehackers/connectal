@@ -60,6 +60,10 @@ Preparation for PCIe
 
     cd pcie/drivers; make insmod
 
+3. Install the Digilent cable driver
+   cd /scratch/Xilinx/Vivado/2013.2/data/xicom/cable_drivers/lin64/digilent
+   sudo ./install_digilent.sh
+
 
 Echo Example
 ------------
