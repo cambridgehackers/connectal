@@ -49,6 +49,18 @@ It does not seem to boot from cards with a partition table.
 
 Eject the card and plug it into the zc702 and boot.
 
+Preparation for PCIe
+--------------------
+
+1. Build the drivers
+
+    cd pcie/drivers/; make
+
+2. Load the drivers
+
+    cd pcie/drivers; make insmod
+
+
 Echo Example
 ------------
 
@@ -123,10 +135,6 @@ or
 
     ## to install the bitfile
     make program
-
-    ## build the drivers
-    cd pcie/drivers/
-    make && make insmod
 
     ## run the example
     ./loadstoreproj/jni/loadstore
