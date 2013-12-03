@@ -86,7 +86,7 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     mkConnectionWithClocks(dma_stream_read_chan.readData, hdmiGen.request, defaultClock, defaultReset, hdmi_clock, hdmi_reset);
 
     rule vsyncrule if (vsyncPulse.pulse() && referenceReg >= 0);
-        dma.request.configReadChan(0, pack(referenceReg), 16);
+        dma.request.configChan(0, 0, pack(referenceReg), 16);
     endrule
 
     rule bozobit_rule;
