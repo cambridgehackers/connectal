@@ -52,3 +52,4 @@ rmmod:
 insmod: rmmod
 	sudo insmod pcie-portal.ko
 	sudo insmod portalalloc.ko
+	sudo chmod agu+rw /dev/fpga* /dev/portalalloc
