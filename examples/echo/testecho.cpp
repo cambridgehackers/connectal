@@ -13,7 +13,7 @@ class TestEchoIndications : public CoreEchoIndication
     }
     virtual void heard2(unsigned long a, unsigned long b) {
       fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
-      exit(0);
+      //exit(0);
     }
 };
 
