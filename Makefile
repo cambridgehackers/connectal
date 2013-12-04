@@ -79,14 +79,14 @@ test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/tes
 
 
 
-test-mp_strstr/sources/bsim: examples/mp_strstr/Strstr.bsv examples/mp_strstr/teststrstr.cpp
+test-strstr/sources/bsim: examples/strstr/Strstr.bsv examples/strstr/teststrstr.cpp
 	-pkill bluetcl
-	rm -fr test-mp_strstr
-	mkdir test-mp_strstr
-	./genxpsprojfrombsv -M bsim -B $(BOARD) -p test-mp_strstr -b Strstr examples/mp_strstr/Strstr.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/mp_strstr/teststrstr.cpp
-	cd test-mp_strstr; make x86_exe; cd ..
-	test-mp_strstr/sources/bsim &
-	test-mp_strstr/jni/strstr
+	rm -fr test-strstr
+	mkdir test-strstr
+	./genxpsprojfrombsv -M bsim -B $(BOARD) -p test-strstr -b Strstr examples/strstr/Strstr.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/strstr/teststrstr.cpp
+	cd test-strstr; make x86_exe; cd ..
+	test-strstr/sources/bsim &
+	test-strstr/jni/strstr
 
 
 xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl

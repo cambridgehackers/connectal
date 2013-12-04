@@ -19,9 +19,5 @@ static struct portal iport = {{0,0,{0,""},false, ""},
 
 void* init_socket(void* _xx);
 void connect_socket(channel *c);
-char *get_uid();
-
-
-
 
 #endif //_SOCK_UTILS_H_

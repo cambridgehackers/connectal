@@ -52,11 +52,11 @@ interface CoreRequest;
     method Action say6(Bit#(32)a, Bit#(40) b, Bit#(32) c);
 endinterface
 
-interface EchoRequest;
+interface StructRequest;
    interface CoreRequest coreRequest;
 endinterface
 
-interface EchoIndication;
+interface StructIndication;
    interface CoreIndication coreIndication;
 endinterface
 
@@ -67,7 +67,7 @@ typedef struct {
 } Say6ReqStruct deriving (Bits);
 
 
-module mkEchoRequest#(EchoIndication indication)(EchoRequest);
+module mkStructRequest#(StructIndication indication)(StructRequest);
 
    interface CoreRequest coreRequest; 
    method Action say1(Bit#(32) v);

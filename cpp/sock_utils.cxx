@@ -6,17 +6,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <pwd.h>
-
 
 #include "sock_utils.h"
-
-char *get_uid()
-{
-  uid_t uid = getuid();
-  struct passwd* pwd = getpwuid(uid);
-  return pwd->pw_name;
-}
 
 void* init_socket(void* _xx)
 {
