@@ -118,9 +118,17 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile uns
     // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
     unsigned int buf[1024];
     PortalMessage *msg = 0x0;
+    static int runaway = 0;
     
     switch (channel) {
 %(responseSzCases)s
+    default:
+        printf("%(namespace)s%(className)s::handleMessage: unknown channel 0x%%x\\n", channel);
+        if (runaway++ > 10) {
+            printf("%(namespace)s%(className)s::handleMessage: too many bogus indications, exiting\\n");
+            exit(-1);
+        }
+        return 0;
     }
 
     // mutex_lock(&portal_data->reg_mutex);
