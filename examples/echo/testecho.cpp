@@ -2,8 +2,22 @@
 #include "Echo.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 CoreEchoRequest *echo = 0;
+
+#define DECL(A) \
+    static sem_t sem_ ## A; \
+    static unsigned long cv_ ## A;
+
+DECL(heard2)
+
+
+static void init_local_semaphores(void)
+{
+    sem_init(&sem_heard2, 0, 0);
+}
 
 class TestEchoIndications : public CoreEchoIndication
 {
@@ -13,20 +27,43 @@ class TestEchoIndications : public CoreEchoIndication
     }
     virtual void heard2(unsigned long a, unsigned long b) {
       fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
+      sem_post(&sem_heard2);
       //exit(0);
     }
 };
+static void *pthread_worker(void *ptr)
+{
+    portalExec(NULL);
+    return NULL;
+}
+
+static void call_say(int v)
+{
+printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
+    echo->say(v);
+    sem_wait(&sem_heard2);
+}
+
+static void call_say2(int v, int v2)
+{
+printf("[%s:%d] %d, %d\n", __FUNCTION__, __LINE__, v, v2);
+    echo->say2(v, v2);
+    sem_wait(&sem_heard2);
+}
 
 int main(int argc, const char **argv)
 {
+    pthread_t threaddata;
+
+    init_local_semaphores();
     echo = CoreEchoRequest::createCoreEchoRequest(new TestEchoIndications);
+    pthread_create(&threaddata, NULL, &pthread_worker, (void *)echo);
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
-    echo->say(v);
-    echo->say(v*5);
-    echo->say(v*17);
-    echo->say(v*93);
-    echo->say2(v, v*3);
+    call_say(v);
+    call_say(v*5);
+    call_say(v*17);
+    call_say(v*93);
+    call_say2(v, v*3);
     echo->setLeds(9);
-    portalExec(0);
 }
