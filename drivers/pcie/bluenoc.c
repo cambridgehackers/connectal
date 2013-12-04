@@ -524,9 +524,15 @@ static int __init bluenoc_init(void)
 {
   int status;
 
+  bluenoc_class = class_create(THIS_MODULE, "Bluespec");
+  if (IS_ERR(bluenoc_class)) {
+    printk(KERN_ERR "%s: failed to create class Bluespec\n", DEV_NAME);
+    return PTR_ERR(bluenoc_class);
+  }
   /* dynamically allocate a device number */
   if (alloc_chrdev_region(&device_number, 1, NUM_BOARDS, DEV_NAME) < 0) {
     printk(KERN_ERR "%s: failed to allocate character device region\n", DEV_NAME);
+    class_destroy(bluenoc_class);
     return -1;
   }
 
@@ -537,6 +543,7 @@ static int __init bluenoc_init(void)
   status = pci_register_driver(&bluenoc_ops);
   if (status < 0) {
     printk(KERN_ERR "%s: failed to register PCI driver\n", DEV_NAME);
+    class_destroy(bluenoc_class);
     return status;
   }
 
@@ -556,6 +563,7 @@ static void __exit bluenoc_exit (void)
 
   /* release reserved device numbers */
   unregister_chrdev_region(device_number, NUM_BOARDS);
+  class_destroy(bluenoc_class);
 
   /* log that the driver module has been unloaded */
   printk(KERN_INFO "%s: Unregistered Bluespec BlueNoC driver %s\n", DEV_NAME, DEV_VERSION);
@@ -589,10 +597,6 @@ static int __init bluenoc_probe(struct pci_dev* dev, const struct pci_device_id*
     goto exit_bluenoc_probe;
   }
   memset(this_board, 0, sizeof(tBoard));
-
-  /* if this is the first, create the udev class */
-  if (NULL == bluenoc_class)
-    bluenoc_class = class_create(THIS_MODULE, "Bluespec");
 
   /* initially, the board structure contains only the pci_dev pointer and is in
    * the probed state with no assigned number.
@@ -687,10 +691,10 @@ static void __exit bluenoc_remove(struct pci_dev* dev)
   kfree(this_board);
 
   /* release udev resources if this is the last board */
-  if (NULL == board_list) {
-    class_destroy(bluenoc_class);
-    bluenoc_class = NULL;
-  }
+  //if (NULL == board_list) {
+    //class_destroy(bluenoc_class);
+    //bluenoc_class = NULL;
+  //}
 }
 
 /*
