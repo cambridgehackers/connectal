@@ -63,8 +63,10 @@ extern "C" {
     rc = &(portals[id].read);
     wc = &(portals[id].write);
 
-    snprintf(rc->path, sizeof(rc->path), "/tmp/fpga%ld_rc", id);
-    snprintf(wc->path, sizeof(wc->path), "/tmp/fpga%ld_wc", id);
+    
+    char *uid = get_uid();
+    snprintf(rc->path, sizeof(rc->path), "/tmp/%s_fpga%ld_rc", uid, id);
+    snprintf(wc->path, sizeof(wc->path), "/tmp/%s_fpga%ld_wc", uid, id);
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)rc)){
       fprintf(stderr, "error creating init thread\n");

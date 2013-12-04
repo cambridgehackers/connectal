@@ -103,7 +103,6 @@ PortalRequest::~PortalRequest()
 
 
 
-
 int PortalRequest::open()
 {
 #ifdef ZYNQ
@@ -155,10 +154,10 @@ int PortalRequest::open()
     *(ind_reg_base+0x1) = 1;
 
 #else
-    
-    snprintf(p.read.path, sizeof(p.read.path), "/tmp/%s_rc", name);
+    char *uid = get_uid();
+    snprintf(p.read.path, sizeof(p.read.path), "/tmp/%s_%s_rc", uid, name);
     connect_socket(&(p.read));
-    snprintf(p.write.path, sizeof(p.read.path), "/tmp/%s_wc", name);
+    snprintf(p.write.path, sizeof(p.read.path), "/tmp/%s_%s_wc", uid, name);
     connect_socket(&(p.write));
 
     unsigned long dev_base = 0;
@@ -247,9 +246,10 @@ PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
     handle(1)
 {
 #ifndef MMAP_HW
-  snprintf(p_fd.read.path, sizeof(p_fd.read.path), "/tmp/fd_sock_rc");
+  char *uid = get_uid();
+  snprintf(p_fd.read.path, sizeof(p_fd.read.path), "/tmp/%s_fd_sock_rc", uid);
   connect_socket(&(p_fd.read));
-  snprintf(p_fd.write.path, sizeof(p_fd.write.path), "/tmp/fd_sock_wc");
+  snprintf(p_fd.write.path, sizeof(p_fd.write.path), "/tmp/%s_fd_sock_wc", uid);
   connect_socket(&(p_fd.write));
 #endif
   const char* path = "/dev/portalalloc";

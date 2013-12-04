@@ -31,11 +31,13 @@ extern "C" {
 
     fprintf(stderr, "BsimDMA::init_pareff()\n");
 
+    char *uid = get_uid();
+
     rc = &(p_fd.read);
-    snprintf(rc->path, sizeof(rc->path), "/tmp/fd_sock_rc");
+    snprintf(rc->path, sizeof(rc->path), "/tmp/%s_fd_sock_rc", uid);
 
     wc = &(p_fd.write);
-    snprintf(wc->path, sizeof(wc->path), "/tmp/fd_sock_wc");
+    snprintf(wc->path, sizeof(wc->path), "/tmp/%s_fd_sock_wc", uid);
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)rc)){
       fprintf(stderr, "error creating init thread\n");

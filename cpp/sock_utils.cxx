@@ -6,9 +6,17 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <pwd.h>
 
 
 #include "sock_utils.h"
+
+char *get_uid()
+{
+  uid_t uid = getuid();
+  struct passwd* pwd = getpwuid(uid);
+  return pwd->pw_name;
+}
 
 void* init_socket(void* _xx)
 {
@@ -26,18 +34,18 @@ void* init_socket(void* _xx)
   unlink(c->local.sun_path);
   int len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
   if (bind(c->s1, (struct sockaddr *)&c->local, len) == -1) {
-    fprintf(stderr, "%s (%s) bind error",__FUNCTION__, c->path);
+    fprintf(stderr, "%s (%s) bind error\n",__FUNCTION__, c->path);
     exit(1);
   }
   
   if (listen(c->s1, 5) == -1) {
-    fprintf(stderr, "%s (%s) listen error",__FUNCTION__, c->path);
+    fprintf(stderr, "%s (%s) listen error\n",__FUNCTION__, c->path);
     exit(1);
   }
   
   fprintf(stderr, "%s (%s) waiting for a connection...\n",__FUNCTION__, c->path);
   if ((c->s2 = accept(c->s1, NULL, NULL)) == -1) {
-    fprintf(stderr, "%s (%s) accept error",__FUNCTION__, c->path);
+    fprintf(stderr, "%s (%s) accept error\n",__FUNCTION__, c->path);
     exit(1);
   }
   
@@ -53,7 +61,7 @@ void connect_socket(channel *c)
   int connect_attempts = 0;
 
   if ((c->s2 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "%s (%s) socket error",__FUNCTION__, c->path);
+    fprintf(stderr, "%s (%s) socket error\n",__FUNCTION__, c->path);
     exit(1);
   }
 
