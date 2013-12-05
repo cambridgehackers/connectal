@@ -29,27 +29,6 @@
 
 #include "bluenoc.h"
 
-/*
- * portability settings across multiple kernel versions
- */
-
-#define USE_INTR_PT_REGS_ARG          (LINUX_VERSION_CODE <  KERNEL_VERSION(2,6,19))
-#define USE_CHAINED_SGLIST_API        (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
-#define USE_EXPLICIT_PCI_TABLE_TYPE   (LINUX_VERSION_CODE <  KERNEL_VERSION(2,6,25))
-#define DEVICE_CREATE_HAS_DRVDATA_ARG (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
-
-/*
- * driver module data for the kernel
- */
-
-MODULE_AUTHOR("Bluespec, Inc.");
-MODULE_DESCRIPTION("PCIe device driver for Bluespec FPGA interconnect");
-MODULE_LICENSE("Dual BSD/GPL");
-
-/*
- * driver configuration
- */
-
 /* stem used for module and device names */
 #define DEV_NAME "fpga"
 
@@ -72,7 +51,7 @@ MODULE_LICENSE("Dual BSD/GPL");
 
 /* per-device data that persists from probe to remove */
 
-struct tBoard;
+//struct tBoard;
 typedef struct tPortal {
         unsigned int portal_number;
         struct tBoard *board;
@@ -124,22 +103,11 @@ typedef struct tBoard {
         unsigned long long interrupt_count;
 } tBoard;
 
+/* static device data */
+static dev_t device_number;
+static struct class *bluenoc_class = NULL;
+static unsigned int open_count[NUM_BOARDS + 1];
 static tBoard *board_list = NULL;
-
-/* forward declarations of driver routines */
-
-static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id *id);
-static void __exit bluenoc_remove(struct pci_dev *dev); 
-static int bluenoc_open(struct inode *inode, struct file *filp);
-static int bluenoc_release(struct inode *inode, struct file *filp); 
-static unsigned int bluenoc_poll(struct file *filp, poll_table * wait); 
-static long bluenoc_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
-static int portal_mmap(struct file *filp, struct vm_area_struct *vma); 
-#if USE_INTR_PT_REGS_ARG
-static irqreturn_t intr_handler(int irq, void *brd, struct pt_regs *unused);
-#else
-static irqreturn_t intr_handler(int irq, void *brd);
-#endif
 
 /* these are the activation levels defined for a board,
  * along with functions for activating and deactivate a
@@ -158,6 +126,24 @@ static irqreturn_t intr_handler(int irq, void *brd);
 #define MSIX_INITIALIZED    9
 #define PCI_BUS_MASTER     10
 #define BLUENOC_ACTIVE     11
+
+/*
+ * interrupt handler
+ */
+
+static irqreturn_t intr_handler(int irq, void *brd)
+{
+        tBoard *this_board = brd;
+
+        if (this_board->debug_level & DEBUG_PROFILE)
+                this_board->interrupt_count += 1; 
+        if (this_board->debug_level & DEBUG_INTR) {
+                printk(KERN_INFO "%s_%d: interrupt!\n",
+                       DEV_NAME, this_board->board_number);
+        } 
+        wake_up_interruptible(&(this_board->intr_wq)); 
+        return IRQ_HANDLED;
+}
 
 static void deactivate(tBoard * this_board)
 {
@@ -431,267 +417,6 @@ static int activate(tBoard * this_board)
 }
 
 /*
- * driver initialization and exit
- *
- * these routines are responsible for allocating and
- * freeing kernel resources, creating device nodes,
- * registering the driver, obtaining a major and minor
- * numbers, etc.
- */
-
-/* static device data */
-static dev_t device_number;
-static struct class *bluenoc_class = NULL;
-static unsigned int open_count[NUM_BOARDS + 1];
-
-/* file operations pointers */
-static const struct file_operations bluenoc_fops = {
-        .owner = THIS_MODULE,
-        .open = bluenoc_open,
-        .release = bluenoc_release,
-        .poll = bluenoc_poll,
-        .unlocked_ioctl = bluenoc_ioctl,
-        .compat_ioctl = bluenoc_ioctl,
-        .mmap = portal_mmap
-};
-
-/* PCI ID pattern table */
-#if USE_EXPLICIT_PCI_TABLE_TYPE
-static struct pci_device_id bluenoc_id_table[] = {
-#else
-static DEFINE_PCI_DEVICE_TABLE(bluenoc_id_table) = {
-#endif
-        {
-        PCI_DEVICE(BLUESPEC_VENDOR_ID, BLUESPEC_NOC_DEVICE_ID)}, {        /* end: all zeros */
-        }
-};
-
-MODULE_DEVICE_TABLE(pci, bluenoc_id_table);
-
-/* PCI driver operations pointers */
-static struct pci_driver bluenoc_ops = {
-        .name = DEV_NAME,
-        .id_table = bluenoc_id_table,
-        .probe = bluenoc_probe,
-        .remove = __exit_p(bluenoc_remove)
-};
-
-/* first routine called on module load */
-static int __init bluenoc_init(void)
-{
-        int status;
-
-        bluenoc_class = class_create(THIS_MODULE, "Bluespec");
-        if (IS_ERR(bluenoc_class)) {
-                printk(KERN_ERR "%s: failed to create class Bluespec\n",
-                       DEV_NAME);
-                return PTR_ERR(bluenoc_class);
-        }
-        /* dynamically allocate a device number */
-        if (alloc_chrdev_region(&device_number, 1, NUM_BOARDS, DEV_NAME) <
-            0) {
-                printk(KERN_ERR "%s: failed to allocate character device region\n",
-                       DEV_NAME);
-                class_destroy(bluenoc_class);
-                return -1;
-        }
-
-        /* initialize driver data */
-        board_list = NULL;
-
-        /* register the driver with the PCI subsystem */
-        status = pci_register_driver(&bluenoc_ops);
-        if (status < 0) {
-                printk(KERN_ERR "%s: failed to register PCI driver\n",
-                       DEV_NAME);
-                class_destroy(bluenoc_class);
-                return status;
-        }
-
-        /* log the fact that we loaded the driver module */
-        printk(KERN_INFO "%s: Registered Bluespec BlueNoC driver %s\n", DEV_NAME, DEV_VERSION);
-        printk(KERN_INFO "%s: Major = %d  Minors = %d to %d\n", DEV_NAME,
-               MAJOR(device_number), MINOR(device_number),
-               MINOR(device_number) + NUM_BOARDS * 16 - 1);
-
-        return 0;                /* success */
-}
-
-/* routine called on module unload */
-static void __exit bluenoc_exit(void)
-{
-        /* unregister the driver with the PCI subsystem */
-        pci_unregister_driver(&bluenoc_ops);
-
-        /* release reserved device numbers */
-        unregister_chrdev_region(device_number, NUM_BOARDS);
-        class_destroy(bluenoc_class);
-
-        /* log that the driver module has been unloaded */
-        printk(KERN_INFO "%s: Unregistered Bluespec BlueNoC driver %s\n",
-               DEV_NAME, DEV_VERSION);
-}
-
-/* register init and exit routines */
-module_init(bluenoc_init);
-module_exit(bluenoc_exit);
-
-/* driver PCI operations */
-
-static int __init bluenoc_probe(struct pci_dev *dev,
-                                const struct pci_device_id *id)
-{
-        int err = 0;
-        tBoard *this_board = NULL;
-
-        printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
-        /* double-check vendor and device */
-        if ((dev->vendor != BLUESPEC_VENDOR_ID)
-            || (dev->device != BLUESPEC_NOC_DEVICE_ID)) {
-                printk(KERN_ERR "%s: probe with invalid vendor or device ID\n",
-                       DEV_NAME);
-                err = -EINVAL;
-                goto exit_bluenoc_probe;
-        }
-
-        /* allocate a structure for this board */
-        this_board = (tBoard *) kmalloc(sizeof(tBoard), GFP_KERNEL);
-        if (NULL == this_board) {
-                printk(KERN_ERR "%s: unable to allocate memory for board structure\n",
-                       DEV_NAME);
-                err = -EINVAL;
-                goto exit_bluenoc_probe;
-        }
-        memset(this_board, 0, sizeof(tBoard));
-
-        /* initially, the board structure contains only the pci_dev pointer and is in
-         * the probed state with no assigned number.
-         */
-        this_board->activation_level = PROBED;
-        this_board->pci_dev = dev;
-        this_board->board_number = UNASSIGNED;
-        this_board->next = NULL;
-        this_board->debug_level = DEBUG_OFF;
-
-        mutex_init(&(this_board->read_mutex));
-        mutex_init(&(this_board->write_mutex));
-
-        /* insert board into linked list of boards */
-        this_board->next = board_list;
-        board_list = this_board;
-
-        /* activate the board */
-        if ((err = activate(this_board)) >= 0) {
-                int dn;
-                for (dn = 0; dn < 16 && err >= 0; dn++) {
-                        dev_t this_device_number = MKDEV(MAJOR(device_number),
-                                  MINOR(device_number) + this_board->board_number * 16 + dn);
-                        open_count[this_board->board_number] = 0;
-
-                        this_board->portal[dn].portal_number = dn;
-                        this_board->portal[dn].board = this_board;
-
-                        /* add the device operations */
-                        cdev_init(&this_board->cdev[dn], &bluenoc_fops);
-                        if (cdev_add(&this_board->cdev[dn], this_device_number, 1) != 0) {
-                                printk(KERN_ERR "%s: cdev_add %x failed\n",
-                                       DEV_NAME, this_device_number);
-                                deactivate(this_board);
-                                err = -EFAULT;
-                        } else {
-                                /* create a device node via udev */
-
-#if DEVICE_CREATE_HAS_DRVDATA_ARG
-                                device_create(bluenoc_class, NULL,
-                                              this_device_number, NULL, "%s%d", DEV_NAME,
-                                              this_board->board_number * 16 + dn);
-#else
-                                device_create(bluenoc_class, NULL,
-                                              this_device_number, "%s%d", DEV_NAME,
-                                              this_board->board_number * 16 + dn);
-#endif
-                                printk(KERN_INFO "%s: /dev/%s%d device file created\n",
-                                       DEV_NAME, DEV_NAME, this_board->board_number * 16 + dn);
-                        }
-                }
-        }
-        if (err < 0) {
-                /* remove the board from the list */
-                board_list = this_board->next;
-                kfree(this_board);
-        }
-
-      exit_bluenoc_probe:
-        return err;
-}
-
-static void __exit bluenoc_remove(struct pci_dev *dev)
-{
-        tBoard *this_board = NULL;
-        tBoard *prev_board = NULL;
-        dev_t this_device_number;
-
-        /* locate device-specific data for this board */
-        for (this_board = board_list; this_board != NULL;
-             prev_board = this_board, this_board = this_board->next) {
-                if (this_board->pci_dev == dev)
-                        break;
-        }
-        if (NULL == this_board) {
-                printk(KERN_ERR "%s: Unable to locate board when removing PCI device %p\n",
-                       DEV_NAME, dev);
-                return;
-        }
-
-        /* deactivate the board */
-        deactivate(this_board);
-
-        /* remove device node in udev */
-        {
-                int dn;
-                for (dn = 0; dn < 16; dn++) {
-                        this_device_number = MKDEV(MAJOR(device_number),
-                                  this_board->board_number * 16 + dn);
-                        device_destroy(bluenoc_class, this_device_number);
-                        printk(KERN_INFO "%s: /dev/%s_%d device file removed\n",
-                               DEV_NAME, DEV_NAME, MINOR(this_device_number)); 
-                        /* remove device */
-                        cdev_del(&this_board->cdev[dn]);
-                }
-        }
-
-        /* free the board structure */
-        if (prev_board)
-                prev_board->next = this_board->next;
-        else
-                board_list = this_board->next;
-        kfree(this_board);
-}
-
-/*
- * interrupt handler
- */
-
-#if USE_INTR_PT_REGS_ARG
-static irqreturn_t intr_handler(int irq, void *brd, struct pt_regs *unused)
-#else
-static irqreturn_t intr_handler(int irq, void *brd)
-#endif
-{
-        tBoard *this_board = brd;
-
-        if (this_board->debug_level & DEBUG_PROFILE)
-                this_board->interrupt_count += 1; 
-        if (this_board->debug_level & DEBUG_INTR) {
-                printk(KERN_INFO "%s_%d: interrupt!\n",
-                       DEV_NAME, this_board->board_number);
-        } 
-        wake_up_interruptible(&(this_board->intr_wq)); 
-        return IRQ_HANDLED;
-}
-
-
-/*
  * driver file operations
  */
 
@@ -815,8 +540,7 @@ static unsigned int bluenoc_poll(struct file *filp, poll_table * wait)
  * driver IOCTL operations
  */
 
-static long bluenoc_ioctl(struct file *filp, unsigned int cmd,
-                          unsigned long arg)
+static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
         tPortal *this_portal = NULL;
         tBoard *this_board = NULL;
@@ -1119,3 +843,221 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
                 return 0;
         }
 }
+
+/* file operations pointers */
+static const struct file_operations bluenoc_fops = {
+        .owner = THIS_MODULE,
+        .open = bluenoc_open,
+        .release = bluenoc_release,
+        .poll = bluenoc_poll,
+        .unlocked_ioctl = bluenoc_ioctl,
+        .compat_ioctl = bluenoc_ioctl,
+        .mmap = portal_mmap
+};
+
+/* driver PCI operations */
+
+static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id *id)
+{
+        int err = 0;
+        tBoard *this_board = NULL;
+
+        printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
+        /* double-check vendor and device */
+        if ((dev->vendor != BLUESPEC_VENDOR_ID)
+            || (dev->device != BLUESPEC_NOC_DEVICE_ID)) {
+                printk(KERN_ERR "%s: probe with invalid vendor or device ID\n",
+                       DEV_NAME);
+                err = -EINVAL;
+                goto exit_bluenoc_probe;
+        }
+
+        /* allocate a structure for this board */
+        this_board = (tBoard *) kmalloc(sizeof(tBoard), GFP_KERNEL);
+        if (NULL == this_board) {
+                printk(KERN_ERR "%s: unable to allocate memory for board structure\n",
+                       DEV_NAME);
+                err = -EINVAL;
+                goto exit_bluenoc_probe;
+        }
+        memset(this_board, 0, sizeof(tBoard));
+
+        /* initially, the board structure contains only the pci_dev pointer and is in
+         * the probed state with no assigned number.
+         */
+        this_board->activation_level = PROBED;
+        this_board->pci_dev = dev;
+        this_board->board_number = UNASSIGNED;
+        this_board->next = NULL;
+        this_board->debug_level = DEBUG_OFF;
+
+        mutex_init(&(this_board->read_mutex));
+        mutex_init(&(this_board->write_mutex));
+
+        /* insert board into linked list of boards */
+        this_board->next = board_list;
+        board_list = this_board;
+
+        /* activate the board */
+        if ((err = activate(this_board)) >= 0) {
+                int dn;
+                for (dn = 0; dn < 16 && err >= 0; dn++) {
+                        dev_t this_device_number = MKDEV(MAJOR(device_number),
+                                  MINOR(device_number) + this_board->board_number * 16 + dn);
+                        open_count[this_board->board_number] = 0;
+
+                        this_board->portal[dn].portal_number = dn;
+                        this_board->portal[dn].board = this_board;
+
+                        /* add the device operations */
+                        cdev_init(&this_board->cdev[dn], &bluenoc_fops);
+                        if (cdev_add(&this_board->cdev[dn], this_device_number, 1) != 0) {
+                                printk(KERN_ERR "%s: cdev_add %x failed\n",
+                                       DEV_NAME, this_device_number);
+                                deactivate(this_board);
+                                err = -EFAULT;
+                        } else {
+                                /* create a device node via udev */
+                                device_create(bluenoc_class, NULL,
+                                              this_device_number, NULL, "%s%d", DEV_NAME,
+                                              this_board->board_number * 16 + dn);
+                                printk(KERN_INFO "%s: /dev/%s%d device file created\n",
+                                       DEV_NAME, DEV_NAME, this_board->board_number * 16 + dn);
+                        }
+                }
+        }
+        if (err < 0) {
+                /* remove the board from the list */
+                board_list = this_board->next;
+                kfree(this_board);
+        }
+
+      exit_bluenoc_probe:
+        return err;
+}
+
+static void __exit bluenoc_remove(struct pci_dev *dev)
+{
+        tBoard *this_board = NULL;
+        tBoard *prev_board = NULL;
+
+        /* locate device-specific data for this board */
+        for (this_board = board_list; this_board != NULL;
+             prev_board = this_board, this_board = this_board->next) {
+                if (this_board->pci_dev == dev)
+                        break;
+        }
+        if (NULL == this_board) {
+                printk(KERN_ERR "%s: Unable to locate board when removing PCI device %p\n",
+                       DEV_NAME, dev);
+                return;
+        }
+
+        /* deactivate the board */
+        deactivate(this_board);
+
+        /* remove device node in udev */
+        {
+                int dn;
+                for (dn = 0; dn < 16; dn++) {
+                        //dev_t this_device_number = MKDEV(MAJOR(device_number),
+                                  //this_board->board_number * 16 + dn);
+                        dev_t this_device_number = MKDEV(MAJOR(device_number),
+                                  MINOR(device_number) + this_board->board_number * 16 + dn);
+                        device_destroy(bluenoc_class, this_device_number);
+                        printk(KERN_INFO "%s: /dev/%s_%d device file removed\n",
+                               DEV_NAME, DEV_NAME, MINOR(this_device_number)); 
+                        /* remove device */
+                        cdev_del(&this_board->cdev[dn]);
+                }
+        }
+
+        /* free the board structure */
+        if (prev_board)
+                prev_board->next = this_board->next;
+        else
+                board_list = this_board->next;
+        kfree(this_board);
+}
+
+/* PCI ID pattern table */
+static DEFINE_PCI_DEVICE_TABLE(bluenoc_id_table) = {{
+        PCI_DEVICE(BLUESPEC_VENDOR_ID, BLUESPEC_NOC_DEVICE_ID)}, { /* end: all zeros */ } };
+
+MODULE_DEVICE_TABLE(pci, bluenoc_id_table);
+
+/* PCI driver operations pointers */
+static struct pci_driver bluenoc_ops = {
+        .name = DEV_NAME,
+        .id_table = bluenoc_id_table,
+        .probe = bluenoc_probe,
+        .remove = __exit_p(bluenoc_remove)
+};
+
+/*
+ * driver initialization and exit
+ *
+ * these routines are responsible for allocating and
+ * freeing kernel resources, creating device nodes,
+ * registering the driver, obtaining a major and minor
+ * numbers, etc.
+ */
+
+/* first routine called on module load */
+static int __init bluenoc_init(void)
+{
+        int status;
+
+        bluenoc_class = class_create(THIS_MODULE, "Bluespec");
+        if (IS_ERR(bluenoc_class)) {
+                printk(KERN_ERR "%s: failed to create class Bluespec\n",
+                       DEV_NAME);
+                return PTR_ERR(bluenoc_class);
+        }
+        /* dynamically allocate a device number */
+        if (alloc_chrdev_region(&device_number, 1, NUM_BOARDS, DEV_NAME) < 0) {
+                printk(KERN_ERR "%s: failed to allocate character device region\n",
+                       DEV_NAME);
+                class_destroy(bluenoc_class);
+                return -1;
+        }
+        /* initialize driver data */
+        board_list = NULL;
+        /* register the driver with the PCI subsystem */
+        status = pci_register_driver(&bluenoc_ops);
+        if (status < 0) {
+                printk(KERN_ERR "%s: failed to register PCI driver\n",
+                       DEV_NAME);
+                class_destroy(bluenoc_class);
+                return status;
+        }
+        /* log the fact that we loaded the driver module */
+        printk(KERN_INFO "%s: Registered Bluespec BlueNoC driver %s\n", DEV_NAME, DEV_VERSION);
+        printk(KERN_INFO "%s: Major = %d  Minors = %d to %d\n", DEV_NAME,
+               MAJOR(device_number), MINOR(device_number),
+               MINOR(device_number) + NUM_BOARDS * 16 - 1);
+        return 0;                /* success */
+}
+
+/* routine called on module unload */
+static void __exit bluenoc_exit(void)
+{
+        /* unregister the driver with the PCI subsystem */
+        pci_unregister_driver(&bluenoc_ops);
+        /* release reserved device numbers */
+        unregister_chrdev_region(device_number, NUM_BOARDS);
+        class_destroy(bluenoc_class);
+        /* log that the driver module has been unloaded */
+        printk(KERN_INFO "%s: Unregistered Bluespec BlueNoC driver %s\n", DEV_NAME, DEV_VERSION);
+}
+
+/*
+ * driver module data for the kernel
+ */
+
+module_init(bluenoc_init);
+module_exit(bluenoc_exit);
+
+MODULE_AUTHOR("Bluespec, Inc.");
+MODULE_DESCRIPTION("PCIe device driver for Bluespec FPGA interconnect");
+MODULE_LICENSE("Dual BSD/GPL");
