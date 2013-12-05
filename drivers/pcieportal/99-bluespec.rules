@@ -1,4 +1,4 @@
 # UDev rules for setting up Bluespec emulation device drivers
 
-ACTION=="add",SUBSYSTEM=="pci",ATTR{idVendor}=="1be7",ATTR{idProduct}=="b100", RUN+="/sbin/modprobe -b bluenoc"
-KERNEL=="bluenoc_*",MODE="666"
+ACTION=="add",SUBSYSTEM=="pci",ATTR{idVendor}=="1be7",ATTR{idProduct}=="b100", RUN+="/sbin/modprobe -b pcieportal"
+KERNEL=="pcieportal_*",MODE="666"

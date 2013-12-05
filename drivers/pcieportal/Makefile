@@ -9,10 +9,10 @@ default: pcie-portal.ko
 
 EXTRA_CFLAGS = -I$(PWD)
 cflags-y += -I$(PWD)
-#pcie-portal-y = bluenoc.o dma-buf.o
-pcie-portal-y = bluenoc.o
+#pcie-portal-y = pcieportal.o dma-buf.o
+pcie-portal-y = pcieportal.o
 
-pcie-portal.ko: bluenoc.c bluenoc.h dma-buf.c
+pcie-portal.ko: pcieportal.c bluenoc.h dma-buf.c
 	@$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check
