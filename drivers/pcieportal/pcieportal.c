@@ -74,12 +74,6 @@ typedef struct tBoard {
         wait_queue_head_t intr_wq;
         unsigned int activation_level; /* activation status */
         tDebugLevel debug_level; /* debug status */
-        /* accumulators used for profiling */
-        unsigned long long read_call_count, write_call_count, poll_call_count;
-        unsigned long long total_bytes_read, total_bytes_written;
-        unsigned long long total_read_call_ns, total_read_blocked_ns;
-        unsigned long long total_write_call_ns, total_write_blocked_ns;
-        unsigned long long interrupt_count;
 } tBoard;
 
 /* static device data */
@@ -102,8 +96,6 @@ static irqreturn_t intr_handler(int irq, void *brd)
 {
         tBoard *this_board = brd;
 
-        if (this_board->debug_level & DEBUG_PROFILE)
-                this_board->interrupt_count += 1; 
         if (this_board->debug_level & DEBUG_INTR)
                 printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_board->board_number);
         wake_up_interruptible(&(this_board->intr_wq)); 
@@ -211,12 +203,12 @@ static int activate(tBoard * this_board)
                 printk("bar0io=%p\n", this_board->bar0io);
                 this_board->bar1io = pci_iomap(this_board->pci_dev, 1, 0);
                 printk("bar1io=%p\n", this_board->bar1io);
+                this_board->bar2io = pci_iomap(this_board->pci_dev, 2, 0);
+                printk("bar2io=%p\n", this_board->bar2io);
                 if (!this_board->bar1io) {
                         this_board->bar1io = pci_iomap(this_board->pci_dev, 1, 8192);
                         printk("bar1io=%p\n", this_board->bar1io);
                 }
-                this_board->bar2io = pci_iomap(this_board->pci_dev, 2, 0);
-                printk("bar2io=%p\n", this_board->bar2io);
                 if (!this_board->bar0io) {
                         printk("failed to map bar0\n");
                         deactivate(this_board);
@@ -231,28 +223,20 @@ static int activate(tBoard * this_board)
                         deactivate(this_board);
                         return -EINVAL;
                 }
-                {
-                unsigned int minor_rev = ioread32(this_board->bar0io + 8);
-                unsigned int major_rev = ioread32(this_board->bar0io + 12);
-                unsigned int build_version = ioread32(this_board->bar0io + 16);
-                unsigned int timestamp = ioread32(this_board->bar0io + 20);
-                unsigned int noc_params = ioread32(this_board->bar0io + 28);
-                unsigned long long board_content_id = readq(this_board->bar0io + 32);
-                /* basic board info */
-                printk(KERN_INFO "%s: revision = %d.%d\n", DEV_NAME, major_rev, minor_rev);
-                printk(KERN_INFO "%s: build_version = %d\n", DEV_NAME, build_version);
-                printk(KERN_INFO "%s: timestamp = %d\n", DEV_NAME, timestamp);
-                printk(KERN_INFO "%s: NoC is using %d byte beats\n", DEV_NAME, (noc_params & 0xff));
-                printk(KERN_INFO "%s: Content identifier is %llx\n", DEV_NAME, board_content_id); 
-                this_board->major_rev = major_rev;
-                this_board->minor_rev = minor_rev;
-                this_board->build = build_version;
-                this_board->timestamp = timestamp;
-                this_board->bytes_per_beat = noc_params & 0xff;
-                this_board->content_id = board_content_id;
-                this_board->uses_msix = 0;
                 }
-                } /* fall through */
+                this_board->minor_rev = ioread32(this_board->bar0io + 8);
+                this_board->major_rev = ioread32(this_board->bar0io + 12);
+                this_board->build = ioread32(this_board->bar0io + 16);
+                this_board->timestamp = ioread32(this_board->bar0io + 20);
+                this_board->bytes_per_beat = ioread32(this_board->bar0io + 28) & 0xff;
+                this_board->content_id = readq(this_board->bar0io + 32);
+                /* basic board info */
+                printk(KERN_INFO "%s: revision = %d.%d\n", DEV_NAME, this_board->major_rev, this_board->minor_rev);
+                printk(KERN_INFO "%s: build_version = %d\n", DEV_NAME, this_board->build);
+                printk(KERN_INFO "%s: timestamp = %d\n", DEV_NAME, this_board->timestamp);
+                printk(KERN_INFO "%s: NoC is using %d byte beats\n", DEV_NAME, this_board->bytes_per_beat);
+                printk(KERN_INFO "%s: Content identifier is %llx\n", DEV_NAME, this_board->content_id); 
+                this_board->uses_msix = 0;
                 /* set DMA mask */
                 if (pci_set_dma_mask(this_board->pci_dev, DMA_BIT_MASK(48))) {
                         printk(KERN_ERR "%s: pci_set_dma_mask failed for 48-bit DMA\n", DEV_NAME);
@@ -361,8 +345,6 @@ static unsigned int bluenoc_poll(struct file *filp, poll_table * wait)
                        this_board->board_number);
         if (this_board->activation_level != BLUENOC_ACTIVE)
                 return 0;
-        if (this_board->debug_level & DEBUG_PROFILE)
-                this_board->poll_call_count += 1;
         poll_wait(filp, &this_board->intr_wq, wait);
         //FIXME for portal
 #warning bluenoc_poll incomplete
@@ -447,8 +429,6 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
         case BNOC_SET_DEBUG_LEVEL:
                 {
                 tDebugLevel prev = this_board->debug_level, changed;
-                unsigned long long s;
-                unsigned ns;
                 /* set the debug level from the user-space value */
                 err = __get_user(this_board->debug_level, (tDebugLevel __user *) arg);
                 changed = this_board->debug_level ^ prev;
@@ -464,11 +444,6 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                                                DEV_NAME, this_board->board_number,
                                                (prev & DEBUG_CALLS) ? "off" : "on");
                                 }
-                                if (changed & DEBUG_DATA) {
-                                        printk(KERN_INFO "%s_%d: turned %s debugging BlueNoC message data\n",
-                                               DEV_NAME, this_board->board_number,
-                                               (prev & DEBUG_DATA) ? "off" : "on");
-                                }
                                 if (changed & DEBUG_INTR) {
                                         printk(KERN_INFO "%s_%d: turned %s debugging interrupts\n",
                                                DEV_NAME, this_board->board_number,
@@ -481,64 +456,10 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 if (this_board->debug_level & DEBUG_PROFILE) {
                         printk(KERN_INFO "%s_%d: turned on profiling BlueNoC driver\n",
                                DEV_NAME, this_board->board_number);
-                        this_board->read_call_count = 0;
-                        this_board->write_call_count = 0;
-                        this_board->poll_call_count = 0;
-                        this_board->total_bytes_read = 0;
-                        this_board->total_bytes_written = 0;
-                        this_board->total_read_call_ns = 0;
-                        this_board->total_read_blocked_ns = 0;
-                        this_board->total_write_call_ns = 0;
-                        this_board->total_write_blocked_ns = 0;
-                        this_board->interrupt_count = 0;
                         break;
                 }
-                /* NOTE: The do_div macro is required to perform division
-                 * inside a kernel module. It NOT A FUNCTION and it
-                 * DOESN'T WORK THE WAY ITS NAME IMPLIES IT SHOULD!
-                 *
-                 * The first argument is EVALUATED MULTIPLE TIMES, so
-                 * beware of side effects in that expression. It is also
-                 * MODIFIED IN PLACE to contain the QUOTIENT after the
-                 * macro is executed. The return value of do_div is the
-                 * REMAINDER, not the quotient!
-                 */
                 printk(KERN_INFO "%s_%d: turned off profiling BlueNoC driver\n",
                        DEV_NAME, this_board->board_number);
-                printk(KERN_INFO "%s_%d:   poll_call_count          = %12llu calls\n",
-                       DEV_NAME, this_board->board_number,
-                       this_board->poll_call_count);
-                printk(KERN_INFO "%s_%d:   read_call_count          = %12llu calls\n",
-                       DEV_NAME, this_board->board_number,
-                       this_board->read_call_count);
-                printk(KERN_INFO "%s_%d:   total_bytes_read         = %12llu bytes\n",
-                       DEV_NAME, this_board->board_number,
-                       this_board->total_bytes_read);
-                s = this_board->total_read_call_ns;
-                ns = do_div(s, 1000000000);
-                printk(KERN_INFO "%s_%d:   total_read_call_time     = %12llu seconds + %12u nanoseconds\n",
-                       DEV_NAME, this_board->board_number, s, ns);
-                s = this_board->total_read_blocked_ns;
-                ns = do_div(s, 1000000000);
-                printk(KERN_INFO "%s_%d:   total_read_blocked_time  = %12llu seconds + %12u nanoseconds\n",
-                       DEV_NAME, this_board->board_number, s, ns);
-                printk(KERN_INFO "%s_%d:   write_call_count         = %12llu calls\n",
-                       DEV_NAME, this_board->board_number,
-                       this_board->write_call_count);
-                printk(KERN_INFO "%s_%d:   total_bytes_written      = %12llu bytes\n",
-                       DEV_NAME, this_board->board_number,
-                       this_board->total_bytes_written);
-                s = this_board->total_write_call_ns;
-                ns = do_div(s, 1000000000);
-                printk(KERN_INFO "%s_%d:   total_write_call_time    = %12llu seconds + %12u nanoseconds\n",
-                       DEV_NAME, this_board->board_number, s, ns);
-                s = this_board->total_write_blocked_ns;
-                ns = do_div(s, 1000000000);
-                printk(KERN_INFO "%s_%d:   total_write_blocked_time = %12llu seconds + %12u nanoseconds\n",
-                       DEV_NAME, this_board->board_number, s, ns);
-                printk(KERN_INFO "%s_%d:   interrupt_count          = %12llu interrupts\n",
-                       DEV_NAME, this_board->board_number,
-                       this_board->interrupt_count);
                 }
                 break;
         case BNOC_IDENTIFY_PORTAL:
@@ -679,10 +600,7 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
         this_board->activation_level = PROBED;
         this_board->pci_dev = dev;
         this_board->board_number = UNASSIGNED;
-        this_board->next = NULL;
         this_board->debug_level = DEBUG_OFF;
-
-        /* insert board into linked list of boards */
         this_board->next = board_list;
         board_list = this_board;
         /* activate the board */
