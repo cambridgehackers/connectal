@@ -216,22 +216,22 @@ Install the python-ply package, e.g.,
 
 PLY's home is http://www.dabeaz.com/ply/
 
-Portal Driver
+Zynq Portal Driver
 -------------
 
-To Build the portal driver, Makefile needs to be pointed to the root of the kernel source tree:
+To Build the zynq portal driver, Makefile needs to be pointed to the root of the kernel source tree:
    export DEVICE_XILINX_KERNEL=/scratch/mdk/device_xilinx_kernel/
 
 The driver sources are located in the xbsv project:
-   (cd drivers/portal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portal.ko)
-   (cd drivers/alloc/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portalalloc.ko)
-   adb push drivers/portal/portal.ko /mnt/sdcard
-   adb push drivers/alloc/portalalloc.ko /mnt/sdcard
+   (cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)
+   (cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portalmem.ko)
+   adb push drivers/zynqportal/zynqportal.ko /mnt/sdcard
+   adb push drivers/portalmem/portalmem.ko /mnt/sdcard
 
-To update the driver running on the Zync platform, set ADB_PORT appropriately and run the following commands:
-   adb -s $ADB_PORT push portal.ko /mnt/sdcard/
+To update the zynq portal driver running on the Zync platform, set ADB_PORT appropriately and run the following commands:
+   adb -s $ADB_PORT push zynqportal.ko /mnt/sdcard/
    adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs rm -rf"
    adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mkdir"
-   adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mv portal.ko"
-   adb -s $ADB_PORT shell "modprobe -r portal"
-   adb -s $ADB_PORT shell "modprobe portal"
+   adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mv zynqportal.ko"
+   adb -s $ADB_PORT shell "modprobe -r zynqportal"
+   adb -s $ADB_PORT shell "modprobe zynqportal"
