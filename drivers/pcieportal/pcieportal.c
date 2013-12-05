@@ -48,9 +48,6 @@
 /*
  * Per-device data
  */
-
-/* per-device data that persists from probe to remove */
-
 typedef struct tPortal {
         unsigned int portal_number;
         struct tBoard *board;
@@ -101,7 +98,6 @@ enum {PROBED, BOARD_NUM_ASSIGNED, PCI_DEV_ENABLED, BARS_ALLOCATED,
 /*
  * interrupt handler
  */
-
 static irqreturn_t intr_handler(int irq, void *brd)
 {
         tBoard *this_board = brd;
@@ -451,6 +447,8 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
         case BNOC_SET_DEBUG_LEVEL:
                 {
                 tDebugLevel prev = this_board->debug_level, changed;
+                unsigned long long s;
+                unsigned ns;
                 /* set the debug level from the user-space value */
                 err = __get_user(this_board->debug_level, (tDebugLevel __user *) arg);
                 changed = this_board->debug_level ^ prev;
@@ -478,71 +476,69 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                                 }
                         }
                 }
-                if (changed & DEBUG_PROFILE) {
-                        if (this_board->debug_level & DEBUG_PROFILE) {
-                                printk(KERN_INFO "%s_%d: turned on profiling BlueNoC driver\n",
-                                       DEV_NAME, this_board->board_number);
-                                this_board->read_call_count = 0;
-                                this_board->write_call_count = 0;
-                                this_board->poll_call_count = 0;
-                                this_board->total_bytes_read = 0;
-                                this_board->total_bytes_written = 0;
-                                this_board->total_read_call_ns = 0;
-                                this_board->total_read_blocked_ns = 0;
-                                this_board->total_write_call_ns = 0;
-                                this_board->total_write_blocked_ns = 0;
-                                this_board->interrupt_count = 0;
-                        } else {
-                                /* NOTE: The do_div macro is required to perform division
-                                 * inside a kernel module. It NOT A FUNCTION and it
-                                 * DOESN'T WORK THE WAY ITS NAME IMPLIES IT SHOULD!
-                                 *
-                                 * The first argument is EVALUATED MULTIPLE TIMES, so
-                                 * beware of side effects in that expression. It is also
-                                 * MODIFIED IN PLACE to contain the QUOTIENT after the
-                                 * macro is executed. The return value of do_div is the
-                                 * REMAINDER, not the quotient!
-                                 */
-                                unsigned long long s;
-                                unsigned ns;
-                                printk(KERN_INFO "%s_%d: turned off profiling BlueNoC driver\n",
-                                       DEV_NAME, this_board->board_number);
-                                printk(KERN_INFO "%s_%d:   poll_call_count          = %12llu calls\n",
-                                       DEV_NAME, this_board->board_number,
-                                       this_board->poll_call_count);
-                                printk(KERN_INFO "%s_%d:   read_call_count          = %12llu calls\n",
-                                       DEV_NAME, this_board->board_number,
-                                       this_board->read_call_count);
-                                printk(KERN_INFO "%s_%d:   total_bytes_read         = %12llu bytes\n",
-                                       DEV_NAME, this_board->board_number,
-                                       this_board->total_bytes_read);
-                                s = this_board->total_read_call_ns;
-                                ns = do_div(s, 1000000000);
-                                printk(KERN_INFO "%s_%d:   total_read_call_time     = %12llu seconds + %12u nanoseconds\n",
-                                       DEV_NAME, this_board->board_number, s, ns);
-                                s = this_board->total_read_blocked_ns;
-                                ns = do_div(s, 1000000000);
-                                printk(KERN_INFO "%s_%d:   total_read_blocked_time  = %12llu seconds + %12u nanoseconds\n",
-                                       DEV_NAME, this_board->board_number, s, ns);
-                                printk(KERN_INFO "%s_%d:   write_call_count         = %12llu calls\n",
-                                       DEV_NAME, this_board->board_number,
-                                       this_board->write_call_count);
-                                printk(KERN_INFO "%s_%d:   total_bytes_written      = %12llu bytes\n",
-                                       DEV_NAME, this_board->board_number,
-                                       this_board->total_bytes_written);
-                                s = this_board->total_write_call_ns;
-                                ns = do_div(s, 1000000000);
-                                printk(KERN_INFO "%s_%d:   total_write_call_time    = %12llu seconds + %12u nanoseconds\n",
-                                       DEV_NAME, this_board->board_number, s, ns);
-                                s = this_board->total_write_blocked_ns;
-                                ns = do_div(s, 1000000000);
-                                printk(KERN_INFO "%s_%d:   total_write_blocked_time = %12llu seconds + %12u nanoseconds\n",
-                                       DEV_NAME, this_board->board_number, s, ns);
-                                printk(KERN_INFO "%s_%d:   interrupt_count          = %12llu interrupts\n",
-                                       DEV_NAME, this_board->board_number,
-                                       this_board->interrupt_count);
-                        }
+                if (!(changed & DEBUG_PROFILE))
+                        break;
+                if (this_board->debug_level & DEBUG_PROFILE) {
+                        printk(KERN_INFO "%s_%d: turned on profiling BlueNoC driver\n",
+                               DEV_NAME, this_board->board_number);
+                        this_board->read_call_count = 0;
+                        this_board->write_call_count = 0;
+                        this_board->poll_call_count = 0;
+                        this_board->total_bytes_read = 0;
+                        this_board->total_bytes_written = 0;
+                        this_board->total_read_call_ns = 0;
+                        this_board->total_read_blocked_ns = 0;
+                        this_board->total_write_call_ns = 0;
+                        this_board->total_write_blocked_ns = 0;
+                        this_board->interrupt_count = 0;
+                        break;
                 }
+                /* NOTE: The do_div macro is required to perform division
+                 * inside a kernel module. It NOT A FUNCTION and it
+                 * DOESN'T WORK THE WAY ITS NAME IMPLIES IT SHOULD!
+                 *
+                 * The first argument is EVALUATED MULTIPLE TIMES, so
+                 * beware of side effects in that expression. It is also
+                 * MODIFIED IN PLACE to contain the QUOTIENT after the
+                 * macro is executed. The return value of do_div is the
+                 * REMAINDER, not the quotient!
+                 */
+                printk(KERN_INFO "%s_%d: turned off profiling BlueNoC driver\n",
+                       DEV_NAME, this_board->board_number);
+                printk(KERN_INFO "%s_%d:   poll_call_count          = %12llu calls\n",
+                       DEV_NAME, this_board->board_number,
+                       this_board->poll_call_count);
+                printk(KERN_INFO "%s_%d:   read_call_count          = %12llu calls\n",
+                       DEV_NAME, this_board->board_number,
+                       this_board->read_call_count);
+                printk(KERN_INFO "%s_%d:   total_bytes_read         = %12llu bytes\n",
+                       DEV_NAME, this_board->board_number,
+                       this_board->total_bytes_read);
+                s = this_board->total_read_call_ns;
+                ns = do_div(s, 1000000000);
+                printk(KERN_INFO "%s_%d:   total_read_call_time     = %12llu seconds + %12u nanoseconds\n",
+                       DEV_NAME, this_board->board_number, s, ns);
+                s = this_board->total_read_blocked_ns;
+                ns = do_div(s, 1000000000);
+                printk(KERN_INFO "%s_%d:   total_read_blocked_time  = %12llu seconds + %12u nanoseconds\n",
+                       DEV_NAME, this_board->board_number, s, ns);
+                printk(KERN_INFO "%s_%d:   write_call_count         = %12llu calls\n",
+                       DEV_NAME, this_board->board_number,
+                       this_board->write_call_count);
+                printk(KERN_INFO "%s_%d:   total_bytes_written      = %12llu bytes\n",
+                       DEV_NAME, this_board->board_number,
+                       this_board->total_bytes_written);
+                s = this_board->total_write_call_ns;
+                ns = do_div(s, 1000000000);
+                printk(KERN_INFO "%s_%d:   total_write_call_time    = %12llu seconds + %12u nanoseconds\n",
+                       DEV_NAME, this_board->board_number, s, ns);
+                s = this_board->total_write_blocked_ns;
+                ns = do_div(s, 1000000000);
+                printk(KERN_INFO "%s_%d:   total_write_blocked_time = %12llu seconds + %12u nanoseconds\n",
+                       DEV_NAME, this_board->board_number, s, ns);
+                printk(KERN_INFO "%s_%d:   interrupt_count          = %12llu interrupts\n",
+                       DEV_NAME, this_board->board_number,
+                       this_board->interrupt_count);
                 }
                 break;
         case BNOC_IDENTIFY_PORTAL:
@@ -629,8 +625,8 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
         } else {
                 if (!this_portal->virt) {
                         this_portal->virt = dma_alloc_coherent(&this_board->pci_dev->dev,
-                                               vma->vm_end - vma->vm_start, &this_portal->dma_handle, GFP_ATOMIC);
-                        //this_portal->virt = pci_alloc_consistent(this_board->pci_dev, 1<<16, &this_portal->dma_handle);
+                             vma->vm_end - vma->vm_start, &this_portal->dma_handle, GFP_ATOMIC);
+                        //this_portal->virt =pci_alloc_consistent(this_board->pci_dev, 1<<16, &this_portal->dma_handle);
                         printk("dma_alloc_coherent virt=%p dma_handle=%p\n",
                              this_portal->virt, (void *) this_portal->dma_handle);
                 }
@@ -664,8 +660,7 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
 
         printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
         /* double-check vendor and device */
-        if ((dev->vendor != BLUESPEC_VENDOR_ID)
-            || (dev->device != BLUESPEC_NOC_DEVICE_ID)) {
+        if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != BLUESPEC_NOC_DEVICE_ID) {
                 printk(KERN_ERR "%s: probe with invalid vendor or device ID\n", DEV_NAME);
                 err = -EINVAL;
                 goto exit_bluenoc_probe;
@@ -729,33 +724,27 @@ static void __exit bluenoc_remove(struct pci_dev *dev)
 {
         tBoard *this_board = board_list;
         tBoard *prev_board = NULL;
+        int dn;
 
         /* locate device-specific data for this board */
-        for (; this_board; prev_board = this_board, this_board = this_board->next) {
-                if (this_board->pci_dev == dev)
-                        break;
+        while(this_board && this_board->pci_dev != dev) {
+            prev_board = this_board;
+            this_board = this_board->next;
         }
         if (!this_board) {
-                printk(KERN_ERR "%s: Unable to locate board when removing PCI device %p\n",
-                       DEV_NAME, dev);
+                printk(KERN_ERR "%s: Unable to locate board when removing PCI device %p\n", DEV_NAME, dev);
                 return;
         }
-        /* deactivate the board */
-        deactivate(this_board);
-        /* remove device node in udev */
-        {
-                int dn;
-                for (dn = 0; dn < 16; dn++) {
-                        //dev_t this_device_number = MKDEV(MAJOR(device_number),
-                                  //this_board->board_number * 16 + dn);
-                        dev_t this_device_number = MKDEV(MAJOR(device_number),
-                                  MINOR(device_number) + this_board->board_number * 16 + dn);
-                        device_destroy(bluenoc_class, this_device_number);
-                        printk(KERN_INFO "%s: /dev/%s_%d device file removed\n",
-                               DEV_NAME, DEV_NAME, MINOR(this_device_number)); 
-                        /* remove device */
-                        cdev_del(&this_board->cdev[dn]);
-                }
+        deactivate(this_board); /* deactivate the board */
+        for (dn = 0; dn < 16; dn++) {
+                /* remove device node in udev */
+                dev_t this_device_number = MKDEV(MAJOR(device_number),
+                          MINOR(device_number) + this_board->board_number * 16 + dn);
+                device_destroy(bluenoc_class, this_device_number);
+                printk(KERN_INFO "%s: /dev/%s_%d device file removed\n",
+                       DEV_NAME, DEV_NAME, MINOR(this_device_number)); 
+                /* remove device */
+                cdev_del(&this_board->cdev[dn]);
         }
         /* free the board structure */
         if (prev_board)
