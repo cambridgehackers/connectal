@@ -147,7 +147,7 @@ static irqreturn_t intr_handler(int irq, void *brd)
 
 static void deactivate(tBoard * this_board)
 {
-        if (this_board == NULL)
+        if (!this_board)
                 return;
 
 /* Note: this makes use of C's fall-through switch semantics */
@@ -184,11 +184,11 @@ static void deactivate(tBoard * this_board)
                 /* fall through */
         case BARS_MAPPED:
                 /* unmap PCI BARs */
-                if (this_board->bar0io != NULL)
+                if (this_board->bar0io)
                         pci_iounmap(this_board->pci_dev, this_board->bar0io);
-                if (this_board->bar1io != NULL)
+                if (this_board->bar1io)
                         pci_iounmap(this_board->pci_dev, this_board->bar1io);
-                if (this_board->bar2io != NULL)
+                if (this_board->bar2io)
                         pci_iounmap(this_board->pci_dev, this_board->bar2io);
                 /* fall through */
         case BARS_ALLOCATED:
@@ -209,18 +209,18 @@ static void deactivate(tBoard * this_board)
 
 static int activate(tBoard * this_board)
 {
-        if (this_board == NULL)
+        unsigned int board_number = 0;
+        if (!this_board)
                 return -EFAULT;
 
         /* Note: this makes use of C's fall-through switch semantics */
         switch (this_board->activation_level) {
         case PROBED:
-                {                /* assign a board number */
-                unsigned int board_number = 0;
+                /* assign a board number */
                 while (board_number <= NUM_BOARDS) {
                         tBoard *brd = board_list;
                         unsigned int collision = 0;
-                        while (brd != NULL && !collision) {
+                        while (brd && !collision) {
                                 collision |= (brd->board_number == board_number);
                                 brd = brd->next;
                         }
@@ -238,19 +238,17 @@ static int activate(tBoard * this_board)
                        DEV_NAME, board_number);
                 this_board->board_number = board_number;
                 this_board->activation_level = BOARD_NUM_ASSIGNED;
-                } /* fall through */
+                /* fall through */
         case BOARD_NUM_ASSIGNED:
-                {
                 /* enable the PCI device */
                 if (pci_enable_device(this_board->pci_dev) != 0) {
                         printk(KERN_ERR "%s: failed to enable %s\n",
-                               DEV_NAME,
-                               pci_name(this_board->pci_dev));
+                               DEV_NAME, pci_name(this_board->pci_dev));
                         deactivate(this_board);
                         return -EFAULT;
                 }
                 this_board->activation_level = PCI_DEV_ENABLED;
-                } /* fall through */
+                /* fall through */
         case PCI_DEV_ENABLED:
                 {                /* reserve PCI memory regions */
                 int rc0;
@@ -276,10 +274,9 @@ static int activate(tBoard * this_board)
                 this_board->activation_level = BARS_ALLOCATED;
                 } /* fall through */
         case BARS_ALLOCATED:
-                {                /* map BARs */
+                /* map BARs */
                 this_board->bar0io = pci_iomap(this_board->pci_dev, 0, 0);
                 printk("bar0io=%p\n", this_board->bar0io);
-
                 this_board->bar1io = pci_iomap(this_board->pci_dev, 1, 0);
                 printk("bar1io=%p\n", this_board->bar1io);
                 if (this_board->bar1io == 0) {
@@ -289,15 +286,13 @@ static int activate(tBoard * this_board)
                 this_board->bar2io = pci_iomap(this_board->pci_dev, 2, 0);
                 printk("bar2io=%p\n", this_board->bar2io);
 
-                if (NULL == this_board->bar0io) {
+                if (!this_board->bar0io) {
                         printk("failed to map bar0\n");
                         deactivate(this_board);
                         return -EFAULT;
                 }
-
-
                 this_board->activation_level = BARS_MAPPED;
-                } /* fall through */
+                /* fall through */
         case BARS_MAPPED:
                 {                /* check the magic number in BAR 0 */
                 unsigned long long magic_num = readq(this_board->bar0io);
@@ -340,18 +335,17 @@ static int activate(tBoard * this_board)
                 this_board->activation_level = MAGIC_MATCH;
                 } /* fall through */
         case MAGIC_MATCH:
-                {                /* set DMA mask */
+                /* set DMA mask */
                 if (pci_set_dma_mask(this_board->pci_dev, DMA_BIT_MASK(48)) != 0) {
-                        printk(KERN_ERR "%s: pci_set_dma_mask failed for 48-bit DMA\n",
-                               DEV_NAME);
+                        printk(KERN_ERR "%s: pci_set_dma_mask failed for 48-bit DMA\n", DEV_NAME);
                         deactivate(this_board);
                         return -EIO;
                 }
                 init_waitqueue_head(&(this_board->intr_wq));
                 this_board->activation_level = DMA_MASK_SET;
-                } /* fall through */
+                /* fall through */
         case DMA_MASK_SET:
-                {                /* enable MSI or MSI-X */
+                /* enable MSI or MSI-X */
                 if (pci_enable_msi(this_board->pci_dev) == 0) {
                         this_board->uses_msix = 0;
                         this_board->irq_num = this_board->pci_dev->irq;
@@ -364,17 +358,15 @@ static int activate(tBoard * this_board)
                                 this_board->uses_msix = 1;
                                 this_board->irq_num = msix_entries[0].vector;
                                 if (this_board->debug_level & DEBUG_INTR)
-                                        printk(KERN_INFO "%s: Using MSI-X interrupts\n",
-                                               DEV_NAME);
+                                        printk(KERN_INFO "%s: Using MSI-X interrupts\n", DEV_NAME);
                         } else {
-                                printk(KERN_ERR "%s: Failed to setup MSI or MSI-X interrupts\n",
-                                       DEV_NAME);
+                                printk(KERN_ERR "%s: Failed to setup MSI or MSI-X interrupts\n", DEV_NAME);
                                 deactivate(this_board);
                                 return -EFAULT;
                         }
                 }
                 this_board->activation_level = MSI_ENABLED;
-                } /* fall through */
+                /* fall through */
         case MSI_ENABLED:
                 {                /* install an IRQ handler */
                 int result;
@@ -384,35 +376,32 @@ static int activate(tBoard * this_board)
                         printk(KERN_ERR "%s: Failed to get requested IRQ %d\n",
                                DEV_NAME, this_board->irq_num);
                         deactivate(this_board);
-                                return -EBUSY;
+                        return -EBUSY;
                 }
                 this_board->activation_level = IRQ_ASSIGNED;
                 } /* fall through */
         case IRQ_ASSIGNED:
-                {                /* set MSI-X Entry 0 Vector Control value to 0 (unmasked) */
+                /* set MSI-X Entry 0 Vector Control value to 0 (unmasked) */
                 if (this_board->uses_msix) {
                         printk(KERN_INFO "%s: MSI-X interrupts enabled with IRQ %d\n",
                                DEV_NAME, this_board->irq_num);
                         iowrite32(0, this_board->bar0io + 16396);
                 }
                 this_board->activation_level = MSIX_INITIALIZED;
-                } /* fall through */
+                /* fall through */
         case MSIX_INITIALIZED:
-                {                /* enable PCI bus master */
+                /* enable PCI bus master */
                 pci_set_master(this_board->pci_dev);
                 this_board->activation_level = PCI_BUS_MASTER;
-                } /* fall through */
+                /* fall through */
         case PCI_BUS_MASTER:
-                {                /* activate the network */
+                /* activate the network */
                 iowrite8(1, this_board->bar0io + 257);
                 this_board->activation_level = BLUENOC_ACTIVE;
-                } /* fall through */
+                /* fall through */
         case BLUENOC_ACTIVE:
-                {
-                break;
-                }                /* fully activated! */
+                break;           /* fully activated! */
         }
-
         return 0;                /* successful activation */
 }
 
@@ -424,22 +413,19 @@ static int activate(tBoard * this_board)
 static int bluenoc_open(struct inode *inode, struct file *filp)
 {
         int err = 0;
-        unsigned int this_board_number = UNASSIGNED;
-        unsigned int this_portal_number = UNASSIGNED;
         tBoard *this_board = NULL;
         tBoard *tmp_board = NULL;
         tPortal *this_portal = NULL;
-
-        int minor = iminor(inode) - MINOR(device_number);
-
         /* figure out the board number */
-        this_board_number = minor >> 4;
-        this_portal_number = minor & 0xF;
+        int minor = iminor(inode) - MINOR(device_number);
+        unsigned int this_board_number = minor >> 4;
+        unsigned int this_portal_number = minor & 0xF;
+
         printk("bluenoc_open: device_number=%x board_number=%d portal_number=%d\n",
              device_number, this_board_number, this_portal_number);
 
         /* store the board pointer for easy access */
-        for (tmp_board = board_list; tmp_board != NULL;
+        for (tmp_board = board_list; tmp_board;
              tmp_board = tmp_board->next) {
                 if (tmp_board->board_number == this_board_number) {
                         this_board = tmp_board;
@@ -447,11 +433,10 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
                         break;
                 }
         }
-        if (NULL == this_board) {
+        if (!this_board) {
                 printk(KERN_ERR "%s_%d: Unable to locate board\n",
                        DEV_NAME, this_board_number);
-                err = -ENXIO;
-                goto exit_bluenoc_open;
+                return -ENXIO;
         }
         filp->private_data = (void *) this_portal; 
         /* increment the open file count */
@@ -463,36 +448,26 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
         }
         // FIXME: why does the kernel think this device is RDONLY?
         filp->f_mode |= FMODE_WRITE;
-
-        goto exit_bluenoc_open;
-
-      exit_bluenoc_open:
         return err;
 }
 
 /* close the device file */
 static int bluenoc_release(struct inode *inode, struct file *filp)
 {
-        unsigned int this_board_number = UNASSIGNED;
         tPortal *this_portal = NULL;
         tBoard *this_board;
-
         /* figure out the board number */
-        this_board_number = iminor(inode);
-
+        unsigned int this_board_number = iminor(inode);
         /* decrement the open file count */
         open_count[this_board_number] -= 1;
-
         /* access the tBoard structure for this file */
         this_portal = (tPortal *) filp->private_data;
         this_board = this_portal->board;
-
         if (this_board->debug_level & DEBUG_CALLS) {
                 /* log the operation */
                 printk(KERN_INFO "%s_%d: Closed device file\n", DEV_NAME,
                        this_board_number);
         }
-
         return 0;                /* success */
 }
 
@@ -560,11 +535,9 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 err = !access_ok(VERIFY_READ, (void __user *) arg, _IOC_SIZE(cmd));
         if (err)
                 return -EFAULT;
-
         /* access the tBoard structure for this file */
         this_portal = (tPortal *) filp->private_data;
         this_board = this_portal->board;
-
         /* execute the requested action */
         switch (cmd) {
         case BNOC_IDENTIFY:
@@ -589,50 +562,37 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 }
 
                 err = copy_to_user((void __user *) arg, &info, sizeof(tBoardInfo));
-                if (err != 0)
-                        return -EFAULT;
-                return 0;
+                break;
                 }
         case BNOC_SOFT_RESET:
                 {
                 printk(KERN_INFO "%s: /dev/%s_%d soft reset\n",
                        DEV_NAME, DEV_NAME, this_board->board_number);
-
                 if (this_board->activation_level == BLUENOC_ACTIVE) {
                 /* deactivate the network, wait 100ms and reactivate it */
                         iowrite8(0, this_board->bar0io + 257);
                         msleep(100);
                         iowrite8(1, this_board->bar0io + 257);
                 }
-
                 return 0;
                 }
         case BNOC_DEACTIVATE:
-                {
                 printk(KERN_INFO "%s: /dev/%s_%d deactivated\n",
                        DEV_NAME, DEV_NAME, this_board->board_number);
-
                 /* deactivate the whole PCI infrastructure for this board */
                 deactivate(this_board);
                 msleep(100);
                 return 0;
-                }
         case BNOC_REACTIVATE:
-                {
                 printk(KERN_INFO "%s: /dev/%s_%d reactivated\n",
                        DEV_NAME, DEV_NAME, this_board->board_number);
                 /* reactivate the PCI infrastructure for this board */
                 activate(this_board);
                 return 0;
-                }
         case BNOC_GET_DEBUG_LEVEL:
-                {
                 /* copy the debug level to the user-space value */
                 err = __put_user(this_board->debug_level, (tDebugLevel __user *) arg);
-                if (err != 0)
-                        return -EFAULT;
-                return 0;
-                }
+                break;
         case BNOC_SET_DEBUG_LEVEL:
                 {
                 /* set the debug level from the user-space value */
@@ -737,16 +697,12 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 /* copy board identification info to a user-space struct */
                 tPortalInfo info;
                 memset(&info, 0, sizeof(info));
-
                 printk("rcb_mask=%#x max_read_req_bytes=%#x max_payload_bytes=%#x\n",
                      ioread32(this_board->bar0io + (782 << 2)),
                      ioread32(this_board->bar0io + (783 << 2)),
                      ioread32(this_board->bar0io + (784 << 2)));
-
                 err = copy_to_user((void __user *) arg, &info, sizeof(tPortalInfo));
-                if (err != 0)
-                        return -EFAULT;
-                return 0;
+                break;
                 }
         case BNOC_GET_TLP:
                 {
@@ -764,13 +720,10 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 tlp[3] = ioread32(this_board->bar0io + (776 << 2) + (3 << 2));
                 mb();
                 tlp[2] = ioread32(this_board->bar0io + (776 << 2) + (2 << 2));
-
                 // now deq the tlpDataFifo
                 iowrite32(0, this_board->bar0io + (768 << 2) + 0);
                 err = copy_to_user((void __user *) arg, tlp, sizeof(tTlpData));
-                if (err != 0)
-                        return -EFAULT;
-                return 0;
+                break;
                 }
         case BNOC_TRACE:
                 {
@@ -779,23 +732,22 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 int tlpseqno = ioread32(this_board->bar0io + (774 << 2)); 
                 err = copy_from_user(&trace, (void __user *) arg, sizeof(int));
                 if (err != 0)
-                        return -EFAULT;
-
+                        break;
                 // update tlpBramWrAddr, which also writes the scratchpad to BRAM
                 iowrite32(0, this_board->bar0io + (792 << 2)); 
                 old_trace = ioread32(this_board->bar0io + (775 << 2) + 0);
                 iowrite32(trace, this_board->bar0io + (775 << 2) + 0); 
                 printk("new trace=%d old trace=%d tlpseqno=%d\n",
                        trace, old_trace, tlpseqno);
-
                 err = copy_to_user((void __user *) arg, &trace, sizeof(int));
-                if (err != 0)
-                        return -EFAULT;
-                return 0;
+                break;
                 }
         default:
                 return -ENOTTY;
         }
+        if (err != 0)
+                return -EFAULT;
+        return 0;
 }
 
 static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
@@ -814,7 +766,6 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
                      (long) this_board->pci_dev->resource[2].start,
                      (long) this_board->pci_dev->resource[2].start +
                      1024 * 1024 * this_portal->portal_number);
-
                 vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
                 vma->vm_pgoff = off >> PAGE_SHIFT;
                 //vma->vm_flags |= VM_IO | VM_RESERVED;
@@ -822,8 +773,6 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
                 if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
                      vma->vm_end - vma->vm_start, vma->vm_page_prot))
                         return -EAGAIN;
-
-                return 0;
         } else {
                 if (this_portal->virt == 0) {
                         this_portal->virt = dma_alloc_coherent(&this_board->pci_dev->dev,
@@ -833,15 +782,13 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
                              this_portal->virt, (void *) this_portal->dma_handle);
                 }
                 //vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-
                 vma->vm_flags |= VM_IO;
                 if (io_remap_pfn_range(vma, vma->vm_start,
                      this_portal->dma_handle >> PAGE_SHIFT,
                      vma->vm_end - vma->vm_start, vma->vm_page_prot))
                         return -EAGAIN;
-
-                return 0;
         }
+        return 0;
 }
 
 /* file operations pointers */
@@ -866,22 +813,18 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
         /* double-check vendor and device */
         if ((dev->vendor != BLUESPEC_VENDOR_ID)
             || (dev->device != BLUESPEC_NOC_DEVICE_ID)) {
-                printk(KERN_ERR "%s: probe with invalid vendor or device ID\n",
-                       DEV_NAME);
+                printk(KERN_ERR "%s: probe with invalid vendor or device ID\n", DEV_NAME);
                 err = -EINVAL;
                 goto exit_bluenoc_probe;
         }
-
         /* allocate a structure for this board */
         this_board = (tBoard *) kmalloc(sizeof(tBoard), GFP_KERNEL);
-        if (NULL == this_board) {
-                printk(KERN_ERR "%s: unable to allocate memory for board structure\n",
-                       DEV_NAME);
+        if (!this_board) {
+                printk(KERN_ERR "%s: unable to allocate memory for board structure\n", DEV_NAME);
                 err = -EINVAL;
                 goto exit_bluenoc_probe;
         }
         memset(this_board, 0, sizeof(tBoard));
-
         /* initially, the board structure contains only the pci_dev pointer and is in
          * the probed state with no assigned number.
          */
@@ -890,14 +833,12 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
         this_board->board_number = UNASSIGNED;
         this_board->next = NULL;
         this_board->debug_level = DEBUG_OFF;
-
         mutex_init(&(this_board->read_mutex));
         mutex_init(&(this_board->write_mutex));
 
         /* insert board into linked list of boards */
         this_board->next = board_list;
         board_list = this_board;
-
         /* activate the board */
         if ((err = activate(this_board)) >= 0) {
                 int dn;
@@ -905,10 +846,8 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
                         dev_t this_device_number = MKDEV(MAJOR(device_number),
                                   MINOR(device_number) + this_board->board_number * 16 + dn);
                         open_count[this_board->board_number] = 0;
-
                         this_board->portal[dn].portal_number = dn;
                         this_board->portal[dn].board = this_board;
-
                         /* add the device operations */
                         cdev_init(&this_board->cdev[dn], &bluenoc_fops);
                         if (cdev_add(&this_board->cdev[dn], this_device_number, 1) != 0) {
@@ -931,31 +870,27 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
                 board_list = this_board->next;
                 kfree(this_board);
         }
-
       exit_bluenoc_probe:
         return err;
 }
 
 static void __exit bluenoc_remove(struct pci_dev *dev)
 {
-        tBoard *this_board = NULL;
+        tBoard *this_board = board_list;
         tBoard *prev_board = NULL;
 
         /* locate device-specific data for this board */
-        for (this_board = board_list; this_board != NULL;
-             prev_board = this_board, this_board = this_board->next) {
+        for (; this_board; prev_board = this_board, this_board = this_board->next) {
                 if (this_board->pci_dev == dev)
                         break;
         }
-        if (NULL == this_board) {
+        if (!this_board) {
                 printk(KERN_ERR "%s: Unable to locate board when removing PCI device %p\n",
                        DEV_NAME, dev);
                 return;
         }
-
         /* deactivate the board */
         deactivate(this_board);
-
         /* remove device node in udev */
         {
                 int dn;
@@ -971,7 +906,6 @@ static void __exit bluenoc_remove(struct pci_dev *dev)
                         cdev_del(&this_board->cdev[dn]);
                 }
         }
-
         /* free the board structure */
         if (prev_board)
                 prev_board->next = this_board->next;
@@ -1010,14 +944,12 @@ static int __init bluenoc_init(void)
 
         bluenoc_class = class_create(THIS_MODULE, "Bluespec");
         if (IS_ERR(bluenoc_class)) {
-                printk(KERN_ERR "%s: failed to create class Bluespec\n",
-                       DEV_NAME);
+                printk(KERN_ERR "%s: failed to create class Bluespec\n", DEV_NAME);
                 return PTR_ERR(bluenoc_class);
         }
         /* dynamically allocate a device number */
         if (alloc_chrdev_region(&device_number, 1, NUM_BOARDS, DEV_NAME) < 0) {
-                printk(KERN_ERR "%s: failed to allocate character device region\n",
-                       DEV_NAME);
+                printk(KERN_ERR "%s: failed to allocate character device region\n", DEV_NAME);
                 class_destroy(bluenoc_class);
                 return -1;
         }
@@ -1026,8 +958,7 @@ static int __init bluenoc_init(void)
         /* register the driver with the PCI subsystem */
         status = pci_register_driver(&bluenoc_ops);
         if (status < 0) {
-                printk(KERN_ERR "%s: failed to register PCI driver\n",
-                       DEV_NAME);
+                printk(KERN_ERR "%s: failed to register PCI driver\n", DEV_NAME);
                 class_destroy(bluenoc_class);
                 return status;
         }
