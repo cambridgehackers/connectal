@@ -78,6 +78,7 @@ void MP(const char *x, const char *t, int *MP_next, int m, int n)
       i = 1;
     }
   }
+  fprintf(stderr, "MP exiting\n");
 }
 
 int main(int argc, const char **argv)
@@ -103,7 +104,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  {
+  if(1){
     fprintf(stderr, "simple tests\n");
     PortalAlloc *needleAlloc;
     PortalAlloc *haystackAlloc;
@@ -142,9 +143,6 @@ int main(int argc, const char **argv)
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
-    for(int i = 0; i < needle_len+1; i++)
-      fprintf(stderr, "mpNext[%d]=%d\n", i, mpNext[i]);
-
     MP(needle, haystack, mpNext, needle_len, haystack_len);
     
     dma->dCacheFlushInval(needleAlloc, needle);
@@ -160,34 +158,52 @@ int main(int argc, const char **argv)
     sem_wait(&conf_sem);
 
     device->search(needle_len, haystack_len);
+    sem_wait(&test_sem);
   }
 
-  sem_wait(&test_sem);
   
-  {
+  if(0){
     fprintf(stderr, "benchmarks\n");
-    unsigned int BENCHMARK_INPUT_SIZE = 200 * 1024 * 1024;
-    
     PortalAlloc *needleAlloc;
     PortalAlloc *haystackAlloc;
     PortalAlloc *mpNextAlloc;
-    unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
-
     const char *needle_text = "I have control\n";
+    unsigned int BENCHMARK_INPUT_SIZE = 200 * 1024 * 1024;
+    unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
     unsigned int needle_alloc_len = strlen(needle_text);
-
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
-
+    
     dma->alloc(needle_alloc_len, &needleAlloc);
     char *needle = (char *)mmap(0, needle_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc->header.fd, 0);
     dma->alloc(haystack_alloc_len, &haystackAlloc);
     char *haystack = (char *)mmap(0, haystack_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc->header.fd, 0);
     dma->alloc(mpNext_alloc_len, &mpNextAlloc);
     int *mpNext = (int *)mmap(0, mpNext_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc->header.fd, 0);
-    
+
     unsigned int ref_needleAlloc = dma->reference(needleAlloc);
     unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);
     unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
+
+    FILE* fp = fopen("/dev/urandom", "r");
+    size_t rv = fread(haystack, 1, BENCHMARK_INPUT_SIZE, fp);
+    strncpy(needle, needle_text, needle_alloc_len);
+    
+    int needle_len = strlen(needle);
+    int haystack_len = haystack_alloc_len;
+    int border[needle_len+1];
+
+    compute_borders(needle, border, needle_len);
+    compute_MP_next(needle, mpNext, needle_len);
+
+    assert(mpNext[1] == 0);
+    assert(border[1] == 0);
+    for(int i = 2; i < needle_len+1; i++)
+      assert(mpNext[i] == border[i-1]+1);
+
+    MP(needle, haystack, mpNext, needle_len, haystack_len);
+
+    dma->dCacheFlushInval(needleAlloc, needle);
+    dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
     dma->configChan(0, 0, ref_haystackAlloc, 2);
     sem_wait(&conf_sem);
@@ -197,9 +213,9 @@ int main(int argc, const char **argv)
 
     dma->configChan(0, 2, ref_mpNextAlloc, 2);
     sem_wait(&conf_sem);
-    
-    exit(0);
+
+    device->search(needle_len, haystack_len);
+    sem_wait(&test_sem);
   }
 
-  while(true) sleep(1);
 }

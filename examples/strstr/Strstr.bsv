@@ -166,6 +166,7 @@ module mkStrstrRequest#(StrstrIndication indication)(StrstrRequest);
    
    interface CoreRequest coreRequest;
       method Action search(Bit#(32) needle_len, Bit#(32) haystack_len) if (stage == Idle);
+	 $display("search %h %h", needle_len, haystack_len);
 	 needleLenReg <= needle_len;
 	 haystackLenReg <= haystack_len;
 	 n2b.start(pack(truncate(needle_len)));

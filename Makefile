@@ -53,7 +53,8 @@ test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.
 	-pkill bluetcl
 	rm -fr test-memcpy
 	mkdir test-memcpy
-	./genxpsprojfrombsv -M bsim -B $(BOARD) -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s  examples/memcpy/testmemcpy.cpp
+	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s  examples/memcpy/testmemcpy.cpp
+	cd test-strstr; make bsim; cd ..
 	cd test-memcpy; make x86_exe; cd ..
 	test-memcpy/sources/bsim &
 	test-memcpy/jni/memcpy
@@ -63,8 +64,9 @@ test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmem
 	-pkill bluetcl
 	rm -fr test-memread
 	mkdir test-memread
-	./genxpsprojfrombsv -M bsim -B $(BOARD) -p test-memread -b Memread examples/memread/Memread.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/memread/testmemread.cpp
+	./genxpsprojfrombsv -B $(BOARD) -p test-memread -b Memread examples/memread/Memread.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/memread/testmemread.cpp
 	cd test-memread; make x86_exe; cd ..
+	cd test-strstr; make bsim; cd ..
 	test-memread/sources/bsim &
 	test-memread/jni/memread
 
@@ -72,8 +74,9 @@ test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/tes
 	-pkill bluetcl
 	rm -fr test-memwrite
 	mkdir test-memwrite
-	./genxpsprojfrombsv -M bsim -B $(BOARD) -p test-memwrite -b Memwrite examples/memwrite/Memwrite.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/memwrite/testmemwrite.cpp
+	./genxpsprojfrombsv -B $(BOARD) -p test-memwrite -b Memwrite examples/memwrite/Memwrite.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/memwrite/testmemwrite.cpp
 	cd test-memwrite; make x86_exe; cd ..
+	cd test-strstr; make bsim; cd ..
 	test-memwrite/sources/bsim &
 	test-memwrite/jni/memwrite
 
@@ -83,8 +86,9 @@ test-strstr/sources/bsim: examples/strstr/Strstr.bsv examples/strstr/teststrstr.
 	-pkill bluetcl
 	rm -fr test-strstr
 	mkdir test-strstr
-	./genxpsprojfrombsv -M bsim -B $(BOARD) -p test-strstr -b Strstr examples/strstr/Strstr.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/strstr/teststrstr.cpp
+	./genxpsprojfrombsv -B $(BOARD) -p test-strstr -b Strstr examples/strstr/Strstr.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/strstr/teststrstr.cpp
 	cd test-strstr; make x86_exe; cd ..
+	cd test-strstr; make bsim; cd ..
 	test-strstr/sources/bsim &
 	test-strstr/jni/strstr
 
