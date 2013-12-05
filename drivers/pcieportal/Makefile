@@ -12,6 +12,9 @@ cflags-y += -I$(PWD)
 #pcie-portal-y = pcieportal.o dma-buf.o
 pcie-portal-y = pcieportal.o
 
+all: pcie-portal.ko
+	cd ../portalmem; make -f Makefile.x86
+
 pcie-portal.ko: pcieportal.c bluenoc.h dma-buf.c
 	@$(MAKE) -C $(KROOT) M=$(PWD) modules
 
@@ -23,6 +26,7 @@ modules_check:
 install: pcie-portal.ko
 	install -d -m755 $(BS_MOD_DIR)
 	install -m644 pcie-portal.ko $(BS_MOD_DIR)
+	install -m644 ../portalmem/portalmem.ko $(BS_MOD_DIR)
 	depmod
 	install -m644 99-bluespec.rules $(UDEV_RULES_DIR)
 
@@ -46,5 +50,6 @@ rmmod:
 .PHONY: insmod
 insmod: rmmod
 	sudo insmod pcie-portal.ko
-	sudo insmod portalmem.ko
-	sudo chmod agu+rw /dev/fpga* /dev/portalmem
+	sudo chmod agu+rw /dev/fpga*
+	sudo insmod ../portalmem/portalmem.ko
+	sudo chmod agu+rw /dev/portalmem
