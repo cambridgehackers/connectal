@@ -51,7 +51,6 @@
 
 /* per-device data that persists from probe to remove */
 
-//struct tBoard;
 typedef struct tPortal {
         unsigned int portal_number;
         struct tBoard *board;
@@ -60,19 +59,14 @@ typedef struct tPortal {
 } tPortal;
 
 typedef struct tBoard {
-        /* bars */
-        void __iomem *bar0io;
-        void __iomem *bar1io;
-        void __iomem *bar2io;
-        /* pci device pointer */
-        struct pci_dev *pci_dev;
+        struct tBoard *next; /* link to next board */
+        void __iomem *bar0io, *bar1io, *bar2io; /* bars */
+        struct pci_dev *pci_dev; /* pci device pointer */
         unsigned int board_number;
-        /* per-portal cdev structure */
-        struct cdev cdev[16];
+        struct cdev cdev[16]; /* per-portal cdev structure */
         struct tPortal portal[16];
         /* board identification fields */
-        unsigned int major_rev;
-        unsigned int minor_rev;
+        unsigned int major_rev, minor_rev;
         unsigned int build;
         unsigned int timestamp;
         unsigned int bytes_per_beat;
@@ -81,25 +75,13 @@ typedef struct tBoard {
         unsigned int uses_msix;
         unsigned int irq_num;
         wait_queue_head_t intr_wq;
-        /* link to next board */
-        struct tBoard *next;
-        /* activation status */
-        unsigned int activation_level;
-        /* debug status */
-        tDebugLevel debug_level;
-        /* mutexes used to prevent race conditions in read and write functions */
-        struct mutex read_mutex;
-        struct mutex write_mutex;
+        unsigned int activation_level; /* activation status */
+        tDebugLevel debug_level; /* debug status */
         /* accumulators used for profiling */
-        unsigned long long read_call_count;
-        unsigned long long write_call_count;
-        unsigned long long poll_call_count;
-        unsigned long long total_bytes_read;
-        unsigned long long total_bytes_written;
-        unsigned long long total_read_call_ns;
-        unsigned long long total_read_blocked_ns;
-        unsigned long long total_write_call_ns;
-        unsigned long long total_write_blocked_ns;
+        unsigned long long read_call_count, write_call_count, poll_call_count;
+        unsigned long long total_bytes_read, total_bytes_written;
+        unsigned long long total_read_call_ns, total_read_blocked_ns;
+        unsigned long long total_write_call_ns, total_write_blocked_ns;
         unsigned long long interrupt_count;
 } tBoard;
 
@@ -114,7 +96,7 @@ static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 'e' << 48) | ((unsigned long long) 'c' << 56);
 
 enum {PROBED, BOARD_NUM_ASSIGNED, PCI_DEV_ENABLED, BARS_ALLOCATED,
-    BARS_MAPPED, MAGIC_MATCH, DMA_MASK_SET, MSI_ENABLED, BLUENOC_ACTIVE};
+    BARS_MAPPED, MSI_ENABLED, BLUENOC_ACTIVE};
 
 /*
  * interrupt handler
@@ -126,26 +108,19 @@ static irqreturn_t intr_handler(int irq, void *brd)
 
         if (this_board->debug_level & DEBUG_PROFILE)
                 this_board->interrupt_count += 1; 
-        if (this_board->debug_level & DEBUG_INTR) {
-                printk(KERN_INFO "%s_%d: interrupt!\n",
-                       DEV_NAME, this_board->board_number);
-        } 
+        if (this_board->debug_level & DEBUG_INTR)
+                printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_board->board_number);
         wake_up_interruptible(&(this_board->intr_wq)); 
         return IRQ_HANDLED;
 }
 
 static void deactivate(tBoard * this_board)
 {
-        if (!this_board)
-                return;
-
-/* Note: this makes use of C's fall-through switch semantics */
+        if (this_board)
         switch (this_board->activation_level) {
         case BLUENOC_ACTIVE:
-                /* deactivate the network */
-                iowrite8(0, this_board->bar0io + 257);
-                /* disable PCI bus master */
-                pci_clear_master(this_board->pci_dev);
+                iowrite8(0, this_board->bar0io + 257); /* deactivate the network */
+                pci_clear_master(this_board->pci_dev); /* disable PCI bus master */
                 /* set MSI-X Entry 0 Vector Control value to 1 (masked) */
                 if (this_board->uses_msix)
                         iowrite32(1, this_board->bar0io + 16396);
@@ -159,12 +134,6 @@ static void deactivate(tBoard * this_board)
                 else
                         pci_disable_msi(this_board->pci_dev);
                 /* fall through */
-        case DMA_MASK_SET:
-                ;
-                /* fall through */
-        case MAGIC_MATCH:
-                ;
-                /* fall through */
         case BARS_MAPPED:
                 /* unmap PCI BARs */
                 if (this_board->bar0io)
@@ -175,16 +144,13 @@ static void deactivate(tBoard * this_board)
                         pci_iounmap(this_board->pci_dev, this_board->bar2io);
                 /* fall through */
         case BARS_ALLOCATED:
-                /* release PCI memory regions */
-                pci_release_regions(this_board->pci_dev);
+                pci_release_regions(this_board->pci_dev); /* release PCI memory regions */
                 /* fall through */
         case PCI_DEV_ENABLED:
-                /* disable pci device */
-                pci_disable_device(this_board->pci_dev);
+                pci_disable_device(this_board->pci_dev); /* disable pci device */
                 this_board->activation_level = BOARD_NUM_ASSIGNED;
                 /* fall through */
-        case BOARD_NUM_ASSIGNED:
-        case PROBED:
+        case BOARD_NUM_ASSIGNED: case PROBED:
                 break;                /* nothing to deactivate */
         }
 }
@@ -192,7 +158,7 @@ static void deactivate(tBoard * this_board)
 static int activate(tBoard * this_board)
 {
         unsigned int board_number = 0;
-        int rc, i, result;
+        int rc, i;
 
         if (!this_board)
                 return -EFAULT;
@@ -222,19 +188,19 @@ static int activate(tBoard * this_board)
                 /* fall through */
         case BOARD_NUM_ASSIGNED:
                 /* enable the PCI device */
-                if (pci_enable_device(this_board->pci_dev) != 0) {
+                if (pci_enable_device(this_board->pci_dev)) {
                         printk(KERN_ERR "%s: failed to enable %s\n", DEV_NAME, pci_name(this_board->pci_dev));
                         deactivate(this_board);
                         return -EFAULT;
                 }
                 this_board->activation_level = PCI_DEV_ENABLED;
-                {                /* reserve PCI memory regions */
+                /* reserve PCI memory regions */
                 for (i = 0; i < 5; i++)
                         printk("pci bar %d start=%08lx end=%08lx flags=%lx\n", i,
                              (unsigned long) this_board->pci_dev->resource[i].start,
                              (unsigned long) this_board->pci_dev->resource[i].end,
                              this_board->pci_dev->resource[i].flags);
-                if ((rc = pci_request_region(this_board->pci_dev, 0, "bar0")) != 0) {
+                if ((rc = pci_request_region(this_board->pci_dev, 0, "bar0"))) {
                         printk("failed to request region bar0 rc=%d\n", rc);
                         deactivate(this_board);
                         return -EBUSY;
@@ -244,19 +210,17 @@ static int activate(tBoard * this_board)
                 rc = pci_request_region(this_board->pci_dev, 2, "bar2");
                 printk("reserving region bar2 rc=%d\n", rc);
                 this_board->activation_level = BARS_ALLOCATED;
-                } /* fall through */
                 /* map BARs */
                 this_board->bar0io = pci_iomap(this_board->pci_dev, 0, 0);
                 printk("bar0io=%p\n", this_board->bar0io);
                 this_board->bar1io = pci_iomap(this_board->pci_dev, 1, 0);
                 printk("bar1io=%p\n", this_board->bar1io);
-                if (this_board->bar1io == 0) {
+                if (!this_board->bar1io) {
                         this_board->bar1io = pci_iomap(this_board->pci_dev, 1, 8192);
                         printk("bar1io=%p\n", this_board->bar1io);
                 }
                 this_board->bar2io = pci_iomap(this_board->pci_dev, 2, 0);
                 printk("bar2io=%p\n", this_board->bar2io);
-
                 if (!this_board->bar0io) {
                         printk("failed to map bar0\n");
                         deactivate(this_board);
@@ -290,56 +254,49 @@ static int activate(tBoard * this_board)
                 this_board->timestamp = timestamp;
                 this_board->bytes_per_beat = noc_params & 0xff;
                 this_board->content_id = board_content_id;
+                this_board->uses_msix = 0;
                 }
-                this_board->activation_level = MAGIC_MATCH;
                 } /* fall through */
                 /* set DMA mask */
-                if (pci_set_dma_mask(this_board->pci_dev, DMA_BIT_MASK(48)) != 0) {
+                if (pci_set_dma_mask(this_board->pci_dev, DMA_BIT_MASK(48))) {
                         printk(KERN_ERR "%s: pci_set_dma_mask failed for 48-bit DMA\n", DEV_NAME);
                         deactivate(this_board);
                         return -EIO;
                 }
                 init_waitqueue_head(&(this_board->intr_wq));
-                this_board->activation_level = DMA_MASK_SET;
                 /* enable MSI or MSI-X */
-                if (pci_enable_msi(this_board->pci_dev) == 0) {
-                        this_board->uses_msix = 0;
+                if (!pci_enable_msi(this_board->pci_dev)) {
                         this_board->irq_num = this_board->pci_dev->irq;
                         if (this_board->debug_level & DEBUG_INTR)
                                 printk(KERN_INFO "%s: Using MSI interrupts\n", DEV_NAME);
                 } else {
                         struct msix_entry msix_entries[1];
                         msix_entries[0].entry = 0;
-                        if (pci_enable_msix(this_board->pci_dev, msix_entries, 1) == 0) {
-                                this_board->uses_msix = 1;
-                                this_board->irq_num = msix_entries[0].vector;
-                                if (this_board->debug_level & DEBUG_INTR)
-                                        printk(KERN_INFO "%s: Using MSI-X interrupts\n", DEV_NAME);
-                        } else {
+                        if (pci_enable_msix(this_board->pci_dev, msix_entries, 1)) {
                                 printk(KERN_ERR "%s: Failed to setup MSI or MSI-X interrupts\n", DEV_NAME);
                                 deactivate(this_board);
                                 return -EFAULT;
                         }
+                        this_board->uses_msix = 1;
+                        this_board->irq_num = msix_entries[0].vector;
+                        if (this_board->debug_level & DEBUG_INTR)
+                                printk(KERN_INFO "%s: Using MSI-X interrupts\n", DEV_NAME);
                 }
                 this_board->activation_level = MSI_ENABLED;
                 /* install an IRQ handler */
-                result = request_irq(this_board->irq_num, intr_handler, 0, DEV_NAME, (void *) this_board);
-                if (result != 0) {
-                        printk(KERN_ERR "%s: Failed to get requested IRQ %d\n",
-                               DEV_NAME, this_board->irq_num);
+                if (request_irq(this_board->irq_num, intr_handler, 0, DEV_NAME, (void *) this_board)) {
+                        printk(KERN_ERR "%s: Failed to get requested IRQ %d\n", DEV_NAME, this_board->irq_num);
                         deactivate(this_board);
                         return -EBUSY;
                 }
-                /* set MSI-X Entry 0 Vector Control value to 0 (unmasked) */
                 if (this_board->uses_msix) {
+                        /* set MSI-X Entry 0 Vector Control value to 0 (unmasked) */
                         printk(KERN_INFO "%s: MSI-X interrupts enabled with IRQ %d\n",
                                DEV_NAME, this_board->irq_num);
                         iowrite32(0, this_board->bar0io + 16396);
                 }
-                /* enable PCI bus master */
-                pci_set_master(this_board->pci_dev);
-                /* activate the network */
-                iowrite8(1, this_board->bar0io + 257);
+                pci_set_master(this_board->pci_dev); /* enable PCI bus master */
+                iowrite8(1, this_board->bar0io + 257); /* activate the network */
                 this_board->activation_level = BLUENOC_ACTIVE;
                 break;
         case BLUENOC_ACTIVE:
@@ -356,36 +313,25 @@ static int activate(tBoard * this_board)
 static int bluenoc_open(struct inode *inode, struct file *filp)
 {
         int err = 0;
-        tBoard *this_board = NULL;
-        tBoard *tmp_board = board_list;
-        tPortal *this_portal = NULL;
-        /* figure out the board number */
+        tBoard *this_board = board_list;
         int minor = iminor(inode) - MINOR(device_number);
         unsigned int this_board_number = minor >> 4;
         unsigned int this_portal_number = minor & 0xF;
 
         printk("bluenoc_open: device_number=%x board_number=%d portal_number=%d\n",
              device_number, this_board_number, this_portal_number);
-        /* store the board pointer for easy access */
-        for (; tmp_board; tmp_board = tmp_board->next) {
-                if (tmp_board->board_number == this_board_number) {
-                        this_board = tmp_board;
-                        this_portal = &this_board->portal[this_portal_number];
-                        break;
-                }
-        }
+        while(this_board && this_board->board_number != this_board_number)
+            this_board = this_board->next;
         if (!this_board) {
-                printk(KERN_ERR "%s_%d: Unable to locate board\n",
-                       DEV_NAME, this_board_number);
+                printk(KERN_ERR "%s_%d: Unable to locate board\n", DEV_NAME, this_board_number);
                 return -ENXIO;
         }
-        filp->private_data = (void *) this_portal; 
+        filp->private_data = (void *) &this_board->portal[this_portal_number];
         /* increment the open file count */
         open_count[this_board_number] += 1; 
         if (this_board->debug_level & DEBUG_CALLS) {
-        /* log the operation */
-                printk(KERN_INFO "%s_%d: Opened device file\n", DEV_NAME,
-                       this_board_number);
+                /* log the operation */
+                printk(KERN_INFO "%s_%d: Opened device file\n", DEV_NAME, this_board_number);
         }
         // FIXME: why does the kernel think this device is RDONLY?
         filp->f_mode |= FMODE_WRITE;
@@ -508,7 +454,7 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 /* set the debug level from the user-space value */
                 err = __get_user(this_board->debug_level, (tDebugLevel __user *) arg);
                 changed = this_board->debug_level ^ prev;
-                if (err != 0 || !changed)
+                if (err || !changed)
                         break;
                 if (changed & ~DEBUG_PROFILE) {
                         if ((this_board->debug_level & ~DEBUG_PROFILE) == DEBUG_OFF) {
@@ -652,7 +598,7 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
         default:
                 return -ENOTTY;
         }
-        if (err != 0)
+        if (err)
                 return -EFAULT;
         return 0;
 }
@@ -681,7 +627,7 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
                      vma->vm_end - vma->vm_start, vma->vm_page_prot))
                         return -EAGAIN;
         } else {
-                if (this_portal->virt == 0) {
+                if (!this_portal->virt) {
                         this_portal->virt = dma_alloc_coherent(&this_board->pci_dev->dev,
                                                vma->vm_end - vma->vm_start, &this_portal->dma_handle, GFP_ATOMIC);
                         //this_portal->virt = pci_alloc_consistent(this_board->pci_dev, 1<<16, &this_portal->dma_handle);
@@ -740,8 +686,6 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
         this_board->board_number = UNASSIGNED;
         this_board->next = NULL;
         this_board->debug_level = DEBUG_OFF;
-        mutex_init(&(this_board->read_mutex));
-        mutex_init(&(this_board->write_mutex));
 
         /* insert board into linked list of boards */
         this_board->next = board_list;
@@ -757,7 +701,7 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
                         this_board->portal[dn].board = this_board;
                         /* add the device operations */
                         cdev_init(&this_board->cdev[dn], &bluenoc_fops);
-                        if (cdev_add(&this_board->cdev[dn], this_device_number, 1) != 0) {
+                        if (cdev_add(&this_board->cdev[dn], this_device_number, 1)) {
                                 printk(KERN_ERR "%s: cdev_add %x failed\n",
                                        DEV_NAME, this_device_number);
                                 deactivate(this_board);
