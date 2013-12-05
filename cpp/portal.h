@@ -10,8 +10,8 @@
 #include <sys/un.h>
 #include <bitset>
 
-#include "drivers/alloc/portalalloc.h"
-#include "drivers/portal/portal.h"
+#include "drivers/portalmem/portalmem.h"
+#include "drivers/zynqportal/zynqportal.h"
 
 #include "sock_utils.h"
 

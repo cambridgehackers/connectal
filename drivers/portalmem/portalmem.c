@@ -20,7 +20,7 @@
 
 #include <asm/cacheflush.h>
 
-#include "portalalloc.h"
+#include "portalmem.h"
 
 #ifdef DEBUG // was KERN_DEBUG
 #define driver_devel(format, ...)		\
@@ -31,7 +31,7 @@
 #define driver_devel(format, ...)
 #endif
 
-#define DRIVER_NAME "portalalloc"
+#define DRIVER_NAME "portalmem"
 #define DRIVER_DESCRIPTION "Memory management between HW and SW processes"
 #define DRIVER_VERSION "0.1"
 
@@ -621,7 +621,7 @@ static int __init pa_init(void)
   struct miscdevice *md = &miscdev;
   printk("PortalAlloc::pa_init\n");
   md->minor = MISC_DYNAMIC_MINOR;
-  md->name = "portalalloc";
+  md->name = "portalmem";
   md->fops = &pa_fops;
   md->parent = NULL;
   misc_register(md);

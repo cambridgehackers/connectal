@@ -233,7 +233,7 @@ int PortalRequest::registerInstance(PortalRequest *instance)
 PortalMemory::PortalMemory()
   : handle(1)
 {
-  const char* path = "/dev/portalalloc";
+  const char* path = "/dev/portalmem";
   this->pa_fd = ::open(path, O_RDWR);
   if (this->pa_fd < 0){
     ALOGE("Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);
@@ -250,7 +250,7 @@ PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
   snprintf(p_fd.write.path, sizeof(p_fd.write.path), "fd_sock_wc");
   connect_socket(&(p_fd.write));
 #endif
-  const char* path = "/dev/portalalloc";
+  const char* path = "/dev/portalmem";
   this->pa_fd = ::open(path, O_RDWR);
   if (this->pa_fd < 0){
     ALOGE("Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);

@@ -28,13 +28,13 @@
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 
-#include "portal.h"
+#include "zynqportal.h"
 
 /////////////////////////////////////////////////////////////
 // copied from portal.h
 
 
-#define DRIVER_NAME "portal"
+#define DRIVER_NAME "zynqportal"
 #define DRIVER_DESCRIPTION "Generic userspace hardware bridge"
 #define DRIVER_VERSION "0.1"
 

@@ -1,11 +1,11 @@
-obj-m += portal.o
+obj-m += zynqportal.o
 
 export KROOT=$(DEVICE_XILINX_KERNEL)
 
-default: portal.ko
-	cp portal.ko ~/adb_scripts/
+default: zynqportal.ko
+	cp zynqportal.ko ~/adb_scripts/
 
-portal.ko: portal.h portal.c
+zynqportal.ko: zynqportal.h zynqportal.c
 	@$(MAKE) ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- -C $(KROOT) xilinx_zynq_portal_defconfig  
 	@$(MAKE) ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- -C $(KROOT) oldconfig
 	@$(MAKE) -j 8 ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- -C $(KROOT) zImage

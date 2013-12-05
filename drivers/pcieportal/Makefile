@@ -1,23 +1,18 @@
-obj-m += pcie-portal.o portalalloc.o
+obj-m += pcie-portal.o
 
 export KROOT=/lib/modules/$(shell uname -r)/build
 export BS_MOD_DIR=/lib/modules/$(shell uname -r)/bluespec
 export UDEV_RULES_DIR=/etc/udev/rules.d
 
 .PHONY: default
-default: pcie-portal.ko portalalloc.ko
+default: pcie-portal.ko 
 
 EXTRA_CFLAGS = -I$(PWD)
 cflags-y += -I$(PWD)
 #pcie-portal-y = bluenoc.o dma-buf.o
 pcie-portal-y = bluenoc.o
 
-portalalloc.o: ../../drivers/alloc/portalalloc.c ../../drivers/alloc/portalalloc.h
-
-pcie-portal.ko: bluenoc.c bluenoc.h ../../drivers/alloc/portalalloc.h dma-buf.c
-	@$(MAKE) -C $(KROOT) M=$(PWD) modules
-
-portalalloc.ko: portalalloc.c ../../drivers/alloc/portalalloc.h
+pcie-portal.ko: bluenoc.c bluenoc.h dma-buf.c
 	@$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check
@@ -45,11 +40,11 @@ clean:
 
 .PHONY: rmmod
 rmmod:
-	sudo rmmod portalalloc || true
+	sudo rmmod portalmem || true
 	sudo rmmod pcie-portal || true
 
 .PHONY: insmod
 insmod: rmmod
 	sudo insmod pcie-portal.ko
-	sudo insmod portalalloc.ko
-	sudo chmod agu+rw /dev/fpga* /dev/portalalloc
+	sudo insmod portalmem.ko
+	sudo chmod agu+rw /dev/fpga* /dev/portalmem
