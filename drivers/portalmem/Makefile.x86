@@ -6,7 +6,7 @@ BASEDIR = ../../
 
 default:
 	make -C /lib/modules/$(KVERSION)/build M=$(PWD) modules
-	sudo rmmod portalmem
+	sudo rmmod portalmem || true
 	sudo insmod ./portalmem.ko
 	sudo chmod 777 /dev/portalmem
 
