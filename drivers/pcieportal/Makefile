@@ -5,12 +5,12 @@ export BS_MOD_DIR=/lib/modules/$(shell uname -r)/bluespec
 export UDEV_RULES_DIR=/etc/udev/rules.d
 
 .PHONY: default
-default: pcieportal.ko 
+default: pcieportal.ko ../portalmem/portalmem.ko
 
 EXTRA_CFLAGS = -I$(PWD)
 cflags-y += -I$(PWD)
 
-all: pcieportal.ko
+../portalmem/portalmem.ko: ../portalmem/portalmem.c
 	cd ../portalmem; make -f Makefile.x86
 
 pcieportal.ko: pcieportal.c bluenoc.h
@@ -47,7 +47,7 @@ rmmod:
 
 .PHONY: insmod
 insmod: rmmod
-	sudo insmod pcie-portal.ko
+	sudo insmod pcieportal.ko
 	sudo chmod agu+rw /dev/fpga*
 	sudo insmod ../portalmem/portalmem.ko
 	sudo chmod agu+rw /dev/portalmem
