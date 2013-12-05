@@ -1,4 +1,4 @@
-obj-m = portalalloc.o
+obj-m = portalmem.o
 
 KVERSION = $(shell uname -r)
 UTILDIR = ../../cpp/
@@ -6,9 +6,9 @@ BASEDIR = ../../
 
 default:
 	make -C /lib/modules/$(KVERSION)/build M=$(PWD) modules
-	sudo rmmod portalalloc
-	sudo insmod ./portalalloc.ko
-	sudo chmod 777 /dev/portalalloc
+	sudo rmmod portalmem
+	sudo insmod ./portalmem.ko
+	sudo chmod 777 /dev/portalmem
 
 clean:
 	make -C /lib/modules/$(KVERSION)/build M=$(PWD) clean
