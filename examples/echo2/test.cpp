@@ -21,8 +21,8 @@ class SaySW : public Say
 int main(int argc, const char **argv)
 {
 
-  SayProxy sayHW* = new SayProxy(1); // the corresponding wrapper's index in ctrls_v
-  SaySW saySW* = new SaySW(0); // the corresponding proxy's index in ctrls_v
+  SayProxy sayHW* = new SayProxy(1008);
+  SaySW saySW* = new SaySW(7); 
 
   if(sem_init(&say_sem, 1, 0)){
     fprintf(stderr, "failed to init say_sem\n");
