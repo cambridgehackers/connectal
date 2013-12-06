@@ -150,6 +150,9 @@ interface Axi3Slave#(type addrWidth, type busWidth, type busWidthBytes, type idW
    interface Axi3SlaveWrite#(addrWidth, busWidth, busWidthBytes, idWidth) write;
 endinterface
 
+typedef Axi3Slave#(32,32,4,12)  Axi3SlaveStandard;
+typedef Axi3Master#(40,64,8,12) Axi3MasterStandard;
+
 typedef struct {
     Bit#(addrWidth) addr;
     Bit#(8) numWords;
