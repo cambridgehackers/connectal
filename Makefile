@@ -99,3 +99,8 @@ xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
 	mv ./proj_pcie/proj_pcie.srcs/sources_1/ip/pcie_7x_0 xilinx/pcie_7x_v2_1
 	rm -fr ./proj_pcie
 
+k7echoproj:
+	./genxpsprojfrombsv -B kc705 -p k7echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv && (cd k7echoproj && time make implementation)
+
+v7echoproj:
+	./genxpsprojfrombsv -B vc707 -p v7echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv && (cd v7echoproj && time make implementation)
