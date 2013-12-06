@@ -11,7 +11,7 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-#include "../../drivers/pcie/bluenoc.h"
+#include "../../drivers/pcieportal/bluenoc.h"
 
 static void print_usage(const char* argv0)
 {
