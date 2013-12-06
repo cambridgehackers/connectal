@@ -173,6 +173,9 @@ static void pa_buffer_kmap_put(struct pa_buffer *buffer)
   }
 }
 
+/*
+ * driver dma_buf callback functions
+ */
 
 static struct sg_table *pa_map_dma_buf(struct dma_buf_attachment *attachment,
 				       enum dma_data_direction direction)
@@ -188,14 +191,10 @@ static void pa_unmap_dma_buf(struct dma_buf_attachment *attachment,
 {
 }
 
-
 struct pa_vma_list {
   struct list_head list;
   struct vm_area_struct *vma;
 };
-
-
-
 
 static int pa_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 {
@@ -525,6 +524,10 @@ int pa_system_heap_map_user(struct pa_buffer *buffer,
   return 0;
 }
 
+/*
+ * driver file operations
+ */
+
 static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   switch (cmd) {
@@ -615,6 +618,10 @@ static struct file_operations pa_fops =
     .owner = THIS_MODULE,
     .unlocked_ioctl = pa_unlocked_ioctl
   };
+
+/*
+ * driver initialization and exit
+ */
  
 static int __init pa_init(void)
 {
