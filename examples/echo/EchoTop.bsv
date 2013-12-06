@@ -41,7 +41,13 @@ import CoreEchoIndicationProxy::*;
 import AxiMasterSlave::*;
 import AxiClientServer::*;
 
-module mkEchoPcie#(X7PcieBridgeIfc#(8) x7pcie)(KC705_FPGA);
+// this should go in a library file
+interface PortalInterface;
+   interface Axi3Slave#(32,32,4,12) axislave;
+   interface Get#(Bool) interrupt;
+endinterface
+
+module mkEchoTop(PortalInterface);
 
    CoreEchoIndicationProxy coreIndicationProxy <- mkCoreEchoIndicationProxy();
 
@@ -50,20 +56,21 @@ module mkEchoPcie#(X7PcieBridgeIfc#(8) x7pcie)(KC705_FPGA);
    CoreEchoRequestWrapper coreRequestWrapper <- mkCoreEchoRequestWrapper(echoRequest.coreRequest);
    NonEchoRequestWrapper otherRequestWrapper <- mkNonEchoRequestWrapper(echoRequest.otherRequest);
 
+   let numPortals = 3;
    Vector#(numPortals,Axi3Slave#(32,32,4,12)) ctrls_v;
    ctrls_v[0] = coreIndicationProxy.ctrl;
    ctrls_v[1] = coreRequestWrapper.ctrl;
    ctrls_v[2] = coreRequestWrapper.ctrl;
    let ctrl_mux <- mkAxiSlaveMux(ctrls_v);
-   mkConnection(x7pcie.portal0, ctrl_mux);
 
    Vector#(numPortals,ReadOnly#(Bool)) interrupts_v;
    interrupts_v[0] = coreIndicationProxy.interrupt;
    interrupts_v[1] = coreRequestWrapper.interrupt;
    interrupts_v[2] = otherRequestWrapper.interrupt;
-   mkConnection(x7pcie.interrupts, interrupts_v);
+   let intr_mux = mkInterruptMux(interrupts_v);
 
-   interface pcie = x7pcie.pcie;
+   interface axislave = ctrl_mux;
+   interface interrupt = intr_mux;
    method leds = zeroExtend({  pack(x7pcie.isCalibrated)
 			     , pack(True)
 			     , pack(False)
@@ -78,13 +85,31 @@ module mkEchoPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
                          (KC705_FPGA);
 
    let contentId = 64'h4563686f;
-   let numPortals = 3;
-   X7PcieBridgeIfc#(8) x7pcie <- mkX7PcieBridge(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
-						numPortals,
-						contentId );
+   X7PcieBridgeIfc x7pcie <- mkX7PcieBridge(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
+					    contentId );
 
-   let top <- mkEchoPcie(x7pcie, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   interface pcie = top.pcie;
+   let top <- mkEchoTop(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(x7pcie.aximaster, top.axislave);
+   mkConnection(x7pcie.interrupt, top.interrupt);
+
+   interface pcie = x7pcie.pcie;
    methods leds = top.leds;
    
 endmodule: mkEchoPcieTop
+
+(* synthesize, no_default_clock, no_default_reset *)
+module mkEchoZynqTop #(Clock zynq_sys_clk_p, Clock zynq_sys_clk_n,
+		       Clock sys_clk_p,     Clock sys_clk_n,
+		       Reset zynq_sys_reset_n)
+			 (KC705_FPGA);
+
+   let contentId = 64'h4563686f;
+   Ps7BridgeIfc zynq <- mkPs7Bridge(zynq_sys_clk_p, zynq_sys_clk_n, sys_clk_p, sys_clk_n, zynq_sys_reset_n );
+
+   let top <- mkEchoTop(clocked_by zynq.clock125, reset_by zynq.reset125);
+   mkConnection(zynq.aximaster, top.axislave);
+   mkConnection(zynq.interrupt, top.interrupt);
+
+   methods leds = top.leds;
+
+endmodule: mkEchoZynqTop
