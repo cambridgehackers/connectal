@@ -39,12 +39,12 @@ argparser.add_argument('-b', '--interface', help='BSV interface to generate stub
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 argparser.add_argument('-c', '--coherent', help='Use ACP coherence port for first AXI master bus')
-argparser.add_argument('-s', '--source', help='C++ source files', nargs='+')
+argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument('-I', '--contentid', help='Specify 64-bit contentid for PCIe designs')
-argparser.add_argument('-V', '--verilog', help='Additional verilog sources', nargs='+')
-argparser.add_argument('-C', '--constraint', help='Additional constraint files', nargs='+')
-argparser.add_argument('-M', '--make', help='Run make on the specified targets', nargs='+')
-argparser.add_argument('-x', '--export', help='Promote/export named interface from top module', nargs='+')
+argparser.add_argument('-V', '--verilog', help='Additional verilog sources', action='append')
+argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
+argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
+argparser.add_argument('-x', '--export', help='Promote/export named interface from top module', action='append')
 
 tclfileXprTemplate='''
 create_project %(dut)s . -part %(partname)s
