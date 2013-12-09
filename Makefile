@@ -105,17 +105,6 @@ k7echoproj:
 v7echoproj:
 	./genxpsprojfrombsv -B vc707 -p v7echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv && (cd v7echoproj && time make implementation)
 
-
-test-ringtest/sources/bsim: examples/ringtest/Ringtest.bsv examples/ringtest/testringtest.cpp
-	-pkill bluetcl
-	rm -fr test-ringtest
-	mkdir test-ringtest
-	./genxpsprojfrombsv -B $(BOARD) -p test-ringtest -b Ringtest examples/ringtest/Ringtest.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/ringtest/testringtest.cpp
-	cd test-ringtest; make x86_exe; cd ..
-	cd test-ringtest; make bsim; cd ..
-	test-ringtest/sources/bsim &
-	test-ringtest/jni/ringtest
-
 test-mempoke/sources/bsim: examples/mempoke/Mempoke.bsv examples/mempoke/testmempoke.cpp
 	-pkill bluetcl
 	rm -fr test-mempoke
