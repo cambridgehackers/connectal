@@ -25,6 +25,7 @@ import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;
 import Vector::*;
+import GetPut::*;
 
 typedef struct {
     Bit#(32)                  addr;
@@ -67,15 +68,15 @@ typedef struct {
 interface AxiMasterCommon#(numeric type data_width, numeric type id_width);
     method Action             aclk(Bit#(1) v); // common
     method Bit#(1)            aresetn();      // common
-    method Action             put(AxiMISO#(data_width, id_width) v);
-    method ActionValue#(AxiMOSI#(data_width, id_width)) get();
+    interface Put#(AxiMISO#(data_width, id_width)) req;
+    interface Get#(AxiMOSI#(data_width, id_width)) resp;
 endinterface
 
 interface AxiSlaveCommon#(numeric type data_width, numeric type id_width);
     method Action             aclk(Bit#(1) v); // common
     method Bit#(1)            aresetn();      // common
-    method Action             put(AxiMOSI#(data_width, id_width) v);
-    method ActionValue#(AxiMISO#(data_width, id_width)) get();
+    interface Put#(AxiMOSI#(data_width, id_width)) req;
+    interface Get#(AxiMISO#(data_width, id_width)) resp;
     method Action             araddr(Bit#(32) v);
     method Bit#(1)            arready();
 endinterface
@@ -208,11 +209,11 @@ interface Core;
 endinterface
 
 interface PS7#(numeric type data_width, numeric type id_width, numeric type gpio_width, numeric type mio_width);
-    interface Vector#(2, Can) can;
-    interface Vector#(2, Core)core;
+    //interface Vector#(2, Can) can;
+    //interface Vector#(2, Core)core;
     interface Ddr#(10,1,1)    ddr;
-    interface Vector#(4, Dma) dma;
-    interface Vector#(2, Enet)enet;
+    //interface Vector#(4, Dma) dma;
+    //interface Vector#(2, Enet)enet;
     method Action             event_eventi(Bit#(1) v);
     method Bit#(1)            event_evento();
     method Bit#(2)            event_standbywfe();
@@ -240,8 +241,8 @@ interface PS7#(numeric type data_width, numeric type id_width, numeric type gpio
     method Bit#(32)           ftmt_p2f_debug();
     method Bit#(4)            ftmt_p2f_trig();
     method Action             ftmt_p2f_trigack(Bit#(4) v);
-    interface Bidir#(gpio_width) gpio;
-    interface Vector#(2, I2c)i2c;
+    //interface Bidir#(gpio_width) gpio;
+    //interface Vector#(2, I2c)i2c;
     method Action             irq_f2p(Bit#(16) v);
     method Bit#(1)            irq_p2f_can0();
     method Bit#(1)            irq_p2f_can1();
@@ -273,38 +274,250 @@ interface PS7#(numeric type data_width, numeric type id_width, numeric type gpio
     method Bit#(1)            irq_p2f_usb0();
     method Bit#(1)            irq_p2f_usb1();
     method Bit#(mio_width)mio();
-    interface AxiSlaveCommon#(data_width, id_width)    s_axi_acp;
+    //interface AxiSlaveCommon#(data_width, id_width)    s_axi_acp;
     method Action             s_axi_acp_aruser(Bit#(5) v);
     method Action             s_axi_acp_awuser(Bit#(5) v);
-    interface AxiSlaveCommon#(data_width, id_width)    s_axi_gp0;
-    interface AxiSlaveCommon#(data_width, id_width)    s_axi_gp1;
-    interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp0;
-    interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp1;
-    interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp2;
-    interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp3;
-    interface AxiMasterCommon#(data_width, id_width)   m_axi_gp0;
-    interface AxiMasterCommon#(data_width, id_width)   m_axi_gp1;
+    //interface AxiSlaveCommon#(data_width, id_width)    s_axi_gp0;
+    //interface AxiSlaveCommon#(data_width, id_width)    s_axi_gp1;
+    //interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp0;
+    //interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp1;
+    //interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp2;
+    //interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp3;
+    //interface AxiMasterCommon#(data_width, id_width)   m_axi_gp0;
+    //interface AxiMasterCommon#(data_width, id_width)   m_axi_gp1;
     method Action             pjtag_tck(Bit#(1) v);
-    interface Bidir#(1)       pjtag_td;
+    //interface Bidir#(1)       pjtag_td;
     method Action             pjtag_tms(Bit#(1) v);
     method Action             ps_clk(Bit#(1) v);
     method Action             ps_porb(Bit#(1) v);
     method Action             ps_srstb(Bit#(1) v);
-    interface Vector#(2, Sdio)sdio;
-    interface Vector#(2, Spi) spi;
+    //interface Vector#(2, Sdio)sdio;
+    //interface Vector#(2, Spi) spi;
     method Action             sram_intin(Bit#(1) v);
     method Action             trace_clk(Bit#(1) v);
     method Bit#(1)            trace_ctl();
     method Bit#(32)           trace_data();
-    interface Vector#(2, Ttc) ttc;
-    interface Vector#(2, Uart)uart;
-    interface Vector#(2, Usb) usb;
+    //interface Vector#(2, Ttc) ttc;
+    //interface Vector#(2, Uart)uart;
+    //interface Vector#(2, Usb) usb;
     method Action             wdt_clk_in(Bit#(1) v);
     method Bit#(1)            wdt_rst_out();
-    //schedule (datain, idatain, inc, ce) CF (datain, idatain, inc, ce);
 endinterface
 
+import "BVI" processing_system7 =
 module mkPS7#(int data_width, int id_width, int gpio_width, int mio_width)(PS7#(data_width, id_width, gpio_width, mio_width));
-    Clock defaultClock <- exposeCurrentClock();
-    Reset defaultReset <- exposeCurrentReset();
+   default_clock clk(C);
+   no_reset;
+//    parameter USE_TRACE_DATA_EDGE_DETECTOR = 0;
+//    parameter C_DM_WIDTH = 0;
+//    parameter C_DQS_WIDTH = 0;
+//    parameter C_DQ_WIDTH = 0;
+//    parameter C_EMIO_GPIO_WIDTH = 0;
+//    parameter C_EN_EMIO_ENET0 = 0;
+//    parameter C_EN_EMIO_ENET1 = 0;
+//    parameter C_EN_EMIO_TRACE = 0;
+//    parameter C_FCLK_CLK0_BUF = 0;
+//    parameter C_FCLK_CLK1_BUF = 0;
+//    parameter C_FCLK_CLK2_BUF = 0;
+//    parameter C_FCLK_CLK3_BUF = 0;
+//    parameter C_INCLUDE_ACP_TRANS_CHECK = 0;
+//    parameter C_INCLUDE_TRACE_BUFFER = 0;
+//    parameter C_MIO_PRIMITIVE = 0;
+//    parameter C_M_AXI_GP0_ENABLE_STATIC_REMAP = 0;
+//    parameter C_M_AXI_GP0_ID_WIDTH = 0;
+//    parameter C_M_AXI_GP0_THREAD_ID_WIDTH = 0;
+//    parameter C_M_AXI_GP1_ENABLE_STATIC_REMAP = 0;
+//    parameter C_M_AXI_GP1_ID_WIDTH = 0;
+//    parameter C_M_AXI_GP1_THREAD_ID_WIDTH = 0;
+    parameter C_NUM_F2P_INTR_INPUTS = 16;
+//    parameter C_PACKAGE_NAME = 0;
+//    parameter C_PS7_SI_REV = 0;
+//    parameter C_S_AXI_ACP_ARUSER_VAL = 0;
+//    parameter C_S_AXI_ACP_AWUSER_VAL = 0;
+//    parameter C_S_AXI_ACP_ID_WIDTH = 0;
+//    parameter C_S_AXI_GP0_ID_WIDTH = 0;
+//    parameter C_S_AXI_GP1_ID_WIDTH = 0;
+//    parameter C_S_AXI_HP0_DATA_WIDTH = 0;
+//    parameter C_S_AXI_HP0_ID_WIDTH = 0;
+//    parameter C_S_AXI_HP1_DATA_WIDTH = 0;
+//    parameter C_S_AXI_HP1_ID_WIDTH = 0;
+//    parameter C_S_AXI_HP2_DATA_WIDTH = 0;
+//    parameter C_S_AXI_HP2_ID_WIDTH = 0;
+//    parameter C_S_AXI_HP3_DATA_WIDTH = 0;
+//    parameter C_S_AXI_HP3_ID_WIDTH = 0;
+//    parameter C_TRACE_BUFFER_CLOCK_DELAY = 0;
+//    parameter C_TRACE_BUFFER_FIFO_SIZE = 0;
+//    parameter C_USE_DEFAULT_ACP_USER_VAL = 0;
+    //interface can;
+    //method phy_rx(PHY_RX)  enable((*inhigh*) en26);
+    //method   PHY_TX phy_tx();
+    //endinterface
+    //interface core;
+    //endinterface
+    //interface ddr;
+    //interface Ddr#(10,1,1)    ddr;
+    interface Ddr    ddr;
+    method arb(ARB)  enable((*inhigh*) en25);
+    method DDR_ADDR     addr();
+    method DDR_BANKADDR bankaddr();
+    method DDR_CAS_N    cas_n();
+    method DDR_CKE      cke();
+    method DDR_CS_N     cs_n();
+    method DDR_CLK      clk();
+    method DDR_CLK_N    clk_n();
+    method DDR_DM       dm();
+    method DDR_DQ       dq();
+    method DDR_DQS      dqs();
+    method DDR_DQS_N    dqs_n();
+    method DDR_DRSTB    drstb();
+    method DDR_ODT      odt();
+    method DDR_RAS_N    ras_n();
+    method DDR_VRN      vrn();
+    method DDR_VRP      vrp();
+    method DDR_WEB      web();
+    endinterface
+    //interface dma;
+    //endinterface
+    //interface enet;
+    //endinterface
+    method event_eventi(EVENT_EVENTI)  enable((*inhigh*) en24);
+    method   EVENT_EVENTO event_evento();
+    method   EVENT_STANDBYWFE event_standbywfe();
+    method   EVENT_STANDBYWFI event_standbywfi();
+    method   FCLK_CLK0 fclk_clk0();
+    method   FCLK_CLK1 fclk_clk1();
+    method   FCLK_CLK2 fclk_clk2();
+    method   FCLK_CLK3 fclk_clk3();
+    method fclk_clktrig0_n(FCLK_CLKTRIG0_N)  enable((*inhigh*) en23);
+    method fclk_clktrig1_n(FCLK_CLKTRIG1_N)  enable((*inhigh*) en22);
+    method fclk_clktrig2_n(FCLK_CLKTRIG2_N)  enable((*inhigh*) en21);
+    method fclk_clktrig3_n(FCLK_CLKTRIG3_N)  enable((*inhigh*) en20);
+    method   FCLK_RESET0_N fclk_reset0_n();
+    method   FCLK_RESET1_N fclk_reset1_n();
+    method   FCLK_RESET2_N fclk_reset2_n();
+    method   FCLK_RESET3_N fclk_reset3_n();
+    method fpga_idle_n(FPGA_IDLE_N)  enable((*inhigh*) en19);
+    method ftmd_tracein_atid(FTMD_TRACEIN_ATID)  enable((*inhigh*) en18);
+    method ftmd_tracein_clk(FTMD_TRACEIN_CLK)  enable((*inhigh*) en17);
+    method ftmd_tracein_data(FTMD_TRACEIN_DATA)  enable((*inhigh*) en16);
+    method ftmd_tracein_valid(FTMD_TRACEIN_VALID)  enable((*inhigh*) en15);
+    method ftmt_f2p_debug(FTMT_F2P_DEBUG)  enable((*inhigh*) en14);
+    method ftmt_f2p_trig(FTMT_F2P_TRIG)  enable((*inhigh*) en13);
+    method   FTMT_F2P_TRIGACK ftmt_f2p_trigack();
+    method   FTMT_P2F_DEBUG ftmt_p2f_debug();
+    method   FTMT_P2F_TRIG ftmt_p2f_trig();
+    method ftmt_p2f_trigack(FTMT_P2F_TRIGACK)  enable((*inhigh*) en12);
+    //interface gpio;
+    //endinterface
+    //interface i2c;
+    //endinterface
+    method irq_f2p(IRQ_F2P)  enable((*inhigh*) en11);
+    method   IRQ_P2F_CAN0 irq_p2f_can0();
+    method   IRQ_P2F_CAN1 irq_p2f_can1();
+    method   IRQ_P2F_CTI irq_p2f_cti();
+    method   IRQ_P2F_DMAC0 irq_p2f_dmac0();
+    method   IRQ_P2F_DMAC1 irq_p2f_dmac1();
+    method   IRQ_P2F_DMAC2 irq_p2f_dmac2();
+    method   IRQ_P2F_DMAC3 irq_p2f_dmac3();
+    method   IRQ_P2F_DMAC4 irq_p2f_dmac4();
+    method   IRQ_P2F_DMAC5 irq_p2f_dmac5();
+    method   IRQ_P2F_DMAC6 irq_p2f_dmac6();
+    method   IRQ_P2F_DMAC7 irq_p2f_dmac7();
+    method   IRQ_P2F_DMAC_ABORT irq_p2f_dmac_abort();
+    method   IRQ_P2F_ENET0 irq_p2f_enet0();
+    method   IRQ_P2F_ENET1 irq_p2f_enet1();
+    method   IRQ_P2F_ENET_WAKE0 irq_p2f_enet_wake0();
+    method   IRQ_P2F_ENET_WAKE1 irq_p2f_enet_wake1();
+    method   IRQ_P2F_GPIO irq_p2f_gpio();
+    method   IRQ_P2F_I2C0 irq_p2f_i2c0();
+    method   IRQ_P2F_I2C1 irq_p2f_i2c1();
+    method   IRQ_P2F_QSPI irq_p2f_qspi();
+    method   IRQ_P2F_SDIO0 irq_p2f_sdio0();
+    method   IRQ_P2F_SDIO1 irq_p2f_sdio1();
+    method   IRQ_P2F_SMC irq_p2f_smc();
+    method   IRQ_P2F_SPI0 irq_p2f_spi0();
+    method   IRQ_P2F_SPI1 irq_p2f_spi1();
+    method   IRQ_P2F_UART0 irq_p2f_uart0();
+    method   IRQ_P2F_UART1 irq_p2f_uart1();
+    method   IRQ_P2F_USB0 irq_p2f_usb0();
+    method   IRQ_P2F_USB1 irq_p2f_usb1();
+    method   MIO mio();
+    //interface s_axi_acp;
+    //endinterface
+    method s_axi_acp_aruser(YY1)  enable((*inhigh*) en10);
+    method s_axi_acp_awuser(YY)  enable((*inhigh*) en09);
+    //interface s_axi_gp0;
+    //endinterface
+    //interface s_axi_gp1;
+    //endinterface
+    //interface s_axi_hp0;
+    //endinterface
+    //interface s_axi_hp1;
+    //endinterface
+    //interface s_axi_hp2;
+    //endinterface
+    //interface s_axi_hp3;
+    //endinterface
+    //interface m_axi_gp0;
+    //endinterface
+    //interface m_axi_gp1;
+    //endinterface
+    method pjtag_tck(PJTAG_TCK)  enable((*inhigh*) en08);
+    //interface pjtag_td;
+    //endinterface
+    method pjtag_tms(PJTAG_TMS)  enable((*inhigh*) en07);
+    method ps_clk(PS_CLK)  enable((*inhigh*) en06);
+    method ps_porb(PS_PORB)  enable((*inhigh*) en05);
+    method ps_srstb(PS_SRTSB)  enable((*inhigh*) en04);
+    //interface sdio;
+    //endinterface
+    //interface spi;
+    //endinterface
+    method sram_intin(SRAM_INTIN)  enable((*inhigh*) en03);
+    method trace_clk(TRACE_CLK)  enable((*inhigh*) en02);
+    method   TRACE_CTL trace_ctl();
+    method   TRACE_DATA trace_data();
+    //interface ttc;
+    //endinterface
+    //interface uart;
+    //endinterface
+    //interface usb;
+//    Vector#(2, Usb) usbif;
+//    usbif[0] = interface Usb;
+//        method PORT_INDCTL port_indctl();
+//            return ?;
+//        endmethod
+//        //method vbus_pwrfault(VBUS_PWRFAULT) enable((*inhigh*) en00);
+//        //endmethod
+//        method VBUS_PWRSELECT vbus_pwrselect();
+//            return ?;
+//        endmethod
+//        //method Bit#(2)            port_indctl();
+//        method Action             vbus_pwrfault(Bit#(1) v);
+//        endmethod
+//        //method Bit#(1)            vbus_pwrselect();
+//        //endmethod
+//        endinterface;
+//    usbif[1] = interface Usb;
+//        method PORT_INDCTL1 port_indctl();
+//            return ?;
+//        endmethod
+//        //method vbus_pwrfault(VBUS_PWRFAULT1) enable((*inhigh*) en00);
+//        //endmethod
+//        method VBUS_PWRSELECT1 vbus_pwrselect();
+//            return ?;
+//        endmethod
+//        //method Bit#(2)            port_indctl();
+//        method Action             vbus_pwrfault(Bit#(1) v);
+//        endmethod
+//        //method Bit#(1)            vbus_pwrselect();
+//        //endmethod
+//        endinterface;
+//    //interface Vector#(2, Usb) usb = usbif;
+    //interface Vector usb;
+        //method VBUS_PWRSELECT1 vbus_pwrselect[0]();
+    //endinterface
+    method wdt_clk_in(WDT_CLK_IN)  enable((*inhigh*) en01);
+    method WDT_RST_OUT wdt_rst_out();
+    //schedule (datain, idatain, inc, ce) CF (datain, idatain, inc, ce);
 endmodule
