@@ -114,3 +114,13 @@ test-mempoke/sources/bsim: examples/mempoke/Mempoke.bsv examples/mempoke/testmem
 	cd test-mempoke; make bsim; cd ..
 	test-mempoke/sources/bsim &
 	test-mempoke/jni/mempoke
+
+test-ring/sources/bsim: examples/ring/Ring.bsv examples/ring/testring.cpp
+	-pkill bluetcl
+	rm -fr test-ring
+	mkdir test-ring
+	./genxpsprojfrombsv -B $(BOARD) -p test-ring -b Ring examples/ring/Ring.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/ring/testring.cpp
+	cd test-ring; make x86_exe; cd ..
+	cd test-ring; make bsim; cd ..
+	test-ring/sources/bsim &
+	test-ring/jni/ring
