@@ -64,7 +64,7 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);
-  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
+  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc->header.fd, 0);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -73,13 +73,13 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  unsigned int ref_dstAlloc = dma->reference(&dstAlloc);
+  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
 
   for (int i = 0; i < numWords; i++){
     dstBuffer[i] = i;
   }
     
-  dma->dCacheFlushInval(&dstAlloc, dstBuffer);
+  dma->dCacheFlushInval(dstAlloc, dstBuffer);
   fprintf(stderr, "flush and invalidate complete\n");
       
   dma->configChan(1, 0, ref_dstAlloc, 2);
