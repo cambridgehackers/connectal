@@ -9,7 +9,7 @@
 
 CoreRequest *device = 0;
 DMARequest *dma = 0;
-PortalAlloc dstAlloc;
+PortalAlloc *dstAlloc;
 unsigned int *dstBuffer = 0;
 int numWords = 16 << 3;
 size_t test_sz  = numWords*sizeof(unsigned int);
