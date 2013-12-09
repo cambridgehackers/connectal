@@ -27,12 +27,51 @@ import XilinxCells  :: *;
 import Vector       :: *;
 
 (* always_ready, always_enabled *)
+interface AxiREQ#(numeric type C_DATA_WIDTH, numeric type C_ID_WIDTH);
+    Bit#(32)             ADDR;
+    Bit#(2)              BURST;
+    Bit#(4)              CACHE;
+    Bit#(C_ID_WIDTH)     ID;
+    Bit#(4)              LEN;
+    Bit#(2)              LOCK;
+    Bit#(3)              PROT;
+    Bit#(4)              QOS;
+    Bit#(3)              SIZE;
+    Bit#(1)              VALID;
+endinterface
+interface AxiMOSI#(numeric type C_DATA_WIDTH, numeric type C_ID_WIDTH);
+    AxiREQ               AR;
+    AxiREQ               AW;
+    Bit#(1)              BREADY;
+    Bit#(1)              RREADY;
+    Bit#(C_DATA_WIDTH)   WDATA;
+    Bit#(C_ID_WIDTH)     WID;
+    Bit#(1)              WLAST;
+    Bit#(C_DATA_WIDTH/8) WSTRB;
+    Bit#(1)              WVALID;
+endinterface
+interface AxiVALID#(numeric type C_DATA_WIDTH, numeric type C_ID_WIDTH);
+    Bit#(C_ID_WIDTH)     ID;
+    Bit#(2)              RESP;
+    Bit#(1)              VALID;
+endinterface
+interface AxiMISO(numeric type C_DATA_WIDTH, numeric type C_ID_WIDTH);
+    Bit#(1)              ARREADY;
+    Bit#(1)              AWREADY;
+    AxiVALID#(numeric type C_DATA_WIDTH, numeric type C_ID_WIDTH) B;
+    AxiVALID#(numeric type C_DATA_WIDTH, numeric type C_ID_WIDTH) R;
+    Bit#(C_DATA_WIDTH)   RDATA;
+    Bit#(1)              RLAST;
+    Bit#(1)              WREADY;
+endinterface
 interface AxiMasterCommon#(numeric type C_DATA_WIDTH, numeric type C_ID_WIDTH);
-    method Action ACLK(Bit#(1) v);
+    method Action ACLK(Bit#(1) v); // common
+    method Bit#(1) ARESETN();      // common
+    AxiMOSI#(numeric type C_DATA_WIDTH, numeric type C_ID_WIDTH);
+    AxiMISO#(numeric type C_DATA_WIDTH, numeric type C_ID_WIDTH);
     method Action ARADDR(Bit#(32) v);
     method Action ARBURST(Bit#(2) v);
     method Action ARCACHE(Bit#(4) v);
-    method Bit#(1) ARESETN();
     method Action ARID(Bit#(C_ID_WIDTH) v);
     method Action ARLEN(Bit#(4) v);
     method Action ARLOCK(Bit#(2) v);
