@@ -280,7 +280,7 @@ interface PS7#(numeric type data_width, numeric type id_width, numeric type gpio
     method Bit#(1)            irq_p2f_usb0();
     method Bit#(1)            irq_p2f_usb1();
     method Bit#(mio_width)mio();
-    //interface AxiSlaveCommon#(data_width, id_width)    s_axi_acp;
+    interface AxiSlaveCommon#(data_width, id_width)    s_axi_acp;
     method Action             s_axi_acp_aruser(Bit#(5) v);
     method Action             s_axi_acp_awuser(Bit#(5) v);
     //interface AxiSlaveCommon#(data_width, id_width)    s_axi_gp0;
@@ -289,7 +289,7 @@ interface PS7#(numeric type data_width, numeric type id_width, numeric type gpio
     //interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp1;
     //interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp2;
     //interface AxiSlaveHighSpeed#(data_width, id_width) s_axi_hp3;
-    //interface AxiMasterCommon#(data_width, id_width)   m_axi_gp0;
+    interface AxiMasterCommon#(data_width, id_width)   m_axi_gp0;
     //interface AxiMasterCommon#(data_width, id_width)   m_axi_gp1;
     method Action             pjtag_tck(Bit#(1) v);
     interface Bidir#(1)       pjtag_td;
@@ -584,26 +584,6 @@ module mkPS7#(int data_width, int id_width, int gpio_width, int mio_width)(PS7#(
     method IRQ_P2F_USB0 irq_p2f_usb0();
     method IRQ_P2F_USB1 irq_p2f_usb1();
     method MIO mio();
-    //interface s_axi_acp;
-    //endinterface
-    method s_axi_acp_aruser(YY1)  enable((*inhigh*) en10);
-    method s_axi_acp_awuser(YY)  enable((*inhigh*) en09);
-    //interface s_axi_gp0;
-    //endinterface
-    //interface s_axi_gp1;
-    //endinterface
-    //interface s_axi_hp0;
-    //endinterface
-    //interface s_axi_hp1;
-    //endinterface
-    //interface s_axi_hp2;
-    //endinterface
-    //interface s_axi_hp3;
-    //endinterface
-    //interface m_axi_gp0;
-    //endinterface
-    //interface m_axi_gp1;
-    //endinterface
     method pjtag_tck(PJTAG_TCK)  enable((*inhigh*) en08);
     interface Bidir       pjtag_td;
         method i(PJTAG_TD_CMD_I) enable((*inhigh*) en175);
@@ -752,5 +732,53 @@ module mkPS7#(int data_width, int id_width, int gpio_width, int mio_width)(PS7#(
     endinterface
     method wdt_clk_in(WDT_CLK_IN)  enable((*inhigh*) en01);
     method WDT_RST_OUT wdt_rst_out();
+
+    interface AxiSlaveCommon    s_axi_acp;
+    method aclk(S_AXI_ACP_ACLK) enable((*inhigh*) en190);
+    method S_AXI_ACP_ARESETN aresetn();
+    interface Put req;
+        method put(M_AXI_ACP_put) enable((*inhigh*) en195b);
+    endinterface
+    interface Get resp;
+        method M_AXI_GP0_get get() enable((*inhigh*) en200);
+    endinterface
+    method araddr(S_AXI_ACP_ARADDR) enable((*inhigh*) en191);
+    method S_AXI_ACP_ARREADY arready();
+    endinterface
+    method s_axi_acp_aruser(S_AXI_ACP_ARUSER)  enable((*inhigh*) en10);
+    method s_axi_acp_awuser(S_AXI_ACP_AWUSER)  enable((*inhigh*) en09);
+
+    //interface AxiSlaveCommon    s_axi_gp0;
+    //endinterface
+    //interface AxiSlaveCommon    s_axi_gp1;
+    //endinterface
+    //interface AxiSlaveHighSpeed s_axi_hp0;
+    //interface AxiSlaveCommon axi;
+    //endinterface
+    //method S_AXI_HP0_RACOUNT racount();
+    //method S_AXI_HP0_RCOUNT rcount();
+    //method rdissuecap1_en(S_AXI_HP0_RDISSUECAP1_EN) enable((*inhigh*) en192);
+    //method S_AXI_HP0_WACOUNT wacount();
+    //method S_AXI_HP0_WCOUNT wcount();
+    //method wrissuecap1_en(S_AXI_HP0_WRISSUECAP1_EN) enable((*inhigh*) en193);
+    //endinterface
+    //interface AxiSlaveHighSpeed s_axi_hp1;
+    //endinterface
+    //interface AxiSlaveHighSpeed s_axi_hp2;
+    //endinterface
+    //interface AxiSlaveHighSpeed s_axi_hp3;
+    //endinterface
+    interface AxiMasterCommon   m_axi_gp0;
+    method aclk(M_AXI_GP0_ACLK) enable((*inhigh*) en194);
+    method M_AXI_GP0_ARESETN aresetn();
+    interface Put req;
+        method put(M_AXI_GP0_put) enable((*inhigh*) en195);
+    endinterface
+    interface Get resp;
+        method M_AXI_GP0_get get() enable((*inhigh*) en201);
+    endinterface
+    endinterface
+    //interface AxiMasterCommon   m_axi_gp1;
+    //endinterface
     //schedule (datain, idatain, inc, ce) CF (datain, idatain, inc, ce);
 endmodule
