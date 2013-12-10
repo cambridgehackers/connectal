@@ -108,6 +108,9 @@ bsim:
 
 verilog: $(vfile)
 
+lint: $(vfile)
+	verilator --lint-only -Isources/%(dut)s -Isources/source $(vfile)
+
 %(dut)s.xpr:
 	vivado -mode batch -source %(dut)sxpr.tcl
 
