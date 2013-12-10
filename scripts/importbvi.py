@@ -66,8 +66,6 @@ def parse_verilog(filename):
             if f[0][-1] == ';':
                 break
             masterlist.append(f)
-    masterlist = masterlist[:600]
-#717
 
 def translate_verilog(ifname):
     modulename = ''
@@ -127,4 +125,4 @@ def translate_verilog(ifname):
 
 if __name__=='__main__':
     parse_verilog(sys.argv[1])
-    translate_verilog('PS7')
+    translate_verilog('PPS7')
