@@ -27,6 +27,7 @@ import os, sys, re, shutil
 masterlist = []
 
 def parse_verilog(filename):
+    global masterlist
     indata = open(filename).read().expandtabs().split('\n')
     for line in indata:
         ind = line.find('//')
@@ -37,7 +38,7 @@ def parse_verilog(filename):
         if ind >= 0:
             f = line[ind+1:].split(']')
             f.insert(0, line[:ind])
-            f[1] = f[1].translate(None,' ')
+            f[1] = f[1].translate(None,' ').lower()
             if f[1][-2:] == ':0':
                 f[1] = f[1][:-2]
             if f[1].find('(') >= 0 and f[1][-1] == ')':
@@ -48,6 +49,9 @@ def parse_verilog(filename):
                 f[1] = str(int(f[1]) + 1)
             if f[1].find('(') >= 0 and f[1][-1] == ')':
                 f[1] = f[1][1:-1]
+            ind = f[1].find('/')
+            if ind > 0:
+                f[1] = 'TDiv#('+f[1][:ind]+','+f[1][ind+1:]+')'
             line = f
         else:
             line = line.split()
@@ -60,10 +64,12 @@ def parse_verilog(filename):
                 f.append(item)
         if len(f) > 0:
             if f[0][-1] == ';':
-                return
+                break
             masterlist.append(f)
+    masterlist = masterlist[:600]
+#717
 
-def translate_verilog():
+def translate_verilog(ifname):
     modulename = ''
     params = []
     for item in masterlist:
@@ -72,7 +78,7 @@ def translate_verilog():
             modulename = item[1]
         if len(item) > 2 and item[0] != 'parameter':
             item = item[1].strip('0123456789/')
-            if len(item) > 0 and item not in params:
+            if len(item) > 0 and item not in params and item[:4] != 'TDiv':
                 params.append(item)
     params.sort()
     paramlist = ''
@@ -80,7 +86,9 @@ def translate_verilog():
         paramlist = paramlist + ', numeric type ' + item
     if paramlist != '':
         paramlist = '#(' + paramlist[2:] + ')'
-    print('interface ' + modulename + paramlist + ';')
+    for item in ['Clocks', 'DefaultValue', 'XilinxCells', 'GetPut']:
+        print('import ' + item + '::*;');
+    print('(* always_ready, always_enabled *)\ninterface ' + ifname + paramlist + ';')
     for item in masterlist:
         itemlen = '1'
         if len(item) > 2:
@@ -89,29 +97,34 @@ def translate_verilog():
             print('    method Bit#('+itemlen+')     '+item[-1].lower()+'();')
         elif item[0] == 'output':
             print('    method Action      '+item[-1].lower()+'(Bit#('+itemlen+') v);')
-        elif item[0] == 'inout':
-            print('    interface Inout#(Bit#('+itemlen+'))     '+item[-1].lower()+';')
+        #elif item[0] == 'inout':
+        #    print('    interface Inout#(Bit#('+itemlen+'))     '+item[-1].lower()+';')
     print('endinterface')
-    ifname = 'PS7'
     print('import "BVI" '+modulename + ' =')
-    print('module mk'+ifname+paramlist+'('+ifname+paramlist+');')
+    print('module mk'+ifname+paramlist.replace('numeric type', 'int')+'('+ifname+paramlist.replace('numeric type ', '')+');')
     for item in masterlist:
         if item[0] == 'parameter':
             print('    parameter ' + item[1] + ' = ' + item[2] + ';')
     enindex = 100
+    methodlist = ''
     for item in masterlist:
         itemlen = '1'
         if len(item) > 2:
             itemlen = item[1]
         if item[0] == 'input':
             print('    method '+item[-1] + ' ' + item[-1].lower()+'();')
+            methodlist = methodlist + ', ' + item[-1].lower()
         elif item[0] == 'output':
             print('    method '+item[-1].lower()+'('+item[-1]+') enable((*inhigh*) en'+str(enindex)+');')
             enindex = enindex + 1
-        elif item[0] == 'inout':
-            print('    ifc_inout '+item[-1].lower()+'('+item[-1]+');')
+            methodlist = methodlist + ', ' + item[-1].lower()
+        #elif item[0] == 'inout':
+        #    print('    ifc_inout '+item[-1].lower()+'('+item[-1]+');')
+    if methodlist != '':
+        methodlist = '(' + methodlist[2:] + ')'
+        print('    schedule '+methodlist + ' CF ' + methodlist + ';')
     print('endmodule')
 
 if __name__=='__main__':
     parse_verilog(sys.argv[1])
-    translate_verilog()
+    translate_verilog('PS7')
