@@ -1,29 +1,27 @@
-typedef Bit#(40) Address;
 
-interface RingInterface;
-	  method Action set(RingBufferReg reg, Address addr);
-	  method Address get(RingBufferReg reg);
+interface RingBuffer;
+	  method Action set(Bit#(2) regist, Bit#(40) addr);
+	  method Bit#(40) get(Bit#(2) regist);
 endinterface
 
-module mkRingBuffer(RingInterface);
+module mkRingBuffer(RingBuffer);
 
-	Reg#(Address) base <- mkReg;
-	Reg#(Address) end <- mkReg;
-	Reg#(Address) first <- mkReg;
-	Reg#(Address) last <- mkReg;
+	Reg#(Bit#(40)) bufferbase <- mkReg(0);
+	Reg#(Bit#(40)) bufferend <- mkReg(0);
+	Reg#(Bit#(40)) bufferfirst <- mkReg(0);
+	Reg#(Bit#(40)) bufferlast <- mkReg(0);
 
-	method Action set(RingBufferReg reg Address addr);
-	  if (reg == RegBase) base <= addr;
-	  else if (reg == RegEnd) end <= addr;
-	  else if (reg == RegFirst) first <= addr;
-	  else last <= addr;
+	method Action set(Bit#(2) regist, Bit#(40) addr);
+	  if (regist == 0) bufferbase <= addr;
+	  else if (regist == 1) bufferend <= addr;
+	  else if (regist == 2) bufferfirst <= addr;
+	  else bufferlast <= addr;
 	  endmethod
   
-	  method Address get(RingBufferReg reg);
-            return case(reg)
-	    RegBase: base;
-	    RegEnd: end;
-	    RegFirst: first;
-	    default: last;              
-	    endmethod;
+	  method Bit#(40) get(Bit#(2) regist);
+	    if (regist == 0) return (bufferbase);
+	    else if (regist == 1) return (bufferend);
+	    else if (regist == 2) return (bufferfirst);
+	    else return(bufferlast);
+	    endmethod
 endmodule

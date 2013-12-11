@@ -45,11 +45,24 @@ class TestCoreIndication : public CoreIndication
 {
   virtual void readWordResult (S0 &s){
     fprintf(stderr, "readWordResult(S0{a:%ld,b:%ld})\n", s.a, s.b);
+    sem_post(&conf_sem);
   }
   virtual void writeWordResult (S0 &s){
     fprintf(stderr, "writeWordResult(S0{a:%ld,b:%ld})\n", s.a, s.b);
+    sem_post(&conf_sem);
+  }
+  virtual void setResult(unsigned long cmd, unsigned long regist, unsigned long long addr) {
+    fprintf(stderr, "setResult(cmd %ld regist %ld addr %llx)\n", 
+	    cmd, regist, addr);
+    sem_post(&conf_sem);
+  }
+  virtual void getResult(unsigned long cmd, unsigned long regist, unsigned long long addr) {
+    fprintf(stderr, "getResult(cmd %ld regist %ld addr %llx)\n", 
+	    cmd, regist, addr);
+    sem_post(&conf_sem);
   }
 };
+
 
 int main(int argc, const char **argv)
 {
@@ -89,13 +102,47 @@ int main(int argc, const char **argv)
   sem_wait(&conf_sem);
 
   fprintf(stderr, "main about to issue requests\n");
+  device->set(0, 0, 0x1000);
+  sem_wait(&conf_sem);
+  device->set(0, 1, 0x1001);
+  sem_wait(&conf_sem);
+  device->set(0, 2, 0x1002);
+  sem_wait(&conf_sem);
+  device->set(0, 3, 0x1003);
+  sem_wait(&conf_sem);
+  device->set(1, 0, 0x1010);
+  sem_wait(&conf_sem);
+  device->set(1, 1, 0x1011);
+  sem_wait(&conf_sem);
+  device->set(1, 2, 0x1012);
+  sem_wait(&conf_sem);
+  device->set(1, 3, 0x1013);
+  sem_wait(&conf_sem);
+  device->get(0, 0);
+  sem_wait(&conf_sem);
+  device->get(0, 1);
+  sem_wait(&conf_sem);
+  device->get(0, 2);
+  sem_wait(&conf_sem);
+  device->get(0, 3);
+  sem_wait(&conf_sem);
+  device->get(1, 0);
+  sem_wait(&conf_sem);
+  device->get(1, 1);
+  sem_wait(&conf_sem);
+  device->get(1, 2);
+  sem_wait(&conf_sem);
+  device->get(1, 3);
+  sem_wait(&conf_sem);
 
   device->readWord(5*8);
-  sleep(1);
+  sem_wait(&conf_sem);
   S0 s = {3,4};
   device->writeWord(6*8,s);
-  sleep(1);
+  sem_wait(&conf_sem);
   device->readWord(6*8);
+  sem_wait(&conf_sem);
+
   
   fprintf(stderr, "main going to sleep\n");
   while(true){sleep(1);}

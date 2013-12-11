@@ -32,34 +32,25 @@ import PortalRMemory::*;
 
 import RingBuffer::*;
 
-typedef enum { 
-	RegBase=0,
-	RegEnd=1,
-	RegFirst=2,
-	RegLast=3,
-} RingBufferReg deriving (Eq, Bits);
-
-
 
 typedef struct{
    Bit#(32) a;
    Bit#(32) b;
    } S0 deriving (Bits);
 
-	 
 interface CoreRequest;
    method Action readWord(Bit#(40) addr);
    method Action writeWord(Bit#(40) addr, S0 data);
-   method Action set(Bit#(1) cmd, RingBufferReg reg, Bit#(40) addr);
-   method Action get(Bit#(1) cmd, RingBufferReg reg);
-   method Action enable(Bit#(1) enable);
+   method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
+   method Action get(Bit#(1) cmd, Bit#(2) regist);
+   method Action hwenable(Bit#(1) en);
 endinterface
 
 interface CoreIndication;
    method Action readWordResult(S0 v);
    method Action writeWordResult(S0 v);
-   method Action setResult(Bit#(1) cmd, RingBufferReg reg, Address addr);
-   method Action getResult(Bit#(1) cmd, RingBufferReg reg, Address addr);
+   method Action setResult(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
+   method Action getResult(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
 endinterface
 
 interface RingRequest;
@@ -83,9 +74,9 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
 
    ReadChan#(S0)   dma_read_chan = dma.read.readChannels[0];
    WriteChan#(S0) dma_write_chan = dma.write.writeChannels[0];
-   RingBuffer cmd <- mkRingBuffer();
-   RingBuffer status <- mkRingBuffer();
-   Reg#(Bool) enabled <- mkReg(False);
+   RingBuffer cmdRing <- mkRingBuffer;
+   RingBuffer statusRing <- mkRingBuffer;
+   Reg#(Bool) hwenabled <- mkReg(False);
 
    rule writeRule;
       let v <- dma_write_chan.writeDone.get;
@@ -99,23 +90,23 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
    
    interface CoreRequest coreRequest;
 
-   method Action set(Bit#(1) cmd, RingBufferReg reg, Bit#(40) addr);
+   method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
      if (cmd == 1)
-       cmdRing.set(reg, addr);
+       cmdRing.set(regist, addr);
      else
-       statusRing.set(reg, addr);
-     indication.coreIndication.setResult(cmd, reg, addr);
+       statusRing.set(regist, addr);
+     indication.coreIndication.setResult(cmd, regist, addr);
    endmethod
 
-   method Action get(Bit#(1) cmd, RingBufferReg reg);
+   method Action get(Bit#(1) cmd, Bit#(2) regist);
      if (cmd == 1)
-       indication.coreIndication.getResult(1, reg, cmdRing.get(reg, addr));
+       indication.coreIndication.getResult(1, regist, cmdRing.get(regist));
      else
-       indication.coreIndication.getResult(0, reg, statusRing.get(reg, addr));
+       indication.coreIndication.getResult(0, regist, statusRing.get(regist));
    endmethod
 
-   method Action enable(Bit#(1) enable);
-     enabled <= enable == 1;
+   method Action hwenable(Bit#(1) en);
+     hwenabled <= en == 1;
      endmethod
 
       method Action readWord(Bit#(40) addr);
