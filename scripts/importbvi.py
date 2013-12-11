@@ -22,9 +22,11 @@
 # SOFTWARE.
 
 from __future__ import print_function
-import os, sys, re, shutil
+import optparse, os, sys, re, shutil
 
 masterlist = []
+parammap = {}
+paramnames = []
 
 def parse_verilog(filename):
     global masterlist
@@ -51,7 +53,15 @@ def parse_verilog(filename):
                 f[1] = f[1][1:-1]
             ind = f[1].find('/')
             if ind > 0:
-                f[1] = 'TDiv#('+f[1][:ind]+','+f[1][ind+1:]+')'
+                item = f[1][:ind]
+                newitem = parammap.get(item)
+                if newitem:
+                    item = newitem
+                f[1] = 'TDiv#('+item+','+f[1][ind+1:]+')'
+            else:
+                newitem = parammap.get(f[1])
+                if newitem:
+                    f[1] = newitem
             line = f
         else:
             line = line.split()
@@ -66,27 +76,32 @@ def parse_verilog(filename):
             if f[0][-1] == ';':
                 break
             masterlist.append(f)
+    masterlist = sorted(masterlist, key=lambda item: item[1] if item[0] == 'parameter' else item[-1])
 
 def translate_verilog(ifname):
+    global paramnames
     modulename = ''
-    params = []
     for item in masterlist:
         #print('KK', item)
         if item[0] == 'module':
             modulename = item[1]
         if len(item) > 2 and item[0] != 'parameter':
             item = item[1].strip('0123456789/')
-            if len(item) > 0 and item not in params and item[:4] != 'TDiv':
-                params.append(item)
-    params.sort()
+            if len(item) > 0 and item not in paramnames and item[:4] != 'TDiv':
+                print('Missing parameter declaration', item, file=sys.stderr)
+                paramnames.append(item)
+    paramnames.sort()
     paramlist = ''
-    for item in params:
+    for item in paramnames:
         paramlist = paramlist + ', numeric type ' + item
     if paramlist != '':
         paramlist = '#(' + paramlist[2:] + ')'
+    print('')
     for item in ['Clocks', 'DefaultValue', 'XilinxCells', 'GetPut']:
-        print('import ' + item + '::*;');
-    print('(* always_ready, always_enabled *)\ninterface ' + ifname + paramlist + ';')
+        print('import ' + item + '::*;')
+    print('')
+    #print('(* always_ready, always_enabled *)')
+    print('interface ' + ifname + paramlist + ';')
     for item in masterlist:
         itemlen = '1'
         if len(item) > 2:
@@ -95,8 +110,8 @@ def translate_verilog(ifname):
             print('    method Bit#('+itemlen+')     '+item[-1].lower()+'();')
         elif item[0] == 'output':
             print('    method Action      '+item[-1].lower()+'(Bit#('+itemlen+') v);')
-        #elif item[0] == 'inout':
-        #    print('    interface Inout#(Bit#('+itemlen+'))     '+item[-1].lower()+';')
+        elif item[0] == 'inout':
+            print('    interface Inout#(Bit#('+itemlen+'))     '+item[-1].lower()+';')
     print('endinterface')
     print('import "BVI" '+modulename + ' =')
     print('module mk'+ifname+paramlist.replace('numeric type', 'int')+'('+ifname+paramlist.replace('numeric type ', '')+');')
@@ -116,13 +131,30 @@ def translate_verilog(ifname):
             print('    method '+item[-1].lower()+'('+item[-1]+') enable((*inhigh*) en'+str(enindex)+');')
             enindex = enindex + 1
             methodlist = methodlist + ', ' + item[-1].lower()
-        #elif item[0] == 'inout':
-        #    print('    ifc_inout '+item[-1].lower()+'('+item[-1]+');')
+        elif item[0] == 'inout':
+            print('    ifc_inout '+item[-1].lower()+'('+item[-1]+');')
     if methodlist != '':
         methodlist = '(' + methodlist[2:] + ')'
         print('    schedule '+methodlist + ' CF ' + methodlist + ';')
     print('endmodule')
 
 if __name__=='__main__':
-    parse_verilog(sys.argv[1])
-    translate_verilog('PPS7')
+    parser = optparse.OptionParser("usage: %prog [options] arg")
+    parser.add_option("-f", "--output", dest="filename", help="write data to FILENAME")
+    parser.add_option("-p", "--param", action="append", dest="param")
+    (options, args) = parser.parse_args()
+    #print('KK', options, args, file=sys.stderr)
+    for item in options.param:
+        item2 = item.split(':')
+        if len(item2) == 1:
+            if item2[0] not in paramnames:
+                paramnames.append(item2[0])
+        else:
+            parammap[item2[0]] = item2[1]
+            if item2[1] not in paramnames:
+                paramnames.append(item2[1])
+    if len(args) != 1:
+        print("incorrect number of arguments", file=sys.stderr)
+    else:
+        parse_verilog(args[0])
+        translate_verilog('PPS7')
