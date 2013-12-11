@@ -18,7 +18,7 @@ AST.Method.__bases__ += (cppgen.MethodMixin,bsvgen.MethodMixin)
 AST.StructMember.__bases__ += (cppgen.StructMemberMixin,)
 AST.Struct.__bases__ += (cppgen.StructMixin,bsvgen.NullMixin)
 AST.EnumElement.__bases__ += (cppgen.EnumElementMixin,)
-AST.Enum.__bases__ += (cppgen.EnumMixin,bsvgen.NullMixin)
+AST.Enum.__bases__ += (cppgen.EnumMixin,bsvgen.EnumMixin)
 AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
 AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin,xpsgen.InterfaceMixin)
@@ -262,7 +262,6 @@ if __name__=='__main__':
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/vc707.xdc'))
     else:
-        print dir(namespace)
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z020clg484-1'
         topSuffix = 'Wrapper'
@@ -301,7 +300,7 @@ if __name__=='__main__':
 
     ## code generation pass
     for v in syntax.globaldecls:
-        if (v.type == 'TypeDef') and v.tdtype.type == 'Struct':
+        if (v.type == 'TypeDef'):
             v.emitCDeclaration(h)
         #v.emitCImplementation(cpp)
 

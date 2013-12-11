@@ -31,8 +31,19 @@ typedef struct{
 typedef struct{
    Bit#(32) a;
    Bit#(16) b;
-   Bit#(16) c;
+   Bit#(7) c;
    } S2 deriving (Bits);
+
+typedef enum {
+   E1Choice1,
+   E1Choice2,
+   E1Choice3
+   } E1 deriving (Bits,Eq);
+
+typedef struct{
+   Bit#(32) a;
+   E1 e1;
+   } S3 deriving (Bits);
 
 interface CoreIndication;
     method Action heard1(Bit#(32) v);
@@ -41,6 +52,7 @@ interface CoreIndication;
     method Action heard4(S2 v);
     method Action heard5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
     method Action heard6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
+    method Action heard7(Bit#(32) a, E1 e1);
 endinterface
 
 interface CoreRequest;
@@ -50,6 +62,7 @@ interface CoreRequest;
     method Action say4(S2 v);
     method Action say5(Bit#(32)a, Bit#(64) b, Bit#(32) c);
     method Action say6(Bit#(32)a, Bit#(40) b, Bit#(32) c);
+    method Action say7(S3 v);
 endinterface
 
 interface StructRequest;
@@ -101,6 +114,10 @@ module mkStructRequest#(StructIndication indication)(StructRequest);
       // Say6ReqStruct rs = Say6ReqStruct{a:32'hBBBBBBBB, b:40'hEFFECAFECA, c:32'hCCCCCCCC};
       // $display("(hw) say6 %h", pack(rs));
       // indication.coreIndication.heard6(rs.a, rs.b, rs.c);
+   endmethod
+
+   method Action say7(S3 v);
+      indication.coreIndication.heard7(v.a, v.e1);
    endmethod
    endinterface
 

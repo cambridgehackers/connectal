@@ -3,6 +3,7 @@ import syntax
 import AST
 import util
 import functools
+import math
 
 applicationmk_template='''
 APP_STL                 := stlport_static
@@ -252,19 +253,25 @@ class MethodMixin:
 
         # resurse interface types and flattening all structs into a list of types
         def collectMembers(scope, member):
+            t = member.type
             tn = member.type.name
             if tn == 'Bit':
-                return [('%s.%s'%(scope,member.name),member.type)]
+                return [('%s.%s'%(scope,member.name),t)]
             elif tn == 'Int':
-                return [('%s.%s'%(scope,member.name),member.type)]
+                return [('%s.%s'%(scope,member.name),t)]
             elif tn == 'Vector':
-                print ('%s.%s'%(scope,member.name),member.type)
-                return [('%s.%s'%(scope,member.name),member.type)]
+                return [('%s.%s'%(scope,member.name),t)]
             else:
                 td = syntax.globalvars[tn]
-                ns = '%s.%s' % (scope,member.name)
-                rv = map(functools.partial(collectMembers, ns), td.tdtype.elements)
-                return sum(rv,[])
+                tdtype = td.tdtype
+                if tdtype.type == 'Struct':
+                    ns = '%s.%s' % (scope,member.name)
+                    rv = map(functools.partial(collectMembers, ns), tdtype.elements)
+                    return sum(rv,[])
+                elif tdtype.type == 'Enum':
+                    return [('%s.%s'%(scope,member.name),tdtype)]
+                else:
+                    return self.collectMembers(scope, tdtype.type)
 
         # pack flattened struct-member list into 32-bit wide bins.  If a type is wider than 32-bits or 
         # crosses a 32-bit boundary, it will appear in more than one bin (though with different ranges).  
@@ -318,8 +325,8 @@ class MethodMixin:
                     field = '(%s>>%s)' % (field, e[2])
                 if off:
                     field = '(%s<<%s)' % (field, off)
-                if e[3].params[0].numeric() > 64:
-                    field = '(%s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e[3].params[0].numeric())
+                if e[3].bitWidth() > 64:
+                    field = '(%s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e[3].bitWidth())
                 word.append(field)
                 off = off+e[1]-e[2]
             return '        buff[i++] = %s;\n' % (''.join(util.intersperse('|', word)))
@@ -330,7 +337,13 @@ class MethodMixin:
             for e in w:
                 # print e[0]+' (d)'
                 ass = '=' if e[4] else '|='
-                word.append('        %s %s ((%s)(buff[i]>>%s))<<%s;\n'%(e[0],ass,e[3].cName(),off,e[2]))
+                field = 'buff[i]'
+                if off:
+                    field = '(%s>>%s)' % (field, off)
+                field = '(%s&0x%xul)' % (field, ((1 << e[3].bitWidth())-1))
+                if e[2]:
+                    field = '((%s)%s<<%s)' % (e[3].cName(),field, e[2])
+                word.append('        %s %s (%s)%s;\n'%(e[0],ass,e[3].cName(),field))
                 off = off+e[1]-e[2]
             word.append('        i++;\n');
             # print ''
@@ -381,7 +394,7 @@ class StructMemberMixin:
 
 class TypeDefMixin:
     def emitCDeclaration(self,f,indentation=0, namespace=''):
-        if self.tdtype.type == 'Struct':
+        if self.tdtype.type == 'Struct' or self.tdtype.type == 'Enum':
             self.tdtype.emitCDeclaration(self.name,f,indentation,namespace)
 
 class StructMixin:
@@ -409,23 +422,27 @@ class EnumElementMixin:
         return self.name
 
 class EnumMixin:
+    def cName(self):
+        return self.name
     def collectTypes(self):
         result = [self]
         return result
-    def emitCDeclaration(self, f, indentation=0, namespace=''):
+    def emitCDeclaration(self, name, f, indentation=0, namespace=''):
         indent(f, indentation)
         if (indentation == 0):
             f.write('typedef ')
-        f.write('enum %s { ' % self.name.cName())
+        f.write('enum %s { ' % name)
         indent(f, indentation)
-        f.write(', '.join([e.cName() for e in self.elements]))
+        f.write(', '.join(['%s_%s' % (name, e) for e in self.elements]))
         indent(f, indentation)
         f.write(' }')
         if (indentation == 0):
-            f.write(' %s;' % self.name.cName())
+            f.write(' %s;' % name)
         f.write('\n')
     def emitCImplementation(self, f, className='', namespace=''):
         pass
+    def bitWidth(self):
+        return int(math.ceil(math.log(len(self.elements))))
 
 class InterfaceMixin:
     def collectTypes(self):
