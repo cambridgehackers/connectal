@@ -157,10 +157,10 @@ HDMI Example
 For example, to create an HDMI frame buffer from the example code:
 
 To generate code for Zedboard:
-    ./genxpsprojfrombsv -B zedboard -p hdmiproj -x HDMI XADC -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/HDMI.bsv bsv/PortalMemory.bsv
+    ./genxpsprojfrombsv -B zedboard -p hdmiproj -x HDMI -x XADC -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/HDMI.bsv bsv/PortalMemory.bsv
 
 To generate code for a ZC702 board:
-    ./genxpsprojfrombsv -B zc702 -p hdmiproj -x HDMI XADC -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/HDMI.bsv bsv/PortalMemory.bsv
+    ./genxpsprojfrombsv -B zc702 -p hdmiproj -x HDMI -x XADC -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/HDMI.bsv bsv/PortalMemory.bsv
 
 To generate the bitstream:
 
@@ -196,7 +196,7 @@ Imageon Example
 This is an example using the Avnet Imageon board and ZC702 (not tested with Zedboard yet):
 
 To generate code for a ZC702 board:
-    ./genxpsprojfrombsv  -B zc702 -p fooproj -x HDMI ImageonVita -b ImageCapture examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv bsv/AxiSDMA.bsv bsv/Imageon.bsv bsv/IserdesDatadeser.bsv bsv/HDMI.bsv
+    ./genxpsprojfrombsv  -B zc702 -p fooproj -x HDMI -x ImageonVita -b ImageCapture examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv bsv/AxiSDMA.bsv bsv/Imageon.bsv bsv/IserdesDatadeser.bsv bsv/HDMI.bsv
 
 Test program:
     cp examples/imageon/testimagecapture.cpp fooproj/jni

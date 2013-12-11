@@ -80,6 +80,16 @@ test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/tes
 	test-memwrite/sources/bsim &
 	test-memwrite/jni/memwrite
 
+test-struct/sources/bsim: examples/struct/Struct.bsv examples/struct/teststruct.cpp
+	-pkill bluetcl
+	rm -fr test-struct
+	mkdir test-struct
+	./genxpsprojfrombsv -B $(BOARD) -p test-struct -b Struct examples/struct/Struct.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/struct/teststruct.cpp
+	cd test-struct; make x86_exe; cd ..
+	cd test-struct; make bsim; cd ..
+	test-struct/sources/bsim &
+	test-struct/jni/struct
+
 
 
 test-strstr/sources/bsim: examples/strstr/Strstr.bsv examples/strstr/teststrstr.cpp

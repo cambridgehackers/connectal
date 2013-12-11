@@ -36,33 +36,34 @@ typedef struct {
     Bit#(3)                   prot;
     Bit#(4)                   qos;
     Bit#(3)                   size;
-    Bit#(1)                   valid;
 } AxiREQ#(numeric type id_width);
-typedef struct {
-    AxiREQ#(id_width)         ar;
-    AxiREQ#(id_width)         aw;
-    Bit#(1)                   bready;
-    Bit#(1)                   rready;
-    Bit#(data_width)          wdata;
-    Bit#(id_width)            wid;
-    Bit#(1)                   wlast;
-    Bit#(TDiv#(data_width, 8))wstrb;
-    Bit#(1)                   wvalid;
-} AxiMOSI#(numeric type data_width, numeric type id_width);
+    Bit#(1)                   valid;
 typedef struct {
     Bit#(id_width)            id;
     Bit#(2)                   resp;
+} AxiRESP#(numeric type id_width);
     Bit#(1)                   valid;
-} AxiVALID#(numeric type id_width);
+
+typedef AxiREQ#(id_width) AxiMOSI_ar#(numeric type id_width);
+    Bit#(1)                   rready;
+typedef AxiREQ#(id_width) AxiMOSI_aw#(numeric type id_width);
 typedef struct {
-    Bit#(1)                   arready;
-    Bit#(1)                   awready;
-    AxiVALID#(id_width)       b;
-    AxiVALID#(id_width)       r;
+    Bit#(id_width)            wid;
+    Bit#(data_width)          wdata;
+    Bit#(1)                   wlast;
+    Bit#(TDiv#(data_width, 8))wstrb;
+} AxiMOSI_write_data#(numeric type data_width);
+    Bit#(1)                   wvalid;
+    Bit#(1)                   bready;
+typedef struct {
+    AxiRESP#(id_width)        r;
     Bit#(data_width)          rdata;
     Bit#(1)                   rlast;
+} AxiMISO_read#(numeric type data_width, numeric type id_width);
+    Bit#(1)                   arready;
+    Bit#(1)                   awready;
     Bit#(1)                   wready;
-} AxiMISO#(numeric type data_width, numeric type id_width);
+typedef AxiRESP#(id_width) AxiMISO_b#(numeric type id_width);
 
 interface AxiMasterCommon#(numeric type data_width, numeric type id_width);
     method Action             aclk(Bit#(1) v); // common

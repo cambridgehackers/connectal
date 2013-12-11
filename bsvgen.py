@@ -711,6 +711,10 @@ class TypeMixin:
         else:
             return sdef.numBitsBSV();
 
+class EnumMixin:
+    def numBitsBSV(self):
+        return int(math.ceil(math.log(len(self.elements),2)))
+
 class MethodMixin:
     def emitBsvImplementation(self, f):
         pass

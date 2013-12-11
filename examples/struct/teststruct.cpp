@@ -22,17 +22,21 @@ unsigned long v6a = 0xBBBBBBBB;
 unsigned long long v6b = 0x000000EFFECAFECA;
 unsigned long v6c = 0xCCCCCCCC;
 
+unsigned long v7a = 0xDADADADA;
+E1 v7b = E1_E1Choice2;
+S3 s3 = { a: v7a, e1: v7b };
+
 
 class TestCoreIndication : public CoreIndication
 {  
 public:
   static unsigned long cnt;
   static void incr_cnt(){
-    if (++cnt == 6)
+    if (++cnt == 7)
       exit(0);
   }
   virtual void heard1(unsigned long a) {
-    fprintf(stderr, "heard1(%d)\n", a);
+    fprintf(stderr, "heard1(%ld)\n", a);
     assert(a == v1a);
     TestCoreIndication::incr_cnt();
   }
@@ -69,6 +73,12 @@ public:
     assert(c == v6c);
     TestCoreIndication::incr_cnt();
   }
+  virtual void heard7(unsigned long a, E1& b) {
+    fprintf(stderr, "heard7(%08lx, %08x)\n", a, b);
+    assert(a == v7a);
+    assert(b == v7b);
+    TestCoreIndication::incr_cnt();
+  }
 };
 
 unsigned long TestCoreIndication::cnt = 0;
@@ -88,6 +98,8 @@ int main(int argc, const char **argv)
   device->say5(v5a, v5b, v5c);  
   fprintf(stderr, "calling say6(%08lx, %016llx, %08lx)\n", v6a, v6b, v6c);
   device->say6(v6a, v6b, v6c);  
+  fprintf(stderr, "calling say7(%08lx, %08lx)\n", s3.a, s3.e1);
+  device->say7(s3);  
   fprintf(stderr, "about to invoke portalExec\n");
   portalExec(NULL);
 }
