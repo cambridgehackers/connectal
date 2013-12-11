@@ -122,5 +122,5 @@ test-ring/sources/bsim: examples/ring/Ring.bsv examples/ring/testring.cpp
 	./genxpsprojfrombsv -B $(BOARD) -p test-ring -b Ring examples/ring/Ring.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/ring/testring.cpp
 	cd test-ring; make x86_exe; cd ..
 	cd test-ring; make bsim; cd ..
-	test-ring/sources/bsim &
-	test-ring/jni/ring
+#	test-ring/sources/bsim &
+#	test-ring/jni/ring
