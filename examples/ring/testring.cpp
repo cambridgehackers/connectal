@@ -61,6 +61,11 @@ class TestCoreIndication : public CoreIndication
 	    cmd, regist, addr);
     sem_post(&conf_sem);
   }
+  virtual void completion(unsigned long cmd, unsigned long token) {
+    fprintf(stderr, "getResult(cmd %ld token %lx)\n", 
+	    cmd, token);
+    sem_post(&conf_sem);
+  }
 };
 
 
@@ -99,6 +104,12 @@ int main(int argc, const char **argv)
   sem_wait(&conf_sem);
   
   dma->configChan(0, 0, ref_dstAlloc, 2);
+  sem_wait(&conf_sem);
+
+  dma->configChan(1, 2, ref_dstAlloc, 2);
+  sem_wait(&conf_sem);
+  
+  dma->configChan(0, 2, ref_dstAlloc, 2);
   sem_wait(&conf_sem);
 
   fprintf(stderr, "main about to issue requests\n");
@@ -143,6 +154,10 @@ int main(int argc, const char **argv)
   device->readWord(6*8);
   sem_wait(&conf_sem);
 
+  CommandStruct ci = { 1, 0x12345, 0x100, 0x200, 0x20 };
+  device->doCommandImmediate(ci);
+  fprintf(stderr, "main started dma copy\n");
+  sem_wait(&conf_sem);
   
   fprintf(stderr, "main going to sleep\n");
   while(true){sleep(1);}
