@@ -31,8 +31,8 @@ def filter_bsv(bsvfile, ofile):
     bsvin = open(bsvfile, 'r')
     out = open(ofile, 'w')
     # define groups to bundle interfaces and modules
-    out.write("/** @defgroup BSVInterface Interfaces */ ")
-    out.write("/** @defgroup BSVModule Modules */ ")
+    out.write("/** @defgroup BSVInterface Interfaces */ \n")
+    out.write("/** @defgroup BSVModule Modules */ \n")
 
     for line in bsvin:
         # Skip the license section
@@ -256,6 +256,13 @@ def filter_bsv(bsvfile, ofile):
                 line = re.sub(r'deriving(.)*', ';', line)
                 in_struct = 0;
                 documented_construct = 0
+
+        import_re = re.compile("""(\s)*            # white space
+                                import(\s)+         # keyword import followed by white space 
+                                .*          # Parameters inside parantheses
+                                """, re.X)
+        if import_re.search(line):
+            continue
 
         out.write(line)
     out.close()
