@@ -8,12 +8,12 @@ import re
 import argparse
 
 argparser = argparse.ArgumentParser("Generate doxygen-ready Java from BSV.")
-argparser.add_argument('bsvfile', help='BSV files to process', nargs='+')
+argparser.add_argument('bsvfile', help='BSV files to process', nargs='*')
 argparser.add_argument('-d', '--outdir', default=None, help='Directory for output files')
 
 
 
-def filter_bsv(bsvfile, ofile):
+def filter_bsv(bsvin, out):
     processing_module = 0
     module_start = ""
     prev_line = ""
@@ -28,8 +28,6 @@ def filter_bsv(bsvfile, ofile):
     in_struct = 0
     documented_construct = 0
     
-    bsvin = open(bsvfile, 'r')
-    out = open(ofile, 'w')
     # define groups to bundle interfaces and modules
     out.write("/** @defgroup BSVInterface Interfaces */ \n")
     out.write("/** @defgroup BSVModule Modules */ \n")
@@ -274,6 +272,8 @@ if __name__=='__main__':
     print namespace
     if namespace.outdir and not os.path.exists(namespace.outdir):
         os.makedirs(namespace.outdir)
+    if not namespace.bsvfile:
+        filter_bsv(sys.stdin, sys.stdout)
     for bsvfile in namespace.bsvfile:
         if not namespace.outdir:
             ofile = bsvfile.replace('.bsv', '.java')
@@ -282,4 +282,6 @@ if __name__=='__main__':
             print basename
             ofile = os.path.join(namespace.outdir, basename)
         print ofile
-        filter_bsv(bsvfile, ofile)
+        bsvin = open(bsvfile, 'r')
+        out = open(ofile, 'w')
+        filter_bsv(bsvfile, out)
