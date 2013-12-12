@@ -140,20 +140,25 @@ interface PS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_
     interface Pps7Ftmt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ftmt;
     interface Vector#(2, Pps7I2c#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     i2c;
     interface Pps7Irq#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     irq;
-    interface Vector#(2, Pps7M_axi_gp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     m_axi_gp;
     interface Pps7Pjtag#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     pjtag;
     interface Pps7Ps#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ps;
     interface Vector#(2, Pps7Sdio#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     sdio;
     interface Vector#(2, Pps7Spi#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     spi;
     interface Pps7Sram#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     sram;
-    interface Pps7S_axi_acp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     s_axi_acp;
-    interface Vector#(2, Pps7S_axi_gp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     s_axi_gp;
-    interface Vector#(4, Pps7S_axi_hp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     s_axi_hp;
     interface Pps7Trace#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     trace;
     interface Vector#(2, Pps7Ttc#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     ttc;
     interface Vector#(2, Pps7Uart#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     uart;
     interface Vector#(2, Pps7Usb#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     usb;
     interface Pps7Wdt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     wdt;
+
+    //interface Vector#(2, Pps7M_axi_gp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     m_axi_gp;
+    //interface Pps7S_axi_acp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     s_axi_acp;
+    //interface Vector#(2, Pps7S_axi_gp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     s_axi_gp;
+    //interface Vector#(4, Pps7S_axi_hp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     s_axi_hp;
+    interface Vector#(2, AxiMasterCommon#(data_width, id_width)) m_axi_gp;
+    interface AxiSlaveCommon#(data_width, id_width) s_axi_acp;
+    interface Vector#(2, AxiSlaveCommon#(data_width, id_width)) s_axi_gp;
+    interface Vector#(4, AxiSlaveHighSpeed#(data_width, id_width)) s_axi_hp;
 endinterface
 
 module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, int gpio_width, int id_width, int mio_width)
@@ -175,6 +180,7 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
     Vector#(2, Pps7Ttc#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vttc;
     Vector#(2, Pps7Uart#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vuart;
     Vector#(2, Pps7Usb#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vusb;
+    Vector#(2, AxiMasterCommon#(data_width, id_width)) vtopm_axi_gp;
 
     vcan[0] = foo.can0;
     vcan[1] = foo.can1;
@@ -214,6 +220,53 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
     vuart[1] = foo.uart1;
     vusb[0] = foo.usb0;
     vusb[1] = foo.usb1;
+    for (Integer i = 0; i < 2; i = i + 1)
+        begin
+        vtopm_axi_gp[i] = interface AxiMasterCommon#(data_width, id_width);
+//interface AxiMasterCommon#(data_width, id_width);
+            method Action             aclk(Bit#(1) v); // common
+                 vm_axi_gp[i].aclk(v);
+            endmethod
+            method Bit#(1)            aresetn();      // common
+                 return vm_axi_gp[i].aresetn();
+            endmethod
+
+            method Bit#(1)            arvalid();
+                 return vm_axi_gp[i].arvalid();
+            endmethod
+            //interface Get#(AxiREQ#(id_width)) req_ar;
+            method Action             arready(Bit#(1) v);
+            endmethod
+
+            method Bit#(1)            awvalid();
+                 return vm_axi_gp[i].awvalid();
+            endmethod
+            //interface Get#(AxiREQ#(id_width)) req_aw;
+            method Action             awready(Bit#(1) v);
+            endmethod
+
+            method Action             rvalid(Bit#(1) v);
+            endmethod
+            //interface Put#(AxiRead#(data_width, id_width)) resp_read;
+            method Bit#(1)            rready();
+                 return vm_axi_gp[i].rready();
+            endmethod
+
+            method Bit#(1)            wvalid();
+                 return vm_axi_gp[i].wvalid();
+            endmethod
+            //interface Get#(AxiWrite#(data_width, id_width)) resp_write;
+            method Action             wready(Bit#(1) v);
+            endmethod
+
+            method Action             bvalid(Bit#(1) v);
+            endmethod
+            //interface Put#(AxiRESP#(id_width)) resp_b;
+            method Bit#(1)            bready();
+                 return vm_axi_gp[i].bready();
+            endmethod
+            endinterface;
+        end
 
     interface Pps7Can can = vcan;
     interface Pps7Core     core = vcore;
@@ -224,12 +277,13 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
     //interface Pps7Ftmd    ftmd = foo.ftmd;
     //interface Pps7Ftmt    ftmt = foo.ftmt;
     interface Pps7I2c    i2c = vi2c;
-    interface Pps7M_axi_gp    m_axi_gp = vm_axi_gp;
     interface Pps7Sdio    sdio = vsdio;
     interface Pps7Spi    spi = vspi;
-    interface Pps7S_axi_gp    s_axi_gp = vs_axi_gp;
-    interface Pps7S_axi_hp    s_axi_hp = vs_axi_hp;
     interface Pps7Ttc    ttc = vttc;
     interface Pps7Uart    uart = vuart;
     interface Pps7Usb    usb = vusb;
+    interface AxiMasterCommon m_axi_gp = vtopm_axi_gp;
+    //interface Pps7M_axi_gp    m_axi_gp = vm_axi_gp;
+    //interface Pps7S_axi_gp    s_axi_gp = vs_axi_gp;
+    //interface Pps7S_axi_hp    s_axi_hp = vs_axi_hp;
 endmodule
