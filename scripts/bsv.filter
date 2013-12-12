@@ -270,6 +270,8 @@ if __name__=='__main__':
     xbsvdir = os.path.dirname(exename)
     namespace = argparser.parse_args()
     print namespace
+    if namespace.bsvfile:
+        sys.stderr.write(','.join(namespace.bsvfile) + '\n')
     if namespace.outdir and not os.path.exists(namespace.outdir):
         os.makedirs(namespace.outdir)
     if not namespace.bsvfile:
@@ -282,6 +284,6 @@ if __name__=='__main__':
             print basename
             ofile = os.path.join(namespace.outdir, basename)
         print ofile
-        bsvin = open(bsvfile, 'r')
-        out = open(ofile, 'w')
+        bsvin = sys.stdin #open(bsvfile, 'r')
+        out = sys.stdout #open(ofile, 'w')
         filter_bsv(bsvfile, out)
