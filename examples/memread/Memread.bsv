@@ -24,10 +24,10 @@ import FIFOF::*;
 import BRAMFIFO::*;
 import GetPut::*;
 import AxiClientServer::*;
-import AxiSDMA::*;
-import BsimSDMA::*;
+import AxiRDMA::*;
+import BsimRDMA::*;
 import PortalMemory::*;
-import PortalSMemory::*;
+import PortalRMemory::*;
 
 interface CoreRequest;
    method Action startRead(Bit#(32) numWords);
@@ -56,16 +56,17 @@ endinterface
 module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
 
 `ifdef BSIM
-   BsimDMA             dma <- mkBsimDMA(indication.dmaIndication);
+   BsimDMA#(Bit#(64))          dma <- mkBsimDMA(indication.dmaIndication);
 `else
-   AxiDMA              dma <- mkAxiDMA(indication.dmaIndication);
+   AxiDMA#(Bit#(64))           dma <- mkAxiDMA(indication.dmaIndication);
 `endif
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
    Reg#(Bit#(32))      srcGen <- mkReg(0);
+   Reg#(Bit#(40))      offset <- mkReg(0);
 
    // dma read channel 0 is reserved for memread read path
-   ReadChan dma_stream_read_chan = dma.read.readChannels[0];
+   ReadChan#(Bit#(64)) dma_stream_read_chan = dma.read.readChannels[0];
 
    rule consume;
       let v <- dma_stream_read_chan.readData.get;
@@ -78,7 +79,8 @@ module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
    
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt-16;
-      dma_stream_read_chan.readReq.put(?);
+      dma_stream_read_chan.readReq.put(offset);
+      offset <= offset + 1;
       if (streamRdCnt == 16)
 	 indication.coreIndication.readDone(zeroExtend(pack(dataMismatch)));
       else if (streamRdCnt[5:0] == 6'b0)

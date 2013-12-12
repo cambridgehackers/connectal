@@ -25,7 +25,7 @@ void dump(const char *prefix, char *buf, size_t len)
 
 class TestDMAIndication : public DMAIndication
 {
-  virtual void reportStateDbg(DmaDbgRec& rec){
+  virtual void reportStateDbg(const DmaDbgRec& rec){
     fprintf(stderr, "DMA::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void configResp(unsigned long channelId){
@@ -92,8 +92,7 @@ int main(int argc, const char **argv)
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
-  // read channel 0 is read source
-  dma->configChan(0, 0, ref_srcAlloc, 16);
+  dma->configChan(ChannelType_Read, 0, ref_srcAlloc, 16);
   sleep(2);
 
   fprintf(stderr, "Main::starting read %08x\n", numWords);
