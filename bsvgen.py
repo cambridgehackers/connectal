@@ -28,138 +28,10 @@ import PortalMemory::*;
 
 '''
 
-exposedInterfaces = []
-
-
-bsimTopTemplate='''
-import StmtFSM::*;
-import AxiMasterSlave::*;
-import FIFO::*;
-import SpecialFIFOs::*;
-import %(Base)sWrapper::*;
-
-
-import "BDPI" function Action      initPortal(Bit#(32) d);
-
-import "BDPI" function Bool                    writeReq();
-import "BDPI" function ActionValue#(Bit#(32)) writeAddr();
-import "BDPI" function ActionValue#(Bit#(32)) writeData();
-
-import "BDPI" function Bool                     readReq();
-import "BDPI" function ActionValue#(Bit#(32))  readAddr();
-import "BDPI" function Action        readData(Bit#(32) d);
-
-
-module mkBsimTop();
-    %(Base)sWrapper dut <- mk%(Base)sWrapper;
-    let wf <- mkPipelineFIFO;
-    let init_seq = (action 
-                        %(initBsimPortals)s
-                    endaction);
-    let init_fsm <- mkOnce(init_seq);
-    rule init_rule;
-        init_fsm.start;
-    endrule
-    rule wrReq (writeReq());
-        let wa <- writeAddr;
-        let wd <- writeData;
-        dut.ctrl.write.writeAddr(wa,0,0,0,0,0,0);
-        wf.enq(wd);
-    endrule
-    rule wrData;
-        wf.deq;
-        dut.ctrl.write.writeData(wf.first,0,0,0);
-    endrule
-    rule rdReq (readReq());
-        let ra <- readAddr;
-        dut.ctrl.read.readAddr(ra,0,0,0,0,0,0);
-    endrule
-    rule rdResp;
-        let rd <- dut.ctrl.read.readData;
-        readData(rd);
-    endrule
-endmodule
-'''
-
-pcieTopTemplate='''
-import Vector            :: *;
-import Clocks            :: *;
-import Connectable       :: *;
-import Assert            :: *;
-import Xilinx            :: *;
-import XilinxPCIE        :: *;
-import Xilinx7PcieBridge :: *;
-import PcieToAxiBridge   :: *;
-import %(Dut)sWrapper       :: *;
-
-(* synthesize, no_default_clock, no_default_reset *)
-module mk%(Dut)sPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
-                          Clock sys_clk_p,     Clock sys_clk_n,
-                          Reset pci_sys_reset_n)
-                         (%(fpga_interface)s);
-
-   let contentId = %(contentid)s;
-
-   X7PcieBridgeIfc#(8) x7pcie <- mkX7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
-                                                 contentId );
-   
-   Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   %(Dut)sWrapper %(dut)sWrapper <- mk%(Dut)sWrapper(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(x7pcie.portal0, %(dut)sWrapper.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   %(tlpTraceConnection)s
-%(axiMasterConnections)s
-   rule numPortals;
-       x7pcie.numPortals <= %(dut)sWrapper.numPortals;
-   endrule
-   
-   function Bool my_read(ReadOnly#(Bool) r); return r._read; endfunction
-   function Bool my_or (Bool a, Bool b); return a || b; endfunction
-
-   rule requestInterrupt;
-      Bool interrupt = fold(my_or, map(my_read, %(dut)sWrapper.interrupts));
-      if (interrupt && !interruptRequested)
-	 x7pcie.interrupt();
-      interruptRequested <= interrupt;
-   endrule
-
-   interface pcie = x7pcie.pcie;
-   //interface ddr3 = x7pcie.ddr3;
-   method leds = zeroExtend({  pack(x7pcie.isCalibrated)
-			     , pack(True)
-			     , pack(False)
-			     , pack(x7pcie.isLinkUp)
-			     });
-
-endmodule: mk%(Dut)sPcieTop
-'''
-
-axiMasterConnectionTemplate='''
-   AxiSlaveEngine#(%(buswidth)s,%(buswidthbytes)s) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(%(dut)sWrapper.%(busname)s, axiSlaveEngine.slave%(axiversion)s, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-'''
-tlpTraceConnectionTemplate='''
-   mkConnection(%(dut)sWrapper.%(busname)s.tlp, x7pcie.trace);
-'''
-
-
-topInterfaceTemplate='''
-interface %(Base)sWrapper;
-    interface Axi3Slave#(32,32,4,12) ctrl;
-    interface Vector#(%(numPortals)s,ReadOnly#(Bool)) interrupts;
-%(axiSlaveDeclarations)s
-%(axiMasterDeclarations)s
-%(exposedInterfaceDeclarations)s
-    interface ReadOnly#(Bit#(4)) numPortals;
-endinterface
-'''
-
 requestWrapperInterfaceTemplate='''
 %(requestElements)s
 interface %(Dut)sWrapper;
 %(axiSlaveDeclarations)s
-%(axiMasterDeclarations)s
 endinterface
 '''
 
@@ -182,12 +54,44 @@ endinterface
 %(indicationInterfaces)s
 interface %(Dut)sWrapper;
     interface Axi3Slave#(32,32,4,12) ctrl;
-    interface ReadOnly#(Bool) putEnable;
     interface ReadOnly#(Bool) interrupt;
     interface %(Dut)s indication;
     interface RequestWrapperCommFIFOs rwCommFifos;%(indicationMethodDeclsAug)s
 endinterface
 '''
+
+exposedProxyInterfaceTemplate='''
+%(responseElements)s
+interface %(Dut)sWrapper;
+    interface Axi3Slave#(32,32,4,12) ctrl;
+    interface ReadOnly#(Bool) interrupt;
+    interface %(Dut)s ifc;
+endinterface
+'''
+
+hiddenProxyInterfaceTemplate='''
+%(responseElements)s
+interface %(Dut)sWrapper;
+    interface %(Dut)s ifc;
+endinterface
+'''
+
+exposedWrapperInterfaceTemplate='''
+%(requestElements)s
+interface %(Dut)sWrapper;
+    interface Axi3Slave#(32,32,4,12) ctrl;
+    interface ReadOnly#(Bool) interrupt;
+    interface %(Dut)s ifc;
+endinterface
+'''
+
+exposedWrapperInterfaceTemplate='''
+%(requestElements)s
+interface %(Dut)sWrapper;
+    interface %(Dut)s ifc;
+endinterface
+'''
+
 
 responseStructTemplate='''
 typedef struct {
@@ -407,6 +311,71 @@ endmodule: mk%(Dut)sWrapper
 
 '''
 
+mkHiddenProxyInterfaceTemplate='''
+
+%(mutexRuleList)s
+module %(moduleContext)s mk%(Dut)sWrapper(%(Dut)sWrapper);
+
+    // request-specific state
+    Reg#(Bit#(32)) requestFiredCount <- mkReg(0);
+    Reg#(Bit#(32)) overflowCount <- mkReg(0);
+    Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
+    PulseWire requestFiredPulse <- mkPulseWireOR();
+
+    let axiSlaveWriteAddrFifo = iw.rwCommFifos.axiSlaveWriteAddrFifo;
+    let axiSlaveReadAddrFifo  = iw.rwCommFifos.axiSlaveReadAddrFifo;
+    let axiSlaveWriteDataFifo = iw.rwCommFifos.axiSlaveWriteDataFifo;
+    let axiSlaveReadDataFifo  = iw.rwCommFifos.axiSlaveReadDataFifo; 
+
+    rule requestFiredIncrement if (requestFiredPulse);
+        requestFiredCount <= requestFiredCount+1;
+    endrule
+
+    rule writeCtrlReg if (axiSlaveWriteAddrFifo.first[14] == 1);
+        axiSlaveWriteAddrFifo.deq;
+        axiSlaveWriteDataFifo.deq;
+	let addr = axiSlaveWriteAddrFifo.first[13:0];
+	let v = axiSlaveWriteDataFifo.first;
+	if (addr == 14'h000)
+	    noAction;
+	if (addr == 14'h004)
+	    noAction;
+    endrule
+
+    rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
+        axiSlaveReadAddrFifo.deq;
+	let addr = axiSlaveReadAddrFifo.first[13:0];
+	Bit#(32) v = 32'h05a05a0;
+	if (addr == 14'h010)
+	    v = requestFiredCount;
+	if (addr == 14'h01C)
+	    v = overflowCount;
+	if (addr == 14'h034)
+	    v = outOfRangeWriteCount;
+        axiSlaveReadDataFifo.enq(v);
+    endrule
+    rule readWriteFifo if (axiSlaveReadAddrFifo.first[14] == 0);
+        axiSlaveReadAddrFifo.deq;
+        axiSlaveReadDataFifo.enq(32'h05b05b0);
+    endrule
+
+%(indicationMethodRules)s
+
+    rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[14] == 0 && 
+                             axiSlaveWriteAddrFifo.first[13:8] >= %(channelCount)s);
+        axiSlaveWriteAddrFifo.deq;
+        axiSlaveWriteDataFifo.deq;
+        outOfRangeWriteCount <= outOfRangeWriteCount+1;
+    endrule
+
+    interface %(Dut)s indication;
+%(indicationMethodsOrig)s
+    endinterface
+%(indicationMethodsAug)s
+endmodule: mk%(Dut)sWrapper
+
+'''
+
 mkRequestWrapperTemplate='''
 
 
@@ -465,48 +434,69 @@ module mk%(Dut)sWrapper#(%(Dut)s %(dut)s, %(Indication)sWrapper iw)(%(Dut)sWrapp
         axiSlaveWriteDataFifo.deq;
         outOfRangeWriteCount <= outOfRangeWriteCount+1;
     endrule
-%(axiMasterModules)s
 %(axiSlaveImplementations)s
-%(axiMasterImplementations)s
 endmodule: mk%(Dut)sWrapper
 '''
 
-mkTopTemplate='''
-module %(moduleContext)s mk%(Base)sWrapper%(dut_hdmi_clock_param)s(%(Base)sWrapper);
-    Reg#(Bit#(TLog#(%(numPortals)s))) axiSlaveWS <- mkReg(0);
-    Reg#(Bit#(TLog#(%(numPortals)s))) axiSlaveRS <- mkReg(0); 
-%(indicationWrappers)s
-%(indicationIfc)s
-    %(Dut)s %(dut)s <- mk%(Dut)s(%(dut_hdmi_clock_arg)s indication);
-%(axiMasterModules)s
-%(requestWrappers)s
-    Vector#(%(numPortals)s,Axi3Slave#(32,32,4,12)) ctrls_v;
-    Vector#(%(numPortals)s,ReadOnly#(Bool)) interrupts_v;
-%(connectIndicationCtrls)s
-%(connectIndicationInterrupts)s
-    let ctrl_mux <- mkAxiSlaveMux(ctrls_v);
+mkExposedWrapperInterfaceTemplate='''
+%(mutexRuleList)s
+module mk%(Dut)sWrapper#(%(Dut)s %(dut)s)(%(Dut)sWrapper);
+
+    // request-specific state
+    Reg#(Bit#(32)) requestFiredCount <- mkReg(0);
+    Reg#(Bit#(32)) overflowCount <- mkReg(0);
+    Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
+    PulseWire requestFiredPulse <- mkPulseWireOR();
+
+    let axiSlaveWriteAddrFifo = iw.rwCommFifos.axiSlaveWriteAddrFifo;
+    let axiSlaveReadAddrFifo  = iw.rwCommFifos.axiSlaveReadAddrFifo;
+    let axiSlaveWriteDataFifo = iw.rwCommFifos.axiSlaveWriteDataFifo;
+    let axiSlaveReadDataFifo  = iw.rwCommFifos.axiSlaveReadDataFifo; 
+
+    rule requestFiredIncrement if (requestFiredPulse);
+        requestFiredCount <= requestFiredCount+1;
+    endrule
+
+    rule writeCtrlReg if (axiSlaveWriteAddrFifo.first[14] == 1);
+        axiSlaveWriteAddrFifo.deq;
+        axiSlaveWriteDataFifo.deq;
+	let addr = axiSlaveWriteAddrFifo.first[13:0];
+	let v = axiSlaveWriteDataFifo.first;
+	if (addr == 14'h000)
+	    noAction;
+	if (addr == 14'h004)
+	    noAction;
+    endrule
+
+    rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
+        axiSlaveReadAddrFifo.deq;
+	let addr = axiSlaveReadAddrFifo.first[13:0];
+	Bit#(32) v = 32'h05a05a0;
+	if (addr == 14'h010)
+	    v = requestFiredCount;
+	if (addr == 14'h01C)
+	    v = overflowCount;
+	if (addr == 14'h034)
+	    v = outOfRangeWriteCount;
+        axiSlaveReadDataFifo.enq(v);
+    endrule
+    rule readWriteFifo if (axiSlaveReadAddrFifo.first[14] == 0);
+        axiSlaveReadAddrFifo.deq;
+        axiSlaveReadDataFifo.enq(32'h05b05b0);
+    endrule
+
+%(methodRules)s
+
+    %(requestFailureRuleNames)s
+    rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[14] == 0 && 
+                             axiSlaveWriteAddrFifo.first[13:8] >= %(channelCount)s);
+        axiSlaveWriteAddrFifo.deq;
+        axiSlaveWriteDataFifo.deq;
+        outOfRangeWriteCount <= outOfRangeWriteCount+1;
+    endrule
 %(axiSlaveImplementations)s
-%(axiMasterImplementations)s
-%(exposedInterfaceImplementations)s
-    interface ctrl = ctrl_mux;
-    interface Vector interrupts = interrupts_v;
-    interface ReadOnly numPortals;
-        method Bit#(4) _read();
-            return %(numPortals)s;
-        endmethod
-    endinterface
-endmodule: mk%(Base)sWrapper
+endmodule: mk%(Dut)sWrapper
 '''
-
-# this used to sit in the requestRuleTemplate, but
-# support for impCondOf in bsc is questionable (mdk)
-#
-# // let success = impCondOf(%(dut)s.%(methodName)s(%(paramsForCall)s));
-# // if (success)
-# // %(dut)s.%(methodName)s(%(paramsForCall)s);
-# // else
-# // indication$Aug.putFailed(%(ord)s);
-
 
 requestRuleTemplate='''
     FromBit#(32,%(MethodName)s$Request) %(methodName)s$requestFifo <- mkFromBit();
@@ -677,12 +667,7 @@ sub-targets:                    vc707_dut vc707_tb
 def emitPreamble(f, files):
     extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
                    + ['import %s::*;\n' % i for i in syntax.globalimports ])
-    #axiMasterDecarations = ['interface AxiMaster#(64,8) %s;' % axiMaster for axiMaster in axiMasterNames]
-    #axiSlaveDecarations = ['interface AxiSlave#(32,4) %s;' % axiSlave for axiSlave in axiSlaveNames]
     f.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})
-
-def exposeInterfaces(ilist):
-    exposedInterfaces.extend(ilist)
 
 class ParamMixin:
     def numBitsBSV(self):
@@ -794,125 +779,11 @@ class MethodMixin:
 
 class InterfaceMixin:
 
-    def emitBsimTop(self,f):
-        substs = {
-		'Base' : self.base ,
-		'initBsimPortals' : ''.join(util.intersperse(('\n'+' '*24), ['initPortal(%d);' % j for j in range(len(self.ind.decls))]))
-		}
-        f.write(bsimTopTemplate % substs);
-
-    def emitPcieTop(self,f,boardname,contentid):
-        print self.collectInterfaceNames('^Axi[34]Client$', True)
-        axiMasterConnections = [axiMasterConnectionTemplate % {'dut': util.decapitalize(self.base),
-                                                               'busname': busname,
-                                                               'buswidth': params[1].numeric(),
-                                                               'buswidthbytes': params[1].numeric()/8,
-                                                               'axiversion': 4 if (t == 'Axi4Client') else 3}
-                                for (busname,t,params) in self.collectInterfaceNames('^Axi[34]Client$', True)]
-        tlpTraceConnections = [tlpTraceConnectionTemplate % {'dut': util.decapitalize(self.base),
-                                                             'busname': busname}
-                               for (busname,t,params) in self.collectInterfaceNames('TlpTrace')]
-        if boardname == 'kc705':
-            fpga_interface = 'KC705_FPGA'
-        else:
-            fpga_interface = 'VC707_FPGA'
-        substs = {
-		'Dut' : self.base ,
-		'dut' : util.decapitalize(self.base),
-                'axiMasterConnections': '\n'.join(axiMasterConnections),
-                'tlpTraceConnection': '\n'.join(tlpTraceConnections),
-                'contentid' : contentid,
-                'fpga_interface': fpga_interface
-		}
-        f.write(pcieTopTemplate % substs);
-
     def getClockArgNames(self, m):
         #print m
         #print m.params
         #print [ p.name for p in m.params if p.type.name == 'Clock']
         return [ p.name for p in m.params if p.type.name == 'Clock']
-
-    def emitBsvImplementationRequestTop(self,f):
-        axiMasters = self.collectInterfaceNames('Axi[34]Client', True)
-        axiSlaves = self.collectInterfaceNames('AxiSlave')
-        indicationWrappers = self.collectIndicationWrappers()
-        connectIndicationCtrls = self.collectIndicationCtrls()
-        connectIndicationInterrupts = self.collectIndicationInterrupts()
-        requestWrappers = self.collectRequestWrappers()
-        indicationIfc = self.generateIndicationIfc()
-        dutName = util.decapitalize(self.name)
-        methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
-        buses = {}
-        for busType in exposedInterfaces:
-            collected = self.collectInterfaceNames(busType)
-            buses[busType] = collected
-
-        constructor = syntax.globalvars['mk%s' % self.name]
-        dut_clknames = self.getClockArgNames(constructor)
-        moduleContext = constructor.moduleContext
-
-        substs = {
-            'dut': dutName,
-            'Dut': util.capitalize(self.name),
-            'base': util.decapitalize(self.base),
-            'Base': self.base,
-            'axiMasterDeclarations': '\n'.join(['    interface Axi%sMaster#(%s,%s,%s,%s) %s;' % (4 if t == 'Axi4Client' else 3,
-                                                                                                 params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(),
-                                                                                                 axiMaster)
-                                                for (axiMaster,t,params) in axiMasters]),
-            'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
-                                               for (axiSlave,t,params) in axiSlaves]),
-            'exposedInterfaceDeclarations':
-                '\n'.join(['\n'.join(['    interface %s %s;' % (t, util.decapitalize(busname))
-                                      for (busname,t,params) in buses[busType]])
-                           for busType in exposedInterfaces]),
-            'axiMasterModules': '\n'.join(['    Axi%(axiversion)sMaster#(%(addrWidth)s,%(busWidth)s,%(busWidthBytes)s,%(idWidth)s) %(axiMaster)sMaster <- mkAxi%(axiversion)sMaster(%(dutName)s.%(axiMaster)s);'
-                                           % { 'axiversion': 4 if t == 'Axi4Client' else 3,
-                                               'addrWidth': params[0].numeric(),
-                                               'busWidth': params[1].numeric(),
-                                               'busWidthBytes': params[2].numeric(),
-                                               'idWidth': params[3].numeric(),
-                                               'axiMaster': axiMaster,
-                                               'dutName': dutName }
-                                           for (axiMaster,t,params) in axiMasters]),
-            'axiMasterImplementations': '\n'.join(['    interface Axi%sMaster %s = %sMaster;' % (4 if t == 'Axi4Client' else 3, axiMaster,axiMaster)
-                                                   for (axiMaster,t,params) in axiMasters]),
-            'dut_hdmi_clock_param': '#(%s)' % ', '.join(['Clock %s' % name for name in dut_clknames]) if len(dut_clknames) else '',
-            'dut_hdmi_clock_arg': ' '.join(['%s,' % name for name in dut_clknames]),
-            'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
-                                                  for (axiSlave,t,params) in axiSlaves]),
-            'exposedInterfaceImplementations': '\n'.join(['\n'.join(['    interface %s %s = %s.%s;' % (t, busname, dutName, busname)
-                                                                     for (busname,t,params) in buses[busType]])
-                                                          for busType in exposedInterfaces]),
-            'Indication' : self.ind.name,
-            'numPortals' : self.numPortals,
-            'indicationWrappers' : ''.join(indicationWrappers),
-            'requestWrappers' : ''.join(requestWrappers),
-            'indicationIfc' : indicationIfc,
-            'connectIndicationCtrls' : connectIndicationCtrls,
-            'connectIndicationInterrupts' : connectIndicationInterrupts,
-            'moduleContext': '[%s]' % moduleContext if moduleContext else ''
-            }
-        f.write(topInterfaceTemplate % substs)
-        f.write(mkTopTemplate % substs)
-
-    def writeTopBsv(self,f):
-        assert(self.top and (not self.isIndication))
-        self.emitBsvImplementationRequestTop(f)
-
-    def writeBsimTop(self,fname):
-        assert(self.top and (not self.isIndication))
-	f = util.createDirAndOpen(fname, 'w')
-        print 'Writing bsv file ', fname
-	self.emitBsimTop(f);
-	f.close()
-
-    def writePcieTop(self,fname,boardname,contentid):
-        assert(self.top and (not self.isIndication))
-	f = util.createDirAndOpen(fname, 'w')
-        print 'Writing bsv file ', fname
-	self.emitPcieTop(f,boardname,contentid);
-	f.close()
 
     def writeProjectBld(self,projectdirname,srcdirs=[]):
         assert(self.top and (not self.isIndication))
@@ -928,65 +799,11 @@ class InterfaceMixin:
         f.write(projectBldTemplate % subst)
 	f.close()
 
-    def collectIndicationInterrupts(self):
-        rv = []
-        portalNum = 0
-        for d in self.ind.decls:
-            if d.type == 'Interface':
-                rv.append('    interrupts_v[%s] = %sWrapper.interrupt;\n' % (portalNum, d.subinterfacename))
-                portalNum = portalNum+1
-        return ''.join(rv)
-
-    def collectIndicationCtrls(self):
-        rv = []
-        portalNum = 0
-        for d in self.ind.decls:
-            if d.type == 'Interface':
-                rv.append('    ctrls_v[%s] = %sWrapper.ctrl;\n' % (portalNum, d.subinterfacename))
-                portalNum = portalNum+1
-        return ''.join(rv)
-
-
-    def generateIndicationIfc(self):
-        rv = []
-        ind_bsv_type = self.ind.interfaceType().toBsvType()
-        ind_bsv_name = 'indication'
-        rv.append('    %s %s = (interface %s;' % (ind_bsv_type, ind_bsv_name, ind_bsv_type))
-        for d in self.ind.decls:
-            if d.type == 'Interface' and d.hasSource:
-                bsv_type = d.interfaceType().toBsvType()
-                rv.append('\n        interface %s %s = %sWrapper.indication;' % (bsv_type, d.subinterfacename, d.subinterfacename))
-        rv.append('\n    endinterface);\n')
-        return ''.join(rv)
-
-    def collectRequestWrappers(self):
-        rv = []
-        for d in self.decls:
-            if d.type == 'Interface' and  syntax.globalvars.has_key(d.name):
-                interface = syntax.globalvars[d.name]
-                bsv_type = d.interfaceType().toBsvType()
-                request = '%s.%s' % (util.decapitalize(self.name), util.decapitalize(d.subinterfacename))
-                # this is a horrible hack (mdk)
-                indicationWrapper = '%sWrapper' % re.sub('Request', 'Indication', (util.decapitalize(d.subinterfacename)))
-                rv.append('    %sWrapper %sWrapper <- mk%sWrapper(%s,%s);\n' % (bsv_type, d.subinterfacename, bsv_type, request, indicationWrapper))
-        return rv
-            
-
-    def collectIndicationWrappers(self):
-        rv = []
-        for d in self.ind.decls:
-            if d.type == 'Interface':
-                bsv_type = d.interfaceType().toBsvType()
-                rv.append('    %sWrapper %sWrapper <- mk%sWrapper();\n' % (bsv_type, d.subinterfacename, bsv_type))
-        return rv
-
-    def emitBsvImplementationRequest(self,f):
-        # print self.name
+    def emitBsvWrapper(self,f,suffix,expose):
         requestElements = self.collectRequestElements(self.name)
         methodNames = self.collectMethodNames(self.name)
         methodRuleNames = self.collectMethodRuleNames(self.name)
         methodRules = self.collectMethodRules(self.name)
-        axiMasters = self.collectInterfaceNames('Axi[34]Client', True)
         axiSlaves = self.collectInterfaceNames('AxiSlave')
         dutName = util.decapitalize(self.name)
         methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
@@ -999,24 +816,19 @@ class InterfaceMixin:
             'requestFailureRuleNames': "" if len(methodNames) == 0 else '(* descending_urgency = "'+', '.join(['handle$%s$requestFailure' % n for n in methodNames])+'"*)',
             'channelCount': self.channelCount,
             'writeChannelCount': self.channelCount,
-            'axiMasterDeclarations': '\n'.join(['    interface Axi3Master#(%s,%s,%s,%s) %s;' % (params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(), axiMaster)
-                                                for (axiMaster,t,params) in axiMasters]),
             'axiSlaveDeclarations': '\n'.join(['    interface AxiSlave#(32,4) %s;' % axiSlave
                                                for (axiSlave,t,params) in axiSlaves]),
-            'axiMasterModules': '\n'.join(['    Axi3Master#(%s,%s,%s,%s) %sMaster <- mkAxi3Master(%s.%s);'
-                                           % (params[0].numeric(), params[1].numeric(), params[2].numeric(), params[3].numeric(), axiMaster,dutName,axiMaster)
-                                                   for (axiMaster,t,params) in axiMasters]),
-            'axiMasterImplementations': '\n'.join(['    interface Axi3Master %s = %sMaster;' % (axiMaster,axiMaster)
-                                                   for (axiMaster,t,params) in axiMasters]),
             'axiSlaveImplementations': '\n'.join(['    interface AxiSlave %s = %s.%s;' % (axiSlave,dutName,axiSlave)
-                                                  for (axiSlave,t,params) in axiSlaves]),
-            'Indication' : self.ind.name
+                                                  for (axiSlave,t,params) in axiSlaves])
             }
-        f.write(requestWrapperInterfaceTemplate % substs)
-        f.write(mkRequestWrapperTemplate % substs)
+        if expose:
+            f.write(exposedWrapperInterfaceTemplate % substs)
+            f.write(mkExposedWrapperInterfaceTemplate % substs)
+        else:
+            f.write(hiddenWrapperInterfaceTemplate % substs)
+            f.write(mkHiddenWrapperInterfaceTemplate % substs)
 
-    def emitBsvImplementationIndication(self,f):
-
+    def emitBsvProxy(self,f,suffix,expose):
         responseElements = self.collectResponseElements(self.name)
         indicationMethodRuleNames = self.collectIndicationMethodRuleNames(self.name)
         indicationMethodRules = self.collectIndicationMethodRules(self.name)
@@ -1041,13 +853,13 @@ class InterfaceMixin:
             'moduleContext': '',
             'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': self.name }) if not self.hasSource else ''
             }
-        f.write(indicationWrapperInterfaceTemplate % substs)
-        f.write(mkIndicationWrapperTemplate % substs)
-    def emitBsvImplementation(self, f):
-        if self.isIndication:
-            self.emitBsvImplementationIndication(f)
+        if expose:
+            f.write(exposedProxyInterfaceTemplate % substs)
+            f.write(mkExposedProxyInterfaceTemplate % substs)
         else:
-            self.emitBsvImplementationRequest(f)
+            f.write(hiddenProxyInterfaceTemplate % substs)
+            f.write(mkHiddenProxyInterfaceTemplate % substs)
+
 
     def collectRequestElements(self, outerTypeName):
         requestElements = []

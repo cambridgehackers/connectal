@@ -66,6 +66,7 @@ void connect_socket(channel *c)
       fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, c->path, strerror(errno));
       exit(1);
     }
+    fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, c->path);
     sleep(1);
   }
   // int sockbuffsz = sizeof(memrequest);

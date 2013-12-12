@@ -43,6 +43,7 @@
 #include "portal.h"
 #include "sock_utils.h"
 #include "sock_fd.h"
+#include "PortalDirectory.h"
 
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
@@ -53,11 +54,11 @@
 #endif
 
 
-PortalRequest **portal_requests = 0;
+PortalWrapper **portal_wrappers = 0;
 struct pollfd *portal_fds = 0;
 int numFds = 0;
 
-void PortalRequest::close()
+void Portal::close()
 {
     if (fd > 0) {
         ::close(fd);
@@ -65,45 +66,53 @@ void PortalRequest::close()
     }    
 }
 
-PortalRequest::PortalRequest(const char *name, PortalIndication *indication)
+Portal::Portal(char *_name, length)
   : indication(indication), 
     fd(-1),
     ind_reg_base(0x0), 
     ind_fifo_base(0x0),
     req_reg_base(0x0),
     req_fifo_base(0x0),
-    name((char*)strdup(name))
+    name(strdup(_name))
 {
-  int rc = open();
+  int rc = open(length);
   if (rc != 0) {
-    printf("[%s:%d] failed to open PortalRequest %s\n", __FUNCTION__, __LINE__, name);
-    ALOGD("PortalRequest::PortalRequest failure rc=%d\n", rc);
+    printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
+    ALOGD("Portal::Portal failure rc=%d\n", rc);
     exit(1);
   }
 }
-
-PortalRequest::PortalRequest()
-  : indication(NULL), 
+Portal::Portal(int id)
+  : indication(indication), 
     fd(-1),
     ind_reg_base(0x0), 
     ind_fifo_base(0x0),
     req_reg_base(0x0),
-    req_fifo_base(0x0),
-    name(NULL)
+    req_fifo_base(0x0)
 {
+  int offset, length;
+  PortalDirectory::getInstance().offsetRequest(id,&offset);
+  PortalDirectory::getInstance().lengthRequest(id,&length);
+
+  name = (char*)malloc(32);
+  sprintf(name, "fpga%d", offset);
+  int rc = open(length);
+  if (rc != 0) {
+    printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
+    ALOGD("Portal::Portal failure rc=%d\n", rc);
+    exit(1);
+  }
 }
 
-PortalRequest::~PortalRequest()
+Portal::~Portal()
 {
   close();
-  if (name)
-    free(name);
-  unregisterInstance(this);
+  free(name);
 }
 
 
 
-int PortalRequest::open()
+int Portal::open(int length)
 {
 #ifdef ZYNQ
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
@@ -139,7 +148,7 @@ int PortalRequest::open()
 	ALOGE("Failed to open %s fd=%d errno=%d\n", path, this->fd, errno);
 	return -errno;
     }
-    volatile unsigned int *dev_base = (volatile unsigned int*)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
+    volatile unsigned int *dev_base = (volatile unsigned int*)mmap(NULL, length, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
     if (dev_base == MAP_FAILED) {
       ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
       return -errno;
@@ -150,7 +159,7 @@ int PortalRequest::open()
     req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
 
     // enable interrupts
-    fprintf(stderr, "PortalRequest::enabling interrupts %s\n", name);
+    fprintf(stderr, "Portal::enabling interrupts %s\n", name);
     *(ind_reg_base+0x1) = 1;
 
 #else
@@ -165,11 +174,10 @@ int PortalRequest::open()
     req_reg_base   = dev_base+(1<<14);
     req_fifo_base  = dev_base+(0<<14);
 #endif
-    registerInstance(this);
     return 0;
 }
 
-int PortalRequest::sendMessage(PortalMessage *msg)
+int Portal::sendMessage(PortalMessage *msg)
 {
 
   // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
@@ -197,7 +205,27 @@ int PortalRequest::sendMessage(PortalMessage *msg)
   return 0;
 }
 
-int PortalRequest::unregisterInstance(PortalRequest *instance)
+PortalWrapper::PortalWrapper(int id) 
+  : Portal(id)
+{
+  registerInstance();
+}
+
+PortalWrapper::~PortalWrapper()
+{
+  unregisterInstance();
+}
+
+PortalProxy::PortalProxy(int id)
+  : Portal(id)
+{
+}
+
+PortalProxy::~PortalProxy()
+{
+}
+
+int PortalWrapper::unregisterInstance();
 {
   int i = 0;
   while(i < numFds)
@@ -208,20 +236,20 @@ int PortalRequest::unregisterInstance(PortalRequest *instance)
 
   while(i < numFds-1){
     portal_fds[i] = portal_fds[i+1];
-    portal_requests[i] = portal_requests[i+1];
+    portal_wrappers[i] = portal_wrappers[i+1];
   }
 
   numFds--;
   portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
-  portal_requests = (PortalRequest **)realloc(portal_requests, numFds*sizeof(PortalRequest *));  
+  portal_wrappers = (Portal **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));  
   return 0;
 }
 
-int PortalRequest::registerInstance(PortalRequest *instance)
+int PortalWrapper::registerInstance();
 {
     numFds++;
-    portal_requests = (PortalRequest **)realloc(portal_requests, numFds*sizeof(PortalRequest *));
-    portal_requests[numFds-1] = instance;
+    portal_wrappers = (PortalWrapper **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));
+    portal_wrappers[numFds-1] = instance;
     portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
     struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
@@ -240,8 +268,8 @@ PortalMemory::PortalMemory()
   }
 }
 
-PortalMemory::PortalMemory(const char *name, PortalIndication *indication)
-  : PortalRequest(name,indication),
+PortalMemory::PortalMemory(id)
+  : PortalProxy(id),
     handle(1)
 {
 #ifndef MMAP_HW
@@ -331,7 +359,7 @@ int PortalMemory::alloc(size_t size, PortalAlloc **ppa)
   return 0;
 }
 
-int PortalRequest::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
+int Portal::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
     if (!numFds) {
 	ALOGE("%s No fds open\n", __FUNCTION__);
@@ -368,7 +396,7 @@ void* portalExec(void* __x)
       // PCIE interrupts not working
       if (1)
 	{
-	  PortalRequest *instance = portal_requests[0];
+	  PortalWrapper *instance = portal_wrappers[0];
 	  unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
 	  unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	  unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
@@ -383,11 +411,11 @@ void* portalExec(void* __x)
 	// PCIE interrupts not working
 	if (0)
 #endif
-	if (!portal_requests) {
+	if (!portal_wrappers) {
 	  fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
 	}
 	
-	PortalRequest *instance = portal_requests[i];
+	PortalWrapper *instance = portal_wrappers[i];
 	
 	// sanity check, to see the status of interrupt source and enable
 	unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
@@ -401,7 +429,7 @@ void* portalExec(void* __x)
 	while (queue_status) {
 	  if(0)
 	    fprintf(stderr, "queue_status %d\n", queue_status);
-	  instance->indication->handleMessage(queue_status-1, instance->ind_fifo_base);
+	  instance->handleMessage(queue_status-1, instance->ind_fifo_base);
 	  int_src = *(volatile int *)(instance->ind_reg_base+0x0);
 	  int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	  ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
@@ -427,7 +455,7 @@ void* portalExec(void* __x)
     while (true){
       sleep(0);
       for(int i = 0; i < numFds; i++){
-	PortalRequest *instance = portal_requests[i];
+	PortalWrapper *instance = portal_wrappers[i];
 	unsigned int addr = instance->ind_reg_base+0x20;
 	struct memrequest foo = {false,addr,0};
 	//fprintf(stderr, "sending read request\n");
@@ -443,7 +471,7 @@ void* portalExec(void* __x)
 	}
 	//fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
 	if (queue_status){
-	  instance->indication->handleMessage(queue_status-1, instance);	
+	  instance->handleMessage(queue_status-1, instance);	
 	}
       }
     }

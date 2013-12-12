@@ -33,81 +33,43 @@ test%(classname)s: %(ClassName)s.cpp %(xbsvdir)s/cpp/portal.cpp %(source)s
 '''
 
 
-classPrefixTemplate='''
+proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 public:
-    static %(className)s *create%(className)s(%(indicationName)s *indication);
-    static void methodName(unsigned long v, char *dst);
+    %(className)s(unsigned int id);
 '''
-classSuffixTemplate='''
-protected:
-    %(className)s(const char *instanceName, %(indicationName)s *indication);
-    ~%(className)s();
+proxyClassSuffixTemplate='''
 };
 '''
 
-indicationClassPrefixTemplate='''
+wrapperClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 public:
-    %(className)s();
-    virtual ~%(className)s();
+    %(className)s(unsigned int id);
 '''
-indicationClassSuffixTemplate='''
+wrapperClassSuffixTemplate='''
 protected:
-#ifdef MMAP_HW
-    virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base);
-#else
-    virtual int handleMessage(unsigned int channel, PortalRequest* instance);
-#endif
-    friend class PortalRequest;
+    virtual int handleMessage(unsigned int channel);
 };
 '''
 
-
-creatorTemplate = '''
-%(namespace)s%(className)s *%(namespace)s%(className)s::create%(className)s(%(indicationName)s *indication)
-{
-    const char *instanceName = \"fpga%(portalNum)s\"; 
-    %(namespace)s%(className)s *instance = new %(namespace)s%(className)s(instanceName, indication);
-    return instance;
-}
+proxyConstructorTemplate='''
+%(namespace)s%(className)s::%(className)s(unsigned int id)
+ : %(parentClass)s(id)
+{}
 '''
 
-methodNameTemplate = '''
+wrapperConstructorTemplate='''
+%(namespace)s%(className)s::%(className)s(unsigned int id)
+ : %(parentClass)s(id)
+{}
 
-void %(namespace)s%(className)s::methodName(unsigned long idx, char* dst)
-{
-   const char* methodNameStrings[] = {%(methodNames)s};
-   const char* src = methodNameStrings[idx];
-   strcpy(dst, src);
-}
-'''
-
-constructorTemplate='''
-%(namespace)s%(className)s::%(className)s(const char *instanceName, %(indicationName)s *indication)
- : %(parentClass)s(instanceName, indication)%(initializers)s
-{
-}
-%(namespace)s%(className)s::~%(className)s()
-{
-    close();
-}
-'''
-
-indicationConstructorTemplate='''
-%(namespace)s%(className)s::%(className)s()
-{
-}
-%(namespace)s%(className)s::~%(className)s()
-{
-}
 '''
 
 putFailedTemplate='''
 void %(namespace)s%(className)s::putFailed(unsigned long v){
-    char buff[100];
-    %(instName)s::methodName(v, buff);
-    fprintf(stderr, "putFailed: %%s\\n", buff);
+    const char* methodNameStrings[] = {%(putFailedStrings)s};
+    fprintf(stderr, "putFailed: %%s\\n", methodNameStrings[v]);
     exit(1);
   }
 '''
@@ -116,7 +78,6 @@ handleMessageTemplate='''
 #ifdef MMAP_HW
 int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base)
 {    
-    // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
     unsigned int buf[1024];
     PortalMessage *msg = 0x0;
     static int runaway = 0;
@@ -131,9 +92,6 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile uns
         }
         return 0;
     }
-
-    // mutex_lock(&portal_data->reg_mutex);
-    // mutex_unlock(&portal_data->reg_mutex);
     for (int i = (msg->size()/4)-1; i >= 0; i--) {
         unsigned int val = *((volatile unsigned int*)(((unsigned long)ind_fifo_base) + channel * 256));
         buf[i] = val;
@@ -147,7 +105,6 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile uns
 #else
 int %(namespace)s%(className)s::handleMessage(unsigned int channel, PortalRequest* instance)
 {    
-    // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
     unsigned int buf[1024];
     PortalMessage *msg = 0x0;
     
@@ -180,7 +137,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, PortalReques
 
 '''
 
-requestTemplate='''
+proxyMethodTemplate='''
 void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
     %(className)s%(methodName)sMSG msg;
@@ -240,16 +197,16 @@ class MethodMixin:
     def emitCDeclaration(self, f, indentation=0, namespace=''):
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
-        if self.isIndication:
+        if (not proxy):
             f.write('virtual ')
         f.write('void %s ( ' % cName(self.name))
         f.write(', '.join(self.formalParameters(self.params)))
         f.write(' )')
-        if (self.isIndication and not self.aug):
+        if (not proxy and not self.aug):
             f.write('= 0;\n')
         else:
             f.write(';\n')
-    def emitCImplementation(self, f, className, namespace):
+    def emitCImplementation(self, f, className, namespace, proxy):
 
         # resurse interface types and flattening all structs into a list of types
         def collectMembers(scope, member):
@@ -372,16 +329,16 @@ class MethodMixin:
             # if message is empty, we still send an int of padding
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
-        if not self.isIndication:
-            substs['responseCase'] = 'assert(false);'
-            f.write(msgTemplate % substs)
-            f.write(requestTemplate % substs)
-        else:
+        if (not proxy):
             substs['responseCase'] = ('((%(className)s *)ind)->%(name)s(%(params)s);\n'
                                       % { 'name': self.name,
                                           'className' : className,
                                           'params': ', '.join(['payload.%s' % (p.name) for p in self.params])})
             f.write(msgTemplate % substs)
+        else:
+            substs['responseCase'] = 'assert(false);'
+            f.write(msgTemplate % substs)
+            f.write(proxyMethodTemplate % substs)
 
 
 class StructMemberMixin:
@@ -466,81 +423,54 @@ class InterfaceMixin:
                 d.channelNumber = channelNumber
                 channelNumber = channelNumber + 1
         self.channelCount = channelNumber
-    def emitCDeclaration(self, f, indentation=0, namespace=''):
-        self.toplevel = (indentation == 0)
-        name = cName(self.name)
-        indent(f, indentation)
-        subs = {'className': name,
+    def parentClass(self, default):
+        rv = default if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
+        return rv
+    def emitCProxyDeclaration(self, f, suffix, indentation=0, namespace=''):
+        className = "%s%s" % (cName(self.name), suffix)
+        subs = {'className': className,
                 'namespace': namespace,
-                'portalNum': self.portalNum}
-        if self.isIndication:
-            prefixTemplate = indicationClassPrefixTemplate
-            suffixTemplate= indicationClassSuffixTemplate
-            subs['parentClass'] =  'PortalIndication'
-        else:
-            prefixTemplate = classPrefixTemplate
-            suffixTemplate = classSuffixTemplate
-            subs['indicationName'] = self.ind.name
-            subs['parentClass'] =  'PortalRequest' if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
-        f.write(prefixTemplate % subs)
+                'parentClass': self.parentClass('PortalProxy')}
+        f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
-            if d.type == 'Interface':
-                continue
-            d.isIndication = self.isIndication
-            d.emitCDeclaration(f, indentation + 4, namespace)
-        f.write(suffixTemplate % subs)
-        return
-    def emitCImplementation(self, f, namespace=''):
-        className = cName(self.name)
-        self.emitConstructorImplementation(f, className, namespace)
+            d.emitCDeclaration(f, True, indentation + 4, namespace)
+        f.write(proxyClassSuffixTemplate % subs)
+    def emitCWrapperDeclaration(self, f, suffix, indentation=0, namespace=''):
+        className = "%s%s" % (cName(self.name), suffix)
+        indent(f, indentation)
+        subs = {'className': className,
+                'namespace': namespace,
+                'parentClass': self.parentClass('PortalWrapper')}
+        f.write(wrapperClassPrefixTemplate % subs)
         for d in self.decls:
-            if d.type == 'Interface':
-                continue
-            d.emitCImplementation(f, className, namespace)
-
+            d.emitCDeclaration(f, False, indentation + 4, namespace)
+        f.write(wrapperClassSuffixTemplate % subs)
+    def emitCProxyImplementation(self, f,  suffix, namespace=''):
+        className = "%s%s" % (cName(self.name), suffix)
         substitutions = {'namespace': namespace,
                          'className': className,
-                         # this is a horrible hack (mdk)
-                         'instName' : className.replace('Indication', 'Request'),
+                         'parentClass': self.parentClass('PortalProxy')}
+        f.write(proxyConstructorTemplate % substitutions)
+        for d in self.decls:
+            d.emitCImplementation(f, className, namespace,True)
+    def emitCWrapperImplementation (self, f,  suffix, namespace=''):
+        className = "%s%s" % (cName(self.name), suffix)
+        emitPutFailed = True in [d.name == "putFailed" for d in self.decls]
+        substitutions = {'namespace': namespace,
+                         'className': className,
+                         'parentClass': self.parentClass('PortalWrapper'),
                          'responseSzCases': ''.join(['    case %(channelNumber)s: { msg = new %(msg)s(); break; }\n'
                                                      % { 'channelNumber': d.channelNumber,
                                                          'msg': '%s%sMSG' % (className, d.name)}
                                                      for d in self.decls 
-                                                     if d.type == 'Method' and d.return_type.name == 'Action'
-                                                     ])
-                         }
-
-
-
-        if self.isIndication:
-            f.write(handleMessageTemplate % substitutions)
-            f.write(putFailedTemplate % substitutions)
-
-    def emitConstructorImplementation(self, f, className, namespace):
-        substitutions = {'namespace': namespace,
-                         'className': className,
-                         'portalNum': self.portalNum,
-                         'initializers': '',
-                         'methodNames': ', '.join('"%s"' % (d.name) for d in self.decls if d.__class__ == AST.Method )}
-        subinterfaces = []
+                                                     if d.type == 'Method' and d.return_type.name == 'Action']),
+                         'putFailedStrings': '' if (not emitPutFailed) else ', '.join('"%s"' % (d.name) for d in self.req.decls if d.__class__ == AST.Method )}
+        f.write(wrapperConstructorTemplate % substitutions)
         for d in self.decls:
-            if d.__class__ == AST.Interface:
-                subinterfaces.append(d.subinterfacename)
-        ## not generating code for subinterfaces for now
-        ## if subinterfaces:
-        ##     substitutions['initializers'] = (', %s'
-        ##                                      % ', '.join([ '%s(p)' % i for i in subinterfaces]))
-        if self.toplevel:
-            if not self.isIndication:
-                substitutions['indicationName'] = self.ind.name
-                f.write(creatorTemplate % substitutions)
-                f.write(methodNameTemplate % substitutions)
-        if self.isIndication:
-            f.write(indicationConstructorTemplate % substitutions)
-        else:
-            substitutions['parentClass'] =  'PortalRequest' if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
-            f.write(constructorTemplate % substitutions)
-        return
+            d.emitCImplementation(f, className, namespace, False);
+        if emitPutFailed:
+            f.write(putFailedTemplate % substitutions)
+        f.write(handleMessageTemplate % substitutions)
     def writeAndroidMk(self, androidmkname, applicationmkname, silent=False):
         f = util.createDirAndOpen(androidmkname, 'w')
         className = cName(self.base)

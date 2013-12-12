@@ -26,16 +26,14 @@ AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin,xpsgen.I
 supported_boards = ['zedboard', 'zc702', 'kc705', 'vc707']
 supported_os = ['android', 'ubuntu']
 
-requestIfcs = []
-indicationIfcs = []
-
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
 argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
 argparser.add_argument('-B', '--board', default='zc702', choices=supported_boards,
                        help='Board to generate stubs and ucf constraints for')
 argparser.add_argument('-O', '--OS', default=None, choices=supported_os,
                        help='Target operating system')
-argparser.add_argument('-b', '--interface', help='BSV interface to generate stubs for')
+argparser.add_argument('-s2h', '--s2hinterface', help='BSV interface to generate stubs for software to hardware communication', action='append')
+argparser.add_argument('-h2s', '--h2sinterface', help='BSV interface to generate stubs for hardware to software communication', action='append')
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 argparser.add_argument('-c', '--coherent', help='Use ACP coherence port for first AXI master bus')
@@ -44,7 +42,8 @@ argparser.add_argument('-I', '--contentid', help='Specify 64-bit contentid for P
 argparser.add_argument('-V', '--verilog', help='Additional verilog sources', action='append')
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
-argparser.add_argument('-x', '--export', help='Promote/export named interface from top module', action='append')
+argparser.add_argument('-x', '--export', help='Promote/export named interface from top module')
+
 
 tclfileXprTemplate='''
 create_project %(dut)s . -part %(partname)s
@@ -206,7 +205,6 @@ if __name__=='__main__':
     exename = os.path.abspath(sys.argv[0])
     xbsvdir = os.path.dirname(exename)
     namespace = argparser.parse_args()
-    print namespace
 
     write_vivado_strategies()
     project_dir = os.path.expanduser(namespace.project_dir)
@@ -217,9 +215,9 @@ if __name__=='__main__':
     os.path.exists('./parser.out')   and os.remove('./parser.out')
     os.path.exists('./parsetab.pyc') and os.remove('./parsetab.pyc')
     os.path.exists('./parsetab.py')  and os.remove('./parsetab.py')
-
-    dutname = namespace.interface.lower()
-    corename = '%s_v1_00_a' % namespace.interface.lower()
+    
+    dutname = namespace.export
+    corename = '%s_v1_00_a' % dutname
     boardname = namespace.board.lower()
 
     bsvdefines = ['BSIM'] if namespace.make and ('bsim' in namespace.make) else []
@@ -227,9 +225,6 @@ if __name__=='__main__':
         bsvdefines += ['Kintex7']
     elif boardname == 'vc707':
         bsvdefines += ['Virtex7']
-    if namespace.export:
-        bsvgen.exposeInterfaces(namespace.export)
-        syntax.exposeInterfaces(namespace.export)
     
     for inputfile in namespace.bsvfile:
         inputdir = os.path.dirname(inputfile)
@@ -274,6 +269,7 @@ if __name__=='__main__':
     if needs_pcie_7x_v2_1:
         subprocess.call(['make', '-C', xbsvdir, 'xilinx/pcie_7x_v2_1'])
 
+<<<<<<< HEAD
     tclname = os.path.join(project_dir, '%s.tcl' % namespace.interface.lower())
     tclxprname = os.path.join(project_dir, '%sxpr.tcl' % namespace.interface.lower())
     makename = os.path.join(project_dir, 'Makefile')
@@ -306,151 +302,130 @@ if __name__=='__main__':
 
 
     # this is an ugly misuse of typeclassinstance (mdk)
+=======
+    # this is an ugly abuse of typeclassinstance
+>>>>>>> intermediate checkin
     for v in syntax.globaldecls:
         if (v.type == 'TypeclassInstance' and v.name == 'PortalMemory'):
             assert (len(v.params) == 1)
             syntax.globalvars[v.params[0].name].typeClassInstances.append(v.name)
-            # print syntax.globalvars[v.params[0].name]
+
+    ## code generation pass
+    swProxies = []
+    hwProxies = []
+    swWrappers = []
+    hwWrappers = []
+
+    for i in set(namespace.s2hinterface + namespace.h2sinterface):
+        ifc = syntax.globalvars[i]
+        ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
+        ifc.ind = AST.Interface(i, [], [], None)
+        ifc.ind.insertPutErrorMethod()
+        ifc.ind.req = ifc
+        ifc.assignRequestResponseChannels()
+        ifc.ind.assignRequestResponseChannels()
+        if i in namespace.s2hinterface:
+            swProxies.append(ifc)
+            hwWrappers.append(ifc)
+        if i in namespace.h2sinterface:
+            hwProxies.append(ifc)
+            swWrappers.append(ifc)
+
+    def create_cpp_file(name):
+        fname = os.path.join(project_dir, 'jni', name)
+        f = util.createDirAndOpen(fname, 'w')
+        print "Writing file ",fname
+        return f
+
+    for i in swProxies:
+        hpp = create_cpp_file('%sProxy.h' % i.name)
+        cpp = create_cpp_file('%sProxy.cpp' % i.name)
+        i.ind.emitCWrapperDeclaration(hpp, "ProxyStatus")
+        i.emitCProxyDeclaration(hpp, "Proxy")
+        i.ind.emitCWrapperImplementation(cpp, "ProxyStatus")
+        i.emitCProxyImplementation(cpp, "Proxy")
+        hpp.close();
+        cpp.close();
+
+    for i in swWrappers:
+        hpp = create_cpp_file('%sWrapper.h' % i.name)
+        cpp = create_cpp_file('%sWrapper.cpp' % i.name)
+        i.ind.emitCProxyDeclaration(hpp, "WrapperStatus")
+        i.emitCWrapperDeclaration(hpp, "Wrapper")
+        i.ind.emitCProxyImplementation(cpp, "WrapperStatus")
+        i.emitCWrapperImplementation(cpp, "Wrapper")
+        hpp.close();
+        cpp.close();
+    
+    hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
+    hpp = util.createDirAndOpen(hname, 'w')
+    # global type declarations used by interface mthods
+    for v in syntax.globaldecls:
+        if (v.type == 'TypeDef') and v.tdtype.type == 'Struct':
+            v.emitCDeclaration(hpp)
+    hpp.close();
+    cpp.close();
 
     def create_bsv_package(pname, files=[]):
         fname = os.path.join(project_dir, 'sources', dutname, '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
         bsvgen.emitPreamble(bsv_file, namespace.bsvfile+files)
-        print 'Writing bsv file ', fname
+        print 'Writing file ', fname
         return bsv_file
 
     def close_bsv_package(bsv_file, pname):
         bsv_file.write('endpackage: %s\n' % pname)
         bsv_file.close()
 
-    topRequestIfcName = '%sRequest' % util.capitalize(namespace.interface)
-    topIndicationIfcName = '%sIndication' % util.capitalize(namespace.interface)
+    for i in hwWrappers:
+        pname = '%sWrapper' % i.name
+        bsv = create_bsv_package(pname)
+        i.ind.emitBsvProxy(bsv, "WrapperStatus", False)
+        i.emitBsvWrapper(bsv, "Wrapper", True)
+        close_bsv_package(bsv,pname)
 
-    if (syntax.globalvars.has_key(topRequestIfcName)):
-        topRequestIfc = syntax.globalvars[topRequestIfcName]
-        topIndicationIfc = syntax.globalvars[topIndicationIfcName]
-        topRequestIfc.isIndication = False
-        topIndicationIfc.isIndication = True
-        topRequestIfc.top = True
-        topIndicationIfc.top = True
-        topRequestIfc.ind = topIndicationIfc
-        topRequestIfc.base = namespace.interface
+    assert(False)
 
-        # this is a primitive way of detecting the subinterfaces
-        # which will be assigned their own request interface.  In 
-        # the future I will add code which examines the actual type
-        for d in topRequestIfc.decls:
-            if d.type == 'Interface':
-                if syntax.globalvars.has_key(d.name):
-                    subintdef = syntax.globalvars[d.name]
-                    newint = subintdef.instantiate(dict(zip(subintdef.params, d.params)))
-                    newint.top = False
-                    newint.isIndication = False
-                    requestIfcs.append(newint)
-                    indname = re.sub('Request', 'Indication', d.name)
-                    if not syntax.globalvars.has_key(indname):
-                        newind = AST.Interface(indname, [], [], None);
-                        newind.hasSource = False
-                        print 'Creating empty Indication interface', indname, newind
-                        syntax.globalvars[indname] = newind
-                        ## this matches the horrible hack in bsvgen.py
-                        newdecl = AST.Interface(indname, [], [], d.subinterfacename.replace('Request','Indication'))
-                        newdecl.hasSource = False
-                        print newdecl
-                        topIndicationIfc.decls.append(newdecl)
+    for i in hwProxies:
+        pname = '%sProxy' % i.name
+        bsv = create_bsv_package(pname)
+        i.ind.emitBsvWrapper(bsv, "ProxyStatus",False)
+        i.emitBsvProxy(bsv, "Proxy",True)
+        close_bsv_package(bsv,pname)
 
-        # same comment as above
-        for d in topIndicationIfc.decls:
-            if d.type == 'Interface':
-                if syntax.globalvars.has_key(d.name):
-                    subintdef = syntax.globalvars[d.name]
-                    newint = subintdef.instantiate(dict(zip(subintdef.params, d.params)))
-                    newint.top = False
-                    newint.isIndication = True
-                    indicationIfcs.append(newint)
-
-        # find the corresponding indication interafce.  we are currently relying
-        # on a naming convention, but we might relax this at some point
-        if len(indicationIfcs) != len(requestIfcs):
-            print 'The number of Request interface definitions', len(requestIfcs), 'must match the number of Indication interface definitions', len(indicationIfcs)
-            print 'Request definitions', requestIfcs
-            print 'Indication definitions', indicationIfcs
-            assert(len(indicationIfcs) == len(requestIfcs))
-        for d0 in requestIfcs:
-            base = re.sub('Request', '', d0.name)
-            for d1 in indicationIfcs:
-                if d1.name == ('%sIndication' % base ):
-                    d0.ind = d1
-                    break
-
-        wrapper_files = []
-        portalNum = 0;
-        for d in requestIfcs:
-            # adding an error reporting channel to the indication interface for reporting 'put' errors
-            d.ind.insertPutErrorMethod();
-            # assign the indication methods to the lower channel numbers
-            d.assignRequestResponseChannels()
-            d.ind.assignRequestResponseChannels()
-            
-            d.portalNum = portalNum
-            d.ind.portalNum = portalNum
-            portalNum = portalNum+1
-            
-            d.ind.emitCDeclaration(h)
-            d.emitCDeclaration(h)
-            d.ind.emitCImplementation(cpp)
-            d.emitCImplementation(cpp)            
-            
-            ind_pname = '%sWrapper' % d.ind.name
-            ind_wrapper_file = create_bsv_package(ind_pname)
-            d.ind.emitBsvImplementation(ind_wrapper_file)
-            close_bsv_package(ind_wrapper_file, ind_pname)
-            wrapper_files.append('%s.bsv' % ind_pname)
-
-            req_pname = '%sWrapper' % d.name
-            rec_wrapper_file = create_bsv_package(req_pname, ['%s.bsv' % ind_pname])
-            d.emitBsvImplementation(rec_wrapper_file)
-            close_bsv_package(rec_wrapper_file, req_pname)
-            wrapper_files.append('%s.bsv' % req_pname)
-
-        top_pname = '%sWrapper' % util.capitalize(namespace.interface)
-        top_bsv_file = create_bsv_package(top_pname, wrapper_files)
-        topRequestIfc.numPortals = portalNum
-        topRequestIfc.writeTopBsv(top_bsv_file)
-        close_bsv_package(top_bsv_file, top_pname)
-
-        bsim_name = os.path.join(project_dir, 'sources', 'BsimTop.bsv')
-        topRequestIfc.writeBsimTop(bsim_name)
-        if (boardname == 'kc705' or boardname == 'vc707'):
-            pcie_name = os.path.join(project_dir, 'sources', namespace.interface.lower(),
-                                     '%sPcieTop.bsv' % util.capitalize(namespace.interface))
-            if not namespace.contentid:
-                namespace.contentid = '''64'h0000_0000_0000_0000'''
-                namespace.contentid = '''64'h%s''' % ''.join(map((lambda c: '%02x' % ord(c)), namespace.interface[0:8]))
-            print 'contentid', namespace.contentid
-            topRequestIfc.writePcieTop(pcie_name, namespace.board, namespace.contentid)
-            topRequestIfc.writeProjectBld(project_dir, srcdirs)
-        else:
-            topRequestIfc.writeTopVerilog(topverilogname)
+    if (boardname == 'kc705' or boardname == 'vc707'):
+        pcie_name = os.path.join(project_dir, 'sources', namespace.interface.lower(),
+                                 '%sPcieTop.bsv' % util.capitalize(namespace.interface))
+        topRequestIfc.writeProjectBld(project_dir, srcdirs)
+    else: # Zynq platform
+        topRequestIfc.writeTopVerilog(topverilogname)
         topRequestIfc.writeXdc(xdcname, boardname)
-        if os != 'android':
-            topRequestIfc.writeImpactCmd(os.path.join(project_dir, 'impact.cmd'))
-            topRequestIfc.writeProgramTcl(os.path.join(project_dir, '%s-program.tcl' % namespace.interface.lower()))
-        print 'Writing Android.mk', androidmkname
-        print 'Writing Application.mk', applicationmkname
-        topRequestIfc.writeAndroidMk(androidmkname, applicationmkname)
-        topRequestIfc.writeLinuxMk(linuxmkname, xbsvdir, namespace.source)
-    else:
-        print 'No %s interface found' % topRequestIfcName
-    h.close()
-    cpp.close()
 
-    if cppname:
-        srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'cpp')
-        dstdir = os.path.dirname(cppname)
-        for f in ['portal.cpp', 'sock_utils.cxx', 'sock_fd.cxx']:
-            shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
+    if os != 'android':
+        topRequestIfc.writeImpactCmd(os.path.join(project_dir, 'impact.cmd'))
+        topRequestIfc.writeProgramTcl(os.path.join(project_dir, '%s-program.tcl' % namespace.interface.lower()))
+    print 'Writing Android.mk', androidmkname
+    print 'Writing Application.mk', applicationmkname
+    topRequestIfc.writeAndroidMk(androidmkname, applicationmkname)
+    topRequestIfc.writeLinuxMk(linuxmkname, xbsvdir, namespace.source)
+
+    assert(False);
+
+    tclname = os.path.join(project_dir, '%s.tcl' % namespace.export.lower())
+    tclxprname = os.path.join(project_dir, '%sxpr.tcl' % namespace.export.lower())
+    makename = os.path.join(project_dir, 'Makefile')
+
+    applicationmkname = os.path.join(project_dir, 'jni', 'Application.mk')
+    androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
+    linuxmkname = os.path.join(project_dir, 'jni', 'Makefile')
+    
+    topverilogname = os.path.join(project_dir, 'sources', 'top.v')
+    ucfname = os.path.join(project_dir, 'data',
+                           '%s.ucf' % dutname)
+    xdcname = os.path.join(project_dir, 'constraints',
+                           '%s.xdc' % dutname)
+
 
     print 'Writing tcl file', tclname
     tcl = util.createDirAndOpen(tclname, 'w')

@@ -4,8 +4,6 @@ import AST
 import sys
 import os
 
-exportlist = []
-
 tokens = (
     'AMPER',
     'AMPERAMPER',
@@ -762,11 +760,8 @@ def p_packageStmt(p):
                    | macroDef
                    | typeDef'''
     decl = p[1]
-    # don't expose 'export' interfaces as 'request' interfaces
-    if decl.type != 'Interface' or decl.name not in exportlist:
-        globaldecls.append(decl)
-        globalvars[decl.name] = decl
-    p[0] = decl
+    globaldecls.append(decl)
+    globalvars[decl.name] = decl
 
 def p_packageStmts(p):
     '''packageStmts :
@@ -789,10 +784,6 @@ if 0:
     lexer.input(data)
     for tok in lexer:
         print tok
-
-def exposeInterfaces(aexportlist):
-    global exportlist
-    exportlist = aexportlist
 
 def parse(data):
     lexer = lex.lex(errorlog=lex.NullLogger())

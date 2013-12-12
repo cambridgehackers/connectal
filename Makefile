@@ -106,6 +106,10 @@ test-strstr/sources/bsim: examples/strstr/Strstr.bsv examples/strstr/teststrstr.
 	test-strstr/jni/strstr
 
 
+clean_sockets:
+	rm -rf fpga*
+	rm -rf fd_*
+
 xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
 	rm -fr proj_pcie
 	vivado -mode batch -source scripts/generate-pcie.tcl
