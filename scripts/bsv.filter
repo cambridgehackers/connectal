@@ -2,14 +2,18 @@
 # Usage doxyfilter_bsv.psv < infile.bsv > outfile.java
 
 import fileinput
+import os
 import sys
 import re
+import argparse
 
-# define groups to bundle interfaces and modules
-sys.stdout.write("/** @defgroup BSVInterface Interfaces */ ")
-sys.stdout.write("/** @defgroup BSVModule Modules */ ")
+argparser = argparse.ArgumentParser("Generate doxygen-ready Java from BSV.")
+argparser.add_argument('bsvfile', help='BSV files to process', nargs='+')
+argparser.add_argument('-d', '--outdir', default=None, help='Directory for output files')
 
-def filter_bsv():     
+
+
+def filter_bsv(bsvfile, ofile):
     processing_module = 0
     module_start = ""
     prev_line = ""
@@ -24,17 +28,23 @@ def filter_bsv():
     in_struct = 0
     documented_construct = 0
     
-    for line in fileinput.input():
+    bsvin = open(bsvfile, 'r')
+    out = open(ofile, 'w')
+    # define groups to bundle interfaces and modules
+    out.write("/** @defgroup BSVInterface Interfaces */ ")
+    out.write("/** @defgroup BSVModule Modules */ ")
+
+    for line in bsvin:
         # Skip the license section
         if "Copyright" in line:
             # Print the line without modification
-            sys.stdout.write(line)
+            out.write(line)
             in_license = 1
             continue
         if in_license:
             # All comments in the license section should be printed without modification
             if "//" in line:
-                sys.stdout.write(line)
+                out.write(line)
                 continue
             # if in license and the current line is not a comment then 
             # end the license section
@@ -50,7 +60,7 @@ def filter_bsv():
                                  """, re.X)
         if comment_re.match(line):
             # if a section break found then print the line without modification
-            sys.stdout.write(line)
+            out.write(line)
             # if beginning of section break comment then set in_section_break to 1
             # if end of section break comment then set in_section_break to 0
             in_section_break = in_section_break ^ 1
@@ -58,7 +68,7 @@ def filter_bsv():
         if in_section_break:
             # All comments in section break comment should be printed without modification
             if "//" in line:
-                sys.stdout.write(line)
+                out.write(line)
                 continue
         
 
@@ -75,7 +85,7 @@ def filter_bsv():
             line = re.sub(r'//', r'///', line)
             important_comment = 1
             documented_construct = 1   
-            sys.stdout.write(line)
+            out.write(line)
             continue
 
         if important_comment:
@@ -86,7 +96,7 @@ def filter_bsv():
                                      """, re.X)
             if comment_re.search(line):
                 line = re.sub(r'//', r'///', line)
-                sys.stdout.write(line)
+                out.write(line)
                 continue
              
         important_comment = 0
@@ -247,7 +257,22 @@ def filter_bsv():
                 in_struct = 0;
                 documented_construct = 0
 
-        sys.stdout.write(line)
-    
-filter_bsv()
-    
+        out.write(line)
+    out.close()
+
+if __name__=='__main__':
+    exename = os.path.abspath(sys.argv[0])
+    xbsvdir = os.path.dirname(exename)
+    namespace = argparser.parse_args()
+    print namespace
+    if namespace.outdir and not os.path.exists(namespace.outdir):
+        os.makedirs(namespace.outdir)
+    for bsvfile in namespace.bsvfile:
+        if not namespace.outdir:
+            ofile = bsvfile.replace('.bsv', '.java')
+        else:
+            basename = os.path.basename(bsvfile).replace('.bsv', '.java')
+            print basename
+            ofile = os.path.join(namespace.outdir, basename)
+        print ofile
+        filter_bsv(bsvfile, ofile)
