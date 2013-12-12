@@ -1,6 +1,10 @@
 
 all: parsetab.py
 
+docs:
+	./scripts/bsv.filter -d java bsv/*.bsv
+	doxygen Doxyfile
+
 BOARD=zedboard
 
 parsetab.py: syntax.py
