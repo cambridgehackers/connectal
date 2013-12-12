@@ -36,7 +36,7 @@ void dump(const char *prefix, char *buf, size_t len)
 
 class TestDMAIndication : public DMAIndication
 {
-  virtual void reportStateDbg(DmaDbgRec& rec){
+  virtual void reportStateDbg(const DmaDbgRec& rec){
     fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void configResp(unsigned long channelId){
@@ -168,16 +168,16 @@ int main(int argc, const char **argv)
     fprintf(stderr, "flush and invalidate complete\n");
       
     // write channel 0 is copy destination
-    dma->configChan(1, 0, ref_dstAlloc, 16);
+    dma->configChan(ChannelType_Write, 0, ref_dstAlloc, 16);
     sem_wait(&conf_sem);
     // read channel 0 is copy source
-    dma->configChan(0, 0, ref_srcAlloc, 16);
+    dma->configChan(ChannelType_Read, 0, ref_srcAlloc, 16);
     sem_wait(&conf_sem);
     // read channel 1 is readWord source
-    dma->configChan(0, 1, ref_srcAlloc, 2);
+    dma->configChan(ChannelType_Read, 1, ref_srcAlloc, 2);
     sem_wait(&conf_sem);
     // write channel 1 is Bluescope destination
-    dma->configChan(1, 1, ref_bsAlloc, 2);
+    dma->configChan(ChannelType_Write, 1, ref_bsAlloc, 2);
     sem_wait(&conf_sem);
 
     fprintf(stderr, "starting mempcy numWords:%d\n", numWords);
