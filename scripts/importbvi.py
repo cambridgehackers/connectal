@@ -80,7 +80,7 @@ def parse_verilog(filename):
                 break
             masterlist.append(f)
 
-def generate_interface(ifname, ilist):
+def generate_interface(ifname, paramval, ilist):
     print('interface ' + ifname + ';')
     for item in ilist:
         itemlen = '1'
@@ -93,7 +93,7 @@ def generate_interface(ifname, ilist):
         elif item[0] == 'inout':
             print('    interface Inout#(Bit#('+itemlen+'))     '+item[-1].lower()+';')
         elif item[0] == 'interface':
-            print('    interface '+item[1]+'     '+item[2].lower()+';')
+            print('    interface '+item[1]+ paramval +'     '+item[2].lower()+';')
     print('endinterface')
 
 def regroup_items(ifname, masterlist):
@@ -126,6 +126,9 @@ def regroup_items(ifname, masterlist):
                 fieldname = m.group(2)
             groupname = m.group(1)
             itemname = groupname + indexname
+            if itemname.lower() in ['event']:
+                itemname = itemname + '_';
+            #fieldname = fieldname + '_';
             interfacename = ifname[0].upper() + ifname[1:].lower() + groupname[0].upper() + groupname[1:].lower()
             if not commoninterfaces.get(interfacename):
                 commoninterfaces[interfacename] = {}
@@ -135,14 +138,17 @@ def regroup_items(ifname, masterlist):
             foo = item[:-1]
             foo.append(fieldname)
             commoninterfaces[interfacename][indexname].append(foo)
+    return newlist
+
+def generate_inter_declarations(paramlist, paramval):
+    global commoninterfaces
     for k, v in sorted(commoninterfaces.items()):
         print('interface', k, file=sys.stderr)
         for kuse, vuse in sorted(v.items()):
             if kuse == '' or kuse == '0':
-                generate_interface(k, vuse);
+                generate_interface(k+paramlist, paramval, vuse);
             else:
                 print('     ', kuse, json.dumps(vuse), file=sys.stderr)
-    return newlist
 
 def generate_instance(item, indent, prefix):
     global enindex
@@ -160,7 +166,7 @@ def generate_instance(item, indent, prefix):
     elif item[0] == 'inout':
         print(indent + 'ifc_inout '+item[-1].lower()+'('+ prefix + item[-1]+');')
     elif item[0] == 'interface':
-        print(indent + 'interface      '+item[2].lower()+';')
+        print(indent + 'interface '+item[1]+'     '+item[2].lower()+';')
         temp = commoninterfaces[item[1]].get('0')
         if not temp:
             temp = commoninterfaces[item[1]]['']
@@ -194,9 +200,11 @@ def translate_verilog(ifname):
         paramlist = paramlist + ', numeric type ' + item
     if paramlist != '':
         paramlist = '#(' + paramlist[2:] + ')'
-    generate_interface(ifname + paramlist, masterlist)
+    paramval = paramlist.replace('numeric type ', '')
+    generate_inter_declarations(paramlist, paramval)
+    generate_interface(ifname + paramlist, paramval, masterlist)
     print('import "BVI" '+modulename + ' =')
-    print('module mk'+ifname+paramlist.replace('numeric type', 'int')+'('+ifname+paramlist.replace('numeric type ', '')+');')
+    print('module mk'+ifname+paramlist.replace('numeric type', 'int')+'('+ifname+ paramval +');')
     for item in masterlist:
         if item[0] == 'parameter':
             print('    parameter ' + item[1] + ' = ' + item[2] + ';')
