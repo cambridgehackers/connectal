@@ -233,18 +233,18 @@ module mkBsimDMA#(DMAIndication indication)(BsimDMA#(t))
    endrule
    
    interface DMARequest request;
-      method Action configChan(Bit#(32) rc, Bit#(32) channelId, Bit#(32) pref, Bit#(32) __ignored);
-	 if (rc == 0)
+      method Action configChan(ChannelType rc, Bit#(32) channelId, Bit#(32) pref, Bit#(32) __ignored);
+	 if (rc == Read)
 	    reader.read.configChan(pack(truncate(channelId)), pref);
-	 else if (rc == 1)
+	 else
 	    writer.write.configChan(pack(truncate(channelId)), pref);
 	 indication.configResp(channelId);
       endmethod
-      method Action getStateDbg(Bit#(32) rc);
+      method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
-	 if (rc == 0)
+	 if (rc == Read)
 	    rv <- reader.read.dbg;
-	 else if (rc == 1)
+	 else
 	    rv <- writer.write.dbg;
 	 indication.reportStateDbg(rv);
       endmethod
