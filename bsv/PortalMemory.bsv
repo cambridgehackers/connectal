@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+package PortalMemory;
 
 import GetPut::*;
 import Vector::*;
@@ -38,6 +39,9 @@ typedef struct {
    Bit#(32) w;
    } DmaDbgRec deriving(Bits);
 
+//
+// @brief Events sent from a DMA engine
+//
 interface DMAIndication;
    method Action reportStateDbg(DmaDbgRec rec);
    method Action configResp(Bit#(32) channelId);
@@ -45,6 +49,7 @@ interface DMAIndication;
    method Action parefResp(Bit#(32) v);
 endinterface
 
+// @brief Configuration interface to DMA engine
 interface DMARequest;
    method Action configChan(ChannelType rc, Bit#(32) channelId, Bit#(32) pref, Bit#(32) bsz);
    method Action getStateDbg(ChannelType rc);
@@ -52,8 +57,11 @@ interface DMARequest;
    method Action paref(Bit#(32) pref, Bit#(32) size);
 endinterface
 
+// Instances of type class PortalMemory implement sglist and paref methods
 typeclass PortalMemory#(type a);
 endtypeclass
 
 instance PortalMemory#(DMARequest);
 endinstance
+
+endpackage

@@ -40,11 +40,30 @@ function WriteChan#(t) mkWriteChan(Put#(t) wd, Put#(Bit#(40)) wr, Get#(void) d);
 	   endinterface);
 endfunction
 
+//
+// @brief A channel for reading an object of type t from DRAM
+//
+//
+// Put the index of the next object desired to the readReq interface
+//
+// @param index The number of the next object to read
+//
+// The virtual address of the object will be 
+//     base + index*objectsize
+// where objectsize is in bytes and base is
+// configured via the configChan method
+//
+// Get the object from the readData interface
+//
 interface ReadChan#(type t);
-   interface Get#(t)        readData;
+   //
+   // Returns the next object
+   //
    interface Put#(Bit#(40)) readReq;
+   interface Get#(t)        readData;
 endinterface
 
+// @brief A channel for writing an object of type t from DRAM
 interface WriteChan#(type t);
    interface Put#(t)        writeData;
    interface Put#(Bit#(40)) writeReq;

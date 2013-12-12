@@ -45,8 +45,15 @@ typedef struct {
    Bit#(32) offset;
    } SGListPointer deriving (Bits);
 
+//
+// @brief SGListStreamer manages virtual to physical translations via scatter-gather lists
+// 
 interface SGListStreamer;
-   method Action sglist(Bit#(32) off, Bit#(40) addr, Bit#(32) len);
+   // @brief Add a scatter-gather list entry for a memory object
+   // @param segoff Offset into the object described by this segment
+   // @param addr Physical address of this segment of the object
+   // @param len  Length of this segment of the object
+   method Action sglist(Bit#(32) segoff, Bit#(40) physaddr, Bit#(32) len);
    method Action loadCtx(SGListId id);
    method ActionValue#(Bit#(40)) nextAddr(Bit#(4) burstLen);
    method Action dropCtx();
