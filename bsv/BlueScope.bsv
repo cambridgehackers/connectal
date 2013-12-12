@@ -28,7 +28,7 @@ import BRAMFIFO::*;
 import GetPut::*;
 
 import PortalMemory::*;
-import PortalSMemory::*;
+import PortalRMemory::*;
 import ClientServer::*;
 
 interface BlueScopeIndication;
@@ -52,20 +52,21 @@ endinterface
 
 typedef enum { Idle, Enabled, Triggered } State deriving (Bits,Eq);
 
-module mkBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndication indication)(BlueScopeInternal);
+module mkBlueScopeInternal#(Integer samples, WriteChan#(Bit#(64)) wchan, BlueScopeIndication indication)(BlueScopeInternal);
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
    let rv  <- mkSyncBlueScopeInternal(samples, wchan, indication, clk, rst, clk,rst);
    return rv;
 endmodule
 
-module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScopeInternal);
+module mkSyncBlueScopeInternal#(Integer samples, WriteChan#(Bit#(64)) wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScopeInternal);
    SyncFIFOIfc#(Bit#(64)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
    Reg#(Bit#(64))    maskReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(64))   valueReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
    Reg#(State)                stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
+   Reg#(Bit#(40))       writeOffsetReg <- mkReg(0,    clocked_by dClk, reset_by dRst);
    //FIFOF#(void)                  tfifo <- mkFIFOF(    clocked_by sClk, reset_by sRst);
    SyncPulseIfc             startPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);
@@ -82,7 +83,8 @@ module mkSyncBlueScopeInternal#(Integer samples, WriteChan wchan, BlueScopeIndic
    endrule
 
    rule writeReq if (dfifo.notEmpty);
-      wchan.writeReq.put(?);
+      wchan.writeReq.put(writeOffsetReg);
+      writeOffsetReg <= writeOffsetReg + 2;
    endrule
    
    rule  writeData;
