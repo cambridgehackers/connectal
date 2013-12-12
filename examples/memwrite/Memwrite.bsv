@@ -25,9 +25,9 @@ import BRAMFIFO::*;
 import GetPut::*;
 import AxiClientServer::*;
 import PortalMemory::*;
-import PortalSMemory::*;
-import AxiSDMA::*;
-import BsimSDMA::*;
+import PortalRMemory::*;
+import AxiRDMA::*;
+import BsimRDMA::*;
 
 
 
@@ -59,15 +59,16 @@ endinterface
 module mkMemwriteRequest#(MemwriteIndication indication)(MemwriteRequest);
 
 `ifdef BSIM
-   BsimDMA             dma <- mkBsimDMA(indication.dmaIndication);
+   BsimDMA#(Bit#(64))     dma <- mkBsimDMA(indication.dmaIndication);
 `else
-   AxiDMA              dma <- mkAxiDMA(indication.dmaIndication);
+   AxiDMA#(Bit#(64))      dma <- mkAxiDMA(indication.dmaIndication);
 `endif
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
+   Reg#(Bit#(40)) streamWrOff <- mkReg(0);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
 
    // dma write channel 0 is reserved for memwrite write path
-   WriteChan dma_stream_write_chan = dma.write.writeChannels[0];
+   WriteChan#(Bit#(64)) dma_stream_write_chan = dma.write.writeChannels[0];
    
    rule resp;
       dma_stream_write_chan.writeDone.get;
@@ -79,10 +80,11 @@ module mkMemwriteRequest#(MemwriteIndication indication)(MemwriteRequest);
    endrule
    
    rule writeReq(streamWrCnt > 0);
-      streamWrCnt <= streamWrCnt-8;
-      dma_stream_write_chan.writeReq.put(?);
+      streamWrCnt <= streamWrCnt-1;
+      dma_stream_write_chan.writeReq.put(streamWrOff);
+      streamWrOff <= streamWrOff + 1;
       indication.coreIndication.writeReq(streamWrCnt);
-      if (streamWrCnt == 8)
+      if (streamWrCnt == 1)
 	 indication.coreIndication.writeDone(srcGen);
    endrule
 

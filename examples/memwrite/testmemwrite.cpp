@@ -25,7 +25,7 @@ void dump(const char *prefix, char *buf, size_t len)
 
 class TestDMAIndication : public DMAIndication
 {
-  virtual void reportStateDbg(DmaDbgRec& rec){
+  virtual void reportStateDbg(const DmaDbgRec& rec){
     fprintf(stderr, "DMA::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void configResp(unsigned long channelId){
@@ -117,7 +117,7 @@ void parent(int rd_sock, int wr_sock)
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   // write channel 0 is write source
-  dma->configChan(1, 0, ref_dstAlloc, 8);
+  dma->configChan(ChannelType_Write, 0, ref_dstAlloc, 8);
   sem_wait(&conf_sem);
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);
