@@ -87,9 +87,9 @@ def generate_interface(ifname, paramval, ilist):
         if len(item) > 2:
             itemlen = item[1]
         if item[0] == 'input':
-            print('    method Bit#('+itemlen+')     '+item[-1].lower()+'();')
-        elif item[0] == 'output':
             print('    method Action      '+item[-1].lower()+'(Bit#('+itemlen+') v);')
+        elif item[0] == 'output':
+            print('    method Bit#('+itemlen+')     '+item[-1].lower()+'();')
         elif item[0] == 'inout':
             print('    interface Inout#(Bit#('+itemlen+'))     '+item[-1].lower()+';')
         elif item[0] == 'interface':
@@ -157,11 +157,11 @@ def generate_instance(item, indent, prefix):
     if len(item) > 2:
         itemlen = item[1]
     if item[0] == 'input':
-        print(indent + 'method '+ prefix + item[-1] + ' ' + item[-1].lower()+'();')
-        methodlist = methodlist + ', ' + item[-1].lower()
-    elif item[0] == 'output':
         print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) en'+str(enindex)+');')
         enindex = enindex + 1
+        methodlist = methodlist + ', ' + item[-1].lower()
+    elif item[0] == 'output':
+        print(indent + 'method '+ prefix + item[-1] + ' ' + item[-1].lower()+'();')
         methodlist = methodlist + ', ' + item[-1].lower()
     elif item[0] == 'inout':
         print(indent + 'ifc_inout '+item[-1].lower()+'('+ prefix + item[-1]+');')
