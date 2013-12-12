@@ -236,7 +236,7 @@ class MethodMixin:
         else:
             return int
     def formalParameters(self, params):
-        return [ '%s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
+        return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
     def emitCDeclaration(self, f, indentation=0, namespace=''):
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
@@ -326,7 +326,7 @@ class MethodMixin:
                 if off:
                     field = '(%s<<%s)' % (field, off)
                 if e[3].bitWidth() > 64:
-                    field = '(%s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e[3].bitWidth())
+                    field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, e[3].bitWidth())
                 word.append(field)
                 off = off+e[1]-e[2]
             return '        buff[i++] = %s;\n' % (''.join(util.intersperse('|', word)))
