@@ -1,0 +1,253 @@
+#!/usr/bin/python
+# Usage doxyfilter_bsv.psv < infile.bsv > outfile.java
+
+import fileinput
+import sys
+import re
+
+# define groups to bundle interfaces and modules
+sys.stdout.write("/** @defgroup BSVInterface Interfaces */ ")
+sys.stdout.write("/** @defgroup BSVModule Modules */ ")
+
+def filter_bsv():     
+    processing_module = 0
+    module_start = ""
+    prev_line = ""
+    continue_template = 0
+    important_comment = 0
+    in_interface = 0
+    in_module = 0
+    in_instance = 0
+    in_license = 0
+    in_section_break = 0
+    in_enum = 0
+    in_struct = 0
+    documented_construct = 0
+    
+    for line in fileinput.input():
+        # Skip the license section
+        if "Copyright" in line:
+            # Print the line without modification
+            sys.stdout.write(line)
+            in_license = 1
+            continue
+        if in_license:
+            # All comments in the license section should be printed without modification
+            if "//" in line:
+                sys.stdout.write(line)
+                continue
+            # if in license and the current line is not a comment then 
+            # end the license section
+            in_license = 0
+            important_comment = 0
+            documented_construct = 0
+    
+        # Skip the section break marked by // =============
+        comment_re = re.compile(r"""[\s]*       # white space at the start of the line
+                                    //          # start of the comment
+                                    [\s]*       # one or more white spaces
+                                    ===         # section break marked by a line of =
+                                 """, re.X)
+        if comment_re.match(line):
+            # if a section break found then print the line without modification
+            sys.stdout.write(line)
+            # if beginning of section break comment then set in_section_break to 1
+            # if end of section break comment then set in_section_break to 0
+            in_section_break = in_section_break ^ 1
+            continue
+        if in_section_break:
+            # All comments in section break comment should be printed without modification
+            if "//" in line:
+                sys.stdout.write(line)
+                continue
+        
+
+        # Check if it is the beginning of an important comment 
+        # //<space><End of Line>
+        comment_re = re.compile(r"""[\s]*    # white space before the comment
+                                    //       # start of comment      
+                                    [\s]*    # immediately followed by 0 or more white space
+                                    \n       # end of line
+                                """, re.X)
+        if comment_re.search(line):
+            # if this is the beginning of an important comment then change double slashes to
+            # triple slashes and set important_comment
+            line = re.sub(r'//', r'///', line)
+            important_comment = 1
+            documented_construct = 1   
+            sys.stdout.write(line)
+            continue
+
+        if important_comment:
+            # If inside an important comment then change double slashes to 
+            # triple slashes
+            comment_re = re.compile(r"""[\s]*   # white space before the comment
+                                        //      # start of a comment
+                                     """, re.X)
+            if comment_re.search(line):
+                line = re.sub(r'//', r'///', line)
+                sys.stdout.write(line)
+                continue
+             
+        important_comment = 0
+        #FIXME
+        # Check to see if it is the second highest priority comment 
+        # //<space><text>
+        #comment_re = re.compile(r"""[\s]*   # white space before the comment
+        #                            //      # start of comment
+        #                            [\s]*   # white space before the start of the text
+        #                            (.+)    # comment text
+        #                         """, re.X)
+        #if comment_re.search(line):
+        #    line = re.sub(r'//', r'///', line)
+        
+        # All comments with or without space/newline in the first line
+        # are important within a module or interface
+        if in_module or in_interface or in_instance:
+            comment_re = re.compile(r"""[\s]+   # white space before the comment
+                                        //      # start of comment
+                                        (?!/)   # should not be followed by a 3rd slash
+                                     """, re.X)
+            if comment_re.search(line):
+               line = re.sub(r'//', r'/// ', line)
+    
+        # Replace #() with <> 
+        comment_re = re.compile("""#\(              # start of the template parameter
+                                   ([\w\s,<>]+?)    # non greedy search for template parameters
+                                   \)               # End of the template parameter 
+                                """, re.X)
+        # If the template parameter did not find a closing parantheses in the last line
+        # then process the last line along with this line
+        if continue_template:
+            line = prev_line + line
+            prev_line = ""
+        if re.search(r'#\(', line):
+            prev_line = line
+            continue_template = 1
+            while re.search(r'#\(([\w\s,<>]+?)\)', line):
+                line = re.sub(r'#\(([\w\s,<>]+?)\)', r'<\1>', line)
+                if not re.search(r'#\(', line):
+                    prev_line = ""
+                    continue_template = 0
+        if continue_template:
+            continue
+        
+        # handle interface definitions
+        comment_re = re.compile("""interface\s  # interface keyword followed by white space
+                                   [\w]+        # interface name
+                                   [\s]*        # 0 or more white spaces after the name
+                                   (<           # Start of template
+                                   [\w\s,<>]+   # Template parameters - may be nested
+                                   >)*          # End of template - may not be present and hence the *
+                                   ;            # end of interface declaration statement
+                                """, re.X)
+        if comment_re.search(line):
+            line = re.sub(r'\binterface\b', r'class', line)
+            if documented_construct:
+                line = "/** @ingroup BSVInterface */ " + line
+            line = line.replace(';', ' {');
+            in_interface = 1
+        if re.search(r'endinterface', line):
+            line = line.replace('endinterface', '};', re.DOTALL)
+            in_interface = 0
+            documented_construct = 0
+
+        # handle module definitions
+        comment_re = re.compile("""^(\s)*         # start of string followed by white space
+                                   module(\s)+    # module keyword followed by white spaces
+                                   (\[[\w]+\])*   # [module type] may or may not be present
+                                   [\s]*          # white space
+                                   ([\w]+)        # module name
+                                   (<             # Start of template
+                                   [\w\s,<>]+     # Template parameters - may be nested
+                                   >)*            # End of template may not be present and hence the *
+                                   (\(.*\))*      # interface name may or may not be present on the same line
+                                """, re.X)
+        if comment_re.search(line):
+            line = re.sub(r'\bmodule\b', r'class', line)
+            line = re.sub(r'\[[\w]+\]', r'', line)
+            line = re.sub(r'\n$', ' {\n', line)         # the $ sign denotes the end of line. In case module declaration span multiple lines
+            if documented_construct:
+                line = "/** @ingroup BSVModule */ " + line 
+            line = line.replace(';', '');
+            # remove interface name from the definition
+            line = re.sub(r'\(.*\)', r' ', line)
+            in_module = 1
+
+        # substitute the end module statement with a closing curly brace
+        if re.search(r'endmodule', line):
+            line = line.replace('endmodule', '};', re.DOTALL)
+            in_module = 0
+            documented_construct = 0
+        
+        # handle methods
+        comment_re = re.compile("""^(\s)*       # start of the string followed by white space
+                           method(\s)+          # method keyword followed by white space
+                           ([\w<>,]+)(\s)+       # method type followed by white space
+                           ([\w]+)              # method name
+                           """, re.X)
+        if in_module:
+            if comment_re.search(line):
+                line = re.sub(r'\bmethod\b', r'', line)
+                line = line.replace(';', '');
+                line = re.sub(r'\n', ' {\n', line)
+            line = line.replace('endmethod', '}')
+
+
+        #FIXME        
+        # handle  functions
+        #comment_re = re.compile("""^(\s)*           # start of a string followed by white space
+        #                        function(\s)+       # function keyword followed by white space
+        #                        ([\w<>,]+)(\s)+      # function return type followed by white space
+        #                        ([\w]+)             # function name
+        #                        """, re.X)
+  
+        #if comment_re.search(line):
+        #    if documented_construct:
+        #        line = "/** @ingroup BSVFunctions */ " + line
+        #    line = re.sub(r'\bfunction\b', r'', line)
+        #    line = line.replace(';', '')
+        #    line = re.sub(r'\n', ' {\n', line)
+        #line = line.replace('endfunction', '}')
+        
+
+        # handle the special "deriving" enum case
+        comment_re = re.compile("""^(\s)*           # start of a string followed by white space
+                                typedef(\s)+        # typedef keyword followed by white space
+                                enum(\s)+           # enum keyword followed by white space
+                                """, re.X)
+        if comment_re.search(line):
+            in_enum = 1
+
+        comment_re = re.compile("""(\s)+            # white space
+                                deriving(\s)+       # keyword derving followed by white space 
+                                \([\w,\s]+\)          # Parameters inside parantheses
+                                """, re.X)
+        if in_enum:
+            if comment_re.search(line):
+                line = re.sub(r'deriving(.)*', ';', line)
+                in_enum = 0;
+                documented_construct = 0
+
+        # handle the special "deriving" struct case
+        comment_re = re.compile("""^(\s)*           # start of a string followed by white space
+                                typedef(\s)+        # typedef keyword followed by white space
+                                struct(\s)+         # struct keyword followed by white space
+                                """, re.X)
+        if comment_re.search(line):
+            in_struct = 1
+
+        comment_re = re.compile("""(\s)+            # white space
+                                deriving(\s)+       # keyword derving followed by white space 
+                                \([\w,\s]+\)          # Parameters inside parantheses
+                                """, re.X)
+        if in_struct:
+            if comment_re.search(line):
+                line = re.sub(r'deriving(.)*', ';', line)
+                in_struct = 0;
+                documented_construct = 0
+
+        sys.stdout.write(line)
+    
+filter_bsv()
+    
