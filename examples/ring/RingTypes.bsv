@@ -22,11 +22,6 @@
 
 // types needed by both hardware and software
 
-typedef struct{
-   Bit#(32) a;
-   Bit#(32) b;
-   } S0 deriving (Bits);
-
 typedef struct {
    Bit#(32) cmd;
    Bit#(32) tag;

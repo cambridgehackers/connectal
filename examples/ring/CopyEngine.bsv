@@ -26,7 +26,7 @@ import ClientServer::*;
 import PortalRMemory::*;
 import RingTypes::*;
 
-module mkCopyEngine#(ReadChan#(S0) copy_read_chan, WriteChan#(S0) copy_write_chan) ( Server#(CommandStruct, Bit#(32)));
+module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) copy_write_chan) ( Server#(CommandStruct, Bit#(32)));
     FIFO#(CommandStruct) f_in  <- mkFIFO;    // to buffer incoming requests
     FIFO#(Bit#(32)) f_out <- mkFIFO;    // to buffer outgoing responses
     Reg#(Bit#(16)) copyReadCount <- mkReg(0);
@@ -44,7 +44,7 @@ module mkCopyEngine#(ReadChan#(S0) copy_read_chan, WriteChan#(S0) copy_write_cha
     endrule
     
     rule copyReadWriteRule (copyBusy);
-       S0 data <- copy_read_chan.readData.get;
+       let data <- copy_read_chan.readData.get;
        $display("copyReadWrite addr %h", copyWriteAddr);
        copy_write_chan.writeReq.put(copyWriteAddr);
        copy_write_chan.writeData.put(data);

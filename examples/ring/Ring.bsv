@@ -41,7 +41,7 @@ import CopyEngine::*;
 
 interface CoreRequest;
    method Action readWord(Bit#(40) addr);
-   method Action writeWord(Bit#(40) addr, S0 data);
+   method Action writeWord(Bit#(40) addr, Bit#(64) data);
    method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
    method Action get(Bit#(1) cmd, Bit#(2) regist);
    method Action hwenable(Bit#(1) en);
@@ -50,8 +50,8 @@ interface CoreRequest;
 endinterface
 
 interface CoreIndication;
-   method Action readWordResult(S0 v);
-   method Action writeWordResult(S0 v);
+   method Action readWordResult(Bit#(64) v);
+   method Action writeWordResult(Bit#(64) v);
    method Action setResult(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
    method Action getResult(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
    method Action completion(Bit#(32) command, Bit#(32) tag);
@@ -71,16 +71,16 @@ endinterface
 module mkRingRequest#(RingIndication indication)(RingRequest);
    
 `ifdef BSIM
-   BsimDMA#(S0)  dma <- mkBsimDMA(indication.dmaIndication);
+   BsimDMA#(Bit#(64))  dma <- mkBsimDMA(indication.dmaIndication);
 `else
-   AxiDMA#(S0)   dma <- mkAxiDMA(indication.dmaIndication);
+   AxiDMA#(Bit#(64))   dma <- mkAxiDMA(indication.dmaIndication);
 `endif
 
    Server#(CommandStruct, Bit#(32)) ce <- mkCopyEngine(dma.read.readChannels[2], dma.write.writeChannels[2]);
 
 
-   ReadChan#(S0)   dma_read_chan = dma.read.readChannels[0];
-   WriteChan#(S0) dma_write_chan = dma.write.writeChannels[0];
+   ReadChan#(Bit#(64))   dma_read_chan = dma.read.readChannels[0];
+   WriteChan#(Bit#(64)) dma_write_chan = dma.write.writeChannels[0];
  //  ReadChan#(CommandStruct) cmd_read_chan = dma.read.readChannels[1];
 
 
@@ -149,7 +149,7 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
 	 dma_read_chan.readReq.put(addr);
       endmethod
    
-      method Action writeWord(Bit#(40) addr, S0 data);
+      method Action writeWord(Bit#(40) addr, Bit#(64) data);
 	 dma_write_chan.writeReq.put(addr);
 	 dma_write_chan.writeData.put(data);
       endmethod  
