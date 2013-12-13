@@ -5,18 +5,6 @@ import util
 import re
 import syntax
 
-busHandlers={}
-
-import busdefs.define_ddr
-busdefs.define_ddr.Register(busHandlers)
-import busdefs.define_hdmi
-busdefs.define_hdmi.Register(busHandlers)
-import busdefs.define_leds
-busdefs.define_leds.Register(busHandlers)
-import busdefs.define_xadc
-busdefs.define_xadc.Register(busHandlers)
-import busdefs.define_imageon
-busdefs.define_imageon.Register(busHandlers)
 
 edkversion = '14.3'
 edkversions = ['14.3', '14.4']
