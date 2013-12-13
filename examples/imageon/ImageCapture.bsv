@@ -33,8 +33,8 @@ import Leds::*;
 import Imageon::*;
 import IserdesDatadeser::*;
 import HDMI::*;
-import AxiSDMA::*;
-import PortalSMemory::*;
+import AxiRDMA::*;
+import PortalRMemory::*;
 import PortalMemory::*;
 import BlueScope::*;
 import SensorToVideo::*;
@@ -86,8 +86,8 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     ISerdes serdes <- mkISerdes(defaultClock, defaultReset, indication.idIndication,
         clocked_by imageon_clock, reset_by imageon_reset);
-    AxiDMA dma <- mkAxiDMA(indication.dmaIndication);
-    WriteChan dma_debug_write_chan = dma.write.writeChannels[1];
+    AxiDMA#(Bit#(64)) dma <- mkAxiDMA(indication.dmaIndication);
+    WriteChan#(Bit#(64)) dma_debug_write_chan = dma.write.writeChannels[1];
     BlueScopeInternal bsi <- mkSyncBlueScopeInternal(32, dma_debug_write_chan, indication.bsIndication,
 		hdmi_clock, hdmi_reset, defaultClock, defaultReset);
     SPI#(Bit#(26)) spiController <- mkSPI(1000);

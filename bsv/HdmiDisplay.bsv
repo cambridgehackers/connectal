@@ -28,9 +28,9 @@ import PCIE::*;
 import GetPutWithClocks::*;
 import Connectable::*;
 import PortalMemory::*;
-import PortalSMemory::*;
-import AxiSDMA::*;
-import BsimSDMA::*;
+import PortalRMemory::*;
+import AxiRDMA::*;
+import BsimRDMA::*;
 import AxiMasterSlave::*;
 import AxiClientServer::*;
 import HDMI::*;
@@ -68,25 +68,25 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
     Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
 `ifdef BSIM
-    BsimDMA    dma <- mkBsimDMA(indication.dmaIndication);
+    BsimDMA#(Bit#(64))    dma <- mkBsimDMA(indication.dmaIndication);
 `else
-    AxiDMA     dma <- mkAxiDMA(indication.dmaIndication);
+    AxiDMA#(Bit#(64))     dma <- mkAxiDMA(indication.dmaIndication);
 `endif
-    ReadChan dma_stream_read_chan = dma.read.readChannels[0];
+    ReadChan#(Bit#(64)) dma_stream_read_chan = dma.read.readChannels[0];
     Reg#(Int#(32)) referenceReg <- mkReg(-1);
-    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
+    Reg#(Bit#(40)) streamRdOff <- mkReg(0);
 
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
         vsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
    
     rule readReq if(referenceReg >= 0);
-        streamRdCnt <= streamRdCnt - 16;
-        dma_stream_read_chan.readReq.put(?);
+        streamRdOff <= streamRdOff + 1;
+        dma_stream_read_chan.readReq.put(streamRdOff);
     endrule
     mkConnectionWithClocks(dma_stream_read_chan.readData, hdmiGen.request, defaultClock, defaultReset, hdmi_clock, hdmi_reset);
 
     rule vsyncrule if (vsyncPulse.pulse() && referenceReg >= 0);
-        dma.request.configChan(0, 0, pack(referenceReg), 16);
+        dma.request.configChan(Read, 0, pack(referenceReg), 16);
     endrule
 
     rule bozobit_rule;

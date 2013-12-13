@@ -41,14 +41,14 @@ test-loadstore/loadstore.bit.bin.gz: examples/loadstore/LoadStore.bsv
 test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
 	rm -fr test-hdmi
 	mkdir test-hdmi
-	./genxpsprojfrombsv -B $(BOARD) -p test-hdmi -b HdmiDisplay bsv/HdmiDisplay.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-hdmi -x HDMI -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/HDMI.bsv bsv/PortalMemory.bsv
 	cd test-hdmi; make verilog && make bits && make hdmidisplay.bit.bin.gz
 	echo test-hdmi built successfully
 
 test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	rm -fr test-imageon
 	mkdir test-imageon
-	./genxpsprojfrombsv -B zc702 -p test-imageon -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv
+	./genxpsprojfrombsv -B zc702 -p test-imageon -x ImageonVita -x HDMI -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv bsv/Imageon.bsv bsv/HDMI.bsv bsv/IserdesDatadeser.bsv
 	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
 	echo test-imageon built successfully
 
