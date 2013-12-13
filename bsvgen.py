@@ -300,6 +300,10 @@ proxyCtrlTemplate='''
         outOfRangeReadCountReg <= outOfRangeReadCountReg+1;
     endrule
 
+%(startIndicationMethods)s
+%(indicationMethods)s
+%(endIndicationMethods)s
+
     interface ReadOnly interrupt;
         method Bool _read();
             return (interruptEnableReg && interruptStatus);
@@ -358,115 +362,6 @@ indicationMethodTemplate='''
         responseFiredWires[%(channelNumber)s].send();
     endmethod'''
 
-projectBldTemplate='''
-[DEFAULT]
-bsc-compile-options:           	-aggressive-conditions -show-schedule -keep-inlined-boundaries -keep-fires -steps-warn-interval 1000000 -suppress-warnings G0046 -p +%(srcdirs)s:%(projectdir)s:%(projectdir)s/sources:%(projectdir)s/sources/%(base)s:../bsv
-bsc-rts-options:               	-K1024M
-bsc-link-options:              	-keep-fires -parallel-sim-link 8
-bsv-source-directories:        	.
-c++-header-aliases
-verilog-simulator:             	cvc
-log-directory:                 	.build/${BUILD_TARGET}/logs
-c++-header-directory:          	.build/${BUILD_TARGET}/cpp
-verilog-directory:             	.build/${BUILD_TARGET}/rtl
-binary-directory:              	.build/${BUILD_TARGET}/obj
-simulation-directory:          	.build/${BUILD_TARGET}/sim
-info-directory:                	.build/${BUILD_TARGET}/info
-exe-file:                      	.build/${BUILD_TARGET}/dut
-scemi-parameters-file:         	.build/${BUILD_TARGET}/scemi.params
-altera-directory:              	.build/${BUILD_TARGET}/fpga
-xilinx-directory:              	.build/${BUILD_TARGET}/fpga
-design-editor-output-directory: .build/${BUILD_TARGET}/rtl_mod
-design-editor-output-params:    .build/${BUILD_TARGET}/scemi.params
-workstation-project-file:       ${BUILD_TARGET}.bspec
-design-editor-edit-params
-design-editor-options:          --batch -bsvmodule mk%(Base)sPcieTop --blackbox 4
-xilinx-use-planahead
-xilinx-use-precompiled
-scemi-tcp-port:                 4321
-top-module:                     mk%(Base)sPcieTop
-
-[mv_vlog_lib]
-hide-target
-run-shell-mv_vlog_lib-0:        mv ${PROJECT_ROOT}/directc_*.so .build/${BUILD_TARGET}/.
-run-shell-mv_vlog_lib-1:        cd ${PROJECT_ROOT}/.build/${BUILD_TARGET} && ln -s ../../.build .build
-
-[sw]
-hide-target
-run-shell-sw-0:                 cd sw && make clean && make
-run-shell-sw-1:                 cd sw/bluenocd && make clean && make
-
-[dut]
-hide-target
-verilog-define:                 BSV_TIMESCALE=1ns/100ps BSV_DUMP_LEVEL=0
-scemi-type:                     TCP
-create-workstation-project
-
-[bsim_dut]
-hide-target
-extends-target:                 dut
-top-file:                       ./Simulation.bsv
-build-for:                      bluesim
-bsv-define:                     BSIM SIMULATION
-
-[kc705_dut]
-hide-target
-extends-target:                 dut
-top-file:                       ./sources/%(base)s/%(Base)sPcieTop.bsv
-build-for:                      kc705
-scemi-clock-period:             30.0
-bsc-compile-options:            -D Kintex7 -opt-undetermined-vals -unspecified-to 0 -remove-dollar -verilog-filter ${BLUESPECDIR}/bin/basicinout
-scemi-type:                     PCIE_KINTEX7
-sodimm-style:                   DDR3
-bsv-define:                     DDR3
-
-[vc707_dut]
-hide-target
-extends-target:                 dut
-top-file:                       ./sources/%(base)s/%(Base)sPcieTop.bsv
-build-for:                      vc707
-scemi-clock-period:             30.0
-bsc-compile-options:            -D Virtex7 -opt-undetermined-vals -unspecified-to 0 -remove-dollar -verilog-filter ${BLUESPECDIR}/bin/basicinout
-scemi-type:                     PCIE_VIRTEX7
-sodimm-style:                   DDR3
-bsv-define:                     DDR3
-
-[tb_tcl]
-hide-target
-scemi-tb
-uses-tcl
-build-for:                      c++
-c++-options:                    -I${BLUESPECDIR}/SceMi/bsvxactors -I${BLUESPECDIR}/tcllib/include -g -O0
-c++-files:                      ${PROJECT_ROOT}/sw/TclTb.cpp ${BLUESPECDIR}/tcllib/include/bsdebug_common.cpp
-shared-lib:                     .build/${BUILD_TARGET}/libbsdebug.so
-
-[kc705_tb]
-hide-target
-extends-target:                 tb_tcl
-top-file:                       ./sources/%(base)s/%(Base)sPcieTop.bsv
-post-targets:                   sw
-scemi-type:                     PCIE_KINTEX7
-
-[vc707_tb]
-hide-target
-extends-target:                 tb_tcl
-top-file:                       ./sources/%(base)s/%(Base)sPcieTop.bsv
-post-targets:                   sw
-scemi-type:                     PCIE_VIRTEX7
-
-################################################################################
-[bluesim]
-sub-targets:                    bsim_dut bsim_tb
-
-[verilog]
-sub-targets:                    vlog_dut vlog_tb
-
-[kc705]
-sub-targets:                    kc705_dut kc705_tb
-
-[vc707]
-sub-targets:                    vc707_dut vc707_tb
-'''
 
 mkHiddenWrapperInterfaceTemplate='''
 %(mutexRuleList)s
@@ -643,20 +538,6 @@ class InterfaceMixin:
         #print [ p.name for p in m.params if p.type.name == 'Clock']
         return [ p.name for p in m.params if p.type.name == 'Clock']
 
-    def writeProjectBld(self,projectdirname,srcdirs=[]):
-        assert(self.top and (not self.isIndication))
-        fname = os.path.join(projectdirname, 'project.bld')
-	f = util.createDirAndOpen(fname, 'w')
-        print 'Writing project.bld file ', fname
-        base = self.name.replace('Request','')                           
-        subst = { 'Base': base, 'base': base.lower(), 'projectdir': os.path.abspath(projectdirname)}
-        if srcdirs:
-            subst['srcdirs'] = ':%s' % ':'.join([os.path.abspath(srcdir) for srcdir in srcdirs])
-        else:
-            subst['srcdirs'] = ''
-        f.write(projectBldTemplate % subst)
-	f.close()
-
     def substs(self,suffix,expose):
         name = "%s%s"%(self.name,suffix)
         dutName = util.decapitalize(name)
@@ -695,7 +576,9 @@ class InterfaceMixin:
             'indicationMethodDecls' :''.join(indicationMethodDecls),
             'indicationChannelCount': self.channelCount,
             'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
-            'hiddenWrapper' : "%sStatus" % name}
+            'hiddenWrapper' : "%sStatus" % name,
+            'startIndicationMethods' : '' if not expose else '    interface %s ifc;' % self.name,
+            'endIndicationMethods' : '' if not expose else '    endinterface'}
 
         substs['axiState'] = axiStateTemplate % substs
         substs['axiCtrlIfc'] = axiCtrlIfcTemplate % substs

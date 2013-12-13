@@ -21,7 +21,7 @@ AST.EnumElement.__bases__ += (cppgen.EnumElementMixin,)
 AST.Enum.__bases__ += (cppgen.EnumMixin,bsvgen.EnumMixin)
 AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
-AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin,xpsgen.InterfaceMixin)
+AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
 
 supported_boards = ['zedboard', 'zc702', 'kc705', 'vc707']
 supported_os = ['android', 'ubuntu']
@@ -356,26 +356,6 @@ if __name__=='__main__':
         i.ind.emitBsvWrapper(bsv, "ProxyStatus",False)
         i.emitBsvProxy(bsv, "Proxy",True)
         close_bsv_package(bsv,pname)
-        
-    assert(False)
-
-    if (boardname == 'kc705' or boardname == 'vc707'):
-        pcie_name = os.path.join(project_dir, 'sources', namespace.interface.lower(),
-                                 '%sPcieTop.bsv' % util.capitalize(namespace.interface))
-        topRequestIfc.writeProjectBld(project_dir, srcdirs)
-    else: # Zynq platform
-        topRequestIfc.writeTopVerilog(topverilogname)
-        topRequestIfc.writeXdc(xdcname, boardname)
-
-    if os != 'android':
-        topRequestIfc.writeImpactCmd(os.path.join(project_dir, 'impact.cmd'))
-        topRequestIfc.writeProgramTcl(os.path.join(project_dir, '%s-program.tcl' % namespace.interface.lower()))
-    print 'Writing Android.mk', androidmkname
-    print 'Writing Application.mk', applicationmkname
-    topRequestIfc.writeAndroidMk(androidmkname, applicationmkname)
-    topRequestIfc.writeLinuxMk(linuxmkname, xbsvdir, namespace.source)
-
-    assert(False);
 
     tclname = os.path.join(project_dir, '%s.tcl' % namespace.export.lower())
     tclxprname = os.path.join(project_dir, '%sxpr.tcl' % namespace.export.lower())
@@ -384,24 +364,26 @@ if __name__=='__main__':
     applicationmkname = os.path.join(project_dir, 'jni', 'Application.mk')
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
     linuxmkname = os.path.join(project_dir, 'jni', 'Makefile')
-    
-    topverilogname = os.path.join(project_dir, 'sources', 'top.v')
-    ucfname = os.path.join(project_dir, 'data',
-                           '%s.ucf' % dutname)
-    xdcname = os.path.join(project_dir, 'constraints',
-                           '%s.xdc' % dutname)
+ 
+    if os != 'android':
+        xpsgen.writeImpactCmd(dutname, os.path.join(project_dir, 'impact.cmd'))
+        xpsgen.writeProgramTcl(dutname, os.path.join(project_dir, '%s-program.tcl' % dutname.lower()))
 
+    print 'Writing Android.mk', androidmkname
+    print 'Writing Application.mk', applicationmkname
+    cppgen.writeAndroidMk(dutname, androidmkname, applicationmkname)
+    cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source)
 
     print 'Writing tcl file', tclname
     tcl = util.createDirAndOpen(tclname, 'w')
-    tcl.write(tclfileTemplate % {'dut': namespace.interface.lower(),
-                                 'Dut': util.capitalize(namespace.interface),
+    tcl.write(tclfileTemplate % {'dut': dutname.lower(),
+                                 'Dut': util.capitalize(dutname),
                                  'project_dir': project_dir
                                  })
     tcl.close()
     tcl = util.createDirAndOpen(tclxprname, 'w')
-    tcl.write(tclfileXprTemplate % {'dut': namespace.interface.lower(),
-                                    'Dut': util.capitalize(namespace.interface),
+    tcl.write(tclfileXprTemplate % {'dut': dutname.lower(),
+                                    'Dut': util.capitalize(dutname),
                                     'partname': partname,
                                     'project_dir': project_dir,
                                     'tclfileAdditionalConstraints': '\n'.join([tclfileAdditionalConstraintTemplate
@@ -436,9 +418,9 @@ if __name__=='__main__':
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
     make.write(makefileTemplate % {'corename': corename,
-                                   'dut': namespace.interface.lower(),
-                                   'Dut': util.capitalize(namespace.interface),
-                                   'Top': '%s%s' % (util.capitalize(namespace.interface), topSuffix),
+                                   'dut': dutname.lower(),
+                                   'Dut': util.capitalize(dutname),
+                                   'Top': '%s%s' % (util.capitalize(dutname), topSuffix),
                                    'xbsvdir': xbsvdir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in namespace.bsvfile]
                                                                 + [os.path.join(xbsvdir, 'bsv')]))),

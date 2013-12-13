@@ -169,6 +169,33 @@ public:
 
 
 
+def writeAndroidMk(base, androidmkname, applicationmkname, silent=False):
+        f = util.createDirAndOpen(androidmkname, 'w')
+        className = cName(base)
+        substs = {
+            'ClassName': className,
+            'classname': className.lower()
+        }
+        f.write(androidmk_template % substs)
+        f.close()
+        f = util.createDirAndOpen(applicationmkname, 'w')
+        f.write(applicationmk_template % substs)
+        f.close()
+
+def writeLinuxMk(base, linuxmkname, xbsvdir, sourcefiles):
+        f = util.createDirAndOpen(linuxmkname, 'w')
+        className = cName(base)
+        substs = {
+            'ClassName': className,
+            'classname': className.lower(),
+            'xbsvdir': xbsvdir,
+            'source': ' '.join([os.path.abspath(sf) for sf in sourcefiles]) if sourcefiles else '',
+            'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in sourcefiles]) if sourcefiles else ''
+        }
+        f.write(linuxmakefile_template % substs)
+        f.close()
+
+
 def indent(f, indentation):
     for i in xrange(indentation):
         f.write(' ')
@@ -471,31 +498,7 @@ class InterfaceMixin:
         if emitPutFailed:
             f.write(putFailedTemplate % substitutions)
         f.write(handleMessageTemplate % substitutions)
-    def writeAndroidMk(self, androidmkname, applicationmkname, silent=False):
-        f = util.createDirAndOpen(androidmkname, 'w')
-        className = cName(self.base)
-        substs = {
-            'ClassName': className,
-            'classname': className.lower()
-        }
-        f.write(androidmk_template % substs)
-        f.close()
-        f = util.createDirAndOpen(applicationmkname, 'w')
-        className = cName(self.name)
-        f.write(applicationmk_template % substs)
-        f.close()
-    def writeLinuxMk(self, linuxmkname, xbsvdir, sourcefiles):
-        f = util.createDirAndOpen(linuxmkname, 'w')
-        className = cName(self.base)
-        substs = {
-            'ClassName': className,
-            'classname': className.lower(),
-            'xbsvdir': xbsvdir,
-            'source': ' '.join([os.path.abspath(sf) for sf in sourcefiles]) if sourcefiles else '',
-            'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in sourcefiles]) if sourcefiles else ''
-        }
-        f.write(linuxmakefile_template % substs)
-        f.close()
+
 
 class ParamMixin:
     def cName(self):
