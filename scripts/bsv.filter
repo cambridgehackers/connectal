@@ -269,21 +269,17 @@ if __name__=='__main__':
     exename = os.path.abspath(sys.argv[0])
     xbsvdir = os.path.dirname(exename)
     namespace = argparser.parse_args()
-    print namespace
-    if namespace.bsvfile:
-        sys.stderr.write(','.join(namespace.bsvfile) + '\n')
     if namespace.outdir and not os.path.exists(namespace.outdir):
         os.makedirs(namespace.outdir)
-    if not namespace.bsvfile:
-        filter_bsv(sys.stdin, sys.stdout)
-    for bsvfile in namespace.bsvfile:
-        if not namespace.outdir:
-            ofile = bsvfile.replace('.bsv', '.java')
-        else:
-            basename = os.path.basename(bsvfile).replace('.bsv', '.java')
-            print basename
-            ofile = os.path.join(namespace.outdir, basename)
-        print ofile
-        bsvin = sys.stdin #open(bsvfile, 'r')
-        out = sys.stdout #open(ofile, 'w')
-        filter_bsv(bsvfile, out)
+    if not namespace.outdir:
+        filter_bsv(open(namespace.bsvfile[0], 'r'), sys.stdout)
+    else:
+        for bsvfile in namespace.bsvfile:
+            if not namespace.outdir:
+                ofile = bsvfile.replace('.bsv', '.java')
+            else:
+                basename = os.path.basename(bsvfile).replace('.bsv', '.java')
+                ofile = os.path.join(namespace.outdir, basename)
+            bsvin = open(bsvfile, 'r')
+            out = open(ofile, 'w')
+            filter_bsv(bsvin, out)
