@@ -1,7 +1,9 @@
 
+// bsv libraries
 import Vector::*;
+import FIFO::*;
 
-// libraries
+// portz libraries
 import Directory::*;
 import AxiMasterSlave::*;
 
@@ -17,7 +19,7 @@ import Say::*;
 interface Top;
    interface Axi3SlaveStandard ctrl;
    interface Axi3MasterStandard m_axi;      
-   interface Vector#(4,ReadOnly#(Bool)) interrupts;
+   interface ReadOnly#(Bool) interrupt;
    interface LEDS leds;
 endinterface
 
@@ -50,10 +52,11 @@ module mkZynqTop(Top);
    interrupts_v[1] = dirRespProxy.interrupt;
    interrupts_v[2] = sayWrapper.interrupt;
    interrupts_v[3] = sayProxy.interrupt;
+   let interrupt_mux <- mkInterruptMux(interrupts_v);
    
    interface Axi3Master m_axi = ?;
    interface Axi3Slave ctrl = ctrl_mux;
-   interface Vector interrupts = interrupt_v;
+   interface Vector interrupts = interrupt_mux;
    interface LEDS leds = ?;
 endmodule
 

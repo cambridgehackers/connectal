@@ -202,7 +202,7 @@ class MethodMixin:
         f.write('void %s ( ' % cName(self.name))
         f.write(', '.join(self.formalParameters(self.params)))
         f.write(' )')
-        if (not proxy and not self.aug):
+        if (not proxy):
             f.write('= 0;\n')
         else:
             f.write(';\n')
@@ -416,7 +416,7 @@ class InterfaceMixin:
         meth_name = "putFailed"
         meth_type = AST.Type("Action",[])
         meth_formal_params = [AST.Param("v", AST.Type("Bit",[AST.Type(32,[])]))]
-        self.decls = self.decls + [AST.Method(meth_name, meth_type, meth_formal_params,True)]
+        self.decls = self.decls + [AST.Method(meth_name, meth_type, meth_formal_params)]
     def assignRequestResponseChannels(self, channelNumber=0):
         for d in self.decls:
             if d.__class__ == AST.Method:
@@ -524,7 +524,7 @@ class TypeMixin:
             if self.params[0].numeric() == 32:
                 return 'int'
             else:
-                assert(false)
+                assert(False)
         elif cid == 'Vector':
             return 'bsvvector<%d,%s>' % (self.params[0].numeric(), self.params[1].cName())
         elif cid == 'Action':

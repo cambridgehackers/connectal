@@ -269,42 +269,7 @@ if __name__=='__main__':
     if needs_pcie_7x_v2_1:
         subprocess.call(['make', '-C', xbsvdir, 'xilinx/pcie_7x_v2_1'])
 
-<<<<<<< HEAD
-    tclname = os.path.join(project_dir, '%s.tcl' % namespace.interface.lower())
-    tclxprname = os.path.join(project_dir, '%sxpr.tcl' % namespace.interface.lower())
-    makename = os.path.join(project_dir, 'Makefile')
-
-    applicationmkname = os.path.join(project_dir, 'jni', 'Application.mk')
-    androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
-    linuxmkname = os.path.join(project_dir, 'jni', 'Makefile')
-    hname = os.path.join(project_dir, 'jni', '%s.h' % namespace.interface)
-    cppname = os.path.join(project_dir, 'jni', '%s.cpp' % namespace.interface)
-    topverilogname = os.path.join(project_dir, 'sources', 'top.v')
-    ucfname = os.path.join(project_dir, 'data',
-                           '%s.ucf' % dutname)
-    xdcname = os.path.join(project_dir, 'constraints',
-                           '%s.xdc' % dutname)
-    print 'Writing CPP header', hname
-    h = util.createDirAndOpen(hname, 'w')
-    h.write('#include "portal.h"\n')
-    print 'Writing CPP wrapper', cppname
-    cpp = util.createDirAndOpen(cppname, 'w')
-    cpp.write('#include "%s.h"\n' % namespace.interface)
-    cpp.write('#include <stdio.h>\n')
-    cpp.write('#include <stdlib.h>\n')
-    cpp.write('#include <assert.h>\n')
-
-    ## code generation pass
-    for v in syntax.globaldecls:
-        if (v.type == 'TypeDef'):
-            v.emitCDeclaration(h)
-        #v.emitCImplementation(cpp)
-
-
-    # this is an ugly misuse of typeclassinstance (mdk)
-=======
     # this is an ugly abuse of typeclassinstance
->>>>>>> intermediate checkin
     for v in syntax.globaldecls:
         if (v.type == 'TypeclassInstance' and v.name == 'PortalMemory'):
             assert (len(v.params) == 1)
@@ -384,15 +349,15 @@ if __name__=='__main__':
         i.ind.emitBsvProxy(bsv, "WrapperStatus", False)
         i.emitBsvWrapper(bsv, "Wrapper", True)
         close_bsv_package(bsv,pname)
-
-    assert(False)
-
+        
     for i in hwProxies:
         pname = '%sProxy' % i.name
         bsv = create_bsv_package(pname)
         i.ind.emitBsvWrapper(bsv, "ProxyStatus",False)
         i.emitBsvProxy(bsv, "Proxy",True)
         close_bsv_package(bsv,pname)
+        
+    assert(False)
 
     if (boardname == 'kc705' or boardname == 'vc707'):
         pcie_name = os.path.join(project_dir, 'sources', namespace.interface.lower(),

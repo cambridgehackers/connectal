@@ -404,7 +404,7 @@ def p_parenthesizedFormalParams(p):
 
 def p_methodDecl(p):
     '''methodDecl : TOKMETHOD type VAR parenthesizedFormalParams SEMICOLON'''
-    p[0] = AST.Method(p[3], p[2], p[4],False)
+    p[0] = AST.Method(p[3], p[2], p[4])
 
 def p_interfaceStmt(p):
     '''interfaceStmt : subinterfaceDecl
@@ -551,7 +551,7 @@ def p_methodDef(p):
     returnType = p[2]
     name = p[3]
     params = []
-    p[0] = AST.Method(name, returnType, params,False)
+    p[0] = AST.Method(name, returnType, params)
 
 def p_methodBody(p):
     '''methodBody : expressionStmts endMethod
