@@ -58,53 +58,23 @@ typedef struct {
 } AxiRead#(numeric type data_width, numeric type id_width);
 
 interface AxiMasterCommon#(numeric type data_width, numeric type id_width);
-    method Action             aclk(Bit#(1) v); // common
-    method Bit#(1)            aresetn();      // common
-
-    method Bit#(1)            arvalid();
+    method Action             aclk(Bit#(1) v);
+    method Bit#(1)            aresetn();
     interface Get#(AxiREQ#(id_width)) req_ar;
-    method Action             arready(Bit#(1) v);
-
-    method Bit#(1)            awvalid();
     interface Get#(AxiREQ#(id_width)) req_aw;
-    method Action             awready(Bit#(1) v);
-
-    method Action             rvalid(Bit#(1) v);
     interface Put#(AxiRead#(data_width, id_width)) resp_read;
-    method Bit#(1)            rready();
-
-    method Bit#(1)            wvalid();
     interface Get#(AxiWrite#(data_width, id_width)) resp_write;
-    method Action             wready(Bit#(1) v);
-
-    method Action             bvalid(Bit#(1) v);
     interface Put#(AxiRESP#(id_width)) resp_b;
-    method Bit#(1)            bready();
 endinterface
 
 interface AxiSlaveCommon#(numeric type data_width, numeric type id_width);
-    method Action             aclk(Bit#(1) v); // common
-    method Bit#(1)            aresetn();      // common
-
-    method Action             arvalid(Bit#(1) v);
+    method Action             aclk(Bit#(1) v);
+    method Bit#(1)            aresetn();
     interface Put#(AxiREQ#(id_width)) req_ar;
-    method Bit#(1)            arready();
-
-    method Action             awvalid(Bit#(1) v);
     interface Put#(AxiREQ#(id_width)) req_aw;
-    method Bit#(1)            awready();
-
-    method Action             wvalid(Bit#(1) v);
     interface Put#(AxiWrite#(data_width, id_width)) resp_write;
-    method Bit#(1)            wready();
-
-    method Bit#(1)            rvalid();
     interface Get#(AxiRead#(data_width, id_width)) resp_read;
-    method Action             rready(Bit#(1) v);
-
-    method Bit#(1)            bvalid();
     interface Get#(AxiRESP#(id_width)) resp_b;
-    method Action             bready(Bit#(1) v);
 endinterface
 
 interface AxiSlaveHighSpeed#(numeric type data_width, numeric type id_width);
@@ -144,11 +114,11 @@ endmodule
 
 module mkAxiSlaveWires(AxiSlaveWires);
    Vector#(5, Wire#(Bit#(1))) wires <- replicateM(mkDWire(0));
-   interface Wire arready = wires[0];
-   interface Wire awready = wires[1];
-   interface Wire rvalid = wires[2];
-   interface Wire wready = wires[3];
-   interface Wire bvalid = wires[4];
+   interface Wire arvalid = wires[0];
+   interface Wire awvalid = wires[1];
+   interface Wire rready = wires[2];
+   interface Wire wvalid = wires[3];
+   interface Wire bready = wires[4];
 endmodule
 
 (* always_ready, always_enabled *)
@@ -159,36 +129,32 @@ interface Bidir#(numeric type data_width);
 endinterface
 
 interface PS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
-    interface Vector#(2, Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     can;
-    interface Vector#(2, Pps7Core#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     core;
-    interface Pps7Ddr#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ddr;
-    interface Vector#(4, Pps7Dma#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     dma;
-    interface Vector#(2, Pps7Enet#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     enet;
-    interface Pps7Event#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     event_;
-    interface Pps7Fclk#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fclk;
-    interface Vector#(4, Pps7Fclk_clktrig#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     fclk_clktrig;
-    interface Vector#(4, Pps7Fclk_reset#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     fclk_reset;
-    interface Pps7Fpga#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fpga;
-    interface Pps7Gpio#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     gpio;
-    interface Pps7Ftmd#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ftmd;
-    interface Pps7Ftmt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ftmt;
-    interface Vector#(2, Pps7I2c#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     i2c;
-    interface Pps7Irq#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     irq;
-    interface Pps7Pjtag#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     pjtag;
-    interface Pps7Ps#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ps;
-    interface Vector#(2, Pps7Sdio#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     sdio;
-    interface Vector#(2, Pps7Spi#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     spi;
-    interface Pps7Sram#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     sram;
-    interface Pps7Trace#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     trace;
-    interface Vector#(2, Pps7Ttc#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     ttc;
-    interface Vector#(2, Pps7Uart#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     uart;
-    interface Vector#(2, Pps7Usb#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     usb;
-    interface Pps7Wdt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     wdt;
+    interface Vector#(2, Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))  can;
+    interface Vector#(2, Pps7Core#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)) core;
+    interface Pps7Ddr#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)              ddr;
+    interface Vector#(4, Pps7Dma#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))  dma;
+    interface Vector#(2, Pps7Enet#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)) enet;
+    interface Pps7Event#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)            event_;
+    interface Pps7Fclk#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)             fclk;
+    interface Vector#(4,Pps7Fclk_clktrig#(c_dm_width,c_dq_width,c_dqs_width,data_width,gpio_width,id_width,mio_width))fclk_clktrig;
+    interface Vector#(4,Pps7Fclk_reset#(c_dm_width,c_dq_width,c_dqs_width,data_width,gpio_width,id_width,mio_width))  fclk_reset;
+    interface Pps7Fpga#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)             fpga;
+    interface Pps7Gpio#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)             gpio;
+    interface Pps7Ftmd#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)             ftmd;
+    interface Pps7Ftmt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)             ftmt;
+    interface Vector#(2, Pps7I2c#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))  i2c;
+    interface Pps7Irq#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)              irq;
+    interface Pps7Pjtag#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)            pjtag;
+    interface Pps7Ps#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)               ps;
+    interface Vector#(2, Pps7Sdio#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)) sdio;
+    interface Vector#(2, Pps7Spi#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))  spi;
+    interface Pps7Sram#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)             sram;
+    interface Pps7Trace#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)            trace;
+    interface Vector#(2, Pps7Ttc#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))  ttc;
+    interface Vector#(2, Pps7Uart#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)) uart;
+    interface Vector#(2, Pps7Usb#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))  usb;
+    interface Pps7Wdt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)              wdt;
 
-    //interface Vector#(2, Pps7M_axi_gp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     m_axi_gp;
-    //interface Pps7S_axi_acp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     s_axi_acp;
-    //interface Vector#(2, Pps7S_axi_gp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     s_axi_gp;
-    //interface Vector#(4, Pps7S_axi_hp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     s_axi_hp;
     interface Vector#(2, AxiMasterCommon#(32, id_width)) m_axi_gp;
     interface AxiSlaveCommon#(32, id_width) s_axi_acp;
     interface Vector#(2, AxiSlaveCommon#(32, id_width)) s_axi_gp;
@@ -260,17 +226,27 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
     vusb[0] = foo.usb0;
     vusb[1] = foo.usb1;
     for (Integer i = 0; i < 2; i = i + 1)
-       rule axi_master_handshake;
+       begin
+       rule axi_master_handshake1;
 	    vm_axi_gp[i].arready(vtopmw_axi_gp[i].arready);
+       endrule
+       rule axi_master_handshake2;
 	    vm_axi_gp[i].awready(vtopmw_axi_gp[i].awready);
+       endrule
+       rule axi_master_handshake3;
             vm_axi_gp[i].rvalid(vtopmw_axi_gp[i].rvalid);
+       endrule
+       rule axi_master_handshake4;
 	    vm_axi_gp[i].wready(vtopmw_axi_gp[i].wready);
+       endrule
+       rule axi_master_handshake5;
             vm_axi_gp[i].bvalid(vtopmw_axi_gp[i].bvalid);
        endrule
+       end
     for (Integer i = 0; i < 2; i = i + 1)
         vtopm_axi_gp[i] = interface AxiMasterCommon#(32, id_width);
             interface Get req_ar;
-                 method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].arvalid());
+                 method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].arvalid() != 0);
                      AxiREQ#(id_width) v;
                      v.addr = vm_axi_gp[i].araddr();
                      v.burst = vm_axi_gp[i].arburst();
@@ -282,12 +258,12 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
                      v.qos = vm_axi_gp[i].arqos();
                      v.size = vm_axi_gp[i].arsize();
 
-		     vtopmw_axi_gp[i].arready <= 1;
+		     vm_axi_gp[i].arready(1);
                      return v;
                  endmethod
             endinterface
             interface Get req_aw;
-                 method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].awvalid());
+                 method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].awvalid() != 0);
                      AxiREQ#(id_width) v;
                      v.addr = vm_axi_gp[i].awaddr();
                      v.burst = vm_axi_gp[i].awburst();
@@ -299,55 +275,65 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
                      v.qos = vm_axi_gp[i].awqos();
                      v.size = vm_axi_gp[i].awsize();
 
-	             vtopmw_axi_gp[i].awready <= 1;
+	             vm_axi_gp[i].awready(1);
                      return v;
                 endmethod
             endinterface
             interface Put resp_read;
-                method Action put(AxiRead#(32, id_width) v) if (vm_axi_gp[i].rready());
+                method Action put(AxiRead#(32, id_width) v) if (vm_axi_gp[i].rready() != 0);
                     vm_axi_gp[i].rid(v.r.id);
                     vm_axi_gp[i].rresp(v.r.resp);
                     vm_axi_gp[i].rdata(v.rd.data);
                     vm_axi_gp[i].rlast(v.rd.last);
 
-	            vtopmw_axi_gp[i].rvalid <= 1;
+	            vm_axi_gp[i].rvalid(1);
                 endmethod
             endinterface
             interface Get resp_write;
-                 method ActionValue#(AxiWrite#(32, id_width)) get() if (vm_axi_gp[i].wvalid());
+                 method ActionValue#(AxiWrite#(32, id_width)) get() if (vm_axi_gp[i].wvalid() != 0);
                      AxiWrite#(32, id_width) v;
                      v.wid = vm_axi_gp[i].wid();
                      v.wstrb = vm_axi_gp[i].wstrb();
                      v.wd.data = vm_axi_gp[i].wdata();
                      v.wd.last = vm_axi_gp[i].wlast();
 
-	             vtopmw_axi_gp[i].wready <= 1;
+	             vm_axi_gp[i].wready(1);
                      return v;
                 endmethod
             endinterface
             interface Put resp_b;
-                method Action put(AxiRESP#(id_width) v) if (vm_axi_gp[i].bready());
+                method Action put(AxiRESP#(id_width) v) if (vm_axi_gp[i].bready() != 0);
                     vm_axi_gp[i].bid(v.id);
                     vm_axi_gp[i].bresp(v.resp);
 	       
-	            vtopmw_axi_gp[i].bvalid <= 1;
+	            vm_axi_gp[i].bvalid(1);
                 endmethod
             endinterface
             method aclk = vm_axi_gp[i].aclk;
             method aresetn = vm_axi_gp[i].aresetn;
             endinterface;
     for (Integer i = 0; i < 2; i = i + 1)
-       rule axi_master_handshake;
+       begin
+       rule axi_master_handshake1;
 	    vs_axi_gp[i].arvalid(vtopsw_axi_gp[i].arvalid);
+       endrule
+       rule axi_master_handshake2;
 	    vs_axi_gp[i].awvalid(vtopsw_axi_gp[i].awvalid);
+       endrule
+       rule axi_master_handshake3;
             vs_axi_gp[i].rready(vtopsw_axi_gp[i].rready);
+       endrule
+       rule axi_master_handshake4;
 	    vs_axi_gp[i].wvalid(vtopsw_axi_gp[i].wvalid);
+       endrule
+       rule axi_master_handshake5;
             vs_axi_gp[i].bready(vtopsw_axi_gp[i].bready);
        endrule
+       end
     for (Integer i = 0; i < 2; i = i + 1)
         vtops_axi_gp[i] = interface AxiSlaveCommon#(32, id_width);
             interface Put req_ar;
-                method Action put(AxiREQ#(id_width) v) if (vs_axi_gp[i].arready());
+                method Action put(AxiREQ#(id_width) v) if (vs_axi_gp[i].arready() != 0);
                     vs_axi_gp[i].araddr(v.addr);
                     vs_axi_gp[i].arburst(v.burst);
                     vs_axi_gp[i].arcache(v.cache);
@@ -358,11 +344,11 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
                     vs_axi_gp[i].arqos(v.qos);
                     vs_axi_gp[i].arsize(v.size);
 
-	            vtopsw_axi_gp[i].arvalid <= 1;
+	            vs_axi_gp[i].arvalid(1);
                 endmethod
             endinterface
             interface Put req_aw;
-                method Action put(AxiREQ#(id_width) v) if (vs_axi_gp[i].awready());
+                method Action put(AxiREQ#(id_width) v) if (vs_axi_gp[i].awready() != 0);
                     vs_axi_gp[i].awaddr(v.addr);
                     vs_axi_gp[i].awburst(v.burst);
                     vs_axi_gp[i].awcache(v.cache);
@@ -373,38 +359,38 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
                     vs_axi_gp[i].awqos(v.qos);
                     vs_axi_gp[i].awsize(v.size);
 
-	            vtopsw_axi_gp[i].awvalid() <= 1;
+	            vs_axi_gp[i].awvalid(1);
                 endmethod
             endinterface
             interface Put resp_write;
-                method Action put(AxiWrite#(32, id_width) v) if (vs_axi_gp[i].wready());
+                method Action put(AxiWrite#(32, id_width) v) if (vs_axi_gp[i].wready() != 0);
                     vs_axi_gp[i].wid(v.wid);
                     vs_axi_gp[i].wstrb(v.wstrb);
                     vs_axi_gp[i].wdata(v.wd.data);
                     vs_axi_gp[i].wlast(v.wd.last);
 
-	            vtopsw_axi_gp.wvalid <= 1;
+	            vs_axi_gp[i].wvalid(1);
                 endmethod
             endinterface
             interface Get resp_read;
-                method ActionValue#(AxiRead#(32, id_width)) get() if (vs_axi_gp[i].rvalid());
+                method ActionValue#(AxiRead#(32, id_width)) get() if (vs_axi_gp[i].rvalid() != 0);
                     AxiRead#(32, id_width) v;
                     v.r.id = vs_axi_gp[i].rid();
                     v.r.resp = vs_axi_gp[i].rresp();
                     v.rd.data = vs_axi_gp[i].rdata();
                     v.rd.last = vs_axi_gp[i].rlast();
 
-	            vtopsw_axi_gp.rready <= 1;
+	            vs_axi_gp[i].rready(1);
                     return v;
                 endmethod
             endinterface
             interface Get resp_b;
-                method ActionValue#(AxiRESP#(id_width)) get() if (vs_axi_gp[i].bvalid());
+                method ActionValue#(AxiRESP#(id_width)) get() if (vs_axi_gp[i].bvalid() != 0);
                     AxiRESP#(id_width) v;
                     v.id = vs_axi_gp[i].bid();
                     v.resp = vs_axi_gp[i].bresp();
 
-	            vtopsw_axi_gp.bready <= 1;
+	            vs_axi_gp[i].bready(1);
                     return v;
                 endmethod
             endinterface
@@ -412,18 +398,28 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
             method aresetn = vs_axi_gp[i].aresetn;
         endinterface;
     for (Integer i = 0; i < 2; i = i + 1)
-       rule axi_master_handshake;
+       begin
+       rule axi_master_handshake1;
 	    vs_axi_hp[i].arvalid(vtopsw_axi_hp[i].arvalid);
+       endrule
+       rule axi_master_handshake2;
 	    vs_axi_hp[i].awvalid(vtopsw_axi_hp[i].awvalid);
+       endrule
+       rule axi_master_handshake3;
             vs_axi_hp[i].rready(vtopsw_axi_hp[i].rready);
+       endrule
+       rule axi_master_handshake4;
 	    vs_axi_hp[i].wvalid(vtopsw_axi_hp[i].wvalid);
+       endrule
+       rule axi_master_handshake5;
             vs_axi_hp[i].bready(vtopsw_axi_hp[i].bready);
        endrule
+       end
     for (Integer i = 0; i < 4; i = i + 1)
         vtops_axi_hp[i] = interface AxiSlaveHighSpeed#(data_width, id_width);
             interface AxiSlaveCommon axi;
             interface Put req_ar;
-                method Action put(AxiREQ#(id_width) v) if (vs_axi_hp[i].arready());
+                method Action put(AxiREQ#(id_width) v) if (vs_axi_hp[i].arready() != 0);
                     vs_axi_hp[i].araddr(v.addr);
                     vs_axi_hp[i].arburst(v.burst);
                     vs_axi_hp[i].arcache(v.cache);
@@ -438,7 +434,7 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
                 endmethod
             endinterface
             interface Put req_aw;
-                method Action put(AxiREQ#(id_width) v) if (vs_axi_hp[i].awready());
+                method Action put(AxiREQ#(id_width) v) if (vs_axi_hp[i].awready() != 0);
                     vs_axi_hp[i].awaddr(v.addr);
                     vs_axi_hp[i].awburst(v.burst);
                     vs_axi_hp[i].awcache(v.cache);
@@ -453,7 +449,7 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
                 endmethod
             endinterface
             interface Put resp_write;
-                method Action put(AxiWrite#(data_width, id_width) v) if (vs_axi_hp[i].wready());
+                method Action put(AxiWrite#(data_width, id_width) v) if (vs_axi_hp[i].wready() != 0);
                     vs_axi_hp[i].wid(v.wid);
                     vs_axi_hp[i].wstrb(v.wstrb);
                     vs_axi_hp[i].wdata(v.wd.data);
@@ -463,7 +459,7 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
                 endmethod
             endinterface
             interface Get resp_read;
-                method ActionValue#(AxiRead#(data_width, id_width)) get() if (vs_axi_hp[i].rvalid());
+                method ActionValue#(AxiRead#(data_width, id_width)) get() if (vs_axi_hp[i].rvalid() != 0);
                     AxiRead#(data_width, id_width) v;
                     v.r.id = vs_axi_hp[i].rid();
                     v.r.resp = vs_axi_hp[i].rresp();
@@ -475,12 +471,12 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
                 endmethod
             endinterface
             interface Get resp_b;
-                method ActionValue#(AxiRESP#(id_width)) get() if (vs_axi_hp[i].bvalid());
+                method ActionValue#(AxiRESP#(id_width)) get() if (vs_axi_hp[i].bvalid() != 0);
                     AxiRESP#(id_width) v;
                     v.id = vs_axi_hp[i].bid();
                     v.resp = vs_axi_hp[i].bresp();
 
-		    vs_axi_hp[i].bready();
+		    vs_axi_hp[i].bready(1);
                     return v;
                 endmethod
             endinterface
