@@ -23,6 +23,7 @@
 
 from __future__ import print_function
 import io, json, optparse, os, sys, re, tokenize
+#names of tokens: tokenize.tok_name
 
 masterlist = []
 parammap = {}
@@ -52,15 +53,18 @@ def validate_token(testval):
         sys.exit(1)
     parsenext()
 
-def parse_item():
-    global toknum, tokval
-    #print('ITEMSTART', toknum, tokval)
-    tname = tokval
+def parseparam():
+    paramstr = ''
     validate_token(tokval == '(')
     while tokval != ')':
+        paramstr = paramstr + tokval
         parsenext()
     validate_token(tokval == ')')
     validate_token(tokval == '{')
+    return paramstr
+
+def parse_item():
+    paramlist = []
     while tokval != '}':
         paramname = tokval
         validate_token(toknum == tokenize.NAME)
@@ -74,9 +78,16 @@ def parse_item():
             continue
         if tokval == '(':
             while True:
-                if paramname not in ['pin', 'timing', 'fpga_condition', 'fpga_condition_value', 'bus']:
-                    print('PARSENAME', paramname)
-                parse_item()
+                paramstr = parseparam()
+                plist = parse_item()
+                if paramstr != '':
+                    item = ''
+                    if len(plist) > 0:
+                        item = plist[0]
+                    paramlist.append([paramstr, item])
+                if paramname == 'cell':
+                    print('CC', paramstr, plist)
+                #if paramname == 'pin':
                 paramname = tokval
                 if toknum != tokenize.NAME:
                     break
@@ -85,6 +96,8 @@ def parse_item():
                     break
         else:
             validate_token(tokval == ':')
+            if paramname == 'direction':
+                paramlist.append(tokval)
             if toknum == tokenize.NUMBER or toknum == tokenize.NAME or toknum == tokenize.STRING:
                 parsenext()
             else:
@@ -92,17 +105,17 @@ def parse_item():
             if tokval != '}':
                 validate_token(tokval == ';')
     validate_token(tokval == '}')
-    #print('ITEMEND', toknum, tokval, tokenize.ENDMARKER)
+    return paramlist
 
 def parse_lib(filename):
     global tokgenerator
     tokgenerator = tokenize.generate_tokens(open(filename).readline)
     parsenext()
     print('PARSEFIRST', tokval)
-#tokenize.tok_name)
+    if tokval != 'library':
+        sys.exit(1)
     validate_token(toknum == tokenize.NAME)
-    #while True:
-        #toknum, tokval, _, _, _ = tokgenerator.next()
+    parseparam()
     parse_item()
 
 def generate_interface(ifname, paramval, ilist):
