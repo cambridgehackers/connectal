@@ -25,10 +25,16 @@ package PortalMemory;
 import GetPut::*;
 import Vector::*;
 
+//
+// DMA channel type
+//
 typedef enum {
    Read, Write
    } ChannelType deriving (Bits,Eq);
 
+//
+// @brief Number of DMA channels supported
+//
 typedef 4 NumDmaChannels;
 typedef Bit#(TLog#(NumDmaChannels)) DmaChannelId;
 
@@ -49,18 +55,54 @@ interface DMAIndication;
    method Action parefResp(Bit#(32) v);
 endinterface
 
+//
 // @brief Configuration interface to DMA engine
+//
 interface DMARequest;
+
+   //
+   // @brief Configure a DMA channel
+   //
+   // @param rc Channel type (Read or Write)
+   // @param channelId Number of the channel to configure
+   // @param pref
+   // @param bsz
    method Action configChan(ChannelType rc, Bit#(32) channelId, Bit#(32) pref, Bit#(32) bsz);
+
+   //
+   // @brief Requests debug info for the specified channel type
+   //
    method Action getStateDbg(ChannelType rc);
+
+   //
+   // @brief Adds an address translation entry to the scatter-gather list for an object
+   //
+   // @param pref Specifies the object to be translated
+   // @param addr Physical address of the segment
+   // @param len Length of the segment
+   //
+   // @note Only implemented for hardware
    method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
+
+   //
+   // @brief Maps the indicated object to remote software, e.g. bluesim
+   //
+   // @param pref Specifies the object to be map
+   // @param size Number of bytes of the object to map
+   //
+   // @note Only implemented for software 
    method Action paref(Bit#(32) pref, Bit#(32) size);
 endinterface
 
-// Instances of type class PortalMemory implement sglist and paref methods
+//
+// @brief Instances of type class PortalMemory implement sglist and paref methods
+//
 typeclass PortalMemory#(type a);
 endtypeclass
 
+//
+// @brief DMARequest implements sglist()
+//
 instance PortalMemory#(DMARequest);
 endinstance
 

@@ -48,6 +48,11 @@ interface AxiDMAReadInternal#(type t);
    method Action page(Bit#(32) tabel, Bit#(32) off, Bit#(40) addr);
 endinterface
 
+//
+// @brief DMA implementation for use with memory connected via AXI
+// 
+// @see PortalMemory and PortalRMemory for the subinterfaces
+//
 interface AxiDMA#(type t);
    interface DMARequest request;
    interface DMAWrite#(t) write;

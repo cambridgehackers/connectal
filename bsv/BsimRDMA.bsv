@@ -47,6 +47,11 @@ interface BsimDMAReadInternal#(type t);
    interface DMARead#(t) read;
 endinterface
 
+//
+// @brief DMA implementation for use in Bluesim
+// 
+// @see PortalMemory and PortalRMemory for the subinterfaces
+//
 interface BsimDMA#(type t);
    interface DMARequest request;
    interface DMAWrite#(t) write;

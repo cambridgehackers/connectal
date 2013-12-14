@@ -44,6 +44,10 @@ endfunction
 // @brief A channel for reading an object of type t from DRAM
 //
 //
+// @param t The type of object to write.
+//
+// @note The size of t must be a multiple of 64 bits.
+//
 // Put the index of the next object desired to the readReq interface
 //
 // @param index The number of the next object to read
@@ -63,21 +67,66 @@ interface ReadChan#(type t);
    interface Get#(t)        readData;
 endinterface
 
-// @brief A channel for writing an object of type t from DRAM
+//
+// @brief A channel for writing an object of type t to DRAM
+//
+// @param t The type of object to write.
+//
+// @note The size of t must be a multiple of 64 bits.
+//
+// Put the index of the next object desired to the writeReq interface
+//
+// @param index The number of the next object to write
+//
+// The virtual address of the object will be 
+//     base + index*objectsize
+// where objectsize is in bytes and base is
+// configured via the configChan method
+//
+// Put the object to the writeData interface.
+//
+// Get a void value from the writeDone interface when the write has completed.
+//
 interface WriteChan#(type t);
    interface Put#(t)        writeData;
    interface Put#(Bit#(40)) writeReq;
    interface Get#(void)     writeDone;
 endinterface
 
+//
+// @brief A DMA engine for reading objects of type t
+//
+// @param t The type of object to write.
+//
+// @note The size of t must be a multiple of 64 bits.
 interface DMARead#(type t);
+
+   //
+   // @brief Configure a DMA read channel
+   //
+   // @param channelId The number of the channel to configure
+   // @param pref The something
    method Action configChan(DmaChannelId channelId, Bit#(32) pref);
    interface Vector#(NumDmaChannels, ReadChan#(t)) readChannels;
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 
+//
+// @brief A DMA engine for writing objects of type t
+//
+// @param t The type of object to write.
+//
+// @note The size of t must be a multiple of 64 bits.
 interface DMAWrite#(type t);
+
+   //
+   // @brief Configure a DMA read channel
+   //
+   // @param channelId The number of the channel to configure
+   // @param pref The something
+   //
    method Action  configChan(DmaChannelId channelId, Bit#(32) pref);   
+
    interface Vector#(NumDmaChannels, WriteChan#(t)) writeChannels;
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
