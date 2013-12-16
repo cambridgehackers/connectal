@@ -83,6 +83,8 @@ wrapperCtrlTemplate='''
     Reg#(Bit#(32)) requestFiredCount <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
     PulseWire requestFiredPulse <- mkPulseWireOR();
+    // this is here to get rid of bsv warnings.  
+    Reg#(Bool) putEnable <- mkReg(True); 
 
     rule requestFiredIncrement if (requestFiredPulse);
         requestFiredCount <= requestFiredCount+1;
@@ -97,6 +99,8 @@ wrapperCtrlTemplate='''
 	    noAction;
 	if (addr == 14'h004)
 	    noAction;
+        if (addr == 14'h008)
+            putEnable <= v[0] == 1'd1;
     endrule
 
     rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
@@ -251,10 +255,10 @@ axiStateTemplate='''
     Reg#(Bit#(1)) axiSlaveRS <- mkReg(0);
     Reg#(Bit#(1)) axiSlaveWS <- mkReg(0);
 
-    let axiSlaveWriteAddrFifo = axiSlaveWriteAddrFifos[0];
-    let axiSlaveReadAddrFifo  = axiSlaveReadAddrFifos[0];
-    let axiSlaveWriteDataFifo = axiSlaveWriteDataFifos[0];
-    let axiSlaveReadDataFifo  = axiSlaveReadDataFifos[0];
+    let axiSlaveWriteAddrFifo = axiSlaveWriteAddrFifos[%(slaveFifoSel)s];
+    let axiSlaveReadAddrFifo  = axiSlaveReadAddrFifos[%(slaveFifoSel)s];
+    let axiSlaveWriteDataFifo = axiSlaveWriteDataFifos[%(slaveFifoSel)s];
+    let axiSlaveReadDataFifo  = axiSlaveReadDataFifos[%(slaveFifoSel)s];
 '''
 
 proxyCtrlTemplate='''
@@ -343,7 +347,7 @@ requestRuleTemplate='''
         %(methodName)s$requestFifo.enq(axiSlaveWriteDataFifo.first);
     endrule
     (* descending_urgency = "handle$%(methodName)s$request, handle$%(methodName)s$requestFailure" *)
-    rule handle$%(methodName)s$request;
+    rule handle$%(methodName)s$request if (putEnable);
         let request = %(methodName)s$requestFifo.first;
         %(methodName)s$requestFifo.deq;
         %(invokeMethod)s
@@ -403,10 +407,10 @@ mkExposedWrapperInterfaceTemplate='''
 module mk%(Dut)s#(Integer id, %(Ifc)s ifc)(%(Dut)s);
 %(axiState)s
     // instantiate hidden proxy to report put failures
-    %(hiddenProxy)s p <- mk%(hiddenProxy)s(axiSlaveWriteAddrFifos[0],
-                                           axiSlaveReadAddrFifos[0],
-                                           axiSlaveWriteDataFifos[0],
-                                           axiSlaveReadDataFifos[0]);
+    %(hiddenProxy)s p <- mk%(hiddenProxy)s(axiSlaveWriteAddrFifos[%(slaveFifoSelHidden)s],
+                                           axiSlaveReadAddrFifos[%(slaveFifoSelHidden)s],
+                                           axiSlaveWriteDataFifos[%(slaveFifoSelHidden)s],
+                                           axiSlaveReadDataFifos[%(slaveFifoSelHidden)s]);
 %(wrapperCtrl)s
 %(portalIfc)s
 endmodule
@@ -430,10 +434,10 @@ mkExposedProxyInterfaceTemplate='''
 module %(moduleContext)s mk%(Dut)s#(Integer id) (%(Dut)s) provisos (Log#(%(indicationChannelCount)s,iccsz));
 %(axiState)s
     // instantiate hidden wrapper to receive failure notifications
-    %(hiddenWrapper)s p <- mk%(hiddenWrapper)s(axiSlaveWriteAddrFifos[1],
-                                           axiSlaveReadAddrFifos[1],
-                                           axiSlaveWriteDataFifos[1],
-                                           axiSlaveReadDataFifos[1]);
+    %(hiddenWrapper)s p <- mk%(hiddenWrapper)s(axiSlaveWriteAddrFifos[%(slaveFifoSelHidden)s],
+                                           axiSlaveReadAddrFifos[%(slaveFifoSelHidden)s],
+                                           axiSlaveWriteDataFifos[%(slaveFifoSelHidden)s],
+                                           axiSlaveReadDataFifos[%(slaveFifoSelHidden)s]);
 %(proxyCtrl)s
 %(portalIfc)s
 endmodule
@@ -555,12 +559,6 @@ class MethodMixin:
 
 class InterfaceMixin:
 
-    def getClockArgNames(self, m):
-        #print m
-        #print m.params
-        #print [ p.name for p in m.params if p.type.name == 'Clock']
-        return [ p.name for p in m.params if p.type.name == 'Clock']
-
     def substs(self,suffix,expose,proxy):
         name = "%s%s"%(self.name,suffix)
         dutName = util.decapitalize(name)
@@ -605,11 +603,13 @@ class InterfaceMixin:
             'hiddenWrapper' : "%sStatus" % name,
             'startIndicationMethods' : '' if not expose else '    interface %s ifc;' % self.name,
             'endIndicationMethods' : '' if not expose else '    endinterface',
-            'readAxiState' : '' if not expose else readAxiStateTemplate,
-            'portalIfcInterrupt' : 'interface ReadOnly interrupt = p.interrupt;' if not proxy else proxyInterruptImplTemplate,
-            'ifcType' : 'truncate(128\'h%s)' % m.hexdigest(),
+            'slaveFifoSel' : '1' if proxy else '0',
+            'slaveFifoSelHidden' : '0' if proxy else '1',
             }
 
+        substs['readAxiState'] = '' if not expose else readAxiStateTemplate % substs
+        substs['portalIfcInterrupt'] = 'interface ReadOnly interrupt = p.interrupt;' if not proxy else proxyInterruptImplTemplate
+        substs['ifcType'] = 'truncate(128\'h%s)' % m.hexdigest()
         substs['axiState'] = axiStateTemplate % substs
         substs['portalIfc'] = portalIfcTemplate % substs
         substs['wrapperCtrl'] = wrapperCtrlTemplate % substs

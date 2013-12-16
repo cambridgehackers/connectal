@@ -93,7 +93,7 @@ BSCFLAGS=--aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)
 all: $(ALLTARGETS)
 
 $(vfile): %(topbsvfile)s %(bsvfiles)s
-	cd sources/%(dut)s; bsc %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
+	cd sources/%(dut)s; bsc -vdir . -bdir . %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
 	$(XBSVTOP)/scripts/copy_verilog.py $(vfile) $(subst :, ,$(BSVPATH))
 
 x86_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
