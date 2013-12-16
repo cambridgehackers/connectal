@@ -42,7 +42,7 @@ void loadPortalDirectory();
 class Portal
 {
  private:
-  Portal(char *name, int length)
+  Portal(char *name, int length);
  public:
   int open(int length);
   void close();
