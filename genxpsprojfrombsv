@@ -46,10 +46,9 @@ argparser.add_argument('-x', '--export', help='Promote/export named interface fr
 argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
 
 tclfileXprTemplate='''
-create_project %(dut)s . -part %(partname)s
+create_project ztop_1 . -part %(partname)s
 add_files sources
 %(tclfileAdditionalConstraints)s
-add_files -fileset constrs_1 -norecurse {constraints/%(dut)s.xdc}
 update_compile_order -fileset sources_1
 update_compile_order -fileset sources_1
 update_compile_order -fileset sim_1
@@ -59,7 +58,7 @@ close_project
 tclfileAdditionalConstraintTemplate='''add_files -fileset constrs_1 -norecurse {constraints/%(xdcname)s}'''
 
 tclfileTemplate='''
-open_project %(dut)s
+open_project ztop_1
 reset_run synth_1
 reset_run impl_1
 set_property strategy manual_fsm [get_runs synth_1]
@@ -115,18 +114,18 @@ lint: $(vfile)
 %(dut)s.xpr:
 	vivado -mode batch -source %(dut)sxpr.tcl
 
-%(dut)s.runs/impl_1/%(dut)s_top_1.bit: $(vfile) %(dut)s.xpr
+%(dut)s.runs/impl_1/ztop_1.bit: $(vfile) %(dut)s.xpr
 	vivado -mode batch -source %(dut)s.tcl
 
-implementation: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
+implementation: %(dut)s.runs/impl_1/ztop_1.bit
 
 program:
 	vivado -mode batch -source %(dut)s-program.tcl
 
-%(dut)s.bit.bin.gz: %(dut)s.runs/impl_1/%(dut)s_top_1.bit
-	#promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 %(dut)s.runs/impl_1/%(dut)s_top_1.bit -data_width 32
-	xxd %(dut)s.runs/impl_1/%(dut)s_top_1.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >%(dut)s.bit.bin
-	gzip -f %(dut)s.bit.bin
+%(dut)s.bit.bin.gz: %(dut)s.runs/impl_1/ztop_1.bit
+	#promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 %(dut)s.runs/impl_1/ztop_1.bit -data_width 32
+	xxd ztop_1.runs/impl_1/ztop_1.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >ztop_1.bit.bin
+	gzip -f ztop_1.bit.bin
 
 bits: %(dut)s.bit.bin.gz
 boot.bin: %(dut)s.bit.bin.gz
@@ -247,22 +246,23 @@ if __name__=='__main__':
         needs_pcie_7x_v2_1 = True
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
-        namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/kc705.xdc'))
     elif boardname == 'vc707':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
         needs_pcie_7x_v2_1 = True
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
-        namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/vc707.xdc'))
     else:
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z020clg484-1'
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/design_1_processing_system7_1_0.xdc'))
 
+    namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/%s.xdc' % boardname))
     if needs_pcie_7x_v2_1:
         subprocess.call(['make', '-C', xbsvdir, 'xilinx/pcie_7x_v2_1'])
+
+
 
     # this is an ugly abuse of typeclassinstance
     for v in syntax.globaldecls:

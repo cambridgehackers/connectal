@@ -2,7 +2,7 @@
 `timescale 1 ps / 1 ps
 // lib IP_Integrator_Lib
 (* CORE_GENERATION_INFO = "design_1,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLanguage=VERILOG}" *) 
-module memcpy_top_1(
+module ztop_1(
     inout [14:0]DDR_Addr,
     inout [2:0]DDR_BankAddr,
     inout DDR_CAS_n,
@@ -45,10 +45,7 @@ parameter C_CTRL_MEM0_HIGHADDR = 32'h6e4fffff;
 
 parameter C_FAMILY = "virtex6";
 
-  wire memcpy_0_interrupt;
-  wire memcpy_1_interrupt;
-  wire memcpy_2_interrupt;
-
+  wire interrupt;
 
   wire [C_M_AXI_DATA_WIDTH-1:0]m_axi_rdata;
   wire [C_M_AXI_DATA_WIDTH-1:0]m_axi_wdata;
@@ -182,8 +179,7 @@ GND GND
 
 
 /* dut goes here */
-mkMemcpyWrapper MemcpyIMPLEMENTATION (
-      
+mkZynqTop dutIMPLEMENTATION (
       
       .EN_m_axi_read_readAddr(WILL_FIRE_m_axi_read_readAddr),
       .m_axi_read_readAddr(m_axi_araddr),
@@ -299,9 +295,8 @@ mkMemcpyWrapper MemcpyIMPLEMENTATION (
       .CLK(processing_system7_1_fclk_clk0),
       .RST_N(processing_system7_1_fclk_reset0_n),
 
-      .interrupts_0__read(memcpy_0_interrupt),
-      .interrupts_1__read(memcpy_1_interrupt),
-      .interrupts_2__read(memcpy_2_interrupt)
+      .interrupt__read(interrupt),
+      .leds_leds(GPIO_leds)
       );
 
 
@@ -343,9 +338,9 @@ assign EN_ctrl_write_writeResponse = RDY_ctrl_write_writeResponse & ctrl_bready;
 
 
 wire [15:0] irq_f2p;
-assign irq_f2p[0] = memcpy_0_interrupt;
-assign irq_f2p[1] = memcpy_1_interrupt;
-assign irq_f2p[2] = memcpy_2_interrupt;
+assign irq_f2p[0] = interrupt;
+assign irq_f2p[1] = 0;
+assign irq_f2p[2] = 0;
 assign irq_f2p[3] = 0;
 assign irq_f2p[4] = 0;
 assign irq_f2p[5] = 0;
@@ -474,7 +469,4 @@ processing_system7#(.C_NUM_F2P_INTR_INPUTS(16))
 
         .PS_CLK(FIXED_IO_ps_clk));
    
-
-
-assign GPIO_leds = 8'haa;
 endmodule
