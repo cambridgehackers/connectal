@@ -16,7 +16,7 @@ void* init_socket(void* _xx)
 
   printf("%s (%s)\n",__FUNCTION__,c->path);
   if ((c->s1 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "%s (%s) socket error",__FUNCTION__, c->path);
+    fprintf(stderr, "%s (%s) socket error %s",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
 
@@ -25,18 +25,18 @@ void* init_socket(void* _xx)
   unlink(c->local.sun_path);
   int len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
   if (bind(c->s1, (struct sockaddr *)&c->local, len) == -1) {
-    fprintf(stderr, "%s (%s) bind error\n",__FUNCTION__, c->path);
+    fprintf(stderr, "%s (%s) bind error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
   
   if (listen(c->s1, 5) == -1) {
-    fprintf(stderr, "%s (%s) listen error\n",__FUNCTION__, c->path);
+    fprintf(stderr, "%s (%s) listen error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
   
   fprintf(stderr, "%s (%s) waiting for a connection...\n",__FUNCTION__, c->path);
   if ((c->s2 = accept(c->s1, NULL, NULL)) == -1) {
-    fprintf(stderr, "%s (%s) accept error\n",__FUNCTION__, c->path);
+    fprintf(stderr, "%s (%s) accept error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
   
@@ -52,7 +52,7 @@ void connect_socket(channel *c)
   int connect_attempts = 0;
 
   if ((c->s2 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    fprintf(stderr, "%s (%s) socket error\n",__FUNCTION__, c->path);
+    fprintf(stderr, "%s (%s) socket error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
 
@@ -62,8 +62,8 @@ void connect_socket(channel *c)
   strcpy(c->local.sun_path, c->path);
   len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
   while (connect(c->s2, (struct sockaddr *)&(c->local), len) == -1) {
-    if(connect_attempts++ > 10){
-      fprintf(stderr,"%s (%s) connect error\n",__FUNCTION__, c->path);
+    if(connect_attempts++ > 0){
+      fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, c->path, strerror(errno));
       exit(1);
     }
     sleep(1);
