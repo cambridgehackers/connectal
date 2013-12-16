@@ -4,6 +4,7 @@
 import os
 import math
 import re
+import md5
 
 import syntax
 import AST
@@ -24,6 +25,7 @@ import Vector::*;
 import SpecialFIFOs::*;
 import XbsvReadyQueue::*;
 import PortalMemory::*;
+import Portal::*;
 %(extraImports)s
 
 '''
@@ -40,8 +42,7 @@ exposedProxyInterfaceTemplate='''
 %(responseElements)s
 // exposed proxy interface
 interface %(Dut)s;
-    interface Axi3Slave#(32,32,4,12) ctrl;
-    interface ReadOnly#(Bool) interrupt;
+    interface StdPortal portalIfc;
     interface %(Ifc)s ifc;
 endinterface
 '''
@@ -59,8 +60,7 @@ exposedWrapperInterfaceTemplate='''
 %(requestElements)s
 // exposed wrapper interface
 interface %(Dut)s;
-    interface Axi3Slave#(32,32,4,12) ctrl;
-    interface ReadOnly#(Bool) interrupt;
+    interface StdPortal portalIfc;
 endinterface
 '''
 
@@ -103,12 +103,11 @@ wrapperCtrlTemplate='''
         axiSlaveReadAddrFifo.deq;
 	let addr = axiSlaveReadAddrFifo.first[13:0];
 	Bit#(32) v = 32'h05a05a0;
-	if (addr == 14'h010)
+	if (addr == 14'h000)
 	    v = requestFiredCount;
-	if (addr == 14'h01C)
-	    v = ?;
-	if (addr == 14'h034)
+	if (addr == 14'h004)
 	    v = outOfRangeWriteCount;
+%(readAxiState)s
         axiSlaveReadDataFifo.enq(v);
     endrule
     rule readWriteFifo if (axiSlaveReadAddrFifo.first[14] == 0);
@@ -126,7 +125,14 @@ wrapperCtrlTemplate='''
     endrule
 '''
 
-axiCtrlIfcTemplate='''
+portalIfcTemplate='''
+    interface StdPortal portalIfc;
+    method Bit#(32) ifcId;
+        return fromInteger(id);
+    endmethod
+    method Bit#(64) ifcType;
+        return %(ifcType)s;
+    endmethod
     interface Axi3Slave ctrl;
         interface Axi3SlaveWrite write;
             method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
@@ -190,6 +196,36 @@ axiCtrlIfcTemplate='''
             endmethod
         endinterface
     endinterface
+%(portalIfcInterrupt)s
+    endinterface
+'''
+
+proxyInterruptImplTemplate='''
+    interface ReadOnly interrupt;
+        method Bool _read();
+            return (interruptEnableReg && interruptStatus);
+        endmethod
+    endinterface
+'''
+
+
+readAxiStateTemplate='''
+	if (addr == 14'h01C)
+	    v = getWordCount;
+	if (addr == 14'h020)
+	    v = putWordCount;
+	if (addr == 14'h024)
+	    v = zeroExtend(axiSlaveReadAddrReg);
+	if (addr == 14'h028)
+	    v = zeroExtend(axiSlaveWriteAddrReg);
+	if (addr == 14'h02C)
+	    v = zeroExtend(axiSlaveReadIdReg);
+	if (addr == 14'h030)
+	    v = zeroExtend(axiSlaveWriteIdReg);
+	if (addr == 14'h034)
+	    v = zeroExtend(axiSlaveReadBurstCountReg);
+	if (addr == 14'h038)
+	    v = zeroExtend(axiSlaveWriteBurstCountReg);
 '''
 
 axiStateTemplate='''
@@ -224,10 +260,10 @@ axiStateTemplate='''
 proxyCtrlTemplate='''
     // indication-specific state
     Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
-    Vector#(%(indicationChannelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
     Reg#(Bit#(32)) underflowReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
+    Vector#(%(indicationChannelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
     ReadyQueue#(%(indicationChannelCount)s, Bit#(iccsz), Bit#(iccsz)) rq <- mkFirstReadyQueue();
     
     Reg#(Bool) interruptEnableReg <- mkReg(False);
@@ -246,7 +282,7 @@ proxyCtrlTemplate='''
 	let addr = axiSlaveWriteAddrFifo.first[13:0];
 	let v = axiSlaveWriteDataFifo.first;
 	if (addr == 14'h000)
-	    noAction; // interruptStatus is read-only
+	    noAction;
 	if (addr == 14'h004)
 	    interruptEnableReg <= v[0] == 1'd1;
     endrule
@@ -269,25 +305,18 @@ proxyCtrlTemplate='''
 	if (addr == 14'h008)
 	    v = responseFiredCntReg;
 	if (addr == 14'h00C)
-	    v = 0; // unused
+	    v = underflowReadCountReg;
 	if (addr == 14'h010)
-	    v = (32'h68470000 | extend(readBurstCountReg));
-	if (addr == 14'h014)
-	    v = putWordCount;
-	if (addr == 14'h018)
-	    v = getWordCount;
-        if (addr == 14'h01C)
 	    v = outOfRangeReadCountReg;
-        if (addr == 14'h020) begin
+	if (addr == 14'h014)
+	    v = outOfRangeWriteCount;
+        if (addr == 14'h018) begin
             if (tpl_2(rq.maxPriorityRequest) > 0) 
               v = extend(tpl_1(rq.maxPriorityRequest))+1;
             else 
               v = 0;
         end
-	if (addr == 14'h034)
-	    v = outOfRangeWriteCount;
-	if (addr == 14'h038)
-	    v = underflowReadCountReg;
+%(readAxiState)s
         axiSlaveReadDataFifo.enq(v);
     endrule
 
@@ -303,12 +332,6 @@ proxyCtrlTemplate='''
 %(startIndicationMethods)s
 %(indicationMethods)s
 %(endIndicationMethods)s
-
-    interface ReadOnly interrupt;
-        method Bool _read();
-            return (interruptEnableReg && interruptStatus);
-        endmethod
-    endinterface
 '''
 
 
@@ -369,7 +392,7 @@ mkHiddenWrapperInterfaceTemplate='''
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
                             FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
+                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s);
 %(wrapperCtrl)s
 endmodule
 '''
@@ -377,7 +400,7 @@ endmodule
 mkExposedWrapperInterfaceTemplate='''
 %(mutexRuleList)s
 // exposed wrapper implementation
-module mk%(Dut)s#(%(Ifc)s ifc)(%(Dut)s);
+module mk%(Dut)s#(Integer id, %(Ifc)s ifc)(%(Dut)s);
 %(axiState)s
     // instantiate hidden proxy to report put failures
     %(hiddenProxy)s p <- mk%(hiddenProxy)s(axiSlaveWriteAddrFifos[0],
@@ -385,8 +408,7 @@ module mk%(Dut)s#(%(Ifc)s ifc)(%(Dut)s);
                                            axiSlaveWriteDataFifos[0],
                                            axiSlaveReadDataFifos[0]);
 %(wrapperCtrl)s
-%(axiCtrlIfc)s
-    interface ReadOnly interrupt = p.interrupt;
+%(portalIfc)s
 endmodule
 '''
 
@@ -398,13 +420,14 @@ module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
                             FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s) provisos (Log#(%(indicationChannelCount)s,iccsz));
 %(proxyCtrl)s
+%(portalIfcInterrupt)s
 endmodule
 '''
 
 mkExposedProxyInterfaceTemplate='''
 %(indicationMutexRuleList)s
 // exposed proxy implementation
-module %(moduleContext)s mk%(Dut)s (%(Dut)s) provisos (Log#(%(indicationChannelCount)s,iccsz));
+module %(moduleContext)s mk%(Dut)s#(Integer id) (%(Dut)s) provisos (Log#(%(indicationChannelCount)s,iccsz));
 %(axiState)s
     // instantiate hidden wrapper to receive failure notifications
     %(hiddenWrapper)s p <- mk%(hiddenWrapper)s(axiSlaveWriteAddrFifos[1],
@@ -412,7 +435,7 @@ module %(moduleContext)s mk%(Dut)s (%(Dut)s) provisos (Log#(%(indicationChannelC
                                            axiSlaveWriteDataFifos[1],
                                            axiSlaveReadDataFifos[1]);
 %(proxyCtrl)s
-%(axiCtrlIfc)s
+%(portalIfc)s
 endmodule
 '''
 
@@ -493,8 +516,8 @@ class MethodMixin:
         if self.return_type.name == 'Action':
             paramsForCall = ['request.%s' % p.name for p in self.params]
             substs['paramsForCall'] = ', '.join(paramsForCall)
-            substs['putFailed'] = '' if hidden else 'p.putFailed(%(ord)s);'
-            substs['invokeMethod'] = '' if hidden else 'ifc.%(methodName)s(%(paramsForCall)s);'
+            substs['putFailed'] = '' if hidden else 'p.putFailed(%(ord)s);' % substs
+            substs['invokeMethod'] = '' if hidden else 'ifc.%(methodName)s(%(paramsForCall)s);' % substs
             return requestRuleTemplate % substs
         else:
             return None
@@ -538,7 +561,7 @@ class InterfaceMixin:
         #print [ p.name for p in m.params if p.type.name == 'Clock']
         return [ p.name for p in m.params if p.type.name == 'Clock']
 
-    def substs(self,suffix,expose):
+    def substs(self,suffix,expose,proxy):
         name = "%s%s"%(self.name,suffix)
         dutName = util.decapitalize(name)
         methods = [d for d in self.decls if d.type == 'Method' and d.return_type.name == 'Action']
@@ -556,11 +579,14 @@ class InterfaceMixin:
         indicationMethods = self.collectIndicationMethods(name)
         indicationMethodDecls = self.collectIndicationMethodDecls(name)
 
+        m = md5.new()
+        m.update(self.name)
+
         substs = {
             'dut': dutName,
             'Dut': util.capitalize(name),
             'requestElements': ''.join(requestElements),
-            'mutexRuleList': '(* mutually_exclusive = "' + (', '.join(methodRuleNames)) + '" *)' if (len(methodRuleNames) > 1) else '',
+            'mutexRuleList': '', #'(* mutually_exclusive = "' + (', '.join(methodRuleNames)) + '" *)' if (len(methodRuleNames) > 1) else '',
             'methodRules': ''.join(methodRules),
             'requestFailureRuleNames': "" if len(methodNames) == 0 else '(* descending_urgency = "'+', '.join(['handle$%s$requestFailure' % n for n in methodNames])+'"*)',
             'channelCount': self.channelCount,
@@ -570,7 +596,7 @@ class InterfaceMixin:
             'moduleContext': '',
 
             'responseElements': ''.join(responseElements),
-            'indicationMutexRuleList': '(* mutually_exclusive = "' + (', '.join(indicationMethodRuleNames)) + '" *)' if (len(indicationMethodRuleNames) > 1) else '',
+            'indicationMutexRuleList': '', #'(* mutually_exclusive = "' + (', '.join(indicationMethodRuleNames)) + '" *)' if (len(indicationMethodRuleNames) > 1) else '',
             'indicationMethodRules': ''.join(indicationMethodRules),
             'indicationMethods': ''.join(indicationMethods),
             'indicationMethodDecls' :''.join(indicationMethodDecls),
@@ -578,16 +604,20 @@ class InterfaceMixin:
             'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
             'hiddenWrapper' : "%sStatus" % name,
             'startIndicationMethods' : '' if not expose else '    interface %s ifc;' % self.name,
-            'endIndicationMethods' : '' if not expose else '    endinterface'}
+            'endIndicationMethods' : '' if not expose else '    endinterface',
+            'readAxiState' : '' if not expose else readAxiStateTemplate,
+            'portalIfcInterrupt' : 'interface ReadOnly interrupt = p.interrupt;' if not proxy else proxyInterruptImplTemplate,
+            'ifcType' : 'truncate(128\'h%s)' % m.hexdigest(),
+            }
 
         substs['axiState'] = axiStateTemplate % substs
-        substs['axiCtrlIfc'] = axiCtrlIfcTemplate % substs
+        substs['portalIfc'] = portalIfcTemplate % substs
         substs['wrapperCtrl'] = wrapperCtrlTemplate % substs
         substs['proxyCtrl'] = proxyCtrlTemplate % substs
         return substs
 
     def emitBsvWrapper(self,f,suffix,expose):
-        subs = self.substs(suffix,expose)
+        subs = self.substs(suffix,expose,False)
         if expose:
             #print "exposed wrapper: ", subs['dut']
             f.write(exposedWrapperInterfaceTemplate % subs)
@@ -598,7 +628,7 @@ class InterfaceMixin:
             f.write(mkHiddenWrapperInterfaceTemplate % subs)
 
     def emitBsvProxy(self,f,suffix,expose):
-        subs = self.substs(suffix,expose)
+        subs = self.substs(suffix,expose,True)
         if expose:
             #print " exposed proxy: ", subs['dut']
             f.write(exposedProxyInterfaceTemplate % subs)

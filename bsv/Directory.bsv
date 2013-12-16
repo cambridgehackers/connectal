@@ -1,47 +1,78 @@
 
+import Vector::*;
+import FIFO::*;
+
+import Portal::*;
+
 interface DirectoryRequest;
-   method Action offsetRequest(Bit#(32) id);
-   method Action lengthRequeset(Bit#(32) id);
+   method Action timeStamp();
+   method Action numPortals();
+   method Action portalAddrBits();
+   method Action idOffset(Bit#(32) id);
+   method Action idType(Bit#(32) id);
 endinterface
 
 interface DirectoryResponse;
-   method Action offsetResponse(Bit#(32) off);
-   method Action lengthResponse(Bit#(32) len);
+   method Action timeStamp(Bit#(64) t);
+   method Action numPortals(Bit#(32) n);
+   method Action portalAddrBits(Bit#(32) n);
+   method Action idOffset(Bit#(32) id, Bit#(32) o);
+   method Action idType(Bit#(32) id, Bit#(64) t);
 endinterface
 
-interface DirectoryRequestI#(numeric type n);
-   interface DirectoryRequest req;
-endinterface
+module mkDirectoryRequest#(Vector#(n,StdPortal) portals, DirectoryResponse resp) (DirectoryRequest);
 
-module mkDirectoryRequestI#(DirectoryResponse resp, Vector#(n,Bit#(32)) ids) (DirectoryRequestP#(n));
-
-   Vector#(n, Reg#(Bit#(32))) ids <- mapM(mkReg,ids);
-   FIFO#(Bit#(32)) req <- mkFIF0;
-   Reg#(Bit#(32)) ptr <- mkReg(0);
+   FIFO#(Bit#(32)) offReqQ <- mkFIFO;
+   FIFO#(Bit#(32)) typeReqQ <- mkFIFO;
+   Reg#(Bit#(32)) offPtr <- mkReg(0);
+   Reg#(Bit#(32)) typePtr <- mkReg(0);
    
-   rule search;
-      if (req.first == ids[ptr]) begin
-	 req.deq;
-	 resp.offsetResponse(zeroExtend(ptr));
+   rule searchOff;
+      if (offReqQ.first == portals[offPtr].ifcId) begin
+	 offReqQ.deq;
+	 resp.idOffset(offReqQ.first, zeroExtend(offPtr));
       end
-      else if(ptr+1 == valueOf(n)) begin
-	 resp.offsetResponse(maxValue);
-	 ptr <= 0;
-	 req.deq;
+      else if(offPtr+1 == fromInteger(valueOf(n))) begin
+	 resp.idOffset(offReqQ.first, maxBound);
+	 offPtr <= 0;
+	 offReqQ.deq;
       end
       else begin
-	 ptr <= ptr+1;
+	 offPtr <= offPtr+1;
+      end
+   endrule
+
+   rule searchType;
+      if (typeReqQ.first == portals[typePtr].ifcId) begin
+	 typeReqQ.deq;
+	 resp.idType(typeReqQ.first, portals[typePtr].ifcType);
+      end
+      else if(typePtr+1 == fromInteger(valueOf(n))) begin
+	 resp.idType(typeReqQ.first, maxBound);
+	 typePtr <= 0;
+	 typeReqQ.deq;
+      end
+      else begin
+	 typePtr <= typePtr+1;
       end
    endrule
    
-   interface DirectoryRequest req;
-      method Action offsetRequest(Bit#(32) id);
-	 req.enq(id);
-      endmethod
-      method Action lengthRequest(Bit#(32) id);
-	 resp.lengthResponse(0);
-      endmethod
-   endinterface
+   method Action timeStamp();
+      let rv <- $time;
+      resp.timeStamp(rv);
+   endmethod
+   method Action numPortals();
+      resp.numPortals(fromInteger(valueOf(n)));
+   endmethod
+   method Action portalAddrBits();
+      resp.portalAddrBits(0);
+   endmethod
+   method Action idOffset(Bit#(32) id);
+      offReqQ.enq(id);
+   endmethod
+   method Action idType(Bit#(32) id);
+      typeReqQ.enq(id);
+   endmethod
 
 endmodule
 

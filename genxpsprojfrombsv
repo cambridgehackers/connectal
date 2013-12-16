@@ -43,7 +43,7 @@ argparser.add_argument('-V', '--verilog', help='Additional verilog sources', act
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-x', '--export', help='Promote/export named interface from top module')
-
+argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
 
 tclfileXprTemplate='''
 create_project %(dut)s . -part %(partname)s
@@ -78,7 +78,7 @@ makefileTemplate='''
 DTOP=%(project_dir)s
 XBSVTOP=%(xbsvdir)s
 BSVPATH = %(bsvpath)s
-vfile=sources/%(dut)s/mk%(Top)s.v
+vfile=sources/%(dut)s/%(topbsvmod)s.v
 
 BOARD=%(boardname)s
 OS=%(OS)s
@@ -92,9 +92,8 @@ BSCFLAGS=--aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)
 
 all: $(ALLTARGETS)
 
-$(vfile): sources/%(dut)s/%(Top)s.bsv %(bsvfiles)s
-	mkdir -p $(DTOP)/obj
-	cd sources/%(dut)s; bsc %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH) -verilog -u -g mk%(Top)s %(Top)s.bsv
+$(vfile): %(topbsvfile)s %(bsvfiles)s
+	cd sources/%(dut)s; bsc %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
 	$(XBSVTOP)/scripts/copy_verilog.py $(vfile) $(subst :, ,$(BSVPATH))
 
 x86_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
@@ -217,7 +216,6 @@ if __name__=='__main__':
     os.path.exists('./parsetab.py')  and os.remove('./parsetab.py')
     
     dutname = namespace.export
-    corename = '%s_v1_00_a' % dutname
     boardname = namespace.board.lower()
 
     bsvdefines = ['BSIM'] if namespace.make and ('bsim' in namespace.make) else []
@@ -246,7 +244,6 @@ if __name__=='__main__':
     if boardname == 'kc705':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7k325tffg900-2'
-        topSuffix = 'PcieTop'
         needs_pcie_7x_v2_1 = True
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
@@ -254,7 +251,6 @@ if __name__=='__main__':
     elif boardname == 'vc707':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
-        topSuffix = 'PcieTop'
         needs_pcie_7x_v2_1 = True
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
@@ -262,7 +258,6 @@ if __name__=='__main__':
     else:
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z020clg484-1'
-        topSuffix = 'Wrapper'
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/design_1_processing_system7_1_0.xdc'))
 
@@ -332,7 +327,7 @@ if __name__=='__main__':
     cpp.close();
 
     def create_bsv_package(pname, files=[]):
-        fname = os.path.join(project_dir, 'sources', dutname, '%s.bsv' % pname)
+        fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
         bsvgen.emitPreamble(bsv_file, namespace.bsvfile+files)
@@ -417,21 +412,19 @@ if __name__=='__main__':
             shutil.copy(constraint, dstconstraintdir)
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
-    make.write(makefileTemplate % {'corename': corename,
-                                   'dut': dutname.lower(),
-                                   'Dut': util.capitalize(dutname),
-                                   'Top': '%s%s' % (util.capitalize(dutname), topSuffix),
-                                   'xbsvdir': xbsvdir,
+    make.write(makefileTemplate % {'xbsvdir': xbsvdir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in namespace.bsvfile]
                                                                 + [os.path.join(xbsvdir, 'bsv')]))),
-                                   'bsvname': os.path.basename(namespace.bsvfile[0]),
                                    'bsvdefines': util.foldl((lambda e,a: '-D '+e+' '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': namespace.os,
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in namespace.bsvfile]),
                                    'sourcefiles': ' '.join([os.path.abspath(source) for source in namespace.source]) if namespace.source else '',
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in namespace.source]) if namespace.source else '',
-                                   'project_dir': os.path.abspath(project_dir)
+                                   'project_dir': os.path.abspath(project_dir),
+                                   'topbsvfile' : os.path.abspath(namespace.topbsv),
+                                   'topbsvmod'  : namespace.export,
+                                   'dut' : namespace.export.lower()
                                    })
     make.close()
 
