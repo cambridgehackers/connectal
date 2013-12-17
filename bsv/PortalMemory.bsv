@@ -30,7 +30,7 @@ import Vector::*;
 //
 typedef enum {
    Read, Write
-   } ChannelType deriving (Bits,Eq);
+   } ChannelType deriving (Bits,Eq,FShow);
 
 //
 // @brief Number of DMA channels supported
