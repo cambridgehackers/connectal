@@ -94,6 +94,7 @@ BSCFLAGS=--aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)
 all: $(ALLTARGETS)
 
 $(vfile): sources/%(dut)s/%(Top)s.bsv %(bsvfiles)s
+	mkdir -p $(DTOP)/obj
 	cd sources/%(dut)s; bsc %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH) -verilog -u -g mk%(Top)s %(Top)s.bsv
 	$(XBSVTOP)/scripts/copy_verilog.py $(vfile) $(subst :, ,$(BSVPATH))
 
@@ -104,7 +105,6 @@ ubuntu_exe:
 	cd jni; make
 
 bsim:
-	mkdir -p $(DTOP)/obj
 	cd sources; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop BsimTop.bsv 
 	export BSC_CXXFLAGS="-I$(XBSVTOP)/cpp -I$(XBSVTOP) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim $(DTOP)/obj/*.ba $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
 
