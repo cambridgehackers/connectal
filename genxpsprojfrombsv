@@ -89,11 +89,12 @@ else
 ALLTARGETS=implementation ubuntu_exe
 endif
 
+BSCFLAGS=--aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj
 
 all: $(ALLTARGETS)
 
 $(vfile): sources/%(dut)s/%(Top)s.bsv %(bsvfiles)s
-	cd sources/%(dut)s; bsc %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -p +:$(BSVPATH) -verilog -u -g mk%(Top)s %(Top)s.bsv
+	cd sources/%(dut)s; bsc %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH) -verilog -u -g mk%(Top)s %(Top)s.bsv
 	$(XBSVTOP)/scripts/copy_verilog.py $(vfile) $(subst :, ,$(BSVPATH))
 
 x86_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
@@ -103,8 +104,9 @@ ubuntu_exe:
 	cd jni; make
 
 bsim:
-	cd sources; bsc -D BSIM %(bsvdefines)s --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop BsimTop.bsv 
-	export BSC_CXXFLAGS="-I$(XBSVTOP)/cpp -I$(XBSVTOP) -DBSIM" ; cd sources; bsc --aggressive-conditions --wait-for-license -show-schedule -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim *.ba $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
+	mkdir -p $(DTOP)/obj
+	cd sources; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop BsimTop.bsv 
+	export BSC_CXXFLAGS="-I$(XBSVTOP)/cpp -I$(XBSVTOP) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -simdir . -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim $(DTOP)/obj/*.ba $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
 
 verilog: $(vfile)
 
@@ -272,7 +274,6 @@ if __name__=='__main__':
         os.chdir(xbsvdir)
         os.putenv('PWD', subprocess.check_output(['pwd'])[0:-1])
         subprocess.call(['make', 'xilinx/pcie_7x_v2_1'])
-
 
     tclname = os.path.join(project_dir, '%s.tcl' % namespace.interface.lower())
     tclxprname = os.path.join(project_dir, '%sxpr.tcl' % namespace.interface.lower())
