@@ -1,5 +1,12 @@
+// system header files
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
+
 // library header files
 #include "portal.h"
+#include "Directory.h"
 
 // generated header files
 #include "SayWrapper.h"
@@ -7,8 +14,9 @@
 
 sem_t echo_sem;
 
-class MySay : public SayWrapper
+class Say : public SayWrapper
 {
+public:
   virtual void say(unsigned long v){
     fprintf(stderr, "say(%ld)\n", v);
     sem_post(&echo_sem);
@@ -17,15 +25,16 @@ class MySay : public SayWrapper
     fprintf(stderr, "say2(%ld, %ld)\n", a,b);
     sem_post(&echo_sem);
   }
-  MySay(int id) : SayWrapper(id){}
-}
+  Say(const char* devname, unsigned int addrbits) : SayWrapper(devname,addrbits){}
+};
 
 int main(int argc, const char **argv)
 {
-  loadPortalDirectory();
+  DirectoryRequestProxy *dirReqProxy  = new DirectoryRequestProxy("fpga0",16);
+  DirectoryResponse *dirResp = new DirectoryResponse("fpga1",16);
 
-  SayProxy *sayProxy = new SayProxy(1008);
-  MySay *sayWrapper = new MySay(7); 
+  SayProxy *sayProxy = new SayProxy("fpga2", 16);
+  Say *say = new Say("fpga3", 16); 
 
   pthread_t tid;
   if(pthread_create(&tid, NULL,  portalExec, NULL)){
@@ -43,5 +52,4 @@ int main(int argc, const char **argv)
 
   sayProxy->say2(1,2);
   sem_wait(&echo_sem);
-
 }

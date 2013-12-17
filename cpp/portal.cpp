@@ -43,7 +43,6 @@
 #include "portal.h"
 #include "sock_utils.h"
 #include "sock_fd.h"
-#include "PortalDirectory.h"
 
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
@@ -66,16 +65,15 @@ void Portal::close()
     }    
 }
 
-Portal::Portal(char *_name, length)
-  : indication(indication), 
-    fd(-1),
+Portal::Portal(const char *devname, unsigned int addrbits)
+  : fd(-1),
     ind_reg_base(0x0), 
     ind_fifo_base(0x0),
     req_reg_base(0x0),
     req_fifo_base(0x0),
-    name(strdup(_name))
+    name(strdup(devname))
 {
-  int rc = open(length);
+  int rc = open(addrbits);
   if (rc != 0) {
     printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
     ALOGD("Portal::Portal failure rc=%d\n", rc);
@@ -83,25 +81,13 @@ Portal::Portal(char *_name, length)
   }
 }
 Portal::Portal(int id)
-  : indication(indication), 
-    fd(-1),
+  : fd(-1),
     ind_reg_base(0x0), 
     ind_fifo_base(0x0),
     req_reg_base(0x0),
     req_fifo_base(0x0)
 {
-  int offset, length;
-  PortalDirectory::getInstance().offsetRequest(id,&offset);
-  PortalDirectory::getInstance().lengthRequest(id,&length);
-
-  name = (char*)malloc(32);
-  sprintf(name, "fpga%d", offset);
-  int rc = open(length);
-  if (rc != 0) {
-    printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
-    ALOGD("Portal::Portal failure rc=%d\n", rc);
-    exit(1);
-  }
+  assert(false);
 }
 
 Portal::~Portal()
@@ -211,6 +197,11 @@ PortalWrapper::PortalWrapper(int id)
   registerInstance();
 }
 
+PortalWrapper::PortalWrapper(const char *devname, unsigned int addrbits)
+  : Portal(devname,addrbits)
+{
+}
+
 PortalWrapper::~PortalWrapper()
 {
   unregisterInstance();
@@ -221,15 +212,20 @@ PortalProxy::PortalProxy(int id)
 {
 }
 
+PortalProxy::PortalProxy(const char *devname, unsigned int addrbits)
+  : Portal(devname,addrbits)
+{
+}
+
 PortalProxy::~PortalProxy()
 {
 }
 
-int PortalWrapper::unregisterInstance();
+int PortalWrapper::unregisterInstance()
 {
   int i = 0;
   while(i < numFds)
-    if(portal_fds[i].fd == instance->fd)
+    if(portal_fds[i].fd == this->fd)
       break;
     else
       i++;
@@ -241,36 +237,26 @@ int PortalWrapper::unregisterInstance();
 
   numFds--;
   portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
-  portal_wrappers = (Portal **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));  
+  portal_wrappers = (PortalWrapper **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));  
   return 0;
 }
 
-int PortalWrapper::registerInstance();
+int PortalWrapper::registerInstance()
 {
     numFds++;
     portal_wrappers = (PortalWrapper **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));
-    portal_wrappers[numFds-1] = instance;
+    portal_wrappers[numFds-1] = this;
     portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
     struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
-    pollfd->fd = instance->fd;
+    pollfd->fd = this->fd;
     pollfd->events = POLLIN;
     return 0;
 }
 
-PortalMemory::PortalMemory()
-  : handle(1)
-{
-  const char* path = "/dev/portalmem";
-  this->pa_fd = ::open(path, O_RDWR);
-  if (this->pa_fd < 0){
-    ALOGE("Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);
-  }
-}
-
-PortalMemory::PortalMemory(id)
-  : PortalProxy(id),
-    handle(1)
+PortalMemory::PortalMemory(const char *devname, unsigned int addrbits)
+  : PortalProxy(devname, addrbits)
+  , handle(1)
 {
 #ifndef MMAP_HW
   snprintf(p_fd.read.path, sizeof(p_fd.read.path), "fd_sock_rc");
@@ -283,6 +269,13 @@ PortalMemory::PortalMemory(id)
   if (this->pa_fd < 0){
     ALOGE("Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);
   }
+}
+
+PortalMemory::PortalMemory(int id)
+  : PortalProxy(id),
+    handle(1)
+{
+  assert(false);
 }
 
 void *PortalMemory::mmap(PortalAlloc *portalAlloc)
@@ -429,7 +422,7 @@ void* portalExec(void* __x)
 	while (queue_status) {
 	  if(0)
 	    fprintf(stderr, "queue_status %d\n", queue_status);
-	  instance->handleMessage(queue_status-1, instance->ind_fifo_base);
+	  instance->handleMessage(queue_status-1);
 	  int_src = *(volatile int *)(instance->ind_reg_base+0x0);
 	  int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	  ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
@@ -471,7 +464,7 @@ void* portalExec(void* __x)
 	}
 	//fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
 	if (queue_status){
-	  instance->handleMessage(queue_status-1, instance);	
+	  instance->handleMessage(queue_status-1);	
 	}
       }
     }

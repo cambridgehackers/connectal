@@ -95,8 +95,6 @@ module mkZynqTop(Top);
 `endif
 endmodule
 
-
-
 import "BDPI" function Action      initPortal(Bit#(32) d);
 import "BDPI" function Bool                    writeReq();
 import "BDPI" function ActionValue#(Bit#(32)) writeAddr();

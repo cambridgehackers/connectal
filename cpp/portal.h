@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <bitset>
+#include <assert.h>
 
 #include "drivers/portalmem/portalmem.h"
 #include "drivers/zynqportal/zynqportal.h"
@@ -37,16 +38,14 @@ class PortalMessage
 }; 
 
 void* portalExec(void* __x);
-void loadPortalDirectory();
 
 class Portal
 {
- private:
-  Portal(char *name, int length);
  public:
   int open(int length);
   void close();
   Portal(int id);
+  Portal(const char *name, unsigned int addrbits);
   ~Portal();
   int fd;
   struct portal p;
@@ -67,22 +66,24 @@ class Portal
   friend void* portalExec(void* __x);
 };
 
-class PortalWrapper : private Portal
+class PortalWrapper : public Portal
 {
  private:
-  static int registerInstance();
-  static int unregisterInstance();
+  int registerInstance();
+  int unregisterInstance();
  public:
   ~PortalWrapper();
   PortalWrapper(int id);
+  PortalWrapper(const char* devname, unsigned int addrbits);
   virtual int handleMessage(unsigned int channel) = 0;
 };
 
-class PortalProxy : private Portal
+class PortalProxy : public Portal
 {
  public:
   ~PortalProxy();
   PortalProxy(int id);
+  PortalProxy(const char *devname, unsigned int addrbits);
 };
 
 class PortalMemory : public PortalProxy 
@@ -94,6 +95,7 @@ class PortalMemory : public PortalProxy
 #endif
  public:
   PortalMemory(int id);
+  PortalMemory(const char *devname, unsigned int addrbits);
   int pa_fd;
   void *mmap(PortalAlloc *portalAlloc);
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);

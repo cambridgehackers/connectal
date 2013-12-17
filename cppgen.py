@@ -14,8 +14,8 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
-LOCAL_SRC_FILES := %(ClassName)s.cpp portal.cpp test%(classname)s.cpp sock_fd.cxx
-LOCAL_MODULE = test%(classname)s
+LOCAL_SRC_FILES := %(cfiles)s  portal.cpp sock_fd.cxx sock_utils.cxx %(generatedCFiles)s
+LOCAL_MODULE := %(exe)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
 LOCAL_CPPFLAGS := "-march=armv7-a"
@@ -36,7 +36,8 @@ test%(classname)s: %(ClassName)s.cpp %(xbsvdir)s/cpp/portal.cpp %(source)s
 proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 public:
-    %(className)s(unsigned int id);
+    %(className)s(int id);
+    %(className)s(const char *devname, unsigned int addrbits);
 '''
 proxyClassSuffixTemplate='''
 };
@@ -45,7 +46,8 @@ proxyClassSuffixTemplate='''
 wrapperClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 public:
-    %(className)s(unsigned int id);
+    %(className)s(int id);
+    %(className)s(const char *devname, unsigned int addrbits);
 '''
 wrapperClassSuffixTemplate='''
 protected:
@@ -54,16 +56,21 @@ protected:
 '''
 
 proxyConstructorTemplate='''
-%(namespace)s%(className)s::%(className)s(unsigned int id)
+%(namespace)s%(className)s::%(className)s(int id)
  : %(parentClass)s(id)
+{}
+%(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits)
+ : %(parentClass)s(devname, addrbits)
 {}
 '''
 
 wrapperConstructorTemplate='''
-%(namespace)s%(className)s::%(className)s(unsigned int id)
+%(namespace)s%(className)s::%(className)s(int id)
  : %(parentClass)s(id)
 {}
-
+%(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits)
+ : %(parentClass)s(devname, addrbits)
+{}
 '''
 
 putFailedTemplate='''
@@ -76,7 +83,7 @@ void %(namespace)s%(className)s::putFailed(unsigned long v){
 
 handleMessageTemplate='''
 #ifdef MMAP_HW
-int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base)
+int %(namespace)s%(className)s::handleMessage(unsigned int channel)
 {    
     unsigned int buf[1024];
     PortalMessage *msg = 0x0;
@@ -103,7 +110,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel, volatile uns
     return 0;
 }
 #else
-int %(namespace)s%(className)s::handleMessage(unsigned int channel, PortalRequest* instance)
+int %(namespace)s%(className)s::handleMessage(unsigned int channel)
 {    
     unsigned int buf[1024];
     PortalMessage *msg = 0x0;
@@ -169,12 +176,12 @@ public:
 
 
 
-def writeAndroidMk(base, androidmkname, applicationmkname, silent=False):
+def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, silent=False):
         f = util.createDirAndOpen(androidmkname, 'w')
-        className = cName(base)
         substs = {
-            'ClassName': className,
-            'classname': className.lower()
+            'cfiles': ' '.join([os.path.basename(x) for x in cfiles]),
+	    'generatedCFiles': ' '.join(generatedCFiles),
+	    'exe' : 'exe'
         }
         f.write(androidmk_template % substs)
         f.close()

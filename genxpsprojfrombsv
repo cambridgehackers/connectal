@@ -296,27 +296,38 @@ if __name__=='__main__':
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
         print "Writing file ",fname
+        f.write('#include \"portal.h\"\n')
         return f
 
+    generatedCFiles = []
+
     for i in swProxies:
-        hpp = create_cpp_file('%sProxy.h' % i.name)
-        cpp = create_cpp_file('%sProxy.cpp' % i.name)
+        cppname = '%sProxy.cpp' % i.name
+        hppname = '%sProxy.h' % i.name
+        hpp = create_cpp_file(hppname)
+        cpp = create_cpp_file(cppname)
+        cpp.write('#include \"%s\"' % hppname)
         i.ind.emitCWrapperDeclaration(hpp, "ProxyStatus")
         i.emitCProxyDeclaration(hpp, "Proxy")
         i.ind.emitCWrapperImplementation(cpp, "ProxyStatus")
         i.emitCProxyImplementation(cpp, "Proxy")
         hpp.close();
         cpp.close();
+        generatedCFiles.append(cppname)
 
     for i in swWrappers:
-        hpp = create_cpp_file('%sWrapper.h' % i.name)
-        cpp = create_cpp_file('%sWrapper.cpp' % i.name)
+        cppname = '%sWrapper.cpp' % i.name
+        hppname = '%sWrapper.h' % i.name
+        hpp = create_cpp_file(hppname)
+        cpp = create_cpp_file(cppname)
+        cpp.write('#include \"%s\"' % hppname)
         i.ind.emitCProxyDeclaration(hpp, "WrapperStatus")
         i.emitCWrapperDeclaration(hpp, "Wrapper")
         i.ind.emitCProxyImplementation(cpp, "WrapperStatus")
         i.emitCWrapperImplementation(cpp, "Wrapper")
         hpp.close();
         cpp.close();
+        generatedCFiles.append(cppname)
     
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
     hpp = util.createDirAndOpen(hname, 'w')
@@ -365,9 +376,22 @@ if __name__=='__main__':
         xpsgen.writeImpactCmd(dutname, os.path.join(project_dir, 'impact.cmd'))
         xpsgen.writeProgramTcl(dutname, os.path.join(project_dir, '%s-program.tcl' % dutname.lower()))
 
+    # copy cxx library files to jni
+    for f in ['portal.cpp', 'sock_utils.cxx', 'sock_fd.cxx']:
+        srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'cpp')
+        dstdir = os.path.join(project_dir, 'jni')
+        shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
+    
+    # copy cmd-line specified cxx files to jni
+    for s in namespace.source:
+        srcdir = os.path.dirname(s)
+        dstdir = os.path.join(project_dir, 'jni')
+        f = os.path.basename(s)
+        shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
+
     print 'Writing Android.mk', androidmkname
     print 'Writing Application.mk', applicationmkname
-    cppgen.writeAndroidMk(dutname, androidmkname, applicationmkname)
+    cppgen.writeAndroidMk(namespace.source, generatedCFiles, androidmkname, applicationmkname)
     cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source)
 
     print 'Writing tcl file', tclname
