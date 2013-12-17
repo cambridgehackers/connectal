@@ -271,9 +271,7 @@ if __name__=='__main__':
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/design_1_processing_system7_1_0.xdc'))
 
     if needs_pcie_7x_v2_1:
-        os.chdir(xbsvdir)
-        os.putenv('PWD', subprocess.check_output(['pwd'])[0:-1])
-        subprocess.call(['make', 'xilinx/pcie_7x_v2_1'])
+        subprocess.call(['make', '-C', xbsvdir, 'xilinx/pcie_7x_v2_1'])
 
     tclname = os.path.join(project_dir, '%s.tcl' % namespace.interface.lower())
     tclxprname = os.path.join(project_dir, '%sxpr.tcl' % namespace.interface.lower())
