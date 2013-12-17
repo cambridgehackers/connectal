@@ -10,6 +10,7 @@ import subprocess
 import util
 import re
 import glob
+import time
 
 AST.TypeDef.__bases__ += (cppgen.TypeDefMixin,)
 AST.Function.__bases__ += (cppgen.NoCMixin,)
@@ -87,7 +88,7 @@ else
 ALLTARGETS=implementation ubuntu_exe
 endif
 
-BSCFLAGS = --aggressive-conditions --wait-for-license -show-schedule -bdir . -vdir . -simdir .
+BSCFLAGS = --aggressive-conditions --wait-for-license -show-schedule -bdir . -vdir . -simdir .  -D TimeStamp=%(timestamp)s
 BSIM_CXX = $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
 
 all: $(ALLTARGETS)
@@ -97,7 +98,7 @@ $(vfile): %(topbsvfile)s %(bsvfiles)s
 	$(XBSVTOP)/scripts/copy_verilog.py $(vfile) $(subst :, ,$(BSVPATH))
 
 x86_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
-	cd jni; g++ -g -O -o %(dut)s -I%(project_dir)s/jni %(includepath)s *.cpp *.cxx %(sourcefiles)s -pthread -I$(XBSVTOP) -I$(XBSVTOP)/cpp -DBSIM 
+	cd jni; g++ -g -O -o %(dut)s -I%(project_dir)s/jni %(includepath)s *.cpp *.cxx  -pthread -I$(XBSVTOP) -I$(XBSVTOP)/cpp -DBSIM 
 
 ubuntu_exe:
 	cd jni; make
@@ -297,6 +298,7 @@ if __name__=='__main__':
         f = util.createDirAndOpen(fname, 'w')
         print "Writing file ",fname
         f.write('#include \"portal.h\"\n')
+        f.write('#include <stdio.h>\n')
         return f
 
     generatedCFiles = []
@@ -449,7 +451,8 @@ if __name__=='__main__':
                                    'project_dir': os.path.abspath(project_dir),
                                    'topbsvfile' : os.path.abspath(namespace.topbsv),
                                    'topbsvmod'  : namespace.export,
-                                   'dut' : namespace.export.lower()
+                                   'dut' : namespace.export.lower(),
+                                   'timestamp' : int(time.time())
                                    })
     make.close()
 

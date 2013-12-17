@@ -200,6 +200,7 @@ PortalWrapper::PortalWrapper(int id)
 PortalWrapper::PortalWrapper(const char *devname, unsigned int addrbits)
   : Portal(devname,addrbits)
 {
+  registerInstance();
 }
 
 PortalWrapper::~PortalWrapper()

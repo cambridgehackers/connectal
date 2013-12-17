@@ -29,14 +29,14 @@ import AxiMasterSlave::*;
 import Portal::*;
 
 
-module mkInterruptMux#(Vector#(2,         Portal#(aw,_a,_b,_c,_d)) directories, 
+module mkInterruptMux#(Vector#(1,         Portal#(aw,_a,_b,_c,_d)) directories, 
 		       Vector#(numPortals,Portal#(aw,_a,_b,_c,_d)) portals) (ReadOnly#(Bool))
 
-   provisos(Add#(2,numPortals,numInputs),
+   provisos(Add#(1,numPortals,numInputs),
 	    Add#(nz, TLog#(numInputs), 4),
 	    Add#(1, a__, numInputs));
    
-   Vector#(2, ReadOnly#(Bool)) d_interrupts = map(getInterrupt, directories);
+   Vector#(1, ReadOnly#(Bool)) d_interrupts = map(getInterrupt, directories);
    Vector#(numPortals, ReadOnly#(Bool)) p_interrupts = map(getInterrupt, portals);
    Vector#(numInputs, ReadOnly#(Bool)) inputs = append(d_interrupts,p_interrupts);
    
@@ -55,13 +55,13 @@ module mkInterruptMux#(Vector#(2,         Portal#(aw,_a,_b,_c,_d)) directories,
 
 endmodule
 
-module mkAxiSlaveMux#(Vector#(2,         Portal#(aw,_a,_b,_c,_d)) directories, 
+module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c,_d)) directories, 
 		      Vector#(numPortals,Portal#(aw,_a,_b,_c,_d)) portals) (Axi3Slave#(_a,_b,_c,_d))
 
-   provisos(Add#(2,numPortals,numInputs),
+   provisos(Add#(1,numPortals,numInputs),
 	    Add#(nz, TLog#(numInputs), 4));
    
-   Vector#(2, Axi3Slave#(_a,_b,_c,_d)) d_slaves = map(getCtrl, directories);
+   Vector#(1, Axi3Slave#(_a,_b,_c,_d)) d_slaves = map(getCtrl, directories);
    Vector#(numPortals, Axi3Slave#(_a,_b,_c,_d)) p_slaves = map(getCtrl, portals);
    Vector#(numInputs, Axi3Slave#(_a,_b,_c,_d)) inputs = append(d_slaves,p_slaves);
    

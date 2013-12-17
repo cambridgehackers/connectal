@@ -6,7 +6,6 @@
 
 // library header files
 #include "portal.h"
-#include "Directory.h"
 
 // generated header files
 #include "SayWrapper.h"
@@ -30,11 +29,8 @@ public:
 
 int main(int argc, const char **argv)
 {
-  DirectoryRequestProxy *dirReqProxy  = new DirectoryRequestProxy("fpga0",16);
-  DirectoryResponse *dirResp = new DirectoryResponse("fpga1",16);
-
-  SayProxy *sayProxy = new SayProxy("fpga2", 16);
-  Say *say = new Say("fpga3", 16); 
+  SayProxy *sayProxy = new SayProxy("fpga1", 16);
+  Say *say = new Say("fpga2", 16); 
 
   pthread_t tid;
   if(pthread_create(&tid, NULL,  portalExec, NULL)){

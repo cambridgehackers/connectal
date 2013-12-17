@@ -120,16 +120,16 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel)
     }
 
     for (int i = (msg->size()/4)-1; i >= 0; i--) {
-	unsigned long addr = instance->ind_fifo_base + (channel * 256);
+	unsigned long addr = ind_fifo_base + (channel * 256);
 	struct memrequest foo = {false,addr,0};
         //fprintf(stderr, "xxx %%08x\\n", addr);
-	if (send(instance->p.read.s2, &foo, sizeof(foo), 0) != sizeof(foo)) {
-	  fprintf(stderr, "(%%s) send error\\n", instance->name);
+	if (send(p.read.s2, &foo, sizeof(foo), 0) != sizeof(foo)) {
+	  fprintf(stderr, "(%%s) send error\\n", name);
 	  exit(1);
 	}
         unsigned int val;
-	if(recv(instance->p.read.s2, &val, sizeof(val), 0) != sizeof(val)){
-	  fprintf(stderr, "(%%s) recv error\\n", instance->name);
+	if(recv(p.read.s2, &val, sizeof(val), 0) != sizeof(val)){
+	  fprintf(stderr, "(%%s) recv error\\n", name);
 	  exit(1);	  
 	}
         //fprintf(stderr, "%%08x\\n", val);

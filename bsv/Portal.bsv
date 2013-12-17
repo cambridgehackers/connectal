@@ -30,7 +30,7 @@ interface Portal#(numeric type portalAddrBits,
 		  numeric type slaveBusIdWidth);
    
    method Bit#(32) ifcId();
-   method Bit#(64) ifcType();
+   method Bit#(32) ifcType();
    interface Axi3Slave#(slaveBusAddrWidth,slaveBusDataWidth,slaveBusDataWidthBytes,slaveBusIdWidth) ctrl;
    interface ReadOnly#(Bool) interrupt;
 

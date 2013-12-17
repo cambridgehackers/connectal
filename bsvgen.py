@@ -134,7 +134,7 @@ portalIfcTemplate='''
     method Bit#(32) ifcId;
         return fromInteger(id);
     endmethod
-    method Bit#(64) ifcType;
+    method Bit#(32) ifcType;
         return %(ifcType)s;
     endmethod
     interface Axi3Slave ctrl;
