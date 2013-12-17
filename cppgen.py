@@ -221,7 +221,7 @@ class MethodMixin:
             return int
     def formalParameters(self, params):
         return [ 'const %s%s %s' % (p.type.cName(), p.type.refParam(), p.name) for p in params]
-    def emitCDeclaration(self, f, indentation=0, namespace=''):
+    def emitCDeclaration(self, f, proxy, indentation=0, namespace=''):
         indent(f, indentation)
         resultTypeName = self.resultTypeName()
         if (not proxy):

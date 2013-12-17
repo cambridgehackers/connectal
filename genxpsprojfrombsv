@@ -217,7 +217,7 @@ if __name__=='__main__':
     dutname = namespace.export
     boardname = namespace.board.lower()
 
-    bsvdefines = ['BSIM'] if namespace.make and ('bsim' in namespace.make) else []
+    bsvdefines = []
     if boardname == 'kc705':
         bsvdefines += ['Kintex7']
     elif boardname == 'vc707':

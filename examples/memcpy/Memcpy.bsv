@@ -25,19 +25,19 @@ import BRAMFIFO::*;
 import GetPut::*;
 
 import AxiClientServer::*;
-import AxiRDMA::*;
-import BsimRDMA::*;
 import PortalMemory::*;
 import PortalRMemory::*;
+import AxiRDMA::*;
+import BsimRDMA::*;
 import BlueScope::*;
 
-interface CoreRequest;
+interface MemcpyRequest;
    method Action startCopy(Bit#(32) numWords);
    method Action readWord();
    method Action getStateDbg();   
 endinterface
 
-interface CoreIndication;
+interface MemcpyIndication;
    method Action started(Bit#(32) numWords);
    method Action readWordResult(Bit#(64) v);
    method Action done(Bit#(32) dataMismatch);
@@ -48,26 +48,12 @@ interface CoreIndication;
    method Action reportStateDbg(Bit#(32) srcGen, Bit#(32) streamRdCnt, Bit#(32) streamWrCnt, Bit#(32) writeInProg, Bit#(32) dataMismatch);
 endinterface
 
-interface MemcpyRequest;
-   interface Axi3Client#(40,64,8,12) m_axi;
-   interface CoreRequest coreRequest;
-   interface BlueScopeRequest bsRequest;
-   interface DMARequest dmaRequest;
-endinterface
+module mkMemcpyRequest#(MemcpyIndication indication, 
+			ReadChan#(Bit#(64)) dma_stream_read_chan,
+			WriteChan#(Bit#(64)) dma_stream_write_chan,
+			ReadChan#(Bit#(64)) dma_word_read_chan,
+			BlueScopeInternal bsi)(MemcpyRequest);
 
-interface MemcpyIndication;
-   interface CoreIndication coreIndication;
-   interface BlueScopeIndication bsIndication;
-   interface DMAIndication dmaIndication;
-endinterface
-
-module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
-   
-`ifdef BSIM
-   BsimDMA#(Bit#(64))     dma <- mkBsimDMA(indication.dmaIndication);
-`else
-   AxiDMA#(Bit#(64))      dma <- mkAxiDMA(indication.dmaIndication);
-`endif
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
@@ -75,42 +61,28 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
    Reg#(Bit#(40)) streamWrOff <- mkReg(0);
    Reg#(Bool)     writeInProg <- mkReg(False);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
-
-   // dma read channel 0 is reserved for memcpy read path
-   ReadChan#(Bit#(64)) dma_stream_read_chan = dma.read.readChannels[0];
-
-   // dma write channel 0 is reserved for memcpy write path
-   WriteChan#(Bit#(64)) dma_stream_write_chan = dma.write.writeChannels[0];
-   
-   // dma read channel 1 is reserved for debug read path
-   ReadChan#(Bit#(64)) dma_word_read_chan = dma.read.readChannels[1];
-
-   // dma write channel 1 is reserved for Bluescope output
-   WriteChan#(Bit#(64)) dma_debug_write_chan = dma.write.writeChannels[1];
-   BlueScopeInternal bsi <- mkBlueScopeInternal(32, dma_debug_write_chan, indication.bsIndication);
    
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt - 1;
       streamRdOff <= streamRdOff + 1;
       dma_stream_read_chan.readReq.put(streamRdOff);
-      indication.coreIndication.readReq(streamRdCnt);
-      let x = dma.write.dbg;
+      indication.readReq(streamRdCnt);
    endrule
 
    rule writeReq(streamWrCnt > 0 && !writeInProg);
       writeInProg <= True;
       streamWrOff <= streamWrOff + 1;
       dma_stream_write_chan.writeReq.put(streamWrOff);
-      indication.coreIndication.writeReq(streamWrCnt);
+      indication.writeReq(streamWrCnt);
    endrule
    
    rule writeAck(writeInProg);
       writeInProg <= False;
       dma_stream_write_chan.writeDone.get;
       streamWrCnt <= streamWrCnt-1;
-      indication.coreIndication.writeAck(streamWrCnt);
+      indication.writeAck(streamWrCnt);
       if(streamWrCnt==1)
-   	 indication.coreIndication.done(dataMismatch ? 32'd1 : 32'd0);
+   	 indication.done(dataMismatch ? 32'd1 : 32'd0);
    endrule
 
    rule loopback;
@@ -122,32 +94,26 @@ module mkMemcpyRequest#(MemcpyIndication indication)(MemcpyRequest);
       bsi.dataIn(v,v);
       srcGen <= srcGen+2;
       // $display("%h", v);
-      // indication.coreIndication.rData(v);
+      // indication.rData(v);
    endrule
    
    rule readWordResp;
       let v <- dma_word_read_chan.readData.get;
-      indication.coreIndication.readWordResult(v);
+      indication.readWordResult(v);
    endrule
    
-   interface CoreRequest coreRequest;
-      method Action startCopy(Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
-	 streamRdCnt <= numWords;
-	 streamWrCnt <= numWords;
-	 indication.coreIndication.started(numWords);
-      endmethod
-      
-      method Action readWord();
-	 dma_word_read_chan.readReq.put(0);
-      endmethod
-         
-      method Action getStateDbg();
-	 indication.coreIndication.reportStateDbg(srcGen, streamRdCnt, streamWrCnt, writeInProg ? 32'd1 : 32'd0, dataMismatch  ? 32'd1 : 32'd0);
-      endmethod
-   endinterface
-   interface BlueScopeRequest bsRequest = bsi.requestIfc;
-`ifndef BSIM
-   interface Axi3Client m_axi = dma.m_axi;
-`endif
-   interface DMARequest dmaRequest = dma.request;
+   method Action startCopy(Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
+      streamRdCnt <= numWords;
+      streamWrCnt <= numWords;
+      indication.started(numWords);
+   endmethod
+   
+   method Action readWord();
+      dma_word_read_chan.readReq.put(0);
+   endmethod
+	 
+   method Action getStateDbg();
+      indication.reportStateDbg(srcGen, streamRdCnt, streamWrCnt, writeInProg ? 32'd1 : 32'd0, dataMismatch  ? 32'd1 : 32'd0);
+   endmethod
+
 endmodule
