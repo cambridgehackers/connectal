@@ -346,7 +346,7 @@ int PortalMemory::reference(PortalAlloc* pa)
   pa->header.numEntries;
   for(int i = 0; i <= pa->header.numEntries; i++){
     assert(i<32); // the HW has defined SGListMaxLen as 32
-    fprintf(stderr, "PortalMemory::sglist(%08x, %08lx, %08lx)\n", id, pa->entries[i].dma_address, pa->entries[i].length);
+    fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, pa->entries[i].dma_address, pa->entries[i].length);
     sglist(id, pa->entries[i].dma_address, pa->entries[i].length);
     sleep(1); // ugly hack.  should use a semaphore for flow-control (mdk)
   }

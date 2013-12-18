@@ -36,19 +36,20 @@ endinterface
 module mkZynqTop(Top);
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
-`ifdef BSIM
-   BsimDMA#(Bit#(64))  dma <- mkBsimDMA(dmaIndicationProxy.ifc);
-`else
-   AxiDMA#(Bit#(64))   dma <- mkAxiDMA(dmaIndicationProxy.ifc);
-`endif
-   DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
-
-   // dma read channel 0 is reserved for memread read path
-   ReadChan#(Bit#(64)) dma_stream_read_chan = dma.read.readChannels[0];
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(7);
-   MemreadRequest memreadRequest <- mkMemreadRequest(memreadIndicationProxy.ifc, dma_stream_read_chan);
-   MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(1008,memreadRequest);
+   Memread memread <- mkMemread(memreadIndicationProxy.ifc);
+   MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(1008,memread.request);
+
+   Vector#(1, DMAReadClient#(64)) clients = cons(memread.dmaClient, nil);
+`ifdef BSIM
+   BsimDMAServer#(64)  dma <- mkBsimDMAServer(dmaIndicationProxy.ifc, clients, nil);
+`else
+   Integer             numRequests = 2;
+   AxiDMAServer#(64,8) dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, clients, nil);
+`endif
+
+   DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
 
    Vector#(4,StdPortal) portals;
    portals[0] = memreadRequestWrapper.portalIfc;

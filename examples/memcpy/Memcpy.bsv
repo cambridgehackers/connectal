@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Vector::*;
 import FIFOF::*;
 import BRAMFIFO::*;
 import GetPut::*;
@@ -32,7 +33,7 @@ import BsimRDMA::*;
 import BlueScope::*;
 
 interface MemcpyRequest;
-   method Action startCopy(Bit#(32) numWords);
+   method Action startCopy(Bit#(32) wrHandle, Bit#(32) rdHandle, Bit#(32) numWords);
    method Action readWord();
    method Action getStateDbg();   
 endinterface
@@ -48,10 +49,10 @@ interface MemcpyIndication;
    method Action reportStateDbg(Bit#(32) srcGen, Bit#(32) streamRdCnt, Bit#(32) streamWrCnt, Bit#(32) writeInProg, Bit#(32) dataMismatch);
 endinterface
 
-module mkMemcpyRequest#(MemcpyIndication indication, 
-			ReadChan#(Bit#(64)) dma_stream_read_chan,
-			WriteChan#(Bit#(64)) dma_stream_write_chan,
-			ReadChan#(Bit#(64)) dma_word_read_chan,
+module mkMemcpyRequest#(MemcpyIndication indication,
+			DMAReadServer#(64) dma_stream_read_server,
+			DMAWriteServer#(64) dma_stream_write_server,
+			DMAReadServer#(64) dma_word_read_server,
 			BlueScopeInternal bsi)(MemcpyRequest);
 
    Reg#(Bit#(32))      srcGen <- mkReg(0);
@@ -59,26 +60,32 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
    Reg#(Bit#(40)) streamRdOff <- mkReg(0);
    Reg#(Bit#(40)) streamWrOff <- mkReg(0);
-   Reg#(Bool)     writeInProg <- mkReg(False);
-   Reg#(Bool)    dataMismatch <- mkReg(False);  
+   Reg#(DmaMemHandle)    streamRdHandle <- mkReg(0);
+   Reg#(DmaMemHandle)    streamWrHandle <- mkReg(0);
+   Reg#(DmaMemHandle) bluescopeWrHandle <- mkReg(0);
+   Reg#(Bool)               writeInProg <- mkReg(False);
+   Reg#(Bool)              dataMismatch <- mkReg(False);  
    
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt - 1;
       streamRdOff <= streamRdOff + 1;
-      dma_stream_read_chan.readReq.put(streamRdOff);
+      $display("readReq.put handle=%h address=%h", streamRdHandle, streamRdOff);
+      dma_stream_read_server.readReq.put(DMAAddressRequest {handle: streamRdHandle, address: streamRdOff, burstLen: 1, tag: truncate(streamRdOff)});
       indication.readReq(streamRdCnt);
    endrule
 
    rule writeReq(streamWrCnt > 0 && !writeInProg);
       writeInProg <= True;
       streamWrOff <= streamWrOff + 1;
-      dma_stream_write_chan.writeReq.put(streamWrOff);
+      $display("writeReq.put handle=%h address=%h", streamWrHandle, streamWrOff);
+      dma_stream_write_server.writeReq.put(DMAAddressRequest {handle: streamWrHandle, address: streamWrOff, burstLen: 1, tag: truncate(streamWrOff)});
       indication.writeReq(streamWrCnt);
    endrule
    
    rule writeAck(writeInProg);
       writeInProg <= False;
-      dma_stream_write_chan.writeDone.get;
+      let tag <- dma_stream_write_server.writeDone.get();
+      $display("writeAck: tag=%d", tag);
       streamWrCnt <= streamWrCnt-1;
       indication.writeAck(streamWrCnt);
       if(streamWrCnt==1)
@@ -86,32 +93,36 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    endrule
 
    rule loopback;
-      let v <- dma_stream_read_chan.readData.get;
+      let tagdata <- dma_stream_read_server.readData.get();
+      let v = tagdata.data;
       let misMatch0 = v[31:0] != srcGen;
       let misMatch1 = v[63:32] != srcGen+1;
       dataMismatch <= dataMismatch || misMatch0 || misMatch1;
-      dma_stream_write_chan.writeData.put(v);
-      bsi.dataIn(v,v);
+      dma_stream_write_server.writeData.put(tagdata);
+      //bsi.dataIn(v,v);
       srcGen <= srcGen+2;
-      // $display("%h", v);
+      $display("loopback %h", tagdata.data);
       // indication.rData(v);
    endrule
    
    rule readWordResp;
-      let v <- dma_word_read_chan.readData.get;
-      indication.readWordResult(v);
+      let tagdata <- dma_word_read_server.readData.get;
+      indication.readWordResult(tagdata.data);
    endrule
    
-   method Action startCopy(Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
+   method Action startCopy(Bit#(32) wrHandle, Bit#(32) rdHandle, Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
+      $display("startCopy wrHandle=%h rdHandle=%h numWords=%d", wrHandle, rdHandle, numWords);
+      streamWrHandle <= wrHandle;
+      streamRdHandle <= rdHandle;
       streamRdCnt <= numWords;
       streamWrCnt <= numWords;
       indication.started(numWords);
    endmethod
-   
+
    method Action readWord();
-      dma_word_read_chan.readReq.put(0);
+      dma_word_read_server.readReq.put(DMAAddressRequest {handle: streamWrHandle, address: 0, burstLen: 1, tag: 1});
    endmethod
-	 
+
    method Action getStateDbg();
       indication.reportStateDbg(srcGen, streamRdCnt, streamWrCnt, writeInProg ? 32'd1 : 32'd0, dataMismatch  ? 32'd1 : 32'd0);
    endmethod

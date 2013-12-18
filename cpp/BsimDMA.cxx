@@ -50,11 +50,12 @@ extern "C" {
   }
 
   void write_pareff(unsigned long pref, unsigned long offset, unsigned long long data){
+    fprintf(stderr, "write_pareff(pref=%08lx, %08lx, offset=%016llx)\n", pref, offset, data);
     buffer[pref-1][offset] = data;
-    //fprintf(stderr, "write_pareff(%08lx, %08lx, %016llx) [%ld]\n", pref, offset, data, fd[pref]);
   }
 
   unsigned long long read_pareff(unsigned long pref, unsigned long offset){
+    fprintf(stderr, "read_pareff(pref=%08lx, offset=%08lx)\n", pref, offset);
     return buffer[pref-1][offset];
   }
 
@@ -62,7 +63,7 @@ extern "C" {
     assert(pref < 16);
     sock_fd_read(p_fd.write.s2, &(fd[pref-1]));
     buffer[pref-1] = (unsigned long long *)mmap(0, size, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref-1], 0);
-    // fprintf(stderr, "BsimDMA::pareff pref=%ld, buffer=%08lx\n", pref, buffer[pref]);
+    fprintf(stderr, "BsimDMA::pareff pref=%ld, buffer=%08lx\n", pref, buffer[pref]);
     ptr[pref-1] = 0;
   }
 

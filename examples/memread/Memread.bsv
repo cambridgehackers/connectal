@@ -23,6 +23,8 @@
 import FIFOF::*;
 import BRAMFIFO::*;
 import GetPut::*;
+import Vector::*;
+
 import AxiClientServer::*;
 import AxiRDMA::*;
 import BsimRDMA::*;
@@ -30,8 +32,13 @@ import PortalMemory::*;
 import PortalRMemory::*;
 
 interface MemreadRequest;
-   method Action startRead(Bit#(32) numWords);
+   method Action startRead(Bit#(32) handle, Bit#(32) numWords);
    method Action getStateDbg();   
+endinterface
+
+interface Memread;
+   interface MemreadRequest request;
+   interface DMAReadClient#(64) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -42,40 +49,48 @@ interface MemreadIndication;
    method Action readDone(Bit#(32) dataMismatch);
 endinterface
 
-module mkMemreadRequest#(MemreadIndication indication,
-			 ReadChan#(Bit#(64)) dma_stream_read_chan) (MemreadRequest);
+module mkMemread#(MemreadIndication indication) (Memread);
 
+   Reg#(DmaMemHandle) streamRdHandle <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(40))      offset <- mkReg(0);
 
-   rule consume;
-      let v <- dma_stream_read_chan.readData.get;
-      let misMatch0 = v[31:0] != srcGen;
-      let misMatch1 = v[63:32] != srcGen+1;
-      dataMismatch <= dataMismatch || misMatch0 || misMatch1;
-      srcGen <= srcGen+2;
-      // indication.rData(v);
-   endrule
-   
-   rule readReq(streamRdCnt > 0);
-      streamRdCnt <= streamRdCnt-16;
-      dma_stream_read_chan.readReq.put(offset);
-      offset <= offset + 1;
-      if (streamRdCnt == 16)
-	 indication.readDone(zeroExtend(pack(dataMismatch)));
-      else if (streamRdCnt[5:0] == 6'b0)
-	 indication.readReq(streamRdCnt);
-   endrule
+   interface MemreadRequest request;
+       method Action startRead(Bit#(32) handle, Bit#(32) numWords) if (streamRdCnt == 0);
+	  streamRdHandle <= handle;
+	  streamRdCnt <= numWords;
+	  indication.started(numWords);
+       endmethod
 
-   method Action startRead(Bit#(32) numWords) if (streamRdCnt == 0);
-      streamRdCnt <= numWords;
-      indication.started(numWords);
-   endmethod
-   
-   method Action getStateDbg();
-      indication.reportStateDbg(streamRdCnt, dataMismatch ? 32'd1 : 32'd0);
-   endmethod
-   
+       method Action getStateDbg();
+	  indication.reportStateDbg(streamRdCnt, dataMismatch ? 32'd1 : 32'd0);
+       endmethod
+   endinterface
+
+   interface DMAReadClient dmaClient;
+      interface Get readReq;
+	 method ActionValue#(DMAAddressRequest) get() if (streamRdCnt > 0);
+	    streamRdCnt <= streamRdCnt-16;
+
+	    offset <= offset + 1;
+	    if (streamRdCnt == 16)
+	       indication.readDone(zeroExtend(pack(dataMismatch)));
+	    else if (streamRdCnt[5:0] == 6'b0)
+	       indication.readReq(streamRdCnt);
+	    return DMAAddressRequest { handle: streamRdHandle, address: offset, burstLen: 16, tag: truncate(offset) };
+	 endmethod
+      endinterface : readReq
+      interface Put readData;
+	 method Action put(DMAData#(64) d);
+	    let v = d.data;
+	    let misMatch0 = v[31:0] != srcGen;
+	    let misMatch1 = v[63:32] != srcGen+1;
+	    dataMismatch <= dataMismatch || misMatch0 || misMatch1;
+	    srcGen <= srcGen+2;
+	    // indication.rData(v);
+	 endmethod
+      endinterface : readData
+   endinterface
 endmodule

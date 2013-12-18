@@ -20,7 +20,7 @@ PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 16 << 8;
+int numWords = 128;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 
@@ -46,10 +46,6 @@ public:
 
   virtual void reportStateDbg(const DmaDbgRec& rec){
     fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
-  }
-  virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "configResp: %lx\n", channelId);
-    sem_post(&conf_sem);
   }
   virtual void sglistResp(unsigned long channelId){
     fprintf(stderr, "sglistResp: %lx\n", channelId);
@@ -194,32 +190,21 @@ int main(int argc, const char **argv)
     dma->dCacheFlushInval(dstAlloc, dstBuffer);
     dma->dCacheFlushInval(bsAlloc,  bsBuffer);
     fprintf(stderr, "flush and invalidate complete\n");
-      
-    // write channel 0 is copy destination
-    dma->configChan(ChannelType_Write, 0, ref_dstAlloc, 16);
-    sem_wait(&conf_sem);
-    // read channel 0 is copy source
-    dma->configChan(ChannelType_Read, 0, ref_srcAlloc, 16);
-    sem_wait(&conf_sem);
-    // read channel 1 is readWord source
-    dma->configChan(ChannelType_Read, 1, ref_srcAlloc, 2);
-    sem_wait(&conf_sem);
-    // write channel 1 is Bluescope destination
-    dma->configChan(ChannelType_Write, 1, ref_bsAlloc, 2);
-    sem_wait(&conf_sem);
 
     fprintf(stderr, "starting mempcy numWords:%d\n", numWords);
     bluescope->reset();
     bluescope->setTriggerMask (0xFFFFFFFF);
     bluescope->setTriggerValue(0x00000002);
-    bluescope->start();
+
+    if (0)
+    bluescope->start(ref_bsAlloc);
 
     //bluescope->getStateDbg();
     device->getStateDbg();
     sleep(1);
 
     // initiate the transfer
-    device->startCopy(numWords);
+    device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords);
   } 
   while(1){sleep(1);}
 }

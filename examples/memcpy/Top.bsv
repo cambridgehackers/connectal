@@ -11,7 +11,6 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import PortalMemory::*;
 import BlueScope::*;
 import AxiRDMA::*;
 import BsimRDMA::*;
@@ -39,28 +38,48 @@ endinterface
 module mkZynqTop(Top);
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
+   // dma read channel 0 is reserved for memcpy read path
+   // Max burst 16
+   DMAReadBuffer#(64,16) dma_stream_read_chan <- mkDMAReadBuffer();
+
+   // dma write channel 0 is reserved for memcpy write path
+   // Max burst 16
+   DMAWriteBuffer#(64,16) dma_stream_write_chan <- mkDMAWriteBuffer();
+   
+   // dma read channel 1 is reserved for debug read path
+   // Max burst 1 because it only reads one word at a time
+   DMAReadBuffer#(64,1) dma_word_read_chan <- mkDMAReadBuffer();
+
+   // dma write channel 1 is reserved for Bluescope output
+   // Max burst 16
+   DMAWriteBuffer#(64,16) dma_debug_write_chan <- mkDMAWriteBuffer();
+
+   Vector#(2,  DMAReadClient#(64))   readClients = newVector();
+   readClients[0] = dma_stream_read_chan.dmaClient;
+   readClients[1] = dma_word_read_chan.dmaClient;
+
+   Vector#(2, DMAWriteClient#(64)) writeClients = newVector();
+   writeClients[0] = dma_stream_write_chan.dmaClient;
+   writeClients[1] = dma_debug_write_chan.dmaClient;
+
 `ifdef BSIM
-   BsimDMA#(Bit#(64))  dma <- mkBsimDMA(dmaIndicationProxy.ifc);
+   BsimDMAServer#(64)     dma <- mkBsimDMAServer(dmaIndicationProxy.ifc, readClients, writeClients);
 `else
-   AxiDMA#(Bit#(64))   dma <- mkAxiDMA(dmaIndicationProxy.ifc);
+   Integer               numRequests = 8;
+   AxiDMAServer#(64,8)   dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
 `endif
+
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
 
-   // dma read channel 0 is reserved for memcpy read path
-   ReadChan#(Bit#(64)) dma_stream_read_chan = dma.read.readChannels[0];
-   // dma write channel 0 is reserved for memcpy write path
-   WriteChan#(Bit#(64)) dma_stream_write_chan = dma.write.writeChannels[0];
-   // dma read channel 1 is reserved for debug read path
-   ReadChan#(Bit#(64)) dma_word_read_chan = dma.read.readChannels[1];
-   // dma write channel 1 is reserved for Bluescope output
-   WriteChan#(Bit#(64)) dma_debug_write_chan = dma.write.writeChannels[1];
-
    BlueScopeIndicationProxy blueScopeIndicationProxy <- mkBlueScopeIndicationProxy(8);
-   BlueScopeInternal bsi <- mkBlueScopeInternal(32, dma_debug_write_chan, blueScopeIndicationProxy.ifc);
+   BlueScopeInternal bsi <- mkBlueScopeInternal(32, dma_debug_write_chan.dmaServer, blueScopeIndicationProxy.ifc);
    BlueScopeRequestWrapper blueScopeRequestWrapper <- mkBlueScopeRequestWrapper(1003,bsi.requestIfc);
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(7);
-   MemcpyRequest memcpyRequest <- mkMemcpyRequest(memcpyIndicationProxy.ifc, dma_stream_read_chan, dma_stream_write_chan,dma_word_read_chan,bsi);
+   MemcpyRequest memcpyRequest <- mkMemcpyRequest(memcpyIndicationProxy.ifc, dma_stream_read_chan.dmaServer,
+						  dma_stream_write_chan.dmaServer,
+						  dma_word_read_chan.dmaServer,
+						  bsi);
    MemcpyRequestWrapper memcpyRequestWrapper <- mkMemcpyRequestWrapper(1008,memcpyRequest);
 
    Vector#(6,StdPortal) portals;

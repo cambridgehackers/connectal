@@ -34,9 +34,6 @@ public:
   virtual void reportStateDbg(const DmaDbgRec& rec){
     fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
-  virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "configResp: %lx\n", channelId);
-  }
   virtual void sglistResp(unsigned long channelId){
     fprintf(stderr, "sglistResp: %lx\n", channelId);
   }
@@ -108,11 +105,8 @@ int main(int argc, const char **argv)
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
-  dma->configChan(ChannelType_Read, 0, ref_srcAlloc, 16);
-  sleep(2);
-
   fprintf(stderr, "Main::starting read %08x\n", numWords);
-  device->startRead(numWords);
+  device->startRead(ref_srcAlloc, numWords);
 
   //dma->getReadStateDbg();
   device->getStateDbg();
