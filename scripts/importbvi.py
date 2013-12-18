@@ -34,6 +34,9 @@ tokgenerator = 0
 toknum = 0
 tokval = 0
 
+#
+# parser for .lib files
+#
 def parsenext():
     global toknum, tokval
     while True:
@@ -144,7 +147,7 @@ def parse_item():
     return paramlist
 
 def parse_lib(filename):
-    global tokgenerator
+    global tokgenerator, masterlist
     tokgenerator = tokenize.generate_tokens(open(filename).readline)
     parsenext()
     print('PARSEFIRST', tokval)
@@ -153,7 +156,34 @@ def parse_lib(filename):
     validate_token(toknum == tokenize.NAME)
     parseparam()
     parse_item()
+    searchlist = []
+    for item in masterlist:
+        ind = item[-1].find('1')
+        if ind > 0:
+            searchstr = item[-1][:ind]
+            #print('II', item[-1], searchstr)
+            if searchstr not in searchlist:
+                for iitem in masterlist:
+                    #print('VV', iitem[-1], searchstr + '0')
+                    if iitem[-1].startswith(searchstr + '0'):
+                        searchlist.append(searchstr)
+                        break
+    for sitem in searchlist:
+        print('SS', sitem)
+    for item in masterlist:
+        for sitem in searchlist:
+            tname = item[-1]
+            if tname.startswith(sitem):
+                tname = tname[len(sitem):]
+                ind = 0
+                while tname[ind] >= '0' and tname[ind] <= '9':
+                    ind = ind + 1
+                item[-1] = sitem + tname[:ind] + '_' + tname[ind:]
+                break
 
+#
+# parser for .v files
+#
 def parse_verilog(filename):
     global masterlist, commoninterfaces
     indata = open(filename).read().expandtabs().split('\n')
