@@ -1,7 +1,7 @@
 CC ?= gcc
 
-xbsvutil: bluenoc.c ../../drivers/pcieportal/bluenoc.h
-	$(CC) -g -O2 -o xbsvutil bluenoc.c
+xbsvutil: xbsvutil.c ../../drivers/pcieportal/bluenoc.h
+	$(CC) -g -O2 -o xbsvutil xbsvutil.c
 
 .PHONY: install
 install: xbsvutil

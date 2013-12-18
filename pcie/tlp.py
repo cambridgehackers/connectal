@@ -267,7 +267,7 @@ def print_tlp_log(tlplog, f=None):
         print_tlp(tlpdata, f)
 
 if __name__ == '__main__':
-    tlplog = subprocess.check_output(['bluenoc', 'tlp', '/dev/fpga0']).split('\n')
+    tlplog = subprocess.check_output(['xbsvutil', 'tlp', '/dev/fpga0']).split('\n')
     f = open('tlp.vcd', 'w')
     print_tlp_log(tlplog[0:-1], f)
     print classCounts
