@@ -81,12 +81,15 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
 
    ReadChan#(Bit#(64))   dma_read_chan = dma.read.readChannels[0];
    WriteChan#(Bit#(64)) dma_write_chan = dma.write.writeChannels[0];
- //  ReadChan#(CommandStruct) cmd_read_chan = dma.read.readChannels[1];
+   ReadChan#(CommandStruct) cmd_read_chan = dma.read.readChannels[1];
+   WriteChan#(Bit#(64)) status_write_chan = dma.write.writeChannels[1];
 
 
    RingBuffer cmdRing <- mkRingBuffer;
    RingBuffer statusRing <- mkRingBuffer;
    Reg#(Bool) hwenabled <- mkReg(False);
+   
+
    
 
    

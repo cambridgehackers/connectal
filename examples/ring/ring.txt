@@ -53,6 +53,14 @@ Copies command to status ring
 NOP
 Does nothing
 
+COPY
+tag
+to
+from
+count
+
+Copies count bytes from from to to, must be aligned on 64 bit boundaries and count must be a multiple of 8
+
 REPORTC
 tag
 
@@ -67,3 +75,35 @@ returns tag, base, end, first, last of status ring
 Requests
 
 
+
+
+Functions operating on rings
+
+EmptyP  
+  return (first == last)
+  
+SpaceAvailable
+  return (size + last - first) % size
+
+
+Command thread
+
+If first != last, run until it is
+
+fetch(first), burst 64 bytes
+
+there is a tradeoff between fetching one burst that might be too long
+or adding latency by requesting more short bursts when a long one would have 
+been sufficient
+
+interpreting fi.first as a command
+
+switch(command field)
+NOP
+  discard data, advance
+COPY
+  send data to copyengine input, advance
+MARK/ECHO
+  send completion, discard data, advance
+REPORT
+  
