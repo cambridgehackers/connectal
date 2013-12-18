@@ -69,7 +69,6 @@ module mkBsimTop();
 		      initPortal(0);
 		      initPortal(1);
 		      initPortal(2);
-		      initPortal(3);
                    endaction);
    let init_fsm <- mkOnce(init_seq);
    rule init_rule;
@@ -80,6 +79,7 @@ module mkBsimTop();
       let wd <- writeData;
       top.ctrl.write.writeAddr(wa,0,0,0,0,0,0);
       wf.enq(wd);
+      $display("mkBsimTop::wrReq %h", wa);
    endrule
    rule wrData;
       wf.deq;
@@ -88,6 +88,7 @@ module mkBsimTop();
    rule rdReq (readReq());
       let ra <- readAddr;
       top.ctrl.read.readAddr(ra,0,0,0,0,0,0);
+      //$display("mkBsimTop::rdReq %h", ra);
    endrule
    rule rdResp;
       let rd <- top.ctrl.read.readData;

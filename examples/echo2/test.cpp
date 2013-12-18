@@ -43,7 +43,7 @@ int main(int argc, const char **argv)
     return -1;
   }
 
-  sayProxy->say(0);
+  sayProxy->say(3);
   sem_wait(&echo_sem);
 
   sayProxy->say2(1,2);

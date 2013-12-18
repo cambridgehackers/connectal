@@ -394,7 +394,7 @@ void* portalExec(void* __x)
 	  unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
 	  unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	  unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
-	  unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
+	  unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
 	  if (0)
 	    fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
 		    __LINE__, int_src, int_en, ind_count, queue_status);
@@ -415,7 +415,7 @@ void* portalExec(void* __x)
 	unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
 	unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
-	unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
+	unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
 	if(0)
 	  fprintf(stderr, "(%d) about to receive messages %08x %08x %08x\n", i, int_src, int_en, queue_status);
 
@@ -427,7 +427,7 @@ void* portalExec(void* __x)
 	  int_src = *(volatile int *)(instance->ind_reg_base+0x0);
 	  int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	  ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
-	  queue_status = *(volatile int *)(instance->ind_reg_base+0x8);
+	  queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
 	  if (0)
 	    fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
 		    __LINE__, int_src, int_en, ind_count, queue_status);
@@ -445,20 +445,20 @@ void* portalExec(void* __x)
     fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
     return (void*)rc;
 #else // BSIM
-    fprintf(stderr, "about to enter while(true)\n");
+    fprintf(stderr, "about to enter bsim while(true), numFds=%d\n", numFds);
     while (true){
       sleep(0);
       for(int i = 0; i < numFds; i++){
 	PortalWrapper *instance = portal_wrappers[i];
-	unsigned int addr = instance->ind_reg_base+0x20;
+	unsigned int addr = instance->ind_reg_base+0x18;
 	struct memrequest foo = {false,addr,0};
-	//fprintf(stderr, "sending read request\n");
+	//fprintf(stderr, "(%s) sending read request\n", instance->name);
 	if (send(instance->p.read.s2, &foo, sizeof(foo), 0) == -1) {
 	  fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, instance->name);
 	  exit(1);
 	}
 	unsigned int queue_status;
-	//fprintf(stderr, "about to get read response\n");
+	//fprintf(stderr, "(%s) about to get read response\n", instance->name);
 	if(recv(instance->p.read.s2, &queue_status, sizeof(queue_status), 0) == -1){
 	  fprintf(stderr, "portalExec recv error (%s)\n", instance->name);
 	  exit(1);	  

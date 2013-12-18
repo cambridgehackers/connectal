@@ -106,6 +106,7 @@ wrapperCtrlTemplate='''
     rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
         axiSlaveReadAddrFifo.deq;
 	let addr = axiSlaveReadAddrFifo.first[13:0];
+        //$display(\"wrapper readCtrlReg %%h\", addr);
 	Bit#(32) v = 32'h05a05a0;
 	if (addr == 14'h000)
 	    v = requestFiredCount;
@@ -147,6 +148,7 @@ portalIfcTemplate='''
                  axiSlaveWriteBurstCountReg <= burstLen + 1;
                  axiSlaveWriteAddrReg <= truncate(addr);
 		 axiSlaveWriteIdReg <= awid;
+                 $display(\"%(Dut)s::Axi3SlaveWrite::writeAddr(%%h) ws=%%d\", addr, addr[15]);
             endmethod
             method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last, Bit#(12) wid)
                           if (axiSlaveWriteBurstCountReg > 0);
@@ -181,6 +183,7 @@ portalIfcTemplate='''
                  axiSlaveReadBurstCountReg <= burstLen + 1;
                  axiSlaveReadAddrReg <= truncate(addr);
 	    	 axiSlaveReadIdReg <= arid;
+                 //$display(\"%(Dut)s::Axi3SlaveRead::readAddr(%%h)\", addr);
             endmethod
             method Bit#(1) last();
                 return axiSlaveReadLastFifo.first;
@@ -255,10 +258,18 @@ axiStateTemplate='''
     Reg#(Bit#(1)) axiSlaveRS <- mkReg(0);
     Reg#(Bit#(1)) axiSlaveWS <- mkReg(0);
 
-    let axiSlaveWriteAddrFifo = axiSlaveWriteAddrFifos[%(slaveFifoSel)s];
-    let axiSlaveReadAddrFifo  = axiSlaveReadAddrFifos[%(slaveFifoSel)s];
-    let axiSlaveWriteDataFifo = axiSlaveWriteDataFifos[%(slaveFifoSel)s];
-    let axiSlaveReadDataFifo  = axiSlaveReadDataFifos[%(slaveFifoSel)s];
+    let axiSlaveWriteAddrFifo = axiSlaveWriteAddrFifos[%(slaveFifoSelExposed)s];
+    let axiSlaveReadAddrFifo  = axiSlaveReadAddrFifos[%(slaveFifoSelExposed)s];
+    let axiSlaveWriteDataFifo = axiSlaveWriteDataFifos[%(slaveFifoSelExposed)s];
+    let axiSlaveReadDataFifo  = axiSlaveReadDataFifos[%(slaveFifoSelExposed)s];
+
+    rule axiSlaveReadAddressGenerator if (axiSlaveReadBurstCountReg != 0);                                                                                                                                                                                                                                                   
+        axiSlaveReadAddrFifos[axiSlaveRS].enq(truncate(axiSlaveReadAddrReg));                                                                                                                                                                                                                                                
+        axiSlaveReadAddrReg <= axiSlaveReadAddrReg + 4;                                                                                                                                                                                                                                                                      
+        axiSlaveReadBurstCountReg <= axiSlaveReadBurstCountReg - 1;                                                                                                                                                                                                                                                          
+        axiSlaveReadLastFifo.enq(axiSlaveReadBurstCountReg == 1 ? 1 : 0);                                                                                                                                                                                                                                                    
+        axiSlaveReadIdFifo.enq(axiSlaveReadIdReg);                                                                                                                                                                                                                                                                           
+    endrule 
 '''
 
 proxyCtrlTemplate='''
@@ -301,13 +312,15 @@ proxyCtrlTemplate='''
         axiSlaveReadAddrFifo.deq;
 	let addr = axiSlaveReadAddrFifo.first[13:0];
 
+        //$display(\"proxy readCtrlReg %%h\", addr);
+
 	Bit#(32) v = 32'h05a05a0;
 	if (addr == 14'h000)
 	    v = interruptStatus ? 32'd1 : 32'd0;
 	if (addr == 14'h004)
 	    v = interruptEnableReg ? 32'd1 : 32'd0;
 	if (addr == 14'h008)
-	    v = responseFiredCntReg;
+	    v = %(indicationChannelCount)s;
 	if (addr == 14'h00C)
 	    v = underflowReadCountReg;
 	if (addr == 14'h010)
@@ -387,6 +400,7 @@ indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
         %(methodName)s$responseFifo.enq(%(MethodName)s$Response {%(structElements)s});
         responseFiredWires[%(channelNumber)s].send();
+        //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
 
@@ -603,8 +617,8 @@ class InterfaceMixin:
             'hiddenWrapper' : "%sStatus" % name,
             'startIndicationMethods' : '' if not expose else '    interface %s ifc;' % self.name,
             'endIndicationMethods' : '' if not expose else '    endinterface',
-            'slaveFifoSel' : '1' if proxy else '0',
-            'slaveFifoSelHidden' : '0' if proxy else '1',
+            'slaveFifoSelExposed' : '1' if proxy else '0',
+            'slaveFifoSelHidden'  : '0' if proxy else '1',
             }
 
         substs['readAxiState'] = '' if not expose else readAxiStateTemplate % substs

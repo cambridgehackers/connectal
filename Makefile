@@ -29,6 +29,7 @@ test-memcpy/memcpy.bit.bin.gz: examples/memcpy/Memcpy.bsv
 	(cd test-memcpy; ndk-build)
 	echo test-memcpy built successfully
 
+
 test-loadstore/loadstore.bit.bin.gz: examples/loadstore/LoadStore.bsv
 	rm -fr test-loadstore
 	mkdir test-loadstore
@@ -52,6 +53,16 @@ test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
 	echo test-imageon built successfully
 
+test-echo2/sources/bsim: examples/echo2/Top.bsv examples/echo2/test.cpp
+	-pkill bluetcl
+	rm -fr test-echo2
+	mkdir test-echo2
+	./genxpsprojfrombsv -B $(BOARD) -p test-echo2 -x mkZynqTop -s2h Say -h2s Say -s examples/echo2/test.cpp examples/echo2/Say.bsv  -t examples/echo2/Top.bsv -V verilog
+	cd test-echo2; make bsim; cd ..
+	cd test-echo2; make bsim_exe; cd ..
+	test-echo2/sources/bsim &
+	test-echo2/jni/bsim_exe
+
 test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.cpp
 	-pkill bluetcl
 	rm -fr test-memcpy
@@ -61,6 +72,7 @@ test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.
 	cd test-memcpy; make x86_exe; cd ..
 	test-memcpy/sources/bsim &
 	test-memcpy/jni/memcpy
+
 
 
 test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmemread.cpp

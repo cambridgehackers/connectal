@@ -100,6 +100,7 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c,_d)) directories,
 	 Bit#(TLog#(numInputs)) rsv = truncate(psel(addr)); 
 	 inputs[rsv].read.readAddr(addr,burstLen,burstWidth,burstType,burstProt,burstCache,arid);
 	 rs <= rsv;
+	 //$display("mkAxiSlaveMux::Axi3SlaveRead::readAddr(%h), rsv=%d", addr, rsv);
       endmethod
       method Bit#(1) last();
 	 return inputs[rs].read.last;

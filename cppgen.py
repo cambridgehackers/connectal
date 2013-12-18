@@ -181,7 +181,7 @@ def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, si
         substs = {
             'cfiles': ' '.join([os.path.basename(x) for x in cfiles]),
 	    'generatedCFiles': ' '.join(generatedCFiles),
-	    'exe' : 'exe'
+	    'exe' : 'android_exe'
         }
         f.write(androidmk_template % substs)
         f.close()

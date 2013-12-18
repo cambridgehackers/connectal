@@ -97,8 +97,8 @@ $(vfile): %(topbsvfile)s %(bsvfiles)s
 	cd sources/%(dut)s; bsc %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
 	$(XBSVTOP)/scripts/copy_verilog.py $(vfile) $(subst :, ,$(BSVPATH))
 
-x86_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
-	cd jni; g++ -g -O -o %(dut)s -I%(project_dir)s/jni %(includepath)s *.cpp *.cxx  -pthread -I$(XBSVTOP) -I$(XBSVTOP)/cpp -DBSIM 
+bsim_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
+	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s *.cpp *.cxx  -pthread -I$(XBSVTOP) -I$(XBSVTOP)/cpp -DBSIM 
 
 ubuntu_exe:
 	cd jni; make
