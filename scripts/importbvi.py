@@ -22,13 +22,137 @@
 # SOFTWARE.
 
 from __future__ import print_function
-import json, optparse, os, sys, re, shutil
+import json, optparse, os, sys, re, tokenize
+#names of tokens: tokenize.tok_name
 
 masterlist = []
 parammap = {}
 paramnames = []
 commoninterfaces = {}
 enindex = 0
+tokgenerator = 0
+toknum = 0
+tokval = 0
+
+def parsenext():
+    global toknum, tokval
+    while True:
+        toknum, tokval, _, _, _ = tokgenerator.next()
+        if toknum != tokenize.NL and toknum != tokenize.NEWLINE:
+            break
+    #print('Token:', toknum, tokval)
+    if toknum == tokenize.ENDMARKER:
+        print('Token: endoffile')
+        return None, None
+    return toknum, tokval
+
+def validate_token(testval):
+    global toknum, tokval
+    if not testval:
+        print('Error:Got:', toknum, tokval)
+        sys.exit(1)
+    parsenext()
+
+def parseparam():
+    paramstr = ''
+    validate_token(tokval == '(')
+    while tokval != ')' and toknum != tokenize.ENDMARKER:
+        paramstr = paramstr + tokval
+        parsenext()
+    validate_token(tokval == ')')
+    validate_token(tokval == '{')
+    return paramstr
+
+def parse_item():
+    global masterlist
+    paramlist = {}
+    while tokval != '}' and toknum != tokenize.ENDMARKER:
+        paramname = tokval
+        validate_token(toknum == tokenize.NAME)
+        if paramname == 'default_intrinsic_fall' or paramname == 'default_intrinsic_rise':
+            validate_token(tokval == ':')
+            validate_token(toknum == tokenize.NUMBER)
+            continue
+        if paramname == 'bus_type':
+            validate_token(tokval == ':')
+            validate_token(toknum == tokenize.NAME)
+            continue
+        if tokval == '(':
+            paramlist['attr'] = []
+            while True:
+                paramstr = parseparam()
+                plist = parse_item()
+                if paramstr != '' and paramname != 'fpga_condition':
+                    if plist == {}:
+                        paramlist['attr'].append([paramstr])
+                    else:
+                        paramlist['attr'].append([paramstr, plist])
+                if paramname == 'cell':
+                    print('CC', paramstr)
+                    pinlist = {}
+                    for item in plist['attr']:
+                        tname = item[0]
+                        tlist = item[1]
+                        tdir = 'unknowndir'
+                        if tlist.get('direction'):
+                            tdir = tlist['direction']
+                            del tlist['direction']
+                        tsub = ''
+                        ind = tname.find('[')
+                        if ind > 0:
+                            tsub = tname[ind+1:-1]
+                            tname = tname[:ind]
+                        titem = [tdir, tsub, tlist]
+                        ttemp = pinlist.get(tname)
+                        if not ttemp:
+                            pinlist[tname] = titem
+                        elif ttemp[0] != titem[0] or ttemp[2] != titem[2]: 
+                            print('different', tname, ttemp, titem)
+                        elif ttemp[1] != titem[1]: 
+                            if int(titem[1]) > int(ttemp[1]):
+                                ttemp[1] = titem[1]
+                            else:
+                                print('differentindex', tname, ttemp, titem)
+                    for k, v in sorted(pinlist.items()):
+                        if v[1] == '':
+                            ttemp = [v[0], k]
+                        else:
+                            ttemp = [v[0], str(int(v[1])+1), k]
+                        if v[2] != {}:
+                            ttemp.append(v[2])
+                        if paramstr == 'PS7':
+                            masterlist.append(ttemp)
+                paramname = tokval
+                if toknum != tokenize.NAME:
+                    break
+                parsenext()
+                if tokval != '(':
+                    break
+        else:
+            validate_token(tokval == ':')
+            if paramname not in ['fpga_arc_condition', 'function', 'next_state']:
+                paramlist[paramname] = tokval
+            if toknum == tokenize.NUMBER or toknum == tokenize.NAME or toknum == tokenize.STRING:
+                parsenext()
+            else:
+                validate_token(False)
+            if tokval != '}':
+                validate_token(tokval == ';')
+    validate_token(tokval == '}')
+    if paramlist.get('attr') == []:
+        del paramlist['attr']
+    return paramlist
+
+def parse_lib(filename):
+    global tokgenerator
+    tokgenerator = tokenize.generate_tokens(open(filename).readline)
+    parsenext()
+    print('PARSEFIRST', tokval)
+    if tokval != 'library':
+        sys.exit(1)
+    validate_token(toknum == tokenize.NAME)
+    parseparam()
+    parse_item()
 
 def parse_verilog(filename):
     global masterlist, commoninterfaces
@@ -107,7 +231,6 @@ def regroup_items(ifname, masterlist):
             newlist.append(item)
         else:
             litem = item[-1]
-#.lower()
             m = re.search('(.+?)(\d+)_(.+)', litem)
             if prevlist != [] and not litem.startswith(currentgroup):
                 print('UU', currentgroup, litem, prevlist, file=sys.stderr)
@@ -180,10 +303,10 @@ def translate_verilog(ifname):
     modulename = ''
     # check for parameterized declarations
     for item in masterlist:
-        #print('KK', item)
+        #print('KK', item, len(item))
         if item[0] == 'module':
             modulename = item[1]
-        if item[0] == 'input' or item[0] == 'output' or item[0] == 'inout':
+        if len(item) > 2 and (item[0] == 'input' or item[0] == 'output' or item[0] == 'inout'):
             item = item[1].strip('0123456789/')
             if len(item) > 0 and item not in paramnames and item[:4] != 'TDiv':
                 print('Missing parameter declaration', item, file=sys.stderr)
@@ -224,18 +347,22 @@ if __name__=='__main__':
     (options, args) = parser.parse_args()
     ifname = 'PPS7'
     #print('KK', options, args, file=sys.stderr)
-    for item in options.param:
-        item2 = item.split(':')
-        if len(item2) == 1:
-            if item2[0] not in paramnames:
-                paramnames.append(item2[0])
-        else:
-            parammap[item2[0]] = item2[1]
-            if item2[1] not in paramnames:
-                paramnames.append(item2[1])
+    if options.param:
+        for item in options.param:
+            item2 = item.split(':')
+            if len(item2) == 1:
+                if item2[0] not in paramnames:
+                    paramnames.append(item2[0])
+            else:
+                parammap[item2[0]] = item2[1]
+                if item2[1] not in paramnames:
+                    paramnames.append(item2[1])
     if len(args) != 1:
         print("incorrect number of arguments", file=sys.stderr)
     else:
-        parse_verilog(args[0])
+        if args[0].endswith('.lib'):
+            parse_lib(args[0])
+        else:
+            parse_verilog(args[0])
         masterlist = regroup_items(ifname, masterlist)
         translate_verilog(ifname)
