@@ -24,44 +24,37 @@ import FIFO            :: *;
 import AxiClientServer :: *;
 import PortalMemory    :: *;
 
-interface CoreIndication;
+interface LoadStoreIndication;
     method Action loadValue(Bit#(64) value);
 endinterface
 
-interface CoreRequest;
+interface LoadStoreRequest;
     method Action load(Bit#(40) addr, Bit#(4) length);
     method Action store(Bit#(40) addr, Bit#(64) value);
 endinterface
 
-instance PortalMemory#(CoreRequest);
-endinstance
-
-interface LoadStoreIndication;
-    interface CoreIndication coreIndication;
-endinterface
-
-interface LoadStoreRequest;
-   interface CoreRequest coreRequest;
+interface LoadStoreRequestInternal;
+   interface LoadStoreRequest ifc;
    interface Axi3Client#(40,64,8,12) m_axi;
 endinterface
 
-module mkLoadStoreRequest#(LoadStoreIndication ind)(LoadStoreRequest);
+module mkLoadStoreRequestInternal#(LoadStoreIndication ind)(LoadStoreRequestInternal);
 
     FIFO#(Bit#(40)) readAddrFifo <- mkFIFO;
     FIFO#(Bit#(4)) readLenFifo <- mkFIFO;
     FIFO#(Bit#(40)) writeAddrFifo <- mkFIFO;
     FIFO#(Bit#(64)) writeDataFifo <- mkFIFO;
 
-    interface CoreRequest coreRequest;
+    interface LoadStoreRequest ifc;
         method Action load(Bit#(40) addr, Bit#(4) len);
     	    readAddrFifo.enq(addr);
 	    readLenFifo.enq(len);
-	endmethod: load
+	endmethod
         method Action store(Bit#(40) addr, Bit#(64) value);
 	    writeAddrFifo.enq(addr);
 	    writeDataFifo.enq(value);
-	endmethod: store
-    endinterface: coreRequest
+	endmethod
+    endinterface
 
     interface Axi3Client m_axi;
 	interface Axi3WriteClient write;
@@ -75,7 +68,7 @@ module mkLoadStoreRequest#(LoadStoreIndication ind)(LoadStoreRequest);
 	   endmethod
 	   method Action response(Axi3WriteResponse#(12) r);
 	   endmethod
-	endinterface: write
+	endinterface
 	interface Axi3ReadClient read;
 	   method ActionValue#(Axi3ReadRequest#(40, 12)) address();
 	       readAddrFifo.deq;
@@ -83,8 +76,8 @@ module mkLoadStoreRequest#(LoadStoreIndication ind)(LoadStoreRequest);
 	       return Axi3ReadRequest { address: readAddrFifo.first, burstLen: readLenFifo.first, id: 0};
 	   endmethod
 	   method Action data(Axi3ReadResponse#(64, 12) response);
-	       ind.coreIndication.loadValue(response.data);
+	       ind.loadValue(response.data);
 	   endmethod
-	endinterface: read
-    endinterface: m_axi
-endmodule: mkLoadStoreRequest
+	endinterface
+    endinterface
+endmodule

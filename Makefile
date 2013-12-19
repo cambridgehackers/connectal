@@ -37,7 +37,7 @@ test-echo/sources/bsim: examples/echo/Top.bsv examples/echo/testecho.cpp
 # examples/echo2
 
 gen_echo2:
-	./genxpsprojfrombsv -B $(BOARD) -p test-echo2 -x mkZynqTop -s2h Say -h2s Say -s examples/echo2/test.cpp examples/echo2/Say.bsv  -t examples/echo2/Top.bsv -V verilog
+	./genxpsprojfrombsv -B $(BOARD) -p test-echo2 -x mkZynqTop -s2h Say -h2s Say -s examples/echo2/test.cpp -t examples/echo2/Top.bsv -V verilog examples/echo2/Say.bsv
 
 test-echo2/sources/bsim: examples/echo2/Top.bsv examples/echo2/test.cpp
 	-pkill bluetcl
@@ -52,7 +52,7 @@ test-echo2/sources/bsim: examples/echo2/Top.bsv examples/echo2/test.cpp
 # examples/memcpy
 
 gen_memcpy:
-	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication -s examples/memcpy/testmemcpy.cpp examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv -t examples/memcpy/Top.bsv -V verilog
+	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication -s examples/memcpy/testmemcpy.cpp  -t examples/memcpy/Top.bsv -V verilog examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv
 
 test-memcpy/ztop_1.bit.bin.gz: examples/memcpy/Memcpy.bsv
 	rm -fr test-memcpy
@@ -70,13 +70,16 @@ test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.
 	cd test-memcpy; jni/bsim_exe; cd ..
 
 #################################################################################################
+# examples/loadstore
+
+gen_loadstore:
+	./genxpsprojfrombsv -B $(BOARD) -p test-loadstore -x mkZynqTop  -s2h LoadStoreRequest -s2h DMARequest -h2s LoadStoreIndication -h2s DMAIndication -s examples/loadstore/testloadstore.cpp -t examples/loadstore/Top.bsv -V verilog examples/loadstore/LoadStore.bsv bsv/PortalMemory.bsv
 
 test-loadstore/loadstore.bit.bin.gz: examples/loadstore/LoadStore.bsv
 	rm -fr test-loadstore
-	./genxpsprojfrombsv -B $(BOARD) -p test-loadstore -b LoadStore examples/loadstore/LoadStore.bsv
+	make gen_loadstore
 	cd test-loadstore; make verilog && make bits && make loadstore.bit.bin.gz
-	cp examples/loadstore/testloadstore.cpp test-loadstore/jni
-	(cd test-loadstore; ndk-build)
+	cd test-loadstore; ndk-build
 	echo test-loadstore built successfully
 
 test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
