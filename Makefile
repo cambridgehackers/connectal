@@ -82,6 +82,25 @@ test-loadstore/loadstore.bit.bin.gz: examples/loadstore/LoadStore.bsv
 	cd test-loadstore; ndk-build
 	echo test-loadstore built successfully
 
+#################################################################################################
+# examples/memread
+
+gen_memread:
+	./genxpsprojfrombsv -B $(BOARD) -p test-memread -x mkZynqTop -s2h MemreadRequest -s2h DMARequest -h2s MemreadIndication -h2s DMAIndication -s examples/memread/testmemread.cpp  -t examples/memread/Top.bsv -V verilog examples/memread/Memread.bsv bsv/PortalMemory.bsv
+
+test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmemread.cpp
+	-pkill bluetcl
+	rm -fr test-memread
+	make gen_memread
+	cd test-memread; make bsim; cd ..
+	cd test-memread; make bsim_exe; cd ..
+	cd test-memread; sources/bsim& cd ..
+	cd test-memread; jni/bsim_exe; cd ..
+
+#################################################################################################
+# not yet updated
+
+
 test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
 	rm -fr test-hdmi
 	./genxpsprojfrombsv -B $(BOARD) -p test-hdmi -x HDMI -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/HDMI.bsv bsv/PortalMemory.bsv
@@ -94,14 +113,6 @@ test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
 	echo test-imageon built successfully
 
-test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmemread.cpp
-	-pkill bluetcl
-	rm -fr test-memread
-	./genxpsprojfrombsv -B $(BOARD) -p test-memread -b Memread examples/memread/Memread.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s examples/memread/testmemread.cpp
-	cd test-memread; make x86_exe; cd ..
-	cd test-memread; make bsim; cd ..
-	test-memread/sources/bsim &
-	test-memread/jni/memread
 
 test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/testmemwrite.cpp
 	-pkill bluetcl

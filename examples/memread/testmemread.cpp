@@ -1,4 +1,3 @@
-#include "Memread.h"
 #include <stdio.h>
 #include <sys/mman.h>
 #include <string.h>
@@ -6,11 +5,14 @@
 #include <unistd.h>
 #include <pthread.h>
 
-CoreRequest *device = 0;
-DMARequest *dma = 0;
+#include "DMAIndicationWrapper.h"
+#include "DMARequestProxy.h"
+#include "GeneratedTypes.h" 
+#include "MemreadIndicationWrapper.h"
+#include "MemreadRequestProxy.h"
+
 PortalAlloc *srcAlloc;
 unsigned int *srcBuffer = 0;
-
 int numWords = 16 << 8;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
@@ -23,24 +25,29 @@ void dump(const char *prefix, char *buf, size_t len)
     fprintf(stderr, "\n");
 }
 
-class TestDMAIndication : public DMAIndication
+class DMAIndication : public DMAIndicationWrapper
 {
+
+public:
+  DMAIndication(const char* devname, unsigned int addrbits) : DMAIndicationWrapper(devname,addrbits){}
+
   virtual void reportStateDbg(const DmaDbgRec& rec){
-    fprintf(stderr, "DMA::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
+    fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "DMA::configResp: %lx\n", channelId);
+    fprintf(stderr, "configResp: %lx\n", channelId);
   }
   virtual void sglistResp(unsigned long channelId){
-    fprintf(stderr, "DMA::sglistResp: %lx\n", channelId);
+    fprintf(stderr, "sglistResp: %lx\n", channelId);
   }
   virtual void parefResp(unsigned long channelId){
-    fprintf(stderr, "DMA::parefResp: %lx\n", channelId);
+    fprintf(stderr, "parefResp: %lx\n", channelId);
   }
 };
 
-class TestCoreIndication : public CoreIndication
+class MemreadIndication : public MemreadIndicationWrapper
 {
+public:
   unsigned int rDataCnt;
   virtual void readReq(unsigned long v){
     //fprintf(stderr, "Core::readReq %lx\n", v);
@@ -59,18 +66,27 @@ class TestCoreIndication : public CoreIndication
   virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
     fprintf(stderr, "Core::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
   }  
-public:
-  TestCoreIndication()
-    : rDataCnt(0){}
+  MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits){}
+
 };
 
 int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
 
+  MemreadRequestProxy *device = 0;
+  DMARequestProxy *dma = 0;
+  
+  MemreadIndication *deviceIndication = 0;
+  DMAIndication *dmaIndication = 0;
+
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
-  device = CoreRequest::createCoreRequest(new TestCoreIndication);
-  dma = DMARequest::createDMARequest(new TestDMAIndication);
+
+  device = new MemreadRequestProxy("fpga1", 16);
+  dma = new DMARequestProxy("fpga3", 16);
+
+  deviceIndication = new MemreadIndication("fpga2", 16);
+  dmaIndication = new DMAIndication("fpga4", 16);
 
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(alloc_sz, &srcAlloc);

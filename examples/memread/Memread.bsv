@@ -29,12 +29,12 @@ import BsimRDMA::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 
-interface CoreRequest;
+interface MemreadRequest;
    method Action startRead(Bit#(32) numWords);
    method Action getStateDbg();   
 endinterface
 
-interface CoreIndication;
+interface MemreadIndication;
    method Action started(Bit#(32) numWords);
    method Action rData(Bit#(64) v);
    method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) dataMismatch);
@@ -42,31 +42,13 @@ interface CoreIndication;
    method Action readDone(Bit#(32) dataMismatch);
 endinterface
 
-interface MemreadRequest;
-   interface Axi3Client#(40,64,8,12) m_axi;
-   interface CoreRequest coreRequest;
-   interface DMARequest dmaRequest;
-endinterface
+module mkMemreadRequest#(MemreadIndication indication,
+			 ReadChan#(Bit#(64)) dma_stream_read_chan) (MemreadRequest);
 
-interface MemreadIndication;
-   interface CoreIndication coreIndication;
-   interface DMAIndication dmaIndication;
-endinterface
-
-module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
-
-`ifdef BSIM
-   BsimDMA#(Bit#(64))          dma <- mkBsimDMA(indication.dmaIndication);
-`else
-   AxiDMA#(Bit#(64))           dma <- mkAxiDMA(indication.dmaIndication);
-`endif
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(40))      offset <- mkReg(0);
-
-   // dma read channel 0 is reserved for memread read path
-   ReadChan#(Bit#(64)) dma_stream_read_chan = dma.read.readChannels[0];
 
    rule consume;
       let v <- dma_stream_read_chan.readData.get;
@@ -74,7 +56,7 @@ module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
       let misMatch1 = v[63:32] != srcGen+1;
       dataMismatch <= dataMismatch || misMatch0 || misMatch1;
       srcGen <= srcGen+2;
-      // indication.coreIndication.rData(v);
+      // indication.rData(v);
    endrule
    
    rule readReq(streamRdCnt > 0);
@@ -82,23 +64,18 @@ module mkMemreadRequest#(MemreadIndication indication)(MemreadRequest);
       dma_stream_read_chan.readReq.put(offset);
       offset <= offset + 1;
       if (streamRdCnt == 16)
-	 indication.coreIndication.readDone(zeroExtend(pack(dataMismatch)));
+	 indication.readDone(zeroExtend(pack(dataMismatch)));
       else if (streamRdCnt[5:0] == 6'b0)
-	 indication.coreIndication.readReq(streamRdCnt);
+	 indication.readReq(streamRdCnt);
    endrule
 
-   interface CoreRequest coreRequest;
-      method Action startRead(Bit#(32) numWords) if (streamRdCnt == 0);
-	 streamRdCnt <= numWords;
-	 indication.coreIndication.started(numWords);
-      endmethod
-      
-      method Action getStateDbg();
-	 indication.coreIndication.reportStateDbg(streamRdCnt, dataMismatch ? 32'd1 : 32'd0);
-      endmethod
-   endinterface
-`ifndef BSIM
-   interface Axi3Client m_axi = dma.m_axi;
-`endif
-   interface DMARequest dmaRequest = dma.request;
+   method Action startRead(Bit#(32) numWords) if (streamRdCnt == 0);
+      streamRdCnt <= numWords;
+      indication.started(numWords);
+   endmethod
+   
+   method Action getStateDbg();
+      indication.reportStateDbg(streamRdCnt, dataMismatch ? 32'd1 : 32'd0);
+   endmethod
+   
 endmodule
