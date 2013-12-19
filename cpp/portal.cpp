@@ -425,8 +425,7 @@ void* portalExec(void* __x)
 	unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
 	unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
-	if(0)
-	  fprintf(stderr, "(%d) about to receive messages %08x %08x %08x\n", i, int_src, int_en, queue_status);
+	fprintf(stderr, "(%d) about to receive messages %08x %08x %08x\n", i, int_src, int_en, queue_status);
 
 	// handle all messasges from this portal instance
 	while (queue_status) {

@@ -388,10 +388,9 @@ indicationRuleTemplate='''
             $display("underflow");
         end
         axiSlaveReadDataFifo.enq(v);
-        rq.readyBits[%(methodName)s$Offset] <= False;
     endrule
-    rule %(methodName)s$ReadyBit if (!rq.readyBits[%(methodName)s$Offset]);
-        rq.readyBits[%(methodName)s$Offset] <= %(methodName)s$responseFifo.fullComp();
+    rule %(methodName)s$ReadyBit;
+        rq.readyBits[%(methodName)s$Offset] <= %(methodName)s$responseFifo.notEmpty;
     endrule
 '''
 

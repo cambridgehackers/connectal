@@ -7,17 +7,17 @@ interface ReadyQueue#(type nports, type tagtype, type priotype);
    interface Vector#(nports, Reg#(Bool)) readyBits;
 endinterface
 
-module mkFirstReadyQueue(ReadyQueue#(nports,Bit#(tagtypesz),Bit#(priotypesz)))
+module mkFirstReadyQueue(ReadyQueue#(nports,Bit#(tts),Bit#(pts)))
    provisos (Add#(1,s,nports));
 
     Vector#(nports, Reg#(Bool)) readyBitsRegs <- replicateM(mkReg(False));
 
-    function Tuple2#(Bit#(tagtypesz), Bit#(priotypesz)) getMaxPriorityRequest();
-       Vector#(nports, Bit#(tagtypesz)) idxs = genWith(fromInteger);
-       function Bit#(priotypesz) ready2Prio(Reg#(Bool) r);
+    function Tuple2#(Bit#(tts), Bit#(pts)) getMaxPriorityRequest();
+       Vector#(nports, Bit#(tts)) idxs = genWith(fromInteger);
+       function Bit#(pts) ready2Prio(Reg#(Bool) r);
 	  return r._read ? 1 : 0;
        endfunction
-       function Tuple2#(Bit#(tagtypesz),Bit#(priotypesz)) maxreq(Tuple2#(Bit#(tagtypesz),Bit#(priotypesz)) a, Tuple2#(Bit#(tagtypesz),Bit#(priotypesz)) b);
+       function Tuple2#(Bit#(tts),Bit#(pts)) maxreq(Tuple2#(Bit#(tts),Bit#(pts)) a, Tuple2#(Bit#(tts),Bit#(pts)) b);
 	  if (tpl_2(a) != 0)
              return a;
           else
@@ -29,7 +29,7 @@ module mkFirstReadyQueue(ReadyQueue#(nports,Bit#(tagtypesz),Bit#(priotypesz)))
    interface readyBits = readyBitsRegs;
 
    interface ReadOnly maxPriorityRequest;
-      method Tuple2#(Bit#(tagtypesz), Bit#(priotypesz)) _read;
+      method Tuple2#(Bit#(tts), Bit#(pts)) _read;
 	 return getMaxPriorityRequest;
       endmethod
    endinterface
