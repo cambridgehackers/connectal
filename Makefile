@@ -9,28 +9,70 @@ BOARD=zedboard
 parsetab.py: syntax.py
 	python syntax.py
 
-test: test-echo/echo.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidisplay.bit.bin.gz
+test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidisplay.bit.bin.gz
 
-test-echo/echo.bit.bin.gz: examples/echo/Echo.bsv
+
+#################################################################################################
+# examples/echo
+
+gen_echo:
+	./genxpsprojfrombsv -B$(BOARD) -p test-echo -x mkZynqTop -s2h Swallow -s2h EchoRequest -h2s EchoIndication -s examples/echo/testecho.cpp -t examples/echo/Top.bsv -V verilog examples/echo/Echo.bsv examples/echo/Swallow.bsv
+
+test-echo/ztop_1.bit.bin.gz: examples/echo/Echo.bsv
 	rm -fr test-echo
-	mkdir test-echo
-	./genxpsprojfrombsv -B $(BOARD) -p test-echo -b Echo examples/echo/Echo.bsv
+	make gen_echo
 	cd test-echo; make verilog && make bits && make echo.bit.bin.gz
-	cp examples/echo/testecho.cpp test-echo/jni
-	(cd test-echo; ndk-build)
-	echo test-echo built successfully
+	cd test-echo; ndk-build
+
+test-echo/sources/bsim: examples/echo/Top.bsv examples/echo/testecho.cpp
+	-pkill bluetcl
+	rm -fr test-echo
+	make gen_echo
+	cd test-echo; make bsim; cd ..
+	cd test-echo; make bsim_exe; cd ..
+	cd test-echo; sources/bsim& cd ..
+	cd test-echo; jni/bsim_exe; cd ..
+
+#################################################################################################
+# examples/echo2
+
+gen_echo2:
+	./genxpsprojfrombsv -B $(BOARD) -p test-echo2 -x mkZynqTop -s2h Say -h2s Say -s examples/echo2/test.cpp examples/echo2/Say.bsv  -t examples/echo2/Top.bsv -V verilog
+
+test-echo2/sources/bsim: examples/echo2/Top.bsv examples/echo2/test.cpp
+	-pkill bluetcl
+	rm -fr test-echo2
+	make gen_echo2
+	cd test-echo2; make bsim; cd ..
+	cd test-echo2; make bsim_exe; cd ..
+	cd test-echo2; sources/bsim& cd ..
+	cd test-echo2; jni/bsim_exe; cd ..
+
+#################################################################################################
+# examples/memcpy
+
+gen_memcpy:
+	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication -s examples/memcpy/testmemcpy.cpp examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv -t examples/memcpy/Top.bsv -V verilog
 
 test-memcpy/ztop_1.bit.bin.gz: examples/memcpy/Memcpy.bsv
 	rm -fr test-memcpy
-	mkdir test-memcpy
-	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication -s examples/memcpy/testmemcpy.cpp examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv -t examples/memcpy/Top.bsv -V verilog
+	make gen_memcpy
 	cd test-memcpy; make verilog && make bits
 	cd test-memcpy; ndk-build
-	echo test-memcpy built successfully
+
+test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.cpp
+	-pkill bluetcl
+	rm -fr test-memcpy
+	make gen_memcpy
+	cd test-memcpy; make bsim; cd ..
+	cd test-memcpy; make bsim_exe; cd ..
+	cd test-memcpy; sources/bsim& cd ..
+	cd test-memcpy; jni/bsim_exe; cd ..
+
+#################################################################################################
 
 test-loadstore/loadstore.bit.bin.gz: examples/loadstore/LoadStore.bsv
 	rm -fr test-loadstore
-	mkdir test-loadstore
 	./genxpsprojfrombsv -B $(BOARD) -p test-loadstore -b LoadStore examples/loadstore/LoadStore.bsv
 	cd test-loadstore; make verilog && make bits && make loadstore.bit.bin.gz
 	cp examples/loadstore/testloadstore.cpp test-loadstore/jni
@@ -39,42 +81,19 @@ test-loadstore/loadstore.bit.bin.gz: examples/loadstore/LoadStore.bsv
 
 test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
 	rm -fr test-hdmi
-	mkdir test-hdmi
 	./genxpsprojfrombsv -B $(BOARD) -p test-hdmi -x HDMI -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/HDMI.bsv bsv/PortalMemory.bsv
 	cd test-hdmi; make verilog && make bits && make hdmidisplay.bit.bin.gz
 	echo test-hdmi built successfully
 
 test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	rm -fr test-imageon
-	mkdir test-imageon
 	./genxpsprojfrombsv -B zc702 -p test-imageon -x ImageonVita -x HDMI -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv bsv/Imageon.bsv bsv/HDMI.bsv bsv/IserdesDatadeser.bsv
 	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
 	echo test-imageon built successfully
 
-test-echo2/sources/bsim: examples/echo2/Top.bsv examples/echo2/test.cpp
-	-pkill bluetcl
-	rm -fr test-echo2
-	mkdir test-echo2
-	./genxpsprojfrombsv -B $(BOARD) -p test-echo2 -x mkZynqTop -s2h Say -h2s Say -s examples/echo2/test.cpp examples/echo2/Say.bsv  -t examples/echo2/Top.bsv -V verilog
-	cd test-echo2; make bsim; cd ..
-	cd test-echo2; make bsim_exe; cd ..
-	test-echo2/sources/bsim &
-	test-echo2/jni/bsim_exe
-
-test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.cpp
-	-pkill bluetcl
-	rm -fr test-memcpy
-	mkdir test-memcpy
-	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication -s examples/memcpy/testmemcpy.cpp examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv -t examples/memcpy/Top.bsv -V verilog
-	cd test-memcpy; make bsim; cd ..
-	cd test-memcpy; make bsim_exe; cd ..
-	test-memcpy/sources/bsim &
-	test-memcpy/jni/bsim_exe
-
 test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmemread.cpp
 	-pkill bluetcl
 	rm -fr test-memread
-	mkdir test-memread
 	./genxpsprojfrombsv -B $(BOARD) -p test-memread -b Memread examples/memread/Memread.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s examples/memread/testmemread.cpp
 	cd test-memread; make x86_exe; cd ..
 	cd test-memread; make bsim; cd ..
@@ -84,7 +103,6 @@ test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmem
 test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/testmemwrite.cpp
 	-pkill bluetcl
 	rm -fr test-memwrite
-	mkdir test-memwrite
 	./genxpsprojfrombsv -B $(BOARD) -p test-memwrite -b Memwrite examples/memwrite/Memwrite.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s examples/memwrite/testmemwrite.cpp
 	cd test-memwrite; make x86_exe; cd ..
 	cd test-memwrite; make bsim; cd ..
@@ -94,7 +112,6 @@ test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/tes
 test-struct/sources/bsim: examples/struct/Struct.bsv examples/struct/teststruct.cpp
 	-pkill bluetcl
 	rm -fr test-struct
-	mkdir test-struct
 	./genxpsprojfrombsv -B $(BOARD) -p test-struct -b Struct examples/struct/Struct.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s examples/struct/teststruct.cpp
 	cd test-struct; make x86_exe; cd ..
 	cd test-struct; make bsim; cd ..
@@ -106,7 +123,6 @@ test-struct/sources/bsim: examples/struct/Struct.bsv examples/struct/teststruct.
 test-strstr/sources/bsim: examples/strstr/Strstr.bsv examples/strstr/teststrstr.cpp
 	-pkill bluetcl
 	rm -fr test-strstr
-	mkdir test-strstr
 	./genxpsprojfrombsv -B $(BOARD) -p test-strstr -b Strstr examples/strstr/Strstr.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s examples/strstr/teststrstr.cpp
 	cd test-strstr; make x86_exe; cd ..
 	cd test-strstr; make bsim; cd ..
@@ -133,7 +149,6 @@ v7echoproj:
 test-mempoke/sources/bsim: examples/mempoke/Mempoke.bsv examples/mempoke/testmempoke.cpp
 	-pkill bluetcl
 	rm -fr test-mempoke
-	mkdir test-mempoke
 	./genxpsprojfrombsv -B $(BOARD) -p test-mempoke -b Mempoke examples/mempoke/Mempoke.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s examples/mempoke/testmempoke.cpp
 	cd test-mempoke; make x86_exe; cd ..
 	cd test-mempoke; make bsim; cd ..
@@ -143,7 +158,6 @@ test-mempoke/sources/bsim: examples/mempoke/Mempoke.bsv examples/mempoke/testmem
 test-ring/sources/bsim: examples/ring/Ring.bsv examples/ring/testring.cpp
 	-pkill bluetcl
 	rm -fr test-ring
-	mkdir test-ring
 	./genxpsprojfrombsv -B $(BOARD) -p test-ring -b Ring examples/ring/Ring.bsv examples/ring/RingTypes.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/ring/testring.cpp
 	cd test-ring; make x86_exe; cd ..
 	cd test-ring; make bsim; cd ..

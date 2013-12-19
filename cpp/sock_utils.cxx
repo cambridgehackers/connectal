@@ -14,7 +14,7 @@ void* init_socket(void* _xx)
 
   struct channel *c = (struct channel *)_xx;
 
-  printf("%s (%s)\n",__FUNCTION__,c->path);
+  //fprintf(stderr, "%s (%s)\n",__FUNCTION__,c->path);
   if ((c->s1 = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     fprintf(stderr, "%s (%s) socket error %s",__FUNCTION__, c->path, strerror(errno));
     exit(1);
@@ -34,13 +34,13 @@ void* init_socket(void* _xx)
     exit(1);
   }
   
-  fprintf(stderr, "%s (%s) waiting for a connection...\n",__FUNCTION__, c->path);
+  //fprintf(stderr, "%s (%s) waiting for a connection...\n",__FUNCTION__, c->path);
   if ((c->s2 = accept(c->s1, NULL, NULL)) == -1) {
     fprintf(stderr, "%s (%s) accept error %s\n",__FUNCTION__, c->path, strerror(errno));
     exit(1);
   }
   
-  fprintf(stderr, "%s (%s) connected\n",__FUNCTION__,c->path);
+  //fprintf(stderr, "%s (%s) connected\n",__FUNCTION__,c->path);
   c->connected = true;
   return _xx;
 }
@@ -56,7 +56,7 @@ void connect_socket(channel *c)
     exit(1);
   }
 
-  printf("%s (%s) trying to connect...\n",__FUNCTION__, c->path);
+  //fprintf(stderr, "%s (%s) trying to connect...\n",__FUNCTION__, c->path);
   
   c->local.sun_family = AF_UNIX;
   strcpy(c->local.sun_path, c->path);
@@ -66,7 +66,7 @@ void connect_socket(channel *c)
       fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, c->path, strerror(errno));
       exit(1);
     }
-    fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, c->path);
+    //fprintf(stderr, "%s (%s) retrying connection\n",__FUNCTION__, c->path);
     sleep(1);
   }
   // int sockbuffsz = sizeof(memrequest);
