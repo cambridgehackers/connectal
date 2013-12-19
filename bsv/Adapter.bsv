@@ -39,6 +39,7 @@ interface ToBit#(numeric type n, type a);
    method Action deq();
    method Bool notEmpty();
    method Bool notFull();
+   method Bool fullComp();
 endinterface
    
 interface FromBit#(numeric type n, type a);
@@ -89,6 +90,10 @@ module mkToBit(ToBit#(n,a))
    Reg#(Bit#(32))   count <- mkReg(0);
    
    let nv = valueOf(n);
+   
+   method Bool fullComp();
+      return (fifo.notEmpty() && count == 0);
+   endmethod
    
    method Action enq(a val);
       fifo.enq({padding,pack(val)});

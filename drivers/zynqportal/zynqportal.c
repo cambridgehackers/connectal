@@ -52,20 +52,13 @@
 struct portal_data {
 	struct device *dev;
         struct miscdevice misc;
-        struct mutex completion_mutex;
         wait_queue_head_t wait_queue;
         const char *device_name;
         dma_addr_t dev_base_phys;
         dma_addr_t ind_reg_base_phys;
-        dma_addr_t ind_fifo_base_phys;
-        dma_addr_t req_reg_base_phys;
-        dma_addr_t req_fifo_base_phys;
         void      *dev_base_virt;
         void      *ind_reg_base_virt;
-        void      *ind_fifo_base_virt;
-        void      *req_reg_base_virt;
-        void      *req_fifo_base_virt;
-	unsigned char portal_irq;
+        unsigned char portal_irq;
 };
 
 struct portal_client {
@@ -94,23 +87,26 @@ static void dump_ind_regs(const char *prefix, struct portal_data *portal_data)
 static irqreturn_t portal_isr(int irq, void *dev_id)
 {
 	struct portal_data *portal_data = (struct portal_data *)dev_id;
-	u32 int_src, int_en;
+	u32 int_status, int_en;
 
 
         //dump_ind_regs("ISR a", portal_data);
-        int_src = readl(portal_data->ind_reg_base_virt + 0);
+        int_status = readl(portal_data->ind_reg_base_virt + 0);
 	int_en  = readl(portal_data->ind_reg_base_virt + 4);
-	driver_devel("%s IRQ %s %d %x %x\n", __func__, portal_data->device_name, irq, int_src, int_en);
+	driver_devel("%s IRQ %s %d %x %x\n", __func__, portal_data->device_name, irq, int_status, int_en);
 
-	// disable interrupt.  this will be enabled by user mode 
-	// driver  after all the HW->SW FIFOs have been emptied
-        writel(0, portal_data->ind_reg_base_virt + 0x4);
-
-        //dump_ind_regs("ISR b", portal_data);
-        mutex_unlock(&portal_data->completion_mutex);
-	wake_up_interruptible(&portal_data->wait_queue);
-
-        return IRQ_HANDLED;
+	if(int_status){
+	  // disable interrupt.  this will be enabled by user mode 
+	  // driver  after all the HW->SW FIFOs have been emptied
+	  writel(0, portal_data->ind_reg_base_virt + 0x4);
+	  
+	  //dump_ind_regs("ISR b", portal_data);
+	  wake_up_interruptible(&portal_data->wait_queue);
+	  
+	  return IRQ_HANDLED;
+	} else {
+	  return IRQ_NONE;
+	}
 }
 
 static int portal_open(struct inode *inode, struct file *filep)
@@ -121,12 +117,10 @@ static int portal_open(struct inode *inode, struct file *filep)
         struct portal_client *portal_client =
                 (struct portal_client *)kzalloc(sizeof(struct portal_client), GFP_KERNEL);
 
-        driver_devel("%s: %s ind_reg_base_phys %lx ind_fifo_base_phys %lx\n", __FUNCTION__, portal_data->device_name,
-                     (long)portal_data->ind_reg_base_phys, (long)(portal_data->ind_fifo_base_phys));
-        driver_devel("%s: %s req_reg_base_phys %lx req_fifo_base_phys %lx\n", __FUNCTION__, portal_data->device_name,
-                     (long)portal_data->req_reg_base_phys, (long)(portal_data->req_fifo_base_phys));
-
-        //dump_ind_regs("portal_open", portal_data);
+        driver_devel("%s: %s ind_reg_base_phys %lx\n", __FUNCTION__, portal_data->device_name,
+                     (long)portal_data->ind_reg_base_phys);
+        
+	//dump_ind_regs("portal_open", portal_data);
 
         portal_client->portal_data = portal_data;
         filep->private_data = portal_client;
@@ -243,7 +237,7 @@ int portal_init_driver(struct portal_init_data *init_data)
 	struct portal_data *portal_data;
 	struct resource *reg_res, *irq_res;
         struct miscdevice *miscdev;
-	int rc = 0, dev_range=0, reg_range=0, fifo_range=0;
+	int rc = 0, dev_range=0, reg_range=0;
 	dev = &init_data->pdev->dev;
 
 	reg_res = platform_get_resource(init_data->pdev, IORESOURCE_MEM, 0);
@@ -259,38 +253,26 @@ int portal_init_driver(struct portal_init_data *init_data)
 		rc = -ENOMEM;
 		goto err_mem;
 	}
+
         portal_data->device_name = init_data->device_name;
         portal_data->dev_base_phys = reg_res->start;
         portal_data->ind_reg_base_phys = reg_res->start + (3 << 14);
-	portal_data->ind_fifo_base_phys = reg_res->start + (2 << 14);
-        portal_data->req_reg_base_phys = reg_res->start + (1 << 14);
-	portal_data->req_fifo_base_phys = reg_res->start + (0 << 14);
-	
+			
 	dev_range = reg_res->end - reg_res->start;
-	fifo_range = 1 << 14;
 	reg_range = 1 << 14;
 
 	portal_data->dev_base_virt = ioremap_nocache(portal_data->dev_base_phys, dev_range);
         portal_data->ind_reg_base_virt = ioremap_nocache(portal_data->ind_reg_base_phys, reg_range);
-        portal_data->ind_fifo_base_virt = ioremap_nocache(portal_data->ind_fifo_base_phys, fifo_range);
-        portal_data->req_reg_base_virt = ioremap_nocache(portal_data->req_reg_base_phys, reg_range);
-        portal_data->req_fifo_base_virt = ioremap_nocache(portal_data->req_fifo_base_phys, fifo_range);
-
+                
         pr_info("%s ind_reg_base phys %x/%x virt %p\n",
                 portal_data->device_name,
                 portal_data->ind_reg_base_phys, reg_range, portal_data->ind_reg_base_virt);
 
-        pr_info("%s ind_fifo_base phys %x/%x virt %p\n",
-                portal_data->device_name,
-                portal_data->ind_fifo_base_phys, fifo_range, portal_data->ind_fifo_base_virt);
-
-        mutex_init(&portal_data->completion_mutex);
-        mutex_lock(&portal_data->completion_mutex);
         init_waitqueue_head(&portal_data->wait_queue);
-
 	portal_data->portal_irq = irq_res->start;
+	printk("%s about to call request_irq\n", __func__);
 	if (request_irq(portal_data->portal_irq, portal_isr,
-			IRQF_TRIGGER_HIGH, portal_data->device_name, portal_data)) {
+			IRQF_TRIGGER_HIGH | IRQF_SHARED, portal_data->device_name, portal_data)) {
 		portal_data->portal_irq = 0;
 		goto err_bb;
 	}
@@ -310,6 +292,7 @@ int portal_init_driver(struct portal_init_data *init_data)
 	return 0;
 
 err_bb:
+	printk("%s err_bb\n", __func__);
 	if (portal_data->portal_irq != 0)
 		free_irq(portal_data->portal_irq, portal_data);
 

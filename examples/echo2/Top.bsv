@@ -79,7 +79,7 @@ module mkBsimTop();
       let wd <- writeData;
       top.ctrl.write.writeAddr(wa,0,0,0,0,0,0);
       wf.enq(wd);
-      $display("mkBsimTop::wrReq %h", wa);
+      //$display("mkBsimTop::wrReq %h", wa);
    endrule
    rule wrData;
       wf.deq;

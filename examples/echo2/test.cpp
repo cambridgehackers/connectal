@@ -29,6 +29,8 @@ public:
 
 int main(int argc, const char **argv)
 {
+  fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
+
   SayProxy *sayProxy = new SayProxy("fpga1", 16);
   Say *say = new Say("fpga2", 16); 
 

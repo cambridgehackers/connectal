@@ -98,7 +98,7 @@ Portal::~Portal()
 
 
 
-int Portal::open(int length)
+int Portal::open(int addrbits)
 {
 #ifdef ZYNQ
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
@@ -134,7 +134,7 @@ int Portal::open(int length)
 	ALOGE("Failed to open %s fd=%d errno=%d\n", path, this->fd, errno);
 	return -errno;
     }
-    volatile unsigned int *dev_base = (volatile unsigned int*)mmap(NULL, length, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
+    volatile unsigned int *dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
     if (dev_base == MAP_FAILED) {
       ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
       return -errno;
@@ -159,6 +159,15 @@ int Portal::open(int length)
     ind_fifo_base  = dev_base+(2<<14);
     req_reg_base   = dev_base+(1<<14);
     req_fifo_base  = dev_base+(0<<14);
+
+    // enable interrupts
+    fprintf(stderr, "Portal::enabling interrupts %s\n", name);
+    unsigned int addr = ind_reg_base+0x4;
+    struct memrequest foo = {true,addr,1};
+    if (send(p.write.s2, &foo, sizeof(foo), 0) == -1) {
+      fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
+      exit(1);
+    }
 #endif
     return 0;
 }
@@ -375,7 +384,7 @@ void* portalExec(void* __x)
 {
 #ifdef MMAP_HW
     long rc;
-    int timeout = -1;
+    int timeout = 1; // interrupts not working yet on Zynq
 #ifndef ZYNQ
     timeout = 1; // interrupts not working yet on PCIe
 #endif
@@ -447,7 +456,6 @@ void* portalExec(void* __x)
 #else // BSIM
     fprintf(stderr, "about to enter bsim while(true), numFds=%d\n", numFds);
     while (true){
-      sleep(0);
       for(int i = 0; i < numFds; i++){
 	PortalWrapper *instance = portal_wrappers[i];
 	unsigned int addr = instance->ind_reg_base+0x18;
@@ -463,8 +471,20 @@ void* portalExec(void* __x)
 	  fprintf(stderr, "portalExec recv error (%s)\n", instance->name);
 	  exit(1);	  
 	}
-	//fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
+	
+	{
+	  unsigned int addr = instance->ind_reg_base+0x0;
+	  struct memrequest foo = {false,addr,0};
+	  assert(send(instance->p.read.s2, &foo, sizeof(foo), 0) != -1);
+	  unsigned int int_status;
+	  assert(recv(instance->p.read.s2, &int_status, sizeof(int_status), 0) != -1);
+	  //fprintf(stderr, "(%s) int_status : %08x\n", instance->name, int_status);
+	  // int_status and queue_status should be coherent
+	  if(int_status)
+	    assert(queue_status > 0);
+	}
 	if (queue_status){
+          fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
 	  instance->handleMessage(queue_status-1);	
 	}
       }

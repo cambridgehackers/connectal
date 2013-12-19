@@ -148,7 +148,7 @@ portalIfcTemplate='''
                  axiSlaveWriteBurstCountReg <= burstLen + 1;
                  axiSlaveWriteAddrReg <= truncate(addr);
 		 axiSlaveWriteIdReg <= awid;
-                 $display(\"%(Dut)s::Axi3SlaveWrite::writeAddr(%%h) ws=%%d\", addr, addr[15]);
+                 //$display(\"%(Dut)s::Axi3SlaveWrite::writeAddr(%%h) ws=%%d\", addr, addr[15]);
             endmethod
             method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last, Bit#(12) wid)
                           if (axiSlaveWriteBurstCountReg > 0);
@@ -279,10 +279,10 @@ proxyCtrlTemplate='''
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
     Vector#(%(indicationChannelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
-    ReadyQueue#(%(indicationChannelCount)s, Bit#(iccsz), Bit#(iccsz)) rq <- mkFirstReadyQueue();
+    ReadyQueue#(%(indicationChannelCount)s, Bit#(TAdd#(iccsz,1)), Bit#(TAdd#(iccsz,1))) rq <- mkFirstReadyQueue();
     
     Reg#(Bool) interruptEnableReg <- mkReg(False);
-    let       interruptStatus = tpl_2(rq.maxPriorityRequest) != 0;
+    let       interruptStatus = tpl_2(rq.maxPriorityRequest) > 0;
     function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
     function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
 
@@ -385,11 +385,13 @@ indicationRuleTemplate='''
         end
         else begin
             underflowReadCountReg <= underflowReadCountReg + 1;
+            $display("underflow");
         end
         axiSlaveReadDataFifo.enq(v);
+        rq.readyBits[%(methodName)s$Offset] <= False;
     endrule
-    rule %(methodName)s$ReadyBit;
-        rq.readyBits[%(methodName)s$Offset] <= %(methodName)s$responseFifo.notEmpty();
+    rule %(methodName)s$ReadyBit if (!rq.readyBits[%(methodName)s$Offset]);
+        rq.readyBits[%(methodName)s$Offset] <= %(methodName)s$responseFifo.fullComp();
     endrule
 '''
 
@@ -405,7 +407,6 @@ indicationMethodTemplate='''
 
 
 mkHiddenWrapperInterfaceTemplate='''
-%(mutexRuleList)s
 // hidden wrapper implementation
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
@@ -416,7 +417,6 @@ endmodule
 '''
 
 mkExposedWrapperInterfaceTemplate='''
-%(mutexRuleList)s
 // exposed wrapper implementation
 module mk%(Dut)s#(Integer id, %(Ifc)s ifc)(%(Dut)s);
 %(axiState)s
@@ -431,7 +431,6 @@ endmodule
 '''
 
 mkHiddenProxyInterfaceTemplate='''
-%(indicationMutexRuleList)s
 // hidden proxy implementation
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
@@ -443,7 +442,6 @@ endmodule
 '''
 
 mkExposedProxyInterfaceTemplate='''
-%(indicationMutexRuleList)s
 // exposed proxy implementation
 module %(moduleContext)s mk%(Dut)s#(Integer id) (%(Dut)s) provisos (Log#(%(indicationChannelCount)s,iccsz));
 %(axiState)s
@@ -598,7 +596,6 @@ class InterfaceMixin:
             'dut': dutName,
             'Dut': util.capitalize(name),
             'requestElements': ''.join(requestElements),
-            'mutexRuleList': '', #'(* mutually_exclusive = "' + (', '.join(methodRuleNames)) + '" *)' if (len(methodRuleNames) > 1) else '',
             'methodRules': ''.join(methodRules),
             'requestFailureRuleNames': "" if len(methodNames) == 0 else '(* descending_urgency = "'+', '.join(['handle$%s$requestFailure' % n for n in methodNames])+'"*)',
             'channelCount': self.channelCount,
@@ -608,7 +605,6 @@ class InterfaceMixin:
             'moduleContext': '',
 
             'responseElements': ''.join(responseElements),
-            'indicationMutexRuleList': '', #'(* mutually_exclusive = "' + (', '.join(indicationMethodRuleNames)) + '" *)' if (len(indicationMethodRuleNames) > 1) else '',
             'indicationMethodRules': ''.join(indicationMethodRules),
             'indicationMethods': ''.join(indicationMethods),
             'indicationMethodDecls' :''.join(indicationMethodDecls),

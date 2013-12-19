@@ -132,7 +132,7 @@ program:
 bits: %(dut)s.bit.bin.gz
 boot.bin: %(dut)s.bit.bin.gz
 
-exe:
+android_exe:
 	ndk-build
 '''
 

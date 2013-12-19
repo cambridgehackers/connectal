@@ -26,13 +26,15 @@ module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
 		      return fromInteger(valueOf(n));
 		   else if (addr == 3)
 		      return 16; // portal Addr bits
-		   else begin
+		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(2,n),4)))) begin
 		      let idx = (addr-4);
 		      if (idx[0] == 0)
 			 return portals[idx<<1].ifcId;
 		      else
 			 return portals[idx<<1].ifcType;
 		   end
+		   else
+		      return 0;
 		endmethod
       	     endinterface);
    StdAxi3Slave ctrl_mod <- mkAxi3SlaveFromRegFile(rf);
