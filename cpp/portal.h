@@ -22,6 +22,9 @@ struct memrequest{
   unsigned int data;
 };
 
+unsigned int read_portal(portal *p, unsigned int addr, char *name);
+void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
+
 class PortalMessage 
 {
  public:

@@ -52,6 +52,34 @@
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
 
+unsigned int read_portal(portal *p, unsigned int addr, char *name)
+{
+  unsigned int rv;
+  struct memrequest foo = {false,addr,0};
+
+  if (send(p->read.s2, &foo, sizeof(foo), 0) == -1) {
+    fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
+    exit(1);
+  }
+
+  if(recv(p->read.s2, &rv, sizeof(rv), 0) == -1){
+    fprintf(stderr, "portalExec recv error (%s)\n", name);
+    exit(1);	  
+  }
+
+  return rv;
+}
+
+void write_portal(portal *p, unsigned int addr, unsigned int v, char *name)
+{
+  struct memrequest foo = {true,addr,v};
+
+  if (send(p->write.s2, &foo, sizeof(foo), 0) == -1) {
+    fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
+    exit(1);
+  }
+
+}
 
 PortalWrapper **portal_wrappers = 0;
 struct pollfd *portal_fds = 0;
@@ -144,9 +172,8 @@ int Portal::open(int addrbits)
     req_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(1<<14));
     req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
 
-    // enable interrupts
-    fprintf(stderr, "Portal::enabling interrupts %s\n", name);
-    *(ind_reg_base+0x1) = 1;
+    fprintf(stderr, "Portal::disabling interrupts %s\n", name);
+    *(ind_reg_base+0x1) = 0;
 
 #else
     snprintf(p.read.path, sizeof(p.read.path), "%s_rc", name);
@@ -160,14 +187,9 @@ int Portal::open(int addrbits)
     req_reg_base   = dev_base+(1<<14);
     req_fifo_base  = dev_base+(0<<14);
 
-    // enable interrupts
-    fprintf(stderr, "Portal::enabling interrupts %s\n", name);
+    fprintf(stderr, "Portal::disabling interrupts %s\n", name);
     unsigned int addr = ind_reg_base+0x4;
-    struct memrequest foo = {true,addr,1};
-    if (send(p.write.s2, &foo, sizeof(foo), 0) == -1) {
-      fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
-      exit(1);
-    }
+    write_portal(&p, addr, 0, name);
 #endif
     return 0;
 }
@@ -189,11 +211,7 @@ int Portal::sendMessage(PortalMessage *msg)
     *((volatile unsigned int*)addr) = data;
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
-    struct memrequest foo = {true,addr,data};
-    if (send(p.write.s2, &foo, sizeof(foo), 0) == -1) {
-      fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
-      exit(1);
-    }
+    write_portal(&p, addr, data, name);
     //fprintf(stderr, "(%s) sendMessage\n", name);
 #endif
   }
@@ -446,7 +464,7 @@ void* portalExec(void* __x)
 	  // do something if we timeout??
 	}
 	// re-enable interupt which was disabled by portal_isr
-	*(instance->ind_reg_base+0x1) = 1;
+	//*(instance->ind_reg_base+0x1) = 1;
       }
     }
     // return only in error case
@@ -458,29 +476,12 @@ void* portalExec(void* __x)
       for(int i = 0; i < numFds; i++){
 	PortalWrapper *instance = portal_wrappers[i];
 	unsigned int addr = instance->ind_reg_base+0x18;
-	struct memrequest foo = {false,addr,0};
-	//fprintf(stderr, "(%s) sending read request\n", instance->name);
-	if (send(instance->p.read.s2, &foo, sizeof(foo), 0) == -1) {
-	  fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, instance->name);
-	  exit(1);
-	}
-	unsigned int queue_status;
-	//fprintf(stderr, "(%s) about to get read response\n", instance->name);
-	if(recv(instance->p.read.s2, &queue_status, sizeof(queue_status), 0) == -1){
-	  fprintf(stderr, "portalExec recv error (%s)\n", instance->name);
-	  exit(1);	  
-	}
-	
-	{
-	  unsigned int addr = instance->ind_reg_base+0x0;
-	  struct memrequest foo = {false,addr,0};
-	  assert(send(instance->p.read.s2, &foo, sizeof(foo), 0) != -1);
-	  unsigned int int_status;
-	  assert(recv(instance->p.read.s2, &int_status, sizeof(int_status), 0) != -1);
-	  //fprintf(stderr, "(%s) int_status : %08x\n", instance->name, int_status);
-	  // int_status and queue_status should be coherent
-	  if(int_status)
-	    assert(queue_status > 0);
+	unsigned int queue_status = read_portal(&(instance->p), addr, instance->name);
+	addr = instance->ind_reg_base+0x0;
+	unsigned int int_status = read_portal(&(instance->p), addr, instance->name);
+	// int_status and queue_status should be coherent
+	if(int_status && (queue_status == 0)){
+	  fprintf(stderr, "WARNING: int_status and queue_status are incoherent\n");
 	}
 	if (queue_status){
           fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
