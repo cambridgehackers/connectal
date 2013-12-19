@@ -443,7 +443,8 @@ void* portalExec(void* __x)
 	unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
 	unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
 	unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
-	fprintf(stderr, "(%d) about to receive messages %08x %08x %08x\n", i, int_src, int_en, queue_status);
+	if(0)
+        fprintf(stderr, "(%d) about to receive messages %08x %08x %08x\n", i, int_src, int_en, queue_status);
 
 	// handle all messasges from this portal instance
 	while (queue_status) {
@@ -484,7 +485,7 @@ void* portalExec(void* __x)
 	  fprintf(stderr, "WARNING: int_status and queue_status are incoherent\n");
 	}
 	if (queue_status){
-          fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
+          //fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
 	  instance->handleMessage(queue_status-1);	
 	}
       }

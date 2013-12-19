@@ -9,7 +9,7 @@ BOARD=zedboard
 parsetab.py: syntax.py
 	python syntax.py
 
-test: test-echo/echo.bit.bin.gz test-memcpy/memcpy.bit.bin.gz test-hdmi/hdmidisplay.bit.bin.gz
+test: test-echo/echo.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidisplay.bit.bin.gz
 
 test-echo/echo.bit.bin.gz: examples/echo/Echo.bsv
 	rm -fr test-echo
@@ -20,15 +20,13 @@ test-echo/echo.bit.bin.gz: examples/echo/Echo.bsv
 	(cd test-echo; ndk-build)
 	echo test-echo built successfully
 
-test-memcpy/memcpy.bit.bin.gz: examples/memcpy/Memcpy.bsv
+test-memcpy/ztop_1.bit.bin.gz: examples/memcpy/Memcpy.bsv
 	rm -fr test-memcpy
 	mkdir test-memcpy
-	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv
-	cd test-memcpy; make verilog && make bits && make memcpy.bit.bin.gz
-	cp examples/memcpy/testmemcpy.cpp test-memcpy/jni
-	(cd test-memcpy; ndk-build)
+	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication -s examples/memcpy/testmemcpy.cpp examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv -t examples/memcpy/Top.bsv -V verilog
+	cd test-memcpy; make verilog && make bits
+	cd test-memcpy; ndk-build
 	echo test-memcpy built successfully
-
 
 test-loadstore/loadstore.bit.bin.gz: examples/loadstore/LoadStore.bsv
 	rm -fr test-loadstore
@@ -67,13 +65,11 @@ test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.
 	-pkill bluetcl
 	rm -fr test-memcpy
 	mkdir test-memcpy
-	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s  examples/memcpy/testmemcpy.cpp
+	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication -s examples/memcpy/testmemcpy.cpp examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv -t examples/memcpy/Top.bsv -V verilog
 	cd test-memcpy; make bsim; cd ..
-	cd test-memcpy; make x86_exe; cd ..
+	cd test-memcpy; make bsim_exe; cd ..
 	test-memcpy/sources/bsim &
-	test-memcpy/jni/memcpy
-
-
+	test-memcpy/jni/bsim_exe
 
 test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmemread.cpp
 	-pkill bluetcl

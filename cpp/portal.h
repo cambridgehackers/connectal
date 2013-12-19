@@ -66,7 +66,6 @@ class Portal
 #endif
   int sendMessage(PortalMessage *msg);
   static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-  friend void* portalExec(void* __x);
 };
 
 class PortalWrapper : public Portal

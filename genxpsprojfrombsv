@@ -297,8 +297,10 @@ if __name__=='__main__':
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
         print "Writing file ",fname
-        f.write('#include \"portal.h\"\n')
+        f.write('#include "portal.h"\n')
+        f.write('#include "GeneratedTypes.h"\n');
         f.write('#include <stdio.h>\n')
+        f.write('#include <stdlib.h>\n')
         return f
 
     generatedCFiles = []
@@ -308,7 +310,7 @@ if __name__=='__main__':
         hppname = '%sProxy.h' % i.name
         hpp = create_cpp_file(hppname)
         cpp = create_cpp_file(cppname)
-        cpp.write('#include \"%s\"' % hppname)
+        cpp.write('#include "%s"' % hppname)
         i.ind.emitCWrapperDeclaration(hpp, "ProxyStatus")
         i.emitCProxyDeclaration(hpp, "Proxy")
         i.ind.emitCWrapperImplementation(cpp, "ProxyStatus")
@@ -322,7 +324,7 @@ if __name__=='__main__':
         hppname = '%sWrapper.h' % i.name
         hpp = create_cpp_file(hppname)
         cpp = create_cpp_file(cppname)
-        cpp.write('#include \"%s\"' % hppname)
+        cpp.write('#include "%s"' % hppname)
         i.ind.emitCProxyDeclaration(hpp, "WrapperStatus")
         i.emitCWrapperDeclaration(hpp, "Wrapper")
         i.ind.emitCProxyImplementation(cpp, "WrapperStatus")
@@ -333,10 +335,13 @@ if __name__=='__main__':
     
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
     hpp = util.createDirAndOpen(hname, 'w')
+    hpp.write('#ifndef __GENERATED_TYPES__\n');
+    hpp.write('#define __GENERATED_TYPES__\n');
     # global type declarations used by interface mthods
     for v in syntax.globaldecls:
-        if (v.type == 'TypeDef') and v.tdtype.type == 'Struct':
+        if (v.type == 'TypeDef'):
             v.emitCDeclaration(hpp)
+    hpp.write('#endif //__GENERATED_TYPES__\n');
     hpp.close();
     cpp.close();
 

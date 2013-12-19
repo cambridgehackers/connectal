@@ -10,6 +10,7 @@
 #include <linux/dma-buf.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
+#include <linux/vmalloc.h>
 
 #include <asm/cacheflush.h>
 

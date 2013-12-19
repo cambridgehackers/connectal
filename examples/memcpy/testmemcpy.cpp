@@ -1,4 +1,3 @@
-#include "Memcpy.h"
 #include <stdio.h>
 #include <sys/mman.h>
 #include <string.h>
@@ -7,9 +6,14 @@
 #include <semaphore.h>
 #include <pthread.h>
 
-CoreRequest *device = 0;
-BlueScopeRequest *bluescope = 0;
-DMARequest *dma = 0;
+#include "BlueScopeIndicationWrapper.h"
+#include "BlueScopeRequestProxy.h"
+#include "DMAIndicationWrapper.h"
+#include "DMARequestProxy.h"
+#include "GeneratedTypes.h"
+#include "MemcpyIndicationWrapper.h"
+#include "MemcpyRequestProxy.h"
+
 PortalAlloc *srcAlloc;
 PortalAlloc *dstAlloc;
 PortalAlloc *bsAlloc;
@@ -34,8 +38,12 @@ void dump(const char *prefix, char *buf, size_t len)
     fprintf(stderr, "\n");
 }
 
-class TestDMAIndication : public DMAIndication
+class DMAIndication : public DMAIndicationWrapper
 {
+
+public:
+  DMAIndication(const char* devname, unsigned int addrbits) : DMAIndicationWrapper(devname,addrbits){}
+
   virtual void reportStateDbg(const DmaDbgRec& rec){
     fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
@@ -51,8 +59,12 @@ class TestDMAIndication : public DMAIndication
   }
 };
 
-class TestCoreIndication : public CoreIndication
+class MemcpyIndication : public MemcpyIndicationWrapper
 {
+
+public:
+  MemcpyIndication(const char* devname, unsigned int addrbits) : MemcpyIndicationWrapper(devname,addrbits){}
+
   virtual void started(unsigned long words){
     fprintf(stderr, "started: words=%lx\n", words);
   }
@@ -89,13 +101,16 @@ class TestCoreIndication : public CoreIndication
   virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
 			      unsigned long streamWrCnt, unsigned long writeInProg, 
 			      unsigned long dataMismatch){
-    fprintf(stderr, "Core::reportStateDbg: srcGen=%ld, streamRdCnt=%ld, streamWrCnt=%ld, writeInProg=%ld, dataMismatch=%ld\n", 
+    fprintf(stderr, "Memcpy::reportStateDbg: srcGen=%ld, streamRdCnt=%ld, streamWrCnt=%ld, writeInProg=%ld, dataMismatch=%ld\n", 
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
   }  
 };
 
-class TestBlueScopeIndication : public BlueScopeIndication
+class BlueScopeIndication : public BlueScopeIndicationWrapper
 {
+public:
+  BlueScopeIndication(const char* devname, unsigned int addrbits) : BlueScopeIndicationWrapper(devname,addrbits){}
+
   virtual void triggerFired( ){
     fprintf(stderr, "BlueScope::triggerFired\n");
   }
@@ -119,10 +134,23 @@ int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
 
+  MemcpyRequestProxy *device = 0;
+  BlueScopeRequestProxy *bluescope = 0;
+  DMARequestProxy *dma = 0;
+  
+  MemcpyIndication *deviceIndication = 0;
+  BlueScopeIndication *bluescopeIndication = 0;
+  DMAIndication *dmaIndication = 0;
+
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  device = CoreRequest::createCoreRequest(new TestCoreIndication);
-  bluescope = BlueScopeRequest::createBlueScopeRequest(new TestBlueScopeIndication);
-  dma = DMARequest::createDMARequest(new TestDMAIndication);
+
+  device = new MemcpyRequestProxy("fpga1", 16);
+  bluescope = new BlueScopeRequestProxy("fpga3", 16);
+  dma = new DMARequestProxy("fpga5", 16);
+
+  deviceIndication = new MemcpyIndication("fpga2", 16);
+  bluescopeIndication = new BlueScopeIndication("fpga4", 16);
+  dmaIndication = new DMAIndication("fpga6", 16);
 
   if(sem_init(&iter_sem, 1, 1)){
     fprintf(stderr, "failed to init iter_sem\n");
