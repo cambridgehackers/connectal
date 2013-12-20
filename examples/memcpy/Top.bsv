@@ -34,14 +34,7 @@ import DMAIndicationProxy::*;
 // defined by user
 import Memcpy::*;
 
-interface AxiTop;
-   interface StdAxi3Slave     ctrl;
-   interface StdAxi3Master    m_axi;
-   interface ReadOnly#(Bool)  interrupt;
-   interface LEDS             leds;
-endinterface
-
-module mkAxiTop(Top);
+module mkPortalDmaTop(PortalDmaTop);
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
    // dma read channel 0 is reserved for memcpy read path
@@ -114,8 +107,8 @@ module mkAxiTop(Top);
 `endif
 endmodule
 
-module mkZynqTop(AxiTop);
-   let top <- mkAxiTop();
+module mkZynqTop(PortalDmaTop);
+   let top <- mkPortalDmaTop();
    return top;
 endmodule
 
@@ -129,7 +122,7 @@ import "BDPI" function Action        readData(Bit#(32) d);
 
 
 module mkBsimTop();
-   Top top <- mkZynqTop;
+   PortalDmaTop top <- mkPortalDmaTop();
    let wf <- mkPipelineFIFO;
    let init_seq = (action 
 		      initPortal(0);
@@ -166,39 +159,13 @@ module mkBsimTop();
 endmodule
 
 (* no_default_clock, no_default_reset *)
-module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
+module [Module] mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
                           Clock sys_clk_p,     Clock sys_clk_n,
                           Reset pci_sys_reset_n)
                          (VC707_FPGA);
 
    let contentId = 64'h4563686f;
 
-   X7PcieBridgeIfc#(8) x7pcie <- mkX7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
-                                                 contentId );
-   
-   Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-
-   // instantiate user portals
-   let axiTop <- mkAxiTop(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(x7pcie.portal0, axiTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-
-   AxiSlaveEngine#(64,8) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(axiTop.m_axi, axiSlaveEngine.slave3, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-
-   rule requestInterrupt;
-      if (axiTop.interrupt && !interruptRequested)
-	 x7pcie.interrupt();
-      interruptRequested <= interrupt;
-   endrule
-
-   interface pcie = x7pcie.pcie;
-   //interface ddr3 = x7pcie.ddr3;
-   method leds = zeroExtend({  pack(x7pcie.isCalibrated)
-			     , pack(True)
-			     , pack(False)
-			     , pack(x7pcie.isLinkUp)
-			     });
-
+   let top <- mkPcieDmaTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n, contentId, mkPortalDmaTop);
+   return top;
 endmodule: mkPcieTop
