@@ -28,6 +28,7 @@ import json, optparse, os, sys, re, tokenize
 masterlist = []
 parammap = {}
 paramnames = []
+remapmap = {}
 commoninterfaces = {}
 enindex = 0
 tokgenerator = 0
@@ -86,12 +87,16 @@ def parse_item():
                 paramstr = parseparam()
                 plist = parse_item()
                 if paramstr != '' and paramname != 'fpga_condition':
+                    for mitem in remapmap:
+                        if paramstr.startswith(mitem):
+                            paramstr = remapmap[mitem] + paramstr[len(mitem):]
+                        #print('RRR', mitem, paramstr)
                     if plist == {}:
                         paramlist['attr'].append([paramstr])
                     else:
                         paramlist['attr'].append([paramstr, plist])
                 if paramname == 'cell':
-                    print('CC', paramstr)
+                    #print('CC', paramstr)
                     pinlist = {}
                     for item in plist['attr']:
                         tname = item[0]
@@ -277,6 +282,7 @@ def regroup_items(ifname, masterlist):
                     m = re.search('(.+)_(.+)', litem)
                 indexname = ''
                 fieldname = m.group(2)
+                print('OJ', item[-1], m.groups(), file=sys.stderr)
             groupname = m.group(1)
             itemname = groupname + indexname
             if itemname.lower() in ['event']:
@@ -310,7 +316,8 @@ def generate_instance(item, indent, prefix):
     if len(item) > 2:
         itemlen = item[1]
     if item[0] == 'input':
-        print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) en'+str(enindex)+');')
+        #print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) en'+str(enindex)+');')
+        print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) EN_'+prefix + item[-1]+');')
         enindex = enindex + 1
         methodlist = methodlist + ', ' + item[-1].lower()
     elif item[0] == 'output':
@@ -374,6 +381,7 @@ if __name__=='__main__':
     parser = optparse.OptionParser("usage: %prog [options] arg")
     parser.add_option("-f", "--output", dest="filename", help="write data to FILENAME")
     parser.add_option("-p", "--param", action="append", dest="param")
+    parser.add_option("-r", "--remap", action="append", dest="remap")
     (options, args) = parser.parse_args()
     ifname = 'PPS7'
     #print('KK', options, args, file=sys.stderr)
@@ -387,6 +395,11 @@ if __name__=='__main__':
                 parammap[item2[0]] = item2[1]
                 if item2[1] not in paramnames:
                     paramnames.append(item2[1])
+    if options.remap:
+        for item in options.remap:
+            item2 = item.split(':')
+            if len(item2) == 2:
+                remapmap[item2[0]] = item2[1]
     if len(args) != 1:
         print("incorrect number of arguments", file=sys.stderr)
     else:
