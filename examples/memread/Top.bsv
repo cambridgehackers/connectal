@@ -33,14 +33,14 @@ import DMAIndicationProxy::*;
 // defined by user
 import Memread::*;
 
-interface Top;
+interface AxiTop;
    interface StdAxi3Slave     ctrl;
    interface StdAxi3Master    m_axi;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;
 endinterface
 
-module mkZynqTop(Top);
+module mkAxiTop(AxiTop);
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
 
@@ -80,7 +80,12 @@ module mkZynqTop(Top);
 `ifndef BSIM
    interface StdAxi3Master m_axi = axi_master;
 `endif
-endmodule
+endmodule : mkAxiTop
+
+module mkZynqTop(AxiTop);
+   let axiTop <- mkAxiTop();
+   return axiTop;
+endmodule : mkZynqTop
 
 import "BDPI" function Action      initPortal(Bit#(32) d);
 import "BDPI" function Bool                    writeReq();
@@ -92,7 +97,7 @@ import "BDPI" function Action        readData(Bit#(32) d);
 
 
 module mkBsimTop();
-   Top top <- mkZynqTop;
+   AxiTop top <- mkAxiTop;
    let wf <- mkPipelineFIFO;
    let init_seq = (action 
 		      initPortal(0);
@@ -139,41 +144,20 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    // instantiate user portals
-   DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-
-   MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(7, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   Memread memread <- mkMemread(memreadIndicationProxy.ifc, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(1008,memread.request, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-
-   Vector#(1, DMAReadClient#(64)) clients = cons(memread.dmaClient, nil);
-   Integer             numRequests = 2;
-   AxiDMAServer#(64,8) dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, clients, nil,
-					     clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-
-   DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-
-   Vector#(4,StdPortal) portals;
-   portals[0] = memreadRequestWrapper.portalIfc;
-   portals[1] = memreadIndicationProxy.portalIfc; 
-   portals[2] = dmaRequestWrapper.portalIfc;
-   portals[3] = dmaIndicationProxy.portalIfc; 
-   
-   Directory dir <- mkDirectory(portals, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   Vector#(1,StdPortal) directories;
-   directories[0] = dir.portalIfc;
-   
-   // when constructing ctrl and interrupt muxes, directories must be the first argument
-   let ctrl_mux <- mkAxiSlaveMux(directories,portals, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   let interrupt_mux <- mkInterruptMux(directories,portals, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   let axi_master <- mkAxi3Master(dma.m_axi, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   let axiTop <- mkAxiTop(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    // connect them to PCIE
-   mkConnection(x7pcie.portal0, ctrl_mux, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(x7pcie.portal0, axiTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+
+   AxiSlaveEngine#(64,8) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(axiTop.m_axi, axiSlaveEngine.slave3, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    rule requestInterrupt;
-      if (interrupt_mux && !interruptRequested)
+      if (axiTop.interrupt && !interruptRequested)
 	 x7pcie.interrupt();
-      interruptRequested <= interrupt_mux;
+      interruptRequested <= axiTop.interrupt;
    endrule
 
    interface pcie = x7pcie.pcie;
