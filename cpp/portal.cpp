@@ -203,6 +203,11 @@ int Portal::sendMessage(PortalMessage *msg)
 
   // mutex_lock(&portal_data->reg_mutex);
   // mutex_unlock(&portal_data->reg_mutex);
+  if (0) {
+    volatile unsigned int *addr = req_reg_base;
+    fprintf(stderr, "requestFiredCount=%x outOfRangeWriteCount=%x\n",addr[0], addr[1]);
+    //addr[2] = 0xffffffff;
+  }
   for (int i = msg->size()/4-1; i >= 0; i--) {
     unsigned int data = buf[i];
 #ifdef MMAP_HW
@@ -214,6 +219,11 @@ int Portal::sendMessage(PortalMessage *msg)
     write_portal(&p, addr, data, name);
     //fprintf(stderr, "(%s) sendMessage\n", name);
 #endif
+  }
+  if (0)
+  for (int i = 0; i < 3; i++) {
+    volatile unsigned int *addr = req_reg_base;
+    fprintf(stderr, "requestFiredCount=%x outOfRangeWriteCount=%x getWordCount=%x putWordCount=%x putEnable=%x\n",addr[0], addr[1], addr[7], addr[8], addr[2]);
   }
   return 0;
 }
@@ -410,31 +420,19 @@ void* portalExec(void* __x)
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
     }
-    while ((rc = poll(portal_fds, numFds, timeout)) >= 0) {
-      if (0)
-	fprintf(stderr, "poll returned rc=%ld\n", rc);
 #ifndef ZYNQ
-      // PCIE interrupts not working
-      if (1)
-	{
-	  PortalWrapper *instance = portal_wrappers[0];
-	  unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
-	  unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
-	  unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
-	  unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
-	  if (0)
-	    fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
-		    __LINE__, int_src, int_en, ind_count, queue_status);
-	}
-#endif      
-      for (int i = 0; i < numFds; i++) {
-#ifndef ZYNQ
-	// PCIE interrupts not working
-	if (0)
+    for (int i = 0; i < numFds; i++) {
+      PortalWrapper *instance = portal_wrappers[i];
+      //fprintf(stderr, "Portal::enabling interrupts portal %d\n", i);
+      *(volatile int *)(instance->ind_reg_base+0x1) = 1;
+    }
 #endif
-	if (!portal_wrappers) {
-	  fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
-	}
+    while ((rc = poll(portal_fds, numFds, timeout)) >= 0) {
+
+      for (int i = 0; i < numFds; i++) {
+	  if (!portal_wrappers) {
+	    fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
+	  }
 	
 	PortalWrapper *instance = portal_wrappers[i];
 	
@@ -444,7 +442,7 @@ void* portalExec(void* __x)
 	unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
 	unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
 	if(0)
-        fprintf(stderr, "(%d) about to receive messages %08x %08x %08x\n", i, int_src, int_en, queue_status);
+	  fprintf(stderr, "(%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, int_src, int_en, queue_status);
 
 	// handle all messasges from this portal instance
 	while (queue_status) {
