@@ -195,12 +195,10 @@ int main(int argc, const char **argv)
     bluescope->reset();
     bluescope->setTriggerMask (0xFFFFFFFF);
     bluescope->setTriggerValue(0x00000002);
-
-    if (0)
     bluescope->start(ref_bsAlloc);
 
     //bluescope->getStateDbg();
-    device->getStateDbg();
+    //device->getStateDbg();
     sleep(1);
 
     // initiate the transfer

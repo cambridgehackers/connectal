@@ -33,7 +33,6 @@ import ClientServer::*;
 
 interface BlueScopeIndication;
    method Action triggerFired();
-//   method Action reportStateDbg(Bit#(64) mask, Bit#(64) value);
 endinterface
 
 interface BlueScopeRequest;
@@ -41,25 +40,24 @@ interface BlueScopeRequest;
    method Action reset();
    method Action setTriggerMask(Bit#(64) mask);
    method Action setTriggerValue(Bit#(64) value);
-// accesses dataIn clock domain without synchronizer
-//   method Action getStateDbg();
 endinterface
 
-interface BlueScopeInternal;
+interface BlueScope;
    method Action dataIn(Bit#(64) d, Bit#(64) t);
    interface BlueScopeRequest requestIfc;
 endinterface
 
 typedef enum { Idle, Enabled, Triggered } State deriving (Bits,Eq);
 
-module mkBlueScopeInternal#(Integer samples, DMAWriteServer#(64) wchan, BlueScopeIndication indication)(BlueScopeInternal);
+module mkBlueScope#(Integer samples, DMAWriteServer#(64) wchan, BlueScopeIndication indication)(BlueScope);
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
-   let rv  <- mkSyncBlueScopeInternal(samples, wchan, indication, clk, rst, clk,rst);
+   let rv  <- mkSyncBlueScope(samples, wchan, indication, clk, rst, clk,rst);
    return rv;
 endmodule
 
-module mkSyncBlueScopeInternal#(Integer samples, DMAWriteServer#(64) wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScopeInternal);
+module mkSyncBlueScope#(Integer samples, DMAWriteServer#(64) wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope);
+
    SyncFIFOIfc#(Bit#(64)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
    Reg#(DmaMemHandle) handleReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(64))       maskReg <- mkSyncReg(0, dClk, dRst, sClk);
@@ -68,7 +66,7 @@ module mkSyncBlueScopeInternal#(Integer samples, DMAWriteServer#(64) wchan, Blue
    Reg#(State)                stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
    Reg#(Bit#(40))       writeOffsetReg <- mkReg(0,    clocked_by dClk, reset_by dRst);
-   //FIFOF#(void)                  tfifo <- mkFIFOF(    clocked_by sClk, reset_by sRst);
+   
    SyncPulseIfc             startPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc         triggeredPulse <- mkSyncPulse(sClk, sRst, dClk);
@@ -84,10 +82,10 @@ module mkSyncBlueScopeInternal#(Integer samples, DMAWriteServer#(64) wchan, Blue
    endrule
 
    rule writeReq if (dfifo.notEmpty);
-      wchan.writeReq.put(DMAAddressRequest { handle: handleReg, address: zeroExtend(writeOffsetReg), burstLen: 16, tag: 0});
+      //wchan.writeReq.put(DMAAddressRequest { handle: handleReg, address: zeroExtend(writeOffsetReg), burstLen: 16, tag: 0});
       writeOffsetReg <= writeOffsetReg + 16;
    endrule
-   
+
    rule  writeData;
       dfifo.deq();
       wchan.writeData.put(DMAData { data: dfifo.first, tag: 0});
@@ -109,41 +107,41 @@ module mkSyncBlueScopeInternal#(Integer samples, DMAWriteServer#(64) wchan, Blue
  
       // if 'Enabled', we can transition to 'Triggered'
       if (s == Enabled && ((trigger & maskReg) == (valueReg & maskReg)))
-	 begin
-	    s = Triggered;
-	    e = True;
-	    c = c+1;
-	    t = True;
+      	 begin
+      	    s = Triggered;
+      	    e = True;
+      	    c = c+1;
+      	    t = True;
          end
       // if 'Triggered', we can transition to 'Enabled'
       else if (s == Triggered && c == fromInteger(samples))
-	 begin
-	    s = Enabled;
-	    e = False;
-	    c = 0;
-	    t = False;
-	 end
+      	 begin
+      	    s = Enabled;
+      	    e = False;
+      	    c = 0;
+      	    t = False;
+      	 end
       // if 'Triggered', we can remain in 'Triggered'
       else if (s == Triggered && c <= fromInteger(samples))
-	 begin
-	    s = Triggered;
-	    e = True;
-	    c = c+1;
-	    t = False;
-	 end
+      	 begin
+      	    s = Triggered;
+      	    e = True;
+      	    c = c+1;
+      	    t = False;
+      	 end
       // else we must be enabled waiting for a Trigger
       else 
-	 begin
-	    s = s;
-	    e = e;
-	    c = c;
-	    t = t;
-	 end
+      	 begin
+      	    s = s;
+      	    e = e;
+      	    c = c;
+      	    t = t;
+      	 end
    
       if(e && dfifo.notFull)
-	 dfifo.enq(data);
+      	 dfifo.enq(data);
       if(t)
-	 triggeredPulse.send();
+      	 triggeredPulse.send();
       countReg <= c;
       stateReg <= s;
    endmethod
@@ -165,12 +163,6 @@ module mkSyncBlueScopeInternal#(Integer samples, DMAWriteServer#(64) wchan, Blue
       method Action setTriggerValue(Bit#(64) value);
 	 valueReg <= value;
       endmethod
-
-// accesses dataIn clock domain without synchronizer
-//      method Action getStateDbg();
-//	 indication.reportStateDbg(maskReg,valueReg);
-//      endmethod
-
    endinterface
 
 endmodule

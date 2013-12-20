@@ -88,7 +88,7 @@ else
 ALLTARGETS=implementation ubuntu_exe
 endif
 
-BSCFLAGS = --aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir . -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
+BSCFLAGS = --show-schedule --aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir . -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
 BSIM_CXX = $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
 
 all: $(ALLTARGETS)

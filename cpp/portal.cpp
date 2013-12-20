@@ -203,11 +203,13 @@ int Portal::sendMessage(PortalMessage *msg)
 
   // mutex_lock(&portal_data->reg_mutex);
   // mutex_unlock(&portal_data->reg_mutex);
+#ifdef MMAP_HW
   if (0) {
-    volatile unsigned int *addr = req_reg_base;
+    volatile unsigned int *addr = (volatile unsigned int *)req_reg_base;
     fprintf(stderr, "requestFiredCount=%x outOfRangeWriteCount=%x\n",addr[0], addr[1]);
     //addr[2] = 0xffffffff;
   }
+#endif
   for (int i = msg->size()/4-1; i >= 0; i--) {
     unsigned int data = buf[i];
 #ifdef MMAP_HW
@@ -220,11 +222,13 @@ int Portal::sendMessage(PortalMessage *msg)
     //fprintf(stderr, "(%s) sendMessage\n", name);
 #endif
   }
+#ifdef MMAP_HW
   if (0)
   for (int i = 0; i < 3; i++) {
-    volatile unsigned int *addr = req_reg_base;
+    volatile unsigned int *addr = (volatile unsigned int *)req_reg_base;
     fprintf(stderr, "requestFiredCount=%x outOfRangeWriteCount=%x getWordCount=%x putWordCount=%x putEnable=%x\n",addr[0], addr[1], addr[7], addr[8], addr[2]);
   }
+#endif
   return 0;
 }
 

@@ -53,7 +53,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 			DMAReadServer#(64) dma_stream_read_server,
 			DMAWriteServer#(64) dma_stream_write_server,
 			DMAReadServer#(64) dma_word_read_server,
-			BlueScopeInternal bsi)(MemcpyRequest);
+			BlueScope bs)(MemcpyRequest);
 
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
@@ -99,7 +99,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       let misMatch1 = v[63:32] != srcGen+1;
       dataMismatch <= dataMismatch || misMatch0 || misMatch1;
       dma_stream_write_server.writeData.put(tagdata);
-      // bsi.dataIn(v,v);
+      bs.dataIn(v,v);
       srcGen <= srcGen+2;
       //$display("loopback %h", tagdata.data);
       // indication.rData(v);

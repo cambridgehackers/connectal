@@ -71,14 +71,12 @@ module mkPortalDmaTop(PortalDmaTop);
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
 
    BlueScopeIndicationProxy blueScopeIndicationProxy <- mkBlueScopeIndicationProxy(8);
-   BlueScopeInternal bsi <- mkBlueScopeInternal(32, dma_debug_write_chan.dmaServer, blueScopeIndicationProxy.ifc);
-   BlueScopeRequestWrapper blueScopeRequestWrapper <- mkBlueScopeRequestWrapper(1003,bsi.requestIfc);
+   BlueScope bs <- mkBlueScope(32, dma_debug_write_chan.dmaServer, blueScopeIndicationProxy.ifc);
+   BlueScopeRequestWrapper blueScopeRequestWrapper <- mkBlueScopeRequestWrapper(1003,bs.requestIfc);
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(7);
    MemcpyRequest memcpyRequest <- mkMemcpyRequest(memcpyIndicationProxy.ifc, dma_stream_read_chan.dmaServer,
-						  dma_stream_write_chan.dmaServer,
-						  dma_word_read_chan.dmaServer,
-						  bsi);
+						  dma_stream_write_chan.dmaServer, dma_word_read_chan.dmaServer, bs);
    MemcpyRequestWrapper memcpyRequestWrapper <- mkMemcpyRequestWrapper(1008,memcpyRequest);
 
    Vector#(6,StdPortal) portals;
