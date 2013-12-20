@@ -22,6 +22,7 @@
 
 
 import AxiMasterSlave::*;
+import Leds::*;
 
 interface Portal#(numeric type portalAddrBits, 
 		  numeric type slaveBusAddrWidth, 
@@ -49,3 +50,15 @@ typedef Axi3Slave#(32,32,4,12) StdAxi3Slave;
 typedef Axi3Master#(40,64,8,12) StdAxi3Master;
 typedef Portal#(16,32,32,4,12) StdPortal;
 
+interface PortalTop;
+   interface StdAxi3Slave     ctrl;
+   interface ReadOnly#(Bool)  interrupt;
+   interface LEDS             leds;
+endinterface
+
+interface PortalDmaTop;
+   interface StdAxi3Slave     ctrl;
+   interface StdAxi3Master    m_axi;
+   interface ReadOnly#(Bool)  interrupt;
+   interface LEDS             leds;
+endinterface
