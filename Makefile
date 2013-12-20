@@ -13,25 +13,42 @@ test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidi
 
 
 #################################################################################################
+# generate bsim and zynq make targets for each test in testnames
+# for test 'foo', we will generate 'foo.bits' and 'foo.bsim'
+
+testnames = echo     \
+            echo2    \
+            memcpy   \
+            memread  \
+	    memwrite \
+            strstr
+
+
+bsimtests = $(addsuffix .bsim, $(testnames))
+
+$(bsimtests):
+	pkill bluetcl
+	rm -fr $(addprefix test-, $(basename $@))
+	make $(addprefix gen_, $(basename $@))
+	cd $(addprefix test-, $(basename $@)); make bsim; cd ..
+	cd $(addprefix test-, $(basename $@)); make bsim_exe; cd ..
+	cd $(addprefix test-, $(basename $@)); sources/bsim& cd ..
+	cd $(addprefix test-, $(basename $@)); jni/bsim_exe; cd ..
+
+bitstests = $(addsuffix .bits, $(testnames))
+
+$(bitstests):
+	rm -fr $(addprefix test-, $(basename $@))
+	make $(addprefix gen_, $(basename $@))
+	cd $(addprefix test-, $(basename $@)); make bits; cd ..
+	cd $(addprefix test-, $(basename $@)); ndk-build; cd ..
+
+
+#################################################################################################
 # examples/echo
 
 gen_echo:
 	./genxpsprojfrombsv -B$(BOARD) -p test-echo -x mkZynqTop -s2h Swallow -s2h EchoRequest -h2s EchoIndication -s examples/echo/testecho.cpp -t examples/echo/Top.bsv -V verilog examples/echo/Echo.bsv examples/echo/Swallow.bsv
-
-test-echo/ztop_1.bit.bin.gz: examples/echo/Echo.bsv
-	rm -fr test-echo
-	make gen_echo
-	cd test-echo; make verilog && make bits && make echo.bit.bin.gz
-	cd test-echo; ndk-build
-
-test-echo/sources/bsim: examples/echo/Top.bsv examples/echo/testecho.cpp
-	-pkill bluetcl
-	rm -fr test-echo
-	make gen_echo
-	cd test-echo; make bsim; cd ..
-	cd test-echo; make bsim_exe; cd ..
-	cd test-echo; sources/bsim& cd ..
-	cd test-echo; jni/bsim_exe; cd ..
 
 #################################################################################################
 # examples/echo2
@@ -39,35 +56,11 @@ test-echo/sources/bsim: examples/echo/Top.bsv examples/echo/testecho.cpp
 gen_echo2:
 	./genxpsprojfrombsv -B $(BOARD) -p test-echo2 -x mkZynqTop -s2h Say -h2s Say -s examples/echo2/test.cpp -t examples/echo2/Top.bsv -V verilog examples/echo2/Say.bsv
 
-test-echo2/sources/bsim: examples/echo2/Top.bsv examples/echo2/test.cpp
-	-pkill bluetcl
-	rm -fr test-echo2
-	make gen_echo2
-	cd test-echo2; make bsim; cd ..
-	cd test-echo2; make bsim_exe; cd ..
-	cd test-echo2; sources/bsim& cd ..
-	cd test-echo2; jni/bsim_exe; cd ..
-
 #################################################################################################
 # examples/memcpy
 
 gen_memcpy:
 	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication -s examples/memcpy/testmemcpy.cpp  -t examples/memcpy/Top.bsv -V verilog examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv
-
-test-memcpy/ztop_1.bit.bin.gz: examples/memcpy/Memcpy.bsv
-	rm -fr test-memcpy
-	make gen_memcpy
-	cd test-memcpy; make verilog && make bits
-	cd test-memcpy; ndk-build
-
-test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.cpp
-	-pkill bluetcl
-	rm -fr test-memcpy
-	make gen_memcpy
-	cd test-memcpy; make bsim; cd ..
-	cd test-memcpy; make bsim_exe; cd ..
-	cd test-memcpy; sources/bsim& cd ..
-	cd test-memcpy; jni/bsim_exe; cd ..
 
 #################################################################################################
 # examples/loadstore
@@ -75,27 +68,11 @@ test-memcpy/sources/bsim: examples/memcpy/Memcpy.bsv examples/memcpy/testmemcpy.
 gen_loadstore:
 	./genxpsprojfrombsv -B $(BOARD) -p test-loadstore -x mkZynqTop  -s2h LoadStoreRequest -s2h DMARequest -h2s LoadStoreIndication -h2s DMAIndication -s examples/loadstore/testloadstore.cpp -t examples/loadstore/Top.bsv -V verilog examples/loadstore/LoadStore.bsv bsv/PortalMemory.bsv
 
-test-loadstore/loadstore.bit.bin.gz: examples/loadstore/LoadStore.bsv
-	rm -fr test-loadstore
-	make gen_loadstore
-	cd test-loadstore; make verilog && make bits && make loadstore.bit.bin.gz
-	cd test-loadstore; ndk-build
-	echo test-loadstore built successfully
-
 #################################################################################################
 # examples/memread
 
 gen_memread:
 	./genxpsprojfrombsv -B $(BOARD) -p test-memread -x mkZynqTop -s2h MemreadRequest -s2h DMARequest -h2s MemreadIndication -h2s DMAIndication -s examples/memread/testmemread.cpp  -t examples/memread/Top.bsv -V verilog examples/memread/Memread.bsv bsv/PortalMemory.bsv
-
-test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmemread.cpp
-	-pkill bluetcl
-	rm -fr test-memread
-	make gen_memread
-	cd test-memread; make bsim; cd ..
-	cd test-memread; make bsim_exe; cd ..
-	cd test-memread; sources/bsim& cd ..
-	cd test-memread; jni/bsim_exe; cd ..
 
 #################################################################################################
 # examples/memwrite
@@ -103,19 +80,14 @@ test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmem
 gen_memwrite:
 	./genxpsprojfrombsv -B $(BOARD) -p test-memwrite -x mkZynqTop -s2h MemwriteRequest -s2h DMARequest -h2s MemwriteIndication -h2s DMAIndication -s examples/memwrite/testmemwrite.cpp  -t examples/memwrite/Top.bsv -V verilog examples/memwrite/Memwrite.bsv bsv/PortalMemory.bsv
 
-test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/testmemwrite.cpp
-	-pkill bluetcl
-	rm -fr test-memwrite
-	make gen_memwrite
-	cd test-memwrite; make bsim_exe; cd ..
-	cd test-memwrite; make bsim; cd ..
-	cd test-memwrite; sources/bsim& cd ..
-	cd test-memwrite; jni/bsim_exe; cd ..
+#################################################################################################
+# examples/strstr
 
+gen_strstr:
+	./genxpsprojfrombsv -B $(BOARD) -p test-strstr -x mkZynqTop -s2h StrstrRequest -s2h DMARequest -h2s StrstrIndication -h2s DMAIndication  -s examples/strstr/teststrstr.cpp -t examples/strstr/Top.bsv -V verilog examples/strstr/Strstr.bsv bsv/PortalMemory.bsv 
 
 #################################################################################################
-# not yet updated
-
+# not yet updated.
 
 test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
 	rm -fr test-hdmi
@@ -129,7 +101,6 @@ test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
 	echo test-imageon built successfully
 
-
 test-struct/sources/bsim: examples/struct/Struct.bsv examples/struct/teststruct.cpp
 	-pkill bluetcl
 	rm -fr test-struct
@@ -138,17 +109,6 @@ test-struct/sources/bsim: examples/struct/Struct.bsv examples/struct/teststruct.
 	cd test-struct; make bsim; cd ..
 	test-struct/sources/bsim &
 	test-struct/jni/struct
-
-
-
-test-strstr/sources/bsim: examples/strstr/Strstr.bsv examples/strstr/teststrstr.cpp
-	-pkill bluetcl
-	rm -fr test-strstr
-	./genxpsprojfrombsv -B $(BOARD) -p test-strstr -b Strstr examples/strstr/Strstr.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s examples/strstr/teststrstr.cpp
-	cd test-strstr; make x86_exe; cd ..
-	cd test-strstr; make bsim; cd ..
-	test-strstr/sources/bsim &
-	test-strstr/jni/strstr
 
 
 xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
