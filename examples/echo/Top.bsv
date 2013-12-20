@@ -28,14 +28,14 @@ import SwallowWrapper::*;
 import Echo::*;
 import Swallow::*;
 
-interface Top;
+interface AxiTop;
    interface StdAxi3Slave     ctrl;
    interface StdAxi3Master    m_axi;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;
 endinterface
 
-module mkZynqTop(Top);
+module mkAxiTop(AxiTop);
 
    // instantiate user portals
    EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(7);
@@ -64,8 +64,12 @@ module mkZynqTop(Top);
    interface Axi3Master m_axi = ?;
    interface LEDS leds = echoRequestInternal.leds;
 
-endmodule
+endmodule : mkAxiTop
 
+module mkZynqTop(AxiTop);
+   let axiTop <- mkAxiTop();
+   return axiTop;
+endmodule : mkZynqTop
 
 import "BDPI" function Action      initPortal(Bit#(32) d);
 import "BDPI" function Bool                    writeReq();
@@ -77,7 +81,7 @@ import "BDPI" function Action        readData(Bit#(32) d);
 
 
 module mkBsimTop();
-   Top top <- mkZynqTop;
+   AxiTop top <- mkAxiTop;
    let wf <- mkPipelineFIFO;
    let init_seq = (action 
 		      initPortal(0);
@@ -123,33 +127,14 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    // instantiate user portals
-   EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(7, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   EchoRequestInternal echoRequestInternal <- mkEchoRequestInternal(echoIndicationProxy.ifc, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(1008,echoRequestInternal.ifc, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   
-   Swallow swallow <- mkSwallow(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   SwallowWrapper swallowWrapper <- mkSwallowWrapper(1009, swallow, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   
-   Vector#(3,StdPortal) portals;
-   portals[0] = echoIndicationProxy.portalIfc;
-   portals[1] = echoRequestWrapper.portalIfc; 
-   portals[2] = swallowWrapper.portalIfc; 
-   
-   // instantiate system directory
-   Directory dir <- mkDirectory(portals, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   Vector#(1,StdPortal) directories;
-   directories[0] = dir.portalIfc;
-   
-   // when constructing ctrl and interrupt muxes, directories must be the first argument
-   let ctrl_mux <- mkAxiSlaveMux(directories,portals, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   let interrupt <- mkInterruptMux(directories,portals, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   let axiTop <- mkAxiTop(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
-   mkConnection(x7pcie.portal0, ctrl_mux, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(x7pcie.portal0, axiTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    rule requestInterrupt;
-      if (interrupt && !interruptRequested)
+      if (axiTop.interrupt && !interruptRequested)
 	 x7pcie.interrupt();
-      interruptRequested <= interrupt;
+      interruptRequested <= axiTop.interrupt;
    endrule
 
    interface pcie = x7pcie.pcie;
