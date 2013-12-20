@@ -59,12 +59,12 @@ unsigned int read_portal(portal *p, unsigned int addr, char *name)
 
   if (send(p->read.s2, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
-    exit(1);
+    //exit(1);
   }
 
   if(recv(p->read.s2, &rv, sizeof(rv), 0) == -1){
-    fprintf(stderr, "portalExec recv error (%s)\n", name);
-    exit(1);	  
+    fprintf(stderr, "%s (%s) recv error\n",__FUNCTION__, name);
+    //exit(1);	  
   }
 
   return rv;
@@ -76,7 +76,7 @@ void write_portal(portal *p, unsigned int addr, unsigned int v, char *name)
 
   if (send(p->write.s2, &foo, sizeof(foo), 0) == -1) {
     fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
-    exit(1);
+    //exit(1);
   }
 
 }
@@ -476,17 +476,16 @@ void* portalExec(void* __x)
     while (true){
       for(int i = 0; i < numFds; i++){
 	PortalWrapper *instance = portal_wrappers[i];
-	unsigned int addr = instance->ind_reg_base+0x18;
-	unsigned int queue_status = read_portal(&(instance->p), addr, instance->name);
-	addr = instance->ind_reg_base+0x0;
-	unsigned int int_status = read_portal(&(instance->p), addr, instance->name);
-	// int_status and queue_status should be coherent
-	if(int_status && (queue_status == 0)){
-	  fprintf(stderr, "WARNING: int_status and queue_status are incoherent\n");
-	}
+	unsigned int queue_status_addr = instance->ind_reg_base+0x18;
+	unsigned int queue_status = read_portal(&(instance->p), queue_status_addr, instance->name);
+	unsigned int int_status_addr = instance->ind_reg_base+0x0;
+	unsigned int int_status = read_portal(&(instance->p), int_status_addr, instance->name);
 	if (queue_status){
           //fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
 	  instance->handleMessage(queue_status-1);	
+	}
+	if(int_status && (queue_status == 0)){
+	  fprintf(stderr, "WARNING: int_status and queue_status are incoherent\n");
 	}
       }
     }

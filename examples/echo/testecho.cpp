@@ -35,7 +35,7 @@ public:
       sem_post(&sem_heard2);
       //exit(0);
     }
-  EchoIndication(const char* devname, unsigned int addrbits) : EchoIndicationWrapper(name,addrbits){}
+  EchoIndication(const char* devname, unsigned int addrbits) : EchoIndicationWrapper(devname,addrbits){}
 };
 static void *pthread_worker(void *ptr)
 {

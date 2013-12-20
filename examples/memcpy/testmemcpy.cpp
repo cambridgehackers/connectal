@@ -62,7 +62,7 @@ public:
   MemcpyIndication(const char* devname, unsigned int addrbits) : MemcpyIndicationWrapper(devname,addrbits){}
 
   virtual void started(unsigned long words){
-    fprintf(stderr, "started: words=%lx\n", words);
+    fprintf(stderr, "started: words=%ld\n", words);
   }
   virtual void readWordResult ( unsigned long long v ){
     dump("readWordResult: ", (char*)&v, sizeof(v));

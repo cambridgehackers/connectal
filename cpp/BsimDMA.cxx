@@ -39,12 +39,12 @@ extern "C" {
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)rc)){
       fprintf(stderr, "error creating init thread\n");
-      exit(1);
+      //exit(1);
     }
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)wc)){
       fprintf(stderr, "error creating init thread\n");
-      exit(1);
+      //exit(1);
     }
 
   }

@@ -60,7 +60,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    interface MemreadRequest request;
        method Action startRead(Bit#(32) handle, Bit#(32) numWords) if (streamRdCnt == 0);
 	  streamRdHandle <= handle;
-	  streamRdCnt <= numWords;
+	  streamRdCnt <= numWords>>1;
 	  indication.started(numWords);
        endmethod
 
@@ -88,7 +88,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    let misMatch1 = v[63:32] != srcGen+1;
 	    dataMismatch <= dataMismatch || misMatch0 || misMatch1;
 	    srcGen <= srcGen+2;
-	    // indication.rData(v);
+	    //indication.rData(v);
 	 endmethod
       endinterface : readData
    endinterface

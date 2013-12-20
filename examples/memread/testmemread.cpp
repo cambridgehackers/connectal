@@ -109,6 +109,7 @@ int main(int argc, const char **argv)
   device->startRead(ref_srcAlloc, numWords);
 
   //dma->getReadStateDbg();
-  device->getStateDbg();
+  //device->getStateDbg();
+  fprintf(stderr, "Main::sleeping\n");
   while(true){sleep(1);}
 }

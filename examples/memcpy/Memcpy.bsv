@@ -69,7 +69,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt - 1;
       streamRdOff <= streamRdOff + 1;
-      //$display("readReq.put handle=%h address=%h", streamRdHandle, streamRdOff);
+      // $display("readReq.put handle=%h address=%h", streamRdHandle, streamRdOff);
       dma_stream_read_server.readReq.put(DMAAddressRequest {handle: streamRdHandle, address: streamRdOff, burstLen: 1, tag: truncate(streamRdOff)});
       indication.readReq(streamRdCnt);
    endrule
@@ -99,7 +99,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       let misMatch1 = v[63:32] != srcGen+1;
       dataMismatch <= dataMismatch || misMatch0 || misMatch1;
       dma_stream_write_server.writeData.put(tagdata);
-      //bsi.dataIn(v,v);
+      // bsi.dataIn(v,v);
       srcGen <= srcGen+2;
       //$display("loopback %h", tagdata.data);
       // indication.rData(v);
@@ -114,8 +114,8 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       //$display("startCopy wrHandle=%h rdHandle=%h numWords=%d", wrHandle, rdHandle, numWords);
       streamWrHandle <= wrHandle;
       streamRdHandle <= rdHandle;
-      streamRdCnt <= numWords;
-      streamWrCnt <= numWords;
+      streamRdCnt <= numWords>>1;
+      streamWrCnt <= numWords>>1;
       indication.started(numWords);
    endmethod
 

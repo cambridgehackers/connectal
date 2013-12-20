@@ -118,8 +118,9 @@ module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(64)) wri
    rule writeData if (burstReg > 0);
       addrReg <= addrReg+1;
       let v <- writeClients[activeChan].writeData.get();
-      if (v.tag != tagReg)
+      if (v.tag != tagReg) begin
 	 //$display("BsimWriteData tag mismatch %h expected %h", v.tag, tagReg);
+      end
       if (burstReg == 1)
 	 writeClients[activeChan].writeDone.put(v.tag);
       burstReg <= burstReg-1;
