@@ -50,21 +50,21 @@ class MemreadIndication : public MemreadIndicationWrapper
 public:
   unsigned int rDataCnt;
   virtual void readReq(unsigned long v){
-    //fprintf(stderr, "Core::readReq %lx\n", v);
+    //fprintf(stderr, "Memread::readReq %lx\n", v);
   }
   virtual void readDone(unsigned long v){
-    fprintf(stderr, "Core::readDone %lx\n", v);
+    fprintf(stderr, "Memread::readDone %lx\n", v);
     exit(0);
   }
   virtual void started(unsigned long words){
-    fprintf(stderr, "Core::started: words=%lx\n", words);
+    fprintf(stderr, "Memread::started: words=%lx\n", words);
   }
   virtual void rData ( unsigned long long v ){
     fprintf(stderr, "rData (%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
   virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
-    fprintf(stderr, "Core::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
+    fprintf(stderr, "Memread::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
   }  
   MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits){}
 

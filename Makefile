@@ -98,6 +98,22 @@ test-memread/sources/bsim: examples/memread/Memread.bsv examples/memread/testmem
 	cd test-memread; jni/bsim_exe; cd ..
 
 #################################################################################################
+# examples/memwrite
+
+gen_memwrite:
+	./genxpsprojfrombsv -B $(BOARD) -p test-memwrite -x mkZynqTop -s2h MemwriteRequest -s2h DMARequest -h2s MemwriteIndication -h2s DMAIndication -s examples/memwrite/testmemwrite.cpp  -t examples/memwrite/Top.bsv -V verilog examples/memwrite/Memwrite.bsv bsv/PortalMemory.bsv
+
+test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/testmemwrite.cpp
+	-pkill bluetcl
+	rm -fr test-memwrite
+	make gen_memwrite
+	cd test-memwrite; make bsim_exe; cd ..
+	cd test-memwrite; make bsim; cd ..
+	cd test-memwrite; sources/bsim& cd ..
+	cd test-memwrite; jni/bsim_exe; cd ..
+
+
+#################################################################################################
 # not yet updated
 
 
@@ -113,15 +129,6 @@ test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
 	echo test-imageon built successfully
 
-
-test-memwrite/sources/bsim: examples/memwrite/Memwrite.bsv examples/memwrite/testmemwrite.cpp
-	-pkill bluetcl
-	rm -fr test-memwrite
-	./genxpsprojfrombsv -B $(BOARD) -p test-memwrite -b Memwrite examples/memwrite/Memwrite.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s examples/memwrite/testmemwrite.cpp
-	cd test-memwrite; make x86_exe; cd ..
-	cd test-memwrite; make bsim; cd ..
-	test-memwrite/sources/bsim &
-	test-memwrite/jni/memwrite
 
 test-struct/sources/bsim: examples/struct/Struct.bsv examples/struct/teststruct.cpp
 	-pkill bluetcl
@@ -143,10 +150,6 @@ test-strstr/sources/bsim: examples/strstr/Strstr.bsv examples/strstr/teststrstr.
 	test-strstr/sources/bsim &
 	test-strstr/jni/strstr
 
-
-clean_sockets:
-	rm -rf fpga*
-	rm -rf fd_*
 
 xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
 	rm -fr proj_pcie
