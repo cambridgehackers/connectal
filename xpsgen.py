@@ -28,7 +28,7 @@ set_property DIFF_TERM "TRUE" [get_ports "%(name)s"]
 impactCmdTemplate = '''
 setMode -bscan
 setCable -p auto
-addDevice -p 1 -file ./%(base)s.runs/impl_1/mk%(Base)sPcieTop.bit
+addDevice -p 1 -file ./%(base)s.runs/impl_1/%(Base)s.bit
 program -p 1
 quit
 '''
@@ -37,7 +37,7 @@ programTclTemplate = '''
 connect_hw_server
 open_hw_target 
 set fpga [lindex [get_hw_devices] 0]
-set file ./%(base)s.runs/impl_1/mk%(Base)sPcieTop.bit
+set file ./%(base)s.runs/impl_1/%(Base)s.bit
 set_property PROGRAM.FILE $file $fpga
 puts "fpga is $fpga, bit file size is [exec ls -sh $file]"
 program_hw_devices $fpga
