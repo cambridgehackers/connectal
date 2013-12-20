@@ -47,7 +47,7 @@ argparser.add_argument('-x', '--export', help='Promote/export named interface fr
 argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
 
 tclfileXprTemplate='''
-create_project ztop_1 . -part %(partname)s
+create_project %(dut)s . -part %(partname)s
 add_files sources
 %(tclfileAdditionalConstraints)s
 update_compile_order -fileset sources_1
@@ -59,7 +59,7 @@ close_project
 tclfileAdditionalConstraintTemplate='''add_files -fileset constrs_1 -norecurse {constraints/%(xdcname)s}'''
 
 tclfileTemplate='''
-open_project ztop_1
+open_project %(dut)s
 reset_run synth_1
 reset_run impl_1
 set_property strategy manual_fsm [get_runs synth_1]
@@ -95,7 +95,7 @@ all: $(ALLTARGETS)
 
 $(vfile): %(topbsvfile)s %(bsvfiles)s
 	cd sources/%(dut)s; mkdir -p $(DTOP)/obj; bsc %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
-	$(XBSVTOP)/scripts/copy_verilog.py $(vfile) $(subst :, ,$(BSVPATH))
+	for v in sources/%(dut)s/*.v; do $(XBSVTOP)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
 bsim_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
 	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s *.cpp *.cxx  -pthread -I$(XBSVTOP) -I$(XBSVTOP)/cpp -DBSIM 
@@ -116,18 +116,17 @@ lint: $(vfile)
 %(dut)s.xpr:
 	vivado -mode batch -source %(dut)sxpr.tcl
 
-%(dut)s.runs/impl_1/ztop_1.bit: $(vfile) %(dut)s.xpr
+%(dut)s.runs/impl_1/%(dut)s.bit: $(vfile) %(dut)s.xpr
 	vivado -mode batch -source %(dut)s.tcl
 
-implementation: %(dut)s.runs/impl_1/ztop_1.bit
+implementation: %(dut)s.runs/impl_1/%(dut)s.bit
 
 program:
 	vivado -mode batch -source %(dut)s-program.tcl
 
-%(dut)s.bit.bin.gz: %(dut)s.runs/impl_1/ztop_1.bit
-	#promgen -w -b -p bin -o %(dut)s.bit.bin -u 0 %(dut)s.runs/impl_1/ztop_1.bit -data_width 32
-	xxd ztop_1.runs/impl_1/ztop_1.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >ztop_1.bit.bin
-	gzip -f ztop_1.bit.bin
+%(dut)s.bit.bin.gz: %(dut)s.runs/impl_1/%(dut)s.bit
+	xxd %(dut)s.runs/impl_1/%(dut)s.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >%(dut)s.bit.bin
+	gzip -f %(dut)s.bit.bin
 
 bits: %(dut)s.bit.bin.gz
 boot.bin: %(dut)s.bit.bin.gz
