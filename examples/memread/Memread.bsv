@@ -73,8 +73,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
       interface Get readReq;
 	 method ActionValue#(DMAAddressRequest) get() if (streamRdCnt > 0);
 	    streamRdCnt <= streamRdCnt-16;
-
-	    offset <= offset + 1;
+	    offset <= offset + 16;
 	    if (streamRdCnt == 16)
 	       indication.readDone(zeroExtend(pack(dataMismatch)));
 	    else if (streamRdCnt[5:0] == 6'b0)

@@ -69,7 +69,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt - 1;
       streamRdOff <= streamRdOff + 1;
-      $display("readReq.put handle=%h address=%h", streamRdHandle, streamRdOff);
+      //$display("readReq.put handle=%h address=%h", streamRdHandle, streamRdOff);
       dma_stream_read_server.readReq.put(DMAAddressRequest {handle: streamRdHandle, address: streamRdOff, burstLen: 1, tag: truncate(streamRdOff)});
       indication.readReq(streamRdCnt);
    endrule
@@ -77,7 +77,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    rule writeReq(streamWrCnt > 0 && !writeInProg);
       writeInProg <= True;
       streamWrOff <= streamWrOff + 1;
-      $display("writeReq.put handle=%h address=%h", streamWrHandle, streamWrOff);
+      //$display("writeReq.put handle=%h address=%h", streamWrHandle, streamWrOff);
       dma_stream_write_server.writeReq.put(DMAAddressRequest {handle: streamWrHandle, address: streamWrOff, burstLen: 1, tag: truncate(streamWrOff)});
       indication.writeReq(streamWrCnt);
    endrule
@@ -85,7 +85,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    rule writeAck(writeInProg);
       writeInProg <= False;
       let tag <- dma_stream_write_server.writeDone.get();
-      $display("writeAck: tag=%d", tag);
+      //$display("writeAck: tag=%d", tag);
       streamWrCnt <= streamWrCnt-1;
       indication.writeAck(streamWrCnt);
       if(streamWrCnt==1)
@@ -101,7 +101,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       dma_stream_write_server.writeData.put(tagdata);
       //bsi.dataIn(v,v);
       srcGen <= srcGen+2;
-      $display("loopback %h", tagdata.data);
+      //$display("loopback %h", tagdata.data);
       // indication.rData(v);
    endrule
    
@@ -111,7 +111,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    endrule
    
    method Action startCopy(Bit#(32) wrHandle, Bit#(32) rdHandle, Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
-      $display("startCopy wrHandle=%h rdHandle=%h numWords=%d", wrHandle, rdHandle, numWords);
+      //$display("startCopy wrHandle=%h rdHandle=%h numWords=%d", wrHandle, rdHandle, numWords);
       streamWrHandle <= wrHandle;
       streamRdHandle <= rdHandle;
       streamRdCnt <= numWords;

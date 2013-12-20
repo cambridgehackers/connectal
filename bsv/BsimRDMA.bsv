@@ -67,7 +67,7 @@ module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(64)) readCl
    rule loadClient if (burstReg == 0);
       activeChan <= selectReg;
       let req <- readClients[selectReg].readReq.get();
-      $display("dmaread.loadClient activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
+      //$display("dmaread.loadClient activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
       handleReg <= req.handle;
       addrReg <= truncate(req.address);
       burstReg <= req.burstLen;
@@ -78,7 +78,7 @@ module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(64)) readCl
       addrReg <= addrReg+1;
       burstReg <= burstReg-1;
       let v <- read_pareff(handleReg, addrReg);
-	    $display("dmaread.readData activeChan=%d handle=%h addr=%h burst=%h v=%h", activeChan, handleReg, addrReg, burstReg, v);
+      //$display("dmaread.readData activeChan=%d handle=%h addr=%h burst=%h v=%h", activeChan, handleReg, addrReg, burstReg, v);
       readClients[activeChan].readData.put(DMAData { data: v, tag: tagReg});
    endrule
    
@@ -108,7 +108,7 @@ module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(64)) wri
    rule loadClient if (burstReg == 0);
       activeChan <= selectReg;
       let req   <- writeClients[selectReg].writeReq.get();
-      $display("dmawrite.loadClient activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
+      //$display("dmawrite.loadClient activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
       handleReg   <= req.handle;
       addrReg   <= truncate(req.address);
       burstReg  <= req.burstLen;
@@ -119,11 +119,11 @@ module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(64)) wri
       addrReg <= addrReg+1;
       let v <- writeClients[activeChan].writeData.get();
       if (v.tag != tagReg)
-	 $display("BsimWriteData tag mismatch %h expected %h", v.tag, tagReg);
+	 //$display("BsimWriteData tag mismatch %h expected %h", v.tag, tagReg);
       if (burstReg == 1)
 	 writeClients[activeChan].writeDone.put(v.tag);
       burstReg <= burstReg-1;
-      $display("writeData activeChan=%d handle=%h addr=%h", activeChan, handleReg, addrReg);
+      //$display("writeData activeChan=%d handle=%h addr=%h", activeChan, handleReg, addrReg);
       write_pareff(handleReg, addrReg, v.data);
    endrule
    

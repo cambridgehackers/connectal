@@ -27,7 +27,7 @@ testnames = echo     \
 bsimtests = $(addsuffix .bsim, $(testnames))
 
 $(bsimtests):
-	pkill bluetcl
+	pkill bluetcl || true
 	rm -fr $(addprefix test-, $(basename $@))
 	make $(addprefix gen_, $(basename $@))
 	cd $(addprefix test-, $(basename $@)); make bsim; cd ..
