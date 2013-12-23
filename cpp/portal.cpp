@@ -478,16 +478,17 @@ void* portalExec(void* __x)
     while (true){
       for(int i = 0; i < numFds; i++){
 	PortalWrapper *instance = portal_wrappers[i];
-	unsigned int queue_status_addr = instance->ind_reg_base+0x18;
-	unsigned int queue_status = read_portal(&(instance->p), queue_status_addr, instance->name);
 	unsigned int int_status_addr = instance->ind_reg_base+0x0;
 	unsigned int int_status = read_portal(&(instance->p), int_status_addr, instance->name);
-	if (queue_status){
-          //fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
-	  instance->handleMessage(queue_status-1);	
-	}
-	if(int_status && (queue_status == 0)){
-	  fprintf(stderr, "WARNING: int_status and queue_status are incoherent\n");
+	if(int_status){
+	  unsigned int queue_status_addr = instance->ind_reg_base+0x18;
+	  unsigned int queue_status = read_portal(&(instance->p), queue_status_addr, instance->name);
+	  if (queue_status){
+	    //fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
+	    instance->handleMessage(queue_status-1);	
+	  } else {
+	    fprintf(stderr, "WARNING: int_status and queue_status are incoherent (%s)\n", instance->name);
+	  }
 	}
       }
     }
