@@ -70,7 +70,7 @@ module mkAxiTop(AxiTop);
    
    // when constructing ctrl and interrupt muxes, directories must be the first argument
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
-   let interrupt_mux <- mkInterruptMux(directories,portals);
+   let interrupt_mux <- mkInterruptMux(portals);
 `ifndef BSIM
    let axi_master <- mkAxi3Master(dma.m_axi);
 `endif

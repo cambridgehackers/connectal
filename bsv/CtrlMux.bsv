@@ -29,17 +29,12 @@ import AxiMasterSlave::*;
 import Portal::*;
 
 
-module mkInterruptMux#(Vector#(1,         Portal#(aw,_a,_b,_c,_d)) directories, 
-		       Vector#(numPortals,Portal#(aw,_a,_b,_c,_d)) portals) (ReadOnly#(Bool))
+module mkInterruptMux#(Vector#(numPortals,Portal#(aw,_a,_b,_c,_d)) portals) (ReadOnly#(Bool))
 
-   provisos(Add#(1,numPortals,numInputs),
-	    Add#(nz, TLog#(numInputs), 4),
-	    Add#(1, a__, numInputs));
+   provisos(Add#(nz, TLog#(numPortals), 4),
+	    Add#(1, a__, numPortals));
    
-   Vector#(1, ReadOnly#(Bool)) d_interrupts = map(getInterrupt, directories);
-   Vector#(numPortals, ReadOnly#(Bool)) p_interrupts = map(getInterrupt, portals);
-   Vector#(numInputs, ReadOnly#(Bool)) inputs = append(d_interrupts,p_interrupts);
-   
+   Vector#(numPortals, ReadOnly#(Bool)) inputs = map(getInterrupt, portals);
    
    function Bool my_read(ReadOnly#(Bool) x);
       return x._read;

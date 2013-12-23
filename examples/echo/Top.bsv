@@ -51,15 +51,15 @@ module mkAxiTop(AxiTop);
    portals[0] = echoIndicationProxy.portalIfc;
    portals[1] = echoRequestWrapper.portalIfc; 
    portals[2] = swallowWrapper.portalIfc; 
+   let interrupt_mux <- mkInterruptMux(portals);
    
    // instantiate system directory
-   Directory dir <- mkDirectory(portals);
+   Directory dir <- mkDirectoryDbg(portals,interrupt_mux);
    Vector#(1,StdPortal) directories;
    directories[0] = dir.portalIfc;
    
-   // when constructing ctrl and interrupt muxes, directories must be the first argument
+   // when constructing the ctrl mux, directories must be the first argument
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
-   let interrupt_mux <- mkInterruptMux(directories,portals);
    
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;

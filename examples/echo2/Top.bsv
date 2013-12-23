@@ -43,7 +43,7 @@ module mkZynqTop(Top);
    
    // when constructing ctrl and interrupt muxes, directories must be the first argument
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
-   let interrupt_mux <- mkInterruptMux(directories,portals);
+   let interrupt_mux <- mkInterruptMux(portals);
    
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
