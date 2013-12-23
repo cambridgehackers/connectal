@@ -6,47 +6,17 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "sock_fd.h"
+#include "StdDMAIndication.h"
 
-#include "DMAIndicationWrapper.h"
 #include "DMARequestProxy.h"
 #include "GeneratedTypes.h" 
 #include "MemwriteIndicationWrapper.h"
 #include "MemwriteRequestProxy.h"
 
-
 int numWords = 16 << 3;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 sem_t done_sem;
-sem_t conf_sem;
-
-void dump(const char *prefix, char *buf, size_t len)
-{
-    fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
-	fprintf(stderr, "%02x", (unsigned char)buf[i]);
-    fprintf(stderr, "\n");
-}
-
-class DMAIndication : public DMAIndicationWrapper
-{
-
-public:
-  DMAIndication(const char* devname, unsigned int addrbits) : DMAIndicationWrapper(devname,addrbits){}
-
-  virtual void reportStateDbg(const DmaDbgRec& rec){
-    fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
-  }
-  virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "configResp: %lx\n", channelId);
-  }
-  virtual void sglistResp(unsigned long channelId){
-    fprintf(stderr, "sglistResp: %lx\n", channelId);
-  }
-  virtual void parefResp(unsigned long channelId){
-    fprintf(stderr, "parefResp: %lx\n", channelId);
-  }
-};
 
 
 class MemwriteIndication : public MemwriteIndicationWrapper
@@ -105,10 +75,6 @@ void parent(int rd_sock, int wr_sock)
     fprintf(stderr, "failed to init done_sem\n");
     exit(1);
   }
-  if(sem_init(&conf_sem, 1, 0)){
-    fprintf(stderr, "failed to init conf_sem\n");
-    exit(1);
-  }
 
   fprintf(stderr, "parent::%s %s\n", __DATE__, __TIME__);
 
@@ -138,12 +104,8 @@ void parent(int rd_sock, int wr_sock)
   dma->dCacheFlushInval(dstAlloc, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
-  // write channel 0 is write source
-  dma->configChan(ChannelType_Write, 0, ref_dstAlloc, 8);
-  sem_wait(&conf_sem);
-
   fprintf(stderr, "parent::starting write %08x\n", numWords);
-  device->startWrite(numWords);
+  device->startWrite(ref_dstAlloc, numWords);
 
   sem_wait(&done_sem);
   

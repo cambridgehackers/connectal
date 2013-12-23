@@ -21,6 +21,7 @@ testnames = echo     \
             memcpy   \
             memread  \
 	    memwrite \
+            mempoke  \
             strstr
 
 
@@ -30,8 +31,8 @@ $(bsimtests):
 	pkill bluetcl || true
 	rm -fr $(addprefix test-, $(basename $@))
 	make $(addprefix gen_, $(basename $@))
-	cd $(addprefix test-, $(basename $@)); make bsim; cd ..
 	cd $(addprefix test-, $(basename $@)); make bsim_exe; cd ..
+	cd $(addprefix test-, $(basename $@)); make bsim; cd ..
 	cd $(addprefix test-, $(basename $@)); sources/bsim& cd ..
 	cd $(addprefix test-, $(basename $@)); jni/bsim_exe; cd ..
 
@@ -81,6 +82,12 @@ gen_memwrite:
 	./genxpsprojfrombsv -B $(BOARD) -p test-memwrite -x mkZynqTop -s2h MemwriteRequest -s2h DMARequest -h2s MemwriteIndication -h2s DMAIndication -s examples/memwrite/testmemwrite.cpp  -t examples/memwrite/Top.bsv -V verilog examples/memwrite/Memwrite.bsv bsv/PortalMemory.bsv
 
 #################################################################################################
+# examples/mempoke
+
+gen_mempoke:
+	./genxpsprojfrombsv -B $(BOARD) -p test-mempoke -x mkZynqTop -s2h MempokeRequest -s2h DMARequest -h2s MempokeIndication -h2s DMAIndication -s examples/mempoke/testmempoke.cpp  -t examples/mempoke/Top.bsv -V verilog examples/mempoke/Mempoke.bsv bsv/PortalMemory.bsv
+
+#################################################################################################
 # examples/strstr
 
 gen_strstr:
@@ -122,15 +129,6 @@ k7echoproj:
 
 v7echoproj:
 	./genxpsprojfrombsv -B vc707 -p v7echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv && (cd v7echoproj && time make implementation)
-
-test-mempoke/sources/bsim: examples/mempoke/Mempoke.bsv examples/mempoke/testmempoke.cpp
-	-pkill bluetcl
-	rm -fr test-mempoke
-	./genxpsprojfrombsv -B $(BOARD) -p test-mempoke -b Mempoke examples/mempoke/Mempoke.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s examples/mempoke/testmempoke.cpp
-	cd test-mempoke; make x86_exe; cd ..
-	cd test-mempoke; make bsim; cd ..
-	test-mempoke/sources/bsim &
-	test-mempoke/jni/mempoke
 
 test-ring/sources/bsim: examples/ring/Ring.bsv examples/ring/testring.cpp
 	-pkill bluetcl

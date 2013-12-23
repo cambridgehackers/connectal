@@ -23,14 +23,17 @@
 import FIFOF::*;
 import BRAMFIFO::*;
 import GetPut::*;
+
+
 import AxiClientServer::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 import AxiRDMA::*;
 import BsimRDMA::*;
+import BlueScope::*;
 
 interface MemwriteRequest;
-   method Action startWrite(Bit#(32) numWords);
+   method Action startWrite(Bit#(32) handle, Bit#(32) numWords);
    method Action getStateDbg();   
 endinterface
 
@@ -41,35 +44,36 @@ interface MemwriteIndication;
    method Action writeDone(Bit#(32) v);
 endinterface
 
-
 module mkMemwriteRequest#(MemwriteIndication indication,
-			  WriteChan#(Bit#(64)) dma_stream_write_chan) (MemwriteRequest);
+			  DMAWriteServer#(64) dma_stream_write_server) (MemwriteRequest);
 
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
    Reg#(Bit#(40)) streamWrOff <- mkReg(0);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
+   Reg#(Bit#(32))    wrHandle <- mkReg(0); 
 
    rule resp;
-      dma_stream_write_chan.writeDone.get;
+      let rv <- dma_stream_write_server.writeDone.get;
    endrule
    
    rule produce;
-      dma_stream_write_chan.writeData.put({srcGen+1,srcGen});
+      dma_stream_write_server.writeData.put(DMAData{data:{srcGen+1,srcGen}, tag:0});
       srcGen <= srcGen+2;
    endrule
    
    rule writeReq(streamWrCnt > 0);
       streamWrCnt <= streamWrCnt-1;
-      dma_stream_write_chan.writeReq.put(streamWrOff);
+      dma_stream_write_server.writeReq.put(DMAAddressRequest {handle: wrHandle, address: streamWrOff, burstLen: 1, tag: 0});
       streamWrOff <= streamWrOff + 1;
       indication.writeReq(streamWrCnt);
       if (streamWrCnt == 1)
 	 indication.writeDone(srcGen);
    endrule
 
-   method Action startWrite(Bit#(32) numWords) if (streamWrCnt == 0);
+   method Action startWrite(Bit#(32) handle, Bit#(32) numWords) if (streamWrCnt == 0);
       streamWrCnt <= numWords;
       indication.started(numWords);
+      wrHandle <= handle;
    endmethod
    
    method Action getStateDbg();

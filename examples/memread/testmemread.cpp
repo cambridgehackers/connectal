@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "StdDMAIndication.h"
 
-#include "DMAIndicationWrapper.h"
 #include "DMARequestProxy.h"
 #include "GeneratedTypes.h" 
 #include "MemreadIndicationWrapper.h"
@@ -24,23 +24,6 @@ void dump(const char *prefix, char *buf, size_t len)
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
     fprintf(stderr, "\n");
 }
-
-class DMAIndication : public DMAIndicationWrapper
-{
-
-public:
-  DMAIndication(const char* devname, unsigned int addrbits) : DMAIndicationWrapper(devname,addrbits){}
-
-  virtual void reportStateDbg(const DmaDbgRec& rec){
-    fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
-  }
-  virtual void sglistResp(unsigned long channelId){
-    fprintf(stderr, "sglistResp: %lx\n", channelId);
-  }
-  virtual void parefResp(unsigned long channelId){
-    fprintf(stderr, "parefResp: %lx\n", channelId);
-  }
-};
 
 class MemreadIndication : public MemreadIndicationWrapper
 {
