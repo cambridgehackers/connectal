@@ -60,7 +60,6 @@ interface FIFOFLevel#(type element_type, numeric type fifo_depth);
    interface FIFOF#(element_type) fifo;
    method Bool highWater(Bit#(TAdd#(1,TLog#(fifo_depth))) mark);
    method Bool lowWater(Bit#(TAdd#(1,TLog#(fifo_depth))) mark);
-
 endinterface
 
 instance ToGet#(FIFOFLevel#(a,b), a);

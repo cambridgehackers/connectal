@@ -29,7 +29,6 @@ import BRAMFIFO::*;
 import BRAM::*;
 
 // XBSV Libraries
-import BRAMFIFOFLevel::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 import Adapter::*;

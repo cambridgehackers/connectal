@@ -37,19 +37,15 @@ import Memcpy::*;
 module mkPortalDmaTop(PortalDmaTop);
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
-   // dma read channel 0 is reserved for memcpy read path
    // Max burst 16
    DMAReadBuffer#(64,16) dma_stream_read_chan <- mkDMAReadBuffer();
 
-   // dma write channel 0 is reserved for memcpy write path
    // Max burst 16
    DMAWriteBuffer#(64,16) dma_stream_write_chan <- mkDMAWriteBuffer();
    
-   // dma read channel 1 is reserved for debug read path
    // Max burst 1 because it only reads one word at a time
    DMAReadBuffer#(64,1) dma_word_read_chan <- mkDMAReadBuffer();
 
-   // dma write channel 1 is reserved for Bluescope output
    // Max burst 16
    DMAWriteBuffer#(64,16) dma_debug_write_chan <- mkDMAWriteBuffer();
 

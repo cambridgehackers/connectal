@@ -97,17 +97,24 @@ endinterface
 // @param maxBurst The max number of words to transfer per request.
 //
 module mkDMAReadBuffer(DMAReadBuffer#(dsz, maxBurst))
-   provisos(Add#(1,a__,dsz));
+   provisos(Add#(1,a__,dsz),
+	    Add#(b__, TAdd#(1, TLog#(maxBurst)), 8));
 
-   FIFOF#(DMAData#(dsz))     readBuffer     <- mkSizedBRAMFIFOF(valueOf(maxBurst));
-   FIFOF#(DMAAddressRequest) reqOutstanding <- mkFIFOF();
+   FIFOFLevel#(DMAData#(dsz),maxBurst) readBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(DMAAddressRequest)       reqOutstanding <- mkFIFOF();
 
    interface DMAReadServer dmaServer;
       interface Put readReq = toPut(reqOutstanding);
       interface Get readData = toGet(readBuffer);
    endinterface
    interface DMAReadClient dmaClient;
-      interface Get readReq = toGet(reqOutstanding);
+      // only issue the readRequest when sufficient buffering is available
+      interface Get readReq;
+	 method ActionValue#(DMAAddressRequest) get if (readBuffer.lowWater(truncate(reqOutstanding.first.burstLen)));
+	    reqOutstanding.deq;
+	    return reqOutstanding.first;
+	 endmethod
+      endinterface
       interface Put readData = toPut(readBuffer);
    endinterface
 endmodule
@@ -119,11 +126,12 @@ endmodule
 // @param maxBurst The max number of words to transfer per request.
 //
 module mkDMAWriteBuffer(DMAWriteBuffer#(bsz, maxBurst))
-   provisos(Add#(1,a__,bsz));
+   provisos(Add#(1,a__,bsz),
+	    Add#(b__, TAdd#(1, TLog#(maxBurst)), 8));
 
-   FIFOF#(DMAData#(bsz))        writeBuffer    <- mkSizedBRAMFIFOF(valueOf(maxBurst));
-   FIFOF#(DMAAddressRequest)    reqOutstanding <- mkFIFOF();
-   FIFOF#(Bit#(8))              doneTags       <- mkFIFOF();
+   FIFOFLevel#(DMAData#(bsz),maxBurst) writeBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(DMAAddressRequest)        reqOutstanding <- mkFIFOF();
+   FIFOF#(Bit#(8))                        doneTags <- mkFIFOF();
 
    interface DMAWriteServer dmaServer;
       interface Put writeReq = toPut(reqOutstanding);
@@ -131,7 +139,13 @@ module mkDMAWriteBuffer(DMAWriteBuffer#(bsz, maxBurst))
       interface Get writeDone = toGet(doneTags);
    endinterface
    interface DMAWriteClient dmaClient;
-      interface Get writeReq = toGet(reqOutstanding);
+      // only issue the writeRequest when sufficient data has been buffered
+      interface Get writeReq;
+	 method ActionValue#(DMAAddressRequest) get if (writeBuffer.highWater(truncate(reqOutstanding.first.burstLen)));
+	    reqOutstanding.deq;
+	    return reqOutstanding.first;
+	 endmethod
+      endinterface
       interface Get writeData = toGet(writeBuffer);
       interface Put writeDone = toPut(doneTags);
    endinterface
