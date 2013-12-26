@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include "Directory.h"
 
 #include "EchoIndicationWrapper.h"
 #include "EchoRequestProxy.h"
@@ -59,6 +60,7 @@ printf("[%s:%d] %d, %d\n", __FUNCTION__, __LINE__, v, v2);
 
 EchoIndication *echoIndication = 0;
 SwallowProxy *swallowProxy = 0;
+Directory *dir = 0;
 
 int main(int argc, const char **argv)
 {
@@ -66,9 +68,12 @@ int main(int argc, const char **argv)
 
     init_local_semaphores();
 
+    dir = new Directory("fpga0", 16);
     echoIndication = new EchoIndication("fpga1",16);
     echoRequestProxy = new EchoRequestProxy("fpga2",16);
     swallowProxy = new SwallowProxy("fpga3",16);
+
+    dir->print();
 
     pthread_create(&threaddata, NULL, &pthread_worker, NULL);
     int v = 42;

@@ -33,22 +33,22 @@ module mkDirectoryDbg#(Vector#(n,StdPortal) portals, ReadOnly#(Bool) interrupt_m
 		   noAction;
 		endmethod
 		method Bit#(32) sub(Bit#(32) addr);
-		   if (addr == 0)
+		   if (addr == 32'h00000000)
 		      return 0; // directory version
-		   else if (addr == 1)
+		   else if (addr == 32'h00000004)
 		      return `TimeStamp;
-		   else if (addr == 2)
+		   else if (addr == 32'h00000008)
 		      return fromInteger(valueOf(n));
-		   else if (addr == 3)
+		   else if (addr == 32'h0000000C)
 		      return 16; // portal Addr bits
-		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(2,n),4)))) begin
-		      let idx = (addr-4);
+		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(4,n),16)))) begin
+		      let idx = (addr-32'h0000000C)>>2;
 		      if (idx[0] == 0)
 			 return portals[idx<<1].ifcId;
 		      else
 			 return portals[idx<<1].ifcType;
 		   end
-		   else if (addr == 128)
+		   else if (addr == 32'h00008000)
 		      return interrupt_mux ? 32'd1 : 32'd0;
 		   else
 		      return 0;
@@ -64,16 +64,16 @@ module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
 		   noAction;
 		endmethod
 		method Bit#(32) sub(Bit#(32) addr);
-		   if (addr == 0)
+		   if (addr == 32'h00000000)
 		      return 0; // directory version
-		   else if (addr == 1)
+		   else if (addr == 32'h00000004)
 		      return `TimeStamp;
-		   else if (addr == 2)
+		   else if (addr == 32'h00000008)
 		      return fromInteger(valueOf(n));
-		   else if (addr == 3)
+		   else if (addr == 32'h0000000C)
 		      return 16; // portal Addr bits
-		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(2,n),4)))) begin
-		      let idx = (addr-4);
+		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(4,n),16)))) begin
+		      let idx = (addr-32'h0000000C)>>2;
 		      if (idx[0] == 0)
 			 return portals[idx<<1].ifcId;
 		      else
@@ -83,8 +83,9 @@ module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
 		      return 0;
 		endmethod
       	     endinterface);
-   StdAxi3Slave ctrl_mod <- mkAxi3SlaveFromRegFile(rf);
-   mkDirectoryPortalIfc(rf);
+   let ifc <- mkDirectoryPortalIfc(rf);
+   interface StdPortal portalIfc = ifc;
 endmodule
+
 
 

@@ -140,6 +140,22 @@ static int portal_open(struct inode *inode, struct file *filep)
 long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
         switch (cmd) {
+	case PORTAL_PRINT_DIRECTORY: {
+	  struct portal_client *portal_client = filep->private_data;
+	  struct portal_data *portal_data = portal_client->portal_data;
+	  volatile unsigned int *ptr = portal_data->dev_base_virt;
+	  unsigned int numportals,i;
+	  printk(KERN_INFO "[%s:%d] version=%d\n", __FUNCTION__, __LINE__, *(ptr++));
+	  printk(KERN_INFO "[%s:%d] timestamp=%d\n", __FUNCTION__, __LINE__, *(ptr++));
+	  numportals = *(ptr++);
+	  printk(KERN_INFO "[%s:%d] numportals=%d\n", __FUNCTION__, __LINE__, numportals);
+	  for(i = 0; i < numportals; i++){
+	    unsigned int ifcid = *(ptr++);
+	    unsigned int ifctype = *(ptr++);
+	    printk(KERN_INFO "[%s:%d] portal[%d]: ifcid=%d, ifctype=%d\n", __FUNCTION__, __LINE__, i, ifcid, ifctype);
+	  }
+	  return 0;
+	}
 	case PORTAL_SET_FCLK_RATE: {
 		PortalClockRequest request;
 		char clkname[8];
