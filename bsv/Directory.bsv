@@ -33,20 +33,20 @@ module mkDirectoryDbg#(Vector#(n,StdPortal) portals, ReadOnly#(Bool) interrupt_m
 		   noAction;
 		endmethod
 		method Bit#(32) sub(Bit#(32) addr);
-		   if (addr == 32'h00000000)
-		      return 0; // directory version
-		   else if (addr == 32'h00000004)
+		   if (addr == 0)
+		      return 1; // directory version
+		   else if (addr == 1)
 		      return `TimeStamp;
-		   else if (addr == 32'h00000008)
+		   else if (addr == 2)
 		      return fromInteger(valueOf(n));
-		   else if (addr == 32'h0000000C)
+		   else if (addr == 3)
 		      return 16; // portal Addr bits
-		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(4,n),16)))) begin
-		      let idx = (addr-32'h0000000C)>>2;
+		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(2,n),4)))) begin
+		      let idx = (addr-4);
 		      if (idx[0] == 0)
-			 return portals[idx<<1].ifcId;
+		   	 return portals[idx>>1].ifcId;
 		      else
-			 return portals[idx<<1].ifcType;
+		   	 return portals[idx>>1].ifcType;
 		   end
 		   else if (addr == 32'h00008000)
 		      return interrupt_mux ? 32'd1 : 32'd0;
@@ -64,20 +64,20 @@ module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
 		   noAction;
 		endmethod
 		method Bit#(32) sub(Bit#(32) addr);
-		   if (addr == 32'h00000000)
-		      return 0; // directory version
-		   else if (addr == 32'h00000004)
+		   if (addr == 0)
+		      return 1; // directory version
+		   else if (addr == 1)
 		      return `TimeStamp;
-		   else if (addr == 32'h00000008)
+		   else if (addr == 2)
 		      return fromInteger(valueOf(n));
-		   else if (addr == 32'h0000000C)
+		   else if (addr == 3)
 		      return 16; // portal Addr bits
-		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(4,n),16)))) begin
-		      let idx = (addr-32'h0000000C)>>2;
+		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(2,n),4)))) begin
+		      let idx = (addr-4);
 		      if (idx[0] == 0)
-			 return portals[idx<<1].ifcId;
+		   	 return portals[idx>>1].ifcId;
 		      else
-			 return portals[idx<<1].ifcType;
+		   	 return portals[idx>>1].ifcType;
 		   end
 		   else
 		      return 0;
@@ -86,6 +86,7 @@ module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
    let ifc <- mkDirectoryPortalIfc(rf);
    interface StdPortal portalIfc = ifc;
 endmodule
+
 
 
 

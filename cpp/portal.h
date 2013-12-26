@@ -68,6 +68,13 @@ class Portal
   static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 };
 
+class Directory : public Portal
+{
+ public:
+  Directory(const char* devname, unsigned int addrbits);
+  void print();
+};
+
 class PortalWrapper : public Portal
 {
  private:

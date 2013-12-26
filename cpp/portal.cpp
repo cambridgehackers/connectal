@@ -495,3 +495,49 @@ void* portalExec(void* __x)
 #endif
 }
 
+Directory::Directory(const char* devname, unsigned int addrbits) : Portal(devname,addrbits){}
+void Directory::print()
+{
+  fprintf(stderr, "Directory::print(%s)\n", name);
+#ifdef MMAP_HW
+  volatile unsigned int *ptr = req_fifo_base;
+  unsigned int numportals,i;
+  fprintf(stderr, "version=%d\n",  *ptr);
+  ptr++;
+  fprintf(stderr, "timestamp=%d\n", *ptr);
+  ptr++;
+  numportals = *ptr;
+  fprintf(stderr, "numportals=%d\n", numportals);
+  ptr++;
+  fprintf(stderr, "addrbits=%d\n", *ptr);
+  ptr++;
+  for(i = 0; i < numportals; i++){
+    unsigned int ifcid = *ptr;
+    ptr++;
+    unsigned int ifctype = *ptr;
+    ptr++;
+    fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, ifcid, ifctype);
+  }
+#else
+  unsigned int ptr = 0;
+  unsigned int numportals,i;
+  fprintf(stderr, "version=%d\n",  read_portal(&p, ptr, name));
+  ptr += 4;
+  fprintf(stderr, "timestamp=%d\n", read_portal(&p, ptr, name));
+  ptr += 4;
+  numportals = read_portal(&p, ptr, name);
+  fprintf(stderr, "numportals=%d\n", numportals);
+  ptr += 4;
+  fprintf(stderr, "addrbits=%d\n", read_portal(&p, ptr, name));
+  ptr += 4;
+  for(i = 0; i < numportals; i++){
+    unsigned int ifcid = read_portal(&p, ptr, name);
+    ptr += 4;
+    unsigned int ifctype = read_portal(&p, ptr, name);
+    ptr += 4;
+    fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, ifcid, ifctype);
+  }
+  
+#endif
+}
+

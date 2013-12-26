@@ -19,8 +19,6 @@ typedef struct PortalClockRequest {
     long actual_rate;
 } PortalClockRequest;
 
-#define PORTAL_PRINT_DIRECTORY _IOWR('B', 10, PortalClockRequest)
 #define PORTAL_SET_FCLK_RATE _IOWR('B', 40, PortalClockRequest)
-
 
 #endif /* __PORTAL_H__ */

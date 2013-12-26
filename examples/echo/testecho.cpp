@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include "Directory.h"
 
 #include "EchoIndicationWrapper.h"
 #include "EchoRequestProxy.h"
