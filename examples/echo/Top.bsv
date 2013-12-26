@@ -68,11 +68,6 @@ module mkAxiTop(AxiTop);
 
 endmodule : mkAxiTop
 
-module mkZynqTop(AxiTop);
-   let axiTop <- mkAxiTop();
-   return axiTop;
-endmodule : mkZynqTop
-
 import "BDPI" function Action      initPortal(Bit#(32) d);
 import "BDPI" function Bool                    writeReq();
 import "BDPI" function ActionValue#(Bit#(32)) writeAddr();
