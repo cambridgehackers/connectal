@@ -459,7 +459,7 @@ interface PPS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c
     interface Pps7Usb#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     usb1;
     interface Pps7Wdt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     wdt;
 endinterface
-import "BVI" qqprocessing_system7 =
+import "BVI" processing_system7 =
 module mkPPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, int gpio_width, int id_width, int mio_width)(PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width));
     parameter C_DM_WIDTH = 4;
     parameter C_DQS_WIDTH = 4;
