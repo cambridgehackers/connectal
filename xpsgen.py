@@ -37,7 +37,7 @@ programTclTemplate = '''
 connect_hw_server
 open_hw_target 
 set fpga [lindex [get_hw_devices] 0]
-set file ./%(base)s.runs/impl_1/%(Base)s.bit
+set file ./hw/%(Base)s.bit
 set_property PROGRAM.FILE $file $fpga
 puts "fpga is $fpga, bit file size is [exec ls -sh $file]"
 program_hw_devices $fpga
