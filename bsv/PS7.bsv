@@ -248,7 +248,6 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
         vtopm_axi_gp[i] = interface AxiMasterCommon#(32, id_width);
             interface Get req_ar;
                  method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].arvalid() != 0);
-                     actionvalue
                      AxiREQ#(id_width) v;
                      v.addr = vm_axi_gp[i].araddr();
                      v.burst = vm_axi_gp[i].arburst();
@@ -262,12 +261,10 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
 
 		     vm_axi_gp[i].arready(1);
                      return v;
-                     endactionvalue
                  endmethod
             endinterface
             interface Get req_aw;
                  method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].awvalid() != 0);
-                     actionvalue
                      AxiREQ#(id_width) v;
                      v.addr = vm_axi_gp[i].awaddr();
                      v.burst = vm_axi_gp[i].awburst();
@@ -281,7 +278,6 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
 
 	             vm_axi_gp[i].awready(1);
                      return v;
-                     endactionvalue
                 endmethod
             endinterface
             interface Put resp_read;
@@ -296,7 +292,6 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
             endinterface
             interface Get resp_write;
                  method ActionValue#(AxiWrite#(32, id_width)) get() if (vm_axi_gp[i].wvalid() != 0);
-                     actionvalue
                      AxiWrite#(32, id_width) v;
                      v.wid = vm_axi_gp[i].wid();
                      v.wstrb = vm_axi_gp[i].wstrb();
@@ -305,7 +300,6 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
 
 	             vm_axi_gp[i].wready(1);
                      return v;
-                     endactionvalue
                 endmethod
             endinterface
             interface Put resp_b;

@@ -4,9 +4,10 @@
 //import StmtFSM::*;
 //import FIFO::*;
 //import Connectable::*;
+import GetPut::*;
 
 // portz libraries
-//import AxiMasterSlave::*;
+import AxiMasterSlave::*;
 //import Directory::*;
 //import CtrlMux::*;
 //import Portal::*;
@@ -28,30 +29,30 @@ module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
     let id_width = 12;
     PS7#(4, 32, 4, 32/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7(4, 32/*data_width*/, 4, 32, 64/*gpio_width*/, 12/*id_width*/, 54);
 
-    //Bit#(1) intval <- pack(axiTop.interrupt);
+    Bit#(1) intval <- pack(axiTop.interrupt);
     //Bit#(1) intval <- axiTop.interrupt ? 1'b1 : 1'b0;
-    //ps7.irq.f2p({15'b0, pack(intval)});
-    //let fclock0 <- ps7.fclk.clk0();
-    //ps7.m_axi_gp[0].aclk(fclock0);
+    ps7.irq.f2p({15'b0, pack(intval)});
+    let fclock0 <- ps7.fclk.clk0();
+    ps7.m_axi_gp[0].aclk(fclock0);
     //ps7.s_axi_hp[0].axi.aclk(fclock0);
     //ps7.fclk_reset[0].n = ?;
 
     rule m_ar_rule; //.M_AXI_GP0_ARREADY(ctrl_arready), .M_AXI_GP0_ARVALID(ctrl_arvalid),
-        let m_ar = ps7.m_axi_gp[0].req_ar.get();
+        let m_ar <- ps7.m_axi_gp[0].req_ar.get();
             //m_ar.lock; //m_ar.qos;
         axiTop.ctrl.read.readAddr(m_ar.addr, m_ar.len, m_ar.size, m_ar.burst, m_ar.prot, m_ar.cache, m_ar.id);
     endrule
 
     rule m_aw_rule; //.M_AXI_GP0_AWREADY(ctrl_awready), .M_AXI_GP0_AWVALID(ctrl_awvalid),
-        let m_aw = ps7.m_axi_gp[0].req_aw.get();
+        let m_aw <- ps7.m_axi_gp[0].req_aw.get();
             //m_aw.lock; //m_aw.qos;
         axiTop.ctrl.write.writeAddr(m_aw.addr, m_aw.len, m_aw.size, m_aw.burst, m_aw.prot, m_aw.cache, m_aw.id);
     endrule
 
     rule m_arespb_rule; //.M_AXI_GP0_BREADY(ctrl_bready), .M_AXI_GP0_BVALID(ctrl_bvalid),
         AxiRESP#(12/*id_width*/) m_arespb;
-        m_arespb.id = axiTop.ctrl.write.bid();
-        m_arespb.resp = axiTop.ctrl.write.writeResponse();
+        m_arespb.id <- axiTop.ctrl.write.bid();
+        m_arespb.resp <- axiTop.ctrl.write.writeResponse();
         ps7.m_axi_gp[0].resp_b.put(m_arespb);
     endrule
 
@@ -66,7 +67,7 @@ module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
 
     rule m_arespw_rule; //.M_AXI_GP0_WREADY(ctrl_wready), .M_AXI_GP0_WVALID(ctrl_wvalid),
         let m_arespw <- ps7.m_axi_gp[0].resp_write.get();
-        axiTop.ctrl.write.writeData(m_arespw.wd.data, m_arespw.wstrb, m_arespw.wd.last, m_aresp.wid);
+        axiTop.ctrl.write.writeData(m_arespw.wd.data, m_arespw.wstrb, m_arespw.wd.last, m_arespw.wid);
     endrule
 
 /* m_axi interface not bound in examples/echo/Top.bsv
