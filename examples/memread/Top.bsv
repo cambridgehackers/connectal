@@ -33,14 +33,7 @@ import DMAIndicationProxy::*;
 // defined by user
 import Memread::*;
 
-interface AxiTop;
-   interface StdAxi3Slave     ctrl;
-   interface StdAxi3Master    m_axi;
-   interface ReadOnly#(Bool)  interrupt;
-   interface LEDS             leds;
-endinterface
-
-module mkAxiTop(AxiTop);
+module mkPortalDmaTop(PortalDmaTop);
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
 
@@ -80,11 +73,11 @@ module mkAxiTop(AxiTop);
 `ifndef BSIM
    interface StdAxi3Master m_axi = axi_master;
 `endif
-endmodule : mkAxiTop
+endmodule : mkPortalDmaTop
 
-module mkZynqTop(AxiTop);
-   let axiTop <- mkAxiTop();
-   return axiTop;
+module mkZynqTop(PortalDmaTop);
+   let portalTop <- mkPortalDmaTop();
+   return portalTop;
 endmodule : mkZynqTop
 
 import "BDPI" function Action      initPortal(Bit#(32) d);
@@ -97,7 +90,7 @@ import "BDPI" function Action        readData(Bit#(32) d);
 
 
 module mkBsimTop();
-   AxiTop top <- mkAxiTop;
+   PortalDmaTop top <- mkPortalDmaTop;
    let wf <- mkPipelineFIFO;
    let init_seq = (action 
 		      initPortal(0);
@@ -144,20 +137,20 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    // instantiate user portals
-   let axiTop <- mkAxiTop(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   let portalTop <- mkPortalDmaTop(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    // connect them to PCIE
-   mkConnection(x7pcie.portal0, axiTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(x7pcie.portal0, portalTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    AxiSlaveEngine#(64,8) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(axiTop.m_axi, axiSlaveEngine.slave3, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(portalTop.m_axi, axiSlaveEngine.slave3, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    rule requestInterrupt;
-      if (axiTop.interrupt && !interruptRequested)
+      if (portalTop.interrupt && !interruptRequested)
 	 x7pcie.interrupt();
-      interruptRequested <= axiTop.interrupt;
+      interruptRequested <= portalTop.interrupt;
    endrule
 
    interface pcie = x7pcie.pcie;
