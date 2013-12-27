@@ -1,9 +1,13 @@
 
-#include "Struct.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
+
+#include "StructIndicationWrapper.h"
+#include "StructRequestProxy.h"
+#include "GeneratedTypes.h"
+
 
 int v1a = 42;
 
@@ -27,65 +31,68 @@ E1 v7b = E1_E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
 
-class TestCoreIndication : public CoreIndication
+class StructIndication : public StructIndicationWrapper
 {  
 public:
-  static unsigned long cnt;
-  static void incr_cnt(){
+  unsigned long cnt;
+  void incr_cnt(){
     if (++cnt == 7)
       exit(0);
   }
   virtual void heard1(unsigned long a) {
     fprintf(stderr, "heard1(%ld)\n", a);
     assert(a == v1a);
-    TestCoreIndication::incr_cnt();
+    incr_cnt();
   }
   virtual void heard2(unsigned long a, unsigned long b) {
     fprintf(stderr, "heard2(%ld %ld)\n", a, b);
     assert(a == v2a);
     assert(b == v2b);
-    TestCoreIndication::incr_cnt();
+    incr_cnt();
   }
-  virtual void heard3(S1& s){
+  virtual void heard3(const S1& s){
     fprintf(stderr, "heard3(S1{a:%ld,b:%ld})\n", s.a, s.b);
     assert(s.a == s1.a);
     assert(s.b == s1.b);
-    TestCoreIndication::incr_cnt();
+    incr_cnt();
   }
-  virtual void heard4(S2& s){
+  virtual void heard4(const S2& s){
     fprintf(stderr, "heard4(S2{a:%ld,b:%ld,c:%ld})\n", s.a,s.b,s.c);
     assert(s.a == s2.a);
     assert(s.b == s2.b);
     assert(s.c == s2.c);
-    TestCoreIndication::incr_cnt();
+    incr_cnt();
   }
   virtual void heard5(unsigned long a, unsigned long long b, unsigned long c) {
     fprintf(stderr, "heard5(%08lx, %016llx, %08lx)\n", a, b, c);
     assert(a == v5a);
     assert(b == v5b);
     assert(c == v5c);
-    TestCoreIndication::incr_cnt();
+    incr_cnt();
   }
   virtual void heard6(unsigned long a, unsigned long long b, unsigned long c) {
     fprintf(stderr, "heard6(%08lx, %016llx, %08lx)\n", a, b, c);
     assert(a == v6a);
     assert(b == v6b);
     assert(c == v6c);
-    TestCoreIndication::incr_cnt();
+    incr_cnt();
   }
-  virtual void heard7(unsigned long a, E1& b) {
+  virtual void heard7(unsigned long a, const E1& b) {
     fprintf(stderr, "heard7(%08lx, %08x)\n", a, b);
     assert(a == v7a);
     assert(b == v7b);
-    TestCoreIndication::incr_cnt();
+    incr_cnt();
   }
+  StructIndication(const char* devname, unsigned int addrbits) : StructIndicationWrapper(devname,addrbits), cnt(0){}
 };
 
-unsigned long TestCoreIndication::cnt = 0;
+
 
 int main(int argc, const char **argv)
 {
-  CoreRequest* device = CoreRequest::createCoreRequest(new TestCoreIndication);
+  StructIndication *indication = new StructIndication("fpga1",16);
+  StructRequestProxy *device = new StructRequestProxy("fpga2",16);
+  
   fprintf(stderr, "calling say1(%d)\n", v1a);
   device->say1(v1a);  
   fprintf(stderr, "calling say2(%d, %d)\n", v2a,v2b);
@@ -98,7 +105,7 @@ int main(int argc, const char **argv)
   device->say5(v5a, v5b, v5c);  
   fprintf(stderr, "calling say6(%08lx, %016llx, %08lx)\n", v6a, v6b, v6c);
   device->say6(v6a, v6b, v6c);  
-  fprintf(stderr, "calling say7(%08lx, %08lx)\n", s3.a, s3.e1);
+  fprintf(stderr, "calling say7(%08lx, %08x)\n", s3.a, s3.e1);
   device->say7(s3);  
   fprintf(stderr, "about to invoke portalExec\n");
   portalExec(NULL);

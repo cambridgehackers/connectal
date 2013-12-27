@@ -22,7 +22,8 @@ testnames = echo     \
             memread  \
 	    memwrite \
             mempoke  \
-            strstr
+            strstr   \
+            struct 
 
 
 bsimtests = $(addsuffix .bsim, $(testnames))
@@ -93,6 +94,13 @@ gen_mempoke:
 gen_strstr:
 	./genxpsprojfrombsv -B $(BOARD) -p test-strstr -x mkZynqTop -s2h StrstrRequest -s2h DMARequest -h2s StrstrIndication -h2s DMAIndication  -s examples/strstr/teststrstr.cpp -t examples/strstr/Top.bsv -V verilog examples/strstr/Strstr.bsv bsv/PortalMemory.bsv 
 
+
+#################################################################################################
+# examples/struct
+
+gen_struct:
+	./genxpsprojfrombsv -B $(BOARD) -p test-struct -x mkZynqTop -s2h StructRequest -h2s StructIndication -s examples/struct/teststruct.cpp -t examples/struct/Topz.bsv -V verilog examples/struct/Struct.bsv
+
 #################################################################################################
 # not yet updated.
 
@@ -107,16 +115,6 @@ test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	./genxpsprojfrombsv -B zc702 -p test-imageon -x ImageonVita -x HDMI -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv bsv/Imageon.bsv bsv/HDMI.bsv bsv/IserdesDatadeser.bsv
 	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
 	echo test-imageon built successfully
-
-test-struct/sources/bsim: examples/struct/Struct.bsv examples/struct/teststruct.cpp
-	-pkill bluetcl
-	rm -fr test-struct
-	./genxpsprojfrombsv -B $(BOARD) -p test-struct -b Struct examples/struct/Struct.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv -s examples/struct/teststruct.cpp
-	cd test-struct; make x86_exe; cd ..
-	cd test-struct; make bsim; cd ..
-	test-struct/sources/bsim &
-	test-struct/jni/struct
-
 
 xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
 	rm -fr proj_pcie
