@@ -35,6 +35,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <assert.h>
+#include <time.h>
 
 #ifdef ZYNQ
 #include <android/log.h>
@@ -504,7 +505,8 @@ void Directory::print()
   unsigned int numportals,i;
   fprintf(stderr, "version=%08x\n",  *ptr);
   ptr++;
-  fprintf(stderr, "timestamp=%08x\n", *ptr);
+  long int timestamp = (long int)*ptr;
+  fprintf(stderr, "timestamp=%s", ctime(&timestamp));
   ptr++;
   numportals = *ptr;
   fprintf(stderr, "numportals=%08x\n", numportals);
@@ -524,7 +526,8 @@ void Directory::print()
   unsigned int numportals,i;
   fprintf(stderr, "version=%d\n",  read_portal(&p, ptr, name));
   ptr += 4;
-  fprintf(stderr, "timestamp=%d\n", read_portal(&p, ptr, name));
+  long int timestamp = (long int)read_portal(&p, ptr, name);
+  fprintf(stderr, "timestamp=%s", ctime(&timestamp));
   ptr += 4;
   numportals = read_portal(&p, ptr, name);
   fprintf(stderr, "numportals=%d\n", numportals);
