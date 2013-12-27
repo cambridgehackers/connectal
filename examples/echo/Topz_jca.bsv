@@ -9,7 +9,7 @@ import GetPut::*;
 // portz libraries
 import AxiMasterSlave::*;
 //import Directory::*;
-//import CtrlMux::*;
+import CtrlMux::*;
 //import Portal::*;
 import Leds::*;
 import Top::*;
@@ -29,7 +29,7 @@ module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
     let id_width = 12;
     PS7#(4, 32, 4, 32/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7(4, 32/*data_width*/, 4, 32, 64/*gpio_width*/, 12/*id_width*/, 54);
 
-    Bit#(1) intval <- pack(axiTop.interrupt);
+    Bool intval <- axiTop.interrupt();
     //Bit#(1) intval <- axiTop.interrupt ? 1'b1 : 1'b0;
     ps7.irq.f2p({15'b0, pack(intval)});
     let fclock0 <- ps7.fclk.clk0();
