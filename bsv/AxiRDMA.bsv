@@ -71,9 +71,10 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
    
    SGListMMU sgl <- mkSGListMMU();
    
-   FIFO#(DMAAddressRequest) reqFifo <- mkFIFO();
+   FIFO#(DMAAddressRequest) reqFifo  <- mkFIFO();
    FIFO#(DMAAddressRequest) dreqFifo <- mkSizedFIFO(numRequests);
-   FIFO#(DmaChannelId)    chanFifo <- mkSizedFIFO(numRequests);
+   FIFO#(Bit#(40))        paFifo     <- mkFIFO();
+   FIFO#(DmaChannelId)    chanFifo   <- mkSizedFIFO(numRequests);
 
    Reg#(DmaChannelId)    selectReg <- mkReg(0);
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
@@ -104,6 +105,18 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       sgl.addrReq(truncate(req.handle),req.address);
    endrule
    
+   rule checkSglResp;
+      let physAddr <- sgl.addrResp();
+      if (physAddr == 0) begin
+	 // squash request
+	 reqFifo.deq();
+	 dmaIndication.badAddr(reqFifo.first.handle, reqFifo.first.address);
+      end
+      else begin
+	 paFifo.enq(physAddr);
+      end
+   endrule
+
    method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr);
       sgl.page(truncate(tabsel), off, addr);
    endmethod
@@ -123,7 +136,8 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       method ActionValue#(Axi3ReadRequest#(40,12)) address() if (!debugReg);
 	 let req = reqFifo.first();
 	 reqFifo.deq();
-	 let physAddr <- sgl.addrResp();
+	 let physAddr = paFifo.first();
+	 paFifo.deq();
 
 	 dreqFifo.enq(req);
 	 return Axi3ReadRequest{address:physAddr, burstLen:truncate(req.burstLen-1), id:extend(req.tag)};
@@ -157,6 +171,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
    
    FIFO#(DMAAddressRequest) reqFifo <- mkFIFO();
    FIFO#(DMAAddressRequest) dreqFifo <- mkSizedFIFO(numRequests);
+   FIFO#(Bit#(40))        paFifo     <- mkFIFO();
    FIFO#(DmaChannelId)    chanFifo <- mkSizedFIFO(numRequests);
    FIFO#(DmaChannelId)    respFifo <- mkSizedFIFO(numRequests);
 
@@ -189,6 +204,18 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
       sgl.addrReq(truncate(req.handle),req.address);
    endrule
    
+   rule checkSglResp;
+      let physAddr <- sgl.addrResp();
+      if (physAddr == 0) begin
+	 // squash request
+	 reqFifo.deq();
+	 dmaIndication.badAddr(reqFifo.first.handle, reqFifo.first.address);
+      end
+      else begin
+	 paFifo.enq(physAddr);
+      end
+   endrule
+
    method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr);
       sgl.page(truncate(tabsel), off, addr);
    endmethod
@@ -208,7 +235,8 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
       method ActionValue#(Axi3WriteRequest#(40,12)) address() if (!debugReg);
 	 let req = reqFifo.first();
 	 reqFifo.deq();
-	 let physAddr <- sgl.addrResp();
+	 let physAddr = paFifo.first();
+	 paFifo.deq();
 
 	 dreqFifo.enq(req);
 	 return Axi3WriteRequest{address:physAddr, burstLen:truncate(burstReg-1), id:extend(req.tag)};

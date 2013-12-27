@@ -30,4 +30,7 @@ public:
   virtual void parefResp(unsigned long channelId){
     fprintf(stderr, "parefResp: %lx\n", channelId);
   }
+  virtual void badAddr ( const unsigned long handle, const unsigned long long address ) {
+    fprintf(stderr, "DMAIndication bad address pref=%lx addr=%llx\n", handle, address);
+  }
 };

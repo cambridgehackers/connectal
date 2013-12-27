@@ -52,6 +52,7 @@ interface DMAIndication;
    method Action sglistResp(Bit#(32) pref, Bit#(32) idx);
    method Action parefResp(Bit#(32) v);
    method Action sglistEntry(Bit#(64) physAddr);
+   method Action badAddr(Bit#(32) handle, Bit#(40) address);
 endinterface
 
 //
