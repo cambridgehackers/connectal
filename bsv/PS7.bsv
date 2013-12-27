@@ -144,6 +144,7 @@ interface PS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_
     interface Pps7Ftmt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)             ftmt;
     interface Vector#(2, Pps7I2c#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))  i2c;
     interface Pps7Irq#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)              irq;
+    interface Inout#(Bit#(mio_width))     mio;
     interface Pps7Pjtag#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)            pjtag;
     interface Pps7Ps#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)               ps;
     interface Vector#(2, Pps7Sdio#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)) sdio;
@@ -247,6 +248,7 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
         vtopm_axi_gp[i] = interface AxiMasterCommon#(32, id_width);
             interface Get req_ar;
                  method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].arvalid() != 0);
+                     actionvalue
                      AxiREQ#(id_width) v;
                      v.addr = vm_axi_gp[i].araddr();
                      v.burst = vm_axi_gp[i].arburst();
@@ -260,10 +262,12 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
 
 		     vm_axi_gp[i].arready(1);
                      return v;
+                     endactionvalue
                  endmethod
             endinterface
             interface Get req_aw;
                  method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].awvalid() != 0);
+                     actionvalue
                      AxiREQ#(id_width) v;
                      v.addr = vm_axi_gp[i].awaddr();
                      v.burst = vm_axi_gp[i].awburst();
@@ -277,6 +281,7 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
 
 	             vm_axi_gp[i].awready(1);
                      return v;
+                     endactionvalue
                 endmethod
             endinterface
             interface Put resp_read;
@@ -291,6 +296,7 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
             endinterface
             interface Get resp_write;
                  method ActionValue#(AxiWrite#(32, id_width)) get() if (vm_axi_gp[i].wvalid() != 0);
+                     actionvalue
                      AxiWrite#(32, id_width) v;
                      v.wid = vm_axi_gp[i].wid();
                      v.wstrb = vm_axi_gp[i].wstrb();
@@ -299,6 +305,7 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
 
 	             vm_axi_gp[i].wready(1);
                      return v;
+                     endactionvalue
                 endmethod
             endinterface
             interface Put resp_b;
@@ -512,6 +519,7 @@ module mkPS7#(int c_dm_width, int c_dq_width, int c_dqs_width, int data_width, i
     interface Pps7Ftmd     ftmd = foo.ftmd;
     interface Pps7Ftmt     ftmt = foo.ftmt;
     interface Pps7Irq     irq = foo.irq;
+    interface Inout     mio = foo.mio;
     interface Pps7Pjtag     pjtag = foo.pjtag;
     interface Pps7Ps     ps = foo.ps;
     interface Pps7Sram     sram = foo.sram;
