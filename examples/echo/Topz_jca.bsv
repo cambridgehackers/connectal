@@ -17,24 +17,28 @@ import PPS7::*;
 import PS7::*;
 
 interface EchoPins#(numeric type gpio_width, numeric type mio_width);
-    interface Pps7Ddr#(4, 32, 4, 32, 64, 12, 54) ddr;
+    interface Pps7Ddr#(4, 32, 4, 64, 64, 12, 54) ddr;
     interface Inout#(Bit#(mio_width))       mio;
-    interface Pps7Ps#(4, 32, 4, 32, 64, 12, 54) ps;
+    interface Pps7Ps#(4, 32, 4, 64, 64, 12, 54) ps;
     interface LEDS                          leds;
 endinterface
 
 module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
     let axiTop <- mkAxiTop();
-    let data_width = 32;
+    let data_width = 64;
     let id_width = 12;
-    PS7#(4, 32, 4, 32/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7(4, 32/*data_width*/, 4, 32, 64/*gpio_width*/, 12/*id_width*/, 54);
+    PS7#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7();
 
-    Bool intval <- axiTop.interrupt();
-    //Bit#(1) intval <- axiTop.interrupt ? 1'b1 : 1'b0;
+    rule int_rule;
+    let intval = axiTop.interrupt ? 1'b1 : 1'b0;
     ps7.irq.f2p({15'b0, pack(intval)});
-    let fclock0 <- ps7.fclk.clk0();
+    endrule
+
+    rule clock_rule;
+    let fclock0 = ps7.fclk.clk0();
     ps7.m_axi_gp[0].aclk(fclock0);
     //ps7.s_axi_hp[0].axi.aclk(fclock0);
+    endrule
     //ps7.fclk_reset[0].n = ?;
 
     rule m_ar_rule; //.M_AXI_GP0_ARREADY(ctrl_arready), .M_AXI_GP0_ARVALID(ctrl_arvalid),
