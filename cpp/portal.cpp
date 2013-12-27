@@ -300,6 +300,7 @@ int PortalWrapper::registerInstance()
 PortalMemory::PortalMemory(const char *devname, unsigned int addrbits)
   : PortalProxy(devname, addrbits)
   , handle(1)
+  , sglistCallbackRegistered(false)
 {
 #ifndef MMAP_HW
   snprintf(p_fd.read.path, sizeof(p_fd.read.path), "fd_sock_rc");
@@ -307,6 +308,9 @@ PortalMemory::PortalMemory(const char *devname, unsigned int addrbits)
   snprintf(p_fd.write.path, sizeof(p_fd.write.path), "fd_sock_wc");
   connect_socket(&(p_fd.write));
 #endif
+  if (sem_init(&sglistSem, 1, 0)){
+    fprintf(stderr, "failed to init sglistSem errno=%d:%s\n", errno, strerror(errno));
+  }
   const char* path = "/dev/portalmem";
   this->pa_fd = ::open(path, O_RDWR);
   if (this->pa_fd < 0){
@@ -359,18 +363,29 @@ int PortalMemory::reference(PortalAlloc* pa)
   pa->entries[ne].dma_address = 0;
   pa->entries[ne].length = 0;
   pa->header.numEntries;
+  sglist(0, 0, 0);
   for(int i = 0; i <= pa->header.numEntries; i++){
     assert(i<32); // the HW has defined SGListMaxLen as 32
     fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, pa->entries[i].dma_address, pa->entries[i].length);
     sglist(id, pa->entries[i].dma_address, pa->entries[i].length);
-    sleep(1); // ugly hack.  should use a semaphore for flow-control (mdk)
+    if (sglistCallbackRegistered)
+      sem_wait(&sglistSem);
+    else
+      sleep(1); // ugly hack.  should use a semaphore for flow-control (mdk)
   }
 #else
   sock_fd_write(p_fd.write.s2, pa->header.fd);
   paref(id, pa->header.size);
-  sleep(1); // ugly hack.  should use a semaphore for flow-control (mdk)
+  if (sglistCallbackRegistered)
+    sem_wait(&sglistSem);
+  else
+    sleep(1); // ugly hack.  should use a semaphore for flow-control (mdk)
 #endif
   return id;
+}
+void PortalMemory::sglistResp(unsigned long channelId)
+{
+  sem_post(&sglistSem);
 }
 
 int PortalMemory::alloc(size_t size, PortalAlloc **ppa)
