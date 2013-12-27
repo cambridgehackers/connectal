@@ -13,8 +13,8 @@ test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidi
 
 
 #################################################################################################
-# generate bsim and zynq make targets for each test in testnames
-# for test 'foo', we will generate 'foo.bits' and 'foo.bsim'
+# Generate bsim and zynq make targets for each test in testnames.
+# For test 'foo', we will generate 'foo.bits' and 'foo.bsim'
 
 testnames = echo     \
             echo2    \
@@ -50,56 +50,64 @@ $(bitstests):
 # examples/echo
 
 gen_echo:
-	./genxpsprojfrombsv -B$(BOARD) -p test-echo -x mkZynqTop -s2h Swallow -s2h EchoRequest -h2s EchoIndication -s examples/echo/testecho.cpp -t examples/echo/Topz.bsv -V verilog examples/echo/Echo.bsv examples/echo/Swallow.bsv
+	./genxpsprojfrombsv -B$(BOARD) -p test-echo -x mkZynqTop -s2h Swallow -s2h EchoRequest -h2s EchoIndication \
+	-s examples/echo/testecho.cpp -t examples/echo/Topz.bsv -V verilog examples/echo/Echo.bsv examples/echo/Swallow.bsv
 
 #################################################################################################
 # examples/echo2
 
 gen_echo2:
-	./genxpsprojfrombsv -B $(BOARD) -p test-echo2 -x mkZynqTop -s2h Say -h2s Say -s examples/echo2/test.cpp -t examples/echo2/Top.bsv -V verilog examples/echo2/Say.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-echo2 -x mkZynqTop -s2h Say -h2s Say \
+	-s examples/echo2/test.cpp -t examples/echo2/Top.bsv -V verilog examples/echo2/Say.bsv
 
 #################################################################################################
 # examples/memcpy
 
 gen_memcpy:
-	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication -s examples/memcpy/testmemcpy.cpp  -t examples/memcpy/Top.bsv -V verilog examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication \
+	-s examples/memcpy/testmemcpy.cpp  -t examples/memcpy/Top.bsv -V verilog examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv
 
 #################################################################################################
 # examples/loadstore
 
 gen_loadstore:
-	./genxpsprojfrombsv -B $(BOARD) -p test-loadstore -x mkZynqTop  -s2h LoadStoreRequest -s2h DMARequest -h2s LoadStoreIndication -h2s DMAIndication -s examples/loadstore/testloadstore.cpp -t examples/loadstore/Top.bsv -V verilog examples/loadstore/LoadStore.bsv bsv/PortalMemory.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-loadstore -x mkZynqTop  -s2h LoadStoreRequest -s2h DMARequest -h2s LoadStoreIndication -h2s DMAIndication \
+	-s examples/loadstore/testloadstore.cpp -t examples/loadstore/Top.bsv -V verilog examples/loadstore/LoadStore.bsv bsv/PortalMemory.bsv
 
 #################################################################################################
 # examples/memread
 
 gen_memread:
-	./genxpsprojfrombsv -B $(BOARD) -p test-memread -x mkZynqTop -s2h MemreadRequest -s2h DMARequest -h2s MemreadIndication -h2s DMAIndication -s examples/memread/testmemread.cpp  -t examples/memread/Top.bsv -V verilog examples/memread/Memread.bsv bsv/PortalMemory.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-memread -x mkZynqTop -s2h MemreadRequest -s2h DMARequest -h2s MemreadIndication -h2s DMAIndication \
+	-s examples/memread/testmemread.cpp  -t examples/memread/Top.bsv -V verilog examples/memread/Memread.bsv bsv/PortalMemory.bsv
 
 #################################################################################################
 # examples/memwrite
 
 gen_memwrite:
-	./genxpsprojfrombsv -B $(BOARD) -p test-memwrite -x mkZynqTop -s2h MemwriteRequest -s2h DMARequest -h2s MemwriteIndication -h2s DMAIndication -s examples/memwrite/testmemwrite.cpp  -t examples/memwrite/Top.bsv -V verilog examples/memwrite/Memwrite.bsv bsv/PortalMemory.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-memwrite -x mkZynqTop -s2h MemwriteRequest -s2h DMARequest -h2s MemwriteIndication -h2s DMAIndication \
+	-s examples/memwrite/testmemwrite.cpp  -t examples/memwrite/Top.bsv -V verilog examples/memwrite/Memwrite.bsv bsv/PortalMemory.bsv
 
 #################################################################################################
 # examples/mempoke
 
 gen_mempoke:
-	./genxpsprojfrombsv -B $(BOARD) -p test-mempoke -x mkZynqTop -s2h MempokeRequest -s2h DMARequest -h2s MempokeIndication -h2s DMAIndication -s examples/mempoke/testmempoke.cpp  -t examples/mempoke/Top.bsv -V verilog examples/mempoke/Mempoke.bsv bsv/PortalMemory.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-mempoke -x mkZynqTop -s2h MempokeRequest -s2h DMARequest -h2s MempokeIndication -h2s DMAIndication \
+	-s examples/mempoke/testmempoke.cpp  -t examples/mempoke/Top.bsv -V verilog examples/mempoke/Mempoke.bsv bsv/PortalMemory.bsv
 
 #################################################################################################
 # examples/strstr
 
 gen_strstr:
-	./genxpsprojfrombsv -B $(BOARD) -p test-strstr -x mkZynqTop -s2h StrstrRequest -s2h DMARequest -h2s StrstrIndication -h2s DMAIndication  -s examples/strstr/teststrstr.cpp -t examples/strstr/Top.bsv -V verilog examples/strstr/Strstr.bsv bsv/PortalMemory.bsv 
-
+	./genxpsprojfrombsv -B $(BOARD) -p test-strstr -x mkZynqTop -s2h StrstrRequest -s2h DMARequest -h2s StrstrIndication -h2s DMAIndication  \
+	-s examples/strstr/teststrstr.cpp -t examples/strstr/Top.bsv -V verilog examples/strstr/Strstr.bsv bsv/PortalMemory.bsv 
 
 #################################################################################################
 # examples/struct
 
 gen_struct:
-	./genxpsprojfrombsv -B $(BOARD) -p test-struct -x mkZynqTop -s2h StructRequest -h2s StructIndication -s examples/struct/teststruct.cpp -t examples/struct/Topz.bsv -V verilog examples/struct/Struct.bsv
+	./genxpsprojfrombsv -B $(BOARD) -p test-struct -x mkZynqTop -s2h StructRequest -h2s StructIndication \
+	-s examples/struct/teststruct.cpp -t examples/struct/Topz.bsv -V verilog examples/struct/Struct.bsv
 
 #################################################################################################
 # not yet updated.

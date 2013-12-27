@@ -34,17 +34,18 @@ module mkDirectoryDbg#(Vector#(n,StdPortal) portals, ReadOnly#(Bool) interrupt_m
 		   noAction;
 		endmethod
 		method Bit#(32) sub(Bit#(32) _addr);
+		   let base = 128;
 		   let addr = _addr[15:0]; 
-		   if (addr == 0)
+		   if (addr == 0+base)
 		      return 1; // directory version
-		   else if (addr == 1)
+		   else if (addr == 1+base)
 		      return `TimeStamp;
-		   else if (addr == 2)
+		   else if (addr == 2+base)
 		      return fromInteger(valueOf(n));
-		   else if (addr == 3)
+		   else if (addr == 3+base)
 		      return 16; // portal Addr bits
-		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(2,n),4)))) begin
-		      let idx = (addr-4);
+		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(2,n),4)))+base) begin
+		      let idx = (addr-4-base);
 		      if (idx[0] == 0)
 		   	 return portals[idx>>1].ifcId;
 		      else
@@ -53,13 +54,12 @@ module mkDirectoryDbg#(Vector#(n,StdPortal) portals, ReadOnly#(Bool) interrupt_m
 		   else if (addr == 16'h1000)
 		      return interrupt_mux ? 32'd1 : 32'd0;
 		   else
-		      return _addr;
+		      return 0;
 		endmethod
       	     endinterface);
    let ifc <- mkDirectoryPortalIfc(rf);
    interface StdPortal portalIfc = ifc;
 endmodule
-
 
 module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
    let rf = (interface RegFile#(Bit#(32), Bit#(32));
@@ -67,28 +67,30 @@ module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
 		   noAction;
 		endmethod
 		method Bit#(32) sub(Bit#(32) _addr);
+		   let base = 128;
 		   let addr = _addr[15:0]; 
-		   if (addr == 0)
+		   if (addr == 0+base)
 		      return 1; // directory version
-		   else if (addr == 1)
+		   else if (addr == 1+base)
 		      return `TimeStamp;
-		   else if (addr == 2)
+		   else if (addr == 2+base)
 		      return fromInteger(valueOf(n));
-		   else if (addr == 3)
+		   else if (addr == 3+base)
 		      return 16; // portal Addr bits
-		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(2,n),4)))) begin
-		      let idx = (addr-4);
+		   else if (addr < fromInteger(valueOf(TAdd#(TMul#(2,n),4)))+base) begin
+		      let idx = (addr-4-base);
 		      if (idx[0] == 0)
 		   	 return portals[idx>>1].ifcId;
 		      else
 		   	 return portals[idx>>1].ifcType;
 		   end
 		   else
-		      return _addr;
+		      return 0;
 		endmethod
       	     endinterface);
    let ifc <- mkDirectoryPortalIfc(rf);
    interface StdPortal portalIfc = ifc;
 endmodule
+
 
 

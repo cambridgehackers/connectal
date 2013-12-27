@@ -173,8 +173,8 @@ int Portal::open(int addrbits)
     req_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(1<<14));
     req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
 
-    fprintf(stderr, "Portal::disabling interrupts %s\n", name);
-    *(ind_reg_base+0x1) = 0;
+    fprintf(stderr, "Portal::enabling interrupts %s\n", name);
+    *(ind_reg_base+0x1) = 1;
 
 #else
     snprintf(p.read.path, sizeof(p.read.path), "%s_rc", name);
@@ -188,9 +188,9 @@ int Portal::open(int addrbits)
     req_reg_base   = dev_base+(1<<14);
     req_fifo_base  = dev_base+(0<<14);
 
-    fprintf(stderr, "Portal::disabling interrupts %s\n", name);
+    fprintf(stderr, "Portal::enabling interrupts %s\n", name);
     unsigned int addr = ind_reg_base+0x4;
-    write_portal(&p, addr, 0, name);
+    write_portal(&p, addr, 1, name);
 #endif
     return 0;
 }
@@ -432,7 +432,7 @@ void* portalExec(void* __x)
 {
 #ifdef MMAP_HW
     long rc;
-    int timeout = 1; // interrupts not working yet on Zynq
+    int timeout = -1; 
 #ifndef ZYNQ
     timeout = 1; // interrupts not working yet on PCIe
 #endif
@@ -483,7 +483,7 @@ void* portalExec(void* __x)
 	  // do something if we timeout??
 	}
 	// re-enable interupt which was disabled by portal_isr
-	//*(instance->ind_reg_base+0x1) = 1;
+	*(instance->ind_reg_base+0x1) = 1;
       }
     }
     // return only in error case
@@ -516,7 +516,7 @@ void Directory::print()
 {
   fprintf(stderr, "Directory::print(%s)\n", name);
 #ifdef MMAP_HW
-  volatile unsigned int *ptr = req_fifo_base;
+  volatile unsigned int *ptr = req_fifo_base+128;
   unsigned int numportals,i;
   fprintf(stderr, "version=%08x\n",  *ptr);
   ptr++;
@@ -537,7 +537,7 @@ void Directory::print()
   }
   fprintf(stderr, "interrupt_mux=%08x\n", *(req_fifo_base+0x00004000));
 #else
-  unsigned int ptr = 0;
+  unsigned int ptr = 128*4;
   unsigned int numportals,i;
   fprintf(stderr, "version=%d\n",  read_portal(&p, ptr, name));
   ptr += 4;
