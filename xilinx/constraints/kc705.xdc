@@ -125,7 +125,7 @@ set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 # Please refer to the Virtex-7 GT Transceiver User Guide
 # (UG) for guidelines regarding clock resource selection.
 #
-set_property LOC IBUFDS_GTE2_X0Y1  [get_cells { x7pcie_pci_clk_100mhz_buf }]
+set_property LOC IBUFDS_GTE2_X0Y1  [get_cells { *x7pcie_pci_clk_100mhz_buf }]
 set_property LOC MMCME2_ADV_X1Y1 [get_cells -hier -filter { NAME =~ *clk_gen_pll }]
 
 #
@@ -193,10 +193,10 @@ endgroup
 ######################################################################################################
 
 # # clocks
-create_clock -name pci_refclk -period 10 [get_pins x7pcie_pci_clk_100mhz_buf/O]
-create_clock -name sys_clk -period 5 [get_pins x7pcie_sys_clk_200mhz/O]
+create_clock -name pci_refclk -period 10 [get_pins *x7pcie_pci_clk_100mhz_buf/O]
+create_clock -name sys_clk -period 5 [get_pins *x7pcie_sys_clk_200mhz/O]
 
-create_clock -name pci_extclk -period 10 [get_pins x7pcie_pcie_ep/pcie_7x_v2_1_i/gt_top_i/PIPE_TXOUTCLK_OUT]
+create_clock -name pci_extclk -period 10 [get_pins *x7pcie_pcie_ep/pcie_7x_v2_1_i/gt_top_i/PIPE_TXOUTCLK_OUT]
 
 # # False Paths
 # set_false_path -from [get_ports { RST_N_pci_sys_reset_n }]
