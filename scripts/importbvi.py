@@ -313,16 +313,21 @@ def generate_instance(item, indent, prefix):
     global enindex
     itemlen = '1'
     methodlist = ''
+    pname = ''
+    if prefix:
+        pname = prefix[:-1].lower() + '.'
+        if pname == 'event.':
+            pname = 'event_.'
     if len(item) > 2:
         itemlen = item[1]
     if item[0] == 'input':
         #print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) en'+str(enindex)+');')
         print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) EN_'+prefix + item[-1]+');')
         enindex = enindex + 1
-        methodlist = methodlist + ', ' + item[-1].lower()
+        methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'output':
         print(indent + 'method '+ prefix + item[-1] + ' ' + item[-1].lower()+'();')
-        methodlist = methodlist + ', ' + item[-1].lower()
+        methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'inout':
         print(indent + 'ifc_inout '+item[-1].lower()+'('+ prefix + item[-1]+');')
     elif item[0] == 'interface':
@@ -331,7 +336,7 @@ def generate_instance(item, indent, prefix):
         if not temp:
             temp = commoninterfaces[item[1]]['']
         for titem in temp:
-             generate_instance(titem, '        ', item[3])
+             methodlist = methodlist + generate_instance(titem, '        ', item[3])
         print('    endinterface')
     return methodlist
 
@@ -350,7 +355,10 @@ def translate_verilog(ifname):
                 paramnames.append(item)
     paramnames.sort()
     # generate output file
-    print('')
+    print('\n/*')
+    for item in sys.argv:
+        print('   ' + item);
+    print('*/\n');
     for item in ['Clocks', 'DefaultValue', 'XilinxCells', 'GetPut']:
         print('import ' + item + '::*;')
     print('')
@@ -364,7 +372,10 @@ def translate_verilog(ifname):
     generate_inter_declarations(paramlist, paramval)
     generate_interface(ifname + paramlist, paramval, masterlist)
     print('import "BVI" '+modulename + ' =')
-    print('module mk'+ifname+paramlist.replace('numeric type', 'int')+'('+ifname+ paramval +');')
+    print('module mk'+ifname+'('+ifname+ paramval +');')
+    for item in paramnames:
+        print('    let ' + item + ' = valueOf(' + item + ');')
+
     for item in masterlist:
         if item[0] == 'parameter':
             print('    parameter ' + item[1] + ' = ' + item[2] + ';')
