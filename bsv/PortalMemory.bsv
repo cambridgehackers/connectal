@@ -49,8 +49,9 @@ typedef struct {
 //
 interface DMAIndication;
    method Action reportStateDbg(DmaDbgRec rec);
-   method Action sglistResp(Bit#(32) v);
+   method Action sglistResp(Bit#(32) pref, Bit#(32) idx);
    method Action parefResp(Bit#(32) v);
+   method Action sglistEntry(Bit#(64) physAddr);
 endinterface
 
 //
@@ -81,6 +82,8 @@ interface DMARequest;
    //
    // @note Only implemented for software 
    method Action paref(Bit#(32) pref, Bit#(32) size);
+
+   method Action readSglist(ChannelType rc, Bit#(32) pref, Bit#(64) addr);
 endinterface
 
 //
