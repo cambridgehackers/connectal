@@ -47,20 +47,30 @@ interface MemreadIndication;
    method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) dataMismatch);
    method Action readReq(Bit#(32) v);
    method Action readDone(Bit#(32) dataMismatch);
+   method Action mismatch(Bit#(32) offset, Bit#(64) value);
 endinterface
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
    Reg#(DmaMemHandle) streamRdHandle <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
+   Reg#(Bit#(32)) putOffset <- mkReg(0);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(40))      offset <- mkReg(0);
+   FIFOF#(Tuple2#(Bit#(32),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
+
+   rule mismatch;
+      let tpl = mismatchFifo.first();
+      mismatchFifo.deq();
+      indication.mismatch(tpl_1(tpl), tpl_2(tpl));
+   endrule
 
    interface MemreadRequest request;
        method Action startRead(Bit#(32) handle, Bit#(32) numWords) if (streamRdCnt == 0);
 	  streamRdHandle <= handle;
 	  streamRdCnt <= numWords>>1;
+	  putOffset <= 0;
 	  indication.started(numWords);
        endmethod
 
@@ -71,7 +81,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 
    interface DMAReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(DMAAddressRequest) get() if (streamRdCnt > 0);
+	 method ActionValue#(DMAAddressRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
 	    streamRdCnt <= streamRdCnt-16;
 	    offset <= offset + 16;
 	    if (streamRdCnt == 16)
@@ -87,7 +97,10 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    let misMatch0 = v[31:0] != srcGen;
 	    let misMatch1 = v[63:32] != srcGen+1;
 	    dataMismatch <= dataMismatch || misMatch0 || misMatch1;
+	    if (misMatch0 || misMatch1)
+	       mismatchFifo.enq(tuple2(putOffset, v));
 	    srcGen <= srcGen+2;
+	    putOffset <= putOffset + 8;
 	    //indication.rData(v);
 	 endmethod
       endinterface : readData

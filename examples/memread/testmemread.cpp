@@ -46,6 +46,10 @@ public:
   virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
     fprintf(stderr, "Memread::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
   }  
+  virtual void mismatch(unsigned long offset, unsigned long long v) {
+    fprintf(stderr, "Mismatch at %lx %llx\n", offset, v);
+  }
+
   MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits){}
 
 };
@@ -88,11 +92,15 @@ int main(int argc, const char **argv)
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
+  fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
+  dma->readSglist(ChannelType_Read, ref_srcAlloc, 0);
+  dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x1000);
+  dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x2000);
   fprintf(stderr, "Main::starting read %08x\n", numWords);
-  device->startRead(ref_srcAlloc, numWords);
+  device->startRead(ref_srcAlloc, 16);
 
   //dma->getReadStateDbg();
-  //device->getStateDbg();
+  device->getStateDbg();
   fprintf(stderr, "Main::sleeping\n");
   while(true){sleep(1);}
 }
