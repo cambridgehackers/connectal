@@ -502,22 +502,23 @@ void Directory::print()
 #ifdef MMAP_HW
   volatile unsigned int *ptr = req_fifo_base;
   unsigned int numportals,i;
-  fprintf(stderr, "version=%d\n",  *ptr);
+  fprintf(stderr, "version=%08x\n",  *ptr);
   ptr++;
-  fprintf(stderr, "timestamp=%d\n", *ptr);
+  fprintf(stderr, "timestamp=%08x\n", *ptr);
   ptr++;
   numportals = *ptr;
-  fprintf(stderr, "numportals=%d\n", numportals);
+  fprintf(stderr, "numportals=%08x\n", numportals);
   ptr++;
-  fprintf(stderr, "addrbits=%d\n", *ptr);
+  fprintf(stderr, "addrbits=%08x\n", *ptr);
   ptr++;
-  for(i = 0; i < numportals; i++){
+  for(i = 0; (i < numportals) && (i < 32); i++){
     unsigned int ifcid = *ptr;
     ptr++;
     unsigned int ifctype = *ptr;
     ptr++;
     fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, ifcid, ifctype);
   }
+  fprintf(stderr, "interrupt_mux=%08x\n", *(req_fifo_base+0x00004000));
 #else
   unsigned int ptr = 0;
   unsigned int numportals,i;
@@ -530,14 +531,14 @@ void Directory::print()
   ptr += 4;
   fprintf(stderr, "addrbits=%d\n", read_portal(&p, ptr, name));
   ptr += 4;
-  for(i = 0; i < numportals; i++){
+  for(i = 0; (i < numportals) && (i < 32); i++){
     unsigned int ifcid = read_portal(&p, ptr, name);
     ptr += 4;
     unsigned int ifctype = read_portal(&p, ptr, name);
     ptr += 4;
     fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, ifcid, ifctype);
   }
-  
+  fprintf(stderr, "interrupt_mux=%08x\n", read_portal(&p, 0x00004000, name));
 #endif
 }
 

@@ -2,6 +2,7 @@
 import Vector::*;
 import FIFO::*;
 import RegFile::*;
+import SpecialFIFOs::*;
 
 //portz libraries
 import Portal::*;
@@ -32,7 +33,8 @@ module mkDirectoryDbg#(Vector#(n,StdPortal) portals, ReadOnly#(Bool) interrupt_m
 		method Action upd(Bit#(32) addr, Bit#(32) data);
 		   noAction;
 		endmethod
-		method Bit#(32) sub(Bit#(32) addr);
+		method Bit#(32) sub(Bit#(32) _addr);
+		   let addr = _addr[15:0]; 
 		   if (addr == 0)
 		      return 1; // directory version
 		   else if (addr == 1)
@@ -48,22 +50,24 @@ module mkDirectoryDbg#(Vector#(n,StdPortal) portals, ReadOnly#(Bool) interrupt_m
 		      else
 		   	 return portals[idx>>1].ifcType;
 		   end
-		   else if (addr == 32'h00008000)
+		   else if (addr == 16'h1000)
 		      return interrupt_mux ? 32'd1 : 32'd0;
 		   else
-		      return 0;
+		      return _addr;
 		endmethod
       	     endinterface);
    let ifc <- mkDirectoryPortalIfc(rf);
    interface StdPortal portalIfc = ifc;
 endmodule
+
 
 module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
    let rf = (interface RegFile#(Bit#(32), Bit#(32));
 		method Action upd(Bit#(32) addr, Bit#(32) data);
 		   noAction;
 		endmethod
-		method Bit#(32) sub(Bit#(32) addr);
+		method Bit#(32) sub(Bit#(32) _addr);
+		   let addr = _addr[15:0]; 
 		   if (addr == 0)
 		      return 1; // directory version
 		   else if (addr == 1)
@@ -80,13 +84,11 @@ module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
 		   	 return portals[idx>>1].ifcType;
 		   end
 		   else
-		      return 0;
+		      return _addr;
 		endmethod
       	     endinterface);
    let ifc <- mkDirectoryPortalIfc(rf);
    interface StdPortal portalIfc = ifc;
 endmodule
-
-
 
 

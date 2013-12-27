@@ -263,12 +263,12 @@ axiStateTemplate='''
     let axiSlaveWriteDataFifo = axiSlaveWriteDataFifos[%(slaveFifoSelExposed)s];
     let axiSlaveReadDataFifo  = axiSlaveReadDataFifos[%(slaveFifoSelExposed)s];
 
-    rule axiSlaveReadAddressGenerator if (axiSlaveReadBurstCountReg != 0);                                                                                                                                                                                                                                                   
-        axiSlaveReadAddrFifos[axiSlaveRS].enq(truncate(axiSlaveReadAddrReg));                                                                                                                                                                                                                                                
-        axiSlaveReadAddrReg <= axiSlaveReadAddrReg + 4;                                                                                                                                                                                                                                                                      
-        axiSlaveReadBurstCountReg <= axiSlaveReadBurstCountReg - 1;                                                                                                                                                                                                                                                          
-        axiSlaveReadLastFifo.enq(axiSlaveReadBurstCountReg == 1 ? 1 : 0);                                                                                                                                                                                                                                                    
-        axiSlaveReadIdFifo.enq(axiSlaveReadIdReg);                                                                                                                                                                                                                                                                           
+    rule axiSlaveReadAddressGenerator if (axiSlaveReadBurstCountReg != 0);
+         axiSlaveReadAddrFifos[axiSlaveRS].enq(truncate(axiSlaveReadAddrReg));
+         axiSlaveReadAddrReg <= axiSlaveReadAddrReg + 4;
+         axiSlaveReadBurstCountReg <= axiSlaveReadBurstCountReg - 1;
+         axiSlaveReadLastFifo.enq(axiSlaveReadBurstCountReg == 1 ? 1 : 0);
+         axiSlaveReadIdFifo.enq(axiSlaveReadIdReg);
     endrule 
 '''
 
