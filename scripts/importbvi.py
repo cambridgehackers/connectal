@@ -375,6 +375,8 @@ def translate_verilog(ifname):
     print('module mk'+ifname+'('+ifname+ paramval +');')
     for item in paramnames:
         print('    let ' + item + ' = valueOf(' + item + ');')
+    print('    no_reset;')
+    print('    default_clock no_clock;')
 
     for item in masterlist:
         if item[0] == 'parameter':

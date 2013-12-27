@@ -509,6 +509,8 @@ module mkPPS7(PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width,
     let gpio_width = valueOf(gpio_width);
     let id_width = valueOf(id_width);
     let mio_width = valueOf(mio_width);
+    no_reset;
+    default_clock no_clock;
     parameter C_DM_WIDTH = 4;
     parameter C_DQS_WIDTH = 4;
     parameter C_DQ_WIDTH = 32;

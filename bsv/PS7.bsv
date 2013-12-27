@@ -264,26 +264,26 @@ module mkPS7(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, i
                      v.qos = vm_axi_gp[i].arqos();
                      v.size = vm_axi_gp[i].arsize();
 
-		     vm_axi_gp[i].arready(1);
-                     return v;
-                 endmethod
+                    vtopmw_axi_gp[i].arready <= 1;
+                    return v;
+                endmethod
             endinterface
             interface Get req_aw;
-                 method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].awvalid() != 0);
-                     AxiREQ#(id_width) v;
-                     v.addr = vm_axi_gp[i].awaddr();
-                     v.burst = vm_axi_gp[i].awburst();
-                     v.cache = vm_axi_gp[i].awcache();
-                     v.id = vm_axi_gp[i].awid();
-                     v.len = vm_axi_gp[i].awlen();
-                     v.lock = vm_axi_gp[i].awlock();
-                     v.prot = vm_axi_gp[i].awprot();
-                     v.qos = vm_axi_gp[i].awqos();
-                     v.size = vm_axi_gp[i].awsize();
+                method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].awvalid() != 0);
+                    AxiREQ#(id_width) v;
+                    v.addr = vm_axi_gp[i].awaddr();
+                    v.burst = vm_axi_gp[i].awburst();
+                    v.cache = vm_axi_gp[i].awcache();
+                    v.id = vm_axi_gp[i].awid();
+                    v.len = vm_axi_gp[i].awlen();
+                    v.lock = vm_axi_gp[i].awlock();
+                    v.prot = vm_axi_gp[i].awprot();
+                    v.qos = vm_axi_gp[i].awqos();
+                    v.size = vm_axi_gp[i].awsize();
 
-	             vm_axi_gp[i].awready(1);
-                     return v;
-                endmethod
+                    vtopmw_axi_gp[i].awready <= 1;
+                    return v;
+               endmethod
             endinterface
             interface Put resp_read;
                 method Action put(AxiRead#(32, id_width) v) if (vm_axi_gp[i].rready() != 0);
@@ -292,19 +292,19 @@ module mkPS7(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, i
                     vm_axi_gp[i].rdata(v.rd.data);
                     vm_axi_gp[i].rlast(v.rd.last);
 
-	            vm_axi_gp[i].rvalid(1);
+                    vtopmw_axi_gp[i].rvalid <= 1;
                 endmethod
             endinterface
             interface Get resp_write;
-                 method ActionValue#(AxiWrite#(32, id_width)) get() if (vm_axi_gp[i].wvalid() != 0);
-                     AxiWrite#(32, id_width) v;
-                     v.wid = vm_axi_gp[i].wid();
-                     v.wstrb = vm_axi_gp[i].wstrb();
-                     v.wd.data = vm_axi_gp[i].wdata();
-                     v.wd.last = vm_axi_gp[i].wlast();
+                method ActionValue#(AxiWrite#(32, id_width)) get() if (vm_axi_gp[i].wvalid() != 0);
+                    AxiWrite#(32, id_width) v;
+                    v.wid = vm_axi_gp[i].wid();
+                    v.wstrb = vm_axi_gp[i].wstrb();
+                    v.wd.data = vm_axi_gp[i].wdata();
+                    v.wd.last = vm_axi_gp[i].wlast();
 
-	             vm_axi_gp[i].wready(1);
-                     return v;
+                    vtopmw_axi_gp[i].wready <= 1;
+                    return v;
                 endmethod
             endinterface
             interface Put resp_b;
@@ -312,7 +312,7 @@ module mkPS7(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, i
                     vm_axi_gp[i].bid(v.id);
                     vm_axi_gp[i].bresp(v.resp);
 	       
-	            vm_axi_gp[i].bvalid(1);
+                    vtopmw_axi_gp[i].bvalid <= 1;
                 endmethod
             endinterface
             method aclk = vm_axi_gp[i].aclk;
