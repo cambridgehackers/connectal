@@ -60,6 +60,8 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(40))      offset <- mkReg(0);
    FIFOF#(Tuple2#(Bit#(32),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
 
+   Integer burstLen = 8;
+
    rule mismatch;
       let tpl = mismatchFifo.first();
       mismatchFifo.deq();
@@ -82,13 +84,13 @@ module mkMemread#(MemreadIndication indication) (Memread);
    interface DMAReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(DMAAddressRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
-	    streamRdCnt <= streamRdCnt-16;
-	    offset <= offset + 16;
-	    if (streamRdCnt == 16)
+	    streamRdCnt <= streamRdCnt-fromInteger(burstLen);
+	    offset <= offset + fromInteger(burstLen)*8;
+	    if (streamRdCnt == fromInteger(burstLen))
 	       indication.readDone(zeroExtend(pack(dataMismatch)));
-	    else if (streamRdCnt[5:0] == 6'b0)
-	       indication.readReq(streamRdCnt);
-	    return DMAAddressRequest { handle: streamRdHandle, address: offset, burstLen: 16, tag: truncate(offset) };
+	    //else if (streamRdCnt[5:0] == 6'b0)
+	    //   indication.readReq(streamRdCnt);
+	    return DMAAddressRequest { handle: streamRdHandle, address: offset, burstLen: fromInteger(burstLen), tag: truncate(offset) };
 	 endmethod
       endinterface : readReq
       interface Put readData;

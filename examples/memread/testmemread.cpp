@@ -94,10 +94,16 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
   dma->readSglist(ChannelType_Read, ref_srcAlloc, 0);
+  sleep(1);
   dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x1000);
+  sleep(1);
   dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x2000);
+  sleep(1);
+  dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x3000);
+  sleep(1);
   fprintf(stderr, "Main::starting read %08x\n", numWords);
-  device->startRead(ref_srcAlloc, 16);
+  device->startRead(ref_srcAlloc, 128);
+  sleep(1);
 
   //dma->getReadStateDbg();
   device->getStateDbg();
