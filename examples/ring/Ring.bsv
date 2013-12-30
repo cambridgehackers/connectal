@@ -88,8 +88,19 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
    RingBuffer cmdRing <- mkRingBuffer;
    RingBuffer statusRing <- mkRingBuffer;
    Reg#(Bool) hwenabled <- mkReg(False);
-   
+   Reg#(Bool) cmdBusy <- mkReg(False);
 
+   rule cmdFetchRule (hwenabled && !cmdBusy & (cmdRing.notEmpty()));
+      Bit#(40) nextCmdAddress = cmdRing.get(2);
+      cmdBusy <= True;
+      StmtFSM FetchCmd =
+      for ii <= 0; ii < 8; ii <= ii + 1) seq
+	 cmd_read_chan.readReq.put(nextCmdAddress);
+	 nextCmdAddress <= nextCmdAddress + 8;
+      endseq
+   endrule
+  rule cmdDispatchRule
+     UInt#(64) cmd = cmd_read_chan.readData.get
    
 
    
