@@ -1,7 +1,8 @@
 package PcieToAxiBridge;
 
 // This is a package which acts as a bridge between a TLP-based PCIe
-// interface on one side and message-based NoC interface on the other.
+// interface on one side and an AXI slave (portal) and AXI Master on
+// the other.
 
 import GetPut       :: *;
 import Connectable  :: *;
@@ -17,7 +18,6 @@ import BRAMFIFO     :: *;
 import ConfigReg    :: *;
 import DReg         :: *;
 
-import MsgFormat     :: *;
 import ByteBuffer    :: *;
 import ByteCompactor :: *;
 
@@ -35,17 +35,12 @@ interface TlpTrace;
    interface Get#(TimestampedTlpData) tlp;
 endinterface
 
-// The top-level interface of the PCIe-to-NoC bridge
+// The top-level interface of the PCIe-to-AXI bridge
 interface PcieToAxiBridge#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
-   interface MsgPort#(bpb)         noc;  // to the NoC
    interface Axi3Master#(32,32,4,12) portal0; // to the portal control
    interface GetPut#(TLPData#(16)) slave;
-
-   // global network activation status
-   (* always_ready *)
-   method Bool is_activated();
 
    // status for FPGA LEDs
    (* always_ready *)
@@ -53,7 +48,6 @@ interface PcieToAxiBridge#(numeric type bpb);
    (* always_ready *)
    method Bool tx_activity();
 
-   (* always_ready *)
    method Action interrupt();
 
    interface Put#(TimestampedTlpData) trace;
@@ -62,14 +56,8 @@ interface PcieToAxiBridge#(numeric type bpb);
 endinterface: PcieToAxiBridge
 
 // When TLP packets come in from the PCIe bus, they are dispatched to
-// either the configuration register block or the DMA controller
-// block. The DMA controller and driver need to observe a protocol
-// that prevents requests from backing up on the DMA side and thereby
-// preventing reads and writes of the control and status registers.
-// For example, the DMA controller can tell the driver how many
-// open slots it has to receive write and read commands, and the
-// driver must respect those limits.
-
+// either the configuration register block, the portal (AXI slave) or
+// the AXI master.
 interface TLPDispatcher;
 
    // TLPs in from PCIe
@@ -77,7 +65,6 @@ interface TLPDispatcher;
 
    // TLPs out to the bridge implementation
    interface Get#(TLPData#(16)) tlp_out_to_config;
-   interface Get#(TLPData#(16)) tlp_out_to_dma;
    interface Get#(TLPData#(16)) tlp_out_to_portal;
    interface Get#(TLPData#(16)) tlp_out_to_axi;
 
@@ -98,12 +85,10 @@ module mkTLPDispatcher(TLPDispatcher);
 
    FIFO#(TLPData#(16))  tlp_in_fifo     <- mkFIFO();
    FIFOF#(TLPData#(16)) tlp_in_cfg_fifo <- mkGFIFOF(True,False); // unguarded enq
-   FIFOF#(TLPData#(16)) tlp_in_dma_fifo <- mkGFIFOF(True,False); // unguarded enq
    FIFOF#(TLPData#(16)) tlp_in_portal_fifo <- mkGFIFOF(True,False); // unguarded enq
    FIFOF#(TLPData#(16)) tlp_in_axi_fifo <- mkGFIFOF(True,False); // unguarded enq
 
    Reg#(Bool) route_to_cfg <- mkReg(False);
-   Reg#(Bool) route_to_dma <- mkReg(False);
    Reg#(Bool) route_to_portal <- mkReg(False);
    Reg#(Bool) route_to_axi <- mkReg(False);
 
@@ -117,11 +102,6 @@ module mkTLPDispatcher(TLPDispatcher);
    rule dispatch_incoming_TLP;
       TLPData#(16) tlp = tlp_in_fifo.first();
       TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      Bool in_dma_command_addr_range =  ((hdr_3dw.addr % 8192) == 1024)
-                                     || ((hdr_3dw.addr % 8192) == 1025)
-                                     || ((hdr_3dw.addr % 8192) == 1026)
-                                     || ((hdr_3dw.addr % 8192) == 1027)
-                                     ;
       Bool is_config_read    =  tlp.sof
                              && (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
@@ -130,7 +110,6 @@ module mkTLPDispatcher(TLPDispatcher);
                              && (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
-                             && !in_dma_command_addr_range
                              ;
       Bool is_axi_read       =  tlp.sof
                              && (tlp.hit == 7'h04)
@@ -140,16 +119,6 @@ module mkTLPDispatcher(TLPDispatcher);
                              && (tlp.hit == 7'h04)
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
-                             ;
-      Bool is_dma_command    =  tlp.sof
-                             && (tlp.hit == 7'h01)
-                             && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
-                             && (hdr_3dw.pkttype != COMPLETION)
-                             && in_dma_command_addr_range
-                             ;
-      Bool is_dma_completion =  tlp.sof
-                             && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
-                             && (hdr_3dw.pkttype == COMPLETION)
                              ;
       Bool is_axi_completion =  tlp.sof
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
@@ -184,23 +153,13 @@ module mkTLPDispatcher(TLPDispatcher);
                   route_to_axi <= True;
             end
 	 end
-         else if (is_dma_command || is_dma_completion) begin
-            // send to DMA interface if it will accept
-            if (tlp_in_dma_fifo.notFull()) begin
-               tlp_in_fifo.deq();
-               tlp_in_dma_fifo.enq(tlp);
-               if (!tlp.eof)
-                  route_to_dma <= True;
-            end
-         end
          else begin
             // unknown packet type -- just discard it
             tlp_in_fifo.deq();
          end
          // indicate activity type
          if (is_config_read)                     is_read.send();
-         if (is_config_write || is_dma_command)  is_write.send();
-         if (is_dma_completion)                  is_completion.send();
+         if (is_config_write)                    is_write.send();
       end
       else begin
          // this is a continuation of a previous TLP packet, so route
@@ -232,15 +191,6 @@ module mkTLPDispatcher(TLPDispatcher);
                   route_to_axi <= False;
             end
          end
-         else if (route_to_dma) begin
-            // send to DMA interface if it will accept
-            if (tlp_in_dma_fifo.notFull()) begin
-               tlp_in_fifo.deq();
-               tlp_in_dma_fifo.enq(tlp);
-               if (tlp.eof)
-                  route_to_dma <= False;
-            end
-         end
          else begin
             // unknown packet type -- just discard it
             tlp_in_fifo.deq();
@@ -250,7 +200,6 @@ module mkTLPDispatcher(TLPDispatcher);
 
    interface Put tlp_in_from_bus    = toPut(tlp_in_fifo);
    interface Get tlp_out_to_config  = toGet(tlp_in_cfg_fifo);
-   interface Get tlp_out_to_dma     = toGet(tlp_in_dma_fifo);
    interface Get tlp_out_to_portal  = toGet(tlp_in_portal_fifo);
    interface Get tlp_out_to_axi     = toGet(tlp_in_axi_fifo);
 
@@ -271,7 +220,6 @@ interface TLPArbiter;
 
    // TLPs in from the bridge implementation
    interface Put#(TLPData#(16)) tlp_in_from_config; // read completions
-   interface Put#(TLPData#(16)) tlp_in_from_dma;    // read and write requests, interrupts
    interface Put#(TLPData#(16)) tlp_in_from_portal; // read completions
    interface Put#(TLPData#(16)) tlp_in_from_axi;    // read and write requests
 
@@ -290,12 +238,10 @@ module mkTLPArbiter(TLPArbiter);
 
    FIFO#(TLPData#(16))  tlp_out_fifo     <- mkFIFO();
    FIFOF#(TLPData#(16)) tlp_out_cfg_fifo <- mkGFIFOF(False,True); // unguarded deq
-   FIFOF#(TLPData#(16)) tlp_out_dma_fifo <- mkGFIFOF(False,True); // unguarded deq
    FIFOF#(TLPData#(16)) tlp_out_portal_fifo <- mkGFIFOF(False,True); // unguarded deq
    FIFOF#(TLPData#(16)) tlp_out_axi_fifo <- mkGFIFOF(False,True); // unguarded deq
 
    Reg#(Bool) route_from_cfg <- mkReg(False);
-   Reg#(Bool) route_from_dma <- mkReg(False);
    Reg#(Bool) route_from_portal <- mkReg(False);
    Reg#(Bool) route_from_axi <- mkReg(False);
 
@@ -335,18 +281,8 @@ module mkTLPArbiter(TLPArbiter);
                route_from_axi <= False;
          end
       end
-      else if (route_from_dma) begin
-         // continue taking from the DMA FIFO until end-of-frame
-         if (tlp_out_dma_fifo.notEmpty()) begin
-            TLPData#(16) tlp = tlp_out_dma_fifo.first();
-            tlp_out_dma_fifo.deq();
-            tlp_out_fifo.enq(tlp);
-            if (tlp.eof)
-               route_from_dma <= False;
-         end
-      end
       else if (tlp_out_cfg_fifo.notEmpty()) begin
-         // prioritize config read completions over DMA traffic
+         // prioritize config read completions over portal traffic
          TLPData#(16) tlp = tlp_out_cfg_fifo.first();
          tlp_out_cfg_fifo.deq();
          if (tlp.sof) begin
@@ -357,7 +293,7 @@ module mkTLPArbiter(TLPArbiter);
          end
       end
       else if (tlp_out_portal_fifo.notEmpty()) begin
-         // prioritize portal read completions over DMA traffic
+         // prioritize portal read completions over AXI master traffic
          TLPData#(16) tlp = tlp_out_portal_fifo.first();
          tlp_out_portal_fifo.deq();
          if (tlp.sof) begin
@@ -368,7 +304,6 @@ module mkTLPArbiter(TLPArbiter);
          end
       end
       else if (tlp_out_axi_fifo.notEmpty()) begin
-         // prioritize axi read completions over DMA traffic
          TLPData#(16) tlp = tlp_out_axi_fifo.first();
          tlp_out_axi_fifo.deq();
          if (tlp.sof) begin
@@ -378,26 +313,10 @@ module mkTLPArbiter(TLPArbiter);
             is_completion.send();
          end
       end
-      else if (tlp_out_dma_fifo.notEmpty()) begin
-         // take DMA traffic
-         TLPData#(16) tlp = tlp_out_dma_fifo.first();
-         tlp_out_dma_fifo.deq();
-         if (tlp.sof) begin
-            tlp_out_fifo.enq(tlp);
-            if (!tlp.eof)
-               route_from_dma <= True;
-            TLPMemory4DWHeader hdr_4dw = unpack(tlp.data);
-            if (hdr_4dw.format == MEM_READ_4DW_NO_DATA)
-               is_read.send();
-            else
-               is_write.send();
-         end
-      end
    endrule: arbitrate_outgoing_TLP
 
    interface Get tlp_out_to_bus     = toGet(tlp_out_fifo);
    interface Put tlp_in_from_config = toPut(tlp_out_cfg_fifo);
-   interface Put tlp_in_from_dma    = toPut(tlp_out_dma_fifo);
    interface Put tlp_in_from_portal = toPut(tlp_out_portal_fifo);
    interface Put tlp_in_from_axi    = toPut(tlp_out_axi_fifo);
 
@@ -484,9 +403,8 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	  interruptSecondHalf <= True;
        end
 
-       //tlpTag <= tlpTag + 1;
-
-       tlpOutFifo.enq(tlp);
+       if (sendInterrupt)
+	  tlpOutFifo.enq(tlp);
     endrule
 
 //    rule interruptTlpDataOut if (interruptSecondHalf);
@@ -1025,29 +943,6 @@ interface ControlAndStatusRegs;
    interface Put#(TLPData#(16)) csr_read_and_write_tlps;
    interface Get#(TLPData#(16)) csr_read_completion_tlps;
 
-   // DMA-facing interfaces
-   (* always_ready *)
-   method Bool is_activated();
-   (* always_ready *)
-   method Action set_write_buffers_level(UInt#(5) n);
-   (* always_ready *)
-   method Action set_read_buffers_level(UInt#(5) n);
-   (* always_ready *)
-   method Action incr_rd_xfer_count(UInt#(5) bytes);
-   (* always_ready *)
-   method Action incr_wr_xfer_count(UInt#(5) bytes);
-   (* always_ready *)
-   method Action finished_write();
-   (* always_ready *)
-   method Action finished_read(Bool short);
-   (* always_ready, always_enabled *)
-   method Action has_space_to_receive_data(Bool b);
-   (* always_ready, always_enabled *)
-   method Action has_data_to_send(Bool b);
-   (* always_ready *)
-   method Action interrupt();
-   interface Get#(Tuple2#(Bit#(64),Bit#(32))) intr_to_send;
-
    interface ReadOnly#(Bit#(64)) interruptAddr;
    interface ReadOnly#(Bit#(32)) interruptData;
 
@@ -1100,44 +995,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    // Registers and their default values
    Reg#(Bool)            is_board_number_assigned <- mkReg(False);
    Reg#(UInt#(4))        board_number             <- mkReg(15);
-   Reg#(Bool)            is_network_active        <- mkConfigReg(False);
-   Reg#(NodeID)          host_nodeid              <- mkReg(unpack(0));
    Vector#(4,MSIX_Entry) msix_entry               <- replicateM(mkMSIXEntry);
-   Reg#(Bool)            end_of_read_list         <- mkReg(False);
-   Reg#(Bool)            flushed                  <- mkReg(False);
-   Reg#(Bool)            end_of_write_list        <- mkReg(False);
-   Reg#(UInt#(32))       rd_xfer_count            <- mkReg(0);
-   Reg#(UInt#(32))       wr_xfer_count            <- mkReg(0);
-
-   // Wires used to manage concurrent actions
-   PulseWire         reset_read_status  <- mkPulseWireOR();
-   PulseWire         reset_write_status <- mkPulseWireOR();
-   RWire#(UInt#(5))  rd_xfer_incr       <- mkRWire();
-   RWire#(UInt#(5))  wr_xfer_incr       <- mkRWire();
-   PulseWire         finished_read_pw   <- mkPulseWire();
-   PulseWire         finished_write_pw  <- mkPulseWire();
-   PulseWire         flushed_pw         <- mkPulseWire();
-   Wire#(Bool)       space_for_read     <- mkBypassWire();
-   Wire#(Bool)       data_to_write      <- mkBypassWire();
-
-   // A FIFO used for managing MSI-X interrupt requests
-   FIFOF#(Tuple2#(Bit#(64),Bit#(32))) intr_info <- mkGFIFOF(True,False); // unguarded enq
-   PulseWire                          intr_read <- mkPulseWire();
-
-   // A register used for MSI interrupt requests
-   Reg#(Bool) msi_intr_needed <- mkReg(False);
-
-   // External values available in the CSR address space
-   Wire#(UInt#(5)) write_buffers_level <- mkBypassWire();
-   Wire#(UInt#(5)) read_buffers_level  <- mkBypassWire();
-
-   // We want to notify the user when space becomes
-   // available for writing (via DMA read) and when data
-   // becomes available for reading (via DMA write).
-   Reg#(Bool) read_operation_in_progress <- mkReg(False);
-   Reg#(Bool) write_operation_in_progress <- mkReg(False);
-   Bool read_allowed  = !read_operation_in_progress && data_to_write;
-   Bool write_allowed = !write_operation_in_progress && space_for_read;
 
    Reg#(Bool) tlpTracingReg <- mkReg(False);
    Reg#(Bool) axiEnabledReg <- mkReg(False);
@@ -1177,13 +1035,11 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          7: return {24'd0,fromInteger(bytes_per_beat)};
          8: return board_content_id[31:0];
          9: return board_content_id[63:32];
-         // network configuration
-         64: return zeroExtend({pack(is_network_active),pack(host_nodeid)});
-         // DMA status
-         512: return {23'd0,pack(read_allowed),pack(read_buffers_level == 16),pack(end_of_read_list),pack(flushed),pack(read_buffers_level)};
-         513: return {23'd0,pack(write_allowed),pack(write_buffers_level == 16),pack(end_of_write_list),1'b0,pack(write_buffers_level)};
-         514: return pack(rd_xfer_count);
-         515: return pack(wr_xfer_count);
+         64: return 0;
+         512: return 0;
+         513: return 0;
+         514: return 0;
+         515: return 0;
 	 768: return 0;
 	 769: return 0;
 	 770: return 0;
@@ -1232,7 +1088,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          4110: return msix_entry[3].msg_data;           // entry 3 msg data
          4111: return {'0, pack(msix_entry[3].masked)}; // entry 3 vector control
          // 4-bit MSIx pending bit field
-         5120: return {'0, pack(intr_info.notEmpty())}; // PBA structure (low)
+         5120: return '0;                               // PBA structure (low)
          5121: return '0;                               // PBA structure (high)
          // unused addresses
          default: return 32'hbad0add0;
@@ -1257,14 +1113,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
                    if (be[0] == 1) board_number             <= unpack(dword[3:0]);
                    if (be[1] == 1) is_board_number_assigned <= unpack(dword[8]);
                 end
-            // network configuration
-            64: begin
-                   if (be[0] == 1) host_nodeid       <= unpack(dword[7:0]);
-                   if (be[1] == 1) is_network_active <= unpack(dword[8]);
-                end
-            // DMA status
-            512: if (be[0] == 1) reset_read_status.send();
-            513: if (be[0] == 1) reset_write_status.send();
 	    774: tlpSeqnoReg <= dword;
 	    775: tlpTracingReg <= (dword != 0) ? True : False;
 	    776: tlpDataScratchpad[0] <= dword;
@@ -1300,19 +1148,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          endcase
       endaction
    endfunction: wr_csr
-
-   // Interrupts can be requested externally, or generated internally
-
-   PulseWire external_intr <- mkPulseWire();
-   PulseWire internal_intr <- mkPulseWire();
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule trigger_interrupt if (is_network_active && (external_intr || internal_intr));
-      if (msix_enabled && !intr_info.notEmpty())
-         intr_info.enq(tuple2({msix_entry[0].addr_hi,msix_entry[0].addr_lo},msix_entry[0].msg_data));
-      else if (msi_enabled)
-         msi_intr_needed <= True;
-   endrule
 
    // State used to actually service read and write requests
 
@@ -1495,81 +1330,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
       end
    endrule: pad_completion_TLP
 
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule reset_csr_dma_state if (!is_network_active);
-      end_of_read_list            <= False;
-      flushed                     <= False;
-      rd_xfer_count               <= 0;
-      read_operation_in_progress  <= False;
-      end_of_write_list           <= False;
-      wr_xfer_count               <= 0;
-      write_operation_in_progress <= False;
-      msi_intr_needed             <= False;
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule clear_csr_dma_intr if (!is_network_active);
-      intr_info.clear();
-   endrule
-
-   (* fire_when_enabled *)
-   rule deq_csr_dma_intr if (is_network_active && intr_read);
-      intr_info.deq();
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule update_csr_dma_state if (is_network_active);
-      if (reset_read_status) begin
-         end_of_read_list           <= False;
-         flushed                    <= False;
-         rd_xfer_count              <= 0;
-         read_operation_in_progress <= True;
-      end
-      else begin
-         if (rd_xfer_incr.wget() matches tagged Valid .n)
-            rd_xfer_count <= rd_xfer_count + zeroExtend(n);
-         if (finished_read_pw)
-            end_of_read_list <= True;
-         if (flushed_pw)
-            flushed <= True;
-         if (finished_read_pw || flushed_pw)
-            read_operation_in_progress <= False;
-      end
-      if (reset_write_status) begin
-         end_of_write_list           <= False;
-         wr_xfer_count               <= 0;
-         write_operation_in_progress <= True;
-      end
-      else begin
-         if (wr_xfer_incr.wget() matches tagged Valid .n)
-            wr_xfer_count <= wr_xfer_count + zeroExtend(n);
-         if (finished_write_pw) begin
-            end_of_write_list           <= True;
-            write_operation_in_progress <= False;
-         end
-      end
-   endrule
-
-   // generate interrupts when a read or write becomes allowed
-   // and the SW side needs to know this
-
-   Reg#(Bool) prev_read_allowed  <- mkReg(False);
-   Reg#(Bool) prev_write_allowed <- mkReg(False);
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule generate_internal_interrupts if (is_network_active);
-      Bool do_internal_intr = False;
-      if (!prev_read_allowed && read_allowed)
-         do_internal_intr = True;
-      if (!prev_write_allowed && write_allowed)
-         do_internal_intr = True;
-      prev_read_allowed  <= read_allowed;
-      prev_write_allowed <= write_allowed;
-      if (do_internal_intr)
-         internal_intr.send();
-   endrule
-
-
    // PCIE-facing interfaces
 
    interface Put csr_read_and_write_tlps;
@@ -1677,51 +1437,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
       endmethod
    endinterface
 
-   // DMA-facing interfaces
-
-   method is_activated = is_network_active;
-
-   method set_write_buffers_level = write_buffers_level._write;
-   method set_read_buffers_level  = read_buffers_level._write;
-
-   method Action incr_rd_xfer_count(UInt#(5) bytes);
-      rd_xfer_incr.wset(bytes);
-   endmethod
-
-   method Action incr_wr_xfer_count(UInt#(5) bytes);
-      wr_xfer_incr.wset(bytes);
-   endmethod
-
-   method Action finished_write();
-      finished_write_pw.send();
-   endmethod
-
-   method Action finished_read(Bool short);
-      if (short)
-         flushed_pw.send();
-      else
-         finished_read_pw.send();
-   endmethod
-
-   method Action has_space_to_receive_data(Bool b);
-      space_for_read <= b;
-   endmethod
-
-   method Action has_data_to_send(Bool b);
-      data_to_write <= b;
-   endmethod
-
-   method Action interrupt();
-      external_intr.send();
-   endmethod
-
-   interface Get intr_to_send;
-      method ActionValue#(Tuple2#(Bit#(64),Bit#(32))) get() if (!msix_mask_all_intr && !msix_entry[0].masked);
-         intr_read.send();
-         return intr_info.first();
-      endmethod
-   endinterface
-
    interface ReadOnly interruptAddr;
       method Bit#(64) _read();
 	 return { msix_entry[0].addr_hi, msix_entry[0].addr_lo };
@@ -1740,977 +1455,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface BRAMServer tlpDataBram = tlpDataBram1Port.portA;
 endmodule: mkControlAndStatusRegs
 
-// The DMA engine receives DMA commands from the PCIe bus in the form
-// of scatter-gather list entries. Based on the commands it receives
-// the DMA engine will initiate read and write transactions across the
-// PCIe bus to move data to and from the host memory. The DMA engine
-// also coordinates with the control and status register module to
-// communicate status and interrupts to the host. The other side of
-// the DMA engine consists of a connection to the NoC, where DMA data
-// is converted to/from NoC messages.
-
-// This is one entry of a DMA scatter-gather list.
-typedef struct {
-   Bool      last;       // last entry in the list
-   Bool      intr_req;   // interrupt when this entry is processed
-   UInt#(32) len;        // number of bytes to transfer
-   UInt#(64) addr;       // starting address
-} DMAListEntry deriving (Bits);
-
-interface DMAEngine#(numeric type bpb);
-
-   // PCIe-facing interfaces
-   interface Put#(TLPData#(16)) dma_commands_and_completions;
-   interface Get#(TLPData#(16)) dma_read_and_write_requests;
-
-   // NoC-facing interface
-   interface MsgPort#(bpb) noc;
-
-   // Methods for coordination with control and status registers
-   (* always_ready *)
-   method Action clear();
-   (* always_ready *)
-   method UInt#(5) num_write_commands();
-   (* always_ready *)
-   method UInt#(5) num_read_commands();
-   method UInt#(5) bytes_received();
-   method UInt#(5) bytes_sent();
-   (* always_ready *)
-   method Bool write_operation_completed();
-   (* always_ready *)
-   method Bool read_operation_completed();
-   (* always_ready *)
-   method Bool read_flushed();
-   (* always_ready *)
-   method Bool has_space_to_receive_data();
-   (* always_ready *)
-   method Bool has_data_to_send();
-   (* always_ready *)
-   method Bool request_interrupt();
-   interface Put#(Tuple2#(Bit#(64),Bit#(32))) next_interrupt;
-
-endinterface: DMAEngine
-
-module mkDMAEngine#( PciId my_id
-                   , UInt#(13) max_read_req_bytes
-                   , UInt#(13) max_payload_bytes
-                   )
-                   (DMAEngine#(bpb))
-   provisos( Add#(1, __1, TDiv#(bpb,4))
-           // the compiler should be able to figure these out ...
-           , Log#(TAdd#(1,bpb), TLog#(TAdd#(bpb,1)))
-           , Add#(TAdd#(bpb,20), __2, TMul#(TDiv#(TMul#(TAdd#(bpb,20),9),36),4))
-           );
-
-   Integer bytes_per_beat = valueOf(bpb);
-
-   // Reset functionality for the DMA engine
-   PulseWire      reset_engine  <- mkPulseWire();
-   Reg#(Bool)     in_reset  <- mkReg(True);
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule manage_reset;
-      if (reset_engine)
-	 in_reset <= True;
-      else if (in_reset)
-         in_reset <= False;
-   endrule
-
-   // Buffers of DMA commands for read and write requests
-
-   FIFO#(DMAListEntry) rd_buffer_queue     <- mkSizedBRAMFIFO(16);
-   FIFO#(DMAListEntry) wr_buffer_queue     <- mkSizedBRAMFIFO(16);
-   Reg#(UInt#(5))      read_buffers_level  <- mkReg(0);
-   Reg#(UInt#(5))      write_buffers_level <- mkReg(0);
-   Wire#(DMAListEntry) new_rd_command      <- mkWire();
-   Wire#(DMAListEntry) new_wr_command      <- mkWire();
-   PulseWire           rd_command_incr     <- mkPulseWire();
-   PulseWire           rd_command_decr     <- mkPulseWire();
-   PulseWire           wr_command_incr     <- mkPulseWire();
-   PulseWire           wr_command_decr     <- mkPulseWire();
-   RWire#(UInt#(5))    byte_sent_count     <- mkRWire();
-   RWire#(UInt#(5))    byte_recv_count     <- mkRWire();
-
-   // Scatter-gather list entries (DMA commands) are added to their
-   // queues using these rules. The purpose of the wires is to stop
-   // propagation of the implicit conditions. The method that receives
-   // these commands also processes read completion data and we do not
-   // want processing of read completions to stop if one of the
-   // command queues is full. The driver is responsible for ensuring
-   // that it doesn't attempt to add a command to a queue that is
-   // already full, and the buffer level values are provided to the
-   // driver for that purpose.
-
-   (* fire_when_enabled *)
-   rule add_rd_command if (!in_reset);
-      rd_buffer_queue.enq(new_rd_command);
-      rd_command_incr.send();
-   endrule
-
-   (* fire_when_enabled *)
-   rule add_wr_command if (!in_reset);
-      wr_buffer_queue.enq(new_wr_command);
-      wr_command_incr.send();
-   endrule
-
-   // As scatter-gather list entries are added and removed, we track
-   // the number of entries in each queue.
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule track_rd_buffer_level if ((rd_command_incr || rd_command_decr) && !in_reset);
-      if (rd_command_incr && !rd_command_decr)
-         read_buffers_level <= read_buffers_level + 1;
-      else if (!rd_command_incr && rd_command_decr)
-         read_buffers_level <= read_buffers_level - 1;
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule track_wr_buffer_level if ((wr_command_incr || wr_command_decr) && !in_reset);
-      if (wr_command_incr && !wr_command_decr)
-         write_buffers_level <= write_buffers_level + 1;
-      else if (!wr_command_incr && wr_command_decr)
-         write_buffers_level <= write_buffers_level - 1;
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule reset_buffer_queues if (in_reset);
-      wr_buffer_queue.clear();
-      rd_buffer_queue.clear();
-      write_buffers_level <= 0;
-      read_buffers_level  <= 0;
-   endrule
-
-   // Process incoming commands and completions (see the put method)
-
-   Reg#(Bit#(32))  lo_command_data      <- mkRegU();
-   Reg#(Bool)      do_rd_command        <- mkReg(False);
-   Reg#(Bool)      do_wr_command        <- mkReg(False);
-   Reg#(Bool)      pass_completion_data <- mkReg(False);
-   Reg#(TLPTag)    saved_tag            <- mkRegU();
-   Reg#(UInt#(10)) saved_length         <- mkRegU();
-   Reg#(Bit#(4))   saved_lastbe         <- mkRegU();
-
-   ByteCompactor#(16,bpb,TAdd#(bpb,20)) wr_data <- mkByteCompactor();
-
-   function Maybe#(t) mkMaybe(Bool valid, t x);
-      return valid ? tagged Valid x : tagged Invalid;
-   endfunction
-
-   function Action wr_dma(Vector#(4,Tuple2#(Bit#(4),Bit#(32))) dwords);
-      action
-         Vector#(16,Bool)    mask  = unpack(pack(map(tpl_1,dwords)));
-         Vector#(16,Bit#(8)) bytes = unpack(pack(map(tpl_2,dwords)));
-         Vector#(16,Maybe#(Bit#(8))) vec = zipWith(mkMaybe,mask,bytes);
-         wr_data.enq(vec);
-      endaction
-   endfunction
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule reset_incoming_tlp_status if (in_reset);
-      do_rd_command        <= False;
-      do_wr_command        <= False;
-      pass_completion_data <= False;
-      wr_data.clear();
-   endrule
-
-   // When there is a DMA request in the write queue, we need to
-   // initiate a sequence of one or more read request TLPs to transfer
-   // the full memory range requested.
-
-   Reg#(Bool)      dma_to_device_in_progress      <- mkReg(False);
-   Reg#(UInt#(52)) dma_td_block_page              <- mkRegU();
-   Reg#(UInt#(12)) dma_td_block_offset            <- mkRegU();
-   Reg#(UInt#(32)) dma_td_block_bytes_remaining   <- mkReg(0);
-   Reg#(Bool)      dma_td_block_is_last           <- mkRegU();
-   Reg#(Bool)      dma_td_intr_req                <- mkRegU();
-   PulseWire       intr_req_during_xfer_to_device <- mkPulseWire();
-   PulseWire       finished_xfer_to_device        <- mkPulseWire();
-
-   Reg#(Bool)      end_of_completion              <- mkDReg(False);
-   Reg#(Bool)      is_last_completion_for_req     <- mkReg(False);
-   FIFO#(UInt#(5)) last_tag_queue                 <- mkSizedFIFO(32);
-   Reg#(UInt#(5))  next_read_req_tag              <- mkReg(0);
-   Reg#(UInt#(5))  last_completion_tag            <- mkReg(unpack('1));
-   // For now, only allow one outstanding request at a time
-   // Bool ok_to_send_read_req = (next_read_req_tag != last_completion_tag);
-   Bool ok_to_send_read_req = (next_read_req_tag == (last_completion_tag + 1));
-
-   ByteBuffer#(16) dma_read_req_tlp <- mkByteBuffer();
-
-   // These values are redundant with dma_td_block_offset, but keeping
-   // them in registers allows for shorter circuit paths.
-   Reg#(UInt#(13)) dma_td_bytes_to_end_of_page <- mkRegU();
-   Reg#(UInt#(13)) dma_td_bytes_to_size_limit  <- mkRegU();
-   UInt#(13) dma_td_req_size_limit = min(dma_td_bytes_to_end_of_page,dma_td_bytes_to_size_limit);
-
-   (* fire_when_enabled *)
-   rule initiate_dma_buffer_read if (!dma_to_device_in_progress && ok_to_send_read_req && !in_reset);
-      DMAListEntry entry = wr_buffer_queue.first();
-      dma_to_device_in_progress    <= True;
-      dma_td_block_page            <= truncate(entry.addr / 4096);
-      UInt#(12) _offset = truncate(entry.addr % 4096);
-      dma_td_block_offset          <= _offset;
-      dma_td_block_bytes_remaining <= entry.len;
-      dma_td_block_is_last         <= entry.last;
-      dma_td_intr_req              <= entry.intr_req;
-      UInt#(2) addr_idx_in_dw = truncate(_offset);
-      dma_td_bytes_to_size_limit   <= max_read_req_bytes - zeroExtend(addr_idx_in_dw);
-      dma_td_bytes_to_end_of_page  <= 4096 - zeroExtend(_offset);
-   endrule
-
-   (* fire_when_enabled *)
-   rule make_dma_block_read_request if (  dma_to_device_in_progress
-                                       && (dma_td_block_bytes_remaining != 0)
-                                       && (dma_read_req_tlp.valid_mask() == replicate(False))
-                                       && ok_to_send_read_req
-                                       && !in_reset
-                                       );
-      TLPData#(16) tlp;
-      tlp.sof = True;
-      tlp.eof = True;
-      tlp.be  = '1;
-      tlp.hit = 7'h01;
-      TLPMemory4DWHeader hdr_4dw = defaultValue();
-      hdr_4dw.format = MEM_READ_4DW_NO_DATA;
-      hdr_4dw.tag = unpack(zeroExtend(pack(next_read_req_tag)));
-      next_read_req_tag <= next_read_req_tag + 1;
-      hdr_4dw.reqid = my_id;
-      hdr_4dw.nosnoop = SNOOPING_REQD;
-      hdr_4dw.addr = ({pack(dma_td_block_page),pack(dma_td_block_offset)})[63:2];
-      UInt#(2) addr_idx_in_dw  = truncate(dma_td_block_offset);
-      if (dma_td_block_bytes_remaining <= (4 - zeroExtend(addr_idx_in_dw))) begin
-         // entire transfer fits in one DW
-         hdr_4dw.length  = 1;
-         hdr_4dw.firstbe = (~('1 << dma_td_block_bytes_remaining)) << addr_idx_in_dw;
-         hdr_4dw.lastbe  = '0;
-         dma_td_block_bytes_remaining <= 0;
-         dma_to_device_in_progress <= False;
-             wr_buffer_queue.deq();
-         wr_command_decr.send();
-         if (dma_td_intr_req) intr_req_during_xfer_to_device.send();
-         if (dma_td_block_is_last) last_tag_queue.enq(next_read_req_tag);
-      end
-      else if (dma_td_block_bytes_remaining > zeroExtend(dma_td_req_size_limit)) begin
-         // transfer crosses a 4K boundary or exceedss maximum request size
-         hdr_4dw.length  = pack(truncate((dma_td_req_size_limit + 3)/4));
-         hdr_4dw.firstbe = '1 << addr_idx_in_dw;
-         hdr_4dw.lastbe  = '1;
-         dma_td_block_bytes_remaining <= dma_td_block_bytes_remaining - zeroExtend(dma_td_req_size_limit);
-         if (dma_td_req_size_limit == dma_td_bytes_to_end_of_page) begin
-            dma_td_block_offset         <= 0;
-            dma_td_block_page           <= dma_td_block_page + 1;
-            dma_td_bytes_to_size_limit  <= max_read_req_bytes;
-            dma_td_bytes_to_end_of_page <= 4096;
-         end
-         else begin
-            dma_td_block_offset         <= dma_td_block_offset + truncate(dma_td_bytes_to_size_limit);
-            dma_td_bytes_to_size_limit  <= max_read_req_bytes;
-            dma_td_bytes_to_end_of_page <= dma_td_bytes_to_end_of_page - dma_td_bytes_to_size_limit;
-         end
-      end
-      else begin
-         // transfer can be done with one request of more than 1 DW
-         UInt#(2) end_idx_in_dw       = addr_idx_in_dw + truncate(dma_td_block_bytes_remaining);
-         UInt#(2) space_in_last_dw    = truncate(3'd4 - zeroExtend(end_idx_in_dw));
-         UInt#(32) bytes_plus_padding = dma_td_block_bytes_remaining + zeroExtend(addr_idx_in_dw) + zeroExtend(space_in_last_dw);
-         hdr_4dw.length  = pack(truncate(bytes_plus_padding/4));
-         hdr_4dw.firstbe = '1 << addr_idx_in_dw;
-         hdr_4dw.lastbe  = '1 >> space_in_last_dw;
-         dma_td_block_bytes_remaining <= 0;
-         dma_to_device_in_progress <= False;
-         wr_buffer_queue.deq();
-         wr_command_decr.send();
-         if (dma_td_intr_req) intr_req_during_xfer_to_device.send();
-         if (dma_td_block_is_last) last_tag_queue.enq(next_read_req_tag);
-      end
-      for (Integer i = 0; i < 16; i = i + 1)
-         dma_read_req_tlp.bytes[i] <= pack(hdr_4dw)[8*i+7:8*i];
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule move_to_next_request if (end_of_completion && is_last_completion_for_req && !in_reset);
-      last_completion_tag        <= unpack(truncate(pack(saved_tag)));
-      is_last_completion_for_req <= False;
-   endrule
-
-   (* fire_when_enabled *)
-   rule request_completed if (  end_of_completion
-                             && is_last_completion_for_req
-                             && (saved_tag == unpack(zeroExtend(pack(last_tag_queue.first()))))
-                             && !in_reset
-                             );
-      last_tag_queue.deq();
-      finished_xfer_to_device.send();
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule reset_dma_to_device if (in_reset);
-      dma_to_device_in_progress    <= False;
-      dma_td_block_bytes_remaining <= 0;
-      is_last_completion_for_req   <= False;
-      last_tag_queue.clear();
-      next_read_req_tag            <= 0;
-      last_completion_tag          <= unpack('1);
-      dma_read_req_tlp.clear();
-   endrule
-
-   // convert incoming NoC messages to DMA transfers from the device
-
-   PulseWire                            incoming_beat <- mkUnsafePulseWire();
-   MsgRoute#(bpb)                       msg_parse     <- mkMsgRoute();
-   ByteCompactor#(bpb,16,TAdd#(bpb,20)) rd_data       <- mkByteCompactor();
-   Wire#(MsgBeat#(bpb))                 current_beat  <- mkWire();
-   PulseWire                            beat_moving   <- mkPulseWire();
-   FIFOF#(Bool)                         dont_wait_out <- mkFIFOF();
-   FIFOF#(UInt#(9))                     msg_len_out   <- mkFIFOF();
-
-   // parse the incoming beats
-   rule advance_to_next_beat if (incoming_beat && !in_reset);
-      Vector#(bpb,Maybe#(Bit#(8))) vec = zipWith(mkMaybe,replicate(True),unpack(current_beat));
-      rd_data.enq(vec);
-      msg_parse.advance();
-      beat_moving.send();
-   endrule
-
-   // extract the sequence of message lengths from the incoming beat stream
-   (* fire_when_enabled *)
-   rule capture_msg_len if (beat_moving && !in_reset);
-      UInt#(8) len = msg_parse.length();
-      msg_len_out.enq(zeroExtend(len) + 4);
-   endrule
-
-   // extract the sequence of "don't wait" flags from the incoming beat stream
-   (* fire_when_enabled *)
-   rule capture_dont_wait if (beat_moving && !in_reset);
-      Bool dw = msg_parse.dont_wait();
-      dont_wait_out.enq(dw);
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule reset_incoming_noc_ifc if (in_reset);
-      msg_parse.clear();
-      rd_data.clear();
-      dont_wait_out.clear();
-      msg_len_out.clear();
-   endrule
-
-   // generate the DMA write requests to transfer the messages
-
-   ByteBuffer#(16) dma_write_req_tlp <- mkByteBuffer();
-   Reg#(Bool)      header_sent_out   <- mkReg(False);
-   Reg#(UInt#(9))  bytes_left_in_tlp <- mkReg(0);
-
-   Reg#(Bool)      dma_from_device_in_progress  <- mkReg(False);
-   Reg#(UInt#(52)) dma_fd_block_page            <- mkRegU();
-   Reg#(UInt#(12)) dma_fd_block_offset          <- mkRegU();
-   Reg#(UInt#(32)) dma_fd_block_bytes_remaining <- mkReg(0);
-   Reg#(Bool)      dma_fd_block_is_last         <- mkRegU();
-   Reg#(Bool)      dma_fd_intr_req              <- mkRegU();
-   PulseWire       intr_from_xfer_from_device   <- mkPulseWire();
-   PulseWire       finished_xfer_from_device    <- mkPulseWire();
-   PulseWire       flushed_xfer_from_device     <- mkPulseWire();
-   Reg#(UInt#(9))  bytes_left_in_msg            <- mkReg(0);
-   Reg#(Bool)      flush_after_msg              <- mkReg(False);
-   Reg#(Bool)      flush_unused_dma_blocks      <- mkReg(False);
-   PulseWire       flush_dma_from_device        <- mkPulseWire();
-
-   // These values are redundant with dma_fd_block_offset, but keeping
-   // them in registers allows for shorter circuit paths.
-   Reg#(UInt#(13)) dma_fd_bytes_to_end_of_page <- mkRegU();
-   Reg#(UInt#(13)) dma_fd_bytes_to_size_limit  <- mkRegU();
-   UInt#(13) dma_fd_req_size_limit = min(dma_fd_bytes_to_end_of_page,dma_fd_bytes_to_size_limit);
-
-   (* fire_when_enabled *)
-   rule prepare_for_dma_buffer_write if (!dma_from_device_in_progress && !flush_unused_dma_blocks && !in_reset);
-      DMAListEntry entry = rd_buffer_queue.first();
-      dma_from_device_in_progress  <= True;
-      dma_fd_block_page            <= truncate(entry.addr / 4096);
-      UInt#(12) _offset = truncate(entry.addr % 4096);
-      dma_fd_block_offset          <= _offset;
-      dma_fd_block_bytes_remaining <= entry.len;
-      dma_fd_block_is_last         <= entry.last;
-      dma_fd_intr_req              <= entry.intr_req;
-      UInt#(2) addr_idx_in_dw  = truncate(_offset);
-      dma_fd_bytes_to_size_limit   <= max_payload_bytes - zeroExtend(addr_idx_in_dw);
-      dma_fd_bytes_to_end_of_page  <= 4096 - zeroExtend(_offset);
-   endrule
-
-   (* fire_when_enabled *)
-   rule setup_next_msg_dma if ((bytes_left_in_msg == 0) && !in_reset);
-      UInt#(9) msg_bytes = msg_len_out.first();
-      Bool needs_padding = (msg_bytes % fromInteger(bytes_per_beat)) != 0;
-      UInt#(9) msg_beats = (msg_bytes / fromInteger(bytes_per_beat)) + (needs_padding ? 1 : 0);
-      bytes_left_in_msg <= fromInteger(bytes_per_beat) * msg_beats;
-      msg_len_out.deq();
-      flush_after_msg <= dont_wait_out.first();
-      dont_wait_out.deq();
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule send_dma_write_request_header if (  !header_sent_out
-                                         && (dma_write_req_tlp.valid_mask == replicate(False))
-                                         && dma_from_device_in_progress
-                                         && (dma_fd_block_bytes_remaining != 0)
-                                         && (bytes_left_in_msg != 0)
-                                         && !in_reset
-                                         );
-      TLPMemory4DWHeader hdr_4dw = defaultValue();
-      hdr_4dw.format  = MEM_WRITE_4DW_DATA;
-      hdr_4dw.tag     = 0;
-      hdr_4dw.reqid   = my_id;
-      hdr_4dw.nosnoop = SNOOPING_REQD;
-      hdr_4dw.addr    = ({pack(dma_fd_block_page),pack(dma_fd_block_offset)})[63:2];
-      UInt#(9) bytes_to_xfer = 0;
-      if (zeroExtend(bytes_left_in_msg) <= dma_fd_block_bytes_remaining) begin
-         // the entire message fits within the current DMA block
-         bytes_to_xfer = bytes_left_in_msg;
-      end
-      else begin
-         // we can only fit a portion of the message in the current DMA block
-         bytes_to_xfer = truncate(dma_fd_block_bytes_remaining);
-      end
-      UInt#(2) addr_idx_in_dw  = truncate(dma_fd_block_offset);
-      if (bytes_to_xfer <= (4 - zeroExtend(addr_idx_in_dw))) begin
-         // entire transfer fits in one DW
-         hdr_4dw.length  = 1;
-         hdr_4dw.firstbe = (~('1 << bytes_to_xfer)) << addr_idx_in_dw;
-         hdr_4dw.lastbe  = '0;
-         bytes_left_in_tlp <= bytes_to_xfer;
-      end
-      else if (zeroExtend(bytes_to_xfer) > dma_fd_req_size_limit) begin
-         // transfer crosses a 4K boundary or exceeds maximum payload size
-         hdr_4dw.length  = pack(truncate((dma_fd_req_size_limit + 3)/4));
-         hdr_4dw.firstbe = '1 << addr_idx_in_dw;
-         hdr_4dw.lastbe  = '1;
-         bytes_left_in_tlp <= truncate(dma_fd_req_size_limit);
-      end
-      else begin
-         // transfer can be done with one request of more than 1 DW
-         UInt#(2) end_idx_in_dw  = addr_idx_in_dw + truncate(bytes_to_xfer);
-         UInt#(2) space_in_last_dw = truncate(3'd4 - zeroExtend(end_idx_in_dw));
-         UInt#(9) bytes_plus_padding = bytes_to_xfer + zeroExtend(addr_idx_in_dw) + zeroExtend(space_in_last_dw);
-         hdr_4dw.length  = pack(zeroExtend(bytes_plus_padding/4));
-         hdr_4dw.firstbe = '1 << addr_idx_in_dw;
-         hdr_4dw.lastbe  = '1 >> space_in_last_dw;
-         bytes_left_in_tlp <= bytes_to_xfer;
-      end
-      for (Integer i = 0; i < 16; i = i + 1)
-         dma_write_req_tlp.bytes[i] <= pack(hdr_4dw)[8*i+7:8*i];
-      header_sent_out <= True;
-   endrule
-
-   (* fire_when_enabled *)
-   rule send_dma_write_data if (  header_sent_out
-                               && (dma_write_req_tlp.valid_mask() == replicate(False))
-                               && dma_from_device_in_progress
-                               && (bytes_left_in_msg != 0)
-                               && !flush_unused_dma_blocks
-                               && !in_reset
-                               );
-      // we need to supply up to 4DWs of data, but possibly less
-      Bit#(16) mask = pack(map(isValid,rd_data.first()));
-      UInt#(9) bytes_to_take = min(bytes_left_in_tlp,16);
-      Bit#(16) required_mask = ~('1 << bytes_to_take);
-      if ((mask & required_mask) == required_mask) begin
-         for (Integer i = 0; i < 16; i = i + 1) begin
-            Integer dw  = 3 - (i / 4);
-            Integer idx = 3 - (i % 4);
-            if (required_mask[i] != 0)
-               dma_write_req_tlp.bytes[4*dw+idx] <= validValue(rd_data.first()[i]);
-            else
-               dma_write_req_tlp.bytes[4*dw+idx] <= '0; // padding
-         end
-         rd_data.deq(truncate(bytes_to_take));
-         bytes_left_in_tlp <= bytes_left_in_tlp - bytes_to_take;
-         if (bytes_left_in_tlp == bytes_to_take)
-            header_sent_out <= False;
-         if ((bytes_left_in_msg == bytes_to_take) && flush_after_msg) begin
-            flush_dma_from_device.send();
-            if (dma_fd_block_bytes_remaining != zeroExtend(bytes_to_take) || !dma_fd_block_is_last) begin
-               flush_unused_dma_blocks <= True;
-               flushed_xfer_from_device.send();
-            end
-         end
-         bytes_left_in_msg <= bytes_left_in_msg - bytes_to_take;
-         if (dma_fd_block_bytes_remaining == zeroExtend(bytes_to_take)) begin
-            rd_buffer_queue.deq();
-            rd_command_decr.send();
-            if (dma_fd_block_is_last || dma_fd_intr_req)
-               intr_from_xfer_from_device.send();
-            if (dma_fd_block_is_last)
-               finished_xfer_from_device.send();
-         end
-         if (  (dma_fd_block_bytes_remaining == zeroExtend(bytes_to_take))
-            || ((bytes_left_in_msg == bytes_to_take) && flush_after_msg)
-            )
-            dma_from_device_in_progress <= False;
-         dma_fd_block_bytes_remaining <= dma_fd_block_bytes_remaining - zeroExtend(bytes_to_take);
-         if ((dma_fd_block_offset + zeroExtend(bytes_to_take)) == 0) begin
-            dma_fd_block_offset         <= 0;
-            dma_fd_block_page           <= dma_fd_block_page + 1;
-            dma_fd_bytes_to_size_limit  <= max_payload_bytes;
-            dma_fd_bytes_to_end_of_page <= 4096;
-         end
-         else begin
-            UInt#(12) _new_offset = dma_fd_block_offset + zeroExtend(bytes_to_take);
-            UInt#(2) _new_addr_idx_in_dw  = truncate(_new_offset);
-            dma_fd_block_offset         <= _new_offset;
-            dma_fd_bytes_to_size_limit  <= max_payload_bytes - zeroExtend(_new_addr_idx_in_dw);
-            dma_fd_bytes_to_end_of_page <= 4096 - zeroExtend(_new_offset);
-         end
-         byte_sent_count.wset(truncate(bytes_to_take));
-      end
-   endrule
-
-   (* fire_when_enabled *)
-   rule discard_unused_blocks if (flush_unused_dma_blocks);
-      DMAListEntry entry = rd_buffer_queue.first();
-      rd_buffer_queue.deq();
-      rd_command_decr.send();
-      if (entry.last)
-         flush_unused_dma_blocks <= False;
-   endrule
-
-   (* fire_when_enabled *)
-   rule reset_dma_from_device if (in_reset);
-      dma_write_req_tlp.clear();
-      header_sent_out              <= False;
-      bytes_left_in_tlp            <= 0;
-      dma_from_device_in_progress  <= False;
-      dma_fd_block_bytes_remaining <= 0;
-      bytes_left_in_msg            <= 0;
-      flush_after_msg              <= False;
-      flush_unused_dma_blocks      <= False;
-   endrule
-
-   // generate MSIx interrupts
-
-   // There are five reasons we will send an interrupt:
-   //
-   //   1. When DMA to the device completes
-   //
-   //      An interrupt is sent when the final completion
-   //      associated with the last DMA block in the write
-   //      buffer list is handled. It allows the host to
-   //      know that the transfer is complete.
-   //
-   //   2. When the write buffer queue needs to be refilled
-   //
-   //      An interrupt is sent when an entry with the intr_req
-   //      field set is removed from the write buffer queue.
-   //      It allows the host to supply additional DMA blocks.
-   //
-   //   3. When DMA from the device completes
-   //
-   //      An interrupt is sent after the final write request
-   //      associated with the last DMA block in the read
-   //      buffer list is generated. It allows the host to
-   //      know that the transfer is complete.
-   //
-   //   4. When the read buffer queue needs to be refilled
-   //
-   //      An interrupt is sent when an entry with the intr_req
-   //      field set is removed from the read buffer queue.
-   //      It allows the host to supply additional DMA blocks.
-   //
-   //   5. When a read flush is encountered
-   //
-   //      An interrupt is generated after transferring
-   //      a message that is marked as "don't wait" from the
-   //      device to the host. It allows the host to know
-   //      that the transfer finished early.
-
-   Wire#(Tuple2#(Bit#(64),Bit#(32)))  add_intr  <- mkWire();
-   FIFOF#(Tuple2#(Bit#(64),Bit#(32))) intr_info <- mkFIFOF();
-
-   ByteBuffer#(16) intr_tlp            <- mkByteBuffer();
-   Reg#(Bool)      intr_header_done    <- mkReg(False);
-   Reg#(Bool)      intr_in_one_tlp     <- mkRegU();
-   Reg#(Bool)      second_tlp          <- mkRegU();
-   PulseWire       need_intr           <- mkPulseWireOR();
-
-   // case 1
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule trigger_intr_after_dma_to_device if (finished_xfer_to_device);
-      need_intr.send();
-   endrule
-
-   // case 2
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule trigger_intr_during_dma_to_device if (intr_req_during_xfer_to_device);
-      need_intr.send();
-   endrule
-
-   // cases 3 & 4
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule trigger_intr_during_dma_from_device if (intr_from_xfer_from_device);
-      need_intr.send();
-   endrule
-
-   // case 5
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule trigger_intr_on_flush_dma_from_device if (flush_dma_from_device);
-      need_intr.send();
-   endrule
-
-   (* fire_when_enabled *)
-   rule initiate_intr if (!intr_info.notEmpty());
-      intr_info.enq(add_intr);
-   endrule
-
-   (* fire_when_enabled *)
-   rule write_intr_tlp_header if (!intr_header_done && !in_reset);
-      let {addr,data} = intr_info.first();
-      if (addr[63:32] == '0) begin
-         TLPMemoryIO3DWHeader hdr_3dw = defaultValue();
-         hdr_3dw.format = MEM_WRITE_3DW_DATA;
-         hdr_3dw.tag = 0;
-         hdr_3dw.reqid = my_id;
-         hdr_3dw.length = 1;
-         hdr_3dw.firstbe = '1;
-         hdr_3dw.lastbe = '0;
-         hdr_3dw.addr = addr[31:2];
-         for (Integer i = 4; i < 16; i = i + 1)
-            intr_tlp.bytes[i] <= pack(hdr_3dw)[8*i+7:8*i];
-         intr_in_one_tlp <= True;
-      end
-      else begin
-         TLPMemory4DWHeader hdr_4dw = defaultValue();
-         hdr_4dw.format = MEM_WRITE_4DW_DATA;
-         hdr_4dw.tag = 0;
-         hdr_4dw.reqid = my_id;
-         hdr_4dw.length = 1;
-         hdr_4dw.firstbe = '1;
-         hdr_4dw.lastbe = '0;
-         hdr_4dw.addr = addr[63:2];
-         for (Integer i = 0; i < 16; i = i + 1)
-            intr_tlp.bytes[i] <= pack(hdr_4dw)[8*i+7:8*i];
-         intr_in_one_tlp <= False;
-      end
-      intr_header_done <= True;
-   endrule
-
-   (* fire_when_enabled *)
-   rule write_intr_tlp_data if (intr_header_done && (intr_tlp.valid_mask() != replicate(True)));
-      let {addr,data} = intr_info.first();
-      intr_info.deq();
-      Bit#(32) value = byteSwap(data);
-      if (intr_in_one_tlp) begin
-         for (Integer i = 0; i < 4; i = i + 1)
-            intr_tlp.bytes[i] <= value[8*i+7:8*i];
-      end
-      else begin
-         for (Integer i = 0; i < 4; i = i + 1)
-            intr_tlp.bytes[12+i] <= value[8*i+7:8*i];
-         for (Integer i = 0; i < 12; i = i + 1)
-            intr_tlp.bytes[i] <= ?;
-      end
-      intr_header_done <= False;
-      second_tlp       <= False;
-   endrule
-
-   (* fire_when_enabled *)
-   rule reset_intr_generation if (in_reset);
-      intr_info.clear();
-      intr_tlp.clear();
-      intr_header_done <= False;
-   endrule
-
-   // auto flush
-
-   Reg#(Bit#(7)) rIdleCount <- mkReg(0);
-
-   Bool read_in_progress = ((read_buffers_level != 0) &&
-			    (dma_from_device_in_progress) &&
-			    (!in_reset));
-
-   Bool read_idle = ((dma_write_req_tlp.valid_mask() == replicate(False)) &&
-		     (!flush_unused_dma_blocks) &&
-		     (rd_data.bytes_available() == 0) &&
-		     (!header_sent_out) &&
-		     (bytes_left_in_tlp == 0) &&
-		     (bytes_left_in_msg == 0));
-
-   rule auto_flush;
-
-      rule reset(!read_in_progress || !read_idle);
-	 rIdleCount <= 0;
-      endrule
-
-      rule count(read_in_progress && read_idle && (rIdleCount < maxBound));
-	 rIdleCount <= rIdleCount + 1;
-      endrule
-
-      rule flush(read_in_progress && read_idle && (rIdleCount == maxBound));
-	 rIdleCount <= 0;
-	 flush_dma_from_device.send();
-	 flush_unused_dma_blocks <= True;
-	 flushed_xfer_from_device.send();
-         dma_from_device_in_progress <= False;
-      endrule
-
-   endrule
-
-   //
-   // Interfaces
-   //
-
-   Reg#(UInt#(11)) dma_write_req_reserved <- mkReg(0);
-   Reg#(Bool)      dma_intr_reserved      <- mkReg(False);
-
-   Bool read_req_ready   = dma_read_req_tlp.valid_mask() == replicate(True);
-   Bool write_data_ready = dma_write_req_tlp.valid_mask() == replicate(True);
-   Bool intr_ready       = intr_tlp.valid_mask() == replicate(True);
-   Bool tlp_ready =  ((dma_write_req_reserved != 0) && write_data_ready)
-                  || (dma_intr_reserved && intr_ready)
-                  || ((dma_write_req_reserved == 0) && !dma_intr_reserved && (read_req_ready || write_data_ready || intr_ready))
-                  ;
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule reset_tlp_reservation if (in_reset);
-      dma_write_req_reserved <= 0;
-      dma_intr_reserved      <= False;
-   endrule
-
-   // This is the interface which processes incoming DMA commands and
-   // completion data from the PCIe bus.
-
-   interface Put dma_commands_and_completions;
-      method Action put(TLPData#(16) tlp) if (!in_reset);
-         // We expect only writes of 8 bytes to the DMA command addresses,
-         // using 32-bit addresses, or else read completion traffic
-         if (tlp.sof) begin
-            TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-            if (hdr_3dw.pkttype != COMPLETION) begin
-               // This is a write to the command area
-               if ((hdr_3dw.addr % 8192) == 1024) begin
-                  if (!tlp.eof)
-                     do_rd_command <= True;
-                  lo_command_data <= byteSwap(tlp.data[31:0]);
-               end
-               else if ((hdr_3dw.addr % 8192) == 1025) begin
-                  Bit#(32) hi_command_data = byteSwap(tlp.data[31:0]);
-                  DMAListEntry entry = ?;
-                  entry.last     = unpack(hi_command_data[31]);
-                  entry.intr_req = unpack(hi_command_data[30]);
-                  entry.len      = (hi_command_data[29:16] == '0) ? 16384 : zeroExtend(unpack(hi_command_data[29:16]));
-                  entry.addr     = zeroExtend(unpack({hi_command_data[15:0],lo_command_data}));
-                  new_rd_command <= entry;
-                  do_rd_command  <= False;
-               end
-               else if ((hdr_3dw.addr % 8192) == 1026) begin
-                  if (!tlp.eof)
-                     do_wr_command <= True;
-                  lo_command_data <= byteSwap(tlp.data[31:0]);
-               end
-               else if ((hdr_3dw.addr % 8192) == 1027) begin
-                  Bit#(32) hi_command_data = byteSwap(tlp.data[31:0]);
-                  DMAListEntry entry = ?;
-                  entry.last     = unpack(hi_command_data[31]);
-                  entry.intr_req = unpack(hi_command_data[30]);
-                  entry.len      = (hi_command_data[29:16] == '0) ? 16384 : zeroExtend(unpack(hi_command_data[29:16]));
-                  entry.addr     = zeroExtend(unpack({hi_command_data[15:0],lo_command_data}));
-                  new_wr_command <= entry;
-                  do_wr_command  <= False;
-               end
-            end
-            else begin
-               // This is the start of completion data
-               TLPCompletionHeader hdr_compl = unpack(tlp.data);
-               if (hdr_compl.cstatus == SUCCESSFUL_COMPLETION) begin
-                  UInt#(2) unused_in_first_dw = unpack(truncate(hdr_compl.loweraddr));
-                  Bit#(4) firstbe = '1 << unused_in_first_dw;
-                  UInt#(2) _tmp = truncate(unpack(hdr_compl.loweraddr)) + truncate(unpack(hdr_compl.bytecount));
-                  UInt#(2) unused_in_last_dw = truncate(3'd4 - zeroExtend(_tmp));
-                  Bit#(4) lastbe = (hdr_compl.length == 1) ? '0 : ('1 >> unused_in_last_dw);
-                  Vector#(4,Tuple2#(Bit#(4),Bit#(32))) vec = replicate(tuple2(4'h0,?));
-                  vec[0] = tuple2(firstbe, byteSwap(hdr_compl.data));
-                  wr_dma(vec);
-                  byte_recv_count.wset(countOnes({tpl_1(vec[0]),tpl_1(vec[1]),tpl_1(vec[2]),tpl_1(vec[3])}));
-                  is_last_completion_for_req <= hdr_compl.bytecount == computeByteCount(hdr_compl.length,firstbe,lastbe);
-                  saved_tag <= hdr_compl.tag;
-                  if (tlp.eof)
-                     end_of_completion <= True;
-                  else begin
-                     pass_completion_data <= True;
-                     saved_lastbe <= lastbe;
-                     saved_length <= unpack(hdr_compl.length) - 1;
-                  end
-               end
-            end
-         end
-         else if (do_rd_command) begin
-            // Second DW of a read command
-            Bit#(32) hi_command_data = byteSwap(tlp.data[127:96]);
-            DMAListEntry entry = ?;
-            entry.last     = unpack(hi_command_data[31]);
-            entry.intr_req = unpack(hi_command_data[30]);
-            entry.len      = (hi_command_data[29:16] == '0) ? 16384 : zeroExtend(unpack(hi_command_data[29:16]));
-            entry.addr     = zeroExtend(unpack({hi_command_data[15:0],lo_command_data}));
-            new_rd_command <= entry;
-            do_rd_command  <= False;
-         end
-         else if (do_wr_command) begin
-            // Second DW of a write command
-            Bit#(32) hi_command_data = byteSwap(tlp.data[127:96]);
-            DMAListEntry entry = ?;
-            entry.last     = unpack(hi_command_data[31]);
-            entry.intr_req = unpack(hi_command_data[30]);
-            entry.len      = (hi_command_data[29:16] == '0) ? 16384 : zeroExtend(unpack(hi_command_data[29:16]));
-            entry.addr     = zeroExtend(unpack({hi_command_data[15:0],lo_command_data}));
-            new_wr_command <= entry;
-            do_wr_command  <= False;
-         end
-         else if (pass_completion_data) begin
-            // Continuation of completion data
-            Vector#(4,Tuple2#(Bit#(4),Bit#(32))) vec = replicate(tuple2(4'h0,?));
-            vec[0] = tuple2((saved_length == 1) ? saved_lastbe : 4'hf, byteSwap(tlp.data[127:96]));
-            vec[1] = tuple2((saved_length == 2) ? saved_lastbe : ((saved_length < 2) ? 4'h0 : 4'hf), byteSwap(tlp.data[95:64]));
-            vec[2] = tuple2((saved_length == 3) ? saved_lastbe : ((saved_length < 3) ? 4'h0 : 4'hf), byteSwap(tlp.data[63:32]));
-            vec[3] = tuple2((saved_length == 4) ? saved_lastbe : ((saved_length < 4) ? 4'h0 : 4'hf), byteSwap(tlp.data[31:0]));
-            wr_dma(vec);
-            byte_recv_count.wset(countOnes({tpl_1(vec[0]),tpl_1(vec[1]),tpl_1(vec[2]),tpl_1(vec[3])}));
-            if (tlp.eof) begin
-               end_of_completion <= True;
-               pass_completion_data <= False;
-            end
-            else
-               saved_length <= saved_length - 4;
-         end
-      endmethod
-   endinterface
-
-   // This is the interface which selects TLPs to go out to the PCIe
-   // bus. It gives priority to read and write TLPs over interrupts,
-   // to ensure that interrupts don't accidentally overtake requests.
-   // It also must make sure that multi-TLP write and interrupt
-   // requests are transmitted without interruption.
-
-   interface Get dma_read_and_write_requests;
-      method ActionValue#(TLPData#(16)) get() if (tlp_ready && !in_reset);
-         TLPData#(16) tlp = ?;
-         if (dma_write_req_reserved != 0) begin
-            // we can send only the write data TLPs
-            tlp.sof = False;
-            tlp.eof = (dma_write_req_reserved <= 4);
-            tlp.hit = 7'h00;
-            case (dma_write_req_reserved)
-               1:       tlp.be = 16'hf000;
-               2:       tlp.be = 16'hff00;
-               3:       tlp.be = 16'hfff0;
-               default: tlp.be = 16'hffff;
-            endcase
-            tlp.data = pack(readVReg(dma_write_req_tlp.bytes));
-            dma_write_req_tlp.clear();
-            if (dma_write_req_reserved <= 4)
-               dma_write_req_reserved <= 0;
-            else
-               dma_write_req_reserved <= dma_write_req_reserved - 4;
-         end
-         else if (dma_intr_reserved) begin
-            // we can only send the interrupt data TLP
-            tlp.sof  = False;
-            tlp.eof  = True;
-            tlp.hit  = 7'h00;
-            tlp.be   = 16'hf000;
-            tlp.data = pack(readVReg(intr_tlp.bytes));
-            intr_tlp.clear();
-            dma_intr_reserved <= False;
-         end
-         else if (read_req_ready) begin
-            // entire read request
-            tlp.sof  = True;
-            tlp.eof  = True;
-            tlp.hit  = 7'h00;
-            tlp.be   = 16'hffff;
-            tlp.data = pack(readVReg(dma_read_req_tlp.bytes));
-            dma_read_req_tlp.clear();
-         end
-         else if (write_data_ready) begin
-            // first part of write request
-            TLPMemory4DWHeader hdr_4dw = unpack(pack(readVReg(dma_write_req_tlp.bytes)));
-            tlp.sof  = True;
-            tlp.eof  = False;
-            tlp.hit  = 7'h00;
-            tlp.be   = 16'hffff;
-            tlp.data = pack(readVReg(dma_write_req_tlp.bytes));
-            dma_write_req_tlp.clear();
-            dma_write_req_reserved <= (hdr_4dw.length == '0) ? 11'd1024 : zeroExtend(unpack(hdr_4dw.length));
-         end
-         else if (intr_ready) begin
-            // first part of interrupt
-            TLPMemoryIO3DWHeader hdr_3dw = unpack(pack(readVReg(intr_tlp.bytes)));
-            tlp.sof  = True;
-            tlp.eof  = (hdr_3dw.format == MEM_WRITE_3DW_DATA);
-            tlp.hit  = 7'h00;
-            tlp.be   = 16'hffff;
-            tlp.data = pack(readVReg(intr_tlp.bytes));
-            intr_tlp.clear();
-            if (hdr_3dw.format != MEM_WRITE_3DW_DATA)
-               dma_intr_reserved <= True;
-         end
-         return tlp;
-      endmethod
-   endinterface
-
-   // This is the interface which handles NoC traffic
-
-   interface MsgPort noc;
-
-      interface MsgSource out;
-         method Action dst_rdy(Bool b);
-            if (b && (wr_data.bytes_available() >= fromInteger(bytes_per_beat)))
-               wr_data.deq(fromInteger(bytes_per_beat));
-         endmethod
-         method src_rdy = (wr_data.bytes_available() >= fromInteger(bytes_per_beat));
-         method beat = pack(take(map(validValue,wr_data.first())));
-      endinterface
-
-      interface MsgSink in;
-         method dst_rdy = rd_data.can_enq() && msg_len_out.notFull() && !in_reset;
-         method Action src_rdy(Bool b);
-            if (b && (rd_data.can_enq() && msg_len_out.notFull()) && !in_reset)
-               incoming_beat.send();
-         endmethod
-         method Action beat(MsgBeat#(bpb) v);
-            current_beat <= v;
-            if (incoming_beat)
-               msg_parse.beat(v);
-         endmethod
-      endinterface
-
-   endinterface
-
-   // Methods for coordination with control and status registers
-
-   method Action clear();
-      reset_engine.send();
-   endmethod
-
-   method UInt#(5) num_write_commands = write_buffers_level;
-   method UInt#(5) num_read_commands  = read_buffers_level;
-
-   method UInt#(5) bytes_received = fromMaybe(0,byte_recv_count.wget());
-   method UInt#(5) bytes_sent     = fromMaybe(0,byte_sent_count.wget());
-
-   method Bool write_operation_completed = finished_xfer_to_device;
-   method Bool read_operation_completed  = finished_xfer_from_device || flushed_xfer_from_device;
-   method Bool read_flushed              = flushed_xfer_from_device;
-
-   method Bool has_space_to_receive_data = wr_data.can_enq();
-   method Bool has_data_to_send          = (bytes_left_in_msg != 0);
-
-   method Bool request_interrupt = need_intr;
-
-   interface Put next_interrupt;
-      method Action put(Tuple2#(Bit#(64),Bit#(32)) x);
-         add_intr <= x;
-      endmethod
-   endinterface
-
-endmodule: mkDMAEngine
-
-// The PCIe-to-NoC bridge puts all of the elements together
+// The PCIe-to-AXI bridge puts all of the elements together
 (* synthesize *)
 module mkPcieToAxiBridge_4#( Bit#(64)  board_content_id
 			   , PciId     my_id
@@ -2783,8 +1528,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 
    Integer bytes_per_beat = valueOf(bpb);
 
-   check_bytes_per_beat("mkPCIEtoBNoC", bytes_per_beat);
-
    // instantiate sub-components
    PortalEngine            portalEngine <- mkPortalEngine( my_id );
 
@@ -2801,11 +1544,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
                                                             , msi_enabled
 							    , portalEngine
                                                             );
-   DMAEngine#(bpb)      dma        <- mkDMAEngine( my_id
-                                                 , max_read_req_bytes
-                                                 , max_payload_bytes
-                                                 );
-
    Reg#(Bit#(32)) timestamp <- mkReg(0);
    rule incTimestamp;
        timestamp <= timestamp + 1;
@@ -2826,44 +1564,10 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    endrule
 
    mkConnection(dispatcher.tlp_out_to_config,    csr.csr_read_and_write_tlps);
-   mkConnection(dispatcher.tlp_out_to_dma,       dma.dma_commands_and_completions);
    mkConnection(dispatcher.tlp_out_to_portal,    portalEngine.tlp_in);
 
    mkConnection(csr.csr_read_completion_tlps,    arbiter.tlp_in_from_config);
-   mkConnection(dma.dma_read_and_write_requests, arbiter.tlp_in_from_dma);
    mkConnection(portalEngine.tlp_out,            arbiter.tlp_in_from_portal);
-
-   mkConnection(dma.bytes_received,              csr.incr_wr_xfer_count);
-   mkConnection(dma.bytes_sent,                  csr.incr_rd_xfer_count);
-   mkConnection(csr.intr_to_send,                dma.next_interrupt);
-   mkConnection(dma.num_write_commands,          csr.set_write_buffers_level);
-   mkConnection(dma.num_read_commands,           csr.set_read_buffers_level);
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule clear_dma_when_inactive if (!csr.is_activated());
-      dma.clear();
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule wr_xfer_done if (dma.write_operation_completed() && csr.is_activated());
-      csr.finished_write();
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule rd_xfer_done if (dma.read_operation_completed() && csr.is_activated());
-      csr.finished_read(dma.read_flushed());
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule pass_ready_indicators;
-      csr.has_space_to_receive_data(dma.has_space_to_receive_data());
-      csr.has_data_to_send(dma.has_data_to_send());
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule intr_req if (dma.request_interrupt);
-      csr.interrupt();
-   endrule
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
    Reg#(Bool) skippingIncomingTlps <- mkReg(False);
@@ -2908,12 +1612,10 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    //interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
    interface GetPut tlps = tuple2(toGet(tlpToBusFifo),toPut(tlpFromBusFifo));
 
-   interface MsgPort noc = dma.noc;
    interface Axi3Master portal0 = portalEngine.portal;
    interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
    interface Reg numPortals = csr.numPortals;
 
-   method Bool is_activated = csr.is_activated();
    method Bool rx_activity  = dispatcher.read_tlp() || dispatcher.write_tlp() || arbiter.completion_tlp();
    method Bool tx_activity  = arbiter.read_tlp()    || arbiter.write_tlp()    || dispatcher.completion_tlp();
 

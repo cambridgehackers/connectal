@@ -19,7 +19,6 @@ import XilinxCells          :: *;
 import GetPut               :: *;
 import ClientServer         :: *;
 import Memory               :: *;
-import BlueNoC              :: *;
 import PcieToAxiBridge      :: *;
 import XbsvXilinx7Pcie      :: *;
 //import XbsvXilinx7DDR3      :: *;
@@ -111,8 +110,8 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 		       };
 
    // The PCIE endpoint is processing TLPWord#(8)s at 250MHz.  The
-   // NoC bridge is accepting TLPWord#(16)s at 125 MHz. The
-   // connection between the endpoint and the NoC contains GearBox
+   // AXI bridge is accepting TLPWord#(16)s at 125 MHz. The
+   // connection between the endpoint and the AXI contains GearBox
    // instances for the TLPWord#(8)@250 <--> TLPWord#(16)@125
    // conversion.
 
@@ -172,7 +171,7 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
       _ep.cfg_interrupt.req(0);      // tied off for MSI-X
    endrule: intr_ifc_ctl
 
-   // Build the PCIe-to-NoC bridge
+   // Build the PCIe-to-AXI bridge
    PcieToAxiBridge#(BPB)  bridge <- mkPcieToAxiBridge_4( contentId
 						       , my_id
 						       , max_read_req_bytes
@@ -185,9 +184,6 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 						       );
    mkConnectionWithClocks(_ep.trn_rx, tpl_2(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
    mkConnectionWithClocks(_ep.trn_tx, tpl_1(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
-
-   //mkConnection(_dut.noc_src,bridge.noc);
-   mkTieOff(bridge.noc);
 
    //SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, clk, rst_n, ddr3clk);
    //SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, clk);
