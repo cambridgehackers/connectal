@@ -30,10 +30,10 @@ parammap = {}
 paramnames = []
 remapmap = {}
 commoninterfaces = {}
-enindex = 0
 tokgenerator = 0
 toknum = 0
 tokval = 0
+modulename = ''
 
 #
 # parser for .lib files
@@ -190,7 +190,8 @@ def parse_lib(filename):
 # parser for .v files
 #
 def parse_verilog(filename):
-    global masterlist, commoninterfaces
+    global masterlist
+    global paramnames, modulename
     indata = open(filename).read().expandtabs().split('\n')
     for line in indata:
         ind = line.find('//')
@@ -237,21 +238,34 @@ def parse_verilog(filename):
         if len(f) > 0:
             if f[0][-1] == ';':
                 break
+            if f[0] == 'module':
+                modulename = f[1]
+            if f[0] == 'input' or f[0] == 'output' or f[0] == 'inout':
+                #print('FF', f, file=sys.stderr)
+                if len(f) == 2:
+                    f = [f[0], '1', f[1]]
+                # check for parameterized declarations
+                pname = f[1].strip('0123456789/')
+                if len(pname) > 0 and pname not in paramnames and pname[:4] != 'TDiv':
+                    print('Missing parameter declaration', pname, file=sys.stderr)
+                    paramnames.append(pname)
+                f[1] = 'Bit#(' + f[1] + ')'
             masterlist.append(f)
+    paramnames.sort()
 
 def generate_interface(ifname, paramval, ilist):
     print('(* always_ready, always_enabled *)')
     print('interface ' + ifname + ';')
     for item in ilist:
-        itemlen = '1'
-        if len(item) > 2:
-            itemlen = item[1]
+        if item[0] != 'input' and item[0] != 'output' and item[0] != 'inout' and item[0] != 'interface':
+            continue
+        itemlen = item[1]
         if item[0] == 'input':
-            print('    method Action      '+item[-1].lower()+'(Bit#('+itemlen+') v);')
+            print('    method Action      '+item[-1].lower()+'('+itemlen+' v);')
         elif item[0] == 'output':
-            print('    method Bit#('+itemlen+')     '+item[-1].lower()+'();')
+            print('    method '+itemlen+'     '+item[-1].lower()+'();')
         elif item[0] == 'inout':
-            print('    interface Inout#(Bit#('+itemlen+'))     '+item[-1].lower()+';')
+            print('    interface Inout#('+itemlen+')     '+item[-1].lower()+';')
         elif item[0] == 'interface':
             print('    interface '+item[1]+ paramval +'     '+item[2].lower()+';')
     print('endinterface')
@@ -273,7 +287,7 @@ def regroup_items(ifname, masterlist):
             if m:
                 indexname = m.group(2)
                 fieldname = m.group(3)
-                print('OO', item[-1], m.groups(), file=sys.stderr)
+                #print('OO', item[-1], m.groups(), file=sys.stderr)
             else:
                 m = re.search('(.+?)_(.+)', litem)
                 if not m:
@@ -283,12 +297,12 @@ def regroup_items(ifname, masterlist):
                     m = re.search('(.+)_(.+)', litem)
                 indexname = ''
                 fieldname = m.group(2)
-                print('OJ', item[-1], m.groups(), file=sys.stderr)
+                #print('OJ', item[-1], m.groups(), file=sys.stderr)
             groupname = m.group(1)
             itemname = groupname + indexname
             if itemname.lower() in ['event']:
-                itemname = itemname + '_';
-            #fieldname = fieldname + '_';
+                itemname = itemname + '_'
+            #fieldname = fieldname + '_'
             interfacename = ifname[0].upper() + ifname[1:].lower() + groupname[0].upper() + groupname[1:].lower()
             if not commoninterfaces.get(interfacename):
                 commoninterfaces[interfacename] = {}
@@ -303,15 +317,14 @@ def regroup_items(ifname, masterlist):
 def generate_inter_declarations(paramlist, paramval):
     global commoninterfaces
     for k, v in sorted(commoninterfaces.items()):
-        print('interface', k, file=sys.stderr)
+        #print('interface', k, file=sys.stderr)
         for kuse, vuse in sorted(v.items()):
             if kuse == '' or kuse == '0':
-                generate_interface(k+paramlist, paramval, vuse);
-            else:
-                print('     ', kuse, json.dumps(vuse), file=sys.stderr)
+                generate_interface(k+paramlist, paramval, vuse)
+            #else:
+                #print('     ', kuse, json.dumps(vuse), file=sys.stderr)
 
 def generate_instance(item, indent, prefix):
-    global enindex
     itemlen = '1'
     methodlist = ''
     pname = ''
@@ -322,9 +335,7 @@ def generate_instance(item, indent, prefix):
     if len(item) > 2:
         itemlen = item[1]
     if item[0] == 'input':
-        #print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) en'+str(enindex)+');')
         print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) EN_'+prefix + item[-1]+');')
-        enindex = enindex + 1
         methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'output':
         print(indent + 'method '+ prefix + item[-1] + ' ' + item[-1].lower()+'();')
@@ -342,24 +353,12 @@ def generate_instance(item, indent, prefix):
     return methodlist
 
 def translate_verilog(ifname):
-    global paramnames, enindex
-    modulename = ''
-    # check for parameterized declarations
-    for item in masterlist:
-        #print('KK', item, len(item))
-        if item[0] == 'module':
-            modulename = item[1]
-        if len(item) > 2 and (item[0] == 'input' or item[0] == 'output' or item[0] == 'inout'):
-            item = item[1].strip('0123456789/')
-            if len(item) > 0 and item not in paramnames and item[:4] != 'TDiv':
-                print('Missing parameter declaration', item, file=sys.stderr)
-                paramnames.append(item)
-    paramnames.sort()
+    global paramnames, modulename
     # generate output file
     print('\n/*')
     for item in sys.argv:
-        print('   ' + item);
-    print('*/\n');
+        print('   ' + item)
+    print('*/\n')
     for item in ['Clocks', 'DefaultValue', 'XilinxCells', 'GetPut']:
         print('import ' + item + '::*;')
     print('')
@@ -382,7 +381,6 @@ def translate_verilog(ifname):
     for item in masterlist:
         if item[0] == 'parameter':
             print('    parameter ' + item[1] + ' = ' + item[2] + ';')
-    enindex = 100
     methodlist = ''
     for item in masterlist:
         methodlist = methodlist + generate_instance(item, '    ', '')
