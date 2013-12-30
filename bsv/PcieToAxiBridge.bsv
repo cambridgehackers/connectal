@@ -364,15 +364,21 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
         timerReg <= timerReg - 1;
     endrule
 
-    rule interruptTlpOut if (interruptRequestedReg // && !interruptSecondHalf
-       );
+    rule interruptTlpOut if (interruptRequestedReg && !interruptSecondHalf);
        TLPData#(16) tlp = defaultValue;
        tlp.sof = True;
        tlp.eof = False;
        tlp.hit = 7'h00;
        tlp.be = 16'hffff;
 
-       if (interruptAddrReg[63:32] == '0) begin
+       let sendInterrupt = False;
+       let interruptRequested = interruptRequestedReg;
+
+       if (interruptAddrReg == '0) begin
+	  // do not write to 0 -- it wedges the host
+	  interruptRequested = False;
+       end
+       else if (interruptAddrReg[63:32] == '0) begin
           TLPMemoryIO3DWHeader hdr_3dw = defaultValue();
           hdr_3dw.format = MEM_WRITE_3DW_DATA;
 	  //hdr_3dw.pkttype = MEM_READ_WRITE;
@@ -385,7 +391,8 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	  hdr_3dw.data = byteSwap(interruptDataReg);
 	  tlp.data = pack(hdr_3dw);
 	  tlp.eof = True;
-	  interruptRequestedReg <= False;
+	  sendInterrupt = True;
+	  interruptRequested = False;
        end
        else begin
 	  TLPMemory4DWHeader hdr_4dw = defaultValue;
@@ -400,24 +407,27 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	  hdr_4dw.lastbe = 0;
 	  tlp.data = pack(hdr_4dw);
 
+	  sendInterrupt = True;
 	  interruptSecondHalf <= True;
        end
 
+       if (!interruptRequested)
+	  interruptRequestedReg <= False;
        if (sendInterrupt)
 	  tlpOutFifo.enq(tlp);
     endrule
 
-//    rule interruptTlpDataOut if (interruptSecondHalf);
-//       TLPData#(16) tlp = defaultValue;
-//       tlp.sof = False;
-//       tlp.eof = True;
-//       tlp.hit = 7'h00;
-//       tlp.be = 16'hf000;
-//       tlp.data[7+8*15:8*12] = byteSwap(interruptDataReg);
-//       tlpOutFifo.enq(tlp);
-//       interruptSecondHalf <= False;
-//       interruptRequestedReg <= False;
-//    endrule
+    rule interruptTlpDataOut if (interruptSecondHalf);
+       TLPData#(16) tlp = defaultValue;
+       tlp.sof = False;
+       tlp.eof = True;
+       tlp.hit = 7'h00;
+       tlp.be = 16'hf000;
+       tlp.data[7+8*15:8*12] = byteSwap(interruptDataReg);
+       tlpOutFifo.enq(tlp);
+       interruptSecondHalf <= False;
+       interruptRequestedReg <= False;
+    endrule
 
     interface Put tlp_in;
         method Action put(TLPData#(16) tlp);
@@ -675,13 +685,12 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 		     hitReg <= tlp.hit;
 		     TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
 		     Vector#(4, Bit#(32)) vec = unpack(0);
+		     Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
 		     if (!tlp.sof) begin
-			for (Integer i = 0; i < 4; i = i+1) begin
-			   if (tlp.be[(i+1)*4-1:i*4] == 4'hf) begin
-			      vec[i] = tlp.data[(i+1)*32-1:i*32];
-			   end
-			end
 			let count = tlpWordCount(tlp);
+			for (Integer i = 0; i < count; i = i+1) begin
+			   vec[i] = tlpvec[count-1-i];
+			end
 			completionMimo.enq(count, vec);
 			completionTagMimo.enq(count, replicate(lastTag));
 		     end
