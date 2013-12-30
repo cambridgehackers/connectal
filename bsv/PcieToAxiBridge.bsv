@@ -594,7 +594,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
     Reg#(TLPTag) writeTag <- mkReg(0);
    Reg#(Bool) writeHeaderSent <- mkReg(False);
 
-    function LUInt#(4) tlpWordCount(TLPData#(16) tlp);
+    function Integer tlpWordCount(TLPData#(16) tlp);
        if (tlp.be == 16'h0000)
 	  return 0;
        else if (tlp.be == 16'h000f || tlp.be == 16'hf000)
@@ -688,11 +688,18 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 		     Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
 		     if (!tlp.sof) begin
 			let count = tlpWordCount(tlp);
-			for (Integer i = 0; i < count; i = i+1) begin
-			   vec[i] = tlpvec[count-1-i];
+			// if sof is false, then count will be at least 1
+			function Bit#(32) f(Integer i);
+			begin
+			   if (i < count)
+			      return tlpvec[count-1-i];
+			   else
+			      return 32'hbad0beef;
 			end
-			completionMimo.enq(count, vec);
-			completionTagMimo.enq(count, replicate(lastTag));
+			endfunction
+			vec = genWith(f);
+			completionMimo.enq(fromInteger(count), vec);
+			completionTagMimo.enq(fromInteger(count), replicate(lastTag));
 		     end
 		     else if (hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype == COMPLETION) begin
 			vec[0] = hdr_3dw.data;
