@@ -45,14 +45,17 @@ import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
 
+(* always_ready, always_enabled *)
 interface Pps7Can#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      phy_rx(Bit#(1) v);
     method Bit#(1)     phy_tx();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Core#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      nfiq(Bit#(1) v);
     method Action      nirq(Bit#(1) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Ddr#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      arb(Bit#(4) v);
     interface Inout#(Bit#(15))     addr;
@@ -73,6 +76,7 @@ interface Pps7Ddr#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
     interface Inout#(Bit#(1))     vrp;
     interface Inout#(Bit#(1))     web;
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Dma#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      aclk(Bit#(1) v);
     method Action      daready(Bit#(1) v);
@@ -84,6 +88,7 @@ interface Pps7Dma#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
     method Action      drvalid(Bit#(1) v);
     method Bit#(1)     rstn();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Enet#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      ext_intin(Bit#(1) v);
     method Action      gmii_col(Bit#(1) v);
@@ -111,33 +116,40 @@ interface Pps7Enet#(numeric type c_dm_width, numeric type c_dq_width, numeric ty
     method Bit#(1)     sof_rx();
     method Bit#(1)     sof_tx();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Event#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      eventi(Bit#(1) v);
     method Bit#(1)     evento();
     method Bit#(2)     standbywfe();
     method Bit#(2)     standbywfi();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Fclk#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Bit#(1)     clk0();
     method Bit#(1)     clk1();
     method Bit#(1)     clk2();
     method Bit#(1)     clk3();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Fclk_clktrig#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      n(Bit#(1) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Fclk_reset#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Bit#(1)     n();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Fpga#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      idle_n(Bit#(1) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Ftmd#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      tracein_atid(Bit#(4) v);
     method Action      tracein_clk(Bit#(1) v);
     method Action      tracein_data(Bit#(32) v);
     method Action      tracein_valid(Bit#(1) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Ftmt#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      f2p_debug(Bit#(32) v);
     method Action      f2p_trig(Bit#(4) v);
@@ -146,11 +158,13 @@ interface Pps7Ftmt#(numeric type c_dm_width, numeric type c_dq_width, numeric ty
     method Bit#(4)     p2f_trig();
     method Action      p2f_trigack(Bit#(4) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Gpio#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      i(Bit#(gpio_width) v);
     method Bit#(gpio_width)     o();
     method Bit#(gpio_width)     t();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7I2c#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      scl_i(Bit#(1) v);
     method Bit#(1)     scl_o();
@@ -159,6 +173,7 @@ interface Pps7I2c#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
     method Bit#(1)     sda_o();
     method Bit#(1)     sda_t();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Irq#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      f2p(Bit#(16) v);
     method Bit#(1)     p2f_can0();
@@ -191,6 +206,7 @@ interface Pps7Irq#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
     method Bit#(1)     p2f_usb0();
     method Bit#(1)     p2f_usb1();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7M_axi_gp#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      aclk(Bit#(1) v);
     method Bit#(32)     araddr();
@@ -233,6 +249,7 @@ interface Pps7M_axi_gp#(numeric type c_dm_width, numeric type c_dq_width, numeri
     method Bit#(4)     wstrb();
     method Bit#(1)     wvalid();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Pjtag#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      tck(Bit#(1) v);
     method Action      td_i(Bit#(1) v);
@@ -240,11 +257,13 @@ interface Pps7Pjtag#(numeric type c_dm_width, numeric type c_dq_width, numeric t
     method Bit#(1)     td_t();
     method Action      tms(Bit#(1) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Ps#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     interface Inout#(Bit#(1))     clk;
     interface Inout#(Bit#(1))     porb;
     interface Inout#(Bit#(1))     srstb;
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7S_axi_acp#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      aclk(Bit#(1) v);
     method Action      araddr(Bit#(32) v);
@@ -289,6 +308,7 @@ interface Pps7S_axi_acp#(numeric type c_dm_width, numeric type c_dq_width, numer
     method Action      wstrb(Bit#(8) v);
     method Action      wvalid(Bit#(1) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7S_axi_gp#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      aclk(Bit#(1) v);
     method Action      araddr(Bit#(32) v);
@@ -331,6 +351,7 @@ interface Pps7S_axi_gp#(numeric type c_dm_width, numeric type c_dq_width, numeri
     method Action      wstrb(Bit#(4) v);
     method Action      wvalid(Bit#(1) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7S_axi_hp#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      aclk(Bit#(1) v);
     method Action      araddr(Bit#(32) v);
@@ -379,6 +400,7 @@ interface Pps7S_axi_hp#(numeric type c_dm_width, numeric type c_dq_width, numeri
     method Action      wstrb(Bit#(TDiv#(data_width,8)) v);
     method Action      wvalid(Bit#(1) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Sdio#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Bit#(1)     buspow();
     method Bit#(3)     busvolt();
@@ -394,6 +416,7 @@ interface Pps7Sdio#(numeric type c_dm_width, numeric type c_dq_width, numeric ty
     method Bit#(1)     led();
     method Action      wp(Bit#(1) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Spi#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      miso_i(Bit#(1) v);
     method Bit#(1)     miso_o();
@@ -410,14 +433,17 @@ interface Pps7Spi#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
     method Bit#(1)     ss_o();
     method Bit#(1)     ss_t();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Sram#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      intin(Bit#(1) v);
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Trace#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      clk(Bit#(1) v);
     method Bit#(1)     ctl();
     method Bit#(32)     data();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Ttc#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      clk0_in(Bit#(1) v);
     method Action      clk1_in(Bit#(1) v);
@@ -426,6 +452,7 @@ interface Pps7Ttc#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
     method Bit#(1)     wave1_out();
     method Bit#(1)     wave2_out();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Uart#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      ctsn(Bit#(1) v);
     method Action      dcdn(Bit#(1) v);
@@ -436,15 +463,18 @@ interface Pps7Uart#(numeric type c_dm_width, numeric type c_dq_width, numeric ty
     method Action      rx(Bit#(1) v);
     method Bit#(1)     tx();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Usb#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Bit#(2)     port_indctl();
     method Action      vbus_pwrfault(Bit#(1) v);
     method Bit#(1)     vbus_pwrselect();
 endinterface
+(* always_ready, always_enabled *)
 interface Pps7Wdt#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      clk_in(Bit#(1) v);
     method Bit#(1)     rst_out();
 endinterface
+(* always_ready, always_enabled *)
 interface PPS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     interface Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     can0;
     interface Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     can1;

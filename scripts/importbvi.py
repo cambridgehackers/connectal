@@ -240,6 +240,7 @@ def parse_verilog(filename):
             masterlist.append(f)
 
 def generate_interface(ifname, paramval, ilist):
+    print('(* always_ready, always_enabled *)')
     print('interface ' + ifname + ';')
     for item in ilist:
         itemlen = '1'
