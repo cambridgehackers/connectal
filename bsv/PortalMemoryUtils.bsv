@@ -28,7 +28,7 @@ import Vector::*;
 import Gearbox::*;
 
 import PortalMemory::*;
-import PortalSMemory::*;
+import PortalRMemory::*;
 
 
 interface ReadChan2BRAM#(type a);

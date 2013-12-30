@@ -159,51 +159,6 @@ typedef struct {
 } AddrBurst#(type addrWidth) deriving (Bits);
 
 
-module mkAxiSlaveMux#(Vector#(numInputs,Axi3Slave#(addrWidth, busWidth,busWidthBytes,idWidth)) inputs) (Axi3Slave#(addrWidth, busWidth, busWidthBytes, idWidth))
-   provisos(Add#(nz, TLog#(numInputs), 4));
-
-   Reg#(Bit#(TLog#(numInputs))) ws <- mkReg(0);
-   Reg#(Bit#(TLog#(numInputs))) rs <- mkReg(0);
-   
-   interface Axi3SlaveWrite write;
-      method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-			      Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache,
-			      Bit#(idWidth) awid);
-	 Bit#(TLog#(numInputs)) wsv = truncate(addr[19:16]); 
-	 inputs[wsv].write.writeAddr(addr,burstLen,burstWidth,burstType,burstProt,burstCache,awid);
-	 ws <= wsv;
-      endmethod
-      method Action writeData(Bit#(busWidth) v, Bit#(busWidthBytes) byteEnable, Bit#(1) last, Bit#(idWidth) wid);
-	 inputs[ws].write.writeData(v,byteEnable,last,wid);
-      endmethod
-      method ActionValue#(Bit#(2)) writeResponse();
-	 let rv <- inputs[ws].write.writeResponse;
-	 return rv;
-      endmethod
-      method ActionValue#(Bit#(idWidth)) bid();
-	 let rv <- inputs[ws].write.bid;
-	 return rv;
-      endmethod
-   endinterface
-   interface Axi3SlaveRead read;
-      method Action readAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-			     Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(idWidth) arid);
-	 Bit#(TLog#(numInputs)) rsv = truncate(addr[19:16]); 
-	 inputs[rsv].read.readAddr(addr,burstLen,burstWidth,burstType,burstProt,burstCache,arid);
-	 rs <= rsv;
-      endmethod
-      method Bit#(1) last();
-	 return inputs[rs].read.last;
-      endmethod
-      method Bit#(idWidth) rid();
-         return inputs[rs].read.rid;
-      endmethod
-      method ActionValue#(Bit#(busWidth)) readData();
-	 let rv <- inputs[rs].read.readData;
-	 return rv;
-      endmethod
-   endinterface
-endmodule
 
 module mkAxi4SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
                              (Axi4Slave#(addrWidth, busWidth, busWidthBytes, idWidth)) 

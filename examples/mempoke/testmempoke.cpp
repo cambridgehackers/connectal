@@ -1,4 +1,3 @@
-#include "Mempoke.h"
 #include <stdio.h>
 #include <sys/mman.h>
 #include <string.h>
@@ -6,61 +5,56 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include "StdDMAIndication.h"
 
-CoreRequest *device = 0;
-DMARequest *dma = 0;
-PortalAlloc *dstAlloc;
-unsigned int *dstBuffer = 0;
+#include "DMARequestProxy.h"
+#include "GeneratedTypes.h" 
+#include "MempokeIndicationWrapper.h"
+#include "MempokeRequestProxy.h"
+
 int numWords = 16 << 3;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
-sem_t conf_sem;
+sem_t done_sem;
 
-void dump(const char *prefix, char *buf, size_t len)
-{
-    fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
-	fprintf(stderr, "%02x", (unsigned char)buf[i]);
-    fprintf(stderr, "\n");
-}
 
-class TestDMAIndication : public DMAIndication
+class MempokeIndication : public MempokeIndicationWrapper
 {
-  virtual void reportStateDbg(DmaDbgRec& rec){
-    fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
-  }
-  virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "configResp: %lx\n", channelId);
-    sem_post(&conf_sem);
-  }
-  virtual void sglistResp(unsigned long channelId){
-    fprintf(stderr, "sglistResp: %lx\n", channelId);
-  }
-  virtual void parefResp(unsigned long channelId){
-    fprintf(stderr, "parefResp: %lx\n", channelId);
-  }
-};
+public:
+  MempokeIndication(const char* devname, unsigned int addrbits) : MempokeIndicationWrapper(devname,addrbits){}
 
-class TestCoreIndication : public CoreIndication
-{
-  virtual void readWordResult (S0 &s){
+  virtual void readWordResult (const S0 &s){
     fprintf(stderr, "readWordResult(S0{a:%ld,b:%ld})\n", s.a, s.b);
+    sem_post(&done_sem);    
   }
-  virtual void writeWordResult (S0 &s){
+  virtual void writeWordResult (const S0 &s){
     fprintf(stderr, "writeWordResult(S0{a:%ld,b:%ld})\n", s.a, s.b);
+    sem_post(&done_sem);    
   }
 };
 
 int main(int argc, const char **argv)
 {
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  device = CoreRequest::createCoreRequest(new TestCoreIndication);
-  dma = DMARequest::createDMARequest(new TestDMAIndication);
+  MempokeRequestProxy *device = 0;
+  DMARequestProxy *dma = 0;
+  
+  MempokeIndication *deviceIndication = 0;
+  DMAIndication *dmaIndication = 0;
 
-  if(sem_init(&conf_sem, 1, 0)){
-    fprintf(stderr, "failed to init conf_sem\n");
-    return -1;
+  PortalAlloc *dstAlloc;
+  unsigned int *dstBuffer = 0;
+
+  if(sem_init(&done_sem, 1, 0)){
+    fprintf(stderr, "failed to init done_sem\n");
+    exit(1);
   }
+
+  device = new MempokeRequestProxy("fpga1", 16);
+  dma = new DMARequestProxy("fpga3", 16);
+
+  deviceIndication = new MempokeIndication("fpga2", 16);
+  dmaIndication = new DMAIndication("fpga4", 16);
 
   fprintf(stderr, "allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);
@@ -81,22 +75,13 @@ int main(int argc, const char **argv)
     
   dma->dCacheFlushInval(dstAlloc, dstBuffer);
   fprintf(stderr, "flush and invalidate complete\n");
-      
-  dma->configChan(1, 0, ref_dstAlloc, 2);
-  sem_wait(&conf_sem);
-  
-  dma->configChan(0, 0, ref_dstAlloc, 2);
-  sem_wait(&conf_sem);
-
   fprintf(stderr, "main about to issue requests\n");
 
-  device->readWord(5*8);
-  sleep(1);
+  device->readWord(ref_dstAlloc, 5*8);
+  sem_wait(&done_sem);
   S0 s = {3,4};
-  device->writeWord(6*8,s);
-  sleep(1);
-  device->readWord(6*8);
-  
-  fprintf(stderr, "main going to sleep\n");
-  while(true){sleep(1);}
+  device->writeWord(ref_dstAlloc, 6*8, s);
+  sem_wait(&done_sem);
+  device->readWord(ref_dstAlloc, 6*8);
+  sem_wait(&done_sem);
 }

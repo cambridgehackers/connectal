@@ -30,7 +30,7 @@ static void recv_request(bool rr)
   struct queuestatus* head = rr ? &read_head : &write_head;
   if (!head->valid && !head->inflight){
     for(int i = 0; i < 16; i++){
-      struct channel* chan = rr ? &(portals[i].read) : & (portals[i].write);
+      struct channel* chan = rr ? &(portals[i].read) : &(portals[i].write);
       if(chan->connected){
 	int rv = recv(chan->s2, &(head->req), sizeof(memrequest), MSG_DONTWAIT);
 	if(rv > 0){
@@ -69,12 +69,12 @@ extern "C" {
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)rc)){
       fprintf(stderr, "error creating init thread\n");
-      exit(1);
+      //exit(1);
     }
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)wc)){
       fprintf(stderr, "error creating init thread\n");
-      exit(1);
+      //exit(1);
     }
   }
 
@@ -112,7 +112,7 @@ extern "C" {
     read_head.inflight = false;
     if(send(portals[read_head.pnum].read.s2, &x, sizeof(x), 0) == -1){
       fprintf(stderr, "(%d) send failure", read_head.pnum);
-      exit(1);
+      //exit(1);
     }
   }
 

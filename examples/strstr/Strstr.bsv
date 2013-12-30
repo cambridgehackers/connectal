@@ -28,29 +28,16 @@ import BRAM::*;
 import Gearbox::*;
 
 import AxiClientServer::*;
-import AxiSDMA::*;
-import BsimSDMA::*;
 import PortalMemory::*;
-import PortalSMemory::*;
+import PortalRMemory::*;
 import PortalSMemoryUtils::*;
 
-interface CoreRequest;
+interface StrstrRequest;
    method Action search(Bit#(32) needle_len, Bit#(32) haystack_len);
 endinterface
 
-interface CoreIndication;
-   method Action searchResult(Int#(32) v);
-endinterface
-
-interface StrstrRequest;
-   interface Axi3Client#(40,64,8,12) m_axi;
-   interface CoreRequest coreRequest;
-   interface DMARequest dmaRequest;
-endinterface
-
 interface StrstrIndication;
-   interface CoreIndication coreIndication;
-   interface DMAIndication dmaIndication;
+   method Action searchResult(Int#(32) v);
 endinterface
 
 typedef Bit#(8) Char;
@@ -62,17 +49,10 @@ typedef Bit#(TLog#(MaxNeedleLen)) NeedleIdx;
 
 typedef enum {Idle, Init, Run} Stage deriving (Eq, Bits);
 
-module mkStrstrRequest#(StrstrIndication indication)(StrstrRequest);
-   
-`ifdef BSIM
-   BsimDMA  dma <- mkBsimDMA(indication.dmaIndication);
-`else
-   AxiDMA   dma <- mkAxiDMA(indication.dmaIndication);
-`endif
-
-   ReadChan   haystack_read_chan = dma.read.readChannels[0];
-   ReadChan     needle_read_chan = dma.read.readChannels[1];
-   ReadChan    mp_next_read_chan = dma.read.readChannels[2];
+module mkStrstrRequest#(StrstrIndication indication,
+			ReadChan   haystack_read_chan,
+			ReadChan     needle_read_chan,
+			ReadChan    mp_next_read_chan )(StrstrRequest);
    
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
@@ -164,18 +144,12 @@ module mkStrstrRequest#(StrstrIndication indication)(StrstrRequest);
       end
    endrule
    
-   interface CoreRequest coreRequest;
-      method Action search(Bit#(32) needle_len, Bit#(32) haystack_len) if (stage == Idle);
-	 $display("search %h %h", needle_len, haystack_len);
-	 needleLenReg <= needle_len;
-	 haystackLenReg <= haystack_len;
-	 n2b.start(pack(truncate(needle_len)));
-	 mp2b.start(pack(truncate(needle_len)));
-	 stage <= Init;
-      endmethod
-   endinterface
-`ifndef BSIM
-   interface Axi3Client m_axi = dma.m_axi;
-`endif
-   interface DMARequest dmaRequest = dma.request;
+   method Action search(Bit#(32) needle_len, Bit#(32) haystack_len) if (stage == Idle);
+      $display("search %h %h", needle_len, haystack_len);
+      needleLenReg <= needle_len;
+      haystackLenReg <= haystack_len;
+      n2b.start(pack(truncate(needle_len)));
+      mp2b.start(pack(truncate(needle_len)));
+      stage <= Init;
+   endmethod
 endmodule

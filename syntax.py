@@ -4,8 +4,6 @@ import AST
 import sys
 import os
 
-exportlist = []
-
 tokens = (
     'AMPER',
     'AMPERAMPER',
@@ -406,7 +404,7 @@ def p_parenthesizedFormalParams(p):
 
 def p_methodDecl(p):
     '''methodDecl : TOKMETHOD type VAR parenthesizedFormalParams SEMICOLON'''
-    p[0] = AST.Method(p[3], p[2], p[4],False)
+    p[0] = AST.Method(p[3], p[2], p[4])
 
 def p_interfaceStmt(p):
     '''interfaceStmt : subinterfaceDecl
@@ -553,7 +551,7 @@ def p_methodDef(p):
     returnType = p[2]
     name = p[3]
     params = []
-    p[0] = AST.Method(name, returnType, params,False)
+    p[0] = AST.Method(name, returnType, params)
 
 def p_methodBody(p):
     '''methodBody : expressionStmts endMethod
@@ -762,11 +760,8 @@ def p_packageStmt(p):
                    | macroDef
                    | typeDef'''
     decl = p[1]
-    # don't expose 'export' interfaces as 'request' interfaces
-    if decl.type != 'Interface' or decl.name not in exportlist:
-        globaldecls.append(decl)
-        globalvars[decl.name] = decl
-    p[0] = decl
+    globaldecls.append(decl)
+    globalvars[decl.name] = decl
 
 def p_packageStmts(p):
     '''packageStmts :
@@ -789,10 +784,6 @@ if 0:
     lexer.input(data)
     for tok in lexer:
         print tok
-
-def exposeInterfaces(aexportlist):
-    global exportlist
-    exportlist = aexportlist
 
 def parse(data):
     lexer = lex.lex(errorlog=lex.NullLogger())

@@ -28,6 +28,7 @@ import ClientServer::*;
 import BRAMFIFO::*;
 import BRAM::*;
 import PortalMemory::*;
+import StmtFSM::*;
 
 // In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
 typedef 4 NumSGLists;
@@ -73,15 +74,23 @@ module mkSGListStreamer(SGListStreamer);
       return mkReg(p);
    endfunction
    
-   BRAM1Port#(SGListIdx, SGListEntry)         listMem <- mkBRAM1Server(defaultValue);
+   BRAM1Port#(SGListIdx, Maybe#(SGListEntry)) listMem <- mkBRAM1Server(defaultValue);
    Vector#(NumSGLists, Reg#(SGListPointer))  listPtrs <- genWithM(foo);
    Vector#(NumSGLists, Reg#(SGListIdx))      listEnds <- genWithM(bar);
    FIFOF#(SGListId)                          loadReqs <- mkFIFOF;
+   Reg#(SGListIdx)                            initPtr <- mkReg(0);
+   Reg#(Bool)                             initialized <- mkReg(False);
+
+   mkAutoFSM(
+      seq
+   	 initialized <= True;
+      endseq
+      );
    
    method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
       let off = listEnds[pref-1];
       listEnds[pref-1] <= off+1;
-      let entry = SGListEntry{address:addr, length:len};
+      let entry = tagged Valid SGListEntry{address:addr, length:len};
       listMem.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(off), datain:entry});
    endmethod
    
@@ -90,14 +99,15 @@ module mkSGListStreamer(SGListStreamer);
       loadReqs.enq(id);
    endmethod
    
-   // I should think of a better way of handling the case of mis-alignment 
-   // between burst lengths and the sizes of the blocks in the SG list (mdk)
    method ActionValue#(Bit#(40)) nextAddr(Bit#(4) burstLen);
       loadReqs.deq;
-      let rv <- listMem.portA.response.get;
+      let mrv <- listMem.portA.response.get;
       let id = loadReqs.first;
       let lp = listPtrs[id-1];
       let new_offset = ((zeroExtend(burstLen)+1) << 3) + lp.offset;
+      let rv = fromMaybe(?, mrv);
+      if (!isValid(mrv))
+	 $display("mkSGListStreamer::nextAddr has gone off the reservation");
       if(new_offset < rv.length)
 	 listPtrs[id-1] <= SGListPointer{entry:lp.entry, offset:new_offset};
       else if (new_offset == rv.length)
@@ -130,14 +140,21 @@ typedef 12 SGListPageShift;
 // if this structure becomes too expensive, we can switch to a multi-level structure
 module mkSGListMMU(SGListMMU);
 
-   Vector#(NumSGLists, BRAM1Port#(PageIdx, Bit#(TSub#(40,SGListPageShift)))) pageTables <- replicateM(mkBRAM1Server(defaultValue));
+   Vector#(NumSGLists, BRAM1Port#(PageIdx, Maybe#(Bit#(TSub#(40,SGListPageShift))))) pageTables <- replicateM(mkBRAM1Server(defaultValue));
    FIFOF#(Bit#(SGListPageShift)) offs <- mkFIFOF;
    FIFOF#(SGListId) ids  <- mkFIFOF;
+   Reg#(Bool) initialized <- mkReg(False);
    
    let page_shift = fromInteger(valueOf(SGListPageShift));
-
+   
+   mkAutoFSM(
+      seq
+   	 initialized <= True;
+      endseq
+      );
+   
    method Action page(SGListId id, Bit#(32) off, Bit#(40) addr);
-      pageTables[id].portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(off), datain:truncate(addr)});
+      pageTables[id].portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(off), datain:tagged Valid truncate(addr)});
    endmethod
 
    method Action addrReq(SGListId id, Bit#(40) off);
@@ -149,7 +166,10 @@ module mkSGListMMU(SGListMMU);
    method ActionValue#(Bit#(40)) addrResp();
       ids.deq;
       offs.deq;
-      let rv <- pageTables[ids.first].portA.response.get;
+      let mrv <- pageTables[ids.first].portA.response.get;
+      let rv = fromMaybe(?,mrv);
+      if (!isValid(mrv))
+	 $display("mkSGListMMU::addrResp has gone off the reservation");
       return {rv,offs.first};
    endmethod
    

@@ -1,4 +1,3 @@
-#include "Memwrite.h"
 #include <stdio.h>
 #include <sys/mman.h>
 #include <string.h>
@@ -6,55 +5,39 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
-
 #include "sock_fd.h"
+#include "StdDMAIndication.h"
+
+#include "DMARequestProxy.h"
+#include "GeneratedTypes.h" 
+#include "MemwriteIndicationWrapper.h"
+#include "MemwriteRequestProxy.h"
 
 int numWords = 16 << 3;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 sem_t done_sem;
-sem_t conf_sem;
 
-void dump(const char *prefix, char *buf, size_t len)
-{
-    fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
-	fprintf(stderr, "%02x", (unsigned char)buf[i]);
-    fprintf(stderr, "\n");
-}
 
-class TestDMAIndication : public DMAIndication
+class MemwriteIndication : public MemwriteIndicationWrapper
 {
-  virtual void reportStateDbg(const DmaDbgRec& rec){
-    fprintf(stderr, "DMA::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
-  }
-  virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "DMA::configResp: %lx\n", channelId);
-    sem_post(&conf_sem);
-  }
-  virtual void sglistResp(unsigned long channelId){
-    fprintf(stderr, "DMA::sglistResp: %lx\n", channelId);
-  }
-  virtual void parefResp(unsigned long channelId){
-    fprintf(stderr, "DMA::parefResp: %lx\n", channelId);
-  }
-};
+public:
+  MemwriteIndication(const char* devname, unsigned int addrbits) : MemwriteIndicationWrapper(devname,addrbits){}
 
-class TestCoreIndication : public CoreIndication
-{
   virtual void writeReq(unsigned long v){
-    //fprintf(stderr, "Core::writeReq %lx\n", v);
+    //fprintf(stderr, "Memwrite::writeReq %lx\n", v);
   }
   virtual void started(unsigned long words){
-    fprintf(stderr, "Core::started: words=%lx\n", words);
+    fprintf(stderr, "Memwrite::started: words=%lx\n", words);
   }
   virtual void writeDone ( unsigned long srcGen ){
-    fprintf(stderr, "Core::writeDone (%08lx)\n", srcGen);
+    fprintf(stderr, "Memwrite::writeDone (%08lx)\n", srcGen);
     sem_post(&done_sem);    
   }
   virtual void reportStateDbg(unsigned long streamWrCnt, unsigned long srcGen){
-    fprintf(stderr, "Core::reportStateDbg: streamWrCnt=%08lx srcGen=%ld\n", streamWrCnt, srcGen);
+    fprintf(stderr, "Memwrite::reportStateDbg: streamWrCnt=%08lx srcGen=%ld\n", streamWrCnt, srcGen);
   }  
+
 };
 
 void child(int rd_sock)
@@ -78,8 +61,13 @@ void child(int rd_sock)
 
 void parent(int rd_sock, int wr_sock)
 {
-  CoreRequest *device = 0;
-  DMARequest *dma = 0;
+
+  MemwriteRequestProxy *device = 0;
+  DMARequestProxy *dma = 0;
+  
+  MemwriteIndication *deviceIndication = 0;
+  DMAIndication *dmaIndication = 0;
+
   PortalAlloc *dstAlloc;
   unsigned int *dstBuffer = 0;
   
@@ -87,14 +75,14 @@ void parent(int rd_sock, int wr_sock)
     fprintf(stderr, "failed to init done_sem\n");
     exit(1);
   }
-  if(sem_init(&conf_sem, 1, 0)){
-    fprintf(stderr, "failed to init conf_sem\n");
-    exit(1);
-  }
 
   fprintf(stderr, "parent::%s %s\n", __DATE__, __TIME__);
-  device = CoreRequest::createCoreRequest(new TestCoreIndication);
-  dma = DMARequest::createDMARequest(new TestDMAIndication);
+
+  device = new MemwriteRequestProxy("fpga1", 16);
+  dma = new DMARequestProxy("fpga3", 16);
+
+  deviceIndication = new MemwriteIndication("fpga2", 16);
+  dmaIndication = new DMAIndication("fpga4", 16);
   
   fprintf(stderr, "parent::allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);
@@ -116,12 +104,8 @@ void parent(int rd_sock, int wr_sock)
   dma->dCacheFlushInval(dstAlloc, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
-  // write channel 0 is write source
-  dma->configChan(ChannelType_Write, 0, ref_dstAlloc, 8);
-  sem_wait(&conf_sem);
-
   fprintf(stderr, "parent::starting write %08x\n", numWords);
-  device->startWrite(numWords);
+  device->startWrite(ref_dstAlloc, numWords);
 
   sem_wait(&done_sem);
   

@@ -18,7 +18,7 @@
 static struct portal p_fd = iport;
 static int fd[16];
 static unsigned long long *buffer[16];
-static int ptr[16];
+static unsigned long buffer_len[16];
 
 extern "C" {
 
@@ -39,22 +39,25 @@ extern "C" {
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)rc)){
       fprintf(stderr, "error creating init thread\n");
-      exit(1);
+      //exit(1);
     }
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)wc)){
       fprintf(stderr, "error creating init thread\n");
-      exit(1);
+      //exit(1);
     }
 
   }
 
   void write_pareff(unsigned long pref, unsigned long offset, unsigned long long data){
+    if(buffer_len[pref-1] <= offset)
+      fprintf(stderr, "write_pareff(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
     buffer[pref-1][offset] = data;
-    //fprintf(stderr, "write_pareff(%08lx, %08lx, %016llx) [%ld]\n", pref, offset, data, fd[pref]);
   }
 
   unsigned long long read_pareff(unsigned long pref, unsigned long offset){
+    if(buffer_len[pref-1] <= offset)
+      fprintf(stderr, "read_pareff(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
     return buffer[pref-1][offset];
   }
 
@@ -62,8 +65,8 @@ extern "C" {
     assert(pref < 16);
     sock_fd_read(p_fd.write.s2, &(fd[pref-1]));
     buffer[pref-1] = (unsigned long long *)mmap(0, size, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref-1], 0);
-    // fprintf(stderr, "BsimDMA::pareff pref=%ld, buffer=%08lx\n", pref, buffer[pref]);
-    ptr[pref-1] = 0;
+    //fprintf(stderr, "BsimDMA::pareff pref=%ld, buffer=%08lx\n", pref, buffer[pref]);
+    buffer_len[pref-1] = size/sizeof(unsigned long long);
   }
 
 }

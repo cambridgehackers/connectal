@@ -82,7 +82,7 @@ set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 # Please refer to the Virtex-7 GT Transceiver User Guide
 # (UG) for guidelines regarding clock resource selection.
 #
-set_property LOC IBUFDS_GTE2_X1Y5  [get_cells { x7pcie_pci_clk_100mhz_buf }]
+set_property LOC IBUFDS_GTE2_X1Y5  [get_cells { *x7pcie_pci_clk_100mhz_buf }]
 
 set_property LOC MMCME2_ADV_X1Y2 [get_cells -hier -filter { NAME =~ */ext_clk.pipe_clock_i/mmcm_i }]
 set_property LOC MMCME2_ADV_X1Y1 [get_cells -hier -filter { NAME =~ *clkgen_pll }]
@@ -162,17 +162,8 @@ set_property LOC RAMB36_X14Y19 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i
 # TIMING CONSTRAINTS
 ######################################################################################################
 
-create_clock -name pci_refclk -period 10 [get_pins x7pcie_pci_clk_100mhz_buf/O]
-create_clock -name pci_extclk -period 10 [get_pins x7pcie_pcie_ep/pcie_7x_v2_1_i/PIPE_TXOUTCLK_OUT]
-
-create_generated_clock -name clk_125mhz -source [get_pins x7pcie_pcie_ep/pcie_7x_v2_1_i/PIPE_TXOUTCLK_OUT] -edges {1 2 3} -edge_shift {0 -1 -2} [get_pins */ext_clk.pipe_clock_i/mmcm_i/CLKOUT0]
-
-create_generated_clock -name clk_250mhz -source [get_pins x7pcie_pcie_ep/pcie_7x_v2_1_i/PIPE_TXOUTCLK_OUT] -edges {1 2 3} -edge_shift {0 -3 -6} [get_pins */ext_clk.pipe_clock_i/mmcm_i/CLKOUT1]
-
-
-create_generated_clock -name clk_userclk -source [get_pins x7pcie_pcie_ep/pcie_7x_v2_1_i/PIPE_TXOUTCLK_OUT] -edges {1 2 3} -edge_shift {0 -3 -6} [get_pins */ext_clk.pipe_clock_i/mmcm_i/CLKOUT2]
-
-create_generated_clock -name clk_userclk2 -source [get_pins x7pcie_pcie_ep/pcie_7x_v2_1_i/PIPE_TXOUTCLK_OUT] -edges {1 2 3} -edge_shift {0 -3 -6} [get_pins */ext_clk.pipe_clock_i/mmcm_i/CLKOUT3]
+create_clock -name pci_refclk -period 10 [get_pins *x7pcie_pci_clk_100mhz_buf/O]
+create_clock -name pci_extclk -period 10 [get_pins *x7pcie_pcie_ep/pcie_7x_v2_1_i/PIPE_TXOUTCLK_OUT]
 
 #set_false_path -through [get_nets {*/pcie_7x_v2_1_i/gt_top_i/pipe_wrapper_i/user_resetdone*}]
 set_false_path -through [get_nets {*/pcie_7x_v2_1_i/gt_top_i/pipe_wrapper_i/pipe_lane[0].pipe_rate.pipe_rate_i/*}]

@@ -33,10 +33,9 @@ typedef enum {
    } ChannelType deriving (Bits,Eq,FShow);
 
 //
-// @brief Number of DMA channels supported
+// @brief Channel Identifier
 //
-typedef 4 NumDmaChannels;
-typedef Bit#(TLog#(NumDmaChannels)) DmaChannelId;
+typedef Bit#(16) DmaChannelId;
 
 typedef struct {
    Bit#(32) x;
@@ -50,24 +49,16 @@ typedef struct {
 //
 interface DMAIndication;
    method Action reportStateDbg(DmaDbgRec rec);
-   method Action configResp(Bit#(32) channelId);
-   method Action sglistResp(Bit#(32) v);
+   method Action sglistResp(Bit#(32) pref, Bit#(32) idx);
    method Action parefResp(Bit#(32) v);
+   method Action sglistEntry(Bit#(64) physAddr);
+   method Action badAddr(Bit#(32) handle, Bit#(40) address);
 endinterface
 
 //
 // @brief Configuration interface to DMA engine
 //
 interface DMARequest;
-
-   //
-   // @brief Configure a DMA channel
-   //
-   // @param rc Channel type (Read or Write)
-   // @param channelId Number of the channel to configure
-   // @param pref
-   // @param bsz
-   method Action configChan(ChannelType rc, Bit#(32) channelId, Bit#(32) pref, Bit#(32) bsz);
 
    //
    // @brief Requests debug info for the specified channel type
@@ -92,6 +83,8 @@ interface DMARequest;
    //
    // @note Only implemented for software 
    method Action paref(Bit#(32) pref, Bit#(32) size);
+
+   method Action readSglist(ChannelType rc, Bit#(32) pref, Bit#(64) addr);
 endinterface
 
 //

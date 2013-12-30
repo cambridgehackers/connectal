@@ -45,7 +45,7 @@ typedef struct{
    E1 e1;
    } S3 deriving (Bits);
 
-interface CoreIndication;
+interface StructIndication;
     method Action heard1(Bit#(32) v);
     method Action heard2(Bit#(16) a, Bit#(16) b);
     method Action heard3(S1 v);
@@ -55,7 +55,7 @@ interface CoreIndication;
     method Action heard7(Bit#(32) a, E1 e1);
 endinterface
 
-interface CoreRequest;
+interface StructRequest;
     method Action say1(Bit#(32) v);
     method Action say2(Bit#(16) a, Bit#(16) b);
     method Action say3(S1 v);
@@ -63,14 +63,6 @@ interface CoreRequest;
     method Action say5(Bit#(32)a, Bit#(64) b, Bit#(32) c);
     method Action say6(Bit#(32)a, Bit#(40) b, Bit#(32) c);
     method Action say7(S3 v);
-endinterface
-
-interface StructRequest;
-   interface CoreRequest coreRequest;
-endinterface
-
-interface StructIndication;
-   interface CoreIndication coreIndication;
 endinterface
 
 typedef struct {
@@ -82,43 +74,41 @@ typedef struct {
 
 module mkStructRequest#(StructIndication indication)(StructRequest);
 
-   interface CoreRequest coreRequest; 
    method Action say1(Bit#(32) v);
-      indication.coreIndication.heard1(v);
+      indication.heard1(v);
       $display("(hw) say1 %d", v);
    endmethod
    
    method Action say2(Bit#(16) a, Bit#(16) b);
-      indication.coreIndication.heard2(a,b);
+      indication.heard2(a,b);
       $display("(hw) say2 %d %d", a, b);
    endmethod
       
    method Action say3(S1 v);
-      indication.coreIndication.heard3(v);
+      indication.heard3(v);
       $display("(hw) say3 S1{a:%d, b:%d}", v.a, v.b);
    endmethod
    
    method Action say4(S2 v);
-      indication.coreIndication.heard4(v);
+      indication.heard4(v);
       $display("(hw) say4 S1{a:%d, b:%d, c:%d}", v.a, v.b, v.c);
    endmethod
       
    method Action say5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
-      indication.coreIndication.heard5(a, b, c);
+      indication.heard5(a, b, c);
       $display("(hw) say5 %h %h %h", a, b, c);
    endmethod
 
    method Action say6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
-      indication.coreIndication.heard6(a, b, c);
+      indication.heard6(a, b, c);
       $display("(hw) say6 %h %h %h", a, b, c);
       // Say6ReqStruct rs = Say6ReqStruct{a:32'hBBBBBBBB, b:40'hEFFECAFECA, c:32'hCCCCCCCC};
       // $display("(hw) say6 %h", pack(rs));
-      // indication.coreIndication.heard6(rs.a, rs.b, rs.c);
+      // indication.heard6(rs.a, rs.b, rs.c);
    endmethod
 
    method Action say7(S3 v);
-      indication.coreIndication.heard7(v.a, v.e1);
+      indication.heard7(v.a, v.e1);
    endmethod
-   endinterface
 
 endmodule

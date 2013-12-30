@@ -9,6 +9,9 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <bitset>
+#include <assert.h>
+#include <semaphore.h>
+#include <pthread.h>
 
 #include "drivers/portalmem/portalmem.h"
 #include "drivers/zynqportal/zynqportal.h"
@@ -21,7 +24,11 @@ struct memrequest{
   unsigned int data;
 };
 
-class PortalMessage {
+unsigned int read_portal(portal *p, unsigned int addr, char *name);
+void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
+
+class PortalMessage 
+{
  public:
   size_t channel;
   // size of bsv bit-representation in bytes
@@ -35,72 +42,85 @@ class PortalMessage {
   virtual ~PortalMessage() {};
 }; 
 
-class PortalRequest;
-
-class PortalIndication {
- public:
-#ifdef MMAP_HW
-  virtual int handleMessage(unsigned int channel, volatile unsigned int* ind_fifo_base) { return 0; };
-#else
-  virtual int handleMessage(unsigned int channel, PortalRequest* request) { return 0; };
-#endif
-  virtual ~PortalIndication() {};
-};
-
-class PortalRequest {
-public:
-    int sendMessage(PortalMessage *msg);
-    void close();
-protected:
-    PortalIndication *indication;
-    PortalRequest(const char *name, PortalIndication *indication=0);
-    PortalRequest();
-    virtual ~PortalRequest();
-    int open();
- public:
-    int fd;
-    struct portal p;
-#ifdef MMAP_HW
-    volatile unsigned int *ind_reg_base;
-    volatile unsigned int *ind_fifo_base;
-    volatile unsigned int *req_reg_base;
-    volatile unsigned int *req_fifo_base;
-#else
-    unsigned int ind_reg_base;
-    unsigned int ind_fifo_base;
-    unsigned int req_reg_base;
-    unsigned int req_fifo_base;
-#endif
-    char *name;
-    static int registerInstance(PortalRequest *request);
-    static int unregisterInstance(PortalRequest *request);
-    friend void* portalExec(void* __x);
-    static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-};
-
 void* portalExec(void* __x);
 
-class PortalMemory : public PortalRequest {
+class Portal
+{
+ public:
+  int open(int length);
+  void close();
+  Portal(int id);
+  Portal(const char *name, unsigned int addrbits);
+  ~Portal();
+  int fd;
+  struct portal p;
+  char *name;
+#ifdef MMAP_HW
+  volatile unsigned int *ind_reg_base;
+  volatile unsigned int *ind_fifo_base;
+  volatile unsigned int *req_reg_base;
+  volatile unsigned int *req_fifo_base;
+#else
+  unsigned int ind_reg_base;
+  unsigned int ind_fifo_base;
+  unsigned int req_reg_base;
+  unsigned int req_fifo_base;
+#endif
+  int sendMessage(PortalMessage *msg);
+  static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
+};
+
+class Directory : public Portal
+{
+ public:
+  Directory(const char* devname, unsigned int addrbits);
+  void print();
+};
+
+class PortalWrapper : public Portal
+{
+ private:
+  int registerInstance();
+  int unregisterInstance();
+ public:
+  ~PortalWrapper();
+  PortalWrapper(int id);
+  PortalWrapper(const char* devname, unsigned int addrbits);
+  virtual int handleMessage(unsigned int channel) = 0;
+};
+
+class PortalProxy : public Portal
+{
+ public:
+  ~PortalProxy();
+  PortalProxy(int id);
+  PortalProxy(const char *devname, unsigned int addrbits);
+};
+
+class PortalMemory : public PortalProxy 
+{
  private:
   int handle;
+  bool sglistCallbackRegistered;
+  sem_t sglistSem;
 #ifndef MMAP_HW
   portal p_fd;
 #endif
- protected:
-  PortalMemory(const char* name, PortalIndication *indication=0);
-  PortalMemory();
  public:
+  PortalMemory(int id);
+  PortalMemory(const char *devname, unsigned int addrbits);
   int pa_fd;
   void *mmap(PortalAlloc *portalAlloc);
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
   int alloc(size_t size, PortalAlloc **portalAlloc);
   int reference(PortalAlloc* pa);
+  void sglistResp(unsigned long channelId);
+  void useSemaphore() { sglistCallbackRegistered = true; }
   virtual void sglist(unsigned long pref, unsigned long long addr, unsigned long len) = 0;
   virtual void paref(unsigned long pref, unsigned long size) = 0;
 };
 
 // ugly hack (mdk)
 typedef int SGListId;
-
 
 #endif // _PORTAL_H_

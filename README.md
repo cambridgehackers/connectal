@@ -72,6 +72,7 @@ Echo Example
     . Xilinx/Vivado/2013.2/settings64.sh
 
     ./genxpsprojfrombsv -B zedboard -p echoproj-s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv
+    ./genxpsprojfrombsv -B zedboard -p echo2proj -x mkZynqTop -s2h Say -h2s Say -s examples/echo2/test.cpp examples/echo2/Say.bsv  -t examples/echo2/Top.bsv -V verilog
 or
     ./genxpsprojfrombsv -B zc702 -p echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv
 or

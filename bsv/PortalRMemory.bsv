@@ -21,113 +21,141 @@
 // SOFTWARE.
 
 
+// BSV Libraries
+import FIFOF::*;
+import Adapter::*;
 import GetPut::*;
 import Vector::*;
+import ClientServer::*;
+import BRAMFIFO::*;
+
+// XBSV Libraries
 import PortalMemory::*;
+import BRAMFIFOFLevel::*;
 
-function ReadChan#(t) mkReadChan(Get#(t) rd, Put#(Bit#(40)) rr);
-   return (interface ReadChan;
-	      interface Get readData = rd;
-	      interface Put readReq  = rr;
-	   endinterface);
-endfunction
+typedef Bit#(32) DmaMemHandle;
 
-function WriteChan#(t) mkWriteChan(Put#(t) wd, Put#(Bit#(40)) wr, Get#(void) d);
-   return (interface WriteChan;
-	      interface Put writeData = wd;
-	      interface Put writeReq  = wr;
-	      interface Get writeDone = d;
-	   endinterface);
-endfunction
+typedef struct {
+   DmaMemHandle handle;
+   Bit#(40)  address;
+   Bit#(8) burstLen;
+   Bit#(8)  tag;
+   } DMAAddressRequest deriving (Bits);
+typedef struct {
+   Bit#(dsz) data;
+   Bit#(8) tag;
+   } DMAData#(numeric type dsz) deriving (Bits);
 
-//
-// @brief A channel for reading an object of type t from DRAM
-//
-//
-// @param t The type of object to write.
-//
-// @note The size of t must be a multiple of 64 bits.
-//
-// Put the index of the next object desired to the readReq interface
-//
-// @param index The number of the next object to read
-//
-// The virtual address of the object will be 
-//     base + index*objectsize
-// where objectsize is in bytes and base is
-// configured via the configChan method
-//
-// Get the object from the readData interface
-//
-interface ReadChan#(type t);
-   //
-   // Returns the next object
-   //
-   interface Put#(Bit#(40)) readReq;
-   interface Get#(t)        readData;
+interface DMAReadClient#(numeric type dsz);
+   interface Get#(DMAAddressRequest)    readReq;
+   interface Put#(DMAData#(dsz)) readData;
+endinterface
+
+interface DMAWriteClient#(numeric type dsz);
+   interface Get#(DMAAddressRequest)    writeReq;
+   interface Get#(DMAData#(dsz)) writeData;
+   interface Put#(Bit#(8))       writeDone;
+endinterface
+
+interface DMAReadServer#(numeric type dsz);
+   interface Put#(DMAAddressRequest) readReq;
+   interface Get#(DMAData#(dsz))     readData;
+endinterface
+
+interface DMAWriteServer#(numeric type dsz);
+   interface Put#(DMAAddressRequest) writeReq;
+   interface Put#(DMAData#(dsz))     writeData;
+   interface Get#(Bit#(8))           writeDone;
 endinterface
 
 //
-// @brief A channel for writing an object of type t to DRAM
+// @brief A buffer for reading from a bus of width bsz.
 //
-// @param t The type of object to write.
+// @param bsz The number of bits in the bus.
+// @param maxBurst The number of words to buffer
 //
-// @note The size of t must be a multiple of 64 bits.
-//
-// Put the index of the next object desired to the writeReq interface
-//
-// @param index The number of the next object to write
-//
-// The virtual address of the object will be 
-//     base + index*objectsize
-// where objectsize is in bytes and base is
-// configured via the configChan method
-//
-// Put the object to the writeData interface.
-//
-// Get a void value from the writeDone interface when the write has completed.
-//
-interface WriteChan#(type t);
-   interface Put#(t)        writeData;
-   interface Put#(Bit#(40)) writeReq;
-   interface Get#(void)     writeDone;
+interface DMAReadBuffer#(numeric type bsz, numeric type maxBurst);
+   interface DMAReadServer #(bsz) dmaServer;
+   interface DMAReadClient#(bsz) dmaClient;
 endinterface
 
 //
-// @brief A DMA engine for reading objects of type t
+// @brief A buffer for writing to a bus of width bsz.
 //
-// @param t The type of object to write.
+// @param bsz The number of bits in the bus.
+// @param maxBurst The number of words to buffer
 //
-// @note The size of t must be a multiple of 64 bits.
-interface DMARead#(type t);
+interface DMAWriteBuffer#(numeric type bsz, numeric type maxBurst);
+   interface DMAWriteServer#(bsz) dmaServer;
+   interface DMAWriteClient#(bsz) dmaClient;
+endinterface
 
-   //
-   // @brief Configure a DMA read channel
-   //
-   // @param channelId The number of the channel to configure
-   // @param pref The something
-   method Action configChan(DmaChannelId channelId, Bit#(32) pref);
-   interface Vector#(NumDmaChannels, ReadChan#(t)) readChannels;
+//
+// @brief Makes a DMA buffer for reading wordSize words from memory.
+//
+// @param dsz The width of the bus in bits.
+// @param maxBurst The max number of words to transfer per request.
+//
+module mkDMAReadBuffer(DMAReadBuffer#(dsz, maxBurst))
+   provisos(Add#(1,a__,dsz),
+	    Add#(b__, TAdd#(1, TLog#(maxBurst)), 8));
+
+   FIFOFLevel#(DMAData#(dsz),maxBurst) readBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(DMAAddressRequest)       reqOutstanding <- mkFIFOF();
+
+   interface DMAReadServer dmaServer;
+      interface Put readReq = toPut(reqOutstanding);
+      interface Get readData = toGet(readBuffer);
+   endinterface
+   interface DMAReadClient dmaClient;
+      // only issue the readRequest when sufficient buffering is available
+      interface Get readReq;
+	 method ActionValue#(DMAAddressRequest) get if (readBuffer.lowWater(truncate(reqOutstanding.first.burstLen)));
+	    reqOutstanding.deq;
+	    return reqOutstanding.first;
+	 endmethod
+      endinterface
+      interface Put readData = toPut(readBuffer);
+   endinterface
+endmodule
+
+//
+// @brief Makes a DMA channel for writing wordSize words from memory.
+//
+// @param bsz The width of the bus in bits.
+// @param maxBurst The max number of words to transfer per request.
+//
+module mkDMAWriteBuffer(DMAWriteBuffer#(bsz, maxBurst))
+   provisos(Add#(1,a__,bsz),
+	    Add#(b__, TAdd#(1, TLog#(maxBurst)), 8));
+
+   FIFOFLevel#(DMAData#(bsz),maxBurst) writeBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(DMAAddressRequest)        reqOutstanding <- mkFIFOF();
+   FIFOF#(Bit#(8))                        doneTags <- mkFIFOF();
+
+   interface DMAWriteServer dmaServer;
+      interface Put writeReq = toPut(reqOutstanding);
+      interface Put writeData = toPut(writeBuffer);
+      interface Get writeDone = toGet(doneTags);
+   endinterface
+   interface DMAWriteClient dmaClient;
+      // only issue the writeRequest when sufficient data has been buffered
+      interface Get writeReq;
+	 method ActionValue#(DMAAddressRequest) get if (writeBuffer.highWater(truncate(reqOutstanding.first.burstLen)));
+	    reqOutstanding.deq;
+	    return reqOutstanding.first;
+	 endmethod
+      endinterface
+      interface Get writeData = toGet(writeBuffer);
+      interface Put writeDone = toPut(doneTags);
+   endinterface
+endmodule
+
+interface DMARead;
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 
-//
-// @brief A DMA engine for writing objects of type t
-//
-// @param t The type of object to write.
-//
-// @note The size of t must be a multiple of 64 bits.
-interface DMAWrite#(type t);
-
-   //
-   // @brief Configure a DMA read channel
-   //
-   // @param channelId The number of the channel to configure
-   // @param pref The something
-   //
-   method Action  configChan(DmaChannelId channelId, Bit#(32) pref);   
-
-   interface Vector#(NumDmaChannels, WriteChan#(t)) writeChannels;
+interface DMAWrite;
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 

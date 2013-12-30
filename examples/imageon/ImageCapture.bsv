@@ -88,7 +88,7 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
         clocked_by imageon_clock, reset_by imageon_reset);
     AxiDMA#(Bit#(64)) dma <- mkAxiDMA(indication.dmaIndication);
     WriteChan#(Bit#(64)) dma_debug_write_chan = dma.write.writeChannels[1];
-    BlueScopeInternal bsi <- mkSyncBlueScopeInternal(32, dma_debug_write_chan, indication.bsIndication,
+    BlueScope bsi <- mkSyncBlueScope(32, dma_debug_write_chan, indication.bsIndication,
 		hdmi_clock, hdmi_reset, defaultClock, defaultReset);
     SPI#(Bit#(26)) spiController <- mkSPI(1000);
     SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);

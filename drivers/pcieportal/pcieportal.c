@@ -527,15 +527,13 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
 
         if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
                 return -EINVAL;
-        printk("vma->vm_pgoff=%lx\n", vma->vm_pgoff);
         if (vma->vm_pgoff < 16) {
                 off_t off = this_board->pci_dev->resource[2].start +
-                    1024 * 1024 * this_portal->portal_number;
+		  (1 << 16) * this_portal->portal_number;
                 printk("portal_mmap portal_number=%d board_start=%012lx portal_start=%012lx\n",
                      this_portal->portal_number,
                      (long) this_board->pci_dev->resource[2].start,
-                     (long) this_board->pci_dev->resource[2].start +
-                     1024 * 1024 * this_portal->portal_number);
+		       off);
                 vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
                 vma->vm_pgoff = off >> PAGE_SHIFT;
                 //vma->vm_flags |= VM_IO | VM_RESERVED;

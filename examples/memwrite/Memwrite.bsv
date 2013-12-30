@@ -23,84 +23,60 @@
 import FIFOF::*;
 import BRAMFIFO::*;
 import GetPut::*;
+
+
 import AxiClientServer::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 import AxiRDMA::*;
 import BsimRDMA::*;
+import BlueScope::*;
 
-
-
-
-
-interface CoreRequest;
-   method Action startWrite(Bit#(32) numWords);
+interface MemwriteRequest;
+   method Action startWrite(Bit#(32) handle, Bit#(32) numWords);
    method Action getStateDbg();   
 endinterface
 
-interface CoreIndication;
+interface MemwriteIndication;
    method Action started(Bit#(32) numWords);
    method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) srcGen);
    method Action writeReq(Bit#(32) v);
    method Action writeDone(Bit#(32) v);
 endinterface
 
-interface MemwriteRequest;
-   interface Axi3Client#(40,64,8,12) m_axi;
-   interface CoreRequest coreRequest;
-   interface DMARequest dmaRequest;
-endinterface
+module mkMemwriteRequest#(MemwriteIndication indication,
+			  DMAWriteServer#(64) dma_stream_write_server) (MemwriteRequest);
 
-interface MemwriteIndication;
-   interface CoreIndication coreIndication;
-   interface DMAIndication dmaIndication;
-endinterface
-
-module mkMemwriteRequest#(MemwriteIndication indication)(MemwriteRequest);
-
-`ifdef BSIM
-   BsimDMA#(Bit#(64))     dma <- mkBsimDMA(indication.dmaIndication);
-`else
-   AxiDMA#(Bit#(64))      dma <- mkAxiDMA(indication.dmaIndication);
-`endif
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
    Reg#(Bit#(40)) streamWrOff <- mkReg(0);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
+   Reg#(Bit#(32))    wrHandle <- mkReg(0); 
 
-   // dma write channel 0 is reserved for memwrite write path
-   WriteChan#(Bit#(64)) dma_stream_write_chan = dma.write.writeChannels[0];
-   
    rule resp;
-      dma_stream_write_chan.writeDone.get;
+      let rv <- dma_stream_write_server.writeDone.get;
    endrule
    
    rule produce;
-      dma_stream_write_chan.writeData.put({srcGen+1,srcGen});
+      dma_stream_write_server.writeData.put(DMAData{data:{srcGen+1,srcGen}, tag:0});
       srcGen <= srcGen+2;
    endrule
    
    rule writeReq(streamWrCnt > 0);
       streamWrCnt <= streamWrCnt-1;
-      dma_stream_write_chan.writeReq.put(streamWrOff);
+      dma_stream_write_server.writeReq.put(DMAAddressRequest {handle: wrHandle, address: streamWrOff, burstLen: 1, tag: 0});
       streamWrOff <= streamWrOff + 1;
-      indication.coreIndication.writeReq(streamWrCnt);
+      indication.writeReq(streamWrCnt);
       if (streamWrCnt == 1)
-	 indication.coreIndication.writeDone(srcGen);
+	 indication.writeDone(srcGen);
    endrule
 
-   interface CoreRequest coreRequest;
-      method Action startWrite(Bit#(32) numWords) if (streamWrCnt == 0);
-	 streamWrCnt <= numWords;
-	 indication.coreIndication.started(numWords);
-      endmethod
-      
-      method Action getStateDbg();
-	 indication.coreIndication.reportStateDbg(streamWrCnt, srcGen);
-      endmethod
-   endinterface
-
-`ifndef BSIM
-   interface Axi3Client m_axi = dma.m_axi;
-`endif
-   interface DMARequest dmaRequest = dma.request;
+   method Action startWrite(Bit#(32) handle, Bit#(32) numWords) if (streamWrCnt == 0);
+      streamWrCnt <= numWords;
+      indication.started(numWords);
+      wrHandle <= handle;
+   endmethod
+   
+   method Action getStateDbg();
+      indication.reportStateDbg(streamWrCnt, srcGen);
+   endmethod
 endmodule

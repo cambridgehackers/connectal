@@ -7,50 +7,33 @@ interface ReadyQueue#(type nports, type tagtype, type priotype);
    interface Vector#(nports, Reg#(Bool)) readyBits;
 endinterface
 
-module mkFirstReadyQueue(ReadyQueue#(nports,Bit#(tagtypesz),Bit#(priotypesz)))
+module mkFirstReadyQueue(ReadyQueue#(nports,Bit#(tts),Bit#(pts)))
    provisos (Add#(1,s,nports));
 
-    Reg#(Vector#(nports, Bit#(priotypesz))) priorities <- mkReg(replicate(0));
-    Reg#(Tuple2#(Bit#(tagtypesz),Bit#(priotypesz))) maxPriorityRequestReg <- mkReg(tuple2(0,0));
     Vector#(nports, Reg#(Bool)) readyBitsRegs <- replicateM(mkReg(False));
 
-    function Tuple2#(Bit#(tagtypesz), Bit#(priotypesz)) getMaxPriorityRequest();
-        Vector#(nports, Bit#(tagtypesz)) requests = genWith(fromInteger);
-        function Tuple2#(Bit#(tagtypesz),Bit#(priotypesz)) maxreq(Tuple2#(Bit#(tagtypesz),Bit#(priotypesz)) a, Tuple2#(Bit#(tagtypesz),Bit#(priotypesz)) b);
-           if (tpl_2(a) != 0)
-               return a;
-           else
-               return b;
-        endfunction
-        return fold(maxreq, zip(requests, priorities));
+    function Tuple2#(Bit#(tts), Bit#(pts)) getMaxPriorityRequest();
+       Vector#(nports, Bit#(tts)) idxs = genWith(fromInteger);
+       function Bit#(pts) ready2Prio(Reg#(Bool) r);
+	  return r._read ? 1 : 0;
+       endfunction
+       function Tuple2#(Bit#(tts),Bit#(pts)) maxreq(Tuple2#(Bit#(tts),Bit#(pts)) a, Tuple2#(Bit#(tts),Bit#(pts)) b);
+	  if (tpl_2(a) != 0)
+             return a;
+          else
+             return b;
+       endfunction
+       return fold(maxreq, zip(idxs, map(ready2Prio,readyBitsRegs)));
     endfunction
 
-
-    rule updatePriorities;
-       Vector#(nports, Tuple2#(Bit#(priotypesz), Reg#(Bool))) zipped = zip(priorities, readyBitsRegs);
-       function Bit#(priotypesz) updatePrio(Tuple2#(Bit#(priotypesz), Reg#(Bool)) pair);
-	  Bool b = tpl_2(pair)._read;
-	  if (b) begin
-	     let v = tpl_1(pair);
-	     if (v == 0)
-		return 1;
-	     else
-		return v;
-	  end
-	  else begin
-	     return 0;
-	  end
-       endfunction
-       priorities <= map(updatePrio, zipped);
-       //$display("priorities=%h", priorities);
-    endrule
-
-    rule updateMaxPriorityRequest;
-        maxPriorityRequestReg <= getMaxPriorityRequest();
-    endrule
-   
    interface readyBits = readyBitsRegs;
-   interface maxPriorityRequest = regToReadOnly(maxPriorityRequestReg);
+
+   interface ReadOnly maxPriorityRequest;
+      method Tuple2#(Bit#(tts), Bit#(pts)) _read;
+	 return getMaxPriorityRequest;
+      endmethod
+   endinterface
+
 endmodule
 
 module mkPriorityQueue(ReadyQueue#(nports,Bit#(tagtypesz),Bit#(priotypesz)))

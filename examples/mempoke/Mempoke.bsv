@@ -30,64 +30,42 @@ import BsimRDMA::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 
-interface CoreRequest;
-   method Action readWord(Bit#(40) addr);
-   method Action writeWord(Bit#(40) addr, S0 data);
-endinterface
-
-interface CoreIndication;
-   method Action readWordResult(S0 v);
-   method Action writeWordResult(S0 v);
-endinterface
-
 interface MempokeRequest;
-   interface Axi3Client#(40,64,8,12) m_axi;
-   interface CoreRequest coreRequest;
-   interface DMARequest dmaRequest;
+   method Action readWord(Bit#(32) handle, Bit#(40) addr);
+   method Action writeWord(Bit#(32) handle, Bit#(40) addr, S0 data);
 endinterface
 
 interface MempokeIndication;
-   interface CoreIndication coreIndication;
-   interface DMAIndication dmaIndication;
+   method Action readWordResult(S0 v);
+   method Action writeWordResult(S0 v);
 endinterface
 
 typedef struct{
    Bit#(32) a;
    Bit#(32) b;
-   } S0 deriving (Bits);
+   } S0 deriving (Eq,Bits);
 
-module mkMempokeRequest#(MempokeIndication indication)(MempokeRequest);
-   
-`ifdef BSIM
-   BsimDMA#(S0)  dma <- mkBsimDMA(indication.dmaIndication);
-`else
-   AxiDMA#(S0)   dma <- mkAxiDMA(indication.dmaIndication);
-`endif
-
-   ReadChan#(S0)   dma_read_chan = dma.read.readChannels[0];
-   WriteChan#(S0) dma_write_chan = dma.write.writeChannels[0];
-   
+module mkMempokeRequest#(MempokeIndication indication,
+			 DMAWriteServer#(64) dma_write_server,
+			 DMAReadServer#(64) dma_read_server) (MempokeRequest);
+      
    rule writeRule;
-      let v <- dma_write_chan.writeDone.get;
-      indication.coreIndication.writeWordResult(unpack(0));
+      let v <- dma_write_server.writeDone.get;
+      indication.writeWordResult(unpack(0));
    endrule
 
    rule readRule;
-      let v <- dma_read_chan.readData.get;
-      indication.coreIndication.readWordResult(v);
+      let v <- dma_read_server.readData.get();
+      indication.readWordResult(unpack(v.data));
    endrule
    
-   interface CoreRequest coreRequest;
-      method Action readWord(Bit#(40) addr);
-	 dma_read_chan.readReq.put(addr);
-      endmethod
-      method Action writeWord(Bit#(40) addr, S0 data);
-	 dma_write_chan.writeReq.put(addr);
-	 dma_write_chan.writeData.put(data);
-      endmethod         
-   endinterface
-`ifndef BSIM
-   interface Axi3Client m_axi = dma.m_axi;
-`endif
-   interface DMARequest dmaRequest = dma.request;
+   method Action readWord(Bit#(32) handle, Bit#(40) addr);
+      dma_read_server.readReq.put(DMAAddressRequest{handle:handle, address:addr, burstLen:1, tag:0});
+   endmethod
+   
+   method Action writeWord(Bit#(32) handle, Bit#(40) addr, S0 data);
+      dma_write_server.writeReq.put(DMAAddressRequest{handle:handle, address:addr, burstLen:1, tag:0});
+      dma_write_server.writeData.put(DMAData{data:pack(data),tag:0});
+   endmethod         
+
 endmodule
