@@ -534,7 +534,7 @@ interface PPS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c
     interface Pps7Wdt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     wdt;
 endinterface
 import "BVI" processing_system7 =
-module mkPPS7(PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width));
+module mkPPS7#(Clock m_axi_gp0_aclk)(PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width));
     let c_dm_width = valueOf(c_dm_width);
     let c_dq_width = valueOf(c_dq_width);
     let c_dqs_width = valueOf(c_dqs_width);
@@ -585,7 +585,7 @@ module mkPPS7(PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width,
     parameter C_USE_DEFAULT_ACP_USER_VAL = 1;
     parameter USE_TRACE_DATA_EDGE_DETECTOR = 0;
         output_clock fclk_clk0(FCLK_CLK0);
-        input_clock m_axi_gp0_aclk(M_AXI_GP0_ACLK) <- exposeCurrentClock();
+        input_clock m_axi_gp0_aclk(M_AXI_GP0_ACLK) = m_axi_gp0_aclk;
         input_clock m_axi_gp1_aclk(M_AXI_GP1_ACLK) <- exposeCurrentClock();
     interface Pps7Can     can0;
         method phy_rx(CAN0_PHY_RX) enable((*inhigh*) EN_CAN0_PHY_RX);

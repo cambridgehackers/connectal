@@ -27,7 +27,8 @@ module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
     let axiTop <- mkAxiTop();
     let data_width = 64;
     let id_width = 12;
-    PS7#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7();
+    Clock m_axi_gp0_aclk <- exposeCurrentClock();
+    PS7#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7(m_axi_gp0_aclk);
 
     rule int_rule;
     let intval = axiTop.interrupt ? 1'b1 : 1'b0;
@@ -40,6 +41,7 @@ module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
     //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
     //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
     //need to reclock this subinterface using fclock0!! ps7.m_axi_gp[0]
+    //m_axi_gp0_aclk <= fclock0;
     //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
     //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
     //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX

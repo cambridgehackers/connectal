@@ -163,7 +163,7 @@ interface PS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_
     interface Vector#(4, AxiSlaveHighSpeed#(data_width, id_width)) s_axi_hp;
 endinterface
 
-module mkPS7(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width));
+module mkPS7#(Clock m_axi_gp0_aclk)(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width));
     let c_dm_width = valueOf(c_dm_width);
     let c_dq_width = valueOf(c_dq_width);
     let c_dqs_width = valueOf(c_dqs_width);
@@ -171,7 +171,7 @@ module mkPS7(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, i
     let gpio_width = valueOf(gpio_width);
     let id_width = valueOf(id_width);
     let mio_width = valueOf(mio_width);
-    PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)foo <- mkPPS7();
+    PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)foo <- mkPPS7(m_axi_gp0_aclk);
     Vector#(2, Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vcan;
     Vector#(2, Pps7Core#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vcore;
     Vector#(4, Pps7Dma#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vdma;
