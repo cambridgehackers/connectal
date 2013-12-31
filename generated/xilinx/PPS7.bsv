@@ -212,7 +212,6 @@ interface Pps7Irq#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
 endinterface
 (* always_ready, always_enabled *)
 interface Pps7M_axi_gp#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
-    //method Action      aclk(Clock v);
     method Bit#(32)     araddr();
     method Bit#(2)     arburst();
     method Bit#(4)     arcache();
@@ -585,6 +584,8 @@ module mkPPS7(PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width,
     parameter C_TRACE_BUFFER_FIFO_SIZE = 128;
     parameter C_USE_DEFAULT_ACP_USER_VAL = 1;
     parameter USE_TRACE_DATA_EDGE_DETECTOR = 0;
+        input_clock m_axi_gp0_aclk(M_AXI_GP0_ACLK) <- exposeCurrentClock();
+        input_clock m_axi_gp1_aclk(M_AXI_GP1_ACLK) <- exposeCurrentClock();
     interface Pps7Can     can0;
         method phy_rx(CAN0_PHY_RX) enable((*inhigh*) EN_CAN0_PHY_RX);
         method CAN0_PHY_TX phy_tx();
@@ -726,7 +727,6 @@ module mkPPS7(PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width,
         method EVENT_STANDBYWFI standbywfi();
     endinterface
     interface Pps7Fclk     fclk;
-        //output_clock clk0_gen_clk(FCLK_CLK0);
         output_clock clk0(FCLK_CLK0);
         method FCLK_CLK1 clk1();
         method FCLK_CLK2 clk2();
@@ -828,7 +828,6 @@ module mkPPS7(PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width,
     endinterface
     ifc_inout mio(MIO);
     interface Pps7M_axi_gp     m_axi_gp0;
-        //method aclk(M_AXI_GP0_ACLK) enable((*inhigh*) EN_M_AXI_GP0_ACLK);
         method M_AXI_GP0_ARADDR araddr();
         method M_AXI_GP0_ARBURST arburst();
         method M_AXI_GP0_ARCACHE arcache();
@@ -870,7 +869,6 @@ module mkPPS7(PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width,
         method M_AXI_GP0_WVALID wvalid();
     endinterface
     interface Pps7M_axi_gp     m_axi_gp1;
-        //method aclk(M_AXI_GP1_ACLK) enable((*inhigh*) EN_M_AXI_GP1_ACLK);
         method M_AXI_GP1_ARADDR araddr();
         method M_AXI_GP1_ARBURST arburst();
         method M_AXI_GP1_ARCACHE arcache();

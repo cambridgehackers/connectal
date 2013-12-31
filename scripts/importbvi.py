@@ -263,7 +263,8 @@ def generate_interface(ifname, paramval, ilist):
         if item[0] != 'input' and item[0] != 'output' and item[0] != 'inout' and item[0] != 'interface':
             continue
         if item[0] == 'input':
-            print('    method Action      '+item[-1].lower()+'('+item[1]+' v);')
+            if item[1] != 'Clock':
+                print('    method Action      '+item[-1].lower()+'('+item[1]+' v);')
         elif item[0] == 'output':
             print('    method '+item[1]+'     '+item[-1].lower()+'();')
         elif item[0] == 'inout':
@@ -326,6 +327,22 @@ def generate_inter_declarations(paramlist, paramval):
             #else:
                 #print('     ', kuse, json.dumps(vuse), file=sys.stderr)
 
+def generate_clocks(item, indent, prefix):
+    pname = ''
+    if prefix:
+        pname = prefix[:-1].lower() + '.'
+        if pname == 'event.':
+            pname = 'event_.'
+    if item[0] == 'input':
+        if item[1] == 'Clock':
+            print(indent + 'input_clock '+prefix.lower() + item[-1].lower()+'('+ prefix + item[-1]+') <- exposeCurrentClock();')
+    elif item[0] == 'interface':
+        temp = commoninterfaces[item[1]].get('0')
+        if not temp:
+            temp = commoninterfaces[item[1]]['']
+        for titem in temp:
+             generate_clocks(titem, '        ', item[3])
+
 def generate_instance(item, indent, prefix):
     methodlist = ''
     pname = ''
@@ -334,11 +351,15 @@ def generate_instance(item, indent, prefix):
         if pname == 'event.':
             pname = 'event_.'
     if item[0] == 'input':
-        print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) EN_'+prefix + item[-1]+');')
-        methodlist = methodlist + ', ' + pname + item[-1].lower()
+        if item[1] != 'Clock':
+            print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) EN_'+prefix + item[-1]+');')
+            methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'output':
-        print(indent + 'method '+ prefix + item[-1] + ' ' + item[-1].lower()+'();')
-        methodlist = methodlist + ', ' + pname + item[-1].lower()
+        if item[1] == 'Clock':
+            print(indent + 'output_clock '+ item[-1].lower()+ '(' + prefix + item[-1]+');')
+        else:
+            print(indent + 'method '+ prefix + item[-1] + ' ' + item[-1].lower()+'();')
+            methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'inout':
         print(indent + 'ifc_inout '+item[-1].lower()+'('+ prefix + item[-1]+');')
     elif item[0] == 'interface':
@@ -380,6 +401,8 @@ def translate_verilog(ifname):
         if item[0] == 'parameter':
             print('    parameter ' + item[1] + ' = ' + item[2] + ';')
     methodlist = ''
+    for item in masterlist:
+        generate_clocks(item, '    ', '')
     for item in masterlist:
         methodlist = methodlist + generate_instance(item, '    ', '')
     if methodlist != '':
