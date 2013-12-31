@@ -32,7 +32,7 @@ import PortalMemory::*;
 import PortalRMemory::*;
 
 interface MemreadRequest;
-   method Action startRead(Bit#(32) handle, Bit#(32) numWords);
+   method Action startRead(Bit#(32) handle, Bit#(32) numWords, Bit#(32) burstLen);
    method Action getStateDbg();   
 endinterface
 
@@ -60,7 +60,8 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(40))      offset <- mkReg(0);
    FIFOF#(Tuple2#(Bit#(32),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
 
-   Integer burstLen = 8;
+   Reg#(Bit#(8)) burstLen <- mkReg(8);
+   Reg#(Bit#(40)) deltaOffset <- mkReg(8*8);
 
    rule mismatch;
       let tpl = mismatchFifo.first();
@@ -69,10 +70,12 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endrule
 
    interface MemreadRequest request;
-       method Action startRead(Bit#(32) handle, Bit#(32) numWords) if (streamRdCnt == 0);
+       method Action startRead(Bit#(32) handle, Bit#(32) numWords, Bit#(32) bl) if (streamRdCnt == 0);
 	  streamRdHandle <= handle;
 	  streamRdCnt <= numWords>>1;
 	  putOffset <= 0;
+	  burstLen <= truncate(bl);
+	  deltaOffset <= 8*extend(bl);
 	  indication.started(numWords);
        endmethod
 
@@ -84,13 +87,13 @@ module mkMemread#(MemreadIndication indication) (Memread);
    interface DMAReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(DMAAddressRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
-	    streamRdCnt <= streamRdCnt-fromInteger(burstLen);
-	    offset <= offset + fromInteger(burstLen)*8;
-	    if (streamRdCnt == fromInteger(burstLen))
+	    streamRdCnt <= streamRdCnt-extend(burstLen);
+	    offset <= offset + deltaOffset;
+	    if (streamRdCnt == extend(burstLen))
 	       indication.readDone(zeroExtend(pack(dataMismatch)));
 	    //else if (streamRdCnt[5:0] == 6'b0)
 	    //   indication.readReq(streamRdCnt);
-	    return DMAAddressRequest { handle: streamRdHandle, address: offset, burstLen: fromInteger(burstLen), tag: truncate(offset) };
+	    return DMAAddressRequest { handle: streamRdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
 	 endmethod
       endinterface : readReq
       interface Put readData;

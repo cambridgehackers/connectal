@@ -102,7 +102,7 @@ int main(int argc, const char **argv)
   dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x3000);
   sleep(1);
   fprintf(stderr, "Main::starting read %08x\n", numWords);
-  device->startRead(ref_srcAlloc, 128);
+  device->startRead(ref_srcAlloc, 128, 16);
   sleep(1);
 
   //dma->getReadStateDbg();
