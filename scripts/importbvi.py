@@ -29,6 +29,7 @@ masterlist = []
 parammap = {}
 paramnames = []
 remapmap = {}
+clocknames = []
 commoninterfaces = {}
 tokgenerator = 0
 toknum = 0
@@ -241,7 +242,6 @@ def parse_verilog(filename):
             if f[0] == 'module':
                 modulename = f[1]
             if f[0] == 'input' or f[0] == 'output' or f[0] == 'inout':
-                #print('FF', f, file=sys.stderr)
                 if len(f) == 2:
                     f = [f[0], '1', f[1]]
                 # check for parameterized declarations
@@ -250,6 +250,9 @@ def parse_verilog(filename):
                     print('Missing parameter declaration', pname, file=sys.stderr)
                     paramnames.append(pname)
                 f[1] = 'Bit#(' + f[1] + ')'
+                if f[2] in clocknames:
+                    f[1] = 'Clock'
+                #print('FF', f, file=sys.stderr)
             masterlist.append(f)
     paramnames.sort()
 
@@ -259,13 +262,12 @@ def generate_interface(ifname, paramval, ilist):
     for item in ilist:
         if item[0] != 'input' and item[0] != 'output' and item[0] != 'inout' and item[0] != 'interface':
             continue
-        itemlen = item[1]
         if item[0] == 'input':
-            print('    method Action      '+item[-1].lower()+'('+itemlen+' v);')
+            print('    method Action      '+item[-1].lower()+'('+item[1]+' v);')
         elif item[0] == 'output':
-            print('    method '+itemlen+'     '+item[-1].lower()+'();')
+            print('    method '+item[1]+'     '+item[-1].lower()+'();')
         elif item[0] == 'inout':
-            print('    interface Inout#('+itemlen+')     '+item[-1].lower()+';')
+            print('    interface Inout#('+item[1]+')     '+item[-1].lower()+';')
         elif item[0] == 'interface':
             print('    interface '+item[1]+ paramval +'     '+item[2].lower()+';')
     print('endinterface')
@@ -325,15 +327,12 @@ def generate_inter_declarations(paramlist, paramval):
                 #print('     ', kuse, json.dumps(vuse), file=sys.stderr)
 
 def generate_instance(item, indent, prefix):
-    itemlen = '1'
     methodlist = ''
     pname = ''
     if prefix:
         pname = prefix[:-1].lower() + '.'
         if pname == 'event.':
             pname = 'event_.'
-    if len(item) > 2:
-        itemlen = item[1]
     if item[0] == 'input':
         print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) EN_'+prefix + item[-1]+');')
         methodlist = methodlist + ', ' + pname + item[-1].lower()
@@ -375,9 +374,8 @@ def translate_verilog(ifname):
     print('module mk'+ifname+'('+ifname+ paramval +');')
     for item in paramnames:
         print('    let ' + item + ' = valueOf(' + item + ');')
-    print('    no_reset;')
-    print('    default_clock no_clock;')
-
+    print('    default_clock clk();')
+    print('    default_reset rst();')
     for item in masterlist:
         if item[0] == 'parameter':
             print('    parameter ' + item[1] + ' = ' + item[2] + ';')
@@ -394,6 +392,7 @@ if __name__=='__main__':
     parser.add_option("-f", "--output", dest="filename", help="write data to FILENAME")
     parser.add_option("-p", "--param", action="append", dest="param")
     parser.add_option("-r", "--remap", action="append", dest="remap")
+    parser.add_option("-c", "--clock", action="append", dest="clock")
     (options, args) = parser.parse_args()
     ifname = 'PPS7'
     #print('KK', options, args, file=sys.stderr)
@@ -412,6 +411,7 @@ if __name__=='__main__':
             item2 = item.split(':')
             if len(item2) == 2:
                 remapmap[item2[0]] = item2[1]
+    clocknames = options.clock
     if len(args) != 1:
         print("incorrect number of arguments", file=sys.stderr)
     else:

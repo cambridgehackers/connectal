@@ -58,7 +58,7 @@ typedef struct {
 } AxiRead#(numeric type data_width, numeric type id_width);
 
 interface AxiMasterCommon#(numeric type data_width, numeric type id_width);
-    method Action             aclk(Bit#(1) v);
+    //method Action             aclk(Clock v);
     method Bit#(1)            aresetn();
     interface Get#(AxiREQ#(id_width)) req_ar;
     interface Get#(AxiREQ#(id_width)) req_aw;
@@ -68,7 +68,7 @@ interface AxiMasterCommon#(numeric type data_width, numeric type id_width);
 endinterface
 
 interface AxiSlaveCommon#(numeric type data_width, numeric type id_width);
-    method Action             aclk(Bit#(1) v);
+    //method Action             aclk(Clock v);
     method Bit#(1)            aresetn();
     interface Put#(AxiREQ#(id_width)) req_ar;
     interface Put#(AxiREQ#(id_width)) req_aw;
@@ -315,7 +315,7 @@ module mkPS7(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, i
                     vtopmw_axi_gp[i].bvalid <= 1;
                 endmethod
             endinterface
-            method aclk = vm_axi_gp[i].aclk;
+            //method aclk = vm_axi_gp[i].aclk;
             method aresetn = vm_axi_gp[i].aresetn;
             endinterface;
     for (Integer i = 0; i < 2; i = i + 1)
@@ -400,7 +400,7 @@ module mkPS7(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, i
                     return v;
                 endmethod
             endinterface
-            method aclk = vs_axi_gp[i].aclk;
+            //method aclk = vs_axi_gp[i].aclk;
             method aresetn = vs_axi_gp[i].aresetn;
         endinterface;
     for (Integer i = 0; i < 2; i = i + 1)
@@ -486,7 +486,7 @@ module mkPS7(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, i
                     return v;
                 endmethod
             endinterface
-            method aclk = vs_axi_hp[i].aclk;
+            //method aclk = vs_axi_hp[i].aclk;
             method aresetn = vs_axi_hp[i].aresetn;
             endinterface
             method racount = vs_axi_hp[i].racount;

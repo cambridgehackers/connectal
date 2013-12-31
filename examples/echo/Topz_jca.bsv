@@ -36,7 +36,14 @@ module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
 
     rule clock_rule;
     let fclock0 = ps7.fclk.clk0();
-    ps7.m_axi_gp[0].aclk(fclock0);
+    //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
+    //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
+    //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
+    //need to reclock this subinterface using fclock0!! ps7.m_axi_gp[0]
+    //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
+    //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
+    //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
+    //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
     //ps7.s_axi_hp[0].axi.aclk(fclock0);
     endrule
     //ps7.fclk_reset[0].n = ?;
