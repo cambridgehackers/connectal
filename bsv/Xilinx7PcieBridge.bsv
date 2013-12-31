@@ -23,6 +23,7 @@ import PcieToAxiBridge      :: *;
 import XbsvXilinx7Pcie      :: *;
 //import XbsvXilinx7DDR3      :: *;
 import AxiMasterSlave       :: *;
+import AxiClientServer      :: *;
 import Portal               :: *;
 
 // from SceMiDefines
