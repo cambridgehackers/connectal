@@ -98,6 +98,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
       endinterface : readReq
       interface Put readData;
 	 method Action put(DMAData#(64) d);
+	    $display("readData putOffset=%h d=%h tag=%h", putOffset, d.data, d.tag);
 	    let v = d.data;
 	    let misMatch0 = v[31:0] != srcGen;
 	    let misMatch1 = v[63:32] != srcGen+1;
