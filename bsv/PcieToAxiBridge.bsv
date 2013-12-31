@@ -579,6 +579,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	     Add#(eee, busWidthWords, 8));
 
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
+    FIFOF#(TLPData#(16)) tlpInFifo <- mkFIFOF;
     FIFOF#(TLPData#(16)) tlpWriteHeaderFifo <- mkFIFOF;
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
@@ -685,39 +686,52 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
       end
    endrule
 
-    interface GetPut tlps = tuple2(
-              toGet(tlpOutFifo),
-	      (interface Put;
-		  method Action put(TLPData#(16) tlp);
-		     $display("AxiSlaveEngine.put tlp=%h", tlp);
-		     TLPMemoryIO3DWHeader h = unpack(tlp.data);
-		     hitReg <= tlp.hit;
-		     TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-		     Vector#(4, Bit#(32)) vec = unpack(0);
-		     Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
-		     if (!tlp.sof) begin
-			let count = tlpWordCount(tlp);
-			// if sof is false, then count will be at least 1
-			function Bit#(32) f(Integer i);
-			begin
-			   if (i < count)
-			      return tlpvec[count-1-i];
-			   else
-			      return 32'hbad0beef;
-			end
-			endfunction
-			vec = genWith(f);
-			completionMimo.enq(fromInteger(count), vec);
-			completionTagMimo.enq(fromInteger(count), replicate(lastTag));
-		     end
-		     else if (hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype == COMPLETION) begin
-			vec[0] = hdr_3dw.data;
-			completionMimo.enq(1, vec);
-			lastTag <= hdr_3dw.tag;
-			completionTagMimo.enq(1, replicate(hdr_3dw.tag));
-		      end
-		  endmethod
-	      endinterface));
+   rule handleTlpIn;
+      let tlp = tlpInFifo.first;
+      Bool handled = False;
+      TLPMemoryIO3DWHeader h = unpack(tlp.data);
+      hitReg <= tlp.hit;
+      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+      Vector#(4, Bit#(32)) vec = unpack(0);
+      Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
+
+      if (!tlp.sof) begin
+	 let count = tlpWordCount(tlp);
+	 // if sof is false, then count will be at least 1
+	 function Bit#(32) f(Integer i);
+	    begin
+	       if (i < count)
+		  return tlpvec[3-i];
+	       else
+		  return 32'hbad0beef;
+	    end
+	 endfunction
+	 vec = genWith(f);
+	 $display($format(fshow("completionMimo.enq vec=")+fshow(vec)));
+	 if (completionMimo.enqReadyN(fromInteger(count))
+	    && completionTagMimo.enqReadyN(fromInteger(count)))
+	    begin
+	       completionMimo.enq(fromInteger(count), vec);
+	       completionTagMimo.enq(fromInteger(count), replicate(lastTag));
+	       handled = True;
+	    end
+      end
+      else if (hdr_3dw.format == MEM_WRITE_3DW_DATA
+	       && hdr_3dw.pkttype == COMPLETION
+	       && completionMimo.enqReadyN(1)
+	       && completionTagMimo.enqReadyN(1)) begin
+	    vec[0] = hdr_3dw.data;
+	    completionMimo.enq(1, vec);
+	    lastTag <= hdr_3dw.tag;
+	    completionTagMimo.enq(1, replicate(hdr_3dw.tag));
+	    handled = True;
+      end
+      $display("tlpIn handled=%d tlp=%h\n", handled, tlp);
+      if (handled)
+	 tlpInFifo.deq();
+   endrule
+
+    interface GetPut tlps = tuple2(toGet(tlpOutFifo),toPut(tlpInFifo));
     interface Axi3Server slave3;
 	interface Axi3WriteServer write;
 	   method Action address(Axi3WriteRequest#(40, 12) req)
@@ -767,7 +781,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      writeTag <= truncate(awid);
            endmethod: address
 	   method Action data(Axi3WriteData#(busWidth,busWidthBytes,12) wdata)
-	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0);
+	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
+
 	      writeBurstCount <= writeBurstCount - 1;
 	      Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
 	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
@@ -882,7 +897,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      writeTag <= truncate(awid);
            endmethod: address
 	   method Action data(Axi4WriteData#(buswidth,busWidthBytes,12) wdata)
-	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0);
+	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
+
 	      writeBurstCount <= writeBurstCount - 1;
 	      Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
 	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
