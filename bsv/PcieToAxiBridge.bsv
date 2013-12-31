@@ -592,6 +592,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
     Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
     Reg#(TLPLength)  writeDwCount <- mkReg(0);
     Reg#(TLPTag) writeTag <- mkReg(0);
+    FIFOF#(TLPTag) doneTag <- mkFIFOF();
 
     function Integer tlpWordCount(TLPData#(16) tlp);
        if (tlp.be == 16'h0000)
@@ -660,6 +661,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	 v = writeDataMimo.first();
 	 writeDataMimo.deq(unpack(truncate(writeDwCount)));
 	 writeDwCount <= 0;
+	 doneTag.enq(writeTag);
 	 $display("writeDwCount=%d will be zero", writeDwCount);
 	 tlp.eof = True;
 	 if (writeDwCount == 4)
@@ -771,8 +773,9 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
            endmethod: data
 	   method ActionValue#(Axi3WriteResponse#(12)) response();
-// fixme awid
-	       return Axi3WriteResponse { code: 0, id: extend(writeTag)};
+	      let tag = doneTag.first();
+	      doneTag.deq();
+	      return Axi3WriteResponse { code: 0, id: extend(tag)};
            endmethod: response
 	endinterface
 	interface Axi3ReadServer read;
@@ -885,7 +888,9 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
            endmethod: data
 	   method ActionValue#(Axi4WriteResponse#(12)) response();
-	       return Axi4WriteResponse { code: 0, id: 0};
+	      let tag = doneTag.first();
+	      doneTag.deq();
+	      return Axi4WriteResponse { code: 0, id: extend(tag)};
            endmethod: response
 	endinterface
 	interface Axi4ReadServer read;
