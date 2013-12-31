@@ -23,13 +23,16 @@
 // BSV Libraries
 import FIFO::*;
 import FIFOF::*;
+import SpecialFIFOs :: *;
 import Vector::*;
 import GetPut::*;
 import ClientServer::*;
 import BRAMFIFO::*;
 import BRAM::*;
+import PCIE::*;
 
 // XBSV Libraries
+import PcieToAxiBridge::*;
 import AxiClientServer::*;
 import BRAMFIFOFLevel::*;
 import PortalMemory::*;
@@ -48,18 +51,22 @@ interface AxiDMAServer#(numeric type dsz, numeric type dbytes);
    interface Axi3Client#(40,dsz,dbytes,12) m_axi;
 endinterface
 
+interface ConfigureSglist;
+   method Action configuring(Bool c);
+   method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr);
+   method Action readSglist(Bit#(32) pref, Bit#(40) addr);
+endinterface
+
 interface AxiDMAWriteInternal#(numeric type dsz, numeric type dbytes);
    interface DMAWrite write;
    interface Axi3WriteClient#(40,dsz,dbytes,12) m_axi_write;
-   method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr);
-   method Action readSglist(Bit#(32) pref, Bit#(40) addr);
+   interface ConfigureSglist configure;
 endinterface
 
 interface AxiDMAReadInternal#(numeric type dsz, numeric type dbytes);
    interface DMARead read;
    interface Axi3ReadClient#(40,dsz,12) m_axi_read;
-   method Action page(Bit#(32) tabel, Bit#(32) off, Bit#(40) addr);
-   method Action readSglist(Bit#(32) pref, Bit#(40) addr);
+   interface ConfigureSglist configure;
 endinterface
 
 typedef enum {Idle, Translate, Address, Data, Done} InternalState deriving(Eq,Bits);
@@ -71,13 +78,15 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
    
    SGListMMU sgl <- mkSGListMMU();
    
-   FIFO#(DMAAddressRequest) reqFifo  <- mkFIFO();
+   FIFO#(DMAAddressRequest) lreqFifo <- mkPipelineFIFO();
+   FIFO#(DMAAddressRequest) reqFifo  <- mkPipelineFIFO();
    FIFO#(DMAAddressRequest) dreqFifo <- mkSizedFIFO(numRequests);
-   FIFO#(Bit#(40))        paFifo     <- mkFIFO();
+   FIFO#(Bit#(40))        paFifo     <- mkPipelineFIFO();
    FIFO#(DmaChannelId)    chanFifo   <- mkSizedFIFO(numRequests);
 
    Reg#(DmaChannelId)    selectReg <- mkReg(0);
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
+   Reg#(Bool)            isConfiguring <- mkReg(False);
    Reg#(Bool)            debugReg <- mkReg(False);
 
    (* descending_urgency = "loadChannel,incSelectReg" *)
@@ -94,37 +103,44 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       debugReg <= False;
    endrule
 
-   rule loadChannel if (valueOf(numReadClients) > 0);
+   rule loadChannel if (valueOf(numReadClients) > 0 && !isConfiguring);
       DMAAddressRequest req = unpack(0);
       if (valueOf(numReadClients) > 0)
 	 req <- readClients[selectReg].readReq.get();
-      $display("dmaread.loadClient activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
+      $display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
 
-      reqFifo.enq(req);
+      lreqFifo.enq(req);
       chanFifo.enq(selectReg);
       sgl.addrReq(truncate(req.handle),req.address);
    endrule
    
-   rule checkSglResp;
+   rule checkSglResp if (!debugReg);
       let physAddr <- sgl.addrResp();
+      let req = lreqFifo.first();
+      lreqFifo.deq();
       if (physAddr == 0) begin
 	 // squash request
-	 reqFifo.deq();
-	 dmaIndication.badAddr(reqFifo.first.handle, reqFifo.first.address);
+	 dmaIndication.badAddr(req.handle, req.address);
       end
       else begin
+	 reqFifo.enq(req);
 	 paFifo.enq(physAddr);
       end
    endrule
 
-   method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr);
-      sgl.page(truncate(tabsel), off, addr);
-   endmethod
-   
-   method Action readSglist(Bit#(32) pref, Bit#(40) addr) if (!debugReg);
-      debugReg <= True;
-      sgl.addrReq(truncate(pref), addr);
-   endmethod
+   interface ConfigureSglist configure;
+       method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr) if (isConfiguring);
+	  sgl.page(truncate(tabsel), off, addr);
+       endmethod
+
+       method Action readSglist(Bit#(32) pref, Bit#(40) addr) if (!debugReg);
+	  debugReg <= True;
+	  sgl.addrReq(truncate(pref), addr);
+       endmethod
+      method Action configuring(Bool c);
+	 isConfiguring <= c;
+      endmethod
+   endinterface
 
    interface DMARead read;
       method ActionValue#(DmaDbgRec) dbg();
@@ -133,7 +149,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
    endinterface
 
    interface Axi3ReadClient m_axi_read;
-      method ActionValue#(Axi3ReadRequest#(40,12)) address() if (!debugReg);
+      method ActionValue#(Axi3ReadRequest#(40,12)) address();
 	 let req = reqFifo.first();
 	 reqFifo.deq();
 	 let physAddr = paFifo.first();
@@ -166,9 +182,11 @@ endmodule
 module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAWriteClient#(dsz)) writeClients,
 			      DMAIndication dmaIndication)(AxiDMAWriteInternal#(dsz,dbytes))
    provisos(Add#(1,a__,dsz),
-	    Mul#(dbytes,8,dsz));
+	    Mul#(dbytes,8,dsz),
+	    Add#(b__, TAdd#(dsz, 8), 128));
    SGListMMU sgl <- mkSGListMMU();
    
+   FIFO#(DMAAddressRequest) lreqFifo <- mkPipelineFIFO();
    FIFO#(DMAAddressRequest) reqFifo <- mkFIFO();
    FIFO#(DMAAddressRequest) dreqFifo <- mkSizedFIFO(numRequests);
    FIFO#(Bit#(40))        paFifo     <- mkFIFO();
@@ -177,6 +195,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 
    Reg#(DmaChannelId)    selectReg <- mkReg(0);
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
+   Reg#(Bool)            isConfiguring <- mkReg(False);
    Reg#(Bool)            debugReg <- mkReg(False);
 
    (* descending_urgency = "loadChannel,incSelectReg" *)
@@ -193,37 +212,45 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
       debugReg <= False;
    endrule
 
-   rule loadChannel if (valueOf(numWriteClients) > 0);
+   rule loadChannel if (valueOf(numWriteClients) > 0 && !isConfiguring);
       DMAAddressRequest req = unpack(0);
       if (valueOf(numWriteClients) > 0)
 	 req <- writeClients[selectReg].writeReq.get();
-      $display("dmaread.loadClient activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
+      $display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.handle, req.address, req.burstLen, debugReg);
 
-      reqFifo.enq(req);
+      lreqFifo.enq(req);
       chanFifo.enq(selectReg);
       sgl.addrReq(truncate(req.handle),req.address);
    endrule
    
-   rule checkSglResp;
+   rule checkSglResp if (!debugReg);
       let physAddr <- sgl.addrResp();
+      let req = lreqFifo.first();
+      lreqFifo.deq();
       if (physAddr == 0) begin
 	 // squash request
-	 reqFifo.deq();
-	 dmaIndication.badAddr(reqFifo.first.handle, reqFifo.first.address);
+	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.handle, req.address, physAddr);
+	 dmaIndication.badAddr(req.handle, req.address);
       end
       else begin
+	 reqFifo.enq(req);
 	 paFifo.enq(physAddr);
       end
    endrule
 
-   method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr);
-      sgl.page(truncate(tabsel), off, addr);
-   endmethod
+   interface ConfigureSglist configure;
+      method Action page(Bit#(32) tabsel, Bit#(32) off, Bit#(40) addr) if (isConfiguring);
+	 sgl.page(truncate(tabsel), off, addr);
+      endmethod
 
-   method Action readSglist(Bit#(32) pref, Bit#(40) addr) if (!debugReg);
-      debugReg <= True;
-      sgl.addrReq(truncate(pref), addr);
-   endmethod
+      method Action readSglist(Bit#(32) pref, Bit#(40) addr) if (!debugReg);
+	 debugReg <= True;
+	 sgl.addrReq(truncate(pref), addr);
+      endmethod
+      method Action configuring(Bool c);
+	 isConfiguring <= c;
+      endmethod
+   endinterface
 
    interface DMAWrite write;
       method ActionValue#(DmaDbgRec) dbg();
@@ -232,11 +259,12 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
    endinterface
 
    interface Axi3WriteClient m_axi_write;
-      method ActionValue#(Axi3WriteRequest#(40,12)) address() if (!debugReg);
+      method ActionValue#(Axi3WriteRequest#(40,12)) address();
 	 let req = reqFifo.first();
 	 reqFifo.deq();
 	 let physAddr = paFifo.first();
 	 paFifo.deq();
+	 $display("dmaWrite addr physAddr=%h", physAddr);
 
 	 dreqFifo.enq(req);
 	 return Axi3WriteRequest{address:physAddr, burstLen:truncate(burstReg-1), id:extend(req.tag)};
@@ -256,6 +284,8 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 	    chanFifo.deq();
 	    respFifo.enq(activeChan);
 	 end
+
+	 $display("dmaWrite data data=%h", tagdata.data);
 
 	 burstReg <= burstLen-1;
 
@@ -285,7 +315,8 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
 		       Vector#(numWriteClients, DMAWriteClient#(dsz)) writeClients)
    (AxiDMAServer#(dsz,dbytes))
    provisos (Add#(1,a__,dsz),
-      Mul#(dbytes,8,dsz));
+	     Mul#(dbytes,8,dsz),
+	     Add#(dsz, b__, 120));
 
    AxiDMAReadInternal#(dsz,dbytes) reader <- mkAxiDMAReadInternal(numRequests, readClients, dmaIndication);
    AxiDMAWriteInternal#(dsz,dbytes) writer <- mkAxiDMAWriteInternal(numRequests, writeClients, dmaIndication);
@@ -300,10 +331,13 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
    rule write_pages(idxReg < lenReg);
       idxReg <= idxReg + 1;
       addrReg <= addrReg + 1;
-      writer.page(prefReg,idxReg,addrReg);
-      reader.page(prefReg,idxReg,addrReg);
-      if(idxReg+1 == lenReg)
+      writer.configure.page(prefReg,idxReg,addrReg);
+      reader.configure.page(prefReg,idxReg,addrReg);
+      if(idxReg+1 == lenReg) begin
+	 reader.configure.configuring(False);
+	 writer.configure.configuring(False);
 	 dmaIndication.sglistResp(prefReg, idxReg);
+      end
    endrule
 
    interface DMARequest request;
@@ -323,14 +357,19 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
 	 lenReg  <= (len >> page_shift) + idx;
 	 addrReg <= addr >> page_shift;
 	 idxReg <= idx;
-	 if (addr == 0 && len == 0) // sw marks end-of-list with zeros
+	 if (addr == 0 && len == 0) begin // sw marks end-of-list with zeros
 	    dmaIndication.sglistResp(pref, idx);
+	 end
+	 else begin
+	    reader.configure.configuring(True);
+	    writer.configure.configuring(True);
+	 end
       endmethod
       method Action readSglist(ChannelType rc, Bit#(32) handle, Bit#(64) addr);
 	 if (rc == Read)
-	    reader.readSglist(handle, truncate(addr));
+	    reader.configure.readSglist(handle, truncate(addr));
 	 else
-	    writer.readSglist(handle, truncate(addr));
+	    writer.configure.readSglist(handle, truncate(addr));
       endmethod
    endinterface
    interface Axi3Client m_axi;
