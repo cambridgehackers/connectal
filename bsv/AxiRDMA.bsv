@@ -264,10 +264,10 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 	 reqFifo.deq();
 	 let physAddr = paFifo.first();
 	 paFifo.deq();
-	 $display("dmaWrite addr physAddr=%h", physAddr);
+	 $display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
 
 	 dreqFifo.enq(req);
-	 return Axi3WriteRequest{address:physAddr, burstLen:truncate(burstReg-1), id:extend(req.tag)};
+	 return Axi3WriteRequest{address:physAddr, burstLen:truncate(req.burstLen-1), id:extend(req.tag)};
       endmethod
       method ActionValue#(Axi3WriteData#(dsz, dbytes, 12)) data();
 	 let activeChan = chanFifo.first();
@@ -285,7 +285,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 	    respFifo.enq(activeChan);
 	 end
 
-	 $display("dmaWrite data data=%h", tagdata.data);
+	 $display("dmaWrite data data=%h burstLen=%d", tagdata.data, burstLen);
 
 	 burstReg <= burstLen-1;
 
