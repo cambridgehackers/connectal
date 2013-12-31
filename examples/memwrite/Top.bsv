@@ -3,10 +3,13 @@ import SpecialFIFOs::*;
 import Vector::*;
 import StmtFSM::*;
 import FIFO::*;
-
+import PCIE::*;
+import GetPut::*;
 
 // portz libraries
+import PcieToAxiBridge::*;
 import AxiMasterSlave::*;
+import AxiClientServer::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
@@ -26,14 +29,15 @@ import DMAIndicationProxy::*;
 // defined by user
 import Memwrite::*;
 
-interface Top;
+interface MemwriteTop;
    interface StdAxi3Slave     ctrl;
-   interface StdAxi3Master    m_axi;
+   interface StdAxi3Client    m_axi;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;
 endinterface
 
-module mkZynqTop(Top);
+
+module mkMemwriteTop(MemwriteTop);
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
    DMAWriteBuffer#(64,16) dma_stream_write_chan <- mkDMAWriteBuffer();
@@ -67,15 +71,20 @@ module mkZynqTop(Top);
    // when constructing ctrl and interrupt muxes, directories must be the first argument
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
    let interrupt_mux <- mkInterruptMux(portals);
-`ifndef BSIM
-   let axi_master <- mkAxi3Master(dma.m_axi);
-`endif
    
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
 `ifndef BSIM
-   interface StdAxi3Master m_axi = axi_master;
+   interface StdAxi3Client m_axi = dma.m_axi;
 `endif
+endmodule
+
+module mkZynqTop(PortalDmaTop);
+   let top <- mkMemwriteTop();
+   interface StdAxi3Slave     ctrl = top.ctrl;
+   interface StdAxi3Master   m_axi = top.m_axi;
+   interface ReadOnly    interrupt = top.interrupt;
+   interface LEDS             leds = top.leds;
 endmodule
 
 import "BDPI" function Action      initPortal(Bit#(32) d);
@@ -88,7 +97,7 @@ import "BDPI" function Action        readData(Bit#(32) d);
 
 
 module mkBsimTop();
-   Top top <- mkZynqTop;
+   let top <- mkMemwriteTop();
    let wf <- mkPipelineFIFO;
    let init_seq = (action 
 		      initPortal(0);
