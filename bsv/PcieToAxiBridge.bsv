@@ -707,7 +707,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	    end
 	 endfunction
 	 vec = genWith(f);
-	 $display($format(fshow("completionMimo.enq vec=")+fshow(vec)));
+	 //$display($format(fshow("completionMimo.enq vec=")+fshow(vec)));
 	 if (completionMimo.enqReadyN(fromInteger(count))
 	    && completionTagMimo.enqReadyN(fromInteger(count)))
 	    begin
@@ -726,7 +726,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	    completionTagMimo.enq(1, replicate(hdr_3dw.tag));
 	    handled = True;
       end
-      $display("tlpIn handled=%d tlp=%h\n", handled, tlp);
+      //$display("tlpIn handled=%d tlp=%h\n", handled, tlp);
       if (handled)
 	 tlpInFifo.deq();
    endrule
