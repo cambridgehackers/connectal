@@ -344,7 +344,6 @@ interface PortalEngine;
     interface Reg#(Bit#(32))       interruptData;
 endinterface
 
-(* synthesize *)
 module mkPortalEngine#(PciId my_id)(PortalEngine);
     Reg#(Bool) byteSwapReg <- mkReg(True);
     Reg#(Bool) interruptRequestedReg <- mkReg(False);
@@ -590,9 +589,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
     MIMO#(busWidthWords,4,8,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(TLPTag) lastTag <- mkReg(0);
     Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
-    Reg#(Bit#(9)) writeDwCount <- mkReg(0);
+    Reg#(TLPLength)  writeDwCount <- mkReg(0);
     Reg#(TLPTag) writeTag <- mkReg(0);
-   Reg#(Bool) writeHeaderSent <- mkReg(False);
 
     function Integer tlpWordCount(TLPData#(16) tlp);
        if (tlp.be == 16'h0000)
@@ -609,18 +607,23 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	  return 0;
     endfunction
 
-   rule writeHeaderTlp if (writeDwCount > 0 && !writeHeaderSent);
+   rule writeHeaderTlp if (writeDwCount == 0);
       let tlp = tlpWriteHeaderFifo.first;
+
+      TLPMemory4DWHeader hdr_4dw = unpack(tlp.data);
+      TLPLength dwCount = hdr_4dw.length;
+
       TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
       Bool sendit = False;
       if (hdr_3dw.format == MEM_WRITE_3DW_DATA && writeDataMimo.deqReadyN(1)) begin
+	 dwCount = hdr_3dw.length;
 	 Vector#(4, Bit#(32)) v = writeDataMimo.first();
 	 writeDataMimo.deq(1);
 	 hdr_3dw.data = byteSwap(v[0]);
 	 tlp.be = 16'hffff;
-	 if (writeDwCount == 1)
+	 if (dwCount == 1)
 	    tlp.eof = True;
-	 writeDwCount <= writeDwCount - 1;
+	 dwCount = dwCount - 1;
 	 tlp.data = pack(hdr_3dw);
 	 sendit = True;
       end
@@ -633,11 +636,12 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
       if (sendit) begin
 	 tlpWriteHeaderFifo.deq();
 	 tlpOutFifo.enq(tlp);
-	 writeHeaderSent <= True;
+	 $display("writeHeaderTlp dwCount=%d", dwCount);
+	 writeDwCount <= dwCount;
       end
    endrule
 
-   rule writeTlps if (writeDwCount > 0 && writeHeaderSent);
+   rule writeTlps if (writeDwCount > 0);
       TLPData#(16) tlp = defaultValue;
       tlp.sof = False;
       Vector#(4, Bit#(32)) v = unpack(0);
@@ -647,14 +651,16 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 
 	 writeDataMimo.deq(4);
 	 writeDwCount <= writeDwCount - 4;
-	 tlp.eof = True;
+	 $display("writeDwCount=%d", writeDwCount);
+	 tlp.eof = False;
 	 tlp.be = 16'hffff;
 	 sendit = True;
       end
-      else if (writeDataMimo.deqReadyN(unpack(truncate(writeDwCount)))) begin
+      else if (writeDwCount <= 4 && writeDataMimo.deqReadyN(unpack(truncate(writeDwCount)))) begin
 	 v = writeDataMimo.first();
 	 writeDataMimo.deq(unpack(truncate(writeDwCount)));
 	 writeDwCount <= 0;
+	 $display("writeDwCount=%d will be zero", writeDwCount);
 	 tlp.eof = True;
 	 if (writeDwCount == 4)
 	    tlp.be = 16'hffff;
@@ -664,10 +670,12 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	    tlp.be = 16'hff00;
 	 else if (writeDwCount == 1)
 	    tlp.be = 16'hf000;
+	 $display("tlp.be=%h", tlp.be);
 	 sendit = True;
       end
       else begin
 	 // wait for more data in writeDataMimo
+	 $display("waiting for more data dwCount=%d count=%d", writeDwCount, writeDataMimo.count());
       end
       if (sendit) begin
 	 for (Integer i = 0; i < 4; i = i + 1)
@@ -714,7 +722,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	   method Action writeAddr(Bit#(addrWidth) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
 				   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) awid)
 	      provisos (Add#(zzz,32,addrWidth))
-	      if (writeBurstCount == 0 && writeDwCount == 0);
+	      if (writeBurstCount == 0);
 
 	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
 	      TLPData#(16) tlp = defaultValue;
@@ -722,7 +730,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      tlp.eof = False;
 	      tlp.hit = 7'h00;
 	      tlp.be = 16'hffff;
-	      Bit#(9) dwCount = zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
+
+	      $display("slave3.writeAddr tlplen=%d burstLen=%d", tlplen, burstLen);
 	      if ((addr >> 32) != 0) begin
 		 TLPMemory4DWHeader hdr_4dw = defaultValue;
 		 hdr_4dw.format = MEM_WRITE_4DW_DATA;
@@ -745,19 +754,13 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 		 hdr_3dw.length = tlplen;
 		 hdr_3dw.firstbe = 4'hf;
 		 hdr_3dw.lastbe = 4'hf;
-		 
-		 // this would cause a deadlock
-		 //Vector#(busWidthWords, Bit#(32)) v = writeDataMimo.deq(1);
-		 //hdr_3dw.data = v[0];
-		 //dwCount = dwCount - 1;
 
 		 tlp.be = 16'hfff0; // no data word in this TLP
 
 		 tlp.data = pack(hdr_3dw);
 	      end
-	      tlpOutFifo.enq(tlp);
+	      tlpWriteHeaderFifo.enq(tlp);
 	      writeBurstCount <= zeroExtend(burstLen)+1;
-	      writeDwCount <= dwCount;
 	      writeTag <= truncate(awid);
            endmethod: writeAddr
 	   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last, Bit#(idWidth) wid)
@@ -876,9 +879,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      end
 	      tlpWriteHeaderFifo.enq(tlp);
 	      writeBurstCount <= zeroExtend(burstLen)+1;
-	      writeDwCount <= zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
 	      writeTag <= truncate(awid);
-	      writeHeaderSent <= False;
            endmethod: writeAddr
 	   method Action writeData(Bit#(busWidth) data, Bit#(busWidthBytes) byteEnable, Bit#(1) last, Bit#(idWidth) wid)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0);
