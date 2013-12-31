@@ -256,9 +256,15 @@ def parse_verilog(filename):
             masterlist.append(f)
     paramnames.sort()
 
-def generate_interface(ifname, paramval, ilist):
+clock_names = []
+def generate_interface(ifname, paramval, ilist, cname):
+    global clock_names
     print('(* always_ready, always_enabled *)')
     print('interface ' + ifname + ';')
+    for item in cname:
+        if item[0] == 'output':
+            if item[1] == 'Clock':
+                print('    interface '+item[1]+'     '+item[-1].lower()+';')
     for item in ilist:
         if item[0] != 'input' and item[0] != 'output' and item[0] != 'inout' and item[0] != 'interface':
             continue
@@ -266,7 +272,10 @@ def generate_interface(ifname, paramval, ilist):
             if item[1] != 'Clock':
                 print('    method Action      '+item[-1].lower()+'('+item[1]+' v);')
         elif item[0] == 'output':
-            print('    method '+item[1]+'     '+item[-1].lower()+'();')
+            if item[1] == 'Clock':
+                clock_names.append(item)
+            else:
+                print('    method '+item[1]+'     '+item[-1].lower()+'();')
         elif item[0] == 'inout':
             print('    interface Inout#('+item[1]+')     '+item[-1].lower()+';')
         elif item[0] == 'interface':
@@ -323,7 +332,7 @@ def generate_inter_declarations(paramlist, paramval):
         #print('interface', k, file=sys.stderr)
         for kuse, vuse in sorted(v.items()):
             if kuse == '' or kuse == '0':
-                generate_interface(k+paramlist, paramval, vuse)
+                generate_interface(k+paramlist, paramval, vuse, [])
             #else:
                 #print('     ', kuse, json.dumps(vuse), file=sys.stderr)
 
@@ -336,6 +345,9 @@ def generate_clocks(item, indent, prefix):
     if item[0] == 'input':
         if item[1] == 'Clock':
             print(indent + 'input_clock '+prefix.lower() + item[-1].lower()+'('+ prefix + item[-1]+') <- exposeCurrentClock();')
+    elif item[0] == 'output':
+        if item[1] == 'Clock':
+            print(indent + 'output_clock '+ prefix.lower() + item[-1].lower()+ '(' + prefix + item[-1]+');')
     elif item[0] == 'interface':
         temp = commoninterfaces[item[1]].get('0')
         if not temp:
@@ -355,9 +367,7 @@ def generate_instance(item, indent, prefix):
             print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) EN_'+prefix + item[-1]+');')
             methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'output':
-        if item[1] == 'Clock':
-            print(indent + 'output_clock '+ item[-1].lower()+ '(' + prefix + item[-1]+');')
-        else:
+        if item[1] != 'Clock':
             print(indent + 'method '+ prefix + item[-1] + ' ' + item[-1].lower()+'();')
             methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'inout':
@@ -373,7 +383,7 @@ def generate_instance(item, indent, prefix):
     return methodlist
 
 def translate_verilog(ifname):
-    global paramnames, modulename
+    global paramnames, modulename, clock_names
     # generate output file
     print('\n/*')
     for item in sys.argv:
@@ -390,7 +400,7 @@ def translate_verilog(ifname):
         paramlist = '#(' + paramlist[2:] + ')'
     paramval = paramlist.replace('numeric type ', '')
     generate_inter_declarations(paramlist, paramval)
-    generate_interface(ifname + paramlist, paramval, masterlist)
+    generate_interface(ifname + paramlist, paramval, masterlist, clock_names)
     print('import "BVI" '+modulename + ' =')
     print('module mk'+ifname+'('+ifname+ paramval +');')
     for item in paramnames:

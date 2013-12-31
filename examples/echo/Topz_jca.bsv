@@ -35,7 +35,7 @@ module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
     endrule
 
     rule clock_rule;
-    let fclock0 = ps7.fclk.clk0();
+    let fclock0 = ps7.fclk_clk0;
     //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
     //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
     //FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX FIX
