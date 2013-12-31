@@ -22,6 +22,7 @@
 
 
 import AxiMasterSlave::*;
+import AxiClientServer::*;
 import Leds::*;
 
 interface Portal#(numeric type portalAddrBits, 
@@ -48,6 +49,8 @@ endfunction
 
 typedef Axi3Slave#(32,32,4,12) StdAxi3Slave;
 typedef Axi3Master#(40,64,8,12) StdAxi3Master;
+typedef Axi3Server#(40,64,8,12) StdAxi3Server;
+typedef Axi3Client#(40,64,8,12) StdAxi3Client;
 typedef Portal#(16,32,32,4,12) StdPortal;
 
 interface PortalTop;
@@ -58,7 +61,7 @@ endinterface
 
 interface PortalDmaTop;
    interface StdAxi3Slave     ctrl;
-   interface StdAxi3Master    m_axi;
+   interface StdAxi3Client    m_axi;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;
 endinterface
