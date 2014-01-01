@@ -58,7 +58,6 @@ typedef struct {
 } AxiRead#(numeric type data_width, numeric type id_width);
 
 interface AxiMasterCommon#(numeric type data_width, numeric type id_width);
-    //method Action             aclk(Clock v);
     method Bit#(1)            aresetn();
     interface Get#(AxiREQ#(id_width)) req_ar;
     interface Get#(AxiREQ#(id_width)) req_aw;
@@ -68,7 +67,6 @@ interface AxiMasterCommon#(numeric type data_width, numeric type id_width);
 endinterface
 
 interface AxiSlaveCommon#(numeric type data_width, numeric type id_width);
-    //method Action             aclk(Clock v);
     method Bit#(1)            aresetn();
     interface Put#(AxiREQ#(id_width)) req_ar;
     interface Put#(AxiREQ#(id_width)) req_aw;
@@ -163,7 +161,7 @@ interface PS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_
     interface Vector#(4, AxiSlaveHighSpeed#(data_width, id_width)) s_axi_hp;
 endinterface
 
-module mkPS7#(Clock m_axi_gp0_aclk)(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width));
+module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width));
     let c_dm_width = valueOf(c_dm_width);
     let c_dq_width = valueOf(c_dq_width);
     let c_dqs_width = valueOf(c_dqs_width);
@@ -171,7 +169,12 @@ module mkPS7#(Clock m_axi_gp0_aclk)(PS7#(c_dm_width, c_dq_width, c_dqs_width, da
     let gpio_width = valueOf(gpio_width);
     let id_width = valueOf(id_width);
     let mio_width = valueOf(mio_width);
-    PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)foo <- mkPPS7(m_axi_gp0_aclk);
+    Clock defaultClock <- exposeCurrentClock();
+    Reset defaultReset <- exposeCurrentReset();
+    PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)foo <- mkPPS7(
+        axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset,
+        axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset, axi_clock, axi_reset,
+        axi_clock, axi_reset);
     Vector#(2, Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vcan;
     Vector#(2, Pps7Core#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vcore;
     Vector#(4, Pps7Dma#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vdma;
@@ -188,11 +191,11 @@ module mkPS7#(Clock m_axi_gp0_aclk)(PS7#(c_dm_width, c_dq_width, c_dqs_width, da
     Vector#(2, Pps7Uart#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vuart;
     Vector#(2, Pps7Usb#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))     vusb;
     Vector#(2, AxiMasterCommon#(32, id_width)) vtopm_axi_gp;
-    Vector#(2, AxiMasterWires) vtopmw_axi_gp <- replicateM(mkAxiMasterWires());
+    Vector#(2, AxiMasterWires) vtopmw_axi_gp <- replicateM(mkAxiMasterWires(clocked_by axi_clock, reset_by axi_reset));
     Vector#(2, AxiSlaveCommon#(32, id_width)) vtops_axi_gp;
-    Vector#(2, AxiSlaveWires) vtopsw_axi_gp <- replicateM(mkAxiSlaveWires());
+    Vector#(2, AxiSlaveWires) vtopsw_axi_gp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
     Vector#(4, AxiSlaveHighSpeed#(data_width, id_width)) vtops_axi_hp;
-    Vector#(2, AxiSlaveWires) vtopsw_axi_hp <- replicateM(mkAxiSlaveWires());
+    Vector#(2, AxiSlaveWires) vtopsw_axi_hp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
 
     vcan[0] = foo.can0;
     vcan[1] = foo.can1;
@@ -316,7 +319,6 @@ module mkPS7#(Clock m_axi_gp0_aclk)(PS7#(c_dm_width, c_dq_width, c_dqs_width, da
                     vtopmw_axi_gp[i].bvalid <= 1;
                 endmethod
             endinterface
-            //method aclk = vm_axi_gp[i].aclk;
             method aresetn = vm_axi_gp[i].aresetn;
             endinterface;
     for (Integer i = 0; i < 2; i = i + 1)
@@ -401,7 +403,6 @@ module mkPS7#(Clock m_axi_gp0_aclk)(PS7#(c_dm_width, c_dq_width, c_dqs_width, da
                     return v;
                 endmethod
             endinterface
-            //method aclk = vs_axi_gp[i].aclk;
             method aresetn = vs_axi_gp[i].aresetn;
         endinterface;
     for (Integer i = 0; i < 2; i = i + 1)
@@ -487,7 +488,6 @@ module mkPS7#(Clock m_axi_gp0_aclk)(PS7#(c_dm_width, c_dq_width, c_dqs_width, da
                     return v;
                 endmethod
             endinterface
-            //method aclk = vs_axi_hp[i].aclk;
             method aresetn = vs_axi_hp[i].aresetn;
             endinterface
             method racount = vs_axi_hp[i].racount;

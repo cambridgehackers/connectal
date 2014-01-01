@@ -32,6 +32,7 @@ remapmap = {}
 clocknames = []
 commoninterfaces = {}
 tokgenerator = 0
+clock_params = []
 toknum = 0
 tokval = 0
 modulename = ''
@@ -264,7 +265,8 @@ def generate_interface(ifname, paramval, ilist, cname):
     for item in cname:
         if item[0] == 'output':
             if item[1] == 'Clock':
-                print('    interface '+item[1]+'     '+item[-1].lower()+';')
+                # HACK HACK HACK --- add in 'fclk_' for interface name
+                print('    interface Clock     fclk_'+item[-1].lower()+';')
     for item in ilist:
         if item[0] != 'input' and item[0] != 'output' and item[0] != 'inout' and item[0] != 'interface':
             continue
@@ -336,18 +338,28 @@ def generate_inter_declarations(paramlist, paramval):
             #else:
                 #print('     ', kuse, json.dumps(vuse), file=sys.stderr)
 
-def generate_clocks(item, indent, prefix):
-    pname = ''
-    if prefix:
-        pname = prefix[:-1].lower() + '.'
-        if pname == 'event.':
-            pname = 'event_.'
+def locate_clocks(item, prefix):
+    global clock_params
+    pname = prefix + item[-1]
     if item[0] == 'input':
         if item[1] == 'Clock':
-            print(indent + 'input_clock '+prefix.lower() + item[-1].lower()+'('+ prefix + item[-1]+') <- exposeCurrentClock();')
+            clock_params.append(pname.lower())
+    elif item[0] == 'interface':
+        temp = commoninterfaces[item[1]].get('0')
+        if not temp:
+            temp = commoninterfaces[item[1]]['']
+        for titem in temp:
+             locate_clocks(titem, item[3])
+
+def generate_clocks(item, indent, prefix):
+    prefname = prefix + item[-1]
+    if item[0] == 'input':
+        if item[1] == 'Clock':
+            print(indent + 'input_clock '+prefname.lower()+'('+ prefname+') = '+prefname.lower() + ';')
+            print(indent + 'input_reset '+prefname.lower()+'_reset() = '+prefname.lower() + '_reset;')
     elif item[0] == 'output':
         if item[1] == 'Clock':
-            print(indent + 'output_clock '+ prefix.lower() + item[-1].lower()+ '(' + prefix + item[-1]+');')
+            print(indent + 'output_clock '+ prefname.lower()+ '(' + prefname+');')
     elif item[0] == 'interface':
         temp = commoninterfaces[item[1]].get('0')
         if not temp:
@@ -355,35 +367,42 @@ def generate_clocks(item, indent, prefix):
         for titem in temp:
              generate_clocks(titem, '        ', item[3])
 
-def generate_instance(item, indent, prefix):
+def generate_instance(item, indent, prefix, clockedby_arg):
     methodlist = ''
     pname = ''
     if prefix:
         pname = prefix[:-1].lower() + '.'
         if pname == 'event.':
             pname = 'event_.'
+    prefname = prefix + item[-1]
     if item[0] == 'input':
         if item[1] != 'Clock':
-            print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) EN_'+prefix + item[-1]+');')
+            print(indent + 'method '+item[-1].lower()+'('+ prefname +')' + clockedby_arg + ' enable((*inhigh*) EN_'+prefname+');')
             methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'output':
         if item[1] != 'Clock':
-            print(indent + 'method '+ prefix + item[-1] + ' ' + item[-1].lower()+'();')
+            print(indent + 'method '+ prefname + ' ' + item[-1].lower()+'()' + clockedby_arg + ';')
             methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'inout':
-        print(indent + 'ifc_inout '+item[-1].lower()+'('+ prefix + item[-1]+');')
+        print(indent + 'ifc_inout '+item[-1].lower()+'('+ prefname+');')
     elif item[0] == 'interface':
         print(indent + 'interface '+item[1]+'     '+item[2].lower()+';')
         temp = commoninterfaces[item[1]].get('0')
         if not temp:
             temp = commoninterfaces[item[1]]['']
+        clockedby_name = ''
         for titem in temp:
-             methodlist = methodlist + generate_instance(titem, '        ', item[3])
+             if titem[0] == 'input' and titem[1] == 'Clock':
+                 print('PPP', item, titem, file=sys.stderr)
+                 clockedby_name = ' clocked_by (' + (item[3]+titem[-1]).lower() + ') reset_by (' + (item[3]+titem[-1]).lower() + '_reset)'
+        for titem in temp:
+             methodlist = methodlist + generate_instance(titem, '        ', item[3], clockedby_name)
         print('    endinterface')
     return methodlist
 
 def translate_verilog(ifname):
     global paramnames, modulename, clock_names
+    global clock_params
     # generate output file
     print('\n/*')
     for item in sys.argv:
@@ -402,7 +421,17 @@ def translate_verilog(ifname):
     generate_inter_declarations(paramlist, paramval)
     generate_interface(ifname + paramlist, paramval, masterlist, clock_names)
     print('import "BVI" '+modulename + ' =')
-    print('module mk'+ifname+'('+ifname+ paramval +');')
+    temp = 'module mk' + ifname
+    for item in masterlist:
+        locate_clocks(item, '')
+    if clock_params != []:
+        sepstring = '#('
+        for item in clock_params:
+            temp = temp + sepstring + 'Clock ' + item + ', Reset ' + item + '_reset'
+            sepstring = ', '
+        temp = temp + ')'
+    temp = temp + '(' + ifname + paramval + ');'
+    print(temp)
     for item in paramnames:
         print('    let ' + item + ' = valueOf(' + item + ');')
     print('    default_clock clk();')
@@ -414,7 +443,7 @@ def translate_verilog(ifname):
     for item in masterlist:
         generate_clocks(item, '    ', '')
     for item in masterlist:
-        methodlist = methodlist + generate_instance(item, '    ', '')
+        methodlist = methodlist + generate_instance(item, '    ', '', '')
     if methodlist != '':
         methodlist = '(' + methodlist[2:] + ')'
         print('    schedule '+methodlist + ' CF ' + methodlist + ';')
