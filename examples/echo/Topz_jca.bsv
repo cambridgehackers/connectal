@@ -35,10 +35,10 @@ module mkZynqTop#(Clock axi_clock)(EchoPins#(64/*gpio_width*/, 54));
     let top_m_axi <- mkClockBinder(axiTop.m_axi, clocked_by axi_clock, reset_by axi_reset);
     let data_width = 64;
     let id_width = 12;
-    PS7#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7(axi_clock, axi_reset);
+    PS7#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7(axi_clock, axi_reset, clocked_by axi_clock, reset_by axi_reset);
     //let ps7_irq <- mkClockBinder(ps7.irq, clocked_by axi_clock, reset_by axi_reset);
-    //SyncBitIfc#(Bit#(1)) interrupt_reg <- mkSyncBit(defaultClock, defaultReset, axi_clock);
-    SyncBitIfc#(Bit#(1)) interrupt_reg <- mkSyncBit(axi_clock, axi_reset, defaultClock);
+    //SyncBitIfc#(Bit#(1)) interrupt_reg <- mkSyncBit(axi_clock, axi_reset, defaultClock);
+    SyncBitIfc#(Bit#(1)) interrupt_reg <- mkSyncBit(axi_clock, axi_reset, axi_clock);
 
     rule int_rule;
     interrupt_reg.send(axiTop.interrupt ? 1'b1 : 1'b0);
