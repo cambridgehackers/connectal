@@ -278,8 +278,12 @@ if __name__=='__main__':
         namespace.constraint = []
     if not namespace.verilog:
         namespace.verilog = []
+    if boardname == 'bluesim':
+        ## nothing special here
+        topmodulename = dutname
     if boardname == 'kc705':
         if not 'os' in namespace: namespace.os = 'ubuntu'
+        topmodulename = dutname
         partname = 'xc7k325tffg900-2'
         needs_pcie_7x_v2_1 = True
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
@@ -287,12 +291,15 @@ if __name__=='__main__':
     elif boardname == 'vc707':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
+        topmodulename = dutname
         needs_pcie_7x_v2_1 = True
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
     else:
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z020clg484-1'
+        topmodulename = 'ztop_1'
+        namespace.verilog.append(os.path.join(xbsvdir, 'verilog'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/design_1_processing_system7_1_0.xdc'))
 
@@ -439,8 +446,8 @@ if __name__=='__main__':
 
     print 'Writing tcl impl file', tclimplname
     tcl = util.createDirAndOpen(tclimplname, 'w')
-    tcl.write(tclfileTemplate % {'dut': dutname.lower(),
-                                 'Dut': dutname,
+    tcl.write(tclfileTemplate % {'dut': topmodulename.lower(),
+                                 'Dut': topmodulename,
                                  'project_dir': project_dir,
                                  'partname': partname,
                                  'tclfileConstraints': '\n'.join([tclfileConstraintTemplate
