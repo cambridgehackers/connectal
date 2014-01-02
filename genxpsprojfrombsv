@@ -61,6 +61,7 @@ file mkdir $outputDir
 # STEP#1: setup design sources and constraints
 #
 %(read_verilog)s
+%(tclfileConstraints)s
 
 # STEP#2: run synthesis, report utilization and timing estimates, write checkpoint design
 #
@@ -76,7 +77,6 @@ write_checkpoint -force $outputDir/%(dut)s_post_synth
 #
 # STEP#3: run placement and logic optimization, report utilization and timing estimates, write checkpoint design
 #
-%(tclfileConstraints)s
 opt_design
 # power_opt_design
 place_design
@@ -115,7 +115,7 @@ else
 ALLTARGETS=implementation ubuntu_exe
 endif
 
-BSCFLAGS = --show-schedule --aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
+BSCFLAGS = -remove-dollar -show-schedule -aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
 BSIM_CXX = $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
 
 all: $(ALLTARGETS)
