@@ -1,4 +1,12 @@
 
+BSVDIR=../../bsv
+S2H = MemreadRequest BlueScopeRequest DMARequest
+H2S = MemreadIndication BlueScopeIndication DMAIndication
+BSVFILES = Memread.bsv $(BSVDIR)/BlueScope.bsv $(BSVDIR)/PortalMemory.bsv
+CPPFILES=testmemread.cpp
+
+include ../../Makefile.common
+
 mkTbPcie: mkTbPcie.ba
 	bsc -sim -o mkTbPcie -e mkTbPcie obj/mkTbPcie.ba
 
