@@ -92,12 +92,10 @@ module mkPortalTop(StdPortalDmaTop);
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
    let interrupt_mux <- mkInterruptMux(portals);
    
-   Vector#(1, StdAxi3Client) v_m_axi = replicate(dma.m_axi);
-
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
 `ifndef BSIM
-   interface Vector m_axi = v_m_axi;
+   interface Vector m_axi = replicate(dma.m_axi);
 `endif
 endmodule
 
