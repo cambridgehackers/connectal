@@ -60,6 +60,7 @@ file mkdir $outputDir
 #
 # STEP#1: setup design sources and constraints
 #
+read_verilog [ glob {verilog/*.v} ]
 %(read_verilog)s
 %(tclfileConstraints)s
 
