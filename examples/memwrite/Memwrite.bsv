@@ -101,6 +101,10 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(8))     burstLen <- mkReg(1);
    Reg#(Bit#(40)) deltaOffset <- mkReg(1*8);
    
+   FIFOF#(Bit#(8))   dataTags <- mkFIFOF();
+   FIFOF#(Bit#(8))   doneTags <- mkFIFOF();
+   Reg#(Bit#(8))   burstCount <- mkReg(0);
+
    interface DMAWriteClient dmaClient;
       interface Get writeReq;
 	 method ActionValue#(DMAAddressRequest) get() if (streamWrCnt > 0);
@@ -110,19 +114,34 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	    if (streamWrCnt == 1)
 	       indication.writeDone(srcGen);
 	    $display("burstlen=%d", burstLen);
-	    return DMAAddressRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: 0};
+	    Bit#(8) tag = truncate(streamWrOff >> 5);
+	    dataTags.enq(tag);
+	    doneTags.enq(tag);
+	    return DMAAddressRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: tag};
 	 endmethod
       endinterface : writeReq
       interface Get writeData;
 	 method ActionValue#(DMAData#(64)) get();
+	    let bc = burstCount;
+	    if (bc == 0)
+	       bc = burstLen;
+
+	    let tag = dataTags.first();
+	    if (bc == 1)
+	       dataTags.deq();
+	    burstCount <= bc - 1;
+
 	    srcGen <= srcGen+2;
 	    let dmadata = {srcGen+1,srcGen};
 	    $display("Memwrite dmadata=%h", dmadata);
-	    return DMAData{data:dmadata, tag: 0};
+	    return DMAData{data:dmadata, tag: tag};
 	 endmethod
       endinterface : writeData
       interface Put writeDone;
-	 method Action put(Bit#(8) v);
+	 method Action put(Bit#(8) tag);
+	    if (tag != doneTags.first)
+	       $display("doneTag mismatch tag=%h doneTag=%h", tag, doneTags.first);
+	    doneTags.deq();
 	 endmethod
       endinterface : writeDone
    endinterface : dmaClient

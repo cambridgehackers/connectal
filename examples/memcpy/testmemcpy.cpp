@@ -20,7 +20,7 @@ PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 128;
+int numWords = 256;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 
@@ -33,8 +33,11 @@ unsigned int iterCnt=1;
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
+    for (int i = 0; i < len ; i++) {
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
+	if (i % 32 == 31)
+	  fprintf(stderr, "\n");
+    }
     fprintf(stderr, "\n");
 }
 
@@ -166,7 +169,7 @@ int main(int argc, const char **argv)
     sem_wait(&iter_sem);
     for (int i = 0; i < numWords; i++){
       srcBuffer[i] = srcGen++;
-      dstBuffer[i] = 5;
+      dstBuffer[i] = 0x5a5abeef;
     }
     
     dma->dCacheFlushInval(srcAlloc, srcBuffer);
@@ -178,7 +181,7 @@ int main(int argc, const char **argv)
     bluescope->reset();
     bluescope->setTriggerMask (0xFFFFFFFF);
     bluescope->setTriggerValue(0x00000002);
-    bluescope->start(ref_bsAlloc);
+    //bluescope->start(ref_bsAlloc);
 
     //bluescope->getStateDbg();
     //device->getStateDbg();

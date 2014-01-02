@@ -74,7 +74,7 @@ typedef enum {Idle, Translate, Address, Data, Done} InternalState deriving(Eq,Bi
 module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMAReadClient#(dsz)) readClients,
 			     DMAIndication dmaIndication)(AxiDMAReadInternal#(dsz,dbytes))
    provisos(Add#(1,a__,dsz),
-      Mul#(dbytes,8,dsz));
+	    Mul#(dbytes,8,dsz));
    
    SGListMMU sgl <- mkSGListMMU();
    
@@ -182,8 +182,7 @@ endmodule
 module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAWriteClient#(dsz)) writeClients,
 			      DMAIndication dmaIndication)(AxiDMAWriteInternal#(dsz,dbytes))
    provisos(Add#(1,a__,dsz),
-	    Mul#(dbytes,8,dsz),
-	    Add#(b__, TAdd#(dsz, 8), 128));
+	    Mul#(dbytes,8,dsz));
    SGListMMU sgl <- mkSGListMMU();
    
    FIFO#(DMAAddressRequest) lreqFifo <- mkPipelineFIFO();
@@ -315,8 +314,7 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
 		       Vector#(numWriteClients, DMAWriteClient#(dsz)) writeClients)
    (AxiDMAServer#(dsz,dbytes))
    provisos (Add#(1,a__,dsz),
-	     Mul#(dbytes,8,dsz),
-	     Add#(dsz, b__, 120));
+	     Mul#(dbytes,8,dsz));
 
    AxiDMAReadInternal#(dsz,dbytes) reader <- mkAxiDMAReadInternal(numRequests, readClients, dmaIndication);
    AxiDMAWriteInternal#(dsz,dbytes) writer <- mkAxiDMAWriteInternal(numRequests, writeClients, dmaIndication);

@@ -58,6 +58,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
+   Reg#(Bit#(32)) streamAckCnt <- mkReg(0);
    Reg#(Bit#(40)) streamRdOff <- mkReg(0);
    Reg#(Bit#(40)) streamWrOff <- mkReg(0);
    Reg#(DmaMemHandle)    streamRdHandle <- mkReg(0);
@@ -66,29 +67,33 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bool)               writeInProg <- mkReg(False);
    Reg#(Bool)              dataMismatch <- mkReg(False);  
    
+   Reg#(Bit#(8)) burstLen <- mkReg(8);
+   Reg#(Bit#(40)) deltaOffset <- mkReg(8*8);
+
    rule readReq(streamRdCnt > 0);
-      streamRdCnt <= streamRdCnt - 1;
-      streamRdOff <= streamRdOff + 1;
+      streamRdCnt <= streamRdCnt - extend(burstLen);
+      streamRdOff <= streamRdOff + deltaOffset;
       // $display("readReq.put handle=%h address=%h", streamRdHandle, streamRdOff);
-      dma_stream_read_server.readReq.put(DMAAddressRequest {handle: streamRdHandle, address: streamRdOff, burstLen: 1, tag: truncate(streamRdOff)});
-      indication.readReq(streamRdCnt);
+      dma_stream_read_server.readReq.put(DMAAddressRequest {handle: streamRdHandle, address: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
+      //indication.readReq(streamRdCnt);
    endrule
 
    rule writeReq(streamWrCnt > 0 && !writeInProg);
       writeInProg <= True;
-      streamWrOff <= streamWrOff + 1;
+      streamWrCnt <= streamWrCnt-extend(burstLen);
+      streamWrOff <= streamWrOff + deltaOffset;
       //$display("writeReq.put handle=%h address=%h", streamWrHandle, streamWrOff);
-      dma_stream_write_server.writeReq.put(DMAAddressRequest {handle: streamWrHandle, address: streamWrOff, burstLen: 1, tag: truncate(streamWrOff)});
-      indication.writeReq(streamWrCnt);
+      dma_stream_write_server.writeReq.put(DMAAddressRequest {handle: streamWrHandle, address: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
+      //indication.writeReq(streamWrCnt);
    endrule
    
    rule writeAck(writeInProg);
       writeInProg <= False;
       let tag <- dma_stream_write_server.writeDone.get();
       //$display("writeAck: tag=%d", tag);
-      streamWrCnt <= streamWrCnt-1;
-      indication.writeAck(streamWrCnt);
-      if(streamWrCnt==1)
+      streamAckCnt <= streamAckCnt-extend(burstLen);
+      //indication.writeAck(streamAckCnt);
+      if(streamAckCnt==extend(burstLen))
    	 indication.done(dataMismatch ? 32'd1 : 32'd0);
    endrule
 
@@ -99,7 +104,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       let misMatch1 = v[63:32] != srcGen+1;
       dataMismatch <= dataMismatch || misMatch0 || misMatch1;
       dma_stream_write_server.writeData.put(tagdata);
-      bs.dataIn(v,v);
+      //bs.dataIn(v,v);
       srcGen <= srcGen+2;
       //$display("loopback %h", tagdata.data);
       // indication.rData(v);
@@ -112,10 +117,14 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    
    method Action startCopy(Bit#(32) wrHandle, Bit#(32) rdHandle, Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
       //$display("startCopy wrHandle=%h rdHandle=%h numWords=%d", wrHandle, rdHandle, numWords);
+      streamRdOff <= 0;
+      streamWrOff <= 0;
+
       streamWrHandle <= wrHandle;
       streamRdHandle <= rdHandle;
       streamRdCnt <= numWords>>1;
       streamWrCnt <= numWords>>1;
+      streamAckCnt <= numWords>>1;
       indication.started(numWords);
    endmethod
 

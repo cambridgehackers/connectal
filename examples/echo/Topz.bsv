@@ -33,7 +33,7 @@ import Leds::*;
 import Top::*;
 
 module mkZynqTop(AxiTop);
-   let axiTop <- mkAxiTop();
+   let axiTop <- mkPortalTop();
    return axiTop;
 endmodule : mkZynqTop
 
@@ -46,7 +46,7 @@ import "BDPI" function ActionValue#(Bit#(32))  readAddr();
 import "BDPI" function Action        readData(Bit#(32) d);
 
 module mkBsimTop();
-   AxiTop top <- mkAxiTop;
+   AxiTop top <- mkPortalTop;
    let wf <- mkPipelineFIFO;
    let init_seq = (action 
 		      initPortal(0);
