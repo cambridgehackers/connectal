@@ -25,10 +25,11 @@ import Connectable       :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
+import AxiMasterSlave    :: *;
 
 interface ZynqTop#(type pins);
    interface StdAxi3Slave     ctrl;
-   interface StdAxi3Client    m_axi;
+   interface StdAxi3Master    m_axi;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;
    interface pins             pins;
@@ -40,9 +41,11 @@ typedef (function Module#(PortalTop#(nmasters, ipins)) mkpt()) MkPortalTop#(nume
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(nmasters,ipins) constructor)(ZynqTop#(ipins));
    let defaultClock <- exposeCurrentClock;
    let top <- constructor(clocked_by defaultClock);
-   StdAxi3Client master = ?;
-   if (valueOf(nmasters) > 0)
-      master = top.m_axi[0];
+   StdAxi3Master master = ?;
+   if (valueOf(nmasters) > 0) begin
+      let m <- mkAxi3Master(top.m_axi[0]);
+      master = m;
+   end
 
    interface ctrl = top.ctrl;
    interface m_axi = master;
