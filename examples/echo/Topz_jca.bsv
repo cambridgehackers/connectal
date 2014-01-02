@@ -1,23 +1,17 @@
 // bsv libraries
-//import SpecialFIFOs::*;
-//import Vector::*;
-//import StmtFSM::*;
-//import FIFO::*;
-//import Connectable::*;
 import Clocks :: *;
 import GetPut::*;
 import GetPutWithClocks::*;
 
 // portz libraries
 import AxiMasterSlave::*;
-//import Directory::*;
 import CtrlMux::*;
-//import Portal::*;
 import Leds::*;
 import Top::*;
 import PPS7::*;
 import PS7::*;
 
+(* always_ready, always_enabled *)
 interface EchoPins#(numeric type gpio_width, numeric type mio_width);
     interface Pps7Ddr#(4, 32, 4, 64, 64, 12, 54) ddr;
     interface Inout#(Bit#(mio_width))       mio;
@@ -137,6 +131,6 @@ end of m_axi */
     interface Inout   mio = ps7.mio;
     interface Pps7Ps  ps = ps7.ps;
     interface LEDS    leds = axiTop.leds;
-    interface Clock   fclk_clk0 = ps7.fclk_clk0;
+    interface Clock   fclk_clk0 = ps7.fclk.clk0;
 endmodule : mkZynqTop
 

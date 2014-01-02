@@ -262,11 +262,6 @@ def generate_interface(ifname, paramval, ilist, cname):
     global clock_names
     print('(* always_ready, always_enabled *)')
     print('interface ' + ifname + ';')
-    for item in cname:
-        if item[0] == 'output':
-            if item[1] == 'Clock':
-                # HACK HACK HACK --- add in 'fclk_' for interface name
-                print('    interface Clock     fclk_'+item[-1].lower()+';')
     for item in ilist:
         if item[0] != 'input' and item[0] != 'output' and item[0] != 'inout' and item[0] != 'interface':
             continue
@@ -275,6 +270,7 @@ def generate_interface(ifname, paramval, ilist, cname):
                 print('    method Action      '+item[-1].lower()+'('+item[1]+' v);')
         elif item[0] == 'output':
             if item[1] == 'Clock':
+                print('    interface Clock     '+item[-1].lower()+';')
                 clock_names.append(item)
             else:
                 print('    method '+item[1]+'     '+item[-1].lower()+'();')
@@ -357,9 +353,6 @@ def generate_clocks(item, indent, prefix):
         if item[1] == 'Clock':
             print(indent + 'input_clock '+prefname.lower()+'('+ prefname+') = '+prefname.lower() + ';')
             print(indent + 'input_reset '+prefname.lower()+'_reset() = '+prefname.lower() + '_reset;')
-    elif item[0] == 'output':
-        if item[1] == 'Clock':
-            print(indent + 'output_clock '+ prefname.lower()+ '(' + prefname+');')
     elif item[0] == 'interface':
         temp = commoninterfaces[item[1]].get('0')
         if not temp:
@@ -380,7 +373,9 @@ def generate_instance(item, indent, prefix, clockedby_arg):
             print(indent + 'method '+item[-1].lower()+'('+ prefname +')' + clockedby_arg + ' enable((*inhigh*) EN_'+prefname+');')
             methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'output':
-        if item[1] != 'Clock':
+        if item[1] == 'Clock':
+            print(indent + 'output_clock '+ item[-1].lower()+ '(' + prefname+');')
+        else:
             print(indent + 'method '+ prefname + ' ' + item[-1].lower()+'()' + clockedby_arg + ';')
             methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'inout':
@@ -411,7 +406,6 @@ def translate_verilog(ifname):
     for item in ['Clocks', 'DefaultValue', 'XilinxCells', 'GetPut']:
         print('import ' + item + '::*;')
     print('')
-    #print('(* always_ready, always_enabled *)')
     paramlist = ''
     for item in paramnames:
         paramlist = paramlist + ', numeric type ' + item

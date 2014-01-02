@@ -145,6 +145,7 @@ interface Pps7Event#(numeric type c_dm_width, numeric type c_dq_width, numeric t
 endinterface
 (* always_ready, always_enabled *)
 interface Pps7Fclk#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
+    interface Clock     clk0;
     method Bit#(1)     clk1();
     method Bit#(1)     clk2();
     method Bit#(1)     clk3();
@@ -491,7 +492,6 @@ interface Pps7Wdt#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
 endinterface
 (* always_ready, always_enabled *)
 interface PPS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
-    interface Clock     fclk_clk0;
     interface Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     can0;
     interface Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     can1;
     interface Pps7Core#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     core0;
@@ -597,7 +597,6 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
     parameter C_TRACE_BUFFER_FIFO_SIZE = 128;
     parameter C_USE_DEFAULT_ACP_USER_VAL = 1;
     parameter USE_TRACE_DATA_EDGE_DETECTOR = 0;
-        output_clock fclk_clk0(FCLK_CLK0);
         input_clock m_axi_gp0_aclk(M_AXI_GP0_ACLK) = m_axi_gp0_aclk;
         input_reset m_axi_gp0_aclk_reset() = m_axi_gp0_aclk_reset;
         input_clock m_axi_gp1_aclk(M_AXI_GP1_ACLK) = m_axi_gp1_aclk;
@@ -757,6 +756,7 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method EVENT_STANDBYWFI standbywfi();
     endinterface
     interface Pps7Fclk     fclk;
+        output_clock clk0(FCLK_CLK0);
         method FCLK_CLK1 clk1();
         method FCLK_CLK2 clk2();
         method FCLK_CLK3 clk3();

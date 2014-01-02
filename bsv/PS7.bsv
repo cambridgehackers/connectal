@@ -127,7 +127,6 @@ interface Bidir#(numeric type data_width);
 endinterface
 
 interface PS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
-    interface Clock fclk_clk0;
     interface Vector#(2, Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width))  can;
     interface Vector#(2, Pps7Core#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)) core;
     interface Pps7Ddr#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)              ddr;
@@ -529,5 +528,4 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
     interface AxiSlaveCommon s_axi_gp = vtops_axi_gp;
     interface AxiSlaveHighSpeed s_axi_hp = vtops_axi_hp;
     //interface AxiSlaveCommon s_axi_acp;
-    interface Clock fclk_clk0 = foo.fclk_clk0;
 endmodule
