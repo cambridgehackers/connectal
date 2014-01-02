@@ -17,14 +17,7 @@ import StructRequestWrapper::*;
 // defined by user
 import Struct::*;
 
-interface AxiTop;
-   interface StdAxi3Slave     ctrl;
-   interface StdAxi3Master    m_axi;
-   interface ReadOnly#(Bool)  interrupt;
-   interface LEDS             leds;
-endinterface
-
-module mkAxiTop(AxiTop);
+module mkPortalTop(StdPortalTop);
 
    // instantiate user portals
    StructIndicationProxy structIndicationProxy <- mkStructIndicationProxy(7);
@@ -46,9 +39,9 @@ module mkAxiTop(AxiTop);
    
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
-   interface Axi3Master m_axi = ?;
+   interface Vector m_axi = ?;
    interface LEDS leds = ?;
 
-endmodule : mkAxiTop
+endmodule : mkPortalTop
 
 

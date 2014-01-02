@@ -26,14 +26,7 @@ import DMAIndicationProxy::*;
 // defined by user
 import Mempoke::*;
 
-interface Top;
-   interface StdAxi3Slave     ctrl;
-   interface StdAxi3Master    m_axi;
-   interface ReadOnly#(Bool)  interrupt;
-   interface LEDS             leds;
-endinterface
-
-module mkZynqTop(Top);
+module mkPortalTop(StdPortalDmaTop);
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
    DMAWriteBuffer#(64,16) dma_stream_write_chan <- mkDMAWriteBuffer();
@@ -69,56 +62,10 @@ module mkZynqTop(Top);
    // when constructing ctrl and interrupt muxes, directories must be the first argument
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
    let interrupt_mux <- mkInterruptMux(portals);
-`ifndef BSIM
-   let axi_master <- mkAxi3Master(dma.m_axi);
-`endif
    
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
 `ifndef BSIM
-   interface StdAxi3Master m_axi = axi_master;
+   interface Vector m_axi = replicate(dma.m_axi);
 `endif
-endmodule
-
-import "BDPI" function Action      initPortal(Bit#(32) d);
-import "BDPI" function Bool                    writeReq();
-import "BDPI" function ActionValue#(Bit#(32)) writeAddr();
-import "BDPI" function ActionValue#(Bit#(32)) writeData();
-import "BDPI" function Bool                     readReq();
-import "BDPI" function ActionValue#(Bit#(32))  readAddr();
-import "BDPI" function Action        readData(Bit#(32) d);
-
-
-module mkBsimTop();
-   Top top <- mkZynqTop;
-   let wf <- mkPipelineFIFO;
-   let init_seq = (action 
-		      initPortal(0);
-		      initPortal(1);
-		      initPortal(2);
-		      initPortal(3);
-		      initPortal(4);
-                   endaction);
-   let init_fsm <- mkOnce(init_seq);
-   rule init_rule;
-      init_fsm.start;
-   endrule
-   rule wrReq (writeReq());
-      let wa <- writeAddr;
-      let wd <- writeData;
-      top.ctrl.write.writeAddr(wa,0,0,0,0,0,0);
-      wf.enq(wd);
-   endrule
-   rule wrData;
-      wf.deq;
-      top.ctrl.write.writeData(wf.first,0,0,0);
-   endrule
-   rule rdReq (readReq());
-      let ra <- readAddr;
-      top.ctrl.read.readAddr(ra,0,0,0,0,0,0);
-   endrule
-   rule rdResp;
-      let rd <- top.ctrl.read.readData;
-      readData(rd);
-   endrule
 endmodule
