@@ -1,0 +1,23 @@
+
+all bits verilog implementation bsim bsim_exe: gen
+	make -C $(BOARD) $@
+
+ifeq ($(BOARD),kc705)
+TOP=PcieTop
+endif
+ifeq ($(BOARD),vc707)
+TOP=PcieTop
+endif
+ifeq ($(BOARD),zedboard)
+TOP=ZynqTop
+endif
+ifeq ($(BOARD),zc702)
+TOP=ZynqTop
+endif
+
+gen:
+	../../genxpsprojfrombsv -B$(BOARD) -p $(BOARD) -x mk$(TOP) \
+	$(foreach s2h, $(S2H), -s2h $(s2h)) \
+	$(foreach h2s, $(H2S), -h2s $(h2s)) \
+	$(foreach f, $(CPPFILES), -s $f) \
+        -t ../../bsv/$(TOP).bsv $(BSVFILES)
