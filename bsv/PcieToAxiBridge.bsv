@@ -585,6 +585,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bool) use4dwReg <- mkReg(True);
 
+    // default configuration for MIMO is for guarded enq() and deq().
+    // However, the implicit guard only checks for space for 1 element for enq(), and availability of 1 element for deq().
     MIMOConfiguration mimoCfg = defaultValue;
     MIMO#(4,busWidthWords,8,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
     MIMO#(4,busWidthWords,8,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
@@ -649,6 +651,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
       tlp.sof = False;
       Vector#(4, Bit#(32)) v = unpack(0);
       Bool sendit = False;
+      // The MIMO implicit guard only checks for availability of 1 element
+      // so we explicitly check for the number of elements required
       if (writeDwCount > 4 && writeDataMimo.deqReadyN(4)) begin
 	 v = writeDataMimo.first();
 
@@ -677,7 +681,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
       end
       else begin
 	 // wait for more data in writeDataMimo
-	 $display("waiting for more data dwCount=%d count=%d writeBurstCount=%d enqReady=%d", writeDwCount, writeDataMimo.count(), writeBurstCount, writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
+	 $display("waiting for more data dwCount=%d count=%d writeBurstCount=%d enqReady=%d",
+	    writeDwCount, writeDataMimo.count(), writeBurstCount, writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
       end
       if (sendit) begin
 	 for (Integer i = 0; i < 4; i = i + 1)
@@ -707,7 +712,9 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	    end
 	 endfunction
 	 vec = genWith(f);
-	 //$display($format(fshow("completionMimo.enq vec=")+fshow(vec)));
+	 // The MIMO implicit guard only checks for space to enqueue 1 element
+	 // so we explicitly check for the number of elements required
+	 // otherwise elements in the queue will be overwritten.
 	 if (completionMimo.enqReadyN(fromInteger(count))
 	    && completionTagMimo.enqReadyN(fromInteger(count)))
 	    begin
