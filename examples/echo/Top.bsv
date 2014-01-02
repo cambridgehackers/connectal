@@ -21,7 +21,7 @@ import SwallowWrapper::*;
 import Echo::*;
 import Swallow::*;
 
-module mkPortalTop(PortalTop);
+module mkPortalTop(StdPortalTop);
 
    // instantiate user portals
    EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(7);

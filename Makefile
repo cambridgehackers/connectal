@@ -133,7 +133,7 @@ xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
 
 k7echoproj:
 	./genxpsprojfrombsv -Bkc705 -p k7echoproj -x mkPcieTop -s2h Swallow -s2h EchoRequest -h2s EchoIndication \
-	-s examples/echo/testecho.cpp -t examples/echo/PcieTop.bsv -M verilog -M implementation examples/echo/Echo.bsv examples/echo/Swallow.bsv
+	-s examples/echo/testecho.cpp -t bsv/PcieTop.bsv -M verilog -M implementation examples/echo/Echo.bsv examples/echo/Swallow.bsv
 
 v7echoproj:
 	./genxpsprojfrombsv -B vc707 -p v7echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv && (cd v7echoproj && time make implementation)

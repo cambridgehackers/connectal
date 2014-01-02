@@ -53,15 +53,20 @@ typedef Axi3Server#(40,64,8,12) StdAxi3Server;
 typedef Axi3Client#(40,64,8,12) StdAxi3Client;
 typedef Portal#(16,32,32,4,12) StdPortal;
 
-interface PortalTop;
+interface PortalTop#(type pins);
    interface StdAxi3Slave     ctrl;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;
+   interface pins             pins;
 endinterface
 
-interface PortalDmaTop;
+interface PortalDmaTop#(type pins);
    interface StdAxi3Slave     ctrl;
    interface StdAxi3Client    m_axi;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;
+   interface pins             pins;
 endinterface
+
+typedef PortalTop#(Empty)     StdPortalTop;
+typedef PortalDmaTop#(Empty)  StdPortalDmaTop;
