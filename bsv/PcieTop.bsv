@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Vector            :: *;
 import Connectable       :: *;
 import Xilinx            :: *;
 import XilinxPCIE        :: *;
@@ -29,7 +30,7 @@ import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 
-typedef (function Module#(PortalTop#(ipins)) mkPortalTop()) MkPortalTop#(type ipins);
+typedef (function Module#(PortalTop#(nmasters, ipins)) mkPortalTop()) MkPortalTop#(numeric type nmasters, type ipins);
 
 interface PcieTop#(type ipins);
    (* prefix=""*)
@@ -41,9 +42,11 @@ endinterface
 module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 				      Clock sys_clk_p,     Clock sys_clk_n,
 				      Reset pci_sys_reset_n,
-				      MkPortalTop#(ipins) mkPortalTop)
-   (PcieTop#(ipins));
+				      MkPortalTop#(nmasters, ipins) mkPortalTop)
+   (PcieTop#(ipins))
+   provisos (Add#(nmasters,a__,1));
 
+   let nmasters = valueOf(nmasters);
    let contentId = 0;
 
    X7PcieBridgeIfc#(8) x7pcie <- mkX7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
@@ -53,6 +56,15 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    // instantiate user portals
    let portalTop <- mkPortalTop(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   if (nmasters > 0) begin
+      Vector#(nmasters, StdAxi3Client) m_axi = portalTop.m_axi;
+      Vector#(nmasters, AxiSlaveEngine#(64,8)) axiSlaveEngines <- replicateM(mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125));
+      for (Integer i = 0; i < nmasters; i = i+1) begin
+	 mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngines[i].tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+	 mkConnection(tpl_1(axiSlaveEngines[i].tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+	 mkConnection(portalTop.m_axi[i], axiSlaveEngines[i].slave3, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+      end
+   end
 
    mkConnection(x7pcie.portal0, portalTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 

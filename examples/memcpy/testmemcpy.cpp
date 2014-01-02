@@ -50,7 +50,7 @@ public:
   virtual void started(unsigned long words){
     fprintf(stderr, "started: words=%ld\n", words);
   }
-  virtual void readWordResult ( unsigned long long v ){
+  virtual void readWordResult ( unsigned long v ){
     dump("readWordResult: ", (char*)&v, sizeof(v));
   }
   virtual void done(unsigned long v) {

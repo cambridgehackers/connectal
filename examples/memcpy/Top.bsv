@@ -12,6 +12,7 @@ import Xilinx7PcieBridge :: *;
 import PcieToAxiBridge   :: *;
 
 // portz libraries
+import AxiClientServer::*;
 import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;
@@ -34,20 +35,20 @@ import DMAIndicationProxy::*;
 // defined by user
 import Memcpy::*;
 
-module mkPortalDmaTop(PortalDmaTop);
+module mkPortalTop(StdPortalDmaTop);
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
    // Max burst 16
-   DMAReadBuffer#(64,16) dma_stream_read_chan <- mkDMAReadBuffer();
+   DMAReadBuffer#(64,8) dma_stream_read_chan <- mkDMAReadBuffer();
 
    // Max burst 16
-   DMAWriteBuffer#(64,16) dma_stream_write_chan <- mkDMAWriteBuffer();
+   DMAWriteBuffer#(64,8) dma_stream_write_chan <- mkDMAWriteBuffer();
    
    // Max burst 1 because it only reads one word at a time
    DMAReadBuffer#(64,1) dma_word_read_chan <- mkDMAReadBuffer();
 
    // Max burst 16
-   DMAWriteBuffer#(64,16) dma_debug_write_chan <- mkDMAWriteBuffer();
+   DMAWriteBuffer#(64,8) dma_debug_write_chan <- mkDMAWriteBuffer();
 
    Vector#(2,  DMAReadClient#(64))   readClients = newVector();
    readClients[0] = dma_stream_read_chan.dmaClient;
@@ -91,61 +92,13 @@ module mkPortalDmaTop(PortalDmaTop);
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
    let interrupt_mux <- mkInterruptMux(portals);
    
+   Vector#(1, StdAxi3Client) v_m_axi = replicate(dma.m_axi);
+
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
 `ifndef BSIM
-   interface StdAxi3Client m_axi = dma.m_axi;
+   interface Vector m_axi = v_m_axi;
 `endif
 endmodule
 
-module mkZynqTop(PortalDmaTop);
-   let top <- mkPortalDmaTop();
-   return top;
-endmodule
-
-import "BDPI" function Action      initPortal(Bit#(32) d);
-import "BDPI" function Bool                    writeReq();
-import "BDPI" function ActionValue#(Bit#(32)) writeAddr();
-import "BDPI" function ActionValue#(Bit#(32)) writeData();
-import "BDPI" function Bool                     readReq();
-import "BDPI" function ActionValue#(Bit#(32))  readAddr();
-import "BDPI" function Action        readData(Bit#(32) d);
-
-
-module mkBsimTop();
-   PortalDmaTop top <- mkPortalDmaTop();
-   let wf <- mkPipelineFIFO;
-   let init_seq = (action 
-		      initPortal(0);
-		      initPortal(1);
-		      initPortal(2);
-		      initPortal(3);
-		      initPortal(4);
-		      initPortal(5);
-		      initPortal(6);
-		      initPortal(7);
-                   endaction);
-   let init_fsm <- mkOnce(init_seq);
-   rule init_rule;
-      init_fsm.start;
-   endrule
-   rule wrReq (writeReq());
-      let wa <- writeAddr;
-      let wd <- writeData;
-      top.ctrl.write.writeAddr(wa,0,0,0,0,0,0);
-      wf.enq(wd);
-   endrule
-   rule wrData;
-      wf.deq;
-      top.ctrl.write.writeData(wf.first,0,0,0);
-   endrule
-   rule rdReq (readReq());
-      let ra <- readAddr;
-      top.ctrl.read.readAddr(ra,0,0,0,0,0,0);
-   endrule
-   rule rdResp;
-      let rd <- top.ctrl.read.readData;
-      readData(rd);
-   endrule
-endmodule
 

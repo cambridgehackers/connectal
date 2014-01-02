@@ -434,16 +434,17 @@ void* portalExec(void* __x)
     long rc;
     int timeout = -1; 
 #ifndef ZYNQ
-    timeout = 1; // interrupts not working yet on PCIe
+    timeout = 100; // interrupts not working yet on PCIe
 #endif
     if (!numFds) {
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
     }
 #ifndef ZYNQ
+    if (0)
     for (int i = 0; i < numFds; i++) {
       PortalWrapper *instance = portal_wrappers[i];
-      //fprintf(stderr, "Portal::enabling interrupts portal %d\n", i);
+      fprintf(stderr, "Portal::enabling interrupts portal %d\n", i);
       *(volatile int *)(instance->ind_reg_base+0x1) = 1;
     }
 #endif

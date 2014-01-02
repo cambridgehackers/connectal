@@ -40,7 +40,7 @@ endinterface
 
 interface MemcpyIndication;
    method Action started(Bit#(32) numWords);
-   method Action readWordResult(Bit#(64) v);
+   method Action readWordResult(Bit#(32) v);
    method Action done(Bit#(32) dataMismatch);
    method Action rData(Bit#(64) v);
    method Action readReq(Bit#(32) v);
@@ -50,10 +50,15 @@ interface MemcpyIndication;
 endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication,
-			DMAReadServer#(64) dma_stream_read_server,
-			DMAWriteServer#(64) dma_stream_write_server,
-			DMAReadServer#(64) dma_word_read_server,
-			BlueScope bs)(MemcpyRequest);
+			DMAReadServer#(busWidth) dma_stream_read_server,
+			DMAWriteServer#(busWidth) dma_stream_write_server,
+			DMAReadServer#(busWidth) dma_word_read_server,
+			BlueScope bs)(MemcpyRequest)
+   provisos (Div#(busWidth,8,busWidthBytes),
+	     Add#(a__,32,busWidth));
+
+   let busWidthBytes = valueOf(busWidthBytes);
+   let busWidthWords = busWidthBytes/4;
 
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
@@ -68,7 +73,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bool)              dataMismatch <- mkReg(False);  
    
    Reg#(Bit#(8)) burstLen <- mkReg(8);
-   Reg#(Bit#(40)) deltaOffset <- mkReg(8*8);
+   Reg#(Bit#(40)) deltaOffset <- mkReg(8*fromInteger(busWidthBytes));
 
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt - extend(burstLen);
@@ -100,19 +105,20 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    rule loopback;
       let tagdata <- dma_stream_read_server.readData.get();
       let v = tagdata.data;
-      let misMatch0 = v[31:0] != srcGen;
-      let misMatch1 = v[63:32] != srcGen+1;
-      dataMismatch <= dataMismatch || misMatch0 || misMatch1;
+      Bool mismatch = False;
+      for (Integer i = 0; i < busWidthWords; i = i+1)
+	 mismatch = mismatch || (v[31+i*32:i*32] != (srcGen + fromInteger(i)));
+      dataMismatch <= dataMismatch || mismatch;
       dma_stream_write_server.writeData.put(tagdata);
       //bs.dataIn(v,v);
-      srcGen <= srcGen+2;
+      srcGen <= srcGen+fromInteger(busWidthWords);
       //$display("loopback %h", tagdata.data);
       // indication.rData(v);
    endrule
    
    rule readWordResp;
       let tagdata <- dma_word_read_server.readData.get;
-      indication.readWordResult(tagdata.data);
+      indication.readWordResult(truncate(tagdata.data));
    endrule
    
    method Action startCopy(Bit#(32) wrHandle, Bit#(32) rdHandle, Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
