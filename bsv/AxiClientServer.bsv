@@ -26,6 +26,7 @@ import FIFO::*;
 import FIFOF::*;
 import FIFOLevel::*;
 import SpecialFIFOs::*;
+import Connectable::*;
 
 typedef struct {
     Bit#(addrWidth) address;
@@ -182,3 +183,60 @@ interface Axi4Server#(type addrWidth, type busWidth, type busWidthBytes, type id
    interface Axi4ReadServer#(addrWidth, busWidth, idWidth) read;
    interface Axi4WriteServer#(addrWidth, busWidth, busWidthBytes, idWidth) write;
 endinterface
+
+instance Connectable#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth), Axi3Server#(addrWidth, busWidth,busWidthBytes,idWidth));
+   module mkConnection#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) m, Axi3Server#(addrWidth, busWidth,busWidthBytes,idWidth) s)(Empty);
+
+      rule connectionReadAddr;
+         let req <- m.read.address();
+         s.read.address(req);
+      endrule
+      rule connectionReadData;
+         let d <- s.read.data();
+         m.read.data(d);
+      endrule
+
+      rule connectionWriteAddr;
+         let req <- m.write.address();
+         s.write.address(req);
+      endrule
+      (* aggressive_implicit_conditions *)
+      rule connectionWriteData;
+         let d <- m.write.data();
+         s.write.data(d);
+      endrule
+      rule connectionWriteResponse;
+         let r <- s.write.response();
+         m.write.response(r);
+      endrule
+
+   endmodule
+endinstance
+
+instance Connectable#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth), Axi4Server#(addrWidth, busWidth,busWidthBytes,idWidth));
+   module mkConnection#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth) m, Axi4Server#(addrWidth, busWidth,busWidthBytes,idWidth) s)(Empty);
+
+      rule connectionReadAddr;
+         let req <- m.read.address();
+         s.read.address(req);
+      endrule
+      rule connectionReadData;
+         let d <- s.read.data();
+         m.read.data(d);
+      endrule
+
+      rule connectionWriteAddr;
+         let req <- m.write.address();
+         s.write.address(req);
+      endrule
+      rule connectionWriteData;
+         let d <- m.write.data();
+         s.write.data(d);
+      endrule
+      rule connectionWriteResponse;
+         let r <- s.write.response();
+         m.write.response(r);
+      endrule
+
+   endmodule
+endinstance

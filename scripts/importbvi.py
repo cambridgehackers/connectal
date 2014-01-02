@@ -29,8 +29,10 @@ masterlist = []
 parammap = {}
 paramnames = []
 remapmap = {}
+clocknames = []
 commoninterfaces = {}
 tokgenerator = 0
+clock_params = []
 toknum = 0
 tokval = 0
 modulename = ''
@@ -241,7 +243,6 @@ def parse_verilog(filename):
             if f[0] == 'module':
                 modulename = f[1]
             if f[0] == 'input' or f[0] == 'output' or f[0] == 'inout':
-                #print('FF', f, file=sys.stderr)
                 if len(f) == 2:
                     f = [f[0], '1', f[1]]
                 # check for parameterized declarations
@@ -250,22 +251,31 @@ def parse_verilog(filename):
                     print('Missing parameter declaration', pname, file=sys.stderr)
                     paramnames.append(pname)
                 f[1] = 'Bit#(' + f[1] + ')'
+                if f[2] in clocknames:
+                    f[1] = 'Clock'
+                #print('FF', f, file=sys.stderr)
             masterlist.append(f)
     paramnames.sort()
 
-def generate_interface(ifname, paramval, ilist):
+clock_names = []
+def generate_interface(ifname, paramval, ilist, cname):
+    global clock_names
     print('(* always_ready, always_enabled *)')
     print('interface ' + ifname + ';')
     for item in ilist:
         if item[0] != 'input' and item[0] != 'output' and item[0] != 'inout' and item[0] != 'interface':
             continue
-        itemlen = item[1]
         if item[0] == 'input':
-            print('    method Action      '+item[-1].lower()+'('+itemlen+' v);')
+            if item[1] != 'Clock':
+                print('    method Action      '+item[-1].lower()+'('+item[1]+' v);')
         elif item[0] == 'output':
-            print('    method '+itemlen+'     '+item[-1].lower()+'();')
+            if item[1] == 'Clock':
+                print('    interface Clock     '+item[-1].lower()+';')
+                clock_names.append(item)
+            else:
+                print('    method '+item[1]+'     '+item[-1].lower()+'();')
         elif item[0] == 'inout':
-            print('    interface Inout#('+itemlen+')     '+item[-1].lower()+';')
+            print('    interface Inout#('+item[1]+')     '+item[-1].lower()+';')
         elif item[0] == 'interface':
             print('    interface '+item[1]+ paramval +'     '+item[2].lower()+';')
     print('endinterface')
@@ -320,40 +330,74 @@ def generate_inter_declarations(paramlist, paramval):
         #print('interface', k, file=sys.stderr)
         for kuse, vuse in sorted(v.items()):
             if kuse == '' or kuse == '0':
-                generate_interface(k+paramlist, paramval, vuse)
+                generate_interface(k+paramlist, paramval, vuse, [])
             #else:
                 #print('     ', kuse, json.dumps(vuse), file=sys.stderr)
 
-def generate_instance(item, indent, prefix):
-    itemlen = '1'
+def locate_clocks(item, prefix):
+    global clock_params
+    pname = prefix + item[-1]
+    if item[0] == 'input':
+        if item[1] == 'Clock':
+            clock_params.append(pname.lower())
+    elif item[0] == 'interface':
+        temp = commoninterfaces[item[1]].get('0')
+        if not temp:
+            temp = commoninterfaces[item[1]]['']
+        for titem in temp:
+             locate_clocks(titem, item[3])
+
+def generate_clocks(item, indent, prefix):
+    prefname = prefix + item[-1]
+    if item[0] == 'input':
+        if item[1] == 'Clock':
+            print(indent + 'input_clock '+prefname.lower()+'('+ prefname+') = '+prefname.lower() + ';')
+            print(indent + 'input_reset '+prefname.lower()+'_reset() = '+prefname.lower() + '_reset;')
+    elif item[0] == 'interface':
+        temp = commoninterfaces[item[1]].get('0')
+        if not temp:
+            temp = commoninterfaces[item[1]]['']
+        for titem in temp:
+             generate_clocks(titem, '        ', item[3])
+
+def generate_instance(item, indent, prefix, clockedby_arg):
     methodlist = ''
     pname = ''
     if prefix:
         pname = prefix[:-1].lower() + '.'
         if pname == 'event.':
             pname = 'event_.'
-    if len(item) > 2:
-        itemlen = item[1]
+    prefname = prefix + item[-1]
     if item[0] == 'input':
-        print(indent + 'method '+item[-1].lower()+'('+ prefix + item[-1]+') enable((*inhigh*) EN_'+prefix + item[-1]+');')
-        methodlist = methodlist + ', ' + pname + item[-1].lower()
+        if item[1] != 'Clock':
+            print(indent + 'method '+item[-1].lower()+'('+ prefname +')' + clockedby_arg + ' enable((*inhigh*) EN_'+prefname+');')
+            methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'output':
-        print(indent + 'method '+ prefix + item[-1] + ' ' + item[-1].lower()+'();')
-        methodlist = methodlist + ', ' + pname + item[-1].lower()
+        if item[1] == 'Clock':
+            print(indent + 'output_clock '+ item[-1].lower()+ '(' + prefname+');')
+        else:
+            print(indent + 'method '+ prefname + ' ' + item[-1].lower()+'()' + clockedby_arg + ';')
+            methodlist = methodlist + ', ' + pname + item[-1].lower()
     elif item[0] == 'inout':
-        print(indent + 'ifc_inout '+item[-1].lower()+'('+ prefix + item[-1]+');')
+        print(indent + 'ifc_inout '+item[-1].lower()+'('+ prefname+');')
     elif item[0] == 'interface':
         print(indent + 'interface '+item[1]+'     '+item[2].lower()+';')
         temp = commoninterfaces[item[1]].get('0')
         if not temp:
             temp = commoninterfaces[item[1]]['']
+        clockedby_name = ''
         for titem in temp:
-             methodlist = methodlist + generate_instance(titem, '        ', item[3])
+             if titem[0] == 'input' and titem[1] == 'Clock':
+                 print('PPP', item, titem, file=sys.stderr)
+                 clockedby_name = ' clocked_by (' + (item[3]+titem[-1]).lower() + ') reset_by (' + (item[3]+titem[-1]).lower() + '_reset)'
+        for titem in temp:
+             methodlist = methodlist + generate_instance(titem, '        ', item[3], clockedby_name)
         print('    endinterface')
     return methodlist
 
 def translate_verilog(ifname):
-    global paramnames, modulename
+    global paramnames, modulename, clock_names
+    global clock_params
     # generate output file
     print('\n/*')
     for item in sys.argv:
@@ -362,7 +406,6 @@ def translate_verilog(ifname):
     for item in ['Clocks', 'DefaultValue', 'XilinxCells', 'GetPut']:
         print('import ' + item + '::*;')
     print('')
-    #print('(* always_ready, always_enabled *)')
     paramlist = ''
     for item in paramnames:
         paramlist = paramlist + ', numeric type ' + item
@@ -370,20 +413,31 @@ def translate_verilog(ifname):
         paramlist = '#(' + paramlist[2:] + ')'
     paramval = paramlist.replace('numeric type ', '')
     generate_inter_declarations(paramlist, paramval)
-    generate_interface(ifname + paramlist, paramval, masterlist)
+    generate_interface(ifname + paramlist, paramval, masterlist, clock_names)
     print('import "BVI" '+modulename + ' =')
-    print('module mk'+ifname+'('+ifname+ paramval +');')
+    temp = 'module mk' + ifname
+    for item in masterlist:
+        locate_clocks(item, '')
+    if clock_params != []:
+        sepstring = '#('
+        for item in clock_params:
+            temp = temp + sepstring + 'Clock ' + item + ', Reset ' + item + '_reset'
+            sepstring = ', '
+        temp = temp + ')'
+    temp = temp + '(' + ifname + paramval + ');'
+    print(temp)
     for item in paramnames:
         print('    let ' + item + ' = valueOf(' + item + ');')
-    print('    no_reset;')
-    print('    default_clock no_clock;')
-
+    print('    default_clock clk();')
+    print('    default_reset rst();')
     for item in masterlist:
         if item[0] == 'parameter':
             print('    parameter ' + item[1] + ' = ' + item[2] + ';')
     methodlist = ''
     for item in masterlist:
-        methodlist = methodlist + generate_instance(item, '    ', '')
+        generate_clocks(item, '    ', '')
+    for item in masterlist:
+        methodlist = methodlist + generate_instance(item, '    ', '', '')
     if methodlist != '':
         methodlist = '(' + methodlist[2:] + ')'
         print('    schedule '+methodlist + ' CF ' + methodlist + ';')
@@ -394,6 +448,7 @@ if __name__=='__main__':
     parser.add_option("-f", "--output", dest="filename", help="write data to FILENAME")
     parser.add_option("-p", "--param", action="append", dest="param")
     parser.add_option("-r", "--remap", action="append", dest="remap")
+    parser.add_option("-c", "--clock", action="append", dest="clock")
     (options, args) = parser.parse_args()
     ifname = 'PPS7'
     #print('KK', options, args, file=sys.stderr)
@@ -412,6 +467,7 @@ if __name__=='__main__':
             item2 = item.split(':')
             if len(item2) == 2:
                 remapmap[item2[0]] = item2[1]
+    clocknames = options.clock
     if len(args) != 1:
         print("incorrect number of arguments", file=sys.stderr)
     else:

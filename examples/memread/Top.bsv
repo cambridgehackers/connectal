@@ -57,14 +57,11 @@ module mkPortalDmaTop(PortalDmaTop);
    // when constructing ctrl and interrupt muxes, directories must be the first argument
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
    let interrupt_mux <- mkInterruptMux(portals);
-`ifndef BSIM
-   let axi_master <- mkAxi3Master(dma.m_axi);
-`endif
    
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
 `ifndef BSIM
-   interface StdAxi3Master m_axi = axi_master;
+   interface StdAxi3Client m_axi = dma.m_axi;
 `endif
 endmodule : mkPortalDmaTop
 

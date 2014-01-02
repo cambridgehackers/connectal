@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 // BSV Libraries
+import RegFile::*;
 import FIFOF::*;
 import Vector::*;
 import GetPut::*;
@@ -79,14 +80,7 @@ module mkSGListStreamer(SGListStreamer);
    Vector#(NumSGLists, Reg#(SGListIdx))      listEnds <- genWithM(bar);
    FIFOF#(SGListId)                          loadReqs <- mkFIFOF;
    Reg#(SGListIdx)                            initPtr <- mkReg(0);
-   Reg#(Bool)                             initialized <- mkReg(False);
 
-   mkAutoFSM(
-      seq
-   	 initialized <= True;
-      endseq
-      );
-   
    method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
       let off = listEnds[pref-1];
       listEnds[pref-1] <= off+1;
@@ -140,20 +134,27 @@ typedef 12 SGListPageShift;
 // if this structure becomes too expensive, we can switch to a multi-level structure
 module mkSGListMMU(SGListMMU);
 
-   Vector#(NumSGLists, BRAM1Port#(PageIdx, Maybe#(Bit#(TSub#(40,SGListPageShift))))) pageTables <- replicateM(mkBRAM1Server(defaultValue));
+   BRAM_Configure cfg = defaultValue;
+   cfg.latency = 2;
+   Vector#(NumSGLists, BRAM1Port#(PageIdx, Maybe#(Bit#(TSub#(40,SGListPageShift))))) pageTables <- replicateM(mkBRAM1Server(cfg));
    FIFOF#(Bit#(SGListPageShift)) offs <- mkFIFOF;
    FIFOF#(SGListId) ids  <- mkFIFOF;
-   Reg#(Bool) initialized <- mkReg(False);
+   FIFOF#(Bit#(40)) respFifo <- mkFIFOF;
    
    let page_shift = fromInteger(valueOf(SGListPageShift));
-   
-   mkAutoFSM(
-      seq
-   	 initialized <= True;
-      endseq
-      );
-   
+
+   (* aggressive_implicit_conditions *)
+   rule respond;
+      ids.deq;
+      offs.deq;
+      let mrv <- pageTables[ids.first].portA.response.get;
+      let rv = fromMaybe(?,mrv);
+      if (!isValid(mrv))
+      	 $display("mkSGListMMU::addrResp has gone off the reservation");
+      respFifo.enq({rv,offs.first});
+   endrule
    method Action page(SGListId id, Bit#(32) off, Bit#(40) addr);
+      $display("page id=%d off=%h addr=%h", id, off, addr);
       pageTables[id].portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(off), datain:tagged Valid truncate(addr)});
    endmethod
 
@@ -164,13 +165,8 @@ module mkSGListMMU(SGListMMU);
    endmethod
    
    method ActionValue#(Bit#(40)) addrResp();
-      ids.deq;
-      offs.deq;
-      let mrv <- pageTables[ids.first].portA.response.get;
-      let rv = fromMaybe(?,mrv);
-      if (!isValid(mrv))
-	 $display("mkSGListMMU::addrResp has gone off the reservation");
-      return {rv,offs.first};
+      respFifo.deq();
+      return respFifo.first();
    endmethod
    
 endmodule

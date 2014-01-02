@@ -105,7 +105,7 @@ void parent(int rd_sock, int wr_sock)
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);
-  device->startWrite(ref_dstAlloc, numWords);
+  device->startWrite(ref_dstAlloc, numWords, 2);
 
   sem_wait(&done_sem);
   

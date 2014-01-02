@@ -90,14 +90,11 @@ module mkPortalDmaTop(PortalDmaTop);
    // when constructing ctrl and interrupt muxes, directories must be the first argument
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
    let interrupt_mux <- mkInterruptMux(portals);
-`ifndef BSIM
-   let axi_master <- mkAxi3Master(dma.m_axi);
-`endif
    
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
 `ifndef BSIM
-   interface StdAxi3Master m_axi = axi_master;
+   interface StdAxi3Client m_axi = dma.m_axi;
 `endif
 endmodule
 
@@ -152,14 +149,3 @@ module mkBsimTop();
    endrule
 endmodule
 
-(* no_default_clock, no_default_reset *)
-module [Module] mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
-                          Clock sys_clk_p,     Clock sys_clk_n,
-                          Reset pci_sys_reset_n)
-                         (VC707_FPGA);
-
-   let contentId = 64'h4563686f;
-
-   let top <- mkPcieDmaTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n, contentId, mkPortalDmaTop);
-   return top;
-endmodule: mkPcieTop
