@@ -21,8 +21,13 @@
 // SOFTWARE.
 
 import Vector            :: *;
+import FIFO              :: *;
+import SpecialFIFOs      :: *;
 import Connectable       :: *;
+import StmtFSM           :: *;
 import Portal            :: *;
+import AxiClientServer   :: *;
+import AxiMasterSlave    :: *;
 import Leds              :: *;
 import Top               :: *;
 
@@ -36,7 +41,7 @@ import "BDPI" function Action        readData(Bit#(32) d);
 
 
 module mkBsimTop();
-   PortalDmaTop top <- mkPortalDmaTop();
+   let top <- mkPortalTop();
    let wf <- mkPipelineFIFO;
    let init_seq = (action 
 		      initPortal(0);

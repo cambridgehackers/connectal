@@ -2,6 +2,9 @@
 all bits verilog implementation bsim bsim_exe: gen
 	make -C $(BOARD) $@
 
+ifeq ($(BOARD),bluesim)
+TOP=BsimTop
+endif
 ifeq ($(BOARD),kc705)
 TOP=PcieTop
 endif

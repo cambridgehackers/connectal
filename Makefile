@@ -30,85 +30,30 @@ bsimtests = $(addsuffix .bsim, $(testnames))
 
 $(bsimtests):
 	pkill bluetcl || true
-	rm -fr $(addprefix test-, $(basename $@))
-	make $(addprefix gen_, $(basename $@))
-	cd $(addprefix test-, $(basename $@)); make bsim_exe; cd ..
-	cd $(addprefix test-, $(basename $@)); make bsim; cd ..
-	cd $(addprefix test-, $(basename $@)); sources/bsim& cd ..
-	cd $(addprefix test-, $(basename $@)); jni/bsim_exe; cd ..
+	rm -fr examples/$(basename $@)/bluesim
+	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
+	(cd examples/$(basename $@)/bluesim; ./sources/bsim& sleep 2; ./jni/bsim_exe)
 
 bitstests = $(addsuffix .bits, $(testnames))
 
 $(bitstests):
-	rm -fr $(addprefix test-, $(basename $@))
-	make $(addprefix gen_, $(basename $@))
-	cd $(addprefix test-, $(basename $@)); make bits; cd ..
-	cd $(addprefix test-, $(basename $@)); ndk-build; cd ..
+	rm -fr examples/$(basename $@)/zedboard
+	make BOARD=zedboard -C examples/$(basename $@) all
+	make -C examples/$(basename $@)/zedboard bits
+	(cd examples/$(basename $@)/zedboard; ndk-build)
 
+kc705tests = $(addsuffix .kc705, $(testnames))
 
-#################################################################################################
-# examples/echo
+$(kc705tests):
+	rm -fr examples/$(basename $@)/kc705
+	make BOARD=kc705 -C examples/$(basename $@) all
 
-gen_echo:
-	make -C examples/echo gen_echo
+vc707tests = $(addsuffix .vc707, $(testnames))
 
-#################################################################################################
+$(vc707tests):
+	rm -fr examples/$(basename $@)/vc707
+	make BOARD=vc707 -C examples/$(basename $@) all
 
-
-# examples/echo2
-
-gen_echo2:
-	./genxpsprojfrombsv -B $(BOARD) -p test-echo2 -x mkZynqTop -s2h Say -h2s Say \
-	-s examples/echo2/test.cpp -t examples/echo2/Top.bsv -V verilog examples/echo2/Say.bsv
-
-#################################################################################################
-# examples/memcpy
-
-gen_memcpy:
-	./genxpsprojfrombsv -B $(BOARD) -p test-memcpy -x mkZynqTop -s2h MemcpyRequest -s2h BlueScopeRequest -s2h DMARequest -h2s MemcpyIndication -h2s BlueScopeIndication -h2s DMAIndication \
-	-s examples/memcpy/testmemcpy.cpp  -t examples/memcpy/Top.bsv -V verilog examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv
-
-#################################################################################################
-# examples/loadstore
-
-gen_loadstore:
-	./genxpsprojfrombsv -B $(BOARD) -p test-loadstore -x mkZynqTop  -s2h LoadStoreRequest -s2h DMARequest -h2s LoadStoreIndication -h2s DMAIndication \
-	-s examples/loadstore/testloadstore.cpp -t examples/loadstore/Top.bsv -V verilog examples/loadstore/LoadStore.bsv bsv/PortalMemory.bsv
-
-#################################################################################################
-# examples/memread
-
-gen_memread:
-	./genxpsprojfrombsv -B $(BOARD) -p test-memread -x mkZynqTop -s2h MemreadRequest -s2h DMARequest -h2s MemreadIndication -h2s DMAIndication \
-	-s examples/memread/testmemread.cpp  -t examples/memread/Top.bsv -V verilog examples/memread/Memread.bsv bsv/PortalMemory.bsv
-
-#################################################################################################
-# examples/memwrite
-
-gen_memwrite:
-	./genxpsprojfrombsv -B $(BOARD) -p test-memwrite -x mkZynqTop -s2h MemwriteRequest -s2h DMARequest -h2s MemwriteIndication -h2s DMAIndication \
-	-s examples/memwrite/testmemwrite.cpp  -t examples/memwrite/Top.bsv -V verilog examples/memwrite/Memwrite.bsv bsv/PortalMemory.bsv
-
-#################################################################################################
-# examples/mempoke
-
-gen_mempoke:
-	./genxpsprojfrombsv -B $(BOARD) -p test-mempoke -x mkZynqTop -s2h MempokeRequest -s2h DMARequest -h2s MempokeIndication -h2s DMAIndication \
-	-s examples/mempoke/testmempoke.cpp  -t examples/mempoke/Top.bsv -V verilog examples/mempoke/Mempoke.bsv bsv/PortalMemory.bsv
-
-#################################################################################################
-# examples/strstr
-
-gen_strstr:
-	./genxpsprojfrombsv -B $(BOARD) -p test-strstr -x mkZynqTop -s2h StrstrRequest -s2h DMARequest -h2s StrstrIndication -h2s DMAIndication  \
-	-s examples/strstr/teststrstr.cpp -t examples/strstr/Top.bsv -V verilog examples/strstr/Strstr.bsv bsv/PortalMemory.bsv 
-
-#################################################################################################
-# examples/struct
-
-gen_struct:
-	./genxpsprojfrombsv -B $(BOARD) -p test-struct -x mkZynqTop -s2h StructRequest -h2s StructIndication \
-	-s examples/struct/teststruct.cpp -t examples/struct/Topz.bsv -V verilog examples/struct/Struct.bsv
 
 #################################################################################################
 # not yet updated.
@@ -130,13 +75,6 @@ xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
 	vivado -mode batch -source scripts/generate-pcie.tcl
 	mv ./proj_pcie/proj_pcie.srcs/sources_1/ip/pcie_7x_0 xilinx/pcie_7x_v2_1
 	rm -fr ./proj_pcie
-
-k7echoproj:
-	./genxpsprojfrombsv -Bkc705 -p k7echoproj -x mkPcieTop -s2h Swallow -s2h EchoRequest -h2s EchoIndication \
-	-s examples/echo/testecho.cpp -t bsv/PcieTop.bsv -M verilog -M implementation examples/echo/Echo.bsv examples/echo/Swallow.bsv
-
-v7echoproj:
-	./genxpsprojfrombsv -B vc707 -p v7echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv && (cd v7echoproj && time make implementation)
 
 test-ring/sources/bsim: examples/ring/Ring.bsv examples/ring/testring.cpp
 	-pkill bluetcl

@@ -24,7 +24,7 @@ AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
 AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
 
-supported_boards = ['zedboard', 'zc702', 'kc705', 'vc707']
+supported_boards = ['zedboard', 'zc702', 'kc705', 'vc707', 'bluesim']
 supported_os = ['android', 'ubuntu']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
@@ -116,14 +116,14 @@ else
 ALLTARGETS=implementation ubuntu_exe
 endif
 
-BSCFLAGS = -remove-dollar -show-schedule -aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
+BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
 BSIM_CXX = $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
 
 all: $(ALLTARGETS)
 
 $(vfile): %(topbsvfile)s %(bsvfiles)s
 	mkdir -p verilog
-	cd sources/%(dut)s; mkdir -p $(DTOP)/obj; bsc %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
+	cd sources/%(dut)s; mkdir -p $(DTOP)/obj; bsc %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
 	for v in verilog/*.v; do $(XBSVTOP)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
 bsim_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
