@@ -30,6 +30,8 @@ parammap = {}
 paramnames = []
 remapmap = {}
 clocknames = []
+deletenames = []
+clock_names = []
 commoninterfaces = {}
 tokgenerator = 0
 clock_params = []
@@ -251,13 +253,14 @@ def parse_verilog(filename):
                     print('Missing parameter declaration', pname, file=sys.stderr)
                     paramnames.append(pname)
                 f[1] = 'Bit#(' + f[1] + ')'
+                if f[2] in deletenames:
+                    continue
                 if f[2] in clocknames:
                     f[1] = 'Clock'
                 #print('FF', f, file=sys.stderr)
             masterlist.append(f)
     paramnames.sort()
 
-clock_names = []
 def generate_interface(ifname, paramval, ilist, cname):
     global clock_names
     print('(* always_ready, always_enabled *)')
@@ -449,6 +452,7 @@ if __name__=='__main__':
     parser.add_option("-p", "--param", action="append", dest="param")
     parser.add_option("-r", "--remap", action="append", dest="remap")
     parser.add_option("-c", "--clock", action="append", dest="clock")
+    parser.add_option("-d", "--delete", action="append", dest="delete")
     (options, args) = parser.parse_args()
     ifname = 'PPS7'
     #print('KK', options, args, file=sys.stderr)
@@ -468,6 +472,7 @@ if __name__=='__main__':
             if len(item2) == 2:
                 remapmap[item2[0]] = item2[1]
     clocknames = options.clock
+    deletenames = options.delete
     if len(args) != 1:
         print("incorrect number of arguments", file=sys.stderr)
     else:
