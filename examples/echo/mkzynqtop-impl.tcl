@@ -8,24 +8,24 @@ file mkdir $outputDir
 #
 # STEP#1: setup design sources and constraints
 #
-read_verilog [ glob {sources/verilog/*.v} ]
 read_verilog [ glob {verilog/*.v} ]
 read_verilog [ glob verilog/*.v ]
+read_verilog [ glob /scratch/jca/git/xbsv/verilog/*.v ]
 read_verilog [ glob /scratch/jca/git/xbsv/xilinx/sources/processing_system7/*.v ]
 read_xdc {./constraints/design_1_processing_system7_1_0.xdc}
 read_xdc {./constraints/zedboard.xdc}
 
 # STEP#2: run synthesis, report utilization and timing estimates, write checkpoint design
 #
-synth_design -name mkZynqTop -top mkZynqTop -part xc7z020clg484-1 -flatten rebuilt
+synth_design -name ztop_1 -top mkZynqTop -part xc7z020clg484-1 -flatten rebuilt
 
-write_checkpoint -force $outputDir/mkzynqtop_post_synth
-#write_verilog -force $outputDir/mkzynqtop_netlist.v
-#report_timing_summary -file $outputDir/mkzynqtop_post_synth_timing_summary.rpt
-#report_power -file $outputDir/mkzynqtop_post_synth_power.rpt
+write_checkpoint -force $outputDir/ztop_1_post_synth
+#write_verilog -force $outputDir/ztop_1_netlist.v
+#report_timing_summary -file $outputDir/ztop_1_post_synth_timing_summary.rpt
+#report_power -file $outputDir/ztop_1_post_synth_power.rpt
 
 ##set outputDir ./hw
-##open_checkpoint $outputDir/mkzynqtop_post_synth.dcp
+##open_checkpoint $outputDir/ztop_1_post_synth.dcp
 #
 # STEP#3: run placement and logic optimization, report utilization and timing estimates, write checkpoint design
 #
@@ -39,21 +39,21 @@ opt_design
 # power_opt_design
 place_design
 phys_opt_design
-write_checkpoint -force $outputDir/mkzynqtop_post_place
-report_timing_summary -file $outputDir/mkzynqtop_post_place_timing_summary.rpt
+write_checkpoint -force $outputDir/ztop_1_post_place
+report_timing_summary -file $outputDir/ztop_1_post_place_timing_summary.rpt
 #
 # STEP#4: run router, report actual utilization and timing, write checkpoint design, run drc, write verilog and xdc out
 #
 route_design
-report_timing_summary -file $outputDir/mkzynqtop_post_route_timing_summary.rpt
-report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/mkzynqtop_post_route_timing.rpt
-report_clock_utilization -file $outputDir/mkzynqtop_clock_util.rpt
-report_utilization -file $outputDir/mkzynqtop_post_route_util.rpt
-report_power -file $outputDir/mkzynqtop_post_route_power.rpt
-report_drc -file $outputDir/mkzynqtop_post_imp_drc.rpt
-write_verilog -force $outputDir/mkzynqtop_impl_netlist.v
-write_xdc -no_fixed_only -force $outputDir/mkzynqtop_impl.xdc
+report_timing_summary -file $outputDir/ztop_1_post_route_timing_summary.rpt
+report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/ztop_1_post_route_timing.rpt
+report_clock_utilization -file $outputDir/ztop_1_clock_util.rpt
+report_utilization -file $outputDir/ztop_1_post_route_util.rpt
+report_power -file $outputDir/ztop_1_post_route_power.rpt
+report_drc -file $outputDir/ztop_1_post_imp_drc.rpt
+write_verilog -force $outputDir/ztop_1_impl_netlist.v
+write_xdc -no_fixed_only -force $outputDir/ztop_1_impl.xdc
 #
 # STEP#5: generate a bitstream
 # 
-write_bitstream -force $outputDir/mkZynqTop.bit
+write_bitstream -force $outputDir/ztop_1.bit
