@@ -270,15 +270,15 @@ def generate_interface(ifname, paramval, ilist, cname):
             continue
         if item[0] == 'input':
             if item[1] != 'Clock':
-                print('    method Action      '+item[-1].lower()+'('+item[1]+' v);')
+                print('    (* prefix="' + item[-1] + '" *) method Action      '+item[-1].lower()+'('+item[1]+' v);')
         elif item[0] == 'output':
             if item[1] == 'Clock':
                 print('    interface Clock     '+item[-1].lower()+';')
                 clock_names.append(item)
             else:
-                print('    method '+item[1]+'     '+item[-1].lower()+'();')
+                print('    (* prefix="' + item[-1] + '" *) method '+item[1]+'     '+item[-1].lower()+'();')
         elif item[0] == 'inout':
-            print('    interface Inout#('+item[1]+')     '+item[-1].lower()+';')
+            print('    (* prefix="' + item[-1] + '" *) interface Inout#('+item[1]+')     '+item[-1].lower()+';')
         elif item[0] == 'interface':
             print('    interface '+item[1]+ paramval +'     '+item[2].lower()+';')
     print('endinterface')
