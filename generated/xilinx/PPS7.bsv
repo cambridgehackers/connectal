@@ -59,6 +59,8 @@
    S_AXI_HP3_ACLK
    -d
    DDR_ARB
+   -e
+   C_NUM_F2P_INTR_INPUTS:16
    ../../import_components/Xilinx/Vivado/2013.2/data/ip/xilinx/processing_system7_v5_01/hdl/verilog/processing_system7.v
 */
 
@@ -558,46 +560,7 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
     let mio_width = valueOf(mio_width);
     default_clock clk();
     default_reset rst();
-    parameter C_DM_WIDTH = 4;
-    parameter C_DQS_WIDTH = 4;
-    parameter C_DQ_WIDTH = 32;
-    parameter C_EMIO_GPIO_WIDTH = 64;
-    parameter C_EN_EMIO_ENET0 = 0;
-    parameter C_EN_EMIO_ENET1 = 0;
-    parameter C_EN_EMIO_TRACE = 0;
-    parameter C_FCLK_CLK0_BUF = "TRUE";
-    parameter C_FCLK_CLK1_BUF = "TRUE";
-    parameter C_FCLK_CLK2_BUF = "TRUE";
-    parameter C_FCLK_CLK3_BUF = "TRUE";
-    parameter C_INCLUDE_ACP_TRANS_CHECK = 0;
-    parameter C_INCLUDE_TRACE_BUFFER = 0;
-    parameter C_MIO_PRIMITIVE = 54;
-    parameter C_M_AXI_GP0_ENABLE_STATIC_REMAP = 1;
-    parameter C_M_AXI_GP0_ID_WIDTH = 12;
-    parameter C_M_AXI_GP0_THREAD_ID_WIDTH = 12;
-    parameter C_M_AXI_GP1_ENABLE_STATIC_REMAP = 1;
-    parameter C_M_AXI_GP1_ID_WIDTH = 12;
-    parameter C_M_AXI_GP1_THREAD_ID_WIDTH = 12;
-    parameter C_NUM_F2P_INTR_INPUTS = 1;
-    parameter C_PACKAGE_NAME = "clg484";
-    parameter C_PS7_SI_REV = "PRODUCTION";
-    parameter C_S_AXI_ACP_ARUSER_VAL = 31;
-    parameter C_S_AXI_ACP_AWUSER_VAL = 31;
-    parameter C_S_AXI_ACP_ID_WIDTH = 3;
-    parameter C_S_AXI_GP0_ID_WIDTH = 6;
-    parameter C_S_AXI_GP1_ID_WIDTH = 6;
-    parameter C_S_AXI_HP0_DATA_WIDTH = 64;
-    parameter C_S_AXI_HP0_ID_WIDTH = 6;
-    parameter C_S_AXI_HP1_DATA_WIDTH = 64;
-    parameter C_S_AXI_HP1_ID_WIDTH = 6;
-    parameter C_S_AXI_HP2_DATA_WIDTH = 64;
-    parameter C_S_AXI_HP2_ID_WIDTH = 6;
-    parameter C_S_AXI_HP3_DATA_WIDTH = 64;
-    parameter C_S_AXI_HP3_ID_WIDTH = 6;
-    parameter C_TRACE_BUFFER_CLOCK_DELAY = 12;
-    parameter C_TRACE_BUFFER_FIFO_SIZE = 128;
-    parameter C_USE_DEFAULT_ACP_USER_VAL = 1;
-    parameter USE_TRACE_DATA_EDGE_DETECTOR = 0;
+    parameter C_NUM_F2P_INTR_INPUTS = 16;
         input_clock m_axi_gp0_aclk(M_AXI_GP0_ACLK) = m_axi_gp0_aclk;
         input_reset m_axi_gp0_aclk_reset() = m_axi_gp0_aclk_reset;
         input_clock m_axi_gp1_aclk(M_AXI_GP1_ACLK) = m_axi_gp1_aclk;

@@ -14,51 +14,49 @@ import Portal::*;
 
 (* always_ready, always_enabled *)
 interface EchoDdr#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
-    (* prefix="Addr" *) interface Inout#(Bit#(15))     addr;
-    (* prefix="BankAddr" *) interface Inout#(Bit#(3))     bankaddr;
-    (* prefix="CAS_n" *) interface Inout#(Bit#(1))     cas_n;
-    (* prefix="CKE" *) interface Inout#(Bit#(1))     cke;
-    (* prefix="CS_n" *) interface Inout#(Bit#(1))     cs_n;
-    (* prefix="Clk_n" *) interface Inout#(Bit#(1))     clk_n;
-    (* prefix="Clk_p" *) interface Inout#(Bit#(1))     clk_p;
-    (* prefix="DM" *) interface Inout#(Bit#(c_dm_width))     dm;
-    (* prefix="DQ" *) interface Inout#(Bit#(c_dq_width))     dq;
-    (* prefix="DQS_n" *) interface Inout#(Bit#(c_dqs_width))     dqs_n;
-    (* prefix="DQS_p" *) interface Inout#(Bit#(c_dqs_width))     dqs_p;
-    (* prefix="DRSTB" *) interface Inout#(Bit#(1))     drstb;
-    (* prefix="ODT" *) interface Inout#(Bit#(1))     odt;
-    (* prefix="RAS_n" *) interface Inout#(Bit#(1))     ras_n;
-    (* prefix="VRN" *) interface Inout#(Bit#(1))     vrn;
-    (* prefix="VRP" *) interface Inout#(Bit#(1))     vrp;
-    (* prefix="WEB" *) interface Inout#(Bit#(1))     web;
+    (* prefix="DDR_Addr" *) interface Inout#(Bit#(15))     addr;
+    (* prefix="DDR_BankAddr" *) interface Inout#(Bit#(3))     bankaddr;
+    (* prefix="DDR_CAS_n" *) interface Inout#(Bit#(1))     cas_n;
+    (* prefix="DDR_CKE" *) interface Inout#(Bit#(1))     cke;
+    (* prefix="DDR_CS_n" *) interface Inout#(Bit#(1))     cs_n;
+    (* prefix="DDR_Clk_n" *) interface Inout#(Bit#(1))     clk_n;
+    (* prefix="DDR_Clk_p" *) interface Inout#(Bit#(1))     clk;
+    (* prefix="DDR_DM" *) interface Inout#(Bit#(c_dm_width))     dm;
+    (* prefix="DDR_DQ" *) interface Inout#(Bit#(c_dq_width))     dq;
+    (* prefix="DDR_DQS_n" *) interface Inout#(Bit#(c_dqs_width))     dqs_n;
+    (* prefix="DDR_DQS_p" *) interface Inout#(Bit#(c_dqs_width))     dqs;
+    (* prefix="DDR_DRSTB" *) interface Inout#(Bit#(1))     drstb;
+    (* prefix="DDR_ODT" *) interface Inout#(Bit#(1))     odt;
+    (* prefix="DDR_RAS_n" *) interface Inout#(Bit#(1))     ras_n;
+    (* prefix="FIXED_IO_ddr_vrn" *) interface Inout#(Bit#(1))     vrn;
+    (* prefix="FIXED_IO_ddr_vrp" *) interface Inout#(Bit#(1))     vrp;
+    (* prefix="DDR_WEB" *) interface Inout#(Bit#(1))     web;
 endinterface
 (* always_ready, always_enabled *)
 interface EchoPins#(numeric type gpio_width, numeric type mio_width);
-    (* prefix="DDR" *)
+    (* prefix="" *)
     interface EchoDdr#(4, 32, 4, 64, 64, 12, 54) ddr;
-    (* prefix="MIO" *)
+    (* prefix="FIXED_IO_mio" *)
     interface Inout#(Bit#(mio_width))       mio;
-    (* prefix="PS" *)
+    (* prefix="FIXED_IO_ps" *)
     interface Pps7Ps#(4, 32, 4, 64, 64, 12, 54) ps;
     (* prefix="GPIO" *)
     interface LEDS                          leds;
     interface Clock                         fclk_clk0;
     interface Bit#(1)                       fclk_reset0_n;
 endinterface
+//module mkZynqTop(CLK_axi_clock, RST_N_axi_reset, CLK, RST_N, fclk_reset0_n, CLK_fclk_clk0,
 
-module mkZynqTop#(Clock axi_clock, Reset axi_reset)(EchoPins#(64/*gpio_width*/, 54));
+module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
-    //Reset axi_reset <- mkAsyncReset(2, defaultReset, axi_clock);
-    let axiTop <- mkPortalTop(clocked_by axi_clock, reset_by axi_reset);
-    let top_ctrl <- mkClockBinder(axiTop.ctrl, clocked_by axi_clock, reset_by axi_reset);
-    //let top_m_axi <- mkClockBinder(axiTop.m_axi, clocked_by axi_clock, reset_by axi_reset);
+    let axiTop <- mkPortalTop();
+    let top_ctrl <- mkClockBinder(axiTop.ctrl);
     let data_width = 64;
     let id_width = 12;
-    PS7#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7(axi_clock, axi_reset, clocked_by axi_clock, reset_by axi_reset);
+    PS7#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7(defaultClock, defaultReset);
     //let ps7_irq <- mkClockBinder(ps7.irq, clocked_by axi_clock, reset_by axi_reset);
-    //SyncBitIfc#(Bit#(1)) interrupt_reg <- mkSyncBit(axi_clock, axi_reset, defaultClock);
-    SyncBitIfc#(Bit#(1)) interrupt_reg <- mkSyncBit(axi_clock, axi_reset, axi_clock);
+    SyncBitIfc#(Bit#(1)) interrupt_reg <- mkSyncBit(defaultClock, defaultReset, defaultClock);
 
     rule int_rule;
     interrupt_reg.send(axiTop.interrupt ? 1'b1 : 1'b0);
@@ -67,8 +65,6 @@ module mkZynqTop#(Clock axi_clock, Reset axi_reset)(EchoPins#(64/*gpio_width*/, 
     rule send_int_rule;
     ps7.irq.f2p({15'b0, interrupt_reg.read()});
     endrule
-
-    //ps7.fclk_reset[0].n = ?;
 
     rule m_ar_rule; //.M_AXI_GP0_ARREADY(ctrl_arready), .M_AXI_GP0_ARVALID(ctrl_arvalid),
         let m_ar <- ps7.m_axi_gp[0].req_ar.get();
@@ -160,11 +156,11 @@ end of m_axi */
         method cke = ps7.ddr.cke;
         method cs_n = ps7.ddr.cs_n;
         method clk_n = ps7.ddr.clk_n;
-        method clk_p = ps7.ddr.clk;
+        method clk = ps7.ddr.clk;
         method dm = ps7.ddr.dm;
         method dq = ps7.ddr.dq;
         method dqs_n = ps7.ddr.dqs_n;
-        method dqs_p = ps7.ddr.dqs;
+        method dqs = ps7.ddr.dqs;
         method drstb = ps7.ddr.drstb;
         method odt = ps7.ddr.odt;
         method ras_n = ps7.ddr.ras_n;

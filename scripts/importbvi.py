@@ -389,7 +389,6 @@ def generate_instance(item, indent, prefix, clockedby_arg):
         clockedby_name = ''
         for titem in temp:
              if titem[0] == 'input' and titem[1] == 'Clock':
-                 print('PPP', item, titem, file=sys.stderr)
                  clockedby_name = ' clocked_by (' + (item[3]+titem[-1]).lower() + ') reset_by (' + (item[3]+titem[-1]).lower() + '_reset)'
         for titem in temp:
              methodlist = methodlist + generate_instance(titem, '        ', item[3], clockedby_name)
@@ -431,9 +430,13 @@ def translate_verilog(ifname):
         print('    let ' + item + ' = valueOf(' + item + ');')
     print('    default_clock clk();')
     print('    default_reset rst();')
-    for item in masterlist:
-        if item[0] == 'parameter':
-            print('    parameter ' + item[1] + ' = ' + item[2] + ';')
+    #for item in masterlist:
+    #    if item[0] == 'parameter':
+    #        print('    parameter ' + item[1] + ' = ' + item[2] + ';')
+    for item in options.export:
+        item2 = item.split(':')
+        if len(item2) == 2:
+            print('    parameter ' + item2[0] + ' = ' + item2[1] + ';')
     methodlist = ''
     for item in masterlist:
         generate_clocks(item, '    ', '')
@@ -451,6 +454,7 @@ if __name__=='__main__':
     parser.add_option("-r", "--remap", action="append", dest="remap")
     parser.add_option("-c", "--clock", action="append", dest="clock")
     parser.add_option("-d", "--delete", action="append", dest="delete")
+    parser.add_option("-e", "--export", action="append", dest="export")
     (options, args) = parser.parse_args()
     ifname = 'PPS7'
     #print('KK', options, args, file=sys.stderr)
