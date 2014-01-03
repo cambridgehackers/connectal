@@ -35,9 +35,43 @@ import Adapter::*;
 
 import "BDPI" function Action pareff(Bit#(32) handle, Bit#(32) size);
 import "BDPI" function Action init_pareff();
-import "BDPI" function Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
-import "BDPI" function ActionValue#(Bit#(64)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+import "BDPI" function Action write_pareff32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
+import "BDPI" function Action write_pareff64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
+import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit#(32) addr);
+import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
 		       
+interface BsimRdmaReadWrite#(numeric type dsz);
+   method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(dsz) v);
+   method ActionValue#(Bit#(dsz)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+endinterface
+
+typeclass SelectBsimRdmaReadWrite#(numeric type dsz);
+   module selectBsimRdmaReadWrite(BsimRdmaReadWrite#(dsz) ifc);
+endtypeclass
+
+instance SelectBsimRdmaReadWrite#(32);
+   module selectBsimRdmaReadWrite(BsimRdmaReadWrite#(32) ifc);
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
+	  write_pareff32(handle, addr, v);
+       endmethod
+       method ActionValue#(Bit#(32)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v <- read_pareff32(handle, addr);
+	  return v;
+       endmethod
+   endmodule
+endinstance
+instance SelectBsimRdmaReadWrite#(64);
+   module selectBsimRdmaReadWrite(BsimRdmaReadWrite#(64) ifc);
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
+	  write_pareff64(handle, addr, v);
+       endmethod
+       method ActionValue#(Bit#(64)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v <- read_pareff64(handle, addr);
+	  return v;
+       endmethod
+   endmodule
+endinstance
+
 //
 // @brief DMA server for use in Bluesim
 //
@@ -47,8 +81,12 @@ interface BsimDMAServer#(numeric type dsz);
    interface DMARequest request;
 endinterface
 
-module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(64)) readClients)(DMARead);
+module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(dsz)) readClients)(DMARead)
+      provisos (SelectBsimRdmaReadWrite#(dsz));
    
+   let dsz = valueOf(dsz);
+   let rw <- selectBsimRdmaReadWrite();
+
    Reg#(DmaMemHandle)     handleReg <- mkReg(0);
    Reg#(Bit#(32))         addrReg <- mkReg(0);
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
@@ -76,7 +114,7 @@ module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(64)) readCl
    rule readData if (burstReg > 0);
       addrReg <= addrReg+1;
       burstReg <= burstReg-1;
-      let v <- read_pareff(handleReg, addrReg);
+      Bit#(dsz) v <- rw.read_pareff(handleReg, addrReg);
       //$display("dmaread.readData activeChan=%d handle=%h addr=%h burst=%h v=%h", activeChan, handleReg, addrReg, burstReg, v);
       readClients[activeChan].readData.put(DMAData { data: v, tag: tagReg});
    endrule
@@ -88,7 +126,11 @@ module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(64)) readCl
 endmodule
 
 
-module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(64)) writeClients)(DMAWrite);
+module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(dsz)) writeClients)(DMAWrite)
+      provisos (SelectBsimRdmaReadWrite#(dsz));
+
+   let dsz = valueOf(dsz);
+   let rw <- selectBsimRdmaReadWrite();
 
    Reg#(DmaMemHandle)   handleReg <- mkReg(0);
    Reg#(Bit#(32))         addrReg <- mkReg(0);
@@ -124,7 +166,7 @@ module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(64)) wri
 	 writeClients[activeChan].writeDone.put(v.tag);
       burstReg <= burstReg-1;
       //$display("writeData activeChan=%d handle=%h addr=%h", activeChan, handleReg, addrReg);
-      write_pareff(handleReg, addrReg, v.data);
+      rw.write_pareff(handleReg, addrReg, v.data);
    endrule
    
    method ActionValue#(DmaDbgRec) dbg();
@@ -142,9 +184,11 @@ endmodule
 // @param writeClients The writeclients.
 //
 module mkBsimDMAServer#(DMAIndication dmaIndication,
-			Vector#(numReadClients, DMAReadClient#(64)) readClients,
-			Vector#(numWriteClients, DMAWriteClient#(64)) writeClients)
-   (BsimDMAServer#(64));
+			Vector#(numReadClients, DMAReadClient#(dsz)) readClients,
+			Vector#(numWriteClients, DMAWriteClient#(dsz)) writeClients)
+   (BsimDMAServer#(dsz))
+   provisos (SelectBsimRdmaReadWrite#(dsz));
+
 	    
    Reg#(Bool) inited <- mkReg(False);
 

@@ -17,7 +17,7 @@
 
 static struct portal p_fd = iport;
 static int fd[16];
-static unsigned long long *buffer[16];
+static unsigned char *buffer[16];
 static unsigned long buffer_len[16];
 
 extern "C" {
@@ -49,24 +49,36 @@ extern "C" {
 
   }
 
-  void write_pareff(unsigned long pref, unsigned long offset, unsigned long long data){
+  void write_pareff32(unsigned long pref, unsigned long offset, unsigned int data){
     if(buffer_len[pref-1] <= offset)
       fprintf(stderr, "write_pareff(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
-    buffer[pref-1][offset] = data;
+    *(unsigned int *)&buffer[pref-1][offset] = data;
   }
 
-  unsigned long long read_pareff(unsigned long pref, unsigned long offset){
+  unsigned int read_pareff32(unsigned long pref, unsigned long offset){
     if(buffer_len[pref-1] <= offset)
       fprintf(stderr, "read_pareff(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
-    return buffer[pref-1][offset];
+    return *(unsigned int *)&buffer[pref-1][offset];
+  }
+
+  void write_pareff64(unsigned long pref, unsigned long offset, unsigned long long data){
+    if(buffer_len[pref-1] <= offset)
+      fprintf(stderr, "write_pareff(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
+    *(unsigned long long *)&buffer[pref-1][offset] = data;
+  }
+
+  unsigned long long read_pareff64(unsigned long pref, unsigned long offset){
+    if(buffer_len[pref-1] <= offset)
+      fprintf(stderr, "read_pareff(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
+    return *(unsigned long long *)&buffer[pref-1][offset];
   }
 
   void pareff(unsigned long pref, unsigned long size){
     assert(pref < 16);
     sock_fd_read(p_fd.write.s2, &(fd[pref-1]));
-    buffer[pref-1] = (unsigned long long *)mmap(0, size, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref-1], 0);
+    buffer[pref-1] = (unsigned char *)mmap(0, size, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref-1], 0);
     //fprintf(stderr, "BsimDMA::pareff pref=%ld, buffer=%08lx\n", pref, buffer[pref]);
-    buffer_len[pref-1] = size/sizeof(unsigned long long);
+    buffer_len[pref-1] = size/sizeof(unsigned char);
   }
 
 }
