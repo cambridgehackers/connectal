@@ -13,9 +13,29 @@ import PS7::*;
 import Portal::*;
 
 (* always_ready, always_enabled *)
+interface EchoDdr#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
+    (* prefix="Addr" *) interface Inout#(Bit#(15))     addr;
+    (* prefix="BankAddr" *) interface Inout#(Bit#(3))     bankaddr;
+    (* prefix="CAS_n" *) interface Inout#(Bit#(1))     cas_n;
+    (* prefix="CKE" *) interface Inout#(Bit#(1))     cke;
+    (* prefix="CS_n" *) interface Inout#(Bit#(1))     cs_n;
+    (* prefix="Clk_n" *) interface Inout#(Bit#(1))     clk_n;
+    (* prefix="Clk_p" *) interface Inout#(Bit#(1))     clk_p;
+    (* prefix="DM" *) interface Inout#(Bit#(c_dm_width))     dm;
+    (* prefix="DQ" *) interface Inout#(Bit#(c_dq_width))     dq;
+    (* prefix="DQS_n" *) interface Inout#(Bit#(c_dqs_width))     dqs_n;
+    (* prefix="DQS_p" *) interface Inout#(Bit#(c_dqs_width))     dqs_p;
+    (* prefix="DRSTB" *) interface Inout#(Bit#(1))     drstb;
+    (* prefix="ODT" *) interface Inout#(Bit#(1))     odt;
+    (* prefix="RAS_n" *) interface Inout#(Bit#(1))     ras_n;
+    (* prefix="VRN" *) interface Inout#(Bit#(1))     vrn;
+    (* prefix="VRP" *) interface Inout#(Bit#(1))     vrp;
+    (* prefix="WEB" *) interface Inout#(Bit#(1))     web;
+endinterface
+(* always_ready, always_enabled *)
 interface EchoPins#(numeric type gpio_width, numeric type mio_width);
     (* prefix="DDR" *)
-    interface Pps7Ddr#(4, 32, 4, 64, 64, 12, 54) ddr;
+    interface EchoDdr#(4, 32, 4, 64, 64, 12, 54) ddr;
     (* prefix="MIO" *)
     interface Inout#(Bit#(mio_width))       mio;
     (* prefix="PS" *)
@@ -133,7 +153,25 @@ module mkZynqTop#(Clock axi_clock, Reset axi_reset)(EchoPins#(64/*gpio_width*/, 
     endrule
 end of m_axi */
 
-    interface Pps7Ddr ddr = ps7.ddr;
+    interface EchoDdr ddr;
+        method addr = ps7.ddr.addr;
+        method bankaddr = ps7.ddr.bankaddr;
+        method cas_n = ps7.ddr.cas_n;
+        method cke = ps7.ddr.cke;
+        method cs_n = ps7.ddr.cs_n;
+        method clk_n = ps7.ddr.clk_n;
+        method clk_p = ps7.ddr.clk;
+        method dm = ps7.ddr.dm;
+        method dq = ps7.ddr.dq;
+        method dqs_n = ps7.ddr.dqs_n;
+        method dqs_p = ps7.ddr.dqs;
+        method drstb = ps7.ddr.drstb;
+        method odt = ps7.ddr.odt;
+        method ras_n = ps7.ddr.ras_n;
+        method vrn = ps7.ddr.vrn;
+        method vrp = ps7.ddr.vrp;
+        method web = ps7.ddr.web;
+    endinterface
     interface Inout   mio = ps7.mio;
     interface Pps7Ps  ps = ps7.ps;
     interface LEDS    leds = axiTop.leds;

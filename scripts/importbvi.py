@@ -29,8 +29,6 @@ masterlist = []
 parammap = {}
 paramnames = []
 remapmap = {}
-clocknames = []
-deletenames = []
 clock_names = []
 commoninterfaces = {}
 tokgenerator = 0
@@ -253,9 +251,9 @@ def parse_verilog(filename):
                     print('Missing parameter declaration', pname, file=sys.stderr)
                     paramnames.append(pname)
                 f[1] = 'Bit#(' + f[1] + ')'
-                if f[2] in deletenames:
+                if f[2] in options.delete:
                     continue
-                if f[2] in clocknames:
+                if f[2] in options.clock:
                     f[1] = 'Clock'
                 #print('FF', f, file=sys.stderr)
             masterlist.append(f)
@@ -270,15 +268,15 @@ def generate_interface(ifname, paramval, ilist, cname):
             continue
         if item[0] == 'input':
             if item[1] != 'Clock':
-                print('    (* prefix="' + item[-1] + '" *) method Action      '+item[-1].lower()+'('+item[1]+' v);')
+                print('    method Action      '+item[-1].lower()+'('+item[1]+' v);')
         elif item[0] == 'output':
             if item[1] == 'Clock':
                 print('    interface Clock     '+item[-1].lower()+';')
                 clock_names.append(item)
             else:
-                print('    (* prefix="' + item[-1] + '" *) method '+item[1]+'     '+item[-1].lower()+'();')
+                print('    method '+item[1]+'     '+item[-1].lower()+'();')
         elif item[0] == 'inout':
-            print('    (* prefix="' + item[-1] + '" *) interface Inout#('+item[1]+')     '+item[-1].lower()+';')
+            print('    interface Inout#('+item[1]+')     '+item[-1].lower()+';')
         elif item[0] == 'interface':
             print('    interface '+item[1]+ paramval +'     '+item[2].lower()+';')
     print('endinterface')
@@ -471,8 +469,6 @@ if __name__=='__main__':
             item2 = item.split(':')
             if len(item2) == 2:
                 remapmap[item2[0]] = item2[1]
-    clocknames = options.clock
-    deletenames = options.delete
     if len(args) != 1:
         print("incorrect number of arguments", file=sys.stderr)
     else:
