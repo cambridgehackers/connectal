@@ -142,10 +142,10 @@ verilog: $(vfile)
 lint: $(vfile)
 	verilator --error-limit 200 --lint-only -Isources/%(dut)s -Isources/source $(vfile)
 
-hw/%(dut)s.bit: $(vfile)
+hw/%(Dut)s.bit: $(vfile)
 	vivado -mode batch -source %(dut)s-impl.tcl
 
-implementation: hw/%(dut)s.bit
+implementation: hw/%(Dut)s.bit
 
 program:
 	vivado -mode batch -source %(dut)s-program.tcl
@@ -153,13 +153,13 @@ program:
 
 ifeq ($(OS),android)
 
-%(dut)s.bit.bin.gz: hw/%(dut)s.bit
-	xxd hw/%(dut)s.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >%(dut)s.bit.bin
-	gzip -f %(dut)s.bit.bin
-bits: %(dut)s.bit.bin.gz
+%(Dut)s.bit.bin.gz: hw/%(Dut)s.bit
+	xxd hw/%(Dut)s.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >%(Dut)s.bit.bin
+	gzip -f %(Dut)s.bit.bin
+bits: %(Dut)s.bit.bin.gz
 
 else
-bits: hw/%(dut)s.bit
+bits: hw/%(Dut)s.bit
 endif
 
 android_exe:
@@ -497,6 +497,7 @@ if __name__=='__main__':
                                    'topbsvfile' : os.path.abspath(namespace.topbsv),
                                    'topbsvmod'  : namespace.export,
                                    'dut' : namespace.export.lower(),
+                                   'Dut': topmodulename,
                                    'timestamp' : int(time.time())
                                    })
     make.close()

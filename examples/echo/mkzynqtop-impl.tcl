@@ -56,4 +56,4 @@ write_xdc -no_fixed_only -force $outputDir/ztop_1_impl.xdc
 #
 # STEP#5: generate a bitstream
 # 
-write_bitstream -force $outputDir/ztop_1.bit
+write_bitstream -force -bin_file $outputDir/ztop_1.bit
