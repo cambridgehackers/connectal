@@ -99,7 +99,7 @@ write_xdc -no_fixed_only -force $outputDir/%(dut)s_impl.xdc
 #
 # STEP#5: generate a bitstream
 # 
-write_bitstream -force $outputDir/%(Dut)s.bit
+write_bitstream -force -bin_file $outputDir/%(Dut)s.bit
 '''
 
 makefileTemplate='''
