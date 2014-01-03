@@ -10,20 +10,26 @@ import Leds::*;
 import Top::*;
 import PPS7::*;
 import PS7::*;
+import Portal::*;
 
 (* always_ready, always_enabled *)
 interface EchoPins#(numeric type gpio_width, numeric type mio_width);
+    (* prefix="DDR" *)
     interface Pps7Ddr#(4, 32, 4, 64, 64, 12, 54) ddr;
+    (* prefix="MIO" *)
     interface Inout#(Bit#(mio_width))       mio;
+    (* prefix="PS" *)
     interface Pps7Ps#(4, 32, 4, 64, 64, 12, 54) ps;
+    (* prefix="GPIO" *)
     interface LEDS                          leds;
     interface Clock                         fclk_clk0;
+    interface Bit#(1)                       fclk_reset0_n;
 endinterface
 
-module mkZynqTop#(Clock axi_clock)(EchoPins#(64/*gpio_width*/, 54));
+module mkZynqTop#(Clock axi_clock, Reset axi_reset)(EchoPins#(64/*gpio_width*/, 54));
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
-    Reset axi_reset <- mkAsyncReset(2, defaultReset, axi_clock);
+    //Reset axi_reset <- mkAsyncReset(2, defaultReset, axi_clock);
     let axiTop <- mkPortalTop(clocked_by axi_clock, reset_by axi_reset);
     let top_ctrl <- mkClockBinder(axiTop.ctrl, clocked_by axi_clock, reset_by axi_reset);
     //let top_m_axi <- mkClockBinder(axiTop.m_axi, clocked_by axi_clock, reset_by axi_reset);
@@ -132,5 +138,6 @@ end of m_axi */
     interface Pps7Ps  ps = ps7.ps;
     interface LEDS    leds = axiTop.leds;
     interface Clock   fclk_clk0 = ps7.fclk.clk0;
+    interface Bit     fclk_reset0_n = ps7.fclk_reset[0].n;
 endmodule : mkZynqTop
 
