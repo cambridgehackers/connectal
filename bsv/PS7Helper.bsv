@@ -37,42 +37,42 @@ endinterface
 
 typedef ZynqPinsInternal#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ZynqPins;
 
-module mkPS7Slave#(Clock axi_clock, Reset axi_reset, StdPortalTop axiTop)(ZynqPins);
+module mkPS7Slave#(Clock axi_clock, Reset axi_reset, StdAxi3Slave ctrl, StdAxi3Master m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
     StdPS7 ps7 <- mkPS7(axi_clock, axi_reset);
 
     rule send_int_rule;
-    ps7.irq.f2p({15'b0, axiTop.interrupt ? 1'b1 : 1'b0});
+    ps7.irq.f2p({15'b0, interrupt ? 1'b1 : 1'b0});
     endrule
 
     rule m_ar_rule;
         let m_ar <- ps7.m_axi_gp[0].req_ar.get();
-        axiTop.ctrl.read.readAddr(m_ar.addr, m_ar.len, m_ar.size, m_ar.burst, m_ar.prot, m_ar.cache, m_ar.id);
+        ctrl.read.readAddr(m_ar.addr, m_ar.len, m_ar.size, m_ar.burst, m_ar.prot, m_ar.cache, m_ar.id);
     endrule
 
     rule m_aw_rule;
         let m_aw <- ps7.m_axi_gp[0].req_aw.get();
-        axiTop.ctrl.write.writeAddr(m_aw.addr, m_aw.len, m_aw.size, m_aw.burst, m_aw.prot, m_aw.cache, m_aw.id);
+        ctrl.write.writeAddr(m_aw.addr, m_aw.len, m_aw.size, m_aw.burst, m_aw.prot, m_aw.cache, m_aw.id);
     endrule
 
     rule m_arespb_rule;
         AxiRESP#(12/*id_width*/) m_arespb;
-        m_arespb.id <- axiTop.ctrl.write.bid();
-        m_arespb.resp <- axiTop.ctrl.write.writeResponse();
+        m_arespb.id <- ctrl.write.bid();
+        m_arespb.resp <- ctrl.write.writeResponse();
         ps7.m_axi_gp[0].resp_b.put(m_arespb);
     endrule
 
     rule m_arespr_rule;
         AxiRead#(32/*data_width*/, 12/*id_width*/) m_arespr;
-        m_arespr.r.id = axiTop.ctrl.read.rid();
+        m_arespr.r.id = ctrl.read.rid();
         m_arespr.r.resp = 2'b0; //.M_AXI_GP0_RRESP(ctrl_rresp),
-        m_arespr.rd.data <- axiTop.ctrl.read.readData();
-        m_arespr.rd.last = axiTop.ctrl.read.last();
+        m_arespr.rd.data <- ctrl.read.readData();
+        m_arespr.rd.last = ctrl.read.last();
         ps7.m_axi_gp[0].resp_read.put(m_arespr);
     endrule
 
     rule m_arespw_rule;
         let m_arespw <- ps7.m_axi_gp[0].resp_write.get();
-        axiTop.ctrl.write.writeData(m_arespw.wd.data, m_arespw.wstrb, m_arespw.wd.last, m_arespw.wid);
+        ctrl.write.writeData(m_arespw.wd.data, m_arespw.wstrb, m_arespw.wd.last, m_arespw.wid);
     endrule
 
 /* m_axi interface not bound in examples/echo/Top.bsv
