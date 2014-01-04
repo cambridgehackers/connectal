@@ -29,6 +29,8 @@ masterlist = []
 parammap = {}
 paramnames = []
 remapmap = {}
+ifdefmap = {}
+conditionalcf = {}
 clock_names = []
 commoninterfaces = {}
 tokgenerator = 0
@@ -259,10 +261,19 @@ def parse_verilog(filename):
             masterlist.append(f)
     paramnames.sort()
 
-def generate_interface(ifname, paramval, ilist, cname):
+def generate_condition(ifname):
+    global ifdefmap
+    for k, v in ifdefmap.items():
+        if ifname in v:
+            print('`ifdef', k)
+            return k
+    return None
+
+def generate_interface(ifname, paramlist, paramval, ilist, cname):
     global clock_names
+    cflag = generate_condition(ifname)
     print('(* always_ready, always_enabled *)')
-    print('interface ' + ifname + ';')
+    print('interface ' + ifname + paramlist + ';')
     for item in ilist:
         if item[0] != 'input' and item[0] != 'output' and item[0] != 'inout' and item[0] != 'interface':
             continue
@@ -278,8 +289,13 @@ def generate_interface(ifname, paramval, ilist, cname):
         elif item[0] == 'inout':
             print('    interface Inout#('+item[1]+')     '+item[-1].lower()+';')
         elif item[0] == 'interface':
+            cflag2 = generate_condition(item[1])
             print('    interface '+item[1]+ paramval +'     '+item[2].lower()+';')
+            if cflag2:
+                print('`endif')
     print('endinterface')
+    if cflag:
+        print('`endif')
 
 def regroup_items(ifname, masterlist):
     global commoninterfaces
@@ -331,7 +347,7 @@ def generate_inter_declarations(paramlist, paramval):
         #print('interface', k, file=sys.stderr)
         for kuse, vuse in sorted(v.items()):
             if kuse == '' or kuse == '0':
-                generate_interface(k+paramlist, paramval, vuse, [])
+                generate_interface(k, paramlist, paramval, vuse, [])
             #else:
                 #print('     ', kuse, json.dumps(vuse), file=sys.stderr)
 
@@ -382,17 +398,27 @@ def generate_instance(item, indent, prefix, clockedby_arg):
     elif item[0] == 'inout':
         print(indent + 'ifc_inout '+item[-1].lower()+'('+ prefname+');')
     elif item[0] == 'interface':
+        cflag = generate_condition(item[1])
         print(indent + 'interface '+item[1]+'     '+item[2].lower()+';')
         temp = commoninterfaces[item[1]].get('0')
         if not temp:
             temp = commoninterfaces[item[1]]['']
         clockedby_name = ''
         for titem in temp:
-             if titem[0] == 'input' and titem[1] == 'Clock':
-                 clockedby_name = ' clocked_by (' + (item[3]+titem[-1]).lower() + ') reset_by (' + (item[3]+titem[-1]).lower() + '_reset)'
+            if titem[0] == 'input' and titem[1] == 'Clock':
+                clockedby_name = ' clocked_by (' + (item[3]+titem[-1]).lower() + ') reset_by (' + (item[3]+titem[-1]).lower() + '_reset)'
+        templist = ''
         for titem in temp:
-             methodlist = methodlist + generate_instance(titem, '        ', item[3], clockedby_name)
+            templist = templist + generate_instance(titem, '        ', item[3], clockedby_name)
+        if cflag:
+            if not conditionalcf.get(cflag):
+                conditionalcf[cflag] = ''
+            conditionalcf[cflag] = conditionalcf[cflag] + templist
+        else:
+            methodlist = methodlist + templist
         print('    endinterface')
+        if cflag:
+            print('`endif')
     return methodlist
 
 def translate_verilog(ifname):
@@ -413,7 +439,7 @@ def translate_verilog(ifname):
         paramlist = '#(' + paramlist[2:] + ')'
     paramval = paramlist.replace('numeric type ', '')
     generate_inter_declarations(paramlist, paramval)
-    generate_interface(ifname + paramlist, paramval, masterlist, clock_names)
+    generate_interface(ifname, paramlist, paramval, masterlist, clock_names)
     print('import "BVI" '+modulename + ' =')
     temp = 'module mk' + ifname
     for item in masterlist:
@@ -443,8 +469,17 @@ def translate_verilog(ifname):
     for item in masterlist:
         methodlist = methodlist + generate_instance(item, '    ', '', '')
     if methodlist != '':
-        methodlist = '(' + methodlist[2:] + ')'
+        methodlist = methodlist[2:]
+        if conditionalcf != {}:
+            for k, v in sorted(conditionalcf.items()):
+                mtemp = '(' + methodlist + v + ')'
+                print('`ifdef', k)
+                print('    schedule '+mtemp + ' CF ' + mtemp + ';')
+                print('`else')
+        methodlist = '(' + methodlist + ')'
         print('    schedule '+methodlist + ' CF ' + methodlist + ';')
+        if conditionalcf != {}:
+            print('`endif')
     print('endmodule')
 
 if __name__=='__main__':
@@ -455,6 +490,7 @@ if __name__=='__main__':
     parser.add_option("-c", "--clock", action="append", dest="clock")
     parser.add_option("-d", "--delete", action="append", dest="delete")
     parser.add_option("-e", "--export", action="append", dest="export")
+    parser.add_option("-i", "--ifdef", action="append", dest="ifdef")
     (options, args) = parser.parse_args()
     ifname = 'PPS7'
     #print('KK', options, args, file=sys.stderr)
@@ -473,6 +509,11 @@ if __name__=='__main__':
             item2 = item.split(':')
             if len(item2) == 2:
                 remapmap[item2[0]] = item2[1]
+    if options.ifdef:
+        for item in options.ifdef:
+            item2 = item.split(':')
+            ifdefmap[item2[0]] = item2[1:]
+            print('III', ifdefmap, file=sys.stderr)
     if len(args) != 1:
         print("incorrect number of arguments", file=sys.stderr)
     else:

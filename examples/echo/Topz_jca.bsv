@@ -51,56 +51,52 @@ module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     let axiTop <- mkPortalTop();
-    let top_ctrl <- mkClockBinder(axiTop.ctrl);
     let data_width = 64;
     let id_width = 12;
     PS7#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ps7 <- mkPS7(defaultClock, defaultReset);
-    //let ps7_irq <- mkClockBinder(ps7.irq, clocked_by axi_clock, reset_by axi_reset);
-    SyncBitIfc#(Bit#(1)) interrupt_reg <- mkSyncBit(defaultClock, defaultReset, defaultClock);
+    //SyncBitIfc#(Bit#(1)) interrupt_reg <- mkSyncBit(defaultClock, defaultReset, defaultClock);
 
-    rule int_rule;
-    interrupt_reg.send(axiTop.interrupt ? 1'b1 : 1'b0);
-    endrule
+    //rule int_rule;
+    //interrupt_reg.send(axiTop.interrupt ? 1'b1 : 1'b0);
+    //endrule
 
     rule send_int_rule;
-    ps7.irq.f2p({15'b0, interrupt_reg.read()});
+    ps7.irq.f2p({15'b0, axiTop.interrupt ? 1'b1 : 1'b0});
     endrule
 
-    rule m_ar_rule; //.M_AXI_GP0_ARREADY(ctrl_arready), .M_AXI_GP0_ARVALID(ctrl_arvalid),
+    rule m_ar_rule;
         let m_ar <- ps7.m_axi_gp[0].req_ar.get();
-            //m_ar.lock; //m_ar.qos;
-        top_ctrl.read.readAddr(m_ar.addr, m_ar.len, m_ar.size, m_ar.burst, m_ar.prot, m_ar.cache, m_ar.id);
+        axiTop.ctrl.read.readAddr(m_ar.addr, m_ar.len, m_ar.size, m_ar.burst, m_ar.prot, m_ar.cache, m_ar.id);
     endrule
 
-    rule m_aw_rule; //.M_AXI_GP0_AWREADY(ctrl_awready), .M_AXI_GP0_AWVALID(ctrl_awvalid),
+    rule m_aw_rule;
         let m_aw <- ps7.m_axi_gp[0].req_aw.get();
-            //m_aw.lock; //m_aw.qos;
-        top_ctrl.write.writeAddr(m_aw.addr, m_aw.len, m_aw.size, m_aw.burst, m_aw.prot, m_aw.cache, m_aw.id);
+        axiTop.ctrl.write.writeAddr(m_aw.addr, m_aw.len, m_aw.size, m_aw.burst, m_aw.prot, m_aw.cache, m_aw.id);
     endrule
 
-    rule m_arespb_rule; //.M_AXI_GP0_BREADY(ctrl_bready), .M_AXI_GP0_BVALID(ctrl_bvalid),
+    rule m_arespb_rule;
         AxiRESP#(12/*id_width*/) m_arespb;
-        m_arespb.id <- top_ctrl.write.bid();
-        m_arespb.resp <- top_ctrl.write.writeResponse();
+        m_arespb.id <- axiTop.ctrl.write.bid();
+        m_arespb.resp <- axiTop.ctrl.write.writeResponse();
         ps7.m_axi_gp[0].resp_b.put(m_arespb);
     endrule
 
-    rule m_arespr_rule; //.M_AXI_GP0_RREADY(ctrl_rready), .M_AXI_GP0_RVALID(ctrl_rvalid),
+    rule m_arespr_rule;
         AxiRead#(32/*data_width*/, 12/*id_width*/) m_arespr;
-        m_arespr.r.id = top_ctrl.read.rid();
+        m_arespr.r.id = axiTop.ctrl.read.rid();
         m_arespr.r.resp = 2'b0; //.M_AXI_GP0_RRESP(ctrl_rresp),
-        m_arespr.rd.data <- top_ctrl.read.readData();
-        m_arespr.rd.last = top_ctrl.read.last();
+        m_arespr.rd.data <- axiTop.ctrl.read.readData();
+        m_arespr.rd.last = axiTop.ctrl.read.last();
         ps7.m_axi_gp[0].resp_read.put(m_arespr);
     endrule
 
-    rule m_arespw_rule; //.M_AXI_GP0_WREADY(ctrl_wready), .M_AXI_GP0_WVALID(ctrl_wvalid),
+    rule m_arespw_rule;
         let m_arespw <- ps7.m_axi_gp[0].resp_write.get();
-        top_ctrl.write.writeData(m_arespw.wd.data, m_arespw.wstrb, m_arespw.wd.last, m_arespw.wid);
+        axiTop.ctrl.write.writeData(m_arespw.wd.data, m_arespw.wstrb, m_arespw.wd.last, m_arespw.wid);
     endrule
 
 /* m_axi interface not bound in examples/echo/Top.bsv
-    rule s_areqr_rule; //.S_AXI_HP0_ARREADY(m_axi_arready), .S_AXI_HP0_ARVALID(m_axi_arvalid),
+    rule s_areqr_rule;
         AxiREQ#(12/*id_width* /) s_areqr;
         s_areqr.lock = 0;
         s_areqr.qos = 0;
@@ -114,7 +110,7 @@ module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
         ps7.s_axi_hp[0].axi.req_ar.put(s_areqr);
     endrule
 
-    rule s_areqw_rule; //.S_AXI_HP0_AWREADY(m_axi_awready), .S_AXI_HP0_AWVALID(m_axi_awvalid),
+    rule s_areqw_rule;
         AxiREQ#(12/*id_width* /) s_areqw;
         s_areqw.lock = 0;
         s_areqw.qos = 0;
@@ -128,17 +124,17 @@ module mkZynqTop(EchoPins#(64/*gpio_width*/, 54));
         ps7.s_axi_hp[0].axi.req_ar.put(s_areqr);
     endrule
 
-    rule s_arespb_rule; //.S_AXI_HP0_BREADY(m_axi_bready), .S_AXI_HP0_BVALID(m_axi_bvalid),
+    rule s_arespb_rule;
         let s_arespb = ps7.s_axi_hp[0].axi.resp_b.get();
         top_m_axi.write.writeResponse(s_arespb.resp, s_arespb.id);
     endrule
 
-    rule s_arespr_rule; //.S_AXI_HP0_RREADY(m_axi_rready), .S_AXI_HP0_RVALID(m_axi_rvalid),
+    rule s_arespr_rule;
         let s_arespr = ps7.s_axi_hp[0].axi.resp_read.get();
         top_m_axi.read.readData(s_arespr.rd.data, s_arespr.r.resp, s_arespr.rd.last, s_arespr.r.id);
     endrule
 
-    rule s_arespw_rule; //.S_AXI_HP0_WREADY(m_axi_wready), .S_AXI_HP0_WVALID(m_axi_wvalid),
+    rule s_arespw_rule;
         AxiWrite#(32/*data_width* /, 12/*id_width* /) s_arespw;
         s_arespw.wid = top_m_axi.write.writeWid();
         //??s_arespw.wd.data <= top_m_axi.write.writeWid(); //.m_axi_write_writeData(m_axi_wdata_wire),

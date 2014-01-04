@@ -61,6 +61,8 @@
    DDR_ARB
    -e
    C_NUM_F2P_INTR_INPUTS:16
+   -i
+   PS7EXTENDED:Pps7Can:Pps7Core:Pps7Dma:Pps7Enet:Pps7Event:Pps7Fclk_clktrig:Pps7Fpga:Pps7Ftmd:Pps7Ftmt:Pps7Pjtag:Pps7Sdio:Pps7Spi:Pps7Sram:Pps7Trace:Pps7Ttc:Pps7Uart:Pps7Usb:Pps7Wdt
    ../../import_components/Xilinx/Vivado/2013.2/data/ip/xilinx/processing_system7_v5_01/hdl/verilog/processing_system7.v
 */
 
@@ -69,16 +71,20 @@ import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
 
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Can#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      phy_rx(Bit#(1) v);
     method Bit#(1)     phy_tx();
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Core#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      nfiq(Bit#(1) v);
     method Action      nirq(Bit#(1) v);
 endinterface
+`endif
 (* always_ready, always_enabled *)
 interface Pps7Ddr#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     interface Inout#(Bit#(15))     addr;
@@ -99,6 +105,7 @@ interface Pps7Ddr#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
     interface Inout#(Bit#(1))     vrp;
     interface Inout#(Bit#(1))     web;
 endinterface
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Dma#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      aclk(Bit#(1) v);
@@ -111,6 +118,8 @@ interface Pps7Dma#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
     method Action      drvalid(Bit#(1) v);
     method Bit#(1)     rstn();
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Enet#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      ext_intin(Bit#(1) v);
@@ -139,6 +148,8 @@ interface Pps7Enet#(numeric type c_dm_width, numeric type c_dq_width, numeric ty
     method Bit#(1)     sof_rx();
     method Bit#(1)     sof_tx();
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Event#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      eventi(Bit#(1) v);
@@ -146,6 +157,7 @@ interface Pps7Event#(numeric type c_dm_width, numeric type c_dq_width, numeric t
     method Bit#(2)     standbywfe();
     method Bit#(2)     standbywfi();
 endinterface
+`endif
 (* always_ready, always_enabled *)
 interface Pps7Fclk#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     interface Clock     clk0;
@@ -153,18 +165,23 @@ interface Pps7Fclk#(numeric type c_dm_width, numeric type c_dq_width, numeric ty
     method Bit#(1)     clk2();
     method Bit#(1)     clk3();
 endinterface
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Fclk_clktrig#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      n(Bit#(1) v);
 endinterface
+`endif
 (* always_ready, always_enabled *)
 interface Pps7Fclk_reset#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Bit#(1)     n();
 endinterface
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Fpga#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      idle_n(Bit#(1) v);
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Ftmd#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      tracein_atid(Bit#(4) v);
@@ -172,6 +189,8 @@ interface Pps7Ftmd#(numeric type c_dm_width, numeric type c_dq_width, numeric ty
     method Action      tracein_data(Bit#(32) v);
     method Action      tracein_valid(Bit#(1) v);
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Ftmt#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      f2p_debug(Bit#(32) v);
@@ -181,6 +200,7 @@ interface Pps7Ftmt#(numeric type c_dm_width, numeric type c_dq_width, numeric ty
     method Bit#(4)     p2f_trig();
     method Action      p2f_trigack(Bit#(4) v);
 endinterface
+`endif
 (* always_ready, always_enabled *)
 interface Pps7Gpio#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      i(Bit#(gpio_width) v);
@@ -271,6 +291,7 @@ interface Pps7M_axi_gp#(numeric type c_dm_width, numeric type c_dq_width, numeri
     method Bit#(4)     wstrb();
     method Bit#(1)     wvalid();
 endinterface
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Pjtag#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      tck(Bit#(1) v);
@@ -279,6 +300,7 @@ interface Pps7Pjtag#(numeric type c_dm_width, numeric type c_dq_width, numeric t
     method Bit#(1)     td_t();
     method Action      tms(Bit#(1) v);
 endinterface
+`endif
 (* always_ready, always_enabled *)
 interface Pps7Ps#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     interface Inout#(Bit#(1))     clk;
@@ -419,6 +441,7 @@ interface Pps7S_axi_hp#(numeric type c_dm_width, numeric type c_dq_width, numeri
     method Action      wstrb(Bit#(TDiv#(data_width,8)) v);
     method Action      wvalid(Bit#(1) v);
 endinterface
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Sdio#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Bit#(1)     buspow();
@@ -435,6 +458,8 @@ interface Pps7Sdio#(numeric type c_dm_width, numeric type c_dq_width, numeric ty
     method Bit#(1)     led();
     method Action      wp(Bit#(1) v);
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Spi#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      miso_i(Bit#(1) v);
@@ -452,16 +477,22 @@ interface Pps7Spi#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
     method Bit#(1)     ss_o();
     method Bit#(1)     ss_t();
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Sram#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      intin(Bit#(1) v);
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Trace#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      clk(Bit#(1) v);
     method Bit#(1)     ctl();
     method Bit#(32)     data();
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Ttc#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      clk0_in(Bit#(1) v);
@@ -471,6 +502,8 @@ interface Pps7Ttc#(numeric type c_dm_width, numeric type c_dq_width, numeric typ
     method Bit#(1)     wave1_out();
     method Bit#(1)     wave2_out();
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Uart#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      ctsn(Bit#(1) v);
@@ -482,43 +515,84 @@ interface Pps7Uart#(numeric type c_dm_width, numeric type c_dq_width, numeric ty
     method Action      rx(Bit#(1) v);
     method Bit#(1)     tx();
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Usb#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Bit#(2)     port_indctl();
     method Action      vbus_pwrfault(Bit#(1) v);
     method Bit#(1)     vbus_pwrselect();
 endinterface
+`endif
+`ifdef PS7EXTENDED
 (* always_ready, always_enabled *)
 interface Pps7Wdt#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
     method Action      clk_in(Bit#(1) v);
     method Bit#(1)     rst_out();
 endinterface
+`endif
 (* always_ready, always_enabled *)
 interface PPS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
+`ifdef PS7EXTENDED
     interface Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     can0;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Can#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     can1;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Core#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     core0;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Core#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     core1;
+`endif
     interface Pps7Ddr#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ddr;
+`ifdef PS7EXTENDED
     interface Pps7Dma#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     dma0;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Dma#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     dma1;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Dma#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     dma2;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Dma#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     dma3;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Enet#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     enet0;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Enet#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     enet1;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Event#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     event_;
+`endif
     interface Pps7Fclk#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fclk;
+`ifdef PS7EXTENDED
     interface Pps7Fclk_clktrig#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fclk_clktrig0;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Fclk_clktrig#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fclk_clktrig1;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Fclk_clktrig#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fclk_clktrig2;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Fclk_clktrig#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fclk_clktrig3;
+`endif
     interface Pps7Fclk_reset#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fclk_reset0;
     interface Pps7Fclk_reset#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fclk_reset1;
     interface Pps7Fclk_reset#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fclk_reset2;
     interface Pps7Fclk_reset#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fclk_reset3;
+`ifdef PS7EXTENDED
     interface Pps7Fpga#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     fpga;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Ftmd#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ftmd;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Ftmt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ftmt;
+`endif
     interface Pps7Gpio#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     gpio;
     interface Pps7I2c#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     i2c0;
     interface Pps7I2c#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     i2c1;
@@ -526,13 +600,25 @@ interface PPS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c
     interface Inout#(Bit#(mio_width))     mio;
     interface Pps7M_axi_gp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     m_axi_gp0;
     interface Pps7M_axi_gp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     m_axi_gp1;
+`ifdef PS7EXTENDED
     interface Pps7Pjtag#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     pjtag;
+`endif
     interface Pps7Ps#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ps;
+`ifdef PS7EXTENDED
     interface Pps7Sdio#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     sdio0;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Sdio#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     sdio1;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Spi#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     spi0;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Spi#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     spi1;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Sram#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     sram;
+`endif
     interface Pps7S_axi_acp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     s_axi_acp;
     interface Pps7S_axi_gp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     s_axi_gp0;
     interface Pps7S_axi_gp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     s_axi_gp1;
@@ -540,14 +626,30 @@ interface PPS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c
     interface Pps7S_axi_hp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     s_axi_hp1;
     interface Pps7S_axi_hp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     s_axi_hp2;
     interface Pps7S_axi_hp#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     s_axi_hp3;
+`ifdef PS7EXTENDED
     interface Pps7Trace#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     trace;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Ttc#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ttc0;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Ttc#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     ttc1;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Uart#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     uart0;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Uart#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     uart1;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Usb#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     usb0;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Usb#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     usb1;
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Wdt#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width)     wdt;
+`endif
 endinterface
 import "BVI" processing_system7 =
 module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1_aclk, Reset m_axi_gp1_aclk_reset, Clock s_axi_acp_aclk, Reset s_axi_acp_aclk_reset, Clock s_axi_gp0_aclk, Reset s_axi_gp0_aclk_reset, Clock s_axi_gp1_aclk, Reset s_axi_gp1_aclk_reset, Clock s_axi_hp0_aclk, Reset s_axi_hp0_aclk_reset, Clock s_axi_hp1_aclk, Reset s_axi_hp1_aclk_reset, Clock s_axi_hp2_aclk, Reset s_axi_hp2_aclk_reset, Clock s_axi_hp3_aclk, Reset s_axi_hp3_aclk_reset)(PPS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width));
@@ -579,22 +681,30 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         input_reset s_axi_hp2_aclk_reset() = s_axi_hp2_aclk_reset;
         input_clock s_axi_hp3_aclk(S_AXI_HP3_ACLK) = s_axi_hp3_aclk;
         input_reset s_axi_hp3_aclk_reset() = s_axi_hp3_aclk_reset;
+`ifdef PS7EXTENDED
     interface Pps7Can     can0;
         method phy_rx(CAN0_PHY_RX) enable((*inhigh*) EN_CAN0_PHY_RX);
         method CAN0_PHY_TX phy_tx();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Can     can1;
         method phy_rx(CAN1_PHY_RX) enable((*inhigh*) EN_CAN1_PHY_RX);
         method CAN1_PHY_TX phy_tx();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Core     core0;
         method nfiq(Core0_nFIQ) enable((*inhigh*) EN_Core0_nFIQ);
         method nirq(Core0_nIRQ) enable((*inhigh*) EN_Core0_nIRQ);
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Core     core1;
         method nfiq(Core1_nFIQ) enable((*inhigh*) EN_Core1_nFIQ);
         method nirq(Core1_nIRQ) enable((*inhigh*) EN_Core1_nIRQ);
     endinterface
+`endif
     interface Pps7Ddr     ddr;
         ifc_inout addr(DDR_Addr);
         ifc_inout bankaddr(DDR_BankAddr);
@@ -614,6 +724,7 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         ifc_inout vrp(DDR_VRP);
         ifc_inout web(DDR_WEB);
     endinterface
+`ifdef PS7EXTENDED
     interface Pps7Dma     dma0;
         method aclk(DMA0_ACLK) enable((*inhigh*) EN_DMA0_ACLK);
         method daready(DMA0_DAREADY) enable((*inhigh*) EN_DMA0_DAREADY);
@@ -625,6 +736,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method drvalid(DMA0_DRVALID) enable((*inhigh*) EN_DMA0_DRVALID);
         method DMA0_RSTN rstn();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Dma     dma1;
         method aclk(DMA1_ACLK) enable((*inhigh*) EN_DMA1_ACLK);
         method daready(DMA1_DAREADY) enable((*inhigh*) EN_DMA1_DAREADY);
@@ -636,6 +749,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method drvalid(DMA1_DRVALID) enable((*inhigh*) EN_DMA1_DRVALID);
         method DMA1_RSTN rstn();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Dma     dma2;
         method aclk(DMA2_ACLK) enable((*inhigh*) EN_DMA2_ACLK);
         method daready(DMA2_DAREADY) enable((*inhigh*) EN_DMA2_DAREADY);
@@ -647,6 +762,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method drvalid(DMA2_DRVALID) enable((*inhigh*) EN_DMA2_DRVALID);
         method DMA2_RSTN rstn();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Dma     dma3;
         method aclk(DMA3_ACLK) enable((*inhigh*) EN_DMA3_ACLK);
         method daready(DMA3_DAREADY) enable((*inhigh*) EN_DMA3_DAREADY);
@@ -658,6 +775,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method drvalid(DMA3_DRVALID) enable((*inhigh*) EN_DMA3_DRVALID);
         method DMA3_RSTN rstn();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Enet     enet0;
         method ext_intin(ENET0_EXT_INTIN) enable((*inhigh*) EN_ENET0_EXT_INTIN);
         method gmii_col(ENET0_GMII_COL) enable((*inhigh*) EN_ENET0_GMII_COL);
@@ -685,6 +804,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method ENET0_SOF_RX sof_rx();
         method ENET0_SOF_TX sof_tx();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Enet     enet1;
         method ext_intin(ENET1_EXT_INTIN) enable((*inhigh*) EN_ENET1_EXT_INTIN);
         method gmii_col(ENET1_GMII_COL) enable((*inhigh*) EN_ENET1_GMII_COL);
@@ -712,30 +833,41 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method ENET1_SOF_RX sof_rx();
         method ENET1_SOF_TX sof_tx();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Event     event_;
         method eventi(EVENT_EVENTI) enable((*inhigh*) EN_EVENT_EVENTI);
         method EVENT_EVENTO evento();
         method EVENT_STANDBYWFE standbywfe();
         method EVENT_STANDBYWFI standbywfi();
     endinterface
+`endif
     interface Pps7Fclk     fclk;
         output_clock clk0(FCLK_CLK0);
         method FCLK_CLK1 clk1();
         method FCLK_CLK2 clk2();
         method FCLK_CLK3 clk3();
     endinterface
+`ifdef PS7EXTENDED
     interface Pps7Fclk_clktrig     fclk_clktrig0;
         method n(FCLK_CLKTRIG0_N) enable((*inhigh*) EN_FCLK_CLKTRIG0_N);
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Fclk_clktrig     fclk_clktrig1;
         method n(FCLK_CLKTRIG1_N) enable((*inhigh*) EN_FCLK_CLKTRIG1_N);
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Fclk_clktrig     fclk_clktrig2;
         method n(FCLK_CLKTRIG2_N) enable((*inhigh*) EN_FCLK_CLKTRIG2_N);
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Fclk_clktrig     fclk_clktrig3;
         method n(FCLK_CLKTRIG3_N) enable((*inhigh*) EN_FCLK_CLKTRIG3_N);
     endinterface
+`endif
     interface Pps7Fclk_reset     fclk_reset0;
         method FCLK_RESET0_N n();
     endinterface
@@ -748,15 +880,20 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
     interface Pps7Fclk_reset     fclk_reset3;
         method FCLK_RESET3_N n();
     endinterface
+`ifdef PS7EXTENDED
     interface Pps7Fpga     fpga;
         method idle_n(FPGA_IDLE_N) enable((*inhigh*) EN_FPGA_IDLE_N);
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Ftmd     ftmd;
         method tracein_atid(FTMD_TRACEIN_ATID) enable((*inhigh*) EN_FTMD_TRACEIN_ATID);
         method tracein_clk(FTMD_TRACEIN_CLK) enable((*inhigh*) EN_FTMD_TRACEIN_CLK);
         method tracein_data(FTMD_TRACEIN_DATA) enable((*inhigh*) EN_FTMD_TRACEIN_DATA);
         method tracein_valid(FTMD_TRACEIN_VALID) enable((*inhigh*) EN_FTMD_TRACEIN_VALID);
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Ftmt     ftmt;
         method f2p_debug(FTMT_F2P_DEBUG) enable((*inhigh*) EN_FTMT_F2P_DEBUG);
         method f2p_trig(FTMT_F2P_TRIG) enable((*inhigh*) EN_FTMT_F2P_TRIG);
@@ -765,6 +902,7 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method FTMT_P2F_TRIG p2f_trig();
         method p2f_trigack(FTMT_P2F_TRIGACK) enable((*inhigh*) EN_FTMT_P2F_TRIGACK);
     endinterface
+`endif
     interface Pps7Gpio     gpio;
         method i(GPIO_I) enable((*inhigh*) EN_GPIO_I);
         method GPIO_O o();
@@ -901,6 +1039,7 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method M_AXI_GP1_WSTRB wstrb() clocked_by (m_axi_gp1_aclk) reset_by (m_axi_gp1_aclk_reset);
         method M_AXI_GP1_WVALID wvalid() clocked_by (m_axi_gp1_aclk) reset_by (m_axi_gp1_aclk_reset);
     endinterface
+`ifdef PS7EXTENDED
     interface Pps7Pjtag     pjtag;
         method tck(PJTAG_TCK) enable((*inhigh*) EN_PJTAG_TCK);
         method td_i(PJTAG_TD_I) enable((*inhigh*) EN_PJTAG_TD_I);
@@ -908,11 +1047,13 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method PJTAG_TD_T td_t();
         method tms(PJTAG_TMS) enable((*inhigh*) EN_PJTAG_TMS);
     endinterface
+`endif
     interface Pps7Ps     ps;
         ifc_inout clk(PS_CLK);
         ifc_inout porb(PS_PORB);
         ifc_inout srstb(PS_SRSTB);
     endinterface
+`ifdef PS7EXTENDED
     interface Pps7Sdio     sdio0;
         method SDIO0_BUSPOW buspow();
         method SDIO0_BUSVOLT busvolt();
@@ -928,6 +1069,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method SDIO0_LED led();
         method wp(SDIO0_WP) enable((*inhigh*) EN_SDIO0_WP);
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Sdio     sdio1;
         method SDIO1_BUSPOW buspow();
         method SDIO1_BUSVOLT busvolt();
@@ -943,6 +1086,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method SDIO1_LED led();
         method wp(SDIO1_WP) enable((*inhigh*) EN_SDIO1_WP);
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Spi     spi0;
         method miso_i(SPI0_MISO_I) enable((*inhigh*) EN_SPI0_MISO_I);
         method SPI0_MISO_O miso_o();
@@ -959,6 +1104,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method SPI0_SS_O ss_o();
         method SPI0_SS_T ss_t();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Spi     spi1;
         method miso_i(SPI1_MISO_I) enable((*inhigh*) EN_SPI1_MISO_I);
         method SPI1_MISO_O miso_o();
@@ -975,9 +1122,12 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method SPI1_SS_O ss_o();
         method SPI1_SS_T ss_t();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Sram     sram;
         method intin(SRAM_INTIN) enable((*inhigh*) EN_SRAM_INTIN);
     endinterface
+`endif
     interface Pps7S_axi_acp     s_axi_acp;
         method araddr(S_AXI_ACP_ARADDR) clocked_by (s_axi_acp_aclk) reset_by (s_axi_acp_aclk_reset) enable((*inhigh*) EN_S_AXI_ACP_ARADDR);
         method arburst(S_AXI_ACP_ARBURST) clocked_by (s_axi_acp_aclk) reset_by (s_axi_acp_aclk_reset) enable((*inhigh*) EN_S_AXI_ACP_ARBURST);
@@ -1291,11 +1441,14 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method wstrb(S_AXI_HP3_WSTRB) clocked_by (s_axi_hp3_aclk) reset_by (s_axi_hp3_aclk_reset) enable((*inhigh*) EN_S_AXI_HP3_WSTRB);
         method wvalid(S_AXI_HP3_WVALID) clocked_by (s_axi_hp3_aclk) reset_by (s_axi_hp3_aclk_reset) enable((*inhigh*) EN_S_AXI_HP3_WVALID);
     endinterface
+`ifdef PS7EXTENDED
     interface Pps7Trace     trace;
         method clk(TRACE_CLK) enable((*inhigh*) EN_TRACE_CLK);
         method TRACE_CTL ctl();
         method TRACE_DATA data();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Ttc     ttc0;
         method clk0_in(TTC0_CLK0_IN) enable((*inhigh*) EN_TTC0_CLK0_IN);
         method clk1_in(TTC0_CLK1_IN) enable((*inhigh*) EN_TTC0_CLK1_IN);
@@ -1304,6 +1457,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method TTC0_WAVE1_OUT wave1_out();
         method TTC0_WAVE2_OUT wave2_out();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Ttc     ttc1;
         method clk0_in(TTC1_CLK0_IN) enable((*inhigh*) EN_TTC1_CLK0_IN);
         method clk1_in(TTC1_CLK1_IN) enable((*inhigh*) EN_TTC1_CLK1_IN);
@@ -1312,6 +1467,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method TTC1_WAVE1_OUT wave1_out();
         method TTC1_WAVE2_OUT wave2_out();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Uart     uart0;
         method ctsn(UART0_CTSN) enable((*inhigh*) EN_UART0_CTSN);
         method dcdn(UART0_DCDN) enable((*inhigh*) EN_UART0_DCDN);
@@ -1322,6 +1479,8 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method rx(UART0_RX) enable((*inhigh*) EN_UART0_RX);
         method UART0_TX tx();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Uart     uart1;
         method ctsn(UART1_CTSN) enable((*inhigh*) EN_UART1_CTSN);
         method dcdn(UART1_DCDN) enable((*inhigh*) EN_UART1_DCDN);
@@ -1332,19 +1491,30 @@ module mkPPS7#(Clock m_axi_gp0_aclk, Reset m_axi_gp0_aclk_reset, Clock m_axi_gp1
         method rx(UART1_RX) enable((*inhigh*) EN_UART1_RX);
         method UART1_TX tx();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Usb     usb0;
         method USB0_PORT_INDCTL port_indctl();
         method vbus_pwrfault(USB0_VBUS_PWRFAULT) enable((*inhigh*) EN_USB0_VBUS_PWRFAULT);
         method USB0_VBUS_PWRSELECT vbus_pwrselect();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Usb     usb1;
         method USB1_PORT_INDCTL port_indctl();
         method vbus_pwrfault(USB1_VBUS_PWRFAULT) enable((*inhigh*) EN_USB1_VBUS_PWRFAULT);
         method USB1_VBUS_PWRSELECT vbus_pwrselect();
     endinterface
+`endif
+`ifdef PS7EXTENDED
     interface Pps7Wdt     wdt;
         method clk_in(WDT_CLK_IN) enable((*inhigh*) EN_WDT_CLK_IN);
         method WDT_RST_OUT rst_out();
     endinterface
-    schedule (can0.phy_rx, can0.phy_tx, can1.phy_rx, can1.phy_tx, core0.nfiq, core0.nirq, core1.nfiq, core1.nirq, dma0.aclk, dma0.daready, dma0.datype, dma0.davalid, dma0.drlast, dma0.drready, dma0.drtype, dma0.drvalid, dma0.rstn, dma1.aclk, dma1.daready, dma1.datype, dma1.davalid, dma1.drlast, dma1.drready, dma1.drtype, dma1.drvalid, dma1.rstn, dma2.aclk, dma2.daready, dma2.datype, dma2.davalid, dma2.drlast, dma2.drready, dma2.drtype, dma2.drvalid, dma2.rstn, dma3.aclk, dma3.daready, dma3.datype, dma3.davalid, dma3.drlast, dma3.drready, dma3.drtype, dma3.drvalid, dma3.rstn, enet0.ext_intin, enet0.gmii_col, enet0.gmii_crs, enet0.gmii_rxd, enet0.gmii_rx_clk, enet0.gmii_rx_dv, enet0.gmii_rx_er, enet0.gmii_txd, enet0.gmii_tx_clk, enet0.gmii_tx_en, enet0.gmii_tx_er, enet0.mdio_i, enet0.mdio_mdc, enet0.mdio_o, enet0.mdio_t, enet0.ptp_delay_req_rx, enet0.ptp_delay_req_tx, enet0.ptp_pdelay_req_rx, enet0.ptp_pdelay_req_tx, enet0.ptp_pdelay_resp_rx, enet0.ptp_pdelay_resp_tx, enet0.ptp_sync_frame_rx, enet0.ptp_sync_frame_tx, enet0.sof_rx, enet0.sof_tx, enet1.ext_intin, enet1.gmii_col, enet1.gmii_crs, enet1.gmii_rxd, enet1.gmii_rx_clk, enet1.gmii_rx_dv, enet1.gmii_rx_er, enet1.gmii_txd, enet1.gmii_tx_clk, enet1.gmii_tx_en, enet1.gmii_tx_er, enet1.mdio_i, enet1.mdio_mdc, enet1.mdio_o, enet1.mdio_t, enet1.ptp_delay_req_rx, enet1.ptp_delay_req_tx, enet1.ptp_pdelay_req_rx, enet1.ptp_pdelay_req_tx, enet1.ptp_pdelay_resp_rx, enet1.ptp_pdelay_resp_tx, enet1.ptp_sync_frame_rx, enet1.ptp_sync_frame_tx, enet1.sof_rx, enet1.sof_tx, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclk.clk1, fclk.clk2, fclk.clk3, fclk_clktrig0.n, fclk_clktrig1.n, fclk_clktrig2.n, fclk_clktrig3.n, fclk_reset0.n, fclk_reset1.n, fclk_reset2.n, fclk_reset3.n, fpga.idle_n, ftmd.tracein_atid, ftmd.tracein_clk, ftmd.tracein_data, ftmd.tracein_valid, ftmt.f2p_debug, ftmt.f2p_trig, ftmt.f2p_trigack, ftmt.p2f_debug, ftmt.p2f_trig, ftmt.p2f_trigack, gpio.i, gpio.o, gpio.t, i2c0.scl_i, i2c0.scl_o, i2c0.scl_t, i2c0.sda_i, i2c0.sda_o, i2c0.sda_t, i2c1.scl_i, i2c1.scl_o, i2c1.scl_t, i2c1.sda_i, i2c1.sda_o, i2c1.sda_t, irq.f2p, irq.p2f_can0, irq.p2f_can1, irq.p2f_cti, irq.p2f_dmac0, irq.p2f_dmac1, irq.p2f_dmac2, irq.p2f_dmac3, irq.p2f_dmac4, irq.p2f_dmac5, irq.p2f_dmac6, irq.p2f_dmac7, irq.p2f_dmac_abort, irq.p2f_enet0, irq.p2f_enet1, irq.p2f_enet_wake0, irq.p2f_enet_wake1, irq.p2f_gpio, irq.p2f_i2c0, irq.p2f_i2c1, irq.p2f_qspi, irq.p2f_sdio0, irq.p2f_sdio1, irq.p2f_smc, irq.p2f_spi0, irq.p2f_spi1, irq.p2f_uart0, irq.p2f_uart1, irq.p2f_usb0, irq.p2f_usb1, m_axi_gp0.araddr, m_axi_gp0.arburst, m_axi_gp0.arcache, m_axi_gp0.aresetn, m_axi_gp0.arid, m_axi_gp0.arlen, m_axi_gp0.arlock, m_axi_gp0.arprot, m_axi_gp0.arqos, m_axi_gp0.arready, m_axi_gp0.arsize, m_axi_gp0.arvalid, m_axi_gp0.awaddr, m_axi_gp0.awburst, m_axi_gp0.awcache, m_axi_gp0.awid, m_axi_gp0.awlen, m_axi_gp0.awlock, m_axi_gp0.awprot, m_axi_gp0.awqos, m_axi_gp0.awready, m_axi_gp0.awsize, m_axi_gp0.awvalid, m_axi_gp0.bid, m_axi_gp0.bready, m_axi_gp0.bresp, m_axi_gp0.bvalid, m_axi_gp0.rdata, m_axi_gp0.rid, m_axi_gp0.rlast, m_axi_gp0.rready, m_axi_gp0.rresp, m_axi_gp0.rvalid, m_axi_gp0.wdata, m_axi_gp0.wid, m_axi_gp0.wlast, m_axi_gp0.wready, m_axi_gp0.wstrb, m_axi_gp0.wvalid, m_axi_gp1.araddr, m_axi_gp1.arburst, m_axi_gp1.arcache, m_axi_gp1.aresetn, m_axi_gp1.arid, m_axi_gp1.arlen, m_axi_gp1.arlock, m_axi_gp1.arprot, m_axi_gp1.arqos, m_axi_gp1.arready, m_axi_gp1.arsize, m_axi_gp1.arvalid, m_axi_gp1.awaddr, m_axi_gp1.awburst, m_axi_gp1.awcache, m_axi_gp1.awid, m_axi_gp1.awlen, m_axi_gp1.awlock, m_axi_gp1.awprot, m_axi_gp1.awqos, m_axi_gp1.awready, m_axi_gp1.awsize, m_axi_gp1.awvalid, m_axi_gp1.bid, m_axi_gp1.bready, m_axi_gp1.bresp, m_axi_gp1.bvalid, m_axi_gp1.rdata, m_axi_gp1.rid, m_axi_gp1.rlast, m_axi_gp1.rready, m_axi_gp1.rresp, m_axi_gp1.rvalid, m_axi_gp1.wdata, m_axi_gp1.wid, m_axi_gp1.wlast, m_axi_gp1.wready, m_axi_gp1.wstrb, m_axi_gp1.wvalid, pjtag.tck, pjtag.td_i, pjtag.td_o, pjtag.td_t, pjtag.tms, sdio0.buspow, sdio0.busvolt, sdio0.cdn, sdio0.clk, sdio0.clk_fb, sdio0.cmd_i, sdio0.cmd_o, sdio0.cmd_t, sdio0.data_i, sdio0.data_o, sdio0.data_t, sdio0.led, sdio0.wp, sdio1.buspow, sdio1.busvolt, sdio1.cdn, sdio1.clk, sdio1.clk_fb, sdio1.cmd_i, sdio1.cmd_o, sdio1.cmd_t, sdio1.data_i, sdio1.data_o, sdio1.data_t, sdio1.led, sdio1.wp, spi0.miso_i, spi0.miso_o, spi0.miso_t, spi0.mosi_i, spi0.mosi_o, spi0.mosi_t, spi0.sclk_i, spi0.sclk_o, spi0.sclk_t, spi0.ss1_o, spi0.ss2_o, spi0.ss_i, spi0.ss_o, spi0.ss_t, spi1.miso_i, spi1.miso_o, spi1.miso_t, spi1.mosi_i, spi1.mosi_o, spi1.mosi_t, spi1.sclk_i, spi1.sclk_o, spi1.sclk_t, spi1.ss1_o, spi1.ss2_o, spi1.ss_i, spi1.ss_o, spi1.ss_t, sram.intin, s_axi_acp.araddr, s_axi_acp.arburst, s_axi_acp.arcache, s_axi_acp.aresetn, s_axi_acp.arid, s_axi_acp.arlen, s_axi_acp.arlock, s_axi_acp.arprot, s_axi_acp.arqos, s_axi_acp.arready, s_axi_acp.arsize, s_axi_acp.aruser, s_axi_acp.arvalid, s_axi_acp.awaddr, s_axi_acp.awburst, s_axi_acp.awcache, s_axi_acp.awid, s_axi_acp.awlen, s_axi_acp.awlock, s_axi_acp.awprot, s_axi_acp.awqos, s_axi_acp.awready, s_axi_acp.awsize, s_axi_acp.awuser, s_axi_acp.awvalid, s_axi_acp.bid, s_axi_acp.bready, s_axi_acp.bresp, s_axi_acp.bvalid, s_axi_acp.rdata, s_axi_acp.rid, s_axi_acp.rlast, s_axi_acp.rready, s_axi_acp.rresp, s_axi_acp.rvalid, s_axi_acp.wdata, s_axi_acp.wid, s_axi_acp.wlast, s_axi_acp.wready, s_axi_acp.wstrb, s_axi_acp.wvalid, s_axi_gp0.araddr, s_axi_gp0.arburst, s_axi_gp0.arcache, s_axi_gp0.aresetn, s_axi_gp0.arid, s_axi_gp0.arlen, s_axi_gp0.arlock, s_axi_gp0.arprot, s_axi_gp0.arqos, s_axi_gp0.arready, s_axi_gp0.arsize, s_axi_gp0.arvalid, s_axi_gp0.awaddr, s_axi_gp0.awburst, s_axi_gp0.awcache, s_axi_gp0.awid, s_axi_gp0.awlen, s_axi_gp0.awlock, s_axi_gp0.awprot, s_axi_gp0.awqos, s_axi_gp0.awready, s_axi_gp0.awsize, s_axi_gp0.awvalid, s_axi_gp0.bid, s_axi_gp0.bready, s_axi_gp0.bresp, s_axi_gp0.bvalid, s_axi_gp0.rdata, s_axi_gp0.rid, s_axi_gp0.rlast, s_axi_gp0.rready, s_axi_gp0.rresp, s_axi_gp0.rvalid, s_axi_gp0.wdata, s_axi_gp0.wid, s_axi_gp0.wlast, s_axi_gp0.wready, s_axi_gp0.wstrb, s_axi_gp0.wvalid, s_axi_gp1.araddr, s_axi_gp1.arburst, s_axi_gp1.arcache, s_axi_gp1.aresetn, s_axi_gp1.arid, s_axi_gp1.arlen, s_axi_gp1.arlock, s_axi_gp1.arprot, s_axi_gp1.arqos, s_axi_gp1.arready, s_axi_gp1.arsize, s_axi_gp1.arvalid, s_axi_gp1.awaddr, s_axi_gp1.awburst, s_axi_gp1.awcache, s_axi_gp1.awid, s_axi_gp1.awlen, s_axi_gp1.awlock, s_axi_gp1.awprot, s_axi_gp1.awqos, s_axi_gp1.awready, s_axi_gp1.awsize, s_axi_gp1.awvalid, s_axi_gp1.bid, s_axi_gp1.bready, s_axi_gp1.bresp, s_axi_gp1.bvalid, s_axi_gp1.rdata, s_axi_gp1.rid, s_axi_gp1.rlast, s_axi_gp1.rready, s_axi_gp1.rresp, s_axi_gp1.rvalid, s_axi_gp1.wdata, s_axi_gp1.wid, s_axi_gp1.wlast, s_axi_gp1.wready, s_axi_gp1.wstrb, s_axi_gp1.wvalid, s_axi_hp0.araddr, s_axi_hp0.arburst, s_axi_hp0.arcache, s_axi_hp0.aresetn, s_axi_hp0.arid, s_axi_hp0.arlen, s_axi_hp0.arlock, s_axi_hp0.arprot, s_axi_hp0.arqos, s_axi_hp0.arready, s_axi_hp0.arsize, s_axi_hp0.arvalid, s_axi_hp0.awaddr, s_axi_hp0.awburst, s_axi_hp0.awcache, s_axi_hp0.awid, s_axi_hp0.awlen, s_axi_hp0.awlock, s_axi_hp0.awprot, s_axi_hp0.awqos, s_axi_hp0.awready, s_axi_hp0.awsize, s_axi_hp0.awvalid, s_axi_hp0.bid, s_axi_hp0.bready, s_axi_hp0.bresp, s_axi_hp0.bvalid, s_axi_hp0.racount, s_axi_hp0.rcount, s_axi_hp0.rdata, s_axi_hp0.rdissuecap1_en, s_axi_hp0.rid, s_axi_hp0.rlast, s_axi_hp0.rready, s_axi_hp0.rresp, s_axi_hp0.rvalid, s_axi_hp0.wacount, s_axi_hp0.wcount, s_axi_hp0.wdata, s_axi_hp0.wid, s_axi_hp0.wlast, s_axi_hp0.wready, s_axi_hp0.wrissuecap1_en, s_axi_hp0.wstrb, s_axi_hp0.wvalid, s_axi_hp1.araddr, s_axi_hp1.arburst, s_axi_hp1.arcache, s_axi_hp1.aresetn, s_axi_hp1.arid, s_axi_hp1.arlen, s_axi_hp1.arlock, s_axi_hp1.arprot, s_axi_hp1.arqos, s_axi_hp1.arready, s_axi_hp1.arsize, s_axi_hp1.arvalid, s_axi_hp1.awaddr, s_axi_hp1.awburst, s_axi_hp1.awcache, s_axi_hp1.awid, s_axi_hp1.awlen, s_axi_hp1.awlock, s_axi_hp1.awprot, s_axi_hp1.awqos, s_axi_hp1.awready, s_axi_hp1.awsize, s_axi_hp1.awvalid, s_axi_hp1.bid, s_axi_hp1.bready, s_axi_hp1.bresp, s_axi_hp1.bvalid, s_axi_hp1.racount, s_axi_hp1.rcount, s_axi_hp1.rdata, s_axi_hp1.rdissuecap1_en, s_axi_hp1.rid, s_axi_hp1.rlast, s_axi_hp1.rready, s_axi_hp1.rresp, s_axi_hp1.rvalid, s_axi_hp1.wacount, s_axi_hp1.wcount, s_axi_hp1.wdata, s_axi_hp1.wid, s_axi_hp1.wlast, s_axi_hp1.wready, s_axi_hp1.wrissuecap1_en, s_axi_hp1.wstrb, s_axi_hp1.wvalid, s_axi_hp2.araddr, s_axi_hp2.arburst, s_axi_hp2.arcache, s_axi_hp2.aresetn, s_axi_hp2.arid, s_axi_hp2.arlen, s_axi_hp2.arlock, s_axi_hp2.arprot, s_axi_hp2.arqos, s_axi_hp2.arready, s_axi_hp2.arsize, s_axi_hp2.arvalid, s_axi_hp2.awaddr, s_axi_hp2.awburst, s_axi_hp2.awcache, s_axi_hp2.awid, s_axi_hp2.awlen, s_axi_hp2.awlock, s_axi_hp2.awprot, s_axi_hp2.awqos, s_axi_hp2.awready, s_axi_hp2.awsize, s_axi_hp2.awvalid, s_axi_hp2.bid, s_axi_hp2.bready, s_axi_hp2.bresp, s_axi_hp2.bvalid, s_axi_hp2.racount, s_axi_hp2.rcount, s_axi_hp2.rdata, s_axi_hp2.rdissuecap1_en, s_axi_hp2.rid, s_axi_hp2.rlast, s_axi_hp2.rready, s_axi_hp2.rresp, s_axi_hp2.rvalid, s_axi_hp2.wacount, s_axi_hp2.wcount, s_axi_hp2.wdata, s_axi_hp2.wid, s_axi_hp2.wlast, s_axi_hp2.wready, s_axi_hp2.wrissuecap1_en, s_axi_hp2.wstrb, s_axi_hp2.wvalid, s_axi_hp3.araddr, s_axi_hp3.arburst, s_axi_hp3.arcache, s_axi_hp3.aresetn, s_axi_hp3.arid, s_axi_hp3.arlen, s_axi_hp3.arlock, s_axi_hp3.arprot, s_axi_hp3.arqos, s_axi_hp3.arready, s_axi_hp3.arsize, s_axi_hp3.arvalid, s_axi_hp3.awaddr, s_axi_hp3.awburst, s_axi_hp3.awcache, s_axi_hp3.awid, s_axi_hp3.awlen, s_axi_hp3.awlock, s_axi_hp3.awprot, s_axi_hp3.awqos, s_axi_hp3.awready, s_axi_hp3.awsize, s_axi_hp3.awvalid, s_axi_hp3.bid, s_axi_hp3.bready, s_axi_hp3.bresp, s_axi_hp3.bvalid, s_axi_hp3.racount, s_axi_hp3.rcount, s_axi_hp3.rdata, s_axi_hp3.rdissuecap1_en, s_axi_hp3.rid, s_axi_hp3.rlast, s_axi_hp3.rready, s_axi_hp3.rresp, s_axi_hp3.rvalid, s_axi_hp3.wacount, s_axi_hp3.wcount, s_axi_hp3.wdata, s_axi_hp3.wid, s_axi_hp3.wlast, s_axi_hp3.wready, s_axi_hp3.wrissuecap1_en, s_axi_hp3.wstrb, s_axi_hp3.wvalid, trace.clk, trace.ctl, trace.data, ttc0.clk0_in, ttc0.clk1_in, ttc0.clk2_in, ttc0.wave0_out, ttc0.wave1_out, ttc0.wave2_out, ttc1.clk0_in, ttc1.clk1_in, ttc1.clk2_in, ttc1.wave0_out, ttc1.wave1_out, ttc1.wave2_out, uart0.ctsn, uart0.dcdn, uart0.dsrn, uart0.dtrn, uart0.rin, uart0.rtsn, uart0.rx, uart0.tx, uart1.ctsn, uart1.dcdn, uart1.dsrn, uart1.dtrn, uart1.rin, uart1.rtsn, uart1.rx, uart1.tx, usb0.port_indctl, usb0.vbus_pwrfault, usb0.vbus_pwrselect, usb1.port_indctl, usb1.vbus_pwrfault, usb1.vbus_pwrselect, wdt.clk_in, wdt.rst_out) CF (can0.phy_rx, can0.phy_tx, can1.phy_rx, can1.phy_tx, core0.nfiq, core0.nirq, core1.nfiq, core1.nirq, dma0.aclk, dma0.daready, dma0.datype, dma0.davalid, dma0.drlast, dma0.drready, dma0.drtype, dma0.drvalid, dma0.rstn, dma1.aclk, dma1.daready, dma1.datype, dma1.davalid, dma1.drlast, dma1.drready, dma1.drtype, dma1.drvalid, dma1.rstn, dma2.aclk, dma2.daready, dma2.datype, dma2.davalid, dma2.drlast, dma2.drready, dma2.drtype, dma2.drvalid, dma2.rstn, dma3.aclk, dma3.daready, dma3.datype, dma3.davalid, dma3.drlast, dma3.drready, dma3.drtype, dma3.drvalid, dma3.rstn, enet0.ext_intin, enet0.gmii_col, enet0.gmii_crs, enet0.gmii_rxd, enet0.gmii_rx_clk, enet0.gmii_rx_dv, enet0.gmii_rx_er, enet0.gmii_txd, enet0.gmii_tx_clk, enet0.gmii_tx_en, enet0.gmii_tx_er, enet0.mdio_i, enet0.mdio_mdc, enet0.mdio_o, enet0.mdio_t, enet0.ptp_delay_req_rx, enet0.ptp_delay_req_tx, enet0.ptp_pdelay_req_rx, enet0.ptp_pdelay_req_tx, enet0.ptp_pdelay_resp_rx, enet0.ptp_pdelay_resp_tx, enet0.ptp_sync_frame_rx, enet0.ptp_sync_frame_tx, enet0.sof_rx, enet0.sof_tx, enet1.ext_intin, enet1.gmii_col, enet1.gmii_crs, enet1.gmii_rxd, enet1.gmii_rx_clk, enet1.gmii_rx_dv, enet1.gmii_rx_er, enet1.gmii_txd, enet1.gmii_tx_clk, enet1.gmii_tx_en, enet1.gmii_tx_er, enet1.mdio_i, enet1.mdio_mdc, enet1.mdio_o, enet1.mdio_t, enet1.ptp_delay_req_rx, enet1.ptp_delay_req_tx, enet1.ptp_pdelay_req_rx, enet1.ptp_pdelay_req_tx, enet1.ptp_pdelay_resp_rx, enet1.ptp_pdelay_resp_tx, enet1.ptp_sync_frame_rx, enet1.ptp_sync_frame_tx, enet1.sof_rx, enet1.sof_tx, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclk.clk1, fclk.clk2, fclk.clk3, fclk_clktrig0.n, fclk_clktrig1.n, fclk_clktrig2.n, fclk_clktrig3.n, fclk_reset0.n, fclk_reset1.n, fclk_reset2.n, fclk_reset3.n, fpga.idle_n, ftmd.tracein_atid, ftmd.tracein_clk, ftmd.tracein_data, ftmd.tracein_valid, ftmt.f2p_debug, ftmt.f2p_trig, ftmt.f2p_trigack, ftmt.p2f_debug, ftmt.p2f_trig, ftmt.p2f_trigack, gpio.i, gpio.o, gpio.t, i2c0.scl_i, i2c0.scl_o, i2c0.scl_t, i2c0.sda_i, i2c0.sda_o, i2c0.sda_t, i2c1.scl_i, i2c1.scl_o, i2c1.scl_t, i2c1.sda_i, i2c1.sda_o, i2c1.sda_t, irq.f2p, irq.p2f_can0, irq.p2f_can1, irq.p2f_cti, irq.p2f_dmac0, irq.p2f_dmac1, irq.p2f_dmac2, irq.p2f_dmac3, irq.p2f_dmac4, irq.p2f_dmac5, irq.p2f_dmac6, irq.p2f_dmac7, irq.p2f_dmac_abort, irq.p2f_enet0, irq.p2f_enet1, irq.p2f_enet_wake0, irq.p2f_enet_wake1, irq.p2f_gpio, irq.p2f_i2c0, irq.p2f_i2c1, irq.p2f_qspi, irq.p2f_sdio0, irq.p2f_sdio1, irq.p2f_smc, irq.p2f_spi0, irq.p2f_spi1, irq.p2f_uart0, irq.p2f_uart1, irq.p2f_usb0, irq.p2f_usb1, m_axi_gp0.araddr, m_axi_gp0.arburst, m_axi_gp0.arcache, m_axi_gp0.aresetn, m_axi_gp0.arid, m_axi_gp0.arlen, m_axi_gp0.arlock, m_axi_gp0.arprot, m_axi_gp0.arqos, m_axi_gp0.arready, m_axi_gp0.arsize, m_axi_gp0.arvalid, m_axi_gp0.awaddr, m_axi_gp0.awburst, m_axi_gp0.awcache, m_axi_gp0.awid, m_axi_gp0.awlen, m_axi_gp0.awlock, m_axi_gp0.awprot, m_axi_gp0.awqos, m_axi_gp0.awready, m_axi_gp0.awsize, m_axi_gp0.awvalid, m_axi_gp0.bid, m_axi_gp0.bready, m_axi_gp0.bresp, m_axi_gp0.bvalid, m_axi_gp0.rdata, m_axi_gp0.rid, m_axi_gp0.rlast, m_axi_gp0.rready, m_axi_gp0.rresp, m_axi_gp0.rvalid, m_axi_gp0.wdata, m_axi_gp0.wid, m_axi_gp0.wlast, m_axi_gp0.wready, m_axi_gp0.wstrb, m_axi_gp0.wvalid, m_axi_gp1.araddr, m_axi_gp1.arburst, m_axi_gp1.arcache, m_axi_gp1.aresetn, m_axi_gp1.arid, m_axi_gp1.arlen, m_axi_gp1.arlock, m_axi_gp1.arprot, m_axi_gp1.arqos, m_axi_gp1.arready, m_axi_gp1.arsize, m_axi_gp1.arvalid, m_axi_gp1.awaddr, m_axi_gp1.awburst, m_axi_gp1.awcache, m_axi_gp1.awid, m_axi_gp1.awlen, m_axi_gp1.awlock, m_axi_gp1.awprot, m_axi_gp1.awqos, m_axi_gp1.awready, m_axi_gp1.awsize, m_axi_gp1.awvalid, m_axi_gp1.bid, m_axi_gp1.bready, m_axi_gp1.bresp, m_axi_gp1.bvalid, m_axi_gp1.rdata, m_axi_gp1.rid, m_axi_gp1.rlast, m_axi_gp1.rready, m_axi_gp1.rresp, m_axi_gp1.rvalid, m_axi_gp1.wdata, m_axi_gp1.wid, m_axi_gp1.wlast, m_axi_gp1.wready, m_axi_gp1.wstrb, m_axi_gp1.wvalid, pjtag.tck, pjtag.td_i, pjtag.td_o, pjtag.td_t, pjtag.tms, sdio0.buspow, sdio0.busvolt, sdio0.cdn, sdio0.clk, sdio0.clk_fb, sdio0.cmd_i, sdio0.cmd_o, sdio0.cmd_t, sdio0.data_i, sdio0.data_o, sdio0.data_t, sdio0.led, sdio0.wp, sdio1.buspow, sdio1.busvolt, sdio1.cdn, sdio1.clk, sdio1.clk_fb, sdio1.cmd_i, sdio1.cmd_o, sdio1.cmd_t, sdio1.data_i, sdio1.data_o, sdio1.data_t, sdio1.led, sdio1.wp, spi0.miso_i, spi0.miso_o, spi0.miso_t, spi0.mosi_i, spi0.mosi_o, spi0.mosi_t, spi0.sclk_i, spi0.sclk_o, spi0.sclk_t, spi0.ss1_o, spi0.ss2_o, spi0.ss_i, spi0.ss_o, spi0.ss_t, spi1.miso_i, spi1.miso_o, spi1.miso_t, spi1.mosi_i, spi1.mosi_o, spi1.mosi_t, spi1.sclk_i, spi1.sclk_o, spi1.sclk_t, spi1.ss1_o, spi1.ss2_o, spi1.ss_i, spi1.ss_o, spi1.ss_t, sram.intin, s_axi_acp.araddr, s_axi_acp.arburst, s_axi_acp.arcache, s_axi_acp.aresetn, s_axi_acp.arid, s_axi_acp.arlen, s_axi_acp.arlock, s_axi_acp.arprot, s_axi_acp.arqos, s_axi_acp.arready, s_axi_acp.arsize, s_axi_acp.aruser, s_axi_acp.arvalid, s_axi_acp.awaddr, s_axi_acp.awburst, s_axi_acp.awcache, s_axi_acp.awid, s_axi_acp.awlen, s_axi_acp.awlock, s_axi_acp.awprot, s_axi_acp.awqos, s_axi_acp.awready, s_axi_acp.awsize, s_axi_acp.awuser, s_axi_acp.awvalid, s_axi_acp.bid, s_axi_acp.bready, s_axi_acp.bresp, s_axi_acp.bvalid, s_axi_acp.rdata, s_axi_acp.rid, s_axi_acp.rlast, s_axi_acp.rready, s_axi_acp.rresp, s_axi_acp.rvalid, s_axi_acp.wdata, s_axi_acp.wid, s_axi_acp.wlast, s_axi_acp.wready, s_axi_acp.wstrb, s_axi_acp.wvalid, s_axi_gp0.araddr, s_axi_gp0.arburst, s_axi_gp0.arcache, s_axi_gp0.aresetn, s_axi_gp0.arid, s_axi_gp0.arlen, s_axi_gp0.arlock, s_axi_gp0.arprot, s_axi_gp0.arqos, s_axi_gp0.arready, s_axi_gp0.arsize, s_axi_gp0.arvalid, s_axi_gp0.awaddr, s_axi_gp0.awburst, s_axi_gp0.awcache, s_axi_gp0.awid, s_axi_gp0.awlen, s_axi_gp0.awlock, s_axi_gp0.awprot, s_axi_gp0.awqos, s_axi_gp0.awready, s_axi_gp0.awsize, s_axi_gp0.awvalid, s_axi_gp0.bid, s_axi_gp0.bready, s_axi_gp0.bresp, s_axi_gp0.bvalid, s_axi_gp0.rdata, s_axi_gp0.rid, s_axi_gp0.rlast, s_axi_gp0.rready, s_axi_gp0.rresp, s_axi_gp0.rvalid, s_axi_gp0.wdata, s_axi_gp0.wid, s_axi_gp0.wlast, s_axi_gp0.wready, s_axi_gp0.wstrb, s_axi_gp0.wvalid, s_axi_gp1.araddr, s_axi_gp1.arburst, s_axi_gp1.arcache, s_axi_gp1.aresetn, s_axi_gp1.arid, s_axi_gp1.arlen, s_axi_gp1.arlock, s_axi_gp1.arprot, s_axi_gp1.arqos, s_axi_gp1.arready, s_axi_gp1.arsize, s_axi_gp1.arvalid, s_axi_gp1.awaddr, s_axi_gp1.awburst, s_axi_gp1.awcache, s_axi_gp1.awid, s_axi_gp1.awlen, s_axi_gp1.awlock, s_axi_gp1.awprot, s_axi_gp1.awqos, s_axi_gp1.awready, s_axi_gp1.awsize, s_axi_gp1.awvalid, s_axi_gp1.bid, s_axi_gp1.bready, s_axi_gp1.bresp, s_axi_gp1.bvalid, s_axi_gp1.rdata, s_axi_gp1.rid, s_axi_gp1.rlast, s_axi_gp1.rready, s_axi_gp1.rresp, s_axi_gp1.rvalid, s_axi_gp1.wdata, s_axi_gp1.wid, s_axi_gp1.wlast, s_axi_gp1.wready, s_axi_gp1.wstrb, s_axi_gp1.wvalid, s_axi_hp0.araddr, s_axi_hp0.arburst, s_axi_hp0.arcache, s_axi_hp0.aresetn, s_axi_hp0.arid, s_axi_hp0.arlen, s_axi_hp0.arlock, s_axi_hp0.arprot, s_axi_hp0.arqos, s_axi_hp0.arready, s_axi_hp0.arsize, s_axi_hp0.arvalid, s_axi_hp0.awaddr, s_axi_hp0.awburst, s_axi_hp0.awcache, s_axi_hp0.awid, s_axi_hp0.awlen, s_axi_hp0.awlock, s_axi_hp0.awprot, s_axi_hp0.awqos, s_axi_hp0.awready, s_axi_hp0.awsize, s_axi_hp0.awvalid, s_axi_hp0.bid, s_axi_hp0.bready, s_axi_hp0.bresp, s_axi_hp0.bvalid, s_axi_hp0.racount, s_axi_hp0.rcount, s_axi_hp0.rdata, s_axi_hp0.rdissuecap1_en, s_axi_hp0.rid, s_axi_hp0.rlast, s_axi_hp0.rready, s_axi_hp0.rresp, s_axi_hp0.rvalid, s_axi_hp0.wacount, s_axi_hp0.wcount, s_axi_hp0.wdata, s_axi_hp0.wid, s_axi_hp0.wlast, s_axi_hp0.wready, s_axi_hp0.wrissuecap1_en, s_axi_hp0.wstrb, s_axi_hp0.wvalid, s_axi_hp1.araddr, s_axi_hp1.arburst, s_axi_hp1.arcache, s_axi_hp1.aresetn, s_axi_hp1.arid, s_axi_hp1.arlen, s_axi_hp1.arlock, s_axi_hp1.arprot, s_axi_hp1.arqos, s_axi_hp1.arready, s_axi_hp1.arsize, s_axi_hp1.arvalid, s_axi_hp1.awaddr, s_axi_hp1.awburst, s_axi_hp1.awcache, s_axi_hp1.awid, s_axi_hp1.awlen, s_axi_hp1.awlock, s_axi_hp1.awprot, s_axi_hp1.awqos, s_axi_hp1.awready, s_axi_hp1.awsize, s_axi_hp1.awvalid, s_axi_hp1.bid, s_axi_hp1.bready, s_axi_hp1.bresp, s_axi_hp1.bvalid, s_axi_hp1.racount, s_axi_hp1.rcount, s_axi_hp1.rdata, s_axi_hp1.rdissuecap1_en, s_axi_hp1.rid, s_axi_hp1.rlast, s_axi_hp1.rready, s_axi_hp1.rresp, s_axi_hp1.rvalid, s_axi_hp1.wacount, s_axi_hp1.wcount, s_axi_hp1.wdata, s_axi_hp1.wid, s_axi_hp1.wlast, s_axi_hp1.wready, s_axi_hp1.wrissuecap1_en, s_axi_hp1.wstrb, s_axi_hp1.wvalid, s_axi_hp2.araddr, s_axi_hp2.arburst, s_axi_hp2.arcache, s_axi_hp2.aresetn, s_axi_hp2.arid, s_axi_hp2.arlen, s_axi_hp2.arlock, s_axi_hp2.arprot, s_axi_hp2.arqos, s_axi_hp2.arready, s_axi_hp2.arsize, s_axi_hp2.arvalid, s_axi_hp2.awaddr, s_axi_hp2.awburst, s_axi_hp2.awcache, s_axi_hp2.awid, s_axi_hp2.awlen, s_axi_hp2.awlock, s_axi_hp2.awprot, s_axi_hp2.awqos, s_axi_hp2.awready, s_axi_hp2.awsize, s_axi_hp2.awvalid, s_axi_hp2.bid, s_axi_hp2.bready, s_axi_hp2.bresp, s_axi_hp2.bvalid, s_axi_hp2.racount, s_axi_hp2.rcount, s_axi_hp2.rdata, s_axi_hp2.rdissuecap1_en, s_axi_hp2.rid, s_axi_hp2.rlast, s_axi_hp2.rready, s_axi_hp2.rresp, s_axi_hp2.rvalid, s_axi_hp2.wacount, s_axi_hp2.wcount, s_axi_hp2.wdata, s_axi_hp2.wid, s_axi_hp2.wlast, s_axi_hp2.wready, s_axi_hp2.wrissuecap1_en, s_axi_hp2.wstrb, s_axi_hp2.wvalid, s_axi_hp3.araddr, s_axi_hp3.arburst, s_axi_hp3.arcache, s_axi_hp3.aresetn, s_axi_hp3.arid, s_axi_hp3.arlen, s_axi_hp3.arlock, s_axi_hp3.arprot, s_axi_hp3.arqos, s_axi_hp3.arready, s_axi_hp3.arsize, s_axi_hp3.arvalid, s_axi_hp3.awaddr, s_axi_hp3.awburst, s_axi_hp3.awcache, s_axi_hp3.awid, s_axi_hp3.awlen, s_axi_hp3.awlock, s_axi_hp3.awprot, s_axi_hp3.awqos, s_axi_hp3.awready, s_axi_hp3.awsize, s_axi_hp3.awvalid, s_axi_hp3.bid, s_axi_hp3.bready, s_axi_hp3.bresp, s_axi_hp3.bvalid, s_axi_hp3.racount, s_axi_hp3.rcount, s_axi_hp3.rdata, s_axi_hp3.rdissuecap1_en, s_axi_hp3.rid, s_axi_hp3.rlast, s_axi_hp3.rready, s_axi_hp3.rresp, s_axi_hp3.rvalid, s_axi_hp3.wacount, s_axi_hp3.wcount, s_axi_hp3.wdata, s_axi_hp3.wid, s_axi_hp3.wlast, s_axi_hp3.wready, s_axi_hp3.wrissuecap1_en, s_axi_hp3.wstrb, s_axi_hp3.wvalid, trace.clk, trace.ctl, trace.data, ttc0.clk0_in, ttc0.clk1_in, ttc0.clk2_in, ttc0.wave0_out, ttc0.wave1_out, ttc0.wave2_out, ttc1.clk0_in, ttc1.clk1_in, ttc1.clk2_in, ttc1.wave0_out, ttc1.wave1_out, ttc1.wave2_out, uart0.ctsn, uart0.dcdn, uart0.dsrn, uart0.dtrn, uart0.rin, uart0.rtsn, uart0.rx, uart0.tx, uart1.ctsn, uart1.dcdn, uart1.dsrn, uart1.dtrn, uart1.rin, uart1.rtsn, uart1.rx, uart1.tx, usb0.port_indctl, usb0.vbus_pwrfault, usb0.vbus_pwrselect, usb1.port_indctl, usb1.vbus_pwrfault, usb1.vbus_pwrselect, wdt.clk_in, wdt.rst_out);
+`endif
+`ifdef PS7EXTENDED
+    schedule (fclk.clk1, fclk.clk2, fclk.clk3, fclk_reset0.n, fclk_reset1.n, fclk_reset2.n, fclk_reset3.n, gpio.i, gpio.o, gpio.t, i2c0.scl_i, i2c0.scl_o, i2c0.scl_t, i2c0.sda_i, i2c0.sda_o, i2c0.sda_t, i2c1.scl_i, i2c1.scl_o, i2c1.scl_t, i2c1.sda_i, i2c1.sda_o, i2c1.sda_t, irq.f2p, irq.p2f_can0, irq.p2f_can1, irq.p2f_cti, irq.p2f_dmac0, irq.p2f_dmac1, irq.p2f_dmac2, irq.p2f_dmac3, irq.p2f_dmac4, irq.p2f_dmac5, irq.p2f_dmac6, irq.p2f_dmac7, irq.p2f_dmac_abort, irq.p2f_enet0, irq.p2f_enet1, irq.p2f_enet_wake0, irq.p2f_enet_wake1, irq.p2f_gpio, irq.p2f_i2c0, irq.p2f_i2c1, irq.p2f_qspi, irq.p2f_sdio0, irq.p2f_sdio1, irq.p2f_smc, irq.p2f_spi0, irq.p2f_spi1, irq.p2f_uart0, irq.p2f_uart1, irq.p2f_usb0, irq.p2f_usb1, m_axi_gp0.araddr, m_axi_gp0.arburst, m_axi_gp0.arcache, m_axi_gp0.aresetn, m_axi_gp0.arid, m_axi_gp0.arlen, m_axi_gp0.arlock, m_axi_gp0.arprot, m_axi_gp0.arqos, m_axi_gp0.arready, m_axi_gp0.arsize, m_axi_gp0.arvalid, m_axi_gp0.awaddr, m_axi_gp0.awburst, m_axi_gp0.awcache, m_axi_gp0.awid, m_axi_gp0.awlen, m_axi_gp0.awlock, m_axi_gp0.awprot, m_axi_gp0.awqos, m_axi_gp0.awready, m_axi_gp0.awsize, m_axi_gp0.awvalid, m_axi_gp0.bid, m_axi_gp0.bready, m_axi_gp0.bresp, m_axi_gp0.bvalid, m_axi_gp0.rdata, m_axi_gp0.rid, m_axi_gp0.rlast, m_axi_gp0.rready, m_axi_gp0.rresp, m_axi_gp0.rvalid, m_axi_gp0.wdata, m_axi_gp0.wid, m_axi_gp0.wlast, m_axi_gp0.wready, m_axi_gp0.wstrb, m_axi_gp0.wvalid, m_axi_gp1.araddr, m_axi_gp1.arburst, m_axi_gp1.arcache, m_axi_gp1.aresetn, m_axi_gp1.arid, m_axi_gp1.arlen, m_axi_gp1.arlock, m_axi_gp1.arprot, m_axi_gp1.arqos, m_axi_gp1.arready, m_axi_gp1.arsize, m_axi_gp1.arvalid, m_axi_gp1.awaddr, m_axi_gp1.awburst, m_axi_gp1.awcache, m_axi_gp1.awid, m_axi_gp1.awlen, m_axi_gp1.awlock, m_axi_gp1.awprot, m_axi_gp1.awqos, m_axi_gp1.awready, m_axi_gp1.awsize, m_axi_gp1.awvalid, m_axi_gp1.bid, m_axi_gp1.bready, m_axi_gp1.bresp, m_axi_gp1.bvalid, m_axi_gp1.rdata, m_axi_gp1.rid, m_axi_gp1.rlast, m_axi_gp1.rready, m_axi_gp1.rresp, m_axi_gp1.rvalid, m_axi_gp1.wdata, m_axi_gp1.wid, m_axi_gp1.wlast, m_axi_gp1.wready, m_axi_gp1.wstrb, m_axi_gp1.wvalid, s_axi_acp.araddr, s_axi_acp.arburst, s_axi_acp.arcache, s_axi_acp.aresetn, s_axi_acp.arid, s_axi_acp.arlen, s_axi_acp.arlock, s_axi_acp.arprot, s_axi_acp.arqos, s_axi_acp.arready, s_axi_acp.arsize, s_axi_acp.aruser, s_axi_acp.arvalid, s_axi_acp.awaddr, s_axi_acp.awburst, s_axi_acp.awcache, s_axi_acp.awid, s_axi_acp.awlen, s_axi_acp.awlock, s_axi_acp.awprot, s_axi_acp.awqos, s_axi_acp.awready, s_axi_acp.awsize, s_axi_acp.awuser, s_axi_acp.awvalid, s_axi_acp.bid, s_axi_acp.bready, s_axi_acp.bresp, s_axi_acp.bvalid, s_axi_acp.rdata, s_axi_acp.rid, s_axi_acp.rlast, s_axi_acp.rready, s_axi_acp.rresp, s_axi_acp.rvalid, s_axi_acp.wdata, s_axi_acp.wid, s_axi_acp.wlast, s_axi_acp.wready, s_axi_acp.wstrb, s_axi_acp.wvalid, s_axi_gp0.araddr, s_axi_gp0.arburst, s_axi_gp0.arcache, s_axi_gp0.aresetn, s_axi_gp0.arid, s_axi_gp0.arlen, s_axi_gp0.arlock, s_axi_gp0.arprot, s_axi_gp0.arqos, s_axi_gp0.arready, s_axi_gp0.arsize, s_axi_gp0.arvalid, s_axi_gp0.awaddr, s_axi_gp0.awburst, s_axi_gp0.awcache, s_axi_gp0.awid, s_axi_gp0.awlen, s_axi_gp0.awlock, s_axi_gp0.awprot, s_axi_gp0.awqos, s_axi_gp0.awready, s_axi_gp0.awsize, s_axi_gp0.awvalid, s_axi_gp0.bid, s_axi_gp0.bready, s_axi_gp0.bresp, s_axi_gp0.bvalid, s_axi_gp0.rdata, s_axi_gp0.rid, s_axi_gp0.rlast, s_axi_gp0.rready, s_axi_gp0.rresp, s_axi_gp0.rvalid, s_axi_gp0.wdata, s_axi_gp0.wid, s_axi_gp0.wlast, s_axi_gp0.wready, s_axi_gp0.wstrb, s_axi_gp0.wvalid, s_axi_gp1.araddr, s_axi_gp1.arburst, s_axi_gp1.arcache, s_axi_gp1.aresetn, s_axi_gp1.arid, s_axi_gp1.arlen, s_axi_gp1.arlock, s_axi_gp1.arprot, s_axi_gp1.arqos, s_axi_gp1.arready, s_axi_gp1.arsize, s_axi_gp1.arvalid, s_axi_gp1.awaddr, s_axi_gp1.awburst, s_axi_gp1.awcache, s_axi_gp1.awid, s_axi_gp1.awlen, s_axi_gp1.awlock, s_axi_gp1.awprot, s_axi_gp1.awqos, s_axi_gp1.awready, s_axi_gp1.awsize, s_axi_gp1.awvalid, s_axi_gp1.bid, s_axi_gp1.bready, s_axi_gp1.bresp, s_axi_gp1.bvalid, s_axi_gp1.rdata, s_axi_gp1.rid, s_axi_gp1.rlast, s_axi_gp1.rready, s_axi_gp1.rresp, s_axi_gp1.rvalid, s_axi_gp1.wdata, s_axi_gp1.wid, s_axi_gp1.wlast, s_axi_gp1.wready, s_axi_gp1.wstrb, s_axi_gp1.wvalid, s_axi_hp0.araddr, s_axi_hp0.arburst, s_axi_hp0.arcache, s_axi_hp0.aresetn, s_axi_hp0.arid, s_axi_hp0.arlen, s_axi_hp0.arlock, s_axi_hp0.arprot, s_axi_hp0.arqos, s_axi_hp0.arready, s_axi_hp0.arsize, s_axi_hp0.arvalid, s_axi_hp0.awaddr, s_axi_hp0.awburst, s_axi_hp0.awcache, s_axi_hp0.awid, s_axi_hp0.awlen, s_axi_hp0.awlock, s_axi_hp0.awprot, s_axi_hp0.awqos, s_axi_hp0.awready, s_axi_hp0.awsize, s_axi_hp0.awvalid, s_axi_hp0.bid, s_axi_hp0.bready, s_axi_hp0.bresp, s_axi_hp0.bvalid, s_axi_hp0.racount, s_axi_hp0.rcount, s_axi_hp0.rdata, s_axi_hp0.rdissuecap1_en, s_axi_hp0.rid, s_axi_hp0.rlast, s_axi_hp0.rready, s_axi_hp0.rresp, s_axi_hp0.rvalid, s_axi_hp0.wacount, s_axi_hp0.wcount, s_axi_hp0.wdata, s_axi_hp0.wid, s_axi_hp0.wlast, s_axi_hp0.wready, s_axi_hp0.wrissuecap1_en, s_axi_hp0.wstrb, s_axi_hp0.wvalid, s_axi_hp1.araddr, s_axi_hp1.arburst, s_axi_hp1.arcache, s_axi_hp1.aresetn, s_axi_hp1.arid, s_axi_hp1.arlen, s_axi_hp1.arlock, s_axi_hp1.arprot, s_axi_hp1.arqos, s_axi_hp1.arready, s_axi_hp1.arsize, s_axi_hp1.arvalid, s_axi_hp1.awaddr, s_axi_hp1.awburst, s_axi_hp1.awcache, s_axi_hp1.awid, s_axi_hp1.awlen, s_axi_hp1.awlock, s_axi_hp1.awprot, s_axi_hp1.awqos, s_axi_hp1.awready, s_axi_hp1.awsize, s_axi_hp1.awvalid, s_axi_hp1.bid, s_axi_hp1.bready, s_axi_hp1.bresp, s_axi_hp1.bvalid, s_axi_hp1.racount, s_axi_hp1.rcount, s_axi_hp1.rdata, s_axi_hp1.rdissuecap1_en, s_axi_hp1.rid, s_axi_hp1.rlast, s_axi_hp1.rready, s_axi_hp1.rresp, s_axi_hp1.rvalid, s_axi_hp1.wacount, s_axi_hp1.wcount, s_axi_hp1.wdata, s_axi_hp1.wid, s_axi_hp1.wlast, s_axi_hp1.wready, s_axi_hp1.wrissuecap1_en, s_axi_hp1.wstrb, s_axi_hp1.wvalid, s_axi_hp2.araddr, s_axi_hp2.arburst, s_axi_hp2.arcache, s_axi_hp2.aresetn, s_axi_hp2.arid, s_axi_hp2.arlen, s_axi_hp2.arlock, s_axi_hp2.arprot, s_axi_hp2.arqos, s_axi_hp2.arready, s_axi_hp2.arsize, s_axi_hp2.arvalid, s_axi_hp2.awaddr, s_axi_hp2.awburst, s_axi_hp2.awcache, s_axi_hp2.awid, s_axi_hp2.awlen, s_axi_hp2.awlock, s_axi_hp2.awprot, s_axi_hp2.awqos, s_axi_hp2.awready, s_axi_hp2.awsize, s_axi_hp2.awvalid, s_axi_hp2.bid, s_axi_hp2.bready, s_axi_hp2.bresp, s_axi_hp2.bvalid, s_axi_hp2.racount, s_axi_hp2.rcount, s_axi_hp2.rdata, s_axi_hp2.rdissuecap1_en, s_axi_hp2.rid, s_axi_hp2.rlast, s_axi_hp2.rready, s_axi_hp2.rresp, s_axi_hp2.rvalid, s_axi_hp2.wacount, s_axi_hp2.wcount, s_axi_hp2.wdata, s_axi_hp2.wid, s_axi_hp2.wlast, s_axi_hp2.wready, s_axi_hp2.wrissuecap1_en, s_axi_hp2.wstrb, s_axi_hp2.wvalid, s_axi_hp3.araddr, s_axi_hp3.arburst, s_axi_hp3.arcache, s_axi_hp3.aresetn, s_axi_hp3.arid, s_axi_hp3.arlen, s_axi_hp3.arlock, s_axi_hp3.arprot, s_axi_hp3.arqos, s_axi_hp3.arready, s_axi_hp3.arsize, s_axi_hp3.arvalid, s_axi_hp3.awaddr, s_axi_hp3.awburst, s_axi_hp3.awcache, s_axi_hp3.awid, s_axi_hp3.awlen, s_axi_hp3.awlock, s_axi_hp3.awprot, s_axi_hp3.awqos, s_axi_hp3.awready, s_axi_hp3.awsize, s_axi_hp3.awvalid, s_axi_hp3.bid, s_axi_hp3.bready, s_axi_hp3.bresp, s_axi_hp3.bvalid, s_axi_hp3.racount, s_axi_hp3.rcount, s_axi_hp3.rdata, s_axi_hp3.rdissuecap1_en, s_axi_hp3.rid, s_axi_hp3.rlast, s_axi_hp3.rready, s_axi_hp3.rresp, s_axi_hp3.rvalid, s_axi_hp3.wacount, s_axi_hp3.wcount, s_axi_hp3.wdata, s_axi_hp3.wid, s_axi_hp3.wlast, s_axi_hp3.wready, s_axi_hp3.wrissuecap1_en, s_axi_hp3.wstrb, s_axi_hp3.wvalid, can0.phy_rx, can0.phy_tx, can1.phy_rx, can1.phy_tx, core0.nfiq, core0.nirq, core1.nfiq, core1.nirq, dma0.aclk, dma0.daready, dma0.datype, dma0.davalid, dma0.drlast, dma0.drready, dma0.drtype, dma0.drvalid, dma0.rstn, dma1.aclk, dma1.daready, dma1.datype, dma1.davalid, dma1.drlast, dma1.drready, dma1.drtype, dma1.drvalid, dma1.rstn, dma2.aclk, dma2.daready, dma2.datype, dma2.davalid, dma2.drlast, dma2.drready, dma2.drtype, dma2.drvalid, dma2.rstn, dma3.aclk, dma3.daready, dma3.datype, dma3.davalid, dma3.drlast, dma3.drready, dma3.drtype, dma3.drvalid, dma3.rstn, enet0.ext_intin, enet0.gmii_col, enet0.gmii_crs, enet0.gmii_rxd, enet0.gmii_rx_clk, enet0.gmii_rx_dv, enet0.gmii_rx_er, enet0.gmii_txd, enet0.gmii_tx_clk, enet0.gmii_tx_en, enet0.gmii_tx_er, enet0.mdio_i, enet0.mdio_mdc, enet0.mdio_o, enet0.mdio_t, enet0.ptp_delay_req_rx, enet0.ptp_delay_req_tx, enet0.ptp_pdelay_req_rx, enet0.ptp_pdelay_req_tx, enet0.ptp_pdelay_resp_rx, enet0.ptp_pdelay_resp_tx, enet0.ptp_sync_frame_rx, enet0.ptp_sync_frame_tx, enet0.sof_rx, enet0.sof_tx, enet1.ext_intin, enet1.gmii_col, enet1.gmii_crs, enet1.gmii_rxd, enet1.gmii_rx_clk, enet1.gmii_rx_dv, enet1.gmii_rx_er, enet1.gmii_txd, enet1.gmii_tx_clk, enet1.gmii_tx_en, enet1.gmii_tx_er, enet1.mdio_i, enet1.mdio_mdc, enet1.mdio_o, enet1.mdio_t, enet1.ptp_delay_req_rx, enet1.ptp_delay_req_tx, enet1.ptp_pdelay_req_rx, enet1.ptp_pdelay_req_tx, enet1.ptp_pdelay_resp_rx, enet1.ptp_pdelay_resp_tx, enet1.ptp_sync_frame_rx, enet1.ptp_sync_frame_tx, enet1.sof_rx, enet1.sof_tx, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclk_clktrig0.n, fclk_clktrig1.n, fclk_clktrig2.n, fclk_clktrig3.n, fpga.idle_n, ftmd.tracein_atid, ftmd.tracein_clk, ftmd.tracein_data, ftmd.tracein_valid, ftmt.f2p_debug, ftmt.f2p_trig, ftmt.f2p_trigack, ftmt.p2f_debug, ftmt.p2f_trig, ftmt.p2f_trigack, pjtag.tck, pjtag.td_i, pjtag.td_o, pjtag.td_t, pjtag.tms, sdio0.buspow, sdio0.busvolt, sdio0.cdn, sdio0.clk, sdio0.clk_fb, sdio0.cmd_i, sdio0.cmd_o, sdio0.cmd_t, sdio0.data_i, sdio0.data_o, sdio0.data_t, sdio0.led, sdio0.wp, sdio1.buspow, sdio1.busvolt, sdio1.cdn, sdio1.clk, sdio1.clk_fb, sdio1.cmd_i, sdio1.cmd_o, sdio1.cmd_t, sdio1.data_i, sdio1.data_o, sdio1.data_t, sdio1.led, sdio1.wp, spi0.miso_i, spi0.miso_o, spi0.miso_t, spi0.mosi_i, spi0.mosi_o, spi0.mosi_t, spi0.sclk_i, spi0.sclk_o, spi0.sclk_t, spi0.ss1_o, spi0.ss2_o, spi0.ss_i, spi0.ss_o, spi0.ss_t, spi1.miso_i, spi1.miso_o, spi1.miso_t, spi1.mosi_i, spi1.mosi_o, spi1.mosi_t, spi1.sclk_i, spi1.sclk_o, spi1.sclk_t, spi1.ss1_o, spi1.ss2_o, spi1.ss_i, spi1.ss_o, spi1.ss_t, sram.intin, trace.clk, trace.ctl, trace.data, ttc0.clk0_in, ttc0.clk1_in, ttc0.clk2_in, ttc0.wave0_out, ttc0.wave1_out, ttc0.wave2_out, ttc1.clk0_in, ttc1.clk1_in, ttc1.clk2_in, ttc1.wave0_out, ttc1.wave1_out, ttc1.wave2_out, uart0.ctsn, uart0.dcdn, uart0.dsrn, uart0.dtrn, uart0.rin, uart0.rtsn, uart0.rx, uart0.tx, uart1.ctsn, uart1.dcdn, uart1.dsrn, uart1.dtrn, uart1.rin, uart1.rtsn, uart1.rx, uart1.tx, usb0.port_indctl, usb0.vbus_pwrfault, usb0.vbus_pwrselect, usb1.port_indctl, usb1.vbus_pwrfault, usb1.vbus_pwrselect, wdt.clk_in, wdt.rst_out) CF (fclk.clk1, fclk.clk2, fclk.clk3, fclk_reset0.n, fclk_reset1.n, fclk_reset2.n, fclk_reset3.n, gpio.i, gpio.o, gpio.t, i2c0.scl_i, i2c0.scl_o, i2c0.scl_t, i2c0.sda_i, i2c0.sda_o, i2c0.sda_t, i2c1.scl_i, i2c1.scl_o, i2c1.scl_t, i2c1.sda_i, i2c1.sda_o, i2c1.sda_t, irq.f2p, irq.p2f_can0, irq.p2f_can1, irq.p2f_cti, irq.p2f_dmac0, irq.p2f_dmac1, irq.p2f_dmac2, irq.p2f_dmac3, irq.p2f_dmac4, irq.p2f_dmac5, irq.p2f_dmac6, irq.p2f_dmac7, irq.p2f_dmac_abort, irq.p2f_enet0, irq.p2f_enet1, irq.p2f_enet_wake0, irq.p2f_enet_wake1, irq.p2f_gpio, irq.p2f_i2c0, irq.p2f_i2c1, irq.p2f_qspi, irq.p2f_sdio0, irq.p2f_sdio1, irq.p2f_smc, irq.p2f_spi0, irq.p2f_spi1, irq.p2f_uart0, irq.p2f_uart1, irq.p2f_usb0, irq.p2f_usb1, m_axi_gp0.araddr, m_axi_gp0.arburst, m_axi_gp0.arcache, m_axi_gp0.aresetn, m_axi_gp0.arid, m_axi_gp0.arlen, m_axi_gp0.arlock, m_axi_gp0.arprot, m_axi_gp0.arqos, m_axi_gp0.arready, m_axi_gp0.arsize, m_axi_gp0.arvalid, m_axi_gp0.awaddr, m_axi_gp0.awburst, m_axi_gp0.awcache, m_axi_gp0.awid, m_axi_gp0.awlen, m_axi_gp0.awlock, m_axi_gp0.awprot, m_axi_gp0.awqos, m_axi_gp0.awready, m_axi_gp0.awsize, m_axi_gp0.awvalid, m_axi_gp0.bid, m_axi_gp0.bready, m_axi_gp0.bresp, m_axi_gp0.bvalid, m_axi_gp0.rdata, m_axi_gp0.rid, m_axi_gp0.rlast, m_axi_gp0.rready, m_axi_gp0.rresp, m_axi_gp0.rvalid, m_axi_gp0.wdata, m_axi_gp0.wid, m_axi_gp0.wlast, m_axi_gp0.wready, m_axi_gp0.wstrb, m_axi_gp0.wvalid, m_axi_gp1.araddr, m_axi_gp1.arburst, m_axi_gp1.arcache, m_axi_gp1.aresetn, m_axi_gp1.arid, m_axi_gp1.arlen, m_axi_gp1.arlock, m_axi_gp1.arprot, m_axi_gp1.arqos, m_axi_gp1.arready, m_axi_gp1.arsize, m_axi_gp1.arvalid, m_axi_gp1.awaddr, m_axi_gp1.awburst, m_axi_gp1.awcache, m_axi_gp1.awid, m_axi_gp1.awlen, m_axi_gp1.awlock, m_axi_gp1.awprot, m_axi_gp1.awqos, m_axi_gp1.awready, m_axi_gp1.awsize, m_axi_gp1.awvalid, m_axi_gp1.bid, m_axi_gp1.bready, m_axi_gp1.bresp, m_axi_gp1.bvalid, m_axi_gp1.rdata, m_axi_gp1.rid, m_axi_gp1.rlast, m_axi_gp1.rready, m_axi_gp1.rresp, m_axi_gp1.rvalid, m_axi_gp1.wdata, m_axi_gp1.wid, m_axi_gp1.wlast, m_axi_gp1.wready, m_axi_gp1.wstrb, m_axi_gp1.wvalid, s_axi_acp.araddr, s_axi_acp.arburst, s_axi_acp.arcache, s_axi_acp.aresetn, s_axi_acp.arid, s_axi_acp.arlen, s_axi_acp.arlock, s_axi_acp.arprot, s_axi_acp.arqos, s_axi_acp.arready, s_axi_acp.arsize, s_axi_acp.aruser, s_axi_acp.arvalid, s_axi_acp.awaddr, s_axi_acp.awburst, s_axi_acp.awcache, s_axi_acp.awid, s_axi_acp.awlen, s_axi_acp.awlock, s_axi_acp.awprot, s_axi_acp.awqos, s_axi_acp.awready, s_axi_acp.awsize, s_axi_acp.awuser, s_axi_acp.awvalid, s_axi_acp.bid, s_axi_acp.bready, s_axi_acp.bresp, s_axi_acp.bvalid, s_axi_acp.rdata, s_axi_acp.rid, s_axi_acp.rlast, s_axi_acp.rready, s_axi_acp.rresp, s_axi_acp.rvalid, s_axi_acp.wdata, s_axi_acp.wid, s_axi_acp.wlast, s_axi_acp.wready, s_axi_acp.wstrb, s_axi_acp.wvalid, s_axi_gp0.araddr, s_axi_gp0.arburst, s_axi_gp0.arcache, s_axi_gp0.aresetn, s_axi_gp0.arid, s_axi_gp0.arlen, s_axi_gp0.arlock, s_axi_gp0.arprot, s_axi_gp0.arqos, s_axi_gp0.arready, s_axi_gp0.arsize, s_axi_gp0.arvalid, s_axi_gp0.awaddr, s_axi_gp0.awburst, s_axi_gp0.awcache, s_axi_gp0.awid, s_axi_gp0.awlen, s_axi_gp0.awlock, s_axi_gp0.awprot, s_axi_gp0.awqos, s_axi_gp0.awready, s_axi_gp0.awsize, s_axi_gp0.awvalid, s_axi_gp0.bid, s_axi_gp0.bready, s_axi_gp0.bresp, s_axi_gp0.bvalid, s_axi_gp0.rdata, s_axi_gp0.rid, s_axi_gp0.rlast, s_axi_gp0.rready, s_axi_gp0.rresp, s_axi_gp0.rvalid, s_axi_gp0.wdata, s_axi_gp0.wid, s_axi_gp0.wlast, s_axi_gp0.wready, s_axi_gp0.wstrb, s_axi_gp0.wvalid, s_axi_gp1.araddr, s_axi_gp1.arburst, s_axi_gp1.arcache, s_axi_gp1.aresetn, s_axi_gp1.arid, s_axi_gp1.arlen, s_axi_gp1.arlock, s_axi_gp1.arprot, s_axi_gp1.arqos, s_axi_gp1.arready, s_axi_gp1.arsize, s_axi_gp1.arvalid, s_axi_gp1.awaddr, s_axi_gp1.awburst, s_axi_gp1.awcache, s_axi_gp1.awid, s_axi_gp1.awlen, s_axi_gp1.awlock, s_axi_gp1.awprot, s_axi_gp1.awqos, s_axi_gp1.awready, s_axi_gp1.awsize, s_axi_gp1.awvalid, s_axi_gp1.bid, s_axi_gp1.bready, s_axi_gp1.bresp, s_axi_gp1.bvalid, s_axi_gp1.rdata, s_axi_gp1.rid, s_axi_gp1.rlast, s_axi_gp1.rready, s_axi_gp1.rresp, s_axi_gp1.rvalid, s_axi_gp1.wdata, s_axi_gp1.wid, s_axi_gp1.wlast, s_axi_gp1.wready, s_axi_gp1.wstrb, s_axi_gp1.wvalid, s_axi_hp0.araddr, s_axi_hp0.arburst, s_axi_hp0.arcache, s_axi_hp0.aresetn, s_axi_hp0.arid, s_axi_hp0.arlen, s_axi_hp0.arlock, s_axi_hp0.arprot, s_axi_hp0.arqos, s_axi_hp0.arready, s_axi_hp0.arsize, s_axi_hp0.arvalid, s_axi_hp0.awaddr, s_axi_hp0.awburst, s_axi_hp0.awcache, s_axi_hp0.awid, s_axi_hp0.awlen, s_axi_hp0.awlock, s_axi_hp0.awprot, s_axi_hp0.awqos, s_axi_hp0.awready, s_axi_hp0.awsize, s_axi_hp0.awvalid, s_axi_hp0.bid, s_axi_hp0.bready, s_axi_hp0.bresp, s_axi_hp0.bvalid, s_axi_hp0.racount, s_axi_hp0.rcount, s_axi_hp0.rdata, s_axi_hp0.rdissuecap1_en, s_axi_hp0.rid, s_axi_hp0.rlast, s_axi_hp0.rready, s_axi_hp0.rresp, s_axi_hp0.rvalid, s_axi_hp0.wacount, s_axi_hp0.wcount, s_axi_hp0.wdata, s_axi_hp0.wid, s_axi_hp0.wlast, s_axi_hp0.wready, s_axi_hp0.wrissuecap1_en, s_axi_hp0.wstrb, s_axi_hp0.wvalid, s_axi_hp1.araddr, s_axi_hp1.arburst, s_axi_hp1.arcache, s_axi_hp1.aresetn, s_axi_hp1.arid, s_axi_hp1.arlen, s_axi_hp1.arlock, s_axi_hp1.arprot, s_axi_hp1.arqos, s_axi_hp1.arready, s_axi_hp1.arsize, s_axi_hp1.arvalid, s_axi_hp1.awaddr, s_axi_hp1.awburst, s_axi_hp1.awcache, s_axi_hp1.awid, s_axi_hp1.awlen, s_axi_hp1.awlock, s_axi_hp1.awprot, s_axi_hp1.awqos, s_axi_hp1.awready, s_axi_hp1.awsize, s_axi_hp1.awvalid, s_axi_hp1.bid, s_axi_hp1.bready, s_axi_hp1.bresp, s_axi_hp1.bvalid, s_axi_hp1.racount, s_axi_hp1.rcount, s_axi_hp1.rdata, s_axi_hp1.rdissuecap1_en, s_axi_hp1.rid, s_axi_hp1.rlast, s_axi_hp1.rready, s_axi_hp1.rresp, s_axi_hp1.rvalid, s_axi_hp1.wacount, s_axi_hp1.wcount, s_axi_hp1.wdata, s_axi_hp1.wid, s_axi_hp1.wlast, s_axi_hp1.wready, s_axi_hp1.wrissuecap1_en, s_axi_hp1.wstrb, s_axi_hp1.wvalid, s_axi_hp2.araddr, s_axi_hp2.arburst, s_axi_hp2.arcache, s_axi_hp2.aresetn, s_axi_hp2.arid, s_axi_hp2.arlen, s_axi_hp2.arlock, s_axi_hp2.arprot, s_axi_hp2.arqos, s_axi_hp2.arready, s_axi_hp2.arsize, s_axi_hp2.arvalid, s_axi_hp2.awaddr, s_axi_hp2.awburst, s_axi_hp2.awcache, s_axi_hp2.awid, s_axi_hp2.awlen, s_axi_hp2.awlock, s_axi_hp2.awprot, s_axi_hp2.awqos, s_axi_hp2.awready, s_axi_hp2.awsize, s_axi_hp2.awvalid, s_axi_hp2.bid, s_axi_hp2.bready, s_axi_hp2.bresp, s_axi_hp2.bvalid, s_axi_hp2.racount, s_axi_hp2.rcount, s_axi_hp2.rdata, s_axi_hp2.rdissuecap1_en, s_axi_hp2.rid, s_axi_hp2.rlast, s_axi_hp2.rready, s_axi_hp2.rresp, s_axi_hp2.rvalid, s_axi_hp2.wacount, s_axi_hp2.wcount, s_axi_hp2.wdata, s_axi_hp2.wid, s_axi_hp2.wlast, s_axi_hp2.wready, s_axi_hp2.wrissuecap1_en, s_axi_hp2.wstrb, s_axi_hp2.wvalid, s_axi_hp3.araddr, s_axi_hp3.arburst, s_axi_hp3.arcache, s_axi_hp3.aresetn, s_axi_hp3.arid, s_axi_hp3.arlen, s_axi_hp3.arlock, s_axi_hp3.arprot, s_axi_hp3.arqos, s_axi_hp3.arready, s_axi_hp3.arsize, s_axi_hp3.arvalid, s_axi_hp3.awaddr, s_axi_hp3.awburst, s_axi_hp3.awcache, s_axi_hp3.awid, s_axi_hp3.awlen, s_axi_hp3.awlock, s_axi_hp3.awprot, s_axi_hp3.awqos, s_axi_hp3.awready, s_axi_hp3.awsize, s_axi_hp3.awvalid, s_axi_hp3.bid, s_axi_hp3.bready, s_axi_hp3.bresp, s_axi_hp3.bvalid, s_axi_hp3.racount, s_axi_hp3.rcount, s_axi_hp3.rdata, s_axi_hp3.rdissuecap1_en, s_axi_hp3.rid, s_axi_hp3.rlast, s_axi_hp3.rready, s_axi_hp3.rresp, s_axi_hp3.rvalid, s_axi_hp3.wacount, s_axi_hp3.wcount, s_axi_hp3.wdata, s_axi_hp3.wid, s_axi_hp3.wlast, s_axi_hp3.wready, s_axi_hp3.wrissuecap1_en, s_axi_hp3.wstrb, s_axi_hp3.wvalid, can0.phy_rx, can0.phy_tx, can1.phy_rx, can1.phy_tx, core0.nfiq, core0.nirq, core1.nfiq, core1.nirq, dma0.aclk, dma0.daready, dma0.datype, dma0.davalid, dma0.drlast, dma0.drready, dma0.drtype, dma0.drvalid, dma0.rstn, dma1.aclk, dma1.daready, dma1.datype, dma1.davalid, dma1.drlast, dma1.drready, dma1.drtype, dma1.drvalid, dma1.rstn, dma2.aclk, dma2.daready, dma2.datype, dma2.davalid, dma2.drlast, dma2.drready, dma2.drtype, dma2.drvalid, dma2.rstn, dma3.aclk, dma3.daready, dma3.datype, dma3.davalid, dma3.drlast, dma3.drready, dma3.drtype, dma3.drvalid, dma3.rstn, enet0.ext_intin, enet0.gmii_col, enet0.gmii_crs, enet0.gmii_rxd, enet0.gmii_rx_clk, enet0.gmii_rx_dv, enet0.gmii_rx_er, enet0.gmii_txd, enet0.gmii_tx_clk, enet0.gmii_tx_en, enet0.gmii_tx_er, enet0.mdio_i, enet0.mdio_mdc, enet0.mdio_o, enet0.mdio_t, enet0.ptp_delay_req_rx, enet0.ptp_delay_req_tx, enet0.ptp_pdelay_req_rx, enet0.ptp_pdelay_req_tx, enet0.ptp_pdelay_resp_rx, enet0.ptp_pdelay_resp_tx, enet0.ptp_sync_frame_rx, enet0.ptp_sync_frame_tx, enet0.sof_rx, enet0.sof_tx, enet1.ext_intin, enet1.gmii_col, enet1.gmii_crs, enet1.gmii_rxd, enet1.gmii_rx_clk, enet1.gmii_rx_dv, enet1.gmii_rx_er, enet1.gmii_txd, enet1.gmii_tx_clk, enet1.gmii_tx_en, enet1.gmii_tx_er, enet1.mdio_i, enet1.mdio_mdc, enet1.mdio_o, enet1.mdio_t, enet1.ptp_delay_req_rx, enet1.ptp_delay_req_tx, enet1.ptp_pdelay_req_rx, enet1.ptp_pdelay_req_tx, enet1.ptp_pdelay_resp_rx, enet1.ptp_pdelay_resp_tx, enet1.ptp_sync_frame_rx, enet1.ptp_sync_frame_tx, enet1.sof_rx, enet1.sof_tx, event_.eventi, event_.evento, event_.standbywfe, event_.standbywfi, fclk_clktrig0.n, fclk_clktrig1.n, fclk_clktrig2.n, fclk_clktrig3.n, fpga.idle_n, ftmd.tracein_atid, ftmd.tracein_clk, ftmd.tracein_data, ftmd.tracein_valid, ftmt.f2p_debug, ftmt.f2p_trig, ftmt.f2p_trigack, ftmt.p2f_debug, ftmt.p2f_trig, ftmt.p2f_trigack, pjtag.tck, pjtag.td_i, pjtag.td_o, pjtag.td_t, pjtag.tms, sdio0.buspow, sdio0.busvolt, sdio0.cdn, sdio0.clk, sdio0.clk_fb, sdio0.cmd_i, sdio0.cmd_o, sdio0.cmd_t, sdio0.data_i, sdio0.data_o, sdio0.data_t, sdio0.led, sdio0.wp, sdio1.buspow, sdio1.busvolt, sdio1.cdn, sdio1.clk, sdio1.clk_fb, sdio1.cmd_i, sdio1.cmd_o, sdio1.cmd_t, sdio1.data_i, sdio1.data_o, sdio1.data_t, sdio1.led, sdio1.wp, spi0.miso_i, spi0.miso_o, spi0.miso_t, spi0.mosi_i, spi0.mosi_o, spi0.mosi_t, spi0.sclk_i, spi0.sclk_o, spi0.sclk_t, spi0.ss1_o, spi0.ss2_o, spi0.ss_i, spi0.ss_o, spi0.ss_t, spi1.miso_i, spi1.miso_o, spi1.miso_t, spi1.mosi_i, spi1.mosi_o, spi1.mosi_t, spi1.sclk_i, spi1.sclk_o, spi1.sclk_t, spi1.ss1_o, spi1.ss2_o, spi1.ss_i, spi1.ss_o, spi1.ss_t, sram.intin, trace.clk, trace.ctl, trace.data, ttc0.clk0_in, ttc0.clk1_in, ttc0.clk2_in, ttc0.wave0_out, ttc0.wave1_out, ttc0.wave2_out, ttc1.clk0_in, ttc1.clk1_in, ttc1.clk2_in, ttc1.wave0_out, ttc1.wave1_out, ttc1.wave2_out, uart0.ctsn, uart0.dcdn, uart0.dsrn, uart0.dtrn, uart0.rin, uart0.rtsn, uart0.rx, uart0.tx, uart1.ctsn, uart1.dcdn, uart1.dsrn, uart1.dtrn, uart1.rin, uart1.rtsn, uart1.rx, uart1.tx, usb0.port_indctl, usb0.vbus_pwrfault, usb0.vbus_pwrselect, usb1.port_indctl, usb1.vbus_pwrfault, usb1.vbus_pwrselect, wdt.clk_in, wdt.rst_out);
+`else
+    schedule (fclk.clk1, fclk.clk2, fclk.clk3, fclk_reset0.n, fclk_reset1.n, fclk_reset2.n, fclk_reset3.n, gpio.i, gpio.o, gpio.t, i2c0.scl_i, i2c0.scl_o, i2c0.scl_t, i2c0.sda_i, i2c0.sda_o, i2c0.sda_t, i2c1.scl_i, i2c1.scl_o, i2c1.scl_t, i2c1.sda_i, i2c1.sda_o, i2c1.sda_t, irq.f2p, irq.p2f_can0, irq.p2f_can1, irq.p2f_cti, irq.p2f_dmac0, irq.p2f_dmac1, irq.p2f_dmac2, irq.p2f_dmac3, irq.p2f_dmac4, irq.p2f_dmac5, irq.p2f_dmac6, irq.p2f_dmac7, irq.p2f_dmac_abort, irq.p2f_enet0, irq.p2f_enet1, irq.p2f_enet_wake0, irq.p2f_enet_wake1, irq.p2f_gpio, irq.p2f_i2c0, irq.p2f_i2c1, irq.p2f_qspi, irq.p2f_sdio0, irq.p2f_sdio1, irq.p2f_smc, irq.p2f_spi0, irq.p2f_spi1, irq.p2f_uart0, irq.p2f_uart1, irq.p2f_usb0, irq.p2f_usb1, m_axi_gp0.araddr, m_axi_gp0.arburst, m_axi_gp0.arcache, m_axi_gp0.aresetn, m_axi_gp0.arid, m_axi_gp0.arlen, m_axi_gp0.arlock, m_axi_gp0.arprot, m_axi_gp0.arqos, m_axi_gp0.arready, m_axi_gp0.arsize, m_axi_gp0.arvalid, m_axi_gp0.awaddr, m_axi_gp0.awburst, m_axi_gp0.awcache, m_axi_gp0.awid, m_axi_gp0.awlen, m_axi_gp0.awlock, m_axi_gp0.awprot, m_axi_gp0.awqos, m_axi_gp0.awready, m_axi_gp0.awsize, m_axi_gp0.awvalid, m_axi_gp0.bid, m_axi_gp0.bready, m_axi_gp0.bresp, m_axi_gp0.bvalid, m_axi_gp0.rdata, m_axi_gp0.rid, m_axi_gp0.rlast, m_axi_gp0.rready, m_axi_gp0.rresp, m_axi_gp0.rvalid, m_axi_gp0.wdata, m_axi_gp0.wid, m_axi_gp0.wlast, m_axi_gp0.wready, m_axi_gp0.wstrb, m_axi_gp0.wvalid, m_axi_gp1.araddr, m_axi_gp1.arburst, m_axi_gp1.arcache, m_axi_gp1.aresetn, m_axi_gp1.arid, m_axi_gp1.arlen, m_axi_gp1.arlock, m_axi_gp1.arprot, m_axi_gp1.arqos, m_axi_gp1.arready, m_axi_gp1.arsize, m_axi_gp1.arvalid, m_axi_gp1.awaddr, m_axi_gp1.awburst, m_axi_gp1.awcache, m_axi_gp1.awid, m_axi_gp1.awlen, m_axi_gp1.awlock, m_axi_gp1.awprot, m_axi_gp1.awqos, m_axi_gp1.awready, m_axi_gp1.awsize, m_axi_gp1.awvalid, m_axi_gp1.bid, m_axi_gp1.bready, m_axi_gp1.bresp, m_axi_gp1.bvalid, m_axi_gp1.rdata, m_axi_gp1.rid, m_axi_gp1.rlast, m_axi_gp1.rready, m_axi_gp1.rresp, m_axi_gp1.rvalid, m_axi_gp1.wdata, m_axi_gp1.wid, m_axi_gp1.wlast, m_axi_gp1.wready, m_axi_gp1.wstrb, m_axi_gp1.wvalid, s_axi_acp.araddr, s_axi_acp.arburst, s_axi_acp.arcache, s_axi_acp.aresetn, s_axi_acp.arid, s_axi_acp.arlen, s_axi_acp.arlock, s_axi_acp.arprot, s_axi_acp.arqos, s_axi_acp.arready, s_axi_acp.arsize, s_axi_acp.aruser, s_axi_acp.arvalid, s_axi_acp.awaddr, s_axi_acp.awburst, s_axi_acp.awcache, s_axi_acp.awid, s_axi_acp.awlen, s_axi_acp.awlock, s_axi_acp.awprot, s_axi_acp.awqos, s_axi_acp.awready, s_axi_acp.awsize, s_axi_acp.awuser, s_axi_acp.awvalid, s_axi_acp.bid, s_axi_acp.bready, s_axi_acp.bresp, s_axi_acp.bvalid, s_axi_acp.rdata, s_axi_acp.rid, s_axi_acp.rlast, s_axi_acp.rready, s_axi_acp.rresp, s_axi_acp.rvalid, s_axi_acp.wdata, s_axi_acp.wid, s_axi_acp.wlast, s_axi_acp.wready, s_axi_acp.wstrb, s_axi_acp.wvalid, s_axi_gp0.araddr, s_axi_gp0.arburst, s_axi_gp0.arcache, s_axi_gp0.aresetn, s_axi_gp0.arid, s_axi_gp0.arlen, s_axi_gp0.arlock, s_axi_gp0.arprot, s_axi_gp0.arqos, s_axi_gp0.arready, s_axi_gp0.arsize, s_axi_gp0.arvalid, s_axi_gp0.awaddr, s_axi_gp0.awburst, s_axi_gp0.awcache, s_axi_gp0.awid, s_axi_gp0.awlen, s_axi_gp0.awlock, s_axi_gp0.awprot, s_axi_gp0.awqos, s_axi_gp0.awready, s_axi_gp0.awsize, s_axi_gp0.awvalid, s_axi_gp0.bid, s_axi_gp0.bready, s_axi_gp0.bresp, s_axi_gp0.bvalid, s_axi_gp0.rdata, s_axi_gp0.rid, s_axi_gp0.rlast, s_axi_gp0.rready, s_axi_gp0.rresp, s_axi_gp0.rvalid, s_axi_gp0.wdata, s_axi_gp0.wid, s_axi_gp0.wlast, s_axi_gp0.wready, s_axi_gp0.wstrb, s_axi_gp0.wvalid, s_axi_gp1.araddr, s_axi_gp1.arburst, s_axi_gp1.arcache, s_axi_gp1.aresetn, s_axi_gp1.arid, s_axi_gp1.arlen, s_axi_gp1.arlock, s_axi_gp1.arprot, s_axi_gp1.arqos, s_axi_gp1.arready, s_axi_gp1.arsize, s_axi_gp1.arvalid, s_axi_gp1.awaddr, s_axi_gp1.awburst, s_axi_gp1.awcache, s_axi_gp1.awid, s_axi_gp1.awlen, s_axi_gp1.awlock, s_axi_gp1.awprot, s_axi_gp1.awqos, s_axi_gp1.awready, s_axi_gp1.awsize, s_axi_gp1.awvalid, s_axi_gp1.bid, s_axi_gp1.bready, s_axi_gp1.bresp, s_axi_gp1.bvalid, s_axi_gp1.rdata, s_axi_gp1.rid, s_axi_gp1.rlast, s_axi_gp1.rready, s_axi_gp1.rresp, s_axi_gp1.rvalid, s_axi_gp1.wdata, s_axi_gp1.wid, s_axi_gp1.wlast, s_axi_gp1.wready, s_axi_gp1.wstrb, s_axi_gp1.wvalid, s_axi_hp0.araddr, s_axi_hp0.arburst, s_axi_hp0.arcache, s_axi_hp0.aresetn, s_axi_hp0.arid, s_axi_hp0.arlen, s_axi_hp0.arlock, s_axi_hp0.arprot, s_axi_hp0.arqos, s_axi_hp0.arready, s_axi_hp0.arsize, s_axi_hp0.arvalid, s_axi_hp0.awaddr, s_axi_hp0.awburst, s_axi_hp0.awcache, s_axi_hp0.awid, s_axi_hp0.awlen, s_axi_hp0.awlock, s_axi_hp0.awprot, s_axi_hp0.awqos, s_axi_hp0.awready, s_axi_hp0.awsize, s_axi_hp0.awvalid, s_axi_hp0.bid, s_axi_hp0.bready, s_axi_hp0.bresp, s_axi_hp0.bvalid, s_axi_hp0.racount, s_axi_hp0.rcount, s_axi_hp0.rdata, s_axi_hp0.rdissuecap1_en, s_axi_hp0.rid, s_axi_hp0.rlast, s_axi_hp0.rready, s_axi_hp0.rresp, s_axi_hp0.rvalid, s_axi_hp0.wacount, s_axi_hp0.wcount, s_axi_hp0.wdata, s_axi_hp0.wid, s_axi_hp0.wlast, s_axi_hp0.wready, s_axi_hp0.wrissuecap1_en, s_axi_hp0.wstrb, s_axi_hp0.wvalid, s_axi_hp1.araddr, s_axi_hp1.arburst, s_axi_hp1.arcache, s_axi_hp1.aresetn, s_axi_hp1.arid, s_axi_hp1.arlen, s_axi_hp1.arlock, s_axi_hp1.arprot, s_axi_hp1.arqos, s_axi_hp1.arready, s_axi_hp1.arsize, s_axi_hp1.arvalid, s_axi_hp1.awaddr, s_axi_hp1.awburst, s_axi_hp1.awcache, s_axi_hp1.awid, s_axi_hp1.awlen, s_axi_hp1.awlock, s_axi_hp1.awprot, s_axi_hp1.awqos, s_axi_hp1.awready, s_axi_hp1.awsize, s_axi_hp1.awvalid, s_axi_hp1.bid, s_axi_hp1.bready, s_axi_hp1.bresp, s_axi_hp1.bvalid, s_axi_hp1.racount, s_axi_hp1.rcount, s_axi_hp1.rdata, s_axi_hp1.rdissuecap1_en, s_axi_hp1.rid, s_axi_hp1.rlast, s_axi_hp1.rready, s_axi_hp1.rresp, s_axi_hp1.rvalid, s_axi_hp1.wacount, s_axi_hp1.wcount, s_axi_hp1.wdata, s_axi_hp1.wid, s_axi_hp1.wlast, s_axi_hp1.wready, s_axi_hp1.wrissuecap1_en, s_axi_hp1.wstrb, s_axi_hp1.wvalid, s_axi_hp2.araddr, s_axi_hp2.arburst, s_axi_hp2.arcache, s_axi_hp2.aresetn, s_axi_hp2.arid, s_axi_hp2.arlen, s_axi_hp2.arlock, s_axi_hp2.arprot, s_axi_hp2.arqos, s_axi_hp2.arready, s_axi_hp2.arsize, s_axi_hp2.arvalid, s_axi_hp2.awaddr, s_axi_hp2.awburst, s_axi_hp2.awcache, s_axi_hp2.awid, s_axi_hp2.awlen, s_axi_hp2.awlock, s_axi_hp2.awprot, s_axi_hp2.awqos, s_axi_hp2.awready, s_axi_hp2.awsize, s_axi_hp2.awvalid, s_axi_hp2.bid, s_axi_hp2.bready, s_axi_hp2.bresp, s_axi_hp2.bvalid, s_axi_hp2.racount, s_axi_hp2.rcount, s_axi_hp2.rdata, s_axi_hp2.rdissuecap1_en, s_axi_hp2.rid, s_axi_hp2.rlast, s_axi_hp2.rready, s_axi_hp2.rresp, s_axi_hp2.rvalid, s_axi_hp2.wacount, s_axi_hp2.wcount, s_axi_hp2.wdata, s_axi_hp2.wid, s_axi_hp2.wlast, s_axi_hp2.wready, s_axi_hp2.wrissuecap1_en, s_axi_hp2.wstrb, s_axi_hp2.wvalid, s_axi_hp3.araddr, s_axi_hp3.arburst, s_axi_hp3.arcache, s_axi_hp3.aresetn, s_axi_hp3.arid, s_axi_hp3.arlen, s_axi_hp3.arlock, s_axi_hp3.arprot, s_axi_hp3.arqos, s_axi_hp3.arready, s_axi_hp3.arsize, s_axi_hp3.arvalid, s_axi_hp3.awaddr, s_axi_hp3.awburst, s_axi_hp3.awcache, s_axi_hp3.awid, s_axi_hp3.awlen, s_axi_hp3.awlock, s_axi_hp3.awprot, s_axi_hp3.awqos, s_axi_hp3.awready, s_axi_hp3.awsize, s_axi_hp3.awvalid, s_axi_hp3.bid, s_axi_hp3.bready, s_axi_hp3.bresp, s_axi_hp3.bvalid, s_axi_hp3.racount, s_axi_hp3.rcount, s_axi_hp3.rdata, s_axi_hp3.rdissuecap1_en, s_axi_hp3.rid, s_axi_hp3.rlast, s_axi_hp3.rready, s_axi_hp3.rresp, s_axi_hp3.rvalid, s_axi_hp3.wacount, s_axi_hp3.wcount, s_axi_hp3.wdata, s_axi_hp3.wid, s_axi_hp3.wlast, s_axi_hp3.wready, s_axi_hp3.wrissuecap1_en, s_axi_hp3.wstrb, s_axi_hp3.wvalid) CF (fclk.clk1, fclk.clk2, fclk.clk3, fclk_reset0.n, fclk_reset1.n, fclk_reset2.n, fclk_reset3.n, gpio.i, gpio.o, gpio.t, i2c0.scl_i, i2c0.scl_o, i2c0.scl_t, i2c0.sda_i, i2c0.sda_o, i2c0.sda_t, i2c1.scl_i, i2c1.scl_o, i2c1.scl_t, i2c1.sda_i, i2c1.sda_o, i2c1.sda_t, irq.f2p, irq.p2f_can0, irq.p2f_can1, irq.p2f_cti, irq.p2f_dmac0, irq.p2f_dmac1, irq.p2f_dmac2, irq.p2f_dmac3, irq.p2f_dmac4, irq.p2f_dmac5, irq.p2f_dmac6, irq.p2f_dmac7, irq.p2f_dmac_abort, irq.p2f_enet0, irq.p2f_enet1, irq.p2f_enet_wake0, irq.p2f_enet_wake1, irq.p2f_gpio, irq.p2f_i2c0, irq.p2f_i2c1, irq.p2f_qspi, irq.p2f_sdio0, irq.p2f_sdio1, irq.p2f_smc, irq.p2f_spi0, irq.p2f_spi1, irq.p2f_uart0, irq.p2f_uart1, irq.p2f_usb0, irq.p2f_usb1, m_axi_gp0.araddr, m_axi_gp0.arburst, m_axi_gp0.arcache, m_axi_gp0.aresetn, m_axi_gp0.arid, m_axi_gp0.arlen, m_axi_gp0.arlock, m_axi_gp0.arprot, m_axi_gp0.arqos, m_axi_gp0.arready, m_axi_gp0.arsize, m_axi_gp0.arvalid, m_axi_gp0.awaddr, m_axi_gp0.awburst, m_axi_gp0.awcache, m_axi_gp0.awid, m_axi_gp0.awlen, m_axi_gp0.awlock, m_axi_gp0.awprot, m_axi_gp0.awqos, m_axi_gp0.awready, m_axi_gp0.awsize, m_axi_gp0.awvalid, m_axi_gp0.bid, m_axi_gp0.bready, m_axi_gp0.bresp, m_axi_gp0.bvalid, m_axi_gp0.rdata, m_axi_gp0.rid, m_axi_gp0.rlast, m_axi_gp0.rready, m_axi_gp0.rresp, m_axi_gp0.rvalid, m_axi_gp0.wdata, m_axi_gp0.wid, m_axi_gp0.wlast, m_axi_gp0.wready, m_axi_gp0.wstrb, m_axi_gp0.wvalid, m_axi_gp1.araddr, m_axi_gp1.arburst, m_axi_gp1.arcache, m_axi_gp1.aresetn, m_axi_gp1.arid, m_axi_gp1.arlen, m_axi_gp1.arlock, m_axi_gp1.arprot, m_axi_gp1.arqos, m_axi_gp1.arready, m_axi_gp1.arsize, m_axi_gp1.arvalid, m_axi_gp1.awaddr, m_axi_gp1.awburst, m_axi_gp1.awcache, m_axi_gp1.awid, m_axi_gp1.awlen, m_axi_gp1.awlock, m_axi_gp1.awprot, m_axi_gp1.awqos, m_axi_gp1.awready, m_axi_gp1.awsize, m_axi_gp1.awvalid, m_axi_gp1.bid, m_axi_gp1.bready, m_axi_gp1.bresp, m_axi_gp1.bvalid, m_axi_gp1.rdata, m_axi_gp1.rid, m_axi_gp1.rlast, m_axi_gp1.rready, m_axi_gp1.rresp, m_axi_gp1.rvalid, m_axi_gp1.wdata, m_axi_gp1.wid, m_axi_gp1.wlast, m_axi_gp1.wready, m_axi_gp1.wstrb, m_axi_gp1.wvalid, s_axi_acp.araddr, s_axi_acp.arburst, s_axi_acp.arcache, s_axi_acp.aresetn, s_axi_acp.arid, s_axi_acp.arlen, s_axi_acp.arlock, s_axi_acp.arprot, s_axi_acp.arqos, s_axi_acp.arready, s_axi_acp.arsize, s_axi_acp.aruser, s_axi_acp.arvalid, s_axi_acp.awaddr, s_axi_acp.awburst, s_axi_acp.awcache, s_axi_acp.awid, s_axi_acp.awlen, s_axi_acp.awlock, s_axi_acp.awprot, s_axi_acp.awqos, s_axi_acp.awready, s_axi_acp.awsize, s_axi_acp.awuser, s_axi_acp.awvalid, s_axi_acp.bid, s_axi_acp.bready, s_axi_acp.bresp, s_axi_acp.bvalid, s_axi_acp.rdata, s_axi_acp.rid, s_axi_acp.rlast, s_axi_acp.rready, s_axi_acp.rresp, s_axi_acp.rvalid, s_axi_acp.wdata, s_axi_acp.wid, s_axi_acp.wlast, s_axi_acp.wready, s_axi_acp.wstrb, s_axi_acp.wvalid, s_axi_gp0.araddr, s_axi_gp0.arburst, s_axi_gp0.arcache, s_axi_gp0.aresetn, s_axi_gp0.arid, s_axi_gp0.arlen, s_axi_gp0.arlock, s_axi_gp0.arprot, s_axi_gp0.arqos, s_axi_gp0.arready, s_axi_gp0.arsize, s_axi_gp0.arvalid, s_axi_gp0.awaddr, s_axi_gp0.awburst, s_axi_gp0.awcache, s_axi_gp0.awid, s_axi_gp0.awlen, s_axi_gp0.awlock, s_axi_gp0.awprot, s_axi_gp0.awqos, s_axi_gp0.awready, s_axi_gp0.awsize, s_axi_gp0.awvalid, s_axi_gp0.bid, s_axi_gp0.bready, s_axi_gp0.bresp, s_axi_gp0.bvalid, s_axi_gp0.rdata, s_axi_gp0.rid, s_axi_gp0.rlast, s_axi_gp0.rready, s_axi_gp0.rresp, s_axi_gp0.rvalid, s_axi_gp0.wdata, s_axi_gp0.wid, s_axi_gp0.wlast, s_axi_gp0.wready, s_axi_gp0.wstrb, s_axi_gp0.wvalid, s_axi_gp1.araddr, s_axi_gp1.arburst, s_axi_gp1.arcache, s_axi_gp1.aresetn, s_axi_gp1.arid, s_axi_gp1.arlen, s_axi_gp1.arlock, s_axi_gp1.arprot, s_axi_gp1.arqos, s_axi_gp1.arready, s_axi_gp1.arsize, s_axi_gp1.arvalid, s_axi_gp1.awaddr, s_axi_gp1.awburst, s_axi_gp1.awcache, s_axi_gp1.awid, s_axi_gp1.awlen, s_axi_gp1.awlock, s_axi_gp1.awprot, s_axi_gp1.awqos, s_axi_gp1.awready, s_axi_gp1.awsize, s_axi_gp1.awvalid, s_axi_gp1.bid, s_axi_gp1.bready, s_axi_gp1.bresp, s_axi_gp1.bvalid, s_axi_gp1.rdata, s_axi_gp1.rid, s_axi_gp1.rlast, s_axi_gp1.rready, s_axi_gp1.rresp, s_axi_gp1.rvalid, s_axi_gp1.wdata, s_axi_gp1.wid, s_axi_gp1.wlast, s_axi_gp1.wready, s_axi_gp1.wstrb, s_axi_gp1.wvalid, s_axi_hp0.araddr, s_axi_hp0.arburst, s_axi_hp0.arcache, s_axi_hp0.aresetn, s_axi_hp0.arid, s_axi_hp0.arlen, s_axi_hp0.arlock, s_axi_hp0.arprot, s_axi_hp0.arqos, s_axi_hp0.arready, s_axi_hp0.arsize, s_axi_hp0.arvalid, s_axi_hp0.awaddr, s_axi_hp0.awburst, s_axi_hp0.awcache, s_axi_hp0.awid, s_axi_hp0.awlen, s_axi_hp0.awlock, s_axi_hp0.awprot, s_axi_hp0.awqos, s_axi_hp0.awready, s_axi_hp0.awsize, s_axi_hp0.awvalid, s_axi_hp0.bid, s_axi_hp0.bready, s_axi_hp0.bresp, s_axi_hp0.bvalid, s_axi_hp0.racount, s_axi_hp0.rcount, s_axi_hp0.rdata, s_axi_hp0.rdissuecap1_en, s_axi_hp0.rid, s_axi_hp0.rlast, s_axi_hp0.rready, s_axi_hp0.rresp, s_axi_hp0.rvalid, s_axi_hp0.wacount, s_axi_hp0.wcount, s_axi_hp0.wdata, s_axi_hp0.wid, s_axi_hp0.wlast, s_axi_hp0.wready, s_axi_hp0.wrissuecap1_en, s_axi_hp0.wstrb, s_axi_hp0.wvalid, s_axi_hp1.araddr, s_axi_hp1.arburst, s_axi_hp1.arcache, s_axi_hp1.aresetn, s_axi_hp1.arid, s_axi_hp1.arlen, s_axi_hp1.arlock, s_axi_hp1.arprot, s_axi_hp1.arqos, s_axi_hp1.arready, s_axi_hp1.arsize, s_axi_hp1.arvalid, s_axi_hp1.awaddr, s_axi_hp1.awburst, s_axi_hp1.awcache, s_axi_hp1.awid, s_axi_hp1.awlen, s_axi_hp1.awlock, s_axi_hp1.awprot, s_axi_hp1.awqos, s_axi_hp1.awready, s_axi_hp1.awsize, s_axi_hp1.awvalid, s_axi_hp1.bid, s_axi_hp1.bready, s_axi_hp1.bresp, s_axi_hp1.bvalid, s_axi_hp1.racount, s_axi_hp1.rcount, s_axi_hp1.rdata, s_axi_hp1.rdissuecap1_en, s_axi_hp1.rid, s_axi_hp1.rlast, s_axi_hp1.rready, s_axi_hp1.rresp, s_axi_hp1.rvalid, s_axi_hp1.wacount, s_axi_hp1.wcount, s_axi_hp1.wdata, s_axi_hp1.wid, s_axi_hp1.wlast, s_axi_hp1.wready, s_axi_hp1.wrissuecap1_en, s_axi_hp1.wstrb, s_axi_hp1.wvalid, s_axi_hp2.araddr, s_axi_hp2.arburst, s_axi_hp2.arcache, s_axi_hp2.aresetn, s_axi_hp2.arid, s_axi_hp2.arlen, s_axi_hp2.arlock, s_axi_hp2.arprot, s_axi_hp2.arqos, s_axi_hp2.arready, s_axi_hp2.arsize, s_axi_hp2.arvalid, s_axi_hp2.awaddr, s_axi_hp2.awburst, s_axi_hp2.awcache, s_axi_hp2.awid, s_axi_hp2.awlen, s_axi_hp2.awlock, s_axi_hp2.awprot, s_axi_hp2.awqos, s_axi_hp2.awready, s_axi_hp2.awsize, s_axi_hp2.awvalid, s_axi_hp2.bid, s_axi_hp2.bready, s_axi_hp2.bresp, s_axi_hp2.bvalid, s_axi_hp2.racount, s_axi_hp2.rcount, s_axi_hp2.rdata, s_axi_hp2.rdissuecap1_en, s_axi_hp2.rid, s_axi_hp2.rlast, s_axi_hp2.rready, s_axi_hp2.rresp, s_axi_hp2.rvalid, s_axi_hp2.wacount, s_axi_hp2.wcount, s_axi_hp2.wdata, s_axi_hp2.wid, s_axi_hp2.wlast, s_axi_hp2.wready, s_axi_hp2.wrissuecap1_en, s_axi_hp2.wstrb, s_axi_hp2.wvalid, s_axi_hp3.araddr, s_axi_hp3.arburst, s_axi_hp3.arcache, s_axi_hp3.aresetn, s_axi_hp3.arid, s_axi_hp3.arlen, s_axi_hp3.arlock, s_axi_hp3.arprot, s_axi_hp3.arqos, s_axi_hp3.arready, s_axi_hp3.arsize, s_axi_hp3.arvalid, s_axi_hp3.awaddr, s_axi_hp3.awburst, s_axi_hp3.awcache, s_axi_hp3.awid, s_axi_hp3.awlen, s_axi_hp3.awlock, s_axi_hp3.awprot, s_axi_hp3.awqos, s_axi_hp3.awready, s_axi_hp3.awsize, s_axi_hp3.awvalid, s_axi_hp3.bid, s_axi_hp3.bready, s_axi_hp3.bresp, s_axi_hp3.bvalid, s_axi_hp3.racount, s_axi_hp3.rcount, s_axi_hp3.rdata, s_axi_hp3.rdissuecap1_en, s_axi_hp3.rid, s_axi_hp3.rlast, s_axi_hp3.rready, s_axi_hp3.rresp, s_axi_hp3.rvalid, s_axi_hp3.wacount, s_axi_hp3.wcount, s_axi_hp3.wdata, s_axi_hp3.wid, s_axi_hp3.wlast, s_axi_hp3.wready, s_axi_hp3.wrissuecap1_en, s_axi_hp3.wstrb, s_axi_hp3.wvalid);
+`endif
 endmodule
