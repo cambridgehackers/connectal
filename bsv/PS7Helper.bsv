@@ -12,6 +12,34 @@ import PPS7::*;
 import PS7::*;
 import Portal::*;
 
+interface ZynqPinsInternal#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_dqs_width, numeric type data_width, numeric type gpio_width, numeric type id_width, numeric type mio_width);
+    (* prefix="DDR_Addr" *) interface Inout#(Bit#(15))     addr;
+    (* prefix="DDR_BankAddr" *) interface Inout#(Bit#(3))     bankaddr;
+    (* prefix="DDR_CAS_n" *) interface Inout#(Bit#(1))     cas_n;
+    (* prefix="DDR_CKE" *) interface Inout#(Bit#(1))     cke;
+    (* prefix="DDR_CS_n" *) interface Inout#(Bit#(1))     cs_n;
+    (* prefix="DDR_Clk_n" *) interface Inout#(Bit#(1))     clk_n;
+    (* prefix="DDR_Clk_p" *) interface Inout#(Bit#(1))     clk;
+    (* prefix="DDR_DM" *) interface Inout#(Bit#(c_dm_width))     dm;
+    (* prefix="DDR_DQ" *) interface Inout#(Bit#(c_dq_width))     dq;
+    (* prefix="DDR_DQS_n" *) interface Inout#(Bit#(c_dqs_width))     dqs_n;
+    (* prefix="DDR_DQS_p" *) interface Inout#(Bit#(c_dqs_width))     dqs;
+    (* prefix="DDR_DRSTB" *) interface Inout#(Bit#(1))     drstb;
+    (* prefix="DDR_ODT" *) interface Inout#(Bit#(1))     odt;
+    (* prefix="DDR_RAS_n" *) interface Inout#(Bit#(1))     ras_n;
+    (* prefix="FIXED_IO_ddr_vrn" *) interface Inout#(Bit#(1))     vrn;
+    (* prefix="FIXED_IO_ddr_vrp" *) interface Inout#(Bit#(1))     vrp;
+    (* prefix="DDR_WEB" *) interface Inout#(Bit#(1))     web;
+    (* prefix="FIXED_IO_mio" *)
+    interface Inout#(Bit#(mio_width))       mio;
+    (* prefix="FIXED_IO_ps" *)
+    interface Pps7Ps#(4, 32, 4, 64, 64, 12, 54) ps;
+    interface Clock                         fclk_clk0;
+    interface Bit#(1)                       fclk_reset0_n;
+endinterface
+
+typedef ZynqPinsInternal#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ZynqPins;
+
 module mkPS7Slave#(Clock axi_clock, Reset axi_reset, StdPortalTop axiTop)(StdPS7);
     StdPS7 ps7 <- mkPS7(axi_clock, axi_reset);
 
