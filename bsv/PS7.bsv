@@ -162,6 +162,8 @@ interface PS7#(numeric type c_dm_width, numeric type c_dq_width, numeric type c_
     interface Vector#(4, AxiSlaveHighSpeed#(data_width, id_width)) s_axi_hp;
 endinterface
 
+typedef PS7#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) StdPS7;
+
 module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_dqs_width, data_width, gpio_width, id_width, mio_width));
     let c_dm_width = valueOf(c_dm_width);
     let c_dq_width = valueOf(c_dq_width);
