@@ -1,13 +1,10 @@
 // bsv libraries
 import Clocks :: *;
 import GetPut::*;
-import GetPutWithClocks::*;
 
 // portz libraries
 import AxiMasterSlave::*;
 import CtrlMux::*;
-//import Leds::*;
-//import Top::*;
 import PPS7::*;
 import PS7::*;
 import Portal::*;
@@ -40,7 +37,7 @@ endinterface
 
 typedef ZynqPinsInternal#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ZynqPins;
 
-module mkPS7Slave#(Clock axi_clock, Reset axi_reset, StdPortalTop axiTop)(StdPS7);
+module mkPS7Slave#(Clock axi_clock, Reset axi_reset, StdPortalTop axiTop)(ZynqPins);
     StdPS7 ps7 <- mkPS7(axi_clock, axi_reset);
 
     rule send_int_rule;
@@ -127,5 +124,26 @@ module mkPS7Slave#(Clock axi_clock, Reset axi_reset, StdPortalTop axiTop)(StdPS7
         ps7.s_axi_hp[0].axi.resp_write.put(s_arespw);
     endrule
 end of m_axi */
-    return ps7;
+
+    interface Inout  addr = ps7.ddr.addr;
+    interface Inout  bankaddr = ps7.ddr.bankaddr;
+    interface Inout  cas_n = ps7.ddr.cas_n;
+    interface Inout  cke = ps7.ddr.cke;
+    interface Inout  cs_n = ps7.ddr.cs_n;
+    interface Inout  clk_n = ps7.ddr.clk_n;
+    interface Inout  clk = ps7.ddr.clk;
+    interface Inout  dm = ps7.ddr.dm;
+    interface Inout  dq = ps7.ddr.dq;
+    interface Inout  dqs_n = ps7.ddr.dqs_n;
+    interface Inout  dqs = ps7.ddr.dqs;
+    interface Inout  drstb = ps7.ddr.drstb;
+    interface Inout  odt = ps7.ddr.odt;
+    interface Inout  ras_n = ps7.ddr.ras_n;
+    interface Inout  vrn = ps7.ddr.vrn;
+    interface Inout  vrp = ps7.ddr.vrp;
+    interface Inout  web = ps7.ddr.web;
+    interface Inout  mio = ps7.mio;
+    interface Pps7Ps ps = ps7.ps;
+    interface Clock  fclk_clk0 = ps7.fclk.clk0;
+    interface Bit    fclk_reset0_n = ps7.fclk_reset[0].n;
 endmodule
