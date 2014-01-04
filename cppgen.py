@@ -19,7 +19,7 @@ LOCAL_MODULE := %(exe)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I.. -I../cpp
+LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/cpp
 
 
 include $(BUILD_EXECUTABLE)
@@ -176,11 +176,12 @@ public:
 
 
 
-def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, silent=False):
+def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xbsvdir, silent=False):
         f = util.createDirAndOpen(androidmkname, 'w')
         substs = {
             'cfiles': ' '.join([os.path.basename(x) for x in cfiles]),
 	    'generatedCFiles': ' '.join(generatedCFiles),
+            'xbsvdir': xbsvdir,
 	    'exe' : 'android_exe'
         }
         f.write(androidmk_template % substs)

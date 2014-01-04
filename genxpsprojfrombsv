@@ -451,7 +451,7 @@ if __name__=='__main__':
 
     print 'Writing Android.mk', androidmkname
     print 'Writing Application.mk', applicationmkname
-    cppgen.writeAndroidMk(namespace.source, generatedCFiles, androidmkname, applicationmkname)
+    cppgen.writeAndroidMk(namespace.source, generatedCFiles, androidmkname, applicationmkname, xbsvdir)
     cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source, swProxies, swWrappers)
 
     print 'Writing tcl impl file', tclimplname
