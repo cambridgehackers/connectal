@@ -38,39 +38,32 @@ endinterface
 typedef ZynqPinsInternal#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ZynqPins;
 
 typedef AxiSlaveHighSpeed#(64/*data_width*/, 12/*id_width*/) HSSlave;
+typedef AxiREQ#(12/*id_width*/) StdAxiREQ;
 
 interface HackInterface;
 endinterface
 
 module mkPS7MasterInternal#(StdAxi3Master m_axi, HSSlave hp)(HackInterface);
     rule s_areqr_rule;
-        AxiREQ#(12/*id_width*/) s_areqr;
-        s_areqr.lock = 0;
-        s_areqr.qos = 0;
         let addr <- m_axi.read.readAddr();
-        s_areqr.addr = addr[31:0];
-        s_areqr.burst = m_axi.read.readBurstType();
-        s_areqr.cache = m_axi.read.readBurstCache();
-        s_areqr.id = m_axi.read.readId();
-        s_areqr.len = m_axi.read.readBurstLen();
-        s_areqr.prot = m_axi.read.readBurstProt();
-        s_areqr.size = m_axi.read.readBurstWidth();
-        hp.axi.req_ar.put(s_areqr);
+        hp.axi.req_ar.put(StdAxiREQ{ addr: addr[31:0],
+            len: m_axi.read.readBurstLen(),
+            size: m_axi.read.readBurstWidth(),
+            burst: m_axi.read.readBurstType(),
+            prot: m_axi.read.readBurstProt(),
+            cache: m_axi.read.readBurstCache(),
+            id: m_axi.read.readId(), lock: 0, qos: 0});
     endrule
 
     rule s_areqw_rule;
-        AxiREQ#(12/*id_width*/) s_areqw;
-        s_areqw.lock = 0;
-        s_areqw.qos = 0;
         let addr <- m_axi.write.writeAddr();
-        s_areqw.addr = addr[31:0];
-        s_areqw.burst = m_axi.write.writeBurstType();
-        s_areqw.cache = m_axi.write.writeBurstCache();
-        s_areqw.id = m_axi.write.writeId();
-        s_areqw.len = m_axi.write.writeBurstLen();
-        s_areqw.prot = m_axi.write.writeBurstProt();
-        s_areqw.size = m_axi.write.writeBurstWidth();
-        hp.axi.req_ar.put(s_areqw);
+        hp.axi.req_aw.put(StdAxiREQ{ addr: addr[31:0],
+            len: m_axi.write.writeBurstLen(),
+            size: m_axi.write.writeBurstWidth(),
+            burst: m_axi.write.writeBurstType(),
+            prot: m_axi.write.writeBurstProt(),
+            cache: m_axi.write.writeBurstCache(),
+            id: m_axi.write.writeId(), lock: 0, qos: 0});
     endrule
 
     rule s_arespb_rule;
@@ -84,12 +77,12 @@ module mkPS7MasterInternal#(StdAxi3Master m_axi, HSSlave hp)(HackInterface);
     endrule
 
     rule s_arespw_rule;
+        let data <- m_axi.write.writeData();
         AxiWrite#(64/*data_width*/, 12/*id_width*/) s_arespw;
-        s_arespw.wid = m_axi.write.writeWid();
-        //??s_arespw.wd.data <- m_axi.write.writeWid(); //.m_axi_write_writeData(m_axi_wdata_wire),
-        //.S_AXI_HP0_WDATA(m_axi_wdata),
-        s_arespw.wd.last = m_axi.write.writeLastDataBeat();
+        s_arespw.wd.data = data;
         s_arespw.wstrb = m_axi.write.writeDataByteEnable();
+        s_arespw.wd.last = m_axi.write.writeLastDataBeat();
+        s_arespw.wid = m_axi.write.writeWid();
         hp.axi.resp_write.put(s_arespw);
     endrule
 endmodule
@@ -113,17 +106,18 @@ module mkPS7Slave#(Clock axi_clock, Reset axi_reset, StdAxi3Slave ctrl, Integer 
 
     rule m_arespb_rule;
         AxiRESP#(12/*id_width*/) m_arespb;
-        m_arespb.id <- ctrl.write.bid();
         m_arespb.resp <- ctrl.write.writeResponse();
+        m_arespb.id <- ctrl.write.bid();
         ps7.m_axi_gp[0].resp_b.put(m_arespb);
     endrule
 
     rule m_arespr_rule;
+        let data <- ctrl.read.readData();
         AxiRead#(32/*data_width*/, 12/*id_width*/) m_arespr;
-        m_arespr.r.id = ctrl.read.rid();
-        m_arespr.r.resp = 2'b0; //.M_AXI_GP0_RRESP(ctrl_rresp),
-        m_arespr.rd.data <- ctrl.read.readData();
+        m_arespr.rd.data = data;
+        m_arespr.r.resp = 2'b0;
         m_arespr.rd.last = ctrl.read.last();
+        m_arespr.r.id = ctrl.read.rid();
         ps7.m_axi_gp[0].resp_read.put(m_arespr);
     endrule
 

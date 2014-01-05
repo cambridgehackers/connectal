@@ -360,7 +360,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     vs_axi_gp[i].arqos(v.qos);
                     vs_axi_gp[i].arsize(v.size);
 
-	            vs_axi_gp[i].arvalid(1);
+	            vtopsw_axi_gp[i].arvalid <= 1;
                 endmethod
             endinterface
             interface Put req_aw;
@@ -375,7 +375,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     vs_axi_gp[i].awqos(v.qos);
                     vs_axi_gp[i].awsize(v.size);
 
-	            vs_axi_gp[i].awvalid(1);
+	            vtopsw_axi_gp[i].awvalid <= 1;
                 endmethod
             endinterface
             interface Put resp_write;
@@ -385,7 +385,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     vs_axi_gp[i].wdata(v.wd.data);
                     vs_axi_gp[i].wlast(v.wd.last);
 
-	            vs_axi_gp[i].wvalid(1);
+	            vtopsw_axi_gp[i].wvalid <= 1;
                 endmethod
             endinterface
             interface Get resp_read;
@@ -396,7 +396,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     v.rd.data = vs_axi_gp[i].rdata();
                     v.rd.last = vs_axi_gp[i].rlast();
 
-	            vs_axi_gp[i].rready(1);
+	            vtopsw_axi_gp[i].rready <= 1;
                     return v;
                 endmethod
             endinterface
@@ -406,7 +406,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     v.id = vs_axi_gp[i].bid();
                     v.resp = vs_axi_gp[i].bresp();
 
-	            vs_axi_gp[i].bready(1);
+	            vtopsw_axi_gp[i].bready <= 1;
                     return v;
                 endmethod
             endinterface
@@ -445,7 +445,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     vs_axi_hp[i].arqos(v.qos);
                     vs_axi_hp[i].arsize(v.size);
 
-		    vs_axi_hp[i].arvalid(1);
+		    vtopsw_axi_hp[i].arvalid <= 1;
                 endmethod
             endinterface
             interface Put req_aw;
@@ -460,7 +460,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     vs_axi_hp[i].awqos(v.qos);
                     vs_axi_hp[i].awsize(v.size);
 
-	            vs_axi_hp[i].awvalid(1);
+	            vtopsw_axi_hp[i].awvalid <= 1;
                 endmethod
             endinterface
             interface Put resp_write;
@@ -470,7 +470,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     vs_axi_hp[i].wdata(v.wd.data);
                     vs_axi_hp[i].wlast(v.wd.last);
 
-	            vs_axi_hp[i].wvalid(1);
+	            vtopsw_axi_hp[i].wvalid <= 1;
                 endmethod
             endinterface
             interface Get resp_read;
@@ -481,7 +481,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     v.rd.data = vs_axi_hp[i].rdata();
                     v.rd.last = vs_axi_hp[i].rlast();
 
-	            vs_axi_hp[i].rready(1);
+	            vtopsw_axi_hp[i].rready <= 1;
                     return v;
                 endmethod
             endinterface
@@ -491,7 +491,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     v.id = vs_axi_hp[i].bid();
                     v.resp = vs_axi_hp[i].bresp();
 
-		    vs_axi_hp[i].bready(1);
+		    vtopsw_axi_hp[i].bready <= 1;
                     return v;
                 endmethod
             endinterface
