@@ -121,7 +121,7 @@ vfile=verilog/%(topbsvmod)s.v
 BOARD=%(boardname)s
 OS=%(OS)s
 ifeq ($(OS),android)
-ALLTARGETS=bits exe
+ALLTARGETS=bits android_exe
 else
 ALLTARGETS=implementation ubuntu_exe
 endif
