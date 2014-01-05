@@ -42,15 +42,16 @@ endinterface
 typedef (function Module#(PortalTop#(nmasters, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, type ipins);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(nmasters,ipins) constructor)(ZynqTop#(ipins));
+   Integer nmasters = valueOf(nmasters);
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
    let top <- constructor(clocked_by defaultClock);
    StdAxi3Master master = ?;
-   if (valueOf(nmasters) > 0) begin
+   if (nmasters > 0) begin
       let m <- mkAxi3Master(top.m_axi[0]);
       master = m;
    end
-   ZynqPins ps7 <- mkPS7Slave(defaultClock, defaultReset, top.ctrl, master, top.interrupt);
+   ZynqPins ps7 <- mkPS7Slave(defaultClock, defaultReset, top.ctrl, nmasters, master, top.interrupt);
 
    interface zynq = ps7;
    interface leds = top.leds;
