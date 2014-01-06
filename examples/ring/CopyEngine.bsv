@@ -26,16 +26,35 @@ import ClientServer::*;
 import PortalRMemory::*;
 import RingTypes::*;
 
-module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) copy_write_chan) ( Server#(CommandStruct, Bit#(32)));
-    FIFO#(CommandStruct) f_in  <- mkFIFO;    // to buffer incoming requests
-    FIFO#(Bit#(32)) f_out <- mkFIFO;    // to buffer outgoing responses
-    Reg#(Bit#(16)) copyReadCount <- mkReg(0);
-    Reg#(Bit#(16)) copyWriteCount <- mkReg(0);
-    Reg#(Bit#(40)) copyReadAddr <- mkReg(0);
-    Reg#(Bit#(40)) copyWriteAddr <- mkReg(0);
-    Reg#(Bit#(32)) copyTag <- mkReg(0);
-    Reg#(Bool) copyBusy <- mkReg(False);
+// The interface to the copyengine is a pair of fifos which supply and accept
+// blocks of 8 64 bit words
+
+module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) copy_write_chan) ( Server#(Bit#(64), Bit#(64)));
+   FIFO#(CommandStruct) f_in  <- mkFIFO;    // to buffer incoming requests
+   FIFO#(Bit#(32)) f_out <- mkFIFO;    // to buffer outgoing responses
+   Reg#(Bit#(16)) copyReadCount <- mkReg(0);
+   Reg#(Bit#(16)) copyWriteCount <- mkReg(0);
+   Reg#(Bit#(40)) copyReadAddr <- mkReg(0);
+   Reg#(Bit#(40)) copyWriteAddr <- mkReg(0);
+   Reg#(Bit#(32)) copyTag <- mkReg(0);
+   Reg#(Bool) copyBusy <- mkReg(False);
     
+   Stmt CopyStart = while(True)
+   seq
+      while (copyBusy) noAction;
+      copyTag <= f_in.deq[31:0];
+      copyReadAddr <= f_in.deq[39:0];
+      copyWriteAddr <= f_in.deq[39:0];
+      action
+	 let regv <-f_in.deq[15:0];
+	 copyReadCount <= regv;
+	 copyWriteCount <= regv;
+      endaction
+      for (ii <= 0; ii < 4; ii <= ii+1)
+	 f_in.deq;
+      copyBusy <= True;
+   endseq
+      
     rule copyReadRule (copyBusy && (copyReadCount != 0));
        $display("copyRead %h, count %h", copyReadAddr, copyReadCount);
        copy_read_chan.readReq.put(copyReadAddr);
@@ -51,29 +70,23 @@ module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) co
        copyWriteAddr <= copyWriteAddr + 8;
     endrule
     
-    rule copyWriteCompleteRule (copyBusy);
-       let v <- copy_write_chan.writeDone.get;
-       $display("copyWrite count %h", copyWriteCount);
-       if (copyWriteCount == 8) begin
-	  copyBusy <= False;
-	  f_out.enq(copyTag);
-       end
-       copyWriteCount <= copyWriteCount - 8;
-    endrule
-    
-    rule copyStart (!copyBusy);
-       let cmd = f_in.first;
-       $display("doCopy %h %h %h", cmd.fromAddress, cmd.toAddress, cmd.count);
-       copyReadAddr <= cmd.fromAddress;
-       copyWriteAddr <= cmd.toAddress;
-       copyReadCount <= cmd.count;
-       copyWriteCount <= cmd.count;
-       copyTag <= cmd.tag;
-       copyBusy <= True;
-       f_in.deq();
-    endrule
+   Stmt copyFinish = while(True)
+   seq
+      while (!copyBusy) noAction;
+      while (copyWriteCount > 0)
+      action
+	 let v <= copy_write_chan.writeDone.get;
+	 copyWriteCount <= copyWriteCount - 8;	 
+      endaction
+      for (ii <= 0; ii < 7; ii += 1)
+	 f_out.enq(0);
+      f_out.enq(extend(copyTag));
+      copyBusy >= False;
+   endseq
+      
    
    interface Put request = toPut(f_in);
    interface Get response = toGet (f_out);
+   
 endmodule: mkCopyEngine
 
