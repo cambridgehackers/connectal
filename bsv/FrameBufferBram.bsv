@@ -86,8 +86,6 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
     //Vector#(16, Reg#(ScatterGather)) sglist <- replicateM(mkReg(unpack(0)));
     SyncBRAM#(Bit#(8), ScatterGather) sglist <- mkSyncBRAM( 256, clk, rst, clk, rst);
 
-    //Axi3Master#(32,4,6) nullAxiMaster <- mkNullAxi3Master();
-
     SyncBRAM#(Bit#(12), Bit#(32)) syncBRAM <- mkSyncBRAM( 4096, displayClk, displayRst, clk, rst );
     //SyncBRAM#(Bit#(12), Bit#(32)) syncBRAM <- mkSimSyncBRAM( 4096, displayClk, displayRst, clk, rst );
     Reg#(Bit#(12)) pixelCountReg2 <- mkReg(0);
@@ -198,24 +196,24 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
     endmethod
 
    interface Axi3Client axi;
-       interface Axi3ReadClient read;
-           method ActionValue#(Axi3ReadRequest#(32,6)) address() if (runningReg
-								  && readAddrReg != 24'hFFFFFF
-								  && readAddrReg < readLimitReg
-								  && readAddrReg <= segmentLimitReg
-								  );
-               Bit#(32) addr = extend(readAddrReg) + segmentOffsetReg;
-	       Bit#(5) burstLen = burstCount-1;
-               readAddrReg <= readAddrReg + burstCount*bytesPerWord;
-               return Axi3ReadRequest { address: addr, burstLen: truncate(burstLen), id: 0} ;
-           endmethod
-           method Action data(Axi3ReadResponse#(32,6) response);
-               pixelCountReg2 <= pixelCountReg2 + pixelsPerWord;
-               syncBRAM.portB.write(pixelCountReg2 / pixelsPerWord, response.data);
-           endmethod
-       endinterface
-
-       //interface Axi3WriteClient write = nullAxiClient.write;
+      interface Get req_ar;
+	 method ActionValue#(Axi3ReadRequest#(32,6)) get() if (runningReg
+							       && readAddrReg != 24'hFFFFFF
+							       && readAddrReg < readLimitReg
+							       && readAddrReg <= segmentLimitReg
+							       );
+            Bit#(32) addr = extend(readAddrReg) + segmentOffsetReg;
+	    Bit#(5) burstLen = burstCount-1;
+            readAddrReg <= readAddrReg + burstCount*bytesPerWord;
+            return Axi3ReadRequest { address: addr, burstLen: truncate(burstLen), id: 0} ;
+         endmethod
+      endinterface
+      interface Put resp_read;
+	 method Action put(Axi3ReadResponse#(32,6) response);
+            pixelCountReg2 <= pixelCountReg2 + pixelsPerWord;
+            syncBRAM.portB.write(pixelCountReg2 / pixelsPerWord, response.data);
+	 endmethod
+      endinterface
    endinterface
    interface NrccBRAM buffer = syncBRAM.portA;
 endmodule

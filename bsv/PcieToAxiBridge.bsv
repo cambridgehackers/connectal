@@ -740,8 +740,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 
     interface GetPut tlps = tuple2(toGet(tlpOutFifo),toPut(tlpInFifo));
     interface Axi3Server slave3;
-	interface Axi3WriteServer write;
-	   method Action address(Axi3WriteRequest#(40, 12) req)
+	interface Put req_aw;
+	   method Action put(Axi3WriteRequest#(40, 12) req)
 	      if (writeBurstCount == 0);
 
 	      let burstLen = req.burstLen;
@@ -786,22 +786,26 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      tlpWriteHeaderFifo.enq(tlp);
 	      writeBurstCount <= zeroExtend(burstLen)+1;
 	      writeTag <= truncate(awid);
-           endmethod: address
-	   method Action data(Axi3WriteData#(busWidth,busWidthBytes,12) wdata)
+           endmethod
+	endinterface : req_aw
+       interface Put resp_write;
+	   method Action put(Axi3WriteData#(busWidth,busWidthBytes,12) wdata)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
 
 	      writeBurstCount <= writeBurstCount - 1;
 	      Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
 	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
-           endmethod: data
-	   method ActionValue#(Axi3WriteResponse#(12)) response();
+           endmethod
+       endinterface : resp_write
+       interface Get resp_b;
+	   method ActionValue#(Axi3WriteResponse#(12)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
 	      return Axi3WriteResponse { code: 0, id: extend(tag)};
-           endmethod: response
-	endinterface
-	interface Axi3ReadServer read;
-	   method Action address(Axi3ReadRequest#(40,12) req) if (writeDwCount == 0);
+           endmethod
+	endinterface: resp_b
+       interface Put req_ar;
+	   method Action put(Axi3ReadRequest#(40,12) req) if (writeDwCount == 0);
 	      let burstLen = req.burstLen;
 	      let addr = req.address;
 	      let arid = req.id;
@@ -838,8 +842,10 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 		   tlp.be = 16'hfff0;
 	       end
 	       tlpOutFifo.enq(tlp);
-           endmethod: address
-	   method ActionValue#(Axi3ReadResponse#(buswidth,12)) data() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
+           endmethod
+       endinterface : req_ar
+       interface Get resp_read;
+	   method ActionValue#(Axi3ReadResponse#(buswidth,12)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
 	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
 	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
@@ -847,12 +853,12 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
 	      return Axi3ReadResponse { data: v, last: 0, id: extend(completionTagMimo.first[0]), code: 0 };
-           endmethod: data
-	endinterface: read
+           endmethod
+	endinterface: resp_read
     endinterface: slave3
     interface Axi4Server slave4;
-	interface Axi4WriteServer write;
-	   method Action address(Axi4WriteRequest#(40,12) req)
+       interface Put req_aw;
+	   method Action put(Axi4WriteRequest#(40,12) req)
 	      if (writeBurstCount == 0);
 
 	      let burstLen = req.burstLen;
@@ -902,22 +908,26 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      tlpWriteHeaderFifo.enq(tlp);
 	      writeBurstCount <= zeroExtend(burstLen)+1;
 	      writeTag <= truncate(awid);
-           endmethod: address
-	   method Action data(Axi4WriteData#(buswidth,busWidthBytes,12) wdata)
+           endmethod
+       endinterface: req_aw
+       interface Put resp_write;
+	   method Action put(Axi4WriteData#(buswidth,busWidthBytes,12) wdata)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
 
 	      writeBurstCount <= writeBurstCount - 1;
 	      Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
 	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
-           endmethod: data
-	   method ActionValue#(Axi4WriteResponse#(12)) response();
+           endmethod
+       endinterface
+       interface Get resp_b;
+	   method ActionValue#(Axi4WriteResponse#(12)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
 	      return Axi4WriteResponse { code: 0, id: extend(tag)};
-           endmethod: response
-	endinterface
-	interface Axi4ReadServer read;
-	   method Action address(Axi4ReadRequest#(40,12) req) if (writeDwCount == 0);
+           endmethod
+	endinterface: resp_b
+        interface Put req_ar;
+	   method Action put(Axi4ReadRequest#(40,12) req) if (writeDwCount == 0);
 	      let burstLen = req.burstLen;
 	      let addr = req.address;
 	      let arid = req.id;
@@ -954,8 +964,10 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 		   tlp.be = 16'hfff0;
 	       end
 	       tlpOutFifo.enq(tlp);
-           endmethod: address
-	   method ActionValue#(Axi4ReadResponse#(buswidth,12)) data() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
+           endmethod
+       endinterface: req_ar
+       interface Get resp_read;
+	   method ActionValue#(Axi4ReadResponse#(buswidth,12)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
 	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
 	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
@@ -963,8 +975,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
 	      return Axi4ReadResponse { data: v, last: 0, id: zeroExtend(completionTagMimo.first[0]), code: 0 };
-           endmethod: data
-	endinterface: read
+           endmethod
+	endinterface: resp_read
     endinterface: slave4
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
    interface Reg use4dw = use4dwReg;

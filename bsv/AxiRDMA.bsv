@@ -59,13 +59,13 @@ endinterface
 
 interface AxiDMAWriteInternal#(numeric type dsz, numeric type dbytes);
    interface DMAWrite write;
-   interface Axi3WriteClient#(40,dsz,dbytes,12) m_axi_write;
+   interface Axi3Client#(40,dsz,dbytes,12) m_axi;
    interface ConfigureSglist configure;
 endinterface
 
 interface AxiDMAReadInternal#(numeric type dsz, numeric type dbytes);
    interface DMARead read;
-   interface Axi3ReadClient#(40,dsz,12) m_axi_read;
+   interface Axi3Client#(40,dsz,dbytes,12) m_axi;
    interface ConfigureSglist configure;
 endinterface
 
@@ -148,34 +148,41 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       endmethod
    endinterface
 
-   interface Axi3ReadClient m_axi_read;
-      method ActionValue#(Axi3ReadRequest#(40,12)) address();
-	 let req = reqFifo.first();
-	 reqFifo.deq();
-	 let physAddr = paFifo.first();
-	 paFifo.deq();
+   interface Axi3Client m_axi;
+      interface Get req_ar;
+	 method ActionValue#(Axi3ReadRequest#(40,12)) get();
+	    let req = reqFifo.first();
+	    reqFifo.deq();
+	    let physAddr = paFifo.first();
+	    paFifo.deq();
 
-	 dreqFifo.enq(req);
-	 return Axi3ReadRequest{address:physAddr, burstLen:truncate(req.burstLen-1), id:extend(req.tag)};
-      endmethod
-      method Action data(Axi3ReadResponse#(dsz,12) response);
-	 let activeChan = chanFifo.first();
-	 let resp = dreqFifo.first();
-	 if (valueOf(numReadClients) > 0)
-	    readClients[activeChan].readData.put(DMAData { data: response.data, tag: resp.tag});
+	    dreqFifo.enq(req);
+	    return Axi3ReadRequest{address:physAddr, burstLen:truncate(req.burstLen-1), id:extend(req.tag)};
+	 endmethod
+      endinterface
+      interface Put resp_read;
+	 method Action put(Axi3ReadResponse#(dsz,12) response);
+	    let activeChan = chanFifo.first();
+	    let resp = dreqFifo.first();
+	    if (valueOf(numReadClients) > 0)
+	       readClients[activeChan].readData.put(DMAData { data: response.data, tag: resp.tag});
 
-	 let burstLen = burstReg;
-	 if (burstLen == 0)
-	    burstLen = resp.burstLen;
+	    let burstLen = burstReg;
+	    if (burstLen == 0)
+	       burstLen = resp.burstLen;
 
-	 if (burstLen == 1) begin
-	    dreqFifo.deq();
-	    chanFifo.deq();
-	 end
+	    if (burstLen == 1) begin
+	       dreqFifo.deq();
+	       chanFifo.deq();
+	    end
 
-	 burstReg <= burstLen-1;
-      endmethod
-   endinterface   
+	    burstReg <= burstLen-1;
+	 endmethod
+      endinterface
+      interface Get req_aw = ?;
+      interface Get resp_write = ?;
+      interface Put resp_b = ?;
+   endinterface
 endmodule
 
 
@@ -257,8 +264,11 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
       endmethod
    endinterface
 
-   interface Axi3WriteClient m_axi_write;
-      method ActionValue#(Axi3WriteRequest#(40,12)) address();
+   interface Axi3Client m_axi;
+   interface Get req_ar = ?;
+   interface Put resp_read = ?;
+   interface Get req_aw;
+      method ActionValue#(Axi3WriteRequest#(40,12)) get();
 	 let req = reqFifo.first();
 	 reqFifo.deq();
 	 let physAddr = paFifo.first();
@@ -268,36 +278,41 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 	 dreqFifo.enq(req);
 	 return Axi3WriteRequest{address:physAddr, burstLen:truncate(req.burstLen-1), id:extend(req.tag)};
       endmethod
-      method ActionValue#(Axi3WriteData#(dsz, dbytes, 12)) data();
-	 let activeChan = chanFifo.first();
-	 let resp = dreqFifo.first();
-	 DMAData#(dsz) tagdata = unpack(0);
-	 if (valueOf(numWriteClients) > 0)
-	    tagdata <- writeClients[activeChan].writeData.get();
-	 let burstLen = burstReg;
-	 if (burstLen == 0)
-	    burstLen = resp.burstLen;
+   endinterface
+   interface Get resp_write;
+	 method ActionValue#(Axi3WriteData#(dsz, dbytes, 12)) get();
+	    let activeChan = chanFifo.first();
+	    let resp = dreqFifo.first();
+	    DMAData#(dsz) tagdata = unpack(0);
+	    if (valueOf(numWriteClients) > 0)
+	       tagdata <- writeClients[activeChan].writeData.get();
+	    let burstLen = burstReg;
+	    if (burstLen == 0)
+	       burstLen = resp.burstLen;
 
-	 if (burstLen == 1) begin
-	    dreqFifo.deq();
-	    chanFifo.deq();
-	    respFifo.enq(activeChan);
-	 end
+	    if (burstLen == 1) begin
+	       dreqFifo.deq();
+	       chanFifo.deq();
+	       respFifo.enq(activeChan);
+	    end
 
-	 $display("dmaWrite data data=%h burstLen=%d", tagdata.data, burstLen);
+	    $display("dmaWrite data data=%h burstLen=%d", tagdata.data, burstLen);
 
-	 burstReg <= burstLen-1;
+	    burstReg <= burstLen-1;
 
-	 Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
+	    Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
 
-	 return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: extend(tagdata.tag) };
-      endmethod
-      method Action response(Axi3WriteResponse#(12) resp);
-	 let activeChan = respFifo.first();
-	 respFifo.deq();
-	 if (valueOf(numWriteClients) > 0)
-	    writeClients[activeChan].writeDone.put(truncate(resp.id));
-      endmethod
+	    return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: extend(tagdata.tag) };
+	 endmethod
+      endinterface
+      interface Put resp_b;
+	 method Action put(Axi3WriteResponse#(12) resp);
+	    let activeChan = respFifo.first();
+	    respFifo.deq();
+	    if (valueOf(numWriteClients) > 0)
+	       writeClients[activeChan].writeDone.put(truncate(resp.id));
+	 endmethod
+      endinterface
    endinterface
 endmodule
 
@@ -371,8 +386,12 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
       endmethod
    endinterface
    interface Axi3Client m_axi;
-      interface Axi3WriteClient write = writer.m_axi_write;
-      interface Axi3ReadClient read = reader.m_axi_read;
+      interface Get req_ar = reader.m_axi.req_ar;
+      interface Put resp_read = reader.m_axi.resp_read;
+
+      interface Get req_aw = writer.m_axi.req_aw;
+      interface Get resp_write = writer.m_axi.resp_write;
+      interface Put resp_b = writer.m_axi.resp_b;
    endinterface
 endmodule
 

@@ -23,6 +23,7 @@
 // SOFTWARE.
 
 import Connectable::*;
+import GetPut::*;
 import RegFile::*;
 import BRAMFIFO::*;
 import FIFO::*;
@@ -313,65 +314,6 @@ module mkAxi3SlaveRegFile(Axi3Slave#(addrWidth, busWidth, busWidthBytes, idWidth
        return axiSlave;
 endmodule
 
-module mkClientSlaveConnection#(Axi3WriteClient#(addrWidth, busWidth, busWidthBytes,idWidth) axicw,
-                                Axi3ReadClient#(addrWidth, busWidth,idWidth) axicr,
-                                Axi3Slave#(addrWidth, busWidth, busWidthBytes, idWidth) axiSlave)
-                                () provisos (Div#(busWidth, 8, busWidthBytes),
-				             Add#(1, a__, busWidth),
-					     Add#(busWidth, ccc, 128),
-					     Add#(idWidth, 1, 13));
-       
-    Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
-    Bool verbose = False;
-
-    Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) axic <- mkAxi3Client(axicw, axicr);
-    Axi3Master#(addrWidth, busWidth,busWidthBytes,idWidth) m_axiMaster <- mkAxi3Master(axic);
-    let axir = m_axiMaster.read;
-    let axiw = m_axiMaster.write;
-
-    rule readAddr;
-        Bit#(addrWidth) addr <-axir.readAddr;
-        let burstLen = axir.readBurstLen;
-        let burstWidth = axir.readBurstWidth;
-        let burstType = axir.readBurstType;
-        let burstProt = axir.readBurstProt;
-        let burstCache = axir.readBurstCache;
-	let id = axir.readId;
-        axiSlave.read.readAddr(addr, burstLen, burstWidth, burstType, burstProt, burstCache, id);
-	if (verbose) $display("        MasterSlaveConnection.readAddr %h %d", addr, burstLen+1);
-    endrule
-    rule readData;
-        let data <- axiSlave.read.readData();
-	let id = axiSlave.read.rid();
-        axir.readData(data, 2'b00, 0, id);
-        if (verbose) $display("        MasterSlaveConnection.readData %h", data);
-    endrule
-    rule writeAddr;
-        Bit#(addrWidth) addr <- axiw.writeAddr;
-        let burstLen = axiw.writeBurstLen;
-        let burstWidth = axiw.writeBurstWidth;
-        let burstType = axiw.writeBurstType;
-        let burstProt = axiw.writeBurstProt;
-        let burstCache = axiw.writeBurstCache;
-	let id = axiw.writeId;
-        axiSlave.write.writeAddr(addr, burstLen, burstWidth, burstType, burstProt, burstCache, id);
-        if (verbose) $display("        MasterSlaveConnection.writeAddr %h %d", addr, burstLen+1);
-    endrule
-    rule writeData;
-        let data <- axiw.writeData;
-        let id = axiw.writeWid;
-        let byteEnable = axiw.writeDataByteEnable;
-        let last = axiw.writeLastDataBeat;
-        axiSlave.write.writeData(data, byteEnable, last, id);
-        if (verbose) $display("        MasterSlaveConnection.writeData %h", data);
-    endrule
-    rule writeResponse;
-        let response <- axiSlave.write.writeResponse();
-        let id <- axiSlave.write.bid();
-        axiw.writeResponse(response, id);
-    endrule
-endmodule
-
 module mkAxi3MasterWires#(Axi3Client#(addrWidth,busWidth,busWidthBytes,idWidth) client)(Axi3Master#(addrWidth, busWidth,busWidthBytes,idWidth))
 	 provisos(Div#(busWidth,8,busWidthBytes),Add#(1,a,busWidth));
 
@@ -381,7 +323,7 @@ module mkAxi3MasterWires#(Axi3Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 
     interface Axi3MasterWrite write;
 	method ActionValue#(Bit#(addrWidth)) writeAddr();
-	    let r <- client.write.address();
+	    let r <- client.req_aw.get();
 	    wWriteRequest <= r;
 	    return r.address;
 	endmethod
@@ -410,7 +352,7 @@ module mkAxi3MasterWires#(Axi3Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	endmethod
 
 	method ActionValue#(Bit#(busWidth)) writeData();
-	    let d <- client.write.data();
+	    let d <- client.resp_write.get();
 	    wWriteData <= d;
 	    return d.data;
 	endmethod
@@ -425,13 +367,13 @@ module mkAxi3MasterWires#(Axi3Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	endmethod
 
 	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
-	    client.write.response(Axi3WriteResponse { code: responseCode, id: id});
+	    client.resp_b.put(Axi3WriteResponse { code: responseCode, id: id});
 	endmethod
     endinterface
 
     interface Axi3MasterRead read;
 	method ActionValue#(Bit#(addrWidth)) readAddr();
-	    let r <- client.read.address();
+	    let r <- client.req_ar.get();
 	    wReadRequest <= r;
 	    return r.address;
 	endmethod
@@ -459,7 +401,7 @@ module mkAxi3MasterWires#(Axi3Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	    return wReadRequest.id;
 	endmethod
 	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
-	    client.read.data(Axi3ReadResponse { data: data, code: code, last: last, id: id});
+	    client.resp_read.put(Axi3ReadResponse { data: data, code: code, last: last, id: id});
 	endmethod
    endinterface
 endmodule
@@ -471,18 +413,18 @@ module mkAxi3Master#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
     FIFOF#(Axi3WriteRequest#(addrWidth, idWidth))                     fWriteRequest <- mkSizedBRAMFIFOF(8);
     FIFOF#(Axi3WriteData#(busWidth,busWidthBytes,idWidth)) fWriteData <- mkSizedBRAMFIFOF(8);
 
-    rule writAddrRule;
-        let r <- client.write.address();
+    rule writeAddrRule;
+        let r <- client.req_aw.get();
 	fWriteRequest.enq(r);
     endrule
 
     rule writeDataRule;
-        let d <- client.write.data();
+        let d <- client.resp_write.get();
 	fWriteData.enq(d);
     endrule
 
     rule readAddrRule;
-        let r <- client.read.address();
+        let r <- client.req_ar.get();
 	fReadRequest.enq(r);
     endrule
 
@@ -530,7 +472,7 @@ module mkAxi3Master#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	endmethod
 
 	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
-	    client.write.response(Axi3WriteResponse { code: responseCode, id: id});
+	    client.resp_b.put(Axi3WriteResponse { code: responseCode, id: id});
 	endmethod
     endinterface
 
@@ -563,7 +505,7 @@ module mkAxi3Master#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	    return fReadRequest.first.id;
 	endmethod
 	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
-	    client.read.data(Axi3ReadResponse { data: data, code: code, last: last, id: id});
+	    client.resp_read.put(Axi3ReadResponse { data: data, code: code, last: last, id: id});
 	endmethod
    endinterface
 endmodule
@@ -623,7 +565,7 @@ module mkAxi4MasterWires#(Axi4Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 
     interface Axi4MasterWrite write;
 	method ActionValue#(Bit#(addrWidth)) writeAddr();
-	    let r <- client.write.address();
+	    let r <- client.req_aw.get();
 	    wWriteRequest <= r;
 	    return r.address;
 	endmethod
@@ -652,7 +594,7 @@ module mkAxi4MasterWires#(Axi4Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	endmethod
 
 	method ActionValue#(Bit#(busWidth)) writeData();
-	    let d <- client.write.data();
+	    let d <- client.resp_write.get();
 	    wWriteData <= d;
 	    return d.data;
 	endmethod
@@ -667,13 +609,13 @@ module mkAxi4MasterWires#(Axi4Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	endmethod
 
 	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
-	    client.write.response(Axi4WriteResponse { code: responseCode, id: id});
+	    client.resp_b.put(Axi4WriteResponse { code: responseCode, id: id});
 	endmethod
     endinterface
 
     interface Axi4MasterRead read;
 	method ActionValue#(Bit#(addrWidth)) readAddr();
-	    let r <- client.read.address();
+	    let r <- client.req_ar.get();
 	    wReadRequest <= r;
 	    return r.address;
 	endmethod
@@ -701,7 +643,7 @@ module mkAxi4MasterWires#(Axi4Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	    return wReadRequest.id;
 	endmethod
 	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
-	    client.read.data(Axi4ReadResponse { data: data, code: code, last: last, id: id});
+	    client.resp_read.put(Axi4ReadResponse { data: data, code: code, last: last, id: id});
 	endmethod
    endinterface
 endmodule
@@ -713,18 +655,18 @@ module mkAxi4Master#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
     FIFOF#(Axi4WriteRequest#(addrWidth, idWidth))                     fWriteRequest <- mkSizedBRAMFIFOF(8);
     FIFOF#(Axi4WriteData#(busWidth,busWidthBytes,idWidth)) fWriteData <- mkSizedBRAMFIFOF(8);
 
-    rule writAddrRule;
-        let r <- client.write.address();
+    rule writeAddrRule;
+        let r <- client.req_aw.get();
 	fWriteRequest.enq(r);
     endrule
 
     rule writeDataRule;
-        let d <- client.write.data();
+        let d <- client.resp_write.get();
 	fWriteData.enq(d);
     endrule
 
     rule readAddrRule;
-        let r <- client.read.address();
+        let r <- client.req_ar.get();
 	fReadRequest.enq(r);
     endrule
 
@@ -772,7 +714,7 @@ module mkAxi4Master#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	endmethod
 
 	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
-	    client.write.response(Axi4WriteResponse { code: responseCode, id: id});
+	    client.resp_b.put(Axi4WriteResponse { code: responseCode, id: id});
 	endmethod
     endinterface
 
@@ -805,7 +747,7 @@ module mkAxi4Master#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	    return fReadRequest.first.id;
 	endmethod
 	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
-	    client.read.data(Axi4ReadResponse { data: data, code: code, last: last, id: id});
+	    client.resp_read.put(Axi4ReadResponse { data: data, code: code, last: last, id: id});
 	endmethod
    endinterface
 endmodule
