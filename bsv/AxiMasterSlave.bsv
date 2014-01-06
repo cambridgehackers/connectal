@@ -328,7 +328,7 @@ module mkAxi3MasterWires#(Axi3Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	    return r.address;
 	endmethod
 	method Bit#(4) writeBurstLen();
-	    return wWriteRequest.burstLen;
+	    return wWriteRequest.len;
 	endmethod
 	method Bit#(3) writeBurstWidth();
 	    if (valueOf(busWidth) == 32)
@@ -378,7 +378,7 @@ module mkAxi3MasterWires#(Axi3Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	    return r.address;
 	endmethod
 	method Bit#(4) readBurstLen();
-	    return wReadRequest.burstLen;
+	    return wReadRequest.len;
 	endmethod
 	method Bit#(3) readBurstWidth();
 	    if (valueOf(busWidth) == 32)
@@ -434,7 +434,7 @@ module mkAxi3Master#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	    return fWriteRequest.first.address;
 	endmethod
 	method Bit#(4) writeBurstLen();
-	    return fWriteRequest.first.burstLen;
+	    return fWriteRequest.first.len;
 	endmethod
 	method Bit#(3) writeBurstWidth();
 	    if (valueOf(busWidth) == 32)
@@ -482,7 +482,7 @@ module mkAxi3Master#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	    return fReadRequest.first.address;
 	endmethod
 	method Bit#(4) readBurstLen();
-	    return fReadRequest.first.burstLen;
+	    return fReadRequest.first.len;
 	endmethod
 	method Bit#(3) readBurstWidth();
 	    if (valueOf(busWidth) == 32)
@@ -570,7 +570,7 @@ module mkAxi4MasterWires#(Axi4Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	    return r.address;
 	endmethod
 	method Bit#(8) writeBurstLen();
-	    return wWriteRequest.burstLen;
+	    return wWriteRequest.len;
 	endmethod
 	method Bit#(3) writeBurstWidth();
 	    if (valueOf(busWidth) == 32)
@@ -620,7 +620,7 @@ module mkAxi4MasterWires#(Axi4Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	    return r.address;
 	endmethod
 	method Bit#(8) readBurstLen();
-	    return wReadRequest.burstLen;
+	    return wReadRequest.len;
 	endmethod
 	method Bit#(3) readBurstWidth();
 	    if (valueOf(busWidth) == 32)
@@ -676,7 +676,7 @@ module mkAxi4Master#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	    return fWriteRequest.first.address;
 	endmethod
 	method Bit#(8) writeBurstLen();
-	    return fWriteRequest.first.burstLen;
+	    return fWriteRequest.first.len;
 	endmethod
 	method Bit#(3) writeBurstWidth();
 	    if (valueOf(busWidth) == 32)
@@ -724,7 +724,7 @@ module mkAxi4Master#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	    return fReadRequest.first.address;
 	endmethod
 	method Bit#(8) readBurstLen();
-	    return fReadRequest.first.burstLen;
+	    return fReadRequest.first.len;
 	endmethod
 	method Bit#(3) readBurstWidth();
 	    if (valueOf(busWidth) == 32)

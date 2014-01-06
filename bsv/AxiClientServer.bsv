@@ -22,16 +22,28 @@
 
 import GetPut::*;
 import Connectable::*;
+import DefaultValue::*;
 
 typedef struct {
    Bit#(addrWidth) address;
-   Bit#(4) burstLen;
-   Bit#(3) burstWidth; // assume matches bus width of Axi3Client
-   //Bit#(2) readBurstType();  // drive with 2'b01
-   //Bit#(2) readBurstProt(); // drive with 3'b000
-   //Bit#(3) readBurstCache(); // drive with 4'b0011
+   Bit#(4) len;
+   Bit#(3) size; // assume matches bus width of Axi3Client
+   Bit#(2) burst;  // drive with 2'b01
+   Bit#(2) prot; // drive with 3'b000
+   Bit#(3) cache; // drive with 4'b0011
    Bit#(idWidth) id;
 } Axi3ReadRequest#(type addrWidth, type idWidth) deriving (Bits);
+
+function Bit#(3) axiBusSize(Integer busWidth);
+   if (busWidth == 32)
+      return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+   else if (busWidth == 64)
+      return 3'b011;
+   else if (busWidth == 128)
+      return 3'b100;
+   else
+      return 3'b011;
+endfunction
 
 typedef struct {
    Bit#(busWidth) data;
@@ -42,11 +54,11 @@ typedef struct {
 
 typedef struct {
    Bit#(addrWidth) address;
-   Bit#(4) burstLen;
-   Bit#(3) burstWidth; // assume matches bus width of Axi3Client
-   //Bit#(2) burstType;  // drive with 2'b01
-   //Bit#(2) burstProt; // drive with 3'b000
-   //Bit#(3) burstCache; // drive with 4'b0011
+   Bit#(4) len;
+   Bit#(3) size; // assume matches bus width of Axi3Client
+   Bit#(2) burst;  // drive with 2'b01
+   Bit#(2) prot; // drive with 3'b000
+   Bit#(3) cache; // drive with 4'b0011
    Bit#(idWidth) id;
 } Axi3WriteRequest#(type addrWidth, type idWidth) deriving (Bits);
 
@@ -80,11 +92,11 @@ endinterface
 
 typedef struct {
     Bit#(addrWidth) address;
-    Bit#(8) burstLen;
-    Bit#(3) burstWidth; // assume matches bus width of Axi4Client
-    //Bit#(2) readBurstType();  // drive with 2'b01
-    //Bit#(2) readBurstProt(); // drive with 3'b000
-    //Bit#(3) readBurstCache(); // drive with 4'b0011
+    Bit#(8) len;
+    Bit#(3) size; // assume matches bus width of Axi4Client
+    Bit#(2) burst;  // drive with 2'b01
+    Bit#(2) prot; // drive with 3'b000
+    Bit#(3) cache; // drive with 4'b0011
     Bit#(idWidth) id;
 } Axi4ReadRequest#(type addrWidth, type idWidth) deriving (Bits);
 
@@ -97,11 +109,11 @@ typedef struct {
 
 typedef struct {
     Bit#(addrWidth) address;
-    Bit#(8) burstLen;
-    Bit#(3) burstWidth; // assume matches bus width of Axi4Client
-    //Bit#(2) burstType;  // drive with 2'b01
-    //Bit#(2) burstProt; // drive with 3'b000
-    //Bit#(3) burstCache; // drive with 4'b0011
+    Bit#(8) len;
+    Bit#(3) size; // assume matches bus width of Axi4Client
+    Bit#(2) burst;  // drive with 2'b01
+    Bit#(2) prot; // drive with 3'b000
+    Bit#(3) cache; // drive with 4'b0011
     Bit#(idWidth) id;
 } Axi4WriteRequest#(type addrWidth, type idWidth) deriving (Bits);
 

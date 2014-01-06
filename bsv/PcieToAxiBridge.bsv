@@ -744,7 +744,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	   method Action put(Axi3WriteRequest#(40, 12) req)
 	      if (writeBurstCount == 0);
 
-	      let burstLen = req.burstLen;
+	      let burstLen = req.len;
 	      let addr = req.address;
 	      let awid = req.id;
 
@@ -806,7 +806,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	endinterface: resp_b
        interface Put req_ar;
 	   method Action put(Axi3ReadRequest#(40,12) req) if (writeDwCount == 0);
-	      let burstLen = req.burstLen;
+	      let burstLen = req.len;
 	      let addr = req.address;
 	      let arid = req.id;
 
@@ -861,7 +861,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	   method Action put(Axi4WriteRequest#(40,12) req)
 	      if (writeBurstCount == 0);
 
-	      let burstLen = req.burstLen;
+	      let burstLen = req.len;
 	      let addr = req.address;
 	      let awid = req.id;
 
@@ -928,7 +928,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	endinterface: resp_b
         interface Put req_ar;
 	   method Action put(Axi4ReadRequest#(40,12) req) if (writeDwCount == 0);
-	      let burstLen = req.burstLen;
+	      let burstLen = req.len;
 	      let addr = req.address;
 	      let arid = req.id;
 
