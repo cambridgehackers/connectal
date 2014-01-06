@@ -51,27 +51,33 @@ extern "C" {
 
   void write_pareff32(unsigned long pref, unsigned long offset, unsigned int data){
     if(buffer_len[pref-1] <= offset)
-      fprintf(stderr, "write_pareff(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
+      fprintf(stderr, "write_pareff32(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
     *(unsigned int *)&buffer[pref-1][offset] = data;
   }
 
   unsigned int read_pareff32(unsigned long pref, unsigned long offset){
     if(buffer_len[pref-1] <= offset)
-      fprintf(stderr, "read_pareff(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
-    return *(unsigned int *)&buffer[pref-1][offset];
+      fprintf(stderr, "read_pareff32(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
+    unsigned int rv = *(unsigned int *)&buffer[pref-1][offset];
+    //fprintf(stderr, "read_pareff32(pref=%08lx, offset=%08lx)=%08x\n", pref, offset,rv);
+    return rv;
   }
 
   void write_pareff64(unsigned long pref, unsigned long offset, unsigned long long data){
     if(buffer_len[pref-1] <= offset)
-      fprintf(stderr, "write_pareff(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
+      fprintf(stderr, "write_pareff64(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
     *(unsigned long long *)&buffer[pref-1][offset] = data;
+    //fprintf(stderr, "write_pareff64(pref=%08lx, offset=%08lx, data=%016llx)\n", pref, offset, data);
   }
 
   unsigned long long read_pareff64(unsigned long pref, unsigned long offset){
     if(buffer_len[pref-1] <= offset)
-      fprintf(stderr, "read_pareff(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
-    return *(unsigned long long *)&buffer[pref-1][offset];
+      fprintf(stderr, "read_pareff64(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
+    unsigned long long rv = *(unsigned long long *)&buffer[pref-1][offset];
+    //fprintf(stderr, "read_pareff64(pref=%08lx, offset=%08lx)=%016llx\n", pref, offset,rv);
+    return rv;
   }
+
 
   void pareff(unsigned long pref, unsigned long size){
     assert(pref < 16);

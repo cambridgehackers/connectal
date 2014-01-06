@@ -62,7 +62,7 @@ void connect_socket(channel *c)
   strcpy(c->local.sun_path, c->path);
   len = strlen(c->local.sun_path) + sizeof(c->local.sun_family);
   while (connect(c->s2, (struct sockaddr *)&(c->local), len) == -1) {
-    if(connect_attempts++ > 0){
+    if(connect_attempts++ > 16){
       fprintf(stderr,"%s (%s) connect error %s\n",__FUNCTION__, c->path, strerror(errno));
       exit(1);
     }

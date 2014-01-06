@@ -22,14 +22,10 @@
 
 import Vector::*;
 import FIFOF::*;
-import BRAMFIFO::*;
 import GetPut::*;
 
-import AxiClientServer::*;
 import PortalMemory::*;
 import PortalRMemory::*;
-import AxiRDMA::*;
-import BsimRDMA::*;
 import BlueScope::*;
 
 interface MemcpyRequest;
@@ -78,7 +74,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt - extend(burstLen);
       streamRdOff <= streamRdOff + deltaOffset;
-      // $display("readReq.put handle=%h address=%h", streamRdHandle, streamRdOff);
+      //$display("readReq.put handle=%h address=%h, burstlen=%h", streamRdHandle, streamRdOff, burstLen);
       dma_stream_read_server.readReq.put(DMAAddressRequest {handle: streamRdHandle, address: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
       //indication.readReq(streamRdCnt);
    endrule
