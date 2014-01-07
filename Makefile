@@ -37,10 +37,10 @@ $(bsimtests):
 bitstests = $(addsuffix .bits, $(testnames))
 
 $(bitstests):
-	rm -fr examples/$(basename $@)/zedboard
-	make BOARD=zedboard -C examples/$(basename $@) all
-	make -C examples/$(basename $@)/zedboard bits
-	(cd examples/$(basename $@)/zedboard; ndk-build)
+	rm -fr examples/$(basename $@)/zedboardnew
+	make BOARD=zedboardnew -C examples/$(basename $@) all
+	make -C examples/$(basename $@)/zedboardnew bits
+	(cd examples/$(basename $@)/zedboardnew; ndk-build)
 
 gentests = $(addsuffix .gen, $(testnames))
 
