@@ -23,7 +23,8 @@ testnames = echo     \
 	    memwrite \
             mempoke  \
             strstr   \
-            struct 
+            struct   \
+	    ring
 
 
 bsimtests = $(addsuffix .bsim, $(testnames))
@@ -76,11 +77,3 @@ xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
 	mv ./proj_pcie/proj_pcie.srcs/sources_1/ip/pcie_7x_0 xilinx/pcie_7x_v2_1
 	rm -fr ./proj_pcie
 
-test-ring/sources/bsim: examples/ring/Ring.bsv examples/ring/testring.cpp
-	-pkill bluetcl
-	rm -fr test-ring
-	./genxpsprojfrombsv -B $(BOARD) -p test-ring -b Ring examples/ring/Ring.bsv examples/ring/RingTypes.bsv bsv/BlueScope.bsv bsv/AxiSDMA.bsv bsv/PortalMemory.bsv -s examples/ring/testring.cpp
-	cd test-ring; make x86_exe; cd ..
-	cd test-ring; make bsim; cd ..
-#	test-ring/sources/bsim &
-#	test-ring/jni/ring
