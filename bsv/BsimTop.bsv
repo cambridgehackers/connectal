@@ -39,7 +39,8 @@ import "BDPI" function Bool                     readReq();
 import "BDPI" function ActionValue#(Bit#(32))  readAddr();
 import "BDPI" function Action        readData(Bit#(32) d);
 
-
+		 
+		 
 module mkBsimTop();
    let top <- mkPortalTop();
    let wf <- mkPipelineFIFO;
@@ -54,6 +55,8 @@ module mkBsimTop();
 		      initPortal(7);
                    endaction);
    let init_fsm <- mkOnce(init_seq);
+   
+   (* descending_urgency = "rdResp, rdReq" *)
    rule init_rule;
       init_fsm.start;
    endrule
