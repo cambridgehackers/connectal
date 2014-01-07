@@ -29,9 +29,11 @@ typedef struct {
    Bit#(4) len;
    Bit#(3) size; // assume matches bus width of Axi3Client
    Bit#(2) burst;  // drive with 2'b01
-   Bit#(2) prot; // drive with 3'b000
-   Bit#(3) cache; // drive with 4'b0011
+   Bit#(3) prot; // drive with 3'b000
+   Bit#(4) cache; // drive with 4'b0011
    Bit#(idWidth) id;
+   Bit#(2) lock;
+   Bit#(4) qos;
 } Axi3ReadRequest#(type addrWidth, type idWidth) deriving (Bits);
 
 function Bit#(3) axiBusSize(Integer busWidth);
@@ -47,7 +49,7 @@ endfunction
 
 typedef struct {
    Bit#(busWidth) data;
-   Bit#(2) code;
+   Bit#(2) resp;
    Bit#(1) last;
    Bit#(idWidth) id;
 } Axi3ReadResponse#(type busWidth, type idWidth) deriving (Bits);
@@ -57,9 +59,11 @@ typedef struct {
    Bit#(4) len;
    Bit#(3) size; // assume matches bus width of Axi3Client
    Bit#(2) burst;  // drive with 2'b01
-   Bit#(2) prot; // drive with 3'b000
-   Bit#(3) cache; // drive with 4'b0011
+   Bit#(3) prot; // drive with 3'b000
+   Bit#(4) cache; // drive with 4'b0011
    Bit#(idWidth) id;
+   Bit#(2) lock;
+   Bit#(4) qos;
 } Axi3WriteRequest#(type addrWidth, type idWidth) deriving (Bits);
 
 typedef struct {
@@ -70,7 +74,7 @@ typedef struct {
 } Axi3WriteData#(type busWidth, type busWidthBytes, type idWidth) deriving (Bits);
 
 typedef struct {
-    Bit#(2) code;
+    Bit#(2) resp;
     Bit#(idWidth) id;
 } Axi3WriteResponse#(type idWidth) deriving (Bits);
 
@@ -95,14 +99,16 @@ typedef struct {
     Bit#(8) len;
     Bit#(3) size; // assume matches bus width of Axi4Client
     Bit#(2) burst;  // drive with 2'b01
-    Bit#(2) prot; // drive with 3'b000
-    Bit#(3) cache; // drive with 4'b0011
+    Bit#(3) prot; // drive with 3'b000
+    Bit#(4) cache; // drive with 4'b0011
     Bit#(idWidth) id;
+    Bit#(2) lock;
+    Bit#(4) qos;
 } Axi4ReadRequest#(type addrWidth, type idWidth) deriving (Bits);
 
 typedef struct {
     Bit#(busWidth) data;
-    Bit#(2) code;
+    Bit#(2) resp;
     Bit#(1) last;
     Bit#(idWidth) id;
 } Axi4ReadResponse#(type busWidth, type idWidth) deriving (Bits);
@@ -112,9 +118,11 @@ typedef struct {
     Bit#(8) len;
     Bit#(3) size; // assume matches bus width of Axi4Client
     Bit#(2) burst;  // drive with 2'b01
-    Bit#(2) prot; // drive with 3'b000
-    Bit#(3) cache; // drive with 4'b0011
+    Bit#(3) prot; // drive with 3'b000
+    Bit#(4) cache; // drive with 4'b0011
     Bit#(idWidth) id;
+    Bit#(2) lock;
+    Bit#(4) qos;
 } Axi4WriteRequest#(type addrWidth, type idWidth) deriving (Bits);
 
 typedef struct {
@@ -125,7 +133,7 @@ typedef struct {
 } Axi4WriteData#(type busWidth, type busWidthBytes, type idWidth) deriving (Bits);
 
 typedef struct {
-    Bit#(2) code;
+    Bit#(2) resp;
     Bit#(idWidth) id;
 } Axi4WriteResponse#(type idWidth) deriving (Bits);
 
