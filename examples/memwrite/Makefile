@@ -1,8 +1,8 @@
 
 BSVDIR=../../bsv
-S2H = MemwriteRequest BlueScopeRequest DMARequest
-H2S = MemwriteIndication BlueScopeIndication DMAIndication
-BSVFILES = Memwrite.bsv $(BSVDIR)/BlueScope.bsv $(BSVDIR)/PortalMemory.bsv
+S2H = MemwriteRequest DMARequest
+H2S = MemwriteIndication DMAIndication
+BSVFILES = Memwrite.bsv  $(BSVDIR)/PortalMemory.bsv
 CPPFILES=testmemwrite.cpp
 
 include ../../Makefile.common

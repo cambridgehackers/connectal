@@ -112,7 +112,7 @@ module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(dsz)) readC
    endrule
    
    rule readData if (burstReg > 0);
-      addrReg <= addrReg+1;
+      addrReg <= addrReg+fromInteger(valueOf(TDiv#(dsz,8)));
       burstReg <= burstReg-1;
       Bit#(dsz) v <- rw.read_pareff(handleReg, addrReg);
       //$display("dmaread.readData activeChan=%d handle=%h addr=%h burst=%h v=%h", activeChan, handleReg, addrReg, burstReg, v);
@@ -157,7 +157,7 @@ module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(dsz)) wr
    endrule
    
    rule writeData if (burstReg > 0);
-      addrReg <= addrReg+1;
+      addrReg <= addrReg+fromInteger(valueOf(TDiv#(dsz,8)));
       let v <- writeClients[activeChan].writeData.get();
       if (v.tag != tagReg) begin
 	 //$display("BsimWriteData tag mismatch %h expected %h", v.tag, tagReg);

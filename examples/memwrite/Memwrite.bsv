@@ -21,16 +21,11 @@
 // SOFTWARE.
 
 import FIFOF::*;
-import BRAMFIFO::*;
 import GetPut::*;
-
 
 import AxiClientServer::*;
 import PortalMemory::*;
 import PortalRMemory::*;
-import AxiRDMA::*;
-import BsimRDMA::*;
-import BlueScope::*;
 
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) handle, Bit#(32) numWords, Bit#(32) burstLen);

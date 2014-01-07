@@ -24,10 +24,12 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <string.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <sys/select.h> // in MacOSX, poll() does not work with devices!!
 #include <dirent.h>
+#include <unistd.h>
 
 static struct termios orig_terminfo;
 static void signal_handler(int signame)
@@ -38,7 +40,7 @@ static void signal_handler(int signame)
 }
 
 static char buf[1000];
-int main(int argc, char *argv)
+int main(int argc, char **argv)
 {
     struct termios terminfo;
     struct sigaction sact;

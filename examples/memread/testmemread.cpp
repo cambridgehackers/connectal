@@ -33,7 +33,7 @@ public:
     //fprintf(stderr, "Memread::readReq %lx\n", v);
   }
   virtual void readDone(unsigned long v){
-    fprintf(stderr, "Memread::readDone %lx\n", v);
+    fprintf(stderr, "Memread::readDone mismatch=%lx\n", v);
     exit(0);
   }
   virtual void started(unsigned long words){

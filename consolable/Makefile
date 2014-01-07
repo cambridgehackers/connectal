@@ -1,3 +1,3 @@
 
 all:
-	cc -o consolable consolable.c
+	cc -Wall -o consolable consolable.c

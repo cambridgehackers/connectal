@@ -1,8 +1,8 @@
 
 BSVDIR=../../bsv
-S2H = MemreadRequest BlueScopeRequest DMARequest
-H2S = MemreadIndication BlueScopeIndication DMAIndication
-BSVFILES = Memread.bsv $(BSVDIR)/BlueScope.bsv $(BSVDIR)/PortalMemory.bsv
+S2H = MemreadRequest DMARequest
+H2S = MemreadIndication DMAIndication
+BSVFILES = Memread.bsv  $(BSVDIR)/PortalMemory.bsv
 CPPFILES=testmemread.cpp
 
 include ../../Makefile.common

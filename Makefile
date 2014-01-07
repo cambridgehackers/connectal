@@ -32,7 +32,7 @@ $(bsimtests):
 	pkill bluetcl || true
 	rm -fr examples/$(basename $@)/bluesim
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
-	(cd examples/$(basename $@)/bluesim; ./sources/bsim& sleep 2; ./jni/bsim_exe)
+	(cd examples/$(basename $@)/bluesim; ./sources/bsim& ./jni/bsim_exe)
 
 bitstests = $(addsuffix .bits, $(testnames))
 
