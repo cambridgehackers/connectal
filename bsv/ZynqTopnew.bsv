@@ -27,7 +27,7 @@ import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiMasterSlave    :: *;
-import PS7Helper::*;
+import PS7::*;
 
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
