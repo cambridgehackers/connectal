@@ -92,7 +92,10 @@ module mkPortalTop(StdPortalDmaTop);
    interface StdAxi3Slave ctrl = ctrl_mux;
 `ifndef BSIM
    interface Vector m_axi = replicate(dma.m_axi);
+`else
+   interface Vector m_axi = ?;
 `endif
+   interface Leds leds = ?;
 endmodule
 
 

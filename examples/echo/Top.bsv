@@ -48,5 +48,6 @@ module mkPortalTop(StdPortalTop);
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
    interface LEDS leds = echoRequestInternal.leds;
+   interface Axi3Client m_axi = ?;
 
 endmodule : mkPortalTop
