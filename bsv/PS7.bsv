@@ -30,52 +30,24 @@ import PPS7::*;
 import AxiMasterSlave::*;
 import CtrlMux::*;
 import Portal::*;
-
-typedef struct {
-    Bit#(32)                  addr;
-    Bit#(2)                   burst;
-    Bit#(4)                   cache;
-    Bit#(id_width)            id;
-    Bit#(4)                   len;
-    Bit#(2)                   lock;
-    Bit#(3)                   prot;
-    Bit#(4)                   qos;
-    Bit#(3)                   size;
-} AxiREQ#(numeric type id_width);
-typedef struct {
-    Bit#(id_width)            id;
-    Bit#(2)                   resp;
-} AxiRESP#(numeric type id_width);
-typedef struct {
-    Bit#(data_width)          data;
-    Bit#(1)                   last;
-} AxiDATA#(numeric type data_width);
-typedef struct {
-    Bit#(id_width)            wid;
-    AxiDATA#(data_width)      wd;
-    Bit#(TDiv#(data_width, 8))wstrb;
-} AxiWrite#(numeric type data_width, numeric type id_width);
-typedef struct {
-    AxiRESP#(id_width)        r;
-    AxiDATA#(data_width)      rd;
-} AxiRead#(numeric type data_width, numeric type id_width);
+import AxiClientServer::*;
 
 interface AxiMasterCommon#(numeric type data_width, numeric type id_width);
     method Bit#(1)            aresetn();
-    interface Get#(AxiREQ#(id_width)) req_ar;
-    interface Get#(AxiREQ#(id_width)) req_aw;
-    interface Put#(AxiRead#(data_width, id_width)) resp_read;
-    interface Get#(AxiWrite#(data_width, id_width)) resp_write;
-    interface Put#(AxiRESP#(id_width)) resp_b;
+    interface Get#(Axi3ReadRequest#(32,id_width)) req_ar;
+    interface Get#(Axi3WriteRequest#(32,id_width)) req_aw;
+    interface Put#(Axi3ReadResponse#(data_width, id_width)) resp_read;
+    interface Get#(Axi3WriteData#(data_width, TDiv#(data_width, 8), id_width)) resp_write;
+    interface Put#(Axi3WriteResponse#(id_width)) resp_b;
 endinterface
 
 interface AxiSlaveCommon#(numeric type data_width, numeric type id_width);
     method Bit#(1)            aresetn();
-    interface Put#(AxiREQ#(id_width)) req_ar;
-    interface Put#(AxiREQ#(id_width)) req_aw;
-    interface Put#(AxiWrite#(data_width, id_width)) resp_write;
-    interface Get#(AxiRead#(data_width, id_width)) resp_read;
-    interface Get#(AxiRESP#(id_width)) resp_b;
+    interface Put#(Axi3ReadRequest#(32,id_width)) req_ar;
+    interface Put#(Axi3WriteRequest#(32,id_width)) req_aw;
+    interface Put#(Axi3WriteData#(data_width, TDiv#(data_width, 8), id_width)) resp_write;
+    interface Get#(Axi3ReadResponse#(data_width, id_width)) resp_read;
+    interface Get#(Axi3WriteResponse#(id_width)) resp_b;
 endinterface
 
 interface AxiSlaveHighSpeed#(numeric type data_width, numeric type id_width);
@@ -266,9 +238,9 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
     for (Integer i = 0; i < 2; i = i + 1)
         vtopm_axi_gp[i] = interface AxiMasterCommon#(32, id_width);
             interface Get req_ar;
-                 method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].arvalid() != 0);
-                     AxiREQ#(id_width) v;
-                     v.addr = vm_axi_gp[i].araddr();
+                 method ActionValue#(Axi3ReadRequest#(32,id_width)) get() if (vm_axi_gp[i].arvalid() != 0);
+                     Axi3ReadRequest#(32,id_width) v;
+                     v.address = vm_axi_gp[i].araddr();
                      v.burst = vm_axi_gp[i].arburst();
                      v.cache = vm_axi_gp[i].arcache();
                      v.id = vm_axi_gp[i].arid();
@@ -283,9 +255,9 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                 endmethod
             endinterface
             interface Get req_aw;
-                method ActionValue#(AxiREQ#(id_width)) get() if (vm_axi_gp[i].awvalid() != 0);
-                    AxiREQ#(id_width) v;
-                    v.addr = vm_axi_gp[i].awaddr();
+                method ActionValue#(Axi3WriteRequest#(32,id_width)) get() if (vm_axi_gp[i].awvalid() != 0);
+                    Axi3WriteRequest#(32,id_width) v;
+                    v.address = vm_axi_gp[i].awaddr();
                     v.burst = vm_axi_gp[i].awburst();
                     v.cache = vm_axi_gp[i].awcache();
                     v.id = vm_axi_gp[i].awid();
@@ -300,29 +272,29 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                endmethod
             endinterface
             interface Put resp_read;
-                method Action put(AxiRead#(32, id_width) v) if (vm_axi_gp[i].rready() != 0);
-                    vm_axi_gp[i].rid(v.r.id);
-                    vm_axi_gp[i].rresp(v.r.resp);
-                    vm_axi_gp[i].rdata(v.rd.data);
-                    vm_axi_gp[i].rlast(v.rd.last);
+                method Action put(Axi3ReadResponse#(32, id_width) v) if (vm_axi_gp[i].rready() != 0);
+                    vm_axi_gp[i].rid(v.id);
+                    vm_axi_gp[i].rresp(v.resp);
+                    vm_axi_gp[i].rdata(v.data);
+                    vm_axi_gp[i].rlast(v.last);
 
                     vtopmw_axi_gp[i].rvalid <= 1;
                 endmethod
             endinterface
             interface Get resp_write;
-                method ActionValue#(AxiWrite#(32, id_width)) get() if (vm_axi_gp[i].wvalid() != 0);
-                    AxiWrite#(32, id_width) v;
-                    v.wid = vm_axi_gp[i].wid();
-                    v.wstrb = vm_axi_gp[i].wstrb();
-                    v.wd.data = vm_axi_gp[i].wdata();
-                    v.wd.last = vm_axi_gp[i].wlast();
+                method ActionValue#(Axi3WriteData#(32, TDiv#(32, 8), id_width)) get() if (vm_axi_gp[i].wvalid() != 0);
+                    Axi3WriteData#(32, TDiv#(32, 8), id_width) v;
+                    v.id = vm_axi_gp[i].wid();
+                    v.byteEnable = vm_axi_gp[i].wstrb();
+                    v.data = vm_axi_gp[i].wdata();
+                    v.last = vm_axi_gp[i].wlast();
 
                     vtopmw_axi_gp[i].wready <= 1;
                     return v;
                 endmethod
             endinterface
             interface Put resp_b;
-                method Action put(AxiRESP#(id_width) v) if (vm_axi_gp[i].bready() != 0);
+                method Action put(Axi3WriteResponse#(id_width) v) if (vm_axi_gp[i].bready() != 0);
                     vm_axi_gp[i].bid(v.id);
                     vm_axi_gp[i].bresp(v.resp);
 	       
@@ -352,8 +324,8 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
     for (Integer i = 0; i < 2; i = i + 1)
         vtops_axi_gp[i] = interface AxiSlaveCommon#(32, id_width);
             interface Put req_ar;
-                method Action put(AxiREQ#(id_width) v) if (vs_axi_gp[i].arready() != 0);
-                    vs_axi_gp[i].araddr(v.addr);
+                method Action put(Axi3ReadRequest#(32,id_width) v) if (vs_axi_gp[i].arready() != 0);
+                    vs_axi_gp[i].araddr(v.address);
                     vs_axi_gp[i].arburst(v.burst);
                     vs_axi_gp[i].arcache(v.cache);
                     vs_axi_gp[i].arid(v.id);
@@ -367,8 +339,8 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                 endmethod
             endinterface
             interface Put req_aw;
-                method Action put(AxiREQ#(id_width) v) if (vs_axi_gp[i].awready() != 0);
-                    vs_axi_gp[i].awaddr(v.addr);
+                method Action put(Axi3WriteRequest#(32,id_width) v) if (vs_axi_gp[i].awready() != 0);
+                    vs_axi_gp[i].awaddr(v.address);
                     vs_axi_gp[i].awburst(v.burst);
                     vs_axi_gp[i].awcache(v.cache);
                     vs_axi_gp[i].awid(v.id);
@@ -382,30 +354,30 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                 endmethod
             endinterface
             interface Put resp_write;
-                method Action put(AxiWrite#(32, id_width) v) if (vs_axi_gp[i].wready() != 0);
-                    vs_axi_gp[i].wid(v.wid);
-                    vs_axi_gp[i].wstrb(v.wstrb);
-                    vs_axi_gp[i].wdata(v.wd.data);
-                    vs_axi_gp[i].wlast(v.wd.last);
+                method Action put(Axi3WriteData#(32, TDiv#(32, 8), id_width) v) if (vs_axi_gp[i].wready() != 0);
+                    vs_axi_gp[i].wid(v.id);
+                    vs_axi_gp[i].wstrb(v.byteEnable);
+                    vs_axi_gp[i].wdata(v.data);
+                    vs_axi_gp[i].wlast(v.last);
 
 	            vtopsw_axi_gp[i].wvalid <= 1;
                 endmethod
             endinterface
             interface Get resp_read;
-                method ActionValue#(AxiRead#(32, id_width)) get() if (vs_axi_gp[i].rvalid() != 0);
-                    AxiRead#(32, id_width) v;
-                    v.r.id = vs_axi_gp[i].rid();
-                    v.r.resp = vs_axi_gp[i].rresp();
-                    v.rd.data = vs_axi_gp[i].rdata();
-                    v.rd.last = vs_axi_gp[i].rlast();
+                method ActionValue#(Axi3ReadResponse#(32, id_width)) get() if (vs_axi_gp[i].rvalid() != 0);
+                    Axi3ReadResponse#(32, id_width) v;
+                    v.id = vs_axi_gp[i].rid();
+                    v.resp = vs_axi_gp[i].rresp();
+                    v.data = vs_axi_gp[i].rdata();
+                    v.last = vs_axi_gp[i].rlast();
 
 	            vtopsw_axi_gp[i].rready <= 1;
                     return v;
                 endmethod
             endinterface
             interface Get resp_b;
-                method ActionValue#(AxiRESP#(id_width)) get() if (vs_axi_gp[i].bvalid() != 0);
-                    AxiRESP#(id_width) v;
+                method ActionValue#(Axi3WriteResponse#(id_width)) get() if (vs_axi_gp[i].bvalid() != 0);
+                    Axi3WriteResponse#(id_width) v;
                     v.id = vs_axi_gp[i].bid();
                     v.resp = vs_axi_gp[i].bresp();
 
@@ -437,8 +409,8 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
         vtops_axi_hp[i] = interface AxiSlaveHighSpeed#(data_width, id_width);
             interface AxiSlaveCommon axi;
             interface Put req_ar;
-                method Action put(AxiREQ#(id_width) v) if (vs_axi_hp[i].arready() != 0);
-                    vs_axi_hp[i].araddr(v.addr);
+                method Action put(Axi3ReadRequest#(32,id_width) v) if (vs_axi_hp[i].arready() != 0);
+                    vs_axi_hp[i].araddr(v.address);
                     vs_axi_hp[i].arburst(v.burst);
                     vs_axi_hp[i].arcache(v.cache);
                     vs_axi_hp[i].arid(v.id);
@@ -452,8 +424,8 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                 endmethod
             endinterface
             interface Put req_aw;
-                method Action put(AxiREQ#(id_width) v) if (vs_axi_hp[i].awready() != 0);
-                    vs_axi_hp[i].awaddr(v.addr);
+                method Action put(Axi3WriteRequest#(32,id_width) v) if (vs_axi_hp[i].awready() != 0);
+                    vs_axi_hp[i].awaddr(v.address);
                     vs_axi_hp[i].awburst(v.burst);
                     vs_axi_hp[i].awcache(v.cache);
                     vs_axi_hp[i].awid(v.id);
@@ -467,30 +439,30 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                 endmethod
             endinterface
             interface Put resp_write;
-                method Action put(AxiWrite#(data_width, id_width) v) if (vs_axi_hp[i].wready() != 0);
-                    vs_axi_hp[i].wid(v.wid);
-                    vs_axi_hp[i].wstrb(v.wstrb);
-                    vs_axi_hp[i].wdata(v.wd.data);
-                    vs_axi_hp[i].wlast(v.wd.last);
+                method Action put(Axi3WriteData#(data_width, TDiv#(data_width, 8), id_width) v) if (vs_axi_hp[i].wready() != 0);
+                    vs_axi_hp[i].wid(v.id);
+                    vs_axi_hp[i].wstrb(v.byteEnable);
+                    vs_axi_hp[i].wdata(v.data);
+                    vs_axi_hp[i].wlast(v.last);
 
 	            vtopsw_axi_hp[i].wvalid <= 1;
                 endmethod
             endinterface
             interface Get resp_read;
-                method ActionValue#(AxiRead#(data_width, id_width)) get() if (vs_axi_hp[i].rvalid() != 0);
-                    AxiRead#(data_width, id_width) v;
-                    v.r.id = vs_axi_hp[i].rid();
-                    v.r.resp = vs_axi_hp[i].rresp();
-                    v.rd.data = vs_axi_hp[i].rdata();
-                    v.rd.last = vs_axi_hp[i].rlast();
+                method ActionValue#(Axi3ReadResponse#(data_width, id_width)) get() if (vs_axi_hp[i].rvalid() != 0);
+                    Axi3ReadResponse#(data_width, id_width) v;
+                    v.id = vs_axi_hp[i].rid();
+                    v.resp = vs_axi_hp[i].rresp();
+                    v.data = vs_axi_hp[i].rdata();
+                    v.last = vs_axi_hp[i].rlast();
 
 	            vtopsw_axi_hp[i].rready <= 1;
                     return v;
                 endmethod
             endinterface
             interface Get resp_b;
-                method ActionValue#(AxiRESP#(id_width)) get() if (vs_axi_hp[i].bvalid() != 0);
-                    AxiRESP#(id_width) v;
+                method ActionValue#(Axi3WriteResponse#(id_width)) get() if (vs_axi_hp[i].bvalid() != 0);
+                    Axi3WriteResponse#(id_width) v;
                     v.id = vs_axi_hp[i].bid();
                     v.resp = vs_axi_hp[i].bresp();
 
@@ -572,15 +544,16 @@ endinterface
 typedef ZynqPinsInternal#(4, 32, 4, 64/*data_width*/, 64/*gpio_width*/, 12/*id_width*/, 54) ZynqPins;
 
 typedef AxiSlaveHighSpeed#(64/*data_width*/, 12/*id_width*/) HSSlave;
-typedef AxiREQ#(12/*id_width*/) StdAxiREQ;
+typedef Axi3ReadRequest#(32,12/*id_width*/) StdAxiREQR;
+typedef Axi3WriteRequest#(32,12/*id_width*/) StdAxiREQW;
 
 interface HackInterface;
 endinterface
 
 module mkPS7MasterInternal#(StdAxi3Master m_axi, HSSlave hp)(HackInterface);
     rule s_areqr_rule;
-        let addr <- m_axi.read.readAddr();
-        hp.axi.req_ar.put(StdAxiREQ{ addr: addr[31:0],
+        let address <- m_axi.read.readAddr();
+        hp.axi.req_ar.put(StdAxiREQR{ address: address[31:0],
             len: m_axi.read.readBurstLen(),
             size: m_axi.read.readBurstWidth(),
             burst: m_axi.read.readBurstType(),
@@ -590,8 +563,8 @@ module mkPS7MasterInternal#(StdAxi3Master m_axi, HSSlave hp)(HackInterface);
     endrule
 
     rule s_areqw_rule;
-        let addr <- m_axi.write.writeAddr();
-        hp.axi.req_aw.put(StdAxiREQ{ addr: addr[31:0],
+        let address <- m_axi.write.writeAddr();
+        hp.axi.req_aw.put(StdAxiREQW{ address: address[31:0],
             len: m_axi.write.writeBurstLen(),
             size: m_axi.write.writeBurstWidth(),
             burst: m_axi.write.writeBurstType(),
@@ -607,16 +580,16 @@ module mkPS7MasterInternal#(StdAxi3Master m_axi, HSSlave hp)(HackInterface);
 
     rule s_arespr_rule;
         let s_arespr <- hp.axi.resp_read.get();
-        m_axi.read.readData(s_arespr.rd.data, s_arespr.r.resp, s_arespr.rd.last, s_arespr.r.id);
+        m_axi.read.readData(s_arespr.data, s_arespr.resp, s_arespr.last, s_arespr.id);
     endrule
 
     rule s_arespw_rule;
         let data <- m_axi.write.writeData();
-        AxiWrite#(64/*data_width*/, 12/*id_width*/) s_arespw;
-        s_arespw.wd.data = data;
-        s_arespw.wstrb = m_axi.write.writeDataByteEnable();
-        s_arespw.wd.last = m_axi.write.writeLastDataBeat();
-        s_arespw.wid = m_axi.write.writeWid();
+        Axi3WriteData#(64/*data_width*/, TDiv#(64, 8), 12/*id_width*/) s_arespw;
+        s_arespw.data = data;
+        s_arespw.byteEnable = m_axi.write.writeDataByteEnable();
+        s_arespw.last = m_axi.write.writeLastDataBeat();
+        s_arespw.id = m_axi.write.writeWid();
         hp.axi.resp_write.put(s_arespw);
     endrule
 endmodule
@@ -630,16 +603,16 @@ module mkPS7Slave#(Clock axi_clock, Reset axi_reset, StdAxi3Slave ctrl, Integer 
 
     rule m_ar_rule;
         let m_ar <- ps7.m_axi_gp[0].req_ar.get();
-        ctrl.read.readAddr(m_ar.addr, m_ar.len, m_ar.size, m_ar.burst, m_ar.prot, m_ar.cache, m_ar.id);
+        ctrl.read.readAddr(m_ar.address, m_ar.len, m_ar.size, m_ar.burst, m_ar.prot, m_ar.cache, m_ar.id);
     endrule
 
     rule m_aw_rule;
         let m_aw <- ps7.m_axi_gp[0].req_aw.get();
-        ctrl.write.writeAddr(m_aw.addr, m_aw.len, m_aw.size, m_aw.burst, m_aw.prot, m_aw.cache, m_aw.id);
+        ctrl.write.writeAddr(m_aw.address, m_aw.len, m_aw.size, m_aw.burst, m_aw.prot, m_aw.cache, m_aw.id);
     endrule
 
     rule m_arespb_rule;
-        AxiRESP#(12/*id_width*/) m_arespb;
+        Axi3WriteResponse#(12/*id_width*/) m_arespb;
         m_arespb.resp <- ctrl.write.writeResponse();
         m_arespb.id <- ctrl.write.bid();
         ps7.m_axi_gp[0].resp_b.put(m_arespb);
@@ -647,17 +620,17 @@ module mkPS7Slave#(Clock axi_clock, Reset axi_reset, StdAxi3Slave ctrl, Integer 
 
     rule m_arespr_rule;
         let data <- ctrl.read.readData();
-        AxiRead#(32/*data_width*/, 12/*id_width*/) m_arespr;
-        m_arespr.rd.data = data;
-        m_arespr.r.resp = 2'b0;
-        m_arespr.rd.last = ctrl.read.last();
-        m_arespr.r.id = ctrl.read.rid();
+        Axi3ReadResponse#(32/*data_width*/, 12/*id_width*/) m_arespr;
+        m_arespr.data = data;
+        m_arespr.resp = 2'b0;
+        m_arespr.last = ctrl.read.last();
+        m_arespr.id = ctrl.read.rid();
         ps7.m_axi_gp[0].resp_read.put(m_arespr);
     endrule
 
     rule m_arespw_rule;
         let m_arespw <- ps7.m_axi_gp[0].resp_write.get();
-        ctrl.write.writeData(m_arespw.wd.data, m_arespw.wstrb, m_arespw.wd.last, m_arespw.wid);
+        ctrl.write.writeData(m_arespw.data, m_arespw.byteEnable, m_arespw.last, m_arespw.id);
     endrule
 
 if (nmasters > 0) begin
