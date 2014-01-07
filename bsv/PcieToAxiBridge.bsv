@@ -801,7 +801,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	   method ActionValue#(Axi3WriteResponse#(12)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
-	      return Axi3WriteResponse { code: 0, id: extend(tag)};
+	      return Axi3WriteResponse { resp: 0, id: extend(tag)};
            endmethod
 	endinterface: resp_b
        interface Put req_ar;
@@ -852,7 +852,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
               Bit#(buswidth) v = 0;
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
-	      return Axi3ReadResponse { data: v, last: 0, id: extend(completionTagMimo.first[0]), code: 0 };
+	      return Axi3ReadResponse { data: v, last: 0, id: extend(completionTagMimo.first[0]), resp: 0 };
            endmethod
 	endinterface: resp_read
     endinterface: slave3
@@ -923,7 +923,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
 	   method ActionValue#(Axi4WriteResponse#(12)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
-	      return Axi4WriteResponse { code: 0, id: extend(tag)};
+	      return Axi4WriteResponse { resp: 0, id: extend(tag)};
            endmethod
 	endinterface: resp_b
         interface Put req_ar;
@@ -974,7 +974,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
               Bit#(buswidth) v = 0;
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
-	      return Axi4ReadResponse { data: v, last: 0, id: zeroExtend(completionTagMimo.first[0]), code: 0 };
+	      return Axi4ReadResponse { data: v, last: 0, id: zeroExtend(completionTagMimo.first[0]), resp: 0 };
            endmethod
 	endinterface: resp_read
     endinterface: slave4

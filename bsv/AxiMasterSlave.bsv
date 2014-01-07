@@ -367,7 +367,7 @@ module mkAxi3MasterWires#(Axi3Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	endmethod
 
 	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
-	    client.resp_b.put(Axi3WriteResponse { code: responseCode, id: id});
+	    client.resp_b.put(Axi3WriteResponse { resp: responseCode, id: id});
 	endmethod
     endinterface
 
@@ -400,8 +400,8 @@ module mkAxi3MasterWires#(Axi3Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	method Bit#(idWidth) readId();
 	    return wReadRequest.id;
 	endmethod
-	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
-	    client.resp_read.put(Axi3ReadResponse { data: data, code: code, last: last, id: id});
+	method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(idWidth) id);
+	    client.resp_read.put(Axi3ReadResponse { data: data, resp: resp, last: last, id: id});
 	endmethod
    endinterface
 endmodule
@@ -472,7 +472,7 @@ module mkAxi3Master#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	endmethod
 
 	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
-	    client.resp_b.put(Axi3WriteResponse { code: responseCode, id: id});
+	    client.resp_b.put(Axi3WriteResponse { resp: responseCode, id: id});
 	endmethod
     endinterface
 
@@ -504,8 +504,8 @@ module mkAxi3Master#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	method Bit#(idWidth) readId();
 	    return fReadRequest.first.id;
 	endmethod
-	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
-	    client.resp_read.put(Axi3ReadResponse { data: data, code: code, last: last, id: id});
+	method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(idWidth) id);
+	    client.resp_read.put(Axi3ReadResponse { data: data, resp: resp, last: last, id: id});
 	endmethod
    endinterface
 endmodule
@@ -609,7 +609,7 @@ module mkAxi4MasterWires#(Axi4Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	endmethod
 
 	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
-	    client.resp_b.put(Axi4WriteResponse { code: responseCode, id: id});
+	    client.resp_b.put(Axi4WriteResponse { resp: responseCode, id: id});
 	endmethod
     endinterface
 
@@ -642,8 +642,8 @@ module mkAxi4MasterWires#(Axi4Client#(addrWidth,busWidth,busWidthBytes,idWidth) 
 	method Bit#(idWidth) readId();
 	    return wReadRequest.id;
 	endmethod
-	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
-	    client.resp_read.put(Axi4ReadResponse { data: data, code: code, last: last, id: id});
+	method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(idWidth) id);
+	    client.resp_read.put(Axi4ReadResponse { data: data, resp: resp, last: last, id: id});
 	endmethod
    endinterface
 endmodule
@@ -714,7 +714,7 @@ module mkAxi4Master#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	endmethod
 
 	method Action writeResponse(Bit#(2) responseCode, Bit#(idWidth) id);
-	    client.resp_b.put(Axi4WriteResponse { code: responseCode, id: id});
+	    client.resp_b.put(Axi4WriteResponse { resp: responseCode, id: id});
 	endmethod
     endinterface
 
@@ -746,8 +746,8 @@ module mkAxi4Master#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth) clie
 	method Bit#(idWidth) readId();
 	    return fReadRequest.first.id;
 	endmethod
-	method Action readData(Bit#(busWidth) data, Bit#(2) code, Bit#(1) last, Bit#(idWidth) id);
-	    client.resp_read.put(Axi4ReadResponse { data: data, code: code, last: last, id: id});
+	method Action readData(Bit#(busWidth) data, Bit#(2) resp, Bit#(1) last, Bit#(idWidth) id);
+	    client.resp_read.put(Axi4ReadResponse { data: data, resp: resp, last: last, id: id});
 	endmethod
    endinterface
 endmodule
