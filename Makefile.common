@@ -1,3 +1,6 @@
+ifeq ($(origin XBSVDIR),undefined)
+XBSVDIR=../..
+endif
 
 all bits verilog implementation bsim bsim_exe: gen
 	make -C $(BOARD) $@
@@ -22,8 +25,8 @@ TOP=ZynqTop
 endif
 
 gen:
-	../../genxpsprojfrombsv -B$(BOARD) -p $(BOARD) -x mk$(TOP) \
+	$(XBSVDIR)/genxpsprojfrombsv -B$(BOARD) -p $(BOARD) -x mk$(TOP) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
-        -t ../../bsv/$(TOP).bsv $(BSVFILES)
+        -t $(XBSVDIR)/bsv/$(TOP).bsv $(BSVFILES)
