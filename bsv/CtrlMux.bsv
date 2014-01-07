@@ -24,8 +24,9 @@
 
 
 import Vector::*;
+import GetPut::*;
 
-import AxiMasterSlave::*;
+import AxiClientServer::*;
 import Portal::*;
 
 
@@ -51,14 +52,14 @@ module mkInterruptMux#(Vector#(numPortals,Portal#(aw,_a,_b,_c,_d)) portals) (Rea
 endmodule
 
 module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c,_d)) directories, 
-		      Vector#(numPortals,Portal#(aw,_a,_b,_c,_d)) portals) (Axi3Slave#(_a,_b,_c,_d))
+		      Vector#(numPortals,Portal#(aw,_a,_b,_c,_d)) portals) (Axi3Server#(_a,_b,_c,_d))
 
    provisos(Add#(1,numPortals,numInputs),
 	    Add#(nz, TLog#(numInputs), 4));
    
-   Vector#(1, Axi3Slave#(_a,_b,_c,_d)) d_slaves = map(getCtrl, directories);
-   Vector#(numPortals, Axi3Slave#(_a,_b,_c,_d)) p_slaves = map(getCtrl, portals);
-   Vector#(numInputs, Axi3Slave#(_a,_b,_c,_d)) inputs = append(d_slaves,p_slaves);
+   Vector#(1, Axi3Server#(_a,_b,_c,_d)) d_slaves = map(getCtrl, directories);
+   Vector#(numPortals, Axi3Server#(_a,_b,_c,_d)) p_slaves = map(getCtrl, portals);
+   Vector#(numInputs, Axi3Server#(_a,_b,_c,_d)) inputs = append(d_slaves,p_slaves);
    
    Reg#(Bit#(TLog#(numInputs))) ws <- mkReg(0);
    Reg#(Bit#(TLog#(numInputs))) rs <- mkReg(0);
@@ -69,42 +70,34 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c,_d)) directories,
       return a[port_sel_high:port_sel_low];
    endfunction
    
-   interface Axi3SlaveWrite write;
-      method Action writeAddr(Bit#(_a) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-			      Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache,
-			      Bit#(_d) awid);
-	 Bit#(TLog#(numInputs)) wsv = truncate(psel(addr));
-	 inputs[wsv].write.writeAddr(addr,burstLen,burstWidth,burstType,burstProt,burstCache,awid);
+   interface Put req_aw;
+      method Action put(Axi3WriteRequest#(_a,_d) req);
+	 Bit#(TLog#(numInputs)) wsv = truncate(psel(req.address));
+	 inputs[wsv].req_aw.put(req);
 	 ws <= wsv;
       endmethod
-      method Action writeData(Bit#(_b) v, Bit#(_c) byteEnable, Bit#(1) last, Bit#(_d) wid);
-	 inputs[ws].write.writeData(v,byteEnable,last,wid);
+   endinterface
+   interface Put resp_write;
+      method Action put(Axi3WriteData#(_b,_c,_d) wdata);
+	 inputs[ws].resp_write.put(wdata);
       endmethod
-      method ActionValue#(Bit#(2)) writeResponse();
-	 let rv <- inputs[ws].write.writeResponse;
-	 return rv;
-      endmethod
-      method ActionValue#(Bit#(_d)) bid();
-	 let rv <- inputs[ws].write.bid;
+   endinterface
+   interface Get resp_b;
+      method ActionValue#(Axi3WriteResponse#(_d)) get();
+	 let rv <- inputs[ws].resp_b.get();
 	 return rv;
       endmethod
    endinterface
-   interface Axi3SlaveRead read;
-      method Action readAddr(Bit#(_a) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-			     Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(_d) arid);
-	 Bit#(TLog#(numInputs)) rsv = truncate(psel(addr)); 
-	 inputs[rsv].read.readAddr(addr,burstLen,burstWidth,burstType,burstProt,burstCache,arid);
+   interface Put req_ar;
+      method Action put(Axi3ReadRequest#(_a,_d) req);
+	 Bit#(TLog#(numInputs)) rsv = truncate(psel(req.address)); 
+	 inputs[rsv].req_ar.put(req);
 	 rs <= rsv;
-	 //$display("mkAxiSlaveMux::Axi3SlaveRead::readAddr(%h), rsv=%d", addr, rsv);
       endmethod
-      method Bit#(1) last();
-	 return inputs[rs].read.last;
-      endmethod
-      method Bit#(_d) rid();
-         return inputs[rs].read.rid;
-      endmethod
-      method ActionValue#(Bit#(_b)) readData();
-	 let rv <- inputs[rs].read.readData;
+   endinterface
+   interface Get resp_read;
+      method ActionValue#(Axi3ReadResponse#(_b,_d)) get();
+	 let rv <- inputs[rs].resp_read.get();
 	 return rv;
       endmethod
    endinterface

@@ -25,10 +25,10 @@ import Connectable       :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
-import AxiMasterSlave    :: *;
+import AxiClientServer   :: *;
 
 interface ZynqTop#(type pins);
-   interface StdAxi3Slave     ctrl;
+   interface StdAxi3Server    ctrl;
    interface StdAxi3Master    m_axi;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;

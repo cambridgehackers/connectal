@@ -27,7 +27,6 @@ import GetPut::*;
 import FIFOF::*;
 import Vector::*;
 import SpecialFIFOs::*;
-import AxiMasterSlave::*;
 import AxiClientServer::*;
 
 typedef struct {

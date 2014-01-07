@@ -26,7 +26,7 @@ import Connectable       :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
-import AxiMasterSlave    :: *;
+import AxiClientServer   :: *;
 import PS7::*;
 
 (* always_ready, always_enabled *)
@@ -46,10 +46,9 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(nmasters,ipins) constructor)(Z
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
    let top <- constructor(clocked_by defaultClock);
-   StdAxi3Master master = ?;
+   Axi3Client#(40,64,8,12) master = ?;
    if (nmasters > 0) begin
-      let m <- mkAxi3Master(top.m_axi[0]);
-      master = m;
+      master = top.m_axi[0];
    end
    ZynqPins ps7 <- mkPS7Slave(defaultClock, defaultReset, top.ctrl, nmasters, master, top.interrupt);
 

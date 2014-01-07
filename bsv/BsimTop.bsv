@@ -23,11 +23,11 @@
 import Vector            :: *;
 import FIFO              :: *;
 import SpecialFIFOs      :: *;
+import GetPut            :: *;
 import Connectable       :: *;
 import StmtFSM           :: *;
 import Portal            :: *;
 import AxiClientServer   :: *;
-import AxiMasterSlave    :: *;
 import Leds              :: *;
 import Top               :: *;
 
@@ -63,19 +63,19 @@ module mkBsimTop();
    rule wrReq (writeReq());
       let wa <- writeAddr;
       let wd <- writeData;
-      top.ctrl.write.writeAddr(wa,0,0,0,0,0,0);
+      top.ctrl.req_aw.put(Axi3WriteRequest { address: wa, len: 0, size: axiBusSize(32), id: 0, prot: 0, burst: 1, cache: 'b11, qos: 0, lock: 0 });
       wf.enq(wd);
    endrule
    rule wrData;
       wf.deq;
-      top.ctrl.write.writeData(wf.first,0,0,0);
+      top.ctrl.resp_write.put(Axi3WriteData { data: wf.first, id: 0, last: 1 });
    endrule
    rule rdReq (readReq());
       let ra <- readAddr;
-      top.ctrl.read.readAddr(ra,0,0,0,0,0,0);
+	 top.ctrl.req_ar.put(Axi3ReadRequest { address: ra, len: 0, size: axiBusSize(32), id: 0, prot: 0, burst: 1, cache: 'b11, qos: 0, lock: 0 });
    endrule
    rule rdResp;
-      let rd <- top.ctrl.read.readData;
-      readData(rd);
+      let rd <- top.ctrl.resp_read.get();
+      readData(rd.data);
    endrule
 endmodule

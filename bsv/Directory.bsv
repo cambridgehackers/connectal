@@ -6,21 +6,21 @@ import SpecialFIFOs::*;
 
 //portz libraries
 import Portal::*;
-import AxiMasterSlave::*;
+import AxiClientServer::*;
 
 interface Directory;
    interface StdPortal portalIfc;
 endinterface
 
 module mkDirectoryPortalIfc#(RegFile#(Bit#(32), Bit#(32)) rf)(StdPortal);
-   StdAxi3Slave ctrl_mod <- mkAxi3SlaveFromRegFile(rf);
+   Axi3Server#(32,32,4,12) ctrl_mod <- mkAxi3ServerFromRegFile(rf);
    method Bit#(32) ifcId();
       return 0;
    endmethod
    method Bit#(32) ifcType();
       return 0;
    endmethod
-   interface Axi3Slave ctrl = ctrl_mod;
+   interface Axi3Server ctrl = ctrl_mod;
    interface ReadOnly interrupt;
       method Bool _read;
 	 return False;

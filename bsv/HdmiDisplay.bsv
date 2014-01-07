@@ -31,7 +31,6 @@ import PortalMemory::*;
 import PortalRMemory::*;
 import AxiRDMA::*;
 import BsimRDMA::*;
-import AxiMasterSlave::*;
 import AxiClientServer::*;
 import HDMI::*;
 import XADC::*;

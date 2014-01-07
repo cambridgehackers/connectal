@@ -21,7 +21,6 @@ import DReg         :: *;
 import ByteBuffer    :: *;
 import ByteCompactor :: *;
 
-import AxiMasterSlave :: *;
 import AxiClientServer:: *;
 
 typedef struct {
@@ -40,7 +39,7 @@ endinterface
 interface PcieToAxiBridge#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
-   interface Axi3Master#(32,32,4,12) portal0; // to the portal control
+   interface Axi3Client#(32,32,4,12) portal0; // to the portal control
    interface GetPut#(TLPData#(16)) slave;
 
    // status for FPGA LEDs
@@ -338,7 +337,7 @@ endinterface
 interface PortalEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Master#(32,32,4,12) portal;
+    interface Axi3Client#(32,32,4,12) portal;
     interface Reg#(Bool)           byteSwap;
     interface Reg#(Bool)           interruptRequested;
     interface Reg#(Bit#(64))       interruptAddr;
@@ -450,80 +449,40 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	endmethod
     endinterface: tlp_in
     interface Get tlp_out = toGet(tlpOutFifo);
-    interface Axi3Master portal;
-	interface Axi3MasterWrite write;
-	    method ActionValue#(Bit#(32)) writeAddr() if (!interruptSecondHalf);
-	        let hdr = writeHeaderFifo.first;
-	        writeHeaderFifo.deq;
-		writeDataFifo.enq(hdr);
-		return (extend(writeHeaderFifo.first.addr) << 2);
+    interface Axi3Client portal;
+       interface Get req_aw;
+	  method ActionValue#(Axi3WriteRequest#(32,12)) get() if (!interruptSecondHalf);
+	     let hdr = writeHeaderFifo.first;
+	     writeHeaderFifo.deq;
+	     writeDataFifo.enq(hdr);
+	     return Axi3WriteRequest { address: extend(writeHeaderFifo.first.addr) << 2, len: 0, id: zeroExtend(writeHeaderFifo.first.tag),
+				       size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011 };
+	  endmethod
+       endinterface: req_aw
+       interface Get resp_write;
+	  method ActionValue#(Axi3WriteData#(32,4,12)) get();
+	     writeDataFifo.deq;
+	     let data = writeDataFifo.first.data;
+	     if (byteSwapReg)
+		data = byteSwap(data);
+	     return Axi3WriteData { data: data, id: zeroExtend(writeDataFifo.first.tag), byteEnable: writeDataFifo.first.firstbe, last: 1 };
+	  endmethod
+       endinterface: resp_write
+       interface Put resp_b;
+	  method Action put(Axi3WriteResponse#(12) resp);
+	  endmethod
+       endinterface: resp_b
+       interface Get req_ar;
+	  method ActionValue#(Axi3ReadRequest#(32,12)) get();
+	     let hdr = readHeaderFifo.first;
+	     readHeaderFifo.deq;
+	     readDataFifo.enq(hdr);
+	     return Axi3ReadRequest { address: extend(readHeaderFifo.first.addr) << 2, len: 0, id: zeroExtend(readHeaderFifo.first.tag),
+				     size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011 };
 	    endmethod
-	    method Bit#(4) writeBurstLen();
-		return 0;
-	    endmethod
-	    method Bit#(3) writeBurstWidth();
-		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
-	    endmethod
-	    method Bit#(2) writeBurstType();  // drive with 2'b01 increment address
-		return 2'b01; // increment address
-	    endmethod
-	    method Bit#(3) writeBurstProt(); // drive with 3'b000
-		return 3'b000;
-	    endmethod
-	    method Bit#(4) writeBurstCache(); // drive with 4'b0011
-		return 4'b0011;
-	    endmethod
-	    method Bit#(12) writeId();
-		return extend(writeHeaderFifo.first.tag);
-	    endmethod
-
-	    method ActionValue#(Bit#(32)) writeData();
-	        writeDataFifo.deq;
-		if (byteSwapReg)
-		    return byteSwap(writeDataFifo.first.data);
-		else
-		    return writeDataFifo.first.data;
-	    endmethod
-	    method Bit#(12) writeWid();
-		return extend(writeDataFifo.first.tag);
-	    endmethod
-	    method Bit#(4) writeDataByteEnable();
-		return writeDataFifo.first.firstbe;
-	    endmethod
-	    method Bit#(1) writeLastDataBeat(); // last data beat
-		return 0;
-	    endmethod
-
-	    method Action writeResponse(Bit#(2) responseCode, Bit#(12) id);
-	    endmethod
-	endinterface: write
-
-	interface Axi3MasterRead read;
-	    method ActionValue#(Bit#(32)) readAddr();
-	        let hdr = readHeaderFifo.first;
-	        readHeaderFifo.deq;
-		readDataFifo.enq(hdr);
-		return (extend(readHeaderFifo.first.addr) << 2);
-	    endmethod
-	    method Bit#(4) readBurstLen();
-		return 0;
-	    endmethod
-	    method Bit#(3) readBurstWidth();
-		return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
-	    endmethod
-	    method Bit#(2) readBurstType();  // drive with 2'b01
-		return 2'b01;
-	    endmethod
-	    method Bit#(3) readBurstProt(); // drive with 3'b000
-		return 3'b000;
-	    endmethod
-	    method Bit#(4) readBurstCache(); // drive with 4'b0011
-		return 4'b0011;
-	    endmethod
-	    method Bit#(12) readId();
-		return extend(readHeaderFifo.first.tag);
-	    endmethod
-	    method Action readData(Bit#(32) data, Bit#(2) resp, Bit#(1) last, Bit#(12) arid) if (!interruptSecondHalf);
+       endinterface: req_ar
+       interface Put resp_read;
+	  method Action put(Axi3ReadResponse#(32,12) resp) if (!interruptSecondHalf);
 	        let hdr = readDataFifo.first;
 		//FIXME: assumes only 1 word read per request
 		readDataFifo.deq;
@@ -536,14 +495,14 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		completion.length = 1;
 		completion.tclass = hdr.tclass;
 		completion.cmplid = my_id;
-		completion.tag = truncate(arid);
+		completion.tag = truncate(resp.id);
 		completion.bytecount = 4;
 		completion.reqid = hdr.reqid;
 		completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
 		if (byteSwapReg)
-		    completion.data = byteSwap(data);
+		    completion.data = byteSwap(resp.data);
 		else
-		    completion.data = data;
+		    completion.data = resp.data;
 	        TLPData#(16) tlp = defaultValue;
 		tlp.data = pack(completion);
 		tlp.sof = True;
@@ -552,7 +511,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		tlp.hit = hitReg;
 		tlpOutFifo.enq(tlp);
 	    endmethod
-	endinterface: read
+	endinterface: resp_read
     endinterface: portal
     interface Reg byteSwap           = byteSwapReg;
     interface Reg interruptRequested = interruptRequestedReg;
@@ -560,15 +519,15 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     interface Reg interruptData      = interruptDataReg;
 endmodule: mkPortalEngine
 
-interface AxiSlaveEngine#(type buswidth, type busWidthBytes);
+interface AxiSlaveEngine#(type buswidth);
     interface GetPut#(TLPData#(16))   tlps;
-    interface Axi3Server#(40,buswidth,busWidthBytes,12)  slave3;
-    interface Axi4Server#(40,buswidth,busWidthBytes,12)  slave4;
+    interface Axi3Server#(40,buswidth,TDiv#(buswidth,8),12)  slave3;
+    interface Axi4Server#(40,buswidth,TDiv#(buswidth,8),12)  slave4;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: AxiSlaveEngine
 
-module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth, busWidthBytes))
+module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
    provisos (Div#(buswidth, 8, busWidthBytes),
 	     Div#(buswidth, 32, busWidthWords),
 	     Bits#(Vector#(busWidthWords, Bit#(32)), buswidth),
@@ -1659,7 +1618,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    //interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
    interface GetPut tlps = tuple2(toGet(tlpToBusFifo),toPut(tlpFromBusFifo));
 
-   interface Axi3Master portal0 = portalEngine.portal;
+   interface Axi3Server portal0 = portalEngine.portal;
    interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
    interface Reg numPortals = csr.numPortals;
 
