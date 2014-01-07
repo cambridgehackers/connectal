@@ -83,16 +83,18 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
-
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = srcGen++;
   }
     
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
+  sleep(1);
 
+  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
+  sleep(1);
+
   dma->readSglist(ChannelType_Read, ref_srcAlloc, 0);
   sleep(1);
   dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x1000);
@@ -103,9 +105,7 @@ int main(int argc, const char **argv)
   sleep(1);
   fprintf(stderr, "Main::starting read %08x\n", numWords);
   device->startRead(ref_srcAlloc, 128, 16);
-  sleep(1);
 
-  //dma->getReadStateDbg();
   device->getStateDbg();
   fprintf(stderr, "Main::sleeping\n");
   while(true){sleep(1);}

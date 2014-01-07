@@ -42,6 +42,12 @@ $(bitstests):
 	make -C examples/$(basename $@)/zedboard bits
 	(cd examples/$(basename $@)/zedboard; ndk-build)
 
+gentests = $(addsuffix .gen, $(testnames))
+
+$(gentests):
+	make BOARD=zedboard -C examples/$(basename $@) gen
+	make -C examples/$(basename $@)/zedboard android_exe
+
 kc705tests = $(addsuffix .kc705, $(testnames))
 
 $(kc705tests):
