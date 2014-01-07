@@ -95,7 +95,7 @@ module mkPortalTop(StdPortalDmaTop);
 `else
    interface Vector m_axi = ?;
 `endif
-   interface Leds leds = ?;
+   interface LEDS leds = ?;
 endmodule
 
 
