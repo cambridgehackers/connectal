@@ -70,6 +70,9 @@ module mkBsimTop();
       wf.deq;
       top.ctrl.resp_write.put(Axi3WriteData { data: wf.first, id: 0, last: 1 });
    endrule
+   rule wrB;
+      let resp <- top.ctrl.resp_b.get();
+   endrule
    rule rdReq (readReq());
       let ra <- readAddr;
 	 top.ctrl.req_ar.put(Axi3ReadRequest { address: ra, len: 0, size: axiBusSize(32), id: 0, prot: 0, burst: 1, cache: 'b11, qos: 0, lock: 0 });
