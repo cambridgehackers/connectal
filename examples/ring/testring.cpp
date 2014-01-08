@@ -1,11 +1,14 @@
-#include "Ring.h"
+
 #include <stdio.h>
-#include <sys/mman.h>
-#include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <semaphore.h>
 #include <pthread.h>
+#include <semaphore.h>
+
+#include "RingIndicationWrapper.h"
+#include "RingRequestProxy.h"
+#include "GeneratedTypes.h"
+
+
 
 CoreRequest *device = 0;
 DMARequest *dma = 0;
@@ -24,7 +27,7 @@ void dump(const char *prefix, char *buf, size_t len)
     fprintf(stderr, "\n");
 }
 
-class TestDMAIndication : public DMAIndication
+class TestDMAIndication : public DMAIndicationWrapper
 {
   virtual void reportStateDbg(DmaDbgRec& rec){
     fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
@@ -43,14 +46,6 @@ class TestDMAIndication : public DMAIndication
 
 class TestCoreIndication : public CoreIndication
 {
-  virtual void readWordResult (unsigned long long s){
-    fprintf(stderr, "readWordResult(%llx)\n", s);
-    sem_post(&conf_sem);
-  }
-  virtual void writeWordResult (unsigned long long s){
-    fprintf(stderr, "writeWordResult(%llx)\n", s);
-    sem_post(&conf_sem);
-  }
   virtual void setResult(unsigned long cmd, unsigned long regist, unsigned long long addr) {
     fprintf(stderr, "setResult(cmd %ld regist %ld addr %llx)\n", 
 	    cmd, regist, addr);
