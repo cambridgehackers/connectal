@@ -48,20 +48,23 @@ module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) co
    Reg#(Bit#(32)) copyTag <- mkReg(0);
    Reg#(Bool) copyBusy <- mkReg(False);
     
-   Stmt copyStart = while(True)
+   Stmt copyStart = 
    seq
-      while (copyBusy) noAction;
-      copyTag <= f_in.deq[31:0];
-      copyReadAddr <= f_in.deq[39:0];
-      copyWriteAddr <= f_in.deq[39:0];
-      action
-	 let regv <-f_in.deq[15:0];
-	 copyReadCount <= regv;
-	 copyWriteCount <= regv;
-      endaction
-      for (ii <= 0; ii < 4; ii <= ii+1)
-	 f_in.deq;
-      copyBusy <= True;
+      while(True)
+	 seq
+	    while (copyBusy) noAction;
+	    copyTag <= f_in.deq[31:0];
+	    copyReadAddr <= f_in.deq[39:0];
+	    copyWriteAddr <= f_in.deq[39:0];
+	    action
+	       let regv <-f_in.deq[15:0];
+	       copyReadCount <= regv;
+	       copyWriteCount <= regv;
+	    endaction
+	    for (ii <= 0; ii < 4; ii <= ii+1)
+	       f_in.deq;
+	    copyBusy <= True;
+	 endseq
    endseq
       
     rule copyReadRule (copyBusy && (copyReadCount != 0));
@@ -79,18 +82,21 @@ module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) co
        copyWriteAddr <= copyWriteAddr + 8;
     endrule
     
-   Stmt copyFinish = while(True)
+   Stmt copyFinish = 
    seq
-      while (!copyBusy) noAction;
-      while (copyWriteCount > 0)
-      action
-	 let v <= copy_write_chan.writeDone.get;
-	 copyWriteCount <= copyWriteCount - 8;	 
-      endaction
-      for (ii <= 0; ii < 7; ii += 1)
-	 f_out.enq(0);
-      f_out.enq(extend(copyTag));
-      copyBusy <= False;
+      while(True)
+	 seq
+	    while (!copyBusy) noAction;
+	    while (copyWriteCount > 0)
+	       action
+		  let v <= copy_write_chan.writeDone.get;
+		  copyWriteCount <= copyWriteCount - 8;	 
+	       endaction
+	    for (ii <= 0; ii < 7; ii += 1)
+	       f_out.enq(0);
+	    f_out.enq(extend(copyTag));
+	    copyBusy <= False;
+	 endseq
    endseq
       
    FSM start();
