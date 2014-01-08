@@ -57,7 +57,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(nmasters,ipins) constructor)(Z
    interface pins = top.pins;
 endmodule
 
-module mkZynqTopnew(ZynqTop#(Empty));
+module mkZynqTop(ZynqTop#(Empty));
    let top <- mkZynqTopFromPortal(mkPortalTop);
    return top;
 endmodule
