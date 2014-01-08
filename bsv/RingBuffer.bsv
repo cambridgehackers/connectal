@@ -12,15 +12,21 @@
 // 
 // Configuration.  
 interface RingBuffer;
-   method Action set(Bit#(2) regist, Bit#(40) addr);
-   method Bit#(40) get(Bit#(2) regist);
 //   method Get#(CommandStruct);
 //   method Put#(StatusStruct);
    method Bool notEmpty();
    method Bool notFull();
    method Action push(UInt num);
    method Action pop(UInt num);
+   interface Reg#(Bit#(40)) expBufferLast;
+   interface RingBufferConfig configifc;
 endinterface
+
+interface RingBufferConfig;
+   method Action set(Bit#(2) regist, Bit#(40) addr);
+   method Bit#(40) get(Bit#(2) regist);
+endinterface
+
 
 module mkRingBuffer(RingBuffer);
    
@@ -30,6 +36,7 @@ module mkRingBuffer(RingBuffer);
    Reg#(Bit#(40)) bufferlast <- mkReg(0);
    Reg#(Bit#(40)) buffermask <- mkReg(0);
    
+   interface RingBufferConfig configifc;
    method Action set(Bit#(2) regist, Bit#(40) addr);
       if (regist == 0) bufferbase <= addr;
       else if (regist == 1) bufferend <= addr;
@@ -44,6 +51,7 @@ module mkRingBuffer(RingBuffer);
       else if (regist == 2) return (bufferfirst);
       else return(bufferlast);
    endmethod
+   endinterface
 
    method Bool notEmpty();
    return (bufferfirst != bufferlast);
@@ -60,5 +68,7 @@ module mkRingBuffer(RingBuffer);
    method Action pop(UInt num);
    bufferlast <= (bufferlast + num) & buffermask;
    endmethod
+ 
+   interface Reg expBufferLast = bufferlast;
 
 endmodule
