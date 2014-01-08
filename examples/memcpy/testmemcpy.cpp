@@ -60,7 +60,7 @@ public:
       dump("dst", (char*)dstBuffer, test_sz);
     }
     fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
-    exit(0);
+    exit(memcmp_fail);
   }
   virtual void rData ( unsigned long long v ){
     dump("rData: ", (char*)&v, sizeof(v));

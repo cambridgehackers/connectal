@@ -84,4 +84,5 @@ int main(int argc, const char **argv)
   sem_wait(&done_sem);
   device->readWord(ref_dstAlloc, 6*8);
   sem_wait(&done_sem);
+  return 0;
 }

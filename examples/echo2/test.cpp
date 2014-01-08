@@ -51,5 +51,5 @@ int main(int argc, const char **argv)
   sayProxy->say2(1,2);
   sem_wait(&echo_sem);
 
-  exit(1);
+  return 0;
 }

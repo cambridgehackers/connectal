@@ -33,7 +33,6 @@ public:
     virtual void heard2(unsigned long a, unsigned long b) {
       fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
       sem_post(&sem_heard2);
-      //exit(0);
     }
   EchoIndication(unsigned int id) : EchoIndicationWrapper(id){}
 };
@@ -79,4 +78,5 @@ int main(int argc, const char **argv)
     call_say(v*93);
     call_say2(v, v*3);
     echoRequestProxy->setLeds(9);
+    return 0;
 }
