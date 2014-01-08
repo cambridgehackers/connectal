@@ -20,42 +20,44 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Clocks :: *;
 import Vector            :: *;
 import Connectable       :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiClientServer   :: *;
-import AxiMasterSlave   :: *;
+import PS7::*;
 
+(* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
-   interface Axi3Server#(32,32,4,12)    ctrl;
-   interface Axi3Master#(40, 64,8,12)    m_axi;
-   interface ReadOnly#(Bool)  interrupt;
+   (* prefix="" *)
+   interface ZynqPins zynq;
+   (* prefix="GPIO" *)
    interface LEDS             leds;
    interface pins             pins;
 endinterface
 
 
-typedef (function Module#(PortalTop#(nmasters, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, type ipins);
+typedef (function Module#(PortalTop#(nmasters, 64, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, type ipins);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(nmasters,ipins) constructor)(ZynqTop#(ipins));
+   Integer nmasters = valueOf(nmasters);
    let defaultClock <- exposeCurrentClock;
+   let defaultReset <- exposeCurrentReset;
    let top <- constructor(clocked_by defaultClock);
-   Axi3Master#(40, 64,8,12) master = ?;
-   if (valueOf(nmasters) > 0) begin
-      let m <- mkAxi3Master(top.m_axi[0]);
-      master = m;
+   Axi3Client#(40,64,8,12) master = ?;
+   if (nmasters > 0) begin
+      master = top.m_axi[0];
    end
+   ZynqPins ps7 <- mkPS7Slave(defaultClock, defaultReset, top.ctrl, nmasters, master, top.interrupt);
 
-   interface ctrl = top.ctrl;
-   interface m_axi = master;
-   interface interrupt = top.interrupt;
+   interface zynq = ps7;
    interface leds = top.leds;
    interface pins = top.pins;
 endmodule
 
-module mkZynqTop(ZynqTop#(Empty));
+module mkZynqTopnew(ZynqTop#(Empty));
    let top <- mkZynqTopFromPortal(mkPortalTop);
    return top;
 endmodule

@@ -17,9 +17,6 @@ endif
 ifeq ($(BOARD),zedboard)
 TOP=ZynqTop
 endif
-ifeq ($(BOARD),zedboardnew)
-TOP=ZynqTopnew
-endif
 ifeq ($(BOARD),zc702)
 TOP=ZynqTop
 endif

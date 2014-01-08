@@ -24,7 +24,7 @@ AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
 AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
 
-supported_boards = ['zedboard', 'zedboardnew', 'zc702', 'kc705', 'vc707', 'bluesim']
+supported_boards = ['zedboard', 'zc702', 'kc705', 'vc707', 'bluesim']
 supported_os = ['android', 'ubuntu']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
@@ -305,10 +305,7 @@ if __name__=='__main__':
     else:
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z020clg484-1'
-        if boardname == 'zedboardnew':
-            rewireclockstring = tclzynqrewireclock
-        else:
-            topmodulename = 'ztop_1'
+        rewireclockstring = tclzynqrewireclock
         namespace.verilog.append(os.path.join(xbsvdir, 'verilog'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/design_1_processing_system7_1_0.xdc'))
