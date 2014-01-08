@@ -53,11 +53,11 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32)) putOffset <- mkReg(0);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
    Reg#(Bit#(32))      srcGen <- mkReg(0);
-   Reg#(Bit#(40))      offset <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize))      offset <- mkReg(0);
    FIFOF#(Tuple2#(Bit#(32),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
 
    Reg#(Bit#(8)) burstLen <- mkReg(8);
-   Reg#(Bit#(40)) deltaOffset <- mkReg(8*8);
+   Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(8*8);
 
    rule mismatch;
       let tpl = mismatchFifo.first();
@@ -71,7 +71,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	  streamRdCnt <= numWords>>1;
 	  putOffset <= 0;
 	  burstLen <= truncate(bl);
-	  deltaOffset <= 8*extend(bl);
+	  deltaOffset <= 8*truncate(bl);
 	  indication.started(numWords);
        endmethod
 

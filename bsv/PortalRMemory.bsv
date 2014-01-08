@@ -35,9 +35,12 @@ import BRAMFIFOFLevel::*;
 
 typedef Bit#(32) DmaMemHandle;
 
+typedef 24 DmaAddrSize;
+// SGListMaxPages is derived from this
+
 typedef struct {
    DmaMemHandle handle;
-   Bit#(40)  address;
+   Bit#(DmaAddrSize)  address;
    Bit#(8) burstLen;
    Bit#(8)  tag;
    } DMAAddressRequest deriving (Bits);

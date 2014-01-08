@@ -48,12 +48,12 @@ module mkMemwriteRequest#(MemwriteIndication indication,
 			  DMAWriteServer#(64) dma_stream_write_server) (MemwriteRequest);
 
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
-   Reg#(Bit#(40)) streamWrOff <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) streamWrOff <- mkReg(0);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32))    wrHandle <- mkReg(0); 
 
    Reg#(Bit#(8))     burstLen <- mkReg(1);
-   Reg#(Bit#(40)) deltaOffset <- mkReg(1*8);
+   Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(1*8);
 
    rule resp;
       let rv <- dma_stream_write_server.writeDone.get;
@@ -76,7 +76,7 @@ module mkMemwriteRequest#(MemwriteIndication indication,
    method Action startWrite(Bit#(32) handle, Bit#(32) numWords, Bit#(32) blen) if (streamWrCnt == 0);
       streamWrCnt <= numWords;
       burstLen <= truncate(blen);
-      deltaOffset <= extend(blen) * 8;
+      deltaOffset <= truncate(blen) * 8;
       indication.started(numWords);
       wrHandle <= handle;
    endmethod
@@ -89,12 +89,12 @@ endmodule
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
-   Reg#(Bit#(40)) streamWrOff <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) streamWrOff <- mkReg(0);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32))    wrHandle <- mkReg(0); 
 
    Reg#(Bit#(8))     burstLen <- mkReg(1);
-   Reg#(Bit#(40)) deltaOffset <- mkReg(1*8);
+   Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(1*8);
    
    FIFOF#(Bit#(8))   dataTags <- mkFIFOF();
    FIFOF#(Bit#(8))   doneTags <- mkFIFOF();
@@ -145,7 +145,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
        method Action startWrite(Bit#(32) handle, Bit#(32) numWords, Bit#(32) blen) if (streamWrCnt == 0);
 	  streamWrCnt <= numWords;
 	  burstLen <= truncate(blen);
-	  deltaOffset <= extend(blen) * 8;
+	  deltaOffset <= truncate(blen) * 8;
 	  indication.started(numWords);
 	  wrHandle <= handle;
        endmethod
