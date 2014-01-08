@@ -22,13 +22,13 @@
 
 import FIFO::*;
 import GetPut::*;
-import ClientServer::*;
+import FunctionServer::*;
 
-module mkEchoServer#() ( Server#(Bit#(64), Bit#(64)));
+module mkEchoServer#() ( ServerF#(Bit#(64), Bit#(64)));
    FIFO#(Bit#(64)) f_echo  <- mkSizedFIFOF(16);    // to buffer incoming requests
    
    interface Put request = toPut(f_echo);
    interface Get response = toGet (f_echo);
-   
+   interface Bit#(64) Bit#(64) 
 endmodule: mkEchoServer
 
