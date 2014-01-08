@@ -48,6 +48,7 @@
 PortalWrapper **portal_wrappers = 0;
 struct pollfd *portal_fds = 0;
 int numFds = 0;
+Directory dir;
 
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
@@ -116,8 +117,15 @@ Portal::Portal(int id)
     req_reg_base(0x0),
     req_fifo_base(0x0)
 {
-  fprintf(stderr, "Portal::Portal(int id) not yet implemented!!!\n");
-  assert(false);
+  char buff[128];
+  sprintf(buff, "fpga%d", dir.fpga(id));
+  name = strdup(buff);
+  int rc = open(dir.addrbits(id));
+  if (rc != 0) {
+    printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
+    ALOGD("Portal::Portal failure rc=%d\n", rc);
+    exit(1);
+  }
 }
 
 Portal::~Portal()
@@ -125,7 +133,6 @@ Portal::~Portal()
   close();
   free(name);
 }
-
 
 
 int Portal::open(int addrbits)
@@ -335,8 +342,6 @@ PortalMemory::PortalMemory(int id)
   : PortalProxy(id),
     handle(1)
 {
-  fprintf(stderr, "PortalMemory:PortalMemory(int id) not yet implemented!!!\n");
-  assert(false);
 }
 
 void *PortalMemory::mmap(PortalAlloc *portalAlloc)
@@ -525,7 +530,63 @@ void* portalExec(void* __x)
 #endif
 }
 
-Directory::Directory(const char* devname, unsigned int addrbits) : Portal(devname,addrbits){}
+Directory::Directory() : Portal("fpga0", 16){}
+
+unsigned int Directory::fpga(unsigned int id)
+{
+#ifdef MMAP_HW
+  volatile unsigned int *ptr = req_fifo_base+128;
+  unsigned int numportals,i;
+  ptr++;
+  ptr++;
+  numportals = *ptr;
+  ptr++;
+  ptr++;
+  for(i = 0; (i < numportals) && (i < 32); i++){
+    unsigned int ifcid = *ptr;
+    ptr++;
+    unsigned int ifctype = *ptr;
+    ptr++;
+    if(ifcid == id)
+      return i+1;
+  }
+#else
+  unsigned int ptr = 128*4;
+  unsigned int numportals,i;
+  ptr += 4;
+  ptr += 4;
+  numportals = read_portal(&p, ptr, name);
+  ptr += 4;
+  ptr += 4;
+  for(i = 0; (i < numportals) && (i < 32); i++){
+    unsigned int ifcid = read_portal(&p, ptr, name);
+    ptr += 4;
+    unsigned int ifctype = read_portal(&p, ptr, name);
+    ptr += 4;
+    if(ifcid == id)
+      return i+1;
+  }
+#endif
+  fprintf(stderr, "Directory::fpga(id=%d) id not found\n", id);
+}
+
+unsigned int Directory::addrbits(unsigned int id)
+{
+#ifdef MMAP_HW
+  volatile unsigned int *ptr = req_fifo_base+128;
+  ptr++;
+  ptr++;
+  ptr++;
+  return *ptr;
+#else
+  unsigned int ptr = 128*4;
+  ptr += 4;
+  ptr += 4;
+  ptr += 4;
+  return read_portal(&p, ptr, name);
+#endif
+}
+
 void Directory::print()
 {
   fprintf(stderr, "Directory::print(%s)\n", name);

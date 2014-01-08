@@ -35,7 +35,7 @@ public:
       sem_post(&sem_heard2);
       //exit(0);
     }
-  EchoIndication(const char* devname, unsigned int addrbits) : EchoIndicationWrapper(devname,addrbits){}
+  EchoIndication(unsigned int id) : EchoIndicationWrapper(id){}
 };
 static void *pthread_worker(void *ptr)
 {
@@ -59,7 +59,6 @@ printf("[%s:%d] %d, %d\n", __FUNCTION__, __LINE__, v, v2);
 
 EchoIndication *echoIndication = 0;
 SwallowProxy *swallowProxy = 0;
-Directory *dir = 0;
 
 int main(int argc, const char **argv)
 {
@@ -67,12 +66,9 @@ int main(int argc, const char **argv)
 
     init_local_semaphores();
 
-    dir = new Directory("fpga0", 16);
-    echoIndication = new EchoIndication("fpga1",16);
-    echoRequestProxy = new EchoRequestProxy("fpga2",16);
-    swallowProxy = new SwallowProxy("fpga3",16);
-
-    dir->print();
+    echoIndication = new EchoIndication(IfcNames_EchoIndication);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    swallowProxy = new SwallowProxy(IfcNames_Swallow);
 
     pthread_create(&threaddata, NULL, &pthread_worker, NULL);
     int v = 42;

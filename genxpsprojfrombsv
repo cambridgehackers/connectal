@@ -277,7 +277,7 @@ if __name__=='__main__':
             srcdirs.append(inputdir)
         s0 = open(inputfile).read() + '\n'
         s1 = preprocess(s0, bsvdefines)
-        s2 = syntax.parse(s1)
+        s2 = syntax.parse(s1,inputfile)
 
     if namespace.coherent:
         xpsgen.use_acp = 1
@@ -334,7 +334,7 @@ if __name__=='__main__':
     for i in set(namespace.s2hinterface + namespace.h2sinterface):
         ifc = syntax.globalvars[i]
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
-        ifc.ind = AST.Interface(i, [], [], None)
+        ifc.ind = AST.Interface(i, [], [], None, ifc.package)
         ifc.ind.insertPutErrorMethod()
         ifc.ind.req = ifc
         ifc.assignRequestResponseChannels()
@@ -402,7 +402,7 @@ if __name__=='__main__':
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
         bsv_file = util.createDirAndOpen(fname, 'w')
         bsv_file.write('package %s;\n' % pname)
-        bsvgen.emitPreamble(bsv_file, namespace.bsvfile+files)
+        bsvgen.emitPreamble(bsv_file, files)
         print 'Writing file ', fname
         return bsv_file
 
@@ -412,14 +412,14 @@ if __name__=='__main__':
 
     for i in hwWrappers:
         pname = '%sWrapper' % i.name
-        bsv = create_bsv_package(pname)
+        bsv = create_bsv_package(pname, i.package)
         i.ind.emitBsvProxy(bsv, "WrapperStatus", False)
         i.emitBsvWrapper(bsv, "Wrapper", True)
         close_bsv_package(bsv,pname)
         
     for i in hwProxies:
         pname = '%sProxy' % i.name
-        bsv = create_bsv_package(pname)
+        bsv = create_bsv_package(pname, i.package)
         i.ind.emitBsvWrapper(bsv, "ProxyStatus",False)
         i.emitBsvProxy(bsv, "Proxy",True)
         close_bsv_package(bsv,pname)

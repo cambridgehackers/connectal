@@ -74,7 +74,10 @@ class Directory : public Portal
 {
  public:
   Directory(const char* devname, unsigned int addrbits);
+  Directory();
   void print();
+  unsigned int fpga(unsigned int id);
+  unsigned int addrbits(unsigned int id);
 };
 
 class PortalWrapper : public Portal

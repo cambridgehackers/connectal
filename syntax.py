@@ -344,7 +344,7 @@ def p_patterns(p):
 
 def p_importDecl(p):
     'importDecl : TOKIMPORT VAR COLONCOLON STAR SEMICOLON'
-    globalimports.append(p[2])
+    #globalimports.append(p[2])
     p[0] = p[2]
 
 def p_importDecls(p):
@@ -392,7 +392,7 @@ def p_subinterfaceDecl(p):
     else:
         name = p[2]
         t = p[1]
-    p[0] = AST.Interface(t.name, t.params, [], name) 
+    p[0] = AST.Interface(t.name, t.params, [], name, globalfilename) 
 
 def p_parenthesizedFormalParams(p):
     '''parenthesizedFormalParams : 
@@ -421,7 +421,7 @@ def p_interfaceStmts(p):
 
 def p_interfaceDecl(p):
     '''interfaceDecl : instanceAttributes TOKINTERFACE VAR interfaceHashParams SEMICOLON interfaceStmts TOKENDINTERFACE colonVar'''
-    interface = AST.Interface(p[3], p[4], p[6], None)
+    interface = AST.Interface(p[3], p[4], p[6], None, globalfilename)
     p[0] = interface
 
 def p_varDecl(p):
@@ -748,6 +748,7 @@ def p_typeClassDecl(p):
 globaldecls = []
 globalvars = {}
 globalimports = []
+globalfilename = []
 
 def p_packageStmt(p):
     '''packageStmt : interfaceDecl
@@ -785,11 +786,13 @@ if 0:
     for tok in lexer:
         print tok
 
-def parse(data):
+def parse(data, inputfilename):
+    global globalfilename
     lexer = lex.lex(errorlog=lex.NullLogger())
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger())
-    return parser.parse(data)
-
+    globalfilename = [inputfilename]
+    return  parser.parse(data)
+    
 if __name__=='__main__':
     lexer = lex.lex()
     parser = yacc.yacc()

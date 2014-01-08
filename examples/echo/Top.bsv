@@ -21,15 +21,17 @@ import SwallowWrapper::*;
 import Echo::*;
 import Swallow::*;
 
+typedef enum {EchoIndication, EchoRequest, Swallow} IfcNames deriving (Eq,Bits);
+
 module mkPortalTop(StdPortalTop);
 
    // instantiate user portals
-   EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(7);
+   EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);
    EchoRequestInternal echoRequestInternal <- mkEchoRequestInternal(echoIndicationProxy.ifc);
-   EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(1008,echoRequestInternal.ifc);
+   EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(EchoRequest,echoRequestInternal.ifc);
    
    Swallow swallow <- mkSwallow();
-   SwallowWrapper swallowWrapper <- mkSwallowWrapper(1009, swallow);
+   SwallowWrapper swallowWrapper <- mkSwallowWrapper(Swallow, swallow);
    
    Vector#(3,StdPortal) portals;
    portals[0] = echoIndicationProxy.portalIfc;

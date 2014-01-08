@@ -133,7 +133,7 @@ wrapperCtrlTemplate='''
 portalIfcTemplate='''
     interface StdPortal portalIfc;
     method Bit#(32) ifcId;
-        return fromInteger(id);
+        return zeroExtend(pack(id));
     endmethod
     method Bit#(32) ifcType;
         return %(ifcType)s;
@@ -399,14 +399,18 @@ mkHiddenWrapperInterfaceTemplate='''
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
                             FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s);
+                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
+    provisos (Log#(%(indicationChannelCount)s,iccsz));
 %(wrapperCtrl)s
 endmodule
 '''
 
 mkExposedWrapperInterfaceTemplate='''
 // exposed wrapper implementation
-module mk%(Dut)s#(Integer id, %(Ifc)s ifc)(%(Dut)s);
+module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
+    provisos (Log#(%(indicationChannelCount)s,iccsz),
+              Bits#(idType, __a), 
+              Add#(a__, __a, 32));
 %(axiState)s
     // instantiate hidden proxy to report put failures
     %(hiddenProxy)s p <- mk%(hiddenProxy)s(axiSlaveWriteAddrFifos[%(slaveFifoSelHidden)s],
@@ -423,7 +427,8 @@ mkHiddenProxyInterfaceTemplate='''
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
                             FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s) provisos (Log#(%(indicationChannelCount)s,iccsz));
+                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
+    provisos (Log#(%(indicationChannelCount)s,iccsz));
 %(proxyCtrl)s
 %(portalIfcInterrupt)s
 endmodule
@@ -431,7 +436,10 @@ endmodule
 
 mkExposedProxyInterfaceTemplate='''
 // exposed proxy implementation
-module %(moduleContext)s mk%(Dut)s#(Integer id) (%(Dut)s) provisos (Log#(%(indicationChannelCount)s,iccsz));
+module %(moduleContext)s mk%(Dut)s#(idType id) (%(Dut)s) 
+    provisos (Log#(%(indicationChannelCount)s,iccsz),
+              Bits#(idType, __a), 
+              Add#(a__, __a, 32));
 %(axiState)s
     // instantiate hidden wrapper to receive failure notifications
     %(hiddenWrapper)s p <- mk%(hiddenWrapper)s(axiSlaveWriteAddrFifos[%(slaveFifoSelHidden)s],
@@ -443,7 +451,7 @@ module %(moduleContext)s mk%(Dut)s#(Integer id) (%(Dut)s) provisos (Log#(%(indic
 endmodule
 '''
 
-def emitPreamble(f, files):
+def emitPreamble(f, files=[]):
     extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
                    + ['import %s::*;\n' % i for i in syntax.globalimports ])
     f.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})

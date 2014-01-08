@@ -45,8 +45,8 @@ $(bitstests):
 gentests = $(addsuffix .gen, $(testnames))
 
 $(gentests):
-	make BOARD=zedboard -C examples/$(basename $@) gen
-	make -C examples/$(basename $@)/zedboard android_exe
+	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
+
 
 kc705tests = $(addsuffix .kc705, $(testnames))
 
