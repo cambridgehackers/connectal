@@ -39,7 +39,7 @@ interface ZynqTop#(type pins);
 endinterface
 
 
-typedef (function Module#(PortalTop#(nmasters, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, type ipins);
+typedef (function Module#(PortalTop#(nmasters, 64, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, type ipins);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(nmasters,ipins) constructor)(ZynqTop#(ipins));
    Integer nmasters = valueOf(nmasters);
