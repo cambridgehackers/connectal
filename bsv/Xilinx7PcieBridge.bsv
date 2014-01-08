@@ -22,7 +22,6 @@ import Memory               :: *;
 import PcieToAxiBridge      :: *;
 import XbsvXilinx7Pcie      :: *;
 //import XbsvXilinx7DDR3      :: *;
-import AxiMasterSlave       :: *;
 import AxiClientServer      :: *;
 import Portal               :: *;
 
@@ -43,7 +42,7 @@ interface X7PcieBridgeIfc#(numeric type lanes);
    interface Reset reset125;
    (* prefix = "" *)
    //interface DDR3_Pins_X7      ddr3;
-   interface Axi3Master#(32,32,4,12) portal0;
+   interface Axi3Client#(32,32,4,12) portal0;
    interface GetPut#(TLPData#(16)) slave; // to the axi slave engine
    interface Put#(TimestampedTlpData) trace;
    interface Reg#(Bit#(4)) numPortals;

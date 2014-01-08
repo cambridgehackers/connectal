@@ -133,65 +133,55 @@ wrapperCtrlTemplate='''
 portalIfcTemplate='''
     interface StdPortal portalIfc;
     method Bit#(32) ifcId;
-        return fromInteger(id);
+        return zeroExtend(pack(id));
     endmethod
     method Bit#(32) ifcType;
         return %(ifcType)s;
     endmethod
-    interface Axi3Slave ctrl;
-        interface Axi3SlaveWrite write;
-            method Action writeAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                    Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache,
-				    Bit#(12) awid)
+    interface Axi3Server ctrl;
+        interface Put req_aw;
+            method Action put(Axi3WriteRequest#(32, 12) req)
                           if (axiSlaveWriteBurstCountReg == 0);
-                 axiSlaveWS <= addr[15];
-                 axiSlaveWriteBurstCountReg <= burstLen + 1;
-                 axiSlaveWriteAddrReg <= truncate(addr);
-		 axiSlaveWriteIdReg <= awid;
-                 //$display(\"%(Dut)s::Axi3SlaveWrite::writeAddr(%%h) ws=%%d\", addr, addr[15]);
+                 axiSlaveWS <= req.address[15];
+                 axiSlaveWriteBurstCountReg <= req.len + 1;
+                 axiSlaveWriteAddrReg <= truncate(req.address);
+		 axiSlaveWriteIdReg <= req.id;
             endmethod
-            method Action writeData(Bit#(32) v, Bit#(4) byteEnable, Bit#(1) last, Bit#(12) wid)
+        endinterface: req_aw
+        interface Put resp_write;
+            method Action put(Axi3WriteData#(32, 4, 12) wdata)
                           if (axiSlaveWriteBurstCountReg > 0);
                 let addr = axiSlaveWriteAddrReg;
                 axiSlaveWriteAddrReg <= axiSlaveWriteAddrReg + 4;
                 axiSlaveWriteBurstCountReg <= axiSlaveWriteBurstCountReg - 1;
 
                 axiSlaveWriteAddrFifos[axiSlaveWS].enq(axiSlaveWriteAddrReg[14:0]);
-                axiSlaveWriteDataFifos[axiSlaveWS].enq(v);
+                axiSlaveWriteDataFifos[axiSlaveWS].enq(wdata.data);
 
                 putWordCount <= putWordCount + 1;
-                if (last == 1'b1)
+                if (wdata.last == 1'b1)
                 begin
-                    axiSlaveBrespFifo.enq(0);
-                    axiSlaveBidFifo.enq(wid);
+                    axiSlaveBrespFifo.enq(Axi3WriteResponse { resp: 0, id: wdata.id });
                 end
             endmethod
-            method ActionValue#(Bit#(2)) writeResponse();
+        endinterface
+        interface Get resp_b;
+            method ActionValue#(Axi3WriteResponse#(12)) get();
                 axiSlaveBrespFifo.deq;
                 return axiSlaveBrespFifo.first;
             endmethod
-            method ActionValue#(Bit#(12)) bid();
-                axiSlaveBidFifo.deq;
-                return axiSlaveBidFifo.first;
+        endinterface
+        interface Put req_ar;
+            method Action put(Axi3ReadRequest#(32,12) req)
+                          if (axiSlaveReadBurstCountReg == 0);
+                 axiSlaveRS <= req.address[15];
+                 axiSlaveReadBurstCountReg <= req.len + 1;
+                 axiSlaveReadAddrReg <= truncate(req.address);
+	    	 axiSlaveReadIdReg <= req.id;
             endmethod
         endinterface
-        interface Axi3SlaveRead read;
-            method Action readAddr(Bit#(32) addr, Bit#(4) burstLen, Bit#(3) burstWidth,
-                                   Bit#(2) burstType, Bit#(3) burstProt, Bit#(4) burstCache, Bit#(12) arid)
-                          if (axiSlaveReadBurstCountReg == 0);
-                 axiSlaveRS <= addr[15];
-                 axiSlaveReadBurstCountReg <= burstLen + 1;
-                 axiSlaveReadAddrReg <= truncate(addr);
-	    	 axiSlaveReadIdReg <= arid;
-                 //$display(\"%(Dut)s::Axi3SlaveRead::readAddr(%%h)\", addr);
-            endmethod
-            method Bit#(1) last();
-                return axiSlaveReadLastFifo.first;
-            endmethod
-            method Bit#(12) rid();
-                return axiSlaveReadIdFifo.first;
-            endmethod
-            method ActionValue#(Bit#(32)) readData();
+        interface Get resp_read;
+            method ActionValue#(Axi3ReadResponse#(32,12)) get();
 
                 let v = axiSlaveReadDataFifos[axiSlaveRS].first;
                 axiSlaveReadDataFifos[axiSlaveRS].deq;
@@ -199,7 +189,7 @@ portalIfcTemplate='''
                 axiSlaveReadIdFifo.deq;
 
                 getWordCount <= getWordCount + 1;
-                return v;
+                return Axi3ReadResponse { data: v, last: axiSlaveReadLastFifo.first, id: axiSlaveReadIdFifo.first, resp: 0 };
             endmethod
         endinterface
     endinterface
@@ -247,8 +237,7 @@ axiStateTemplate='''
     FIFO#(Bit#(12)) axiSlaveReadIdFifo <- mkPipelineFIFO;
     Reg#(Bit#(4)) axiSlaveReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(4)) axiSlaveWriteBurstCountReg <- mkReg(0);
-    FIFO#(Bit#(2)) axiSlaveBrespFifo <- mkFIFO();
-    FIFO#(Bit#(12)) axiSlaveBidFifo <- mkFIFO();
+    FIFO#(Axi3WriteResponse#(12)) axiSlaveBrespFifo <- mkFIFO();
 
     Vector#(2,FIFO#(Bit#(15))) axiSlaveWriteAddrFifos <- replicateM(mkPipelineFIFO);
     Vector#(2,FIFO#(Bit#(15))) axiSlaveReadAddrFifos <- replicateM(mkPipelineFIFO);
@@ -410,14 +399,18 @@ mkHiddenWrapperInterfaceTemplate='''
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
                             FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s);
+                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
+    provisos (Log#(%(indicationChannelCount)s,iccsz));
 %(wrapperCtrl)s
 endmodule
 '''
 
 mkExposedWrapperInterfaceTemplate='''
 // exposed wrapper implementation
-module mk%(Dut)s#(Integer id, %(Ifc)s ifc)(%(Dut)s);
+module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
+    provisos (Log#(%(indicationChannelCount)s,iccsz),
+              Bits#(idType, __a), 
+              Add#(a__, __a, 32));
 %(axiState)s
     // instantiate hidden proxy to report put failures
     %(hiddenProxy)s p <- mk%(hiddenProxy)s(axiSlaveWriteAddrFifos[%(slaveFifoSelHidden)s],
@@ -434,7 +427,8 @@ mkHiddenProxyInterfaceTemplate='''
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
                             FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s) provisos (Log#(%(indicationChannelCount)s,iccsz));
+                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
+    provisos (Log#(%(indicationChannelCount)s,iccsz));
 %(proxyCtrl)s
 %(portalIfcInterrupt)s
 endmodule
@@ -442,7 +436,10 @@ endmodule
 
 mkExposedProxyInterfaceTemplate='''
 // exposed proxy implementation
-module %(moduleContext)s mk%(Dut)s#(Integer id) (%(Dut)s) provisos (Log#(%(indicationChannelCount)s,iccsz));
+module %(moduleContext)s mk%(Dut)s#(idType id) (%(Dut)s) 
+    provisos (Log#(%(indicationChannelCount)s,iccsz),
+              Bits#(idType, __a), 
+              Add#(a__, __a, 32));
 %(axiState)s
     // instantiate hidden wrapper to receive failure notifications
     %(hiddenWrapper)s p <- mk%(hiddenWrapper)s(axiSlaveWriteAddrFifos[%(slaveFifoSelHidden)s],
@@ -454,7 +451,7 @@ module %(moduleContext)s mk%(Dut)s#(Integer id) (%(Dut)s) provisos (Log#(%(indic
 endmodule
 '''
 
-def emitPreamble(f, files):
+def emitPreamble(f, files=[]):
     extraImports = (['import %s::*;\n' % os.path.splitext(os.path.basename(fn))[0] for fn in files]
                    + ['import %s::*;\n' % i for i in syntax.globalimports ])
     f.write(preambleTemplate % {'extraImports' : ''.join(extraImports)})

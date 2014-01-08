@@ -33,7 +33,7 @@ class Variable:
         return '<variable: %s : %s>' % (self.name, self.type)
 
 class Interface:
-    def __init__(self, name, params, decls, subinterfacename):
+    def __init__(self, name, params, decls, subinterfacename, packagename):
         self.type = 'Interface'
         self.name = name
         self.params = params
@@ -41,6 +41,7 @@ class Interface:
         self.subinterfacename = subinterfacename
         self.typeClassInstances = []
         self.hasSource = True
+        self.package = packagename
     def interfaceType(self):
         return Type(self.name,self.params)
     def __repr__(self):
@@ -48,7 +49,8 @@ class Interface:
     def instantiate(self, paramBindings):
         newInterface = Interface(self.name, [],
                                  [d.instantiate(paramBindings) for d in self.decls],
-                                 self.subinterfacename)
+                                 self.subinterfacename,
+                                 self.package)
         newInterface.hasSource = self.hasSource
         newInterface.typeClassInstances = self.typeClassInstances
         return newInterface

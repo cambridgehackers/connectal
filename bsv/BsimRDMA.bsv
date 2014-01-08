@@ -23,7 +23,7 @@
 // BSV Libraries
 import FIFOF::*;
 import Vector::*;
-import GetPut::*;
+import GetPutF::*;
 import ClientServer::*;
 import BRAMFIFO::*;
 import BRAM::*;
@@ -88,7 +88,7 @@ module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(dsz)) readC
    let rw <- selectBsimRdmaReadWrite();
 
    Reg#(DmaMemHandle)     handleReg <- mkReg(0);
-   Reg#(Bit#(32))         addrReg <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize))  addrReg <- mkReg(0);
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
    Reg#(Bit#(8))           tagReg <- mkReg(0);
    Reg#(DmaChannelId)  activeChan <- mkReg(0);
@@ -101,12 +101,12 @@ module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(dsz)) readC
       selectReg <= s;
    endrule
 
-   rule loadClient if (burstReg == 0);
+   rule loadClient if (burstReg == 0 && readClients[selectReg].readData.notFull());
       activeChan <= selectReg;
       let req <- readClients[selectReg].readReq.get();
       //$display("dmaread.loadClient activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
       handleReg <= req.handle;
-      addrReg <= truncate(req.address);
+      addrReg <= req.address;
       burstReg <= req.burstLen;
       tagReg <= req.tag;
    endrule
@@ -114,7 +114,8 @@ module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(dsz)) readC
    rule readData if (burstReg > 0);
       addrReg <= addrReg+fromInteger(valueOf(TDiv#(dsz,8)));
       burstReg <= burstReg-1;
-      Bit#(dsz) v <- rw.read_pareff(handleReg, addrReg);
+      Bit#(32) addr = extend(addrReg);
+      Bit#(dsz) v <- rw.read_pareff(handleReg, addr);
       //$display("dmaread.readData activeChan=%d handle=%h addr=%h burst=%h v=%h", activeChan, handleReg, addrReg, burstReg, v);
       readClients[activeChan].readData.put(DMAData { data: v, tag: tagReg});
    endrule
@@ -133,7 +134,7 @@ module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(dsz)) wr
    let rw <- selectBsimRdmaReadWrite();
 
    Reg#(DmaMemHandle)   handleReg <- mkReg(0);
-   Reg#(Bit#(32))         addrReg <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) addrReg <- mkReg(0);
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
    Reg#(Bit#(8))           tagReg <- mkReg(0);
    Reg#(DmaChannelId)  activeChan <- mkReg(0);
@@ -151,7 +152,7 @@ module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(dsz)) wr
       let req   <- writeClients[selectReg].writeReq.get();
       //$display("dmawrite.loadClient activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
       handleReg   <= req.handle;
-      addrReg   <= truncate(req.address);
+      addrReg   <= req.address;
       burstReg  <= req.burstLen;
       tagReg    <= req.tag;
    endrule
@@ -166,7 +167,8 @@ module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(dsz)) wr
 	 writeClients[activeChan].writeDone.put(v.tag);
       burstReg <= burstReg-1;
       //$display("writeData activeChan=%d handle=%h addr=%h", activeChan, handleReg, addrReg);
-      rw.write_pareff(handleReg, addrReg, v.data);
+      Bit#(32) addr = extend(addrReg);
+      rw.write_pareff(handleReg, addr, v.data);
    endrule
    
    method ActionValue#(DmaDbgRec) dbg();

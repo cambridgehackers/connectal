@@ -25,14 +25,14 @@ import RegFile::*;
 import FIFOF::*;
 import Vector::*;
 import GetPut::*;
-import ClientServer::*;
 import BRAMFIFO::*;
 import BRAM::*;
 import PortalMemory::*;
+import PortalRMemory::*;
 import StmtFSM::*;
 
 // In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
-typedef 4 NumSGLists;
+typedef 32 NumSGLists;
 typedef Bit#(TLog#(NumSGLists)) SGListId;
 typedef 32 SGListMaxLen;
 typedef Bit#(TLog#(TMul#(NumSGLists, SGListMaxLen))) SGListIdx;
@@ -119,52 +119,56 @@ module mkSGListStreamer(SGListStreamer);
    endmethod
 endmodule
 
-interface SGListMMU;
-   method Action page(SGListId id, Bit#(32) off, Bit#(40) addr);
-   method Action addrReq(SGListId id, Bit#(40) off);
-   method ActionValue#(Bit#(40)) addrResp();
+
+
+typedef 12 SGListPageShift;
+typedef TSub#(DmaAddrSize,SGListPageShift) PageIdxSize;
+typedef Bit#(PageIdxSize) PageIdx;
+// these numbers have only been tested on the Zynq platform
+
+interface SGListMMU#(numeric type paSize);
+   method Action page(SGListId id, Bit#(PageIdxSize) vPageNum, Bit#(TSub#(paSize,SGListPageShift)) pPageNum);
+   method Action addrReq(SGListId id, Bit#(DmaAddrSize) off);
+   method ActionValue#(Bit#(paSize)) addrResp();
 endinterface
 
-// is 1 K pages enough (probably not) 
-typedef 1024 SGListMaxPages;
-typedef Bit#(TLog#(SGListMaxPages)) PageIdx;
-// these numbers have only been tested on the Zynq platform
-typedef 12 SGListPageShift;
-
 // if this structure becomes too expensive, we can switch to a multi-level structure
-module mkSGListMMU(SGListMMU);
+module mkSGListMMU(SGListMMU#(paSize))
+   provisos (Log#(NumSGLists, listIdxSize),
+	     Add#(listIdxSize,PageIdxSize,entryIdxSize),
+	     Add#(pPageNumSize, SGListPageShift, paSize),
+	     Bits#(Maybe#(Bit#(pPageNumSize)), mpPageNumSize),
+	     Add#(1, pPageNumSize, mpPageNumSize)
+	     );
 
    BRAM_Configure cfg = defaultValue;
    cfg.latency = 2;
-   Vector#(NumSGLists, BRAM1Port#(PageIdx, Maybe#(Bit#(TSub#(40,SGListPageShift))))) pageTables <- replicateM(mkBRAM1Server(cfg));
+   BRAM1Port#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) pageTable <- mkBRAM1Server(cfg);
    FIFOF#(Bit#(SGListPageShift)) offs <- mkFIFOF;
-   FIFOF#(SGListId) ids  <- mkFIFOF;
-   FIFOF#(Bit#(40)) respFifo <- mkFIFOF;
+   FIFOF#(Bit#(paSize)) respFifo <- mkFIFOF;
    
    let page_shift = fromInteger(valueOf(SGListPageShift));
 
    (* aggressive_implicit_conditions *)
    rule respond;
-      ids.deq;
       offs.deq;
-      let mrv <- pageTables[ids.first].portA.response.get;
+      let mrv <- pageTable.portA.response.get;
       let rv = fromMaybe(?,mrv);
       if (!isValid(mrv))
       	 $display("mkSGListMMU::addrResp has gone off the reservation");
       respFifo.enq({rv,offs.first});
    endrule
-   method Action page(SGListId id, Bit#(32) off, Bit#(40) addr);
-      $display("page id=%d off=%h addr=%h", id, off, addr);
-      pageTables[id].portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(off), datain:tagged Valid truncate(addr)});
+   method Action page(SGListId id, Bit#(PageIdxSize) pageNum, Bit#(pPageNumSize) pPageNum);
+      $display("page id=%d pageNum=%h physaddr=%h", id, pageNum, pPageNum);
+      pageTable.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:{id,pageNum}, datain:tagged Valid pPageNum});
    endmethod
 
-   method Action addrReq(SGListId id, Bit#(40) off);
-      ids.enq(id);
+   method Action addrReq(SGListId id, Bit#(DmaAddrSize) off);
       offs.enq(truncate(off));
-      pageTables[id].portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(off >> page_shift), datain:?});
+      pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,off[valueOf(DmaAddrSize)-1:page_shift]}, datain:?});
    endmethod
    
-   method ActionValue#(Bit#(40)) addrResp();
+   method ActionValue#(Bit#(paSize)) addrResp();
       respFifo.deq();
       return respFifo.first();
    endmethod

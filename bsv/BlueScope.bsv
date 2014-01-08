@@ -25,7 +25,7 @@ import Clocks::*;
 import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
-import GetPut::*;
+import GetPutF::*;
 
 import PortalMemory::*;
 import PortalRMemory::*;
@@ -65,7 +65,7 @@ module mkSyncBlueScope#(Integer samples, DMAWriteServer#(64) wchan, BlueScopeInd
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
    Reg#(State)                stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
-   Reg#(Bit#(40))       writeOffsetReg <- mkReg(0,    clocked_by dClk, reset_by dRst);
+   Reg#(Bit#(DmaAddrSize)) writeOffsetReg <- mkReg(0,    clocked_by dClk, reset_by dRst);
    
    SyncPulseIfc             startPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);

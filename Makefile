@@ -43,6 +43,12 @@ $(bitstests):
 	make -C examples/$(basename $@)/zedboard bits
 	(cd examples/$(basename $@)/zedboard; ndk-build)
 
+gentests = $(addsuffix .gen, $(testnames))
+
+$(gentests):
+	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
+
+
 kc705tests = $(addsuffix .kc705, $(testnames))
 
 $(kc705tests):

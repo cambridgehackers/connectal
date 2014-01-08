@@ -57,6 +57,7 @@ void child(int rd_sock)
   fprintf(stderr, "child::writeDone mismatch=%d\n", mismatch);
   munmap(dstBuffer, alloc_sz);
   close(fd);
+  exit(mismatch);
 }
 
 void parent(int rd_sock, int wr_sock)

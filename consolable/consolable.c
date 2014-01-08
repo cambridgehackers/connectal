@@ -79,10 +79,10 @@ int main(int argc, char **argv)
             if (dirptr) {
                 while ((direntp = readdir(dirptr))) {
                     if (!strncmp(direntp->d_name, "tty.usbmodem", 12)) {
+                        printf("consolable: opening %s\n", direntp->d_name);
                         sprintf(buf, "/dev/%s", direntp->d_name);
                         fd = open(buf, O_RDWR);
-                        if (fd != -1)
-                            break;
+                        break;
                     }
                 }
                 closedir(dirptr); 

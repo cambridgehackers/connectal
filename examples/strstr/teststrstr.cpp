@@ -218,4 +218,5 @@ int main(int argc, const char **argv)
     sem_wait(&test_sem);
   }
 
+  return 0;
 }

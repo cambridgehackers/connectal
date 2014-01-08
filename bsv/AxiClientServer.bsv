@@ -20,9 +20,10 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import FIFO::*;
 import GetPut::*;
 import Connectable::*;
-import DefaultValue::*;
+import RegFile::*;
 
 typedef struct {
    Bit#(addrWidth) address;
@@ -94,6 +95,67 @@ interface Axi3Server#(type addrWidth, type busWidth, type busWidthBytes, type id
    interface Get#(Axi3WriteResponse#(idWidth)) resp_b;
 endinterface
 
+module mkAxi3ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
+   (Axi3Server#(addrWidth, busWidth, busWidthBytes, idWidth))
+   provisos(Div#(busWidth,8,busWidthBytes),
+      Add#(nz, regFileBusWidth, addrWidth));
+   Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
+   Reg#(Bit#(regFileBusWidth)) writeAddrReg <- mkReg(0);
+   Reg#(Bit#(idWidth)) readIdReg <- mkReg(0);
+   Reg#(Bit#(4)) readBurstCountReg <- mkReg(0);
+   Reg#(Bit#(4)) writeBurstCountReg <- mkReg(0);
+   FIFO#(Bit#(2)) writeRespFifo <- mkFIFO();
+   FIFO#(Bit#(idWidth)) writeIdFifo <- mkFIFO();
+
+   Bool verbose = False;
+   interface Put req_ar;
+      method Action put(Axi3ReadRequest#(addrWidth,idWidth) req) if (readBurstCountReg == 0);
+         if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.address, req.len+1);
+         readAddrReg <= truncate(req.address/fromInteger(valueOf(busWidthBytes)));
+	 readIdReg <= req.id;
+         readBurstCountReg <= req.len+1;
+      endmethod
+   endinterface: req_ar
+   interface Get resp_read;
+      method ActionValue#(Axi3ReadResponse#(busWidth,idWidth)) get() if (readBurstCountReg > 0);
+         let data = rf.sub(readAddrReg);
+         if (verbose) $display("axiSlave.read.readData %h %h %d", readAddrReg, data, readBurstCountReg);
+         readBurstCountReg <= readBurstCountReg - 1;
+         readAddrReg <= readAddrReg + 1;
+         return Axi3ReadResponse { data: data, last: (readBurstCountReg == 1) ? 1 : 0, id: readIdReg, resp: 0 };
+      endmethod
+   endinterface: resp_read
+   interface Put req_aw;
+      method Action put(Axi3WriteRequest#(addrWidth,idWidth) req) if (writeBurstCountReg == 0);
+         if (verbose) $display("axiSlave.write.writeAddr %h bc %d", req.address, req.len+1);
+         writeAddrReg <= truncate(req.address/fromInteger(valueOf(busWidthBytes)));
+         writeBurstCountReg <= req.len+1;
+         writeIdFifo.enq(req.id);
+      endmethod
+   endinterface: req_aw
+   interface Put resp_write;
+      method Action put(Axi3WriteData#(busWidth,busWidthBytes,idWidth) resp) if (writeBurstCountReg > 0);
+         if (verbose) $display("writeData %h %h %d", writeAddrReg, resp.data, writeBurstCountReg);
+         rf.upd(writeAddrReg, resp.data);
+         writeAddrReg <= writeAddrReg + 1;
+         writeBurstCountReg <= writeBurstCountReg - 1;
+         if (verbose) $display("axiSlave.write.writeData %h %h %d", writeAddrReg, resp.data, writeBurstCountReg);
+         if (writeBurstCountReg == 1)
+	    begin
+               writeRespFifo.enq(0);
+            end
+      endmethod
+   endinterface: resp_write
+   interface Get resp_b;
+      method ActionValue#(Axi3WriteResponse#(idWidth)) get();
+         writeRespFifo.deq;
+	 writeIdFifo.deq;
+         return Axi3WriteResponse { resp: writeRespFifo.first, id: writeIdFifo.first };
+      endmethod
+   endinterface: resp_b
+endmodule
+
+
 typedef struct {
     Bit#(addrWidth) address;
     Bit#(8) len;
@@ -153,6 +215,66 @@ interface Axi4Server#(type addrWidth, type busWidth, type busWidthBytes, type id
    interface Put#(Axi4WriteData#(busWidth, busWidthBytes, idWidth)) resp_write;
    interface Get#(Axi4WriteResponse#(idWidth)) resp_b;
 endinterface
+
+module mkAxi4ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
+   (Axi4Server#(addrWidth, busWidth, busWidthBytes, idWidth))
+   provisos(Div#(busWidth,8,busWidthBytes),
+      Add#(nz, regFileBusWidth, addrWidth));
+   Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
+   Reg#(Bit#(regFileBusWidth)) writeAddrReg <- mkReg(0);
+   Reg#(Bit#(idWidth)) readIdReg <- mkReg(0);
+   Reg#(Bit#(4)) readBurstCountReg <- mkReg(0);
+   Reg#(Bit#(4)) writeBurstCountReg <- mkReg(0);
+   FIFO#(Bit#(2)) writeRespFifo <- mkFIFO();
+   FIFO#(Bit#(idWidth)) writeIdFifo <- mkFIFO();
+
+   Bool verbose = False;
+   interface Put req_ar;
+      method Action put(Axi4ReadRequest#(addrWidth,idWidth) req) if (readBurstCountReg == 0);
+         if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.address, req.len+1);
+         readAddrReg <= truncate(req.address/fromInteger(valueOf(busWidthBytes)));
+	 readIdReg <= req.id;
+         readBurstCountReg <= truncate(req.len)+1;
+      endmethod
+   endinterface: req_ar
+   interface Get resp_read;
+      method ActionValue#(Axi4ReadResponse#(busWidth,idWidth)) get() if (readBurstCountReg > 0);
+         let data = rf.sub(readAddrReg);
+         if (verbose) $display("axiSlave.read.readData %h %h %d", readAddrReg, data, readBurstCountReg);
+         readBurstCountReg <= readBurstCountReg - 1;
+         readAddrReg <= readAddrReg + 1;
+         return Axi4ReadResponse { data: data, last: (readBurstCountReg == 1) ? 1 : 0, id: readIdReg, resp: 0 };
+      endmethod
+   endinterface: resp_read
+   interface Put req_aw;
+      method Action put(Axi4WriteRequest#(addrWidth,idWidth) req) if (writeBurstCountReg == 0);
+         if (verbose) $display("axiSlave.write.writeAddr %h bc %d", req.address, req.len+1);
+         writeAddrReg <= truncate(req.address/fromInteger(valueOf(busWidthBytes)));
+         writeBurstCountReg <= truncate(req.len)+1;
+         writeIdFifo.enq(req.id);
+      endmethod
+   endinterface: req_aw
+   interface Put resp_write;
+      method Action put(Axi4WriteData#(busWidth,busWidthBytes,idWidth) resp) if (writeBurstCountReg > 0);
+         if (verbose) $display("writeData %h %h %d", writeAddrReg, resp.data, writeBurstCountReg);
+         rf.upd(writeAddrReg, resp.data);
+         writeAddrReg <= writeAddrReg + 1;
+         writeBurstCountReg <= writeBurstCountReg - 1;
+         if (verbose) $display("axiSlave.write.writeData %h %h %d", writeAddrReg, resp.data, writeBurstCountReg);
+         if (writeBurstCountReg == 1)
+	    begin
+               writeRespFifo.enq(0);
+            end
+      endmethod
+   endinterface: resp_write
+   interface Get resp_b;
+      method ActionValue#(Axi4WriteResponse#(idWidth)) get();
+         writeRespFifo.deq;
+	 writeIdFifo.deq;
+         return Axi4WriteResponse { resp: writeRespFifo.first, id: writeIdFifo.first };
+      endmethod
+   endinterface: resp_b
+endmodule
 
 instance Connectable#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth), Axi3Server#(addrWidth, busWidth,busWidthBytes,idWidth));
    module mkConnection#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) m, Axi3Server#(addrWidth, busWidth,busWidthBytes,idWidth) s)(Empty);

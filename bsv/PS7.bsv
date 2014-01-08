@@ -25,6 +25,7 @@ import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
+import Connectable::*;
 import Vector::*;
 import PPS7::*;
 import AxiMasterSlave::*;
@@ -34,20 +35,12 @@ import AxiClientServer::*;
 
 interface AxiMasterCommon#(numeric type data_width, numeric type id_width);
     method Bit#(1)            aresetn();
-    interface Get#(Axi3ReadRequest#(32,id_width)) req_ar;
-    interface Get#(Axi3WriteRequest#(32,id_width)) req_aw;
-    interface Put#(Axi3ReadResponse#(data_width, id_width)) resp_read;
-    interface Get#(Axi3WriteData#(data_width, TDiv#(data_width, 8), id_width)) resp_write;
-    interface Put#(Axi3WriteResponse#(id_width)) resp_b;
+    interface Axi3Client#(32,data_width,TDiv#(data_width,8), id_width) client;
 endinterface
 
 interface AxiSlaveCommon#(numeric type data_width, numeric type id_width);
     method Bit#(1)            aresetn();
-    interface Put#(Axi3ReadRequest#(32,id_width)) req_ar;
-    interface Put#(Axi3WriteRequest#(32,id_width)) req_aw;
-    interface Put#(Axi3WriteData#(data_width, TDiv#(data_width, 8), id_width)) resp_write;
-    interface Get#(Axi3ReadResponse#(data_width, id_width)) resp_read;
-    interface Get#(Axi3WriteResponse#(id_width)) resp_b;
+    interface Axi3Server#(32,data_width,TDiv#(data_width,8), id_width) server;
 endinterface
 
 interface AxiSlaveHighSpeed#(numeric type data_width, numeric type id_width);
@@ -237,6 +230,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
        end
     for (Integer i = 0; i < 2; i = i + 1)
         vtopm_axi_gp[i] = interface AxiMasterCommon#(32, id_width);
+       interface Axi3Client client;
             interface Get req_ar;
                  method ActionValue#(Axi3ReadRequest#(32,id_width)) get() if (vm_axi_gp[i].arvalid() != 0);
                      Axi3ReadRequest#(32,id_width) v;
@@ -301,6 +295,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
                     vtopmw_axi_gp[i].bvalid <= 1;
                 endmethod
             endinterface
+            endinterface
             method aresetn = vm_axi_gp[i].aresetn;
             endinterface;
     for (Integer i = 0; i < 2; i = i + 1)
@@ -323,6 +318,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
        end
     for (Integer i = 0; i < 2; i = i + 1)
         vtops_axi_gp[i] = interface AxiSlaveCommon#(32, id_width);
+          interface Axi3Server server;
             interface Put req_ar;
                 method Action put(Axi3ReadRequest#(32,id_width) v) if (vs_axi_gp[i].arready() != 0);
                     vs_axi_gp[i].araddr(v.address);
@@ -384,6 +380,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
 	            vtopsw_axi_gp[i].bready <= 1;
                     return v;
                 endmethod
+              endinterface
             endinterface
             method aresetn = vs_axi_gp[i].aresetn;
         endinterface;
@@ -408,6 +405,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
     for (Integer i = 0; i < 4; i = i + 1)
         vtops_axi_hp[i] = interface AxiSlaveHighSpeed#(data_width, id_width);
             interface AxiSlaveCommon axi;
+            interface Axi3Server server;
             interface Put req_ar;
                 method Action put(Axi3ReadRequest#(32,id_width) v) if (vs_axi_hp[i].arready() != 0);
                     vs_axi_hp[i].araddr(v.address);
@@ -469,9 +467,10 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7#(c_dm_width, c_dq_width, c_d
 		    vtopsw_axi_hp[i].bready <= 1;
                     return v;
                 endmethod
-            endinterface
+              endinterface: resp_b
+            endinterface: server
             method aresetn = vs_axi_hp[i].aresetn;
-            endinterface
+            endinterface: axi
             method racount = vs_axi_hp[i].racount;
             method rcount = vs_axi_hp[i].rcount;
             method rdissuecap1_en = vs_axi_hp[i].rdissuecap1_en;
@@ -547,94 +546,39 @@ typedef AxiSlaveHighSpeed#(64/*data_width*/, 12/*id_width*/) HSSlave;
 typedef Axi3ReadRequest#(32,12/*id_width*/) StdAxiREQR;
 typedef Axi3WriteRequest#(32,12/*id_width*/) StdAxiREQW;
 
-interface HackInterface;
-endinterface
+// special mkConnection that truncates the address until we make AxiRDMA polymorphic over addrWidth
+instance Connectable#(Axi3Client#(40, busWidth,busWidthBytes,idWidth), Axi3Server#(32, busWidth,busWidthBytes,idWidth));
+   module mkConnection#(Axi3Client#(40, busWidth,busWidthBytes,idWidth) m, Axi3Server#(32, busWidth,busWidthBytes,idWidth) s)(Empty);
 
-module mkPS7MasterInternal#(StdAxi3Master m_axi, HSSlave hp)(HackInterface);
-    rule s_areqr_rule;
-        let address <- m_axi.read.readAddr();
-        hp.axi.req_ar.put(StdAxiREQR{ address: address[31:0],
-            len: m_axi.read.readBurstLen(),
-            size: m_axi.read.readBurstWidth(),
-            burst: m_axi.read.readBurstType(),
-            prot: m_axi.read.readBurstProt(),
-            cache: m_axi.read.readBurstCache(),
-            id: m_axi.read.readId(), lock: 0, qos: 0});
-    endrule
+      //mkConnection(m.req_ar, s.req_ar);
+      rule connect_req_ar;
+	 let req <- m.req_ar.get();
+	 s.req_ar.put(Axi3ReadRequest { address: truncate(req.address), len: req.len, id: req.id, burst: req.burst, cache: req.cache, lock: req.lock, qos: req.qos, prot:req.prot, size: req.size });
+      endrule
+      mkConnection(s.resp_read, m.resp_read);
 
-    rule s_areqw_rule;
-        let address <- m_axi.write.writeAddr();
-        hp.axi.req_aw.put(StdAxiREQW{ address: address[31:0],
-            len: m_axi.write.writeBurstLen(),
-            size: m_axi.write.writeBurstWidth(),
-            burst: m_axi.write.writeBurstType(),
-            prot: m_axi.write.writeBurstProt(),
-            cache: m_axi.write.writeBurstCache(),
-            id: m_axi.write.writeId(), lock: 0, qos: 0});
-    endrule
+      //mkConnection(m.req_aw, s.req_aw);
+      rule connect_req_aw;
+	 let req <- m.req_aw.get();
+	 s.req_aw.put(Axi3WriteRequest { address: truncate(req.address), len: req.len, id: req.id, burst: req.burst, cache: req.cache, lock: req.lock, qos: req.qos, prot:req.prot, size: req.size });
+      endrule
+      mkConnection(m.resp_write, s.resp_write);
+      mkConnection(s.resp_b, m.resp_b);
 
-    rule s_arespb_rule;
-        let s_arespb <- hp.axi.resp_b.get();
-        m_axi.write.writeResponse(s_arespb.resp, s_arespb.id);
-    endrule
+   endmodule
+endinstance
 
-    rule s_arespr_rule;
-        let s_arespr <- hp.axi.resp_read.get();
-        m_axi.read.readData(s_arespr.data, s_arespr.resp, s_arespr.last, s_arespr.id);
-    endrule
-
-    rule s_arespw_rule;
-        let data <- m_axi.write.writeData();
-        Axi3WriteData#(64/*data_width*/, TDiv#(64, 8), 12/*id_width*/) s_arespw;
-        s_arespw.data = data;
-        s_arespw.byteEnable = m_axi.write.writeDataByteEnable();
-        s_arespw.last = m_axi.write.writeLastDataBeat();
-        s_arespw.id = m_axi.write.writeWid();
-        hp.axi.resp_write.put(s_arespw);
-    endrule
-endmodule
-
-module mkPS7Slave#(Clock axi_clock, Reset axi_reset, StdAxi3Slave ctrl, Integer nmasters, StdAxi3Master m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
+module mkPS7Slave#(Clock axi_clock, Reset axi_reset, Axi3Server#(32,32,4,12) ctrl, Integer nmasters, Axi3Client#(40,64,8,12) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
     StdPS7 ps7 <- mkPS7(axi_clock, axi_reset);
 
     rule send_int_rule;
     ps7.irq.f2p({15'b0, interrupt ? 1'b1 : 1'b0});
     endrule
 
-    rule m_ar_rule;
-        let m_ar <- ps7.m_axi_gp[0].req_ar.get();
-        ctrl.read.readAddr(m_ar.address, m_ar.len, m_ar.size, m_ar.burst, m_ar.prot, m_ar.cache, m_ar.id);
-    endrule
-
-    rule m_aw_rule;
-        let m_aw <- ps7.m_axi_gp[0].req_aw.get();
-        ctrl.write.writeAddr(m_aw.address, m_aw.len, m_aw.size, m_aw.burst, m_aw.prot, m_aw.cache, m_aw.id);
-    endrule
-
-    rule m_arespb_rule;
-        Axi3WriteResponse#(12/*id_width*/) m_arespb;
-        m_arespb.resp <- ctrl.write.writeResponse();
-        m_arespb.id <- ctrl.write.bid();
-        ps7.m_axi_gp[0].resp_b.put(m_arespb);
-    endrule
-
-    rule m_arespr_rule;
-        let data <- ctrl.read.readData();
-        Axi3ReadResponse#(32/*data_width*/, 12/*id_width*/) m_arespr;
-        m_arespr.data = data;
-        m_arespr.resp = 2'b0;
-        m_arespr.last = ctrl.read.last();
-        m_arespr.id = ctrl.read.rid();
-        ps7.m_axi_gp[0].resp_read.put(m_arespr);
-    endrule
-
-    rule m_arespw_rule;
-        let m_arespw <- ps7.m_axi_gp[0].resp_write.get();
-        ctrl.write.writeData(m_arespw.data, m_arespw.byteEnable, m_arespw.last, m_arespw.id);
-    endrule
+   mkConnection(ps7.m_axi_gp[0].client, ctrl);
 
 if (nmasters > 0) begin
-    let myhp <- mkPS7MasterInternal(m_axi, ps7.s_axi_hp[0]);
+   mkConnection(m_axi, ps7.s_axi_hp[0].axi.server);
 end
 
     interface Inout  addr = ps7.ddr.addr;

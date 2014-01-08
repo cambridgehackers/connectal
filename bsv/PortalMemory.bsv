@@ -52,7 +52,8 @@ interface DMAIndication;
    method Action sglistResp(Bit#(32) pref, Bit#(32) idx);
    method Action parefResp(Bit#(32) v);
    method Action sglistEntry(Bit#(64) physAddr);
-   method Action badAddr(Bit#(32) handle, Bit#(40) address);
+   method Action badHandle(Bit#(32) handle, Bit#(32) address);
+   method Action badAddr(Bit#(32) handle, Bit#(32) address);
 endinterface
 
 //
@@ -84,7 +85,7 @@ interface DMARequest;
    // @note Only implemented for software 
    method Action paref(Bit#(32) pref, Bit#(32) size);
 
-   method Action readSglist(ChannelType rc, Bit#(32) pref, Bit#(64) addr);
+   method Action readSglist(ChannelType rc, Bit#(32) pref, Bit#(32) addr);
 endinterface
 
 //

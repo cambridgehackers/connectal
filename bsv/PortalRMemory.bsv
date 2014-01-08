@@ -24,7 +24,7 @@
 // BSV Libraries
 import FIFOF::*;
 import Adapter::*;
-import GetPut::*;
+import GetPutF::*;
 import Vector::*;
 import ClientServer::*;
 import BRAMFIFO::*;
@@ -35,9 +35,12 @@ import BRAMFIFOFLevel::*;
 
 typedef Bit#(32) DmaMemHandle;
 
+typedef 24 DmaAddrSize;
+// SGListMaxPages is derived from this
+
 typedef struct {
    DmaMemHandle handle;
-   Bit#(40)  address;
+   Bit#(DmaAddrSize)  address;
    Bit#(8) burstLen;
    Bit#(8)  tag;
    } DMAAddressRequest deriving (Bits);
@@ -47,25 +50,25 @@ typedef struct {
    } DMAData#(numeric type dsz) deriving (Bits);
 
 interface DMAReadClient#(numeric type dsz);
-   interface Get#(DMAAddressRequest)    readReq;
-   interface Put#(DMAData#(dsz)) readData;
+   interface GetF#(DMAAddressRequest)    readReq;
+   interface PutF#(DMAData#(dsz)) readData;
 endinterface
 
 interface DMAWriteClient#(numeric type dsz);
-   interface Get#(DMAAddressRequest)    writeReq;
-   interface Get#(DMAData#(dsz)) writeData;
-   interface Put#(Bit#(8))       writeDone;
+   interface GetF#(DMAAddressRequest)    writeReq;
+   interface GetF#(DMAData#(dsz)) writeData;
+   interface PutF#(Bit#(8))       writeDone;
 endinterface
 
 interface DMAReadServer#(numeric type dsz);
-   interface Put#(DMAAddressRequest) readReq;
-   interface Get#(DMAData#(dsz))     readData;
+   interface PutF#(DMAAddressRequest) readReq;
+   interface GetF#(DMAData#(dsz))     readData;
 endinterface
 
 interface DMAWriteServer#(numeric type dsz);
-   interface Put#(DMAAddressRequest) writeReq;
-   interface Put#(DMAData#(dsz))     writeData;
-   interface Get#(Bit#(8))           writeDone;
+   interface PutF#(DMAAddressRequest) writeReq;
+   interface PutF#(DMAData#(dsz))     writeData;
+   interface GetF#(Bit#(8))           writeDone;
 endinterface
 
 //
@@ -104,18 +107,19 @@ module mkDMAReadBuffer(DMAReadBuffer#(dsz, maxBurst))
    FIFOF#(DMAAddressRequest)       reqOutstanding <- mkFIFOF();
 
    interface DMAReadServer dmaServer;
-      interface Put readReq = toPut(reqOutstanding);
-      interface Get readData = toGet(readBuffer);
+      interface PutF readReq = toPutF(reqOutstanding);
+      interface GetF readData = toGetF(readBuffer);
    endinterface
    interface DMAReadClient dmaClient;
       // only issue the readRequest when sufficient buffering is available
-      interface Get readReq;
+      interface GetF readReq;
 	 method ActionValue#(DMAAddressRequest) get if (readBuffer.lowWater(truncate(reqOutstanding.first.burstLen)));
 	    reqOutstanding.deq;
 	    return reqOutstanding.first;
 	 endmethod
+         method notEmpty = reqOutstanding.notEmpty;
       endinterface
-      interface Put readData = toPut(readBuffer);
+      interface PutF readData = toPutF(readBuffer);
    endinterface
 endmodule
 
@@ -134,20 +138,23 @@ module mkDMAWriteBuffer(DMAWriteBuffer#(bsz, maxBurst))
    FIFOF#(Bit#(8))                        doneTags <- mkFIFOF();
 
    interface DMAWriteServer dmaServer;
-      interface Put writeReq = toPut(reqOutstanding);
-      interface Put writeData = toPut(writeBuffer);
-      interface Get writeDone = toGet(doneTags);
+      interface PutF writeReq = toPutF(reqOutstanding);
+      interface PutF writeData = toPutF(writeBuffer);
+      interface GetF writeDone = toGetF(doneTags);
    endinterface
    interface DMAWriteClient dmaClient;
       // only issue the writeRequest when sufficient data has been buffered
-      interface Get writeReq;
+      interface GetF writeReq;
 	 method ActionValue#(DMAAddressRequest) get if (writeBuffer.highWater(truncate(reqOutstanding.first.burstLen)));
 	    reqOutstanding.deq;
 	    return reqOutstanding.first;
 	 endmethod
+	 method Bool notEmpty();
+	    return reqOutstanding.notEmpty && writeBuffer.highWater(truncate(reqOutstanding.first.burstLen));
+	 endmethod
       endinterface
-      interface Get writeData = toGet(writeBuffer);
-      interface Put writeDone = toPut(doneTags);
+      interface GetF writeData = toGetF(writeBuffer);
+      interface PutF writeDone = toPutF(doneTags);
    endinterface
 endmodule
 

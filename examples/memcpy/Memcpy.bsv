@@ -22,7 +22,7 @@
 
 import Vector::*;
 import FIFOF::*;
-import GetPut::*;
+import GetPutF::*;
 
 import PortalMemory::*;
 import PortalRMemory::*;
@@ -60,8 +60,8 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
    Reg#(Bit#(32)) streamAckCnt <- mkReg(0);
-   Reg#(Bit#(40)) streamRdOff <- mkReg(0);
-   Reg#(Bit#(40)) streamWrOff <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) streamRdOff <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) streamWrOff <- mkReg(0);
    Reg#(DmaMemHandle)    streamRdHandle <- mkReg(0);
    Reg#(DmaMemHandle)    streamWrHandle <- mkReg(0);
    Reg#(DmaMemHandle) bluescopeWrHandle <- mkReg(0);
@@ -69,7 +69,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bool)              dataMismatch <- mkReg(False);  
    
    Reg#(Bit#(8)) burstLen <- mkReg(8);
-   Reg#(Bit#(40)) deltaOffset <- mkReg(8*fromInteger(busWidthBytes));
+   Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(8*fromInteger(busWidthBytes));
 
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt - extend(burstLen);

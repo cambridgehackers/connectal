@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 import FIFOF::*;
-import GetPut::*;
+import GetPutF::*;
 import Vector::*;
 
 import PortalMemory::*;
@@ -53,11 +53,11 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32)) putOffset <- mkReg(0);
    Reg#(Bool)    dataMismatch <- mkReg(False);  
    Reg#(Bit#(32))      srcGen <- mkReg(0);
-   Reg#(Bit#(40))      offset <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize))      offset <- mkReg(0);
    FIFOF#(Tuple2#(Bit#(32),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
 
    Reg#(Bit#(8)) burstLen <- mkReg(8);
-   Reg#(Bit#(40)) deltaOffset <- mkReg(8*8);
+   Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(8*8);
 
    rule mismatch;
       let tpl = mismatchFifo.first();
@@ -71,7 +71,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	  streamRdCnt <= numWords>>1;
 	  putOffset <= 0;
 	  burstLen <= truncate(bl);
-	  deltaOffset <= 8*extend(bl);
+	  deltaOffset <= 8*truncate(bl);
 	  indication.started(numWords);
        endmethod
 
@@ -81,7 +81,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endinterface
 
    interface DMAReadClient dmaClient;
-      interface Get readReq;
+      interface GetF readReq;
 	 method ActionValue#(DMAAddressRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
 	    streamRdCnt <= streamRdCnt-extend(burstLen);
 	    offset <= offset + deltaOffset;
@@ -91,8 +91,11 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    //   indication.readReq(streamRdCnt);
 	    return DMAAddressRequest { handle: streamRdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
 	 endmethod
+	 method Bool notEmpty();
+	    return streamRdCnt > 0 && mismatchFifo.notFull();
+	 endmethod
       endinterface : readReq
-      interface Put readData;
+      interface PutF readData;
 	 method Action put(DMAData#(64) d);
 	    //$display("readData putOffset=%h d=%h tag=%h", putOffset, d.data, d.tag);
 	    let v = d.data;
@@ -104,6 +107,9 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    srcGen <= srcGen+2;
 	    putOffset <= putOffset + 8;
 	    //indication.rData(v);
+	 endmethod
+	 method Bool notFull();
+	    return mismatchFifo.notFull();
 	 endmethod
       endinterface : readData
    endinterface

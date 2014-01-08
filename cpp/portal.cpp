@@ -45,6 +45,11 @@
 #include "sock_utils.h"
 #include "sock_fd.h"
 
+PortalWrapper **portal_wrappers = 0;
+struct pollfd *portal_fds = 0;
+int numFds = 0;
+Directory dir;
+
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
 #define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
@@ -82,10 +87,6 @@ void write_portal(portal *p, unsigned int addr, unsigned int v, char *name)
 
 }
 
-PortalWrapper **portal_wrappers = 0;
-struct pollfd *portal_fds = 0;
-int numFds = 0;
-
 void Portal::close()
 {
     if (fd > 0) {
@@ -116,7 +117,15 @@ Portal::Portal(int id)
     req_reg_base(0x0),
     req_fifo_base(0x0)
 {
-  assert(false);
+  char buff[128];
+  sprintf(buff, "fpga%d", dir.fpga(id));
+  name = strdup(buff);
+  int rc = open(dir.addrbits(id));
+  if (rc != 0) {
+    printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
+    ALOGD("Portal::Portal failure rc=%d\n", rc);
+    exit(1);
+  }
 }
 
 Portal::~Portal()
@@ -124,7 +133,6 @@ Portal::~Portal()
   close();
   free(name);
 }
-
 
 
 int Portal::open(int addrbits)
@@ -173,8 +181,8 @@ int Portal::open(int addrbits)
     req_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(1<<14));
     req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
 
-    fprintf(stderr, "Portal::enabling interrupts %s\n", name);
-    *(ind_reg_base+0x1) = 1;
+    fprintf(stderr, "Portal::disabling interrupts %s\n", name);
+    *(ind_reg_base+0x1) = 0;
 
 #else
     snprintf(p.read.path, sizeof(p.read.path), "%s_rc", name);
@@ -188,9 +196,9 @@ int Portal::open(int addrbits)
     req_reg_base   = dev_base+(1<<14);
     req_fifo_base  = dev_base+(0<<14);
 
-    fprintf(stderr, "Portal::enabling interrupts %s\n", name);
+    fprintf(stderr, "Portal::disabling interrupts %s\n", name);
     unsigned int addr = ind_reg_base+0x4;
-    write_portal(&p, addr, 1, name);
+    write_portal(&p, addr, 0, name);
 #endif
     return 0;
 }
@@ -287,9 +295,23 @@ int PortalWrapper::unregisterInstance()
 int PortalWrapper::registerInstance()
 {
     numFds++;
-    portal_wrappers = (PortalWrapper **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));
+
+    // XXX: I have no idea why realloc sometimes causes tests to segfault on zynq platform
+    //      it seems to me that the use of malloc/memcpy here should be interchangeable (mdk)
+
+    PortalWrapper **tmp = (PortalWrapper **)malloc(numFds*sizeof(PortalWrapper *));
+    if (numFds - 1)
+        memcpy(tmp, portal_wrappers, (numFds-1)*(sizeof(PortalWrapper*)));
+    portal_wrappers = tmp;
+    //portal_wrappers = (PortalWrapper **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));
+
+    struct pollfd *tmpp = (struct pollfd *)malloc(numFds*sizeof(struct pollfd));
+    if (numFds - 1)
+        memcpy(tmpp, portal_fds, (numFds-1)*(sizeof(struct pollfd)));
+    portal_fds = tmpp;
+    //portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
+
     portal_wrappers[numFds-1] = this;
-    portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
     struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
     pollfd->fd = this->fd;
@@ -322,7 +344,6 @@ PortalMemory::PortalMemory(int id)
   : PortalProxy(id),
     handle(1)
 {
-  assert(false);
 }
 
 void *PortalMemory::mmap(PortalAlloc *portalAlloc)
@@ -432,7 +453,7 @@ void* portalExec(void* __x)
 {
 #ifdef MMAP_HW
     long rc;
-    int timeout = -1; 
+    int timeout = 100; // interrupts not working yet on zynq 
 #ifndef ZYNQ
     timeout = 100; // interrupts not working yet on PCIe
 #endif
@@ -449,7 +470,6 @@ void* portalExec(void* __x)
     }
 #endif
     while ((rc = poll(portal_fds, numFds, timeout)) >= 0) {
-
       for (int i = 0; i < numFds; i++) {
 	  if (!portal_wrappers) {
 	    fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
@@ -468,7 +488,7 @@ void* portalExec(void* __x)
 	// handle all messasges from this portal instance
 	while (queue_status) {
 	  if(0)
-	    fprintf(stderr, "queue_status %d\n", queue_status);
+	  fprintf(stderr, "queue_status %d\n", queue_status);
 	  instance->handleMessage(queue_status-1);
 	  int_src = *(volatile int *)(instance->ind_reg_base+0x0);
 	  int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
@@ -484,7 +504,7 @@ void* portalExec(void* __x)
 	  // do something if we timeout??
 	}
 	// re-enable interupt which was disabled by portal_isr
-	*(instance->ind_reg_base+0x1) = 1;
+	// *(instance->ind_reg_base+0x1) = 1;
       }
     }
     // return only in error case
@@ -512,7 +532,63 @@ void* portalExec(void* __x)
 #endif
 }
 
-Directory::Directory(const char* devname, unsigned int addrbits) : Portal(devname,addrbits){}
+Directory::Directory() : Portal("fpga0", 16){}
+
+unsigned int Directory::fpga(unsigned int id)
+{
+#ifdef MMAP_HW
+  volatile unsigned int *ptr = req_fifo_base+128;
+  unsigned int numportals,i;
+  ptr++;
+  ptr++;
+  numportals = *ptr;
+  ptr++;
+  ptr++;
+  for(i = 0; (i < numportals) && (i < 32); i++){
+    unsigned int ifcid = *ptr;
+    ptr++;
+    unsigned int ifctype = *ptr;
+    ptr++;
+    if(ifcid == id)
+      return i+1;
+  }
+#else
+  unsigned int ptr = 128*4;
+  unsigned int numportals,i;
+  ptr += 4;
+  ptr += 4;
+  numportals = read_portal(&p, ptr, name);
+  ptr += 4;
+  ptr += 4;
+  for(i = 0; (i < numportals) && (i < 32); i++){
+    unsigned int ifcid = read_portal(&p, ptr, name);
+    ptr += 4;
+    unsigned int ifctype = read_portal(&p, ptr, name);
+    ptr += 4;
+    if(ifcid == id)
+      return i+1;
+  }
+#endif
+  fprintf(stderr, "Directory::fpga(id=%d) id not found\n", id);
+}
+
+unsigned int Directory::addrbits(unsigned int id)
+{
+#ifdef MMAP_HW
+  volatile unsigned int *ptr = req_fifo_base+128;
+  ptr++;
+  ptr++;
+  ptr++;
+  return *ptr;
+#else
+  unsigned int ptr = 128*4;
+  ptr += 4;
+  ptr += 4;
+  ptr += 4;
+  return read_portal(&p, ptr, name);
+#endif
+}
+
 void Directory::print()
 {
   fprintf(stderr, "Directory::print(%s)\n", name);
