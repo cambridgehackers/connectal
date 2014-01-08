@@ -1,7 +1,7 @@
 
 S2H = RingRequest
 H2S = RingIndication
-BSVFILES = Ring.bsv Swallow.bsv
+BSVFILES = Ring.bsv 
 CPPFILES=testring.cpp
 
 include ../../Makefile.common
