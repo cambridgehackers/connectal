@@ -23,6 +23,8 @@
 import GetPut::*;
 import Connectable::*;
 import FIFOF::*;
+import FIFOLevel::*;
+import BRAMFIFOFLevel::*;
 
 interface GetF#(type a);
    method ActionValue#(a) get();
@@ -88,6 +90,60 @@ instance ToPutF#(FIFOF#(b), b);
 	      endmethod
 	      method Bool notFull();
 		 return fifof.notFull();
+	      endmethod
+	 endinterface);
+   endfunction
+endinstance
+
+instance ToGetF#(FIFOLevelIfc#(b,d), b);
+   function GetF#(b) toGetF(FIFOLevelIfc#(b,d) fifof);
+      return (interface GetF;
+	      method ActionValue#(b) get();
+	         fifof.deq();
+	      return fifof.first();
+	      endmethod
+	 method Bool notEmpty();
+	    return fifof.notEmpty();
+	 endmethod
+	 endinterface);
+   endfunction
+endinstance
+
+instance ToPutF#(FIFOLevelIfc#(b,d), b);
+   function PutF#(b) toPutF(FIFOLevelIfc#(b,d) fifof);
+      return (interface PutF;
+	      method Action put(b x);
+	         fifof.enq(x);
+	      endmethod
+	      method Bool notFull();
+		 return fifof.notFull();
+	      endmethod
+	 endinterface);
+   endfunction
+endinstance
+
+instance ToGetF#(FIFOFLevel#(b,d), b);
+   function GetF#(b) toGetF(FIFOFLevel#(b,d) fifof);
+      return (interface GetF;
+	      method ActionValue#(b) get();
+	         fifof.fifo.deq();
+	      return fifof.fifo.first();
+	      endmethod
+	 method Bool notEmpty();
+	    return fifof.fifo.notEmpty();
+	 endmethod
+	 endinterface);
+   endfunction
+endinstance
+
+instance ToPutF#(FIFOFLevel#(b,d), b);
+   function PutF#(b) toPutF(FIFOFLevel#(b,d) fifof);
+      return (interface PutF;
+	      method Action put(b x);
+	         fifof.fifo.enq(x);
+	      endmethod
+	      method Bool notFull();
+		 return fifof.fifo.notFull();
 	      endmethod
 	 endinterface);
    endfunction

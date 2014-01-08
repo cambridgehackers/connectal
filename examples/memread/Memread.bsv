@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 import FIFOF::*;
-import GetPut::*;
+import GetPutF::*;
 import Vector::*;
 
 import PortalMemory::*;
@@ -81,7 +81,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endinterface
 
    interface DMAReadClient dmaClient;
-      interface Get readReq;
+      interface GetF readReq;
 	 method ActionValue#(DMAAddressRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
 	    streamRdCnt <= streamRdCnt-extend(burstLen);
 	    offset <= offset + deltaOffset;
@@ -91,8 +91,11 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    //   indication.readReq(streamRdCnt);
 	    return DMAAddressRequest { handle: streamRdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
 	 endmethod
+	 method Bool notEmpty();
+	    return streamRdCnt > 0 && mismatchFifo.notFull();
+	 endmethod
       endinterface : readReq
-      interface Put readData;
+      interface PutF readData;
 	 method Action put(DMAData#(64) d);
 	    //$display("readData putOffset=%h d=%h tag=%h", putOffset, d.data, d.tag);
 	    let v = d.data;
@@ -104,6 +107,9 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    srcGen <= srcGen+2;
 	    putOffset <= putOffset + 8;
 	    //indication.rData(v);
+	 endmethod
+	 method Bool notFull();
+	    return mismatchFifo.notFull();
 	 endmethod
       endinterface : readData
    endinterface

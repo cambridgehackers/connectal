@@ -22,7 +22,7 @@
 
 import FIFOF::*;
 import BRAMFIFO::*;
-import GetPut::*;
+import GetPutF::*;
 
 import AxiClientServer::*;
 import AxiRDMA::*;

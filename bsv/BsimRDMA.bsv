@@ -23,7 +23,7 @@
 // BSV Libraries
 import FIFOF::*;
 import Vector::*;
-import GetPut::*;
+import GetPutF::*;
 import ClientServer::*;
 import BRAMFIFO::*;
 import BRAM::*;
@@ -101,7 +101,7 @@ module mkBsimDMAReadInternal#(Vector#(numReadClients, DMAReadClient#(dsz)) readC
       selectReg <= s;
    endrule
 
-   rule loadClient if (burstReg == 0);
+   rule loadClient if (burstReg == 0 && readClients[selectReg].readData.notFull());
       activeChan <= selectReg;
       let req <- readClients[selectReg].readReq.get();
       //$display("dmaread.loadClient activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);

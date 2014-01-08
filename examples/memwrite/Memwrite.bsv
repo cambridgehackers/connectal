@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 import FIFOF::*;
-import GetPut::*;
+import GetPutF::*;
 
 import AxiClientServer::*;
 import PortalMemory::*;
@@ -101,7 +101,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(8))   burstCount <- mkReg(0);
 
    interface DMAWriteClient dmaClient;
-      interface Get writeReq;
+      interface GetF writeReq;
 	 method ActionValue#(DMAAddressRequest) get() if (streamWrCnt > 0);
 	    streamWrCnt <= streamWrCnt-1;
 	    streamWrOff <= streamWrOff + deltaOffset;
@@ -114,8 +114,11 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	    doneTags.enq(tag);
 	    return DMAAddressRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: tag};
 	 endmethod
+	 method Bool notEmpty;
+	    return streamWrCnt > 0;
+	 endmethod
       endinterface : writeReq
-      interface Get writeData;
+      interface GetF writeData;
 	 method ActionValue#(DMAData#(64)) get();
 	    let bc = burstCount;
 	    if (bc == 0)
@@ -131,13 +134,17 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	    $display("Memwrite dmadata=%h", dmadata);
 	    return DMAData{data:dmadata, tag: tag};
 	 endmethod
+	 method Bool notEmpty;
+	    return dataTags.notEmpty();
+	 endmethod
       endinterface : writeData
-      interface Put writeDone;
+      interface PutF writeDone;
 	 method Action put(Bit#(8) tag);
 	    if (tag != doneTags.first)
 	       $display("doneTag mismatch tag=%h doneTag=%h", tag, doneTags.first);
 	    doneTags.deq();
 	 endmethod
+	 method Bool notFull = doneTags.notFull;
       endinterface : writeDone
    endinterface : dmaClient
 

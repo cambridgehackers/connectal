@@ -25,7 +25,7 @@ import Clocks::*;
 import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
-import GetPut::*;
+import GetPutF::*;
 
 import PortalMemory::*;
 import PortalRMemory::*;

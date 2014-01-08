@@ -22,7 +22,7 @@
 
 import Vector::*;
 import FIFOF::*;
-import GetPut::*;
+import GetPutF::*;
 
 import PortalMemory::*;
 import PortalRMemory::*;

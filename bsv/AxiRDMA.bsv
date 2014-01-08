@@ -25,7 +25,7 @@ import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs :: *;
 import Vector::*;
-import GetPut::*;
+import GetPutF::*;
 import ClientServer::*;
 import BRAMFIFO::*;
 import BRAM::*;
