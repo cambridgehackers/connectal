@@ -158,7 +158,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
 
 	    dreqFifo.enq(req);
 	    return Axi3ReadRequest{address:physAddr, len:truncate(req.burstLen-1), id:extend(req.tag),
-				   size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3};
+				   size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
 	 endmethod
       endinterface
       interface Put resp_read;
@@ -278,7 +278,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 
 	 dreqFifo.enq(req);
 	 return Axi3WriteRequest{address:physAddr, len:truncate(req.burstLen-1), id:extend(req.tag),
-				 size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3};
+				 size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
    interface Get resp_write;

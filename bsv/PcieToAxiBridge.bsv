@@ -456,7 +456,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
 	     return Axi3WriteRequest { address: extend(writeHeaderFifo.first.addr) << 2, len: 0, id: zeroExtend(writeHeaderFifo.first.tag),
-				       size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011 };
+				       size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
 	  endmethod
        endinterface: req_aw
        interface Get resp_write;
@@ -478,7 +478,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	     readHeaderFifo.deq;
 	     readDataFifo.enq(hdr);
 	     return Axi3ReadRequest { address: extend(readHeaderFifo.first.addr) << 2, len: 0, id: zeroExtend(readHeaderFifo.first.tag),
-				     size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011 };
+				     size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
 	    endmethod
        endinterface: req_ar
        interface Put resp_read;
