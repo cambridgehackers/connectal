@@ -32,7 +32,7 @@ import PortalRMemory::*;
 import StmtFSM::*;
 
 // In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
-typedef 32 NumSGLists;
+typedef 4 NumSGLists;
 typedef Bit#(TLog#(NumSGLists)) SGListId;
 typedef 32 SGListMaxLen;
 typedef Bit#(TLog#(TMul#(NumSGLists, SGListMaxLen))) SGListIdx;
