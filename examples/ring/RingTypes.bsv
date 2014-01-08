@@ -22,11 +22,7 @@
 
 // types needed by both hardware and software
 
-typedef struct {
-   Bit#(32) cmd;
-   Bit#(32) tag;
-   Bit#(40) fromAddress;
-   Bit#(40) toAddress;
-   Bit#(16) count;
-   } CommandStruct deriving (Bits);
 
+typedef CmdNOP 0
+typedef CmdCOPY 1
+typedef CmdECHO 2
