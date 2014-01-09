@@ -27,6 +27,11 @@ interface ServerF#(type intype, type outtype);
 	  interface GetF#(outtype) response;
 endinterface
 
-typedef CmdNOP 0
-typedef CmdCOPY 1
-typedef CmdECHO 2
+typedef struct {
+   Bit#(32) a;
+   Bit#(32) b;
+   } CommandStruct deriving(Bits);
+
+typedef 0 CmdNOP;
+typedef 1 CmdCOPY;
+typedef 2 CmdECHO;
