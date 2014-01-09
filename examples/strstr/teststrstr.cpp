@@ -1,35 +1,23 @@
-#include "Strstr.h"
 #include <stdio.h>
 #include <sys/mman.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
 #include <semaphore.h>
+#include "StdDMAIndication.h"
 
-sem_t conf_sem;
+#include "StrstrIndicationWrapper.h"
+#include "StrstrRequestProxy.h"
+#include "GeneratedTypes.h"
+#include "DMARequestProxy.h"
+
 sem_t test_sem;
-CoreRequest *device = 0;
-DMARequest *dma = 0;
 
-class TestDMAIndication : public DMAIndication
+class StrstrIndication : public StrstrIndicationWrapper
 {
-  virtual void reportStateDbg(DmaDbgRec& rec){
-    fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
-  }
-  virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "configResp: %lx\n", channelId);
-    sem_post(&conf_sem);
-  }
-  virtual void sglistResp(unsigned long channelId){
-    fprintf(stderr, "sglistResp: %lx\n", channelId);
-  }
-  virtual void parefResp(unsigned long channelId){
-    fprintf(stderr, "parefResp: %lx\n", channelId);
-  }
-};
+public:
+  StrstrIndication(const char* devname, unsigned int addrbits) : StrstrIndicationWrapper(devname,addrbits){};
 
-class TestCoreIndication : public CoreIndication
-{
   virtual void searchResult (int v){
     fprintf(stderr, "searchResult = %d\n", v);
     if (v == -1){
@@ -84,14 +72,16 @@ void MP(const char *x, const char *t, int *MP_next, int m, int n)
 int main(int argc, const char **argv)
 {
 
-  fprintf(stderr, "teststrstr %s %s\n", __TIME__, __DATE__);
-  device = CoreRequest::createCoreRequest(new TestCoreIndication);
-  dma = DMARequest::createDMARequest(new TestDMAIndication);
+  StrstrRequestProxy *device = 0;
+  DMARequestProxy *dma = 0;
+  
+  StrstrIndication *deviceIndication = 0;
+  DMAIndication *dmaIndication = 0;
 
-  if(sem_init(&conf_sem, 1, 0)){
-    fprintf(stderr, "failed to init conf_sem\n");
-    return -1;
-  }
+  fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
+  device = new StrstrRequestProxy("fpga1", 16);
+  dma = new DMARequestProxy("fpga2", 16);
+
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
     return -1;
@@ -110,12 +100,13 @@ int main(int argc, const char **argv)
     PortalAlloc *haystackAlloc;
     PortalAlloc *mpNextAlloc;
     unsigned int alloc_len = 16 << 2;
-
+    
     dma->alloc(alloc_len, &needleAlloc);
-    char *needle = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc->header.fd, 0);
     dma->alloc(alloc_len, &haystackAlloc);
-    char *haystack = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc->header.fd, 0);
     dma->alloc(alloc_len, &mpNextAlloc);
+
+    char *needle = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc->header.fd, 0);
+    char *haystack = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc->header.fd, 0);
     int *mpNext = (int *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc->header.fd, 0);
     
     unsigned int ref_needleAlloc = dma->reference(needleAlloc);
@@ -148,16 +139,7 @@ int main(int argc, const char **argv)
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
-    dma->configChan(0, 0, ref_haystackAlloc, 2);
-    sem_wait(&conf_sem);
-
-    dma->configChan(0, 1, ref_needleAlloc, 2);
-    sem_wait(&conf_sem);
-
-    dma->configChan(0, 2, ref_mpNextAlloc, 2);
-    sem_wait(&conf_sem);
-
-    device->search(needle_len, haystack_len);
+    device->search(ref_needleAlloc, ref_haystackAlloc, ref_mpNextAlloc, needle_len, haystack_len);
     sem_wait(&test_sem);
   }
 
@@ -174,10 +156,11 @@ int main(int argc, const char **argv)
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
     
     dma->alloc(needle_alloc_len, &needleAlloc);
-    char *needle = (char *)mmap(0, needle_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc->header.fd, 0);
     dma->alloc(haystack_alloc_len, &haystackAlloc);
-    char *haystack = (char *)mmap(0, haystack_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc->header.fd, 0);
     dma->alloc(mpNext_alloc_len, &mpNextAlloc);
+
+    char *needle = (char *)mmap(0, needle_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc->header.fd, 0);
+    char *haystack = (char *)mmap(0, haystack_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc->header.fd, 0);
     int *mpNext = (int *)mmap(0, mpNext_alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc->header.fd, 0);
 
     unsigned int ref_needleAlloc = dma->reference(needleAlloc);
@@ -205,16 +188,7 @@ int main(int argc, const char **argv)
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
-    dma->configChan(0, 0, ref_haystackAlloc, 2);
-    sem_wait(&conf_sem);
-
-    dma->configChan(0, 1, ref_needleAlloc, 2);
-    sem_wait(&conf_sem);
-
-    dma->configChan(0, 2, ref_mpNextAlloc, 2);
-    sem_wait(&conf_sem);
-
-    device->search(needle_len, haystack_len);
+    device->search(ref_needleAlloc, ref_haystackAlloc, ref_mpNextAlloc, needle_len, haystack_len);
     sem_wait(&test_sem);
   }
 
