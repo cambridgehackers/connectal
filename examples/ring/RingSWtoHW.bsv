@@ -29,7 +29,7 @@ import RingBuffer::*;
 
 interface RingSWtoHW;
    interface RingBuffer ring;
-   interface GetS#(Bit#(64));
+   interface GetF#(Bit#(64));
    method Action hwenable(Bit#(1) en);
 endinterface: RingSwtoHW
 
@@ -37,7 +37,8 @@ module mkRingSWtoHW#(RingBuffer ring, ReadChan#(Bit#(64)) copy_read_chan, UInt i
 
    FIFOF#(Bit#(64)) out <- mkSizedBRAMFIFOF#(itemSize * 4);
 
-   StmtFSM fetchMachine = 
+   Stmt fetchMachine = 
+   seq
    while(hwenabled) seq
       if (ring.notEmpty())
 	 seq
