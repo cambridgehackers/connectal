@@ -74,67 +74,91 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
    AxiDMA#(Bit#(64))   dma <- mkAxiDMA(indication.dmaIndication);
 `endif
 
-   Server#(Bit#(64), Bit#(64)) ce <- mkCopyEngine(dma.read.readChannels[2], dma.write.writeChannels[2]);
-   Server#(Bit#(64), Bit#(64)) discardServer <- mkNopServer();
-   Server#(Bit#(64), Bit#(64)) echoServer <- mkEchoServer();
+   Server#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma.read.readChannels[2], dma.write.writeChannels[2]);
    
-   Server#(Bit#(64), Bit#(64)) cmdServer;
-   Server#(Bit#(64), Bit#(64)) responseServer;
+   Server#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
+   Server#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
+   
+  Server#(Bit#(64), Bit#(64)) responseServer;
 
    ReadChan#(Bit#(64))   dma_read_chan = dma.read.readChannels[0];
    WriteChan#(Bit#(64)) dma_write_chan = dma.write.writeChannels[0];
-   ReadChan#(CommandStruct) cmd_read_chan = dma.read.readChannels[1];
+   ReadChan#(Bit#(64)) cmd_read_chan = dma.read.readChannels[1];
    WriteChan#(Bit#(64)) status_write_chan = dma.write.writeChannels[1];
-
 
    RingBuffer cmdRing <- mkRingBuffer;
    RingBuffer statusRing <- mkRingBuffer;
    Reg#(Bool) hwenabled <- mkReg(False);
    Reg#(Bool) cmdBusy <- mkReg(False);
-   UInt#(64) cmd;
+   Reg#(UInt#(64)) cmd <- mkReg(0);
 
+   let ifcselect = cmd[63:56];
+   function Server#(Bit#(64), Bit#(64)) cmdifc();
+      if (ifcselect == cmdNOP) 
+	 return nopEngine;
+      else if (ifcselect == cmdCOPY) 
+	 return copyEngine;
+      else if (ifcselect == cmdECHO) 
+	 return echoServer;
+      else 
+	 return nopEngine;
+   endfunction
+   
+   
+   method statusput(Bit#(64) d);
+      action
+	 status_write_chan.writeReq.put(statusRing.expBufferFirst);
+	 status_write_chan.writeDataq.put(d);
+	 statusRing.push(8);
+      endaction
+   endmethod;
+   
    // wait for hwenabled
    // wait for not cmdBusy
    // wait for cmdRing not empty
    // then start fetches for the next command
-   Stmt CmdFetch = 
+   Stmt cmdFetch = 
    seq
       while (True) seq
 	 while(!(hwenabled && cmdRing.notEmpty())) noAction;
 	 cmd_read_chan.readReq.put(cmdRing.expBufferLast);
-	 cmdRing.expBufferLast <= cmdRing.expBufferLast + 8;
+	 cmdRing.pop();
       endseq
-   endseq
+   endseq;
    
-   function UInt#(8) getopcode(UInt#(64) a);
-      return a[63:56];
-   endfunction
+   let fn = cmd[63:56];
 
-   Stmt CmdDispatch = 
+   Stmt cmdDispatch = 
    seq
       while (True) seq
-	 cmd = cmd_read_chan.readData.get();
-	 let fn = getopcode(cmd);
-	 if (fn == cmdNop)
-	    cmdServer = nopServer;
-	 else if (fn == cmdCOPY)
-	    cmdServer = ce;
-	 else if (fn == cmdECHO)
-	    cmdServer = echoServer;
-	 cmdServer.put(cmd);
-	 for (ii = 1; ii < 8; ii = ii + 1)
-	    cmdServer.put(cmd_read_chan.readData.get());
+	 cmd <= cmd_read_chan.readData.get();
+	 cmdifc.put(cmd);
+	 for (ii <= 1; ii < 8; ii <= ii + 1)
+	    cmdifc.put(cmd_read_chan.readData.get());
       endseq
-   endseq
+   endseq;
    
    
-   Stmt CmdCompletion =
+   Stmt cmdCompletion =
    seq
       while(True) seq
 	 while(!(hwenabled && statusRing.notFull())) noAction;
       endseq
-   endseq
+   endseq;
 
+   Stmt responseArbiter =
+   seq
+      while(True) seq
+	 if (statusRing.notFull() && copyEngine.response.notEmpty())
+	    for (ii <= 1; ii < 8; ii <= ii + 1)
+	       statusput(copyEngine.get());
+	 if (statusRing.notFull() && echoEngine.response.notEmpty())
+	    for (ii <= 1; ii < 8; ii <= ii + 1)
+	       statusput(echoEngine.get());
+      endseq;
+   endseq;
+   
+   
    rule copyCompletion;
       let v <- ce.response.get();
       indication.coreIndication.completion(1, v);
@@ -145,6 +169,10 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
       //doCommandImmediate(v);
 //   endrule
    
+  mkAutoFSM (cmdFetch);
+  mkAutoFSM (cmdDispatch);
+  mkAutoFSM (cmdCompletion);
+
    interface CoreRequest coreRequest;
 
       // to start a command, doCommand fires off a memory read to the
