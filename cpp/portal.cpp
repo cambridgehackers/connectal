@@ -295,22 +295,8 @@ int PortalWrapper::unregisterInstance()
 int PortalWrapper::registerInstance()
 {
     numFds++;
-
-    // XXX: I have no idea why realloc sometimes causes tests to segfault on zynq platform
-    //      it seems to me that the use of malloc/memcpy here should be interchangeable (mdk)
-
-    PortalWrapper **tmp = (PortalWrapper **)malloc(numFds*sizeof(PortalWrapper *));
-    if (numFds - 1)
-        memcpy(tmp, portal_wrappers, (numFds-1)*(sizeof(PortalWrapper*)));
-    portal_wrappers = tmp;
-    //portal_wrappers = (PortalWrapper **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));
-
-    struct pollfd *tmpp = (struct pollfd *)malloc(numFds*sizeof(struct pollfd));
-    if (numFds - 1)
-        memcpy(tmpp, portal_fds, (numFds-1)*(sizeof(struct pollfd)));
-    portal_fds = tmpp;
-    //portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
-
+    portal_wrappers = (PortalWrapper **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));
+    portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
     portal_wrappers[numFds-1] = this;
     struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
@@ -421,7 +407,7 @@ int PortalMemory::alloc(size_t size, PortalAlloc **ppa)
   }
   fprintf(stderr, "alloc size=%ld rc=%d fd=%d numEntries=%d\n", 
 	  (long)portalAlloc->header.size, rc, portalAlloc->header.fd, portalAlloc->header.numEntries);
-  portalAlloc = (PortalAlloc *)realloc(portalAlloc, sizeof(PortalAlloc)+(portalAlloc->header.numEntries*sizeof(DMAEntry)));
+  portalAlloc = (PortalAlloc *)realloc(portalAlloc, sizeof(PortalAlloc)+((portalAlloc->header.numEntries+1)*sizeof(DMAEntry)));
   rc = ioctl(this->pa_fd, PA_DMA_ADDRESSES, portalAlloc);
   if (rc){
     fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));

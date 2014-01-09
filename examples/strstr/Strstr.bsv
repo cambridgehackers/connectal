@@ -22,7 +22,7 @@
 
 import FIFO::*;
 import SpecialFIFOs::*;
-import GetPut::*;
+import GetPutF::*;
 import Vector::*;
 import BRAM::*;
 import Gearbox::*;
@@ -30,10 +30,11 @@ import Gearbox::*;
 import AxiClientServer::*;
 import PortalMemory::*;
 import PortalRMemory::*;
-import PortalSMemoryUtils::*;
+import PortalMemoryUtils::*;
+
 
 interface StrstrRequest;
-   method Action search(Bit#(32) needle_len, Bit#(32) haystack_len);
+   method Action search(Bit#(32) needleHandle, Bit#(32) haystackHandle, Bit#(32) mpNextHandle, Bit#(32) needle_len, Bit#(32) haystack_len);
 endinterface
 
 interface StrstrIndication;
@@ -50,24 +51,33 @@ typedef Bit#(TLog#(MaxNeedleLen)) NeedleIdx;
 typedef enum {Idle, Init, Run} Stage deriving (Eq, Bits);
 
 module mkStrstrRequest#(StrstrIndication indication,
-			ReadChan   haystack_read_chan,
-			ReadChan     needle_read_chan,
-			ReadChan    mp_next_read_chan )(StrstrRequest);
+			DMAReadServer#(busWidth)   haystack_read_chan,
+			DMAReadServer#(busWidth)     needle_read_chan,
+			DMAReadServer#(busWidth)    mp_next_read_chan )(StrstrRequest)
+   
+   provisos(Add#(a__, 8, busWidth),
+	    Div#(busWidth,8,nc),
+	    Mul#(nc,8,busWidth),
+	    Add#(1, b__, nc),
+	    Add#(c__, 32, busWidth),
+	    Add#(1, d__, TDiv#(busWidth, 32)),
+	    Mul#(TDiv#(busWidth, 32), 32, busWidth));
    
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
    BRAM2Port#(NeedleIdx, Char) needle  <- mkBRAM2Server(defaultValue);
    BRAM2Port#(NeedleIdx, Bit#(32)) mpNext <- mkBRAM2Server(defaultValue);
-   Gearbox#(8,1,Char) haystack <- mkNto1Gearbox(clk,rst,clk,rst);
+   Gearbox#(nc,1,Char) haystack <- mkNto1Gearbox(clk,rst,clk,rst);
    
    Reg#(Stage) stage <- mkReg(Idle);
    Reg#(Bit#(32)) needleLenReg <- mkReg(0);
    Reg#(Bit#(32)) haystackLenReg <- mkReg(0);
    Reg#(Bit#(32)) iReg <- mkReg(0);
    Reg#(Bit#(32)) jReg <- mkReg(0);
+   Reg#(DmaMemHandle) haystackHandle <- mkReg(0);
    
-   ReadChan2BRAM#(NeedleIdx) n2b <- mkReadChan2BRAM(needle_read_chan, needle.portB);
-   ReadChan2BRAM#(NeedleIdx) mp2b <- mkReadChan2BRAM(mp_next_read_chan, mpNext.portB);
+   DMAReadServer2BRAM#(NeedleIdx) n2b <- mkDMAReadServer2BRAM(needle_read_chan, needle.portB);
+   DMAReadServer2BRAM#(NeedleIdx) mp2b <- mkDMAReadServer2BRAM(mp_next_read_chan, mpNext.portB);
 
    Reg#(Bit#(2)) epochReg <- mkReg(0);
    FIFO#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFO(2);
@@ -84,12 +94,12 @@ module mkStrstrRequest#(StrstrIndication indication,
    (* descending_urgency = "mp2b_load, n2b_load, matchNeedleResp, matchNeedleReq" *)
    
    rule haystackReq (stage == Run);
-      haystack_read_chan.readReq.put(?);
+      haystack_read_chan.readReq.put(DMAAddressRequest {handle: haystackHandle, address: 0, burstLen: 1, tag: 0});
    endrule
    
    rule haystackResp;
       let rv <- haystack_read_chan.readData.get;
-      Vector#(8,Char) pv = unpack(rv);
+      Vector#(nc,Char) pv = unpack(rv.data);
       haystack.enq(pv);
    endrule
 
@@ -122,12 +132,12 @@ module mkStrstrRequest#(StrstrIndication indication,
 	 let i = tpl_2(efifo.first);
 	 let j = jReg;
 	 if (j > n) begin
-	    indication.coreIndication.searchResult(-1);
+	    indication.searchResult(-1);
 	    stage <= Idle;
 	 end
 	 else if (i==m+1) begin
 	    //$display("string match %d", j);
-	    indication.coreIndication.searchResult(unpack(j-i));
+	    indication.searchResult(unpack(j-i));
 	    epochReg <= epochReg+1;
 	    iReg <= 1;
 	 end
@@ -144,12 +154,16 @@ module mkStrstrRequest#(StrstrIndication indication,
       end
    endrule
    
-   method Action search(Bit#(32) needle_len, Bit#(32) haystack_len) if (stage == Idle);
+   method Action search(Bit#(32) needle_handle, Bit#(32) haystack_handle, Bit#(32) mpNext_handle, 
+			Bit#(32) needle_len, Bit#(32) haystack_len) if (stage == Idle);
+
       $display("search %h %h", needle_len, haystack_len);
       needleLenReg <= needle_len;
       haystackLenReg <= haystack_len;
-      n2b.start(pack(truncate(needle_len)));
-      mp2b.start(pack(truncate(needle_len)));
+      n2b.start(needle_handle, pack(truncate(needle_len)));
+      mp2b.start(mpNext_handle, pack(truncate(needle_len)));
+      haystackHandle <= haystack_handle;
       stage <= Init;
+      
    endmethod
 endmodule

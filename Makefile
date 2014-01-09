@@ -30,10 +30,9 @@ testnames = echo     \
 bsimtests = $(addsuffix .bsim, $(testnames))
 
 $(bsimtests):
-	pkill bluetcl || true
 	rm -fr examples/$(basename $@)/bluesim
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
-	(cd examples/$(basename $@)/bluesim; ./sources/bsim& ./jni/bsim_exe)
+	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; kill $$bsimpid )
 
 bitstests = $(addsuffix .bits, $(testnames))
 

@@ -21,31 +21,31 @@
 // SOFTWARE.
 
 
-import GetPut::*;
 import BRAM::*;
 import FIFO::*;
 import Vector::*;
 import Gearbox::*;
 
+import GetPutF::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 
-
-interface ReadChan2BRAM#(type a);
-   method Action start(a x);
+interface DMAReadServer2BRAM#(type a);
+   method Action start(DmaMemHandle h, a x);
    method ActionValue#(Bool) finished();
 endinterface
 
-module mkReadChan2BRAM#(ReadChan rc, BRAMServer#(a,d) br)(ReadChan2BRAM#(a))
+module mkDMAReadServer2BRAM#(DMAReadServer#(busWidth) rs, BRAMServer#(a,d) br)(DMAReadServer2BRAM#(a))
    provisos(Bits#(d,dsz),
-	    Div#(64,dsz,nd),
-	    Mul#(nd,dsz,64),
+	    Div#(busWidth,dsz,nd),
+	    Mul#(nd,dsz,busWidth),
 	    Eq#(a),
 	    Ord#(a),
 	    Arith#(a),
 	    Bits#(a,b__),
+	    Add#(d__,b__,DmaAddrSize),
 	    Add#(1, c__, nd),
-	    Add#(a__, dsz, 64));
+	    Add#(a__, dsz, busWidth));
    
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
@@ -57,16 +57,17 @@ module mkReadChan2BRAM#(ReadChan rc, BRAMServer#(a,d) br)(ReadChan2BRAM#(a))
    Reg#(a) j <- mkReg(0);
    Reg#(Bool) jv <- mkReg(False);
    Reg#(a) n <- mkReg(0);
+   Reg#(DmaMemHandle) readHandle <- mkReg(0);
 
    rule loadReq(iv);
-      rc.readReq.put(?);
+      rs.readReq.put(DMAAddressRequest {handle: readHandle, address: zeroExtend(pack(i)), burstLen: 1, tag: 0});
       i <= i+fromInteger(valueOf(nd));
       iv <= (i < n);
    endrule
    
    rule loadResp;
-      let rv <- rc.readData.get;
-      Vector#(nd,d) rvv = unpack(rv);
+      let rv <- rs.readData.get();
+      Vector#(nd,d) rvv = unpack(rv.data);
       gb.enq(rvv);
    endrule
    
@@ -83,12 +84,13 @@ module mkReadChan2BRAM#(ReadChan rc, BRAMServer#(a,d) br)(ReadChan2BRAM#(a))
       gb.deq;
    endrule
    
-   method Action start(a x);
+   method Action start(DmaMemHandle h, a x);
       iv <= True;
       jv <= True;
       i <= 0;
       j <= 0;
       n <= x;
+      readHandle <= h;
    endmethod
    
    method ActionValue#(Bool) finished();
