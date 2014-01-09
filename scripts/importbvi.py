@@ -253,9 +253,9 @@ def parse_verilog(filename):
                     print('Missing parameter declaration', pname, file=sys.stderr)
                     paramnames.append(pname)
                 f[1] = 'Bit#(' + f[1] + ')'
-                if f[2] in options.delete:
+                if options.delete and f[2] in options.delete:
                     continue
-                if f[2] in options.clock:
+                if options.clock and f[2] in options.clock:
                     f[1] = 'Clock'
                 #print('FF', f, file=sys.stderr)
             masterlist.append(f)
@@ -459,10 +459,11 @@ def translate_verilog(ifname):
     #for item in masterlist:
     #    if item[0] == 'parameter':
     #        print('    parameter ' + item[1] + ' = ' + item[2] + ';')
-    for item in options.export:
-        item2 = item.split(':')
-        if len(item2) == 2:
-            print('    parameter ' + item2[0] + ' = ' + item2[1] + ';')
+    if options.export:
+        for item in options.export:
+            item2 = item.split(':')
+            if len(item2) == 2:
+                print('    parameter ' + item2[0] + ' = ' + item2[1] + ';')
     methodlist = ''
     for item in masterlist:
         generate_clocks(item, '    ', '')
