@@ -21,17 +21,19 @@ import RingRequestWrapper::*;
 // defined by user
 import Ring::*;
 
+typedef enum {RingIndication, RingRequest} IfcNames deriving (Eq,Bits);
+
 module mkPortalTop(StdPortalTop);
 
    // instantiate user portals
-   RingIndicationProxy echoIndicationProxy <- mkRingIndicationProxy(7);
-   RingRequestInternal echoRequestInternal <- mkRingRequestInternal(echoIndicationProxy.ifc);
-   RingRequestWrapper echoRequestWrapper <- mkRingRequestWrapper(1008,echoRequestInternal.ifc);
+   RingIndicationProxy ringIndicationProxy <- mkRingIndicationProxy(RingIndication);
+   RingRequestInternal ringRequestInternal <- mkRingRequestInternal(ringIndicationProxy.ifc);
+   RingRequestWrapper ringRequestWrapper <- mkRingRequestWrapper(RingRequest, ringRequestInternal.ifc);
    
    
    Vector#(2,StdPortal) portals;
-   portals[0] = echoIndicationProxy.portalIfc;
-   portals[1] = echoRequestWrapper.portalIfc; 
+   portals[0] = ringIndicationProxy.portalIfc;
+   portals[1] = ringRequestWrapper.portalIfc; 
 
    let interrupt_mux <- mkInterruptMux(portals);
    
@@ -45,6 +47,7 @@ module mkPortalTop(StdPortalTop);
    
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
+   interface Axi3Client m_axi = ?;
 
 
 endmodule : mkPortalTop
