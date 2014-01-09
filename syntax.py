@@ -802,7 +802,6 @@ if 0:
         print tok
 
 def parse(data, inputfilename):
-    print inputfilename
     global globalfilename
     lexer = lex.lex(errorlog=lex.NullLogger())
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger())

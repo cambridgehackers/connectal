@@ -45,7 +45,7 @@ $(bitstests):
 gentests = $(addsuffix .gen, $(testnames))
 
 $(gentests):
-	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
+	make BOARD=bluesim -C examples/$(basename $@) bsim_exe
 
 
 kc705tests = $(addsuffix .kc705, $(testnames))

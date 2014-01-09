@@ -330,6 +330,20 @@ PortalMemory::PortalMemory(int id)
   : PortalProxy(id),
     handle(1)
 {
+#ifndef MMAP_HW
+  snprintf(p_fd.read.path, sizeof(p_fd.read.path), "fd_sock_rc");
+  connect_socket(&(p_fd.read));
+  snprintf(p_fd.write.path, sizeof(p_fd.write.path), "fd_sock_wc");
+  connect_socket(&(p_fd.write));
+#endif
+  if (sem_init(&sglistSem, 1, 0)){
+    fprintf(stderr, "failed to init sglistSem errno=%d:%s\n", errno, strerror(errno));
+  }
+  const char* path = "/dev/portalmem";
+  this->pa_fd = ::open(path, O_RDWR);
+  if (this->pa_fd < 0){
+    ALOGE("Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);
+  }
 }
 
 void *PortalMemory::mmap(PortalAlloc *portalAlloc)
