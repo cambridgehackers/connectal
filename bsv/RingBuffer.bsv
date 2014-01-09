@@ -11,15 +11,15 @@
 // or by other means
 // 
 // Configuration.  
+
 interface RingBuffer;
-//   method Get#(CommandStruct);
-//   method Put#(StatusStruct);
    method Bool notEmpty();
    method Bool notFull();
-   method Action push(UInt num);
-   method Action pop(UInt num);
-   interface Reg#(Bit#(40)) expBufferFirst;
-   interface Reg#(Bit#(40)) expBufferLast;
+   method Action push(UInt#(8) num);
+   method Action pop(UInt#(8) num);
+   interface Reg#(Bit#(40)) bufferfirst;
+   interface Reg#(Bit#(40)) bufferlast;
+   interface Reg#(Bool) enable;
    interface RingBufferConfig configifc;
 endinterface
 
@@ -36,6 +36,7 @@ module mkRingBuffer(RingBuffer);
    Reg#(Bit#(40)) bufferfirst <- mkReg(0);
    Reg#(Bit#(40)) bufferlast <- mkReg(0);
    Reg#(Bit#(40)) buffermask <- mkReg(0);
+   Reg#(Bool) hwenable <- mkReg(False);
    
    interface RingBufferConfig configifc;
    method Action set(Bit#(2) regist, Bit#(40) addr);
@@ -43,14 +44,17 @@ module mkRingBuffer(RingBuffer);
       else if (regist == 1) bufferend <= addr;
       else if (regist == 2) bufferfirst <= addr;
       else if (regist == 3) bufferlast <= addr;
-      else buffermask <= addr;
+      else if (regist == 4) buffermask <= addr;
+      else hwenable <= (addr[0] != 0);
    endmethod
    
    method Bit#(40) get(Bit#(2) regist);
       if (regist == 0) return (bufferbase);
       else if (regist == 1) return (bufferend);
       else if (regist == 2) return (bufferfirst);
-      else return(bufferlast);
+      else if (regist == 3) return (bufferlast);
+      else if (regist == 4) return (buffermask);
+      else return(hwenable);
    endmethod
    endinterface
 
@@ -62,14 +66,16 @@ module mkRingBuffer(RingBuffer);
    return (((bufferfirst + 64) & buffermask) != bufferlast);
    endmethod
 
-   method Action push(UInt num);
+   method Action push(UInt#(8) num);
    bufferfirst <= (bufferfirst + num) & buffermask;
    endmethod
 
-   method Action pop(UInt num);
+   method Action pop(UInt#(8) num);
    bufferlast <= (bufferlast + num) & buffermask;
    endmethod
  
-   interface Reg expBufferLast = bufferlast;
+   interface Reg bufferFirst = bufferFirst;
+   interface Reg bufferLast = bufferlast;
+   interface Reg enable = hwenable;
 
 endmodule
