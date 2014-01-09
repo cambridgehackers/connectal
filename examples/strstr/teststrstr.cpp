@@ -161,7 +161,7 @@ int main(int argc, const char **argv)
     PortalAlloc *haystackAlloc;
     PortalAlloc *mpNextAlloc;
     const char *needle_text = "I have control\n";
-    unsigned int BENCHMARK_INPUT_SIZE = 1024; //200 * 1024 * 1024;
+    unsigned int BENCHMARK_INPUT_SIZE = 100 * 1024 * 1024;
     unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
     unsigned int needle_alloc_len = strlen(needle_text);
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
