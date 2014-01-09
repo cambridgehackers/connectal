@@ -12,6 +12,8 @@
 #include "DMARequestProxy.h"
 
 sem_t test_sem;
+unsigned int sw_match_cnt = 0;
+unsigned int hw_match_cnt = 0;
 
 class StrstrIndication : public StrstrIndicationWrapper
 {
@@ -20,9 +22,10 @@ public:
 
   virtual void searchResult (int v){
     fprintf(stderr, "searchResult = %d\n", v);
-    if (v == -1){
+    if (v == -1)
       sem_post(&test_sem);
-    }
+    else 
+      hw_match_cnt++;
   }
 };
 
@@ -64,6 +67,7 @@ void MP(const char *x, const char *t, int *MP_next, int m, int n)
     if (i==m+1){
       fprintf(stderr, "%s occurs in t at position %d\n", x, j-i);
       i = 1;
+      sw_match_cnt++;
     }
   }
   fprintf(stderr, "MP exiting\n");
@@ -144,6 +148,8 @@ int main(int argc, const char **argv)
 
     device->search(ref_needleAlloc, ref_haystackAlloc, ref_mpNextAlloc, needle_len, haystack_len);
     sem_wait(&test_sem);
+    fprintf(stderr, "sw_match_cnt=%d, hw_match_cnt=%d\n", sw_match_cnt, hw_match_cnt);
+    return (sw_match_cnt != hw_match_cnt);
   }
 
   

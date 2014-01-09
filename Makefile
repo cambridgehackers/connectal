@@ -32,7 +32,7 @@ bsimtests = $(addsuffix .bsim, $(testnames))
 $(bsimtests):
 	rm -fr examples/$(basename $@)/bluesim
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
-	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; kill $$bsimpid )
+	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
 
 bitstests = $(addsuffix .bits, $(testnames))
 

@@ -75,6 +75,7 @@ module mkStrstrRequest#(StrstrIndication indication,
    Reg#(Bit#(32)) iReg <- mkReg(0);
    Reg#(Bit#(32)) jReg <- mkReg(0);
    Reg#(DmaMemHandle) haystackHandle <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) haystackPtr <- mkReg(0);
    
    DMAReadServer2BRAM#(NeedleIdx) n2b <- mkDMAReadServer2BRAM(needle_read_chan, needle.portB);
    DMAReadServer2BRAM#(NeedleIdx) mp2b <- mkDMAReadServer2BRAM(mp_next_read_chan, mpNext.portB);
@@ -94,7 +95,8 @@ module mkStrstrRequest#(StrstrIndication indication,
    (* descending_urgency = "mp2b_load, n2b_load, matchNeedleResp, matchNeedleReq" *)
    
    rule haystackReq (stage == Run);
-      haystack_read_chan.readReq.put(DMAAddressRequest {handle: haystackHandle, address: 0, burstLen: 1, tag: 0});
+      haystack_read_chan.readReq.put(DMAAddressRequest {handle: haystackHandle, address: haystackPtr, burstLen: 1, tag: 0});
+      haystackPtr <= haystackPtr + fromInteger(valueOf(nc));
    endrule
    
    rule haystackResp;
