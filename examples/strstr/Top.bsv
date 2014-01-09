@@ -29,33 +29,33 @@ import DMAIndicationProxy::*;
 // defined by user
 import Strstr::*;
 
+typedef enum {StrstrIndication, StrstrRequest, DMAIndication, DMARequest} IfcNames deriving (Eq,Bits);
+
 module mkPortalTop(StdPortalDmaTop);
 
-   DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
+   DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(DMAIndication);
    DMAReadBuffer#(64,8) haystack_read_chan <- mkDMAReadBuffer();
    DMAReadBuffer#(64,8) needle_read_chan <- mkDMAReadBuffer();
    DMAReadBuffer#(64,8) mp_next_read_chan <- mkDMAReadBuffer();
    
-   Vector#(3,  DMAReadClient#(64))   readClients = newVector();
+   Vector#(3, DMAReadClient#(64)) readClients = newVector();
    readClients[0] = haystack_read_chan.dmaClient;
    readClients[1] = needle_read_chan.dmaClient;
    readClients[2] = mp_next_read_chan.dmaClient;
 
    Vector#(0, DMAWriteClient#(64)) writeClients = newVector();
-   
 `ifdef BSIM
    BsimDMAServer#(64) dma <- mkBsimDMAServer(dmaIndicationProxy.ifc, readClients, writeClients);
 `else
    Integer numRequests = 8;
    AxiDMAServer#(64,8) dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
 `endif
-   
-   DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
+   DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(DMARequest,dma.request);
 
-   StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(7);
+   StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
    StrstrRequest strstrRequest <- mkStrstrRequest(strstrIndicationProxy.ifc, haystack_read_chan.dmaServer, 
 						  needle_read_chan.dmaServer, mp_next_read_chan.dmaServer);
-   StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(1008,strstrRequest);
+   StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstrRequest);
 
    Vector#(4,StdPortal) portals;
    portals[0] = strstrRequestWrapper.portalIfc;

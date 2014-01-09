@@ -16,7 +16,7 @@ sem_t test_sem;
 class StrstrIndication : public StrstrIndicationWrapper
 {
 public:
-  StrstrIndication(const char* devname, unsigned int addrbits) : StrstrIndicationWrapper(devname,addrbits){};
+  StrstrIndication(unsigned int id) : StrstrIndicationWrapper(id){};
 
   virtual void searchResult (int v){
     fprintf(stderr, "searchResult = %d\n", v);
@@ -79,8 +79,11 @@ int main(int argc, const char **argv)
   DMAIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  device = new StrstrRequestProxy("fpga1", 16);
-  dma = new DMARequestProxy("fpga2", 16);
+  device = new StrstrRequestProxy(IfcNames_StrstrRequest);
+  dma = new DMARequestProxy(IfcNames_DMARequest);
+
+  deviceIndication = new StrstrIndication(IfcNames_StrstrIndication);
+  dmaIndication = new DMAIndication(IfcNames_DMAIndication);
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
