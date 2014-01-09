@@ -71,6 +71,19 @@ instance SelectBsimRdmaReadWrite#(64);
        endmethod
    endmodule
 endinstance
+instance SelectBsimRdmaReadWrite#(128);
+   module selectBsimRdmaReadWrite(BsimRdmaReadWrite#(128) ifc);
+       method Action write_pareff(Bit#(32) handle, Bit#(32) addr, Bit#(128) v);
+	  write_pareff64(handle, addr, v[63:0]);
+	  write_pareff64(handle, addr+8, v[127:64]);
+       endmethod
+       method ActionValue#(Bit#(128)) read_pareff(Bit#(32) handle, Bit#(32) addr);
+	  let v0 <- read_pareff64(handle, addr);
+	  let v1 <- read_pareff64(handle, addr+8);
+	  return {v1,v0};
+       endmethod
+   endmodule
+endinstance
 
 //
 // @brief DMA server for use in Bluesim
