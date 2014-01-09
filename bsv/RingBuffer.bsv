@@ -18,6 +18,7 @@ interface RingBuffer;
    method Bool notFull();
    method Action push(UInt num);
    method Action pop(UInt num);
+   interface Reg#(Bit#(40)) expBufferFirst;
    interface Reg#(Bit#(40)) expBufferLast;
    interface RingBufferConfig configifc;
 endinterface
