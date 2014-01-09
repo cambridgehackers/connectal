@@ -15,8 +15,8 @@
 interface RingBuffer;
    method Bool notEmpty();
    method Bool notFull();
-   method Action push(UInt#(8) num);
-   method Action pop(UInt#(8) num);
+   method Action push(Bit#(8) num);
+   method Action pop(Bit#(8) num);
    interface Reg#(Bit#(40)) bufferfirst;
    interface Reg#(Bit#(40)) bufferlast;
    interface Reg#(Bool) enable;
@@ -31,51 +31,51 @@ endinterface
 
 module mkRingBuffer(RingBuffer);
    
-   Reg#(Bit#(40)) bufferbase <- mkReg(0);
-   Reg#(Bit#(40)) bufferend <- mkReg(0);
-   Reg#(Bit#(40)) bufferfirst <- mkReg(0);
-   Reg#(Bit#(40)) bufferlast <- mkReg(0);
-   Reg#(Bit#(40)) buffermask <- mkReg(0);
-   Reg#(Bool) hwenable <- mkReg(False);
+   Reg#(Bit#(40)) rbufferbase <- mkReg(0);
+   Reg#(Bit#(40)) rbufferend <- mkReg(0);
+   Reg#(Bit#(40)) rbufferfirst <- mkReg(0);
+   Reg#(Bit#(40)) rbufferlast <- mkReg(0);
+   Reg#(Bit#(40)) rbuffermask <- mkReg(0);
+   Reg#(Bool) renable <- mkReg(False);
    
    interface RingBufferConfig configifc;
    method Action set(Bit#(2) regist, Bit#(40) addr);
-      if (regist == 0) bufferbase <= addr;
-      else if (regist == 1) bufferend <= addr;
-      else if (regist == 2) bufferfirst <= addr;
-      else if (regist == 3) bufferlast <= addr;
-      else if (regist == 4) buffermask <= addr;
-      else hwenable <= (addr[0] != 0);
+      if (regist == 0) rbufferbase <= addr;
+      else if (regist == 1) rbufferend <= addr;
+      else if (regist == 2) rbufferfirst <= addr;
+      else if (regist == 3) rbufferlast <= addr;
+      else if (regist == 4) rbuffermask <= addr;
+      else renable <= (addr[0] != 0);
    endmethod
    
    method Bit#(40) get(Bit#(2) regist);
-      if (regist == 0) return (bufferbase);
-      else if (regist == 1) return (bufferend);
-      else if (regist == 2) return (bufferfirst);
-      else if (regist == 3) return (bufferlast);
-      else if (regist == 4) return (buffermask);
-      else return(hwenable);
+      if (regist == 0) return (rbufferbase);
+      else if (regist == 1) return (rbufferend);
+      else if (regist == 2) return (rbufferfirst);
+      else if (regist == 3) return (rbufferlast);
+      else if (regist == 4) return (rbuffermask);
+      else return(zeroExtend(pack(renable)));
    endmethod
    endinterface
 
    method Bool notEmpty();
-   return (bufferfirst != bufferlast);
+   return (rbufferfirst != rbufferlast);
    endmethod
 
    method Bool notFull();
-   return (((bufferfirst + 64) & buffermask) != bufferlast);
+   return (((rbufferfirst + 64) & rbuffermask) != rbufferlast);
    endmethod
 
-   method Action push(UInt#(8) num);
-   bufferfirst <= (bufferfirst + num) & buffermask;
+   method Action push(Bit#(8) num);
+   rbufferfirst <= (rbufferfirst + zeroExtend(num)) & rbuffermask;
    endmethod
 
-   method Action pop(UInt#(8) num);
-   bufferlast <= (bufferlast + num) & buffermask;
+   method Action pop(Bit#(8) num);
+   rbufferlast <= (rbufferlast + zeroExtend(num)) & rbuffermask;
    endmethod
  
-   interface Reg bufferFirst = bufferFirst;
-   interface Reg bufferLast = bufferlast;
-   interface Reg enable = hwenable;
+   interface Reg bufferfirst = rbufferfirst;
+   interface Reg bufferlast = rbufferlast;
+   interface Reg enable = renable;
 
 endmodule
