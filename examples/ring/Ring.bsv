@@ -79,8 +79,6 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
    Server#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
    Server#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
    
-  Server#(Bit#(64), Bit#(64)) responseServer;
-
    ReadChan#(Bit#(64))   dma_read_chan = dma.read.readChannels[0];
    WriteChan#(Bit#(64)) dma_write_chan = dma.write.writeChannels[0];
    ReadChan#(Bit#(64)) cmd_read_chan = dma.read.readChannels[1];
@@ -92,27 +90,27 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
    Reg#(Bool) cmdBusy <- mkReg(False);
    Reg#(UInt#(64)) cmd <- mkReg(0);
 
-   let ifcselect = cmd[63:56];
+   let engineselect = cmd[63:56];
    function Server#(Bit#(64), Bit#(64)) cmdifc();
-      if (ifcselect == cmdNOP) 
+      if (engineselect == cmdNOP) 
 	 return nopEngine;
-      else if (ifcselect == cmdCOPY) 
+      else if (engineselect == cmdCOPY) 
 	 return copyEngine;
-      else if (ifcselect == cmdECHO) 
+      else if (engineselect == cmdECHO) 
 	 return echoServer;
       else 
 	 return nopEngine;
    endfunction
    
    
-   method statusput(Bit#(64) d);
-      action
-	 status_write_chan.writeReq.put(statusRing.expBufferFirst);
-	 status_write_chan.writeDataq.put(d);
-	 statusRing.push(8);
-      endaction
-   endmethod;
-   
+   function Action statusput(Bit#(64) d);
+   return (action
+	   status_write_chan.writeReq.put(statusRing.expBufferFirst);
+	   status_write_chan.writeDataq.put(d);
+	   statusRing.push(8);
+	   endaction);
+   endfunction
+
    // wait for hwenabled
    // wait for not cmdBusy
    // wait for cmdRing not empty
@@ -155,7 +153,7 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    for (ii <= 1; ii < 8; ii <= ii + 1)
 	       statusput(echoEngine.get());
-      endseq;
+      endseq
    endseq;
    
    
