@@ -103,14 +103,6 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
    endfunction
    
    
-   function Action statusput(Bit#(64) d);
-   return (action
-	   status_write_chan.writeReq.put(statusRing.expBufferFirst);
-	   status_write_chan.writeDataq.put(d);
-	   statusRing.push(8);
-	   endaction);
-   endfunction
-
    // wait for hwenabled
    // wait for not cmdBusy
    // wait for cmdRing not empty
@@ -149,10 +141,18 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
       while(True) seq
 	 if (statusRing.notFull() && copyEngine.response.notEmpty())
 	    for (ii <= 1; ii < 8; ii <= ii + 1)
-	       statusput(copyEngine.get());
+	       action;
+		  status_write_chan.writeReq.put(statusRing.expBufferFirst);
+		  status_write_chan.writeDataq.put(copyEngine.get());
+		  statusRing.push(8);
+	       endaction
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    for (ii <= 1; ii < 8; ii <= ii + 1)
-	       statusput(echoEngine.get());
+	       action;
+		  status_write_chan.writeReq.put(statusRing.expBufferFirst);
+		  status_write_chan.writeDataq.put(ehoEngine.get());
+		  statusRing.push(8);
+	       endaction
       endseq
    endseq;
    
@@ -162,14 +162,9 @@ module mkRingRequest#(RingIndication indication)(RingRequest);
       indication.coreIndication.completion(1, v);
    endrule
 
-//   rule doCommandRule;
-      //let v <- cmd_read_chan.readData.get;
-      //doCommandImmediate(v);
-//   endrule
-   
-  mkAutoFSM (cmdFetch);
-  mkAutoFSM (cmdDispatch);
-  mkAutoFSM (cmdCompletion);
+   mkAutoFSM (cmdFetch);
+   mkAutoFSM (cmdDispatch);
+   mkAutoFSM (cmdCompletion);
 
    interface CoreRequest coreRequest;
 
