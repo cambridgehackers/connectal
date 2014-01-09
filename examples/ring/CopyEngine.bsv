@@ -21,8 +21,7 @@
 // SOFTWARE.
 
 import FIFO::*;
-import GetPut::*;
-import ClientServer::*;
+import GetPutF::*;
 import PortalRMemory::*;
 import RingTypes::*;
 
@@ -38,7 +37,7 @@ import RingTypes::*;
 //  word0-6 all 0
 //  word7  TAG[31:0]
 
-module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) copy_write_chan) ( Server#(Bit#(64), Bit#(64)));
+module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) copy_write_chan) ( ServerF#(Bit#(64), Bit#(64)));
    FIFO#(Bit#(64)) f_in  <- mkSizedFIFO(16);    // to buffer incoming requests
    FIFO#(Bit#(64)) f_out <- mkSizedFIFO(16);    // to buffer outgoing responses
    Reg#(Bit#(16)) copyReadCount <- mkReg(0);
@@ -104,8 +103,8 @@ module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) co
    FSM finish();
    mkAutoFSM#(copyFinish)(finish);
    
-   interface Put request = toPut(f_in);
-   interface Get response = toGet (f_out);
+   interface PutF request = toPutF(f_in);
+   interface GetF response = toGetF (f_out);
    
 endmodule: mkCopyEngine
 

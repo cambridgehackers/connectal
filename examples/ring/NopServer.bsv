@@ -21,10 +21,10 @@
 // SOFTWARE.
 
 import FIFO::*;
-import GetPut::*;
-import ClientServer::*;
+import GetPutF::*;
+import RingTypes::*;
 
-module mkNopServer#() ( Server#(Bit#(64), Bit#(64)));
+module mkNopServer#() ( ServerF#(Bit#(64), Bit#(64)));
    FIFO#(Bit#(64)) f_nop <- mkSizedFIFO(2);
 
    rule discard;   
@@ -32,8 +32,8 @@ module mkNopServer#() ( Server#(Bit#(64), Bit#(64)));
       $display("Nop %h\n", x);
    endrule
      
-   interface Put request = toPut(f_echo);
-   interface Get response = ?;
+   interface PutF request = toPutF(f_echo);
+   interface GetF response = ?;
    
 endmodule: mkNopServer
 

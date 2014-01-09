@@ -22,6 +22,10 @@
 
 // types needed by both hardware and software
 
+interface ServerF#(type intype, type outtype);
+	  interface PutF#(intype) request;
+	  interface GetF#(outtype) response;
+endinterface
 
 typedef CmdNOP 0
 typedef CmdCOPY 1
