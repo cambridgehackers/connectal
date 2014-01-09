@@ -122,6 +122,7 @@ reserved = {
     'schedule': 'TOKSCHEDULE',
     'seq': 'TOKSEQ',
     '_when_': 'TOKWHEN',
+    'Stmt' : 'TOKSTMT',
     'struct': 'TOKSTRUCT',
     'tagged': 'TOKTAGGED',
     'type': 'TOKTYPE',
@@ -491,6 +492,7 @@ def p_beginStmt(p):
 
 def p_expressionStmt(p):
     '''expressionStmt : TOKRETURN expression SEMICOLON
+                      | fsmStmtDef
                       | whenStmt
                       | lvalue SEMICOLON
                       | lvalue LPAREN expressions RPAREN SEMICOLON
@@ -505,6 +507,7 @@ def p_expressionStmt(p):
                       | functionDef
                       | methodDef
                       | moduleDef
+                      | TOKACTION SEMICOLON expressionStmts TOKENDACTION
                       | typeDef
                       | instanceAttributes rule'''
 
@@ -536,6 +539,18 @@ def p_functionFormals(p):
     '''functionFormals :
                        | functionFormal
                        | functionFormals COMMA functionFormal '''
+def p_fsmStmt(p):
+    '''fsmStmt : TOKSEQ fsmStmts TOKENDSEQ
+               | TOKWHILE ruleCond fsmStmt
+               | expressionStmt'''
+
+def p_fsmStmts(p):
+    '''fsmStmts : fsmStmt fsmStmts
+                | fsmStmt'''
+
+def p_fsmStmtDef(p):
+    '''fsmStmtDef : TOKSTMT VAR EQUAL fsmStmts SEMICOLON'''
+
 def p_functionDef(p):
     '''functionDef : instanceAttributes TOKFUNCTION type VAR LPAREN functionFormals RPAREN provisos functionBody
                    | instanceAttributes TOKFUNCTION type VAR LPAREN functionFormals RPAREN provisos functionValue'''
@@ -787,6 +802,7 @@ if 0:
         print tok
 
 def parse(data, inputfilename):
+    print inputfilename
     global globalfilename
     lexer = lex.lex(errorlog=lex.NullLogger())
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger())

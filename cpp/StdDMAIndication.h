@@ -5,6 +5,7 @@ class DMAIndication : public DMAIndicationWrapper
   PortalMemory *portalMemory;
 
 public:
+  DMAIndication(unsigned int id) : DMAIndicationWrapper(id), portalMemory(0) {}
   DMAIndication(const char* devname, unsigned int addrbits) : DMAIndicationWrapper(devname,addrbits), portalMemory(0) {}
   DMAIndication(PortalMemory *pm, const char* devname, unsigned int addrbits)
     : DMAIndicationWrapper(devname,addrbits)
