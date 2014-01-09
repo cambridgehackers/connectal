@@ -22,7 +22,7 @@
 # SOFTWARE.
 
 from __future__ import print_function
-import json, optparse, os, sys, re, tokenize
+import copy, json, optparse, os, sys, re, tokenize
 #names of tokens: tokenize.tok_name
 
 masterlist = []
@@ -39,6 +39,13 @@ toknum = 0
 tokval = 0
 modulename = ''
 
+class PinType(object):
+    def __init__(self, mode, type, name, origname):
+        self.mode = mode
+        self.type = type
+        self.name = name
+        self.origname = origname
+        self.comment = ''
 #
 # parser for .lib files
 #
@@ -50,7 +57,6 @@ def parsenext():
             break
     #print('Token:', toknum, tokval)
     if toknum == tokenize.ENDMARKER:
-        print('Token: endoffile')
         return None, None
     return toknum, tokval
 
@@ -127,11 +133,11 @@ def parse_item():
                                 print('differentindex', tname, ttemp, titem)
                     for k, v in sorted(pinlist.items()):
                         if v[1] == '':
-                            ttemp = [v[0], k]
+                            ttemp = PinType(v[0], 'Bit#(1)', k, '')
                         else:
-                            ttemp = [v[0], str(int(v[1])+1), k]
+                            ttemp = PinType(v[0], 'Bit#(' + str(int(v[1])+1) + ')', k, '')
                         if v[2] != {}:
-                            ttemp.append(v[2])
+                            ttemp.comment = v[2]
                         if paramstr == 'PS7':
                             masterlist.append(ttemp)
                 paramname = tokval
@@ -159,7 +165,6 @@ def parse_lib(filename):
     global tokgenerator, masterlist
     tokgenerator = tokenize.generate_tokens(open(filename).readline)
     parsenext()
-    print('PARSEFIRST', tokval)
     if tokval != 'library':
         sys.exit(1)
     validate_token(toknum == tokenize.NAME)
@@ -167,27 +172,25 @@ def parse_lib(filename):
     parse_item()
     searchlist = []
     for item in masterlist:
-        ind = item[-1].find('1')
+        ind = item.name.find('1')
         if ind > 0:
-            searchstr = item[-1][:ind]
-            #print('II', item[-1], searchstr)
+            searchstr = item.name[:ind]
+            #print('II', item.name, searchstr)
             if searchstr not in searchlist:
                 for iitem in masterlist:
-                    #print('VV', iitem[-1], searchstr + '0')
-                    if iitem[-1].startswith(searchstr + '0'):
+                    #print('VV', iitem.name, searchstr + '0')
+                    if iitem.name.startswith(searchstr + '0'):
                         searchlist.append(searchstr)
                         break
-    for sitem in searchlist:
-        print('SS', sitem)
     for item in masterlist:
         for sitem in searchlist:
-            tname = item[-1]
+            tname = item.name
             if tname.startswith(sitem):
                 tname = tname[len(sitem):]
                 ind = 0
                 while tname[ind] >= '0' and tname[ind] <= '9':
                     ind = ind + 1
-                item[-1] = sitem + tname[:ind] + '_' + tname[ind:]
+                item.name = sitem + tname[:ind] + '_' + tname[ind:]
                 break
 
 #
@@ -258,8 +261,13 @@ def parse_verilog(filename):
                 if options.clock and f[2] in options.clock:
                     f[1] = 'Clock'
                 #print('FF', f, file=sys.stderr)
-            masterlist.append(f)
-    paramnames.sort()
+            if len(f) == 3:
+                masterlist.append(PinType(f[0], f[1], f[2], ''))
+            elif len(f) == 2:
+                print('FFDDDDD', f, file=sys.stderr)
+                masterlist.append(PinType(f[0], '', f[1], ''))
+            else:
+                print('FFDDDDD', f, file=sys.stderr)
 
 def generate_condition(ifname):
     global ifdefmap
@@ -275,22 +283,22 @@ def generate_interface(ifname, paramlist, paramval, ilist, cname):
     print('(* always_ready, always_enabled *)')
     print('interface ' + ifname + paramlist + ';')
     for item in ilist:
-        if item[0] != 'input' and item[0] != 'output' and item[0] != 'inout' and item[0] != 'interface':
+        if item.mode != 'input' and item.mode != 'output' and item.mode != 'inout' and item.mode != 'interface':
             continue
-        if item[0] == 'input':
-            if item[1] != 'Clock':
-                print('    method Action      '+item[-1].lower()+'('+item[1]+' v);')
-        elif item[0] == 'output':
-            if item[1] == 'Clock':
-                print('    interface Clock     '+item[-1].lower()+';')
+        if item.mode == 'input':
+            if item.type != 'Clock':
+                print('    method Action      '+item.name.lower()+'('+item.type+' v);')
+        elif item.mode == 'output':
+            if item.type == 'Clock':
+                print('    interface Clock     '+item.name.lower()+';')
                 clock_names.append(item)
             else:
-                print('    method '+item[1]+'     '+item[-1].lower()+'();')
-        elif item[0] == 'inout':
-            print('    interface Inout#('+item[1]+')     '+item[-1].lower()+';')
-        elif item[0] == 'interface':
-            cflag2 = generate_condition(item[1])
-            print('    interface '+item[1]+ paramval +'     '+item[2].lower()+';')
+                print('    method '+item.type+'     '+item.name.lower()+'();')
+        elif item.mode == 'inout':
+            print('    interface Inout#('+item.type+')     '+item.name.lower()+';')
+        elif item.mode == 'interface':
+            cflag2 = generate_condition(item.type)
+            print('    interface '+item.type+ paramval +'     '+item.name.lower()+';')
             if cflag2:
                 print('`endif')
     print('endinterface')
@@ -298,23 +306,24 @@ def generate_interface(ifname, paramlist, paramval, ilist, cname):
         print('`endif')
 
 def regroup_items(ifname, masterlist):
-    global commoninterfaces
-    masterlist = sorted(masterlist, key=lambda item: item[1] if item[0] == 'parameter' else item[-1])
+    global paramnames, commoninterfaces
+    paramnames.sort()
+    masterlist = sorted(masterlist, key=lambda item: item.type if item.mode == 'parameter' else item.name)
     newlist = []
     currentgroup = ''
     prevlist = []
     for item in masterlist:
-        if item[0] != 'input' and item[0] != 'output' and item[0] != 'inout':
+        if item.mode != 'input' and item.mode != 'output' and item.mode != 'inout':
             newlist.append(item)
         else:
-            litem = item[-1]
+            litem = item.name
             m = re.search('(.+?)(\d+)_(.+)', litem)
             if prevlist != [] and not litem.startswith(currentgroup):
                 print('UU', currentgroup, litem, prevlist, file=sys.stderr)
             if m:
                 indexname = m.group(2)
                 fieldname = m.group(3)
-                #print('OO', item[-1], m.groups(), file=sys.stderr)
+                #print('OO', item.name, m.groups(), file=sys.stderr)
             else:
                 m = re.search('(.+?)_(.+)', litem)
                 if not m:
@@ -324,7 +333,7 @@ def regroup_items(ifname, masterlist):
                     m = re.search('(.+)_(.+)', litem)
                 indexname = ''
                 fieldname = m.group(2)
-                #print('OJ', item[-1], m.groups(), file=sys.stderr)
+                #print('OJ', item.name, m.groups(), file=sys.stderr)
             groupname = m.group(1)
             itemname = groupname + indexname
             if itemname.lower() in ['event']:
@@ -335,9 +344,9 @@ def regroup_items(ifname, masterlist):
                 commoninterfaces[interfacename] = {}
             if not commoninterfaces[interfacename].get(indexname):
                 commoninterfaces[interfacename][indexname] = []
-                newlist.append(['interface', interfacename, itemname, groupname+indexname+'_'])
-            foo = item[:-1]
-            foo.append(fieldname)
+                newlist.append(PinType('interface', interfacename, itemname, groupname+indexname+'_'))
+            foo = copy.copy(item)
+            foo.name = fieldname
             commoninterfaces[interfacename][indexname].append(foo)
     return newlist
 
@@ -353,29 +362,29 @@ def generate_inter_declarations(paramlist, paramval):
 
 def locate_clocks(item, prefix):
     global clock_params
-    pname = prefix + item[-1]
-    if item[0] == 'input':
-        if item[1] == 'Clock':
+    pname = prefix + item.name
+    if item.mode == 'input':
+        if item.type == 'Clock':
             clock_params.append(pname.lower())
-    elif item[0] == 'interface':
-        temp = commoninterfaces[item[1]].get('0')
+    elif item.mode == 'interface':
+        temp = commoninterfaces[item.type].get('0')
         if not temp:
-            temp = commoninterfaces[item[1]]['']
+            temp = commoninterfaces[item.type]['']
         for titem in temp:
-             locate_clocks(titem, item[3])
+             locate_clocks(titem, item.origname)
 
 def generate_clocks(item, indent, prefix):
-    prefname = prefix + item[-1]
-    if item[0] == 'input':
-        if item[1] == 'Clock':
+    prefname = prefix + item.name
+    if item.mode == 'input':
+        if item.type == 'Clock':
             print(indent + 'input_clock '+prefname.lower()+'('+ prefname+') = '+prefname.lower() + ';')
             print(indent + 'input_reset '+prefname.lower()+'_reset() = '+prefname.lower() + '_reset;')
-    elif item[0] == 'interface':
-        temp = commoninterfaces[item[1]].get('0')
+    elif item.mode == 'interface':
+        temp = commoninterfaces[item.type].get('0')
         if not temp:
-            temp = commoninterfaces[item[1]]['']
+            temp = commoninterfaces[item.type]['']
         for titem in temp:
-             generate_clocks(titem, '        ', item[3])
+             generate_clocks(titem, '        ', item.origname)
 
 def generate_instance(item, indent, prefix, clockedby_arg):
     methodlist = ''
@@ -384,32 +393,32 @@ def generate_instance(item, indent, prefix, clockedby_arg):
         pname = prefix[:-1].lower() + '.'
         if pname == 'event.':
             pname = 'event_.'
-    prefname = prefix + item[-1]
-    if item[0] == 'input':
-        if item[1] != 'Clock':
-            print(indent + 'method '+item[-1].lower()+'('+ prefname +')' + clockedby_arg + ' enable((*inhigh*) EN_'+prefname+');')
-            methodlist = methodlist + ', ' + pname + item[-1].lower()
-    elif item[0] == 'output':
-        if item[1] == 'Clock':
-            print(indent + 'output_clock '+ item[-1].lower()+ '(' + prefname+');')
+    prefname = prefix + item.name
+    if item.mode == 'input':
+        if item.type != 'Clock':
+            print(indent + 'method '+item.name.lower()+'('+ prefname +')' + clockedby_arg + ' enable((*inhigh*) EN_'+prefname+');')
+            methodlist = methodlist + ', ' + pname + item.name.lower()
+    elif item.mode == 'output':
+        if item.type == 'Clock':
+            print(indent + 'output_clock '+ item.name.lower()+ '(' + prefname+');')
         else:
-            print(indent + 'method '+ prefname + ' ' + item[-1].lower()+'()' + clockedby_arg + ';')
-            methodlist = methodlist + ', ' + pname + item[-1].lower()
-    elif item[0] == 'inout':
-        print(indent + 'ifc_inout '+item[-1].lower()+'('+ prefname+');')
-    elif item[0] == 'interface':
-        cflag = generate_condition(item[1])
-        print(indent + 'interface '+item[1]+'     '+item[2].lower()+';')
-        temp = commoninterfaces[item[1]].get('0')
+            print(indent + 'method '+ prefname + ' ' + item.name.lower()+'()' + clockedby_arg + ';')
+            methodlist = methodlist + ', ' + pname + item.name.lower()
+    elif item.mode == 'inout':
+        print(indent + 'ifc_inout '+item.name.lower()+'('+ prefname+');')
+    elif item.mode == 'interface':
+        cflag = generate_condition(item.type)
+        print(indent + 'interface '+item.type+'     '+item.name.lower()+';')
+        temp = commoninterfaces[item.type].get('0')
         if not temp:
-            temp = commoninterfaces[item[1]]['']
+            temp = commoninterfaces[item.type]['']
         clockedby_name = ''
         for titem in temp:
-            if titem[0] == 'input' and titem[1] == 'Clock':
-                clockedby_name = ' clocked_by (' + (item[3]+titem[-1]).lower() + ') reset_by (' + (item[3]+titem[-1]).lower() + '_reset)'
+            if titem.mode == 'input' and titem.type == 'Clock':
+                clockedby_name = ' clocked_by (' + (item.origname+titem.name).lower() + ') reset_by (' + (item.origname+titem.name).lower() + '_reset)'
         templist = ''
         for titem in temp:
-            templist = templist + generate_instance(titem, '        ', item[3], clockedby_name)
+            templist = templist + generate_instance(titem, '        ', item.origname, clockedby_name)
         if cflag:
             if not conditionalcf.get(cflag):
                 conditionalcf[cflag] = ''
@@ -457,8 +466,8 @@ def translate_verilog(ifname):
     print('    default_clock clk();')
     print('    default_reset rst();')
     #for item in masterlist:
-    #    if item[0] == 'parameter':
-    #        print('    parameter ' + item[1] + ' = ' + item[2] + ';')
+    #    if item.mode == 'parameter':
+    #        print('    parameter ' + item.type + ' = ' + item.name + ';')
     if options.export:
         for item in options.export:
             item2 = item.split(':')
