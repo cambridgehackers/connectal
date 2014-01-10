@@ -43,8 +43,8 @@ module mkPortalTop(StdPortalDmaTop);
    // Max burst 1 because it only reads one word at a time
    DMAReadBuffer#(64,1) dma_word_read_chan <- mkDMAReadBuffer();
 
-   // Max burst 1
-   DMAWriteBuffer#(64,1) dma_debug_write_chan <- mkDMAWriteBuffer();
+   // Max burst 16
+   DMAWriteBuffer#(64,16) dma_debug_write_chan <- mkDMAWriteBuffer();
 
    Vector#(2,  DMAReadClient#(64))   readClients = newVector();
    readClients[0] = dma_stream_read_chan.dmaClient;
