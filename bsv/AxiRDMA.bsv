@@ -103,7 +103,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       debugReg <= False;
    endrule
 
-   rule loadChannel if (valueOf(numReadClients) > 0 && !isConfiguring);
+   rule loadChannel if (valueOf(numReadClients) > 0 && !isConfiguring && readClients[selectReg].readData.notFull());
       DMAAddressRequest req = unpack(0);
       if (valueOf(numReadClients) > 0)
 	 req <- readClients[selectReg].readReq.get();
@@ -223,7 +223,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
       debugReg <= False;
    endrule
 
-   rule loadChannel if (valueOf(numWriteClients) > 0 && !isConfiguring);
+   rule loadChannel if (valueOf(numWriteClients) > 0 && !isConfiguring && writeClients[selectReg].writeData.notEmpty());
       DMAAddressRequest req = unpack(0);
       if (valueOf(numWriteClients) > 0)
 	 req <- writeClients[selectReg].writeReq.get();

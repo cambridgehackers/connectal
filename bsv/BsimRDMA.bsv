@@ -160,7 +160,7 @@ module mkBsimDMAWriteInternal#(Vector#(numWriteClients, DMAWriteClient#(dsz)) wr
       selectReg <= s;
    endrule
 
-   rule loadClient if (burstReg == 0);
+   rule loadClient if (burstReg == 0 && writeClients[activeChan].writeData.notEmpty());
       activeChan <= selectReg;
       let req   <- writeClients[selectReg].writeReq.get();
       //$display("dmawrite.loadClient activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
