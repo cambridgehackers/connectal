@@ -12,8 +12,6 @@ if os.environ.has_key('XILINX_EDK'):
     m = re.match('.*/(\d+.\d+)/ISE_DS/EDK$', os.environ['XILINX_EDK'])
     if m:
         edkversion = m.group(1)
-use_acp = 0
-
 
 xdc_template = '''
 set_property iostandard "%(iostandard)s" [get_ports "%(name)s"]
