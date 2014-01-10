@@ -44,6 +44,7 @@ argparser.add_argument('-C', '--constraint', help='Additional constraint files',
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-x', '--export', help='Promote/export named interface from top module')
 argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
+argparser.add_argument('-l', '--clib', help='C++ libary', action='append')
 
 tclReadVerilogTemplate='read_verilog [ glob %(verilog)s/*.v ]'
 
@@ -136,7 +137,7 @@ $(vfile): %(topbsvfile)s %(bsvfiles)s
 	for v in verilog/*.v; do $(XBSVTOP)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
 bsim_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
-	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s *.cpp *.cxx  -pthread -I$(XBSVTOP) -I$(XBSVTOP)/cpp -DBSIM 
+	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s *.cpp *.cxx  -pthread -I$(XBSVTOP) -I$(XBSVTOP)/cpp -DBSIM %(clibs)s
 
 ubuntu_exe:
 	cd jni; make
@@ -444,7 +445,7 @@ if __name__=='__main__':
     print 'Writing Android.mk', androidmkname
     print 'Writing Application.mk', applicationmkname
     cppgen.writeAndroidMk(namespace.source, generatedCFiles, androidmkname, applicationmkname, xbsvdir)
-    cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source, swProxies, swWrappers)
+    cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source, swProxies, swWrappers, namespace.clib)
 
     print 'Writing tcl impl file', tclimplname
     tcl = util.createDirAndOpen(tclimplname, 'w')
@@ -501,7 +502,8 @@ if __name__=='__main__':
                                    'topbsvmod'  : namespace.export,
                                    'dut' : namespace.export.lower(),
                                    'Dut': topmodulename,
-                                   'timestamp' : int(time.time())
+                                   'timestamp' : int(time.time()),
+                                   'clibs': ' '.join(['-l%s' % l for l in namespace.clib])
                                    })
     make.close()
 

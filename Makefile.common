@@ -26,4 +26,4 @@ gen:
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
-        -t $(XBSVDIR)/bsv/$(TOP).bsv $(BSVFILES)
+        -t $(XBSVDIR)/bsv/$(TOP).bsv $(XBSVFLAGS) $(BSVFILES)

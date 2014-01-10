@@ -29,7 +29,7 @@ linuxmakefile_template='''
 CFLAGS = -DMMAP_HW -O -g -I. -I%(xbsvdir)s/cpp -I%(xbsvdir)s %(sourceincludes)s
 
 test%(classname)s: %(swProxies)s %(swWrappers)s %(xbsvdir)s/cpp/portal.cpp %(source)s
-	g++ $(CFLAGS) -o %(classname)s %(swProxies)s %(swWrappers)s %(xbsvdir)s/cpp/portal.cpp %(source)s -pthread 
+	g++ $(CFLAGS) -o %(classname)s %(swProxies)s %(swWrappers)s %(xbsvdir)s/cpp/portal.cpp %(source)s %(clibs)s -pthread 
 '''
 
 
@@ -190,7 +190,7 @@ def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xb
         f.write(applicationmk_template % substs)
         f.close()
 
-def writeLinuxMk(base, linuxmkname, xbsvdir, sourcefiles, swProxies, swWrappers):
+def writeLinuxMk(base, linuxmkname, xbsvdir, sourcefiles, swProxies, swWrappers, clibs):
         f = util.createDirAndOpen(linuxmkname, 'w')
         className = cName(base)
         substs = {
@@ -200,7 +200,8 @@ def writeLinuxMk(base, linuxmkname, xbsvdir, sourcefiles, swProxies, swWrappers)
 	    'swProxies': ' '.join(['%sProxy.cpp' % p.name for p in swProxies]),
 	    'swWrappers': ' '.join(['%sWrapper.cpp' % w.name for w in swWrappers]),
             'source': ' '.join([os.path.abspath(sf) for sf in sourcefiles]) if sourcefiles else '',
-            'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in sourcefiles]) if sourcefiles else ''
+            'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in sourcefiles]) if sourcefiles else '',
+	    'clibs': ' '.join(['-l%s' % l for l in clibs])
         }
         f.write(linuxmakefile_template % substs)
         f.close()
