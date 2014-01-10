@@ -23,6 +23,7 @@ unsigned int *bsBuffer  = 0;
 int numWords = 128;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
+bool trigger_fired = false;
 
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
@@ -58,9 +59,10 @@ public:
       fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
       dump("src", (char*)srcBuffer, test_sz);
       dump("dst", (char*)dstBuffer, test_sz);
+      dump("dbg", (char*)bsBuffer,  test_sz);   
     }
-    fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
-    exit(memcmp_fail);
+    fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d, trigger_fired=%d\n", memcmp_count, memcmp_fail, trigger_fired);
+    exit(memcmp_fail || !trigger_fired);
   }
   virtual void rData ( unsigned long long v ){
     dump("rData: ", (char*)&v, sizeof(v));
@@ -89,6 +91,7 @@ public:
 
   virtual void triggerFired( ){
     fprintf(stderr, "BlueScope::triggerFired\n");
+    trigger_fired = true;
   }
   virtual void reportStateDbg(unsigned long long mask, unsigned long long value){
     //fprintf(stderr, "BlueScope::reportStateDbg mask=%016llx, value=%016llx\n", mask, value);
@@ -148,6 +151,7 @@ int main(int argc, const char **argv)
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = srcGen++;
     dstBuffer[i] = 0x5a5abeef;
+    bsBuffer[i]  = 0x5a5abeef;
   }
 
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
@@ -162,7 +166,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   bluescope->reset();
   bluescope->setTriggerMask (0xFFFFFFFF);
-  bluescope->setTriggerValue(0x00000002);
+  bluescope->setTriggerValue(0x00000008);
   bluescope->start(ref_bsAlloc);
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords);
   

@@ -34,9 +34,9 @@ typedef enum {StrstrIndication, StrstrRequest, DMAIndication, DMARequest} IfcNam
 module mkPortalTop(StdPortalDmaTop);
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(DMAIndication);
-   DMAReadBuffer#(64,8) haystack_read_chan <- mkDMAReadBuffer();
-   DMAReadBuffer#(64,8) needle_read_chan <- mkDMAReadBuffer();
-   DMAReadBuffer#(64,8) mp_next_read_chan <- mkDMAReadBuffer();
+   DMAReadBuffer#(64,1) haystack_read_chan <- mkDMAReadBuffer();
+   DMAReadBuffer#(64,1) needle_read_chan <- mkDMAReadBuffer();
+   DMAReadBuffer#(64,1) mp_next_read_chan <- mkDMAReadBuffer();
    
    Vector#(3, DMAReadClient#(64)) readClients = newVector();
    readClients[0] = haystack_read_chan.dmaClient;

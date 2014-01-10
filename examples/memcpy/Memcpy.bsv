@@ -49,7 +49,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 			DMAReadServer#(busWidth) dma_stream_read_server,
 			DMAWriteServer#(busWidth) dma_stream_write_server,
 			DMAReadServer#(busWidth) dma_word_read_server,
-			BlueScope bs)(MemcpyRequest)
+			BlueScope#(busWidth) bs)(MemcpyRequest)
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Add#(a__,32,busWidth));
 
@@ -106,7 +106,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 	 mismatch = mismatch || (v[31+i*32:i*32] != (srcGen + fromInteger(i)));
       dataMismatch <= dataMismatch || mismatch;
       dma_stream_write_server.writeData.put(tagdata);
-      //bs.dataIn(v,v);
+      bs.dataIn(v,v);
       srcGen <= srcGen+fromInteger(busWidthWords);
       //$display("loopback %h", tagdata.data);
       // indication.rData(v);

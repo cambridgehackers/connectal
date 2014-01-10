@@ -49,6 +49,7 @@ PortalWrapper **portal_wrappers = 0;
 struct pollfd *portal_fds = 0;
 int numFds = 0;
 Directory dir;
+Directory *pdir;
 
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
@@ -532,7 +533,10 @@ void* portalExec(void* __x)
 #endif
 }
 
-Directory::Directory() : Portal("fpga0", 16){}
+Directory::Directory() : Portal("fpga0", 16)
+{
+  pdir=this;
+}
 
 unsigned int Directory::fpga(unsigned int id)
 {

@@ -42,26 +42,32 @@ interface BlueScopeRequest;
    method Action setTriggerValue(Bit#(64) value);
 endinterface
 
-interface BlueScope;
-   method Action dataIn(Bit#(64) d, Bit#(64) t);
+interface BlueScope#(numeric type dataWidth);
+   method Action dataIn(Bit#(dataWidth) d, Bit#(dataWidth) t);
    interface BlueScopeRequest requestIfc;
 endinterface
 
 typedef enum { Idle, Enabled, Triggered } State deriving (Bits,Eq);
 
-module mkBlueScope#(Integer samples, DMAWriteServer#(64) wchan, BlueScopeIndication indication)(BlueScope);
+module mkBlueScope#(Integer samples, DMAWriteServer#(dataWidth) wchan, BlueScopeIndication indication)(BlueScope#(dataWidth))
+   provisos(Add#(a__,dataWidth,64),
+	    Add#(1,b__,dataWidth));
+   
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
    let rv  <- mkSyncBlueScope(samples, wchan, indication, clk, rst, clk,rst);
    return rv;
 endmodule
 
-module mkSyncBlueScope#(Integer samples, DMAWriteServer#(64) wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope);
+module mkSyncBlueScope#(Integer samples, DMAWriteServer#(dataWidth) wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth))
+   provisos(Add#(a__,dataWidth,64),
+	    Add#(1,b__,dataWidth),
+	    Div#(dataWidth,8,dataBytes));
 
-   SyncFIFOIfc#(Bit#(64)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
+   SyncFIFOIfc#(Bit#(dataWidth)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
    Reg#(DmaMemHandle) handleReg <- mkSyncReg(0, dClk, dRst, sClk);
-   Reg#(Bit#(64))       maskReg <- mkSyncReg(0, dClk, dRst, sClk);
-   Reg#(Bit#(64))      valueReg <- mkSyncReg(0, dClk, dRst, sClk);
+   Reg#(Bit#(dataWidth))       maskReg <- mkSyncReg(0, dClk, dRst, sClk);
+   Reg#(Bit#(dataWidth))      valueReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
    Reg#(State)                stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
@@ -82,8 +88,8 @@ module mkSyncBlueScope#(Integer samples, DMAWriteServer#(64) wchan, BlueScopeInd
    endrule
 
    rule writeReq if (dfifo.notEmpty);
-      wchan.writeReq.put(DMAAddressRequest { handle: handleReg, address: zeroExtend(writeOffsetReg), burstLen: 16, tag: 0});
-      writeOffsetReg <= writeOffsetReg + 16;
+      wchan.writeReq.put(DMAAddressRequest { handle: handleReg, address: zeroExtend(writeOffsetReg), burstLen: 1, tag: 0});
+      writeOffsetReg <= writeOffsetReg + fromInteger(valueOf(dataBytes));
    endrule
 
    rule  writeData;
@@ -99,7 +105,7 @@ module mkSyncBlueScope#(Integer samples, DMAWriteServer#(64) wchan, BlueScopeInd
       indication.triggerFired;
    endrule
    
-   method Action dataIn(Bit#(64) data, Bit#(64) trigger) if (stateReg != Idle);
+   method Action dataIn(Bit#(dataWidth) data, Bit#(dataWidth) trigger) if (stateReg != Idle);
       let e = False;
       let s = stateReg;
       let c = countReg;
@@ -157,11 +163,11 @@ module mkSyncBlueScope#(Integer samples, DMAWriteServer#(64) wchan, BlueScopeInd
       endmethod
 
       method Action setTriggerMask(Bit#(64) mask);
-	 maskReg <= mask;
+	 maskReg <= truncate(mask);
       endmethod
 
       method Action setTriggerValue(Bit#(64) value);
-	 valueReg <= value;
+	 valueReg <= truncate(value);
       endmethod
    endinterface
 

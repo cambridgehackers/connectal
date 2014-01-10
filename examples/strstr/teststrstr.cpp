@@ -14,6 +14,7 @@
 sem_t test_sem;
 unsigned int sw_match_cnt = 0;
 unsigned int hw_match_cnt = 0;
+extern Directory *pdir;
 
 class StrstrIndication : public StrstrIndicationWrapper
 {
@@ -75,6 +76,8 @@ void MP(const char *x, const char *t, int *MP_next, int m, int n)
 
 int main(int argc, const char **argv)
 {
+
+  pdir->print();
 
   StrstrRequestProxy *device = 0;
   DMARequestProxy *dma = 0;
@@ -154,14 +157,15 @@ int main(int argc, const char **argv)
     close(mpNextAlloc->header.fd);
   }
 
-  
-  if(1){
+
+#ifdef MMAP_HW  
+  if(0){
     fprintf(stderr, "benchmarks\n");
     PortalAlloc *needleAlloc;
     PortalAlloc *haystackAlloc;
     PortalAlloc *mpNextAlloc;
     const char *needle_text = "I have control\n";
-    unsigned int BENCHMARK_INPUT_SIZE = 1024; //200 * 1024 * 1024;
+    unsigned int BENCHMARK_INPUT_SIZE = 1024 * 1024;
     unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
     unsigned int needle_alloc_len = strlen(needle_text);
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
@@ -206,6 +210,7 @@ int main(int argc, const char **argv)
     close(haystackAlloc->header.fd);
     close(mpNextAlloc->header.fd);
   }
+#endif
 
   fprintf(stderr, "sw_match_cnt=%d, hw_match_cnt=%d\n", sw_match_cnt, hw_match_cnt);
   return (sw_match_cnt != hw_match_cnt);

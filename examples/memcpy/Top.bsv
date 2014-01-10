@@ -43,8 +43,8 @@ module mkPortalTop(StdPortalDmaTop);
    // Max burst 1 because it only reads one word at a time
    DMAReadBuffer#(64,1) dma_word_read_chan <- mkDMAReadBuffer();
 
-   // Max burst 16
-   DMAWriteBuffer#(64,8) dma_debug_write_chan <- mkDMAWriteBuffer();
+   // Max burst 1
+   DMAWriteBuffer#(64,1) dma_debug_write_chan <- mkDMAWriteBuffer();
 
    Vector#(2,  DMAReadClient#(64))   readClients = newVector();
    readClients[0] = dma_stream_read_chan.dmaClient;
@@ -64,7 +64,7 @@ module mkPortalTop(StdPortalDmaTop);
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
 
    BlueScopeIndicationProxy blueScopeIndicationProxy <- mkBlueScopeIndicationProxy(8);
-   BlueScope bs <- mkBlueScope(32, dma_debug_write_chan.dmaServer, blueScopeIndicationProxy.ifc);
+   BlueScope#(64) bs <- mkBlueScope(32, dma_debug_write_chan.dmaServer, blueScopeIndicationProxy.ifc);
    BlueScopeRequestWrapper blueScopeRequestWrapper <- mkBlueScopeRequestWrapper(1003,bs.requestIfc);
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(7);
