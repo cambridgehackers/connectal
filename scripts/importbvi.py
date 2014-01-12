@@ -28,7 +28,6 @@ import copy, json, optparse, os, sys, re, tokenize
 masterlist = []
 parammap = {}
 paramnames = []
-remapmap = {}
 ifdefmap = {}
 conditionalcf = {}
 clock_names = []
@@ -45,8 +44,9 @@ class PinType(object):
         self.type = type
         self.name = name.lower()
         self.origname = origname
-        #print('PNN', self.mode, self.type, self.name, self.origname)
         self.comment = ''
+        self.separator = ''
+        #print('PNN', self.mode, self.type, self.name, self.origname)
 #
 # parser for .lib files
 #
@@ -98,10 +98,6 @@ def parse_item():
                 paramstr = parseparam()
                 plist = parse_item()
                 if paramstr != '' and paramname != 'fpga_condition':
-                    for mitem in remapmap:
-                        if paramstr.startswith(mitem):
-                            paramstr = remapmap[mitem] + paramstr[len(mitem):]
-                        #print('RRR', mitem, paramstr)
                     if plist == {}:
                         paramlist['attr'].append([paramstr])
                     else:
@@ -191,7 +187,7 @@ def parse_lib(filename):
                 ind = 0
                 while tname[ind] >= '0' and tname[ind] <= '9':
                     ind = ind + 1
-                item.name = sitem + tname[:ind] + '_' + tname[ind:]
+                item.name = sitem + tname[:ind] + item.separator + tname[ind:]
                 break
 
 #
@@ -329,35 +325,46 @@ def regroup_items(ifname, masterlist):
             titem = titem.replace('P2F', 'ZZC')
             titem = titem.replace('F2P', 'ZZD')
             #m = re.search('(.+?)(\d+)_(.+)', litem)
-            m = re.search('(.+?)(\d+)_?(.+)', titem)
+            m = re.search('(.+?)(\d+)(_?)(.+)', titem)
+            separator = '_'
+            indexname = ''
             if prevlist != [] and not litem.startswith(currentgroup):
                 print('UU', currentgroup, litem, prevlist, file=sys.stderr)
             if m:
                 groupname = goback(m.group(1))
                 indexname = goback(m.group(2))
-                fieldname = goback(m.group(3))
+                separator = goback(m.group(3))
+                fieldname = goback(m.group(4))
                 #print('OO', item.name, [groupname, indexname, fieldname], file=sys.stderr)
             else:
-                m = re.search('(.+?)_(.+)', litem)
-                if not m:
-                    newlist.append(item)
-                    continue
-                if len(m.group(1)) == 1: # if only 1 character prefix, get more greedy
-                    m = re.search('(.+)_(.+)', litem)
-                indexname = ''
-                fieldname = m.group(2)
-                #print('OJ', item.name, m.groups(), file=sys.stderr)
-                groupname = m.group(1)
+                if options.factor:
+                    for tstring in options.factor:
+                        if litem.startswith(tstring):
+                            groupname = tstring
+                            fieldname = litem[len(tstring):]
+                            separator = ''
+                            break
+                if separator != '':
+                    m = re.search('(.+?)_(.+)', litem)
+                    if not m:
+                        newlist.append(item)
+                        continue
+                    if len(m.group(1)) == 1: # if only 1 character prefix, get more greedy
+                        m = re.search('(.+)_(.+)', litem)
+                    #print('OJ', item.name, m.groups(), file=sys.stderr)
+                    fieldname = m.group(2)
+                    groupname = m.group(1)
             itemname = (groupname + indexname).lower()
             if itemname in ['event']:
                 itemname = itemname + '_'
-            #fieldname = fieldname + '_'
             interfacename = ifname[0].upper() + ifname[1:].lower() + groupname[0].upper() + groupname[1:].lower()
             if not commoninterfaces.get(interfacename):
                 commoninterfaces[interfacename] = {}
             if not commoninterfaces[interfacename].get(indexname):
                 commoninterfaces[interfacename][indexname] = []
-                newlist.append(PinType('interface', interfacename, itemname, groupname+indexname+'_'))
+                t = PinType('interface', interfacename, itemname, groupname+indexname+separator)
+                t.separator = separator
+                newlist.append(t)
             foo = copy.copy(item)
             foo.name = fieldname.lower()
             foo.origname = fieldname
@@ -508,9 +515,9 @@ def translate_verilog(ifname):
 
 if __name__=='__main__':
     parser = optparse.OptionParser("usage: %prog [options] arg")
-    parser.add_option("-f", "--output", dest="filename", help="write data to FILENAME")
+    parser.add_option("-o", "--output", dest="filename", help="write data to FILENAME")
     parser.add_option("-p", "--param", action="append", dest="param")
-    parser.add_option("-r", "--remap", action="append", dest="remap")
+    parser.add_option("-f", "--factor", action="append", dest="factor")
     parser.add_option("-c", "--clock", action="append", dest="clock")
     parser.add_option("-d", "--delete", action="append", dest="delete")
     parser.add_option("-e", "--export", action="append", dest="export")
@@ -528,11 +535,6 @@ if __name__=='__main__':
                 parammap[item2[0]] = item2[1]
                 if item2[1] not in paramnames:
                     paramnames.append(item2[1])
-    if options.remap:
-        for item in options.remap:
-            item2 = item.split(':')
-            if len(item2) == 2:
-                remapmap[item2[0]] = item2[1]
     if options.ifdef:
         for item in options.ifdef:
             item2 = item.split(':')
