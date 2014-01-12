@@ -43,8 +43,9 @@ class PinType(object):
     def __init__(self, mode, type, name, origname):
         self.mode = mode
         self.type = type
-        self.name = name
+        self.name = name.lower()
         self.origname = origname
+        #print('PNN', self.mode, self.type, self.name, self.origname)
         self.comment = ''
 #
 # parser for .lib files
@@ -133,9 +134,9 @@ def parse_item():
                                 print('differentindex', tname, ttemp, titem)
                     for k, v in sorted(pinlist.items()):
                         if v[1] == '':
-                            ttemp = PinType(v[0], 'Bit#(1)', k, '')
+                            ttemp = PinType(v[0], 'Bit#(1)', k, k)
                         else:
-                            ttemp = PinType(v[0], 'Bit#(' + str(int(v[1])+1) + ')', k, '')
+                            ttemp = PinType(v[0], 'Bit#(' + str(int(v[1])+1) + ')', k, k)
                         if v[2] != {}:
                             ttemp.comment = v[2]
                         if paramstr == 'PS7':
@@ -262,10 +263,10 @@ def parse_verilog(filename):
                     f[1] = 'Clock'
                 #print('FF', f, file=sys.stderr)
             if len(f) == 3:
-                masterlist.append(PinType(f[0], f[1], f[2], ''))
+                masterlist.append(PinType(f[0], f[1], f[2], f[2]))
             elif len(f) == 2:
                 print('FFDDDDD', f, file=sys.stderr)
-                masterlist.append(PinType(f[0], '', f[1], ''))
+                masterlist.append(PinType(f[0], '', f[1], f[1]))
             else:
                 print('FFDDDDD', f, file=sys.stderr)
 
@@ -287,23 +288,29 @@ def generate_interface(ifname, paramlist, paramval, ilist, cname):
             continue
         if item.mode == 'input':
             if item.type != 'Clock':
-                print('    method Action      '+item.name.lower()+'('+item.type+' v);')
+                print('    method Action      '+item.name+'('+item.type+' v);')
         elif item.mode == 'output':
             if item.type == 'Clock':
-                print('    interface Clock     '+item.name.lower()+';')
+                print('    interface Clock     '+item.name+';')
                 clock_names.append(item)
             else:
-                print('    method '+item.type+'     '+item.name.lower()+'();')
+                print('    method '+item.type+'     '+item.name+'();')
         elif item.mode == 'inout':
-            print('    interface Inout#('+item.type+')     '+item.name.lower()+';')
+            print('    interface Inout#('+item.type+')     '+item.name+';')
         elif item.mode == 'interface':
             cflag2 = generate_condition(item.type)
-            print('    interface '+item.type+ paramval +'     '+item.name.lower()+';')
+            print('    interface '+item.type+ paramval +'     '+item.name+';')
             if cflag2:
                 print('`endif')
     print('endinterface')
     if cflag:
         print('`endif')
+
+def goback(arg):
+    titem = arg.replace('ZZB', 'I2C')
+    titem = titem.replace('ZZC', 'P2F')
+    titem = titem.replace('ZZD', 'F2P')
+    return titem.replace('ZZA', 'ZZ')
 
 def regroup_items(ifname, masterlist):
     global paramnames, commoninterfaces
@@ -316,14 +323,20 @@ def regroup_items(ifname, masterlist):
         if item.mode != 'input' and item.mode != 'output' and item.mode != 'inout':
             newlist.append(item)
         else:
-            litem = item.name
-            m = re.search('(.+?)(\d+)_(.+)', litem)
+            litem = item.origname
+            titem = litem.replace('ZZ', 'ZZA')
+            titem = titem.replace('I2C', 'ZZB')
+            titem = titem.replace('P2F', 'ZZC')
+            titem = titem.replace('F2P', 'ZZD')
+            #m = re.search('(.+?)(\d+)_(.+)', litem)
+            m = re.search('(.+?)(\d+)_?(.+)', titem)
             if prevlist != [] and not litem.startswith(currentgroup):
                 print('UU', currentgroup, litem, prevlist, file=sys.stderr)
             if m:
-                indexname = m.group(2)
-                fieldname = m.group(3)
-                #print('OO', item.name, m.groups(), file=sys.stderr)
+                groupname = goback(m.group(1))
+                indexname = goback(m.group(2))
+                fieldname = goback(m.group(3))
+                #print('OO', item.name, [groupname, indexname, fieldname], file=sys.stderr)
             else:
                 m = re.search('(.+?)_(.+)', litem)
                 if not m:
@@ -334,9 +347,9 @@ def regroup_items(ifname, masterlist):
                 indexname = ''
                 fieldname = m.group(2)
                 #print('OJ', item.name, m.groups(), file=sys.stderr)
-            groupname = m.group(1)
-            itemname = groupname + indexname
-            if itemname.lower() in ['event']:
+                groupname = m.group(1)
+            itemname = (groupname + indexname).lower()
+            if itemname in ['event']:
                 itemname = itemname + '_'
             #fieldname = fieldname + '_'
             interfacename = ifname[0].upper() + ifname[1:].lower() + groupname[0].upper() + groupname[1:].lower()
@@ -346,7 +359,8 @@ def regroup_items(ifname, masterlist):
                 commoninterfaces[interfacename][indexname] = []
                 newlist.append(PinType('interface', interfacename, itemname, groupname+indexname+'_'))
             foo = copy.copy(item)
-            foo.name = fieldname
+            foo.name = fieldname.lower()
+            foo.origname = fieldname
             commoninterfaces[interfacename][indexname].append(foo)
     return newlist
 
@@ -371,10 +385,10 @@ def locate_clocks(item, prefix):
         if not temp:
             temp = commoninterfaces[item.type]['']
         for titem in temp:
-             locate_clocks(titem, item.origname)
+            locate_clocks(titem, item.origname)
 
 def generate_clocks(item, indent, prefix):
-    prefname = prefix + item.name
+    prefname = prefix + item.origname
     if item.mode == 'input':
         if item.type == 'Clock':
             print(indent + 'input_clock '+prefname.lower()+'('+ prefname+') = '+prefname.lower() + ';')
@@ -393,7 +407,7 @@ def generate_instance(item, indent, prefix, clockedby_arg):
         pname = prefix[:-1].lower() + '.'
         if pname == 'event.':
             pname = 'event_.'
-    prefname = prefix + item.name
+    prefname = prefix + item.origname
     if item.mode == 'input':
         if item.type != 'Clock':
             print(indent + 'method '+item.name.lower()+'('+ prefname +')' + clockedby_arg + ' enable((*inhigh*) EN_'+prefname+');')

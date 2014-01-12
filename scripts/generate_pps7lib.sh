@@ -2,34 +2,22 @@
 set -x
 set -e
 scripts/importbvi.py \
-    -r SAXIACP:S_AXI_ACP_ \
-    -r MAXI:M_AXI_ \
-    -r SAXI:S_AXI_ \
-    -r DDR:DDR_ \
     -r EMIOCAN:CAN \
-    -r EMIOCORE:CORE_ \
+    -r EMIOCORE:CORE \
     -r EMIODMA:DMA \
     -r EMIOENET:ENET \
-    -r EVENT:EVENT_ \
-    -r FCLKCLKTRIG:FCLKCLKTRIG_ \
-    -r FCLKRESET:FCLK_RESET_ \
-    -r FCLKCLK:FCLK_ \
-    -r FPGA:FPGA_ \
-    -r FTMD:FTMD_ \
-    -r FTMT:FTMT_ \
-    -r EMIOGPIO:GPIO_ \
+    -r EMIOGPIO:GPIO \
     -r EMIOI2C:I2C \
-    -r IRQ:IRQ_ \
-    -r EMIOPJTAG:PJTAG_ \
+    -r EMIOPJTAG:PJTAG \
     -r EMIOPS:PS \
     -r EMIOSDIO:SDIO \
     -r EMIOSPI:SPI \
-    -r EMIOSRAM:SRAM_ \
-    -r EMIOTRACE:TRACE_ \
+    -r EMIOSRAM:SRAM \
+    -r EMIOTRACE:TRACE \
     -r EMIOTTC:TTC \
     -r EMIOUART:UART \
     -r EMIOUSB:USB \
-    -r EMIOWDT:WDT_ \
+    -r EMIOWDT:WDT \
     -p c_emio_gpio_width:gpio_width \
     -p c_m_axi_gp0_thread_id_width:id_width \
     -p c_m_axi_gp1_thread_id_width:id_width \
