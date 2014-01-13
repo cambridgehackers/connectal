@@ -79,7 +79,7 @@ def parseparam():
     return paramstr
 
 def parse_item():
-    global masterlist
+    global masterlist, modulename
     paramlist = {}
     while tokval != '}' and toknum != tokenize.ENDMARKER:
         paramname = tokval
@@ -130,12 +130,16 @@ def parse_item():
                                 print('differentindex', tname, ttemp, titem)
                     for k, v in sorted(pinlist.items()):
                         if v[1] == '':
-                            ttemp = PinType(v[0], 'Bit#(1)', k, k)
+                            ptemp = 'Bit#(1)'
+                            if options.clock and k in options.clock:
+                                ptemp = 'Clock'
+                            ttemp = PinType(v[0], ptemp, k, k)
                         else:
                             ttemp = PinType(v[0], 'Bit#(' + str(int(v[1])+1) + ')', k, k)
                         if v[2] != {}:
                             ttemp.comment = v[2]
                         if paramstr == 'PS7':
+                            modulename = paramstr
                             masterlist.append(ttemp)
                 paramname = tokval
                 if toknum != tokenize.NAME:
@@ -411,7 +415,10 @@ def generate_instance(item, indent, prefix, clockedby_arg):
     methodlist = ''
     pname = ''
     if prefix:
-        pname = prefix[:-1].lower() + '.'
+        pname = prefix.lower()
+        if pname[-1] == '_':
+            pname = pname[:-1]
+        pname = pname + '.'
         if pname == 'event.':
             pname = 'event_.'
     prefname = prefix + item.origname
