@@ -47,10 +47,10 @@ interface AxiSlaveHighSpeed;
     interface AxiSlaveCommon#(64) axi;
     method Bit#(3)            racount();
     method Bit#(8)            rcount();
-    method Action             rdissuecap1_en(Bit#(1) v);
+    method Action             rdissuecap1en(Bit#(1) v);
     method Bit#(6)            wacount();
     method Bit#(8)            wcount();
-    method Action             wrissuecap1_en(Bit#(1) v);
+    method Action             wrissuecap1en(Bit#(1) v);
 endinterface
 
 interface AxiMasterWires;
@@ -115,12 +115,14 @@ interface PS7LIB;
     interface Pps7Wdt              wdt;
 `endif
     interface Pps7Ddr              ddr;
-    interface Vector#(4,Pps7Fclk_reset)  fclk_reset;
-    interface Pps7Fclk             fclk;
-    interface Pps7Gpio             gpio;
-    interface Vector#(2, Pps7I2c)  i2c;
+    method Bit#(4)     fclkclk();
+    method Action      fclkclktrign(Bit#(4) v);
+    method Bit#(4)     fclkresetn();
+    method Action      fpgaidlen(Bit#(1) v);
+    interface Pps7Emiogpio             gpio;
+    interface Vector#(2, Pps7Emioi2c)  i2c;
     interface Pps7Irq              irq;
-    interface Inout#(Bit#(mio_width))     mio;
+    interface Inout#(Bit#(54))     mio;
     interface Pps7Ps               ps;
 
     interface Vector#(2, AxiMasterCommon) m_axi_gp;
@@ -129,7 +131,7 @@ interface PS7LIB;
     interface Vector#(4, AxiSlaveHighSpeed) s_axi_hp;
 endinterface
 
-module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
+module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     PPS7LIB foo <- mkPPS7LIB(
@@ -140,18 +142,16 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
     Vector#(2, Pps7Can)     vcan;
     Vector#(4, Pps7Dma)     vdma;
     Vector#(2, Pps7Enet)     venet;
-    Vector#(4, Pps7Fclk_clktrig)     vfclk_clktrig;
     Vector#(2, Pps7Sdio)     vsdio;
     Vector#(2, Pps7Spi)     vspi;
     Vector#(2, Pps7Ttc)     vttc;
     Vector#(2, Pps7Uart)     vuart;
     Vector#(2, Pps7Usb)     vusb;
 `endif
-    Vector#(4, Pps7Fclk_reset)     vfclk_reset;
-    Vector#(2, Pps7I2c)     vi2c;
-    Vector#(2, Pps7M_axi_gp)     vm_axi_gp;
-    Vector#(2, Pps7S_axi_gp)     vs_axi_gp;
-    Vector#(4, Pps7S_axi_hp)     vs_axi_hp;
+    Vector#(2, Pps7Emioi2c)     vi2c;
+    Vector#(2, Pps7Maxigp)     vm_axi_gp;
+    Vector#(2, Pps7Saxigp)     vs_axi_gp;
+    Vector#(4, Pps7Saxihp)     vs_axi_hp;
     Vector#(2, AxiMasterCommon) vtopm_axi_gp;
     Vector#(2, AxiMasterWires) vtopmw_axi_gp <- replicateM(mkAxiMasterWires(clocked_by axi_clock, reset_by axi_reset));
     Vector#(2, AxiSlaveCommon#(32)) vtops_axi_gp;
@@ -168,10 +168,6 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
     vdma[3] = foo.dma3;
     venet[0] = foo.enet0;
     venet[1] = foo.enet1;
-    vfclk_clktrig[0] = foo.fclk_clktrig0;
-    vfclk_clktrig[1] = foo.fclk_clktrig1;
-    vfclk_clktrig[2] = foo.fclk_clktrig2;
-    vfclk_clktrig[3] = foo.fclk_clktrig3;
     vsdio[0] = foo.sdio0;
     vsdio[1] = foo.sdio1;
     vspi[0] = foo.spi0;
@@ -183,20 +179,16 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
     vusb[0] = foo.usb0;
     vusb[1] = foo.usb1;
 `endif
-    vfclk_reset[0] = foo.fclk_reset0;
-    vfclk_reset[1] = foo.fclk_reset1;
-    vfclk_reset[2] = foo.fclk_reset2;
-    vfclk_reset[3] = foo.fclk_reset3;
-    vi2c[0] = foo.i2c0;
-    vi2c[1] = foo.i2c1;
-    vm_axi_gp[0] = foo.m_axi_gp0;
-    vm_axi_gp[1] = foo.m_axi_gp1;
-    vs_axi_gp[0] = foo.s_axi_gp0;
-    vs_axi_gp[1] = foo.s_axi_gp1;
-    vs_axi_hp[0] = foo.s_axi_hp0;
-    vs_axi_hp[1] = foo.s_axi_hp1;
-    vs_axi_hp[2] = foo.s_axi_hp2;
-    vs_axi_hp[3] = foo.s_axi_hp3;
+    vi2c[0] = foo.emioi2c0;
+    vi2c[1] = foo.emioi2c1;
+    vm_axi_gp[0] = foo.maxigp0;
+    vm_axi_gp[1] = foo.maxigp1;
+    vs_axi_gp[0] = foo.saxigp0;
+    vs_axi_gp[1] = foo.saxigp1;
+    vs_axi_hp[0] = foo.saxihp0;
+    vs_axi_hp[1] = foo.saxihp1;
+    vs_axi_hp[2] = foo.saxihp2;
+    vs_axi_hp[3] = foo.saxihp3;
     for (Integer i = 0; i < 2; i = i + 1)
        begin
        rule axi_master_handshake1;
@@ -229,7 +221,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
                      v.lock = vm_axi_gp[i].arlock();
                      v.prot = vm_axi_gp[i].arprot();
                      v.qos = vm_axi_gp[i].arqos();
-                     v.size = vm_axi_gp[i].arsize();
+                     v.size = {0, vm_axi_gp[i].arsize()};
 
                     vtopmw_axi_gp[i].arready <= 1;
                     return v;
@@ -246,7 +238,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
                     v.lock = vm_axi_gp[i].awlock();
                     v.prot = vm_axi_gp[i].awprot();
                     v.qos = vm_axi_gp[i].awqos();
-                    v.size = vm_axi_gp[i].awsize();
+                    v.size = {0, vm_axi_gp[i].awsize()};
 
                     vtopmw_axi_gp[i].awready <= 1;
                     return v;
@@ -311,12 +303,12 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
                     vs_axi_gp[i].araddr(v.address);
                     vs_axi_gp[i].arburst(v.burst);
                     vs_axi_gp[i].arcache(v.cache);
-                    vs_axi_gp[i].arid(v.id);
+                    vs_axi_gp[i].arid(v.id[5:0]);
                     vs_axi_gp[i].arlen(v.len);
                     vs_axi_gp[i].arlock(v.lock);
                     vs_axi_gp[i].arprot(v.prot);
                     vs_axi_gp[i].arqos(v.qos);
-                    vs_axi_gp[i].arsize(v.size);
+                    vs_axi_gp[i].arsize(v.size[1:0]);
 
 	            vtopsw_axi_gp[i].arvalid <= 1;
                 endmethod
@@ -326,19 +318,19 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
                     vs_axi_gp[i].awaddr(v.address);
                     vs_axi_gp[i].awburst(v.burst);
                     vs_axi_gp[i].awcache(v.cache);
-                    vs_axi_gp[i].awid(v.id);
+                    vs_axi_gp[i].awid(v.id[5:0]);
                     vs_axi_gp[i].awlen(v.len);
                     vs_axi_gp[i].awlock(v.lock);
                     vs_axi_gp[i].awprot(v.prot);
                     vs_axi_gp[i].awqos(v.qos);
-                    vs_axi_gp[i].awsize(v.size);
+                    vs_axi_gp[i].awsize(v.size[1:0]);
 
 	            vtopsw_axi_gp[i].awvalid <= 1;
                 endmethod
             endinterface
             interface Put resp_write;
                 method Action put(Axi3WriteData#(32, TDiv#(32, 8), 12) v) if (vs_axi_gp[i].wready() != 0);
-                    vs_axi_gp[i].wid(v.id);
+                    vs_axi_gp[i].wid(v.id[5:0]);
                     vs_axi_gp[i].wstrb(v.byteEnable);
                     vs_axi_gp[i].wdata(v.data);
                     vs_axi_gp[i].wlast(v.last);
@@ -349,7 +341,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
             interface Get resp_read;
                 method ActionValue#(Axi3ReadResponse#(32, 12)) get() if (vs_axi_gp[i].rvalid() != 0);
                     Axi3ReadResponse#(32, 12) v;
-                    v.id = vs_axi_gp[i].rid();
+                    v.id = {6'b0, vs_axi_gp[i].rid()};
                     v.resp = vs_axi_gp[i].rresp();
                     v.data = vs_axi_gp[i].rdata();
                     v.last = vs_axi_gp[i].rlast();
@@ -361,7 +353,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
             interface Get resp_b;
                 method ActionValue#(Axi3WriteResponse#(12)) get() if (vs_axi_gp[i].bvalid() != 0);
                     Axi3WriteResponse#(12) v;
-                    v.id = vs_axi_gp[i].bid();
+                    v.id = {6'b0, vs_axi_gp[i].bid()};
                     v.resp = vs_axi_gp[i].bresp();
 
 	            vtopsw_axi_gp[i].bready <= 1;
@@ -398,12 +390,12 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
                     vs_axi_hp[i].araddr(v.address);
                     vs_axi_hp[i].arburst(v.burst);
                     vs_axi_hp[i].arcache(v.cache);
-                    vs_axi_hp[i].arid(v.id);
+                    vs_axi_hp[i].arid(v.id[5:0]);
                     vs_axi_hp[i].arlen(v.len);
                     vs_axi_hp[i].arlock(v.lock);
                     vs_axi_hp[i].arprot(v.prot);
                     vs_axi_hp[i].arqos(v.qos);
-                    vs_axi_hp[i].arsize(v.size);
+                    vs_axi_hp[i].arsize(v.size[1:0]);
 
 		    vtopsw_axi_hp[i].arvalid <= 1;
                 endmethod
@@ -413,19 +405,19 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
                     vs_axi_hp[i].awaddr(v.address);
                     vs_axi_hp[i].awburst(v.burst);
                     vs_axi_hp[i].awcache(v.cache);
-                    vs_axi_hp[i].awid(v.id);
+                    vs_axi_hp[i].awid(v.id[5:0]);
                     vs_axi_hp[i].awlen(v.len);
                     vs_axi_hp[i].awlock(v.lock);
                     vs_axi_hp[i].awprot(v.prot);
                     vs_axi_hp[i].awqos(v.qos);
-                    vs_axi_hp[i].awsize(v.size);
+                    vs_axi_hp[i].awsize(v.size[1:0]);
 
 	            vtopsw_axi_hp[i].awvalid <= 1;
                 endmethod
             endinterface
             interface Put resp_write;
                 method Action put(Axi3WriteData#(64, TDiv#(64, 8), 12) v) if (vs_axi_hp[i].wready() != 0);
-                    vs_axi_hp[i].wid(v.id);
+                    vs_axi_hp[i].wid(v.id[5:0]);
                     vs_axi_hp[i].wstrb(v.byteEnable);
                     vs_axi_hp[i].wdata(v.data);
                     vs_axi_hp[i].wlast(v.last);
@@ -436,7 +428,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
             interface Get resp_read;
                 method ActionValue#(Axi3ReadResponse#(64, 12)) get() if (vs_axi_hp[i].rvalid() != 0);
                     Axi3ReadResponse#(64, 12) v;
-                    v.id = vs_axi_hp[i].rid();
+                    v.id = {6'b0, vs_axi_hp[i].rid()};
                     v.resp = vs_axi_hp[i].rresp();
                     v.data = vs_axi_hp[i].rdata();
                     v.last = vs_axi_hp[i].rlast();
@@ -448,7 +440,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
             interface Get resp_b;
                 method ActionValue#(Axi3WriteResponse#(12)) get() if (vs_axi_hp[i].bvalid() != 0);
                     Axi3WriteResponse#(12) v;
-                    v.id = vs_axi_hp[i].bid();
+                    v.id = {6'b0, vs_axi_hp[i].bid()};
                     v.resp = vs_axi_hp[i].bresp();
 
 		    vtopsw_axi_hp[i].bready <= 1;
@@ -460,17 +452,16 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
             endinterface: axi
             method racount = vs_axi_hp[i].racount;
             method rcount = vs_axi_hp[i].rcount;
-            method rdissuecap1_en = vs_axi_hp[i].rdissuecap1_en;
+            method rdissuecap1en = vs_axi_hp[i].rdissuecap1en;
             method wacount = vs_axi_hp[i].wacount;
             method wcount = vs_axi_hp[i].wcount;
-            method wrissuecap1_en = vs_axi_hp[i].wrissuecap1_en;
+            method wrissuecap1en = vs_axi_hp[i].wrissuecap1en;
         endinterface;
 
 `ifdef PS7EXTENDED
     interface Pps7Can can = vcan;
     interface Pps7Dma     dma = vdma;
     interface Pps7Enet     enet = venet;
-    interface Pps7Fclk_clktrig    fclk_clktrig = vfclk_clktrig;
     interface Pps7Sdio    sdio = vsdio;
     interface Pps7Spi    spi = vspi;
     interface Pps7Ttc    ttc = vttc;
@@ -485,11 +476,17 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
     interface Pps7Trace     trace = foo.trace;
     interface Pps7Wdt     wdt = foo.wdt;
 `endif
-    interface Pps7Fclk_reset    fclk_reset = vfclk_reset;
-    interface Pps7I2c    i2c = vi2c;
+    interface Pps7Emioi2c    i2c = vi2c;
     interface Pps7Ddr     ddr = foo.ddr;
-    interface Pps7Fclk     fclk = foo.fclk;
-    interface Pps7Gpio     gpio = foo.gpio;
+    interface Bit        fclkclk = foo.fclkclk;
+    interface Bit        fclkresetn = foo.fclkresetn;
+    method Action      fclkclktrign(Bit#(4) v);
+        foo.fclkclktrign(v);
+    endmethod
+    method Action      fpgaidlen(Bit#(1) v);
+        foo.fpgaidlen(v);
+    endmethod
+    interface Pps7Emiogpio     gpio = foo.emiogpio;
     interface Pps7Irq     irq = foo.irq;
     interface Inout     mio = foo.mio;
     interface Pps7Ps     ps = foo.ps;
@@ -501,20 +498,20 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
 endmodule
 
 interface ZynqPins;
-    (* prefix="DDR_Addr" *) interface Inout#(Bit#(15))     addr;
-    (* prefix="DDR_BankAddr" *) interface Inout#(Bit#(3))     bankaddr;
-    (* prefix="DDR_CAS_n" *) interface Inout#(Bit#(1))     cas_n;
+    (* prefix="DDR_Addr" *) interface Inout#(Bit#(15))     a;
+    (* prefix="DDR_BankAddr" *) interface Inout#(Bit#(3))     ba;
+    (* prefix="DDR_CAS_n" *) interface Inout#(Bit#(1))     casb;
     (* prefix="DDR_CKE" *) interface Inout#(Bit#(1))     cke;
-    (* prefix="DDR_CS_n" *) interface Inout#(Bit#(1))     cs_n;
-    (* prefix="DDR_Clk_n" *) interface Inout#(Bit#(1))     clk_n;
-    (* prefix="DDR_Clk_p" *) interface Inout#(Bit#(1))     clk;
-    (* prefix="DDR_DM" *) interface Inout#(Bit#(c_dm_width))     dm;
-    (* prefix="DDR_DQ" *) interface Inout#(Bit#(c_dq_width))     dq;
-    (* prefix="DDR_DQS_n" *) interface Inout#(Bit#(c_dqs_width))     dqs_n;
-    (* prefix="DDR_DQS_p" *) interface Inout#(Bit#(c_dqs_width))     dqs;
+    (* prefix="DDR_CS_n" *) interface Inout#(Bit#(1))     csb;
+    (* prefix="DDR_Clk_n" *) interface Inout#(Bit#(1))     ckn;
+    (* prefix="DDR_Clk_p" *) interface Inout#(Bit#(1))     ckp;
+    (* prefix="DDR_DM" *) interface Inout#(Bit#(4))     dm;
+    (* prefix="DDR_DQ" *) interface Inout#(Bit#(32))     dq;
+    (* prefix="DDR_DQS_n" *) interface Inout#(Bit#(4))     dqsn;
+    (* prefix="DDR_DQS_p" *) interface Inout#(Bit#(4))     dqsp;
     (* prefix="DDR_DRSTB" *) interface Inout#(Bit#(1))     drstb;
     (* prefix="DDR_ODT" *) interface Inout#(Bit#(1))     odt;
-    (* prefix="DDR_RAS_n" *) interface Inout#(Bit#(1))     ras_n;
+    (* prefix="DDR_RAS_n" *) interface Inout#(Bit#(1))     rasb;
     (* prefix="FIXED_IO_ddr_vrn" *) interface Inout#(Bit#(1))     vrn;
     (* prefix="FIXED_IO_ddr_vrp" *) interface Inout#(Bit#(1))     vrp;
     (* prefix="DDR_WEB" *) interface Inout#(Bit#(1))     web;
@@ -522,7 +519,7 @@ interface ZynqPins;
     interface Inout#(Bit#(54))       mio;
     (* prefix="FIXED_IO_ps" *)
     interface Pps7Ps ps;
-    interface Clock                         fclk_clk0;
+    interface Bit#(1)                       fclk_clk0;
     interface Bit#(1)                       fclk_reset0_n;
 endinterface
 
@@ -556,7 +553,7 @@ module mkPS7Slave#(Clock axi_clock, Reset axi_reset, Axi3Server#(32,32,4,12) ctr
     PS7LIB ps7 <- mkPS7LIB(axi_clock, axi_reset);
 
     rule send_int_rule;
-    ps7.irq.f2p({15'b0, interrupt ? 1'b1 : 1'b0});
+    ps7.irq.f2p({19'b0, interrupt ? 1'b1 : 1'b0});
     endrule
 
    mkConnection(ps7.m_axi_gp[0].client, ctrl);
@@ -565,25 +562,29 @@ if (nmasters > 0) begin
    mkConnection(m_axi, ps7.s_axi_hp[0].axi.server);
 end
 
-    interface Inout  addr = ps7.ddr.addr;
-    interface Inout  bankaddr = ps7.ddr.bankaddr;
-    interface Inout  cas_n = ps7.ddr.cas_n;
+    rule arb_rule;
+        ps7.ddr.arb(4'b0);
+    endrule
+
+    interface Inout  a = ps7.ddr.a;
+    interface Inout  ba = ps7.ddr.ba;
+    interface Inout  casb = ps7.ddr.casb;
     interface Inout  cke = ps7.ddr.cke;
-    interface Inout  cs_n = ps7.ddr.cs_n;
-    interface Inout  clk_n = ps7.ddr.clk_n;
-    interface Inout  clk = ps7.ddr.clk;
+    interface Inout  csb = ps7.ddr.csb;
+    interface Inout  ckn = ps7.ddr.ckn;
+    interface Inout  ckp = ps7.ddr.ckp;
     interface Inout  dm = ps7.ddr.dm;
     interface Inout  dq = ps7.ddr.dq;
-    interface Inout  dqs_n = ps7.ddr.dqs_n;
-    interface Inout  dqs = ps7.ddr.dqs;
+    interface Inout  dqsn = ps7.ddr.dqsn;
+    interface Inout  dqsp = ps7.ddr.dqsp;
     interface Inout  drstb = ps7.ddr.drstb;
     interface Inout  odt = ps7.ddr.odt;
-    interface Inout  ras_n = ps7.ddr.ras_n;
+    interface Inout  rasb = ps7.ddr.rasb;
     interface Inout  vrn = ps7.ddr.vrn;
     interface Inout  vrp = ps7.ddr.vrp;
     interface Inout  web = ps7.ddr.web;
     interface Inout  mio = ps7.mio;
     interface Pps7Ps ps = ps7.ps;
-    interface Clock  fclk_clk0 = ps7.fclk.clk0;
-    interface Bit    fclk_reset0_n = ps7.fclk_reset[0].n;
+    interface Bit    fclk_clk0 = ps7.fclkclk()[0];
+    interface Bit    fclk_reset0_n = ps7.fclkresetn()[0];
 endmodule

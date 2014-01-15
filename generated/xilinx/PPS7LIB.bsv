@@ -50,6 +50,7 @@ import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
+import Vector::*;
 
 (* always_ready, always_enabled *)
 interface Pps7Ddr;
