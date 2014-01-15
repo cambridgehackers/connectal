@@ -102,8 +102,9 @@ def parse_item():
                         paramlist['attr'].append([paramstr])
                     else:
                         paramlist['attr'].append([paramstr, plist])
-                if paramname == 'cell':
+                if paramname == 'cell' and paramstr == 'PS7':
                     #print('CC', paramstr)
+                    modulename = paramstr
                     pinlist = {}
                     for item in plist['attr']:
                         tname = item[0]
@@ -133,14 +134,12 @@ def parse_item():
                             ptemp = 'Bit#(1)'
                             if options.clock and k in options.clock:
                                 ptemp = 'Clock'
-                            ttemp = PinType(v[0], ptemp, k, k)
                         else:
-                            ttemp = PinType(v[0], 'Bit#(' + str(int(v[1])+1) + ')', k, k)
+                            ptemp = 'Bit#(' + str(int(v[1])+1) + ')'
+                        ttemp = PinType(v[0], ptemp, k, k)
                         if v[2] != {}:
                             ttemp.comment = v[2]
-                        if paramstr == 'PS7':
-                            modulename = paramstr
-                            masterlist.append(ttemp)
+                        masterlist.append(ttemp)
                 paramname = tokval
                 if toknum != tokenize.NAME:
                     break
@@ -270,19 +269,19 @@ def parse_verilog(filename):
             else:
                 print('FFDDDDD', f, file=sys.stderr)
 
-def generate_condition(ifname):
+def generate_condition(interfacename):
     global ifdefmap
     for k, v in ifdefmap.items():
-        if ifname in v:
+        if interfacename in v:
             print('`ifdef', k)
             return k
     return None
 
-def generate_interface(ifname, paramlist, paramval, ilist, cname):
+def generate_interface(interfacename, paramlist, paramval, ilist, cname):
     global clock_names
-    cflag = generate_condition(ifname)
+    cflag = generate_condition(interfacename)
     print('(* always_ready, always_enabled *)')
-    print('interface ' + ifname + paramlist + ';')
+    print('interface ' + interfacename + paramlist + ';')
     for item in ilist:
         if item.mode != 'input' and item.mode != 'output' and item.mode != 'inout' and item.mode != 'interface':
             continue
@@ -458,7 +457,7 @@ def generate_instance(item, indent, prefix, clockedby_arg):
             print('`endif')
     return methodlist
 
-def translate_verilog(ifname):
+def generate_bsv(ifname):
     global paramnames, modulename, clock_names
     global clock_params
     # generate output file
@@ -531,6 +530,7 @@ if __name__=='__main__':
     parser.add_option("-i", "--ifdef", action="append", dest="ifdef")
     (options, args) = parser.parse_args()
     ifname = 'PPS7'
+    ifprefix = 'PPS7'
     #print('KK', options, args, file=sys.stderr)
     if options.param:
         for item in options.param:
@@ -551,8 +551,9 @@ if __name__=='__main__':
         print("incorrect number of arguments", file=sys.stderr)
     else:
         if args[0].endswith('.lib'):
+            ifname = 'PPS7LIB'
             parse_lib(args[0])
         else:
             parse_verilog(args[0])
-        masterlist = regroup_items(ifname, masterlist)
-        translate_verilog(ifname)
+        masterlist = regroup_items(ifprefix, masterlist)
+        generate_bsv(ifname)
