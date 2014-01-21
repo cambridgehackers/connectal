@@ -54,7 +54,7 @@ int main(int argc, const char **argv)
   dma = new DMARequestProxy("fpga3", 16);
 
   deviceIndication = new MempokeIndication("fpga2", 16);
-  dmaIndication = new DMAIndication("fpga4", 16);
+  dmaIndication = new DMAIndication(dma, "fpga4", 16);
 
   fprintf(stderr, "allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);

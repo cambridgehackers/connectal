@@ -83,7 +83,7 @@ void parent(int rd_sock, int wr_sock)
   dma = new DMARequestProxy("fpga3", 16);
 
   deviceIndication = new MemwriteIndication("fpga2", 16);
-  dmaIndication = new DMAIndication("fpga4", 16);
+  dmaIndication = new DMAIndication(dma, "fpga4", 16);
   
   fprintf(stderr, "parent::allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);

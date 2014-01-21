@@ -129,7 +129,7 @@ int main(int argc, const char **argv)
 
   deviceIndication = new MemcpyIndication("fpga2", 16);
   bluescopeIndication = new BlueScopeIndication("fpga4", 16);
-  dmaIndication = new DMAIndication("fpga6", 16);
+  dmaIndication = new DMAIndication(dma, "fpga6", 16);
 
   fprintf(stderr, "Main::allocating memory...\n");
 

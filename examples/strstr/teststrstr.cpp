@@ -90,7 +90,7 @@ int main(int argc, const char **argv)
   dma = new DMARequestProxy(IfcNames_DMARequest);
 
   deviceIndication = new StrstrIndication(IfcNames_StrstrIndication);
-  dmaIndication = new DMAIndication(IfcNames_DMAIndication);
+  dmaIndication = new DMAIndication(dma, IfcNames_DMAIndication);
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
