@@ -1,4 +1,4 @@
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -23,95 +23,141 @@
 import FIFOF::*;
 import GetPutF::*;
 import Vector::*;
+import BRAM::*;
 
 import PortalMemory::*;
 import PortalRMemory::*;
 
 interface NandSimRequest;
-   method Action startRead(Bit#(32) dramhandle, Bit#(32) nandAddr, Bit#(32) numWords, Bit#(32) burstLen);
-   method Action startWrite(Bit#(32) dramhandle, Bit#(32) nandAddr, Bit#(32) numWords, Bit#(32) burstLen);
+   method Action startRead(Bit#(32) dramhandle, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numWords, Bit#(32) burstLen);
+   method Action startWrite(Bit#(32) dramhandle, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numWords, Bit#(32) burstLen);
    method Action startErase(Bit#(32) nandAddr, Bit#(32) numWords, Bit#(32) burstLen);
-   method Action getStateDbg();   
 endinterface
 
 interface NandSimIndication;
-   method Action started(Bit#(32) numWords);
-   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) dataMismatch);
    method Action readDone(Bit#(32) tag);
    method Action writeDone(Bit#(32) tag);
-   method Action writeErase(Bit#(32) tag);
+   method Action eraseDone(Bit#(32) tag);
 endinterface
 
 interface NandSim;
    interface NandSimRequest request;
-   interface DMAReadClient#(64) dmaClient;
+   interface DMAReadClient#(64) readClient;
+   interface DMAWriteClient#(64) writeClient;
 endinterface
 
-module mkNandSim#(NandSimIndication indication) (NandSim);
+module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64)) br) (NandSim)
+   provisos (Add#(a__, asz, 32));
 
-   Reg#(DmaMemHandle) streamRdHandle <- mkReg(0);
-   Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
-   Reg#(Bit#(32)) putOffset <- mkReg(0);
-   Reg#(Bool)    dataMismatch <- mkReg(False);  
-   Reg#(Bit#(32))      srcGen <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize))      offset <- mkReg(0);
-   FIFOF#(Tuple2#(Bit#(32),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
+   Reg#(DmaMemHandle) dramRdHandle <- mkReg(0);
+   Reg#(DmaMemHandle) dramWrHandle <- mkReg(0);
+   Reg#(Bit#(32)) dramRdCnt <- mkReg(0);
+   Reg#(Bit#(32)) dramWrCnt <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize))      dramRdOffset <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize))      dramWrOffset <- mkReg(0);
+   Reg#(Bit#(asz)) nandRdAddr <- mkReg(0);
+   Reg#(Bit#(asz)) nandWrAddr <- mkReg(0);
+   Reg#(Bit#(asz)) nandRdLimit <- mkReg(0);
+   Reg#(Bit#(asz)) nandWrLimit <- mkReg(0);
+
+   Reg#(Bit#(8)) dramRdTag <- mkReg(0);
+   Reg#(Bit#(8)) dramWrTag <- mkReg(0);
 
    Reg#(Bit#(8)) burstLen <- mkReg(8);
+   Reg#(Bit#(8)) dramWrBurstLen <- mkReg(8);
    Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(8*8);
 
-   rule mismatch;
-      let tpl = mismatchFifo.first();
-      mismatchFifo.deq();
-      indication.mismatch(tpl_1(tpl), tpl_2(tpl));
+   rule readBram if (nandRdAddr < nandRdLimit);
+      br.request.put(BRAMRequest{write:False,responseOnWrite:?,address:nandRdAddr,datain:?});
+      nandRdAddr <= nandRdAddr+1;
    endrule
 
    interface NandSimRequest request;
-       method Action startRead(Bit#(32) handle, Bit#(32) numWords, Bit#(32) bl) if (streamRdCnt == 0);
-	  streamRdHandle <= handle;
-	  streamRdCnt <= numWords>>1;
-	  putOffset <= 0;
-	  burstLen <= truncate(bl);
-	  deltaOffset <= 8*truncate(bl);
-	  indication.started(numWords);
+   /*!
+   * Reads from NAND and writes to DRAM
+   */
+       method Action startRead(Bit#(32) handle, Bit#(32) dramOffset, Bit#(32) nandAddr,
+			       Bit#(32) numWords, Bit#(32) bl) if (dramWrCnt == 0);
+          dramWrHandle <= handle;
+	  dramWrOffset <= truncate(dramOffset);
+          dramWrCnt <= numWords>>1;
+	  nandRdAddr <= truncate(nandAddr);
+	  nandRdLimit <= truncate(nandAddr + numWords);
+          burstLen <= truncate(bl);
+          deltaOffset <= 8*truncate(bl);
+       endmethod
+   /*!
+   * Reads from DRAM and writes to NAND
+   */
+       method Action startWrite(Bit#(32) handle, Bit#(32) dramOffset, Bit#(32) nandAddr,
+				Bit#(32) numWords, Bit#(32) bl) if (dramRdCnt == 0);
+          dramRdHandle <= handle;
+          dramRdOffset <= truncate(dramOffset);
+          dramRdCnt <= numWords>>1;
+	  nandWrAddr <= truncate(nandAddr);
+	  nandWrLimit <= truncate(nandAddr + numWords);
+          dramWrBurstLen <= truncate(bl);
+          deltaOffset <= 8*truncate(bl);
        endmethod
 
-       method Action getStateDbg();
-	  indication.reportStateDbg(streamRdCnt, dataMismatch ? 32'd1 : 32'd0);
-       endmethod
    endinterface
 
-   interface DMAReadClient dmaClient;
+   interface DMAReadClient readClient;
       interface GetF readReq;
-	 method ActionValue#(DMAAddressRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
-	    streamRdCnt <= streamRdCnt-extend(burstLen);
-	    offset <= offset + deltaOffset;
-	    if (streamRdCnt == extend(burstLen))
-	       indication.readDone(zeroExtend(pack(dataMismatch)));
-	    //else if (streamRdCnt[5:0] == 6'b0)
-	    //   indication.readReq(streamRdCnt);
-	    return DMAAddressRequest { handle: streamRdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
-	 endmethod
-	 method Bool notEmpty();
-	    return streamRdCnt > 0 && mismatchFifo.notFull();
-	 endmethod
+         method ActionValue#(DMAAddressRequest) get() if (dramRdCnt > 0);
+            dramRdCnt <= dramRdCnt-extend(burstLen);
+            dramRdOffset <= dramRdOffset + deltaOffset;
+            if (dramRdCnt <= extend(burstLen))
+               indication.writeDone(0); // read from DRAM is write to NAND
+            //else if (dramRdCnt[5:0] == 6'b0)
+            //   indication.readReq(dramRdCnt);
+            return DMAAddressRequest { handle: dramRdHandle, address: dramRdOffset, burstLen: burstLen, tag: truncate(dramRdOffset) };
+         endmethod
+         method Bool notEmpty();
+            return dramRdCnt > 0;
+         endmethod
       endinterface : readReq
       interface PutF readData;
-	 method Action put(DMAData#(64) d);
-	    //$display("readData putOffset=%h d=%h tag=%h", putOffset, d.data, d.tag);
-	    let v = d.data;
-	    let misMatch0 = v[31:0] != srcGen;
-	    let misMatch1 = v[63:32] != srcGen+1;
-	    dataMismatch <= dataMismatch || misMatch0 || misMatch1;
-	    if (misMatch0 || misMatch1)
-	       mismatchFifo.enq(tuple2(putOffset, v));
-	    srcGen <= srcGen+2;
-	    putOffset <= putOffset + 8;
-	    //indication.rData(v);
+         method Action put(DMAData#(64) d);
+	    $display("readData/nandWrite nandWrAddr=%h d=%h tag=%h", nandWrAddr, d.data, d.tag);
+	    br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:nandWrAddr, datain:d.data});
+	    nandWrAddr <= nandWrAddr+1;
+         endmethod
+         method Bool notFull();
+            return True;
+         endmethod
+      endinterface : readData
+   endinterface
+   interface DMAWriteClient writeClient;
+      interface GetF writeReq;
+	 method ActionValue#(DMAAddressRequest) get() if (dramWrCnt > 0);
+	    dramWrCnt <= dramWrCnt - extend(dramWrBurstLen);
+	    dramWrOffset <= dramWrOffset + deltaOffset;
+	    let tag = truncate(dramWrOffset>>3);
+	    dramWrTag <= tag;
+	    return DMAAddressRequest { handle: dramWrHandle, address: dramWrOffset, burstLen: dramWrBurstLen, tag: tag };
+	 endmethod
+	 method Bool notEmpty();
+	    return dramWrCnt > 0;
+	 endmethod
+      endinterface: writeReq
+      interface GetF writeData;
+	 method ActionValue#(DMAData#(64)) get();
+	    let v <- br.response.get();
+	    return DMAData { data: v, tag: dramWrTag };
+	 endmethod
+	 method Bool notEmpty();
+	    return nandRdAddr < nandRdLimit;
+	 endmethod
+      endinterface: writeData
+      interface PutF writeDone;
+	 method Action put(Bit#(8) tag);
+            if (dramWrCnt <= extend(dramWrBurstLen))
+	       indication.readDone(0);
 	 endmethod
 	 method Bool notFull();
-	    return mismatchFifo.notFull();
+	    return True;
 	 endmethod
-      endinterface : readData
+      endinterface: writeDone
    endinterface
 endmodule

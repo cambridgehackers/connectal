@@ -24,7 +24,8 @@ testnames = echo     \
             mempoke  \
             strstr   \
             struct   \
-	    ring
+	    ring     \
+	    nandsim
 
 
 bsimtests = $(addsuffix .bsim, $(testnames))
