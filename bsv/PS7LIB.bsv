@@ -523,10 +523,6 @@ interface ZynqPins;
     interface Bit#(1)                       fclk_reset0_n;
 endinterface
 
-typedef AxiSlaveHighSpeed HSSlave;
-typedef Axi3ReadRequest#(32,12/*id_width*/) StdAxiREQR;
-typedef Axi3WriteRequest#(32,12/*id_width*/) StdAxiREQW;
-
 // special mkConnection that truncates the address until we make AxiRDMA polymorphic over addrWidth
 instance Connectable#(Axi3Client#(40, busWidth,busWidthBytes,idWidth), Axi3Server#(32, busWidth,busWidthBytes,idWidth));
    module mkConnection#(Axi3Client#(40, busWidth,busWidthBytes,idWidth) m, Axi3Server#(32, busWidth,busWidthBytes,idWidth) s)(Empty);
