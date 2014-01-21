@@ -39,7 +39,7 @@ endinterface
 interface PcieToAxiBridge#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
-   interface Axi3Client#(32,32,4,6) portal0; // to the portal control
+   interface Axi3Client#(32,32,4,12) portal0; // to the portal control
    interface GetPut#(TLPData#(16)) slave;
 
    // status for FPGA LEDs
@@ -337,7 +337,7 @@ endinterface
 interface PortalEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Client#(32,32,4,6) portal;
+    interface Axi3Client#(32,32,4,12) portal;
     interface Reg#(Bool)           byteSwap;
     interface Reg#(Bool)           interruptRequested;
     interface Reg#(Bit#(64))       interruptAddr;
@@ -451,38 +451,38 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     interface Get tlp_out = toGet(tlpOutFifo);
     interface Axi3Client portal;
        interface Get req_aw;
-	  method ActionValue#(Axi3WriteRequest#(32,6)) get() if (!interruptSecondHalf);
+	  method ActionValue#(Axi3WriteRequest#(32,12)) get() if (!interruptSecondHalf);
 	     let hdr = writeHeaderFifo.first;
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
-	     return Axi3WriteRequest { address: extend(writeHeaderFifo.first.addr) << 2, len: 0, id: truncate(writeHeaderFifo.first.tag),
+	     return Axi3WriteRequest { address: extend(writeHeaderFifo.first.addr) << 2, len: 0, id: extend(writeHeaderFifo.first.tag),
 				       size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
 	  endmethod
        endinterface: req_aw
        interface Get resp_write;
-	  method ActionValue#(Axi3WriteData#(32,4,6)) get();
+	  method ActionValue#(Axi3WriteData#(32,4,12)) get();
 	     writeDataFifo.deq;
 	     let data = writeDataFifo.first.data;
 	     if (byteSwapReg)
 		data = byteSwap(data);
-	     return Axi3WriteData { data: data, id: truncate(writeDataFifo.first.tag), byteEnable: writeDataFifo.first.firstbe, last: 1 };
+	     return Axi3WriteData { data: data, id: extend(writeDataFifo.first.tag), byteEnable: writeDataFifo.first.firstbe, last: 1 };
 	  endmethod
        endinterface: resp_write
        interface Put resp_b;
-	  method Action put(Axi3WriteResponse#(6) resp);
+	  method Action put(Axi3WriteResponse#(12) resp);
 	  endmethod
        endinterface: resp_b
        interface Get req_ar;
-	  method ActionValue#(Axi3ReadRequest#(32,6)) get();
+	  method ActionValue#(Axi3ReadRequest#(32,12)) get();
 	     let hdr = readHeaderFifo.first;
 	     readHeaderFifo.deq;
 	     readDataFifo.enq(hdr);
-	     return Axi3ReadRequest { address: extend(readHeaderFifo.first.addr) << 2, len: 0, id: truncate(readHeaderFifo.first.tag),
+	     return Axi3ReadRequest { address: extend(readHeaderFifo.first.addr) << 2, len: 0, id: extend(readHeaderFifo.first.tag),
 				     size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
 	    endmethod
        endinterface: req_ar
        interface Put resp_read;
-	  method Action put(Axi3ReadResponse#(32,6) resp) if (!interruptSecondHalf);
+	  method Action put(Axi3ReadResponse#(32,12) resp) if (!interruptSecondHalf);
 	        let hdr = readDataFifo.first;
 		//FIXME: assumes only 1 word read per request
 		readDataFifo.deq;
@@ -495,7 +495,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		completion.length = 1;
 		completion.tclass = hdr.tclass;
 		completion.cmplid = my_id;
-		completion.tag = extend(resp.id);
+		completion.tag = truncate(resp.id);
 		completion.bytecount = 4;
 		completion.reqid = hdr.reqid;
 		completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
