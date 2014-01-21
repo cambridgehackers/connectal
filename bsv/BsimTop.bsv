@@ -99,7 +99,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 
    Integer nmasters = valueOf(nmasters);
    let top <- constructor();
-   Axi3Client#(40,dsz,TDiv#(dsz,8),12) master = ?;
+   Axi3Client#(40,dsz,TDiv#(dsz,8),6) master = ?;
    if (nmasters > 0) begin
       master = top.m_axi[0];
 
