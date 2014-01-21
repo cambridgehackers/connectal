@@ -467,3 +467,18 @@ module mkIbufdsTest(IbufdsTest);
    endmethod
    interface ReadOnly o = ibufds;
 endmodule
+
+(* always_ready, always_enabled *)
+interface BIBUF#(numeric type sa);
+    interface Inout#(Bit#(sa))     pad;
+endinterface
+import "BVI" GenBIBUF =
+module mkBIBUF#(Inout#(a) v)(BIBUF#(sa)) provisos(Bits#(a, sa));
+    let sa = fromInteger(valueOf(sa));
+    parameter SIZE=sa;
+    default_clock clk();
+    default_reset rst();
+    inout IO = v;
+    ifc_inout pad(PAD);
+endmodule
+
