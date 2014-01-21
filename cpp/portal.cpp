@@ -400,7 +400,7 @@ int PortalMemory::reference(PortalAlloc* pa)
   }
 #else
   sock_fd_write(p_fd.write.s2, pa->header.fd);
-  sglist(id, 0, pa->header.size);
+  sglist(id, 4096, pa->header.size);
   if (sglistCallbackRegistered)
     sem_wait(&sglistSem);
   else
