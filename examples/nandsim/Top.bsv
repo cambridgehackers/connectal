@@ -8,7 +8,6 @@ import DefaultValue::*;
 
 // portz libraries
 import AxiClientServer::*;
-import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;

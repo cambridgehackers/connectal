@@ -13,9 +13,7 @@
 
 PortalAlloc *srcAlloc;
 unsigned int *srcBuffer = 0;
-int numWords = 16 << 8;
-size_t test_sz  = numWords*sizeof(unsigned int);
-size_t alloc_sz = test_sz;
+size_t numBytes = 1 << 12;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -43,7 +41,7 @@ public:
   }
 
   NandSimIndication(const char* devname, unsigned int addrbits) : NandSimIndicationWrapper(devname,addrbits) {
-    sem_init(&sem, 1, 0);
+    sem_init(&sem, 0, 0);
   }
   void wait() {
     sem_wait(&sem);
@@ -72,8 +70,10 @@ int main(int argc, const char **argv)
   dmaIndication = new DMAIndication(dma, "fpga4", 16);
 
   fprintf(stderr, "Main::allocating memory...\n");
-  dma->alloc(alloc_sz, &srcAlloc);
-  srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+  dma->alloc(numBytes, &srcAlloc);
+  fprintf(stderr, "fd=%d\n", srcAlloc->header.fd);
+  srcBuffer = (unsigned int *)mmap(0, numBytes, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+  fprintf(stderr, "srcBuffer=%p\n", srcBuffer);
 
   pthread_t tid;
   fprintf(stderr, "Main::creating exec thread\n");
@@ -82,7 +82,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  for (int i = 0; i < numWords; i++){
+  for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++){
     srcBuffer[i] = srcGen++;
   }
     
@@ -92,18 +92,21 @@ int main(int argc, const char **argv)
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
-  sleep(1);
 
-  for (int i = 0; i < 12; i++) {
-    dma->readSglist(ChannelType_Read, ref_srcAlloc, i*0x1000);
-    sleep(1);
-  }
-  fprintf(stderr, "Main::starting write %08x\n", numWords);
-  device->startWrite(ref_srcAlloc, 0, 0, 32, 1);
+  fprintf(stderr, "Main::starting write %08x\n", numBytes);
+  device->startWrite(ref_srcAlloc, 0, 0, numBytes, 1);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting read %08x\n", numWords);
-  device->startRead(ref_srcAlloc, 0, 0, 32, 1);
+  fprintf(stderr, "Main::starting read %08x\n", numBytes);
+  device->startRead(ref_srcAlloc, 0, 0, numBytes, 1);
+  deviceIndication->wait();
+
+  fprintf(stderr, "Main::starting erase %08x\n", numBytes);
+  device->startErase(0, numBytes);
+  deviceIndication->wait();
+
+  fprintf(stderr, "Main::starting read %08x\n", numBytes);
+  device->startRead(ref_srcAlloc, 0, 0, numBytes, 1);
   deviceIndication->wait();
 
   exit(0);

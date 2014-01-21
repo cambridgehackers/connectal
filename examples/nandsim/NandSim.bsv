@@ -29,9 +29,9 @@ import PortalMemory::*;
 import PortalRMemory::*;
 
 interface NandSimRequest;
-   method Action startRead(Bit#(32) dramhandle, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numWords, Bit#(32) burstLen);
-   method Action startWrite(Bit#(32) dramhandle, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numWords, Bit#(32) burstLen);
-   method Action startErase(Bit#(32) nandAddr, Bit#(32) numWords, Bit#(32) burstLen);
+   method Action startRead(Bit#(32) dramhandle, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
+   method Action startWrite(Bit#(32) dramhandle, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
+   method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);
 endinterface
 
 interface NandSimIndication;
@@ -50,18 +50,23 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
    provisos (Add#(a__, asz, 32));
 
    Reg#(DmaMemHandle) dramRdHandle <- mkReg(0);
-   Reg#(DmaMemHandle) dramWrHandle <- mkReg(0);
    Reg#(Bit#(32)) dramRdCnt <- mkReg(0);
-   Reg#(Bit#(32)) dramWrCnt <- mkReg(0);
    Reg#(Bit#(DmaAddrSize))      dramRdOffset <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize))      dramWrOffset <- mkReg(0);
+   Reg#(Bit#(6)) dramRdTag <- mkReg(0);
    Reg#(Bit#(asz)) nandRdAddr <- mkReg(0);
-   Reg#(Bit#(asz)) nandWrAddr <- mkReg(0);
    Reg#(Bit#(asz)) nandRdLimit <- mkReg(0);
+
+   Reg#(DmaMemHandle) dramWrHandle <- mkReg(0);
+   Reg#(Bit#(32)) dramWrCnt <- mkReg(0);
+   Reg#(Bit#(32)) dramWrDone <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize))      dramWrOffset <- mkReg(0);
+   Reg#(Bit#(6)) dramWrTag <- mkReg(0);
+   Reg#(Bit#(asz)) nandWrAddr <- mkReg(0);
    Reg#(Bit#(asz)) nandWrLimit <- mkReg(0);
 
-   Reg#(Bit#(8)) dramRdTag <- mkReg(0);
-   Reg#(Bit#(8)) dramWrTag <- mkReg(0);
+   Reg#(Bit#(asz)) nandEraseAddr <- mkReg(0);
+   Reg#(Bit#(asz)) nandEraseLimit <- mkReg(0);
+   Reg#(Bit#(asz)) nandEraseCnt <- mkReg(0);
 
    Reg#(Bit#(8)) burstLen <- mkReg(8);
    Reg#(Bit#(8)) dramWrBurstLen <- mkReg(8);
@@ -69,36 +74,53 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
 
    rule readBram if (nandRdAddr < nandRdLimit);
       br.request.put(BRAMRequest{write:False,responseOnWrite:?,address:nandRdAddr,datain:?});
-      nandRdAddr <= nandRdAddr+1;
+      nandRdAddr <= nandRdAddr + 1;
+   endrule
+
+   rule eraseBram if (nandEraseAddr < nandEraseLimit);
+      Bit#(64) v = fromInteger(-1);
+      $display("eraseBram: addr=%h limit=%h count=%h v=%h", nandEraseAddr, nandEraseLimit, nandEraseCnt, v);
+      br.request.put(BRAMRequest{write:True,responseOnWrite:?,address:nandEraseAddr,datain:v});
+      nandEraseAddr <= nandEraseAddr + 1;
+      nandEraseCnt <= nandEraseCnt - 1;
+      if (nandEraseCnt == 1)
+	 indication.eraseDone(0);
    endrule
 
    interface NandSimRequest request;
    /*!
    * Reads from NAND and writes to DRAM
    */
-       method Action startRead(Bit#(32) handle, Bit#(32) dramOffset, Bit#(32) nandAddr,
-			       Bit#(32) numWords, Bit#(32) bl) if (dramWrCnt == 0);
-          dramWrHandle <= handle;
-	  dramWrOffset <= truncate(dramOffset);
-          dramWrCnt <= numWords>>1;
-	  nandRdAddr <= truncate(nandAddr);
-	  nandRdLimit <= truncate(nandAddr + numWords);
-          burstLen <= truncate(bl);
-          deltaOffset <= 8*truncate(bl);
-       endmethod
+      method Action startRead(Bit#(32) handle, Bit#(32) dramOffset, Bit#(32) nandAddr,
+			      Bit#(32) numBytes, Bit#(32) bl);
+         dramWrHandle <= handle;
+	 dramWrOffset <= truncate(dramOffset);
+         dramWrCnt <= numBytes>>3;
+         dramWrDone <= numBytes>>3;
+	 nandRdAddr <= truncate(nandAddr >> 3);
+	 nandRdLimit <= truncate((nandAddr + numBytes) >> 3);
+         burstLen <= truncate(bl);
+         deltaOffset <= 8*truncate(bl);
+      endmethod
    /*!
    * Reads from DRAM and writes to NAND
    */
-       method Action startWrite(Bit#(32) handle, Bit#(32) dramOffset, Bit#(32) nandAddr,
-				Bit#(32) numWords, Bit#(32) bl) if (dramRdCnt == 0);
-          dramRdHandle <= handle;
-          dramRdOffset <= truncate(dramOffset);
-          dramRdCnt <= numWords>>1;
-	  nandWrAddr <= truncate(nandAddr);
-	  nandWrLimit <= truncate(nandAddr + numWords);
-          dramWrBurstLen <= truncate(bl);
-          deltaOffset <= 8*truncate(bl);
-       endmethod
+      method Action startWrite(Bit#(32) handle, Bit#(32) dramOffset, Bit#(32) nandAddr,
+			       Bit#(32) numBytes, Bit#(32) bl);
+         dramRdHandle <= handle;
+         dramRdOffset <= truncate(dramOffset);
+         dramRdCnt <= numBytes>>3;
+	 nandWrAddr <= truncate(nandAddr >> 3);
+	 nandWrLimit <= truncate((nandAddr + numBytes) >> 3);
+         dramWrBurstLen <= truncate(bl);
+         deltaOffset <= 8*truncate(bl);
+      endmethod
+
+      method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);
+	 nandEraseAddr <= truncate(nandAddr >> 3);
+	 nandEraseLimit <= truncate((nandAddr + numBytes) >> 3);
+	 nandEraseCnt <= truncate(numBytes >> 3);
+      endmethod
 
    endinterface
 
@@ -144,6 +166,7 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
       interface GetF writeData;
 	 method ActionValue#(DMAData#(64)) get();
 	    let v <- br.response.get();
+	    $display("writeReq v=%h", v);
 	    return DMAData { data: v, tag: dramWrTag };
 	 endmethod
 	 method Bool notEmpty();
@@ -151,8 +174,11 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
 	 endmethod
       endinterface: writeData
       interface PutF writeDone;
-	 method Action put(Bit#(8) tag);
-            if (dramWrCnt <= extend(dramWrBurstLen))
+	 method Action put(Bit#(6) tag);
+	    let dwd = dramWrDone - extend(dramWrBurstLen);
+	    dramWrDone <= dwd;
+	    $display("dramWrDone=%h", dramWrDone);
+            if (dwd <= extend(dramWrBurstLen))
 	       indication.readDone(0);
 	 endmethod
 	 method Bool notFull();
