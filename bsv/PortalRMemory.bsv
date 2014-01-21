@@ -42,11 +42,11 @@ typedef struct {
    DmaMemHandle handle;
    Bit#(DmaAddrSize)  address;
    Bit#(8) burstLen;
-   Bit#(8)  tag;
+   Bit#(6)  tag;
    } DMAAddressRequest deriving (Bits);
 typedef struct {
    Bit#(dsz) data;
-   Bit#(8) tag;
+   Bit#(6) tag;
    } DMAData#(numeric type dsz) deriving (Bits);
 
 interface DMAReadClient#(numeric type dsz);
@@ -57,7 +57,7 @@ endinterface
 interface DMAWriteClient#(numeric type dsz);
    interface GetF#(DMAAddressRequest)    writeReq;
    interface GetF#(DMAData#(dsz)) writeData;
-   interface PutF#(Bit#(8))       writeDone;
+   interface PutF#(Bit#(6))       writeDone;
 endinterface
 
 interface DMAReadServer#(numeric type dsz);
@@ -68,7 +68,7 @@ endinterface
 interface DMAWriteServer#(numeric type dsz);
    interface PutF#(DMAAddressRequest) writeReq;
    interface PutF#(DMAData#(dsz))     writeData;
-   interface GetF#(Bit#(8))           writeDone;
+   interface GetF#(Bit#(6))           writeDone;
 endinterface
 
 //
@@ -149,7 +149,7 @@ module mkDMAWriteBuffer(DMAWriteBuffer#(bsz, maxBurst))
 
    FIFOFLevel#(DMAData#(bsz),maxBurst) writeBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(DMAAddressRequest)        reqOutstanding <- mkFIFOF();
-   FIFOF#(Bit#(8))                        doneTags <- mkFIFOF();
+   FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(maxBurst)))  unfulfilled <- mkRatchet(0);
    
    // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.

@@ -96,8 +96,8 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(8))     burstLen <- mkReg(1);
    Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(1*8);
    
-   FIFOF#(Bit#(8))   dataTags <- mkFIFOF();
-   FIFOF#(Bit#(8))   doneTags <- mkFIFOF();
+   FIFOF#(Bit#(6))   dataTags <- mkFIFOF();
+   FIFOF#(Bit#(6))   doneTags <- mkFIFOF();
    Reg#(Bit#(8))   burstCount <- mkReg(0);
 
    interface DMAWriteClient dmaClient;
@@ -109,7 +109,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	    if (streamWrCnt == 1)
 	       indication.writeDone(srcGen);
 	    $display("burstlen=%d", burstLen);
-	    Bit#(8) tag = truncate(streamWrOff >> 5);
+	    Bit#(6) tag = truncate(streamWrOff >> 5);
 	    dataTags.enq(tag);
 	    doneTags.enq(tag);
 	    return DMAAddressRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: tag};
@@ -139,7 +139,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	 endmethod
       endinterface : writeData
       interface PutF writeDone;
-	 method Action put(Bit#(8) tag);
+	 method Action put(Bit#(6) tag);
 	    if (tag != doneTags.first)
 	       $display("doneTag mismatch tag=%h doneTag=%h", tag, doneTags.first);
 	    doneTags.deq();

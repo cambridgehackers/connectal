@@ -161,7 +161,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
 	    paFifo.deq();
 
 	    dreqFifo.enq(req);
-	    return Axi3ReadRequest{address:physAddr, len:truncate(req.burstLen-1), id:truncate(req.tag),
+	    return Axi3ReadRequest{address:physAddr, len:truncate(req.burstLen-1), id:req.tag,
 				   size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
 	 endmethod
       endinterface
@@ -281,7 +281,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 	 $display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
 
 	 dreqFifo.enq(req);
-	 return Axi3WriteRequest{address:physAddr, len:truncate(req.burstLen-1), id:truncate(req.tag),
+	 return Axi3WriteRequest{address:physAddr, len:truncate(req.burstLen-1), id:req.tag,
 				 size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
@@ -308,7 +308,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 
 	    Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
 
-	    return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: truncate(tagdata.tag) };
+	    return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: tagdata.tag };
 	 endmethod
       endinterface
       interface Put resp_b;
