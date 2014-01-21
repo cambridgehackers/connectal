@@ -113,10 +113,10 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 
       Reg#(Bit#(40)) readAddr <- mkReg(0);
       Reg#(Bit#(5))  readLen <- mkReg(0);
-      Reg#(Bit#(12)) readId <- mkReg(0);
+      Reg#(Bit#(6)) readId <- mkReg(0);
       Reg#(Bit#(40)) writeAddr <- mkReg(0);
       Reg#(Bit#(5))  writeLen <- mkReg(0);
-      Reg#(Bit#(12)) writeId <- mkReg(0);
+      Reg#(Bit#(6)) writeId <- mkReg(0);
 
       rule req_ar if (readLen == 0);
 	 let req <- master.req_ar.get();
@@ -146,7 +146,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 	 writeId <= req.id;
       endrule
 
-      FIFO#(Axi3WriteResponse#(12)) bFifo <- mkFIFO();
+      FIFO#(Axi3WriteResponse#(6)) bFifo <- mkFIFO();
 
       rule write_resp if (writeLen > 0);
 	 let handle = writeAddr[39:32];
