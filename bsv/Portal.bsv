@@ -48,13 +48,13 @@ endfunction
 
 typedef Portal#(16,32,32,12) StdPortal;
 
-interface PortalTop#(numeric type nmasters, numeric type dataWidth, type pins);
+interface PortalTop#(numeric type addrWidth, numeric type nmasters, numeric type dataWidth, type pins);
    interface Axi3Server#(32,32,12) ctrl;
-   interface Vector#(nmasters, Axi3Client#(40,dataWidth,6)) m_axi;
+   interface Vector#(nmasters, Axi3Client#(addrWidth,dataWidth,6)) m_axi;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;
    interface pins             pins;
 endinterface
 
-typedef PortalTop#(0,64,Empty)     StdPortalTop;
-typedef PortalTop#(1,64,Empty)     StdPortalDmaTop;
+typedef PortalTop#(32,0,64,Empty)     StdPortalTop;
+typedef PortalTop#(addrWidth,1,64,Empty)     StdPortalDmaTop#(numeric type addrWidth);

@@ -26,7 +26,11 @@ import DMAIndicationProxy::*;
 // defined by user
 import Memcpy::*;
 
-module mkPortalTop(StdPortalDmaTop);
+module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos(
+    Add#(addrWidth, a__, 52),
+    Add#(b__, addrWidth, 64),
+    Add#(c__, 12, addrWidth),
+    Add#(addrWidth, d__, 44));
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
    DMAReadBuffer#(64,8)   dma_stream_read_chan <- mkDMAReadBuffer();
@@ -43,7 +47,7 @@ module mkPortalTop(StdPortalDmaTop);
    writeClients[1] = dma_debug_write_chan.dmaClient;
 
    Integer               numRequests = 8;
-   AxiDMAServer#(64)   dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
+   AxiDMAServer#(addrWidth, 64)   dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
 
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
 

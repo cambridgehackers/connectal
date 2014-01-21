@@ -45,41 +45,41 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) s
 //
 // @param dsz Number of bits in the data bus
 //
-interface AxiDMAServer#(numeric type dsz);
+interface AxiDMAServer#(numeric type addrWidth, numeric type dsz);
    interface DMARequest request;
-   interface Axi3Client#(40,dsz,6) m_axi;
+   interface Axi3Client#(addrWidth,dsz,6) m_axi;
 endinterface
 
-interface ConfigureSglist;
+interface ConfigureSglist#(numeric type addrWidth);
    method Action configuring(Bool c);
-   method Action page(Bit#(32) tabsel, Bit#(PageIdxSize) off, Bit#(TSub#(40,SGListPageShift)) addr);
+   method Action page(Bit#(32) tabsel, Bit#(PageIdxSize) off, Bit#(TSub#(addrWidth,SGListPageShift)) addr);
    method Action readSglist(Bit#(32) pref, Bit#(DmaAddrSize) addr);
 endinterface
 
-interface AxiDMAWriteInternal#(numeric type dsz);
+interface AxiDMAWriteInternal#(numeric type addrWidth, numeric type dsz);
    interface DMAWrite write;
-   interface Axi3Client#(40,dsz,6) m_axi;
-   interface ConfigureSglist configure;
+   interface Axi3Client#(addrWidth,dsz,6) m_axi;
+   interface ConfigureSglist#(addrWidth) configure;
 endinterface
 
-interface AxiDMAReadInternal#(numeric type dsz);
+interface AxiDMAReadInternal#(numeric type addrWidth, numeric type dsz);
    interface DMARead read;
-   interface Axi3Client#(40,dsz,6) m_axi;
-   interface ConfigureSglist configure;
+   interface Axi3Client#(addrWidth,dsz,6) m_axi;
+   interface ConfigureSglist#(addrWidth) configure;
 endinterface
 
 typedef enum {Idle, Translate, Address, Data, Done} InternalState deriving(Eq,Bits);
 		 
 module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMAReadClient#(dsz)) readClients,
-			     DMAIndication dmaIndication)(AxiDMAReadInternal#(dsz))
-   provisos(Add#(1,a__,dsz));
+			     DMAIndication dmaIndication)(AxiDMAReadInternal#(addrWidth, dsz))
+   provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
-   SGListMMU#(40) sgl <- mkSGListMMU();
+   SGListMMU#(addrWidth) sgl <- mkSGListMMU();
    
    FIFO#(DMAAddressRequest) lreqFifo <- mkPipelineFIFO();
    FIFO#(DMAAddressRequest) reqFifo  <- mkPipelineFIFO();
    FIFO#(DMAAddressRequest) dreqFifo <- mkSizedFIFO(numRequests);
-   FIFO#(Bit#(40))        paFifo     <- mkPipelineFIFO();
+   FIFO#(Bit#(addrWidth))        paFifo     <- mkPipelineFIFO();
    FIFO#(DmaChannelId)    chanFifo   <- mkSizedFIFO(numRequests);
 
    Reg#(DmaChannelId)    selectReg <- mkReg(0);
@@ -133,7 +133,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
    endrule
 
    interface ConfigureSglist configure;
-       method Action page(Bit#(32) tabsel, Bit#(PageIdxSize) off, Bit#(TSub#(40,SGListPageShift)) addr) if (isConfiguring);
+       method Action page(Bit#(32) tabsel, Bit#(PageIdxSize) off, Bit#(TSub#(addrWidth,SGListPageShift)) addr) if (isConfiguring);
 	  sgl.page(truncate(tabsel), off, addr);
        endmethod
 
@@ -154,7 +154,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
 
    interface Axi3Client m_axi;
       interface Get req_ar;
-	 method ActionValue#(Axi3ReadRequest#(40,6)) get();
+	 method ActionValue#(Axi3ReadRequest#(addrWidth,6)) get();
 	    let req = reqFifo.first();
 	    reqFifo.deq();
 	    let physAddr = paFifo.first();
@@ -192,14 +192,14 @@ endmodule
 
 
 module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAWriteClient#(dsz)) writeClients,
-			      DMAIndication dmaIndication)(AxiDMAWriteInternal#(dsz))
-   provisos(Add#(1,a__,dsz));
-   SGListMMU#(40) sgl <- mkSGListMMU();
+			      DMAIndication dmaIndication)(AxiDMAWriteInternal#(addrWidth, dsz))
+   provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
+   SGListMMU#(addrWidth) sgl <- mkSGListMMU();
    
    FIFO#(DMAAddressRequest) lreqFifo <- mkPipelineFIFO();
    FIFO#(DMAAddressRequest) reqFifo <- mkFIFO();
    FIFO#(DMAAddressRequest) dreqFifo <- mkSizedFIFO(numRequests);
-   FIFO#(Bit#(40))        paFifo     <- mkFIFO();
+   FIFO#(Bit#(addrWidth))        paFifo     <- mkFIFO();
    FIFO#(DmaChannelId)    chanFifo <- mkSizedFIFO(numRequests);
    FIFO#(DmaChannelId)    respFifo <- mkSizedFIFO(numRequests);
 
@@ -250,7 +250,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
    endrule
 
    interface ConfigureSglist configure;
-      method Action page(Bit#(32) tabsel, Bit#(PageIdxSize) off, Bit#(TSub#(40,SGListPageShift)) addr) if (isConfiguring);
+      method Action page(Bit#(32) tabsel, Bit#(PageIdxSize) off, Bit#(TSub#(addrWidth,SGListPageShift)) addr) if (isConfiguring);
 	 sgl.page(truncate(tabsel), off, addr);
       endmethod
 
@@ -273,7 +273,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
    interface Get req_ar = ?;
    interface Put resp_read = ?;
    interface Get req_aw;
-      method ActionValue#(Axi3WriteRequest#(40,6)) get();
+      method ActionValue#(Axi3WriteRequest#(addrWidth,6)) get();
 	 let req = reqFifo.first();
 	 reqFifo.deq();
 	 let physAddr = paFifo.first();
@@ -333,13 +333,17 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
 		       Integer numRequests,
 		       Vector#(numReadClients, DMAReadClient#(dsz)) readClients,
 		       Vector#(numWriteClients, DMAWriteClient#(dsz)) writeClients)
-   (AxiDMAServer#(dsz))
-   provisos (Add#(1,a__,dsz));
+   (AxiDMAServer#(addrWidth, dsz))
+   provisos (Add#(1,a__,dsz),
+        Add#(b__, TSub#(addrWidth, 12), 32),
+        Add#(c__, 12, addrWidth),
+        Add#(d__, addrWidth, 64),
+        Add#(e__, TSub#(addrWidth, 12), 40));
 
-   AxiDMAReadInternal#(dsz) reader <- mkAxiDMAReadInternal(numRequests, readClients, dmaIndication);
-   AxiDMAWriteInternal#(dsz) writer <- mkAxiDMAWriteInternal(numRequests, writeClients, dmaIndication);
+   AxiDMAReadInternal#(addrWidth, dsz) reader <- mkAxiDMAReadInternal(numRequests, readClients, dmaIndication);
+   AxiDMAWriteInternal#(addrWidth, dsz) writer <- mkAxiDMAWriteInternal(numRequests, writeClients, dmaIndication);
 
-   Reg#(Bit#(TSub#(40,SGListPageShift))) addrReg <- mkReg(0);
+   Reg#(Bit#(TSub#(addrWidth,SGListPageShift))) addrReg <- mkReg(0);
    Reg#(Bit#(32))                        prefReg <- mkReg(0);
    Reg#(Bit#(PageIdxSize))               lenReg  <- mkReg(0);
    Reg#(Bit#(PageIdxSize))               idxReg  <- mkReg(0);

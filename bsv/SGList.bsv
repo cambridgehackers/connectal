@@ -38,9 +38,9 @@ typedef 32 SGListMaxLen;
 typedef Bit#(TLog#(TMul#(NumSGLists, SGListMaxLen))) SGListIdx;
 
 typedef struct {
-   Bit#(40) address;
+   Bit#(addrWidth) address;
    Bit#(32) length;
-   } SGListEntry deriving (Bits);
+   } SGListEntry#(numeric type addrWidth) deriving (Bits);
 
 typedef struct {
    SGListIdx entry;
@@ -50,18 +50,18 @@ typedef struct {
 //
 // @brief SGListStreamer manages virtual to physical translations via scatter-gather lists
 // 
-interface SGListStreamer;
+interface SGListStreamer#(numeric type addrWidth);
    // @brief Add a scatter-gather list entry for a memory object
    // @param segoff Offset into the object described by this segment
    // @param addr Physical address of this segment of the object
    // @param len  Length of this segment of the object
-   method Action sglist(Bit#(32) segoff, Bit#(40) physaddr, Bit#(32) len);
+   method Action sglist(Bit#(32) segoff, Bit#(addrWidth) physaddr, Bit#(32) len);
    method Action loadCtx(SGListId id);
-   method ActionValue#(Bit#(40)) nextAddr(Bit#(4) burstLen);
+   method ActionValue#(Bit#(addrWidth)) nextAddr(Bit#(4) burstLen);
    method Action dropCtx();
 endinterface
 
-module mkSGListStreamer(SGListStreamer);
+module mkSGListStreamer(SGListStreamer#(addrWidth)) provisos(Add#(a__, 32, addrWidth), Add#(b__, addrWidth, 64));
 
    function m#(Reg#(SGListPointer)) foo(Integer x)
       provisos (IsModule#(m,__a));
@@ -75,13 +75,13 @@ module mkSGListStreamer(SGListStreamer);
       return mkReg(p);
    endfunction
    
-   BRAM1Port#(SGListIdx, Maybe#(SGListEntry)) listMem <- mkBRAM1Server(defaultValue);
+   BRAM1Port#(SGListIdx, Maybe#(SGListEntry#(addrWidth))) listMem <- mkBRAM1Server(defaultValue);
    Vector#(NumSGLists, Reg#(SGListPointer))  listPtrs <- genWithM(foo);
    Vector#(NumSGLists, Reg#(SGListIdx))      listEnds <- genWithM(bar);
    FIFOF#(SGListId)                          loadReqs <- mkFIFOF;
    Reg#(SGListIdx)                            initPtr <- mkReg(0);
 
-   method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
+   method Action sglist(Bit#(32) pref, Bit#(addrWidth) addr, Bit#(32) len);
       let off = listEnds[pref-1];
       listEnds[pref-1] <= off+1;
       let entry = tagged Valid SGListEntry{address:addr, length:len};
@@ -93,7 +93,7 @@ module mkSGListStreamer(SGListStreamer);
       loadReqs.enq(id);
    endmethod
    
-   method ActionValue#(Bit#(40)) nextAddr(Bit#(4) burstLen);
+   method ActionValue#(Bit#(addrWidth)) nextAddr(Bit#(4) burstLen);
       loadReqs.deq;
       let mrv <- listMem.portA.response.get;
       let id = loadReqs.first;
@@ -126,19 +126,19 @@ typedef TSub#(DmaAddrSize,SGListPageShift) PageIdxSize;
 typedef Bit#(PageIdxSize) PageIdx;
 // these numbers have only been tested on the Zynq platform
 
-interface SGListMMU#(numeric type paSize);
-   method Action page(SGListId id, Bit#(PageIdxSize) vPageNum, Bit#(TSub#(paSize,SGListPageShift)) pPageNum);
+interface SGListMMU#(numeric type addrWidth);
+   method Action page(SGListId id, Bit#(PageIdxSize) vPageNum, Bit#(TSub#(addrWidth,SGListPageShift)) pPageNum);
    method Action addrReq(SGListId id, Bit#(DmaAddrSize) off);
-   method ActionValue#(Bit#(paSize)) addrResp();
+   method ActionValue#(Bit#(addrWidth)) addrResp();
    method Action dbgAddrReq(SGListId id, Bit#(DmaAddrSize) off);
-   method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(paSize))) dbgAddrResp();
+   method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) dbgAddrResp();
 endinterface
 
 // if this structure becomes too expensive, we can switch to a multi-level structure
-module mkSGListMMU(SGListMMU#(paSize))
+module mkSGListMMU(SGListMMU#(addrWidth))
    provisos (Log#(NumSGLists, listIdxSize),
 	     Add#(listIdxSize,PageIdxSize,entryIdxSize),
-	     Add#(pPageNumSize, SGListPageShift, paSize),
+	     Add#(pPageNumSize, SGListPageShift, addrWidth),
 	     Bits#(Maybe#(Bit#(pPageNumSize)), mpPageNumSize),
 	     Add#(1, pPageNumSize, mpPageNumSize)
 	     );
@@ -146,7 +146,7 @@ module mkSGListMMU(SGListMMU#(paSize))
    BRAM_Configure cfg = defaultValue;
    BRAM1Port#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) pageTable <- mkBRAM1Server(cfg);
    FIFOF#(Bit#(SGListPageShift)) offs <- mkFIFOF;
-   FIFOF#(Bit#(paSize)) respFifo <- mkFIFOF;
+   FIFOF#(Bit#(addrWidth)) respFifo <- mkFIFOF;
    FIFOF#(Bit#(PageIdxSize)) pageIdxs <- mkFIFOF;
 
    let page_shift = fromInteger(valueOf(SGListPageShift));
@@ -155,7 +155,7 @@ module mkSGListMMU(SGListMMU#(paSize))
    rule respond;
       offs.deq;
       let mrv <- pageTable.portA.response.get;
-      let rv = fromMaybe(fromInteger('hbababa),mrv);
+      let rv = fromMaybe(fromInteger('hababa),mrv);
       if (!isValid(mrv))
       	 $display("mkSGListMMU::addrResp has gone off the reservation");
       respFifo.enq({rv,offs.first});
@@ -172,7 +172,7 @@ module mkSGListMMU(SGListMMU#(paSize))
       pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pageNum}, datain:?});
    endmethod
    
-   method ActionValue#(Bit#(paSize)) addrResp() if (!pageIdxs.notEmpty());
+   method ActionValue#(Bit#(addrWidth)) addrResp() if (!pageIdxs.notEmpty());
       respFifo.deq();
       $display("addrResp phys_addr=%h", respFifo.first());
       return respFifo.first();
@@ -185,7 +185,7 @@ module mkSGListMMU(SGListMMU#(paSize))
       pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pageIdx}, datain:?});
    endmethod
    
-   method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(paSize))) dbgAddrResp();
+   method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) dbgAddrResp();
       respFifo.deq();
       let pageIdx = pageIdxs.first();
       pageIdxs.deq();

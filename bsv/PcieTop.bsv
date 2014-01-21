@@ -30,7 +30,7 @@ import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 
-typedef (function Module#(PortalTop#(nmasters, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type nmasters, numeric type dsz, type ipins);
+typedef (function Module#(PortalTop#(40, nmasters, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type nmasters, numeric type dsz, type ipins);
 
 interface PcieTop#(type ipins);
    (* prefix=""*)

@@ -24,7 +24,11 @@ import DMAIndicationProxy::*;
 // defined by user
 import NandSim::*;
 
-module mkPortalTop(StdPortalDmaTop);
+module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
+    Add#(addrWidth, a__, 52),
+    Add#(b__, addrWidth, 64),
+    Add#(c__, 12, addrWidth),
+    Add#(addrWidth, d__, 44));
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(9);
 
@@ -37,7 +41,7 @@ module mkPortalTop(StdPortalDmaTop);
    Vector#(1, DMAReadClient#(64)) readClients = cons(nandSim.readClient, nil);
    Vector#(1, DMAWriteClient#(64)) writeClients = cons(nandSim.writeClient, nil);
    Integer             numRequests = 2;
-   AxiDMAServer#(64) dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
+   AxiDMAServer#(addrWidth,64) dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
 
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
 

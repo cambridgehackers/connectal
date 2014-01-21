@@ -39,14 +39,14 @@ interface ZynqTop#(type pins);
 endinterface
 
 
-typedef (function Module#(PortalTop#(nmasters, 64, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, type ipins);
+typedef (function Module#(PortalTop#(32, nmasters, 64, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, type ipins);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(nmasters,ipins) constructor)(ZynqTop#(ipins));
    Integer nmasters = valueOf(nmasters);
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
    let top <- constructor(clocked_by defaultClock);
-   Axi3Client#(40,64,6) master = ?;
+   Axi3Client#(32,64,6) master = ?;
    if (nmasters > 0) begin
       master = top.m_axi[0];
    end

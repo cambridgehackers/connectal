@@ -92,7 +92,7 @@ instance SelectBsimRdmaReadWrite#(128);
    endmodule
 endinstance
 		 
-typedef (function Module#(PortalTop#(nmasters, dsz, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, numeric type dsz, type ipins);
+typedef (function Module#(PortalTop#(40, nmasters, dsz, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, numeric type dsz, type ipins);
 
 module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructor)(Empty)
    provisos (SelectBsimRdmaReadWrite#(dsz));

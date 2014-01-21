@@ -26,7 +26,11 @@ import Strstr::*;
 
 typedef enum {StrstrIndication, StrstrRequest, DMAIndication, DMARequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop);
+module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
+    Add#(addrWidth, a__, 52),
+    Add#(b__, addrWidth, 64),
+    Add#(c__, 12, addrWidth),
+    Add#(addrWidth, d__, 44));
 
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(DMAIndication);
    DMAReadBuffer#(64,1) haystack_read_chan <- mkDMAReadBuffer();
@@ -40,7 +44,7 @@ module mkPortalTop(StdPortalDmaTop);
 
    Vector#(0, DMAWriteClient#(64)) writeClients = newVector();
    Integer numRequests = 8;
-   AxiDMAServer#(64,8) dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
+   AxiDMAServer#(addrWidth,64) dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(DMARequest,dma.request);
 
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
