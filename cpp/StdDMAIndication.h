@@ -6,6 +6,11 @@ class DMAIndication : public DMAIndicationWrapper
 
 public:
   DMAIndication(unsigned int id) : DMAIndicationWrapper(id), portalMemory(0) {}
+  DMAIndication(PortalMemory *pm, unsigned int id)
+    : DMAIndicationWrapper(id), portalMemory(pm)
+  {
+    pm->useSemaphore();
+  }
   DMAIndication(const char* devname, unsigned int addrbits) : DMAIndicationWrapper(devname,addrbits), portalMemory(0) {}
   DMAIndication(PortalMemory *pm, const char* devname, unsigned int addrbits)
     : DMAIndicationWrapper(devname,addrbits)
@@ -25,8 +30,8 @@ public:
     if (portalMemory)
       portalMemory->sglistResp(channelId);
   }
-  virtual void sglistEntry(unsigned long handle, unsigned long long physAddr){
-    fprintf(stderr, "sglistEntry: handle=%lx physAddr=%llx\n", handle, physAddr);
+  virtual void sglistEntry(unsigned long idx, unsigned long long physAddr){
+    fprintf(stderr, "sglistEntry: idx=%lx physAddr=%llx\n", idx, physAddr);
   }
   virtual void parefResp(unsigned long channelId){
     fprintf(stderr, "parefResp: %lx\n", channelId);
