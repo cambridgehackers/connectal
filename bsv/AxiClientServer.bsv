@@ -69,36 +69,35 @@ typedef struct {
 
 typedef struct {
     Bit#(busWidth) data;
-    Bit#(busWidthBytes) byteEnable;
+    Bit#(TDiv#(busWidth,8)) byteEnable;
     Bit#(1)        last;
     Bit#(idWidth) id;
-} Axi3WriteData#(type busWidth, type busWidthBytes, type idWidth) deriving (Bits);
+} Axi3WriteData#(type busWidth, type idWidth) deriving (Bits);
 
 typedef struct {
     Bit#(2) resp;
     Bit#(idWidth) id;
 } Axi3WriteResponse#(type idWidth) deriving (Bits);
 
-interface Axi3Client#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+interface Axi3Client#(type addrWidth, type busWidth, type idWidth);
    interface Get#(Axi3ReadRequest#(addrWidth, idWidth)) req_ar;
    interface Put#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
    interface Get#(Axi3WriteRequest#(addrWidth, idWidth)) req_aw;
-   interface Get#(Axi3WriteData#(busWidth, busWidthBytes, idWidth)) resp_write;
+   interface Get#(Axi3WriteData#(busWidth, idWidth)) resp_write;
    interface Put#(Axi3WriteResponse#(idWidth)) resp_b;
 endinterface
 
-interface Axi3Server#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+interface Axi3Server#(type addrWidth, type busWidth, type idWidth);
    interface Put#(Axi3ReadRequest#(addrWidth, idWidth)) req_ar;
    interface Get#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
    interface Put#(Axi3WriteRequest#(addrWidth, idWidth)) req_aw;
-   interface Put#(Axi3WriteData#(busWidth, busWidthBytes, idWidth)) resp_write;
+   interface Put#(Axi3WriteData#(busWidth, idWidth)) resp_write;
    interface Get#(Axi3WriteResponse#(idWidth)) resp_b;
 endinterface
 
 module mkAxi3ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
-   (Axi3Server#(addrWidth, busWidth, busWidthBytes, idWidth))
-   provisos(Div#(busWidth,8,busWidthBytes),
-      Add#(nz, regFileBusWidth, addrWidth));
+   (Axi3Server#(addrWidth, busWidth, idWidth))
+   provisos(Add#(nz, regFileBusWidth, addrWidth));
    Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
    Reg#(Bit#(regFileBusWidth)) writeAddrReg <- mkReg(0);
    Reg#(Bit#(idWidth)) readIdReg <- mkReg(0);
@@ -111,7 +110,7 @@ module mkAxi3ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    interface Put req_ar;
       method Action put(Axi3ReadRequest#(addrWidth,idWidth) req) if (readBurstCountReg == 0);
          if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.address, req.len+1);
-         readAddrReg <= truncate(req.address/fromInteger(valueOf(busWidthBytes)));
+         readAddrReg <= truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8))));
 	 readIdReg <= req.id;
          readBurstCountReg <= req.len+1;
       endmethod
@@ -128,13 +127,13 @@ module mkAxi3ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(addrWidth,idWidth) req) if (writeBurstCountReg == 0);
          if (verbose) $display("axiSlave.write.writeAddr %h bc %d", req.address, req.len+1);
-         writeAddrReg <= truncate(req.address/fromInteger(valueOf(busWidthBytes)));
+         writeAddrReg <= truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8))));
          writeBurstCountReg <= req.len+1;
          writeIdFifo.enq(req.id);
       endmethod
    endinterface: req_aw
    interface Put resp_write;
-      method Action put(Axi3WriteData#(busWidth,busWidthBytes,idWidth) resp) if (writeBurstCountReg > 0);
+      method Action put(Axi3WriteData#(busWidth,idWidth) resp) if (writeBurstCountReg > 0);
          if (verbose) $display("writeData %h %h %d", writeAddrReg, resp.data, writeBurstCountReg);
          rf.upd(writeAddrReg, resp.data);
          writeAddrReg <= writeAddrReg + 1;
@@ -189,37 +188,36 @@ typedef struct {
 
 typedef struct {
     Bit#(busWidth) data;
-    Bit#(busWidthBytes) byteEnable;
+    Bit#(TDiv#(busWidth,8)) byteEnable;
     Bit#(1)        last;
     Bit#(idWidth) id;
-} Axi4WriteData#(type busWidth, type busWidthBytes, type idWidth) deriving (Bits);
+} Axi4WriteData#(type busWidth, type idWidth) deriving (Bits);
 
 typedef struct {
     Bit#(2) resp;
     Bit#(idWidth) id;
 } Axi4WriteResponse#(type idWidth) deriving (Bits);
 
-interface Axi4Client#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+interface Axi4Client#(type addrWidth, type busWidth, type idWidth);
    interface Get#(Axi4ReadRequest#(addrWidth, idWidth)) req_ar;
    interface Put#(Axi4ReadResponse#(busWidth, idWidth)) resp_read;
 
    interface Get#(Axi4WriteRequest#(addrWidth, idWidth)) req_aw;
-   interface Get#(Axi4WriteData#(busWidth, busWidthBytes, idWidth)) resp_write;
+   interface Get#(Axi4WriteData#(busWidth, idWidth)) resp_write;
    interface Put#(Axi4WriteResponse#(idWidth)) resp_b;
 endinterface
 
-interface Axi4Server#(type addrWidth, type busWidth, type busWidthBytes, type idWidth);
+interface Axi4Server#(type addrWidth, type busWidth, type idWidth);
    interface Put#(Axi4ReadRequest#(addrWidth, idWidth)) req_ar;
    interface Get#(Axi4ReadResponse#(busWidth, idWidth)) resp_read;
    interface Put#(Axi4WriteRequest#(addrWidth, idWidth)) req_aw;
-   interface Put#(Axi4WriteData#(busWidth, busWidthBytes, idWidth)) resp_write;
+   interface Put#(Axi4WriteData#(busWidth, idWidth)) resp_write;
    interface Get#(Axi4WriteResponse#(idWidth)) resp_b;
 endinterface
 
 module mkAxi4ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
-   (Axi4Server#(addrWidth, busWidth, busWidthBytes, idWidth))
-   provisos(Div#(busWidth,8,busWidthBytes),
-      Add#(nz, regFileBusWidth, addrWidth));
+   (Axi4Server#(addrWidth, busWidth, idWidth))
+   provisos(Add#(nz, regFileBusWidth, addrWidth));
    Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
    Reg#(Bit#(regFileBusWidth)) writeAddrReg <- mkReg(0);
    Reg#(Bit#(idWidth)) readIdReg <- mkReg(0);
@@ -232,7 +230,7 @@ module mkAxi4ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    interface Put req_ar;
       method Action put(Axi4ReadRequest#(addrWidth,idWidth) req) if (readBurstCountReg == 0);
          if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.address, req.len+1);
-         readAddrReg <= truncate(req.address/fromInteger(valueOf(busWidthBytes)));
+         readAddrReg <= truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8))));
 	 readIdReg <= req.id;
          readBurstCountReg <= truncate(req.len)+1;
       endmethod
@@ -249,13 +247,13 @@ module mkAxi4ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    interface Put req_aw;
       method Action put(Axi4WriteRequest#(addrWidth,idWidth) req) if (writeBurstCountReg == 0);
          if (verbose) $display("axiSlave.write.writeAddr %h bc %d", req.address, req.len+1);
-         writeAddrReg <= truncate(req.address/fromInteger(valueOf(busWidthBytes)));
+         writeAddrReg <= truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8))));
          writeBurstCountReg <= truncate(req.len)+1;
          writeIdFifo.enq(req.id);
       endmethod
    endinterface: req_aw
    interface Put resp_write;
-      method Action put(Axi4WriteData#(busWidth,busWidthBytes,idWidth) resp) if (writeBurstCountReg > 0);
+      method Action put(Axi4WriteData#(busWidth,idWidth) resp) if (writeBurstCountReg > 0);
          if (verbose) $display("writeData %h %h %d", writeAddrReg, resp.data, writeBurstCountReg);
          rf.upd(writeAddrReg, resp.data);
          writeAddrReg <= writeAddrReg + 1;
@@ -276,8 +274,8 @@ module mkAxi4ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    endinterface: resp_b
 endmodule
 
-instance Connectable#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth), Axi3Server#(addrWidth, busWidth,busWidthBytes,idWidth));
-   module mkConnection#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth) m, Axi3Server#(addrWidth, busWidth,busWidthBytes,idWidth) s)(Empty);
+instance Connectable#(Axi3Client#(addrWidth, busWidth,idWidth), Axi3Server#(addrWidth, busWidth,idWidth));
+   module mkConnection#(Axi3Client#(addrWidth, busWidth,idWidth) m, Axi3Server#(addrWidth, busWidth,idWidth) s)(Empty);
 
       mkConnection(m.req_ar, s.req_ar);
       mkConnection(s.resp_read, m.resp_read);
@@ -289,8 +287,8 @@ instance Connectable#(Axi3Client#(addrWidth, busWidth,busWidthBytes,idWidth), Ax
    endmodule
 endinstance
 
-instance Connectable#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth), Axi4Server#(addrWidth, busWidth,busWidthBytes,idWidth));
-   module mkConnection#(Axi4Client#(addrWidth, busWidth,busWidthBytes,idWidth) m, Axi4Server#(addrWidth, busWidth,busWidthBytes,idWidth) s)(Empty);
+instance Connectable#(Axi4Client#(addrWidth, busWidth,idWidth), Axi4Server#(addrWidth, busWidth,idWidth));
+   module mkConnection#(Axi4Client#(addrWidth, busWidth,idWidth) m, Axi4Server#(addrWidth, busWidth,idWidth) s)(Empty);
 
       mkConnection(m.req_ar, s.req_ar);
       mkConnection(s.resp_read, m.resp_read);

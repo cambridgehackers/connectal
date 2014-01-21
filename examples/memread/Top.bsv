@@ -32,7 +32,7 @@ module mkPortalTop(StdPortalDmaTop);
 
    Vector#(1, DMAReadClient#(64)) clients = cons(memread.dmaClient, nil);
    Integer             numRequests = 2;
-   AxiDMAServer#(64,8) dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, clients, nil);
+   AxiDMAServer#(64) dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, clients, nil);
 
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
 

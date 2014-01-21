@@ -35,7 +35,7 @@ module mkPortalTop(StdPortalDmaTop);
    writeClients[0] = dma_stream_write_chan.dmaClient;
    readClients[0]  = dma_stream_read_chan.dmaClient;
    Integer               numRequests = 8;
-   AxiDMAServer#(64,8)   dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
+   AxiDMAServer#(64)   dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
 
    

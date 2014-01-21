@@ -139,7 +139,7 @@ portalIfcTemplate='''
     endmethod
     interface Axi3Server ctrl;
         interface Put req_aw;
-            method Action put(Axi3WriteRequest#(32, 12) req)
+            method Action put(Axi3WriteRequest#(32,12) req)
                           if (axiSlaveWriteBurstCountReg == 0);
                  axiSlaveWS <= req.address[15];
                  axiSlaveWriteBurstCountReg <= req.len + 1;
@@ -148,7 +148,7 @@ portalIfcTemplate='''
             endmethod
         endinterface: req_aw
         interface Put resp_write;
-            method Action put(Axi3WriteData#(32, 4, 12) wdata)
+            method Action put(Axi3WriteData#(32,12) wdata)
                           if (axiSlaveWriteBurstCountReg > 0);
                 let addr = axiSlaveWriteAddrReg;
                 axiSlaveWriteAddrReg <= axiSlaveWriteAddrReg + 4;

@@ -45,7 +45,7 @@ interface FrameBufferBram;
     method Action startFrame();
     method Action startLine();
     method Action setSgEntry(Bit#(8) index, Bit#(24) startingOffset, Bit#(20) address, Bit#(20) length);
-    interface Axi3Client#(32,32,4,6) axi;
+    interface Axi3Client#(32,32,6) axi;
     interface BRAM#(Bit#(12), Bit#(32)) buffer;
 endinterface
 

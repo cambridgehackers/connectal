@@ -48,7 +48,7 @@ endinterface
 
 interface ReadBWRequest;
    interface CoreRequest coreRequest;
-   interface Axi4Client#(40,128,16,12) m_axi;
+   interface Axi4Client#(40,128,12) m_axi;
    interface TlpTrace trace;
 endinterface
 

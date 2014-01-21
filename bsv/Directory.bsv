@@ -13,7 +13,7 @@ interface Directory;
 endinterface
 
 module mkDirectoryPortalIfc#(RegFile#(Bit#(32), Bit#(32)) rf)(StdPortal);
-   Axi3Server#(32,32,4,12) ctrl_mod <- mkAxi3ServerFromRegFile(rf);
+   Axi3Server#(32,32,12) ctrl_mod <- mkAxi3ServerFromRegFile(rf);
    method Bit#(32) ifcId();
       return 0;
    endmethod

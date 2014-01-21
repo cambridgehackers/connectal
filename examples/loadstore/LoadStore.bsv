@@ -35,7 +35,7 @@ endinterface
 
 interface LoadStoreRequestInternal;
    interface LoadStoreRequest ifc;
-   interface Axi3Client#(40,64,8,12) m_axi;
+   interface Axi3Client#(40,64,6) m_axi;
 endinterface
 
 module mkLoadStoreRequestInternal#(LoadStoreIndication ind)(LoadStoreRequestInternal);

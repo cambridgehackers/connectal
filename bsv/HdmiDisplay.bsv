@@ -46,7 +46,7 @@ interface HdmiDisplayRequest;
     interface HdmiControlRequest coreRequest;
     interface HdmiInternalRequest coRequest;
     interface DMARequest dmaRequest;
-    interface Axi3Client#(40,64,8,6) m_axi;
+    interface Axi3Client#(40,64,6) m_axi;
     interface HDMI hdmi;
     interface XADC xadc;
 endinterface

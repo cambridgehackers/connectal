@@ -33,12 +33,12 @@ import AxiClientServer::*;
 
 interface AxiMasterCommon;
     method Bit#(1)            aresetn();
-    interface Axi3Client#(32,32,TDiv#(32,8), 12) client;
+    interface Axi3Client#(32,32,12) client;
 endinterface
 
 interface AxiSlaveCommon#(numeric type data_width);
     method Bit#(1)            aresetn();
-    interface Axi3Server#(32,data_width,TDiv#(data_width,8), 6) server;
+    interface Axi3Server#(32,data_width,6) server;
 endinterface
 
 interface AxiSlaveHighSpeed;
@@ -253,8 +253,8 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Get resp_write;
-                method ActionValue#(Axi3WriteData#(32, TDiv#(32, 8), 12)) get() if (vm_axi_gp[i].wvalid() != 0);
-                    Axi3WriteData#(32, TDiv#(32, 8), 12) v;
+                method ActionValue#(Axi3WriteData#(32,12)) get() if (vm_axi_gp[i].wvalid() != 0);
+                    Axi3WriteData#(32,12) v;
                     v.id = vm_axi_gp[i].wid();
                     v.byteEnable = vm_axi_gp[i].wstrb();
                     v.data = vm_axi_gp[i].wdata();
@@ -327,7 +327,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Put resp_write;
-                method Action put(Axi3WriteData#(32, TDiv#(32, 8), 6) v) if (vs_axi_gp[i].wready() != 0);
+                method Action put(Axi3WriteData#(32,6) v) if (vs_axi_gp[i].wready() != 0);
                     vs_axi_gp[i].wid(v.id);
                     vs_axi_gp[i].wstrb(v.byteEnable);
                     vs_axi_gp[i].wdata(v.data);
@@ -414,7 +414,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Put resp_write;
-                method Action put(Axi3WriteData#(64, TDiv#(64, 8), 6) v) if (vs_axi_hp[i].wready() != 0);
+                method Action put(Axi3WriteData#(64,6) v) if (vs_axi_hp[i].wready() != 0);
                     vs_axi_hp[i].wid(v.id);
                     vs_axi_hp[i].wstrb(v.byteEnable);
                     vs_axi_hp[i].wdata(v.data);
@@ -424,7 +424,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Get resp_read;
-                method ActionValue#(Axi3ReadResponse#(64, 6)) get() if (vs_axi_hp[i].rvalid() != 0);
+                method ActionValue#(Axi3ReadResponse#(64,6)) get() if (vs_axi_hp[i].rvalid() != 0);
                     Axi3ReadResponse#(64, 6) v;
                     v.id = vs_axi_hp[i].rid();
                     v.resp = vs_axi_hp[i].rresp();
@@ -522,8 +522,8 @@ interface ZynqPins;
 endinterface
 
 // special mkConnection that truncates the address until we make AxiRDMA polymorphic over addrWidth
-instance Connectable#(Axi3Client#(40, busWidth,busWidthBytes,idWidth), Axi3Server#(32, busWidth,busWidthBytes,idWidth));
-   module mkConnection#(Axi3Client#(40, busWidth,busWidthBytes,idWidth) m, Axi3Server#(32, busWidth,busWidthBytes,idWidth) s)(Empty);
+instance Connectable#(Axi3Client#(40, busWidth,idWidth), Axi3Server#(32, busWidth,idWidth));
+   module mkConnection#(Axi3Client#(40, busWidth,idWidth) m, Axi3Server#(32, busWidth,idWidth) s)(Empty);
 
       //mkConnection(m.req_ar, s.req_ar);
       rule connect_req_ar;
@@ -543,7 +543,7 @@ instance Connectable#(Axi3Client#(40, busWidth,busWidthBytes,idWidth), Axi3Serve
    endmodule
 endinstance
 
-module mkPS7Slave#(Clock axi_clock, Reset axi_reset, Axi3Server#(32,32,4,12) ctrl, Integer nmasters, Axi3Client#(40,64,8,6) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
+module mkPS7Slave#(Clock axi_clock, Reset axi_reset, Axi3Server#(32,32,12) ctrl, Integer nmasters, Axi3Client#(40,64,6) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
     PS7LIB ps7 <- mkPS7LIB(axi_clock, axi_reset);
 
     rule send_int_rule;
