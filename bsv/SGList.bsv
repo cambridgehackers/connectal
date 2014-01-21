@@ -144,7 +144,6 @@ module mkSGListMMU(SGListMMU#(paSize))
 	     );
 
    BRAM_Configure cfg = defaultValue;
-   cfg.latency = 2;
    BRAM1Port#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) pageTable <- mkBRAM1Server(cfg);
    FIFOF#(Bit#(SGListPageShift)) offs <- mkFIFOF;
    FIFOF#(Bit#(paSize)) respFifo <- mkFIFOF;
@@ -156,7 +155,7 @@ module mkSGListMMU(SGListMMU#(paSize))
    rule respond;
       offs.deq;
       let mrv <- pageTable.portA.response.get;
-      let rv = fromMaybe(?,mrv);
+      let rv = fromMaybe(fromInteger('hbababa),mrv);
       if (!isValid(mrv))
       	 $display("mkSGListMMU::addrResp has gone off the reservation");
       respFifo.enq({rv,offs.first});
@@ -168,11 +167,14 @@ module mkSGListMMU(SGListMMU#(paSize))
 
    method Action addrReq(SGListId id, Bit#(DmaAddrSize) off);
       offs.enq(truncate(off));
-      pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,off[valueOf(DmaAddrSize)-1:page_shift]}, datain:?});
+      Bit#(PageIdxSize) pageNum = off[valueOf(DmaAddrSize)-1:page_shift];
+      $display("addrReq id=%d pageNum=%h", id, pageNum);
+      pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pageNum}, datain:?});
    endmethod
    
    method ActionValue#(Bit#(paSize)) addrResp() if (!pageIdxs.notEmpty());
       respFifo.deq();
+      $display("addrResp phys_addr=%h", respFifo.first());
       return respFifo.first();
    endmethod
 

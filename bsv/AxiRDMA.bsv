@@ -25,16 +25,12 @@ import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs :: *;
 import Vector::*;
+import GetPut::*;
 import GetPutF::*;
 import ClientServer::*;
-import BRAMFIFO::*;
-import BRAM::*;
-import PCIE::*;
 
 // XBSV Libraries
-//import PcieToAxiBridge::*;
 import AxiClientServer::*;
-import BRAMFIFOFLevel::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 import Adapter::*;
@@ -129,6 +125,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift))) begin
 	 // squash request
+	 $display("dmaRead: badAddr handle=%d addr=%h physAddr=%h", req.handle, req.address, physAddr);
 	 dmaIndication.badAddr(req.handle, extend(req.address), extend(physAddr));
       end
       else begin
@@ -139,8 +136,6 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
 
    interface ConfigureSglist configure;
        method Action page(Bit#(32) tabsel, Bit#(PageIdxSize) off, Bit#(TSub#(40,SGListPageShift)) addr) if (isConfiguring);
-	  if (addr == 0) // for debugging
-	     dmaIndication.badAddr(tabsel, extend(off), extend(addr));
 	  sgl.page(truncate(tabsel), off, addr);
        endmethod
 
@@ -377,23 +372,27 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
 	 dmaIndication.reportStateDbg(rv);
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len) if (idxReg == lenReg);
-`ifdef BSIM
-	 let va <- pareff(pref, len);
-	 addr[39:32] = truncate(pref);
-	 addr[31:0] = 0;
-	 $display("sglist.pareff handle=%d addr=%h len=%h", pref, addr, len);
-`endif
 	 let idx = idxReg;
 	 if (prefReg != pref)
 	    idx = 0;
 	 prefReg <= pref;
 	 lenReg  <= truncate(len >> page_shift) + idx;
-	 addrReg <= truncate(addr >> page_shift);
 	 idxReg <= idx;
 	 if (addr == 0 && len == 0) begin // sw marks end-of-list with zeros
 	    dmaIndication.sglistResp(pref, extend(idx), 0);
 	 end
+	 else if (addr == 0 && len > 0) begin
+	    $display("sglist badAddr pref=%d idx=%h addr=%h", pref, idx, addr);
+	    dmaIndication.badAddr(pref, extend(idx), extend(addr >> page_shift));
+	 end
 	 else begin
+`ifdef BSIM
+	    let va <- pareff(pref, len);
+	    addr[39:32] = truncate(pref);
+	    addr[31:0] = 0;
+	    $display("sglist.pareff handle=%d addr=%h len=%h", pref, addr, len);
+`endif
+	    addrReg <= truncate(addr >> page_shift);
 	    reader.configure.configuring(True);
 	    writer.configure.configuring(True);
 	 end

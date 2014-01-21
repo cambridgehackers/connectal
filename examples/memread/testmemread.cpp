@@ -103,6 +103,10 @@ int main(int argc, const char **argv)
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
   sleep(1);
 
+  dma->readSglist(ChannelType_Read, 0, 0);
+  sleep(1);
+  dma->readSglist(ChannelType_Read, 0, 0x1000);
+  sleep(1);
   dma->readSglist(ChannelType_Read, ref_srcAlloc, 0);
   sleep(1);
   dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x1000);
