@@ -25,8 +25,8 @@ testnames = echo     \
             strstr   \
             struct   \
 	    ring     \
-	    nandsim
-
+	    nandsim  \
+            flowcontrol
 
 bsimtests = $(addsuffix .bsim, $(testnames))
 
