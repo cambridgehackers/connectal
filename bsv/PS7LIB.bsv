@@ -40,7 +40,7 @@ endinterface
 
 interface AxiSlaveCommon#(numeric type data_width);
     method Bit#(1)            aresetn();
-    interface Axi3Server#(32,data_width,TDiv#(data_width,8), 12) server;
+    interface Axi3Server#(32,data_width,TDiv#(data_width,8), 6) server;
 endinterface
 
 interface AxiSlaveHighSpeed;
@@ -299,11 +299,11 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
         vtops_axi_gp[i] = interface AxiSlaveCommon#(32);
           interface Axi3Server server;
             interface Put req_ar;
-                method Action put(Axi3ReadRequest#(32,12) v) if (vs_axi_gp[i].arready() != 0);
+                method Action put(Axi3ReadRequest#(32,6) v) if (vs_axi_gp[i].arready() != 0);
                     vs_axi_gp[i].araddr(v.address);
                     vs_axi_gp[i].arburst(v.burst);
                     vs_axi_gp[i].arcache(v.cache);
-                    vs_axi_gp[i].arid(v.id[5:0]);
+                    vs_axi_gp[i].arid(v.id);
                     vs_axi_gp[i].arlen(v.len);
                     vs_axi_gp[i].arlock(v.lock);
                     vs_axi_gp[i].arprot(v.prot);
@@ -314,11 +314,11 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Put req_aw;
-                method Action put(Axi3WriteRequest#(32,12) v) if (vs_axi_gp[i].awready() != 0);
+                method Action put(Axi3WriteRequest#(32,6) v) if (vs_axi_gp[i].awready() != 0);
                     vs_axi_gp[i].awaddr(v.address);
                     vs_axi_gp[i].awburst(v.burst);
                     vs_axi_gp[i].awcache(v.cache);
-                    vs_axi_gp[i].awid(v.id[5:0]);
+                    vs_axi_gp[i].awid(v.id);
                     vs_axi_gp[i].awlen(v.len);
                     vs_axi_gp[i].awlock(v.lock);
                     vs_axi_gp[i].awprot(v.prot);
@@ -329,8 +329,8 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Put resp_write;
-                method Action put(Axi3WriteData#(32, TDiv#(32, 8), 12) v) if (vs_axi_gp[i].wready() != 0);
-                    vs_axi_gp[i].wid(v.id[5:0]);
+                method Action put(Axi3WriteData#(32, TDiv#(32, 8), 6) v) if (vs_axi_gp[i].wready() != 0);
+                    vs_axi_gp[i].wid(v.id);
                     vs_axi_gp[i].wstrb(v.byteEnable);
                     vs_axi_gp[i].wdata(v.data);
                     vs_axi_gp[i].wlast(v.last);
@@ -339,9 +339,9 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Get resp_read;
-                method ActionValue#(Axi3ReadResponse#(32, 12)) get() if (vs_axi_gp[i].rvalid() != 0);
-                    Axi3ReadResponse#(32, 12) v;
-                    v.id = {6'b0, vs_axi_gp[i].rid()};
+                method ActionValue#(Axi3ReadResponse#(32, 6)) get() if (vs_axi_gp[i].rvalid() != 0);
+                    Axi3ReadResponse#(32, 6) v;
+                    v.id = vs_axi_gp[i].rid();
                     v.resp = vs_axi_gp[i].rresp();
                     v.data = vs_axi_gp[i].rdata();
                     v.last = vs_axi_gp[i].rlast();
@@ -351,9 +351,9 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Get resp_b;
-                method ActionValue#(Axi3WriteResponse#(12)) get() if (vs_axi_gp[i].bvalid() != 0);
-                    Axi3WriteResponse#(12) v;
-                    v.id = {6'b0, vs_axi_gp[i].bid()};
+                method ActionValue#(Axi3WriteResponse#(6)) get() if (vs_axi_gp[i].bvalid() != 0);
+                    Axi3WriteResponse#(6) v;
+                    v.id = vs_axi_gp[i].bid();
                     v.resp = vs_axi_gp[i].bresp();
 
 	            vtopsw_axi_gp[i].bready <= 1;
@@ -386,11 +386,11 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
             interface AxiSlaveCommon axi;
             interface Axi3Server server;
             interface Put req_ar;
-                method Action put(Axi3ReadRequest#(32,12) v) if (vs_axi_hp[i].arready() != 0);
+                method Action put(Axi3ReadRequest#(32,6) v) if (vs_axi_hp[i].arready() != 0);
                     vs_axi_hp[i].araddr(v.address);
                     vs_axi_hp[i].arburst(v.burst);
                     vs_axi_hp[i].arcache(v.cache);
-                    vs_axi_hp[i].arid(v.id[5:0]);
+                    vs_axi_hp[i].arid(v.id);
                     vs_axi_hp[i].arlen(v.len);
                     vs_axi_hp[i].arlock(v.lock);
                     vs_axi_hp[i].arprot(v.prot);
@@ -401,11 +401,11 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Put req_aw;
-                method Action put(Axi3WriteRequest#(32,12) v) if (vs_axi_hp[i].awready() != 0);
+                method Action put(Axi3WriteRequest#(32,6) v) if (vs_axi_hp[i].awready() != 0);
                     vs_axi_hp[i].awaddr(v.address);
                     vs_axi_hp[i].awburst(v.burst);
                     vs_axi_hp[i].awcache(v.cache);
-                    vs_axi_hp[i].awid(v.id[5:0]);
+                    vs_axi_hp[i].awid(v.id);
                     vs_axi_hp[i].awlen(v.len);
                     vs_axi_hp[i].awlock(v.lock);
                     vs_axi_hp[i].awprot(v.prot);
@@ -416,8 +416,8 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Put resp_write;
-                method Action put(Axi3WriteData#(64, TDiv#(64, 8), 12) v) if (vs_axi_hp[i].wready() != 0);
-                    vs_axi_hp[i].wid(v.id[5:0]);
+                method Action put(Axi3WriteData#(64, TDiv#(64, 8), 6) v) if (vs_axi_hp[i].wready() != 0);
+                    vs_axi_hp[i].wid(v.id);
                     vs_axi_hp[i].wstrb(v.byteEnable);
                     vs_axi_hp[i].wdata(v.data);
                     vs_axi_hp[i].wlast(v.last);
@@ -426,9 +426,9 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Get resp_read;
-                method ActionValue#(Axi3ReadResponse#(64, 12)) get() if (vs_axi_hp[i].rvalid() != 0);
-                    Axi3ReadResponse#(64, 12) v;
-                    v.id = {6'b0, vs_axi_hp[i].rid()};
+                method ActionValue#(Axi3ReadResponse#(64, 6)) get() if (vs_axi_hp[i].rvalid() != 0);
+                    Axi3ReadResponse#(64, 6) v;
+                    v.id = vs_axi_hp[i].rid();
                     v.resp = vs_axi_hp[i].rresp();
                     v.data = vs_axi_hp[i].rdata();
                     v.last = vs_axi_hp[i].rlast();
@@ -438,9 +438,9 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                 endmethod
             endinterface
             interface Get resp_b;
-                method ActionValue#(Axi3WriteResponse#(12)) get() if (vs_axi_hp[i].bvalid() != 0);
-                    Axi3WriteResponse#(12) v;
-                    v.id = {6'b0, vs_axi_hp[i].bid()};
+                method ActionValue#(Axi3WriteResponse#(6)) get() if (vs_axi_hp[i].bvalid() != 0);
+                    Axi3WriteResponse#(6) v;
+                    v.id = vs_axi_hp[i].bid();
                     v.resp = vs_axi_hp[i].bresp();
 
 		    vtopsw_axi_hp[i].bready <= 1;
@@ -545,7 +545,7 @@ instance Connectable#(Axi3Client#(40, busWidth,busWidthBytes,idWidth), Axi3Serve
    endmodule
 endinstance
 
-module mkPS7Slave#(Clock axi_clock, Reset axi_reset, Axi3Server#(32,32,4,12) ctrl, Integer nmasters, Axi3Client#(40,64,8,12) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
+module mkPS7Slave#(Clock axi_clock, Reset axi_reset, Axi3Server#(32,32,4,12) ctrl, Integer nmasters, Axi3Client#(40,64,8,6) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
     PS7LIB ps7 <- mkPS7LIB(axi_clock, axi_reset);
     BIBUF#(1) pclk <- mkBIBUF(ps7.ps.clk);
     BIBUF#(1) pporb <- mkBIBUF(ps7.ps.porb);

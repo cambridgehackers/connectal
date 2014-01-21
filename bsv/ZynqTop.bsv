@@ -46,7 +46,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(nmasters,ipins) constructor)(Z
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
    let top <- constructor(clocked_by defaultClock);
-   Axi3Client#(40,64,8,12) master = ?;
+   Axi3Client#(40,64,8,6) master = ?;
    if (nmasters > 0) begin
       master = top.m_axi[0];
    end

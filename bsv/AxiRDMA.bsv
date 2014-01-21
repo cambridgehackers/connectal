@@ -32,7 +32,7 @@ import BRAM::*;
 import PCIE::*;
 
 // XBSV Libraries
-import PcieToAxiBridge::*;
+//import PcieToAxiBridge::*;
 import AxiClientServer::*;
 import BRAMFIFOFLevel::*;
 import PortalMemory::*;
@@ -52,7 +52,7 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) s
 //
 interface AxiDMAServer#(numeric type dsz, numeric type dbytes);
    interface DMARequest request;
-   interface Axi3Client#(40,dsz,dbytes,12) m_axi;
+   interface Axi3Client#(40,dsz,dbytes,6) m_axi;
 endinterface
 
 interface ConfigureSglist;
@@ -63,13 +63,13 @@ endinterface
 
 interface AxiDMAWriteInternal#(numeric type dsz, numeric type dbytes);
    interface DMAWrite write;
-   interface Axi3Client#(40,dsz,dbytes,12) m_axi;
+   interface Axi3Client#(40,dsz,dbytes,6) m_axi;
    interface ConfigureSglist configure;
 endinterface
 
 interface AxiDMAReadInternal#(numeric type dsz, numeric type dbytes);
    interface DMARead read;
-   interface Axi3Client#(40,dsz,dbytes,12) m_axi;
+   interface Axi3Client#(40,dsz,dbytes,6) m_axi;
    interface ConfigureSglist configure;
 endinterface
 
@@ -161,19 +161,19 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
 
    interface Axi3Client m_axi;
       interface Get req_ar;
-	 method ActionValue#(Axi3ReadRequest#(40,12)) get();
+	 method ActionValue#(Axi3ReadRequest#(40,6)) get();
 	    let req = reqFifo.first();
 	    reqFifo.deq();
 	    let physAddr = paFifo.first();
 	    paFifo.deq();
 
 	    dreqFifo.enq(req);
-	    return Axi3ReadRequest{address:physAddr, len:truncate(req.burstLen-1), id:extend(req.tag),
+	    return Axi3ReadRequest{address:physAddr, len:truncate(req.burstLen-1), id:truncate(req.tag),
 				   size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
 	 endmethod
       endinterface
       interface Put resp_read;
-	 method Action put(Axi3ReadResponse#(dsz,12) response);
+	 method Action put(Axi3ReadResponse#(dsz,6) response);
 	    let activeChan = chanFifo.first();
 	    let resp = dreqFifo.first();
 	    if (valueOf(numReadClients) > 0)
@@ -281,7 +281,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
    interface Get req_ar = ?;
    interface Put resp_read = ?;
    interface Get req_aw;
-      method ActionValue#(Axi3WriteRequest#(40,12)) get();
+      method ActionValue#(Axi3WriteRequest#(40,6)) get();
 	 let req = reqFifo.first();
 	 reqFifo.deq();
 	 let physAddr = paFifo.first();
@@ -289,12 +289,12 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 	 $display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
 
 	 dreqFifo.enq(req);
-	 return Axi3WriteRequest{address:physAddr, len:truncate(req.burstLen-1), id:extend(req.tag),
+	 return Axi3WriteRequest{address:physAddr, len:truncate(req.burstLen-1), id:truncate(req.tag),
 				 size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
    interface Get resp_write;
-	 method ActionValue#(Axi3WriteData#(dsz, dbytes, 12)) get();
+	 method ActionValue#(Axi3WriteData#(dsz, dbytes, 6)) get();
 	    let activeChan = chanFifo.first();
 	    let resp = dreqFifo.first();
 	    DMAData#(dsz) tagdata = unpack(0);
@@ -316,15 +316,15 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 
 	    Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
 
-	    return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: extend(tagdata.tag) };
+	    return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: truncate(tagdata.tag) };
 	 endmethod
       endinterface
       interface Put resp_b;
-	 method Action put(Axi3WriteResponse#(12) resp);
+	 method Action put(Axi3WriteResponse#(6) resp);
 	    let activeChan = respFifo.first();
 	    respFifo.deq();
 	    if (valueOf(numWriteClients) > 0)
-	       writeClients[activeChan].writeDone.put(truncate(resp.id));
+	       writeClients[activeChan].writeDone.put(extend(resp.id));
 	 endmethod
       endinterface
    endinterface

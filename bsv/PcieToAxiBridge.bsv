@@ -39,7 +39,7 @@ endinterface
 interface PcieToAxiBridge#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
-   interface Axi3Client#(32,32,4,12) portal0; // to the portal control
+   interface Axi3Client#(32,32,4,6) portal0; // to the portal control
    interface GetPut#(TLPData#(16)) slave;
 
    // status for FPGA LEDs
@@ -337,7 +337,7 @@ endinterface
 interface PortalEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Client#(32,32,4,12) portal;
+    interface Axi3Client#(32,32,4,6) portal;
     interface Reg#(Bool)           byteSwap;
     interface Reg#(Bool)           interruptRequested;
     interface Reg#(Bit#(64))       interruptAddr;
@@ -451,38 +451,38 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     interface Get tlp_out = toGet(tlpOutFifo);
     interface Axi3Client portal;
        interface Get req_aw;
-	  method ActionValue#(Axi3WriteRequest#(32,12)) get() if (!interruptSecondHalf);
+	  method ActionValue#(Axi3WriteRequest#(32,6)) get() if (!interruptSecondHalf);
 	     let hdr = writeHeaderFifo.first;
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
-	     return Axi3WriteRequest { address: extend(writeHeaderFifo.first.addr) << 2, len: 0, id: zeroExtend(writeHeaderFifo.first.tag),
+	     return Axi3WriteRequest { address: extend(writeHeaderFifo.first.addr) << 2, len: 0, id: truncate(writeHeaderFifo.first.tag),
 				       size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
 	  endmethod
        endinterface: req_aw
        interface Get resp_write;
-	  method ActionValue#(Axi3WriteData#(32,4,12)) get();
+	  method ActionValue#(Axi3WriteData#(32,4,6)) get();
 	     writeDataFifo.deq;
 	     let data = writeDataFifo.first.data;
 	     if (byteSwapReg)
 		data = byteSwap(data);
-	     return Axi3WriteData { data: data, id: zeroExtend(writeDataFifo.first.tag), byteEnable: writeDataFifo.first.firstbe, last: 1 };
+	     return Axi3WriteData { data: data, id: truncate(writeDataFifo.first.tag), byteEnable: writeDataFifo.first.firstbe, last: 1 };
 	  endmethod
        endinterface: resp_write
        interface Put resp_b;
-	  method Action put(Axi3WriteResponse#(12) resp);
+	  method Action put(Axi3WriteResponse#(6) resp);
 	  endmethod
        endinterface: resp_b
        interface Get req_ar;
-	  method ActionValue#(Axi3ReadRequest#(32,12)) get();
+	  method ActionValue#(Axi3ReadRequest#(32,6)) get();
 	     let hdr = readHeaderFifo.first;
 	     readHeaderFifo.deq;
 	     readDataFifo.enq(hdr);
-	     return Axi3ReadRequest { address: extend(readHeaderFifo.first.addr) << 2, len: 0, id: zeroExtend(readHeaderFifo.first.tag),
+	     return Axi3ReadRequest { address: extend(readHeaderFifo.first.addr) << 2, len: 0, id: truncate(readHeaderFifo.first.tag),
 				     size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
 	    endmethod
        endinterface: req_ar
        interface Put resp_read;
-	  method Action put(Axi3ReadResponse#(32,12) resp) if (!interruptSecondHalf);
+	  method Action put(Axi3ReadResponse#(32,6) resp) if (!interruptSecondHalf);
 	        let hdr = readDataFifo.first;
 		//FIXME: assumes only 1 word read per request
 		readDataFifo.deq;
@@ -495,7 +495,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		completion.length = 1;
 		completion.tclass = hdr.tclass;
 		completion.cmplid = my_id;
-		completion.tag = truncate(resp.id);
+		completion.tag = extend(resp.id);
 		completion.bytecount = 4;
 		completion.reqid = hdr.reqid;
 		completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
@@ -521,8 +521,8 @@ endmodule: mkPortalEngine
 
 interface AxiSlaveEngine#(type buswidth);
     interface GetPut#(TLPData#(16))   tlps;
-    interface Axi3Server#(40,buswidth,TDiv#(buswidth,8),12)  slave3;
-    interface Axi4Server#(40,buswidth,TDiv#(buswidth,8),12)  slave4;
+    interface Axi3Server#(40,buswidth,TDiv#(buswidth,8),6)  slave3;
+    interface Axi4Server#(40,buswidth,TDiv#(buswidth,8),6)  slave4;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: AxiSlaveEngine
@@ -700,7 +700,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
     interface GetPut tlps = tuple2(toGet(tlpOutFifo),toPut(tlpInFifo));
     interface Axi3Server slave3;
 	interface Put req_aw;
-	   method Action put(Axi3WriteRequest#(40, 12) req)
+	   method Action put(Axi3WriteRequest#(40, 6) req)
 	      if (writeBurstCount == 0);
 
 	      let burstLen = req.len;
@@ -718,7 +718,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	      if ((addr >> 32) != 0) begin
 		 TLPMemory4DWHeader hdr_4dw = defaultValue;
 		 hdr_4dw.format = MEM_WRITE_4DW_DATA;
-		 hdr_4dw.tag = truncate(awid);
+		 hdr_4dw.tag = extend(awid);
 		 hdr_4dw.reqid = my_id;
 		 hdr_4dw.nosnoop = SNOOPING_REQD;
 		 hdr_4dw.addr = addr[40-1:2];
@@ -730,7 +730,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	      else begin
 		 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
 		 hdr_3dw.format = MEM_WRITE_3DW_DATA;
-		 hdr_3dw.tag = truncate(awid);
+		 hdr_3dw.tag = extend(awid);
 		 hdr_3dw.reqid = my_id;
 		 hdr_3dw.nosnoop = SNOOPING_REQD;
 		 hdr_3dw.addr = addr[32-1:2];
@@ -744,11 +744,11 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	      end
 	      tlpWriteHeaderFifo.enq(tlp);
 	      writeBurstCount <= zeroExtend(burstLen)+1;
-	      writeTag <= truncate(awid);
+	      writeTag <= extend(awid);
            endmethod
 	endinterface : req_aw
        interface Put resp_write;
-	   method Action put(Axi3WriteData#(busWidth,busWidthBytes,12) wdata)
+	   method Action put(Axi3WriteData#(busWidth,busWidthBytes,6) wdata)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
 
 	      writeBurstCount <= writeBurstCount - 1;
@@ -757,14 +757,14 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
            endmethod
        endinterface : resp_write
        interface Get resp_b;
-	   method ActionValue#(Axi3WriteResponse#(12)) get();
+	   method ActionValue#(Axi3WriteResponse#(6)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
-	      return Axi3WriteResponse { resp: 0, id: extend(tag)};
+	      return Axi3WriteResponse { resp: 0, id: truncate(tag)};
            endmethod
 	endinterface: resp_b
        interface Put req_ar;
-	   method Action put(Axi3ReadRequest#(40,12) req) if (writeDwCount == 0);
+	   method Action put(Axi3ReadRequest#(40,6) req) if (writeDwCount == 0);
 	      let burstLen = req.len;
 	      let addr = req.address;
 	      let arid = req.id;
@@ -777,7 +777,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	       if (addr[39:32] != 0) begin
 		   TLPMemory4DWHeader hdr_4dw = defaultValue;
 		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
-		   hdr_4dw.tag = truncate(arid);
+		   hdr_4dw.tag = extend(arid);
 		   hdr_4dw.reqid = my_id;
 		   hdr_4dw.nosnoop = SNOOPING_REQD;
 		   hdr_4dw.addr = addr[40-1:2];
@@ -790,7 +790,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	       else begin
 		   TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
 		   hdr_3dw.format = MEM_READ_3DW_NO_DATA;
-		   hdr_3dw.tag = truncate(arid);
+		   hdr_3dw.tag = extend(arid);
 		   hdr_3dw.reqid = my_id;
 		   hdr_3dw.nosnoop = SNOOPING_REQD;
 		   hdr_3dw.addr = addr[32-1:2];
@@ -804,20 +804,20 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
            endmethod
        endinterface : req_ar
        interface Get resp_read;
-	   method ActionValue#(Axi3ReadResponse#(buswidth,12)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
+	   method ActionValue#(Axi3ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
 	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
 	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
               Bit#(buswidth) v = 0;
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
-	      return Axi3ReadResponse { data: v, last: 0, id: extend(completionTagMimo.first[0]), resp: 0 };
+	      return Axi3ReadResponse { data: v, last: 0, id: truncate(completionTagMimo.first[0]), resp: 0 };
            endmethod
 	endinterface: resp_read
     endinterface: slave3
     interface Axi4Server slave4;
        interface Put req_aw;
-	   method Action put(Axi4WriteRequest#(40,12) req)
+	   method Action put(Axi4WriteRequest#(40,6) req)
 	      if (writeBurstCount == 0);
 
 	      let burstLen = req.len;
@@ -835,7 +835,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	      if ((addr >> 32) != 0) begin
 		 TLPMemory4DWHeader hdr_4dw = defaultValue;
 		 hdr_4dw.format = MEM_WRITE_4DW_DATA;
-		 hdr_4dw.tag = truncate(awid);
+		 hdr_4dw.tag = extend(awid);
 		 hdr_4dw.reqid = my_id;
 		 hdr_4dw.nosnoop = SNOOPING_REQD;
 		 hdr_4dw.addr = addr[40-1:2];
@@ -847,7 +847,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	      else begin
 		 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
 		 hdr_3dw.format = MEM_WRITE_3DW_DATA;
-		 hdr_3dw.tag = truncate(awid);
+		 hdr_3dw.tag = extend(awid);
 		 hdr_3dw.reqid = my_id;
 		 hdr_3dw.nosnoop = SNOOPING_REQD;
 		 hdr_3dw.addr = addr[32-1:2];
@@ -866,11 +866,11 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	      end
 	      tlpWriteHeaderFifo.enq(tlp);
 	      writeBurstCount <= zeroExtend(burstLen)+1;
-	      writeTag <= truncate(awid);
+	      writeTag <= extend(awid);
            endmethod
        endinterface: req_aw
        interface Put resp_write;
-	   method Action put(Axi4WriteData#(buswidth,busWidthBytes,12) wdata)
+	   method Action put(Axi4WriteData#(buswidth,busWidthBytes,6) wdata)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
 
 	      writeBurstCount <= writeBurstCount - 1;
@@ -879,14 +879,14 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
            endmethod
        endinterface
        interface Get resp_b;
-	   method ActionValue#(Axi4WriteResponse#(12)) get();
+	   method ActionValue#(Axi4WriteResponse#(6)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
-	      return Axi4WriteResponse { resp: 0, id: extend(tag)};
+	      return Axi4WriteResponse { resp: 0, id: truncate(tag)};
            endmethod
 	endinterface: resp_b
         interface Put req_ar;
-	   method Action put(Axi4ReadRequest#(40,12) req) if (writeDwCount == 0);
+	   method Action put(Axi4ReadRequest#(40,6) req) if (writeDwCount == 0);
 	      let burstLen = req.len;
 	      let addr = req.address;
 	      let arid = req.id;
@@ -899,7 +899,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	       if (addr[39:32] != 0) begin
 		   TLPMemory4DWHeader hdr_4dw = defaultValue;
 		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
-		   hdr_4dw.tag = truncate(arid);
+		   hdr_4dw.tag = extend(arid);
 		   hdr_4dw.reqid = my_id;
 		   hdr_4dw.nosnoop = SNOOPING_REQD;
 		   hdr_4dw.addr = addr[40-1:2];
@@ -912,7 +912,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	       else begin
 		   TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
 		   hdr_3dw.format = MEM_READ_3DW_NO_DATA;
-		   hdr_3dw.tag = truncate(arid);
+		   hdr_3dw.tag = extend(arid);
 		   hdr_3dw.reqid = my_id;
 		   hdr_3dw.nosnoop = SNOOPING_REQD;
 		   hdr_3dw.addr = addr[32-1:2];
@@ -926,14 +926,14 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
            endmethod
        endinterface: req_ar
        interface Get resp_read;
-	   method ActionValue#(Axi4ReadResponse#(buswidth,12)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
+	   method ActionValue#(Axi4ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
 	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
 	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
               Bit#(buswidth) v = 0;
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
-	      return Axi4ReadResponse { data: v, last: 0, id: zeroExtend(completionTagMimo.first[0]), resp: 0 };
+	      return Axi4ReadResponse { data: v, last: 0, id: truncate(completionTagMimo.first[0]), resp: 0 };
            endmethod
 	endinterface: resp_read
     endinterface: slave4
