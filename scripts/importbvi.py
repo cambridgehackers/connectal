@@ -37,6 +37,8 @@ clock_params = []
 toknum = 0
 tokval = 0
 modulename = ''
+imported_name = 'PS7'
+#imported_name = 'BIBUF'
 
 class PinType(object):
     def __init__(self, mode, type, name, origname):
@@ -102,7 +104,7 @@ def parse_item():
                         paramlist['attr'].append([paramstr])
                     else:
                         paramlist['attr'].append([paramstr, plist])
-                if paramname == 'cell' and paramstr == 'PS7':
+                if paramname == 'cell' and paramstr == imported_name:
                     #print('CC', paramstr)
                     modulename = paramstr
                     pinlist = {}
