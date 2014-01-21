@@ -93,10 +93,6 @@ int main(int argc, char **argv)
                 fdlist[1] = fd;
                 maxfd = fd+1;
                 rc = tcgetattr(fd, &terminfo);
-                //printf("iflag %x\n", (int)terminfo.c_iflag);
-                //printf("oflag %x\n", (int)terminfo.c_oflag);
-                //printf("cflag %x\n", (int)terminfo.c_cflag);
-                //printf("lflag %x\n", (int)terminfo.c_lflag);
                 terminfo.c_ispeed = B115200;
                 terminfo.c_ospeed = B115200;
                 rc = tcsetattr(fd, TCSANOW, &terminfo);
