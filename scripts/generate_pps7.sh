@@ -25,9 +25,7 @@ scripts/importbvi.py \
     -d DDR_ARB \
     -e C_NUM_F2P_INTR_INPUTS:16 \
     -i PS7EXTENDED:Pps7Can:Pps7Core:Pps7Dma:Pps7Enet:Pps7Event:Pps7Fclk_clktrig:Pps7Fpga:Pps7Ftmd:Pps7Ftmt:Pps7Pjtag:Pps7Sdio:Pps7Spi:Pps7Sram:Pps7Trace:Pps7Ttc:Pps7Uart:Pps7Usb:Pps7Wdt \
-    xilinx/sources/processing_system7/processing_system7.v >PPS7.bsv
-
-#    ../import_components/Xilinx/Vivado/2013.2/data/ip/xilinx/processing_system7_v5_01/hdl/verilog/processing_system7.v >PPS7.bsv
+    xilinx.unused/sources/processing_system7/processing_system7.v >PPS7.bsv
 
 #    -m DDR_DQS:DDR_DQS_p -m DDR_Clk:DDR_Clk_p \
 #    -c ENET0_GMII_RX_CLK -c ENET0_GMII_TX_CLK \
