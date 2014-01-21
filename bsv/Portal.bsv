@@ -56,5 +56,5 @@ interface PortalTop#(numeric type addrWidth, numeric type nmasters, numeric type
    interface pins             pins;
 endinterface
 
-typedef PortalTop#(32,0,64,Empty)     StdPortalTop;
+typedef PortalTop#(addrWidth,0,64,Empty)     StdPortalTop#(numeric type addrWidth);
 typedef PortalTop#(addrWidth,1,64,Empty)     StdPortalDmaTop#(numeric type addrWidth);

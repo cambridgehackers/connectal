@@ -16,7 +16,7 @@ import StructRequestWrapper::*;
 // defined by user
 import Struct::*;
 
-module mkPortalTop(StdPortalTop);
+module mkPortalTop(StdPortalTop#(addrWidth));
 
    // instantiate user portals
    StructIndicationProxy structIndicationProxy <- mkStructIndicationProxy(7);

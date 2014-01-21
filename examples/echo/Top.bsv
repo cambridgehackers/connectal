@@ -22,7 +22,7 @@ import Swallow::*;
 
 typedef enum {EchoIndication, EchoRequest, Swallow} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop);
+module mkPortalTop(StdPortalTop#(addrWidth));
 
    // instantiate user portals
    EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);

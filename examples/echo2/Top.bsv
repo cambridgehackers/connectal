@@ -18,7 +18,7 @@ import SayProxy::*;
 // defined by user
 import Say::*;
 
-module mkPortalTop(StdPortalTop);
+module mkPortalTop(StdPortalTop#(addrWidth));
 
    // instantiate user portals
    SayProxy sayProxy <- mkSayProxy(7);
