@@ -23,7 +23,7 @@
 
 import Clocks::*;
 import DefaultValue::*;
-import XilinxCells::*;
+import XbsvXilinxCells::*;
 import GetPut::*;
 import Connectable::*;
 import Vector::*;
@@ -551,6 +551,10 @@ endinstance
 
 module mkPS7Slave#(Clock axi_clock, Reset axi_reset, Axi3Server#(32,32,4,12) ctrl, Integer nmasters, Axi3Client#(40,64,8,12) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
     PS7LIB ps7 <- mkPS7LIB(axi_clock, axi_reset);
+    BIBUF#(1) pclk <- mkBIBUF(ps7.ps.clk);
+    BIBUF#(1) pporb <- mkBIBUF(ps7.ps.porb);
+    BIBUF#(1) psrstb <- mkBIBUF(ps7.ps.srstb);
+    BIBUF#(54) pmio <- mkBIBUF(ps7.mio);
 
     rule send_int_rule;
     ps7.irq.f2p({19'b0, interrupt ? 1'b1 : 1'b0});
@@ -583,8 +587,13 @@ end
     interface Inout  vrn = ps7.ddr.vrn;
     interface Inout  vrp = ps7.ddr.vrp;
     interface Inout  web = ps7.ddr.web;
-    interface Inout  mio = ps7.mio;
-    interface Pps7Ps ps = ps7.ps;
+    interface Inout  mio = pmio.pad;
+    interface Pps7Ps ps = (interface Pps7Ps;
+       interface clk = pclk.pad;
+       interface porb = pporb.pad;
+       interface srstb = psrstb.pad;
+       endinterface
+       );
     interface Bit    fclk_clk0 = ps7.fclkclk()[0];
     interface Bit    fclk_reset0_n = ps7.fclkresetn()[0];
 endmodule

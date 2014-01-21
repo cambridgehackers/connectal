@@ -104,12 +104,15 @@ write_bitstream -force -bin_file $outputDir/%(Dut)s.bit
 '''
 
 tclzynqrewireclock = '''
-disconnect_net -net [get_nets -of_objects [get_pins CLK_GATE_fclk_clk0_OBUF_inst/I]] -objects CLK_GATE_fclk_clk0_OBUF_inst/I
-disconnect_net -net [get_nets -of_objects [get_pins CLK_fclk_clk0_OBUF_inst/I]] -objects top_ps7_ps7_foo/FCLK_CLK0
-connect_net -net CLK_IBUF_BUFG -objects top_ps7_ps7_foo/FCLK_CLK0
-disconnect_net -net [get_nets -of_objects [get_pins top_ps7_ps7_foo/FCLK_RESET0_N]] -objects top_ps7_ps7_foo/FCLK_RESET0_N
-connect_net -net RST_N_IBUF -objects top_ps7_ps7_foo/FCLK_RESET0_N
+set clkname "top_ps7_ps7_foo/FCLKCLK[0]"
+set rstname "top_ps7_ps7_foo/FCLKRESETN[0]"
+disconnect_net -net [get_nets -of_objects [get_pins $clkname]] -objects $clkname
+disconnect_net -net fclk_clk0 -objects [get_pins -of_objects [get_nets fclk_clk0]]
+unplace_cell top_ps7_ps7_foo
+connect_net -net CLK_IBUF -objects $clkname
+disconnect_net -net [get_nets -of_objects [get_pins $rstname]] -objects $rstname
 disconnect_net -net RST_N_IBUF -objects RST_N_IBUF_inst/O
+connect_net -net RST_N_IBUF -objects $rstname
 '''
 
 makefileTemplate='''

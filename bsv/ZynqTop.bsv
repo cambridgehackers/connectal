@@ -27,7 +27,7 @@ import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiClientServer   :: *;
-import PS7::*;
+import PS7LIB::*;
 
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
