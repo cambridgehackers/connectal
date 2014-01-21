@@ -107,14 +107,10 @@ int main(int argc, const char **argv)
   sleep(1);
   dma->readSglist(ChannelType_Read, 0, 0x1000);
   sleep(1);
-  dma->readSglist(ChannelType_Read, ref_srcAlloc, 0);
-  sleep(1);
-  dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x1000);
-  sleep(1);
-  dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x2000);
-  sleep(1);
-  dma->readSglist(ChannelType_Read, ref_srcAlloc, 0x3000);
-  sleep(1);
+  for (int i = 0; i < 12; i++) {
+    dma->readSglist(ChannelType_Read, ref_srcAlloc, i*0x1000);
+    sleep(1);
+  }
   fprintf(stderr, "Main::starting read %08x\n", numWords);
   device->startRead(ref_srcAlloc, 128, 16);
 
