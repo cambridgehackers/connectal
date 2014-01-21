@@ -390,14 +390,17 @@ int PortalMemory::reference(PortalAlloc* pa)
     assert(i<32); // the HW has defined SGListMaxLen as 32
     fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, pa->entries[i].dma_address, pa->entries[i].length);
     sglist(id, pa->entries[i].dma_address, pa->entries[i].length);
-    if (sglistCallbackRegistered)
+    if (sglistCallbackRegistered) {
+      fprintf(stderr, "sem_wait\n");
       sem_wait(&sglistSem);
-    else
+    } else {
+      fprintf(stderr, "ugly hack\n");
       sleep(1); // ugly hack.  should use a semaphore for flow-control (mdk)
+    }
   }
 #else
   sock_fd_write(p_fd.write.s2, pa->header.fd);
-  paref(id, pa->header.size);
+  sglist(id, 0, pa->header.size);
   if (sglistCallbackRegistered)
     sem_wait(&sglistSem);
   else
@@ -407,6 +410,7 @@ int PortalMemory::reference(PortalAlloc* pa)
 }
 void PortalMemory::sglistResp(unsigned long channelId)
 {
+  fprintf(stderr, "PortalMemory::sglistResp channelId=%ld\n", channelId);
   sem_post(&sglistSem);
 }
 

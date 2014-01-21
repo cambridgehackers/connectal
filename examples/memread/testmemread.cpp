@@ -34,7 +34,9 @@ public:
   }
   virtual void readDone(unsigned long v){
     fprintf(stderr, "Memread::readDone mismatch=%lx\n", v);
-    exit(v);
+    mismatchCount = v;
+    if (mismatchesReceived == mismatchCount)
+      exit(v ? 1 : 0);
   }
   virtual void started(unsigned long words){
     fprintf(stderr, "Memread::started: words=%lx\n", words);
@@ -46,12 +48,18 @@ public:
   virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
     fprintf(stderr, "Memread::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
   }  
-  virtual void mismatch(unsigned long offset, unsigned long long v) {
-    fprintf(stderr, "Mismatch at %lx %llx\n", offset, v);
+  virtual void mismatch(unsigned long offset, unsigned long long ev, unsigned long long v) {
+    fprintf(stderr, "Mismatch at %lx %llx != %llx\n", offset, ev, v);
+
+    mismatchesReceived++;
+    if (mismatchesReceived == mismatchCount)
+      exit(1);
   }
 
-  MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits){}
-
+  MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits), mismatchCount(0), mismatchesReceived(0){}
+private:
+  int mismatchCount;
+  int mismatchesReceived;
 };
 
 int main(int argc, const char **argv)

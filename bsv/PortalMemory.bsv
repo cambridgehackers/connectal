@@ -49,11 +49,11 @@ typedef struct {
 //
 interface DMAIndication;
    method Action reportStateDbg(DmaDbgRec rec);
-   method Action sglistResp(Bit#(32) pref, Bit#(32) idx);
+   method Action sglistResp(Bit#(32) pref, Bit#(32) idx, Bit#(32) physPageNum);
    method Action parefResp(Bit#(32) v);
-   method Action sglistEntry(Bit#(64) physAddr);
+   method Action sglistEntry(Bit#(32) o, Bit#(64) physAddr);
    method Action badHandle(Bit#(32) handle, Bit#(32) address);
-   method Action badAddr(Bit#(32) handle, Bit#(32) address);
+   method Action badAddr(Bit#(32) handle, Bit#(32) offset, Bit#(64) physAddr);
 endinterface
 
 //
@@ -75,15 +75,6 @@ interface DMARequest;
    //
    // @note Only implemented for hardware
    method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
-
-   //
-   // @brief Maps the indicated object to remote software, e.g. bluesim
-   //
-   // @param pref Specifies the object to be map
-   // @param size Number of bytes of the object to map
-   //
-   // @note Only implemented for software 
-   method Action paref(Bit#(32) pref, Bit#(32) size);
 
    method Action readSglist(ChannelType rc, Bit#(32) pref, Bit#(32) addr);
 endinterface

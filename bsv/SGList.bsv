@@ -32,7 +32,7 @@ import PortalRMemory::*;
 import StmtFSM::*;
 
 // In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
-typedef 4 NumSGLists;
+typedef 16 NumSGLists;
 typedef Bit#(TLog#(NumSGLists)) SGListId;
 typedef 32 SGListMaxLen;
 typedef Bit#(TLog#(TMul#(NumSGLists, SGListMaxLen))) SGListIdx;
@@ -130,6 +130,8 @@ interface SGListMMU#(numeric type paSize);
    method Action page(SGListId id, Bit#(PageIdxSize) vPageNum, Bit#(TSub#(paSize,SGListPageShift)) pPageNum);
    method Action addrReq(SGListId id, Bit#(DmaAddrSize) off);
    method ActionValue#(Bit#(paSize)) addrResp();
+   method Action dbgAddrReq(SGListId id, Bit#(DmaAddrSize) off);
+   method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(paSize))) dbgAddrResp();
 endinterface
 
 // if this structure becomes too expensive, we can switch to a multi-level structure
@@ -146,7 +148,8 @@ module mkSGListMMU(SGListMMU#(paSize))
    BRAM1Port#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) pageTable <- mkBRAM1Server(cfg);
    FIFOF#(Bit#(SGListPageShift)) offs <- mkFIFOF;
    FIFOF#(Bit#(paSize)) respFifo <- mkFIFOF;
-   
+   FIFOF#(Bit#(PageIdxSize)) pageIdxs <- mkFIFOF;
+
    let page_shift = fromInteger(valueOf(SGListPageShift));
 
    (* aggressive_implicit_conditions *)
@@ -168,9 +171,23 @@ module mkSGListMMU(SGListMMU#(paSize))
       pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,off[valueOf(DmaAddrSize)-1:page_shift]}, datain:?});
    endmethod
    
-   method ActionValue#(Bit#(paSize)) addrResp();
+   method ActionValue#(Bit#(paSize)) addrResp() if (!pageIdxs.notEmpty());
       respFifo.deq();
       return respFifo.first();
+   endmethod
+
+   method Action dbgAddrReq(SGListId id, Bit#(DmaAddrSize) off);
+      offs.enq(truncate(off));
+      let pageIdx = off[valueOf(DmaAddrSize)-1:page_shift];
+      pageIdxs.enq(pageIdx);
+      pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pageIdx}, datain:?});
+   endmethod
+   
+   method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(paSize))) dbgAddrResp();
+      respFifo.deq();
+      let pageIdx = pageIdxs.first();
+      pageIdxs.deq();
+      return tuple2(pageIdx, respFifo.first());
    endmethod
    
 endmodule

@@ -20,13 +20,13 @@ public:
   virtual void configResp(unsigned long channelId){
     fprintf(stderr, "configResp: %lx\n", channelId);
   }
-  virtual void sglistResp(unsigned long channelId, unsigned long idx){
-    fprintf(stderr, "sglistResp: %lx idx=%lx\n", channelId, idx);
+  virtual void sglistResp(unsigned long channelId, unsigned long idx, unsigned long pa){
+    fprintf(stderr, "sglistResp: %lx idx=%lx physAddr=%lx\n", channelId, idx, pa);
     if (portalMemory)
       portalMemory->sglistResp(channelId);
   }
-  virtual void sglistEntry(unsigned long long physAddr){
-    fprintf(stderr, "sglistEntry: physAddr=%llx\n", physAddr);
+  virtual void sglistEntry(unsigned long handle, unsigned long long physAddr){
+    fprintf(stderr, "sglistEntry: handle=%lx physAddr=%llx\n", handle, physAddr);
   }
   virtual void parefResp(unsigned long channelId){
     fprintf(stderr, "parefResp: %lx\n", channelId);
@@ -34,7 +34,7 @@ public:
   virtual void badHandle ( const unsigned long handle, const unsigned long address ) {
     fprintf(stderr, "DMAIndication bad handle pref=%lx addr=%lx\n", handle, address);
   }
-  virtual void badAddr ( const unsigned long handle, const unsigned long address ) {
-    fprintf(stderr, "DMAIndication bad address pref=%lx addr=%lx\n", handle, address);
+  virtual void badAddr ( const unsigned long handle, const unsigned long address , const unsigned long long pa) {
+    fprintf(stderr, "DMAIndication bad address pref=%lx addr=%lx physaddr=%llx\n", handle, address, pa);
   }
 };

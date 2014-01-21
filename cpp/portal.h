@@ -120,7 +120,6 @@ class PortalMemory : public PortalProxy
   void sglistResp(unsigned long channelId);
   void useSemaphore() { sglistCallbackRegistered = true; }
   virtual void sglist(unsigned long pref, unsigned long long addr, unsigned long len) = 0;
-  virtual void paref(unsigned long pref, unsigned long size) = 0;
 };
 
 // ugly hack (mdk)

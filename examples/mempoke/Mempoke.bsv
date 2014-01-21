@@ -26,7 +26,6 @@ import GetPutF::*;
 
 import AxiClientServer::*;
 import AxiRDMA::*;
-import BsimRDMA::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 

@@ -37,15 +37,15 @@ module mkTbPcie(Empty);
       method Action reportStateDbg(DmaDbgRec rec);
 	 $display("reportStateDbg rec=%h %x %h %x", rec.x, rec.y, rec.z, rec.w);
       endmethod
-      method Action sglistResp(Bit#(32) pref, Bit#(32) idx);
-	 $display("sglistResp pref=%d idx=%d", pref, idx);
+      method Action sglistResp(Bit#(32) pref, Bit#(32) idx, Bit#(32) pa);
+	 $display("sglistResp pref=%d idx=%d pa=%h", pref, idx, pa);
       endmethod
       method Action parefResp(Bit#(32) v);
       endmethod
       method Action sglistEntry(Bit#(64) physAddr);
 	 $display("sglistEntry physAddr=%h", physAddr);
       endmethod
-      method Action badAddr(Bit#(32) handle, Bit#(40) address);
+      method Action badAddr(Bit#(32) handle, Bit#(32) address);
 	 $display("badAddr handle=%d address=%h", handle, address);
       endmethod
       endinterface);
@@ -75,7 +75,7 @@ module mkTbPcie(Empty);
    AxiDMAServer#(64,8)   dma <- mkAxiDMAServer(dmaIndication, numRequests, readClients, writeClients);
 
    PciId myId = PciId { bus: 1, dev: 1, func: 0 };
-   AxiSlaveEngine#(64,8) axiSlaveEngine <- mkAxiSlaveEngine(myId);
+   AxiSlaveEngine#(64) axiSlaveEngine <- mkAxiSlaveEngine(myId);
 
    let axi_master = dma.m_axi;
    mkConnection(axi_master, axiSlaveEngine.slave3);

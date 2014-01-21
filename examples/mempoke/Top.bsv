@@ -13,7 +13,6 @@ import Portal::*;
 import Leds::*;
 import PortalMemory::*;
 import AxiRDMA::*;
-import BsimRDMA::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 
@@ -36,12 +35,8 @@ module mkPortalTop(StdPortalDmaTop);
    Vector#(1, DMAWriteClient#(64)) writeClients = newVector();
    writeClients[0] = dma_stream_write_chan.dmaClient;
    readClients[0]  = dma_stream_read_chan.dmaClient;
-`ifdef BSIM
-   BsimDMAServer#(64)     dma <- mkBsimDMAServer(dmaIndicationProxy.ifc, readClients, writeClients);
-`else
    Integer               numRequests = 8;
    AxiDMAServer#(64,8)   dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
-`endif
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(1005,dma.request);
 
    
@@ -65,7 +60,5 @@ module mkPortalTop(StdPortalDmaTop);
    
    interface ReadOnly interrupt = interrupt_mux;
    interface StdAxi3Slave ctrl = ctrl_mux;
-`ifndef BSIM
    interface Vector m_axi = replicate(dma.m_axi);
-`endif
 endmodule

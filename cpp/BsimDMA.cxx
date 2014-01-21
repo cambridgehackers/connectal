@@ -79,12 +79,13 @@ extern "C" {
   }
 
 
-  void pareff(unsigned long pref, unsigned long size){
+  unsigned long pareff(unsigned long pref, unsigned long size){
     assert(pref < 16);
     sock_fd_read(p_fd.write.s2, &(fd[pref-1]));
     buffer[pref-1] = (unsigned char *)mmap(0, size, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref-1], 0);
-    //fprintf(stderr, "BsimDMA::pareff pref=%ld, buffer=%08lx\n", pref, buffer[pref]);
+    fprintf(stderr, "BsimDMA::pareff pref=%ld, buffer=%08lx\n", pref, buffer[pref-1]);
     buffer_len[pref-1] = size/sizeof(unsigned char);
+    return buffer[pref-1];
   }
 
 }

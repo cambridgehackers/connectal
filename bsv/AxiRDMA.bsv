@@ -40,6 +40,10 @@ import PortalRMemory::*;
 import Adapter::*;
 import SGList::*;
 
+`ifdef BSIM
+import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
+`endif
+
 //
 // @brief AxiDMA provides the configuration and AXI bus interface for DMA
 //
@@ -98,8 +102,9 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
    endrule
    
    rule sglistEntry if (debugReg);
-      let physAddr <- sgl.addrResp();
-      dmaIndication.sglistEntry(extend(physAddr));
+      let tpl <- sgl.dbgAddrResp();
+      let physAddr = tpl_2(tpl);
+      dmaIndication.sglistEntry(extend(tpl_1(tpl)), extend(physAddr));
       debugReg <= False;
    endrule
 
@@ -122,9 +127,9 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       let physAddr <- sgl.addrResp();
       let req = lreqFifo.first();
       lreqFifo.deq();
-      if (physAddr == 0) begin
+      if (physAddr <= (1 << valueOf(SGListPageShift))) begin
 	 // squash request
-	 dmaIndication.badAddr(req.handle, extend(req.address));
+	 dmaIndication.badAddr(req.handle, extend(req.address), extend(physAddr));
       end
       else begin
 	 reqFifo.enq(req);
@@ -134,12 +139,14 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
 
    interface ConfigureSglist configure;
        method Action page(Bit#(32) tabsel, Bit#(PageIdxSize) off, Bit#(TSub#(40,SGListPageShift)) addr) if (isConfiguring);
+	  if (addr == 0) // for debugging
+	     dmaIndication.badAddr(tabsel, extend(off), extend(addr));
 	  sgl.page(truncate(tabsel), off, addr);
        endmethod
 
        method Action readSglist(Bit#(32) pref, Bit#(DmaAddrSize) addr) if (!debugReg);
 	  debugReg <= True;
-	  sgl.addrReq(truncate(pref), addr);
+	  sgl.dbgAddrReq(truncate(pref), addr);
        endmethod
       method Action configuring(Bool c);
 	 isConfiguring <= c;
@@ -218,8 +225,9 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
    endrule
    
    rule readEntry if (debugReg);
-      let physAddr <- sgl.addrResp();
-      dmaIndication.sglistEntry(extend(physAddr));
+      let tpl <- sgl.dbgAddrResp();
+      let physAddr = tpl_2(tpl);
+      dmaIndication.sglistEntry(extend(tpl_1(tpl)), extend(physAddr));
       debugReg <= False;
    endrule
 
@@ -238,10 +246,10 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
       let physAddr <- sgl.addrResp();
       let req = lreqFifo.first();
       lreqFifo.deq();
-      if (physAddr == 0) begin
+      if (physAddr <= (1 << valueOf(SGListPageShift))) begin
 	 // squash request
 	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.handle, req.address, physAddr);
-	 dmaIndication.badAddr(req.handle, extend(req.address));
+	 dmaIndication.badAddr(req.handle, extend(req.address), extend(physAddr));
       end
       else begin
 	 reqFifo.enq(req);
@@ -355,7 +363,7 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
       if(idxReg+1 == lenReg) begin
 	 reader.configure.configuring(False);
 	 writer.configure.configuring(False);
-	 dmaIndication.sglistResp(prefReg, extend(idxReg));
+	 dmaIndication.sglistResp(prefReg, extend(idxReg), extend(addrReg));
       end
    endrule
 
@@ -369,6 +377,12 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
 	 dmaIndication.reportStateDbg(rv);
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len) if (idxReg == lenReg);
+`ifdef BSIM
+	 let va <- pareff(pref, len);
+	 addr[39:32] = truncate(pref);
+	 addr[31:0] = 0;
+	 $display("sglist.pareff handle=%d addr=%h len=%h", pref, addr, len);
+`endif
 	 let idx = idxReg;
 	 if (prefReg != pref)
 	    idx = 0;
@@ -377,7 +391,7 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
 	 addrReg <= truncate(addr >> page_shift);
 	 idxReg <= idx;
 	 if (addr == 0 && len == 0) begin // sw marks end-of-list with zeros
-	    dmaIndication.sglistResp(pref, extend(idx));
+	    dmaIndication.sglistResp(pref, extend(idx), 0);
 	 end
 	 else begin
 	    reader.configure.configuring(True);
