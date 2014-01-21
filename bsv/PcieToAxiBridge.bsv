@@ -460,7 +460,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	  endmethod
        endinterface: req_aw
        interface Get resp_write;
-	  method ActionValue#(Axi3WriteData#(32,4,12)) get();
+	  method ActionValue#(Axi3WriteData#(32,12)) get();
 	     writeDataFifo.deq;
 	     let data = writeDataFifo.first.data;
 	     if (byteSwapReg)
@@ -748,7 +748,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
            endmethod
 	endinterface : req_aw
        interface Put resp_write;
-	   method Action put(Axi3WriteData#(busWidth,busWidthBytes,6) wdata)
+	   method Action put(Axi3WriteData#(busWidth,6) wdata)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
 
 	      writeBurstCount <= writeBurstCount - 1;
@@ -870,7 +870,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
            endmethod
        endinterface: req_aw
        interface Put resp_write;
-	   method Action put(Axi4WriteData#(buswidth,busWidthBytes,6) wdata)
+	   method Action put(Axi4WriteData#(buswidth,6) wdata)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
 
 	      writeBurstCount <= writeBurstCount - 1;
