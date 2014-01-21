@@ -101,25 +101,39 @@ endinterface
 //
 module mkDMAReadBuffer(DMAReadBuffer#(dsz, maxBurst))
    provisos(Add#(1,a__,dsz),
-	    Add#(b__, TAdd#(1, TLog#(maxBurst)), 8));
+	    Add#(b__, TAdd#(1,TLog#(maxBurst)), 8));
 
-   FIFOFLevel#(DMAData#(dsz),maxBurst) readBuffer <- mkBRAMFIFOFLevel;
-   FIFOF#(DMAAddressRequest)       reqOutstanding <- mkFIFOF();
+   FIFOFLevel#(DMAData#(dsz),maxBurst)  readBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(DMAAddressRequest)        reqOutstanding <- mkFIFOF();
+   Ratchet#(TAdd#(1,TLog#(maxBurst))) unfulfilled <- mkRatchet(0);
+   
+   // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
+   Bit#(TAdd#(1,TLog#(maxBurst))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
 
    interface DMAReadServer dmaServer;
       interface PutF readReq = toPutF(reqOutstanding);
       interface GetF readData = toGetF(readBuffer);
    endinterface
    interface DMAReadClient dmaClient;
-      // only issue the readRequest when sufficient buffering is available
       interface GetF readReq;
-	 method ActionValue#(DMAAddressRequest) get if (readBuffer.lowWater(truncate(reqOutstanding.first.burstLen)));
+	 method ActionValue#(DMAAddressRequest) get if (readBuffer.lowWater(sreq));
 	    reqOutstanding.deq;
+	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
 	    return reqOutstanding.first;
 	 endmethod
-         method notEmpty = reqOutstanding.notEmpty;
+         method Bool notEmpty();
+	    return readBuffer.lowWater(sreq);
+	 endmethod
       endinterface
-      interface PutF readData = toPutF(readBuffer);
+      interface PutF readData;
+	 method Action put(DMAData#(dsz) x);
+	    readBuffer.fifo.enq(x);
+	    unfulfilled.decrement(1);
+	 endmethod
+	 method notFull();
+	    return readBuffer.fifo.notFull();
+	 endmethod
+      endinterface
    endinterface
 endmodule
 
@@ -136,6 +150,10 @@ module mkDMAWriteBuffer(DMAWriteBuffer#(bsz, maxBurst))
    FIFOFLevel#(DMAData#(bsz),maxBurst) writeBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(DMAAddressRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(8))                        doneTags <- mkFIFOF();
+   Ratchet#(TAdd#(1,TLog#(maxBurst)))  unfulfilled <- mkRatchet(0);
+   
+   // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.
+   Bit#(TAdd#(1,TLog#(maxBurst))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
 
    interface DMAWriteServer dmaServer;
       interface PutF writeReq = toPutF(reqOutstanding);
@@ -143,17 +161,26 @@ module mkDMAWriteBuffer(DMAWriteBuffer#(bsz, maxBurst))
       interface GetF writeDone = toGetF(doneTags);
    endinterface
    interface DMAWriteClient dmaClient;
-      // only issue the writeRequest when sufficient data has been buffered
       interface GetF writeReq;
-	 method ActionValue#(DMAAddressRequest) get if (writeBuffer.highWater(truncate(reqOutstanding.first.burstLen)));
+	 method ActionValue#(DMAAddressRequest) get if (writeBuffer.highWater(sreq));
 	    reqOutstanding.deq;
+	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
 	    return reqOutstanding.first;
 	 endmethod
 	 method Bool notEmpty();
-	    return reqOutstanding.notEmpty && writeBuffer.highWater(truncate(reqOutstanding.first.burstLen));
+	    return writeBuffer.highWater(sreq);
 	 endmethod
       endinterface
-      interface GetF writeData = toGetF(writeBuffer);
+      interface GetF writeData;
+	 method ActionValue#(DMAData#(bsz)) get();
+	    unfulfilled.decrement(1);
+	    writeBuffer.fifo.deq;
+	    return writeBuffer.fifo.first;
+	 endmethod
+	 method Bool notEmpty();
+	    return writeBuffer.fifo.notEmpty;
+	 endmethod
+      endinterface
       interface PutF writeDone = toPutF(doneTags);
    endinterface
 endmodule
