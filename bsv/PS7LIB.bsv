@@ -521,29 +521,7 @@ interface ZynqPins;
     interface Bit#(1)                       fclk_reset0_n;
 endinterface
 
-// special mkConnection that truncates the address until we make AxiRDMA polymorphic over addrWidth
-instance Connectable#(Axi3Client#(32, busWidth,idWidth), Axi3Server#(32, busWidth,idWidth));
-   module mkConnection#(Axi3Client#(32, busWidth,idWidth) m, Axi3Server#(32, busWidth,idWidth) s)(Empty);
-
-      //mkConnection(m.req_ar, s.req_ar);
-      rule connect_req_ar;
-	 let req <- m.req_ar.get();
-	 s.req_ar.put(Axi3ReadRequest { address: truncate(req.address), len: req.len, id: req.id, burst: req.burst, cache: req.cache, lock: req.lock, qos: req.qos, prot:req.prot, size: req.size });
-      endrule
-      mkConnection(s.resp_read, m.resp_read);
-
-      //mkConnection(m.req_aw, s.req_aw);
-      rule connect_req_aw;
-	 let req <- m.req_aw.get();
-	 s.req_aw.put(Axi3WriteRequest { address: truncate(req.address), len: req.len, id: req.id, burst: req.burst, cache: req.cache, lock: req.lock, qos: req.qos, prot:req.prot, size: req.size });
-      endrule
-      mkConnection(m.resp_write, s.resp_write);
-      mkConnection(s.resp_b, m.resp_b);
-
-   endmodule
-endinstance
-
-module mkPS7Slave#(Clock axi_clock, Reset axi_reset, Axi3Server#(32,32,12) ctrl, Integer nmasters, Axi3Client#(32,64,6) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
+module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Server#(32,32,12) ctrl, Integer nmasters, Axi3Client#(32,64,6) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
     PS7LIB ps7 <- mkPS7LIB(axi_clock, axi_reset);
 
     rule send_int_rule;

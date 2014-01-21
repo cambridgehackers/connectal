@@ -50,7 +50,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(nmasters,ipins) constructor)(Z
    if (nmasters > 0) begin
       master = top.m_axi[0];
    end
-   ZynqPins ps7 <- mkPS7Slave(defaultClock, defaultReset, top.ctrl, nmasters, master, top.interrupt);
+   ZynqPins ps7 <- mkPS7(defaultClock, defaultReset, top.ctrl, nmasters, master, top.interrupt);
 
    interface zynq = ps7;
    interface leds = top.leds;
