@@ -6,7 +6,6 @@ import FIFO::*;
 
 
 // portz libraries
-import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;

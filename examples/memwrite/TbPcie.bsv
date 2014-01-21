@@ -15,7 +15,6 @@ import GetPut::*;
 
 // portz libraries
 import PcieToAxiBridge::*;
-import AxiMasterSlave::*;
 import AxiClientServer::*;
 import Directory::*;
 import CtrlMux::*;

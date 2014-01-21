@@ -13,7 +13,6 @@ import Memory         :: *;
 import GetPut         :: *;
 import ClientServer   :: *;
 import BUtils         :: *;
-import AxiMasterSlave :: *;
 import EchoWrapper    :: *;
 import AxiScratchPad  :: *;
 

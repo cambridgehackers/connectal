@@ -4,7 +4,6 @@ import FIFO::*;
 import Connectable::*;
 
 // portz libraries
-import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;

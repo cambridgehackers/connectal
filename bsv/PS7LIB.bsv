@@ -27,7 +27,6 @@ import GetPut::*;
 import Connectable::*;
 import Vector::*;
 import PPS7LIB::*;
-import AxiMasterSlave::*;
 import CtrlMux::*;
 import Portal::*;
 import AxiClientServer::*;

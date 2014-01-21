@@ -5,7 +5,6 @@ import Connectable::*;
 
 // portz libraries
 import Portal::*;
-import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
