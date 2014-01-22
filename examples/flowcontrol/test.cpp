@@ -34,6 +34,7 @@ public:
 int main(int argc, const char **argv)
 {
 
+  int tokens = 0;
   pthread_t tid;
   SinkIndication *sinkIndication = new SinkIndication(IfcNames_SinkIndication);
   SinkRequestProxy *sinkRequestProxy = new SinkRequestProxy(IfcNames_SinkRequest);
@@ -45,7 +46,7 @@ int main(int argc, const char **argv)
   }
   
   sinkRequestProxy->init(0);
-  for (int i = 0; i < 3; i++){
+  while(tokens < 32){
 
     // Lock mutex and then wait for signal to relase mutex
     pthread_mutex_lock( &count_mutex );
@@ -54,14 +55,18 @@ int main(int argc, const char **argv)
     // mutex unlocked if condition varialbe is signaled.
     pthread_cond_wait( &condition_var, &count_mutex );
 
-    while(count){
-      fprintf(stderr, "main() count:%d\n", count);
-      sinkRequestProxy->put(count--);
-    }
+    // consume the credit
+    int local_count = count;
+    count = 0;
 
     // Unlock the mutex so SinkIndication::returnTokens can
     // accept more tokens from the SinkRequest hardware
     pthread_mutex_unlock( &count_mutex );
+
+    while(local_count){
+      fprintf(stderr, "main() count:%d\n", local_count--);
+      sinkRequestProxy->put(tokens++);
+    }
 
   }
   

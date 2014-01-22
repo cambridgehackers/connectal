@@ -34,12 +34,13 @@ interface SinkRequest;
 endinterface
 
 module mkSinkRequest#(SinkIndication indication)(SinkRequest);
-   
-   Bit#(32) capacity = 12;
+      
+   Bit#(32) threshold = 4;
+   Bit#(32) capacity = 24;
    Reg#(Bit#(32)) count <- mkReg(0);
-   
-   rule consume (count == capacity);
-      indication.returnTokens(capacity);
+
+   rule consume (count >= threshold);
+      indication.returnTokens(count);
       count <= 0;
    endrule
    
@@ -52,3 +53,8 @@ module mkSinkRequest#(SinkIndication indication)(SinkRequest);
    endmethod
 
 endmodule
+
+
+
+
+
