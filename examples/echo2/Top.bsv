@@ -37,9 +37,9 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
    let interrupt_mux <- mkInterruptMux(portals);
    
-   interface ReadOnly interrupt = interrupt_mux;
-   interface StdAxi3Slave ctrl = ctrl_mux;
-   interface Axi3Master m_axi = ?;
-   interface LEDS leds = ?;
+   interface interrupt = interrupt_mux;
+   interface ctrl = ctrl_mux;
+   interface m_axi = ?;
+   interface leds = ?;
 
 endmodule

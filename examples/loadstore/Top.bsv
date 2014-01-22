@@ -46,10 +46,10 @@ module mkZynqTop(Top);
    let interrupt_mux <- mkInterruptMux(directories,portals);
    let foo <- mkAxi3Master(loadStoreRequestInternal.m_axi);
    
-   interface ReadOnly interrupt = interrupt_mux;
-   interface StdAxi3Slave ctrl = ctrl_mux;
-   interface Axi3Master m_axi = foo;
-   interface LEDS leds = ?;
+   interface interrupt = interrupt_mux;
+   interface ctrl = ctrl_mux;
+   interface m_axi = foo;
+   interface leds = ?;
 
 endmodule
 

@@ -59,7 +59,8 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
    let interrupt_mux <- mkInterruptMux(portals);
    
-   interface ReadOnly interrupt = interrupt_mux;
-   interface StdAxi3Slave ctrl = ctrl_mux;
-   interface Vector m_axi = replicate(dma.m_axi);
+   interface interrupt = interrupt_mux;
+   interface ctrl = ctrl_mux;
+   interface m_axi = replicate(dma.m_axi);
+   interface leds = ?;
 endmodule : mkPortalTop

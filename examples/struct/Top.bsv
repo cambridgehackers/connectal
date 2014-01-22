@@ -36,10 +36,10 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    // when constructing the ctrl mux, directories must be the first argument
    let ctrl_mux <- mkAxiSlaveMux(directories,portals);
    
-   interface ReadOnly interrupt = interrupt_mux;
-   interface StdAxi3Slave ctrl = ctrl_mux;
-   interface Vector m_axi = ?;
-   interface LEDS leds = ?;
+   interface interrupt = interrupt_mux;
+   interface ctrl = ctrl_mux;
+   interface m_axi = ?;
+   interface leds = ?;
 
 endmodule : mkPortalTop
 
