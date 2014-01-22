@@ -168,13 +168,13 @@ module mkSGListMMU(SGListMMU#(addrWidth))
    method Action addrReq(SGListId id, Bit#(DmaAddrSize) off);
       offs.enq(truncate(off));
       Bit#(PageIdxSize) pageNum = off[valueOf(DmaAddrSize)-1:page_shift];
-      $display("addrReq id=%d pageNum=%h", id, pageNum);
+      //$display("addrReq id=%d pageNum=%h", id, pageNum);
       pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pageNum}, datain:?});
    endmethod
    
    method ActionValue#(Bit#(addrWidth)) addrResp() if (!pageIdxs.notEmpty());
       respFifo.deq();
-      $display("addrResp phys_addr=%h", respFifo.first());
+      //$display("addrResp phys_addr=%h", respFifo.first());
       return respFifo.first();
    endmethod
 

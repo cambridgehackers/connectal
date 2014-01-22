@@ -24,6 +24,7 @@ int numWords = 256;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 bool trigger_fired = false;
+bool finished = false;
 
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
@@ -39,6 +40,12 @@ void dump(const char *prefix, char *buf, size_t len)
     fprintf(stderr, "\n");
 }
 
+void exit_test()
+{
+  fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d, trigger_fired=%d\n", memcmp_count, memcmp_fail, trigger_fired);
+  exit(memcmp_fail || !trigger_fired);
+}
+
 class MemcpyIndication : public MemcpyIndicationWrapper
 {
 
@@ -52,6 +59,7 @@ public:
     dump("readWordResult: ", (char*)&v, sizeof(v));
   }
   virtual void done(unsigned long v) {
+    finished = true;
     unsigned int mcf = memcmp(srcBuffer, dstBuffer, test_sz);
     memcmp_fail |= mcf;
     if(true){
@@ -61,8 +69,9 @@ public:
       //dump("dst", (char*)dstBuffer, test_sz);
       //dump("dbg", (char*)bsBuffer,  test_sz);   
     }
-    fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d, trigger_fired=%d\n", memcmp_count, memcmp_fail, trigger_fired);
-    exit(memcmp_fail || !trigger_fired);
+    if(trigger_fired){
+      exit_test();
+    }
   }
   virtual void rData ( unsigned long long v ){
     dump("rData: ", (char*)&v, sizeof(v));
@@ -92,6 +101,9 @@ public:
   virtual void triggerFired( ){
     fprintf(stderr, "BlueScope::triggerFired\n");
     trigger_fired = true;
+    if(finished){
+      exit_test();
+    }
   }
   virtual void reportStateDbg(unsigned long long mask, unsigned long long value){
     //fprintf(stderr, "BlueScope::reportStateDbg mask=%016llx, value=%016llx\n", mask, value);
