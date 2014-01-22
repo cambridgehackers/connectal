@@ -29,16 +29,16 @@ import Vector::*;
 import PPS7LIB::*;
 import CtrlMux::*;
 import Portal::*;
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 
 interface AxiMasterCommon;
     method Bit#(1)            aresetn();
-    interface Axi3Client#(32,32,12) client;
+    interface Axi3Master#(32,32,12) client;
 endinterface
 
 interface AxiSlaveCommon#(numeric type data_width);
     method Bit#(1)            aresetn();
-    interface Axi3Server#(32,data_width,6) server;
+    interface Axi3Slave#(32,data_width,6) server;
 endinterface
 
 interface AxiSlaveHighSpeed;
@@ -207,7 +207,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
        end
     for (Integer i = 0; i < 2; i = i + 1)
         vtopm_axi_gp[i] = interface AxiMasterCommon;
-       interface Axi3Client client;
+       interface Axi3Master client;
             interface Get req_ar;
                  method ActionValue#(Axi3ReadRequest#(32,12)) get() if (vm_axi_gp[i].arvalid() != 0);
                      Axi3ReadRequest#(32,12) v;
@@ -295,7 +295,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
        end
     for (Integer i = 0; i < 2; i = i + 1)
         vtops_axi_gp[i] = interface AxiSlaveCommon#(32);
-          interface Axi3Server server;
+          interface Axi3Slave server;
             interface Put req_ar;
                 method Action put(Axi3ReadRequest#(32,6) v) if (vs_axi_gp[i].arready() != 0);
                     vs_axi_gp[i].araddr(v.address);
@@ -382,7 +382,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     for (Integer i = 0; i < 4; i = i + 1)
         vtops_axi_hp[i] = interface AxiSlaveHighSpeed;
             interface AxiSlaveCommon axi;
-            interface Axi3Server server;
+            interface Axi3Slave server;
             interface Put req_ar;
                 method Action put(Axi3ReadRequest#(32,6) v) if (vs_axi_hp[i].arready() != 0);
                     vs_axi_hp[i].araddr(v.address);
@@ -521,7 +521,7 @@ interface ZynqPins;
     interface Bit#(1)                       fclk_reset0_n;
 endinterface
 
-module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Server#(32,32,12) ctrl, Integer nmasters, Axi3Client#(32,64,6) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
+module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Slave#(32,32,12) ctrl, Integer nmasters, Axi3Master#(32,64,6) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
     PS7LIB ps7 <- mkPS7LIB(axi_clock, axi_reset);
 
     rule send_int_rule;

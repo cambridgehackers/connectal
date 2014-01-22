@@ -27,7 +27,7 @@ import GetPut::*;
 import FIFOF::*;
 import Vector::*;
 import SpecialFIFOs::*;
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 
 typedef struct {
     Bit#(32) base;
@@ -45,7 +45,7 @@ interface FrameBufferBram;
     method Action startFrame();
     method Action startLine();
     method Action setSgEntry(Bit#(8) index, Bit#(24) startingOffset, Bit#(20) address, Bit#(20) length);
-    interface Axi3Client#(32,32,6) axi;
+    interface Axi3Master#(32,32,6) axi;
     interface BRAM#(Bit#(12), Bit#(32)) buffer;
 endinterface
 
@@ -194,7 +194,7 @@ module mkFrameBufferBram#(Clock displayClk, Reset displayRst)(FrameBufferBram);
         end
     endmethod
 
-   interface Axi3Client axi;
+   interface Axi3Master axi;
       interface Get req_ar;
 	 method ActionValue#(Axi3ReadRequest#(32,6)) get() if (runningReg
 							       && readAddrReg != 24'hFFFFFF

@@ -5,7 +5,7 @@ import GetPut::*;
 import Connectable::*;
 import Clocks::*;
 import Adapter::*;
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import HDMI::*;
 import Leds::*;
 import Imageon::*;

@@ -23,7 +23,7 @@
 import FIFOF::*;
 import GetPutF::*;
 
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 

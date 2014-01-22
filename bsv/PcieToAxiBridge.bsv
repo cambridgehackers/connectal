@@ -21,7 +21,7 @@ import DReg         :: *;
 import ByteBuffer    :: *;
 import ByteCompactor :: *;
 
-import AxiClientServer:: *;
+import AxiMasterSlave:: *;
 
 typedef struct {
     Bit#(32) timestamp;
@@ -39,7 +39,7 @@ endinterface
 interface PcieToAxiBridge#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
-   interface Axi3Client#(32,32,12) portal0; // to the portal control
+   interface Axi3Master#(32,32,12) portal0; // to the portal control
    interface GetPut#(TLPData#(16)) slave;
 
    // status for FPGA LEDs
@@ -337,7 +337,7 @@ endinterface
 interface PortalEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Client#(32,32,12) portal;
+    interface Axi3Master#(32,32,12) portal;
     interface Reg#(Bool)           byteSwap;
     interface Reg#(Bool)           interruptRequested;
     interface Reg#(Bit#(64))       interruptAddr;
@@ -449,7 +449,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	endmethod
     endinterface: tlp_in
     interface Get tlp_out = toGet(tlpOutFifo);
-    interface Axi3Client portal;
+    interface Axi3Master portal;
        interface Get req_aw;
 	  method ActionValue#(Axi3WriteRequest#(32,12)) get() if (!interruptSecondHalf);
 	     let hdr = writeHeaderFifo.first;
@@ -521,8 +521,8 @@ endmodule: mkPortalEngine
 
 interface AxiSlaveEngine#(type buswidth);
     interface GetPut#(TLPData#(16))   tlps;
-    interface Axi3Server#(40,buswidth,6)  slave3;
-    interface Axi4Server#(40,buswidth,6)  slave4;
+    interface Axi3Slave#(40,buswidth,6)  slave3;
+    interface Axi4Slave#(40,buswidth,6)  slave4;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: AxiSlaveEngine
@@ -698,7 +698,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
    endrule
 
     interface GetPut tlps = tuple2(toGet(tlpOutFifo),toPut(tlpInFifo));
-    interface Axi3Server slave3;
+    interface Axi3Slave slave3;
 	interface Put req_aw;
 	   method Action put(Axi3WriteRequest#(40, 6) req)
 	      if (writeBurstCount == 0);
@@ -815,7 +815,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
            endmethod
 	endinterface: resp_read
     endinterface: slave3
-    interface Axi4Server slave4;
+    interface Axi4Slave slave4;
        interface Put req_aw;
 	   method Action put(Axi4WriteRequest#(40,6) req)
 	      if (writeBurstCount == 0);
@@ -1618,7 +1618,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    //interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
    interface GetPut tlps = tuple2(toGet(tlpToBusFifo),toPut(tlpFromBusFifo));
 
-   interface Axi3Server portal0 = portalEngine.portal;
+   interface Axi3Slave portal0 = portalEngine.portal;
    interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
    interface Reg numPortals = csr.numPortals;
 

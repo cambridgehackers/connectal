@@ -24,7 +24,7 @@ import FIFOF::*;
 import BRAMFIFO::*;
 import GetPutF::*;
 
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import AxiRDMA::*;
 import PortalMemory::*;
 import PortalRMemory::*;

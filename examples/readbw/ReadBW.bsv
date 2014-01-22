@@ -22,7 +22,7 @@
 
 import FIFO::*;
 import GetPut::*;
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import PcieToAxiBridge::*;
 import PortalMemory::*;
 import SGList::*;
@@ -48,7 +48,7 @@ endinterface
 
 interface ReadBWRequest;
    interface CoreRequest coreRequest;
-   interface Axi4Client#(40,128,12) m_axi;
+   interface Axi4Master#(40,128,12) m_axi;
    interface TlpTrace trace;
 endinterface
 
@@ -114,7 +114,7 @@ module mkReadBWRequest#(ReadBWIndication ind)(ReadBWRequest);
 	endmethod: store
     endinterface: coreRequest
 
-    interface Axi4Client m_axi;
+    interface Axi4Master m_axi;
 	interface Axi4WriteClient write;
 	   method ActionValue#(Axi4WriteRequest#(40, 12)) address();
 	       writeAddrFifo.deq;

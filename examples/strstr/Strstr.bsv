@@ -27,7 +27,7 @@ import Vector::*;
 import BRAM::*;
 import Gearbox::*;
 
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 import PortalMemoryUtils::*;

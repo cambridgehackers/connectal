@@ -31,7 +31,7 @@ import PortalMemory::*;
 import PortalRMemory::*;
 import AxiRDMA::*;
 import BsimRDMA::*;
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import HDMI::*;
 import XADC::*;
 import YUV::*;
@@ -46,7 +46,7 @@ interface HdmiDisplayRequest;
     interface HdmiControlRequest coreRequest;
     interface HdmiInternalRequest coRequest;
     interface DMARequest dmaRequest;
-    interface Axi3Client#(40,64,6) m_axi;
+    interface Axi3Master#(40,64,6) m_axi;
     interface HDMI hdmi;
     interface XADC xadc;
 endinterface
@@ -101,7 +101,7 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     endinterface: coreRequest
 
 `ifndef BSIM
-    interface Axi3Client m_axi = dma.m_axi;
+    interface Axi3Master m_axi = dma.m_axi;
 `endif
     interface DMARequest dmaRequest = dma.request;
     interface HDMI hdmi = hdmiGen.hdmi;

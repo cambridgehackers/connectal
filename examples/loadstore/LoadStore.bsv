@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 import FIFO            :: *;
-import AxiClientServer :: *;
+import AxiMasterSlave :: *;
 import PortalMemory    :: *;
 
 interface LoadStoreIndication;
@@ -35,7 +35,7 @@ endinterface
 
 interface LoadStoreRequestInternal;
    interface LoadStoreRequest ifc;
-   interface Axi3Client#(40,64,6) m_axi;
+   interface Axi3Master#(40,64,6) m_axi;
 endinterface
 
 module mkLoadStoreRequestInternal#(LoadStoreIndication ind)(LoadStoreRequestInternal);
@@ -56,7 +56,7 @@ module mkLoadStoreRequestInternal#(LoadStoreIndication ind)(LoadStoreRequestInte
 	endmethod
     endinterface
 
-    interface Axi3Client m_axi;
+    interface Axi3Master m_axi;
 	interface Axi3WriteClient write;
 	   method ActionValue#(Axi3WriteRequest#(40, 12)) address();
 	       writeAddrFifo.deq;

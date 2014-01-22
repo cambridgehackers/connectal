@@ -5,7 +5,7 @@ import StmtFSM::*;
 import FIFO::*;
 
 // portz libraries
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;

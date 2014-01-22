@@ -27,7 +27,7 @@ import GetPut            :: *;
 import Connectable       :: *;
 import StmtFSM           :: *;
 import Portal            :: *;
-import AxiClientServer   :: *;
+import AxiMasterSlave   :: *;
 import Leds              :: *;
 import Top               :: *;
 
@@ -99,7 +99,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 
    Integer nmasters = valueOf(nmasters);
    let top <- constructor();
-   Axi3Client#(40,dsz,6) master = ?;
+   Axi3Master#(40,dsz,6) master = ?;
    if (nmasters > 0) begin
       master = top.m_axi[0];
 

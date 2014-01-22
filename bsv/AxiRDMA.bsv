@@ -30,7 +30,7 @@ import GetPutF::*;
 import ClientServer::*;
 
 // XBSV Libraries
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 import Adapter::*;
@@ -47,7 +47,7 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) s
 //
 interface AxiDMAServer#(numeric type addrWidth, numeric type dsz);
    interface DMARequest request;
-   interface Axi3Client#(addrWidth,dsz,6) m_axi;
+   interface Axi3Master#(addrWidth,dsz,6) m_axi;
 endinterface
 
 interface ConfigureSglist#(numeric type addrWidth);
@@ -58,13 +58,13 @@ endinterface
 
 interface AxiDMAWriteInternal#(numeric type addrWidth, numeric type dsz);
    interface DMAWrite write;
-   interface Axi3Client#(addrWidth,dsz,6) m_axi;
+   interface Axi3Master#(addrWidth,dsz,6) m_axi;
    interface ConfigureSglist#(addrWidth) configure;
 endinterface
 
 interface AxiDMAReadInternal#(numeric type addrWidth, numeric type dsz);
    interface DMARead read;
-   interface Axi3Client#(addrWidth,dsz,6) m_axi;
+   interface Axi3Master#(addrWidth,dsz,6) m_axi;
    interface ConfigureSglist#(addrWidth) configure;
 endinterface
 
@@ -152,7 +152,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       endmethod
    endinterface
 
-   interface Axi3Client m_axi;
+   interface Axi3Master m_axi;
       interface Get req_ar;
 	 method ActionValue#(Axi3ReadRequest#(addrWidth,6)) get();
 	    let req = reqFifo.first();
@@ -269,7 +269,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
       endmethod
    endinterface
 
-   interface Axi3Client m_axi;
+   interface Axi3Master m_axi;
    interface Get req_ar = ?;
    interface Put resp_read = ?;
    interface Get req_aw;
@@ -404,7 +404,7 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
 	    writer.configure.readSglist(handle, truncate(addr));
       endmethod
    endinterface
-   interface Axi3Client m_axi;
+   interface Axi3Master m_axi;
       interface Get req_ar = reader.m_axi.req_ar;
       interface Put resp_read = reader.m_axi.resp_read;
 

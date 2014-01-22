@@ -26,7 +26,7 @@
 import Vector::*;
 import GetPut::*;
 
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import Portal::*;
 
 
@@ -52,14 +52,14 @@ module mkInterruptMux#(Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (ReadOn
 endmodule
 
 module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories, 
-		      Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Server#(_a,_b,_c))
+		      Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Slave#(_a,_b,_c))
 
    provisos(Add#(1,numPortals,numInputs),
 	    Add#(nz, TLog#(numInputs), 4));
    
-   Vector#(1, Axi3Server#(_a,_b,_c)) d_slaves = map(getCtrl, directories);
-   Vector#(numPortals, Axi3Server#(_a,_b,_c)) p_slaves = map(getCtrl, portals);
-   Vector#(numInputs, Axi3Server#(_a,_b,_c)) inputs = append(d_slaves,p_slaves);
+   Vector#(1, Axi3Slave#(_a,_b,_c)) d_slaves = map(getCtrl, directories);
+   Vector#(numPortals, Axi3Slave#(_a,_b,_c)) p_slaves = map(getCtrl, portals);
+   Vector#(numInputs, Axi3Slave#(_a,_b,_c)) inputs = append(d_slaves,p_slaves);
    
    Reg#(Bit#(TLog#(numInputs))) ws <- mkReg(0);
    Reg#(Bit#(TLog#(numInputs))) rs <- mkReg(0);

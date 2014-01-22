@@ -18,7 +18,7 @@ import GetPut::*;
 import Connectable::*;
 import Clocks::*;
 import Adapter::*;
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import Leds::*;
 import Vector::*;
 import SpecialFIFOs::*;
@@ -137,7 +137,7 @@ portalIfcTemplate='''
     method Bit#(32) ifcType;
         return %(ifcType)s;
     endmethod
-    interface Axi3Server ctrl;
+    interface Axi3Slave ctrl;
         interface Put req_aw;
             method Action put(Axi3WriteRequest#(32,12) req)
                           if (axiSlaveWriteBurstCountReg == 0);

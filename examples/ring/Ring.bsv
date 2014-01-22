@@ -27,7 +27,7 @@ import GetPut::*;
 import StmtFSM::*;
 import ClientServer::*;
 
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 import GetPutF::*;
@@ -191,7 +191,7 @@ module mkRingRequest#(RingIndication indication,
    endinterface
 
 `ifndef BSIM
-   interface Axi3Client m_axi = dma.m_axi;
+   interface Axi3Master m_axi = dma.m_axi;
 `endif
    interface DMARequest dmaRequest = dma.request;
 endmodule

@@ -28,7 +28,7 @@ import RegFile::*;
 typedef struct {
    Bit#(addrWidth) address;
    Bit#(4) len;
-   Bit#(3) size; // assume matches bus width of Axi3Client
+   Bit#(3) size; // assume matches bus width of Axi3Master
    Bit#(2) burst;  // drive with 2'b01
    Bit#(3) prot; // drive with 3'b000
    Bit#(4) cache; // drive with 4'b0011
@@ -58,7 +58,7 @@ typedef struct {
 typedef struct {
    Bit#(addrWidth) address;
    Bit#(4) len;
-   Bit#(3) size; // assume matches bus width of Axi3Client
+   Bit#(3) size; // assume matches bus width of Axi3Master
    Bit#(2) burst;  // drive with 2'b01
    Bit#(3) prot; // drive with 3'b000
    Bit#(4) cache; // drive with 4'b0011
@@ -79,7 +79,7 @@ typedef struct {
     Bit#(idWidth) id;
 } Axi3WriteResponse#(type idWidth) deriving (Bits);
 
-interface Axi3Client#(type addrWidth, type busWidth, type idWidth);
+interface Axi3Master#(type addrWidth, type busWidth, type idWidth);
    interface Get#(Axi3ReadRequest#(addrWidth, idWidth)) req_ar;
    interface Put#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
    interface Get#(Axi3WriteRequest#(addrWidth, idWidth)) req_aw;
@@ -87,7 +87,7 @@ interface Axi3Client#(type addrWidth, type busWidth, type idWidth);
    interface Put#(Axi3WriteResponse#(idWidth)) resp_b;
 endinterface
 
-interface Axi3Server#(type addrWidth, type busWidth, type idWidth);
+interface Axi3Slave#(type addrWidth, type busWidth, type idWidth);
    interface Put#(Axi3ReadRequest#(addrWidth, idWidth)) req_ar;
    interface Get#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
    interface Put#(Axi3WriteRequest#(addrWidth, idWidth)) req_aw;
@@ -95,8 +95,8 @@ interface Axi3Server#(type addrWidth, type busWidth, type idWidth);
    interface Get#(Axi3WriteResponse#(idWidth)) resp_b;
 endinterface
 
-module mkAxi3ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
-   (Axi3Server#(addrWidth, busWidth, idWidth))
+module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
+   (Axi3Slave#(addrWidth, busWidth, idWidth))
    provisos(Add#(nz, regFileBusWidth, addrWidth));
    Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
    Reg#(Bit#(regFileBusWidth)) writeAddrReg <- mkReg(0);
@@ -158,7 +158,7 @@ endmodule
 typedef struct {
     Bit#(addrWidth) address;
     Bit#(8) len;
-    Bit#(3) size; // assume matches bus width of Axi4Client
+    Bit#(3) size; // assume matches bus width of Axi4Master
     Bit#(2) burst;  // drive with 2'b01
     Bit#(3) prot; // drive with 3'b000
     Bit#(4) cache; // drive with 4'b0011
@@ -177,7 +177,7 @@ typedef struct {
 typedef struct {
     Bit#(addrWidth) address;
     Bit#(8) len;
-    Bit#(3) size; // assume matches bus width of Axi4Client
+    Bit#(3) size; // assume matches bus width of Axi4Master
     Bit#(2) burst;  // drive with 2'b01
     Bit#(3) prot; // drive with 3'b000
     Bit#(4) cache; // drive with 4'b0011
@@ -198,7 +198,7 @@ typedef struct {
     Bit#(idWidth) id;
 } Axi4WriteResponse#(type idWidth) deriving (Bits);
 
-interface Axi4Client#(type addrWidth, type busWidth, type idWidth);
+interface Axi4Master#(type addrWidth, type busWidth, type idWidth);
    interface Get#(Axi4ReadRequest#(addrWidth, idWidth)) req_ar;
    interface Put#(Axi4ReadResponse#(busWidth, idWidth)) resp_read;
 
@@ -207,7 +207,7 @@ interface Axi4Client#(type addrWidth, type busWidth, type idWidth);
    interface Put#(Axi4WriteResponse#(idWidth)) resp_b;
 endinterface
 
-interface Axi4Server#(type addrWidth, type busWidth, type idWidth);
+interface Axi4Slave#(type addrWidth, type busWidth, type idWidth);
    interface Put#(Axi4ReadRequest#(addrWidth, idWidth)) req_ar;
    interface Get#(Axi4ReadResponse#(busWidth, idWidth)) resp_read;
    interface Put#(Axi4WriteRequest#(addrWidth, idWidth)) req_aw;
@@ -215,8 +215,8 @@ interface Axi4Server#(type addrWidth, type busWidth, type idWidth);
    interface Get#(Axi4WriteResponse#(idWidth)) resp_b;
 endinterface
 
-module mkAxi4ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
-   (Axi4Server#(addrWidth, busWidth, idWidth))
+module mkAxi4SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
+   (Axi4Slave#(addrWidth, busWidth, idWidth))
    provisos(Add#(nz, regFileBusWidth, addrWidth));
    Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
    Reg#(Bit#(regFileBusWidth)) writeAddrReg <- mkReg(0);
@@ -274,8 +274,8 @@ module mkAxi4ServerFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    endinterface: resp_b
 endmodule
 
-instance Connectable#(Axi3Client#(addrWidth, busWidth,idWidth), Axi3Server#(addrWidth, busWidth,idWidth));
-   module mkConnection#(Axi3Client#(addrWidth, busWidth,idWidth) m, Axi3Server#(addrWidth, busWidth,idWidth) s)(Empty);
+instance Connectable#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrWidth, busWidth,idWidth));
+   module mkConnection#(Axi3Master#(addrWidth, busWidth,idWidth) m, Axi3Slave#(addrWidth, busWidth,idWidth) s)(Empty);
 
       mkConnection(m.req_ar, s.req_ar);
       mkConnection(s.resp_read, m.resp_read);
@@ -287,8 +287,8 @@ instance Connectable#(Axi3Client#(addrWidth, busWidth,idWidth), Axi3Server#(addr
    endmodule
 endinstance
 
-instance Connectable#(Axi4Client#(addrWidth, busWidth,idWidth), Axi4Server#(addrWidth, busWidth,idWidth));
-   module mkConnection#(Axi4Client#(addrWidth, busWidth,idWidth) m, Axi4Server#(addrWidth, busWidth,idWidth) s)(Empty);
+instance Connectable#(Axi4Master#(addrWidth, busWidth,idWidth), Axi4Slave#(addrWidth, busWidth,idWidth));
+   module mkConnection#(Axi4Master#(addrWidth, busWidth,idWidth) m, Axi4Slave#(addrWidth, busWidth,idWidth) s)(Empty);
 
       mkConnection(m.req_ar, s.req_ar);
       mkConnection(s.resp_read, m.resp_read);

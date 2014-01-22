@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 
-import AxiClientServer::*;
+import AxiMasterSlave::*;
 import Vector::*;
 import Leds::*;
 
@@ -32,7 +32,7 @@ interface Portal#(numeric type portalAddrBits,
    
    method Bit#(32) ifcId();
    method Bit#(32) ifcType();
-   interface Axi3Server#(slaveBusAddrWidth,slaveBusDataWidth,slaveBusIdWidth) ctrl;
+   interface Axi3Slave#(slaveBusAddrWidth,slaveBusDataWidth,slaveBusIdWidth) ctrl;
    interface ReadOnly#(Bool) interrupt;
 
 endinterface
@@ -42,15 +42,15 @@ function ReadOnly#(Bool) getInterrupt(Portal#(_n,_a,_b,_c) p);
    return p.interrupt;
 endfunction
 
-function Axi3Server#(_a,_b,_c) getCtrl(Portal#(_n,_a,_b,_c) p);
+function Axi3Slave#(_a,_b,_c) getCtrl(Portal#(_n,_a,_b,_c) p);
    return p.ctrl;
 endfunction
 
 typedef Portal#(16,32,32,12) StdPortal;
 
 interface PortalTop#(numeric type addrWidth, numeric type nmasters, numeric type dataWidth, type pins);
-   interface Axi3Server#(32,32,12) ctrl;
-   interface Vector#(nmasters, Axi3Client#(addrWidth,dataWidth,6)) m_axi;
+   interface Axi3Slave#(32,32,12) ctrl;
+   interface Vector#(nmasters, Axi3Master#(addrWidth,dataWidth,6)) m_axi;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;
    interface pins             pins;
