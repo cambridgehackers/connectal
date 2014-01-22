@@ -35,17 +35,18 @@ endinterface
 
 module mkSinkRequest#(SinkIndication indication)(SinkRequest);
    
-   Bit#(32) capacity = 24;
-   Reg#(Bit#(32))    count <- mkReg(0);
+   Bit#(32) capacity = 12;
+   Reg#(Bit#(32)) count <- mkReg(0);
    
-   rule consume (count > 0);
-      indication.returnTokens(count);
+   rule consume (count == capacity);
+      indication.returnTokens(capacity);
       count <= 0;
    endrule
    
    method Action init(Bit#(32) v);
       indication.returnTokens(capacity);
    endmethod
+
    method Action put(Bit#(32) v) if (count < capacity);
       count <= count+1;
    endmethod
