@@ -1,5 +1,4 @@
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
-
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
 // files (the "Software"), to deal in the Software without
@@ -27,7 +26,6 @@ import GetPut::*;
 import StmtFSM::*;
 import ClientServer::*;
 
-import AxiMasterSlave::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 import GetPutF::*;
@@ -43,7 +41,7 @@ interface RingRequest;
    method Action get(Bit#(1) cmd, Bit#(2) regist);
    method Action hwenable(Bit#(1) en);
    method Action doCommandIndirect(Bit#(40) addr);
-   method Action doCommandImmediate(CommandStruct cmd);
+   method Action doCommandImmediate(Bit#(64) data);
 endinterface
 
 interface RingIndication;
@@ -56,11 +54,11 @@ module mkRingRequest#(RingIndication indication,
 		      DMAReadBuffer#(64,8) dma_read_chan,
 		      DMAWriteBuffer#(64,8) dma_write_chan,
 		      DMAReadBuffer#(64,8) cmd_read_chan,
-		      DMAWriteBuffer#(64,8) cmd_write_chan )(RingRequest);
+		      DMAWriteBuffer#(64,8) status_write_chan )(RingRequest);
    
-   Server#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma.read.readChannels[2], dma.write.writeChannels[2]);   
-   Server#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
-   Server#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
+   ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma.read.readChannels[2], dma.write.writeChannels[2]);   
+   ServerF#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
+   ServerF#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
    
    RingBuffer cmdRing <- mkRingBuffer;
    RingBuffer statusRing <- mkRingBuffer;
@@ -68,6 +66,7 @@ module mkRingRequest#(RingIndication indication,
    Reg#(Bool) cmdBusy <- mkReg(False);
    Reg#(UInt#(64)) cmd <- mkReg(0);
 
+   
    let engineselect = cmd[63:56];
    function Server#(Bit#(64), Bit#(64)) cmdifc();
       if (engineselect == cmdNOP) 
@@ -79,29 +78,15 @@ module mkRingRequest#(RingIndication indication,
       else 
 	 return nopEngine;
    endfunction
-   
-   Stmt cmdFetch = 
-   seq
-      while (True) seq
-	 while(!(hwenabled && cmdRing.notEmpty())) noAction;
-	 cmd_read_chan.readReq.put(cmdRing.expBufferLast);
-	 cmdRing.pop();
-      endseq
-   endseq;
 
-   // wait for hwenabled
-   // wait for not cmdBusy
-   // wait for cmdRing not empty
-   // then start fetches for the next command
-   Stmt cmdFetch = 
-   seq
+   Stmt cmdFetch =   seq
       while (True) seq
 	 while(!(hwenabled && cmdRing.notEmpty())) noAction;
 	 cmd_read_chan.readReq.put(cmdRing.expBufferLast);
 	 cmdRing.pop();
       endseq
-   endseq;
-   
+		     endseq;
+
    let fn = cmd[63:56];
 
    Stmt cmdDispatch = 
@@ -127,32 +112,31 @@ module mkRingRequest#(RingIndication indication,
       while(True) seq
 	 if (statusRing.notFull() && copyEngine.response.notEmpty())
 	    for (ii <= 1; ii < 8; ii <= ii + 1)
-	       action;
+	       action
 		  status_write_chan.writeReq.put(statusRing.expBufferFirst);
-		  status_write_chan.writeDataq.put(copyEngine.get());
+		  status_write_chan.writeData.put(copyEngine.get());
 		  statusRing.push(8);
 	       endaction
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    for (ii <= 1; ii < 8; ii <= ii + 1)
-	       action;
+	       action
 		  status_write_chan.writeReq.put(statusRing.expBufferFirst);
-		  status_write_chan.writeDataq.put(ehoEngine.get());
+		  status_write_chan.writeData.put(echoEngine.get());
 		  statusRing.push(8);
 	       endaction
       endseq
    endseq;
    
-   
    rule copyCompletion;
       let v <- ce.response.get();
-      indication.coreIndication.completion(1, v);
+      indication.ringIndication.completion(1, v);
    endrule
 
    mkAutoFSM (cmdFetch);
    mkAutoFSM (cmdDispatch);
    mkAutoFSM (cmdCompletion);
 
-   interface CoreRequest coreRequest;
+   interface RingRequest ringRequest;
 
       // to start a command, doCommand fires off a memory read to the
       // specified address. when it comes back, the doCommandRule will
@@ -161,9 +145,8 @@ module mkRingRequest#(RingIndication indication,
 	 //cmd_read_chan.readReq.put(addr);
       endmethod
    
-      method Action doCommandImmediate(CommandStruct cmd);
-      	 $display("doCopy %h %h %h", cmd.fromAddress, cmd.toAddress, cmd.count);
-	 ce.request.put(cmd);
+      method Action doCommandImmediate(Bit#(64) data);
+      	 $display("doCommandImmediate %h", data);
       endmethod
    
 
@@ -172,14 +155,14 @@ module mkRingRequest#(RingIndication indication,
 	    cmdRing.set(regist, addr);
 	 else
 	    statusRing.set(regist, addr);
-	 indication.coreIndication.setResult(cmd, regist, addr);
+	 indication.ringIndication.setResult(cmd, regist, addr);
       endmethod
    
       method Action get(Bit#(1) cmd, Bit#(2) regist);
 	 if (cmd == 1)
-	    indication.coreIndication.getResult(1, regist, cmdRing.get(regist));
+	    indication.ringIndication.getResult(1, regist, cmdRing.get(regist));
 	 else
-	    indication.coreIndication.getResult(0, regist, 
+	    indication.ringIndication.getResult(0, regist, 
 	       statusRing.get(regist));
       endmethod
 
@@ -190,8 +173,4 @@ module mkRingRequest#(RingIndication indication,
        
    endinterface
 
-`ifndef BSIM
-   interface Axi3Master m_axi = dma.m_axi;
-`endif
-   interface DMARequest dmaRequest = dma.request;
 endmodule
