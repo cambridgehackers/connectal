@@ -507,7 +507,7 @@ def p_expressionStmt(p):
                       | functionDef
                       | methodDef
                       | moduleDef
-                      | TOKACTION SEMICOLON expressionStmts TOKENDACTION
+                      | TOKACTION colonVar expressionStmts TOKENDACTION colonVar
                       | typeDef
                       | instanceAttributes rule'''
 
