@@ -76,32 +76,32 @@ module mkStructRequest#(StructIndication indication)(StructRequest);
 
    method Action say1(Bit#(32) v);
       indication.heard1(v);
-      $display("(hw) say1 %d", v);
+      //$display("(hw) say1 %d", v);
    endmethod
    
    method Action say2(Bit#(16) a, Bit#(16) b);
       indication.heard2(a,b);
-      $display("(hw) say2 %d %d", a, b);
+      //$display("(hw) say2 %d %d", a, b);
    endmethod
       
    method Action say3(S1 v);
       indication.heard3(v);
-      $display("(hw) say3 S1{a:%d, b:%d}", v.a, v.b);
+      //$display("(hw) say3 S1{a:%d, b:%d}", v.a, v.b);
    endmethod
    
    method Action say4(S2 v);
       indication.heard4(v);
-      $display("(hw) say4 S1{a:%d, b:%d, c:%d}", v.a, v.b, v.c);
+      //$display("(hw) say4 S1{a:%d, b:%d, c:%d}", v.a, v.b, v.c);
    endmethod
       
    method Action say5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
       indication.heard5(a, b, c);
-      $display("(hw) say5 %h %h %h", a, b, c);
+      //$display("(hw) say5 %h %h %h", a, b, c);
    endmethod
 
    method Action say6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
       indication.heard6(a, b, c);
-      $display("(hw) say6 %h %h %h", a, b, c);
+      // $display("(hw) say6 %h %h %h", a, b, c);
       // Say6ReqStruct rs = Say6ReqStruct{a:32'hBBBBBBBB, b:40'hEFFECAFECA, c:32'hCCCCCCCC};
       // $display("(hw) say6 %h", pack(rs));
       // indication.heard6(rs.a, rs.b, rs.c);

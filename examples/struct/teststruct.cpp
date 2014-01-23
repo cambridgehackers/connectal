@@ -83,30 +83,39 @@ public:
     assert(b == v7b);
     incr_cnt();
   }
-  StructIndication(const char* devname, unsigned int addrbits) : StructIndicationWrapper(devname,addrbits), cnt(0){}
+  StructIndication(unsigned int id) : StructIndicationWrapper(id), cnt(0){}
 };
 
 
 
 int main(int argc, const char **argv)
 {
-  StructIndication *indication = new StructIndication("fpga1",16);
-  StructRequestProxy *device = new StructRequestProxy("fpga2",16);
-  
-  fprintf(stderr, "calling say1(%d)\n", v1a);
+  StructIndication *indication = new StructIndication(IfcNames_StructIndication);
+  StructRequestProxy *device = new StructRequestProxy(IfcNames_StructRequest);
+
+  pthread_t tid;
+  fprintf(stderr, "Main::creating exec thread\n");
+  if(pthread_create(&tid, NULL,  portalExec, NULL)){
+    fprintf(stderr, "Main::error creating exec thread\n");
+    exit(1);
+  }
+
+  fprintf(stderr, "Main::calling say1(%d)\n", v1a);
+  sleep(1);
   device->say1(v1a);  
-  fprintf(stderr, "calling say2(%d, %d)\n", v2a,v2b);
+  fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
   device->say2(v2a,v2b);
-  fprintf(stderr, "calling say3(S1{a:%ld,b:%ld})\n", s1.a,s1.b);
+  fprintf(stderr, "Main::calling say3(S1{a:%ld,b:%ld})\n", s1.a,s1.b);
   device->say3(s1);
-  fprintf(stderr, "calling say4(S2{a:%ld,b:%ld,c:%ld})\n", s2.a,s2.b,s2.c);
+  fprintf(stderr, "Main::calling say4(S2{a:%ld,b:%ld,c:%ld})\n", s2.a,s2.b,s2.c);
   device->say4(s2);
-  fprintf(stderr, "calling say5(%08lx, %016llx, %08lx)\n", v5a, v5b, v5c);
+  fprintf(stderr, "Main::calling say5(%08lx, %016llx, %08lx)\n", v5a, v5b, v5c);
   device->say5(v5a, v5b, v5c);  
-  fprintf(stderr, "calling say6(%08lx, %016llx, %08lx)\n", v6a, v6b, v6c);
+  fprintf(stderr, "Main::calling say6(%08lx, %016llx, %08lx)\n", v6a, v6b, v6c);
   device->say6(v6a, v6b, v6c);  
-  fprintf(stderr, "calling say7(%08lx, %08x)\n", s3.a, s3.e1);
+  fprintf(stderr, "Main::calling say7(%08lx, %08x)\n", s3.a, s3.e1);
   device->say7(s3);  
-  fprintf(stderr, "about to invoke portalExec\n");
-  portalExec(NULL);
+
+  fprintf(stderr, "Main::about to go to sleep\n");
+  while(true){sleep(2);}
 }

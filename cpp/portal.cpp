@@ -50,6 +50,7 @@ struct pollfd *portal_fds = 0;
 int numFds = 0;
 Directory dir;
 Directory *pdir;
+bool use_interrupts = false;
 
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
@@ -182,8 +183,13 @@ int Portal::open(int addrbits)
     req_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(1<<14));
     req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
 
-    fprintf(stderr, "Portal::disabling interrupts %s\n", name);
-    *(ind_reg_base+0x1) = 0;
+    if(use_interrupts){
+      fprintf(stderr, "Portal::enabling interrupts %s\n", name);
+      *(ind_reg_base+0x1) = 1;
+    } else {
+      fprintf(stderr, "Portal::disabling interrupts %s\n", name);
+      *(ind_reg_base+0x1) = 0;
+    }
 
 #else
     snprintf(p.read.path, sizeof(p.read.path), "%s_rc", name);
@@ -197,9 +203,15 @@ int Portal::open(int addrbits)
     req_reg_base   = dev_base+(1<<14);
     req_fifo_base  = dev_base+(0<<14);
 
-    fprintf(stderr, "Portal::disabling interrupts %s\n", name);
-    unsigned int addr = ind_reg_base+0x4;
-    write_portal(&p, addr, 0, name);
+    if(use_interrupts){
+      fprintf(stderr, "Portal::enabling interrupts %s\n", name);
+      unsigned int addr = ind_reg_base+0x4;
+      write_portal(&p, addr, 1, name);
+    } else {
+      fprintf(stderr, "Portal::disabling interrupts %s\n", name);
+      unsigned int addr = ind_reg_base+0x4;
+      write_portal(&p, addr, 0, name);
+    }  
 #endif
     return 0;
 }
@@ -458,7 +470,11 @@ void* portalExec(void* __x)
 {
 #ifdef MMAP_HW
     long rc;
-    int timeout = 100; // interrupts not working yet on zynq 
+    int timeout;
+    if(use_interrupts)
+      timeout = -1; // no interrupt timeout on Zynq platform
+    else
+      timeout = 100; // interrupt timeout on Zynq platform
 #ifndef ZYNQ
     timeout = 100; // interrupts not working yet on PCIe
 #endif
@@ -474,6 +490,7 @@ void* portalExec(void* __x)
       *(volatile int *)(instance->ind_reg_base+0x1) = 1;
     }
 #endif
+    fprintf(stderr, "portalExec::about to enter loop\n");
     while ((rc = poll(portal_fds, numFds, timeout)) >= 0) {
       for (int i = 0; i < numFds; i++) {
 	  if (!portal_wrappers) {
@@ -488,8 +505,8 @@ void* portalExec(void* __x)
 	unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
 	unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
 	if(0)
-	  fprintf(stderr, "(%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, int_src, int_en, queue_status);
-
+	fprintf(stderr, "(%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, int_src, int_en, queue_status);
+	
 	// handle all messasges from this portal instance
 	while (queue_status) {
 	  if(0)
@@ -500,16 +517,18 @@ void* portalExec(void* __x)
 	  ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
 	  queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
 	  if (0)
-	    fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
-		    __LINE__, int_src, int_en, ind_count, queue_status);
+	  fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
+		  __LINE__, int_src, int_en, ind_count, queue_status);
 	}
 	
 	// rc of 0 indicates timeout
 	if (rc == 0) {
 	  // do something if we timeout??
 	}
-	// re-enable interupt which was disabled by portal_isr
-	// *(instance->ind_reg_base+0x1) = 1;
+	if(use_interrupts){
+	  // re-enable interrupt which was disabled by portal_isr
+	  *(instance->ind_reg_base+0x1) = 1;
+	}
       }
     }
     // return only in error case

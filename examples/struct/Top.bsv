@@ -16,16 +16,18 @@ import StructRequestWrapper::*;
 // defined by user
 import Struct::*;
 
+typedef enum {StructIndication, StructRequest} IfcNames deriving (Eq,Bits);
+
 module mkPortalTop(StdPortalTop#(addrWidth));
 
    // instantiate user portals
-   StructIndicationProxy structIndicationProxy <- mkStructIndicationProxy(7);
+   StructIndicationProxy structIndicationProxy <- mkStructIndicationProxy(StructIndication);
    StructRequest structRequest <- mkStructRequest(structIndicationProxy.ifc);
-   StructRequestWrapper structRequestWrapper <- mkStructRequestWrapper(1008,structRequest);
+   StructRequestWrapper structRequestWrapper <- mkStructRequestWrapper(StructRequest,structRequest);
    
    Vector#(2,StdPortal) portals;
-   portals[0] = structIndicationProxy.portalIfc;
-   portals[1] = structRequestWrapper.portalIfc; 
+   portals[0] = structRequestWrapper.portalIfc; 
+   portals[1] = structIndicationProxy.portalIfc;
    let interrupt_mux <- mkInterruptMux(portals);
    
    // instantiate system directory
