@@ -50,6 +50,12 @@ tclReadVerilogTemplate='read_verilog [ glob %(verilog)s/*.v ]'
 
 tclfileConstraintTemplate='''read_xdc {./constraints/%(xdcname)s}'''
 
+tclboardTemplate='''
+set partname {%(partname)s}
+set boardname {%(boardname)s}
+set xbsvdir {%(xbsvdir)s}
+'''
+
 tclfileTemplate='''
 # NOTE: typical usage would be "vivado -mode tcl -source create_mkPcieTop_batch.tcl" 
 #
@@ -118,7 +124,7 @@ connect_net -net RST_N_IBUF -objects $rstname
 
 makefileTemplate='''
 DTOP=%(project_dir)s
-XBSVTOP=%(xbsvdir)s
+XBSVDIR=%(xbsvdir)s
 BSVPATH = %(bsvpath)s
 vfile=verilog/top/%(topbsvmod)s.v
 
@@ -131,24 +137,24 @@ ALLTARGETS=implementation ubuntu_exe
 endif
 
 BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
-BSIM_CXX = $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
+BSIM_CXX = $(XBSVDIR)/cpp/BsimTop.cxx $(XBSVDIR)/cpp/BsimDMA.cxx $(XBSVDIR)/cpp/sock_utils.cxx $(XBSVDIR)/cpp/sock_fd.cxx
 
 all: $(ALLTARGETS)
 
 $(vfile): %(topbsvfile)s %(bsvfiles)s
 	mkdir -p verilog/top verilog/portal
 	cd sources/%(dut)s; mkdir -p $(DTOP)/obj; bsc %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
-	for v in verilog/top/*.v; do $(XBSVTOP)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
+	for v in verilog/top/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
 bsim_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
-	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s *.cpp *.cxx  -pthread -I$(XBSVTOP) -I$(XBSVTOP)/cpp -DBSIM %(clibs)s
+	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s *.cpp *.cxx  -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -DBSIM %(clibs)s
 
 ubuntu_exe:
 	cd jni; make
 
 bsim:
 	cd sources; mkdir -p $(DTOP)/obj; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop %(topbsvfile)s
-	export BSC_CXXFLAGS="-I$(XBSVTOP)/cpp -I$(XBSVTOP) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
+	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
 
 
 verilog: $(vfile)
@@ -169,16 +175,18 @@ verilog/portal/mkSynthesizeablePortalTop.v:
 	mkdir -p verilog/portal
 	mv -fv verilog/top/mkSynthesizeablePortalTop.v verilog/portal
 
-verilog/top/portalstub.v: verilog/portal/mkSynthesizeablePortalTop.v $(XBSVTOP)/verilog/portalstub.v
-	cp -v $(XBSVTOP)/verilog/portalstub.v verilog/top
- 
+## (*black_box*) causes vivado to ignore contents of the module and treat it as a black box
+verilog/top/portalstub.v: verilog/portal/mkSynthesizeablePortalTop.v
+	cat verilog/portal/mkSynthesizeablePortalTop.v | sed 's/^module /(*black_box*)module /' > verilog/top/portalstub.v
+
 hw/portaltop_post_synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v
-	vivado -mode batch -source $(XBSVTOP)/scripts/portaltop-synth.tcl
+	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl
 
 hw/mkpcietop_post_synth.dcp: $(vfile) verilog/top/portalstub.v
-	vivado -mode batch -source $(XBSVTOP)/scripts/mkpcietop-synth.tcl
+	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-synth.tcl
 
-hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop_post_synth.dcp
+hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop_post_synth.dcp hw/portaltop_post_synth.dcp
+	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-partial-reconfiguration.tcl
 
 partial: hw/mkPcieTop_pblock_portalTop_partial.bit
 
@@ -438,6 +446,7 @@ if __name__=='__main__':
         i.emitBsvProxy(bsv, "Proxy",True)
         close_bsv_package(bsv,pname)
 
+    tclboardname = os.path.join(project_dir, 'board.tcl')
     tclimplname = os.path.join(project_dir, '%s-impl.tcl' % namespace.export.lower())
     tclsynthname = os.path.join(project_dir, '%s-synth.tcl' % namespace.export.lower())
     makename = os.path.join(project_dir, 'Makefile')
@@ -469,18 +478,24 @@ if __name__=='__main__':
     cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source, swProxies, swWrappers, namespace.clib)
 
     print 'Writing tcl impl file', tclimplname
+    tclsubsts = {'dut': topmodulename.lower(),
+                 'Dut': topmodulename,
+                 'rewire_clock': rewireclockstring,
+                 'project_dir': project_dir,
+                 'partname': partname,
+                 'boardname': boardname,
+                 'xbsvdir': xbsvdir,
+                 'tclfileConstraints': '\n'.join([tclfileConstraintTemplate
+                                                  % { 'xdcname': os.path.basename(f) }
+                                                  for f in namespace.constraint ]),
+                 'read_verilog': '\n'.join([tclReadVerilogTemplate
+                                            % { 'verilog': f } for f in namespace.verilog])
+                 }
     tcl = util.createDirAndOpen(tclimplname, 'w')
-    tcl.write(tclfileTemplate % {'dut': topmodulename.lower(),
-                                 'Dut': topmodulename,
-                                 'rewire_clock': rewireclockstring,
-                                 'project_dir': project_dir,
-                                 'partname': partname,
-                                 'tclfileConstraints': '\n'.join([tclfileConstraintTemplate
-                                                                  % { 'xdcname': os.path.basename(f) }
-                                                                  for f in namespace.constraint ]),
-                                 'read_verilog': '\n'.join([tclReadVerilogTemplate
-                                                            % { 'verilog': f } for f in namespace.verilog])
-                                 })
+    tcl.write(tclfileTemplate % tclsubsts)
+    tcl.close()
+    tcl = util.createDirAndOpen(tclboardname, 'w')
+    tcl.write(tclboardTemplate % tclsubsts)
     tcl.close()
 
     if namespace.verilog:

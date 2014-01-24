@@ -6,29 +6,30 @@
 set outputDir ./hw
 file mkdir $outputDir
 
+if [file exists {board.tcl}] {
+    source {board.tcl}
+} else {
+    set boardname vc707
+    set partname {xc7vx485tffg1761-2}
+}
+
 read_checkpoint $outputDir/mkpcietop_post_synth.dcp
-read_xdc {./constraints/vc707.xdc}
+read_xdc constraints/$boardname.xdc
 start_gui
 
 #
 # STEP#3: run placement and logic optimization, report utilization and timing estimates, write checkpoint design
 #
 
-read_checkpoint -cell portalTop hw/portaltop_post_synth.dcp
-startgroup
-create_pblock pblock_portalTop
-resize_pblock pblock_portalTop -add {SLICE_X0Y0:SLICE_X105Y199 DSP48_X0Y0:DSP48_X8Y79 PCIE_X0Y0:PCIE_X0Y0 RAMB18_X0Y0:RAMB18_X6Y79 RAMB36_X0Y0:RAMB36_X6Y39}
-add_cells_to_pblock pblock_portalTop [get_cells portalTop]
-endgroup
+read_checkpoint -cell top_portalTop hw/portaltop_post_synth.dcp
+read_xdc $xbsvdir/constraints/$boardname-portal-bplock.xdc
+set_property HD.RECONFIGURABLE TRUE [get_cells top_portalTop]
 
-set_property HD.RECONFIGURABLE TRUE [get_cells portalTop]
-
-delete_pblock pblock_pcie0
-startgroup
-create_pblock pblock_pcie0
-resize_pblock pblock_pcie0 -add {SLICE_X116Y51:SLICE_X221Y149 DSP48_X10Y22:DSP48_X19Y59 RAMB18_X7Y22:RAMB18_X14Y59 RAMB36_X7Y11:RAMB36_X14Y29}
-add_cells_to_pblock pblock_pcie0 [get_cells top/x7pcie_pcie_ep]
-endgroup
+# startgroup
+# create_pblock pblock_pcie0
+# resize_pblock pblock_pcie0 -add {SLICE_X116Y51:SLICE_X221Y149 DSP48_X10Y22:DSP48_X19Y59 RAMB18_X7Y22:RAMB18_X14Y59 RAMB36_X7Y11:RAMB36_X14Y29}
+# add_cells_to_pblock pblock_pcie0 [get_cells top_x7pcie_pcie_ep]
+# endgroup
 
 opt_design
 # power_opt_design
