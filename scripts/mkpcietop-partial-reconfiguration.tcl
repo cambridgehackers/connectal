@@ -13,8 +13,13 @@ if [file exists {board.tcl}] {
     set partname {xc7vx485tffg1761-2}
 }
 
-read_checkpoint $outputDir/mkpcietop_post_synth.dcp
-read_xdc constraints/$boardname.xdc
+if [file exists $outputDir/mkpcietop_post_route.dcp] {
+    read_checkpoint $outputDir/mkpcietop_post_route.dcp
+    update_design -cells [get_cells top_portalTop] -black_box
+} else {
+    read_checkpoint $outputDir/mkpcietop_post_synth.dcp
+    read_xdc constraints/$boardname.xdc
+}
 start_gui
 
 #

@@ -170,16 +170,21 @@ implementation: hw/%(Dut)s.bit
 program:
 	vivado -mode batch -source %(dut)s-program.tcl
 
+reprogram:
+	vivado -mode batch -source %(dut)s-reprogram.tcl
+
 ## for partial reconfiguration on VC707
 verilog/portal/mkSynthesizeablePortalTop.v:
 	mkdir -p verilog/portal
 	mv -fv verilog/top/mkSynthesizeablePortalTop.v verilog/portal
 
 ## (*black_box*) causes vivado to ignore contents of the module and treat it as a black box
-verilog/top/portalstub.v: verilog/portal/mkSynthesizeablePortalTop.v
+verilog/top/portalstub.v:
+	make verilog/portal/mkSynthesizeablePortalTop.v
 	cat verilog/portal/mkSynthesizeablePortalTop.v | sed 's/^module /(*black_box*)module /' > verilog/top/portalstub.v
 
-hw/portaltop_post_synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v
+hw/portaltop_post_synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
+	if [ -f verilog/top/mkSynthesizeablePortalTop.v ]; then mv -v verilog/top/mkSynthesizeablePortalTop.v verilog/portal; fi
 	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl
 
 hw/mkpcietop_post_synth.dcp: $(vfile) verilog/top/portalstub.v
