@@ -8,7 +8,6 @@ file mkdir $outputDir
 #
 # STEP#1: setup design sources and constraints
 #
-read_verilog [ glob {verilog/lib/*.v} ]
 read_verilog [ glob {verilog/top/*.v} ]
 read_verilog [ glob /scratch/jamey/xbsv/xilinx/pcie_7x_v2_1/pcie_7x_0/source/*.v ]
 read_verilog [ glob /scratch/jamey/xbsv/xilinx/7x/pcie/source/*.v ]

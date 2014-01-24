@@ -17,10 +17,3 @@ read_verilog [ glob {verilog/portal/*.v} ]
 synth_design -mode out_of_context -name mkPortalTopForPcie -top mkPortalTopForPcie -part xc7vx485tffg1761-2 -flatten rebuilt
 
 write_checkpoint -force $outputDir/portaltop_post_synth
-
-read_xdc {constraints/vc707-portal-pblock.xdc}
-
-place_design
-route_design
-
-write_checkpoint -force $outputDir/portaltop_post_route

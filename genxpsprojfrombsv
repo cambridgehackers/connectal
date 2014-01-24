@@ -164,6 +164,23 @@ implementation: hw/%(Dut)s.bit
 program:
 	vivado -mode batch -source %(dut)s-program.tcl
 
+## for partial reconfiguration on VC707
+verilog/portal/mkSynthesizeablePortalTop.v:
+	mkdir -p verilog/portal
+	mv -fv verilog/top/mkSynthesizeablePortalTop.v verilog/portal
+
+verilog/top/portalstub.v: verilog/portal/mkSynthesizeablePortalTop.v $(XBSVTOP)/verilog/portalstub.v
+	cp -v $(XBSVTOP)/verilog/portalstub.v verilog/top
+ 
+hw/portaltop_post_synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v
+	vivado -mode batch -source $(XBSVTOP)/scripts/portaltop-synth.tcl
+
+hw/mkpcietop_post_synth.dcp: $(vfile) verilog/top/portalstub.v
+	vivado -mode batch -source $(XBSVTOP)/scripts/mkpcietop-synth.tcl
+
+hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop_post_synth.dcp
+
+partial: hw/mkPcieTop_pblock_portalTop_partial.bit
 
 ifeq ($(OS),android)
 
