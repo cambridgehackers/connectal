@@ -188,6 +188,7 @@ hw/portaltop_post_synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
 	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl
 
 hw/mkpcietop_post_synth.dcp: $(vfile) verilog/top/portalstub.v
+	make verilog/portal/mkSynthesizeablePortalTop.v
 	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-synth.tcl
 
 hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop_post_synth.dcp hw/portaltop_post_synth.dcp
