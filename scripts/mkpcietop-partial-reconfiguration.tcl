@@ -22,7 +22,7 @@ start_gui
 #
 
 read_checkpoint -cell top_portalTop hw/portaltop_post_synth.dcp
-read_xdc $xbsvdir/constraints/$boardname-portal-bplock.xdc
+read_xdc $xbsvdir/xilinx/constraints/$boardname-portal-pblock.xdc
 set_property HD.RECONFIGURABLE TRUE [get_cells top_portalTop]
 
 # startgroup
@@ -56,3 +56,4 @@ write_xdc -no_fixed_only -force $outputDir/mkpcietop_post_route.xdc
 # STEP#5: generate a bitstream
 # 
 write_bitstream -force -bin_file $outputDir/mkPcieTop.bit
+write_checkpoint -force $outputDir/mkpcietop_post_bitstream.dcp
