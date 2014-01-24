@@ -13,9 +13,9 @@ if [file exists {board.tcl}] {
     set partname {xc7vx485tffg1761-2}
 }
 
-if [file exists $outputDir/mkpcietop_post_route.dcp] {
-    read_checkpoint $outputDir/mkpcietop_post_route.dcp
-    update_design -cells [get_cells top_portalTop] -black_box
+if [file exists $outputDir/mkpcietop_static_routed.dcp] {
+    read_checkpoint $outputDir/mkpcietop_static_routed.dcp
+    lock_design -level routing
 } else {
     read_checkpoint $outputDir/mkpcietop_post_synth.dcp
     read_xdc constraints/$boardname.xdc
@@ -27,14 +27,11 @@ start_gui
 #
 
 read_checkpoint -cell top_portalTop hw/portaltop_post_synth.dcp
-read_xdc $xbsvdir/xilinx/constraints/$boardname-portal-pblock.xdc
-set_property HD.RECONFIGURABLE TRUE [get_cells top_portalTop]
-
-# startgroup
-# create_pblock pblock_pcie0
-# resize_pblock pblock_pcie0 -add {SLICE_X116Y51:SLICE_X221Y149 DSP48_X10Y22:DSP48_X19Y59 RAMB18_X7Y22:RAMB18_X14Y59 RAMB36_X7Y11:RAMB36_X14Y29}
-# add_cells_to_pblock pblock_pcie0 [get_cells top_x7pcie_pcie_ep]
-# endgroup
+if [file exists $outputDir/mkpcietop_static_routed.dcp] {
+} else {
+    read_xdc $xbsvdir/xilinx/constraints/$boardname-portal-pblock.xdc
+    set_property HD.RECONFIGURABLE TRUE [get_cells top_portalTop]
+}
 
 opt_design
 # power_opt_design
@@ -42,7 +39,6 @@ place_design
 #phys_opt_design
 write_checkpoint -force $outputDir/mkpcietop_post_place.dcp
 report_timing_summary -file $outputDir/mkpcietop_post_place_timing_summary.rpt
-
 
 #
 # STEP#4: run router, report actual utilization and timing, write checkpoint design, run drc, write verilog and xdc out
@@ -61,4 +57,6 @@ write_xdc -no_fixed_only -force $outputDir/mkpcietop_post_route.xdc
 # STEP#5: generate a bitstream
 # 
 write_bitstream -force -bin_file $outputDir/mkPcieTop.bit
-write_checkpoint -force $outputDir/mkpcietop_post_bitstream.dcp
+
+update_design -cells [get_cells top_portalTop] -black_box
+write_checkpoint -force $outputDir/mkpcietop_static_routed.dcp
