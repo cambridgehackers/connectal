@@ -41,7 +41,7 @@ module mkSynthesizeablePortalTop(PortalTop#(40, 0, 64, Empty));
    interface pins = top.pins;
 endmodule
 
-module mkStdPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
+module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Clock sys_clk_p,     Clock sys_clk_n,
    Reset pci_sys_reset_n)
    (VC707_FPGA);
@@ -49,4 +49,4 @@ module mkStdPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
       mkSynthesizeablePortalTop);
    return top.fpga;
-endmodule: mkStdPcieTop
+endmodule: mkPcieTop
