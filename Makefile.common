@@ -9,10 +9,10 @@ ifeq ($(BOARD),bluesim)
 TOP=BsimTop
 endif
 ifeq ($(BOARD),kc705)
-TOP=PcieTop
+TOP=$(PINS)Pcie$(DMA)Top
 endif
 ifeq ($(BOARD),vc707)
-TOP=PcieTop
+TOP=$(PINS)Pcie$(DMA)Top
 endif
 ifeq ($(BOARD),zedboard)
 TOP=ZynqTop

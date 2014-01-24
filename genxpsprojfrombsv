@@ -60,7 +60,7 @@ file mkdir $outputDir
 #
 # STEP#1: setup design sources and constraints
 #
-read_verilog [ glob {verilog/*.v} ]
+read_verilog [ glob {verilog/top/*.v} ]
 %(read_verilog)s
 %(tclfileConstraints)s
 
@@ -119,7 +119,7 @@ makefileTemplate='''
 DTOP=%(project_dir)s
 XBSVTOP=%(xbsvdir)s
 BSVPATH = %(bsvpath)s
-vfile=verilog/%(topbsvmod)s.v
+vfile=verilog/top/%(topbsvmod)s.v
 
 BOARD=%(boardname)s
 OS=%(OS)s
@@ -129,15 +129,15 @@ else
 ALLTARGETS=implementation ubuntu_exe
 endif
 
-BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
+BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
 BSIM_CXX = $(XBSVTOP)/cpp/BsimTop.cxx $(XBSVTOP)/cpp/BsimDMA.cxx $(XBSVTOP)/cpp/sock_utils.cxx $(XBSVTOP)/cpp/sock_fd.cxx
 
 all: $(ALLTARGETS)
 
 $(vfile): %(topbsvfile)s %(bsvfiles)s
-	mkdir -p verilog
+	mkdir -p verilog/top verilog/portal
 	cd sources/%(dut)s; mkdir -p $(DTOP)/obj; bsc %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
-	for v in verilog/*.v; do $(XBSVTOP)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
+	for v in verilog/top/*.v; do $(XBSVTOP)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
 bsim_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s
 	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s *.cpp *.cxx  -pthread -I$(XBSVTOP) -I$(XBSVTOP)/cpp -DBSIM %(clibs)s
@@ -182,7 +182,7 @@ hwclean:
 	rm -fr obj hw vivado*.jou vivado*.log fsm_encoding.os .Xil
 
 clean: hwclean
-	rm -fr verilog/*.v
+	rm -fr verilog
 '''
 
 vivado_strategies={

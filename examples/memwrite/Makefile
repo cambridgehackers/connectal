@@ -4,6 +4,8 @@ S2H = MemwriteRequest DMARequest
 H2S = MemwriteIndication DMAIndication
 BSVFILES = Memwrite.bsv  $(BSVDIR)/PortalMemory.bsv
 CPPFILES=testmemwrite.cpp
+DMA = Dma
+PINS = Std
 
 include ../../Makefile.common
 

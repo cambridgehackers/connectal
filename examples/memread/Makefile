@@ -4,6 +4,8 @@ S2H = MemreadRequest DMARequest
 H2S = MemreadIndication DMAIndication
 BSVFILES = Memread.bsv  $(BSVDIR)/PortalMemory.bsv
 CPPFILES=testmemread.cpp
+DMA = Dma
+PINS = Std
 
 include ../../Makefile.common
 
