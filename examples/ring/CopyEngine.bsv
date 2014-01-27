@@ -38,7 +38,7 @@ import StmtFSM::*;
 //  word0-6 all 0
 //  word7  TAG[31:0]
 
-module mkCopyEngine#(DMAReadClient#(64) copy_read_chan, DMAWriteClient#(64) copy_write_chan) ( ServerF#(Bit#(64), Bit#(64)));
+module mkCopyEngine#(DMAReadServer#(64) copy_read_chan, DMAWriteServer#(64) copy_write_chan) ( ServerF#(Bit#(64), Bit#(64)));
    FIFO#(Bit#(64)) f_in  <- mkSizedFIFO(16);    // to buffer incoming requests
    FIFO#(Bit#(64)) f_out <- mkSizedFIFO(16);    // to buffer outgoing responses
    Reg#(Bit#(16)) copyReadCount <- mkReg(0);
@@ -53,13 +53,16 @@ module mkCopyEngine#(DMAReadClient#(64) copy_read_chan, DMAWriteClient#(64) copy
       while(True)
 	 seq
 	    while (copyBusy) noAction;
-	    copyTag <= f_in.deq[31:0];
-	    copyReadAddr <= f_in.deq[39:0];
-	    copyWriteAddr <= f_in.deq[39:0];
+	    copyTag <= f_in.first()[31:0];
+	    f_in.deq();
+	    copyReadAddr <= f_in.first()[39:0];
+	    f_in.deq();
+	    copyWriteAddr <= f_in.first()[39:0];
+	    f_in.deq();
 	    action
-	       let regv <-f_in.deq[15:0];
-	       copyReadCount <= regv;
-	       copyWriteCount <= regv;
+	       copyReadCount <= f_in.first()[15:0];
+	       copyWriteCount <= f_in.first()[15:0];
+	       f_in.deq();
 	    endaction
 	    for (ii <= 0; ii < 4; ii <= ii+1)
 	       f_in.deq;
