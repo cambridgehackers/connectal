@@ -43,12 +43,7 @@ def printval(starty, lasty, lastval):
                         lastval = lastval - 28
         outstring = outstring + ' %3d-%3d/%d' % (starty, lasty, lastval)
 
-minbit = 2201033
-minx = 9999
-miny = 9999
-maxx = 1
-maxy = 1
-print('hi', sys.argv[1])
+print('readll: opening', sys.argv[1])
 lines =  open(sys.argv[1]).readlines()
 print('len', len(lines))
 i = 0
@@ -59,39 +54,20 @@ for thisline in lines:
     if thisline[0] == ';':
         continue
     iteml = thisline.split()
-    if iteml[0] != 'Bit':
-        print('Non-Bit line', thisline)
+    if iteml[0] != 'Bit' or not iteml[4].startswith('Block=SLICE_X'):
+        print('Non-Bit line', thisline.strip())
         continue
-    if not iteml[4].startswith('Block=SLICE_X'):
-        print('Non-"Block=SLICE_X" line', thisline)
-        continue
-    iteml.pop(0)
     for i in range(3):
-        iteml[i] = int(iteml[i], 0)
-    bitoff = iteml[0]
-    frameoffset = iteml[2]
-    temp = iteml[3][13:]
+        iteml[i+1] = int(iteml[i+1], 0)
+    bitoff = iteml[1]
+    frameoffset = iteml[3]
+    temp = iteml[4][13:]
     ind = temp.find('Y')
     coordx = int(temp[:ind])
     coordy = int(temp[ind+1:])
-    adjustment = 0
-    itemtype = iteml[4]
+    itemtype = iteml[5]
     if itemtype.startswith('Ram='):
         continue
-    if itemtype == 'Latch=BQ':
-        adjustment = 25
-    if itemtype == 'Latch=CQ':
-        adjustment = 30
-    if itemtype == 'Latch=DQ':
-        adjustment = 55
-    if itemtype == 'Latch=AMUX':
-        adjustment = 1
-    if itemtype == 'Latch=BMUX':
-        adjustment = 19
-    if itemtype == 'Latch=CMUX':
-        adjustment = 38
-    if itemtype == 'Latch=DMUX':
-        adjustment = 48
     if not itemtype.endswith('MUX'):
         itemtype = itemtype[:6] + '   ' + itemtype[6:]
     if not topoffset.get(itemtype):
@@ -100,22 +76,15 @@ for thisline in lines:
         topoffset[itemtype][frameoffset] = 0
     topoffset[itemtype][frameoffset] = topoffset[itemtype][frameoffset] + 1
     ftemp = frameoffset % 32
+    fmult = int(frameoffset/32)
     if not topref.get(ftemp):
-        topref[ftemp] = []
-    if itemtype not in topref[ftemp]:
-        topref[ftemp].append(itemtype)
-    adjoff = bitoff - coordx - 64 * coordy - adjustment
-    if maxx < coordx:
-        maxx = coordx
-    if maxy < coordy:
-        maxy = coordy
-    if minx > coordx:
-        minx = coordx
-    if miny > coordy:
-        miny = coordy
-    #print('index', '%4d_%4d_%5d' % (coordy, coordx, frameoffset))
+        topref[ftemp] = {}
+    if not topref[ftemp].get(itemtype):
+        topref[ftemp][itemtype] = {}
+    if not topref[ftemp][itemtype].get(fmult):
+        topref[ftemp][itemtype][fmult] = 0
+    topref[ftemp][itemtype][fmult] = topref[ftemp][itemtype][fmult] + 1
     toplist['%4d_%4d_%5d' % (coordx, coordy, frameoffset)] = [ coordx, coordy, bitoff - frameoffset]
-print('min', minx, miny, 'max', maxx, maxy)
 lastx = 0
 outstring = ''
 starty = -1
@@ -137,12 +106,26 @@ for key, value in sorted(toplist.items()):
     lastval = value[2]
 printval(starty, lasty, lastval)
 print(outstring)
-for key, value in sorted(topoffset.items()):
-    outstring = key + ': '
-    for vkey, vvalue in sorted(value.items()):
-        if vvalue != 1:
-            outstring = outstring + ' ' + str(vkey) + '/' + str(vvalue)
-    print(outstring)
+#for key, value in sorted(topoffset.items()):
+#    outstring = key + ': '
+#    for vkey, vvalue in sorted(value.items()):
+#        if vvalue != 1:
+#            outstring = outstring + ' ' + str(vkey) + '/' + str(vvalue)
+#    print(outstring)
+print('ref')
 for key, value in sorted(topref.items()):
-    print('ref', key, value)
-
+    #print(key, value)
+    for vkey, vvalue in sorted(value.items()):
+        outstringhead = str(key) + '=' + vkey[6:].strip() + ':'
+        outstring = outstringhead
+        prevrkey = -1
+        for rkey, rvalue in sorted(vvalue.items()):
+            if prevrkey != -1 and rkey != prevrkey + 2:
+                print(outstring)
+                outstring = '    ' + outstringhead
+                prevrkey = -1
+            outstring = outstring + ' ' + str(rkey)
+            if rvalue != 1:
+                outstring = outstring + '/' + str(rvalue)
+            prevrkey = rkey
+    print(outstring)
