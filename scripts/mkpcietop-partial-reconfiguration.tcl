@@ -20,7 +20,7 @@ if [file exists $outputDir/mkpcietop_static_routed.dcp] {
     read_checkpoint $outputDir/mkpcietop_post_synth.dcp
     read_xdc constraints/$boardname.xdc
 }
-start_gui
+#start_gui
 
 #
 # STEP#3: run placement and logic optimization, report utilization and timing estimates, write checkpoint design
