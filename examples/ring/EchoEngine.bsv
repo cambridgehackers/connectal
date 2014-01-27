@@ -21,10 +21,9 @@
 // SOFTWARE.
 
 import FIFO::*;
-import GetPutF::*;
 import RingTypes::*;
 
-module mkEchoServer#() ( ServerF#(Bit#(64), Bit#(64)));
+module mkEchoServer ( ServerF#(Bit#(64), Bit#(64)));
    FIFO#(Bit#(64)) f_echo  <- mkSizedFIFOF(16);    // to buffer incoming requests
    
    interface PutF request = toPutF(f_echo);
