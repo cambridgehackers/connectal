@@ -24,6 +24,7 @@ import FIFO::*;
 import GetPutF::*;
 import PortalRMemory::*;
 import RingTypes::*;
+import StmtFSM::*;
 
 // The interface to the copyengine is a pair of fifos which supply and accept
 // blocks of 8 64 bit words
@@ -37,7 +38,7 @@ import RingTypes::*;
 //  word0-6 all 0
 //  word7  TAG[31:0]
 
-module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) copy_write_chan) ( ServerF#(Bit#(64), Bit#(64)));
+module mkCopyEngine#(DMAReadClient#(64) copy_read_chan, DMAWriteClient#(64) copy_write_chan) ( ServerF#(Bit#(64), Bit#(64)));
    FIFO#(Bit#(64)) f_in  <- mkSizedFIFO(16);    // to buffer incoming requests
    FIFO#(Bit#(64)) f_out <- mkSizedFIFO(16);    // to buffer outgoing responses
    Reg#(Bit#(16)) copyReadCount <- mkReg(0);
@@ -64,7 +65,7 @@ module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) co
 	       f_in.deq;
 	    copyBusy <= True;
 	 endseq
-   endseq
+   endseq;
       
     rule copyReadRule (copyBusy && (copyReadCount != 0));
        $display("copyRead %h, count %h", copyReadAddr, copyReadCount);
@@ -88,20 +89,18 @@ module mkCopyEngine#(ReadChan#(Bit#(64)) copy_read_chan, WriteChan#(Bit#(64)) co
 	    while (!copyBusy) noAction;
 	    while (copyWriteCount > 0)
 	       action
-		  let v <= copy_write_chan.writeDone.get;
+		  let v <- copy_write_chan.writeDone.get;
 		  copyWriteCount <= copyWriteCount - 8;	 
 	       endaction
-	    for (ii <= 0; ii < 7; ii += 1)
+	    for (ii <= 0; ii < 7; ii <= ii + 1)
 	       f_out.enq(0);
 	    f_out.enq(extend(copyTag));
 	    copyBusy <= False;
 	 endseq
-   endseq
+   endseq;
       
-   FSM start();
-   mkAutoFSM#(copyStart)(start);
-   FSM finish();
-   mkAutoFSM#(copyFinish)(finish);
+   mkAutoFSM(copyStart);
+   mkAutoFSM(copyFinish);
    
    interface PutF request = toPutF(f_in);
    interface GetF response = toGetF (f_out);
