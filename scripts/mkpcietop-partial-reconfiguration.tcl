@@ -59,6 +59,10 @@ write_xdc -no_fixed_only -force $outputDir/mkpcietop_post_route.xdc
 # STEP#5: generate a bitstream
 # 
 write_bitstream -force -bin_file $outputDir/mkPcieTop.bit
+if [file exists $outputDir/mkpcietop_static_routed.dcp] {
+    pr_verify $outputDir/mkpcietop_static_routed.dcp $outputDir/mkpcietop_post_route.dcp
+} else {
+    update_design -cells [get_cells top_portalTop] -black_box
+    write_checkpoint -force $outputDir/mkpcietop_static_routed.dcp
+}
 
-update_design -cells [get_cells top_portalTop] -black_box
-write_checkpoint -force $outputDir/mkpcietop_static_routed.dcp
