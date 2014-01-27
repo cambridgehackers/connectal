@@ -30,9 +30,11 @@ import StmtFSM::*;
 // blocks of 8 64 bit words
 // A Command:
 //  word 0: COPY[63:56] TAG[31:0]
-//  word 1: readAddress[39:0]
-//  word 2: writeAddress[39:0]
-//  word 3: bytecount[15:0'
+//  word 1: readMemHandle[63:32]
+//  word 1: readAddress[23:0]
+//  word 2  writeMemHandle[63:32]
+//  word 2: writeAddress[23:0]
+//  word 3: bytecount[15:0]
 //  word 4-7 unused
 // Status
 //  word0-6 all 0
@@ -43,8 +45,10 @@ module mkCopyEngine#(DMAReadServer#(64) copy_read_chan, DMAWriteServer#(64) copy
    FIFO#(Bit#(64)) f_out <- mkSizedFIFO(16);    // to buffer outgoing responses
    Reg#(Bit#(16)) copyReadCount <- mkReg(0);
    Reg#(Bit#(16)) copyWriteCount <- mkReg(0);
-   Reg#(Bit#(40)) copyReadAddr <- mkReg(0);
-   Reg#(Bit#(40)) copyWriteAddr <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) copyReadAddr <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) copyWriteAddr <- mkReg(0);
+   Reg#(DmaMemHandle) copyReadHandle <- mkReg(0);
+   Reg#(DmaMemHandle) copyWriteHandle <- mkReg(0);
    Reg#(Bit#(32)) copyTag <- mkReg(0);
    Reg#(Bool) copyBusy <- mkReg(False);
     
@@ -53,26 +57,34 @@ module mkCopyEngine#(DMAReadServer#(64) copy_read_chan, DMAWriteServer#(64) copy
       while(True)
 	 seq
 	    while (copyBusy) noAction;
-	    copyTag <= f_in.first()[31:0];
-	    f_in.deq();
-	    copyReadAddr <= f_in.first()[39:0];
-	    f_in.deq();
-	    copyWriteAddr <= f_in.first()[39:0];
-	    f_in.deq();
+	    action
+	       copyTag <= f_in.first()[31:0];
+	       f_in.deq();  // word 0
+	    endaction
+	    action
+	       copyReadHandle <= f_in.first()[63:32]
+	       copyReadAddr <= f_in.first()[23:0];
+	       f_in.deq();  // word 1
+	    endaction
+	    action
+	       copyWriteHandle <= f_in.first()[63:32]
+	       copyWriteAddr <= f_in.first()[23:0];
+	       f_in.deq();  // word 2
+	    endaction
 	    action
 	       copyReadCount <= f_in.first()[15:0];
 	       copyWriteCount <= f_in.first()[15:0];
-	       f_in.deq();
+	       f_in.deq();  // word 3
 	    endaction
-	    for (ii <= 0; ii < 4; ii <= ii+1)
-	       f_in.deq;
+	    for (ii <= 4; ii < 8; ii <= ii+1)
+	       f_in.deq;  // discard words 4-7
 	    copyBusy <= True;
 	 endseq
    endseq;
       
     rule copyReadRule (copyBusy && (copyReadCount != 0));
        $display("copyRead %h, count %h", copyReadAddr, copyReadCount);
-       copy_read_chan.readReq.put(copyReadAddr);
+       copy_read_chan.readReq.put(DMAAddressRequest{handle: copyReadHandle, address: copyReadAddr, burstLen: extend(1), tag: truncate(copyReadAddr >> 3)});
        copyReadAddr <= copyReadAddr + 8;
        copyReadCount <= copyReadCount - 8;
     endrule
@@ -80,8 +92,8 @@ module mkCopyEngine#(DMAReadServer#(64) copy_read_chan, DMAWriteServer#(64) copy
     rule copyReadWriteRule (copyBusy);
        let data <- copy_read_chan.readData.get;
        $display("copyReadWrite addr %h", copyWriteAddr);
-       copy_write_chan.writeReq.put(copyWriteAddr);
-       copy_write_chan.writeData.put(data);
+       copy_write_chan.writeReq.put(DMAAddressRequest{handle: copyWriteHandle, address: copyWriteAddr, burstLen: extend(1), tag: truncate(copyWriteAddr >> 3)});
+       copy_write_chan.writeData.put(DMAData{data: data.data, tag: copyWriteAddr >> 3});
        copyWriteAddr <= copyWriteAddr + 8;
     endrule
     
