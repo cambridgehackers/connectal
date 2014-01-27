@@ -58,3 +58,7 @@ endinterface
 
 typedef PortalTop#(addrWidth,0,64,Empty)     StdPortalTop#(numeric type addrWidth);
 typedef PortalTop#(addrWidth,1,64,Empty)     StdPortalDmaTop#(numeric type addrWidth);
+
+typeclass SynthesizablePortalTop#(numeric type addrWidth, numeric type nmasters, numeric type dataWidth, type pins);
+   module mkSynthesizablePortalTop(PortalTop#(addrWidth,nmasters,dataWidth,pins) ifc);
+endtypeclass

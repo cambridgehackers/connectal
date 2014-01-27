@@ -219,8 +219,8 @@ static int portal_release(struct inode *inode, struct file *filep)
 {
 	struct portal_client *portal_client = filep->private_data;
 	driver_devel("%s inode=%p filep=%p\n", __func__, inode, filep);
-        kfree(portal_client);
-        return 0;
+	kfree(portal_client);
+       return 0;
 }
 
 static const struct file_operations portal_fops = {

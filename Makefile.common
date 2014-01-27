@@ -7,22 +7,27 @@ all bits verilog implementation bsim bsim_exe: gen
 
 ifeq ($(BOARD),bluesim)
 TOP=BsimTop
+MKTOP=mkBsimTop
 endif
 ifeq ($(BOARD),kc705)
-TOP=PcieTop
+TOP=$(PINS)Pcie$(DMA)Top
+MKTOP=mkPcieTop
 endif
 ifeq ($(BOARD),vc707)
-TOP=PcieTop
+TOP=$(PINS)Pcie$(DMA)Top
+MKTOP=mkPcieTop
 endif
 ifeq ($(BOARD),zedboard)
 TOP=ZynqTop
+MKTOP=mkZynqTop
 endif
 ifeq ($(BOARD),zc702)
 TOP=ZynqTop
+MKTOP=mkZynqTop
 endif
 
 gen:
-	$(XBSVDIR)/genxpsprojfrombsv -B$(BOARD) -p $(BOARD) -x mk$(TOP) \
+	$(XBSVDIR)/genxpsprojfrombsv -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \

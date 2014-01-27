@@ -1,0 +1,5 @@
+startgroup
+create_pblock pblock_portalTop
+resize_pblock pblock_portalTop -add {SLICE_X0Y0:SLICE_X105Y199 DSP48_X0Y0:DSP48_X8Y79 PCIE_X0Y0:PCIE_X0Y0 RAMB18_X0Y0:RAMB18_X6Y79 RAMB36_X0Y0:RAMB36_X6Y39}
+add_cells_to_pblock pblock_portalTop [get_cells top_portalTop]
+endgroup

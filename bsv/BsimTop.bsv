@@ -121,7 +121,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
       rule req_ar if (readLen == 0);
 	 let req <- master.req_ar.get();
 	 Bit#(5) rlen = extend(req.len)+1;
-	 //$display("req_ar: addr=%h len=%d", req.address, rlen);
+	 $display("req_ar: addr=%h len=%d", req.address, rlen);
 	 readAddr <= req.address;
 	 readLen <= rlen;
 	 readId <= req.id;
@@ -130,7 +130,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 	 let handle = readAddr[39:32];
 	 let addr = readAddr[31:0];
 	 Bit#(dsz) v <- rw.read_pareff(extend(handle), addr);
-	 //$display("read_resp: handle=%d addr=%h v=%h", handle, addr, v);
+	 $display("read_resp: handle=%d addr=%h v=%h", handle, addr, v);
 	 readLen <= readLen - 1;
 	 readAddr <= readAddr + fromInteger(valueOf(dsz)/8);
 	 let resp = Axi3ReadResponse { data: v, resp: 0, last: pack(readLen == 1), id: readId};
@@ -140,7 +140,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
       rule req_aw if (writeLen == 0);
 	 let req <- master.req_aw.get();
 	 Bit#(5) wlen = extend(req.len)+1;
-	 //$display("req_aw: addr=%h len=%d", req.address, wlen);
+	 $display("req_aw: addr=%h len=%d", req.address, wlen);
 	 writeAddr <= req.address;
 	 writeLen <= wlen;
 	 writeId <= req.id;
@@ -153,7 +153,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 	 let addr = writeAddr[31:0];
 	 let resp <- master.resp_write.get();
 	 rw.write_pareff(extend(handle), addr, resp.data);
-	 //$display("write_resp: handle=%d addr=%h v=%h", handle, addr, resp.data);
+	 $display("write_resp: handle=%d addr=%h v=%h", handle, addr, resp.data);
 	 writeLen <= writeLen - 1;
 	 writeAddr <= writeAddr + fromInteger(valueOf(dsz)/8);
 	 if (writeLen == 1)

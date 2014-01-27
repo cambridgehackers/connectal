@@ -106,7 +106,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       DMAAddressRequest req = unpack(0);
       if (valueOf(numReadClients) > 0)
 	 req <- readClients[selectReg].readReq.get();
-      //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
+      $display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
 
       if (req.handle > fromInteger(valueOf(NumSGLists)))
 	 dmaIndication.badHandle(req.handle, extend(req.address));
@@ -123,7 +123,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift))) begin
 	 // squash request
-	 //$display("dmaRead: badAddr handle=%d addr=%h physAddr=%h", req.handle, req.address, physAddr);
+	 $display("dmaRead: badAddr handle=%d addr=%h physAddr=%h", req.handle, req.address, physAddr);
 	 dmaIndication.badAddr(req.handle, extend(req.address), extend(physAddr));
       end
       else begin
@@ -227,7 +227,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
       DMAAddressRequest req = unpack(0);
       if (valueOf(numWriteClients) > 0)
 	 req <- writeClients[selectReg].writeReq.get();
-      //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.handle, req.address, req.burstLen, debugReg);
+      $display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.handle, req.address, req.burstLen, debugReg);
 
       lreqFifo.enq(req);
       chanFifo.enq(selectReg);
@@ -240,7 +240,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift))) begin
 	 // squash request
-	 //$display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.handle, req.address, physAddr);
+	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.handle, req.address, physAddr);
 	 dmaIndication.badAddr(req.handle, extend(req.address), extend(physAddr));
       end
       else begin
@@ -278,7 +278,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 	 reqFifo.deq();
 	 let physAddr = paFifo.first();
 	 paFifo.deq();
-	 //$display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
+	 $display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
 
 	 dreqFifo.enq(req);
 	 return Axi3WriteRequest{address:physAddr, len:truncate(req.burstLen-1), id:req.tag,
@@ -302,7 +302,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 	       respFifo.enq(activeChan);
 	    end
 
-	    //$display("dmaWrite data data=%h burstLen=%d", tagdata.data, burstLen);
+	    $display("dmaWrite data data=%h burstLen=%d", tagdata.data, burstLen);
 
 	    burstReg <= burstLen-1;
 
