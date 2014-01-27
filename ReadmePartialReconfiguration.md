@@ -8,19 +8,23 @@ this worthwhile at the moment.
 Run genxpsprojfrombsv as usual to create the project directory.
 
 Create proxies, wrappers, scripts, and Makefiles:
+
     cd examples/echo
     genxpsprojfrombsv -Bkc705 -p kc705 -x mkPcieTop -s2h Say -h2s Say -s test.cpp -t ../../bsv/StdPcieTop.bsv  Say.bsv
 
 Compile the full bitstream:
+
     cd kc705
     make verilog
     make partial ## generates full and partial bitstreams
     make program ## loads the full bitstream
 
 Now reboot to configure the PCIe endpoint
+
     sudo shutdown -r now
 
 Now you can edit the source code, recompile, and generate a new partial bitstream:
+
     ## edit the BSV
     make verilog
     make partial
