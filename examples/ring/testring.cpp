@@ -16,11 +16,20 @@
 
 RingRequestProxy *ring = new RingRequestProxy(IfcNames_RingRequest);
 DMARequestProxy *dma = new DMARequestProxy(IfcNames_DMARequest);
-PortalAlloc *dstAlloc;
-unsigned int *dstBuffer = 0;
-int numWords = 16 << 3;
-size_t test_sz  = numWords*sizeof(unsigned int);
-size_t alloc_sz = test_sz;
+
+PortalAlloc *cmdAlloc;
+unsigned int *cmdBuffer = 0;
+PortalAlloc *statusAlloc;
+unsigned int *statusBuffer = 0;
+PortalAlloc *scratchAlloc;
+unsigned int *scratchBuffer = 0;
+
+size_t cmd_ring_sz 4096;
+size_t status_ring_sz 4096;
+size_t scratch_sz 1<<20; /* 1 MB */
+size_t scratch_words = scratch_sz >> 8;
+
+
 sem_t conf_sem;
 
 void dump(const char *prefix, char *buf, size_t len)
@@ -52,9 +61,36 @@ public:
   RingIndication(unsigned int id) : RingIndicationWrapper(id){}
 };
 
+struct SWRing_struct {
+  unsigned int ref;
+  void *base;
+  void *first;
+  size_t size;
+};
+
+struct SWRing cmd_ring;
+struct SWRing status_ring;
+
+void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size_t size)
+{
+  r->size = size;
+  r->base = base;
+  r->first = base;
+  r->ref = ref;
+  ring->set(ringid, 0, 0);         // bufferbase, relative to base
+  ring->set(ringid, 1, size);      // bufferend
+  ring->set(ringid, 2, 0);         // bufferfirst
+  ring->set(ringid, 3, 0);         // bufferlast 
+  ring->set(ringid, 4, size - 1);  // buffermask
+  ring->set(ringid, 5, ref);       // memhandle
+}
+
+void * ring_next(
+
 
 int main(int argc, const char **argv)
 {
+  void *v;
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   if(sem_init(&conf_sem, 1, 0)){
@@ -63,9 +99,21 @@ int main(int argc, const char **argv)
   }
 
   fprintf(stderr, "allocating memory...\n");
-  dma->alloc(alloc_sz, &dstAlloc);
+  dma->alloc(cmd_ring_sz, &cmdAlloc);
+  dma->alloc(status_ring_sz, &statusAlloc);
+  dma->alloc(scratch_ring_sz, &scratchAlloc);
 
-  dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE, MAP_SHARED, dstAlloc->header.fd, 0);
+  v = mmap(0, cmd_sz, PROT_READ|PROT_WRITE, MAP_SHARED, cmdAlloc->header.fd, 0);
+  assert(v != MAP_FAILED);
+  cmdBuffer = (unsigned int *) v;
+
+  v = mmap(0, status_sz, PROT_READ|PROT_WRITE, MAP_SHARED, statusAlloc->header.fd, 0);
+  assert(v != MAP_FAILED);
+  statusBuffer = (unsigned int *) = v;
+  v = mmap(0, scratch_sz, PROT_READ|PROT_WRITE, MAP_SHARED, scratchAlloc->header.fd, 0);
+  assert(v != MAP_FAILED);
+  scratchBuffer = (unsigned int *) = v;
+
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -74,17 +122,23 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
+  unsigned int ref_cmdAlloc = dma->reference(cmdAlloc);
+  unsigned int ref_statusAlloc = dma->reference(statusAlloc);
+  unsigned int ref_scratchAlloc = dma->reference(scratchAlloc);
 
-  for (int i = 0; i < numWords; i++){
-    dstBuffer[i] = i;
+  for (int i = 0; i < scratch_words; i += 1){
+    scratchBuffer[i] = i;
   }
     
-  dma->dCacheFlushInval(dstAlloc, dstBuffer);
+  dma->dCacheFlushInval(cmdAlloc, cmdBuffer);
+  dma->dCacheFlushInval(statusAlloc, statusBuffer);
+  dma->dCacheFlushInval(scratchAlloc, scratchBuffer);
+
   fprintf(stderr, "flush and invalidate complete\n");
       
 
   fprintf(stderr, "main about to issue requests\n");
+
   ring->set(0, 0, 0x1000);
   sem_wait(&conf_sem);
   ring->set(0, 1, 0x1001);
