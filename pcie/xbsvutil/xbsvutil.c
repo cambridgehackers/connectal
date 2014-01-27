@@ -37,7 +37,7 @@ static void print_usage(const char* argv0)
   printf("  help    - Print usage information and exit.\n");
   printf("  info    - Describe the BlueNoC target(s).\n");
   printf("  build   - Display the Build number.\n");
-  printf("  reset   - Reset the BlueNoC target(s).\n");
+  printf("  reset   - Reset the portals.\n");
   printf("  down    - Deactivate the BlueNoC target(s).\n");
   printf("  up      - Reactivate the BlueNoC target(s).\n");
   printf("  debug   - Control debugging output written to the kernel log.\n");
@@ -167,14 +167,14 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
     }
     case RESET: {
       if (!board_info.is_active) {
-        printf("Cannot reset BlueNoC device at %s because it is deactivated\n", file);
+        printf("Cannot reset portals at %s because it is deactivated\n", file);
       } else {
         res = ioctl(fd,BNOC_SOFT_RESET);
         if (res == -1) {
           perror("reset ioctl");
           ret = -1;
         } else {
-          printf("Reset BlueNoC device at %s\n", file);
+          printf("Reset portals at %s\n", file);
           ret = 1;
         }
       }
