@@ -22,7 +22,7 @@ import DMAIndicationProxy::*;
 // defined by user
 import Ring::*;
 
-typedef enum {RingIndication, RingRequest, DmaRequest, DmaIndication} IfcNames deriving (Eq,Bits);
+typedef enum {RingIndication, RingRequest, DMAIndication, DMARequest} IfcNames deriving (Eq,Bits);
 
 module mkPortalTop(StdPortalTop#(addrWidth));
    
@@ -41,7 +41,6 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    writeClients[0] = dma_write_chan.dmaClient;
    writeClients[1] = cmd_write_chan.dmaClient;
 
-   DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(DMAIndication);
    Integer numRequests = 8;   
    AxiDMA#(Bit#(64))   dma <- mkAxiDMA(dmaIndication.ifc, numRequests, readClients, writeClients);
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(DMARequest,dma.request);
