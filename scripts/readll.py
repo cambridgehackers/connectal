@@ -28,15 +28,15 @@ def getbit(lastx, lasty):
     toff = 36 * int((lastx - 14)/2)
     if lastx >= 54:
         toff = toff + 2 + 4 * 28
-    elif lastx >= 50:
+    elif lastx >= 50: # column X1
         toff = toff + 2 + 3 * 28
     elif lastx >= 36:
         toff = toff + 2 * 28
     elif lastx >= 32:
         toff = toff + 28
-    if lasty <= 35:
+    if lasty <= 49:   # row Y0
         toff = toff + 2 * 2 * 1283
-    elif lasty <= 99:
+    elif lasty <= 99: # row Y1
         toff = toff + 2 * 1283
     return toff
 
