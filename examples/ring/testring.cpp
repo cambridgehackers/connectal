@@ -61,11 +61,14 @@ public:
   RingIndication(unsigned int id) : RingIndicationWrapper(id){}
 };
 
-struct SWRing_struct {
+struct SWRing {
   unsigned int ref;
-  void *base;
-  void *first;
+  char *base;
+  unsigned first;
+  unsigned last;
   size_t size;
+  unsigned cached_space;
+  int ringid;
 };
 
 struct SWRing cmd_ring;
@@ -75,8 +78,11 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
 {
   r->size = size;
   r->base = base;
-  r->first = base;
+  r->first = 0;
+  r->last = 0;
   r->ref = ref;
+  r->cached_space = size - 64;
+  r->ringid = ringid;
   ring->set(ringid, 0, 0);         // bufferbase, relative to base
   ring->set(ringid, 1, size);      // bufferend
   ring->set(ringid, 2, 0);         // bufferfirst
@@ -85,8 +91,49 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   ring->set(ringid, 5, ref);       // memhandle
 }
 
-void * ring_next(
+uint64_t ring_next(struct SWRing *r)
+{
+  uint64_t *p = (uint64_t *) (r->base + r->last);
+  if (p[7] == 0) return (0);
+  return (p);
+}
 
+void ring_pop(struct SWRing *r)
+{
+  uint64_t *p = (uint64_t *) r->base;
+  unsigned last = r->last;
+  p = (uint64_t *) ((char *) p + last);
+  p[7] = 0;
+  /* wmb */
+  last += 64;
+  if (last >= r->size) last  = 0;
+  r->last = last;
+}
+
+void update_space_cache(struct SWRing *r)
+{
+}
+
+void ring_send(struct SWRing *r, uint64_t *cmd)
+{
+}
+
+
+/*
+
+is empty
+  read first
+  read last
+  return first == last
+
+
+how much space is available ?
+
+   read first
+   read last
+   if (first == last) return (size - 64)
+   else return (size - 64) - ((size + first - last) % size)
+*/
 
 int main(int argc, const char **argv)
 {
