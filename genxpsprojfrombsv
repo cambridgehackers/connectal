@@ -79,8 +79,6 @@ write_verilog -force $outputDir/%(dut)s_netlist.v
 #report_timing_summary -file $outputDir/%(dut)s_post_synth_timing_summary.rpt
 #report_power -file $outputDir/%(dut)s_post_synth_power.rpt
 
-##set outputDir ./hw
-##open_checkpoint $outputDir/%(dut)s_post_synth.dcp
 #
 # STEP#3: run placement and logic optimization, report utilization and timing estimates, write checkpoint design
 #
@@ -172,6 +170,7 @@ program:
 
 reprogram:
 	vivado -mode batch -source %(dut)s-reprogram.tcl
+	xbsvutil reset /dev/fpga0
 
 ## for partial reconfiguration on VC707
 verilog/portal/mkSynthesizeablePortalTop.v:
@@ -184,11 +183,11 @@ verilog/top/portalstub.v:
 	cat verilog/portal/mkSynthesizeablePortalTop.v | sed 's/^module /(*black_box*)module /' > verilog/top/portalstub.v
 
 hw/portaltop_post_synth.dcp: verilog/portal/mkSynthesizeablePortalTop.v $(vfile)
-	if [ -f verilog/top/mkSynthesizeablePortalTop.v ]; then mv -v verilog/top/mkSynthesizeablePortalTop.v verilog/portal; fi
+	make verilog/top/portalstub.v
 	vivado -mode batch -source $(XBSVDIR)/scripts/portaltop-synth.tcl
 
-hw/mkpcietop_post_synth.dcp: $(vfile) verilog/top/portalstub.v
-	make verilog/portal/mkSynthesizeablePortalTop.v
+hw/mkpcietop_post_synth.dcp:
+	make verilog/top/portalstub.v
 	vivado -mode batch -source $(XBSVDIR)/scripts/mkpcietop-synth.tcl
 
 hw/mkPcieTop_pblock_portalTop_partial.bit: hw/mkpcietop_post_synth.dcp hw/portaltop_post_synth.dcp
