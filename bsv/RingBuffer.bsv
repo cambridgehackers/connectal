@@ -17,10 +17,11 @@ interface RingBuffer;
    method Bool notFull();
    method Action push(Bit#(8) num);
    method Action pop(Bit#(8) num);
-   interface Reg#(Bit#(40)) bufferfirst;
-   interface Reg#(Bit#(40)) bufferlast;
+   interface Reg#(DmaAddrSize) bufferfirst;
+   interface Reg#(DmaAddrSize) bufferlast;
    interface Reg#(Bool) enable;
    interface RingBufferConfig configifc;
+   interface Reg#(DmaMemHandle) memhandle;
 endinterface
 
 interface RingBufferConfig;
@@ -31,11 +32,12 @@ endinterface
 
 module mkRingBuffer(RingBuffer);
    
-   Reg#(Bit#(40)) rbufferbase <- mkReg(0);
-   Reg#(Bit#(40)) rbufferend <- mkReg(0);
-   Reg#(Bit#(40)) rbufferfirst <- mkReg(0);
-   Reg#(Bit#(40)) rbufferlast <- mkReg(0);
-   Reg#(Bit#(40)) rbuffermask <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) rbufferbase <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) rbufferend <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) rbufferfirst <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) rbufferlast <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) rbuffermask <- mkReg(0);
+   Reg#(DmaMemHandle) rmemhandle <- mkReg(0);
    Reg#(Bool) renable <- mkReg(False);
    
    interface RingBufferConfig configifc;
@@ -45,6 +47,7 @@ module mkRingBuffer(RingBuffer);
       else if (regist == 2) rbufferfirst <= addr;
       else if (regist == 3) rbufferlast <= addr;
       else if (regist == 4) rbuffermask <= addr;
+      else if (regist == 5) rmemhandle <= truncate(addr);
       else renable <= (addr[0] != 0);
    endmethod
    
@@ -54,6 +57,7 @@ module mkRingBuffer(RingBuffer);
       else if (regist == 2) return (rbufferfirst);
       else if (regist == 3) return (rbufferlast);
       else if (regist == 4) return (rbuffermask);
+      else if (regist == 5) return (zeroExtend(rmemhandle));
       else return(zeroExtend(pack(renable)));
    endmethod
    endinterface
@@ -77,5 +81,6 @@ module mkRingBuffer(RingBuffer);
    interface Reg bufferfirst = rbufferfirst;
    interface Reg bufferlast = rbufferlast;
    interface Reg enable = renable;
+   interface Reg memhandle = rmemhandle;
 
 endmodule
