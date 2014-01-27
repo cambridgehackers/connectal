@@ -45,6 +45,7 @@ interface X7PcieBridgeIfc#(numeric type lanes);
    interface Axi3Master#(32,32,12) portal0;
    interface GetPut#(TLPData#(16)) slave; // to the axi slave engine
    interface Put#(TimestampedTlpData) trace;
+   interface Reset portalReset;
    interface Reg#(Bit#(4)) numPortals;
    interface ReadOnly#(PciId) pciId;
 endinterface
@@ -201,6 +202,7 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface slave    = bridge.slave;
    interface trace    = bridge.trace;
    interface numPortals = bridge.numPortals;
+   interface portalReset = bridge.portalReset;
    interface ReadOnly pciId;
       method PciId _read();
          return my_id;

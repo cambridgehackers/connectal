@@ -62,7 +62,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    // instantiate user portals
-   let portalTop <- mkPortalTop(clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   let portalTop <- mkPortalTop(clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
    if (nmasters > 0) begin
       let m_axi = portalTop.m_axi;
       Vector#(nmasters, AxiSlaveEngine#(dsz)) axiSlaveEngines <- replicateM(mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125));
