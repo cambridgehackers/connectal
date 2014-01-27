@@ -20,7 +20,7 @@ if [file exists $outputDir/mkpcietop_static_routed.dcp] {
     read_checkpoint $outputDir/mkpcietop_post_synth.dcp
     read_xdc constraints/$boardname.xdc
 }
-start_gui
+#start_gui
 
 #
 # STEP#3: run placement and logic optimization, report utilization and timing estimates, write checkpoint design
@@ -31,6 +31,8 @@ if [file exists $outputDir/mkpcietop_static_routed.dcp] {
 } else {
     read_xdc $xbsvdir/xilinx/constraints/$boardname-portal-pblock.xdc
     set_property HD.RECONFIGURABLE TRUE [get_cells top_portalTop]
+    ## if the pblock is aligned to a reconfigurable frame, can use the following
+    #set_property RESET_AFTER_RECONFIG true [get_pblocks top_portalTop]
 }
 
 opt_design
@@ -57,6 +59,10 @@ write_xdc -no_fixed_only -force $outputDir/mkpcietop_post_route.xdc
 # STEP#5: generate a bitstream
 # 
 write_bitstream -force -bin_file $outputDir/mkPcieTop.bit
+if [file exists $outputDir/mkpcietop_static_routed.dcp] {
+    pr_verify $outputDir/mkpcietop_static_routed.dcp $outputDir/mkpcietop_post_route.dcp
+} else {
+    update_design -cells [get_cells top_portalTop] -black_box
+    write_checkpoint -force $outputDir/mkpcietop_static_routed.dcp
+}
 
-update_design -cells [get_cells top_portalTop] -black_box
-write_checkpoint -force $outputDir/mkpcietop_static_routed.dcp

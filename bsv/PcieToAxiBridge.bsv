@@ -17,6 +17,7 @@ import BRAM         :: *;
 import BRAMFIFO     :: *;
 import ConfigReg    :: *;
 import DReg         :: *;
+import Clocks       :: *;
 
 import ByteBuffer    :: *;
 import ByteCompactor :: *;
@@ -41,6 +42,7 @@ interface PcieToAxiBridge#(numeric type bpb);
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
    interface Axi3Master#(32,32,12) portal0; // to the portal control
    interface GetPut#(TLPData#(16)) slave;
+   interface Reset portalReset;
 
    // status for FPGA LEDs
    (* always_ready *)
@@ -342,8 +344,10 @@ interface PortalEngine;
     interface Reg#(Bool)           interruptRequested;
     interface Reg#(Bit#(64))       interruptAddr;
     interface Reg#(Bit#(32))       interruptData;
+    interface Reg#(Bit#(12))       bTag;
 endinterface
 
+(* synthesize *)
 module mkPortalEngine#(PciId my_id)(PortalEngine);
     Reg#(Bool) byteSwapReg <- mkReg(True);
     Reg#(Bool) interruptRequestedReg <- mkReg(False);
@@ -358,6 +362,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     FIFOF#(TLPMemoryIO3DWHeader) writeDataFifo <- mkFIFOF;
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
     Reg#(TLPTag) tlpTag <- mkReg(0);
+    Reg#(Bit#(12)) bTagReg <- mkReg(0);
 
     rule txnTimer if (timerReg > 0);
         timerReg <= timerReg - 1;
@@ -470,6 +475,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
        endinterface: resp_write
        interface Put resp_b;
 	  method Action put(Axi3WriteResponse#(12) resp);
+             bTagReg <= resp.id;
 	  endmethod
        endinterface: resp_b
        interface Get req_ar;
@@ -517,6 +523,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
     interface Reg interruptRequested = interruptRequestedReg;
     interface Reg interruptAddr      = interruptAddrReg;
     interface Reg interruptData      = interruptDataReg;
+    interface Reg bTag = bTagReg;
 endmodule: mkPortalEngine
 
 interface AxiSlaveEngine#(type buswidth);
@@ -977,6 +984,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 			       , Bool      msix_mask_all_intr
 			       , Bool      msi_enabled
 			       , PortalEngine portalEngine
+			       , MakeResetIfc portalResetIfc
                               )
                               (ControlAndStatusRegs);
 
@@ -1073,8 +1081,9 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 792: return tlpDataBramWrAddrReg;
 	 793: return msi_enabled ? 1 : 0;
 	 794: return byteSwapReg ? 1 : 0;
-	 795: return 0;
+	 795: return portalResetIfc.isAsserted() ? 1 : 0;
 	 796: return extend(numPortalsReg);
+	 797: return extend(portalEngine.bTag);
 
          // 4-entry MSIx table
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
@@ -1215,6 +1224,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	     ttd[24+(5*32):0+(5*32)] = tlpDataScratchpad[5][24:0];
 	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(tpl_2(value[0])),
 	                                                     datain: unpack(ttd)});
+         end else if ((addr % 8192) == 795) begin
+					       portalResetIfc.assertReset();
          end
          wr_csr(addr,  tpl_1(value[0]),tpl_2(value[0]));
          wr_csr(addr+1,tpl_1(value[1]),tpl_2(value[1]));
@@ -1534,6 +1545,10 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 
    Integer bytes_per_beat = valueOf(bpb);
 
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
+   MakeResetIfc portalResetIfc <- mkReset(10, False, defaultClock);
+
    // instantiate sub-components
    PortalEngine            portalEngine <- mkPortalEngine( my_id );
 
@@ -1549,6 +1564,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
                                                             , msix_mask_all_intr
                                                             , msi_enabled
 							    , portalEngine
+							    , portalResetIfc
                                                             );
    Reg#(Bit#(32)) timestamp <- mkReg(0);
    rule incTimestamp;
@@ -1621,6 +1637,8 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    interface Axi3Slave portal0 = portalEngine.portal;
    interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
    interface Reg numPortals = csr.numPortals;
+
+   interface Reset portalReset = portalResetIfc.new_rst;
 
    method Bool rx_activity  = dispatcher.read_tlp() || dispatcher.write_tlp() || arbiter.completion_tlp();
    method Bool tx_activity  = arbiter.read_tlp()    || arbiter.write_tlp()    || dispatcher.completion_tlp();

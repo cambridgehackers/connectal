@@ -24,24 +24,26 @@
 from __future__ import print_function
 import sys
 
-def printval(starty, lasty, lastval):
-    global outstring, lastx
-    if starty != -1:
-        lastval = lastval/ 3232.0 - 467
-        if lasty < 100:
-            lastval = lastval - 2566
-            if lasty <= 35:
-                lastval = lastval - 2566
-        lastval = lastval - 36 * int((lastx - 14)/2)
-        if lastx >= 32:
-            lastval = lastval - 28
-            if lastx >= 36:
-                lastval = lastval - 28
-                if lastx >= 50:
-                    lastval = lastval - 30
-                    if lastx >= 54:
-                        lastval = lastval - 28
-        outstring = outstring + ' %3d-%3d/%d' % (starty, lasty, lastval)
+def getbit(lastx, lasty):
+    toff = 36 * int((lastx - 14)/2)
+    if lastx >= 54:
+        toff = toff + 2 + 4 * 28
+    elif lastx >= 50:
+        toff = toff + 2 + 3 * 28
+    elif lastx >= 36:
+        toff = toff + 2 * 28
+    elif lastx >= 32:
+        toff = toff + 28
+    if lasty <= 35:
+        toff = toff + 2 * 2 * 1283
+    elif lasty <= 99:
+        toff = toff + 2 * 1283
+    return toff
+
+def printval(starty, lastx, lasty, lastval):
+    if starty == -1:
+        return ''
+    return ' %3d-%3d/%d' % (starty, lasty, lastval - getbit(lastx, lasty))
 
 print('readll: opening', sys.argv[1])
 lines =  open(sys.argv[1]).readlines()
@@ -84,7 +86,7 @@ for thisline in lines:
     if not topref[ftemp][itemtype].get(fmult):
         topref[ftemp][itemtype][fmult] = 0
     topref[ftemp][itemtype][fmult] = topref[ftemp][itemtype][fmult] + 1
-    toplist['%4d_%4d_%5d' % (coordx, coordy, frameoffset)] = [ coordx, coordy, bitoff - frameoffset]
+    toplist['%4d_%4d_%5d' % (coordx, coordy, frameoffset)] = [ coordx, coordy, (bitoff - frameoffset)/ 3232.0 - 467]
 lastx = 0
 outstring = ''
 starty = -1
@@ -92,19 +94,17 @@ lasty = -1
 lastval = -1
 for key, value in sorted(toplist.items()):
     if value[0] != lastx:
-        printval(starty, lasty, lastval)
+        outstring = outstring + printval(starty, lastx, lasty, lastval)
         lastx = value[0]
         print(outstring)
         outstring = '%3d:' % value[0]
         starty = -1
-        lasty = -1
-        lastval = -1
     if lastval != value[2]:
-        printval(starty, lasty, lastval)
+        outstring = outstring + printval(starty, lastx, lasty, lastval)
         starty = value[1]
     lasty = value[1]
     lastval = value[2]
-printval(starty, lasty, lastval)
+outstring = outstring + printval(starty, lastx, lasty, lastval)
 print(outstring)
 #for key, value in sorted(topoffset.items()):
 #    outstring = key + ': '

@@ -464,6 +464,7 @@ if __name__=='__main__':
     if os != 'android':
         xpsgen.writeImpactCmd(dutname, os.path.join(project_dir, 'impact.cmd'))
         xpsgen.writeProgramTcl(dutname, os.path.join(project_dir, '%s-program.tcl' % dutname.lower()))
+        xpsgen.writeReprogramTcl(dutname, os.path.join(project_dir, '%s-reprogram.tcl' % dutname.lower()))
 
     # copy cxx library files to jni
     for f in ['portal.cpp', 'sock_utils.cxx', 'sock_fd.cxx']:

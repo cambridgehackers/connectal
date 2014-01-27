@@ -34,6 +34,12 @@
 #include <netinet/in.h>
 
 #define BUFFER_SIZE 20000000
+#define ITEMSIZE 101
+/* from ug470, pg 91:
+ * The 7 series devices are divided into two halves, the top and the bottom. All frames in
+ * 7 series devices have a fixed, identical length of 3,232 bits (101 32-bit words).
+ */
+#define LINESIZE 8
 
 static struct {
     uint32_t mask;
@@ -72,6 +78,42 @@ static struct {
     {0x11, "LTIMER"}, {}};
 
 uint32_t buffer[BUFFER_SIZE];
+
+
+int dump_data(uint32_t *pint, int size)
+{
+static int itemnumber;
+static int skipped;
+    uint32_t t[ITEMSIZE], *p = t, nonzero = 0;
+    int i;
+    char title[100];
+    sprintf(title, "   %2x:%03x:%02x", itemnumber>>17, (itemnumber>>7) & 0x3ff, itemnumber & 0x7f);
+    for (i = 0; i < size; i++) {
+         t[i] = htonl(*pint);
+         nonzero |= *pint++;
+    }
+    i = 0;
+    if (nonzero) {
+        if (skipped)
+            printf("skipped %d\n", skipped);
+        printf("%s: ",title);
+        while (size > 0) {
+            if (i == LINESIZE) {
+                printf("\n%s: ",title);
+                i = 0;
+            }
+            printf("%08x ", *p++);
+            i++;
+            size--;
+        }
+        printf("\n");
+        skipped = 0;
+    }
+    else
+        skipped++;
+    itemnumber++;
+    return nonzero;
+}
 int main(int argc, char **argv)
 {
 uint32_t *pint = buffer, *pend;
@@ -120,7 +162,16 @@ printf("[%s:%d] start\n", __FUNCTION__, __LINE__);
             }
             if (regmap[regindex].name)
                 pname = regmap[regindex].name;
-            printf("%s: opcode %s %s", map[mapindex].name, opcodemap[opcode], pname);
+            if (regnum == 0x1 && wordcnt == 1) { /* FAR */
+                pint++;
+                printf("%s: opcode %s %s type %x top %x row %x col %x minor %x\n",
+                    map[mapindex].name, opcodemap[opcode], pname,
+                    (cmdnum>>23) & 7, (cmdnum>>22) & 1, (cmdnum>>17) & 0x1f,
+                    (cmdnum>>7) & 0x3ff, cmdnum & 0x7f);
+                break;
+            }
+            else
+                printf("%s: opcode %s %s", map[mapindex].name, opcodemap[opcode], pname);
             if (wordcnt)
                 printf(" :");
             while (wordcnt--) {
@@ -135,34 +186,15 @@ printf("[%s:%d] start\n", __FUNCTION__, __LINE__);
             int wordcnt = val & 0x7ffffff;
             int skipped = 0;
             printf("%s: wordcnt %08x\n", map[mapindex].name, wordcnt);
-            while (wordcnt > 8) {
-                wordcnt -= 8;
-                uint32_t t[8], nonzero = 0;
-                int i;
-                for (i = 0; i < 8; i++) {
-                     t[i] = htonl(*pint);
-                     nonzero |= *pint++;
-                }
-                if (nonzero) {
-                    if (skipped > 10)
-                        printf("skipped %d\n", skipped);
-                    else while (skipped--)
-                        printf("    %08x %08x %08x %08x %08x %08x %08x %08x\n", 0, 0, 0, 0, 0, 0, 0, 0);
-                    printf("    %08x %08x %08x %08x %08x %08x %08x %08x\n", t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7]);
-                    skipped = 0;
-                }
-                else
-                    skipped++;
+            while (wordcnt >= ITEMSIZE) {
+                dump_data(pint, ITEMSIZE);
+                wordcnt -= ITEMSIZE;
+                pint += ITEMSIZE;
             }
-            if (wordcnt) {
-                printf("   ");
-                while (wordcnt--) {
-                    uint32_t t = htonl(*pint);
-                    printf(" %08x", t);
-                    pint++;
-                }
-                printf("\n");
-            }
+            if (wordcnt)
+                printf("residual wordcnt %d\n", wordcnt);
+            dump_data(pint, wordcnt);
+            pint += wordcnt;
             break;
             }
         default:

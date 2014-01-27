@@ -403,10 +403,8 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 printk(KERN_INFO "%s: /dev/%s_%d soft reset\n",
                        DEV_NAME, DEV_NAME, this_board->board_number);
                 if (this_board->activation_level == BLUENOC_ACTIVE) {
-                /* deactivate the network, wait 100ms and reactivate it */
-                        iowrite8(0, this_board->bar0io + 257);
-                        msleep(100);
-                        iowrite8(1, this_board->bar0io + 257);
+			// reset the portal
+			iowrite32(1, this_board->bar0io + (795 << 2)); 
                 }
                 break;
         case BNOC_DEACTIVATE:
