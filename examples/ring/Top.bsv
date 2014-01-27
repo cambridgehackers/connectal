@@ -47,7 +47,7 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    
    // instantiate user portals
    RingIndicationProxy ringIndicationProxy <- mkRingIndicationProxy(RingIndication);
-   RingRequest ringRequest <- mkRingRequestInternal(ringIndicationProxy.ifc, dma_read_chan, dma_write_chan, cmd_read_chan, cmd_write_chan);
+   RingRequest ringRequest <- mkRingRequestInternal(ringIndicationProxy.ifc, dma_read_chan.dmaServer, dma_write_chan.dmaServer, cmd_read_chan.dmaServer, cmd_write_chan.dmaServer);
    RingRequestWrapper ringRequestWrapper <- mkRingRequestWrapper(RingRequest, ringRequest);
    
    Vector#(4,StdPortal) portals;

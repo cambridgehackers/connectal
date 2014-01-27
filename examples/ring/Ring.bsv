@@ -51,12 +51,14 @@ interface RingIndication;
 endinterface
 
 module mkRingRequest#(RingIndication indication,
-		      DMAReadBuffer#(64,8) dma_read_chan,
-		      DMAWriteBuffer#(64,8) dma_write_chan,
-		      DMAReadBuffer#(64,8) cmd_read_chan,
-		      DMAWriteBuffer#(64,8) status_write_chan )(RingRequest);
-   
-   ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma.read.readChannels[2], dma.write.writeChannels[2]);   
+		      DMAReadServer#(64) dma_read_chan,
+		      DMAWriteServer#(64) dma_write_chan,
+		      DMAReadServer#(64) cmd_read_chan,
+		      DMAWriteServer#(64) status_write_chan )(RingRequest);
+   DMAReadBuffer#(64,8) copy_read_chan <- mkDMAReadBuffer();
+   DMAWriteBuffer#(64,8) copy_write_chan <- mkDMAWriteBuffer();
+
+   ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
    ServerF#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
    ServerF#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
    
