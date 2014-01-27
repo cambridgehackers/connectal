@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 // types needed by both hardware and software
+import GetPutF::*;
 
 interface ServerF#(type intype, type outtype);
 	  interface PutF#(intype) request;
