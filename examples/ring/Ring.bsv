@@ -96,15 +96,23 @@ module mkRingRequest#(RingIndication indication,
    Stmt cmdDispatch = 
    seq
       while (True) seq
-	 cmd <= cmd_read_chan.readData.get().data;
+	 cmd <= cmd_read_chan.readData.first().data;
+	 cmd_read_chan.readData.deq();
 	 cmdifc.put(cmd);
-	 cmdifc.put(cmd_read_chan.readData.get().data);
-	 cmdifc.put(cmd_read_chan.readData.get().data);
-	 cmdifc.put(cmd_read_chan.readData.get().data);
-	 cmdifc.put(cmd_read_chan.readData.get().data);
-	 cmdifc.put(cmd_read_chan.readData.get().data);
-	 cmdifc.put(cmd_read_chan.readData.get().data);
-	 cmdifc.put(cmd_read_chan.readData.get().data);
+	 cmdifc.put(cmd_read_chan.readData.first().data);
+	 cmd_read_chan.readData.deq();
+	 cmdifc.put(cmd_read_chan.readData.first().data);
+	 cmd_read_chan.readData.deq();
+	 cmdifc.put(cmd_read_chan.readData.first().data);
+	 cmd_read_chan.readData.deq();
+	 cmdifc.put(cmd_read_chan.readData.first().data);
+	 cmd_read_chan.readData.deq();
+	 cmdifc.put(cmd_read_chan.readData.first().data);
+	 cmd_read_chan.readData.deq();
+	 cmdifc.put(cmd_read_chan.readData.first().data);
+	 cmd_read_chan.readData.deq();
+	 cmdifc.put(cmd_read_chan.readData.first().data);
+	 cmd_read_chan.readData.deq();
       endseq
    endseq;
    
@@ -148,16 +156,10 @@ module mkRingRequest#(RingIndication indication,
       endseq
    endseq;
    
-   rule copyCompletion;
-      let v <- ce.response.get();
-      indication.ringIndication.completion(1, v);
-   endrule
-
    mkAutoFSM (cmdFetch);
    mkAutoFSM (cmdDispatch);
    mkAutoFSM (cmdCompletion);
 
-   interface RingRequest ringRequest;
 
       // to start a command, doCommand fires off a memory read to the
       // specified address. when it comes back, the doCommandRule will
@@ -171,16 +173,16 @@ module mkRingRequest#(RingIndication indication,
       endmethod
    
 
-      method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(32) addr);
-	 if (cmd == 1)
+      method Action set(Bit#(1) _cmd, Bit#(2) regist, Bit#(32) addr);
+	 if (_cmd == 1)
 	    cmdRing.set(regist, addr);
 	 else
 	    statusRing.set(regist, addr);
 	 indication.ringIndication.setResult(cmd, regist, addr);
       endmethod
    
-      method Action get(Bit#(1) cmd, Bit#(2) regist);
-	 if (cmd == 1)
+      method Action get(Bit#(1) _cmd, Bit#(2) regist);
+	 if (_cmd == 1)
 	    indication.ringIndication.getResult(1, regist, cmdRing.get(regist));
 	 else
 	    indication.ringIndication.getResult(0, regist, 
@@ -191,7 +193,6 @@ module mkRingRequest#(RingIndication indication,
 	 hwenabled <= en == 1;
       endmethod
    
-       
-   endinterface
 
+   
 endmodule
