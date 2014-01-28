@@ -59,6 +59,7 @@ struct portal_data {
         void      *dev_base_virt;
         void      *ind_reg_base_virt;
         unsigned char portal_irq;
+        int irq_requested;
 };
 
 struct portal_client {
@@ -72,6 +73,22 @@ struct portal_init_data {
 
 // 
 /////////////////////////////////////////////////////////////
+
+static int portal_parse_hw_info(struct device_node *np,
+				struct portal_init_data *init_data)
+{
+	u32 const *prop;
+	int size;
+
+	prop = of_get_property(np, "device-name", &size);
+	if (!prop) {
+                pr_err("Error %s getting device-name\n", DRIVER_NAME);
+		return -EINVAL;
+	}
+        init_data->device_name = (char *)prop;
+        driver_devel("%s: device_name=%s\n", DRIVER_NAME, init_data->device_name);
+	return 0;
+}
 
 static void dump_ind_regs(const char *prefix, struct portal_data *portal_data)
 {
@@ -100,9 +117,11 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
 	  // driver  after all the HW->SW FIFOs have been emptied
 	  writel(0, portal_data->ind_reg_base_virt + 0x4);
 	  
+	  // driver_devel("%s IRQ before wake_up_interruptible\n", __func__);
 	  //dump_ind_regs("ISR b", portal_data);
 	  wake_up_interruptible(&portal_data->wait_queue);
-	  
+	  //driver_devel("%s IRQ after wake_up_interruptible\n", __func__);
+	  //driver_devel("%s blurgh=%p\n", __func__,  *((unsigned int*)NULL));        
 	  return IRQ_HANDLED;
 	} else {
 	  return IRQ_NONE;
@@ -111,6 +130,7 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
 
 static int portal_open(struct inode *inode, struct file *filep)
 {
+        u32 int_status, int_en;
 	struct miscdevice *miscdev = filep->private_data;
 	struct portal_data *portal_data =
                 container_of(miscdev, struct portal_data, misc);
@@ -125,13 +145,26 @@ static int portal_open(struct inode *inode, struct file *filep)
         portal_client->portal_data = portal_data;
         filep->private_data = portal_client;
 
-        /* // clear indication status (ignored by HW) */
-        /* writel(0, portal_data->ind_reg_base_virt + 0); */
-        /* // enable indication interrupts */
-        /* writel(1, portal_data->ind_reg_base_virt + 4); */
-
 	// sanity check, see if interrupts have been enabled
         //dump_ind_regs("enable interrupts", portal_data);
+
+	if(!portal_data->irq_requested){
+
+	  printk("%s about to call request_irq\n", __func__);
+	  // read the interrupt as a sanity check
+	  int_status = readl(portal_data->ind_reg_base_virt + 0);
+	  int_en  = readl(portal_data->ind_reg_base_virt + 4);
+	  driver_devel("%s IRQ %s %x %x\n", __func__, portal_data->device_name, int_status, int_en);
+
+	  if (request_irq(portal_data->portal_irq, portal_isr, IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->device_name, portal_data)) {
+	    portal_data->portal_irq = 0;
+	    printk("%s err_bb\n", __func__);
+	    if(portal_data->portal_irq)
+	      free_irq(portal_data->portal_irq, portal_data);
+	  } else {
+	    portal_data->irq_requested = 1;
+	  }
+	}
 
 	return 0;
 }
@@ -220,7 +253,9 @@ static int portal_release(struct inode *inode, struct file *filep)
 	struct portal_client *portal_client = filep->private_data;
 	driver_devel("%s inode=%p filep=%p\n", __func__, inode, filep);
 	kfree(portal_client);
-       return 0;
+	//driver_devel("%s blurgh=%d\n", __func__,  *((unsigned int*)NULL)); 
+	//dump_stack();
+	return 0;
 }
 
 static const struct file_operations portal_fops = {
@@ -235,14 +270,15 @@ int portal_init_driver(struct portal_init_data *init_data)
 {
 	struct device *dev;
 	struct portal_data *portal_data;
-	struct resource *reg_res, *irq_res;
         struct miscdevice *miscdev;
+	struct resource *reg_res, *irq_res;
 	int rc = 0, dev_range=0, reg_range=0;
 	dev = &init_data->pdev->dev;
 
 	reg_res = platform_get_resource(init_data->pdev, IORESOURCE_MEM, 0);
 	irq_res = platform_get_resource(init_data->pdev, IORESOURCE_IRQ, 0);
-	if ((!reg_res) || (!irq_res)) {
+
+	if (!reg_res || !irq_res) {
 		pr_err("Error portal resources\n");
 		return -ENODEV;
 	}
@@ -254,6 +290,7 @@ int portal_init_driver(struct portal_init_data *init_data)
 		goto err_mem;
 	}
 
+	portal_data->irq_requested = 0;
         portal_data->device_name = init_data->device_name;
         portal_data->dev_base_phys = reg_res->start;
         portal_data->ind_reg_base_phys = reg_res->start + (3 << 14);
@@ -270,12 +307,6 @@ int portal_init_driver(struct portal_init_data *init_data)
 
         init_waitqueue_head(&portal_data->wait_queue);
 	portal_data->portal_irq = irq_res->start;
-	printk("%s about to call request_irq\n", __func__);
-	if (request_irq(portal_data->portal_irq, portal_isr,
-			IRQF_TRIGGER_HIGH | IRQF_SHARED, portal_data->device_name, portal_data)) {
-		portal_data->portal_irq = 0;
-		goto err_bb;
-	}
 
 	portal_data->dev = dev;
 	dev_set_drvdata(dev, (void *)portal_data);
@@ -289,12 +320,8 @@ int portal_init_driver(struct portal_init_data *init_data)
         miscdev->parent = NULL;
         misc_register(miscdev);
 
+        driver_devel("%s:%d about to return\n", __func__, __LINE__);
 	return 0;
-
-err_bb:
-	printk("%s err_bb\n", __func__);
-	if (portal_data->portal_irq != 0)
-		free_irq(portal_data->portal_irq, portal_data);
 
 err_mem:
 	if (portal_data) {
@@ -312,29 +339,13 @@ int portal_deinit_driver(struct platform_device *pdev)
 	struct portal_data *portal_data = 
                 (struct portal_data *)dev_get_drvdata(dev);
 
-	driver_devel("%s\n", __func__);
-
-	free_irq(portal_data->portal_irq, portal_data);
+	if(portal_data->irq_requested)
+	  free_irq(portal_data->portal_irq, portal_data);
+	
 	kfree(portal_data);
 
 	dev_set_drvdata(dev, NULL);
 
-	return 0;
-}
-
-static int portal_parse_hw_info(struct device_node *np,
-                                     struct portal_init_data *init_data)
-{
-	u32 const *prop;
-	int size;
-
-	prop = of_get_property(np, "device-name", &size);
-	if (!prop) {
-                pr_err("Error %s getting device-name\n", DRIVER_NAME);
-		return -EINVAL;
-	}
-        init_data->device_name = (char *)prop;
-        driver_devel("%s: device-name=%s\n", DRIVER_NAME, init_data->device_name);
 	return 0;
 }
 
@@ -344,16 +355,14 @@ static int portal_of_probe(struct platform_device *pdev)
 	int rc;
 
         driver_devel("portal_of_probe\n");
-
 	memset(&init_data, 0, sizeof(struct portal_init_data));
-
 	init_data.pdev = pdev;
-
 	rc = portal_parse_hw_info(pdev->dev.of_node, &init_data);
-        driver_devel("portal_parse_hw_info returned %d\n", rc);
-	if (rc)
-		return rc;
+	driver_devel("portal_parse_hw_info returned %d\n", rc);
 
+	if (rc)
+	  return rc;
+	
 	return portal_init_driver(&init_data);
 }
 
@@ -361,6 +370,7 @@ static int portal_of_remove(struct platform_device *pdev)
 {
   struct device *dev = &pdev->dev;
   struct portal_data *portal_data =  (struct portal_data *)dev_get_drvdata(dev);
+  driver_devel("%s:%s\n",__FUNCTION__, pdev->name);
   misc_deregister(&portal_data->misc);
   return portal_deinit_driver(pdev);
 }
@@ -401,6 +411,7 @@ static void __exit portal_of_exit(void)
 {
 	platform_driver_unregister(&portal_of_driver);
 }
+
 
 
 #ifndef MODULE

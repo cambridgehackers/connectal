@@ -154,6 +154,57 @@ module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) r
    endinterface: resp_b
 endmodule
 
+module mkAxi3SlaveOutOfRange (Axi3Slave#(addrWidth, busWidth, idWidth));
+   
+   Reg#(Bit#(addrWidth)) readAddrReg <- mkReg(0);
+   Reg#(Bit#(addrWidth)) writeAddrReg <- mkReg(0);
+   Reg#(Bit#(idWidth)) readIdReg <- mkReg(0);
+   Reg#(Bit#(4)) readBurstCountReg <- mkReg(0);
+   Reg#(Bit#(4)) writeBurstCountReg <- mkReg(0);
+   FIFO#(Bit#(2)) writeRespFifo <- mkFIFO();
+   FIFO#(Bit#(idWidth)) writeIdFifo <- mkFIFO();
+
+   interface Put req_ar;
+      method Action put(Axi3ReadRequest#(addrWidth,idWidth) req) if (readBurstCountReg == 0);
+         readAddrReg <= req.address/fromInteger(valueOf(TDiv#(busWidth,8)));
+	 readIdReg <= req.id;
+         readBurstCountReg <= req.len+1;
+      endmethod
+   endinterface: req_ar
+   interface Get resp_read;
+      method ActionValue#(Axi3ReadResponse#(busWidth,idWidth)) get() if (readBurstCountReg > 0);
+         let data = 0;
+         readBurstCountReg <= readBurstCountReg - 1;
+         readAddrReg <= readAddrReg + 1;
+         return Axi3ReadResponse { data: data, last: (readBurstCountReg == 1) ? 1 : 0, id: readIdReg, resp: 2'b11 };
+      endmethod
+   endinterface: resp_read
+   interface Put req_aw;
+      method Action put(Axi3WriteRequest#(addrWidth,idWidth) req) if (writeBurstCountReg == 0);
+         writeAddrReg <= req.address/fromInteger(valueOf(TDiv#(busWidth,8)));
+         writeBurstCountReg <= req.len+1;
+         writeIdFifo.enq(req.id);
+      endmethod
+   endinterface: req_aw
+   interface Put resp_write;
+      method Action put(Axi3WriteData#(busWidth,idWidth) resp) if (writeBurstCountReg > 0);
+         writeAddrReg <= writeAddrReg + 1;
+         writeBurstCountReg <= writeBurstCountReg - 1;
+         if (writeBurstCountReg == 1)
+	    begin
+               writeRespFifo.enq(2'b11);
+            end
+      endmethod
+   endinterface: resp_write
+   interface Get resp_b;
+      method ActionValue#(Axi3WriteResponse#(idWidth)) get();
+         writeRespFifo.deq;
+	 writeIdFifo.deq;
+         return Axi3WriteResponse { resp: writeRespFifo.first, id: writeIdFifo.first };
+      endmethod
+   endinterface: resp_b
+endmodule
+
 
 typedef struct {
     Bit#(addrWidth) address;

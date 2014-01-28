@@ -26,14 +26,14 @@ install: pcieportal.ko
 	install -m644 pcieportal.ko $(BS_MOD_DIR)
 	install -m644 ../portalmem/portalmem.ko $(BS_MOD_DIR)
 	depmod
-	install -m644 99-bluespec.rules $(UDEV_RULES_DIR)
+	install -m644 99-pcieportal.rules $(UDEV_RULES_DIR)
 
 .PHONY: uninstall
 uninstall:
 	rm -f $(BS_MOD_DIR)/pcieportal.ko
 	rmdir --ignore-fail-on-non-empty $(BS_MOD_DIR)
 	depmod
-	rm -f $(UDEV_RULES_DIR)/99-bluespec.rules
+	rm -f $(UDEV_RULES_DIR)/99-pcieportal.rules
 
 .PHONY: clean
 clean:

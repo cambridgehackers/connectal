@@ -84,6 +84,7 @@ public:
     incr_cnt();
   }
   StructIndication(unsigned int id) : StructIndicationWrapper(id), cnt(0){}
+  StructIndication(const char *name, unsigned int addrbits) : StructIndicationWrapper(name,addrbits), cnt(0){}
 };
 
 
@@ -100,11 +101,16 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
+  //fprintf(stderr, "Main::before sleep calling say1(%d)\n", v1a);
+  //sleep(3);
   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
-  sleep(1);
   device->say1(v1a);  
+
+  //fprintf(stderr, "Main::before sleep calling say2(%d, %d)\n", v2a,v2b);
+  //sleep(10);
   fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
   device->say2(v2a,v2b);
+
   fprintf(stderr, "Main::calling say3(S1{a:%ld,b:%ld})\n", s1.a,s1.b);
   device->say3(s1);
   fprintf(stderr, "Main::calling say4(S2{a:%ld,b:%ld,c:%ld})\n", s2.a,s2.b,s2.c);

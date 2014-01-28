@@ -35,13 +35,13 @@ $(bsimtests):
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
 	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
 
-bitstests = $(addsuffix .bits, $(testnames))
+zedtests = $(addsuffix .zedboard, $(testnames))
 
-$(bitstests):
+$(zedtests):
 	rm -fr examples/$(basename $@)/zedboard
 	make BOARD=zedboard -C examples/$(basename $@) all
-	make -C examples/$(basename $@)/zedboard bits
-	(cd examples/$(basename $@)/zedboard; ndk-build)
+	#make -C examples/$(basename $@)/zedboard bits
+	#(cd examples/$(basename $@)/zedboard; ndk-build)
 
 gentests = $(addsuffix .gen, $(testnames))
 
