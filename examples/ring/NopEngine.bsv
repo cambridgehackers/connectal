@@ -32,7 +32,7 @@ module mkNopServer ( ServerF#(Bit#(64), Bit#(64)));
       $display("Nop %h\n", x);
    endrule
      
-   interface PutF request = toPutF(f_echo);
+   interface PutF request = toPutF(f_nop);
    interface GetF response = ?;
    
 endmodule: mkNopServer
