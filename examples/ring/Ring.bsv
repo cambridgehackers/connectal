@@ -93,16 +93,15 @@ module mkRingRequest#(RingIndication indication,
    Stmt cmdDispatch = 
    seq
       while (True) seq
-	 let data = cmd_read_chan.readData.get();
-	 cmd <= data.data;
+	 cmd <= cmd_read_chan.readData.get().data;
 	 cmdifc.put(cmd);
-	    cmdifc.put(cmd_read_chan.readData.get().data);
-	    cmdifc.put(cmd_read_chan.readData.get().data);
-	    cmdifc.put(cmd_read_chan.readData.get().data);
-	    cmdifc.put(cmd_read_chan.readData.get().data);
-	    cmdifc.put(cmd_read_chan.readData.get().data);
-	    cmdifc.put(cmd_read_chan.readData.get().data);
-	    cmdifc.put(cmd_read_chan.readData.get().data);
+	 cmdifc.put(cmd_read_chan.readData.get().data);
+	 cmdifc.put(cmd_read_chan.readData.get().data);
+	 cmdifc.put(cmd_read_chan.readData.get().data);
+	 cmdifc.put(cmd_read_chan.readData.get().data);
+	 cmdifc.put(cmd_read_chan.readData.get().data);
+	 cmdifc.put(cmd_read_chan.readData.get().data);
+	 cmdifc.put(cmd_read_chan.readData.get().data);
       endseq
    endseq;
    
