@@ -129,6 +129,8 @@ int main(int argc, char **argv)
                     char *pend = strstr(p, "Bcast:");
                     if (pend) {
                         *pend = 0;
+                        while (*--pend == ' ')
+                            *pend = 0;
                         if (!strcmp(ipaddr, p))
                             matchcount++;
                         else {
@@ -136,7 +138,7 @@ int main(int argc, char **argv)
                             strcpy(ipaddr, p);
                         }
                         if (matchcount > MATCHLIMIT) {
-                            printf("%s\n", p);
+                            printf("%s", p);
                             exit(0);
                         }
                     }
