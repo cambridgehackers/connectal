@@ -26,8 +26,8 @@ interface RingBuffer;
 endinterface
 
 interface RingBufferConfig;
-   method Action set(Bit#(2) regist, Bit#(40) addr);
-   method Bit#(40) get(Bit#(2) regist);
+   method Action set(Bit#(2) regist, Bit#(32) addr);
+   method Bit#(32) get(Bit#(2) regist);
 endinterface
 
 
@@ -42,22 +42,22 @@ module mkRingBuffer(RingBuffer);
    Reg#(Bool) renable <- mkReg(False);
    
    interface RingBufferConfig configifc;
-   method Action set(Bit#(2) regist, Bit#(DmaAddrSize) addr);
-      if (regist == 0) rbufferbase <= addr;
-      else if (regist == 1) rbufferend <= addr;
-      else if (regist == 2) rbufferfirst <= addr;
-      else if (regist == 3) rbufferlast <= addr;
-      else if (regist == 4) rbuffermask <= addr;
+   method Action set(Bit#(2) regist, Bit#(32) addr);
+      if (regist == 0) rbufferbase <= truncate(addr);
+      else if (regist == 1) rbufferend <= truncate(addr);
+      else if (regist == 2) rbufferfirst <= truncate(addr);
+      else if (regist == 3) rbufferlast <= truncate(addr);
+      else if (regist == 4) rbuffermask <= truncate(addr);
       else if (regist == 5) rmemhandle <= truncate(addr);
       else renable <= (addr[0] != 0);
    endmethod
    
    method Bit#(DmaAddrSize) get(Bit#(2) regist);
-      if (regist == 0) return (rbufferbase);
-      else if (regist == 1) return (rbufferend);
-      else if (regist == 2) return (rbufferfirst);
-      else if (regist == 3) return (rbufferlast);
-      else if (regist == 4) return (rbuffermask);
+      if (regist == 0) return (zeroExtend(rbufferbase));
+      else if (regist == 1) return (zeroExtend(rbufferend));
+      else if (regist == 2) return (zeroExtend(rbufferfirst));
+      else if (regist == 3) return (zeroExtend(rbufferlast));
+      else if (regist == 4) return (zeroExtend(rbuffermask));
       else if (regist == 5) return (zeroExtend(rmemhandle));
       else return(zeroExtend(pack(renable)));
    endmethod
