@@ -31,8 +31,7 @@
 #include <dirent.h>
 #include <unistd.h>
 
-#ifdef OSX
-#error aklsjdlk
+#ifdef __APPLE__
 #define TTYCLASS "tty.usbmodem"
 #else
 #define TTYCLASS "ttyACM"
@@ -86,9 +85,10 @@ int main(int argc, char **argv)
             if (dirptr) {
                 while ((direntp = readdir(dirptr))) {
                     if (!strncmp(direntp->d_name, TTYCLASS, strlen(TTYCLASS))) {
-                        printf("consolable: opening %s\n", direntp->d_name);
                         sprintf(buf, "/dev/%s", direntp->d_name);
-                        fd = open(buf, O_RDWR);
+                        fprintf(stderr, "consolable: opening %s\n", buf);
+                        fd = open(buf, O_RDWR | O_NONBLOCK);
+                        fprintf(stderr, "consolable: fd %d\n", fd);
                         break;
                     }
                 }
@@ -117,6 +117,8 @@ int main(int argc, char **argv)
                 if (FD_ISSET(fdlist[fdsindex], &fdset)) {
                     int len = read(fdlist[fdsindex], buf, sizeof(buf));
                     if (len == -1) {
+                        if (errno == EWOULDBLOCK)
+                            continue;
                         if (fdlist[fdsindex] != 0 && (errno == ENXIO || errno == EBADF)) {
                             printf("consolable: USB device closed\n");
                             number_fds = 1;

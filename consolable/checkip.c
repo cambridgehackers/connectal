@@ -33,8 +33,7 @@
 #define MATCHLIMIT 10
 #define CHECKIP "ifconfig -a\n"
 
-#ifdef OSX
-#error aklsjdlk
+#ifdef __APPLE__
 #define TTYCLASS "tty.usbmodem"
 #else
 #define TTYCLASS "ttyACM"
