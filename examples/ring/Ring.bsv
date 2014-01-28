@@ -66,10 +66,10 @@ module mkRingRequest#(RingIndication indication,
    RingBuffer statusRing <- mkRingBuffer;
    Reg#(Bool) hwenabled <- mkReg(False);
    Reg#(Bool) cmdBusy <- mkReg(False);
-   Reg#(UInt#(64)) cmd <- mkReg(0);
+   Reg#(Bit#(64)) cmd <- mkReg(0);
    Reg#(Bit#(4)) ii <- mkReg(0);
    Reg#(Bit#(4)) respCtr <- mkReg(0);
-
+   Reg#(Bit#(4)) dispCtr <- mkReg(0);
    
    let engineselect = pack(cmd)[63:56];
    function ServerF#(Bit#(64), Bit#(64)) cmdifc();
@@ -96,23 +96,16 @@ module mkRingRequest#(RingIndication indication,
    Stmt cmdDispatch = 
    seq
       while (True) seq
-	 cmd <= cmd_read_chan.readData.first().data;
-	 cmd_read_chan.readData.deq();
-	 cmdifc.put(cmd);
-	 cmdifc.put(cmd_read_chan.readData.first().data);
-	 cmd_read_chan.readData.deq();
-	 cmdifc.put(cmd_read_chan.readData.first().data);
-	 cmd_read_chan.readData.deq();
-	 cmdifc.put(cmd_read_chan.readData.first().data);
-	 cmd_read_chan.readData.deq();
-	 cmdifc.put(cmd_read_chan.readData.first().data);
-	 cmd_read_chan.readData.deq();
-	 cmdifc.put(cmd_read_chan.readData.first().data);
-	 cmd_read_chan.readData.deq();
-	 cmdifc.put(cmd_read_chan.readData.first().data);
-	 cmd_read_chan.readData.deq();
-	 cmdifc.put(cmd_read_chan.readData.first().data);
-	 cmd_read_chan.readData.deq();
+	 action
+	    let rv <- cmd_read_chan.readData.get();
+	    cmd <= rv.data;
+	    cmdifc.request.put(rv.data);
+	 endaction
+	 for (dispCtr <= 1; dispCtr < 8; dispCtr <= dispCtr + 1)
+	    action
+	       let rv <- cmd_read_chan.readData.get();
+	       cmdifc.request.put(rv.data);
+	    endaction
       endseq
    endseq;
    
@@ -134,8 +127,10 @@ module mkRingRequest#(RingIndication indication,
 		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
 	       statusRing.push(64);
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
-		  status_write_chan.writeData.put(
-		     DMAData{data:copyEngine.get(), tag: 0});
+		  action
+		     let rv <- copyEngine.response.get();
+		     status_write_chan.writeData.put(DMAData{data: rv, tag: 0});
+		  endaction
 	    endseq
 
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
@@ -145,14 +140,12 @@ module mkRingRequest#(RingIndication indication,
 		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
 	       statusRing.push(64);
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
-		  status_write_chan.writeData.put(
-		     DMAData{data:echoEngine.get(), tag: 0});
+		  action
+		     let rv <- echoEngine.response.get();
+		     status_write_chan.writeData.put(DMAData{data: rv, tag: 0});
+		  endaction
 	    endseq
 
-	       action
-		  status_write_chan.writeData.put(echoEngine.get());
-		  statusRing.push(8);
-	       endaction
       endseq
    endseq;
    
@@ -164,7 +157,7 @@ module mkRingRequest#(RingIndication indication,
       // to start a command, doCommand fires off a memory read to the
       // specified address. when it comes back, the doCommandRule will
       // handle it
-      method Action doCommandIndirect(Bit#(DmaAddrSize) addr);
+      method Action doCommandIndirect(Bit#(32) addr);
 	 //cmd_read_chan.readReq.put(addr);
       endmethod
    
@@ -175,18 +168,19 @@ module mkRingRequest#(RingIndication indication,
 
       method Action set(Bit#(1) _cmd, Bit#(2) regist, Bit#(32) addr);
 	 if (_cmd == 1)
-	    cmdRing.set(regist, addr);
+	    cmdRing.configifc.set(regist, addr);
 	 else
-	    statusRing.set(regist, addr);
-	 indication.ringIndication.setResult(cmd, regist, addr);
+	    statusRing.configifc.set(regist, addr);
+	 indication.setResult(cmd, regist, addr);
       endmethod
    
       method Action get(Bit#(1) _cmd, Bit#(2) regist);
 	 if (_cmd == 1)
-	    indication.ringIndication.getResult(1, regist, cmdRing.get(regist));
+	    indication.getResult(1, regist, 
+	       cmdRing.configifc.get(regist));
 	 else
-	    indication.ringIndication.getResult(0, regist, 
-	       statusRing.get(regist));
+	    indication.getResult(0, regist, 
+	       statusRing.configifc.get(regist));
       endmethod
 
       method Action hwenable(Bit#(1) en);
