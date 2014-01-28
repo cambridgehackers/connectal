@@ -11,6 +11,7 @@
 // or by other means
 // 
 // Configuration.  
+import PortalRMemory::*;
 
 interface RingBuffer;
    method Bool notEmpty();
