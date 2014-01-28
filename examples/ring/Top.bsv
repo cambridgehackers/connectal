@@ -42,7 +42,7 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    writeClients[1] = cmd_write_chan.dmaClient;
 
    Integer numRequests = 8;   
-   AxiDMA#(Bit#(64))   dma <- mkAxiDMA(dmaIndication.ifc, numRequests, readClients, writeClients);
+   AxiDMA#(Bit#(64))   dma <- mkAxiRDMA(dmaIndication.ifc, numRequests, readClients, writeClients);
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(DMARequest,dma.request);
    
    // instantiate user portals
