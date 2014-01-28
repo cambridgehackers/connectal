@@ -509,7 +509,8 @@ def p_expressionStmt(p):
                       | moduleDef
                       | TOKACTION colonVar expressionStmts TOKENDACTION colonVar
                       | typeDef
-                      | instanceAttributes rule'''
+                      | instanceAttributes rule
+                      | TOKSEQ fsmStmts TOKENDSEQ'''
 
 def p_expressionStmts(p):
     '''expressionStmts : expressionStmts expressionStmt
