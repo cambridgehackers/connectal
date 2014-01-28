@@ -31,6 +31,13 @@
 #include <dirent.h>
 #include <unistd.h>
 
+#ifdef OSX
+#error aklsjdlk
+#define TTYCLASS "tty.usbmodem"
+#else
+#define TTYCLASS "ttyACM"
+#endif
+
 static struct termios orig_terminfo;
 static void signal_handler(int signame)
 {
@@ -78,7 +85,7 @@ int main(int argc, char **argv)
             DIR *dirptr = opendir("/dev/");
             if (dirptr) {
                 while ((direntp = readdir(dirptr))) {
-                    if (!strncmp(direntp->d_name, "tty.usbmodem", 12)) {
+                    if (!strncmp(direntp->d_name, TTYCLASS, strlen(TTYCLASS))) {
                         printf("consolable: opening %s\n", direntp->d_name);
                         sprintf(buf, "/dev/%s", direntp->d_name);
                         fd = open(buf, O_RDWR);

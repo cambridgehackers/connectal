@@ -33,6 +33,13 @@
 #define MATCHLIMIT 10
 #define CHECKIP "ifconfig -a\n"
 
+#ifdef OSX
+#error aklsjdlk
+#define TTYCLASS "tty.usbmodem"
+#else
+#define TTYCLASS "ttyACM"
+#endif
+
 void memdump(unsigned char *p, int len, char *title)
 {
 int i;
@@ -69,7 +76,7 @@ int main(int argc, char **argv)
             DIR *dirptr = opendir("/dev/");
             if (dirptr) {
                 while ((direntp = readdir(dirptr))) {
-                    if (!strncmp(direntp->d_name, "tty.usbmodem", 12)) {
+                    if (!strncmp(direntp->d_name, TTYCLASS, strlen(TTYCLASS))) {
                         sprintf(buf, "/dev/%s", direntp->d_name);
                         fprintf(stderr, "consolable: opening %s\n", buf);
                         fd = open(buf, O_RDWR | O_NONBLOCK);

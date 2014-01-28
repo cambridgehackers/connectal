@@ -1,0 +1,5 @@
+# For Ubuntu 12.04
+# zedboard
+SUBSYSTEM=="usb", ATTR{idVendor}=="04b4", ATTR{idProduct}=="0008", MODE="0666", OWNER="jenkins"
+KERNEL=="ttyACM*", ATTRS{idVendor}=="04b4", ATTRS{idProduct}=="0008", MODE:="0666"
+
