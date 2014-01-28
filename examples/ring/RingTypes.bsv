@@ -29,6 +29,8 @@ interface ServerF#(type intype, type outtype);
 endinterface
 
 
-typedef 0 CmdNOP;
-typedef 1 CmdCOPY;
-typedef 2 CmdECHO;
+typedef enum {
+ CmdNOP = 0,
+ CmdCOPY = 1,
+ CmdECHO = 2
+   } OpCode deriving (Bits);
