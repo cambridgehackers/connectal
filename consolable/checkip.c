@@ -62,7 +62,7 @@ int main(int argc, char **argv)
     int matchcount = 0, loopcount = 0, slowdown = 0;
     char *lfind;
 
-    printf("checkip: Waiting for USB device\n");
+    fprintf(stderr, "checkip: Waiting for USB device\n");
     while (1) {
         if (fd == -1) {
             struct dirent *direntp;
@@ -71,18 +71,18 @@ int main(int argc, char **argv)
                 while ((direntp = readdir(dirptr))) {
                     if (!strncmp(direntp->d_name, "tty.usbmodem", 12)) {
                         sprintf(buf, "/dev/%s", direntp->d_name);
-                        printf("consolable: opening %s\n", buf);
+                        fprintf(stderr, "consolable: opening %s\n", buf);
                         fd = open(buf, O_RDWR | O_NONBLOCK);
                         linep = linebuf;
                         ipaddr[0] = 0;
-                        printf("consolable: fd %d\n", fd);
+                        fprintf(stderr, "consolable: fd %d\n", fd);
                         break;
                     }
                 }
                 closedir(dirptr); 
             }
             if (fd >= 0) {
-                printf("consolable: USB device '%s' opened fd=%d\n", buf, fd);
+                fprintf(stderr, "consolable: USB device '%s' opened fd=%d\n", buf, fd);
                 rc = tcgetattr(fd, &terminfo);
                 terminfo.c_ispeed = B115200;
                 terminfo.c_ospeed = B115200;
@@ -101,12 +101,12 @@ int main(int argc, char **argv)
                 if (errno == EWOULDBLOCK)
                     continue;
                 if (errno == ENXIO || errno == EBADF) {
-                    printf("consolable: USB device closed\n");
+                    fprintf(stderr, "consolable: USB device closed\n");
                     close(fd);
                     fd = -1;
                     continue;
                 }
-                printf("consolable: read error\n");
+                fprintf(stderr, "consolable: read error\n");
                 exit(-1);
             }
             //write(1, linep, len);
@@ -127,7 +127,7 @@ int main(int argc, char **argv)
                             strcpy(ipaddr, p);
                         }
                         if (matchcount > MATCHLIMIT) {
-                            fprintf(stderr, "%s\n", p);
+                            printf("%s\n", p);
                             exit(0);
                         }
                     }
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
                 write(fd, CHECKIP, strlen(CHECKIP));
             }
             if (loopcount++ > 1000000) {
-printf("[%s:%d] timeout\n", __FUNCTION__, __LINE__);
+fprintf(stderr, "[%s:%d] timeout\n", __FUNCTION__, __LINE__);
                 exit(-1);
             }
         }
