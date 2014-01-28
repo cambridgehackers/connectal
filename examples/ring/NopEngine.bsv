@@ -20,12 +20,12 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import FIFO::*;
+import FIFOF::*;
 import GetPutF::*;
 import RingTypes::*;
 
 module mkNopServer ( ServerF#(Bit#(64), Bit#(64)));
-   FIFO#(Bit#(64)) f_nop <- mkSizedFIFO(2);
+   FIFOF#(Bit#(64)) f_nop <- mkSizedFIFOF(2);
 
    rule discard;   
       let x = f_nop.deq();
