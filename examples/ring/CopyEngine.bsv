@@ -62,12 +62,12 @@ module mkCopyEngine#(DMAReadServer#(64) copy_read_chan, DMAWriteServer#(64) copy
 	       f_in.deq();  // word 0
 	    endaction
 	    action
-	       copyReadHandle <= f_in.first()[63:32]
+	       copyReadHandle <= f_in.first()[63:32];
 	       copyReadAddr <= f_in.first()[23:0];
 	       f_in.deq();  // word 1
 	    endaction
 	    action
-	       copyWriteHandle <= f_in.first()[63:32]
+	       copyWriteHandle <= f_in.first()[63:32];
 	       copyWriteAddr <= f_in.first()[23:0];
 	       f_in.deq();  // word 2
 	    endaction
