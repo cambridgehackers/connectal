@@ -58,11 +58,9 @@ int main(int argc, char **argv)
     int fd = -1;
     int rc;
     fd_set fdset;
-    int number_fds = 1;
     struct timeval timeout;
-    int maxfd = 1;
-    int matchcount = 0;
-    int loopcount = 0;
+    int matchcount = 0, loopcount = 0, slowdown = 0;
+    char *lfind;
 
     printf("checkip: Waiting for USB device\n");
     while (1) {
@@ -74,7 +72,7 @@ int main(int argc, char **argv)
                     if (!strncmp(direntp->d_name, "tty.usbmodem", 12)) {
                         sprintf(buf, "/dev/%s", direntp->d_name);
                         printf("consolable: opening %s\n", buf);
-                        fd = open(buf, O_RDWR);
+                        fd = open(buf, O_RDWR | O_NONBLOCK);
                         linep = linebuf;
                         ipaddr[0] = 0;
                         printf("consolable: fd %d\n", fd);
@@ -84,9 +82,7 @@ int main(int argc, char **argv)
                 closedir(dirptr); 
             }
             if (fd >= 0) {
-                number_fds = 2;
                 printf("consolable: USB device '%s' opened fd=%d\n", buf, fd);
-                maxfd = fd+1;
                 rc = tcgetattr(fd, &terminfo);
                 terminfo.c_ispeed = B115200;
                 terminfo.c_ospeed = B115200;
@@ -98,28 +94,24 @@ int main(int argc, char **argv)
             FD_SET(fd, &fdset);
         timeout.tv_sec = 0;
         timeout.tv_usec = 300000;
-        rc = select(maxfd, &fdset, NULL, NULL, &timeout);
+        rc = select(fd+1, &fdset, NULL, NULL, &timeout);
         if (rc > 0 && fd != -1 && FD_ISSET(fd, &fdset)) {
-            int len = read(fd, buf, sizeof(buf));
+            int len = read(fd, linep, sizeof(buf) - (linep - linebuf + 1));
             if (len == -1) {
-                if (fd != 0 && (errno == ENXIO || errno == EBADF)) {
+                if (errno == EWOULDBLOCK)
+                    continue;
+                if (errno == ENXIO || errno == EBADF) {
                     printf("consolable: USB device closed\n");
-                    number_fds = 1;
                     close(fd);
-                    maxfd = 0;
-                    fd = -1;
                     fd = -1;
                     continue;
                 }
                 printf("consolable: read error\n");
                 exit(-1);
             }
-            int i = 0;
-            while(i < len)
-                if (buf[i++] == '\r')
-                    buf[i-1] = ' ';
-            //write(1, buf, len);
-            char *lfind;
+            //write(1, linep, len);
+            linep += len;
+            *linep = 0;
             while ((lfind = index(linebuf, '\n'))) {
                 *lfind++ = 0;
                 char *p = strstr(linebuf, "addr:");
@@ -145,12 +137,12 @@ int main(int argc, char **argv)
                     *linep++ = *lfind++;
                 *linep = 0;
             }
-            memcpy(linep, buf, len);
-            linep += len;
-            *linep = 0;
         }
         if (fd != -1) {
-            write(fd, CHECKIP, strlen(CHECKIP));
+            if (slowdown++ > 1) {
+                slowdown = 0;
+                write(fd, CHECKIP, strlen(CHECKIP));
+            }
             if (loopcount++ > 1000000) {
 printf("[%s:%d] timeout\n", __FUNCTION__, __LINE__);
                 exit(-1);
