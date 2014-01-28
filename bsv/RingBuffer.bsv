@@ -42,7 +42,7 @@ module mkRingBuffer(RingBuffer);
    Reg#(Bool) renable <- mkReg(False);
    
    interface RingBufferConfig configifc;
-   method Action set(Bit#(2) regist, Bit#(40) addr);
+   method Action set(Bit#(2) regist, Bit#(DmaAddrSize) addr);
       if (regist == 0) rbufferbase <= addr;
       else if (regist == 1) rbufferend <= addr;
       else if (regist == 2) rbufferfirst <= addr;
@@ -52,7 +52,7 @@ module mkRingBuffer(RingBuffer);
       else renable <= (addr[0] != 0);
    endmethod
    
-   method Bit#(40) get(Bit#(2) regist);
+   method Bit#(DmaAddrSize) get(Bit#(2) regist);
       if (regist == 0) return (rbufferbase);
       else if (regist == 1) return (rbufferend);
       else if (regist == 2) return (rbufferfirst);
