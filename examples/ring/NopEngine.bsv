@@ -24,7 +24,7 @@ import FIFOF::*;
 import GetPutF::*;
 import RingTypes::*;
 
-module mkNopServer ( ServerF#(Bit#(64), Bit#(64)));
+module mkNopEngine ( ServerF#(Bit#(64), Bit#(64)));
    FIFOF#(Bit#(64)) f_nop <- mkSizedFIFOF(2);
 
    rule discard;   
