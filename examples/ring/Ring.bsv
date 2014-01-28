@@ -86,8 +86,10 @@ module mkRingRequest#(RingIndication indication,
    Stmt cmdFetch =   seq
       while (True) seq
 	 while(!(hwenabled && cmdRing.notEmpty())) noAction;
-	 cmd_read_chan.readReq.put(cmdRing.bufferlast);
-	 cmdRing.pop();
+	 cmd_read_chan.readReq.put(
+	    DMAAddressRequest{handle: cmdRing.memhandle,
+	       address: cmdRing.bufferlast, burstLen: 8, tag: 0);
+	 cmdRing.pop(64);
       endseq
 		     endseq;
 
