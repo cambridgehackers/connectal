@@ -37,16 +37,16 @@ import EchoEngine::*;
 import NopEngine::*;
 
 interface RingRequest;
-   method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
+   method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(DmaAddrSize) addr);
    method Action get(Bit#(1) cmd, Bit#(2) regist);
    method Action hwenable(Bit#(1) en);
-   method Action doCommandIndirect(Bit#(40) addr);
+   method Action doCommandIndirect(Bit#(DmaAddrSize) addr);
    method Action doCommandImmediate(Bit#(64) data);
 endinterface
 
 interface RingIndication;
-   method Action setResult(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
-   method Action getResult(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
+   method Action setResult(Bit#(1) cmd, Bit#(2) regist, Bit#(DmaAddrSize) addr);
+   method Action getResult(Bit#(1) cmd, Bit#(2) regist, Bit#(DmaAddrSize) addr);
    method Action completion(Bit#(32) command, Bit#(32) tag);
 endinterface
 
@@ -143,7 +143,7 @@ module mkRingRequest#(RingIndication indication,
       // to start a command, doCommand fires off a memory read to the
       // specified address. when it comes back, the doCommandRule will
       // handle it
-      method Action doCommandIndirect(Bit#(40) addr);
+      method Action doCommandIndirect(Bit#(DmaAddrSize) addr);
 	 //cmd_read_chan.readReq.put(addr);
       endmethod
    
@@ -152,7 +152,7 @@ module mkRingRequest#(RingIndication indication,
       endmethod
    
 
-      method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(40) addr);
+      method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(DmaAddrSize) addr);
 	 if (cmd == 1)
 	    cmdRing.set(regist, addr);
 	 else
