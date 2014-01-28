@@ -24,7 +24,8 @@ import FIFOF::*;
 import GetPutF::*;
 import RingTypes::*;
 
-module mkNopEngine ( ServerF#(Bit#(64), Bit#(64)));
+module mkNopEngine
+ ( ServerF#(Bit#(64), Bit#(64)));
    FIFOF#(Bit#(64)) f_nop <- mkSizedFIFOF(2);
 
    rule discard;   
@@ -35,5 +36,5 @@ module mkNopEngine ( ServerF#(Bit#(64), Bit#(64)));
    interface PutF request = toPutF(f_nop);
    interface GetF response = ?;
    
-endmodule: mkNopServer
+endmodule: mkNopEngine
 
