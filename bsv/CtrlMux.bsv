@@ -55,15 +55,15 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories,
 		      Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Slave#(_a,_b,_c))
 
    provisos(Add#(1,numPortals,numInputs),
-	    Add#(nz, TLog#(numInputs), 4));
+	    Add#(1,numInputs,numIfcs),
+	    Add#(nz, TLog#(numIfcs), 4));
    
-   Vector#(1, Axi3Slave#(_a,_b,_c)) d_slaves = map(getCtrl, directories);
-   Vector#(numPortals, Axi3Slave#(_a,_b,_c)) p_slaves = map(getCtrl, portals);
-   Vector#(numInputs, Axi3Slave#(_a,_b,_c)) inputs = append(d_slaves,p_slaves);
+   Axi3Slave#(_a,_b,_c) out_of_range <- mkAxi3SlaveOutOfRange;
+   Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(append(map(getCtrl, directories),map(getCtrl, portals)),cons(out_of_range, nil));
    
-   Reg#(Bit#(TLog#(numInputs))) ws <- mkReg(0);
-   Reg#(Bit#(TLog#(numInputs))) rs <- mkReg(0);
-
+   Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
+   Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
+   
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
    function Bit#(4) psel(Bit#(_a) a);
@@ -72,32 +72,36 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories,
    
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(_a,_c) req);
-	 Bit#(TLog#(numInputs)) wsv = truncate(psel(req.address));
-	 inputs[wsv].req_aw.put(req);
+	 Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.address));
+	 if (wsv > fromInteger(valueOf(numInputs)))
+	    wsv = fromInteger(valueOf(numInputs));
+	 ifcs[wsv].req_aw.put(req);
 	 ws <= wsv;
       endmethod
    endinterface
    interface Put resp_write;
       method Action put(Axi3WriteData#(_b,_c) wdata);
-	 inputs[ws].resp_write.put(wdata);
+	 ifcs[ws].resp_write.put(wdata);
       endmethod
    endinterface
    interface Get resp_b;
       method ActionValue#(Axi3WriteResponse#(_c)) get();
-	 let rv <- inputs[ws].resp_b.get();
+	 let rv <- ifcs[ws].resp_b.get();
 	 return rv;
       endmethod
    endinterface
    interface Put req_ar;
       method Action put(Axi3ReadRequest#(_a,_c) req);
-	 Bit#(TLog#(numInputs)) rsv = truncate(psel(req.address)); 
-	 inputs[rsv].req_ar.put(req);
+	 Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.address)); 
+	 if (rsv > fromInteger(valueOf(numInputs)))
+	    rsv = fromInteger(valueOf(numInputs));
+	 ifcs[rsv].req_ar.put(req);
 	 rs <= rsv;
       endmethod
    endinterface
    interface Get resp_read;
       method ActionValue#(Axi3ReadResponse#(_b,_c)) get();
-	 let rv <- inputs[rs].resp_read.get();
+	 let rv <- ifcs[rs].resp_read.get();
 	 return rv;
       endmethod
    endinterface
