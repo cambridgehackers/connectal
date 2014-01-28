@@ -30,5 +30,5 @@ module mkEchoEngine ( ServerF#(Bit#(64), Bit#(64)));
    interface PutF request = toPutF(f_echo);
    interface GetF response = toGetF(f_echo);
 
-endmodule: mkEchoServer
+endmodule: mkEchoEngine
 
