@@ -52,7 +52,7 @@ module mkRingBuffer(RingBuffer);
       else renable <= (addr[0] != 0);
    endmethod
    
-   method Bit#(DmaAddrSize) get(Bit#(2) regist);
+   method Bit#(32) get(Bit#(2) regist);
       if (regist == 0) return (zeroExtend(rbufferbase));
       else if (regist == 1) return (zeroExtend(rbufferend));
       else if (regist == 2) return (zeroExtend(rbufferfirst));
