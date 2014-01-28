@@ -76,7 +76,7 @@ module mkRingRequest#(RingIndication indication,
       else if (engineselect == cmdCOPY) 
 	 return copyEngine;
       else if (engineselect == cmdECHO) 
-	 return echoServer;
+	 return echoEngine;
       else 
 	 return nopEngine;
    endfunction
