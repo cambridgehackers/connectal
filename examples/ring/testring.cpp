@@ -2,6 +2,7 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -24,9 +25,9 @@ char *statusBuffer = 0;
 PortalAlloc *scratchAlloc;
 char *scratchBuffer = 0;
 
-size_t cmd_ring_sz 4096;
-size_t status_ring_sz 4096;
-size_t scratch_sz 1<<20; /* 1 MB */
+size_t cmd_ring_sz = 4096;
+size_t status_ring_sz = 4096;
+size_t scratch_sz = 1<<20; /* 1 MB */
 size_t scratch_words = scratch_sz >> 8;
 
 #define CMD_NOP 0
@@ -76,12 +77,12 @@ struct SWRing {
 };
 
 /* accessors for get and set calls */
-#define 0 REG_BASE
-#define 1 REG_END
-#define 2 REG_FIRST
-#define 3 REG_LAST
-#define 4 REG_MASK
-#define 5 REG_HANDLE
+#define REG_BASE 0
+#define REG_END 1
+#define REG_FIRST 2
+#define REG_LAST 3
+#define REG_MASK 4
+#define REG_HANDLE 5
 
 struct SWRing cmd_ring;
 struct SWRing status_ring;
@@ -89,7 +90,7 @@ struct SWRing status_ring;
 void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size_t size)
 {
   r->size = size;
-  r->base = base;
+  r->base = (char *) base;
   r->first = 0;
   r->last = 0;
   r->ref = ref;
@@ -103,7 +104,7 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   ring->set(ringid, REG_HANDLE, ref);       // memhandle
 }
 
-uint64_t ring_next(struct SWRing *r)
+uint64_t *ring_next(struct SWRing *r)
 {
   uint64_t *p = (uint64_t *) (r->base + r->last);
   if (p[7] == 0) return (0);
@@ -138,16 +139,9 @@ void ring_send(struct SWRing *r, uint64_t *cmd)
   assert(r->first < r->size);
   next_first = r->first + 64;
   if (next_first == r->size) next_first = 0;
-  r->first = next_rirst;
+  r->first = next_first;
   r->cached_space -= 64;
 }
-
-void ring_flow(struct SWRing *r)
-{
-  static uint64_t fc[8];
-  ddd
-}
-
 
 int main(int argc, const char **argv)
 {
@@ -165,18 +159,18 @@ int main(int argc, const char **argv)
   fprintf(stderr, "allocating memory...\n");
   dma->alloc(cmd_ring_sz, &cmdAlloc);
   dma->alloc(status_ring_sz, &statusAlloc);
-  dma->alloc(scratch_ring_sz, &scratchAlloc);
+  dma->alloc(scratch_sz, &scratchAlloc);
 
-  v = mmap(0, cmd_sz, PROT_READ|PROT_WRITE, MAP_SHARED, cmdAlloc->header.fd, 0);
+  v = mmap(0, cmd_ring_sz, PROT_READ|PROT_WRITE, MAP_SHARED, cmdAlloc->header.fd, 0);
   assert(v != MAP_FAILED);
-  cmdBuffer = (unsigned int *) v;
+  cmdBuffer = (char *) v;
 
-  v = mmap(0, status_sz, PROT_READ|PROT_WRITE, MAP_SHARED, statusAlloc->header.fd, 0);
+  v = mmap(0, status_ring_sz, PROT_READ|PROT_WRITE, MAP_SHARED, statusAlloc->header.fd, 0);
   assert(v != MAP_FAILED);
-  statusBuffer = (unsigned int *) = v;
+  statusBuffer = (char *) v;
   v = mmap(0, scratch_sz, PROT_READ|PROT_WRITE, MAP_SHARED, scratchAlloc->header.fd, 0);
   assert(v != MAP_FAILED);
-  scratchBuffer = (unsigned int *) = v;
+  scratchBuffer = (char *) v;
 
 
   pthread_t tid;
@@ -200,34 +194,35 @@ int main(int argc, const char **argv)
 
 
   fprintf(stderr, "flush and invalidate complete\n");
-  ring_init(cmd_ring, 0, ref_cmdAlloc, cmdBuffer, cmd_sz);
-  ring_init(status_ring, 1, ref_statusAlloc, statusBuffer, status_sz);
+  ring_init(&cmd_ring, 0, ref_cmdAlloc, cmdBuffer, cmd_ring_sz);
+  ring_init(&status_ring, 1, ref_statusAlloc, statusBuffer, status_ring_sz);
 
   fprintf(stderr, "main about to issue requests\n");
 
   for (i = 0; i < 256; i += 1) {
-    scratchBuf[i] = i;
-  }
+    scratchBuffer[i] = i;
+   }
   for (i = 0; i < 10; i += 1) {
-    tcmd[0] = ((unsigned long) cmdNOP) << 56;
-    ring_send(cmd_ring, tcmd);
-    tcmd[0] = ((unsigned long) cmdCOPY) << 56;
+    tcmd[0] = ((unsigned long) CMD_NOP) << 56;
+    ring_send(&cmd_ring, tcmd);
+    tcmd[0] = ((unsigned long) CMD_COPY) << 56;
     tcmd[0] |= 0x2000 + i; // tag
-    tcmd[1] = (((long unsigned) scratchHandle) << 32)
+    tcmd[1] = (((long unsigned) ref_scratchAlloc) << 32)
       | (256 * i);
-    tcmd[2] = (((long unsigned) scratchHandle) << 32)
+    tcmd[2] = (((long unsigned) ref_scratchAlloc) << 32)
       | (256 * (i + 1));
     tcmd[3] = 256; // byte count
-    ring_send(cmd_ring, tcmd);
-    tcmd[0] = ((unsigned long) cmdECHO) << 56;
+    ring_send(&cmd_ring, tcmd);
+    tcmd[0] = ((unsigned long) CMD_ECHO) << 56;
     tcmd[7] = tcmd[0] + i;
-    ring_send(cmd_ring, tcmd);
+    ring_send(&cmd_ring, tcmd);
   }
   sleep(1);
   for (i = 0; i < 256; i += 1) {
-    if (scratchBuf[i + 2560] != i) {
-      printf("loc %d got %d should be %d\n"
-	     i + 2560, scratchBuf[i + 2560], i);
+    if (scratchBuffer[i + 2560] != i) {
+      printf("loc %d got %d should be %d\n",
+	     i + 2560, scratchBuffer[i + 2560], i);
+    }
   }
 
 
