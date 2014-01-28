@@ -24,8 +24,12 @@ import Ring::*;
 
 typedef enum {RingIndication, RingRequest, DMAIndication, DMARequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth));
-   
+module mkPortalTop(StdPortalTop#(addrWidth)) provisos(
+     Add#(addrWidth, a__, 52),
+    Add#(b__, addrWidth, 64),
+    Add#(c__, 12, addrWidth),
+    Add#(addrWidth, d__, 44));
+  
    // instantiate DMA infrastructure
    DMAIndicationProxy dmaIndicationProxy <- mkDMAIndicationProxy(DMAIndication);
    DMAReadBuffer#(64,8) dma_read_chan <- mkDMAReadBuffer();
@@ -42,12 +46,12 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    writeClients[1] = cmd_write_chan.dmaClient;
 
    Integer numRequests = 8;   
-   AxiDMA#(Bit#(64))   dma <- mkAxiRDMA(dmaIndication.ifc, numRequests, readClients, writeClients);
+   AxiDMAServer#(addrWidth,64) dma <- mkAxiDMAServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
    DMARequestWrapper dmaRequestWrapper <- mkDMARequestWrapper(DMARequest,dma.request);
    
    // instantiate user portals
    RingIndicationProxy ringIndicationProxy <- mkRingIndicationProxy(RingIndication);
-   RingRequest ringRequest <- mkRingRequestInternal(ringIndicationProxy.ifc, dma_read_chan.dmaServer, dma_write_chan.dmaServer, cmd_read_chan.dmaServer, cmd_write_chan.dmaServer);
+   RingRequest ringRequest <- mkRingRequest(ringIndicationProxy.ifc, dma_read_chan.dmaServer, dma_write_chan.dmaServer, cmd_read_chan.dmaServer, cmd_write_chan.dmaServer);
    RingRequestWrapper ringRequestWrapper <- mkRingRequestWrapper(RingRequest, ringRequest);
    
    Vector#(4,StdPortal) portals;
