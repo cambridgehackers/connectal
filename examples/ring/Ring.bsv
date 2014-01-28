@@ -37,16 +37,16 @@ import EchoEngine::*;
 import NopEngine::*;
 
 interface RingRequest;
-   method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(DmaAddrSize) addr);
+   method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(32) addr);
    method Action get(Bit#(1) cmd, Bit#(2) regist);
    method Action hwenable(Bit#(1) en);
-   method Action doCommandIndirect(Bit#(DmaAddrSize) addr);
+   method Action doCommandIndirect(Bit#(32) addr);
    method Action doCommandImmediate(Bit#(64) data);
 endinterface
 
 interface RingIndication;
-   method Action setResult(Bit#(1) cmd, Bit#(2) regist, Bit#(DmaAddrSize) addr);
-   method Action getResult(Bit#(1) cmd, Bit#(2) regist, Bit#(DmaAddrSize) addr);
+   method Action setResult(Bit#(1) cmd, Bit#(2) regist, Bit#(32) addr);
+   method Action getResult(Bit#(1) cmd, Bit#(2) regist, Bit#(32) addr);
    method Action completion(Bit#(32) command, Bit#(32) tag);
 endinterface
 
@@ -152,7 +152,7 @@ module mkRingRequest#(RingIndication indication,
       endmethod
    
 
-      method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(DmaAddrSize) addr);
+      method Action set(Bit#(1) cmd, Bit#(2) regist, Bit#(32) addr);
 	 if (cmd == 1)
 	    cmdRing.set(regist, addr);
 	 else
