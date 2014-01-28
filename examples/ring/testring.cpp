@@ -18,16 +18,20 @@ RingRequestProxy *ring = new RingRequestProxy(IfcNames_RingRequest);
 DMARequestProxy *dma = new DMARequestProxy(IfcNames_DMARequest);
 
 PortalAlloc *cmdAlloc;
-unsigned int *cmdBuffer = 0;
+char *cmdBuffer = 0;
 PortalAlloc *statusAlloc;
-unsigned int *statusBuffer = 0;
+char *statusBuffer = 0;
 PortalAlloc *scratchAlloc;
-unsigned int *scratchBuffer = 0;
+char *scratchBuffer = 0;
 
 size_t cmd_ring_sz 4096;
 size_t status_ring_sz 4096;
 size_t scratch_sz 1<<20; /* 1 MB */
 size_t scratch_words = scratch_sz >> 8;
+
+#define CMD_NOP 0
+#define CMD_COPY 1
+#define CMD_ECHO 2
 
 
 sem_t conf_sem;
@@ -71,6 +75,14 @@ struct SWRing {
   int ringid;
 };
 
+/* accessors for get and set calls */
+#define 0 REG_BASE
+#define 1 REG_END
+#define 2 REG_FIRST
+#define 3 REG_LAST
+#define 4 REG_MASK
+#define 5 REG_HANDLE
+
 struct SWRing cmd_ring;
 struct SWRing status_ring;
 
@@ -83,12 +95,12 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   r->ref = ref;
   r->cached_space = size - 64;
   r->ringid = ringid;
-  ring->set(ringid, 0, 0);         // bufferbase, relative to base
-  ring->set(ringid, 1, size);      // bufferend
-  ring->set(ringid, 2, 0);         // bufferfirst
-  ring->set(ringid, 3, 0);         // bufferlast 
-  ring->set(ringid, 4, size - 1);  // buffermask
-  ring->set(ringid, 5, ref);       // memhandle
+  ring->set(ringid, REG_BASE, 0);         // bufferbase, relative to base
+  ring->set(ringid, REG_END, size);      // bufferend
+  ring->set(ringid, REG_FIRST, 0);         // bufferfirst
+  ring->set(ringid, REG_LAST, 0);         // bufferlast 
+  ring->set(ringid, REG_MASK, size - 1);  // buffermask
+  ring->set(ringid, REG_HANDLE, ref);       // memhandle
 }
 
 uint64_t ring_next(struct SWRing *r)
@@ -110,34 +122,39 @@ void ring_pop(struct SWRing *r)
   r->last = last;
 }
 
+unsigned ring_estimated_space_left(struct SWRing *r)
+{
+  return(r->cached_space);
+}
+
 void update_space_cache(struct SWRing *r)
 {
 }
 
 void ring_send(struct SWRing *r, uint64_t *cmd)
 {
+  unsigned next_first;
+  assert(ring_estimated_space_left(r) > 0);
+  assert(r->first < r->size);
+  next_first = r->first + 64;
+  if (next_first == r->size) next_first = 0;
+  r->first = next_rirst;
+  r->cached_space -= 64;
 }
 
+void ring_flow(struct SWRing *r)
+{
+  static uint64_t fc[8];
+  ddd
+}
 
-/*
-
-is empty
-  read first
-  read last
-  return first == last
-
-
-how much space is available ?
-
-   read first
-   read last
-   if (first == last) return (size - 64)
-   else return (size - 64) - ((size + first - last) % size)
-*/
 
 int main(int argc, const char **argv)
 {
   void *v;
+  int i;
+  uint64_t tcmd[8];
+
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   if(sem_init(&conf_sem, 1, 0)){
@@ -181,49 +198,39 @@ int main(int argc, const char **argv)
   dma->dCacheFlushInval(statusAlloc, statusBuffer);
   dma->dCacheFlushInval(scratchAlloc, scratchBuffer);
 
+
   fprintf(stderr, "flush and invalidate complete\n");
-      
+  ring_init(cmd_ring, 0, ref_cmdAlloc, cmdBuffer, cmd_sz);
+  ring_init(status_ring, 1, ref_statusAlloc, statusBuffer, status_sz);
 
   fprintf(stderr, "main about to issue requests\n");
 
-  ring->set(0, 0, 0x1000);
-  sem_wait(&conf_sem);
-  ring->set(0, 1, 0x1001);
-  sem_wait(&conf_sem);
-  ring->set(0, 2, 0x1002);
-  sem_wait(&conf_sem);
-  ring->set(0, 3, 0x1003);
-  sem_wait(&conf_sem);
-  ring->set(1, 0, 0x1010);
-  sem_wait(&conf_sem);
-  ring->set(1, 1, 0x1011);
-  sem_wait(&conf_sem);
-  ring->set(1, 2, 0x1012);
-  sem_wait(&conf_sem);
-  ring->set(1, 3, 0x1013);
-  sem_wait(&conf_sem);
-  ring->get(0, 0);
-  sem_wait(&conf_sem);
-  ring->get(0, 1);
-  sem_wait(&conf_sem);
-  ring->get(0, 2);
-  sem_wait(&conf_sem);
-  ring->get(0, 3);
-  sem_wait(&conf_sem);
-  ring->get(1, 0);
-  sem_wait(&conf_sem);
-  ring->get(1, 1);
-  sem_wait(&conf_sem);
-  ring->get(1, 2);
-  sem_wait(&conf_sem);
-  ring->get(1, 3);
-  sem_wait(&conf_sem);
+  for (i = 0; i < 256; i += 1) {
+    scratchBuf[i] = i;
+  }
+  for (i = 0; i < 10; i += 1) {
+    tcmd[0] = ((unsigned long) cmdNOP) << 56;
+    ring_send(cmd_ring, tcmd);
+    tcmd[0] = ((unsigned long) cmdCOPY) << 56;
+    tcmd[0] |= 0x2000 + i; // tag
+    tcmd[1] = (((long unsigned) scratchHandle) << 32)
+      | (256 * i);
+    tcmd[2] = (((long unsigned) scratchHandle) << 32)
+      | (256 * (i + 1));
+    tcmd[3] = 256; // byte count
+    ring_send(cmd_ring, tcmd);
+    tcmd[0] = ((unsigned long) cmdECHO) << 56;
+    tcmd[7] = tcmd[0] + i;
+    ring_send(cmd_ring, tcmd);
+  }
+  sleep(1);
+  for (i = 0; i < 256; i += 1) {
+    if (scratchBuf[i + 2560] != i) {
+      printf("loc %d got %d should be %d\n"
+	     i + 2560, scratchBuf[i + 2560], i);
+  }
 
 
-
-  //  ring->doCommandImmediate(ci);
-  fprintf(stderr, "main started dma copy\n");
-  sem_wait(&conf_sem);
   
   fprintf(stderr, "main going to sleep\n");
   while(true){sleep(1);}
