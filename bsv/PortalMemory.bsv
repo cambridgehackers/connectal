@@ -50,7 +50,6 @@ typedef struct {
 interface DMAIndication;
    method Action reportStateDbg(DmaDbgRec rec);
    method Action sglistResp(Bit#(32) pref, Bit#(32) idx, Bit#(32) physPageNum);
-   method Action parefResp(Bit#(32) v);
    method Action sglistEntry(Bit#(32) o, Bit#(64) physAddr);
    method Action badHandle(Bit#(32) handle, Bit#(32) address);
    method Action badAddr(Bit#(32) handle, Bit#(32) offset, Bit#(64) physAddr);
@@ -75,12 +74,11 @@ interface DMARequest;
    //
    // @note Only implemented for hardware
    method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
-
-   method Action readSglist(ChannelType rc, Bit#(32) pref, Bit#(32) addr);
+   method Action readSglist(Bit#(32) pref, Bit#(32) addr);
 endinterface
 
 //
-// @brief Instances of type class PortalMemory implement sglist and paref methods
+// @brief Instances of type class PortalMemory implement the sglist method
 //
 typeclass PortalMemory#(type a);
 endtypeclass

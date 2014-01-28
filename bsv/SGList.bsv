@@ -30,6 +30,7 @@ import BRAM::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 import StmtFSM::*;
+import ClientServer::*;
 
 // In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
 typedef 16 NumSGLists;
@@ -41,10 +42,9 @@ typedef Bit#(PageIdxSize) PageIdx;
 
 interface SGListMMU#(numeric type addrWidth);
    method Action page(SGListId id, Bit#(PageIdxSize) vPageNum, Bit#(TSub#(addrWidth,SGListPageShift)) pPageNum);
-   method Action addrReq(SGListId id, Bit#(DmaAddrSize) off);
-   method ActionValue#(Bit#(addrWidth)) addrResp();
-   method Action dbgAddrReq(SGListId id, Bit#(DmaAddrSize) off);
-   method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) dbgAddrResp();
+   method Action configuring(Bool c);
+   interface Vector#(2,Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth))) addr;
+   interface Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)), Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) addrDbg;
 endinterface
 
 // if this structure becomes too expensive, we can switch to a multi-level structure
@@ -53,56 +53,88 @@ module mkSGListMMU(SGListMMU#(addrWidth))
 	     Add#(listIdxSize,PageIdxSize,entryIdxSize),
 	     Add#(pPageNumSize, SGListPageShift, addrWidth),
 	     Bits#(Maybe#(Bit#(pPageNumSize)), mpPageNumSize),
-	     Add#(1, pPageNumSize, mpPageNumSize)
-	     );
+	     Add#(1, pPageNumSize, mpPageNumSize));
 
    BRAM_Configure cfg = defaultValue;
-   BRAM1Port#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) pageTable <- mkBRAM1Server(cfg);
-   FIFOF#(Bit#(SGListPageShift)) offs <- mkFIFOF;
-   FIFOF#(Bit#(addrWidth)) respFifo <- mkFIFOF;
-   FIFOF#(Bit#(PageIdxSize)) pageIdxs <- mkFIFOF;
-
+   BRAM2Port#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) pageTable <- mkBRAM2Server(cfg);
+   Vector#(2,FIFOF#(Bit#(SGListPageShift))) offs <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Bit#(addrWidth))) respFifos <- replicateM(mkFIFOF);
+   FIFOF#(Bit#(PageIdxSize)) pageIdx <- mkFIFOF;
+   Reg#(Bool)  isConfiguring <- mkReg(False);
+   
    let page_shift = fromInteger(valueOf(SGListPageShift));
+   function BRAMServer#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) portsel(int i);
+      if(i==0)
+	 return pageTable.portA;
+      else
+	 return pageTable.portB;
+   endfunction
 
-   (* aggressive_implicit_conditions *)
-   rule respond;
-      offs.deq;
-      let mrv <- pageTable.portA.response.get;
-      let rv = fromMaybe(fromInteger('hababa),mrv);
-      if (!isValid(mrv))
-      	 $display("mkSGListMMU::addrResp has gone off the reservation");
-      respFifo.enq({rv,offs.first});
-   endrule
+   Vector#(2,Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth))) addrServers;
+   for(int i = 0; i < 2; i=i+1)
+      addrServers[i] = 
+      (interface Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth));
+	  interface Put request;
+	     method Action put(Tuple2#(SGListId,Bit#(DmaAddrSize)) req) if (!isConfiguring);
+		let id = tpl_1(req);
+		let off = tpl_2(req);
+		offs[i].enq(truncate(off));
+		Bit#(PageIdxSize) pageNum = off[valueOf(DmaAddrSize)-1:page_shift];
+		//$display("addrReq id=%d pageNum=%h", id, pageNum);
+		portsel(i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pageNum}, datain:?});
+	     endmethod
+	  endinterface
+	  interface Get response;
+	     method ActionValue#(Bit#(addrWidth)) get if (!isConfiguring);
+		respFifos[i].deq();
+		//$display("addrResp phys_addr=%h", respFifo.first());
+		return respFifos[i].first();
+	     endmethod
+	  endinterface
+       endinterface);
+   
+   for(int i = 0; i < 2; i=i+1) begin
+      (* aggressive_implicit_conditions *)
+      rule respond;
+	 offs[i].deq;
+	 let mrv <- portsel(i).response.get;
+	 let rv = fromMaybe(fromInteger('hababa),mrv);
+	 if (!isValid(mrv))
+      	    $display("mkSGListMMU::addrResp (%d) has gone off the reservation", i);
+	 respFifos[i].enq({rv,offs[i].first});
+      endrule
+   end
+   
+   method Action configuring(Bool c);
+      isConfiguring <= c;
+   endmethod
+   
    method Action page(SGListId id, Bit#(PageIdxSize) pageNum, Bit#(pPageNumSize) pPageNum);
       $display("page id=%d pageNum=%h physaddr=%h", id, pageNum, pPageNum);
       pageTable.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:{id,pageNum}, datain:tagged Valid pPageNum});
    endmethod
+   
+   interface Server addrDbg;
+      interface Put request;
+      	 method Action put(Tuple2#(SGListId,Bit#(DmaAddrSize)) req) if (!isConfiguring);
+	    let id = tpl_1(req);
+	    let off = tpl_2(req);
+      	    offs[1].enq(truncate(off));
+      	    let pIdx = off[valueOf(DmaAddrSize)-1:page_shift];
+      	    pageIdx.enq(pIdx);
+      	    pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pIdx}, datain:?});
+      	 endmethod
+      endinterface
+      interface Get response;
+      	 method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) get if (!isConfiguring);
+      	    respFifos[1].deq();
+      	    let pIdx = pageIdx.first();
+      	    pageIdx.deq();
+      	    return tuple2(pIdx, respFifos[1].first());
+      	 endmethod
+      endinterface
+   endinterface
+   
+   interface addr = addrServers;
 
-   method Action addrReq(SGListId id, Bit#(DmaAddrSize) off);
-      offs.enq(truncate(off));
-      Bit#(PageIdxSize) pageNum = off[valueOf(DmaAddrSize)-1:page_shift];
-      //$display("addrReq id=%d pageNum=%h", id, pageNum);
-      pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pageNum}, datain:?});
-   endmethod
-   
-   method ActionValue#(Bit#(addrWidth)) addrResp() if (!pageIdxs.notEmpty());
-      respFifo.deq();
-      //$display("addrResp phys_addr=%h", respFifo.first());
-      return respFifo.first();
-   endmethod
-
-   method Action dbgAddrReq(SGListId id, Bit#(DmaAddrSize) off);
-      offs.enq(truncate(off));
-      let pageIdx = off[valueOf(DmaAddrSize)-1:page_shift];
-      pageIdxs.enq(pageIdx);
-      pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pageIdx}, datain:?});
-   endmethod
-   
-   method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) dbgAddrResp();
-      respFifo.deq();
-      let pageIdx = pageIdxs.first();
-      pageIdxs.deq();
-      return tuple2(pageIdx, respFifo.first());
-   endmethod
-   
 endmodule
