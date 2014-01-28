@@ -102,6 +102,9 @@ int main(int argc, char **argv)
                 rc = tcgetattr(fd, &terminfo);
                 terminfo.c_ispeed = B115200;
                 terminfo.c_ospeed = B115200;
+                terminfo.c_cflag = B115200 | CRTSCTS | CS8 | CLOCAL | CREAD;
+                terminfo.c_iflag = IGNCR;
+                terminfo.c_lflag = ICANON;
                 rc = tcsetattr(fd, TCSANOW, &terminfo);
             }
         }
