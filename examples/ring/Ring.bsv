@@ -68,6 +68,7 @@ module mkRingRequest#(RingIndication indication,
    Reg#(Bool) cmdBusy <- mkReg(False);
    Reg#(UInt#(64)) cmd <- mkReg(0);
    Reg#(Bit#(4)) ii <- mkReg(0);
+   Reg#(Bit#(4)) respCtr <- mkReg(0);
 
    
    let engineselect = pack(cmd)[63:56];
@@ -117,16 +118,28 @@ module mkRingRequest#(RingIndication indication,
    seq
       while(True) seq
 	 if (statusRing.notFull() && copyEngine.response.notEmpty())
-	    for (ii <= 1; ii < 8; ii <= ii + 1)
-	       action
-		  status_write_chan.writeReq.put(statusRing.expBufferFirst);
-		  status_write_chan.writeData.put(copyEngine.get());
-		  statusRing.push(8);
-	       endaction
+	    seq
+	       status_write_chan.writeReq.put(
+		  DMAAddressRequest{handle: statusRing.memhandle, 
+		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
+	       statusRing.push(64);
+	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
+		  status_write_chan.writeData.put(
+		     DMAData{data:copyEngine.get(), tag: 0});
+	    endseq
+
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
-	    for (ii <= 1; ii < 8; ii <= ii + 1)
+	    seq
+	       status_write_chan.writeReq.put(
+		  DMAAddressRequest{handle: statusRing.memhandle, 
+		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
+	       statusRing.push(64);
+	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
+		  status_write_chan.writeData.put(
+		     DMAData{data:echoEngine.get(), tag: 0});
+	    endseq
+
 	       action
-		  status_write_chan.writeReq.put(statusRing.expBufferFirst);
 		  status_write_chan.writeData.put(echoEngine.get());
 		  statusRing.push(8);
 	       endaction
