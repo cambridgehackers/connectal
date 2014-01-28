@@ -69,13 +69,13 @@ module mkRingRequest#(RingIndication indication,
    Reg#(UInt#(64)) cmd <- mkReg(0);
 
    
-   let engineselect = cmd[63:56];
-   function Server#(Bit#(64), Bit#(64)) cmdifc();
-      if (engineselect == cmdNOP) 
+   let engineselect = pack(cmd)[63:56];
+   function ServerF#(Bit#(64), Bit#(64)) cmdifc();
+      if (engineselect == zeroExtend(pack(CmdNOP))) 
 	 return nopEngine;
-      else if (engineselect == cmdCOPY) 
+      else if (engineselect == zeroExtend(pack(CmdCOPY))) 
 	 return copyEngine;
-      else if (engineselect == cmdECHO) 
+      else if (engineselect == zeroExtend(pack(CmdECHO))) 
 	 return echoEngine;
       else 
 	 return nopEngine;
@@ -88,8 +88,6 @@ module mkRingRequest#(RingIndication indication,
 	 cmdRing.pop();
       endseq
 		     endseq;
-
-   let fn = cmd[63:56];
 
    Stmt cmdDispatch = 
    seq
