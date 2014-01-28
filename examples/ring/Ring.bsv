@@ -96,7 +96,12 @@ module mkRingRequest#(RingIndication indication,
       while (True) seq
 	 cmd <= cmd_read_chan.readData.get();
 	 cmdifc.put(cmd);
-	 for (ii <= 1; ii < 8; ii <= ii + 1)
+	    cmdifc.put(cmd_read_chan.readData.get());
+	    cmdifc.put(cmd_read_chan.readData.get());
+	    cmdifc.put(cmd_read_chan.readData.get());
+	    cmdifc.put(cmd_read_chan.readData.get());
+	    cmdifc.put(cmd_read_chan.readData.get());
+	    cmdifc.put(cmd_read_chan.readData.get());
 	    cmdifc.put(cmd_read_chan.readData.get());
       endseq
    endseq;
