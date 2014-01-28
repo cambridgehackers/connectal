@@ -85,7 +85,7 @@ module mkRingRequest#(RingIndication indication,
    Stmt cmdFetch =   seq
       while (True) seq
 	 while(!(hwenabled && cmdRing.notEmpty())) noAction;
-	 cmd_read_chan.readReq.put(cmdRing.expBufferLast);
+	 cmd_read_chan.readReq.put(cmdRing.bufferlast);
 	 cmdRing.pop();
       endseq
 		     endseq;
@@ -93,15 +93,16 @@ module mkRingRequest#(RingIndication indication,
    Stmt cmdDispatch = 
    seq
       while (True) seq
-	 cmd <= cmd_read_chan.readData.get();
+	 let data = cmd_read_chan.readData.get();
+	 cmd <= data.data;
 	 cmdifc.put(cmd);
-	    cmdifc.put(cmd_read_chan.readData.get());
-	    cmdifc.put(cmd_read_chan.readData.get());
-	    cmdifc.put(cmd_read_chan.readData.get());
-	    cmdifc.put(cmd_read_chan.readData.get());
-	    cmdifc.put(cmd_read_chan.readData.get());
-	    cmdifc.put(cmd_read_chan.readData.get());
-	    cmdifc.put(cmd_read_chan.readData.get());
+	    cmdifc.put(cmd_read_chan.readData.get().data);
+	    cmdifc.put(cmd_read_chan.readData.get().data);
+	    cmdifc.put(cmd_read_chan.readData.get().data);
+	    cmdifc.put(cmd_read_chan.readData.get().data);
+	    cmdifc.put(cmd_read_chan.readData.get().data);
+	    cmdifc.put(cmd_read_chan.readData.get().data);
+	    cmdifc.put(cmd_read_chan.readData.get().data);
       endseq
    endseq;
    
