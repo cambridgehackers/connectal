@@ -67,6 +67,7 @@ module mkRingRequest#(RingIndication indication,
    Reg#(Bool) hwenabled <- mkReg(False);
    Reg#(Bool) cmdBusy <- mkReg(False);
    Reg#(UInt#(64)) cmd <- mkReg(0);
+   Reg#(Bit#(4)) ii <- mkReg(0);
 
    
    let engineselect = pack(cmd)[63:56];
