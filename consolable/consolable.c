@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     fdlist[0] = 0; // stdin
     rc = tcgetattr(0, &orig_terminfo);
     sact.sa_handler = signal_handler;
-    sact.sa_mask = 0;
+    memset(&sact.sa_mask, 0, sizeof(sact.sa_mask));
     sact.sa_flags = 0;
     rc = sigaction(SIGHUP, &sact, NULL);
     rc |= sigaction(SIGINT, &sact, NULL);
