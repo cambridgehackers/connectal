@@ -171,12 +171,13 @@ module mkRingRequest#(RingIndication indication,
 	    cmdRing.configifc.set(regist, addr);
 	 else
 	    statusRing.configifc.set(regist, addr);
-	 indication.setResult(cmd, regist, addr);
+	 indication.setResult(_cmd, regist, addr);
       endmethod
    
       method Action get(Bit#(1) _cmd, Bit#(3) regist);
 	 if (_cmd == 1)
-	    indication.getResult(1, regist, 3	       cmdRing.configifc.get(regist));
+	    indication.getResult(1, regist, 
+	       cmdRing.configifc.get(regist));
 	 else
 	    indication.getResult(0, regist, 
 	       statusRing.configifc.get(regist));
