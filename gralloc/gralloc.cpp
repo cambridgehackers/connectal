@@ -76,7 +76,7 @@ struct gralloc_context_t {
     pthread_cond_t vsync_cond;
     HdmiControlRequest *hdmiDisplay;
     HdmiInternalRequest *hdmiInternal;
-    DmaRequest *dma;
+    DmaConfig *dma;
     unsigned int ref_srcAlloc;
     uint32_t nextSegmentNumber;
 };
@@ -367,7 +367,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         pthread_cond_init(&dev->vsync_cond, &condattr);
         dev->hdmiDisplay = HdmiControlRequest::createHdmiControlRequest(new HdmiControlIndication);
         dev->hdmiInternal = HdmiInternalRequest::createHdmiInternalRequest(new TestHdmiIndication);
-        dev->dma = DmaRequest::createDmaRequest(new TestDmaIndication);
+        dev->dma = DmaConfig::createDmaConfig(new TestDmaIndication);
         dev->nextSegmentNumber = 0;
 
         status = 0;

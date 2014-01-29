@@ -87,7 +87,7 @@ module mkRingRequest#(RingIndication indication,
       while (True) seq
 	 while(!(hwenabled && cmdRing.notEmpty())) noAction;
 	 cmd_read_chan.readReq.put(
-	    DmaAddressRequest{handle: cmdRing.memhandle,
+	    DmaRequest{handle: cmdRing.memhandle,
 	       address: cmdRing.bufferlast, burstLen: 8, tag: 0});
 	 cmdRing.pop(64);
       endseq
@@ -123,7 +123,7 @@ module mkRingRequest#(RingIndication indication,
 	 if (statusRing.notFull() && copyEngine.response.notEmpty())
 	    seq
 	       status_write_chan.writeReq.put(
-		  DmaAddressRequest{handle: statusRing.memhandle, 
+		  DmaRequest{handle: statusRing.memhandle, 
 		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
 	       statusRing.push(64);
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
@@ -136,7 +136,7 @@ module mkRingRequest#(RingIndication indication,
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    seq
 	       status_write_chan.writeReq.put(
-		  DmaAddressRequest{handle: statusRing.memhandle, 
+		  DmaRequest{handle: statusRing.memhandle, 
 		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
 	       statusRing.push(64);
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)

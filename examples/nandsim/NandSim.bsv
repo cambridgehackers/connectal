@@ -125,14 +125,14 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
 
    interface DmaReadClient readClient;
       interface GetF readReq;
-         method ActionValue#(DmaAddressRequest) get() if (dramRdCnt > 0);
+         method ActionValue#(DmaRequest) get() if (dramRdCnt > 0);
             dramRdCnt <= dramRdCnt-extend(burstLen);
             dramRdOffset <= dramRdOffset + deltaOffset;
             if (dramRdCnt <= extend(burstLen))
                indication.writeDone(0); // read from DRAM is write to NAND
             //else if (dramRdCnt[5:0] == 6'b0)
             //   indication.readReq(dramRdCnt);
-            return DmaAddressRequest { handle: dramRdHandle, address: dramRdOffset, burstLen: burstLen, tag: truncate(dramRdOffset) };
+            return DmaRequest { handle: dramRdHandle, address: dramRdOffset, burstLen: burstLen, tag: truncate(dramRdOffset) };
          endmethod
          method Bool notEmpty();
             return dramRdCnt > 0;
@@ -151,12 +151,12 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
    endinterface
    interface DmaWriteClient writeClient;
       interface GetF writeReq;
-	 method ActionValue#(DmaAddressRequest) get() if (dramWrCnt > 0);
+	 method ActionValue#(DmaRequest) get() if (dramWrCnt > 0);
 	    dramWrCnt <= dramWrCnt - extend(dramWrBurstLen);
 	    dramWrOffset <= dramWrOffset + deltaOffset;
 	    let tag = truncate(dramWrOffset>>3);
 	    dramWrTag <= tag;
-	    return DmaAddressRequest { handle: dramWrHandle, address: dramWrOffset, burstLen: dramWrBurstLen, tag: tag };
+	    return DmaRequest { handle: dramWrHandle, address: dramWrOffset, burstLen: dramWrBurstLen, tag: tag };
 	 endmethod
 	 method Bool notEmpty();
 	    return dramWrCnt > 0;

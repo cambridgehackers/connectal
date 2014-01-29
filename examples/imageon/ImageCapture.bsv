@@ -69,7 +69,7 @@ interface ImageCaptureRequest;
     interface HdmiInternalRequest coRequest;
     interface BlueScopeRequest bsRequest;
     interface HDMI hdmi;
-    interface DmaRequest dmaRequest;
+    interface DmaConfig dmaRequest;
     interface ImageonVita vita;
 endinterface
  

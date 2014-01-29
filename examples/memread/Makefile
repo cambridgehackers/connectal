@@ -1,6 +1,6 @@
 
 BSVDIR=../../bsv
-S2H = MemreadRequest DmaRequest
+S2H = MemreadRequest DmaConfig
 H2S = MemreadIndication DmaIndication
 BSVFILES = Memread.bsv  $(BSVDIR)/PortalMemory.bsv
 CPPFILES=testmemread.cpp

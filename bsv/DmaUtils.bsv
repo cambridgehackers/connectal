@@ -62,7 +62,7 @@ module mkDmaReadServer2BRAM#(DmaReadServer#(busWidth) rs, BRAMServer#(a,d) br)(D
    Reg#(DmaPointer) readHandle <- mkReg(0);
 
    rule loadReq(iv);
-      rs.readReq.put(DmaAddressRequest {handle: readHandle, address: zeroExtend(pack(i)), burstLen: 1, tag: 0});
+      rs.readReq.put(DmaRequest {handle: readHandle, address: zeroExtend(pack(i)), burstLen: 1, tag: 0});
       i <= i+fromInteger(valueOf(nd));
       iv <= (i < n);
    endrule
@@ -136,7 +136,7 @@ module mkDmaReadBuffer(DmaReadBuffer#(dsz, maxBurst))
 	    Add#(b__, TAdd#(1,TLog#(maxBurst)), 8));
 
    FIFOFLevel#(DmaData#(dsz),maxBurst)  readBuffer <- mkBRAMFIFOFLevel;
-   FIFOF#(DmaAddressRequest)        reqOutstanding <- mkFIFOF();
+   FIFOF#(DmaRequest)        reqOutstanding <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(maxBurst))) unfulfilled <- mkRatchet(0);
    
    // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
@@ -148,7 +148,7 @@ module mkDmaReadBuffer(DmaReadBuffer#(dsz, maxBurst))
    endinterface
    interface DmaReadClient dmaClient;
       interface GetF readReq;
-	 method ActionValue#(DmaAddressRequest) get if (readBuffer.lowWater(sreq));
+	 method ActionValue#(DmaRequest) get if (readBuffer.lowWater(sreq));
 	    reqOutstanding.deq;
 	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
 	    return reqOutstanding.first;
@@ -180,7 +180,7 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, maxBurst))
 	    Add#(b__, TAdd#(1, TLog#(maxBurst)), 8));
 
    FIFOFLevel#(DmaData#(bsz),maxBurst) writeBuffer <- mkBRAMFIFOFLevel;
-   FIFOF#(DmaAddressRequest)        reqOutstanding <- mkFIFOF();
+   FIFOF#(DmaRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(maxBurst)))  unfulfilled <- mkRatchet(0);
    
@@ -194,7 +194,7 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, maxBurst))
    endinterface
    interface DmaWriteClient dmaClient;
       interface GetF writeReq;
-	 method ActionValue#(DmaAddressRequest) get if (writeBuffer.highWater(sreq));
+	 method ActionValue#(DmaRequest) get if (writeBuffer.highWater(sreq));
 	    reqOutstanding.deq;
 	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
 	    return reqOutstanding.first;

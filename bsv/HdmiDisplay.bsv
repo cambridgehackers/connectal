@@ -44,7 +44,7 @@ endinterface
 interface HdmiDisplayRequest;
     interface HdmiControlRequest coreRequest;
     interface HdmiInternalRequest coRequest;
-    interface DmaRequest dmaRequest;
+    interface DmaConfig dmaRequest;
     interface Axi3Master#(40,64,6) m_axi;
     interface HDMI hdmi;
     interface XADC xadc;
@@ -102,7 +102,7 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 `ifndef BSIM
     interface Axi3Master m_axi = dma.m_axi;
 `endif
-    interface DmaRequest dmaRequest = dma.request;
+    interface DmaConfig dmaRequest = dma.request;
     interface HDMI hdmi = hdmiGen.hdmi;
     interface HdmiInternalRequest coRequest = hdmiGen.control;
     interface XADC xadc;

@@ -85,7 +85,7 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
       
     rule copyReadRule (copyBusy && (copyReadCount != 0));
        $display("copyRead %h, count %h", copyReadAddr, copyReadCount);
-       copy_read_chan.readReq.put(DmaAddressRequest{handle: copyReadHandle, address: copyReadAddr, burstLen: 1, tag: copyReadAddr[8:3]});
+       copy_read_chan.readReq.put(DmaRequest{handle: copyReadHandle, address: copyReadAddr, burstLen: 1, tag: copyReadAddr[8:3]});
        copyReadAddr <= copyReadAddr + 8;
        copyReadCount <= copyReadCount - 8;
     endrule
@@ -93,7 +93,7 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
     rule copyReadWriteRule (copyBusy);
        let data <- copy_read_chan.readData.get;
        $display("copyReadWrite addr %h", copyWriteAddr);
-       copy_write_chan.writeReq.put(DmaAddressRequest{handle: copyWriteHandle, address: copyWriteAddr, burstLen: 1, tag: copyWriteAddr[8:3]});
+       copy_write_chan.writeReq.put(DmaRequest{handle: copyWriteHandle, address: copyWriteAddr, burstLen: 1, tag: copyWriteAddr[8:3]});
        copy_write_chan.writeData.put(DmaData{data: data.data, tag: copyWriteAddr[8:3]});
        copyWriteAddr <= copyWriteAddr + 8;
     endrule

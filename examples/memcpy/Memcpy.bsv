@@ -75,7 +75,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       streamRdCnt <= streamRdCnt - extend(burstLen);
       streamRdOff <= streamRdOff + deltaOffset;
       //$display("readReq.put handle=%h address=%h, burstlen=%h", streamRdHandle, streamRdOff, burstLen);
-      dma_stream_read_server.readReq.put(DmaAddressRequest {handle: streamRdHandle, address: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
+      dma_stream_read_server.readReq.put(DmaRequest {handle: streamRdHandle, address: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
       //indication.readReq(streamRdCnt);
    endrule
 
@@ -84,7 +84,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       streamWrCnt <= streamWrCnt-extend(burstLen);
       streamWrOff <= streamWrOff + deltaOffset;
       //$display("writeReq.put handle=%h address=%h", streamWrHandle, streamWrOff);
-      dma_stream_write_server.writeReq.put(DmaAddressRequest {handle: streamWrHandle, address: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
+      dma_stream_write_server.writeReq.put(DmaRequest {handle: streamWrHandle, address: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
       //indication.writeReq(streamWrCnt);
    endrule
    
@@ -131,7 +131,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    endmethod
 
    method Action readWord();
-      dma_word_read_server.readReq.put(DmaAddressRequest {handle: streamWrHandle, address: 0, burstLen: 1, tag: 1});
+      dma_word_read_server.readReq.put(DmaRequest {handle: streamWrHandle, address: 0, burstLen: 1, tag: 1});
    endmethod
 
    method Action getStateDbg();

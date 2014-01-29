@@ -9,7 +9,7 @@
 #include "StrstrIndicationWrapper.h"
 #include "StrstrRequestProxy.h"
 #include "GeneratedTypes.h"
-#include "DmaRequestProxy.h"
+#include "DmaConfigProxy.h"
 
 sem_t test_sem;
 unsigned int sw_match_cnt = 0;
@@ -80,14 +80,14 @@ int main(int argc, const char **argv)
   pdir->print();
 
   StrstrRequestProxy *device = 0;
-  DmaRequestProxy *dma = 0;
+  DmaConfigProxy *dma = 0;
   
   StrstrIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new StrstrRequestProxy(IfcNames_StrstrRequest);
-  dma = new DmaRequestProxy(IfcNames_DmaRequest);
+  dma = new DmaConfigProxy(IfcNames_DmaRequest);
 
   deviceIndication = new StrstrIndication(IfcNames_StrstrIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);

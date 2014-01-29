@@ -47,7 +47,7 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) s
 //
 
 interface AxiDmaServer#(numeric type addrWidth, numeric type dsz);
-   interface DmaRequest request;
+   interface DmaConfig request;
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
 endinterface
 
@@ -67,9 +67,9 @@ module mkAxiDmaReadInternal#(Integer numRequests, Vector#(numReadClients, DmaRea
 			     DmaIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth)) sgl)(AxiDmaReadInternal#(addrWidth, dsz))
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
-   FIFO#(DmaAddressRequest) lreqFifo <- mkPipelineFIFO();
-   FIFO#(DmaAddressRequest) reqFifo  <- mkPipelineFIFO();
-   FIFO#(DmaAddressRequest) dreqFifo <- mkSizedFIFO(numRequests);
+   FIFO#(DmaRequest) lreqFifo <- mkPipelineFIFO();
+   FIFO#(DmaRequest) reqFifo  <- mkPipelineFIFO();
+   FIFO#(DmaRequest) dreqFifo <- mkSizedFIFO(numRequests);
    FIFO#(Bit#(addrWidth))        paFifo     <- mkPipelineFIFO();
    FIFO#(DmaChannelId)    chanFifo   <- mkSizedFIFO(numRequests);
 
@@ -85,7 +85,7 @@ module mkAxiDmaReadInternal#(Integer numRequests, Vector#(numReadClients, DmaRea
    endrule
    
    rule loadChannel if (valueOf(numReadClients) > 0  && readClients[selectReg].readData.notFull());
-      DmaAddressRequest req = unpack(0);
+      DmaRequest req = unpack(0);
       if (valueOf(numReadClients) > 0)
 	 req <- readClients[selectReg].readReq.get();
       //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
@@ -163,9 +163,9 @@ module mkAxiDmaWriteInternal#(Integer numRequests, Vector#(numWriteClients, DmaW
 			      DmaIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth)) sgl)(AxiDmaWriteInternal#(addrWidth, dsz))
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
-   FIFO#(DmaAddressRequest) lreqFifo <- mkPipelineFIFO();
-   FIFO#(DmaAddressRequest) reqFifo <- mkFIFO();
-   FIFO#(DmaAddressRequest) dreqFifo <- mkSizedFIFO(numRequests);
+   FIFO#(DmaRequest) lreqFifo <- mkPipelineFIFO();
+   FIFO#(DmaRequest) reqFifo <- mkFIFO();
+   FIFO#(DmaRequest) dreqFifo <- mkSizedFIFO(numRequests);
    FIFO#(Bit#(addrWidth))        paFifo     <- mkFIFO();
    FIFO#(DmaChannelId)    chanFifo <- mkSizedFIFO(numRequests);
    FIFO#(DmaChannelId)    respFifo <- mkSizedFIFO(numRequests);
@@ -182,7 +182,7 @@ module mkAxiDmaWriteInternal#(Integer numRequests, Vector#(numWriteClients, DmaW
    endrule
    
    rule loadChannel if (valueOf(numWriteClients) > 0 && writeClients[selectReg].writeData.notEmpty());
-      DmaAddressRequest req = unpack(0);
+      DmaRequest req = unpack(0);
       if (valueOf(numWriteClients) > 0)
 	 req <- writeClients[selectReg].writeReq.get();
       //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.handle, req.address, req.burstLen, debugReg);
@@ -313,7 +313,7 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
       end
    endrule
 
-   interface DmaRequest request;
+   interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
 	 if (rc == Read)

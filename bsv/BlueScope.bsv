@@ -87,7 +87,7 @@ module mkSyncBlueScope#(Integer samples, DmaWriteServer#(dataWidth) wchan, BlueS
    endrule
 
    rule writeReq if (dfifo.notEmpty);
-      wchan.writeReq.put(DmaAddressRequest { handle: handleReg, address: zeroExtend(writeOffsetReg), burstLen: 2, tag: 0});
+      wchan.writeReq.put(DmaRequest { handle: handleReg, address: zeroExtend(writeOffsetReg), burstLen: 2, tag: 0});
       writeOffsetReg <= writeOffsetReg + (fromInteger(valueOf(dataBytes)) * 2);
    endrule
 

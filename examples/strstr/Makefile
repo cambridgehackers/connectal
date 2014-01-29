@@ -1,6 +1,6 @@
 
 BSVDIR=../../bsv
-S2H = StrstrRequest DmaRequest
+S2H = StrstrRequest DmaConfig
 H2S = StrstrIndication DmaIndication
 BSVFILES = Strstr.bsv $(BSVDIR)/PortalMemory.bsv Top.bsv
 CPPFILES=teststrstr.cpp

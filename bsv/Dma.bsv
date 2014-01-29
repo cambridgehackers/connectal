@@ -43,30 +43,30 @@ typedef struct {
    Bit#(DmaAddrSize)  address;
    Bit#(8) burstLen;
    Bit#(6)  tag;
-   } DmaAddressRequest deriving (Bits);
+   } DmaRequest deriving (Bits);
 typedef struct {
    Bit#(dsz) data;
    Bit#(6) tag;
    } DmaData#(numeric type dsz) deriving (Bits);
 
 interface DmaReadClient#(numeric type dsz);
-   interface GetF#(DmaAddressRequest)    readReq;
+   interface GetF#(DmaRequest)    readReq;
    interface PutF#(DmaData#(dsz)) readData;
 endinterface
 
 interface DmaWriteClient#(numeric type dsz);
-   interface GetF#(DmaAddressRequest)    writeReq;
+   interface GetF#(DmaRequest)    writeReq;
    interface GetF#(DmaData#(dsz)) writeData;
    interface PutF#(Bit#(6))       writeDone;
 endinterface
 
 interface DmaReadServer#(numeric type dsz);
-   interface PutF#(DmaAddressRequest) readReq;
+   interface PutF#(DmaRequest) readReq;
    interface GetF#(DmaData#(dsz))     readData;
 endinterface
 
 interface DmaWriteServer#(numeric type dsz);
-   interface PutF#(DmaAddressRequest) writeReq;
+   interface PutF#(DmaRequest) writeReq;
    interface PutF#(DmaData#(dsz))     writeData;
    interface GetF#(Bit#(6))           writeDone;
 endinterface

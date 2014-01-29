@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include "StdDmaIndication.h"
 
-#include "DmaRequestProxy.h"
+#include "DmaConfigProxy.h"
 #include "GeneratedTypes.h" 
 #include "MempokeIndicationWrapper.h"
 #include "MempokeRequestProxy.h"
@@ -37,7 +37,7 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   MempokeRequestProxy *device = 0;
-  DmaRequestProxy *dma = 0;
+  DmaConfigProxy *dma = 0;
   
   MempokeIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
@@ -51,7 +51,7 @@ int main(int argc, const char **argv)
   }
 
   device = new MempokeRequestProxy("fpga1", 16);
-  dma = new DmaRequestProxy("fpga3", 16);
+  dma = new DmaConfigProxy("fpga3", 16);
 
   deviceIndication = new MempokeIndication("fpga2", 16);
   dmaIndication = new DmaIndication(dma, "fpga4", 16);

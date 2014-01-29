@@ -81,14 +81,14 @@ module mkMemread#(MemreadIndication indication) (Memread);
 
    interface DmaReadClient dmaClient;
       interface GetF readReq;
-	 method ActionValue#(DmaAddressRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
+	 method ActionValue#(DmaRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
 	    streamRdCnt <= streamRdCnt-extend(burstLen);
 	    offset <= offset + deltaOffset;
 	    if (streamRdCnt == extend(burstLen))
 	       indication.readDone(mismatchCount);
 	    //else if (streamRdCnt[5:0] == 6'b0)
 	    //   indication.readReq(streamRdCnt);
-	    return DmaAddressRequest { handle: streamRdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
+	    return DmaRequest { handle: streamRdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
 	 endmethod
 	 method Bool notEmpty();
 	    return streamRdCnt > 0 && mismatchFifo.notFull();

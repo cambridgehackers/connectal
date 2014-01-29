@@ -8,7 +8,7 @@
 
 #include "BlueScopeIndicationWrapper.h"
 #include "BlueScopeRequestProxy.h"
-#include "DmaRequestProxy.h"
+#include "DmaConfigProxy.h"
 #include "GeneratedTypes.h"
 #include "MemcpyIndicationWrapper.h"
 #include "MemcpyRequestProxy.h"
@@ -126,7 +126,7 @@ int main(int argc, const char **argv)
 
   MemcpyRequestProxy *device = 0;
   BlueScopeRequestProxy *bluescope = 0;
-  DmaRequestProxy *dma = 0;
+  DmaConfigProxy *dma = 0;
   
   MemcpyIndication *deviceIndication = 0;
   BlueScopeIndication *bluescopeIndication = 0;
@@ -136,7 +136,7 @@ int main(int argc, const char **argv)
 
   device = new MemcpyRequestProxy("fpga1", 16);
   bluescope = new BlueScopeRequestProxy("fpga3", 16);
-  dma = new DmaRequestProxy("fpga5", 16);
+  dma = new DmaConfigProxy("fpga5", 16);
 
   deviceIndication = new MemcpyIndication("fpga2", 16);
   bluescopeIndication = new BlueScopeIndication("fpga4", 16);

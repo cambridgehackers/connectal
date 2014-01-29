@@ -56,7 +56,7 @@ endinterface
 //
 // @brief Configuration interface to Dma engine
 //
-interface DmaRequest;
+interface DmaConfig;
 
    //
    // @brief Requests debug info for the specified channel type
@@ -82,8 +82,8 @@ typeclass PortalMemory#(type a);
 endtypeclass
 
 //
-// @brief DmaRequest implements sglist()
+// @brief DmaConfig implements sglist()
 //
-instance PortalMemory#(DmaRequest);
+instance PortalMemory#(DmaConfig);
 endinstance
 

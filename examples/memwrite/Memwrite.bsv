@@ -65,7 +65,7 @@ module mkMemwriteRequest#(MemwriteIndication indication,
    
    rule writeReq(streamWrCnt > 0);
       streamWrCnt <= streamWrCnt-1;
-      dma_stream_write_server.writeReq.put(DmaAddressRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: 0});
+      dma_stream_write_server.writeReq.put(DmaRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: 0});
       streamWrOff <= streamWrOff + deltaOffset;
       indication.writeReq(streamWrCnt);
       if (streamWrCnt == 1)
@@ -101,7 +101,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    interface DmaWriteClient dmaClient;
       interface GetF writeReq;
-	 method ActionValue#(DmaAddressRequest) get() if (streamWrCnt > 0);
+	 method ActionValue#(DmaRequest) get() if (streamWrCnt > 0);
 	    streamWrCnt <= streamWrCnt-1;
 	    streamWrOff <= streamWrOff + deltaOffset;
 	    indication.writeReq(streamWrCnt);
@@ -111,7 +111,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	    Bit#(6) tag = truncate(streamWrOff >> 5);
 	    dataTags.enq(tag);
 	    doneTags.enq(tag);
-	    return DmaAddressRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: tag};
+	    return DmaRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: tag};
 	 endmethod
 	 method Bool notEmpty;
 	    return streamWrCnt > 0;

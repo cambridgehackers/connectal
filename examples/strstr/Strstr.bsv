@@ -94,7 +94,7 @@ module mkStrstrRequest#(StrstrIndication indication,
    (* descending_urgency = "mp2b_load, n2b_load, matchNeedleResp, matchNeedleReq" *)
    
    rule haystackReq (stage == Run);
-      haystack_read_chan.readReq.put(DmaAddressRequest {handle: haystackHandle, address: haystackPtr, burstLen: 1, tag: 0});
+      haystack_read_chan.readReq.put(DmaRequest {handle: haystackHandle, address: haystackPtr, burstLen: 1, tag: 0});
       haystackPtr <= haystackPtr + fromInteger(valueOf(nc));
    endrule
    

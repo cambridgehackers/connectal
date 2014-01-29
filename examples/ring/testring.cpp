@@ -10,13 +10,13 @@
 #include "StdDmaIndication.h"
 #include "RingIndicationWrapper.h"
 #include "RingRequestProxy.h"
-#include "DmaRequestProxy.h"
+#include "DmaConfigProxy.h"
 #include "GeneratedTypes.h"
 
 
 
 RingRequestProxy *ring = 0;
-DmaRequestProxy *dma = 0;
+DmaConfigProxy *dma = 0;
 
 PortalAlloc *cmdAlloc;
 PortalAlloc *statusAlloc;
@@ -159,7 +159,7 @@ int main(int argc, const char **argv)
   }
 
   ring = new RingRequestProxy(IfcNames_RingRequest);
-  dma = new DmaRequestProxy(IfcNames_DmaRequest);
+  dma = new DmaConfigProxy(IfcNames_DmaRequest);
   dmaIndication = new DmaIndication(IfcNames_DmaIndication);
   ringIndication = new RingIndication(IfcNames_RingIndication);
 
