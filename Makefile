@@ -40,8 +40,23 @@ zedtests = $(addsuffix .zedboard, $(testnames))
 $(zedtests):
 	rm -fr examples/$(basename $@)/zedboard
 	make BOARD=zedboard -C examples/$(basename $@) all
-	#make -C examples/$(basename $@)/zedboard bits
-	#(cd examples/$(basename $@)/zedboard; ndk-build)
+
+zedruns = $(addsuffix .zedrun, $(testnames))
+
+$(zedruns):
+	(cd consolable; make)
+	ZEDBOARD_IPADDR=`consolable/checkip`
+	adb connect $(ZEDBOARD_IPADDR)
+	ANDROID_SERIAL=$(ZEDBOARD_IPADDR):5555
+	echo androidserial= $(ANDROID_SERIAL)
+	adb -s $(ZEDBOARD_IPADDR):5555 root
+	adb -s $(ZEDBOARD_IPADDR):5555 connect $(ZEDBOARD_IPADDR)
+	adb -s $(ZEDBOARD_IPADDR):5555 push `find examples/$(basename $@)/zedboard -name \*.gz` /mnt/sdcard
+	adb -s $(ZEDBOARD_IPADDR):5555 push `find examples/$(basename $@)/zedboard -name android_exe | grep libs` /mnt/sdcard
+	adb -s $(ZEDBOARD_IPADDR):5555 shell insmod /mnt/sdcard/portalmem.ko
+	adb -s $(ZEDBOARD_IPADDR):5555 shell insmod /mnt/sdcard/zynqportal.ko
+	adb -s $(ZEDBOARD_IPADDR):5555 shell "gzip -dc /mnt/sdcard/mk*gz >/dev/xdevcfg"
+	adb -s $(ZEDBOARD_IPADDR):5555 shell /mnt/sdcard/android_exe
 
 gentests = $(addsuffix .gen, $(testnames))
 
