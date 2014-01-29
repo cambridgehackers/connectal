@@ -139,7 +139,7 @@ int main(int argc, const char **argv)
 
   device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
   bluescope = new BlueScopeRequestProxy(IfcNames_BluescopeRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaRequest);
+  dma = new DmaConfigProxy(IfcNames_DmaConfig);
 
   deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
   bluescopeIndication = new BlueScopeIndication(IfcNames_BluescopeIndication);
