@@ -216,8 +216,6 @@ int main(int argc, const char **argv)
     scratchBuffer[i] = i;
    }
   for (i = 0; i < 10; i += 1) {
-    tcmd[0] = ((unsigned long) CMD_NOP) << 56;
-    ring_send(&cmd_ring, tcmd);
     tcmd[0] = ((unsigned long) CMD_COPY) << 56;
     tcmd[0] |= 0x2000 + i; // tag
     tcmd[1] = (((long unsigned) ref_scratchAlloc) << 32)
@@ -231,7 +229,7 @@ int main(int argc, const char **argv)
     ring_send(&cmd_ring, tcmd);
   }
   sleep(1);
-  for (i = 0; i < 256; i += 1) {
+  for (i = 0; i < 10; i += 1) {
     if (scratchBuffer[i + 2560] != i) {
       printf("loc %d got %d should be %d\n",
 	     i + 2560, scratchBuffer[i + 2560], i);
