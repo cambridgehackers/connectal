@@ -55,8 +55,6 @@ module mkRingRequest#(RingIndication indication,
 		      DmaWriteServer#(64) dma_write_chan,
 		      DmaReadServer#(64) cmd_read_chan,
 		      DmaWriteServer#(64) status_write_chan )(RingRequest);
-   DmaReadServer#(64,8) copy_read_chan <- mkDmaReadBuffer();
-   DmaWriteServer#(64,8) copy_write_chan <- mkDmaWriteBuffer();
 
    ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
    ServerF#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
