@@ -70,7 +70,9 @@ module mkRingRequest#(RingIndication indication,
    Reg#(Bit#(4)) ii <- mkReg(0);
    Reg#(Bit#(4)) respCtr <- mkReg(0);
    Reg#(Bit#(4)) dispCtr <- mkReg(0);
-   
+   Reg#(Bit#(6)) cmdFetchTag <- mkReg(0);
+   Reg#(Bool) cmdFetchEn <- mkReg(False);
+
    let engineselect = pack(cmd)[63:56];
    function ServerF#(Bit#(64), Bit#(64)) cmdifc();
       if (engineselect == zeroExtend(pack(CmdNOP))) 
@@ -83,28 +85,40 @@ module mkRingRequest#(RingIndication indication,
 	 return nopEngine;
    endfunction
 
-   Stmt cmdFetch =   seq
-      while (True) seq
-	 while(!(hwenabled && cmdRing.notEmpty())) noAction;
-	 cmd_read_chan.readReq.put(
-	    DMAAddressRequest{handle: cmdRing.memhandle,
-	       address: cmdRing.bufferlast, burstLen: 8, tag: 0});
-	 cmdRing.pop(64);
-      endseq
-		     endseq;
-
+   Stmt cmdFetch =   
+   seq
+      $display("cmdFetch FSM TOP");
+      while (True) 
+	 seq
+	    if (hwenabled) 
+	       seq
+	       if (cmdRing.bufferfirst != cmdRing.bufferlast) 
+		  seq
+		     $display ("cmdFetch handle=%h address=%d burst=%h tag=%h", cmdRing.memhandle, cmdRing.bufferlast, 8, cmdFetchTag);
+		     cmd_read_chan.readReq.put(
+			DMAAddressRequest{handle: cmdRing.memhandle,
+			   address: cmdRing.bufferlast, burstLen: 8, tag: cmdFetchTag});
+		     cmdRing.pop(64);
+		     cmdFetchTag <= cmdFetchTag + 1;
+		  endseq
+	       endseq
+	 endseq
+   endseq;
+   
    Stmt cmdDispatch = 
    seq
       while (True) seq
+	 $display("cmdDispatch FSM TOP");
 	 action
 	    let rv <- cmd_read_chan.readData.get();
 	    cmd <= rv.data;
-	    cmdifc.request.put(rv.data);
+	    $display("cmdDispatch %h", cmd);
+	    //cmdifc.request.put(rv.data);
 	 endaction
 	 for (dispCtr <= 1; dispCtr < 8; dispCtr <= dispCtr + 1)
 	    action
 	       let rv <- cmd_read_chan.readData.get();
-	       cmdifc.request.put(rv.data);
+	       //cmdifc.request.put(rv.data);
 	    endaction
       endseq
    endseq;
@@ -122,28 +136,30 @@ module mkRingRequest#(RingIndication indication,
       while(True) seq
 	 if (statusRing.notFull() && copyEngine.response.notEmpty())
 	    seq
+	       $display("responseArbiter copyEngine completion");
 	       status_write_chan.writeReq.put(
 		  DMAAddressRequest{handle: statusRing.memhandle, 
 		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
-	       statusRing.push(64);
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- copyEngine.response.get();
 		     status_write_chan.writeData.put(DMAData{data: rv, tag: 0});
 		  endaction
+	       statusRing.push(64);
 	    endseq
 
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    seq
+	       $display("responseArbiter echoEngine completion");
 	       status_write_chan.writeReq.put(
 		  DMAAddressRequest{handle: statusRing.memhandle, 
 		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
-	       statusRing.push(64);
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- echoEngine.response.get();
 		     status_write_chan.writeData.put(DMAData{data: rv, tag: 0});
 		  endaction
+	       statusRing.push(64);
 	    endseq
 
       endseq
@@ -152,6 +168,7 @@ module mkRingRequest#(RingIndication indication,
    mkAutoFSM (cmdFetch);
    mkAutoFSM (cmdDispatch);
    mkAutoFSM (cmdCompletion);
+   mkAutoFSM (responseArbiter);
 
 
       // to start a command, doCommand fires off a memory read to the
@@ -167,7 +184,7 @@ module mkRingRequest#(RingIndication indication,
    
 
       method Action set(Bit#(1) _cmd, Bit#(3) regist, Bit#(32) addr);
-	 if (_cmd == 1)
+	 if (_cmd == 0)
 	    cmdRing.configifc.set(regist, addr);
 	 else
 	    statusRing.configifc.set(regist, addr);
@@ -175,8 +192,8 @@ module mkRingRequest#(RingIndication indication,
       endmethod
    
       method Action get(Bit#(1) _cmd, Bit#(3) regist);
-	 if (_cmd == 1)
-	    indication.getResult(1, regist, 
+	 if (_cmd == 0)
+	    indication.getResult(0, regist, 
 	       cmdRing.configifc.get(regist));
 	 else
 	    indication.getResult(0, regist, 
@@ -184,6 +201,7 @@ module mkRingRequest#(RingIndication indication,
       endmethod
 
       method Action hwenable(Bit#(1) en);
+	 $display ("hwenable set to %h", en);
 	 hwenabled <= en == 1;
       endmethod
    
