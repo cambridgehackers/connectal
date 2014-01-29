@@ -731,7 +731,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		 hdr_4dw.addr = addr[40-1:2];
 		 hdr_4dw.length = tlplen;
 		 hdr_4dw.firstbe = 4'hf;
-		 hdr_4dw.lastbe = 4'hf;
+		 hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
 		 tlp.data = pack(hdr_4dw);
 	      end
 	      else begin
@@ -743,7 +743,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		 hdr_3dw.addr = addr[32-1:2];
 		 hdr_3dw.length = tlplen;
 		 hdr_3dw.firstbe = 4'hf;
-		 hdr_3dw.lastbe = 4'hf;
+		 hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
 
 		 tlp.be = 16'hfff0; // no data word in this TLP
 
@@ -790,7 +790,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		   hdr_4dw.addr = addr[40-1:2];
 		   hdr_4dw.length = tlplen;
 		   hdr_4dw.firstbe = 4'hf;
-		   hdr_4dw.lastbe = 4'hf;
+		   hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
 		   tlp.data = pack(hdr_4dw);
 		   tlp.be = 16'hffff;
 	       end
@@ -803,7 +803,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		   hdr_3dw.addr = addr[32-1:2];
 		   hdr_3dw.length = tlplen;
 		   hdr_3dw.firstbe = 4'hf;
-		   hdr_3dw.lastbe = 4'hf;
+		   hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
 		   tlp.data = pack(hdr_3dw);
 		   tlp.be = 16'hfff0;
 	       end
@@ -848,7 +848,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		 hdr_4dw.addr = addr[40-1:2];
 		 hdr_4dw.length = tlplen;
 		 hdr_4dw.firstbe = 4'hf;
-		 hdr_4dw.lastbe = 4'hf;
+		 hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
 		 tlp.data = pack(hdr_4dw);
 	      end
 	      else begin
@@ -860,7 +860,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		 hdr_3dw.addr = addr[32-1:2];
 		 hdr_3dw.length = tlplen;
 		 hdr_3dw.firstbe = 4'hf;
-		 hdr_3dw.lastbe = 4'hf;
+		 hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
 		 
 		 // this would cause a deadlock
 		 //Vector#(busWidthWords, Bit#(32)) v = writeDataMimo.deq(1);
@@ -912,7 +912,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		   hdr_4dw.addr = addr[40-1:2];
 		   hdr_4dw.length = tlplen;
 		   hdr_4dw.firstbe = 4'hf;
-		   hdr_4dw.lastbe = 4'hf;
+		   hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
 		   tlp.data = pack(hdr_4dw);
 		   tlp.be = 16'hffff;
 	       end
@@ -925,7 +925,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		   hdr_3dw.addr = addr[32-1:2];
 		   hdr_3dw.length = tlplen;
 		   hdr_3dw.firstbe = 4'hf;
-		   hdr_3dw.lastbe = 4'hf;
+		   hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
 		   tlp.data = pack(hdr_3dw);
 		   tlp.be = 16'hfff0;
 	       end
