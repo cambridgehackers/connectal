@@ -50,6 +50,8 @@ class MemcpyIndication : public MemcpyIndicationWrapper
 
 public:
   MemcpyIndication(const char* devname, unsigned int addrbits) : MemcpyIndicationWrapper(devname,addrbits){}
+  MemcpyIndication(unsigned int id) : MemcpyIndicationWrapper(id){}
+
 
   virtual void started(unsigned long words){
     fprintf(stderr, "started: words=%ld\n", words);
@@ -96,6 +98,7 @@ class BlueScopeIndication : public BlueScopeIndicationWrapper
 {
 public:
   BlueScopeIndication(const char* devname, unsigned int addrbits) : BlueScopeIndicationWrapper(devname,addrbits){}
+  BlueScopeIndication(unsigned int id) : BlueScopeIndicationWrapper(id){}
 
   virtual void triggerFired( ){
     fprintf(stderr, "BlueScope::triggerFired\n");
@@ -134,13 +137,13 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  device = new MemcpyRequestProxy("fpga1", 16);
-  bluescope = new BlueScopeRequestProxy("fpga3", 16);
-  dma = new DmaConfigProxy("fpga5", 16);
+  device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
+  bluescope = new BlueScopeRequestProxy(IfcNames_BluescopeRequest);
+  dma = new DmaConfigProxy(IfcNames_DmaRequest);
 
-  deviceIndication = new MemcpyIndication("fpga2", 16);
-  bluescopeIndication = new BlueScopeIndication("fpga4", 16);
-  dmaIndication = new DmaIndication(dma, "fpga6", 16);
+  deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
+  bluescopeIndication = new BlueScopeIndication(IfcNames_BluescopeIndication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
