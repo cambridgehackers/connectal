@@ -105,11 +105,6 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 
       BsimRdmaReadWrite#(dsz) rw <- selectBsimRdmaReadWrite();
 
-      Reg#(Bool) inited <- mkReg(False);
-      rule initialize(!inited);
-	 inited <= True;
-	 init_pareff();
-      endrule
 
       Reg#(Bit#(40)) readAddr <- mkReg(0);
       Reg#(Bit#(5))  readLen <- mkReg(0);
@@ -152,8 +147,8 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 	 let handle = writeAddr[39:32];
 	 let addr = writeAddr[31:0];
 	 let resp <- master.resp_write.get();
-	 rw.write_pareff(extend(handle), addr, resp.data);
 	 //$display("write_resp: handle=%d addr=%h v=%h", handle, addr, resp.data);
+	 rw.write_pareff(extend(handle), addr, resp.data);
 	 writeLen <= writeLen - 1;
 	 writeAddr <= writeAddr + fromInteger(valueOf(dsz)/8);
 	 if (writeLen == 1)
@@ -169,6 +164,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 
    let wf <- mkPipelineFIFO;
    let init_seq = (action 
+		      //$display("mkBsimTopFromPortal::init_seq (start)");
 		      initPortal(0);
 		      initPortal(1);
 		      initPortal(2);
@@ -177,11 +173,13 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 		      initPortal(5);
 		      initPortal(6);
 		      initPortal(7);
+		      //$display("mkBsimTopFromPortal::init_seq (end)");
                    endaction);
    let init_fsm <- mkOnce(init_seq);
    
    (* descending_urgency = "rdResp, rdReq" *)
    rule init_rule;
+      init_pareff();
       init_fsm.start;
    endrule
    rule wrReq (writeReq());
