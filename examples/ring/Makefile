@@ -2,7 +2,7 @@
 BSVDIR=../../bsv
 S2H = RingRequest DMARequest
 H2S = RingIndication DMAIndication
-BSVFILES = Ring.bsv Top.bsv RingTypes.bsv $(BSVDIR)/PortalMemory.bsv
+BSVFILES = Ring.bsv RingTypes.bsv $(BSVDIR)/PortalMemory.bsv Top.bsv
 CPPFILES=testring.cpp
 DMA = Dma
 PINS = Std
