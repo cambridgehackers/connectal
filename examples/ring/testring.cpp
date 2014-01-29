@@ -139,10 +139,12 @@ void ring_send(struct SWRing *r, uint64_t *cmd)
   unsigned next_first;
   assert(ring_estimated_space_left(r) > 0);
   assert(r->first < r->size);
+  memcpy(&r->base[r->first], cmd, 64);
   next_first = r->first + 64;
   if (next_first == r->size) next_first = 0;
   r->first = next_first;
   r->cached_space -= 64;
+  ring->set(ringid, REG_FIRST, r->first);         // bufferfirst
 }
 
 int main(int argc, const char **argv)
