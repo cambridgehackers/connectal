@@ -39,18 +39,13 @@ interface ZynqTop#(type pins);
 endinterface
 
 
-typedef (function Module#(PortalTop#(32, nmasters, 64, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, type ipins);
+typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt()) MkPortalTop#(type ipins);
 
-module [Module] mkZynqTopFromPortal#(MkPortalTop#(nmasters,ipins) constructor)(ZynqTop#(ipins));
-   Integer nmasters = valueOf(nmasters);
+module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
    let top <- constructor(clocked_by defaultClock);
-   Axi3Master#(32,64,6) master = ?;
-   if (nmasters > 0) begin
-      master = top.m_axi[0];
-   end
-   ZynqPins ps7 <- mkPS7(defaultClock, defaultReset, top.ctrl, nmasters, master, top.interrupt);
+   ZynqPins ps7 <- mkPS7(defaultClock, defaultReset, top.ctrl, top.m_axi, top.interrupt);
 
    interface zynq = ps7;
    interface leds = top.leds;

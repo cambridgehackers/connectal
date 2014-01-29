@@ -521,7 +521,7 @@ interface ZynqPins;
     interface Bit#(1)                       fclk_reset0_n;
 endinterface
 
-module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Slave#(32,32,12) ctrl, Integer nmasters, Axi3Master#(32,64,6) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
+module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Slave#(32,32,12) ctrl, Axi3Master#(32,64,6) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
     PS7LIB ps7 <- mkPS7LIB(axi_clock, axi_reset);
 
     rule send_int_rule;
@@ -529,10 +529,8 @@ module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Slave#(32,32,12) ctrl, Integ
     endrule
 
     mkConnection(ps7.m_axi_gp[0].client, ctrl);
-    if (nmasters > 0) begin
-       mkConnection(m_axi, ps7.s_axi_hp[0].axi.server);
-    end
-
+    mkConnection(m_axi, ps7.s_axi_hp[0].axi.server);
+    
     rule arb_rule;
         ps7.ddr.arb(4'b0);
     endrule
