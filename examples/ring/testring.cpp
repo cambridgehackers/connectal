@@ -177,14 +177,14 @@ int main(int argc, const char **argv)
   dma->alloc(status_ring_sz, &statusAlloc);
   dma->alloc(scratch_sz, &scratchAlloc);
 
-  v = mmap(0, cmd_ring_sz, PROT_READ|PROT_WRITE, MAP_SHARED, cmdAlloc->header.fd, 0);
+  v = mmap(0, cmd_ring_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, cmdAlloc->header.fd, 0);
   assert(v != MAP_FAILED);
   cmdBuffer = (char *) v;
 
-  v = mmap(0, status_ring_sz, PROT_READ|PROT_WRITE, MAP_SHARED, statusAlloc->header.fd, 0);
+  v = mmap(0, status_ring_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, statusAlloc->header.fd, 0);
   assert(v != MAP_FAILED);
   statusBuffer = (char *) v;
-  v = mmap(0, scratch_sz, PROT_READ|PROT_WRITE, MAP_SHARED, scratchAlloc->header.fd, 0);
+  v = mmap(0, scratch_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, scratchAlloc->header.fd, 0);
   assert(v != MAP_FAILED);
   scratchBuffer = (char *) v;
 
@@ -200,10 +200,10 @@ int main(int argc, const char **argv)
   unsigned int ref_statusAlloc = dma->reference(statusAlloc);
   unsigned int ref_scratchAlloc = dma->reference(scratchAlloc);
 
-  dma->dCacheFlushInval(cmdAlloc, cmdBuffer);
+  /*   dma->dCacheFlushInval(cmdAlloc, cmdBuffer);
   dma->dCacheFlushInval(statusAlloc, statusBuffer);
   dma->dCacheFlushInval(scratchAlloc, scratchBuffer);
-
+  */
 
   fprintf(stderr, "flush and invalidate complete\n");
   ring_init(&cmd_ring, 0, ref_cmdAlloc, cmdBuffer, cmd_ring_sz);
