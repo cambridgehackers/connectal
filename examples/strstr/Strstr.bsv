@@ -28,9 +28,8 @@ import BRAM::*;
 import Gearbox::*;
 
 import AxiMasterSlave::*;
-import PortalMemory::*;
-import PortalRMemory::*;
-import PortalMemoryUtils::*;
+import DMA::*;
+import DMAUtils::*;
 
 
 interface StrstrRequest;

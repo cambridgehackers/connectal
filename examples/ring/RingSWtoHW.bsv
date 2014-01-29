@@ -24,7 +24,6 @@
 import BRAMFIFO::*;
 import GetPut::*;
 import ClientServer::*;
-import PortalRMemory::*;
 import RingBuffer::*;
 
 interface RingSWtoHW;

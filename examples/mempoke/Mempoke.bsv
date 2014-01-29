@@ -25,8 +25,7 @@ import BRAMFIFO::*;
 import GetPutF::*;
 
 import AxiMasterSlave::*;
-import PortalMemory::*;
-import PortalRMemory::*;
+import DMA::*;
 
 interface MempokeRequest;
    method Action readWord(Bit#(32) handle, Bit#(32) addr);

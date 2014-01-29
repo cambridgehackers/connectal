@@ -28,7 +28,7 @@ import PCIE::*;
 import GetPutWithClocks::*;
 import Connectable::*;
 import PortalMemory::*;
-import PortalRMemory::*;
+import DMA::*;
 import AxiDMA::*;
 import AxiMasterSlave::*;
 import HDMI::*;

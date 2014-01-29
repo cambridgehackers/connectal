@@ -31,8 +31,8 @@ import ClientServer::*;
 
 // XBSV Libraries
 import AxiMasterSlave::*;
+import DMA::*;
 import PortalMemory::*;
-import PortalRMemory::*;
 import Adapter::*;
 import SGList::*;
 

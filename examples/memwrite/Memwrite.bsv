@@ -24,8 +24,7 @@ import FIFOF::*;
 import GetPutF::*;
 
 import AxiMasterSlave::*;
-import PortalMemory::*;
-import PortalRMemory::*;
+import DMA::*;
 
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) handle, Bit#(32) numWords, Bit#(32) burstLen);

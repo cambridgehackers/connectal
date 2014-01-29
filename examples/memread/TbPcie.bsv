@@ -22,10 +22,9 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import PortalMemory::*;
 import AxiDMA::*;
 import PortalMemory::*;
-import PortalRMemory::*;
+import DMA::*;
 
 // defined by user
 import Memread::*;

@@ -22,7 +22,7 @@
 
 import FIFOF::*;
 import GetPutF::*;
-import PortalRMemory::*;
+import DMA::*;
 import RingTypes::*;
 import StmtFSM::*;
 

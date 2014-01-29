@@ -27,7 +27,7 @@ import StmtFSM::*;
 import ClientServer::*;
 
 import PortalMemory::*;
-import PortalRMemory::*;
+import DMA::*;
 import GetPutF::*;
 
 import RingTypes::*;

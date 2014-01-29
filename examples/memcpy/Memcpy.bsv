@@ -25,7 +25,7 @@ import FIFOF::*;
 import GetPutF::*;
 
 import PortalMemory::*;
-import PortalRMemory::*;
+import DMA::*;
 import BlueScope::*;
 
 interface MemcpyRequest;

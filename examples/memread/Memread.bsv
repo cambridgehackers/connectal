@@ -24,8 +24,7 @@ import FIFOF::*;
 import GetPutF::*;
 import Vector::*;
 
-import PortalMemory::*;
-import PortalRMemory::*;
+import DMA::*;
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) handle, Bit#(32) numWords, Bit#(32) burstLen);

@@ -25,8 +25,7 @@ import GetPutF::*;
 import Vector::*;
 import BRAM::*;
 
-import PortalMemory::*;
-import PortalRMemory::*;
+import DMA::*;
 
 interface NandSimRequest;
    method Action startRead(Bit#(32) dramhandle, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
