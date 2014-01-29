@@ -33,49 +33,49 @@ import BRAMFIFO::*;
 import PortalMemory::*;
 import BRAMFIFOFLevel::*;
 
-typedef Bit#(32) DmaMemHandle;
+typedef Bit#(32) DmaPointer;
 
 typedef 24 DmaAddrSize;
 // SGListMaxPages is derived from this
 
 typedef struct {
-   DmaMemHandle handle;
+   DmaPointer handle;
    Bit#(DmaAddrSize)  address;
    Bit#(8) burstLen;
    Bit#(6)  tag;
-   } DMAAddressRequest deriving (Bits);
+   } DmaAddressRequest deriving (Bits);
 typedef struct {
    Bit#(dsz) data;
    Bit#(6) tag;
-   } DMAData#(numeric type dsz) deriving (Bits);
+   } DmaData#(numeric type dsz) deriving (Bits);
 
-interface DMAReadClient#(numeric type dsz);
-   interface GetF#(DMAAddressRequest)    readReq;
-   interface PutF#(DMAData#(dsz)) readData;
+interface DmaReadClient#(numeric type dsz);
+   interface GetF#(DmaAddressRequest)    readReq;
+   interface PutF#(DmaData#(dsz)) readData;
 endinterface
 
-interface DMAWriteClient#(numeric type dsz);
-   interface GetF#(DMAAddressRequest)    writeReq;
-   interface GetF#(DMAData#(dsz)) writeData;
+interface DmaWriteClient#(numeric type dsz);
+   interface GetF#(DmaAddressRequest)    writeReq;
+   interface GetF#(DmaData#(dsz)) writeData;
    interface PutF#(Bit#(6))       writeDone;
 endinterface
 
-interface DMAReadServer#(numeric type dsz);
-   interface PutF#(DMAAddressRequest) readReq;
-   interface GetF#(DMAData#(dsz))     readData;
+interface DmaReadServer#(numeric type dsz);
+   interface PutF#(DmaAddressRequest) readReq;
+   interface GetF#(DmaData#(dsz))     readData;
 endinterface
 
-interface DMAWriteServer#(numeric type dsz);
-   interface PutF#(DMAAddressRequest) writeReq;
-   interface PutF#(DMAData#(dsz))     writeData;
+interface DmaWriteServer#(numeric type dsz);
+   interface PutF#(DmaAddressRequest) writeReq;
+   interface PutF#(DmaData#(dsz))     writeData;
    interface GetF#(Bit#(6))           writeDone;
 endinterface
 
-interface DMARead;
+interface DmaRead;
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 
-interface DMAWrite;
+interface DmaWrite;
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 

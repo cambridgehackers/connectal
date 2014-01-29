@@ -28,8 +28,8 @@ import PCIE::*;
 import GetPutWithClocks::*;
 import Connectable::*;
 import PortalMemory::*;
-import DMA::*;
-import AxiDMA::*;
+import Dma::*;
+import AxiDma::*;
 import AxiMasterSlave::*;
 import HDMI::*;
 import XADC::*;
@@ -44,7 +44,7 @@ endinterface
 interface HdmiDisplayRequest;
     interface HdmiControlRequest coreRequest;
     interface HdmiInternalRequest coRequest;
-    interface DMARequest dmaRequest;
+    interface DmaRequest dmaRequest;
     interface Axi3Master#(40,64,6) m_axi;
     interface HDMI hdmi;
     interface XADC xadc;
@@ -52,7 +52,7 @@ endinterface
 interface HdmiDisplayIndication;
     interface HdmiControlIndication coreIndication;
     interface HdmiInternalIndication coIndication;
-    interface DMAIndication dmaIndication;
+    interface DmaIndication dmaIndication;
 endinterface
 
 module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIndication indication)(HdmiDisplayRequest);
@@ -66,9 +66,9 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
     Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
 `ifdef BSIM
-    BsimDMA#(Bit#(64))    dma <- mkBsimDMA(indication.dmaIndication);
+    BsimDma#(Bit#(64))    dma <- mkBsimDma(indication.dmaIndication);
 `else
-    AxiDMA#(Bit#(64))     dma <- mkAxiDMA(indication.dmaIndication);
+    AxiDma#(Bit#(64))     dma <- mkAxiDma(indication.dmaIndication);
 `endif
     ReadChan#(Bit#(64)) dma_stream_read_chan = dma.read.readChannels[0];
     Reg#(Int#(32)) referenceReg <- mkReg(-1);
@@ -102,7 +102,7 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
 `ifndef BSIM
     interface Axi3Master m_axi = dma.m_axi;
 `endif
-    interface DMARequest dmaRequest = dma.request;
+    interface DmaRequest dmaRequest = dma.request;
     interface HDMI hdmi = hdmiGen.hdmi;
     interface HdmiInternalRequest coRequest = hdmiGen.control;
     interface XADC xadc;

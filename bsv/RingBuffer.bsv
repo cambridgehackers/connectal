@@ -11,7 +11,7 @@
 // or by other means
 // 
 // Configuration.  
-import DMA::*;
+import Dma::*;
 
 interface RingBuffer;
    method Bool notEmpty();
@@ -22,7 +22,7 @@ interface RingBuffer;
    interface Reg#(Bit#(DmaAddrSize)) bufferlast;
    interface Reg#(Bool) enable;
    interface RingBufferConfig configifc;
-   interface Reg#(DmaMemHandle) memhandle;
+   interface Reg#(DmaPointer) memhandle;
 endinterface
 
 interface RingBufferConfig;
@@ -38,7 +38,7 @@ module mkRingBuffer(RingBuffer);
    Reg#(Bit#(DmaAddrSize)) rbufferfirst <- mkReg(0);
    Reg#(Bit#(DmaAddrSize)) rbufferlast <- mkReg(0);
    Reg#(Bit#(DmaAddrSize)) rbuffermask <- mkReg(0);
-   Reg#(DmaMemHandle) rmemhandle <- mkReg(0);
+   Reg#(DmaPointer) rmemhandle <- mkReg(0);
    Reg#(Bool) renable <- mkReg(False);
    
    interface RingBufferConfig configifc;

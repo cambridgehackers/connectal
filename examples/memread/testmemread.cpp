@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "StdDMAIndication.h"
+#include "StdDmaIndication.h"
 
-#include "DMARequestProxy.h"
+#include "DmaRequestProxy.h"
 #include "GeneratedTypes.h" 
 #include "MemreadIndicationWrapper.h"
 #include "MemreadRequestProxy.h"
@@ -67,18 +67,18 @@ int main(int argc, const char **argv)
   unsigned int srcGen = 0;
 
   MemreadRequestProxy *device = 0;
-  DMARequestProxy *dma = 0;
+  DmaRequestProxy *dma = 0;
   
   MemreadIndication *deviceIndication = 0;
-  DMAIndication *dmaIndication = 0;
+  DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new MemreadRequestProxy("fpga1", 16);
-  dma = new DMARequestProxy("fpga3", 16);
+  dma = new DmaRequestProxy("fpga3", 16);
 
   deviceIndication = new MemreadIndication("fpga2", 16);
-  dmaIndication = new DMAIndication(dma, "fpga4", 16);
+  dmaIndication = new DmaIndication(dma, "fpga4", 16);
 
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(alloc_sz, &srcAlloc);

@@ -25,7 +25,7 @@ import FIFOF::*;
 import GetPutF::*;
 
 import PortalMemory::*;
-import DMA::*;
+import Dma::*;
 import BlueScope::*;
 
 interface MemcpyRequest;
@@ -46,9 +46,9 @@ interface MemcpyIndication;
 endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication,
-			DMAReadServer#(busWidth) dma_stream_read_server,
-			DMAWriteServer#(busWidth) dma_stream_write_server,
-			DMAReadServer#(busWidth) dma_word_read_server,
+			DmaReadServer#(busWidth) dma_stream_read_server,
+			DmaWriteServer#(busWidth) dma_stream_write_server,
+			DmaReadServer#(busWidth) dma_word_read_server,
 			BlueScope#(busWidth) bs)(MemcpyRequest)
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Add#(a__,32,busWidth));
@@ -62,9 +62,9 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(32)) streamAckCnt <- mkReg(0);
    Reg#(Bit#(DmaAddrSize)) streamRdOff <- mkReg(0);
    Reg#(Bit#(DmaAddrSize)) streamWrOff <- mkReg(0);
-   Reg#(DmaMemHandle)    streamRdHandle <- mkReg(0);
-   Reg#(DmaMemHandle)    streamWrHandle <- mkReg(0);
-   Reg#(DmaMemHandle) bluescopeWrHandle <- mkReg(0);
+   Reg#(DmaPointer)    streamRdHandle <- mkReg(0);
+   Reg#(DmaPointer)    streamWrHandle <- mkReg(0);
+   Reg#(DmaPointer) bluescopeWrHandle <- mkReg(0);
    Reg#(Bool)               writeInProg <- mkReg(False);
    Reg#(Bool)              dataMismatch <- mkReg(False);  
    
@@ -75,7 +75,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       streamRdCnt <= streamRdCnt - extend(burstLen);
       streamRdOff <= streamRdOff + deltaOffset;
       //$display("readReq.put handle=%h address=%h, burstlen=%h", streamRdHandle, streamRdOff, burstLen);
-      dma_stream_read_server.readReq.put(DMAAddressRequest {handle: streamRdHandle, address: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
+      dma_stream_read_server.readReq.put(DmaAddressRequest {handle: streamRdHandle, address: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
       //indication.readReq(streamRdCnt);
    endrule
 
@@ -84,7 +84,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       streamWrCnt <= streamWrCnt-extend(burstLen);
       streamWrOff <= streamWrOff + deltaOffset;
       //$display("writeReq.put handle=%h address=%h", streamWrHandle, streamWrOff);
-      dma_stream_write_server.writeReq.put(DMAAddressRequest {handle: streamWrHandle, address: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
+      dma_stream_write_server.writeReq.put(DmaAddressRequest {handle: streamWrHandle, address: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
       //indication.writeReq(streamWrCnt);
    endrule
    
@@ -131,7 +131,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    endmethod
 
    method Action readWord();
-      dma_word_read_server.readReq.put(DMAAddressRequest {handle: streamWrHandle, address: 0, burstLen: 1, tag: 1});
+      dma_word_read_server.readReq.put(DmaAddressRequest {handle: streamWrHandle, address: 0, burstLen: 1, tag: 1});
    endmethod
 
    method Action getStateDbg();

@@ -4,12 +4,12 @@
 #include <unistd.h>
 #include <assert.h>
 #include <semaphore.h>
-#include "StdDMAIndication.h"
+#include "StdDmaIndication.h"
 
 #include "StrstrIndicationWrapper.h"
 #include "StrstrRequestProxy.h"
 #include "GeneratedTypes.h"
-#include "DMARequestProxy.h"
+#include "DmaRequestProxy.h"
 
 sem_t test_sem;
 unsigned int sw_match_cnt = 0;
@@ -80,17 +80,17 @@ int main(int argc, const char **argv)
   pdir->print();
 
   StrstrRequestProxy *device = 0;
-  DMARequestProxy *dma = 0;
+  DmaRequestProxy *dma = 0;
   
   StrstrIndication *deviceIndication = 0;
-  DMAIndication *dmaIndication = 0;
+  DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new StrstrRequestProxy(IfcNames_StrstrRequest);
-  dma = new DMARequestProxy(IfcNames_DMARequest);
+  dma = new DmaRequestProxy(IfcNames_DmaRequest);
 
   deviceIndication = new StrstrIndication(IfcNames_StrstrIndication);
-  dmaIndication = new DMAIndication(dma, IfcNames_DMAIndication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");

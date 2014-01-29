@@ -24,7 +24,7 @@ import FIFOF::*;
 import GetPutF::*;
 import Vector::*;
 
-import DMA::*;
+import Dma::*;
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) handle, Bit#(32) numWords, Bit#(32) burstLen);
@@ -33,7 +33,7 @@ endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface DMAReadClient#(64) dmaClient;
+   interface DmaReadClient#(64) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -47,7 +47,7 @@ endinterface
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
-   Reg#(DmaMemHandle) streamRdHandle <- mkReg(0);
+   Reg#(DmaPointer) streamRdHandle <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bit#(32)) putOffset <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount <- mkReg(0);
@@ -79,23 +79,23 @@ module mkMemread#(MemreadIndication indication) (Memread);
        endmethod
    endinterface
 
-   interface DMAReadClient dmaClient;
+   interface DmaReadClient dmaClient;
       interface GetF readReq;
-	 method ActionValue#(DMAAddressRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
+	 method ActionValue#(DmaAddressRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
 	    streamRdCnt <= streamRdCnt-extend(burstLen);
 	    offset <= offset + deltaOffset;
 	    if (streamRdCnt == extend(burstLen))
 	       indication.readDone(mismatchCount);
 	    //else if (streamRdCnt[5:0] == 6'b0)
 	    //   indication.readReq(streamRdCnt);
-	    return DMAAddressRequest { handle: streamRdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
+	    return DmaAddressRequest { handle: streamRdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
 	 endmethod
 	 method Bool notEmpty();
 	    return streamRdCnt > 0 && mismatchFifo.notFull();
 	 endmethod
       endinterface : readReq
       interface PutF readData;
-	 method Action put(DMAData#(64) d);
+	 method Action put(DmaData#(64) d);
 	    //$display("readData putOffset=%h d=%h tag=%h", putOffset, d.data, d.tag);
 	    let v = d.data;
 	    let expectedV = {srcGen+1,srcGen};

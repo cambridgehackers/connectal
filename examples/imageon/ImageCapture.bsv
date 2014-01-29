@@ -33,8 +33,8 @@ import Leds::*;
 import Imageon::*;
 import IserdesDatadeser::*;
 import HDMI::*;
-import AxiDMA::*;
-import DMA::*;
+import AxiDma::*;
+import Dma::*;
 import PortalMemory::*;
 import BlueScope::*;
 import SensorToVideo::*;
@@ -59,7 +59,7 @@ interface ImageCaptureIndication;
     interface ImageonSerdesIndication idIndication;
     interface HdmiInternalIndication coIndication;
     interface BlueScopeIndication bsIndication;
-    interface DMAIndication dmaIndication;
+    interface DmaIndication dmaIndication;
 endinterface
 
 interface ImageCaptureRequest;
@@ -69,7 +69,7 @@ interface ImageCaptureRequest;
     interface HdmiInternalRequest coRequest;
     interface BlueScopeRequest bsRequest;
     interface HDMI hdmi;
-    interface DMARequest dmaRequest;
+    interface DmaRequest dmaRequest;
     interface ImageonVita vita;
 endinterface
  
@@ -86,7 +86,7 @@ module mkImageCaptureRequest#(Clock fmc_imageon_video_clk1, Clock processing_sys
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     ISerdes serdes <- mkISerdes(defaultClock, defaultReset, indication.idIndication,
         clocked_by imageon_clock, reset_by imageon_reset);
-    AxiDMA#(Bit#(64)) dma <- mkAxiDMA(indication.dmaIndication);
+    AxiDma#(Bit#(64)) dma <- mkAxiDma(indication.dmaIndication);
     WriteChan#(Bit#(64)) dma_debug_write_chan = dma.write.writeChannels[1];
     BlueScope bsi <- mkSyncBlueScope(32, dma_debug_write_chan, indication.bsIndication,
 		hdmi_clock, hdmi_reset, defaultClock, defaultReset);

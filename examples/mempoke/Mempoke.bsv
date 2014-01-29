@@ -25,7 +25,7 @@ import BRAMFIFO::*;
 import GetPutF::*;
 
 import AxiMasterSlave::*;
-import DMA::*;
+import Dma::*;
 
 interface MempokeRequest;
    method Action readWord(Bit#(32) handle, Bit#(32) addr);
@@ -43,8 +43,8 @@ typedef struct{
    } S0 deriving (Eq,Bits);
 
 module mkMempokeRequest#(MempokeIndication indication,
-			 DMAWriteServer#(64) dma_write_server,
-			 DMAReadServer#(64) dma_read_server) (MempokeRequest);
+			 DmaWriteServer#(64) dma_write_server,
+			 DmaReadServer#(64) dma_read_server) (MempokeRequest);
       
    rule writeRule;
       let v <- dma_write_server.writeDone.get;
@@ -57,12 +57,12 @@ module mkMempokeRequest#(MempokeIndication indication,
    endrule
    
    method Action readWord(Bit#(32) handle, Bit#(32) addr);
-      dma_read_server.readReq.put(DMAAddressRequest{handle:handle, address:truncate(addr), burstLen:1, tag:0});
+      dma_read_server.readReq.put(DmaAddressRequest{handle:handle, address:truncate(addr), burstLen:1, tag:0});
    endmethod
    
    method Action writeWord(Bit#(32) handle, Bit#(32) addr, S0 data);
-      dma_write_server.writeReq.put(DMAAddressRequest{handle:handle, address:truncate(addr), burstLen:1, tag:0});
-      dma_write_server.writeData.put(DMAData{data:pack(data),tag:0});
+      dma_write_server.writeReq.put(DmaAddressRequest{handle:handle, address:truncate(addr), burstLen:1, tag:0});
+      dma_write_server.writeData.put(DmaData{data:pack(data),tag:0});
    endmethod         
 
 endmodule

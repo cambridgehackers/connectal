@@ -1,19 +1,19 @@
-#include "DMAIndicationWrapper.h"
+#include "DmaIndicationWrapper.h"
 
-class DMAIndication : public DMAIndicationWrapper
+class DmaIndication : public DmaIndicationWrapper
 {
   PortalMemory *portalMemory;
 
 public:
-  DMAIndication(unsigned int id) : DMAIndicationWrapper(id), portalMemory(0) {}
-  DMAIndication(PortalMemory *pm, unsigned int id)
-    : DMAIndicationWrapper(id), portalMemory(pm)
+  DmaIndication(unsigned int id) : DmaIndicationWrapper(id), portalMemory(0) {}
+  DmaIndication(PortalMemory *pm, unsigned int id)
+    : DmaIndicationWrapper(id), portalMemory(pm)
   {
     pm->useSemaphore();
   }
-  DMAIndication(const char* devname, unsigned int addrbits) : DMAIndicationWrapper(devname,addrbits), portalMemory(0) {}
-  DMAIndication(PortalMemory *pm, const char* devname, unsigned int addrbits)
-    : DMAIndicationWrapper(devname,addrbits)
+  DmaIndication(const char* devname, unsigned int addrbits) : DmaIndicationWrapper(devname,addrbits), portalMemory(0) {}
+  DmaIndication(PortalMemory *pm, const char* devname, unsigned int addrbits)
+    : DmaIndicationWrapper(devname,addrbits)
     , portalMemory(pm)
   {
     pm->useSemaphore();
@@ -37,9 +37,9 @@ public:
     fprintf(stderr, "parefResp: %lx\n", channelId);
   }
   virtual void badHandle ( const unsigned long handle, const unsigned long address ) {
-    fprintf(stderr, "DMAIndication bad handle pref=%lx addr=%lx\n", handle, address);
+    fprintf(stderr, "DmaIndication bad handle pref=%lx addr=%lx\n", handle, address);
   }
   virtual void badAddr ( const unsigned long handle, const unsigned long address , const unsigned long long pa) {
-    fprintf(stderr, "DMAIndication bad address pref=%lx addr=%lx physaddr=%llx\n", handle, address, pa);
+    fprintf(stderr, "DmaIndication bad address pref=%lx addr=%lx physaddr=%llx\n", handle, address, pa);
   }
 };

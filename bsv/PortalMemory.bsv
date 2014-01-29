@@ -24,7 +24,7 @@ import GetPut::*;
 import Vector::*;
 
 //
-// DMA channel type
+// Dma channel type
 //
 typedef enum {
    Read, Write
@@ -43,9 +43,9 @@ typedef struct {
    } DmaDbgRec deriving(Bits);
 
 //
-// @brief Events sent from a DMA engine
+// @brief Events sent from a Dma engine
 //
-interface DMAIndication;
+interface DmaIndication;
    method Action reportStateDbg(DmaDbgRec rec);
    method Action sglistResp(Bit#(32) pref, Bit#(32) idx, Bit#(32) physPageNum);
    method Action sglistEntry(Bit#(32) o, Bit#(64) physAddr);
@@ -54,9 +54,9 @@ interface DMAIndication;
 endinterface
 
 //
-// @brief Configuration interface to DMA engine
+// @brief Configuration interface to Dma engine
 //
-interface DMARequest;
+interface DmaRequest;
 
    //
    // @brief Requests debug info for the specified channel type
@@ -82,8 +82,8 @@ typeclass PortalMemory#(type a);
 endtypeclass
 
 //
-// @brief DMARequest implements sglist()
+// @brief DmaRequest implements sglist()
 //
-instance PortalMemory#(DMARequest);
+instance PortalMemory#(DmaRequest);
 endinstance
 

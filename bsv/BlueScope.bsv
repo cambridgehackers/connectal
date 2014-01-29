@@ -27,7 +27,7 @@ import FIFOF::*;
 import BRAMFIFO::*;
 import GetPutF::*;
 
-import DMA::*;
+import Dma::*;
 import ClientServer::*;
 
 interface BlueScopeIndication;
@@ -48,7 +48,7 @@ endinterface
 
 typedef enum { Idle, Enabled, Triggered } State deriving (Bits,Eq);
 
-module mkBlueScope#(Integer samples, DMAWriteServer#(dataWidth) wchan, BlueScopeIndication indication)(BlueScope#(dataWidth))
+module mkBlueScope#(Integer samples, DmaWriteServer#(dataWidth) wchan, BlueScopeIndication indication)(BlueScope#(dataWidth))
    provisos(Add#(a__,dataWidth,64),
 	    Add#(1,b__,dataWidth));
    
@@ -58,13 +58,13 @@ module mkBlueScope#(Integer samples, DMAWriteServer#(dataWidth) wchan, BlueScope
    return rv;
 endmodule
 
-module mkSyncBlueScope#(Integer samples, DMAWriteServer#(dataWidth) wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth))
+module mkSyncBlueScope#(Integer samples, DmaWriteServer#(dataWidth) wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth))
    provisos(Add#(a__,dataWidth,64),
 	    Add#(1,b__,dataWidth),
 	    Div#(dataWidth,8,dataBytes));
 
    SyncFIFOIfc#(Bit#(dataWidth)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
-   Reg#(DmaMemHandle) handleReg <- mkSyncReg(0, dClk, dRst, sClk);
+   Reg#(DmaPointer) handleReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(dataWidth))       maskReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(dataWidth))      valueReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
@@ -87,13 +87,13 @@ module mkSyncBlueScope#(Integer samples, DMAWriteServer#(dataWidth) wchan, BlueS
    endrule
 
    rule writeReq if (dfifo.notEmpty);
-      wchan.writeReq.put(DMAAddressRequest { handle: handleReg, address: zeroExtend(writeOffsetReg), burstLen: 2, tag: 0});
+      wchan.writeReq.put(DmaAddressRequest { handle: handleReg, address: zeroExtend(writeOffsetReg), burstLen: 2, tag: 0});
       writeOffsetReg <= writeOffsetReg + (fromInteger(valueOf(dataBytes)) * 2);
    endrule
 
    rule  writeData;
       dfifo.deq();
-      wchan.writeData.put(DMAData { data: dfifo.first, tag: 0});
+      wchan.writeData.put(DmaData { data: dfifo.first, tag: 0});
    endrule
    
    rule writeDone;

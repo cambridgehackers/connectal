@@ -27,7 +27,7 @@ import StmtFSM::*;
 import ClientServer::*;
 
 import PortalMemory::*;
-import DMA::*;
+import Dma::*;
 import GetPutF::*;
 
 import RingTypes::*;
@@ -51,12 +51,12 @@ interface RingIndication;
 endinterface
 
 module mkRingRequest#(RingIndication indication,
-		      DMAReadServer#(64) dma_read_chan,
-		      DMAWriteServer#(64) dma_write_chan,
-		      DMAReadServer#(64) cmd_read_chan,
-		      DMAWriteServer#(64) status_write_chan )(RingRequest);
-   DMAReadBuffer#(64,8) copy_read_chan <- mkDMAReadBuffer();
-   DMAWriteBuffer#(64,8) copy_write_chan <- mkDMAWriteBuffer();
+		      DmaReadServer#(64) dma_read_chan,
+		      DmaWriteServer#(64) dma_write_chan,
+		      DmaReadServer#(64) cmd_read_chan,
+		      DmaWriteServer#(64) status_write_chan )(RingRequest);
+   DmaReadBuffer#(64,8) copy_read_chan <- mkDmaReadBuffer();
+   DmaWriteBuffer#(64,8) copy_write_chan <- mkDmaWriteBuffer();
 
    ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
    ServerF#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
@@ -87,7 +87,7 @@ module mkRingRequest#(RingIndication indication,
       while (True) seq
 	 while(!(hwenabled && cmdRing.notEmpty())) noAction;
 	 cmd_read_chan.readReq.put(
-	    DMAAddressRequest{handle: cmdRing.memhandle,
+	    DmaAddressRequest{handle: cmdRing.memhandle,
 	       address: cmdRing.bufferlast, burstLen: 8, tag: 0});
 	 cmdRing.pop(64);
       endseq
@@ -123,26 +123,26 @@ module mkRingRequest#(RingIndication indication,
 	 if (statusRing.notFull() && copyEngine.response.notEmpty())
 	    seq
 	       status_write_chan.writeReq.put(
-		  DMAAddressRequest{handle: statusRing.memhandle, 
+		  DmaAddressRequest{handle: statusRing.memhandle, 
 		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
 	       statusRing.push(64);
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- copyEngine.response.get();
-		     status_write_chan.writeData.put(DMAData{data: rv, tag: 0});
+		     status_write_chan.writeData.put(DmaData{data: rv, tag: 0});
 		  endaction
 	    endseq
 
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    seq
 	       status_write_chan.writeReq.put(
-		  DMAAddressRequest{handle: statusRing.memhandle, 
+		  DmaAddressRequest{handle: statusRing.memhandle, 
 		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
 	       statusRing.push(64);
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- echoEngine.response.get();
-		     status_write_chan.writeData.put(DMAData{data: rv, tag: 0});
+		     status_write_chan.writeData.put(DmaData{data: rv, tag: 0});
 		  endaction
 	    endseq
 

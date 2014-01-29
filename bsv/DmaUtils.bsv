@@ -30,14 +30,14 @@ import FIFOF::*;
 
 import BRAMFIFOFLevel::*;
 import GetPutF::*;
-import DMA::*;
+import Dma::*;
 
-interface DMAReadServer2BRAM#(type a);
-   method Action start(DmaMemHandle h, a x);
+interface DmaReadServer2BRAM#(type a);
+   method Action start(DmaPointer h, a x);
    method ActionValue#(Bool) finished();
 endinterface
 
-module mkDMAReadServer2BRAM#(DMAReadServer#(busWidth) rs, BRAMServer#(a,d) br)(DMAReadServer2BRAM#(a))
+module mkDmaReadServer2BRAM#(DmaReadServer#(busWidth) rs, BRAMServer#(a,d) br)(DmaReadServer2BRAM#(a))
    provisos(Bits#(d,dsz),
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),
@@ -59,10 +59,10 @@ module mkDMAReadServer2BRAM#(DMAReadServer#(busWidth) rs, BRAMServer#(a,d) br)(D
    Reg#(a) j <- mkReg(0);
    Reg#(Bool) jv <- mkReg(False);
    Reg#(a) n <- mkReg(0);
-   Reg#(DmaMemHandle) readHandle <- mkReg(0);
+   Reg#(DmaPointer) readHandle <- mkReg(0);
 
    rule loadReq(iv);
-      rs.readReq.put(DMAAddressRequest {handle: readHandle, address: zeroExtend(pack(i)), burstLen: 1, tag: 0});
+      rs.readReq.put(DmaAddressRequest {handle: readHandle, address: zeroExtend(pack(i)), burstLen: 1, tag: 0});
       i <= i+fromInteger(valueOf(nd));
       iv <= (i < n);
    endrule
@@ -86,7 +86,7 @@ module mkDMAReadServer2BRAM#(DMAReadServer#(busWidth) rs, BRAMServer#(a,d) br)(D
       gb.deq;
    endrule
    
-   method Action start(DmaMemHandle h, a x);
+   method Action start(DmaPointer h, a x);
       iv <= True;
       jv <= True;
       i <= 0;
@@ -109,9 +109,9 @@ endmodule
 // @param bsz The number of bits in the bus.
 // @param maxBurst The number of words to buffer
 //
-interface DMAReadBuffer#(numeric type bsz, numeric type maxBurst);
-   interface DMAReadServer #(bsz) dmaServer;
-   interface DMAReadClient#(bsz) dmaClient;
+interface DmaReadBuffer#(numeric type bsz, numeric type maxBurst);
+   interface DmaReadServer #(bsz) dmaServer;
+   interface DmaReadClient#(bsz) dmaClient;
 endinterface
 
 //
@@ -120,35 +120,35 @@ endinterface
 // @param bsz The number of bits in the bus.
 // @param maxBurst The number of words to buffer
 //
-interface DMAWriteBuffer#(numeric type bsz, numeric type maxBurst);
-   interface DMAWriteServer#(bsz) dmaServer;
-   interface DMAWriteClient#(bsz) dmaClient;
+interface DmaWriteBuffer#(numeric type bsz, numeric type maxBurst);
+   interface DmaWriteServer#(bsz) dmaServer;
+   interface DmaWriteClient#(bsz) dmaClient;
 endinterface
 
 //
-// @brief Makes a DMA buffer for reading wordSize words from memory.
+// @brief Makes a Dma buffer for reading wordSize words from memory.
 //
 // @param dsz The width of the bus in bits.
 // @param maxBurst The max number of words to transfer per request.
 //
-module mkDMAReadBuffer(DMAReadBuffer#(dsz, maxBurst))
+module mkDmaReadBuffer(DmaReadBuffer#(dsz, maxBurst))
    provisos(Add#(1,a__,dsz),
 	    Add#(b__, TAdd#(1,TLog#(maxBurst)), 8));
 
-   FIFOFLevel#(DMAData#(dsz),maxBurst)  readBuffer <- mkBRAMFIFOFLevel;
-   FIFOF#(DMAAddressRequest)        reqOutstanding <- mkFIFOF();
+   FIFOFLevel#(DmaData#(dsz),maxBurst)  readBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(DmaAddressRequest)        reqOutstanding <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(maxBurst))) unfulfilled <- mkRatchet(0);
    
    // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
    Bit#(TAdd#(1,TLog#(maxBurst))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
 
-   interface DMAReadServer dmaServer;
+   interface DmaReadServer dmaServer;
       interface PutF readReq = toPutF(reqOutstanding);
       interface GetF readData = toGetF(readBuffer);
    endinterface
-   interface DMAReadClient dmaClient;
+   interface DmaReadClient dmaClient;
       interface GetF readReq;
-	 method ActionValue#(DMAAddressRequest) get if (readBuffer.lowWater(sreq));
+	 method ActionValue#(DmaAddressRequest) get if (readBuffer.lowWater(sreq));
 	    reqOutstanding.deq;
 	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
 	    return reqOutstanding.first;
@@ -158,7 +158,7 @@ module mkDMAReadBuffer(DMAReadBuffer#(dsz, maxBurst))
 	 endmethod
       endinterface
       interface PutF readData;
-	 method Action put(DMAData#(dsz) x);
+	 method Action put(DmaData#(dsz) x);
 	    readBuffer.fifo.enq(x);
 	    unfulfilled.decrement(1);
 	 endmethod
@@ -170,31 +170,31 @@ module mkDMAReadBuffer(DMAReadBuffer#(dsz, maxBurst))
 endmodule
 
 //
-// @brief Makes a DMA channel for writing wordSize words from memory.
+// @brief Makes a Dma channel for writing wordSize words from memory.
 //
 // @param bsz The width of the bus in bits.
 // @param maxBurst The max number of words to transfer per request.
 //
-module mkDMAWriteBuffer(DMAWriteBuffer#(bsz, maxBurst))
+module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, maxBurst))
    provisos(Add#(1,a__,bsz),
 	    Add#(b__, TAdd#(1, TLog#(maxBurst)), 8));
 
-   FIFOFLevel#(DMAData#(bsz),maxBurst) writeBuffer <- mkBRAMFIFOFLevel;
-   FIFOF#(DMAAddressRequest)        reqOutstanding <- mkFIFOF();
+   FIFOFLevel#(DmaData#(bsz),maxBurst) writeBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(DmaAddressRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(maxBurst)))  unfulfilled <- mkRatchet(0);
    
    // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.
    Bit#(TAdd#(1,TLog#(maxBurst))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
 
-   interface DMAWriteServer dmaServer;
+   interface DmaWriteServer dmaServer;
       interface PutF writeReq = toPutF(reqOutstanding);
       interface PutF writeData = toPutF(writeBuffer);
       interface GetF writeDone = toGetF(doneTags);
    endinterface
-   interface DMAWriteClient dmaClient;
+   interface DmaWriteClient dmaClient;
       interface GetF writeReq;
-	 method ActionValue#(DMAAddressRequest) get if (writeBuffer.highWater(sreq));
+	 method ActionValue#(DmaAddressRequest) get if (writeBuffer.highWater(sreq));
 	    reqOutstanding.deq;
 	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
 	    return reqOutstanding.first;
@@ -204,7 +204,7 @@ module mkDMAWriteBuffer(DMAWriteBuffer#(bsz, maxBurst))
 	 endmethod
       endinterface
       interface GetF writeData;
-	 method ActionValue#(DMAData#(bsz)) get();
+	 method ActionValue#(DmaData#(bsz)) get();
 	    unfulfilled.decrement(1);
 	    writeBuffer.fifo.deq;
 	    return writeBuffer.fifo.first;

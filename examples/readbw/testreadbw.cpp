@@ -118,7 +118,7 @@ int main(int argc, const char **argv)
     rc = device->dCacheFlushInval(&srcAlloc, srcBuffer);
     fprintf(stderr, "cache flushed rc=%d\n", rc);
 #endif
-    // map the DMA buf into PCIe. Seems not to be needed.
+    // map the Dma buf into PCIe. Seems not to be needed.
     //rc = ioctl(device->fd, BNOC_DMA_BUF_MAP, srcAlloc.header.fd);
     //fprintf(stderr, "BNOC_DMA_BUF_MAP rc=%d errno=%d\n", rc, errno);
 

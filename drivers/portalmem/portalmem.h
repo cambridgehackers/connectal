@@ -8,15 +8,15 @@ typedef struct PortalAllocHeader {
     int numEntries;
 } PortalAllocHeader;
 
-typedef struct DMAEntry {
+typedef struct DmaEntry {
   unsigned long dma_address;
   unsigned long length;
-} DMAEntry;
+} DmaEntry;
 
 
 typedef struct PortalAlloc {
   PortalAllocHeader header;
-  DMAEntry entries[0];
+  DmaEntry entries[0];
 } PortalAlloc;
 
 #define PA_ALLOC _IOWR('B', 10, PortalAlloc)

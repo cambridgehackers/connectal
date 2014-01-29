@@ -27,7 +27,7 @@ import Vector::*;
 import GetPut::*;
 import BRAMFIFO::*;
 import BRAM::*;
-import DMA::*;
+import Dma::*;
 import StmtFSM::*;
 import ClientServer::*;
 

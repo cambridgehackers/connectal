@@ -25,7 +25,7 @@ import GetPutF::*;
 import Vector::*;
 import BRAM::*;
 
-import DMA::*;
+import Dma::*;
 
 interface NandSimRequest;
    method Action startRead(Bit#(32) dramhandle, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
@@ -41,21 +41,21 @@ endinterface
 
 interface NandSim;
    interface NandSimRequest request;
-   interface DMAReadClient#(64) readClient;
-   interface DMAWriteClient#(64) writeClient;
+   interface DmaReadClient#(64) readClient;
+   interface DmaWriteClient#(64) writeClient;
 endinterface
 
 module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64)) br) (NandSim)
    provisos (Add#(a__, asz, 32));
 
-   Reg#(DmaMemHandle) dramRdHandle <- mkReg(0);
+   Reg#(DmaPointer) dramRdHandle <- mkReg(0);
    Reg#(Bit#(32)) dramRdCnt <- mkReg(0);
    Reg#(Bit#(DmaAddrSize))      dramRdOffset <- mkReg(0);
    Reg#(Bit#(6)) dramRdTag <- mkReg(0);
    Reg#(Bit#(asz)) nandRdAddr <- mkReg(0);
    Reg#(Bit#(asz)) nandRdLimit <- mkReg(0);
 
-   Reg#(DmaMemHandle) dramWrHandle <- mkReg(0);
+   Reg#(DmaPointer) dramWrHandle <- mkReg(0);
    Reg#(Bit#(32)) dramWrCnt <- mkReg(0);
    Reg#(Bit#(32)) dramWrDone <- mkReg(0);
    Reg#(Bit#(DmaAddrSize))      dramWrOffset <- mkReg(0);
@@ -123,23 +123,23 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
 
    endinterface
 
-   interface DMAReadClient readClient;
+   interface DmaReadClient readClient;
       interface GetF readReq;
-         method ActionValue#(DMAAddressRequest) get() if (dramRdCnt > 0);
+         method ActionValue#(DmaAddressRequest) get() if (dramRdCnt > 0);
             dramRdCnt <= dramRdCnt-extend(burstLen);
             dramRdOffset <= dramRdOffset + deltaOffset;
             if (dramRdCnt <= extend(burstLen))
                indication.writeDone(0); // read from DRAM is write to NAND
             //else if (dramRdCnt[5:0] == 6'b0)
             //   indication.readReq(dramRdCnt);
-            return DMAAddressRequest { handle: dramRdHandle, address: dramRdOffset, burstLen: burstLen, tag: truncate(dramRdOffset) };
+            return DmaAddressRequest { handle: dramRdHandle, address: dramRdOffset, burstLen: burstLen, tag: truncate(dramRdOffset) };
          endmethod
          method Bool notEmpty();
             return dramRdCnt > 0;
          endmethod
       endinterface : readReq
       interface PutF readData;
-         method Action put(DMAData#(64) d);
+         method Action put(DmaData#(64) d);
 	    $display("readData/nandWrite nandWrAddr=%h d=%h tag=%h", nandWrAddr, d.data, d.tag);
 	    br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:nandWrAddr, datain:d.data});
 	    nandWrAddr <= nandWrAddr+1;
@@ -149,24 +149,24 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
          endmethod
       endinterface : readData
    endinterface
-   interface DMAWriteClient writeClient;
+   interface DmaWriteClient writeClient;
       interface GetF writeReq;
-	 method ActionValue#(DMAAddressRequest) get() if (dramWrCnt > 0);
+	 method ActionValue#(DmaAddressRequest) get() if (dramWrCnt > 0);
 	    dramWrCnt <= dramWrCnt - extend(dramWrBurstLen);
 	    dramWrOffset <= dramWrOffset + deltaOffset;
 	    let tag = truncate(dramWrOffset>>3);
 	    dramWrTag <= tag;
-	    return DMAAddressRequest { handle: dramWrHandle, address: dramWrOffset, burstLen: dramWrBurstLen, tag: tag };
+	    return DmaAddressRequest { handle: dramWrHandle, address: dramWrOffset, burstLen: dramWrBurstLen, tag: tag };
 	 endmethod
 	 method Bool notEmpty();
 	    return dramWrCnt > 0;
 	 endmethod
       endinterface: writeReq
       interface GetF writeData;
-	 method ActionValue#(DMAData#(64)) get();
+	 method ActionValue#(DmaData#(64)) get();
 	    let v <- br.response.get();
 	    $display("writeReq v=%h", v);
-	    return DMAData { data: v, tag: dramWrTag };
+	    return DmaData { data: v, tag: dramWrTag };
 	 endmethod
 	 method Bool notEmpty();
 	    return nandRdAddr < nandRdLimit;

@@ -29,7 +29,7 @@ extern "C" {
     struct channel* rc;
     struct channel* wc;
 
-    fprintf(stderr, "BsimDMA::init_pareff()\n");
+    fprintf(stderr, "BsimDma::init_pareff()\n");
 
     rc = &(p_fd.read);
     snprintf(rc->path, sizeof(rc->path), "fd_sock_rc");
@@ -83,7 +83,7 @@ extern "C" {
     assert(pref < 16);
     sock_fd_read(p_fd.write.s2, &(fd[pref-1]));
     buffer[pref-1] = (unsigned char *)mmap(0, size, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref-1], 0);
-    fprintf(stderr, "BsimDMA::pareff pref=%ld, buffer=%08lx\n", pref, buffer[pref-1]);
+    fprintf(stderr, "BsimDma::pareff pref=%ld, buffer=%08lx\n", pref, buffer[pref-1]);
     buffer_len[pref-1] = size/sizeof(unsigned char);
     return buffer[pref-1];
   }

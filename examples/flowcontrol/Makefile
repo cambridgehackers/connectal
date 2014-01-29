@@ -3,7 +3,7 @@ S2H = SinkRequest
 H2S = SinkIndication
 BSVFILES = Sink.bsv Top.bsv
 CPPFILES=test.cpp
-DMA = 
+Dma = 
 PINS = Std
 
 include ../../Makefile.common

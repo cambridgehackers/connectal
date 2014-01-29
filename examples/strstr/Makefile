@@ -1,10 +1,10 @@
 
 BSVDIR=../../bsv
-S2H = StrstrRequest DMARequest
-H2S = StrstrIndication DMAIndication
+S2H = StrstrRequest DmaRequest
+H2S = StrstrIndication DmaIndication
 BSVFILES = Strstr.bsv $(BSVDIR)/PortalMemory.bsv Top.bsv
 CPPFILES=teststrstr.cpp
-DMA = Dma
+Dma = Dma
 PINS = Std
 
 include ../../Makefile.common
