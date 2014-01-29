@@ -15,8 +15,8 @@
 
 
 
-RingRequestProxy *ring = 0;new RingRequestProxy(IfcNames_RingRequest);
-DMARequestProxy *dma = 0; new DMARequestProxy(IfcNames_DMARequest);
+RingRequestProxy *ring = 0;
+DMARequestProxy *dma = 0;
 
 PortalAlloc *cmdAlloc;
 PortalAlloc *statusAlloc;
@@ -48,12 +48,12 @@ class RingIndication : public RingIndicationWrapper
 {
 public:
   virtual void setResult(long unsigned int cmd, long unsigned int regist, long unsigned int addr) {
-    fprintf(stderr, "setResult(cmd %ld regist %ld addr %llx)\n", 
+    fprintf(stderr, "setResult(cmd %ld regist %ld addr %lx)\n", 
 	    cmd, regist, addr);
     sem_post(&conf_sem);
   }
   virtual void getResult(long unsigned int cmd, long unsigned int regist, long unsigned int addr) {
-    fprintf(stderr, "getResult(cmd %ld regist %ld addr %llx)\n", 
+    fprintf(stderr, "getResult(cmd %ld regist %ld addr %lx)\n", 
 	    cmd, regist, addr);
     sem_post(&conf_sem);
   }
