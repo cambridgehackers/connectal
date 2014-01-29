@@ -1,0 +1,16 @@
+#
+set -x
+set -e
+export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+ZEDBOARD_IPADDR=`$SCRIPT_DIR/../consolable/checkip`
+ANDROID_SERIAL=$ZEDBOARD_IPADDR:5555
+adb connect $ZEDBOARD_IPADDR
+adb root
+adb connect $ZEDBOARD_IPADDR
+adb push $1 /mnt/sdcard
+adb push $2 /mnt/sd
+adb shell insmod /mnt/sdcard/portalmem.ko
+adb shell insmod /mnt/sdcard/zynqportal.ko
+adb shell "gzip -dc /mnt/sdcard/mk*gz >/dev/xdevcfg"
+adb shell /mnt/sdcard/android_exe
+
