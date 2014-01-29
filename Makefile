@@ -45,7 +45,8 @@ zedruns = $(addsuffix .zedrun, $(testnames))
 
 $(zedruns):
 	(cd consolable; make)
-	scripts/run.zedboard `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
+	# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
+	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
 
 gentests = $(addsuffix .gen, $(testnames))
 
@@ -66,6 +67,9 @@ $(vc707tests):
 	rm -fr examples/$(basename $@)/vc707
 	make BOARD=vc707 -C examples/$(basename $@) all
 
+zynqdrivers:
+	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)
+	(cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portalmem.ko)
 
 #################################################################################################
 # not yet updated.
