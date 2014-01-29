@@ -157,7 +157,7 @@ module mkRingRequest#(RingIndication indication,
       endseq
    endseq;
    
-   rule writeAck(Empty);
+   rule writeAck;
       let tag <- status_write_chan.writeDone.get();
       $display("status write done tag=%h", tag);
    endrule
