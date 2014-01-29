@@ -144,7 +144,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd)
   if (next_first == r->size) next_first = 0;
   r->first = next_first;
   r->cached_space -= 64;
-  ring->set(ringid, REG_FIRST, r->first);         // bufferfirst
+  ring->set(r->ringid, REG_FIRST, r->first);         // bufferfirst
 }
 
 int main(int argc, const char **argv)
