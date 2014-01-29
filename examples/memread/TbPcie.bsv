@@ -23,7 +23,7 @@ import CtrlMux::*;
 import Portal::*;
 import Leds::*;
 import PortalMemory::*;
-import AxiRDMA::*;
+import AxiDMA::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 

@@ -25,7 +25,6 @@ import BRAMFIFO::*;
 import GetPutF::*;
 
 import AxiMasterSlave::*;
-import AxiRDMA::*;
 import PortalMemory::*;
 import PortalRMemory::*;
 

@@ -33,7 +33,7 @@ import Leds::*;
 import Imageon::*;
 import IserdesDatadeser::*;
 import HDMI::*;
-import AxiRDMA::*;
+import AxiDMA::*;
 import PortalRMemory::*;
 import PortalMemory::*;
 import BlueScope::*;
