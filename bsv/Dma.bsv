@@ -26,7 +26,7 @@ import FIFOF::*;
 import Adapter::*;
 import GetPutF::*;
 import Vector::*;
-import ClientServer::*;
+import Connectable::*;
 import BRAMFIFO::*;
 
 // XBSV Libraries
@@ -79,3 +79,32 @@ interface DmaWrite;
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 
+instance Connectable#(DmaReadClient#(dsz), DmaReadServer#(dsz));
+   module mkConnection#(DmaReadClient#(dsz) source, DmaReadServer#(dsz) sink)(Empty);
+      rule request;
+	 let req <- source.readReq.get();
+	 sink.readReq.put(req);
+      endrule
+      rule response;
+	 let resp <- sink.readData.get();
+	 source.readData.put(resp);
+      endrule
+   endmodule
+endinstance
+
+instance Connectable#(DmaWriteClient#(dsz), DmaWriteServer#(dsz));
+   module mkConnection#(DmaWriteClient#(dsz) source, DmaWriteServer#(dsz) sink)(Empty);
+      rule request;
+	 let req <- source.writeReq.get();
+	 sink.writeReq.put(req);
+      endrule
+      rule response;
+	 let resp <- source.writeData.get();
+	 sink.writeData.put(resp);
+      endrule
+      rule done;
+	 let resp <- sink.writeDone.get();
+	 source.writeDone.put(resp);
+      endrule
+   endmodule
+endinstance
