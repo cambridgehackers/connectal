@@ -9,6 +9,8 @@ adb root
 adb connect $ZEDBOARD_IPADDR
 adb push $1 /mnt/sdcard
 adb push $2 /mnt/sdcard
+adb shell rmmod portalmem
+adb shell rmmod zynqportal
 adb shell insmod /mnt/sdcard/portalmem.ko
 adb shell insmod /mnt/sdcard/zynqportal.ko
 adb shell "gzip -dc /mnt/sdcard/`basename $1` >/dev/xdevcfg"
