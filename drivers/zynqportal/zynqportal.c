@@ -43,10 +43,8 @@
 #define driver_devel(format, ...)
 #endif
 
-#define PORTAL_NAME_SZ 20
-
 struct portal_data {
-        struct miscdevice misc;       /* must be first element (passed to misc_register) */
+        struct miscdevice misc; /* must be first element (pointer passed to misc_register) */
         wait_queue_head_t wait_queue;
         dma_addr_t        dev_base_phys;
         void             *ind_reg_base_virt;
@@ -54,9 +52,9 @@ struct portal_data {
         int               irq_requested;
 };
 
-//
-/////////////////////////////////////////////////////////////
-
+/*
+ * Local helper functions
+ */
 static void dump_ind_regs(const char *prefix, struct portal_data *portal_data)
 {
         int i;
@@ -69,11 +67,10 @@ static void dump_ind_regs(const char *prefix, struct portal_data *portal_data)
 static irqreturn_t portal_isr(int irq, void *dev_id)
 {
         struct portal_data *portal_data = (struct portal_data *)dev_id;
-        u32 int_status, int_en;
 
         //dump_ind_regs("ISR a", portal_data);
-        int_status = readl(portal_data->ind_reg_base_virt + 0);
-        int_en  = readl(portal_data->ind_reg_base_virt + 4);
+        u32 int_status = readl(portal_data->ind_reg_base_virt + 0);
+        u32 int_en  = readl(portal_data->ind_reg_base_virt + 4);
         driver_devel("%s IRQ %s %d %x %x\n", __func__, portal_data->misc.name, irq, int_status, int_en);
 
         if (int_status) {
@@ -91,20 +88,23 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
         return IRQ_NONE;
 }
 
+/*
+ * file_operations functions
+ */
 static int portal_open(struct inode *inode, struct file *filep)
 {
-        u32 int_status, int_en;
         struct portal_data *portal_data = filep->private_data;
 
-        driver_devel("%s: %s\n", __FUNCTION__, portal_data->misc.name);
+        driver_devel("%s: %s irq_requested %d\n", __FUNCTION__,
+            portal_data->misc.name, portal_data->irq_requested);
         //dump_ind_regs("portal_open", portal_data);
         if (!portal_data->irq_requested) {
-                printk("%s about to call request_irq\n", __func__);
-                // read the interrupt as a sanity check
-                int_status = readl(portal_data->ind_reg_base_virt + 0);
-                int_en  = readl(portal_data->ind_reg_base_virt + 4);
+                // read the interrupt as a sanity check (to force segv if hw not present)
+                u32 int_status = readl(portal_data->ind_reg_base_virt + 0);
+                u32 int_en  = readl(portal_data->ind_reg_base_virt + 4);
                 driver_devel("%s IRQ %s %x %x\n", __func__, portal_data->misc.name, int_status, int_en);
-                if (request_irq(portal_data->portal_irq, portal_isr, IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->misc.name, portal_data)) {
+                if (request_irq(portal_data->portal_irq, portal_isr,
+                        IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->misc.name, portal_data)) {
                         portal_data->portal_irq = 0;
                         printk("%s err_bb\n", __func__);
                         return -EFAULT;
@@ -131,7 +131,8 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 if (!fclk)
                         return -ENODEV;
                 request.actual_rate = clk_round_rate(fclk, request.requested_rate);
-                printk(KERN_INFO "[%s:%d] requested rate %ld actual rate %ld\n", __FUNCTION__, __LINE__, request.requested_rate, request.actual_rate);
+                printk(KERN_INFO "[%s:%d] requested rate %ld actual rate %ld\n",
+                    __FUNCTION__, __LINE__, request.requested_rate, request.actual_rate);
                 if ((status = clk_set_rate(fclk, request.actual_rate))) {
                         printk(KERN_INFO "[%s:%d] err\n", __FUNCTION__, __LINE__);
                         return status;
@@ -202,7 +203,10 @@ static const struct file_operations portal_fops = {
         .release = portal_release,
 };
 
-int portal_init_driver(struct platform_device *pdev)
+/*
+ * platform_device functions
+ */
+static int portal_of_probe(struct platform_device *pdev)
 {
         int size;
         struct portal_data *portal_data;
@@ -254,27 +258,16 @@ err_mem:
         return rc;
 }
 
-int portal_deinit_driver(struct platform_device *pdev)
-{
-        struct portal_data *portal_data = (struct portal_data *)dev_get_drvdata(&pdev->dev);
-        if (portal_data->irq_requested)
-                free_irq(portal_data->portal_irq, portal_data);
-        kfree(portal_data);
-        dev_set_drvdata(&pdev->dev, NULL);
-        return 0;
-}
-
-static int portal_of_probe(struct platform_device *pdev)
-{
-        return portal_init_driver(pdev);
-}
-
 static int portal_of_remove(struct platform_device *pdev)
 {
         struct portal_data *portal_data = (struct portal_data *)dev_get_drvdata(&pdev->dev);
         driver_devel("%s:%s\n",__FUNCTION__, pdev->name);
+        if (portal_data->irq_requested)
+                free_irq(portal_data->portal_irq, portal_data);
         misc_deregister(&portal_data->misc);
-        return portal_deinit_driver(pdev);
+        dev_set_drvdata(&pdev->dev, NULL);
+        kfree(portal_data);
+        return 0;
 }
 
 static struct of_device_id portal_of_match[]
@@ -298,6 +291,9 @@ static struct platform_driver portal_of_driver = {
         },
 };
 
+/*
+ * Module functions
+ */
 static int __init portal_of_init(void)
 {
         if (platform_driver_register(&portal_of_driver)) {
