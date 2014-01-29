@@ -15,8 +15,8 @@
 
 
 
-RingRequestProxy *ring = new RingRequestProxy(IfcNames_RingRequest);
-DMARequestProxy *dma = new DMARequestProxy(IfcNames_DMARequest);
+RingRequestProxy *ring = 0;new RingRequestProxy(IfcNames_RingRequest);
+DMARequestProxy *dma = 0; new DMARequestProxy(IfcNames_DMARequest);
 
 PortalAlloc *cmdAlloc;
 PortalAlloc *statusAlloc;
@@ -158,6 +158,8 @@ int main(int argc, const char **argv)
     return -1;
   }
 
+  ring = new RingRequestProxy(IfcNames_RingRequest);
+  dma = new DMARequestProxy(IfcNames_DMARequest);
   dmaIndication = new DMAIndication(IfcNames_DMAIndication);
   ringIndication = new RingIndication(IfcNames_RingIndication);
 
