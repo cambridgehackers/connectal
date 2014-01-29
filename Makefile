@@ -45,7 +45,8 @@ zedruns = $(addsuffix .zedrun, $(testnames))
 
 $(zedruns):
 	(cd consolable; make)
-	scripts/run.zedboard `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
+	# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
+	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
 
 gentests = $(addsuffix .gen, $(testnames))
 
@@ -66,6 +67,9 @@ $(vc707tests):
 	rm -fr examples/$(basename $@)/vc707
 	make BOARD=vc707 -C examples/$(basename $@) all
 
+zynqdrivers:
+	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)
+	(cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portalmem.ko)
 
 #################################################################################################
 # not yet updated.
@@ -78,7 +82,7 @@ test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
 
 test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
 	rm -fr test-imageon
-	./genxpsprojfrombsv -B zc702 -p test-imageon -x ImageonVita -x HDMI -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiRDMA.bsv bsv/PortalMemory.bsv bsv/Imageon.bsv bsv/HDMI.bsv bsv/IserdesDatadeser.bsv
+	./genxpsprojfrombsv -B zc702 -p test-imageon -x ImageonVita -x HDMI -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiDma.bsv bsv/PortalMemory.bsv bsv/Imageon.bsv bsv/HDMI.bsv bsv/IserdesDatadeser.bsv
 	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
 	echo test-imageon built successfully
 

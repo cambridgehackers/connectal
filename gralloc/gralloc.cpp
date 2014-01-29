@@ -43,19 +43,19 @@
 #include "HdmiDisplay.h"
 #include "i2chdmi.h"
 
-class TestDMAIndication : public DMAIndication
+class TestDmaIndication : public DmaIndication
 {
   virtual void reportStateDbg(DmaDbgRec& rec){
-    ALOGD("DMA::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
+    ALOGD("Dma::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void configResp(unsigned long channelId){
-    ALOGD("DMA::configResp: %lx\n", channelId);
+    ALOGD("Dma::configResp: %lx\n", channelId);
   }
   virtual void sglistResp(unsigned long channelId){
-    ALOGD("DMA::sglistResp: %lx\n", channelId);
+    ALOGD("Dma::sglistResp: %lx\n", channelId);
   }
   virtual void parefResp(unsigned long channelId){
-    ALOGD("DMA::parefResp: %lx\n", channelId);
+    ALOGD("Dma::parefResp: %lx\n", channelId);
   }
 };
 
@@ -76,7 +76,7 @@ struct gralloc_context_t {
     pthread_cond_t vsync_cond;
     HdmiControlRequest *hdmiDisplay;
     HdmiInternalRequest *hdmiInternal;
-    DMARequest *dma;
+    DmaConfig *dma;
     unsigned int ref_srcAlloc;
     uint32_t nextSegmentNumber;
 };
@@ -367,7 +367,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         pthread_cond_init(&dev->vsync_cond, &condattr);
         dev->hdmiDisplay = HdmiControlRequest::createHdmiControlRequest(new HdmiControlIndication);
         dev->hdmiInternal = HdmiInternalRequest::createHdmiInternalRequest(new TestHdmiIndication);
-        dev->dma = DMARequest::createDMARequest(new TestDMAIndication);
+        dev->dma = DmaConfig::createDmaConfig(new TestDmaIndication);
         dev->nextSegmentNumber = 0;
 
         status = 0;

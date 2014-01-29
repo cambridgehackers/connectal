@@ -7,16 +7,16 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include "StdDMAIndication.h"
+#include "StdDmaIndication.h"
 #include "RingIndicationWrapper.h"
 #include "RingRequestProxy.h"
-#include "DMARequestProxy.h"
+#include "DmaConfigProxy.h"
 #include "GeneratedTypes.h"
 
 
 
 RingRequestProxy *ring = 0;
-DMARequestProxy *dma = 0;
+DmaConfigProxy *dma = 0;
 
 PortalAlloc *cmdAlloc;
 PortalAlloc *statusAlloc;
@@ -66,7 +66,7 @@ public:
 };
 
 RingIndication *ringIndication = 0;
-DMAIndication *dmaIndication = 0;
+DmaIndication *dmaIndication = 0;
 
 struct SWRing {
   unsigned int ref;
@@ -168,8 +168,8 @@ int main(int argc, const char **argv)
   }
 
   ring = new RingRequestProxy(IfcNames_RingRequest);
-  dma = new DMARequestProxy(IfcNames_DMARequest);
-  dmaIndication = new DMAIndication(IfcNames_DMAIndication);
+  dma = new DmaConfigProxy(IfcNames_DmaRequest);
+  dmaIndication = new DmaIndication(IfcNames_DmaIndication);
   ringIndication = new RingIndication(IfcNames_RingIndication);
 
   fprintf(stderr, "allocating memory...\n");

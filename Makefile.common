@@ -10,11 +10,11 @@ TOP=BsimTop
 MKTOP=mkBsimTop
 endif
 ifeq ($(BOARD),kc705)
-TOP=$(PINS)Pcie$(DMA)Top
+TOP=$(PINS)Pcie$(Dma)Top
 MKTOP=mkPcieTop
 endif
 ifeq ($(BOARD),vc707)
-TOP=$(PINS)Pcie$(DMA)Top
+TOP=$(PINS)Pcie$(Dma)Top
 MKTOP=mkPcieTop
 endif
 ifeq ($(BOARD),zedboard)

@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "StdDMAIndication.h"
+#include "StdDmaIndication.h"
 
 #include "BlueScopeIndicationWrapper.h"
 #include "BlueScopeRequestProxy.h"
-#include "DMARequestProxy.h"
+#include "DmaConfigProxy.h"
 #include "GeneratedTypes.h"
 #include "MemcpyIndicationWrapper.h"
 #include "MemcpyRequestProxy.h"
@@ -126,21 +126,21 @@ int main(int argc, const char **argv)
 
   MemcpyRequestProxy *device = 0;
   BlueScopeRequestProxy *bluescope = 0;
-  DMARequestProxy *dma = 0;
+  DmaConfigProxy *dma = 0;
   
   MemcpyIndication *deviceIndication = 0;
   BlueScopeIndication *bluescopeIndication = 0;
-  DMAIndication *dmaIndication = 0;
+  DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   device = new MemcpyRequestProxy("fpga1", 16);
   bluescope = new BlueScopeRequestProxy("fpga3", 16);
-  dma = new DMARequestProxy("fpga5", 16);
+  dma = new DmaConfigProxy("fpga5", 16);
 
   deviceIndication = new MemcpyIndication("fpga2", 16);
   bluescopeIndication = new BlueScopeIndication("fpga4", 16);
-  dmaIndication = new DMAIndication(dma, "fpga6", 16);
+  dmaIndication = new DmaIndication(dma, "fpga6", 16);
 
   fprintf(stderr, "Main::allocating memory...\n");
 

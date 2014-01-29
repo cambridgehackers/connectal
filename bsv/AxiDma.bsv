@@ -31,8 +31,8 @@ import ClientServer::*;
 
 // XBSV Libraries
 import AxiMasterSlave::*;
+import Dma::*;
 import PortalMemory::*;
-import PortalRMemory::*;
 import Adapter::*;
 import SGList::*;
 
@@ -41,35 +41,35 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) s
 `endif
 
 //
-// @brief AxiDMA provides the configuration and AXI bus interface for DMA
+// @brief AxiDma provides the configuration and AXI bus interface for Dma
 //
 // @param dsz Number of bits in the data bus
 //
 
-interface AxiDMAServer#(numeric type addrWidth, numeric type dsz);
-   interface DMARequest request;
+interface AxiDmaServer#(numeric type addrWidth, numeric type dsz);
+   interface DmaConfig request;
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
 endinterface
 
-interface AxiDMAWriteInternal#(numeric type addrWidth, numeric type dsz);
-   interface DMAWrite write;
+interface AxiDmaWriteInternal#(numeric type addrWidth, numeric type dsz);
+   interface DmaWrite write;
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
 endinterface
 
-interface AxiDMAReadInternal#(numeric type addrWidth, numeric type dsz);
-   interface DMARead read;
+interface AxiDmaReadInternal#(numeric type addrWidth, numeric type dsz);
+   interface DmaRead read;
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
 endinterface
 
 typedef enum {Idle, Translate, Address, Data, Done} InternalState deriving(Eq,Bits);
 		 
-module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMAReadClient#(dsz)) readClients,
-			     DMAIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth)) sgl)(AxiDMAReadInternal#(addrWidth, dsz))
+module mkAxiDmaReadInternal#(Integer numRequests, Vector#(numReadClients, DmaReadClient#(dsz)) readClients,
+			     DmaIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth)) sgl)(AxiDmaReadInternal#(addrWidth, dsz))
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
-   FIFO#(DMAAddressRequest) lreqFifo <- mkPipelineFIFO();
-   FIFO#(DMAAddressRequest) reqFifo  <- mkPipelineFIFO();
-   FIFO#(DMAAddressRequest) dreqFifo <- mkSizedFIFO(numRequests);
+   FIFO#(DmaRequest) lreqFifo <- mkPipelineFIFO();
+   FIFO#(DmaRequest) reqFifo  <- mkPipelineFIFO();
+   FIFO#(DmaRequest) dreqFifo <- mkSizedFIFO(numRequests);
    FIFO#(Bit#(addrWidth))        paFifo     <- mkPipelineFIFO();
    FIFO#(DmaChannelId)    chanFifo   <- mkSizedFIFO(numRequests);
 
@@ -85,7 +85,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
    endrule
    
    rule loadChannel if (valueOf(numReadClients) > 0  && readClients[selectReg].readData.notFull());
-      DMAAddressRequest req = unpack(0);
+      DmaRequest req = unpack(0);
       if (valueOf(numReadClients) > 0)
 	 req <- readClients[selectReg].readReq.get();
       //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
@@ -114,7 +114,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
       end
    endrule
 
-   interface DMARead read;
+   interface DmaRead read;
       method ActionValue#(DmaDbgRec) dbg();
 	 return ?;
       endmethod
@@ -138,7 +138,7 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
 	    let activeChan = chanFifo.first();
 	    let resp = dreqFifo.first();
 	    if (valueOf(numReadClients) > 0)
-	       readClients[activeChan].readData.put(DMAData { data: response.data, tag: resp.tag});
+	       readClients[activeChan].readData.put(DmaData { data: response.data, tag: resp.tag});
 
 	    let burstLen = burstReg;
 	    if (burstLen == 0)
@@ -159,13 +159,13 @@ module mkAxiDMAReadInternal#(Integer numRequests, Vector#(numReadClients, DMARea
 endmodule
 
 
-module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAWriteClient#(dsz)) writeClients,
-			      DMAIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth)) sgl)(AxiDMAWriteInternal#(addrWidth, dsz))
+module mkAxiDmaWriteInternal#(Integer numRequests, Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients,
+			      DmaIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth)) sgl)(AxiDmaWriteInternal#(addrWidth, dsz))
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
-   FIFO#(DMAAddressRequest) lreqFifo <- mkPipelineFIFO();
-   FIFO#(DMAAddressRequest) reqFifo <- mkFIFO();
-   FIFO#(DMAAddressRequest) dreqFifo <- mkSizedFIFO(numRequests);
+   FIFO#(DmaRequest) lreqFifo <- mkPipelineFIFO();
+   FIFO#(DmaRequest) reqFifo <- mkFIFO();
+   FIFO#(DmaRequest) dreqFifo <- mkSizedFIFO(numRequests);
    FIFO#(Bit#(addrWidth))        paFifo     <- mkFIFO();
    FIFO#(DmaChannelId)    chanFifo <- mkSizedFIFO(numRequests);
    FIFO#(DmaChannelId)    respFifo <- mkSizedFIFO(numRequests);
@@ -182,7 +182,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
    endrule
    
    rule loadChannel if (valueOf(numWriteClients) > 0 && writeClients[selectReg].writeData.notEmpty());
-      DMAAddressRequest req = unpack(0);
+      DmaRequest req = unpack(0);
       if (valueOf(numWriteClients) > 0)
 	 req <- writeClients[selectReg].writeReq.get();
       //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.handle, req.address, req.burstLen, debugReg);
@@ -207,7 +207,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
       end
    endrule
 
-   interface DMAWrite write;
+   interface DmaWrite write;
       method ActionValue#(DmaDbgRec) dbg();
 	 return ?;
       endmethod
@@ -233,7 +233,7 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 	 method ActionValue#(Axi3WriteData#(dsz,6)) get();
 	    let activeChan = chanFifo.first();
 	    let resp = dreqFifo.first();
-	    DMAData#(dsz) tagdata = unpack(0);
+	    DmaData#(dsz) tagdata = unpack(0);
 	    if (valueOf(numWriteClients) > 0)
 	       tagdata <- writeClients[activeChan].writeData.get();
 	    let burstLen = burstReg;
@@ -267,17 +267,17 @@ module mkAxiDMAWriteInternal#(Integer numRequests, Vector#(numWriteClients, DMAW
 endmodule
 
 //
-// @brief Creates a DMA controller for DMA read and write clients
+// @brief Creates a Dma controller for Dma read and write clients
 //
 // @param dmaIndication Interface for notifying software
 // @param readClients The read clients.
 // @param writeClients The writeclients.
 //
-module mkAxiDMAServer#(DMAIndication dmaIndication,
+module mkAxiDmaServer#(DmaIndication dmaIndication,
 		       Integer numRequests,
-		       Vector#(numReadClients, DMAReadClient#(dsz)) readClients,
-		       Vector#(numWriteClients, DMAWriteClient#(dsz)) writeClients)
-   (AxiDMAServer#(addrWidth, dsz))
+		       Vector#(numReadClients, DmaReadClient#(dsz)) readClients,
+		       Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients)
+   (AxiDmaServer#(addrWidth, dsz))
    provisos (Add#(1,a__,dsz),
         Add#(b__, TSub#(addrWidth, 12), 32),
         Add#(c__, 12, addrWidth),
@@ -286,8 +286,8 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
    
    SGListMMU#(addrWidth) sgl <- mkSGListMMU();
 
-   AxiDMAReadInternal#(addrWidth, dsz) reader <- mkAxiDMAReadInternal(numRequests, readClients, dmaIndication, sgl.addr[0]);
-   AxiDMAWriteInternal#(addrWidth, dsz) writer <- mkAxiDMAWriteInternal(numRequests, writeClients, dmaIndication, sgl.addr[1]);
+   AxiDmaReadInternal#(addrWidth, dsz) reader <- mkAxiDmaReadInternal(numRequests, readClients, dmaIndication, sgl.addr[0]);
+   AxiDmaWriteInternal#(addrWidth, dsz) writer <- mkAxiDmaWriteInternal(numRequests, writeClients, dmaIndication, sgl.addr[1]);
 
    Reg#(Bit#(TSub#(addrWidth,SGListPageShift))) addrReg <- mkReg(0);
    Reg#(Bit#(32))                        prefReg <- mkReg(0);
@@ -313,7 +313,7 @@ module mkAxiDMAServer#(DMAIndication dmaIndication,
       end
    endrule
 
-   interface DMARequest request;
+   interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
 	 if (rc == Read)

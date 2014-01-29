@@ -1,10 +1,10 @@
 
 BSVDIR=../../bsv
-S2H = MemwriteRequest DMARequest
-H2S = MemwriteIndication DMAIndication
+S2H = MemwriteRequest DmaConfig
+H2S = MemwriteIndication DmaIndication
 BSVFILES = Memwrite.bsv  $(BSVDIR)/PortalMemory.bsv
 CPPFILES=testmemwrite.cpp
-DMA = Dma
+Dma = Dma
 PINS = Std
 
 include ../../Makefile.common
@@ -12,6 +12,6 @@ include ../../Makefile.common
 mkTbPcie: mkTbPcie.ba
 	bsc -sim -o mkTbPcie -e mkTbPcie obj/mkTbPcie.ba
 
-mkTbPcie.ba: TbPcie.bsv ../../bsv/AxiRDMA.bsv ../../bsv/PcieToAxiBridge.bsv
+mkTbPcie.ba: TbPcie.bsv ../../bsv/AxiDma.bsv ../../bsv/PcieToAxiBridge.bsv
 	mkdir -p obj
 	bsc --aggressive-conditions -show-schedule -D TimeStamp=22 -bdir $$PWD/obj -sim -u -g mkTbPcie -p +:../../bsv TbPcie.bsv

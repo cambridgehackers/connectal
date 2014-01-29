@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "StdDMAIndication.h"
+#include "StdDmaIndication.h"
 
-#include "DMARequestProxy.h"
+#include "DmaConfigProxy.h"
 #include "GeneratedTypes.h" 
 #include "NandSimIndicationWrapper.h"
 #include "NandSimRequestProxy.h"
@@ -56,18 +56,18 @@ int main(int argc, const char **argv)
   unsigned int srcGen = 0;
 
   NandSimRequestProxy *device = 0;
-  DMARequestProxy *dma = 0;
+  DmaConfigProxy *dma = 0;
   
   NandSimIndication *deviceIndication = 0;
-  DMAIndication *dmaIndication = 0;
+  DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   device = new NandSimRequestProxy("fpga1", 16);
-  dma = new DMARequestProxy("fpga3", 16);
+  dma = new DmaConfigProxy("fpga3", 16);
 
   deviceIndication = new NandSimIndication("fpga2", 16);
-  dmaIndication = new DMAIndication(dma, "fpga4", 16);
+  dmaIndication = new DmaIndication(dma, "fpga4", 16);
 
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(numBytes, &srcAlloc);

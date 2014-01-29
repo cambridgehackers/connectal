@@ -28,9 +28,8 @@ import BRAM::*;
 import Gearbox::*;
 
 import AxiMasterSlave::*;
-import PortalMemory::*;
-import PortalRMemory::*;
-import PortalMemoryUtils::*;
+import Dma::*;
+import DmaUtils::*;
 
 
 interface StrstrRequest;
@@ -51,9 +50,9 @@ typedef Bit#(TLog#(MaxNeedleLen)) NeedleIdx;
 typedef enum {Idle, Init, Run} Stage deriving (Eq, Bits);
 
 module mkStrstrRequest#(StrstrIndication indication,
-			DMAReadServer#(busWidth)   haystack_read_chan,
-			DMAReadServer#(busWidth)     needle_read_chan,
-			DMAReadServer#(busWidth)    mp_next_read_chan )(StrstrRequest)
+			DmaReadServer#(busWidth)   haystack_read_chan,
+			DmaReadServer#(busWidth)     needle_read_chan,
+			DmaReadServer#(busWidth)    mp_next_read_chan )(StrstrRequest)
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
@@ -74,11 +73,11 @@ module mkStrstrRequest#(StrstrIndication indication,
    Reg#(Bit#(32)) haystackLenReg <- mkReg(0);
    Reg#(Bit#(32)) iReg <- mkReg(0);
    Reg#(Bit#(32)) jReg <- mkReg(0);
-   Reg#(DmaMemHandle) haystackHandle <- mkReg(0);
+   Reg#(DmaPointer) haystackHandle <- mkReg(0);
    Reg#(Bit#(DmaAddrSize)) haystackPtr <- mkReg(0);
    
-   DMAReadServer2BRAM#(NeedleIdx) n2b <- mkDMAReadServer2BRAM(needle_read_chan, needle.portB);
-   DMAReadServer2BRAM#(NeedleIdx) mp2b <- mkDMAReadServer2BRAM(mp_next_read_chan, mpNext.portB);
+   DmaReadServer2BRAM#(NeedleIdx) n2b <- mkDmaReadServer2BRAM(needle_read_chan, needle.portB);
+   DmaReadServer2BRAM#(NeedleIdx) mp2b <- mkDmaReadServer2BRAM(mp_next_read_chan, mpNext.portB);
 
    Reg#(Bit#(2)) epochReg <- mkReg(0);
    FIFO#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFO(2);
@@ -95,7 +94,7 @@ module mkStrstrRequest#(StrstrIndication indication,
    (* descending_urgency = "mp2b_load, n2b_load, matchNeedleResp, matchNeedleReq" *)
    
    rule haystackReq (stage == Run);
-      haystack_read_chan.readReq.put(DMAAddressRequest {handle: haystackHandle, address: haystackPtr, burstLen: 1, tag: 0});
+      haystack_read_chan.readReq.put(DmaRequest {handle: haystackHandle, address: haystackPtr, burstLen: 1, tag: 0});
       haystackPtr <= haystackPtr + fromInteger(valueOf(nc));
    endrule
    

@@ -5,9 +5,9 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <pthread.h>
-#include "StdDMAIndication.h"
+#include "StdDmaIndication.h"
 
-#include "DMARequestProxy.h"
+#include "DmaConfigProxy.h"
 #include "GeneratedTypes.h" 
 #include "MempokeIndicationWrapper.h"
 #include "MempokeRequestProxy.h"
@@ -37,10 +37,10 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   MempokeRequestProxy *device = 0;
-  DMARequestProxy *dma = 0;
+  DmaConfigProxy *dma = 0;
   
   MempokeIndication *deviceIndication = 0;
-  DMAIndication *dmaIndication = 0;
+  DmaIndication *dmaIndication = 0;
 
   PortalAlloc *dstAlloc;
   unsigned int *dstBuffer = 0;
@@ -51,10 +51,10 @@ int main(int argc, const char **argv)
   }
 
   device = new MempokeRequestProxy("fpga1", 16);
-  dma = new DMARequestProxy("fpga3", 16);
+  dma = new DmaConfigProxy("fpga3", 16);
 
   deviceIndication = new MempokeIndication("fpga2", 16);
-  dmaIndication = new DMAIndication(dma, "fpga4", 16);
+  dmaIndication = new DmaIndication(dma, "fpga4", 16);
 
   fprintf(stderr, "allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);

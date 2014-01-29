@@ -6,9 +6,9 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "sock_fd.h"
-#include "StdDMAIndication.h"
+#include "StdDmaIndication.h"
 
-#include "DMARequestProxy.h"
+#include "DmaConfigProxy.h"
 #include "GeneratedTypes.h" 
 #include "MemwriteIndicationWrapper.h"
 #include "MemwriteRequestProxy.h"
@@ -64,10 +64,10 @@ void parent(int rd_sock, int wr_sock)
 {
 
   MemwriteRequestProxy *device = 0;
-  DMARequestProxy *dma = 0;
+  DmaConfigProxy *dma = 0;
   
   MemwriteIndication *deviceIndication = 0;
-  DMAIndication *dmaIndication = 0;
+  DmaIndication *dmaIndication = 0;
 
   PortalAlloc *dstAlloc;
   unsigned int *dstBuffer = 0;
@@ -80,10 +80,10 @@ void parent(int rd_sock, int wr_sock)
   fprintf(stderr, "parent::%s %s\n", __DATE__, __TIME__);
 
   device = new MemwriteRequestProxy("fpga1", 16);
-  dma = new DMARequestProxy("fpga3", 16);
+  dma = new DmaConfigProxy("fpga3", 16);
 
   deviceIndication = new MemwriteIndication("fpga2", 16);
-  dmaIndication = new DMAIndication(dma, "fpga4", 16);
+  dmaIndication = new DmaIndication(dma, "fpga4", 16);
   
   fprintf(stderr, "parent::allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);

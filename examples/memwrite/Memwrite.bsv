@@ -24,8 +24,7 @@ import FIFOF::*;
 import GetPutF::*;
 
 import AxiMasterSlave::*;
-import PortalMemory::*;
-import PortalRMemory::*;
+import Dma::*;
 
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) handle, Bit#(32) numWords, Bit#(32) burstLen);
@@ -34,7 +33,7 @@ endinterface
 
 interface Memwrite;
    interface MemwriteRequest request;
-   interface DMAWriteClient#(64) dmaClient;
+   interface DmaWriteClient#(64) dmaClient;
 endinterface
 
 interface MemwriteIndication;
@@ -45,7 +44,7 @@ interface MemwriteIndication;
 endinterface
 
 module mkMemwriteRequest#(MemwriteIndication indication,
-			  DMAWriteServer#(64) dma_stream_write_server) (MemwriteRequest);
+			  DmaWriteServer#(64) dma_stream_write_server) (MemwriteRequest);
 
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
    Reg#(Bit#(DmaAddrSize)) streamWrOff <- mkReg(0);
@@ -60,13 +59,13 @@ module mkMemwriteRequest#(MemwriteIndication indication,
    endrule
    
    rule produce;
-      dma_stream_write_server.writeData.put(DMAData{data:{srcGen+1,srcGen}, tag: 0});
+      dma_stream_write_server.writeData.put(DmaData{data:{srcGen+1,srcGen}, tag: 0});
       srcGen <= srcGen+2;
    endrule
    
    rule writeReq(streamWrCnt > 0);
       streamWrCnt <= streamWrCnt-1;
-      dma_stream_write_server.writeReq.put(DMAAddressRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: 0});
+      dma_stream_write_server.writeReq.put(DmaRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: 0});
       streamWrOff <= streamWrOff + deltaOffset;
       indication.writeReq(streamWrCnt);
       if (streamWrCnt == 1)
@@ -100,9 +99,9 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    FIFOF#(Bit#(6))   doneTags <- mkFIFOF();
    Reg#(Bit#(8))   burstCount <- mkReg(0);
 
-   interface DMAWriteClient dmaClient;
+   interface DmaWriteClient dmaClient;
       interface GetF writeReq;
-	 method ActionValue#(DMAAddressRequest) get() if (streamWrCnt > 0);
+	 method ActionValue#(DmaRequest) get() if (streamWrCnt > 0);
 	    streamWrCnt <= streamWrCnt-1;
 	    streamWrOff <= streamWrOff + deltaOffset;
 	    indication.writeReq(streamWrCnt);
@@ -112,14 +111,14 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	    Bit#(6) tag = truncate(streamWrOff >> 5);
 	    dataTags.enq(tag);
 	    doneTags.enq(tag);
-	    return DMAAddressRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: tag};
+	    return DmaRequest {handle: wrHandle, address: streamWrOff, burstLen: burstLen, tag: tag};
 	 endmethod
 	 method Bool notEmpty;
 	    return streamWrCnt > 0;
 	 endmethod
       endinterface : writeReq
       interface GetF writeData;
-	 method ActionValue#(DMAData#(64)) get();
+	 method ActionValue#(DmaData#(64)) get();
 	    let bc = burstCount;
 	    if (bc == 0)
 	       bc = burstLen;
@@ -132,7 +131,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	    srcGen <= srcGen+2;
 	    let dmadata = {srcGen+1,srcGen};
 	    $display("Memwrite dmadata=%h", dmadata);
-	    return DMAData{data:dmadata, tag: tag};
+	    return DmaData{data:dmadata, tag: tag};
 	 endmethod
 	 method Bool notEmpty;
 	    return dataTags.notEmpty();

@@ -23,7 +23,7 @@
 import FIFO::*;
 import GetPut::*;
 import ClientServer::*;
-import PortalRMemory::*;
+import Dma::*;
 import RingTypes::*;
 
 

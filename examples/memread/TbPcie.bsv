@@ -22,17 +22,16 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
+import AxiDma::*;
 import PortalMemory::*;
-import AxiRDMA::*;
-import PortalMemory::*;
-import PortalRMemory::*;
+import Dma::*;
 
 // defined by user
 import Memread::*;
 
 module mkTbPcie(Empty);
 
-   DMAIndication dmaIndication = (interface DMAIndication;
+   DmaIndication dmaIndication = (interface DmaIndication;
       method Action reportStateDbg(DmaDbgRec rec);
 	 $display("reportStateDbg rec=%h %x %h %x", rec.x, rec.y, rec.z, rec.w);
       endmethod
@@ -66,12 +65,12 @@ module mkTbPcie(Empty);
    Memread memread <- mkMemread(memreadIndication);
    let memreadRequest = memread.request;
 
-   Vector#(1,  DMAReadClient#(64))   readClients = newVector();
+   Vector#(1,  DmaReadClient#(64))   readClients = newVector();
    readClients[0] = memread.dmaClient;
-   Vector#(0, DMAWriteClient#(64)) writeClients = newVector();
+   Vector#(0, DmaWriteClient#(64)) writeClients = newVector();
    Integer               numRequests = 8;
 
-   AxiDMAServer#(addrWidth,64)   dma <- mkAxiDMAServer(dmaIndication, numRequests, readClients, writeClients);
+   AxiDmaServer#(addrWidth,64)   dma <- mkAxiDmaServer(dmaIndication, numRequests, readClients, writeClients);
 
    PciId myId = PciId { bus: 1, dev: 1, func: 0 };
    AxiSlaveEngine#(64) axiSlaveEngine <- mkAxiSlaveEngine(myId);
