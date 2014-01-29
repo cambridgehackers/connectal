@@ -31,21 +31,13 @@ Setting up the SD Card
 
 1. Download http://xbsv.googlecode.com/files/sdcard-130611.tar.bz
 2. tar -jxvf sdcard-130611.tar.bz
-3. Assuming the card shows up as /dev/sdc:
 
-   sudo umount /dev/sdc
-   sudo umount /dev/sdc1
-   sudo mkdosfs -I -n zynq /dev/sdc
+Currently, all files must be in the first partition of an SD card.
 
-It does not seem to boot from cards with a partition table.
-
-4. Unplug the card and plug it back in
-5. Copy files
+3. Copy files
    cd sdcard-130611
    cp boot.bin devicetree.dtb ramdisk8M.image.gz zImage system.img /media/zynq
    cp empty.img /media/zynq/userdata.img
-5. sync
-   sudo umount /dev/sdc
 
 Eject the card and plug it into the zc702 and boot.
 
@@ -54,11 +46,11 @@ Preparation for PCIe
 
 1. Build the drivers
 
-    cd pcie/drivers/; make
+    cd drivers/pcie; make
 
 2. Load the drivers
 
-    cd pcie/drivers; make insmod
+    cd drivers/pcie; make insmod
 
 3. Install the Digilent cable driver
    cd /scratch/Xilinx/Vivado/2013.2/data/xicom/cable_drivers/lin64/digilent
@@ -71,56 +63,21 @@ Echo Example
     ## this has only been tested with the Vivado 2013.2 release
     . Xilinx/Vivado/2013.2/settings64.sh
 
-    ./genxpsprojfrombsv -B zedboard -p echoproj-s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv
-    ./genxpsprojfrombsv -B zedboard -p echo2proj -x mkZynqTop -s2h Say -h2s Say -s examples/echo2/test.cpp examples/echo2/Say.bsv  -t examples/echo2/Top.bsv -V verilog
+    BOARD=zedboard make -C examples/echo
 or
-    ./genxpsprojfrombsv -B zc702 -p echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv
+    BOARD=zc702 make -C examples/echo
 or
-    ./genxpsprojfrombsv -B kc705 -p k7echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv
+    BOARD=kc705 make -C examples/echo
 or
-    ./genxpsprojfrombsv -B vc707 -p v7echoproj -s examples/echo/testecho.cpp -b Echo examples/echo/Echo.bsv
+    BOARD=vc707 make -C examples/echo
 
-    cd echoproj
-    make verilog
-
-    ## after 'make bits', the .bit and .bin files will be in:
-    ##     echo.runs/impl_1/
-    ##         echo_top_1.bit
-    ##         echo_top_1.bin
-    make bits
-
-    ## this step requires promgen from Xilinx ISE 14.3
-    make echo.bit.bin.gz
-
-    ## building the test executable
-    cp examples/echo/testecho.cpp echoproj/jni
-    ndk-build -C echoproj
-
-    adb push echoproj/echo.bit.bin.gz /mnt/sdcard
-    adb push echoproj/libs/armeabi/testecho /data/local
-
-The first time, this will launch the XPS GUI, but only so that it will
-generate some makefiles. Quit from the XPS GUI once it has loaded the
-design and the build process will continue.
-
-Loading the bitfile on the device:
-    mknod /dev/xdevcfg c 259 0
-    cat /sys/devices/amba.0/f8007000.devcfg/prog_done
-    zcat /mnt/sdcard/echo.bit.bin.gz > /dev/xdevcfg
-    cat /sys/devices/amba.0/f8007000.devcfg/prog_done
-    chmod agu+rwx /dev/fpga0
-
-When we run it on the device:
-    / # /data/local/testecho 
-    Mapped device fpga0 at 0xb6f4b000
-    Saying 42
-    PortalInterface::exec()
-    heard 42
+To run on a zedboard with IP address aa.bb.cc.dd:
+    RUNPARAM=aa.bb.cc.dd make echo.zedrun
 
 Memcpy Example
 --------------
 
-    ./genxpsprojfrombsv -B vc707 -p memcpyproj -b Memcpy examples/memcpy/Memcpy.bsv bsv/BlueScope.bsv bsv/AxiDMA.bsv
+    BOARD=vc707 make -C examples/memcpy
 
 
 LoadStore Example
