@@ -49,8 +49,6 @@ struct portal_data {
         struct miscdevice misc;       /* must be first element (passed to misc_register) */
         wait_queue_head_t wait_queue;
         dma_addr_t        dev_base_phys;
-        dma_addr_t        ind_reg_base_phys;
-        void             *dev_base_virt;
         void             *ind_reg_base_virt;
         unsigned char     portal_irq;
         int               irq_requested;
@@ -98,8 +96,7 @@ static int portal_open(struct inode *inode, struct file *filep)
         u32 int_status, int_en;
         struct portal_data *portal_data = filep->private_data;
 
-        driver_devel("%s: %s ind_reg_base_phys %lx\n", __FUNCTION__, portal_data->misc.name,
-                     (long)portal_data->ind_reg_base_phys);
+        driver_devel("%s: %s\n", __FUNCTION__, portal_data->misc.name);
         //dump_ind_regs("portal_open", portal_data);
         if (!portal_data->irq_requested) {
                 printk("%s about to call request_irq\n", __func__);
@@ -211,6 +208,7 @@ int portal_init_driver(struct platform_device *pdev)
         struct portal_data *portal_data;
         struct resource *reg_res, *irq_res;
         int rc = 0, reg_range= 1 << 14;
+        dma_addr_t ind_reg_base_phys;
 
         const char *dname = (char *)of_get_property(pdev->dev.of_node, "device-name", &size);
         if (!dname) {
@@ -234,17 +232,15 @@ int portal_init_driver(struct platform_device *pdev)
         portal_data->irq_requested = 0;
         portal_data->misc.name = dname;
         portal_data->dev_base_phys = reg_res->start;
-        portal_data->ind_reg_base_phys = reg_res->start + (3 << 14);
-        portal_data->dev_base_virt = ioremap_nocache(portal_data->dev_base_phys,
-                reg_res->end - reg_res->start);
-        portal_data->ind_reg_base_virt = ioremap_nocache(portal_data->ind_reg_base_phys,
+        ind_reg_base_phys = reg_res->start + (3 << 14);
+        //void *dev_base_virt = ioremap_nocache(portal_data->dev_base_phys, reg_res->end - reg_res->start);
+        portal_data->ind_reg_base_virt = ioremap_nocache(ind_reg_base_phys,
                 reg_range);
         init_waitqueue_head(&portal_data->wait_queue);
         portal_data->portal_irq = irq_res->start;
-        dev_set_drvdata(&pdev->dev, (void *)portal_data);
 
         pr_info("%s ind_reg_base phys %x/%x virt %p\n", portal_data->misc.name,
-                portal_data->ind_reg_base_phys, reg_range, portal_data->ind_reg_base_virt);
+                ind_reg_base_phys, reg_range, portal_data->ind_reg_base_virt);
 
         driver_devel("%s:%d portal_data=%p\n", __func__, __LINE__, portal_data);
         portal_data->misc.minor = MISC_DYNAMIC_MINOR;
@@ -252,14 +248,9 @@ int portal_init_driver(struct platform_device *pdev)
         portal_data->misc.parent = NULL;
         misc_register( &portal_data->misc);
 
-        driver_devel("%s:%d about to return\n", __func__, __LINE__);
-        return 0;
-
 err_mem:
-        if (portal_data) {
-                kfree(portal_data);
-        }
-        dev_set_drvdata(&pdev->dev, NULL);
+        dev_set_drvdata(&pdev->dev, (void *)portal_data);
+        driver_devel("%s:%d about to return %d\n", __func__, __LINE__, rc);
         return rc;
 }
 
