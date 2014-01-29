@@ -46,10 +46,8 @@
 #define PORTAL_NAME_SZ 20
 
 struct portal_data {
-        struct device    *dev;
-        struct miscdevice misc;
+        struct miscdevice misc;       /* must be first element (passed to misc_register) */
         wait_queue_head_t wait_queue;
-        const char       *device_name;
         dma_addr_t        dev_base_phys;
         dma_addr_t        ind_reg_base_phys;
         void             *dev_base_virt;
@@ -78,9 +76,9 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
         //dump_ind_regs("ISR a", portal_data);
         int_status = readl(portal_data->ind_reg_base_virt + 0);
         int_en  = readl(portal_data->ind_reg_base_virt + 4);
-        driver_devel("%s IRQ %s %d %x %x\n", __func__, portal_data->device_name, irq, int_status, int_en);
+        driver_devel("%s IRQ %s %d %x %x\n", __func__, portal_data->misc.name, irq, int_status, int_en);
 
-        if(int_status){
+        if (int_status) {
                 // disable interrupt.  this will be enabled by user mode
                 // driver  after all the HW->SW FIFOs have been emptied
                 writel(0, portal_data->ind_reg_base_virt + 0x4);
@@ -98,33 +96,26 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
 static int portal_open(struct inode *inode, struct file *filep)
 {
         u32 int_status, int_en;
-        struct miscdevice *miscdev = filep->private_data;
-        struct portal_data *portal_data =
-                container_of(miscdev, struct portal_data, misc);
+        struct portal_data *portal_data = filep->private_data;
 
-        driver_devel("%s: %s ind_reg_base_phys %lx\n", __FUNCTION__, portal_data->device_name,
+        driver_devel("%s: %s ind_reg_base_phys %lx\n", __FUNCTION__, portal_data->misc.name,
                      (long)portal_data->ind_reg_base_phys);
         //dump_ind_regs("portal_open", portal_data);
-        filep->private_data = portal_data;
-        if(!portal_data->irq_requested){
+        if (!portal_data->irq_requested) {
                 printk("%s about to call request_irq\n", __func__);
                 // read the interrupt as a sanity check
                 int_status = readl(portal_data->ind_reg_base_virt + 0);
                 int_en  = readl(portal_data->ind_reg_base_virt + 4);
-                driver_devel("%s IRQ %s %x %x\n", __func__, portal_data->device_name, int_status, int_en);
-
-                if (request_irq(portal_data->portal_irq, portal_isr, IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->device_name, portal_data)) {
+                driver_devel("%s IRQ %s %x %x\n", __func__, portal_data->misc.name, int_status, int_en);
+                if (request_irq(portal_data->portal_irq, portal_isr, IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->misc.name, portal_data)) {
                         portal_data->portal_irq = 0;
                         printk("%s err_bb\n", __func__);
-                        if(portal_data->portal_irq)
-                                free_irq(portal_data->portal_irq, portal_data);
                         return -EFAULT;
                 }
                 portal_data->irq_requested = 1;
         }
         return 0;
 }
-
 
 long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
@@ -150,7 +141,7 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 }
                 if (copy_to_user((void __user *)arg, &request, sizeof(request)))
                         return -EFAULT;
-                return status;
+                return 0;
                 }
                 break;
         default:
@@ -179,7 +170,7 @@ int portal_mmap(struct file *filep, struct vm_area_struct *vma)
                                vma->vm_end - vma->vm_start, vma->vm_page_prot))
                 return -EAGAIN;
         printk("%s req_len=%lx off=%lx\n", __FUNCTION__, req_len, off);
-        if(0)
+        if (0)
                 dump_ind_regs(__FUNCTION__, portal_data);
         return 0;
 }
@@ -193,8 +184,8 @@ unsigned int portal_poll (struct file *filep, poll_table *poll_table)
         poll_wait(filep, &portal_data->wait_queue, poll_table);
         if (int_status & 1)
                 mask = POLLIN | POLLRDNORM;
-        if(0)
-                printk("%s: %s int_status=%x mask=%x\n", __FUNCTION__, portal_data->device_name, int_status, mask);
+        if (0)
+                printk("%s: %s int_status=%x mask=%x\n", __FUNCTION__, portal_data->misc.name, int_status, mask);
         return mask;
 }
 
@@ -217,20 +208,16 @@ static const struct file_operations portal_fops = {
 int portal_init_driver(struct platform_device *pdev)
 {
         int size;
-        const char *device_name;
-        struct device *dev = &pdev->dev;
         struct portal_data *portal_data;
-        struct miscdevice *miscdev;
         struct resource *reg_res, *irq_res;
         int rc = 0, reg_range= 1 << 14;
 
-        driver_devel("portal_init_driver\n");
-        device_name = (char *)of_get_property(pdev->dev.of_node, "device-name", &size);
-        if (!device_name) {
+        const char *dname = (char *)of_get_property(pdev->dev.of_node, "device-name", &size);
+        if (!dname) {
                 pr_err("Error %s getting device-name\n", DRIVER_NAME);
                 return -EINVAL;
         }
-        driver_devel("%s: device_name=%s\n", DRIVER_NAME, device_name);
+        driver_devel("%s: device_name=%s\n", DRIVER_NAME, dname);
         reg_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
         irq_res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
         if (!reg_res || !irq_res) {
@@ -245,7 +232,7 @@ int portal_init_driver(struct platform_device *pdev)
                 goto err_mem;
         }
         portal_data->irq_requested = 0;
-        portal_data->device_name = device_name;
+        portal_data->misc.name = dname;
         portal_data->dev_base_phys = reg_res->start;
         portal_data->ind_reg_base_phys = reg_res->start + (3 << 14);
         portal_data->dev_base_virt = ioremap_nocache(portal_data->dev_base_phys,
@@ -254,21 +241,16 @@ int portal_init_driver(struct platform_device *pdev)
                 reg_range);
         init_waitqueue_head(&portal_data->wait_queue);
         portal_data->portal_irq = irq_res->start;
-        portal_data->dev = dev;
+        dev_set_drvdata(&pdev->dev, (void *)portal_data);
 
-        pr_info("%s ind_reg_base phys %x/%x virt %p\n",
-                portal_data->device_name,
+        pr_info("%s ind_reg_base phys %x/%x virt %p\n", portal_data->misc.name,
                 portal_data->ind_reg_base_phys, reg_range, portal_data->ind_reg_base_virt);
 
-        dev_set_drvdata(dev, (void *)portal_data);
-
-        miscdev = &portal_data->misc;
-        driver_devel("%s:%d miscdev=%p portal_data=%p\n", __func__, __LINE__, miscdev, portal_data);
-        miscdev->minor = MISC_DYNAMIC_MINOR;
-        miscdev->name = portal_data->device_name;
-        miscdev->fops = &portal_fops;
-        miscdev->parent = NULL;
-        misc_register(miscdev);
+        driver_devel("%s:%d portal_data=%p\n", __func__, __LINE__, portal_data);
+        portal_data->misc.minor = MISC_DYNAMIC_MINOR;
+        portal_data->misc.fops = &portal_fops;
+        portal_data->misc.parent = NULL;
+        misc_register( &portal_data->misc);
 
         driver_devel("%s:%d about to return\n", __func__, __LINE__);
         return 0;
@@ -277,20 +259,17 @@ err_mem:
         if (portal_data) {
                 kfree(portal_data);
         }
-        dev_set_drvdata(dev, NULL);
+        dev_set_drvdata(&pdev->dev, NULL);
         return rc;
 }
 
 int portal_deinit_driver(struct platform_device *pdev)
 {
-        struct device *dev = &pdev->dev;
-        struct portal_data *portal_data =
-                (struct portal_data *)dev_get_drvdata(dev);
-
-        if(portal_data->irq_requested)
+        struct portal_data *portal_data = (struct portal_data *)dev_get_drvdata(&pdev->dev);
+        if (portal_data->irq_requested)
                 free_irq(portal_data->portal_irq, portal_data);
         kfree(portal_data);
-        dev_set_drvdata(dev, NULL);
+        dev_set_drvdata(&pdev->dev, NULL);
         return 0;
 }
 
@@ -301,8 +280,7 @@ static int portal_of_probe(struct platform_device *pdev)
 
 static int portal_of_remove(struct platform_device *pdev)
 {
-        struct device *dev = &pdev->dev;
-        struct portal_data *portal_data =  (struct portal_data *)dev_get_drvdata(dev);
+        struct portal_data *portal_data = (struct portal_data *)dev_get_drvdata(&pdev->dev);
         driver_devel("%s:%s\n",__FUNCTION__, pdev->name);
         misc_deregister(&portal_data->misc);
         return portal_deinit_driver(pdev);
