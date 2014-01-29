@@ -48,6 +48,21 @@ $(zedruns):
 	# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
 	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
 
+zedruns = $(addsuffix .zedrun, $(testnames))
+
+zctests = $(addsuffix .zc702, $(testnames))
+
+$(zctests):
+	rm -fr examples/$(basename $@)/zc702
+	make BOARD=zc702 -C examples/$(basename $@) all
+
+zcruns = $(addsuffix .zcrun, $(testnames))
+
+$(zcruns):
+	(cd consolable; make)
+	# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc702
+	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zc702 -name \*.gz` `find examples/$(basename $@)/zc702 -name android_exe | grep libs`
+
 gentests = $(addsuffix .gen, $(testnames))
 
 $(gentests):
