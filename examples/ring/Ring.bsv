@@ -111,23 +111,17 @@ module mkRingRequest#(RingIndication indication,
 	    let rv <- cmd_read_chan.readData.get();
 	    cmd <= rv.data;
 	    $display("cmdDispatch %h", cmd);
-	    //cmdifc.request.put(rv.data);
+	    cmdifc.request.put(rv.data);
 	 endaction
 	 for (dispCtr <= 1; dispCtr < 8; dispCtr <= dispCtr + 1)
 	    action
 	       let rv <- cmd_read_chan.readData.get();
-	       //cmdifc.request.put(rv.data);
+	       cmdifc.request.put(rv.data);
 	    endaction
       endseq
    endseq;
    
    
-   Stmt cmdCompletion =
-   seq
-      while(True) seq
-	 while(!(hwenabled && statusRing.notFull())) noAction;
-      endseq
-   endseq;
 
    Stmt responseArbiter =
    seq
@@ -163,9 +157,13 @@ module mkRingRequest#(RingIndication indication,
       endseq
    endseq;
    
+   rule writeAck(Empty);
+      let tag <- status_write_chan.writeDone.get();
+      $display("status write done tag=%h", tag);
+   endrule
+   
    mkAutoFSM (cmdFetch);
    mkAutoFSM (cmdDispatch);
-   mkAutoFSM (cmdCompletion);
    mkAutoFSM (responseArbiter);
 
 
