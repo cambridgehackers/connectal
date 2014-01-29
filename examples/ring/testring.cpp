@@ -99,11 +99,17 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   r->cached_space = size - 64;
   r->ringid = ringid;
   ring->set(ringid, REG_BASE, 0);         // bufferbase, relative to base
+  sem_wait(&conf_sem);
   ring->set(ringid, REG_END, size);      // bufferend
+  sem_wait(&conf_sem);
   ring->set(ringid, REG_FIRST, 0);         // bufferfirst
+  sem_wait(&conf_sem);
   ring->set(ringid, REG_LAST, 0);         // bufferlast 
+  sem_wait(&conf_sem);
   ring->set(ringid, REG_MASK, size - 1);  // buffermask
+  sem_wait(&conf_sem);
   ring->set(ringid, REG_HANDLE, ref);       // memhandle
+  sem_wait(&conf_sem);
 }
 
 uint64_t *ring_next(struct SWRing *r)
@@ -145,6 +151,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd)
   r->first = next_first;
   r->cached_space -= 64;
   ring->set(r->ringid, REG_FIRST, r->first);         // bufferfirst
+  sem_wait(&conf_sem);
 }
 
 int main(int argc, const char **argv)
@@ -202,6 +209,7 @@ int main(int argc, const char **argv)
   ring_init(&cmd_ring, 0, ref_cmdAlloc, cmdBuffer, cmd_ring_sz);
   ring_init(&status_ring, 1, ref_statusAlloc, statusBuffer, status_ring_sz);
 
+  ring->hwenable(1);  /* turn on engines */
   fprintf(stderr, "main about to issue requests\n");
 
   for (i = 0; i < 256; i += 1) {
