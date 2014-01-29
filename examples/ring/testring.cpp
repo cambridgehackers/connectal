@@ -19,21 +19,20 @@ RingRequestProxy *ring = new RingRequestProxy(IfcNames_RingRequest);
 DMARequestProxy *dma = new DMARequestProxy(IfcNames_DMARequest);
 
 PortalAlloc *cmdAlloc;
-char *cmdBuffer = 0;
 PortalAlloc *statusAlloc;
-char *statusBuffer = 0;
 PortalAlloc *scratchAlloc;
+
+char *cmdBuffer = 0;
+char *statusBuffer = 0;
 char *scratchBuffer = 0;
 
 size_t cmd_ring_sz = 4096;
 size_t status_ring_sz = 4096;
 size_t scratch_sz = 1<<20; /* 1 MB */
-size_t scratch_words = scratch_sz >> 8;
 
 #define CMD_NOP 0
 #define CMD_COPY 1
 #define CMD_ECHO 2
-
 
 sem_t conf_sem;
 
@@ -48,12 +47,12 @@ void dump(const char *prefix, char *buf, size_t len)
 class RingIndication : public RingIndicationWrapper
 {
 public:
-  virtual void setResult(unsigned long cmd, unsigned long regist, unsigned long long addr) {
+  virtual void setResult(long unsigned int cmd, long unsigned int regist, long unsigned int addr) {
     fprintf(stderr, "setResult(cmd %ld regist %ld addr %llx)\n", 
 	    cmd, regist, addr);
     sem_post(&conf_sem);
   }
-  virtual void getResult(unsigned long cmd, unsigned long regist, unsigned long long addr) {
+  virtual void getResult(long unsigned int cmd, long unsigned int regist, long unsigned int addr) {
     fprintf(stderr, "getResult(cmd %ld regist %ld addr %llx)\n", 
 	    cmd, regist, addr);
     sem_post(&conf_sem);
@@ -65,6 +64,9 @@ public:
   }
   RingIndication(unsigned int id) : RingIndicationWrapper(id){}
 };
+
+RingIndication *ringIndication = 0;
+DMAIndication *dmaIndication = 0;
 
 struct SWRing {
   unsigned int ref;
@@ -156,6 +158,9 @@ int main(int argc, const char **argv)
     return -1;
   }
 
+  dmaIndication = new DMAIndication(IfcNames_DMAIndication);
+  ringIndication = new RingIndication(IfcNames_RingIndication);
+
   fprintf(stderr, "allocating memory...\n");
   dma->alloc(cmd_ring_sz, &cmdAlloc);
   dma->alloc(status_ring_sz, &statusAlloc);
@@ -184,10 +189,6 @@ int main(int argc, const char **argv)
   unsigned int ref_statusAlloc = dma->reference(statusAlloc);
   unsigned int ref_scratchAlloc = dma->reference(scratchAlloc);
 
-  for (int i = 0; i < scratch_words; i += 1){
-    scratchBuffer[i] = i;
-  }
-    
   dma->dCacheFlushInval(cmdAlloc, cmdBuffer);
   dma->dCacheFlushInval(statusAlloc, statusBuffer);
   dma->dCacheFlushInval(scratchAlloc, scratchBuffer);
