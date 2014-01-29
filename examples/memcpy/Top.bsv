@@ -27,13 +27,15 @@ import DmaIndicationProxy::*;
 // defined by user
 import Memcpy::*;
 
+typedef enum {MemcpyIndication, MemcpyRequest, DmaIndication, DmaConfig, BluescopeIndication, BluescopeRequest} IfcNames deriving (Eq,Bits);
+
 module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos(
     Add#(addrWidth, a__, 52),
     Add#(b__, addrWidth, 64),
     Add#(c__, 12, addrWidth),
     Add#(addrWidth, d__, 44));
 
-   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(9);
+   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    DmaReadBuffer#(64,8)   dma_stream_read_chan <- mkDmaReadBuffer();
    DmaWriteBuffer#(64,8) dma_stream_write_chan <- mkDmaWriteBuffer();
    DmaReadBuffer#(64,8)     dma_word_read_chan <- mkDmaReadBuffer();
@@ -50,16 +52,16 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos(
    Integer               numRequests = 8;
    AxiDmaServer#(addrWidth, 64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
 
-   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(1005,dma.request);
+   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
-   BlueScopeIndicationProxy blueScopeIndicationProxy <- mkBlueScopeIndicationProxy(8);
+   BlueScopeIndicationProxy blueScopeIndicationProxy <- mkBlueScopeIndicationProxy(BluescopeIndication);
    BlueScope#(64) bs <- mkBlueScope(32, dma_debug_write_chan.dmaServer, blueScopeIndicationProxy.ifc);
-   BlueScopeRequestWrapper blueScopeRequestWrapper <- mkBlueScopeRequestWrapper(1003,bs.requestIfc);
+   BlueScopeRequestWrapper blueScopeRequestWrapper <- mkBlueScopeRequestWrapper(BluescopeRequest,bs.requestIfc);
 
-   MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(7);
+   MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(MemcpyIndication);
    MemcpyRequest memcpyRequest <- mkMemcpyRequest(memcpyIndicationProxy.ifc, dma_stream_read_chan.dmaServer,
 						  dma_stream_write_chan.dmaServer, dma_word_read_chan.dmaServer, bs);
-   MemcpyRequestWrapper memcpyRequestWrapper <- mkMemcpyRequestWrapper(1008,memcpyRequest);
+   MemcpyRequestWrapper memcpyRequestWrapper <- mkMemcpyRequestWrapper(MemcpyRequest,memcpyRequest);
 
    Vector#(6,StdPortal) portals;
    portals[0] = memcpyRequestWrapper.portalIfc;
