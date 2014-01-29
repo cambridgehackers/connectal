@@ -113,7 +113,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
       Reg#(Bit#(5))  writeLen <- mkReg(0);
       Reg#(Bit#(6)) writeId <- mkReg(0);
 
-      rule req_ar if (readLen == 0);
+      rule req_ar if (readLen == 0 && writeLen == 0);
 	 let req <- master.req_ar.get();
 	 Bit#(5) rlen = extend(req.len)+1;
 	 //$display("req_ar: addr=%h len=%d", req.address, rlen);
@@ -132,7 +132,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 	 master.resp_read.put(resp);
       endrule
 
-      rule req_aw if (writeLen == 0);
+      rule req_aw if (writeLen == 0 && writeLen == 0);
 	 let req <- master.req_aw.get();
 	 Bit#(5) wlen = extend(req.len)+1;
 	 //$display("req_aw: addr=%h len=%d", req.address, wlen);
