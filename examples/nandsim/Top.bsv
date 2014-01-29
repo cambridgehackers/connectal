@@ -7,6 +7,7 @@ import BRAM::*;
 import DefaultValue::*;
 
 // portz libraries
+import Leds::*;
 import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;

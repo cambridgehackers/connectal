@@ -5,6 +5,7 @@ import StmtFSM::*;
 import FIFO::*;
 
 // portz libraries
+import Leds::*;
 import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;
