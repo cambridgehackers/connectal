@@ -92,79 +92,75 @@ instance SelectBsimRdmaReadWrite#(128);
    endmodule
 endinstance
 		 
-typedef (function Module#(PortalTop#(40, nmasters, dsz, ipins)) mkpt()) MkPortalTop#(numeric type nmasters, numeric type dsz, type ipins);
+typedef (function Module#(PortalTop#(40, dsz, ipins)) mkpt()) MkPortalTop#(numeric type dsz, type ipins);
 
-module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructor)(Empty)
+module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
    provisos (SelectBsimRdmaReadWrite#(dsz));
 
-   Integer nmasters = valueOf(nmasters);
    let top <- constructor();
-   Axi3Master#(40,dsz,6) master = ?;
-   if (nmasters > 0) begin
-      master = top.m_axi[0];
 
-      BsimRdmaReadWrite#(dsz) rw <- selectBsimRdmaReadWrite();
-
-
-      Reg#(Bit#(40)) readAddr <- mkReg(0);
-      Reg#(Bit#(5))  readLen <- mkReg(0);
-      Reg#(Bit#(6)) readId <- mkReg(0);
-      Reg#(Bit#(40)) writeAddr <- mkReg(0);
-      Reg#(Bit#(5))  writeLen <- mkReg(0);
-      Reg#(Bit#(6)) writeId <- mkReg(0);
-
-      rule req_ar if (readLen == 0 && writeLen == 0);
-	 let req <- master.req_ar.get();
-	 Bit#(5) rlen = extend(req.len)+1;
-	 //$display("req_ar: addr=%h len=%d", req.address, rlen);
-	 readAddr <= req.address;
-	 readLen <= rlen;
-	 readId <= req.id;
-      endrule
-      rule read_resp if (readLen > 0);
-	 let handle = readAddr[39:32];
-	 let addr = readAddr[31:0];
-	 Bit#(dsz) v <- rw.read_pareff(extend(handle), addr);
-	 //$display("read_resp: handle=%d addr=%h v=%h", handle, addr, v);
-	 readLen <= readLen - 1;
-	 readAddr <= readAddr + fromInteger(valueOf(dsz)/8);
-	 let resp = Axi3ReadResponse { data: v, resp: 0, last: pack(readLen == 1), id: readId};
-	 master.resp_read.put(resp);
-      endrule
-
-      rule req_aw if (writeLen == 0 && writeLen == 0);
-	 let req <- master.req_aw.get();
-	 Bit#(5) wlen = extend(req.len)+1;
-	 //$display("req_aw: addr=%h len=%d", req.address, wlen);
-	 writeAddr <= req.address;
-	 writeLen <= wlen;
-	 writeId <= req.id;
-      endrule
-
-      FIFO#(Axi3WriteResponse#(6)) bFifo <- mkFIFO();
-
-      rule write_resp if (writeLen > 0);
-	 let handle = writeAddr[39:32];
-	 let addr = writeAddr[31:0];
-	 let resp <- master.resp_write.get();
-	 //$display("write_resp: handle=%d addr=%h v=%h", handle, addr, resp.data);
-	 rw.write_pareff(extend(handle), addr, resp.data);
-	 writeLen <= writeLen - 1;
-	 writeAddr <= writeAddr + fromInteger(valueOf(dsz)/8);
-	 if (writeLen == 1)
-	    bFifo.enq(Axi3WriteResponse { id: writeId, resp: 0 });
-      endrule
-
-      rule resp_b;
-	 let resp = bFifo.first();
-	 bFifo.deq();
-	 master.resp_b.put(resp);
-      endrule
-   end
+   Axi3Master#(40,dsz,6) master = top.m_axi;
+   
+   BsimRdmaReadWrite#(dsz) rw <- selectBsimRdmaReadWrite();
+   
+   
+   Reg#(Bit#(40)) readAddrr <- mkReg(0);
+   Reg#(Bit#(5))  readLen <- mkReg(0);
+   Reg#(Bit#(6)) readId <- mkReg(0);
+   Reg#(Bit#(40)) writeAddrr <- mkReg(0);
+   Reg#(Bit#(5))  writeLen <- mkReg(0);
+   Reg#(Bit#(6)) writeId <- mkReg(0);
+   
+   rule req_ar if (readLen == 0 && writeLen == 0);
+      let req <- master.req_ar.get();
+      Bit#(5) rlen = extend(req.len)+1;
+      //$display("req_ar: addr=%h len=%d", req.address, rlen);
+      readAddrr <= req.address;
+      readLen <= rlen;
+      readId <= req.id;
+   endrule
+   rule read_resp if (readLen > 0);
+      let handle = readAddrr[39:32];
+      let addr = readAddrr[31:0];
+      Bit#(dsz) v <- rw.read_pareff(extend(handle), addr);
+      //$display("read_resp: handle=%d addr=%h v=%h", handle, addr, v);
+      readLen <= readLen - 1;
+      readAddrr <= readAddrr + fromInteger(valueOf(dsz)/8);
+      let resp = Axi3ReadResponse { data: v, resp: 0, last: pack(readLen == 1), id: readId};
+      master.resp_read.put(resp);
+   endrule
+   
+   rule req_aw if (writeLen == 0 && writeLen == 0);
+      let req <- master.req_aw.get();
+      Bit#(5) wlen = extend(req.len)+1;
+      //$display("req_aw: addr=%h len=%d", req.address, wlen);
+      writeAddrr <= req.address;
+      writeLen <= wlen;
+      writeId <= req.id;
+   endrule
+   
+   FIFO#(Axi3WriteResponse#(6)) bFifo <- mkFIFO();
+   
+   rule write_resp if (writeLen > 0);
+      let handle = writeAddrr[39:32];
+      let addr = writeAddrr[31:0];
+      let resp <- master.resp_write.get();
+      //$display("write_resp: handle=%d addr=%h v=%h", handle, addr, resp.data);
+      rw.write_pareff(extend(handle), addr, resp.data);
+      writeLen <= writeLen - 1;
+      writeAddrr <= writeAddrr + fromInteger(valueOf(dsz)/8);
+      if (writeLen == 1)
+	 bFifo.enq(Axi3WriteResponse { id: writeId, resp: 0 });
+   endrule
+   
+   rule resp_b;
+      let resp = bFifo.first();
+      bFifo.deq();
+      master.resp_b.put(resp);
+   endrule
 
    let wf <- mkPipelineFIFO;
    let init_seq = (action 
-		      //$display("mkBsimTopFromPortal::init_seq (start)");
 		      initPortal(0);
 		      initPortal(1);
 		      initPortal(2);
@@ -173,7 +169,6 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
 		      initPortal(5);
 		      initPortal(6);
 		      initPortal(7);
-		      //$display("mkBsimTopFromPortal::init_seq (end)");
                    endaction);
    let init_fsm <- mkOnce(init_seq);
    
@@ -197,7 +192,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(nmasters,dsz,ipins) constructo
    endrule
    rule rdReq (readReq());
       let ra <- readAddr;
-	 top.ctrl.req_ar.put(Axi3ReadRequest { address: ra, len: 0, size: axiBusSize(32), id: 0, prot: 0, burst: 1, cache: 'b11, qos: 0, lock: 0 });
+      top.ctrl.req_ar.put(Axi3ReadRequest { address: ra, len: 0, size: axiBusSize(32), id: 0, prot: 0, burst: 1, cache: 'b11, qos: 0, lock: 0 });
    endrule
    rule rdResp;
       let rd <- top.ctrl.resp_read.get();
