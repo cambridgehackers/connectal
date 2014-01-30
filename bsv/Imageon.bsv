@@ -44,8 +44,6 @@ interface ImageonSensorRequest;
     method Action set_host_oe(Bit#(1) v);
     method Action set_trigger_cnt_trigger(Bit#(32) v);
 endinterface
-interface ImageonSensorIndication;
-endinterface
 
 interface ImageonSensor;
     interface ImageonSensorRequest control;
