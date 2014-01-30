@@ -40,7 +40,7 @@ interface RingRequest;
    method Action set(Bit#(1) cmd, Bit#(3) regist, Bit#(32) addr);
    method Action get(Bit#(1) cmd, Bit#(3) regist);
    method Action hwenable(Bit#(1) en);
-   method Action doCommandIndirect(Bit#(32) addr);
+   method Action doCommandIndirect(Bit#(64) addr);
    method Action doCommandImmediate(Bit#(64) data);
 endinterface
 
