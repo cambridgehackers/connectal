@@ -1,3 +1,62 @@
+/* Copyright (c) 2013 Quanta Research Cambridge, Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
+/*
+ * Implementation of:
+ *    MP algorithm on pages 7-11 from "Pattern Matching Algorithms" by
+ *       Alberto Apostolico, Zvi Galil, 1997
+ *
+ *    procedure MP(x, t: string; m, n: integer);
+ *    begin
+ *        i := 1; j := 1;
+ *        while j <= n do begin
+ *            while (i = m + 1) or (i > 0 and x[i] != t[j]) do j := MP_next[i];
+ *            i := i + 1; j := j + 1;
+ *            if i = m + 1 then writeln('x occurs in t at position ', j - i + 1);
+ *        end;
+ *    end;
+ *    
+ *    procedure Compute_borders(x: string; m: integer);
+ *    begin
+ *        Border[0] := -1;
+ *        for i := 1 to m do begin
+ *            j := Border[i - 1];
+ *            while j >= 0 and x[i] != x[j + 1] do j := Border[j];
+ *            Border[i] := j + 1;
+ *        end;
+ *    end;
+ *    
+ *    procedure Compute_MP_next(x: string; m: integer);
+ *    begin
+ *        MP_next[i] := 0; j := 0;
+ *        for i := 1 to m do begin
+ *            { at this point, we have j = MP_next[i] }
+ *            while j > 0 and x[i] != x[j] do j := MP_next[j];
+ *            j := j + 1;
+ *            MP_next[i + 1] := j;
+ *        end;
+ *    end;
+ *
+ */
+
 #include <stdio.h>
 #include <sys/mman.h>
 #include <stdlib.h>

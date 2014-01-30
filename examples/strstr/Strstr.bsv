@@ -31,44 +31,6 @@ import AxiMasterSlave::*;
 import Dma::*;
 import DmaUtils::*;
 
-/*
- * Implementation of:
- *    MP algorithm on pages 7-11 from "Pattern Matching Algorithms" by
- *       Alberto Apostolico, Zvi Galil, 1997
- *
- *    procedure MP(x, t: string; m, n: integer);
- *    begin
- *        i := 1; j := 1;
- *        while j <= n do begin
- *            while (i = m + 1) or (i > 0 and x[i] != t[j]) do j := MP_next[i];
- *            i := i + 1; j := j + 1;
- *            if i = m + 1 then writeln('x occurs in t at position ', j - i + 1);
- *        end;
- *    end;
- *    
- *    procedure Compute_borders(x: string; m: integer);
- *    begin
- *        Border[0] := -1;
- *        for i := 1 to m do begin
- *            j := Border[i - 1];
- *            while j >= 0 and x[i] != x[j + 1] do j := Border[j];
- *            Border[i] := j + 1;
- *        end;
- *    end;
- *    
- *    procedure Compute_MP_next(x: string; m: integer);
- *    begin
- *        MP_next[i] := 0; j := 0;
- *        for i := 1 to m do begin
- *            { at this point, we have j = MP_next[i] }
- *            while j > 0 and x[i] != x[j] do j := MP_next[j];
- *            j := j + 1;
- *            MP_next[i + 1] := j;
- *        end;
- *    end;
- *
- */
-
 interface StrstrRequest;
    method Action search(Bit#(32) needleHandle, Bit#(32) haystackHandle, Bit#(32) mpNextHandle, Bit#(32) needle_len, Bit#(32) haystack_len);
 endinterface
