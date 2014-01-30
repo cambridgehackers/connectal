@@ -154,6 +154,19 @@ void ring_send(struct SWRing *r, uint64_t *cmd)
   sem_wait(&conf_sem);
 }
 
+void *statusThreadProc(void *arg)
+{
+  int i;
+  uint64_t *msg;
+  for (;;) {
+    while ((msg = ring_next(&status_ring)) == NULL);
+    printf("Received %x %x\n", msg[0], msg[7]);
+    ring_pop(&status_ring);
+  }
+
+}
+
+
 int main(int argc, const char **argv)
 {
   void *v;
@@ -209,6 +222,12 @@ int main(int argc, const char **argv)
   ring_init(&cmd_ring, 0, ref_cmdAlloc, cmdBuffer, cmd_ring_sz);
   ring_init(&status_ring, 1, ref_statusAlloc, statusBuffer, status_ring_sz);
 
+  pthread_t ltid;
+  fprintf(stderr, "creating status thread\n");
+  if(pthread_create(&ltid, NULL,  statusThreadProc, NULL)){
+   fprintf(stderr, "error creating exec thread\n");
+   exit(1);
+  }
   ring->hwenable(1);  /* turn on engines */
   fprintf(stderr, "main about to issue requests\n");
 
@@ -223,8 +242,18 @@ int main(int argc, const char **argv)
     tcmd[2] = (((long unsigned) ref_scratchAlloc) << 32)
       | (256 * (i + 1));
     tcmd[3] = 256; // byte count
+    tcmd[4] = 0xdeadbeef;
+    tcmd[5] = 0xfeedface;
+    tcmd[6] = 0x012345789abcdefL;
+    tcmd[7] = 0xfedcba9876543210L;
     ring_send(&cmd_ring, tcmd);
     tcmd[0] = ((unsigned long) CMD_ECHO) << 56;
+    tcmd[1] = 0x111;
+    tcmd[2] = 0x222;
+    tcmd[3] = 0x333;
+    tcmd[4] = 0x444;
+    tcmd[5] = 0x555;
+    tcmd[6] = 0x666;
     tcmd[7] = tcmd[0] + i;
     ring_send(&cmd_ring, tcmd);
   }
