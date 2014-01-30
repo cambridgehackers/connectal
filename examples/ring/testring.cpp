@@ -89,6 +89,10 @@ struct SWRing {
 struct SWRing cmd_ring;
 struct SWRing status_ring;
 
+uint64_t fetch(uint64_t *p)
+  return p[0];
+}
+
 void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size_t size)
 {
   r->size = size;
