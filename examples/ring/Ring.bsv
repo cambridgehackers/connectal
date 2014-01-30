@@ -93,7 +93,7 @@ module mkRingRequest#(RingIndication indication,
 	       seq
 	       if (cmdRing.bufferfirst != cmdRing.bufferlast) 
 		  seq
-		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", cmdRing.memhandle, cmdRing.bufferlast, 8, cmdFetchTag);
+		     //$display ("cmdFetch handle=%h address=%h burst=%h tag=%h", cmdRing.memhandle, cmdRing.bufferlast, 8, cmdFetchTag);
 		     cmd_read_chan.readReq.put(
 			DmaRequest{handle: cmdRing.memhandle,
 			   address: cmdRing.bufferlast, burstLen: 8, tag: cmdFetchTag});
@@ -114,7 +114,7 @@ module mkRingRequest#(RingIndication indication,
 	       cmd <= rv;
 	    endaction
 	    // wait a cycle so cmd is valid!
-	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
+	    //$display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
 	    cmdifc.request.put(cmd.data);
 	 endseq
 	 for (dispCtr <= 1; dispCtr < 8; dispCtr <= dispCtr + 1)
@@ -133,8 +133,8 @@ module mkRingRequest#(RingIndication indication,
       while(True) seq
 	 if (statusRing.notFull() && copyEngine.response.notEmpty())
 	    seq
-	       $display("responseArbiter copyEngine completion");
-	       $display("status write handle=%d address=%h burst=%h tag=%h",
+	       //$display("responseArbiter copyEngine completion");
+	       //$display("status write handle=%d address=%h burst=%h tag=%h",
 		  statusRing.memhandle, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{handle: statusRing.memhandle, 
@@ -150,8 +150,8 @@ module mkRingRequest#(RingIndication indication,
 
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    seq
-	       $display("responseArbiter echoEngine completion");
-	       $display("status write handle=%d address=%h burst=%h tag=%h",
+	       //$display("responseArbiter echoEngine completion");
+	       //$display("status write handle=%d address=%h burst=%h tag=%h",
 		  statusRing.memhandle, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{handle: statusRing.memhandle, 
@@ -170,7 +170,7 @@ module mkRingRequest#(RingIndication indication,
    
    rule writeAck;
       let tag <- status_write_chan.writeDone.get();
-      $display("status write done tag=%h", tag);
+      //$display("status write done tag=%h", tag);
    endrule
    
    mkAutoFSM (cmdFetch);
@@ -181,8 +181,11 @@ module mkRingRequest#(RingIndication indication,
       // to start a command, doCommand fires off a memory read to the
       // specified address. when it comes back, the doCommandRule will
       // handle it
-      method Action doCommandIndirect(Bit#(32) addr);
-	 //cmd_read_chan.readReq.put(addr);
+      method Action doCommandIndirect(Bit#(64) addr);
+	 cmd_read_chan.readReq.put(
+				   DmaRequest{handle: addr[63:32],
+	 address: addr[31:0], burstLen: 8, tag: cmdFetchTag});
+   	 cmdFetchTag <= cmdFetchTag + 1;
       endmethod
    
       method Action doCommandImmediate(Bit#(64) data);
