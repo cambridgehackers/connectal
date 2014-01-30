@@ -482,3 +482,16 @@ module mkBIBUF#(Inout#(a) v)(BIBUF#(sa)) provisos(Bits#(a, sa));
     ifc_inout pad(PAD);
 endmodule
 
+
+(* always_ready, always_enabled *)
+interface B2C;
+    interface Clock c;
+endinterface
+import "BVI" GenB2C =
+module mkB2C#(Bit#(1) v)(B2C);
+    no_clock;
+    no_reset;
+    output_clock c();
+    port B = v;
+endmodule
+
