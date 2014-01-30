@@ -64,7 +64,7 @@ module mkRingRequest#(RingIndication indication,
    RingBuffer statusRing <- mkRingBuffer;
    Reg#(Bool) hwenabled <- mkReg(False);
    Reg#(Bool) cmdBusy <- mkReg(False);
-   Reg#(Bit#(64)) cmd <- mkReg(0);
+   Reg#(DmaData#(64)) cmd <- mkReg(DmaData{data:0, tag:0});
    Reg#(Bit#(4)) ii <- mkReg(0);
    Reg#(Bit#(4)) respCtr <- mkReg(0);
    Reg#(Bit#(4)) dispCtr <- mkReg(0);
@@ -72,7 +72,7 @@ module mkRingRequest#(RingIndication indication,
    Reg#(Bit#(6)) statusTag <- mkReg(0);
    Reg#(Bool) cmdFetchEn <- mkReg(False);
 
-   let engineselect = pack(cmd)[63:56];
+   let engineselect = cmd.data[63:56];
    function ServerF#(Bit#(64), Bit#(64)) cmdifc();
       if (engineselect == zeroExtend(pack(CmdNOP))) 
 	 return nopEngine;
@@ -108,12 +108,12 @@ module mkRingRequest#(RingIndication indication,
    seq
       while (True) seq
 //	 $display("cmdDispatch FSM TOP");
-	 action
-	    let rv <- cmd_read_chan.readData.get();
-	    cmd <= rv.data;
-	    $display("cmdDispatch 0 tag=%h %h", rv.tag, rv.data);
-	    cmdifc.request.put(rv.data);
-	 endaction
+	 seq
+	    cmd <= cmd_read_chan.readData.get();
+	    // wait a cycle so cmd is valid!
+	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
+	    cmdifc.request.put(cmd.data);
+	 endseq
 	 for (dispCtr <= 1; dispCtr < 8; dispCtr <= dispCtr + 1)
 	    action
 	       let rv <- cmd_read_chan.readData.get();
