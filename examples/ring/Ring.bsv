@@ -183,7 +183,7 @@ module mkRingRequest#(RingIndication indication,
       method Action doCommandIndirect(Bit#(64) addr);
 	 cmd_read_chan.readReq.put(
 				   DmaRequest{handle: addr[63:32],
-	 address: addr[31:0], burstLen: 8, tag: cmdFetchTag});
+	 address: truncate(addr[31:0]), burstLen: 8, tag: cmdFetchTag});
    	 cmdFetchTag <= cmdFetchTag + 1;
       endmethod
    
