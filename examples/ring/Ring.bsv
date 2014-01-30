@@ -177,7 +177,6 @@ module mkRingRequest#(RingIndication indication,
    mkAutoFSM (cmdDispatch);
    mkAutoFSM (responseArbiter);
 
-
       // to start a command, doCommand fires off a memory read to the
       // specified address. when it comes back, the doCommandRule will
       // handle it
@@ -191,7 +190,6 @@ module mkRingRequest#(RingIndication indication,
       method Action doCommandImmediate(Bit#(64) data);
       	 $display("doCommandImmediate %h", data);
       endmethod
-   
 
       method Action set(Bit#(1) _cmd, Bit#(3) regist, Bit#(32) addr);
 	 if (_cmd == 0)
