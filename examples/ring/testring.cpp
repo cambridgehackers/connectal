@@ -114,8 +114,8 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
 
 uint64_t *ring_next(struct SWRing *r)
 {
-  uint64_t *p = (uint64_t *) (r->base + r->last);
-  if (p[7] == 0) return (0);
+  uint64_t *p = (uint64_t *) (r->base + (long) r->last);
+  if (p[7] == 0) return (NULL);
   return (p);
 }
 
@@ -158,14 +158,13 @@ void *statusThreadProc(void *arg)
 {
   int i;
   uint64_t *msg;
+  printf("Status thread running\n");
   for (;;) {
     while ((msg = ring_next(&status_ring)) == NULL);
     printf("Received %x %x\n", msg[0], msg[7]);
     ring_pop(&status_ring);
   }
-
 }
-
 
 int main(int argc, const char **argv)
 {
@@ -235,11 +234,11 @@ int main(int argc, const char **argv)
     scratchBuffer[i] = i;
    }
   for (i = 0; i < 10; i += 1) {
-    tcmd[0] = ((unsigned long) CMD_COPY) << 56;
-    tcmd[0] |= 0x2000 + i; // tag
-    tcmd[1] = (((long unsigned) ref_scratchAlloc) << 32)
+    tcmd[0] = ((uint64_t) CMD_COPY) << 56;
+    tcmd[0] |= 0x20000000 + i; // tag
+    tcmd[1] = (((uint64_t) ref_scratchAlloc) << 32)
       | (256 * i);
-    tcmd[2] = (((long unsigned) ref_scratchAlloc) << 32)
+    tcmd[2] = (((uint64_t) ref_scratchAlloc) << 32)
       | (256 * (i + 1));
     tcmd[3] = 256; // byte count
     tcmd[4] = 0xdeadbeef;
@@ -247,14 +246,14 @@ int main(int argc, const char **argv)
     tcmd[6] = 0x012345789abcdefL;
     tcmd[7] = 0xfedcba9876543210L;
     ring_send(&cmd_ring, tcmd);
-    tcmd[0] = ((unsigned long) CMD_ECHO) << 56;
+    tcmd[0] = ((uint64_t) CMD_ECHO) << 56;
     tcmd[1] = 0x111;
     tcmd[2] = 0x222;
     tcmd[3] = 0x333;
     tcmd[4] = 0x444;
     tcmd[5] = 0x555;
     tcmd[6] = 0x666;
-    tcmd[7] = tcmd[0] + i;
+    tcmd[7] = 0xf0000000 | i;
     ring_send(&cmd_ring, tcmd);
   }
   sleep(1);
@@ -264,7 +263,10 @@ int main(int argc, const char **argv)
 	     i + 2560, scratchBuffer[i + 2560], i);
     }
   }
-
+  printf("Status dump \n");
+  for (i = 0; i < 20; i += 1) {
+    printf("Status entry %d word[7]=%08x\n", i, ((uint64_t *) status_ring.base)[(i*8)+7]);
+  }
 
   
   fprintf(stderr, "main going to sleep\n");
