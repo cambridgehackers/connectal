@@ -57,13 +57,14 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
       while(True)
 	 seq
 	    while (copyBusy) noAction;
+	    /*
 	    for (cmdCtr <= 0; cmdCtr < 8; cmdCtr <= cmdCtr + 1) 
 	       action
 		  $display("COPY %h %h", cmdCtr, f_in.first());
 		  f_in.deq();
 	       endaction
 	    
-	    /*
+	    */
 	    action
 	       copyTag <= f_in.first()[31:0];
 	       f_in.deq();  // word 0
@@ -90,12 +91,11 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
 	    $display("copyStart from %h to %h count %h",
 	       copyReadAddr, copyWriteAddr, copyReadCount);
 	    copyBusy <= True;
-	     */
 	 endseq
    endseq;
       
     rule copyReadRule (copyBusy && (copyReadCount != 0));
-       $display("copyRead %h, count %h", copyReadAddr, copyReadCount);
+       //$display("copyRead %h, count %h", copyReadAddr, copyReadCount);
        copy_read_chan.readReq.put(DmaRequest{handle: copyReadHandle, address: copyReadAddr, burstLen: 1, tag: copyReadAddr[8:3]});
        copyReadAddr <= copyReadAddr + 8;
        copyReadCount <= copyReadCount - 8;
@@ -103,7 +103,7 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
     
     rule copyReadWriteRule (copyBusy);
        let data <- copy_read_chan.readData.get;
-       $display("copyReadWrite addr %h", copyWriteAddr);
+       //$display("copyReadWrite addr %h", copyWriteAddr);
        copy_write_chan.writeReq.put(DmaRequest{handle: copyWriteHandle, address: copyWriteAddr, burstLen: 1, tag: copyWriteAddr[8:3]});
        copy_write_chan.writeData.put(DmaData{data: data.data, tag: copyWriteAddr[8:3]});
        copyWriteAddr <= copyWriteAddr + 8;
@@ -118,7 +118,7 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
 	    while (copyWriteCount > 0)
 	       action
 		  let v <- copy_write_chan.writeDone.get;
-		  $display("copyWriteAck");
+		  //$display("copyWriteAck");
 		  copyWriteCount <= copyWriteCount - 8;	 
 	       endaction
 	    f_out.enq(0);
