@@ -108,7 +108,6 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
        copy_write_chan.writeData.put(DmaData{data: data.data, tag: copyWriteAddr[8:3]});
        copyWriteAddr <= copyWriteAddr + 8;
     endrule
-   
     
    Stmt copyFinish = 
    seq
