@@ -116,9 +116,9 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   sem_wait(&conf_sem);
 }
 
-uint64_t *ring_next(struct SWRing *r)
+volatile uint64_t *ring_next(struct SWRing *r)
 {
-  uint64_t *p = (uint64_t *) (r->base + (long) r->last);
+  volatile uint64_t *p = (uint64_t *) (r->base + (long) r->last);
   if (p[7] == 0) return (NULL);
   return (p);
 }
@@ -161,7 +161,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd)
 void *statusThreadProc(void *arg)
 {
   int i;
-  uint64_t *msg;
+  volatile uint64_t *msg;
   printf("Status thread running\n");
   for (;;) {
     while ((msg = ring_next(&status_ring)) == NULL);
@@ -267,11 +267,6 @@ int main(int argc, const char **argv)
 	     i + 2560, scratchBuffer[i + 2560], i);
     }
   }
-  printf("Status dump \n");
-  for (i = 0; i < 20; i += 1) {
-    printf("Status entry %d word[7]=%08x\n", i, ((uint64_t *) status_ring.base)[(i*8)+7]);
-  }
-
   
   fprintf(stderr, "main going to sleep\n");
   while(true){sleep(1);}
