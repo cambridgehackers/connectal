@@ -86,7 +86,7 @@ module mkRingRequest#(RingIndication indication,
 
    Stmt cmdFetch =   
    seq
-      $display("cmdFetch FSM TOP");
+//      $display("cmdFetch FSM TOP");
       while (True) 
 	 seq
 	    if (hwenabled) 
@@ -107,16 +107,17 @@ module mkRingRequest#(RingIndication indication,
    Stmt cmdDispatch = 
    seq
       while (True) seq
-	 $display("cmdDispatch FSM TOP");
+//	 $display("cmdDispatch FSM TOP");
 	 action
 	    let rv <- cmd_read_chan.readData.get();
 	    cmd <= rv.data;
-	    $display("cmdDispatch %h", cmd);
+	    $display("cmdDispatch 0 tag=%h %h", rv.tag, rv.data);
 	    cmdifc.request.put(rv.data);
 	 endaction
 	 for (dispCtr <= 1; dispCtr < 8; dispCtr <= dispCtr + 1)
 	    action
 	       let rv <- cmd_read_chan.readData.get();
+	       $display("  cmdDispatch %h tag=%h %h", dispCtr, rv.tag, rv.data);
 	       cmdifc.request.put(rv.data);
 	    endaction
       endseq
@@ -131,14 +132,14 @@ module mkRingRequest#(RingIndication indication,
 	    seq
 	       $display("responseArbiter copyEngine completion");
 	       $display("status write handle=%d address=%h burst=%h tag=%h",
-		  statusRing.memhandle, statusRing.bufferfirst, 9, statusTag);
+		  statusRing.memhandle, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{handle: statusRing.memhandle, 
-		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
+		     address: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- copyEngine.response.get();
-		     status_write_chan.writeData.put(DmaData{data: rv, tag: 0});
+		     status_write_chan.writeData.put(DmaData{data: rv, tag: statusTag});
 		  endaction
 	       statusRing.push(64);
 	       statusTag <= statusTag + 1;
@@ -148,14 +149,14 @@ module mkRingRequest#(RingIndication indication,
 	    seq
 	       $display("responseArbiter echoEngine completion");
 	       $display("status write handle=%d address=%h burst=%h tag=%h",
-		  statusRing.memhandle, statusRing.bufferfirst, 9, statusTag);
+		  statusRing.memhandle, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{handle: statusRing.memhandle, 
-		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
+		     address: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- echoEngine.response.get();
-		     status_write_chan.writeData.put(DmaData{data: rv, tag: 0});
+		     status_write_chan.writeData.put(DmaData{data: rv, tag: statusTag});
 		  endaction
 	       statusRing.push(64);
 	       statusTag <= statusTag + 1;
