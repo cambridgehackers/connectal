@@ -732,7 +732,6 @@ def p_moduleContext(p):
     '''moduleContext : 
                      | LBRACKET VAR RBRACKET'''
     if len(p) > 2:
-        print 'ModuleContext', p[2]
         p[0] = p[2]
 
 def p_moduleDef(p):

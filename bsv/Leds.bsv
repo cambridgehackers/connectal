@@ -24,3 +24,11 @@
 interface LEDS;
     method Bit#(8) leds;
 endinterface
+
+function LEDS default_leds();
+   return (interface LEDS;
+	      method Bit#(8) leds;
+		 return 0;
+	      endmethod
+	   endinterface);   
+endfunction

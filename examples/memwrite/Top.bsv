@@ -5,6 +5,7 @@ import StmtFSM::*;
 import FIFO::*;
 
 // portz libraries
+import Leds::*;
 import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;
@@ -23,7 +24,7 @@ import DmaIndicationProxy::*;
 // defined by user
 import Memwrite::*;
 
-module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
+module mkPortalTop(StdPortalTop#(addrWidth)) provisos (
     Add#(addrWidth, a__, 52),
     Add#(b__, addrWidth, 64),
     Add#(c__, 12, addrWidth),
@@ -60,6 +61,6 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
    
    interface interrupt = interrupt_mux;
    interface ctrl = ctrl_mux;
-   interface m_axi = replicate(dma.m_axi);
-   interface leds = ?;
+   interface m_axi = dma.m_axi;
+   interface leds = default_leds;
 endmodule

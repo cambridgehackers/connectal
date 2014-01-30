@@ -30,7 +30,7 @@ import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 
-typedef (function Module#(PortalTop#(40, nmasters, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type nmasters, numeric type dsz, type ipins);
+typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins);
 
 interface PcieTop#(type ipins);
    (* prefix=""*)
@@ -42,10 +42,9 @@ endinterface
 module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 				      Clock sys_clk_p,     Clock sys_clk_n,
 				      Reset pci_sys_reset_n,
-				      MkPortalTop#(nmasters, dsz, ipins) mkPortalTop)
+				      MkPortalTop#(dsz, ipins) mkPortalTop)
    (PcieTop#(ipins))
-   provisos (Add#(nmasters,a__,1),
-	     Mul#(TDiv#(dsz, 32), 32, dsz),
+   provisos (Mul#(TDiv#(dsz, 32), 32, dsz),
 	     Add#(b__, 32, dsz),
 	     Add#(c__, dsz, 256),
 	     Add#(d__, TMul#(8, TDiv#(dsz, 32)), 64),
@@ -53,7 +52,6 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 	     Add#(f__, TDiv#(dsz, 32), 8)
       );
 
-   let nmasters = valueOf(nmasters);
    let contentId = 0;
 
    X7PcieBridgeIfc#(8) x7pcie <- mkX7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
@@ -63,15 +61,11 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    // instantiate user portals
    let portalTop <- mkPortalTop(clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
-   if (nmasters > 0) begin
-      let m_axi = portalTop.m_axi;
-      Vector#(nmasters, AxiSlaveEngine#(dsz)) axiSlaveEngines <- replicateM(mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125));
-      for (Integer i = 0; i < nmasters; i = i+1) begin
-	 mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngines[i].tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-	 mkConnection(tpl_1(axiSlaveEngines[i].tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-	 mkConnection(portalTop.m_axi[i], axiSlaveEngines[i].slave3, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-      end
-   end
+   let m_axi = portalTop.m_axi;
+   AxiSlaveEngine#(dsz) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(portalTop.m_axi, axiSlaveEngine.slave3, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    mkConnection(x7pcie.portal0, portalTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 

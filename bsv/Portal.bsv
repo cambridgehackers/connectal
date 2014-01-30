@@ -22,7 +22,6 @@
 
 
 import AxiMasterSlave::*;
-import Vector::*;
 import Leds::*;
 
 interface Portal#(numeric type portalAddrBits, 
@@ -48,17 +47,16 @@ endfunction
 
 typedef Portal#(16,32,32,12) StdPortal;
 
-interface PortalTop#(numeric type addrWidth, numeric type nmasters, numeric type dataWidth, type pins);
+interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins);
    interface Axi3Slave#(32,32,12) ctrl;
-   interface Vector#(nmasters, Axi3Master#(addrWidth,dataWidth,6)) m_axi;
+   interface Axi3Master#(addrWidth,dataWidth,6) m_axi;
    interface ReadOnly#(Bool)  interrupt;
    interface LEDS             leds;
    interface pins             pins;
 endinterface
 
-typedef PortalTop#(addrWidth,0,64,Empty)     StdPortalTop#(numeric type addrWidth);
-typedef PortalTop#(addrWidth,1,64,Empty)     StdPortalDmaTop#(numeric type addrWidth);
+typedef PortalTop#(addrWidth,64,Empty)     StdPortalTop#(numeric type addrWidth);
 
-typeclass SynthesizablePortalTop#(numeric type addrWidth, numeric type nmasters, numeric type dataWidth, type pins);
-   module mkSynthesizablePortalTop(PortalTop#(addrWidth,nmasters,dataWidth,pins) ifc);
+typeclass SynthesizablePortalTop#(numeric type addrWidth, numeric type dataWidth, type pins);
+   module mkSynthesizablePortalTop(PortalTop#(addrWidth,dataWidth,pins) ifc);
 endtypeclass

@@ -95,6 +95,32 @@ interface Axi3Slave#(type addrWidth, type busWidth, type idWidth);
    interface Get#(Axi3WriteResponse#(idWidth)) resp_b;
 endinterface
 
+function Put#(t) null_put();
+   return (interface Put;
+	      method Action put(t x) if (False);
+		 noAction;
+	      endmethod
+	   endinterface);
+endfunction
+
+function Get#(t) null_get();
+   return (interface Get;
+	      method ActionValue#(t) get() if (False);
+		 return ?;
+	      endmethod
+	   endinterface);
+endfunction
+      
+function  Axi3Master#(addrWidth, busWidth, idWidth) null_axi_master();
+   return (interface Axi3Master;
+	      interface Get req_ar = null_get;
+	      interface Put resp_read = null_put;
+	      interface Get req_aw = null_get;
+	      interface Get resp_write = null_get;
+	      interface Put resp_b = null_put;
+	   endinterface);
+endfunction
+
 module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
    (Axi3Slave#(addrWidth, busWidth, idWidth))
    provisos(Add#(nz, regFileBusWidth, addrWidth));

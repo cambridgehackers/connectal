@@ -20,6 +20,13 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+/*
+ * Simple tty program for connecting to console on Zync devices.
+ * Defaults should be fine for zedboard.
+ * When connecting to ZC702 on Mac:
+ *      ./consolable tty.SLAB_USBtoUART
+ */
+
 #include <termios.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -58,7 +65,10 @@ int main(int argc, char **argv)
     struct timeval timeout;
     int maxfd = 1;
     int fdsindex;
+    char *basestring = TTYCLASS;
 
+    if (argc == 2)
+        basestring = argv[1];
     fdlist[0] = 0; // stdin
     rc = tcgetattr(0, &orig_terminfo);
     sact.sa_handler = signal_handler;
@@ -84,7 +94,7 @@ int main(int argc, char **argv)
             DIR *dirptr = opendir("/dev/");
             if (dirptr) {
                 while ((direntp = readdir(dirptr))) {
-                    if (!strncmp(direntp->d_name, TTYCLASS, strlen(TTYCLASS))) {
+                    if (!strncmp(direntp->d_name, basestring, strlen(basestring))) {
                         sprintf(buf, "/dev/%s", direntp->d_name);
                         fprintf(stderr, "consolable: opening %s\n", buf);
                         fd = open(buf, O_RDWR | O_NONBLOCK);
@@ -103,6 +113,7 @@ int main(int argc, char **argv)
                 terminfo.c_ispeed = B115200;
                 terminfo.c_ospeed = B115200;
                 terminfo.c_cflag = B115200 | CS8 | CLOCAL | CREAD;
+                terminfo.c_cflag &= ~CRTSCTS; // needed for /dev/tty.SLAB_USBtoUART
                 terminfo.c_iflag = IGNCR;
                 terminfo.c_lflag = ICANON;
                 rc = tcsetattr(fd, TCSANOW, &terminfo);

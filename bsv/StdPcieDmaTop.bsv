@@ -32,7 +32,7 @@ import Top               :: *;
 import PcieTop           :: *;
 
 (* synthesize *)
-module mkSynthesizeablePortalTop(PortalTop#(40, 1, 64, Empty));
+module mkSynthesizeablePortalTop(PortalTop#(40, 64, Empty));
    let top <- mkPortalTop();
    interface ctrl = top.ctrl;
    interface m_axi = top.m_axi;
