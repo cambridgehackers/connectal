@@ -181,7 +181,7 @@ t_TILDEAMPER = r'~\&'
 t_TILDEBAR = r'~\|'
 t_TILDECARET = r'~^'
 
-t_ignore = ' \t'
+t_ignore = ' \t\f'
 
 def t_error(t):
     print "Illegal character '%s' in file '%s'" % (t.value[0], globalfilename)
