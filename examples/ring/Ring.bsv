@@ -135,7 +135,7 @@ module mkRingRequest#(RingIndication indication,
 	    seq
 	       //$display("responseArbiter copyEngine completion");
 	       //$display("status write handle=%d address=%h burst=%h tag=%h",
-		  statusRing.memhandle, statusRing.bufferfirst, 8, statusTag);
+	//	  statusRing.memhandle, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{handle: statusRing.memhandle, 
 		     address: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
@@ -152,7 +152,7 @@ module mkRingRequest#(RingIndication indication,
 	    seq
 	       //$display("responseArbiter echoEngine completion");
 	       //$display("status write handle=%d address=%h burst=%h tag=%h",
-		  statusRing.memhandle, statusRing.bufferfirst, 8, statusTag);
+	//	  statusRing.memhandle, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{handle: statusRing.memhandle, 
 		     address: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
