@@ -184,7 +184,7 @@ t_TILDECARET = r'~^'
 t_ignore = ' \t'
 
 def t_error(t):
-    print "Illegal character '%s'" % t.value[0]
+    print "Illegal character '%s' in file '%s'" % (t.value[0], globalfilename)
     t.lexer.skip(1)
 
 def t_VAR(t):
