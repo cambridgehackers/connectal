@@ -303,7 +303,7 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
    endrule
    
    rule write_pages(idxReg < lenReg);
-      $display("write_pages %h %h", idxReg, lenReg);
+      //$display("write_pages %h %h", idxReg, lenReg);
       idxReg <= idxReg + 1;
       addrReg <= addrReg + 1;
       sgl.page(truncate(prefReg),idxReg,addrReg);

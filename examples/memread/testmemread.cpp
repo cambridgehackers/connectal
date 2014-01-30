@@ -13,7 +13,7 @@
 
 PortalAlloc *srcAlloc;
 unsigned int *srcBuffer = 0;
-int numWords = 16 << 8;
+int numWords = 16 << 15;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 
@@ -97,11 +97,9 @@ int main(int argc, const char **argv)
     
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
-  sleep(1);
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
-  sleep(1);
 
   // dma->readSglist(0, 0);
   // sleep(1);
@@ -111,8 +109,9 @@ int main(int argc, const char **argv)
   //   dma->readSglist(ref_srcAlloc, i*0x1000);
   //   sleep(1);
   // }
+
   fprintf(stderr, "Main::starting read %08x\n", numWords);
-  device->startRead(ref_srcAlloc, 128, 16);
+  device->startRead(ref_srcAlloc, numWords, 16);
 
   device->getStateDbg();
   fprintf(stderr, "Main::sleeping\n");

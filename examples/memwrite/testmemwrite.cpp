@@ -13,7 +13,7 @@
 #include "MemwriteIndicationWrapper.h"
 #include "MemwriteRequestProxy.h"
 
-int numWords = 16 << 3;
+int numWords = 16 << 15;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 sem_t done_sem;
@@ -106,7 +106,7 @@ void parent(int rd_sock, int wr_sock)
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);
-  device->startWrite(ref_dstAlloc, numWords, 2);
+  device->startWrite(ref_dstAlloc, numWords, 16);
 
   sem_wait(&done_sem);
   

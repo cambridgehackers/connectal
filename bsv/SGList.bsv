@@ -86,7 +86,7 @@ module mkSGListMMU(SGListMMU#(addrWidth))
 	  interface Get response;
 	     method ActionValue#(Bit#(addrWidth)) get if (!isConfiguring);
 		respFifos[i].deq();
-		//$display("addrResp phys_addr=%h", respFifo.first());
+		//$display("addrResp phys_addr=%h", respFifos[i].first());
 		return respFifos[i].first();
 	     endmethod
 	  endinterface
@@ -109,7 +109,7 @@ module mkSGListMMU(SGListMMU#(addrWidth))
    endmethod
    
    method Action page(SGListId id, Bit#(PageIdxSize) pageNum, Bit#(pPageNumSize) pPageNum);
-      $display("page id=%d pageNum=%h physaddr=%h", id, pageNum, pPageNum);
+      //$display("page id=%d pageNum=%h physaddr=%h", id, pageNum, pPageNum);
       pageTable.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:{id,pageNum}, datain:tagged Valid pPageNum});
    endmethod
    

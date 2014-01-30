@@ -388,6 +388,7 @@ int PortalMemory::reference(PortalAlloc* pa)
   pa->entries[ne].length = 0;
   pa->header.numEntries;
   sglist(0, 0, 0);
+  fprintf(stderr, "PortalMemory::reference numEntries=%d\n", pa->header.numEntries);
   for(int i = 0; i <= pa->header.numEntries; i++){
     assert(i<32); // the HW has defined SGListMaxLen as 32
     fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, pa->entries[i].dma_address, pa->entries[i].length);

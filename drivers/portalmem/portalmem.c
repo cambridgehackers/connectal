@@ -253,8 +253,7 @@ static struct dma_buf *dmabuffer_create(unsigned long len,
       gfp_t gfp_flags = low_order_gfp_flags;
       if (orders[ordindex] > 4)
         gfp_flags = high_order_gfp_flags;
-      if (size_remaining >= (PAGE_SIZE << orders[ordindex])
-       && max_order >= orders[ordindex]) {
+      if (size_remaining >= (PAGE_SIZE << orders[ordindex]) && max_order >= orders[ordindex]) {
         struct page *page = alloc_pages(gfp_flags, orders[ordindex]);
         if (page) {
           info = kmalloc(sizeof(*info), GFP_KERNEL);
@@ -264,13 +263,18 @@ static struct dma_buf *dmabuffer_create(unsigned long len,
           size_remaining -= (1 << info->order) * PAGE_SIZE;
           max_order = info->order;
           infocount++;
+	  printk("%s, alloc_pages succeeded with order=%d\n", __FUNCTION__, orders[ordindex]);
           break;
-        }
+        } else {
+	  printk("%s, alloc_pages failed with order=%d\n", __FUNCTION__, orders[ordindex]);
+	}
       }
+      printk("%s, alloc_pages skipping order=%d\n", __FUNCTION__, orders[ordindex]);
     }
     if (!info)
       break;
   }
+
   if (info) {
     int ret = sg_alloc_table(table, infocount, GFP_KERNEL);
     if (!ret) {
@@ -307,6 +311,7 @@ static struct dma_buf *dmabuffer_create(unsigned long len,
     }
     kfree(table);
   }
+
   list_for_each_entry(info, &pages, list) {
     free_buffer_page(info->page, info->order);
     kfree(info);

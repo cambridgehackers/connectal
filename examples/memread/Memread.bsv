@@ -38,78 +38,63 @@ endinterface
 
 interface MemreadIndication;
    method Action started(Bit#(32) numWords);
-   method Action rData(Bit#(64) v);
    method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount);
    method Action readReq(Bit#(32) v);
    method Action readDone(Bit#(32) mismatchCount);
-   method Action mismatch(Bit#(32) offset, Bit#(64) expectedValue, Bit#(64) value);
 endinterface
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
-   Reg#(DmaPointer) streamRdHandle <- mkReg(0);
-   Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
-   Reg#(Bit#(32)) putOffset <- mkReg(0);
-   Reg#(Bit#(32)) mismatchCount <- mkReg(0);
-   Reg#(Bit#(32))      srcGen <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize))      offset <- mkReg(0);
-   FIFOF#(Tuple3#(Bit#(32),Bit#(64),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
-
-   Reg#(Bit#(8)) burstLen <- mkReg(8);
-   Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(8*8);
-
-   rule mismatch;
-      let tpl = mismatchFifo.first();
-      mismatchFifo.deq();
-      indication.mismatch(tpl_1(tpl), tpl_2(tpl), tpl_3(tpl));
-   endrule
-
-   interface MemreadRequest request;
-       method Action startRead(Bit#(32) handle, Bit#(32) numWords, Bit#(32) bl) if (streamRdCnt == 0);
-	  streamRdHandle <= handle;
-	  streamRdCnt <= numWords>>1;
-	  putOffset <= 0;
-	  burstLen <= truncate(bl);
-	  deltaOffset <= 8*truncate(bl);
-	  indication.started(numWords);
-       endmethod
-
-       method Action getStateDbg();
-	  indication.reportStateDbg(streamRdCnt, mismatchCount);
-       endmethod
-   endinterface
+   Reg#(DmaPointer)      rdHandle <- mkReg(0);
+   Reg#(Bit#(32))           rdCnt <- mkReg(0);
+   Reg#(Bit#(32))   mismatchCount <- mkReg(0);
+   Reg#(Bit#(32))          srcGen <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize)) offset <- mkReg(0);
+   
+   Reg#(Bit#(8))         burstLen <- mkReg(0);
+   Reg#(Bit#(DmaAddrSize))  delta <- mkReg(0);
 
    interface DmaReadClient dmaClient;
       interface GetF readReq;
-	 method ActionValue#(DmaRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
-	    streamRdCnt <= streamRdCnt-extend(burstLen);
-	    offset <= offset + deltaOffset;
-	    if (streamRdCnt == extend(burstLen))
+	 method ActionValue#(DmaRequest) get() if (rdCnt > 0);
+	    rdCnt <= rdCnt-extend(burstLen);
+	    offset <= offset + delta;
+	    if (rdCnt == extend(burstLen))
 	       indication.readDone(mismatchCount);
-	    //else if (streamRdCnt[5:0] == 6'b0)
-	    //   indication.readReq(streamRdCnt);
-	    return DmaRequest { handle: streamRdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
+	    //else if (rdCnt[5:0] == 6'b0)
+	    //   indication.readReq(rdCnt);
+	    return DmaRequest { handle: rdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
 	 endmethod
 	 method Bool notEmpty();
-	    return streamRdCnt > 0 && mismatchFifo.notFull();
+	    return rdCnt > 0;
 	 endmethod
       endinterface : readReq
       interface PutF readData;
 	 method Action put(DmaData#(64) d);
-	    //$display("readData putOffset=%h d=%h tag=%h", putOffset, d.data, d.tag);
+	    //$display("readData  data=%h tag=%h",  d.data, d.tag);
 	    let v = d.data;
 	    let expectedV = {srcGen+1,srcGen};
 	    let misMatch = v != expectedV;
 	    mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
-	    if (misMatch)
-	       mismatchFifo.enq(tuple3(putOffset, expectedV, v));
 	    srcGen <= srcGen+2;
-	    putOffset <= putOffset + 8;
-	    //indication.rData(v);
 	 endmethod
 	 method Bool notFull();
-	    return mismatchFifo.notFull();
+	    return True;
 	 endmethod
       endinterface : readData
+   endinterface
+
+   interface MemreadRequest request;
+      method Action startRead(Bit#(32) handle, Bit#(32) numWords, Bit#(32) bl) if (rdCnt == 0);
+	  $display("mkMemRead::startRead(%d %d %d)", handle, numWords, bl);
+	  rdCnt <= numWords>>1;
+	  burstLen <= truncate(bl);
+	  delta <= 8*truncate(bl);
+	  indication.started(numWords);
+	  rdHandle <= handle;
+       endmethod
+       method Action getStateDbg();
+	  indication.reportStateDbg(rdCnt, mismatchCount);
+       endmethod
    endinterface
 endmodule
