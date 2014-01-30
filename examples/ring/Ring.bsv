@@ -93,7 +93,7 @@ module mkRingRequest#(RingIndication indication,
 	       seq
 	       if (cmdRing.bufferfirst != cmdRing.bufferlast) 
 		  seq
-		     $display ("cmdFetch handle=%h address=%d burst=%h tag=%h", cmdRing.memhandle, cmdRing.bufferlast, 8, cmdFetchTag);
+		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", cmdRing.memhandle, cmdRing.bufferlast, 8, cmdFetchTag);
 		     cmd_read_chan.readReq.put(
 			DmaRequest{handle: cmdRing.memhandle,
 			   address: cmdRing.bufferlast, burstLen: 8, tag: cmdFetchTag});
@@ -120,7 +120,7 @@ module mkRingRequest#(RingIndication indication,
 	 for (dispCtr <= 1; dispCtr < 8; dispCtr <= dispCtr + 1)
 	    action
 	       let rv <- cmd_read_chan.readData.get();
-	       $display("  cmdDispatch %h tag=%h %h", dispCtr, rv.tag, rv.data);
+	       //$display("  cmdDispatch %h tag=%h %h", dispCtr, rv.tag, rv.data);
 	       cmdifc.request.put(rv.data);
 	    endaction
       endseq
