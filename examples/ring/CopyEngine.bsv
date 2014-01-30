@@ -88,7 +88,7 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
 	       f_in.deq;  // discard words 4-7
 	       f_in.deq;  // discard words 4-7
 	       f_in.deq;  // discard words 4-7
-	    $display("copyStart from %h to %h count %h",
+	    //$display("copyStart from %h to %h count %h",
 	       copyReadAddr, copyWriteAddr, copyReadCount);
 	    copyBusy <= True;
 	 endseq
