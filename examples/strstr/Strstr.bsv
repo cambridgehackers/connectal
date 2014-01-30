@@ -50,13 +50,13 @@ import DmaUtils::*;
  *    begin
  *        Border[0] := -1;
  *        for i := 1 to m do begin
- *            j := Boarder[i - 1];
- *            while j >= 0 and x[i] != x[j + 1] do j := Boarder[j];
+ *            j := Border[i - 1];
+ *            while j >= 0 and x[i] != x[j + 1] do j := Border[j];
  *            Border[i] := j + 1;
  *        end;
  *    end;
  *    
- *    procedure Compute_mp_next(x: string; m: integer);
+ *    procedure Compute_MP_next(x: string; m: integer);
  *    begin
  *        MP_next[i] := 0; j := 0;
  *        for i := 1 to m do begin
