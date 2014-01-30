@@ -79,6 +79,8 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
 	       f_in.deq;  // discard words 4-7
 	       f_in.deq;  // discard words 4-7
 	       f_in.deq;  // discard words 4-7
+	    $display("copyStart from %h to %h count %h",
+	       copyReadAddr, copyWriteAddr, copyReadCount);
 	    copyBusy <= True;
 	 endseq
    endseq;
@@ -97,6 +99,7 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
        copy_write_chan.writeData.put(DmaData{data: data.data, tag: copyWriteAddr[8:3]});
        copyWriteAddr <= copyWriteAddr + 8;
     endrule
+   
     
    Stmt copyFinish = 
    seq
@@ -106,6 +109,7 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
 	    while (copyWriteCount > 0)
 	       action
 		  let v <- copy_write_chan.writeDone.get;
+		  $display("copyWriteAck");
 		  copyWriteCount <= copyWriteCount - 8;	 
 	       endaction
 	    f_out.enq(0);
