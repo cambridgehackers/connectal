@@ -51,11 +51,19 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
    Reg#(DmaPointer) copyWriteHandle <- mkReg(0);
    Reg#(Bit#(32)) copyTag <- mkReg(0);
    Reg#(Bool) copyBusy <- mkReg(False);
+   Reg#(Bit#(4)) cmdCtr <- mkReg(0);
    Stmt copyStart = 
    seq
       while(True)
 	 seq
 	    while (copyBusy) noAction;
+	    for (cmdCtr <= 0; cmdCtr < 8; cmdCtr <= cmdCtr + 1) 
+	       action
+		  $display("COPY %h %h", cmdCtr, f_in.first());
+		  f_in.deq();
+	       endaction
+	    
+	    /*
 	    action
 	       copyTag <= f_in.first()[31:0];
 	       f_in.deq();  // word 0
@@ -82,6 +90,7 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
 	    $display("copyStart from %h to %h count %h",
 	       copyReadAddr, copyWriteAddr, copyReadCount);
 	    copyBusy <= True;
+	     */
 	 endseq
    endseq;
       
