@@ -70,8 +70,8 @@ module mkStrstrRequest#(StrstrIndication indication,
    Reg#(Stage) stage <- mkReg(Idle);
    Reg#(Bit#(32)) needleLenReg <- mkReg(0);
    Reg#(Bit#(32)) haystackLenReg <- mkReg(0);
-   Reg#(Bit#(32)) iReg <- mkReg(0);
-   Reg#(Bit#(32)) jReg <- mkReg(0);
+   Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
+   Reg#(Bit#(32)) jReg <- mkReg(0); // offset in haystack
    Reg#(DmaPointer) haystackHandle <- mkReg(0);
    Reg#(Bit#(DmaAddrSize)) haystackPtr <- mkReg(0);
    
@@ -132,22 +132,26 @@ module mkStrstrRequest#(StrstrIndication indication,
 	 let i = tpl_2(efifo.first);
 	 let j = jReg;
 	 if (j > n) begin
+	    // jReg points to the end of the haystack; we are done
 	    indication.searchResult(-1);
 	    stage <= Idle;
 	 end
 	 else if (i==m+1) begin
-	    //$display("string match %d", j);
+	    // iReg points to the end of the needle; we have a match
+	    // $display("string match %d", j);
 	    indication.searchResult(unpack(j-i));
 	    epochReg <= epochReg+1;
 	    iReg <= 1;
 	 end
-	 else if ((i==m+1) || ((i>0) && (nv != hv[0]))) begin
+	 else if ((i>0) && (nv != hv[0])) begin
+	    // mismatch betwen head of haystack and head of needle; rewind iReg
+	    // $display("char mismatch %d %d MP_Next[i]=%d", i, j, mp);
 	    epochReg <= epochReg + 1;
 	    iReg <= mp;
-	    //$display("char mismatch %d %d MP_Next[i]=%d", i, j, mp);
 	 end
 	 else begin
-	    //$display("   char match %d %d", i, j);
+	    // match between head of needle and head of haystack; increment haystack
+	    // $display("   char match %d %d", i, j);
 	    jReg <= j+1;
 	    haystack.deq;
 	 end
