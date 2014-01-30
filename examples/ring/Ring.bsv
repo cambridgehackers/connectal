@@ -109,7 +109,10 @@ module mkRingRequest#(RingIndication indication,
       while (True) seq
 //	 $display("cmdDispatch FSM TOP");
 	 seq
-	    cmd <= cmd_read_chan.readData.get();
+	    action
+	       let rv <- cmd_read_chan.readData.get();
+	       cmd <= rv;
+	    endaction
 	    // wait a cycle so cmd is valid!
 	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
 	    cmdifc.request.put(cmd.data);
