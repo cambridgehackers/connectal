@@ -69,6 +69,7 @@ module mkRingRequest#(RingIndication indication,
    Reg#(Bit#(4)) respCtr <- mkReg(0);
    Reg#(Bit#(4)) dispCtr <- mkReg(0);
    Reg#(Bit#(6)) cmdFetchTag <- mkReg(0);
+   Reg#(Bit#(6)) statusTag <- mkReg(0);
    Reg#(Bool) cmdFetchEn <- mkReg(False);
 
    let engineselect = pack(cmd)[63:56];
@@ -129,6 +130,8 @@ module mkRingRequest#(RingIndication indication,
 	 if (statusRing.notFull() && copyEngine.response.notEmpty())
 	    seq
 	       $display("responseArbiter copyEngine completion");
+	       $display("status write handle=%d address=%h burst=%h tag=%h",
+		  statusRing.memhandle, statusRing.bufferfirst, 9, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{handle: statusRing.memhandle, 
 		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
@@ -138,11 +141,14 @@ module mkRingRequest#(RingIndication indication,
 		     status_write_chan.writeData.put(DmaData{data: rv, tag: 0});
 		  endaction
 	       statusRing.push(64);
+	       statusTag <= statusTag + 1;
 	    endseq
 
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    seq
 	       $display("responseArbiter echoEngine completion");
+	       $display("status write handle=%d address=%h burst=%h tag=%h",
+		  statusRing.memhandle, statusRing.bufferfirst, 9, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{handle: statusRing.memhandle, 
 		     address: statusRing.bufferfirst, burstLen: 8, tag: 0});
@@ -152,6 +158,7 @@ module mkRingRequest#(RingIndication indication,
 		     status_write_chan.writeData.put(DmaData{data: rv, tag: 0});
 		  endaction
 	       statusRing.push(64);
+	       statusTag <= statusTag + 1;
 	    endseq
 
       endseq
