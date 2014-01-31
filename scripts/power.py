@@ -29,16 +29,18 @@
 from __future__ import print_function
 import socket,sys,time
 
-#pset n v    Sets outlet #n to v(value 1-on,0-off).
-#mac         Displays Ethernet port Mac address.
-#nwshow      Displays network Status.
-#pshow       Displays outlet status.
-#sysshow     Displays system information.
-#time        Displays current time.
-#ver         Displays hardware and software versions.
 
 if len(sys.argv) < 3:
     print('power.py <ipaddress> <command> ...')
+    print('Where <command> is:')
+    print('    pset n v    Sets outlet #n to v(value 1-on,0-off)')
+    print('    mac         Displays Ethernet port Mac address')
+    print('    nwshow      Displays network Status')
+    print('    pshow       Displays outlet status')
+    print('    sysshow     Displays system information')
+    print('    time        Displays current time')
+    print('    ver         Displays hardware and software versions')
+    sys.exit(1)
 lines = []
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((sys.argv[1], 23))
