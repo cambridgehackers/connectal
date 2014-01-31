@@ -381,34 +381,34 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 int PortalMemory::reference(PortalAlloc* pa)
 {
   int id = handle++;
-#ifdef MMAP_HW
   int ne = pa->header.numEntries;
-  assert(ne < 32);
+  int size_accum = 0;
+  // HW interprets zeros as end of sglist
   pa->entries[ne].dma_address = 0;
   pa->entries[ne].length = 0;
-  pa->header.numEntries;
-  sglist(0, 0, 0);
-  fprintf(stderr, "PortalMemory::reference numEntries=%d\n", pa->header.numEntries);
-  for(int i = 0; i <= pa->header.numEntries; i++){
-    assert(i<32); // the HW has defined SGListMaxLen as 32
-    fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, pa->entries[i].dma_address, pa->entries[i].length);
-    sglist(id, pa->entries[i].dma_address, pa->entries[i].length);
+  pa->header.numEntries++;
+#ifndef MMAP_HW
+  sock_fd_write(p_fd.write.s2, pa->header.fd);
+#endif
+  for(int i = 0; i < pa->header.numEntries; i++){
+    DmaEntry *e = &(pa->entries[i]);
+#ifdef MMAP_HW
+    fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, e->dma_address, e->length);
+    sglist(id, e->dma_address, e->length);
+#else
+    int addr = (e->length > 0) ? size_accum : 0;
+    fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, addr, e->length);
+    sglist(id, addr , e->length);
+#endif
+    size_accum += e->length;
     if (sglistCallbackRegistered) {
       fprintf(stderr, "sem_wait\n");
       sem_wait(&sglistSem);
     } else {
       fprintf(stderr, "ugly hack\n");
-      sleep(1); // ugly hack.  should use a semaphore for flow-control (mdk)
+      sleep(1);
     }
   }
-#else
-  sock_fd_write(p_fd.write.s2, pa->header.fd);
-  sglist(id, 4096, pa->header.size);
-  if (sglistCallbackRegistered)
-    sem_wait(&sglistSem);
-  else
-    sleep(1); // ugly hack.  should use a semaphore for flow-control (mdk)
-#endif
   return id;
 }
 void PortalMemory::sglistResp(unsigned long channelId)

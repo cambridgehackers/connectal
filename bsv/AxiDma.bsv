@@ -90,7 +90,7 @@ module mkAxiDmaReadInternal#(Integer numRequests, Vector#(numReadClients, DmaRea
 	 req <- readClients[selectReg].readReq.get();
       //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
 
-      if (req.handle > fromInteger(valueOf(NumSGLists)))
+      if (req.handle > fromInteger(valueOf(MaxNumSGLists)))
 	 dmaIndication.badHandle(req.handle, extend(req.address));
       else begin
 	 lreqFifo.enq(req);
@@ -308,7 +308,6 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
       addrReg <= addrReg + 1;
       sgl.page(truncate(prefReg),idxReg,addrReg);
       if(idxReg+1 == lenReg) begin
-	 sgl.configuring(False);
 	 dmaIndication.sglistResp(prefReg, extend(idxReg), extend(addrReg));
       end
    endrule
@@ -332,20 +331,20 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 	 if (addr == 0 && len == 0) begin // sw marks end-of-list with zeros
 	    dmaIndication.sglistResp(pref, extend(idx), 0);
 	 end
-	 else if (addr == 0 && len > 0) begin
-	    //$display("sglist badAddr pref=%d idx=%h addr=%h", pref, idx, addr);
+`ifndef BSIM
+	 if (pref != 0 && (addr == 0 && len > 0)) begin
 	    dmaIndication.badAddr(pref, extend(idx), extend(addr >> page_shift));
 	 end
-	 else begin
-`ifdef BSIM
-	    let va <- pareff(pref, len);
-	    addr[39:32] = truncate(pref);
-	    addr[31:0] = 0;
-	    //$display("sglist.pareff handle=%d addr=%h len=%h", pref, addr, len);
 `endif
-	    addrReg <= truncate(addr >> page_shift);
-	    sgl.configuring(True);
+         if (pref == 0) begin
+	    dmaIndication.badAddr(pref, extend(idx), extend(addr >> page_shift));
 	 end
+`ifdef BSIM
+	 let va <- pareff(pref, len);
+	 addr[39:32] = truncate(pref);
+`endif
+	 $display("sglist.pareff handle=%d addr=%h len=%h", pref, addr, len);
+	 addrReg <= truncate(addr >> page_shift);
       endmethod
       method Action readSglist(Bit#(32) handle, Bit#(32) addr);
 	 sgl.addrDbg.request.put(tuple2(truncate(handle), truncate(addr)));

@@ -31,9 +31,8 @@ import Dma::*;
 import StmtFSM::*;
 import ClientServer::*;
 
-// In the future, NumDmaChannels will be defined somehwere in the xbsv compiler output
-typedef 16 NumSGLists;
-typedef Bit#(TLog#(NumSGLists)) SGListId;
+typedef 16 MaxNumSGLists;
+typedef Bit#(TLog#(MaxNumSGLists)) SGListId;
 typedef 12 SGListPageShift;
 typedef TSub#(DmaAddrSize,SGListPageShift) PageIdxSize;
 typedef Bit#(PageIdxSize) PageIdx;
@@ -41,14 +40,13 @@ typedef Bit#(PageIdxSize) PageIdx;
 
 interface SGListMMU#(numeric type addrWidth);
    method Action page(SGListId id, Bit#(PageIdxSize) vPageNum, Bit#(TSub#(addrWidth,SGListPageShift)) pPageNum);
-   method Action configuring(Bool c);
    interface Vector#(2,Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth))) addr;
    interface Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)), Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) addrDbg;
 endinterface
 
 // if this structure becomes too expensive, we can switch to a multi-level structure
 module mkSGListMMU(SGListMMU#(addrWidth))
-   provisos (Log#(NumSGLists, listIdxSize),
+   provisos (Log#(MaxNumSGLists, listIdxSize),
 	     Add#(listIdxSize,PageIdxSize,entryIdxSize),
 	     Add#(pPageNumSize, SGListPageShift, addrWidth),
 	     Bits#(Maybe#(Bit#(pPageNumSize)), mpPageNumSize),
@@ -59,7 +57,6 @@ module mkSGListMMU(SGListMMU#(addrWidth))
    Vector#(2,FIFOF#(Bit#(SGListPageShift))) offs <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(Bit#(addrWidth))) respFifos <- replicateM(mkFIFOF);
    FIFOF#(Bit#(PageIdxSize)) pageIdx <- mkFIFOF;
-   Reg#(Bool)  isConfiguring <- mkReg(False);
    
    let page_shift = fromInteger(valueOf(SGListPageShift));
    function BRAMServer#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) portsel(int i);
@@ -74,7 +71,7 @@ module mkSGListMMU(SGListMMU#(addrWidth))
       addrServers[i] = 
       (interface Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth));
 	  interface Put request;
-	     method Action put(Tuple2#(SGListId,Bit#(DmaAddrSize)) req) if (!isConfiguring);
+	     method Action put(Tuple2#(SGListId,Bit#(DmaAddrSize)) req);
 		let id = tpl_1(req);
 		let off = tpl_2(req);
 		offs[i].enq(truncate(off));
@@ -84,7 +81,7 @@ module mkSGListMMU(SGListMMU#(addrWidth))
 	     endmethod
 	  endinterface
 	  interface Get response;
-	     method ActionValue#(Bit#(addrWidth)) get if (!isConfiguring);
+	     method ActionValue#(Bit#(addrWidth)) get();
 		respFifos[i].deq();
 		//$display("addrResp phys_addr=%h", respFifos[i].first());
 		return respFifos[i].first();
@@ -104,18 +101,14 @@ module mkSGListMMU(SGListMMU#(addrWidth))
       endrule
    end
    
-   method Action configuring(Bool c);
-      isConfiguring <= c;
-   endmethod
-   
    method Action page(SGListId id, Bit#(PageIdxSize) pageNum, Bit#(pPageNumSize) pPageNum);
-      //$display("page id=%d pageNum=%h physaddr=%h", id, pageNum, pPageNum);
+      $display("mkSGListMMU::page(id=%d pageNum=%h physaddr=%h)", id, pageNum, pPageNum);
       pageTable.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:{id,pageNum}, datain:tagged Valid pPageNum});
    endmethod
    
    interface Server addrDbg;
       interface Put request;
-      	 method Action put(Tuple2#(SGListId,Bit#(DmaAddrSize)) req) if (!isConfiguring);
+      	 method Action put(Tuple2#(SGListId,Bit#(DmaAddrSize)) req);
 	    let id = tpl_1(req);
 	    let off = tpl_2(req);
       	    offs[1].enq(truncate(off));
@@ -125,7 +118,7 @@ module mkSGListMMU(SGListMMU#(addrWidth))
       	 endmethod
       endinterface
       interface Get response;
-      	 method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) get if (!isConfiguring);
+      	 method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) get();
       	    respFifos[1].deq();
       	    let pIdx = pageIdx.first();
       	    pageIdx.deq();

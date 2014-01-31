@@ -44,9 +44,9 @@ $(zedtests):
 
 zedruns = $(addsuffix .zedrun, $(testnames))
 
+# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
 $(zedruns):
 	(cd consolable; make)
-	# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
 	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
 
 zedruns = $(addsuffix .zedrun, $(testnames))
@@ -59,16 +59,21 @@ $(zctests):
 
 zcruns = $(addsuffix .zcrun, $(testnames))
 
+# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc702
 $(zcruns):
 	(cd consolable; make)
-	# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc702
 	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zc702 -name \*.gz` `find examples/$(basename $@)/zc702 -name android_exe | grep libs`
 
-gentests = $(addsuffix .gen, $(testnames))
+bsim_exetests = $(addsuffix .bsim_exe, $(testnames))
 
-$(gentests):
+$(bsim_exetests):
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe
 	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
+
+android_exetests = $(addsuffix .android_exe, $(testnames))
+
+$(android_exetests):
+	make BOARD=zedboard -C examples/$(basename $@) android_exe
 
 kc705tests = $(addsuffix .kc705, $(testnames))
 

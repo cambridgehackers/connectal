@@ -19,7 +19,7 @@ PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 256;
+int numWords = 16 << 4;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 bool trigger_fired = false;
@@ -66,9 +66,9 @@ public:
     if(true){
       fprintf(stderr, "memcpy done: %lx\n", v);
       fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
-      //dump("src", (char*)srcBuffer, test_sz);
-      //dump("dst", (char*)dstBuffer, test_sz);
-      //dump("dbg", (char*)bsBuffer,  test_sz);   
+      //dump("src", (char*)srcBuffer, 128);
+      //dump("dst", (char*)dstBuffer, 128);
+      //dump("dbg", (char*)bsBuffer,  128);   
     }
     if(trigger_fired){
       exit_test();
