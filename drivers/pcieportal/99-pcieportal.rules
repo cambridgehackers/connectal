@@ -1,4 +1,5 @@
 # UDev rules for setting up Bluespec emulation device drivers
 
-ACTION=="add",SUBSYSTEM=="pci",ATTR{idVendor}=="1be7",ATTR{idProduct}=="b100", RUN+="/sbin/modprobe -b pcieportal"
+ACTION=="add",SUBSYSTEM=="pci",ATTR{vendor}=="0x1be7", ATTR{device}="0xb100", RUN+="/sbin/modprobe -ba pcieportal portalmem"
 KERNEL=="fpga*",MODE="666"
+KERNEL=="portalmem",MODE="666"
