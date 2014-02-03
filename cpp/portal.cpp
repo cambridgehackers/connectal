@@ -387,22 +387,23 @@ int PortalMemory::reference(PortalAlloc* pa)
   pa->entries[ne].dma_address = 0;
   pa->entries[ne].length = 0;
   pa->header.numEntries++;
+  fprintf(stderr, "PortalMemory::reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, pa->header.size);
 #ifndef MMAP_HW
   sock_fd_write(p_fd.write.s2, pa->header.fd);
 #endif
   for(int i = 0; i < pa->header.numEntries; i++){
     DmaEntry *e = &(pa->entries[i]);
 #ifdef MMAP_HW
-    fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, e->dma_address, e->length);
+    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, e->dma_address, e->length);
     sglist(id, e->dma_address, e->length);
 #else
     int addr = (e->length > 0) ? size_accum : 0;
-    fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, addr, e->length);
+    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, addr, e->length);
     sglist(id, addr , e->length);
 #endif
     size_accum += e->length;
     if (sglistCallbackRegistered) {
-      fprintf(stderr, "sem_wait\n");
+      //fprintf(stderr, "sem_wait\n");
       sem_wait(&sglistSem);
     } else {
       fprintf(stderr, "ugly hack\n");
@@ -411,9 +412,8 @@ int PortalMemory::reference(PortalAlloc* pa)
   }
   return id;
 }
-void PortalMemory::sglistResp(unsigned long channelId)
+void PortalMemory::configResp(unsigned long channelId)
 {
-  fprintf(stderr, "PortalMemory::sglistResp channelId=%ld\n", channelId);
   sem_post(&sglistSem);
 }
 

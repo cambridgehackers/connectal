@@ -117,7 +117,7 @@ class PortalMemory : public PortalProxy
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
   int alloc(size_t size, PortalAlloc **portalAlloc);
   int reference(PortalAlloc* pa);
-  void sglistResp(unsigned long channelId);
+  void configResp(unsigned long channelId);
   void useSemaphore() { sglistCallbackRegistered = true; }
   virtual void sglist(unsigned long pref, unsigned long long addr, unsigned long len) = 0;
 };

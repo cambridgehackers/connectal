@@ -45,7 +45,7 @@ module mkDmaReadServer2BRAM#(DmaReadServer#(busWidth) rs, BRAMServer#(a,d) br)(D
 	    Ord#(a),
 	    Arith#(a),
 	    Bits#(a,b__),
-	    Add#(d__,b__,DmaAddrSize),
+	    Add#(d__,b__,DmaOffsetSize),
 	    Add#(1, c__, nd),
 	    Add#(a__, dsz, busWidth));
    
@@ -59,10 +59,10 @@ module mkDmaReadServer2BRAM#(DmaReadServer#(busWidth) rs, BRAMServer#(a,d) br)(D
    Reg#(a) j <- mkReg(0);
    Reg#(Bool) jv <- mkReg(False);
    Reg#(a) n <- mkReg(0);
-   Reg#(DmaPointer) readHandle <- mkReg(0);
+   Reg#(DmaPointer) readPointer <- mkReg(0);
 
    rule loadReq(iv);
-      rs.readReq.put(DmaRequest {handle: readHandle, address: zeroExtend(pack(i)), burstLen: 1, tag: 0});
+      rs.readReq.put(DmaRequest {pointer: readPointer, offset: zeroExtend(pack(i)), burstLen: 1, tag: 0});
       i <= i+fromInteger(valueOf(nd));
       iv <= (i < n);
    endrule
@@ -92,7 +92,7 @@ module mkDmaReadServer2BRAM#(DmaReadServer#(busWidth) rs, BRAMServer#(a,d) br)(D
       i <= 0;
       j <= 0;
       n <= x;
-      readHandle <= h;
+      readPointer <= h;
    endmethod
    
    method ActionValue#(Bool) finished();

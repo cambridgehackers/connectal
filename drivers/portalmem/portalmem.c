@@ -224,6 +224,7 @@ static struct dma_buf *dmabuffer_create(unsigned long len,
   static unsigned int low_order_gfp_flags  = (GFP_HIGHUSER | __GFP_ZERO |
 					    __GFP_NOWARN);
   static const unsigned int orders[] = {8, 4, 0};
+  unsigned int allocated_orders[] = {0,0,0};
   struct pa_buffer *buffer;
   struct sg_table *table;
   struct scatterlist *sg;
@@ -263,17 +264,20 @@ static struct dma_buf *dmabuffer_create(unsigned long len,
           size_remaining -= (1 << info->order) * PAGE_SIZE;
           max_order = info->order;
           infocount++;
-	  printk("%s, alloc_pages succeeded with order=%d\n", __FUNCTION__, orders[ordindex]);
+	  allocated_orders[ordindex] += 1;
+	  //printk("%s, alloc_pages succeeded with order=%d\n", __FUNCTION__, orders[ordindex]);
           break;
         } else {
-	  printk("%s, alloc_pages failed with order=%d\n", __FUNCTION__, orders[ordindex]);
+	  //printk("%s, alloc_pages failed with order=%d\n", __FUNCTION__, orders[ordindex]);
 	}
       }
-      printk("%s, alloc_pages skipping order=%d\n", __FUNCTION__, orders[ordindex]);
+      //printk("%s, alloc_pages skipping order=%d\n", __FUNCTION__, orders[ordindex]);
     }
     if (!info)
       break;
   }
+
+  printk("%s orders_allocated %d:%d, %d:%d, %d:%d\n", __FUNCTION__, orders[0], allocated_orders[0],orders[1], allocated_orders[1],orders[2], allocated_orders[2]);
 
   if (info) {
     int ret = sg_alloc_table(table, infocount, GFP_KERNEL);

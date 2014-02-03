@@ -13,7 +13,7 @@
 
 PortalAlloc *srcAlloc;
 unsigned int *srcBuffer = 0;
-int numWords = 16 << 10;
+int numWords = 16 << 16;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 

@@ -27,7 +27,7 @@ import AxiMasterSlave::*;
 import Dma::*;
 
 interface MemwriteRequest;
-   method Action startWrite(Bit#(32) handle, Bit#(32) numWords, Bit#(32) burstLen);
+   method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen);
    method Action getStateDbg();   
 endinterface
 
@@ -45,14 +45,14 @@ endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
-   Reg#(Bit#(32))        wrHandle <- mkReg(0); 
+   Reg#(Bit#(32))        wrPointer <- mkReg(0); 
    Reg#(Bit#(32))           wrCnt <- mkReg(0);
    Reg#(Bit#(32))          srcGen <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) offset <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) offset <- mkReg(0);
    Reg#(Bit#(32))       maxSrcGen <- mkReg(0);
 
    Reg#(Bit#(8))         burstLen <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize))  delta <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize))  delta <- mkReg(0);
    
    Reg#(Bit#(8))       burstCount <- mkReg(0);
    FIFOF#(Bit#(6))       dataTags <- mkFIFOF();
@@ -71,7 +71,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	    dataTags.enq(tag);
 	    doneTags.enq(tag);
 	    //$display("mkMemWrite.dmaClient.writeReq::get wrCnt=%d, tag=%d", wrCnt, tag);
-	    return DmaRequest {handle: wrHandle, address: offset, burstLen: burstLen, tag: tag};
+	    return DmaRequest {pointer: wrPointer, offset: offset, burstLen: burstLen, tag: tag};
 	 endmethod
 	 method Bool notEmpty;
 	    return wrCnt > 0;
@@ -109,14 +109,14 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    endinterface : dmaClient
 
    interface MemwriteRequest request;
-       method Action startWrite(Bit#(32) handle, Bit#(32) numWords, Bit#(32) bl) if (wrCnt == 0);
-	  $display("mkMemWrite::startWrite(%d %d %d)", handle, numWords, bl);
+       method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) bl) if (wrCnt == 0);
+	  $display("mkMemWrite::startWrite(%d %d %d)", pointer, numWords, bl);
 	  wrCnt <= numWords>>1;
 	  maxSrcGen <= numWords;
 	  burstLen <= truncate(bl);
-	  delta <= 8*truncate(bl);
+	  delta <= 8*extend(bl);
 	  indication.started(numWords);
-	  wrHandle <= handle;
+	  wrPointer <= pointer;
        endmethod
        method Action getStateDbg();
 	  indication.reportStateDbg(wrCnt, srcGen);

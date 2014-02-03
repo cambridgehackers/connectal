@@ -34,13 +34,12 @@ import PortalMemory::*;
 import BRAMFIFOFLevel::*;
 
 typedef Bit#(32) DmaPointer;
+typedef 40 DmaOffsetSize;
 
-typedef 24 DmaAddrSize;
-// SGListMaxPages is derived from this
 
 typedef struct {
-   DmaPointer handle;
-   Bit#(DmaAddrSize)  address;
+   DmaPointer pointer;
+   Bit#(DmaOffsetSize) offset;
    Bit#(8) burstLen;
    Bit#(6)  tag;
    } DmaRequest deriving (Bits);

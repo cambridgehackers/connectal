@@ -102,7 +102,7 @@ sock_fd_read(int sock, int *fd)
             }
 
             *fd = *((int *) CMSG_DATA(cmsg));
-            printf ("received fd %d\n", *fd);
+            //fprintf(stderr, "received fd %d\n", *fd);
         } else
             *fd = -1;
     } else {
