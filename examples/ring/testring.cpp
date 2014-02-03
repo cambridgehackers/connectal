@@ -34,8 +34,6 @@
 #include "DmaConfigProxy.h"
 #include "GeneratedTypes.h"
 
-
-
 RingRequestProxy *ring = 0;
 DmaConfigProxy *dma = 0;
 
@@ -47,8 +45,8 @@ char *cmdBuffer = 0;
 char *statusBuffer = 0;
 char *scratchBuffer = 0;
 
-size_t cmd_ring_sz = 4096;
-size_t status_ring_sz = 4096;
+size_t cmd_ring_sz = 8192;
+size_t status_ring_sz = 8192;
 size_t scratch_sz = 1<<20; /* 1 MB */
 
 #define CMD_NOP 0
@@ -95,6 +93,7 @@ struct SWRing {
   unsigned first;
   unsigned last;
   size_t size;
+  size_t slots;
   unsigned cached_space;
   int ringid;
 };
@@ -117,6 +116,7 @@ uint64_t fetch(uint64_t *p) {
 void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size_t size)
 {
   r->size = size;
+  r->slots = r->size / 64;
   r->base = (char *) base;
   r->first = 0;
   r->last = 0;
@@ -170,6 +170,11 @@ void ring_send(struct SWRing *r, uint64_t *cmd)
   unsigned next_first;
   assert(ring_estimated_space_left(r) > 0);
   assert(r->first < r->size);
+  /* send an inquiry every 1/4 way around the ring */
+  if ((r->cached_space % (r->size >> 2)) == 0) {
+    ring->get(r->ringid, REG_LAST, 0);         // bufferlast 
+  }
+  
   memcpy(&r->base[r->first], cmd, 64);
   next_first = r->first + 64;
   if (next_first == r->size) next_first = 0;
