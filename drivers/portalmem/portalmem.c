@@ -85,6 +85,37 @@ static void pa_dma_buf_unmap(struct dma_buf_attachment *attachment,
 {
 }
 
+//from: http://stackoverflow.com/questions/654393/examining-mmaped-addresses-using-gdb
+static inline int custom_vma_access(struct vm_area_struct *vma, unsigned long addr,
+          void *buf, int len, int write)
+{
+  void __iomem *maddr = NULL;
+  struct pa_buffer *buffer = vma->vm_private_data;
+  struct scatterlist *sg;
+  int i;
+
+  if (!buffer)
+    return -EFAULT;
+  int offset = (addr) - vma->vm_start;
+
+  struct sg_table *table = buffer->sg_table;
+  for_each_sg(table->sgl, sg, table->nents, i) {
+    struct page *page = sg_page(sg);
+    maddr = page_address(page);
+    if (offset < sg->length)
+        break;
+    offset -= sg->length;
+  }
+  if (write)
+    memcpy(maddr + offset, buf, len);
+  else
+    memcpy(buf, maddr + offset, len);
+  return len;
+}
+static struct vm_operations_struct custom_vm_ops = {
+    .access = custom_vma_access,
+};
+
 static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 {
   struct pa_buffer *buffer = dmabuf->priv;
@@ -92,6 +123,9 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   struct scatterlist *sg;
   int i;
 
+  /* Fill in vma_ops::access(), so that gdb print command works correctly */
+  vma->vm_ops = &custom_vm_ops;
+  vma->vm_private_data = buffer;
   printk("pa_dma_buf_mmap %08lx %zd\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
   vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
   mutex_lock(&buffer->lock);
