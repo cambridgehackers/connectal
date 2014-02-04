@@ -32,5 +32,6 @@ endinterface
 typedef enum {
  CmdNOP = 0,
  CmdCOPY = 1,
- CmdECHO = 2
+ CmdECHO = 2,
+ CmdFILL = 3
    } OpCode deriving (Bits);
