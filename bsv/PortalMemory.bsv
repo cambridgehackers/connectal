@@ -70,7 +70,6 @@ interface DmaConfig;
    // @param addr Physical address of the segment
    // @param len Length of the segment
    //
-   // @note Only implemented for hardware
    method Action sglist(Bit#(32) pointer, Bit#(40) addr, Bit#(32) len);
    method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 endinterface

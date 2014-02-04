@@ -27,11 +27,14 @@ import Strstr::*;
 
 typedef enum {StrstrIndication, StrstrRequest, DmaIndication, DmaRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth)) provisos (
-    Add#(addrWidth, a__, 52),
-    Add#(b__, addrWidth, 64),
-    Add#(c__, 12, addrWidth),
-    Add#(addrWidth, d__, 44));
+module mkPortalTop(StdPortalTop#(addrWidth)) 
+
+   provisos(Add#(addrWidth, a__, 52),
+	    Add#(b__, addrWidth, 64),
+	    Add#(c__, 12, addrWidth),
+	    Add#(addrWidth, d__, 44),
+	    Add#(e__, c__, 40),
+	    Add#(f__, addrWidth, 40));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    DmaReadBuffer#(64,1) haystack_read_chan <- mkDmaReadBuffer();
