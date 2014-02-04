@@ -74,6 +74,10 @@ public:
   virtual void getResult(long unsigned int cmd, long unsigned int regist, long unsigned int addr) {
     fprintf(stderr, "getResult(cmd %ld regist %ld addr %lx)\n", 
 	    cmd, regist, addr);
+    /* returning query about last pointer of cmd ring */
+    if ((cmd = cmd_ring.ringid) && (regist == REG_LAST)) {
+      cmd_ring.last = addr;
+    }
     sem_post(&conf_sem);
   }
   virtual void completion(unsigned long cmd, unsigned long token) {
@@ -91,7 +95,7 @@ struct SWRing {
   unsigned int ref;
   char *base;
   unsigned first;
-  unsigned last;
+  volatile unsigned last;
   size_t size;
   size_t slots;
   unsigned cached_space;
@@ -156,23 +160,16 @@ void ring_pop(struct SWRing *r)
   r->last = last;
 }
 
-unsigned ring_estimated_space_left(struct SWRing *r)
-{
-  return(r->cached_space);
-}
-
-void update_space_cache(struct SWRing *r)
-{
-}
-
 void ring_send(struct SWRing *r, uint64_t *cmd)
 {
   unsigned next_first;
-  assert(ring_estimated_space_left(r) > 0);
   assert(r->first < r->size);
   /* send an inquiry every 1/4 way around the ring */
   if ((r->cached_space % (r->size >> 2)) == 0) {
     ring->get(r->ringid, REG_LAST, 0);         // bufferlast 
+    while (r->cached_space == 0) {
+      r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
+    }
   }
   
   memcpy(&r->base[r->first], cmd, 64);
