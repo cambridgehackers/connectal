@@ -10,14 +10,15 @@ else
 fi
 ANDROID_SERIAL=$ZEDBOARD_IPADDR:5555
 adb connect $ZEDBOARD_IPADDR
-adb root
+adb -s $ANDROID_SERIAL root
 adb connect $ZEDBOARD_IPADDR
-adb push $1 /mnt/sdcard
-adb push $2 /mnt/sdcard
-adb shell rmmod portalmem
-adb shell rmmod zynqportal
-adb shell insmod /mnt/sdcard/portalmem.ko
-adb shell insmod /mnt/sdcard/zynqportal.ko
-adb shell "gzip -dc /mnt/sdcard/`basename $1` >/dev/xdevcfg"
-adb shell /mnt/sdcard/`basename $2`
-adb shell rm /mnt/sdcard/`basename $1` /mnt/sdcard/`basename $2`
+adb -s $ANDROID_SERIAL push $1 /mnt/sdcard
+adb -s $ANDROID_SERIAL push $2 /mnt/sdcard
+adb -s $ANDROID_SERIAL shell rmmod portalmem
+adb -s $ANDROID_SERIAL shell rmmod zynqportal
+adb -s $ANDROID_SERIAL shell insmod /mnt/sdcard/portalmem.ko
+adb -s $ANDROID_SERIAL shell insmod /mnt/sdcard/zynqportal.ko
+adb -s $ANDROID_SERIAL shell "gzip -dc /mnt/sdcard/`basename $1` >/dev/xdevcfg"
+adb -s $ANDROID_SERIAL shell "pwd"
+adb -s $ANDROID_SERIAL shell /mnt/sdcard/`basename $2`
+adb -s $ANDROID_SERIAL shell rm /mnt/sdcard/`basename $1` /mnt/sdcard/`basename $2`
