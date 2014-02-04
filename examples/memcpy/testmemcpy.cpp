@@ -39,7 +39,7 @@ PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 16 << 5;
+int numWords = 16 << 15;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 bool trigger_fired = false;

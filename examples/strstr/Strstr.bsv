@@ -49,9 +49,9 @@ typedef Bit#(TLog#(MaxNeedleLen)) NeedleIdx;
 typedef enum {Idle, Init, Run} Stage deriving (Eq, Bits);
 
 module mkStrstrRequest#(StrstrIndication indication,
-			DmaReadServer#(busWidth)   haystack_read_chan,
-			DmaReadServer#(busWidth)     needle_read_chan,
-			DmaReadServer#(busWidth)    mp_next_read_chan )(StrstrRequest)
+			DmaReadServer#(busWidth)   haystack_read_server,
+			DmaReadServer#(busWidth)     needle_read_server,
+			DmaReadServer#(busWidth)    mp_next_read_server )(StrstrRequest)
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
@@ -75,8 +75,8 @@ module mkStrstrRequest#(StrstrIndication indication,
    Reg#(DmaPointer) haystackPointer <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) haystackOff <- mkReg(0);
    
-   DmaReadServer2BRAM#(NeedleIdx) n2b <- mkDmaReadServer2BRAM(needle_read_chan, needle.portB);
-   DmaReadServer2BRAM#(NeedleIdx) mp2b <- mkDmaReadServer2BRAM(mp_next_read_chan, mpNext.portB);
+   DmaReadServer2BRAM#(NeedleIdx) n2b <- mkDmaReadServer2BRAM(needle_read_server, needle.portB);
+   DmaReadServer2BRAM#(NeedleIdx) mp2b <- mkDmaReadServer2BRAM(mp_next_read_server, mpNext.portB);
 
    Reg#(Bit#(2)) epochReg <- mkReg(0);
    FIFO#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFO(2);
@@ -92,13 +92,13 @@ module mkStrstrRequest#(StrstrIndication indication,
 
    (* descending_urgency = "mp2b_load, n2b_load, matchNeedleResp, matchNeedleReq" *)
    
-   rule haystackReq (stage == Run);
-      haystack_read_chan.readReq.put(DmaRequest {pointer: haystackPointer, offset: haystackOff, burstLen: 1, tag: 0});
+   rule haystackReq (stage == Run && haystackOff < extend(haystackLenReg));
+      haystack_read_server.readReq.put(DmaRequest {pointer: haystackPointer, offset: haystackOff, burstLen: 1, tag: 0});
       haystackOff <= haystackOff + fromInteger(valueOf(nc));
    endrule
    
    rule haystackResp;
-      let rv <- haystack_read_chan.readData.get;
+      let rv <- haystack_read_server.readData.get;
       Vector#(nc,Char) pv = unpack(rv.data);
       haystack.enq(pv);
    endrule
@@ -168,6 +168,8 @@ module mkStrstrRequest#(StrstrIndication indication,
       mp2b.start(mpNext_pointer, pack(truncate(needle_len)));
       haystackPointer <= haystack_pointer;
       stage <= Init;
-      
+      haystackOff <= 0;
+      jReg <= 0;
+      iReg <= 0;
    endmethod
 endmodule

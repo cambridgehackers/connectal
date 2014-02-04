@@ -110,7 +110,7 @@ module mkSGListMMU(SGListMMU#(addrWidth))
 		   p = truncate(off>>page_shift0);
 		end 
 		else begin
-		   $display("mkSGListMMU.addr[%d].request.put: ERROR\n", i);
+		   $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
 		end
 		offs[i].enq(o);
 		portsel(i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{ptr-1,p}, datain:?});
