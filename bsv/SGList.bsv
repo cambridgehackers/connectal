@@ -61,7 +61,7 @@ module mkSGListMMU(SGListMMU#(addrWidth))
 	    Add#(c__, addrWidth, DmaOffsetSize));
 
    BRAM2Port#(Bit#(entryIdxSize), Page) pageTable <- mkBRAM2Server(defaultValue);
-   Vector#(MaxNumSGLists, Reg#(Tuple3#(Bit#(8),Bit#(8),Bit#(8)))) regions <- replicateM(mkReg(unpack(0)));
+   Vector#(MaxNumSGLists, Reg#(Tuple3#(Bit#(40),Bit#(40),Bit#(40)))) regions <- replicateM(mkReg(unpack(0)));
    
    Vector#(2,FIFOF#(Offset))  offs <- replicateM(mkFIFOF);
    Reg#(Bit#(8))               idxReg  <- mkReg(0);
@@ -70,9 +70,9 @@ module mkSGListMMU(SGListMMU#(addrWidth))
    let page_shift4 = fromInteger(valueOf(SGListPageShift4));
    let page_shift8 = fromInteger(valueOf(SGListPageShift8));
    
-   let ord0 = 32'd1 << page_shift0;
-   let ord4 = 32'd1 << page_shift4;
-   let ord8 = 32'd1 << page_shift8;
+   let ord0 = 40'd1 << page_shift0;
+   let ord4 = 40'd1 << page_shift4;
+   let ord8 = 40'd1 << page_shift8;
 
    function BRAMServer#(Bit#(entryIdxSize), Page) portsel(int i);
       if(i==0)
@@ -91,9 +91,9 @@ module mkSGListMMU(SGListMMU#(addrWidth))
 		let off = tpl_2(req);
 		Offset o = ?;
 		Bit#(8) p = ?;
-		Bit#(40) barrier8 = extend(tpl_3(regions[ptr-1]))*extend(ord8);
-		Bit#(40) barrier4 = extend(tpl_2(regions[ptr-1]))*extend(ord4);
-		Bit#(40) barrier0 = extend(tpl_1(regions[ptr-1]))*extend(ord0);
+		Bit#(40) barrier8 = tpl_3(regions[ptr-1]);
+		Bit#(40) barrier4 = tpl_2(regions[ptr-1]);
+		Bit#(40) barrier0 = tpl_1(regions[ptr-1]);
 		if (off < barrier8) begin
 		   //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
 		   o = tagged OOrd8 truncate(off);
@@ -147,18 +147,19 @@ module mkSGListMMU(SGListMMU#(addrWidth))
 	 else begin
 	    idxReg <= idxReg+1;
 	 end
-	 Tuple3#(Bit#(8),Bit#(8),Bit#(8)) tt = regions[pointer-1];
+	 Tuple3#(Bit#(40),Bit#(40),Bit#(40)) tt = regions[pointer-1];
 	 Page page = ?;
-	 if (len == ord0) begin
-	    regions[pointer-1] <= tuple3(idxReg+1, tpl_2(tt), tpl_3(tt));
+	 // if we were willing to have a "reset" method, we could get rid of the multiplies
+	 if (extend(len) == ord0) begin
+	    regions[pointer-1] <= tuple3(extend(idxReg+1)*ord0, tpl_2(tt), tpl_3(tt));
 	    page = tagged POrd0 truncate(offset>>page_shift0);
 	 end
-	 else if (len == ord4) begin
-	    regions[pointer-1] <= tuple3(tpl_1(tt), idxReg+1,tpl_3(tt));
+	 else if (extend(len) == ord4) begin
+	    regions[pointer-1] <= tuple3(tpl_1(tt), extend(idxReg+1)*ord4,tpl_3(tt));
 	    page = tagged POrd4 truncate(offset>>page_shift4);
 	 end
-	 else if (len == ord8) begin
-	    regions[pointer-1] <= tuple3(tpl_1(tt), tpl_2(tt),idxReg+1);
+	 else if (extend(len) == ord8) begin
+	    regions[pointer-1] <= tuple3(tpl_1(tt), tpl_2(tt),extend(idxReg+1)*ord8);
 	    page = tagged POrd8 truncate(offset>>page_shift8);
 	 end
 	 else begin
