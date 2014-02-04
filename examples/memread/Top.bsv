@@ -23,11 +23,14 @@ import DmaIndicationProxy::*;
 // defined by user
 import Memread::*;
 
-module mkPortalTop(StdPortalTop#(addrWidth)) provisos (
-    Add#(addrWidth, a__, 52),
-    Add#(b__, addrWidth, 64),
-    Add#(c__, 12, addrWidth),
-    Add#(addrWidth, d__, 44));
+module mkPortalTop(StdPortalTop#(addrWidth)) 
+
+   provisos(Add#(addrWidth, a__, 52),
+	    Add#(b__, addrWidth, 64),
+	    Add#(c__, 12, addrWidth),
+	    Add#(addrWidth, d__, 44),
+	    Add#(e__, c__, DmaOffsetSize),
+	    Add#(f__, addrWidth, 40));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(9);
 

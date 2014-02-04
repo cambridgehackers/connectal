@@ -13,7 +13,7 @@
 #include "MemwriteIndicationWrapper.h"
 #include "MemwriteRequestProxy.h"
 
-int numWords = 16 << 15;
+int numWords = 16 << 5;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 sem_t done_sem;

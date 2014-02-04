@@ -103,7 +103,7 @@ module mkAxiDmaReadInternal#(Integer numRequests, Vector#(numReadClients, DmaRea
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first();
       lreqFifo.deq();
-      if (physAddr <= (1 << valueOf(SGListPageShift))) begin
+      if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
 	 $display("dmaRead: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
@@ -196,7 +196,7 @@ module mkAxiDmaWriteInternal#(Integer numRequests, Vector#(numWriteClients, DmaW
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first();
       lreqFifo.deq();
-      if (physAddr <= (1 << valueOf(SGListPageShift))) begin
+      if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
 	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
@@ -278,24 +278,20 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 		       Vector#(numReadClients, DmaReadClient#(dsz)) readClients,
 		       Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients)
    (AxiDmaServer#(addrWidth, dsz))
+   
    provisos (Add#(1,a__,dsz),
         Add#(b__, TSub#(addrWidth, 12), 32),
         Add#(c__, 12, addrWidth),
         Add#(d__, addrWidth, 64),
-        Add#(e__, TSub#(addrWidth, 12), 40));
+        Add#(e__, TSub#(addrWidth, 12), DmaOffsetSize),
+        Add#(f__, c__, DmaOffsetSize),
+	Add#(g__, addrWidth, 40));
    
    SGListMMU#(addrWidth) sgl <- mkSGListMMU();
+   FIFO#(void)   addrReqFifo <- mkFIFO;
 
    AxiDmaReadInternal#(addrWidth, dsz) reader <- mkAxiDmaReadInternal(numRequests, readClients, dmaIndication, sgl.addr[0]);
    AxiDmaWriteInternal#(addrWidth, dsz) writer <- mkAxiDmaWriteInternal(numRequests, writeClients, dmaIndication, sgl.addr[1]);
-
-   Reg#(Bit#(TSub#(addrWidth,SGListPageShift))) addrReg <- mkReg(0);
-   Reg#(Bit#(32))                        prefReg <- mkReg(0);
-   Reg#(Bit#(PageIdxSize))               lenReg  <- mkReg(0);
-   Reg#(Bit#(PageIdxSize))               idxReg  <- mkReg(0);
-   FIFO#(void)                       addrReqFifo <- mkFIFO;
-   
-   let page_shift = fromInteger(valueOf(SGListPageShift));
    
    rule sglistEntry;
       addrReqFifo.deq;
@@ -303,16 +299,6 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
-   rule write_pages(idxReg < lenReg);
-      //$display("write_pages %h %h", idxReg, lenReg);
-      idxReg <= idxReg + 1;
-      addrReg <= addrReg + 1;
-      sgl.page(truncate(prefReg),idxReg,addrReg);
-      if(idxReg+1 == lenReg) begin
-	 dmaIndication.configResp(prefReg);
-      end
-   endrule
-
    interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
@@ -322,34 +308,23 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 	    rv <- writer.write.dbg;
 	 dmaIndication.reportStateDbg(rv);
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len) if (idxReg == lenReg);
-	 let idx = idxReg;
-	 if (prefReg != pref)
-	    idx = 0;
-	 prefReg <= pref;
-	 lenReg  <= truncate(len >> page_shift) + idx;
-	 idxReg <= idx;
-	 if (addr == 0 && len == 0) begin // sw marks end-of-list with zeros
-	    dmaIndication.configResp(pref);
-	 end
-`ifndef BSIM
-	 if (pref != 0 && (addr == 0 && len > 0)) begin
-	    dmaIndication.badAddr(pref, extend(idx), extend(addr >> page_shift));
-	 end
-`endif
-         if (pref == 0) begin
-	    dmaIndication.badAddr(pref, extend(idx), extend(addr >> page_shift));
+      method Action sglist(Bit#(32) pref, Bit#(DmaOffsetSize) addr, Bit#(32) len);
+	 dmaIndication.configResp(pref);
+	 if (pref == 0 || pref > fromInteger(valueOf(MaxNumSGLists))) begin
+	    dmaIndication.badPointer(pref);
 	 end
 `ifdef BSIM
 	 let va <- pareff(pref, len);
-	 addr[39:32] = truncate(pref);
+         addr[39:32] = truncate(pref);
 `endif
-	 //$display("sglist.pareff handle=%d addr=%h len=%h", pref, addr, len);
-	 addrReg <= truncate(addr >> page_shift);
+	 if (addr == 0 && len > 0) begin
+	    dmaIndication.badAddr(pref, addr, zeroExtend(len));
+	 end
+	 sgl.sglist(pref, addr, len);
       endmethod
-      method Action addrRequest(Bit#(32) handle, Bit#(32) offset);
+      method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);
-	 sgl.addr[0].request.put(tuple2(truncate(handle), extend(offset)));
+	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
       endmethod
    endinterface
    interface Axi3Master m_axi;
