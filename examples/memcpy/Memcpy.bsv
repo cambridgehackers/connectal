@@ -29,7 +29,7 @@ import Dma::*;
 import BlueScope::*;
 
 interface MemcpyRequest;
-   method Action startCopy(Bit#(32) wrHandle, Bit#(32) rdHandle, Bit#(32) numWords);
+   method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords);
    method Action readWord();
    method Action getStateDbg();   
 endinterface
@@ -60,22 +60,22 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
    Reg#(Bit#(32)) streamAckCnt <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) streamRdOff <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) streamWrOff <- mkReg(0);
-   Reg#(DmaPointer)    streamRdHandle <- mkReg(0);
-   Reg#(DmaPointer)    streamWrHandle <- mkReg(0);
-   Reg#(DmaPointer) bluescopeWrHandle <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) streamRdOff <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) streamWrOff <- mkReg(0);
+   Reg#(DmaPointer)    streamRdPointer <- mkReg(0);
+   Reg#(DmaPointer)    streamWrPointer <- mkReg(0);
+   Reg#(DmaPointer) bluescopeWrPointer <- mkReg(0);
    Reg#(Bool)               writeInProg <- mkReg(False);
    Reg#(Bool)              dataMismatch <- mkReg(False);  
    
    Reg#(Bit#(8)) burstLen <- mkReg(8);
-   Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(8*fromInteger(busWidthBytes));
+   Reg#(Bit#(DmaOffsetSize)) deltaOffset <- mkReg(8*fromInteger(busWidthBytes));
 
    rule readReq(streamRdCnt > 0);
       streamRdCnt <= streamRdCnt - extend(burstLen);
       streamRdOff <= streamRdOff + deltaOffset;
-      //$display("readReq.put handle=%h address=%h, burstlen=%h", streamRdHandle, streamRdOff, burstLen);
-      dma_stream_read_server.readReq.put(DmaRequest {handle: streamRdHandle, address: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
+      //$display("readReq.put pointer=%h address=%h, burstlen=%h", streamRdPointer, streamRdOff, burstLen);
+      dma_stream_read_server.readReq.put(DmaRequest {pointer: streamRdPointer, offset: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
       //indication.readReq(streamRdCnt);
    endrule
 
@@ -83,8 +83,8 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       writeInProg <= True;
       streamWrCnt <= streamWrCnt-extend(burstLen);
       streamWrOff <= streamWrOff + deltaOffset;
-      //$display("writeReq.put handle=%h address=%h", streamWrHandle, streamWrOff);
-      dma_stream_write_server.writeReq.put(DmaRequest {handle: streamWrHandle, address: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
+      //$display("writeReq.put pointer=%h address=%h", streamWrPointer, streamWrOff);
+      dma_stream_write_server.writeReq.put(DmaRequest {pointer: streamWrPointer, offset: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
       //indication.writeReq(streamWrCnt);
    endrule
    
@@ -117,13 +117,13 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       indication.readWordResult(truncate(tagdata.data));
    endrule
    
-   method Action startCopy(Bit#(32) wrHandle, Bit#(32) rdHandle, Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
-      //$display("startCopy wrHandle=%h rdHandle=%h numWords=%d", wrHandle, rdHandle, numWords);
+   method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
+      //$display("startCopy wrPointer=%h rdPointer=%h numWords=%d", wrPointer, rdPointer, numWords);
       streamRdOff <= 0;
       streamWrOff <= 0;
 
-      streamWrHandle <= wrHandle;
-      streamRdHandle <= rdHandle;
+      streamWrPointer <= wrPointer;
+      streamRdPointer <= rdPointer;
       streamRdCnt <= numWords>>1;
       streamWrCnt <= numWords>>1;
       streamAckCnt <= numWords>>1;
@@ -131,7 +131,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    endmethod
 
    method Action readWord();
-      dma_word_read_server.readReq.put(DmaRequest {handle: streamWrHandle, address: 0, burstLen: 1, tag: 1});
+      dma_word_read_server.readReq.put(DmaRequest {pointer: streamWrPointer, offset: 0, burstLen: 1, tag: 1});
    endmethod
 
    method Action getStateDbg();

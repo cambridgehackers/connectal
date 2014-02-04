@@ -32,7 +32,7 @@ import Dma::*;
 import DmaUtils::*;
 
 interface StrstrRequest;
-   method Action search(Bit#(32) needleHandle, Bit#(32) haystackHandle, Bit#(32) mpNextHandle, Bit#(32) needle_len, Bit#(32) haystack_len);
+   method Action search(Bit#(32) needlePointer, Bit#(32) haystackPointer, Bit#(32) mpNextPointer, Bit#(32) needle_len, Bit#(32) haystack_len);
 endinterface
 
 interface StrstrIndication;
@@ -72,8 +72,8 @@ module mkStrstrRequest#(StrstrIndication indication,
    Reg#(Bit#(32)) haystackLenReg <- mkReg(0);
    Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
    Reg#(Bit#(32)) jReg <- mkReg(0); // offset in haystack
-   Reg#(DmaPointer) haystackHandle <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) haystackPtr <- mkReg(0);
+   Reg#(DmaPointer) haystackPointer <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) haystackOff <- mkReg(0);
    
    DmaReadServer2BRAM#(NeedleIdx) n2b <- mkDmaReadServer2BRAM(needle_read_chan, needle.portB);
    DmaReadServer2BRAM#(NeedleIdx) mp2b <- mkDmaReadServer2BRAM(mp_next_read_chan, mpNext.portB);
@@ -93,8 +93,8 @@ module mkStrstrRequest#(StrstrIndication indication,
    (* descending_urgency = "mp2b_load, n2b_load, matchNeedleResp, matchNeedleReq" *)
    
    rule haystackReq (stage == Run);
-      haystack_read_chan.readReq.put(DmaRequest {handle: haystackHandle, address: haystackPtr, burstLen: 1, tag: 0});
-      haystackPtr <= haystackPtr + fromInteger(valueOf(nc));
+      haystack_read_chan.readReq.put(DmaRequest {pointer: haystackPointer, offset: haystackOff, burstLen: 1, tag: 0});
+      haystackOff <= haystackOff + fromInteger(valueOf(nc));
    endrule
    
    rule haystackResp;
@@ -108,8 +108,8 @@ module mkStrstrRequest#(StrstrIndication indication,
    endrule
  
    rule matchNeedleReq(stage == Run);
-      needle.portA.request.put(BRAMRequest{write:False, address:truncate(iReg-1)});
-      mpNext.portA.request.put(BRAMRequest{write:False, address:truncate(iReg)});
+      needle.portA.request.put(BRAMRequest{write:False, address: truncate(iReg-1)});
+      mpNext.portA.request.put(BRAMRequest{write:False, address: truncate(iReg)});
       efifo.enq(tuple2(epochReg,iReg));
       iReg <= iReg+1;
       //$display("matchNeedleReq %d %d", epochReg, iReg);
@@ -158,15 +158,15 @@ module mkStrstrRequest#(StrstrIndication indication,
       end
    endrule
    
-   method Action search(Bit#(32) needle_handle, Bit#(32) haystack_handle, Bit#(32) mpNext_handle, 
+   method Action search(Bit#(32) needle_pointer, Bit#(32) haystack_pointer, Bit#(32) mpNext_pointer, 
 			Bit#(32) needle_len, Bit#(32) haystack_len) if (stage == Idle);
 
       $display("search %h %h", needle_len, haystack_len);
       needleLenReg <= needle_len;
       haystackLenReg <= haystack_len;
-      n2b.start(needle_handle, pack(truncate(needle_len)));
-      mp2b.start(mpNext_handle, pack(truncate(needle_len)));
-      haystackHandle <= haystack_handle;
+      n2b.start(needle_pointer, pack(truncate(needle_len)));
+      mp2b.start(mpNext_pointer, pack(truncate(needle_len)));
+      haystackPointer <= haystack_pointer;
       stage <= Init;
       
    endmethod

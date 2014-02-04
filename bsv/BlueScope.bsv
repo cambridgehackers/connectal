@@ -35,7 +35,7 @@ interface BlueScopeIndication;
 endinterface
 
 interface BlueScopeRequest;
-   method Action start(Bit#(32) handle);
+   method Action start(Bit#(32) pointer);
    method Action reset();
    method Action setTriggerMask(Bit#(64) mask);
    method Action setTriggerValue(Bit#(64) value);
@@ -64,13 +64,13 @@ module mkSyncBlueScope#(Integer samples, DmaWriteServer#(dataWidth) wchan, BlueS
 	    Div#(dataWidth,8,dataBytes));
 
    SyncFIFOIfc#(Bit#(dataWidth)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
-   Reg#(DmaPointer) handleReg <- mkSyncReg(0, dClk, dRst, sClk);
+   Reg#(DmaPointer) pointerReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(dataWidth))       maskReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(dataWidth))      valueReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
    Reg#(State)                stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
-   Reg#(Bit#(DmaAddrSize)) writeOffsetReg <- mkReg(0,    clocked_by dClk, reset_by dRst);
+   Reg#(Bit#(DmaOffsetSize)) writeOffsetReg <- mkReg(0,    clocked_by dClk, reset_by dRst);
    
    SyncPulseIfc             startPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);
@@ -87,7 +87,7 @@ module mkSyncBlueScope#(Integer samples, DmaWriteServer#(dataWidth) wchan, BlueS
    endrule
 
    rule writeReq if (dfifo.notEmpty);
-      wchan.writeReq.put(DmaRequest { handle: handleReg, address: zeroExtend(writeOffsetReg), burstLen: 2, tag: 0});
+      wchan.writeReq.put(DmaRequest { pointer: pointerReg, offset: zeroExtend(writeOffsetReg), burstLen: 2, tag: 0});
       writeOffsetReg <= writeOffsetReg + (fromInteger(valueOf(dataBytes)) * 2);
    endrule
 
@@ -152,8 +152,8 @@ module mkSyncBlueScope#(Integer samples, DmaWriteServer#(dataWidth) wchan, BlueS
    endmethod
    
    interface BlueScopeRequest requestIfc;
-      method Action start(Bit#(32) handle);
-         handleReg <= handle;
+      method Action start(Bit#(32) pointer);
+         pointerReg <= pointer;
 	 startPulse.send();
       endmethod
 

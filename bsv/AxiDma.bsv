@@ -64,7 +64,7 @@ endinterface
 typedef enum {Idle, Translate, Address, Data, Done} InternalState deriving(Eq,Bits);
 		 
 module mkAxiDmaReadInternal#(Integer numRequests, Vector#(numReadClients, DmaReadClient#(dsz)) readClients,
-			     DmaIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth)) sgl)(AxiDmaReadInternal#(addrWidth, dsz))
+			     DmaIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth)) sgl)(AxiDmaReadInternal#(addrWidth, dsz))
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
    FIFO#(DmaRequest) lreqFifo <- mkPipelineFIFO();
@@ -88,14 +88,14 @@ module mkAxiDmaReadInternal#(Integer numRequests, Vector#(numReadClients, DmaRea
       DmaRequest req = unpack(0);
       if (valueOf(numReadClients) > 0)
 	 req <- readClients[selectReg].readReq.get();
-      //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.handle, req.address, req.burstLen);
+      //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.pointer, req.offset, req.burstLen);
 
-      if (req.handle > fromInteger(valueOf(MaxNumSGLists)))
-	 dmaIndication.badHandle(req.handle, extend(req.address));
+      if (req.pointer > fromInteger(valueOf(MaxNumSGLists)))
+	 dmaIndication.badPointer(req.pointer);
       else begin
 	 lreqFifo.enq(req);
 	 chanFifo.enq(selectReg);
-	 sgl.request.put(tuple2(truncate(req.handle),req.address));
+	 sgl.request.put(tuple2(truncate(req.pointer),req.offset));
       end
    endrule
    
@@ -105,8 +105,8 @@ module mkAxiDmaReadInternal#(Integer numRequests, Vector#(numReadClients, DmaRea
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift))) begin
 	 // squash request
-	 $display("dmaRead: badAddr handle=%d addr=%h physAddr=%h", req.handle, req.address, physAddr);
-	 dmaIndication.badAddr(req.handle, extend(req.address), extend(physAddr));
+	 $display("dmaRead: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
+	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
       end
       else begin
 	 reqFifo.enq(req);
@@ -160,7 +160,7 @@ endmodule
 
 
 module mkAxiDmaWriteInternal#(Integer numRequests, Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients,
-			      DmaIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth)) sgl)(AxiDmaWriteInternal#(addrWidth, dsz))
+			      DmaIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth)) sgl)(AxiDmaWriteInternal#(addrWidth, dsz))
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
    FIFO#(DmaRequest) lreqFifo <- mkPipelineFIFO();
@@ -185,11 +185,11 @@ module mkAxiDmaWriteInternal#(Integer numRequests, Vector#(numWriteClients, DmaW
       DmaRequest req = unpack(0);
       if (valueOf(numWriteClients) > 0)
 	 req <- writeClients[selectReg].writeReq.get();
-      //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.handle, req.address, req.burstLen, debugReg);
+      //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.pointer, req.offset, req.burstLen, debugReg);
 
       lreqFifo.enq(req);
       chanFifo.enq(selectReg);
-      sgl.request.put(tuple2(truncate(req.handle),req.address));
+      sgl.request.put(tuple2(truncate(req.pointer),req.offset));
    endrule
    
    rule checkSglResp;
@@ -198,8 +198,8 @@ module mkAxiDmaWriteInternal#(Integer numRequests, Vector#(numWriteClients, DmaW
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift))) begin
 	 // squash request
-	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.handle, req.address, physAddr);
-	 dmaIndication.badAddr(req.handle, extend(req.address), extend(physAddr));
+	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
+	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
       end
       else begin
 	 reqFifo.enq(req);
@@ -293,13 +293,14 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
    Reg#(Bit#(32))                        prefReg <- mkReg(0);
    Reg#(Bit#(PageIdxSize))               lenReg  <- mkReg(0);
    Reg#(Bit#(PageIdxSize))               idxReg  <- mkReg(0);
+   FIFO#(void)                       addrReqFifo <- mkFIFO;
    
    let page_shift = fromInteger(valueOf(SGListPageShift));
    
    rule sglistEntry;
-      let tpl <- sgl.addrDbg.response.get;
-      let physAddr = tpl_2(tpl);
-      dmaIndication.sglistEntry(extend(tpl_1(tpl)), extend(physAddr));
+      addrReqFifo.deq;
+      let physAddr <- sgl.addr[0].response.get;
+      dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
    rule write_pages(idxReg < lenReg);
@@ -308,7 +309,7 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
       addrReg <= addrReg + 1;
       sgl.page(truncate(prefReg),idxReg,addrReg);
       if(idxReg+1 == lenReg) begin
-	 dmaIndication.sglistResp(prefReg, extend(idxReg), extend(addrReg));
+	 dmaIndication.configResp(prefReg);
       end
    endrule
 
@@ -329,7 +330,7 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 	 lenReg  <= truncate(len >> page_shift) + idx;
 	 idxReg <= idx;
 	 if (addr == 0 && len == 0) begin // sw marks end-of-list with zeros
-	    dmaIndication.sglistResp(pref, extend(idx), 0);
+	    dmaIndication.configResp(pref);
 	 end
 `ifndef BSIM
 	 if (pref != 0 && (addr == 0 && len > 0)) begin
@@ -343,11 +344,12 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 	 let va <- pareff(pref, len);
 	 addr[39:32] = truncate(pref);
 `endif
-	 $display("sglist.pareff handle=%d addr=%h len=%h", pref, addr, len);
+	 //$display("sglist.pareff handle=%d addr=%h len=%h", pref, addr, len);
 	 addrReg <= truncate(addr >> page_shift);
       endmethod
-      method Action readSglist(Bit#(32) handle, Bit#(32) addr);
-	 sgl.addrDbg.request.put(tuple2(truncate(handle), truncate(addr)));
+      method Action addrRequest(Bit#(32) handle, Bit#(32) offset);
+	 addrReqFifo.enq(?);
+	 sgl.addr[0].request.put(tuple2(truncate(handle), extend(offset)));
       endmethod
    endinterface
    interface Axi3Master m_axi;

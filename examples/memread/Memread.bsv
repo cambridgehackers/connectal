@@ -27,7 +27,7 @@ import Vector::*;
 import Dma::*;
 
 interface MemreadRequest;
-   method Action startRead(Bit#(32) handle, Bit#(32) numWords, Bit#(32) burstLen);
+   method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen);
    method Action getStateDbg();   
 endinterface
 
@@ -45,14 +45,14 @@ endinterface
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
-   Reg#(DmaPointer)      rdHandle <- mkReg(0);
+   Reg#(DmaPointer)      rdPointer <- mkReg(0);
    Reg#(Bit#(32))           rdCnt <- mkReg(0);
    Reg#(Bit#(32))   mismatchCount <- mkReg(0);
    Reg#(Bit#(32))          srcGen <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) offset <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) offset <- mkReg(0);
    
    Reg#(Bit#(8))         burstLen <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize))  delta <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize))  delta <- mkReg(0);
 
    interface DmaReadClient dmaClient;
       interface GetF readReq;
@@ -63,7 +63,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	       indication.readDone(mismatchCount);
 	    //else if (rdCnt[5:0] == 6'b0)
 	    //   indication.readReq(rdCnt);
-	    return DmaRequest { handle: rdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
+	    return DmaRequest { pointer: rdPointer, offset: offset, burstLen: burstLen, tag: truncate(offset) };
 	 endmethod
 	 method Bool notEmpty();
 	    return rdCnt > 0;
@@ -85,13 +85,13 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endinterface
 
    interface MemreadRequest request;
-      method Action startRead(Bit#(32) handle, Bit#(32) numWords, Bit#(32) bl) if (rdCnt == 0);
-	  $display("mkMemRead::startRead(%d %d %d)", handle, numWords, bl);
+      method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) bl) if (rdCnt == 0);
+	  $display("mkMemRead::startRead(%d %d %d)", pointer, numWords, bl);
 	  rdCnt <= numWords>>1;
 	  burstLen <= truncate(bl);
-	  delta <= 8*truncate(bl);
+	  delta <= 8*extend(bl);
 	  indication.started(numWords);
-	  rdHandle <= handle;
+	  rdPointer <= pointer;
        endmethod
        method Action getStateDbg();
 	  indication.reportStateDbg(rdCnt, mismatchCount);

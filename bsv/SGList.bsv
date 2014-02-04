@@ -34,29 +34,28 @@ import ClientServer::*;
 typedef 16 MaxNumSGLists;
 typedef Bit#(TLog#(MaxNumSGLists)) SGListId;
 typedef 12 SGListPageShift;
-typedef TSub#(DmaAddrSize,SGListPageShift) PageIdxSize;
+typedef TSub#(DmaOffsetSize,SGListPageShift) PageIdxSize;
 typedef Bit#(PageIdxSize) PageIdx;
-// these numbers have only been tested on the Zynq platform
 
 interface SGListMMU#(numeric type addrWidth);
    method Action page(SGListId id, Bit#(PageIdxSize) vPageNum, Bit#(TSub#(addrWidth,SGListPageShift)) pPageNum);
-   interface Vector#(2,Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth))) addr;
-   interface Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)), Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) addrDbg;
+   interface Vector#(2,Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth))) addr;
 endinterface
 
-// if this structure becomes too expensive, we can switch to a multi-level structure
 module mkSGListMMU(SGListMMU#(addrWidth))
    provisos (Log#(MaxNumSGLists, listIdxSize),
-	     Add#(listIdxSize,PageIdxSize,entryIdxSize),
+	     //Add#(listIdxSize,PageIdxSize,entryIdxSize),
+	     Add#(listIdxSize,12,entryIdxSize),
 	     Add#(pPageNumSize, SGListPageShift, addrWidth),
 	     Bits#(Maybe#(Bit#(pPageNumSize)), mpPageNumSize),
 	     Add#(1, pPageNumSize, mpPageNumSize));
 
-   BRAM_Configure cfg = defaultValue;
-   BRAM2Port#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) pageTable <- mkBRAM2Server(cfg);
+
+   BRAM2Port#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) pageTable <- mkBRAM2Server(defaultValue);
+   Vector#(MaxNumSGLists, Reg#(Tuple3#(Bit#(entryIdxSize),Bit#(entryIdxSize),Bit#(entryIdxSize)))) regions <- replicateM(mkReg(unpack(0)));
+   
    Vector#(2,FIFOF#(Bit#(SGListPageShift))) offs <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(Bit#(addrWidth))) respFifos <- replicateM(mkFIFOF);
-   FIFOF#(Bit#(PageIdxSize)) pageIdx <- mkFIFOF;
    
    let page_shift = fromInteger(valueOf(SGListPageShift));
    function BRAMServer#(Bit#(entryIdxSize), Maybe#(Bit#(pPageNumSize))) portsel(int i);
@@ -66,18 +65,18 @@ module mkSGListMMU(SGListMMU#(addrWidth))
 	 return pageTable.portB;
    endfunction
 
-   Vector#(2,Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth))) addrServers;
+   Vector#(2,Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth))) addrServers;
    for(int i = 0; i < 2; i=i+1)
       addrServers[i] = 
-      (interface Server#(Tuple2#(SGListId,Bit#(DmaAddrSize)),Bit#(addrWidth));
+      (interface Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth));
 	  interface Put request;
-	     method Action put(Tuple2#(SGListId,Bit#(DmaAddrSize)) req);
+	     method Action put(Tuple2#(SGListId,Bit#(DmaOffsetSize)) req);
 		let id = tpl_1(req);
 		let off = tpl_2(req);
 		offs[i].enq(truncate(off));
-		Bit#(PageIdxSize) pageNum = off[valueOf(DmaAddrSize)-1:page_shift];
+		Bit#(PageIdxSize) pageNum = off[valueOf(DmaOffsetSize)-1:page_shift];
 		//$display("addrReq id=%d pageNum=%h", id, pageNum);
-		portsel(i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pageNum}, datain:?});
+		portsel(i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,truncate(pageNum)}, datain:?});
 	     endmethod
 	  endinterface
 	  interface Get response;
@@ -102,30 +101,9 @@ module mkSGListMMU(SGListMMU#(addrWidth))
    end
    
    method Action page(SGListId id, Bit#(PageIdxSize) pageNum, Bit#(pPageNumSize) pPageNum);
-      $display("mkSGListMMU::page(id=%d pageNum=%h physaddr=%h)", id, pageNum, pPageNum);
-      pageTable.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:{id,pageNum}, datain:tagged Valid pPageNum});
+      //$display("mkSGListMMU::page(id=%d pageNum=%h physaddr=%h)", id, pageNum, pPageNum);
+      pageTable.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:{id,truncate(pageNum)}, datain:tagged Valid pPageNum});
    endmethod
-   
-   interface Server addrDbg;
-      interface Put request;
-      	 method Action put(Tuple2#(SGListId,Bit#(DmaAddrSize)) req);
-	    let id = tpl_1(req);
-	    let off = tpl_2(req);
-      	    offs[1].enq(truncate(off));
-      	    let pIdx = off[valueOf(DmaAddrSize)-1:page_shift];
-      	    pageIdx.enq(pIdx);
-      	    pageTable.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:{id,pIdx}, datain:?});
-      	 endmethod
-      endinterface
-      interface Get response;
-      	 method ActionValue#(Tuple2#(Bit#(PageIdxSize), Bit#(addrWidth))) get();
-      	    respFifos[1].deq();
-      	    let pIdx = pageIdx.first();
-      	    pageIdx.deq();
-      	    return tuple2(pIdx, respFifos[1].first());
-      	 endmethod
-      endinterface
-   endinterface
    
    interface addr = addrServers;
 

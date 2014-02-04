@@ -47,10 +47,10 @@ typedef struct {
 //
 interface DmaIndication;
    method Action reportStateDbg(DmaDbgRec rec);
-   method Action sglistResp(Bit#(32) pref, Bit#(32) idx, Bit#(32) physPageNum);
-   method Action sglistEntry(Bit#(32) o, Bit#(64) physAddr);
-   method Action badHandle(Bit#(32) handle, Bit#(32) address);
-   method Action badAddr(Bit#(32) handle, Bit#(32) offset, Bit#(64) physAddr);
+   method Action configResp(Bit#(32) pointer);
+   method Action addrResponse(Bit#(64) physAddr);
+   method Action badPointer(Bit#(32) pointer);
+   method Action badAddr(Bit#(32) pointer, Bit#(40) offset, Bit#(64) physAddr);
 endinterface
 
 //
@@ -66,13 +66,13 @@ interface DmaConfig;
    //
    // @brief Adds an address translation entry to the scatter-gather list for an object
    //
-   // @param pref Specifies the object to be translated
+   // @param pointer Specifies the object to be translated
    // @param addr Physical address of the segment
    // @param len Length of the segment
    //
    // @note Only implemented for hardware
-   method Action sglist(Bit#(32) pref, Bit#(40) addr, Bit#(32) len);
-   method Action readSglist(Bit#(32) pref, Bit#(32) addr);
+   method Action sglist(Bit#(32) pointer, Bit#(40) addr, Bit#(32) len);
+   method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 endinterface
 
 //

@@ -521,7 +521,14 @@ interface ZynqPins;
     interface Bit#(1)                       fclk_reset0_n;
 endinterface
 
-module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Slave#(32,32,12) ctrl, Axi3Master#(32,64,6) m_axi, ReadOnly#(Bool) interrupt)(ZynqPins);
+interface PS7;
+    (* prefix="" *)
+    interface ZynqPins pins;
+    method Bit#(4)     fclkclk();
+    method Bit#(4)     fclkresetn();
+endinterface
+
+module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Slave#(32,32,12) ctrl, Axi3Master#(32,64,6) m_axi, ReadOnly#(Bool) interrupt)(PS7);
     PS7LIB ps7 <- mkPS7LIB(axi_clock, axi_reset);
 
     rule send_int_rule;
@@ -535,6 +542,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Slave#(32,32,12) ctrl, Axi3M
         ps7.ddr.arb(4'b0);
     endrule
 
+    interface ZynqPins pins;
     interface Inout  a = ps7.ddr.a;
     interface Inout  ba = ps7.ddr.ba;
     interface Inout  casb = ps7.ddr.casb;
@@ -556,4 +564,7 @@ module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Slave#(32,32,12) ctrl, Axi3M
     interface Pps7Ps ps = ps7.ps;
     interface Bit    fclk_clk0 = ps7.fclkclk()[0];
     interface Bit    fclk_reset0_n = ps7.fclkresetn()[0];
+    endinterface
+    method Bit#(4)     fclkclk() = ps7.fclkclk;
+    method Bit#(4)     fclkresetn() = ps7.fclkresetn;
 endmodule

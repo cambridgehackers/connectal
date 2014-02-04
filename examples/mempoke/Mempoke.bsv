@@ -28,8 +28,8 @@ import AxiMasterSlave::*;
 import Dma::*;
 
 interface MempokeRequest;
-   method Action readWord(Bit#(32) handle, Bit#(32) addr);
-   method Action writeWord(Bit#(32) handle, Bit#(32) addr, S0 data);
+   method Action readWord(Bit#(32) pointer, Bit#(32) offset);
+   method Action writeWord(Bit#(32) pointer, Bit#(32) offset, S0 data);
 endinterface
 
 interface MempokeIndication;
@@ -56,12 +56,12 @@ module mkMempokeRequest#(MempokeIndication indication,
       indication.readWordResult(unpack(v.data));
    endrule
    
-   method Action readWord(Bit#(32) handle, Bit#(32) addr);
-      dma_read_server.readReq.put(DmaRequest{handle:handle, address:truncate(addr), burstLen:1, tag:0});
+   method Action readWord(Bit#(32) pointer, Bit#(32) offset);
+      dma_read_server.readReq.put(DmaRequest{pointer:pointer, offset:extend(offset), burstLen:1, tag:0});
    endmethod
    
-   method Action writeWord(Bit#(32) handle, Bit#(32) addr, S0 data);
-      dma_write_server.writeReq.put(DmaRequest{handle:handle, address:truncate(addr), burstLen:1, tag:0});
+   method Action writeWord(Bit#(32) pointer, Bit#(32) offset, S0 data);
+      dma_write_server.writeReq.put(DmaRequest{pointer:pointer, offset:extend(offset), burstLen:1, tag:0});
       dma_write_server.writeData.put(DmaData{data:pack(data),tag:0});
    endmethod         
 

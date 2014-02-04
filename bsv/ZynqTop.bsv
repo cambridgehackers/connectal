@@ -45,9 +45,9 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
    let top <- constructor(clocked_by defaultClock);
-   ZynqPins ps7 <- mkPS7(defaultClock, defaultReset, top.ctrl, top.m_axi, top.interrupt);
+   PS7 ps7 <- mkPS7(defaultClock, defaultReset, top.ctrl, top.m_axi, top.interrupt);
 
-   interface zynq = ps7;
+   interface zynq = ps7.pins;
    interface leds = top.leds;
    interface pins = top.pins;
 endmodule

@@ -18,28 +18,24 @@ public:
   {
     pm->useSemaphore();
   }
-
   virtual void reportStateDbg(const DmaDbgRec& rec){
     fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
-  virtual void configResp(unsigned long channelId){
-    fprintf(stderr, "configResp: %lx\n", channelId);
-  }
-  virtual void sglistResp(unsigned long channelId, unsigned long idx, unsigned long pa){
-    fprintf(stderr, "sglistResp: %lx idx=%lx physAddr=%lx\n", channelId, idx, pa);
+  virtual void configResp(unsigned long pointer){
+    fprintf(stderr, "configResp: %lx\n", pointer);
     if (portalMemory)
-      portalMemory->sglistResp(channelId);
+      portalMemory->configResp(pointer);
   }
-  virtual void sglistEntry(unsigned long idx, unsigned long long physAddr){
-    fprintf(stderr, "sglistEntry: idx=%lx physAddr=%llx\n", idx, physAddr);
+  virtual void addrResponse(unsigned long long physAddr){
+    fprintf(stderr, "DmaIndication::addrResponse(physAddr=%llx)\n", physAddr);
   }
-  virtual void parefResp(unsigned long channelId){
-    fprintf(stderr, "parefResp: %lx\n", channelId);
+  virtual void parefResp(unsigned long pointer){
+    fprintf(stderr, "DmaIndication::parefResp(pointer=%lx)\n", pointer);
   }
-  virtual void badHandle ( const unsigned long handle, const unsigned long address ) {
-    fprintf(stderr, "DmaIndication bad handle pref=%lx addr=%lx\n", handle, address);
+  virtual void badPointer (unsigned long pointer) {
+    fprintf(stderr, "DmaIndication::badPointer(pointer=%lx)\n", pointer);
   }
-  virtual void badAddr ( const unsigned long handle, const unsigned long address , const unsigned long long pa) {
-    fprintf(stderr, "DmaIndication bad address pref=%lx addr=%lx physaddr=%llx\n", handle, address, pa);
+  virtual void badAddr (unsigned long pointer, unsigned long long offset , unsigned long long physAddr) {
+    fprintf(stderr, "DmaIndication::badAddr(pointer=%lx offset=%llx physAddr=%llx)\n", pointer, offset, physAddr);
   }
 };
