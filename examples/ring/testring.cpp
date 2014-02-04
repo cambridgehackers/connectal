@@ -52,6 +52,28 @@ size_t scratch_sz = 1<<20; /* 1 MB */
 #define CMD_NOP 0
 #define CMD_COPY 1
 #define CMD_ECHO 2
+#define CMD_FILL 3
+
+
+struct Ring_Completion {
+  struct Ring_Completion *next;
+  sem_t completion_sem;
+  int tag;     /* which completion is this */
+  int notify;  /* use semaphore */
+  int finished; /* boolean for completed */
+};
+
+struct Ring_Completion completion[1024];
+
+LIST_HEAD(completionlisthead, Ring_Completion);
+struct completionlisthead *free;
+
+void completion_list_init()
+{
+  LIST_INIT(&gtrr
+}
+
+
 
 sem_t conf_sem;
 
@@ -192,6 +214,18 @@ void *statusThreadProc(void *arg)
     ring_pop(&status_ring);
   }
 }
+
+
+void hw_copy(void *from, void *to, unsigned count)
+{
+  uint64_t tcmd[8];
+  tcmd[0] = ((uint64_t) CMD_COPY) << 56;
+  tcmd[0] |= 0x20000000 + i; // tag
+  tcmd[1] = (uint64_t) from;
+  tcmd[2] = (uint64_t) to;
+  tcmd[3] = count; // byte count
+}
+
 
 int main(int argc, const char **argv)
 {
