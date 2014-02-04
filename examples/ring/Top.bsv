@@ -65,7 +65,7 @@ module mkPortalTop(StdPortalTop#(addrWidth)) provisos(
    let interrupt_mux <- mkInterruptMux(portals);
    
    // instantiate system directory
-   Directory dir <- mkDirectoryDbg(portals,interrupt_mux);
+   Directory dir <- mkDirectory(portals);
    Vector#(1,StdPortal) directories;
    directories[0] = dir.portalIfc;
    
