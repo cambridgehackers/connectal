@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/queueh>
 #include <semaphore.h>
 
 #include "StdDmaIndication.h"
@@ -56,23 +57,48 @@ size_t scratch_sz = 1<<20; /* 1 MB */
 
 
 struct Ring_Completion {
-  struct Ring_Completion *next;
-  sem_t completion_sem;
+  LIST_ENTRY(Ring_Completion) entries;
   int tag;     /* which completion is this */
-  int notify;  /* use semaphore */
   int finished; /* boolean for completed */
+  sem_t *sem;
 };
 
 struct Ring_Completion completion[1024];
 
-LIST_HEAD(completionlisthead, Ring_Completion);
-struct completionlisthead *free;
+LIST_HEAD(completionlisthead, Ring_Completion) free;
 
 void completion_list_init()
 {
-  LIST_INIT(&gtrr
+  int i;
+  LIST_INIT(&free);
+  for (i = 1; i < 1024; i += 1) 
+    {
+      completion[i].tag = i;  /* non zero! */
+      completion[i].finished = 1;
+      completion[i].sem = NULL;
+      LIST_INSERT_HEAD(&free, &completion[i], entries);
+    }
 }
 
+struct Ring_Completion *get_free_completion()
+{
+  struct Ring_Completion *p;
+  p = LIST_FIRST(&free);
+  if (p) LIST_REMOVE(p, entries);
+  return(p);
+}
+
+void Ring_Handle_Completion(unsigned tag)
+{
+  struct Ring_Completion *p;
+  assert(tag != 0);
+  assert(tag < 1024);
+  p = &completion[tag];
+  assert(p->finished == 0);
+  p->finished = 1;
+  if (p->sem) sem_post(p->sem);
+  LIST_INSERT_HEAD(&free, p, entries);
+}
 
 
 sem_t conf_sem;
@@ -133,7 +159,8 @@ struct SWRing {
 #define REG_HANDLE 5
 
 struct SWRing cmd_ring;
-struct SWRing status_ring;
+ struct SWRing status_ring;
+ pthread_mutex_t cmd_lock = PTHREAD_MTEX_INITIALIZER;
 
 uint64_t fetch(uint64_t *p) {
   return (p[0]);
@@ -182,15 +209,22 @@ void ring_pop(struct SWRing *r)
   r->last = last;
 }
 
+/* XXX this isn't right, I think the SWRing* has to be volatile, so that
+ * the compiler will know to refetch
+ */
+
 void ring_send(struct SWRing *r, uint64_t *cmd)
 {
   unsigned next_first;
+  pthread_mutex_lock(&cmd_lock);
   assert(r->first < r->size);
   /* send an inquiry every 1/4 way around the ring */
   if ((r->cached_space % (r->size >> 2)) == 0) {
     ring->get(r->ringid, REG_LAST, 0);         // bufferlast 
     while (r->cached_space == 0) {
+      pthread_mutex_unlock(&cmd_lock);
       r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
+      pthread_mutex_lock(&cmd_lock);
     }
   }
   
@@ -200,6 +234,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd)
   r->first = next_first;
   r->cached_space -= 64;
   ring->set(r->ringid, REG_FIRST, r->first);         // bufferfirst
+  pthread_mutex_unlock(&cmd_lock);
   sem_wait(&conf_sem);
 }
 
@@ -224,6 +259,28 @@ void hw_copy(void *from, void *to, unsigned count)
   tcmd[1] = (uint64_t) from;
   tcmd[2] = (uint64_t) to;
   tcmd[3] = count; // byte count
+  ring_send(&cmd_ring, tcmd);
+
+}
+
+
+void hw_echo(long unsigned a, long unsigned b)
+{
+  uint64_t tcmd[8];
+  tcmd[0] = ((uint64_t) CMD_ECHO) << 56;
+  tcmd[1] = (uint64_t) a;
+  tcmd[2] = (uint64_t) b;
+  ring_send(&cmd_ring, tcmd);
+
+}
+
+void hw_nop()
+{
+  uint64_t tcmd[8];
+  tcmd[0] = ((uint64_t) CMD_NOP) << 56;
+  tcmd[1] = (uint64_t) a;
+  tcmd[2] = (uint64_t) b;
+  ring_send_no_response(&cmd_ring, tcmd);
 }
 
 
