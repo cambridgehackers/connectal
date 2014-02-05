@@ -65,10 +65,7 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
 	       endaction
 	    
 	    */
-	    action
-	       copyTag <= f_in.first()[31:0];
-	       f_in.deq();  // word 0
-	    endaction
+	    f_in.deq();  // word 0
 	    action
 	       copyReadHandle <= f_in.first()[63:32];
 	       copyReadAddr <= f_in.first()[23:0];
@@ -87,7 +84,11 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
 	       f_in.deq;  // discard words 4-7
 	       f_in.deq;  // discard words 4-7
 	       f_in.deq;  // discard words 4-7
+	    action
+	       copyTag <= f_in.first()[31:0];
 	       f_in.deq;  // discard words 4-7
+	    endaction
+	    
 	    //$display("copyStart from %h to %h count %h",
 	    //   copyReadAddr, copyWriteAddr, copyReadCount);
 	    copyBusy <= True;
