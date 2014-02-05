@@ -575,6 +575,7 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
         int err = 0;
         tBoard *this_board = NULL;
 
+printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &bluenoc_probe, dev, id, pci_get_drvdata(dev));
         printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
         /* double-check vendor and device */
         if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != BLUESPEC_NOC_DEVICE_ID) {
@@ -620,8 +621,8 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
                                 device_create(bluenoc_class, NULL,
                                               this_device_number, NULL, "%s%d", DEV_NAME,
                                               this_board->board_number * 16 + dn);
-                                printk(KERN_INFO "%s: /dev/%s%d device file created\n",
-                                       DEV_NAME, DEV_NAME, this_board->board_number * 16 + dn);
+                                printk(KERN_INFO "%s: /dev/%s%d = %x created\n",
+                                       DEV_NAME, DEV_NAME, this_board->board_number * 16 + dn, this_device_number);
                         }
                 }
         }
@@ -636,6 +637,7 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
 
 static void __exit bluenoc_remove(struct pci_dev *dev)
 {
+printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, pci_get_drvdata(dev));
         tBoard *this_board = board_list;
         tBoard *prev_board = NULL;
         int dn;
@@ -655,8 +657,8 @@ static void __exit bluenoc_remove(struct pci_dev *dev)
                 dev_t this_device_number = MKDEV(MAJOR(device_number),
                           MINOR(device_number) + this_board->board_number * 16 + dn);
                 device_destroy(bluenoc_class, this_device_number);
-                printk(KERN_INFO "%s: /dev/%s_%d device file removed\n",
-                       DEV_NAME, DEV_NAME, MINOR(this_device_number)); 
+                printk(KERN_INFO "%s: /dev/%s_%d = %x removed\n",
+                       DEV_NAME, DEV_NAME, this_board->board_number * 16 + dn, this_device_number); 
                 /* remove device */
                 cdev_del(&this_board->cdev[dn]);
         }
