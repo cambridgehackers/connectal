@@ -44,31 +44,15 @@ typedef struct {
   unsigned long dma_handle;
 } tDmaMap;
 
-typedef unsigned int tDebugLevel;
-
 typedef unsigned int tTlpData[6];
-
-const tDebugLevel DEBUG_OFF     =        0;
-const tDebugLevel DEBUG_CALLS   = (1 <<  0);
-const tDebugLevel DEBUG_DATA    = (1 <<  1);
-const tDebugLevel DEBUG_DMA     = (1 <<  2);
-const tDebugLevel DEBUG_INTR    = (1 <<  3);
-const tDebugLevel DEBUG_PROFILE = (1 << 31);
 
 /* IOCTL code definitions */
 
 #define BNOC_IDENTIFY        _IOR(BNOC_IOC_MAGIC,0,tBoardInfo*)
 #define BNOC_SOFT_RESET      _IO(BNOC_IOC_MAGIC,1)
-#define BNOC_DEACTIVATE      _IO(BNOC_IOC_MAGIC,2)
-#define BNOC_REACTIVATE      _IO(BNOC_IOC_MAGIC,3)
-#define BNOC_GET_DEBUG_LEVEL _IOR(BNOC_IOC_MAGIC,4,tDebugLevel*)
-#define BNOC_SET_DEBUG_LEVEL _IOW(BNOC_IOC_MAGIC,5,tDebugLevel*)
 #define BNOC_IDENTIFY_PORTAL _IOR(BNOC_IOC_MAGIC,6,tPortalInfo*)
 #define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
 #define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,int*)
-#define BNOC_SEQNO           _IOWR(BNOC_IOC_MAGIC,9,int*)
-#define BNOC_DMA_BUF_MAP     _IOWR(BNOC_IOC_MAGIC,10,long)
-#define BNOC_DMA_MAP         _IOWR(BNOC_IOC_MAGIC,11,tDmaMap*)
 
 /* maximum valid IOCTL number */
 #define BNOC_IOC_MAXNR 11

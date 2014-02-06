@@ -22,15 +22,10 @@ static void print_usage(const char* argv0)
   printf("       %s info    [ <file1> [ .. <fileN> ] ]\n", pgm);
   printf("       %s build   [ <file1> [ .. <fileN> ] ]\n", pgm);
   printf("       %s reset   [ <file1> [ .. <fileN> ] ]\n", pgm);
-  printf("       %s down    [ <file1> [ .. <fileN> ] ]\n", pgm);
-  printf("       %s up      [ <file1> [ .. <fileN> ] ]\n", pgm);
-  printf("       %s debug   ([+-]<debug_mode>)* [ <file1> [ .. <fileN> ] ]\n", pgm);
-  printf("       %s profile <profile_command>   [ <file1> [ .. <fileN> ] ]\n", pgm);
   printf("       %s portal  \n", pgm);
   printf("       %s tlp  \n", pgm);
   printf("       %s trace  \n", pgm);
   printf("       %s notrace  \n", pgm);
-  printf("       %s seqno  \n", pgm);
   printf("       %s mmap  \n", pgm);
   printf("\n");
   printf("Modes:\n");
@@ -38,10 +33,6 @@ static void print_usage(const char* argv0)
   printf("  info    - Describe the BlueNoC target(s).\n");
   printf("  build   - Display the Build number.\n");
   printf("  reset   - Reset the portals.\n");
-  printf("  down    - Deactivate the BlueNoC target(s).\n");
-  printf("  up      - Reactivate the BlueNoC target(s).\n");
-  printf("  debug   - Control debugging output written to the kernel log.\n");
-  printf("  profile - Start and stop profiling BlueNoC driver activity.\n");
   printf("  portal  - Describe the portal target(s).\n");
   printf("\n");
   printf("File arguments:\n");
@@ -55,18 +46,6 @@ static void print_usage(const char* argv0)
   printf("'%s' by itself is equivalent to '%s info' (it will search out\n", pgm, pgm);
   printf("and describe all BlueNoC targets).");
   printf("\n");
-  printf("Debug modes:\n");
-  printf("  calls   - Log driver function calls for reading and writing.\n");
-  printf("  data    - Log all data read and written across the BlueNoC link.\n");
-  printf("  dma     - Log DMA command activity.\n");
-  printf("  intrs   - Log interrupts.\n");
-  printf("  off     - Turn off all debugging.\n");
-  printf("  on      - Turn on all debugging.\n");
-  printf("Multiple non-off modes can be specified on the same command line.\n");
-  printf("A mode can be prefixed with '-' to turn it off. If it is prefixed\n");
-  printf("with a '+' or has no prefix, it will be turned on. Prefixes should\n");
-  printf("not be used with the 'off' and 'on' modes.\n");
-  printf("\n");
   printf("Profiling commands:\n");
   printf("  start   - Begin collecting profiling data.\n");
   printf("  stop    - Stop collecting profiling data and write accumulated data\n");
@@ -76,7 +55,7 @@ static void print_usage(const char* argv0)
   free(argv0_copy);
 }
 
-typedef enum { HELP, INFO, BUILD, RESET, DOWN, UP, DEBUG, PROFILE, PORTAL, TLP, TRACE, NOTRACE, SEQNO, MMAP } tMode;
+typedef enum { HELP, INFO, RESET, PORTAL, TLP, TRACE, NOTRACE, MMAP } tMode;
 
 static int is_bluenoc_file(const struct dirent* ent)
 {
@@ -86,24 +65,7 @@ static int is_bluenoc_file(const struct dirent* ent)
     return 0;
 }
 
-static void print_debug_mode(tDebugLevel dbg_level)
-{
-  if (dbg_level == DEBUG_OFF)  printf(" OFF");
-  if (dbg_level & DEBUG_CALLS) printf(" CALLS");
-  if (dbg_level & DEBUG_DATA)  printf(" DATA");
-  if (dbg_level & DEBUG_DMA)   printf(" DMA");
-  if (dbg_level & DEBUG_INTR)  printf(" INTR");
-}
-
-static void print_profile_mode(tDebugLevel dbg_level)
-{
-  if (dbg_level & DEBUG_PROFILE)
-    printf(" ON");
-  else
-    printf(" OFF");
-}
-
-static int process(const char* file, tMode mode, unsigned int strict, tDebugLevel turn_off, tDebugLevel turn_on)
+static int process(const char* file, tMode mode, unsigned int strict)
 {
   int ret = 0;
   tBoardInfo board_info;
@@ -139,28 +101,8 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
         printf("  Timestamp:        %s", ctime(&t));
         printf("  Network width:    %d bytes per beat\n", board_info.bytes_per_beat);
         printf("  Content ID:       %llx\n", board_info.content_id);
-        tDebugLevel dbg_level = DEBUG_OFF;
-        res = ioctl(fd,BNOC_GET_DEBUG_LEVEL,&dbg_level);
-        if (res == -1) {
-          perror("debug level query ioctl");
-        } else {
-          printf("  Debug level:     ");
-          print_debug_mode(dbg_level);
-          printf("\n");
-          printf("  Profiling:       ");
-          print_profile_mode(dbg_level);
-          printf("\n");
-        }
       } else {
         printf("  *** BOARD IS DEACTIVATED ***\n");
-      }
-      ret = 1;
-      break;
-    }
-    case BUILD: {
-      if (board_info.is_active) {
-        time_t t = board_info.timestamp;
-        printf("%d\n", board_info.build);
       }
       ret = 1;
       break;
@@ -175,70 +117,6 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
           ret = -1;
         } else {
           printf("Reset portals at %s\n", file);
-          ret = 1;
-        }
-      }
-      break;
-    }
-    case DOWN: {
-      if (!board_info.is_active) {
-        printf("BlueNoC device at %s is already deactivated\n", file);
-      } else {
-        res = ioctl(fd,BNOC_DEACTIVATE);
-        if (res == -1) {
-          perror("deactivate ioctl");
-          ret = -1;
-        } else {
-          printf("Deactivated BlueNoC device at %s\n", file);
-          ret = 1;
-        }
-      }
-      break;
-    }
-    case UP: {
-      if (board_info.is_active) {
-        printf("BlueNoC device at %s is already activated\n", file);
-      } else {
-        res = ioctl(fd,BNOC_REACTIVATE);
-        if (res == -1) {
-          perror("reactivate ioctl");
-          ret = -1;
-        } else {
-          printf("Reactivated BlueNoC device at %s\n", file);
-          ret = 1;
-        }
-      }
-      break;
-    }
-    case DEBUG: /* fall through */
-    case PROFILE: {
-      tDebugLevel dbg_level = DEBUG_OFF;
-      res = ioctl(fd,BNOC_GET_DEBUG_LEVEL,&dbg_level);
-      if (res == -1) {
-        perror("debug level query ioctl");
-        ret = -1;
-      } else if (!(turn_on | turn_off)) {
-        /* no changes, just report current status */
-        printf("BlueNoC device at %s %s mode is:", file, (mode == DEBUG) ? "debug" : "profile");
-        if (mode == DEBUG)
-          print_debug_mode(dbg_level);
-        else
-          print_profile_mode(dbg_level);
-        printf("\n");
-      } else {
-        dbg_level &= ~turn_off;
-        dbg_level |= turn_on;
-        res = ioctl(fd,BNOC_SET_DEBUG_LEVEL,&dbg_level);
-        if (res == -1) {
-          perror("debug level update ioctl");
-          ret = -1;
-        } else {
-          printf("BlueNoC device at %s %s mode is now:", file, (mode == DEBUG) ? "debug" : "profiling");
-          if (mode == DEBUG)
-            print_debug_mode(dbg_level);
-          else
-            print_profile_mode(dbg_level);
-          printf("\n");
           ret = 1;
         }
       }
@@ -268,13 +146,13 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
   }
   case TLP: {
     int trace = 0;
-    int seqno = 0;
+    //int seqno = 0;
     int res, i;
 
     // disable tracing
     res = ioctl(fd,BNOC_TRACE,&trace);
     // set pointer to 0
-    res = ioctl(fd,BNOC_SEQNO,&seqno);
+    //res = ioctl(fd,BNOC_SEQNO,&seqno);
 
     for (i = 0; i < 2048; i++) {
       tTlpData tlp;
@@ -303,13 +181,9 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
     int res = ioctl(fd,BNOC_TRACE,&trace);
     printf("old trace=%d\n", trace);
   } break;
-  case SEQNO: {
-    int seqno = 0;
-    int res = ioctl(fd,BNOC_SEQNO,&seqno);
-    printf("old seqno=%d\n", seqno);
-  } break;
   case MMAP: {
     int *portal = (int *)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+    int *regbase = (int *)(((unsigned long)portal) + (1<<14));
     if ((void*)-1 == portal) {
       printf("failed to map portal %d:%s\n", errno, strerror(errno));
     }
@@ -322,21 +196,12 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
       printf("portal[256]=%08x\n", portal[256]);
     }
     if (1) {
-      int *channel0 = portal;
-      int *channel2 = (int *)(((unsigned long)portal) + 2*256);
-      //*channel0 = 42;
-      //*channel2 = 9;
-
-      int *regbase = (int *)(((unsigned long)portal) + (1<<14));
       fprintf(stderr, "should be 6847xxxx = %x\n", *(int *)(((unsigned long)portal) + (1 << 15) + (1<<14) + 0x10));
       fprintf(stderr, "should be bad0dada = %x\n", *(int *)(((unsigned long)portal) + (1 << 15) + (0<<14) + 0x00));
       fprintf(stderr, "should be 05a005a0 = %x\n", *(int *)(((unsigned long)portal) + (0 << 15) + (1<<14) + 0x00));
       fprintf(stderr, "should be bad07ead = %x\n", *(int *)(((unsigned long)portal) + (0 << 15) + (0<<14) + 0x00));
-
       fprintf(stderr, "regbase[0] = %x\n", regbase[0]);
-      fprintf(stderr, "foo\n");
     }
-      fprintf(stderr, "bar\n");
   } break;
   }
 
@@ -348,12 +213,9 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
 int main(int argc, char* const argv[])
 {
   int opt;
-  unsigned int n;
-  tMode mode;
+  tMode mode = INFO; /* not a recognized mode, assume it is a file name, and use INFO mode */
   int ret;
-  int process_failed;
-  tDebugLevel turn_on = 0;
-  tDebugLevel turn_off = 0;
+  int process_failed = 0;
 
   while (1) {
     opt = getopt(argc, argv, "+h");
@@ -372,103 +234,9 @@ int main(int argc, char* const argv[])
   } else if (strcmp("info",argv[optind]) == 0) {
     mode = INFO;
     optind += 1;
-  } else if (strcmp("build",argv[optind]) == 0) {
-    mode = BUILD;
-    optind += 1;
   } else if (strcmp("reset",argv[optind]) == 0) {
     mode = RESET;
     optind += 1;
-  } else if (strcmp("down",argv[optind]) == 0) {
-    mode = DOWN;
-    optind += 1;
-  } else if (strcmp("up",argv[optind]) == 0) {
-    mode = UP;
-    optind += 1;
-  } else if (strcmp("debug",argv[optind]) == 0) {
-    mode = DEBUG;
-    optind += 1;
-    while (optind < argc) {
-      char* ptr = argv[optind];
-      int do_remove = 0;
-      if (*ptr == '-') {
-        do_remove = 1;
-        ++ptr;
-      } else if (*ptr == '+') {
-        ++ptr;
-      }
-      if ((strcmp("call",ptr) == 0) || (strcmp("calls",ptr) == 0)) {
-        if (do_remove)
-          turn_off |= DEBUG_CALLS;
-        else
-          turn_on |= DEBUG_CALLS;
-        optind += 1;
-      } else if (strcmp("data",ptr) == 0) {
-        if (do_remove)
-          turn_off |= DEBUG_DATA;
-        else
-          turn_on |= DEBUG_DATA;
-        optind += 1;
-      } else if (strcmp("dma",ptr) == 0) {
-        if (do_remove)
-          turn_off |= DEBUG_DMA;
-        else
-          turn_on |= DEBUG_DMA;
-        optind += 1;
-      } else if ((strcmp("intr",ptr) == 0) || (strcmp("intrs",ptr) == 0)) {
-        if (do_remove)
-          turn_off |= DEBUG_INTR;
-        else
-          turn_on |= DEBUG_INTR;
-        optind += 1;
-      } else if (strcmp("off",ptr) == 0) {
-        if (do_remove) {
-          printf("Error: '-off' is not a valid debug mode.\n");
-          print_usage(argv[0]);
-          exit(1);
-        } else {
-          turn_off |= DEBUG_CALLS | DEBUG_DATA | DEBUG_DMA | DEBUG_INTR;
-        }
-        optind += 1;
-      } else if (strcmp("on",ptr) == 0) {
-        if (do_remove) {
-          printf("Error: '-on' is not a valid debug mode. Did you mean 'off'?\n");
-          print_usage(argv[0]);
-          exit(1);
-        } else {
-          turn_on |= DEBUG_CALLS | DEBUG_DATA | DEBUG_DMA | DEBUG_INTR;
-        }
-        optind += 1;
-      } else {
-        /* not a valid debug mode, assume it is the start of file names */
-        break;
-      }
-    }
-    if (turn_off & turn_on) {
-      printf("Error: inconsistent debug modes specified.\n");
-      print_usage(argv[0]);
-      exit(1);
-    }
-  } else if (  (strcmp("prof",argv[optind]) == 0)
-            || (strcmp("profile",argv[optind]) == 0)
-            ) {
-    mode = PROFILE;
-    optind += 1;
-    if (optind < argc) {
-      if ((strcmp("start",argv[optind]) == 0) || (strcmp("on",argv[optind]) == 0)) {
-        turn_on |= DEBUG_PROFILE;
-        optind += 1;
-      } else if ((strcmp("stop",argv[optind]) == 0) || (strcmp("off",argv[optind]) == 0)) {
-        turn_off |= DEBUG_PROFILE;
-        optind += 1;
-      } else {
-        /* not a valid profile command, assume it is the start of file names */
-      }
-    }
-    if (turn_off & turn_on) {
-      printf("Error: conflicting profile commands specified.\n");
-      print_usage(argv[0]);
-      exit(1);
-    }
   } else if (strcmp("portal",argv[optind]) == 0) {
     mode = PORTAL;
     optind += 1;
@@ -481,15 +249,9 @@ int main(int argc, char* const argv[])
   } else if (strcmp("notrace",argv[optind]) == 0) {
     mode = NOTRACE;
     optind += 1;
-  } else if (strcmp("seqno",argv[optind]) == 0) {
-    mode = SEQNO;
-    optind += 1;
   } else if (strcmp("mmap",argv[optind]) == 0) {
     mode = MMAP;
     optind += 1;
-  } else {
-    /* not a recognized mode, assume it is a file name, and use INFO mode */
-    mode = INFO;
   }
 
   /* execute the requested action */
@@ -499,7 +261,6 @@ int main(int argc, char* const argv[])
     exit(0);
   }
 
-  process_failed = 0;
   if (optind == argc) {
     /* no file arguments given, so look for all /dev/fpga* */
     struct dirent **eps;
@@ -517,8 +278,7 @@ int main(int argc, char* const argv[])
       int cnt;
       char* filename = NULL;
       unsigned int len = 0;
-      for (cnt = 0; cnt < res; ++cnt)
-      {
+      for (cnt = 0; cnt < res; ++cnt) {
         unsigned int l = 6 + strlen(eps[cnt]->d_name);
         if (l > len) {
           if (filename != NULL) free(filename);
@@ -531,15 +291,16 @@ int main(int argc, char* const argv[])
         }
         strcpy(filename, "/dev/");
         strcpy(filename+5, eps[cnt]->d_name);
-        process_failed |= (process(filename,mode,0,turn_off,turn_on) == -1);
+        process_failed |= (process(filename,mode,0) == -1);
       }
       if (filename != NULL) free(filename);
     }
   }
   else {
+    unsigned int n;
     /* only operate on the given file arguments */
     for (n = optind; n < argc; ++n)
-      process_failed |= (process(argv[n],mode,1,turn_off,turn_on) == -1);
+      process_failed |= (process(argv[n],mode,1) == -1);
   }
 
   exit(process_failed ? 1 : 0);
