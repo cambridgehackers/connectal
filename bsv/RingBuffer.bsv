@@ -18,8 +18,8 @@ interface RingBuffer;
    method Bool notFull();
    method Action push(Bit#(8) num);
    method Action pop(Bit#(8) num);
-   interface Reg#(Bit#(DmaAddrSize)) bufferfirst;
-   interface Reg#(Bit#(DmaAddrSize)) bufferlast;
+   interface Reg#(Bit#(DmaOffsetize)) bufferfirst;
+   interface Reg#(Bit#(DmaOffsetSize)) bufferlast;
    interface Reg#(Bool) enable;
    interface RingBufferConfig configifc;
    interface Reg#(DmaPointer) memhandle;
@@ -33,11 +33,11 @@ endinterface
 
 module mkRingBuffer(RingBuffer);
    
-   Reg#(Bit#(DmaAddrSize)) rbufferbase <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) rbufferend <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) rbufferfirst <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) rbufferlast <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) rbuffermask <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) rbufferbase <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) rbufferend <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) rbufferfirst <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) rbufferlast <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) rbuffermask <- mkReg(0);
    Reg#(DmaPointer) rmemhandle <- mkReg(0);
    Reg#(Bool) renable <- mkReg(False);
    
