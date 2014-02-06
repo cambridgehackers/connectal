@@ -292,7 +292,7 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                          iowrite32(trace, this_board->bar0io + (775 << 2) + 0); 
                          printk("new trace=%d old trace=%d tlpseqno=%d\n",
                                 trace, old_trace, tlpseqno);
-                         err = copy_to_user((void __user *) arg, &trace, sizeof(int));
+                         err = copy_to_user((void __user *) arg, &old_trace, sizeof(int));
                 }
                 }
                 break;
