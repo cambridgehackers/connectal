@@ -7,25 +7,17 @@
 #include <linux/pci.h>          /* pci device types, fns, etc. */
 #include <linux/errno.h>        /* error codes */
 #include <linux/io.h>           /* I/O mapping, reading, writing */
-#include <linux/types.h>        /* size_t */
 #include <linux/cdev.h>         /* struct cdev */
 #include <linux/fs.h>           /* struct file_operations */
 #include <linux/init.h>         /* __init, __exit, etc. */
 #include <linux/ioctl.h>        /* ioctl macros */
 #include <linux/interrupt.h>    /* request_irq, free_irq, etc. */
-#include <linux/delay.h>        /* udelay */
 #include <linux/mm.h>           /* kmalloc, kfree, struct page, etc. */
 #include <linux/sched.h>        /* task_struct */
-#include <linux/pagemap.h>      /* page_cache_release */
 #include <linux/scatterlist.h>  /* sg_* operations */
-#include <linux/spinlock.h>     /* spinlock_t, spin_lock_irqsave, etc. */
 #include <linux/mutex.h>        /* mutex_lock, mutex_unlock, etc. */
 #include <linux/poll.h>         /* poll_table, etc. */
-#include <linux/time.h>         /* getnstimeofday, struct timespec, etc. */
 #include <asm/uaccess.h>        /* copy_to_user, copy_from_user */
-#include <asm/dma-mapping.h>
-#include <linux/dma-buf.h>
-#include <linux/pci.h>
 
 #include "bluenoc.h"
 
@@ -43,7 +35,6 @@
 
 /* Number of boards to support */
 #define NUM_BOARDS 16
-#define UNASSIGNED -1
 
 /*
  * Per-device data
