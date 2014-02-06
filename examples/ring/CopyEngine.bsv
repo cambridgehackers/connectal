@@ -45,8 +45,8 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
    FIFOF#(Bit#(64)) f_out <- mkSizedFIFOF(16);    // to buffer outgoing responses
    Reg#(Bit#(16)) copyReadCount <- mkReg(0);
    Reg#(Bit#(16)) copyWriteCount <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) copyReadAddr <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize)) copyWriteAddr <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) copyReadAddr <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) copyWriteAddr <- mkReg(0);
    Reg#(DmaPointer) copyReadHandle <- mkReg(0);
    Reg#(DmaPointer) copyWriteHandle <- mkReg(0);
    Reg#(Bit#(32)) copyTag <- mkReg(0);
