@@ -22,7 +22,6 @@ static void print_usage(const char* argv0)
   printf("       %s info    [ <file1> [ .. <fileN> ] ]\n", pgm);
   printf("       %s build   [ <file1> [ .. <fileN> ] ]\n", pgm);
   printf("       %s reset   [ <file1> [ .. <fileN> ] ]\n", pgm);
-  printf("       %s profile <profile_command>   [ <file1> [ .. <fileN> ] ]\n", pgm);
   printf("       %s portal  \n", pgm);
   printf("       %s tlp  \n", pgm);
   printf("       %s trace  \n", pgm);
@@ -34,7 +33,6 @@ static void print_usage(const char* argv0)
   printf("  info    - Describe the BlueNoC target(s).\n");
   printf("  build   - Display the Build number.\n");
   printf("  reset   - Reset the portals.\n");
-  printf("  profile - Start and stop profiling BlueNoC driver activity.\n");
   printf("  portal  - Describe the portal target(s).\n");
   printf("\n");
   printf("File arguments:\n");
@@ -57,7 +55,7 @@ static void print_usage(const char* argv0)
   free(argv0_copy);
 }
 
-typedef enum { HELP, INFO, BUILD, RESET, PORTAL, TLP, TRACE, NOTRACE, MMAP } tMode;
+typedef enum { HELP, INFO, RESET, PORTAL, TLP, TRACE, NOTRACE, MMAP } tMode;
 
 static int is_bluenoc_file(const struct dirent* ent)
 {
@@ -105,14 +103,6 @@ static int process(const char* file, tMode mode, unsigned int strict)
         printf("  Content ID:       %llx\n", board_info.content_id);
       } else {
         printf("  *** BOARD IS DEACTIVATED ***\n");
-      }
-      ret = 1;
-      break;
-    }
-    case BUILD: {
-      if (board_info.is_active) {
-        time_t t = board_info.timestamp;
-        printf("%d\n", board_info.build);
       }
       ret = 1;
       break;
@@ -193,6 +183,7 @@ static int process(const char* file, tMode mode, unsigned int strict)
   } break;
   case MMAP: {
     int *portal = (int *)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+    int *regbase = (int *)(((unsigned long)portal) + (1<<14));
     if ((void*)-1 == portal) {
       printf("failed to map portal %d:%s\n", errno, strerror(errno));
     }
@@ -205,21 +196,12 @@ static int process(const char* file, tMode mode, unsigned int strict)
       printf("portal[256]=%08x\n", portal[256]);
     }
     if (1) {
-      int *channel0 = portal;
-      int *channel2 = (int *)(((unsigned long)portal) + 2*256);
-      //*channel0 = 42;
-      //*channel2 = 9;
-
-      int *regbase = (int *)(((unsigned long)portal) + (1<<14));
       fprintf(stderr, "should be 6847xxxx = %x\n", *(int *)(((unsigned long)portal) + (1 << 15) + (1<<14) + 0x10));
       fprintf(stderr, "should be bad0dada = %x\n", *(int *)(((unsigned long)portal) + (1 << 15) + (0<<14) + 0x00));
       fprintf(stderr, "should be 05a005a0 = %x\n", *(int *)(((unsigned long)portal) + (0 << 15) + (1<<14) + 0x00));
       fprintf(stderr, "should be bad07ead = %x\n", *(int *)(((unsigned long)portal) + (0 << 15) + (0<<14) + 0x00));
-
       fprintf(stderr, "regbase[0] = %x\n", regbase[0]);
-      fprintf(stderr, "foo\n");
     }
-      fprintf(stderr, "bar\n");
   } break;
   }
 
@@ -231,10 +213,9 @@ static int process(const char* file, tMode mode, unsigned int strict)
 int main(int argc, char* const argv[])
 {
   int opt;
-  unsigned int n;
-  tMode mode;
+  tMode mode = INFO; /* not a recognized mode, assume it is a file name, and use INFO mode */
   int ret;
-  int process_failed;
+  int process_failed = 0;
 
   while (1) {
     opt = getopt(argc, argv, "+h");
@@ -252,9 +233,6 @@ int main(int argc, char* const argv[])
     mode = HELP;
   } else if (strcmp("info",argv[optind]) == 0) {
     mode = INFO;
-    optind += 1;
-  } else if (strcmp("build",argv[optind]) == 0) {
-    mode = BUILD;
     optind += 1;
   } else if (strcmp("reset",argv[optind]) == 0) {
     mode = RESET;
@@ -274,9 +252,6 @@ int main(int argc, char* const argv[])
   } else if (strcmp("mmap",argv[optind]) == 0) {
     mode = MMAP;
     optind += 1;
-  } else {
-    /* not a recognized mode, assume it is a file name, and use INFO mode */
-    mode = INFO;
   }
 
   /* execute the requested action */
@@ -286,7 +261,6 @@ int main(int argc, char* const argv[])
     exit(0);
   }
 
-  process_failed = 0;
   if (optind == argc) {
     /* no file arguments given, so look for all /dev/fpga* */
     struct dirent **eps;
@@ -304,8 +278,7 @@ int main(int argc, char* const argv[])
       int cnt;
       char* filename = NULL;
       unsigned int len = 0;
-      for (cnt = 0; cnt < res; ++cnt)
-      {
+      for (cnt = 0; cnt < res; ++cnt) {
         unsigned int l = 6 + strlen(eps[cnt]->d_name);
         if (l > len) {
           if (filename != NULL) free(filename);
@@ -324,6 +297,7 @@ int main(int argc, char* const argv[])
     }
   }
   else {
+    unsigned int n;
     /* only operate on the given file arguments */
     for (n = optind; n < argc; ++n)
       process_failed |= (process(argv[n],mode,1) == -1);
