@@ -57,7 +57,7 @@ static void print_usage(const char* argv0)
   free(argv0_copy);
 }
 
-typedef enum { HELP, INFO, BUILD, RESET, PROFILE, PORTAL, TLP, TRACE, NOTRACE, MMAP } tMode;
+typedef enum { HELP, INFO, BUILD, RESET, PORTAL, TLP, TRACE, NOTRACE, MMAP } tMode;
 
 static int is_bluenoc_file(const struct dirent* ent)
 {
@@ -67,7 +67,7 @@ static int is_bluenoc_file(const struct dirent* ent)
     return 0;
 }
 
-static int process(const char* file, tMode mode, unsigned int strict, tDebugLevel turn_off, tDebugLevel turn_on)
+static int process(const char* file, tMode mode, unsigned int strict)
 {
   int ret = 0;
   tBoardInfo board_info;
@@ -156,13 +156,13 @@ static int process(const char* file, tMode mode, unsigned int strict, tDebugLeve
   }
   case TLP: {
     int trace = 0;
-    int seqno = 0;
+    //int seqno = 0;
     int res, i;
 
     // disable tracing
     res = ioctl(fd,BNOC_TRACE,&trace);
     // set pointer to 0
-    res = ioctl(fd,BNOC_SEQNO,&seqno);
+    //res = ioctl(fd,BNOC_SEQNO,&seqno);
 
     for (i = 0; i < 2048; i++) {
       tTlpData tlp;
@@ -235,8 +235,6 @@ int main(int argc, char* const argv[])
   tMode mode;
   int ret;
   int process_failed;
-  tDebugLevel turn_on = 0;
-  tDebugLevel turn_off = 0;
 
   while (1) {
     opt = getopt(argc, argv, "+h");
@@ -261,27 +259,6 @@ int main(int argc, char* const argv[])
   } else if (strcmp("reset",argv[optind]) == 0) {
     mode = RESET;
     optind += 1;
-  } else if (  (strcmp("prof",argv[optind]) == 0)
-            || (strcmp("profile",argv[optind]) == 0)
-            ) {
-    mode = PROFILE;
-    optind += 1;
-    if (optind < argc) {
-      if ((strcmp("start",argv[optind]) == 0) || (strcmp("on",argv[optind]) == 0)) {
-        turn_on |= DEBUG_PROFILE;
-        optind += 1;
-      } else if ((strcmp("stop",argv[optind]) == 0) || (strcmp("off",argv[optind]) == 0)) {
-        turn_off |= DEBUG_PROFILE;
-        optind += 1;
-      } else {
-        /* not a valid profile command, assume it is the start of file names */
-      }
-    }
-    if (turn_off & turn_on) {
-      printf("Error: conflicting profile commands specified.\n");
-      print_usage(argv[0]);
-      exit(1);
-    }
   } else if (strcmp("portal",argv[optind]) == 0) {
     mode = PORTAL;
     optind += 1;
@@ -341,7 +318,7 @@ int main(int argc, char* const argv[])
         }
         strcpy(filename, "/dev/");
         strcpy(filename+5, eps[cnt]->d_name);
-        process_failed |= (process(filename,mode,0,turn_off,turn_on) == -1);
+        process_failed |= (process(filename,mode,0) == -1);
       }
       if (filename != NULL) free(filename);
     }
@@ -349,7 +326,7 @@ int main(int argc, char* const argv[])
   else {
     /* only operate on the given file arguments */
     for (n = optind; n < argc; ++n)
-      process_failed |= (process(argv[n],mode,1,turn_off,turn_on) == -1);
+      process_failed |= (process(argv[n],mode,1) == -1);
   }
 
   exit(process_failed ? 1 : 0);
