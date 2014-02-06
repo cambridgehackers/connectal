@@ -80,13 +80,13 @@ typedef struct tBoard {
 static dev_t device_number;
 static struct class *bluenoc_class = NULL;
 static unsigned int open_count[NUM_BOARDS + 1];
-static tBoard *board_list = NULL;
+static tBoard board_map[NUM_BOARDS];
 static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 'u' << 16) | ((unsigned long long) 'e' << 24)
     | ((unsigned long long) 's' << 32) | ((unsigned long long) 'p' << 40)
     | ((unsigned long long) 'e' << 48) | ((unsigned long long) 'c' << 56);
 
-enum {PROBED, BOARD_NUM_ASSIGNED, PCI_DEV_ENABLED, BARS_ALLOCATED,
+enum {BOARD_UNACTIVATED=0, BOARD_NUM_ASSIGNED, PCI_DEV_ENABLED, BARS_ALLOCATED,
     BARS_MAPPED, MSI_ENABLED, BLUENOC_ACTIVE};
 
 /*
@@ -104,7 +104,6 @@ static irqreturn_t intr_handler(int irq, void *brd)
 
 static void deactivate(tBoard * this_board)
 {
-        if (this_board)
         switch (this_board->activation_level) {
         case BLUENOC_ACTIVE:
                 iowrite8(0, this_board->bar0io + 257); /* deactivate the network */
@@ -136,44 +135,21 @@ static void deactivate(tBoard * this_board)
                 /* fall through */
         case PCI_DEV_ENABLED:
                 pci_disable_device(this_board->pci_dev); /* disable pci device */
-                this_board->activation_level = BOARD_NUM_ASSIGNED;
                 /* fall through */
-        case BOARD_NUM_ASSIGNED: case PROBED:
+        case BOARD_NUM_ASSIGNED:
+                this_board->activation_level = BOARD_UNACTIVATED;
                 break;                /* nothing to deactivate */
         }
 }
 
 static int activate(tBoard * this_board)
 {
-        unsigned int board_number = 0;
         int rc, i;
 
         if (!this_board)
                 return -EFAULT;
         /* Note: this makes use of C's fall-through switch semantics */
         switch (this_board->activation_level) {
-        case PROBED:
-                /* assign a board number */
-                while (board_number <= NUM_BOARDS) {
-                        tBoard *brd = board_list;
-                        unsigned int collision = 0;
-                        while (brd && !collision) {
-                                collision |= (brd->board_number == board_number);
-                                brd = brd->next;
-                        }
-                        if (!collision)
-                                break;
-                        ++board_number;
-                }
-                if (board_number > NUM_BOARDS) {
-                        printk(KERN_ERR "%s: %d boards are already in use!\n", DEV_NAME, NUM_BOARDS);
-                        deactivate(this_board);
-                        return -EBUSY;
-                }
-                printk(KERN_INFO "%s: board_number = %d\n", DEV_NAME, board_number);
-                this_board->board_number = board_number;
-                this_board->activation_level = BOARD_NUM_ASSIGNED;
-                /* fall through */
         case BOARD_NUM_ASSIGNED:
                 /* enable the PCI device */
                 if (pci_enable_device(this_board->pci_dev)) {
@@ -293,15 +269,13 @@ static int activate(tBoard * this_board)
 static int bluenoc_open(struct inode *inode, struct file *filp)
 {
         int err = 0;
-        tBoard *this_board = board_list;
         int minor = iminor(inode) - MINOR(device_number);
         unsigned int this_board_number = minor >> 4;
         unsigned int this_portal_number = minor & 0xF;
+        tBoard *this_board = &board_map[this_board_number];
 
         printk("bluenoc_open: device_number=%x board_number=%d portal_number=%d\n",
              device_number, this_board_number, this_portal_number);
-        while(this_board && this_board->board_number != this_board_number)
-            this_board = this_board->next;
         if (!this_board) {
                 printk(KERN_ERR "%s_%d: Unable to locate board\n", DEV_NAME, this_board_number);
                 return -ENXIO;
@@ -574,6 +548,7 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
 {
         int err = 0;
         tBoard *this_board = NULL;
+        int board_number = 0;
 
 printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &bluenoc_probe, dev, id, pci_get_drvdata(dev));
         printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
@@ -583,23 +558,20 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 err = -EINVAL;
                 goto exit_bluenoc_probe;
         }
-        /* allocate a structure for this board */
-        this_board = (tBoard *) kmalloc(sizeof(tBoard), GFP_KERNEL);
-        if (!this_board) {
-                printk(KERN_ERR "%s: unable to allocate memory for board structure\n", DEV_NAME);
-                err = -EINVAL;
-                goto exit_bluenoc_probe;
+        /* assign a board number */
+        while (board_map[board_number].activation_level != BOARD_UNACTIVATED && board_number < NUM_BOARDS)
+                board_number++;
+        if (board_number >= NUM_BOARDS) {
+                printk(KERN_ERR "%s: %d boards are already in use!\n", DEV_NAME, NUM_BOARDS);
+                return -EBUSY;
         }
+        this_board = &board_map[board_number];
+        printk(KERN_INFO "%s: board_number = %d\n", DEV_NAME, board_number);
         memset(this_board, 0, sizeof(tBoard));
-        /* initially, the board structure contains only the pci_dev pointer and is in
-         * the probed state with no assigned number.
-         */
-        this_board->activation_level = PROBED;
+        this_board->board_number = board_number;
+        this_board->activation_level = BOARD_NUM_ASSIGNED;
         this_board->pci_dev = dev;
-        this_board->board_number = UNASSIGNED;
         this_board->debug_level = DEBUG_OFF;
-        this_board->next = board_list;
-        board_list = this_board;
         /* activate the board */
         if ((err = activate(this_board)) >= 0) {
                 int dn;
@@ -626,27 +598,19 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                         }
                 }
         }
-        if (err < 0) {
-                /* remove the board from the list */
-                board_list = this_board->next;
-                kfree(this_board);
-        }
       exit_bluenoc_probe:
+        if (err < 0)
+                this_board = NULL;
+        pci_set_drvdata(dev, this_board);
         return err;
 }
 
 static void __exit bluenoc_remove(struct pci_dev *dev)
 {
-printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, pci_get_drvdata(dev));
-        tBoard *this_board = board_list;
-        tBoard *prev_board = NULL;
+        tBoard *this_board = pci_get_drvdata(dev);
         int dn;
 
-        /* locate device-specific data for this board */
-        while(this_board && this_board->pci_dev != dev) {
-            prev_board = this_board;
-            this_board = this_board->next;
-        }
+printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
         if (!this_board) {
                 printk(KERN_ERR "%s: Unable to locate board when removing PCI device %p\n", DEV_NAME, dev);
                 return;
@@ -662,12 +626,7 @@ printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, pci_get_drvdata(dev))
                 /* remove device */
                 cdev_del(&this_board->cdev[dn]);
         }
-        /* free the board structure */
-        if (prev_board)
-                prev_board->next = this_board->next;
-        else
-                board_list = this_board->next;
-        kfree(this_board);
+        pci_set_drvdata(dev, NULL);
 }
 
 /* PCI ID pattern table */
@@ -710,7 +669,7 @@ static int __init bluenoc_init(void)
                 return -1;
         }
         /* initialize driver data */
-        board_list = NULL;
+        memset(board_map, 0, sizeof(board_map));
         /* register the driver with the PCI subsystem */
         status = pci_register_driver(&bluenoc_ops);
         if (status < 0) {
