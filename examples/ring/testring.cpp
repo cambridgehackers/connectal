@@ -26,7 +26,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <sys/queueh>
+#include <sys/queue.h>
 #include <semaphore.h>
 
 #include "StdDmaIndication.h"
@@ -55,53 +55,81 @@ size_t scratch_sz = 1<<20; /* 1 MB */
 #define CMD_ECHO 2
 #define CMD_FILL 3
 
+/* The finish function is called with arg and the event */
 
 struct Ring_Completion {
   LIST_ENTRY(Ring_Completion) entries;
   int tag;     /* which completion is this */
   int finished; /* boolean for completed */
-  sem_t *sem;
+  void (*finish)(void *, uint64_t *);
+  void *arg;
 };
 
 struct Ring_Completion completion[1024];
 
-LIST_HEAD(completionlisthead, Ring_Completion) free;
+LIST_HEAD(completionlisthead, Ring_Completion) completionfreelist;
 
 void completion_list_init()
 {
   int i;
-  LIST_INIT(&free);
+  LIST_INIT(&completionfreelist);
   for (i = 1; i < 1024; i += 1) 
     {
       completion[i].tag = i;  /* non zero! */
       completion[i].finished = 1;
-      completion[i].sem = NULL;
-      LIST_INSERT_HEAD(&free, &completion[i], entries);
+      completion[i].finish = NULL;
+      completion[i].arg = NULL;
+      LIST_INSERT_HEAD(&completionfreelist, &completion[i], entries);
     }
 }
 
 struct Ring_Completion *get_free_completion()
 {
   struct Ring_Completion *p;
-  p = LIST_FIRST(&free);
+  p = LIST_FIRST(&completionfreelist);
   if (p) LIST_REMOVE(p, entries);
   return(p);
 }
 
-void Ring_Handle_Completion(unsigned tag)
+void Ring_Handle_Completion(uint64_t *event)
 {
   struct Ring_Completion *p;
-  assert(tag != 0);
+  unsigned tag = event[7] & 0xffff;
   assert(tag < 1024);
   p = &completion[tag];
   assert(p->finished == 0);
   p->finished = 1;
-  if (p->sem) sem_post(p->sem);
-  LIST_INSERT_HEAD(&free, p, entries);
+  if (p->finish) (*p->finish)(p->arg, event);
+  LIST_INSERT_HEAD(&completionfreelist, p, entries);
 }
 
 
 sem_t conf_sem;
+
+DmaIndication *dmaIndication = 0;
+
+struct SWRing {
+  unsigned int ref;
+  char *base;
+  unsigned first;
+  volatile unsigned last;
+  size_t size;
+  size_t slots;
+  unsigned cached_space;
+  int ringid;
+};
+
+/* accessors for get and set calls */
+#define REG_BASE 0
+#define REG_END 1
+#define REG_FIRST 2
+#define REG_LAST 3
+#define REG_MASK 4
+#define REG_HANDLE 5
+
+struct SWRing cmd_ring;
+ struct SWRing status_ring;
+ pthread_mutex_t cmd_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -110,6 +138,7 @@ void dump(const char *prefix, char *buf, size_t len)
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
     fprintf(stderr, "\n");
 }
+
 
 class RingIndication : public RingIndicationWrapper
 {
@@ -137,30 +166,6 @@ public:
 };
 
 RingIndication *ringIndication = 0;
-DmaIndication *dmaIndication = 0;
-
-struct SWRing {
-  unsigned int ref;
-  char *base;
-  unsigned first;
-  volatile unsigned last;
-  size_t size;
-  size_t slots;
-  unsigned cached_space;
-  int ringid;
-};
-
-/* accessors for get and set calls */
-#define REG_BASE 0
-#define REG_END 1
-#define REG_FIRST 2
-#define REG_LAST 3
-#define REG_MASK 4
-#define REG_HANDLE 5
-
-struct SWRing cmd_ring;
- struct SWRing status_ring;
- pthread_mutex_t cmd_lock = PTHREAD_MTEX_INITIALIZER;
 
 uint64_t fetch(uint64_t *p) {
   return (p[0]);
@@ -190,11 +195,11 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   sem_wait(&conf_sem);
 }
 
-volatile uint64_t *ring_next(struct SWRing *r)
+uint64_t *ring_next(struct SWRing *r)
 {
   volatile uint64_t *p = (uint64_t *) (r->base + (long) r->last);
   if (p[7] == 0) return (NULL);
-  return (p);
+  return ((uint64_t *) p);
 }
 
 void ring_pop(struct SWRing *r)
@@ -213,21 +218,26 @@ void ring_pop(struct SWRing *r)
  * the compiler will know to refetch
  */
 
-void ring_send(struct SWRing *r, uint64_t *cmd)
+void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), void *arg)
 {
   unsigned next_first;
+  struct Ring_Completion *p;
   pthread_mutex_lock(&cmd_lock);
   assert(r->first < r->size);
   /* send an inquiry every 1/4 way around the ring */
   if ((r->cached_space % (r->size >> 2)) == 0) {
-    ring->get(r->ringid, REG_LAST, 0);         // bufferlast 
+    ring->get(r->ringid, REG_LAST);         // bufferlast 
     while (r->cached_space == 0) {
       pthread_mutex_unlock(&cmd_lock);
       r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
       pthread_mutex_lock(&cmd_lock);
     }
   }
-  
+  p = get_free_completion();
+  p->finish = fp;
+  p->arg = arg;
+  assert (p != NULL);
+  cmd[7] = p->tag;
   memcpy(&r->base[r->first], cmd, 64);
   next_first = r->first + 64;
   if (next_first == r->size) next_first = 0;
@@ -241,46 +251,77 @@ void ring_send(struct SWRing *r, uint64_t *cmd)
 void *statusThreadProc(void *arg)
 {
   int i;
-  volatile uint64_t *msg;
+  uint64_t *msg;
   printf("Status thread running\n");
   for (;;) {
     while ((msg = ring_next(&status_ring)) == NULL);
-    printf("Received %x %x\n", msg[0], msg[7]);
+    printf("Received %lx %lx\n", (long) msg[0], (long) msg[7]);
+    Ring_Handle_Completion((uint64_t *) msg);
     ring_pop(&status_ring);
   }
+}
+
+void sem_finish(void *arg, uint64_t *event)
+{
+  sem_t *p = (sem_t *) arg;
+  sem_post(p);
 }
 
 
 void hw_copy(void *from, void *to, unsigned count)
 {
   uint64_t tcmd[8];
+  sem_t my_sem;
+  assert(sem_init(&my_sem, 1, 0) == 0);
   tcmd[0] = ((uint64_t) CMD_COPY) << 56;
-  tcmd[0] |= 0x20000000 + i; // tag
   tcmd[1] = (uint64_t) from;
   tcmd[2] = (uint64_t) to;
   tcmd[3] = count; // byte count
-  ring_send(&cmd_ring, tcmd);
+  ring_send(&cmd_ring, tcmd, sem_finish, &my_sem);
+  sem_wait(&my_sem);
+  sem_destroy(&my_sem);
+}
 
+struct CompletionEvent {
+  uint64_t event[8];
+  sem_t sem;
+};
+
+
+void echo_finish(void *arg, uint64_t *event)
+{
+  struct CompletionEvent *p = (struct CompletionEvent *) arg;
+  assert(p != NULL);
+  memcpy(&p->event, event, 8 * sizeof(uint64_t));
+  sem_post(&p->sem);
 }
 
 
 void hw_echo(long unsigned a, long unsigned b)
 {
+  struct CompletionEvent myevent;
   uint64_t tcmd[8];
+  sem_init(&myevent.sem, 1, 0);
   tcmd[0] = ((uint64_t) CMD_ECHO) << 56;
   tcmd[1] = (uint64_t) a;
   tcmd[2] = (uint64_t) b;
-  ring_send(&cmd_ring, tcmd);
-
+  ring_send(&cmd_ring, tcmd, echo_finish, &myevent);
+  sem_wait(&myevent.sem);
+  if ((myevent.event[1] != a) || (myevent.event[2] != b)) {
+    printf("echo failed a=%lx b= %lx got %lx %lx\n",
+	   a, b, myevent.event[1], myevent.event[2]);
+  }
+  sem_destroy(&myevent.sem);
+  
 }
 
 void hw_nop()
 {
   uint64_t tcmd[8];
   tcmd[0] = ((uint64_t) CMD_NOP) << 56;
-  tcmd[1] = (uint64_t) a;
-  tcmd[2] = (uint64_t) b;
-  ring_send_no_response(&cmd_ring, tcmd);
+  tcmd[1] = (uint64_t) 17;
+  tcmd[2] = (uint64_t) 34;
+  ring_send(&cmd_ring, tcmd, NULL, NULL);
 }
 
 
@@ -352,27 +393,14 @@ int main(int argc, const char **argv)
     scratchBuffer[i] = i;
    }
   for (i = 0; i < 10; i += 1) {
-    tcmd[0] = ((uint64_t) CMD_COPY) << 56;
-    tcmd[0] |= 0x20000000 + i; // tag
-    tcmd[1] = (((uint64_t) ref_scratchAlloc) << 32)
-      | (256 * i);
-    tcmd[2] = (((uint64_t) ref_scratchAlloc) << 32)
-      | (256 * (i + 1));
-    tcmd[3] = 256; // byte count
-    tcmd[4] = 0xdeadbeef;
-    tcmd[5] = 0xfeedface;
-    tcmd[6] = 0x012345789abcdefL;
-    tcmd[7] = 0xfedcba9876543210L;
-    ring_send(&cmd_ring, tcmd);
-    tcmd[0] = ((uint64_t) CMD_ECHO) << 56;
-    tcmd[1] = 0x111;
-    tcmd[2] = 0x222;
-    tcmd[3] = 0x333;
-    tcmd[4] = 0x444;
-    tcmd[5] = 0x555;
-    tcmd[6] = 0x666;
-    tcmd[7] = 0xf0000000 | i;
-    ring_send(&cmd_ring, tcmd);
+    uint64_t ul1;
+    uint64_t ul2;
+    hw_copy((void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * i)),
+		      (void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * (i + 1))),
+	    0x100);
+    ul1 = (0x111L << 32) + (long) i;
+    ul2 = (0x222L << 32) + (long) i;
+    hw_echo(ul1, ul2);
   }
   sleep(1);
   for (i = 0; i < 10; i += 1) {
