@@ -88,7 +88,7 @@ extern "C" {
       sock_fd_read(p_fd.write.s2, &(fd[pref-1]));
       buffer[pref-1] = (unsigned char *)mmap(0, size_accum[pref-1], PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref-1], 0);
       buffer_len[pref-1] = size_accum[pref-1]/sizeof(unsigned char);
-      return buffer[pref-1];
+      return (unsigned long)buffer[pref-1];
     } else {
       return 0;
     }
