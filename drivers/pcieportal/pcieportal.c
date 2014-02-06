@@ -73,7 +73,6 @@ typedef struct tBoard {
         unsigned int irq_num;
         wait_queue_head_t intr_wq;
         unsigned int activation_level; /* activation status */
-        tDebugLevel debug_level; /* debug status */
 } tBoard;
 
 /* static device data */
@@ -96,8 +95,7 @@ static irqreturn_t intr_handler(int irq, void *brd)
 {
         tBoard *this_board = brd;
 
-        if (this_board->debug_level & DEBUG_INTR)
-                printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_board->board_number);
+        //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_board->board_number);
         wake_up_interruptible(&(this_board->intr_wq)); 
         return IRQ_HANDLED;
 }
@@ -223,8 +221,7 @@ static int activate(tBoard * this_board)
                 /* enable MSI or MSI-X */
                 if (!pci_enable_msi(this_board->pci_dev)) {
                         this_board->irq_num = this_board->pci_dev->irq;
-                        if (this_board->debug_level & DEBUG_INTR)
-                                printk(KERN_INFO "%s: Using MSI interrupts\n", DEV_NAME);
+                        //printk(KERN_INFO "%s: Using MSI interrupts\n", DEV_NAME);
                 } else {
                         struct msix_entry msix_entries[1];
                         msix_entries[0].entry = 0;
@@ -235,8 +232,7 @@ static int activate(tBoard * this_board)
                         }
                         this_board->uses_msix = 1;
                         this_board->irq_num = msix_entries[0].vector;
-                        if (this_board->debug_level & DEBUG_INTR)
-                                printk(KERN_INFO "%s: Using MSI-X interrupts\n", DEV_NAME);
+                        //printk(KERN_INFO "%s: Using MSI-X interrupts\n", DEV_NAME);
                 }
                 this_board->activation_level = MSI_ENABLED;
                 /* install an IRQ handler */
@@ -283,10 +279,7 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
         filp->private_data = (void *) &this_board->portal[this_portal_number];
         /* increment the open file count */
         open_count[this_board_number] += 1; 
-        if (this_board->debug_level & DEBUG_CALLS) {
-                /* log the operation */
-                printk(KERN_INFO "%s_%d: Opened device file\n", DEV_NAME, this_board_number);
-        }
+        //printk(KERN_INFO "%s_%d: Opened device file\n", DEV_NAME, this_board_number);
         // FIXME: why does the kernel think this device is RDONLY?
         filp->f_mode |= FMODE_WRITE;
         return err;
@@ -296,14 +289,9 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
 static int bluenoc_release(struct inode *inode, struct file *filp)
 {
         unsigned int this_board_number = iminor(inode);
-        tPortal *this_portal = (tPortal *) filp->private_data;
-        tBoard *this_board = this_portal->board;
         /* decrement the open file count */
         open_count[this_board_number] -= 1;
-        if (this_board->debug_level & DEBUG_CALLS) {
-                /* log the operation */
-                printk(KERN_INFO "%s_%d: Closed device file\n", DEV_NAME, this_board_number);
-        }
+        //printk(KERN_INFO "%s_%d: Closed device file\n", DEV_NAME, this_board_number);
         return 0;                /* success */
 }
 
@@ -314,9 +302,7 @@ static unsigned int bluenoc_poll(struct file *filp, poll_table * wait)
         tPortal *this_portal = (tPortal *) filp->private_data;
         tBoard *this_board = this_portal->board;
 
-        if (this_board->debug_level & DEBUG_CALLS)
-                printk(KERN_INFO "%s_%d: poll function called\n", DEV_NAME,
-                       this_board->board_number);
+        //printk(KERN_INFO "%s_%d: poll function called\n", DEV_NAME, this_board->board_number);
         if (this_board->activation_level != BLUENOC_ACTIVE)
                 return 0;
         poll_wait(filp, &this_board->intr_wq, wait);
@@ -324,8 +310,7 @@ static unsigned int bluenoc_poll(struct file *filp, poll_table * wait)
 #warning bluenoc_poll incomplete
         //if (this_portal->read_ok)  mask |= POLLIN  | POLLRDNORM; /* readable */
         //if (this_portal->write_ok) mask |= POLLOUT | POLLWRNORM; /* writable */
-        if (this_board->debug_level & DEBUG_CALLS)
-                printk(KERN_INFO "%s_%d: poll return status is %x\n", DEV_NAME, this_board->board_number, mask);
+        //printk(KERN_INFO "%s_%d: poll return status is %x\n", DEV_NAME, this_board->board_number, mask);
         return mask;
 }
 
@@ -379,59 +364,6 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 if (this_board->activation_level == BLUENOC_ACTIVE) {
 			// reset the portal
 			iowrite32(1, this_board->bar0io + (795 << 2)); 
-                }
-                break;
-        case BNOC_DEACTIVATE:
-                printk(KERN_INFO "%s: /dev/%s_%d deactivated\n",
-                       DEV_NAME, DEV_NAME, this_board->board_number);
-                /* deactivate the whole PCI infrastructure for this board */
-                deactivate(this_board);
-                msleep(100);
-                break;
-        case BNOC_REACTIVATE:
-                printk(KERN_INFO "%s: /dev/%s_%d reactivated\n",
-                       DEV_NAME, DEV_NAME, this_board->board_number);
-                /* reactivate the PCI infrastructure for this board */
-                activate(this_board);
-                break;
-        case BNOC_GET_DEBUG_LEVEL:
-                /* copy the debug level to the user-space value */
-                err = __put_user(this_board->debug_level, (tDebugLevel __user *) arg);
-                break;
-        case BNOC_SET_DEBUG_LEVEL:
-                {
-                tDebugLevel prev = this_board->debug_level, changed;
-                /* set the debug level from the user-space value */
-                err = __get_user(this_board->debug_level, (tDebugLevel __user *) arg);
-                changed = this_board->debug_level ^ prev;
-                if (err || !changed)
-                        break;
-                if (changed & ~DEBUG_PROFILE) {
-                        if ((this_board->debug_level & ~DEBUG_PROFILE) == DEBUG_OFF) {
-                                printk(KERN_INFO "%s_%d: turned off debugging\n",
-                                       DEV_NAME, this_board->board_number);
-                        } else {
-                                if (changed & DEBUG_CALLS) {
-                                        printk(KERN_INFO "%s_%d: turned %s debugging function call sequence\n",
-                                               DEV_NAME, this_board->board_number,
-                                               (prev & DEBUG_CALLS) ? "off" : "on");
-                                }
-                                if (changed & DEBUG_INTR) {
-                                        printk(KERN_INFO "%s_%d: turned %s debugging interrupts\n",
-                                               DEV_NAME, this_board->board_number,
-                                               (prev & DEBUG_INTR) ? "off" : "on");
-                                }
-                        }
-                }
-                if (!(changed & DEBUG_PROFILE))
-                        break;
-                if (this_board->debug_level & DEBUG_PROFILE) {
-                        printk(KERN_INFO "%s_%d: turned on profiling BlueNoC driver\n",
-                               DEV_NAME, this_board->board_number);
-                        break;
-                }
-                printk(KERN_INFO "%s_%d: turned off profiling BlueNoC driver\n",
-                       DEV_NAME, this_board->board_number);
                 }
                 break;
         case BNOC_IDENTIFY_PORTAL:
@@ -571,7 +503,6 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         this_board->board_number = board_number;
         this_board->activation_level = BOARD_NUM_ASSIGNED;
         this_board->pci_dev = dev;
-        this_board->debug_level = DEBUG_OFF;
         /* activate the board */
         if ((err = activate(this_board)) >= 0) {
                 int dn;
