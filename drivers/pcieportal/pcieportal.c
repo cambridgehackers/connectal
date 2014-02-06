@@ -85,7 +85,7 @@ static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 's' << 32) | ((unsigned long long) 'p' << 40)
     | ((unsigned long long) 'e' << 48) | ((unsigned long long) 'c' << 56);
 
-enum {BOARD_UNACTIVATED=0, BOARD_NUM_ASSIGNED, PCI_DEV_ENABLED, BARS_ALLOCATED,
+enum {BOARD_UNACTIVATED=0, PCI_DEV_ENABLED, BARS_ALLOCATED,
     BARS_MAPPED, MSI_ENABLED, BLUENOC_ACTIVE};
 
 /*
@@ -383,7 +383,6 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         printk(KERN_INFO "%s: board_number = %d\n", DEV_NAME, board_number);
         memset(this_board, 0, sizeof(tBoard));
         this_board->board_number = board_number;
-        this_board->activation_level = BOARD_NUM_ASSIGNED;
         this_board->pci_dev = dev;
         /* enable the PCI device */
         if (pci_enable_device(this_board->pci_dev)) {
@@ -507,6 +506,9 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                                 DEV_NAME, DEV_NAME, this_board->board_number * 16 + dn, this_device_number);
                 }
         }
+      // this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
+      // but why is it needed?...
+      iowrite32(0, this_board->bar0io + (792 << 2)); 
       exit_bluenoc_probe:
         if (err < 0) {
                 if (this_board)
