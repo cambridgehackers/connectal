@@ -39,24 +39,24 @@
 /*
  * Per-device data
  */
-typedef struct tPortal {
-        unsigned int portal_number;
-        struct tBoard *board;
-        void *virt;
-        dma_addr_t dma_handle;
+typedef struct {
+        unsigned int      portal_number;
+        struct tBoard    *board;
+        void             *virt;
+        dma_addr_t        dma_handle;
+        struct cdev       cdev; /* per-portal cdev structure */
 } tPortal;
 
 typedef struct tBoard {
-        void __iomem *bar0io, *bar1io, *bar2io; /* bars */
-        struct pci_dev *pci_dev; /* pci device pointer */
-        struct cdev cdev[16]; /* per-portal cdev structure */
-        struct tPortal portal[16];
-        tBoardInfo info; /* board identification fields */
-        unsigned int uses_msix;
-        unsigned int irq_num;
+        void __iomem     *bar0io, *bar1io, *bar2io; /* bars */
+        struct pci_dev   *pci_dev; /* pci device pointer */
+        tPortal           portal[NUM_BOARDS];
+        tBoardInfo        info; /* board identification fields */
+        unsigned int      uses_msix;
+        unsigned int      irq_num;
         wait_queue_head_t intr_wq; /* used for interrupt notifications */
-        unsigned int activation_level; /* activation status */
-        unsigned int open_count;
+        unsigned int      activation_level; /* activation status */
+        unsigned int      open_count;
 } tBoard;
 
 /* static device data */
@@ -248,12 +248,12 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
 {
         tPortal *this_portal = (tPortal *) filp->private_data;
         struct pci_dev *pci_dev = this_portal->board->pci_dev;
+        off_t off;
 
         if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
                 return -EINVAL;
         if (vma->vm_pgoff < 16) {
-                off_t off = pci_dev->resource[2].start +
-		  (1 << 16) * this_portal->portal_number;
+                off = pci_dev->resource[2].start + (1 << 16) * this_portal->portal_number;
                 printk("portal_mmap portal_number=%d board_start=%012lx portal_start=%012lx\n",
                      this_portal->portal_number,
                      (long) pci_dev->resource[2].start,
@@ -261,10 +261,6 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
                 vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
                 vma->vm_pgoff = off >> PAGE_SHIFT;
                 //vma->vm_flags |= VM_IO | VM_RESERVED;
-                vma->vm_flags |= VM_IO;
-                if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
-                     vma->vm_end - vma->vm_start, vma->vm_page_prot))
-                        return -EAGAIN;
         } else {
                 if (!this_portal->virt) {
                         this_portal->virt = dma_alloc_coherent(&pci_dev->dev,
@@ -274,12 +270,12 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
                              this_portal->virt, (void *) this_portal->dma_handle);
                 }
                 //vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-                vma->vm_flags |= VM_IO;
-                if (io_remap_pfn_range(vma, vma->vm_start,
-                     this_portal->dma_handle >> PAGE_SHIFT,
-                     vma->vm_end - vma->vm_start, vma->vm_page_prot))
-                        return -EAGAIN;
+                off = this_portal->dma_handle;
         }
+        vma->vm_flags |= VM_IO;
+        if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
+             vma->vm_end - vma->vm_start, vma->vm_page_prot))
+                return -EAGAIN;
         return 0;
 }
 
@@ -360,6 +356,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         this_board = &board_map[board_number];
         printk(KERN_INFO "%s: board_number = %d\n", DEV_NAME, board_number);
         memset(this_board, 0, sizeof(tBoard));
+        init_waitqueue_head(&(this_board->intr_wq));
         this_board->info.board_number = board_number;
         this_board->pci_dev = dev;
         /* enable the PCI device */
@@ -422,14 +419,12 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         printk(KERN_INFO "%s: timestamp = %d\n", DEV_NAME, this_board->info.timestamp);
         printk(KERN_INFO "%s: NoC is using %d byte beats\n", DEV_NAME, this_board->info.bytes_per_beat);
         printk(KERN_INFO "%s: Content identifier is %llx\n", DEV_NAME, this_board->info.content_id); 
-        this_board->uses_msix = 0;
         /* set DMA mask */
         if (pci_set_dma_mask(dev, DMA_BIT_MASK(48))) {
                 printk(KERN_ERR "%s: pci_set_dma_mask failed for 48-bit DMA\n", DEV_NAME);
                 err = -EIO;
                 goto exit_bluenoc_probe;
         }
-        init_waitqueue_head(&(this_board->intr_wq));
         /* enable MSI or MSI-X */
         if (!pci_enable_msi(dev)) {
                 this_board->irq_num = dev->irq;
@@ -462,24 +457,24 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         pci_set_master(dev); /* enable PCI bus master */
         iowrite8(1, this_board->bar0io + 257); /* activate the network */
         this_board->activation_level = BLUENOC_ACTIVE;
-        for (dn = 0; dn < 16 && err >= 0; dn++) {
+        for (dn = 0; dn < NUM_BOARDS && err >= 0; dn++) {
+                int fpga_number = board_number * NUM_BOARDS + dn;
                 dev_t this_device_number = MKDEV(MAJOR(device_number),
-                          MINOR(device_number) + board_number * 16 + dn);
+                          MINOR(device_number) + fpga_number);
                 this_board->portal[dn].portal_number = dn;
                 this_board->portal[dn].board = this_board;
                 /* add the device operations */
-                cdev_init(&this_board->cdev[dn], &bluenoc_fops);
-                if (cdev_add(&this_board->cdev[dn], this_device_number, 1)) {
+                cdev_init(&this_board->portal[dn].cdev, &bluenoc_fops);
+                if (cdev_add(&this_board->portal[dn].cdev, this_device_number, 1)) {
                         printk(KERN_ERR "%s: cdev_add %x failed\n",
                                DEV_NAME, this_device_number);
                         err = -EFAULT;
                 } else {
                         /* create a device node via udev */
                         device_create(bluenoc_class, NULL,
-                                this_device_number, NULL, "%s%d", DEV_NAME,
-                                board_number * 16 + dn);
+                                this_device_number, NULL, "%s%d", DEV_NAME, fpga_number);
                         printk(KERN_INFO "%s: /dev/%s%d = %x created\n",
-                                DEV_NAME, DEV_NAME, board_number * 16 + dn, this_device_number);
+                                DEV_NAME, DEV_NAME, fpga_number, this_device_number);
                 }
         }
       // this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
@@ -506,15 +501,15 @@ printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
                 return;
         }
         deactivate(this_board, dev);
-        for (dn = 0; dn < 16; dn++) {
+        for (dn = 0; dn < NUM_BOARDS; dn++) {
                 /* remove device node in udev */
                 dev_t this_device_number = MKDEV(MAJOR(device_number),
-                          MINOR(device_number) + this_board->info.board_number * 16 + dn);
+                          MINOR(device_number) + this_board->info.board_number * NUM_BOARDS + dn);
                 device_destroy(bluenoc_class, this_device_number);
                 printk(KERN_INFO "%s: /dev/%s_%d = %x removed\n",
-                       DEV_NAME, DEV_NAME, this_board->info.board_number * 16 + dn, this_device_number); 
+                       DEV_NAME, DEV_NAME, this_board->info.board_number * NUM_BOARDS + dn, this_device_number); 
                 /* remove device */
-                cdev_del(&this_board->cdev[dn]);
+                cdev_del(&this_board->portal[dn].cdev);
         }
         pci_set_drvdata(dev, NULL);
 }
@@ -571,7 +566,7 @@ static int __init bluenoc_init(void)
         printk(KERN_INFO "%s: Registered Bluespec BlueNoC driver %s\n", DEV_NAME, DEV_VERSION);
         printk(KERN_INFO "%s: Major = %d  Minors = %d to %d\n", DEV_NAME,
                MAJOR(device_number), MINOR(device_number),
-               MINOR(device_number) + NUM_BOARDS * 16 - 1);
+               MINOR(device_number) + NUM_BOARDS * NUM_BOARDS - 1);
         return 0;                /* success */
 }
 
