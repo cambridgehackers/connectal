@@ -119,9 +119,9 @@ Portal::Portal(int id)
     req_fifo_base(0x0)
 {
   char buff[128];
-  sprintf(buff, "fpga%d", dir.fpga(id));
+  sprintf(buff, "fpga%d", dir.get_fpga(id));
   name = strdup(buff);
-  int rc = open(dir.addrbits(id));
+  int rc = open(dir.get_addrbits(id));
   if (rc != 0) {
     printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
     ALOGD("Portal::Portal failure rc=%d\n", rc);
@@ -546,112 +546,96 @@ void* portalExec(void* __x)
 #endif
 }
 
-Directory::Directory() : Portal("fpga0", 16)
+Directory::Directory() 
+  : Portal("fpga0", 16),
+    version(0),
+    timestamp(0),
+    addrbits(0),
+    numportals(0),
+    portal_ids(NULL),
+    portal_types(NULL),
+    counter_offset(0)
 {
   pdir=this;
-  print();
+  scan(1);
 }
 
-unsigned int Directory::fpga(unsigned int id)
+unsigned long long Directory::cycle_count()
 {
 #ifdef MMAP_HW
-  volatile unsigned int *ptr = req_fifo_base+128;
-  unsigned int numportals,i;
-  ptr++;
-  ptr++;
-  numportals = *ptr;
-  ptr++;
-  ptr++;
-  for(i = 0; (i < numportals) && (i < 32); i++){
-    unsigned int ifcid = *ptr;
-    ptr++;
-    unsigned int ifctype = *ptr;
-    ptr++;
-    if(ifcid == id)
-      return i+1;
-  }
+  unsigned int high_bits = *(counter_offset+0);
+  unsigned int low_bits = *(counter_offset+1);
 #else
-  unsigned int ptr = 128*4;
-  unsigned int numportals,i;
-  ptr += 4;
-  ptr += 4;
-  numportals = read_portal(&p, ptr, name);
-  ptr += 4;
-  ptr += 4;
-  for(i = 0; (i < numportals) && (i < 32); i++){
-    unsigned int ifcid = read_portal(&p, ptr, name);
-    ptr += 4;
-    unsigned int ifctype = read_portal(&p, ptr, name);
-    ptr += 4;
-    if(ifcid == id)
+  unsigned int high_bits = read_portal(&p, (counter_offset+0), name);
+  unsigned int low_bits = read_portal(&p, (counter_offset+4), name);
+#endif
+  return (((unsigned long long)high_bits)<<32)|((unsigned long long)low_bits);
+}
+unsigned int Directory::get_fpga(unsigned int id)
+{
+  int i;
+  for(i = 0; i < numportals; i++){
+    if(portal_ids[i] == id)
       return i+1;
   }
-#endif
   fprintf(stderr, "Directory::fpga(id=%d) id not found\n", id);
 }
 
-unsigned int Directory::addrbits(unsigned int id)
+unsigned int Directory::get_addrbits(unsigned int id)
 {
-#ifdef MMAP_HW
-  volatile unsigned int *ptr = req_fifo_base+128;
-  ptr++;
-  ptr++;
-  ptr++;
-  return *ptr;
-#else
-  unsigned int ptr = 128*4;
-  ptr += 4;
-  ptr += 4;
-  ptr += 4;
-  return read_portal(&p, ptr, name);
-#endif
+  return addrbits;
 }
 
-void Directory::print()
+void Directory::scan(int display)
 {
-  fprintf(stderr, "Directory::print(%s)\n", name);
+  unsigned int i;
+  if(display) fprintf(stderr, "Directory::scan(%s)\n", name);
 #ifdef MMAP_HW
   volatile unsigned int *ptr = req_fifo_base+128;
-  unsigned int numportals,i;
-  fprintf(stderr, "version=%08x\n",  *ptr);
+  version = *ptr;
   ptr++;
-  long int timestamp = (long int)*ptr;
-  fprintf(stderr, "timestamp=%s", ctime(&timestamp));
+  timestamp = (long int)*ptr;
   ptr++;
   numportals = *ptr;
-  fprintf(stderr, "numportals=%08x\n", numportals);
   ptr++;
-  fprintf(stderr, "addrbits=%08x\n", *ptr);
+  addrbits = *ptr;
   ptr++;
+  portal_ids = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
+  portal_types = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
   for(i = 0; (i < numportals) && (i < 32); i++){
-    unsigned int ifcid = *ptr;
+    portal_ids[i] = *ptr;
     ptr++;
-    unsigned int ifctype = *ptr;
+    portal_types[i] = *ptr;
     ptr++;
-    fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, ifcid, ifctype);
   }
-  fprintf(stderr, "interrupt_mux=%08x\n", *(req_fifo_base+0x00004000));
+  counter_offset = ptr;
 #else
   unsigned int ptr = 128*4;
-  unsigned int numportals,i;
-  fprintf(stderr, "version=%d\n",  read_portal(&p, ptr, name));
+  version = read_portal(&p, ptr, name);
   ptr += 4;
-  long int timestamp = (long int)read_portal(&p, ptr, name);
-  fprintf(stderr, "timestamp=%s", ctime(&timestamp));
+  timestamp = (long int)read_portal(&p, ptr, name);
   ptr += 4;
   numportals = read_portal(&p, ptr, name);
-  fprintf(stderr, "numportals=%d\n", numportals);
   ptr += 4;
-  fprintf(stderr, "addrbits=%d\n", read_portal(&p, ptr, name));
+  addrbits = read_portal(&p, ptr, name);
   ptr += 4;
+  portal_ids = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
+  portal_types = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
   for(i = 0; (i < numportals) && (i < 32); i++){
-    unsigned int ifcid = read_portal(&p, ptr, name);
+    portal_ids[i] = read_portal(&p, ptr, name);
     ptr += 4;
-    unsigned int ifctype = read_portal(&p, ptr, name);
+    portal_types[i] = read_portal(&p, ptr, name);
     ptr += 4;
-    fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, ifcid, ifctype);
   }
-  fprintf(stderr, "interrupt_mux=%08x\n", read_portal(&p, 0x00004000, name));
+  counter_offset = ptr;
 #endif
+  if(display){
+    fprintf(stderr, "version=%d\n",  version);
+    fprintf(stderr, "timestamp=%s",  ctime(&timestamp));
+    fprintf(stderr, "numportals=%d\n", numportals);
+    fprintf(stderr, "addrbits=%d\n", addrbits);
+    for(i = 0; i < numportals; i++)
+      fprintf(stderr, "portal[%d]: ifcid=%d, ifctype=%08x\n", i, portal_ids[i], portal_types[i]);
+  }
 }
 

@@ -72,12 +72,25 @@ class Portal
 
 class Directory : public Portal
 {
+ private:
+  unsigned int version;
+  time_t timestamp;
+  unsigned int addrbits;
+  unsigned int numportals;
+  unsigned int *portal_ids;
+  unsigned int *portal_types;
+#ifdef MMAP_HW
+  volatile unsigned int *counter_offset;
+#else
+  unsigned int counter_offset;
+#endif
  public:
   Directory(const char* devname, unsigned int addrbits);
   Directory();
-  void print();
-  unsigned int fpga(unsigned int id);
-  unsigned int addrbits(unsigned int id);
+  void scan(int display);
+  unsigned int get_fpga(unsigned int id);
+  unsigned int get_addrbits(unsigned int id);
+  unsigned long long cycle_count();
 };
 
 class PortalWrapper : public Portal

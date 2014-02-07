@@ -121,7 +121,12 @@ function  Axi3Master#(addrWidth, busWidth, idWidth) null_axi_master();
 	   endinterface);
 endfunction
 
-module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
+interface RegFileA#(type index_t, type data_t);
+   method Action upd(index_t addr, data_t d);
+   method ActionValue#(data_t) sub(index_t addr);
+endinterface
+
+module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
    (Axi3Slave#(addrWidth, busWidth, idWidth))
    provisos(Add#(nz, regFileBusWidth, addrWidth));
    Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
@@ -143,7 +148,7 @@ module mkAxi3SlaveFromRegFile#(RegFile#(Bit#(regFileBusWidth), Bit#(busWidth)) r
    endinterface: req_ar
    interface Get resp_read;
       method ActionValue#(Axi3ReadResponse#(busWidth,idWidth)) get() if (readBurstCountReg > 0);
-         let data = rf.sub(readAddrReg);
+         let data <- rf.sub(readAddrReg);
          if (verbose) $display("axiSlave.read.readData %h %h %d", readAddrReg, data, readBurstCountReg);
          readBurstCountReg <= readBurstCountReg - 1;
          readAddrReg <= readAddrReg + 1;

@@ -75,17 +75,17 @@ sem_t test_sem;
 unsigned int sw_match_cnt = 0;
 unsigned int hw_match_cnt = 0;
 extern Directory *pdir;
-static clock_t c_start;
+static unsigned long long c_start;
 
 
 static void start_timer() 
 {
-  c_start = std::clock();
+  c_start = pdir->cycle_count();
 }
 
 static void stop_timer()
 {
-  fprintf(stderr, "search time: %d\n", std::clock() - c_start);
+  fprintf(stderr, "search time (hw cycles): %lld\n", pdir->cycle_count() - c_start);
 }
 
 class StrstrIndication : public StrstrIndicationWrapper
@@ -148,9 +148,6 @@ void MP(const char *x, const char *t, int *MP_next, int m, int n)
 
 int main(int argc, const char **argv)
 {
-
-  pdir->print();
-
   StrstrRequestProxy *device = 0;
   DmaConfigProxy *dma = 0;
   
@@ -216,13 +213,17 @@ int main(int argc, const char **argv)
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
+    start_timer();
     MP(needle, haystack, mpNext, needle_len, haystack_len);
+    stop_timer();
     
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
+    start_timer();
     device->search(ref_needleAlloc, ref_haystackAlloc, ref_mpNextAlloc, needle_len, haystack_len);
     sem_wait(&test_sem);
+    stop_timer();
 
     close(needleAlloc->header.fd);
     close(haystackAlloc->header.fd);
@@ -237,7 +238,7 @@ int main(int argc, const char **argv)
     PortalAlloc *haystackAlloc;
     PortalAlloc *mpNextAlloc;
     const char *needle_text = "I have control\n";
-    unsigned int BENCHMARK_INPUT_SIZE = 1024 << 10;
+    unsigned int BENCHMARK_INPUT_SIZE = 1024 << 12;
     unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
     unsigned int needle_alloc_len = strlen(needle_text);
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
