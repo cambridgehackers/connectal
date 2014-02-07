@@ -49,8 +49,6 @@ $(zedruns):
 	(cd consolable; make)
 	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
 
-zedruns = $(addsuffix .zedrun, $(testnames))
-
 zctests = $(addsuffix .zc702, $(testnames))
 
 $(zctests):
@@ -81,11 +79,28 @@ $(kc705tests):
 	rm -fr examples/$(basename $@)/kc705
 	make BOARD=kc705 -C examples/$(basename $@) all
 
+kcruns = $(addsuffix .kcrun, $(testnames))
+
+$(kcruns):
+	(cd examples/$(basename $@)/kc705; make program)
+	scripts/pciescan.sh
+	examples/$(basename $@)/kc705/jni/mkpcietop
+
 vc707tests = $(addsuffix .vc707, $(testnames))
 
 $(vc707tests):
 	rm -fr examples/$(basename $@)/vc707
 	make BOARD=vc707 -C examples/$(basename $@) all
+
+vcruns = $(addsuffix .vcrun, $(testnames))
+
+$(vcruns):
+	(cd examples/$(basename $@)/vc707; make program)
+	scripts/pciescan.sh
+	#(examples/$(basename $@)/vc707/jni/mkpcietop)
+
+ubuntu_exe:
+	catchsegv examples/echo/vc707/jni/mkpcietop
 
 zynqdrivers:
 	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)

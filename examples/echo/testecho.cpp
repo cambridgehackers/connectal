@@ -12,8 +12,8 @@
 EchoRequestProxy *echoRequestProxy = 0;
 
 #define DECL(A) \
-    static sem_t sem_ ## A; \
-    static unsigned long cv_ ## A;
+    static sem_t sem_ ## A;
+    //static unsigned long cv_ ## A;
 
 DECL(heard2)
 
