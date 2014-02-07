@@ -84,7 +84,7 @@ kcruns = $(addsuffix .kcrun, $(testnames))
 $(kcruns):
 	(cd examples/$(basename $@)/kc705; make program)
 	scripts/pciescan.sh
-	examples/$(basename $@)/kc705/jni/mkpcietop
+	catchsegv examples/$(basename $@)/kc707/jni/mkpcietop
 
 vc707tests = $(addsuffix .vc707, $(testnames))
 
@@ -97,10 +97,7 @@ vcruns = $(addsuffix .vcrun, $(testnames))
 $(vcruns):
 	(cd examples/$(basename $@)/vc707; make program)
 	scripts/pciescan.sh
-	#(examples/$(basename $@)/vc707/jni/mkpcietop)
-
-ubuntu_exe:
-	catchsegv examples/echo/vc707/jni/mkpcietop
+	catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
 
 zynqdrivers:
 	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)
