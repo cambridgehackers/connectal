@@ -83,7 +83,7 @@ kcruns = $(addsuffix .kcrun, $(testnames))
 
 $(kcruns):
 	(cd examples/$(basename $@)/kc705; make program)
-	scripts/pciescan.sh
+	pciescanportal
 	catchsegv examples/$(basename $@)/kc707/jni/mkpcietop
 
 vc707tests = $(addsuffix .vc707, $(testnames))
@@ -96,7 +96,7 @@ vcruns = $(addsuffix .vcrun, $(testnames))
 
 $(vcruns):
 	(cd examples/$(basename $@)/vc707; make program)
-	scripts/pciescan.sh
+	pciescanportal
 	catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
 
 zynqdrivers:

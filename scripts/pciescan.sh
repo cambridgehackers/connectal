@@ -9,4 +9,4 @@ sudo sh -c "echo 1 >/sys/bus/pci/devices/0000:$BLUEDEVICE/remove"
 # it is still registered (and causing a segv on the probe call)
 sudo rmmod pcieportal
 sudo sh -c "echo 1 >/sys/bus/pci/rescan"
-lspci -vv -d 1be7:b100
+#lspci -vv -d 1be7:b100
