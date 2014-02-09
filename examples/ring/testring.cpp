@@ -453,6 +453,14 @@ int main(int argc, const char **argv)
       printf("done %d\n", done);
     }
   }
+  /* pass 3 */
+  for (i = 0; i < 512; i += 1) {
+    uint64_t ul1;
+    uint64_t ul2;
+    ul1 = (0x333L << 32) + (long) i;
+    ul2 = (0x444L << 32) + (long) i;
+    hw_echo(ul1, ul2);
+  }
 
 
   fprintf(stderr, "main going to sleep\n");
