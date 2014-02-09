@@ -267,6 +267,12 @@ void sem_finish(void *arg, uint64_t *event)
   sem_post(p);
 }
 
+void flag_finish(void *arg, uint64_t *event)
+{
+  char *p = (char *) arg;
+  *p = 1;
+}
+
 
 void hw_copy(void *from, void *to, unsigned count)
 {
@@ -280,6 +286,16 @@ void hw_copy(void *from, void *to, unsigned count)
   ring_send(&cmd_ring, tcmd, sem_finish, &my_sem);
   sem_wait(&my_sem);
   sem_destroy(&my_sem);
+}
+
+void hw_copy_nb(void *from, void *to, unsigned count, char *flag)
+{
+  uint64_t tcmd[8];
+  tcmd[0] = ((uint64_t) CMD_COPY) << 56;
+  tcmd[1] = (uint64_t) from;
+  tcmd[2] = (uint64_t) to;
+  tcmd[3] = count; // byte count
+  ring_send(&cmd_ring, tcmd, flag_finish, flag);
 }
 
 struct CompletionEvent {
@@ -330,6 +346,7 @@ int main(int argc, const char **argv)
   void *v;
   int i;
   uint64_t tcmd[8];
+  char flag[10];
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
@@ -389,27 +406,55 @@ int main(int argc, const char **argv)
   ring->hwenable(1);  /* turn on engines */
   fprintf(stderr, "main about to issue requests\n");
 
+  /* pass 1, a few blocking tests to see if it works at all
+   * pass 2, non blocking tests
+   * pass 3, a lot of tests, to check ring wrapping
+   */
+  /* pass 1, blocking tests */
   for (i = 0; i < 256; i += 1) {
     scratchBuffer[i] = i;
-   }
+  }
   for (i = 0; i < 10; i += 1) {
     uint64_t ul1;
     uint64_t ul2;
     hw_copy((void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * i)),
-		      (void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * (i + 1))),
+	    (void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * (i + 1))),
 	    0x100);
     ul1 = (0x111L << 32) + (long) i;
     ul2 = (0x222L << 32) + (long) i;
     hw_echo(ul1, ul2);
   }
-  sleep(1);
   for (i = 0; i < 10; i += 1) {
     if (scratchBuffer[i + 2560] != i) {
       printf("loc %d got %d should be %d\n",
 	     i + 2560, scratchBuffer[i + 2560], i);
     }
   }
-  
+  /* pass 2, non blocking tests */
+  memset(scratchBuffer, scratch_sz, 0);
+  for (i = 0; i < 256; i += 1) {
+    scratchBuffer[i] = i;
+  }
+  for (i = 0; i < 10; i += 1) {
+    flag[i] = 0;
+  }
+  for (i = 0; i < 10; i += 1) {
+    uint64_t ul1;
+    uint64_t ul2;
+    hw_copy_nb((void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * i)),
+	    (void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * (i + 1))),
+	       0x100, &flag[i]);
+  }
+  {
+    int done = 0;
+    while(done < 10) {
+      done = 0;
+      for (i = 0; i < 10; i += 1) done += (int) flag[i];
+      printf("done %d\n", done);
+    }
+  }
+
+
   fprintf(stderr, "main going to sleep\n");
   while(true){sleep(1);}
 }
