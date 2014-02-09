@@ -374,9 +374,9 @@ int main(int argc, const char **argv)
   /*   dma->dCacheFlushInval(cmdAlloc, cmdBuffer);
   dma->dCacheFlushInval(statusAlloc, statusBuffer);
   dma->dCacheFlushInval(scratchAlloc, scratchBuffer);
+  fprintf(stderr, "flush and invalidate complete\n");
   */
 
-  fprintf(stderr, "flush and invalidate complete\n");
   ring_init(&cmd_ring, 0, ref_cmdAlloc, cmdBuffer, cmd_ring_sz);
   ring_init(&status_ring, 1, ref_statusAlloc, statusBuffer, status_ring_sz);
 
