@@ -26,8 +26,8 @@ interface RingBuffer;
 endinterface
 
 interface RingBufferConfig;
-   method Action set(Bit#(3) regist, Bit#(DmaOffsetSize) addr);
-   method Bit#(DmaOffsetSize) get(Bit#(3) regist);
+   method Action set(Bit#(3) regist, Bit#(64) addr);
+   method Bit#(64) get(Bit#(3) regist);
 endinterface
 
 
@@ -42,7 +42,7 @@ module mkRingBuffer(RingBuffer);
    Reg#(Bool) renable <- mkReg(False);
    
    interface RingBufferConfig configifc;
-   method Action set(Bit#(3) regist, Bit#(DmaOffsetSize) addr);
+   method Action set(Bit#(3) regist, Bit#(64) addr);
       if (regist == 0) rbufferbase <= truncate(addr);
       else if (regist == 1) rbufferend <= truncate(addr);
       else if (regist == 2) rbufferfirst <= truncate(addr);
@@ -52,7 +52,7 @@ module mkRingBuffer(RingBuffer);
       else renable <= (addr[0] != 0);
    endmethod
    
-   method Bit#(DmaOffsetSize) get(Bit#(3) regist);
+   method Bit#(64) get(Bit#(3) regist);
       if (regist == 0) return (zeroExtend(rbufferbase));
       else if (regist == 1) return (zeroExtend(rbufferend));
       else if (regist == 2) return (zeroExtend(rbufferfirst));
