@@ -35,6 +35,7 @@ test%(classname)s: %(swProxies)s %(swWrappers)s %(xbsvdir)s/cpp/portal.cpp %(sou
 
 proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
+    %(statusDecl)s
 public:
     %(className)s(int id);
     %(className)s(const char *devname, unsigned int addrbits);
@@ -46,6 +47,7 @@ proxyClassSuffixTemplate='''
 wrapperClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 public:
+    %(className)s(Portal *p);
     %(className)s(int id);
     %(className)s(const char *devname, unsigned int addrbits);
 '''
@@ -58,13 +60,20 @@ protected:
 proxyConstructorTemplate='''
 %(namespace)s%(className)s::%(className)s(int id)
  : %(parentClass)s(id)
-{}
+{
+    %(statusInstantiate)s
+}
 %(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits)
  : %(parentClass)s(devname, addrbits)
-{}
+{
+    %(statusInstantiate)s
+}
 '''
 
 wrapperConstructorTemplate='''
+%(namespace)s%(className)s::%(className)s(Portal *p)
+ : %(parentClass)s(p)
+{}
 %(namespace)s%(className)s::%(className)s(int id)
  : %(parentClass)s(id)
 {}
@@ -73,8 +82,10 @@ wrapperConstructorTemplate='''
 {}
 '''
 
+putFailedMethodName = "putFailed"
+
 putFailedTemplate='''
-void %(namespace)s%(className)s::putFailed(unsigned long v){
+void %(namespace)s%(className)s::%(putFailedMethodName)s(unsigned long v){
     const char* methodNameStrings[] = {%(putFailedStrings)s};
     fprintf(stderr, "putFailed: %%s\\n", methodNameStrings[v]);
     exit(1);
@@ -121,18 +132,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel)
 
     for (int i = (msg->size()/4)-1; i >= 0; i--) {
 	unsigned long addr = ind_fifo_base + (channel * 256);
-	struct memrequest foo = {false,addr,0};
-        //fprintf(stderr, "xxx %%08x\\n", addr);
-	if (send(p.read.s2, &foo, sizeof(foo), 0) != sizeof(foo)) {
-	  fprintf(stderr, "(%%s) send error\\n", name);
-	  exit(1);
-	}
-        unsigned int val;
-	if(recv(p.read.s2, &val, sizeof(val), 0) != sizeof(val)){
-	  fprintf(stderr, "(%%s) recv error\\n", name);
-	  exit(1);	  
-	}
-        //fprintf(stderr, "%%08x\\n", val);
+        unsigned int val = read_portal(p, addr, name);
         buf[i] = val;
     }
     msg->demarshall(buf);
@@ -240,7 +240,8 @@ class MethodMixin:
         f.write('void %s ( ' % cName(self.name))
         f.write(', '.join(self.formalParameters(self.params)))
         f.write(' )')
-        if (not proxy):
+	# ugly hack
+        if ((not proxy) and (not (self.name == putFailedMethodName))):
             f.write('= 0;\n')
         else:
             f.write(';\n')
@@ -450,8 +451,8 @@ class InterfaceMixin:
         subinterface = syntax.globalvars[subinterfaceName]
         #print 'subinterface', subinterface, subinterface
         return subinterface
-    def insertPutErrorMethod(self):
-        meth_name = "putFailed"
+    def insertPutFailedMethod(self):
+        meth_name = putFailedMethodName
         meth_type = AST.Type("Action",[])
         meth_formal_params = [AST.Param("v", AST.Type("Bit",[AST.Type(32,[])]))]
         self.decls = self.decls + [AST.Method(meth_name, meth_type, meth_formal_params)]
@@ -464,10 +465,15 @@ class InterfaceMixin:
     def parentClass(self, default):
         rv = default if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
         return rv
+    def hasPutFailed(self):
+	rv = True in [d.name == putFailedMethodName for d in self.decls]
+	return rv
     def emitCProxyDeclaration(self, f, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
+        statusDecl = "%s%s *proxyStatus;" % (cName(self.name), 'ProxyStatus')
         subs = {'className': className,
                 'namespace': namespace,
+		'statusDecl' : '' if self.hasPutFailed() else statusDecl,
                 'parentClass': self.parentClass('PortalProxy')}
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
@@ -485,17 +491,21 @@ class InterfaceMixin:
         f.write(wrapperClassSuffixTemplate % subs)
     def emitCProxyImplementation(self, f,  suffix, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
+	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')
+	statusInstantiate = '' if self.hasPutFailed() else 'proxyStatus = new %s(this);\n' % statusName
         substitutions = {'namespace': namespace,
                          'className': className,
+			 'statusInstantiate' : statusInstantiate,
                          'parentClass': self.parentClass('PortalProxy')}
         f.write(proxyConstructorTemplate % substitutions)
         for d in self.decls:
             d.emitCImplementation(f, className, namespace,True)
     def emitCWrapperImplementation (self, f,  suffix, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
-        emitPutFailed = True in [d.name == "putFailed" for d in self.decls]
+        emitPutFailed = self.hasPutFailed()
         substitutions = {'namespace': namespace,
                          'className': className,
+			 'putFailedMethodName' : putFailedMethodName,
                          'parentClass': self.parentClass('PortalWrapper'),
                          'responseSzCases': ''.join(['    case %(channelNumber)s: { msg = new %(msg)s(); break; }\n'
                                                      % { 'channelNumber': d.channelNumber,

@@ -182,6 +182,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
       let wd <- writeData;
       top.ctrl.req_aw.put(Axi3WriteRequest { address: wa, len: 0, size: axiBusSize(32), id: 0, prot: 0, burst: 1, cache: 'b11, qos: 0, lock: 0 });
       wf.enq(wd);
+      //$display("wrReq: wa=%h, wd=%h", wa,wd);
    endrule
    rule wrData;
       wf.deq;
@@ -193,10 +194,12 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
    rule rdReq (readReq());
       let ra <- readAddr;
       top.ctrl.req_ar.put(Axi3ReadRequest { address: ra, len: 0, size: axiBusSize(32), id: 0, prot: 0, burst: 1, cache: 'b11, qos: 0, lock: 0 });
+      //$display("rdReq: ra=%h", ra);
    endrule
    rule rdResp;
       let rd <- top.ctrl.resp_read.get();
       readData(rd.data);
+      //$display("rdResp: rd=%h", rd);
    endrule
 endmodule
 

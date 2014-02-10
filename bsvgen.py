@@ -105,7 +105,7 @@ wrapperCtrlTemplate='''
     rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
         axiSlaveReadAddrFifo.deq;
 	let addr = axiSlaveReadAddrFifo.first[13:0];
-        //$display(\"wrapper readCtrlReg %%h\", addr);
+        // $display(\"wrapper readCtrlReg %%h\", addr);
 	Bit#(32) v = 32'h05a05a0;
 	if (addr == 14'h000)
 	    v = requestFiredCount;

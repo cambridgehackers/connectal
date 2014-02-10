@@ -365,7 +365,7 @@ if __name__=='__main__':
         ifc = syntax.globalvars[i]
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
         ifc.ind = AST.Interface(i, [], [], None, ifc.package)
-        ifc.ind.insertPutErrorMethod()
+        ifc.ind.insertPutFailedMethod()
         ifc.ind.req = ifc
         ifc.assignRequestResponseChannels()
         ifc.ind.assignRequestResponseChannels()

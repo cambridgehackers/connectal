@@ -48,6 +48,7 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) s
 
 interface AxiDmaServer#(numeric type addrWidth, numeric type dsz);
    interface DmaConfig request;
+   interface DmaDbgConfig dbgRequest;
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
 endinterface
 
@@ -63,8 +64,12 @@ endinterface
 
 typedef enum {Idle, Translate, Address, Data, Done} InternalState deriving(Eq,Bits);
 		 
-module mkAxiDmaReadInternal#(Integer numRequests, Vector#(numReadClients, DmaReadClient#(dsz)) readClients,
-			     DmaIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth)) sgl)(AxiDmaReadInternal#(addrWidth, dsz))
+module mkAxiDmaReadInternal#(Integer numRequests, 
+			     Vector#(numReadClients, DmaReadClient#(dsz)) readClients, 
+			     DmaIndication dmaIndication,
+			     Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth)) sgl) 
+   (AxiDmaReadInternal#(addrWidth, dsz))
+
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
    FIFO#(DmaRequest) lreqFifo <- mkPipelineFIFO();
@@ -159,8 +164,13 @@ module mkAxiDmaReadInternal#(Integer numRequests, Vector#(numReadClients, DmaRea
 endmodule
 
 
-module mkAxiDmaWriteInternal#(Integer numRequests, Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients,
-			      DmaIndication dmaIndication, Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth)) sgl)(AxiDmaWriteInternal#(addrWidth, dsz))
+module mkAxiDmaWriteInternal#(Integer numRequests, 
+			      Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients,
+			      DmaIndication dmaIndication, 
+			      Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth)) sgl)
+
+   (AxiDmaWriteInternal#(addrWidth, dsz))
+   
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
    FIFO#(DmaRequest) lreqFifo <- mkPipelineFIFO();
@@ -274,9 +284,11 @@ endmodule
 // @param writeClients The writeclients.
 //
 module mkAxiDmaServer#(DmaIndication dmaIndication,
+		       DmaDbgIndication dmaDbgIndication, 
 		       Integer numRequests,
 		       Vector#(numReadClients, DmaReadClient#(dsz)) readClients,
 		       Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients)
+
    (AxiDmaServer#(addrWidth, dsz))
    
    provisos (Add#(1,a__,dsz),
@@ -299,15 +311,21 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
-   interface DmaConfig request;
+   interface DmaDbgConfig dbgRequest;
       method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
 	 if (rc == Read)
 	    rv <- reader.read.dbg;
 	 else
 	    rv <- writer.write.dbg;
-	 dmaIndication.reportStateDbg(rv);
+	 dmaDbgIndication.reportStateDbg(rv);
       endmethod
+      method Action getMemoryTraffic(ChannelType rc);
+	 dmaDbgIndication.reportMemoryTraffic(0,0);
+      endmethod
+   endinterface
+   
+   interface DmaConfig request;
       method Action sglist(Bit#(32) pref, Bit#(DmaOffsetSize) addr, Bit#(32) len);
 	 dmaIndication.configResp(pref);
 	 if (pref == 0 || pref > fromInteger(valueOf(MaxNumSGLists))) begin

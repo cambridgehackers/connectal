@@ -64,12 +64,16 @@
 #include <assert.h>
 #include <semaphore.h>
 #include <ctime>
+
 #include "StdDmaIndication.h"
+#include "StdDmaDbgIndication.h"
 
 #include "StrstrIndicationWrapper.h"
 #include "StrstrRequestProxy.h"
 #include "GeneratedTypes.h"
 #include "DmaConfigProxy.h"
+#include "DmaDbgConfigProxy.h"
+
 
 sem_t test_sem;
 unsigned int sw_match_cnt = 0;
@@ -150,16 +154,20 @@ int main(int argc, const char **argv)
 {
   StrstrRequestProxy *device = 0;
   DmaConfigProxy *dma = 0;
+  DmaDbgConfigProxy *dmaDbg = 0;
   
   StrstrIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
+  DmaDbgIndication *dmaDbgIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   device = new StrstrRequestProxy(IfcNames_StrstrRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaRequest);
+  dma = new DmaConfigProxy(IfcNames_DmaConfig);
+  dmaDbg = new DmaDbgConfigProxy(IfcNames_DmaDbgConfig);
 
   deviceIndication = new StrstrIndication(IfcNames_StrstrIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+  dmaDbgIndication = new DmaDbgIndication(IfcNames_DmaDbgIndication);
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
@@ -220,9 +228,11 @@ int main(int argc, const char **argv)
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
+    dmaDbg->getMemoryTraffic(ChannelType_Read);
     start_timer();
     device->search(ref_needleAlloc, ref_haystackAlloc, ref_mpNextAlloc, needle_len, haystack_len);
     sem_wait(&test_sem);
+    dmaDbg->getMemoryTraffic(ChannelType_Read);
     stop_timer();
 
     close(needleAlloc->header.fd);

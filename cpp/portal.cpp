@@ -65,13 +65,16 @@ unsigned int read_portal(portal *p, unsigned int addr, char *name)
   struct memrequest foo = {false,addr,0};
 
   if (send(p->read.s2, &foo, sizeof(foo), 0) == -1) {
-    fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
-    //exit(1);
+    fprintf(stderr, "%s (%s) send error, errno=%s\n",__FUNCTION__, name, strerror(errno));
+    exit(1);
   }
+
+  //fprintf(stderr, "read_portal: %s %x\n", p->read.path, addr);
+
 
   if(recv(p->read.s2, &rv, sizeof(rv), 0) == -1){
     fprintf(stderr, "%s (%s) recv error\n",__FUNCTION__, name);
-    //exit(1);	  
+    exit(1);	  
   }
 
   return rv;
@@ -95,6 +98,17 @@ void Portal::close()
         fd = -1;
     }    
 }
+
+Portal::Portal(Portal *p)
+  : fd(p->fd),
+    ind_reg_base(p->ind_reg_base),
+    ind_fifo_base(p->ind_fifo_base),
+    req_reg_base(p->req_reg_base),
+    req_fifo_base(p->req_fifo_base),
+    name(strdup(p->name)),
+    p(p->p)
+{}
+
 
 Portal::Portal(const char *devname, unsigned int addrbits)
   : fd(-1),
@@ -187,10 +201,11 @@ int Portal::open(int addrbits)
     *(ind_reg_base+0x1) = 1;
  
 #else
-    snprintf(p.read.path, sizeof(p.read.path), "%s_rc", name);
-    connect_socket(&(p.read));
-    snprintf(p.write.path, sizeof(p.read.path), "%s_wc", name);
-    connect_socket(&(p.write));
+    p = (struct portal*)malloc(sizeof(struct portal));
+    snprintf(p->read.path, sizeof(p->read.path), "%s_rc", name);
+    connect_socket(&(p->read));
+    snprintf(p->write.path, sizeof(p->read.path), "%s_wc", name);
+    connect_socket(&(p->write));
 
     unsigned long dev_base = 0;
     ind_reg_base   = dev_base+(3<<14);
@@ -200,7 +215,7 @@ int Portal::open(int addrbits)
 
     fprintf(stderr, "Portal::enabling interrupts %s\n", name);
     unsigned int addr = ind_reg_base+0x4;
-    write_portal(&p, addr, 1, name);
+    write_portal(p, addr, 1, name);
       
 #endif
     return 0;
@@ -230,7 +245,7 @@ int Portal::sendMessage(PortalMessage *msg)
     *((volatile unsigned int*)addr) = data;
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
-    write_portal(&p, addr, data, name);
+    write_portal(p, addr, data, name);
     //fprintf(stderr, "(%s) sendMessage\n", name);
 #endif
   }
@@ -244,8 +259,16 @@ int Portal::sendMessage(PortalMessage *msg)
   return 0;
 }
 
+
+
 PortalWrapper::PortalWrapper(int id) 
   : Portal(id)
+{
+  registerInstance();
+}
+
+PortalWrapper::PortalWrapper(Portal *p) 
+  : Portal(p)
 {
   registerInstance();
 }
@@ -305,6 +328,7 @@ int PortalWrapper::registerInstance()
     memset(pollfd, 0, sizeof(struct pollfd));
     pollfd->fd = this->fd;
     pollfd->events = POLLIN;
+    fprintf(stderr, "PortalWrapper::registerInstance %s\n", name);
     return 0;
 }
 
@@ -474,7 +498,7 @@ void* portalExec(void* __x)
     if (0)
     for (int i = 0; i < numFds; i++) {
       PortalWrapper *instance = portal_wrappers[i];
-      fprintf(stderr, "Portal::enabling interrupts portal %d\n", i);
+      fprintf(stderr, "portalExec::enabling interrupts portal %d\n", i);
       *(volatile int *)(instance->ind_reg_base+0x1) = 1;
     }
 #endif
@@ -530,10 +554,12 @@ void* portalExec(void* __x)
       for(int i = 0; i < numFds; i++){
 	PortalWrapper *instance = portal_wrappers[i];
 	unsigned int int_status_addr = instance->ind_reg_base+0x0;
-	unsigned int int_status = read_portal(&(instance->p), int_status_addr, instance->name);
+	//fprintf(stderr, "AAAA: %x %s\n", int_status_addr, instance->name);
+	unsigned int int_status = read_portal((instance->p), int_status_addr, instance->name);
+	//fprintf(stderr, "BBBB: %d\n", int_status);
 	if(int_status){
 	  unsigned int queue_status_addr = instance->ind_reg_base+0x18;
-	  unsigned int queue_status = read_portal(&(instance->p), queue_status_addr, instance->name);
+	  unsigned int queue_status = read_portal((instance->p), queue_status_addr, instance->name);
 	  if (queue_status){
 	    //fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
 	    instance->handleMessage(queue_status-1);	
@@ -566,8 +592,8 @@ unsigned long long Directory::cycle_count()
   unsigned int high_bits = *(counter_offset+0);
   unsigned int low_bits = *(counter_offset+1);
 #else
-  unsigned int high_bits = read_portal(&p, (counter_offset+0), name);
-  unsigned int low_bits = read_portal(&p, (counter_offset+4), name);
+  unsigned int high_bits = read_portal(p, (counter_offset+0), name);
+  unsigned int low_bits = read_portal(p, (counter_offset+4), name);
 #endif
   return (((unsigned long long)high_bits)<<32)|((unsigned long long)low_bits);
 }
@@ -611,20 +637,20 @@ void Directory::scan(int display)
   counter_offset = ptr;
 #else
   unsigned int ptr = 128*4;
-  version = read_portal(&p, ptr, name);
+  version = read_portal(p, ptr, name);
   ptr += 4;
-  timestamp = (long int)read_portal(&p, ptr, name);
+  timestamp = (long int)read_portal(p, ptr, name);
   ptr += 4;
-  numportals = read_portal(&p, ptr, name);
+  numportals = read_portal(p, ptr, name);
   ptr += 4;
-  addrbits = read_portal(&p, ptr, name);
+  addrbits = read_portal(p, ptr, name);
   ptr += 4;
   portal_ids = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
   portal_types = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
   for(i = 0; (i < numportals) && (i < 32); i++){
-    portal_ids[i] = read_portal(&p, ptr, name);
+    portal_ids[i] = read_portal(p, ptr, name);
     ptr += 4;
-    portal_types[i] = read_portal(&p, ptr, name);
+    portal_types[i] = read_portal(p, ptr, name);
     ptr += 4;
   }
   counter_offset = ptr;

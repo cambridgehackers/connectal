@@ -18,9 +18,6 @@ public:
   {
     pm->useSemaphore();
   }
-  virtual void reportStateDbg(const DmaDbgRec& rec){
-    fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
-  }
   virtual void configResp(unsigned long pointer){
     fprintf(stderr, "configResp: %lx\n", pointer);
     if (portalMemory)

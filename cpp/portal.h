@@ -50,10 +50,11 @@ class Portal
   int open(int length);
   void close();
   Portal(int id);
+  Portal(Portal* p);
   Portal(const char *name, unsigned int addrbits);
   ~Portal();
   int fd;
-  struct portal p;
+  struct portal *p;
   char *name;
 #ifdef MMAP_HW
   volatile unsigned int *ind_reg_base;
@@ -100,6 +101,7 @@ class PortalWrapper : public Portal
   int unregisterInstance();
  public:
   ~PortalWrapper();
+  PortalWrapper(Portal *p);
   PortalWrapper(int id);
   PortalWrapper(const char* devname, unsigned int addrbits);
   virtual int handleMessage(unsigned int channel) = 0;

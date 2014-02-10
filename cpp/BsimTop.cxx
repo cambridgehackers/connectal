@@ -41,15 +41,16 @@ static void recv_request(bool rr)
 	  head->inflight = rr ? false : true;
 	  head->req.addr |= i << 16;
 	  if(0)
-	  fprintf(stderr, "recv_request(i=%d,rr=%d) {%d,%08x, %08x}\n", 
+	  fprintf(stderr, "recv_request(i=%d,rr=%d) {write=%d, addr=%08x, data=%08x}\n", 
 		  i, rr, head->req.write, head->req.addr, head->req.data);
 	  break;
 	}
       }
     }
+  } else {
+    //fprintf(stderr, "blocked %d %d %d\n", head->pnum, head->valid, head->inflight);
   }
 }
-
 
 extern "C" {
   void initPortal(unsigned long id){
@@ -69,12 +70,12 @@ extern "C" {
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)rc)){
       fprintf(stderr, "error creating init thread\n");
-      //exit(1);
+      exit(1);
     }
 
     if(pthread_create(&tid, NULL,  init_socket, (void*)wc)){
       fprintf(stderr, "error creating init thread\n");
-      //exit(1);
+      exit(1);
     }
   }
 
@@ -111,8 +112,8 @@ extern "C" {
     read_head.valid = false;
     read_head.inflight = false;
     if(send(portals[read_head.pnum].read.s2, &x, sizeof(x), 0) == -1){
-      fprintf(stderr, "(%d) send failure", read_head.pnum);
-      //exit(1);
+      //fprintf(stderr, "(%d) send failure", read_head.pnum);
+      exit(1);
     }
   }
 
