@@ -91,7 +91,10 @@ struct Ring_Completion *get_free_completion()
 {
   struct Ring_Completion *p;
   p = LIST_FIRST(&completionfreelist);
-  if (p) LIST_REMOVE(p, entries);
+  if (p) {
+    LIST_REMOVE(p, entries);
+    p->finished = 0;
+  }
   return(p);
 }
 
