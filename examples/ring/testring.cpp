@@ -46,6 +46,10 @@ char *cmdBuffer = 0;
 char *statusBuffer = 0;
 char *scratchBuffer = 0;
 
+unsigned int cmdPointer;
+unsigned int statusPointer;
+unsigned int scratchPointer;
+
 size_t cmd_ring_sz = 8192;
 size_t status_ring_sz = 8192;
 size_t scratch_sz = 1<<20; /* 1 MB */
@@ -386,9 +390,9 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  unsigned int cmdPointer = dma->reference(cmdAlloc);
-  unsigned int statusPointer = dma->reference(statusAlloc);
-  unsigned int scratchPointer = dma->reference(scratchAlloc);
+  cmdPointer = dma->reference(cmdAlloc);
+  statusPointer = dma->reference(statusAlloc);
+  scratchPointer = dma->reference(scratchAlloc);
 
   /*   dma->dCacheFlushInval(cmdAlloc, cmdBuffer);
   dma->dCacheFlushInval(statusAlloc, statusBuffer);
@@ -419,8 +423,8 @@ int main(int argc, const char **argv)
   for (i = 0; i < 10; i += 1) {
     uint64_t ul1;
     uint64_t ul2;
-    hw_copy((void *) (256 * i),
-	    (void *) (256 * (i + 1)),
+    hw_copy((void *) (256L * i),
+	    (void *) (256L * (i + 1)),
 	    0x100);
     ul1 = (0x111L << 32) + (long) i;
     ul2 = (0x222L << 32) + (long) i;
@@ -443,8 +447,8 @@ int main(int argc, const char **argv)
   for (i = 0; i < 10; i += 1) {
     uint64_t ul1;
     uint64_t ul2;
-    hw_copy_nb((void *) (256 * i),
-	    (void *) (256 * (i + 1)),
+    hw_copy_nb((void *) (256L * i),
+	    (void *) (256L * (i + 1)),
 	       0x100, &flag[i]);
   }
   {
