@@ -47,7 +47,6 @@ endinterface
 interface RingIndication;
    method Action setResult(Bit#(1) cmd, Bit#(3) regist, Bit#(64) addr);
    method Action getResult(Bit#(1) cmd, Bit#(3) regist, Bit#(64) addr);
-   method Action completion(Bit#(32) command, Bit#(32) tag);
 endinterface
 
 module mkRingRequest#(RingIndication indication,
