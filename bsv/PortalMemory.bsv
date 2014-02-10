@@ -50,9 +50,6 @@ interface DmaIndication;
    method Action addrResponse(Bit#(64) physAddr);
    method Action badPointer(Bit#(32) pointer);
    method Action badAddr(Bit#(32) pointer, Bit#(40) offset, Bit#(64) physAddr);
-endinterface
-
-interface DmaDbgIndication;
    method Action reportStateDbg(DmaDbgRec rec);
    method Action reportMemoryTraffic(Bit#(64) cycles, Bit#(64) words);
 endinterface
@@ -70,9 +67,6 @@ interface DmaConfig;
    //
    method Action sglist(Bit#(32) pointer, Bit#(40) addr, Bit#(32) len);
    method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
-endinterface
-
-interface DmaDbgConfig;
    //
    // @brief Requests debug info for the specified channel type
    //

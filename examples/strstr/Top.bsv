@@ -21,13 +21,11 @@ import StrstrRequestWrapper::*;
 import DmaConfigWrapper::*;
 import StrstrIndicationProxy::*;
 import DmaIndicationProxy::*;
-import DmaDbgIndicationProxy::*;
-import DmaDbgConfigWrapper::*;
 
 // defined by user
 import Strstr::*;
 
-typedef enum {StrstrIndication, StrstrRequest, DmaIndication, DmaConfig, DmaDbgIndication, DmaDbgConfig} IfcNames deriving (Eq,Bits);
+typedef enum {StrstrIndication, StrstrRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
 module mkPortalTop(StdPortalTop#(addrWidth)) 
 
@@ -39,7 +37,6 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(f__, addrWidth, 40));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   DmaDbgIndicationProxy dmaDbgIndicationProxy <- mkDmaDbgIndicationProxy(DmaDbgIndication);
    DmaReadBuffer#(64,1) haystack_read_chan <- mkDmaReadBuffer();
    DmaReadBuffer#(64,1) needle_read_chan <- mkDmaReadBuffer();
    DmaReadBuffer#(64,1) mp_next_read_chan <- mkDmaReadBuffer();
@@ -51,9 +48,8 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 
    Vector#(0, DmaWriteClient#(64)) writeClients = newVector();
    Integer numRequests = 8;
-   AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, dmaDbgIndicationProxy.ifc, numRequests, readClients, writeClients);
+   AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
-   DmaDbgConfigWrapper dmaDbgConfigWrapper <- mkDmaDbgConfigWrapper(DmaDbgConfig, dma.dbgRequest);
    
    
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
@@ -61,13 +57,11 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 						  needle_read_chan.dmaServer, mp_next_read_chan.dmaServer);
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstrRequest);
 
-   Vector#(6,StdPortal) portals;
+   Vector#(4,StdPortal) portals;
    portals[0] = strstrRequestWrapper.portalIfc;
    portals[1] = strstrIndicationProxy.portalIfc; 
    portals[2] = dmaConfigWrapper.portalIfc;
    portals[3] = dmaIndicationProxy.portalIfc; 
-   portals[4] = dmaDbgConfigWrapper.portalIfc;
-   portals[5] = dmaDbgIndicationProxy.portalIfc;
    
    Directory dir <- mkDirectory(portals);
    Vector#(1,StdPortal) directories;

@@ -48,7 +48,6 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) s
 
 interface AxiDmaServer#(numeric type addrWidth, numeric type dsz);
    interface DmaConfig request;
-   interface DmaDbgConfig dbgRequest;
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
 endinterface
 
@@ -284,7 +283,6 @@ endmodule
 // @param writeClients The writeclients.
 //
 module mkAxiDmaServer#(DmaIndication dmaIndication,
-		       DmaDbgIndication dmaDbgIndication, 
 		       Integer numRequests,
 		       Vector#(numReadClients, DmaReadClient#(dsz)) readClients,
 		       Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients)
@@ -311,21 +309,18 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
-   interface DmaDbgConfig dbgRequest;
+   interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
 	 if (rc == Read)
 	    rv <- reader.read.dbg;
 	 else
 	    rv <- writer.write.dbg;
-	 dmaDbgIndication.reportStateDbg(rv);
+	 dmaIndication.reportStateDbg(rv);
       endmethod
       method Action getMemoryTraffic(ChannelType rc);
-	 dmaDbgIndication.reportMemoryTraffic(0,0);
+	 dmaIndication.reportMemoryTraffic(0,0);
       endmethod
-   endinterface
-   
-   interface DmaConfig request;
       method Action sglist(Bit#(32) pref, Bit#(DmaOffsetSize) addr, Bit#(32) len);
 	 dmaIndication.configResp(pref);
 	 if (pref == 0 || pref > fromInteger(valueOf(MaxNumSGLists))) begin

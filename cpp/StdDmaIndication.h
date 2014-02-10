@@ -35,4 +35,11 @@ public:
   virtual void badAddr (unsigned long pointer, unsigned long long offset , unsigned long long physAddr) {
     fprintf(stderr, "DmaIndication::badAddr(pointer=%lx offset=%llx physAddr=%llx)\n", pointer, offset, physAddr);
   }
+  virtual void reportStateDbg(const DmaDbgRec& rec){
+    fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
+  }
+  
+  virtual void reportMemoryTraffic(unsigned long long cycles, unsigned long long words){
+    fprintf(stderr, "reportMemoryTraffic: cycles=%lld, words=%lld\n", cycles,words);
+  }
 };
