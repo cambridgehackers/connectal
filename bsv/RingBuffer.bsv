@@ -18,7 +18,7 @@ interface RingBuffer;
    method Bool notFull();
    method Action push(Bit#(8) num);
    method Action pop(Bit#(8) num);
-   interface Reg#(Bit#(DmaOffsetize)) bufferfirst;
+   interface Reg#(Bit#(DmaOffsetsize)) bufferfirst;
    interface Reg#(Bit#(DmaOffsetSize)) bufferlast;
    interface Reg#(Bool) enable;
    interface RingBufferConfig configifc;
