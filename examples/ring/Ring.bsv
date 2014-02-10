@@ -40,7 +40,7 @@ interface RingRequest;
    method Action set(Bit#(1) cmd, Bit#(3) regist, Bit#(64) addr);
    method Action get(Bit#(1) cmd, Bit#(3) regist);
    method Action hwenable(Bit#(1) en);
-   method Action doCommandIndirect(Bit#(64) addr);
+   method Action doCommandIndirect(Bit#(64) pointer, Bit#(64) addr);
    method Action doCommandImmediate(Bit#(64) data);
 endinterface
 
@@ -92,10 +92,10 @@ module mkRingRequest#(RingIndication indication,
 	       seq
 	       if (cmdRing.bufferfirst != cmdRing.bufferlast) 
 		  seq
-		     //$display ("cmdFetch handle=%h address=%h burst=%h tag=%h", cmdRing.memhandle, cmdRing.bufferlast, 8, cmdFetchTag);
+		     //$display ("cmdFetch handle=%h address=%h burst=%h tag=%h", cmdRing.mempointer, cmdRing.bufferlast, 8, cmdFetchTag);
 		     cmd_read_chan.readReq.put(
-			DmaRequest{handle: cmdRing.memhandle,
-			   address: cmdRing.bufferlast, burstLen: 8, tag: cmdFetchTag});
+			DmaRequest{pointer: cmdRing.mempointer,
+			   offset: cmdRing.bufferlast, burstLen: 8, tag: cmdFetchTag});
 		     cmdRing.pop(64);
 		     cmdFetchTag <= cmdFetchTag + 1;
 		  endseq
@@ -134,10 +134,10 @@ module mkRingRequest#(RingIndication indication,
 	    seq
 	       //$display("responseArbiter copyEngine completion");
 	       //$display("status write handle=%d address=%h burst=%h tag=%h",
-	//	  statusRing.memhandle, statusRing.bufferfirst, 8, statusTag);
+	//	  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
-		  DmaRequest{handle: statusRing.memhandle, 
-		     address: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
+		  DmaRequest{pointer: statusRing.mempointer, 
+		     offset: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- copyEngine.response.get();
@@ -151,10 +151,10 @@ module mkRingRequest#(RingIndication indication,
 	    seq
 	       //$display("responseArbiter echoEngine completion");
 	       //$display("status write handle=%d address=%h burst=%h tag=%h",
-	//	  statusRing.memhandle, statusRing.bufferfirst, 8, statusTag);
+	//	  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
-		  DmaRequest{handle: statusRing.memhandle, 
-		     address: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
+		  DmaRequest{pointer: statusRing.mempointer, 
+		     offset: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- echoEngine.response.get();
@@ -179,10 +179,10 @@ module mkRingRequest#(RingIndication indication,
       // to start a command, doCommand fires off a memory read to the
       // specified address. when it comes back, the doCommandRule will
       // handle it
-      method Action doCommandIndirect(Bit#(64) addr);
+      method Action doCommandIndirect(Bit#(64) pointer, Bit#(64) addr);
 	 cmd_read_chan.readReq.put(
-				   DmaRequest{handle: addr[63:32],
-	 address: truncate(addr[31:0]), burstLen: 8, tag: cmdFetchTag});
+				   DmaRequest{pointer: truncate(pointer),
+	 offset: truncate(addr), burstLen: 8, tag: cmdFetchTag});
    	 cmdFetchTag <= cmdFetchTag + 1;
       endmethod
    
@@ -201,10 +201,10 @@ module mkRingRequest#(RingIndication indication,
       method Action get(Bit#(1) _cmd, Bit#(3) regist);
 	 if (_cmd == 0)
 	    indication.getResult(0, regist, 
-	       zeroextend(cmdRing.configifc.get(regist)));
+	       zeroExtend(cmdRing.configifc.get(regist)));
 	 else
 	    indication.getResult(0, regist, 
-	       zeroextend(statusRing.configifc.get(regist)));
+	       zeroExtend(statusRing.configifc.get(regist)));
       endmethod
 
       method Action hwenable(Bit#(1) en);
