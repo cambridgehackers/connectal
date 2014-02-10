@@ -22,7 +22,7 @@ interface RingBuffer;
    interface Reg#(Bit#(DmaOffsetSize)) bufferlast;
    interface Reg#(Bool) enable;
    interface RingBufferConfig configifc;
-   interface Reg#(DmaPointer) memhandle;
+   interface Reg#(DmaPointer) mempointer;
 endinterface
 
 interface RingBufferConfig;
@@ -38,7 +38,7 @@ module mkRingBuffer(RingBuffer);
    Reg#(Bit#(DmaOffsetSize)) rbufferfirst <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) rbufferlast <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) rbuffermask <- mkReg(0);
-   Reg#(DmaPointer) rmemhandle <- mkReg(0);
+   Reg#(DmaPointer) rmempointer <- mkReg(0);
    Reg#(Bool) renable <- mkReg(False);
    
    interface RingBufferConfig configifc;
@@ -48,7 +48,7 @@ module mkRingBuffer(RingBuffer);
       else if (regist == 2) rbufferfirst <= truncate(addr);
       else if (regist == 3) rbufferlast <= truncate(addr);
       else if (regist == 4) rbuffermask <= truncate(addr);
-      else if (regist == 5) rmemhandle <= truncate(addr);
+      else if (regist == 5) rmempointer <= truncate(addr);
       else renable <= (addr[0] != 0);
    endmethod
    
@@ -58,7 +58,7 @@ module mkRingBuffer(RingBuffer);
       else if (regist == 2) return (zeroExtend(rbufferfirst));
       else if (regist == 3) return (zeroExtend(rbufferlast));
       else if (regist == 4) return (zeroExtend(rbuffermask));
-      else if (regist == 5) return (zeroExtend(rmemhandle));
+      else if (regist == 5) return (zeroExtend(rmempointer));
       else return(zeroExtend(pack(renable)));
    endmethod
    endinterface
@@ -82,6 +82,6 @@ module mkRingBuffer(RingBuffer);
    interface Reg bufferfirst = rbufferfirst;
    interface Reg bufferlast = rbufferlast;
    interface Reg enable = renable;
-   interface Reg memhandle = rmemhandle;
+   interface Reg mempointer = rmempointer;
 
 endmodule
