@@ -112,7 +112,8 @@ void Ring_Handle_Completion(uint64_t *event)
 }
 
 
-sem_t conf_sem;
+sem_t setresult_sem;
+sem_t getresult_sem;
 
 DmaIndication *dmaIndication = 0;
 
@@ -154,7 +155,7 @@ public:
   virtual void setResult(long unsigned int cmd, long unsigned int regist, long long unsigned int addr) {
     fprintf(stderr, "setResult(cmd %ld regist %ld addr %llx)\n", 
 	    cmd, regist, addr);
-    sem_post(&conf_sem);
+    sem_post(&setresult_sem);
   }
   virtual void getResult(long unsigned int cmd, long unsigned int regist, long long unsigned int addr) {
     fprintf(stderr, "getResult(cmd %ld regist %ld addr %llx)\n", 
@@ -163,12 +164,7 @@ public:
     if ((cmd = cmd_ring.ringid) && (regist == REG_LAST)) {
       cmd_ring.last = addr;
     }
-    sem_post(&conf_sem);
-  }
-  virtual void completion(unsigned long cmd, unsigned long token) {
-    fprintf(stderr, "getResult(cmd %ld token %lx)\n", 
-	    cmd, token);
-    sem_post(&conf_sem);
+    sem_post(&getresult_sem);
   }
   RingIndication(unsigned int id) : RingIndicationWrapper(id){}
 };
@@ -190,17 +186,17 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   r->cached_space = size - 64;
   r->ringid = ringid;
   ring->set(ringid, REG_BASE, 0);         // bufferbase, relative to base
-  sem_wait(&conf_sem);
+  sem_wait(&setresult_sem);
   ring->set(ringid, REG_END, size);      // bufferend
-  sem_wait(&conf_sem);
+  sem_wait(&setresult_sem);
   ring->set(ringid, REG_FIRST, 0);         // bufferfirst
-  sem_wait(&conf_sem);
+  sem_wait(&setresult_sem);
   ring->set(ringid, REG_LAST, 0);         // bufferlast 
-  sem_wait(&conf_sem);
+  sem_wait(&setresult_sem);
   ring->set(ringid, REG_MASK, size - 1);  // buffermask
-  sem_wait(&conf_sem);
+  sem_wait(&setresult_sem);
   ring->set(ringid, REG_HANDLE, ref);       // memhandle
-  sem_wait(&conf_sem);
+  sem_wait(&setresult_sem);
 }
 
 uint64_t *ring_next(struct SWRing *r)
@@ -223,7 +219,7 @@ void ring_pop(struct SWRing *r)
   /* update hardware version of r->last every 1/4 way around the ring */
   if ((r->last % (r->size >> 2)) == 0) {
     ring->set(r->ringid, REG_LAST, r->last);         // bufferlast 
-  sem_wait(&conf_sem);
+    sem_wait(&setresult_sem);
   }
 }
 
@@ -240,6 +236,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   /* send an inquiry every 1/4 way around the ring */
   if ((r->cached_space % (r->size >> 2)) == 0) {
     ring->get(r->ringid, REG_LAST);         // bufferlast 
+    sem_wait(&getresult_sem);
     while (r->cached_space == 0) {
       pthread_mutex_unlock(&cmd_lock);
       r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
@@ -257,9 +254,8 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   r->first = next_first;
   r->cached_space -= 64;
   ring->set(r->ringid, REG_FIRST, r->first);         // bufferfirst
-  sem_wait(&conf_sem);
+  sem_wait(&setresult_sem);
   pthread_mutex_unlock(&cmd_lock);
-  sem_wait(&conf_sem);
 }
 
 void *statusThreadProc(void *arg)
@@ -284,7 +280,7 @@ void sem_finish(void *arg, uint64_t *event)
 
 void flag_finish(void *arg, uint64_t *event)
 {
-  char *p = (char *) arg;
+  volatile char *p = (volatile char *) arg;
   *p = 1;
 }
 
@@ -365,12 +361,16 @@ int main(int argc, const char **argv)
   void *v;
   int i;
   uint64_t tcmd[8];
-  char flag[10];
+  volatile char flag[10];
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   completion_list_init();
-  if(sem_init(&conf_sem, 1, 0)){
-    fprintf(stderr, "failed to init conf_sem\n");
+  if(sem_init(&setresult_sem, 1, 0)){
+    fprintf(stderr, "failed to init setresult_sem\n");
+    return -1;
+  }
+  if(sem_init(&getresult_sem, 1, 0)){
+    fprintf(stderr, "failed to init getresult_sem\n");
     return -1;
   }
 
@@ -463,14 +463,15 @@ int main(int argc, const char **argv)
     uint64_t ul2;
     hw_copy_nb((void *) (256L * i),
 	    (void *) (256L * (i + 1)),
-	       0x100, &flag[i]);
+	       0x100, (char *) &flag[i]);
   }
+  fprintf(stderr, "main waiting for pass 2 completions\n");
   {
     int done = 0;
     while(done < 10) {
-      done = 0;
-      for (i = 0; i < 10; i += 1) done += (int) flag[i];
-      printf("done %d\n", done);
+      while (flag[done] == 0);
+      done += 1;
+      fprintf(stderr, "done %d\n", done);
     }
   }
   /* pass 3 */
