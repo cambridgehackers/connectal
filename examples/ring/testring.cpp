@@ -292,9 +292,11 @@ void hw_copy_nb(void *from, void *to, unsigned count, char *flag)
 {
   uint64_t tcmd[8];
   tcmd[0] = ((uint64_t) CMD_COPY) << 56;
-  tcmd[1] = (uint64_t) from;
-  tcmd[2] = (uint64_t) to;
-  tcmd[3] = count; // byte count
+  tcmd[1] = scratchPointer;
+  tcmd[2] = (uint64_t) from;
+  tcmd[3] = scratchPointer;
+  tcmd[4] = (uint64_t) to;
+  tcmd[5] = count; // byte count
   ring_send(&cmd_ring, tcmd, flag_finish, flag);
 }
 
@@ -384,9 +386,9 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  unsigned int ref_cmdAlloc = dma->reference(cmdAlloc);
-  unsigned int ref_statusAlloc = dma->reference(statusAlloc);
-  unsigned int ref_scratchAlloc = dma->reference(scratchAlloc);
+  unsigned int cmdPointer = dma->reference(cmdAlloc);
+  unsigned int statusPointer = dma->reference(statusAlloc);
+  unsigned int scratchPointer = dma->reference(scratchAlloc);
 
   /*   dma->dCacheFlushInval(cmdAlloc, cmdBuffer);
   dma->dCacheFlushInval(statusAlloc, statusBuffer);
@@ -394,8 +396,8 @@ int main(int argc, const char **argv)
   fprintf(stderr, "flush and invalidate complete\n");
   */
 
-  ring_init(&cmd_ring, 0, ref_cmdAlloc, cmdBuffer, cmd_ring_sz);
-  ring_init(&status_ring, 1, ref_statusAlloc, statusBuffer, status_ring_sz);
+  ring_init(&cmd_ring, 0, cmdPointer, cmdBuffer, cmd_ring_sz);
+  ring_init(&status_ring, 1, statusPointer, statusBuffer, status_ring_sz);
 
   pthread_t ltid;
   fprintf(stderr, "creating status thread\n");
@@ -417,8 +419,8 @@ int main(int argc, const char **argv)
   for (i = 0; i < 10; i += 1) {
     uint64_t ul1;
     uint64_t ul2;
-    hw_copy((void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * i)),
-	    (void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * (i + 1))),
+    hw_copy((void *) (256 * i),
+	    (void *) (256 * (i + 1)),
 	    0x100);
     ul1 = (0x111L << 32) + (long) i;
     ul2 = (0x222L << 32) + (long) i;
@@ -441,8 +443,8 @@ int main(int argc, const char **argv)
   for (i = 0; i < 10; i += 1) {
     uint64_t ul1;
     uint64_t ul2;
-    hw_copy_nb((void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * i)),
-	    (void *) ((((uint64_t) ref_scratchAlloc) << 32) | (256 * (i + 1))),
+    hw_copy_nb((void *) (256 * i),
+	    (void *) (256 * (i + 1)),
 	       0x100, &flag[i]);
   }
   {
