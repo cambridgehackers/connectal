@@ -107,6 +107,7 @@ void Ring_Handle_Completion(uint64_t *event)
   assert(p->finished == 0);
   p->finished = 1;
   if (p->finish) (*p->finish)(p->arg, event);
+  event[7] = 0L;  /* mark unused for next time around */
   LIST_INSERT_HEAD(&completionfreelist, p, entries);
 }
 
@@ -219,6 +220,10 @@ void ring_pop(struct SWRing *r)
   last += 64;
   if (last >= r->size) last  = 0;
   r->last = last;
+  /* update hardware version of r->last every 1/4 way around the ring */
+  if ((r->last % (r->size >> 2)) == 0) {
+    ring->set(r->ringid, REG_LAST, r->last);         // bufferlast 
+  }
 }
 
 /* XXX this isn't right, I think the SWRing* has to be volatile, so that
@@ -267,6 +272,7 @@ void *statusThreadProc(void *arg)
     ring_pop(&status_ring);
   }
 }
+
 
 void sem_finish(void *arg, uint64_t *event)
 {
