@@ -143,13 +143,13 @@ void dump(const char *prefix, char *buf, size_t len)
 class RingIndication : public RingIndicationWrapper
 {
 public:
-  virtual void setResult(long unsigned int cmd, long unsigned int regist, long unsigned int addr) {
-    fprintf(stderr, "setResult(cmd %ld regist %ld addr %lx)\n", 
+  virtual void setResult(long unsigned int cmd, long unsigned int regist, long long unsigned int addr) {
+    fprintf(stderr, "setResult(cmd %ld regist %ld addr %llx)\n", 
 	    cmd, regist, addr);
     sem_post(&conf_sem);
   }
-  virtual void getResult(long unsigned int cmd, long unsigned int regist, long unsigned int addr) {
-    fprintf(stderr, "getResult(cmd %ld regist %ld addr %lx)\n", 
+  virtual void getResult(long unsigned int cmd, long unsigned int regist, long long unsigned int addr) {
+    fprintf(stderr, "getResult(cmd %ld regist %ld addr %llx)\n", 
 	    cmd, regist, addr);
     /* returning query about last pointer of cmd ring */
     if ((cmd = cmd_ring.ringid) && (regist == REG_LAST)) {
