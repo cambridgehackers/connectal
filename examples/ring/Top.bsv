@@ -25,12 +25,14 @@ import Ring::*;
 
 typedef enum {RingIndication, RingRequest, DmaIndication, DmaRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth)) provisos(
+module mkPortalTop(StdPortalTop#(addrWidth)) 
 
-   Add#(addrWidth, a__, 52),
-   Add#(b__, addrWidth, 64),
-   Add#(c__, 12, addrWidth),
-   Add#(addrWidth, d__, 44));
+   provisos(Add#(addrWidth, a__, 52),
+	    Add#(b__, addrWidth, 64),
+	    Add#(c__, 12, addrWidth),
+	    Add#(addrWidth, d__, 44),
+	    Add#(e__, c__, 40),
+	    Add#(f__, addrWidth, 40));
   
    // instantiate Dma infrastructure
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
