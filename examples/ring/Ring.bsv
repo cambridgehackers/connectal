@@ -37,7 +37,7 @@ import EchoEngine::*;
 import NopEngine::*;
 
 interface RingRequest;
-   method Action set(Bit#(1) cmd, Bit#(3) regist, Bit#(32) addr);
+   method Action set(Bit#(1) cmd, Bit#(3) regist, Bit#(64) addr);
    method Action get(Bit#(1) cmd, Bit#(3) regist);
    method Action hwenable(Bit#(1) en);
    method Action doCommandIndirect(Bit#(64) addr);
@@ -45,8 +45,8 @@ interface RingRequest;
 endinterface
 
 interface RingIndication;
-   method Action setResult(Bit#(1) cmd, Bit#(3) regist, Bit#(32) addr);
-   method Action getResult(Bit#(1) cmd, Bit#(3) regist, Bit#(32) addr);
+   method Action setResult(Bit#(1) cmd, Bit#(3) regist, Bit#(64) addr);
+   method Action getResult(Bit#(1) cmd, Bit#(3) regist, Bit#(64) addr);
    method Action completion(Bit#(32) command, Bit#(32) tag);
 endinterface
 
@@ -191,21 +191,21 @@ module mkRingRequest#(RingIndication indication,
       	 $display("doCommandImmediate %h", data);
       endmethod
 
-      method Action set(Bit#(1) _cmd, Bit#(3) regist, Bit#(32) addr);
+      method Action set(Bit#(1) _cmd, Bit#(3) regist, Bit#(64) addr);
 	 if (_cmd == 0)
-	    cmdRing.configifc.set(regist, addr);
+	    cmdRing.configifc.set(regist, truncate(addr));
 	 else
-	    statusRing.configifc.set(regist, addr);
+	    statusRing.configifc.set(regist, truncate(addr));
 	 indication.setResult(_cmd, regist, addr);
       endmethod
    
       method Action get(Bit#(1) _cmd, Bit#(3) regist);
 	 if (_cmd == 0)
 	    indication.getResult(0, regist, 
-	       cmdRing.configifc.get(regist));
+	       zeroextend(cmdRing.configifc.get(regist)));
 	 else
 	    indication.getResult(0, regist, 
-	       statusRing.configifc.get(regist));
+	       zeroextend(statusRing.configifc.get(regist)));
       endmethod
 
       method Action hwenable(Bit#(1) en);
