@@ -64,7 +64,6 @@
 #include <assert.h>
 #include <semaphore.h>
 #include <ctime>
-
 #include "StdDmaIndication.h"
 
 #include "StrstrIndicationWrapper.h"
@@ -222,11 +221,11 @@ int main(int argc, const char **argv)
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
-    dma->getMemoryTraffic(ChannelType_Read);
+    dma->show_mem_stats(ChannelType_Read);
     start_timer();
     device->search(ref_needleAlloc, ref_haystackAlloc, ref_mpNextAlloc, needle_len, haystack_len);
     sem_wait(&test_sem);
-    dma->getMemoryTraffic(ChannelType_Read);
+    dma->show_mem_stats(ChannelType_Read);
     stop_timer();
 
     close(needleAlloc->header.fd);

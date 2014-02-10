@@ -115,29 +115,5 @@ class PortalProxy : public Portal
   PortalProxy(const char *devname, unsigned int addrbits);
 };
 
-class PortalMemory : public PortalProxy 
-{
- private:
-  int handle;
-  bool sglistCallbackRegistered;
-  sem_t sglistSem;
-#ifndef MMAP_HW
-  portal p_fd;
-#endif
- public:
-  PortalMemory(int id);
-  PortalMemory(const char *devname, unsigned int addrbits);
-  int pa_fd;
-  void *mmap(PortalAlloc *portalAlloc);
-  int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
-  int alloc(size_t size, PortalAlloc **portalAlloc);
-  int reference(PortalAlloc* pa);
-  void configResp(unsigned long channelId);
-  void useSemaphore() { sglistCallbackRegistered = true; }
-  virtual void sglist(unsigned long pref, unsigned long long addr, unsigned long len) = 0;
-};
-
-// ugly hack (mdk)
-typedef int SGListId;
 
 #endif // _PORTAL_H_
