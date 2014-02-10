@@ -284,9 +284,11 @@ void hw_copy(void *from, void *to, unsigned count)
   sem_t my_sem;
   assert(sem_init(&my_sem, 1, 0) == 0);
   tcmd[0] = ((uint64_t) CMD_COPY) << 56;
-  tcmd[1] = (uint64_t) from;
-  tcmd[2] = (uint64_t) to;
-  tcmd[3] = count; // byte count
+  tcmd[1] = scratchPointer;
+  tcmd[2] = (uint64_t) from;
+  tcmd[3] = scratchPointer;
+  tcmd[4] = (uint64_t) to;
+  tcmd[5] = count; // byte count
   ring_send(&cmd_ring, tcmd, sem_finish, &my_sem);
   sem_wait(&my_sem);
   sem_destroy(&my_sem);
@@ -355,7 +357,7 @@ int main(int argc, const char **argv)
   char flag[10];
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-
+  completion_list_init();
   if(sem_init(&conf_sem, 1, 0)){
     fprintf(stderr, "failed to init conf_sem\n");
     return -1;
@@ -423,6 +425,7 @@ int main(int argc, const char **argv)
   for (i = 0; i < 10; i += 1) {
     uint64_t ul1;
     uint64_t ul2;
+    fprintf(stderr, "main hwcopy %d\n", i);
     hw_copy((void *) (256L * i),
 	    (void *) (256L * (i + 1)),
 	    0x100);
