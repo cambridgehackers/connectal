@@ -26,8 +26,8 @@ interface RingBuffer;
 endinterface
 
 interface RingBufferConfig;
-   method Action set(Bit#(3) regist, Bit#(32) addr);
-   method Bit#(32) get(Bit#(3) regist);
+   method Action set(Bit#(3) regist, Bit#(DmaOffsetSize) addr);
+   method Bit#(DmaOffsetSize) get(Bit#(3) regist);
 endinterface
 
 
