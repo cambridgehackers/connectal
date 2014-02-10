@@ -223,6 +223,7 @@ void ring_pop(struct SWRing *r)
   /* update hardware version of r->last every 1/4 way around the ring */
   if ((r->last % (r->size >> 2)) == 0) {
     ring->set(r->ringid, REG_LAST, r->last);         // bufferlast 
+  sem_wait(&conf_sem);
   }
 }
 
@@ -256,6 +257,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   r->first = next_first;
   r->cached_space -= 64;
   ring->set(r->ringid, REG_FIRST, r->first);         // bufferfirst
+  sem_wait(&conf_sem);
   pthread_mutex_unlock(&cmd_lock);
   sem_wait(&conf_sem);
 }
