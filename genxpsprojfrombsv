@@ -131,7 +131,7 @@ OS=%(OS)s
 ifeq ($(OS),android)
 ALLTARGETS=bits android_exe
 else
-ALLTARGETS=implementation ubuntu_exe
+ALLTARGETS=ubuntu_exe implementation
 endif
 
 BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s

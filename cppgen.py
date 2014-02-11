@@ -28,8 +28,11 @@ include $(BUILD_EXECUTABLE)
 linuxmakefile_template='''
 CFLAGS = -DMMAP_HW -O -g -I. -I%(xbsvdir)s/cpp -I%(xbsvdir)s %(sourceincludes)s
 
-test%(classname)s: %(swProxies)s %(swWrappers)s %(xbsvdir)s/cpp/portal.cpp %(source)s
-	g++ $(CFLAGS) -o %(classname)s %(swProxies)s %(swWrappers)s %(xbsvdir)s/cpp/portal.cpp %(source)s %(clibs)s -pthread 
+PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.cpp PortalMemory.cpp)
+
+
+test%(classname)s: %(swProxies)s %(swWrappers)s $(PORTAL_CPP_FILES) %(source)s
+	g++ $(CFLAGS) -o %(classname)s %(swProxies)s %(swWrappers)s $(PORTAL_CPP_FILES) %(source)s %(clibs)s -pthread 
 '''
 
 
