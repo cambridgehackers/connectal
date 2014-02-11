@@ -36,6 +36,33 @@
 /* Number of boards to support */
 #define NUM_BOARDS 16
 
+/* CSR address space offsets */
+#define CSR_ID                        (   0 << 2)
+#define CSR_MINOR_REV                 (   2 << 2)
+#define CSR_MAJOR_REV                 (   3 << 2)
+#define CSR_BUILDVERSION              (   4 << 2)
+#define CSR_EPOCHTIME                 (   5 << 2)
+#define CSR_BYTES_PER_BEAT            (   7 << 2)
+#define CSR_BOARD_CONTENT_ID          (   8 << 2)
+#define CSR_TLPDATAFIFO_DEQ           ( 768 << 2)
+#define CSR_TLPSEQNOREG               ( 774 << 2)
+#define CSR_TLPTRACINGREG             ( 775 << 2)
+#define CSR_TLPDATABRAMRESPONSESLICE0 ( 776 << 2)
+#define CSR_TLPDATABRAMRESPONSESLICE1 ( 777 << 2)
+#define CSR_TLPDATABRAMRESPONSESLICE2 ( 778 << 2)
+#define CSR_TLPDATABRAMRESPONSESLICE3 ( 779 << 2)
+#define CSR_TLPDATABRAMRESPONSESLICE4 ( 780 << 2)
+#define CSR_TLPDATABRAMRESPONSESLICE5 ( 781 << 2)
+#define CSR_RCB_MASK                  ( 782 << 2)
+#define CSR_MAX_READ_REQ_BYTES        ( 783 << 2)
+#define CSR_MAX_PAYLOAD_BYTES         ( 784 << 2)
+#define CSR_TLPDATABRAMWRADDRREG      ( 792 << 2)
+#define CSR_RESETISASSERTED           ( 795 << 2)
+#define CSR_MSIX_ADDR_LO              (4096 << 2)
+#define CSR_MSIX_ADDR_HI              (4097 << 2)
+#define CSR_MSIX_MSG_DATA             (4098 << 2)
+#define CSR_MSIX_MASKED               (4099 << 2)
+
 /*
  * Per-device data
  */
@@ -172,9 +199,9 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 info.portal_number = this_portal->portal_number;
                 if (1) {        // msix info
                         printk("msix_entry[0].addr %08x %08x data %08x\n",
-                             ioread32(this_board->bar0io + (4097 << 2)),
-                             ioread32(this_board->bar0io + (4096 << 2)),
-                             ioread32(this_board->bar0io + (4098 << 2)));
+                             ioread32(this_board->bar0io + CSR_MSIX_ADDR_HI),
+                             ioread32(this_board->bar0io + CSR_MSIX_ADDR_LO),
+                             ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA));
                 }
                 err = copy_to_user((void __user *) arg, &info, sizeof(tBoardInfo));
                 break;
@@ -183,7 +210,7 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                        DEV_NAME, DEV_NAME, this_board->info.board_number);
                 if (this_board->activation_level == BLUENOC_ACTIVE) {
 			// reset the portal
-			iowrite32(1, this_board->bar0io + (795 << 2)); 
+			iowrite32(1, this_board->bar0io + CSR_RESETISASSERTED); 
                 }
                 break;
         case BNOC_IDENTIFY_PORTAL:
@@ -192,9 +219,9 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 tPortalInfo portalinfo;
                 memset(&portalinfo, 0, sizeof(portalinfo));
                 printk("rcb_mask=%#x max_read_req_bytes=%#x max_payload_bytes=%#x\n",
-                     ioread32(this_board->bar0io + (782 << 2)),
-                     ioread32(this_board->bar0io + (783 << 2)),
-                     ioread32(this_board->bar0io + (784 << 2)));
+                     ioread32(this_board->bar0io + CSR_RCB_MASK),
+                     ioread32(this_board->bar0io + CSR_MAX_READ_REQ_BYTES),
+                     ioread32(this_board->bar0io + CSR_MAX_PAYLOAD_BYTES));
                 err = copy_to_user((void __user *) arg, &portalinfo, sizeof(tPortalInfo));
                 break;
                 }
@@ -203,19 +230,19 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 /* copy board identification info to a user-space struct */
                 unsigned int tlp[6];
                 memset((char *) tlp, 0xbf, sizeof(tlp));
-                tlp[5] = ioread32(this_board->bar0io + (781 << 2));
+                tlp[5] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE5);
                 mb();
-                tlp[0] = ioread32(this_board->bar0io + (776 << 2));
+                tlp[0] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE0);
                 mb();
-                tlp[4] = ioread32(this_board->bar0io + (780 << 2));
+                tlp[4] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE4);
                 mb();
-                tlp[1] = ioread32(this_board->bar0io + (777 << 2));
+                tlp[1] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE1);
                 mb();
-                tlp[3] = ioread32(this_board->bar0io + (779 << 2));
+                tlp[3] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE3);
                 mb();
-                tlp[2] = ioread32(this_board->bar0io + (778 << 2));
+                tlp[2] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE2);
                 // now deq the tlpDataFifo
-                iowrite32(0, this_board->bar0io + (768 << 2));
+                iowrite32(0, this_board->bar0io + CSR_TLPDATAFIFO_DEQ);
                 err = copy_to_user((void __user *) arg, tlp, sizeof(tTlpData));
                 break;
                 }
@@ -223,13 +250,13 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 {
                 /* copy board identification info to a user-space struct */
                 unsigned trace, old_trace;
-                int tlpseqno = ioread32(this_board->bar0io + (774 << 2)); 
+                int tlpseqno = ioread32(this_board->bar0io + CSR_TLPSEQNOREG); 
                 err = copy_from_user(&trace, (void __user *) arg, sizeof(int));
                 if (!err) {
                          // update tlpBramWrAddr, which also writes the scratchpad to BRAM
-                         iowrite32(0, this_board->bar0io + (792 << 2)); 
-                         old_trace = ioread32(this_board->bar0io + (775 << 2) + 0);
-                         iowrite32(trace, this_board->bar0io + (775 << 2) + 0); 
+                         iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
+                         old_trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
+                         iowrite32(trace, this_board->bar0io + CSR_TLPTRACINGREG); 
                          printk("new trace=%d old trace=%d tlpseqno=%d\n",
                                 trace, old_trace, tlpseqno);
                          err = copy_to_user((void __user *) arg, &old_trace, sizeof(int));
@@ -297,7 +324,7 @@ static void deactivate(tBoard *this_board, struct pci_dev *dev)
                 pci_clear_master(dev); /* disable PCI bus master */
                 /* set MSI-X Entry 0 Vector Control value to 1 (masked) */
                 if (this_board->uses_msix)
-                        iowrite32(1, this_board->bar0io + (4099 << 2));
+                        iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
                 disable_irq(this_board->irq_num);
                 free_irq(this_board->irq_num, (void *) this_board);
                 /* fall through */
@@ -399,19 +426,19 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         }
         this_board->activation_level = BARS_MAPPED;
         /* check the magic number in BAR 0 */
-        magic_num = readq(this_board->bar0io);
+        magic_num = readq(this_board->bar0io + CSR_ID);
         if (magic_num != expected_magic) {
                 printk(KERN_ERR "%s: magic number %llx does not match expected %llx\n",
                        DEV_NAME, magic_num, expected_magic);
                 err = -EINVAL;
                 goto exit_bluenoc_probe;
         }
-        this_board->info.minor_rev = ioread32(this_board->bar0io + (2 << 2));
-        this_board->info.major_rev = ioread32(this_board->bar0io + (3 << 2));
-        this_board->info.build = ioread32(this_board->bar0io + (4 << 2));
-        this_board->info.timestamp = ioread32(this_board->bar0io + (5 << 2));
-        this_board->info.bytes_per_beat = ioread32(this_board->bar0io + (7 << 2)) & 0xff;
-        this_board->info.content_id = readq(this_board->bar0io + (8 << 2));
+        this_board->info.minor_rev = ioread32(this_board->bar0io + CSR_MINOR_REV);
+        this_board->info.major_rev = ioread32(this_board->bar0io + CSR_MAJOR_REV);
+        this_board->info.build = ioread32(this_board->bar0io + CSR_BUILDVERSION);
+        this_board->info.timestamp = ioread32(this_board->bar0io + CSR_EPOCHTIME);
+        this_board->info.bytes_per_beat = ioread32(this_board->bar0io + CSR_BYTES_PER_BEAT) & 0xff;
+        this_board->info.content_id = readq(this_board->bar0io + CSR_BOARD_CONTENT_ID);
         /* basic board info */
         printk(KERN_INFO "%s: revision = %d.%d\n", DEV_NAME, this_board->info.major_rev, this_board->info.minor_rev);
         printk(KERN_INFO "%s: build_version = %d\n", DEV_NAME, this_board->info.build);
@@ -451,7 +478,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 /* set MSI-X Entry 0 Vector Control value to 0 (unmasked) */
                 printk(KERN_INFO "%s: MSI-X interrupts enabled with IRQ %d\n",
                        DEV_NAME, this_board->irq_num);
-                iowrite32(0, this_board->bar0io + (4099 << 2));
+                iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
         }
         pci_set_master(dev); /* enable PCI bus master */
         this_board->activation_level = BLUENOC_ACTIVE;
@@ -477,7 +504,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         }
       // this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
       // but why is it needed?...
-      iowrite32(0, this_board->bar0io + (792 << 2)); 
+      iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
       exit_bluenoc_probe:
         if (err < 0) {
                 if (this_board)
