@@ -2,7 +2,7 @@
 BSVDIR=../../bsv
 S2H = MemcpyRequest BlueScopeRequest DmaConfig
 H2S = MemcpyIndication BlueScopeIndication DmaIndication
-BSVFILES = Memcpy.bsv $(BSVDIR)/BlueScope.bsv $(BSVDIR)/PortalMemory.bsv Top.bsv
+BSVFILES = Memcpy.bsv $(BSVDIR)/BlueScope.bsv Top.bsv
 CPPFILES=testmemcpy.cpp
 Dma = Dma
 PINS = Std
