@@ -16,10 +16,10 @@
 #include "sock_utils.h"
 
 static struct portal p_fd = iport;
-static int fd[16];
-static unsigned char *buffer[16];
-static unsigned long buffer_len[16];
-static int size_accum[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+static int fd[32];
+static unsigned char *buffer[32];
+static unsigned long buffer_len[32];
+static int size_accum[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 extern "C" {
 
@@ -82,7 +82,7 @@ extern "C" {
 
   unsigned long pareff(unsigned long pref, unsigned long size){
     //fprintf(stderr, "BsimDma::pareff pref=%ld, size=%08lx size_accum=%08lx\n", pref, size, size_accum[pref-1]);
-    assert(pref < 16);
+    assert(pref < 32);
     size_accum[pref-1] += size;
     if(size == 0){
       sock_fd_read(p_fd.write.s2, &(fd[pref-1]));

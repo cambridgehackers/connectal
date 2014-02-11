@@ -31,7 +31,7 @@ import Dma::*;
 import StmtFSM::*;
 import ClientServer::*;
 
-typedef 16 MaxNumSGLists;
+typedef 32 MaxNumSGLists;
 typedef Bit#(TLog#(MaxNumSGLists)) SGListId;
 typedef 12 SGListPageShift0;
 typedef 16 SGListPageShift4;
