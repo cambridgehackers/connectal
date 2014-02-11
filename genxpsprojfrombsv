@@ -307,7 +307,10 @@ if __name__=='__main__':
         bsvdefines += ['Kintex7']
     elif boardname == 'vc707':
         bsvdefines += ['Virtex7']
-    
+
+    if not (os.path.abspath(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv')) in map(os.path.abspath, namespace.bsvfile)):
+        namespace.bsvfile.append(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv'))
+
     for inputfile in namespace.bsvfile:
         inputdir = os.path.dirname(inputfile)
         if not inputdir in srcdirs:
