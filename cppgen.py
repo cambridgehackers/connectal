@@ -14,7 +14,7 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
-LOCAL_SRC_FILES := %(cfiles)s  portal.cpp sock_fd.cxx sock_utils.cxx %(generatedCFiles)s
+LOCAL_SRC_FILES := %(cfiles)s  portal.cpp PortalMemory.cpp sock_fd.cxx sock_utils.cxx %(generatedCFiles)s
 LOCAL_MODULE := %(exe)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
