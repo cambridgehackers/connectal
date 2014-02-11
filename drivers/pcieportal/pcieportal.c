@@ -203,19 +203,19 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 /* copy board identification info to a user-space struct */
                 unsigned int tlp[6];
                 memset((char *) tlp, 0xbf, sizeof(tlp));
-                tlp[5] = ioread32(this_board->bar0io + (776 << 2) + (5 << 2));
+                tlp[5] = ioread32(this_board->bar0io + (781 << 2));
                 mb();
-                tlp[0] = ioread32(this_board->bar0io + (776 << 2) + (0 << 2));
+                tlp[0] = ioread32(this_board->bar0io + (776 << 2));
                 mb();
-                tlp[4] = ioread32(this_board->bar0io + (776 << 2) + (4 << 2));
+                tlp[4] = ioread32(this_board->bar0io + (780 << 2));
                 mb();
-                tlp[1] = ioread32(this_board->bar0io + (776 << 2) + (1 << 2));
+                tlp[1] = ioread32(this_board->bar0io + (777 << 2));
                 mb();
-                tlp[3] = ioread32(this_board->bar0io + (776 << 2) + (3 << 2));
+                tlp[3] = ioread32(this_board->bar0io + (779 << 2));
                 mb();
-                tlp[2] = ioread32(this_board->bar0io + (776 << 2) + (2 << 2));
+                tlp[2] = ioread32(this_board->bar0io + (778 << 2));
                 // now deq the tlpDataFifo
-                iowrite32(0, this_board->bar0io + (768 << 2) + 0);
+                iowrite32(0, this_board->bar0io + (768 << 2));
                 err = copy_to_user((void __user *) arg, tlp, sizeof(tTlpData));
                 break;
                 }
@@ -294,11 +294,10 @@ static void deactivate(tBoard *this_board, struct pci_dev *dev)
 {
         switch (this_board->activation_level) {
         case BLUENOC_ACTIVE:
-                iowrite8(0, this_board->bar0io + 257); /* deactivate the network */
                 pci_clear_master(dev); /* disable PCI bus master */
                 /* set MSI-X Entry 0 Vector Control value to 1 (masked) */
                 if (this_board->uses_msix)
-                        iowrite32(1, this_board->bar0io + 16396);
+                        iowrite32(1, this_board->bar0io + (4099 << 2));
                 disable_irq(this_board->irq_num);
                 free_irq(this_board->irq_num, (void *) this_board);
                 /* fall through */
@@ -407,12 +406,12 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 err = -EINVAL;
                 goto exit_bluenoc_probe;
         }
-        this_board->info.minor_rev = ioread32(this_board->bar0io + 8);
-        this_board->info.major_rev = ioread32(this_board->bar0io + 12);
-        this_board->info.build = ioread32(this_board->bar0io + 16);
-        this_board->info.timestamp = ioread32(this_board->bar0io + 20);
-        this_board->info.bytes_per_beat = ioread32(this_board->bar0io + 28) & 0xff;
-        this_board->info.content_id = readq(this_board->bar0io + 32);
+        this_board->info.minor_rev = ioread32(this_board->bar0io + (2 << 2));
+        this_board->info.major_rev = ioread32(this_board->bar0io + (3 << 2));
+        this_board->info.build = ioread32(this_board->bar0io + (4 << 2));
+        this_board->info.timestamp = ioread32(this_board->bar0io + (5 << 2));
+        this_board->info.bytes_per_beat = ioread32(this_board->bar0io + (7 << 2)) & 0xff;
+        this_board->info.content_id = readq(this_board->bar0io + (8 << 2));
         /* basic board info */
         printk(KERN_INFO "%s: revision = %d.%d\n", DEV_NAME, this_board->info.major_rev, this_board->info.minor_rev);
         printk(KERN_INFO "%s: build_version = %d\n", DEV_NAME, this_board->info.build);
@@ -452,10 +451,9 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 /* set MSI-X Entry 0 Vector Control value to 0 (unmasked) */
                 printk(KERN_INFO "%s: MSI-X interrupts enabled with IRQ %d\n",
                        DEV_NAME, this_board->irq_num);
-                iowrite32(0, this_board->bar0io + 16396);
+                iowrite32(0, this_board->bar0io + (4099 << 2));
         }
         pci_set_master(dev); /* enable PCI bus master */
-        iowrite8(1, this_board->bar0io + 257); /* activate the network */
         this_board->activation_level = BLUENOC_ACTIVE;
         for (dn = 0; dn < NUM_BOARDS && err >= 0; dn++) {
                 int fpga_number = board_number * NUM_BOARDS + dn;
