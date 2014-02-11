@@ -78,7 +78,7 @@ interface TLPDispatcher;
    (* always_ready *)
    method Bool completion_tlp();
 
-   interface Reg#(Bool) axiEnabled;
+   //jca interface Reg#(Bool) axiEnabled;
 
 endinterface: TLPDispatcher
 
@@ -94,7 +94,7 @@ module mkTLPDispatcher(TLPDispatcher);
    Reg#(Bool) route_to_portal <- mkReg(False);
    Reg#(Bool) route_to_axi <- mkReg(False);
 
-   Reg#(Bool) axiEnabledReg <- mkReg(False);
+   //jca Reg#(Bool) axiEnabledReg <- mkReg(False);
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
@@ -208,7 +208,7 @@ module mkTLPDispatcher(TLPDispatcher);
    method Bool read_tlp       = is_read;
    method Bool write_tlp      = is_write;
    method Bool completion_tlp = is_completion;
-   interface Reg axiEnabled = axiEnabledReg;
+   //jca interface Reg axiEnabled = axiEnabledReg;
 endmodule: mkTLPDispatcher
 
 // Multiple sources of TLP packets must all share the PCIe bus. There
@@ -960,7 +960,7 @@ interface ControlAndStatusRegs;
    interface ReadOnly#(Bit#(32)) interruptData;
 
    interface Reg#(Bool) tlpTracing;
-   interface Reg#(Bool) axiEnabled;
+   //jca interface Reg#(Bool) axiEnabled;
    interface Reg#(Bool) byteSwap;
    interface Reg#(Bool) use4dw;
    interface Reg#(Bit#(4)) numPortals;
@@ -1007,12 +1007,12 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Integer minor_rev = 0;
 
    // Registers and their default values
-   Reg#(Bool)            is_board_number_assigned <- mkReg(False);
-   Reg#(UInt#(4))        board_number             <- mkReg(15);
+   //jca Reg#(Bool)            is_board_number_assigned <- mkReg(False);
+   //jca Reg#(UInt#(4))        board_number             <- mkReg(15);
    Vector#(4,MSIX_Entry) msix_entry               <- replicateM(mkMSIXEntry);
 
    Reg#(Bool) tlpTracingReg <- mkReg(False);
-   Reg#(Bool) axiEnabledReg <- mkReg(False);
+   //jca Reg#(Bool) axiEnabledReg <- mkReg(False);
    Reg#(Bool) byteSwapReg <- mkReg(False);
    Reg#(Bool) use4dwReg <- mkReg(True);
    Reg#(Bit#(4)) numPortalsReg <- mkReg(1);
@@ -1045,21 +1045,21 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          3: return fromInteger(major_rev);
          4: return pack(buildVersion);
          5: return pack(epochTime);
-         6: return {23'd0,pack(is_board_number_assigned),4'd0,pack(board_number)};
+         //jca 6: return {23'd0,pack(is_board_number_assigned),4'd0,pack(board_number)};
          7: return {24'd0,fromInteger(bytes_per_beat)};
          8: return board_content_id[31:0];
          9: return board_content_id[63:32];
-         64: return 0;
-         512: return 0;
-         513: return 0;
-         514: return 0;
-         515: return 0;
+         //jca 64: return 0;
+         //jca 512: return 0;
+         //jca 513: return 0;
+         //jca 514: return 0;
+         //jca 515: return 0;
 	 768: return 0;
-	 769: return 0;
-	 770: return 0;
-	 771: return 0;
-	 772: return 0;
-	 773: return 0;
+	 //jca 769: return 0;
+	 //jca 770: return 0;
+	 //jca 771: return 0;
+	 //jca 772: return 0;
+	 //jca 773: return 0;
 	 774: return tlpSeqnoReg;
 	 775: return (tlpTracingReg ? 1 : 0);
 	 776: return tlpDataBramResponseSlice(0);
@@ -1071,20 +1071,21 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 782: return zeroExtend(rcb_mask);
 	 783: return zeroExtend(pack(max_read_req_bytes));
 	 784: return zeroExtend(pack(max_payload_bytes));
-	 785: return 0;
-	 786: return 0;
-	 787: return 0;
-	 788: return axiEnabledReg ? 1 : 0;
-	 789: return tlpDataBramRdAddrReg;
-	 790: return msix_enabled ? 1 : 0;
-	 791: return msix_mask_all_intr ? 1 : 0;
+	 //jca 785: return 0;
+	 //jca 786: return 0;
+	 //jca 787: return 0;
+	 //jca 788: return axiEnabledReg ? 1 : 0;
+	 //jca 789: return tlpDataBramRdAddrReg;
+	 //jca 790: return msix_enabled ? 1 : 0;
+	 //jca 791: return msix_mask_all_intr ? 1 : 0;
 	 792: return tlpDataBramWrAddrReg;
-	 793: return msi_enabled ? 1 : 0;
+	 //jca 793: return msi_enabled ? 1 : 0;
 	 794: return byteSwapReg ? 1 : 0;
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
 	 796: return extend(numPortalsReg);
-	 797: return extend(portalEngine.bTag);
+	 //jca 797: return extend(portalEngine.bTag);
 
+         //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
          // 4-entry MSIx table
          4096: return msix_entry[0].addr_lo;            // entry 0 lower address
          4097: return msix_entry[0].addr_hi;            // entry 0 upper address
@@ -1105,6 +1106,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          // 4-bit MSIx pending bit field
          5120: return '0;                               // PBA structure (low)
          5121: return '0;                               // PBA structure (high)
+         //******************************** end of area referenced from xilinx_x7_pcie_wrapper.v
          // unused addresses
          default: return 32'hbad0add0;
       endcase
@@ -1123,11 +1125,11 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action wr_csr(UInt#(30) addr, Bit#(4) be, Bit#(32) dword);
       action
          case (addr % 8192)
-            // board identification
-            6:  begin
-                   if (be[0] == 1) board_number             <= unpack(dword[3:0]);
-                   if (be[1] == 1) is_board_number_assigned <= unpack(dword[8]);
-                end
+            //jca // board identification
+            //jca 6:  begin
+                   //jca if (be[0] == 1) board_number             <= unpack(dword[3:0]);
+                   //jca if (be[1] == 1) is_board_number_assigned <= unpack(dword[8]);
+                //jca end
 	    774: tlpSeqnoReg <= dword;
 	    775: tlpTracingReg <= (dword != 0) ? True : False;
 	    776: tlpDataScratchpad[0] <= dword;
@@ -1137,12 +1139,13 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    780: tlpDataScratchpad[4] <= dword;
 	    781: tlpDataScratchpad[5] <= dword;
 
-	    788: axiEnabledReg <= (dword != 0) ? True : False;
-	    789: tlpDataBramRdAddrReg <= dword;
+	    //jca 788: axiEnabledReg <= (dword != 0) ? True : False;
+	    //jca 789: tlpDataBramRdAddrReg <= dword;
 	    792: tlpDataBramWrAddrReg <= dword;
 	    794: byteSwapReg <= (dword != 0) ? True : False;
 	    796: numPortalsReg <= truncate(dword);
 
+            //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
             // MSIx table entries
             4096: msix_entry[0].addr_lo  <= update_dword(msix_entry[0].addr_lo, be, (dword & 32'hfffffffc));
             4097: msix_entry[0].addr_hi  <= update_dword(msix_entry[0].addr_hi, be, dword);
@@ -1160,6 +1163,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
             4109: msix_entry[3].addr_hi  <= update_dword(msix_entry[3].addr_hi, be, dword);
             4110: msix_entry[3].msg_data <= update_dword(msix_entry[3].msg_data, be, dword);
             4111: if (be[0] == 1) msix_entry[3].masked <= unpack(dword[0]);
+            //******************************** end of area referenced from xilinx_x7_pcie_wrapper.v
          endcase
       endaction
    endfunction: wr_csr
@@ -1462,7 +1466,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface ReadOnly interruptData = regToReadOnly(msix_entry[0].msg_data);
 
    interface Reg tlpTracing = tlpTracingReg;
-   interface Reg axiEnabled = axiEnabledReg;
+   //jca interface Reg axiEnabled = axiEnabledReg;
    interface Reg byteSwap = byteSwapReg;
    interface Reg use4dw = use4dwReg;
    interface Reg numPortals = numPortalsReg;
@@ -1574,7 +1578,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
        csr.tlpTracing <= False;
    endrule
    rule connectEnables;
-      dispatcher.axiEnabled <= csr.axiEnabled;
+      //jca dispatcher.axiEnabled <= csr.axiEnabled;
       portalEngine.byteSwap <= csr.byteSwap;
    endrule
 
