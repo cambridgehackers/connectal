@@ -164,7 +164,6 @@ int main(int argc, const char **argv)
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
-  unsigned int ref_bsAlloc  = dma->reference(bsAlloc);
   
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords);
