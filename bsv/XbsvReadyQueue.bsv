@@ -36,6 +36,21 @@ module mkFirstReadyQueue(ReadyQueue#(nports,Bit#(tts),Bit#(pts)))
 
 endmodule
 
+function Maybe#(Bit#(TLog#(nports))) firstReady(Bit#(nports) readyBits);
+   Vector#(nports, Integer) idxs = genVector();
+   function Maybe#(Bit#(TLog#(nports))) idxToMaybe(Integer i);
+      return (readyBits[i] == 1) ? tagged Valid fromInteger(i) : tagged Invalid;
+   endfunction
+   function Maybe#(Bit#(TLog#(nports))) maxreq(Maybe#(Bit#(TLog#(nports))) a, Maybe#(Bit#(TLog#(nports))) b);
+      if (a matches tagged Valid .p)
+         return a;
+      else
+         return b;
+   endfunction
+   Vector#(1, Maybe#(Bit#(TLog#(nports)))) seed = replicate(tagged Invalid);
+   return fold(maxreq, append(seed, map(idxToMaybe, idxs)));
+endfunction
+
 module mkPriorityQueue(ReadyQueue#(nports,Bit#(tagtypesz),Bit#(priotypesz)))
    provisos (Add#(1,s,nports));
     Reg#(Vector#(nports, Bit#(priotypesz))) priorities <- mkReg(replicate(0));
