@@ -1444,60 +1444,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 endmodule: mkControlAndStatusRegs
 
 // The PCIe-to-AXI bridge puts all of the elements together
-(* synthesize *)
-module mkPcieToAxiBridge_4#( Bit#(64)  board_content_id
-			   , PciId     my_id
-			   , UInt#(13) max_read_req_bytes
-			   , UInt#(13) max_payload_bytes
-			   , Bit#(7)   rcb_mask
-			   , Bool      msix_enabled
-			   , Bool      msix_mask_all_intr
-			   , Bool      msi_enabled
-			   )
-			   (PcieToAxiBridge#(4));
-
-   let pbb <- mkPcieToAxiBridge(board_content_id, my_id, max_read_req_bytes, 
-					max_payload_bytes, rcb_mask, msix_enabled, 
-					msix_mask_all_intr, msi_enabled);
-   return pbb;
-endmodule
-
-//(* synthesize *)
-module mkPcieToAxiBridge_8#( Bit#(64)  board_content_id
-			   , PciId     my_id
-			   , UInt#(13) max_read_req_bytes
-			   , UInt#(13) max_payload_bytes
-			   , Bit#(7)   rcb_mask
-			   , Bool      msix_enabled
-			   , Bool      msix_mask_all_intr
-			   , Bool      msi_enabled
-			   )
-			   (PcieToAxiBridge#(8));
-
-   let pbb <- mkPcieToAxiBridge(board_content_id, my_id, max_read_req_bytes, 
-					max_payload_bytes, rcb_mask, msix_enabled, 
-					msix_mask_all_intr, msi_enabled);
-   return pbb;
-endmodule
-
-//(* synthesize *)
-module mkPcieToAxiBridge_16#( Bit#(64)  board_content_id
-			   , PciId     my_id
-			   , UInt#(13) max_read_req_bytes
-			   , UInt#(13) max_payload_bytes
-			   , Bit#(7)   rcb_mask
-			   , Bool      msix_enabled
-			   , Bool      msix_mask_all_intr
-			   , Bool      msi_enabled
-			   )
-			   (PcieToAxiBridge#(16));
-
-   let pbb <- mkPcieToAxiBridge(board_content_id, my_id, max_read_req_bytes, 
-					max_payload_bytes, rcb_mask, msix_enabled, 
-					msix_mask_all_intr, msi_enabled);
-   return pbb;
-endmodule
-
 module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 			 , PciId     my_id
 			 , UInt#(13) max_read_req_bytes
@@ -1652,6 +1598,7 @@ endinterface
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
+//, synthesize *)
 module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 		       , Clock sys_clk_p,    Clock sys_clk_n
 		       , Reset pci_sys_reset
@@ -1772,7 +1719,7 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    endrule: intr_ifc_ctl
 
    // Build the PCIe-to-AXI bridge
-   PcieToAxiBridge#(BPB)  bridge <- mkPcieToAxiBridge_4( contentId
+   PcieToAxiBridge#(BPB)  bridge <- mkPcieToAxiBridge( contentId
 						       , my_id
 						       , max_read_req_bytes
 						       , max_payload_bytes
