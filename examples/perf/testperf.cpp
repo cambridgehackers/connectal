@@ -38,7 +38,6 @@ unsigned int *dstBuffer = 0;
 int numWords = 16 << 15;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
-bool trigger_fired = false;
 bool finished = false;
 
 bool memcmp_fail = false;
@@ -57,8 +56,8 @@ void dump(const char *prefix, char *buf, size_t len)
 
 void exit_test()
 {
-  fprintf(stderr, "testperf finished count=%d memcmp_fail=%d, trigger_fired=%d\n", memcmp_count, memcmp_fail, trigger_fired);
-  exit(memcmp_fail || !trigger_fired);
+  fprintf(stderr, "testperf finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
+  exit(memcmp_failed);
 }
 
 class PerfIndication : public PerfIndicationWrapper
@@ -85,9 +84,7 @@ public:
       //dump("src", (char*)srcBuffer, 128);
       //dump("dst", (char*)dstBuffer, 128);
     }
-    if(trigger_fired){
       exit_test();
-    }
   }
   virtual void rData ( unsigned long long v ){
     dump("rData: ", (char*)&v, sizeof(v));
