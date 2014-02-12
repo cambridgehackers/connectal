@@ -104,7 +104,6 @@ module mkPerfRequest#(PerfIndication indication,
 	 mismatch = mismatch || (v[31+i*32:i*32] != (srcGen + fromInteger(i)));
       dataMismatch <= dataMismatch || mismatch;
       dma_stream_write_server.writeData.put(tagdata);
-      bs.dataIn(v,v);
       srcGen <= srcGen+fromInteger(busWidthWords);
       //$display("loopback %h", tagdata.data);
       // indication.rData(v);
