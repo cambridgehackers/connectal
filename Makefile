@@ -20,6 +20,7 @@ testnames = echo     \
             echo2    \
             memcpy   \
             memread  \
+            memread128 \
             memread2 \
 	    memwrite \
             mempoke  \
