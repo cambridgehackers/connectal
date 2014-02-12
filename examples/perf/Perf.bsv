@@ -27,13 +27,13 @@ import GetPutF::*;
 import PortalMemory::*;
 import Dma::*;
 
-interface MemcpyRequest;
+interface PerfRequest;
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords);
    method Action readWord();
    method Action getStateDbg();   
 endinterface
 
-interface MemcpyIndication;
+interface PerfIndication;
    method Action started(Bit#(32) numWords);
    method Action readWordResult(Bit#(32) v);
    method Action done(Bit#(32) dataMismatch);
@@ -44,11 +44,11 @@ interface MemcpyIndication;
    method Action reportStateDbg(Bit#(32) srcGen, Bit#(32) streamRdCnt, Bit#(32) streamWrCnt, Bit#(32) writeInProg, Bit#(32) dataMismatch);
 endinterface
 
-module mkMemcpyRequest#(MemcpyIndication indication,
+module mkPerfRequest#(PerfIndication indication,
 			DmaReadServer#(busWidth) dma_stream_read_server,
 			DmaWriteServer#(busWidth) dma_stream_write_server,
 			DmaReadServer#(busWidth) dma_word_read_server)
-   (MemcpyRequest)
+   (PerfRequest)
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Add#(a__,32,busWidth));
 
