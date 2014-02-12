@@ -489,8 +489,8 @@ interface B2C;
 endinterface
 import "BVI" GenB2C =
 module mkB2C#(Bit#(1) v)(B2C);
-    no_clock;
-    no_reset;
+    default_clock no_clock;
+    default_reset no_reset;
     output_clock c();
     port B = v;
 endmodule
