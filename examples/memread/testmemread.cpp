@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <monkit.h>
 #include "StdDmaIndication.h"
 
 #include "DmaConfigProxy.h"
@@ -111,6 +112,11 @@ int main(int argc, const char **argv)
   unsigned long long beats = dma->show_mem_stats(ChannelType_Read);
 
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
+
+  MonkitFile("perf.monkit")
+    .setCycles(cycles)
+    .setBeats(beats)
+    .writeFile();
 
   while(mismatchesReceived != mismatchCount){sleep(1);}
   exit(mismatchCount ? 1 : 0);
