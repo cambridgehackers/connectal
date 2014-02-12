@@ -26,19 +26,15 @@
 #include <pthread.h>
 #include "StdDmaIndication.h"
 
-#include "BlueScopeIndicationWrapper.h"
-#include "BlueScopeRequestProxy.h"
 #include "DmaConfigProxy.h"
 #include "GeneratedTypes.h"
-#include "MemcpyIndicationWrapper.h"
-#include "MemcpyRequestProxy.h"
+#include "PerfIndicationWrapper.h"
+#include "PerfRequestProxy.h"
 
 PortalAlloc *srcAlloc;
 PortalAlloc *dstAlloc;
-PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
-unsigned int *bsBuffer  = 0;
 int numWords = 16 << 15;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
@@ -61,16 +57,16 @@ void dump(const char *prefix, char *buf, size_t len)
 
 void exit_test()
 {
-  fprintf(stderr, "testmemcpy finished count=%d memcmp_fail=%d, trigger_fired=%d\n", memcmp_count, memcmp_fail, trigger_fired);
+  fprintf(stderr, "testperf finished count=%d memcmp_fail=%d, trigger_fired=%d\n", memcmp_count, memcmp_fail, trigger_fired);
   exit(memcmp_fail || !trigger_fired);
 }
 
-class MemcpyIndication : public MemcpyIndicationWrapper
+class PerfIndication : public PerfIndicationWrapper
 {
 
 public:
-  MemcpyIndication(const char* devname, unsigned int addrbits) : MemcpyIndicationWrapper(devname,addrbits){}
-  MemcpyIndication(unsigned int id) : MemcpyIndicationWrapper(id){}
+  PerfIndication(const char* devname, unsigned int addrbits) : PerfIndicationWrapper(devname,addrbits){}
+  PerfIndication(unsigned int id) : PerfIndicationWrapper(id){}
 
 
   virtual void started(unsigned long words){
@@ -84,7 +80,7 @@ public:
     unsigned int mcf = memcmp(srcBuffer, dstBuffer, test_sz);
     memcmp_fail |= mcf;
     if(true){
-      fprintf(stderr, "memcpy done: %lx\n", v);
+      fprintf(stderr, "perf done: %lx\n", v);
       fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
       //dump("src", (char*)srcBuffer, 128);
       //dump("dst", (char*)dstBuffer, 128);
@@ -109,31 +105,11 @@ public:
   virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
 			      unsigned long streamWrCnt, unsigned long writeInProg, 
 			      unsigned long dataMismatch){
-    fprintf(stderr, "Memcpy::reportStateDbg: srcGen=%ld, streamRdCnt=%ld, streamWrCnt=%ld, writeInProg=%ld, dataMismatch=%ld\n", 
+    fprintf(stderr, "Perf::reportStateDbg: srcGen=%ld, streamRdCnt=%ld, streamWrCnt=%ld, writeInProg=%ld, dataMismatch=%ld\n", 
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
   }  
 };
 
-class BlueScopeIndication : public BlueScopeIndicationWrapper
-{
-public:
-  BlueScopeIndication(const char* devname, unsigned int addrbits) : BlueScopeIndicationWrapper(devname,addrbits){}
-  BlueScopeIndication(unsigned int id) : BlueScopeIndicationWrapper(id){}
-
-  virtual void triggerFired( ){
-    fprintf(stderr, "BlueScope::triggerFired\n");
-    trigger_fired = true;
-    if(finished){
-      exit_test();
-    }
-  }
-  virtual void reportStateDbg(unsigned long long mask, unsigned long long value){
-    //fprintf(stderr, "BlueScope::reportStateDbg mask=%016llx, value=%016llx\n", mask, value);
-    fprintf(stderr, "BlueScope::reportStateDbg\n");
-    dump("    mask =", (char*)&mask, sizeof(mask));
-    dump("   value =", (char*)&value, sizeof(value));
-  }
-};
 
 // we can use the data synchronization barrier instead of flushing the 
 // cache only because the ps7 is configured to run in buffered-write mode
@@ -147,33 +123,27 @@ int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
 
-  MemcpyRequestProxy *device = 0;
-  BlueScopeRequestProxy *bluescope = 0;
+  PerfRequestProxy *device = 0;
   DmaConfigProxy *dma = 0;
   
-  MemcpyIndication *deviceIndication = 0;
-  BlueScopeIndication *bluescopeIndication = 0;
+  PerfIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
-  bluescope = new BlueScopeRequestProxy(IfcNames_BluescopeRequest);
+  device = new PerfRequestProxy(IfcNames_PerfRequest);
   dma = new DmaConfigProxy(IfcNames_DmaConfig);
 
-  deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
-  bluescopeIndication = new BlueScopeIndication(IfcNames_BluescopeIndication);
+  deviceIndication = new PerfIndication(IfcNames_PerfIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
   dma->alloc(alloc_sz, &srcAlloc);
   dma->alloc(alloc_sz, &dstAlloc);
-  dma->alloc(alloc_sz, &bsAlloc);
 
   srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc->header.fd, 0);
-  bsBuffer  = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsAlloc->header.fd, 0);
 
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
@@ -190,7 +160,6 @@ int main(int argc, const char **argv)
 
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   dma->dCacheFlushInval(dstAlloc, dstBuffer);
-  dma->dCacheFlushInval(bsAlloc,  bsBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
@@ -198,10 +167,6 @@ int main(int argc, const char **argv)
   unsigned int ref_bsAlloc  = dma->reference(bsAlloc);
   
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
-  bluescope->reset();
-  bluescope->setTriggerMask (0xFFFFFFFF);
-  bluescope->setTriggerValue(0x00000008);
-  bluescope->start(ref_bsAlloc);
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords);
   
   device->getStateDbg();
