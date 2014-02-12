@@ -56,7 +56,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 
    PerfIndicationProxy perfIndicationProxy <- mkPerfIndicationProxy(PerfIndication);
    PerfRequest perfRequest <- mkPerfRequest(perfIndicationProxy.ifc, dma_stream_read_chan.dmaServer,
-						  dma_stream_write_chan.dmaServer, dma_word_read_chan.dmaServer, bs);
+						  dma_stream_write_chan.dmaServer, dma_word_read_chan.dmaServer);
    PerfRequestWrapper perfRequestWrapper <- mkPerfRequestWrapper(PerfRequest,perfRequest);
 
    Vector#(4,StdPortal) portals;
