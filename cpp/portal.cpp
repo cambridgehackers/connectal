@@ -50,6 +50,7 @@ struct pollfd *portal_fds = 0;
 int numFds = 0;
 Directory dir;
 Directory *pdir;
+unsigned long long c_start[16];
 
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
@@ -58,6 +59,20 @@ Directory *pdir;
 #define ALOGD(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
+
+void start_timer(unsigned int i) 
+{
+  assert(i < 16);
+  c_start[i] = pdir->cycle_count();
+}
+
+unsigned long long stop_timer(unsigned int i)
+{
+  assert(i < 16);
+  unsigned long long rv = pdir->cycle_count() - c_start[i];
+  fprintf(stderr, "search time (hw cycles): %lld\n", rv);
+  return rv;
+}
 
 unsigned int read_portal(portal *p, unsigned int addr, char *name)
 {
