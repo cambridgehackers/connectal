@@ -26,7 +26,6 @@ import GetPutF::*;
 
 import PortalMemory::*;
 import Dma::*;
-import BlueScope::*;
 
 interface MemcpyRequest;
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords);
@@ -48,8 +47,8 @@ endinterface
 module mkMemcpyRequest#(MemcpyIndication indication,
 			DmaReadServer#(busWidth) dma_stream_read_server,
 			DmaWriteServer#(busWidth) dma_stream_write_server,
-			DmaReadServer#(busWidth) dma_word_read_server,
-			BlueScope#(busWidth) bs)(MemcpyRequest)
+			DmaReadServer#(busWidth) dma_word_read_server)
+   (MemcpyRequest)
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Add#(a__,32,busWidth));
 
@@ -64,7 +63,6 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(DmaOffsetSize)) streamWrOff <- mkReg(0);
    Reg#(DmaPointer)    streamRdPointer <- mkReg(0);
    Reg#(DmaPointer)    streamWrPointer <- mkReg(0);
-   Reg#(DmaPointer) bluescopeWrPointer <- mkReg(0);
    Reg#(Bool)               writeInProg <- mkReg(False);
    Reg#(Bool)              dataMismatch <- mkReg(False);  
    
