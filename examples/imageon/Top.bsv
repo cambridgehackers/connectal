@@ -38,6 +38,7 @@ import SensorToVideo::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 import YUV::*;
+import PS7LIB :: *;
 
     //interface ImageonVita vita;
         //interface ImageonTopPins toppins;
@@ -56,7 +57,7 @@ import YUV::*;
 typedef enum { ImageCaptureRequest, ImageonSerdesRequest, HdmiInternalRequest, ImageonSensorRequest,
     ImageCaptureIndication, ImageonSerdesIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth));
+module mkPortalTop#(FromPS7 fromPS7)(StdPortalTop#(addrWidth));
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -67,13 +68,9 @@ module mkPortalTop(StdPortalTop#(addrWidth));
 
    //ImageCaptureRequest captureRequestInternal <- mkImageCaptureRequest(captureIndicationProxy.ifc);
 
-   //ImageCaptureRequestWrapper captureRequestWrapper <- mkImageCaptureRequestWrapper(ImageCaptureRequest,captureRequestInternal.ifc);
-   ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequest,serdesRequestInternal.ifc);
-   HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiRequestInternal.ifc);
-   ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequest,captureRequestInternal.ifc);
 //////
-    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by processing_system7_1_fclk_clk3);
-    Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by fmc_imageon_video_clk1);
+    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by fromPS7.processing_system7_1_fclk_clk3);
+    Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by fromPS7.fmc_imageon_video_clk1);
     MMCMHACK mmcmhack <- mkMMCMHACK(clocked_by imageon_video_clk1_buf_wire);
     Clock hdmi_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout0);
     Clock imageon_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout1);
@@ -81,14 +78,19 @@ module mkPortalTop(StdPortalTop#(addrWidth));
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
 
-    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, indication.idIndication,
+    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
         clocked_by imageon_clock, reset_by imageon_reset);
     SPI#(Bit#(26)) spiController <- mkSPI(1000);
     SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
-        vsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
+        vsyncPulse, hdmiIndicationProxy.ifc, clocked_by hdmi_clock, reset_by hdmi_reset);
     ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
         hdmiGen.control, hdmi_clock, hdmi_reset, clocked_by imageon_clock, reset_by imageon_reset);
+
+    //ImageCaptureRequestWrapper captureRequestWrapper <- mkImageCaptureRequestWrapper(ImageCaptureRequest,captureRequestInternal.ifc);
+    ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequest,serdes.control);
+    HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiGen.control);
+    ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequest,fromSensor.control);
 
 //    rule xsviConnection;
 //        let xsvi <- fromSensor.get_data();
@@ -115,8 +117,9 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    
    Vector#(3,StdPortal) portals;
    portals[0] = captureIndicationProxy.portalIfc;
-   portals[1] = captureRequestWrapper.portalIfc; 
-   portals[2] = captureWrapper.portalIfc; 
+   portals[1] = serdesRequestWrapper.portalIfc; 
+   portals[2] = hdmiRequestWrapper.portalIfc; 
+   portals[3] = sensorRequestWrapper.portalIfc; 
    let interrupt_mux <- mkInterruptMux(portals);
    
    // instantiate system directory
@@ -130,6 +133,6 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    interface interrupt = interrupt_mux;
    interface ctrl = ctrl_mux;
    interface m_axi = null_axi_master;
-   interface leds = captureRequestInternal.leds;
+   //interface leds = captureRequestInternal.leds;
 
 endmodule : mkPortalTop
