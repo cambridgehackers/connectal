@@ -84,7 +84,6 @@ public:
       fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
       //dump("src", (char*)srcBuffer, 128);
       //dump("dst", (char*)dstBuffer, 128);
-      //dump("dbg", (char*)bsBuffer,  128);   
     }
     if(trigger_fired){
       exit_test();
@@ -155,7 +154,6 @@ int main(int argc, const char **argv)
   for (int i = 0; i < numWords; i++){
     srcBuffer[i] = srcGen++;
     dstBuffer[i] = 0x5a5abeef;
-    bsBuffer[i]  = 0x5a5abeef;
   }
 
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
