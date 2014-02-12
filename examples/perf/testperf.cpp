@@ -57,7 +57,7 @@ void dump(const char *prefix, char *buf, size_t len)
 void exit_test()
 {
   fprintf(stderr, "testperf finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
-  exit(memcmp_failed);
+  exit(memcmp_fail);
 }
 
 class PerfIndication : public PerfIndicationWrapper
