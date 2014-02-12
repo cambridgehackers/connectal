@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <monkit.h>
 #include "StdDmaIndication.h"
 
 #include "DmaConfigProxy.h"
@@ -11,11 +12,12 @@
 #include "MemreadIndicationWrapper.h"
 #include "MemreadRequestProxy.h"
 
-PortalAlloc *srcAlloc;
-unsigned int *srcBuffer = 0;
-int numWords = 16 << 15;
+sem_t test_sem;
+int numWords = 16 << 18;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
+int mismatchCount;
+int mismatchesReceived;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -30,13 +32,12 @@ class MemreadIndication : public MemreadIndicationWrapper
 public:
   unsigned int rDataCnt;
   virtual void readReq(unsigned long v){
-    //fprintf(stderr, "Memread::readReq %lx\n", v);
+    fprintf(stderr, "Memread::readReq %lx\n", v);
   }
   virtual void readDone(unsigned long v){
     fprintf(stderr, "Memread::readDone mismatch=%lx\n", v);
     mismatchCount = v;
-    if (mismatchesReceived == mismatchCount)
-      exit(v ? 1 : 0);
+    sem_post(&test_sem);
   }
   virtual void started(unsigned long words){
     fprintf(stderr, "Memread::started: words=%lx\n", words);
@@ -50,20 +51,16 @@ public:
   }  
   virtual void mismatch(unsigned long offset, unsigned long long ev, unsigned long long v) {
     fprintf(stderr, "Mismatch at %lx %llx != %llx\n", offset, ev, v);
-
     mismatchesReceived++;
-    if (mismatchesReceived == mismatchCount)
-      exit(1);
   }
-
-  MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits), mismatchCount(0), mismatchesReceived(0){}
-private:
-  int mismatchCount;
-  int mismatchesReceived;
+  MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits){}
 };
 
 int main(int argc, const char **argv)
 {
+  PortalAlloc *srcAlloc;
+  unsigned int *srcBuffer = 0;
+
   unsigned int srcGen = 0;
 
   MemreadRequestProxy *device = 0;
@@ -71,6 +68,11 @@ int main(int argc, const char **argv)
   
   MemreadIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
+
+  if(sem_init(&test_sem, 1, 0)){
+    fprintf(stderr, "failed to init test_sem\n");
+    return -1;
+  }
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
@@ -101,19 +103,21 @@ int main(int argc, const char **argv)
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
 
-  // dma->readSglist(0, 0);
-  // sleep(1);
-  // dma->readSglist(0, 0x1000);
-  // sleep(1);
-  // for (int i = 0; i < 12; i++) {
-  //   dma->readSglist(ref_srcAlloc, i*0x1000);
-  //   sleep(1);
-  // }
-
   fprintf(stderr, "Main::starting read %08x\n", numWords);
+  dma->show_mem_stats(ChannelType_Read);
+  start_timer(0);
   device->startRead(ref_srcAlloc, numWords, 16);
+  sem_wait(&test_sem);
+  unsigned long long cycles = stop_timer(0);
+  unsigned long long beats = dma->show_mem_stats(ChannelType_Read);
 
-  device->getStateDbg();
-  fprintf(stderr, "Main::sleeping\n");
-  while(true){sleep(1);}
+  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
+
+  MonkitFile("perf.monkit")
+    .setCycles(cycles)
+    .setBeats(beats)
+    .writeFile();
+
+  while(mismatchesReceived != mismatchCount){sleep(1);}
+  exit(mismatchCount ? 1 : 0);
 }

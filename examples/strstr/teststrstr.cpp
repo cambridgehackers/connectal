@@ -76,19 +76,6 @@ sem_t test_sem;
 sem_t setup_sem;
 unsigned int sw_match_cnt = 0;
 unsigned int hw_match_cnt = 0;
-extern Directory *pdir;
-static unsigned long long c_start;
-
-
-static void start_timer() 
-{
-  c_start = pdir->cycle_count();
-}
-
-static void stop_timer()
-{
-  fprintf(stderr, "search time (hw cycles): %lld\n", pdir->cycle_count() - c_start);
-}
 
 class StrstrIndication : public StrstrIndicationWrapper
 {
@@ -226,20 +213,20 @@ int main(int argc, const char **argv)
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
-    start_timer();
+    start_timer(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len);
-    stop_timer();
+    stop_timer(0);
     
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);
-    start_timer();
     dma->show_mem_stats(ChannelType_Read);
+    start_timer(0);
     device->search(ref_haystackAlloc, haystack_len);
     sem_wait(&test_sem);
-    stop_timer();
+    stop_timer(0);
     dma->show_mem_stats(ChannelType_Read);
 
     close(needleAlloc->header.fd);
@@ -290,21 +277,22 @@ int main(int argc, const char **argv)
       assert(mpNext[i] == border[i-1]+1);
 
 
-    start_timer();
+    start_timer(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len);
-    stop_timer();
+    stop_timer(0);
 
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);
-    start_timer();
     dma->show_mem_stats(ChannelType_Read);
+    start_timer(0);
     device->search(ref_haystackAlloc, haystack_len);
     sem_wait(&test_sem);
-    stop_timer();
-    dma->show_mem_stats(ChannelType_Read);
+    unsigned long long cycles = stop_timer(0);
+    unsigned long long beats = dma->show_mem_stats(ChannelType_Read);
+    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
     close(needleAlloc->header.fd);
     close(haystackAlloc->header.fd);

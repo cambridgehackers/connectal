@@ -187,6 +187,8 @@ implementation: hw/%(Dut)s.bit
 
 program:
 	vivado -mode batch -source %(dut)s-program.tcl
+	# pciescanportal should be installed in /usr/local/bin from xbsv/util
+	pciescanportal
 
 reprogram:
 	vivado -mode batch -source %(dut)s-reprogram.tcl

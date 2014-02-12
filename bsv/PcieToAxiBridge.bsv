@@ -1,3 +1,12 @@
+
+// Copyright (c) 2008- 2009 Bluespec, Inc.  All rights reserved.
+// $Revision$
+// $Date$
+// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+
+// PCI-Express for Xilinx 7
+// FPGAs.
+
 package PcieToAxiBridge;
 
 // This is a package which acts as a bridge between a TLP-based PCIe
@@ -23,6 +32,17 @@ import ByteBuffer    :: *;
 import ByteCompactor :: *;
 
 import AxiMasterSlave:: *;
+
+import TieOff               :: *;
+import DefaultValue         :: *;
+import BUtils               :: *;
+import Xilinx               :: *;
+import XilinxCells          :: *;
+import ClientServer         :: *;
+import Memory               :: *;
+import XbsvXilinx7Pcie      :: *;
+//import XbsvXilinx7DDR3      :: *;
+import Portal               :: *;
 
 typedef struct {
     Bit#(32) timestamp;
@@ -53,7 +73,6 @@ interface PcieToAxiBridge#(numeric type bpb);
    method Action interrupt();
 
    interface Put#(TimestampedTlpData) trace;
-   interface Reg#(Bit#(4)) numPortals;
 
 endinterface: PcieToAxiBridge
 
@@ -78,7 +97,6 @@ interface TLPDispatcher;
    (* always_ready *)
    method Bool completion_tlp();
 
-   //jca interface Reg#(Bool) axiEnabled;
 
 endinterface: TLPDispatcher
 
@@ -94,7 +112,6 @@ module mkTLPDispatcher(TLPDispatcher);
    Reg#(Bool) route_to_portal <- mkReg(False);
    Reg#(Bool) route_to_axi <- mkReg(False);
 
-   //jca Reg#(Bool) axiEnabledReg <- mkReg(False);
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
@@ -208,7 +225,6 @@ module mkTLPDispatcher(TLPDispatcher);
    method Bool read_tlp       = is_read;
    method Bool write_tlp      = is_write;
    method Bool completion_tlp = is_completion;
-   //jca interface Reg axiEnabled = axiEnabledReg;
 endmodule: mkTLPDispatcher
 
 // Multiple sources of TLP packets must all share the PCIe bus. There
@@ -340,7 +356,6 @@ interface PortalEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
     interface Axi3Master#(32,32,12) portal;
-    interface Reg#(Bool)           byteSwap;
     interface Reg#(Bool)           interruptRequested;
     interface Reg#(Bit#(64))       interruptAddr;
     interface Reg#(Bit#(32))       interruptData;
@@ -349,7 +364,6 @@ endinterface
 
 (* synthesize *)
 module mkPortalEngine#(PciId my_id)(PortalEngine);
-    Reg#(Bool) byteSwapReg <- mkReg(True);
     Reg#(Bool) interruptRequestedReg <- mkReg(False);
     Reg#(Bool) interruptSecondHalf <- mkReg(False);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
@@ -468,8 +482,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	  method ActionValue#(Axi3WriteData#(32,12)) get();
 	     writeDataFifo.deq;
 	     let data = writeDataFifo.first.data;
-	     if (byteSwapReg)
-		data = byteSwap(data);
+	     data = byteSwap(data);
 	     return Axi3WriteData { data: data, id: extend(writeDataFifo.first.tag), byteEnable: writeDataFifo.first.firstbe, last: 1 };
 	  endmethod
        endinterface: resp_write
@@ -505,10 +518,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		completion.bytecount = 4;
 		completion.reqid = hdr.reqid;
 		completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
-		if (byteSwapReg)
-		    completion.data = byteSwap(resp.data);
-		else
-		    completion.data = resp.data;
+		completion.data = byteSwap(resp.data);
 	        TLPData#(16) tlp = defaultValue;
 		tlp.data = pack(completion);
 		tlp.sof = True;
@@ -519,7 +529,6 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    endmethod
 	endinterface: resp_read
     endinterface: portal
-    interface Reg byteSwap           = byteSwapReg;
     interface Reg interruptRequested = interruptRequestedReg;
     interface Reg interruptAddr      = interruptAddrReg;
     interface Reg interruptData      = interruptDataReg;
@@ -960,10 +969,7 @@ interface ControlAndStatusRegs;
    interface ReadOnly#(Bit#(32)) interruptData;
 
    interface Reg#(Bool) tlpTracing;
-   //jca interface Reg#(Bool) axiEnabled;
-   interface Reg#(Bool) byteSwap;
    interface Reg#(Bool) use4dw;
-   interface Reg#(Bit#(4)) numPortals;
    interface Reg#(Bit#(32)) tlpDataBramWrAddr;
    interface Reg#(Bit#(32)) tlpSeqno;
    interface Reg#(Bit#(32)) tlpOutCount;
@@ -1007,15 +1013,10 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Integer minor_rev = 0;
 
    // Registers and their default values
-   //jca Reg#(Bool)            is_board_number_assigned <- mkReg(False);
-   //jca Reg#(UInt#(4))        board_number             <- mkReg(15);
    Vector#(4,MSIX_Entry) msix_entry               <- replicateM(mkMSIXEntry);
 
    Reg#(Bool) tlpTracingReg <- mkReg(False);
-   //jca Reg#(Bool) axiEnabledReg <- mkReg(False);
-   Reg#(Bool) byteSwapReg <- mkReg(False);
    Reg#(Bool) use4dwReg <- mkReg(True);
-   Reg#(Bit#(4)) numPortalsReg <- mkReg(1);
    Reg#(Bit#(32)) tlpSeqnoReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
@@ -1045,21 +1046,10 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          3: return fromInteger(major_rev);
          4: return pack(buildVersion);
          5: return pack(epochTime);
-         //jca 6: return {23'd0,pack(is_board_number_assigned),4'd0,pack(board_number)};
          7: return {24'd0,fromInteger(bytes_per_beat)};
          8: return board_content_id[31:0];
          9: return board_content_id[63:32];
-         //jca 64: return 0;
-         //jca 512: return 0;
-         //jca 513: return 0;
-         //jca 514: return 0;
-         //jca 515: return 0;
 	 768: return 0;
-	 //jca 769: return 0;
-	 //jca 770: return 0;
-	 //jca 771: return 0;
-	 //jca 772: return 0;
-	 //jca 773: return 0;
 	 774: return tlpSeqnoReg;
 	 775: return (tlpTracingReg ? 1 : 0);
 	 776: return tlpDataBramResponseSlice(0);
@@ -1071,19 +1061,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 782: return zeroExtend(rcb_mask);
 	 783: return zeroExtend(pack(max_read_req_bytes));
 	 784: return zeroExtend(pack(max_payload_bytes));
-	 //jca 785: return 0;
-	 //jca 786: return 0;
-	 //jca 787: return 0;
-	 //jca 788: return axiEnabledReg ? 1 : 0;
-	 //jca 789: return tlpDataBramRdAddrReg;
-	 //jca 790: return msix_enabled ? 1 : 0;
-	 //jca 791: return msix_mask_all_intr ? 1 : 0;
 	 792: return tlpDataBramWrAddrReg;
-	 //jca 793: return msi_enabled ? 1 : 0;
-	 794: return byteSwapReg ? 1 : 0;
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
-	 796: return extend(numPortalsReg);
-	 //jca 797: return extend(portalEngine.bTag);
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
          // 4-entry MSIx table
@@ -1125,11 +1104,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action wr_csr(UInt#(30) addr, Bit#(4) be, Bit#(32) dword);
       action
          case (addr % 8192)
-            //jca // board identification
-            //jca 6:  begin
-                   //jca if (be[0] == 1) board_number             <= unpack(dword[3:0]);
-                   //jca if (be[1] == 1) is_board_number_assigned <= unpack(dword[8]);
-                //jca end
 	    774: tlpSeqnoReg <= dword;
 	    775: tlpTracingReg <= (dword != 0) ? True : False;
 	    776: tlpDataScratchpad[0] <= dword;
@@ -1139,11 +1113,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    780: tlpDataScratchpad[4] <= dword;
 	    781: tlpDataScratchpad[5] <= dword;
 
-	    //jca 788: axiEnabledReg <= (dword != 0) ? True : False;
-	    //jca 789: tlpDataBramRdAddrReg <= dword;
 	    792: tlpDataBramWrAddrReg <= dword;
-	    794: byteSwapReg <= (dword != 0) ? True : False;
-	    796: numPortalsReg <= truncate(dword);
 
             //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
             // MSIx table entries
@@ -1466,10 +1436,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface ReadOnly interruptData = regToReadOnly(msix_entry[0].msg_data);
 
    interface Reg tlpTracing = tlpTracingReg;
-   //jca interface Reg axiEnabled = axiEnabledReg;
-   interface Reg byteSwap = byteSwapReg;
    interface Reg use4dw = use4dwReg;
-   interface Reg numPortals = numPortalsReg;
    interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
    interface Reg tlpSeqno = tlpSeqnoReg;
    interface Reg tlpOutCount = tlpOutCountReg;
@@ -1477,60 +1444,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 endmodule: mkControlAndStatusRegs
 
 // The PCIe-to-AXI bridge puts all of the elements together
-(* synthesize *)
-module mkPcieToAxiBridge_4#( Bit#(64)  board_content_id
-			   , PciId     my_id
-			   , UInt#(13) max_read_req_bytes
-			   , UInt#(13) max_payload_bytes
-			   , Bit#(7)   rcb_mask
-			   , Bool      msix_enabled
-			   , Bool      msix_mask_all_intr
-			   , Bool      msi_enabled
-			   )
-			   (PcieToAxiBridge#(4));
-
-   let pbb <- mkPcieToAxiBridge(board_content_id, my_id, max_read_req_bytes, 
-					max_payload_bytes, rcb_mask, msix_enabled, 
-					msix_mask_all_intr, msi_enabled);
-   return pbb;
-endmodule
-
-//(* synthesize *)
-module mkPcieToAxiBridge_8#( Bit#(64)  board_content_id
-			   , PciId     my_id
-			   , UInt#(13) max_read_req_bytes
-			   , UInt#(13) max_payload_bytes
-			   , Bit#(7)   rcb_mask
-			   , Bool      msix_enabled
-			   , Bool      msix_mask_all_intr
-			   , Bool      msi_enabled
-			   )
-			   (PcieToAxiBridge#(8));
-
-   let pbb <- mkPcieToAxiBridge(board_content_id, my_id, max_read_req_bytes, 
-					max_payload_bytes, rcb_mask, msix_enabled, 
-					msix_mask_all_intr, msi_enabled);
-   return pbb;
-endmodule
-
-//(* synthesize *)
-module mkPcieToAxiBridge_16#( Bit#(64)  board_content_id
-			   , PciId     my_id
-			   , UInt#(13) max_read_req_bytes
-			   , UInt#(13) max_payload_bytes
-			   , Bit#(7)   rcb_mask
-			   , Bool      msix_enabled
-			   , Bool      msix_mask_all_intr
-			   , Bool      msi_enabled
-			   )
-			   (PcieToAxiBridge#(16));
-
-   let pbb <- mkPcieToAxiBridge(board_content_id, my_id, max_read_req_bytes, 
-					max_payload_bytes, rcb_mask, msix_enabled, 
-					msix_mask_all_intr, msi_enabled);
-   return pbb;
-endmodule
-
 module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 			 , PciId     my_id
 			 , UInt#(13) max_read_req_bytes
@@ -1576,10 +1489,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    endrule
    rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 2047);
        csr.tlpTracing <= False;
-   endrule
-   rule connectEnables;
-      //jca dispatcher.axiEnabled <= csr.axiEnabled;
-      portalEngine.byteSwap <= csr.byteSwap;
    endrule
 
    // connect the sub-components to each other
@@ -1640,7 +1549,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 
    interface Axi3Slave portal0 = portalEngine.portal;
    interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
-   interface Reg numPortals = csr.numPortals;
 
    interface Reset portalReset = portalResetIfc.new_rst;
 
@@ -1663,5 +1571,197 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 
 endmodule: mkPcieToAxiBridge
 
-endpackage: PcieToAxiBridge
+// from SceMiDefines
+typedef 4 BPB;
 
+// Interface wrapper for PCIE
+interface X7PcieBridgeIfc#(numeric type lanes);
+   interface PCIE_EXP#(lanes) pcie;
+   (* always_ready *)
+   method Bool isLinkUp();
+   method Bool isCalibrated();
+   (* always_ready *)
+   method Action interrupt();
+   interface Clock clock250;
+   interface Reset reset250;
+   interface Clock clock125;
+   interface Reset reset125;
+   (* prefix = "" *)
+   //interface DDR3_Pins_X7      ddr3;
+   interface Axi3Master#(32,32,12) portal0;
+   interface GetPut#(TLPData#(16)) slave; // to the axi slave engine
+   interface Put#(TimestampedTlpData) trace;
+   interface Reset portalReset;
+   interface ReadOnly#(PciId) pciId;
+endinterface
+
+// This module builds the transactor hierarchy, the clock
+// generation logic and the PCIE-to-port logic.
+(* no_default_clock, no_default_reset *)
+//, synthesize *)
+module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
+		       , Clock sys_clk_p,    Clock sys_clk_n
+		       , Reset pci_sys_reset
+                       , Bit#(64) contentId
+		       )
+		       (X7PcieBridgeIfc#(lanes))
+   provisos(Add#(1,_,lanes), XbsvXilinx7Pcie::SelectXilinx7PCIE#(lanes));
+
+   if (valueOf(lanes) != 8)
+      errorM("Only 8-lane PCIe is supported on X7.");
+
+   Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
+
+   ClockGenerator7Params clk_params = defaultValue();
+   clk_params.clkin1_period     = 5.000;       // 200 MHz reference
+   clk_params.clkin_buffer      = False;       // necessary buffer is instanced above
+   clk_params.reset_stages      = 0;           // no sync on reset so input clock has pll as only load
+   clk_params.clkfbout_mult_f   = 5.000;       // 1000 MHz VCO
+   clk_params.clkout0_divide_f  = 10;          // unused clock 
+   clk_params.clkout1_divide    = 5;           // ddr3 reference clock (200 MHz)
+
+   ClockGenerator7 clk_gen <- mkClockGenerator7(clk_params, clocked_by sys_clk_200mhz, reset_by pci_sys_reset);
+
+   Clock clk = clk_gen.clkout0;
+   Reset rst_n <- mkAsyncReset( 1, pci_sys_reset, clk );
+   Reset ddr3ref_rst_n <- mkAsyncReset( 1, rst_n, clk_gen.clkout1 );
+   
+   //DDR3_Configure_X7 ddr3_cfg;
+   //ddr3_cfg.num_reads_in_flight = 2;   // adjust as needed
+   //ddr3_cfg.fast_train_sim_only = False; // adjust if simulating
+   
+   //DDR3_Controller_X7 ddr3_ctrl <- mkXilinx7DDR3Controller(ddr3_cfg, clocked_by clk_gen.clkout1, reset_by ddr3ref_rst_n);
+
+   // ddr3_ctrl.user needs to connect to user logic and should use ddr3clk and ddr3rstn
+   //Clock ddr3clk = ddr3_ctrl.user.clock;
+   //Reset ddr3rstn = ddr3_ctrl.user.reset_n;
+   
+   // Buffer clocks and reset before they are used
+   Clock pci_clk_100mhz_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
+
+   // Instantiate the PCIE endpoint
+   XbsvXilinx7Pcie::PCIExpressX7#(lanes) _ep
+       <- XbsvXilinx7Pcie::mkPCIExpressEndpointX7( defaultValue
+						  , clocked_by pci_clk_100mhz_buf
+						  , reset_by pci_sys_reset
+						  );
+   mkTieOff(_ep.cfg);
+   mkTieOff(_ep.cfg_interrupt);
+   mkTieOff(_ep.cfg_err);
+   mkTieOff(_ep.pl);
+
+   // note our PCI ID
+   PciId my_id = PciId { bus:  _ep.cfg.bus_number()
+		       , dev:  _ep.cfg.device_number()
+		       , func: _ep.cfg.function_number()
+		       };
+
+   // The PCIE endpoint is processing TLPWord#(8)s at 250MHz.  The
+   // AXI bridge is accepting TLPWord#(16)s at 125 MHz. The
+   // connection between the endpoint and the AXI contains GearBox
+   // instances for the TLPWord#(8)@250 <--> TLPWord#(16)@125
+   // conversion.
+
+   // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
+   Clock epClock250 = _ep.trn.clk;
+   Reset epReset250 <- mkAsyncReset(4, _ep.trn.reset_n, epClock250);
+   Clock epClock125 = _ep.trn.clk2;
+   Reset epReset125 <- mkAsyncReset(4, _ep.trn.reset_n, epClock125);
+
+   // Extract some status info from the PCIE endpoint. These values are
+   // all in the epClock250 domain, so we have to cross them into the
+   // epClock125 domain.
+
+   Bool link_is_up = _ep.trn.link_up();
+   UInt#(13) max_read_req_bytes_250       = 128 << _ep.cfg.dcommand[14:12];
+   UInt#(13) max_payload_bytes_250        = 128 << _ep.cfg.dcommand[7:5];
+   UInt#(8)  read_completion_boundary_250 = 64 << _ep.cfg.lcommand[3];
+   Bool      msix_enable_250              = (_ep.cfg_interrupt.msixenable() == 1);
+   Bool      msix_masked_250              = (_ep.cfg_interrupt.msixfm()     == 1);
+
+   CrossingReg#(UInt#(13)) max_rd_req_cr  <- mkNullCrossingReg(epClock125, 128,   clocked_by epClock250, reset_by epReset250);
+   CrossingReg#(UInt#(13)) max_payload_cr <- mkNullCrossingReg(epClock125, 128,   clocked_by epClock250, reset_by epReset250);
+   CrossingReg#(UInt#(8))  rcb_cr         <- mkNullCrossingReg(epClock125, 128,   clocked_by epClock250, reset_by epReset250);
+   CrossingReg#(Bool)      msix_enable_cr <- mkNullCrossingReg(epClock125, False, clocked_by epClock250, reset_by epReset250);
+   CrossingReg#(Bool)      msix_masked_cr <- mkNullCrossingReg(epClock125, True,  clocked_by epClock250, reset_by epReset250);
+
+   Reg#(UInt#(13)) max_read_req_bytes <- mkReg(128,   clocked_by epClock125, reset_by epReset125);
+   Reg#(UInt#(13)) max_payload_bytes  <- mkReg(128,   clocked_by epClock125, reset_by epReset125);
+   Reg#(Bit#(7))   rcb_mask           <- mkReg(7'h3f, clocked_by epClock125, reset_by epReset125);
+   Reg#(Bool)      msix_enable        <- mkReg(False, clocked_by epClock125, reset_by epReset125);
+   Reg#(Bool)      msix_masked        <- mkReg(True,  clocked_by epClock125, reset_by epReset125);
+
+   (* fire_when_enabled, no_implicit_conditions *)
+   rule cross_config_values;
+      max_rd_req_cr  <= max_read_req_bytes_250;
+      max_payload_cr <= max_payload_bytes_250;
+      rcb_cr         <= read_completion_boundary_250;
+      msix_enable_cr <= msix_enable_250;
+      msix_masked_cr <= msix_masked_250;
+   endrule
+
+   (* fire_when_enabled, no_implicit_conditions *)
+   rule register_config_values;
+      max_read_req_bytes <= max_rd_req_cr.crossed();
+      max_payload_bytes  <= max_payload_cr.crossed();
+      rcb_mask           <= (rcb_cr.crossed() == 64) ? 7'h3f : 7'h7f;
+      msix_enable        <= msix_enable_cr.crossed();
+      msix_masked        <= msix_masked_cr.crossed();
+   endrule
+
+   // setup PCIe interrupt for MSI-X
+   // this rule executes in the epClock250 domain
+   (* fire_when_enabled, no_implicit_conditions *)
+   rule intr_ifc_ctl;
+      _ep.cfg_interrupt.di('0);      // tied off for MSI-X
+      _ep.cfg_interrupt.assrt('0);  // tied off for MSI-X
+      _ep.cfg_interrupt.req(0);      // tied off for MSI-X
+   endrule: intr_ifc_ctl
+
+   // Build the PCIe-to-AXI bridge
+   PcieToAxiBridge#(BPB)  bridge <- mkPcieToAxiBridge( contentId
+						       , my_id
+						       , max_read_req_bytes
+						       , max_payload_bytes
+						       , rcb_mask
+						       , msix_enable
+						       , msix_masked
+						       , False // no MSI, only MSI-X
+						       , clocked_by epClock125, reset_by epReset125
+						       );
+   mkConnectionWithClocks(_ep.trn_rx, tpl_2(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
+   mkConnectionWithClocks(_ep.trn_tx, tpl_1(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
+
+   //SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, clk, rst_n, ddr3clk);
+   //SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, clk);
+
+   //let memclient = interface Client;
+   //		      interface request  = toGet(fMemReq);
+   //		      interface response = toPut(fMemResp);
+   //		   endinterface;
+			 
+   //mkConnection( memclient, ddr3_ctrl.user, clocked_by ddr3clk, reset_by ddr3rstn );
+
+   interface pcie     = _ep.pcie;
+   //interface ddr3     = ddr3_ctrl.ddr3;
+   interface portal0  = bridge.portal0;
+   interface slave    = bridge.slave;
+   interface trace    = bridge.trace;
+   interface portalReset = bridge.portalReset;
+   interface ReadOnly pciId;
+      method PciId _read();
+         return my_id;
+      endmethod
+   endinterface
+   interface clock250 = epClock250;
+   interface reset250 = epReset250;
+   interface clock125 = epClock125;
+   interface reset125 = epReset125;
+
+   method Bool isLinkUp        = link_is_up;
+//   method Bool isCalibrated  = ddr3_ctrl.user.init_done;
+   method Action interrupt     = bridge.interrupt;
+   
+endmodule: mkX7PcieBridge
+
+endpackage: PcieToAxiBridge

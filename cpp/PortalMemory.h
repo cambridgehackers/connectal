@@ -11,6 +11,7 @@ class PortalMemory : public PortalProxy
   bool callBacksRegistered;
   sem_t sglistSem;
   sem_t mtSem;
+  unsigned long long mtCnt;
 #ifndef MMAP_HW
   portal p_fd;
 #endif
@@ -24,7 +25,7 @@ class PortalMemory : public PortalProxy
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
   int alloc(size_t size, PortalAlloc **portalAlloc);
   int reference(PortalAlloc* pa);
-  void show_mem_stats(ChannelType rc);
+  unsigned long long show_mem_stats(ChannelType rc);
   void configResp(unsigned long channelId);
   void reportMemoryTraffic(unsigned long long words);
   void useSemaphore() { callBacksRegistered = true; }

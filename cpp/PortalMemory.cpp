@@ -93,8 +93,9 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 
 }
 
-void PortalMemory::show_mem_stats(ChannelType rc)
+unsigned long long PortalMemory::show_mem_stats(ChannelType rc)
 {
+  mtCnt = 0;
   getMemoryTraffic(rc);
   if (callBacksRegistered) {
     sem_wait(&mtSem);
@@ -102,6 +103,7 @@ void PortalMemory::show_mem_stats(ChannelType rc)
     fprintf(stderr, "ugly hack\n");
     sleep(1);
   }
+  return mtCnt;
 }
 
 int PortalMemory::reference(PortalAlloc* pa)
@@ -141,6 +143,7 @@ int PortalMemory::reference(PortalAlloc* pa)
 
 void PortalMemory::reportMemoryTraffic(unsigned long long words)
 {
+  mtCnt = words;
   sem_post(&mtSem);
 }
 

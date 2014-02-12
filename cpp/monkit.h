@@ -1,3 +1,4 @@
+
 // Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -20,30 +21,48 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Vector            :: *;
-import Connectable       :: *;
-import Xilinx            :: *;
-import Portal            :: *;
-import Leds              :: *;
-import Top               :: *;
-import PcieTop           :: *;
+#ifndef _MONKIT_H_
+#define _MONKIT_H_
 
-(* synthesize *)
-module mkSynthesizeablePortalTop(PortalTop#(40, 64, Empty));
-   let top <- mkPortalTop();
-   interface ctrl = top.ctrl;
-   interface m_axi = top.m_axi;
-   interface interrupt = top.interrupt;
-   interface leds = top.leds;
-   interface pins = top.pins;
-endmodule
+class MonkitFile {
+ public:
+ 
+ MonkitFile(const char *name) : name(name) {}
+  ~MonkitFile() {}
+  
+  MonkitFile &setCycles(float cycles) { this->cycles = cycles; return *this; }
+  MonkitFile &setBeats(float beats) { this->beats = beats; return *this; }
+  void writeFile();
+  
+ private:
+  const char *name;
+  float cycles;
+  float beats;
+};
 
-module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
-   Clock sys_clk_p,     Clock sys_clk_n,
-   Reset pci_sys_reset_n)
-   (VC707_FPGA);
+const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+<categories>\n\
+    <category name=\"time\" scale=\"cycles\">\n\
+        <observations>\n\
+            <observation name=\"cycles\">%f</observation>\n\
+            <observation name=\"beats\">%f</observation>\n\
+        </observations>\n\
+    </category>\n\
+    \n\
+    <category name=\"utilization\" scale=\"%%\">\n\
+        <observations>\n\
+            <observation name=\"memory\">%f</observation>\n\
+        </observations>\n\
+    </category>\n\
+</categories>\n";
 
-   let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
-				  mkSynthesizeablePortalTop);
-   return top.fpga;
-endmodule: mkPcieTop
+void MonkitFile::writeFile()
+{
+  float utilization = 100.0 * beats / cycles;
+
+  FILE *out = fopen(name, "w");
+  fprintf(out, monkit, cycles, beats, utilization);
+  fclose(out);
+}
+
+#endif
