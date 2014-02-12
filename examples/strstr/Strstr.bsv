@@ -32,11 +32,13 @@ import Dma::*;
 import DmaUtils::*;
 
 interface StrstrRequest;
-   method Action search(Bit#(32) needlePointer, Bit#(32) haystackPointer, Bit#(32) mpNextPointer, Bit#(32) needle_len, Bit#(32) haystack_len);
+   method Action setup(Bit#(32) needlePointer, Bit#(32) mpNextPointer, Bit#(32) needle_len);
+   method Action search(Bit#(32) haystackPointer, Bit#(32) haystack_len);
 endinterface
 
 interface StrstrIndication;
    method Action searchResult(Int#(32) v);
+   method Action setupComplete();
 endinterface
 
 typedef Bit#(8) Char;
@@ -46,7 +48,7 @@ typedef Bit#(32) Word;
 typedef 1024 MaxNeedleLen;
 typedef Bit#(TLog#(MaxNeedleLen)) NeedleIdx;
 
-typedef enum {Idle, Init, Run} Stage deriving (Eq, Bits);
+typedef enum {Idle, Init, Ready, Run} Stage deriving (Eq, Bits);
 
 module mkStrstrRequest#(StrstrIndication indication,
 			DmaReadServer#(busWidth)   haystack_read_server,
@@ -85,9 +87,10 @@ module mkStrstrRequest#(StrstrIndication indication,
    rule start (stage == Init);
       let x <- n2b.finished;
       let y <- mp2b.finished;
-      stage <= Run;
+      stage <= Ready;
       iReg <= 1;
       jReg <= 1;
+      indication.setupComplete;
    endrule
 
    (* descending_urgency = "mp2b_load, n2b_load, matchNeedleResp, matchNeedleReq" *)
@@ -158,18 +161,21 @@ module mkStrstrRequest#(StrstrIndication indication,
       end
    endrule
    
-   method Action search(Bit#(32) needle_pointer, Bit#(32) haystack_pointer, Bit#(32) mpNext_pointer, 
-			Bit#(32) needle_len, Bit#(32) haystack_len) if (stage == Idle);
-
-      $display("search %h %h", needle_len, haystack_len);
+   method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len) if (stage == Idle);
+      $display("setup %h", needle_len);
       needleLenReg <= needle_len;
-      haystackLenReg <= haystack_len;
       n2b.start(needle_pointer, pack(truncate(needle_len)));
       mp2b.start(mpNext_pointer, pack(truncate(needle_len)));
-      haystackPointer <= haystack_pointer;
       stage <= Init;
-      haystackOff <= 0;
       jReg <= 0;
       iReg <= 0;
+   endmethod
+
+   method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len) if (stage == Ready);
+      $display("search %h", haystack_len);
+      haystackLenReg <= haystack_len;
+      haystackPointer <= haystack_pointer;
+      haystackOff <= 0;
+      stage <= Run;
    endmethod
 endmodule

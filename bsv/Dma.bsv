@@ -70,13 +70,11 @@ interface DmaWriteServer#(numeric type dsz);
    interface GetF#(Bit#(6))           writeDone;
 endinterface
 
-interface DmaRead;
+interface DmaDbg;
+   method ActionValue#(Bit#(64)) getMemoryTraffic();
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 
-interface DmaWrite;
-   method ActionValue#(DmaDbgRec) dbg();
-endinterface
 
 instance Connectable#(DmaReadClient#(dsz), DmaReadServer#(dsz));
    module mkConnection#(DmaReadClient#(dsz) source, DmaReadServer#(dsz) sink)(Empty);

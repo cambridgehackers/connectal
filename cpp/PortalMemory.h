@@ -26,7 +26,7 @@ class PortalMemory : public PortalProxy
   int reference(PortalAlloc* pa);
   void show_mem_stats(ChannelType rc);
   void configResp(unsigned long channelId);
-  void reportMemoryTraffic(unsigned long long cycles, unsigned long long words);
+  void reportMemoryTraffic(unsigned long long words);
   void useSemaphore() { callBacksRegistered = true; }
   virtual void sglist(unsigned long pref, unsigned long long addr, unsigned long len) = 0;
   virtual void getMemoryTraffic (const ChannelType &rc) = 0;

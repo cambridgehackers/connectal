@@ -91,7 +91,7 @@ putFailedTemplate='''
 void %(namespace)s%(className)s::%(putFailedMethodName)s(unsigned long v){
     const char* methodNameStrings[] = {%(putFailedStrings)s};
     fprintf(stderr, "putFailed: %%s\\n", methodNameStrings[v]);
-    exit(1);
+    //exit(1);
   }
 '''
 

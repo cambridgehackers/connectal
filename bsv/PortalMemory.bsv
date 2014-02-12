@@ -51,7 +51,7 @@ interface DmaIndication;
    method Action badPointer(Bit#(32) pointer);
    method Action badAddr(Bit#(32) pointer, Bit#(40) offset, Bit#(64) physAddr);
    method Action reportStateDbg(DmaDbgRec rec);
-   method Action reportMemoryTraffic(Bit#(64) cycles, Bit#(64) words);
+   method Action reportMemoryTraffic(Bit#(64) words);
 endinterface
 
 //
