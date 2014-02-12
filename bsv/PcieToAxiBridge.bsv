@@ -53,7 +53,6 @@ interface PcieToAxiBridge#(numeric type bpb);
    method Action interrupt();
 
    interface Put#(TimestampedTlpData) trace;
-   interface Reg#(Bit#(4)) numPortals;
 
 endinterface: PcieToAxiBridge
 
@@ -78,7 +77,6 @@ interface TLPDispatcher;
    (* always_ready *)
    method Bool completion_tlp();
 
-   //jca interface Reg#(Bool) axiEnabled;
 
 endinterface: TLPDispatcher
 
@@ -94,7 +92,6 @@ module mkTLPDispatcher(TLPDispatcher);
    Reg#(Bool) route_to_portal <- mkReg(False);
    Reg#(Bool) route_to_axi <- mkReg(False);
 
-   //jca Reg#(Bool) axiEnabledReg <- mkReg(False);
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
@@ -208,7 +205,6 @@ module mkTLPDispatcher(TLPDispatcher);
    method Bool read_tlp       = is_read;
    method Bool write_tlp      = is_write;
    method Bool completion_tlp = is_completion;
-   //jca interface Reg axiEnabled = axiEnabledReg;
 endmodule: mkTLPDispatcher
 
 // Multiple sources of TLP packets must all share the PCIe bus. There
@@ -340,7 +336,6 @@ interface PortalEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
     interface Axi3Master#(32,32,12) portal;
-    interface Reg#(Bool)           byteSwap;
     interface Reg#(Bool)           interruptRequested;
     interface Reg#(Bit#(64))       interruptAddr;
     interface Reg#(Bit#(32))       interruptData;
@@ -349,7 +344,6 @@ endinterface
 
 (* synthesize *)
 module mkPortalEngine#(PciId my_id)(PortalEngine);
-    Reg#(Bool) byteSwapReg <- mkReg(True);
     Reg#(Bool) interruptRequestedReg <- mkReg(False);
     Reg#(Bool) interruptSecondHalf <- mkReg(False);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
@@ -468,8 +462,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	  method ActionValue#(Axi3WriteData#(32,12)) get();
 	     writeDataFifo.deq;
 	     let data = writeDataFifo.first.data;
-	     if (byteSwapReg)
-		data = byteSwap(data);
+	     data = byteSwap(data);
 	     return Axi3WriteData { data: data, id: extend(writeDataFifo.first.tag), byteEnable: writeDataFifo.first.firstbe, last: 1 };
 	  endmethod
        endinterface: resp_write
@@ -505,10 +498,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		completion.bytecount = 4;
 		completion.reqid = hdr.reqid;
 		completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
-		if (byteSwapReg)
-		    completion.data = byteSwap(resp.data);
-		else
-		    completion.data = resp.data;
+		completion.data = byteSwap(resp.data);
 	        TLPData#(16) tlp = defaultValue;
 		tlp.data = pack(completion);
 		tlp.sof = True;
@@ -519,7 +509,6 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	    endmethod
 	endinterface: resp_read
     endinterface: portal
-    interface Reg byteSwap           = byteSwapReg;
     interface Reg interruptRequested = interruptRequestedReg;
     interface Reg interruptAddr      = interruptAddrReg;
     interface Reg interruptData      = interruptDataReg;
@@ -960,10 +949,7 @@ interface ControlAndStatusRegs;
    interface ReadOnly#(Bit#(32)) interruptData;
 
    interface Reg#(Bool) tlpTracing;
-   //jca interface Reg#(Bool) axiEnabled;
-   interface Reg#(Bool) byteSwap;
    interface Reg#(Bool) use4dw;
-   interface Reg#(Bit#(4)) numPortals;
    interface Reg#(Bit#(32)) tlpDataBramWrAddr;
    interface Reg#(Bit#(32)) tlpSeqno;
    interface Reg#(Bit#(32)) tlpOutCount;
@@ -1007,15 +993,10 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Integer minor_rev = 0;
 
    // Registers and their default values
-   //jca Reg#(Bool)            is_board_number_assigned <- mkReg(False);
-   //jca Reg#(UInt#(4))        board_number             <- mkReg(15);
    Vector#(4,MSIX_Entry) msix_entry               <- replicateM(mkMSIXEntry);
 
    Reg#(Bool) tlpTracingReg <- mkReg(False);
-   //jca Reg#(Bool) axiEnabledReg <- mkReg(False);
-   Reg#(Bool) byteSwapReg <- mkReg(False);
    Reg#(Bool) use4dwReg <- mkReg(True);
-   Reg#(Bit#(4)) numPortalsReg <- mkReg(1);
    Reg#(Bit#(32)) tlpSeqnoReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
@@ -1045,21 +1026,10 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          3: return fromInteger(major_rev);
          4: return pack(buildVersion);
          5: return pack(epochTime);
-         //jca 6: return {23'd0,pack(is_board_number_assigned),4'd0,pack(board_number)};
          7: return {24'd0,fromInteger(bytes_per_beat)};
          8: return board_content_id[31:0];
          9: return board_content_id[63:32];
-         //jca 64: return 0;
-         //jca 512: return 0;
-         //jca 513: return 0;
-         //jca 514: return 0;
-         //jca 515: return 0;
 	 768: return 0;
-	 //jca 769: return 0;
-	 //jca 770: return 0;
-	 //jca 771: return 0;
-	 //jca 772: return 0;
-	 //jca 773: return 0;
 	 774: return tlpSeqnoReg;
 	 775: return (tlpTracingReg ? 1 : 0);
 	 776: return tlpDataBramResponseSlice(0);
@@ -1071,19 +1041,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 782: return zeroExtend(rcb_mask);
 	 783: return zeroExtend(pack(max_read_req_bytes));
 	 784: return zeroExtend(pack(max_payload_bytes));
-	 //jca 785: return 0;
-	 //jca 786: return 0;
-	 //jca 787: return 0;
-	 //jca 788: return axiEnabledReg ? 1 : 0;
-	 //jca 789: return tlpDataBramRdAddrReg;
-	 //jca 790: return msix_enabled ? 1 : 0;
-	 //jca 791: return msix_mask_all_intr ? 1 : 0;
 	 792: return tlpDataBramWrAddrReg;
-	 //jca 793: return msi_enabled ? 1 : 0;
-	 794: return byteSwapReg ? 1 : 0;
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
-	 796: return extend(numPortalsReg);
-	 //jca 797: return extend(portalEngine.bTag);
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
          // 4-entry MSIx table
@@ -1125,11 +1084,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action wr_csr(UInt#(30) addr, Bit#(4) be, Bit#(32) dword);
       action
          case (addr % 8192)
-            //jca // board identification
-            //jca 6:  begin
-                   //jca if (be[0] == 1) board_number             <= unpack(dword[3:0]);
-                   //jca if (be[1] == 1) is_board_number_assigned <= unpack(dword[8]);
-                //jca end
 	    774: tlpSeqnoReg <= dword;
 	    775: tlpTracingReg <= (dword != 0) ? True : False;
 	    776: tlpDataScratchpad[0] <= dword;
@@ -1139,11 +1093,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    780: tlpDataScratchpad[4] <= dword;
 	    781: tlpDataScratchpad[5] <= dword;
 
-	    //jca 788: axiEnabledReg <= (dword != 0) ? True : False;
-	    //jca 789: tlpDataBramRdAddrReg <= dword;
 	    792: tlpDataBramWrAddrReg <= dword;
-	    794: byteSwapReg <= (dword != 0) ? True : False;
-	    796: numPortalsReg <= truncate(dword);
 
             //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
             // MSIx table entries
@@ -1466,10 +1416,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface ReadOnly interruptData = regToReadOnly(msix_entry[0].msg_data);
 
    interface Reg tlpTracing = tlpTracingReg;
-   //jca interface Reg axiEnabled = axiEnabledReg;
-   interface Reg byteSwap = byteSwapReg;
    interface Reg use4dw = use4dwReg;
-   interface Reg numPortals = numPortalsReg;
    interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
    interface Reg tlpSeqno = tlpSeqnoReg;
    interface Reg tlpOutCount = tlpOutCountReg;
@@ -1577,10 +1524,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 2047);
        csr.tlpTracing <= False;
    endrule
-   rule connectEnables;
-      //jca dispatcher.axiEnabled <= csr.axiEnabled;
-      portalEngine.byteSwap <= csr.byteSwap;
-   endrule
 
    // connect the sub-components to each other
 
@@ -1640,7 +1583,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 
    interface Axi3Slave portal0 = portalEngine.portal;
    interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
-   interface Reg numPortals = csr.numPortals;
 
    interface Reset portalReset = portalResetIfc.new_rst;
 
