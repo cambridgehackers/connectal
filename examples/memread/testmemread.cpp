@@ -12,7 +12,7 @@
 #include "MemreadRequestProxy.h"
 
 sem_t test_sem;
-int numWords = 16 << 15;
+int numWords = 16 << 18;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 int mismatchCount;
@@ -107,8 +107,10 @@ int main(int argc, const char **argv)
   start_timer(0);
   device->startRead(ref_srcAlloc, numWords, 16);
   sem_wait(&test_sem);
-  stop_timer(0);
-  dma->show_mem_stats(ChannelType_Read);
+  unsigned long long cycles = stop_timer(0);
+  unsigned long long beats = dma->show_mem_stats(ChannelType_Read);
+
+  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
   while(mismatchesReceived != mismatchCount){sleep(1);}
   exit(mismatchCount ? 1 : 0);
