@@ -42,12 +42,12 @@ sock_fd_write(int sock, int fd)
         cmsg->cmsg_level = SOL_SOCKET;
         cmsg->cmsg_type = SCM_RIGHTS;
 
-        printf ("passing fd %d\n", fd);
+        //printf ("passing fd %d\n", fd);
         *((int *) CMSG_DATA(cmsg)) = fd;
     } else {
         msg.msg_control = NULL;
         msg.msg_controllen = 0;
-        printf ("not passing fd\n");
+        //printf ("not passing fd\n");
     }
 
     size = sendmsg(sock, &msg, 0);
