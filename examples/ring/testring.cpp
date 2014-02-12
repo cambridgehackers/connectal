@@ -267,8 +267,7 @@ void *statusThreadProc(void *arg)
     while ((msg = ring_next(&status_ring)) == NULL);
     printf("Received %lx %lx\n", (long) msg[0], (long) msg[7]);
     Ring_Handle_Completion((uint64_t *) msg);
-    ring_pop(&status_ring);
-  }
+    ring_pop(&status_ring);  }
 }
 
 
