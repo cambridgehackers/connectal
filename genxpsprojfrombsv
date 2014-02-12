@@ -127,11 +127,12 @@ BSVPATH = %(bsvpath)s
 vfile=verilog/top/%(topbsvmod)s.v
 
 BOARD=%(boardname)s
+MKTOP=%(topbsvmod)s
 OS=%(OS)s
 ifeq ($(OS),android)
-ALLTARGETS=bits android_exe
+ALLTARGETS=android_exe bits
 else
-ALLTARGETS=implementation ubuntu_exe
+ALLTARGETS=ubuntu_exe implementation
 endif
 
 BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -show-schedule -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
@@ -139,7 +140,23 @@ BSIM_CXX = $(XBSVDIR)/cpp/BsimTop.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/
 
 all: $(ALLTARGETS)
 
-$(vfile): %(topbsvfile)s %(bsvfiles)s
+S2H = %(s2hinterface)s
+H2S = %(s2hinterface)s
+BSVFILES = %(bsvfiles)s
+CPPFILES=%(sourcefiles)s
+
+timestampfile=sources/%(dut)s/.timestamp
+
+$(timestampfile): %(bsvfiles)s
+	cd $(DTOP); \
+	$(XBSVDIR)/genxpsprojfrombsv -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
+	$(foreach s2h, $(S2H), -s2h $(s2h)) \
+	$(foreach h2s, $(H2S), -h2s $(h2s)) \
+	$(foreach f, $(CPPFILES), -s $f) \
+        -t $(XBSVDIR)/bsv/$(TOP).bsv $(XBSVFLAGS) $(BSVFILES)
+	touch $(timestampfile)
+
+$(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
 	mkdir -p verilog/top verilog/portal
 	cd sources/%(dut)s; mkdir -p $(DTOP)/obj; bsc %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
 	for v in verilog/top/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
@@ -153,7 +170,7 @@ bsim_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s $(BSIM_EXE_CXX) jni/*Proxy.cpp jni
 ubuntu_exe:
 	cd jni; make
 
-bsim:
+bsim: $(timestampfile)
 	cd sources; mkdir -p $(DTOP)/obj; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop %(topbsvfile)s
 	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
 
@@ -307,7 +324,10 @@ if __name__=='__main__':
         bsvdefines += ['Kintex7']
     elif boardname == 'vc707':
         bsvdefines += ['Virtex7']
-    
+
+    if not (os.path.abspath(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv')) in map(os.path.abspath, namespace.bsvfile)):
+        namespace.bsvfile.append(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv'))
+
     for inputfile in namespace.bsvfile:
         inputdir = os.path.dirname(inputfile)
         if not inputdir in srcdirs:
@@ -459,6 +479,7 @@ if __name__=='__main__':
     tclimplname = os.path.join(project_dir, '%s-impl.tcl' % namespace.export.lower())
     tclsynthname = os.path.join(project_dir, '%s-synth.tcl' % namespace.export.lower())
     makename = os.path.join(project_dir, 'Makefile')
+    timestampname = os.path.join(project_dir, 'sources', dutname.lower(), '.timestamp')
 
     applicationmkname = os.path.join(project_dir, 'jni', 'Application.mk')
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
@@ -540,6 +561,8 @@ if __name__=='__main__':
                                    'bsvdefines': util.foldl((lambda e,a: '-D '+e+' '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': namespace.os,
+                                   's2hinterface': ' '.join(namespace.s2hinterface),
+                                   'h2sinterface': ' '.join(namespace.h2sinterface),
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in namespace.bsvfile]),
                                    'sourcefiles': ' '.join([os.path.abspath(source) for source in namespace.source]) if namespace.source else '',
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in namespace.source]) if namespace.source else '',
@@ -552,6 +575,8 @@ if __name__=='__main__':
                                    'clibs': ' '.join(['-l%s' % l for l in namespace.clib])
                                    })
     make.close()
+    timestamp = util.createDirAndOpen(timestampname, 'w')
+    timestamp.close()
 
     print '############################################################'
     print '## To build:'

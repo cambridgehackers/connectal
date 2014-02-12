@@ -73,6 +73,7 @@
 
 
 sem_t test_sem;
+sem_t setup_sem;
 unsigned int sw_match_cnt = 0;
 unsigned int hw_match_cnt = 0;
 extern Directory *pdir;
@@ -93,6 +94,10 @@ class StrstrIndication : public StrstrIndicationWrapper
 {
 public:
   StrstrIndication(unsigned int id) : StrstrIndicationWrapper(id){};
+
+  virtual void setupComplete() {
+    sem_post(&setup_sem);
+  }
 
   virtual void searchResult (int v){
     fprintf(stderr, "searchResult = %d\n", v);
@@ -130,6 +135,7 @@ void MP(const char *x, const char *t, int *MP_next, int m, int n)
 {
   int i = 1;
   int j = 1;
+  fprintf(stderr, "MP starting\n");
   while (j <= n) {
     while ((i==m+1) || ((i>0) && (x[i-1] != t[j-1]))){
       //fprintf(stderr, "char mismatch %d %d MP_next[i]=%d\n", i,j,MP_next[i]);
@@ -167,6 +173,11 @@ int main(int argc, const char **argv)
     return -1;
   }
 
+  if(sem_init(&setup_sem, 1, 0)){
+    fprintf(stderr, "failed to init setup_sem\n");
+    return -1;
+  }
+
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
   if(pthread_create(&tid, NULL,  portalExec, NULL)){
@@ -174,6 +185,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
+#ifndef MMAP_HW
   if(1){
     fprintf(stderr, "simple tests\n");
     PortalAlloc *needleAlloc;
@@ -221,17 +233,20 @@ int main(int argc, const char **argv)
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
-    dma->show_mem_stats(ChannelType_Read);
+    device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
+    sem_wait(&setup_sem);
     start_timer();
-    device->search(ref_needleAlloc, ref_haystackAlloc, ref_mpNextAlloc, needle_len, haystack_len);
-    sem_wait(&test_sem);
     dma->show_mem_stats(ChannelType_Read);
+    device->search(ref_haystackAlloc, haystack_len);
+    sem_wait(&test_sem);
     stop_timer();
+    dma->show_mem_stats(ChannelType_Read);
 
     close(needleAlloc->header.fd);
     close(haystackAlloc->header.fd);
     close(mpNextAlloc->header.fd);
   }
+#endif
 
 
 #ifdef MMAP_HW
@@ -275,17 +290,21 @@ int main(int argc, const char **argv)
       assert(mpNext[i] == border[i-1]+1);
 
 
-    dma->dCacheFlushInval(needleAlloc, needle);
-    dma->dCacheFlushInval(mpNextAlloc, mpNext);
-
-    start_timer();    
+    start_timer();
     MP(needle, haystack, mpNext, needle_len, haystack_len);
     stop_timer();
 
+    dma->dCacheFlushInval(needleAlloc, needle);
+    dma->dCacheFlushInval(mpNextAlloc, mpNext);
+
+    device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
+    sem_wait(&setup_sem);
     start_timer();
-    device->search(ref_needleAlloc, ref_haystackAlloc, ref_mpNextAlloc, needle_len, haystack_len);
+    dma->show_mem_stats(ChannelType_Read);
+    device->search(ref_haystackAlloc, haystack_len);
     sem_wait(&test_sem);
     stop_timer();
+    dma->show_mem_stats(ChannelType_Read);
 
     close(needleAlloc->header.fd);
     close(haystackAlloc->header.fd);

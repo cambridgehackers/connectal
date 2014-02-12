@@ -52,12 +52,12 @@ interface AxiDmaServer#(numeric type addrWidth, numeric type dsz);
 endinterface
 
 interface AxiDmaWriteInternal#(numeric type addrWidth, numeric type dsz);
-   interface DmaWrite write;
+   interface DmaDbg dbg;
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
 endinterface
 
 interface AxiDmaReadInternal#(numeric type addrWidth, numeric type dsz);
-   interface DmaRead read;
+   interface DmaDbg dbg;
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
 endinterface
 
@@ -79,6 +79,8 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 
    Reg#(DmaChannelId)    selectReg <- mkReg(0);
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
+   
+   Reg#(Bit#(64)) beatCount <- mkReg(0);
 
    (* descending_urgency = "loadChannel,incSelectReg" *)
    rule incSelectReg;
@@ -118,9 +120,13 @@ module mkAxiDmaReadInternal#(Integer numRequests,
       end
    endrule
 
-   interface DmaRead read;
+   interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
 	 return ?;
+      endmethod
+      method ActionValue#(Bit#(64)) getMemoryTraffic();
+	 beatCount <= 0;
+	 return beatCount;
       endmethod
    endinterface
 
@@ -154,6 +160,7 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 	    end
 
 	    burstReg <= burstLen-1;
+	    beatCount <= beatCount+1;
 	 endmethod
       endinterface
       interface Get req_aw = ?;
@@ -182,7 +189,9 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
    Reg#(DmaChannelId)    selectReg <- mkReg(0);
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
 
-   (* descending_urgency = "loadChannel,incSelectReg" *)
+   Reg#(Bit#(64)) beatCount <- mkReg(0);
+
+  (* descending_urgency = "loadChannel,incSelectReg" *)
    rule incSelectReg;
       let s = selectReg+1;
       if (s == fromInteger(valueOf(numWriteClients)))
@@ -216,9 +225,13 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
       end
    endrule
 
-   interface DmaWrite write;
+   interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
 	 return ?;
+      endmethod
+      method ActionValue#(Bit#(64)) getMemoryTraffic();
+	 beatCount <= 0;
+	 return beatCount;
       endmethod
    endinterface
 
@@ -258,7 +271,8 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
 	    //$display("dmaWrite data data=%h burstLen=%d", tagdata.data, burstLen);
 
 	    burstReg <= burstLen-1;
-
+	    beatCount <= beatCount+1;
+	    
 	    Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
 
 	    return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: tagdata.tag };
@@ -313,13 +327,20 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
       method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
 	 if (rc == Read)
-	    rv <- reader.read.dbg;
+	    rv <- reader.dbg.dbg;
 	 else
-	    rv <- writer.write.dbg;
+	    rv <- writer.dbg.dbg;
 	 dmaIndication.reportStateDbg(rv);
       endmethod
       method Action getMemoryTraffic(ChannelType rc);
-	 dmaIndication.reportMemoryTraffic(0,0);
+	 if (rc == Read) begin
+	    let rv <- reader.dbg.getMemoryTraffic;
+	    dmaIndication.reportMemoryTraffic(rv);
+	 end
+	 else begin
+	    let rv <- reader.dbg.getMemoryTraffic;
+	    dmaIndication.reportMemoryTraffic(rv);
+	 end
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(DmaOffsetSize) addr, Bit#(32) len);
 	 dmaIndication.configResp(pref);

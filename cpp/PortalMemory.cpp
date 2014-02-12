@@ -139,7 +139,7 @@ int PortalMemory::reference(PortalAlloc* pa)
   return id;
 }
 
-void PortalMemory::reportMemoryTraffic(unsigned long long cycles, unsigned long long words)
+void PortalMemory::reportMemoryTraffic(unsigned long long words)
 {
   sem_post(&mtSem);
 }

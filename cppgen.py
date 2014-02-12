@@ -14,7 +14,7 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
-LOCAL_SRC_FILES := %(cfiles)s  portal.cpp sock_fd.cxx sock_utils.cxx %(generatedCFiles)s
+LOCAL_SRC_FILES := %(cfiles)s  portal.cpp PortalMemory.cpp sock_fd.cxx sock_utils.cxx %(generatedCFiles)s
 LOCAL_MODULE := %(exe)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
@@ -28,8 +28,11 @@ include $(BUILD_EXECUTABLE)
 linuxmakefile_template='''
 CFLAGS = -DMMAP_HW -O -g -I. -I%(xbsvdir)s/cpp -I%(xbsvdir)s %(sourceincludes)s
 
-test%(classname)s: %(swProxies)s %(swWrappers)s %(xbsvdir)s/cpp/portal.cpp %(source)s
-	g++ $(CFLAGS) -o %(classname)s %(swProxies)s %(swWrappers)s %(xbsvdir)s/cpp/portal.cpp %(source)s %(clibs)s -pthread 
+PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.cpp PortalMemory.cpp)
+
+
+test%(classname)s: %(swProxies)s %(swWrappers)s $(PORTAL_CPP_FILES) %(source)s
+	g++ $(CFLAGS) -o %(classname)s %(swProxies)s %(swWrappers)s $(PORTAL_CPP_FILES) %(source)s %(clibs)s -pthread 
 '''
 
 
@@ -88,7 +91,7 @@ putFailedTemplate='''
 void %(namespace)s%(className)s::%(putFailedMethodName)s(unsigned long v){
     const char* methodNameStrings[] = {%(putFailedStrings)s};
     fprintf(stderr, "putFailed: %%s\\n", methodNameStrings[v]);
-    exit(1);
+    //exit(1);
   }
 '''
 
