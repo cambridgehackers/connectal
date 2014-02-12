@@ -100,9 +100,9 @@ module mkPerfRequest#(PerfIndication indication,
       let tagdata <- dma_stream_read_server.readData.get();
       let v = tagdata.data;
       Bool mismatch = False;
-      for (Integer i = 0; i < busWidthWords; i = i+1)
-	 mismatch = mismatch || (v[31+i*32:i*32] != (srcGen + fromInteger(i)));
-      dataMismatch <= dataMismatch || mismatch;
+      //for (Integer i = 0; i < busWidthWords; i = i+1)
+	// mismatch = mismatch || (v[31+i*32:i*32] != (srcGen + fromInteger(i)));
+      //dataMismatch <= dataMismatch || mismatch;
       dma_stream_write_server.writeData.put(tagdata);
       srcGen <= srcGen+fromInteger(busWidthWords);
       //$display("loopback %h", tagdata.data);
