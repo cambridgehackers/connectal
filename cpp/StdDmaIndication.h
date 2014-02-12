@@ -20,7 +20,7 @@ public:
     pm->useSemaphore();
   }
   virtual void configResp(unsigned long pointer){
-    fprintf(stderr, "configResp: %lx\n", pointer);
+    //fprintf(stderr, "configResp: %lx\n", pointer);
     if (portalMemory)
       portalMemory->configResp(pointer);
   }
