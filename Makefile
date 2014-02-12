@@ -26,6 +26,7 @@ testnames = echo     \
             strstr   \
             struct   \
 	    ring     \
+	    perf     \
 	    nandsim  \
             flowcontrol
 
