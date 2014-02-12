@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/time.h>
+#include <semaphore.h>
 #include "StdDmaIndication.h"
 
 #include "DmaConfigProxy.h"
@@ -31,14 +33,21 @@
 #include "PerfIndicationWrapper.h"
 #include "PerfRequestProxy.h"
 
+sem_t copy_sem;
+
+PerfRequestProxy *device = 0;
+DmaConfigProxy *dma = 0;
+  
 PortalAlloc *srcAlloc;
 PortalAlloc *dstAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
-int numWords = 16 << 15;
-size_t test_sz  = numWords*sizeof(unsigned int);
+int numWords;
+size_t test_sz  = (1 << 20) *sizeof(unsigned int);
 size_t alloc_sz = test_sz;
-bool finished = false;
+unsigned int finishedCount;
+unsigned int ref_srcAlloc;
+unsigned int ref_dstAlloc;
 
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
@@ -56,7 +65,7 @@ void dump(const char *prefix, char *buf, size_t len)
 
 void exit_test()
 {
-  fprintf(stderr, "testperf finished count=%d memcmp_fail=%d\n", memcmp_count, memcmp_fail);
+  fprintf(stderr, "testperf finished count=%d memcmp_fail=%d\n", finishedCount, memcmp_fail);
   exit(memcmp_fail);
 }
 
@@ -69,22 +78,14 @@ public:
 
 
   virtual void started(unsigned long words){
-    fprintf(stderr, "started: words=%ld\n", words);
+    // fprintf(stderr, "started: words=%ld\n", words);
   }
   virtual void readWordResult ( unsigned long v ){
     dump("readWordResult: ", (char*)&v, sizeof(v));
   }
   virtual void done(unsigned long v) {
-    finished = true;
-    unsigned int mcf = memcmp(srcBuffer, dstBuffer, test_sz);
-    memcmp_fail |= mcf;
-    if(true){
-      fprintf(stderr, "perf done: %lx\n", v);
-      fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
-      //dump("src", (char*)srcBuffer, 128);
-      //dump("dst", (char*)dstBuffer, 128);
-    }
-      exit_test();
+    finishedCount += 1;
+    sem_post(&copy_sem);
   }
   virtual void rData ( unsigned long long v ){
     dump("rData: ", (char*)&v, sizeof(v));
@@ -105,6 +106,8 @@ public:
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
   }  
 };
+PerfIndication *deviceIndication = 0;
+DmaIndication *dmaIndication = 0;
 
 
 // we can use the data synchronization barrier instead of flushing the 
@@ -115,15 +118,39 @@ public:
 //
 // #define DATA_SYNC_BARRIER   __asm __volatile( "MCR p15, 0, %0, c7, c10, 4" ::  "r" (0) );
 
+long long deltatime( struct timeval start, struct timeval stop)
+{
+  long long diff = ((long long) (stop.tv_sec - start.tv_sec)) * 1000000;
+  diff = diff + ((long long) (stop.tv_usec - start.tv_usec));
+  return (diff);
+}
+
+int dotest(unsigned size)
+{
+  struct timeval start, stop;
+  unsigned loops = 1;
+  unsigned int i;
+  long long interval;
+  for(;;) {
+    finishedCount = 0;
+    fprintf(stderr, "loop = %d\n", loops);
+    gettimeofday(&start, NULL);
+    for (i = 0; i < loops; i += 1) {
+      device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords);
+      sem_wait(&copy_sem);
+    }
+    gettimeofday(&stop, NULL);
+    interval = deltatime(start, stop);
+    if (interval >= 500000) break;
+    loops <<= 1;
+  }
+  fprintf(stderr, "block size %d microseconds %lld\n", size*16, interval / loops); 
+}
+
 int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
 
-  PerfRequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
-  
-  PerfIndication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
@@ -148,21 +175,21 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
-  for (int i = 0; i < numWords; i++){
-    srcBuffer[i] = srcGen++;
-    dstBuffer[i] = 0x5a5abeef;
-  }
 
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   dma->dCacheFlushInval(dstAlloc, dstBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
-  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
-  unsigned int ref_dstAlloc = dma->reference(dstAlloc);
+  ref_srcAlloc = dma->reference(srcAlloc);
+  ref_dstAlloc = dma->reference(dstAlloc);
   
-  fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
-  device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords);
-  
+  for (numWords = 16; numWords < (1 << 20); numWords <<= 1){
+    
+    fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
+ 
+    dotest(numWords);
+  }
+
   device->getStateDbg();
   fprintf(stderr, "Main::sleeping\n");
   while(1){sleep(1);}
