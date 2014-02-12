@@ -524,20 +524,17 @@ endinterface
 interface PS7;
     (* prefix="" *)
     interface ZynqPins pins;
+    interface Vector#(2, AxiMasterCommon)     m_axi_gp;
+    interface Vector#(2, AxiSlaveCommon#(32)) s_axi_gp;
+    interface Vector#(4, AxiSlaveHighSpeed)   s_axi_hp;
+    method Action                             interrupt(Bit#(1) v);
     method Bit#(4)     fclkclk();
     method Bit#(4)     fclkresetn();
 endinterface
 
-module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Slave#(32,32,12) ctrl, Axi3Master#(32,64,6) m_axi, ReadOnly#(Bool) interrupt)(PS7);
+module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
     PS7LIB ps7 <- mkPS7LIB(axi_clock, axi_reset);
 
-    rule send_int_rule;
-    ps7.irq.f2p({19'b0, interrupt ? 1'b1 : 1'b0});
-    endrule
-
-    mkConnection(ps7.m_axi_gp[0].client, ctrl);
-    mkConnection(m_axi, ps7.s_axi_hp[0].axi.server);
-    
     rule arb_rule;
         ps7.ddr.arb(4'b0);
     endrule
@@ -565,6 +562,12 @@ module mkPS7#(Clock axi_clock, Reset axi_reset, Axi3Slave#(32,32,12) ctrl, Axi3M
     interface Bit    fclk_clk0 = ps7.fclkclk()[0];
     interface Bit    fclk_reset0_n = ps7.fclkresetn()[0];
     endinterface
+    interface AxiMasterCommon m_axi_gp = ps7.m_axi_gp;
+    interface AxiSlaveCommon s_axi_gp = ps7.s_axi_gp;
+    interface AxiSlaveHighSpeed s_axi_hp = ps7.s_axi_hp;
     method Bit#(4)     fclkclk() = ps7.fclkclk;
     method Bit#(4)     fclkresetn() = ps7.fclkresetn;
+    method Action interrupt(Bit#(1) v);
+        ps7.irq.f2p({19'b0, v});
+    endmethod
 endmodule

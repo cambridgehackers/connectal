@@ -44,8 +44,14 @@ typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt()) MkPortalTop#(type i
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
+   PS7 ps7 <- mkPS7(defaultClock, defaultReset);
    let top <- constructor(clocked_by defaultClock);
-   PS7 ps7 <- mkPS7(defaultClock, defaultReset, top.ctrl, top.m_axi, top.interrupt);
+
+   mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
+   mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
+   rule send_int_rule;
+       ps7.interrupt(top.interrupt ? 1'b1 : 1'b0);
+   endrule
 
    interface zynq = ps7.pins;
    interface leds = top.leds;
@@ -56,4 +62,3 @@ module mkZynqTop(ZynqTop#(Empty));
    let top <- mkZynqTopFromPortal(mkPortalTop);
    return top;
 endmodule
-
