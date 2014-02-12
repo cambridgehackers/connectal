@@ -51,6 +51,8 @@ unsigned int ref_dstAlloc;
 
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
+unsigned int start_count = 0;
+unsigned int copy_size = 0;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -79,6 +81,8 @@ public:
 
   virtual void started(unsigned long words){
     // fprintf(stderr, "started: words=%ld\n", words);
+    start_count += 1;
+    if (copy_size == 0) sem_post(&copy_sem);
   }
   virtual void readWordResult ( unsigned long v ){
     dump("readWordResult: ", (char*)&v, sizeof(v));
@@ -131,9 +135,11 @@ int dotest(unsigned size)
   unsigned loops = 1;
   unsigned int i;
   long long interval;
+  fprintf(stderr, "size %d loop ", size);
   for(;;) {
     finishedCount = 0;
-    fprintf(stderr, "loop = %d\n", loops);
+    copy_size = size;
+    fprintf(stderr, " %d", loops);
     gettimeofday(&start, NULL);
     for (i = 0; i < loops; i += 1) {
       device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords);
@@ -144,7 +150,21 @@ int dotest(unsigned size)
     if (interval >= 500000) break;
     loops <<= 1;
   }
-  fprintf(stderr, "block size %d microseconds %lld\n", size*16, interval / loops); 
+  fprintf(stderr, "\n  block size %d microseconds %lld\n", size*16, interval / loops); 
+}
+
+void printportalalloc(char *name, PortalAlloc *p)
+{
+  int i;
+  fprintf(stderr, "%s\n", name);
+  fprintf(stderr, "size %ld\n", p->header.size);
+  fprintf(stderr, "fd %d\n", p->header.fd);
+  fprintf(stderr, "numEntries %d\n", p->header.numEntries);
+  for (i = 0; i < p->header.numEntries; i += 1)
+    {
+      fprintf(stderr, " entry %d (%lx, %lx)\n", i, p->entries[i].dma_address,
+	      p->entries[i].length);
+    }
 }
 
 int main(int argc, const char **argv)
@@ -164,6 +184,8 @@ int main(int argc, const char **argv)
 
   dma->alloc(alloc_sz, &srcAlloc);
   dma->alloc(alloc_sz, &dstAlloc);
+  printportalalloc("srcAlloc", srcAlloc);
+  printportalalloc("dstAlloc", dstAlloc);
 
   srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc->header.fd, 0);
@@ -182,8 +204,12 @@ int main(int argc, const char **argv)
 
   ref_srcAlloc = dma->reference(srcAlloc);
   ref_dstAlloc = dma->reference(dstAlloc);
+  fprintf(stderr, "ref_srcAlloc %d\n", ref_srcAlloc);
+  fprintf(stderr, "ref_dstAlloc %d\n", ref_dstAlloc);
+  //fprintf(stderr, "Main::starting mempcy numWords:%d\n", 0);
   
-  for (numWords = 16; numWords < (1 << 20); numWords <<= 1){
+  //dotest(0);
+  for (numWords = 16; numWords < (1 << 16); numWords <<= 1){
     
     fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
  
