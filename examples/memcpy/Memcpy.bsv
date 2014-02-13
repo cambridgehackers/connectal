@@ -23,13 +23,14 @@
 import Vector::*;
 import FIFOF::*;
 import GetPutF::*;
+import FIFO::*;
 
 import PortalMemory::*;
 import Dma::*;
 import BlueScope::*;
 
 interface MemcpyRequest;
-   method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords);
+   method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
    method Action readWord();
    method Action getStateDbg();   
 endinterface
@@ -42,7 +43,7 @@ interface MemcpyIndication;
    method Action readReq(Bit#(32) v);
    method Action writeReq(Bit#(32) v);
    method Action writeAck(Bit#(32) v);
-   method Action reportStateDbg(Bit#(32) srcGen, Bit#(32) streamRdCnt, Bit#(32) streamWrCnt, Bit#(32) writeInProg, Bit#(32) dataMismatch);
+   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) streamWrCnt, Bit#(32) writeInProg, Bit#(32) dataMismatch);
 endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication,
@@ -50,6 +51,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 			DmaWriteServer#(busWidth) dma_stream_write_server,
 			DmaReadServer#(busWidth) dma_word_read_server,
 			BlueScope#(busWidth) bs)(MemcpyRequest)
+
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Add#(a__,32,busWidth));
 
@@ -62,18 +64,45 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(32)) streamAckCnt <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) streamRdOff <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) streamWrOff <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize))  delta <- mkReg(0);
    Reg#(DmaPointer)    streamRdPointer <- mkReg(0);
    Reg#(DmaPointer)    streamWrPointer <- mkReg(0);
    Reg#(DmaPointer) bluescopeWrPointer <- mkReg(0);
    Reg#(Bool)               writeInProg <- mkReg(False);
    Reg#(Bool)              dataMismatch <- mkReg(False);  
+   Reg#(Bit#(8)) burstLen <- mkReg(0);
    
-   Reg#(Bit#(8)) burstLen <- mkReg(8);
-   Reg#(Bit#(DmaOffsetSize)) deltaOffset <- mkReg(8*fromInteger(busWidthBytes));
+   let                  reqFifo <- mkFIFO;
+   Reg#(Bit#(32))       iterCnt <- mkReg(0);
+   
+   rule start_copy  if (streamRdCnt == 0 && streamWrCnt == 0);
+      Bit#(32) wrPointer = tpl_1(reqFifo.first);
+      Bit#(32) rdPointer = tpl_2(reqFifo.first);
+      Bit#(32) numWords  = tpl_3(reqFifo.first);
+      Bit#(32) bl        = tpl_4(reqFifo.first);
 
+      streamRdOff <= 0;
+      streamWrOff <= 0;
+
+      streamWrPointer <= wrPointer;
+      streamRdPointer <= rdPointer;
+      
+      burstLen <= truncate(bl);
+      delta <= 8*extend(bl);
+      
+      streamRdCnt <= numWords>>1;
+      streamWrCnt <= numWords>>1;
+      streamAckCnt <= numWords>>1;
+
+      iterCnt <= iterCnt-1;
+      if(iterCnt ==1)
+	 reqFifo.deq;
+      $display("start_copy %d", iterCnt);
+   endrule
+   
    rule readReq(streamRdCnt > 0);
-      streamRdCnt <= streamRdCnt - extend(burstLen);
-      streamRdOff <= streamRdOff + deltaOffset;
+      streamRdCnt <= streamRdCnt-extend(burstLen);
+      streamRdOff <= streamRdOff + delta;
       //$display("readReq.put pointer=%h address=%h, burstlen=%h", streamRdPointer, streamRdOff, burstLen);
       dma_stream_read_server.readReq.put(DmaRequest {pointer: streamRdPointer, offset: streamRdOff, burstLen: extend(burstLen), tag: truncate(streamRdOff>>5)});
       //indication.readReq(streamRdCnt);
@@ -82,7 +111,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    rule writeReq(streamWrCnt > 0 && !writeInProg);
       writeInProg <= True;
       streamWrCnt <= streamWrCnt-extend(burstLen);
-      streamWrOff <= streamWrOff + deltaOffset;
+      streamWrOff <= streamWrOff + delta;
       //$display("writeReq.put pointer=%h address=%h", streamWrPointer, streamWrOff);
       dma_stream_write_server.writeReq.put(DmaRequest {pointer: streamWrPointer, offset: streamWrOff, burstLen: extend(burstLen), tag: truncate(streamWrOff>>5)});
       //indication.writeReq(streamWrCnt);
@@ -94,7 +123,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       //$display("writeAck: tag=%d", tag);
       streamAckCnt <= streamAckCnt-extend(burstLen);
       //indication.writeAck(streamAckCnt);
-      if(streamAckCnt==extend(burstLen))
+      if(streamAckCnt==extend(burstLen) && iterCnt == 0)
    	 indication.done(dataMismatch ? 32'd1 : 32'd0);
    endrule
 
@@ -117,17 +146,11 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       indication.readWordResult(truncate(tagdata.data));
    endrule
    
-   method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords) if (streamRdCnt == 0 && streamWrCnt == 0);
-      //$display("startCopy wrPointer=%h rdPointer=%h numWords=%d", wrPointer, rdPointer, numWords);
-      streamRdOff <= 0;
-      streamWrOff <= 0;
-
-      streamWrPointer <= wrPointer;
-      streamRdPointer <= rdPointer;
-      streamRdCnt <= numWords>>1;
-      streamWrCnt <= numWords>>1;
-      streamAckCnt <= numWords>>1;
+   method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) bl, Bit#(32) ic);
+      $display("startCopy wrPointer=%h rdPointer=%h numWords=%d burstLen=%d iterCnt=%d", wrPointer, rdPointer, numWords, bl, ic);
       indication.started(numWords);
+      reqFifo.enq(tuple4(wrPointer, rdPointer, numWords, bl));
+      iterCnt <= ic;
    endmethod
 
    method Action readWord();
@@ -135,7 +158,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    endmethod
 
    method Action getStateDbg();
-      indication.reportStateDbg(srcGen, streamRdCnt, streamWrCnt, writeInProg ? 32'd1 : 32'd0, dataMismatch  ? 32'd1 : 32'd0);
+      indication.reportStateDbg(streamRdCnt, streamWrCnt, writeInProg ? 32'd1 : 32'd0, dataMismatch  ? 32'd1 : 32'd0);
    endmethod
 
 endmodule

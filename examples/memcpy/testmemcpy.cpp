@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <monkit.h>
+#include <semaphore.h>
 #include "StdDmaIndication.h"
 
 #include "BlueScopeIndicationWrapper.h"
@@ -33,18 +35,22 @@
 #include "MemcpyIndicationWrapper.h"
 #include "MemcpyRequestProxy.h"
 
+sem_t done_sem;
 PortalAlloc *srcAlloc;
 PortalAlloc *dstAlloc;
 PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 16 << 15;
+#ifdef MMAP_HW
+int numWords = 16 << 18;
+#else
+int numWords = 16 << 14;
+#endif
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 bool trigger_fired = false;
 bool finished = false;
-
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
 
@@ -80,6 +86,7 @@ public:
     dump("readWordResult: ", (char*)&v, sizeof(v));
   }
   virtual void done(unsigned long v) {
+    sem_post(&done_sem);
     finished = true;
     unsigned int mcf = memcmp(srcBuffer, dstBuffer, test_sz);
     memcmp_fail |= mcf;
@@ -89,9 +96,6 @@ public:
       //dump("src", (char*)srcBuffer, 128);
       //dump("dst", (char*)dstBuffer, 128);
       //dump("dbg", (char*)bsBuffer,  128);   
-    }
-    if(trigger_fired){
-      exit_test();
     }
   }
   virtual void rData ( unsigned long long v ){
@@ -106,11 +110,11 @@ public:
   virtual void writeAck(unsigned long v){
     //fprintf(stderr, "writeAck %lx\n", v);
   }
-  virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
+  virtual void reportStateDbg(unsigned long streamRdCnt, 
 			      unsigned long streamWrCnt, unsigned long writeInProg, 
 			      unsigned long dataMismatch){
-    fprintf(stderr, "Memcpy::reportStateDbg: srcGen=%ld, streamRdCnt=%ld, streamWrCnt=%ld, writeInProg=%ld, dataMismatch=%ld\n", 
-	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
+    fprintf(stderr, "Memcpy::reportStateDbg: streamRdCnt=%ld, streamWrCnt=%ld, writeInProg=%ld, dataMismatch=%ld\n", 
+	    streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
   }  
 };
 
@@ -123,9 +127,6 @@ public:
   virtual void triggerFired( ){
     fprintf(stderr, "BlueScope::triggerFired\n");
     trigger_fired = true;
-    if(finished){
-      exit_test();
-    }
   }
   virtual void reportStateDbg(unsigned long long mask, unsigned long long value){
     //fprintf(stderr, "BlueScope::reportStateDbg mask=%016llx, value=%016llx\n", mask, value);
@@ -145,8 +146,6 @@ public:
 
 int main(int argc, const char **argv)
 {
-  unsigned int srcGen = 0;
-
   MemcpyRequestProxy *device = 0;
   BlueScopeRequestProxy *bluescope = 0;
   DmaConfigProxy *dma = 0;
@@ -154,6 +153,11 @@ int main(int argc, const char **argv)
   MemcpyIndication *deviceIndication = 0;
   BlueScopeIndication *bluescopeIndication = 0;
   DmaIndication *dmaIndication = 0;
+
+  if(sem_init(&done_sem, 1, 0)){
+    fprintf(stderr, "failed to init done_sem\n");
+    exit(1);
+  }
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
@@ -183,7 +187,7 @@ int main(int argc, const char **argv)
   }
 
   for (int i = 0; i < numWords; i++){
-    srcBuffer[i] = srcGen++;
+    srcBuffer[i] = i;
     dstBuffer[i] = 0x5a5abeef;
     bsBuffer[i]  = 0x5a5abeef;
   }
@@ -202,9 +206,25 @@ int main(int argc, const char **argv)
   bluescope->setTriggerMask (0xFFFFFFFF);
   bluescope->setTriggerValue(0x00000008);
   bluescope->start(ref_bsAlloc);
-  device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords);
+
   
-  device->getStateDbg();
-  fprintf(stderr, "Main::sleeping\n");
-  while(1){sleep(1);}
+  int burstLen = 16;
+#ifdef MMAP_HW
+  int iterCnt = 64;
+#else
+  int iterCnt = 2;
+#endif
+  start_timer(0);
+  device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
+  sem_wait(&done_sem);
+  unsigned long long cycles = stop_timer(0);
+  unsigned long long beats = dma->show_mem_stats(ChannelType_Write);
+  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
+  
+  MonkitFile("perf.monkit")
+    .setCycles(cycles)
+    .setBeats(beats)
+    .writeFile();
+  
+  exit_test();
 }
