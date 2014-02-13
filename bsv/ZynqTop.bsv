@@ -26,7 +26,8 @@ import Connectable       :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
-import AxiMasterSlave   :: *;
+import AxiMasterSlave    :: *;
+import XbsvXilinxCells   :: *;
 import PS7LIB::*;
 
 (* always_ready, always_enabled *)
@@ -36,16 +37,16 @@ interface ZynqTop#(type pins);
    (* prefix="GPIO" *)
    interface LEDS             leds;
    interface pins             pins;
+   interface Clock unused_clock;
+   interface Reset unused_reset;
 endinterface
-
 
 typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt()) MkPortalTop#(type ipins);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
-   let defaultClock <- exposeCurrentClock;
-   let defaultReset <- exposeCurrentReset;
-   PS7 ps7 <- mkPS7(defaultClock, defaultReset);
-   let top <- constructor(clocked_by defaultClock);
+   B2C mainclock <- mkB2C();
+   PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
+   let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
 
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
    mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
@@ -53,9 +54,16 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        ps7.interrupt(top.interrupt ? 1'b1 : 1'b0);
    endrule
 
+   rule b2c_rule;
+       mainclock.inputclock(ps7.fclkclk()[0]);
+       mainclock.inputreset(ps7.fclkresetn()[0]);
+   endrule
+
    interface zynq = ps7.pins;
    interface leds = top.leds;
    interface pins = top.pins;
+   interface unused_clock = mainclock.c;
+   interface unused_reset = mainclock.r;
 endmodule
 
 module mkZynqTop(ZynqTop#(Empty));

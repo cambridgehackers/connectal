@@ -109,15 +109,9 @@ write_bitstream -force -bin_file $outputDir/%(Dut)s.bit
 '''
 
 tclzynqrewireclock = '''
-set clkname "top_ps7_ps7_foo/FCLKCLK[0]"
-set rstname "top_ps7_ps7_foo/FCLKRESETN[0]"
-disconnect_net -net [get_nets -of_objects [get_pins $clkname]] -objects $clkname
-disconnect_net -net fclk_clk0 -objects [get_pins -of_objects [get_nets fclk_clk0]]
-unplace_cell top_ps7_ps7_foo
-connect_net -net CLK_IBUF -objects $clkname
-disconnect_net -net [get_nets -of_objects [get_pins $rstname]] -objects $rstname
-disconnect_net -net RST_N_IBUF -objects RST_N_IBUF_inst/O
-connect_net -net RST_N_IBUF -objects $rstname
+disconnect_net -net [get_nets CLK_unused_clock] -objects [get_pins -of_objects [get_nets CLK_unused_clock]]
+disconnect_net -net [get_nets CLK_GATE_unused_clock] -objects [get_pins -of_objects [get_nets CLK_GATE_unused_clock]]
+disconnect_net -net [get_nets RST_N_unused_reset] -objects [get_pins -of_objects [get_nets RST_N_unused_reset]]
 '''
 
 makefileTemplate='''

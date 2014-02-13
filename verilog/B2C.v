@@ -1,8 +1,11 @@
 
-module B2C(B, C);
+module B2C(C, R, BC, BR);
 
-input B;
 output C;
+output R;
+input BC;
+input BR;
 
-assign C = B;
+assign C = BC;
+assign R = BR;
 endmodule

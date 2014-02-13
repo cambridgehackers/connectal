@@ -155,7 +155,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     Vector#(2, AxiSlaveCommon#(32)) vtops_axi_gp;
     Vector#(2, AxiSlaveWires) vtopsw_axi_gp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
     Vector#(4, AxiSlaveHighSpeed) vtops_axi_hp;
-    Vector#(2, AxiSlaveWires) vtopsw_axi_hp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
+    Vector#(4, AxiSlaveWires) vtopsw_axi_hp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
 
 `ifdef PS7EXTENDED
     vcan[0] = foo.can0;
@@ -361,7 +361,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
             endinterface
             method aresetn = vs_axi_gp[i].aresetn;
         endinterface;
-    for (Integer i = 0; i < 2; i = i + 1)
+    for (Integer i = 0; i < 4; i = i + 1)
        begin
        rule axi_master_handshake1;
 	    vs_axi_hp[i].arvalid(vtopsw_axi_hp[i].arvalid);
@@ -517,8 +517,6 @@ interface ZynqPins;
     interface Inout#(Bit#(54))       mio;
     (* prefix="FIXED_IO_ps" *)
     interface Pps7Ps ps;
-    interface Bit#(1)                       fclk_clk0;
-    interface Bit#(1)                       fclk_reset0_n;
 endinterface
 
 interface PS7;
@@ -559,8 +557,6 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
     interface Inout  web = ps7.ddr.web;
     interface Inout  mio = ps7.mio;
     interface Pps7Ps ps = ps7.ps;
-    interface Bit    fclk_clk0 = ps7.fclkclk()[0];
-    interface Bit    fclk_reset0_n = ps7.fclkresetn()[0];
     endinterface
     interface AxiMasterCommon m_axi_gp = ps7.m_axi_gp;
     interface AxiSlaveCommon s_axi_gp = ps7.s_axi_gp;

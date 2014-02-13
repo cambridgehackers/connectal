@@ -486,12 +486,18 @@ endmodule
 (* always_ready, always_enabled *)
 interface B2C;
     interface Clock c;
+    interface Reset r;
+    method Action inputclock(Bit#(1) v);
+    method Action inputreset(Bit#(1) v);
 endinterface
-import "BVI" GenB2C =
-module mkB2C#(Bit#(1) v)(B2C);
+import "BVI" B2C =
+module mkB2C(B2C);
     default_clock no_clock;
     default_reset no_reset;
-    output_clock c();
-    port B = v;
+    output_clock c(C);
+    output_reset r(R);
+    method inputclock(BC) enable((*inhigh*) en_inputclock) clocked_by(c);
+    method inputreset(BR) enable((*inhigh*) en_inputreset) clocked_by(c);
+    schedule ( inputclock, inputreset) CF ( inputclock, inputreset);
 endmodule
 
