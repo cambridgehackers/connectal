@@ -19,12 +19,6 @@ size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 int mismatchCount = 0;
 int mismatchesReceived = 0;
-int doneCnt = 0;
-#ifdef MMAP_HW
-int iterCnt = 32;
-#else
-int iterCnt = 4;
-#endif
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -42,12 +36,9 @@ public:
     fprintf(stderr, "Memread::readReq %lx\n", v);
   }
   virtual void readDone(unsigned long v){
-    fprintf(stderr, "Memread::readDone mismatch=%lx, doneCnt=%d\n", v, doneCnt++);
+    fprintf(stderr, "Memread::readDone mismatch=%lx\n", v);
     mismatchCount += v;
-    if(doneCnt == iterCnt){
-      sem_post(&test_sem);
-      fprintf(stderr, "test complete\n");
-    }
+    sem_post(&test_sem);
   }
   virtual void started(unsigned long words){
     fprintf(stderr, "Memread::started: words=%lx\n", words);
@@ -108,9 +99,13 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::starting read %08x\n", numWords);
   start_timer(0);
-  for(int i = 0; i < iterCnt; i++){
-    device->startRead(ref_srcAlloc, numWords, 16);
-  }
+  int burstLen = 16;
+#ifdef MMAP_HW
+  int iterCnt = 64;
+#else
+  int iterCnt = 2;
+#endif
+  device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&test_sem);
   unsigned long long cycles = stop_timer(0);
   unsigned long long beats = dma->show_mem_stats(ChannelType_Read);

@@ -185,8 +185,9 @@ int PortalMemory::alloc(size_t size, PortalAlloc **ppa)
     fprintf(stderr, "portal alloc failed rc=%d errno=%d:%s\n", rc, errno, strerror(errno));
     return rc;
   }
-  fprintf(stderr, "alloc size=%ld rc=%d fd=%d numEntries=%d\n", 
-	  (long)portalAlloc->header.size, rc, portalAlloc->header.fd, portalAlloc->header.numEntries);
+  float mb = (float)portalAlloc->header.size/(float)(1<<20);
+  fprintf(stderr, "alloc size=%fMB rc=%d fd=%d numEntries=%d\n", 
+	  mb, rc, portalAlloc->header.fd, portalAlloc->header.numEntries);
   portalAlloc = (PortalAlloc *)realloc(portalAlloc, sizeof(PortalAlloc)+((portalAlloc->header.numEntries+1)*sizeof(DmaEntry)));
   rc = ioctl(this->pa_fd, PA_DMA_ADDRESSES, portalAlloc);
   if (rc){

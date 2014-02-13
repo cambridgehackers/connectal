@@ -28,7 +28,7 @@ import Vector::*;
 import Dma::*;
 
 interface MemreadRequest;
-   method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen);
+   method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
    method Action getStateDbg();   
 endinterface
 
@@ -54,14 +54,14 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    Reg#(Bit#(8))         burstLen <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize))  delta <- mkReg(0);
+   Reg#(Bit#(32)) iterCnt <- mkReg(0);
    
-   let reqFifo <- mkSizedFIFO(32);
+   let reqFifo <- mkFIFO;
    
    rule start_read if (rdCnt == 0 && srcGen == 0);
       Bit#(32) pointer = tpl_1(reqFifo.first);
       Bit#(32) numWords = tpl_2(reqFifo.first);
       Bit#(32) bl = tpl_3(reqFifo.first);
-      $display("mkMemRead::startRead(%d %d %d)", pointer, numWords, bl);
       rdPointer <= pointer;
       rdCnt <= numWords>>1;
       mismatchCount <= 0;
@@ -69,8 +69,10 @@ module mkMemread#(MemreadIndication indication) (Memread);
       offset <= 0;
       burstLen <= truncate(bl);
       delta <= 8*extend(bl);
-      indication.started(numWords);
-      reqFifo.deq;
+      iterCnt <= iterCnt-1;
+      if(iterCnt==1) 
+	 reqFifo.deq;
+      $display("start_read %d", iterCnt);
    endrule
    
    interface DmaReadClient dmaClient;
@@ -95,7 +97,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    let misMatch = v != expectedV;
 	    mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
 	    srcGen <= srcGen-2;
-	    if (srcGen == 2)
+	    if (srcGen == 2 && iterCnt == 0)
 	       indication.readDone(mismatchCount);
 	 endmethod
 	 method Bool notFull();
@@ -105,8 +107,11 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endinterface
    
    interface MemreadRequest request;
-      method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) bl);
-          reqFifo.enq(tuple3(pointer,numWords,bl));
+      method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) bl, Bit#(32) ic);
+	 $display("mkMemRead::startRead(%d %d %d %d)", pointer, numWords, bl, ic);
+	 indication.started(numWords*ic);
+         reqFifo.enq(tuple3(pointer,numWords,bl));
+	 iterCnt <= ic;
        endmethod
        method Action getStateDbg();
 	  indication.reportStateDbg(rdCnt, mismatchCount);
