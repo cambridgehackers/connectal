@@ -337,7 +337,7 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
 	 else begin
-	    let rv <- reader.dbg.getMemoryTraffic;
+	    let rv <- writer.dbg.getMemoryTraffic;
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
       endmethod

@@ -160,7 +160,6 @@ Portal::Portal(int id)
 
 Portal::~Portal()
 {
-  fprintf(stderr, "Portal::~Portal()\n");
   close();
   free(name);
 }

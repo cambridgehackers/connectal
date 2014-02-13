@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <monkit.h>
 #include "sock_fd.h"
 #include "StdDmaIndication.h"
 
@@ -13,11 +14,10 @@
 #include "MemwriteIndicationWrapper.h"
 #include "MemwriteRequestProxy.h"
 
-int numWords = 16 << 5;
+sem_t done_sem;
+int numWords = 16 << 18;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
-sem_t done_sem;
-
 
 class MemwriteIndication : public MemwriteIndicationWrapper
 {
@@ -32,13 +32,22 @@ public:
   }
   virtual void writeDone ( unsigned long srcGen ){
     fprintf(stderr, "Memwrite::writeDone (%08lx)\n", srcGen);
-    sem_post(&done_sem);    
+    sem_post(&done_sem);
   }
   virtual void reportStateDbg(unsigned long streamWrCnt, unsigned long srcGen){
     fprintf(stderr, "Memwrite::reportStateDbg: streamWrCnt=%08lx srcGen=%ld\n", streamWrCnt, srcGen);
   }  
 
 };
+
+MemwriteRequestProxy *device = 0;
+DmaConfigProxy *dma = 0;
+
+MemwriteIndication *deviceIndication = 0;
+DmaIndication *dmaIndication = 0;
+
+PortalAlloc *dstAlloc;
+unsigned int *dstBuffer = 0;
 
 void child(int rd_sock)
 {
@@ -62,15 +71,6 @@ void child(int rd_sock)
 
 void parent(int rd_sock, int wr_sock)
 {
-
-  MemwriteRequestProxy *device = 0;
-  DmaConfigProxy *dma = 0;
-  
-  MemwriteIndication *deviceIndication = 0;
-  DmaIndication *dmaIndication = 0;
-
-  PortalAlloc *dstAlloc;
-  unsigned int *dstBuffer = 0;
   
   if(sem_init(&done_sem, 1, 0)){
     fprintf(stderr, "failed to init done_sem\n");
@@ -106,10 +106,24 @@ void parent(int rd_sock, int wr_sock)
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);
-  device->startWrite(ref_dstAlloc, numWords, 16);
-
+  start_timer(0);
+  int burstLen = 16;
+#ifdef MMAP_HW
+  int iterCnt = 64;
+#else
+  int iterCnt = 2;
+#endif
+  device->startWrite(ref_dstAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
-  
+  unsigned long long cycles = stop_timer(0);
+  unsigned long long beats = dma->show_mem_stats(ChannelType_Write);
+  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
+
+  MonkitFile("perf.monkit")
+    .setCycles(cycles)
+    .setBeats(beats)
+    .writeFile();
+
   sock_fd_write(wr_sock, dstAlloc->header.fd);
   munmap(dstBuffer, alloc_sz);
   close(dstAlloc->header.fd);

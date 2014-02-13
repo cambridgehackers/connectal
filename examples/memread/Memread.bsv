@@ -82,7 +82,6 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	    offset <= offset + delta;
 	    //else if (rdCnt[5:0] == 6'b0)
 	    //   indication.readReq(rdCnt);
-	    //$display("readReq %d %d", (offset-zeroExtend(srcGen*4))/8, burstLen);
 	    return DmaRequest { pointer: rdPointer, offset: offset, burstLen: burstLen, tag: truncate(offset) };
 	 endmethod
 	 method Bool notEmpty();

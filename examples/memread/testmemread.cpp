@@ -109,7 +109,6 @@ int main(int argc, const char **argv)
   sem_wait(&test_sem);
   unsigned long long cycles = stop_timer(0);
   unsigned long long beats = dma->show_mem_stats(ChannelType_Read);
-
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
   MonkitFile("perf.monkit")
