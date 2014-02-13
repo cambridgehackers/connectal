@@ -7,12 +7,6 @@ CPPFILES=testmemwrite.cpp
 Dma = Dma
 PINS = Std
 
-ifeq ($(BOARD),bluesim)
-# sock_fd.cxx already included
-else
-CPPFILES += $(XBSVDIR)/cpp/sock_fd.cxx
-endif
-
 include ../../Makefile.common
 
 mkTbPcie: mkTbPcie.ba
