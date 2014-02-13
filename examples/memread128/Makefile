@@ -4,7 +4,7 @@ S2H = MemreadRequest DmaConfig
 H2S = MemreadIndication DmaIndication
 BSVFILES = Memread.bsv
 CPPFILES=testmemread.cpp
-Dma = Dma
+Dma = Dma128
 PINS = Std
 
 include ../../Makefile.common
