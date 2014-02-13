@@ -12,12 +12,19 @@
 #include "MemreadIndicationWrapper.h"
 #include "MemreadRequestProxy.h"
 
+
 sem_t test_sem;
 int numWords = 16 << 18;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
-int mismatchCount;
-int mismatchesReceived;
+int mismatchCount = 0;
+int mismatchesReceived = 0;
+int doneCnt = 0;
+#ifdef MMAP_HW
+int iterCnt = 32;
+#else
+int iterCnt = 4;
+#endif
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -35,9 +42,12 @@ public:
     fprintf(stderr, "Memread::readReq %lx\n", v);
   }
   virtual void readDone(unsigned long v){
-    fprintf(stderr, "Memread::readDone mismatch=%lx\n", v);
-    mismatchCount = v;
-    sem_post(&test_sem);
+    fprintf(stderr, "Memread::readDone mismatch=%lx, doneCnt=%d\n", v, doneCnt++);
+    mismatchCount += v;
+    if(doneCnt == iterCnt){
+      sem_post(&test_sem);
+      fprintf(stderr, "test complete\n");
+    }
   }
   virtual void started(unsigned long words){
     fprintf(stderr, "Memread::started: words=%lx\n", words);
@@ -61,18 +71,11 @@ int main(int argc, const char **argv)
   PortalAlloc *srcAlloc;
   unsigned int *srcBuffer = 0;
 
-  unsigned int srcGen = 0;
-
   MemreadRequestProxy *device = 0;
   DmaConfigProxy *dma = 0;
   
   MemreadIndication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
-
-  if(sem_init(&test_sem, 1, 0)){
-    fprintf(stderr, "failed to init test_sem\n");
-    return -1;
-  }
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
@@ -94,7 +97,7 @@ int main(int argc, const char **argv)
   }
 
   for (int i = 0; i < numWords; i++){
-    srcBuffer[i] = srcGen++;
+    srcBuffer[i] = numWords-i;
   }
     
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
@@ -104,9 +107,10 @@ int main(int argc, const char **argv)
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
 
   fprintf(stderr, "Main::starting read %08x\n", numWords);
-  dma->show_mem_stats(ChannelType_Read);
   start_timer(0);
-  device->startRead(ref_srcAlloc, numWords, 16);
+  for(int i = 0; i < iterCnt; i++){
+    device->startRead(ref_srcAlloc, numWords, 16);
+  }
   sem_wait(&test_sem);
   unsigned long long cycles = stop_timer(0);
   unsigned long long beats = dma->show_mem_stats(ChannelType_Read);

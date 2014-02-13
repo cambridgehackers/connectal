@@ -103,7 +103,6 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
    
    BsimRdmaReadWrite#(dsz) rw <- selectBsimRdmaReadWrite();
    
-   
    Reg#(Bit#(40)) readAddrr <- mkReg(0);
    Reg#(Bit#(5))  readLen <- mkReg(0);
    Reg#(Bit#(6)) readId <- mkReg(0);
@@ -111,8 +110,25 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
    Reg#(Bit#(5))  writeLen <- mkReg(0);
    Reg#(Bit#(6)) writeId <- mkReg(0);
    
-   rule req_ar if (readLen == 0 && writeLen == 0);
+   Bit#(64) readLatency = 32;
+   Bit#(64) writeLatency = 32;
+   
+   Reg#(Bit#(64)) cycle <- mkReg(0);
+   let readDelayFifo <- mkSizedFIFO(32);
+   let writeDelayFifo <- mkSizedFIFO(32);
+				    
+   rule increment_cycle;
+      cycle <= cycle+1;
+   endrule
+   
+   rule req_ar_a;
       let req <- master.req_ar.get();
+      readDelayFifo.enq(tuple2(cycle,req));
+   endrule
+   
+   rule req_ar_b if (readLen == 0 && writeLen == 0 && (cycle-tpl_1(readDelayFifo.first)) > readLatency);
+      let req = tpl_2(readDelayFifo.first);
+      readDelayFifo.deq;
       Bit#(5) rlen = extend(req.len)+1;
       //$display("req_ar: addr=%h len=%d", req.address, rlen);
       readAddrr <= req.address;
@@ -130,8 +146,14 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
       master.resp_read.put(resp);
    endrule
    
-   rule req_aw if (writeLen == 0 && writeLen == 0);
+   rule req_aw_a;
       let req <- master.req_aw.get();
+      writeDelayFifo.enq(tuple2(cycle,req));
+   endrule
+
+   rule req_aw_b if (writeLen == 0 && writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency);
+      let req = tpl_2(writeDelayFifo.first);
+      writeDelayFifo.deq;
       Bit#(5) wlen = extend(req.len)+1;
       //$display("req_aw: addr=%h len=%d", req.address, wlen);
       writeAddrr <= req.address;

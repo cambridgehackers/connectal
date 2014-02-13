@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import FIFO::*;
 import FIFOF::*;
 import GetPutF::*;
 import Vector::*;
@@ -53,16 +54,33 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    Reg#(Bit#(8))         burstLen <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize))  delta <- mkReg(0);
-
+   
+   let reqFifo <- mkSizedFIFO(32);
+   
+   rule start_read if (rdCnt == 0 && srcGen == 0);
+      Bit#(32) pointer = tpl_1(reqFifo.first);
+      Bit#(32) numWords = tpl_2(reqFifo.first);
+      Bit#(32) bl = tpl_3(reqFifo.first);
+      $display("mkMemRead::startRead(%d %d %d)", pointer, numWords, bl);
+      rdPointer <= pointer;
+      rdCnt <= numWords>>1;
+      mismatchCount <= 0;
+      srcGen <= numWords;
+      offset <= 0;
+      burstLen <= truncate(bl);
+      delta <= 8*extend(bl);
+      indication.started(numWords);
+      reqFifo.deq;
+   endrule
+   
    interface DmaReadClient dmaClient;
       interface GetF readReq;
 	 method ActionValue#(DmaRequest) get() if (rdCnt > 0);
 	    rdCnt <= rdCnt-extend(burstLen);
 	    offset <= offset + delta;
-	    if (rdCnt == extend(burstLen))
-	       indication.readDone(mismatchCount);
 	    //else if (rdCnt[5:0] == 6'b0)
 	    //   indication.readReq(rdCnt);
+	    //$display("readReq %d %d", (offset-zeroExtend(srcGen*4))/8, burstLen);
 	    return DmaRequest { pointer: rdPointer, offset: offset, burstLen: burstLen, tag: truncate(offset) };
 	 endmethod
 	 method Bool notEmpty();
@@ -73,25 +91,22 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 method Action put(DmaData#(64) d);
 	    //$display("readData  data=%h tag=%h",  d.data, d.tag);
 	    let v = d.data;
-	    let expectedV = {srcGen+1,srcGen};
+	    let expectedV = {srcGen-1,srcGen};
 	    let misMatch = v != expectedV;
 	    mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
-	    srcGen <= srcGen+2;
+	    srcGen <= srcGen-2;
+	    if (srcGen == 2)
+	       indication.readDone(mismatchCount);
 	 endmethod
 	 method Bool notFull();
 	    return True;
 	 endmethod
       endinterface : readData
    endinterface
-
+   
    interface MemreadRequest request;
-      method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) bl) if (rdCnt == 0);
-	  $display("mkMemRead::startRead(%d %d %d)", pointer, numWords, bl);
-	  rdCnt <= numWords>>1;
-	  burstLen <= truncate(bl);
-	  delta <= 8*extend(bl);
-	  indication.started(numWords);
-	  rdPointer <= pointer;
+      method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) bl);
+          reqFifo.enq(tuple3(pointer,numWords,bl));
        endmethod
        method Action getStateDbg();
 	  indication.reportStateDbg(rdCnt, mismatchCount);

@@ -71,14 +71,15 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
-   FIFO#(DmaRequest) lreqFifo <- mkPipelineFIFO();
-   FIFO#(DmaRequest) reqFifo  <- mkPipelineFIFO();
-   FIFO#(DmaRequest) dreqFifo <- mkSizedFIFO(numRequests);
-   FIFO#(Bit#(addrWidth))        paFifo     <- mkPipelineFIFO();
-   FIFO#(DmaChannelId)    chanFifo   <- mkSizedFIFO(numRequests);
+   FIFO#(DmaRequest)    lreqFifo <- mkPipelineFIFO();
+   FIFO#(DmaRequest)     reqFifo <- mkPipelineFIFO();
+   FIFO#(Bit#(addrWidth)) paFifo <- mkPipelineFIFO();
 
-   Reg#(DmaChannelId)    selectReg <- mkReg(0);
-   Reg#(Bit#(8))         burstReg <- mkReg(0);   
+   FIFO#(DmaChannelId)  chanFifo <- mkSizedFIFO(numRequests);
+   FIFO#(DmaRequest)    dreqFifo <- mkSizedFIFO(numRequests);
+
+   Reg#(DmaChannelId)  selectReg <- mkReg(0);
+   Reg#(Bit#(8))        burstReg <- mkReg(0);   
    
    Reg#(Bit#(64)) beatCount <- mkReg(0);
 
@@ -125,7 +126,6 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 	 return ?;
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic();
-	 beatCount <= 0;
 	 return beatCount;
       endmethod
    endinterface
@@ -230,7 +230,6 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
 	 return ?;
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic();
-	 beatCount <= 0;
 	 return beatCount;
       endmethod
    endinterface
