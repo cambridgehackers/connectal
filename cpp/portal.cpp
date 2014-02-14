@@ -70,7 +70,7 @@ unsigned long long stop_timer(unsigned int i)
 {
   assert(i < 16);
   unsigned long long rv = pdir->cycle_count() - c_start[i];
-  fprintf(stderr, "search time (hw cycles): %lld\n", rv);
+  fprintf(stderr, "elapsed time (hw cycles): %lld\n", rv);
   return rv;
 }
 
