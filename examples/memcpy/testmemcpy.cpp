@@ -43,7 +43,7 @@ unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
 #ifdef MMAP_HW
-int numWords = 16 << 18;
+int numWords = 16 << 10;
 #else
 int numWords = 16 << 14;
 #endif
@@ -111,10 +111,10 @@ public:
     //fprintf(stderr, "writeAck %lx\n", v);
   }
   virtual void reportStateDbg(unsigned long streamRdCnt, 
-			      unsigned long streamWrCnt, unsigned long writeInProg, 
+			      unsigned long streamWrCnt, 
 			      unsigned long dataMismatch){
-    fprintf(stderr, "Memcpy::reportStateDbg: streamRdCnt=%ld, streamWrCnt=%ld, writeInProg=%ld, dataMismatch=%ld\n", 
-	    streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
+    fprintf(stderr, "Memcpy::reportStateDbg: streamRdCnt=%ld, streamWrCnt=%ld, dataMismatch=%ld\n", 
+	    streamRdCnt, streamWrCnt, dataMismatch);
   }  
 };
 
@@ -206,11 +206,10 @@ int main(int argc, const char **argv)
   bluescope->setTriggerMask (0xFFFFFFFF);
   bluescope->setTriggerValue(0x00000008);
   bluescope->start(ref_bsAlloc);
-
   
   int burstLen = 16;
 #ifdef MMAP_HW
-  int iterCnt = 64;
+  int iterCnt = 2;
 #else
   int iterCnt = 2;
 #endif
@@ -218,12 +217,15 @@ int main(int argc, const char **argv)
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
   unsigned long long cycles = stop_timer(0);
-  unsigned long long beats = dma->show_mem_stats(ChannelType_Write);
-  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
+  unsigned long long read_beats = dma->show_mem_stats(ChannelType_Write);
+  unsigned long long write_beats = dma->show_mem_stats(ChannelType_Write);
+  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)read_beats)/((float)cycles));
+  fprintf(stderr, "memory write utilization (beats/cycle): %f\n", ((float)write_beats)/((float)cycles));
   
   MonkitFile("perf.monkit")
     .setCycles(cycles)
-    .setBeats(beats)
+    .setReadBeats(read_beats)
+    .setWriteBeats(write_beats)
     .writeFile();
   
   exit_test();

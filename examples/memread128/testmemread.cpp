@@ -114,7 +114,7 @@ int main(int argc, const char **argv)
 
   MonkitFile("perf.monkit")
     .setCycles(cycles)
-    .setBeats(beats)
+    .setReadBeats(beats)
     .writeFile();
 
   while(mismatchesReceived != mismatchCount){sleep(1);}

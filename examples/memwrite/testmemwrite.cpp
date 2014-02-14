@@ -117,11 +117,11 @@ void parent(int rd_sock, int wr_sock)
   sem_wait(&done_sem);
   unsigned long long cycles = stop_timer(0);
   unsigned long long beats = dma->show_mem_stats(ChannelType_Write);
-  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
+  fprintf(stderr, "memory write utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
   MonkitFile("perf.monkit")
     .setCycles(cycles)
-    .setBeats(beats)
+    .setWriteBeats(beats)
     .writeFile();
 
   sock_fd_write(wr_sock, dstAlloc->header.fd);

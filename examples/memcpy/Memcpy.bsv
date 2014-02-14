@@ -43,7 +43,7 @@ interface MemcpyIndication;
    method Action readReq(Bit#(32) v);
    method Action writeReq(Bit#(32) v);
    method Action writeAck(Bit#(32) v);
-   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) streamWrCnt, Bit#(32) writeInProg, Bit#(32) dataMismatch);
+   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) streamWrCnt, Bit#(32) dataMismatch);
 endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication,
@@ -68,7 +68,6 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(DmaPointer)    streamRdPointer <- mkReg(0);
    Reg#(DmaPointer)    streamWrPointer <- mkReg(0);
    Reg#(DmaPointer) bluescopeWrPointer <- mkReg(0);
-   Reg#(Bool)               writeInProg <- mkReg(False);
    Reg#(Bool)              dataMismatch <- mkReg(False);  
    Reg#(Bit#(8)) burstLen <- mkReg(0);
    
@@ -108,8 +107,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       //indication.readReq(streamRdCnt);
    endrule
 
-   rule writeReq(streamWrCnt > 0 && !writeInProg);
-      writeInProg <= True;
+   rule writeReq(streamWrCnt > 0);
       streamWrCnt <= streamWrCnt-extend(burstLen);
       streamWrOff <= streamWrOff + delta;
       //$display("writeReq.put pointer=%h address=%h", streamWrPointer, streamWrOff);
@@ -117,8 +115,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       //indication.writeReq(streamWrCnt);
    endrule
    
-   rule writeAck(writeInProg);
-      writeInProg <= False;
+   rule writeAck;
       let tag <- dma_stream_write_server.writeDone.get();
       //$display("writeAck: tag=%d", tag);
       streamAckCnt <= streamAckCnt-extend(burstLen);
@@ -158,7 +155,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    endmethod
 
    method Action getStateDbg();
-      indication.reportStateDbg(streamRdCnt, streamWrCnt, writeInProg ? 32'd1 : 32'd0, dataMismatch  ? 32'd1 : 32'd0);
+      indication.reportStateDbg(streamRdCnt, streamWrCnt, dataMismatch  ? 32'd1 : 32'd0);
    endmethod
 
 endmodule

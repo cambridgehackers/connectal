@@ -31,13 +31,15 @@ class MonkitFile {
   ~MonkitFile() {}
   
   MonkitFile &setCycles(float cycles) { this->cycles = cycles; return *this; }
-  MonkitFile &setBeats(float beats) { this->beats = beats; return *this; }
+  MonkitFile &setReadBeats(float beats) { this->read_beats = beats; return *this; }
+  MonkitFile &setWriteBeats(float beats) { this->write_beats = beats; return *this; }
   void writeFile();
   
  private:
   const char *name;
   float cycles;
-  float beats;
+  float read_beats;
+  float write_beats;
 };
 
 const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
@@ -45,23 +47,26 @@ const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
     <category name=\"time\" scale=\"cycles\">\n\
         <observations>\n\
             <observation name=\"cycles\">%f</observation>\n\
-            <observation name=\"beats\">%f</observation>\n\
+            <observation name=\"read_beats\">%f</observation>\n\
+            <observation name=\"write_beats\">%f</observation>\n\
         </observations>\n\
     </category>\n\
     \n\
     <category name=\"utilization\" scale=\"%%\">\n\
         <observations>\n\
-            <observation name=\"memory\">%f</observation>\n\
+            <observation name=\"read_memory\">%f</observation>\n\
+            <observation name=\"write_memory\">%f</observation>\n\
         </observations>\n\
     </category>\n\
 </categories>\n";
 
 void MonkitFile::writeFile()
 {
-  float utilization = 100.0 * beats / cycles;
+  float read_utilization = 100.0 * read_beats / cycles;
+  float write_utilization = 100.0 * write_beats / cycles;
 
   FILE *out = fopen(name, "w");
-  fprintf(out, monkit, cycles, beats, utilization);
+  fprintf(out, monkit, cycles, read_beats, write_beats, read_utilization, write_utilization);
   fclose(out);
 }
 
