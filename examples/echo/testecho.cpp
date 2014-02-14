@@ -10,11 +10,22 @@
 #include "SwallowProxy.h"
 
 #define SEPARATE_EVENT_THREAD
+//#define USE_MUTEX_SYNC
 
 EchoRequestProxy *echoRequestProxy = 0;
 
 #ifdef SEPARATE_EVENT_THREAD
+#ifdef USE_MUTEX_SYNC
+static pthread_mutex_t sem_heard2 = PTHREAD_MUTEX_INITIALIZER;
+#define SEMINIT(A) 
+#define SEMWAIT(A) pthread_mutex_lock(&A);
+#define SEMPOST(A) pthread_mutex_unlock(&A);
+#else
 static sem_t sem_heard2;
+#define SEMINIT(A) sem_init(&A, 0, 0);
+#define SEMWAIT(A) sem_wait(&A);
+#define SEMPOST(A) sem_post(&A)
+#endif
 
 static void *pthread_worker(void *ptr)
 {
@@ -23,40 +34,48 @@ static void *pthread_worker(void *ptr)
         rc = portalExec_event(portalExec_timeout);
     return rc;
 }
-#else
+static void init_thread()
+{
+    pthread_t threaddata;
+    SEMINIT(sem_heard2);
+    pthread_create(&threaddata, NULL, &pthread_worker, NULL);
+}
+static void wait_heard(void)
+{
+    SEMWAIT(sem_heard2);
+}
+#else // inline waiting
 static int sem_heard2;
+#define SEMPOST(A) A++
+static void init_thread()
+{
+}
+static void wait_heard(void)
+{
+    void *rc = NULL;
+    sem_heard2 = 0;
+    while (!sem_heard2 && !rc)
+        rc = portalExec_event(portalExec_timeout);
+}
 #endif
 
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(unsigned long v) {
+        lap_timer(0);
         fprintf(stderr, "heard an echo: %ld\n", v);
 	echoRequestProxy->say2(v, 2*v);
     }
     virtual void heard2(unsigned long a, unsigned long b) {
-#ifdef SEPARATE_EVENT_THREAD
-        sem_post(&sem_heard2);
-#else
-        sem_heard2++;
-#endif
+        lap_timer(0);
+        SEMPOST(sem_heard2);
         fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
+        lap_timer(0);
     }
     EchoIndication(unsigned int id) : EchoIndicationWrapper(id){
     }
 };
-
-static void wait_heard(void)
-{
-#ifdef SEPARATE_EVENT_THREAD
-    sem_wait(&sem_heard2);
-#else
-    void *rc = NULL;
-    sem_heard2 = 0;
-    while (!sem_heard2 && !rc)
-        rc = portalExec_event(portalExec_timeout);
-#endif
-}
 
 static void call_say(int v)
 {
@@ -83,11 +102,7 @@ int main(int argc, const char **argv)
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
 
     portalExec_init();
-#ifdef SEPARATE_EVENT_THREAD
-    pthread_t threaddata;
-    sem_init(&sem_heard2, 0, 0);
-    pthread_create(&threaddata, NULL, &pthread_worker, NULL);
-#endif
+    init_thread();
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
