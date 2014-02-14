@@ -2,6 +2,7 @@
 set -x
 set -e
 export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+echo "run.zedboard parameters are:" $*
 if [ "$#" -lt 3 ]; then
     ZEDBOARD_IPADDR=`$SCRIPT_DIR/../consolable/checkip`
 else
