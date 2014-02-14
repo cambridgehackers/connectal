@@ -364,8 +364,13 @@ int Portal::setClockFrequency(int clkNum, long requestedFrequency, long *actualF
     return status;
 }
 
+int portalExec_timeout;
 void* portalExec_init(void)
 {
+    portalExec_timeout = -1; // no interrupt timeout on Zynq platform
+#ifndef ZYNQ
+    portalExec_timeout = 100; // interrupts not working yet on PCIe
+#endif
 #ifdef MMAP_HW
     if (!numFds) {
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
@@ -454,13 +459,8 @@ void* portalExec_event(int timeout)
     return NULL;
 }
 
-int portalExec_timeout;
 void* portalExec(void* __x)
 {
-    portalExec_timeout = -1; // no interrupt timeout on Zynq platform
-#ifndef ZYNQ
-    portalExec_timeout = 100; // interrupts not working yet on PCIe
-#endif
     void *rc = portalExec_init();
     while (!rc)
         rc = portalExec_event(portalExec_timeout);
