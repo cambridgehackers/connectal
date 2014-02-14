@@ -64,7 +64,7 @@ static void call_say(int v)
     start_timer(0);
     echoRequestProxy->say(v);
     wait_heard();
-    printf("call_say: elapsed %lld\n", stop_timer(0));
+    printf("call_say: elapsed %lld\n", lap_timer(0));
 }
 
 static void call_say2(int v, int v2)
@@ -73,7 +73,7 @@ static void call_say2(int v, int v2)
     start_timer(0);
     echoRequestProxy->say2(v, v2);
     wait_heard();
-    printf("call_say: elapsed %lld\n", stop_timer(0));
+    printf("call_say: elapsed %lld\n", lap_timer(0));
 }
 
 int main(int argc, const char **argv)

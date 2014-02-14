@@ -66,7 +66,7 @@ void start_timer(unsigned int i)
   c_start[i] = pdir->cycle_count();
 }
 
-unsigned long long stop_timer(unsigned int i)
+unsigned long long lap_timer(unsigned int i)
 {
   assert(i < 16);
   unsigned long long rv = pdir->cycle_count() - c_start[i];

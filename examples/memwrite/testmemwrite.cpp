@@ -115,7 +115,7 @@ void parent(int rd_sock, int wr_sock)
 #endif
   device->startWrite(ref_dstAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
-  unsigned long long cycles = stop_timer(0);
+  unsigned long long cycles = lap_timer(0);
   unsigned long long beats = dma->show_mem_stats(ChannelType_Write);
   fprintf(stderr, "memory write utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 

@@ -107,7 +107,7 @@ int main(int argc, const char **argv)
 #endif
   device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&test_sem);
-  unsigned long long cycles = stop_timer(0);
+  unsigned long long cycles = lap_timer(0);
   unsigned long long beats = dma->show_mem_stats(ChannelType_Read);
 
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));

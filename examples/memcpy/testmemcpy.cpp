@@ -216,7 +216,7 @@ int main(int argc, const char **argv)
   start_timer(0);
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
-  unsigned long long cycles = stop_timer(0);
+  unsigned long long cycles = lap_timer(0);
   unsigned long long read_beats = dma->show_mem_stats(ChannelType_Write);
   unsigned long long write_beats = dma->show_mem_stats(ChannelType_Write);
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)read_beats)/((float)cycles));
