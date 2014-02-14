@@ -364,15 +364,9 @@ int Portal::setClockFrequency(int clkNum, long requestedFrequency, long *actualF
     return status;
 }
 
-void* portalExec(void* __x)
+void* portalExec_init(void)
 {
 #ifdef MMAP_HW
-    long rc;
-    int timeout;
-    timeout = -1; // no interrupt timeout on Zynq platform
-#ifndef ZYNQ
-    timeout = 100; // interrupts not working yet on PCIe
-#endif
     if (!numFds) {
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
@@ -386,9 +380,17 @@ void* portalExec(void* __x)
     }
 #endif
     fprintf(stderr, "portalExec::about to enter loop\n");
-    while (true){
-      rc = poll(portal_fds, numFds, timeout);
-      if(rc >= 0) {
+#else // BSIM
+    fprintf(stderr, "about to enter bsim while(true), numFds=%d\n", numFds);
+#endif
+    return NULL;
+}
+
+void* portalExec_event(int timeout)
+{
+#ifdef MMAP_HW
+    long rc = poll(portal_fds, numFds, timeout);
+    if(rc >= 0) {
 	for (int i = 0; i < numFds; i++) {
 	  if (!portal_wrappers) {
 	    fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
@@ -425,16 +427,13 @@ void* portalExec(void* __x)
 	  // re-enable interrupt which was disabled by portal_isr
 	  *(instance->ind_reg_base+0x1) = 1;
 	}
-      } else {
+    } else {
 	// return only in error case
 	fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
 	//return (void*)rc;
-      }
     }
 #else // BSIM
-    fprintf(stderr, "about to enter bsim while(true), numFds=%d\n", numFds);
-    while (true){
-      for(int i = 0; i < numFds; i++){
+    for(int i = 0; i < numFds; i++) {
 	PortalWrapper *instance = portal_wrappers[i];
 	unsigned int int_status_addr = instance->ind_reg_base+0x0;
 	//fprintf(stderr, "AAAA: %x %s\n", int_status_addr, instance->name);
@@ -450,9 +449,22 @@ void* portalExec(void* __x)
 	    fprintf(stderr, "WARNING: int_status and queue_status are incoherent (%s)\n", instance->name);
 	  }
 	}
-      }
     }
 #endif
+    return NULL;
+}
+
+int portalExec_timeout;
+void* portalExec(void* __x)
+{
+    portalExec_timeout = -1; // no interrupt timeout on Zynq platform
+#ifndef ZYNQ
+    portalExec_timeout = 100; // interrupts not working yet on PCIe
+#endif
+    void *rc = portalExec_init();
+    while (!rc)
+        rc = portalExec_event(portalExec_timeout);
+    return rc;
 }
 
 Directory::Directory() 

@@ -45,6 +45,10 @@ class PortalMessage
 }; 
 
 void* portalExec(void* __x);
+/* fine grained functions for building custom portalExec */
+void* portalExec_init(void);
+void* portalExec_event(int timeout);
+extern int portalExec_timeout;
 
 class Portal
 {
