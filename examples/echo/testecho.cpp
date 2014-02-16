@@ -9,11 +9,11 @@
 #include "GeneratedTypes.h"
 #include "SwallowProxy.h"
 
-#define LOOP_COUNT 10000
+#define LOOP_COUNT 100
 // direct 15221 31213 29352 20805
 // mutex 7756 41714 144085 22610
 // sem 36691 1114 22540 353238 37673 243412
-#define SEPARATE_EVENT_THREAD
+//#define SEPARATE_EVENT_THREAD
 //#define USE_MUTEX_SYNC
 
 EchoRequestProxy *echoRequestProxy = 0;
@@ -68,8 +68,10 @@ public:
 	echoRequestProxy->say2(v, 2*v);
     }
     virtual void heard2(unsigned long a, unsigned long b) {
+        catch_timer(2);
         SEMPOST(&sem_heard2);
         //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
+        catch_timer(3);
     }
     EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {
     }
@@ -87,9 +89,13 @@ static void call_say(int v)
 
 static void call_say2(int v, int v2)
 {
+    start_timer(0);
     PREPAREWAIT(sem_heard2);
+    catch_timer(0);
     echoRequestProxy->say2(v, v2);
+    catch_timer(1);
     SEMWAIT(&sem_heard2);
+    catch_timer(4);
 }
 
 int main(int argc, const char **argv)
@@ -108,11 +114,13 @@ int main(int argc, const char **argv)
     call_say(v*17);
     call_say(v*93);
     printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
-    start_timer(0);
+    init_timer();
+    start_timer(1);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
-unsigned long long elapsed = lap_timer(0);
+unsigned long long elapsed = lap_timer(1);
     printf("call_say: elapsed %lld average %lld\n", elapsed, elapsed/LOOP_COUNT);
+    print_timer(LOOP_COUNT);
     echoRequestProxy->setLeds(9);
     portalExec_end();
     return 0;
