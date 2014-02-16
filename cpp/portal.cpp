@@ -392,11 +392,13 @@ void* portalExec_init(void)
 }
 void portalExec_end(void)
 {
+#ifdef MMAP_HW
     for (int i = 0; i < numFds; i++) {
       PortalWrapper *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d\n", i);
       *(volatile int *)(instance->ind_reg_base+0x1) = 0;
     }
+#endif
 }
 
 void* portalExec_event(int timeout)
