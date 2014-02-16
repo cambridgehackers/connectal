@@ -390,6 +390,14 @@ void* portalExec_init(void)
 #endif
     return NULL;
 }
+void portalExec_end(void)
+{
+    for (int i = 0; i < numFds; i++) {
+      PortalWrapper *instance = portal_wrappers[i];
+      fprintf(stderr, "portalExec::disabling interrupts portal %d\n", i);
+      *(volatile int *)(instance->ind_reg_base+0x1) = 0;
+    }
+}
 
 void* portalExec_event(int timeout)
 {

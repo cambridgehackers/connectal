@@ -48,6 +48,7 @@ void* portalExec(void* __x);
 /* fine grained functions for building custom portalExec */
 void* portalExec_init(void);
 void* portalExec_event(int timeout);
+void portalExec_end(void);
 extern int portalExec_timeout;
 
 class Portal
