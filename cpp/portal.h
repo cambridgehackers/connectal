@@ -29,6 +29,15 @@ void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
 void start_timer(unsigned int i);
 unsigned long long lap_timer(unsigned int i);
 
+#define MAX_TIMERS 20
+typedef struct {
+    unsigned long long total, min, max, over;
+} TIMETYPE;
+
+void init_timer(void);
+void catch_timer(int i);
+void print_timer(int loops);
+
 class PortalMessage 
 {
  public:
