@@ -215,7 +215,7 @@ int main(int argc, const char **argv)
 
     start_timer(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len);
-    lap_timer(0);
+    fprintf(stderr, "elapsed time (hw cycles): %lld\n", lap_timer(0));
     
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
