@@ -85,8 +85,8 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 		   end
 		   else if (addr == cco+1)
 		      return snapshot;
-		   else if (addr < cco+8) 
-      		      return append(readIntervalWires,writeIntervalWires)[addr-cco-1];
+		   else if (addr < cco+8) /* address in range [cco+2 .. cco+7] */
+      		      return append(readIntervalWires,writeIntervalWires)[addr-(cco+2)];
 		   else begin
       		      $display("directory addr out bounds %d", addr);
 		      return 0;

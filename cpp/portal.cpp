@@ -294,9 +294,13 @@ int Portal::sendMessage(PortalMessage *msg)
     //catch_timer(10);
     unsigned long addr = ((unsigned long)req_fifo_base) + msg->channel * 256;
     //fprintf(stderr, "%08lx %08x\n", addr, data);
+unsigned long long before_request = pdir->cycle_count();
     catch_timer(11);
     *((volatile unsigned int*)addr) = data;
+unsigned long long after_request = pdir->cycle_count();
     catch_timer(12);
+    pdir->printDbgRequestIntervals();
+printf("portalbefore req %llx after %llx\n", before_request, after_request);
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
     write_portal(p, addr, data, name);
@@ -534,16 +538,20 @@ Directory::Directory()
 void Directory::printDbgRequestIntervals()
 {
   unsigned int i, c;
+  fprintf(stderr, "Rd ");
   for(i = 0; i < 6; i++){
 #ifdef MMAP_HW
     c = *(intervals_offset+i);
 #else
     unsigned int addr = intervals_offset+(i*4);
     c = read_portal(p, addr, name);
-    fprintf(stderr, "%08x\n", addr);
+    fprintf(stderr, "%08x:", addr);
 #endif
-    fprintf(stderr, "%08x\n", c);
+    fprintf(stderr, "%08x ", c);
+    if (i == 2)
+        fprintf(stderr, "\nWr ");
   }
+  fprintf(stderr, "\n");
 }
 
 unsigned long long Directory::cycle_count()
