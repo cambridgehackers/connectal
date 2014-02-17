@@ -136,7 +136,7 @@ void write_portal(portal *p, unsigned int addr, unsigned int v, char *name)
 
 }
 
-void Portal::close()
+void Portal::portalClose()
 {
     if (fd > 0) {
         ::close(fd);
@@ -163,7 +163,7 @@ Portal::Portal(const char *devname, unsigned int addrbits)
     req_fifo_base(0x0),
     name(strdup(devname))
 {
-  int rc = open(addrbits);
+  int rc = portalOpen(addrbits);
   if (rc != 0) {
     printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
     ALOGD("Portal::Portal failure rc=%d\n", rc);
@@ -180,7 +180,7 @@ Portal::Portal(int id)
   char buff[128];
   sprintf(buff, "fpga%d", dir.get_fpga(id));
   name = strdup(buff);
-  int rc = open(dir.get_addrbits(id));
+  int rc = portalOpen(dir.get_addrbits(id));
   if (rc != 0) {
     printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
     ALOGD("Portal::Portal failure rc=%d\n", rc);
@@ -190,12 +190,12 @@ Portal::Portal(int id)
 
 Portal::~Portal()
 {
-  close();
+  portalClose();
   free(name);
 }
 
 
-int Portal::open(int addrbits)
+int Portal::portalOpen(int addrbits)
 {
 #ifdef ZYNQ
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");

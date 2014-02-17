@@ -63,8 +63,8 @@ extern int portalExec_timeout;
 class Portal
 {
  public:
-  int open(int length);
-  void close();
+  int portalOpen(int length);
+  void portalClose();
   Portal(int id);
   Portal(Portal* p);
   Portal(const char *name, unsigned int addrbits);
