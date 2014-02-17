@@ -69,7 +69,9 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
         struct portal_data *portal_data = (struct portal_data *)dev_id;
 
         //dump_ind_regs("ISR a", portal_data);
+        driver_devel("%s %s %d basevirt %p\n", __func__, portal_data->misc.name, irq, portal_data->ind_reg_base_virt);
         u32 int_status = readl(portal_data->ind_reg_base_virt + 0);
+        driver_devel("stat %x\n", int_status);
         u32 int_en  = readl(portal_data->ind_reg_base_virt + 4);
         driver_devel("%s IRQ %s %d %x %x\n", __func__, portal_data->misc.name, irq, int_status, int_en);
 
@@ -78,11 +80,8 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
                 // driver  after all the HW->SW FIFOs have been emptied
                 writel(0, portal_data->ind_reg_base_virt + 0x4);
 
-                // driver_devel("%s IRQ before wake_up_interruptible\n", __func__);
                 //dump_ind_regs("ISR b", portal_data);
                 wake_up_interruptible(&portal_data->wait_queue);
-                //driver_devel("%s IRQ after wake_up_interruptible\n", __func__);
-                //driver_devel("%s blurgh=%p\n", __func__,  *((unsigned int*)NULL));
                 return IRQ_HANDLED;
         }
         return IRQ_NONE;
@@ -102,7 +101,7 @@ static int portal_open(struct inode *inode, struct file *filep)
                 // read the interrupt as a sanity check (to force segv if hw not present)
                 u32 int_status = readl(portal_data->ind_reg_base_virt + 0);
                 u32 int_en  = readl(portal_data->ind_reg_base_virt + 4);
-                driver_devel("%s IRQ %s %x %x\n", __func__, portal_data->misc.name, int_status, int_en);
+                driver_devel("%s IRQ %s basev %p status %x en %x\n", __func__, portal_data->misc.name, portal_data->ind_reg_base_virt, int_status, int_en);
                 if (request_irq(portal_data->portal_irq, portal_isr,
                         IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->misc.name, portal_data)) {
                         portal_data->portal_irq = 0;
@@ -189,9 +188,11 @@ unsigned int portal_poll (struct file *filep, poll_table *poll_table)
 
 static int portal_release(struct inode *inode, struct file *filep)
 {
+        struct portal_data *portal_data = filep->private_data;
         driver_devel("%s inode=%p filep=%p\n", __func__, inode, filep);
-        //driver_devel("%s blurgh=%d\n", __func__,  *((unsigned int*)NULL));
-        //dump_stack();
+        if (portal_data->irq_requested)
+                free_irq(portal_data->portal_irq, portal_data);
+        portal_data->irq_requested = 0;
         return 0;
 }
 
@@ -237,7 +238,6 @@ static int portal_of_probe(struct platform_device *pdev)
         portal_data->misc.name = dname;
         portal_data->dev_base_phys = reg_res->start;
         ind_reg_base_phys = reg_res->start + (3 << 14);
-        //void *dev_base_virt = ioremap_nocache(portal_data->dev_base_phys, reg_res->end - reg_res->start);
         portal_data->ind_reg_base_virt = ioremap_nocache(ind_reg_base_phys,
                 reg_range);
         init_waitqueue_head(&portal_data->wait_queue);
