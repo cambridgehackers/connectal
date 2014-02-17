@@ -193,3 +193,11 @@ To update the zynq portal driver running on the Zync platform, set ADB_PORT appr
    adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mv zynqportal.ko"
    adb -s $ADB_PORT shell "modprobe -r zynqportal"
    adb -s $ADB_PORT shell "modprobe zynqportal"
+
+Zynq Hints
+-------------
+
+To remount /system read/write:
+    mount -o rw,remount /dev/block/mmcblk0p1 /system
+
+
