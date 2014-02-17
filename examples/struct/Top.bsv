@@ -32,7 +32,7 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    let interrupt_mux <- mkInterruptMux(portals);
    
    // instantiate system directory
-   Directory dir <- mkDirectory(portals);
+   StdDirectory dir <- mkStdDirectory(portals);
    Vector#(1,StdPortal) directories;
    directories[0] = dir.portalIfc;
    

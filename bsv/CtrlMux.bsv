@@ -28,6 +28,7 @@ import GetPut::*;
 
 import AxiMasterSlave::*;
 import Portal::*;
+import Directory::*;
 
 
 module mkInterruptMux#(Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (ReadOnly#(Bool))
@@ -106,3 +107,17 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories,
       endmethod
    endinterface
 endmodule
+
+
+// module mkAxiSlaveMuxDbg#(Directory dir,
+// 			 Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Slave#(_a,_b,_c))
+
+//    provisos(Add#(1,numPortals,numInputs),
+// 	    Add#(1,numInputs,numIfcs),
+// 	    Add#(nz, TLog#(numIfcs), 4));
+
+//    Vector#(1,StdPortal) directories;
+//    directories[0] = dir.portalIfc;
+//    mkAxiSlaveMux(directories, portals);
+   
+// endmodule

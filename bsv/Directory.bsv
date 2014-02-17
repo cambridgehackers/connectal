@@ -8,11 +8,16 @@ import SpecialFIFOs::*;
 import Portal::*;
 import AxiMasterSlave::*;
 
-interface Directory;
-   interface StdPortal portalIfc;
+interface Directory#(numeric type _n, 
+		     numeric type _a, 
+		     numeric type _b, 
+		     numeric type _c);
+   interface Portal#(_n,_a,_b,_c) portalIfc;
 endinterface
 
-module mkDirectoryPortalIfc#(RegFileA#(Bit#(32), Bit#(32)) rf)(StdPortal);
+typedef Directory#(16,32,32,12) StdDirectory;
+
+module mkStdDirectoryPortalIfc#(RegFileA#(Bit#(32), Bit#(32)) rf)(StdPortal);
    Axi3Slave#(32,32,12) ctrl_mod <- mkAxi3SlaveFromRegFile(rf);
    method Bit#(32) ifcId();
       return 0;
@@ -28,7 +33,7 @@ module mkDirectoryPortalIfc#(RegFileA#(Bit#(32), Bit#(32)) rf)(StdPortal);
    endinterface
 endmodule
 
-module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
+module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 
    Reg#(Bit#(64)) cycle_count <- mkReg(0);
    Reg#(Bit#(32)) snapshot    <- mkReg(0);
@@ -70,7 +75,7 @@ module mkDirectory#(Vector#(n,StdPortal) portals) (Directory);
 		      return 0;
 		endmethod
       	     endinterface);
-   let ifc <- mkDirectoryPortalIfc(rf);
+   let ifc <- mkStdDirectoryPortalIfc(rf);
    interface StdPortal portalIfc = ifc;
 endmodule
 

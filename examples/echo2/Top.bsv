@@ -31,7 +31,7 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    portals[1] = sayProxy.portalIfc; 
    
    // instantiate system directory
-   Directory dir <- mkDirectory(portals);
+   StdDirectory dir <- mkStdDirectory(portals);
    Vector#(1,StdPortal) directories;
    directories[0] = dir.portalIfc;
    

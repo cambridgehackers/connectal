@@ -63,7 +63,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    portals[2] = dmaConfigWrapper.portalIfc;
    portals[3] = dmaIndicationProxy.portalIfc; 
    
-   Directory dir <- mkDirectory(portals);
+   StdDirectory dir <- mkStdDirectory(portals);
    Vector#(1,StdPortal) directories;
    directories[0] = dir.portalIfc;
    
