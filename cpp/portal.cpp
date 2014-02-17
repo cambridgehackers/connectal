@@ -52,6 +52,8 @@ Directory dir;
 Directory *pdir;
 unsigned long long c_start[16];
 
+#define ENABLE_INTERRUPTS(A) *((A)+0x1) = 1
+
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
 #define ALOGE(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, "PORTAL", fmt, __VA_ARGS__)
@@ -250,7 +252,7 @@ int Portal::portalOpen(int addrbits)
     req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
 
     fprintf(stderr, "Portal::enabling interrupts %s\n", name);
-    *(ind_reg_base+0x1) = 1;
+    ENABLE_INTERRUPTS(ind_reg_base);
  
 #else
     p = (struct portal*)malloc(sizeof(struct portal));
@@ -295,13 +297,20 @@ int Portal::sendMessage(PortalMessage *msg)
     unsigned int data = buf[i];
 #ifdef MMAP_HW
     //catch_timer(10);
+#if 0
+    int temp = *(volatile int *)(ind_reg_base+0x1);
+    *(ind_reg_base+0x1) = 0; // disable interrupts for a bit
+#endif
     unsigned long addr = ((unsigned long)req_fifo_base) + msg->channel * 256;
     unsigned long long before_requestt = catch_timer(11);
     //fprintf(stderr, "%08lx %08x\n", addr, data);
     *((volatile unsigned int*)addr) = data;
     unsigned long long after_requestt = catch_timer(12);
+#if 0
     pdir->printDbgRequestIntervals();
     printf("portalbefore req %llx after %llx\n", before_requestt, after_requestt);
+    *(ind_reg_base+0x1) = temp; //restore interrupt enable
+#endif
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
     write_portal(p, addr, data, name);
@@ -426,7 +435,7 @@ void* portalExec_init(void)
     for (int i = 0; i < numFds; i++) {
       PortalWrapper *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::enabling interrupts portal %d\n", i);
-      *(volatile int *)(instance->ind_reg_base+0x1) = 1;
+      ENABLE_INTERRUPTS(instance->ind_reg_base);
     }
 #endif
     fprintf(stderr, "portalExec::about to enter loop\n");
@@ -457,12 +466,13 @@ void* portalExec_event(int timeout)
 	  }
 	
 	  PortalWrapper *instance = portal_wrappers[i];
+	  volatile unsigned int *ind_reg_base = instance->ind_reg_base;
 	
 	  // sanity check, to see the status of interrupt source and enable
-	  unsigned int int_src = *(volatile int *)(instance->ind_reg_base+0x0);
-	  unsigned int int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
-	  unsigned int ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
-	  unsigned int queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
+	  unsigned int int_src = *(ind_reg_base+0x0);
+	  unsigned int int_en  = *(ind_reg_base+0x1);
+	  unsigned int ind_count  = *(ind_reg_base+0x2);
+	  unsigned int queue_status = *(ind_reg_base+0x6);
 	  if(0)
 	  fprintf(stderr, "(%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, int_src, int_en, queue_status);
 	
@@ -471,10 +481,10 @@ void* portalExec_event(int timeout)
 	    if(0)
 	      fprintf(stderr, "queue_status %d\n", queue_status);
 	    instance->handleMessage(queue_status-1);
-	    int_src = *(volatile int *)(instance->ind_reg_base+0x0);
-	    int_en  = *(volatile int *)(instance->ind_reg_base+0x1);
-	    ind_count  = *(volatile int *)(instance->ind_reg_base+0x2);
-	    queue_status = *(volatile int *)(instance->ind_reg_base+0x6);
+	    int_src = *(ind_reg_base+0x0);
+	    int_en  = *(ind_reg_base+0x1);
+	    ind_count  = *(ind_reg_base+0x2);
+	    queue_status = *(ind_reg_base+0x6);
 	    if (0)
 	      fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
 		      __LINE__, int_src, int_en, ind_count, queue_status);
@@ -485,7 +495,7 @@ void* portalExec_event(int timeout)
 	    // do something if we timeout??
 	  }
 	  // re-enable interrupt which was disabled by portal_isr
-	  *(instance->ind_reg_base+0x1) = 1;
+	  ENABLE_INTERRUPTS(ind_reg_base);
 	}
     } else {
 	// return only in error case
@@ -554,7 +564,7 @@ void Directory::printDbgRequestIntervals()
   }
 
   for(i = 0; i < 6; i++){
-    fprintf(stderr, "%16llx ", x[i]);
+    fprintf(stderr, "%016llx ", x[i]);
     if (i == 2)
       fprintf(stderr, "\nWr ");
   }
