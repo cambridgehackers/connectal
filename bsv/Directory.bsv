@@ -88,7 +88,7 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 		   else if (addr < cco+8) /* address in range [cco+2 .. cco+7] */ // read low order bits
       		      return truncate(append(readIntervalWires,writeIntervalWires)[addr-(cco+2)]);
 		   else if (addr < cco+13) /* address in range [cco+8 .. cco+13] */ // read high order bits
-      		      return truncate(append(readIntervalWires,writeIntervalWires)[addr-(cco+2)]>>32);
+      		      return truncate(append(readIntervalWires,writeIntervalWires)[addr-(cco+8)]>>32);
 		   else begin
       		      $display("directory addr out bounds %d", addr);
 		      return 0;
