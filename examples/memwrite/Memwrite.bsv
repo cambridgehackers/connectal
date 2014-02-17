@@ -40,79 +40,53 @@ endinterface
 
 interface MemwriteIndication;
    method Action started(Bit#(32) numWords);
-   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) srcGen);
+   method Action reportStateDbg(Bit#(32) wrCnt, Bit#(32) srcGen);
    method Action writeReq(Bit#(32) v);
    method Action writeDone(Bit#(32) v);
 endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
-   Reg#(Bit#(32))         wrPointer <- mkReg(0); 
-   Reg#(Bit#(32))             wrCnt <- mkReg(0);
-   Reg#(Bit#(32))            srcGen <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) offset <- mkReg(0);
-
-   Reg#(Bit#(8))           burstLen <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize))  delta <- mkReg(0);
-   Reg#(Bit#(32))           iterCnt <- mkReg(0);
+   Reg#(Bit#(32))         numWords <- mkReg(0);
+   Reg#(Bit#(32))           srcGen <- mkReg(0);
+   Reg#(Bit#(32))            wrCnt <- mkReg(0);
    
-   Reg#(Bit#(8))         burstCount <- mkReg(0);
-   FIFOF#(Bit#(6))         dataTags <- mkSizedFIFOF(32);
-   FIFOF#(Bit#(6))         doneTags <- mkSizedFIFOF(32);
-   
-   let reqFifo <- mkFIFO;
+   Reg#(Bit#(DmaOffsetSize)) wrOff <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) delta <- mkReg(0);
 
-   rule start_write if (wrCnt == 0 && srcGen == 0);
-      Bit#(32) pointer = tpl_1(reqFifo.first);
-      Bit#(32) numWords = tpl_2(reqFifo.first);
-      Bit#(32) bl = tpl_3(reqFifo.first);
-      wrPointer <= pointer;
-      wrCnt <= numWords>>1;
-      srcGen <= numWords;
-      offset <= 0;
-      burstLen <= truncate(bl);
-      delta <= 8*extend(bl);
-      iterCnt <= iterCnt-1;
-      if(iterCnt==1) 
-	 reqFifo.deq;
-      $display("start_write %d", iterCnt);
+   Reg#(DmaPointer)      wrPointer <- mkReg(0);
+   Reg#(Bit#(8))          burstLen <- mkReg(0);
+   Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
+   FIFO#(Bool)                acks <- mkSizedFIFO(32);
+   
+   rule writeReq(wrIterCnt > 0 && wrCnt == numWords>>1);
+      wrCnt <= 0;
+      wrIterCnt <= wrIterCnt-1;
+      wrOff <= 0;
    endrule
-      
+   
    interface DmaWriteClient dmaClient;
       interface GetF writeReq;
-	 method ActionValue#(DmaRequest) get() if (wrCnt > 0);
-	    wrCnt <= wrCnt-extend(burstLen);
-	    offset <= offset + delta;
-	    //else if (wrCnt[5:0] == 6'b0)
-	    //    indication.writeReq(wrCnt);
-	    Bit#(6) tag = truncate(offset >> 5);
-	    dataTags.enq(tag);
-	    doneTags.enq(tag);
-	    //$display("mkMemWrite.dmaClient.writeReq::get wrCnt=%d, tag=%d", wrCnt, tag);
-	    return DmaRequest {pointer: wrPointer, offset: offset, burstLen: burstLen, tag: tag};
+	 method ActionValue#(DmaRequest) get() if (wrIterCnt > 0 && wrCnt < numWords>>1);
+	    //$display("wrReq: pointer=%d offset=%h burstlen=%d", wrPointer, wrOff, burstLen);
+	    wrCnt <= wrCnt+extend(burstLen);
+	    wrOff <= wrOff + delta;
+	    acks.enq(wrIterCnt == 1 && wrCnt == (numWords>>1)-extend(burstLen));
+	    return DmaRequest {pointer: wrPointer, offset: wrOff, burstLen: burstLen, tag: 1};
 	 endmethod
 	 method Bool notEmpty;
-	    return wrCnt > 0;
+	    return (wrIterCnt > 0 && wrCnt < numWords>>1);
 	 endmethod
       endinterface : writeReq
       interface GetF writeData;
 	 method ActionValue#(DmaData#(64)) get();
-	    if (burstCount == 0) begin // starting a new burst
-	       burstCount <= burstLen -1;
-	    end
-	    else begin
-	       burstCount <= burstCount-1;
-	       if (burstCount == 1) begin // ending a burst
-		  dataTags.deq();
-	       end
-	    end
-	    if (srcGen == 2 && iterCnt == 0)
-	       indication.writeDone(0);
-	    let tag = dataTags.first();
-	    srcGen <= srcGen-2;
-	    let dmadata = {srcGen-1,srcGen};
 	    //$display("mkMemWrite.dmaClient.writeData::get dmadata=%h, tag=%h", dmadata, tag);
-	    return DmaData{data:dmadata, tag: tag};
+	    if (srcGen+2 == numWords)
+	       srcGen <= 0;
+	    else
+	       srcGen <= srcGen+2;
+	    let dmadata = {srcGen+1,srcGen};
+	    return DmaData{data:dmadata, tag: 1};
 	 endmethod
 	 method Bool notEmpty;
 	    return True;
@@ -120,20 +94,30 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       endinterface : writeData
       interface PutF writeDone;
 	 method Action put(Bit#(6) tag);
-	    if (tag != doneTags.first)
-	       $display("doneTag mismatch tag=%h doneTag=%h", tag, doneTags.first);
-	    doneTags.deq();
+	    if (acks.first)
+	       indication.writeDone(0);
+	    acks.deq;
 	 endmethod
-	 method Bool notFull = doneTags.notFull;
+	 method Bool notFull;
+	    return True;
+	 endmethod
       endinterface : writeDone
    endinterface : dmaClient
 
    interface MemwriteRequest request;
-       method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) bl, Bit#(32) ic);
-	  $display("mkMemWrite::startWrite(%d %d %d)", pointer, numWords, bl);
-	  indication.started(numWords*ic);
-          reqFifo.enq(tuple3(pointer,numWords,bl));
-	  iterCnt <= ic;
+       method Action startWrite(Bit#(32) pointer, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
+	  $display("startWrite pointer=%d numWords=%h burstLen=%d iterCnt=%d", pointer, nw, bl, ic);
+	  indication.started(nw);
+	  // initialized
+	  wrPointer <= pointer;
+	  numWords <= nw;
+	  burstLen <= truncate(bl);
+	  delta <= 8*extend(bl);
+	  wrIterCnt <= ic;
+	  // reset
+	  wrCnt <= 0;
+	  wrOff <= 0;
+	  srcGen <= 0;
        endmethod
        method Action getStateDbg();
 	  indication.reportStateDbg(wrCnt, srcGen);

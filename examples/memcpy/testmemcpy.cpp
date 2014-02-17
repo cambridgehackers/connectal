@@ -42,13 +42,8 @@ PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-#ifdef MMAP_HW
-int numWords = 16 << 10;
-#else
-int numWords = 16 << 14;
-#endif
-size_t test_sz  = numWords*sizeof(unsigned int);
-size_t alloc_sz = test_sz;
+int numWords = 16 << 2;
+size_t alloc_sz = numWords*sizeof(unsigned int);
 bool trigger_fired = false;
 bool finished = false;
 bool memcmp_fail = false;
@@ -85,21 +80,22 @@ public:
   virtual void readWordResult ( unsigned long v ){
     dump("readWordResult: ", (char*)&v, sizeof(v));
   }
-  virtual void done(unsigned long v) {
+  virtual void done(unsigned long mismatch) {
     sem_post(&done_sem);
     finished = true;
-    unsigned int mcf = memcmp(srcBuffer, dstBuffer, test_sz);
-    memcmp_fail |= mcf;
-    if(true){
-      fprintf(stderr, "memcpy done: %lx\n", v);
-      fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
+    memcmp_fail |= mismatch;
+    //unsigned int mcf = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
+    //memcmp_fail |= mcf;
+    //if(true){
+    //fprintf(stderr, "memcpy done: %lx\n", v);
+    // fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
       //dump("src", (char*)srcBuffer, 128);
       //dump("dst", (char*)dstBuffer, 128);
       //dump("dbg", (char*)bsBuffer,  128);   
-    }
+    // }
   }
   virtual void rData ( unsigned long long v ){
-    dump("rData: ", (char*)&v, sizeof(v));
+    //fprintf(stderr, "rData: %016llx\n", v);
   }
   virtual void readReq(unsigned long v){
     //fprintf(stderr, "readReq %lx\n", v);
@@ -175,6 +171,14 @@ int main(int argc, const char **argv)
   dma->alloc(alloc_sz, &dstAlloc);
   dma->alloc(alloc_sz, &bsAlloc);
 
+  for(int i = 0; i < srcAlloc->header.numEntries; i++)
+    fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);
+  for(int i = 0; i < dstAlloc->header.numEntries; i++)
+    fprintf(stderr, "%lx %lx\n", dstAlloc->entries[i].dma_address, dstAlloc->entries[i].length);
+  for(int i = 0; i < bsAlloc->header.numEntries; i++)
+    fprintf(stderr, "%lx %lx\n", bsAlloc->entries[i].dma_address, bsAlloc->entries[i].length);
+
+
   srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc->header.fd, 0);
   bsBuffer  = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, bsAlloc->header.fd, 0);
@@ -192,27 +196,31 @@ int main(int argc, const char **argv)
     bsBuffer[i]  = 0x5a5abeef;
   }
 
+  dma->dCacheFlushInval(bsAlloc,  bsBuffer);
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   dma->dCacheFlushInval(dstAlloc, dstBuffer);
-  dma->dCacheFlushInval(bsAlloc,  bsBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   unsigned int ref_bsAlloc  = dma->reference(bsAlloc);
   
-  fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   bluescope->reset();
   bluescope->setTriggerMask (0xFFFFFFFF);
   bluescope->setTriggerValue(0x00000008);
   bluescope->start(ref_bsAlloc);
+
+  sleep(1);
+  dma->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
+  sleep(1);
+  dma->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
+  sleep(1);
+  dma->addrRequest(ref_bsAlloc, 3*sizeof(unsigned int));
+  sleep(1);
   
+  fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   int burstLen = 16;
-#ifdef MMAP_HW
   int iterCnt = 2;
-#else
-  int iterCnt = 2;
-#endif
   start_timer(0);
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
@@ -227,6 +235,7 @@ int main(int argc, const char **argv)
     .setReadBeats(read_beats)
     .setWriteBeats(write_beats)
     .writeFile();
-  
+
+  sleep(2);
   exit_test();
 }

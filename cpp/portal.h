@@ -28,7 +28,7 @@ unsigned int read_portal(portal *p, unsigned int addr, char *name);
 void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
 void start_timer(unsigned int i);
 unsigned long long lap_timer(unsigned int i);
-void print_dbg_requeste_intervals();
+void print_dbg_request_intervals();
 
 #define MAX_TIMERS 50
 typedef struct {

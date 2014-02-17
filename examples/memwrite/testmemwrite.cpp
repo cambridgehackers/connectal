@@ -15,7 +15,7 @@
 #include "MemwriteRequestProxy.h"
 
 sem_t done_sem;
-int numWords = 16 << 18;
+int numWords = 16 << 2;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 
@@ -108,11 +108,7 @@ void parent(int rd_sock, int wr_sock)
   fprintf(stderr, "parent::starting write %08x\n", numWords);
   start_timer(0);
   int burstLen = 16;
-#ifdef MMAP_HW
-  int iterCnt = 64;
-#else
   int iterCnt = 2;
-#endif
   device->startWrite(ref_dstAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
   unsigned long long cycles = lap_timer(0);

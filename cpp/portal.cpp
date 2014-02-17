@@ -60,7 +60,7 @@ unsigned long long c_start[16];
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
 
-void print_dbg_requeste_intervals()
+void print_dbg_request_intervals()
 {
   pdir->printDbgRequestIntervals();
 }
@@ -301,7 +301,7 @@ int Portal::sendMessage(PortalMessage *msg)
     *((volatile unsigned int*)addr) = data;
     unsigned long long after_requestt = catch_timer(12);
     pdir->printDbgRequestIntervals();
-printf("portalbefore req %llx after %llx\n", before_requestt, after_requestt);
+    printf("portalbefore req %llx after %llx\n", before_requestt, after_requestt);
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
     write_portal(p, addr, data, name);

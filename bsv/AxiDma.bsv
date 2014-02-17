@@ -112,7 +112,7 @@ module mkAxiDmaReadInternal#(Integer numRequests,
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
-	 $display("dmaRead: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
+	 // $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
       end
       else begin
@@ -310,7 +310,7 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
         Add#(f__, c__, DmaOffsetSize),
 	Add#(g__, addrWidth, 40));
    
-   SGListMMU#(addrWidth) sgl <- mkSGListMMU();
+   SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
 
    AxiDmaReadInternal#(addrWidth, dsz) reader <- mkAxiDmaReadInternal(numRequests, readClients, dmaIndication, sgl.addr[0]);
@@ -350,9 +350,6 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 	 let va <- pareff(pref, len);
          addr[39:32] = truncate(pref);
 `endif
-	 if (addr == 0 && len > 0) begin
-	    dmaIndication.badAddr(pref, addr, zeroExtend(len));
-	 end
 	 sgl.sglist(pref, addr, len);
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);

@@ -125,8 +125,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
       let req <- master.req_ar.get();
       readDelayFifo.enq(tuple2(cycle,req));
    endrule
-   
-   rule req_ar_b if (readLen == 0 && writeLen == 0 && (cycle-tpl_1(readDelayFifo.first)) > readLatency);
+   rule req_ar_b if (readLen == 0 /*&& writeLen == 0*/ && (cycle-tpl_1(readDelayFifo.first)) > readLatency);
       let req = tpl_2(readDelayFifo.first);
       readDelayFifo.deq;
       Bit#(5) rlen = extend(req.len)+1;
@@ -150,8 +149,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
       let req <- master.req_aw.get();
       writeDelayFifo.enq(tuple2(cycle,req));
    endrule
-
-   rule req_aw_b if (writeLen == 0 && writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency);
+   rule req_aw_b if (writeLen == 0 /*&& readLen == 0*/ && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency);
       let req = tpl_2(writeDelayFifo.first);
       writeDelayFifo.deq;
       Bit#(5) wlen = extend(req.len)+1;
@@ -160,9 +158,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
       writeLen <= wlen;
       writeId <= req.id;
    endrule
-   
    FIFO#(Axi3WriteResponse#(6)) bFifo <- mkFIFO();
-   
    rule write_resp if (writeLen > 0);
       let handle = writeAddrr[39:32];
       let addr = writeAddrr[31:0];
@@ -174,7 +170,6 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
       if (writeLen == 1)
 	 bFifo.enq(Axi3WriteResponse { id: writeId, resp: 0 });
    endrule
-   
    rule resp_b;
       let resp = bFifo.first();
       bFifo.deq();

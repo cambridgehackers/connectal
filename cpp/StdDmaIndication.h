@@ -33,6 +33,9 @@ public:
   virtual void badPointer (unsigned long pointer) {
     fprintf(stderr, "DmaIndication::badPointer(pointer=%lx)\n", pointer);
   }
+  virtual void badPageSize (unsigned long pointer, unsigned long len) {
+    fprintf(stderr, "DmaIndication::badPageSize(pointer=%lx, len=%lx)\n", pointer, len);
+  }
   virtual void badAddr (unsigned long pointer, unsigned long long offset , unsigned long long physAddr) {
     fprintf(stderr, "DmaIndication::badAddr(pointer=%lx offset=%llx physAddr=%llx)\n", pointer, offset, physAddr);
   }

@@ -14,7 +14,7 @@
 
 
 sem_t test_sem;
-int numWords = 16 << 18;
+int numWords = 16 << 2;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 int mismatchCount = 0;
@@ -88,7 +88,7 @@ int main(int argc, const char **argv)
   }
 
   for (int i = 0; i < numWords; i++){
-    srcBuffer[i] = numWords-i;
+    srcBuffer[i] = i;
   }
     
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
@@ -100,11 +100,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::starting read %08x\n", numWords);
   start_timer(0);
   int burstLen = 16;
-#ifdef MMAP_HW
-  int iterCnt = 64;
-#else
   int iterCnt = 2;
-#endif
   device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&test_sem);
   unsigned long long cycles = lap_timer(0);
