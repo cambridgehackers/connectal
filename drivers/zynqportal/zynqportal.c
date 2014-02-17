@@ -190,6 +190,8 @@ static int portal_release(struct inode *inode, struct file *filep)
 {
         struct portal_data *portal_data = filep->private_data;
         driver_devel("%s inode=%p filep=%p\n", __func__, inode, filep);
+        // disable interrupt
+        writel(0, portal_data->ind_reg_base_virt + 0x4);
         if (portal_data->irq_requested)
                 free_irq(portal_data->portal_irq, portal_data);
         portal_data->irq_requested = 0;
