@@ -77,26 +77,30 @@ static TIMETYPE timers[MAX_TIMERS];
 
 void init_timer(void)
 {
+    memset(timers, 0, sizeof(timers));
     for (int i = 0; i < MAX_TIMERS; i++)
         timers[i].min = 0xffffffffffff;
 }
 
 void catch_timer(int i)
 {
-unsigned long long val = lap_timer(0);
-if (val > timers[i].max)
-    timers[i].max = val;
-if (val < timers[i].min)
-    timers[i].min = val;
-if (val > 1000000)
-    timers[i].over++;
-timers[i].total += val;
+    unsigned long long val = lap_timer(0);
+    if (i >= MAX_TIMERS)
+        return;
+    if (val > timers[i].max)
+        timers[i].max = val;
+    if (val < timers[i].min)
+        timers[i].min = val;
+    if (val > 1000000)
+        timers[i].over++;
+    timers[i].total += val;
 }
 void print_timer(int loops)
 {
     for (int i = 0; i < MAX_TIMERS; i++) {
         if (timers[i].min != 0xffffffffffff)
-           printf("[%d]: avg %lld min %lld max %lld over %lld\n", i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
+           printf("[%d]: avg %lld min %lld max %lld over %lld\n",
+               i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
     }
 }
 
@@ -267,7 +271,7 @@ int Portal::sendMessage(PortalMessage *msg)
   // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
   unsigned int buf[128];
   msg->marshall(buf);
-catch_timer(6);
+  catch_timer(6);
 
   // mutex_lock(&portal_data->reg_mutex);
   // mutex_unlock(&portal_data->reg_mutex);
@@ -278,16 +282,16 @@ catch_timer(6);
     //addr[2] = 0xffffffff;
   }
 #endif
-catch_timer(9);
+  catch_timer(9);
   for (int i = msg->size()/4-1; i >= 0; i--) {
     unsigned int data = buf[i];
 #ifdef MMAP_HW
-catch_timer(10);
+    catch_timer(10);
     unsigned long addr = ((unsigned long)req_fifo_base) + msg->channel * 256;
     //fprintf(stderr, "%08lx %08x\n", addr, data);
-catch_timer(11);
+    catch_timer(11);
     *((volatile unsigned int*)addr) = data;
-catch_timer(12);
+    catch_timer(12);
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
     write_portal(p, addr, data, name);
@@ -301,7 +305,6 @@ catch_timer(12);
     fprintf(stderr, "requestFiredCount=%x outOfRangeWriteCount=%x getWordCount=%x putWordCount=%x putEnable=%x\n",addr[0], addr[1], addr[7], addr[8], addr[2]);
   }
 #endif
-catch_timer(14);
   return 0;
 }
 

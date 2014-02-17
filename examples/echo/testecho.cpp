@@ -9,12 +9,9 @@
 #include "GeneratedTypes.h"
 #include "SwallowProxy.h"
 
-#define LOOP_COUNT 100
-// direct 15221 31213 29352 20805
-// mutex 7756 41714 144085 22610
-// sem 36691 1114 22540 353238 37673 243412
+#define LOOP_COUNT 1000
 //#define SEPARATE_EVENT_THREAD
-//#define USE_MUTEX_SYNC
+#define USE_MUTEX_SYNC
 
 EchoRequestProxy *echoRequestProxy = 0;
 
@@ -24,7 +21,7 @@ typedef int SEM_TYPE;
 #define SEMWAIT pthread_worker
 #elif defined(USE_MUTEX_SYNC)
 typedef pthread_mutex_t SEM_TYPE;
-#define SEMINIT(A) 
+#define SEMINIT(A) pthread_mutex_lock(A);
 #define SEMWAIT(A) pthread_mutex_lock(A);
 #define SEMPOST(A) pthread_mutex_unlock(A);
 #else // use semaphores
@@ -34,12 +31,12 @@ typedef sem_t SEM_TYPE;
 #define SEMPOST(A) sem_post(A)
 #endif
 
-#ifndef SEPARATE_EVENT_THREAD
-#define PREPAREWAIT(A) (A) = 0
-#define CHECKSEM(A) (!(A))
-#else // use separate threads
+#ifdef SEPARATE_EVENT_THREAD
 #define PREPAREWAIT(A)
 #define CHECKSEM(A) 1
+#else // use inline sync
+#define PREPAREWAIT(A) (A) = 0
+#define CHECKSEM(A) (!(A))
 #endif
 
 static SEM_TYPE sem_heard2;
@@ -68,10 +65,10 @@ public:
 	echoRequestProxy->say2(v, 2*v);
     }
     virtual void heard2(unsigned long a, unsigned long b) {
-        catch_timer(2);
+        catch_timer(20);
         SEMPOST(&sem_heard2);
         //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
-        catch_timer(3);
+        catch_timer(25);
     }
     EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {
     }
@@ -93,9 +90,9 @@ static void call_say2(int v, int v2)
     PREPAREWAIT(sem_heard2);
     catch_timer(0);
     echoRequestProxy->say2(v, v2);
-    catch_timer(1);
+    catch_timer(19);
     SEMWAIT(&sem_heard2);
-    catch_timer(4);
+    catch_timer(30);
 }
 
 int main(int argc, const char **argv)
@@ -119,8 +116,17 @@ int main(int argc, const char **argv)
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
 unsigned long long elapsed = lap_timer(1);
-    printf("call_say: elapsed %lld average %lld\n", elapsed, elapsed/LOOP_COUNT);
+    printf("TEST TYPE: "
+#ifndef SEPARATE_EVENT_THREAD
+       "INLINE"
+#elif defined(USE_MUTEX_SYNC)
+       "MUTEX"
+#else
+       "SEM"
+#endif
+       "\n");
     print_timer(LOOP_COUNT);
+    printf("call_say: elapsed %lld average %lld\n", elapsed, elapsed/LOOP_COUNT);
     echoRequestProxy->setLeds(9);
     portalExec_end();
     return 0;

@@ -29,7 +29,7 @@ void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
 void start_timer(unsigned int i);
 unsigned long long lap_timer(unsigned int i);
 
-#define MAX_TIMERS 20
+#define MAX_TIMERS 50
 typedef struct {
     unsigned long long total, min, max, over;
 } TIMETYPE;
