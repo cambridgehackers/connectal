@@ -537,19 +537,25 @@ Directory::Directory()
 
 void Directory::printDbgRequestIntervals()
 {
-  unsigned int i, c;
+  unsigned int i, c, j;
+  unsigned long long x[6] = {0,0,0,0,0,0};
   fprintf(stderr, "Rd ");
-  for(i = 0; i < 6; i++){
+  for(j = 0; j < 2; j++){
+    for(i = 0; i < 6; i++){
 #ifdef MMAP_HW
-    c = *(intervals_offset+i);
+      c = *(intervals_offset+i);
 #else
-    unsigned int addr = intervals_offset+(i*4);
-    c = read_portal(p, addr, name);
-    fprintf(stderr, "%08x:", addr);
+      unsigned int addr = intervals_offset+(i*4);
+      c = read_portal(p, addr, name);
 #endif
-    fprintf(stderr, "%08x ", c);
+      x[i] |= ((unsigned long long)c)<<(32*j);
+    }
+  }
+
+  for(i = 0; i < 6; i++){
+    fprintf(stderr, "%016x ", x[i]);
     if (i == 2)
-        fprintf(stderr, "\nWr ");
+      fprintf(stderr, "\nWr ");
   }
   fprintf(stderr, "\n");
 }

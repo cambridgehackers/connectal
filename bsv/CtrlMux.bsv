@@ -124,8 +124,8 @@ module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
    Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
    
-   Vector#(3,Reg#(Bit#(32))) writeIntervals <- replicateM(mkReg(0));
-   Vector#(3,Reg#(Bit#(32))) readIntervals <- replicateM(mkReg(0));
+   Vector#(3,Reg#(Bit#(64))) writeIntervals <- replicateM(mkReg(0));
+   Vector#(3,Reg#(Bit#(64))) readIntervals <- replicateM(mkReg(0));
    
    rule xferIntervals;
       dir.writeIntervals[0] <= writeIntervals[0];
@@ -165,7 +165,8 @@ module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
 	    wsv = fromInteger(valueOf(numInputs));
 	 ifcs[wsv].req_aw.put(req);
 	 ws <= wsv;
-	 latchWriteInterval;
+	 if (wsv > 0)
+	    latchWriteInterval;
       endmethod
    endinterface
    interface Put resp_write;
@@ -186,7 +187,8 @@ module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
 	    rsv = fromInteger(valueOf(numInputs));
 	 ifcs[rsv].req_ar.put(req);
 	 rs <= rsv;
-	 latchReadInterval;
+	 if (rsv > 0)
+	    latchReadInterval;
       endmethod
    endinterface
    interface Get resp_read;

@@ -14,8 +14,8 @@ interface Directory#(numeric type _n,
 		     numeric type _c);
    interface Portal#(_n,_a,_b,_c) portalIfc;
    interface ReadOnly#(Bit#(64)) cycles;
-   interface Vector#(3,WriteOnly#(Bit#(32))) writeIntervals;
-   interface Vector#(3,WriteOnly#(Bit#(32))) readIntervals;
+   interface Vector#(3,WriteOnly#(Bit#(64))) writeIntervals;
+   interface Vector#(3,WriteOnly#(Bit#(64))) readIntervals;
 endinterface
 
 typedef Directory#(16,32,32,12) StdDirectory;
@@ -38,8 +38,8 @@ endmodule
 
 module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 
-   Vector#(3,Wire#(Bit#(32))) writeIntervalWires <- replicateM(mkDWire(32'hfecfec));
-   Vector#(3,Wire#(Bit#(32))) readIntervalWires <- replicateM(mkDWire(32'hfecfec));
+   Vector#(3,Wire#(Bit#(64))) writeIntervalWires <- replicateM(mkDWire(64'hfecfecfecfec));
+   Vector#(3,Wire#(Bit#(64))) readIntervalWires <- replicateM(mkDWire(64'hfecfecfecfec));
 
    function WriteOnly#(a) ww(Wire#(a) w);
       return (interface WriteOnly;
@@ -85,8 +85,10 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 		   end
 		   else if (addr == cco+1)
 		      return snapshot;
-		   else if (addr < cco+8) /* address in range [cco+2 .. cco+7] */
-      		      return append(readIntervalWires,writeIntervalWires)[addr-(cco+2)];
+		   else if (addr < cco+8) /* address in range [cco+2 .. cco+7] */ // read low order bits
+      		      return truncate(append(readIntervalWires,writeIntervalWires)[addr-(cco+2)]);
+		   else if (addr < cco+13) /* address in range [cco+8 .. cco+13] */ // read high order bits
+      		      return truncate(append(readIntervalWires,writeIntervalWires)[addr-(cco+2)]>>32);
 		   else begin
       		      $display("directory addr out bounds %d", addr);
 		      return 0;
