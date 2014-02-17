@@ -60,6 +60,11 @@ unsigned long long c_start[16];
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
 
+void print_dbg_requeste_intervals()
+{
+  pdir->printDbgRequestIntervals();
+}
+
 void start_timer(unsigned int i) 
 {
   assert(i < 16);
@@ -526,6 +531,21 @@ Directory::Directory()
   scan(1);
 }
 
+void Directory::printDbgRequestIntervals()
+{
+  unsigned int i, c;
+  for(i = 0; i < 6; i++){
+#ifdef MMAP_HW
+    c = *(intervals_offset+i);
+#else
+    unsigned int addr = intervals_offset+(i*4);
+    c = read_portal(p, addr, name);
+    fprintf(stderr, "%08x\n", addr);
+#endif
+    fprintf(stderr, "%08x\n", c);
+  }
+}
+
 unsigned long long Directory::cycle_count()
 {
 #ifdef MMAP_HW
@@ -575,6 +595,7 @@ void Directory::scan(int display)
     ptr++;
   }
   counter_offset = ptr;
+  intervals_offset = ptr+2;
 #else
   unsigned int ptr = 128*4;
   version = read_portal(p, ptr, name);
@@ -594,6 +615,7 @@ void Directory::scan(int display)
     ptr += 4;
   }
   counter_offset = ptr;
+  intervals_offset = ptr+8;
 #endif
   if(display){
     fprintf(stderr, "version=%d\n",  version);

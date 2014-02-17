@@ -109,15 +109,91 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories,
 endmodule
 
 
-// module mkAxiSlaveMuxDbg#(Directory dir,
-// 			 Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Slave#(_a,_b,_c))
+module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
+			 Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Slave#(_a,_b,_c))
 
-//    provisos(Add#(1,numPortals,numInputs),
-// 	    Add#(1,numInputs,numIfcs),
-// 	    Add#(nz, TLog#(numIfcs), 4));
-
-//    Vector#(1,StdPortal) directories;
-//    directories[0] = dir.portalIfc;
-//    mkAxiSlaveMux(directories, portals);
+   provisos(Add#(1,numPortals,numInputs),
+	    Add#(1,numInputs,numIfcs),
+	    Add#(nz, TLog#(numIfcs), 4));
    
-// endmodule
+   Vector#(1, Portal#(aw,_a,_b,_c)) directories = cons(dir.portalIfc,nil);
+   
+   Axi3Slave#(_a,_b,_c) out_of_range <- mkAxi3SlaveOutOfRange;
+   Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(append(map(getCtrl, directories),map(getCtrl, portals)),cons(out_of_range, nil));
+   
+   Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
+   Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
+   
+   Vector#(3,Reg#(Bit#(32))) writeIntervals <- replicateM(mkReg(0));
+   Vector#(3,Reg#(Bit#(32))) readIntervals <- replicateM(mkReg(0));
+   
+   rule xferIntervals;
+      dir.writeIntervals[0] <= writeIntervals[0];
+      dir.writeIntervals[1] <= writeIntervals[1];
+      dir.writeIntervals[2] <= writeIntervals[2];
+      dir.readIntervals[0] <= readIntervals[0];
+      dir.readIntervals[1] <= readIntervals[1];
+      dir.readIntervals[2] <= readIntervals[2];
+   endrule
+   
+   function Action latchWriteInterval;
+      action
+	 writeIntervals[2] <= writeIntervals[1];
+	 writeIntervals[1] <= writeIntervals[0];
+	 writeIntervals[0] <= truncate(dir.cycles);
+      endaction   
+   endfunction
+
+   function Action latchReadInterval;
+      action
+	 readIntervals[2] <= readIntervals[1];
+	 readIntervals[1] <= readIntervals[0];
+	 readIntervals[0] <= truncate(dir.cycles);
+      endaction   
+   endfunction
+   
+   let port_sel_low = valueOf(aw);
+   let port_sel_high = valueOf(TAdd#(3,aw));
+   function Bit#(4) psel(Bit#(_a) a);
+      return a[port_sel_high:port_sel_low];
+   endfunction
+   
+   interface Put req_aw;
+      method Action put(Axi3WriteRequest#(_a,_c) req);
+	 Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.address));
+	 if (wsv > fromInteger(valueOf(numInputs)))
+	    wsv = fromInteger(valueOf(numInputs));
+	 ifcs[wsv].req_aw.put(req);
+	 ws <= wsv;
+	 latchWriteInterval;
+      endmethod
+   endinterface
+   interface Put resp_write;
+      method Action put(Axi3WriteData#(_b,_c) wdata);
+	 ifcs[ws].resp_write.put(wdata);
+      endmethod
+   endinterface
+   interface Get resp_b;
+      method ActionValue#(Axi3WriteResponse#(_c)) get();
+	 let rv <- ifcs[ws].resp_b.get();
+	 return rv;
+      endmethod
+   endinterface
+   interface Put req_ar;
+      method Action put(Axi3ReadRequest#(_a,_c) req);
+	 Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.address)); 
+	 if (rsv > fromInteger(valueOf(numInputs)))
+	    rsv = fromInteger(valueOf(numInputs));
+	 ifcs[rsv].req_ar.put(req);
+	 rs <= rsv;
+	 latchReadInterval;
+      endmethod
+   endinterface
+   interface Get resp_read;
+      method ActionValue#(Axi3ReadResponse#(_b,_c)) get();
+	 let rv <- ifcs[rs].resp_read.get();
+	 return rv;
+      endmethod
+   endinterface
+   
+endmodule

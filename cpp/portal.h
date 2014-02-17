@@ -28,6 +28,7 @@ unsigned int read_portal(portal *p, unsigned int addr, char *name);
 void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
 void start_timer(unsigned int i);
 unsigned long long lap_timer(unsigned int i);
+void print_dbg_requeste_intervals();
 
 #define MAX_TIMERS 50
 typedef struct {
@@ -98,8 +99,10 @@ class Directory : public Portal
   unsigned int *portal_types;
 #ifdef MMAP_HW
   volatile unsigned int *counter_offset;
+  volatile unsigned int *intervals_offset;
 #else
   unsigned int counter_offset;
+  unsigned int intervals_offset;
 #endif
  public:
   Directory(const char* devname, unsigned int addrbits);
@@ -108,6 +111,7 @@ class Directory : public Portal
   unsigned int get_fpga(unsigned int id);
   unsigned int get_addrbits(unsigned int id);
   unsigned long long cycle_count();
+  void printDbgRequestIntervals();
 };
 
 class PortalWrapper : public Portal

@@ -13,6 +13,9 @@ interface Directory#(numeric type _n,
 		     numeric type _b, 
 		     numeric type _c);
    interface Portal#(_n,_a,_b,_c) portalIfc;
+   interface ReadOnly#(Bit#(64)) cycles;
+   interface Vector#(3,WriteOnly#(Bit#(32))) writeIntervals;
+   interface Vector#(3,WriteOnly#(Bit#(32))) readIntervals;
 endinterface
 
 typedef Directory#(16,32,32,12) StdDirectory;
@@ -34,6 +37,17 @@ module mkStdDirectoryPortalIfc#(RegFileA#(Bit#(32), Bit#(32)) rf)(StdPortal);
 endmodule
 
 module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
+
+   Vector#(3,Wire#(Bit#(32))) writeIntervalWires <- replicateM(mkDWire(32'hfecfec));
+   Vector#(3,Wire#(Bit#(32))) readIntervalWires <- replicateM(mkDWire(32'hfecfec));
+
+   function WriteOnly#(a) ww(Wire#(a) w);
+      return (interface WriteOnly;
+		 method Action _write(a x);
+		    w <= x;
+		 endmethod
+	      endinterface);
+   endfunction
 
    Reg#(Bit#(64)) cycle_count <- mkReg(0);
    Reg#(Bit#(32)) snapshot    <- mkReg(0);
@@ -71,12 +85,20 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 		   end
 		   else if (addr == cco+1)
 		      return snapshot;
-		   else
+		   else if (addr < cco+8) 
+      		      return append(readIntervalWires,writeIntervalWires)[addr-cco-1];
+		   else begin
+      		      $display("directory addr out bounds %d", addr);
 		      return 0;
+		   end
 		endmethod
       	     endinterface);
    let ifc <- mkStdDirectoryPortalIfc(rf);
    interface StdPortal portalIfc = ifc;
+   interface ReadOnly cycles = regToReadOnly(cycle_count);
+   interface Vector writeIntervals = map(ww, writeIntervalWires);
+   interface Vector readIntervals  = map(ww, readIntervalWires);
+
 endmodule
 
 

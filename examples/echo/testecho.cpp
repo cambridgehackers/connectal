@@ -128,6 +128,7 @@ unsigned long long elapsed = lap_timer(1);
     print_timer(LOOP_COUNT);
     printf("call_say: elapsed %lld average %lld\n", elapsed, elapsed/LOOP_COUNT);
     echoRequestProxy->setLeds(9);
+    print_dbg_requeste_intervals();
     portalExec_end();
     return 0;
 }
