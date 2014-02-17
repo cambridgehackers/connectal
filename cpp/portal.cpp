@@ -89,11 +89,11 @@ void init_timer(void)
         timers[i].min = 0xffffffffffff;
 }
 
-void catch_timer(int i)
+unsigned long long catch_timer(int i)
 {
     unsigned long long val = lap_timer(0);
     if (i >= MAX_TIMERS)
-        return;
+        return 0;
     if (val > timers[i].max)
         timers[i].max = val;
     if (val < timers[i].min)
@@ -101,6 +101,7 @@ void catch_timer(int i)
     if (val > 1000000)
         timers[i].over++;
     timers[i].total += val;
+    return lap_timer_temp;
 }
 void print_timer(int loops)
 {
@@ -295,16 +296,12 @@ int Portal::sendMessage(PortalMessage *msg)
 #ifdef MMAP_HW
     //catch_timer(10);
     unsigned long addr = ((unsigned long)req_fifo_base) + msg->channel * 256;
+    unsigned long long before_requestt = catch_timer(11);
     //fprintf(stderr, "%08lx %08x\n", addr, data);
-unsigned long long before_request = pdir->cycle_count();
-    catch_timer(11);
-unsigned long long before_requestt = lap_timer_temp;
     *((volatile unsigned int*)addr) = data;
-unsigned long long after_request = pdir->cycle_count();
-    catch_timer(12);
-unsigned long long after_requestt = lap_timer_temp;
+    unsigned long long after_requestt = catch_timer(12);
     pdir->printDbgRequestIntervals();
-printf("portalbefore req %llx:%llx after %llx:%llx\n", before_request, before_requestt, after_request, after_requestt);
+printf("portalbefore req %llx after %llx\n", before_requestt, after_requestt);
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
     write_portal(p, addr, data, name);
@@ -552,12 +549,12 @@ void Directory::printDbgRequestIntervals()
       unsigned int addr = intervals_offset+((j * 6 + i)*4);
       c = read_portal(p, addr, name);
 #endif
-      x[i] |= ((unsigned long long)c)<<(32*j);
+      x[i] = (((unsigned long long)c) << 32) | (x[i] >> 32);
     }
   }
 
   for(i = 0; i < 6; i++){
-    fprintf(stderr, "%016x ", x[i]);
+    fprintf(stderr, "%16llx ", x[i]);
     if (i == 2)
       fprintf(stderr, "\nWr ");
   }

@@ -36,7 +36,7 @@ typedef struct {
 } TIMETYPE;
 
 void init_timer(void);
-void catch_timer(int i);
+unsigned long long catch_timer(int i);
 void print_timer(int loops);
 
 class PortalMessage 
