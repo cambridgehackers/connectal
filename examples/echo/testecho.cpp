@@ -10,8 +10,8 @@
 #include "SwallowProxy.h"
 
 #define LOOP_COUNT 1000
-//#define SEPARATE_EVENT_THREAD
-#define USE_MUTEX_SYNC
+#define SEPARATE_EVENT_THREAD
+//#define USE_MUTEX_SYNC
 
 EchoRequestProxy *echoRequestProxy = 0;
 
@@ -68,7 +68,7 @@ public:
         catch_timer(20);
         SEMPOST(&sem_heard2);
         //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
-        catch_timer(25);
+        //catch_timer(25);
     }
     EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {
     }

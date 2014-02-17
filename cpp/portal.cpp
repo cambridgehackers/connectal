@@ -271,7 +271,7 @@ int Portal::sendMessage(PortalMessage *msg)
   // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
   unsigned int buf[128];
   msg->marshall(buf);
-  catch_timer(6);
+  //catch_timer(6);
 
   // mutex_lock(&portal_data->reg_mutex);
   // mutex_unlock(&portal_data->reg_mutex);
@@ -282,11 +282,11 @@ int Portal::sendMessage(PortalMessage *msg)
     //addr[2] = 0xffffffff;
   }
 #endif
-  catch_timer(9);
+  //catch_timer(9);
   for (int i = msg->size()/4-1; i >= 0; i--) {
     unsigned int data = buf[i];
 #ifdef MMAP_HW
-    catch_timer(10);
+    //catch_timer(10);
     unsigned long addr = ((unsigned long)req_fifo_base) + msg->channel * 256;
     //fprintf(stderr, "%08lx %08x\n", addr, data);
     catch_timer(11);
