@@ -29,6 +29,7 @@ import Top               :: *;
 import AxiMasterSlave    :: *;
 import XbsvXilinxCells   :: *;
 import PS7LIB::*;
+import XADC::*;
 
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
@@ -36,6 +37,8 @@ interface ZynqTop#(type pins);
    interface ZynqPins zynq;
    (* prefix="GPIO" *)
    interface LEDS             leds;
+   (* prefix="XADC" *)
+   interface XADC             xadc;
    interface pins             pins;
    interface Clock unused_clock;
    interface Reset unused_reset;
@@ -47,11 +50,15 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    B2C mainclock <- mkB2C();
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
    let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
+   Reg#(Bit#(3)) bozoReg <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
 
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
    mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
    rule send_int_rule;
        ps7.interrupt(top.interrupt ? 1'b1 : 1'b0);
+   endrule
+   rule bozorule;
+       bozoReg <= bozoReg + 1;
    endrule
 
    rule b2c_rule;
@@ -61,6 +68,17 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 
    interface zynq = ps7.pins;
    interface leds = top.leds;
+   interface XADC xadc;
+       method Bit#(4) gpio;
+           return {top.interrupt ? 1'b1 : 1'b0, bozoReg};
+   //ps7.m_axi_gp[0].client.readBurstCountIfc == 0
+   //interface Get#(Axi3ReadRequest#(addrWidth, idWidth)) req_ar;
+   //interface Put#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
+   //interface Get#(Axi3WriteRequest#(addrWidth, idWidth)) req_aw;
+   //interface Get#(Axi3WriteData#(busWidth, idWidth)) resp_write;
+   //interface Put#(Axi3WriteResponse#(idWidth)) resp_b;
+       endmethod
+   endinterface
    interface pins = top.pins;
    interface unused_clock = mainclock.c;
    interface unused_reset = mainclock.r;
