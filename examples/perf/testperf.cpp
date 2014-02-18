@@ -65,12 +65,6 @@ void dump(const char *prefix, char *buf, size_t len)
     fprintf(stderr, "\n");
 }
 
-void exit_test()
-{
-  fprintf(stderr, "testperf finished count=%d memcmp_fail=%d\n", finishedCount, memcmp_fail);
-  exit(memcmp_fail);
-}
-
 class PerfIndication : public PerfIndicationWrapper
 {
 
@@ -129,20 +123,20 @@ long long deltatime( struct timeval start, struct timeval stop)
   return (diff);
 }
 
-int dotest(unsigned size)
+int dotest(unsigned size, unsigned repeatCount)
 {
   struct timeval start, stop;
   unsigned loops = 1;
   unsigned int i;
   long long interval;
-  fprintf(stderr, "size %d loop ", size);
+  fprintf(stderr, "repeat %d size %d loop ", repeatCount, size);
   for(;;) {
     finishedCount = 0;
     copy_size = size;
     fprintf(stderr, " %d", loops);
     gettimeofday(&start, NULL);
     for (i = 0; i < loops; i += 1) {
-      device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, 1);
+      device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, repeatCount);
       sem_wait(&copy_sem);
     }
     gettimeofday(&stop, NULL);
@@ -209,14 +203,15 @@ int main(int argc, const char **argv)
   //fprintf(stderr, "Main::starting mempcy numWords:%d\n", 0);
   
   //dotest(0);
-  for (numWords = 16; numWords < (1 << 16); numWords <<= 1){
+  for (repeatCount = 1; repeatCount <= 16; repeatCount <<= 1) {
+    fprintf(stderr, "Main::starting mempcy repeatCount:%d\n", repeatCount);
+    for (numWords = 16; numWords < (1 << 16); numWords <<= 1){
     
-    fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
- 
-    dotest(numWords);
-  }
+      //fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
+      
+      dotest(numWords, repeatCount);
+    }
 
   device->getStateDbg();
-  fprintf(stderr, "Main::sleeping\n");
-  while(1){sleep(1);}
+  fprintf(stderr, "Main::exiting\n");
 }
