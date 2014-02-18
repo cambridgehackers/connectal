@@ -125,7 +125,7 @@ module mkPerfRequest#(PerfIndication indication,
       streamAckCnt <= wordCnt;
       iterInProg <= True;
       repeatCnt <= repeatCnt - 1;
-   endrule;
+   endrule
    
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) repeatCount) if (streamRdCnt == 0 && streamWrCnt == 0);
       //$display("startCopy wrPointer=%h rdPointer=%h numWords=%d", wrPointer, rdPointer, numWords);
