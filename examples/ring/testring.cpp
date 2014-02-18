@@ -193,7 +193,7 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
     ring->setCmdFirst(0);         // bufferfirst
     ring->setCmdLast(0);
   } else {
-    ring->setStatusnFirst(0);         // bufferfirst
+    ring->setStatusFirst(0);         // bufferfirst
     ring->setStatusLast(0);
   }
   ring->set(ringid, REG_MASK, size - 1);  // buffermask
@@ -221,10 +221,10 @@ void ring_pop(struct SWRing *r)
   r->last = last;
   /* update hardware version of r->last every 1/4 way around the ring */
   if ((r->last % (r->size >> 2)) == 0) {
-    if (ring->ringid == 0) {
-      ring->setCmdLast(r->last);         // bufferlast 
+    if (r->ringid == 0) {
+      r->setCmdLast(r->last);         // bufferlast 
     } else {
-      ring->setStatusLast(r->last);         // bufferlast 
+      r->setStatusLast(r->last);         // bufferlast 
     }
   }
 }
