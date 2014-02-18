@@ -105,6 +105,14 @@ void parent(int rd_sock, int wr_sock)
   dma->dCacheFlushInval(dstAlloc, dstBuffer);
   fprintf(stderr, "parent::flush and invalidate complete\n");
 
+  for(int i = 0; i < dstAlloc->header.numEntries; i++)
+    fprintf(stderr, "%lx %lx\n", dstAlloc->entries[i].dma_address, dstAlloc->entries[i].length);
+
+  sleep(1);
+  dma->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
+  sleep(1);
+
+
   fprintf(stderr, "parent::starting write %08x\n", numWords);
   start_timer(0);
   int burstLen = 16;

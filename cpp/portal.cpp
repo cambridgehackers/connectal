@@ -300,7 +300,7 @@ int Portal::sendMessage(PortalMessage *msg)
     *(ind_reg_base+0x1) = 0; // disable interrupts for a bit
 #endif
     unsigned long addr = ((unsigned long)req_fifo_base) + msg->channel * 256;
-    unsigned long long before_requestt = catch_timer(11);
+    //unsigned long long before_requestt = catch_timer(11);
     //fprintf(stderr, "%08lx %08x\n", addr, data);
     *((volatile unsigned int*)addr) = data;
     unsigned long long after_requestt = catch_timer(12);

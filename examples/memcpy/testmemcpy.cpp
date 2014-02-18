@@ -42,7 +42,7 @@ PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 16 << 2;
+int numWords = 16 << 5;
 size_t alloc_sz = numWords*sizeof(unsigned int);
 bool trigger_fired = false;
 bool finished = false;
@@ -76,9 +76,6 @@ public:
 
   virtual void started(unsigned long words){
     fprintf(stderr, "started: words=%ld\n", words);
-  }
-  virtual void readWordResult ( unsigned long v ){
-    dump("readWordResult: ", (char*)&v, sizeof(v));
   }
   virtual void done(unsigned long mismatch) {
     sem_post(&done_sem);
@@ -217,6 +214,7 @@ int main(int argc, const char **argv)
   sleep(1);
   dma->addrRequest(ref_bsAlloc, 3*sizeof(unsigned int));
   sleep(1);
+  sleep(5);
   
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   int burstLen = 16;

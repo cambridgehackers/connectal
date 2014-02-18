@@ -96,7 +96,6 @@ module mkAxiDmaReadInternal#(Integer numRequests,
       if (valueOf(numReadClients) > 0)
 	 req <- readClients[selectReg].readReq.get();
       //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.pointer, req.offset, req.burstLen);
-
       if (req.pointer > fromInteger(valueOf(MaxNumSGLists)))
 	 dmaIndication.badPointer(req.pointer);
       else begin
@@ -112,7 +111,7 @@ module mkAxiDmaReadInternal#(Integer numRequests,
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
-	 // $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
+	 $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
       end
       else begin
@@ -204,10 +203,13 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
       if (valueOf(numWriteClients) > 0)
 	 req <- writeClients[selectReg].writeReq.get();
       //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.pointer, req.offset, req.burstLen, debugReg);
-
-      lreqFifo.enq(req);
-      chanFifo.enq(selectReg);
-      sgl.request.put(tuple2(truncate(req.pointer),req.offset));
+      if (req.pointer > fromInteger(valueOf(MaxNumSGLists)))
+	 dmaIndication.badPointer(req.pointer);
+      else begin
+	 lreqFifo.enq(req);
+	 chanFifo.enq(selectReg);
+	 sgl.request.put(tuple2(truncate(req.pointer),req.offset));
+      end
    endrule
    
    rule checkSglResp;
@@ -342,7 +344,6 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 	 end
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(DmaOffsetSize) addr, Bit#(32) len);
-	 dmaIndication.configResp(pref);
 	 if (pref == 0 || pref > fromInteger(valueOf(MaxNumSGLists))) begin
 	    dmaIndication.badPointer(pref);
 	 end

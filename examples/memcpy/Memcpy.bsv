@@ -31,13 +31,11 @@ import BlueScope::*;
 
 interface MemcpyRequest;
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
-   method Action readWord();
    method Action getStateDbg();   
 endinterface
 
 interface MemcpyIndication;
    method Action started(Bit#(32) numWords);
-   method Action readWordResult(Bit#(32) v);
    method Action done(Bit#(32) dataMismatch);
    method Action rData(Bit#(64) v);
    method Action readReq(Bit#(32) v);
@@ -49,7 +47,6 @@ endinterface
 module mkMemcpyRequest#(MemcpyIndication indication,
 			DmaReadServer#(busWidth) dma_read_server,
 			DmaWriteServer#(busWidth) dma_write_server,
-			DmaReadServer#(busWidth) dma_word_read_server,
 			BlueScope#(busWidth) bs)(MemcpyRequest)
 
    provisos (Div#(busWidth,8,busWidthBytes),
@@ -138,18 +135,13 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       srcGen <= 0;
    endrule
    
-   rule readWordResp;
-      let tagdata <- dma_word_read_server.readData.get;
-      indication.readWordResult(truncate(tagdata.data));
-   endrule
-
    method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
       $display("startCopy wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
       indication.started(nw);
       // initialized
       wrPointer <= wp;
       rdPointer <= rp;
-      numWords        <= nw;
+      numWords  <= nw;
       burstLen <= truncate(bl);
       delta <= 8*extend(bl);
       rdIterCnt <= ic;
@@ -161,10 +153,6 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       rdOff <= 0;
       wrOff <= 0;
       dataMismatch <= False;
-   endmethod
-
-   method Action readWord();
-      dma_word_read_server.readReq.put(DmaRequest {pointer: wrPointer, offset: 0, burstLen: 1, tag: 1});
    endmethod
 
    method Action getStateDbg();

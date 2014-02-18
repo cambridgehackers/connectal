@@ -41,13 +41,11 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    DmaReadBuffer#(64,8)   dma_stream_read_chan <- mkDmaReadBuffer();
    DmaWriteBuffer#(64,8) dma_stream_write_chan <- mkDmaWriteBuffer();
-   DmaReadBuffer#(64,8)     dma_word_read_chan <- mkDmaReadBuffer();
    DmaWriteBuffer#(64,8)  dma_debug_write_chan <- mkDmaWriteBuffer();
 
-   Vector#(2,  DmaReadClient#(64))   readClients = newVector();
+   Vector#(1,  DmaReadClient#(64))   readClients = newVector();
    readClients[0] = dma_stream_read_chan.dmaClient;
-   readClients[1] = dma_word_read_chan.dmaClient;
-
+   
    Vector#(2, DmaWriteClient#(64)) writeClients = newVector();
    writeClients[0] = dma_stream_write_chan.dmaClient;
    writeClients[1] = dma_debug_write_chan.dmaClient;
@@ -63,7 +61,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(MemcpyIndication);
    MemcpyRequest memcpyRequest <- mkMemcpyRequest(memcpyIndicationProxy.ifc, dma_stream_read_chan.dmaServer,
-						  dma_stream_write_chan.dmaServer, dma_word_read_chan.dmaServer, bs);
+						  dma_stream_write_chan.dmaServer, bs);
    MemcpyRequestWrapper memcpyRequestWrapper <- mkMemcpyRequestWrapper(MemcpyRequest,memcpyRequest);
 
    Vector#(6,StdPortal) portals;
