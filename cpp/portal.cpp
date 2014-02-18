@@ -45,12 +45,10 @@
 #include "sock_utils.h"
 #include "sock_fd.h"
 
-PortalWrapper **portal_wrappers = 0;
-struct pollfd *portal_fds = 0;
-int numFds = 0;
 Directory dir;
 Directory *pdir;
 unsigned long long c_start[16];
+PortalPoller *defaultPoller = new PortalPoller();
 
 #define ENABLE_INTERRUPTS(A) *((A)+0x1) = 1
 
@@ -327,29 +325,36 @@ int Portal::sendMessage(PortalMessage *msg)
   return 0;
 }
 
-
-
-PortalWrapper::PortalWrapper(int id) 
+PortalWrapper::PortalWrapper(int id, PortalPoller *poller)
   : Portal(id)
 {
-  registerInstance();
+  if (poller == 0)
+    poller = defaultPoller;
+  this->poller = poller;
+  poller->registerInstance(this);
 }
 
-PortalWrapper::PortalWrapper(Portal *p) 
+PortalWrapper::PortalWrapper(Portal *p, PortalPoller *poller) 
   : Portal(p)
 {
-  registerInstance();
+  if (poller == 0)
+    poller = defaultPoller;
+  this->poller = poller;
+  poller->registerInstance(this);
 }
 
-PortalWrapper::PortalWrapper(const char *devname, unsigned int addrbits)
+PortalWrapper::PortalWrapper(const char *devname, unsigned int addrbits, PortalPoller *poller)
   : Portal(devname,addrbits)
 {
-  registerInstance();
+  if (poller == 0)
+    poller = defaultPoller;
+  this->poller = poller;
+  poller->registerInstance(this);
 }
 
 PortalWrapper::~PortalWrapper()
 {
-  unregisterInstance();
+  poller->unregisterInstance(this);
 }
 
 PortalProxy::PortalProxy(int id)
@@ -366,11 +371,16 @@ PortalProxy::~PortalProxy()
 {
 }
 
-int PortalWrapper::unregisterInstance()
+PortalPoller::PortalPoller()
+  : portal_wrappers(0), portal_fds(0), numFds(0)
+{
+}
+
+int PortalPoller::unregisterInstance(PortalWrapper *portal)
 {
   int i = 0;
   while(i < numFds)
-    if(portal_fds[i].fd == this->fd)
+    if(portal_fds[i].fd == portal->fd)
       break;
     else
       i++;
@@ -386,21 +396,21 @@ int PortalWrapper::unregisterInstance()
   return 0;
 }
 
-int PortalWrapper::registerInstance()
+int PortalPoller::registerInstance(PortalWrapper *portal)
 {
     numFds++;
     portal_wrappers = (PortalWrapper **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));
     portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
-    portal_wrappers[numFds-1] = this;
+    portal_wrappers[numFds-1] = portal;
     struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
-    pollfd->fd = this->fd;
+    pollfd->fd = portal->fd;
     pollfd->events = POLLIN;
-    fprintf(stderr, "PortalWrapper::registerInstance %s\n", name);
+    fprintf(stderr, "PortalWrapper::registerInstance %s\n", portal->name);
     return 0;
 }
 
-int Portal::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
+int PortalPoller::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
     if (!numFds) {
 	ALOGE("%s No fds open\n", __FUNCTION__);
@@ -418,8 +428,7 @@ int Portal::setClockFrequency(int clkNum, long requestedFrequency, long *actualF
     return status;
 }
 
-int portalExec_timeout;
-void* portalExec_init(void)
+void* PortalPoller::portalExec_init(void)
 {
     portalExec_timeout = -1; // no interrupt timeout on Zynq platform
 #ifndef ZYNQ
@@ -444,7 +453,7 @@ void* portalExec_init(void)
 #endif
     return NULL;
 }
-void portalExec_end(void)
+void PortalPoller::portalExec_end(void)
 {
 #ifdef MMAP_HW
     for (int i = 0; i < numFds; i++) {
@@ -455,7 +464,7 @@ void portalExec_end(void)
 #endif
 }
 
-void* portalExec_event(int timeout)
+void* PortalPoller::portalExec_event(int timeout)
 {
 #ifdef MMAP_HW
     long rc = poll(portal_fds, numFds, timeout);
@@ -524,13 +533,20 @@ void* portalExec_event(int timeout)
     return NULL;
 }
 
-void* portalExec(void* __x)
+void* PortalPoller::portalExec(void* __x)
 {
     void *rc = portalExec_init();
     while (!rc)
         rc = portalExec_event(portalExec_timeout);
     return rc;
 }
+
+void* portalExec(void* __x)
+{
+  return defaultPoller->portalExec(__x);
+}
+
+
 
 Directory::Directory() 
   : Portal("fpga0", 16),

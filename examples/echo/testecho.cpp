@@ -41,11 +41,14 @@ typedef sem_t SEM_TYPE;
 
 static SEM_TYPE sem_heard2;
 
-static void *pthread_worker(void *ptr)
+PortalPoller *poller = 0;
+
+static void *pthread_worker(void *p)
 {
+    PortalPoller *poller = (PortalPoller *)p;
     void *rc = NULL;
     while (CHECKSEM(sem_heard2) && !rc)
-        rc = portalExec_event(portalExec_timeout);
+        rc = poller->portalExec_event(poller->portalExec_timeout);
     return rc;
 }
 static void init_thread()
@@ -53,7 +56,7 @@ static void init_thread()
 #ifdef SEPARATE_EVENT_THREAD
     pthread_t threaddata;
     SEMINIT(&sem_heard2);
-    pthread_create(&threaddata, NULL, &pthread_worker, NULL);
+    pthread_create(&threaddata, NULL, &pthread_worker, (void*)poller);
 #endif
 }
 
@@ -70,7 +73,7 @@ public:
         //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
         //catch_timer(25);
     }
-    EchoIndication(unsigned int id) : EchoIndicationWrapper(id) {
+    EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {
     }
 };
 
@@ -97,11 +100,12 @@ static void call_say2(int v, int v2)
 
 int main(int argc, const char **argv)
 {
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication);
-    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    poller = new PortalPoller();
+    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, poller);
+    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow, poller);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, poller);
 
-    portalExec_init();
+    poller->portalExec_init();
     init_thread();
 
     int v = 42;
@@ -129,6 +133,6 @@ unsigned long long elapsed = lap_timer(1);
     printf("call_say: elapsed %lld average %lld\n", elapsed, elapsed/LOOP_COUNT);
     echoRequestProxy->setLeds(9);
     //print_dbg_requeste_intervals();
-    portalExec_end();
+    poller->portalExec_end();
     return 0;
 }
