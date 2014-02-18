@@ -189,10 +189,13 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   sem_wait(&setresult_sem);
   ring->set(ringid, REG_END, size);      // bufferend
   sem_wait(&setresult_sem);
-  ring->set(ringid, REG_FIRST, 0);         // bufferfirst
-  sem_wait(&setresult_sem);
-  ring->set(ringid, REG_LAST, 0);         // bufferlast 
-  sem_wait(&setresult_sem);
+  if (ringid == 0) {
+    ring->setCmdFirst(0);         // bufferfirst
+    ring->setCmdLast(0);
+  } else {
+    ring->setStatusnFirst(0);         // bufferfirst
+    ring->setStatusLast(0);
+  }
   ring->set(ringid, REG_MASK, size - 1);  // buffermask
   sem_wait(&setresult_sem);
   ring->set(ringid, REG_HANDLE, ref);       // memhandle
@@ -218,8 +221,11 @@ void ring_pop(struct SWRing *r)
   r->last = last;
   /* update hardware version of r->last every 1/4 way around the ring */
   if ((r->last % (r->size >> 2)) == 0) {
-    ring->set(r->ringid, REG_LAST, r->last);         // bufferlast 
-    sem_wait(&setresult_sem);
+    if (ring->ringid == 0) {
+      ring->setCmdLast(r->last);         // bufferlast 
+    } else {
+      ring->setStatusLast(r->last);         // bufferlast 
+    }
   }
 }
 
@@ -253,7 +259,11 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   if (next_first == r->size) next_first = 0;
   r->first = next_first;
   r->cached_space -= 64;
-  ring->set(r->ringid, REG_FIRST, r->first);         // bufferfirst
+  if (r->ringid == 0) {
+    ring->setCmdFirst(r->first);         // bufferfirst
+  } else {
+    ring->setStatusFirst(r->first);         // bufferfirst
+  }
   sem_wait(&setresult_sem);
   pthread_mutex_unlock(&cmd_lock);
 }
