@@ -78,32 +78,24 @@ module mkAxiDmaReadInternal#(Integer numRequests,
    FIFO#(DmaChannelId)  chanFifo <- mkSizedFIFO(numRequests);
    FIFO#(DmaRequest)    dreqFifo <- mkSizedFIFO(numRequests);
 
-   Reg#(DmaChannelId)  selectReg <- mkReg(0);
    Reg#(Bit#(8))        burstReg <- mkReg(0);   
    
    Reg#(Bit#(64)) beatCount <- mkReg(0);
 
-   (* descending_urgency = "loadChannel,incSelectReg" *)
-   rule incSelectReg;
-      let s = selectReg+1;
-      if (s == fromInteger(valueOf(numReadClients)))
-	 s = 0;
-      selectReg <= s;
-   endrule
-   
-   rule loadChannel if (valueOf(numReadClients) > 0  && readClients[selectReg].readData.notFull());
-      DmaRequest req = unpack(0);
-      if (valueOf(numReadClients) > 0)
-	 req <- readClients[selectReg].readReq.get();
-      //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.pointer, req.offset, req.burstLen);
-      if (req.pointer > fromInteger(valueOf(MaxNumSGLists)))
-	 dmaIndication.badPointer(req.pointer);
-      else begin
-	 lreqFifo.enq(req);
-	 chanFifo.enq(selectReg);
-	 sgl.request.put(tuple2(truncate(req.pointer),req.offset));
-      end
-   endrule
+   for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
+       rule loadChannel if (valueOf(numReadClients) > 0  && readClients[selectReg].readData.notFull());
+	  DmaRequest req = unpack(0);
+	  if (valueOf(numReadClients) > 0)
+	     req <- readClients[selectReg].readReq.get();
+	  //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.pointer, req.offset, req.burstLen);
+	  if (req.pointer > fromInteger(valueOf(MaxNumSGLists)))
+	     dmaIndication.badPointer(req.pointer);
+	  else begin
+	     lreqFifo.enq(req);
+	     chanFifo.enq(fromInteger(selectReg));
+	     sgl.request.put(tuple2(truncate(req.pointer),req.offset));
+	  end
+       endrule
    
    rule checkSglResp;
       let physAddr <- sgl.response.get;
@@ -185,32 +177,22 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
    FIFO#(DmaChannelId)    chanFifo <- mkSizedFIFO(numRequests);
    FIFO#(DmaChannelId)    respFifo <- mkSizedFIFO(numRequests);
 
-   Reg#(DmaChannelId)    selectReg <- mkReg(0);
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
 
    Reg#(Bit#(64)) beatCount <- mkReg(0);
 
-  (* descending_urgency = "loadChannel,incSelectReg" *)
-   rule incSelectReg;
-      let s = selectReg+1;
-      if (s == fromInteger(valueOf(numWriteClients)))
-	 s = 0;
-      selectReg <= s;
-   endrule
-   
-   rule loadChannel if (valueOf(numWriteClients) > 0 && writeClients[selectReg].writeData.notEmpty());
-      DmaRequest req = unpack(0);
-      if (valueOf(numWriteClients) > 0)
-	 req <- writeClients[selectReg].writeReq.get();
-      //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.pointer, req.offset, req.burstLen, debugReg);
-      if (req.pointer > fromInteger(valueOf(MaxNumSGLists)))
-	 dmaIndication.badPointer(req.pointer);
-      else begin
-	 lreqFifo.enq(req);
-	 chanFifo.enq(selectReg);
-	 sgl.request.put(tuple2(truncate(req.pointer),req.offset));
-      end
-   endrule
+   for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
+       rule loadChannel if (valueOf(numWriteClients) > 0 && writeClients[selectReg].writeData.notEmpty());
+	  DmaRequest req <- writeClients[selectReg].writeReq.get();
+	  //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.pointer, req.offset, req.burstLen, debugReg);
+	  if (req.pointer > fromInteger(valueOf(MaxNumSGLists)))
+	     dmaIndication.badPointer(req.pointer);
+	  else begin
+	     lreqFifo.enq(req);
+	     chanFifo.enq(fromInteger(selectReg));
+	     sgl.request.put(tuple2(truncate(req.pointer),req.offset));
+	  end
+       endrule
    
    rule checkSglResp;
       let physAddr <- sgl.response.get;
