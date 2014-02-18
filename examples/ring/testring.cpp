@@ -222,9 +222,9 @@ void ring_pop(struct SWRing *r)
   /* update hardware version of r->last every 1/4 way around the ring */
   if ((r->last % (r->size >> 2)) == 0) {
     if (r->ringid == 0) {
-      r->setCmdLast(r->last);         // bufferlast 
+      ring->setCmdLast(r->last);         // bufferlast 
     } else {
-      r->setStatusLast(r->last);         // bufferlast 
+      ring->setStatusLast(r->last);         // bufferlast 
     }
   }
 }
