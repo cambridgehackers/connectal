@@ -95,8 +95,10 @@ module mkPerfRequest#(PerfIndication indication,
       //$display("writeAck: tag=%d", tag);
       streamAckCnt <= streamAckCnt-extend(burstLen);
       //indication.writeAck(streamAckCnt);
-      if(streamAckCnt==extend(burstLen))
+      if(streamAckCnt==extend(burstLen)) begin
+	 if (repeatCnt == 0) indication.done(0);
 	 iterInProg <= False;
+	 end
    endrule
 
    rule loopback;
