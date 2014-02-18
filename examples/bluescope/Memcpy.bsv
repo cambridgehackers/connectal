@@ -27,6 +27,7 @@ import FIFO::*;
 
 import PortalMemory::*;
 import Dma::*;
+import BlueScope::*;
 
 interface MemcpyRequest;
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -45,7 +46,8 @@ endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication,
 			DmaReadServer#(busWidth) dma_read_server,
-			DmaWriteServer#(busWidth) dma_write_server)(MemcpyRequest)
+			DmaWriteServer#(busWidth) dma_write_server,
+			BlueScope#(busWidth) bs)(MemcpyRequest)
 
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Add#(a__,64,busWidth),
@@ -79,7 +81,6 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 	 rdCnt <= 0;
 	 rdIterCnt <= rdIterCnt-1;
 	 rdOff <= 0;
-	 $display("rdReq: rdIterCnt=%d", rdIterCnt);
       end
       else begin
 	 //$display("rdReq: pointer=%d offset=%h burstlen=%d", rdPointer, rdOff, burstLen);
@@ -124,6 +125,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 	 mismatch = mismatch || (v[31+i*32:i*32] != (srcGen + fromInteger(i)));
       dataMismatch <= dataMismatch || mismatch;
       dma_write_server.writeData.put(tagdata);
+      bs.dataIn(v,v);
       srcGen <= srcGen+fromInteger(busWidthWords);
       //$display("loopback %h", tagdata.data);
       //indication.rData(truncate(v));
