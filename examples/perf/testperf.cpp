@@ -164,7 +164,7 @@ void printportalalloc(char *name, PortalAlloc *p)
 int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
-
+  unsigned repeatCount = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
@@ -211,6 +211,7 @@ int main(int argc, const char **argv)
       
       dotest(numWords, repeatCount);
     }
+  }
 
   device->getStateDbg();
   fprintf(stderr, "Main::exiting\n");
