@@ -27,6 +27,8 @@ endinterface
 
 interface RingBufferConfig;
    method Action set(Bit#(3) regist, Bit#(64) addr);
+   method Action setFirst(Bit#(64) addr);
+   method Action setLast(Bit#(64) addr);
    method Bit#(64) get(Bit#(3) regist);
 endinterface
 
@@ -50,6 +52,14 @@ module mkRingBuffer(RingBuffer);
       else if (regist == 4) rbuffermask <= truncate(addr);
       else if (regist == 5) rmempointer <= truncate(addr);
       else renable <= (addr[0] != 0);
+   endmethod
+   
+   method Action setFirst(Bit#(64) addr);
+      rbufferfirst <= truncate(addr);
+   endmethod
+   
+   method Action setLast(Bit#(64) addr);
+      rbufferlasst <= truncate(addr);
    endmethod
    
    method Bit#(64) get(Bit#(3) regist);
