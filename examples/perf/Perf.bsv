@@ -132,8 +132,6 @@ module mkPerfRequest#(PerfIndication indication,
 
       streamWrPointer <= wrPointer;
       streamRdPointer <= rdPointer;
-      streamWrPointer <= wrPointer;
-      streamRdPointer <= rdPointer;
       wordCnt <= numWords >> 1;
       repeatCnt <= repeatCount;
       indication.started(numWords);
