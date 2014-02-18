@@ -50,7 +50,11 @@ Directory *pdir;
 unsigned long long c_start[16];
 PortalPoller *defaultPoller = new PortalPoller();
 
+#ifdef USE_INTERRUPTS
 #define ENABLE_INTERRUPTS(A) *((A)+0x1) = 1
+#else
+#define ENABLE_INTERRUPTS(A)
+#endif
 
 #ifdef ZYNQ
 #define ALOGD(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, "PORTAL", fmt, __VA_ARGS__)
@@ -249,7 +253,6 @@ int Portal::portalOpen(int addrbits)
     req_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(1<<14));
     req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
 
-    fprintf(stderr, "Portal::enabling interrupts %s\n", name);
     ENABLE_INTERRUPTS(ind_reg_base);
  
 #else
@@ -265,7 +268,6 @@ int Portal::portalOpen(int addrbits)
     req_reg_base   = dev_base+(1<<14);
     req_fifo_base  = dev_base+(0<<14);
 
-    fprintf(stderr, "Portal::enabling interrupts %s\n", name);
     unsigned int addr = ind_reg_base+0x4;
     write_portal(p, addr, 1, name);
       
@@ -430,9 +432,10 @@ int PortalPoller::setClockFrequency(int clkNum, long requestedFrequency, long *a
 
 void* PortalPoller::portalExec_init(void)
 {
-    portalExec_timeout = -1; // no interrupt timeout on Zynq platform
-#ifndef ZYNQ
-    portalExec_timeout = 100; // interrupts not working yet on PCIe
+#ifdef USE_INTERRUPTS
+    portalExec_timeout = -1; // no interrupt timeout 
+#else
+    portalExec_timeout = 100;
 #endif
 #ifdef MMAP_HW
     if (!numFds) {

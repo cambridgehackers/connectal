@@ -42,7 +42,11 @@ PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 16 << 5;
+#ifdef MMAP_HW
+int numWords = 16 << 15;
+#else
+int numWords = 16 << 10;
+#endif
 size_t alloc_sz = numWords*sizeof(unsigned int);
 bool trigger_fired = false;
 bool finished = false;
@@ -168,12 +172,12 @@ int main(int argc, const char **argv)
   dma->alloc(alloc_sz, &dstAlloc);
   dma->alloc(alloc_sz, &bsAlloc);
 
-  for(int i = 0; i < srcAlloc->header.numEntries; i++)
-    fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);
-  for(int i = 0; i < dstAlloc->header.numEntries; i++)
-    fprintf(stderr, "%lx %lx\n", dstAlloc->entries[i].dma_address, dstAlloc->entries[i].length);
-  for(int i = 0; i < bsAlloc->header.numEntries; i++)
-    fprintf(stderr, "%lx %lx\n", bsAlloc->entries[i].dma_address, bsAlloc->entries[i].length);
+  // for(int i = 0; i < srcAlloc->header.numEntries; i++)
+  //   fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);
+  // for(int i = 0; i < dstAlloc->header.numEntries; i++)
+  //   fprintf(stderr, "%lx %lx\n", dstAlloc->entries[i].dma_address, dstAlloc->entries[i].length);
+  // for(int i = 0; i < bsAlloc->header.numEntries; i++)
+  //   fprintf(stderr, "%lx %lx\n", bsAlloc->entries[i].dma_address, bsAlloc->entries[i].length);
 
 
   srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
@@ -214,11 +218,14 @@ int main(int argc, const char **argv)
   sleep(1);
   dma->addrRequest(ref_bsAlloc, 3*sizeof(unsigned int));
   sleep(1);
-  sleep(5);
   
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   int burstLen = 16;
+#ifdef MMAP_HW
   int iterCnt = 2;
+#else
+  int iterCnt = 2;
+#endif
   start_timer(0);
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
