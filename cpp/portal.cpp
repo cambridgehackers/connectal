@@ -48,7 +48,7 @@
 Directory dir;
 Directory *pdir;
 unsigned long long c_start[16];
-PortalPoller *defaultPoller = new PortalPoller();
+static PortalPoller *defaultPoller = new PortalPoller();
 
 #ifdef USE_INTERRUPTS
 #define ENABLE_INTERRUPTS(A) *((A)+0x1) = 1
@@ -164,7 +164,8 @@ Portal::Portal(Portal *p)
     req_fifo_base(p->req_fifo_base),
     name(strdup(p->name)),
     p(p->p)
-{}
+{
+}
 
 
 Portal::Portal(const char *devname, unsigned int addrbits)
@@ -252,8 +253,6 @@ int Portal::portalOpen(int addrbits)
     ind_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(2<<14));
     req_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(1<<14));
     req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
-
-    ENABLE_INTERRUPTS(ind_reg_base);
  
 #else
     p = (struct portal*)malloc(sizeof(struct portal));
@@ -442,14 +441,11 @@ void* PortalPoller::portalExec_init(void)
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
     }
-#ifndef ZYNQ
-    if (0)
     for (int i = 0; i < numFds; i++) {
       PortalWrapper *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::enabling interrupts portal %d\n", i);
       ENABLE_INTERRUPTS(instance->ind_reg_base);
     }
-#endif
     fprintf(stderr, "portalExec::about to enter loop\n");
 #else // BSIM
     fprintf(stderr, "about to enter bsim while(true), numFds=%d\n", numFds);
