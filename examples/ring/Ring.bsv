@@ -38,6 +38,10 @@ import NopEngine::*;
 
 interface RingRequest;
    method Action set(Bit#(1) cmd, Bit#(3) regist, Bit#(64) addr);
+   method Action setCmdLast(Bit#(64) addr);
+   method Action setCmdFirst(Bit#(64) addr);
+   method Action setStatusLast(Bit#(64) addr);
+   method Action setStatusFirst(Bit#(64) addr);
    method Action get(Bit#(1) cmd, Bit#(3) regist);
    method Action hwenable(Bit#(1) en);
    method Action doCommandIndirect(Bit#(64) pointer, Bit#(64) addr);
@@ -198,6 +202,22 @@ module mkRingRequest#(RingIndication indication,
 	 indication.setResult(_cmd, regist, addr);
       endmethod
    
+      method Action setCmdFirst(Bit#(64) addr);
+	    cmdRing.configifc.setFirst(truncate(addr));
+      endmethod
+   
+      method Action setStatusFirst(Bit#(64) addr);
+	    statusRing.configifc.setFirst(truncate(addr));
+      endmethod
+   
+      method Action setCmdLast(Bit#(64) addr);
+	    cmdRing.configifc.setLast(truncate(addr));
+      endmethod
+   
+      method Action setStatusLast(Bit#(64) addr);
+	    statusRing.configifc.setLast(truncate(addr));
+      endmethod
+   
       method Action get(Bit#(1) _cmd, Bit#(3) regist);
 	 if (_cmd == 0)
 	    indication.getResult(0, regist, 
@@ -206,6 +226,7 @@ module mkRingRequest#(RingIndication indication,
 	    indication.getResult(0, regist, 
 	       zeroExtend(statusRing.configifc.get(regist)));
       endmethod
+
 
       method Action hwenable(Bit#(1) en);
 	 $display ("hwenable set to %h", en);
