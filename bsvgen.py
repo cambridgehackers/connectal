@@ -27,6 +27,12 @@ import PortalMemory::*;
 import Portal::*;
 %(extraImports)s
 
+typedef struct {
+    Bit#(1) select;
+    Bit#(1) last;
+    Bit#(12) id;
+} ReadReqInfo deriving (Bits);
+
 '''
 
 
@@ -181,14 +187,13 @@ portalIfcTemplate='''
         endinterface
         interface Get resp_read;
             method ActionValue#(Axi3ReadResponse#(32,12)) get();
-
-                let v = axiSlaveReadDataFifos[axiSlaveRS].first;
-                axiSlaveReadDataFifos[axiSlaveRS].deq;
-                axiSlaveReadLastFifo.deq;
-                axiSlaveReadIdFifo.deq;
+                let info = axiSlaveReadReqInfoFifo.first();
+                axiSlaveReadReqInfoFifo.deq();
+                let v = axiSlaveReadDataFifos[info.select].first;
+                axiSlaveReadDataFifos[info.select].deq;
 
                 getWordCount <= getWordCount + 1;
-                return Axi3ReadResponse { data: v, last: axiSlaveReadLastFifo.first, id: axiSlaveReadIdFifo.first, resp: 0 };
+                return Axi3ReadResponse { data: v, last: info.last, id: info.id, resp: 0 };
             endmethod
         endinterface
     endinterface
@@ -232,8 +237,7 @@ axiStateTemplate='''
     Reg#(Bit#(15)) axiSlaveWriteAddrReg <- mkReg(0);
     Reg#(Bit#(12)) axiSlaveReadIdReg <- mkReg(0);
     Reg#(Bit#(12)) axiSlaveWriteIdReg <- mkReg(0);
-    FIFO#(Bit#(1)) axiSlaveReadLastFifo <- mkPipelineFIFO;
-    FIFO#(Bit#(12)) axiSlaveReadIdFifo <- mkPipelineFIFO;
+    FIFO#(ReadReqInfo) axiSlaveReadReqInfoFifo <- mkPipelineFIFO;
     Reg#(Bit#(4)) axiSlaveReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(4)) axiSlaveWriteBurstCountReg <- mkReg(0);
     FIFO#(Axi3WriteResponse#(12)) axiSlaveBrespFifo <- mkFIFO();
@@ -255,8 +259,7 @@ axiStateTemplate='''
          axiSlaveReadAddrFifos[axiSlaveRS].enq(truncate(axiSlaveReadAddrReg));
          axiSlaveReadAddrReg <= axiSlaveReadAddrReg + 4;
          axiSlaveReadBurstCountReg <= axiSlaveReadBurstCountReg - 1;
-         axiSlaveReadLastFifo.enq(axiSlaveReadBurstCountReg == 1 ? 1 : 0);
-         axiSlaveReadIdFifo.enq(axiSlaveReadIdReg);
+         axiSlaveReadReqInfoFifo.enq(ReadReqInfo { select: axiSlaveRS, last: axiSlaveReadBurstCountReg == 1 ? 1 : 0, id: axiSlaveReadIdReg });
     endrule 
 '''
 
