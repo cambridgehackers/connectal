@@ -38,10 +38,11 @@ test%(classname)s: %(swProxies)s %(swWrappers)s $(PORTAL_CPP_FILES) %(source)s
 
 proxyClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
+//proxyClass
     %(statusDecl)s
 public:
-    %(className)s(int id);
-    %(className)s(const char *devname, unsigned int addrbits);
+    %(className)s(int id, PortalPoller *poller = 0);
+    %(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller = 0);
 '''
 proxyClassSuffixTemplate='''
 };
@@ -49,10 +50,11 @@ proxyClassSuffixTemplate='''
 
 wrapperClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
+//wrapperClass
 public:
-    %(className)s(Portal *p);
-    %(className)s(int id);
-    %(className)s(const char *devname, unsigned int addrbits);
+    %(className)s(Portal *p, PortalPoller *poller = 0);
+    %(className)s(int id, PortalPoller *poller = 0);
+    %(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller = 0);
 '''
 wrapperClassSuffixTemplate='''
 protected:
@@ -61,12 +63,12 @@ protected:
 '''
 
 proxyConstructorTemplate='''
-%(namespace)s%(className)s::%(className)s(int id)
+%(namespace)s%(className)s::%(className)s(int id, PortalPoller *poller)
  : %(parentClass)s(id)
 {
     %(statusInstantiate)s
 }
-%(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits)
+%(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller)
  : %(parentClass)s(devname, addrbits)
 {
     %(statusInstantiate)s
@@ -74,14 +76,14 @@ proxyConstructorTemplate='''
 '''
 
 wrapperConstructorTemplate='''
-%(namespace)s%(className)s::%(className)s(Portal *p)
- : %(parentClass)s(p)
+%(namespace)s%(className)s::%(className)s(Portal *p, PortalPoller *poller)
+ : %(parentClass)s(p, poller)
 {}
-%(namespace)s%(className)s::%(className)s(int id)
- : %(parentClass)s(id)
+%(namespace)s%(className)s::%(className)s(int id, PortalPoller *poller)
+ : %(parentClass)s(id, poller)
 {}
-%(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits)
- : %(parentClass)s(devname, addrbits)
+%(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller)
+ : %(parentClass)s(devname, addrbits, poller)
 {}
 '''
 
@@ -495,7 +497,7 @@ class InterfaceMixin:
     def emitCProxyImplementation(self, f,  suffix, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
 	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')
-	statusInstantiate = '' if self.hasPutFailed() else 'proxyStatus = new %s(this);\n' % statusName
+	statusInstantiate = '' if self.hasPutFailed() else 'proxyStatus = new %s(this, poller);\n' % statusName
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'statusInstantiate' : statusInstantiate,

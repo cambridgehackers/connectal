@@ -39,6 +39,7 @@ void init_timer(void);
 unsigned long long catch_timer(int i);
 void print_timer(int loops);
 
+class PortalPoller;
 class PortalMessage 
 {
  public:
@@ -85,7 +86,6 @@ class Portal
   unsigned int req_fifo_base;
 #endif
   int sendMessage(PortalMessage *msg);
-  static int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 };
 
 class Directory : public Portal
@@ -116,16 +116,35 @@ class Directory : public Portal
 
 class PortalWrapper : public Portal
 {
- private:
-  int registerInstance();
-  int unregisterInstance();
+  PortalPoller *poller;
  public:
   ~PortalWrapper();
-  PortalWrapper(Portal *p);
-  PortalWrapper(int id);
-  PortalWrapper(const char* devname, unsigned int addrbits);
+  PortalWrapper(Portal *p, PortalPoller *poller = 0);
+  PortalWrapper(int id, PortalPoller *poller = 0);
+  PortalWrapper(const char* devname, unsigned int addrbits, PortalPoller *poller = 0);
   virtual int handleMessage(unsigned int channel) = 0;
 };
+
+class PortalPoller {
+private:
+  PortalWrapper **portal_wrappers;
+  struct pollfd *portal_fds;
+  int numFds;
+public:
+  PortalPoller();
+  int registerInstance(PortalWrapper *portal);
+  int unregisterInstance(PortalWrapper *portal);
+  void *portalExec_init(void);
+  void *portalExec_event(int timeout);
+  void portalExec_end(void);
+  int portalExec_timeout;
+
+  void* portalExec(void* __x);
+  int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
+};
+
+// uses the default poller
+void* portalExec(void* __x);
 
 class PortalProxy : public Portal
 {
