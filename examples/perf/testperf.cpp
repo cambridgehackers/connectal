@@ -142,7 +142,7 @@ int dotest(unsigned size)
     fprintf(stderr, " %d", loops);
     gettimeofday(&start, NULL);
     for (i = 0; i < loops; i += 1) {
-      device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords);
+      device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, 1);
       sem_wait(&copy_sem);
     }
     gettimeofday(&stop, NULL);
