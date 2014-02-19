@@ -50,7 +50,8 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    B2C mainclock <- mkB2C();
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
    let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
-   Reg#(Bit#(3)) bozoReg <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
+   Reg#(Bit#(1)) bozoReg <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
+   Reg#(Bit#(1)) intReg <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
 
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
    mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
@@ -59,6 +60,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    endrule
    rule bozorule;
        bozoReg <= bozoReg + 1;
+       intReg <= top.interrupt ? 1'b1 : 1'b0;
    endrule
 
    rule b2c_rule;
@@ -70,13 +72,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    interface leds = top.leds;
    interface XADC xadc;
        method Bit#(4) gpio;
-           return {top.interrupt ? 1'b1 : 1'b0, bozoReg};
-   //ps7.m_axi_gp[0].client.readBurstCountIfc == 0
-   //interface Get#(Axi3ReadRequest#(addrWidth, idWidth)) req_ar;
-   //interface Put#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
-   //interface Get#(Axi3WriteRequest#(addrWidth, idWidth)) req_aw;
-   //interface Get#(Axi3WriteData#(busWidth, idWidth)) resp_write;
-   //interface Put#(Axi3WriteResponse#(idWidth)) resp_b;
+           return {intReg, ps7.debugif[3], ps7.debugif[2], ps7.debugif[1]};
        endmethod
    endinterface
    interface pins = top.pins;
