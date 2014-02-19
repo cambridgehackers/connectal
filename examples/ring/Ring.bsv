@@ -223,7 +223,7 @@ module mkRingRequest#(RingIndication indication,
 	    indication.getResult(0, regist, 
 	       zeroExtend(cmdRing.configifc.get(regist)));
 	 else
-	    indication.getResult(0, regist, 
+	    indication.getResult(1, regist, 
 	       zeroExtend(statusRing.configifc.get(regist)));
       endmethod
 
