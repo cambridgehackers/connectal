@@ -94,8 +94,10 @@ public:
   void *portalExec_init(void);
   void *portalExec_event(int timeout);
   void portalExec_end(void);
+  void portalExec_start();
   int portalExec_timeout;
   int stopping;
+  sem_t sem_startup;
 
   void* portalExec(void* __x);
   int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
@@ -142,6 +144,7 @@ void* portalExec(void* __x);
 /* fine grained functions for building custom portalExec */
 //void* portalExec_init(void);
 //void* portalExec_event(int timeout);
+void portalExec_start();
 void portalExec_end(void);
 extern int portalExec_timeout;
 

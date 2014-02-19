@@ -36,6 +36,8 @@
 #include <unistd.h>
 #include <assert.h>
 #include <time.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 #ifdef ZYNQ
 #include <android/log.h>
@@ -376,6 +378,7 @@ PortalProxy::~PortalProxy()
 PortalPoller::PortalPoller()
   : portal_wrappers(0), portal_fds(0), numFds(0), stopping(0)
 {
+    sem_init(&sem_startup, 0, 0);
 }
 
 int PortalPoller::unregisterInstance(Portal *portal)
@@ -488,16 +491,16 @@ void* PortalPoller::portalExec_event(int timeout)
 	
 	  // handle all messasges from this portal instance
 	  while (queue_status) {
-	    if(0)
+	    //if(0)
 	      fprintf(stderr, "queue_status %d\n", queue_status);
 	    instance->handleMessage(queue_status-1);
 	    int_src = *(ind_reg_base+0x0);
 	    int_en  = *(ind_reg_base+0x1);
 	    ind_count  = *(ind_reg_base+0x2);
 	    queue_status = *(ind_reg_base+0x6);
-	    if (0)
-	      fprintf(stderr, "%d: int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
-		      __LINE__, int_src, int_en, ind_count, queue_status);
+	    //if (0)
+	      fprintf(stderr, "(%d:%s) int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
+		      i, instance->name, int_src, int_en, ind_count, queue_status);
 	  }
 	
 	  // rc of 0 indicates timeout
@@ -537,6 +540,7 @@ void* PortalPoller::portalExec_event(int timeout)
 void* PortalPoller::portalExec(void* __x)
 {
     void *rc = portalExec_init();
+    sem_post(&sem_startup);
     while (!rc && !stopping)
         rc = portalExec_event(portalExec_timeout);
     portalExec_end();
@@ -551,6 +555,21 @@ void* portalExec(void* __x)
 void portalExec_end(void)
 {
   defaultPoller->portalExec_end();
+}
+
+static void *pthread_worker(void *__x)
+{
+    ((PortalPoller *)__x)->portalExec(__x);
+}
+void PortalPoller::portalExec_start()
+{
+    pthread_t threaddata;
+    pthread_create(&threaddata, NULL, &pthread_worker, (void *)this);
+    sem_wait(&sem_startup);
+}
+void portalExec_start()
+{
+    defaultPoller->portalExec_start();
 }
 
 Directory::Directory() 

@@ -107,11 +107,7 @@ int main(int argc, const char **argv)
 
     poller->portalExec_init();
     init_thread();
-    pthread_t tid;
-    if(pthread_create(&tid, NULL,  portalExec, NULL)){
-	fprintf(stderr, "error creating default exec thread\n");
-	exit(1);
-    }
+    portalExec_start();
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
@@ -122,7 +118,7 @@ int main(int argc, const char **argv)
     printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
     init_timer();
     start_timer(1);
-printf("[%s:%d] sleep5\n", __FUNCTION__, __LINE__); sleep(5);
+printf("[%s:%d] sleep2\n", __FUNCTION__, __LINE__); sleep(2);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
 unsigned long long elapsed = lap_timer(1);
