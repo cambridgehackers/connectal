@@ -161,7 +161,7 @@ public:
     fprintf(stderr, "getResult(cmd %ld regist %ld addr %llx)\n", 
 	    cmd, regist, addr);
     /* returning query about last pointer of cmd ring */
-    if ((cmd = cmd_ring.ringid) && (regist == REG_LAST)) {
+    if ((cmd == cmd_ring.ringid) && (regist == REG_LAST)) {
       fprintf(stderr, "update cmd_ring.last %llx\n", addr);
       cmd_ring.last = addr;
     }
