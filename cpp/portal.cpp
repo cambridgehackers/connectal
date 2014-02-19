@@ -546,6 +546,16 @@ void* portalExec(void* __x)
   return defaultPoller->portalExec(__x);
 }
 
+void* portalExec_init(void)
+{
+  return defaultPoller->portalExec_init();
+}
+
+void* portalExec_event(int timeout)
+{
+  return defaultPoller->portalExec(timeout);
+}
+
 
 
 Directory::Directory() 
