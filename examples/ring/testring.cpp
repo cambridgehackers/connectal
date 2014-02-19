@@ -138,7 +138,7 @@ struct SWRing {
 
 struct SWRing cmd_ring;
  struct SWRing status_ring;
- pthread_mutex_t cmd_lock = PTHREAD_MUTEX_INITIALIZER;
+// pthread_mutex_t cmd_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -237,17 +237,15 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
 {
   unsigned next_first;
   struct Ring_Completion *p;
-  pthread_mutex_lock(&cmd_lock);
+  //  pthread_mutex_lock(&cmd_lock);
   assert(r->first < r->size);
   /* send an inquiry every 1/4 way around the ring */
-  if ((r->cached_space % (r->size >> 2)) == 0) {
+  while ((r->cached_space % (r->size >> 2)) == 0) {
     ring->get(r->ringid, REG_LAST);         // bufferlast 
     sem_wait(&getresult_sem);
-    while (r->cached_space == 0) {
-      pthread_mutex_unlock(&cmd_lock);
-      r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
-      pthread_mutex_lock(&cmd_lock);
-    }
+    //      pthread_mutex_unlock(&cmd_lock);
+    r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
+    //      pthread_mutex_lock(&cmd_lock);
   }
   p = get_free_completion();
   p->finish = fp;
@@ -265,7 +263,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
     ring->setStatusFirst(r->first);         // bufferfirst
   }
   //sem_wait(&setresult_sem);
-  pthread_mutex_unlock(&cmd_lock);
+  //  pthread_mutex_unlock(&cmd_lock);
 }
 
 
