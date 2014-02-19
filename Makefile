@@ -29,7 +29,8 @@ testnames = echo     \
 	    ring     \
 	    perf     \
 	    nandsim  \
-            flowcontrol
+            flowcontrol \
+            bluescope 
 
 bsimtests = $(addsuffix .bsim, $(testnames))
 

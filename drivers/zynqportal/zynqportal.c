@@ -67,13 +67,15 @@ static void dump_ind_regs(const char *prefix, struct portal_data *portal_data)
 static irqreturn_t portal_isr(int irq, void *dev_id)
 {
         struct portal_data *portal_data = (struct portal_data *)dev_id;
+        irqreturn_t rc = IRQ_NONE;
 
         //dump_ind_regs("ISR a", portal_data);
-        //driver_devel("%s %s %d basevirt %p\n", __func__, portal_data->misc.name, irq, portal_data->ind_reg_base_virt);
+        driver_devel("%s %s %d basevirt %p\n", __func__, portal_data->misc.name, irq, portal_data->ind_reg_base_virt);
         u32 int_status = readl(portal_data->ind_reg_base_virt + 0);
-        //driver_devel("stat %x\n", int_status);
+        driver_devel("stat %x\n", int_status);
         u32 int_en  = readl(portal_data->ind_reg_base_virt + 4);
-        driver_devel("%s IRQ %s %d %x %x\n", __func__, portal_data->misc.name, irq, int_status, int_en);
+        driver_devel("en %x\n", int_en);
+        //driver_devel("%s IRQ %s %d %x %x\n", __func__, portal_data->misc.name, irq, int_status, int_en);
 
         if (int_status) {
                 // disable interrupt.  this will be enabled by user mode
@@ -82,9 +84,10 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
 
                 //dump_ind_regs("ISR b", portal_data);
                 wake_up_interruptible(&portal_data->wait_queue);
-                return IRQ_HANDLED;
+                rc = IRQ_HANDLED;
         }
-        return IRQ_NONE;
+        driver_devel("IRQRC %x\n", rc);
+        return rc;
 }
 
 /*
@@ -97,6 +100,7 @@ static int portal_open(struct inode *inode, struct file *filep)
         driver_devel("%s: %s irq_requested %d\n", __FUNCTION__,
             portal_data->misc.name, portal_data->irq_requested);
         //dump_ind_regs("portal_open", portal_data);
+        init_waitqueue_head(&portal_data->wait_queue);
         if (!portal_data->irq_requested) {
                 // read the interrupt as a sanity check (to force segv if hw not present)
                 u32 int_status = readl(portal_data->ind_reg_base_virt + 0);
@@ -195,6 +199,7 @@ static int portal_release(struct inode *inode, struct file *filep)
         if (portal_data->irq_requested)
                 free_irq(portal_data->portal_irq, portal_data);
         portal_data->irq_requested = 0;
+        init_waitqueue_head(&portal_data->wait_queue);
         return 0;
 }
 
@@ -242,7 +247,6 @@ static int portal_of_probe(struct platform_device *pdev)
         ind_reg_base_phys = reg_res->start + (3 << 14);
         portal_data->ind_reg_base_virt = ioremap_nocache(ind_reg_base_phys,
                 reg_range);
-        init_waitqueue_head(&portal_data->wait_queue);
         portal_data->portal_irq = irq_res->start;
 
         pr_info("%s ind_reg_base phys %x/%x virt %p\n", portal_data->misc.name,

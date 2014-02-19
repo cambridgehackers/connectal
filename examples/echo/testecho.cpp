@@ -45,7 +45,6 @@ PortalPoller *poller = 0;
 
 static void *pthread_worker(void *p)
 {
-    PortalPoller *poller = (PortalPoller *)p;
     void *rc = NULL;
     while (CHECKSEM(sem_heard2) && !rc)
         rc = poller->portalExec_event(poller->portalExec_timeout);
@@ -102,11 +101,17 @@ int main(int argc, const char **argv)
 {
     poller = new PortalPoller();
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, poller);
-    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow, poller);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest, poller);
+    // these use the default poller
+    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
+    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
 
     poller->portalExec_init();
     init_thread();
+    pthread_t tid;
+    if(pthread_create(&tid, NULL,  portalExec, NULL)){
+	fprintf(stderr, "error creating default exec thread\n");
+	exit(1);
+    }
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);

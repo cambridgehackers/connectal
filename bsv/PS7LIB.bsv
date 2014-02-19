@@ -127,6 +127,7 @@ interface PS7LIB;
     interface AxiSlaveCommon#(32) s_axi_acp;
     interface Vector#(2, AxiSlaveCommon#(32)) s_axi_gp;
     interface Vector#(4, AxiSlaveHighSpeed) s_axi_hp;
+    method Bit#(4)     debugif();
 endinterface
 
 module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
@@ -493,6 +494,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     interface AxiSlaveCommon s_axi_gp = vtops_axi_gp;
     interface AxiSlaveHighSpeed s_axi_hp = vtops_axi_hp;
     //interface AxiSlaveCommon s_axi_acp;
+    method Bit#(4) debugif = {vm_axi_gp[0].arvalid, vtopmw_axi_gp[0].rvalid, vm_axi_gp[0].awvalid, vm_axi_gp[0].wvalid};
 endmodule
 
 interface ZynqPins;
@@ -528,6 +530,7 @@ interface PS7;
     method Action                             interrupt(Bit#(1) v);
     method Bit#(4)     fclkclk();
     method Bit#(4)     fclkresetn();
+    method Bit#(4)     debugif();
 endinterface
 
 module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
@@ -566,4 +569,5 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
     method Action interrupt(Bit#(1) v);
         ps7.irq.f2p({19'b0, v});
     endmethod
+    method Bit#(4)     debugif() = ps7.debugif;
 endmodule
