@@ -198,9 +198,11 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   r->ref = ref;
   r->cached_space = size - 64;
   r->ringid = ringid;
+  setresult_flag = 0;
   ring->set(ringid, REG_BASE, 0);         // bufferbase, relative to base
   //sem_wait(&setresult_sem);
   waitforflag(&setresult_flag);
+  setresult_flag = 0;
   ring->set(ringid, REG_END, size);      // bufferend
   waitforflag(&setresult_flag);
   //  sem_wait(&setresult_sem);
@@ -211,9 +213,11 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
     ring->setStatusFirst(0);         // bufferfirst
     ring->setStatusLast(0);
   }
+  setresult_flag = 0;
   ring->set(ringid, REG_MASK, size - 1);  // buffermask
   waitforflag(&setresult_flag);
   //  sem_wait(&setresult_sem);
+  setresult_flag = 0;
   ring->set(ringid, REG_HANDLE, ref);       // memhandle
   waitforflag(&setresult_flag);
   //  sem_wait(&setresult_sem);
@@ -265,7 +269,7 @@ void *statusThreadProc(void *arg)
   printf("Status thread running\n");
   for (;;) {
     statusPoll();
-    rc = portalEvent(0);
+    rc = portalExec_event(0);
     assert(rc == 0);
   }
 }
@@ -283,9 +287,10 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   assert(r->first < r->size);
   /* send an inquiry every 1/4 way around the ring */
   while ((r->cached_space % (r->size >> 2)) == 0) {
+    getresult_flag = 0;
     ring->get(r->ringid, REG_LAST);         // bufferlast 
-    statusPoll();
-    sem_wait(&getresult_sem);
+    waitforflag(&getresult_flag);
+    //sem_wait(&getresult_sem);
     //      pthread_mutex_unlock(&cmd_lock);
     r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
     //      pthread_mutex_lock(&cmd_lock);
