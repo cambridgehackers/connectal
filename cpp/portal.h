@@ -62,15 +62,15 @@ void* portalExec_event(int timeout);
 void portalExec_end(void);
 extern int portalExec_timeout;
 
-class Portal
+class PortalInternal
 {
  public:
   int portalOpen(int length);
   void portalClose();
-  Portal(int id);
-  Portal(Portal* p);
-  Portal(const char *name, unsigned int addrbits);
-  ~Portal();
+  PortalInternal(int id);
+  PortalInternal(PortalInternal* p);
+  PortalInternal(const char *name, unsigned int addrbits);
+  ~PortalInternal();
   int fd;
   struct portal *p;
   char *name;
@@ -88,7 +88,7 @@ class Portal
   int sendMessage(PortalMessage *msg);
 };
 
-class Directory : public Portal
+class Directory : public PortalInternal
 {
  private:
   unsigned int version;
@@ -114,26 +114,26 @@ class Directory : public Portal
   void printDbgRequestIntervals();
 };
 
-class PortalWrapper : public Portal
+class Portal : public PortalInternal
 {
   PortalPoller *poller;
  public:
-  ~PortalWrapper();
-  PortalWrapper(Portal *p, PortalPoller *poller = 0);
-  PortalWrapper(int id, PortalPoller *poller = 0);
-  PortalWrapper(const char* devname, unsigned int addrbits, PortalPoller *poller = 0);
+  ~Portal();
+  Portal(PortalInternal *p, PortalPoller *poller = 0);
+  Portal(int id, PortalPoller *poller = 0);
+  Portal(const char* devname, unsigned int addrbits, PortalPoller *poller = 0);
   virtual int handleMessage(unsigned int channel) = 0;
 };
 
 class PortalPoller {
 private:
-  PortalWrapper **portal_wrappers;
+  Portal **portal_wrappers;
   struct pollfd *portal_fds;
   int numFds;
 public:
   PortalPoller();
-  int registerInstance(PortalWrapper *portal);
-  int unregisterInstance(PortalWrapper *portal);
+  int registerInstance(Portal *portal);
+  int unregisterInstance(Portal *portal);
   void *portalExec_init(void);
   void *portalExec_event(int timeout);
   void portalExec_end(void);
@@ -146,7 +146,7 @@ public:
 // uses the default poller
 void* portalExec(void* __x);
 
-class PortalProxy : public Portal
+class PortalProxy : public PortalInternal
 {
  public:
   ~PortalProxy();

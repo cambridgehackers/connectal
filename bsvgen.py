@@ -22,7 +22,6 @@ import AxiMasterSlave::*;
 import Leds::*;
 import Vector::*;
 import SpecialFIFOs::*;
-import XbsvReadyQueue::*;
 import PortalMemory::*;
 import Portal::*;
 %(extraImports)s

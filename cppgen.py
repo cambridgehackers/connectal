@@ -52,7 +52,7 @@ wrapperClassPrefixTemplate='''
 class %(namespace)s%(className)s : public %(parentClass)s {
 //wrapperClass
 public:
-    %(className)s(Portal *p, PortalPoller *poller = 0);
+    %(className)s(PortalInternal *p, PortalPoller *poller = 0);
     %(className)s(int id, PortalPoller *poller = 0);
     %(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller = 0);
 '''
@@ -76,7 +76,7 @@ proxyConstructorTemplate='''
 '''
 
 wrapperConstructorTemplate='''
-%(namespace)s%(className)s::%(className)s(Portal *p, PortalPoller *poller)
+%(namespace)s%(className)s::%(className)s(PortalInternal *p, PortalPoller *poller)
  : %(parentClass)s(p, poller)
 {}
 %(namespace)s%(className)s::%(className)s(int id, PortalPoller *poller)
@@ -489,7 +489,7 @@ class InterfaceMixin:
         indent(f, indentation)
         subs = {'className': className,
                 'namespace': namespace,
-                'parentClass': self.parentClass('PortalWrapper')}
+                'parentClass': self.parentClass('Portal')}
         f.write(wrapperClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitCDeclaration(f, False, indentation + 4, namespace)
@@ -511,7 +511,7 @@ class InterfaceMixin:
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'putFailedMethodName' : putFailedMethodName,
-                         'parentClass': self.parentClass('PortalWrapper'),
+                         'parentClass': self.parentClass('Portal'),
                          'responseSzCases': ''.join(['    case %(channelNumber)s: { msg = new %(msg)s(); break; }\n'
                                                      % { 'channelNumber': d.channelNumber,
                                                          'msg': '%s%sMSG' % (className, d.name)}
