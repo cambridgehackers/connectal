@@ -3,13 +3,14 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <unistd.h>
 
 #include "EchoIndicationWrapper.h"
 #include "EchoRequestProxy.h"
 #include "GeneratedTypes.h"
 #include "SwallowProxy.h"
 
-#define LOOP_COUNT 1000
+#define LOOP_COUNT 5 //1000
 #define SEPARATE_EVENT_THREAD
 //#define USE_MUTEX_SYNC
 
@@ -122,6 +123,7 @@ int main(int argc, const char **argv)
     printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
     init_timer();
     start_timer(1);
+printf("[%s:%d] sleep5\n", __FUNCTION__, __LINE__); sleep(5);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
 unsigned long long elapsed = lap_timer(1);
@@ -137,7 +139,6 @@ unsigned long long elapsed = lap_timer(1);
     print_timer(LOOP_COUNT);
     printf("call_say: elapsed %lld average %lld\n", elapsed, elapsed/LOOP_COUNT);
     echoRequestProxy->setLeds(9);
-    //print_dbg_requeste_intervals();
     poller->portalExec_end();
     return 0;
 }
