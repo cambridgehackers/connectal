@@ -298,20 +298,14 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   for (int i = msg->size()/4-1; i >= 0; i--) {
     unsigned int data = buf[i];
 #ifdef MMAP_HW
-    //catch_timer(10);
-#if 0
-    int temp = *(volatile int *)(ind_reg_base+0x1);
-    *(ind_reg_base+0x1) = 0; // disable interrupts for a bit
-#endif
-    unsigned long addr = ((unsigned long)req_fifo_base) + msg->channel * 256;
+    volatile unsigned int *addr = (volatile unsigned int *)(((unsigned long)req_fifo_base) + msg->channel * 256);
     //unsigned long long before_requestt = catch_timer(11);
     //fprintf(stderr, "%08lx %08x\n", addr, data);
-    *((volatile unsigned int*)addr) = data;
-    unsigned long long after_requestt = catch_timer(12);
+    *addr = data;   /* send request data to the hardware! */
 #if 0
+    unsigned long long after_requestt = catch_timer(12);
     pdir->printDbgRequestIntervals();
     printf("portalbefore req %llx after %llx\n", before_requestt, after_requestt);
-    *(ind_reg_base+0x1) = temp; //restore interrupt enable
 #endif
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
