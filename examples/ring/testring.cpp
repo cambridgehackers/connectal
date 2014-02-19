@@ -269,7 +269,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
 }
 
 
-void *statusPoll(void)
+void statusPoll(void)
 {
   int i;
   uint64_t *msg;
