@@ -162,6 +162,7 @@ public:
 	    cmd, regist, addr);
     /* returning query about last pointer of cmd ring */
     if ((cmd = cmd_ring.ringid) && (regist == REG_LAST)) {
+      fprintf(stderr, "update cmd_ring.last %llx\n", addr);
       cmd_ring.last = addr;
     }
     sem_post(&getresult_sem);
@@ -242,6 +243,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   /* send an inquiry every 1/4 way around the ring */
   while ((r->cached_space % (r->size >> 2)) == 0) {
     ring->get(r->ringid, REG_LAST);         // bufferlast 
+    statusPoll();
     sem_wait(&getresult_sem);
     //      pthread_mutex_unlock(&cmd_lock);
     r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
