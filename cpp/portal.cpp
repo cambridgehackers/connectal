@@ -149,7 +149,7 @@ void write_portal(portal *p, unsigned int addr, unsigned int v, char *name)
 
 }
 
-void Portal::portalClose()
+void PortalInternal::portalClose()
 {
     if (fd > 0) {
         ::close(fd);
@@ -157,7 +157,7 @@ void Portal::portalClose()
     }    
 }
 
-Portal::Portal(Portal *p)
+PortalInternal::PortalInternal(PortalInternal *p)
   : fd(p->fd),
     ind_reg_base(p->ind_reg_base),
     ind_fifo_base(p->ind_fifo_base),
@@ -169,7 +169,7 @@ Portal::Portal(Portal *p)
 }
 
 
-Portal::Portal(const char *devname, unsigned int addrbits)
+PortalInternal::PortalInternal(const char *devname, unsigned int addrbits)
   : fd(-1),
     ind_reg_base(0x0), 
     ind_fifo_base(0x0),
@@ -180,11 +180,11 @@ Portal::Portal(const char *devname, unsigned int addrbits)
   int rc = portalOpen(addrbits);
   if (rc != 0) {
     printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
-    ALOGD("Portal::Portal failure rc=%d\n", rc);
+    ALOGD("PortalInternal::PortalInternal failure rc=%d\n", rc);
     exit(1);
   }
 }
-Portal::Portal(int id)
+PortalInternal::PortalInternal(int id)
   : fd(-1),
     ind_reg_base(0x0), 
     ind_fifo_base(0x0),
@@ -197,19 +197,19 @@ Portal::Portal(int id)
   int rc = portalOpen(dir.get_addrbits(id));
   if (rc != 0) {
     printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
-    ALOGD("Portal::Portal failure rc=%d\n", rc);
+    ALOGD("PortalInternal::PortalInternal failure rc=%d\n", rc);
     exit(1);
   }
 }
 
-Portal::~Portal()
+PortalInternal::~PortalInternal()
 {
   portalClose();
   free(name);
 }
 
 
-int Portal::portalOpen(int addrbits)
+int PortalInternal::portalOpen(int addrbits)
 {
 #ifdef ZYNQ
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
@@ -275,7 +275,7 @@ int Portal::portalOpen(int addrbits)
     return 0;
 }
 
-int Portal::sendMessage(PortalMessage *msg)
+int PortalInternal::sendMessage(PortalMessage *msg)
 {
 
   // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
@@ -327,8 +327,8 @@ int Portal::sendMessage(PortalMessage *msg)
   return 0;
 }
 
-PortalWrapper::PortalWrapper(int id, PortalPoller *poller)
-  : Portal(id)
+Portal::Portal(int id, PortalPoller *poller)
+  : PortalInternal(id)
 {
   if (poller == 0)
     poller = defaultPoller;
@@ -336,8 +336,8 @@ PortalWrapper::PortalWrapper(int id, PortalPoller *poller)
   poller->registerInstance(this);
 }
 
-PortalWrapper::PortalWrapper(Portal *p, PortalPoller *poller) 
-  : Portal(p)
+Portal::Portal(PortalInternal *p, PortalPoller *poller) 
+  : PortalInternal(p)
 {
   if (poller == 0)
     poller = defaultPoller;
@@ -345,8 +345,8 @@ PortalWrapper::PortalWrapper(Portal *p, PortalPoller *poller)
   poller->registerInstance(this);
 }
 
-PortalWrapper::PortalWrapper(const char *devname, unsigned int addrbits, PortalPoller *poller)
-  : Portal(devname,addrbits)
+Portal::Portal(const char *devname, unsigned int addrbits, PortalPoller *poller)
+  : PortalInternal(devname,addrbits)
 {
   if (poller == 0)
     poller = defaultPoller;
@@ -354,18 +354,18 @@ PortalWrapper::PortalWrapper(const char *devname, unsigned int addrbits, PortalP
   poller->registerInstance(this);
 }
 
-PortalWrapper::~PortalWrapper()
+Portal::~Portal()
 {
   poller->unregisterInstance(this);
 }
 
 PortalProxy::PortalProxy(int id)
-  : Portal(id)
+  : PortalInternal(id)
 {
 }
 
 PortalProxy::PortalProxy(const char *devname, unsigned int addrbits)
-  : Portal(devname,addrbits)
+  : PortalInternal(devname,addrbits)
 {
 }
 
@@ -378,7 +378,7 @@ PortalPoller::PortalPoller()
 {
 }
 
-int PortalPoller::unregisterInstance(PortalWrapper *portal)
+int PortalPoller::unregisterInstance(Portal *portal)
 {
   int i = 0;
   while(i < numFds)
@@ -394,21 +394,21 @@ int PortalPoller::unregisterInstance(PortalWrapper *portal)
 
   numFds--;
   portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
-  portal_wrappers = (PortalWrapper **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));  
+  portal_wrappers = (Portal **)realloc(portal_wrappers, numFds*sizeof(Portal *));  
   return 0;
 }
 
-int PortalPoller::registerInstance(PortalWrapper *portal)
+int PortalPoller::registerInstance(Portal *portal)
 {
     numFds++;
-    portal_wrappers = (PortalWrapper **)realloc(portal_wrappers, numFds*sizeof(PortalWrapper *));
+    portal_wrappers = (Portal **)realloc(portal_wrappers, numFds*sizeof(Portal *));
     portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
     portal_wrappers[numFds-1] = portal;
     struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
     pollfd->fd = portal->fd;
     pollfd->events = POLLIN;
-    fprintf(stderr, "PortalWrapper::registerInstance %s\n", portal->name);
+    fprintf(stderr, "Portal::registerInstance %s\n", portal->name);
     return 0;
 }
 
@@ -443,7 +443,7 @@ void* PortalPoller::portalExec_init(void)
         return (void*)-ENODEV;
     }
     for (int i = 0; i < numFds; i++) {
-      PortalWrapper *instance = portal_wrappers[i];
+      Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::enabling interrupts portal %d %s\n", i, instance->name);
       ENABLE_INTERRUPTS(instance->ind_reg_base);
     }
@@ -457,7 +457,7 @@ void PortalPoller::portalExec_end(void)
 {
 #ifdef MMAP_HW
     for (int i = 0; i < numFds; i++) {
-      PortalWrapper *instance = portal_wrappers[i];
+      Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d\n", i);
       *(volatile int *)(instance->ind_reg_base+0x1) = 0;
     }
@@ -474,7 +474,7 @@ void* PortalPoller::portalExec_event(int timeout)
 	    fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
 	  }
 	
-	  PortalWrapper *instance = portal_wrappers[i];
+	  Portal *instance = portal_wrappers[i];
 	  volatile unsigned int *ind_reg_base = instance->ind_reg_base;
 	
 	  // sanity check, to see the status of interrupt source and enable
@@ -513,7 +513,7 @@ void* PortalPoller::portalExec_event(int timeout)
     }
 #else // BSIM
     for(int i = 0; i < numFds; i++) {
-	PortalWrapper *instance = portal_wrappers[i];
+	Portal *instance = portal_wrappers[i];
 	unsigned int int_status_addr = instance->ind_reg_base+0x0;
 	//fprintf(stderr, "AAAA: %x %s\n", int_status_addr, instance->name);
 	unsigned int int_status = read_portal((instance->p), int_status_addr, instance->name);
@@ -549,7 +549,7 @@ void* portalExec(void* __x)
 
 
 Directory::Directory() 
-  : Portal("fpga0", 16),
+  : PortalInternal("fpga0", 16),
     version(0),
     timestamp(0),
     addrbits(0),
