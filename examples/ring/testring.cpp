@@ -246,6 +246,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
     //      pthread_mutex_unlock(&cmd_lock);
     r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
     //      pthread_mutex_lock(&cmd_lock);
+    if (r->cached_space != 0) break;
   }
   p = get_free_completion();
   p->finish = fp;
