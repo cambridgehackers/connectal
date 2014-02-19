@@ -339,7 +339,7 @@ void hw_copy_nb(void *from, void *to, unsigned count, char *flag)
 
 struct CompletionEvent {
   uint64_t event[8];
-  sem_t sem;
+  char flag;
 };
 
 
@@ -348,7 +348,7 @@ void echo_finish(void *arg, uint64_t *event)
   struct CompletionEvent *p = (struct CompletionEvent *) arg;
   assert(p != NULL);
   memcpy(&p->event, event, 8 * sizeof(uint64_t));
-  sem_post(&p->sem);
+  p->flag = 1;
 }
 
 
@@ -356,17 +356,18 @@ void hw_echo(long unsigned a, long unsigned b)
 {
   struct CompletionEvent myevent;
   uint64_t tcmd[8];
-  sem_init(&myevent.sem, 1, 0);
+  //sem_init(&myevent.sem, 1, 0);
+  myevent.flag = 0;
   tcmd[0] = ((uint64_t) CMD_ECHO) << 56;
   tcmd[1] = (uint64_t) a;
   tcmd[2] = (uint64_t) b;
   ring_send(&cmd_ring, tcmd, echo_finish, &myevent);
-  sem_wait(&myevent.sem);
+  while (myevent.flag == 0) statusPoll();
   if ((myevent.event[1] != a) || (myevent.event[2] != b)) {
     printf("echo failed a=%lx b= %lx got %lx %lx\n",
 	   a, b, myevent.event[1], myevent.event[2]);
   }
-  sem_destroy(&myevent.sem);
+  //sem_destroy(&myevent.sem);
   
 }
 
