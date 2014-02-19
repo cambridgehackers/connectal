@@ -61,7 +61,7 @@ void PortalMemory::InitFds()
 #endif
 }
 PortalMemory::PortalMemory(const char *devname, unsigned int addrbits)
-  : PortalProxy(devname, addrbits)
+  : PortalInternal(devname, addrbits)
   , handle(1)
   , callBacksRegistered(false)
 {
@@ -75,7 +75,7 @@ PortalMemory::PortalMemory(const char *devname, unsigned int addrbits)
 }
 
 PortalMemory::PortalMemory(int id)
-  : PortalProxy(id),
+  : PortalInternal(id),
     handle(1)
 {
   InitFds();

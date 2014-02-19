@@ -4,7 +4,7 @@
 #include "portal.h"
 #include "GeneratedTypes.h"
 
-class PortalMemory : public PortalProxy 
+class PortalMemory : public PortalInternal 
 {
  private:
   int handle;

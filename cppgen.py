@@ -479,7 +479,7 @@ class InterfaceMixin:
         subs = {'className': className,
                 'namespace': namespace,
 		'statusDecl' : '' if self.hasPutFailed() else statusDecl,
-                'parentClass': self.parentClass('PortalProxy')}
+                'parentClass': self.parentClass('PortalInternal')}
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitCDeclaration(f, True, indentation + 4, namespace)
@@ -501,7 +501,7 @@ class InterfaceMixin:
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'statusInstantiate' : statusInstantiate,
-                         'parentClass': self.parentClass('PortalProxy')}
+                         'parentClass': self.parentClass('PortalInternal')}
         f.write(proxyConstructorTemplate % substitutions)
         for d in self.decls:
             d.emitCImplementation(f, className, namespace,True)

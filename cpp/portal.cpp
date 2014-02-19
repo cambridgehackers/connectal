@@ -355,20 +355,6 @@ Portal::~Portal()
   poller->unregisterInstance(this);
 }
 
-PortalProxy::PortalProxy(int id)
-  : PortalInternal(id)
-{
-}
-
-PortalProxy::PortalProxy(const char *devname, unsigned int addrbits)
-  : PortalInternal(devname,addrbits)
-{
-}
-
-PortalProxy::~PortalProxy()
-{
-}
-
 PortalPoller::PortalPoller()
   : portal_wrappers(0), portal_fds(0), numFds(0), stopping(0)
 {

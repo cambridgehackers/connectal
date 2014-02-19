@@ -148,13 +148,4 @@ void portalExec_start();
 void portalExec_end(void);
 extern int portalExec_timeout;
 
-class PortalProxy : public PortalInternal
-{
- public:
-  ~PortalProxy();
-  PortalProxy(int id);
-  PortalProxy(const char *devname, unsigned int addrbits);
-};
-
-
 #endif // _PORTAL_H_
