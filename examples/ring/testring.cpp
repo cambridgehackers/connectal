@@ -462,7 +462,7 @@ int main(int argc, const char **argv)
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
   portalThreadRun = 1;
-  if(pthread_create(&tid, NULL,  myportalThreadProc, NULL)){
+  if(pthread_create(&tid, NULL,  myPortalThreadProc, NULL)){
    fprintf(stderr, "error creating exec thread\n");
    exit(1);
   }
