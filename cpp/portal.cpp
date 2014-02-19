@@ -553,7 +553,7 @@ void* portalExec_init(void)
 
 void* portalExec_event(int timeout)
 {
-  return defaultPoller->portalExec(timeout);
+  return defaultPoller->portalExec_event(timeout);
 }
 
 
