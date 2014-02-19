@@ -59,7 +59,7 @@ module mkRingBuffer(RingBuffer);
    endmethod
    
    method Action setLast(Bit#(64) addr);
-      rbufferlasst <= truncate(addr);
+      rbufferlast <= truncate(addr);
    endmethod
    
    method Bit#(64) get(Bit#(3) regist);
