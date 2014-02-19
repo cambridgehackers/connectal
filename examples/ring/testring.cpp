@@ -264,8 +264,20 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   } else {
     ring->setStatusFirst(r->first);         // bufferfirst
   }
-  sem_wait(&setresult_sem);
+  //sem_wait(&setresult_sem);
   pthread_mutex_unlock(&cmd_lock);
+}
+
+
+void *statusPoll(void)
+{
+  int i;
+  uint64_t *msg;
+  msg = ring_next(&status_ring);
+  if (msg == NULL) return;
+  printf("Received %lx %lx\n", (long) msg[0], (long) msg[7]);
+  Ring_Handle_Completion((uint64_t *) msg);
+  ring_pop(&status_ring);
 }
 
 void *statusThreadProc(void *arg)
@@ -274,10 +286,8 @@ void *statusThreadProc(void *arg)
   uint64_t *msg;
   printf("Status thread running\n");
   for (;;) {
-    while ((msg = ring_next(&status_ring)) == NULL);
-    printf("Received %lx %lx\n", (long) msg[0], (long) msg[7]);
-    Ring_Handle_Completion((uint64_t *) msg);
-    ring_pop(&status_ring);  }
+    statusPoll();
+  }
 }
 
 
@@ -298,16 +308,21 @@ void hw_copy(void *from, void *to, unsigned count)
 {
   uint64_t tcmd[8];
   sem_t my_sem;
-  assert(sem_init(&my_sem, 1, 0) == 0);
+  char flag = 0;
   tcmd[0] = ((uint64_t) CMD_COPY) << 56;
   tcmd[1] = scratchPointer;
   tcmd[2] = (uint64_t) from;
   tcmd[3] = scratchPointer;
   tcmd[4] = (uint64_t) to;
   tcmd[5] = count; // byte count
+  /* 
+  assert(sem_init(&my_sem, 1, 0) == 0);
   ring_send(&cmd_ring, tcmd, sem_finish, &my_sem);
   sem_wait(&my_sem);
   sem_destroy(&my_sem);
+  */
+  ring_send(&cmd_ring, tcmd, flag_finish, &flag);
+  while (flag == 0) statusPoll();
 }
 
 void hw_copy_nb(void *from, void *to, unsigned count, char *flag)
@@ -424,13 +439,14 @@ int main(int argc, const char **argv)
 
   ring_init(&cmd_ring, 0, cmdPointer, cmdBuffer, cmd_ring_sz);
   ring_init(&status_ring, 1, statusPointer, statusBuffer, status_ring_sz);
-
+  /*
   pthread_t ltid;
   fprintf(stderr, "creating status thread\n");
   if(pthread_create(&ltid, NULL,  statusThreadProc, NULL)){
    fprintf(stderr, "error creating exec thread\n");
    exit(1);
   }
+  */
   ring->hwenable(1);  /* turn on engines */
   fprintf(stderr, "main about to issue requests\n");
 
@@ -478,7 +494,7 @@ int main(int argc, const char **argv)
   {
     int done = 0;
     while(done < 10) {
-      while (flag[done] == 0);
+      while (flag[done] == 0) statusPoll();
       done += 1;
       fprintf(stderr, "done %d\n", done);
     }
