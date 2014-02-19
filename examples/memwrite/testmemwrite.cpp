@@ -29,9 +29,6 @@ class MemwriteIndication : public MemwriteIndicationWrapper
 public:
   MemwriteIndication(const char* devname, unsigned int addrbits) : MemwriteIndicationWrapper(devname,addrbits){}
 
-  virtual void writeReq(unsigned long v){
-    //fprintf(stderr, "Memwrite::writeReq %lx\n", v);
-  }
   virtual void started(unsigned long words){
     fprintf(stderr, "Memwrite::started: words=%lx\n", words);
   }

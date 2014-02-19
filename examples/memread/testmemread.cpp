@@ -22,7 +22,6 @@ int numWords = 16 << 10;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 int mismatchCount = 0;
-int mismatchesReceived = 0;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -36,9 +35,6 @@ class MemreadIndication : public MemreadIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
-  virtual void readReq(unsigned long v){
-    fprintf(stderr, "Memread::readReq %lx\n", v);
-  }
   virtual void readDone(unsigned long v){
     fprintf(stderr, "Memread::readDone mismatch=%lx\n", v);
     mismatchCount += v;
@@ -54,10 +50,6 @@ public:
   virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
     fprintf(stderr, "Memread::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
   }  
-  virtual void mismatch(unsigned long offset, unsigned long long ev, unsigned long long v) {
-    fprintf(stderr, "Mismatch at %lx %llx != %llx\n", offset, ev, v);
-    mismatchesReceived++;
-  }
   MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits){}
 };
 
@@ -120,6 +112,5 @@ int main(int argc, const char **argv)
     .setReadBeats(beats)
     .writeFile();
 
-  while(mismatchesReceived != mismatchCount){sleep(1);}
   exit(mismatchCount ? 1 : 0);
 }

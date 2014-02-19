@@ -131,6 +131,10 @@ unsigned long long PortalMemory::show_mem_stats(ChannelType rc)
 
 int PortalMemory::reference(PortalAlloc* pa)
 {
+  const int PAGE_SHIFT0 = 12;
+  const int PAGE_SHIFT4 = 16;
+  const int PAGE_SHIFT8 = 20;
+  unsigned long long regions[3] = {0,0,0};
   int id = handle++;
   int ne = pa->header.numEntries;
   int size_accum = 0;
@@ -144,6 +148,21 @@ int PortalMemory::reference(PortalAlloc* pa)
 #endif
   for(int i = 0; i < pa->header.numEntries; i++){
     DmaEntry *e = &(pa->entries[i]);
+    switch (e->length) {
+    case (1<<PAGE_SHIFT0):
+      regions[2]++;
+      break;
+    case (1<<PAGE_SHIFT4):
+      regions[1]++;
+      break;
+    case (1<<PAGE_SHIFT8):
+      regions[0]++;
+      break;
+    case (0):
+      break;
+    default:
+      fprintf(stderr, "PortalMemory::unsupported sglist size %lx\n", e->length);
+    }
 #ifdef MMAP_HW
     //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, e->dma_address, e->length);
     sglist(id, e->dma_address, e->length);
@@ -161,6 +180,34 @@ int PortalMemory::reference(PortalAlloc* pa)
       sleep(1);
     }
   }
+  for(int i = 0; i < 3; i++){
+    Order o = (Order)i;
+    unsigned long long border = 0;
+    switch(i){
+    case 0:
+      border = regions[0]*(1<<PAGE_SHIFT8);
+      region(id, o, border);
+      regions[0] = border;
+      break;
+    case 1:
+      border = (regions[1]*(1<<PAGE_SHIFT4))+regions[0];
+      region(id, o, border);
+      regions[1] = border;
+      break;
+    case 2:
+      border = (regions[2]*(1<<PAGE_SHIFT0))+regions[1];
+      region(id, o, border);
+      regions[2] = border;
+      break;
+    }
+    if (callBacksRegistered) {
+      //fprintf(stderr, "sem_wait\n");
+      sem_wait(&sglistSem);
+    } else {
+      fprintf(stderr, "ugly hack\n");
+      sleep(1);
+    }
+  } 
   return id;
 }
 
