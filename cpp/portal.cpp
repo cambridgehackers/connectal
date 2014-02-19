@@ -471,14 +471,14 @@ void* PortalPoller::portalExec_event(int timeout)
 	
 	  // handle all messasges from this portal instance
 	  while (queue_status) {
-	    //if(0)
+	    if(0)
 	      fprintf(stderr, "queue_status %d\n", queue_status);
 	    instance->handleMessage(queue_status-1);
 	    int_src = *(ind_reg_base+0x0);
 	    int_en  = *(ind_reg_base+0x1);
 	    ind_count  = *(ind_reg_base+0x2);
 	    queue_status = *(ind_reg_base+0x6);
-	    //if (0)
+	    if (0)
 	      fprintf(stderr, "(%d:%s) int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
 		      i, instance->name, int_src, int_en, ind_count, queue_status);
 	  }
