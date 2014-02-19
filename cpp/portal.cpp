@@ -45,10 +45,10 @@
 #include "sock_utils.h"
 #include "sock_fd.h"
 
-Directory dir;
-Directory *pdir;
-unsigned long long c_start[16];
 static PortalPoller *defaultPoller = new PortalPoller();
+static Directory dir;
+static Directory *pdir;
+static unsigned long long c_start[16];
 
 //#define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
@@ -374,7 +374,7 @@ PortalProxy::~PortalProxy()
 }
 
 PortalPoller::PortalPoller()
-  : portal_wrappers(0), portal_fds(0), numFds(0)
+  : portal_wrappers(0), portal_fds(0), numFds(0), stopping(0)
 {
 }
 
@@ -455,10 +455,11 @@ void* PortalPoller::portalExec_init(void)
 }
 void PortalPoller::portalExec_end(void)
 {
+    stopping = 1;
 #ifdef MMAP_HW
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
-      fprintf(stderr, "portalExec::disabling interrupts portal %d\n", i);
+      fprintf(stderr, "portalExec::disabling interrupts portal %d %s\n", i, instance->name);
       *(volatile int *)(instance->ind_reg_base+0x1) = 0;
     }
 #endif
@@ -483,7 +484,7 @@ void* PortalPoller::portalExec_event(int timeout)
 	  unsigned int ind_count  = *(ind_reg_base+0x2);
 	  unsigned int queue_status = *(ind_reg_base+0x6);
 	  if(0)
-	  fprintf(stderr, "(%d) about to receive messages int=%08x en=%08x qs=%08x\n", i, int_src, int_en, queue_status);
+	  fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
 	
 	  // handle all messasges from this portal instance
 	  while (queue_status) {
@@ -536,8 +537,9 @@ void* PortalPoller::portalExec_event(int timeout)
 void* PortalPoller::portalExec(void* __x)
 {
     void *rc = portalExec_init();
-    while (!rc)
+    while (!rc && !stopping)
         rc = portalExec_event(portalExec_timeout);
+    portalExec_end();
     return rc;
 }
 
@@ -546,7 +548,10 @@ void* portalExec(void* __x)
   return defaultPoller->portalExec(__x);
 }
 
-
+void portalExec_end(void)
+{
+  defaultPoller->portalExec_end();
+}
 
 Directory::Directory() 
   : PortalInternal("fpga0", 16),

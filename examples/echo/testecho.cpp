@@ -47,7 +47,7 @@ PortalPoller *poller = 0;
 static void *pthread_worker(void *p)
 {
     void *rc = NULL;
-    while (CHECKSEM(sem_heard2) && !rc)
+    while (CHECKSEM(sem_heard2) && !rc && !poller->stopping)
         rc = poller->portalExec_event(poller->portalExec_timeout);
     return rc;
 }
@@ -73,8 +73,7 @@ public:
         //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
         //catch_timer(25);
     }
-    EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {
-    }
+    EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
 };
 
 static void call_say(int v)
@@ -140,5 +139,6 @@ unsigned long long elapsed = lap_timer(1);
     printf("call_say: elapsed %lld average %lld\n", elapsed, elapsed/LOOP_COUNT);
     echoRequestProxy->setLeds(9);
     poller->portalExec_end();
+    portalExec_end();
     return 0;
 }
