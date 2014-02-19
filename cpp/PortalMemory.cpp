@@ -43,8 +43,8 @@
 
 void PortalMemory::InitSemaphores()
 {
-  if (sem_init(&sglistSem, 1, 0)){
-    fprintf(stderr, "failed to init sglistSem errno=%d:%s\n", errno, strerror(errno));
+  if (sem_init(&confSem, 1, 0)){
+    fprintf(stderr, "failed to init confSem errno=%d:%s\n", errno, strerror(errno));
   }
   if (sem_init(&mtSem, 0, 0)){
     fprintf(stderr, "failed to init mtSem errno=%d:%s\n", errno, strerror(errno));
@@ -174,40 +174,38 @@ int PortalMemory::reference(PortalAlloc* pa)
     size_accum += e->length;
     if (callBacksRegistered) {
       //fprintf(stderr, "sem_wait\n");
-      sem_wait(&sglistSem);
+      sem_wait(&confSem);
     } else {
       fprintf(stderr, "ugly hack\n");
       sleep(1);
     }
   }
   for(int i = 0; i < 3; i++){
-    Order o = (Order)i;
     unsigned long long border = 0;
     switch(i){
-    case 0:
+    case 0: 
       border = regions[0]*(1<<PAGE_SHIFT8);
-      region(id, o, border);
       regions[0] = border;
       break;
     case 1:
       border = (regions[1]*(1<<PAGE_SHIFT4))+regions[0];
-      region(id, o, border);
       regions[1] = border;
       break;
-    case 2:
+    default:  
       border = (regions[2]*(1<<PAGE_SHIFT0))+regions[1];
-      region(id, o, border);
       regions[2] = border;
       break;
     }
-    if (callBacksRegistered) {
-      //fprintf(stderr, "sem_wait\n");
-      sem_wait(&sglistSem);
-    } else {
-      fprintf(stderr, "ugly hack\n");
-      sleep(1);
-    }
-  } 
+  }
+  fprintf(stderr, "regions %d (%llx %llx %llx)\n", id,regions[0], regions[1], regions[2]);
+  region(id,regions[0], regions[1], regions[2]);
+  if (callBacksRegistered) {
+    //fprintf(stderr, "sem_wait\n");
+    sem_wait(&confSem);
+  } else {
+    fprintf(stderr, "ugly hack\n");
+    sleep(1);
+  }
   return id;
 }
 
@@ -219,7 +217,7 @@ void PortalMemory::reportMemoryTraffic(unsigned long long words)
 
 void PortalMemory::configResp(unsigned long channelId)
 {
-  sem_post(&sglistSem);
+  sem_post(&confSem);
 }
 
 int PortalMemory::alloc(size_t size, PortalAlloc **ppa)

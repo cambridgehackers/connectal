@@ -104,9 +104,9 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 indication.started(nw);
 	 // initialized
 	 rdPointer <= rp;
-	 numWords        <= nw;
-	 burstLen <= truncate(bl);
-	 delta <= 8*extend(bl);
+	 numWords  <= nw;
+	 burstLen  <= truncate(bl);
+	 delta     <= 8*extend(bl);
 	 rdIterCnt <= ic;
 	 // reset
 	 srcGen <= 0;

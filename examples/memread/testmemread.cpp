@@ -93,6 +93,13 @@ int main(int argc, const char **argv)
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
 
+  for(int i = 0; i < srcAlloc->header.numEntries; i++)
+    fprintf(stderr, "%lx %lx\n", srcAlloc->entries[i].dma_address, srcAlloc->entries[i].length);
+
+  sleep(1);
+  dma->addrRequest(ref_srcAlloc, 1);
+  sleep(1);
+
   fprintf(stderr, "Main::starting read %08x\n", numWords);
   start_timer(0);
   int burstLen = 16;
@@ -111,6 +118,8 @@ int main(int argc, const char **argv)
     .setCycles(cycles)
     .setReadBeats(beats)
     .writeFile();
+  
+  sleep(3);
 
   exit(mismatchCount ? 1 : 0);
 }

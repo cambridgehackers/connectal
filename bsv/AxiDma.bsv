@@ -61,7 +61,12 @@ interface AxiDmaReadInternal#(numeric type addrWidth, numeric type dsz);
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
 endinterface
 
+function Bool bad_pointer(DmaPointer p);
+   return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
+endfunction
+
 typedef enum {Idle, Translate, Address, Data, Done} InternalState deriving(Eq,Bits);
+		 
 		 
 module mkAxiDmaReadInternal#(Integer numRequests, 
 			     Vector#(numReadClients, DmaReadClient#(dsz)) readClients, 
@@ -83,12 +88,10 @@ module mkAxiDmaReadInternal#(Integer numRequests,
    Reg#(Bit#(64)) beatCount <- mkReg(0);
 
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
-       rule loadChannel if (valueOf(numReadClients) > 0  && readClients[selectReg].readData.notFull());
-	  DmaRequest req = unpack(0);
-	  if (valueOf(numReadClients) > 0)
-	     req <- readClients[selectReg].readReq.get();
+       rule loadChannel if (readClients[selectReg].readData.notFull());
+	  DmaRequest req <- readClients[selectReg].readReq.get();
 	  //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.pointer, req.offset, req.burstLen);
-	  if (req.pointer > fromInteger(valueOf(MaxNumSGLists)))
+	  if (bad_pointer(req.pointer))
 	     dmaIndication.badPointer(req.pointer);
 	  else begin
 	     lreqFifo.enq(req);
@@ -182,10 +185,10 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
    Reg#(Bit#(64)) beatCount <- mkReg(0);
 
    for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
-       rule loadChannel if (valueOf(numWriteClients) > 0 && writeClients[selectReg].writeData.notEmpty());
+       rule loadChannel if (writeClients[selectReg].writeData.notEmpty());
 	  DmaRequest req <- writeClients[selectReg].writeReq.get();
 	  //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.pointer, req.offset, req.burstLen, debugReg);
-	  if (req.pointer > fromInteger(valueOf(MaxNumSGLists)))
+	  if (bad_pointer(req.pointer))
 	     dmaIndication.badPointer(req.pointer);
 	  else begin
 	     lreqFifo.enq(req);
@@ -326,17 +329,16 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 	 end
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(DmaOffsetSize) addr, Bit#(32) len);
-	 if (pref == 0 || pref > fromInteger(valueOf(MaxNumSGLists))) begin
+	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
-	 end
 `ifdef BSIM
 	 let va <- pareff(pref, len);
          addr[39:32] = truncate(pref);
 `endif
 	 sgl.sglist(pref, addr, len);
       endmethod
-      method Action region(Bit#(32) pointer, Order order, Bit#(40) paddr);
-	 sgl.region(pointer,order,paddr);
+      method Action region(Bit#(32) pointer, Bit#(40) off8, Bit#(40) off4, Bit#(40) off0);
+	 sgl.region(pointer,off8,off4,off0);
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);

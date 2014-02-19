@@ -9,7 +9,7 @@ class PortalMemory : public PortalInternal
  private:
   int handle;
   bool callBacksRegistered;
-  sem_t sglistSem;
+  sem_t confSem;
   sem_t mtSem;
   unsigned long long mtCnt;
 #ifndef MMAP_HW
@@ -30,7 +30,7 @@ class PortalMemory : public PortalInternal
   void reportMemoryTraffic(unsigned long long words);
   void useSemaphore() { callBacksRegistered = true; }
   virtual void sglist(unsigned long pointer, unsigned long long paddr, unsigned long len) = 0;
-  virtual void region(unsigned long pointer, const Order& order, unsigned long long paddr) = 0; 
+  virtual void region(unsigned long pointer, unsigned long long off8, unsigned long long off4, unsigned long long off0) = 0; 
   virtual void getMemoryTraffic (const ChannelType &rc) = 0;
 };
 
