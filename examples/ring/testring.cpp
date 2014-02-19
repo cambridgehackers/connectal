@@ -274,6 +274,18 @@ void *statusThreadProc(void *arg)
   }
 }
 
+int portalThreadRun;
+
+void *myPortalThreadProc(void *arg)
+{
+  long int rc;
+  printf("Status thread running\n");
+  while (portalThreadRun) {
+    rc = (long int) portalExec_event(0);
+    assert(rc == 0);
+  }
+}
+
 
 /* XXX this isn't right, I think the SWRing* has to be volatile, so that
  * the compiler will know to refetch
@@ -447,14 +459,14 @@ int main(int argc, const char **argv)
   assert(v != MAP_FAILED);
   scratchBuffer = (char *) v;
 
-  /*
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
+  portalThreadRun = 1;
+  if(pthread_create(&tid, NULL,  myportalThreadProc, NULL)){
    fprintf(stderr, "error creating exec thread\n");
    exit(1);
   }
-  */
+
   rc = (long int) portalExec_init();
   assert(rc == 0);
   cmdPointer = dma->reference(cmdAlloc);
@@ -466,6 +478,7 @@ int main(int argc, const char **argv)
   dma->dCacheFlushInval(scratchAlloc, scratchBuffer);
   fprintf(stderr, "flush and invalidate complete\n");
   */
+  portalThreadRun = 0;
 
   ring_init(&cmd_ring, 0, cmdPointer, cmdBuffer, cmd_ring_sz);
   ring_init(&status_ring, 1, statusPointer, statusBuffer, status_ring_sz);
@@ -506,7 +519,7 @@ int main(int argc, const char **argv)
     }
   }
   /* pass 2, non blocking tests */
-  memset(scratchBuffer, scratch_sz, 0);
+  memset(scratchBuffer, 0, scratch_sz);
   for (i = 0; i < 256; i += 1) {
     scratchBuffer[i] = i;
   }
