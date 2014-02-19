@@ -135,6 +135,7 @@ int PortalMemory::reference(PortalAlloc* pa)
   const int PAGE_SHIFT4 = 16;
   const int PAGE_SHIFT8 = 20;
   unsigned long long regions[3] = {0,0,0};
+  unsigned long long shifts[3] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
   int id = handle++;
   int ne = pa->header.numEntries;
   int size_accum = 0;
@@ -180,23 +181,13 @@ int PortalMemory::reference(PortalAlloc* pa)
       sleep(1);
     }
   }
+
+  unsigned long long border = 0;
   for(int i = 0; i < 3; i++){
-    unsigned long long border = 0;
-    switch(i){
-    case 0: 
-      border = regions[0]*(1<<PAGE_SHIFT8);
-      regions[0] = border;
-      break;
-    case 1:
-      border = (regions[1]*(1<<PAGE_SHIFT4))+regions[0];
-      regions[1] = border;
-      break;
-    default:  
-      border = (regions[2]*(1<<PAGE_SHIFT0))+regions[1];
-      regions[2] = border;
-      break;
-    }
+    border += regions[i]*(1<<shifts[i]);
+    regions[i] = border;
   }
+
   fprintf(stderr, "regions %d (%llx %llx %llx)\n", id,regions[0], regions[1], regions[2]);
   region(id,regions[0], regions[1], regions[2]);
   if (callBacksRegistered) {
