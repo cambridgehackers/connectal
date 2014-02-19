@@ -230,6 +230,28 @@ void ring_pop(struct SWRing *r)
   }
 }
 
+void statusPoll(void)
+{
+  int i;
+  uint64_t *msg;
+  msg = ring_next(&status_ring);
+  if (msg == NULL) return;
+  printf("Received %lx %lx\n", (long) msg[0], (long) msg[7]);
+  Ring_Handle_Completion((uint64_t *) msg);
+  ring_pop(&status_ring);
+}
+
+void *statusThreadProc(void *arg)
+{
+  int i;
+  uint64_t *msg;
+  printf("Status thread running\n");
+  for (;;) {
+    statusPoll();
+  }
+}
+
+
 /* XXX this isn't right, I think the SWRing* has to be volatile, so that
  * the compiler will know to refetch
  */
@@ -267,28 +289,6 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   }
   //sem_wait(&setresult_sem);
   //  pthread_mutex_unlock(&cmd_lock);
-}
-
-
-void statusPoll(void)
-{
-  int i;
-  uint64_t *msg;
-  msg = ring_next(&status_ring);
-  if (msg == NULL) return;
-  printf("Received %lx %lx\n", (long) msg[0], (long) msg[7]);
-  Ring_Handle_Completion((uint64_t *) msg);
-  ring_pop(&status_ring);
-}
-
-void *statusThreadProc(void *arg)
-{
-  int i;
-  uint64_t *msg;
-  printf("Status thread running\n");
-  for (;;) {
-    statusPoll();
-  }
 }
 
 
