@@ -264,12 +264,12 @@ void statusPoll(void)
 void *statusThreadProc(void *arg)
 {
   int i;
-  int rc;
+  long int rc;
   uint64_t *msg;
   printf("Status thread running\n");
   for (;;) {
     statusPoll();
-    rc = (int) portalExec_event(0);
+    rc = (long int) portalExec_event(0);
     assert(rc == 0);
   }
 }
@@ -410,7 +410,7 @@ int main(int argc, const char **argv)
 {
   void *v;
   int i;
-  int rc;
+  long int rc;
   uint64_t tcmd[8];
   volatile char flag[10];
 
@@ -455,7 +455,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
   */
-  rc = (int) portalExec_init();
+  rc = (long int) portalExec_init();
   assert(rc == 0);
   cmdPointer = dma->reference(cmdAlloc);
   statusPointer = dma->reference(statusAlloc);
