@@ -298,22 +298,22 @@ set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_n[3]"]
 
 set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_n[3]"]
 
-set_property iostandard "LVCMOS25" [get_ports "XADC_gpio[0]"]
+set_property iostandard "LVCMOS33" [get_ports "XADC_gpio[0]"]
 set_property PACKAGE_PIN "H17" [get_ports "XADC_gpio[0]"]
 set_property slew "SLOW" [get_ports "XADC_gpio[0]"]
 set_property PIO_DIRECTION "OUTPUT" [get_ports "XADC_gpio[0]"]
 
-set_property iostandard "LVCMOS25" [get_ports "XADC_gpio[1]"]
+set_property iostandard "LVCMOS33" [get_ports "XADC_gpio[1]"]
 set_property PACKAGE_PIN "H22" [get_ports "XADC_gpio[1]"]
 set_property slew "SLOW" [get_ports "XADC_gpio[1]"]
 set_property PIO_DIRECTION "OUTPUT" [get_ports "XADC_gpio[1]"]
 
-set_property iostandard "LVCMOS25" [get_ports "XADC_gpio[2]"]
+set_property iostandard "LVCMOS33" [get_ports "XADC_gpio[2]"]
 set_property PACKAGE_PIN "G22" [get_ports "XADC_gpio[2]"]
 set_property slew "SLOW" [get_ports "XADC_gpio[2]"]
 set_property PIO_DIRECTION "OUTPUT" [get_ports "XADC_gpio[2]"]
 
-set_property iostandard "LVCMOS25" [get_ports "XADC_gpio[3]"]
+set_property iostandard "LVCMOS33" [get_ports "XADC_gpio[3]"]
 set_property PACKAGE_PIN "H18" [get_ports "XADC_gpio[3]"]
 set_property slew "SLOW" [get_ports "XADC_gpio[3]"]
 set_property PIO_DIRECTION "OUTPUT" [get_ports "XADC_gpio[3]"]
