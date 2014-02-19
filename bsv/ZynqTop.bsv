@@ -71,9 +71,15 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    interface XADC xadc;
        method Bit#(4) gpio;
            return {intReg, 
-                 pack((ps7.debug.arvalid == 1) && (ps7.debug.araddr[18:16] == 3'd1) && (ps7.debug.araddr[15:14] == 2'd2) && (ps7.debug.araddr[13:8] == 6'd1)),
+                 pack((ps7.debug.arvalid == 1)
+                   && (ps7.debug.araddr[18:16] == 3'd1)   // /dev/fpga1
+                   && (ps7.debug.araddr[15:14] == 2'd2)   // indication
+                   && (ps7.debug.araddr[13:8] == 6'd1)),  //     #1
                  ps7.debug.rvalid,
-                 pack((ps7.debug.awvalid == 1) && (ps7.debug.awaddr[18:16] == 3'd2) && (ps7.debug.awaddr[15:14] == 2'd0) && (ps7.debug.awaddr[13:8] == 6'd1))};
+                 pack((ps7.debug.awvalid == 1)
+                   && (ps7.debug.awaddr[18:16] == 3'd2)   // /dev/fpga2
+                   && (ps7.debug.awaddr[15:14] == 2'd0)   // request
+                   && (ps7.debug.awaddr[13:8] == 6'd1))}; //     #1
        endmethod
    endinterface
    interface pins = top.pins;
