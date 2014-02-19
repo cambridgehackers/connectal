@@ -59,6 +59,8 @@ size_t scratch_sz = 1<<20; /* 1 MB */
 #define CMD_ECHO 2
 #define CMD_FILL 3
 
+extern void statusPoll(void);  // forward
+
 /* The finish function is called with arg and the event */
 
 struct Ring_Completion {
@@ -111,9 +113,12 @@ void Ring_Handle_Completion(uint64_t *event)
   LIST_INSERT_HEAD(&completionfreelist, p, entries);
 }
 
-
+/*
 sem_t setresult_sem;
 sem_t getresult_sem;
+*/
+char setresult_flag = 0;
+char getresult_flag = 0;
 
 DmaIndication *dmaIndication = 0;
 
@@ -155,7 +160,8 @@ public:
   virtual void setResult(long unsigned int cmd, long unsigned int regist, long long unsigned int addr) {
     fprintf(stderr, "setResult(cmd %ld regist %ld addr %llx)\n", 
 	    cmd, regist, addr);
-    sem_post(&setresult_sem);
+    /* sem_post(&setresult_sem); */
+    setresult_flag = 1;
   }
   virtual void getResult(long unsigned int cmd, long unsigned int regist, long long unsigned int addr) {
     fprintf(stderr, "getResult(cmd %ld regist %ld addr %llx)\n", 
@@ -165,7 +171,8 @@ public:
       fprintf(stderr, "update cmd_ring.last %llx\n", addr);
       cmd_ring.last = addr;
     }
-    sem_post(&getresult_sem);
+    getresult_flag = 1;
+    /*    sem_post(&getresult_sem); */
   }
   RingIndication(unsigned int id) : RingIndicationWrapper(id){}
 };
@@ -174,6 +181,11 @@ RingIndication *ringIndication = 0;
 
 uint64_t fetch(uint64_t *p) {
   return (p[0]);
+}
+
+void waitforflag(char* f)
+{
+  while (*f == 0) statusPoll();
 }
 
 void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size_t size)
@@ -187,9 +199,11 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   r->cached_space = size - 64;
   r->ringid = ringid;
   ring->set(ringid, REG_BASE, 0);         // bufferbase, relative to base
-  sem_wait(&setresult_sem);
+  //sem_wait(&setresult_sem);
+  waitforflag(&setresult_flag);
   ring->set(ringid, REG_END, size);      // bufferend
-  sem_wait(&setresult_sem);
+  waitforflag(&setresult_flag);
+  //  sem_wait(&setresult_sem);
   if (ringid == 0) {
     ring->setCmdFirst(0);         // bufferfirst
     ring->setCmdLast(0);
@@ -198,9 +212,11 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
     ring->setStatusLast(0);
   }
   ring->set(ringid, REG_MASK, size - 1);  // buffermask
-  sem_wait(&setresult_sem);
+  waitforflag(&setresult_flag);
+  //  sem_wait(&setresult_sem);
   ring->set(ringid, REG_HANDLE, ref);       // memhandle
-  sem_wait(&setresult_sem);
+  waitforflag(&setresult_flag);
+  //  sem_wait(&setresult_sem);
 }
 
 uint64_t *ring_next(struct SWRing *r)
@@ -244,10 +260,13 @@ void statusPoll(void)
 void *statusThreadProc(void *arg)
 {
   int i;
+  int rc;
   uint64_t *msg;
   printf("Status thread running\n");
   for (;;) {
     statusPoll();
+    rc = portalEvent(0);
+    assert(rc == 0);
   }
 }
 
@@ -291,13 +310,13 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   //  pthread_mutex_unlock(&cmd_lock);
 }
 
-
+/*
 void sem_finish(void *arg, uint64_t *event)
 {
   sem_t *p = (sem_t *) arg;
   sem_post(p);
 }
-
+*/
 void flag_finish(void *arg, uint64_t *event)
 {
   volatile char *p = (volatile char *) arg;
@@ -308,7 +327,7 @@ void flag_finish(void *arg, uint64_t *event)
 void hw_copy(void *from, void *to, unsigned count)
 {
   uint64_t tcmd[8];
-  sem_t my_sem;
+  //  sem_t my_sem;
   char flag = 0;
   tcmd[0] = ((uint64_t) CMD_COPY) << 56;
   tcmd[1] = scratchPointer;
@@ -386,11 +405,13 @@ int main(int argc, const char **argv)
 {
   void *v;
   int i;
+  int rc;
   uint64_t tcmd[8];
   volatile char flag[10];
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   completion_list_init();
+  /*
   if(sem_init(&setresult_sem, 1, 0)){
     fprintf(stderr, "failed to init setresult_sem\n");
     return -1;
@@ -399,7 +420,7 @@ int main(int argc, const char **argv)
     fprintf(stderr, "failed to init getresult_sem\n");
     return -1;
   }
-
+  */
   ring = new RingRequestProxy(IfcNames_RingRequest);
   dma = new DmaConfigProxy(IfcNames_DmaRequest);
   dmaIndication = new DmaIndication(IfcNames_DmaIndication);
@@ -421,14 +442,15 @@ int main(int argc, const char **argv)
   assert(v != MAP_FAILED);
   scratchBuffer = (char *) v;
 
-
+  /*
   pthread_t tid;
   fprintf(stderr, "creating exec thread\n");
   if(pthread_create(&tid, NULL,  portalExec, NULL)){
    fprintf(stderr, "error creating exec thread\n");
    exit(1);
   }
-
+  */
+  rc = portalExec_init();
   cmdPointer = dma->reference(cmdAlloc);
   statusPointer = dma->reference(statusAlloc);
   scratchPointer = dma->reference(scratchAlloc);
