@@ -41,7 +41,6 @@ endinterface
 interface MemwriteIndication;
    method Action started(Bit#(32) numWords);
    method Action reportStateDbg(Bit#(32) wrCnt, Bit#(32) srcGen);
-   method Action writeReq(Bit#(32) v);
    method Action writeDone(Bit#(32) v);
 endinterface
 

@@ -66,7 +66,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(DmaPointer)      rdPointer <- mkReg(0);
    Reg#(DmaPointer)      wrPointer <- mkReg(0);
 
-   Reg#(Bool)         dataMismatch <- mkReg(False);  
+   Reg#(Bit#(32))     dataMismatch <- mkReg(0);  
    Reg#(Bit#(8))          burstLen <- mkReg(0);
    
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
@@ -108,7 +108,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    
    rule writeAck;
       if (ackFIFO.first) begin
-	 indication.done(dataMismatch ? 32'd1 : 32'd0);
+	 indication.done(dataMismatch);
 	 $display("writeAck: xx=%d", xx);
       end
       let tag <- dma_write_server.writeDone.get();
@@ -122,7 +122,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       Bool mismatch = False;
       for (Integer i = 0; i < busWidthWords; i = i+1)
 	 mismatch = mismatch || (v[31+i*32:i*32] != (srcGen + fromInteger(i)));
-      dataMismatch <= dataMismatch || mismatch;
+      dataMismatch <= dataMismatch + (mismatch ? 1 : 0);
       dma_write_server.writeData.put(tagdata);
       srcGen <= srcGen+fromInteger(busWidthWords);
       //$display("loopback %h", tagdata.data);
@@ -150,11 +150,11 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       wrCnt <= 0;
       rdOff <= 0;
       wrOff <= 0;
-      dataMismatch <= False;
+      dataMismatch <= 0;
    endmethod
 
    method Action getStateDbg();
-      indication.reportStateDbg(rdCnt, wrCnt, dataMismatch  ? 32'd1 : 32'd0);
+      indication.reportStateDbg(rdCnt, wrCnt, dataMismatch);
    endmethod
 
 endmodule

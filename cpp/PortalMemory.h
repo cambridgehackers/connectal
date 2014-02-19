@@ -29,7 +29,8 @@ class PortalMemory : public PortalProxy
   void configResp(unsigned long channelId);
   void reportMemoryTraffic(unsigned long long words);
   void useSemaphore() { callBacksRegistered = true; }
-  virtual void sglist(unsigned long pref, unsigned long long addr, unsigned long len) = 0;
+  virtual void sglist(unsigned long pointer, unsigned long long paddr, unsigned long len) = 0;
+  virtual void region(unsigned long pointer, const Order& order, unsigned long long paddr) = 0; 
   virtual void getMemoryTraffic (const ChannelType &rc) = 0;
 };
 

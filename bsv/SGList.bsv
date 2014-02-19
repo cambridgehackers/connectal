@@ -39,9 +39,11 @@ typedef 16 SGListPageShift4;
 typedef 20 SGListPageShift8;
 
 interface SGListMMU#(numeric type addrWidth);
-   method Action sglist(Bit#(32) pointer, Bit#(DmaOffsetSize) paddr, Bit#(32) len);
+   method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
+   method Action region(Bit#(32) pointer, Order order, Bit#(40) paddr); 
    interface Vector#(2,Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth))) addr;
 endinterface
+
 
 typedef union tagged{
    Bit#(SGListPageShift0) OOrd0;
@@ -107,24 +109,20 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 		   //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
 		   o = tagged OOrd8 truncate(off);
 		   p = truncate(off>>page_shift8);
+		end 
+		else if (off < barrier4) begin
+		   //$display("request: ptr=%h off=%h barrier4=%h", ptr, off, barrier4);
+		   o = tagged OOrd4 truncate(off);
+		   p = truncate(off>>page_shift4);
 		end
+		else if (off < barrier0) begin
+		   //$display("request: ptr=%h off=%h barrier0=%h", ptr, off, barrier0);
+		   o = tagged OOrd0 truncate(off);
+		   p = truncate(off>>page_shift0);
+		end 
 		else begin
-		   if (off < barrier4) begin
-		      //$display("request: ptr=%h off=%h barrier4=%h", ptr, off, barrier4);
-		      o = tagged OOrd4 truncate(off);
-		      p = truncate(off>>page_shift4);
-		   end
-		   else begin
-		      if (off < barrier0) begin
-			 //$display("request: ptr=%h off=%h barrier0=%h", ptr, off, barrier0);
-			 o = tagged OOrd0 truncate(off);
-			 p = truncate(off>>page_shift0);
-		      end 
-		      else begin
-			 $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-			 dmaIndication.badAddrTrans(extend(ptr), truncate(off));
-		      end
-		   end
+		   $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
+		   dmaIndication.badAddrTrans(extend(ptr), truncate(off));
 		end
 		offs[i].enq(o);
 		portsel(i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{ptr-1,p}, datain:?});
@@ -148,38 +146,46 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	     endmethod
 	  endinterface
        endinterface);
+
+
+   method Action region(Bit#(32) pointer, Order order, Bit#(40) paddr);
+      let tt = regions[pointer-1];
+      if (order == Zero)
+	 regions[pointer-1] <= tuple3(paddr,tpl_2(tt),tpl_3(tt));
+      else if (order == Four)
+	 regions[pointer-1] <= tuple3(tpl_1(tt),paddr,tpl_3(tt));
+      else if (order == Eight)
+	 regions[pointer-1] <= tuple3(tpl_1(tt),tpl_2(tt),paddr);
+      dmaIndication.configResp(pointer);
+   endmethod
+	       
    
-   method Action sglist(Bit#(32) pointer, Bit#(DmaOffsetSize) paddr, Bit#(32) len);
+   method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
       $display("sglist(pointer=%d, paddr=%h, len=%h", pointer, paddr,len);
-      if(len == 0) begin
-	 dmaIndication.configResp(pointer);
-	 idxReg <= 0;
+      if (idxReg+1 == 0) begin
+	 $display("sglist: exceeded maximun length of sglist");
+	 dmaIndication.badPageSize(pointer,len);
       end
       else begin
-	 if (idxReg+1 == 0) begin
-	    $display("sglist: exceeded maximun length of sglist");
+	 Page page = tagged POrd0 0;
+	 if(len == 0) begin
+	    idxReg <= 0;
 	 end 
 	 else begin
 	    idxReg <= idxReg+1;
-	 end
-	 Tuple3#(Bit#(40),Bit#(40),Bit#(40)) tt = regions[pointer-1];
-	 Page page = ?;
-	 // if we were willing to have a "reset" method, we could get rid of the multiplies
-	 if (extend(len) == ord0) begin
-	    regions[pointer-1] <= tuple3(extend(idxReg+1)*ord0, tpl_2(tt), tpl_3(tt));
-	    page = tagged POrd0 truncate(paddr>>page_shift0);
-	 end
-	 else if (extend(len) == ord4) begin
-	    regions[pointer-1] <= tuple3(tpl_1(tt), extend(idxReg+1)*ord4,tpl_3(tt));
-	    page = tagged POrd4 truncate(paddr>>page_shift4);
-	 end
-	 else if (extend(len) == ord8) begin
-	    regions[pointer-1] <= tuple3(tpl_1(tt), tpl_2(tt),extend(idxReg+1)*ord8);
-	    page = tagged POrd8 truncate(paddr>>page_shift8);
-	 end
-	 else begin
-	    $display("mkSGListMMU::sglist unsupported length %h", len);
-	    dmaIndication.badPageSize(pointer, len);
+	    if (extend(len) == ord0) begin
+	       page = tagged POrd0 truncate(paddr>>page_shift0);
+	    end
+	    else if (extend(len) == ord4) begin
+	       page = tagged POrd4 truncate(paddr>>page_shift4);
+	    end
+	    else if (extend(len) == ord8) begin
+	       page = tagged POrd8 truncate(paddr>>page_shift8);
+	    end
+	    else begin
+	       $display("mkSGListMMU::sglist unsupported length %h", len);
+	       dmaIndication.badPageSize(pointer, len);
+	    end
 	 end
 	 portsel(0).request.put(BRAMRequest{write:True, responseOnWrite:True, address:{truncate(pointer-1),idxReg}, datain:page});
 	 sglistFifo.enq(pointer);

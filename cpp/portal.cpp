@@ -50,6 +50,7 @@ Directory *pdir;
 unsigned long long c_start[16];
 static PortalPoller *defaultPoller = new PortalPoller();
 
+//#define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
 #define ENABLE_INTERRUPTS(A) *((A)+0x1) = 1
 #else
@@ -443,7 +444,7 @@ void* PortalPoller::portalExec_init(void)
     }
     for (int i = 0; i < numFds; i++) {
       PortalWrapper *instance = portal_wrappers[i];
-      fprintf(stderr, "portalExec::enabling interrupts portal %d\n", i);
+      fprintf(stderr, "portalExec::enabling interrupts portal %d %s\n", i, instance->name);
       ENABLE_INTERRUPTS(instance->ind_reg_base);
     }
     fprintf(stderr, "portalExec::about to enter loop\n");

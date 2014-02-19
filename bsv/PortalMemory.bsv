@@ -30,6 +30,11 @@ typedef enum {
    Read, Write
    } ChannelType deriving (Bits,Eq,FShow);
 
+typedef enum {Eight,
+	      Four,
+	      Zero
+   } Order deriving(Eq,Bits);
+
 //
 // @brief Channel Identifier
 //
@@ -68,6 +73,7 @@ interface DmaConfig;
    // @param len Length of the segment
    //
    method Action sglist(Bit#(32) pointer, Bit#(40) addr, Bit#(32) len);
+   method Action region(Bit#(32) pointer, Order order, Bit#(40) paddr);
    method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
    //
    // @brief Requests debug info for the specified channel type

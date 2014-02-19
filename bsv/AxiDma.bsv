@@ -335,6 +335,9 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 `endif
 	 sgl.sglist(pref, addr, len);
       endmethod
+      method Action region(Bit#(32) pointer, Order order, Bit#(40) paddr);
+	 sgl.region(pointer,order,paddr);
+      endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);
 	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));

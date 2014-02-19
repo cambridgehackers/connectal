@@ -270,10 +270,9 @@ proxyCtrlTemplate='''
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
     Vector#(%(indicationChannelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
-    ReadyQueue#(%(indicationChannelCount)s, Bit#(TAdd#(iccsz,1)), Bit#(TAdd#(iccsz,1))) rq <- mkFirstReadyQueue();
-    
+    Vector#(%(indicationChannelCount)s, Bool) readyBits = replicate(False);
+
     Reg#(Bool) interruptEnableReg <- mkReg(False);
-    let       interruptStatus = tpl_2(rq.maxPriorityRequest) > 0;
     function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
     function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
 
@@ -298,6 +297,17 @@ proxyCtrlTemplate='''
         outOfRangeWriteCount <= outOfRangeWriteCount + 1;
     endrule
 
+%(indicationMethodRules)s
+
+    Bool      interruptStatus = False;
+    Bit#(32)  readyChannel = -1;
+    for (Integer i = 0; i < %(indicationChannelCount)s; i = i + 1) begin
+        if (readyBits[i]) begin
+           interruptStatus = True;
+           readyChannel = fromInteger(i);
+        end
+    end
+
     rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
 
         axiSlaveReadAddrFifo.deq;
@@ -319,16 +329,14 @@ proxyCtrlTemplate='''
 	if (addr == 14'h014)
 	    v = outOfRangeWriteCount;
         if (addr == 14'h018) begin
-            if (tpl_2(rq.maxPriorityRequest) > 0) 
-              v = extend(tpl_1(rq.maxPriorityRequest))+1;
+            if (interruptStatus)
+              v = readyChannel+1;
             else 
               v = 0;
         end
 %(readAxiState)s
         axiSlaveReadDataFifo.enq(v);
     endrule
-
-%(indicationMethodRules)s
 
     rule outOfRangeRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
                             axiSlaveReadAddrFifo.first[13:8] >= %(indicationChannelCount)s);
@@ -380,9 +388,7 @@ indicationRuleTemplate='''
         end
         axiSlaveReadDataFifo.enq(v);
     endrule
-    rule %(methodName)s$ReadyBit;
-        rq.readyBits[%(methodName)s$Offset] <= %(methodName)s$responseFifo.notEmpty;
-    endrule
+    readyBits[%(methodName)s$Offset] = %(methodName)s$responseFifo.notEmpty;
 '''
 
 indicationMethodDeclTemplate='''

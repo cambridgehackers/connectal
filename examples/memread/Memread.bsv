@@ -40,7 +40,6 @@ endinterface
 interface MemreadIndication;
    method Action started(Bit#(32) numWords);
    method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount);
-   method Action readReq(Bit#(32) v);
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
