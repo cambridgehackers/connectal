@@ -269,7 +269,7 @@ void *statusThreadProc(void *arg)
   printf("Status thread running\n");
   for (;;) {
     statusPoll();
-    rc = portalExec_event(0);
+    rc = (int) portalExec_event(0);
     assert(rc == 0);
   }
 }
@@ -455,7 +455,8 @@ int main(int argc, const char **argv)
    exit(1);
   }
   */
-  rc = portalExec_init();
+  rc = (int) portalExec_init();
+  assert(rc == 0);
   cmdPointer = dma->reference(cmdAlloc);
   statusPointer = dma->reference(statusAlloc);
   scratchPointer = dma->reference(scratchAlloc);
