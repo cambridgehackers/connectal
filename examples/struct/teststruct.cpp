@@ -40,45 +40,45 @@ public:
       exit(0);
   }
   virtual void heard1(uint32_t a) {
-    fprintf(stderr, "heard1(%ld)\n", a);
+    fprintf(stderr, "heard1(%d)\n", a);
     assert(a == v1a);
     incr_cnt();
   }
   virtual void heard2(uint32_t a, uint32_t b) {
-    fprintf(stderr, "heard2(%ld %ld)\n", a, b);
+    fprintf(stderr, "heard2(%d %d)\n", a, b);
     assert(a == v2a);
     assert(b == v2b);
     incr_cnt();
   }
   virtual void heard3(const S1& s){
-    fprintf(stderr, "heard3(S1{a:%ld,b:%ld})\n", s.a, s.b);
+    fprintf(stderr, "heard3(S1{a:%d,b:%d})\n", s.a, s.b);
     assert(s.a == s1.a);
     assert(s.b == s1.b);
     incr_cnt();
   }
   virtual void heard4(const S2& s){
-    fprintf(stderr, "heard4(S2{a:%ld,b:%ld,c:%ld})\n", s.a,s.b,s.c);
+    fprintf(stderr, "heard4(S2{a:%d,b:%d,c:%d})\n", s.a,s.b,s.c);
     assert(s.a == s2.a);
     assert(s.b == s2.b);
     assert(s.c == s2.c);
     incr_cnt();
   }
   virtual void heard5(uint32_t a, uint64_t b, uint32_t c) {
-    fprintf(stderr, "heard5(%08lx, %016llx, %08lx)\n", a, b, c);
+    fprintf(stderr, "heard5(%08x, %016zx, %08x)\n", a, b, c);
     assert(a == v5a);
     assert(b == v5b);
     assert(c == v5c);
     incr_cnt();
   }
   virtual void heard6(uint32_t a, uint64_t b, uint32_t c) {
-    fprintf(stderr, "heard6(%08lx, %016llx, %08lx)\n", a, b, c);
+    fprintf(stderr, "heard6(%08x, %016zx, %08x)\n", a, b, c);
     assert(a == v6a);
     assert(b == v6b);
     assert(c == v6c);
     incr_cnt();
   }
   virtual void heard7(uint32_t a, const E1& b) {
-    fprintf(stderr, "heard7(%08lx, %08x)\n", a, b);
+    fprintf(stderr, "heard7(%08x, %08x)\n", a, b);
     assert(a == v7a);
     assert(b == v7b);
     incr_cnt();
@@ -105,15 +105,15 @@ int main(int argc, const char **argv)
   device->say1(v1a);  
   fprintf(stderr, "Main::calling say2(%d, %d)\n", v2a,v2b);
   device->say2(v2a,v2b);
-  fprintf(stderr, "Main::calling say3(S1{a:%ld,b:%ld})\n", s1.a,s1.b);
+  fprintf(stderr, "Main::calling say3(S1{a:%d,b:%d})\n", s1.a,s1.b);
   device->say3(s1);
-  fprintf(stderr, "Main::calling say4(S2{a:%ld,b:%ld,c:%ld})\n", s2.a,s2.b,s2.c);
+  fprintf(stderr, "Main::calling say4(S2{a:%d,b:%d,c:%d})\n", s2.a,s2.b,s2.c);
   device->say4(s2);
-  fprintf(stderr, "Main::calling say5(%08lx, %016llx, %08lx)\n", v5a, v5b, v5c);
+  fprintf(stderr, "Main::calling say5(%08x, %016zx, %08x)\n", v5a, v5b, v5c);
   device->say5(v5a, v5b, v5c);  
-  fprintf(stderr, "Main::calling say6(%08lx, %016llx, %08lx)\n", v6a, v6b, v6c);
+  fprintf(stderr, "Main::calling say6(%08x, %016zx, %08x)\n", v6a, v6b, v6c);
   device->say6(v6a, v6b, v6c);  
-  fprintf(stderr, "Main::calling say7(%08lx, %08x)\n", s3.a, s3.e1);
+  fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
   device->say7(s3);  
 
   fprintf(stderr, "Main::about to go to sleep\n");

@@ -17,11 +17,11 @@ class Say : public SayWrapper
 {
 public:
   virtual void say(uint32_t v){
-    fprintf(stderr, "say(%ld)\n", v);
+    fprintf(stderr, "say(%d)\n", v);
     sem_post(&echo_sem);
   }
   virtual void say2(uint32_t a, uint32_t b){
-    fprintf(stderr, "say2(%ld, %ld)\n", a,b);
+    fprintf(stderr, "say2(%d, %d)\n", a,b);
     sem_post(&echo_sem);
   }
   Say(const char* devname, unsigned int addrbits) : SayWrapper(devname,addrbits){}

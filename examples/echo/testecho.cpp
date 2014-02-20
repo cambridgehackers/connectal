@@ -64,7 +64,7 @@ class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard(uint32_t v) {
-        fprintf(stderr, "heard an echo: %ld\n", v);
+        fprintf(stderr, "heard an echo: %d\n", v);
 	echoRequestProxy->say2(v, 2*v);
     }
     virtual void heard2(uint32_t a, uint32_t b) {
@@ -83,7 +83,7 @@ static void call_say(int v)
     PREPAREWAIT(sem_heard2);
     echoRequestProxy->say(v);
     SEMWAIT(&sem_heard2);
-    printf("call_say: elapsed %lld\n", lap_timer(0));
+    printf("call_say: elapsed %zd\n", lap_timer(0));
 }
 
 static void call_say2(int v, int v2)
@@ -132,7 +132,7 @@ uint64_t elapsed = lap_timer(1);
 #endif
        "\n");
     print_timer(LOOP_COUNT);
-    printf("call_say: elapsed %lld average %lld\n", elapsed, elapsed/LOOP_COUNT);
+    printf("call_say: elapsed %zd average %zd\n", elapsed, elapsed/LOOP_COUNT);
     echoRequestProxy->setLeds(9);
     poller->portalExec_end();
     portalExec_end();

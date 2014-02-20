@@ -75,7 +75,7 @@ public:
 
 
   virtual void started(uint32_t words){
-    fprintf(stderr, "started: words=%ld\n", words);
+    fprintf(stderr, "started: words=%d\n", words);
   }
   virtual void done(uint32_t mismatch) {
     sem_post(&done_sem);
@@ -106,7 +106,7 @@ public:
   virtual void reportStateDbg(uint32_t streamRdCnt, 
 			      uint32_t streamWrCnt, 
 			      uint32_t dataMismatch){
-    fprintf(stderr, "Memcpy::reportStateDbg: streamRdCnt=%ld, streamWrCnt=%ld, dataMismatch=%ld\n", 
+    fprintf(stderr, "Memcpy::reportStateDbg: streamRdCnt=%d, streamWrCnt=%d, dataMismatch=%d\n", 
 	    streamRdCnt, streamWrCnt, dataMismatch);
   }  
 };

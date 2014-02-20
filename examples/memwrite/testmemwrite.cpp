@@ -30,14 +30,14 @@ public:
   MemwriteIndication(const char* devname, unsigned int addrbits) : MemwriteIndicationWrapper(devname,addrbits){}
 
   virtual void started(uint32_t words){
-    fprintf(stderr, "Memwrite::started: words=%lx\n", words);
+    fprintf(stderr, "Memwrite::started: words=%x\n", words);
   }
   virtual void writeDone ( uint32_t srcGen ){
-    fprintf(stderr, "Memwrite::writeDone (%08lx)\n", srcGen);
+    fprintf(stderr, "Memwrite::writeDone (%08x)\n", srcGen);
     sem_post(&done_sem);
   }
   virtual void reportStateDbg(uint32_t streamWrCnt, uint32_t srcGen){
-    fprintf(stderr, "Memwrite::reportStateDbg: streamWrCnt=%08lx srcGen=%ld\n", streamWrCnt, srcGen);
+    fprintf(stderr, "Memwrite::reportStateDbg: streamWrCnt=%08x srcGen=%d\n", streamWrCnt, srcGen);
   }  
 
 };

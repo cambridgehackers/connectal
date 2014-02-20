@@ -24,11 +24,11 @@ public:
   MempokeIndication(const char* devname, unsigned int addrbits) : MempokeIndicationWrapper(devname,addrbits){}
 
   virtual void readWordResult (const S0 &s){
-    fprintf(stderr, "readWordResult(S0{a:%ld,b:%ld})\n", s.a, s.b);
+    fprintf(stderr, "readWordResult(S0{a:%d,b:%d})\n", s.a, s.b);
     sem_post(&done_sem);    
   }
   virtual void writeWordResult (const S0 &s){
-    fprintf(stderr, "writeWordResult(S0{a:%ld,b:%ld})\n", s.a, s.b);
+    fprintf(stderr, "writeWordResult(S0{a:%d,b:%d})\n", s.a, s.b);
     sem_post(&done_sem);    
   }
 };

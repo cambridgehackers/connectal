@@ -28,15 +28,15 @@ class NandSimIndication : public NandSimIndicationWrapper
 public:
   unsigned int rDataCnt;
   virtual void readDone(uint32_t v){
-    fprintf(stderr, "NandSim::readDone v=%lx\n", v);
+    fprintf(stderr, "NandSim::readDone v=%x\n", v);
     sem_post(&sem);
   }
   virtual void writeDone(uint32_t v){
-    fprintf(stderr, "NandSim::writeDone v=%lx\n", v);
+    fprintf(stderr, "NandSim::writeDone v=%x\n", v);
     sem_post(&sem);
   }
   virtual void eraseDone(uint32_t v){
-    fprintf(stderr, "NandSim::eraseDone v=%lx\n", v);
+    fprintf(stderr, "NandSim::eraseDone v=%x\n", v);
     sem_post(&sem);
   }
 
@@ -93,19 +93,19 @@ int main(int argc, const char **argv)
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
 
-  fprintf(stderr, "Main::starting write %08x\n", numBytes);
+  fprintf(stderr, "Main::starting write %08zx\n", numBytes);
   device->startWrite(ref_srcAlloc, 0, 0, numBytes, 1);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting read %08x\n", numBytes);
+  fprintf(stderr, "Main::starting read %08zx\n", numBytes);
   device->startRead(ref_srcAlloc, 0, 0, numBytes, 1);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting erase %08x\n", numBytes);
+  fprintf(stderr, "Main::starting erase %08zx\n", numBytes);
   device->startErase(0, numBytes);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting read %08x\n", numBytes);
+  fprintf(stderr, "Main::starting read %08zx\n", numBytes);
   device->startRead(ref_srcAlloc, 0, 0, numBytes, 1);
   deviceIndication->wait();
 

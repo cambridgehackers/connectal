@@ -33,25 +33,25 @@ class MemreadIndication : public MemreadIndicationWrapper
 public:
   unsigned int rDataCnt;
   virtual void readReq(uint32_t v){
-    fprintf(stderr, "Memread::readReq %lx\n", v);
+    fprintf(stderr, "Memread::readReq %x\n", v);
   }
   virtual void readDone(uint32_t v){
-    fprintf(stderr, "Memread::readDone mismatch=%lx\n", v);
+    fprintf(stderr, "Memread::readDone mismatch=%x\n", v);
     mismatchCount += v;
     sem_post(&test_sem);
   }
   virtual void started(uint32_t words){
-    fprintf(stderr, "Memread::started: words=%lx\n", words);
+    fprintf(stderr, "Memread::started: words=%x\n", words);
   }
   virtual void rData ( uint64_t v ){
     fprintf(stderr, "rData (%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
   virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch){
-    fprintf(stderr, "Memread::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
+    fprintf(stderr, "Memread::reportStateDbg: streamRdCnt=%08x dataMismatch=%d\n", streamRdCnt, dataMismatch);
   }  
   virtual void mismatch(uint32_t offset, uint64_t ev, uint64_t v) {
-    fprintf(stderr, "Mismatch at %lx %llx != %llx\n", offset, ev, v);
+    fprintf(stderr, "Mismatch at %x %zx != %zx\n", offset, ev, v);
     mismatchesReceived++;
   }
   MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits){}

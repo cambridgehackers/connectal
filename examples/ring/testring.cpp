@@ -153,16 +153,16 @@ class RingIndication : public RingIndicationWrapper
 {
 public:
   virtual void setResult(uint32_t cmd, uint32_t regist, uint64_t addr) {
-    fprintf(stderr, "setResult(cmd %ld regist %ld addr %llx)\n", 
+    fprintf(stderr, "setResult(cmd %d regist %d addr %zx)\n", 
 	    cmd, regist, addr);
     sem_post(&setresult_sem);
   }
   virtual void getResult(uint32_t cmd, uint32_t regist, uint64_t addr) {
-    fprintf(stderr, "getResult(cmd %ld regist %ld addr %llx)\n", 
+    fprintf(stderr, "getResult(cmd %d regist %d addr %zx)\n", 
 	    cmd, regist, addr);
     /* returning query about last pointer of cmd ring */
     if ((cmd == cmd_ring.ringid) && (regist == REG_LAST)) {
-      fprintf(stderr, "update cmd_ring.last %llx\n", addr);
+      fprintf(stderr, "update cmd_ring.last %zx\n", addr);
       cmd_ring.last = addr;
     }
     sem_post(&getresult_sem);

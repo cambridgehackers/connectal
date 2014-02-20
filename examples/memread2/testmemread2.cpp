@@ -34,23 +34,23 @@ public:
     //fprintf(stderr, "Memread2::readReq %lx\n", v);
   }
   virtual void readDone(uint32_t v){
-    fprintf(stderr, "Memread2::readDone mismatch=%lx\n", v);
+    fprintf(stderr, "Memread2::readDone mismatch=%x\n", v);
     mismatchCount = v;
     if (mismatchesReceived == mismatchCount)
       exit(v ? 1 : 0);
   }
   virtual void started(uint32_t words){
-    fprintf(stderr, "Memread2::started: words=%lx\n", words);
+    fprintf(stderr, "Memread2::started: words=%x\n", words);
   }
   virtual void rData ( uint64_t v ){
     fprintf(stderr, "rData (%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
   virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch){
-    fprintf(stderr, "Memread2::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
+    fprintf(stderr, "Memread2::reportStateDbg: streamRdCnt=%08x dataMismatch=%d\n", streamRdCnt, dataMismatch);
   }  
   virtual void mismatch(uint32_t offset, uint64_t ev, uint64_t v) {
-    fprintf(stderr, "Mismatch at %lx %llx != %llx\n", offset, ev, v);
+    fprintf(stderr, "Mismatch at %x %zx != %zx\n", offset, ev, v);
 
     mismatchesReceived++;
     if (mismatchesReceived == mismatchCount)

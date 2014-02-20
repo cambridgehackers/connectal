@@ -100,7 +100,7 @@ public:
   virtual void reportStateDbg(uint32_t srcGen, uint32_t streamRdCnt, 
 			      uint32_t streamWrCnt, uint32_t writeInProg, 
 			      uint32_t dataMismatch){
-    fprintf(stderr, "Perf::reportStateDbg: srcGen=%ld, streamRdCnt=%ld, streamWrCnt=%ld, writeInProg=%ld, dataMismatch=%ld\n", 
+    fprintf(stderr, "Perf::reportStateDbg: srcGen=%d, streamRdCnt=%d, streamWrCnt=%d, writeInProg=%d, dataMismatch=%d\n", 
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
   }  
 };
@@ -156,7 +156,7 @@ void printportalalloc(const char *name, PortalAlloc *p)
   fprintf(stderr, "numEntries %d\n", p->header.numEntries);
   for (i = 0; i < p->header.numEntries; i += 1)
     {
-      fprintf(stderr, " entry %d (%lx, %lx)\n", i, p->entries[i].dma_address,
+      fprintf(stderr, " entry %d (%zx, %x)\n", i, p->entries[i].dma_address,
 	      p->entries[i].length);
     }
 }
