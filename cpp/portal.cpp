@@ -50,7 +50,7 @@
 static PortalPoller *defaultPoller = new PortalPoller();
 static Directory dir;
 static Directory *pdir;
-static unsigned long long c_start[16];
+static uint64_t c_start[16];
 
 //#define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
@@ -78,11 +78,11 @@ void start_timer(unsigned int i)
   c_start[i] = pdir->cycle_count();
 }
 
-static unsigned long long lap_timer_temp;
-unsigned long long lap_timer(unsigned int i)
+static uint64_t lap_timer_temp;
+uint64_t lap_timer(unsigned int i)
 {
   assert(i < 16);
-  unsigned long long temp = pdir->cycle_count();
+  uint64_t temp = pdir->cycle_count();
   lap_timer_temp = temp;
   return temp - c_start[i];
 }
@@ -96,9 +96,9 @@ void init_timer(void)
         timers[i].min = 0xffffffffffff;
 }
 
-unsigned long long catch_timer(int i)
+uint64_t catch_timer(int i)
 {
-    unsigned long long val = lap_timer(0);
+    uint64_t val = lap_timer(0);
     if (i >= MAX_TIMERS)
         return 0;
     if (val > timers[i].max)
@@ -114,7 +114,7 @@ void print_timer(int loops)
 {
     for (int i = 0; i < MAX_TIMERS; i++) {
         if (timers[i].min != 0xffffffffffff)
-           printf("[%d]: avg %lld min %lld max %lld over %lld\n",
+           printf("[%d]: avg %zd min %zd max %zd over %zd\n",
                i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
     }
 }
@@ -252,10 +252,10 @@ int PortalInternal::portalOpen(int addrbits)
       ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
       return -errno;
     }  
-    ind_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(3<<14));
-    ind_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(2<<14));
-    req_reg_base   = (volatile unsigned int*)(((unsigned long)dev_base)+(1<<14));
-    req_fifo_base  = (volatile unsigned int*)(((unsigned long)dev_base)+(0<<14));
+    ind_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(3<<14));
+    ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+(2<<14));
+    req_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(1<<14));
+    req_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+(0<<14));
  
 #else
     p = (struct portal*)malloc(sizeof(struct portal));
@@ -264,7 +264,7 @@ int PortalInternal::portalOpen(int addrbits)
     snprintf(p->write.path, sizeof(p->read.path), "%s_wc", name);
     connect_socket(&(p->write));
 
-    unsigned long dev_base = 0;
+    uint32_t dev_base = 0;
     ind_reg_base   = dev_base+(3<<14);
     ind_fifo_base  = dev_base+(2<<14);
     req_reg_base   = dev_base+(1<<14);
@@ -298,14 +298,14 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   for (int i = msg->size()/4-1; i >= 0; i--) {
     unsigned int data = buf[i];
 #ifdef MMAP_HW
-    volatile unsigned int *addr = (volatile unsigned int *)(((unsigned long)req_fifo_base) + msg->channel * 256);
-    //unsigned long long before_requestt = catch_timer(11);
+    volatile unsigned int *addr = (volatile unsigned int *)(((unsigned char *)req_fifo_base) + msg->channel * 256);
+    //uint64_t before_requestt = catch_timer(11);
     //fprintf(stderr, "%08lx %08x\n", addr, data);
     *addr = data;   /* send request data to the hardware! */
 #if 0
-    unsigned long long after_requestt = catch_timer(12);
+    uint64_t after_requestt = catch_timer(12);
     pdir->printDbgRequestIntervals();
-    printf("portalbefore req %llx after %llx\n", before_requestt, after_requestt);
+    printf("portalbefore req %zx after %zx\n", before_requestt, after_requestt);
 #endif
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
@@ -569,7 +569,7 @@ Directory::Directory()
 void Directory::printDbgRequestIntervals()
 {
   unsigned int i, c, j;
-  unsigned long long x[6] = {0,0,0,0,0,0};
+  uint64_t x[6] = {0,0,0,0,0,0};
   fprintf(stderr, "Rd ");
   for(j = 0; j < 2; j++){
     for(i = 0; i < 6; i++){
@@ -579,19 +579,19 @@ void Directory::printDbgRequestIntervals()
       unsigned int addr = intervals_offset+((j * 6 + i)*4);
       c = read_portal(p, addr, name);
 #endif
-      x[i] = (((unsigned long long)c) << 32) | (x[i] >> 32);
+      x[i] = (((uint64_t)c) << 32) | (x[i] >> 32);
     }
   }
 
   for(i = 0; i < 6; i++){
-    fprintf(stderr, "%016llx ", x[i]);
+    fprintf(stderr, "%016zx ", x[i]);
     if (i == 2)
       fprintf(stderr, "\nWr ");
   }
   fprintf(stderr, "\n");
 }
 
-unsigned long long Directory::cycle_count()
+uint64_t Directory::cycle_count()
 {
 #ifdef MMAP_HW
   unsigned int high_bits = *(counter_offset+0);
@@ -600,7 +600,7 @@ unsigned long long Directory::cycle_count()
   unsigned int high_bits = read_portal(p, (counter_offset+0), name);
   unsigned int low_bits = read_portal(p, (counter_offset+4), name);
 #endif
-  return (((unsigned long long)high_bits)<<32)|((unsigned long long)low_bits);
+  return (((uint64_t)high_bits)<<32)|((uint64_t)low_bits);
 }
 unsigned int Directory::get_fpga(unsigned int id)
 {

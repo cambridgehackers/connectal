@@ -69,7 +69,7 @@ PortalMemory::PortalMemory(const char *devname, unsigned int addrbits)
   const char* path = "/dev/portalmem";
   this->pa_fd = ::open(path, O_RDWR);
   if (this->pa_fd < 0){
-    fprintf(stderr, "Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);
+    fprintf(stderr, "Failed to open %s pa_fd=%d errno=%d\n", path, this->pa_fd, errno);
   }
   InitSemaphores();
 }
@@ -82,7 +82,7 @@ PortalMemory::PortalMemory(int id)
   const char* path = "/dev/portalmem";
   this->pa_fd = ::open(path, O_RDWR);
   if (this->pa_fd < 0){
-    fprintf(stderr, "Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);
+    fprintf(stderr, "Failed to open %s pa_fd=%d errno=%d\n", path, this->pa_fd, errno);
   }
   InitSemaphores();
 }
@@ -116,7 +116,7 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 
 }
 
-unsigned long long PortalMemory::show_mem_stats(ChannelType rc)
+uint64_t PortalMemory::show_mem_stats(ChannelType rc)
 {
   mtCnt = 0;
   getMemoryTraffic(rc);
@@ -134,8 +134,8 @@ int PortalMemory::reference(PortalAlloc* pa)
   const int PAGE_SHIFT0 = 12;
   const int PAGE_SHIFT4 = 16;
   const int PAGE_SHIFT8 = 20;
-  unsigned long long regions[3] = {0,0,0};
-  unsigned long long shifts[3] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
+  uint64_t regions[3] = {0,0,0};
+  uint64_t shifts[3] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
   int id = handle++;
   int ne = pa->header.numEntries;
   int size_accum = 0;
@@ -162,14 +162,14 @@ int PortalMemory::reference(PortalAlloc* pa)
     case (0):
       break;
     default:
-      fprintf(stderr, "PortalMemory::unsupported sglist size %lx\n", e->length);
+      fprintf(stderr, "PortalMemory::unsupported sglist size %x\n", e->length);
     }
 #ifdef MMAP_HW
-    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, e->dma_address, e->length);
+    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08zx)\n", id, i, e->dma_address, e->length);
     sglist(id, e->dma_address, e->length);
 #else
     int addr = (e->length > 0) ? size_accum : 0;
-    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, addr, e->length);
+    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08zx)\n", id, i, addr, e->length);
     sglist(id, addr , e->length);
 #endif
     size_accum += e->length;
@@ -182,13 +182,13 @@ int PortalMemory::reference(PortalAlloc* pa)
     }
   }
 
-  unsigned long long border = 0;
+  uint64_t border = 0;
   for(int i = 0; i < 3; i++){
     border += regions[i]*(1<<shifts[i]);
     regions[i] = border;
   }
 
-  fprintf(stderr, "regions %d (%llx %llx %llx)\n", id,regions[0], regions[1], regions[2]);
+  fprintf(stderr, "regions %d (%zx %zx %zx)\n", id,regions[0], regions[1], regions[2]);
   region(id,regions[0], regions[1], regions[2]);
   if (callBacksRegistered) {
     //fprintf(stderr, "sem_wait\n");
@@ -200,13 +200,13 @@ int PortalMemory::reference(PortalAlloc* pa)
   return id;
 }
 
-void PortalMemory::reportMemoryTraffic(unsigned long long words)
+void PortalMemory::reportMemoryTraffic(uint64_t words)
 {
   mtCnt = words;
   sem_post(&mtSem);
 }
 
-void PortalMemory::configResp(unsigned long channelId)
+void PortalMemory::configResp(uint32_t channelId)
 {
   sem_post(&confSem);
 }

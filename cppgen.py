@@ -90,7 +90,7 @@ wrapperConstructorTemplate='''
 putFailedMethodName = "putFailed"
 
 putFailedTemplate='''
-void %(namespace)s%(className)s::%(putFailedMethodName)s(unsigned long v){
+void %(namespace)s%(className)s::%(putFailedMethodName)s(uint32_t v){
     const char* methodNameStrings[] = {%(putFailedStrings)s};
     fprintf(stderr, "putFailed: %%s\\n", methodNameStrings[v]);
     //exit(1);
@@ -116,7 +116,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel)
         return 0;
     }
     for (int i = (msg->size()/4)-1; i >= 0; i--) {
-        unsigned int val = *((volatile unsigned int*)(((unsigned long)ind_fifo_base) + channel * 256));
+        unsigned int val = *((volatile unsigned int*)(((unsigned char *)ind_fifo_base) + channel * 256));
         buf[i] = val;
         //fprintf(stderr, "%%08x\\n", val);
     }
@@ -544,9 +544,9 @@ class TypeMixin:
         cid = cid.replace(' ', '')
         if cid == 'Bit':
             if self.params[0].numeric() <= 32:
-                return 'unsigned long'
+                return 'uint32_t'
             elif self.params[0].numeric() <= 64:
-                return 'unsigned long long'
+                return 'uint64_t'
             else:
                 return 'std::bitset<%d>' % (self.params[0].numeric())
         elif cid == 'Int':

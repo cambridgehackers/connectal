@@ -1,6 +1,7 @@
 #ifndef _PORTAL_H_
 #define _PORTAL_H_
 
+#include <stdint.h>
 #include <sys/types.h>
 #include <linux/ioctl.h>
 #include <sys/ioctl.h>
@@ -13,6 +14,7 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+typedef unsigned long dma_addr_t;
 #include "drivers/portalmem/portalmem.h"
 #include "drivers/zynqportal/zynqportal.h"
 
@@ -26,7 +28,7 @@ struct memrequest{
 
 #define MAX_TIMERS 50
 typedef struct {
-    unsigned long long total, min, max, over;
+    uint64_t total, min, max, over;
 } TIMETYPE;
 
 class PortalPoller;
@@ -125,7 +127,7 @@ class Directory : public PortalInternal
   void scan(int display);
   unsigned int get_fpga(unsigned int id);
   unsigned int get_addrbits(unsigned int id);
-  unsigned long long cycle_count();
+  uint64_t cycle_count();
   void printDbgRequestIntervals();
 };
 
@@ -133,10 +135,10 @@ unsigned int read_portal(portal *p, unsigned int addr, char *name);
 void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
 
 void start_timer(unsigned int i);
-unsigned long long lap_timer(unsigned int i);
+uint64_t lap_timer(unsigned int i);
 void print_dbg_request_intervals();
 void init_timer(void);
-unsigned long long catch_timer(int i);
+uint64_t catch_timer(int i);
 void print_timer(int loops);
 
 // uses the default poller

@@ -19,34 +19,34 @@ public:
   {
     pm->useSemaphore();
   }
-  virtual void configResp(unsigned long pointer){
+  virtual void configResp(uint32_t pointer){
     //fprintf(stderr, "configResp: %lx\n", pointer);
     if (portalMemory)
       portalMemory->configResp(pointer);
   }
-  virtual void addrResponse(unsigned long long physAddr){
-    fprintf(stderr, "DmaIndication::addrResponse(physAddr=%llx)\n", physAddr);
+  virtual void addrResponse(uint64_t physAddr){
+    fprintf(stderr, "DmaIndication::addrResponse(physAddr=%zx)\n", physAddr);
   }
-  virtual void parefResp(unsigned long pointer){
-    fprintf(stderr, "DmaIndication::parefResp(pointer=%lx)\n", pointer);
+  virtual void parefResp(uint32_t pointer){
+    fprintf(stderr, "DmaIndication::parefResp(pointer=%x)\n", pointer);
   }
-  virtual void badPointer (unsigned long pointer) {
-    fprintf(stderr, "DmaIndication::badPointer(pointer=%lx)\n", pointer);
+  virtual void badPointer (uint32_t pointer) {
+    fprintf(stderr, "DmaIndication::badPointer(pointer=%x)\n", pointer);
   }
-  virtual void badPageSize (unsigned long pointer, unsigned long len) {
-    fprintf(stderr, "DmaIndication::badPageSize(pointer=%lx, len=%lx)\n", pointer, len);
+  virtual void badPageSize (uint32_t pointer, uint32_t len) {
+    fprintf(stderr, "DmaIndication::badPageSize(pointer=%x, len=%x)\n", pointer, len);
   }
-  virtual void badAddrTrans (unsigned long pointer, unsigned long offset) {
-    fprintf(stderr, "DmaIndication::badAddrTrans(pointer=%lx, offset=%lx)\n", pointer, offset);
+  virtual void badAddrTrans (uint32_t pointer, uint32_t offset) {
+    fprintf(stderr, "DmaIndication::badAddrTrans(pointer=%x, offset=%x)\n", pointer, offset);
   }
-  virtual void badAddr (unsigned long pointer, unsigned long long offset , unsigned long long physAddr) {
-    fprintf(stderr, "DmaIndication::badAddr(pointer=%lx offset=%llx physAddr=%llx)\n", pointer, offset, physAddr);
+  virtual void badAddr (uint32_t pointer, uint64_t offset , uint64_t physAddr) {
+    fprintf(stderr, "DmaIndication::badAddr(pointer=%x offset=%zx physAddr=%zx)\n", pointer, offset, physAddr);
   }
   virtual void reportStateDbg(const DmaDbgRec& rec){
-    fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
+    fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
   }
-  virtual void reportMemoryTraffic(unsigned long long words){
-    fprintf(stderr, "reportMemoryTraffic: words=%llx\n", words);
+  virtual void reportMemoryTraffic(uint64_t words){
+    fprintf(stderr, "reportMemoryTraffic: words=%zx\n", words);
     if (portalMemory)
       portalMemory->reportMemoryTraffic(words);
   }
