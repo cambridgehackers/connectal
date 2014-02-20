@@ -15,7 +15,7 @@
 
 sem_t test_sem;
 #ifdef MMAP_HW
-int numWords = 16 << 16;
+int numWords = 16 << 18;
 #else
 int numWords = 16 << 10;
 #endif

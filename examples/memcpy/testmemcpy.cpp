@@ -39,7 +39,7 @@ PortalAlloc *dstAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 #ifdef MMAP_HW
-int numWords = 16 << 16;
+int numWords = 16 << 18;
 #else
 int numWords = 16 << 10;
 #endif
