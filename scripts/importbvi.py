@@ -530,10 +530,14 @@ if __name__=='__main__':
     parser.add_option("-d", "--delete", action="append", dest="delete")
     parser.add_option("-e", "--export", action="append", dest="export")
     parser.add_option("-i", "--ifdef", action="append", dest="ifdef")
+    parser.add_option("-C", "--cell", dest="cell")
+    parser.add_option("-I", "--ifname", dest="ifname")
     (options, args) = parser.parse_args()
     ifname = 'PPS7'
     ifprefix = 'PPS7'
     #print('KK', options, args, file=sys.stderr)
+    if options.cell:
+        imported_name = options.cell
     if options.param:
         for item in options.param:
             item2 = item.split(':')
@@ -557,5 +561,7 @@ if __name__=='__main__':
             parse_lib(args[0])
         else:
             parse_verilog(args[0])
+        if options.ifname:
+            ifname = options.ifname
         masterlist = regroup_items(ifprefix, masterlist)
         generate_bsv(ifname)
