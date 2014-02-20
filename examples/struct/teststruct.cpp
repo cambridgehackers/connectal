@@ -84,7 +84,6 @@ public:
     incr_cnt();
   }
   StructIndication(unsigned int id) : StructIndicationWrapper(id), cnt(0){}
-  StructIndication(const char *name, unsigned int addrbits) : StructIndicationWrapper(name,addrbits), cnt(0){}
 };
 
 
