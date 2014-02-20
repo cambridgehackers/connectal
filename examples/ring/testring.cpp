@@ -478,7 +478,7 @@ int main(int argc, const char **argv)
     }
   }
   /* pass 2, non blocking tests */
-  memset(scratchBuffer, scratch_sz, 0);
+  memset(scratchBuffer, 0, scratch_sz);
   for (i = 0; i < 256; i += 1) {
     scratchBuffer[i] = i;
   }
