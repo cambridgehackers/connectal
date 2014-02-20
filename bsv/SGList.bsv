@@ -37,11 +37,13 @@ typedef Bit#(TLog#(MaxNumSGLists)) SGListId;
 typedef 12 SGListPageShift0;
 typedef 16 SGListPageShift4;
 typedef 20 SGListPageShift8;
+typedef Bit#(TLog#(MaxNumSGLists)) RegionsIdx;
+typedef Tuple2#(SGListId,Bit#(DmaOffsetSize)) ReqTup;
 
 interface SGListMMU#(numeric type addrWidth);
    method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
    method Action region(Bit#(32) pointer, Bit#(40) off8, Bit#(40) off4, Bit#(40) off0);
-   interface Vector#(2,Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth))) addr;
+   interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
 
 typedef union tagged{
@@ -62,12 +64,14 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(c__, addrWidth, DmaOffsetSize));
 
-   BRAM2Port#(Bit#(entryIdxSize), Page) pageTable <- mkBRAM2Server(defaultValue);
-   Vector#(MaxNumSGLists, Reg#(Tuple3#(Bit#(DmaOffsetSize),Bit#(DmaOffsetSize),Bit#(DmaOffsetSize)))) regions <- replicateM(mkReg(unpack(0)));
-   
-   let sglistFifo <- mkSizedFIFOF(6);
-   Vector#(2,FIFOF#(Offset))  offs <- replicateM(mkFIFOF);
-   Reg#(Bit#(8))               idxReg  <- mkReg(0);
+   BRAM2Port#(Bit#(entryIdxSize), Page)       pages <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(RegionsIdx, Bit#(DmaOffsetSize)) reg8 <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(RegionsIdx, Bit#(DmaOffsetSize)) reg4 <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(RegionsIdx, Bit#(DmaOffsetSize)) reg0 <- mkBRAM2Server(defaultValue);
+
+   Vector#(2,FIFOF#(Offset))                   offs <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(ReqTup))                   reqs <- replicateM(mkFIFOF);
+   Reg#(Bit#(8))                             idxReg <- mkReg(0);
    
    let page_shift0 = fromInteger(valueOf(SGListPageShift0));
    let page_shift4 = fromInteger(valueOf(SGListPageShift4));
@@ -77,60 +81,65 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    let ord4 = 40'd1 << page_shift4;
    let ord8 = 40'd1 << page_shift8;
 
-   function BRAMServer#(Bit#(entryIdxSize), Page) portsel(int i);
+   function BRAMServer#(a,b) portsel(BRAM2Port#(a,b) x, int i);
       if(i==0)
-	 return pageTable.portA;
+	 return x.portA;
       else
-	 return pageTable.portB;
+	 return x.portB;
    endfunction
+
    
-   rule sglistConf;
-      $display("sglistConf %d", sglistFifo.first);
-      let rv <- portsel(0).response.get;
-      dmaIndication.configResp(sglistFifo.first);
-      sglistFifo.deq;
-   endrule
-   
-   Vector#(2,Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth))) addrServers;
+   for(int i = 0; i < 2; i=i+1)
+      rule req;
+	 reqs[i].deq;
+	 let ptr = tpl_1(reqs[i].first);
+	 let off = tpl_2(reqs[i].first);
+	 Offset o = tagged OOrd0 0;
+	 Bit#(8) p = 0;
+	 Bit#(40) barrier8 <- portsel(reg8,i).response.get;
+	 Bit#(40) barrier4 <- portsel(reg4,i).response.get;
+	 Bit#(40) barrier0 <- portsel(reg0,i).response.get;
+	 if (off < barrier8) begin
+	    //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
+	    o = tagged OOrd8 truncate(off);
+	    p = truncate(off>>page_shift8);
+	 end 
+	 else if (off < barrier4) begin
+	    //$display("request: ptr=%h off=%h barrier4=%h", ptr, off, barrier4);
+	    o = tagged OOrd4 truncate(off);
+	    p = truncate(off>>page_shift4);
+	 end
+	 else if (off < barrier0) begin
+	    //$display("request: ptr=%h off=%h barrier0=%h", ptr, off, barrier0);
+	    o = tagged OOrd0 truncate(off);
+	    p = truncate(off>>page_shift0);
+	 end 
+	 else begin
+	    $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
+	    dmaIndication.badAddrTrans(extend(ptr), truncate(off));
+	 end
+	 offs[i].enq(o);
+	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{ptr-1,p}, datain:?});
+      endrule
+
+   Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
    for(int i = 0; i < 2; i=i+1)
       addrServers[i] = 
-      (interface Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth));
+      (interface Server#(ReqTup,Bit#(addrWidth));
 	  interface Put request;
-	     method Action put(Tuple2#(SGListId,Bit#(DmaOffsetSize)) req) if (!sglistFifo.notEmpty);
+	     method Action put(ReqTup req);
 		let ptr = tpl_1(req);
 		let off = tpl_2(req);
-		Offset o = tagged OOrd0 0;
-		Bit#(8) p = 0;
-		Bit#(40) barrier8 = tpl_1(regions[ptr-1]);
-		Bit#(40) barrier4 = tpl_2(regions[ptr-1]);
-		Bit#(40) barrier0 = tpl_3(regions[ptr-1]);
-		if (off < barrier8) begin
-		   //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
-		   o = tagged OOrd8 truncate(off);
-		   p = truncate(off>>page_shift8);
-		end 
-		else if (off < barrier4) begin
-		   //$display("request: ptr=%h off=%h barrier4=%h", ptr, off, barrier4);
-		   o = tagged OOrd4 truncate(off);
-		   p = truncate(off>>page_shift4);
-		end
-		else if (off < barrier0) begin
-		   //$display("request: ptr=%h off=%h barrier0=%h", ptr, off, barrier0);
-		   o = tagged OOrd0 truncate(off);
-		   p = truncate(off>>page_shift0);
-		end 
-		else begin
-		   $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-		   dmaIndication.badAddrTrans(extend(ptr), truncate(off));
-		end
-		offs[i].enq(o);
-		portsel(i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{ptr-1,p}, datain:?});
+		portsel(reg8, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
+		portsel(reg4, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
+		portsel(reg0, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
+		reqs[i].enq(req);
 	     endmethod
 	  endinterface
 	  interface Get response;
 	     method ActionValue#(Bit#(addrWidth)) get();
 		Bit#(DmaOffsetSize) rv = 0;
-		let page <- portsel(i).response.get;
+		let page <- portsel(pages, i).response.get;
 		let offset = offs[i].first;
 		case (offset) matches
 		   tagged OOrd0 .o:
@@ -147,18 +156,19 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
        endinterface);
 
 
-   method Action region(Bit#(32) pointer, Bit#(DmaOffsetSize) offset8, Bit#(DmaOffsetSize) offset4, Bit#(DmaOffsetSize) offset0);
-      let tt = regions[pointer-1];
-      regions[pointer-1] <= tuple3(offset8, offset4, offset0);
-      dmaIndication.configResp(pointer);
+   method Action region(Bit#(32) ptr, Bit#(40) off8, Bit#(40) off4, Bit#(40) off0);
+      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain:off8});
+      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain:off4});
+      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain:off0});
+      dmaIndication.configResp(ptr);
    endmethod
 	       
    
-   method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
-      $display("sglist(pointer=%d, paddr=%h, len=%h", pointer, paddr,len);
+   method Action sglist(Bit#(32) ptr, Bit#(40) paddr, Bit#(32) len);
+      $display("sglist(ptr=%d, paddr=%h, len=%h", ptr, paddr,len);
       if (idxReg+1 == 0) begin
 	 $display("sglist: exceeded maximun length of sglist");
-	 dmaIndication.badPageSize(pointer,len);
+	 dmaIndication.badPageSize(ptr,len);
       end
       else begin
 	 Page page = tagged POrd0 0;
@@ -178,11 +188,11 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    end
 	    else begin
 	       $display("mkSGListMMU::sglist unsupported length %h", len);
-	       dmaIndication.badPageSize(pointer, len);
+	       dmaIndication.badPageSize(ptr, len);
 	    end
 	 end
-	 portsel(0).request.put(BRAMRequest{write:True, responseOnWrite:True, address:{truncate(pointer-1),idxReg}, datain:page});
-	 sglistFifo.enq(pointer);
+	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:{truncate(ptr-1),idxReg}, datain:page});
+	 dmaIndication.configResp(ptr);
       end
    endmethod   
    

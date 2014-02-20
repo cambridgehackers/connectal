@@ -46,7 +46,7 @@ public:
     fprintf(stderr, "reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void reportMemoryTraffic(unsigned long long words){
-    fprintf(stderr, "reportMemoryTraffic: words=%lld\n", words);
+    fprintf(stderr, "reportMemoryTraffic: words=%llx\n", words);
     if (portalMemory)
       portalMemory->reportMemoryTraffic(words);
   }

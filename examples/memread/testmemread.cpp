@@ -15,7 +15,7 @@
 
 sem_t test_sem;
 #ifdef MMAP_HW
-int numWords = 16 << 18;
+int numWords = 16 << 16;
 #else
 int numWords = 16 << 10;
 #endif
@@ -36,19 +36,19 @@ class MemreadIndication : public MemreadIndicationWrapper
 public:
   unsigned int rDataCnt;
   virtual void readDone(unsigned long v){
-    fprintf(stderr, "Memread::readDone mismatch=%lx\n", v);
+    fprintf(stderr, "Memread::readDone(%lx)\n", v);
     mismatchCount += v;
     sem_post(&test_sem);
   }
   virtual void started(unsigned long words){
-    fprintf(stderr, "Memread::started: words=%lx\n", words);
+    fprintf(stderr, "Memread::started(%lx)\n", words);
   }
   virtual void rData ( unsigned long long v ){
-    fprintf(stderr, "rData (%08x): ", rDataCnt++);
+    fprintf(stderr, "rData(%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
   virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
-    fprintf(stderr, "Memread::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
+    fprintf(stderr, "Memread::reportStateDbg(%08lx, %ld)\n", streamRdCnt, dataMismatch);
   }  
   MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits){}
 };
@@ -104,7 +104,7 @@ int main(int argc, const char **argv)
   start_timer(0);
   int burstLen = 16;
 #ifdef MMAP_HW
-  int iterCnt = 32;
+  int iterCnt = 64;
 #else
   int iterCnt = 2;
 #endif

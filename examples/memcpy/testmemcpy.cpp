@@ -39,7 +39,7 @@ PortalAlloc *dstAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 #ifdef MMAP_HW
-int numWords = 16 << 18;
+int numWords = 16 << 16;
 #else
 int numWords = 16 << 10;
 #endif
@@ -175,7 +175,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   int burstLen = 16;
 #ifdef MMAP_HW
-  int iterCnt = 32;
+  int iterCnt = 64;
 #else
   int iterCnt = 2;
 #endif

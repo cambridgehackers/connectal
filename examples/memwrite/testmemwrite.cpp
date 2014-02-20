@@ -17,7 +17,7 @@
 
 sem_t done_sem;
 #ifdef MMAP_HW
-int numWords = 16 << 18;
+int numWords = 16 << 16;
 #else
 int numWords = 16 << 10;
 #endif
@@ -119,7 +119,7 @@ void parent(int rd_sock, int wr_sock)
   start_timer(0);
   int burstLen = 16;
 #ifdef MMAP_HW
-  int iterCnt = 32;
+  int iterCnt = 64;
 #else
   int iterCnt = 2;
 #endif
