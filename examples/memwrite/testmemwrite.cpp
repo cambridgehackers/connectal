@@ -29,14 +29,14 @@ class MemwriteIndication : public MemwriteIndicationWrapper
 public:
   MemwriteIndication(const char* devname, unsigned int addrbits) : MemwriteIndicationWrapper(devname,addrbits){}
 
-  virtual void started(unsigned long words){
+  virtual void started(uint32_t words){
     fprintf(stderr, "Memwrite::started: words=%lx\n", words);
   }
-  virtual void writeDone ( unsigned long srcGen ){
+  virtual void writeDone ( uint32_t srcGen ){
     fprintf(stderr, "Memwrite::writeDone (%08lx)\n", srcGen);
     sem_post(&done_sem);
   }
-  virtual void reportStateDbg(unsigned long streamWrCnt, unsigned long srcGen){
+  virtual void reportStateDbg(uint32_t streamWrCnt, uint32_t srcGen){
     fprintf(stderr, "Memwrite::reportStateDbg: streamWrCnt=%08lx srcGen=%ld\n", streamWrCnt, srcGen);
   }  
 
@@ -58,7 +58,7 @@ void child(int rd_sock)
   sock_fd_read(rd_sock, &fd);
 
   unsigned int *dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
-  fprintf(stderr, "child::dstBuffer = %08lx\n", (unsigned long)dstBuffer);
+  fprintf(stderr, "child::dstBuffer = %p\n", dstBuffer);
 
   unsigned int sg = 0;
   for (int i = 0; i < numWords; i++){
@@ -125,8 +125,8 @@ void parent(int rd_sock, int wr_sock)
 #endif
   device->startWrite(ref_dstAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
-  unsigned long long cycles = lap_timer(0);
-  unsigned long long beats = dma->show_mem_stats(ChannelType_Write);
+  uint64_t cycles = lap_timer(0);
+  uint64_t beats = dma->show_mem_stats(ChannelType_Write);
   fprintf(stderr, "memory write utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
   MonkitFile("perf.monkit")

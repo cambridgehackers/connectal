@@ -21,13 +21,13 @@ static int trace_spi = 0;
 
 #define DECL(A) \
     static sem_t sem_ ## A; \
-    static unsigned long cv_ ## A;
+    static uint32_t cv_ ## A;
 
 DECL(iserdes_control)
 DECL(spi_response)
 
 #define GETFN(A) \
-    static unsigned long read_ ## A (void) \
+    static uint32_t read_ ## A (void) \
     { \
         serdesdevice->get_ ## A(); \
         sem_wait(&sem_ ## A); \
@@ -35,14 +35,14 @@ DECL(spi_response)
     }
 
 class TestImageonSerdesIndication : public ImageonSerdesIndication {
-    virtual void iserdes_control_value ( unsigned long v ){
+    virtual void iserdes_control_value ( uint32_t v ){
         cv_iserdes_control = v;
         sem_post(&sem_iserdes_control);
     }
 };
 
 class TestImageCaptureIndications : public CoreIndication {
-    void spi_response(unsigned long v){
+    void spi_response(uint32_t v){
       //fprintf(stderr, "spi_response: %x\n", v);
       cv_spi_response = v;
       sem_post(&sem_spi_response);
@@ -52,7 +52,7 @@ printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
     }
 };
 class TestHdmiInternal: public HdmiInternalIndication {
-    virtual void vsync ( unsigned long long v ){
+    virtual void vsync ( uint64_t v ){
 //printf("[%s:%d] %lx\n", __FUNCTION__, __LINE__, v);
     }
 };

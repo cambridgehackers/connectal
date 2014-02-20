@@ -18,15 +18,15 @@ S2 s2 = {7, 8, 9};
 
 S1 s1 = {3, 6};
 
-unsigned long v5a = 0x00000000;
-unsigned long long v5b = 0xDEADBEEFFECAFECA;
-unsigned long v5c = 0x00000001;
+uint32_t v5a = 0x00000000;
+uint64_t v5b = 0xDEADBEEFFECAFECA;
+uint32_t v5c = 0x00000001;
 
-unsigned long v6a = 0xBBBBBBBB;
-unsigned long long v6b = 0x000000EFFECAFECA;
-unsigned long v6c = 0xCCCCCCCC;
+uint32_t v6a = 0xBBBBBBBB;
+uint64_t v6b = 0x000000EFFECAFECA;
+uint32_t v6c = 0xCCCCCCCC;
 
-unsigned long v7a = 0xDADADADA;
+uint32_t v7a = 0xDADADADA;
 E1 v7b = E1_E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
@@ -34,17 +34,17 @@ S3 s3 = { a: v7a, e1: v7b };
 class StructIndication : public StructIndicationWrapper
 {  
 public:
-  unsigned long cnt;
+  uint32_t cnt;
   void incr_cnt(){
     if (++cnt == 7)
       exit(0);
   }
-  virtual void heard1(unsigned long a) {
+  virtual void heard1(uint32_t a) {
     fprintf(stderr, "heard1(%ld)\n", a);
     assert(a == v1a);
     incr_cnt();
   }
-  virtual void heard2(unsigned long a, unsigned long b) {
+  virtual void heard2(uint32_t a, uint32_t b) {
     fprintf(stderr, "heard2(%ld %ld)\n", a, b);
     assert(a == v2a);
     assert(b == v2b);
@@ -63,21 +63,21 @@ public:
     assert(s.c == s2.c);
     incr_cnt();
   }
-  virtual void heard5(unsigned long a, unsigned long long b, unsigned long c) {
+  virtual void heard5(uint32_t a, uint64_t b, uint32_t c) {
     fprintf(stderr, "heard5(%08lx, %016llx, %08lx)\n", a, b, c);
     assert(a == v5a);
     assert(b == v5b);
     assert(c == v5c);
     incr_cnt();
   }
-  virtual void heard6(unsigned long a, unsigned long long b, unsigned long c) {
+  virtual void heard6(uint32_t a, uint64_t b, uint32_t c) {
     fprintf(stderr, "heard6(%08lx, %016llx, %08lx)\n", a, b, c);
     assert(a == v6a);
     assert(b == v6b);
     assert(c == v6c);
     incr_cnt();
   }
-  virtual void heard7(unsigned long a, const E1& b) {
+  virtual void heard7(uint32_t a, const E1& b) {
     fprintf(stderr, "heard7(%08lx, %08x)\n", a, b);
     assert(a == v7a);
     assert(b == v7b);

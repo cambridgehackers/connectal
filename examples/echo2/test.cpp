@@ -16,11 +16,11 @@ sem_t echo_sem;
 class Say : public SayWrapper
 {
 public:
-  virtual void say(unsigned long v){
+  virtual void say(uint32_t v){
     fprintf(stderr, "say(%ld)\n", v);
     sem_post(&echo_sem);
   }
-  virtual void say2(unsigned long a, unsigned long b){
+  virtual void say2(uint32_t a, uint32_t b){
     fprintf(stderr, "say2(%ld, %ld)\n", a,b);
     sem_post(&echo_sem);
   }

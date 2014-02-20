@@ -63,11 +63,11 @@ static void init_thread()
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
-    virtual void heard(unsigned long v) {
+    virtual void heard(uint32_t v) {
         fprintf(stderr, "heard an echo: %ld\n", v);
 	echoRequestProxy->say2(v, 2*v);
     }
-    virtual void heard2(unsigned long a, unsigned long b) {
+    virtual void heard2(uint32_t a, uint32_t b) {
         catch_timer(20);
         SEMPOST(&sem_heard2);
         //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
@@ -121,7 +121,7 @@ int main(int argc, const char **argv)
 printf("[%s:%d] sleep2\n", __FUNCTION__, __LINE__); sleep(2);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
-unsigned long long elapsed = lap_timer(1);
+uint64_t elapsed = lap_timer(1);
     printf("TEST TYPE: "
 #ifndef SEPARATE_EVENT_THREAD
        "INLINE"

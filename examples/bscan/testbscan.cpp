@@ -61,7 +61,7 @@ static void init_thread()
 class BscanIndication : public BscanIndicationWrapper
 {
 public:
-    virtual void bscanGet(unsigned long v) {
+    virtual void bscanGet(uint32_t v) {
         fprintf(stderr, "bscanGet: %lx\n", v);
     }
     BscanIndication(unsigned int id, PortalPoller *poller) : BscanIndicationWrapper(id, poller) {

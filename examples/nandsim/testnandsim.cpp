@@ -27,15 +27,15 @@ class NandSimIndication : public NandSimIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
-  virtual void readDone(unsigned long v){
+  virtual void readDone(uint32_t v){
     fprintf(stderr, "NandSim::readDone v=%lx\n", v);
     sem_post(&sem);
   }
-  virtual void writeDone(unsigned long v){
+  virtual void writeDone(uint32_t v){
     fprintf(stderr, "NandSim::writeDone v=%lx\n", v);
     sem_post(&sem);
   }
-  virtual void eraseDone(unsigned long v){
+  virtual void eraseDone(uint32_t v){
     fprintf(stderr, "NandSim::eraseDone v=%lx\n", v);
     sem_post(&sem);
   }

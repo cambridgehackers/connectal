@@ -10,25 +10,25 @@ Core3Request *req3 = 0;
 
 class TestCore0Indication : public Core0Indication
 {
-  virtual void heard(unsigned long v) {
+  virtual void heard(uint32_t v) {
     fprintf(stderr, "Core0Indication::heard(%d)\n", v);
   }
 };
 class TestCore1Indication : public Core1Indication
 {
-  virtual void heard(unsigned long v) {
+  virtual void heard(uint32_t v) {
     fprintf(stderr, "Core1Indication::heard(%d)\n", v);
   }
 };
 class TestCore2Indication : public Core2Indication
 {
-  virtual void heard(unsigned long v) {
+  virtual void heard(uint32_t v) {
     fprintf(stderr, "Core2Indication::heard(%d)\n", v);
   }
 };
 class TestCore3Indication : public Core3Indication
 {
-  virtual void heard(unsigned long v) {
+  virtual void heard(uint32_t v) {
     fprintf(stderr, "Core3Indication::heard(%d)\n", v);
   }
 };

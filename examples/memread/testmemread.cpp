@@ -35,20 +35,20 @@ class MemreadIndication : public MemreadIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
-  virtual void readDone(unsigned long v){
-    fprintf(stderr, "Memread::readDone(%lx)\n", v);
+  virtual void readDone(uint32_t v){
+    fprintf(stderr, "Memread::readDone(%x)\n", v);
     mismatchCount += v;
     sem_post(&test_sem);
   }
-  virtual void started(unsigned long words){
-    fprintf(stderr, "Memread::started(%lx)\n", words);
+  virtual void started(uint32_t words){
+    fprintf(stderr, "Memread::started(%x)\n", words);
   }
-  virtual void rData ( unsigned long long v ){
+  virtual void rData ( uint64_t v ){
     fprintf(stderr, "rData(%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
-  virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
-    fprintf(stderr, "Memread::reportStateDbg(%08lx, %ld)\n", streamRdCnt, dataMismatch);
+  virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch){
+    fprintf(stderr, "Memread::reportStateDbg(%08x, %d)\n", streamRdCnt, dataMismatch);
   }  
   MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits){}
 };
@@ -110,8 +110,8 @@ int main(int argc, const char **argv)
 #endif
   device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&test_sem);
-  unsigned long long cycles = lap_timer(0);
-  unsigned long long beats = dma->show_mem_stats(ChannelType_Read);
+  uint64_t cycles = lap_timer(0);
+  uint64_t beats = dma->show_mem_stats(ChannelType_Read);
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
   MonkitFile("perf.monkit")

@@ -73,33 +73,33 @@ public:
   PerfIndication(unsigned int id) : PerfIndicationWrapper(id){}
 
 
-  virtual void started(unsigned long words){
+  virtual void started(uint32_t words){
     // fprintf(stderr, "started: words=%ld\n", words);
     start_count += 1;
     if (copy_size == 0) sem_post(&copy_sem);
   }
-  virtual void readWordResult ( unsigned long v ){
+  virtual void readWordResult ( uint32_t v ){
     dump("readWordResult: ", (char*)&v, sizeof(v));
   }
-  virtual void done(unsigned long v) {
+  virtual void done(uint32_t v) {
     finishedCount += 1;
     sem_post(&copy_sem);
   }
-  virtual void rData ( unsigned long long v ){
+  virtual void rData ( uint64_t v ){
     dump("rData: ", (char*)&v, sizeof(v));
   }
-  virtual void readReq(unsigned long v){
+  virtual void readReq(uint32_t v){
     //fprintf(stderr, "readReq %lx\n", v);
   }
-  virtual void writeReq(unsigned long v){
+  virtual void writeReq(uint32_t v){
     //fprintf(stderr, "writeReq %lx\n", v);
   }
-  virtual void writeAck(unsigned long v){
+  virtual void writeAck(uint32_t v){
     //fprintf(stderr, "writeAck %lx\n", v);
   }
-  virtual void reportStateDbg(unsigned long srcGen, unsigned long streamRdCnt, 
-			      unsigned long streamWrCnt, unsigned long writeInProg, 
-			      unsigned long dataMismatch){
+  virtual void reportStateDbg(uint32_t srcGen, uint32_t streamRdCnt, 
+			      uint32_t streamWrCnt, uint32_t writeInProg, 
+			      uint32_t dataMismatch){
     fprintf(stderr, "Perf::reportStateDbg: srcGen=%ld, streamRdCnt=%ld, streamWrCnt=%ld, writeInProg=%ld, dataMismatch=%ld\n", 
 	    srcGen, streamRdCnt, streamWrCnt, writeInProg, dataMismatch);
   }  
@@ -147,7 +147,7 @@ int dotest(unsigned size, unsigned repeatCount)
   fprintf(stderr, "\n  block size %d microseconds %lld\n", size*16, interval / loops); 
 }
 
-void printportalalloc(char *name, PortalAlloc *p)
+void printportalalloc(const char *name, PortalAlloc *p)
 {
   int i;
   fprintf(stderr, "%s\n", name);

@@ -30,26 +30,26 @@ class Memread2Indication : public Memread2IndicationWrapper
 {
 public:
   unsigned int rDataCnt;
-  virtual void readReq(unsigned long v){
+  virtual void readReq(uint32_t v){
     //fprintf(stderr, "Memread2::readReq %lx\n", v);
   }
-  virtual void readDone(unsigned long v){
+  virtual void readDone(uint32_t v){
     fprintf(stderr, "Memread2::readDone mismatch=%lx\n", v);
     mismatchCount = v;
     if (mismatchesReceived == mismatchCount)
       exit(v ? 1 : 0);
   }
-  virtual void started(unsigned long words){
+  virtual void started(uint32_t words){
     fprintf(stderr, "Memread2::started: words=%lx\n", words);
   }
-  virtual void rData ( unsigned long long v ){
+  virtual void rData ( uint64_t v ){
     fprintf(stderr, "rData (%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
-  virtual void reportStateDbg(unsigned long streamRdCnt, unsigned long dataMismatch){
+  virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch){
     fprintf(stderr, "Memread2::reportStateDbg: streamRdCnt=%08lx dataMismatch=%ld\n", streamRdCnt, dataMismatch);
   }  
-  virtual void mismatch(unsigned long offset, unsigned long long ev, unsigned long long v) {
+  virtual void mismatch(uint32_t offset, uint64_t ev, uint64_t v) {
     fprintf(stderr, "Mismatch at %lx %llx != %llx\n", offset, ev, v);
 
     mismatchesReceived++;
