@@ -69,7 +69,6 @@ class PerfIndication : public PerfIndicationWrapper
 {
 
 public:
-  PerfIndication(const char* devname, unsigned int addrbits) : PerfIndicationWrapper(devname,addrbits){}
   PerfIndication(unsigned int id) : PerfIndicationWrapper(id){}
 
 

@@ -70,7 +70,6 @@ class MemcpyIndication : public MemcpyIndicationWrapper
 {
 
 public:
-  MemcpyIndication(const char* devname, unsigned int addrbits) : MemcpyIndicationWrapper(devname,addrbits){}
   MemcpyIndication(unsigned int id) : MemcpyIndicationWrapper(id){}
 
 
@@ -114,7 +113,6 @@ public:
 class BlueScopeIndication : public BlueScopeIndicationWrapper
 {
 public:
-  BlueScopeIndication(const char* devname, unsigned int addrbits) : BlueScopeIndicationWrapper(devname,addrbits){}
   BlueScopeIndication(unsigned int id) : BlueScopeIndicationWrapper(id){}
 
   virtual void triggerFired( ){
