@@ -27,7 +27,7 @@ size_t alloc_sz = test_sz;
 class MemwriteIndication : public MemwriteIndicationWrapper
 {
 public:
-  MemwriteIndication(const char* devname, unsigned int addrbits) : MemwriteIndicationWrapper(devname,addrbits){}
+  MemwriteIndication(int id) : MemwriteIndicationWrapper(id){}
 
   virtual void started(uint32_t words){
     fprintf(stderr, "Memwrite::started: words=%x\n", words);
@@ -81,11 +81,11 @@ void parent(int rd_sock, int wr_sock)
 
   fprintf(stderr, "parent::%s %s\n", __DATE__, __TIME__);
 
-  device = new MemwriteRequestProxy("fpga1", 16);
-  dma = new DmaConfigProxy("fpga3", 16);
+  device = new MemwriteRequestProxy(IfcNames_MemwriteRequest);
+  dma = new DmaConfigProxy(IfcNames_DmaConfig);
 
-  deviceIndication = new MemwriteIndication("fpga2", 16);
-  dmaIndication = new DmaIndication(dma, "fpga4", 16);
+  deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
   
   fprintf(stderr, "parent::allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);

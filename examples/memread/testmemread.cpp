@@ -50,7 +50,7 @@ public:
   virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch){
     fprintf(stderr, "Memread::reportStateDbg(%08x, %d)\n", streamRdCnt, dataMismatch);
   }  
-  MemreadIndication(const char* devname, unsigned int addrbits) : MemreadIndicationWrapper(devname,addrbits){}
+  MemreadIndication(int id) : MemreadIndicationWrapper(id){}
 };
 
 int main(int argc, const char **argv)
@@ -66,11 +66,11 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new MemreadRequestProxy("fpga1", 16);
-  dma = new DmaConfigProxy("fpga3", 16);
+  device = new MemreadRequestProxy(IfcNames_MemreadRequest);
+  dma = new DmaConfigProxy(IfcNames_DmaConfig);
 
-  deviceIndication = new MemreadIndication("fpga2", 16);
-  dmaIndication = new DmaIndication(dma, "fpga4", 16);
+  deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(alloc_sz, &srcAlloc);

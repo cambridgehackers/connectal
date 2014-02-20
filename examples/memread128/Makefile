@@ -2,7 +2,7 @@
 BSVDIR=../../bsv
 S2H = MemreadRequest DmaConfig
 H2S = MemreadIndication DmaIndication
-BSVFILES = Memread.bsv
+BSVFILES = Memread.bsv Top.bsv
 CPPFILES=testmemread.cpp
 Dma = Dma128
 PINS = Std

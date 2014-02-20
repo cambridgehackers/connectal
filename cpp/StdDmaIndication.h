@@ -12,13 +12,6 @@ public:
   {
     pm->useSemaphore();
   }
-  DmaIndication(const char* devname, unsigned int addrbits) : DmaIndicationWrapper(devname,addrbits), portalMemory(0) {}
-  DmaIndication(PortalMemory *pm, const char* devname, unsigned int addrbits)
-    : DmaIndicationWrapper(devname,addrbits)
-    , portalMemory(pm)
-  {
-    pm->useSemaphore();
-  }
   virtual void configResp(uint32_t pointer){
     //fprintf(stderr, "configResp: %lx\n", pointer);
     if (portalMemory)

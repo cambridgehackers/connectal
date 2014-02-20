@@ -40,7 +40,7 @@ public:
     sem_post(&sem);
   }
 
-  NandSimIndication(const char* devname, unsigned int addrbits) : NandSimIndicationWrapper(devname,addrbits) {
+  NandSimIndication(int id) : NandSimIndicationWrapper(id) {
     sem_init(&sem, 0, 0);
   }
   void wait() {
@@ -63,11 +63,11 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new NandSimRequestProxy("fpga1", 16);
-  dma = new DmaConfigProxy("fpga3", 16);
+  device = new NandSimRequestProxy(IfcNames_NandSimRequest);
+  dma = new DmaConfigProxy(IfcNames_DmaConfig);
 
-  deviceIndication = new NandSimIndication("fpga2", 16);
-  dmaIndication = new DmaIndication(dma, "fpga4", 16);
+  deviceIndication = new NandSimIndication(IfcNames_NandSimIndication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(numBytes, &srcAlloc);

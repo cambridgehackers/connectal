@@ -56,8 +56,7 @@ public:
     if (mismatchesReceived == mismatchCount)
       exit(1);
   }
-
-  Memread2Indication(const char* devname, unsigned int addrbits) : Memread2IndicationWrapper(devname,addrbits), mismatchCount(0), mismatchesReceived(0){}
+  Memread2Indication(int id) : Memread2IndicationWrapper(id), mismatchCount(0), mismatchesReceived(0){}
 private:
   int mismatchCount;
   int mismatchesReceived;
@@ -75,11 +74,11 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new Memread2RequestProxy("fpga1", 16);
-  dma = new DmaConfigProxy("fpga3", 16);
+  device = new Memread2RequestProxy(IfcNames_Memread2Request);
+  dma = new DmaConfigProxy(IfcNames_DmaConfig);
 
-  deviceIndication = new Memread2Indication("fpga2", 16);
-  dmaIndication = new DmaIndication(dma, "fpga4", 16);
+  deviceIndication = new Memread2Indication(IfcNames_Memread2Indication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(alloc_sz, &srcAlloc);

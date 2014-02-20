@@ -171,21 +171,6 @@ PortalInternal::PortalInternal(PortalInternal *p)
 }
 
 
-PortalInternal::PortalInternal(const char *devname, unsigned int addrbits)
-  : fd(-1),
-    ind_reg_base(0x0), 
-    ind_fifo_base(0x0),
-    req_reg_base(0x0),
-    req_fifo_base(0x0),
-    name(strdup(devname))
-{
-  int rc = portalOpen(addrbits);
-  if (rc != 0) {
-    printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
-    ALOGD("PortalInternal::PortalInternal failure rc=%d\n", rc);
-    exit(1);
-  }
-}
 PortalInternal::PortalInternal(int id)
   : fd(-1),
     ind_reg_base(0x0), 
@@ -197,6 +182,22 @@ PortalInternal::PortalInternal(int id)
   sprintf(buff, "fpga%d", dir.get_fpga(id));
   name = strdup(buff);
   int rc = portalOpen(dir.get_addrbits(id));
+  if (rc != 0) {
+    printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
+    ALOGD("PortalInternal::PortalInternal failure rc=%d\n", rc);
+    exit(1);
+  }
+}
+
+PortalInternal::PortalInternal(const char* devname, unsigned int addrbits)
+  : fd(-1),
+    ind_reg_base(0x0), 
+    ind_fifo_base(0x0),
+    req_reg_base(0x0),
+    req_fifo_base(0x0)
+{
+  name = strdup(devname);
+  int rc = portalOpen(addrbits);
   if (rc != 0) {
     printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
     ALOGD("PortalInternal::PortalInternal failure rc=%d\n", rc);
@@ -334,15 +335,6 @@ Portal::Portal(int id, PortalPoller *poller)
 
 Portal::Portal(PortalInternal *p, PortalPoller *poller) 
   : PortalInternal(p)
-{
-  if (poller == 0)
-    poller = defaultPoller;
-  this->poller = poller;
-  poller->registerInstance(this);
-}
-
-Portal::Portal(const char *devname, unsigned int addrbits, PortalPoller *poller)
-  : PortalInternal(devname,addrbits)
 {
   if (poller == 0)
     poller = defaultPoller;

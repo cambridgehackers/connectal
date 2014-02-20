@@ -42,7 +42,6 @@ class %(namespace)s%(className)s : public %(parentClass)s {
     %(statusDecl)s
 public:
     %(className)s(int id, PortalPoller *poller = 0);
-    %(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller = 0);
 '''
 proxyClassSuffixTemplate='''
 };
@@ -54,7 +53,6 @@ class %(namespace)s%(className)s : public %(parentClass)s {
 public:
     %(className)s(PortalInternal *p, PortalPoller *poller = 0);
     %(className)s(int id, PortalPoller *poller = 0);
-    %(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller = 0);
 '''
 wrapperClassSuffixTemplate='''
 protected:
@@ -68,11 +66,6 @@ proxyConstructorTemplate='''
 {
     %(statusInstantiate)s
 }
-%(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller)
- : %(parentClass)s(devname, addrbits)
-{
-    %(statusInstantiate)s
-}
 '''
 
 wrapperConstructorTemplate='''
@@ -81,9 +74,6 @@ wrapperConstructorTemplate='''
 {}
 %(namespace)s%(className)s::%(className)s(int id, PortalPoller *poller)
  : %(parentClass)s(id, poller)
-{}
-%(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller)
- : %(parentClass)s(devname, addrbits, poller)
 {}
 '''
 

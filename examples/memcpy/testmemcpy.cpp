@@ -63,9 +63,7 @@ class MemcpyIndication : public MemcpyIndicationWrapper
 {
 
 public:
-  MemcpyIndication(const char* devname, unsigned int addrbits) : MemcpyIndicationWrapper(devname,addrbits){}
   MemcpyIndication(unsigned int id) : MemcpyIndicationWrapper(id){}
-
 
   virtual void started(uint32_t words){
     fprintf(stderr, "started: words=%d\n", words);

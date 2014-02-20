@@ -60,19 +60,6 @@ void PortalMemory::InitFds()
   connect_socket(&(p_fd.write));
 #endif
 }
-PortalMemory::PortalMemory(const char *devname, unsigned int addrbits)
-  : PortalInternal(devname, addrbits)
-  , handle(1)
-  , callBacksRegistered(false)
-{
-  InitFds();
-  const char* path = "/dev/portalmem";
-  this->pa_fd = ::open(path, O_RDWR);
-  if (this->pa_fd < 0){
-    fprintf(stderr, "Failed to open %s pa_fd=%d errno=%d\n", path, this->pa_fd, errno);
-  }
-  InitSemaphores();
-}
 
 PortalMemory::PortalMemory(int id)
   : PortalInternal(id),

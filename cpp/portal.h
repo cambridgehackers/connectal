@@ -49,14 +49,14 @@ class PortalMessage
 
 class PortalInternal
 {
+ private:
+  PortalInternal(const char *name, unsigned int addrbits);
  public:
   PortalPoller *poller;
- public:
   int portalOpen(int length);
   void portalClose();
   PortalInternal(int id);
   PortalInternal(PortalInternal* p);
-  PortalInternal(const char *name, unsigned int addrbits);
   ~PortalInternal();
   int fd;
   struct portal *p;
@@ -73,6 +73,7 @@ class PortalInternal
   unsigned int req_fifo_base;
 #endif
   int sendMessage(PortalMessage *msg);
+  friend class Directory;
 };
 class Portal : public PortalInternal
 {
@@ -80,7 +81,6 @@ class Portal : public PortalInternal
   ~Portal();
   Portal(PortalInternal *p, PortalPoller *poller = 0);
   Portal(int id, PortalPoller *poller = 0);
-  Portal(const char* devname, unsigned int addrbits, PortalPoller *poller = 0);
   virtual int handleMessage(unsigned int channel) {};
 };
 
@@ -122,7 +122,6 @@ class Directory : public PortalInternal
   unsigned int intervals_offset;
 #endif
  public:
-  Directory(const char* devname, unsigned int addrbits);
   Directory();
   void scan(int display);
   unsigned int get_fpga(unsigned int id);
