@@ -22,8 +22,9 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Bscan::*;
-import GetPut::*;
+import BRAM   :: *;
+import Bscan  :: *;
+import GetPut :: *;
 
 interface BscanIndication;
     method Action bscanGet(Bit#(32) v);
@@ -35,8 +36,9 @@ endinterface
 
 module mkBscanRequest#(BscanIndication indication)(BscanRequest);
 
-   Bscan#(32) bscan <- mkBscan(1);
-   
+   BRAMServer#(Bit#(8),Bit#(32)) bscanBram <- mkBscanBram(1, 256);
+   let bscan <- mkBscan(3);
+
     rule bscanGet;
        let v <- bscan.update.get();
        indication.bscanGet(v);
