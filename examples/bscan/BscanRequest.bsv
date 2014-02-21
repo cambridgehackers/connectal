@@ -50,11 +50,11 @@ module mkBscanRequest#(BscanIndication indication)(BscanRequest);
        indication.bscanGet(v);
     endrule
    
-   method Action bscanGet(Bit#(32) addr);
+   method Action bscanGet(Bit#(8) addr);
       bscanBram.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addr, datain: ?});
    endmethod
 
-   method Action bscanPut(Bit#(32) addr, Bit#(32) v);
+   method Action bscanPut(Bit#(8) addr, Bit#(32) v);
       bscan.capture.put(v);
       bscanBram.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addr, datain: v});
    endmethod
