@@ -110,6 +110,8 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
       end
       else begin
+	 if (False && physAddr[31:24] != 0)
+	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 reqFifo.enq(req);
 	 paFifo.enq(physAddr);
       end
@@ -131,6 +133,9 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 	    reqFifo.deq();
 	    let physAddr = paFifo.first();
 	    paFifo.deq();
+
+	    if (False && physAddr[31:24] != 0)
+	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 
 	    dreqFifo.enq(req);
 	    return Axi3ReadRequest{address:physAddr, len:truncate(req.burstLen-1), id:req.tag,
@@ -337,8 +342,8 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 `endif
 	 sgl.sglist(pref, addr, len);
       endmethod
-      method Action region(Bit#(32) pointer, Bit#(40) off8, Bit#(40) off4, Bit#(40) off0);
-	 sgl.region(pointer,off8,off4,off0);
+      method Action region(Bit#(32) pointer, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
+	 sgl.region(pointer,barr8,off8,barr4,off4,barr0,off0);
       endmethod
       method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(?);

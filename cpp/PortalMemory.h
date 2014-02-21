@@ -31,7 +31,7 @@ class PortalMemory : public PortalInternal
   void reportMemoryTraffic(uint64_t words);
   void useSemaphore() { callBacksRegistered = true; }
   virtual void sglist(uint32_t pointer, uint64_t paddr, uint32_t len) = 0;
-  virtual void region(uint32_t pointer, uint64_t off8, uint64_t off4, uint64_t off0) = 0; 
+  virtual void region(uint32_t pointer, uint64_t barr8, uint32_t off8, uint64_t barr4, uint32_t off4, uint64_t barr0, uint32_t off0) = 0;
   virtual void getMemoryTraffic (const ChannelType &rc) = 0;
 };
 

@@ -152,16 +152,16 @@ int PortalMemory::reference(PortalAlloc* pa)
       fprintf(stderr, "PortalMemory::unsupported sglist size %x\n", e->length);
     }
 #ifdef MMAP_HW
-    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08zx)\n", id, i, e->dma_address, e->length);
+    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, e->dma_address, e->length);
     sglist(id, e->dma_address, e->length);
 #else
     int addr = (e->length > 0) ? size_accum : 0;
-    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08zx)\n", id, i, addr, e->length);
+    fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08x, len=%08x)\n", id, i, addr, e->length);
     sglist(id, addr , e->length);
 #endif
     size_accum += e->length;
     if (callBacksRegistered) {
-      //fprintf(stderr, "sem_wait\n");
+      fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
       sem_wait(&confSem);
     } else {
       fprintf(stderr, "ugly hack\n");
@@ -170,15 +170,38 @@ int PortalMemory::reference(PortalAlloc* pa)
   }
 
   uint64_t border = 0;
+  unsigned char entryCount = 0;
+  struct {
+    uint64_t border;
+    unsigned char idxOffset;
+  } borders[3];
   for(int i = 0; i < 3; i++){
+
+    fprintf(stderr, "i=%d entryCount=%d border=%zx shifts=%zd shifted=%zx masked=%zx idxOffset=%zx added=%zx\n",
+	    i, entryCount, border, shifts[i], border >> shifts[i], (border >> shifts[i]) &0xFF,
+	    (entryCount - ((border >> shifts[i])&0xff)) & 0xff,
+	    (((border >> shifts[i])&0xff) + (entryCount - ((border >> shifts[i])&0xff)) & 0xff) & 0xff);
+
+    if (i == 0)
+      borders[i].idxOffset = 0;
+    else
+      borders[i].idxOffset = entryCount - ((border >> shifts[i])&0xff);
+
     border += regions[i]*(1<<shifts[i]);
-    regions[i] = border;
+    borders[i].border = border;
+    entryCount += regions[i];
   }
 
-  fprintf(stderr, "regions %d (%zx %zx %zx)\n", id,regions[0], regions[1], regions[2]);
-  region(id,regions[0], regions[1], regions[2]);
+  fprintf(stderr, "shifts %d (%zd %zd %zd)\n", id,shifts[0], shifts[1], shifts[2]);
+  fprintf(stderr, "regions %d (%zd %zd %zd)\n", id,regions[0], regions[1], regions[2]);
+  fprintf(stderr, "borders %d (%zx %zx %zx)\n", id,borders[0].border, borders[1].border, borders[2].border);
+  fprintf(stderr, "idxoff  %d (%d %d %d)\n", id,borders[0].idxOffset, borders[1].idxOffset, borders[2].idxOffset);
+  region(id,
+	 borders[0].border, borders[0].idxOffset,
+	 borders[1].border, borders[1].idxOffset,
+	 borders[2].border, borders[2].idxOffset);
   if (callBacksRegistered) {
-    //fprintf(stderr, "sem_wait\n");
+    fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
     sem_wait(&confSem);
   } else {
     fprintf(stderr, "ugly hack\n");
@@ -195,6 +218,7 @@ void PortalMemory::reportMemoryTraffic(uint64_t words)
 
 void PortalMemory::configResp(uint32_t channelId)
 {
+  fprintf(stderr, "configResp %d\n", channelId);
   sem_post(&confSem);
 }
 

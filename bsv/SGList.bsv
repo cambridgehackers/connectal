@@ -42,7 +42,7 @@ typedef Tuple2#(SGListId,Bit#(DmaOffsetSize)) ReqTup;
 
 interface SGListMMU#(numeric type addrWidth);
    method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
-   method Action region(Bit#(32) pointer, Bit#(40) off8, Bit#(40) off4, Bit#(40) off0);
+   method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
    interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
 endinterface
 
@@ -50,13 +50,18 @@ typedef union tagged{
    Bit#(SGListPageShift0) OOrd0;
    Bit#(SGListPageShift4) OOrd4;
    Bit#(SGListPageShift8) OOrd8;
-} Offset deriving (Eq,Bits);
+} Offset deriving (Eq,Bits,FShow);
 
 typedef union tagged{
    Bit#(TSub#(DmaOffsetSize,SGListPageShift0)) POrd0;
    Bit#(TSub#(DmaOffsetSize,SGListPageShift4)) POrd4;
    Bit#(TSub#(DmaOffsetSize,SGListPageShift8)) POrd8;
-} Page deriving (Eq,Bits);
+} Page deriving (Eq,Bits,FShow);
+
+typedef struct {
+   Bit#(DmaOffsetSize) barrier;
+   Bit#(8) idxOffset;
+   } Region deriving (Eq,Bits,FShow);
 
 module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    
@@ -65,9 +70,9 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    Add#(c__, addrWidth, DmaOffsetSize));
 
    BRAM2Port#(Bit#(entryIdxSize), Page)       pages <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(RegionsIdx, Bit#(DmaOffsetSize)) reg8 <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(RegionsIdx, Bit#(DmaOffsetSize)) reg4 <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(RegionsIdx, Bit#(DmaOffsetSize)) reg0 <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(RegionsIdx, Region) reg8 <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(RegionsIdx, Region) reg4 <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(RegionsIdx, Region) reg0 <- mkBRAM2Server(defaultValue);
 
    Vector#(2,FIFOF#(Offset))                   offs <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(ReqTup))                   reqs <- replicateM(mkFIFOF);
@@ -96,23 +101,27 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 let off = tpl_2(reqs[i].first);
 	 Offset o = tagged OOrd0 0;
 	 Bit#(8) p = 0;
-	 Bit#(40) barrier8 <- portsel(reg8,i).response.get;
-	 Bit#(40) barrier4 <- portsel(reg4,i).response.get;
-	 Bit#(40) barrier0 <- portsel(reg0,i).response.get;
+	 Region region8 <- portsel(reg8,i).response.get;
+	 Region region4 <- portsel(reg4,i).response.get;
+	 Region region0 <- portsel(reg0,i).response.get;
+	 Bit#(40) barrier8 = region8.barrier;
+	 Bit#(40) barrier4 = region4.barrier;
+	 Bit#(40) barrier0 = region0.barrier;
+
 	 if (off < barrier8) begin
 	    //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
 	    o = tagged OOrd8 truncate(off);
-	    p = truncate(off>>page_shift8);
+	    p = truncate(off>>page_shift8) + region8.idxOffset;
 	 end 
 	 else if (off < barrier4) begin
 	    //$display("request: ptr=%h off=%h barrier4=%h", ptr, off, barrier4);
 	    o = tagged OOrd4 truncate(off);
-	    p = truncate(off>>page_shift4);
+	    p = truncate(off>>page_shift4) + region4.idxOffset;
 	 end
 	 else if (off < barrier0) begin
 	    //$display("request: ptr=%h off=%h barrier0=%h", ptr, off, barrier0);
 	    o = tagged OOrd0 truncate(off);
-	    p = truncate(off>>page_shift0);
+	    p = truncate(off>>page_shift0) + region0.idxOffset;
 	 end 
 	 else begin
 	    $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
@@ -143,12 +152,38 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 		let offset = offs[i].first;
 		case (offset) matches
 		   tagged OOrd0 .o:
-		      rv = {page.POrd0,o};
+		      begin
+			 case (page) matches
+			    tagged POrd4 .p:
+			       $display("OOrd0 vs POrd4");
+			    tagged POrd8 .p:
+			       $display("OOrd0 vs POrd8");
+			 endcase
+			 rv = {page.POrd0,o};
+		      end
 		   tagged OOrd4 .o:
-		      rv = {page.POrd4,o};
+		      begin
+			  case (page) matches
+			     tagged POrd0 .p:
+				$display("OOrd4 vs POrd0");
+			     tagged POrd8 .p:
+				$display("OOrd4 vs POrd8");
+			  endcase
+			  rv = {page.POrd4,o};
+		      end
 		   tagged OOrd8 .o:
-		      rv = {page.POrd8,o};
+		      begin
+			 case (page) matches
+			    tagged POrd0 .p:
+			       $display("OOrd8 vs POrd0");
+			    tagged POrd4 .p:
+			       $display("OOrd8 vs POrd4");
+			 endcase
+			 rv = {page.POrd8,o};
+		      end
 		endcase
+		if (False && rv[31:24] != 0)
+		   $display($format("SGList response: funny r",fshow(rv),fshow(offset),fshow(page)));
 		offs[i].deq;
 		return truncate(rv);
 	     endmethod
@@ -156,10 +191,14 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
        endinterface);
 
 
-   method Action region(Bit#(32) ptr, Bit#(40) off8, Bit#(40) off4, Bit#(40) off0);
-      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain:off8});
-      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain:off4});
-      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain:off0});
+   method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
+      Region region8 = Region { barrier: barr8, idxOffset: off8 };
+      Region region4 = Region { barrier: barr4, idxOffset: off4 };
+      Region region0 = Region { barrier: barr0, idxOffset: off0 };
+      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region8});
+      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region4});
+      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region0});
+      $display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
       dmaIndication.configResp(ptr);
    endmethod
 	       
