@@ -68,16 +68,6 @@ public:
     }
 };
 
-static void bscanPut(int v)
-{
-    printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    start_timer(0);
-    PREPAREWAIT(sem_bscan);
-    bscanRequestProxy->bscanPut(v);
-    SEMWAIT(&sem_bscan);
-    printf("bscanPut: elapsed %lld\n", lap_timer(0));
-}
-
 int main(int argc, const char **argv)
 {
     poller = new PortalPoller();
@@ -95,7 +85,9 @@ int main(int argc, const char **argv)
 
     int v = 42;
     fprintf(stderr, "Bscan put %x\n", v);
-    bscanPut(v);
+    for (int i = 0; i < 255; i++)
+      bscanRequestProxy->bscanPut(i, i*v);
+
     //print_dbg_requeste_intervals();
     poller->portalExec_end();
     return 0;

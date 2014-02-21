@@ -31,7 +31,8 @@ interface BscanIndication;
 endinterface
 
 interface BscanRequest;
-   method Action bscanPut(Bit#(32) v);
+   method Action bscanGet(Bit#(8) addr);
+   method Action bscanPut(Bit#(8) addr, Bit#(32) v);
 endinterface
 
 module mkBscanRequest#(BscanIndication indication)(BscanRequest);
@@ -39,13 +40,23 @@ module mkBscanRequest#(BscanIndication indication)(BscanRequest);
    BRAMServer#(Bit#(8),Bit#(32)) bscanBram <- mkBscanBram(1, 256);
    let bscan <- mkBscan(3);
 
-    rule bscanGet;
+    rule bscanGetRule1;
        let v <- bscan.update.get();
        indication.bscanGet(v);
     endrule
+
+    rule bscanGetRule2;
+       let v <- bscanBram.response.get();
+       indication.bscanGet(v);
+    endrule
    
-   method Action bscanPut(Bit#(32) v);
+   method Action bscanGet(Bit#(32) addr);
+      bscanBram.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addr, datain: ?});
+   endmethod
+
+   method Action bscanPut(Bit#(32) addr, Bit#(32) v);
       bscan.capture.put(v);
+      bscanBram.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addr, datain: v});
    endmethod
       
 endmodule
