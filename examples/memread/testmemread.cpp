@@ -14,11 +14,8 @@
 
 
 sem_t test_sem;
-#ifdef MMAP_HW
-int numWords = 16 << 18;
-#else
-int numWords = 16 << 10;
-#endif
+int numWords = 0x124000/4; // make sure to allocate at least one entry of each size
+
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 int mismatchCount = 0;
