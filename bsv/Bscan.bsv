@@ -25,6 +25,7 @@ import FIFOF::*;
 import Clocks::*;
 import BscanE2::*;
 import GetPut::*;
+import XilinxCells::*;
 
 interface Bscan#(numeric type width);
    interface Put#(Bit#(width)) capture;
@@ -37,24 +38,43 @@ module mkBscan#(Integer bus)(Bscan#(width));
    Reset defaultRst <- exposeCurrentReset();
 
    BscanE2 bscan <- mkBscanE2(bus);
+   Clock tck <- mkClockBUFG(clocked_by bscan.tck);
+   //Clock drck <- mkClockBUFG(clocked_by bscan.drck);
+   // From: http://siliconexposed.blogspot.com/2013/10/soc-framework-part-5.html
+   // SEL goes high whenever USERx is loaded into the instruction register,
+   //     regardless of the test state machine's current state.
+   // CAPTURE, RESET, RUNTEST, SHIFT, UPDATE are one-hot flags that go high
+   //     when the corresponding DR state is active.
+   //     When the state machine is in the IR shift path, all flags are held low.
+   // TMS is of little practical use since the state machine is already implemented for you.
+   // TCK provides direct access to the JTAG clock.
+   //     (Be sure to create a timing constraint for any signals clocked by this net.)
+   //     In my experience the Xilinx tools often do not recognize this signal
+   //     as a clock and use high-skew local routing; manual insertion of a
+   //     BUFG/BUFH is advised for optimal results.
+   // DRCK is a gated version of TCK
+   // TDI and TDO are connected to the corresponding JTAG pins when in the
+   //     SHIFT-DR state. You can connect any fabric logic you want to them.
+   // Example usage: http://www.pld.ttu.ee/~vadim/tty/IAY0570/video_pipeline/psram_app/program_rom.v
+   // Example usage: http://ohm.bu.edu/~dean/G-2TrackerWORKING/uart_test.vhd
    Reset bscanRst = bscan.reset;
 
-   Reg#(Bit#(width)) shiftReg <- mkReg(0, clocked_by bscan.tck, reset_by bscanRst);
-   SyncFIFOIfc#(Bit#(width)) infifo <- mkSyncFIFO(2, defaultClk, defaultRst, bscan.tck);
-   SyncFIFOIfc#(Bit#(width)) outfifo <- mkSyncFIFO(2, bscan.tck, bscanRst, defaultClk);
+   Reg#(Bit#(width)) shiftReg <- mkReg('h1234dead, clocked_by tck); //, reset_by bscanRst);
+   SyncFIFOIfc#(Bit#(width)) infifo <- mkSyncFIFO(2, defaultClk, defaultRst, tck);
+   SyncFIFOIfc#(Bit#(width)) outfifo <- mkSyncFIFO(2, tck, bscanRst, defaultClk);
 
    rule captureRule if (bscan.capture() == 1 && bscan.sel() == 1);
       if (infifo.notEmpty()) begin
-	 shiftReg <= infifo.first();
+	 //shiftReg <= infifo.first();
 	 infifo.deq();
       end
-      else
-	 shiftReg <= 0;
+      //else
+	 //shiftReg <= 0;
    endrule
    rule shift if (bscan.shift() == 1 && bscan.sel() == 1);
-      bscan.tdo(shiftReg[width-1]);
-      let v = (shiftReg << 1);
-      v[0] = bscan.tdi();
+      bscan.tdo(shiftReg[0]);
+      let v = (shiftReg >> 1);
+      v[width-1] = bscan.tdi();
       shiftReg <= v;
    endrule
    rule updateRule if (bscan.update() == 1 && bscan.sel() == 1);

@@ -38,10 +38,12 @@ endinterface
 import "BVI" BSCANE2 =
 module mkBscanE2#(Integer jtag_chain)(BscanE2);
     parameter JTAG_CHAIN = jtag_chain;
+    parameter DISABLE_JTAG = "FALSE";
     default_clock clk();
     default_reset rst();
     output_clock drck(DRCK);
     output_clock tck(TCK);
+    ancestor(drck, tck);
     output_reset reset(RESET) clocked_by(tck);
 
     method CAPTURE capture() clocked_by (tck) reset_by (reset);
