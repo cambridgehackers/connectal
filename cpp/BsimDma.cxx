@@ -18,7 +18,7 @@
 static struct portal p_fd = iport;
 static int fd[32];
 static unsigned char *buffer[32];
-static unsigned long buffer_len[32];
+static uint32_t buffer_len[32];
 static int size_accum[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 extern "C" {
@@ -50,48 +50,44 @@ extern "C" {
 
   }
 
-  void write_pareff32(unsigned long pref, unsigned long offset, unsigned int data){
+  void write_pareff32(uint32_t pref, uint32_t offset, unsigned int data){
     if(buffer_len[pref-1] <= offset)
-      fprintf(stderr, "write_pareff32(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
+      fprintf(stderr, "write_pareff32(pref=%08x, offset=%08x len=%x) going off the reservation \n", pref, offset, buffer_len[pref-1]);
     *(unsigned int *)&buffer[pref-1][offset] = data;
   }
 
-  unsigned int read_pareff32(unsigned long pref, unsigned long offset){
+  unsigned int read_pareff32(uint32_t pref, uint32_t offset){
     if(buffer_len[pref-1] <= offset)
-      fprintf(stderr, "read_pareff32(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
+      fprintf(stderr, "read_pareff32(pref=%08x, offset=%08x len=%x) going off the reservation \n", pref, offset, buffer_len[pref-1]);
     unsigned int rv = *(unsigned int *)&buffer[pref-1][offset];
-    //fprintf(stderr, "read_pareff32(pref=%08lx, offset=%08lx)=%08x\n", pref, offset,rv);
+    //fprintf(stderr, "read_pareff32(pref=%08x, offset=%08x)=%08x\n", pref, offset,rv);
     return rv;
   }
 
-  void write_pareff64(unsigned long pref, unsigned long offset, unsigned long long data){
+  void write_pareff64(uint32_t pref, uint32_t offset, uint64_t data){
     if(buffer_len[pref-1] <= offset)
-      fprintf(stderr, "write_pareff64(pref=%08lx, offset=%08lx, buffer_len[%ld]=%08lx) going off the reservation \n", pref, offset, pref-1, buffer_len[pref-1]);
-    *(unsigned long long *)&buffer[pref-1][offset] = data;
-    //fprintf(stderr, "write_pareff64(pref=%08lx, offset=%08lx, data=%016llx)\n", pref, offset, data);
+      fprintf(stderr, "write_pareff64(pref=%08x, offset=%08x, len=%08x) going off the reservation \n", pref, offset, buffer_len[pref-1]);
+    *(uint64_t *)&buffer[pref-1][offset] = data;
+    //fprintf(stderr, "write_pareff64(pref=%08x, offset=%08x, data=%016llx)\n", pref, offset, data);
   }
 
-  unsigned long long read_pareff64(unsigned long pref, unsigned long offset){
+  uint64_t read_pareff64(uint32_t pref, uint32_t offset){
     if(buffer_len[pref-1] <= offset)
-      fprintf(stderr, "read_pareff64(pref=%08lx, offset=%08lx) going off the reservation \n", pref, offset);
-    unsigned long long rv = *(unsigned long long *)&buffer[pref-1][offset];
-    //fprintf(stderr, "read_pareff64(pref=%08lx, offset=%08lx)=%016llx\n", pref, offset,rv);
+      fprintf(stderr, "read_pareff64(pref=%08x, offset=%08x len=%x) going off the reservation \n", pref, offset, buffer_len[pref-1]);
+    uint64_t rv = *(uint64_t *)&buffer[pref-1][offset];
+    //fprintf(stderr, "read_pareff64(pref=%08x, offset=%08x)=%016llx\n", pref, offset,rv);
     return rv;
   }
 
 
-  unsigned long pareff(unsigned long pref, unsigned long size){
-    //fprintf(stderr, "BsimDma::pareff pref=%ld, size=%08lx size_accum=%08lx\n", pref, size, size_accum[pref-1]);
+  void pareff(uint32_t pref, uint32_t size){
+    //fprintf(stderr, "BsimDma::pareff pref=%ld, size=%08x size_accum=%08x\n", pref, size, size_accum[pref-1]);
     assert(pref < 32);
     size_accum[pref-1] += size;
     if(size == 0){
       sock_fd_read(p_fd.write.s2, &(fd[pref-1]));
       buffer[pref-1] = (unsigned char *)mmap(0, size_accum[pref-1], PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref-1], 0);
       buffer_len[pref-1] = size_accum[pref-1]/sizeof(unsigned char);
-      return (unsigned long)buffer[pref-1];
-    } else {
-      return 0;
     }
   }
-
 }
