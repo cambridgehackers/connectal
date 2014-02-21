@@ -9,3 +9,39 @@
 
 ./configure --enable-ft2232_libftdi
 #     --enable-verbose --enable-verbose-jtag-io --enable-verbose-usb-io --enable-verbose-usb-comms \
+
+
+For reference, the test machine has kc705 and zedboard plugged in:
+1. lsusb
+        Bus 001 Device 031: ID 0403:6014 Future Technology Devices International, Ltd FT232H Single HS USB-UART/FIFO IC
+        Bus 001 Device 013: ID 0403:6010 Future Technology Devices International, Ltd FT2232C Dual USB-UART/FIFO IC
+
+2. djtgcfg enum
+        Found 2 device(s)
+
+        Device: Zed
+            Product Name:   Digilent Zed
+            User Name:      Zed
+            Serial Number:  210248446939
+
+        Device: JtagSmt1
+            Product Name:   Digilent JTAG-SMT1
+            User Name:      JtagSmt1
+            Serial Number:  210203339470
+
+3. djtgcfg -d JtagSmt1 init
+        Initializing scan chain...
+        Found Device ID: 43651093
+        
+        Found 1 device(s):
+            Device 0: UNKNOWN
+
+4. djtgcfg -d Zed init
+        Initializing scan chain...
+        Found Device ID: 03727093
+        Found Device ID: 4ba00477
+
+        Found 2 device(s):
+            Device 0: UNKNOWN
+            Device 1: UNKNOWN
+
