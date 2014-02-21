@@ -90,6 +90,12 @@ android_exetests: $(android_exetests)
 $(android_exetests):
 	make BOARD=zedboard -C examples/$(basename $@) android_exe
 
+ubuntu_exetests = $(addsuffix .ubuntu_exe, $(testnames))
+ubuntu_exetests: $(ubuntu_exetests)
+
+$(ubuntu_exetests):
+	make BOARD=zedboard -C examples/$(basename $@) ubuntu_exe
+
 kc705tests = $(addsuffix .kc705, $(testnames))
 kc705tests: $(kc705tests)
 
