@@ -1,7 +1,7 @@
 #
 set -x
 set -e
-scripts/importbvi.py \
+scripts/importbvi.py -C PS7 \
     -f DDR -f FTMT -f FTMD -f IRQ \
     -f EMIOGPIO -f EMIOPJTAG -f EMIOTRACE -f EMIOWDT -f EVENT -f PS -f SAXIACP \
     -c MAXIGP0ACLK -c MAXIGP1ACLK -c SAXIACPACLK \
