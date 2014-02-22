@@ -143,8 +143,8 @@ void print_timer(int loops);
 // uses the default poller
 void* portalExec(void* __x);
 /* fine grained functions for building custom portalExec */
-//void* portalExec_init(void);
-//void* portalExec_event(int timeout);
+void* portalExec_init(void);
+void* portalExec_event(int timeout);
 void portalExec_start();
 void portalExec_end(void);
 extern int portalExec_timeout;
