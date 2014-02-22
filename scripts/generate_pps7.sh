@@ -1,7 +1,7 @@
 #
 set -e
 set -x
-scripts/importbvi.py \
+scripts/importbvi.py -o PPS7.bsv -I PPS7 -P PPS7 \
     -p c_emio_gpio_width:gpio_width \
     -p c_m_axi_gp0_thread_id_width:id_width \
     -p c_m_axi_gp1_thread_id_width:id_width \
@@ -25,7 +25,7 @@ scripts/importbvi.py \
     -d DDR_ARB \
     -e C_NUM_F2P_INTR_INPUTS:16 \
     -i PS7EXTENDED:Pps7Can:Pps7Core:Pps7Dma:Pps7Enet:Pps7Event:Pps7Fclk_clktrig:Pps7Fpga:Pps7Ftmd:Pps7Ftmt:Pps7Pjtag:Pps7Sdio:Pps7Spi:Pps7Sram:Pps7Trace:Pps7Ttc:Pps7Uart:Pps7Usb:Pps7Wdt \
-    xilinx.unused/sources/processing_system7/processing_system7.v >PPS7.bsv
+    xilinx.unused/sources/processing_system7/processing_system7.v
 
 #    -m DDR_DQS:DDR_DQS_p -m DDR_Clk:DDR_Clk_p \
 #    -c ENET0_GMII_RX_CLK -c ENET0_GMII_TX_CLK \
