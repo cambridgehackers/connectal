@@ -27,7 +27,7 @@ void dump(const char *prefix, char *buf, size_t len)
 
 class TestCoreIndication : public CoreIndication
 {
-  virtual void storeAddress ( unsigned long long addr ) {
+  virtual void storeAddress ( uint64_t addr ) {
     fprintf(stderr, "storeAddress addr=%08llx *(long*)srcBuffer=%lx\n", addr, *(long*)srcBuffer);
     if (storeCount < 16) {
       std::bitset<128>     value128(0xD00DF00DDEADBEEFul);
@@ -38,10 +38,10 @@ class TestCoreIndication : public CoreIndication
       device->loadMultiple(srcAlloc.entries[0].dma_address, 7, 32);
     }
   }
-  virtual void loadAddress ( unsigned long long addr ) {
+  virtual void loadAddress ( uint64_t addr ) {
     fprintf(stderr, "loadAddress addr=%08llx\n", addr);
   }
-  virtual void loadValue ( std::bitset<128> &value, unsigned long cycles ) {
+  virtual void loadValue ( std::bitset<128> &value, uint32_t cycles ) {
     if (!srcBuffer) {
       srcBuffer = (unsigned int *)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, device->fd, 1<<16);
     }
@@ -51,11 +51,11 @@ class TestCoreIndication : public CoreIndication
 	    cycles);
     fprintf(stderr, "srcBuffer[0] = %08lx\n", *(long *)srcBuffer);
   }
-  virtual void loadMultipleLatency ( unsigned long busWidth, unsigned long beatsPerRead, unsigned long numReads,
-				     unsigned long startTime, unsigned long endTime )
+  virtual void loadMultipleLatency ( uint32_t busWidth, uint32_t beatsPerRead, uint32_t numReads,
+				     uint32_t startTime, uint32_t endTime )
   {
-    unsigned long numBytes = beatsPerRead * numReads * busWidth / 8;
-    unsigned long numCycles = endTime - startTime;
+    uint32_t numBytes = beatsPerRead * numReads * busWidth / 8;
+    uint32_t numCycles = endTime - startTime;
     double numMicroSeconds = numCycles / 125.0;
     double megabytesPerSecond = numBytes / numMicroSeconds;
 
@@ -69,10 +69,10 @@ class TestCoreRequest : public CoreRequest
 {
 public:
 
-  virtual void sglist(unsigned long off, unsigned long long addr, unsigned long len) {
+  virtual void sglist(uint32_t off, uint64_t addr, uint32_t len) {
   }
 
-  virtual void paref(unsigned long off, unsigned long ref, unsigned long foo) {
+  virtual void paref(uint32_t off, uint32_t ref, uint32_t foo) {
   }
 
   static TestCoreRequest *createTestCoreRequest(CoreIndication *indication) {

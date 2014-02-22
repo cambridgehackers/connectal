@@ -39,7 +39,7 @@ PortalAlloc *dstAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 #ifdef MMAP_HW
-int numWords = 16 << 10;
+int numWords = 16 << 18;
 #else
 int numWords = 16 << 10;
 #endif
@@ -63,14 +63,12 @@ class MemcpyIndication : public MemcpyIndicationWrapper
 {
 
 public:
-  MemcpyIndication(const char* devname, unsigned int addrbits) : MemcpyIndicationWrapper(devname,addrbits){}
   MemcpyIndication(unsigned int id) : MemcpyIndicationWrapper(id){}
 
-
-  virtual void started(unsigned long words){
-    fprintf(stderr, "started: words=%ld\n", words);
+  virtual void started(uint32_t words){
+    fprintf(stderr, "started: words=%d\n", words);
   }
-  virtual void done(unsigned long mismatch) {
+  virtual void done(uint32_t mismatch) {
     sem_post(&done_sem);
     fprintf(stderr, "done: mismatch=%d\n", mismatch);
     finished = true;
@@ -84,22 +82,22 @@ public:
       //dump("dst", (char*)dstBuffer, 128);
     // }
   }
-  virtual void rData ( unsigned long long v ){
+  virtual void rData ( uint64_t v ){
     //fprintf(stderr, "rData: %016llx\n", v);
   }
-  virtual void readReq(unsigned long v){
+  virtual void readReq(uint32_t v){
     //fprintf(stderr, "readReq %lx\n", v);
   }
-  virtual void writeReq(unsigned long v){
+  virtual void writeReq(uint32_t v){
     //fprintf(stderr, "writeReq %lx\n", v);
   }
-  virtual void writeAck(unsigned long v){
+  virtual void writeAck(uint32_t v){
     //fprintf(stderr, "writeAck %lx\n", v);
   }
-  virtual void reportStateDbg(unsigned long streamRdCnt, 
-			      unsigned long streamWrCnt, 
-			      unsigned long dataMismatch){
-    fprintf(stderr, "Memcpy::reportStateDbg: streamRdCnt=%ld, streamWrCnt=%ld, dataMismatch=%ld\n", 
+  virtual void reportStateDbg(uint32_t streamRdCnt, 
+			      uint32_t streamWrCnt, 
+			      uint32_t dataMismatch){
+    fprintf(stderr, "Memcpy::reportStateDbg: streamRdCnt=%d, streamWrCnt=%d, dataMismatch=%d\n", 
 	    streamRdCnt, streamWrCnt, dataMismatch);
   }  
 };
@@ -175,16 +173,16 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   int burstLen = 16;
 #ifdef MMAP_HW
-  int iterCnt = 2;
+  int iterCnt = 64;
 #else
   int iterCnt = 2;
 #endif
   start_timer(0);
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
-  unsigned long long cycles = lap_timer(0);
-  unsigned long long read_beats = dma->show_mem_stats(ChannelType_Write);
-  unsigned long long write_beats = dma->show_mem_stats(ChannelType_Write);
+  uint64_t cycles = lap_timer(0);
+  uint64_t read_beats = dma->show_mem_stats(ChannelType_Write);
+  uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)read_beats)/((float)cycles));
   fprintf(stderr, "memory write utilization (beats/cycle): %f\n", ((float)write_beats)/((float)cycles));
   

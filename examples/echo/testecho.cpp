@@ -47,7 +47,7 @@ PortalPoller *poller = 0;
 static void *pthread_worker(void *p)
 {
     void *rc = NULL;
-    while (CHECKSEM(sem_heard2) && !rc)
+    while (CHECKSEM(sem_heard2) && !rc && !poller->stopping)
         rc = poller->portalExec_event(poller->portalExec_timeout);
     return rc;
 }
@@ -63,18 +63,17 @@ static void init_thread()
 class EchoIndication : public EchoIndicationWrapper
 {
 public:
-    virtual void heard(unsigned long v) {
-        fprintf(stderr, "heard an echo: %ld\n", v);
+    virtual void heard(uint32_t v) {
+        fprintf(stderr, "heard an echo: %d\n", v);
 	echoRequestProxy->say2(v, 2*v);
     }
-    virtual void heard2(unsigned long a, unsigned long b) {
+    virtual void heard2(uint32_t a, uint32_t b) {
         catch_timer(20);
         SEMPOST(&sem_heard2);
         //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
         //catch_timer(25);
     }
-    EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {
-    }
+    EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
 };
 
 static void call_say(int v)
@@ -84,7 +83,7 @@ static void call_say(int v)
     PREPAREWAIT(sem_heard2);
     echoRequestProxy->say(v);
     SEMWAIT(&sem_heard2);
-    printf("call_say: elapsed %lld\n", lap_timer(0));
+    printf("call_say: elapsed %zd\n", lap_timer(0));
 }
 
 static void call_say2(int v, int v2)
@@ -108,11 +107,7 @@ int main(int argc, const char **argv)
 
     poller->portalExec_init();
     init_thread();
-    pthread_t tid;
-    if(pthread_create(&tid, NULL,  portalExec, NULL)){
-	fprintf(stderr, "error creating default exec thread\n");
-	exit(1);
-    }
+    portalExec_start();
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
@@ -123,10 +118,10 @@ int main(int argc, const char **argv)
     printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
     init_timer();
     start_timer(1);
-printf("[%s:%d] sleep5\n", __FUNCTION__, __LINE__); sleep(5);
+printf("[%s:%d] sleep2\n", __FUNCTION__, __LINE__); sleep(2);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
-unsigned long long elapsed = lap_timer(1);
+uint64_t elapsed = lap_timer(1);
     printf("TEST TYPE: "
 #ifndef SEPARATE_EVENT_THREAD
        "INLINE"
@@ -137,8 +132,9 @@ unsigned long long elapsed = lap_timer(1);
 #endif
        "\n");
     print_timer(LOOP_COUNT);
-    printf("call_say: elapsed %lld average %lld\n", elapsed, elapsed/LOOP_COUNT);
+    printf("call_say: elapsed %zd average %zd\n", elapsed, elapsed/LOOP_COUNT);
     echoRequestProxy->setLeds(9);
     poller->portalExec_end();
+    portalExec_end();
     return 0;
 }

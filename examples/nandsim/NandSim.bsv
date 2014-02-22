@@ -28,8 +28,8 @@ import BRAM::*;
 import Dma::*;
 
 interface NandSimRequest;
-   method Action startRead(Bit#(32) dramhandle, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
-   method Action startWrite(Bit#(32) dramhandle, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
+   method Action startRead(Bit#(32) drampointer, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
+   method Action startWrite(Bit#(32) drampointer, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
    method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);
 endinterface
 
@@ -48,17 +48,17 @@ endinterface
 module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64)) br) (NandSim)
    provisos (Add#(a__, asz, 32));
 
-   Reg#(DmaPointer) dramRdHandle <- mkReg(0);
+   Reg#(DmaPointer) dramRdPointer <- mkReg(0);
    Reg#(Bit#(32)) dramRdCnt <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize))      dramRdOffset <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize))      dramRdOffset <- mkReg(0);
    Reg#(Bit#(6)) dramRdTag <- mkReg(0);
    Reg#(Bit#(asz)) nandRdAddr <- mkReg(0);
    Reg#(Bit#(asz)) nandRdLimit <- mkReg(0);
 
-   Reg#(DmaPointer) dramWrHandle <- mkReg(0);
+   Reg#(DmaPointer) dramWrPointer <- mkReg(0);
    Reg#(Bit#(32)) dramWrCnt <- mkReg(0);
    Reg#(Bit#(32)) dramWrDone <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize))      dramWrOffset <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize))      dramWrOffset <- mkReg(0);
    Reg#(Bit#(6)) dramWrTag <- mkReg(0);
    Reg#(Bit#(asz)) nandWrAddr <- mkReg(0);
    Reg#(Bit#(asz)) nandWrLimit <- mkReg(0);
@@ -69,7 +69,7 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
 
    Reg#(Bit#(8)) burstLen <- mkReg(8);
    Reg#(Bit#(8)) dramWrBurstLen <- mkReg(8);
-   Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(8*8);
+   Reg#(Bit#(DmaOffsetSize)) deltaOffset <- mkReg(8*8);
 
    rule readBram if (nandRdAddr < nandRdLimit);
       br.request.put(BRAMRequest{write:False,responseOnWrite:?,address:nandRdAddr,datain:?});
@@ -90,29 +90,29 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
    /*!
    * Reads from NAND and writes to DRAM
    */
-      method Action startRead(Bit#(32) handle, Bit#(32) dramOffset, Bit#(32) nandAddr,
+      method Action startRead(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,
 			      Bit#(32) numBytes, Bit#(32) bl);
-         dramWrHandle <= handle;
-	 dramWrOffset <= truncate(dramOffset);
+         dramWrPointer <= pointer;
+	 dramWrOffset <= extend(dramOffset);
          dramWrCnt <= numBytes>>3;
          dramWrDone <= numBytes>>3;
 	 nandRdAddr <= truncate(nandAddr >> 3);
 	 nandRdLimit <= truncate((nandAddr + numBytes) >> 3);
          burstLen <= truncate(bl);
-         deltaOffset <= 8*truncate(bl);
+         deltaOffset <= 8*extend(bl);
       endmethod
    /*!
    * Reads from DRAM and writes to NAND
    */
-      method Action startWrite(Bit#(32) handle, Bit#(32) dramOffset, Bit#(32) nandAddr,
+      method Action startWrite(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,
 			       Bit#(32) numBytes, Bit#(32) bl);
-         dramRdHandle <= handle;
-         dramRdOffset <= truncate(dramOffset);
+         dramRdPointer <= pointer;
+         dramRdOffset <= extend(dramOffset);
          dramRdCnt <= numBytes>>3;
 	 nandWrAddr <= truncate(nandAddr >> 3);
 	 nandWrLimit <= truncate((nandAddr + numBytes) >> 3);
          dramWrBurstLen <= truncate(bl);
-         deltaOffset <= 8*truncate(bl);
+         deltaOffset <= 8*extend(bl);
       endmethod
 
       method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);
@@ -132,7 +132,7 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
                indication.writeDone(0); // read from DRAM is write to NAND
             //else if (dramRdCnt[5:0] == 6'b0)
             //   indication.readReq(dramRdCnt);
-            return DmaRequest { handle: dramRdHandle, address: dramRdOffset, burstLen: burstLen, tag: truncate(dramRdOffset) };
+            return DmaRequest { pointer: dramRdPointer, offset: dramRdOffset, burstLen: burstLen, tag: truncate(dramRdOffset) };
          endmethod
          method Bool notEmpty();
             return dramRdCnt > 0;
@@ -156,7 +156,7 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(asz), Bit#(64))
 	    dramWrOffset <= dramWrOffset + deltaOffset;
 	    let tag = truncate(dramWrOffset>>3);
 	    dramWrTag <= tag;
-	    return DmaRequest { handle: dramWrHandle, address: dramWrOffset, burstLen: dramWrBurstLen, tag: tag };
+	    return DmaRequest { pointer: dramWrPointer, offset: dramWrOffset, burstLen: dramWrBurstLen, tag: tag };
 	 endmethod
 	 method Bool notEmpty();
 	    return dramWrCnt > 0;

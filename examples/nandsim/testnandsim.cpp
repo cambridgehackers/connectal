@@ -27,20 +27,20 @@ class NandSimIndication : public NandSimIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
-  virtual void readDone(unsigned long v){
-    fprintf(stderr, "NandSim::readDone v=%lx\n", v);
+  virtual void readDone(uint32_t v){
+    fprintf(stderr, "NandSim::readDone v=%x\n", v);
     sem_post(&sem);
   }
-  virtual void writeDone(unsigned long v){
-    fprintf(stderr, "NandSim::writeDone v=%lx\n", v);
+  virtual void writeDone(uint32_t v){
+    fprintf(stderr, "NandSim::writeDone v=%x\n", v);
     sem_post(&sem);
   }
-  virtual void eraseDone(unsigned long v){
-    fprintf(stderr, "NandSim::eraseDone v=%lx\n", v);
+  virtual void eraseDone(uint32_t v){
+    fprintf(stderr, "NandSim::eraseDone v=%x\n", v);
     sem_post(&sem);
   }
 
-  NandSimIndication(const char* devname, unsigned int addrbits) : NandSimIndicationWrapper(devname,addrbits) {
+  NandSimIndication(int id) : NandSimIndicationWrapper(id) {
     sem_init(&sem, 0, 0);
   }
   void wait() {
@@ -63,11 +63,11 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new NandSimRequestProxy("fpga1", 16);
-  dma = new DmaConfigProxy("fpga3", 16);
+  device = new NandSimRequestProxy(IfcNames_NandSimRequest);
+  dma = new DmaConfigProxy(IfcNames_DmaConfig);
 
-  deviceIndication = new NandSimIndication("fpga2", 16);
-  dmaIndication = new DmaIndication(dma, "fpga4", 16);
+  deviceIndication = new NandSimIndication(IfcNames_NandSimIndication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "Main::allocating memory...\n");
   dma->alloc(numBytes, &srcAlloc);
@@ -93,19 +93,19 @@ int main(int argc, const char **argv)
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
 
-  fprintf(stderr, "Main::starting write %08x\n", numBytes);
+  fprintf(stderr, "Main::starting write %08zx\n", numBytes);
   device->startWrite(ref_srcAlloc, 0, 0, numBytes, 1);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting read %08x\n", numBytes);
+  fprintf(stderr, "Main::starting read %08zx\n", numBytes);
   device->startRead(ref_srcAlloc, 0, 0, numBytes, 1);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting erase %08x\n", numBytes);
+  fprintf(stderr, "Main::starting erase %08zx\n", numBytes);
   device->startErase(0, numBytes);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting read %08x\n", numBytes);
+  fprintf(stderr, "Main::starting read %08zx\n", numBytes);
   device->startRead(ref_srcAlloc, 0, 0, numBytes, 1);
   deviceIndication->wait();
 

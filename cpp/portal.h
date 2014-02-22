@@ -1,6 +1,7 @@
 #ifndef _PORTAL_H_
 #define _PORTAL_H_
 
+#include <stdint.h>
 #include <sys/types.h>
 #include <linux/ioctl.h>
 #include <sys/ioctl.h>
@@ -13,6 +14,7 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+typedef unsigned long dma_addr_t;
 #include "drivers/portalmem/portalmem.h"
 #include "drivers/zynqportal/zynqportal.h"
 
@@ -24,20 +26,10 @@ struct memrequest{
   unsigned int data;
 };
 
-unsigned int read_portal(portal *p, unsigned int addr, char *name);
-void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
-void start_timer(unsigned int i);
-unsigned long long lap_timer(unsigned int i);
-void print_dbg_request_intervals();
-
 #define MAX_TIMERS 50
 typedef struct {
-    unsigned long long total, min, max, over;
+    uint64_t total, min, max, over;
 } TIMETYPE;
-
-void init_timer(void);
-unsigned long long catch_timer(int i);
-void print_timer(int loops);
 
 class PortalPoller;
 class PortalMessage 
@@ -55,21 +47,16 @@ class PortalMessage
   virtual ~PortalMessage() {};
 }; 
 
-void* portalExec(void* __x);
-/* fine grained functions for building custom portalExec */
-void* portalExec_init(void);
-void* portalExec_event(int timeout);
-void portalExec_end(void);
-extern int portalExec_timeout;
-
 class PortalInternal
 {
+ private:
+  PortalInternal(const char *name, unsigned int addrbits);
  public:
+  PortalPoller *poller;
   int portalOpen(int length);
   void portalClose();
   PortalInternal(int id);
   PortalInternal(PortalInternal* p);
-  PortalInternal(const char *name, unsigned int addrbits);
   ~PortalInternal();
   int fd;
   struct portal *p;
@@ -86,6 +73,36 @@ class PortalInternal
   unsigned int req_fifo_base;
 #endif
   int sendMessage(PortalMessage *msg);
+  friend class Directory;
+};
+class Portal : public PortalInternal
+{
+ public:
+  ~Portal();
+  Portal(PortalInternal *p, PortalPoller *poller = 0);
+  Portal(int id, PortalPoller *poller = 0);
+  virtual int handleMessage(unsigned int channel) {};
+};
+
+class PortalPoller {
+private:
+  Portal **portal_wrappers;
+  struct pollfd *portal_fds;
+  int numFds;
+public:
+  PortalPoller();
+  int registerInstance(Portal *portal);
+  int unregisterInstance(Portal *portal);
+  void *portalExec_init(void);
+  void *portalExec_event(int timeout);
+  void portalExec_end(void);
+  void portalExec_start();
+  int portalExec_timeout;
+  int stopping;
+  sem_t sem_startup;
+
+  void* portalExec(void* __x);
+  int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
 };
 
 class Directory : public PortalInternal
@@ -105,54 +122,31 @@ class Directory : public PortalInternal
   unsigned int intervals_offset;
 #endif
  public:
-  Directory(const char* devname, unsigned int addrbits);
   Directory();
   void scan(int display);
   unsigned int get_fpga(unsigned int id);
   unsigned int get_addrbits(unsigned int id);
-  unsigned long long cycle_count();
+  uint64_t cycle_count();
   void printDbgRequestIntervals();
 };
 
-class Portal : public PortalInternal
-{
-  PortalPoller *poller;
- public:
-  ~Portal();
-  Portal(PortalInternal *p, PortalPoller *poller = 0);
-  Portal(int id, PortalPoller *poller = 0);
-  Portal(const char* devname, unsigned int addrbits, PortalPoller *poller = 0);
-  virtual int handleMessage(unsigned int channel) = 0;
-};
+unsigned int read_portal(portal *p, unsigned int addr, char *name);
+void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
 
-class PortalPoller {
-private:
-  Portal **portal_wrappers;
-  struct pollfd *portal_fds;
-  int numFds;
-public:
-  PortalPoller();
-  int registerInstance(Portal *portal);
-  int unregisterInstance(Portal *portal);
-  void *portalExec_init(void);
-  void *portalExec_event(int timeout);
-  void portalExec_end(void);
-  int portalExec_timeout;
-
-  void* portalExec(void* __x);
-  int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-};
+void start_timer(unsigned int i);
+uint64_t lap_timer(unsigned int i);
+void print_dbg_request_intervals();
+void init_timer(void);
+uint64_t catch_timer(int i);
+void print_timer(int loops);
 
 // uses the default poller
 void* portalExec(void* __x);
-
-class PortalProxy : public PortalInternal
-{
- public:
-  ~PortalProxy();
-  PortalProxy(int id);
-  PortalProxy(const char *devname, unsigned int addrbits);
-};
-
+/* fine grained functions for building custom portalExec */
+//void* portalExec_init(void);
+//void* portalExec_event(int timeout);
+void portalExec_start();
+void portalExec_end(void);
+extern int portalExec_timeout;
 
 #endif // _PORTAL_H_

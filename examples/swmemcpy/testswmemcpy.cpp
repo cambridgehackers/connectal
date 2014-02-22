@@ -16,8 +16,8 @@ size_t alloc_sz = test_sz;
 class TestPM : public PortalMemory
 {
 public:
-  virtual void sglist(unsigned long off, unsigned long long addr, unsigned long len) {}
-  virtual void paref(unsigned long off, unsigned long ref) {}
+  virtual void sglist(uint32_t off, uint64_t addr, uint32_t len) {}
+  virtual void paref(uint32_t off, uint32_t ref) {}
   TestPM() : PortalMemory(){}
 };
 
@@ -54,7 +54,7 @@ void* parent(void* pwr_sock)
   fprintf(stderr, "parent::allocating memory...\n");
   pm->alloc(alloc_sz, &dstAlloc);
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
-  fprintf(stderr, "parent::mmap %08lx\n", (unsigned long)dstBuffer);  
+  fprintf(stderr, "parent::mmap %p\n", dstBuffer);  
 
   for (int i = 0; i < numWords; i++){
     dstBuffer[i] = i;
@@ -67,7 +67,7 @@ void* parent(void* pwr_sock)
   fprintf(stderr, "parent::debug ioctl complete (%d)\n",rc);
 
   dba = (unsigned int *)mmap(0, alloc_sz, PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc.header.fd, 0);
-  fprintf(stderr, "parent::mmap %08lx\n", (unsigned long)dba);  
+  fprintf(stderr, "parent::mmap %p\n", dba);  
 
   unsigned int sg = 0;
   bool mismatch = false;

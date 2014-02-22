@@ -27,7 +27,7 @@ import Vector::*;
 import Dma::*;
 
 interface Memread2Request;
-   method Action startRead(Bit#(32) handle, Bit#(32) handle2, Bit#(32) numWords, Bit#(32) burstLen);
+   method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) burstLen);
    method Action getStateDbg();   
 endinterface
 
@@ -48,25 +48,25 @@ endinterface
 
 module mkMemread2#(Memread2Indication indication) (Memread2);
 
-   Reg#(DmaPointer) streamRdHandle <- mkReg(0);
+   Reg#(DmaPointer) streamRdPointer <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bit#(32)) putOffset <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount <- mkReg(0);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize))      offset <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize))      offset <- mkReg(0);
    FIFOF#(Vector#(2, Bit#(64))) dfifo <- mkSizedFIFOF(16);
 
-   Reg#(DmaPointer) streamRdHandle2 <- mkReg(0);
+   Reg#(DmaPointer) streamRdPointer2 <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt2 <- mkReg(0);
    Reg#(Bit#(32)) putOffset2 <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount2 <- mkReg(0);
    Reg#(Bit#(32))      srcGen2 <- mkReg(0);
-   Reg#(Bit#(DmaAddrSize))      offset2 <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize))      offset2 <- mkReg(0);
    FIFOF#(Vector#(2, Bit#(64))) dfifo2 <- mkSizedFIFOF(16);
 
    FIFOF#(Tuple3#(Bit#(32),Bit#(64),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
    Reg#(Bit#(8)) burstLen <- mkReg(8);
-   Reg#(Bit#(DmaAddrSize)) deltaOffset <- mkReg(8*8);
+   Reg#(Bit#(DmaOffsetSize)) deltaOffset <- mkReg(8*8);
 
    rule mismatch;
       let tpl = mismatchFifo.first();
@@ -100,14 +100,14 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    endrule
 
    interface Memread2Request request;
-       method Action startRead(Bit#(32) handle, Bit#(32) handle2, Bit#(32) numWords, Bit#(32) bl) if (streamRdCnt == 0);
-	  streamRdHandle <= handle;
+       method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) bl) if (streamRdCnt == 0);
+	  streamRdPointer <= pointer;
 	  streamRdCnt <= numWords>>1;
 	  putOffset <= 0;
 	  burstLen <= truncate(bl);
-	  deltaOffset <= 8*truncate(bl);
+	  deltaOffset <= 8*extend(bl);
 
-	  streamRdHandle2 <= handle;
+	  streamRdPointer2 <= pointer;
 	  streamRdCnt2 <= numWords>>1;
 	  putOffset2 <= 0;
 	  indication.started(numWords);
@@ -127,7 +127,7 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
 	    offset <= offset + deltaOffset;
 	    //else if (streamRdCnt[5:0] == 6'b0)
 	    //   indication.readReq(streamRdCnt);
-	    return DmaRequest { handle: streamRdHandle, address: offset, burstLen: burstLen, tag: truncate(offset) };
+	    return DmaRequest { pointer: streamRdPointer, offset: offset, burstLen: burstLen, tag: truncate(offset) };
 	 endmethod
 	 method Bool notEmpty();
 	    return streamRdCnt > 0 && mismatchFifo.notFull();
@@ -160,7 +160,7 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
 	    offset2 <= offset2 + deltaOffset;
 	    //else if (streamRdCnt[5:0] == 6'b0)
 	    //   indication.readReq(streamRdCnt);
-	    return DmaRequest { handle: streamRdHandle2, address: offset2, burstLen: burstLen, tag: truncate(offset2) };
+	    return DmaRequest { pointer: streamRdPointer2, offset: offset2, burstLen: burstLen, tag: truncate(offset2) };
 	 endmethod
 	 method Bool notEmpty();
 	    return streamRdCnt2 > 0;

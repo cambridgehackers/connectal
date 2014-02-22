@@ -42,7 +42,6 @@ class %(namespace)s%(className)s : public %(parentClass)s {
     %(statusDecl)s
 public:
     %(className)s(int id, PortalPoller *poller = 0);
-    %(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller = 0);
 '''
 proxyClassSuffixTemplate='''
 };
@@ -54,7 +53,6 @@ class %(namespace)s%(className)s : public %(parentClass)s {
 public:
     %(className)s(PortalInternal *p, PortalPoller *poller = 0);
     %(className)s(int id, PortalPoller *poller = 0);
-    %(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller = 0);
 '''
 wrapperClassSuffixTemplate='''
 protected:
@@ -68,11 +66,6 @@ proxyConstructorTemplate='''
 {
     %(statusInstantiate)s
 }
-%(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller)
- : %(parentClass)s(devname, addrbits)
-{
-    %(statusInstantiate)s
-}
 '''
 
 wrapperConstructorTemplate='''
@@ -82,15 +75,12 @@ wrapperConstructorTemplate='''
 %(namespace)s%(className)s::%(className)s(int id, PortalPoller *poller)
  : %(parentClass)s(id, poller)
 {}
-%(namespace)s%(className)s::%(className)s(const char *devname, unsigned int addrbits, PortalPoller *poller)
- : %(parentClass)s(devname, addrbits, poller)
-{}
 '''
 
 putFailedMethodName = "putFailed"
 
 putFailedTemplate='''
-void %(namespace)s%(className)s::%(putFailedMethodName)s(unsigned long v){
+void %(namespace)s%(className)s::%(putFailedMethodName)s(uint32_t v){
     const char* methodNameStrings[] = {%(putFailedStrings)s};
     fprintf(stderr, "putFailed: %%s\\n", methodNameStrings[v]);
     //exit(1);
@@ -116,7 +106,7 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel)
         return 0;
     }
     for (int i = (msg->size()/4)-1; i >= 0; i--) {
-        unsigned int val = *((volatile unsigned int*)(((unsigned long)ind_fifo_base) + channel * 256));
+        unsigned int val = *((volatile unsigned int*)(((unsigned char *)ind_fifo_base) + channel * 256));
         buf[i] = val;
         //fprintf(stderr, "%%08x\\n", val);
     }
@@ -479,7 +469,7 @@ class InterfaceMixin:
         subs = {'className': className,
                 'namespace': namespace,
 		'statusDecl' : '' if self.hasPutFailed() else statusDecl,
-                'parentClass': self.parentClass('PortalProxy')}
+                'parentClass': self.parentClass('PortalInternal')}
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitCDeclaration(f, True, indentation + 4, namespace)
@@ -501,7 +491,7 @@ class InterfaceMixin:
         substitutions = {'namespace': namespace,
                          'className': className,
 			 'statusInstantiate' : statusInstantiate,
-                         'parentClass': self.parentClass('PortalProxy')}
+                         'parentClass': self.parentClass('PortalInternal')}
         f.write(proxyConstructorTemplate % substitutions)
         for d in self.decls:
             d.emitCImplementation(f, className, namespace,True)
@@ -544,9 +534,9 @@ class TypeMixin:
         cid = cid.replace(' ', '')
         if cid == 'Bit':
             if self.params[0].numeric() <= 32:
-                return 'unsigned long'
+                return 'uint32_t'
             elif self.params[0].numeric() <= 64:
-                return 'unsigned long long'
+                return 'uint64_t'
             else:
                 return 'std::bitset<%d>' % (self.params[0].numeric())
         elif cid == 'Int':

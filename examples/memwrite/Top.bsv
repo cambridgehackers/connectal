@@ -24,6 +24,8 @@ import DmaIndicationProxy::*;
 // defined by user
 import Memwrite::*;
 
+typedef enum {DmaIndication, DmaConfig, MemwriteIndication, MemwriteRequest} IfcNames deriving (Eq,Bits);
+
 module mkPortalTop(StdPortalTop#(addrWidth)) 
 
    provisos(Add#(addrWidth, a__, 52),
@@ -33,16 +35,16 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(e__, c__, 40),
 	    Add#(f__, addrWidth, 40));
 
-   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(9);
+   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
 
-   MemwriteIndicationProxy memwriteIndicationProxy <- mkMemwriteIndicationProxy(7);
+   MemwriteIndicationProxy memwriteIndicationProxy <- mkMemwriteIndicationProxy(MemwriteIndication);
    Memwrite memwrite <- mkMemwrite(memwriteIndicationProxy.ifc);
-   MemwriteRequestWrapper memwriteRequestWrapper <- mkMemwriteRequestWrapper(1008,memwrite.request);
+   MemwriteRequestWrapper memwriteRequestWrapper <- mkMemwriteRequestWrapper(MemwriteRequest,memwrite.request);
 
    Vector#(1, DmaWriteClient#(64)) writeClients = cons(memwrite.dmaClient,nil);
    Integer numRequests = 8;
    AxiDmaServer#(addrWidth,64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, numRequests, nil, writeClients);
-   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(1005,dma.request);
+   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig ,dma.request);
 
    
    Vector#(4,StdPortal) portals;

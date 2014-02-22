@@ -1,17 +1,18 @@
 #ifndef _PORTAL_MEMORY_H_
 #define _PORTAL_MEMORY_H_
 
+#include <stdint.h>
 #include "portal.h"
 #include "GeneratedTypes.h"
 
-class PortalMemory : public PortalProxy 
+class PortalMemory : public PortalInternal 
 {
  private:
   int handle;
   bool callBacksRegistered;
-  sem_t sglistSem;
+  sem_t confSem;
   sem_t mtSem;
-  unsigned long long mtCnt;
+  uint64_t mtCnt;
 #ifndef MMAP_HW
   portal p_fd;
 #endif
@@ -25,12 +26,12 @@ class PortalMemory : public PortalProxy
   int dCacheFlushInval(PortalAlloc *portalAlloc, void *__p);
   int alloc(size_t size, PortalAlloc **portalAlloc);
   int reference(PortalAlloc* pa);
-  unsigned long long show_mem_stats(ChannelType rc);
-  void configResp(unsigned long channelId);
-  void reportMemoryTraffic(unsigned long long words);
+  uint64_t show_mem_stats(ChannelType rc);
+  void configResp(uint32_t channelId);
+  void reportMemoryTraffic(uint64_t words);
   void useSemaphore() { callBacksRegistered = true; }
-  virtual void sglist(unsigned long pointer, unsigned long long paddr, unsigned long len) = 0;
-  virtual void region(unsigned long pointer, const Order& order, unsigned long long paddr) = 0; 
+  virtual void sglist(uint32_t pointer, uint64_t paddr, uint32_t len) = 0;
+  virtual void region(uint32_t pointer, uint64_t barr8, uint32_t off8, uint64_t barr4, uint32_t off4, uint64_t barr0, uint32_t off0) = 0;
   virtual void getMemoryTraffic (const ChannelType &rc) = 0;
 };
 

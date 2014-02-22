@@ -43,8 +43,8 @@
 
 void PortalMemory::InitSemaphores()
 {
-  if (sem_init(&sglistSem, 1, 0)){
-    fprintf(stderr, "failed to init sglistSem errno=%d:%s\n", errno, strerror(errno));
+  if (sem_init(&confSem, 1, 0)){
+    fprintf(stderr, "failed to init confSem errno=%d:%s\n", errno, strerror(errno));
   }
   if (sem_init(&mtSem, 0, 0)){
     fprintf(stderr, "failed to init mtSem errno=%d:%s\n", errno, strerror(errno));
@@ -60,29 +60,16 @@ void PortalMemory::InitFds()
   connect_socket(&(p_fd.write));
 #endif
 }
-PortalMemory::PortalMemory(const char *devname, unsigned int addrbits)
-  : PortalProxy(devname, addrbits)
-  , handle(1)
-  , callBacksRegistered(false)
-{
-  InitFds();
-  const char* path = "/dev/portalmem";
-  this->pa_fd = ::open(path, O_RDWR);
-  if (this->pa_fd < 0){
-    fprintf(stderr, "Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);
-  }
-  InitSemaphores();
-}
 
 PortalMemory::PortalMemory(int id)
-  : PortalProxy(id),
+  : PortalInternal(id),
     handle(1)
 {
   InitFds();
   const char* path = "/dev/portalmem";
   this->pa_fd = ::open(path, O_RDWR);
   if (this->pa_fd < 0){
-    fprintf(stderr, "Failed to open %s pa_fd=%ld errno=%d\n", path, (long)this->pa_fd, errno);
+    fprintf(stderr, "Failed to open %s pa_fd=%d errno=%d\n", path, this->pa_fd, errno);
   }
   InitSemaphores();
 }
@@ -116,7 +103,7 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 
 }
 
-unsigned long long PortalMemory::show_mem_stats(ChannelType rc)
+uint64_t PortalMemory::show_mem_stats(ChannelType rc)
 {
   mtCnt = 0;
   getMemoryTraffic(rc);
@@ -134,7 +121,8 @@ int PortalMemory::reference(PortalAlloc* pa)
   const int PAGE_SHIFT0 = 12;
   const int PAGE_SHIFT4 = 16;
   const int PAGE_SHIFT8 = 20;
-  unsigned long long regions[3] = {0,0,0};
+  uint64_t regions[3] = {0,0,0};
+  uint64_t shifts[3] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
   int id = handle++;
   int ne = pa->header.numEntries;
   int size_accum = 0;
@@ -161,65 +149,77 @@ int PortalMemory::reference(PortalAlloc* pa)
     case (0):
       break;
     default:
-      fprintf(stderr, "PortalMemory::unsupported sglist size %lx\n", e->length);
+      fprintf(stderr, "PortalMemory::unsupported sglist size %x\n", e->length);
     }
 #ifdef MMAP_HW
-    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, e->dma_address, e->length);
+    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, e->dma_address, e->length);
     sglist(id, e->dma_address, e->length);
 #else
     int addr = (e->length > 0) ? size_accum : 0;
-    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, addr, e->length);
+    fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08x, len=%08x)\n", id, i, addr, e->length);
     sglist(id, addr , e->length);
 #endif
     size_accum += e->length;
     if (callBacksRegistered) {
-      //fprintf(stderr, "sem_wait\n");
-      sem_wait(&sglistSem);
+      fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
+      sem_wait(&confSem);
     } else {
       fprintf(stderr, "ugly hack\n");
       sleep(1);
     }
   }
+
+  uint64_t border = 0;
+  unsigned char entryCount = 0;
+  struct {
+    uint64_t border;
+    unsigned char idxOffset;
+  } borders[3];
   for(int i = 0; i < 3; i++){
-    Order o = (Order)i;
-    unsigned long long border = 0;
-    switch(i){
-    case 0:
-      border = regions[0]*(1<<PAGE_SHIFT8);
-      region(id, o, border);
-      regions[0] = border;
-      break;
-    case 1:
-      border = (regions[1]*(1<<PAGE_SHIFT4))+regions[0];
-      region(id, o, border);
-      regions[1] = border;
-      break;
-    case 2:
-      border = (regions[2]*(1<<PAGE_SHIFT0))+regions[1];
-      region(id, o, border);
-      regions[2] = border;
-      break;
-    }
-    if (callBacksRegistered) {
-      //fprintf(stderr, "sem_wait\n");
-      sem_wait(&sglistSem);
-    } else {
-      fprintf(stderr, "ugly hack\n");
-      sleep(1);
-    }
-  } 
+
+    fprintf(stderr, "i=%d entryCount=%d border=%zx shifts=%zd shifted=%zx masked=%zx idxOffset=%zx added=%zx\n",
+	    i, entryCount, border, shifts[i], border >> shifts[i], (border >> shifts[i]) &0xFF,
+	    (entryCount - ((border >> shifts[i])&0xff)) & 0xff,
+	    (((border >> shifts[i])&0xff) + (entryCount - ((border >> shifts[i])&0xff)) & 0xff) & 0xff);
+
+    if (i == 0)
+      borders[i].idxOffset = 0;
+    else
+      borders[i].idxOffset = entryCount - ((border >> shifts[i])&0xff);
+
+    border += regions[i]*(1<<shifts[i]);
+    borders[i].border = border;
+    entryCount += regions[i];
+  }
+
+  fprintf(stderr, "shifts %d (%zd %zd %zd)\n", id,shifts[0], shifts[1], shifts[2]);
+  fprintf(stderr, "regions %d (%zd %zd %zd)\n", id,regions[0], regions[1], regions[2]);
+  fprintf(stderr, "borders %d (%zx %zx %zx)\n", id,borders[0].border, borders[1].border, borders[2].border);
+  fprintf(stderr, "idxoff  %d (%d %d %d)\n", id,borders[0].idxOffset, borders[1].idxOffset, borders[2].idxOffset);
+  region(id,
+	 borders[0].border, borders[0].idxOffset,
+	 borders[1].border, borders[1].idxOffset,
+	 borders[2].border, borders[2].idxOffset);
+  if (callBacksRegistered) {
+    fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
+    sem_wait(&confSem);
+  } else {
+    fprintf(stderr, "ugly hack\n");
+    sleep(1);
+  }
   return id;
 }
 
-void PortalMemory::reportMemoryTraffic(unsigned long long words)
+void PortalMemory::reportMemoryTraffic(uint64_t words)
 {
   mtCnt = words;
   sem_post(&mtSem);
 }
 
-void PortalMemory::configResp(unsigned long channelId)
+void PortalMemory::configResp(uint32_t channelId)
 {
-  sem_post(&sglistSem);
+  fprintf(stderr, "configResp %d\n", channelId);
+  sem_post(&confSem);
 }
 
 int PortalMemory::alloc(size_t size, PortalAlloc **ppa)

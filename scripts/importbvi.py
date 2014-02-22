@@ -37,8 +37,6 @@ clock_params = []
 toknum = 0
 tokval = 0
 modulename = ''
-imported_name = 'PS7'
-#imported_name = 'BIBUF'
 
 class PinType(object):
     def __init__(self, mode, type, name, origname):
@@ -104,7 +102,7 @@ def parse_item():
                         paramlist['attr'].append([paramstr])
                     else:
                         paramlist['attr'].append([paramstr, plist])
-                if paramname == 'cell' and paramstr == imported_name:
+                if paramname == 'cell' and paramstr == options.cell:
                     #print('CC', paramstr)
                     modulename = paramstr
                     pinlist = {}
@@ -275,37 +273,37 @@ def generate_condition(interfacename):
     global ifdefmap
     for k, v in ifdefmap.items():
         if interfacename in v:
-            print('`ifdef', k)
+            print('`ifdef', k, file=options.outfile)
             return k
     return None
 
 def generate_interface(interfacename, paramlist, paramval, ilist, cname):
     global clock_names
     cflag = generate_condition(interfacename)
-    print('(* always_ready, always_enabled *)')
-    print('interface ' + interfacename + paramlist + ';')
+    print('(* always_ready, always_enabled *)', file=options.outfile)
+    print('interface ' + interfacename + paramlist + ';', file=options.outfile)
     for item in ilist:
         if item.mode != 'input' and item.mode != 'output' and item.mode != 'inout' and item.mode != 'interface':
             continue
         if item.mode == 'input':
             if item.type != 'Clock':
-                print('    method Action      '+item.name+'('+item.type+' v);')
+                print('    method Action      '+item.name+'('+item.type+' v);', file=options.outfile)
         elif item.mode == 'output':
             if item.type == 'Clock':
-                print('    interface Clock     '+item.name+';')
+                print('    interface Clock     '+item.name+';', file=options.outfile)
                 clock_names.append(item)
             else:
-                print('    method '+item.type+'     '+item.name+'();')
+                print('    method '+item.type+'     '+item.name+'();', file=options.outfile)
         elif item.mode == 'inout':
-            print('    interface Inout#('+item.type+')     '+item.name+';')
+            print('    interface Inout#('+item.type+')     '+item.name+';', file=options.outfile)
         elif item.mode == 'interface':
             cflag2 = generate_condition(item.type)
-            print('    interface '+item.type+ paramval +'     '+item.name+';')
+            print('    interface '+item.type+ paramval +'     '+item.name+';', file=options.outfile)
             if cflag2:
-                print('`endif')
-    print('endinterface')
+                print('`endif', file=options.outfile)
+    print('endinterface', file=options.outfile)
     if cflag:
-        print('`endif')
+        print('`endif', file=options.outfile)
 
 def goback(arg):
     titem = arg.replace('ZZB', 'I2C')
@@ -313,7 +311,7 @@ def goback(arg):
     titem = titem.replace('ZZD', 'F2P')
     return titem.replace('ZZA', 'ZZ')
 
-def regroup_items(ifname, masterlist):
+def regroup_items(masterlist):
     global paramnames, commoninterfaces
     paramnames.sort()
     masterlist = sorted(masterlist, key=lambda item: item.type if item.mode == 'parameter' else item.name)
@@ -335,6 +333,13 @@ def regroup_items(ifname, masterlist):
             indexname = ''
             if prevlist != [] and not litem.startswith(currentgroup):
                 print('UU', currentgroup, litem, prevlist, file=sys.stderr)
+            skipcheck = False
+            for checkitem in options.notfactor:
+                if litem.startswith(checkitem):
+                    skipcheck = True
+            if skipcheck:
+                newlist.append(item)
+                continue
             if m:
                 groupname = goback(m.group(1))
                 indexname = goback(m.group(2))
@@ -362,7 +367,7 @@ def regroup_items(ifname, masterlist):
             itemname = (groupname + indexname).lower()
             if itemname in ['event']:
                 itemname = itemname + '_'
-            interfacename = ifname[0].upper() + ifname[1:].lower() + groupname[0].upper() + groupname[1:].lower()
+            interfacename = options.ifprefix[0].upper() + options.ifprefix[1:].lower() + groupname[0].upper() + groupname[1:].lower()
             if not commoninterfaces.get(interfacename):
                 commoninterfaces[interfacename] = {}
             if not commoninterfaces[interfacename].get(indexname):
@@ -403,8 +408,8 @@ def generate_clocks(item, indent, prefix):
     prefname = prefix + item.origname
     if item.mode == 'input':
         if item.type == 'Clock':
-            print(indent + 'input_clock '+prefname.lower()+'('+ prefname+') = '+prefname.lower() + ';')
-            print(indent + 'input_reset '+prefname.lower()+'_reset() = '+prefname.lower() + '_reset;')
+            print(indent + 'input_clock '+prefname.lower()+'('+ prefname+') = '+prefname.lower() + ';', file=options.outfile)
+            print(indent + 'input_reset '+prefname.lower()+'_reset() = '+prefname.lower() + '_reset;', file=options.outfile)
     elif item.mode == 'interface':
         temp = commoninterfaces[item.type].get('0')
         if not temp:
@@ -425,19 +430,19 @@ def generate_instance(item, indent, prefix, clockedby_arg):
     prefname = prefix + item.origname
     if item.mode == 'input':
         if item.type != 'Clock':
-            print(indent + 'method '+item.name.lower()+'('+ prefname +')' + clockedby_arg + ' enable((*inhigh*) EN_'+prefname+');')
+            print(indent + 'method '+item.name.lower()+'('+ prefname +')' + clockedby_arg + ' enable((*inhigh*) EN_'+prefname+');', file=options.outfile)
             methodlist = methodlist + ', ' + pname + item.name.lower()
     elif item.mode == 'output':
         if item.type == 'Clock':
-            print(indent + 'output_clock '+ item.name.lower()+ '(' + prefname+');')
+            print(indent + 'output_clock '+ item.name.lower()+ '(' + prefname+');', file=options.outfile)
         else:
-            print(indent + 'method '+ prefname + ' ' + item.name.lower()+'()' + clockedby_arg + ';')
+            print(indent + 'method '+ prefname + ' ' + item.name.lower()+'()' + clockedby_arg + ';', file=options.outfile)
             methodlist = methodlist + ', ' + pname + item.name.lower()
     elif item.mode == 'inout':
-        print(indent + 'ifc_inout '+item.name.lower()+'('+ prefname+');')
+        print(indent + 'ifc_inout '+item.name.lower()+'('+ prefname+');', file=options.outfile)
     elif item.mode == 'interface':
         cflag = generate_condition(item.type)
-        print(indent + 'interface '+item.type+'     '+item.name.lower()+';')
+        print(indent + 'interface '+item.type+'     '+item.name.lower()+';', file=options.outfile)
         temp = commoninterfaces[item.type].get('0')
         if not temp:
             temp = commoninterfaces[item.type]['']
@@ -454,22 +459,22 @@ def generate_instance(item, indent, prefix, clockedby_arg):
             conditionalcf[cflag] = conditionalcf[cflag] + templist
         else:
             methodlist = methodlist + templist
-        print('    endinterface')
+        print('    endinterface', file=options.outfile)
         if cflag:
-            print('`endif')
+            print('`endif', file=options.outfile)
     return methodlist
 
-def generate_bsv(ifname):
+def generate_bsv():
     global paramnames, modulename, clock_names
-    global clock_params
+    global clock_params, options
     # generate output file
-    print('\n/*')
+    print('\n/*', file=options.outfile)
     for item in sys.argv:
-        print('   ' + item)
-    print('*/\n')
+        print('   ' + item, file=options.outfile)
+    print('*/\n', file=options.outfile)
     for item in ['Clocks', 'DefaultValue', 'XilinxCells', 'GetPut']:
-        print('import ' + item + '::*;')
-    print('')
+        print('import ' + item + '::*;', file=options.outfile)
+    print('', file=options.outfile)
     paramlist = ''
     for item in paramnames:
         paramlist = paramlist + ', numeric type ' + item
@@ -477,9 +482,9 @@ def generate_bsv(ifname):
         paramlist = '#(' + paramlist[2:] + ')'
     paramval = paramlist.replace('numeric type ', '')
     generate_inter_declarations(paramlist, paramval)
-    generate_interface(ifname, paramlist, paramval, masterlist, clock_names)
-    print('import "BVI" '+modulename + ' =')
-    temp = 'module mk' + ifname
+    generate_interface(options.ifname, paramlist, paramval, masterlist, clock_names)
+    print('import "BVI" '+modulename + ' =', file=options.outfile)
+    temp = 'module mk' + options.ifname
     for item in masterlist:
         locate_clocks(item, '')
     if clock_params != []:
@@ -488,20 +493,20 @@ def generate_bsv(ifname):
             temp = temp + sepstring + 'Clock ' + item + ', Reset ' + item + '_reset'
             sepstring = ', '
         temp = temp + ')'
-    temp = temp + '(' + ifname + paramval + ');'
-    print(temp)
+    temp = temp + '(' + options.ifname + paramval + ');'
+    print(temp, file=options.outfile)
     for item in paramnames:
-        print('    let ' + item + ' = valueOf(' + item + ');')
-    print('    default_clock clk();')
-    print('    default_reset rst();')
+        print('    let ' + item + ' = valueOf(' + item + ');', file=options.outfile)
+    print('    default_clock clk();', file=options.outfile)
+    print('    default_reset rst();', file=options.outfile)
     #for item in masterlist:
     #    if item.mode == 'parameter':
-    #        print('    parameter ' + item.type + ' = ' + item.name + ';')
+    #        print('    parameter ' + item.type + ' = ' + item.name + ';', file=options.outfile)
     if options.export:
         for item in options.export:
-            item2 = item.split(':')
-            if len(item2) == 2:
-                print('    parameter ' + item2[0] + ' = ' + item2[1] + ';')
+            colonind = item.find(':')
+            if colonind > 0:
+                print('    parameter ' + item[:colonind] + ' = ' + item[colonind+1:] + ';', file=options.outfile)
     methodlist = ''
     for item in masterlist:
         generate_clocks(item, '    ', '')
@@ -512,14 +517,14 @@ def generate_bsv(ifname):
         if conditionalcf != {}:
             for k, v in sorted(conditionalcf.items()):
                 mtemp = '(' + methodlist + v + ')'
-                print('`ifdef', k)
-                print('    schedule '+mtemp + ' CF ' + mtemp + ';')
-                print('`else')
+                print('`ifdef', k, file=options.outfile)
+                print('    schedule '+mtemp + ' CF ' + mtemp + ';', file=options.outfile)
+                print('`else', file=options.outfile)
         methodlist = '(' + methodlist + ')'
-        print('    schedule '+methodlist + ' CF ' + methodlist + ';')
+        print('    schedule '+methodlist + ' CF ' + methodlist + ';', file=options.outfile)
         if conditionalcf != {}:
-            print('`endif')
-    print('endmodule')
+            print('`endif', file=options.outfile)
+    print('endmodule', file=options.outfile)
 
 if __name__=='__main__':
     parser = optparse.OptionParser("usage: %prog [options] arg")
@@ -530,10 +535,15 @@ if __name__=='__main__':
     parser.add_option("-d", "--delete", action="append", dest="delete")
     parser.add_option("-e", "--export", action="append", dest="export")
     parser.add_option("-i", "--ifdef", action="append", dest="ifdef")
+    parser.add_option("-n", "--notfactor", action="append", dest="notfactor")
+    parser.add_option("-C", "--cell", dest="cell")
+    parser.add_option("-P", "--ifprefix", dest="ifprefix")
+    parser.add_option("-I", "--ifname", dest="ifname")
     (options, args) = parser.parse_args()
-    ifname = 'PPS7'
-    ifprefix = 'PPS7'
     #print('KK', options, args, file=sys.stderr)
+    options.outfile = open(options.filename, 'w')
+    if options.notfactor == None:
+        options.notfactor = []
     if options.param:
         for item in options.param:
             item2 = item.split(':')
@@ -553,9 +563,8 @@ if __name__=='__main__':
         print("incorrect number of arguments", file=sys.stderr)
     else:
         if args[0].endswith('.lib'):
-            ifname = 'PPS7LIB'
             parse_lib(args[0])
         else:
             parse_verilog(args[0])
-        masterlist = regroup_items(ifprefix, masterlist)
-        generate_bsv(ifname)
+        masterlist = regroup_items(masterlist)
+        generate_bsv()

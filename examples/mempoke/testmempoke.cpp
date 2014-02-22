@@ -21,14 +21,14 @@ sem_t done_sem;
 class MempokeIndication : public MempokeIndicationWrapper
 {
 public:
-  MempokeIndication(const char* devname, unsigned int addrbits) : MempokeIndicationWrapper(devname,addrbits){}
+  MempokeIndication(int id) : MempokeIndicationWrapper(id){}
 
   virtual void readWordResult (const S0 &s){
-    fprintf(stderr, "readWordResult(S0{a:%ld,b:%ld})\n", s.a, s.b);
+    fprintf(stderr, "readWordResult(S0{a:%d,b:%d})\n", s.a, s.b);
     sem_post(&done_sem);    
   }
   virtual void writeWordResult (const S0 &s){
-    fprintf(stderr, "writeWordResult(S0{a:%ld,b:%ld})\n", s.a, s.b);
+    fprintf(stderr, "writeWordResult(S0{a:%d,b:%d})\n", s.a, s.b);
     sem_post(&done_sem);    
   }
 };
@@ -50,11 +50,11 @@ int main(int argc, const char **argv)
     exit(1);
   }
 
-  device = new MempokeRequestProxy("fpga1", 16);
-  dma = new DmaConfigProxy("fpga3", 16);
+  device = new MempokeRequestProxy(IfcNames_MempokeRequest);
+  dma = new DmaConfigProxy(IfcNames_DmaConfig);
 
-  deviceIndication = new MempokeIndication("fpga2", 16);
-  dmaIndication = new DmaIndication(dma, "fpga4", 16);
+  deviceIndication = new MempokeIndication(IfcNames_MempokeIndication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
   fprintf(stderr, "allocating memory...\n");
   dma->alloc(alloc_sz, &dstAlloc);

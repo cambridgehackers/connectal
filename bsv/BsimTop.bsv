@@ -138,7 +138,6 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,ipins) constructor)(Empty)
       let handle = readAddrr[39:32];
       let addr = readAddrr[31:0];
       Bit#(dsz) v <- rw.read_pareff(extend(handle), addr);
-      //$display("read_resp: handle=%d addr=%h v=%h", handle, addr, v);
       readLen <= readLen - 1;
       readAddrr <= readAddrr + fromInteger(valueOf(dsz)/8);
       let resp = Axi3ReadResponse { data: v, resp: 0, last: pack(readLen == 1), id: readId};

@@ -70,14 +70,13 @@ class MemcpyIndication : public MemcpyIndicationWrapper
 {
 
 public:
-  MemcpyIndication(const char* devname, unsigned int addrbits) : MemcpyIndicationWrapper(devname,addrbits){}
   MemcpyIndication(unsigned int id) : MemcpyIndicationWrapper(id){}
 
 
-  virtual void started(unsigned long words){
-    fprintf(stderr, "started: words=%ld\n", words);
+  virtual void started(uint32_t words){
+    fprintf(stderr, "started: words=%d\n", words);
   }
-  virtual void done(unsigned long mismatch) {
+  virtual void done(uint32_t mismatch) {
     sem_post(&done_sem);
     finished = true;
     memcmp_fail |= mismatch;
@@ -91,22 +90,22 @@ public:
       //dump("dbg", (char*)bsBuffer,  128);   
     // }
   }
-  virtual void rData ( unsigned long long v ){
+  virtual void rData ( uint64_t v ){
     //fprintf(stderr, "rData: %016llx\n", v);
   }
-  virtual void readReq(unsigned long v){
+  virtual void readReq(uint32_t v){
     //fprintf(stderr, "readReq %lx\n", v);
   }
-  virtual void writeReq(unsigned long v){
+  virtual void writeReq(uint32_t v){
     //fprintf(stderr, "writeReq %lx\n", v);
   }
-  virtual void writeAck(unsigned long v){
+  virtual void writeAck(uint32_t v){
     //fprintf(stderr, "writeAck %lx\n", v);
   }
-  virtual void reportStateDbg(unsigned long streamRdCnt, 
-			      unsigned long streamWrCnt, 
-			      unsigned long dataMismatch){
-    fprintf(stderr, "Memcpy::reportStateDbg: streamRdCnt=%ld, streamWrCnt=%ld, dataMismatch=%ld\n", 
+  virtual void reportStateDbg(uint32_t streamRdCnt, 
+			      uint32_t streamWrCnt, 
+			      uint32_t dataMismatch){
+    fprintf(stderr, "Memcpy::reportStateDbg: streamRdCnt=%d, streamWrCnt=%d, dataMismatch=%d\n", 
 	    streamRdCnt, streamWrCnt, dataMismatch);
   }  
 };
@@ -114,14 +113,13 @@ public:
 class BlueScopeIndication : public BlueScopeIndicationWrapper
 {
 public:
-  BlueScopeIndication(const char* devname, unsigned int addrbits) : BlueScopeIndicationWrapper(devname,addrbits){}
   BlueScopeIndication(unsigned int id) : BlueScopeIndicationWrapper(id){}
 
   virtual void triggerFired( ){
     fprintf(stderr, "BlueScope::triggerFired\n");
     trigger_fired = true;
   }
-  virtual void reportStateDbg(unsigned long long mask, unsigned long long value){
+  virtual void reportStateDbg(uint64_t mask, uint64_t value){
     //fprintf(stderr, "BlueScope::reportStateDbg mask=%016llx, value=%016llx\n", mask, value);
     fprintf(stderr, "BlueScope::reportStateDbg\n");
     dump("    mask =", (char*)&mask, sizeof(mask));

@@ -225,8 +225,8 @@ int main(int argc, const char **argv)
     start_timer(0);
     device->search(ref_haystackAlloc, haystack_len);
     sem_wait(&test_sem);
-    unsigned long long cycles = lap_timer(0);
-    unsigned long long beats = dma->show_mem_stats(ChannelType_Read);
+    uint64_t cycles = lap_timer(0);
+    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
     close(needleAlloc->header.fd);
@@ -289,8 +289,8 @@ int main(int argc, const char **argv)
     start_timer(0);
     device->search(ref_haystackAlloc, haystack_len);
     sem_wait(&test_sem);
-    unsigned long long cycles = lap_timer(0);
-    unsigned long long beats = dma->show_mem_stats(ChannelType_Read);
+    uint64_t cycles = lap_timer(0);
+    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
     close(needleAlloc->header.fd);

@@ -30,9 +30,13 @@ testnames = echo     \
 	    perf     \
 	    nandsim  \
             flowcontrol \
-            bluescope 
+            bluescope \
+            bscan \
+
 
 bsimtests = $(addsuffix .bsim, $(testnames))
+
+bsimtests: $(bsimtests)
 
 $(bsimtests):
 	rm -fr examples/$(basename $@)/bluesim
@@ -41,11 +45,15 @@ $(bsimtests):
 
 zedtests = $(addsuffix .zedboard, $(testnames))
 
+zedtests: $(zedtests)
+
 $(zedtests):
 	rm -fr examples/$(basename $@)/zedboard
 	make BOARD=zedboard -C examples/$(basename $@) all
 
 zedruns = $(addsuffix .zedrun, $(testnames))
+
+zedruns: $(zedruns)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
 $(zedruns):
@@ -54,11 +62,15 @@ $(zedruns):
 
 zctests = $(addsuffix .zc702, $(testnames))
 
+zctests: $(zctests)
+
 $(zctests):
 	rm -fr examples/$(basename $@)/zc702
 	make BOARD=zc702 -C examples/$(basename $@) all
 
 zcruns = $(addsuffix .zcrun, $(testnames))
+
+zcruns: $(zcruns)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc702
 $(zcruns):
@@ -67,22 +79,33 @@ $(zcruns):
 
 bsim_exetests = $(addsuffix .bsim_exe, $(testnames))
 
+bsim_exetests: $(bsim_exetests)
+
 $(bsim_exetests):
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe
 	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
 
 android_exetests = $(addsuffix .android_exe, $(testnames))
+android_exetests: $(android_exetests)
 
 $(android_exetests):
 	make BOARD=zedboard -C examples/$(basename $@) android_exe
 
+ubuntu_exetests = $(addsuffix .ubuntu_exe, $(testnames))
+ubuntu_exetests: $(ubuntu_exetests)
+
+$(ubuntu_exetests):
+	make BOARD=zedboard -C examples/$(basename $@) ubuntu_exe
+
 kc705tests = $(addsuffix .kc705, $(testnames))
+kc705tests: $(kc705tests)
 
 $(kc705tests):
 	rm -fr examples/$(basename $@)/kc705
 	make BOARD=kc705 -C examples/$(basename $@) all
 
 kcruns = $(addsuffix .kcrun, $(testnames))
+kcruns: $(kcruns)
 
 $(kcruns):
 	(cd examples/$(basename $@)/kc705; make program)
@@ -90,12 +113,14 @@ $(kcruns):
 	catchsegv examples/$(basename $@)/kc707/jni/mkpcietop
 
 vc707tests = $(addsuffix .vc707, $(testnames))
+vc707tests: $9vc707tests)
 
 $(vc707tests):
 	rm -fr examples/$(basename $@)/vc707
 	make BOARD=vc707 -C examples/$(basename $@) all
 
 vcruns = $(addsuffix .vcrun, $(testnames))
+vcruns: $(vcruns)
 
 $(vcruns):
 	(cd examples/$(basename $@)/vc707; make program)

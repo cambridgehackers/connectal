@@ -18,7 +18,7 @@ int count = 0;
 class SinkIndication : public SinkIndicationWrapper
 {
 public:
-  virtual void returnTokens(unsigned long v) {
+  virtual void returnTokens(uint32_t v) {
     // Lock mutex and update the count variable
     pthread_mutex_lock( &count_mutex );
     count += v;

@@ -1,6 +1,14 @@
 
 /*
    scripts/importbvi.py
+   -o
+   PPS7LIB.bsv
+   -C
+   PS7
+   -I
+   PPS7LIB
+   -P
+   PPS7
    -f
    DDR
    -f

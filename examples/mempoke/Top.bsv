@@ -24,6 +24,8 @@ import DmaIndicationProxy::*;
 // defined by user
 import Mempoke::*;
 
+typedef enum {MempokeIndication, MempokeRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
+
 module mkPortalTop(StdPortalTop#(addrWidth)) 
 
    provisos(Add#(addrWidth, a__, 52),
@@ -33,7 +35,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(e__, c__, 40),
 	    Add#(f__, addrWidth, 40));
 
-   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(9);
+   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    DmaWriteBuffer#(64,16) dma_stream_write_chan <- mkDmaWriteBuffer();
    DmaReadBuffer#(64,16) dma_stream_read_chan <- mkDmaReadBuffer();
 
@@ -43,12 +45,12 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    readClients[0]  = dma_stream_read_chan.dmaClient;
    Integer               numRequests = 8;
    AxiDmaServer#(addrWidth,64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
-   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(1005,dma.request);
+   DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    
-   MempokeIndicationProxy mempokeIndicationProxy <- mkMempokeIndicationProxy(7);
+   MempokeIndicationProxy mempokeIndicationProxy <- mkMempokeIndicationProxy(MempokeIndication);
    MempokeRequest mempokeRequest <- mkMempokeRequest(mempokeIndicationProxy.ifc, dma_stream_write_chan.dmaServer, dma_stream_read_chan.dmaServer);
-   MempokeRequestWrapper mempokeRequestWrapper <- mkMempokeRequestWrapper(1008,mempokeRequest);
+   MempokeRequestWrapper mempokeRequestWrapper <- mkMempokeRequestWrapper(MempokeRequest,mempokeRequest);
 
    Vector#(4,StdPortal) portals;
    portals[0] = mempokeRequestWrapper.portalIfc;

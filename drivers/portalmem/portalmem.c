@@ -93,12 +93,14 @@ static inline int custom_vma_access(struct vm_area_struct *vma, unsigned long ad
   struct pa_buffer *buffer = vma->vm_private_data;
   struct scatterlist *sg;
   int i;
+  int offset = 0;
+  struct sg_table *table;
 
   if (!buffer)
     return -EFAULT;
-  int offset = (addr) - vma->vm_start;
+  offset = (addr) - vma->vm_start;
 
-  struct sg_table *table = buffer->sg_table;
+  table = buffer->sg_table;
   for_each_sg(table->sgl, sg, table->nents, i) {
     struct page *page = sg_page(sg);
     maddr = page_address(page);
@@ -126,7 +128,7 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
   /* Fill in vma_ops::access(), so that gdb print command works correctly */
   vma->vm_ops = &custom_vm_ops;
   vma->vm_private_data = buffer;
-  printk("pa_dma_buf_mmap %08lx %zd\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
+  printk("pa_dma_buf_mmap %p %zd\n", (dmabuf->file), dmabuf->file->f_count.counter);
   vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
   mutex_lock(&buffer->lock);
   /* now map it to userspace */
@@ -139,7 +141,7 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
     for_each_sg(table->sgl, sg, table->nents, i) {
       struct page *page = sg_page(sg);
       unsigned long remainder = vma->vm_end - addr;
-      unsigned long len = sg->length;
+      unsigned int len = sg->length; // sg->length is unsigned int
       //printk("pa_system_heap_map_user %08x %08x\n", sg->length, sg_dma_len(sg));
       //printk("(1) pa_system_heap_map_user %08lx %08lx %08lx\n", (unsigned long) page, remainder, len);
       if (offset >= (sg->length)) {
@@ -151,7 +153,7 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
         len = (sg->length) - offset;
         offset = 0;
       }
-      len = min(len, remainder);
+      len = min((unsigned long)len, remainder);
       //printk("(2) pa_system_heap_map_user %08lx %08lx %08lx\n", addr, (unsigned long)page, page_to_pfn(page));
       remap_pfn_range(vma, addr, page_to_pfn(page), len,
 		      vma->vm_page_prot);
@@ -169,7 +171,7 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 static void pa_dma_buf_release(struct dma_buf *dmabuf)
 {
   struct pa_buffer *buffer = dmabuf->priv;
-  printk("PortalAlloc::pa_dma_buf_release %08lx %zd\n", (unsigned long)(dmabuf->file), dmabuf->file->f_count.counter);
+  printk("PortalAlloc::pa_dma_buf_release %p %zd\n", (dmabuf->file), dmabuf->file->f_count.counter);
   pa_buffer_free(buffer);
 }
 
@@ -369,7 +371,8 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
 #if defined(__arm__)
     struct PortalAllocHeader header;
     struct PortalAlloc* palloc = (struct PortalAlloc*)arg;
-    unsigned long start_addr, end_addr, length;
+    dma_addr_t start_addr, end_addr;
+    unsigned int length;
     int i;
     if (copy_from_user(&header, (void __user *)arg, sizeof(header)))
       return -EFAULT;

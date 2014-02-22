@@ -7,10 +7,10 @@ Periodic *periodic = 0;
 
 class TestPeriodicIndications : public PeriodicIndications
 {
-    virtual void fired ( unsigned long v ){
+    virtual void fired ( uint32_t v ){
         fprintf(stderr, "event: %ld\n", v);
     }
-    virtual void timerUpdated ( unsigned long v ){
+    virtual void timerUpdated ( uint32_t v ){
 	fprintf(stderr, "timerUpdated %ld\n", v);
     }
 };
@@ -18,7 +18,7 @@ class TestPeriodicIndications : public PeriodicIndications
 int main(int argc, const char **argv)
 {
     periodic = Periodic::createPeriodic("fpga0", new TestPeriodicIndications);
-    unsigned long v = 100000000;
+    uint32_t v = 100000000;
     if (argc > 1)
 	v = strtoul(argv[1], 0, 0);
     fprintf(stderr, "Setting period %ld\n", v);

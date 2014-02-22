@@ -232,19 +232,6 @@ clean: hwclean
 	rm -fr verilog
 '''
 
-vivado_strategies={
-    'manual_fsm.Vivado Synthesis 2013.psg':
-'''<?xml version="1.0"?>
-<Strategy Version="1" Minor="2">
-	<StratHandle Name="manual_fsm" Flow="Vivado Synthesis 2013">
-	</StratHandle>
-	<Step Id="synth_design">
-		<Option Id="FsmExtraction">0</Option>
-	</Step>
-</Strategy>
-'''
-}
-
 def preprocess(source, defs):
     
     stack = [(True,True)]
@@ -287,22 +274,11 @@ def preprocess(source, defs):
 
     return pp(source)
 
-def write_vivado_strategies():
-    stratdir = os.path.join(os.environ['HOME'], '.Xilinx', 'Vivado', 'strategies')
-    if not os.path.exists(stratdir):
-        os.makedirs(stratdir)
-    for k in vivado_strategies:
-        print 'Writing vivado strategy file', k, ' to directory ', stratdir
-        f = open(os.path.join(stratdir, k), 'w')
-        f.write(vivado_strategies[k])
-        f.close()    
-
 if __name__=='__main__':
     exename = os.path.abspath(sys.argv[0])
     xbsvdir = os.path.dirname(exename)
     namespace = argparser.parse_args()
 
-    write_vivado_strategies()
     project_dir = os.path.expanduser(namespace.project_dir)
     srcdirs = []
 
