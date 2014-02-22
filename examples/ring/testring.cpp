@@ -54,12 +54,14 @@ size_t cmd_ring_sz = 8192;
 size_t status_ring_sz = 8192;
 size_t scratch_sz = 1<<20; /* 1 MB */
 
+int ring_init_done = 0;
+
 #define CMD_NOP 0
 #define CMD_COPY 1
 #define CMD_ECHO 2
 #define CMD_FILL 3
 
-extern void statusPoll(void);  // forward
+extern void StatusPoll(void);  // forward
 
 /* The finish function is called with arg and the event */
 
@@ -185,7 +187,7 @@ uint64_t fetch(uint64_t *p) {
 
 void waitforflag(char* f)
 {
-  while (*f == 0) statusPoll();
+  while (*f == 0) StatusPoll();
 }
 
 void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size_t size)
@@ -250,17 +252,23 @@ void ring_pop(struct SWRing *r)
   }
 }
 
-void statusPoll(void)
+void StatusPoll(void)
 {
   int i;
   uint64_t *msg;
-  msg = ring_next(&status_ring);
-  if (msg == NULL) return;
-  printf("Received %lx %lx\n", (long) msg[0], (long) msg[7]);
-  Ring_Handle_Completion((uint64_t *) msg);
-  ring_pop(&status_ring);
+  long int rc;
+  rc = (long int) portalExec_event(0);
+  assert(rc == 0);
+  if (ring_init_done) {
+    msg = ring_next(&status_ring);
+    if (msg == NULL) return;
+    printf("Received %lx %lx\n", (long) msg[0], (long) msg[7]);
+    Ring_Handle_Completion((uint64_t *) msg);
+    ring_pop(&status_ring);
+  }
 }
 
+/*
 void *statusThreadProc(void *arg)
 {
   int i;
@@ -268,22 +276,21 @@ void *statusThreadProc(void *arg)
   uint64_t *msg;
   printf("Status thread running\n");
   for (;;) {
-    statusPoll();
+    StatusPoll();
     rc = (long int) portalExec_event(0);
     assert(rc == 0);
   }
 }
-
+*/
 int portalThreadRun;
 
 void *myPortalThreadProc(void *arg)
 {
-  long int rc;
   printf("Status thread running\n");
   while (portalThreadRun) {
-    rc = (long int) portalExec_event(0);
-    assert(rc == 0);
+    StatusPoll();
   }
+  printf("status thread stopping\n");
 }
 
 
@@ -359,7 +366,7 @@ void hw_copy(void *from, void *to, unsigned count)
   sem_destroy(&my_sem);
   */
   ring_send(&cmd_ring, tcmd, flag_finish, &flag);
-  while (flag == 0) statusPoll();
+  while (flag == 0) StatusPoll();
 }
 
 void hw_copy_nb(void *from, void *to, unsigned count, char *flag)
@@ -399,7 +406,7 @@ void hw_echo(long unsigned a, long unsigned b)
   tcmd[1] = (uint64_t) a;
   tcmd[2] = (uint64_t) b;
   ring_send(&cmd_ring, tcmd, echo_finish, &myevent);
-  while (myevent.flag == 0) statusPoll();
+  while (myevent.flag == 0) StatusPoll();
   if ((myevent.event[1] != a) || (myevent.event[2] != b)) {
     printf("echo failed a=%lx b= %lx got %lx %lx\n",
 	   a, b, myevent.event[1], myevent.event[2]);
@@ -482,6 +489,7 @@ int main(int argc, const char **argv)
 
   ring_init(&cmd_ring, 0, cmdPointer, cmdBuffer, cmd_ring_sz);
   ring_init(&status_ring, 1, statusPointer, statusBuffer, status_ring_sz);
+  ring_init_done = 1;
   /*
   pthread_t ltid;
   fprintf(stderr, "creating status thread\n");
@@ -537,7 +545,7 @@ int main(int argc, const char **argv)
   {
     int done = 0;
     while(done < 10) {
-      while (flag[done] == 0) statusPoll();
+      while (flag[done] == 0) StatusPoll();
       done += 1;
       fprintf(stderr, "done %d\n", done);
     }
