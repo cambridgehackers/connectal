@@ -504,9 +504,9 @@ def generate_bsv():
     #        print('    parameter ' + item.type + ' = ' + item.name + ';', file=options.outfile)
     if options.export:
         for item in options.export:
-            item2 = item.split(':')
-            if len(item2) == 2:
-                print('    parameter ' + item2[0] + ' = ' + item2[1] + ';', file=options.outfile)
+            colonind = item.find(':')
+            if colonind > 0:
+                print('    parameter ' + item[:colonind] + ' = ' + item[colonind+1:] + ';', file=options.outfile)
     methodlist = ''
     for item in masterlist:
         generate_clocks(item, '    ', '')
