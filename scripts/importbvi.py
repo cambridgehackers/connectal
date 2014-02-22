@@ -340,30 +340,30 @@ def regroup_items(masterlist):
             if skipcheck:
                 newlist.append(item)
                 continue
+            if options.factor:
+                for tstring in options.factor:
+                    if litem.startswith(tstring):
+                        groupname = tstring
+                        fieldname = litem[len(tstring):]
+                        separator = ''
+                        m = None
+                        break
             if m:
                 groupname = goback(m.group(1))
                 indexname = goback(m.group(2))
                 separator = goback(m.group(3))
                 fieldname = goback(m.group(4))
                 #print('OO', item.name, [groupname, indexname, fieldname], file=sys.stderr)
-            else:
-                if options.factor:
-                    for tstring in options.factor:
-                        if litem.startswith(tstring):
-                            groupname = tstring
-                            fieldname = litem[len(tstring):]
-                            separator = ''
-                            break
-                if separator != '':
-                    m = re.search('(.+?)_(.+)', litem)
-                    if not m:
-                        newlist.append(item)
-                        continue
-                    if len(m.group(1)) == 1: # if only 1 character prefix, get more greedy
-                        m = re.search('(.+)_(.+)', litem)
-                    #print('OJ', item.name, m.groups(), file=sys.stderr)
-                    fieldname = m.group(2)
-                    groupname = m.group(1)
+            elif separator != '':
+                m = re.search('(.+?)_(.+)', litem)
+                if not m:
+                    newlist.append(item)
+                    continue
+                if len(m.group(1)) == 1: # if only 1 character prefix, get more greedy
+                    m = re.search('(.+)_(.+)', litem)
+                #print('OJ', item.name, m.groups(), file=sys.stderr)
+                fieldname = m.group(2)
+                groupname = m.group(1)
             itemname = (groupname + indexname).lower()
             if itemname in ['event']:
                 itemname = itemname + '_'
