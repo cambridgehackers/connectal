@@ -33,23 +33,9 @@ interface Bscan#(numeric type width);
    interface Get#(Bit#(width)) update;
 endinterface
 
-   // From: http://siliconexposed.blogspot.com/2013/10/soc-framework-part-5.html
-   // SEL goes high whenever USERx is loaded into the instruction register,
-   //     regardless of the test state machine's current state.
-   // CAPTURE, RESET, RUNTEST, SHIFT, UPDATE are one-hot flags that go high
-   //     when the corresponding DR state is active.
-   //     When the state machine is in the IR shift path, all flags are held low.
-   // TMS is of little practical use since the state machine is already implemented for you.
-   // TCK provides direct access to the JTAG clock.
-   //     (Be sure to create a timing constraint for any signals clocked by this net.)
-   //     In my experience the Xilinx tools often do not recognize this signal
-   //     as a clock and use high-skew local routing; manual insertion of a
-   //     BUFG/BUFH is advised for optimal results.
-   // DRCK is a gated version of TCK
-   // TDI and TDO are connected to the corresponding JTAG pins when in the
-   //     SHIFT-DR state. You can connect any fabric logic you want to them.
-   // Example usage: http://www.pld.ttu.ee/~vadim/tty/IAY0570/video_pipeline/psram_app/program_rom.v
-   // Example usage: http://ohm.bu.edu/~dean/G-2TrackerWORKING/uart_test.vhd
+// From: http://siliconexposed.blogspot.com/2013/10/soc-framework-part-5.html
+// Example usage: http://www.pld.ttu.ee/~vadim/tty/IAY0570/video_pipeline/psram_app/program_rom.v
+// Example usage: http://ohm.bu.edu/~dean/G-2TrackerWORKING/uart_test.vhd
 
 module mkBscan#(Integer bus)(Bscan#(width));
    let width = valueOf(width);
@@ -57,6 +43,9 @@ module mkBscan#(Integer bus)(Bscan#(width));
    Reset defaultRst <- exposeCurrentReset();
 
    BscanE2 bscan <- mkBscanE2(bus);
+       // SEL := (IR == 'USERx')
+       // CAPTURE, RESET, RUNTEST, SHIFT, UPDATE: <name> := (TAP_state == <name>-DR)
+       // TCK, TDI, TDO := corresponding JTAG pins
    Clock tck <- mkClockBUFG(clocked_by bscan.tck);
    Reset rst <- mkAsyncReset(2, defaultRst, tck);
 
