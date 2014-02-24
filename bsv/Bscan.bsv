@@ -27,6 +27,7 @@ import BRAM::*;
 import BscanE2::*;
 import GetPut::*;
 import XilinxCells::*;
+import SyncBits::*;
 
 interface Bscan#(numeric type width);
    interface Put#(Bit#(width)) capture;
@@ -39,19 +40,19 @@ endinterface
 
 module mkBscan#(Integer bus)(Bscan#(width));
    let width = valueOf(width);
-   Clock defaultClk <- exposeCurrentClock();
-   Reset defaultRst <- exposeCurrentReset();
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
 
    BscanE2 bscan <- mkBscanE2(bus);
        // SEL := (IR == 'USERx')
        // CAPTURE, RESET, RUNTEST, SHIFT, UPDATE: <name> := (TAP_state == <name>-DR)
        // TCK, TDI, TDO := corresponding JTAG pins
    Clock tck <- mkClockBUFG(clocked_by bscan.tck);
-   Reset rst <- mkAsyncReset(2, defaultRst, tck);
+   Reset rst <- mkAsyncReset(2, defaultReset, tck);
 
    Reg#(Bit#(width)) shiftReg <- mkReg(0, clocked_by tck, reset_by rst);
-   SyncFIFOIfc#(Bit#(width)) infifo <- mkSyncFIFO(2, defaultClk, defaultRst, tck);
-   SyncFIFOIfc#(Bit#(width)) outfifo <- mkSyncFIFO(2, tck, rst, defaultClk);
+   SyncFIFOIfc#(Bit#(width)) infifo <- mkSyncFIFO(2, defaultClock, defaultReset, tck);
+   SyncFIFOIfc#(Bit#(width)) outfifo <- mkSyncFIFO(2, tck, rst, defaultClock);
 
    rule captureRule if (bscan.capture() == 1 && bscan.sel() == 1);
       if (infifo.notEmpty()) begin
@@ -77,64 +78,66 @@ module mkBscan#(Integer bus)(Bscan#(width));
    interface Get update = toGet(outfifo);
 endmodule
 
-module mkBscanBram#(Integer bus, Integer memorySize)(BRAMServer#(Bit#(asz), Bit#(dsz)));
+interface BscanBram#(numeric type asz, numeric type dsz);
+    interface BRAMServer#(Bit#(asz), Bit#(dsz)) server;
+    method Bit#(4) debug;
+endinterface
+
+module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
    let asz = valueOf(asz);
    let dsz = valueOf(dsz);
 
-   Clock defaultClk <- exposeCurrentClock();
-   Reset defaultRst <- exposeCurrentReset();
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
 
-   BscanE2 bscan1 <- mkBscanE2(bus);
-   Clock tck1 <- mkClockBUFG(clocked_by bscan1.tck);
-   Reset rst1 <- mkAsyncReset(2, defaultRst, tck1);
-
-   BscanE2 bscan2 <- mkBscanE2(bus+1);
-   Clock tck2 <- mkClockBUFG(clocked_by bscan2.tck);
-   Reset rst2 <- mkAsyncReset(2, defaultRst, tck2);
-   Reg#(Bit#(asz)) addrReg <- mkReg(0, clocked_by tck1, reset_by rst1);
+   BscanE2 bscan <- mkBscanE2(bus);
+   Clock tck <- mkClockBUFG(clocked_by bscan.tck);
+   Reset rst <- mkAsyncReset(2, defaultReset, tck);
+   SyncBitIfc#(Bit#(4)) debugReg <-  mkSyncBits(0, tck, rst, defaultClock, defaultReset);
 
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = memorySize;
-   BRAM2Port#(Bit#(asz), Bit#(dsz)) bram <- mkSyncBRAM2Server(bramCfg, defaultClk, defaultRst, tck1, rst1);
+   bramCfg.latency = 1;
+   BRAM2Port#(Bit#(asz), Bit#(dsz)) bram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset, tck, rst);
 
-   Reg#(Bit#(asz)) shiftReg1 <- mkReg(0, clocked_by tck1, reset_by rst1);
-   rule captureRule1 if (bscan1.capture() == 1 && bscan1.sel() == 1);
-      shiftReg1 <= addrReg;
-   endrule
-   rule shift1 if (bscan1.shift() == 1 && bscan1.sel() == 1);
-      bscan1.tdo(shiftReg1[0]);
-      let v = (shiftReg1 >> 1);
-      v[asz-1] = bscan1.tdi();
-      shiftReg1 <= v;
-   endrule
-   rule updateRule1 if (bscan1.update() == 1 && bscan1.sel() == 1);
-      addrReg <= shiftReg1;
-      bram.portB.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addrReg, datain:?});
+   Reg#(Bit#(dsz)) shiftReg <- mkReg(0, clocked_by tck, reset_by rst);
+   Reg#(Bit#(asz)) addrReg <- mkReg(0, clocked_by tck, reset_by rst);
+   Reg#(Bool) captured <- mkReg(False, clocked_by tck, reset_by rst);
+
+   rule reset_addr if (bscan.capture() == 1 && bscan.sel() == 0);  // if we read a different reg, reset address
+       addrReg <= 0;
    endrule
 
-   Reg#(Bit#(dsz)) dataReg1 <- mkReg(0, clocked_by tck1, reset_by rst1);
-   rule bramResp;
-      let v <- bram.portB.response.get();
-      dataReg1 <= v;
+   rule captureRule if (bscan.capture() == 1 && bscan.sel() == 1);
+       bram.portB.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addrReg, datain:?});
+       captured <= True;
    endrule
 
-
-   ReadOnly#(Bit#(dsz)) dataCross <- mkNullCrossingWire(tck2, dataReg1, clocked_by tck1, reset_by rst1);
-
-   Reg#(Bit#(dsz)) shiftReg2 <- mkReg(0, clocked_by tck2, reset_by rst2);
-
-   rule captureRule2 if (bscan2.capture() == 1 && bscan2.sel() == 1);
-      shiftReg2 <= dataCross;
-   endrule
-   rule shift2 if (bscan2.shift() == 1 && bscan2.sel() == 1);
-      bscan2.tdo(shiftReg2[0]);
-      let v = (shiftReg2 >> 1);
-      v[dsz-1] = bscan2.tdi();
-      shiftReg2 <= v;
-   endrule
-   rule updateRule2 if (bscan2.update() == 1 && bscan2.sel() == 1);
+   rule captureResultRule if (captured);
+       let shift <- bram.portB.response.get();
+       shiftReg <= shift;
+       captured <= False;
    endrule
 
+   rule shift2 if (bscan.shift() == 1 && bscan.sel() == 1 && !captured);
+      let shift = shiftReg;
+      bscan.tdo(shift[0]);
+      let v = (shift >> 1);
+      v[dsz-1] = bscan.tdi();
+      shiftReg <= v;
+   endrule
 
-   return bram.portA;
+   rule updateRule2 if (bscan.update() == 1 && bscan.sel() == 1);
+      bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:shiftReg});
+      addrReg <= addrReg + 1;
+   endrule
+
+   rule debug_rule;
+       debugReg.send({bscan.sel(), bscan.capture(), bscan.shift(), bscan.update()});
+   endrule
+
+   interface server = bram.portA;
+   method Bit#(4) debug;
+       return debugReg.read();
+   endmethod
 endmodule

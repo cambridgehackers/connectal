@@ -41,6 +41,7 @@ module mkDmaReadServer2BRAM#(DmaReadServer#(busWidth) rs, BRAMServer#(a,d) br)(D
    provisos(Bits#(d,dsz),
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),
+	    Div#(busWidth,8,nb),
 	    Eq#(a),
 	    Ord#(a),
 	    Arith#(a),
@@ -59,11 +60,14 @@ module mkDmaReadServer2BRAM#(DmaReadServer#(busWidth) rs, BRAMServer#(a,d) br)(D
    Reg#(a) j <- mkReg(0);
    Reg#(Bool) jv <- mkReg(False);
    Reg#(a) n <- mkReg(0);
-   Reg#(DmaPointer) readPointer <- mkReg(0);
+   Reg#(DmaPointer) ptr <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) off <- mkReg(0);
 
    rule loadReq(iv);
-      rs.readReq.put(DmaRequest {pointer: readPointer, offset: zeroExtend(pack(i)), burstLen: 1, tag: 0});
+      //$display("lloadReq %d %d", ptr, i);
+      rs.readReq.put(DmaRequest {pointer: ptr, offset: off, burstLen: 1, tag: 0});
       i <= i+fromInteger(valueOf(nd));
+      off <= off+fromInteger(valueOf(nb));
       iv <= (i < n);
    endrule
    
@@ -74,6 +78,7 @@ module mkDmaReadServer2BRAM#(DmaReadServer#(busWidth) rs, BRAMServer#(a,d) br)(D
    endrule
    
    rule load(jv);
+      //$display("%d %d", ptr, gb.first[0]);
       br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:j, datain:gb.first[0]});
       gb.deq;
       jv <= (j < n);
@@ -92,7 +97,8 @@ module mkDmaReadServer2BRAM#(DmaReadServer#(busWidth) rs, BRAMServer#(a,d) br)(D
       i <= 0;
       j <= 0;
       n <= x;
-      readPointer <= h;
+      ptr <= h;
+      off <= 0;
    endmethod
    
    method ActionValue#(Bool) finished();

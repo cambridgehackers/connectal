@@ -88,6 +88,12 @@ extern "C" {
       sock_fd_read(p_fd.write.s2, &(fd[pref-1]));
       buffer[pref-1] = (unsigned char *)mmap(0, size_accum[pref-1], PROT_WRITE|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd[pref-1], 0);
       buffer_len[pref-1] = size_accum[pref-1]/sizeof(unsigned char);
+      // fprintf(stderr, "pareff %d %d\n", pref, size_accum[pref-1]);
+      uint32_t* ff = (uint32_t*) buffer[pref-1];
+      // fprintf(stderr, "%d: ", pref);
+      // for(int i = 0; i < 6; i++)
+      // 	fprintf(stderr, "%08x ", ff[i]);
+      // fprintf(stderr, "\n");
     }
   }
 }

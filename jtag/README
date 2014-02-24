@@ -1,15 +1,17 @@
 #
-#wget http://downloads.sourceforge.net/project/openocd/openocd/0.7.0/openocd-0.7.0.tar.bz2
-#
-#    http://www.digilentinc.com/Products/Detail.cfm?NavPath=2,395,923&Prod=JTAG-SMT1
-#    http://wiki.analog.com/resources/eval/user-guides/ad-fmcomms1-ebz/quickstart/microblaze_kc705
 
-#sudo apt-get install libftdi-dev
-#? libftdipp-dev
+On Ubuntu 12.04:
+    wget http://downloads.sourceforge.net/project/openocd/openocd/0.7.0/openocd-0.7.0.tar.bz2
 
-./configure --enable-ft2232_libftdi
-#     --enable-verbose --enable-verbose-jtag-io --enable-verbose-usb-io --enable-verbose-usb-comms \
+    sudo apt-get install libftdi-dev
+    #? libftdipp-dev
 
+    ./configure --enable-ft2232_libftdi
+    #     --enable-verbose --enable-verbose-jtag-io --enable-verbose-usb-io --enable-verbose-usb-comms \
+
+On Mac:
+    port install libftdi0
+    port install openocd
 
 For reference, the test machine has kc705 and zedboard plugged in:
 1. lsusb
@@ -45,3 +47,6 @@ For reference, the test machine has kc705 and zedboard plugged in:
             Device 0: UNKNOWN
             Device 1: UNKNOWN
 
+# Reference info:
+#    http://www.digilentinc.com/Products/Detail.cfm?NavPath=2,395,923&Prod=JTAG-SMT1
+#    http://wiki.analog.com/resources/eval/user-guides/ad-fmcomms1-ebz/quickstart/microblaze_kc705
