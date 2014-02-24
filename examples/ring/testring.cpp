@@ -166,8 +166,8 @@ public:
     setresult_flag = 1;
   }
   virtual void getResult(uint32_t cmd, uint32_t regist, uint64_t addr) {
-    fprintf(stderr, "getResult(cmd %d regist %d addr %zx)\n", 
-	    cmd, regist, addr);
+    //fprintf(stderr, "getResult(cmd %d regist %d addr %zx)\n", 
+    //	    cmd, regist, addr);
     /* returning query about last pointer of cmd ring */
     if ((cmd == cmd_ring.ringid) && (regist == REG_LAST)) {
       fprintf(stderr, "update cmd_ring.last %zx\n", addr);
@@ -262,7 +262,7 @@ void StatusPoll(void)
   if (ring_init_done) {
     msg = ring_next(&status_ring);
     if (msg == NULL) return;
-    printf("Received %lx %lx\n", (long) msg[0], (long) msg[7]);
+    // printf("Received %lx %lx\n", (long) msg[0], (long) msg[7]);
     Ring_Handle_Completion((uint64_t *) msg);
     ring_pop(&status_ring);
   }
