@@ -27,7 +27,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/queue.h>
-#include <semaphore.h>
 #include <sys/time.h>
 
 #include "StdDmaIndication.h"
@@ -117,10 +116,6 @@ void Ring_Handle_Completion(uint64_t *event)
   LIST_INSERT_HEAD(&completionfreelist, p, entries);
 }
 
-/*
-sem_t setresult_sem;
-sem_t getresult_sem;
-*/
 char setresult_flag = 0;
 char getresult_flag = 0;
 
@@ -164,7 +159,6 @@ public:
   virtual void setResult(uint32_t cmd, uint32_t regist, uint64_t addr) {
     fprintf(stderr, "setResult(cmd %d regist %d addr %zx)\n", 
 	    cmd, regist, addr);
-    /* sem_post(&setresult_sem); */
     setresult_flag = 1;
   }
   virtual void getResult(uint32_t cmd, uint32_t regist, uint64_t addr) {
@@ -176,7 +170,6 @@ public:
       cmd_ring.last = addr;
     }
     getresult_flag = 1;
-    /*    sem_post(&getresult_sem); */
   }
   RingIndication(unsigned int id) : RingIndicationWrapper(id){}
 };
@@ -204,12 +197,10 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   r->ringid = ringid;
   setresult_flag = 0;
   ring->set(ringid, REG_BASE, 0);         // bufferbase, relative to base
-  //sem_wait(&setresult_sem);
   waitforflag(&setresult_flag);
   setresult_flag = 0;
   ring->set(ringid, REG_END, size);      // bufferend
   waitforflag(&setresult_flag);
-  //  sem_wait(&setresult_sem);
   if (ringid == 0) {
     ring->setCmdFirst(0);         // bufferfirst
     ring->setCmdLast(0);
@@ -220,11 +211,9 @@ void ring_init(struct SWRing *r, int ringid, unsigned int ref, void * base, size
   setresult_flag = 0;
   ring->set(ringid, REG_MASK, size - 1);  // buffermask
   waitforflag(&setresult_flag);
-  //  sem_wait(&setresult_sem);
   setresult_flag = 0;
   ring->set(ringid, REG_HANDLE, ref);       // memhandle
   waitforflag(&setresult_flag);
-  //  sem_wait(&setresult_sem);
 }
 
 uint64_t *ring_next(struct SWRing *r)
@@ -316,45 +305,30 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
 {
   unsigned next_first;
   struct Ring_Completion *p;
-  //  pthread_mutex_lock(&cmd_lock);
   assert(r->first < r->size);
   /* send an inquiry every 1/4 way around the ring */
   while ((r->cached_space % (r->size >> 2)) == 0) {
     getresult_flag = 0;
     ring->get(r->ringid, REG_LAST);         // bufferlast 
     waitforflag(&getresult_flag);
-    //sem_wait(&getresult_sem);
-    //      pthread_mutex_unlock(&cmd_lock);
     r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
-    //      pthread_mutex_lock(&cmd_lock);
     if (r->cached_space != 0) break;
   }
   p = get_free_completion();
+  assert(p != NULL);
   p->finish = fp;
   p->arg = arg;
   assert (p != NULL);
+  assert(p->in_use == 1);
   cmd[7] = p->tag;
   memcpy(&r->base[r->first], cmd, 64);
   next_first = r->first + 64;
   if (next_first == r->size) next_first = 0;
   r->first = next_first;
   r->cached_space -= 64;
-  if (r->ringid == 0) {
-    ring->setCmdFirst(r->first);         // bufferfirst
-  } else {
-    ring->setStatusFirst(r->first);         // bufferfirst
-  }
-  //sem_wait(&setresult_sem);
-  //  pthread_mutex_unlock(&cmd_lock);
+  ring->setCmdFirst(r->first);         // bufferfirst
 }
 
-/*
-void sem_finish(void *arg, uint64_t *event)
-{
-  sem_t *p = (sem_t *) arg;
-  sem_post(p);
-}
-*/
 void flag_finish(void *arg, uint64_t *event)
 {
   volatile char *p = (volatile char *) arg;
@@ -365,7 +339,6 @@ void flag_finish(void *arg, uint64_t *event)
 void hw_copy(void *from, void *to, unsigned count)
 {
   uint64_t tcmd[8];
-  //  sem_t my_sem;
   char flag = 0;
   tcmd[0] = ((uint64_t) CMD_COPY) << 56;
   tcmd[1] = scratchPointer;
@@ -373,12 +346,6 @@ void hw_copy(void *from, void *to, unsigned count)
   tcmd[3] = scratchPointer;
   tcmd[4] = (uint64_t) to;
   tcmd[5] = count; // byte count
-  /* 
-  assert(sem_init(&my_sem, 1, 0) == 0);
-  ring_send(&cmd_ring, tcmd, sem_finish, &my_sem);
-  sem_wait(&my_sem);
-  sem_destroy(&my_sem);
-  */
   ring_send(&cmd_ring, tcmd, flag_finish, &flag);
   while (flag == 0) StatusPoll();
 }
@@ -473,7 +440,6 @@ void hw_echo(long unsigned a, long unsigned b)
 {
   struct CompletionEvent myevent;
   uint64_t tcmd[8];
-  //sem_init(&myevent.sem, 1, 0);
   myevent.exp_a = a;
   myevent.exp_b = b;
   myevent.flag = 0;
@@ -486,7 +452,6 @@ void hw_echo(long unsigned a, long unsigned b)
     printf("echo failed a=%lx b= %lx got %lx %lx\n",
 	   a, b, myevent.got_a, myevent.got_b);
   }
-  //sem_destroy(&myevent.sem);
   
 }
 
@@ -510,16 +475,6 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   completion_list_init();
-  /*
-  if(sem_init(&setresult_sem, 1, 0)){
-    fprintf(stderr, "failed to init setresult_sem\n");
-    return -1;
-  }
-  if(sem_init(&getresult_sem, 1, 0)){
-    fprintf(stderr, "failed to init getresult_sem\n");
-    return -1;
-  }
-  */
   ring = new RingRequestProxy(IfcNames_RingRequest);
   dma = new DmaConfigProxy(IfcNames_DmaRequest);
   dmaIndication = new DmaIndication(IfcNames_DmaIndication);
