@@ -63,6 +63,7 @@ int ring_init_done = 0;
 
 extern void StatusPoll(void);  // forward
 
+
 /* The finish function is called with arg and the event */
 
 struct Ring_Completion {
@@ -76,45 +77,6 @@ struct Ring_Completion {
 struct Ring_Completion completion[1024];
 
 STAILQ_HEAD(completionlisthead, Ring_Completion) completionfreelist;
-
-void completion_list_init()
-{
-  int i;
-  STAILQ_INIT(&completionfreelist);
-  for (i = 1; i < 1024; i += 1) 
-    {
-      completion[i].tag = i;  /* non zero! */
-      completion[i].in_use = 0;
-      completion[i].finish = NULL;
-      completion[i].arg = NULL;
-      STAILQ_INSERT_TAIL(&completionfreelist, &completion[i], entries);
-    }
-}
-
-struct Ring_Completion *get_free_completion()
-{
-  struct Ring_Completion *p;
-  if STAILQ_EMPTY(&completionfreelist) return(NULL);
-  p = STAILQ_FIRST(&completionfreelist);
-  STAILQ_REMOVE(p, entries);
-  assert(p->in_use == 0);
-  p->in_use = 1;
-  return(p);
-}
-
-void Ring_Handle_Completion(uint64_t *event)
-{
-  struct Ring_Completion *p;
-  unsigned tag = event[7] & 0xffff;
-  assert(tag < 1024);
-  p = &completion[tag];
-  assert(p->in_use == 1);
-  p->in_use = 0;
-  if (p->finish) (*p->finish)(p->arg, event);
-  event[7] = 0L;  /* mark unused for next time around */
-  printf("tag %d returned\n", tag);
-  STAILQ_INSERT_TAIL(&completionfreelist, p, entries);
-}
 
 char setresult_flag = 0;
 char getresult_flag = 0;
@@ -142,6 +104,45 @@ struct SWRing {
 
 struct SWRing cmd_ring;
 struct SWRing status_ring;
+
+void completion_list_init()
+{
+  int i;
+  STAILQ_INIT(&completionfreelist);
+  for (i = 1; i < 1024; i += 1) 
+    {
+      completion[i].tag = i;  /* non zero! */
+      completion[i].in_use = 0;
+      completion[i].finish = NULL;
+      completion[i].arg = NULL;
+      STAILQ_INSERT_TAIL(&completionfreelist, &completion[i], entries);
+    }
+}
+
+struct Ring_Completion *get_free_completion()
+{
+  struct Ring_Completion *p;
+  if STAILQ_EMPTY(&completionfreelist) return(NULL);
+  p = STAILQ_FIRST(&completionfreelist);
+  STAILQ_REMOVE_HEAD(&completionfreelist, entries);
+  assert(p->in_use == 0);
+  p->in_use = 1;
+  return(p);
+}
+
+void Ring_Handle_Completion(uint64_t *event)
+{
+  struct Ring_Completion *p;
+  unsigned tag = event[7] & 0xffff;
+  assert(tag < 1024);
+  p = &completion[tag];
+  assert(p->in_use == 1);
+  p->in_use = 0;
+  if (p->finish) (*p->finish)(p->arg, event);
+  event[7] = 0L;  /* mark unused for next time around */
+  printf("tag %d returned last %d\n", tag, status_ring.last);
+  STAILQ_INSERT_TAIL(&completionfreelist, p, entries);
+}
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -320,7 +321,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   assert (p != NULL);
   assert(p->in_use == 1);
   cmd[7] = p->tag;
-  printf("tag %d used\n", p->tag);
+  printf("tag %d used first %d\n", p->tag, r->first);
 
   memcpy(&r->base[r->first], cmd, 64);
   next_first = r->first + 64;
