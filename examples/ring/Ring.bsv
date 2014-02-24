@@ -96,7 +96,8 @@ module mkRingRequest#(RingIndication indication,
 	       seq
 	       if (cmdRing.bufferfirst != cmdRing.bufferlast) 
 		  seq
-		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", cmdRing.mempointer, cmdRing.bufferlast, 8, cmdFetchTag);
+//		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", 
+//		      cmdRing.mempointer, cmdRing.bufferlast, 8, cmdFetchTag);
 		     cmd_read_chan.readReq.put(
 			DmaRequest{pointer: cmdRing.mempointer,
 			   offset: cmdRing.bufferlast, burstLen: 8, tag: cmdFetchTag});
@@ -117,13 +118,13 @@ module mkRingRequest#(RingIndication indication,
 	       cmd <= rv;
 	    endaction
 	    // wait a cycle so cmd is valid!
-	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
+//	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
 	    cmdifc.request.put(cmd.data);
 	 endseq
 	 for (dispCtr <= 1; dispCtr < 8; dispCtr <= dispCtr + 1)
 	    action
 	       let rv <- cmd_read_chan.readData.get();
-	       $display("  cmdDispatch %h tag=%h %h", dispCtr, rv.tag, rv.data);
+//	       $display("  cmdDispatch %h tag=%h %h", dispCtr, rv.tag, rv.data);
 	       cmdifc.request.put(rv.data);
 	    endaction
       endseq
@@ -136,9 +137,9 @@ module mkRingRequest#(RingIndication indication,
       while(True) seq
 	 if (statusRing.notFull() && copyEngine.response.notEmpty())
 	    seq
-	       $display("responseArbiter copyEngine completion");
-	       $display("status write handle=%d address=%h burst=%h tag=%h",
-		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
+//	       $display("responseArbiter copyEngine completion");
+//	       $display("status write handle=%d address=%h burst=%h tag=%h",
+//		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{pointer: statusRing.mempointer, 
 		     offset: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
@@ -153,9 +154,9 @@ module mkRingRequest#(RingIndication indication,
 
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    seq
-	       $display("responseArbiter echoEngine completion");
-	       $display("status write handle=%d address=%h burst=%h tag=%h",
-		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
+//	       $display("responseArbiter echoEngine completion");
+//	       $display("status write handle=%d address=%h burst=%h tag=%h",
+//		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{pointer: statusRing.mempointer, 
 		     offset: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
