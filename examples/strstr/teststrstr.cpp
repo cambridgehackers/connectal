@@ -174,7 +174,6 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-#ifndef MMAP_HW
   if(1){
     fprintf(stderr, "simple tests\n");
     PortalAlloc *needleAlloc;
@@ -240,7 +239,6 @@ int main(int argc, const char **argv)
     close(haystackAlloc->header.fd);
     close(mpNextAlloc->header.fd);
   }
-#endif
 
 
 #ifdef MMAP_HW
@@ -283,8 +281,7 @@ int main(int argc, const char **argv)
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
-
-    int iter_cnt = 32;
+    int iter_cnt = 8;
 
     start_timer(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt);
