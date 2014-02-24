@@ -66,7 +66,7 @@ extern void StatusPoll(void);  // forward
 /* The finish function is called with arg and the event */
 
 struct Ring_Completion {
-  LIST_ENTRY(Ring_Completion) entries;
+  STAILQ_ENTRY(Ring_Completion) entries;
   int tag;     /* which completion is this */
   int in_use; /* boolean for completed */
   void (*finish)(void *, uint64_t *);
@@ -75,31 +75,30 @@ struct Ring_Completion {
 
 struct Ring_Completion completion[1024];
 
-LIST_HEAD(completionlisthead, Ring_Completion) completionfreelist;
+STAILQ_HEAD(completionlisthead, Ring_Completion) completionfreelist;
 
 void completion_list_init()
 {
   int i;
-  LIST_INIT(&completionfreelist);
+  STAILQ_INIT(&completionfreelist);
   for (i = 1; i < 1024; i += 1) 
     {
       completion[i].tag = i;  /* non zero! */
       completion[i].in_use = 0;
       completion[i].finish = NULL;
       completion[i].arg = NULL;
-      LIST_INSERT_HEAD(&completionfreelist, &completion[i], entries);
+      STAILQ_INSERT_TAIL(&completionfreelist, &completion[i], entries);
     }
 }
 
 struct Ring_Completion *get_free_completion()
 {
   struct Ring_Completion *p;
-  p = LIST_FIRST(&completionfreelist);
-  if (p) {
-    LIST_REMOVE(p, entries);
-    assert(p->in_use == 0);
-    p->in_use = 1;
-  }
+  if STAILQ_EMPTY(&completionfreelist) return(NULL);
+  p = STAILQ_FIRST(&completionfreelist);
+  STAILQ_REMOVE(p, entries);
+  assert(p->in_use == 0);
+  p->in_use = 1;
   return(p);
 }
 
@@ -113,7 +112,8 @@ void Ring_Handle_Completion(uint64_t *event)
   p->in_use = 0;
   if (p->finish) (*p->finish)(p->arg, event);
   event[7] = 0L;  /* mark unused for next time around */
-  LIST_INSERT_HEAD(&completionfreelist, p, entries);
+  printf("tag %d returned\n", tag);
+  STAILQ_INSERT_TAIL(&completionfreelist, p, entries);
 }
 
 char setresult_flag = 0;
@@ -141,8 +141,7 @@ struct SWRing {
 #define REG_HANDLE 5
 
 struct SWRing cmd_ring;
- struct SWRing status_ring;
-// pthread_mutex_t cmd_lock = PTHREAD_MUTEX_INITIALIZER;
+struct SWRing status_ring;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -321,6 +320,8 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   assert (p != NULL);
   assert(p->in_use == 1);
   cmd[7] = p->tag;
+  printf("tag %d used\n", p->tag);
+
   memcpy(&r->base[r->first], cmd, 64);
   next_first = r->first + 64;
   if (next_first == r->size) next_first = 0;
