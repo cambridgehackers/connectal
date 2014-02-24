@@ -16,7 +16,7 @@ import Dma::*;
 interface RingBuffer;
    method Bool notEmpty();
    method Bool notFull();
-   method Action push(Bit#(8) num);
+   method Action push();
    method Action popfetch();
    method Action popack();
    interface Reg#(Bit#(DmaOffsetSize)) bufferfirst;
@@ -93,15 +93,15 @@ module mkRingBuffer(RingBuffer);
    endmethod
 
    method Action push();
-   rbufferfirst <= (rbufferfirst + zeroExtend(64)) & rbuffermask;
+   rbufferfirst <= (rbufferfirst + 64) & rbuffermask;
    endmethod
 
    method Action popfetch();
-   rbufferlast <= (rbufferlastfetch + zeroExtend(64)) & rbuffermask;
+   rbufferlastfetch <= (rbufferlastfetch + 64) & rbuffermask;
    endmethod
 
    method Action popack();
-   rbufferlast <= (rbufferlastack + zeroExtend(64)) & rbuffermask;
+   rbufferlastack <= (rbufferlastack + 64) & rbuffermask;
    endmethod
  
    interface Reg bufferfirst = rbufferfirst;
