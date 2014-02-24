@@ -63,7 +63,7 @@ module mkRingRequest#(RingIndication indication,
    ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
    ServerF#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
    ServerF#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
-   CompletionBuffer#(4,Void) fetchComplete <mkCompletionBuffer;
+   CompletionBuffer#(4,void) fetchComplete <- mkCompletionBuffer;
    
    RingBuffer cmdRing <- mkRingBuffer;
    RingBuffer statusRing <- mkRingBuffer;
@@ -96,14 +96,15 @@ module mkRingRequest#(RingIndication indication,
 	    if (hwenabled) 
 	       seq
 	       if (cmdRing.notEmpty()) 
-		  seq
+		  action
+		     let ct <-  fetchComplete.reserve.get();
 		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", 
-		      cmdRing.mempointer, cmdRing.bufferlast, 8, cmdFetchTag);
+		      cmdRing.mempointer, cmdRing.bufferlastfetch, 8, ct );
 		     cmd_read_chan.readReq.put(
 			DmaRequest{pointer: cmdRing.mempointer,
-			   offset: cmdRing.bufferlast, burstLen: 8, tag: cmdFetchTagfetchCompletion.reserve()});
+			   offset: cmdRing.bufferlastfetch, burstLen: 8, tag: zeroExtend(unpack(ct))});
 		     cmdRing.popfetch();
-		  endseq
+		  endaction
 	       endseq
 	 endseq
    endseq;
@@ -116,24 +117,24 @@ module mkRingRequest#(RingIndication indication,
 	    action
 	       let rv <- cmd_read_chan.readData.get();
 	       cmd <= rv;
-	       completionBuffer.complete(Tuple2(rv.tag,void));
+	       fetchComplete.complete.put(tuple2(pack(truncate(rv.tag)),?));
 	    endaction
 	    // wait a cycle so cmd is valid!
-//	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
+	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
 	    cmdifc.request.put(cmd.data);
 	 endseq
 	 for (dispCtr <= 1; dispCtr < 8; dispCtr <= dispCtr + 1)
 	    action
 	       let rv <- cmd_read_chan.readData.get();
-//	       $display("  cmdDispatch %h tag=%h %h", dispCtr, rv.tag, rv.data);
+	       $display("  cmdDispatch %h tag=%h %h", dispCtr, rv.tag, rv.data);
 	       cmdifc.request.put(rv.data);
 	    endaction
       endseq
    endseq;
    
    rule finishCmdReads;
-      let v <- completionBuffer.drain.get();
-      cmdRing.popAck();
+      let v <- fetchComplete.drain.get();
+      cmdRing.popack();
       $display("pop ack");
    endrule
    
@@ -153,7 +154,7 @@ module mkRingRequest#(RingIndication indication,
 		     let rv <- copyEngine.response.get();
 		     status_write_chan.writeData.put(DmaData{data: rv, tag: statusTag});
 		  endaction
-	       statusRing.push(64);
+	       statusRing.push();
 	       statusTag <= statusTag + 1;
 	    endseq
 
@@ -170,7 +171,7 @@ module mkRingRequest#(RingIndication indication,
 		     let rv <- echoEngine.response.get();
 		     status_write_chan.writeData.put(DmaData{data: rv, tag: statusTag});
 		  endaction
-	       statusRing.push(64);
+	       statusRing.push();
 	       statusTag <= statusTag + 1;
 	    endseq
 
@@ -190,10 +191,10 @@ module mkRingRequest#(RingIndication indication,
       // specified address. when it comes back, the doCommandRule will
       // handle it
       method Action doCommandIndirect(Bit#(64) pointer, Bit#(64) addr);
+	 let ct <- fetchComplete.reserve.get();
 	 cmd_read_chan.readReq.put(
 				   DmaRequest{pointer: truncate(pointer),
-	 offset: truncate(addr), burstLen: 8, tag: cmdFetchTag});
-   	 cmdFetchTag <= cmdFetchTag + 1;
+	 offset: truncate(addr), burstLen: 8, tag: zeroExtend(unpack(ct))});
       endmethod
    
       method Action doCommandImmediate(Bit#(64) data);
