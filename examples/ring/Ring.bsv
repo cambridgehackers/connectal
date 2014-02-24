@@ -29,6 +29,7 @@ import ClientServer::*;
 import PortalMemory::*;
 import Dma::*;
 import GetPutF::*;
+import CompletionBuffer::*;
 
 import RingTypes::*;
 import RingBuffer::*;
@@ -62,6 +63,7 @@ module mkRingRequest#(RingIndication indication,
    ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
    ServerF#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
    ServerF#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
+   CompletionBuffer#(4,Void) fetchComplete <mkCompletionBuffer;
    
    RingBuffer cmdRing <- mkRingBuffer;
    RingBuffer statusRing <- mkRingBuffer;
@@ -71,7 +73,6 @@ module mkRingRequest#(RingIndication indication,
    Reg#(Bit#(4)) ii <- mkReg(0);
    Reg#(Bit#(4)) respCtr <- mkReg(0);
    Reg#(Bit#(4)) dispCtr <- mkReg(0);
-   Reg#(Bit#(6)) cmdFetchTag <- mkReg(0);
    Reg#(Bit#(6)) statusTag <- mkReg(0);
    Reg#(Bool) cmdFetchEn <- mkReg(False);
 
@@ -89,20 +90,19 @@ module mkRingRequest#(RingIndication indication,
 
    Stmt cmdFetch =   
    seq
-//      $display("cmdFetch FSM TOP");
+      $display("cmdFetch FSM TOP");
       while (True) 
 	 seq
 	    if (hwenabled) 
 	       seq
-	       if (cmdRing.bufferfirst != cmdRing.bufferlast) 
+	       if (cmdRing.notEmpty()) 
 		  seq
-//		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", 
-//		      cmdRing.mempointer, cmdRing.bufferlast, 8, cmdFetchTag);
+		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", 
+		      cmdRing.mempointer, cmdRing.bufferlast, 8, cmdFetchTag);
 		     cmd_read_chan.readReq.put(
 			DmaRequest{pointer: cmdRing.mempointer,
-			   offset: cmdRing.bufferlast, burstLen: 8, tag: cmdFetchTag});
-		     cmdRing.pop(64);
-		     cmdFetchTag <= cmdFetchTag + 1;
+			   offset: cmdRing.bufferlast, burstLen: 8, tag: cmdFetchTagfetchCompletion.reserve()});
+		     cmdRing.popfetch();
 		  endseq
 	       endseq
 	 endseq
@@ -111,11 +111,12 @@ module mkRingRequest#(RingIndication indication,
    Stmt cmdDispatch = 
    seq
       while (True) seq
-//	 $display("cmdDispatch FSM TOP");
+	 $display("cmdDispatch FSM TOP");
 	 seq
 	    action
 	       let rv <- cmd_read_chan.readData.get();
 	       cmd <= rv;
+	       completionBuffer.complete(Tuple2(rv.tag,void));
 	    endaction
 	    // wait a cycle so cmd is valid!
 //	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
@@ -130,8 +131,12 @@ module mkRingRequest#(RingIndication indication,
       endseq
    endseq;
    
+   rule finishCmdReads;
+      let v <- completionBuffer.drain.get();
+      cmdRing.popAck();
+      $display("pop ack");
+   endrule
    
-
    Stmt responseArbiter =
    seq
       while(True) seq
