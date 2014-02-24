@@ -30,6 +30,8 @@ import AxiMasterSlave    :: *;
 import XbsvXilinxCells   :: *;
 import PS7LIB::*;
 import XADC::*;
+import BRAM::*;
+import Bscan::*;
 
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
@@ -51,6 +53,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
    let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(1)) intReg <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
+   BscanBram#(8, 32) bscanBram <- mkBscanBram(1, 256, clocked_by mainclock.c, reset_by mainclock.r);
 
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
    mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
@@ -70,6 +73,8 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    interface leds = top.leds;
    interface XADC xadc;
        method Bit#(4) gpio;
+           return bscanBram.debug();
+`ifdef BOZOIFDEF
            return {intReg, 
                  pack((ps7.debug.arvalid == 1)
                    && (ps7.debug.araddr[18:16] == 3'd1)   // /dev/fpga1
@@ -80,6 +85,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
                    && (ps7.debug.awaddr[18:16] == 3'd2)   // /dev/fpga2
                    && (ps7.debug.awaddr[15:14] == 2'd0)   // request
                    && (ps7.debug.awaddr[13:8] == 6'd1))}; //     #1
+`endif
        endmethod
    endinterface
    interface pins = top.pins;

@@ -118,23 +118,25 @@ void compute_MP_next(const char *x, int *MP_next, int m)
   }
 }
 
-void MP(const char *x, const char *t, int *MP_next, int m, int n)
+void MP(const char *x, const char *t, int *MP_next, int m, int n, int iter_cnt)
 {
-  int i = 1;
-  int j = 1;
-  fprintf(stderr, "MP starting\n");
-  while (j <= n) {
-    while ((i==m+1) || ((i>0) && (x[i-1] != t[j-1]))){
-      //fprintf(stderr, "char mismatch %d %d MP_next[i]=%d\n", i,j,MP_next[i]);
-      i = MP_next[i];
-    }
-    //fprintf(stderr, "   char match %d %d\n", i, j);
-    i = i+1;
-    j = j+1;
-    if (i==m+1){
-      fprintf(stderr, "%s occurs in t at position %d\n", x, j-i);
-      i = 1;
-      sw_match_cnt++;
+  while(iter_cnt--){
+    int i = 1;
+    int j = 1;
+    fprintf(stderr, "MP starting\n");
+    while (j <= n) {
+      while ((i==m+1) || ((i>0) && (x[i-1] != t[j-1]))){
+	//fprintf(stderr, "char mismatch %d %d MP_next[i]=%d\n", i,j,MP_next[i]);
+	i = MP_next[i];
+      }
+      //fprintf(stderr, "   char match %d %d\n", i, j);
+      i = i+1;
+      j = j+1;
+      if (i==m+1){
+	fprintf(stderr, "%s occurs in t at position %d\n", x, j-i);
+	i = 1;
+	sw_match_cnt++;
+      }
     }
   }
   fprintf(stderr, "MP exiting\n");
@@ -172,7 +174,6 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-#ifndef MMAP_HW
   if(1){
     fprintf(stderr, "simple tests\n");
     PortalAlloc *needleAlloc;
@@ -181,17 +182,13 @@ int main(int argc, const char **argv)
     unsigned int alloc_len = 16 << 2;
     
     dma->alloc(alloc_len, &needleAlloc);
-    dma->alloc(alloc_len, &haystackAlloc);
     dma->alloc(alloc_len, &mpNextAlloc);
+    dma->alloc(alloc_len, &haystackAlloc);
 
     char *needle = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, needleAlloc->header.fd, 0);
     char *haystack = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, haystackAlloc->header.fd, 0);
     int *mpNext = (int *)mmap(0, alloc_len, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, mpNextAlloc->header.fd, 0);
     
-    unsigned int ref_needleAlloc = dma->reference(needleAlloc);
-    unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);
-    unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
-
     const char *needle_text = "ababab";
     const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
     
@@ -207,23 +204,32 @@ int main(int argc, const char **argv)
 
     compute_borders(needle, border, needle_len);
     compute_MP_next(needle, mpNext, needle_len);
-    
+
     assert(mpNext[1] == 0);
     assert(border[1] == 0);
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
+    for(int i = 0; i < needle_len; i++)
+      fprintf(stderr, "%d %d\n", needle[i], mpNext[i]);
+
+    int iter_cnt = 2;
+
     start_timer(0);
-    MP(needle, haystack, mpNext, needle_len, haystack_len);
+    MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt);
     fprintf(stderr, "elapsed time (hw cycles): %lld\n", lap_timer(0));
     
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
 
+    unsigned int ref_needleAlloc = dma->reference(needleAlloc);
+    unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
+    unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);
+
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);
     start_timer(0);
-    device->search(ref_haystackAlloc, haystack_len);
+    device->search(ref_haystackAlloc, haystack_len, iter_cnt);
     sem_wait(&test_sem);
     uint64_t cycles = lap_timer(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
@@ -233,7 +239,6 @@ int main(int argc, const char **argv)
     close(haystackAlloc->header.fd);
     close(mpNextAlloc->header.fd);
   }
-#endif
 
 
 #ifdef MMAP_HW
@@ -243,7 +248,7 @@ int main(int argc, const char **argv)
     PortalAlloc *haystackAlloc;
     PortalAlloc *mpNextAlloc;
     const char *needle_text = "I have control\n";
-    unsigned int BENCHMARK_INPUT_SIZE = 1024 << 12;
+    unsigned int BENCHMARK_INPUT_SIZE = 16 << 18;
     unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
     unsigned int needle_alloc_len = strlen(needle_text);
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
@@ -276,10 +281,12 @@ int main(int argc, const char **argv)
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
+    int iter_cnt = 8;
 
     start_timer(0);
-    MP(needle, haystack, mpNext, needle_len, haystack_len);
-    lap_timer(0);
+    MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt);
+    uint64_t sw_cycles = lap_timer(0);
+    fprintf(stderr, "sw_cycles:%zx\n", sw_cycles);
 
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
@@ -287,11 +294,11 @@ int main(int argc, const char **argv)
     device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
     sem_wait(&setup_sem);
     start_timer(0);
-    device->search(ref_haystackAlloc, haystack_len);
+    device->search(ref_haystackAlloc, haystack_len, iter_cnt);
     sem_wait(&test_sem);
-    uint64_t cycles = lap_timer(0);
+    uint64_t hw_cycles = lap_timer(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
-    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
+    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)hw_cycles));
 
     close(needleAlloc->header.fd);
     close(haystackAlloc->header.fd);

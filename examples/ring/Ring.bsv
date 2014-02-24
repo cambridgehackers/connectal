@@ -29,6 +29,7 @@ import ClientServer::*;
 import PortalMemory::*;
 import Dma::*;
 import GetPutF::*;
+import CompletionBuffer::*;
 
 import RingTypes::*;
 import RingBuffer::*;
@@ -62,6 +63,7 @@ module mkRingRequest#(RingIndication indication,
    ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
    ServerF#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
    ServerF#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
+   CompletionBuffer#(4,void) fetchComplete <- mkCompletionBuffer;
    
    RingBuffer cmdRing <- mkRingBuffer;
    RingBuffer statusRing <- mkRingBuffer;
@@ -71,7 +73,6 @@ module mkRingRequest#(RingIndication indication,
    Reg#(Bit#(4)) ii <- mkReg(0);
    Reg#(Bit#(4)) respCtr <- mkReg(0);
    Reg#(Bit#(4)) dispCtr <- mkReg(0);
-   Reg#(Bit#(6)) cmdFetchTag <- mkReg(0);
    Reg#(Bit#(6)) statusTag <- mkReg(0);
    Reg#(Bool) cmdFetchEn <- mkReg(False);
 
@@ -89,20 +90,21 @@ module mkRingRequest#(RingIndication indication,
 
    Stmt cmdFetch =   
    seq
-//      $display("cmdFetch FSM TOP");
+      $display("cmdFetch FSM TOP");
       while (True) 
 	 seq
 	    if (hwenabled) 
 	       seq
-	       if (cmdRing.bufferfirst != cmdRing.bufferlast) 
-		  seq
-		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", cmdRing.mempointer, cmdRing.bufferlast, 8, cmdFetchTag);
+	       if (cmdRing.notEmpty()) 
+		  action
+		     let ct <-  fetchComplete.reserve.get();
+		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", 
+		      cmdRing.mempointer, cmdRing.bufferlastfetch, 8, ct );
 		     cmd_read_chan.readReq.put(
 			DmaRequest{pointer: cmdRing.mempointer,
-			   offset: cmdRing.bufferlast, burstLen: 8, tag: cmdFetchTag});
-		     cmdRing.pop(64);
-		     cmdFetchTag <= cmdFetchTag + 1;
-		  endseq
+			   offset: cmdRing.bufferlastfetch, burstLen: 8, tag: zeroExtend(unpack(ct))});
+		     cmdRing.popfetch();
+		  endaction
 	       endseq
 	 endseq
    endseq;
@@ -110,11 +112,12 @@ module mkRingRequest#(RingIndication indication,
    Stmt cmdDispatch = 
    seq
       while (True) seq
-//	 $display("cmdDispatch FSM TOP");
+	 $display("cmdDispatch FSM TOP");
 	 seq
 	    action
 	       let rv <- cmd_read_chan.readData.get();
 	       cmd <= rv;
+	       fetchComplete.complete.put(tuple2(pack(truncate(rv.tag)),?));
 	    endaction
 	    // wait a cycle so cmd is valid!
 	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
@@ -129,16 +132,20 @@ module mkRingRequest#(RingIndication indication,
       endseq
    endseq;
    
+   rule finishCmdReads;
+      let v <- fetchComplete.drain.get();
+      cmdRing.popack();
+      $display("pop ack");
+   endrule
    
-
    Stmt responseArbiter =
    seq
       while(True) seq
 	 if (statusRing.notFull() && copyEngine.response.notEmpty())
 	    seq
-	       $display("responseArbiter copyEngine completion");
-	       $display("status write handle=%d address=%h burst=%h tag=%h",
-		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
+//	       $display("responseArbiter copyEngine completion");
+//	       $display("status write handle=%d address=%h burst=%h tag=%h",
+//		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{pointer: statusRing.mempointer, 
 		     offset: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
@@ -147,15 +154,15 @@ module mkRingRequest#(RingIndication indication,
 		     let rv <- copyEngine.response.get();
 		     status_write_chan.writeData.put(DmaData{data: rv, tag: statusTag});
 		  endaction
-	       statusRing.push(64);
+	       statusRing.push();
 	       statusTag <= statusTag + 1;
 	    endseq
 
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    seq
-	       $display("responseArbiter echoEngine completion");
-	       $display("status write handle=%d address=%h burst=%h tag=%h",
-		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
+//	       $display("responseArbiter echoEngine completion");
+//	       $display("status write handle=%d address=%h burst=%h tag=%h",
+//		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  DmaRequest{pointer: statusRing.mempointer, 
 		     offset: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
@@ -164,7 +171,7 @@ module mkRingRequest#(RingIndication indication,
 		     let rv <- echoEngine.response.get();
 		     status_write_chan.writeData.put(DmaData{data: rv, tag: statusTag});
 		  endaction
-	       statusRing.push(64);
+	       statusRing.push();
 	       statusTag <= statusTag + 1;
 	    endseq
 
@@ -184,10 +191,10 @@ module mkRingRequest#(RingIndication indication,
       // specified address. when it comes back, the doCommandRule will
       // handle it
       method Action doCommandIndirect(Bit#(64) pointer, Bit#(64) addr);
+	 let ct <- fetchComplete.reserve.get();
 	 cmd_read_chan.readReq.put(
 				   DmaRequest{pointer: truncate(pointer),
-	 offset: truncate(addr), burstLen: 8, tag: cmdFetchTag});
-   	 cmdFetchTag <= cmdFetchTag + 1;
+	 offset: truncate(addr), burstLen: 8, tag: zeroExtend(unpack(ct))});
       endmethod
    
       method Action doCommandImmediate(Bit#(64) data);

@@ -16,10 +16,11 @@ import Dma::*;
 interface RingBuffer;
    method Bool notEmpty();
    method Bool notFull();
-   method Action push(Bit#(8) num);
-   method Action pop(Bit#(8) num);
+   method Action push();
+   method Action popfetch();
+   method Action popack();
    interface Reg#(Bit#(DmaOffsetSize)) bufferfirst;
-   interface Reg#(Bit#(DmaOffsetSize)) bufferlast;
+   interface Reg#(Bit#(DmaOffsetSize)) bufferlastfetch;
    interface Reg#(Bool) enable;
    interface RingBufferConfig configifc;
    interface Reg#(DmaPointer) mempointer;
@@ -32,13 +33,13 @@ interface RingBufferConfig;
    method Bit#(64) get(Bit#(3) regist);
 endinterface
 
-
 module mkRingBuffer(RingBuffer);
    
    Reg#(Bit#(DmaOffsetSize)) rbufferbase <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) rbufferend <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) rbufferfirst <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) rbufferlast <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) rbufferlastfetch <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) rbufferlastack <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) rbuffermask <- mkReg(0);
    Reg#(DmaPointer) rmempointer <- mkReg(0);
    Reg#(Bool) renable <- mkReg(False);
@@ -48,9 +49,10 @@ module mkRingBuffer(RingBuffer);
       if (regist == 0) rbufferbase <= truncate(addr);
       else if (regist == 1) rbufferend <= truncate(addr);
       else if (regist == 2) rbufferfirst <= truncate(addr);
-      else if (regist == 3) rbufferlast <= truncate(addr);
+      else if (regist == 3) rbufferlastfetch <= truncate(addr);
       else if (regist == 4) rbuffermask <= truncate(addr);
       else if (regist == 5) rmempointer <= truncate(addr);
+      else if (regist == 6) rbufferlastack <= truncate(addr);
       else renable <= (addr[0] != 0);
    endmethod
    
@@ -59,38 +61,51 @@ module mkRingBuffer(RingBuffer);
    endmethod
    
    method Action setLast(Bit#(64) addr);
-      rbufferlast <= truncate(addr);
+      rbufferlastfetch <= truncate(addr);
+      rbufferlastack <= truncate(addr);
    endmethod
    
    method Bit#(64) get(Bit#(3) regist);
       if (regist == 0) return (zeroExtend(rbufferbase));
       else if (regist == 1) return (zeroExtend(rbufferend));
       else if (regist == 2) return (zeroExtend(rbufferfirst));
-      else if (regist == 3) return (zeroExtend(rbufferlast));
+      else if (regist == 3) return (zeroExtend(rbufferlastfetch));
       else if (regist == 4) return (zeroExtend(rbuffermask));
       else if (regist == 5) return (zeroExtend(rmempointer));
+      else if (regist == 6) return (zeroExtend(rbufferlastack));
       else return(zeroExtend(pack(renable)));
    endmethod
    endinterface
 
+   /* This compares first against lastfetch.  We <start> reads when
+    * first increases, and stop initiating reads when lastfetch
+    * catches up
+    */
    method Bool notEmpty();
-   return (rbufferfirst != rbufferlast);
+   return (rbufferfirst != rbufferlastfetch);
    endmethod
 
+   /* This compares first against lastack because items are not removed
+    * from the ring until lastack increments
+    */
    method Bool notFull();
-   return (((rbufferfirst + 64) & rbuffermask) != rbufferlast);
+   return (((rbufferfirst + 64) & rbuffermask) != rbufferlastack);
    endmethod
 
-   method Action push(Bit#(8) num);
-   rbufferfirst <= (rbufferfirst + zeroExtend(num)) & rbuffermask;
+   method Action push();
+   rbufferfirst <= (rbufferfirst + 64) & rbuffermask;
    endmethod
 
-   method Action pop(Bit#(8) num);
-   rbufferlast <= (rbufferlast + zeroExtend(num)) & rbuffermask;
+   method Action popfetch();
+   rbufferlastfetch <= (rbufferlastfetch + 64) & rbuffermask;
+   endmethod
+
+   method Action popack();
+   rbufferlastack <= (rbufferlastack + 64) & rbuffermask;
    endmethod
  
    interface Reg bufferfirst = rbufferfirst;
-   interface Reg bufferlast = rbufferlast;
+   interface Reg bufferlastfetch = rbufferlastfetch;
    interface Reg enable = renable;
    interface Reg mempointer = rmempointer;
 

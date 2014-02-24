@@ -29,7 +29,7 @@ module mkNopEngine ( ServerF#(Bit#(64), Bit#(64)));
 
    rule discard;   
       let x = f_nop.deq();
-      $display("Nop %h\n", x);
+//      $display("Nop %h\n", x);
    endrule
      
    interface PutF request = toPutF(f_nop);
