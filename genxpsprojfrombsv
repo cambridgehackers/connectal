@@ -135,7 +135,7 @@ BSIM_CXX = $(XBSVDIR)/cpp/BsimTop.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/
 all: $(ALLTARGETS)
 
 S2H = %(s2hinterface)s
-H2S = %(s2hinterface)s
+H2S = %(h2sinterface)s
 BSVFILES = %(bsvfiles)s
 CPPFILES=%(sourcefiles)s
 
