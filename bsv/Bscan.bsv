@@ -91,15 +91,11 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BRAMServer#(Bit#(asz), Bit#
    BscanE2 bscan2 <- mkBscanE2(bus+1);
    Clock tck2 <- mkClockBUFG(clocked_by bscan2.tck);
    Reset rst2 <- mkAsyncReset(2, defaultRst, tck2);
-   Reg#(Bit#(asz)) addrReg <- mkReg(0, clocked_by tck1, reset_by rst1);
-
-   BRAM_Configure bramCfg = defaultValue;
-   bramCfg.memorySize = memorySize;
-   BRAM2Port#(Bit#(asz), Bit#(dsz)) bram <- mkSyncBRAM2Server(bramCfg, defaultClk, defaultRst, tck1, rst1);
+   Reg#(Bit#(asz)) addrReg1 <- mkReg(0, clocked_by tck1, reset_by rst1);
 
    Reg#(Bit#(asz)) shiftReg1 <- mkReg(0, clocked_by tck1, reset_by rst1);
    rule captureRule1 if (bscan1.capture() == 1 && bscan1.sel() == 1);
-      shiftReg1 <= addrReg;
+      shiftReg1 <= addrReg1;
    endrule
    rule shift1 if (bscan1.shift() == 1 && bscan1.sel() == 1);
       bscan1.tdo(shiftReg1[0]);
@@ -108,27 +104,36 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BRAMServer#(Bit#(asz), Bit#
       shiftReg1 <= v;
    endrule
    rule updateRule1 if (bscan1.update() == 1 && bscan1.sel() == 1);
-      addrReg <= shiftReg1;
-      bram.portB.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addrReg, datain:?});
+      addrReg1 <= shiftReg1;
    endrule
 
-   Reg#(Bit#(dsz)) dataReg1 <- mkReg(0, clocked_by tck1, reset_by rst1);
-   rule bramResp;
-      let v <- bram.portB.response.get();
-      dataReg1 <= v;
-   endrule
+   BRAM_Configure bramCfg = defaultValue;
+   bramCfg.memorySize = memorySize;
+   bramCfg.latency = 1;
+   BRAM2Port#(Bit#(asz), Bit#(dsz)) bram <- mkSyncBRAM2Server(bramCfg, defaultClk, defaultRst, tck2, rst2);
 
-
-   ReadOnly#(Bit#(dsz)) dataCross <- mkNullCrossingWire(tck2, dataReg1, clocked_by tck1, reset_by rst1);
 
    Reg#(Bit#(dsz)) shiftReg2 <- mkReg(0, clocked_by tck2, reset_by rst2);
+   Reg#(Bit#(asz)) addrReg2 <- mkReg(0, clocked_by tck2, reset_by rst2);
+   ReadOnly#(Bit#(asz)) addrCross <- mkNullCrossingWire(tck2, addrReg1, clocked_by tck1, reset_by rst1);
+   rule updateAddr2 if (bscan2.sel() == 0);
+      addrReg2 <= addrCross;
+   endrule
 
+
+   Reg#(Bool) captured <- mkReg(False, clocked_by tck2, reset_by rst2);
    rule captureRule2 if (bscan2.capture() == 1 && bscan2.sel() == 1);
-      shiftReg2 <= dataCross;
+      bram.portB.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addrReg2, datain:?});
+      captured <= True;
    endrule
    rule shift2 if (bscan2.shift() == 1 && bscan2.sel() == 1);
-      bscan2.tdo(shiftReg2[0]);
-      let v = (shiftReg2 >> 1);
+      let shift = shiftReg2;
+      if (captured) begin
+	 shift <- bram.portB.response.get();
+	 captured <= False;
+      end
+      bscan2.tdo(shift[0]);
+      let v = (shift >> 1);
       v[dsz-1] = bscan2.tdi();
       shiftReg2 <= v;
    endrule
