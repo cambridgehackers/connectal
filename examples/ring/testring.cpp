@@ -98,9 +98,10 @@ struct SWRing {
 #define REG_BASE 0
 #define REG_END 1
 #define REG_FIRST 2
-#define REG_LAST 3
+#define REG_LASTFETCH 3
 #define REG_MASK 4
 #define REG_HANDLE 5
+#define REG_LASTACK 6
 
 struct SWRing cmd_ring;
 struct SWRing status_ring;
@@ -165,7 +166,7 @@ public:
     //fprintf(stderr, "getResult(cmd %d regist %d addr %zx)\n", 
     //	    cmd, regist, addr);
     /* returning query about last pointer of cmd ring */
-    if ((cmd == cmd_ring.ringid) && (regist == REG_LAST)) {
+    if ((cmd == cmd_ring.ringid) && (regist == REG_LASTACK)) {
       fprintf(stderr, "update cmd_ring.last %zx\n", addr);
       cmd_ring.last = addr;
     }
@@ -309,7 +310,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   /* send an inquiry every 1/4 way around the ring */
   while ((r->cached_space % (r->size >> 2)) == 0) {
     getresult_flag = 0;
-    ring->get(r->ringid, REG_LAST);         // bufferlast 
+    ring->get(r->ringid, REG_LASTACK);         // bufferlast 
     waitforflag(&getresult_flag);
     r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
     if (r->cached_space != 0) break;
