@@ -69,7 +69,7 @@ extern void StatusPoll(void);  // forward
 struct Ring_Completion {
   LIST_ENTRY(Ring_Completion) entries;
   int tag;     /* which completion is this */
-  int finished; /* boolean for completed */
+  int in_use; /* boolean for completed */
   void (*finish)(void *, uint64_t *);
   void *arg;
 };
@@ -85,7 +85,7 @@ void completion_list_init()
   for (i = 1; i < 1024; i += 1) 
     {
       completion[i].tag = i;  /* non zero! */
-      completion[i].finished = 1;
+      completion[i].in_use = 0;
       completion[i].finish = NULL;
       completion[i].arg = NULL;
       LIST_INSERT_HEAD(&completionfreelist, &completion[i], entries);
@@ -98,7 +98,8 @@ struct Ring_Completion *get_free_completion()
   p = LIST_FIRST(&completionfreelist);
   if (p) {
     LIST_REMOVE(p, entries);
-    p->finished = 0;
+    assert(p->in_use == 0);
+    p->in_use = 1;
   }
   return(p);
 }
@@ -109,8 +110,8 @@ void Ring_Handle_Completion(uint64_t *event)
   unsigned tag = event[7] & 0xffff;
   assert(tag < 1024);
   p = &completion[tag];
-  assert(p->finished == 0);
-  p->finished = 1;
+  assert(p->in_use == 1);
+  p->in_use = 0;
   if (p->finish) (*p->finish)(p->arg, event);
   event[7] = 0L;  /* mark unused for next time around */
   LIST_INSERT_HEAD(&completionfreelist, p, entries);
@@ -408,8 +409,8 @@ void echo_finish(void *arg, uint64_t *event)
 {
   struct CompletionEvent *p = (struct CompletionEvent *) arg;
   assert(p != NULL);
-  p->got_a = event[0];
-  p->got_b = event[1];
+  p->got_a = event[1];
+  p->got_b = event[2];
   p->flag = 1;
   totalCompletions += 1;
 }
@@ -426,13 +427,12 @@ int fast_echo_test()
 {
   struct timeval start, stop;
   struct CompletionEvent *p;
+  uint64_t tcmd[8];
   unsigned loops = 1;
   unsigned int i;
   long long interval;
-  fprintf(stderr, "fast echo test  ", );
+  fprintf(stderr, "fast echo test  ");
   for(;;) {
-    finishedCount = 0;
-    copy_size = size;
     fprintf(stderr, " %d", loops);
     for (i = 0; i < loops; i += 1) {
       p = &echoCompletion[i];
@@ -440,11 +440,8 @@ int fast_echo_test()
       p->exp_a = 0xaaa000L + (long) i;
       p->exp_b = 0xbbb000L + (long) i;
       p->flag = 0;
-
-
     }
-
-
+    totalCompletions = 0;
     gettimeofday(&start, NULL);
     for (i = 0; i < loops; i += 1) {
       p = &echoCompletion[i];
@@ -460,14 +457,15 @@ int fast_echo_test()
       p = &echoCompletion[i];
       if ((p->exp_a != p->got_a)
 	  || (p->exp_b != p->got_b)) {
-	printf("echo failed iteration %d got %lx %;x exp %lx %lx\n",
+	printf("echo failed iteration %d got %lx %lx exp %lx %lx\n",
 	       i, p->got_a, p->got_b, p->exp_a, p->exp_b);
+      }
     }
     interval = deltatime(start, stop);
     if (interval >= 500000) break;
     loops <<= 1;
   }
-  fprintf(stderr, "\n  block size %d microseconds %lld\n", size*16, interval / loops); 
+  fprintf(stderr, "\n  microseconds %lld\n", interval / loops); 
 }
 
 
@@ -486,7 +484,7 @@ void hw_echo(long unsigned a, long unsigned b)
   while (myevent.flag == 0) StatusPoll();
   if ((myevent.got_a != a) || (myevent.got_b != b)) {
     printf("echo failed a=%lx b= %lx got %lx %lx\n",
-	   a, b, myevent.event[1], myevent.event[2]);
+	   a, b, myevent.got_a, myevent.got_b);
   }
   //sem_destroy(&myevent.sem);
   
@@ -636,7 +634,6 @@ int main(int argc, const char **argv)
     hw_echo(ul1, ul2);
   }
 
+  fast_echo_test();
 
-  fprintf(stderr, "main going to sleep\n");
-  while(true){sleep(1);}
 }
