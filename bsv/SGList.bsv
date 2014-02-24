@@ -198,13 +198,13 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region8});
       portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region4});
       portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region0});
-      $display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
+      //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
       dmaIndication.configResp(ptr);
    endmethod
 	       
    
    method Action sglist(Bit#(32) ptr, Bit#(40) paddr, Bit#(32) len);
-      $display("sglist(ptr=%d, paddr=%h, len=%h", ptr, paddr,len);
+      // $display("sglist(ptr=%d, paddr=%h, len=%h", ptr, paddr,len);
       if (idxReg+1 == 0) begin
 	 $display("sglist: exceeded maximun length of sglist");
 	 dmaIndication.badPageSize(ptr,len);
