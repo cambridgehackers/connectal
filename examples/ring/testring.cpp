@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <sys/queue.h>
 #include <semaphore.h>
+#include <sys/time.h>
 
 #include "StdDmaIndication.h"
 #include "RingIndicationWrapper.h"
@@ -252,6 +253,18 @@ void ring_pop(struct SWRing *r)
   }
 }
 
+void StatusPollRingOnly(void)
+{
+  int i;
+  uint64_t *msg;
+  for (;;) {
+    msg = ring_next(&status_ring);
+    if (msg == NULL) break;
+    Ring_Handle_Completion((uint64_t *) msg);
+    ring_pop(&status_ring);
+  }
+}
+
 void StatusPoll(void)
 {
   int i;
@@ -381,18 +394,80 @@ void hw_copy_nb(void *from, void *to, unsigned count, char *flag)
   ring_send(&cmd_ring, tcmd, flag_finish, flag);
 }
 
+int totalCompletions;
+
 struct CompletionEvent {
-  uint64_t event[8];
+  uint64_t exp_a, exp_b;  // expected values
+  uint64_t got_a, got_b;  // actual
   char flag;
 };
 
+struct CompletionEvent echoCompletion[1024];
 
 void echo_finish(void *arg, uint64_t *event)
 {
   struct CompletionEvent *p = (struct CompletionEvent *) arg;
   assert(p != NULL);
-  memcpy(&p->event, event, 8 * sizeof(uint64_t));
+  p->got_a = event[0];
+  p->got_b = event[1];
   p->flag = 1;
+  totalCompletions += 1;
+}
+
+
+long long deltatime( struct timeval start, struct timeval stop)
+{
+  long long diff = ((long long) (stop.tv_sec - start.tv_sec)) * 1000000;
+  diff = diff + ((long long) (stop.tv_usec - start.tv_usec));
+  return (diff);
+}
+
+int fast_echo_test()
+{
+  struct timeval start, stop;
+  struct CompletionEvent *p;
+  unsigned loops = 1;
+  unsigned int i;
+  long long interval;
+  fprintf(stderr, "fast echo test  ", );
+  for(;;) {
+    finishedCount = 0;
+    copy_size = size;
+    fprintf(stderr, " %d", loops);
+    for (i = 0; i < loops; i += 1) {
+      p = &echoCompletion[i];
+      // initialize the number of completion events needed
+      p->exp_a = 0xaaa000L + (long) i;
+      p->exp_b = 0xbbb000L + (long) i;
+      p->flag = 0;
+
+
+    }
+
+
+    gettimeofday(&start, NULL);
+    for (i = 0; i < loops; i += 1) {
+      p = &echoCompletion[i];
+      tcmd[0] = ((uint64_t) CMD_ECHO) << 56;
+      tcmd[1] = (uint64_t) p->exp_a;
+      tcmd[2] = (uint64_t) p->exp_b;
+      ring_send(&cmd_ring, tcmd, echo_finish, p);
+      StatusPollRingOnly();
+    }
+    while(totalCompletions != loops) StatusPollRingOnly();
+    gettimeofday(&stop, NULL);
+    for (i = 0; i < loops; i += 1) {
+      p = &echoCompletion[i];
+      if ((p->exp_a != p->got_a)
+	  || (p->exp_b != p->got_b)) {
+	printf("echo failed iteration %d got %lx %;x exp %lx %lx\n",
+	       i, p->got_a, p->got_b, p->exp_a, p->exp_b);
+    }
+    interval = deltatime(start, stop);
+    if (interval >= 500000) break;
+    loops <<= 1;
+  }
+  fprintf(stderr, "\n  block size %d microseconds %lld\n", size*16, interval / loops); 
 }
 
 
@@ -401,13 +476,15 @@ void hw_echo(long unsigned a, long unsigned b)
   struct CompletionEvent myevent;
   uint64_t tcmd[8];
   //sem_init(&myevent.sem, 1, 0);
+  myevent.exp_a = a;
+  myevent.exp_b = b;
   myevent.flag = 0;
   tcmd[0] = ((uint64_t) CMD_ECHO) << 56;
   tcmd[1] = (uint64_t) a;
   tcmd[2] = (uint64_t) b;
   ring_send(&cmd_ring, tcmd, echo_finish, &myevent);
   while (myevent.flag == 0) StatusPoll();
-  if ((myevent.event[1] != a) || (myevent.event[2] != b)) {
+  if ((myevent.got_a != a) || (myevent.got_b != b)) {
     printf("echo failed a=%lx b= %lx got %lx %lx\n",
 	   a, b, myevent.event[1], myevent.event[2]);
   }
