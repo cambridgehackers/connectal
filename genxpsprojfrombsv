@@ -24,7 +24,7 @@ AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
 AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
 
-supported_boards = ['zedboard', 'zc702', 'kc705', 'vc707', 'bluesim']
+supported_boards = ['ac701', 'zedboard', 'zc702', 'kc705', 'vc707', 'bluesim']
 supported_os = ['android', 'ubuntu']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
@@ -296,6 +296,8 @@ if __name__=='__main__':
         bsvdefines += ['Kintex7']
     elif boardname == 'vc707':
         bsvdefines += ['Virtex7']
+    elif boardname == 'ac701':
+        bsvdefines += ['Artix7']
 
     if not (os.path.abspath(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv')) in map(os.path.abspath, namespace.bsvfile)):
         namespace.bsvfile.append(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv'))
@@ -322,6 +324,12 @@ if __name__=='__main__':
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
     elif boardname == 'vc707':
+        if not 'os' in namespace: namespace.os = 'ubuntu'
+        partname = 'xc7vx485tffg1761-2'
+        needs_pcie_7x_v2_1 = True
+        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
+        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
+    elif boardname == 'ac701':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
         needs_pcie_7x_v2_1 = True
