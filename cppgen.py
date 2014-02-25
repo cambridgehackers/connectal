@@ -90,12 +90,33 @@ void %(namespace)s%(className)s::%(putFailedMethodName)s(uint32_t v){
   }
 '''
 
-handleMessageTemplate='''
+responseSzCaseTemplate='''
+    case %(channelNumber)s: 
+    { 
+        %(msg)s msg;
 #ifdef MMAP_HW
+        for (int i = (msg.size()/4)-1; i >= 0; i--) {
+            unsigned int val = *((volatile unsigned int*)(((unsigned char *)ind_fifo_base) + channel * 256));
+            buf[i] = val;
+            //fprintf(stderr, "%%08x\\n", val);
+        }
+#else
+        for (int i = (msg.size()/4)-1; i >= 0; i--) {
+     	    unsigned long addr = ind_fifo_base + (channel * 256);
+            unsigned int val = read_portal(p, addr, name);
+            buf[i] = val;
+        }
+#endif
+        msg.demarshall(buf);
+        msg.indicate(this);
+        break;
+    }
+'''
+
+handleMessageTemplate='''
 int %(namespace)s%(className)s::handleMessage(unsigned int channel)
 {    
     unsigned int buf[1024];
-    PortalMessage *msg = 0x0;
     static int runaway = 0;
     
     switch (channel) {
@@ -108,38 +129,8 @@ int %(namespace)s%(className)s::handleMessage(unsigned int channel)
         }
         return 0;
     }
-    for (int i = (msg->size()/4)-1; i >= 0; i--) {
-        unsigned int val = *((volatile unsigned int*)(((unsigned char *)ind_fifo_base) + channel * 256));
-        buf[i] = val;
-        //fprintf(stderr, "%%08x\\n", val);
-    }
-    msg->demarshall(buf);
-    msg->indicate(this);
-    delete msg;
     return 0;
 }
-#else
-int %(namespace)s%(className)s::handleMessage(unsigned int channel)
-{    
-    unsigned int buf[1024];
-    PortalMessage *msg = 0x0;
-    
-    switch (channel) {
-%(responseSzCases)s
-    }
-
-    for (int i = (msg->size()/4)-1; i >= 0; i--) {
-	unsigned long addr = ind_fifo_base + (channel * 256);
-        unsigned int val = read_portal(p, addr, name);
-        buf[i] = val;
-    }
-    msg->demarshall(buf);
-    msg->indicate(this);
-    delete msg;
-    return 0;
-}
-#endif
-
 '''
 
 proxyMethodTemplate='''
@@ -506,9 +497,8 @@ class InterfaceMixin:
                          'className': className,
 			 'putFailedMethodName' : putFailedMethodName,
                          'parentClass': self.parentClass('Portal'),
-                         'responseSzCases': ''.join(['    case %(channelNumber)s: { msg = new %(msg)s(); break; }\n'
-                                                     % { 'channelNumber': d.channelNumber,
-                                                         'msg': '%s%sMSG' % (className, d.name)}
+                         'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': d.channelNumber,
+                                                                                'msg': '%s%sMSG' % (className, d.name)}
                                                      for d in self.decls 
                                                      if d.type == 'Method' and d.return_type.name == 'Action']),
                          'putFailedStrings': '' if (not emitPutFailed) else ', '.join('"%s"' % (d.name) for d in self.req.decls if d.__class__ == AST.Method )}
