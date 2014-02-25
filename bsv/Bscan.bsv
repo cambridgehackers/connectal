@@ -80,6 +80,7 @@ endmodule
 
 interface BscanBram#(numeric type asz, numeric type dsz);
     interface BRAMServer#(Bit#(asz), Bit#(dsz)) server;
+    method Bit#(asz) addr();
     method Bit#(4) debug;
 endinterface
 
@@ -104,6 +105,8 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
    Reg#(Bit#(asz)) addrReg <- mkReg(0, clocked_by tck, reset_by rst);
    Reg#(Bool) captured <- mkReg(False, clocked_by tck, reset_by rst);
 
+   SyncBitIfc#(Bit#(asz)) syncAddr <-  mkSyncBits(0, tck, rst, defaultClock, defaultReset);
+
    rule reset_addr if (bscan.capture() == 1 && bscan.sel() == 0);  // if we read a different reg, reset address
        addrReg <= 0;
    endrule
@@ -113,14 +116,19 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
        captured <= True;
    endrule
 
+   Wire#(Maybe#(Bit#(dsz))) dataWire <- mkDWire(tagged Invalid, clocked_by tck, reset_by rst);
    rule captureResultRule if (captured);
-       let shift <- bram.portB.response.get();
-       shiftReg <= shift;
-       captured <= False;
+      let shift <- bram.portB.response.get();
+      dataWire <= tagged Valid shift;
+      captured <= False;
    endrule
 
-   rule shift2 if (bscan.shift() == 1 && bscan.sel() == 1 && !captured);
-      let shift = shiftReg;
+   rule shift2 if (bscan.shift() == 1 && bscan.sel() == 1);
+      Bit#(dsz) shift;
+      if (dataWire matches tagged Valid .data)
+	 shift = data;
+      else
+	 shift = shiftReg;
       bscan.tdo(shift[0]);
       let v = (shift >> 1);
       v[dsz-1] = bscan.tdi();
@@ -128,15 +136,21 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
    endrule
 
    rule updateRule2 if (bscan.update() == 1 && bscan.sel() == 1);
-      bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:shiftReg});
+//      bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:shiftReg});
       addrReg <= addrReg + 1;
    endrule
 
    rule debug_rule;
-       debugReg.send({bscan.sel(), bscan.capture(), bscan.shift(), bscan.update()});
+       debugReg.send({bscan.sel(), bscan.capture(), bscan.shift(), 0});
+   endrule
+   rule addr_rule;
+      syncAddr.send(addrReg);
    endrule
 
    interface server = bram.portA;
+   method Bit#(asz) addr();
+      return syncAddr.read();
+   endmethod
    method Bit#(4) debug;
        return debugReg.read();
    endmethod
