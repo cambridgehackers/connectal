@@ -549,8 +549,8 @@ int main(int argc, const char **argv)
     hw_copy((void *) (256L * i),
 	    (void *) (256L * (i + 1)),
 	    0x100);
-    ul1 = (0x111L << 32) + (long) i;
-    ul2 = (0x222L << 32) + (long) i;
+    ul1 = (0x111LL << 32) + (long) i;
+    ul2 = (0x222LL << 32) + (long) i;
     hw_echo(ul1, ul2);
   }
   for (i = 0; i < 10; i += 1) {
@@ -587,8 +587,8 @@ int main(int argc, const char **argv)
   for (i = 0; i < 512; i += 1) {
     uint64_t ul1;
     uint64_t ul2;
-    ul1 = (0x333L << 32) + (long) i;
-    ul2 = (0x444L << 32) + (long) i;
+    ul1 = (0x333LL << 32) + (long) i;
+    ul2 = (0x444LL << 32) + (long) i;
     hw_echo(ul1, ul2);
   }
 
