@@ -137,7 +137,7 @@ void start_timer(unsigned int i);
 uint64_t lap_timer(unsigned int i);
 void print_dbg_request_intervals();
 void init_timer(void);
-uint64_t catch_timer(int i);
+uint64_t catch_timer(unsigned int i);
 void print_timer(int loops);
 
 // uses the default poller
