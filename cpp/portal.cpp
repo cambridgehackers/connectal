@@ -454,10 +454,10 @@ void* PortalPoller::portalExec_event(int timeout)
 	  volatile unsigned int *ind_reg_base = instance->ind_reg_base;
 	
 	  // sanity check, to see the status of interrupt source and enable
-	  unsigned int int_src = *(ind_reg_base+0x0);
-	  unsigned int int_en  = *(ind_reg_base+0x1);
-	  unsigned int ind_count  = *(ind_reg_base+0x2);
-	  unsigned int queue_status = *(ind_reg_base+0x6);
+	  unsigned int int_src = in[d_reg_base[0];
+	  unsigned int int_en  = ind_reg_base[1];
+	  unsigned int ind_count  = ind_reg_base[2];
+	  unsigned int queue_status = ind_reg_base[6];
 	  if(0)
 	  fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
 	
@@ -466,10 +466,10 @@ void* PortalPoller::portalExec_event(int timeout)
 	    if(0)
 	      fprintf(stderr, "queue_status %d\n", queue_status);
 	    instance->handleMessage(queue_status-1);
-	    int_src = *(ind_reg_base+0x0);
-	    int_en  = *(ind_reg_base+0x1);
-	    ind_count  = *(ind_reg_base+0x2);
-	    queue_status = *(ind_reg_base+0x6);
+	    int_src = ind_reg_base[0];
+	    int_en  = ind_reg_base[1];
+	    ind_count  = ind_reg_base[2];
+	    queue_status = ind_reg_base[6);
 	    if (0)
 	      fprintf(stderr, "(%d:%s) int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
 		      i, instance->name, int_src, int_en, ind_count, queue_status);
