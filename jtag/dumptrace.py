@@ -41,10 +41,21 @@ while len(addressarr) > 0 and addressarr[0] == 0xdeadbeef:
     #remove leading entries in case the trace buffer was never really full
     addressarr.pop(0)
 for item in addressarr:
-    transname = ['IND_REG ', 'REQ_FIFO', 'REQ_REG ', 'IND_FIFO'];
+    transname = ['REQ ', 'REQR', '                   IND ', '                   INDR'];
     topbits = item >> 18
     fpganumber = (item >> 16) & 0x7
     transtype = (item >> 14) & 0x3
-    transnumber = (item >> 8) & 0x3f
+    channel = (item >> 8) & 0x3f
     bottombits = item & 0xff
-    print(format(topbits, '05x'), 'fpga'+format(fpganumber, 'x'), transname[transtype], format(transnumber, '02x'), format(bottombits, '02x'))
+    if topbits != 0x1b90:
+        print('dumptrace: address is not in m_axi_gp[0] range', format(topbits, '05x'))
+    fpganame = 'Dir  '
+    channelname = '         '
+    if fpganumber != 0:
+        fpganame = 'fpga'+format(fpganumber, 'x')
+        channelname = 'channel ' + format(channel, 'x')
+    elif channel != 2:
+        channelname = 'channel ' + format(channel, 'x')
+    if bottombits & 0x3 != 0:
+        print('dumptrace: LSB are not 32 word aligned')
+    print(fpganame, transname[transtype], channelname, format(bottombits >> 2, '2x'))
