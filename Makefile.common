@@ -9,6 +9,10 @@ ifeq ($(BOARD),bluesim)
 TOP=BsimTop
 MKTOP=mkBsimTop
 endif
+ifeq ($(BOARD),ac701)
+TOP=$(PINS)Pcie$(Dma)Top
+MKTOP=mkPcieTop
+endif
 ifeq ($(BOARD),kc705)
 TOP=$(PINS)Pcie$(Dma)Top
 MKTOP=mkPcieTop
