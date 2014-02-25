@@ -54,7 +54,7 @@ static uint64_t c_start[16];
 
 //#define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
-#define ENABLE_INTERRUPTS(A) *((A)+0x1) = 1
+#define ENABLE_INTERRUPTS(A) (A[1] = 1)
 #else
 #define ENABLE_INTERRUPTS(A)
 #endif
@@ -454,7 +454,7 @@ void* PortalPoller::portalExec_event(int timeout)
 	  volatile unsigned int *ind_reg_base = instance->ind_reg_base;
 	
 	  // sanity check, to see the status of interrupt source and enable
-	  unsigned int int_src = in[d_reg_base[0];
+	  unsigned int int_src = ind_reg_base[0];
 	  unsigned int int_en  = ind_reg_base[1];
 	  unsigned int ind_count  = ind_reg_base[2];
 	  unsigned int queue_status = ind_reg_base[6];
