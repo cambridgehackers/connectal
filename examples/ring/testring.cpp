@@ -63,7 +63,6 @@ int ring_init_done = 0;
 
 extern void StatusPoll(void);  // forward
 
-
 /* The finish function is called with arg and the event */
 
 struct Ring_Completion {
@@ -144,15 +143,6 @@ void Ring_Handle_Completion(uint64_t *event)
   //  printf("tag %d returned last %d\n", tag, status_ring.last);
   STAILQ_INSERT_TAIL(&completionfreelist, p, entries);
 }
-
-void dump(const char *prefix, char *buf, size_t len)
-{
-    fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
-	fprintf(stderr, "%02x", (unsigned char)buf[i]);
-    fprintf(stderr, "\n");
-}
-
 
 class RingIndication : public RingIndicationWrapper
 {
@@ -310,8 +300,8 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   /* send an inquiry every 1/4 way around the ring */
   while ((r->cached_space % (r->size >> 2)) == 0) {
     getresult_flag = 0;
-    ring->get(r->ringid, REG_LASTACK);         // bufferlast 
     waitforflag(&getresult_flag);
+    ring->get(r->ringid, REG_LASTACK);         // bufferlast 
     r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
     if (r->cached_space != 0) break;
   }
@@ -319,8 +309,6 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   assert(p != NULL);
   p->finish = fp;
   p->arg = arg;
-  assert (p != NULL);
-  assert(p->in_use == 1);
   cmd[7] = p->tag;
   //  printf("tag %d used first %d\n", p->tag, r->first);
 
@@ -466,7 +454,6 @@ void hw_nop()
   tcmd[2] = (uint64_t) 34;
   ring_send(&cmd_ring, tcmd, NULL, NULL);
 }
-
 
 int main(int argc, const char **argv)
 {
