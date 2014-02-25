@@ -14,7 +14,9 @@ module xilinx_x7_pcie_wrapper #(
 				parameter [31:0]  BAR2 = 32'h00000000,
 				parameter [31:0]  BAR3 = 32'h00000000,
 				parameter [31:0]  BAR4 = 32'h00000000,
-				parameter [31:0]  BAR5 = 32'h00000000
+				parameter [31:0]  BAR5 = 32'h00000000,
+                                parameter         PCIE_GT_DEVICE = "GTX",
+				parameter [5:0]   LINK_CAP_MAX_LINK_WIDTH = 6'd8
 // xbsv
                                 )
 (
@@ -298,7 +300,7 @@ module xilinx_x7_pcie_wrapper #(
 		  .DSN_CAP_NEXTPTR     ( 12'hffc ),
                   .LINK_CAP_ASPM_OPTIONALITY ( "TRUE" ),
 	          .LINK_CAP_ASPM_SUPPORT ( 0 ),
-		  .LINK_CAP_MAX_LINK_WIDTH ( 6'h8 ),
+		  .LINK_CAP_MAX_LINK_WIDTH ( LINK_CAP_MAX_LINK_WIDTH ),
                   .LTSSM_MAX_LINK_WIDTH( 6'h8 ),
 		  .MSIX_CAP_ON         ( "TRUE" ),
 		  .MSIX_CAP_PBA_OFFSET ( 29'ha00 ),
@@ -315,7 +317,8 @@ module xilinx_x7_pcie_wrapper #(
 		  .BAR2                ( BAR2 ),
 		  .BAR3                ( BAR3 ),
 		  .BAR4                ( BAR4 ),
-		  .BAR5                ( BAR5 )
+		  .BAR5                ( BAR5 ),
+                  .PCIE_GT_DEVICE      ( PCIE_GT_DEVICE )
 // xbsv
                   )
    pcie_7x_v2_1_i
