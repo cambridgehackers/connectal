@@ -33,18 +33,20 @@ typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop()) MkPortalTop
 
 `ifdef Artix7
 typedef 4 PcieLanes;
+typedef 4 NumLeds;
 `else
 typedef 8 PcieLanes;
+typedef 8 NumLeds;
 `endif
 
 interface PcieTop#(type ipins);
    (* prefix="PCIE" *)
    interface PCIE_EXP#(PcieLanes) pcie;
    (* always_ready *)
-   method Bit#(8) leds();
+   method Bit#(NumLeds) leds();
    interface ipins       pins;
 endinterface
-	    
+
 (* no_default_clock, no_default_reset *)
 module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 				      Clock sys_clk_p,     Clock sys_clk_n,
@@ -84,7 +86,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    interface pcie = x7pcie.pcie;
    //interface ddr3 = x7pcie.ddr3;
-   method Bit#(8) leds();
+   method Bit#(NumLeds) leds();
       return 0;
    endmethod
    interface pins = portalTop.pins;
