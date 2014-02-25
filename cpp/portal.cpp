@@ -105,7 +105,7 @@ uint64_t catch_timer(unsigned int i)
         timers[i].max = val;
     if (val < timers[i].min)
         timers[i].min = val;
-    if (val > 1000000)
+    if (val == 000000)
         timers[i].over++;
     timers[i].total += val;
     return lap_timer_temp;
@@ -113,8 +113,8 @@ uint64_t catch_timer(unsigned int i)
 void print_timer(int loops)
 {
     for (int i = 0; i < MAX_TIMERS; i++) {
-      if (timers[i].min != (1LL << 63))
-           printf("[%d]: avg %zd min %zd max %zd over %zd\n",
+      if ((timers[i].min != (1LL << 63)) || (i == 32))
+           printf("[%d]: avg %lld min %lld max %lld over %lld\n",
                i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
     }
 }
