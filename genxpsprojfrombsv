@@ -137,7 +137,7 @@ all: $(ALLTARGETS)
 S2H = %(s2hinterface)s
 H2S = %(h2sinterface)s
 BSVFILES = %(bsvfiles)s
-CPPFILES=%(sourcefiles)s
+CPPFILES=%(sourcefiles)s $(addprefix %(project_dir)s/jni/, %(generatedCFiles)s)
 
 timestampfile=sources/%(dut)s/.timestamp
 
@@ -158,8 +158,8 @@ $(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
 BSIM_EXE_CXX_FILES = BsimDma.cxx BsimTop.cxx portal.cpp sock_fd.cxx sock_utils.cxx PortalMemory.cpp
 BSIM_EXE_CXX = $(addprefix $(XBSVDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
-bsim_exe: jni/*.cpp jni/*.cxx %(sourcefiles)s $(BSIM_EXE_CXX) jni/*Proxy.cpp jni/*Wrapper.cpp jni/*.h
-	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s $(BSIM_EXE_CXX) *Proxy.cpp *Wrapper.cpp %(sourcefiles)s -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -DBSIM %(clibs)s
+bsim_exe:  $(CPPFILES) $(BSIM_EXE_CXX)
+	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s $(BSIM_EXE_CXX) $(CPPFILES) -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -DBSIM %(clibs)s
 
 ubuntu_exe:
 	cd jni; make
@@ -532,6 +532,7 @@ if __name__=='__main__':
                                    'h2sinterface': ' '.join(namespace.h2sinterface),
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in namespace.bsvfile]),
                                    'sourcefiles': ' '.join([os.path.abspath(source) for source in namespace.source]) if namespace.source else '',
+                                   'generatedCFiles': ' '.join(generatedCFiles),
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in namespace.source]) if namespace.source else '',
                                    'project_dir': os.path.abspath(project_dir),
                                    'topbsvfile' : os.path.abspath(namespace.topbsv),
