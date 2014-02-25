@@ -300,8 +300,8 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   /* send an inquiry every 1/4 way around the ring */
   while ((r->cached_space % (r->size >> 2)) == 0) {
     getresult_flag = 0;
-    waitforflag(&getresult_flag);
     ring->get(r->ringid, REG_LASTACK);         // bufferlast 
+    waitforflag(&getresult_flag);
     r->cached_space = ((r->size + r->last - r->first - 64) % r->size);
     if (r->cached_space != 0) break;
   }
@@ -317,8 +317,9 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   if (next_first == r->size) next_first = 0;
   r->first = next_first;
   r->cached_space -= 64;
-  ring->setCmdFirst(r->first);         // bufferfirst
 }
+
+#define STARTRING() do { ring->setCmdFirst(cmd_ring.first); } while (0);
 
 void flag_finish(void *arg, uint64_t *event)
 {
@@ -338,6 +339,7 @@ void hw_copy(void *from, void *to, unsigned count)
   tcmd[4] = (uint64_t) to;
   tcmd[5] = count; // byte count
   ring_send(&cmd_ring, tcmd, flag_finish, &flag);
+  STARTRING();
   while (flag == 0) StatusPoll();
 }
 
@@ -351,6 +353,7 @@ void hw_copy_nb(void *from, void *to, unsigned count, char *flag)
   tcmd[4] = (uint64_t) to;
   tcmd[5] = count; // byte count
   ring_send(&cmd_ring, tcmd, flag_finish, flag);
+  STARTRING();
 }
 
 int totalCompletions;
@@ -407,8 +410,10 @@ int fast_echo_test()
       tcmd[1] = (uint64_t) p->exp_a;
       tcmd[2] = (uint64_t) p->exp_b;
       ring_send(&cmd_ring, tcmd, echo_finish, p);
+      if ((i & 15) == 0) STARTRING();
       StatusPollRingOnly();
     }
+    STARTRING();
     while(totalCompletions != loops) StatusPollRingOnly();
     gettimeofday(&stop, NULL);
     for (i = 0; i < loops; i += 1) {
@@ -438,6 +443,7 @@ void hw_echo(long unsigned a, long unsigned b)
   tcmd[1] = (uint64_t) a;
   tcmd[2] = (uint64_t) b;
   ring_send(&cmd_ring, tcmd, echo_finish, &myevent);
+  STARTRING();
   while (myevent.flag == 0) StatusPoll();
   if ((myevent.got_a != a) || (myevent.got_b != b)) {
     printf("echo failed a=%lx b= %lx got %lx %lx\n",
@@ -453,6 +459,7 @@ void hw_nop()
   tcmd[1] = (uint64_t) 17;
   tcmd[2] = (uint64_t) 34;
   ring_send(&cmd_ring, tcmd, NULL, NULL);
+  STARTRING();
 }
 
 int main(int argc, const char **argv)
