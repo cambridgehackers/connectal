@@ -31,9 +31,17 @@ import Top               :: *;
 
 typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins);
 
+`ifdef Artix7
+typedef 4 PcieLanes;
+`else
+typedef 8 PcieLanes;
+`endif
+
 interface PcieTop#(type ipins);
-   (* prefix=""*)
-   interface VC707_FPGA fpga;
+   (* prefix="PCIE" *)
+   interface PCIE_EXP#(PcieLanes) pcie;
+   (* always_ready *)
+   method Bit#(8) leds();
    interface ipins       pins;
 endinterface
 	    
@@ -53,8 +61,8 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    let contentId = 0;
 
-   X7PcieBridgeIfc#(8) x7pcie <- mkX7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
-                                                 contentId );
+   X7PcieBridgeIfc#(PcieLanes) x7pcie <- mkX7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
+							contentId );
    
    Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
@@ -74,13 +82,11 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
       interruptRequested <= portalTop.interrupt;
    endrule
 
-   interface VC707_FPGA fpga;
-      interface pcie = x7pcie.pcie;
-      //interface ddr3 = x7pcie.ddr3;
-      method Bit#(8) leds();
-	 return 0;
-      endmethod
-   endinterface
+   interface pcie = x7pcie.pcie;
+   //interface ddr3 = x7pcie.ddr3;
+   method Bit#(8) leds();
+      return 0;
+   endmethod
    interface pins = portalTop.pins;
 
 endmodule: mkPcieTopFromPortal
