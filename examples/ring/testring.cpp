@@ -141,7 +141,7 @@ void Ring_Handle_Completion(uint64_t *event)
   p->in_use = 0;
   if (p->finish) (*p->finish)(p->arg, event);
   event[7] = 0L;  /* mark unused for next time around */
-  printf("tag %d returned last %d\n", tag, status_ring.last);
+  //  printf("tag %d returned last %d\n", tag, status_ring.last);
   STAILQ_INSERT_TAIL(&completionfreelist, p, entries);
 }
 
@@ -322,7 +322,7 @@ void ring_send(struct SWRing *r, uint64_t *cmd, void (*fp)(void *, uint64_t *), 
   assert (p != NULL);
   assert(p->in_use == 1);
   cmd[7] = p->tag;
-  printf("tag %d used first %d\n", p->tag, r->first);
+  //  printf("tag %d used first %d\n", p->tag, r->first);
 
   memcpy(&r->base[r->first], cmd, 64);
   next_first = r->first + 64;
@@ -373,7 +373,7 @@ struct CompletionEvent {
   char flag;
 };
 
-struct CompletionEvent echoCompletion[1024];
+struct CompletionEvent echoCompletion[8192];
 
 void echo_finish(void *arg, uint64_t *event)
 {
@@ -432,7 +432,7 @@ int fast_echo_test()
       }
     }
     interval = deltatime(start, stop);
-    if (interval >= 500000) break;
+    if ((interval >= 500000) || (loops >= 8192)) break;
     loops <<= 1;
   }
   fprintf(stderr, "\n  microseconds %lld\n", interval / loops); 
