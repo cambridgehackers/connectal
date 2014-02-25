@@ -93,10 +93,10 @@ void init_timer(void)
 {
     memset(timers, 0, sizeof(timers));
     for (int i = 0; i < MAX_TIMERS; i++)
-        timers[i].min = 0xffffffffffff;
+      timers[i].min = 1LL << 63;
 }
 
-uint64_t catch_timer(int i)
+uint64_t catch_timer(unsigned int i)
 {
     uint64_t val = lap_timer(0);
     if (i >= MAX_TIMERS)
@@ -113,7 +113,7 @@ uint64_t catch_timer(int i)
 void print_timer(int loops)
 {
     for (int i = 0; i < MAX_TIMERS; i++) {
-        if (timers[i].min != 0xffffffffffff)
+      if (timers[i].min != (1LL << 63))
            printf("[%d]: avg %zd min %zd max %zd over %zd\n",
                i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
     }
