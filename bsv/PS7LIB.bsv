@@ -99,6 +99,7 @@ interface PS7Debug;
     method Bit#(32) awaddr;
     method Bit#(1)  rvalid;
     method Bit#(1)  wvalid;
+    interface Vector#(2, Pps7Maxigp) internal_m_axi_gp;
 endinterface
 
 interface PS7LIB;
@@ -510,6 +511,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
         method Bit#(32) awaddr = vm_axi_gp[0].awaddr;
         method Bit#(1)  rvalid = vtopmw_axi_gp[0].rvalid;
         method Bit#(1)  wvalid = vm_axi_gp[0].wvalid;
+        interface Vector internal_m_axi_gp = vm_axi_gp;
     endinterface
 endmodule
 

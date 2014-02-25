@@ -29,6 +29,7 @@ import Top               :: *;
 import AxiMasterSlave    :: *;
 import XbsvXilinxCells   :: *;
 import PS7LIB::*;
+import PPS7LIB::*;
 import XADC::*;
 import BRAM::*;
 import Bscan::*;
@@ -53,8 +54,8 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
    let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(1)) intReg <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
-   Reg#(Bit#(8)) bramAddr <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
-   BscanBram#(8, 32) bscanBram <- mkBscanBram(1, 256, bramAddr, clocked_by mainclock.c, reset_by mainclock.r);
+   Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
+   BscanBram#(8, 32) bscanBram <- mkBscanBram(1, 256, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
    ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock.c, bscanBram.debug());
 
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
@@ -69,6 +70,16 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    rule b2c_rule;
        mainclock.inputclock(ps7.fclkclk()[0]);
        mainclock.inputreset(ps7.fclkresetn()[0]);
+   endrule
+
+   // AXI trace for JTAG
+   rule axi_read_rule if (ps7.debug.internal_m_axi_gp[0].arvalid() != 0);
+       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:ps7.debug.internal_m_axi_gp[0].araddr()});
+       addrReg <= addrReg + 1;
+   endrule
+   rule axi_write_rule if (ps7.debug.internal_m_axi_gp[0].awvalid() != 0);
+       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:ps7.debug.internal_m_axi_gp[0].awaddr()});
+       addrReg <= addrReg + 1;
    endrule
 
    interface zynq = ps7.pins;
