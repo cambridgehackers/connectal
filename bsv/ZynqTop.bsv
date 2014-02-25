@@ -53,7 +53,8 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
    let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(1)) intReg <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
-   BscanBram#(8, 32) bscanBram <- mkBscanBram(1, 256, clocked_by mainclock.c, reset_by mainclock.r);
+   Reg#(Bit#(8)) bramAddr <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
+   BscanBram#(8, 32) bscanBram <- mkBscanBram(1, 256, bramAddr, clocked_by mainclock.c, reset_by mainclock.r);
    ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock.c, bscanBram.debug());
 
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);

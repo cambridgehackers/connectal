@@ -80,11 +80,10 @@ endmodule
 
 interface BscanBram#(numeric type asz, numeric type dsz);
     interface BRAMServer#(Bit#(asz), Bit#(dsz)) server;
-    method Bit#(asz) addr();
     method Bit#(4) debug;
 endinterface
 
-module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
+module mkBscanBram#(Integer bus, Integer memorySize, Bit#(asz) addr)(BscanBram#(asz, dsz));
    let asz = valueOf(asz);
    let dsz = valueOf(dsz);
 
@@ -99,47 +98,47 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
    bramCfg.memorySize = memorySize;
    bramCfg.latency = 1;
    BRAM2Port#(Bit#(asz), Bit#(dsz)) bram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset, tck, rst);
+   SyncBitIfc#(Bit#(asz)) addr_jtag <- mkSyncBits(0, defaultClock, defaultReset, tck, rst);
 
    Reg#(Bit#(dsz)) shiftReg <- mkReg(0, clocked_by tck, reset_by rst);
    Reg#(Bit#(asz)) addrReg <- mkReg(0, clocked_by tck, reset_by rst);
-   Reg#(Bool) captured <- mkReg(False, clocked_by tck, reset_by rst);
+   Reg#(Bool) capture_delay <- mkReg(False, clocked_by tck, reset_by rst);
    Reg#(Bool) selected_delay <- mkReg(False, clocked_by tck, reset_by rst);
 
    rule selected_rule;
        selected_delay <= bscan.sel() == 1;
+       capture_delay <= bscan.sel() == 1 && bscan.capture() == 1;
+   endrule
+
+   rule addr_clock_crossing;
+       addr_jtag.send(addr);
    endrule
 
    rule reset_addr if (bscan.sel() == 1 && !selected_delay);
-       addrReg <= 0;  // if we read USER2, reset address
+       addrReg <= addr_jtag.read();  // first time USER1 selected, reset address
    endrule
 
-   rule captureRule if (bscan.capture() == 1 && bscan.sel() == 1);
+   rule captureRule if (bscan.sel() == 1 && bscan.capture() == 1);
        bram.portB.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addrReg, datain:?});
-       captured <= True;
    endrule
 
-   rule shiftrule if (bscan.shift() == 1 && bscan.sel() == 1);
-      Bit#(dsz) shift;
-      if (captured)
-         begin
-         shift <- bram.portB.response.get();
-         captured <= False;
-         end
-      else
-	 shift = shiftReg;
-      bscan.tdo(shift[0]);
-      let v = (shift >> 1);
-      v[dsz-1] = bscan.tdi();
-      shiftReg <= v;
+   rule shiftrule if (bscan.sel() == 1 && bscan.shift() == 1);
+       Bit#(dsz) shift = shiftReg;
+       if (capture_delay)
+           shift <- bram.portB.response.get();
+       bscan.tdo(shift[0]);
+       let v = (shift >> 1);
+       v[dsz-1] = bscan.tdi();
+       shiftReg <= v;
    endrule
 
-   rule updateRule if (bscan.update() == 1 && bscan.sel() == 1);
-      bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:shiftReg});
-      addrReg <= addrReg + 1;
+   rule updateRule if (bscan.sel() == 1 && bscan.update() == 1);
+       bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:shiftReg});
+       addrReg <= addrReg + 1;
    endrule
 
-   interface server = bram.portA;
    method Bit#(4) debug;
        return {bscan.sel(), bscan.capture(), bscan.shift(), bscan.update()};
    endmethod
+   interface server = bram.portA;
 endmodule
