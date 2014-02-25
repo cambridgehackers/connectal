@@ -91,10 +91,14 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
 
+   BscanE2 bscan2 <- mkBscanE2(bus+1);
+   Clock tck2 <- mkClockBUFG(clocked_by bscan2.tck);
+   Reset rst2 <- mkAsyncReset(2, defaultReset, tck2);
    BscanE2 bscan <- mkBscanE2(bus);
    Clock tck <- mkClockBUFG(clocked_by bscan.tck);
    Reset rst <- mkAsyncReset(2, defaultReset, tck);
-   SyncBitIfc#(Bit#(4)) debugReg <-  mkSyncBits(0, tck, rst, defaultClock, defaultReset);
+   SyncBitIfc#(Bool) resetAddr <-  mkSyncBits(False, tck2, rst2, tck, rst);
+   Reg#(Bool) doincrement <- mkReg(False, clocked_by tck, reset_by rst);
 
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = memorySize;
@@ -105,15 +109,17 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
    Reg#(Bit#(asz)) addrReg <- mkReg(0, clocked_by tck, reset_by rst);
    Reg#(Bool) captured <- mkReg(False, clocked_by tck, reset_by rst);
 
-   SyncBitIfc#(Bit#(asz)) syncAddr <-  mkSyncBits(0, tck, rst, defaultClock, defaultReset);
-
-   rule reset_addr if (bscan.capture() == 1 && bscan.sel() == 0);  // if we read a different reg, reset address
-       addrReg <= 0;
+   rule reset_signal;
+       resetAddr.send(bscan2.capture() == 1 && bscan2.sel() == 1);
+   endrule
+   rule reset_addr if (resetAddr.read());
+       addrReg <= 0;  // if we read USER2, reset address
    endrule
 
    rule captureRule if (bscan.capture() == 1 && bscan.sel() == 1);
        bram.portB.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addrReg, datain:?});
        captured <= True;
+       doincrement <= True;
    endrule
 
    Wire#(Maybe#(Bit#(dsz))) dataWire <- mkDWire(tagged Invalid, clocked_by tck, reset_by rst);
@@ -135,23 +141,14 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
       shiftReg <= v;
    endrule
 
-   rule updateRule2 if (bscan.update() == 1 && bscan.sel() == 1);
-//      bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:shiftReg});
+   rule updateRule2 if (bscan.update() == 1 && bscan.sel() == 1 && doincrement);
+      bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:shiftReg});
       addrReg <= addrReg + 1;
-   endrule
-
-   rule debug_rule;
-       debugReg.send({bscan.sel(), bscan.capture(), bscan.shift(), 0});
-   endrule
-   rule addr_rule;
-      syncAddr.send(addrReg);
+      doincrement <= False;
    endrule
 
    interface server = bram.portA;
-   method Bit#(asz) addr();
-      return syncAddr.read();
-   endmethod
    method Bit#(4) debug;
-       return debugReg.read();
+       return {bscan.sel(), bscan.capture(), bscan.shift(), bscan.update()};
    endmethod
 endmodule
