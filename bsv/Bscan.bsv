@@ -91,14 +91,9 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
 
-   BscanE2 bscan2 <- mkBscanE2(bus+1);
-   Clock tck2 <- mkClockBUFG(clocked_by bscan2.tck);
-   Reset rst2 <- mkAsyncReset(2, defaultReset, tck2);
    BscanE2 bscan <- mkBscanE2(bus);
    Clock tck <- mkClockBUFG(clocked_by bscan.tck);
    Reset rst <- mkAsyncReset(2, defaultReset, tck);
-   SyncBitIfc#(Bool) resetAddr <-  mkSyncBits(False, tck2, rst2, tck, rst);
-   Reg#(Bool) doincrement <- mkReg(False, clocked_by tck, reset_by rst);
 
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = memorySize;
@@ -108,31 +103,28 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
    Reg#(Bit#(dsz)) shiftReg <- mkReg(0, clocked_by tck, reset_by rst);
    Reg#(Bit#(asz)) addrReg <- mkReg(0, clocked_by tck, reset_by rst);
    Reg#(Bool) captured <- mkReg(False, clocked_by tck, reset_by rst);
+   Reg#(Bool) selected_delay <- mkReg(False, clocked_by tck, reset_by rst);
 
-   rule reset_signal;
-       resetAddr.send(bscan2.capture() == 1 && bscan2.sel() == 1);
+   rule selected_rule;
+       selected_delay <= bscan.sel() == 1;
    endrule
-   rule reset_addr if (resetAddr.read());
+
+   rule reset_addr if (bscan.sel() == 1 && !selected_delay);
        addrReg <= 0;  // if we read USER2, reset address
    endrule
 
    rule captureRule if (bscan.capture() == 1 && bscan.sel() == 1);
        bram.portB.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addrReg, datain:?});
        captured <= True;
-       doincrement <= True;
    endrule
 
-   Wire#(Maybe#(Bit#(dsz))) dataWire <- mkDWire(tagged Invalid, clocked_by tck, reset_by rst);
-   rule captureResultRule if (captured);
-      let shift <- bram.portB.response.get();
-      dataWire <= tagged Valid shift;
-      captured <= False;
-   endrule
-
-   rule shift2 if (bscan.shift() == 1 && bscan.sel() == 1);
+   rule shiftrule if (bscan.shift() == 1 && bscan.sel() == 1);
       Bit#(dsz) shift;
-      if (dataWire matches tagged Valid .data)
-	 shift = data;
+      if (captured)
+         begin
+         shift <- bram.portB.response.get();
+         captured <= False;
+         end
       else
 	 shift = shiftReg;
       bscan.tdo(shift[0]);
@@ -141,10 +133,9 @@ module mkBscanBram#(Integer bus, Integer memorySize)(BscanBram#(asz, dsz));
       shiftReg <= v;
    endrule
 
-   rule updateRule2 if (bscan.update() == 1 && bscan.sel() == 1 && doincrement);
+   rule updateRule if (bscan.update() == 1 && bscan.sel() == 1);
       bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:shiftReg});
       addrReg <= addrReg + 1;
-      doincrement <= False;
    endrule
 
    interface server = bram.portA;
