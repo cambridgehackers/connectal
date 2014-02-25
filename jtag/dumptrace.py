@@ -41,9 +41,10 @@ while len(addressarr) > 0 and addressarr[0] == 0xdeadbeef:
     #remove leading entries in case the trace buffer was never really full
     addressarr.pop(0)
 for item in addressarr:
+    transname = ['IND_REG ', 'REQ_FIFO', 'REQ_REG ', 'IND_FIFO'];
     topbits = item >> 18
     fpganumber = (item >> 16) & 0x7
     transtype = (item >> 14) & 0x3
     transnumber = (item >> 8) & 0x3f
     bottombits = item & 0xff
-    print(format(topbits, '05x'), format(fpganumber, 'x'), format(transtype, 'x'), format(transnumber, '02x'), format(bottombits, '02x'))
+    print(format(topbits, '05x'), 'fpga'+format(fpganumber, 'x'), transname[transtype], format(transnumber, '02x'), format(bottombits, '02x'))
