@@ -11,7 +11,7 @@
 #include "SwallowProxy.h"
 
 #define LOOP_COUNT 50 //1000
-#define SEPARATE_EVENT_THREAD
+//#define SEPARATE_EVENT_THREAD
 //#define USE_MUTEX_SYNC
 
 EchoRequestProxy *echoRequestProxy = 0;
@@ -109,6 +109,21 @@ int main(int argc, const char **argv)
     init_thread();
     portalExec_start();
 
+    printf("Timer tests\n");
+    init_timer();
+    for (int i = 0; i < 1000; i++) {
+      start_timer(0);
+      catch_timer(1);
+      catch_timer(2);
+      catch_timer(3);
+      catch_timer(4);
+      catch_timer(5);
+      catch_timer(6);
+      catch_timer(7);
+      catch_timer(8);
+    }
+    print_timer(1000);
+
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     call_say(v);
@@ -117,8 +132,8 @@ int main(int argc, const char **argv)
     call_say(v*93);
     printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
     init_timer();
+    printf("[%s:%d] sleep2\n", __FUNCTION__, __LINE__); sleep(2);
     start_timer(1);
-printf("[%s:%d] sleep2\n", __FUNCTION__, __LINE__); sleep(2);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
 uint64_t elapsed = lap_timer(1);
