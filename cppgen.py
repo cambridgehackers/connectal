@@ -10,17 +10,20 @@ APP_STL                 := stlport_static
 '''
 
 androidmk_template='''
-LOCAL_PATH:= $(call my-dir)
-
 include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
-LOCAL_SRC_FILES := %(cfiles)s  portal.cpp PortalMemory.cpp sock_fd.cxx sock_utils.cxx %(generatedCFiles)s
+APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(cfiles)s
+PORTAL_SRC_FILES := $(addprefix %(xbsvdir)s/cpp/, portal.cpp PortalMemory.cpp sock_fd.cxx sock_utils.cxx)
+LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
+
+LOCAL_PATH :=
 LOCAL_MODULE := %(exe)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/cpp
+LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(project_dir)s/jni
 
+#NDK_OUT := obj/
 
 include $(BUILD_EXECUTABLE)
 '''
@@ -171,12 +174,13 @@ public:
 
 
 
-def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xbsvdir, silent=False):
+def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xbsvdir, project_dir, silent=False):
         f = util.createDirAndOpen(androidmkname, 'w')
         substs = {
-            'cfiles': ' '.join([os.path.basename(x) for x in cfiles]),
+            'cfiles': ' '.join([os.path.abspath(x) for x in cfiles]),
 	    'generatedCFiles': ' '.join(generatedCFiles),
             'xbsvdir': xbsvdir,
+	    'project_dir': os.path.abspath(project_dir),
 	    'exe' : 'android_exe'
         }
         f.write(androidmk_template % substs)
