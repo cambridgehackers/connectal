@@ -94,19 +94,14 @@ responseSzCaseTemplate='''
     case %(channelNumber)s: 
     { 
         %(msg)s msg;
+        for (int i = (msg.size()/4)-1; i >= 0; i--) {
 #ifdef MMAP_HW
-        for (int i = (msg.size()/4)-1; i >= 0; i--) {
             unsigned int val = *((volatile unsigned int*)(((unsigned char *)ind_fifo_base) + channel * 256));
-            buf[i] = val;
-            //fprintf(stderr, "%%08x\\n", val);
-        }
 #else
-        for (int i = (msg.size()/4)-1; i >= 0; i--) {
-     	    unsigned long addr = ind_fifo_base + (channel * 256);
-            unsigned int val = read_portal(p, addr, name);
+            unsigned int val = read_portal(p, ind_fifo_base + (channel * 256), name);
+#endif
             buf[i] = val;
         }
-#endif
         msg.demarshall(buf);
         msg.indicate(this);
         break;
