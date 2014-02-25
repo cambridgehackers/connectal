@@ -10,7 +10,7 @@
 #include "GeneratedTypes.h"
 #include "SwallowProxy.h"
 
-#define LOOP_COUNT 5 //1000
+#define LOOP_COUNT 50 //1000
 #define SEPARATE_EVENT_THREAD
 //#define USE_MUTEX_SYNC
 
@@ -132,7 +132,7 @@ uint64_t elapsed = lap_timer(1);
 #endif
        "\n");
     print_timer(LOOP_COUNT);
-    printf("call_say: elapsed %zd average %zd\n", elapsed, elapsed/LOOP_COUNT);
+    printf("call_say: elapsed %g average %g\n", (double) elapsed, (double) elapsed/ (double) LOOP_COUNT);
     echoRequestProxy->setLeds(9);
     poller->portalExec_end();
     portalExec_end();
