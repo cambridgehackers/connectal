@@ -373,7 +373,7 @@ struct CompletionEvent {
   char flag;
 };
 
-struct CompletionEvent echoCompletion[8192];
+struct CompletionEvent echoCompletion[16384];
 
 void echo_finish(void *arg, uint64_t *event)
 {
@@ -432,10 +432,10 @@ int fast_echo_test()
       }
     }
     interval = deltatime(start, stop);
-    if ((interval >= 500000) || (loops >= 8192)) break;
+    if ((interval >= 500000) || (loops >= 16384)) break;
     loops <<= 1;
   }
-  fprintf(stderr, "\n  microseconds %lld\n", interval / loops); 
+  fprintf(stderr, "\n  microseconds %f\n", (double) interval / (double)loops); 
 }
 
 
