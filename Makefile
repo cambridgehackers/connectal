@@ -97,6 +97,21 @@ ubuntu_exetests: $(ubuntu_exetests)
 $(ubuntu_exetests):
 	make BOARD=zedboard -C examples/$(basename $@) ubuntu_exe
 
+ac701tests = $(addsuffix .ac701, $(testnames))
+ac701tests: $(ac701tests)
+
+$(ac701tests):
+	rm -fr examples/$(basename $@)/ac701
+	make BOARD=ac701 -C examples/$(basename $@) all
+
+acruns = $(addsuffix .acrun, $(testnames))
+acruns: $(acruns)
+
+$(acruns):
+	(cd examples/$(basename $@)/ac701; make program)
+	pciescanportal
+	catchsegv examples/$(basename $@)/ac701/jni/mkpcietop
+
 kc705tests = $(addsuffix .kc705, $(testnames))
 kc705tests: $(kc705tests)
 
@@ -110,7 +125,7 @@ kcruns: $(kcruns)
 $(kcruns):
 	(cd examples/$(basename $@)/kc705; make program)
 	pciescanportal
-	catchsegv examples/$(basename $@)/kc707/jni/mkpcietop
+	catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
 
 vc707tests = $(addsuffix .vc707, $(testnames))
 vc707tests: $9vc707tests)
