@@ -331,7 +331,7 @@ if __name__=='__main__':
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
     elif boardname == 'ac701':
         if not 'os' in namespace: namespace.os = 'ubuntu'
-        partname = 'xc7vx485tffg1761-2'
+        partname = 'xc7a200tfbg676-2'
         needs_pcie_7x_v2_1 = True
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_v2_1', 'pcie_7x_0', 'source'))
         namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
