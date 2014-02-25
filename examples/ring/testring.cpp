@@ -167,7 +167,7 @@ public:
     //	    cmd, regist, addr);
     /* returning query about last pointer of cmd ring */
     if ((cmd == cmd_ring.ringid) && (regist == REG_LASTACK)) {
-      fprintf(stderr, "update cmd_ring.last %zx\n", addr);
+      //fprintf(stderr, "update cmd_ring.last %zx\n", addr);
       cmd_ring.last = addr;
     }
     getresult_flag = 1;
