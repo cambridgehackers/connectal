@@ -90,7 +90,7 @@ module mkRingRequest#(RingIndication indication,
 
    Stmt cmdFetch =   
    seq
-      $display("cmdFetch FSM TOP");
+//      $display("cmdFetch FSM TOP");
       while (True) 
 	 seq
 	    if (hwenabled) 
@@ -98,8 +98,8 @@ module mkRingRequest#(RingIndication indication,
 	       if (cmdRing.notEmpty()) 
 		  action
 		     let ct <-  fetchComplete.reserve.get();
-		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", 
-		      cmdRing.mempointer, cmdRing.bufferlastfetch, 8, ct );
+//		     $display ("cmdFetch handle=%h address=%h burst=%h tag=%h", 
+//		      cmdRing.mempointer, cmdRing.bufferlastfetch, 8, ct );
 		     cmd_read_chan.readReq.put(
 			DmaRequest{pointer: cmdRing.mempointer,
 			   offset: cmdRing.bufferlastfetch, burstLen: 8, tag: zeroExtend(unpack(ct))});
@@ -112,7 +112,7 @@ module mkRingRequest#(RingIndication indication,
    Stmt cmdDispatch = 
    seq
       while (True) seq
-	 $display("cmdDispatch FSM TOP");
+//	 $display("cmdDispatch FSM TOP");
 	 seq
 	    action
 	       let rv <- cmd_read_chan.readData.get();
@@ -120,13 +120,13 @@ module mkRingRequest#(RingIndication indication,
 	       fetchComplete.complete.put(tuple2(pack(truncate(rv.tag)),?));
 	    endaction
 	    // wait a cycle so cmd is valid!
-	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
+//	    $display("cmdDispatch 0 tag=%h %h", cmd.tag, cmd.data);
 	    cmdifc.request.put(cmd.data);
 	 endseq
 	 for (dispCtr <= 1; dispCtr < 8; dispCtr <= dispCtr + 1)
 	    action
 	       let rv <- cmd_read_chan.readData.get();
-	       $display("  cmdDispatch %h tag=%h %h", dispCtr, rv.tag, rv.data);
+//	       $display("  cmdDispatch %h tag=%h %h", dispCtr, rv.tag, rv.data);
 	       cmdifc.request.put(rv.data);
 	    endaction
       endseq
@@ -135,7 +135,7 @@ module mkRingRequest#(RingIndication indication,
    rule finishCmdReads;
       let v <- fetchComplete.drain.get();
       cmdRing.popack();
-      $display("pop ack");
+//      $display("pop ack");
    endrule
    
    Stmt responseArbiter =
