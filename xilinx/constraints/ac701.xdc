@@ -26,12 +26,12 @@ set_property DRIVE 12 [get_ports leds]
 
 set_property LOC F11   [get_ports { CLK_pci_sys_clk_p }]
 set_property LOC E11  [get_ports { CLK_pci_sys_clk_n }]
-set_property LOC M20  [get_ports { RST_N_pci_sys_reset_n }] #PCIE_PERST
+set_property LOC M20  [get_ports { RST_N_pci_sys_reset_n }]
 
 set_property LOC R3 [get_ports { CLK_sys_clk_p }]
 set_property LOC P3 [get_ports { CLK_sys_clk_n }]
-set_property LOC M21  [get_ports { CLK_user_clk_p }]
-set_property LOC M22  [get_ports { CLK_user_clk_n }]
+# set_property LOC M21  [get_ports { CLK_user_clk_p }]
+# set_property LOC M22  [get_ports { CLK_user_clk_n }]
 
 set_property LOC D12  [get_ports { PCIE_rxp_i[0] }]
 set_property LOC B13  [get_ports { PCIE_rxp_i[1] }]
@@ -56,14 +56,10 @@ set_property LOC A7   [get_ports { PCIE_txn[3] }]
 ######################################################################################################
 # I/O STANDARDS
 ######################################################################################################
-set_property IOSTANDARD LVCMOS15    [get_ports { leds[*] }]
-# set_property IOSTANDARD LVCMOS15    [get_ports { LED_*_gpio }]
-# set_property IOSTANDARD LVCMOS15    [get_ports { DIP_*_gpio }]
-# set_property IOSTANDARD LVCMOS25    [get_ports { BUTTON_*_gpio }]
-# set_property IOSTANDARD LVCMOS15    [get_ports { LCD_* }]
+set_property IOSTANDARD LVCMOS33    [get_ports { leds[*] }]
 set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_sys_clk_* }]
-set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_user_clk_* }]
-set_property IOSTANDARD LVCMOS25    [get_ports { RST_N_pci_sys_reset_n }]
+# set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_user_clk_* }]
+set_property IOSTANDARD LVCMOS33    [get_ports { RST_N_pci_sys_reset_n }]
 set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 
 ######################################################################################################
@@ -87,6 +83,8 @@ set_property LOC IBUFDS_GTE2_X0Y2  [get_cells { *x7pcie_pci_clk_100mhz_buf }]
 # Block to be used.
 #
 set_property LOC PCIE_X0Y0 [get_cells -hierarchical -regexp {.*pcie_7x_i/pcie_block_i}]
+set_property LOC MMCME2_ADV_X0Y4 [get_cells top_x7pcie_clkgen_pll]
+set_property LOC MMCME2_ADV_X0Y3 [get_cells top_x7pcie_pcie_ep/ext_clk.pipe_clock_i/mmcm_i]
 
 #
 # BlockRAM placement
@@ -115,18 +113,6 @@ create_clock -name pci_extclk -period 10 [get_pins *x7pcie_pcie_ep/pcie_7x_v2_1_
 set_false_path -through [get_pins -hierarchical {*pcie_block_i/PLPHYLNKUPN*}]
 set_false_path -through [get_pins -hierarchical {*pcie_block_i/PLRECEIVEDHOTRST*}]
 
-#set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/user_resetdone*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[0].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[1].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[2].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[3].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[4].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[5].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[6].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[7].pipe_rate.pipe_rate_i/*}]
-
-set_false_path -through [get_cells {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_reset.pipe_reset_i/cpllreset_reg*}]
-
 set_false_path -through [get_nets {*/ext_clk.pipe_clock_i/pclk_sel*}]
 
 set_case_analysis 1 [get_pins {*/ext_clk.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/S0}] 
@@ -134,11 +120,3 @@ set_case_analysis 0 [get_pins {*/ext_clk.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/S
 
 set_clock_groups -name ___clk_groups_generated_0_1_0_0_0 -physically_exclusive -group [get_clocks clk_125mhz] -group [get_clocks clk_250mhz]
 
-set_clock_groups -name async_sysclk_coreclk -asynchronous -group [get_clocks -include_generated_clocks sys_clk] -group [get_clocks -include_generated_clocks user_clk] -group [get_clocks -include_generated_clocks pci_refclk]
-
-set_max_delay -from [get_clocks noc_clk] -to [get_clocks clk_userclk2] 8.000 -datapath_only
-set_max_delay -from [get_clocks clk_userclk2] -to [get_clocks noc_clk] 8.000 -datapath_only
-set_max_delay -from [get_clocks cclock] -to [get_clocks core_clock] 20.000 -datapath_only
-set_max_delay -from [get_clocks uclock] -to [get_clocks core_clock] 20.000 -datapath_only
-set_max_delay -from [get_clocks core_clock] -to [get_clocks cclock] 20.000 -datapath_only
-set_max_delay -from [get_clocks core_clock] -to [get_clocks uclock] 20.000 -datapath_only
