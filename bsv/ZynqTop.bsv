@@ -54,6 +54,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(1)) intReg <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
    BscanBram#(8, 32) bscanBram <- mkBscanBram(1, 256, clocked_by mainclock.c, reset_by mainclock.r);
+   ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock.c, bscanBram.debug());
 
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
    mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
@@ -73,7 +74,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    interface leds = top.leds;
    interface XADC xadc;
        method Bit#(4) gpio;
-           return bscanBram.debug();
+           return debugReg;
 `ifdef BOZOIFDEF
            return {intReg, 
                  pack((ps7.debug.arvalid == 1)
