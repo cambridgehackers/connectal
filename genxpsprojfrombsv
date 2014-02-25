@@ -470,22 +470,9 @@ if __name__=='__main__':
         xpsgen.writeProgramTcl(dutname, os.path.join(project_dir, '%s-program.tcl' % dutname.lower()))
         xpsgen.writeReprogramTcl(dutname, os.path.join(project_dir, '%s-reprogram.tcl' % dutname.lower()))
 
-    # copy cxx library files to jni
-    for f in ['portal.cpp', 'PortalMemory.cpp', 'sock_utils.cxx', 'sock_fd.cxx']:
-        srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'cpp')
-        dstdir = os.path.join(project_dir, 'jni')
-        shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
-    
-    # copy cmd-line specified cxx files to jni
-    for s in namespace.source:
-        srcdir = os.path.dirname(s)
-        dstdir = os.path.join(project_dir, 'jni')
-        f = os.path.basename(s)
-        shutil.copyfile(os.path.join(srcdir, f), os.path.join(dstdir, f))
-
     print 'Writing Android.mk', androidmkname
     print 'Writing Application.mk', applicationmkname
-    cppgen.writeAndroidMk(namespace.source, generatedCFiles, androidmkname, applicationmkname, xbsvdir)
+    cppgen.writeAndroidMk(namespace.source, generatedCFiles, androidmkname, applicationmkname, xbsvdir, project_dir)
     cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source, swProxies, swWrappers, namespace.clib)
 
     print 'Writing tcl impl file', tclimplname
