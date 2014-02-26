@@ -58,6 +58,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    BscanBram#(8, 64) bscanBram <- mkBscanBram(1, 256, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
    ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock.c, bscanBram.debug());
    
+   let interrupt_bit = top.interrupt ? 1'b1 : 1'b0;
    
 `define TRACE_AXI
 `ifndef TRACE_AXI
@@ -65,7 +66,6 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 `else
    
    Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF(clocked_by mainclock.c, reset_by mainclock.r));
-   let interrupt_bit = top.interrupt ? 1'b1 : 1'b0;
 
    rule write_bscanBram;
       Bit#(64) data = ?;

@@ -240,15 +240,15 @@ axiStateTemplate='''
     Reg#(Bit#(15)) axiSlaveWriteAddrReg <- mkReg(0);
     Reg#(Bit#(12)) axiSlaveReadIdReg <- mkReg(0);
     Reg#(Bit#(12)) axiSlaveWriteIdReg <- mkReg(0);
-    FIFO#(ReadReqInfo) axiSlaveReadReqInfoFifo <- mkPipelineFIFO;
+    FIFO#(ReadReqInfo) axiSlaveReadReqInfoFifo <- mkFIFO;
     Reg#(Bit#(4)) axiSlaveReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(4)) axiSlaveWriteBurstCountReg <- mkReg(0);
     FIFO#(Axi3WriteResponse#(12)) axiSlaveBrespFifo <- mkFIFO();
 
-    Vector#(2,FIFO#(Bit#(15))) axiSlaveWriteAddrFifos <- replicateM(mkPipelineFIFO);
-    Vector#(2,FIFO#(Bit#(15))) axiSlaveReadAddrFifos <- replicateM(mkPipelineFIFO);
-    Vector#(2,FIFO#(Bit#(32))) axiSlaveWriteDataFifos <- replicateM(mkPipelineFIFO);
-    Vector#(2,FIFO#(Bit#(32))) axiSlaveReadDataFifos <- replicateM(mkPipelineFIFO);
+    Vector#(2,FIFO#(Bit#(15))) axiSlaveWriteAddrFifos <- replicateM(mkFIFO);
+    Vector#(2,FIFO#(Bit#(15))) axiSlaveReadAddrFifos <- replicateM(mkFIFO);
+    Vector#(2,FIFO#(Bit#(32))) axiSlaveWriteDataFifos <- replicateM(mkFIFO);
+    Vector#(2,FIFO#(Bit#(32))) axiSlaveReadDataFifos <- replicateM(mkFIFO);
 
     Reg#(Bit#(1)) axiSlaveRS <- mkReg(0);
     Reg#(Bit#(1)) axiSlaveWS <- mkReg(0);
