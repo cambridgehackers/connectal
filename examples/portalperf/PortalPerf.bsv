@@ -22,7 +22,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-interface SwallowRequest;
+interface PortalPerfRequest;
    method Action swallowl(Bit#(32) v1);
    method Action swallowll(Bit#(32) v1, Bit#(32) v2);
    method Action swallowlll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3);
@@ -42,7 +42,7 @@ interface SwallowRequest;
 endinterface
 
 
-interface SwallowIndication;
+interface PortalPerfIndication;
    method Action spitl(Bit#(32) v1);
    method Action spitll(Bit#(32) v1, Bit#(32) v2);
    method Action spitlll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3);
@@ -54,7 +54,7 @@ interface SwallowIndication;
 endinterface
 
 
-module mkSwallow#(SwallowIndication indication) (SwallowRequest);
+module mkPortalPerf#(PortalPerfIndication indication) (PortalPerfRequest);
 
    Reg#(Bit#(32)) sinkl1 <- mkReg(0);
 
