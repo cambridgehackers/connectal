@@ -1,3 +1,25 @@
+// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use, copy,
+// modify, merge, publish, distribute, sublicense, and/or sell copies
+// of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,16 +27,26 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#include "EchoIndicationWrapper.h"
-#include "EchoRequestProxy.h"
+#include "PortalPerfIndicationWrapper.h"
+#include "PortalPerfRequestProxy.h"
 #include "GeneratedTypes.h"
-#include "SwallowProxy.h"
 
-#define LOOP_COUNT 1000
+#define DEBUG 1
+
+#ifdef DEBUG
+#define DEBUGWHERE() \
+  fprintf(stderr, "at %s, %s:%d\n", __FUNCTION__, __FILE__, __LINE__)
+#else
+#define DEBUGWHERE()
+#endif
+
+
+
+#define LOOP_COUNT 5
 #define SEPARATE_EVENT_THREAD
 //#define USE_MUTEX_SYNC
 
-EchoRequestProxy *echoRequestProxy = 0;
+PortalPerfRequestProxy *portalPerfRequestProxy = 0;
 
 #ifndef SEPARATE_EVENT_THREAD
 typedef int SEM_TYPE;
@@ -40,9 +72,11 @@ typedef sem_t SEM_TYPE;
 #define CHECKSEM(A) (!(A))
 #endif
 
-static SEM_TYPE sem_heard2;
+static SEM_TYPE sem_heard;
 
 PortalPoller *poller = 0;
+
+#ifdef SEPARATE_EVENT_THREAD
 
 static void *pthread_worker(void *p)
 {
@@ -51,29 +85,61 @@ static void *pthread_worker(void *p)
         rc = poller->portalExec_event(poller->portalExec_timeout);
     return rc;
 }
+#endif
+
 static void init_thread()
 {
 #ifdef SEPARATE_EVENT_THREAD
     pthread_t threaddata;
-    SEMINIT(&sem_heard2);
+    SEMINIT(&sem_heard);
     pthread_create(&threaddata, NULL, &pthread_worker, (void*)poller);
 #endif
 }
 
-class EchoIndication : public EchoIndicationWrapper
+class PortalPerfIndication : public PortalPerfIndicationWrapper
 {
 public:
-    virtual void heard(uint32_t v) {
-        fprintf(stderr, "heard an echo: %d\n", v);
-	echoRequestProxy->say2(v, 2*v);
-    }
-    virtual void heard2(uint32_t a, uint32_t b) {
+  virtual void spitl(uint32_t v1) {
+	DEBUGWHERE();
         catch_timer(20);
         SEMPOST(&sem_heard2);
-        //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
-        //catch_timer(25);
     }
-    EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
+  virtual void spitll(uint32_t v1, uint32_t v2) {
+	DEBUGWHERE();
+        catch_timer(20);
+        SEMPOST(&sem_heard2);
+    }
+  virtual void spitlll(uint32_t v1, uint32_t v2, uint32_t v3) {
+	DEBUGWHERE();
+        catch_timer(20);
+        SEMPOST(&sem_heard2);
+    }
+  virtual void spitllll(uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4) {
+	DEBUGWHERE();
+        catch_timer(20);
+        SEMPOST(&sem_heard2);
+    }
+  virtual void spitd(uint64_t v1) {
+	DEBUGWHERE();
+        catch_timer(20);
+        SEMPOST(&sem_heard2);
+    }
+  virtual void spitdd(uint64_t v1, uint64_t v2) {
+	DEBUGWHERE();
+        catch_timer(20);
+        SEMPOST(&sem_heard2);
+    }
+  virtual void spitddd(uint64_t v1, uint64_t v2, uint64_t v3) {
+	DEBUGWHERE();
+        catch_timer(20);
+        SEMPOST(&sem_heard2);
+    }
+  virtual void spitdddd(uint64_t v1, uint64_t v2, uint64_t v3, uint64_t v4) {
+	DEBUGWHERE();
+        catch_timer(20);
+        SEMPOST(&sem_heard2);
+    }
+    PortalPerfIndication(unsigned int id, PortalPoller *poller) : PortalPerfIndicationWrapper(id, poller) {}
 };
 
 static void call_say(int v)
@@ -81,7 +147,7 @@ static void call_say(int v)
     printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
     start_timer(0);
     PREPAREWAIT(sem_heard2);
-    echoRequestProxy->say(v);
+    portalPerfRequestProxy->say(v);
     SEMWAIT(&sem_heard2);
     printf("call_say: elapsed %zd\n", lap_timer(0));
 }
@@ -91,25 +157,233 @@ static void call_say2(int v, int v2)
     start_timer(0);
     PREPAREWAIT(sem_heard2);
     catch_timer(0);
-    echoRequestProxy->say2(v, v2);
+    portalPerfRequestProxy->say2(v, v2);
     catch_timer(19);
     SEMWAIT(&sem_heard2);
     catch_timer(30);
 }
 
+uint32_t vl1, vl2, vl3, vl4;
+uint64_t vd1, vd2, vd3, vd4;
+
+void call_swallowl(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->swallowl(vl1);
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_swallowll(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->swallowll(vl1, vl2);
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_swallowlll(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->swallowlll(vl1, vl2, vl3);
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_swallowllll(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->swallowllll(vl1, vl2, vl3, vl4);
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_swallowd(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->swallowd(vd1);
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_swallowdd(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->swallowdd(vd1, vd2);
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_swallowddd(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->swallowddd(vd1, vd2, vd3);
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_swallowdddd(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->swallowdddd(vd1, vd2, vd3, vd4);
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_dospitl(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->dospitl();
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_dospitll(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->dospitll();
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_dospitlll(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->dospitlll();
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_dospitllll(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->dospitllll();
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_dospitd(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->dospitd();
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_dospitdd(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->dospitdd();
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_dospitddd(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->dospitddd();
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void call_dospitdddd(void)
+{
+  DEBUGWHERE();
+    start_timer(0);
+    PREPAREWAIT(sem_heard);
+    catch_timer(0);
+    portalPerfRequestProxy->dospitdddd();
+    catch_timer(19);
+    SEMWAIT(&sem_heard);
+    catch_timer(30);
+}
+
+void dotest(char *testname, void (*testfn)(void))
+{
+  uint64_t elapsed;
+  init_timer();
+  start_timer(1);
+  for (int i = 0; i < LOOP_COUNT; i++) {
+    testfn();
+  }
+  elapsed = lap_timer(1);
+  printf("test %s: elapsed %g average %g\n", testname, (double) elapsed, (double) elapsed/ (double) LOOP_COUNT);
+  print_timer(LOOP_COUNT);
+}
+
+
 int main(int argc, const char **argv)
 {
     poller = new PortalPoller();
-    EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, poller);
+    PortalPerfIndication *portalPerfIndication = new PortalPerfIndication(IfcNames_PortalPerfIndication, poller);
     // these use the default poller
-    SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
-    echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);
+    portalPerfRequestProxy = new PortalPerfRequestProxy(IfcNames_PortalPerfRequest);
 
     poller->portalExec_init();
     init_thread();
     portalExec_start();
 
-#if 0
+
     printf("Timer tests\n");
     init_timer();
     for (int i = 0; i < 1000; i++) {
@@ -123,22 +397,11 @@ int main(int argc, const char **argv)
       catch_timer(7);
       catch_timer(8);
     }
+    printf("Each line 1-8 is one more call to catch_timer()\n");
     print_timer(1000);
-#endif
 
-    int v = 42;
-    fprintf(stderr, "Saying %d\n", v);
-    call_say(v);
-    call_say(v*5);
-    call_say(v*17);
-    call_say(v*93);
-    printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
-    init_timer();
-    //printf("[%s:%d] sleep2\n", __FUNCTION__, __LINE__); sleep(2);
-    start_timer(1);
-    for (int i = 0; i < LOOP_COUNT; i++)
-        call_say2(v, v*3);
-uint64_t elapsed = lap_timer(1);
+
+
     printf("TEST TYPE: "
 #ifndef SEPARATE_EVENT_THREAD
        "INLINE"
@@ -148,9 +411,24 @@ uint64_t elapsed = lap_timer(1);
        "SEM"
 #endif
        "\n");
-    print_timer(LOOP_COUNT);
-    printf("call_say: elapsed %g average %g\n", (double) elapsed, (double) elapsed/ (double) LOOP_COUNT);
-    echoRequestProxy->setLeds(9);
+
+    dotest("swallowl", call_swallowl);
+    dotest("swallowll", call_swallowll);
+    dotest("swallowlll", call_swallowlll);
+    dotest("swallowllll", call_swallowllll);
+    dotest("swallowd", call_swallowd);
+    dotest("swallowdd", call_swallowdd);
+    dotest("swallowddd", call_swallowddd);
+    dotest("swallowdddd", call_swallowdddd);
+    dotest("spitl", call_dospitl);
+    dotest("spitll", call_dospitll);
+    dotest("spitlll", call_dospitlll);
+    dotest("spitllll", call_dospitllll);
+    dotest("spitd", call_dospitd);
+    dotest("spitdd", call_dospitdd);
+    dotest("spitddd", call_dospitddd);
+    dotest("spitdddd", call_dospitdddd);
+
     poller->portalExec_end();
     portalExec_end();
     return 0;
