@@ -52,9 +52,9 @@ static Directory dir;
 static Directory *pdir;
 static uint64_t c_start[16];
 
-//#define USE_INTERRUPTS
+#define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
-#define ENABLE_INTERRUPTS(A) (A[1] = 1)
+#define ENABLE_INTERRUPTS(A) ((A)[1] = 1)
 #else
 #define ENABLE_INTERRUPTS(A)
 #endif
@@ -430,7 +430,7 @@ void PortalPoller::portalExec_end(void)
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d %s\n", i, instance->name);
-      *(volatile int *)(instance->ind_reg_base+0x1) = 0;
+      (instance->ind_reg_base)[1] = 0;
     }
 #endif
 }
