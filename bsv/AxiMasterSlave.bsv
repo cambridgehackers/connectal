@@ -126,9 +126,24 @@ interface RegFileA#(type index_t, type data_t);
    method ActionValue#(data_t) sub(index_t addr);
 endinterface
 
-module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) rf)
-   (Axi3Slave#(addrWidth, busWidth, idWidth))
+module mkRegFileANull#(data_t defv) (RegFileA#(index_t,data_t));
+   method Action upd(index_t addr, data_t d);
+      noAction;
+   endmethod
+   method ActionValue#(data_t) sub(index_t addr);
+      return defv;
+   endmethod
+endmodule
+
+module mkAxi3SlaveOutOfRange (Axi3Slave#(addrWidth, busWidth, idWidth));
+   RegFileA#(Bit#(addrWidth), Bit#(busWidth)) rf <- mkRegFileANull(0);
+   let rv <- mkAxi3SlaveFromRegFile(rf);
+   return rv;
+endmodule
+
+module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) rf) (Axi3Slave#(addrWidth, busWidth, idWidth))
    provisos(Add#(nz, regFileBusWidth, addrWidth));
+
    Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
    Reg#(Bit#(regFileBusWidth)) writeAddrReg <- mkReg(0);
    Reg#(Bit#(idWidth)) readIdReg <- mkReg(0);
@@ -193,70 +208,6 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
       endmethod
    endinterface: resp_b
 endmodule
-
-module mkAxi3SlaveOutOfRange (Axi3Slave#(addrWidth, busWidth, idWidth));
-   
-   Reg#(Bit#(addrWidth)) readAddrReg <- mkReg(0);
-   Reg#(Bit#(addrWidth)) writeAddrReg <- mkReg(0);
-   Reg#(Bit#(idWidth)) readIdReg <- mkReg(0);
-   Reg#(Bit#(4)) readBurstCountReg <- mkReg(0);
-   Reg#(Bit#(4)) writeBurstCountReg <- mkReg(0);
-   FIFO#(Bit#(2)) writeRespFifo <- mkFIFO();
-   FIFO#(Bit#(idWidth)) writeIdFifo <- mkFIFO();
-   let req_ar_fifo <- mkSizedFIFO(1);
-   
-   Bool verbose = False;
-   interface Put req_ar;
-      method Action put(Axi3ReadRequest#(addrWidth,idWidth) req);
-         if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.address, req.len+1);
-   	 req_ar_fifo.enq(tuple3(truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8)))), req.id, req.len+1));
-      endmethod
-   endinterface: req_ar
-   interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(busWidth,idWidth)) get();
-   	 let addr = readAddrReg;
-   	 let id = readIdReg;
-   	 let burstCount = readBurstCountReg;
-   	 if (readBurstCountReg == 0) begin
-            addr = tpl_1(req_ar_fifo.first);
-   	    id = tpl_2(req_ar_fifo.first);
-            burstCount = tpl_3(req_ar_fifo.first);
-   	    req_ar_fifo.deq;
-   	 end
-         let data = 0;
-         if (verbose) $display("axiSlave.read.readData %h %h %d", addr, data, burstCount);
-         readBurstCountReg <= burstCount - 1;
-         readAddrReg <= addr + 1;
-   	 readIdReg <= id;
-         return Axi3ReadResponse { data: data, last: (burstCount == 1) ? 1 : 0, id: id, resp: 2'b11 };
-      endmethod
-   endinterface: resp_read
-   interface Put req_aw;
-      method Action put(Axi3WriteRequest#(addrWidth,idWidth) req) if (writeBurstCountReg == 0);
-         writeAddrReg <= req.address/fromInteger(valueOf(TDiv#(busWidth,8)));
-         writeBurstCountReg <= req.len+1;
-         writeIdFifo.enq(req.id);
-      endmethod
-   endinterface: req_aw
-   interface Put resp_write;
-      method Action put(Axi3WriteData#(busWidth,idWidth) resp) if (writeBurstCountReg > 0);
-         writeAddrReg <= writeAddrReg + 1;
-         writeBurstCountReg <= writeBurstCountReg - 1;
-         if (writeBurstCountReg == 1)
-	    begin
-               writeRespFifo.enq(2'b11);
-            end
-      endmethod
-   endinterface: resp_write
-   interface Get resp_b;
-      method ActionValue#(Axi3WriteResponse#(idWidth)) get();
-         writeRespFifo.deq;
-	 writeIdFifo.deq;
-         return Axi3WriteResponse { resp: writeRespFifo.first, id: writeIdFifo.first };
-      endmethod
-   endinterface: resp_b
-endmodule
-
 
 typedef struct {
     Bit#(addrWidth) address;
