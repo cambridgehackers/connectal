@@ -25,6 +25,8 @@
 
 import Vector::*;
 import GetPut::*;
+import SpecialFIFOs::*;
+import FIFO::*;
 
 import AxiMasterSlave::*;
 import Portal::*;
@@ -126,6 +128,9 @@ module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
    
    Vector#(3,Reg#(Bit#(64))) writeIntervals <- replicateM(mkReg(0));
    Vector#(3,Reg#(Bit#(64))) readIntervals <- replicateM(mkReg(0));
+
+   FIFO#(void) req_ar_fifo <- mkPipelineFIFO;
+   FIFO#(void) req_aw_fifo <- mkPipelineFIFO;
    
    rule xferIntervals;
       dir.writeIntervals[0] <= writeIntervals[0];
@@ -165,6 +170,7 @@ module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
 	    wsv = fromInteger(valueOf(numInputs));
 	 ifcs[wsv].req_aw.put(req);
 	 ws <= wsv;
+	 req_aw_fifo.enq(?);
 	 if (wsv > 0)
 	    latchWriteInterval;
       endmethod
@@ -172,6 +178,7 @@ module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
    interface Put resp_write;
       method Action put(Axi3WriteData#(_b,_c) wdata);
 	 ifcs[ws].resp_write.put(wdata);
+	 req_aw_fifo.deq;
       endmethod
    endinterface
    interface Get resp_b;
@@ -187,6 +194,7 @@ module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
 	    rsv = fromInteger(valueOf(numInputs));
 	 ifcs[rsv].req_ar.put(req);
 	 rs <= rsv;
+	 req_ar_fifo.enq(?);
 	 if (rsv > 0)
 	    latchReadInterval;
       endmethod
@@ -194,6 +202,7 @@ module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
    interface Get resp_read;
       method ActionValue#(Axi3ReadResponse#(_b,_c)) get();
 	 let rv <- ifcs[rs].resp_read.get();
+	 req_ar_fifo.deq;
 	 return rv;
       endmethod
    endinterface
