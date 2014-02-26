@@ -22,7 +22,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-interface Swallow;
+interface SwallowRequest;
    method Action swallowl(Bit#(32) v1);
    method Action swallowll(Bit#(32) v1, Bit#(32) v2);
    method Action swallowlll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3);
@@ -31,10 +31,30 @@ interface Swallow;
    method Action swallowdd(Bit#(64) v1, Bit#(64) v2);
    method Action swallowddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3);
    method Action swallowdddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3, Bit#(64) v4);
-
+   method Action dospitl();
+   method Action dospitll();
+   method Action dospitlll();
+   method Action dospitllll();
+   method Action dospitd();
+   method Action dospitdd();
+   method Action dospitddd();
+   method Action dospitdddd();
 endinterface
 
-module mkSwallow (Swallow);
+
+interface SwallowIndication;
+   method Action spitl(Bit#(32) v1);
+   method Action spitll(Bit#(32) v1, Bit#(32) v2);
+   method Action spitlll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3);
+   method Action spitllll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3, Bit#(32) v4);
+   method Action spitd(Bit#(64) v1);
+   method Action spitdd(Bit#(64) v1, Bit#(64) v2);
+   method Action spitddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3);
+   method Action spitdddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3, Bit#(64) v4);
+endinterface
+
+
+module mkSwallow#(SwallowIndication indication) (SwallowRequest);
 
    Reg#(Bit#(32)) sinkl1 <- mkReg(0);
 
@@ -108,5 +128,38 @@ module mkSwallow (Swallow);
       sinkdddd3 <= v3;
       sinkdddd4 <= v4;
    endmethod
+
+   method Action dospitl();
+      indication.spitl(sinkl1);
+   endmethod
+
+   method Action dospitll();
+      indication.spitll(sinkll1, sinkll2);
+   endmethod
+
+   method Action dospitlll();
+      indication.spitlll(sinklll1, sinklll2, sinklll3);
+   endmethod
+
+   method Action dospitllll();
+      indication.spitlll(sinkllll1, sinkllll2, sinkllll3, sinklll4);
+   endmethod
+
+   method Action dospitd();
+      indication.spitd(sinkd1);
+   endmethod
+
+   method Action dospitdd();
+      indication.spitdd(sinkdd1, sinkdd2);
+   endmethod
+
+   method Action dospitddd();
+      indication.spitddd(sinkddd1, sinkddd2, sinkddd3);
+   endmethod
+
+   method Action dospitdddd();
+      indication.spitdddd(sinkdddd1, sinkdddd2, sinkdddd3, sinkdddd4);
+   endmethod
+
 
 endmodule
