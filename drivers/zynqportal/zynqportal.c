@@ -70,15 +70,15 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
         irqreturn_t rc = IRQ_NONE;
 
         //dump_ind_regs("ISR a", portal_data);
-        driver_devel("%s %s %d basevirt %p\n", __func__, portal_data->misc.name, irq, portal_data->ind_reg_base_virt);
+        //driver_devel("%s %s %d basevirt %p\n", __func__, portal_data->misc.name, irq, portal_data->ind_reg_base_virt);
         u32 int_status = readl(portal_data->ind_reg_base_virt + 0);
-        driver_devel("stat %x\n", int_status);
+        //driver_devel("stat %x\n", int_status);
         u32 int_en;
 #ifdef DEBUG
 	// LCS read unneeded unless we are debugging
 	int_en = readl(portal_data->ind_reg_base_virt + 4);
 #endif
-        driver_devel("en %x\n", int_en);
+        //driver_devel("en %x\n", int_en);
         //driver_devel("%s IRQ %s %d %x %x\n", __func__, portal_data->misc.name, irq, int_status, int_en);
 
         if (int_status) {
@@ -90,7 +90,7 @@ static irqreturn_t portal_isr(int irq, void *dev_id)
                 wake_up_interruptible(&portal_data->wait_queue);
                 rc = IRQ_HANDLED;
         }
-        driver_devel("IRQRC %x\n", rc);
+        //driver_devel("IRQRC %x\n", rc);
         return rc;
 }
 
