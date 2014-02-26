@@ -182,10 +182,10 @@ int portal_mmap(struct file *filep, struct vm_area_struct *vma)
 unsigned int portal_poll (struct file *filep, poll_table *poll_table)
 {
         struct portal_data *portal_data = filep->private_data;
-        int int_status;
+        int int_status = 0;
         int mask = 0;
         poll_wait(filep, &portal_data->wait_queue, poll_table);
-        int_status = readl(portal_data->ind_reg_base_virt + 0);
+        //int_status = readl(portal_data->ind_reg_base_virt + 0);
         if (int_status & 1)
                 mask = POLLIN | POLLRDNORM;
         if (0)

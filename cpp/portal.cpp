@@ -438,16 +438,10 @@ void PortalPoller::portalExec_end(void)
 void* PortalPoller::portalExec_event(int timeout)
 {
 #ifdef MMAP_HW
-    unsigned int int_src;
-    unsigned int int_en;
-    unsigned int ind_count;
-    unsigned int queue_status;
-    long rc;
+    long rc = 0;
     // LCS bypass the call to poll if the timeout is 0
     if (timeout != 0)
       rc = poll(portal_fds, numFds, timeout);
-    else 
-      rc = 1;
     if(rc >= 0) {
 	for (int i = 0; i < numFds; i++) {
 	  if (!portal_wrappers) {
@@ -458,32 +452,17 @@ void* PortalPoller::portalExec_event(int timeout)
 	  volatile unsigned int *ind_reg_base = instance->ind_reg_base;
 	
 	  // sanity check, to see the status of interrupt source and enable
-	  queue_status = ind_reg_base[6];
-	  if(0) {
-	    int_src = ind_reg_base[0];
-	    int_en  = ind_reg_base[1];
-	    ind_count  = ind_reg_base[2];
-	    fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
-	  }
+	  unsigned int queue_status;
 	
 	  // handle all messasges from this portal instance
-	  while (queue_status) {
-	    if(0)
-	      fprintf(stderr, "queue_status %d\n", queue_status);
-	    instance->handleMessage(queue_status-1);
-	    queue_status = ind_reg_base[6];
-	    if (0) {
-	      int_src = ind_reg_base[0];
-	      int_en  = ind_reg_base[1];
-	      ind_count  = ind_reg_base[2];
-	      fprintf(stderr, "(%d:%s) int_src=%08x int_en=%08x ind_count=%08x queue_status=%08x\n",
-		      i, instance->name, int_src, int_en, ind_count, queue_status);
+	  while ((queue_status= ind_reg_base[6])) {
+	    if(0) {
+	      unsigned int int_src = ind_reg_base[0];
+	      unsigned int int_en  = ind_reg_base[1];
+	      unsigned int ind_count  = ind_reg_base[2];
+	      fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
 	    }
-	  }
-	
-	  // rc of 0 indicates timeout
-	  if (rc == 0) {
-	    // do something if we timeout??
+	    instance->handleMessage(queue_status-1);
 	  }
 	  // re-enable interrupt which was disabled by portal_isr
 	  ENABLE_INTERRUPTS(ind_reg_base);
@@ -522,6 +501,7 @@ void* PortalPoller::portalExec(void* __x)
     while (!rc && !stopping)
         rc = portalExec_event(portalExec_timeout);
     portalExec_end();
+    printf("[%s] thread ending\n", __FUNCTION__);
     return rc;
 }
 
