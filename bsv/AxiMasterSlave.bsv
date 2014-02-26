@@ -136,23 +136,32 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    Reg#(Bit#(4)) writeBurstCountReg <- mkReg(0);
    FIFO#(Bit#(2)) writeRespFifo <- mkFIFO();
    FIFO#(Bit#(idWidth)) writeIdFifo <- mkFIFO();
-
+   let req_ar_fifo <- mkSizedFIFO(1);
+   
    Bool verbose = False;
    interface Put req_ar;
-      method Action put(Axi3ReadRequest#(addrWidth,idWidth) req) if (readBurstCountReg == 0);
+      method Action put(Axi3ReadRequest#(addrWidth,idWidth) req);
          if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.address, req.len+1);
-         readAddrReg <= truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8))));
-	 readIdReg <= req.id;
-         readBurstCountReg <= req.len+1;
+   	 req_ar_fifo.enq(tuple3(truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8)))), req.id, req.len+1));
       endmethod
    endinterface: req_ar
    interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(busWidth,idWidth)) get() if (readBurstCountReg > 0);
-         let data <- rf.sub(readAddrReg);
-         if (verbose) $display("axiSlave.read.readData %h %h %d", readAddrReg, data, readBurstCountReg);
-         readBurstCountReg <= readBurstCountReg - 1;
-         readAddrReg <= readAddrReg + 1;
-         return Axi3ReadResponse { data: data, last: (readBurstCountReg == 1) ? 1 : 0, id: readIdReg, resp: 0 };
+      method ActionValue#(Axi3ReadResponse#(busWidth,idWidth)) get();
+   	 let addr = readAddrReg;
+   	 let id = readIdReg;
+   	 let burstCount = readBurstCountReg;
+   	 if (readBurstCountReg == 0) begin
+            addr = tpl_1(req_ar_fifo.first);
+   	    id = tpl_2(req_ar_fifo.first);
+            burstCount = tpl_3(req_ar_fifo.first);
+   	    req_ar_fifo.deq;
+   	 end
+         let data <- rf.sub(addr);
+         if (verbose) $display("axiSlave.read.readData %h %h %d", addr, data, burstCount);
+         readBurstCountReg <= burstCount - 1;
+         readAddrReg <= addr + 1;
+   	 readIdReg <= id;
+         return Axi3ReadResponse { data: data, last: (burstCount == 1) ? 1 : 0, id: id, resp: 0 };
       endmethod
    endinterface: resp_read
    interface Put req_aw;
@@ -194,20 +203,32 @@ module mkAxi3SlaveOutOfRange (Axi3Slave#(addrWidth, busWidth, idWidth));
    Reg#(Bit#(4)) writeBurstCountReg <- mkReg(0);
    FIFO#(Bit#(2)) writeRespFifo <- mkFIFO();
    FIFO#(Bit#(idWidth)) writeIdFifo <- mkFIFO();
-
+   let req_ar_fifo <- mkSizedFIFO(1);
+   
+   Bool verbose = False;
    interface Put req_ar;
-      method Action put(Axi3ReadRequest#(addrWidth,idWidth) req) if (readBurstCountReg == 0);
-         readAddrReg <= req.address/fromInteger(valueOf(TDiv#(busWidth,8)));
-	 readIdReg <= req.id;
-         readBurstCountReg <= req.len+1;
+      method Action put(Axi3ReadRequest#(addrWidth,idWidth) req);
+         if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.address, req.len+1);
+   	 req_ar_fifo.enq(tuple3(truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8)))), req.id, req.len+1));
       endmethod
    endinterface: req_ar
    interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(busWidth,idWidth)) get() if (readBurstCountReg > 0);
+      method ActionValue#(Axi3ReadResponse#(busWidth,idWidth)) get();
+   	 let addr = readAddrReg;
+   	 let id = readIdReg;
+   	 let burstCount = readBurstCountReg;
+   	 if (readBurstCountReg == 0) begin
+            addr = tpl_1(req_ar_fifo.first);
+   	    id = tpl_2(req_ar_fifo.first);
+            burstCount = tpl_3(req_ar_fifo.first);
+   	    req_ar_fifo.deq;
+   	 end
          let data = 0;
-         readBurstCountReg <= readBurstCountReg - 1;
-         readAddrReg <= readAddrReg + 1;
-         return Axi3ReadResponse { data: data, last: (readBurstCountReg == 1) ? 1 : 0, id: readIdReg, resp: 2'b11 };
+         if (verbose) $display("axiSlave.read.readData %h %h %d", addr, data, burstCount);
+         readBurstCountReg <= burstCount - 1;
+         readAddrReg <= addr + 1;
+   	 readIdReg <= id;
+         return Axi3ReadResponse { data: data, last: (burstCount == 1) ? 1 : 0, id: id, resp: 2'b11 };
       endmethod
    endinterface: resp_read
    interface Put req_aw;
