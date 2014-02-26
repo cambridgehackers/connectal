@@ -134,7 +134,6 @@ int main(int argc, const char **argv)
     call_say(v*93);
     printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
     init_timer();
-    //printf("[%s:%d] sleep2\n", __FUNCTION__, __LINE__); sleep(2);
     start_timer(1);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
