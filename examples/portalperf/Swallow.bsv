@@ -23,15 +23,90 @@
 // SOFTWARE.
 
 interface Swallow;
-   method Action swallow(Bit#(32) v);
+   method Action swallowl(Bit#(32) v1);
+   method Action swallowll(Bit#(32) v1, Bit#(32) v2);
+   method Action swallowlll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3);
+   method Action swallowllll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3, Bit#(32) v4);
+   method Action swallowd(Bit#(64) v1);
+   method Action swallowdd(Bit#(64) v1, Bit#(64) v2);
+   method Action swallowddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3);
+   method Action swallowdddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3, Bit#(64) v4);
+
 endinterface
 
 module mkSwallow (Swallow);
 
-   Reg#(Bit#(32)) sink <- mkReg(0);
+   Reg#(Bit#(32)) sinkl1 <- mkReg(0);
+
+   Reg#(Bit#(32)) sinkll1 <- mkReg(0);
+   Reg#(Bit#(32)) sinkll2 <- mkReg(0);
+
+   Reg#(Bit#(32)) sinklll1 <- mkReg(0);
+   Reg#(Bit#(32)) sinklll2 <- mkReg(0);
+   Reg#(Bit#(32)) sinklll3 <- mkReg(0);
+
+   Reg#(Bit#(32)) sinkllll1 <- mkReg(0);
+   Reg#(Bit#(32)) sinkllll2 <- mkReg(0);
+   Reg#(Bit#(32)) sinkllll3 <- mkReg(0);
+   Reg#(Bit#(32)) sinkllll4 <- mkReg(0);
    
-   method Action swallow(Bit#(32) v);
-      sink <= v;
+   Reg#(Bit#(64)) sinkd1 <- mkReg(0);
+   
+   Reg#(Bit#(64)) sinkdd1 <- mkReg(0);
+   Reg#(Bit#(64)) sinkdd2 <- mkReg(0);
+   
+   Reg#(Bit#(64)) sinkddd1 <- mkReg(0);
+   Reg#(Bit#(64)) sinkddd2 <- mkReg(0);
+   Reg#(Bit#(64)) sinkddd3 <- mkReg(0);
+   
+   Reg#(Bit#(64)) sinkdddd1 <- mkReg(0);
+   Reg#(Bit#(64)) sinkdddd2 <- mkReg(0);
+   Reg#(Bit#(64)) sinkdddd3 <- mkReg(0);
+   Reg#(Bit#(64)) sinkdddd4 <- mkReg(0);
+
+   method Action swallowl(Bit#(32) v1);
+      sinkl1 <= v1;
+   endmethod
+
+   method Action swallowll(Bit#(32) v1, Bit#(32) v2);
+      sinkll1 <= v1;
+      sinkll2 <= v2;
+   endmethod
+
+   method Action swallowlll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3);
+      sinklll1 <= v1;
+      sinklll2 <= v2;
+      sinklll3 <= v3;
+   endmethod
+
+   method Action swallowllll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3, Bit#(32) v4);
+      sinkllll1 <= v1;
+      sinkllll2 <= v2;
+      sinkllll3 <= v3;
+      sinkllll4 <= v4;
+   endmethod
+
+   method Action swallowd(Bit#(64) v);
+      sinkd1 <= v1;
+   endmethod
+
+   method Action swallowdd(Bit#(64) v1, Bit#(64) v2);
+      sinkdd1 <= v1;
+      sinkdd2 <= v2;
+   endmethod
+
+   method Action swallowddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3);
+      sinkddd1 <= v1;
+      sinkddd2 <= v2;
+      sinkddd3 <= v3;
+   endmethod
+
+   method Action swallowdddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3, Bit#(64) v4
+      );
+      sinkdddd1 <= v1;
+      sinkdddd2 <= v2;
+      sinkdddd3 <= v3;
+      sinkdddd4 <= v4;
    endmethod
 
 endmodule
