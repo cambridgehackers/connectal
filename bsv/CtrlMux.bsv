@@ -64,6 +64,9 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories,
    Axi3Slave#(_a,_b,_c) out_of_range <- mkAxi3SlaveOutOfRange;
    Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(append(map(getCtrl, directories),map(getCtrl, portals)),cons(out_of_range, nil));
    
+   FIFO#(void) req_ar_fifo <- mkPipelineFIFO;
+   FIFO#(void) req_aw_fifo <- mkPipelineFIFO;
+
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
    Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
    
@@ -80,6 +83,7 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories,
 	    wsv = fromInteger(valueOf(numInputs));
 	 ifcs[wsv].req_aw.put(req);
 	 ws <= wsv;
+	 req_aw_fifo.enq(?);
       endmethod
    endinterface
    interface Put resp_write;
@@ -90,6 +94,7 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories,
    interface Get resp_b;
       method ActionValue#(Axi3WriteResponse#(_c)) get();
 	 let rv <- ifcs[ws].resp_b.get();
+	 req_aw_fifo.deq;
 	 return rv;
       endmethod
    endinterface
@@ -99,12 +104,14 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories,
 	 if (rsv > fromInteger(valueOf(numInputs)))
 	    rsv = fromInteger(valueOf(numInputs));
 	 ifcs[rsv].req_ar.put(req);
+	 req_ar_fifo.enq(?);
 	 rs <= rsv;
       endmethod
    endinterface
    interface Get resp_read;
       method ActionValue#(Axi3ReadResponse#(_b,_c)) get();
 	 let rv <- ifcs[rs].resp_read.get();
+	 req_ar_fifo.deq;
 	 return rv;
       endmethod
    endinterface
@@ -178,12 +185,12 @@ module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
    interface Put resp_write;
       method Action put(Axi3WriteData#(_b,_c) wdata);
 	 ifcs[ws].resp_write.put(wdata);
-	 req_aw_fifo.deq;
       endmethod
    endinterface
    interface Get resp_b;
       method ActionValue#(Axi3WriteResponse#(_c)) get();
 	 let rv <- ifcs[ws].resp_b.get();
+	 req_aw_fifo.deq;
 	 return rv;
       endmethod
    endinterface
