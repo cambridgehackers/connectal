@@ -35,8 +35,8 @@ import BRAM::*;
 import Bscan::*;
 import FIFOF::*;
 
-`define TRACE_AXI
-`define AXI_READ_TIMING
+//`define TRACE_AXI
+//`define AXI_READ_TIMING
 
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
