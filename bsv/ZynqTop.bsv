@@ -35,6 +35,9 @@ import BRAM::*;
 import Bscan::*;
 import FIFOF::*;
 
+`define TRACE_AXI
+`define AXI_READ_TIMING
+
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
    (* prefix="" *)
@@ -60,7 +63,6 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    
    let interrupt_bit = top.interrupt ? 1'b1 : 1'b0;
    
-`define TRACE_AXI
 `ifndef TRACE_AXI
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
 `else
@@ -92,6 +94,10 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:data});
       addrReg <= addrReg + 1;
    endrule
+   Reg#(Bit#(16)) seqCounter <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
+   rule seqinc;
+       seqCounter <= seqCounter + 1;
+   endrule
 
    // AXI trace for JTAG
    let m = ps7.m_axi_gp[0].client;
@@ -101,8 +107,14 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        let req <- m.req_ar.get();
        s.req_ar.put(req);
        bscan_fifos[0].enq(
-	   {3'h1, interrupt_bit, req.id, req.len, req.cache, req.prot, req.size,
-                    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0), req.address});
+	   {3'h1, interrupt_bit, req.id,
+`ifdef AXI_READ_TIMING
+                    seqCounter,
+`else
+                    req.len, req.cache, req.prot, req.size,
+                    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0),
+`endif
+                    req.address});
    endrule
    //mkConnection(s.resp_read, m.resp_read);
    rule connect_resp_read;
