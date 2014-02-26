@@ -54,7 +54,6 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    B2C mainclock <- mkB2C();
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
    let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
-   Reg#(Bit#(1)) intReg <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
    BscanBram#(8, 64) bscanBram <- mkBscanBram(1, 256, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
    ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock.c, bscanBram.debug());
@@ -66,6 +65,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 `else
    
    Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF(clocked_by mainclock.c, reset_by mainclock.r));
+   let interrupt_bit = top.interrupt ? 1'b1 : 1'b0;
 
    rule write_bscanBram;
       Bit#(64) data = ?;
@@ -101,7 +101,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        let req <- m.req_ar.get();
        s.req_ar.put(req);
        bscan_fifos[0].enq(
-	   {4'h1, req.id, req.len, req.cache, req.prot, req.size,
+	   {3'h1, interrupt_bit, req.id, req.len, req.cache, req.prot, req.size,
                     pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0), req.address});
    endrule
    //mkConnection(s.resp_read, m.resp_read);
@@ -109,14 +109,14 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        let resp <- s.resp_read.get();
        m.resp_read.put(resp);
        bscan_fifos[1].enq(
-           {4'h2, resp.id, resp.resp, resp.last, 13'b0, resp.data});
+           {3'h2, interrupt_bit, resp.id, resp.resp, resp.last, 13'b0, resp.data});
    endrule
    //mkConnection(m.req_aw, s.req_aw);
    rule connect_req_aw;
        let req <- m.req_aw.get();
        s.req_aw.put(req);
        bscan_fifos[2].enq(
-           {4'h3, req.id, req.len, req.cache, req.prot, req.size,
+           {3'h3, interrupt_bit, req.id, req.len, req.cache, req.prot, req.size,
                     pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0), req.address});
    endrule
    //mkConnection(m.resp_write, s.resp_write);
@@ -124,23 +124,20 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        let resp <- m.resp_write.get();
        s.resp_write.put(resp);
        bscan_fifos[3].enq(
-           {4'h4, resp.id, resp.last, resp.byteEnable, 11'b0, resp.data});
+           {3'h4, interrupt_bit, resp.id, resp.last, resp.byteEnable, 11'b0, resp.data});
    endrule
    //mkConnection(s.resp_b, m.resp_b);
    rule connect_resp_b;
        let resp <- s.resp_b.get();
        m.resp_b.put(resp);
        bscan_fifos[4].enq(
-           {4'h5, resp.id, resp.resp, 46'b0});
+           {3'h5, interrupt_bit, resp.id, resp.resp, 46'b0});
    endrule
 `endif
 
    mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
    rule send_int_rule;
-       ps7.interrupt(top.interrupt ? 1'b1 : 1'b0);
-   endrule
-   rule bozorule;
-       intReg <= top.interrupt ? 1'b1 : 1'b0;
+       ps7.interrupt(interrupt_bit);
    endrule
 
    rule b2c_rule;
@@ -154,7 +151,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        method Bit#(4) gpio;
            return debugReg;
 `ifdef BOZOIFDEF
-           return {intReg, 
+           return {interrupt_bit,
                  pack((ps7.debug.arvalid == 1)
                    && (ps7.debug.araddr[18:16] == 3'd1)   // /dev/fpga1
                    && (ps7.debug.araddr[15:14] == 2'd2)   // indication
