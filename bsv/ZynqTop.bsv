@@ -55,10 +55,60 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(1)) intReg <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
-   BscanBram#(8, 32) bscanBram <- mkBscanBram(1, 256, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
+   BscanBram#(8, 64) bscanBram <- mkBscanBram(1, 256, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
    ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock.c, bscanBram.debug());
 
+`define TRACE_AXI
+`ifndef TRACE_AXI
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
+`else
+   // AXI trace for JTAG
+   let m = ps7.m_axi_gp[0].client;
+   let s = top.ctrl;
+   //mkConnection(m.req_ar, s.req_ar);
+   rule connect_req_ar;
+       let req <- m.req_ar.get();
+       s.req_ar.put(req);
+       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:
+           {4'h1, 7'b0, req.len, req.size, req.burst, req.id,
+                    /*req.prot, req.cache, req.lock, req.qos,*/ req.address}});
+       addrReg <= addrReg + 1;
+   endrule
+   //mkConnection(s.resp_read, m.resp_read);
+   rule connect_resp_read;
+       let resp <- s.resp_read.get();
+       m.resp_read.put(resp);
+       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:
+           {4'h2, 13'b0, resp.id, resp.resp, resp.last, resp.data}});
+       addrReg <= addrReg + 1;
+   endrule
+   //mkConnection(m.req_aw, s.req_aw);
+   rule connect_req_aw;
+       let req <- m.req_aw.get();
+       s.req_aw.put(req);
+       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:
+           {4'h3, 7'b0, req.len, req.size, req.burst, req.id,
+                    /*req.prot, req.cache, req.lock, req.qos,*/ req.address}});
+       addrReg <= addrReg + 1;
+   endrule
+   //mkConnection(m.resp_write, s.resp_write);
+   rule connect_resp_write;
+       let resp <- m.resp_write.get();
+       s.resp_write.put(resp);
+       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:
+           {4'h4, 11'b0, resp.id, resp.last, resp.byteEnable, resp.data}});
+       addrReg <= addrReg + 1;
+   endrule
+   //mkConnection(s.resp_b, m.resp_b);
+   rule connect_resp_b;
+       let resp <- s.resp_b.get();
+       m.resp_b.put(resp);
+       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:
+           {4'h5, 46'b0, resp.resp, resp.id}});
+       addrReg <= addrReg + 1;
+   endrule
+`endif
+
    mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
    rule send_int_rule;
        ps7.interrupt(top.interrupt ? 1'b1 : 1'b0);
@@ -70,16 +120,6 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    rule b2c_rule;
        mainclock.inputclock(ps7.fclkclk()[0]);
        mainclock.inputreset(ps7.fclkresetn()[0]);
-   endrule
-
-   // AXI trace for JTAG
-   rule axi_read_rule if (ps7.debug.internal_m_axi_gp[0].arvalid() != 0);
-       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:ps7.debug.internal_m_axi_gp[0].araddr()});
-       addrReg <= addrReg + 1;
-   endrule
-   rule axi_write_rule if (ps7.debug.internal_m_axi_gp[0].awvalid() != 0);
-       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:ps7.debug.internal_m_axi_gp[0].awaddr()});
-       addrReg <= addrReg + 1;
    endrule
 
    interface zynq = ps7.pins;
