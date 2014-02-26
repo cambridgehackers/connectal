@@ -1,8 +1,7 @@
-
-S2H = Swallow EchoRequest
-H2S = EchoIndication
-BSVFILES = Echo.bsv Swallow.bsv Top.bsv
-CPPFILES=testecho.cpp
+S2H = PortalPerfRequest
+H2S = PortalPerfIndication
+BSVFILES = PortalPerf.bsv Top.bsv
+CPPFILES=testportalperf.cpp
 Dma = 
 PINS = Std
 
