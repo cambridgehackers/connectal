@@ -28,6 +28,7 @@ testnames = echo     \
             struct   \
 	    ring     \
 	    perf     \
+	    portalperf     \
 	    nandsim  \
             flowcontrol \
             bluescope \
