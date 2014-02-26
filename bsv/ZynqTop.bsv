@@ -101,37 +101,37 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        let req <- m.req_ar.get();
        s.req_ar.put(req);
        bscan_fifos[0].enq(
-	   {4'h1, 7'b0, req.len, req.size, req.burst, req.id,
-                    /*req.prot, req.cache, req.lock, req.qos,*/ req.address});
+	   {4'h1, req.id, req.len, req.cache, req.prot, req.size,
+                    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0), req.address});
    endrule
    //mkConnection(s.resp_read, m.resp_read);
    rule connect_resp_read;
        let resp <- s.resp_read.get();
        m.resp_read.put(resp);
        bscan_fifos[1].enq(
-           {4'h2, 13'b0, resp.id, resp.resp, resp.last, resp.data});
+           {4'h2, resp.id, resp.resp, resp.last, 13'b0, resp.data});
    endrule
    //mkConnection(m.req_aw, s.req_aw);
    rule connect_req_aw;
        let req <- m.req_aw.get();
        s.req_aw.put(req);
        bscan_fifos[2].enq(
-           {4'h3, 7'b0, req.len, req.size, req.burst, req.id,
-                    /*req.prot, req.cache, req.lock, req.qos,*/ req.address});
+           {4'h3, req.id, req.len, req.cache, req.prot, req.size,
+                    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0), req.address});
    endrule
    //mkConnection(m.resp_write, s.resp_write);
    rule connect_resp_write;
        let resp <- m.resp_write.get();
        s.resp_write.put(resp);
        bscan_fifos[3].enq(
-           {4'h4, 11'b0, resp.id, resp.last, resp.byteEnable, resp.data});
+           {4'h4, resp.id, resp.last, resp.byteEnable, 11'b0, resp.data});
    endrule
    //mkConnection(s.resp_b, m.resp_b);
    rule connect_resp_b;
        let resp <- s.resp_b.get();
        m.resp_b.put(resp);
        bscan_fifos[4].enq(
-           {4'h5, 46'b0, resp.resp, resp.id});
+           {4'h5, resp.id, resp.resp, 46'b0});
    endrule
 `endif
 
