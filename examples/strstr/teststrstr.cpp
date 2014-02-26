@@ -217,7 +217,7 @@ int main(int argc, const char **argv)
 
     start_timer(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt);
-    fprintf(stderr, "elapsed time (hw cycles): %lld\n", lap_timer(0));
+    fprintf(stderr, "elapsed time (hw cycles): %zd\n", lap_timer(0));
     
     dma->dCacheFlushInval(needleAlloc, needle);
     dma->dCacheFlushInval(mpNextAlloc, mpNext);
@@ -241,14 +241,17 @@ int main(int argc, const char **argv)
   }
 
 
-#ifdef MMAP_HW
-  if(1){
+  if(0){
     fprintf(stderr, "benchmarks\n");
     PortalAlloc *needleAlloc;
     PortalAlloc *haystackAlloc;
     PortalAlloc *mpNextAlloc;
     const char *needle_text = "I have control\n";
+#ifdef MMAP_HW
     unsigned int BENCHMARK_INPUT_SIZE = 16 << 18;
+#else
+    unsigned int BENCHMARK_INPUT_SIZE = 16 << 4;
+#endif
     unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
     unsigned int needle_alloc_len = strlen(needle_text);
     unsigned int mpNext_alloc_len = needle_alloc_len*4;
@@ -281,7 +284,11 @@ int main(int argc, const char **argv)
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
+#ifdef MMAP_HW
     int iter_cnt = 8;
+#else
+    int iter_cnt = 2;
+#endif
 
     start_timer(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, iter_cnt);
@@ -298,13 +305,14 @@ int main(int argc, const char **argv)
     sem_wait(&test_sem);
     uint64_t hw_cycles = lap_timer(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    fprintf(stderr, "hw_cycles:%zx\n", hw_cycles);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)hw_cycles));
+    fprintf(stderr, "speedup: %f\n", ((float)sw_cycles)/((float)hw_cycles));
 
     close(needleAlloc->header.fd);
     close(haystackAlloc->header.fd);
     close(mpNextAlloc->header.fd);
   }
-#endif
 
   fprintf(stderr, "sw_match_cnt=%d, hw_match_cnt=%d\n", sw_match_cnt, hw_match_cnt);
   return (sw_match_cnt != hw_match_cnt);

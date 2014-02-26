@@ -36,6 +36,11 @@ interface StrstrRequest;
    method Action search(Bit#(32) haystackPointer, Bit#(32) haystack_len, Bit#(32) iter_cnt);
 endinterface
 
+interface StrstrEngine;
+   method Action setup(Bit#(32) needlePointer, Bit#(32) mpNextPointer, Bit#(32) needle_len);
+   method Action search(Bit#(32) haystackPointer, Bit#(32) haystack_len, Bit#(32) haystack_base, Bit#(32) iter_cnt);
+endinterface
+
 interface StrstrIndication;
    method Action searchResult(Int#(32) v);
    method Action setupComplete();
@@ -50,10 +55,10 @@ typedef Bit#(TLog#(MaxNeedleLen)) NeedleIdx;
 
 typedef enum {Idle, Init, Ready, Run} Stage deriving (Eq, Bits);
 
-module mkStrstrRequest#(StrstrIndication indication,
-			DmaReadServer#(busWidth)   haystack_read_server,
-			DmaReadServer#(busWidth)     needle_read_server,
-			DmaReadServer#(busWidth)    mp_next_read_server )(StrstrRequest)
+module mkStrstrEngine#(FIFO#(void) compf, FIFO#(void) conff, FIFO#(Int#(32)) locf,
+		       DmaReadServer#(busWidth)   haystack_read_server,
+		       DmaReadServer#(busWidth)     needle_read_server,
+		       DmaReadServer#(busWidth)    mp_next_read_server )(StrstrEngine)
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
@@ -72,15 +77,18 @@ module mkStrstrRequest#(StrstrIndication indication,
    Reg#(Stage) stage <- mkReg(Idle);
    Reg#(Bit#(32)) needleLenReg <- mkReg(0);
    Reg#(Bit#(32)) haystackLenReg <- mkReg(0);
-   Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
+   Reg#(Bit#(32)) haystackBase <- mkReg(0);
    Reg#(Bit#(32)) jReg <- mkReg(0); // offset in haystack
+   Reg#(Bit#(32)) haystackOff <- mkReg(0);
+
    Reg#(DmaPointer) haystackPointer <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) haystackOff <- mkReg(0);
    
    DmaReadServer2BRAM#(NeedleIdx) n2b <- mkDmaReadServer2BRAM(needle_read_server, needle.portB);
    DmaReadServer2BRAM#(NeedleIdx) mp2b <- mkDmaReadServer2BRAM(mp_next_read_server, mpNext.portB);
 
+   Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
    Reg#(Bit#(2)) epochReg <- mkReg(0);
+   
    FIFO#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFO(2);
    Reg#(Bit#(32)) cycle <- mkReg(0);
    Reg#(Bit#(32)) iterCnt <- mkReg(0);
@@ -89,7 +97,7 @@ module mkStrstrRequest#(StrstrIndication indication,
       let x <- n2b.finished;
       let y <- mp2b.finished;
       stage <= Ready;
-      indication.setupComplete;
+      conff.enq(?);
    endrule
    
    rule restart (stage == Idle && iterCnt > 0 && (!haystack.notEmpty));
@@ -103,19 +111,22 @@ module mkStrstrRequest#(StrstrIndication indication,
       epochReg <= 0;
    endrule
    
-   (* descending_urgency = "mp2b_load, n2b_load, matchNeedleResp, matchNeedleReq" *)
-   
    rule haystackReq (stage == Run && haystackOff < extend(haystackLenReg));
       //$display("haystackReq %x", haystackOff);
-      haystack_read_server.readReq.put(DmaRequest {pointer: haystackPointer, offset: haystackOff, burstLen: 1, tag: 0});
+      haystack_read_server.readReq.put(DmaRequest {pointer: haystackPointer, offset: extend(haystackBase+haystackOff), burstLen: 1, tag: 0});
       haystackOff <= haystackOff + fromInteger(valueOf(nc));
    endrule
    
-   rule haystackResp;
+   rule haystackRespA (stage == Run);
       //$display("haystackResp");
       let rv <- haystack_read_server.readData.get;
       Vector#(nc,Char) pv = unpack(rv.data);
       haystack.enq(pv);
+   endrule
+   
+   rule haystackRespB (stage != Run);
+      //$display("haystackResp");
+      let rv <- haystack_read_server.readData.get;
    endrule
 
    rule haystackDrain(stage != Run);
@@ -133,25 +144,25 @@ module mkStrstrRequest#(StrstrIndication indication,
       let x <- needle.portA.response.get;
    endrule
       
+   rule hb (stage==Run);
+      //$display("cycle %h **************************", cycle);
+      cycle <= cycle+1;
+   endrule
+   
    rule matchNeedleReq(stage == Run);
       needle.portA.request.put(BRAMRequest{write:False, address: truncate(iReg-1)});
       mpNext.portA.request.put(BRAMRequest{write:False, address: truncate(iReg)});
       efifo.enq(tuple2(epochReg,iReg));
+      //$display(" matchNeedleReq %d %d", epochReg, iReg);
       iReg <= iReg+1;
-      //$display("matchNeedleReq %d %d", epochReg, iReg);
-   endrule
-   
-   rule hb (stage==Run);
-      //$display("cycle %h **************************", cycle);
-      cycle <= cycle+1;
    endrule
    
    rule matchNeedleResp(stage == Run);
       let nv <- needle.portA.response.get;
       let mp <- mpNext.portA.response.get;
       let epoch = tpl_1(efifo.first);
-      //$display("matchNeedleResp %d %d", epoch, epochReg);
       efifo.deq;
+      //$display("matchNeedleResp %d %d", epochReg, epoch);
       if (epoch == epochReg) begin
 	 let n = haystackLenReg;
 	 let m = needleLenReg;
@@ -162,14 +173,15 @@ module mkStrstrRequest#(StrstrIndication indication,
 	 if (j > n) begin
 	    // jReg points to the end of the haystack; we are done
 	    if(iterCnt == 0)
-	       indication.searchResult(-1);
+	       compf.enq(?);
 	    stage <= Idle;
+	    //$display("end of search %d", j);
 	 end
 	 else if (i==m+1) begin
 	    // iReg points to the end of the needle; we have a match
-	    // $display("string match %d", j);
-	    indication.searchResult(unpack(j-i));
-	    epochReg <= epochReg+1;
+	    //$display("string match %d", j);
+	    locf.enq(unpack(haystackBase+j-i));
+	    epochReg <= epochReg + 1;
 	    iReg <= 1;
 	 end
 	 else if ((i>0) && (nv != hv[0])) begin
@@ -180,16 +192,21 @@ module mkStrstrRequest#(StrstrIndication indication,
 	 end
 	 else begin
 	    // match between head of needle and head of haystack; increment haystack
-	    // $display("   char match %d %d", i, j);
+	    //$display("char match %d %d", i, j);
 	    jReg <= j+1;
 	    haystack.deq;
 	 end
       end
+      else begin
+	 //$display("discard");
+	 noAction;
+      end
    endrule
+  
    
    method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len) if (stage == Idle);
       $display("setup(%d %d %d)", needle_pointer, mpNext_pointer, needle_len);
-      needleLenReg <= needle_len;
+      needleLenReg <= extend(needle_len);
       n2b.start(needle_pointer, pack(truncate(needle_len)));
       mp2b.start(mpNext_pointer, pack(truncate(needle_len)));
       stage <= Init;
@@ -197,11 +214,73 @@ module mkStrstrRequest#(StrstrIndication indication,
       iReg <= 0;
    endmethod
 
-   method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) iter_cnt) if (stage == Ready);
-      $display("search %d %d", haystack_len, iter_cnt);
-      haystackLenReg <= haystack_len;
+   method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) haystack_base, Bit#(32) iter_cnt) if (stage == Ready);
+      $display("search %d %d %d", haystack_len, haystack_base, iter_cnt);
+      haystackLenReg <= extend(haystack_len);
       haystackPointer <= haystack_pointer;
+      haystackBase <= extend(haystack_base);
       iterCnt <= iter_cnt;
       stage <= Idle;
+   endmethod
+endmodule
+
+
+module mkStrstrRequest#(StrstrIndication indication,
+			Vector#(p,DmaReadServer#(busWidth))   haystack_read_servers,
+			Vector#(p,DmaReadServer#(busWidth))     needle_read_servers,
+			Vector#(p,DmaReadServer#(busWidth))    mp_next_read_servers )(StrstrRequest)
+   
+   provisos(Add#(a__, 8, busWidth),
+	    Div#(busWidth,8,nc),
+	    Mul#(nc,8,busWidth),
+	    Add#(1, b__, nc),
+	    Add#(c__, 32, busWidth),
+	    Add#(1, d__, TDiv#(busWidth, 32)),
+	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
+	    Log#(p,lp));
+   
+   Reg#(Bit#(32)) needleLen <- mkReg(0);
+   
+   Vector#(p, FIFO#(void)) confs <- replicateM(mkFIFO);
+   Vector#(p, FIFO#(void)) comps <- replicateM(mkFIFO);
+   Vector#(p, FIFO#(Int#(32))) locs <- replicateM(mkFIFO);
+	       
+   Vector#(p, StrstrEngine) engines;
+   for(Integer i = 0; i < valueOf(p); i=i+1) begin
+      let iv = fromInteger(i);
+      engines[iv] <- mkStrstrEngine(comps[iv], confs[iv], locs[iv], haystack_read_servers[iv], needle_read_servers[iv], mp_next_read_servers[iv]);
+   end
+      
+   rule confr;
+      for(Integer i = 0; i < valueOf(p); i=i+1) 
+	 confs[fromInteger(i)].deq;
+      indication.setupComplete;
+   endrule
+   
+   for(Integer i = 0; i < valueOf(p); i=i+1)
+      rule res;
+	 locs[fromInteger(i)].deq;
+	 indication.searchResult(locs[fromInteger(i)].first);
+      endrule
+   
+   rule comp;
+      for(Integer i = 0; i < valueOf(p); i=i+1)
+	 comps[fromInteger(i)].deq;
+      indication.searchResult(-1);
+   endrule
+   
+   method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
+      needleLen <= needle_len;
+      for(Integer i = 0; i < valueOf(p); i=i+1)
+	 engines[fromInteger(i)].setup(needle_pointer, mpNext_pointer, needle_len);
+   endmethod
+
+   method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) iter_cnt);
+      $display("search %d %d", haystack_len, iter_cnt);
+      let pv = fromInteger(valueOf(p));
+      let lpv = fromInteger(valueOf(lp));
+      for(Integer i = 0; i < valueOf(p)-1; i=i+1) 
+	 engines[fromInteger(i)].search(haystack_pointer, (haystack_len>>lpv)+needleLen, fromInteger(i)*(haystack_len>>lpv), iter_cnt);  // this multiplier is unnecessary (mdk)
+      engines[pv-1].search(haystack_pointer, haystack_len>>lpv, haystack_len>>lpv, iter_cnt);
    endmethod
 endmodule

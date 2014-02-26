@@ -37,24 +37,30 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(f__, addrWidth, 40));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   DmaReadBuffer#(64,1) haystack_read_chan <- mkDmaReadBuffer();
-   DmaReadBuffer#(64,1) needle_read_chan <- mkDmaReadBuffer();
-   DmaReadBuffer#(64,1) mp_next_read_chan <- mkDmaReadBuffer();
+   Vector#(2,DmaReadBuffer#(64,1)) haystack_read_chans <- replicateM(mkDmaReadBuffer());
+   Vector#(2,DmaReadBuffer#(64,1)) needle_read_chans <- replicateM(mkDmaReadBuffer());
+   Vector#(2,DmaReadBuffer#(64,1)) mp_next_read_chans <- replicateM(mkDmaReadBuffer());
    
-   Vector#(3, DmaReadClient#(64)) readClients = newVector();
-   readClients[0] = haystack_read_chan.dmaClient;
-   readClients[1] = needle_read_chan.dmaClient;
-   readClients[2] = mp_next_read_chan.dmaClient;
+   Vector#(6, DmaReadClient#(64)) readClients = newVector();
+   readClients[0] = haystack_read_chans[0].dmaClient;
+   readClients[1] = needle_read_chans[0].dmaClient;
+   readClients[2] = mp_next_read_chans[0].dmaClient;
+   readClients[3] = haystack_read_chans[1].dmaClient;
+   readClients[4] = needle_read_chans[1].dmaClient;
+   readClients[5] = mp_next_read_chans[1].dmaClient;
 
    Vector#(0, DmaWriteClient#(64)) writeClients = newVector();
    Integer numRequests = 8;
    AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
    
+   function DmaReadServer#(x) rs(DmaReadBuffer#(x,y) rb);
+      return rb.dmaServer;
+   endfunction
    
    StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(StrstrIndication);
-   StrstrRequest strstrRequest <- mkStrstrRequest(strstrIndicationProxy.ifc, haystack_read_chan.dmaServer, 
-						  needle_read_chan.dmaServer, mp_next_read_chan.dmaServer);
+   StrstrRequest strstrRequest <- mkStrstrRequest(strstrIndicationProxy.ifc, map(rs,haystack_read_chans), 
+						  map(rs,needle_read_chans), map(rs,mp_next_read_chans));
    StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(StrstrRequest,strstrRequest);
 
    Vector#(4,StdPortal) portals;
