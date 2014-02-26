@@ -186,8 +186,8 @@ unsigned int portal_poll (struct file *filep, poll_table *poll_table)
         int mask = 0;
         poll_wait(filep, &portal_data->wait_queue, poll_table);
         //int_status = readl(portal_data->ind_reg_base_virt + 0);
-        if (int_status & 1)
-                mask = POLLIN | POLLRDNORM;
+        //if (int_status & 1)
+        mask = POLLIN | POLLRDNORM;
         if (0)
                 printk("%s: %s int_status=%x mask=%x\n", __FUNCTION__, portal_data->misc.name, int_status, mask);
         return mask;
