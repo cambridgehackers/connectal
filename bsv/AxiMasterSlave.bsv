@@ -151,13 +151,14 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    Reg#(Bit#(4)) writeBurstCountReg <- mkReg(0);
    FIFO#(Bit#(2)) writeRespFifo <- mkFIFO();
    FIFO#(Bit#(idWidth)) writeIdFifo <- mkFIFO();
-   let req_ar_fifo <- mkSizedFIFO(1);
+   FIFO#(Axi3ReadRequest#(addrWidth,idWidth)) req_ar_fifo <- mkSizedFIFO(1);
+   FIFO#(Axi3WriteRequest#(addrWidth,idWidth)) req_aw_fifo <- mkSizedFIFO(1);
    
    Bool verbose = False;
    interface Put req_ar;
       method Action put(Axi3ReadRequest#(addrWidth,idWidth) req);
          if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.address, req.len+1);
-   	 req_ar_fifo.enq(tuple3(truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8)))), req.id, req.len+1));
+   	 req_ar_fifo.enq(req);
       endmethod
    endinterface: req_ar
    interface Get resp_read;
@@ -166,9 +167,10 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    	 let id = readIdReg;
    	 let burstCount = readBurstCountReg;
    	 if (readBurstCountReg == 0) begin
-            addr = tpl_1(req_ar_fifo.first);
-   	    id = tpl_2(req_ar_fifo.first);
-            burstCount = tpl_3(req_ar_fifo.first);
+	    let req = req_ar_fifo.first;
+            addr = truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8))));
+   	    id = req.id;
+            burstCount = req.len+1;
    	    req_ar_fifo.deq;
    	 end
          let data <- rf.sub(addr);
@@ -180,24 +182,29 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
       endmethod
    endinterface: resp_read
    interface Put req_aw;
-      method Action put(Axi3WriteRequest#(addrWidth,idWidth) req) if (writeBurstCountReg == 0);
+      method Action put(Axi3WriteRequest#(addrWidth,idWidth) req);
+         req_aw_fifo.enq(req);
          if (verbose) $display("axiSlave.write.writeAddr %h bc %d", req.address, req.len+1);
-         writeAddrReg <= truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8))));
-         writeBurstCountReg <= req.len+1;
-         writeIdFifo.enq(req.id);
       endmethod
    endinterface: req_aw
    interface Put resp_write;
-      method Action put(Axi3WriteData#(busWidth,idWidth) resp) if (writeBurstCountReg > 0);
-         if (verbose) $display("writeData %h %h %d", writeAddrReg, resp.data, writeBurstCountReg);
-         rf.upd(writeAddrReg, resp.data);
-         writeAddrReg <= writeAddrReg + 1;
-         writeBurstCountReg <= writeBurstCountReg - 1;
-         if (verbose) $display("axiSlave.write.writeData %h %h %d", writeAddrReg, resp.data, writeBurstCountReg);
-         if (writeBurstCountReg == 1)
-	    begin
+      method Action put(Axi3WriteData#(busWidth,idWidth) resp);
+	 let addr = writeAddrReg;
+         let burstCount = writeBurstCountReg;
+         if (burstCount == 0) begin
+	    let req = req_aw_fifo.first;
+            addr = truncate(req.address/fromInteger(valueOf(TDiv#(busWidth,8))));
+            burstCount = req.len+1;
+            writeIdFifo.enq(req.id);
+	    req_aw_fifo.deq;
+	 end
+         if (verbose) $display("writeData %h %h %d", addr, resp.data, burstCount);
+         rf.upd(addr, resp.data);
+         writeAddrReg <= addr + 1;
+         writeBurstCountReg <= burstCount - 1;
+         if (verbose) $display("axiSlave.write.writeData %h %h %d", addr, resp.data, burstCount);
+         if (burstCount == 1)
                writeRespFifo.enq(0);
-            end
       endmethod
    endinterface: resp_write
    interface Get resp_b;

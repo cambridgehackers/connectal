@@ -144,29 +144,37 @@ portalIfcTemplate='''
     endmethod
     interface Axi3Slave ctrl;
         interface Put req_aw;
-            method Action put(Axi3WriteRequest#(32,12) req)
-                          if (axiSlaveWriteBurstCountReg == 0);
-                 axiSlaveWS <= req.address[15];
-                 axiSlaveWriteBurstCountReg <= req.len + 1;
-                 axiSlaveWriteAddrReg <= truncate(req.address);
-		 axiSlaveWriteIdReg <= req.id;
+            method Action put(Axi3WriteRequest#(32,12) req);
+                 req_aw_fifo.enq(req);
             endmethod
         endinterface: req_aw
         interface Put resp_write;
-            method Action put(Axi3WriteData#(32,12) wdata)
-                          if (axiSlaveWriteBurstCountReg > 0);
-                let addr = axiSlaveWriteAddrReg;
-                axiSlaveWriteAddrReg <= axiSlaveWriteAddrReg + 4;
-                axiSlaveWriteBurstCountReg <= axiSlaveWriteBurstCountReg - 1;
+            method Action put(Axi3WriteData#(32,12) wdata);
+                let ws = axiSlaveWS;
+                let wbc = axiSlaveWriteBurstCountReg;
+                let wa = axiSlaveWriteAddrReg;
+                let wid = axiSlaveWriteIdReg;
+                if (axiSlaveWriteBurstCountReg == 0) begin
+                    let req = req_aw_fifo.first;
+                    ws = req.address[15];
+                    wbc = req.len + 1;
+                    wa = truncate(req.address);
+	   	    wid = req.id;
+                    req_aw_fifo.deq;
+                end
+                let addr = wa;
+                axiSlaveWriteAddrReg <= wa + 4;
+                axiSlaveWriteBurstCountReg <= wbc - 1;
 
-                axiSlaveWriteAddrFifos[axiSlaveWS].enq(axiSlaveWriteAddrReg[14:0]);
-                axiSlaveWriteDataFifos[axiSlaveWS].enq(wdata.data);
+                axiSlaveWriteAddrFifos[ws].enq(wa[14:0]);
+                axiSlaveWriteDataFifos[ws].enq(wdata.data);
 
                 putWordCount <= putWordCount + 1;
                 if (wdata.last == 1'b1)
-                begin
                     axiSlaveBrespFifo.enq(Axi3WriteResponse { resp: 0, id: wdata.id });
-                end
+
+                axiSlaveWS <= ws;
+                axiSlaveWriteIdReg <= wid;
             endmethod
         endinterface
         interface Get resp_b;
@@ -177,7 +185,7 @@ portalIfcTemplate='''
         endinterface
         interface Put req_ar;
             method Action put(Axi3ReadRequest#(32,12) req);
-                 req_ar_fifo.enq(req);
+                req_ar_fifo.enq(req);
             endmethod
         endinterface
         interface Get resp_read;
@@ -245,7 +253,8 @@ axiStateTemplate='''
     Reg#(Bit#(1)) axiSlaveRS <- mkReg(0);
     Reg#(Bit#(1)) axiSlaveWS <- mkReg(0);
 
-    FIFO#(Axi3ReadRequest#(32,12)) req_ar_fifo <- mkSizedFIFO(1);
+    FIFO#(Axi3ReadRequest#(32,12))  req_ar_fifo <- mkSizedFIFO(1);
+    FIFO#(Axi3WriteRequest#(32,12)) req_aw_fifo <- mkSizedFIFO(1);
 
     let axiSlaveWriteAddrFifo = axiSlaveWriteAddrFifos[%(slaveFifoSelExposed)s];
     let axiSlaveReadAddrFifo  = axiSlaveReadAddrFifos[%(slaveFifoSelExposed)s];
