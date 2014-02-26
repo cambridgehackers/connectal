@@ -33,6 +33,7 @@ import PPS7LIB::*;
 import XADC::*;
 import BRAM::*;
 import Bscan::*;
+import FIFOF::*;
 
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
@@ -57,11 +58,41 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
    BscanBram#(8, 64) bscanBram <- mkBscanBram(1, 256, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
    ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock.c, bscanBram.debug());
-
+   
+   
 `define TRACE_AXI
 `ifndef TRACE_AXI
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
 `else
+   
+   Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF(clocked_by mainclock.c, reset_by mainclock.r));
+
+   rule write_bscanBram;
+      Bit#(64) data = ?;
+      if (bscan_fifos[0].notEmpty) begin
+	 data = bscan_fifos[0].first;
+	 bscan_fifos[0].deq;
+      end
+      else if (bscan_fifos[1].notEmpty) begin
+	 data = bscan_fifos[1].first;
+	 bscan_fifos[1].deq;
+      end
+      else if (bscan_fifos[2].notEmpty) begin
+	 data = bscan_fifos[2].first;
+	 bscan_fifos[2].deq;
+      end
+      else if (bscan_fifos[3].notEmpty) begin
+	 data = bscan_fifos[3].first;
+	 bscan_fifos[3].deq;
+      end
+      else begin
+	 data = bscan_fifos[4].first;
+	 bscan_fifos[4].deq;
+      end
+      bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:data});
+      addrReg <= addrReg + 1;
+   endrule
+
    // AXI trace for JTAG
    let m = ps7.m_axi_gp[0].client;
    let s = top.ctrl;
@@ -69,43 +100,38 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    rule connect_req_ar;
        let req <- m.req_ar.get();
        s.req_ar.put(req);
-       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:
-           {4'h1, 7'b0, req.len, req.size, req.burst, req.id,
-                    /*req.prot, req.cache, req.lock, req.qos,*/ req.address}});
-       addrReg <= addrReg + 1;
+       bscan_fifos[0].enq(
+	   {4'h1, 7'b0, req.len, req.size, req.burst, req.id,
+                    /*req.prot, req.cache, req.lock, req.qos,*/ req.address});
    endrule
    //mkConnection(s.resp_read, m.resp_read);
    rule connect_resp_read;
        let resp <- s.resp_read.get();
        m.resp_read.put(resp);
-       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:
-           {4'h2, 13'b0, resp.id, resp.resp, resp.last, resp.data}});
-       addrReg <= addrReg + 1;
+       bscan_fifos[1].enq(
+           {4'h2, 13'b0, resp.id, resp.resp, resp.last, resp.data});
    endrule
    //mkConnection(m.req_aw, s.req_aw);
    rule connect_req_aw;
        let req <- m.req_aw.get();
        s.req_aw.put(req);
-       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:
+       bscan_fifos[2].enq(
            {4'h3, 7'b0, req.len, req.size, req.burst, req.id,
-                    /*req.prot, req.cache, req.lock, req.qos,*/ req.address}});
-       addrReg <= addrReg + 1;
+                    /*req.prot, req.cache, req.lock, req.qos,*/ req.address});
    endrule
    //mkConnection(m.resp_write, s.resp_write);
    rule connect_resp_write;
        let resp <- m.resp_write.get();
        s.resp_write.put(resp);
-       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:
-           {4'h4, 11'b0, resp.id, resp.last, resp.byteEnable, resp.data}});
-       addrReg <= addrReg + 1;
+       bscan_fifos[3].enq(
+           {4'h4, 11'b0, resp.id, resp.last, resp.byteEnable, resp.data});
    endrule
    //mkConnection(s.resp_b, m.resp_b);
    rule connect_resp_b;
        let resp <- s.resp_b.get();
        m.resp_b.put(resp);
-       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:
-           {4'h5, 46'b0, resp.resp, resp.id}});
-       addrReg <= addrReg + 1;
+       bscan_fifos[4].enq(
+           {4'h5, 46'b0, resp.resp, resp.id});
    endrule
 `endif
 
