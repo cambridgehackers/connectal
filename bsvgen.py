@@ -176,12 +176,8 @@ portalIfcTemplate='''
             endmethod
         endinterface
         interface Put req_ar;
-            method Action put(Axi3ReadRequest#(32,12) req)
-                          if (axiSlaveReadBurstCountReg == 0);
-                 axiSlaveRS <= req.address[15];
-                 axiSlaveReadBurstCountReg <= req.len + 1;
-                 axiSlaveReadAddrReg <= truncate(req.address);
-	    	 axiSlaveReadIdReg <= req.id;
+            method Action put(Axi3ReadRequest#(32,12) req);
+                 req_ar_fifo.enq(req);
             endmethod
         endinterface
         interface Get resp_read;
@@ -249,16 +245,28 @@ axiStateTemplate='''
     Reg#(Bit#(1)) axiSlaveRS <- mkReg(0);
     Reg#(Bit#(1)) axiSlaveWS <- mkReg(0);
 
+    FIFO#(Axi3ReadRequest#(32,12)) req_ar_fifo <- mkSizedFIFO(1);
+
     let axiSlaveWriteAddrFifo = axiSlaveWriteAddrFifos[%(slaveFifoSelExposed)s];
     let axiSlaveReadAddrFifo  = axiSlaveReadAddrFifos[%(slaveFifoSelExposed)s];
     let axiSlaveWriteDataFifo = axiSlaveWriteDataFifos[%(slaveFifoSelExposed)s];
     let axiSlaveReadDataFifo  = axiSlaveReadDataFifos[%(slaveFifoSelExposed)s];
 
-    rule axiSlaveReadAddressGenerator if (axiSlaveReadBurstCountReg != 0);
-         axiSlaveReadAddrFifos[axiSlaveRS].enq(truncate(axiSlaveReadAddrReg));
-         axiSlaveReadAddrReg <= axiSlaveReadAddrReg + 4;
-         axiSlaveReadBurstCountReg <= axiSlaveReadBurstCountReg - 1;
-         axiSlaveReadReqInfoFifo.enq(ReadReqInfo { select: axiSlaveRS, last: axiSlaveReadBurstCountReg == 1 ? 1 : 0, id: axiSlaveReadIdReg });
+    rule axiSlaveReadAddressGenerator;
+         if (axiSlaveReadBurstCountReg == 0) begin
+             let req = req_ar_fifo.first;
+             axiSlaveRS <= req.address[15];
+             axiSlaveReadBurstCountReg <= req.len + 1;
+             axiSlaveReadAddrReg <= truncate(req.address);
+	     axiSlaveReadIdReg <= req.id;
+             req_ar_fifo.deq;
+         end
+         else begin
+             axiSlaveReadAddrFifos[axiSlaveRS].enq(truncate(axiSlaveReadAddrReg));
+             axiSlaveReadAddrReg <= axiSlaveReadAddrReg + 4;
+             axiSlaveReadBurstCountReg <= axiSlaveReadBurstCountReg - 1;
+             axiSlaveReadReqInfoFifo.enq(ReadReqInfo { select: axiSlaveRS, last: axiSlaveReadBurstCountReg == 1 ? 1 : 0, id: axiSlaveReadIdReg });
+         end
     endrule 
 '''
 

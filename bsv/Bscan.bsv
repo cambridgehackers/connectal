@@ -132,7 +132,7 @@ module mkBscanBram#(Integer bus, Integer memorySize, Bit#(asz) addr)(BscanBram#(
        shiftReg <= v;
    endrule
 
-   rule updateRule if (bscan.sel() == 1 && bscan.update() == 1);
+   rule updateRule if (bscan.sel() == 1 && bscan.update() == 1 && bscan.capture() == 0);
        bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:shiftReg});
        addrReg <= addrReg + 1;
    endrule
