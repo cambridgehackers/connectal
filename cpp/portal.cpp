@@ -39,6 +39,9 @@
 #include <pthread.h>
 #include <semaphore.h>
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #ifdef ZYNQ
 #include <android/log.h>
 #endif
@@ -113,8 +116,8 @@ uint64_t catch_timer(unsigned int i)
 void print_timer(int loops)
 {
     for (int i = 0; i < MAX_TIMERS; i++) {
-      if ((timers[i].min != (1LL << 63)))
-           printf("[%d]: avg %lld min %lld max %lld over %lld\n",
+      if (timers[i].min != (1LL << 63))
+           printf("[%d]: avg %" PRIu64 " min %" PRIu64 " max %" PRIu64 " over %" PRIu64 "\n",
                i, timers[i].total/loops, timers[i].min, timers[i].max, timers[i].over);
     }
 }
