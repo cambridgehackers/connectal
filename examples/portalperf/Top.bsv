@@ -23,14 +23,15 @@ typedef enum {PortalPerfIndication, PortalPerfRequest} IfcNames deriving (Eq,Bit
 module mkPortalTop(StdPortalTop#(addrWidth));
 
    // instantiate user portals
-   PortalPerfIndicationProxy portalperfIndicationProxy <- mkPortalPerfIndicationProxy(PortalPerfIndication);
-   PortalPerfRequestWrapper portalperfRequestWrapper <- mkPortalPerfRequestWrapper(PortalPerfRequest);
+   PortalPerfIndicationProxy portalPerfIndicationProxy <- mkPortalPerfIndicationProxy(PortalPerfIndication);
    
-   PortalPerf portalperf <- mkPortalPerf(portalperfIndicationProxy);
+   PortalPerfRequest portalPerfRequest <- mkPortalPerfRequest(portalPerfIndicationProxy.ifc);
+
+   PortalPerfRequestWrapper portalPerfRequestWrapper <- mkPortalPerfRequestWrapper(PortalPerfRequest, portalPerfRequest);
    
    Vector#(2,StdPortal) portals;
-   portals[0] = portalperfIndicationProxy.portalIfc;
-   portals[1] = portalperfRequestWrapper.portalIfc; 
+   portals[0] = portalPerfIndicationProxy.portalIfc;
+   portals[1] = portalPerfRequestWrapper.portalIfc; 
 
    let interrupt_mux <- mkInterruptMux(portals);
    

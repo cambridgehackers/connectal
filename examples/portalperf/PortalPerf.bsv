@@ -54,7 +54,7 @@ interface PortalPerfIndication;
 endinterface
 
 
-module mkPortalPerf#(PortalPerfIndication indication) (PortalPerfRequest);
+module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest);
 
    Reg#(Bit#(32)) sinkl1 <- mkReg(0);
 
