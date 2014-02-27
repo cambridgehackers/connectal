@@ -150,96 +150,72 @@ void call_swallowl(void)
 {
   DEBUGWHERE();
     start_timer(0);
-    PREPAREWAIT(sem_heard);
     catch_timer(0);
     portalPerfRequestProxy->swallowl(vl1);
     catch_timer(19);
-    SEMWAIT(&sem_heard);
-    catch_timer(30);
 }
 
 void call_swallowll(void)
 {
   DEBUGWHERE();
     start_timer(0);
-    PREPAREWAIT(sem_heard);
     catch_timer(0);
     portalPerfRequestProxy->swallowll(vl1, vl2);
     catch_timer(19);
-    SEMWAIT(&sem_heard);
-    catch_timer(30);
 }
 
 void call_swallowlll(void)
 {
   DEBUGWHERE();
     start_timer(0);
-    PREPAREWAIT(sem_heard);
     catch_timer(0);
     portalPerfRequestProxy->swallowlll(vl1, vl2, vl3);
     catch_timer(19);
-    SEMWAIT(&sem_heard);
-    catch_timer(30);
 }
 
 void call_swallowllll(void)
 {
   DEBUGWHERE();
     start_timer(0);
-    PREPAREWAIT(sem_heard);
     catch_timer(0);
     portalPerfRequestProxy->swallowllll(vl1, vl2, vl3, vl4);
     catch_timer(19);
-    SEMWAIT(&sem_heard);
-    catch_timer(30);
 }
 
 void call_swallowd(void)
 {
   DEBUGWHERE();
     start_timer(0);
-    PREPAREWAIT(sem_heard);
     catch_timer(0);
     portalPerfRequestProxy->swallowd(vd1);
     catch_timer(19);
-    SEMWAIT(&sem_heard);
-    catch_timer(30);
 }
 
 void call_swallowdd(void)
 {
   DEBUGWHERE();
     start_timer(0);
-    PREPAREWAIT(sem_heard);
     catch_timer(0);
     portalPerfRequestProxy->swallowdd(vd1, vd2);
     catch_timer(19);
-    SEMWAIT(&sem_heard);
-    catch_timer(30);
 }
 
 void call_swallowddd(void)
 {
   DEBUGWHERE();
     start_timer(0);
-    PREPAREWAIT(sem_heard);
     catch_timer(0);
     portalPerfRequestProxy->swallowddd(vd1, vd2, vd3);
     catch_timer(19);
-    SEMWAIT(&sem_heard);
-    catch_timer(30);
 }
 
 void call_swallowdddd(void)
 {
   DEBUGWHERE();
     start_timer(0);
-    PREPAREWAIT(sem_heard);
     catch_timer(0);
     portalPerfRequestProxy->swallowdddd(vd1, vd2, vd3, vd4);
     catch_timer(19);
-    SEMWAIT(&sem_heard);
-    catch_timer(30);
 }
 
 void call_dospitl(void)
