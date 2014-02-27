@@ -968,7 +968,8 @@ interface ControlAndStatusRegs;
    interface ReadOnly#(Bit#(64)) interruptAddr;
    interface ReadOnly#(Bit#(32)) interruptData;
 
-   interface Reg#(Bool) tlpTracing;
+   interface Reg#(Bool)     tlpTracing;
+   interface Reg#(Bit#(32)) tlpTraceLimit;
    interface Reg#(Bool) use4dw;
    interface Reg#(Bit#(32)) tlpDataBramWrAddr;
    interface Reg#(Bit#(32)) tlpOutCount;
@@ -1014,7 +1015,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    // Registers and their default values
    Vector#(4,MSIX_Entry) msix_entry               <- replicateM(mkMSIXEntry);
 
-   Reg#(Bool) tlpTracingReg <- mkReg(False);
+   Reg#(Bool) tlpTracingReg        <- mkReg(False);
+   Reg#(Bit#(32)) tlpTraceLimitReg <- mkReg(0);
    Reg#(Bool) use4dwReg <- mkReg(True);
    Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
@@ -1059,6 +1061,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 783: return zeroExtend(pack(max_read_req_bytes));
 	 784: return zeroExtend(pack(max_payload_bytes));
 	 792: return tlpDataBramWrAddrReg;
+	 793: return tlpTraceLimitReg;
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
@@ -1110,6 +1113,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    781: tlpDataScratchpad[5] <= dword;
 
 	    792: tlpDataBramWrAddrReg <= dword;
+	    793: tlpTraceLimitReg <= dword;
 
             //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
             // MSIx table entries
@@ -1431,7 +1435,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    endinterface
    interface ReadOnly interruptData = regToReadOnly(msix_entry[0].msg_data);
 
-   interface Reg tlpTracing = tlpTracingReg;
+   interface Reg tlpTracing    = tlpTracingReg;
+   interface Reg tlpTraceLimit = tlpTraceLimitReg;
    interface Reg use4dw = use4dwReg;
    interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
    interface Reg tlpOutCount = tlpOutCountReg;
@@ -1482,9 +1487,9 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    rule incTimestamp;
        timestamp <= timestamp + 1;
    endrule
-   rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 2047);
-       csr.tlpTracing <= False;
-   endrule
+//   rule endTrace if (csr.tlpTracing && csr.tlpTraceLimit != 0 && csr.tlpDataBramWrAddr > truncate(csr.tlpTraceLimit));
+//       csr.tlpTracing <= False;
+//   endrule
 
    // connect the sub-components to each other
 
@@ -1599,9 +1604,6 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 		       )
 		       (X7PcieBridgeIfc#(lanes))
    provisos(Add#(1,_,lanes), XbsvXilinx7Pcie::SelectXilinx7PCIE#(lanes));
-
-   if (valueOf(lanes) != 8)
-      errorM("Only 8-lane PCIe is supported on X7.");
 
    Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
 
