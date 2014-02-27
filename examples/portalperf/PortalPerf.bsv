@@ -158,7 +158,6 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
    rfns[6] <- mkRepeat(dospitdd);
    rfns[7] <- mkRepeat(dospitddd);
    rfns[8] <- mkRepeat(dospitdddd);
-   Reg#(Bit#(16)) loops <- mkReg(0);
 
    method Action swallowl(Bit#(32) v1);
       sinkl1 <= v1;
