@@ -85,7 +85,7 @@ static void call_say(int v)
     PREPAREWAIT(sem_heard2);
     echoRequestProxy->say(v);
     SEMWAIT(&sem_heard2);
-    printf("call_say: elapsed " PRIu64 "\n", lap_timer(0));
+    printf("call_say: elapsed %" PRIu64 "\n", lap_timer(0));
 }
 
 static void call_say2(int v, int v2)
