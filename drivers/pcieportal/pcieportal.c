@@ -317,7 +317,7 @@ static void deactivate(tBoard *this_board, struct pci_dev *dev)
         switch (this_board->activation_level) {
         case BLUENOC_ACTIVE:
                 pci_clear_master(dev); /* disable PCI bus master */
-                /* set MSI-X Entry 0 Vector Control value to 1 (masked) */
+                /* set MSIX Entry 0 Vector Control value to 1 (masked) */
                 if (this_board->uses_msix)
                         iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
                 disable_irq(this_board->irq_num);
@@ -327,8 +327,6 @@ static void deactivate(tBoard *this_board, struct pci_dev *dev)
                 /* disable MSI/MSIX */
                 if (this_board->uses_msix)
                         pci_disable_msix(dev);
-                else
-                        pci_disable_msi(dev);
                 /* fall through */
         case BARS_MAPPED:
                 /* unmap PCI BARs */
@@ -451,22 +449,26 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 err = -EIO;
                 goto exit_bluenoc_probe;
         }
-        /* enable MSI or MSI-X */
-        if (!pci_enable_msi(dev)) {
-                this_board->irq_num = dev->irq;
-                //printk(KERN_INFO "%s: Using MSI interrupts\n", DEV_NAME);
-        } else {
-                struct msix_entry msix_entries[1];
-                msix_entries[0].entry = 0;
-                if (pci_enable_msix(dev, msix_entries, 1)) {
-                        printk(KERN_ERR "%s: Failed to setup MSI or MSI-X interrupts\n", DEV_NAME);
-                        err = -EFAULT;
-                        goto exit_bluenoc_probe;
-                }
-                this_board->uses_msix = 1;
-                this_board->irq_num = msix_entries[0].vector;
-                //printk(KERN_INFO "%s: Using MSI-X interrupts\n", DEV_NAME);
-        }
+        /* enable MSIX */
+	{
+		int num_entries = 4;
+		struct msix_entry msix_entries[4];
+		int i;
+		for (i = 0; i < num_entries; i++)
+			msix_entries[i].entry = i;
+
+		if (pci_enable_msix(dev, msix_entries, num_entries)) {
+			printk(KERN_ERR "%s: Failed to setup MSIX interrupts\n", DEV_NAME);
+			err = -EFAULT;
+			goto exit_bluenoc_probe;
+		}
+		this_board->uses_msix = 1;
+		this_board->irq_num = msix_entries[0].vector;
+		printk(KERN_INFO "%s: Using MSIX interrupts num_entries=%d check_device\n", DEV_NAME, num_entries);
+
+		for (i = 0; i < num_entries; i++)
+			printk(KERN_INFO "%s: msix_entries[%d] vector=%d entry=%08x\n", DEV_NAME, i, msix_entries[i].vector, msix_entries[i].entry);
+	}
         this_board->activation_level = MSI_ENABLED;
         /* install an IRQ handler */
         if (request_irq(this_board->irq_num, intr_handler, 0, DEV_NAME, (void *) this_board)) {
@@ -475,8 +477,8 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 goto exit_bluenoc_probe;
         }
         if (this_board->uses_msix) {
-                /* set MSI-X Entry 0 Vector Control value to 0 (unmasked) */
-                printk(KERN_INFO "%s: MSI-X interrupts enabled with IRQ %d\n",
+                /* set MSIX Entry 0 Vector Control value to 0 (unmasked) */
+                printk(KERN_INFO "%s: MSIX interrupts enabled with IRQ %d\n",
                        DEV_NAME, this_board->irq_num);
                 iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
         }
