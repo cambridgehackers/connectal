@@ -124,11 +124,7 @@ module mkPortalTop#(FromPS7 fromPS7)(StdPortalTop#(addrWidth));
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
-   Vector#(1,StdPortal) directories;
-   directories[0] = dir.portalIfc;
-   
-   // when constructing the ctrl mux, directories must be the first argument
-   let ctrl_mux <- mkAxiSlaveMux(directories,portals);
+   let ctrl_mux <- mkAxiSlaveMux(dir,portals);
    
    interface interrupt = interrupt_mux;
    interface ctrl = ctrl_mux;

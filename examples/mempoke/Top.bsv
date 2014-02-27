@@ -59,11 +59,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    portals[3] = dmaIndicationProxy.portalIfc; 
    
    StdDirectory dir <- mkStdDirectory(portals);
-   Vector#(1,StdPortal) directories;
-   directories[0] = dir.portalIfc;
-   
-   // when constructing ctrl and interrupt muxes, directories must be the first argument
-   let ctrl_mux <- mkAxiSlaveMux(directories,portals);
+   let ctrl_mux <- mkAxiSlaveMux(dir,portals);
    let interrupt_mux <- mkInterruptMux(portals);
    
    interface interrupt = interrupt_mux;
