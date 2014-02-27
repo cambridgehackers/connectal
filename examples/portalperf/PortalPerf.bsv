@@ -54,6 +54,35 @@ endinterface
 
 
 module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest);
+   
+   Reg#(Bit#(32)) sinkl1 <- mkReg(0);
+
+   Reg#(Bit#(32)) sinkll1 <- mkReg(0);
+   Reg#(Bit#(32)) sinkll2 <- mkReg(0);
+
+   Reg#(Bit#(32)) sinklll1 <- mkReg(0);
+   Reg#(Bit#(32)) sinklll2 <- mkReg(0);
+   Reg#(Bit#(32)) sinklll3 <- mkReg(0);
+
+   Reg#(Bit#(32)) sinkllll1 <- mkReg(0);
+   Reg#(Bit#(32)) sinkllll2 <- mkReg(0);
+   Reg#(Bit#(32)) sinkllll3 <- mkReg(0);
+   Reg#(Bit#(32)) sinkllll4 <- mkReg(0);
+   
+   Reg#(Bit#(64)) sinkd1 <- mkReg(0);
+   
+   Reg#(Bit#(64)) sinkdd1 <- mkReg(0);
+   Reg#(Bit#(64)) sinkdd2 <- mkReg(0);
+   
+   Reg#(Bit#(64)) sinkddd1 <- mkReg(0);
+   Reg#(Bit#(64)) sinkddd2 <- mkReg(0);
+   Reg#(Bit#(64)) sinkddd3 <- mkReg(0);
+   
+   Reg#(Bit#(64)) sinkdddd1 <- mkReg(0);
+   Reg#(Bit#(64)) sinkdddd2 <- mkReg(0);
+   Reg#(Bit#(64)) sinkdddd3 <- mkReg(0);
+   Reg#(Bit#(64)) sinkdddd4 <- mkReg(0);
+   
 
    function Action dospit();
       return  
@@ -119,35 +148,6 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
 	 endaction );
    endfunction
 
-   
-   Reg#(Bit#(32)) sinkl1 <- mkReg(0);
-
-   Reg#(Bit#(32)) sinkll1 <- mkReg(0);
-   Reg#(Bit#(32)) sinkll2 <- mkReg(0);
-
-   Reg#(Bit#(32)) sinklll1 <- mkReg(0);
-   Reg#(Bit#(32)) sinklll2 <- mkReg(0);
-   Reg#(Bit#(32)) sinklll3 <- mkReg(0);
-
-   Reg#(Bit#(32)) sinkllll1 <- mkReg(0);
-   Reg#(Bit#(32)) sinkllll2 <- mkReg(0);
-   Reg#(Bit#(32)) sinkllll3 <- mkReg(0);
-   Reg#(Bit#(32)) sinkllll4 <- mkReg(0);
-   
-   Reg#(Bit#(64)) sinkd1 <- mkReg(0);
-   
-   Reg#(Bit#(64)) sinkdd1 <- mkReg(0);
-   Reg#(Bit#(64)) sinkdd2 <- mkReg(0);
-   
-   Reg#(Bit#(64)) sinkddd1 <- mkReg(0);
-   Reg#(Bit#(64)) sinkddd2 <- mkReg(0);
-   Reg#(Bit#(64)) sinkddd3 <- mkReg(0);
-   
-   Reg#(Bit#(64)) sinkdddd1 <- mkReg(0);
-   Reg#(Bit#(64)) sinkdddd2 <- mkReg(0);
-   Reg#(Bit#(64)) sinkdddd3 <- mkReg(0);
-   Reg#(Bit#(64)) sinkdddd4 <- mkReg(0);
-   
    Vector#(9, Repeat) rfns = ?;
    rfns[0] <- mkRepeat(dospit);
    rfns[1] <- mkRepeat(dospitl);
@@ -209,7 +209,7 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
    endmethod
 
    method Action startspit(Bit#(16) spitType, Bit#(16) loops);
-      dofns[spittype].start(loops);
+      rfns[spitType].start(loops);
    endmethod
 
 endmodule
