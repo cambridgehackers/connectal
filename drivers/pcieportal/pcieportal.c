@@ -148,7 +148,7 @@ static int bluenoc_release(struct inode *inode, struct file *filp)
 }
 
 /* poll operation to predict blocking of reads & writes */
-static unsigned int bluenoc_poll(struct file *filp, poll_table * wait)
+static unsigned int pcieportal_poll(struct file *filp, poll_table * wait)
 {
         unsigned int mask = 0;
         tPortal *this_portal = (tPortal *) filp->private_data;
@@ -158,10 +158,8 @@ static unsigned int bluenoc_poll(struct file *filp, poll_table * wait)
         if (this_board->activation_level != BLUENOC_ACTIVE)
                 return 0;
         poll_wait(filp, &this_board->intr_wq, wait);
-        //FIXME for portal
-#warning bluenoc_poll incomplete
-        //if (this_portal->read_ok)  mask |= POLLIN  | POLLRDNORM; /* readable */
-        //if (this_portal->write_ok) mask |= POLLOUT | POLLWRNORM; /* writable */
+	mask |= POLLIN  | POLLRDNORM; /* readable */
+        //mask |= POLLOUT | POLLWRNORM; /* writable */
         //printk(KERN_INFO "%s_%d: poll return status is %x\n", DEV_NAME, this_board->board_number, mask);
         return mask;
 }
@@ -308,7 +306,7 @@ static const struct file_operations bluenoc_fops = {
         .owner = THIS_MODULE,
         .open = bluenoc_open,
         .release = bluenoc_release,
-        .poll = bluenoc_poll,
+        .poll = pcieportal_poll,
         .unlocked_ioctl = bluenoc_ioctl,
         .compat_ioctl = bluenoc_ioctl,
         .mmap = portal_mmap
