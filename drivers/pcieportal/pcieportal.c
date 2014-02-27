@@ -422,6 +422,11 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 goto exit_bluenoc_probe;
         }
         this_board->activation_level = BARS_MAPPED;
+	// this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
+	// but why is it needed?...
+	iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
+	// enable tracing
+        iowrite32(1, this_board->bar0io + CSR_TLPTRACINGREG);
         /* check the magic number in BAR 0 */
         magic_num = readq(this_board->bar0io + CSR_ID);
         if (magic_num != expected_magic) {
@@ -499,9 +504,6 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                                 DEV_NAME, DEV_NAME, fpga_number, this_device_number);
                 }
         }
-      // this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
-      // but why is it needed?...
-      iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
       exit_bluenoc_probe:
         if (err < 0) {
                 if (this_board)
