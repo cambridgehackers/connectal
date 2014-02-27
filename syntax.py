@@ -293,7 +293,8 @@ def p_unaryExpression(p):
                        | BAR term
                        | TILDEBAR term
                        | CARET term
-                       | TILDECARET term'''
+                       | TILDECARET term
+                       | TOKACTION colonVar expressionStmts TOKENDACTION colonVar'''
 
 def p_term(p):
     '''term : NUM
@@ -680,14 +681,20 @@ def p_formalParam(p):
     param = AST.Param(p[2], p[1])
     p[0] = param
 
+def p_functionAction(p):
+    '''functionAction : TOKFUNCTION type'''
+
 def p_moduleFormalParams(p):
     '''moduleFormalParams : formalParam
+                          | functionAction VAR
                           | moduleFormalParams COMMA formalParam
                           |'''
     if len(p) == 1:
         p[0] = []
-    if len(p) == 2:
+    elif len(p) == 2:
         p[0] = [p[1]]
+    elif len(p) == 3:
+        p[0] = p[2]
     elif len(p) == 4:
         p[0] = p[1] + [p[3]]
 
