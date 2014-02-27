@@ -338,7 +338,7 @@ void call_dospitdddd(void)
     catch_timer(30);
 }
 
-void dotest(char *testname, void (*testfn)(void))
+void dotest(const char *testname, void (*testfn)(void))
 {
   uint64_t elapsed;
   init_timer();
