@@ -23,8 +23,9 @@
 // SOFTWARE.
 
 import Repeat::*;
+import Vector::*;
 
-typedef enum { sp, spl, spll, splll, spllll, spd, spdd, spddd, spdddd } SpitType driving (Bits);
+typedef enum { sp, spl, spll, splll, spllll, spd, spdd, spddd, spdddd } SpitType deriving (Bits);
 
 interface PortalPerfRequest;
    method Action swallowl(Bit#(32) v1);
@@ -56,9 +57,11 @@ endinterface
 module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest);
 
    function Action dospit();
-      return ( action 
+      return  
+	 action 
 	 indication.spit(); 
-	 endaction );
+	 endaction 
+	 ;
    endfunction
 
    function Action dospitl();
@@ -146,7 +149,7 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
    Reg#(Bit#(64)) sinkdddd3 <- mkReg(0);
    Reg#(Bit#(64)) sinkdddd4 <- mkReg(0);
    
-   Vector(9,Repeat) rfns = ?;
+   Vector#(9, Repeat) rfns = ?;
    rfns[0] <- mkRepeat(dospit);
    rfns[1] <- mkRepeat(dospitl);
    rfns[2] <- mkRepeat(dospitll);
