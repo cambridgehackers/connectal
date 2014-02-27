@@ -22,6 +22,8 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+typedef enum { sp, spl, spll, splll, spllll, spd, spdd, spddd, spdddd } SpitType driving (Bits);
+
 interface PortalPerfRequest;
    method Action swallowl(Bit#(32) v1);
    method Action swallowll(Bit#(32) v1, Bit#(32) v2);
@@ -31,18 +33,12 @@ interface PortalPerfRequest;
    method Action swallowdd(Bit#(64) v1, Bit#(64) v2);
    method Action swallowddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3);
    method Action swallowdddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3, Bit#(64) v4);
-   method Action dospitl();
-   method Action dospitll();
-   method Action dospitlll();
-   method Action dospitllll();
-   method Action dospitd();
-   method Action dospitdd();
-   method Action dospitddd();
-   method Action dospitdddd();
+   method Action startspit(SpitType spitType, Bit#(16) loops);
 endinterface
 
 
 interface PortalPerfIndication;
+   method Action spit();
    method Action spitl(Bit#(32) v1);
    method Action spitll(Bit#(32) v1, Bit#(32) v2);
    method Action spitlll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3);
@@ -56,6 +52,7 @@ endinterface
 
 module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest);
 
+   
    Reg#(Bit#(32)) sinkl1 <- mkReg(0);
 
    Reg#(Bit#(32)) sinkll1 <- mkReg(0);
@@ -83,6 +80,18 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
    Reg#(Bit#(64)) sinkdddd2 <- mkReg(0);
    Reg#(Bit#(64)) sinkdddd3 <- mkReg(0);
    Reg#(Bit#(64)) sinkdddd4 <- mkReg(0);
+   
+   Vector(9,Repeat) rfns = ?;
+   rfns[0] <- mkRepeat(dospit);
+   rfns[1] <- mkRepeat(dospitl);
+   rfns[2] <- mkRepeat(dospitll);
+   rfns[3] <- mkRepeat(dospitlll);
+   rfns[4] <- mkRepeat(dospitllll);
+   rfns[5] <- mkRepeat(dospitd);
+   rfns[6] <- mkRepeat(dospitdd);
+   rfns[7] <- mkRepeat(dospitddd);
+   rfns[8] <- mkRepeat(dospitdddd);
+   Reg#(Bit#(16)) loops <- mkReg(0);
 
    method Action swallowl(Bit#(32) v1);
       sinkl1 <= v1;
@@ -129,6 +138,10 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
       sinkdddd4 <= v4;
    endmethod
 
+   method Action dospit();
+      indication.spit();
+   endmethod
+
    method Action dospitl();
       indication.spitl(sinkl1);
    endmethod
@@ -156,10 +169,12 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
    method Action dospitddd();
       indication.spitddd(sinkddd1, sinkddd2, sinkddd3);
    endmethod
-
    method Action dospitdddd();
       indication.spitdddd(sinkdddd1, sinkdddd2, sinkdddd3, sinkdddd4);
    endmethod
 
+   method Action startspit(SpitType spitType, Bit#(16) loops);
+      dofns[spittype].do(loops);
+   endmethod
 
 endmodule
