@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -81,7 +82,7 @@ PortalPoller *poller = 0;
 static void *pthread_worker(void *p)
 {
     void *rc = NULL;
-    while (CHECKSEM(sem_heard2) && !rc && !poller->stopping)
+    while (CHECKSEM(sem_heard) && !rc && !poller->stopping)
         rc = poller->portalExec_event(poller->portalExec_timeout);
     return rc;
 }
@@ -102,66 +103,45 @@ public:
   virtual void spitl(uint32_t v1) {
 	DEBUGWHERE();
         catch_timer(20);
-        SEMPOST(&sem_heard2);
+	SEMPOST(&sem_heard);
     }
   virtual void spitll(uint32_t v1, uint32_t v2) {
 	DEBUGWHERE();
         catch_timer(20);
-        SEMPOST(&sem_heard2);
+        SEMPOST(&sem_heard);
     }
   virtual void spitlll(uint32_t v1, uint32_t v2, uint32_t v3) {
 	DEBUGWHERE();
         catch_timer(20);
-        SEMPOST(&sem_heard2);
+        SEMPOST(&sem_heard);
     }
   virtual void spitllll(uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4) {
 	DEBUGWHERE();
         catch_timer(20);
-        SEMPOST(&sem_heard2);
+        SEMPOST(&sem_heard);
     }
   virtual void spitd(uint64_t v1) {
 	DEBUGWHERE();
         catch_timer(20);
-        SEMPOST(&sem_heard2);
+        SEMPOST(&sem_heard);
     }
   virtual void spitdd(uint64_t v1, uint64_t v2) {
 	DEBUGWHERE();
         catch_timer(20);
-        SEMPOST(&sem_heard2);
+        SEMPOST(&sem_heard);
     }
   virtual void spitddd(uint64_t v1, uint64_t v2, uint64_t v3) {
 	DEBUGWHERE();
         catch_timer(20);
-        SEMPOST(&sem_heard2);
+        SEMPOST(&sem_heard);
     }
   virtual void spitdddd(uint64_t v1, uint64_t v2, uint64_t v3, uint64_t v4) {
 	DEBUGWHERE();
         catch_timer(20);
-        SEMPOST(&sem_heard2);
+        SEMPOST(&sem_heard);
     }
     PortalPerfIndication(unsigned int id, PortalPoller *poller) : PortalPerfIndicationWrapper(id, poller) {}
 };
-
-static void call_say(int v)
-{
-    printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    start_timer(0);
-    PREPAREWAIT(sem_heard2);
-    portalPerfRequestProxy->say(v);
-    SEMWAIT(&sem_heard2);
-    printf("call_say: elapsed %zd\n", lap_timer(0));
-}
-
-static void call_say2(int v, int v2)
-{
-    start_timer(0);
-    PREPAREWAIT(sem_heard2);
-    catch_timer(0);
-    portalPerfRequestProxy->say2(v, v2);
-    catch_timer(19);
-    SEMWAIT(&sem_heard2);
-    catch_timer(30);
-}
 
 uint32_t vl1, vl2, vl3, vl4;
 uint64_t vd1, vd2, vd3, vd4;
