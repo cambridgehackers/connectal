@@ -170,7 +170,6 @@ portalIfcTemplate='''
                 axiSlaveWriteAddrFifos[ws].enq(wa[14:0]);
                 axiSlaveWriteDataFifos[ws].enq(wdata.data);
 
-                putWordCount <= putWordCount + 1;
                 if (wdata.last == 1'b1)
                     axiSlaveBrespFifo.enq(Axi3WriteResponse { resp: 0, id: wdata.id });
 
@@ -178,10 +177,13 @@ portalIfcTemplate='''
                 axiSlaveWriteIdReg <= wid;
             endmethod
         endinterface
-        interface Get resp_b;
+        interface GetF resp_b;
             method ActionValue#(Axi3WriteResponse#(12)) get();
                 axiSlaveBrespFifo.deq;
                 return axiSlaveBrespFifo.first;
+            endmethod
+            method Bool notEmpty();
+                return axiSlaveBrespFifo.notEmpty;
             endmethod
         endinterface
         interface Put req_ar;
@@ -195,7 +197,6 @@ portalIfcTemplate='''
                 axiSlaveReadReqInfoFifo.deq();
                 let v = axiSlaveReadDataFifos[info.select].first;
                 axiSlaveReadDataFifos[info.select].deq;
-                getWordCount <= getWordCount + 1;
                 return Axi3ReadResponse { data: v, last: info.last, id: info.id, resp: 0 };
             endmethod
             method Bool notEmpty();
@@ -223,27 +224,22 @@ proxyInterruptImplTemplate='''
 
 readAxiStateTemplate='''
 	if (addr == 14'h01C)
-	    v = getWordCount;
-	if (addr == 14'h020)
-	    v = putWordCount;
-	if (addr == 14'h024)
 	    v = zeroExtend(axiSlaveReadAddrReg);
-	if (addr == 14'h028)
+	if (addr == 14'h020)
 	    v = zeroExtend(axiSlaveWriteAddrReg);
-	if (addr == 14'h02C)
+	if (addr == 14'h024)
 	    v = zeroExtend(axiSlaveReadIdReg);
-	if (addr == 14'h030)
+	if (addr == 14'h028)
 	    v = zeroExtend(axiSlaveWriteIdReg);
-	if (addr == 14'h034)
+	if (addr == 14'h02C)
 	    v = zeroExtend(axiSlaveReadBurstCountReg);
-	if (addr == 14'h038)
+	if (addr == 14'h030)
 	    v = zeroExtend(axiSlaveWriteBurstCountReg);
+
 '''
 
 axiStateTemplate='''
     // state used to implement Axi Slave interface
-    Reg#(Bit#(32)) getWordCount <- mkReg(0);
-    Reg#(Bit#(32)) putWordCount <- mkReg(0);
     Reg#(Bit#(15)) axiSlaveReadAddrReg <- mkReg(0);
     Reg#(Bit#(15)) axiSlaveWriteAddrReg <- mkReg(0);
     Reg#(Bit#(12)) axiSlaveReadIdReg <- mkReg(0);
@@ -251,7 +247,7 @@ axiStateTemplate='''
     FIFOF#(ReadReqInfo) axiSlaveReadReqInfoFifo <- mkFIFOF;
     Reg#(Bit#(4)) axiSlaveReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(4)) axiSlaveWriteBurstCountReg <- mkReg(0);
-    FIFO#(Axi3WriteResponse#(12)) axiSlaveBrespFifo <- mkFIFO();
+    FIFOF#(Axi3WriteResponse#(12)) axiSlaveBrespFifo <- mkFIFOF();
 
     Vector#(2,FIFO#(Bit#(15))) axiSlaveWriteAddrFifos <- replicateM(mkFIFO);
     Vector#(2,FIFO#(Bit#(15))) axiSlaveReadAddrFifos <- replicateM(mkFIFO);

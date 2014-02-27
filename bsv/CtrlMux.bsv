@@ -25,8 +25,7 @@
 
 import Vector::*;
 import GetPut::*;
-import SpecialFIFOs::*;
-import FIFO::*;
+import FIFOF::*;
 import GetPutF::*;
 
 import AxiMasterSlave::*;
@@ -64,9 +63,7 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
    
    Axi3Slave#(_a,_b,_c) out_of_range <- mkAxi3SlaveOutOfRange;
    Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(cons(dir.portalIfc.ctrl,map(getCtrl, portals)),cons(out_of_range, nil));
-
-   Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
-   FIFO#(void) req_aw_fifo <- mkPipelineFIFO;
+   Vector#(numIfcs,FIFOF#(Bit#(_c))) req_aw_fifos <- replicateM(mkSizedFIFOF(1));
    
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
@@ -75,38 +72,49 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
       return a[port_sel_high:port_sel_low];
    endfunction
    
-   function Maybe#(Bit#(TLog#(numIfcs))) xxx(Tuple2#(Integer,Axi3Slave#(_a,_b,_c)) y);
-      return (tpl_2(y).resp_read.notEmpty) ? tagged Valid fromInteger(tpl_1(y)) : tagged Invalid;
+   function Maybe#(Bit#(TLog#(numIfcs))) xxx(Integer x, GetF#(t) y);
+      return (y.notEmpty) ? tagged Valid fromInteger(x) : tagged Invalid;
    endfunction
    
    function Maybe#(Bit#(TLog#(numIfcs))) yyy(Maybe#(Bit#(TLog#(numIfcs))) x, Maybe#(Bit#(TLog#(numIfcs))) y);
       return isValid(x) ? x : y;
    endfunction
    
-   let next_resp_read_idx = fold(yyy, map(xxx,zip(genVector,ifcs)));
+   function Maybe#(Bit#(TLog#(numIfcs))) zzz(Bit#(_c) r, Integer x, FIFOF#(Bit#(_c)) y);
+      return y.notEmpty ? (y.first == r ? tagged Valid fromInteger(x) : tagged Invalid) : tagged Invalid; 
+   endfunction
    
+   let next_resp_read_idx = fold(yyy, zipWith(xxx, genVector, map(get_resp_read,ifcs)));
+   let next_resp_b_idx    = fold(yyy, zipWith(xxx, genVector, map(get_resp_b,   ifcs)));
+   
+   function Bit#(TLog#(numIfcs)) write_idx(Bit#(_c) r);
+      return fromMaybe(?, fold(yyy, zipWith(zzz(r), genVector, req_aw_fifos)));
+   endfunction
+
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(_a,_c) req);
 	 Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.address));
 	 if (wsv > fromInteger(valueOf(numInputs)))
 	    wsv = fromInteger(valueOf(numInputs));
 	 ifcs[wsv].req_aw.put(req);
-	 ws <= wsv;
-	 req_aw_fifo.enq(?);
 	 if (wsv > 0)
 	    dir.writeEvent <= ?;
+	 req_aw_fifos[wsv].enq(req.id);
       endmethod
    endinterface
    interface Put resp_write;
       method Action put(Axi3WriteData#(_b,_c) wdata);
-	 ifcs[ws].resp_write.put(wdata);
+	 ifcs[write_idx(wdata.id)].resp_write.put(wdata);
       endmethod
    endinterface
-   interface Get resp_b;
-      method ActionValue#(Axi3WriteResponse#(_c)) get();
-	 let rv <- ifcs[ws].resp_b.get();
-	 req_aw_fifo.deq;
+   interface GetF resp_b;
+      method ActionValue#(Axi3WriteResponse#(_c)) get() if (next_resp_b_idx matches tagged Valid .idx);
+	 let rv <- ifcs[idx].resp_b.get();
+	 req_aw_fifos[idx].deq;
 	 return rv;
+      endmethod
+      method Bool notEmpty();
+	 return isValid(next_resp_b_idx);
       endmethod
    endinterface
    interface Put req_ar;
