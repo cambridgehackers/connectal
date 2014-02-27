@@ -35,7 +35,7 @@ interface PortalPerfRequest;
    method Action swallowdd(Bit#(64) v1, Bit#(64) v2);
    method Action swallowddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3);
    method Action swallowdddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3, Bit#(64) v4);
-   method Action startspit(Bit#(16), spitType, Bit#(16) loops);
+   method Action startspit(Bit#(16) spitType, Bit#(16) loops);
 endinterface
 
 
@@ -208,7 +208,7 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
       sinkdddd4 <= v4;
    endmethod
 
-   method Action startspit(SpitType spitType, Bit#(16) loops);
+   method Action startspit(Bit#(16) spitType, Bit#(16) loops);
       dofns[spittype].do(loops);
    endmethod
 
