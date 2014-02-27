@@ -13,9 +13,8 @@ interface Directory#(numeric type _n,
 		     numeric type _b, 
 		     numeric type _c);
    interface Portal#(_n,_a,_b,_c) portalIfc;
-   interface ReadOnly#(Bit#(64)) cycles;
-   interface Vector#(3,WriteOnly#(Bit#(64))) writeIntervals;
-   interface Vector#(3,WriteOnly#(Bit#(64))) readIntervals;
+   interface WriteOnly#(void) writeEvent;
+   interface WriteOnly#(void) readEvent;
 endinterface
 
 typedef Directory#(16,32,32,12) StdDirectory;
@@ -38,20 +37,12 @@ endmodule
 
 module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 
-   Vector#(3,Wire#(Bit#(64))) writeIntervalWires <- replicateM(mkDWire(64'hfecfecfecfec));
-   Vector#(3,Wire#(Bit#(64))) readIntervalWires <- replicateM(mkDWire(64'hfecfecfecfec));
-
-   function WriteOnly#(a) ww(Wire#(a) w);
-      return (interface WriteOnly;
-		 method Action _write(a x);
-		    w <= x;
-		 endmethod
-	      endinterface);
-   endfunction
+   Vector#(3,Reg#(Bit#(64))) writeIntervals <- replicateM(mkReg(0));
+   Vector#(3,Reg#(Bit#(64)))  readIntervals <- replicateM(mkReg(0));
 
    Reg#(Bit#(64)) cycle_count <- mkReg(0);
    Reg#(Bit#(32)) snapshot    <- mkReg(0);
-   
+
    rule count;
       cycle_count <= cycle_count+1;
    endrule
@@ -86,9 +77,9 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 		   else if (addr == cco+1)
 		      return snapshot;
 		   else if (addr < cco+8) /* address in range [cco+2 .. cco+7] */ // read low order bits
-      		      return truncate(append(readIntervalWires,writeIntervalWires)[addr-(cco+2)]);
+      		      return truncate(append(readIntervals,writeIntervals)[addr-(cco+2)]);
 		   else if (addr < cco+13) /* address in range [cco+8 .. cco+13] */ // read high order bits
-      		      return truncate(append(readIntervalWires,writeIntervalWires)[addr-(cco+8)]>>32);
+      		      return truncate(append(readIntervals,writeIntervals)[addr-(cco+8)]>>32);
 		   else begin
       		      $display("directory addr out bounds %d", addr);
 		      return 0;
@@ -97,10 +88,20 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
       	     endinterface);
    let ifc <- mkStdDirectoryPortalIfc(rf);
    interface StdPortal portalIfc = ifc;
-   interface ReadOnly cycles = regToReadOnly(cycle_count);
-   interface Vector writeIntervals = map(ww, writeIntervalWires);
-   interface Vector readIntervals  = map(ww, readIntervalWires);
-
+   interface WriteOnly writeEvent;
+      method Action _write(void x);
+	 writeIntervals[2] <= writeIntervals[1];
+	 writeIntervals[1] <= writeIntervals[0];
+	 writeIntervals[0] <= cycle_count;
+      endmethod
+   endinterface
+   interface WriteOnly readEvent;
+      method Action _write(void x);
+	 readIntervals[2] <= readIntervals[1];
+	 readIntervals[1] <= readIntervals[0];
+	 readIntervals[0] <= cycle_count;
+      endmethod
+   endinterface
 endmodule
 
 

@@ -61,45 +61,15 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 	    Add#(1,numInputs,numIfcs),
 	    Add#(nz, TLog#(numIfcs), 4));
    
-   Vector#(1, Portal#(aw,_a,_b,_c)) directories = cons(dir.portalIfc,nil);
-   
    Axi3Slave#(_a,_b,_c) out_of_range <- mkAxi3SlaveOutOfRange;
-   Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(append(map(getCtrl, directories),map(getCtrl, portals)),cons(out_of_range, nil));
-   
+   Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(cons(dir.portalIfc.ctrl,map(getCtrl, portals)),cons(out_of_range, nil));
+
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
    Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
    
-   Vector#(3,Reg#(Bit#(64))) writeIntervals <- replicateM(mkReg(0));
-   Vector#(3,Reg#(Bit#(64))) readIntervals <- replicateM(mkReg(0));
-
    FIFO#(void) req_ar_fifo <- mkPipelineFIFO;
    FIFO#(void) req_aw_fifo <- mkPipelineFIFO;
-   
-   rule xferIntervals;
-      dir.writeIntervals[0] <= writeIntervals[0];
-      dir.writeIntervals[1] <= writeIntervals[1];
-      dir.writeIntervals[2] <= writeIntervals[2];
-      dir.readIntervals[0] <= readIntervals[0];
-      dir.readIntervals[1] <= readIntervals[1];
-      dir.readIntervals[2] <= readIntervals[2];
-   endrule
-   
-   function Action latchWriteInterval;
-      action
-	 writeIntervals[2] <= writeIntervals[1];
-	 writeIntervals[1] <= writeIntervals[0];
-	 writeIntervals[0] <= truncate(dir.cycles);
-      endaction   
-   endfunction
-
-   function Action latchReadInterval;
-      action
-	 readIntervals[2] <= readIntervals[1];
-	 readIntervals[1] <= readIntervals[0];
-	 readIntervals[0] <= truncate(dir.cycles);
-      endaction   
-   endfunction
-   
+      
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
    function Bit#(4) psel(Bit#(_a) a);
@@ -115,7 +85,7 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 	 ws <= wsv;
 	 req_aw_fifo.enq(?);
 	 if (wsv > 0)
-	    latchWriteInterval;
+	    dir.writeEvent <= ?;
       endmethod
    endinterface
    interface Put resp_write;
@@ -139,7 +109,7 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 	 rs <= rsv;
 	 req_ar_fifo.enq(?);
 	 if (rsv > 0)
-	    latchReadInterval;
+	    dir.readEvent <= ?;
       endmethod
    endinterface
    interface Get resp_read;
