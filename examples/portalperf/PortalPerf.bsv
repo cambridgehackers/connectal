@@ -209,7 +209,7 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
    endmethod
 
    method Action startspit(Bit#(16) spitType, Bit#(16) loops);
-      dofns[spittype].do(loops);
+      dofns[spittype].start(loops);
    endmethod
 
 endmodule
