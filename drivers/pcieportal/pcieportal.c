@@ -45,7 +45,6 @@
 #define CSR_BYTES_PER_BEAT            (   7 << 2)
 #define CSR_BOARD_CONTENT_ID          (   8 << 2)
 #define CSR_TLPDATAFIFO_DEQ           ( 768 << 2)
-#define CSR_TLPSEQNOREG               ( 774 << 2)
 #define CSR_TLPTRACINGREG             ( 775 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE0 ( 776 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE1 ( 777 << 2)
@@ -250,15 +249,13 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 {
                 /* copy board identification info to a user-space struct */
                 unsigned trace, old_trace;
-                int tlpseqno = ioread32(this_board->bar0io + CSR_TLPSEQNOREG); 
                 err = copy_from_user(&trace, (void __user *) arg, sizeof(int));
                 if (!err) {
                          // update tlpBramWrAddr, which also writes the scratchpad to BRAM
                          iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
                          old_trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
                          iowrite32(trace, this_board->bar0io + CSR_TLPTRACINGREG); 
-                         printk("new trace=%d old trace=%d tlpseqno=%d\n",
-                                trace, old_trace, tlpseqno);
+                         printk("new trace=%d old trace=%d\n", trace, old_trace);
                          err = copy_to_user((void __user *) arg, &old_trace, sizeof(int));
                 }
                 }

@@ -971,7 +971,6 @@ interface ControlAndStatusRegs;
    interface Reg#(Bool) tlpTracing;
    interface Reg#(Bool) use4dw;
    interface Reg#(Bit#(32)) tlpDataBramWrAddr;
-   interface Reg#(Bit#(32)) tlpSeqno;
    interface Reg#(Bit#(32)) tlpOutCount;
    interface BRAMServer#(Bit#(11), TimestampedTlpData) tlpDataBram;
 endinterface: ControlAndStatusRegs
@@ -1017,7 +1016,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 
    Reg#(Bool) tlpTracingReg <- mkReg(False);
    Reg#(Bool) use4dwReg <- mkReg(True);
-   Reg#(Bit#(32)) tlpSeqnoReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
    BRAM_Configure bramCfg = defaultValue;
@@ -1050,7 +1048,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          8: return board_content_id[31:0];
          9: return board_content_id[63:32];
 	 768: return 0;
-	 774: return tlpSeqnoReg;
 	 775: return (tlpTracingReg ? 1 : 0);
 	 776: return tlpDataBramResponseSlice(0);
 	 777: return tlpDataBramResponseSlice(1);
@@ -1104,7 +1101,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action wr_csr(UInt#(30) addr, Bit#(4) be, Bit#(32) dword);
       action
          case (addr % 8192)
-	    774: tlpSeqnoReg <= dword;
 	    775: tlpTracingReg <= (dword != 0) ? True : False;
 	    776: tlpDataScratchpad[0] <= dword;
 	    777: tlpDataScratchpad[1] <= dword;
@@ -1438,7 +1434,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface Reg tlpTracing = tlpTracingReg;
    interface Reg use4dw = use4dwReg;
    interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
-   interface Reg tlpSeqno = tlpSeqnoReg;
    interface Reg tlpOutCount = tlpOutCountReg;
    interface BRAMServer tlpDataBram = tlpDataBram1Port.portA;
 endmodule: mkControlAndStatusRegs
@@ -1524,7 +1519,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 	       TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, unused: 7'h04, tlp: tlp };
 	       csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
 	       csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
-	       csr.tlpSeqno <= csr.tlpSeqno + 1;
 	       skippingIncomingTlps <= False;
 	   end
        end
@@ -1538,7 +1532,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 	   TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, unused: 7'h08, tlp: tlp };
 	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
 	   csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
-	   csr.tlpSeqno <= csr.tlpSeqno + 1;
        end
    endrule: traceTlpToBus
 
