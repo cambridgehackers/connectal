@@ -195,10 +195,13 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 info.is_active = (this_board->activation_level == BLUENOC_ACTIVE) ? 1 : 0;
                 info.portal_number = this_portal->portal_number;
                 if (1) {        // msix info
-                        printk("msix_entry[0].addr %08x %08x data %08x\n",
-                             ioread32(this_board->bar0io + CSR_MSIX_ADDR_HI),
-                             ioread32(this_board->bar0io + CSR_MSIX_ADDR_LO),
-                             ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA));
+		  int i;
+		  for (i = 0; i < 4; i++)
+                        printk("msix_entry[%d].addr %08x %08x data %08x\n",
+			       i,
+			       ioread32(this_board->bar0io + CSR_MSIX_ADDR_HI + 16*i),
+                             ioread32(this_board->bar0io + CSR_MSIX_ADDR_LO   + 16*i),
+                             ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*i));
                 }
                 err = copy_to_user((void __user *) arg, &info, sizeof(tBoardInfo));
                 break;
