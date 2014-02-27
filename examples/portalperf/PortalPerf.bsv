@@ -94,56 +94,48 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
 
    function Action dospitl();
       return ( action 
-	 indication.spit(); 
 	 indication.spitl(sinkl1);
 	 endaction );
    endfunction
 
    function Action dospitll();
       return ( action 
-	 indication.spit(); 
 	 indication.spitll(sinkll1, sinkll2);
 	 endaction );
    endfunction
 
    function Action dospitlll();
       return ( action 
-	 indication.spit(); 
 	 indication.spitlll(sinklll1, sinklll2, sinklll3);
 	 endaction );
    endfunction
 
    function Action dospitllll();
       return ( action 
-	 indication.spit(); 
 	 indication.spitllll(sinkllll1, sinkllll2, sinkllll3, sinkllll4);
 	 endaction );
    endfunction
 
    function Action dospitd();
       return ( action 
-	 indication.spit(); 
 	 indication.spitd(sinkd1);
 	 endaction );
    endfunction
 
    function Action dospitdd();
       return ( action 
-	 indication.spit(); 
 	 indication.spitdd(sinkdd1, sinkdd2);
 	 endaction );
    endfunction
 
    function Action dospitddd();
       return ( action 
-	 indication.spit(); 
 	 indication.spitddd(sinkddd1, sinkddd2, sinkddd3);
 	 endaction );
    endfunction
 
    function Action dospitdddd();
       return ( action 
-	 indication.spit(); 
 	 indication.spitdddd(sinkdddd1, sinkdddd2, sinkdddd3, sinkdddd4);
 	 endaction );
    endfunction
