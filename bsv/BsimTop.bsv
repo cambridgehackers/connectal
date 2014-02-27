@@ -27,9 +27,10 @@ import GetPut            :: *;
 import Connectable       :: *;
 import StmtFSM           :: *;
 import Portal            :: *;
-import AxiMasterSlave   :: *;
+import AxiMasterSlave    :: *;
 import Leds              :: *;
 import Top               :: *;
+import GetPutF           :: *;
 
 import "BDPI" function Action      initPortal(Bit#(32) d);
 import "BDPI" function Bool                    writeReq();

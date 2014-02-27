@@ -20,10 +20,12 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
 import Connectable::*;
 import RegFile::*;
+import GetPutF::*;
 
 typedef struct {
    Bit#(addrWidth) address;
@@ -89,7 +91,7 @@ endinterface
 
 interface Axi3Slave#(type addrWidth, type busWidth, type idWidth);
    interface Put#(Axi3ReadRequest#(addrWidth, idWidth)) req_ar;
-   interface Get#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
+   interface GetF#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
    interface Put#(Axi3WriteRequest#(addrWidth, idWidth)) req_aw;
    interface Put#(Axi3WriteData#(busWidth, idWidth)) resp_write;
    interface Get#(Axi3WriteResponse#(idWidth)) resp_b;
@@ -151,7 +153,7 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    Reg#(Bit#(4)) writeBurstCountReg <- mkReg(0);
    FIFO#(Bit#(2)) writeRespFifo <- mkFIFO();
    FIFO#(Bit#(idWidth)) writeIdFifo <- mkFIFO();
-   FIFO#(Axi3ReadRequest#(addrWidth,idWidth)) req_ar_fifo <- mkSizedFIFO(1);
+   FIFOF#(Axi3ReadRequest#(addrWidth,idWidth)) req_ar_fifo <- mkSizedFIFOF(1);
    FIFO#(Axi3WriteRequest#(addrWidth,idWidth)) req_aw_fifo <- mkSizedFIFO(1);
    
    Bool verbose = False;
@@ -161,7 +163,7 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    	 req_ar_fifo.enq(req);
       endmethod
    endinterface: req_ar
-   interface Get resp_read;
+   interface GetF resp_read;
       method ActionValue#(Axi3ReadResponse#(busWidth,idWidth)) get();
    	 let addr = readAddrReg;
    	 let id = readIdReg;
@@ -179,6 +181,9 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
          readAddrReg <= addr + 1;
    	 readIdReg <= id;
          return Axi3ReadResponse { data: data, last: (burstCount == 1) ? 1 : 0, id: id, resp: 0 };
+      endmethod
+      method Bool notEmpty();
+	 return (readBurstCountReg==0) ? req_ar_fifo.notEmpty : True;
       endmethod
    endinterface: resp_read
    interface Put req_aw;

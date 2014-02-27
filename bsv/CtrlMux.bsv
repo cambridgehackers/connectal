@@ -27,6 +27,7 @@ import Vector::*;
 import GetPut::*;
 import SpecialFIFOs::*;
 import FIFO::*;
+import GetPutF::*;
 
 import AxiMasterSlave::*;
 import Portal::*;
@@ -65,16 +66,24 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
    Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(cons(dir.portalIfc.ctrl,map(getCtrl, portals)),cons(out_of_range, nil));
 
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
-   Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
-   
-   FIFO#(void) req_ar_fifo <- mkPipelineFIFO;
    FIFO#(void) req_aw_fifo <- mkPipelineFIFO;
-      
+   
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
+
    function Bit#(4) psel(Bit#(_a) a);
       return a[port_sel_high:port_sel_low];
    endfunction
+   
+   function Maybe#(Bit#(TLog#(numIfcs))) xxx(Tuple2#(Integer,Axi3Slave#(_a,_b,_c)) y);
+      return (tpl_2(y).resp_read.notEmpty) ? tagged Valid fromInteger(tpl_1(y)) : tagged Invalid;
+   endfunction
+   
+   function Maybe#(Bit#(TLog#(numIfcs))) yyy(Maybe#(Bit#(TLog#(numIfcs))) x, Maybe#(Bit#(TLog#(numIfcs))) y);
+      return isValid(x) ? x : y;
+   endfunction
+   
+   let next_resp_read_idx = fold(yyy, map(xxx,zip(genVector,ifcs)));
    
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(_a,_c) req);
@@ -106,17 +115,17 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 	 if (rsv > fromInteger(valueOf(numInputs)))
 	    rsv = fromInteger(valueOf(numInputs));
 	 ifcs[rsv].req_ar.put(req);
-	 rs <= rsv;
-	 req_ar_fifo.enq(?);
 	 if (rsv > 0)
 	    dir.readEvent <= ?;
       endmethod
    endinterface
-   interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(_b,_c)) get();
-	 let rv <- ifcs[rs].resp_read.get();
-	 req_ar_fifo.deq;
+   interface GetF resp_read;
+      method ActionValue#(Axi3ReadResponse#(_b,_c)) get() if (next_resp_read_idx matches tagged Valid .idx);
+	 let rv <- ifcs[idx].resp_read.get();
 	 return rv;
+      endmethod
+      method Bool notEmpty();
+	 return isValid(next_resp_read_idx);
       endmethod
    endinterface
    

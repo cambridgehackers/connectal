@@ -24,6 +24,7 @@ import Vector::*;
 import SpecialFIFOs::*;
 import PortalMemory::*;
 import Portal::*;
+import GetPutF::*;
 %(extraImports)s
 
 typedef struct {
@@ -188,15 +189,22 @@ portalIfcTemplate='''
                 req_ar_fifo.enq(req);
             endmethod
         endinterface
-        interface Get resp_read;
+        interface GetF resp_read;
             method ActionValue#(Axi3ReadResponse#(32,12)) get();
                 let info = axiSlaveReadReqInfoFifo.first();
                 axiSlaveReadReqInfoFifo.deq();
                 let v = axiSlaveReadDataFifos[info.select].first;
                 axiSlaveReadDataFifos[info.select].deq;
-
                 getWordCount <= getWordCount + 1;
                 return Axi3ReadResponse { data: v, last: info.last, id: info.id, resp: 0 };
+            endmethod
+            method Bool notEmpty();
+                Bool rv = False;
+                if(axiSlaveReadReqInfoFifo.notEmpty) begin
+                    let info = axiSlaveReadReqInfoFifo.first();
+                    rv = axiSlaveReadDataFifos[info.select].notEmpty();
+                end
+                return rv;
             endmethod
         endinterface
     endinterface
@@ -240,7 +248,7 @@ axiStateTemplate='''
     Reg#(Bit#(15)) axiSlaveWriteAddrReg <- mkReg(0);
     Reg#(Bit#(12)) axiSlaveReadIdReg <- mkReg(0);
     Reg#(Bit#(12)) axiSlaveWriteIdReg <- mkReg(0);
-    FIFO#(ReadReqInfo) axiSlaveReadReqInfoFifo <- mkFIFO;
+    FIFOF#(ReadReqInfo) axiSlaveReadReqInfoFifo <- mkFIFOF;
     Reg#(Bit#(4)) axiSlaveReadBurstCountReg <- mkReg(0);
     Reg#(Bit#(4)) axiSlaveWriteBurstCountReg <- mkReg(0);
     FIFO#(Axi3WriteResponse#(12)) axiSlaveBrespFifo <- mkFIFO();
@@ -248,7 +256,7 @@ axiStateTemplate='''
     Vector#(2,FIFO#(Bit#(15))) axiSlaveWriteAddrFifos <- replicateM(mkFIFO);
     Vector#(2,FIFO#(Bit#(15))) axiSlaveReadAddrFifos <- replicateM(mkFIFO);
     Vector#(2,FIFO#(Bit#(32))) axiSlaveWriteDataFifos <- replicateM(mkFIFO);
-    Vector#(2,FIFO#(Bit#(32))) axiSlaveReadDataFifos <- replicateM(mkFIFO);
+    Vector#(2,FIFOF#(Bit#(32))) axiSlaveReadDataFifos <- replicateM(mkFIFOF);
 
     Reg#(Bit#(1)) axiSlaveRS <- mkReg(0);
     Reg#(Bit#(1)) axiSlaveWS <- mkReg(0);
@@ -423,7 +431,7 @@ mkHiddenWrapperInterfaceTemplate='''
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
                             FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
+                            FIFOF#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
     provisos (Log#(%(indicationChannelCount)s,iccsz));
 %(wrapperCtrl)s
 endmodule
@@ -451,7 +459,7 @@ mkHiddenProxyInterfaceTemplate='''
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
                             FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFO#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
+                            FIFOF#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
     provisos (Log#(%(indicationChannelCount)s,iccsz));
 %(proxyCtrl)s
 %(portalIfcInterrupt)s
