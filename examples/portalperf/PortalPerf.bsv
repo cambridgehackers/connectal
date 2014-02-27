@@ -22,6 +22,8 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Repeat::*;
+
 typedef enum { sp, spl, spll, splll, spllll, spd, spdd, spddd, spdddd } SpitType driving (Bits);
 
 interface PortalPerfRequest;
