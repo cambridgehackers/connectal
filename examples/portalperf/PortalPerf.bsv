@@ -106,7 +106,7 @@ module mkPortalPerf#(PortalPerfIndication indication) (PortalPerfRequest);
       sinkllll4 <= v4;
    endmethod
 
-   method Action swallowd(Bit#(64) v);
+   method Action swallowd(Bit#(64) v1);
       sinkd1 <= v1;
    endmethod
 
@@ -142,7 +142,7 @@ module mkPortalPerf#(PortalPerfIndication indication) (PortalPerfRequest);
    endmethod
 
    method Action dospitllll();
-      indication.spitlll(sinkllll1, sinkllll2, sinkllll3, sinklll4);
+      indication.spitllll(sinkllll1, sinkllll2, sinkllll3, sinklll4);
    endmethod
 
    method Action dospitd();
