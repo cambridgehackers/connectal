@@ -43,7 +43,7 @@
 
 
 
-#define LOOP_COUNT 5
+#define LOOP_COUNT 50
 #define SEPARATE_EVENT_THREAD
 //#define USE_MUTEX_SYNC
 
