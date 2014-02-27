@@ -52,7 +52,70 @@ interface PortalPerfIndication;
 endinterface
 
 
+
 module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest);
+
+   function Action dospit();
+      return ( action 
+	 indication.spit(); 
+	 endaction );
+   endfunction
+
+   function Action dospitl();
+      return ( action 
+	 indication.spit(); 
+	 indication.spitl(sinkl1);
+	 endaction );
+   endfunction
+
+   function Action dospitll();
+      return ( action 
+	 indication.spit(); 
+	 indication.spitll(sinkll1, sinkll2);
+	 endaction );
+   endfunction
+
+   function Action dospitlll();
+      return ( action 
+	 indication.spit(); 
+	 indication.spitlll(sinklll1, sinklll2, sinklll3);
+	 endaction );
+   endfunction
+
+   function Action dospitllll();
+      return ( action 
+	 indication.spit(); 
+	 indication.spitllll(sinkllll1, sinkllll2, sinkllll3, sinkllll4);
+	 endaction );
+   endfunction
+
+   function Action dospitd();
+      return ( action 
+	 indication.spit(); 
+	 indication.spitd(sinkd1);
+	 endaction );
+   endfunction
+
+   function Action dospitdd();
+      return ( action 
+	 indication.spit(); 
+	 indication.spitdd(sinkdd1, sinkdd2);
+	 endaction );
+   endfunction
+
+   function Action dospitddd();
+      return ( action 
+	 indication.spit(); 
+	 indication.spitddd(sinkddd1, sinkddd2, sinkddd3);
+	 endaction );
+   endfunction
+
+   function Action dospitdddd();
+      return ( action 
+	 indication.spit(); 
+	 indication.spitdddd(sinkdddd1, sinkdddd2, sinkdddd3, sinkdddd4);
+	 endaction );
+   endfunction
 
    
    Reg#(Bit#(32)) sinkl1 <- mkReg(0);
@@ -138,41 +201,6 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
       sinkdddd2 <= v2;
       sinkdddd3 <= v3;
       sinkdddd4 <= v4;
-   endmethod
-
-   method Action dospit();
-      indication.spit();
-   endmethod
-
-   method Action dospitl();
-      indication.spitl(sinkl1);
-   endmethod
-
-   method Action dospitll();
-      indication.spitll(sinkll1, sinkll2);
-   endmethod
-
-   method Action dospitlll();
-      indication.spitlll(sinklll1, sinklll2, sinklll3);
-   endmethod
-
-   method Action dospitllll();
-      indication.spitllll(sinkllll1, sinkllll2, sinkllll3, sinkllll4);
-   endmethod
-
-   method Action dospitd();
-      indication.spitd(sinkd1);
-   endmethod
-
-   method Action dospitdd();
-      indication.spitdd(sinkdd1, sinkdd2);
-   endmethod
-
-   method Action dospitddd();
-      indication.spitddd(sinkddd1, sinkddd2, sinkddd3);
-   endmethod
-   method Action dospitdddd();
-      indication.spitdddd(sinkdddd1, sinkdddd2, sinkdddd3, sinkdddd4);
    endmethod
 
    method Action startspit(SpitType spitType, Bit#(16) loops);
