@@ -28,6 +28,7 @@ import Vector::*;
 typedef enum { sp, spl, spll, splll, spllll, spd, spdd, spddd, spdddd } SpitType deriving (Bits);
 
 interface PortalPerfRequest;
+   method Action swallow();
    method Action swallowl(Bit#(32) v1);
    method Action swallowll(Bit#(32) v1, Bit#(32) v2);
    method Action swallowlll(Bit#(32) v1, Bit#(32) v2, Bit#(32) v3);
@@ -163,6 +164,9 @@ module mkPortalPerfRequest#(PortalPerfIndication indication) (PortalPerfRequest)
 
    method Action swallowl(Bit#(32) v1);
       sinkl1 <= v1;
+   endmethod
+
+   method Action swallow();
    endmethod
 
    method Action swallowll(Bit#(32) v1, Bit#(32) v2);
