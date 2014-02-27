@@ -14,6 +14,7 @@ package PcieToAxiBridge;
 // the other.
 
 import GetPut       :: *;
+import GetPutF      :: *;
 import Connectable  :: *;
 import Vector       :: *;
 import FIFO         :: *;
@@ -822,7 +823,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	       tlpOutFifo.enq(tlp);
            endmethod
        endinterface : req_ar
-       interface Get resp_read;
+       interface GetF resp_read;
 	   method ActionValue#(Axi3ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
 	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
@@ -832,6 +833,9 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
 	      return Axi3ReadResponse { data: v, last: 0, id: truncate(completionTagMimo.first[0]), resp: 0 };
            endmethod
+	  method Bool notEmpty();
+	     return (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
+	  endmethod
 	endinterface: resp_read
     endinterface: slave3
     interface Axi4Slave slave4;
@@ -1023,7 +1027,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bool) use4dwReg <- mkReg(True);
    Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramWrAddrReg <- mkReg(0);
-   Integer memorySize = 2**TlpTraceAddrSize;
+   Integer memorySize = 2**valueOf(TlpTraceAddrSize);
    BscanBram#(Bit#(TlpTraceAddrSize), TimestampedTlpData) bscanBram <- mkBscanBram(1, memorySize, tlpDataBramWrAddrReg);
    Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
    Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
