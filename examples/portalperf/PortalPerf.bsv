@@ -142,7 +142,7 @@ module mkPortalPerf#(PortalPerfIndication indication) (PortalPerfRequest);
    endmethod
 
    method Action dospitllll();
-      indication.spitllll(sinkllll1, sinkllll2, sinkllll3, sinklll4);
+      indication.spitllll(sinkllll1, sinkllll2, sinkllll3, sinkll;l4);
    endmethod
 
    method Action dospitd();
