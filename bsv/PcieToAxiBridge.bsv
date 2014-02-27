@@ -43,6 +43,9 @@ import Memory               :: *;
 import XbsvXilinx7Pcie      :: *;
 //import XbsvXilinx7DDR3      :: *;
 import Portal               :: *;
+import Bscan                :: *;
+
+typedef 11 TlpTraceAddrSize;
 
 typedef struct {
     Bit#(32) timestamp;
@@ -969,11 +972,11 @@ interface ControlAndStatusRegs;
    interface ReadOnly#(Bit#(32)) interruptData;
 
    interface Reg#(Bool)     tlpTracing;
-   interface Reg#(Bit#(32)) tlpTraceLimit;
+   interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimit;
    interface Reg#(Bool) use4dw;
-   interface Reg#(Bit#(32)) tlpDataBramWrAddr;
+   interface Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramWrAddr;
    interface Reg#(Bit#(32)) tlpOutCount;
-   interface BRAMServer#(Bit#(11), TimestampedTlpData) tlpDataBram;
+   interface BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData) tlpDataBram;
 endinterface: ControlAndStatusRegs
 
 // This module encapsulates all of the logic for instantiating and
@@ -1016,13 +1019,12 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Vector#(4,MSIX_Entry) msix_entry               <- replicateM(mkMSIXEntry);
 
    Reg#(Bool) tlpTracingReg        <- mkReg(False);
-   Reg#(Bit#(32)) tlpTraceLimitReg <- mkReg(0);
+   Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimitReg <- mkReg(0);
    Reg#(Bool) use4dwReg <- mkReg(True);
-   Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
-   Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
-   BRAM_Configure bramCfg = defaultValue;
-   bramCfg.memorySize = 2048;
-   BRAM1Port#(Bit#(11), TimestampedTlpData) tlpDataBram1Port <- mkBRAM1Server(bramCfg);
+   Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramRdAddrReg <- mkReg(0);
+   Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramWrAddrReg <- mkReg(0);
+   Integer memorySize = 2**TlpTraceAddrSize;
+   BscanBram#(Bit#(TlpTraceAddrSize), TimestampedTlpData) bscanBram <- mkBscanBram(1, memorySize, tlpDataBramWrAddrReg);
    Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
    Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
    Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
@@ -1060,8 +1062,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 782: return zeroExtend(rcb_mask);
 	 783: return zeroExtend(pack(max_read_req_bytes));
 	 784: return zeroExtend(pack(max_payload_bytes));
-	 792: return tlpDataBramWrAddrReg;
-	 793: return tlpTraceLimitReg;
+	 792: return extend(tlpDataBramWrAddrReg);
+	 793: return extend(tlpTraceLimitReg);
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
@@ -1112,8 +1114,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    780: tlpDataScratchpad[4] <= dword;
 	    781: tlpDataScratchpad[5] <= dword;
 
-	    792: tlpDataBramWrAddrReg <= dword;
-	    793: tlpTraceLimitReg <= dword;
+	    792: tlpDataBramWrAddrReg <= truncate(dword);
+	    793: tlpTraceLimitReg <= truncate(dword);
 
             //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
             // MSIx table entries
@@ -1176,7 +1178,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    endfunction: do_read
 
    rule bramResponse;
-       let v <- tlpDataBram1Port.portA.response.get();
+       let v <- bscanBram.server.response.get();
        tlpDataBramResponse <= v;
    endrule
 
@@ -1185,7 +1187,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action do_write(UInt#(30) addr, Vector#(4,Tuple2#(Bit#(4),Bit#(32))) value);
       action
          if ((addr % 8192) == 768) begin
-	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(tlpDataBramRdAddrReg), datain: unpack(0)});
+	     bscanBram.server.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(tlpDataBramRdAddrReg), datain: unpack(0)});
 	     tlpDataBramRdAddrReg <= tlpDataBramRdAddrReg + 1;
 	 end else if ((addr % 8192) == 792) begin
 	     // update tplDataBramWrAddrReg and write back scratchpad
@@ -1196,7 +1198,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	     ttd[31+(3*32):0+(3*32)] = tlpDataScratchpad[3];
 	     ttd[31+(4*32):0+(4*32)] = tlpDataScratchpad[4];
 	     ttd[24+(5*32):0+(5*32)] = tlpDataScratchpad[5][24:0];
-	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(tpl_2(value[0])),
+	     bscanBram.server.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(tpl_2(value[0])),
 	                                                     datain: unpack(ttd)});
          end else if ((addr % 8192) == 795) begin
 					       portalResetIfc.assertReset();
@@ -1440,7 +1442,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface Reg use4dw = use4dwReg;
    interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
    interface Reg tlpOutCount = tlpOutCountReg;
-   interface BRAMServer tlpDataBram = tlpDataBram1Port.portA;
+   interface BRAMServer tlpDataBram = bscanBram.server;
 endmodule: mkControlAndStatusRegs
 
 // The PCIe-to-AXI bridge puts all of the elements together
