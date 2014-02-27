@@ -25,8 +25,6 @@
 import Repeat::*;
 import Vector::*;
 
-typedef enum { sp, spl, spll, splll, spllll, spd, spdd, spddd, spdddd } SpitType deriving (Bits);
-
 interface PortalPerfRequest;
    method Action swallow();
    method Action swallowl(Bit#(32) v1);
@@ -37,7 +35,7 @@ interface PortalPerfRequest;
    method Action swallowdd(Bit#(64) v1, Bit#(64) v2);
    method Action swallowddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3);
    method Action swallowdddd(Bit#(64) v1, Bit#(64) v2, Bit#(64) v3, Bit#(64) v4);
-   method Action startspit(SpitType spitType, Bit#(16) loops);
+   method Action startspit(Bit#(16), spitType, Bit#(16) loops);
 endinterface
 
 
