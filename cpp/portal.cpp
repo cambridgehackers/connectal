@@ -292,10 +292,8 @@ int PortalInternal::sendMessage(PortalMessage *msg)
     unsigned int data = buf[i];
     volatile unsigned int *addr = (volatile unsigned int *)(((unsigned char *)req_fifo_base) + msg->channel * 256);
     WRITEL(this, addr, data);
-#ifdef MMAP_HW
     //uint64_t after_requestt = catch_timer(12);
     //pdir->printDbgRequestIntervals();
-#endif
     //fprintf(stderr, "(%s) sendMessage\n", name);
   }
 #ifdef MMAP_HW
@@ -585,29 +583,16 @@ void Directory::scan(int display)
   unsigned int i;
   if(display) fprintf(stderr, "Directory::scan(%s)\n", name);
   volatile unsigned int *ptr = req_fifo_base+128;
-#ifdef MMAP_HW
-  version = *ptr++;
-  timestamp = (long int)*ptr++;
-  numportals = *ptr++;
-  addrbits = *ptr++;
-  portal_ids = (unsigned int *)malloc(sizeof(portal_ids[0])*numportals);
-  portal_types = (unsigned int *)malloc(sizeof(portal_types[0])*numportals);
-  for(i = 0; (i < numportals) && (i < 32); i++){
-    portal_ids[i] = *ptr++;
-    portal_types[i] = *ptr++;
-  }
-#else
   version = READL(this, ptr++);
   timestamp = (long int)READL(this, ptr++);
   numportals = READL(this, ptr++);
   addrbits = READL(this, ptr++);
-  portal_ids = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
-  portal_types = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
+  portal_ids = (unsigned int *)malloc(sizeof(portal_ids[0])*numportals);
+  portal_types = (unsigned int *)malloc(sizeof(portal_types[0])*numportals);
   for(i = 0; (i < numportals) && (i < 32); i++){
     portal_ids[i] = READL(this, ptr++);
     portal_types[i] = READL(this, ptr++);
   }
-#endif
   counter_offset = ptr;
   intervals_offset = ptr+2;
   if(display){
