@@ -159,7 +159,7 @@ BSIM_EXE_CXX_FILES = BsimDma.cxx BsimTop.cxx portal.cpp sock_fd.cxx sock_utils.c
 BSIM_EXE_CXX = $(addprefix $(XBSVDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 bsim_exe:  $(CPPFILES) $(BSIM_EXE_CXX)
-	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s $(BSIM_EXE_CXX) $(CPPFILES) -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -DBSIM %(clibs)s
+	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s $(BSIM_EXE_CXX) $(CPPFILES) -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -I$(XBSVDIR)/drivers/zynqportal -DBSIM %(clibs)s
 
 ubuntu_exe:
 	cd jni; make

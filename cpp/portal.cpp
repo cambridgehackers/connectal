@@ -43,6 +43,7 @@
 
 #ifdef ZYNQ
 #include <android/log.h>
+#include <zynqportal.h>
 #endif
 
 #include "portal.h"
@@ -242,6 +243,8 @@ int PortalInternal::portalOpen(int addrbits)
     snprintf(path, sizeof(path), "/dev/%s", name);
 #ifdef ZYNQ
     this->fd = ::open(path, O_RDWR);
+    PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
+    ioctl(this->fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
 #else
     // FIXME: bluenoc driver only opens readonly for some reason
     this->fd = ::open(path, O_RDONLY);
