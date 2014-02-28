@@ -118,8 +118,15 @@ class Directory : public PortalInternal
   void printDbgRequestIntervals();
 };
 
+#ifdef MMAP_HW
+#define READL(CITEM, A) *(A)
+#define WRITEL(CITEM, A, B) (A) = (B)
+#else
 unsigned int read_portal(portal *p, volatile unsigned int *addr, char *name);
 //void write_portal(portal *p, volatile unsigned int *addr, unsigned int v, char *name);
+#define READL(CITEM, A) read_portal((CITEM)->p, (A), (CITEM)->name)
+#define WRITEL(CITEM, A, B) write_portal(p, (A), (B), name);
+#endif
 
 void start_timer(unsigned int i);
 uint64_t lap_timer(unsigned int i);

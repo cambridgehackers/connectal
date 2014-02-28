@@ -70,12 +70,6 @@ static uint64_t c_start[16];
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
 
-#ifdef MMAP_HW
-#define READL(CITEM, A) *(A)
-#else
-#define READL(CITEM, A) read_portal((CITEM)->p, (A), (CITEM)->name)
-#endif
-
 void print_dbg_request_intervals()
 {
   pdir->printDbgRequestIntervals();
@@ -273,7 +267,7 @@ int PortalInternal::portalOpen(int addrbits)
     ind_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(3<<14));
 
 #ifndef MMAP_HW
-    write_portal(p, ind_reg_base+1, 1, name);
+    WRITEL(this, ind_reg_base+1, 1);
 #endif
     return 0;
 }
@@ -297,14 +291,12 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   for (int i = msg->size()/4-1; i >= 0; i--) {
     unsigned int data = buf[i];
     volatile unsigned int *addr = (volatile unsigned int *)(((unsigned char *)req_fifo_base) + msg->channel * 256);
+    WRITEL(this, addr, data);
 #ifdef MMAP_HW
-    *addr = data;   /* send request data to the hardware! */
     //uint64_t after_requestt = catch_timer(12);
     //pdir->printDbgRequestIntervals();
-#else
-    write_portal(p, addr, data, name);
-    //fprintf(stderr, "(%s) sendMessage\n", name);
 #endif
+    //fprintf(stderr, "(%s) sendMessage\n", name);
   }
 #ifdef MMAP_HW
   if (0)
