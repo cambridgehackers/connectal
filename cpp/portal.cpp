@@ -50,18 +50,15 @@
 #include "sock_utils.h"
 #include "sock_fd.h"
 
-#define MAX_TIMER_COUNT 16
+#define MAX_TIMER_COUNT      16
+
 #define REG_INTERRUPT_FLAG    0
 #define REG_INTERRUPT_MASK    1
-
-static PortalPoller *defaultPoller = new PortalPoller();
-static Directory dir;
-static Directory *pdir;
-static uint64_t c_start[MAX_TIMER_COUNT];
+#define REG_QUEUE_STATUS      6
 
 #define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
-#define ENABLE_INTERRUPTS(A) ((A)[REG_INTERRUPT_MASK] = 1)
+#define ENABLE_INTERRUPTS(A) WRITEL(A, &((A)->ind_reg_base[REG_INTERRUPT_MASK]), 1)
 #else
 #define ENABLE_INTERRUPTS(A)
 #endif
@@ -74,10 +71,10 @@ static uint64_t c_start[MAX_TIMER_COUNT];
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
 
-void print_dbg_request_intervals()
-{
-  pdir->printDbgRequestIntervals();
-}
+static PortalPoller *defaultPoller = new PortalPoller();
+static Directory dir;
+static Directory *pdir;
+static uint64_t c_start[MAX_TIMER_COUNT];
 
 void start_timer(unsigned int i) 
 {
@@ -245,10 +242,6 @@ PortalInternal::PortalInternal(int id)
     req_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(1<<14));
     ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+(2<<14));
     ind_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(3<<14));
-
-#ifndef MMAP_HW
-    WRITEL(this, ind_reg_base+REG_INTERRUPT_MASK, 1);
-#endif
 errlab:
     if (rc != 0) {
       printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
@@ -265,13 +258,10 @@ PortalInternal::~PortalInternal()
 
 int PortalInternal::sendMessage(PortalMessage *msg)
 {
-
   // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
   unsigned int buf[128];
   msg->marshall(buf);
 
-  // mutex_lock(&portal_data->reg_mutex);
-  // mutex_unlock(&portal_data->reg_mutex);
 #ifdef MMAP_HW
   if (0) {
     volatile unsigned int *addr = (volatile unsigned int *)req_reg_base;
@@ -282,7 +272,7 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   for (int i = msg->size()/4-1; i >= 0; i--)
     WRITEL(this, req_fifo_base + msg->channel * (256/4), buf[i]);
   //uint64_t after_requestt = catch_timer(12);
-  //pdir->printDbgRequestIntervals();
+  //print_dbg_request_intervals();
   //fprintf(stderr, "(%s) sendMessage\n", name);
 #ifdef MMAP_HW
   if (0)
@@ -359,12 +349,11 @@ int PortalPoller::registerInstance(Portal *portal)
 
 int PortalPoller::setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 {
+    PortalClockRequest request;
     if (!numFds) {
 	ALOGE("%s No fds open\n", __FUNCTION__);
 	return -ENODEV;
     }
-
-    PortalClockRequest request;
     request.clknum = clkNum;
     request.requested_rate = requestedFrequency;
     int status = ioctl(portal_fds[0].fd, PORTAL_SET_FCLK_RATE, (long)&request);
@@ -382,7 +371,6 @@ void* PortalPoller::portalExec_init(void)
 #else
     portalExec_timeout = 100;
 #endif
-#ifdef MMAP_HW
     if (!numFds) {
         ALOGE("portalExec No fds open numFds=%d\n", numFds);
         return (void*)-ENODEV;
@@ -390,12 +378,9 @@ void* PortalPoller::portalExec_init(void)
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::enabling interrupts portal %d %s\n", i, instance->name);
-      ENABLE_INTERRUPTS(instance->ind_reg_base);
+      ENABLE_INTERRUPTS(instance);
     }
-    fprintf(stderr, "portalExec::about to enter loop\n");
-#else // BSIM
-    fprintf(stderr, "about to enter bsim while(true), numFds=%d\n", numFds);
-#endif
+    fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
 }
 void PortalPoller::portalExec_end(void)
@@ -405,7 +390,7 @@ void PortalPoller::portalExec_end(void)
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d %s\n", i, instance->name);
-      (instance->ind_reg_base)[REG_INTERRUPT_MASK] = 0;
+      WRITEL(instance, &(instance->ind_reg_base)[REG_INTERRUPT_MASK], 0);
     }
 #endif
 }
@@ -430,7 +415,7 @@ void* PortalPoller::portalExec_event(int timeout)
 	  unsigned int queue_status;
 	
 	  // handle all messasges from this portal instance
-	  while ((queue_status= ind_reg_base[6])) {
+	  while ((queue_status= ind_reg_base[REG_QUEUE_STATUS])) {
 	    if(0) {
 	      unsigned int int_src = ind_reg_base[0];
 	      unsigned int int_en  = ind_reg_base[REG_INTERRUPT_MASK];
@@ -440,19 +425,19 @@ void* PortalPoller::portalExec_event(int timeout)
 	    instance->handleMessage(queue_status-1);
 	  }
 	  // re-enable interrupt which was disabled by portal_isr
-	  ENABLE_INTERRUPTS(ind_reg_base);
+	  ENABLE_INTERRUPTS(instance);
 	}
     } else {
 	// return only in error case
 	fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
-	//return (void*)rc;
+	return (void*)rc;
     }
 #else // BSIM
     for(int i = 0; i < numFds; i++) {
 	Portal *instance = portal_wrappers[i];
 	unsigned int int_status = READL(instance, instance->ind_reg_base+0x0);
 	if(int_status){
-	  unsigned int queue_status = READL(instance, instance->ind_reg_base+6);
+	  unsigned int queue_status = READL(instance, instance->ind_reg_base+REG_QUEUE_STATUS);
 	  if (queue_status){
 	    instance->handleMessage(queue_status-1);	
 	  } else {
@@ -543,6 +528,11 @@ void Directory::printDbgRequestIntervals()
       fprintf(stderr, "\nWr ");
   }
   fprintf(stderr, "\n");
+}
+
+void print_dbg_request_intervals()
+{
+  pdir->printDbgRequestIntervals();
 }
 
 uint64_t Directory::cycle_count()

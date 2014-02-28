@@ -124,7 +124,7 @@ class Directory : public PortalInternal
 unsigned int read_portal(portal *p, volatile unsigned int *addr, char *name);
 //void write_portal(portal *p, volatile unsigned int *addr, unsigned int v, char *name);
 #define READL(CITEM, A) read_portal((CITEM)->p, (A), (CITEM)->name)
-#define WRITEL(CITEM, A, B) write_portal(p, (A), (B), name);
+#define WRITEL(CITEM, A, B) write_portal((CITEM)->p, (A), (B), (CITEM)->name);
 #endif
 
 void start_timer(unsigned int i);
