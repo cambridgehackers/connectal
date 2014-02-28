@@ -130,7 +130,7 @@ void parent(int rd_sock, int wr_sock)
   fprintf(stderr, "memory write utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
   MonkitFile("perf.monkit")
-    .setCycles(cycles)
+    .setHwCycles(cycles)
     .setWriteBeats(beats)
     .writeFile();
 

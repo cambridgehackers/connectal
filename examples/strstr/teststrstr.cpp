@@ -64,6 +64,7 @@
 #include <assert.h>
 #include <semaphore.h>
 #include <ctime>
+#include <monkit.h>
 #include "StdDmaIndication.h"
 
 #include "StrstrIndicationWrapper.h"
@@ -241,7 +242,7 @@ int main(int argc, const char **argv)
   }
 
 
-  if(0){
+  if(1){
     fprintf(stderr, "benchmarks\n");
     PortalAlloc *needleAlloc;
     PortalAlloc *haystackAlloc;
@@ -308,6 +309,12 @@ int main(int argc, const char **argv)
     fprintf(stderr, "hw_cycles:%zx\n", hw_cycles);
     fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)hw_cycles));
     fprintf(stderr, "speedup: %f\n", ((float)sw_cycles)/((float)hw_cycles));
+
+    MonkitFile("perf.monkit")
+      .setHwCycles(hw_cycles)
+      .setSwCycles(sw_cycles)
+      .setReadBeats(beats)
+      .writeFile();
 
     close(needleAlloc->header.fd);
     close(haystackAlloc->header.fd);

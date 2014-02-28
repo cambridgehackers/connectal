@@ -112,7 +112,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
   MonkitFile("perf.monkit")
-    .setCycles(cycles)
+    .setHwCycles(cycles)
     .setReadBeats(beats)
     .writeFile();
   
