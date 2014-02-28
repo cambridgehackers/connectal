@@ -70,6 +70,12 @@ static uint64_t c_start[16];
 #define ALOGE(fmt, ...) fprintf(stderr, "PORTAL: " fmt, __VA_ARGS__)
 #endif
 
+#ifdef MMAP_HW
+#define READL(CITEM, A) *(A)
+#else
+#define READL(CITEM, A) read_portal((CITEM)->p, (A), (CITEM)->name)
+#endif
+
 void print_dbg_request_intervals()
 {
   pdir->printDbgRequestIntervals();
@@ -466,9 +472,9 @@ void* PortalPoller::portalExec_event(int timeout)
 #else // BSIM
     for(int i = 0; i < numFds; i++) {
 	Portal *instance = portal_wrappers[i];
-	unsigned int int_status = read_portal((instance->p), instance->ind_reg_base+0x0, instance->name);
+	unsigned int int_status = READL(instance, instance->ind_reg_base+0x0);
 	if(int_status){
-	  unsigned int queue_status = read_portal((instance->p), instance->ind_reg_base+6, instance->name);
+	  unsigned int queue_status = READL(instance, instance->ind_reg_base+6);
 	  if (queue_status){
 	    instance->handleMessage(queue_status-1);	
 	  } else {
@@ -548,11 +554,7 @@ void Directory::printDbgRequestIntervals()
   for(j = 0; j < 2; j++){
     for(i = 0; i < 6; i++){
       volatile unsigned int *addr = intervals_offset+(j * 6 + i);
-#ifdef MMAP_HW
-      c = *addr;
-#else
-      c = read_portal(p, addr, name);
-#endif
+      c = READL(this, addr);
       x[i] = (((uint64_t)c) << 32) | (x[i] >> 32);
     }
   }
@@ -567,13 +569,8 @@ void Directory::printDbgRequestIntervals()
 
 uint64_t Directory::cycle_count()
 {
-#ifdef MMAP_HW
-  unsigned int high_bits = counter_offset[0];
-  unsigned int low_bits = counter_offset[1];
-#else
-  unsigned int high_bits = read_portal(p, counter_offset+0, name);
-  unsigned int low_bits = read_portal(p, counter_offset+1, name);
-#endif
+  unsigned int high_bits = READL(this, counter_offset+0);
+  unsigned int low_bits = READL(this, counter_offset+1);
   return (((uint64_t)high_bits)<<32)|((uint64_t)low_bits);
 }
 unsigned int Directory::get_fpga(unsigned int id)
@@ -595,8 +592,8 @@ void Directory::scan(int display)
 {
   unsigned int i;
   if(display) fprintf(stderr, "Directory::scan(%s)\n", name);
-#ifdef MMAP_HW
   volatile unsigned int *ptr = req_fifo_base+128;
+#ifdef MMAP_HW
   version = *ptr++;
   timestamp = (long int)*ptr++;
   numportals = *ptr++;
@@ -608,16 +605,15 @@ void Directory::scan(int display)
     portal_types[i] = *ptr++;
   }
 #else
-  volatile unsigned int *ptr = (volatile unsigned int *)(128*4);
-  version = read_portal(p, ptr++, name);
-  timestamp = (long int)read_portal(p, ptr++, name);
-  numportals = read_portal(p, ptr++, name);
-  addrbits = read_portal(p, ptr++, name);
+  version = READL(this, ptr++);
+  timestamp = (long int)READL(this, ptr++);
+  numportals = READL(this, ptr++);
+  addrbits = READL(this, ptr++);
   portal_ids = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
   portal_types = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
   for(i = 0; (i < numportals) && (i < 32); i++){
-    portal_ids[i] = read_portal(p, ptr++, name);
-    portal_types[i] = read_portal(p, ptr++, name);
+    portal_ids[i] = READL(this, ptr++);
+    portal_types[i] = READL(this, ptr++);
   }
 #endif
   counter_offset = ptr;
