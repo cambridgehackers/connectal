@@ -180,52 +180,19 @@ PortalInternal::PortalInternal(int id)
     req_reg_base(0x0),
     req_fifo_base(0x0)
 {
-  unsigned int addrbits = 16;
-  if (id == -1)     // opening Directory
-    name = strdup("fpga0");
-  else {
+    int rc = 0;
     char buff[128];
-    sprintf(buff, "fpga%d", dir.get_fpga(id));
-    addrbits = dir.get_addrbits(id);
-    name = strdup(buff);
-  }
-  int rc = portalOpen(addrbits);
-  if (rc != 0) {
-    printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
-    ALOGD("PortalInternal::PortalInternal failure rc=%d\n", rc);
-    exit(1);
-  }
-}
-
-#if 0
-PortalInternal::PortalInternal(const char* devname, unsigned int addrbits)
-  : fd(-1),
-    ind_reg_base(0x0), 
-    ind_fifo_base(0x0),
-    req_reg_base(0x0),
-    req_fifo_base(0x0)
-{
-  name = strdup(devname);
-  int rc = portalOpen(addrbits);
-  if (rc != 0) {
-    printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
-    ALOGD("PortalInternal::PortalInternal failure rc=%d\n", rc);
-    exit(1);
-  }
-}
-#endif
-
-PortalInternal::~PortalInternal()
-{
-  portalClose();
-  free(name);
-}
-
-
-int PortalInternal::portalOpen(int addrbits)
-{
+    unsigned int addrbits = 16;
     volatile unsigned int * dev_base = 0;
+    if (id == -1)     // opening Directory
+      name = strdup("fpga0");
+    else {
+      sprintf(buff, "fpga%d", dir.get_fpga(id));
+      addrbits = dir.get_addrbits(id);
+      name = strdup(buff);
+    }
 #ifdef ZYNQ
+    PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
     if (!pgfile) {
         // 3.9 kernel uses amba.2
@@ -234,36 +201,37 @@ int PortalInternal::portalOpen(int addrbits)
     if (pgfile == 0) {
 	ALOGE("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
 	printf("failed to open /sys/devices/amba.[02]/f8007000.devcfg/prog_done %d\n", errno);
-	return -1;
+	rc = -1;
+	goto errlab;
     }
-    char line[128];
-    fgets(line, sizeof(line), pgfile);
-    if (line[0] != '1') {
-	ALOGE("FPGA not programmed: %s\n", line);
-	printf("FPGA not programmed: %s\n", line);
-	return -ENODEV;
+    fgets(buff, sizeof(buff), pgfile);
+    if (buff[0] != '1') {
+	ALOGE("FPGA not programmed: %s\n", buff);
+	printf("FPGA not programmed: %s\n", buff);
+	rc = -ENODEV;
+	goto errlab;
     }
     fclose(pgfile);
 #endif
 #ifdef MMAP_HW
-    char path[128];
-    snprintf(path, sizeof(path), "/dev/%s", name);
+    snprintf(buff, sizeof(buff), "/dev/%s", name);
 #ifdef ZYNQ
-    this->fd = ::open(path, O_RDWR);
-    PortalEnableInterrupt intsettings = {3 << 14, (3 << 14) + 4};
+    this->fd = ::open(buff, O_RDWR);
     ioctl(this->fd, PORTAL_ENABLE_INTERRUPT, &intsettings);
 #else
     // FIXME: bluenoc driver only opens readonly for some reason
-    this->fd = ::open(path, O_RDONLY);
+    this->fd = ::open(buff, O_RDONLY);
 #endif
     if (this->fd < 0) {
-	ALOGE("Failed to open %s fd=%d errno=%d\n", path, this->fd, errno);
-	return -errno;
+	ALOGE("Failed to open %s fd=%d errno=%d\n", buff, this->fd, errno);
+	rc = -errno;
+	goto errlab;
     }
     dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
     if (dev_base == MAP_FAILED) {
-      ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
-      return -errno;
+        ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
+        rc = -errno;
+	goto errlab;
     }  
 #else
     p = (struct portal*)malloc(sizeof(struct portal));
@@ -281,7 +249,18 @@ int PortalInternal::portalOpen(int addrbits)
 #ifndef MMAP_HW
     WRITEL(this, ind_reg_base+REG_INTERRUPT_MASK, 1);
 #endif
-    return 0;
+errlab:
+    if (rc != 0) {
+      printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
+      ALOGD("PortalInternal::PortalInternal failure rc=%d\n", rc);
+      exit(1);
+    }
+}
+
+PortalInternal::~PortalInternal()
+{
+  portalClose();
+  free(name);
 }
 
 int PortalInternal::sendMessage(PortalMessage *msg)

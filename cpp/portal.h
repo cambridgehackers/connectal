@@ -31,7 +31,6 @@ typedef struct {
     uint64_t total, min, max, over;
 } TIMETYPE;
 
-class PortalPoller;
 class PortalMessage 
 {
  public:
@@ -47,10 +46,9 @@ class PortalMessage
   virtual ~PortalMessage() {};
 }; 
 
+class PortalPoller;
 class PortalInternal
 {
- private:
-  PortalInternal(const char *name, unsigned int addrbits);
  public:
   PortalPoller *poller;
   int portalOpen(int length);
@@ -68,6 +66,7 @@ class PortalInternal
   int sendMessage(PortalMessage *msg);
   friend class Directory;
 };
+
 class Portal : public PortalInternal
 {
  public:
