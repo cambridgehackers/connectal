@@ -775,12 +775,13 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
            endmethod
        endinterface : resp_write
-       interface Get resp_b;
+       interface GetF resp_b;
 	   method ActionValue#(Axi3WriteResponse#(6)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
 	      return Axi3WriteResponse { resp: 0, id: truncate(tag)};
            endmethod
+	   method Bool notEmpty() = doneTag.notEmpty();
 	endinterface: resp_b
        interface Put req_ar;
 	   method Action put(Axi3ReadRequest#(40,6) req) if (writeDwCount == 0);
