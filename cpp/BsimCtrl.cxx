@@ -55,6 +55,7 @@ static void recv_request(bool rr)
 extern "C" {
   void initPortal(unsigned long id){
 
+
     pthread_t tid;
     struct channel* rc;
     struct channel* wc;
@@ -63,7 +64,6 @@ extern "C" {
 
     rc = &(portals[id].read);
     wc = &(portals[id].write);
-
     
     snprintf(rc->path, sizeof(rc->path), "fpga%ld_rc", id);
     snprintf(wc->path, sizeof(wc->path), "fpga%ld_wc", id);
@@ -79,41 +79,45 @@ extern "C" {
     }
   }
 
-  bool writeReq(){
+  bool writeReq32(){
     recv_request(false);
     return (write_head.req.write && write_head.valid && write_head.inflight);
   }
   
-  long writeAddr(){
-    //fprintf(stderr, "writeAddr()\n");
+  long writeAddr32(){
+    //fprintf(stderr, "writeAddr32()\n");
     write_head.inflight = false;
     return (long)write_head.req.addr;
   }
   
-  unsigned int writeData(){
-    //fprintf(stderr, "writeData()\n");
+  unsigned int writeData32(){
+    //fprintf(stderr, "writeData32()\n");
     write_head.valid = false;
     return write_head.req.data;
   }
   
-  bool readReq(){
+  bool readReq32(){
     recv_request(true);
     return (!read_head.req.write && read_head.valid && !read_head.inflight);
   }
   
-  long readAddr(){
-    //fprintf(stderr, "readAddr()\n");
+  long readAddr32(){
+    //fprintf(stderr, "readAddr32()\n");
     read_head.inflight = true;
     return (long)read_head.req.addr;
   }
   
-  void readData(unsigned int x){
+  void readData32(unsigned int x){
     //fprintf(stderr, "readData()\n");
     read_head.valid = false;
     read_head.inflight = false;
-    if(send(portals[read_head.pnum].read.s2, &x, sizeof(x), 0) == -1){
-      //fprintf(stderr, "(%d) send failure", read_head.pnum);
-      exit(1);
+    int send_attempts = 0;
+    while(send(portals[read_head.pnum].read.s2, &x, sizeof(x), 0) == -1){
+      if(send_attempts++ > 16){
+	fprintf(stderr, "(%d) send failure\n", read_head.pnum);
+	exit(1);
+      }
+      sleep(1);
     }
   }
 
