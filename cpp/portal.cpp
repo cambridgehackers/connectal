@@ -51,9 +51,11 @@
 #include "sock_fd.h"
 
 #define MAX_TIMER_COUNT      16
+#define TIMING_INTERVAL_SIZE  6
 
 #define REG_INTERRUPT_FLAG    0
 #define REG_INTERRUPT_MASK    1
+#define REG_INTERRUPT_COUNT   2
 #define REG_QUEUE_STATUS      6
 
 #define USE_INTERRUPTS
@@ -262,7 +264,7 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   unsigned int buf[128];
   msg->marshall(buf);
 
-#ifdef MMAP_HW
+#ifdef MMAP_HW //DEBUG INFO
   if (0) {
     volatile unsigned int *addr = (volatile unsigned int *)req_reg_base;
     fprintf(stderr, "requestFiredCount=%x outOfRangeWriteCount=%x\n",addr[0], addr[1]);
@@ -274,7 +276,7 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   //uint64_t after_requestt = catch_timer(12);
   //print_dbg_request_intervals();
   //fprintf(stderr, "(%s) sendMessage\n", name);
-#ifdef MMAP_HW
+#ifdef MMAP_HW //DEBUG INFO
   if (0)
   for (int i = 0; i < 3; i++) {
     volatile unsigned int *addr = (volatile unsigned int *)req_reg_base;
@@ -386,66 +388,50 @@ void* PortalPoller::portalExec_init(void)
 void PortalPoller::portalExec_end(void)
 {
     stopping = 1;
-#ifdef MMAP_HW
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d %s\n", i, instance->name);
       WRITEL(instance, &(instance->ind_reg_base)[REG_INTERRUPT_MASK], 0);
     }
-#endif
 }
 
 void* PortalPoller::portalExec_event(int timeout)
 {
-#ifdef MMAP_HW
     long rc = 0;
+#ifdef MMAP_HW
     // LCS bypass the call to poll if the timeout is 0
     if (timeout != 0)
       rc = poll(portal_fds, numFds, timeout);
-    if(rc >= 0) {
-	for (int i = 0; i < numFds; i++) {
-	  if (!portal_wrappers) {
-	    fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
-	  }
-	
-	  Portal *instance = portal_wrappers[i];
-	  volatile unsigned int *ind_reg_base = instance->ind_reg_base;
-	
-	  // sanity check, to see the status of interrupt source and enable
-	  unsigned int queue_status;
-	
-	  // handle all messasges from this portal instance
-	  while ((queue_status= ind_reg_base[REG_QUEUE_STATUS])) {
-	    if(0) {
-	      unsigned int int_src = ind_reg_base[0];
-	      unsigned int int_en  = ind_reg_base[REG_INTERRUPT_MASK];
-	      unsigned int ind_count  = ind_reg_base[2];
-	      fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
-	    }
-	    instance->handleMessage(queue_status-1);
-	  }
-	  // re-enable interrupt which was disabled by portal_isr
-	  ENABLE_INTERRUPTS(instance);
-	}
-    } else {
+#endif
+    if(rc < 0) {
 	// return only in error case
 	fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
 	return (void*)rc;
     }
-#else // BSIM
-    for(int i = 0; i < numFds; i++) {
-	Portal *instance = portal_wrappers[i];
-	unsigned int int_status = READL(instance, instance->ind_reg_base+0x0);
-	if(int_status){
-	  unsigned int queue_status = READL(instance, instance->ind_reg_base+REG_QUEUE_STATUS);
-	  if (queue_status){
-	    instance->handleMessage(queue_status-1);	
-	  } else {
-	    fprintf(stderr, "WARNING: int_status and queue_status are incoherent (%s)\n", instance->name);
-	  }
-	}
+    for (int i = 0; i < numFds; i++) {
+      if (!portal_wrappers) {
+        fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
+      }
+    
+      Portal *instance = portal_wrappers[i];
+      volatile unsigned int *ind_reg_base = instance->ind_reg_base;
+    
+      // sanity check, to see the status of interrupt source and enable
+      unsigned int queue_status;
+    
+      // handle all messasges from this portal instance
+      while ((queue_status= READL(instance, ind_reg_base + REG_QUEUE_STATUS))) {
+        if(0) {
+          unsigned int int_src = READL(instance, ind_reg_base + REG_INTERRUPT_FLAG);
+          unsigned int int_en  = READL(instance, ind_reg_base + REG_INTERRUPT_MASK);
+          unsigned int ind_count  = READL(instance, ind_reg_base + REG_INTERRUPT_COUNT);
+          fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
+        }
+        instance->handleMessage(queue_status-1);
+      }
+      // re-enable interrupt which was disabled by portal_isr
+      ENABLE_INTERRUPTS(instance);
     }
-#endif
     return NULL;
 }
 
@@ -512,17 +498,17 @@ Directory::Directory()
 void Directory::printDbgRequestIntervals()
 {
   unsigned int i, c, j;
-  uint64_t x[6] = {0,0,0,0,0,0};
+  uint64_t x[TIMING_INTERVAL_SIZE] = {0,0,0,0,0,0};
   fprintf(stderr, "Rd ");
   for(j = 0; j < 2; j++){
-    for(i = 0; i < 6; i++){
-      volatile unsigned int *addr = intervals_offset+(j * 6 + i);
+    for(i = 0; i < TIMING_INTERVAL_SIZE; i++){
+      volatile unsigned int *addr = intervals_offset+(j * TIMING_INTERVAL_SIZE + i);
       c = READL(this, addr);
       x[i] = (((uint64_t)c) << 32) | (x[i] >> 32);
     }
   }
 
-  for(i = 0; i < 6; i++){
+  for(i = 0; i < TIMING_INTERVAL_SIZE; i++){
     fprintf(stderr, "%016zx ", x[i]);
     if (i == 2)
       fprintf(stderr, "\nWr ");
@@ -538,8 +524,7 @@ void print_dbg_request_intervals()
 uint64_t Directory::cycle_count()
 {
   unsigned int high_bits = READL(this, counter_offset+0);
-  unsigned int low_bits = READL(this, counter_offset+1);
-  return (((uint64_t)high_bits)<<32) | low_bits;
+  return (((uint64_t)high_bits)<<32) | READL(this, counter_offset+1);
 }
 unsigned int Directory::get_fpga(unsigned int id)
 {
@@ -562,11 +547,11 @@ void Directory::scan(int display)
   unsigned int i;
   if(display) fprintf(stderr, "Directory::scan(%s)\n", name);
   volatile unsigned int *ptr = req_fifo_base+128;
-  version = READL(this, ptr++);
-  timestamp = (long int)READL(this, ptr++);
+  version    = READL(this, ptr++);
+  timestamp  = READL(this, ptr++);
   numportals = READL(this, ptr++);
-  addrbits = READL(this, ptr++);
-  portal_ids = (unsigned int *)malloc(sizeof(portal_ids[0])*numportals);
+  addrbits   = READL(this, ptr++);
+  portal_ids   = (unsigned int *)malloc(sizeof(portal_ids[0])*numportals);
   portal_types = (unsigned int *)malloc(sizeof(portal_types[0])*numportals);
   for(i = 0; (i < numportals) && (i < 32); i++){
     portal_ids[i] = READL(this, ptr++);
