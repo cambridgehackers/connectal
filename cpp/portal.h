@@ -61,17 +61,10 @@ class PortalInternal
   int fd;
   struct portal *p;
   char *name;
-#ifdef MMAP_HW
   volatile unsigned int *ind_reg_base;
   volatile unsigned int *ind_fifo_base;
   volatile unsigned int *req_reg_base;
   volatile unsigned int *req_fifo_base;
-#else
-  unsigned int ind_reg_base;
-  unsigned int ind_fifo_base;
-  unsigned int req_reg_base;
-  unsigned int req_fifo_base;
-#endif
   int sendMessage(PortalMessage *msg);
   friend class Directory;
 };
@@ -114,13 +107,8 @@ class Directory : public PortalInternal
   unsigned int numportals;
   unsigned int *portal_ids;
   unsigned int *portal_types;
-#ifdef MMAP_HW
   volatile unsigned int *counter_offset;
   volatile unsigned int *intervals_offset;
-#else
-  unsigned int counter_offset;
-  unsigned int intervals_offset;
-#endif
  public:
   Directory();
   void scan(int display);

@@ -131,15 +131,11 @@ unsigned int read_portal(portal *p, volatile unsigned int *addr, char *name)
     fprintf(stderr, "%s (%s) send error, errno=%s\n",__FUNCTION__, name, strerror(errno));
     exit(1);
   }
-
   //fprintf(stderr, "read_portal: %s %x\n", p->read.path, addr);
-
-
   if(recv(p->read.s2, &rv, sizeof(rv), 0) == -1){
     fprintf(stderr, "%s (%s) recv error\n",__FUNCTION__, name);
     exit(1);	  
   }
-
   return rv;
 }
 
@@ -151,7 +147,6 @@ void write_portal(portal *p, volatile unsigned int *addr, unsigned int v, char *
     fprintf(stderr, "%s (%s) send error\n",__FUNCTION__, name);
     //exit(1);
   }
-
 }
 
 void PortalInternal::portalClose()
@@ -217,6 +212,7 @@ PortalInternal::~PortalInternal()
 
 int PortalInternal::portalOpen(int addrbits)
 {
+    volatile unsigned int * dev_base = 0;
 #ifdef ZYNQ
     FILE *pgfile = fopen("/sys/devices/amba.0/f8007000.devcfg/prog_done", "r");
     if (!pgfile) {
@@ -238,7 +234,6 @@ int PortalInternal::portalOpen(int addrbits)
     fclose(pgfile);
 #endif
 #ifdef MMAP_HW
-
     char path[128];
     snprintf(path, sizeof(path), "/dev/%s", name);
 #ifdef ZYNQ
@@ -253,32 +248,26 @@ int PortalInternal::portalOpen(int addrbits)
 	ALOGE("Failed to open %s fd=%d errno=%d\n", path, this->fd, errno);
 	return -errno;
     }
-    volatile unsigned int *dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
+    dev_base = (volatile unsigned int*)mmap(NULL, 1<<addrbits, PROT_READ|PROT_WRITE, MAP_SHARED, this->fd, 0);
     if (dev_base == MAP_FAILED) {
       ALOGE("Failed to mmap PortalHWRegs from fd=%d errno=%d\n", this->fd, errno);
       return -errno;
     }  
-    req_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+(0<<14));
-    req_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(1<<14));
-    ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+(2<<14));
-    ind_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(3<<14));
- 
 #else
     p = (struct portal*)malloc(sizeof(struct portal));
     snprintf(p->read.path, sizeof(p->read.path), "%s_rc", name);
     connect_socket(&(p->read));
     snprintf(p->write.path, sizeof(p->read.path), "%s_wc", name);
     connect_socket(&(p->write));
+#endif
 
-    uint32_t dev_base = 0;
-    req_fifo_base  = dev_base+(0<<14);
-    req_reg_base   = dev_base+(1<<14);
-    ind_fifo_base  = dev_base+(2<<14);
-    ind_reg_base   = dev_base+(3<<14);
+    req_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+(0<<14));
+    req_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(1<<14));
+    ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+(2<<14));
+    ind_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(3<<14));
 
-    volatile unsigned int *addr = (volatile unsigned int *)(long)(ind_reg_base+0x4);
-    write_portal(p, addr, 1, name);
-      
+#ifndef MMAP_HW
+    write_portal(p, ind_reg_base+1, 1, name);
 #endif
     return 0;
 }
@@ -301,16 +290,13 @@ int PortalInternal::sendMessage(PortalMessage *msg)
 #endif
   for (int i = msg->size()/4-1; i >= 0; i--) {
     unsigned int data = buf[i];
-#ifdef MMAP_HW
     volatile unsigned int *addr = (volatile unsigned int *)(((unsigned char *)req_fifo_base) + msg->channel * 256);
+#ifdef MMAP_HW
     *addr = data;   /* send request data to the hardware! */
-#if 0
-    uint64_t after_requestt = catch_timer(12);
-    pdir->printDbgRequestIntervals();
-#endif
+    //uint64_t after_requestt = catch_timer(12);
+    //pdir->printDbgRequestIntervals();
 #else
-    unsigned int addr = req_fifo_base + msg->channel * 256;
-    write_portal(p, (volatile unsigned int *)(long)addr, data, name);
+    write_portal(p, addr, data, name);
     //fprintf(stderr, "(%s) sendMessage\n", name);
 #endif
   }
@@ -480,15 +466,10 @@ void* PortalPoller::portalExec_event(int timeout)
 #else // BSIM
     for(int i = 0; i < numFds; i++) {
 	Portal *instance = portal_wrappers[i];
-	unsigned int int_status_addr = instance->ind_reg_base+0x0;
-	//fprintf(stderr, "AAAA: %x %s\n", int_status_addr, instance->name);
-	unsigned int int_status = read_portal((instance->p), (volatile unsigned int *)(long)int_status_addr, instance->name);
-	//fprintf(stderr, "BBBB: %d\n", int_status);
+	unsigned int int_status = read_portal((instance->p), instance->ind_reg_base+0x0, instance->name);
 	if(int_status){
-	  unsigned int queue_status_addr = instance->ind_reg_base+0x18;
-	  unsigned int queue_status = read_portal((instance->p), (volatile unsigned int *)(long)queue_status_addr, instance->name);
+	  unsigned int queue_status = read_portal((instance->p), instance->ind_reg_base+6, instance->name);
 	  if (queue_status){
-	    //fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
 	    instance->handleMessage(queue_status-1);	
 	  } else {
 	    fprintf(stderr, "WARNING: int_status and queue_status are incoherent (%s)\n", instance->name);
@@ -566,11 +547,11 @@ void Directory::printDbgRequestIntervals()
   fprintf(stderr, "Rd ");
   for(j = 0; j < 2; j++){
     for(i = 0; i < 6; i++){
+      volatile unsigned int *addr = intervals_offset+(j * 6 + i);
 #ifdef MMAP_HW
-      c = *(intervals_offset+(j * 6 + i));
+      c = *addr;
 #else
-      unsigned int addr = intervals_offset+((j * 6 + i)*4);
-      c = read_portal(p, (volatile unsigned int *)(long)addr, name);
+      c = read_portal(p, addr, name);
 #endif
       x[i] = (((uint64_t)c) << 32) | (x[i] >> 32);
     }
@@ -590,8 +571,8 @@ uint64_t Directory::cycle_count()
   unsigned int high_bits = counter_offset[0];
   unsigned int low_bits = counter_offset[1];
 #else
-  unsigned int high_bits = read_portal(p, (volatile unsigned int *)(long)(counter_offset+0), name);
-  unsigned int low_bits = read_portal(p, (volatile unsigned int *)(long)(counter_offset+4), name);
+  unsigned int high_bits = read_portal(p, counter_offset+0, name);
+  unsigned int low_bits = read_portal(p, counter_offset+1, name);
 #endif
   return (((uint64_t)high_bits)<<32)|((uint64_t)low_bits);
 }
@@ -626,29 +607,21 @@ void Directory::scan(int display)
     portal_ids[i] = *ptr++;
     portal_types[i] = *ptr++;
   }
-  counter_offset = ptr;
-  intervals_offset = ptr+2;
 #else
-  long ptr = 128*4;
-  version = read_portal(p, (volatile unsigned int *)ptr, name);
-  ptr += 4;
-  timestamp = (long int)read_portal(p, (volatile unsigned int *)ptr, name);
-  ptr += 4;
-  numportals = read_portal(p, (volatile unsigned int *)ptr, name);
-  ptr += 4;
-  addrbits = read_portal(p, (volatile unsigned int *)ptr, name);
-  ptr += 4;
+  volatile unsigned int *ptr = (volatile unsigned int *)(128*4);
+  version = read_portal(p, ptr++, name);
+  timestamp = (long int)read_portal(p, ptr++, name);
+  numportals = read_portal(p, ptr++, name);
+  addrbits = read_portal(p, ptr++, name);
   portal_ids = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
   portal_types = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
   for(i = 0; (i < numportals) && (i < 32); i++){
-    portal_ids[i] = read_portal(p, (volatile unsigned int *)ptr, name);
-    ptr += 4;
-    portal_types[i] = read_portal(p, (volatile unsigned int *)ptr, name);
-    ptr += 4;
+    portal_ids[i] = read_portal(p, ptr++, name);
+    portal_types[i] = read_portal(p, ptr++, name);
   }
-  counter_offset = ptr;
-  intervals_offset = ptr+8;
 #endif
+  counter_offset = ptr;
+  intervals_offset = ptr+2;
   if(display){
     fprintf(stderr, "version=%d\n",  version);
     fprintf(stderr, "timestamp=%s",  ctime(&timestamp));
