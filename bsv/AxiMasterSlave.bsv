@@ -231,3 +231,16 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
       endmethod
    endinterface: resp_b
 endmodule
+
+instance Connectable#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrWidth, busWidth,idWidth));
+   module mkConnection#(Axi3Master#(addrWidth, busWidth,idWidth) m, Axi3Slave#(addrWidth, busWidth,idWidth) s)(Empty);
+
+      mkConnection(m.req_ar, s.req_ar);
+      mkConnection(s.resp_read, m.resp_read);
+
+      mkConnection(m.req_aw, s.req_aw);
+      mkConnection(m.resp_write, s.resp_write);
+      mkConnection(s.resp_b, m.resp_b);
+
+   endmodule
+endinstance
