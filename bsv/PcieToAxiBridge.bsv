@@ -542,7 +542,6 @@ endmodule: mkPortalEngine
 interface AxiSlaveEngine#(type buswidth);
     interface GetPut#(TLPData#(16))   tlps;
     interface Axi3Slave#(40,buswidth,6)  slave3;
-    interface Axi4Slave#(40,buswidth,6)  slave4;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: AxiSlaveEngine
@@ -838,128 +837,6 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	  endmethod
 	endinterface: resp_read
     endinterface: slave3
-    interface Axi4Slave slave4;
-       interface Put req_aw;
-	   method Action put(Axi4WriteRequest#(40,6) req)
-	      if (writeBurstCount == 0);
-
-	      let burstLen = req.len;
-	      let addr = req.address;
-	      let awid = req.id;
-
-	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
-	      TLPData#(16) tlp = defaultValue;
-	      tlp.sof = True;
-	      tlp.eof = False;
-	      tlp.hit = 7'h00;
-	      tlp.be = 16'hffff;
-
-	      Bit#(9) dwCount = zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
-	      if ((addr >> 32) != 0) begin
-		 TLPMemory4DWHeader hdr_4dw = defaultValue;
-		 hdr_4dw.format = MEM_WRITE_4DW_DATA;
-		 hdr_4dw.tag = extend(awid);
-		 hdr_4dw.reqid = my_id;
-		 hdr_4dw.nosnoop = SNOOPING_REQD;
-		 hdr_4dw.addr = addr[40-1:2];
-		 hdr_4dw.length = tlplen;
-		 hdr_4dw.firstbe = 4'hf;
-		 hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		 tlp.data = pack(hdr_4dw);
-	      end
-	      else begin
-		 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
-		 hdr_3dw.format = MEM_WRITE_3DW_DATA;
-		 hdr_3dw.tag = extend(awid);
-		 hdr_3dw.reqid = my_id;
-		 hdr_3dw.nosnoop = SNOOPING_REQD;
-		 hdr_3dw.addr = addr[32-1:2];
-		 hdr_3dw.length = tlplen;
-		 hdr_3dw.firstbe = 4'hf;
-		 hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		 
-		 // this would cause a deadlock
-		 //Vector#(busWidthWords, Bit#(32)) v = writeDataMimo.deq(1);
-		 //hdr_3dw.data = v[0];
-		 //dwCount = dwCount - 1;
-
-		 tlp.be = 16'hfff0; // no data word in this TLP
-
-		 tlp.data = pack(hdr_3dw);
-	      end
-	      tlpWriteHeaderFifo.enq(tlp);
-	      writeBurstCount <= zeroExtend(burstLen)+1;
-	      writeTag <= extend(awid);
-           endmethod
-       endinterface: req_aw
-       interface Put resp_write;
-	   method Action put(Axi4WriteData#(buswidth,6) wdata)
-	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
-
-	      writeBurstCount <= writeBurstCount - 1;
-	      Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
-	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
-           endmethod
-       endinterface
-       interface Get resp_b;
-	   method ActionValue#(Axi4WriteResponse#(6)) get();
-	      let tag = doneTag.first();
-	      doneTag.deq();
-	      return Axi4WriteResponse { resp: 0, id: truncate(tag)};
-           endmethod
-	endinterface: resp_b
-        interface Put req_ar;
-	   method Action put(Axi4ReadRequest#(40,6) req) if (writeDwCount == 0);
-	      let burstLen = req.len;
-	      let addr = req.address;
-	      let arid = req.id;
-
-	       TLPData#(16) tlp = defaultValue;
-	       tlp.sof = True;
-	       tlp.eof = True;
-	       tlp.hit = 7'h00;
-	       TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
-	       if (addr[39:32] != 0) begin
-		   TLPMemory4DWHeader hdr_4dw = defaultValue;
-		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
-		   hdr_4dw.tag = extend(arid);
-		   hdr_4dw.reqid = my_id;
-		   hdr_4dw.nosnoop = SNOOPING_REQD;
-		   hdr_4dw.addr = addr[40-1:2];
-		   hdr_4dw.length = tlplen;
-		   hdr_4dw.firstbe = 4'hf;
-		   hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		   tlp.data = pack(hdr_4dw);
-		   tlp.be = 16'hffff;
-	       end
-	       else begin
-		   TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
-		   hdr_3dw.format = MEM_READ_3DW_NO_DATA;
-		   hdr_3dw.tag = extend(arid);
-		   hdr_3dw.reqid = my_id;
-		   hdr_3dw.nosnoop = SNOOPING_REQD;
-		   hdr_3dw.addr = addr[32-1:2];
-		   hdr_3dw.length = tlplen;
-		   hdr_3dw.firstbe = 4'hf;
-		   hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		   tlp.data = pack(hdr_3dw);
-		   tlp.be = 16'hfff0;
-	       end
-	       tlpOutFifo.enq(tlp);
-           endmethod
-       endinterface: req_ar
-       interface Get resp_read;
-	   method ActionValue#(Axi4ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
-	      let data_v = completionMimo.first;
-	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
-	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
-              Bit#(buswidth) v = 0;
-	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
-		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
-	      return Axi4ReadResponse { data: v, last: 0, id: truncate(completionTagMimo.first[0]), resp: 0 };
-           endmethod
-	endinterface: resp_read
-    endinterface: slave4
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
    interface Reg use4dw = use4dwReg;
 endmodule: mkAxiSlaveEngine
