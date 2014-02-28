@@ -427,8 +427,7 @@ mkHiddenWrapperInterfaceTemplate='''
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
                             FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFOF#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
-    provisos (Log#(%(indicationChannelCount)s,iccsz));
+                            FIFOF#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s);
 %(wrapperCtrl)s
 endmodule
 '''
@@ -436,8 +435,7 @@ endmodule
 mkExposedWrapperInterfaceTemplate='''
 // exposed wrapper implementation
 module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
-    provisos (Log#(%(indicationChannelCount)s,iccsz),
-              Bits#(idType, __a), 
+    provisos (Bits#(idType, __a), 
               Add#(a__, __a, 32));
 %(axiState)s
     // instantiate hidden proxy to report put failures
@@ -455,19 +453,15 @@ mkHiddenProxyInterfaceTemplate='''
 module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
                             FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
                             FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFOF#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s)
-    provisos (Log#(%(indicationChannelCount)s,iccsz));
+                            FIFOF#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s);
 %(proxyCtrl)s
 %(portalIfcInterrupt)s
 endmodule
 '''
 
 mkExposedProxyInterfaceTemplate='''
-// exposed proxy implementation
-module %(moduleContext)s mk%(Dut)s#(idType id) (%(Dut)s) 
-    provisos (Log#(%(indicationChannelCount)s,iccsz),
-              Bits#(idType, __a), 
-              Add#(a__, __a, 32));
+(* synthesize *)
+module %(moduleContext)s mk%(Dut)sSynth#(Bit#(32) id) (%(Dut)s);
 %(axiState)s
     // instantiate hidden wrapper to receive failure notifications
     %(hiddenWrapper)s p <- mk%(hiddenWrapper)s(axiSlaveWriteAddrFifos[%(slaveFifoSelHidden)s],
@@ -476,6 +470,14 @@ module %(moduleContext)s mk%(Dut)s#(idType id) (%(Dut)s)
                                            axiSlaveReadDataFifos[%(slaveFifoSelHidden)s]);
 %(proxyCtrl)s
 %(portalIfc)s
+endmodule
+
+// exposed proxy implementation
+module %(moduleContext)s mk%(Dut)s#(idType id) (%(Dut)s) 
+    provisos (Bits#(idType, __a), 
+              Add#(a__, __a, 32));
+    let rv <- mk%(Dut)sSynth(extend(pack(id)));
+    return rv;
 endmodule
 '''
 
