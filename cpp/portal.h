@@ -120,7 +120,7 @@ class Directory : public PortalInternal
 
 #ifdef MMAP_HW
 #define READL(CITEM, A) *(A)
-#define WRITEL(CITEM, A, B) (A) = (B)
+#define WRITEL(CITEM, A, B) *(A) = (B)
 #else
 unsigned int read_portal(portal *p, volatile unsigned int *addr, char *name);
 //void write_portal(portal *p, volatile unsigned int *addr, unsigned int v, char *name);
