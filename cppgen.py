@@ -21,7 +21,7 @@ LOCAL_MODULE := %(exe)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(project_dir)s/jni
+LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni
 
 #NDK_OUT := obj/
 
