@@ -122,7 +122,7 @@ void print_timer(int loops)
     }
 }
 
-unsigned int read_portal(portal *p, unsigned int addr, char *name)
+unsigned int read_portal(portal *p, volatile unsigned int *addr, char *name)
 {
   unsigned int rv;
   struct memrequest foo = {false,addr,0};
@@ -143,7 +143,7 @@ unsigned int read_portal(portal *p, unsigned int addr, char *name)
   return rv;
 }
 
-void write_portal(portal *p, unsigned int addr, unsigned int v, char *name)
+void write_portal(portal *p, volatile unsigned int *addr, unsigned int v, char *name)
 {
   struct memrequest foo = {true,addr,v};
 
@@ -276,7 +276,7 @@ int PortalInternal::portalOpen(int addrbits)
     ind_fifo_base  = dev_base+(2<<14);
     ind_reg_base   = dev_base+(3<<14);
 
-    unsigned int addr = ind_reg_base+0x4;
+    volatile unsigned int *addr = (volatile unsigned int *)(long)(ind_reg_base+0x4);
     write_portal(p, addr, 1, name);
       
 #endif
@@ -310,7 +310,7 @@ int PortalInternal::sendMessage(PortalMessage *msg)
 #endif
 #else
     unsigned int addr = req_fifo_base + msg->channel * 256;
-    write_portal(p, addr, data, name);
+    write_portal(p, (volatile unsigned int *)(long)addr, data, name);
     //fprintf(stderr, "(%s) sendMessage\n", name);
 #endif
   }
@@ -482,11 +482,11 @@ void* PortalPoller::portalExec_event(int timeout)
 	Portal *instance = portal_wrappers[i];
 	unsigned int int_status_addr = instance->ind_reg_base+0x0;
 	//fprintf(stderr, "AAAA: %x %s\n", int_status_addr, instance->name);
-	unsigned int int_status = read_portal((instance->p), int_status_addr, instance->name);
+	unsigned int int_status = read_portal((instance->p), (volatile unsigned int *)(long)int_status_addr, instance->name);
 	//fprintf(stderr, "BBBB: %d\n", int_status);
 	if(int_status){
 	  unsigned int queue_status_addr = instance->ind_reg_base+0x18;
-	  unsigned int queue_status = read_portal((instance->p), queue_status_addr, instance->name);
+	  unsigned int queue_status = read_portal((instance->p), (volatile unsigned int *)(long)queue_status_addr, instance->name);
 	  if (queue_status){
 	    //fprintf(stderr, "(%s) queue_status : %08x\n", instance->name, queue_status);
 	    instance->handleMessage(queue_status-1);	
@@ -570,7 +570,7 @@ void Directory::printDbgRequestIntervals()
       c = *(intervals_offset+(j * 6 + i));
 #else
       unsigned int addr = intervals_offset+((j * 6 + i)*4);
-      c = read_portal(p, addr, name);
+      c = read_portal(p, (volatile unsigned int *)(long)addr, name);
 #endif
       x[i] = (((uint64_t)c) << 32) | (x[i] >> 32);
     }
@@ -590,8 +590,8 @@ uint64_t Directory::cycle_count()
   unsigned int high_bits = counter_offset[0];
   unsigned int low_bits = counter_offset[1];
 #else
-  unsigned int high_bits = read_portal(p, (counter_offset+0), name);
-  unsigned int low_bits = read_portal(p, (counter_offset+4), name);
+  unsigned int high_bits = read_portal(p, (volatile unsigned int *)(long)(counter_offset+0), name);
+  unsigned int low_bits = read_portal(p, (volatile unsigned int *)(long)(counter_offset+4), name);
 #endif
   return (((uint64_t)high_bits)<<32)|((uint64_t)low_bits);
 }
@@ -629,21 +629,21 @@ void Directory::scan(int display)
   counter_offset = ptr;
   intervals_offset = ptr+2;
 #else
-  unsigned int ptr = 128*4;
-  version = read_portal(p, ptr, name);
+  long ptr = 128*4;
+  version = read_portal(p, (volatile unsigned int *)ptr, name);
   ptr += 4;
-  timestamp = (long int)read_portal(p, ptr, name);
+  timestamp = (long int)read_portal(p, (volatile unsigned int *)ptr, name);
   ptr += 4;
-  numportals = read_portal(p, ptr, name);
+  numportals = read_portal(p, (volatile unsigned int *)ptr, name);
   ptr += 4;
-  addrbits = read_portal(p, ptr, name);
+  addrbits = read_portal(p, (volatile unsigned int *)ptr, name);
   ptr += 4;
   portal_ids = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
   portal_types = (unsigned int *)malloc(sizeof(unsigned int)*numportals);
   for(i = 0; (i < numportals) && (i < 32); i++){
-    portal_ids[i] = read_portal(p, ptr, name);
+    portal_ids[i] = read_portal(p, (volatile unsigned int *)ptr, name);
     ptr += 4;
-    portal_types[i] = read_portal(p, ptr, name);
+    portal_types[i] = read_portal(p, (volatile unsigned int *)ptr, name);
     ptr += 4;
   }
   counter_offset = ptr;

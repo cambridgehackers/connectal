@@ -39,10 +39,10 @@ static void recv_request(bool rr)
 	  head->pnum = i;
 	  head->valid = true;
 	  head->inflight = rr ? false : true;
-	  head->req.addr |= i << 16;
+	  head->req.addr = (unsigned int *)(((long) head->req.addr) | i << 16);
 	  if(0)
-	  fprintf(stderr, "recv_request(i=%d,rr=%d) {write=%d, addr=%08x, data=%08x}\n", 
-		  i, rr, head->req.write, head->req.addr, head->req.data);
+	  fprintf(stderr, "recv_request(i=%d,rr=%d) {write=%d, addr=%08lx, data=%08x}\n", 
+		  i, rr, head->req.write, (long)head->req.addr, head->req.data);
 	  break;
 	}
       }
@@ -84,10 +84,10 @@ extern "C" {
     return (write_head.req.write && write_head.valid && write_head.inflight);
   }
   
-  unsigned int writeAddr(){
+  long writeAddr(){
     //fprintf(stderr, "writeAddr()\n");
     write_head.inflight = false;
-    return write_head.req.addr;
+    return (long)write_head.req.addr;
   }
   
   unsigned int writeData(){
@@ -101,10 +101,10 @@ extern "C" {
     return (!read_head.req.write && read_head.valid && !read_head.inflight);
   }
   
-  unsigned int readAddr(){
+  long readAddr(){
     //fprintf(stderr, "readAddr()\n");
     read_head.inflight = true;
-    return read_head.req.addr;
+    return (long)read_head.req.addr;
   }
   
   void readData(unsigned int x){

@@ -95,10 +95,11 @@ responseSzCaseTemplate='''
     { 
         %(msg)s msg;
         for (int i = (msg.size()/4)-1; i >= 0; i--) {
+            volatile unsigned int *ptr = (volatile unsigned int*)(((long)ind_fifo_base) + channel * 256);
 #ifdef MMAP_HW
-            unsigned int val = *((volatile unsigned int*)(((unsigned char *)ind_fifo_base) + channel * 256));
+            unsigned int val = *ptr;
 #else
-            unsigned int val = read_portal(p, ind_fifo_base + (channel * 256), name);
+            unsigned int val = read_portal(p, ptr, name);
 #endif
             buf[i] = val;
         }

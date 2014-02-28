@@ -22,7 +22,7 @@ typedef unsigned long dma_addr_t;
 
 struct memrequest{
   bool write;
-  unsigned int addr;
+  volatile unsigned int *addr;
   unsigned int data;
 };
 
@@ -130,8 +130,8 @@ class Directory : public PortalInternal
   void printDbgRequestIntervals();
 };
 
-unsigned int read_portal(portal *p, unsigned int addr, char *name);
-void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
+unsigned int read_portal(portal *p, volatile unsigned int *addr, char *name);
+//void write_portal(portal *p, volatile unsigned int *addr, unsigned int v, char *name);
 
 void start_timer(unsigned int i);
 uint64_t lap_timer(unsigned int i);
