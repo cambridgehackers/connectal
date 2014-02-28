@@ -34,6 +34,7 @@ import Top               :: *;
 import GetPutF           :: *;
 import AxiMasterSlave    :: *;
 
+// implemented in BsimCtrl.cxx
 import "BDPI" function Action      initPortal(Bit#(32) d);
 import "BDPI" function Bool                    writeReq32();
 import "BDPI" function ActionValue#(Bit#(32)) writeAddr32();
@@ -42,6 +43,7 @@ import "BDPI" function Bool                     readReq32();
 import "BDPI" function ActionValue#(Bit#(32))  readAddr32();
 import "BDPI" function Action        readData32(Bit#(32) d);
 		 
+// implemented in BsimDma.cxx		 
 import "BDPI" function Action pareff(Bit#(32) handle, Bit#(32) size);
 import "BDPI" function Action init_pareff();
 import "BDPI" function Action write_pareff32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
