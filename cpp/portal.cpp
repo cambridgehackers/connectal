@@ -50,14 +50,18 @@
 #include "sock_utils.h"
 #include "sock_fd.h"
 
+#define MAX_TIMER_COUNT 16
+#define REG_INTERRUPT_FLAG    0
+#define REG_INTERRUPT_MASK    1
+
 static PortalPoller *defaultPoller = new PortalPoller();
 static Directory dir;
 static Directory *pdir;
-static uint64_t c_start[16];
+static uint64_t c_start[MAX_TIMER_COUNT];
 
 #define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
-#define ENABLE_INTERRUPTS(A) ((A)[1] = 1)
+#define ENABLE_INTERRUPTS(A) ((A)[REG_INTERRUPT_MASK] = 1)
 #else
 #define ENABLE_INTERRUPTS(A)
 #endif
@@ -77,14 +81,14 @@ void print_dbg_request_intervals()
 
 void start_timer(unsigned int i) 
 {
-  assert(i < 16);
+  assert(i < MAX_TIMER_COUNT);
   c_start[i] = pdir->cycle_count();
 }
 
 static uint64_t lap_timer_temp;
 uint64_t lap_timer(unsigned int i)
 {
-  assert(i < 16);
+  assert(i < MAX_TIMER_COUNT);
   uint64_t temp = pdir->cycle_count();
   lap_timer_temp = temp;
   return temp - c_start[i];
@@ -176,10 +180,16 @@ PortalInternal::PortalInternal(int id)
     req_reg_base(0x0),
     req_fifo_base(0x0)
 {
-  char buff[128];
-  sprintf(buff, "fpga%d", dir.get_fpga(id));
-  name = strdup(buff);
-  int rc = portalOpen(dir.get_addrbits(id));
+  unsigned int addrbits = 16;
+  if (id == -1)     // opening Directory
+    name = strdup("fpga0");
+  else {
+    char buff[128];
+    sprintf(buff, "fpga%d", dir.get_fpga(id));
+    addrbits = dir.get_addrbits(id);
+    name = strdup(buff);
+  }
+  int rc = portalOpen(addrbits);
   if (rc != 0) {
     printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
     ALOGD("PortalInternal::PortalInternal failure rc=%d\n", rc);
@@ -187,6 +197,7 @@ PortalInternal::PortalInternal(int id)
   }
 }
 
+#if 0
 PortalInternal::PortalInternal(const char* devname, unsigned int addrbits)
   : fd(-1),
     ind_reg_base(0x0), 
@@ -202,6 +213,7 @@ PortalInternal::PortalInternal(const char* devname, unsigned int addrbits)
     exit(1);
   }
 }
+#endif
 
 PortalInternal::~PortalInternal()
 {
@@ -267,7 +279,7 @@ int PortalInternal::portalOpen(int addrbits)
     ind_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(3<<14));
 
 #ifndef MMAP_HW
-    WRITEL(this, ind_reg_base+1, 1);
+    WRITEL(this, ind_reg_base+REG_INTERRUPT_MASK, 1);
 #endif
     return 0;
 }
@@ -288,14 +300,11 @@ int PortalInternal::sendMessage(PortalMessage *msg)
     //addr[2] = 0xffffffff;
   }
 #endif
-  for (int i = msg->size()/4-1; i >= 0; i--) {
-    unsigned int data = buf[i];
-    volatile unsigned int *addr = (volatile unsigned int *)(((unsigned char *)req_fifo_base) + msg->channel * 256);
-    WRITEL(this, addr, data);
-    //uint64_t after_requestt = catch_timer(12);
-    //pdir->printDbgRequestIntervals();
-    //fprintf(stderr, "(%s) sendMessage\n", name);
-  }
+  for (int i = msg->size()/4-1; i >= 0; i--)
+    WRITEL(this, req_fifo_base + msg->channel * (256/4), buf[i]);
+  //uint64_t after_requestt = catch_timer(12);
+  //pdir->printDbgRequestIntervals();
+  //fprintf(stderr, "(%s) sendMessage\n", name);
 #ifdef MMAP_HW
   if (0)
   for (int i = 0; i < 3; i++) {
@@ -417,7 +426,7 @@ void PortalPoller::portalExec_end(void)
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d %s\n", i, instance->name);
-      (instance->ind_reg_base)[1] = 0;
+      (instance->ind_reg_base)[REG_INTERRUPT_MASK] = 0;
     }
 #endif
 }
@@ -445,7 +454,7 @@ void* PortalPoller::portalExec_event(int timeout)
 	  while ((queue_status= ind_reg_base[6])) {
 	    if(0) {
 	      unsigned int int_src = ind_reg_base[0];
-	      unsigned int int_en  = ind_reg_base[1];
+	      unsigned int int_en  = ind_reg_base[REG_INTERRUPT_MASK];
 	      unsigned int ind_count  = ind_reg_base[2];
 	      fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
 	    }
@@ -523,7 +532,7 @@ void portalExec_start()
 }
 
 Directory::Directory() 
-  : PortalInternal("fpga0", 16),
+  : PortalInternal(-1), //"fpga0", 16),
     version(0),
     timestamp(0),
     addrbits(0),
@@ -561,7 +570,7 @@ uint64_t Directory::cycle_count()
 {
   unsigned int high_bits = READL(this, counter_offset+0);
   unsigned int low_bits = READL(this, counter_offset+1);
-  return (((uint64_t)high_bits)<<32)|((uint64_t)low_bits);
+  return (((uint64_t)high_bits)<<32) | low_bits;
 }
 unsigned int Directory::get_fpga(unsigned int id)
 {
@@ -571,6 +580,7 @@ unsigned int Directory::get_fpga(unsigned int id)
       return i+1;
   }
   fprintf(stderr, "Directory::fpga(id=%d) id not found\n", id);
+  exit(1);
 }
 
 unsigned int Directory::get_addrbits(unsigned int id)
