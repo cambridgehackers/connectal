@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import FIFO::*;
+import FIFOF::*;
 import SpecialFIFOs::*;
 import GetPutF::*;
 import Vector::*;
@@ -58,16 +59,21 @@ module mkStrstrRequest#(StrstrIndication indication,
    
    Reg#(Bit#(32)) needleLen <- mkReg(0);
    
-   Vector#(p, FIFO#(void)) confs <- replicateM(mkFIFO);
-   Vector#(p, FIFO#(void)) comps <- replicateM(mkFIFO);
-   Vector#(p, FIFO#(Int#(32))) locs <- replicateM(mkFIFO);
+   Vector#(p, FIFOF#(void)) confs <- replicateM(mkFIFOF);
+   Vector#(p, FIFOF#(void)) comps <- replicateM(mkFIFOF);
+   Vector#(p, FIFOF#(Int#(32))) locs <- replicateM(mkFIFOF);
+   Reg#(Bit#(32)) iterCnt <- mkReg(0);
+   Reg#(Bit#(32)) haystackPointer <- mkReg(0);
+   Reg#(Bit#(32)) haystackLen <- mkReg(0);
+   FIFO#(void) restartf <- mkSizedFIFO(1);
+   
 	       
    Vector#(p, MPEngine) engines;
    for(Integer i = 0; i < valueOf(p); i=i+1) begin
       let iv = fromInteger(i);
       engines[iv] <- mkMPEngine(comps[iv], confs[iv], locs[iv], haystack_read_servers[iv], needle_read_servers[iv], mp_next_read_servers[iv]);
    end
-      
+   
    rule confr;
       for(Integer i = 0; i < valueOf(p); i=i+1) 
 	 confs[fromInteger(i)].deq;
@@ -75,29 +81,48 @@ module mkStrstrRequest#(StrstrIndication indication,
    endrule
    
    for(Integer i = 0; i < valueOf(p); i=i+1)
-      rule res;
+      rule resr;
+	 let rv = locs[fromInteger(i)].first;
 	 locs[fromInteger(i)].deq;
-	 indication.searchResult(locs[fromInteger(i)].first);
+	 indication.searchResult(rv);
       endrule
    
-   rule comp;
-      for(Integer i = 0; i < valueOf(p); i=i+1)
-	 comps[fromInteger(i)].deq;
-      indication.searchResult(-1);
+   rule restartr(iterCnt > 0);
+      restartf.deq;
+      iterCnt <= iterCnt-1;
+      let pv = fromInteger(valueOf(p));
+      let lpv = fromInteger(valueOf(lp));
+      Bit#(32) base = 0;
+      for(Integer i = 0; i < valueOf(p)-1; i=i+1) begin
+	 engines[fromInteger(i)].search(haystackPointer, (haystackLen>>lpv)+needleLen, base);
+	 base = base + (haystackLen>>lpv);
+      end
+      engines[pv-1].search(haystackPointer, haystackLen>>lpv, base);
    endrule
    
+   rule compr;
+      Bool locs_empty = True;
+      for(Integer i = 0; i < valueOf(p); i=i+1)
+	 locs_empty = locs_empty && !locs[fromInteger(i)].notEmpty;
+      for(Integer i = 0; i < valueOf(p); i=i+1)
+	 comps[fromInteger(i)].deq;
+      if(iterCnt==0)
+	 _when_(locs_empty) (indication.searchResult(-1));
+      else
+	 restartf.enq(?);
+   endrule
+      
    method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
+      $display("setup(%d %d %d)", needle_pointer, mpNext_pointer, needle_len);
       needleLen <= needle_len;
       for(Integer i = 0; i < valueOf(p); i=i+1)
 	 engines[fromInteger(i)].setup(needle_pointer, mpNext_pointer, needle_len);
    endmethod
 
    method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) iter_cnt);
-      $display("search %d %d", haystack_len, iter_cnt);
-      let pv = fromInteger(valueOf(p));
-      let lpv = fromInteger(valueOf(lp));
-      for(Integer i = 0; i < valueOf(p)-1; i=i+1) 
-	 engines[fromInteger(i)].search(haystack_pointer, (haystack_len>>lpv)+needleLen, fromInteger(i)*(haystack_len>>lpv), iter_cnt);  // this multiplier is unnecessary (mdk)
-      engines[pv-1].search(haystack_pointer, haystack_len>>lpv, haystack_len>>lpv, iter_cnt);
+      haystackLen <= haystack_len;
+      haystackPointer <= haystack_pointer;
+      iterCnt <= iter_cnt;
+      restartf.enq(?);
    endmethod
 endmodule
