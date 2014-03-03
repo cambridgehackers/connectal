@@ -546,6 +546,7 @@ if __name__=='__main__':
     make.write(makefileTemplate % {'xbsvdir': xbsvdir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in namespace.bsvfile]
                                                                 + [os.path.join(xbsvdir, 'bsv')]
+                                                                + [os.path.join(xbsvdir, 'lib/bsv')]
                                                                 + [os.path.join(xbsvdir, 'generated/xilinx')]))),
                                    'bsvdefines': util.foldl((lambda e,a: '-D '+e+' '+a), '', bsvdefines),
                                    'boardname': boardname,
