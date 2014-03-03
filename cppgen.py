@@ -45,7 +45,7 @@ LOCAL_MODULE := %(exe)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni
+LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni
 
 #NDK_OUT := obj/
 
@@ -53,7 +53,7 @@ include $(BUILD_EXECUTABLE)
 '''
 
 linuxmakefile_template='''
-CFLAGS = -DMMAP_HW -O -g -I. -I%(xbsvdir)s/cpp -I%(xbsvdir)s %(sourceincludes)s
+CFLAGS = -DMMAP_HW -O -g -I. -I%(xbsvdir)s/cpp -I%(xbsvdir)s -I%(xbsvdir)s/lib/cpp %(sourceincludes)s
 
 PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.cpp PortalMemory.cpp sock_fd.cxx sock_utils.cxx)
 

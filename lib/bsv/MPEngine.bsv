@@ -20,6 +20,12 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+/*
+ * Implementation of:
+ *    MP algorithm on pages 7-11 from "Pattern Matching Algorithms" by
+ *       Alberto Apostolico, Zvi Galil, 1997
+ */
+
 import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;

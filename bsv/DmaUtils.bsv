@@ -120,6 +120,11 @@ interface DmaReadBuffer#(numeric type bsz, numeric type maxBurst);
    interface DmaReadClient#(bsz) dmaClient;
 endinterface
 
+interface DmaReadNoBuffer#(numeric type bsz);
+   interface DmaReadServer #(bsz) dmaServer;
+   interface DmaReadClient#(bsz) dmaClient;
+endinterface
+
 //
 // @brief A buffer for writing to a bus of width bsz.
 //
@@ -127,6 +132,11 @@ endinterface
 // @param maxBurst The number of words to buffer
 //
 interface DmaWriteBuffer#(numeric type bsz, numeric type maxBurst);
+   interface DmaWriteServer#(bsz) dmaServer;
+   interface DmaWriteClient#(bsz) dmaClient;
+endinterface
+
+interface DmaWriteNoBuffer#(numeric type bsz);
    interface DmaWriteServer#(bsz) dmaServer;
    interface DmaWriteClient#(bsz) dmaClient;
 endinterface
@@ -175,6 +185,22 @@ module mkDmaReadBuffer(DmaReadBuffer#(dsz, maxBurst))
    endinterface
 endmodule
 
+module mkDmaReadNoBuffer(DmaReadNoBuffer#(dsz));
+
+   RWire#(DmaData#(dsz)) dataWire <- mkRWire;
+   RWire#(DmaRequest)     reqWire <- mkRWire;
+   
+   interface DmaReadServer dmaServer;
+      interface PutF readReq = toPutF(reqWire);
+      interface GetF readData = toGetF(dataWire);
+   endinterface
+   interface DmaReadClient dmaClient;
+      interface GetF readReq = toGetF(reqWire);
+      interface PutF readData = toPutF(dataWire);
+   endinterface
+
+endmodule
+
 //
 // @brief Makes a Dma channel for writing wordSize words from memory.
 //
@@ -221,4 +247,23 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, maxBurst))
       endinterface
       interface PutF writeDone = toPutF(doneTags);
    endinterface
+endmodule
+
+module mkDmaWriteNoBuffer(DmaWriteNoBuffer#(dsz));
+
+   RWire#(DmaData#(dsz)) dataWire <- mkRWire;
+   RWire#(DmaRequest)     reqWire <- mkRWire;
+   RWire#(Bit#(6))       doneWire <- mkRWire;
+
+   interface DmaWriteServer dmaServer;
+      interface PutF writeReq = toPutF(reqWire);
+      interface PutF writeData = toPutF(dataWire);
+      interface GetF writeDone = toGetF(doneWire);
+   endinterface
+   interface DmaWriteClient dmaClient;
+      interface GetF writeReq = toGetF(reqWire);
+      interface GetF writeData = toGetF(dataWire);
+      interface PutF writeDone = toPutF(doneWire);
+   endinterface
+   
 endmodule

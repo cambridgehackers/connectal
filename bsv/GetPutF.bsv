@@ -77,6 +77,32 @@ typeclass ToPutF#(type a, type b);
    function PutF#(b) toPutF(a x);
 endtypeclass
 
+instance ToGetF#(RWire#(b), b);
+   function GetF#(b) toGetF(RWire#(b) w);
+      return (interface GetF;
+	      method ActionValue#(b) get() if (w.wget matches tagged Valid .x);
+		 return x;
+	      endmethod
+	      method Bool notEmpty();
+		 return True; // is this safe ?? (mdk)
+	      endmethod
+	 endinterface);
+   endfunction
+endinstance   
+
+instance ToPutF#(RWire#(b), b);
+   function PutF#(b) toPutF(RWire#(b) w);
+      return (interface PutF;
+	      method Action put(b x);
+		 w.wset(x);
+	      endmethod
+	      method Bool notFull();
+		 return True; // is this safe ?? (mdk)
+	      endmethod
+	 endinterface);
+   endfunction
+endinstance
+
 instance ToGetF#(FIFOF#(b), b);
    function GetF#(b) toGetF(FIFOF#(b) fifof);
       return (interface GetF;
@@ -84,9 +110,9 @@ instance ToGetF#(FIFOF#(b), b);
 	         fifof.deq();
 	      return fifof.first();
 	      endmethod
-	 method Bool notEmpty();
-	    return fifof.notEmpty();
-	 endmethod
+	      method Bool notEmpty();
+		 return fifof.notEmpty();
+	      endmethod
 	 endinterface);
    endfunction
 endinstance
