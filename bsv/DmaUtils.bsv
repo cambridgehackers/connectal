@@ -177,8 +177,8 @@ endmodule
 
 module mkDmaReadNoBuffer(DmaReadBuffer#(bsz, maxBurst));
 
-   FIFOF#(DmaData#(bsz)) dataFifo <- mkSizedBypassFIFOF(1);
-   FIFOF#(DmaRequest)     reqFifo <- mkSizedBypassFIFOF(1);
+   FIFOF#(DmaData#(bsz)) dataFifo <- mkFIFOF;
+   FIFOF#(DmaRequest)     reqFifo <- mkFIFOF;
    Reg#(Bit#(32))     outstanding <- mkReg(0);
    
    interface DmaReadServer dmaServer;
@@ -259,9 +259,9 @@ endmodule
 
 module mkDmaWriteNoBuffer(DmaWriteBuffer#(bsz, maxBurst));
 
-   FIFOF#(DmaData#(bsz)) dataFifo <- mkSizedBypassFIFOF(1);
-   FIFOF#(DmaRequest)     reqFifo <- mkSizedBypassFIFOF(1);
-   FIFOF#(Bit#(6))       doneFifo <- mkSizedBypassFIFOF(1);
+   FIFOF#(DmaData#(bsz)) dataFifo <- mkFIFOF;
+   FIFOF#(DmaRequest)     reqFifo <- mkFIFOF;
+   FIFOF#(Bit#(6))       doneFifo <- mkFIFOF;
    
    interface DmaWriteServer dmaServer;
       interface PutF writeReq  = toPutF(reqFifo);
