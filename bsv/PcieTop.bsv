@@ -28,6 +28,7 @@ import PcieToAxiBridge   :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
+import AxiSlaveEngine    :: *;
 
 typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins);
 
