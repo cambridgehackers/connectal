@@ -65,41 +65,15 @@ class MemcpyIndication : public MemcpyIndicationWrapper
 public:
   MemcpyIndication(unsigned int id) : MemcpyIndicationWrapper(id){}
 
-  virtual void started(uint32_t words){
-    fprintf(stderr, "started: words=%d\n", words);
+  virtual void started(){
+    fprintf(stderr, "started\n");
   }
-  virtual void done(uint32_t mismatch) {
+  virtual void done() {
     sem_post(&done_sem);
-    fprintf(stderr, "done: mismatch=%d\n", mismatch);
+    fprintf(stderr, "done\n");
     finished = true;
-    memcmp_fail |= mismatch;
-    //unsigned int mcf = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
-    //memcmp_fail |= mcf;
-    //if(true){
-    //fprintf(stderr, "memcpy done: %lx\n", v);
-    // fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
-      //dump("src", (char*)srcBuffer, 128);
-      //dump("dst", (char*)dstBuffer, 128);
-    // }
+    memcmp_fail = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
   }
-  virtual void rData ( uint64_t v ){
-    //fprintf(stderr, "rData: %016llx\n", v);
-  }
-  virtual void readReq(uint32_t v){
-    //fprintf(stderr, "readReq %lx\n", v);
-  }
-  virtual void writeReq(uint32_t v){
-    //fprintf(stderr, "writeReq %lx\n", v);
-  }
-  virtual void writeAck(uint32_t v){
-    //fprintf(stderr, "writeAck %lx\n", v);
-  }
-  virtual void reportStateDbg(uint32_t streamRdCnt, 
-			      uint32_t streamWrCnt, 
-			      uint32_t dataMismatch){
-    fprintf(stderr, "Memcpy::reportStateDbg: streamRdCnt=%d, streamWrCnt=%d, dataMismatch=%d\n", 
-	    streamRdCnt, streamWrCnt, dataMismatch);
-  }  
 };
 
 
