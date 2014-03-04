@@ -58,6 +58,7 @@ module mkMemcpyEngine#(DmaReadServer#(busWidth) dma_read_server,
    
    FIFO#(Bool)             ackFIFO <- mkSizedFIFO(32);
    FIFO#(void)            doneFIFO <- mkSizedFIFO(1);
+   FIFO#(void)            busyFIFO <- mkSizedFIFO(1);
    
    rule readReq (rdCnt < numWords>>1);
       //$display("rdReq: pointer=%d offset=%h burstlen=%d", rdPointer, rdOff, burstLen);
@@ -102,9 +103,11 @@ module mkMemcpyEngine#(DmaReadServer#(busWidth) dma_read_server,
       wrCnt <= 0;
       rdOff <= 0;
       wrOff <= 0;
+      busyFIFO.enq(?);
    endmethod
 
    method ActionValue#(Bool) done;
+      busyFIFO.deq;
       doneFIFO.deq;
       return True;
    endmethod
