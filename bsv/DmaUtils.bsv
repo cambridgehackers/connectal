@@ -26,7 +26,7 @@ import FIFO::*;
 import Vector::*;
 import Gearbox::*;
 import FIFOF::*;
-
+import SpecialFIFOs::*;
 
 import BRAMFIFOFLevel::*;
 import GetPutF::*;
@@ -120,11 +120,6 @@ interface DmaReadBuffer#(numeric type bsz, numeric type maxBurst);
    interface DmaReadClient#(bsz) dmaClient;
 endinterface
 
-interface DmaReadNoBuffer#(numeric type bsz);
-   interface DmaReadServer #(bsz) dmaServer;
-   interface DmaReadClient#(bsz) dmaClient;
-endinterface
-
 //
 // @brief A buffer for writing to a bus of width bsz.
 //
@@ -136,22 +131,17 @@ interface DmaWriteBuffer#(numeric type bsz, numeric type maxBurst);
    interface DmaWriteClient#(bsz) dmaClient;
 endinterface
 
-interface DmaWriteNoBuffer#(numeric type bsz);
-   interface DmaWriteServer#(bsz) dmaServer;
-   interface DmaWriteClient#(bsz) dmaClient;
-endinterface
-
 //
 // @brief Makes a Dma buffer for reading wordSize words from memory.
 //
-// @param dsz The width of the bus in bits.
+// @param bsz The width of the bus in bits.
 // @param maxBurst The max number of words to transfer per request.
 //
-module mkDmaReadBuffer(DmaReadBuffer#(dsz, maxBurst))
-   provisos(Add#(1,a__,dsz),
+module mkDmaReadBuffer(DmaReadBuffer#(bsz, maxBurst))
+   provisos(Add#(1,a__,bsz),
 	    Add#(b__, TAdd#(1,TLog#(maxBurst)), 8));
 
-   FIFOFLevel#(DmaData#(dsz),maxBurst)  readBuffer <- mkBRAMFIFOFLevel;
+   FIFOFLevel#(DmaData#(bsz),maxBurst)  readBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(DmaRequest)        reqOutstanding <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(maxBurst))) unfulfilled <- mkRatchet(0);
    
@@ -174,7 +164,7 @@ module mkDmaReadBuffer(DmaReadBuffer#(dsz, maxBurst))
 	 endmethod
       endinterface
       interface PutF readData;
-	 method Action put(DmaData#(dsz) x);
+	 method Action put(DmaData#(bsz) x);
 	    readBuffer.fifo.enq(x);
 	    unfulfilled.decrement(1);
 	 endmethod
@@ -185,20 +175,38 @@ module mkDmaReadBuffer(DmaReadBuffer#(dsz, maxBurst))
    endinterface
 endmodule
 
-module mkDmaReadNoBuffer(DmaReadNoBuffer#(dsz));
+module mkDmaReadNoBuffer(DmaReadBuffer#(bsz, maxBurst));
 
-   RWire#(DmaData#(dsz)) dataWire <- mkRWire;
-   RWire#(DmaRequest)     reqWire <- mkRWire;
+   FIFOF#(DmaData#(bsz)) dataFifo <- mkSizedBypassFIFOF(1);
+   FIFOF#(DmaRequest)     reqFifo <- mkSizedBypassFIFOF(1);
+   Reg#(Bit#(32))     outstanding <- mkReg(0);
    
    interface DmaReadServer dmaServer;
-      interface PutF readReq = toPutF(reqWire);
-      interface GetF readData = toGetF(dataWire);
+      interface PutF readReq;
+	 method Action put(DmaRequest req);
+	    reqFifo.enq(req);
+	    outstanding <= outstanding+extend(req.burstLen);
+	 endmethod
+	 method Bool notFull;
+	    return reqFifo.notFull;
+	 endmethod
+      endinterface
+      interface GetF readData = toGetF(dataFifo);
    endinterface
+   
    interface DmaReadClient dmaClient;
-      interface GetF readReq = toGetF(reqWire);
-      interface PutF readData = toPutF(dataWire);
+      interface GetF readReq = toGetF(reqFifo);
+      interface PutF readData;
+	 method Action put(DmaData#(bsz) data);
+	    dataFifo.enq(data);
+	    outstanding <= outstanding-1;
+	 endmethod
+	 method Bool notFull;
+	    return outstanding > 0;
+	 endmethod
+      endinterface
    endinterface
-
+   
 endmodule
 
 //
@@ -249,21 +257,22 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, maxBurst))
    endinterface
 endmodule
 
-module mkDmaWriteNoBuffer(DmaWriteNoBuffer#(dsz));
+module mkDmaWriteNoBuffer(DmaWriteBuffer#(bsz, maxBurst));
 
-   RWire#(DmaData#(dsz)) dataWire <- mkRWire;
-   RWire#(DmaRequest)     reqWire <- mkRWire;
-   RWire#(Bit#(6))       doneWire <- mkRWire;
-
+   FIFOF#(DmaData#(bsz)) dataFifo <- mkSizedBypassFIFOF(1);
+   FIFOF#(DmaRequest)     reqFifo <- mkSizedBypassFIFOF(1);
+   FIFOF#(Bit#(6))       doneFifo <- mkSizedBypassFIFOF(1);
+   
    interface DmaWriteServer dmaServer;
-      interface PutF writeReq = toPutF(reqWire);
-      interface PutF writeData = toPutF(dataWire);
-      interface GetF writeDone = toGetF(doneWire);
+      interface PutF writeReq  = toPutF(reqFifo);
+      interface PutF writeData = toPutF(dataFifo);
+      interface GetF writeDone = toGetF(doneFifo);
    endinterface
+   
    interface DmaWriteClient dmaClient;
-      interface GetF writeReq = toGetF(reqWire);
-      interface GetF writeData = toGetF(dataWire);
-      interface PutF writeDone = toPutF(doneWire);
+      interface GetF writeReq = toGetF(reqFifo);
+      interface GetF writeData = toGetF(dataFifo);
+      interface PutF writeDone = toPutF(doneFifo);
    endinterface
    
 endmodule
