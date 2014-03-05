@@ -49,8 +49,6 @@ const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
     <category name=\"time\" scale=\"cycles\">\n\
         <observations>\n\
             <observation name=\"hw_cycles\">%f</observation>\n\
-            <observation name=\"read_beats\">%f</observation>\n\
-            <observation name=\"write_beats\">%f</observation>\n\
             <observation name=\"sw_cycles\">%f</observation>\n\
         </observations>\n\
     </category>\n\
@@ -61,7 +59,7 @@ const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
             <observation name=\"write_memory\">%f</observation>\n\
         </observations>\n\
     </category>\n\
-    <category name=\"speedup\" scale=\"\">\n\
+    <category name=\"speedup\" scale=\"X\">\n\
         <observations>\n\
             <observation name=\"hw_speedup\">%f</observation>\n\
         </observations>\n\
@@ -75,7 +73,7 @@ void MonkitFile::writeFile()
   float hw_speedup = sw_cycles/hw_cycles;
 
   FILE *out = fopen(name, "w");
-  fprintf(out, monkit, hw_cycles, read_beats, write_beats, hw_read_utilization, hw_write_utilization, hw_speedup);
+  fprintf(out, monkit, hw_cycles, sw_cycles, hw_read_utilization, hw_write_utilization, hw_speedup);
   fclose(out);
 }
 
