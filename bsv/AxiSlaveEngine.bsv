@@ -105,6 +105,13 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
       else if (hdr_3dw.format == MEM_WRITE_3DW_DATA) begin
 	 // retry until the data is available in writeDataMimo
       end
+      if (hdr_4dw.format == MEM_WRITE_4DW_DATA && writeDataMimo.deqReadyN(1)) begin
+	 tlp.be = 16'hffff;
+	 sendit = True;
+      end
+      else if (hdr_4dw.format == MEM_WRITE_4DW_DATA) begin
+	 sendit = False;
+      end
       else begin
 	 sendit = True;
       end
