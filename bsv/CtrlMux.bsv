@@ -56,6 +56,9 @@ module mkInterruptMux#(Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (ReadOn
 
 endmodule
 
+// XXX: defining MULTIPLE_WRITES causes designs to deadlock on the PCIE platforms.
+//      until we figure out why, this should remain undefined (mdk)
+
 module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 		      Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Slave#(_a,_b,_c))
 
