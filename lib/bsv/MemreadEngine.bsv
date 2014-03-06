@@ -28,15 +28,17 @@ import FIFO::*;
 import PortalMemory::*;
 import Dma::*;
 
-interface MemreadEngine;
-   method Action start(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen);
-   method ActionValue#(Bool) finished();
-   interface DmaReadClient#(64) dmaClient;
+interface MemreadEngine#(numeric type busWidth);
+   method Action start(DmaPointer pointer, Bit#(32) numWords, Bit#(32) burstLen);
+   method ActionValue#(Bool) finish();
+   interface DmaReadClient#(busWidth) dmaClient;
 endinterface
 
-module mkMemreadEngine#(FIFOF#(Bit#(64)) f) (MemreadEngine);
-
-   Reg#(Bit#(32))         numWords <- mkReg(0);
+module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
+   
+   provisos (Div#(busWidth,8,busWidthBytes));
+   
+   Reg#(Bit#(32))         numBeats <- mkReg(0);
    Reg#(Bit#(32))           reqCnt <- mkReg(0);
    Reg#(Bit#(32))          respCnt <- mkReg(0);
    
@@ -48,8 +50,11 @@ module mkMemreadEngine#(FIFOF#(Bit#(64)) f) (MemreadEngine);
    FIFO#(Bool)                  ff <- mkSizedFIFO(1);
    FIFO#(void)                  wf <- mkSizedFIFO(1);
    
+   let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
+   let words_per_beat = bytes_per_beat>>2;
+
    method Action start(Bit#(32) p, Bit#(32) nw, Bit#(32) bl);
-      numWords <= nw;
+      numBeats <= nw/words_per_beat;
       reqCnt   <= 0;
       respCnt  <= 0;
       off      <= 0;
@@ -59,7 +64,7 @@ module mkMemreadEngine#(FIFOF#(Bit#(64)) f) (MemreadEngine);
       wf.enq(?);
    endmethod
    
-   method ActionValue#(Bool) finished;
+   method ActionValue#(Bool) finish;
       wf.deq;
       ff.deq;
       return ff.first;
@@ -67,19 +72,19 @@ module mkMemreadEngine#(FIFOF#(Bit#(64)) f) (MemreadEngine);
    
    interface DmaReadClient dmaClient;
       interface GetF readReq;
-	 method ActionValue#(DmaRequest) get() if (reqCnt < numWords>>1);
+	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
 	    return DmaRequest { pointer: pointer, offset: off, burstLen: burstLen, tag: 1 };
 	 endmethod
 	 method Bool notEmpty();
-	    return (reqCnt < numWords>>1);
+	    return (reqCnt < numBeats);
 	 endmethod
       endinterface
       interface PutF readData;
-	 method Action put(DmaData#(64) d);
+	 method Action put(DmaData#(busWidth) d);
 	    respCnt <= respCnt+1;
-	    if (respCnt+1 == numWords>>1)
+	    if (respCnt+1 == numBeats)
 	       ff.enq(True);
 	    f.enq(d.data);
 	 endmethod

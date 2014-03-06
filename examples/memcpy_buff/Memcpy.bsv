@@ -24,10 +24,12 @@ import Vector::*;
 import FIFOF::*;
 import GetPutF::*;
 import FIFO::*;
+import Connectable::*;
 
 import PortalMemory::*;
 import Dma::*;
-import MemcpyEngine::*;
+import MemreadEngine::*;
+import MemwriteEngine::*;
 
 interface MemcpyRequest;
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -39,14 +41,14 @@ interface MemcpyIndication;
 endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication,
-			DmaReadServer#(busWidth) dma_read_server,
-			DmaWriteServer#(busWidth) dma_write_server)(MemcpyRequest)
+			DmaReadServer#(64) dma_read_server,
+			DmaWriteServer#(64) dma_write_server)(MemcpyRequest);
 
-   provisos (Div#(busWidth,8,busWidthBytes),
-	     Add#(a__,64,busWidth),
-	     Add#(b__,32,busWidth));
+   let readFifo <- mkFIFOF;
+   let writeFifo <- mkFIFOF;
 
-   let copyEngine <- mkMemcpyEngine(dma_read_server, dma_write_server);
+   MemreadEngine#(64) re <- mkMemreadEngine(readFifo);
+   MemwriteEngine#(64) we <- mkMemwriteEngine(writeFifo);
 
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
@@ -54,16 +56,25 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(DmaPointer)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    
-
+   mkConnection(re.dmaClient,dma_read_server);
+   mkConnection(we.dmaClient,dma_write_server);
+   
    rule start(iterCnt > 0);
-      copyEngine.startCopy(wrPointer, rdPointer, numWords, burstLen);
+      re.start(rdPointer, numWords, burstLen);
+      we.start(wrPointer, numWords, burstLen);
       iterCnt <= iterCnt-1;
    endrule
 
    rule finish;
-      let rv <- copyEngine.done;
+      let rv0 <- re.finish;
+      let rv1 <- we.finish;
       if(iterCnt==0)
 	 indication.done;
+   endrule
+   
+   rule xfer;
+      readFifo.deq;
+      writeFifo.enq(readFifo.first);
    endrule
    
    method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);

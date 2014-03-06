@@ -98,40 +98,6 @@ module mkDmaReadBuffer(DmaReadBuffer#(bsz, maxBurst))
    endinterface
 endmodule
 
-module mkDmaReadNoBuffer(DmaReadBuffer#(bsz, maxBurst));
-
-   FIFOF#(DmaData#(bsz)) dataFifo <- mkFIFOF;
-   FIFOF#(DmaRequest)     reqFifo <- mkFIFOF;
-   Reg#(Bit#(32))     outstanding <- mkReg(0);
-   
-   interface DmaReadServer dmaServer;
-      interface PutF readReq;
-	 method Action put(DmaRequest req);
-	    reqFifo.enq(req);
-	    outstanding <= outstanding+extend(req.burstLen);
-	 endmethod
-	 method Bool notFull;
-	    return reqFifo.notFull;
-	 endmethod
-      endinterface
-      interface GetF readData = toGetF(dataFifo);
-   endinterface
-   
-   interface DmaReadClient dmaClient;
-      interface GetF readReq = toGetF(reqFifo);
-      interface PutF readData;
-	 method Action put(DmaData#(bsz) data);
-	    dataFifo.enq(data);
-	    outstanding <= outstanding-1;
-	 endmethod
-	 method Bool notFull;
-	    return outstanding > 0;
-	 endmethod
-      endinterface
-   endinterface
-   
-endmodule
-
 //
 // @brief Makes a Dma channel for writing wordSize words from memory.
 //
@@ -178,24 +144,4 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, maxBurst))
       endinterface
       interface PutF writeDone = toPutF(doneTags);
    endinterface
-endmodule
-
-module mkDmaWriteNoBuffer(DmaWriteBuffer#(bsz, maxBurst));
-
-   FIFOF#(DmaData#(bsz)) dataFifo <- mkFIFOF;
-   FIFOF#(DmaRequest)     reqFifo <- mkFIFOF;
-   FIFOF#(Bit#(6))       doneFifo <- mkFIFOF;
-   
-   interface DmaWriteServer dmaServer;
-      interface PutF writeReq  = toPutF(reqFifo);
-      interface PutF writeData = toPutF(dataFifo);
-      interface GetF writeDone = toGetF(doneFifo);
-   endinterface
-   
-   interface DmaWriteClient dmaClient;
-      interface GetF writeReq = toGetF(reqFifo);
-      interface GetF writeData = toGetF(dataFifo);
-      interface PutF writeDone = toPutF(doneFifo);
-   endinterface
-   
 endmodule

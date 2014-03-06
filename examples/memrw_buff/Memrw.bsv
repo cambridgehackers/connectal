@@ -24,6 +24,7 @@ import Vector::*;
 import FIFOF::*;
 import GetPutF::*;
 import FIFO::*;
+import Connectable::*;
 
 import PortalMemory::*;
 import Dma::*;
@@ -40,13 +41,15 @@ interface MemrwIndication;
    method Action writeDone;
 endinterface
 
-interface Memrw;
-   interface MemrwRequest request;
-   interface DmaReadClient#(64) dmaReadClient;
-   interface DmaWriteClient#(64) dmaWriteClient;
-endinterface
+module mkMemrwRequest#(MemrwIndication indication,
+		       DmaReadServer#(64) dma_read_server,
+		       DmaWriteServer#(64) dma_write_server)(MemrwRequest);
 
-module mkMemrw#(MemrwIndication indication)(Memrw);
+   let readFifo <- mkFIFOF;
+   let writeFifo <- mkFIFOF;
+
+   MemreadEngine#(64) re <- mkMemreadEngine(readFifo);
+   MemwriteEngine#(64) we <- mkMemwriteEngine(writeFifo);
 
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
@@ -55,11 +58,8 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    Reg#(DmaPointer)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    
-   let readFifo <- mkFIFOF;
-   let writeFifo <- mkFIFOF;
-
-   let re <- mkMemreadEngine(readFifo);
-   let we <- mkMemwriteEngine(writeFifo);
+   mkConnection(re.dmaClient,dma_read_server);
+   mkConnection(we.dmaClient,dma_write_server);
    
    rule startRead(rdIterCnt > 0);
       $display("startRead %d", rdIterCnt);
@@ -68,7 +68,7 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    endrule
 
    rule finishRead;
-      let rv0 <- re.finished;
+      let rv0 <- re.finish;
       if(rdIterCnt==0)
 	 indication.readDone;
    endrule
@@ -84,7 +84,7 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    endrule
 
    rule finishWrite;
-      let rv0 <- we.finished;
+      let rv0 <- we.finish;
       if(wrIterCnt==0)
 	 indication.writeDone;
    endrule
@@ -93,20 +93,15 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
       writeFifo.enq(1);
    endrule
    
-   interface MemrwRequest request;
-      method Action start(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
-	 $display("start wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
-	 indication.started;
-	 // initialized
-	 wrPointer <= wp;
-	 rdPointer <= rp;
-	 numWords  <= nw;
-	 rdIterCnt   <= ic;
-	 wrIterCnt   <= ic;
-	 burstLen  <= bl;
-      endmethod
-   endinterface
-   interface DmaReadClient dmaReadClient = re.dmaClient;
-   interface DmaWriteClient dmaWriteClient = we.dmaClient;
-   
+   method Action start(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
+      $display("start wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
+      indication.started;
+      // initialized
+      wrPointer <= wp;
+      rdPointer <= rp;
+      numWords  <= nw;
+      rdIterCnt   <= ic;
+      wrIterCnt   <= ic;
+      burstLen  <= bl;
+   endmethod
 endmodule

@@ -34,13 +34,12 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(e__, c__, DmaOffsetSize),
 	    Add#(f__, addrWidth, 40));
 
-   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
    Memread memread <- mkMemread(memreadIndicationProxy.ifc);
    MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequest,memread.request);
 
    Vector#(1, DmaReadClient#(64)) clients = cons(memread.dmaClient, nil);
+   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, 16, clients, nil);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 

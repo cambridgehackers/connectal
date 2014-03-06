@@ -28,15 +28,17 @@ import FIFO::*;
 import PortalMemory::*;
 import Dma::*;
 
-interface MemwriteEngine;
-   method Action start(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen);
-   method ActionValue#(Bool) finished();
-   interface DmaWriteClient#(64) dmaClient;
+interface MemwriteEngine#(numeric type busWidth);
+   method Action start(DmaPointer pointer, Bit#(32) numWords, Bit#(32) burstLen);
+   method ActionValue#(Bool) finish();
+   interface DmaWriteClient#(busWidth) dmaClient;
 endinterface
 
-module  mkMemwriteEngine#(FIFOF#(Bit#(64)) f) (MemwriteEngine);
+module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 
-   Reg#(Bit#(32))         numWords <- mkReg(0);
+   provisos (Div#(busWidth,8,busWidthBytes));
+
+   Reg#(Bit#(32))         numBeats <- mkReg(0);
    Reg#(Bit#(32))           reqCnt <- mkReg(0);
    
    Reg#(Bit#(DmaOffsetSize))   off <- mkReg(0);
@@ -48,18 +50,21 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(64)) f) (MemwriteEngine);
 
    FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
    FIFOF#(void)                 wf <- mkSizedFIFOF(1);
+
+   let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
+   let words_per_beat = bytes_per_beat>>2;
    
    method Action start(Bit#(32) p, Bit#(32) nw, Bit#(32) bl);
-      numWords <= nw;
+      numBeats <= nw/words_per_beat;
       reqCnt <= 0;
       off <= 0;
-      delta <= 8*extend(bl);
+      delta <= bytes_per_beat*extend(bl);
       pointer <= p;
       burstLen <= truncate(bl);
       wf.enq(?);
    endmethod
 
-   method ActionValue#(Bool) finished();
+   method ActionValue#(Bool) finish();
       wf.deq;
       ff.deq;
       return ff.first;
@@ -67,18 +72,18 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(64)) f) (MemwriteEngine);
 
    interface DmaWriteClient dmaClient;
       interface GetF writeReq;
-	 method ActionValue#(DmaRequest) get() if (reqCnt < numWords>>1);
+	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
-	    acks.enq(reqCnt+extend(burstLen) == (numWords>>1));
+	    acks.enq(reqCnt+extend(burstLen) == numBeats);
 	    return DmaRequest {pointer: pointer, offset: off, burstLen: burstLen, tag: 1};
 	 endmethod
 	 method Bool notEmpty;
-	    return (reqCnt < numWords>>1);
+	    return (reqCnt < numBeats);
 	 endmethod
       endinterface
       interface GetF writeData;
-	 method ActionValue#(DmaData#(64)) get();
+	 method ActionValue#(DmaData#(busWidth)) get();
 	    f.deq;
 	    return DmaData{data:f.first, tag: 1};
 	 endmethod
