@@ -22,8 +22,6 @@
 
 // BSV Libraries
 import FIFO::*;
-import FIFOF::*;
-import SpecialFIFOs :: *;
 import Vector::*;
 import GetPut::*;
 import GetPutF::*;
@@ -76,19 +74,18 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
-   FIFO#(DmaRequest)    lreqFifo <- mkPipelineFIFO();
-   FIFO#(DmaRequest)     reqFifo <- mkPipelineFIFO();
-   FIFO#(Bit#(addrWidth)) paFifo <- mkPipelineFIFO();
+   FIFO#(DmaRequest)    lreqFifo <- mkSizedFIFO(1);
+   FIFO#(DmaRequest)     reqFifo <- mkSizedFIFO(1);
+   FIFO#(Bit#(addrWidth)) paFifo <- mkSizedFIFO(1);
 
    FIFO#(DmaChannelId)  chanFifo <- mkSizedFIFO(numRequests);
    FIFO#(DmaRequest)    dreqFifo <- mkSizedFIFO(numRequests);
 
    Reg#(Bit#(8))        burstReg <- mkReg(0);   
-   
-   Reg#(Bit#(64)) beatCount <- mkReg(0);
+   Reg#(Bit#(64))      beatCount <- mkReg(0);
 
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
-       rule loadChannel if (readClients[selectReg].readData.notFull());
+       rule loadChannel;
 	  DmaRequest req <- readClients[selectReg].readReq.get();
 	  //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.pointer, req.offset, req.burstLen);
 	  if (bad_pointer(req.pointer))
@@ -108,6 +105,7 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 	 // squash request
 	 $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
+	 chanFifo.deq;
       end
       else begin
 	 if (False && physAddr[31:24] != 0)
@@ -178,19 +176,19 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
    
    provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
    
-   FIFO#(DmaRequest) lreqFifo <- mkPipelineFIFO();
-   FIFO#(DmaRequest) reqFifo <- mkFIFO();
-   FIFO#(DmaRequest) dreqFifo <- mkSizedFIFO(numRequests);
-   FIFO#(Bit#(addrWidth))        paFifo     <- mkFIFO();
+   FIFO#(DmaRequest)      lreqFifo <- mkSizedFIFO(1);
+   FIFO#(DmaRequest)       reqFifo <- mkSizedFIFO(1);
+   FIFO#(Bit#(addrWidth))   paFifo <- mkSizedFIFO(1);
+
+   FIFO#(DmaRequest)      dreqFifo <- mkSizedFIFO(numRequests);
    FIFO#(DmaChannelId)    chanFifo <- mkSizedFIFO(numRequests);
    FIFO#(DmaChannelId)    respFifo <- mkSizedFIFO(numRequests);
 
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
-
-   Reg#(Bit#(64)) beatCount <- mkReg(0);
+   Reg#(Bit#(64))       beatCount <- mkReg(0);
 
    for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
-       rule loadChannel if (writeClients[selectReg].writeData.notEmpty());
+       rule loadChannel;
 	  DmaRequest req <- writeClients[selectReg].writeReq.get();
 	  //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.pointer, req.offset, req.burstLen, debugReg);
 	  if (bad_pointer(req.pointer))
@@ -210,6 +208,7 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
 	 // squash request
 	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
+	 chanFifo.deq;
       end
       else begin
 	 reqFifo.enq(req);

@@ -26,6 +26,7 @@ import GetPutF::*;
 import Vector::*;
 
 import Dma::*;
+import MemreadEngine::*;
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -45,77 +46,55 @@ endinterface
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
+   Reg#(DmaPointer)        pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
+   Reg#(Bit#(32))         burstLen <- mkReg(0);
+   Reg#(Bit#(32))          iterCnt <- mkReg(0);
+   
    Reg#(Bit#(32))           srcGen <- mkReg(0);
-   Reg#(Bit#(32))            rdCnt <- mkReg(0);
-   
-   Reg#(Bit#(DmaOffsetSize)) rdOff <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) delta <- mkReg(0);
-
-   Reg#(DmaPointer)      rdPointer <- mkReg(0);
-
-   Reg#(Bool)         dataMismatch <- mkReg(False);  
-   Reg#(Bit#(8))          burstLen <- mkReg(0);
-   
-   Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
+   FIFOF#(Bit#(64))       readFifo <- mkFIFOF;
+   let                          re <- mkMemreadEngine(readFifo);
    
-   rule readReq (rdIterCnt > 0 && rdCnt == numWords>>1);
-      rdCnt <= 0;
-      rdIterCnt <= rdIterCnt-1;
-      rdOff <= 0;
+   rule start (iterCnt > 0);
+      iterCnt <= iterCnt-1;
+      re.start(pointer, numWords, burstLen);
    endrule
    
-   interface DmaReadClient dmaClient;
-      interface GetF readReq;
-	 method ActionValue#(DmaRequest) get() if (rdIterCnt > 0 && rdCnt < numWords>>1);
-	    //$display("rdReq: pointer=%d offset=%h burstlen=%d", rdPointer, rdOff, burstLen);
-	    rdCnt <= rdCnt+extend(burstLen);
-	    rdOff <= rdOff + delta;
-	    return DmaRequest { pointer: rdPointer, offset: rdOff, burstLen: burstLen, tag: 1 };
-	 endmethod
-	 method Bool notEmpty();
-	    return (rdIterCnt > 0 && rdCnt < numWords>>1);
-	 endmethod
-      endinterface : readReq
-      interface PutF readData;
-	 method Action put(DmaData#(64) d);
-	    //$display("readData  data=%h tag=%h",  d.data, d.tag);
-	    let v = d.data;
-	    let expectedV = {srcGen+1,srcGen};
-	    let misMatch = v != expectedV;
-	    mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
-	    if (srcGen+2 == numWords)
-	       srcGen <= 0;
-	    else
-	       srcGen <= srcGen+2;
-	    if (srcGen+2 == numWords && rdIterCnt == 0)
-	       indication.readDone(mismatchCount);
-	 endmethod
-	 method Bool notFull();
-	    return True;
-	 endmethod
-      endinterface : readData
-   endinterface
+   rule finish;
+      let rv <- re.finished;
+      if (iterCnt == 0)
+	 indication.readDone(mismatchCount);
+   endrule
    
+   rule check;
+      readFifo.deq;
+      let v = readFifo.first;
+      let expectedV = {srcGen+1,srcGen};
+      let misMatch = v != expectedV;
+      mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
+      if (srcGen+2 == numWords)
+	 srcGen <= 0;
+      else
+	 srcGen <= srcGen+2;
+   endrule
+   
+   interface DmaReadClient dmaClient = re.dmaClient;
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	 $display("startRead rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", rp, nw, bl, ic);
 	 indication.started(nw);
-	 // initialized
-	 rdPointer <= rp;
+	 pointer <= rp;
 	 numWords  <= nw;
-	 burstLen  <= truncate(bl);
-	 delta     <= 8*extend(bl);
-	 rdIterCnt <= ic;
-	 // reset
+	 burstLen  <= bl;
+	 iterCnt <= ic;
+	 mismatchCount <= 0;
 	 srcGen <= 0;
-	 rdCnt <= 0;
-	 rdOff <= 0;
-	 dataMismatch <= False;
       endmethod
       method Action getStateDbg();
-	 indication.reportStateDbg(rdCnt, mismatchCount);
+	 indication.reportStateDbg(iterCnt, mismatchCount);
       endmethod
    endinterface
 endmodule
+
+

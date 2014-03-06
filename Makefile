@@ -21,6 +21,7 @@ testnames = echo     \
             memcpy   \
             memcpy_nobuff   \
             memread  \
+            memrw \
             memread128 \
             memread2 \
 	    memwrite \
