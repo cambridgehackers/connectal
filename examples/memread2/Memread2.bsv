@@ -25,6 +25,7 @@ import GetPutF::*;
 import Vector::*;
 
 import Dma::*;
+import MemreadEngine::*;
 
 interface Memread2Request;
    method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) burstLen);
@@ -48,25 +49,15 @@ endinterface
 
 module mkMemread2#(Memread2Indication indication) (Memread2);
 
-   Reg#(DmaPointer) streamRdPointer <- mkReg(0);
-   Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
-   Reg#(Bit#(32)) putOffset <- mkReg(0);
-   Reg#(Bit#(32)) mismatchCount <- mkReg(0);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize))      offset <- mkReg(0);
-   FIFOF#(Vector#(2, Bit#(64))) dfifo <- mkSizedFIFOF(16);
-
-   Reg#(DmaPointer) streamRdPointer2 <- mkReg(0);
-   Reg#(Bit#(32)) streamRdCnt2 <- mkReg(0);
-   Reg#(Bit#(32)) putOffset2 <- mkReg(0);
+   Reg#(Bit#(32)) mismatchCount <- mkReg(0);
+   FIFOF#(Bit#(64)) dfifo <- mkSizedFIFOF(16);
+   let re <- mkMemreadEngine(dfifo);
    Reg#(Bit#(32)) mismatchCount2 <- mkReg(0);
-   Reg#(Bit#(32))      srcGen2 <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize))      offset2 <- mkReg(0);
-   FIFOF#(Vector#(2, Bit#(64))) dfifo2 <- mkSizedFIFOF(16);
+   FIFOF#(Bit#(64)) dfifo2 <- mkSizedFIFOF(16);
+   let re2 <- mkMemreadEngine(dfifo2);
 
    FIFOF#(Tuple3#(Bit#(32),Bit#(64),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
-   Reg#(Bit#(8)) burstLen <- mkReg(8);
-   Reg#(Bit#(DmaOffsetSize)) deltaOffset <- mkReg(8*8);
 
    rule mismatch;
       let tpl = mismatchFifo.first();
@@ -76,116 +67,43 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
 
    Reg#(Bit#(32)) joinCount <- mkReg(0);
    rule joinreads;
-      let vs1 = dfifo.first;
+      srcGen <= srcGen+2;
+      let expectedV1 = {srcGen+1,srcGen};
+      let expectedV2 = {(srcGen+1)*3,srcGen*3};
+      let v1 = dfifo.first;
       dfifo.deq();
-      let vs2 = dfifo2.first;
+      let v2 = dfifo2.first;
       dfifo2.deq();
 
-      let expectedV = vs1[0];
-      let v = vs1[1];
-      let misMatch = v != expectedV;
+      let misMatch = v1 != expectedV1;
       mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
       if (misMatch)
-	 mismatchFifo.enq(tuple3(putOffset, expectedV, v));
+	 mismatchFifo.enq(tuple3(srcGen, expectedV1, v1));
 
-      let expectedV2 = vs2[0];
-      let v2 = vs2[1];
       let misMatch2 = v2 != expectedV2;
       mismatchCount2 <= mismatchCount2 + (misMatch2 ? 1 : 0);
 
-      if (joinCount == 1) begin
-	 indication.readDone(mismatchCount);
-      end
       joinCount <= joinCount - 1;
    endrule
-
+   
+   rule done;
+      let rv <- re.finish;
+      let rv2 <- re2.finish;
+      indication.readDone(mismatchCount);
+   endrule
+   
    interface Memread2Request request;
-       method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) bl) if (streamRdCnt == 0);
-	  streamRdPointer <= pointer;
-	  streamRdCnt <= numWords>>1;
-	  putOffset <= 0;
-	  burstLen <= truncate(bl);
-	  deltaOffset <= 8*extend(bl);
-
-	  streamRdPointer2 <= pointer;
-	  streamRdCnt2 <= numWords>>1;
-	  putOffset2 <= 0;
+       method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) bl);
+	  re.start(pointer,numWords,bl);
+	  re2.start(pointer2,numWords,bl);
 	  indication.started(numWords);
-
 	  joinCount <= numWords>>1;
        endmethod
 
        method Action getStateDbg();
-	  indication.reportStateDbg(streamRdCnt, mismatchCount);
+	  indication.reportStateDbg(srcGen, mismatchCount);
        endmethod
    endinterface
-
-   interface DmaReadClient dmaClient;
-      interface GetF readReq;
-	 method ActionValue#(DmaRequest) get() if (streamRdCnt > 0 && mismatchFifo.notFull());
-	    streamRdCnt <= streamRdCnt-extend(burstLen);
-	    offset <= offset + deltaOffset;
-	    //else if (streamRdCnt[5:0] == 6'b0)
-	    //   indication.readReq(streamRdCnt);
-	    return DmaRequest { pointer: streamRdPointer, offset: offset, burstLen: burstLen, tag: truncate(offset) };
-	 endmethod
-	 method Bool notEmpty();
-	    return streamRdCnt > 0 && mismatchFifo.notFull();
-	 endmethod
-      endinterface : readReq
-      interface PutF readData;
-	 method Action put(DmaData#(64) d);
-	    //$display("readData putOffset=%h d=%h tag=%h", putOffset, d.data, d.tag);
-	    let v = d.data;
-	    let expectedV = {srcGen+1,srcGen};
-
-	    Vector#(2, Bit#(64)) vs;
-	    vs[0] = expectedV;
-	    vs[1] = v;
-	    dfifo.enq(vs);
-	    srcGen <= srcGen+2;
-	    putOffset <= putOffset + 8;
-	    //indication.rData(v);
-	 endmethod
-	 method Bool notFull();
-	    return dfifo.notFull();
-	 endmethod
-      endinterface : readData
-   endinterface
-
-   interface DmaReadClient dmaClient2;
-      interface GetF readReq;
-	 method ActionValue#(DmaRequest) get() if (streamRdCnt2 > 0);
-	    streamRdCnt2 <= streamRdCnt2-extend(burstLen);
-	    offset2 <= offset2 + deltaOffset;
-	    //else if (streamRdCnt[5:0] == 6'b0)
-	    //   indication.readReq(streamRdCnt);
-	    return DmaRequest { pointer: streamRdPointer2, offset: offset2, burstLen: burstLen, tag: truncate(offset2) };
-	 endmethod
-	 method Bool notEmpty();
-	    return streamRdCnt2 > 0;
-	 endmethod
-      endinterface : readReq
-      interface PutF readData;
-	 method Action put(DmaData#(64) d);
-	    //$display("readData putOffset=%h d=%h tag=%h", putOffset, d.data, d.tag);
-	    let v = d.data;
-	    let expectedV = {(srcGen2+1)*3,srcGen2*3};
-
-	    Vector#(2, Bit#(64)) vs;
-	    vs[0] = expectedV;
-	    vs[1] = v;
-	    dfifo2.enq(vs);
-
-	    //if (misMatch)
-	    //   mismatchFifo.enq(tuple3(putOffset, expectedV, v));
-	    srcGen2 <= srcGen2+2;
-	    putOffset2 <= putOffset2 + 8;
-	    //indication.rData(v);
-	 endmethod
-	 method Bool notFull();
-	    return False;
-	 endmethod
-      endinterface : readData
-   endinterface
+   interface DmaReadClient dmaClient = re.dmaClient;
+   interface DmaReadClient dmaClient2 = re2.dmaClient;
 endmodule
