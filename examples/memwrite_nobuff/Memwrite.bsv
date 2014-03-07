@@ -58,7 +58,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    rule start (iterCnt > 0);
       iterCnt <= iterCnt-1;
-      we.start(pointer, numWords, burstLen);
+      we.start(pointer, 0, numWords, burstLen);
    endrule
    
    rule finish;

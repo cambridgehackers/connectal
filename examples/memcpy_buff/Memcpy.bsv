@@ -60,8 +60,8 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    mkConnection(we.dmaClient,dma_write_server);
    
    rule start(iterCnt > 0);
-      re.start(rdPointer, numWords, burstLen);
-      we.start(wrPointer, numWords, burstLen);
+      re.start(rdPointer, 0, numWords, burstLen);
+      we.start(wrPointer, 0, numWords, burstLen);
       iterCnt <= iterCnt-1;
    endrule
 

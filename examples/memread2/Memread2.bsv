@@ -94,8 +94,8 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    
    interface Memread2Request request;
        method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) bl);
-	  re.start(pointer,numWords,bl);
-	  re2.start(pointer2,numWords,bl);
+	  re.start(pointer,0,numWords,bl);
+	  re2.start(pointer2,0,numWords,bl);
 	  indication.started(numWords);
 	  joinCount <= numWords>>1;
        endmethod
