@@ -48,6 +48,13 @@ $(bsimtests):
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
 	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
 
+bsimruns = $(addsuffix .bsimrun, $(testnames))
+
+bsimruns: $(bsimruns)
+
+$(bsimruns):
+	# already executed test in 'bsim'
+
 zedtests = $(addsuffix .zedboard, $(testnames))
 
 zedtests: $(zedtests)
