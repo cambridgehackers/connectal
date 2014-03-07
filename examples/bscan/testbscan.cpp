@@ -62,7 +62,7 @@ class BscanIndication : public BscanIndicationWrapper
 {
 public:
     virtual void bscanGet(uint32_t v) {
-        fprintf(stderr, "bscanGet: %lx\n", v);
+        fprintf(stderr, "bscanGet: %ux\n", v);
     }
     BscanIndication(unsigned int id, PortalPoller *poller) : BscanIndicationWrapper(id, poller) {
     }
