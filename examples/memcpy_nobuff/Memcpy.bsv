@@ -29,6 +29,7 @@ import PortalMemory::*;
 import Dma::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
+import BRAMFIFOFLevel::*;
 
 interface MemcpyRequest;
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -47,18 +48,19 @@ endinterface
 
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   let readFifo <- mkFIFOF;
-   let writeFifo <- mkFIFOF;
+   FIFOFLevel#(Bit#(64), 32) readFifo <- mkBRAMFIFOFLevel;
+   FIFOF#(Bit#(64)) writeFifo <- mkFIFOF;
 
-   let re <- mkMemreadEngine(readFifo);
-   let we <- mkMemwriteEngine(writeFifo);
+   MemreadEngine#(64)  re <- mkMemreadEngine(readFifo.fifo);
+   MemwriteEngine#(64) we <- mkMemwriteEngine(writeFifo);
 
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(DmaPointer)      rdPointer <- mkReg(0);
    Reg#(DmaPointer)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
-
+   Reg#(Bit#(32))          xferCnt <- mkReg(0);
+   
    rule start(iterCnt > 0);
       re.start(rdPointer, 0, numWords, burstLen);
       we.start(wrPointer, 0, numWords, burstLen);
@@ -72,9 +74,14 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 	 indication.done;
    endrule
    
-   rule xfer;
-      readFifo.deq;
-      writeFifo.enq(readFifo.first);
+   rule start_burst_xfer if (readFifo.highWater(truncate(burstLen)) && xferCnt == burstLen);
+      xferCnt <= 0;
+   endrule      
+
+   rule complete_burst_xfer if (xferCnt < burstLen);
+      xferCnt <= xferCnt+1;
+      readFifo.fifo.deq;
+      writeFifo.enq(readFifo.fifo.first);
    endrule
 
    interface MemcpyRequest request;
@@ -87,6 +94,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 	 numWords  <= nw;
 	 iterCnt   <= ic;
 	 burstLen  <= bl;
+	 xferCnt   <= bl;
       endmethod
    endinterface
    interface DmaReadClient dmaReadClient = re.dmaClient;
