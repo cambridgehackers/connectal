@@ -65,9 +65,7 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
    FIFO#(void) f <- mkSizedFIFO(1);
    Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst); 
    Reg#(bramIdx) i <- mkReg(0);
-   Reg#(Bool) iv <- mkReg(False);
    Reg#(bramIdx) j <- mkReg(0);
-   Reg#(Bool) jv <- mkReg(False);
    Reg#(bramIdx) n <- mkReg(0);
    Reg#(bramIdx) wbase <- mkReg(0);
    Reg#(DmaPointer) ptr <- mkReg(0);
@@ -78,12 +76,11 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
    MemreadEngine#(busWidth) re <- mkMemreadEngine(readFifo);
    let bus_width_in_words = fromInteger(valueOf(busWidth)/32);
    
-   rule loadReq(iv);
+   rule loadReq(i < n);
       //$display("lloadReq %d %d", ptr, i);
       re.start(ptr, roff + rbase, bus_width_in_words, 1);
       i <= i+fromInteger(valueOf(nd));
       roff <= roff+fromInteger(valueOf(nb));
-      iv <= (i+1 < n);
    endrule
    
    rule loadResp;
@@ -94,24 +91,21 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
       gb.enq(rvv);
    endrule
    
-   rule load(jv);
+   rule load(j < n);
       //$display("%d %d %h", ptr, gb.first[0], j+wbase);
       br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:j+wbase, datain:gb.first[0]});
       gb.deq;
-      jv <= (j+1 < n);
       j <= j+1;
       if (j+1 == n)
 	 f.enq(?);
    endrule
    
-   rule discard(!jv);
+   rule discard(j >= n);
       gb.deq;
    endrule
    
    method Action start(DmaPointer h, Bit#(DmaOffsetSize) rb, bramIdx num, bramIdx wb);
       $display("mkBRAMReadClient::start(%h, %h, %h %h)", h, wb, num, rb);
-      iv <= True;
-      jv <= True;
       i <= 0;
       j <= 0;
       n <= num;
