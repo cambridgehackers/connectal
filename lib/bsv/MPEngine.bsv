@@ -93,6 +93,7 @@ module mkMPEngine#(FIFOF#(void) compf,
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
 
    rule finish_setup;
+      $display("finish_setup");
       let x <- n2b.finish;
       let y <- mp2b.finish;
       stage <= Ready;

@@ -60,8 +60,8 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    mkConnection(we.dmaClient,dma_write_server);
    
    rule start(iterCnt > 0);
-      re.start(rdPointer, 0, numWords, burstLen);
-      we.start(wrPointer, 0, numWords, burstLen);
+      re.start(rdPointer, 0, numWords*4, burstLen*4);
+      we.start(wrPointer, 0, numWords*4, burstLen*4);
       iterCnt <= iterCnt-1;
    endrule
 
@@ -73,6 +73,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    endrule
    
    rule xfer;
+      //$display("xfer: %h", readFifo.first);
       readFifo.deq;
       writeFifo.enq(readFifo.first);
    endrule

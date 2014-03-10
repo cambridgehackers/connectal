@@ -50,14 +50,11 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
    provisos(Bits#(d,dsz),
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),
-	    Div#(busWidth,8,nb),
+	    Add#(1,a__,nd),
 	    Eq#(bramIdx),
 	    Ord#(bramIdx),
 	    Arith#(bramIdx),
-	    Bits#(bramIdx,b__),
-	    Add#(d__,b__,DmaOffsetSize),
-	    Add#(1, c__, nd),
-	    Add#(a__, dsz, busWidth));
+	    Bits#(bramIdx,b__));
    
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
@@ -74,13 +71,13 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
    
    let readFifo <- mkFIFOF;
    MemreadEngine#(busWidth) re <- mkMemreadEngine(readFifo);
-   let bus_width_in_words = fromInteger(valueOf(busWidth)/32);
+   let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
    rule loadReq(i < n);
-      //$display("lloadReq %d %d", ptr, i);
-      re.start(ptr, roff + rbase, bus_width_in_words, 1);
+      //$display("lloadReq %d %d %d", ptr, roff+rbase, bus_width_in_bytes);
+      re.start(ptr, roff + rbase, bus_width_in_bytes, bus_width_in_bytes);
       i <= i+fromInteger(valueOf(nd));
-      roff <= roff+fromInteger(valueOf(nb));
+      roff <= roff+bus_width_in_bytes;
    endrule
    
    rule loadResp;
@@ -142,7 +139,6 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,Bit#(busWidth)) br)(BRAMWriteClien
    
    let writeFifo <- mkFIFOF;
    MemwriteEngine#(busWidth) we <- mkMemwriteEngine(writeFifo);
-   let bus_width_in_words = fromInteger(valueOf(busWidth)/32);
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
    rule bramReq(j < n);
@@ -156,7 +152,7 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,Bit#(busWidth)) br)(BRAMWriteClien
    endrule
    
    rule loadReq(i < n);
-      we.start(ptr, woff + wbase, bus_width_in_words, 1);
+      we.start(ptr, woff + wbase, bus_width_in_bytes, bus_width_in_bytes);
       i <= i+1;
       woff <= woff+bus_width_in_bytes;
    endrule
