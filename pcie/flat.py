@@ -261,6 +261,8 @@ def print_tlp_log(tlplog, f=None):
         print_tlp(tlpdata, f)
     last_seqno = mpz(-1)
     for seqno in sorted(traceinfo.iterkeys()):
+        if seqno == 0:
+            continue
         if last_seqno >= 0:
             delta = seqno - last_seqno
         else:
