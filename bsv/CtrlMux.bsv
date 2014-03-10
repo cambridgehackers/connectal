@@ -72,27 +72,30 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 `ifdef MULTIPLE_WRITES
    Vector#(numIfcs,FIFOF#(Bit#(_c))) req_aw_fifos <- replicateM(mkSizedFIFOF(1));
 `else
-   FIFO#(void) req_aw_fifo <- mkPipelineFIFO;
+   FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
 `endif   
 
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
-
    function Bit#(4) psel(Bit#(_a) a);
       return a[port_sel_high:port_sel_low];
    endfunction
    
+`ifdef MULTIPLE_READS
    function Maybe#(Bit#(TLog#(numIfcs))) xxx(Integer x, GetF#(t) y);
       return (y.notEmpty) ? tagged Valid fromInteger(x) : tagged Invalid;
    endfunction
    
    function Maybe#(Bit#(TLog#(numIfcs))) yyy(Maybe#(Bit#(TLog#(numIfcs))) x, Maybe#(Bit#(TLog#(numIfcs))) y);
       return isValid(x) ? x : y;
-   endfunction
-   
+   endfunction   
    let next_resp_read_idx = fold(yyy, zipWith(xxx, genVector, map(get_resp_read,ifcs)));
-
+`else
+   FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
+   Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
+`endif
+   
 `ifdef MULTIPLE_WRITES
    function Maybe#(Bit#(TLog#(numIfcs))) zzz(Bit#(_c) r, Integer x, FIFOF#(Bit#(_c)) y);
       return y.notEmpty ? (y.first == r ? tagged Valid fromInteger(x) : tagged Invalid) : tagged Invalid; 
@@ -162,9 +165,15 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 	 ifcs[rsv].req_ar.put(req);
 	 if (rsv > 0)
 	    dir.readEvent <= ?;
+`ifdef MULTIPLE_READS
+`else
+	 req_ar_fifo.enq(?);
+	 rs <= rsv;
+`endif
       endmethod
    endinterface
    interface GetF resp_read;
+`ifdef MULTIPLE_READS
       method ActionValue#(Axi3ReadResponse#(_b,_c)) get() if (next_resp_read_idx matches tagged Valid .idx);
 	 let rv <- ifcs[idx].resp_read.get();
 	 return rv;
@@ -172,6 +181,16 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
       method Bool notEmpty();
 	 return isValid(next_resp_read_idx);
       endmethod
+`else
+      method ActionValue#(Axi3ReadResponse#(_b,_c)) get();
+	 let rv <- ifcs[rs].resp_read.get();
+	 req_ar_fifo.deq;
+	 return rv;
+      endmethod
+      method Bool notEmpty();
+	 return ifcs[rs].resp_read.notEmpty();
+      endmethod
+`endif
    endinterface
    
 endmodule

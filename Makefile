@@ -48,13 +48,21 @@ memtests =  memcpy_buff      \
 	    memwrite_nobuff  \
             memrw_buff       \
             memrw_nobuff     \
+	    echo
 
 memtests.zedboard: $(addsuffix .zedboard, $(memtests))
 
 memtests.zedrun:  $(addsuffix .zedrun, $(memtests))
 
 memtests.zedboard.regression:
-	make -j 8 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.zedboard
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.zedboard
+
+memtests.kc705: $(addsuffix .kc705, $(memtests))
+
+memtests.kcrun:  $(addsuffix .kcrun, $(memtests))
+
+memtests.kc705.regression:
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.kc705
 
 
 
