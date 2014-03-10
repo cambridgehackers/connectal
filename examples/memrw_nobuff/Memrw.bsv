@@ -48,6 +48,12 @@ endinterface
 
 module mkMemrw#(MemrwIndication indication)(Memrw);
 
+   let readFifo <- mkFIFOF;
+   let writeFifo <- mkFIFOF;
+
+   MemreadEngine#(64) re <- mkMemreadEngine(readFifo);
+   MemwriteEngine#(64) we <- mkMemwriteEngine(writeFifo);
+   
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
@@ -55,15 +61,9 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    Reg#(DmaPointer)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    
-   let readFifo <- mkFIFOF;
-   let writeFifo <- mkFIFOF;
-
-   let re <- mkMemreadEngine(readFifo);
-   let we <- mkMemwriteEngine(writeFifo);
-   
    rule startRead(rdIterCnt > 0);
       $display("startRead %d", rdIterCnt);
-      re.start(rdPointer, numWords, burstLen);
+      re.start(rdPointer, 0, numWords, burstLen);
       rdIterCnt <= rdIterCnt-1;
    endrule
 
@@ -79,7 +79,7 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    
    rule startWrite(wrIterCnt > 0);
       $display("startWrite %d", wrIterCnt);
-      we.start(wrPointer, numWords, burstLen);
+      we.start(wrPointer, 0, numWords, burstLen);
       wrIterCnt <= wrIterCnt-1;
    endrule
 
@@ -94,17 +94,17 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    endrule
    
    interface MemrwRequest request;
-      method Action start(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
-	 $display("start wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
-	 indication.started;
-	 // initialized
-	 wrPointer <= wp;
-	 rdPointer <= rp;
-	 numWords  <= nw;
-	 rdIterCnt   <= ic;
-	 wrIterCnt   <= ic;
-	 burstLen  <= bl;
-      endmethod
+   method Action start(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
+      $display("start wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
+      indication.started;
+      // initialized
+      wrPointer <= wp;
+      rdPointer <= rp;
+      numWords  <= nw;
+      rdIterCnt   <= ic;
+      wrIterCnt   <= ic;
+      burstLen  <= bl;
+   endmethod
    endinterface
    interface DmaReadClient dmaReadClient = re.dmaClient;
    interface DmaWriteClient dmaWriteClient = we.dmaClient;

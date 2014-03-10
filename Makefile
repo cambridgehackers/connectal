@@ -49,6 +49,13 @@ $(bsimtests):
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
 	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
 
+bsimruns = $(addsuffix .bsimrun, $(testnames))
+
+bsimruns: $(bsimruns)
+
+$(bsimruns):
+	# already executed test in 'bsim'
+
 zedtests = $(addsuffix .zedboard, $(testnames))
 
 zedtests: $(zedtests)
@@ -133,6 +140,14 @@ $(kcruns):
 	pciescanportal
 	catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
 
+kc705runs = $(addsuffix .kc705run, $(testnames))
+kc705runs: $(kc705runs)
+
+$(kc705runs):
+	(cd examples/$(basename $@)/kc705; make program)
+	pciescanportal
+	catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
+
 vc707tests = $(addsuffix .vc707, $(testnames))
 vc707tests: $9vc707tests)
 
@@ -144,6 +159,14 @@ vcruns = $(addsuffix .vcrun, $(testnames))
 vcruns: $(vcruns)
 
 $(vcruns):
+	(cd examples/$(basename $@)/vc707; make program)
+	pciescanportal
+	catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
+
+vc707runs = $(addsuffix .vc707run, $(testnames))
+vc707runs: $(vc707runs)
+
+$(vc707runs):
 	(cd examples/$(basename $@)/vc707; make program)
 	pciescanportal
 	catchsegv examples/$(basename $@)/vc707/jni/mkpcietop

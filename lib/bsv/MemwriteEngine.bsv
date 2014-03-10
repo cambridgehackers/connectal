@@ -29,7 +29,7 @@ import PortalMemory::*;
 import Dma::*;
 
 interface MemwriteEngine#(numeric type busWidth);
-   method Action start(DmaPointer pointer, Bit#(32) numWords, Bit#(32) burstLen);
+   method Action start(DmaPointer pointer, Bit#(DmaOffsetSize) base, Bit#(32) numWords, Bit#(32) burstLen);
    method ActionValue#(Bool) finish();
    interface DmaWriteClient#(busWidth) dmaClient;
 endinterface
@@ -43,6 +43,7 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
    
    Reg#(Bit#(DmaOffsetSize))   off <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) delta <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize))  base <- mkReg(0);
 
    Reg#(DmaPointer)        pointer <- mkReg(0);
    Reg#(Bit#(8))          burstLen <- mkReg(0);
@@ -54,13 +55,14 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
    let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
    let words_per_beat = bytes_per_beat>>2;
    
-   method Action start(Bit#(32) p, Bit#(32) nw, Bit#(32) bl);
+   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) nw, Bit#(32) bl);
       numBeats <= nw/words_per_beat;
-      reqCnt <= 0;
-      off <= 0;
-      delta <= bytes_per_beat*extend(bl);
-      pointer <= p;
+      reqCnt   <= 0;
+      off      <= 0;
+      delta    <= bytes_per_beat*extend(bl);
+      pointer  <= p;
       burstLen <= truncate(bl);
+      base     <= b;
       wf.enq(?);
    endmethod
 
@@ -76,7 +78,7 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
 	    acks.enq(reqCnt+extend(burstLen) == numBeats);
-	    return DmaRequest {pointer: pointer, offset: off, burstLen: burstLen, tag: 1};
+	    return DmaRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: 1};
 	 endmethod
 	 method Bool notEmpty;
 	    return (reqCnt < numBeats);

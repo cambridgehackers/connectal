@@ -33,10 +33,12 @@ import GetPutF::*;
 import Vector::*;
 import BRAM::*;
 import Gearbox::*;
+import Connectable::*;
 
 import AxiMasterSlave::*;
 import Dma::*;
 import DmaUtils::*;
+import Dma2BRAM::*;
 
 interface MPEngine;
    method Action setup(Bit#(32) needlePointer, Bit#(32) mpNextPointer, Bit#(32) needle_len);
@@ -84,13 +86,15 @@ module mkMPEngine#(FIFOF#(void) compf,
    Reg#(Bit#(32)) haystackOff <- mkReg(0);
    Reg#(DmaPointer) haystackPointer <- mkReg(0);
    
-   DmaReadServer2BRAM#(NeedleIdx) n2b <- mkDmaReadServer2BRAM(needle_read_server, needle.portB);
-   DmaReadServer2BRAM#(NeedleIdx) mp2b <- mkDmaReadServer2BRAM(mp_next_read_server, mpNext.portB);
+   BRAMReadClient#(NeedleIdx,busWidth) n2b <- mkBRAMReadClient(needle.portB);
+   mkConnection(n2b.dmaClient, needle_read_server);
+   BRAMReadClient#(NeedleIdx,busWidth) mp2b <- mkBRAMReadClient(mpNext.portB);
+   mkConnection(mp2b.dmaClient, mp_next_read_server);
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
 
    rule finish_setup;
-      let x <- n2b.finished;
-      let y <- mp2b.finished;
+      let x <- n2b.finish;
+      let y <- mp2b.finish;
       stage <= Ready;
       conff.enq(?);
    endrule
@@ -176,8 +180,8 @@ module mkMPEngine#(FIFOF#(void) compf,
    
    method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
       needleLenReg <= extend(needle_len);
-      n2b.start(needle_pointer, pack(truncate(needle_len)));
-      mp2b.start(mpNext_pointer, pack(truncate(needle_len)));
+      n2b.start(needle_pointer, 0, pack(truncate(needle_len+1)), 0);
+      mp2b.start(mpNext_pointer, 0, pack(truncate(needle_len+1)), 0);
       jReg <= 0;
       iReg <= 0;
    endmethod

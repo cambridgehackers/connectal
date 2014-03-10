@@ -24,6 +24,7 @@ import Vector::*;
 import FIFOF::*;
 import GetPutF::*;
 import FIFO::*;
+import BRAMFIFO::*;
 
 import PortalMemory::*;
 import Dma::*;
@@ -47,21 +48,24 @@ endinterface
 
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   let readFifo <- mkFIFOF;
-   let writeFifo <- mkFIFOF;
-
-   let re <- mkMemreadEngine(readFifo);
-   let we <- mkMemwriteEngine(writeFifo);
+   FIFOF#(Bit#(64))  readFifo <- mkFIFOF;
+   FIFOF#(Bit#(64)) writeFifo <- mkFIFOF;
+   FIFOF#(Bit#(64))    buffer <- mkSizedBRAMFIFOF(32);
+   Reg#(Bit#(32))   bufferCnt <- mkReg(0);
+   Reg#(Bit#(32))     xferCnt <- mkReg(0);
+   
+   MemreadEngine#(64)  re <- mkMemreadEngine(readFifo);
+   MemwriteEngine#(64) we <- mkMemwriteEngine(writeFifo);
 
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(DmaPointer)      rdPointer <- mkReg(0);
    Reg#(DmaPointer)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
-
+   
    rule start(iterCnt > 0);
-      re.start(rdPointer, numWords, burstLen);
-      we.start(wrPointer, numWords, burstLen);
+      re.start(rdPointer, 0, numWords, burstLen);
+      we.start(wrPointer, 0, numWords, burstLen);
       iterCnt <= iterCnt-1;
    endrule
 
@@ -72,9 +76,24 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 	 indication.done;
    endrule
    
-   rule xfer;
+   rule fill_buffer;
+      $display("fill_buffer %d", bufferCnt);
+      buffer.enq(readFifo.first);
       readFifo.deq;
-      writeFifo.enq(readFifo.first);
+      bufferCnt <= bufferCnt+1;
+   endrule
+   
+   rule start_burst_xfer if (bufferCnt >= burstLen);
+      $display("start_burst_xfer %d", bufferCnt);
+      bufferCnt <= bufferCnt - burstLen;
+      xferCnt <= 0;
+   endrule      
+
+   rule complete_burst_xfer if (xferCnt < burstLen);
+      $display("complete_burst_xfer %d %d", xferCnt, burstLen);
+      xferCnt <= xferCnt+1;
+      buffer.deq;
+      writeFifo.enq(buffer.first);
    endrule
 
    interface MemcpyRequest request;
@@ -86,7 +105,9 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 	 rdPointer <= rp;
 	 numWords  <= nw;
 	 iterCnt   <= ic;
-	 burstLen  <= bl;
+	 burstLen  <= bl>>1;
+	 xferCnt   <= bl>>1;
+	 bufferCnt <= 0;
       endmethod
    endinterface
    interface DmaReadClient dmaReadClient = re.dmaClient;

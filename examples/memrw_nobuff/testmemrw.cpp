@@ -46,8 +46,6 @@ int numWords = 16 << 10;
 #endif
 size_t alloc_sz = numWords*sizeof(unsigned int);
 bool finished = false;
-bool memcmp_fail = false;
-unsigned int memcmp_count = 0;
 
 class MemrwIndication : public MemrwIndicationWrapper
 {
@@ -164,5 +162,5 @@ int main(int argc, const char **argv)
     .writeFile();
 
   sleep(2);
-  exit(memcmp_fail);
+  exit(0);
 }

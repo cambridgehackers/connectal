@@ -18,7 +18,6 @@ int numWords = 16 << 18;
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
 int mismatchCount = 0;
-int mismatchesReceived = 0;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -32,9 +31,6 @@ class MemreadIndication : public MemreadIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
-  virtual void readReq(uint32_t v){
-    fprintf(stderr, "Memread::readReq %x\n", v);
-  }
   virtual void readDone(uint32_t v){
     fprintf(stderr, "Memread::readDone mismatch=%x\n", v);
     mismatchCount += v;
@@ -43,17 +39,9 @@ public:
   virtual void started(uint32_t words){
     fprintf(stderr, "Memread::started: words=%x\n", words);
   }
-  virtual void rData ( uint64_t v ){
-    fprintf(stderr, "rData (%08x): ", rDataCnt++);
-    dump("", (char*)&v, sizeof(v));
-  }
   virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch){
     fprintf(stderr, "Memread::reportStateDbg: streamRdCnt=%08x dataMismatch=%d\n", streamRdCnt, dataMismatch);
   }  
-  virtual void mismatch(uint32_t offset, uint64_t ev, uint64_t v) {
-    fprintf(stderr, "Mismatch at %x %zx != %zx\n", offset, ev, v);
-    mismatchesReceived++;
-  }
   MemreadIndication(int id) : MemreadIndicationWrapper(id){}
 };
 
@@ -88,7 +76,7 @@ int main(int argc, const char **argv)
   }
 
   for (int i = 0; i < numWords; i++){
-    srcBuffer[i] = numWords-i;
+    srcBuffer[i] = i;
   }
     
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
@@ -117,6 +105,5 @@ int main(int argc, const char **argv)
     .setReadBeats(beats)
     .writeFile();
 
-  while(mismatchesReceived != mismatchCount){sleep(1);}
   exit(mismatchCount ? 1 : 0);
 }

@@ -28,7 +28,7 @@ import GetPut :: *;
 
 interface BscanIndication;
     method Action bscanGet(Bit#(32) v);
-    method Action addr(Bit#(32) v);
+    //method Action addr(Bit#(32) v);
 endinterface
 
 interface BscanRequest;
@@ -39,13 +39,15 @@ endinterface
 
 module mkBscanRequest#(BscanIndication indication)(BscanRequest);
 
-   BscanBram#(8,32) bscanBram <- mkBscanBram(1, 256);
+   Reg#(Bit#(8)) addrReg <- mkReg(0);
+
+   BscanBram#(Bit#(8),Bit#(32)) bscanBram <- mkBscanBram(1, 256, addrReg);
    //let bscan <- mkBscan(3);
 
-    rule bscanGetRule1;
+    //rule bscanGetRule1;
        //let v <- bscan.update.get();
        //indication.bscanGet(v);
-    endrule
+    //endrule
 
     rule bscanGetRule2;
        let v <- bscanBram.server.response.get();
@@ -61,8 +63,8 @@ module mkBscanRequest#(BscanIndication indication)(BscanRequest);
       bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addr, datain: truncate(v)});
    endmethod
       
-   method Action addr();
-      indication.addr(extend(bscanBram.addr()));
-   endmethod
+   //method Action addr();
+      //indication.addr(extend(bscanBram.addr()));
+   //endmethod
 
 endmodule
