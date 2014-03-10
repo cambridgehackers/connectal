@@ -24,7 +24,7 @@ tlpdatalog = [
 ]
 
 TlpPacketType = [
-    'MEMORY_READ_WRITE',
+    'MRW', # 'MEMORY_READ_WRITE'
     'MEMORY_READ_LOCKED',
     'IO_REQUEST',
     'UNKNOWN_TYPE_3',
@@ -34,7 +34,7 @@ TlpPacketType = [
     'UNKNOWN_TYPE_7',
     'UNKNOWN_TYPE_8',
     'UNKNOWN_TYPE_9',
-    'COMPLETION',
+    'COMP',
     'COMPLETION_LOCKED',
     'UNKNOWN_TYPE_12',
     'UNKNOWN_TYPE_13',
@@ -59,8 +59,8 @@ TlpPacketType = [
 ]
 
 TlpPacketFormat = [
-    'MEM_READ_3DW_NO_DATA',
-    'MEM_READ_4DW_NO_DATA',
+    'MEM_READ__3DW     ',
+    'MEM_READ__4DW     ',
     'MEM_WRITE_3DW_DATA',
     'MEM_WRITE_4DW_DATA'
 ]
@@ -196,35 +196,33 @@ def print_tlp(tlpdata, f=None):
     headerstr = ''
     #headerstr = headerstr + ' ts: %10d delta %11d %20s' % (seqno, delta, pktclass)
     headerstr = headerstr + '%20s' % (pktclass)
-    headerstr = headerstr + ' foo:' + tlpdata[-40:-38] + ' ' + hex(int(tlpdata[-40:-38],16) >> 1)
-    headerstr = headerstr + ' tlp(be: %s hit: %d eof: %d sof: %d)' % (tlpbe, tlphit, tlpeof, tlpsof)
+    headerstr = headerstr + ' ' + tlpdata[-40:-38] + ' ' + hex(int(tlpdata[-40:-38],16) >> 1)
+    headerstr = headerstr + ' tlp(%s %d %d %d)' % (tlpbe, tlphit, tlpeof, tlpsof)
     if tlpsof:
-        headerstr = headerstr + ' format: %s %d %20s pkttype: %s, %2d, %17s' % (tlpdata[-32:-31], pktformat, TlpPacketFormat[pktformat], tlpdata[-32:-30], pkttype, TlpPacketType[pkttype])
+        headerstr = headerstr + ' %s %4s:%s %s' % (tlpdata[-32:-31], TlpPacketType[pkttype], TlpPacketFormat[pktformat], tlpdata[-32:-30])
     if tlpsof == 0:
         print headerstr, ' data:', tlpdata[-32:]
-    elif TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMPLETION':
-        headerstr = headerstr + '                                                tag:' + tlpdata[-12:-10]
-        headerstr = headerstr + ' reqid:' + tlpdata[-16:-12]
-        headerstr = headerstr + ' cmplid:' + tlpdata[-24:-20]
-        headerstr = headerstr + ' status:' + tlpdata[-20:-19]
-        headerstr = headerstr + '  nosnoop:' + tlpdata[-28:-27] + str(int(tlpdata[-28:-27],16) >> 3)
-        headerstr = headerstr + ' bytecount:' + tlpdata[-19:-16]
-        headerstr = headerstr + ' loweraddr:' + tlpdata[-10:-8]
-        headerstr = headerstr + ' length:' + str(int(tlpdata[-27:-24],16) & 0x3ff)
-        headerstr = headerstr + ' data:' + tlpdata[-8:]
-    elif TlpPacketFormat[pktformat] == 'MEM_READ_3DW_NO_DATA' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
-        headerstr = headerstr + ' address: %s offset %4x'% (tlpdata[-16:-8], (int(tlpdata[-16:-8],16) >> 2) % 8192)
-        headerstr = headerstr + ' 1st be:' + tlpdata[-17:-16]
-        headerstr = headerstr + ' last be:' + tlpdata[-18:-17]
-        headerstr = headerstr + ' tag:' + tlpdata[-20:-18]
-        headerstr = headerstr + ' reqid:' + tlpdata[-24:-20]
-        headerstr = headerstr + '                                                             length:' + str(int(tlpdata[-27:-24],16) & 0x3ff)
+    elif TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMP':
+        headerstr = headerstr + '                        ' + tlpdata[-12:-10]
+        headerstr = headerstr + ' ' + tlpdata[-16:-12]
+        headerstr = headerstr + ' ' + tlpdata[-24:-20]
+        headerstr = headerstr + ' ' + tlpdata[-20:-19]
+        headerstr = headerstr + ' ' + tlpdata[-28:-27] + str(int(tlpdata[-28:-27],16) >> 3)
+        headerstr = headerstr + ' ' + tlpdata[-19:-16]
+        headerstr = headerstr + ' ' + tlpdata[-10:-8]
+        headerstr = headerstr + ' ' + str(int(tlpdata[-27:-24],16) & 0x3ff)
+        headerstr = headerstr + ' ' + tlpdata[-8:]
+    elif TlpPacketFormat[pktformat] == 'MEM_READ__3DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
+        headerstr = headerstr + '  %s %4x'% (tlpdata[-16:-8], (int(tlpdata[-16:-8],16) >> 2) % 8192)
+        headerstr = headerstr + ' be(' + tlpdata[-17:-16] + ' ' + tlpdata[-18:-17] + ')'
+        headerstr = headerstr + ' ' + tlpdata[-20:-18]
+        headerstr = headerstr + ' ' + tlpdata[-24:-20]
+        headerstr = headerstr + '                  ' + str(int(tlpdata[-27:-24],16) & 0x3ff)
         if TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
-            headerstr = headerstr + ' data:' + tlpdata[-8:]
-    elif TlpPacketFormat[pktformat] == 'MEM_READ_4DW_NO_DATA' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
+            headerstr = headerstr + ' ' + tlpdata[-8:]
+    elif TlpPacketFormat[pktformat] == 'MEM_READ__4DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
         headerstr = headerstr + ' address: ' + tlpdata[-16:]
-        headerstr = headerstr + ' 1st be:' + tlpdata[-17:-16]
-        headerstr = headerstr + ' last be:' + tlpdata[-18:-17]
+        headerstr = headerstr + ' be(1st: ' + tlpdata[-17:-16] + ' last:' + tlpdata[-18:-17] + ')'
         headerstr = headerstr + ' tag:' + tlpdata[-20:-18]
         headerstr = headerstr + ' reqid:' + tlpdata[-24:-20]
         headerstr = headerstr + ' length:' + str(int(tlpdata[-27:-24],16) & 0x3ff)
@@ -260,6 +258,9 @@ def print_tlp_log(tlplog, f=None):
             continue
         print_tlp(tlpdata, f)
     last_seqno = mpz(-1)
+    #ts     delta           response   foo XXX tlp(be hit eof sof) pkttype format             address  off be(1st last) tag req clid stat nosnoop bcnt laddr length data 
+    print '        ts     delta           response       XXX      tlp           pkttype format              address  off   be    tag     clid nosnp  laddr     data'
+    print '                                          foo    (be hit eof sof)                                          (1st last)     req     stat  bcnt   length'
     for seqno in sorted(traceinfo.iterkeys()):
         if seqno == 0:
             continue
@@ -267,8 +268,9 @@ def print_tlp_log(tlplog, f=None):
             delta = seqno - last_seqno
         else:
             delta = 0
-        print 'ts: %10d delta: %10d %s' % (seqno, delta, traceinfo[seqno])
+        print '%10d %10d %s' % (seqno, delta, traceinfo[seqno])
         last_seqno = seqno
+    print
 
 if __name__ == '__main__':
     tlplog = subprocess.check_output(['xbsvutil', 'tlp', '/dev/fpga0']).split('\n')
