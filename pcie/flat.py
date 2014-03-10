@@ -213,7 +213,7 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + ' length:' + str(int(tlpdata[-27:-24],16) & 0x3ff)
         headerstr = headerstr + ' data:' + tlpdata[-8:]
     elif TlpPacketFormat[pktformat] == 'MEM_READ_3DW_NO_DATA' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
-        headerstr = headerstr + ' address: %s page %4d'% (tlpdata[-16:-8], (int(tlpdata[-16:-8],16) >> 2) % 8192)
+        headerstr = headerstr + ' address: %s offset %4x'% (tlpdata[-16:-8], (int(tlpdata[-16:-8],16) >> 2) % 8192)
         headerstr = headerstr + ' 1st be:' + tlpdata[-17:-16]
         headerstr = headerstr + ' last be:' + tlpdata[-18:-17]
         headerstr = headerstr + ' tag:' + tlpdata[-20:-18]
