@@ -70,13 +70,13 @@ last_vcd_timestamp = mpz(0)
 last_vcd_pktclass_code = None
 
 pktclassCodes = {
-    'Slave Request': 'S',
-    'Slave Write Request': 'T',
-    'Slave Response': 's',
+    'SReq': 'S',
+    'SWReq': 'T',
+    'SResp': 's',
     'slave continuation': 'c',
-    'Master Write Request': 'W',
-    'Master Request': 'M',
-    'Master Response': 'm',
+    'MWReq': 'W',
+    'MReq': 'M',
+    'MResp': 'm',
     'master continuation': 'C',
     'trace': 't',
 }
@@ -146,17 +146,17 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
             return 'Master Response'
         else:
             if pktformat == 2 or pktformat == 3:
-                return 'Slave Write Request'
+                return 'SWReq'
             else:
-                return 'Slave Request'
+                return 'SReq'
     elif portnum == 8:
         if pkttype == 10: # COMPLETION
-            return 'Slave Response'
+            return 'SResp'
         else:
             if pktformat == 2 or pktformat == 3:
-                return 'Master Write Request'
+                return 'MWReq'
             else:
-                return 'Master Request'
+                return 'MReq'
     else:
         return 'Misc'
 
@@ -195,11 +195,11 @@ def print_tlp(tlpdata, f=None):
     headerstr = tlpdata
     headerstr = ''
     #headerstr = headerstr + ' ts: %10d delta %11d %20s' % (seqno, delta, pktclass)
-    headerstr = headerstr + '%20s' % (pktclass)
+    headerstr = headerstr + '%6s' % (pktclass)
+    if tlpsof:
+        headerstr = headerstr + ':%4s:%s' % (TlpPacketType[pkttype], TlpPacketFormat[pktformat])
     headerstr = headerstr + ' ' + tlpdata[-40:-38] + ' ' + hex(int(tlpdata[-40:-38],16) >> 1)
     headerstr = headerstr + ' tlp(%s %d %d %d)' % (tlpbe, tlphit, tlpeof, tlpsof)
-    if tlpsof:
-        headerstr = headerstr + ' %s %4s:%s %s' % (tlpdata[-32:-31], TlpPacketType[pkttype], TlpPacketFormat[pktformat], tlpdata[-32:-30])
     if tlpsof == 0:
         print headerstr, ' data:', tlpdata[-32:]
     elif TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMP':
@@ -259,8 +259,8 @@ def print_tlp_log(tlplog, f=None):
         print_tlp(tlpdata, f)
     last_seqno = mpz(-1)
     #ts     delta           response   foo XXX tlp(be hit eof sof) pkttype format             address  off be(1st last) tag req clid stat nosnoop bcnt laddr length data 
-    print '        ts     delta           response       XXX      tlp           pkttype format              address  off   be    tag     clid nosnp  laddr     data'
-    print '                                          foo    (be hit eof sof)                                          (1st last)     req     stat  bcnt   length'
+    print '        ts     delta   response                     XXX          tlp          address  off   be    tag     clid nosnp  laddr     data'
+    print '                           pkttype format               foo (be hit eof sof)            (1st last)     req     stat bcnt  length'
     for seqno in sorted(traceinfo.iterkeys()):
         if seqno == 0:
             continue
