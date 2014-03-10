@@ -25,8 +25,10 @@
 
 import Vector::*;
 import GetPut::*;
+import FIFOF::*;
 import SpecialFIFOs::*;
 import FIFO::*;
+import GetPutF::*;
 
 import AxiMasterSlave::*;
 import Portal::*;
@@ -54,7 +56,10 @@ module mkInterruptMux#(Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (ReadOn
 
 endmodule
 
-module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories, 
+// XXX: defining MULTIPLE_WRITES causes designs to deadlock on the PCIE platforms.
+//      until we figure out why, this should remain undefined (mdk)
+
+module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 		      Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Slave#(_a,_b,_c))
 
    provisos(Add#(1,numPortals,numInputs),
@@ -62,19 +67,43 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories,
 	    Add#(nz, TLog#(numIfcs), 4));
    
    Axi3Slave#(_a,_b,_c) out_of_range <- mkAxi3SlaveOutOfRange;
-   Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(append(map(getCtrl, directories),map(getCtrl, portals)),cons(out_of_range, nil));
-   
-   FIFO#(void) req_ar_fifo <- mkPipelineFIFO;
-   FIFO#(void) req_aw_fifo <- mkPipelineFIFO;
+   Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(cons(dir.portalIfc.ctrl,map(getCtrl, portals)),cons(out_of_range, nil));
 
+`ifdef MULTIPLE_WRITES
+   Vector#(numIfcs,FIFOF#(Bit#(_c))) req_aw_fifos <- replicateM(mkSizedFIFOF(1));
+`else
+   FIFO#(void) req_aw_fifo <- mkPipelineFIFO;
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
-   Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
-   
+`endif   
+
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
+
    function Bit#(4) psel(Bit#(_a) a);
       return a[port_sel_high:port_sel_low];
    endfunction
+   
+   function Maybe#(Bit#(TLog#(numIfcs))) xxx(Integer x, GetF#(t) y);
+      return (y.notEmpty) ? tagged Valid fromInteger(x) : tagged Invalid;
+   endfunction
+   
+   function Maybe#(Bit#(TLog#(numIfcs))) yyy(Maybe#(Bit#(TLog#(numIfcs))) x, Maybe#(Bit#(TLog#(numIfcs))) y);
+      return isValid(x) ? x : y;
+   endfunction
+   
+   let next_resp_read_idx = fold(yyy, zipWith(xxx, genVector, map(get_resp_read,ifcs)));
+
+`ifdef MULTIPLE_WRITES
+   function Maybe#(Bit#(TLog#(numIfcs))) zzz(Bit#(_c) r, Integer x, FIFOF#(Bit#(_c)) y);
+      return y.notEmpty ? (y.first == r ? tagged Valid fromInteger(x) : tagged Invalid) : tagged Invalid; 
+   endfunction
+   
+   let next_resp_b_idx    = fold(yyy, zipWith(xxx, genVector, map(get_resp_b,   ifcs)));
+
+   function Bit#(TLog#(numIfcs)) write_idx(Bit#(_c) r);
+      return fromMaybe(?, fold(yyy, zipWith(zzz(r), genVector, req_aw_fifos)));
+   endfunction
+`endif
    
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(_a,_c) req);
@@ -82,117 +111,48 @@ module mkAxiSlaveMux#(Vector#(1,         Portal#(aw,_a,_b,_c)) directories,
 	 if (wsv > fromInteger(valueOf(numInputs)))
 	    wsv = fromInteger(valueOf(numInputs));
 	 ifcs[wsv].req_aw.put(req);
+`ifdef MULTIPLE_WRITES
+	 req_aw_fifos[wsv].enq(req.id);
+`else
 	 ws <= wsv;
 	 req_aw_fifo.enq(?);
-      endmethod
-   endinterface
-   interface Put resp_write;
-      method Action put(Axi3WriteData#(_b,_c) wdata);
-	 ifcs[ws].resp_write.put(wdata);
-      endmethod
-   endinterface
-   interface Get resp_b;
-      method ActionValue#(Axi3WriteResponse#(_c)) get();
-	 let rv <- ifcs[ws].resp_b.get();
-	 req_aw_fifo.deq;
-	 return rv;
-      endmethod
-   endinterface
-   interface Put req_ar;
-      method Action put(Axi3ReadRequest#(_a,_c) req);
-	 Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.address)); 
-	 if (rsv > fromInteger(valueOf(numInputs)))
-	    rsv = fromInteger(valueOf(numInputs));
-	 ifcs[rsv].req_ar.put(req);
-	 req_ar_fifo.enq(?);
-	 rs <= rsv;
-      endmethod
-   endinterface
-   interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(_b,_c)) get();
-	 let rv <- ifcs[rs].resp_read.get();
-	 req_ar_fifo.deq;
-	 return rv;
-      endmethod
-   endinterface
-endmodule
-
-
-module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
-			 Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Slave#(_a,_b,_c))
-
-   provisos(Add#(1,numPortals,numInputs),
-	    Add#(1,numInputs,numIfcs),
-	    Add#(nz, TLog#(numIfcs), 4));
-   
-   Vector#(1, Portal#(aw,_a,_b,_c)) directories = cons(dir.portalIfc,nil);
-   
-   Axi3Slave#(_a,_b,_c) out_of_range <- mkAxi3SlaveOutOfRange;
-   Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(append(map(getCtrl, directories),map(getCtrl, portals)),cons(out_of_range, nil));
-   
-   Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
-   Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
-   
-   Vector#(3,Reg#(Bit#(64))) writeIntervals <- replicateM(mkReg(0));
-   Vector#(3,Reg#(Bit#(64))) readIntervals <- replicateM(mkReg(0));
-
-   FIFO#(void) req_ar_fifo <- mkPipelineFIFO;
-   FIFO#(void) req_aw_fifo <- mkPipelineFIFO;
-   
-   rule xferIntervals;
-      dir.writeIntervals[0] <= writeIntervals[0];
-      dir.writeIntervals[1] <= writeIntervals[1];
-      dir.writeIntervals[2] <= writeIntervals[2];
-      dir.readIntervals[0] <= readIntervals[0];
-      dir.readIntervals[1] <= readIntervals[1];
-      dir.readIntervals[2] <= readIntervals[2];
-   endrule
-   
-   function Action latchWriteInterval;
-      action
-	 writeIntervals[2] <= writeIntervals[1];
-	 writeIntervals[1] <= writeIntervals[0];
-	 writeIntervals[0] <= truncate(dir.cycles);
-      endaction   
-   endfunction
-
-   function Action latchReadInterval;
-      action
-	 readIntervals[2] <= readIntervals[1];
-	 readIntervals[1] <= readIntervals[0];
-	 readIntervals[0] <= truncate(dir.cycles);
-      endaction   
-   endfunction
-   
-   let port_sel_low = valueOf(aw);
-   let port_sel_high = valueOf(TAdd#(3,aw));
-   function Bit#(4) psel(Bit#(_a) a);
-      return a[port_sel_high:port_sel_low];
-   endfunction
-   
-   interface Put req_aw;
-      method Action put(Axi3WriteRequest#(_a,_c) req);
-	 Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.address));
-	 if (wsv > fromInteger(valueOf(numInputs)))
-	    wsv = fromInteger(valueOf(numInputs));
-	 ifcs[wsv].req_aw.put(req);
-	 ws <= wsv;
-	 req_aw_fifo.enq(?);
+`endif
 	 if (wsv > 0)
-	    latchWriteInterval;
+	    dir.writeEvent <= ?;
       endmethod
    endinterface
    interface Put resp_write;
       method Action put(Axi3WriteData#(_b,_c) wdata);
+`ifdef MULTIPLE_WRITES
+	 ifcs[write_idx(wdata.id)].resp_write.put(wdata);
+`else
 	 ifcs[ws].resp_write.put(wdata);
+`endif
       endmethod
    endinterface
-   interface Get resp_b;
+   interface GetF resp_b;
+`ifdef MULTIPLE_WRITES
+      method ActionValue#(Axi3WriteResponse#(_c)) get() if (next_resp_b_idx matches tagged Valid .idx);
+	 let rv <- ifcs[idx].resp_b.get();
+	 req_aw_fifos[idx].deq;
+	 return rv;
+      endmethod
+`else
       method ActionValue#(Axi3WriteResponse#(_c)) get();
 	 let rv <- ifcs[ws].resp_b.get();
 	 req_aw_fifo.deq;
 	 return rv;
       endmethod
+`endif
+`ifdef MULTIPLE_WRITES
+      method Bool notEmpty();
+	 return isValid(next_resp_b_idx);
+      endmethod
+`else
+      method Bool notEmpty;
+         return ifcs[ws].resp_b.notEmpty;
+      endmethod
+`endif   
    endinterface
    interface Put req_ar;
       method Action put(Axi3ReadRequest#(_a,_c) req);
@@ -200,17 +160,17 @@ module mkAxiSlaveMuxDbg#(Directory#(aw,_a,_b,_c) dir,
 	 if (rsv > fromInteger(valueOf(numInputs)))
 	    rsv = fromInteger(valueOf(numInputs));
 	 ifcs[rsv].req_ar.put(req);
-	 rs <= rsv;
-	 req_ar_fifo.enq(?);
 	 if (rsv > 0)
-	    latchReadInterval;
+	    dir.readEvent <= ?;
       endmethod
    endinterface
-   interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(_b,_c)) get();
-	 let rv <- ifcs[rs].resp_read.get();
-	 req_ar_fifo.deq;
+   interface GetF resp_read;
+      method ActionValue#(Axi3ReadResponse#(_b,_c)) get() if (next_resp_read_idx matches tagged Valid .idx);
+	 let rv <- ifcs[idx].resp_read.get();
 	 return rv;
+      endmethod
+      method Bool notEmpty();
+	 return isValid(next_resp_read_idx);
       endmethod
    endinterface
    

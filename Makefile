@@ -16,23 +16,28 @@ test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidi
 # Generate bsim and zynq make targets for each test in testnames.
 # For test 'foo', we will generate 'foo.bits' and 'foo.bsim'
 
-testnames = echo     \
-            echo2    \
-            memcpy   \
-            memread  \
-            memread128 \
-            memread2 \
-	    memwrite \
-            mempoke  \
-            strstr   \
-            struct   \
-	    ring     \
-	    perf     \
-	    portalperf     \
-	    nandsim  \
-            flowcontrol \
-            bluescope \
-            bscan \
+testnames = echo             \
+            echo2            \
+            memcpy_buff      \
+            memcpy_nobuff    \
+            memread_buff     \
+            memread_nobuff   \
+	    memwrite_buff    \
+	    memwrite_nobuff  \
+            memrw_buff       \
+            memrw_nobuff     \
+            memread128       \
+            memread2         \
+            mempoke          \
+            strstr           \
+            struct           \
+	    ring             \
+	    perf             \
+	    nandsim          \
+            flowcontrol      \
+            bluescope        \
+            bscan            \
+
 
 
 bsimtests = $(addsuffix .bsim, $(testnames))

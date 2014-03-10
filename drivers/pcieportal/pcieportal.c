@@ -45,7 +45,6 @@
 #define CSR_BYTES_PER_BEAT            (   7 << 2)
 #define CSR_BOARD_CONTENT_ID          (   8 << 2)
 #define CSR_TLPDATAFIFO_DEQ           ( 768 << 2)
-#define CSR_TLPSEQNOREG               ( 774 << 2)
 #define CSR_TLPTRACINGREG             ( 775 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE0 ( 776 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE1 ( 777 << 2)
@@ -149,7 +148,7 @@ static int bluenoc_release(struct inode *inode, struct file *filp)
 }
 
 /* poll operation to predict blocking of reads & writes */
-static unsigned int bluenoc_poll(struct file *filp, poll_table * wait)
+static unsigned int pcieportal_poll(struct file *filp, poll_table * wait)
 {
         unsigned int mask = 0;
         tPortal *this_portal = (tPortal *) filp->private_data;
@@ -159,10 +158,8 @@ static unsigned int bluenoc_poll(struct file *filp, poll_table * wait)
         if (this_board->activation_level != BLUENOC_ACTIVE)
                 return 0;
         poll_wait(filp, &this_board->intr_wq, wait);
-        //FIXME for portal
-#warning bluenoc_poll incomplete
-        //if (this_portal->read_ok)  mask |= POLLIN  | POLLRDNORM; /* readable */
-        //if (this_portal->write_ok) mask |= POLLOUT | POLLWRNORM; /* writable */
+	mask |= POLLIN  | POLLRDNORM; /* readable */
+        //mask |= POLLOUT | POLLWRNORM; /* writable */
         //printk(KERN_INFO "%s_%d: poll return status is %x\n", DEV_NAME, this_board->board_number, mask);
         return mask;
 }
@@ -198,10 +195,13 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 info.is_active = (this_board->activation_level == BLUENOC_ACTIVE) ? 1 : 0;
                 info.portal_number = this_portal->portal_number;
                 if (1) {        // msix info
-                        printk("msix_entry[0].addr %08x %08x data %08x\n",
-                             ioread32(this_board->bar0io + CSR_MSIX_ADDR_HI),
-                             ioread32(this_board->bar0io + CSR_MSIX_ADDR_LO),
-                             ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA));
+		  int i;
+		  for (i = 0; i < 4; i++)
+                        printk("msix_entry[%d].addr %08x %08x data %08x\n",
+			       i,
+			       ioread32(this_board->bar0io + CSR_MSIX_ADDR_HI + 16*i),
+                             ioread32(this_board->bar0io + CSR_MSIX_ADDR_LO   + 16*i),
+                             ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*i));
                 }
                 err = copy_to_user((void __user *) arg, &info, sizeof(tBoardInfo));
                 break;
@@ -250,15 +250,13 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 {
                 /* copy board identification info to a user-space struct */
                 unsigned trace, old_trace;
-                int tlpseqno = ioread32(this_board->bar0io + CSR_TLPSEQNOREG); 
                 err = copy_from_user(&trace, (void __user *) arg, sizeof(int));
                 if (!err) {
                          // update tlpBramWrAddr, which also writes the scratchpad to BRAM
                          iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
                          old_trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
                          iowrite32(trace, this_board->bar0io + CSR_TLPTRACINGREG); 
-                         printk("new trace=%d old trace=%d tlpseqno=%d\n",
-                                trace, old_trace, tlpseqno);
+                         printk("new trace=%d old trace=%d\n", trace, old_trace);
                          err = copy_to_user((void __user *) arg, &old_trace, sizeof(int));
                 }
                 }
@@ -311,7 +309,7 @@ static const struct file_operations bluenoc_fops = {
         .owner = THIS_MODULE,
         .open = bluenoc_open,
         .release = bluenoc_release,
-        .poll = bluenoc_poll,
+        .poll = pcieportal_poll,
         .unlocked_ioctl = bluenoc_ioctl,
         .compat_ioctl = bluenoc_ioctl,
         .mmap = portal_mmap
@@ -322,7 +320,7 @@ static void deactivate(tBoard *this_board, struct pci_dev *dev)
         switch (this_board->activation_level) {
         case BLUENOC_ACTIVE:
                 pci_clear_master(dev); /* disable PCI bus master */
-                /* set MSI-X Entry 0 Vector Control value to 1 (masked) */
+                /* set MSIX Entry 0 Vector Control value to 1 (masked) */
                 if (this_board->uses_msix)
                         iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
                 disable_irq(this_board->irq_num);
@@ -332,8 +330,6 @@ static void deactivate(tBoard *this_board, struct pci_dev *dev)
                 /* disable MSI/MSIX */
                 if (this_board->uses_msix)
                         pci_disable_msix(dev);
-                else
-                        pci_disable_msi(dev);
                 /* fall through */
         case BARS_MAPPED:
                 /* unmap PCI BARs */
@@ -425,6 +421,11 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 goto exit_bluenoc_probe;
         }
         this_board->activation_level = BARS_MAPPED;
+	// this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
+	// but why is it needed?...
+	iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
+	// enable tracing
+        iowrite32(1, this_board->bar0io + CSR_TLPTRACINGREG);
         /* check the magic number in BAR 0 */
         magic_num = readq(this_board->bar0io + CSR_ID);
         if (magic_num != expected_magic) {
@@ -451,22 +452,26 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 err = -EIO;
                 goto exit_bluenoc_probe;
         }
-        /* enable MSI or MSI-X */
-        if (!pci_enable_msi(dev)) {
-                this_board->irq_num = dev->irq;
-                //printk(KERN_INFO "%s: Using MSI interrupts\n", DEV_NAME);
-        } else {
-                struct msix_entry msix_entries[1];
-                msix_entries[0].entry = 0;
-                if (pci_enable_msix(dev, msix_entries, 1)) {
-                        printk(KERN_ERR "%s: Failed to setup MSI or MSI-X interrupts\n", DEV_NAME);
-                        err = -EFAULT;
-                        goto exit_bluenoc_probe;
-                }
-                this_board->uses_msix = 1;
-                this_board->irq_num = msix_entries[0].vector;
-                //printk(KERN_INFO "%s: Using MSI-X interrupts\n", DEV_NAME);
-        }
+        /* enable MSIX */
+	{
+		int num_entries = 4;
+		struct msix_entry msix_entries[4];
+		int i;
+		for (i = 0; i < num_entries; i++)
+			msix_entries[i].entry = i;
+
+		if (pci_enable_msix(dev, msix_entries, num_entries)) {
+			printk(KERN_ERR "%s: Failed to setup MSIX interrupts\n", DEV_NAME);
+			err = -EFAULT;
+			goto exit_bluenoc_probe;
+		}
+		this_board->uses_msix = 1;
+		this_board->irq_num = msix_entries[0].vector;
+		printk(KERN_INFO "%s: Using MSIX interrupts num_entries=%d check_device\n", DEV_NAME, num_entries);
+
+		for (i = 0; i < num_entries; i++)
+			printk(KERN_INFO "%s: msix_entries[%d] vector=%d entry=%08x\n", DEV_NAME, i, msix_entries[i].vector, msix_entries[i].entry);
+	}
         this_board->activation_level = MSI_ENABLED;
         /* install an IRQ handler */
         if (request_irq(this_board->irq_num, intr_handler, 0, DEV_NAME, (void *) this_board)) {
@@ -475,8 +480,8 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 goto exit_bluenoc_probe;
         }
         if (this_board->uses_msix) {
-                /* set MSI-X Entry 0 Vector Control value to 0 (unmasked) */
-                printk(KERN_INFO "%s: MSI-X interrupts enabled with IRQ %d\n",
+                /* set MSIX Entry 0 Vector Control value to 0 (unmasked) */
+                printk(KERN_INFO "%s: MSIX interrupts enabled with IRQ %d\n",
                        DEV_NAME, this_board->irq_num);
                 iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
         }
@@ -502,9 +507,6 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                                 DEV_NAME, DEV_NAME, fpga_number, this_device_number);
                 }
         }
-      // this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
-      // but why is it needed?...
-      iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
       exit_bluenoc_probe:
         if (err < 0) {
                 if (this_board)

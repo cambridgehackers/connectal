@@ -37,7 +37,7 @@
 #define DEBUGWHERE()
 #endif
 
-#define LOOP_COUNT 50
+#define LOOP_COUNT 10000
 
 PortalPerfRequestProxy *portalPerfRequestProxy = 0;
 
@@ -220,11 +220,15 @@ void dotestin(const char *testname, int which)
   printf("starting test %s, which %d\n", testname, which);
   init_timer();
   start_timer(1);
+  start_timer(0);
+  catch_timer(0);
   portalPerfRequestProxy->startspit(which, LOOP_COUNT);
+  catch_timer(19);
   wait_for(LOOP_COUNT);
+  catch_timer(21);
   elapsed = lap_timer(1);
   printf("test %s: heard %d elapsed %g average %g\n", testname, heard_count, (double) elapsed, (double) elapsed/ (double) LOOP_COUNT);
-  //print_timer(LOOP_COUNT);
+  print_timer(1);
 }
 
 int main(int argc, const char **argv)

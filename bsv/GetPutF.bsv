@@ -52,6 +52,15 @@ instance ToPut#(PutF#(b), b);
    endfunction
 endinstance
 
+instance Connectable#(GetF#(a), Put#(a));
+   module mkConnection#(GetF#(a) source, Put#(a) sink)(Empty);
+      rule connectGetPutF;
+	 let v <- source.get();
+	 sink.put(v);
+      endrule
+   endmodule
+endinstance
+
 instance Connectable#(GetF#(a), PutF#(a));
    module mkConnection#(GetF#(a) source, PutF#(a) sink)(Empty);
       rule connectGetPutF;
@@ -75,9 +84,9 @@ instance ToGetF#(FIFOF#(b), b);
 	         fifof.deq();
 	      return fifof.first();
 	      endmethod
-	 method Bool notEmpty();
-	    return fifof.notEmpty();
-	 endmethod
+	      method Bool notEmpty();
+		 return fifof.notEmpty();
+	      endmethod
 	 endinterface);
    endfunction
 endinstance

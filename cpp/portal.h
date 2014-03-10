@@ -1,3 +1,26 @@
+
+// Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
+
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use, copy,
+// modify, merge, publish, distribute, sublicense, and/or sell copies
+// of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #ifndef _PORTAL_H_
 #define _PORTAL_H_
 
@@ -22,7 +45,7 @@ typedef unsigned long dma_addr_t;
 
 struct memrequest{
   bool write;
-  unsigned int addr;
+  volatile unsigned int *addr;
   unsigned int data;
 };
 
@@ -31,7 +54,6 @@ typedef struct {
     uint64_t total, min, max, over;
 } TIMETYPE;
 
-class PortalPoller;
 class PortalMessage 
 {
  public:
@@ -47,10 +69,9 @@ class PortalMessage
   virtual ~PortalMessage() {};
 }; 
 
+class PortalPoller;
 class PortalInternal
 {
- private:
-  PortalInternal(const char *name, unsigned int addrbits);
  public:
   PortalPoller *poller;
   int portalOpen(int length);
@@ -61,20 +82,14 @@ class PortalInternal
   int fd;
   struct portal *p;
   char *name;
-#ifdef MMAP_HW
   volatile unsigned int *ind_reg_base;
   volatile unsigned int *ind_fifo_base;
   volatile unsigned int *req_reg_base;
   volatile unsigned int *req_fifo_base;
-#else
-  unsigned int ind_reg_base;
-  unsigned int ind_fifo_base;
-  unsigned int req_reg_base;
-  unsigned int req_fifo_base;
-#endif
   int sendMessage(PortalMessage *msg);
   friend class Directory;
 };
+
 class Portal : public PortalInternal
 {
  public:
@@ -114,13 +129,8 @@ class Directory : public PortalInternal
   unsigned int numportals;
   unsigned int *portal_ids;
   unsigned int *portal_types;
-#ifdef MMAP_HW
   volatile unsigned int *counter_offset;
   volatile unsigned int *intervals_offset;
-#else
-  unsigned int counter_offset;
-  unsigned int intervals_offset;
-#endif
  public:
   Directory();
   void scan(int display);
@@ -130,8 +140,15 @@ class Directory : public PortalInternal
   void printDbgRequestIntervals();
 };
 
-unsigned int read_portal(portal *p, unsigned int addr, char *name);
-void write_portal(portal *p, unsigned int addr, unsigned int v, char *name);
+#ifdef MMAP_HW
+#define READL(CITEM, A) *(A)
+#define WRITEL(CITEM, A, B) *(A) = (B)
+#else
+unsigned int read_portal(portal *p, volatile unsigned int *addr, char *name);
+//void write_portal(portal *p, volatile unsigned int *addr, unsigned int v, char *name);
+#define READL(CITEM, A) read_portal((CITEM)->p, (A), (CITEM)->name)
+#define WRITEL(CITEM, A, B) write_portal((CITEM)->p, (A), (B), (CITEM)->name);
+#endif
 
 void start_timer(unsigned int i);
 uint64_t lap_timer(unsigned int i);

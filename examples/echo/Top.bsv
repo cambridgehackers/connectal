@@ -41,8 +41,7 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
-   
-   let ctrl_mux <- mkAxiSlaveMuxDbg(dir,portals);
+   let ctrl_mux <- mkAxiSlaveMux(dir,portals);
    
    interface interrupt = interrupt_mux;
    interface ctrl = ctrl_mux;

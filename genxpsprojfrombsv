@@ -1,4 +1,26 @@
 #!/usr/bin/python
+## Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
+
+## Permission is hereby granted, free of charge, to any person
+## obtaining a copy of this software and associated documentation
+## files (the "Software"), to deal in the Software without
+## restriction, including without limitation the rights to use, copy,
+## modify, merge, publish, distribute, sublicense, and/or sell copies
+## of the Software, and to permit persons to whom the Software is
+## furnished to do so, subject to the following conditions:
+
+## The above copyright notice and this permission notice shall be
+## included in all copies or substantial portions of the Software.
+
+## THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+## EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+## MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+## NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+## BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+## ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+## SOFTWARE.
+
 import os, sys, shutil, string
 import AST
 import bsvgen
@@ -130,7 +152,7 @@ ALLTARGETS=ubuntu_exe implementation
 endif
 
 BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
-BSIM_CXX = $(XBSVDIR)/cpp/BsimTop.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.cxx $(XBSVDIR)/cpp/sock_fd.cxx
+BSIM_CXX = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.cxx $(XBSVDIR)/cpp/sock_fd.cxx
 
 all: $(ALLTARGETS)
 
@@ -155,11 +177,11 @@ $(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
 	cd sources/%(dut)s; mkdir -p $(DTOP)/obj; bsc %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
 	for v in verilog/top/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
-BSIM_EXE_CXX_FILES = BsimDma.cxx BsimTop.cxx portal.cpp sock_fd.cxx sock_utils.cxx PortalMemory.cpp
+BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx portal.cpp sock_fd.cxx sock_utils.cxx PortalMemory.cpp
 BSIM_EXE_CXX = $(addprefix $(XBSVDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 bsim_exe:  $(CPPFILES) $(BSIM_EXE_CXX)
-	cd jni; g++ -g -O -o bsim_exe -I%(project_dir)s/jni %(includepath)s $(BSIM_EXE_CXX) $(CPPFILES) -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -DBSIM %(clibs)s
+	cd jni; g++ -g -O -o bsim_exe -I$(XBSVDIR)/lib/cpp -I%(project_dir)s/jni %(includepath)s $(BSIM_EXE_CXX) $(CPPFILES) -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -DBSIM %(clibs)s
 
 ubuntu_exe:
 	cd jni; make
@@ -524,6 +546,7 @@ if __name__=='__main__':
     make.write(makefileTemplate % {'xbsvdir': xbsvdir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in namespace.bsvfile]
                                                                 + [os.path.join(xbsvdir, 'bsv')]
+                                                                + [os.path.join(xbsvdir, 'lib/bsv')]
                                                                 + [os.path.join(xbsvdir, 'generated/xilinx')]))),
                                    'bsvdefines': util.foldl((lambda e,a: '-D '+e+' '+a), '', bsvdefines),
                                    'boardname': boardname,

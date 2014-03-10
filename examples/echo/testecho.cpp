@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #include "EchoIndicationWrapper.h"
 #include "EchoRequestProxy.h"
@@ -83,7 +85,7 @@ static void call_say(int v)
     PREPAREWAIT(sem_heard2);
     echoRequestProxy->say(v);
     SEMWAIT(&sem_heard2);
-    printf("call_say: elapsed %zd\n", lap_timer(0));
+    printf("call_say: elapsed %" PRIu64 "\n", lap_timer(0));
 }
 
 static void call_say2(int v, int v2)

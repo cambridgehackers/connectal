@@ -14,11 +14,11 @@ package PcieToAxiBridge;
 // the other.
 
 import GetPut       :: *;
+import GetPutF      :: *;
 import Connectable  :: *;
 import Vector       :: *;
 import FIFO         :: *;
 import FIFOF        :: *;
-import MIMO         :: *;
 import Counter      :: *;
 import DefaultValue :: *;
 import XilinxPCIE   :: *;
@@ -43,6 +43,11 @@ import Memory               :: *;
 import XbsvXilinx7Pcie      :: *;
 //import XbsvXilinx7DDR3      :: *;
 import Portal               :: *;
+import Bscan                :: *;
+import PortalEngine         :: *;
+import AxiSlaveEngine       :: *;
+
+typedef 11 TlpTraceAddrSize;
 
 typedef struct {
     Bit#(32) timestamp;
@@ -352,611 +357,6 @@ interface MSIX_Entry;
    interface Reg#(Bool)     masked;
 endinterface
 
-interface PortalEngine;
-    interface Put#(TLPData#(16))   tlp_in;
-    interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Master#(32,32,12) portal;
-    interface Reg#(Bool)           interruptRequested;
-    interface Reg#(Bit#(64))       interruptAddr;
-    interface Reg#(Bit#(32))       interruptData;
-    interface Reg#(Bit#(12))       bTag;
-endinterface
-
-(* synthesize *)
-module mkPortalEngine#(PciId my_id)(PortalEngine);
-    Reg#(Bool) interruptRequestedReg <- mkReg(False);
-    Reg#(Bool) interruptSecondHalf <- mkReg(False);
-    Reg#(Bit#(7)) hitReg <- mkReg(0);
-    Reg#(Bit#(4)) timerReg <- mkReg(0);
-    Reg#(Bit#(64)) interruptAddrReg <- mkReg(0);
-    Reg#(Bit#(32)) interruptDataReg <- mkReg(0);
-    FIFOF#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkFIFOF;
-    FIFOF#(TLPMemoryIO3DWHeader) readDataFifo <- mkFIFOF;
-    FIFOF#(TLPMemoryIO3DWHeader) writeHeaderFifo <- mkFIFOF;
-    FIFOF#(TLPMemoryIO3DWHeader) writeDataFifo <- mkFIFOF;
-    FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
-    Reg#(TLPTag) tlpTag <- mkReg(0);
-    Reg#(Bit#(12)) bTagReg <- mkReg(0);
-
-    rule txnTimer if (timerReg > 0);
-        timerReg <= timerReg - 1;
-    endrule
-
-    rule interruptTlpOut if (interruptRequestedReg && !interruptSecondHalf);
-       TLPData#(16) tlp = defaultValue;
-       tlp.sof = True;
-       tlp.eof = False;
-       tlp.hit = 7'h00;
-       tlp.be = 16'hffff;
-
-       let sendInterrupt = False;
-       let interruptRequested = interruptRequestedReg;
-
-       if (interruptAddrReg == '0) begin
-	  // do not write to 0 -- it wedges the host
-	  interruptRequested = False;
-       end
-       else if (interruptAddrReg[63:32] == '0) begin
-          TLPMemoryIO3DWHeader hdr_3dw = defaultValue();
-          hdr_3dw.format = MEM_WRITE_3DW_DATA;
-	  //hdr_3dw.pkttype = MEM_READ_WRITE;
-          hdr_3dw.tag = tlpTag;
-          hdr_3dw.reqid = my_id;
-          hdr_3dw.length = 1;
-          hdr_3dw.firstbe = '1;
-          hdr_3dw.lastbe = '0;
-          hdr_3dw.addr = interruptAddrReg[31:2];
-	  hdr_3dw.data = byteSwap(interruptDataReg);
-	  tlp.data = pack(hdr_3dw);
-	  tlp.eof = True;
-	  sendInterrupt = True;
-	  interruptRequested = False;
-       end
-       else begin
-	  TLPMemory4DWHeader hdr_4dw = defaultValue;
-	  hdr_4dw.format = MEM_WRITE_4DW_DATA;
-	  //hdr_4dw.pkttype = MEM_READ_WRITE;
-	  hdr_4dw.tag = tlpTag;
-	  hdr_4dw.reqid = my_id;
-	  hdr_4dw.nosnoop = SNOOPING_REQD;
-	  hdr_4dw.addr = interruptAddrReg[40-1:2];
-	  hdr_4dw.length = 1;
-	  hdr_4dw.firstbe = 4'hf;
-	  hdr_4dw.lastbe = 0;
-	  tlp.data = pack(hdr_4dw);
-
-	  sendInterrupt = True;
-	  interruptSecondHalf <= True;
-       end
-
-       if (!interruptRequested)
-	  interruptRequestedReg <= False;
-       if (sendInterrupt)
-	  tlpOutFifo.enq(tlp);
-    endrule
-
-    rule interruptTlpDataOut if (interruptSecondHalf);
-       TLPData#(16) tlp = defaultValue;
-       tlp.sof = False;
-       tlp.eof = True;
-       tlp.hit = 7'h00;
-       tlp.be = 16'hf000;
-       tlp.data[7+8*15:8*12] = byteSwap(interruptDataReg);
-       tlpOutFifo.enq(tlp);
-       interruptSecondHalf <= False;
-       interruptRequestedReg <= False;
-    endrule
-
-    interface Put tlp_in;
-        method Action put(TLPData#(16) tlp);
-	    //$display("PortalEngine.put tlp=%h", tlp);
-	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
-	    hitReg <= tlp.hit;
-	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-	    if (hdr_3dw.format == MEM_READ_3DW_NO_DATA) begin
-	       if (readHeaderFifo.notFull())
-	          readHeaderFifo.enq(hdr_3dw);
-	       else begin
-		  // FIXME: should generate a response or host will lock up
-	       end
-	    end
-	    else begin
-	       if (writeHeaderFifo.notFull())
-		  writeHeaderFifo.enq(hdr_3dw);
-	    end
-            timerReg <= truncate(32'hFFFFFFFF);
-	endmethod
-    endinterface: tlp_in
-    interface Get tlp_out = toGet(tlpOutFifo);
-    interface Axi3Master portal;
-       interface Get req_aw;
-	  method ActionValue#(Axi3WriteRequest#(32,12)) get() if (!interruptSecondHalf);
-	     let hdr = writeHeaderFifo.first;
-	     writeHeaderFifo.deq;
-	     writeDataFifo.enq(hdr);
-	     return Axi3WriteRequest { address: extend(writeHeaderFifo.first.addr) << 2, len: 0, id: extend(writeHeaderFifo.first.tag),
-				       size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
-	  endmethod
-       endinterface: req_aw
-       interface Get resp_write;
-	  method ActionValue#(Axi3WriteData#(32,12)) get();
-	     writeDataFifo.deq;
-	     let data = writeDataFifo.first.data;
-	     data = byteSwap(data);
-	     return Axi3WriteData { data: data, id: extend(writeDataFifo.first.tag), byteEnable: writeDataFifo.first.firstbe, last: 1 };
-	  endmethod
-       endinterface: resp_write
-       interface Put resp_b;
-	  method Action put(Axi3WriteResponse#(12) resp);
-             bTagReg <= resp.id;
-	  endmethod
-       endinterface: resp_b
-       interface Get req_ar;
-	  method ActionValue#(Axi3ReadRequest#(32,12)) get();
-	     let hdr = readHeaderFifo.first;
-	     readHeaderFifo.deq;
-	     readDataFifo.enq(hdr);
-	     return Axi3ReadRequest { address: extend(readHeaderFifo.first.addr) << 2, len: 0, id: extend(readHeaderFifo.first.tag),
-				     size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
-	    endmethod
-       endinterface: req_ar
-       interface Put resp_read;
-	  method Action put(Axi3ReadResponse#(32,12) resp) if (!interruptSecondHalf);
-	        let hdr = readDataFifo.first;
-		//FIXME: assumes only 1 word read per request
-		readDataFifo.deq;
-
-	        TLPCompletionHeader completion = defaultValue;
-		completion.format = MEM_WRITE_3DW_DATA;
-		completion.pkttype = COMPLETION;
-		completion.relaxed = hdr.relaxed;
-		completion.nosnoop = hdr.nosnoop;
-		completion.length = 1;
-		completion.tclass = hdr.tclass;
-		completion.cmplid = my_id;
-		completion.tag = truncate(resp.id);
-		completion.bytecount = 4;
-		completion.reqid = hdr.reqid;
-		completion.loweraddr = getLowerAddr(hdr.addr, hdr.firstbe);
-		completion.data = byteSwap(resp.data);
-	        TLPData#(16) tlp = defaultValue;
-		tlp.data = pack(completion);
-		tlp.sof = True;
-		tlp.eof = True;
-		tlp.be = 16'hFFFF;
-		tlp.hit = hitReg;
-		tlpOutFifo.enq(tlp);
-	    endmethod
-	endinterface: resp_read
-    endinterface: portal
-    interface Reg interruptRequested = interruptRequestedReg;
-    interface Reg interruptAddr      = interruptAddrReg;
-    interface Reg interruptData      = interruptDataReg;
-    interface Reg bTag = bTagReg;
-endmodule: mkPortalEngine
-
-interface AxiSlaveEngine#(type buswidth);
-    interface GetPut#(TLPData#(16))   tlps;
-    interface Axi3Slave#(40,buswidth,6)  slave3;
-    interface Axi4Slave#(40,buswidth,6)  slave4;
-    method Bool tlpOutFifoNotEmpty();
-    interface Reg#(Bool) use4dw;
-endinterface: AxiSlaveEngine
-
-module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
-   provisos (Div#(buswidth, 8, busWidthBytes),
-	     Div#(buswidth, 32, busWidthWords),
-	     Bits#(Vector#(busWidthWords, Bit#(32)), buswidth),
-	     Add#(aaa, 32, buswidth),
-	     Add#(bbb, buswidth, 256),
-	     Add#(ccc, TMul#(8, busWidthWords), 64),
-	     Add#(ddd, TMul#(32, busWidthWords), 256),
-	     Add#(eee, busWidthWords, 8));
-
-    FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
-    FIFOF#(TLPData#(16)) tlpInFifo <- mkFIFOF;
-    FIFOF#(TLPData#(16)) tlpWriteHeaderFifo <- mkFIFOF;
-
-    Reg#(Bit#(7)) hitReg <- mkReg(0);
-    Reg#(Bool) use4dwReg <- mkReg(True);
-
-    // default configuration for MIMO is for guarded enq() and deq().
-    // However, the implicit guard only checks for space for 1 element for enq(), and availability of 1 element for deq().
-    MIMOConfiguration mimoCfg = defaultValue;
-    MIMO#(4,busWidthWords,8,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
-    MIMO#(4,busWidthWords,8,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
-    MIMO#(busWidthWords,4,8,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
-    Reg#(TLPTag) lastTag <- mkReg(0);
-    Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
-    Reg#(TLPLength)  writeDwCount <- mkReg(0);
-    Reg#(TLPTag) writeTag <- mkReg(0);
-    FIFOF#(TLPTag) doneTag <- mkFIFOF();
-
-    function Integer tlpWordCount(TLPData#(16) tlp);
-       if (tlp.be == 16'h0000)
-	  return 0;
-       else if (tlp.be == 16'h000f || tlp.be == 16'hf000)
-	  return 1;
-       else if (tlp.be == 16'h00ff || tlp.be == 16'hff00)
-	  return 2;
-       else if (tlp.be == 16'h0fff || tlp.be == 16'hfff0)
-	  return 3;
-       else if (tlp.be == 16'hffff)
-	  return 4;
-       else
-	  return 0;
-    endfunction
-
-   rule writeHeaderTlp if (writeDwCount == 0);
-      let tlp = tlpWriteHeaderFifo.first;
-
-      TLPMemory4DWHeader hdr_4dw = unpack(tlp.data);
-      TLPLength dwCount = hdr_4dw.length;
-
-      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      Bool sendit = False;
-      if (hdr_3dw.format == MEM_WRITE_3DW_DATA && writeDataMimo.deqReadyN(1)) begin
-	 dwCount = hdr_3dw.length;
-	 Vector#(4, Bit#(32)) v = writeDataMimo.first();
-	 writeDataMimo.deq(1);
-	 hdr_3dw.data = byteSwap(v[0]);
-	 tlp.be = 16'hffff;
-	 if (dwCount == 1)
-	    tlp.eof = True;
-	 dwCount = dwCount - 1;
-	 tlp.data = pack(hdr_3dw);
-	 sendit = True;
-      end
-      else if (hdr_3dw.format == MEM_WRITE_3DW_DATA) begin
-	 // retry until the data is available in writeDataMimo
-      end
-      else begin
-	 sendit = True;
-      end
-      if (sendit) begin
-	 tlpWriteHeaderFifo.deq();
-	 tlpOutFifo.enq(tlp);
-	 $display("writeHeaderTlp dwCount=%d", dwCount);
-	 writeDwCount <= dwCount;
-      end
-   endrule
-
-   rule writeTlps if (writeDwCount > 0);
-      TLPData#(16) tlp = defaultValue;
-      tlp.sof = False;
-      Vector#(4, Bit#(32)) v = unpack(0);
-      Bool sendit = False;
-      // The MIMO implicit guard only checks for availability of 1 element
-      // so we explicitly check for the number of elements required
-      if (writeDwCount > 4 && writeDataMimo.deqReadyN(4)) begin
-	 v = writeDataMimo.first();
-
-	 writeDataMimo.deq(4);
-	 writeDwCount <= writeDwCount - 4;
-	 tlp.eof = False;
-	 tlp.be = 16'hffff;
-	 sendit = True;
-      end
-      else if (writeDwCount <= 4 && writeDataMimo.deqReadyN(unpack(truncate(writeDwCount)))) begin
-	 v = writeDataMimo.first();
-	 writeDataMimo.deq(unpack(truncate(writeDwCount)));
-	 writeDwCount <= 0;
-	 doneTag.enq(writeTag);
-	 $display("writeDwCount=%d will be zero", writeDwCount);
-	 tlp.eof = True;
-	 if (writeDwCount == 4)
-	    tlp.be = 16'hffff;
-	 else if (writeDwCount == 3)
-	    tlp.be = 16'hfff0;
-	 else if (writeDwCount == 2)
-	    tlp.be = 16'hff00;
-	 else if (writeDwCount == 1)
-	    tlp.be = 16'hf000;
-	 sendit = True;
-      end
-      else begin
-	 // wait for more data in writeDataMimo
-	 $display("waiting for more data dwCount=%d count=%d writeBurstCount=%d enqReady=%d",
-	    writeDwCount, writeDataMimo.count(), writeBurstCount, writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
-      end
-      if (sendit) begin
-	 for (Integer i = 0; i < 4; i = i + 1)
-	    tlp.data[(i+1)*32-1:i*32] = byteSwap(v[3-i]);
-	 tlpOutFifo.enq(tlp);
-      end
-   endrule
-
-   rule handleTlpIn;
-      let tlp = tlpInFifo.first;
-      Bool handled = False;
-      TLPMemoryIO3DWHeader h = unpack(tlp.data);
-      hitReg <= tlp.hit;
-      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      Vector#(4, Bit#(32)) vec = unpack(0);
-      Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
-
-      if (!tlp.sof) begin
-	 let count = tlpWordCount(tlp);
-	 // if sof is false, then count will be at least 1
-	 function Bit#(32) f(Integer i);
-	    begin
-	       if (i < count)
-		  return tlpvec[3-i];
-	       else
-		  return 32'hbad0beef;
-	    end
-	 endfunction
-	 vec = genWith(f);
-	 // The MIMO implicit guard only checks for space to enqueue 1 element
-	 // so we explicitly check for the number of elements required
-	 // otherwise elements in the queue will be overwritten.
-	 if (completionMimo.enqReadyN(fromInteger(count))
-	    && completionTagMimo.enqReadyN(fromInteger(count)))
-	    begin
-	       completionMimo.enq(fromInteger(count), vec);
-	       completionTagMimo.enq(fromInteger(count), replicate(lastTag));
-	       handled = True;
-	    end
-      end
-      else if (hdr_3dw.format == MEM_WRITE_3DW_DATA
-	       && hdr_3dw.pkttype == COMPLETION
-	       && completionMimo.enqReadyN(1)
-	       && completionTagMimo.enqReadyN(1)) begin
-	    vec[0] = hdr_3dw.data;
-	    completionMimo.enq(1, vec);
-	    lastTag <= hdr_3dw.tag;
-	    completionTagMimo.enq(1, replicate(hdr_3dw.tag));
-	    handled = True;
-      end
-      //$display("tlpIn handled=%d tlp=%h\n", handled, tlp);
-      if (handled)
-	 tlpInFifo.deq();
-   endrule
-
-    interface GetPut tlps = tuple2(toGet(tlpOutFifo),toPut(tlpInFifo));
-    interface Axi3Slave slave3;
-	interface Put req_aw;
-	   method Action put(Axi3WriteRequest#(40, 6) req)
-	      if (writeBurstCount == 0);
-
-	      let burstLen = req.len;
-	      let addr = req.address;
-	      let awid = req.id;
-
-	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
-	      TLPData#(16) tlp = defaultValue;
-	      tlp.sof = True;
-	      tlp.eof = False;
-	      tlp.hit = 7'h00;
-	      tlp.be = 16'hffff;
-
-	      $display("slave3.writeAddr tlplen=%d burstLen=%d", tlplen, burstLen);
-	      if ((addr >> 32) != 0) begin
-		 TLPMemory4DWHeader hdr_4dw = defaultValue;
-		 hdr_4dw.format = MEM_WRITE_4DW_DATA;
-		 hdr_4dw.tag = extend(awid);
-		 hdr_4dw.reqid = my_id;
-		 hdr_4dw.nosnoop = SNOOPING_REQD;
-		 hdr_4dw.addr = addr[40-1:2];
-		 hdr_4dw.length = tlplen;
-		 hdr_4dw.firstbe = 4'hf;
-		 hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		 tlp.data = pack(hdr_4dw);
-	      end
-	      else begin
-		 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
-		 hdr_3dw.format = MEM_WRITE_3DW_DATA;
-		 hdr_3dw.tag = extend(awid);
-		 hdr_3dw.reqid = my_id;
-		 hdr_3dw.nosnoop = SNOOPING_REQD;
-		 hdr_3dw.addr = addr[32-1:2];
-		 hdr_3dw.length = tlplen;
-		 hdr_3dw.firstbe = 4'hf;
-		 hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-
-		 tlp.be = 16'hfff0; // no data word in this TLP
-
-		 tlp.data = pack(hdr_3dw);
-	      end
-	      tlpWriteHeaderFifo.enq(tlp);
-	      writeBurstCount <= zeroExtend(burstLen)+1;
-	      writeTag <= extend(awid);
-           endmethod
-	endinterface : req_aw
-       interface Put resp_write;
-	   method Action put(Axi3WriteData#(busWidth,6) wdata)
-	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
-
-	      writeBurstCount <= writeBurstCount - 1;
-	      Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
-	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
-           endmethod
-       endinterface : resp_write
-       interface Get resp_b;
-	   method ActionValue#(Axi3WriteResponse#(6)) get();
-	      let tag = doneTag.first();
-	      doneTag.deq();
-	      return Axi3WriteResponse { resp: 0, id: truncate(tag)};
-           endmethod
-	endinterface: resp_b
-       interface Put req_ar;
-	   method Action put(Axi3ReadRequest#(40,6) req) if (writeDwCount == 0);
-	      let burstLen = req.len;
-	      let addr = req.address;
-	      let arid = req.id;
-
-	       TLPData#(16) tlp = defaultValue;
-	       tlp.sof = True;
-	       tlp.eof = True;
-	       tlp.hit = 7'h00;
-	       TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
-	       if (addr[39:32] != 0) begin
-		   TLPMemory4DWHeader hdr_4dw = defaultValue;
-		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
-		   hdr_4dw.tag = extend(arid);
-		   hdr_4dw.reqid = my_id;
-		   hdr_4dw.nosnoop = SNOOPING_REQD;
-		   hdr_4dw.addr = addr[40-1:2];
-		   hdr_4dw.length = tlplen;
-		   hdr_4dw.firstbe = 4'hf;
-		   hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		   tlp.data = pack(hdr_4dw);
-		   tlp.be = 16'hffff;
-	       end
-	       else begin
-		   TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
-		   hdr_3dw.format = MEM_READ_3DW_NO_DATA;
-		   hdr_3dw.tag = extend(arid);
-		   hdr_3dw.reqid = my_id;
-		   hdr_3dw.nosnoop = SNOOPING_REQD;
-		   hdr_3dw.addr = addr[32-1:2];
-		   hdr_3dw.length = tlplen;
-		   hdr_3dw.firstbe = 4'hf;
-		   hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		   tlp.data = pack(hdr_3dw);
-		   tlp.be = 16'hfff0;
-	       end
-	       tlpOutFifo.enq(tlp);
-           endmethod
-       endinterface : req_ar
-       interface Get resp_read;
-	   method ActionValue#(Axi3ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
-	      let data_v = completionMimo.first;
-	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
-	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
-              Bit#(buswidth) v = 0;
-	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
-		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
-	      return Axi3ReadResponse { data: v, last: 0, id: truncate(completionTagMimo.first[0]), resp: 0 };
-           endmethod
-	endinterface: resp_read
-    endinterface: slave3
-    interface Axi4Slave slave4;
-       interface Put req_aw;
-	   method Action put(Axi4WriteRequest#(40,6) req)
-	      if (writeBurstCount == 0);
-
-	      let burstLen = req.len;
-	      let addr = req.address;
-	      let awid = req.id;
-
-	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
-	      TLPData#(16) tlp = defaultValue;
-	      tlp.sof = True;
-	      tlp.eof = False;
-	      tlp.hit = 7'h00;
-	      tlp.be = 16'hffff;
-
-	      Bit#(9) dwCount = zeroExtend(burstLen)*fromInteger(valueOf(busWidthWords)) + fromInteger(valueOf(busWidthWords));
-	      if ((addr >> 32) != 0) begin
-		 TLPMemory4DWHeader hdr_4dw = defaultValue;
-		 hdr_4dw.format = MEM_WRITE_4DW_DATA;
-		 hdr_4dw.tag = extend(awid);
-		 hdr_4dw.reqid = my_id;
-		 hdr_4dw.nosnoop = SNOOPING_REQD;
-		 hdr_4dw.addr = addr[40-1:2];
-		 hdr_4dw.length = tlplen;
-		 hdr_4dw.firstbe = 4'hf;
-		 hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		 tlp.data = pack(hdr_4dw);
-	      end
-	      else begin
-		 TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
-		 hdr_3dw.format = MEM_WRITE_3DW_DATA;
-		 hdr_3dw.tag = extend(awid);
-		 hdr_3dw.reqid = my_id;
-		 hdr_3dw.nosnoop = SNOOPING_REQD;
-		 hdr_3dw.addr = addr[32-1:2];
-		 hdr_3dw.length = tlplen;
-		 hdr_3dw.firstbe = 4'hf;
-		 hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		 
-		 // this would cause a deadlock
-		 //Vector#(busWidthWords, Bit#(32)) v = writeDataMimo.deq(1);
-		 //hdr_3dw.data = v[0];
-		 //dwCount = dwCount - 1;
-
-		 tlp.be = 16'hfff0; // no data word in this TLP
-
-		 tlp.data = pack(hdr_3dw);
-	      end
-	      tlpWriteHeaderFifo.enq(tlp);
-	      writeBurstCount <= zeroExtend(burstLen)+1;
-	      writeTag <= extend(awid);
-           endmethod
-       endinterface: req_aw
-       interface Put resp_write;
-	   method Action put(Axi4WriteData#(buswidth,6) wdata)
-	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
-
-	      writeBurstCount <= writeBurstCount - 1;
-	      Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
-	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
-           endmethod
-       endinterface
-       interface Get resp_b;
-	   method ActionValue#(Axi4WriteResponse#(6)) get();
-	      let tag = doneTag.first();
-	      doneTag.deq();
-	      return Axi4WriteResponse { resp: 0, id: truncate(tag)};
-           endmethod
-	endinterface: resp_b
-        interface Put req_ar;
-	   method Action put(Axi4ReadRequest#(40,6) req) if (writeDwCount == 0);
-	      let burstLen = req.len;
-	      let addr = req.address;
-	      let arid = req.id;
-
-	       TLPData#(16) tlp = defaultValue;
-	       tlp.sof = True;
-	       tlp.eof = True;
-	       tlp.hit = 7'h00;
-	       TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
-	       if (addr[39:32] != 0) begin
-		   TLPMemory4DWHeader hdr_4dw = defaultValue;
-		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
-		   hdr_4dw.tag = extend(arid);
-		   hdr_4dw.reqid = my_id;
-		   hdr_4dw.nosnoop = SNOOPING_REQD;
-		   hdr_4dw.addr = addr[40-1:2];
-		   hdr_4dw.length = tlplen;
-		   hdr_4dw.firstbe = 4'hf;
-		   hdr_4dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		   tlp.data = pack(hdr_4dw);
-		   tlp.be = 16'hffff;
-	       end
-	       else begin
-		   TLPMemoryIO3DWHeader hdr_3dw = defaultValue;
-		   hdr_3dw.format = MEM_READ_3DW_NO_DATA;
-		   hdr_3dw.tag = extend(arid);
-		   hdr_3dw.reqid = my_id;
-		   hdr_3dw.nosnoop = SNOOPING_REQD;
-		   hdr_3dw.addr = addr[32-1:2];
-		   hdr_3dw.length = tlplen;
-		   hdr_3dw.firstbe = 4'hf;
-		   hdr_3dw.lastbe = (tlplen > 1) ? 4'hf : 0;
-		   tlp.data = pack(hdr_3dw);
-		   tlp.be = 16'hfff0;
-	       end
-	       tlpOutFifo.enq(tlp);
-           endmethod
-       endinterface: req_ar
-       interface Get resp_read;
-	   method ActionValue#(Axi4ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
-	      let data_v = completionMimo.first;
-	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
-	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
-              Bit#(buswidth) v = 0;
-	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
-		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
-	      return Axi4ReadResponse { data: v, last: 0, id: truncate(completionTagMimo.first[0]), resp: 0 };
-           endmethod
-	endinterface: resp_read
-    endinterface: slave4
-   method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
-   interface Reg use4dw = use4dwReg;
-endmodule: mkAxiSlaveEngine
-
 // The control and status registers which are accessible from the PCIe
 // bus.
 interface ControlAndStatusRegs;
@@ -968,12 +368,12 @@ interface ControlAndStatusRegs;
    interface ReadOnly#(Bit#(64)) interruptAddr;
    interface ReadOnly#(Bit#(32)) interruptData;
 
-   interface Reg#(Bool) tlpTracing;
+   interface Reg#(Bool)     tlpTracing;
+   interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimit;
    interface Reg#(Bool) use4dw;
-   interface Reg#(Bit#(32)) tlpDataBramWrAddr;
-   interface Reg#(Bit#(32)) tlpSeqno;
+   interface Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramWrAddr;
    interface Reg#(Bit#(32)) tlpOutCount;
-   interface BRAMServer#(Bit#(11), TimestampedTlpData) tlpDataBram;
+   interface BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData) tlpDataBram;
 endinterface: ControlAndStatusRegs
 
 // This module encapsulates all of the logic for instantiating and
@@ -1015,14 +415,13 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    // Registers and their default values
    Vector#(4,MSIX_Entry) msix_entry               <- replicateM(mkMSIXEntry);
 
-   Reg#(Bool) tlpTracingReg <- mkReg(False);
+   Reg#(Bool) tlpTracingReg        <- mkReg(False);
+   Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimitReg <- mkReg(0);
    Reg#(Bool) use4dwReg <- mkReg(True);
-   Reg#(Bit#(32)) tlpSeqnoReg <- mkReg(0);
-   Reg#(Bit#(32)) tlpDataBramRdAddrReg <- mkReg(0);
-   Reg#(Bit#(32)) tlpDataBramWrAddrReg <- mkReg(0);
-   BRAM_Configure bramCfg = defaultValue;
-   bramCfg.memorySize = 2048;
-   BRAM1Port#(Bit#(11), TimestampedTlpData) tlpDataBram1Port <- mkBRAM1Server(bramCfg);
+   Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramRdAddrReg <- mkReg(0);
+   Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramWrAddrReg <- mkReg(0);
+   Integer memorySize = 2**valueOf(TlpTraceAddrSize);
+   BscanBram#(Bit#(TlpTraceAddrSize), TimestampedTlpData) bscanBram <- mkBscanBram(1, memorySize, tlpDataBramWrAddrReg);
    Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
    Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
    Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
@@ -1050,7 +449,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          8: return board_content_id[31:0];
          9: return board_content_id[63:32];
 	 768: return 0;
-	 774: return tlpSeqnoReg;
 	 775: return (tlpTracingReg ? 1 : 0);
 	 776: return tlpDataBramResponseSlice(0);
 	 777: return tlpDataBramResponseSlice(1);
@@ -1061,7 +459,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 782: return zeroExtend(rcb_mask);
 	 783: return zeroExtend(pack(max_read_req_bytes));
 	 784: return zeroExtend(pack(max_payload_bytes));
-	 792: return tlpDataBramWrAddrReg;
+	 792: return extend(tlpDataBramWrAddrReg);
+	 793: return extend(tlpTraceLimitReg);
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
@@ -1104,7 +503,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action wr_csr(UInt#(30) addr, Bit#(4) be, Bit#(32) dword);
       action
          case (addr % 8192)
-	    774: tlpSeqnoReg <= dword;
 	    775: tlpTracingReg <= (dword != 0) ? True : False;
 	    776: tlpDataScratchpad[0] <= dword;
 	    777: tlpDataScratchpad[1] <= dword;
@@ -1113,7 +511,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	    780: tlpDataScratchpad[4] <= dword;
 	    781: tlpDataScratchpad[5] <= dword;
 
-	    792: tlpDataBramWrAddrReg <= dword;
+	    792: tlpDataBramWrAddrReg <= truncate(dword);
+	    793: tlpTraceLimitReg <= truncate(dword);
 
             //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
             // MSIx table entries
@@ -1176,7 +575,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    endfunction: do_read
 
    rule bramResponse;
-       let v <- tlpDataBram1Port.portA.response.get();
+       let v <- bscanBram.server.response.get();
        tlpDataBramResponse <= v;
    endrule
 
@@ -1185,7 +584,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action do_write(UInt#(30) addr, Vector#(4,Tuple2#(Bit#(4),Bit#(32))) value);
       action
          if ((addr % 8192) == 768) begin
-	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(tlpDataBramRdAddrReg), datain: unpack(0)});
+	     bscanBram.server.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(tlpDataBramRdAddrReg), datain: unpack(0)});
 	     tlpDataBramRdAddrReg <= tlpDataBramRdAddrReg + 1;
 	 end else if ((addr % 8192) == 792) begin
 	     // update tplDataBramWrAddrReg and write back scratchpad
@@ -1196,7 +595,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	     ttd[31+(3*32):0+(3*32)] = tlpDataScratchpad[3];
 	     ttd[31+(4*32):0+(4*32)] = tlpDataScratchpad[4];
 	     ttd[24+(5*32):0+(5*32)] = tlpDataScratchpad[5][24:0];
-	     tlpDataBram1Port.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(tpl_2(value[0])),
+	     bscanBram.server.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(tpl_2(value[0])),
 	                                                     datain: unpack(ttd)});
          end else if ((addr % 8192) == 795) begin
 					       portalResetIfc.assertReset();
@@ -1435,12 +834,12 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    endinterface
    interface ReadOnly interruptData = regToReadOnly(msix_entry[0].msg_data);
 
-   interface Reg tlpTracing = tlpTracingReg;
+   interface Reg tlpTracing    = tlpTracingReg;
+   interface Reg tlpTraceLimit = tlpTraceLimitReg;
    interface Reg use4dw = use4dwReg;
    interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
-   interface Reg tlpSeqno = tlpSeqnoReg;
    interface Reg tlpOutCount = tlpOutCountReg;
-   interface BRAMServer tlpDataBram = tlpDataBram1Port.portA;
+   interface BRAMServer tlpDataBram = bscanBram.server;
 endmodule: mkControlAndStatusRegs
 
 // The PCIe-to-AXI bridge puts all of the elements together
@@ -1487,9 +886,9 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    rule incTimestamp;
        timestamp <= timestamp + 1;
    endrule
-   rule endTrace if (csr.tlpTracing && csr.tlpDataBramWrAddr > 2047);
-       csr.tlpTracing <= False;
-   endrule
+//   rule endTrace if (csr.tlpTracing && csr.tlpTraceLimit != 0 && csr.tlpDataBramWrAddr > truncate(csr.tlpTraceLimit));
+//       csr.tlpTracing <= False;
+//   endrule
 
    // connect the sub-components to each other
 
@@ -1524,7 +923,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 	       TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, unused: 7'h04, tlp: tlp };
 	       csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
 	       csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
-	       csr.tlpSeqno <= csr.tlpSeqno + 1;
 	       skippingIncomingTlps <= False;
 	   end
        end
@@ -1538,7 +936,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 	   TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, unused: 7'h08, tlp: tlp };
 	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
 	   csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
-	   csr.tlpSeqno <= csr.tlpSeqno + 1;
        end
    endrule: traceTlpToBus
 
@@ -1606,9 +1003,6 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 		       )
 		       (X7PcieBridgeIfc#(lanes))
    provisos(Add#(1,_,lanes), XbsvXilinx7Pcie::SelectXilinx7PCIE#(lanes));
-
-   if (valueOf(lanes) != 8)
-      errorM("Only 8-lane PCIe is supported on X7.");
 
    Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
 

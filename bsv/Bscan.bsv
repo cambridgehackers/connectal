@@ -78,12 +78,13 @@ module mkBscan#(Integer bus)(Bscan#(width));
    interface Get update = toGet(outfifo);
 endmodule
 
-interface BscanBram#(numeric type asz, numeric type dsz);
-    interface BRAMServer#(Bit#(asz), Bit#(dsz)) server;
+interface BscanBram#(type atype, type dtype);
+    interface BRAMServer#(atype, dtype) server;
     method Bit#(4) debug;
 endinterface
 
-module mkBscanBram#(Integer bus, Integer memorySize, Bit#(asz) addr)(BscanBram#(asz, dsz));
+module mkBscanBram#(Integer bus, Integer memorySize, atype addr)(BscanBram#(atype, dtype))
+   provisos (Bits#(atype, asz), Bits#(dtype,dsz));
    let asz = valueOf(asz);
    let dsz = valueOf(dsz);
 
@@ -97,7 +98,7 @@ module mkBscanBram#(Integer bus, Integer memorySize, Bit#(asz) addr)(BscanBram#(
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = memorySize;
    bramCfg.latency = 1;
-   BRAM2Port#(Bit#(asz), Bit#(dsz)) bram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset, tck, rst);
+   BRAM2Port#(atype, dtype) bram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset, tck, rst);
    SyncBitIfc#(Bit#(asz)) addr_jtag <- mkSyncBits(0, defaultClock, defaultReset, tck, rst);
 
    Reg#(Bit#(dsz)) shiftReg <- mkReg(0, clocked_by tck, reset_by rst);
@@ -111,7 +112,7 @@ module mkBscanBram#(Integer bus, Integer memorySize, Bit#(asz) addr)(BscanBram#(
    endrule
 
    rule addr_clock_crossing;
-       addr_jtag.send(addr);
+       addr_jtag.send(pack(addr));
    endrule
 
    rule reset_addr if (bscan.sel() == 1 && !selected_delay);
@@ -119,13 +120,15 @@ module mkBscanBram#(Integer bus, Integer memorySize, Bit#(asz) addr)(BscanBram#(
    endrule
 
    rule captureRule if (bscan.sel() == 1 && bscan.capture() == 1);
-       bram.portB.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addrReg, datain:?});
+       bram.portB.request.put(BRAMRequest {write:False, responseOnWrite:False, address:unpack(addrReg), datain:?});
    endrule
 
    rule shiftrule if (bscan.sel() == 1 && bscan.shift() == 1);
        Bit#(dsz) shift = shiftReg;
-       if (capture_delay)
-           shift <- bram.portB.response.get();
+       if (capture_delay) begin
+          let d <- bram.portB.response.get();
+	  shift = pack(d);
+       end
        bscan.tdo(shift[0]);
        let v = (shift >> 1);
        v[dsz-1] = bscan.tdi();
@@ -133,7 +136,7 @@ module mkBscanBram#(Integer bus, Integer memorySize, Bit#(asz) addr)(BscanBram#(
    endrule
 
    rule updateRule if (bscan.sel() == 1 && bscan.update() == 1 && bscan.capture() == 0);
-       bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:shiftReg});
+       bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:unpack(addrReg), datain:unpack(shiftReg)});
        addrReg <= addrReg + 1;
    endrule
 

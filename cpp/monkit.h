@@ -30,14 +30,16 @@ class MonkitFile {
  MonkitFile(const char *name) : name(name) {}
   ~MonkitFile() {}
   
-  MonkitFile &setCycles(float cycles) { this->cycles = cycles; return *this; }
+  MonkitFile &setHwCycles(float cycles) { this->hw_cycles = cycles; return *this; }
+  MonkitFile &setSwCycles(float cycles) { this->sw_cycles = cycles; return *this; }
   MonkitFile &setReadBeats(float beats) { this->read_beats = beats; return *this; }
   MonkitFile &setWriteBeats(float beats) { this->write_beats = beats; return *this; }
   void writeFile();
   
  private:
   const char *name;
-  float cycles;
+  float hw_cycles;
+  float sw_cycles;
   float read_beats;
   float write_beats;
 };
@@ -46,9 +48,8 @@ const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
 <categories>\n\
     <category name=\"time\" scale=\"cycles\">\n\
         <observations>\n\
-            <observation name=\"cycles\">%f</observation>\n\
-            <observation name=\"read_beats\">%f</observation>\n\
-            <observation name=\"write_beats\">%f</observation>\n\
+            <observation name=\"hw_cycles\">%f</observation>\n\
+            <observation name=\"sw_cycles\">%f</observation>\n\
         </observations>\n\
     </category>\n\
     \n\
@@ -58,15 +59,21 @@ const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
             <observation name=\"write_memory\">%f</observation>\n\
         </observations>\n\
     </category>\n\
+    <category name=\"speedup\" scale=\"X\">\n\
+        <observations>\n\
+            <observation name=\"hw_speedup\">%f</observation>\n\
+        </observations>\n\
+    </category>\n\
 </categories>\n";
 
 void MonkitFile::writeFile()
 {
-  float read_utilization = 100.0 * read_beats / cycles;
-  float write_utilization = 100.0 * write_beats / cycles;
+  float hw_read_utilization = 100.0 * read_beats / hw_cycles;
+  float hw_write_utilization = 100.0 * write_beats / hw_cycles;
+  float hw_speedup = sw_cycles/hw_cycles;
 
   FILE *out = fopen(name, "w");
-  fprintf(out, monkit, cycles, read_beats, write_beats, read_utilization, write_utilization);
+  fprintf(out, monkit, hw_cycles, sw_cycles, hw_read_utilization, hw_write_utilization, hw_speedup);
   fclose(out);
 }
 
