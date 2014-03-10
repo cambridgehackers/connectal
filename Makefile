@@ -39,6 +39,25 @@ testnames = echo             \
             bscan            \
 
 
+
+memtests =  memcpy_buff      \
+            memcpy_nobuff    \
+            memread_buff     \
+            memread_nobuff   \
+	    memwrite_buff    \
+	    memwrite_nobuff  \
+            memrw_buff       \
+            memrw_nobuff     \
+
+memtests.zedboard: $(addsuffix .zedboard, $(memtests))
+
+memtests.zedrun:  $(addsuffix .zedrun, $(memtests))
+
+memtests.zedboard.regression:
+	make -j 8 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.zedboard
+
+
+
 bsimtests = $(addsuffix .bsim, $(testnames))
 
 bsimtests: $(bsimtests)
