@@ -109,11 +109,12 @@ int main(int argc, const char **argv)
   sem_wait(&test_sem);
   uint64_t cycles = lap_timer(0);
   uint64_t beats = dma->show_mem_stats(ChannelType_Read);
-  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
+  float read_util = (float)beats/(float)cycles;
+  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
 
   MonkitFile("perf.monkit")
     .setHwCycles(cycles)
-    .setReadBeats(beats)
+    .setReadBwUtil(read_util)
     .writeFile();
   
   exit(mismatchCount ? 1 : 0);

@@ -224,14 +224,15 @@ int main(int argc, const char **argv)
     sem_wait(&test_sem);
     uint64_t hw_cycles = lap_timer(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    float read_util = (float)beats/(float)hw_cycles;
     fprintf(stderr, "hw_cycles:%zx\n", hw_cycles);
-    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)hw_cycles));
+    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
     fprintf(stderr, "speedup: %f\n", ((float)sw_cycles)/((float)hw_cycles));
 
     MonkitFile("perf.monkit")
       .setHwCycles(hw_cycles)
       .setSwCycles(sw_cycles)
-      .setReadBeats(beats)
+      .setReadBwUtil(read_util)
       .writeFile();
 
     close(needleAlloc->header.fd);

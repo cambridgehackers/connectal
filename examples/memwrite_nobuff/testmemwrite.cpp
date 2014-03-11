@@ -127,11 +127,12 @@ void parent(int rd_sock, int wr_sock)
   sem_wait(&done_sem);
   uint64_t cycles = lap_timer(0);
   uint64_t beats = dma->show_mem_stats(ChannelType_Write);
-  fprintf(stderr, "memory write utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
+  float write_util = (float)beats/(float)cycles;
+fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
 
   MonkitFile("perf.monkit")
     .setHwCycles(cycles)
-    .setWriteBeats(beats)
+    .setWriteBwUtil(write_util)
     .writeFile();
 
   sock_fd_write(wr_sock, dstAlloc->header.fd);

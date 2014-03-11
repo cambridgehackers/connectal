@@ -157,13 +157,15 @@ int main(int argc, const char **argv)
   uint64_t cycles = lap_timer(0);
   uint64_t read_beats = dma->show_mem_stats(ChannelType_Write);
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
-  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)read_beats)/((float)cycles));
-  fprintf(stderr, "memory write utilization (beats/cycle): %f\n", ((float)write_beats)/((float)cycles));
+  float read_util = (float)read_beats/(float)cycles;
+  float write_util = (float)write_beats/(float)cycles;
+  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
+  fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
   
   MonkitFile("perf.monkit")
     .setHwCycles(cycles)
-    .setReadBeats(read_beats)
-    .setWriteBeats(write_beats)
+    .setReadBwUtil(read_util)
+    .setWriteBwUtil(write_util)
     .writeFile();
 
   sleep(2);

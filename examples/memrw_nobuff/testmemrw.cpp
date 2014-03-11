@@ -46,6 +46,10 @@ int numWords = 16 << 10;
 #endif
 size_t alloc_sz = numWords*sizeof(unsigned int);
 bool finished = false;
+uint64_t read_cycles;
+uint64_t write_cycles;
+
+
 
 class MemrwIndication : public MemrwIndicationWrapper
 {
@@ -57,10 +61,12 @@ public:
     fprintf(stderr, "started\n");
   }
   virtual void readDone() {
+    read_cycles = lap_timer(0);
     sem_post(&read_done_sem);
     fprintf(stderr, "readDone\n");
   }
   virtual void writeDone() {
+    write_cycles = lap_timer(0);
     sem_post(&write_done_sem);
     fprintf(stderr, "writeDone\n");
   }
@@ -149,16 +155,19 @@ int main(int argc, const char **argv)
   device->start(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&read_done_sem);
   sem_wait(&write_done_sem);
-  uint64_t cycles = lap_timer(0);
+  uint64_t hw_cycles = lap_timer(0); 
   uint64_t read_beats = dma->show_mem_stats(ChannelType_Write);
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
-  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)read_beats)/((float)cycles));
-  fprintf(stderr, "memory write utilization (beats/cycle): %f\n", ((float)write_beats)/((float)cycles));
-  
+  float read_util = (float)read_beats/(float)read_cycles;
+  float write_util = (float)write_beats/(float)write_cycles;
+
+  fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
+  fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
+
   MonkitFile("perf.monkit")
-    .setHwCycles(cycles)
-    .setReadBeats(read_beats)
-    .setWriteBeats(write_beats)
+    .setHwCycles(hw_cycles)
+    .setReadBwUtil(read_util)
+    .setWriteBwUtil(write_util)
     .writeFile();
 
   sleep(2);

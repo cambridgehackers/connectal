@@ -29,19 +29,18 @@ class MonkitFile {
  
  MonkitFile(const char *name) : name(name) {}
   ~MonkitFile() {}
-  
   MonkitFile &setHwCycles(float cycles) { this->hw_cycles = cycles; return *this; }
   MonkitFile &setSwCycles(float cycles) { this->sw_cycles = cycles; return *this; }
-  MonkitFile &setReadBeats(float beats) { this->read_beats = beats; return *this; }
-  MonkitFile &setWriteBeats(float beats) { this->write_beats = beats; return *this; }
+  MonkitFile &setReadBwUtil(float u) { this->hw_read_bw_util = u; return *this; }
+  MonkitFile &setWriteBwUtil(float u) { this->hw_write_bw_util = u; return *this; }
   void writeFile();
   
  private:
   const char *name;
   float hw_cycles;
   float sw_cycles;
-  float read_beats;
-  float write_beats;
+  float hw_read_bw_util;
+  float hw_write_bw_util;
 };
 
 const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
@@ -55,8 +54,8 @@ const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
     \n\
     <category name=\"utilization\" scale=\"%%\">\n\
         <observations>\n\
-            <observation name=\"read_memory\">%f</observation>\n\
-            <observation name=\"write_memory\">%f</observation>\n\
+            <observation name=\"read_memory_bw\">%f</observation>\n\
+            <observation name=\"write_memory_bw\">%f</observation>\n\
         </observations>\n\
     </category>\n\
     <category name=\"speedup\" scale=\"X\">\n\
@@ -68,12 +67,9 @@ const char *monkit = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
 
 void MonkitFile::writeFile()
 {
-  float hw_read_utilization = 100.0 * read_beats / hw_cycles;
-  float hw_write_utilization = 100.0 * write_beats / hw_cycles;
   float hw_speedup = sw_cycles/hw_cycles;
-
   FILE *out = fopen(name, "w");
-  fprintf(out, monkit, hw_cycles, sw_cycles, hw_read_utilization, hw_write_utilization, hw_speedup);
+  fprintf(out, monkit, hw_cycles, sw_cycles, hw_read_bw_util, hw_write_bw_util, hw_speedup);
   fclose(out);
 }
 
