@@ -46,37 +46,82 @@ interface Memcpy;
    interface DmaWriteClient#(64) dmaWriteClient;
 endinterface
 
+
+// NOTE: this test doesn't rely on mkDma[Read|Write]Buffer to ensure that
+//       speculative read/write requests are not unsafely issued.  As a 
+//       result this must be enforced manually (mdk)
+
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   let readFifo <- mkFIFOF;
-   let writeFifo <- mkFIFOF;
+   let rdFifo <- mkFIFOF;
+   let wrFifo <- mkFIFOF;
    
-   MemreadEngine#(64) re <- mkMemreadEngine(6'b1, readFifo);
-   MemwriteEngine#(64) we <- mkMemwriteEngine(6'b1, writeFifo);
+   MemreadEngine#(64) re <- mkMemreadEngine(6'b1, rdFifo);
+   MemwriteEngine#(64) we <- mkMemwriteEngine(6'b1, wrFifo);
 
-   Reg#(Bit#(32))          iterCnt <- mkReg(0);
-   Reg#(Bit#(32))         numWords <- mkReg(0);
+   Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
+   Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
+   Reg#(Bit#(32))            rdCnt <- mkReg(0);
+   Reg#(Bit#(32))            wrCnt <- mkReg(0);
    Reg#(DmaPointer)      rdPointer <- mkReg(0);
    Reg#(DmaPointer)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
+   Reg#(Bit#(32))         numWords <- mkReg(0);
    
-   rule start(iterCnt > 0);
-      re.start(rdPointer, 0, numWords*4, burstLen*4);
-      we.start(wrPointer, 0, numWords*4, burstLen*4);
-      iterCnt <= iterCnt-1;
+   FIFOF#(Bit#(64))    buffer <- mkSizedBRAMFIFOF(16);
+   Reg#(Bit#(32))    rdBuffer <- mkReg(32);
+   Reg#(Bit#(32))    wrBuffer <- mkReg(0); 
+   
+   rule start_read(rdIterCnt > 0 && rdBuffer >= burstLen);
+      //$display("start_read %d", rdCnt);
+      re.start(rdPointer, extend(rdCnt*4), burstLen*4, burstLen*4);
+      rdBuffer <= rdBuffer-burstLen;
+      if(rdCnt+burstLen == numWords) begin
+	 rdCnt <= 0;
+	 rdIterCnt <= rdIterCnt-1;
+      end
+      else begin
+	 rdCnt <= rdCnt+burstLen;
+      end
    endrule
 
-   rule finish;
+   rule start_write(wrIterCnt > 0 && wrBuffer >= burstLen);
+      //$display("                    start_write %d", wrCnt);
+      we.start(wrPointer, extend(wrCnt*4), burstLen*4, burstLen*4);
+      wrBuffer <= wrBuffer-burstLen;
+      if(wrCnt+burstLen == numWords) begin
+	 wrCnt <= 0;
+	 wrIterCnt <= wrIterCnt-1;
+      end
+      else begin
+	 wrCnt <= wrCnt+burstLen;
+      end
+   endrule
+   
+   rule read_finish;
+      //$display("read_finish %d", rdIterCnt);
       let rv0 <- re.finish;
+   endrule
+
+   rule write_finish;
+      //$display("                    write_finish %d", wrIterCnt);
       let rv1 <- we.finish;
-      if(iterCnt==0)
+      if(wrIterCnt==0)
 	 indication.done;
    endrule
    
-   rule xfer;
-      //$display("xfer: %h", readFifo.first);
-      readFifo.deq;
-      writeFifo.enq(readFifo.first);
+   rule fill_buffer;
+      rdFifo.deq;
+      buffer.enq(rdFifo.first);
+      wrBuffer <= wrBuffer+2;
+      //$display("fill_buffer %h", rdFifo.first);
+   endrule
+   
+   rule drain_buffer;
+      buffer.deq;
+      wrFifo.enq(buffer.first);
+      rdBuffer <= rdBuffer+2;
+      //$display("                    drain_buffer %h", buffer.first);
    endrule
 
    interface MemcpyRequest request;
@@ -87,7 +132,8 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       wrPointer <= wp;
       rdPointer <= rp;
       numWords  <= nw;
-      iterCnt   <= ic;
+      wrIterCnt <= ic;
+      rdIterCnt <= ic;
       burstLen  <= bl;
    endmethod
    endinterface
