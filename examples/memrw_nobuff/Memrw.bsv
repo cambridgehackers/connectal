@@ -63,7 +63,7 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    
    rule startRead(rdIterCnt > 0);
       $display("startRead %d", rdIterCnt);
-      re.start(rdPointer, 0, numWords, burstLen);
+      re.start(rdPointer, 0, numWords*4, burstLen*4);
       rdIterCnt <= rdIterCnt-1;
    endrule
 
@@ -79,7 +79,7 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    
    rule startWrite(wrIterCnt > 0);
       $display("startWrite %d", wrIterCnt);
-      we.start(wrPointer, 0, numWords, burstLen);
+      we.start(wrPointer, 0, numWords*4, burstLen*4);
       wrIterCnt <= wrIterCnt-1;
    endrule
 

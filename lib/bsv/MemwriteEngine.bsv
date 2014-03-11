@@ -29,7 +29,7 @@ import PortalMemory::*;
 import Dma::*;
 
 interface MemwriteEngine#(numeric type busWidth);
-   method Action start(DmaPointer pointer, Bit#(DmaOffsetSize) base, Bit#(32) numWords, Bit#(32) burstLen);
+   method Action start(DmaPointer pointer, Bit#(DmaOffsetSize) base, Bit#(32) writeLen, Bit#(32) burstLen);
    method ActionValue#(Bool) finish();
    interface DmaWriteClient#(busWidth) dmaClient;
 endinterface
@@ -53,15 +53,14 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
    FIFOF#(void)                 wf <- mkSizedFIFOF(1);
 
    let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
-   let words_per_beat = bytes_per_beat>>2;
    
-   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) nw, Bit#(32) bl);
-      numBeats <= nw/words_per_beat;
+   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) wl, Bit#(32) bl);
+      numBeats <= wl/bytes_per_beat;
       reqCnt   <= 0;
       off      <= 0;
-      delta    <= bytes_per_beat*extend(bl);
+      delta    <= extend(bl);
       pointer  <= p;
-      burstLen <= truncate(bl);
+      burstLen <= truncate(bl/bytes_per_beat);
       base     <= b;
       wf.enq(?);
    endmethod

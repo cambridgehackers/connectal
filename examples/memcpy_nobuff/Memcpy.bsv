@@ -48,13 +48,10 @@ endinterface
 
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   FIFOF#(Bit#(64))  readFifo <- mkFIFOF;
-   FIFOF#(Bit#(64)) writeFifo <- mkFIFOF;
-   FIFOF#(Bit#(64))    buffer <- mkSizedBRAMFIFOF(32);
-   Reg#(Bit#(32))   bufferCnt <- mkReg(0);
-   Reg#(Bit#(32))     xferCnt <- mkReg(0);
+   let readFifo <- mkFIFOF;
+   let writeFifo <- mkFIFOF;
    
-   MemreadEngine#(64)  re <- mkMemreadEngine(readFifo);
+   MemreadEngine#(64) re <- mkMemreadEngine(readFifo);
    MemwriteEngine#(64) we <- mkMemwriteEngine(writeFifo);
 
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
@@ -64,8 +61,8 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    
    rule start(iterCnt > 0);
-      re.start(rdPointer, 0, numWords, burstLen);
-      we.start(wrPointer, 0, numWords, burstLen);
+      re.start(rdPointer, 0, numWords*4, burstLen*4);
+      we.start(wrPointer, 0, numWords*4, burstLen*4);
       iterCnt <= iterCnt-1;
    endrule
 
@@ -76,39 +73,23 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 	 indication.done;
    endrule
    
-   rule fill_buffer;
-      $display("fill_buffer %d", bufferCnt);
-      buffer.enq(readFifo.first);
+   rule xfer;
+      //$display("xfer: %h", readFifo.first);
       readFifo.deq;
-      bufferCnt <= bufferCnt+1;
-   endrule
-   
-   rule start_burst_xfer if (bufferCnt >= burstLen);
-      $display("start_burst_xfer %d", bufferCnt);
-      bufferCnt <= bufferCnt - burstLen;
-      xferCnt <= 0;
-   endrule      
-
-   rule complete_burst_xfer if (xferCnt < burstLen);
-      $display("complete_burst_xfer %d %d", xferCnt, burstLen);
-      xferCnt <= xferCnt+1;
-      buffer.deq;
-      writeFifo.enq(buffer.first);
+      writeFifo.enq(readFifo.first);
    endrule
 
    interface MemcpyRequest request;
-      method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
-	 $display("startCopy wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
-	 indication.started;
-	 // initialized
-	 wrPointer <= wp;
-	 rdPointer <= rp;
-	 numWords  <= nw;
-	 iterCnt   <= ic;
-	 burstLen  <= bl>>1;
-	 xferCnt   <= bl>>1;
-	 bufferCnt <= 0;
-      endmethod
+   method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
+      $display("startCopy wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
+      indication.started;
+      // initialized
+      wrPointer <= wp;
+      rdPointer <= rp;
+      numWords  <= nw;
+      iterCnt   <= ic;
+      burstLen  <= bl;
+   endmethod
    endinterface
    interface DmaReadClient dmaReadClient = re.dmaClient;
    interface DmaWriteClient dmaWriteClient = we.dmaClient;

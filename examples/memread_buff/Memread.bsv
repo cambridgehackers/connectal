@@ -57,7 +57,7 @@ module mkMemread#(MemreadIndication indication,
    
    rule start (iterCnt > 0);
       iterCnt <= iterCnt-1;
-      re.start(pointer, 0, numWords, burstLen);
+      re.start(pointer, 0, numWords*4, burstLen*4);
    endrule
    
    rule finish;
