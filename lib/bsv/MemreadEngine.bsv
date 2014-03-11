@@ -34,7 +34,7 @@ interface MemreadEngine#(numeric type busWidth);
    interface DmaReadClient#(busWidth) dmaClient;
 endinterface
 
-module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
+module mkMemreadEngine#(Bit#(6) tag, FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
    
    provisos (Div#(busWidth,8,busWidthBytes));
    
@@ -76,7 +76,7 @@ module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
 	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
-	    return DmaRequest { pointer: pointer, offset: off+base, burstLen: burstLen, tag: 1 };
+	    return DmaRequest { pointer: pointer, offset: off+base, burstLen: burstLen, tag: tag };
 	 endmethod
 	 method Bool notEmpty();
 	    return (reqCnt < numBeats);

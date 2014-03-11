@@ -34,7 +34,7 @@ interface MemwriteEngine#(numeric type busWidth);
    interface DmaWriteClient#(busWidth) dmaClient;
 endinterface
 
-module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
+module  mkMemwriteEngine#(Bit#(6) tag, FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 
    provisos (Div#(busWidth,8,busWidthBytes));
 
@@ -77,7 +77,7 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
 	    acks.enq(reqCnt+extend(burstLen) == numBeats);
-	    return DmaRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: 1};
+	    return DmaRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: tag};
 	 endmethod
 	 method Bool notEmpty;
 	    return (reqCnt < numBeats);
@@ -86,7 +86,7 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
       interface GetF writeData;
 	 method ActionValue#(DmaData#(busWidth)) get();
 	    f.deq;
-	    return DmaData{data:f.first, tag: 1};
+	    return DmaData{data:f.first, tag: tag};
 	 endmethod
 	 method Bool notEmpty;
 	    return f.notEmpty;
