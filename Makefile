@@ -157,7 +157,7 @@ acruns: $(acruns)
 $(acruns):
 	(cd examples/$(basename $@)/ac701; make program)
 	pciescanportal
-	catchsegv examples/$(basename $@)/ac701/jni/mkpcietop
+	timeout 3m catchsegv examples/$(basename $@)/ac701/jni/mkpcietop
 
 kc705tests = $(addsuffix .kc705, $(testnames))
 kc705tests: $(kc705tests)
@@ -172,7 +172,7 @@ kcruns: $(kcruns)
 $(kcruns):
 	(cd examples/$(basename $@)/kc705; make program)
 	pciescanportal
-	catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
+	timeout 3m catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
 
 kc705runs = $(addsuffix .kc705run, $(testnames))
 kc705runs: $(kc705runs)
@@ -180,7 +180,7 @@ kc705runs: $(kc705runs)
 $(kc705runs):
 	(cd examples/$(basename $@)/kc705; make program)
 	pciescanportal
-	catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
+	timeout 3m catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
 
 vc707tests = $(addsuffix .vc707, $(testnames))
 vc707tests: $9vc707tests)
@@ -195,7 +195,7 @@ vcruns: $(vcruns)
 $(vcruns):
 	(cd examples/$(basename $@)/vc707; make program)
 	pciescanportal
-	catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
+	timeout 3m catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
 
 vc707runs = $(addsuffix .vc707run, $(testnames))
 vc707runs: $(vc707runs)
@@ -203,7 +203,7 @@ vc707runs: $(vc707runs)
 $(vc707runs):
 	(cd examples/$(basename $@)/vc707; make program)
 	pciescanportal
-	catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
+	timeout 3m catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
 
 zynqdrivers:
 	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)
