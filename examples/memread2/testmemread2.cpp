@@ -108,7 +108,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "ref_srcAlloc2=%d\n", ref_srcAlloc2);
 
   fprintf(stderr, "Main::starting read %08x\n", numWords);
-  device->startRead(ref_srcAlloc, ref_srcAlloc2, 128, 1);
+  device->startRead(ref_srcAlloc, ref_srcAlloc2, 128, 2);
 
   device->getStateDbg();
   fprintf(stderr, "Main::sleeping\n");

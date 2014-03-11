@@ -52,10 +52,10 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount <- mkReg(0);
    FIFOF#(Bit#(64)) dfifo <- mkSizedFIFOF(16);
-   let re <- mkMemreadEngine(6'b1, dfifo);
+   let re0 <- mkMemreadEngine(6'd1, dfifo);
    Reg#(Bit#(32)) mismatchCount2 <- mkReg(0);
    FIFOF#(Bit#(64)) dfifo2 <- mkSizedFIFOF(16);
-   let re2 <- mkMemreadEngine(6'b2, dfifo2);
+   let re1 <- mkMemreadEngine(6'd2, dfifo2);
 
    FIFOF#(Tuple3#(Bit#(32),Bit#(64),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
 
@@ -65,7 +65,6 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
       indication.mismatch(tpl_1(tpl), tpl_2(tpl), tpl_3(tpl));
    endrule
 
-   Reg#(Bit#(32)) joinCount <- mkReg(0);
    rule joinreads;
       srcGen <= srcGen+2;
       let expectedV1 = {srcGen+1,srcGen};
@@ -83,27 +82,26 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
       let misMatch2 = v2 != expectedV2;
       mismatchCount2 <= mismatchCount2 + (misMatch2 ? 1 : 0);
 
-      joinCount <= joinCount - 1;
    endrule
    
    rule done;
-      let rv <- re.finish;
-      let rv2 <- re2.finish;
+      let rv <- re0.finish;
+      let rv2 <- re1.finish;
       indication.readDone(mismatchCount);
    endrule
    
    interface Memread2Request request;
        method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) bl);
-	  re.start(pointer,0,numWords,bl);
-	  re2.start(pointer2,0,numWords,bl);
+	  $display("startRead(%d %d %d %d)", pointer, pointer2, numWords, bl);
+	  re0.start(pointer,  0, numWords*4, bl*4);
+	  re1.start(pointer2, 0, numWords*4, bl*4);
 	  indication.started(numWords);
-	  joinCount <= numWords>>1;
        endmethod
 
        method Action getStateDbg();
 	  indication.reportStateDbg(srcGen, mismatchCount);
        endmethod
    endinterface
-   interface DmaReadClient dmaClient = re.dmaClient;
-   interface DmaReadClient dmaClient2 = re2.dmaClient;
+   interface DmaReadClient dmaClient = re0.dmaClient;
+   interface DmaReadClient dmaClient2 = re1.dmaClient;
 endmodule

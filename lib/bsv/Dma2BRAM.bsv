@@ -46,7 +46,7 @@ interface BRAMWriteClient#(type bramIdx, numeric type busWidth);
    interface DmaWriteClient#(busWidth) dmaClient;
 endinterface
 
-module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busWidth))
+module mkBRAMReadClient#(Bit#(6) tag, BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busWidth))
    provisos(Bits#(d,dsz),
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),
@@ -70,7 +70,7 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
    Reg#(Bit#(DmaOffsetSize)) rbase <- mkReg(0);
    
    let readFifo <- mkFIFOF;
-   MemreadEngine#(busWidth) re <- mkMemreadEngine(readFifo);
+   MemreadEngine#(busWidth) re <- mkMemreadEngine(tag, readFifo);
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
    rule loadReq(i < n);
@@ -121,7 +121,7 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
 
 endmodule
 
-module mkBRAMWriteClient#(BRAMServer#(bramIdx,Bit#(busWidth)) br)(BRAMWriteClient#(bramIdx,busWidth))
+module mkBRAMWriteClient#(Bit#(6) tag, BRAMServer#(bramIdx,Bit#(busWidth)) br)(BRAMWriteClient#(bramIdx,busWidth))
    
    provisos(Eq#(bramIdx),
 	    Bits#(bramIdx, a__),
@@ -138,7 +138,7 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,Bit#(busWidth)) br)(BRAMWriteClien
    Reg#(Bit#(DmaOffsetSize)) wbase <- mkReg(0);
    
    let writeFifo <- mkFIFOF;
-   MemwriteEngine#(busWidth) we <- mkMemwriteEngine(writeFifo);
+   MemwriteEngine#(busWidth) we <- mkMemwriteEngine(tag, writeFifo);
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
    rule bramReq(j < n);

@@ -82,13 +82,13 @@ module mkMPEngine#(FIFOF#(void) compf,
    Reg#(Bit#(32)) jReg <- mkReg(0); // offset in haystack
    Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
    Reg#(Bit#(2))  epochReg <- mkReg(0);
-   Reg#(Bit#(6))  dmaTag <- mkReg(0);
+   Reg#(Bit#(6))  dmaTag <- mkReg(2); // 0 and 1 are reserved for the BRAMReadClients 
    Reg#(Bit#(32)) haystackOff <- mkReg(0);
    Reg#(DmaPointer) haystackPointer <- mkReg(0);
    
-   BRAMReadClient#(NeedleIdx,busWidth) n2b <- mkBRAMReadClient(needle.portB);
+   BRAMReadClient#(NeedleIdx,busWidth) n2b <- mkBRAMReadClient(6'd0, needle.portB);
    mkConnection(n2b.dmaClient, needle_read_server);
-   BRAMReadClient#(NeedleIdx,busWidth) mp2b <- mkBRAMReadClient(mpNext.portB);
+   BRAMReadClient#(NeedleIdx,busWidth) mp2b <- mkBRAMReadClient(6'd1, mpNext.portB);
    mkConnection(mp2b.dmaClient, mp_next_read_server);
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
 
@@ -192,7 +192,7 @@ module mkMPEngine#(FIFOF#(void) compf,
       haystackLenReg <= extend(haystack_len);
       haystackPointer <= haystack_pointer;
       haystackBase <= extend(haystack_base);
-      dmaTag   <= dmaTag+1;
+      dmaTag   <= dmaTag == maxBound ? 2 : dmaTag+1; // 0 and 1 are reserved for the BRAMReadClients 
       haystackOff <= 0;
       stage <= Run;
       iReg <= 1;
