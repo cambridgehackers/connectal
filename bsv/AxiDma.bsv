@@ -122,9 +122,11 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 	 if (False && physAddr[31:24] != 0)
 	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 // overwrite user-supplied tag and store the original for the responses
-	 reqFifo.enq(DmaRequest{pointer:req.pointer, offset:req.offset, burstLen:req.burstLen, tag:{0,tag_gen[chan]}});
-	 tag_gen[chan] <= tag_gen[chan]+1;
-	 tag_store[chan].enq(req.tag);
+	 if (valueOf(numReadClients) > 0) begin
+	    reqFifo.enq(DmaRequest{pointer:req.pointer, offset:req.offset, burstLen:req.burstLen, tag:{0,tag_gen[chan]}});
+	    tag_gen[chan] <= tag_gen[chan]+1;
+	    tag_store[chan].enq(req.tag);
+	 end
 	 paFifo.enq(physAddr);
       end
    endrule
@@ -165,7 +167,7 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 	    if (burstLen == 0)
 	       burstLen = req.burstLen;
 
-	    if (burstLen == 1) begin
+	    if (burstLen == 1  && valueOf(numReadClients) > 0) begin
 	       dreqFifo.deq();
 	       chanFifo.deq();
 	       tag_store[activeChan].deq;
@@ -239,9 +241,11 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
       else begin
 	 let chan = chanFifo.first;
 	 // overwrite user-supplied tag and store the original for the responses
-	 reqFifo.enq(DmaRequest{pointer:req.pointer, offset:req.offset, burstLen:req.burstLen, tag:{0,tag_gen[chan]}});
-	 tag_gen[chan] <= tag_gen[chan]+1;
-	 tag_store[chan].enq(req.tag);
+	 if (valueOf(numWriteClients) > 0) begin
+	    reqFifo.enq(DmaRequest{pointer:req.pointer, offset:req.offset, burstLen:req.burstLen, tag:{0,tag_gen[chan]}});
+	    tag_gen[chan] <= tag_gen[chan]+1;
+	    tag_store[chan].enq(req.tag);
+	 end
 	 paFifo.enq(physAddr);
       end
    endrule
@@ -293,7 +297,8 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
 	    beatCount <= beatCount+1;
 	    
 	    Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
-	    dynamicAssert(tagdata.tag == tag_store[activeChan].first, "mkAxiDmaWriteInternal badness");
+	    if(valueOf(numWriteClients) > 0)
+	       dynamicAssert(tagdata.tag == tag_store[activeChan].first, "mkAxiDmaWriteInternal badness");
 
 	    return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: req.tag };
 	 endmethod
@@ -305,9 +310,10 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
 	    if (resp.id != tag)
 	       tag_mismatch.enq(True);
 	    respFifo.deq();
-	    tag_store[activeChan].deq;
-	    if (valueOf(numWriteClients) > 0)
+	    if (valueOf(numWriteClients) > 0) begin
 	       writeClients[activeChan].writeDone.put(extend(tag_store[activeChan].first));
+	       tag_store[activeChan].deq;
+	    end
 	 endmethod
       endinterface
    endinterface
