@@ -66,4 +66,7 @@ public:
     if (portalMemory)
       portalMemory->reportMemoryTraffic(words);
   }
+  virtual void tagMismatch(const ChannelType& t){
+    fprintf(stderr, "tagMismatch: %d\n", t);
+  }
 };

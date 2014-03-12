@@ -52,8 +52,8 @@ typedef 14 Asz;
 module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(Asz), Bit#(64)) br) (NandSim);
 
 
-   BRAMReadClient#(Bit#(Asz), 64) rc <- mkBRAMReadClient(6'b1, br);
-   BRAMWriteClient#(Bit#(Asz), 64) wc <- mkBRAMWriteClient(6'b1, br);
+   BRAMReadClient#(Bit#(Asz), 64) rc <- mkBRAMReadClient(br);
+   BRAMWriteClient#(Bit#(Asz), 64) wc <- mkBRAMWriteClient(br);
    
    Reg#(Bit#(Asz)) nandEraseAddr <- mkReg(0);
    Reg#(Bit#(Asz)) nandEraseLimit <- mkReg(0);

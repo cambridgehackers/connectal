@@ -34,7 +34,7 @@ interface MemreadEngine#(numeric type busWidth);
    interface DmaReadClient#(busWidth) dmaClient;
 endinterface
 
-module mkMemreadEngine#(Bit#(6) tag, FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
+module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
    
    provisos (Div#(busWidth,8,busWidthBytes));
    
@@ -76,7 +76,7 @@ module mkMemreadEngine#(Bit#(6) tag, FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(b
 	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
-	    return DmaRequest { pointer: pointer, offset: off+base, burstLen: burstLen, tag: tag };
+	    return DmaRequest { pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0 };
 	 endmethod
 	 method Bool notEmpty();
 	    return (reqCnt < numBeats);
@@ -88,6 +88,7 @@ module mkMemreadEngine#(Bit#(6) tag, FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(b
 	    if (respCnt+1 == numBeats)
 	       ff.enq(True);
 	    f.enq(d.data);
+	    //$display("readData: tag=%d", d.tag);
 	 endmethod
 	 method Bool notFull();
 	    return f.notFull;

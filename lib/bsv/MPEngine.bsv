@@ -86,9 +86,9 @@ module mkMPEngine#(FIFOF#(void) compf,
    Reg#(Bit#(32)) haystackOff <- mkReg(0);
    Reg#(DmaPointer) haystackPointer <- mkReg(0);
    
-   BRAMReadClient#(NeedleIdx,busWidth) n2b <- mkBRAMReadClient(6'd0, needle.portB);
+   BRAMReadClient#(NeedleIdx,busWidth) n2b <- mkBRAMReadClient(needle.portB);
    mkConnection(n2b.dmaClient, needle_read_server);
-   BRAMReadClient#(NeedleIdx,busWidth) mp2b <- mkBRAMReadClient(6'd1, mpNext.portB);
+   BRAMReadClient#(NeedleIdx,busWidth) mp2b <- mkBRAMReadClient(mpNext.portB);
    mkConnection(mp2b.dmaClient, mp_next_read_server);
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
 

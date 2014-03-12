@@ -46,7 +46,7 @@ module  mkMemwriteRequest#(MemwriteIndication indication,
 
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    FIFOF#(Bit#(64))      writeFifo <- mkFIFOF;
-   let                          we <- mkMemwriteEngine(6'b1, writeFifo);
+   let                          we <- mkMemwriteEngine(writeFifo);
 
    Reg#(DmaPointer)        pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);

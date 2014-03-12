@@ -170,21 +170,23 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
       cycle <= cycle+1;
    endrule
    
-   rule req_ar_b if (readLen == 0 /*&& writeLen == 0*/ && (cycle-tpl_1(readDelayFifo.first)) > readLatency);
+   rule req_ar_b if (readLen == 0 && (cycle-tpl_1(readDelayFifo.first)) > readLatency);
       let req = tpl_2(readDelayFifo.first);
       readDelayFifo.deq;
       Bit#(5) rlen = extend(req.len)+1;
       //$display("req_ar: addr=%h len=%d", req.address, rlen);
+      //$display("req_ar: id=%d", req.id);
       readAddrr <= req.address;
       readLen <= rlen;
       readId <= req.id;
    endrule
 
-   rule req_aw_b if (writeLen == 0 /*&& readLen == 0*/ && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency);
+   rule req_aw_b if (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency);
       let req = tpl_2(writeDelayFifo.first);
       writeDelayFifo.deq;
       Bit#(5) wlen = extend(req.len)+1;
       //$display("req_aw: addr=%h len=%d", req.address, wlen);
+      //$display("req_aw: id=%d", req.id);
       writeAddrr <= req.address;
       writeLen <= wlen;
       writeId <= req.id;
