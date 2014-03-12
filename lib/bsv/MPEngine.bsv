@@ -82,7 +82,7 @@ module mkMPEngine#(FIFOF#(void) compf,
    Reg#(Bit#(32)) jReg <- mkReg(0); // offset in haystack
    Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
    Reg#(Bit#(2))  epochReg <- mkReg(0);
-   Reg#(Bit#(6))  dmaTag <- mkReg(2); // 0 and 1 are reserved for the BRAMReadClients 
+   Reg#(Bit#(6))  dmaTag <- mkReg(0);
    Reg#(Bit#(32)) haystackOff <- mkReg(0);
    Reg#(DmaPointer) haystackPointer <- mkReg(0);
    
@@ -192,7 +192,7 @@ module mkMPEngine#(FIFOF#(void) compf,
       haystackLenReg <= extend(haystack_len);
       haystackPointer <= haystack_pointer;
       haystackBase <= extend(haystack_base);
-      dmaTag   <= dmaTag == maxBound ? 2 : dmaTag+1; // 0 and 1 are reserved for the BRAMReadClients 
+      dmaTag   <= dmaTag+1;
       haystackOff <= 0;
       stage <= Run;
       iReg <= 1;
