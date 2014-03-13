@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import subprocess
+import subprocess, sys
 from gmpy import mpz
 
 # 64-bit BAR
@@ -263,12 +263,15 @@ def print_tlp_log(tlplog, f=None):
     print '        ts     delta   response                     XXX          tlp          address  off   be       tag     clid  nosnp  laddr        data'
     print '                           pkttype format               foo (be hit eof sof)            (1st last)        req     stat  bcnt    length'
     for tlpdata in tlplog:
-        if tlpdata == '000000000000000000000000000000000000000000000000' or tlpdata == '':
+        if tlpdata.startswith('00000000') or tlpdata == '':
             continue
         print_tlp(tlpdata, f)
 
 if __name__ == '__main__':
-    tlplog = subprocess.check_output(['xbsvutil', 'tlp', '/dev/fpga0']).split('\n')
+    if len(sys.argv) == 2:
+        tlplog = open(sys.argv[1]).read().split('\n')
+    else:
+        tlplog = subprocess.check_output(['xbsvutil', 'tlp', '/dev/fpga0']).split('\n')
     tlplog.sort()
     f = open('tlp.vcd', 'w')
     print_tlp_log(tlplog[0:-1], f)
