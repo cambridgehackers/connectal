@@ -250,7 +250,7 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + '  pkttype:' + str(int(tlpdata[-26:-24],16) & 0x1f) + ' ' + TlpPacketType[int(tlpdata[-26:-24],16) & 0x1f]
         headerstr = headerstr + '  format:' + str((int(tlpdata[-26:-24],16) >> 1) & 3) + ' ' + TlpPacketFormat[(int(tlpdata[-26:-24],16) >> 1) & 3]
     print '%10d %10d %s' % (seqno, delta, headerstr)
-    print '                      ' + tlpdata[0:8] + ' ' + tlpdata[8:]
+    #print '                      ' + tlpdata[0:8] + ' ' + tlpdata[8:]
     if len(tlpdata) != 48:
         print 'bogus len', len(tlpdata)
         sys.exit(1)
