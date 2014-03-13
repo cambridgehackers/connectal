@@ -138,14 +138,6 @@ $(zcruns):
 	(cd consolable; make)
 	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zc702 -name \*.gz` `find examples/$(basename $@)/zc702 -name android_exe | grep libs`
 
-bsim_exetests = $(addsuffix .bsim_exe, $(testnames))
-
-bsim_exetests: $(bsim_exetests)
-
-$(bsim_exetests):
-	make BOARD=bluesim -C examples/$(basename $@) bsim_exe
-	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
-
 android_exetests = $(addsuffix .android_exe, $(testnames))
 android_exetests: $(android_exetests)
 

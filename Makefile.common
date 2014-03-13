@@ -8,7 +8,7 @@ all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe: gen
 
 ifeq ($(BOARD),bluesim_pcie)
 TOP=BsimTopPcie
-MKTOP=mkBsimTopPcie
+MKTOP=mkBsimTop
 endif
 ifeq ($(BOARD),bluesim)
 TOP=BsimTop
