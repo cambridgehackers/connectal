@@ -138,9 +138,9 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
         return 'trace'
     if tlpsof == 0:
         if portnum == 4:
-            return 'Mcont'
+            return 'MCont'
         else:
-            return 'Scont'
+            return 'SCont'
     if portnum == 4:
         if pkttype == 10: # COMPLETION
             return 'MResp'
@@ -210,14 +210,14 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + ' ' + tlpdata[-28:-27] + str(int(tlpdata[-28:-27],16) >> 3)
         headerstr = headerstr + ' ' + tlpdata[-19:-16]
         headerstr = headerstr + ' ' + tlpdata[-10:-8]
-        headerstr = headerstr + ' ' + str(int(tlpdata[-27:-24],16) & 0x3ff)
+        headerstr = headerstr + ' %3d' % (int(tlpdata[-27:-24],16) & 0x3ff)
         headerstr = headerstr + ' ' + tlpdata[-8:]
     elif TlpPacketFormat[pktformat] == 'MEM_READ__3DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
         headerstr = headerstr + '  %s %4x'% (tlpdata[-16:-8], (int(tlpdata[-16:-8],16) >> 2) % 8192)
         headerstr = headerstr + ' be(' + tlpdata[-17:-16] + ' ' + tlpdata[-18:-17] + ')'
         headerstr = headerstr + ' tag:' + tlpdata[-20:-18]
         headerstr = headerstr + ' ' + tlpdata[-24:-20]
-        headerstr = headerstr + '                  ' + str(int(tlpdata[-27:-24],16) & 0x3ff)
+        headerstr = headerstr + '                  %3d' % (int(tlpdata[-27:-24],16) & 0x3ff)
         if TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
             headerstr = headerstr + ' ' + tlpdata[-8:]
     elif TlpPacketFormat[pktformat] == 'MEM_READ__4DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
@@ -259,8 +259,8 @@ def print_tlp_log(tlplog, f=None):
         print_tlp(tlpdata, f)
     last_seqno = mpz(-1)
     #ts     delta           response   foo XXX tlp(be hit eof sof) pkttype format             address  off be(1st last) tag req clid stat nosnoop bcnt laddr length data 
-    print '        ts     delta   response                     XXX          tlp          address  off   be    tag     clid nosnp  laddr     data'
-    print '                           pkttype format               foo (be hit eof sof)            (1st last)     req     stat bcnt  length'
+    print '        ts     delta   response                     XXX          tlp          address  off   be       tag     clid  nosnp  laddr        data'
+    print '                           pkttype format               foo (be hit eof sof)            (1st last)        req     stat  bcnt    length'
     for seqno in sorted(traceinfo.iterkeys()):
         if seqno == 0:
             continue
