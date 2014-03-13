@@ -201,7 +201,7 @@ def print_tlp(tlpdata, f=None):
     headerstr = headerstr + ' ' + tlpdata[-40:-38] + ' ' + hex(int(tlpdata[-40:-38],16) >> 1)
     headerstr = headerstr + ' tlp(%s %d %d %d)' % (tlpbe, tlphit, tlpeof, tlpsof)
     if tlpsof == 0:
-        print headerstr, ' data:', tlpdata[-32:]
+        headerstr =  headerstr + ' data:', tlpdata[-32:]
     elif TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMP':
         headerstr = headerstr + '                        tag:' + tlpdata[-12:-10]
         headerstr = headerstr + ' ' + tlpdata[-16:-12]
