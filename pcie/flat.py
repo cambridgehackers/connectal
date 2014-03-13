@@ -161,10 +161,10 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
         return 'Misc'
 
 classCounts = {}
-traceinfo = {}
+last_seqno = mpz(-1)
 
 def print_tlp(tlpdata, f=None):
-    global traceinfo
+    global last_seqno
     def segment(i):
         return tlpdata[i*8:i*8+8]
     def byteswap(w):
@@ -175,6 +175,10 @@ def print_tlp(tlpdata, f=None):
     words = map(segment, [0,1,2,3,4,5])
 
     seqno = mpz(tlpdata[-48:-40],16)
+    if last_seqno >= 0:
+        delta = seqno - last_seqno
+    else:
+        delta = 0
     tlpsof = int(tlpdata[-39:-38],16) & 1
     tlpeof = int(tlpdata[-38:-36],16) >> 7
     tlpbe  = tlpdata[-36:-32]
@@ -194,7 +198,6 @@ def print_tlp(tlpdata, f=None):
 
     headerstr = tlpdata
     headerstr = ''
-    #headerstr = headerstr + ' ts: %10d delta %11d %20s' % (seqno, delta, pktclass)
     headerstr = headerstr + '%6s' % (pktclass)
     if tlpsof:
         headerstr = headerstr + ':%4s:%18s' % (TlpPacketType[pkttype], TlpPacketFormat[pktformat])
@@ -246,36 +249,27 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + '   tclass:' + tlpdata[-24:-23]
         headerstr = headerstr + '  pkttype:' + str(int(tlpdata[-26:-24],16) & 0x1f) + ' ' + TlpPacketType[int(tlpdata[-26:-24],16) & 0x1f]
         headerstr = headerstr + '  format:' + str((int(tlpdata[-26:-24],16) >> 1) & 3) + ' ' + TlpPacketFormat[(int(tlpdata[-26:-24],16) >> 1) & 3]
-    if traceinfo.get(seqno) is not None:
-        print 'Already had info for ts:', seqno
-    traceinfo[seqno] = headerstr
-    #print headerstr
-    #print
+    print '%10d %10d %s' % (seqno, delta, headerstr)
+    print '                      ' + tlpdata[0:8] + ' ' + tlpdata[8:]
+    if len(tlpdata) != 48:
+        print 'bogus len', len(tlpdata)
+        sys.exit(1)
+    last_seqno = seqno
 
 def print_tlp_log(tlplog, f=None):
     if f:
         emit_vcd_header(f)
-    for tlpdata in tlplog:
-        if tlpdata == '000000000000000000000000000000000000000000000000':
-            continue
-        print_tlp(tlpdata, f)
-    last_seqno = mpz(-1)
     #ts     delta           response   foo XXX tlp(be hit eof sof) pkttype format             address  off be(1st last) tag req clid stat nosnoop bcnt laddr length data 
     print '        ts     delta   response                     XXX          tlp          address  off   be       tag     clid  nosnp  laddr        data'
     print '                           pkttype format               foo (be hit eof sof)            (1st last)        req     stat  bcnt    length'
-    for seqno in sorted(traceinfo.iterkeys()):
-        if seqno == 0:
+    for tlpdata in tlplog:
+        if tlpdata == '000000000000000000000000000000000000000000000000' or tlpdata == '':
             continue
-        if last_seqno >= 0:
-            delta = seqno - last_seqno
-        else:
-            delta = 0
-        print '%10d %10d %s' % (seqno, delta, traceinfo[seqno])
-        last_seqno = seqno
-    print
+        print_tlp(tlpdata, f)
 
 if __name__ == '__main__':
     tlplog = subprocess.check_output(['xbsvutil', 'tlp', '/dev/fpga0']).split('\n')
+    tlplog.sort()
     f = open('tlp.vcd', 'w')
     print_tlp_log(tlplog[0:-1], f)
     print classCounts
