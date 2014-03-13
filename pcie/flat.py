@@ -249,7 +249,19 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + '   tclass:' + tlpdata[-24:-23]
         headerstr = headerstr + '  pkttype:' + str(int(tlpdata[-26:-24],16) & 0x1f) + ' ' + TlpPacketType[int(tlpdata[-26:-24],16) & 0x1f]
         headerstr = headerstr + '  format:' + str((int(tlpdata[-26:-24],16) >> 1) & 3) + ' ' + TlpPacketFormat[(int(tlpdata[-26:-24],16) >> 1) & 3]
-    print '%10d %10d %s' % (seqno, delta, headerstr)
+    if portnum == 4:
+        dir = 'RX'
+    elif portnum == 8:
+        dir = 'TX'
+    else:
+        dir = '__'
+    if tlpsof == 0:
+        dir = dir + 'cc'    # continuation
+    elif pkttype == 10: 
+        dir = dir + 'pp'    # response
+    else:
+        dir = dir + 'qq'    # request
+    print dir, '%10d %10d %s' % (seqno, delta, headerstr)
     #print '                      ' + tlpdata[0:8] + ' ' + tlpdata[8:]
     if len(tlpdata) != 48:
         print 'bogus len', len(tlpdata)
@@ -260,8 +272,8 @@ def print_tlp_log(tlplog, f=None):
     if f:
         emit_vcd_header(f)
     #ts     delta           response   foo XXX tlp(be hit eof sof) pkttype format             address  off be(1st last) tag req clid stat nosnoop bcnt laddr length data 
-    print '        ts     delta   response                     XXX          tlp          address  off   be       tag     clid  nosnp  laddr        data'
-    print '                           pkttype format               foo (be hit eof sof)            (1st last)        req     stat  bcnt    length'
+    print '             ts     delta   response                     XXX          tlp          address  off   be       tag     clid  nosnp  laddr        data'
+    print '                                pkttype format               foo (be hit eof sof)            (1st last)        req     stat  bcnt    length'
     for tlpdata in tlplog:
         if tlpdata.startswith('00000000') or tlpdata == '':
             continue
