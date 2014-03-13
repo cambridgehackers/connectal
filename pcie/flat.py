@@ -197,11 +197,13 @@ def print_tlp(tlpdata, f=None):
     #headerstr = headerstr + ' ts: %10d delta %11d %20s' % (seqno, delta, pktclass)
     headerstr = headerstr + '%6s' % (pktclass)
     if tlpsof:
-        headerstr = headerstr + ':%4s:%s' % (TlpPacketType[pkttype], TlpPacketFormat[pktformat])
+        headerstr = headerstr + ':%4s:%18s' % (TlpPacketType[pkttype], TlpPacketFormat[pktformat])
+    else:
+        headerstr = headerstr + '                        '
     headerstr = headerstr + ' ' + tlpdata[-40:-38] + ' ' + hex(int(tlpdata[-40:-38],16) >> 1)
     headerstr = headerstr + ' tlp(%s %d %d %d)' % (tlpbe, tlphit, tlpeof, tlpsof)
     if tlpsof == 0:
-        headerstr =  headerstr + ' data:', tlpdata[-32:]
+        headerstr = headerstr + '                      data: ' + tlpdata[-32:]
     elif TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMP':
         headerstr = headerstr + '                        tag:' + tlpdata[-12:-10]
         headerstr = headerstr + ' ' + tlpdata[-16:-12]
