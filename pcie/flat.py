@@ -138,12 +138,12 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
         return 'trace'
     if tlpsof == 0:
         if portnum == 4:
-            return 'master continuation'
+            return 'Mcont'
         else:
-            return 'slave continuation'
+            return 'Scont'
     if portnum == 4:
         if pkttype == 10: # COMPLETION
-            return 'Master Response'
+            return 'MResp'
         else:
             if pktformat == 2 or pktformat == 3:
                 return 'SWReq'
@@ -203,7 +203,7 @@ def print_tlp(tlpdata, f=None):
     if tlpsof == 0:
         print headerstr, ' data:', tlpdata[-32:]
     elif TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMP':
-        headerstr = headerstr + '                        ' + tlpdata[-12:-10]
+        headerstr = headerstr + '                        tag:' + tlpdata[-12:-10]
         headerstr = headerstr + ' ' + tlpdata[-16:-12]
         headerstr = headerstr + ' ' + tlpdata[-24:-20]
         headerstr = headerstr + ' ' + tlpdata[-20:-19]
@@ -215,7 +215,7 @@ def print_tlp(tlpdata, f=None):
     elif TlpPacketFormat[pktformat] == 'MEM_READ__3DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
         headerstr = headerstr + '  %s %4x'% (tlpdata[-16:-8], (int(tlpdata[-16:-8],16) >> 2) % 8192)
         headerstr = headerstr + ' be(' + tlpdata[-17:-16] + ' ' + tlpdata[-18:-17] + ')'
-        headerstr = headerstr + ' ' + tlpdata[-20:-18]
+        headerstr = headerstr + ' tag:' + tlpdata[-20:-18]
         headerstr = headerstr + ' ' + tlpdata[-24:-20]
         headerstr = headerstr + '                  ' + str(int(tlpdata[-27:-24],16) & 0x3ff)
         if TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
