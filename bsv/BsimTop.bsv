@@ -175,7 +175,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
       readDelayFifo.deq;
       Bit#(5) rlen = extend(req.len)+1;
       //$display("req_ar: addr=%h len=%d", req.address, rlen);
-      //$display("req_ar: id=%d", req.id);
+      $display("req_ar: id=%d", req.id);
       readAddrr <= req.address;
       readLen <= rlen;
       readId <= req.id;
@@ -213,6 +213,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
    interface Axi3Slave axi_server;
       interface Put req_ar;
 	 method Action put(Axi3ReadRequest#(serverAddrWidth,serverIdWidth) req);
+	    $display("req_ar::put %d", req.id);
 	    readDelayFifo.enq(tuple2(cycle,req));
 	 endmethod
       endinterface

@@ -14,7 +14,7 @@
 
 
 sem_t test_sem;
-int numWords = 0x124000/4; // make sure to allocate at least one entry of each size
+int numWords = 64; // 0x124000/4; // make sure to allocate at least one entry of each size
 
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
@@ -94,9 +94,9 @@ int main(int argc, const char **argv)
   start_timer(0);
   int burstLen = 16;
 #ifdef MMAP_HW
-  int iterCnt = 64;
+  int iterCnt = 1; //64;
 #else
-  int iterCnt = 2;
+  int iterCnt = 1; //2;
 #endif
   device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&test_sem);

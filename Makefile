@@ -72,14 +72,28 @@ bsimtests: $(bsimtests)
 $(bsimtests):
 	rm -fr examples/$(basename $@)/bluesim
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
-	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
+
+bsim_pcietests = $(addsuffix .bsim_pcie, $(testnames))
+
+bsim_pcietests: $(bsim_pcietests)
+
+$(bsim_pcietests):
+	rm -fr examples/$(basename $@)/bluesim_pcie
+	make BOARD=bluesim_pcie -C examples/$(basename $@) bsim_exe bsim
 
 bsimruns = $(addsuffix .bsimrun, $(testnames))
 
 bsimruns: $(bsimruns)
 
 $(bsimruns):
-	# already executed test in 'bsim'
+	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
+
+bsim_pcieruns = $(addsuffix .bsim_pcierun, $(testnames))
+
+bsim_pcieruns: $(bsim_pcieruns)
+
+$(bsim_pcieruns):
+	(cd examples/$(basename $@)/bluesim_pcie; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
 
 zedtests = $(addsuffix .zedboard, $(testnames))
 

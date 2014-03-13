@@ -46,7 +46,7 @@ AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
 AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
 
-supported_boards = ['ac701', 'zedboard', 'zc702', 'kc705', 'vc707', 'bluesim']
+supported_boards = ['ac701', 'zedboard', 'zc702', 'kc705', 'vc707', 'bluesim', 'bluesim_pcie']
 supported_os = ['android', 'ubuntu']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
@@ -187,9 +187,8 @@ ubuntu_exe:
 	cd jni; make
 
 bsim: $(timestampfile)
-	cd sources; mkdir -p $(DTOP)/obj; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g mkBsimTop %(topbsvfile)s
+	cd sources; mkdir -p $(DTOP)/obj; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
 	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
-
 
 verilog: $(vfile)
 

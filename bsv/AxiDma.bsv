@@ -53,13 +53,13 @@ endinterface
 interface AxiDmaWriteInternal#(numeric type addrWidth, numeric type dsz);
    interface DmaDbg dbg;
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
-   interface Get#(Bool) tagMismatch;
+   interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
 endinterface
 
 interface AxiDmaReadInternal#(numeric type addrWidth, numeric type dsz);
    interface DmaDbg dbg;
    interface Axi3Master#(addrWidth,dsz,6) m_axi;
-   interface Get#(Bool) tagMismatch;
+   interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
 endinterface
 
 function Bool bad_pointer(DmaPointer p);
@@ -92,7 +92,7 @@ module mkAxiDmaReadInternal#(Integer numRequests,
    // a depth of 32 will guarantee per/client uniqueness of outstanding requests
    Vector#(numReadClients, FIFO#(Bit#(6))) tag_store <- replicateM(mkSizedFIFO(32)); 
    // report a tag mismatch for oo write completions (in which case we will need to introduce completion buffers)
-   FIFO#(Bool) tag_mismatch <- mkSizedFIFO(32);
+   FIFO#(Tuple2#(Bit#(6),Bit#(6))) tag_mismatch <- mkSizedFIFO(32);
    
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
        rule loadChannel;
@@ -174,7 +174,7 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 	    end
    
 	    if (response.id != req.tag)
-	       tag_mismatch.enq(True);
+	       tag_mismatch.enq(tuple2(response.id,req.tag));
 
 	    burstReg <= burstLen-1;
 	    beatCount <= beatCount+1;
@@ -213,7 +213,7 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
    // a depth of 32 will guarantee per/client uniqueness of outstanding requests
    Vector#(numWriteClients, FIFO#(Bit#(6))) tag_store <- replicateM(mkSizedFIFO(32)); 
    // report a tag mismatch for oo write completions (in which case we will need to introduce completion buffers)
-   FIFO#(Bool) tag_mismatch <- mkSizedFIFO(32);
+   FIFO#(Tuple2#(Bit#(6),Bit#(6))) tag_mismatch <- mkSizedFIFO(32);
 
    for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
        rule loadChannel;
@@ -308,7 +308,7 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
 	    let activeChan = tpl_1(respFifo.first);
 	    let tag = tpl_2(respFifo.first);
 	    if (resp.id != tag)
-	       tag_mismatch.enq(True);
+	       tag_mismatch.enq(tuple2(resp.id,tag));
 	    respFifo.deq();
 	    if (valueOf(numWriteClients) > 0) begin
 	       writeClients[activeChan].writeDone.put(extend(tag_store[activeChan].first));
@@ -350,12 +350,12 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
    
    rule tag_mismatch_read;
       let rv <- reader.tagMismatch.get;
-      dmaIndication.tagMismatch(Read);
+      dmaIndication.tagMismatch(Read, extend(tpl_1(rv)), extend(tpl_2(rv)));
    endrule
    
    rule tag_mismatch_write;
       let rv <- writer.tagMismatch.get;
-      dmaIndication.tagMismatch(Write);
+      dmaIndication.tagMismatch(Write, extend(tpl_1(rv)), extend(tpl_2(rv)));
    endrule
 
    rule sglistEntry;

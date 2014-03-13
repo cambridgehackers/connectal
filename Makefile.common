@@ -5,6 +5,11 @@ endif
 all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe: gen
 	make -C $(BOARD) $@
 
+
+ifeq ($(BOARD),bluesim_pcie)
+TOP=BsimTopPcie
+MKTOP=mkBsimTopPcie
+endif
 ifeq ($(BOARD),bluesim)
 TOP=BsimTop
 MKTOP=mkBsimTop
