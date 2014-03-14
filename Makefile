@@ -51,69 +51,51 @@ memtests =  memcpy_buff      \
             memrw_nobuff     \
 	    echo
 
-memtests.zedboard: $(addsuffix .zedboard, $(memtests))
 
-memtests.zedrun:  $(addsuffix .zedrun, $(memtests))
-
-memtests.zedboard.regression:
-	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.zedboard
-
-memtests.kc705: $(addsuffix .kc705, $(memtests))
-
-memtests.kcrun:  $(addsuffix .kcrun, $(memtests))
-
-memtests.kc705.regression:
-	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.kc705
+#################################################################################################
+# bsim
 
 bsimtests = $(addsuffix .bsim, $(testnames))
-
 bsimtests: $(bsimtests)
 
 $(bsimtests):
 	rm -fr examples/$(basename $@)/bluesim
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
 
-bsim_pcietests = $(addsuffix .bsim_pcie, $(testnames))
+bsimruns = $(addsuffix .bsimrun, $(testnames))
+bsimruns: $(bsimruns)
 
+$(bsimruns):
+	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
+
+#################################################################################################
+# bsim_pcie
+
+bsim_pcietests = $(addsuffix .bsim_pcie, $(testnames))
 bsim_pcietests: $(bsim_pcietests)
 
 $(bsim_pcietests):
 	rm -fr examples/$(basename $@)/bluesim_pcie
 	make BOARD=bluesim_pcie -C examples/$(basename $@) bsim_exe bsim
 
-bsimruns = $(addsuffix .bsimrun, $(testnames))
-
-bsimruns: $(bsimruns)
-
-$(bsimruns):
-	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
 
 bsim_pcieruns = $(addsuffix .bsim_pcierun, $(testnames))
-
 bsim_pcieruns: $(bsim_pcieruns)
 
 $(bsim_pcieruns):
 	(cd examples/$(basename $@)/bluesim_pcie; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
 
-zedtests = $(addsuffix .zedboard, $(testnames))
+#################################################################################################
+# zedboard
 
+zedtests = $(addsuffix .zedboard, $(testnames))
 zedtests: $(zedtests)
 
 $(zedtests):
 	rm -fr examples/$(basename $@)/zedboard
 	make BOARD=zedboard -C examples/$(basename $@) all
 
-zedruns = $(addsuffix .zedrun, $(testnames))
-
-zedruns: $(zedruns)
-
-# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
-$(zedruns):
-	(cd consolable; make)
-	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
-
 zedboardruns = $(addsuffix .zedboardrun, $(testnames))
-
 zedboardruns: $(zedboardruns)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
@@ -121,8 +103,11 @@ $(zedboardruns):
 	(cd consolable; make)
 	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
 
-zctests = $(addsuffix .zc702, $(testnames))
 
+#################################################################################################
+# zc702
+
+zctests = $(addsuffix .zc702, $(testnames))
 zctests: $(zctests)
 
 $(zctests):
@@ -130,13 +115,61 @@ $(zctests):
 	make BOARD=zc702 -C examples/$(basename $@) all
 
 zcruns = $(addsuffix .zcrun, $(testnames))
-
 zcruns: $(zcruns)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc702
 $(zcruns):
 	(cd consolable; make)
 	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zc702 -name \*.gz` `find examples/$(basename $@)/zc702 -name android_exe | grep libs`
+
+#################################################################################################
+# vc707
+
+vc707tests = $(addsuffix .vc707, $(testnames))
+vc707tests: $9vc707tests)
+
+$(vc707tests):
+	rm -fr examples/$(basename $@)/vc707
+	make BOARD=vc707 -C examples/$(basename $@) all
+
+vc707runs = $(addsuffix .vc707run, $(testnames))
+vc707runs: $(vc707runs)
+
+$(vc707runs):
+	(cd examples/$(basename $@)/vc707; make program)
+	pciescanportal
+	timeout 3m catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
+
+#################################################################################################
+# kc705
+
+kc705tests = $(addsuffix .kc705, $(testnames))
+kc705tests: $(kc705tests)
+
+$(kc705tests):
+	rm -fr examples/$(basename $@)/kc705
+	make BOARD=kc705 -C examples/$(basename $@) all
+
+kc705runs = $(addsuffix .kc705run, $(testnames))
+kc705runs: $(kc705runs)
+
+$(kc705runs):
+	(cd examples/$(basename $@)/kc705; make program)
+	pciescanportal
+	timeout 3m catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
+
+
+#################################################################################################
+# misc
+
+
+memtests.zedboard: $(addsuffix .zedboard, $(memtests))
+memtests.zedboard.regression:
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.zedboard
+
+memtests.kc705: $(addsuffix .kc705, $(memtests))
+memtests.kc705.regression:
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.kc705
 
 android_exetests = $(addsuffix .android_exe, $(testnames))
 android_exetests: $(android_exetests)
@@ -164,52 +197,6 @@ $(acruns):
 	(cd examples/$(basename $@)/ac701; make program)
 	pciescanportal
 	timeout 3m catchsegv examples/$(basename $@)/ac701/jni/mkpcietop
-
-kc705tests = $(addsuffix .kc705, $(testnames))
-kc705tests: $(kc705tests)
-
-$(kc705tests):
-	rm -fr examples/$(basename $@)/kc705
-	make BOARD=kc705 -C examples/$(basename $@) all
-
-kcruns = $(addsuffix .kcrun, $(testnames))
-kcruns: $(kcruns)
-
-$(kcruns):
-	(cd examples/$(basename $@)/kc705; make program)
-	pciescanportal
-	timeout 3m catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
-
-kc705runs = $(addsuffix .kc705run, $(testnames))
-kc705runs: $(kc705runs)
-
-$(kc705runs):
-	(cd examples/$(basename $@)/kc705; make program)
-	pciescanportal
-	timeout 3m catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
-
-vc707tests = $(addsuffix .vc707, $(testnames))
-vc707tests: $9vc707tests)
-
-$(vc707tests):
-	rm -fr examples/$(basename $@)/vc707
-	make BOARD=vc707 -C examples/$(basename $@) all
-
-vcruns = $(addsuffix .vcrun, $(testnames))
-vcruns: $(vcruns)
-
-$(vcruns):
-	(cd examples/$(basename $@)/vc707; make program)
-	pciescanportal
-	timeout 3m catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
-
-vc707runs = $(addsuffix .vc707run, $(testnames))
-vc707runs: $(vc707runs)
-
-$(vc707runs):
-	(cd examples/$(basename $@)/vc707; make program)
-	pciescanportal
-	timeout 3m catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
 
 zynqdrivers:
 	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)

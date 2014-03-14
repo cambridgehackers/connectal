@@ -7,7 +7,7 @@
 // PCI-Express for Xilinx 7
 // FPGAs.
 
-package PcieToAxiBridge;
+package PcieSplitter;
 
 // This is a package which acts as a bridge between a TLP-based PCIe
 // interface on one side and an AXI slave (portal) and AXI Master on
@@ -57,11 +57,11 @@ interface TlpTrace;
 endinterface
 
 // The top-level interface of the PCIe-to-AXI bridge
-interface PcieToAxiBridge#(numeric type bpb);
+interface PcieSplitter#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
-   interface Axi3Master#(32,32,12) portal0; // to the portal control
-   interface GetPut#(TLPData#(16)) slave;
+   interface Axi3Master#(32,32,12) master; // to the portal control
+   interface GetPut#(TLPData#(16)) slave;  // to the portal DMA
    interface Reset portalReset;
 
    // status for FPGA LEDs
@@ -74,7 +74,7 @@ interface PcieToAxiBridge#(numeric type bpb);
 
    interface Put#(TimestampedTlpData) trace;
 
-endinterface: PcieToAxiBridge
+endinterface: PcieSplitter
 
 // When TLP packets come in from the PCIe bus, they are dispatched to
 // either the configuration register block, the portal (AXI slave) or
@@ -859,7 +859,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 endmodule: mkControlAndStatusRegs
 
 // The PCIe-to-AXI bridge puts all of the elements together
-module mkPcieToAxiBridge#( Bit#(64)  board_content_id
+module mkPcieSplitter#( Bit#(64)  board_content_id
 			 , PciId     my_id
 			 , UInt#(13) max_read_req_bytes
 			 , UInt#(13) max_payload_bytes
@@ -868,7 +868,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 			 , Bool      msix_mask_all_intr
 			 , Bool      msi_enabled
 			 )
-			 (PcieToAxiBridge#(bpb))
+			 (PcieSplitter#(bpb))
    provisos( Add#(1, __1, TDiv#(bpb,4))
            // the compiler should be able to figure these out ...
            , Log#(TAdd#(1,bpb), TLog#(TAdd#(bpb,1)))
@@ -960,7 +960,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    //interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
    interface GetPut tlps = tuple2(toGet(tlpToBusFifo),toPut(tlpFromBusFifo));
 
-   interface Axi3Slave portal0 = portalEngine.master;
+   interface Axi3Master master = portalEngine.master;
    interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
 
    interface Reset portalReset = portalResetIfc.new_rst;
@@ -982,6 +982,6 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
        endmethod
    endinterface: trace
 
-endmodule: mkPcieToAxiBridge
+endmodule: mkPcieSplitter
 
-endpackage: PcieToAxiBridge
+endpackage: PcieSplitter

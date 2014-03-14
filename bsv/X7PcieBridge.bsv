@@ -13,7 +13,7 @@ import Clocks          :: *;
 import DefaultValue    :: *;
 import TieOff          :: *;
 import XilinxCells     :: *;
-import PcieToAxiBridge :: *;
+import PcieSplitter :: *;
 import AxiMasterSlave  :: *;
 import XbsvXilinx7Pcie :: *;
 //import XbsvXilinx7DDR3      :: *;
@@ -163,16 +163,16 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    endrule: intr_ifc_ctl
 
    // Build the PCIe-to-AXI bridge
-   PcieToAxiBridge#(BPB)  bridge <- mkPcieToAxiBridge( contentId
-						       , my_id
-						       , max_read_req_bytes
-						       , max_payload_bytes
-						       , rcb_mask
-						       , msix_enable
-						       , msix_masked
-						       , False // no MSI, only MSI-X
-						       , clocked_by epClock125, reset_by epReset125
-						       );
+   PcieSplitter#(BPB)  bridge <- mkPcieSplitter( contentId
+						, my_id
+						, max_read_req_bytes
+						, max_payload_bytes
+						, rcb_mask
+						, msix_enable
+						, msix_masked
+						, False // no MSI, only MSI-X
+						, clocked_by epClock125, reset_by epReset125
+						);
    mkConnectionWithClocks(_ep.trn_rx, tpl_2(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
    mkConnectionWithClocks(_ep.trn_tx, tpl_1(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
 
@@ -188,7 +188,7 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 
    interface pcie     = _ep.pcie;
    //interface ddr3     = ddr3_ctrl.ddr3;
-   interface portal0  = bridge.portal0;
+   interface portal0  = bridge.master;
    interface slave    = bridge.slave;
    interface trace    = bridge.trace;
    interface portalReset = bridge.portalReset;

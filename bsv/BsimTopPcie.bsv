@@ -30,7 +30,7 @@ import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiSlaveEngine    :: *;
-import PcieToAxiBridge   :: *;
+import PcieSplitter      :: *;
 
 // from SceMiDefines
 typedef 4 BPB;
@@ -50,20 +50,20 @@ module mkBsimTop(Empty);
    Reg#(Bool)      msix_enable        <- mkReg(False);
    Reg#(Bool)      msix_masked        <- mkReg(True);
 
-   PcieToAxiBridge#(BPB)  bridge <- mkPcieToAxiBridge( contentId
-						       , my_id
-						       , max_read_req_bytes
-						       , max_payload_bytes
-						       , rcb_mask
-						       , msix_enable
-						       , msix_masked
-						       , False // no MSI, only MSI-X
-						       );
+   PcieSplitter#(BPB)  bridge <- mkPcieSplitter( contentId
+						, my_id
+						, max_read_req_bytes
+						, max_payload_bytes
+						, rcb_mask
+						, msix_enable
+						, msix_masked
+						, False // no MSI, only MSI-X
+						);
    
    mkConnection(tpl_1(bridge.slave), tpl_2(axiSlaveEngine.tlps));
    mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(bridge.slave));
    mkConnection(portalTop.m_axi, axiSlaveEngine.slave);
-   mkConnection(bridge.portal0, portalTop.ctrl);
+   mkConnection(bridge.master, portalTop.ctrl);
 
    Reg#(Bit#(11)) ptr <- mkReg(1);
       

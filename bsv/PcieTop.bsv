@@ -24,7 +24,6 @@ import Vector            :: *;
 import Connectable       :: *;
 import Xilinx            :: *;
 //import XilinxPCIE        :: *;
-import PcieToAxiBridge   :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
