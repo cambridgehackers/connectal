@@ -39,14 +39,14 @@ import ClientServer         :: *;
 import Memory               :: *;
 import Portal               :: *;
 import Bscan                :: *;
-import PortalEngine         :: *;
+import AxiMasterEngine      :: *;
 import AxiSlaveEngine       :: *;
 
 typedef 11 TlpTraceAddrSize;
 
 typedef struct {
     Bit#(32) timestamp;
-    Bit#(7) source;   // 7 bits to make it 192 bits altogether
+    Bit#(7) source;   // 4==frombus 8=tobus
     TLPData#(16) tlp; // 153 bits
 } TimestampedTlpData deriving (Bits);
 typedef SizeOf#(TimestampedTlpData) TimestampedTlpDataSize;
@@ -384,7 +384,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 			       , Bool      msix_enabled
 			       , Bool      msix_mask_all_intr
 			       , Bool      msi_enabled
-			       , PortalEngine portalEngine
+			       , AxiMasterEngine portalEngine
 			       , MakeResetIfc portalResetIfc
                               )
                               (ControlAndStatusRegs);
@@ -416,7 +416,11 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramWrAddrReg <- mkReg(0);
    Integer memorySize = 2**valueOf(TlpTraceAddrSize);
+`ifdef BSIM
+   BscanBram#(Bit#(TlpTraceAddrSize), TimestampedTlpData) bscanBram <- mkBscanBramBsim(1, memorySize, tlpDataBramWrAddrReg);
+`else
    BscanBram#(Bit#(TlpTraceAddrSize), TimestampedTlpData) bscanBram <- mkBscanBram(1, memorySize, tlpDataBramWrAddrReg);
+`endif
    Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
    Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
    Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
@@ -861,7 +865,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    MakeResetIfc portalResetIfc <- mkReset(10, False, defaultClock);
 
    // instantiate sub-components
-   PortalEngine            portalEngine <- mkPortalEngine( my_id );
+   AxiMasterEngine            portalEngine <- mkAxiMasterEngine( my_id );
 
    TLPDispatcher        dispatcher <- mkTLPDispatcher();
    TLPArbiter           arbiter    <- mkTLPArbiter();
@@ -939,7 +943,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
    //interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
    interface GetPut tlps = tuple2(toGet(tlpToBusFifo),toPut(tlpFromBusFifo));
 
-   interface Axi3Slave portal0 = portalEngine.portal;
+   interface Axi3Slave portal0 = portalEngine.master;
    interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
 
    interface Reset portalReset = portalResetIfc.new_rst;

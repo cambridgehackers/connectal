@@ -33,7 +33,7 @@ import AxiMasterSlave :: *;
 
 interface AxiSlaveEngine#(type buswidth);
     interface GetPut#(TLPData#(16))   tlps;
-    interface Axi3Slave#(40,buswidth,6)  slave3;
+    interface Axi3Slave#(40,buswidth,6)  slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: AxiSlaveEngine
@@ -216,7 +216,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
    endrule
 
     interface GetPut tlps = tuple2(toGet(tlpOutFifo),toPut(tlpInFifo));
-    interface Axi3Slave slave3;
+    interface Axi3Slave slave;
 	interface Put req_aw;
 	   method Action put(Axi3WriteRequest#(40, 6) req)
 	      if (writeBurstCount == 0);
@@ -232,7 +232,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	      tlp.hit = 7'h00;
 	      tlp.be = 16'hffff;
 
-	      $display("slave3.writeAddr tlplen=%d burstLen=%d", tlplen, burstLen);
+	      $display("slave.writeAddr tlplen=%d burstLen=%d", tlplen, burstLen);
 	      if ((addr >> 32) != 0) begin
 		 TLPMemory4DWHeader hdr_4dw = defaultValue;
 		 hdr_4dw.format = MEM_WRITE_4DW_DATA;
@@ -336,7 +336,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	     return (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	  endmethod
 	endinterface: resp_read
-    endinterface: slave3
+    endinterface: slave
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
    interface Reg use4dw = use4dwReg;
 endmodule: mkAxiSlaveEngine

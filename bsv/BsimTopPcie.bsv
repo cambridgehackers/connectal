@@ -30,25 +30,62 @@ import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiSlaveEngine    :: *;
-import PortalEngine      :: *;
+import PcieToAxiBridge   :: *;
 
+// from SceMiDefines
+typedef 4 BPB;
 
 module mkBsimTop(Empty);
-   
 
    RegFile#(Bit#(11), Bit#(192)) tlp_trace <- mkRegFileFullLoad("testdata.dat");
    
    PortalTop#(40,64,Empty)  portalTop <- mkPortalTop;
    AxiSlaveEngine#(64) axiSlaveEngine <- mkAxiSlaveEngine(unpack(0));
-   PortalEngine          portalEngine <- mkPortalEngine(unpack(0));
+
+   let contentId = 0;
+   let my_id = unpack(0);
+   Reg#(UInt#(13)) max_read_req_bytes <- mkReg(128);
+   Reg#(UInt#(13)) max_payload_bytes  <- mkReg(128);
+   Reg#(Bit#(7))   rcb_mask           <- mkReg(7'h3f);
+   Reg#(Bool)      msix_enable        <- mkReg(False);
+   Reg#(Bool)      msix_masked        <- mkReg(True);
+
+   PcieToAxiBridge#(BPB)  bridge <- mkPcieToAxiBridge( contentId
+						       , my_id
+						       , max_read_req_bytes
+						       , max_payload_bytes
+						       , rcb_mask
+						       , msix_enable
+						       , msix_masked
+						       , False // no MSI, only MSI-X
+						       );
    
-   mkConnection(portalTop.m_axi, axiSlaveEngine.slave3);
-   mkConnection(portalEngine.portal, portalTop.ctrl);
-   
+   mkConnection(tpl_1(bridge.slave), tpl_2(axiSlaveEngine.tlps));
+   mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(bridge.slave));
+   mkConnection(portalTop.m_axi, axiSlaveEngine.slave);
+   mkConnection(bridge.portal0, portalTop.ctrl);
+
    Reg#(Bit#(11)) ptr <- mkReg(1);
-   Bool dump = True;
-   
+      
    rule read_trace if (ptr+1 != 0);
+      ptr <= ptr+1;
+      TimestampedTlpData lineitem = unpack(tlp_trace.sub(ptr));
+      if (lineitem.source == 7'h04) //frombus
+	 tpl_2(bridge.tlps).put(lineitem.tlp);
+      else if (lineitem.source == 7'h08) //tobus
+	 let _x0 <- tpl_1(bridge.tlps).get;
+   endrule
+   
+   rule quit if (ptr+1 == 0);
+      $finish;
+   endrule
+   
+endmodule
+
+
+/*
+      Bool dump = True;   
+
       ptr <= ptr+1;
       
       let lineitem = tlp_trace.sub(ptr);
@@ -135,11 +172,4 @@ module mkBsimTop(Empty);
 	 tpl_2(axiSlaveEngine.tlps).put(unpack(truncate(dataline)));
       else if (tx && cc)
 	 let _x2 <- tpl_1(axiSlaveEngine.tlps).get;
-      
-   endrule
-   
-   rule quit if (ptr+1 == 0);
-      $finish;
-   endrule
-   
-endmodule
+*/

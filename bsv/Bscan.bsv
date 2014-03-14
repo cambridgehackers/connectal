@@ -83,6 +83,20 @@ interface BscanBram#(type atype, type dtype);
     method Bit#(4) debug;
 endinterface
 
+module mkBscanBramBsim#(Integer bus, Integer memorySize, atype addr)(BscanBram#(atype, dtype))
+   provisos (Bits#(atype, asz), Bits#(dtype,dsz));
+
+   BRAM_Configure bramCfg = defaultValue;
+   bramCfg.memorySize = memorySize;
+   bramCfg.latency = 1;
+   BRAM2Port#(atype, dtype) bram <- mkBRAM2Server(bramCfg);
+
+   method Bit#(4) debug;
+       return ?;
+   endmethod
+   interface server = bram.portA;   
+endmodule
+
 module mkBscanBram#(Integer bus, Integer memorySize, atype addr)(BscanBram#(atype, dtype))
    provisos (Bits#(atype, asz), Bits#(dtype,dsz));
    let asz = valueOf(asz);

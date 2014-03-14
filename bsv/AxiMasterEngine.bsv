@@ -33,10 +33,10 @@ import AxiMasterSlave :: *;
 // Top interface: PCIe transaction level packets (TLPs)
 // Bottom interface: AXI3 Master that sends read/write requests to an Axi3Slave
 // Also sources interrupt MSIX requests
-interface PortalEngine;
+interface AxiMasterEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
-    interface Axi3Master#(32,32,12) portal;
+    interface Axi3Master#(32,32,12) master;
     interface Reg#(Bool)           interruptRequested;
     interface Reg#(Bit#(64))       interruptAddr;
     interface Reg#(Bit#(32))       interruptData;
@@ -44,7 +44,7 @@ interface PortalEngine;
 endinterface
 
 (* synthesize *)
-module mkPortalEngine#(PciId my_id)(PortalEngine);
+module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
     Reg#(Bool) interruptRequestedReg <- mkReg(False);
     Reg#(Bool) interruptSecondHalf <- mkReg(False);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
@@ -130,7 +130,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 
     interface Put tlp_in;
         method Action put(TLPData#(16) tlp);
-	    //$display("PortalEngine.put tlp=%h", tlp);
+	    //$display("AxiMasterEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
@@ -149,7 +149,7 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 	endmethod
     endinterface: tlp_in
     interface Get tlp_out = toGet(tlpOutFifo);
-    interface Axi3Master portal;
+    interface Axi3Master master;
        interface Get req_aw;
 	  method ActionValue#(Axi3WriteRequest#(32,12)) get() if (!interruptSecondHalf);
 	     let hdr = writeHeaderFifo.first;
@@ -209,9 +209,9 @@ module mkPortalEngine#(PciId my_id)(PortalEngine);
 		tlpOutFifo.enq(tlp);
 	    endmethod
 	endinterface: resp_read
-    endinterface: portal
+    endinterface: master
     interface Reg interruptRequested = interruptRequestedReg;
     interface Reg interruptAddr      = interruptAddrReg;
     interface Reg interruptData      = interruptDataReg;
     interface Reg bTag = bTagReg;
-endmodule: mkPortalEngine
+endmodule: mkAxiMasterEngine
