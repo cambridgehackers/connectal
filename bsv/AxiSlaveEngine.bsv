@@ -325,12 +325,13 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
        interface GetF resp_read;
 	   method ActionValue#(Axi3ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
+	      let tag_v = completionTagMimo.first;
 	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
 	      completionTagMimo.deq(fromInteger(valueOf(busWidthWords)));
               Bit#(buswidth) v = 0;
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
-	      return Axi3ReadResponse { data: v, last: 0, id: truncate(completionTagMimo.first[0]), resp: 0 };
+	      return Axi3ReadResponse { data: v, last: 0, id: truncate(tag_v[0]), resp: 0 };
            endmethod
 	  method Bool notEmpty();
 	     return (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
