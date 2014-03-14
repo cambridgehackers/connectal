@@ -6,33 +6,35 @@ all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe: gen
 	make -C $(BOARD) $@
 
 
-ifeq ($(BOARD),bluesim_pcie)
-TOP=BsimTopPcie
-MKTOP=mkBsimTop
-endif
-ifeq ($(BOARD),bluesim)
-TOP=BsimTop
-MKTOP=mkBsimTop
-endif
-ifeq ($(BOARD),ac701)
-TOP=$(PINS)Pcie$(Dma)Top
-MKTOP=mkPcieTop
-endif
-ifeq ($(BOARD),kc705)
-TOP=$(PINS)Pcie$(Dma)Top
-MKTOP=mkPcieTop
-endif
-ifeq ($(BOARD),vc707)
-TOP=$(PINS)Pcie$(Dma)Top
-MKTOP=mkPcieTop
-endif
-ifeq ($(BOARD),zedboard)
-TOP=ZynqTop
-MKTOP=mkZynqTop
-endif
-ifeq ($(BOARD),zc702)
-TOP=ZynqTop
-MKTOP=mkZynqTop
+ifeq ($(TOP),"")
+    ifeq ($(BOARD),bluesim_pcie)
+    TOP=$(XBSVDIR)/bsv/BsimTopPcie.bsv
+    MKTOP=mkBsimTop
+    endif
+    ifeq ($(BOARD),bluesim)
+    TOP=$(XBSVDIR)/bsv/BsimTop.bsv
+    MKTOP=mkBsimTop
+    endif
+    ifeq ($(BOARD),ac701)
+    TOP=$(XBSVDIR)/bsv/$(PINS)Pcie$(Dma)Top.bsv
+    MKTOP=mkPcieTop
+    endif
+    ifeq ($(BOARD),kc705)
+    TOP=$(XBSVDIR)/bsv/$(PINS)Pcie$(Dma)Top.bsv
+    MKTOP=mkPcieTop
+    endif
+    ifeq ($(BOARD),vc707)
+    TOP=$(XBSVDIR)/bsv/$(PINS)Pcie$(Dma)Top.bsv
+    MKTOP=mkPcieTop
+    endif
+    ifeq ($(BOARD),zedboard)
+    TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
+    MKTOP=mkZynqTop
+    endif
+    ifeq ($(BOARD),zc702)
+    TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
+    MKTOP=mkZynqTop
+    endif
 endif
 
 gen:
@@ -40,4 +42,4 @@ gen:
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
-        -t $(XBSVDIR)/bsv/$(TOP).bsv $(XBSVFLAGS) $(BSVFILES)
+        -t $(TOP) $(XBSVFLAGS) $(BSVFILES)
