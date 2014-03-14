@@ -37,9 +37,9 @@ interface AxiMasterEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
     interface Axi3Master#(32,32,12) master;
-    interface Reg#(Bool)           interruptRequested;
-    interface Reg#(Bit#(64))       interruptAddr;
-    interface Reg#(Bit#(32))       interruptData;
+    interface WriteOnly#(Bool)           interruptRequested;
+    interface WriteOnly#(Bit#(64))       interruptAddr;
+    interface WriteOnly#(Bit#(32))       interruptData;
     interface Reg#(Bit#(12))       bTag;
 endinterface
 
@@ -210,8 +210,8 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
 	    endmethod
 	endinterface: resp_read
     endinterface: master
-    interface Reg interruptRequested = interruptRequestedReg;
-    interface Reg interruptAddr      = interruptAddrReg;
-    interface Reg interruptData      = interruptDataReg;
+    interface WriteOnly interruptRequested = regToWriteOnly(interruptRequestedReg);
+    interface WriteOnly interruptAddr      = regToWriteOnly(interruptAddrReg);
+    interface WriteOnly interruptData      = regToWriteOnly(interruptDataReg);
     interface Reg bTag = bTagReg;
 endmodule: mkAxiMasterEngine

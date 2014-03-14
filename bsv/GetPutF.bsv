@@ -158,3 +158,16 @@ instance ToPutF#(FIFOFLevel#(b,d), b);
    endfunction
 endinstance
 
+typeclass RegToWriteOnly#(type a);
+   function WriteOnly#(a) regToWriteOnly(Reg#(a) x);
+endtypeclass
+
+instance RegToWriteOnly#(a);
+   function WriteOnly#(a) regToWriteOnly(Reg#(a) x);
+      return (interface WriteOnly;
+		 method Action _write(a v);
+		    x._write(v);
+		 endmethod
+	      endinterface);
+   endfunction
+endinstance

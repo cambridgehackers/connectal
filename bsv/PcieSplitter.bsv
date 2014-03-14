@@ -31,16 +31,12 @@ import Clocks       :: *;
 import ByteBuffer    :: *;
 import ByteCompactor :: *;
 
-import AxiMasterSlave:: *;
-
 import DefaultValue         :: *;
 import BUtils               :: *;
 import ClientServer         :: *;
 import Memory               :: *;
 import Portal               :: *;
 import Bscan                :: *;
-import AxiMasterEngine      :: *;
-import AxiSlaveEngine       :: *;
 
 typedef 11 TlpTraceAddrSize;
 
@@ -60,7 +56,7 @@ endinterface
 interface PcieSplitter#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
-   interface Axi3Master#(32,32,12) master; // to the portal control
+   interface GetPut#(TLPData#(16)) master; // to the portal control
    interface GetPut#(TLPData#(16)) slave;  // to the portal DMA
    interface Reset portalReset;
 
@@ -70,9 +66,10 @@ interface PcieSplitter#(numeric type bpb);
    (* always_ready *)
    method Bool tx_activity();
 
-   method Action interrupt();
-
    interface Put#(TimestampedTlpData) trace;
+
+   interface ReadOnly#(Bit#(64))       interruptAddr;
+   interface ReadOnly#(Bit#(32))       interruptData;
 
 endinterface: PcieSplitter
 
@@ -384,7 +381,6 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 			       , Bool      msix_enabled
 			       , Bool      msix_mask_all_intr
 			       , Bool      msi_enabled
-			       , AxiMasterEngine portalEngine
 			       , MakeResetIfc portalResetIfc
                               )
                               (ControlAndStatusRegs);
@@ -884,7 +880,7 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
    MakeResetIfc portalResetIfc <- mkReset(10, False, defaultClock);
 
    // instantiate sub-components
-   AxiMasterEngine            portalEngine <- mkAxiMasterEngine( my_id );
+   //AxiMasterEngine            portalEngine <- mkAxiMasterEngine( my_id );
 
    TLPDispatcher        dispatcher <- mkTLPDispatcher();
    TLPArbiter           arbiter    <- mkTLPArbiter();
@@ -897,7 +893,6 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
                                                             , msix_enabled
                                                             , msix_mask_all_intr
                                                             , msi_enabled
-							    , portalEngine
 							    , portalResetIfc
                                                             );
    Reg#(Bit#(32)) timestamp <- mkReg(0);
@@ -910,16 +905,16 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
 
    // connect the sub-components to each other
 
-   rule interruptConfig;
-      portalEngine.interruptAddr <= csr.interruptAddr;
-      portalEngine.interruptData <= csr.interruptData;
-   endrule
+   // rule interruptConfig;
+   //    portalEngine.interruptAddr <= csr.interruptAddr;
+   //    portalEngine.interruptData <= csr.interruptData;
+   // endrule
 
    mkConnection(dispatcher.tlp_out_to_config,    csr.csr_read_and_write_tlps);
-   mkConnection(dispatcher.tlp_out_to_portal,    portalEngine.tlp_in);
+   // mkConnection(dispatcher.tlp_out_to_portal,    portalEngine.tlp_in);
 
    mkConnection(csr.csr_read_completion_tlps,    arbiter.tlp_in_from_config);
-   mkConnection(portalEngine.tlp_out,            arbiter.tlp_in_from_portal);
+   //mkConnection(portalEngine.tlp_out,            arbiter.tlp_in_from_portal);
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
    Reg#(Bool) skippingIncomingTlps <- mkReg(False);
@@ -962,7 +957,7 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
    //interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
    interface GetPut tlps = tuple2(toGet(tlpToBusFifo),toPut(tlpFromBusFifo));
 
-   interface Axi3Master master = portalEngine.master;
+   interface GetPut master = tuple2(dispatcher.tlp_out_to_portal, arbiter.tlp_in_from_portal); //portalEngine.master;
    interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
 
    interface Reset portalReset = portalResetIfc.new_rst;
@@ -970,9 +965,9 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
    method Bool rx_activity  = dispatcher.read_tlp() || dispatcher.write_tlp() || arbiter.completion_tlp();
    method Bool tx_activity  = arbiter.read_tlp()    || arbiter.write_tlp()    || dispatcher.completion_tlp();
 
-   method Action interrupt();
-       portalEngine.interruptRequested <= True;
-   endmethod
+   // method Action interrupt();
+   //     portalEngine.interruptRequested <= True;
+   // endmethod
 
    interface Put trace;
        method Action put(TimestampedTlpData ttd);
@@ -983,7 +978,11 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
 	   end
        endmethod
    endinterface: trace
+   
+   interface ReadOnly interruptAddr = csr.interruptAddr;
+   interface ReadOnly interruptData = csr.interruptData;
 
+      
 endmodule: mkPcieSplitter
 
 endpackage: PcieSplitter

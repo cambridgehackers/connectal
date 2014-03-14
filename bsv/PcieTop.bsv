@@ -23,13 +23,12 @@
 import Vector            :: *;
 import Connectable       :: *;
 import Xilinx            :: *;
-import PcieToAxiBridge   :: *;
-import X7PcieBridge      :: *;
+import X7PcieSplitter    :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiSlaveEngine    :: *;
-import X7PcieBridge      :: *;
+import AxiMasterEngine   :: *;
 
 typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins);
 
@@ -65,22 +64,35 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    let contentId = 0;
 
-   X7PcieBridgeIfc#(PcieLanes) x7pcie <- mkX7PcieBridge( pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
-							contentId );
+   X7PcieSplitter#(PcieLanes) x7pcie <- mkX7PcieSplitter(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
+							 contentId );
    
    Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    // instantiate user portals
    let portalTop <- mkPortalTop(clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
    AxiSlaveEngine#(dsz) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+
    mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(portalTop.m_axi, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(x7pcie.portal0, portalTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
-   rule requestInterrupt;
+   mkConnection(portalTop.m_axi, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+
+   mkConnection(tpl_1(x7pcie.master), axiMasterEngine.tlp_in);
+   mkConnection(axiMasterEngine.tlp_out, tpl_2(x7pcie.master));
+
+   mkConnection(axiMasterEngine.master, portalTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+
+   rule interruptConfig;
+      axiMasterEngine.interruptAddr <= x7pcie.interruptAddr;
+      axiMasterEngine.interruptData <= x7pcie.interruptData;
+   endrule
+
+   // going from level to edge-triggered interrupt
+   rule interruptRequest;
       if (portalTop.interrupt && !interruptRequested)
-	 x7pcie.interrupt();
+	 axiMasterEngine.interruptRequested <= True;
       interruptRequested <= portalTop.interrupt;
    endrule
 

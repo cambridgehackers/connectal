@@ -14,7 +14,6 @@ import DefaultValue    :: *;
 import TieOff          :: *;
 import XilinxCells     :: *;
 import PcieSplitter :: *;
-import AxiMasterSlave  :: *;
 import XbsvXilinx7Pcie :: *;
 //import XbsvXilinx7DDR3      :: *;
 
@@ -22,36 +21,36 @@ import XbsvXilinx7Pcie :: *;
 typedef 4 BPB;
 
 // Interface wrapper for PCIE
-interface X7PcieBridgeIfc#(numeric type lanes);
+interface X7PcieSplitter#(numeric type lanes);
    interface PCIE_EXP#(lanes) pcie;
    (* always_ready *)
    method Bool isLinkUp();
    method Bool isCalibrated();
-   (* always_ready *)
-   method Action interrupt();
    interface Clock clock250;
    interface Reset reset250;
    interface Clock clock125;
    interface Reset reset125;
    (* prefix = "" *)
    //interface DDR3_Pins_X7      ddr3;
-   interface Axi3Master#(32,32,12) portal0;
-   interface GetPut#(TLPData#(16)) slave; // to the axi slave engine
+   interface GetPut#(TLPData#(16)) master; // to the portal dma
+   interface GetPut#(TLPData#(16)) slave;  // to the portal control
    interface Put#(TimestampedTlpData) trace;
    interface Reset portalReset;
    interface ReadOnly#(PciId) pciId;
+   interface ReadOnly#(Bit#(64))       interruptAddr;
+   interface ReadOnly#(Bit#(32))       interruptData;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
 //, synthesize *)
-module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
+module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 		       , Clock sys_clk_p,    Clock sys_clk_n
 		       , Reset pci_sys_reset
                        , Bit#(64) contentId
 		       )
-		       (X7PcieBridgeIfc#(lanes))
+		       (X7PcieSplitter#(lanes))
    provisos(Add#(1,_,lanes), XbsvXilinx7Pcie::SelectXilinx7PCIE#(lanes));
 
    Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
@@ -188,7 +187,7 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 
    interface pcie     = _ep.pcie;
    //interface ddr3     = ddr3_ctrl.ddr3;
-   interface portal0  = bridge.master;
+   interface master   = bridge.master;
    interface slave    = bridge.slave;
    interface trace    = bridge.trace;
    interface portalReset = bridge.portalReset;
@@ -204,6 +203,7 @@ module mkX7PcieBridge#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 
    method Bool isLinkUp        = link_is_up;
 //   method Bool isCalibrated  = ddr3_ctrl.user.init_done;
-   method Action interrupt     = bridge.interrupt;
+   interface ReadOnly interruptAddr = bridge.interruptAddr;
+   interface ReadOnly interruptData = bridge.interruptData;
    
-endmodule: mkX7PcieBridge
+endmodule: mkX7PcieSplitter
