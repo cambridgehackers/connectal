@@ -25,12 +25,13 @@
 import FIFOF::*;
 import Clocks::*;
 import GetPut::*;
+import GetPutF::*;
 import PCIE::*;
 import GetPutWithClocks::*;
 import Connectable::*;
 import PortalMemory::*;
 import Dma::*;
-import AxiDma::*;
+import DmaUtils::*;
 import AxiMasterSlave::*;
 import HDMI::*;
 import XADC::*;
@@ -39,24 +40,17 @@ import YUV::*;
 interface HdmiControlRequest;
     method Action startFrameBuffer0(Int#(32) base);
 endinterface
-interface HdmiControlIndication;
-endinterface
 
-interface HdmiDisplayRequest;
-    interface HdmiControlRequest coreRequest;
-    interface HdmiInternalRequest coRequest;
-    interface DmaConfig dmaRequest;
-    interface Axi3Master#(40,64,6) m_axi;
+interface HdmiDisplay;
+    interface HdmiControlRequest controlRequest;
+    interface HdmiInternalRequest internalRequest;
+    interface DmaReadClient#(64) dmaClient;
     interface HDMI hdmi;
     interface XADC xadc;
 endinterface
-interface HdmiDisplayIndication;
-    interface HdmiControlIndication coreIndication;
-    interface HdmiInternalIndication coIndication;
-    interface DmaIndication dmaIndication;
-endinterface
 
-module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIndication indication)(HdmiDisplayRequest);
+module mkHdmiDisplay#(Clock processing_system7_1_fclk_clk1,
+		      HdmiInternalIndication hdmiInternalIndication)(HdmiDisplay);
     Clock defaultClock <- exposeCurrentClock;
     Reset defaultReset <- exposeCurrentReset;
     Clock hdmi_clock = processing_system7_1_fclk_clk1;
@@ -66,46 +60,44 @@ module mkHdmiDisplayRequest#(Clock processing_system7_1_fclk_clk1, HdmiDisplayIn
     Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
     Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
-`ifdef BSIM
-    BsimDma#(Bit#(64))    dma <- mkBsimDma(indication.dmaIndication);
-`else
-    AxiDma#(Bit#(64))     dma <- mkAxiDma(indication.dmaIndication);
-`endif
-    ReadChan#(Bit#(64)) dma_stream_read_chan = dma.read.readChannels[0];
-    Reg#(Int#(32)) referenceReg <- mkReg(-1);
+
+    Reg#(DmaPointer) referenceReg <- mkReg(-1);
     Reg#(Bit#(40)) streamRdOff <- mkReg(0);
 
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
-        vsyncPulse, indication.coIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
+					     vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
    
+    DmaReadBuffer#(64, 1) dmaReadBuffer <- mkDmaReadBuffer();
     rule readReq if(referenceReg >= 0);
-        streamRdOff <= streamRdOff + 1;
-        dma_stream_read_chan.readReq.put(streamRdOff);
+        streamRdOff <= streamRdOff + 16*8;
+        dmaReadBuffer.dmaServer.readReq.put(DmaRequest {pointer: referenceReg, offset: streamRdOff, burstLen: 16, tag: 0});
     endrule
-    mkConnectionWithClocks(dma_stream_read_chan.readData, hdmiGen.request, defaultClock, defaultReset, hdmi_clock, hdmi_reset);
+   PutF#(DmaData#(64)) sink = (interface PutF;
+      method Action put(DmaData#(64) dmadata);
+         hdmiGen.request.put(dmadata.data);
+      endmethod
+      endinterface);
+    mkConnectionWithClocks(dmaReadBuffer.dmaServer.readData, sink, defaultClock, defaultReset, hdmi_clock, hdmi_reset);
 
     rule vsyncrule if (vsyncPulse.pulse() && referenceReg >= 0);
-        dma.request.configChan(Read, 0, pack(referenceReg), 16);
+       streamRdOff <= 0;
     endrule
 
     rule bozobit_rule;
         bozobit <= ~bozobit;
     endrule
 
-    interface HdmiControlRequest coreRequest;
+    interface HdmiControlRequest controlRequest;
 	method Action startFrameBuffer0(Int#(32) base);
 	    $display("startFrameBuffer %h", base);
-            referenceReg <= base;
+            referenceReg <= truncate(pack(base));
 	    hdmiGen.control.setTestPattern(0);
 	endmethod
-    endinterface: coreRequest
+    endinterface: controlRequest
 
-`ifndef BSIM
-    interface Axi3Master m_axi = dma.m_axi;
-`endif
-    interface DmaConfig dmaRequest = dma.request;
+    interface DmaReadClient dmaClient = dmaReadBuffer.dmaClient;
     interface HDMI hdmi = hdmiGen.hdmi;
-    interface HdmiInternalRequest coRequest = hdmiGen.control;
+    interface HdmiInternalRequest internalRequest = hdmiGen.control;
     interface XADC xadc;
         method Bit#(4) gpio;
             return { bozobit, hdmiGen.hdmi.vsync,
