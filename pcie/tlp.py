@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+import os
+import re
+import sys
 import subprocess
 from gmpy import mpz
 
@@ -264,11 +267,19 @@ def print_tlp_log(tlplog, f=None):
     for tlpdata in tlplog:
         if tlpdata == '000000000000000000000000000000000000000000000000':
             continue
-        print_tlp(tlpdata, f)
+        m = re.match('^([0-9A-Fa-f]+)$', tlpdata)
+        if m:
+            print_tlp(tlpdata, f)
 
 if __name__ == '__main__':
-    tlplog = subprocess.check_output(['xbsvutil', 'tlp', '/dev/fpga0']).split('\n')
     f = open('tlp.vcd', 'w')
+    if len(sys.argv) > 1 and sys.argv[1] == 'openocd':
+        os.chdir('/scratch/jamey/xbsv/jtag')
+        tlplog = subprocess.check_output(['openocd', '-f', 'pcietrace.cfg'], stderr=subprocess.STDOUT).split('\n')
+    elif len(sys.argv) > 1:
+        tlplog = open(sys.argv[1]).read().split('\n')
+    else:
+        tlplog = subprocess.check_output(['xbsvutil', 'tlp', '/dev/fpga0']).split('\n')
     print_tlp_log(tlplog[0:-1], f)
     print classCounts
     print sum([ classCounts[k] for k in classCounts])
