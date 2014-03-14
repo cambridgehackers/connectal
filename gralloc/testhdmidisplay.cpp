@@ -1,9 +1,13 @@
 
-#include "HdmiDisplay.h"
+#include "DmaConfigProxy.h"
+#include "DmaIndicationWrapper.h"
+#include "GeneratedTypes.h"
+#include "HdmiControlRequestProxy.h"
+#include "portal.h"
 #include <stdio.h>
 #include <sys/mman.h>
 
-HdmiControlRequest *device = 0;
+HdmiControlRequestProxy *device = 0;
 PortalAlloc srcAlloc;
 PortalAlloc dstAlloc;
 int srcFd = -1;
@@ -19,24 +23,12 @@ void dump(const char *prefix, char *buf, size_t len)
     fprintf(stderr, "\n");
 }
 
-class TestHdmiDisplayIndications : public HdmiControlIndication
-{
-    virtual void vsync ( unsigned long long v){
-      fprintf(stderr, "vsync %lld\n", v);
-    }
-    virtual void traceData ( unsigned long d){
-      fprintf(stderr, "trace %lx\n", d);
-    }
-    virtual void traceTriggered (  ){ 
-      fprintf(stderr, "trace triggered\n");
-    }
-};
-
 int main(int argc, const char **argv)
 {
-    //device = HdmiDisplay::createHdmiDisplay("fpga0", new TestHdmiDisplayIndications);
-    device = HdmiControlRequest::createHdmiControlRequest(new TestHdmiDisplayIndications);
+    PortalPoller *poller = new PortalPoller();
 
-    int status = PortalRequest::setClockFrequency(1, 160000000, 0);
+    device = new HdmiControlRequestProxy(IfcNames_HdmiControlRequest, poller);
+    
+    int status = poller->setClockFrequency(1, 160000000, 0);
     //portalExec();
 }
