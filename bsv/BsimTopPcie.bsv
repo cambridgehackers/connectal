@@ -23,23 +23,62 @@
 import Vector            :: *;
 import Connectable       :: *;
 import Xilinx            :: *;
+import RegFile           :: *;
+
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
-import PcieTop           :: *;
+import AxiSlaveEngine    :: *;
+import PortalEngine      :: *;
 
-(* synthesize *)
-module mkSynthesizeablePortalTop(PortalTop#(40, 64, Empty));
-   let top <- mkPortalTop();
-   interface ctrl = top.ctrl;
-   interface m_axi = top.m_axi;
-   interface interrupt = top.interrupt;
-   interface leds = top.leds;
-   interface pins = top.pins;
-endmodule
 
-module mkBsimTopPcie(Empty);
-   let clk <- exposeCurrentClock;
-   let rst <- exposeCurrentReset;
-   PcieTop#(Empty) top <- mkPcieTopFromPortal(clk, clk, clk, clk, rst, mkSynthesizeablePortalTop);
+module mkBsimTop(Empty);
+   
+
+   RegFile#(Bit#(11), Bit#(192)) tlp_trace <- mkRegFileFullLoad("testdata.dat");
+   
+   PortalTop#(40,64,Empty)  portalTop <- mkPortalTop;
+   AxiSlaveEngine#(64) axiSlaveEngine <- mkAxiSlaveEngine(unpack(0));
+   PortalEngine          portalEngine <- mkPortalEngine(unpack(0));
+   
+   mkConnection(portalTop.m_axi, axiSlaveEngine.slave3);
+   mkConnection(portalEngine.portal, portalTop.ctrl);
+   
+   Reg#(Bit#(11)) ptr <- mkReg(1);
+   
+   rule dump if (ptr+1 != 0);
+      ptr <= ptr+1;
+      
+      let lineitem = tlp_trace.sub(ptr);
+      Bit#(160) dataline = truncate(lineitem);
+      
+      Bit#(8) portnum = dataline[159:152] >> 1;
+      Bit#(4) tlpsof  = dataline[155:152] & 4'b1;
+      Bit#(8) pkttype = dataline[127:120] & 8'h1f;
+      
+      Bit#(32) seqno  = lineitem[191:160];  
+      
+      if (portnum == 4)
+         $write("RX");
+      else if (portnum == 8)
+         $write("TX");
+      else
+	 $write("__");
+      
+      if (tlpsof == 0)
+         $write("cc: ");
+      else if (pkttype == 10)
+         $write("pp: ");
+      else
+	 $write("qq: ");
+
+      $write("JJ ");
+      $write("%h ", seqno);
+      $display("%h", dataline);
+   endrule
+   
+   rule quit if (ptr+1 == 0);
+      $finish;
+   endrule
+   
 endmodule

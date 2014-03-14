@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     read(fd, data, size);
     close(fd);
 
-int i = 0;
+    int i = 0;
     while(datap < data+size) {
         len = get_next_line(lineitem, sizeof(lineitem));
         char seqno[9];
