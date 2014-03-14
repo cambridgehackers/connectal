@@ -51,8 +51,8 @@ typedef 11 TlpTraceAddrSize;
 
 typedef struct {
     Bit#(32) timestamp;
-    Bit#(7) unused;
-    TLPData#(16) tlp;
+    Bit#(7) source;   // 7 bits to make it 192 bits altogether
+    TLPData#(16) tlp; // 153 bits
 } TimestampedTlpData deriving (Bits);
 typedef SizeOf#(TimestampedTlpData) TimestampedTlpDataSize;
 typedef SizeOf#(TLPData#(16)) TlpData16Size;
@@ -594,7 +594,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	     ttd[31+(2*32):0+(2*32)] = tlpDataScratchpad[2];
 	     ttd[31+(3*32):0+(3*32)] = tlpDataScratchpad[3];
 	     ttd[31+(4*32):0+(4*32)] = tlpDataScratchpad[4];
-	     ttd[24+(5*32):0+(5*32)] = tlpDataScratchpad[5][24:0];
+	     ttd[31+(5*32):0+(5*32)] = tlpDataScratchpad[5];
 	     bscanBram.server.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(tpl_2(value[0])),
 	                                                     datain: unpack(ttd)});
          end else if ((addr % 8192) == 795) begin
@@ -920,7 +920,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
 	      // do nothing
 	   end
 	   else begin
-	       TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, unused: 7'h04, tlp: tlp };
+	       TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: tlp };
 	       csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
 	       csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
 	       skippingIncomingTlps <= False;
@@ -933,7 +933,7 @@ module mkPcieToAxiBridge#( Bit#(64)  board_content_id
        let tlp <- arbiter.tlp_out_to_bus.get();
        tlpToBusFifo.enq(tlp);
        if (csr.tlpTracing) begin
-	   TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, unused: 7'h08, tlp: tlp };
+	   TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, source: 7'h08, tlp: tlp };
 	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
 	   csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
        end
