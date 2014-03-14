@@ -79,25 +79,13 @@ module mkBscan#(Integer bus)(Bscan#(width));
 endmodule
 
 interface BscanBram#(type atype, type dtype);
-    interface BRAMServer#(atype, dtype) server;
-    method Bit#(4) debug;
+   interface Clock jtagClock;
+   interface Reset jtagReset;
+   interface BRAMClient#(atype, dtype) bramClient;
+   method Bit#(4) debug;
 endinterface
 
-module mkBscanBramBsim#(Integer bus, Integer memorySize, atype addr)(BscanBram#(atype, dtype))
-   provisos (Bits#(atype, asz), Bits#(dtype,dsz));
-
-   BRAM_Configure bramCfg = defaultValue;
-   bramCfg.memorySize = memorySize;
-   bramCfg.latency = 1;
-   BRAM2Port#(atype, dtype) bram <- mkBRAM2Server(bramCfg);
-
-   method Bit#(4) debug;
-       return ?;
-   endmethod
-   interface server = bram.portA;   
-endmodule
-
-module mkBscanBram#(Integer bus, Integer memorySize, atype addr)(BscanBram#(atype, dtype))
+module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
    provisos (Bits#(atype, asz), Bits#(dtype,dsz));
    let asz = valueOf(asz);
    let dsz = valueOf(dsz);
@@ -108,12 +96,9 @@ module mkBscanBram#(Integer bus, Integer memorySize, atype addr)(BscanBram#(atyp
    BscanE2 bscan <- mkBscanE2(bus);
    Clock tck <- mkClockBUFG(clocked_by bscan.tck);
    Reset rst <- mkAsyncReset(2, defaultReset, tck);
-
-   BRAM_Configure bramCfg = defaultValue;
-   bramCfg.memorySize = memorySize;
-   bramCfg.latency = 1;
-   BRAM2Port#(atype, dtype) bram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset, tck, rst);
    SyncBitIfc#(Bit#(asz)) addr_jtag <- mkSyncBits(0, defaultClock, defaultReset, tck, rst);
+   Wire#(Maybe#(BRAMRequest#(atype, dtype))) requestWire <- mkDWire(tagged Invalid, clocked_by tck, reset_by rst);
+   Wire#(Maybe#(dtype)) responseWire <- mkDWire(tagged Invalid, clocked_by tck, reset_by rst);
 
    Reg#(Bit#(dsz)) shiftReg <- mkReg(0, clocked_by tck, reset_by rst);
    Reg#(Bit#(asz)) addrReg <- mkReg(0, clocked_by tck, reset_by rst);
@@ -134,13 +119,14 @@ module mkBscanBram#(Integer bus, Integer memorySize, atype addr)(BscanBram#(atyp
    endrule
 
    rule captureRule if (bscan.sel() == 1 && bscan.capture() == 1);
-       bram.portB.request.put(BRAMRequest {write:False, responseOnWrite:False, address:unpack(addrReg), datain:?});
+       requestWire <= tagged Valid BRAMRequest {write:False, responseOnWrite:False, address:unpack(addrReg), datain:?};
    endrule
 
    rule shiftrule if (bscan.sel() == 1 && bscan.shift() == 1);
        Bit#(dsz) shift = shiftReg;
        if (capture_delay) begin
-          let d <- bram.portB.response.get();
+	  Maybe#(dtype) m = responseWire;
+	  let d = fromMaybe(unpack(0), m);
 	  shift = pack(d);
        end
        bscan.tdo(shift[0]);
@@ -150,12 +136,25 @@ module mkBscanBram#(Integer bus, Integer memorySize, atype addr)(BscanBram#(atyp
    endrule
 
    rule updateRule if (bscan.sel() == 1 && bscan.update() == 1 && bscan.capture() == 0);
-       bram.portB.request.put(BRAMRequest {write:True, responseOnWrite:False, address:unpack(addrReg), datain:unpack(shiftReg)});
+       requestWire <= tagged Valid (BRAMRequest {write:True, responseOnWrite:False, address:unpack(addrReg), datain:unpack(shiftReg)});
        addrReg <= addrReg + 1;
    endrule
 
    method Bit#(4) debug;
        return {bscan.sel(), bscan.capture(), bscan.shift(), bscan.update()};
    endmethod
-   interface server = bram.portA;
+   interface BRAMClient bramClient;
+      interface Get request;
+	 method ActionValue#(BRAMRequest#(atype,dtype)) get() if (requestWire matches tagged Valid .req);
+	    return req;
+	 endmethod
+      endinterface
+      interface Put response;
+	 method Action put(dtype d);
+	    responseWire <= tagged Valid d;
+	 endmethod
+      endinterface
+   endinterface
+   interface Clock jtagClock = tck;
+   interface Reset jtagReset = rst;
 endmodule

@@ -58,7 +58,14 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
    let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
-   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, 256, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
+   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
+   BRAM_Configure bramCfg = defaultValue;
+   bramCfg.memorySize = 256;
+   bramCfg.latency = 1;
+   BRAM2Port#(Bit#(8), Bit#(64)) traceBram <- mkSyncBRAM2Server(bramCfg, mainclock.c, mainclock.r,
+								bscanBram.jtagClock, bscanBram.jtagReset);
+   mkConnection(bscanBram.bramClient, traceBram.portB);
+
    ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock.c, bscanBram.debug());
    
    let interrupt_bit = top.interrupt ? 1'b1 : 1'b0;
@@ -91,7 +98,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 	 data = bscan_fifos[4].first;
 	 bscan_fifos[4].deq;
       end
-      bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:data});
+      traceBram.portA.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:data});
       addrReg <= addrReg + 1;
    endrule
    Reg#(Bit#(16)) seqCounter <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);

@@ -410,17 +410,34 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    // Registers and their default values
    Vector#(4,MSIX_Entry) msix_entry               <- replicateM(mkMSIXEntry);
 
+   // Clocks and Resets
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
+   
+   // Trace Support
    Reg#(Bool) tlpTracingReg        <- mkReg(False);
    Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimitReg <- mkReg(0);
    Reg#(Bool) use4dwReg <- mkReg(True);
    Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramRdAddrReg <- mkReg(0);
    Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramWrAddrReg <- mkReg(0);
    Integer memorySize = 2**valueOf(TlpTraceAddrSize);
+   // TODO: lift BscanBram to *Top.bsv
 `ifdef BSIM
-   BscanBram#(Bit#(TlpTraceAddrSize), TimestampedTlpData) bscanBram <- mkBscanBramBsim(1, memorySize, tlpDataBramWrAddrReg);
+   Clock jtagClock = defaultClock;
+   Reset jtagReset = defaultReset;
 `else
-   BscanBram#(Bit#(TlpTraceAddrSize), TimestampedTlpData) bscanBram <- mkBscanBram(1, memorySize, tlpDataBramWrAddrReg);
+   BscanBram#(Bit#(TlpTraceAddrSize), TimestampedTlpData) pcieBscanBram <- mkBscanBram(1, tlpDataBramWrAddrReg);
+   Clock jtagClock = pcieBscanBram.jtagClock;
+   Reset jtagReset = pcieBscanBram.jtagReset;
 `endif
+
+   BRAM_Configure bramCfg = defaultValue;
+   bramCfg.memorySize = memorySize;
+   bramCfg.latency = 1;
+   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) pcieTraceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
+												 jtagClock, jtagReset);
+   mkConnection(pcieBscanBram.bramClient, pcieTraceBram.portB, clocked_by jtagClock, reset_by jtagReset);
+
    Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
    Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
    Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
@@ -573,8 +590,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
       endactionvalue
    endfunction: do_read
 
-   rule bramResponse;
-       let v <- bscanBram.server.response.get();
+   rule pcieBramResponse;
+       let v <- pcieTraceBram.portA.response.get();
        tlpDataBramResponse <= v;
    endrule
 
@@ -583,7 +600,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action do_write(UInt#(30) addr, Vector#(4,Tuple2#(Bit#(4),Bit#(32))) value);
       action
          if ((addr % 8192) == 768) begin
-	     bscanBram.server.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(tlpDataBramRdAddrReg), datain: unpack(0)});
+	     pcieTraceBram.portA.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(tlpDataBramRdAddrReg), datain: unpack(0)});
 	     tlpDataBramRdAddrReg <= tlpDataBramRdAddrReg + 1;
 	 end else if ((addr % 8192) == 792) begin
 	     // update tplDataBramWrAddrReg and write back scratchpad
@@ -594,8 +611,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	     ttd[31+(3*32):0+(3*32)] = tlpDataScratchpad[3];
 	     ttd[31+(4*32):0+(4*32)] = tlpDataScratchpad[4];
 	     ttd[31+(5*32):0+(5*32)] = tlpDataScratchpad[5];
-	     bscanBram.server.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(tpl_2(value[0])),
-	                                                     datain: unpack(ttd)});
+	     pcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(tpl_2(value[0])),
+							     datain: unpack(ttd)});
          end else if ((addr % 8192) == 795) begin
 					       portalResetIfc.assertReset();
          end
@@ -838,7 +855,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface Reg use4dw = use4dwReg;
    interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
    interface Reg tlpOutCount = tlpOutCountReg;
-   interface BRAMServer tlpDataBram = bscanBram.server;
+   interface BRAMServer tlpDataBram = pcieTraceBram.portA;
 endmodule: mkControlAndStatusRegs
 
 // The PCIe-to-AXI bridge puts all of the elements together
