@@ -47,16 +47,20 @@ interface ZynqTop#(type pins);
    (* prefix="XADC" *)
    interface XADC             xadc;
    interface pins             pins;
-   interface Clock unused_clock;
-   interface Reset unused_reset;
+   interface Clock unused_clock0;
+   interface Clock unused_clock1;
+   interface Reset unused_reset0;
+   interface Reset unused_reset1;
 endinterface
 
 typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt(Clock clk1)) MkPortalTop#(type ipins);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
    B2C mainclock <- mkB2C();
+   B2C fclk1 <- mkB2C(clocked_by mainclock.c, reset_by mainclock.r);
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
-   let top <- constructor(ps7.fclk_clk1, clocked_by mainclock.c, reset_by mainclock.r);
+
+   let top <- constructor(fclk1.c, clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
    BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
    BRAM_Configure bramCfg = defaultValue;
@@ -163,6 +167,10 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        mainclock.inputclock(ps7.fclkclk()[0]);
        mainclock.inputreset(ps7.fclkresetn()[0]);
    endrule
+   rule b2c_rule1;
+       fclk1.inputclock(ps7.fclkclk()[1]);
+       fclk1.inputreset(ps7.fclkresetn()[1]);
+   endrule
 
    interface zynq = ps7.pins;
    interface leds = top.leds;
@@ -184,8 +192,10 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        endmethod
    endinterface
    interface pins = top.pins;
-   interface unused_clock = mainclock.c;
-   interface unused_reset = mainclock.r;
+   interface unused_clock0 = mainclock.c;
+   interface unused_reset0 = mainclock.r;
+   interface unused_clock1 = fclk1.c;
+   interface unused_reset1 = fclk1.r;
 endmodule
 
 module mkZynqTopClk1(ZynqTop#(Empty));
