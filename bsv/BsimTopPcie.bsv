@@ -119,20 +119,20 @@ module mkBsimTop(Empty);
       // RXcc: DMA read data
       // TXcc: DMA write data
 
-      function Bit#(153) rtrunc(Bit#(160) x);
-	 return x[159:7];
-      endfunction
+      // function Bit#(153) rtrunc(Bit#(160) x);
+      // 	 return x[159:7];
+      // endfunction
       
       if (rx && qq) 
-	 portalEngine.tlp_in.put(unpack(rtrunc(dataline)));
+	 portalEngine.tlp_in.put(unpack(truncate(dataline)));
       else if (tx && pp)
 	 let _x0 <- portalEngine.tlp_out.get;
       else if (tx && qq)
 	 let _x1 <- tpl_1(axiSlaveEngine.tlps).get;
       else if (rx && pp)
-	 tpl_2(axiSlaveEngine.tlps).put(unpack(rtrunc(dataline)));
+	 tpl_2(axiSlaveEngine.tlps).put(unpack(truncate(dataline)));
       else if (rx && cc)
-	 tpl_2(axiSlaveEngine.tlps).put(unpack(rtrunc(dataline)));
+	 tpl_2(axiSlaveEngine.tlps).put(unpack(truncate(dataline)));
       else if (tx && cc)
 	 let _x2 <- tpl_1(axiSlaveEngine.tlps).get;
       
