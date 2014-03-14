@@ -436,8 +436,10 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    bramCfg.latency = 1;
    BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) pcieTraceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
 												 jtagClock, jtagReset);
+`ifndef BSIM
    mkConnection(pcieBscanBram.bramClient, pcieTraceBram.portB, clocked_by jtagClock, reset_by jtagReset);
-
+`endif
+   
    Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
    Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
    Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
