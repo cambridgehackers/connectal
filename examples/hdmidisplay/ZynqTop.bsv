@@ -34,6 +34,7 @@ import XADC::*;
 import BRAM::*;
 import Bscan::*;
 import FIFOF::*;
+import HDMI::*;
 
 //`define TRACE_AXI
 //`define AXI_READ_TIMING
@@ -198,7 +199,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    interface unused_reset1 = fclk1.r;
 endmodule
 
-module mkZynqTopClk1(ZynqTop#(Empty));
+module mkHdmiZynqTop(ZynqTop#(HDMI));
    let top <- mkZynqTopFromPortal(mkPortalTop);
    return top;
 endmodule

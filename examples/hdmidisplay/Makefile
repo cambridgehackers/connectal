@@ -9,6 +9,6 @@ CPPFILES= $(addprefix ../../gralloc/, testhdmidisplay.cpp)
 Dma = Dma
 PINS = Std
 TOP=ZynqTop.bsv
-MKTOP=mkZynqTopClk1
+MKTOP=mkHdmiZynqTop
 
 include ../../Makefile.common
