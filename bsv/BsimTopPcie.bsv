@@ -24,6 +24,7 @@ import Vector            :: *;
 import Connectable       :: *;
 import Xilinx            :: *;
 import RegFile           :: *;
+import GetPut            :: *;
 
 import Portal            :: *;
 import Leds              :: *;
@@ -45,8 +46,9 @@ module mkBsimTop(Empty);
    mkConnection(portalEngine.portal, portalTop.ctrl);
    
    Reg#(Bit#(11)) ptr <- mkReg(1);
+   Bool dump = True;
    
-   rule dump if (ptr+1 != 0);
+   rule read_trace if (ptr+1 != 0);
       ptr <= ptr+1;
       
       let lineitem = tlp_trace.sub(ptr);
@@ -58,23 +60,82 @@ module mkBsimTop(Empty);
       
       Bit#(32) seqno  = lineitem[191:160];  
       
-      if (portnum == 4)
-         $write("RX");
-      else if (portnum == 8)
-         $write("TX");
-      else
-	 $write("__");
       
-      if (tlpsof == 0)
-         $write("cc: ");
-      else if (pkttype == 10)
-         $write("pp: ");
-      else
-	 $write("qq: ");
+      // TX == to host
+      // RX == from host
+      // qq == request
+      // pp == response
 
-      $write("JJ ");
-      $write("%h ", seqno);
-      $display("%h", dataline);
+      Bool rx = False;
+      Bool tx = False;
+      Bool cc = False;
+      Bool pp = False;
+      Bool qq = False;
+      
+      if (portnum == 4) begin
+	 rx = True;
+	 if (dump) 
+            $write("RX");
+      end
+      else if (portnum == 8) begin
+	 tx = True;
+	 if (dump) 
+            $write("TX");
+      end
+      else begin
+	 if (dump) 
+	    $write("__");
+      end
+	 
+      if (tlpsof == 0) begin
+	 cc = True;
+	 if (dump) 
+            $write("cc: ");
+      end
+      else if (pkttype == 10) begin
+	 pp = True;
+	 if (dump) 
+            $write("pp: ");
+      end
+      else begin
+	 qq = True;
+	 if (dump) 
+	    $write("qq: ");
+      end      
+      
+      if (dump) begin
+	 $write("JJ ");
+	 $write("%h ", seqno);
+	 $display("%h", dataline);
+      end
+   
+      
+      // NOTE: as long as the ctrl interface doesn't support bursts, this decoding is sufficient
+      
+      // RXqq: portal request
+      // TXpp: portal indication
+      // TXqq: DMA request
+      // RXpp: DMA response
+      // RXcc: DMA read data
+      // TXcc: DMA write data
+
+      function Bit#(153) rtrunc(Bit#(160) x);
+	 return x[159:7];
+      endfunction
+      
+      if (rx && qq) 
+	 portalEngine.tlp_in.put(unpack(rtrunc(dataline)));
+      else if (tx && pp)
+	 let _x0 <- portalEngine.tlp_out.get;
+      else if (tx && qq)
+	 let _x1 <- tpl_1(axiSlaveEngine.tlps).get;
+      else if (rx && pp)
+	 tpl_2(axiSlaveEngine.tlps).put(unpack(rtrunc(dataline)));
+      else if (rx && cc)
+	 tpl_2(axiSlaveEngine.tlps).put(unpack(rtrunc(dataline)));
+      else if (tx && cc)
+	 let _x2 <- tpl_1(axiSlaveEngine.tlps).get;
+      
    endrule
    
    rule quit if (ptr+1 == 0);

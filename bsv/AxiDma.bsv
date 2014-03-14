@@ -173,9 +173,11 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 	       tag_store[activeChan].deq;
 	    end
    
-	    if (response.id != req.tag)
+	    if (response.id != req.tag) begin
 	       tag_mismatch.enq(tuple2(response.id,req.tag));
-
+	       $display("mkAxiDmaReadInternal::tag_mismatch %d %d", response.id, req.tag);
+	    end
+	       
 	    burstReg <= burstLen-1;
 	    beatCount <= beatCount+1;
 	 endmethod
