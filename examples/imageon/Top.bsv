@@ -39,25 +39,17 @@ import XilinxCells::*;
 import XbsvXilinxCells::*;
 import YUV::*;
 import PS7LIB :: *;
-
-    //interface ImageonVita vita;
-        //interface ImageonTopPins toppins;
-            //method Clock fbbozo();
-                //return mmcmhack.mmcmadv.clkfbout;
-            //endmethod
-            //method Action fbbozoin(Bit#(1) v);
-                //mmcmhack.mmcmadv.clkfbin(v);
-            //endmethod
-        //endinterface
-        //interface SpiPins spi = spiController.pins;
-        //interface ImageonSensorPins pins = fromSensor.pins;
-        //interface ImageonSerdesPins serpins = serdes.pins;
-    //endinterface
+import Imageon :: *;
 
 typedef enum { ImageCaptureRequest, ImageonSerdesRequest, HdmiInternalRequest, ImageonSensorRequest,
     ImageCaptureIndication, ImageonSerdesIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop#(FromPS7 fromPS7)(StdPortalTop#(addrWidth));
+interface FromPS7;
+   interface Clock processing_system7_1_fclk_clk3;
+   interface Clock fmc_imageon_video_clk1;
+endinterface
+
+module mkPortalTop#(FromPS7 fromPS7)(PortalTop#(addrWidth,64,ImageonVita));
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -115,7 +107,7 @@ module mkPortalTop#(FromPS7 fromPS7)(StdPortalTop#(addrWidth));
 //    endmethod
 ///////////
    
-   Vector#(3,StdPortal) portals;
+   Vector#(4,StdPortal) portals;
    portals[0] = captureIndicationProxy.portalIfc;
    portals[1] = serdesRequestWrapper.portalIfc; 
    portals[2] = hdmiRequestWrapper.portalIfc; 
@@ -130,5 +122,20 @@ module mkPortalTop#(FromPS7 fromPS7)(StdPortalTop#(addrWidth));
    interface ctrl = ctrl_mux;
    interface m_axi = null_axi_master;
    //interface leds = captureRequestInternal.leds;
+
+   interface ImageonVita pins;
+      interface ImageonTopPins toppins;
+	  method Clock fbbozo();
+	     return mmcmhack.mmcmadv.clkfbout;
+	  endmethod
+	  method Action fbbozoin(Bit#(1) v);
+	     mmcmhack.mmcmadv.clkfbin(v);
+	  endmethod
+       endinterface
+
+       interface SpiPins spi = spiController.pins;
+       interface ImageonSensorPins pins = fromSensor.pins;
+       interface ImageonSerdesPins serpins = serdes.pins;
+   endinterface
 
 endmodule : mkPortalTop
