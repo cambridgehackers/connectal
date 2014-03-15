@@ -62,5 +62,5 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI))
    interface ctrl = ctrl_mux;
    interface m_axi = dma.m_axi;
    interface leds = default_leds;
-      
+   interface pins = hdmiDisplay.hdmi;      
 endmodule : mkPortalTop

@@ -60,7 +60,7 @@ endinterface
 
 typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt(Clock clk1)) MkPortalTop#(type ipins);
 
-module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(Empty));
+module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
    Vector#(4, B2C) fclk <- replicateM(mkB2C());
    B2C mainclock = fclk[0];
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
@@ -187,21 +187,9 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(E
    interface XADC xadc;
        method Bit#(4) gpio;
            return debugReg;
-`ifdef BOZOIFDEF
-           return {interrupt_bit,
-                 pack((ps7.debug.arvalid == 1)
-                   && (ps7.debug.araddr[18:16] == 3'd1)   // /dev/fpga1
-                   && (ps7.debug.araddr[15:14] == 2'd2)   // indication
-                   && (ps7.debug.araddr[13:8] == 6'd1)),  //     #1
-                 ps7.debug.rvalid,
-                 pack((ps7.debug.awvalid == 1)
-                   && (ps7.debug.awaddr[18:16] == 3'd2)   // /dev/fpga2
-                   && (ps7.debug.awaddr[15:14] == 2'd0)   // request
-                   && (ps7.debug.awaddr[13:8] == 6'd1))}; //     #1
-`endif
        endmethod
    endinterface
-//   interface pins = top.pins;
+   interface pins = top.pins;
    interface unused_clock0 = fclk[0].c;
    interface unused_reset0 = fclk[0].r;
    interface unused_clock1 = fclk[1].c;
@@ -212,7 +200,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(E
    interface unused_reset3 = fclk[3].r;
 endmodule
 
-module mkHdmiZynqTop(ZynqTop#(Empty));
+module mkHdmiZynqTop(ZynqTop#(HDMI));
    let top <- mkZynqTopFromPortal(mkPortalTop);
    return top;
 endmodule
