@@ -115,26 +115,22 @@ HDMI Example
 For example, to create an HDMI frame buffer from the example code:
 
 To generate code for Zedboard:
-    ./genxpsprojfrombsv -B zedboard -p hdmiproj -x HDMI -x XADC -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/HDMI.bsv bsv/PortalMemory.bsv
+    make hdmidisplay.zedboard
 
 To generate code for a ZC702 board:
-    ./genxpsprojfrombsv -B zc702 -p hdmiproj -x HDMI -x XADC -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/HDMI.bsv bsv/PortalMemory.bsv
-
-To generate the bitstream:
-
-    make -C xpsproj bits hdmidisplay.bit.bin.gz
+    make hdmidisplay.zc702
 
 The result .bit file for this example will be:
 
-    xpsproj/hdmidisplay.bit.bin.gz
+    examples/hdmi/zedboard/hw/mkHdmiZynqTop.bit.bin.gz
 
 Sending the bitfile:
-    adb push xpsproj/hdmidisplay.bit.bin.gz /mnt/sdcard
+    adb push mkHdmiZynqTop.bit.bin.gz /mnt/sdcard
 
 Loading the bitfile on the device:
     mknod /dev/xdevcfg c 259 0
     cat /sys/devices/amba.0/f8007000.devcfg/prog_done
-    zcat /mnt/sdcard/hdmidisplay.bit.bin.gz > /dev/xdevcfg
+    zcat /mnt/sdcard/mkHdmiZynqTop.bit.bin.gz > /dev/xdevcfg
     cat /sys/devices/amba.0/f8007000.devcfg/prog_done
     chmod agu+rwx /dev/fpga0
 
