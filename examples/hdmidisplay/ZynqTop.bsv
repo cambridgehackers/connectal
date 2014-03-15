@@ -50,18 +50,22 @@ interface ZynqTop#(type pins);
    interface pins             pins;
    interface Clock unused_clock0;
    interface Clock unused_clock1;
+   interface Clock unused_clock2;
+   interface Clock unused_clock3;
    interface Reset unused_reset0;
    interface Reset unused_reset1;
+   interface Reset unused_reset2;
+   interface Reset unused_reset3;
 endinterface
 
 typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt(Clock clk1)) MkPortalTop#(type ipins);
 
-module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
-   B2C mainclock <- mkB2C();
-   B2C fclk1 <- mkB2C(clocked_by mainclock.c, reset_by mainclock.r);
+module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(Empty));
+   Vector#(4, B2C) fclk <- replicateM(mkB2C());
+   B2C mainclock = fclk[0];
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
 
-   let top <- constructor(fclk1.c, clocked_by mainclock.c, reset_by mainclock.r);
+   let top <- constructor(fclk[1].c, clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
    BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
    BRAM_Configure bramCfg = defaultValue;
@@ -164,14 +168,19 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        ps7.interrupt(interrupt_bit);
    endrule
 
-   rule b2c_rule;
-       mainclock.inputclock(ps7.fclkclk()[0]);
-       mainclock.inputreset(ps7.fclkresetn()[0]);
-   endrule
-   rule b2c_rule1;
-       fclk1.inputclock(ps7.fclkclk()[1]);
-       fclk1.inputreset(ps7.fclkresetn()[1]);
-   endrule
+   for (Integer i = 0; i < 4; i = i + 1) begin
+      ReadOnly#(Bit#(4)) fclkclk;
+      if (i == 0) begin
+	 fclkclk = (interface ReadOnly; method Bit#(4) _read(); return ps7.fclkclk; endmethod endinterface);
+      end
+      else begin
+	 fclkclk <- mkNullCrossingWire(fclk[i].c, ps7.fclkclk);
+      end
+       rule b2c_rule1;
+	   fclk[i].inputclock(fclkclk[i]);
+	   fclk[i].inputreset(fclkclk[i]);
+       endrule
+   end
 
    interface zynq = ps7.pins;
    interface leds = top.leds;
@@ -192,14 +201,18 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 `endif
        endmethod
    endinterface
-   interface pins = top.pins;
-   interface unused_clock0 = mainclock.c;
-   interface unused_reset0 = mainclock.r;
-   interface unused_clock1 = fclk1.c;
-   interface unused_reset1 = fclk1.r;
+//   interface pins = top.pins;
+   interface unused_clock0 = fclk[0].c;
+   interface unused_reset0 = fclk[0].r;
+   interface unused_clock1 = fclk[1].c;
+   interface unused_reset1 = fclk[1].r;
+   interface unused_clock2 = fclk[2].c;
+   interface unused_reset2 = fclk[2].r;
+   interface unused_clock3 = fclk[3].c;
+   interface unused_reset3 = fclk[3].r;
 endmodule
 
-module mkHdmiZynqTop(ZynqTop#(HDMI));
+module mkHdmiZynqTop(ZynqTop#(Empty));
    let top <- mkZynqTopFromPortal(mkPortalTop);
    return top;
 endmodule
