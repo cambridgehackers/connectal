@@ -131,9 +131,11 @@ write_bitstream -force -bin_file $outputDir/%(Dut)s.bit
 '''
 
 tclzynqrewireclock = '''
-disconnect_net -net [get_nets CLK_unused_clock*] -objects [get_pins -of_objects [get_nets CLK_unused_clock*]]
-disconnect_net -net [get_nets CLK_GATE_unused_clock*] -objects [get_pins -of_objects [get_nets CLK_GATE_unused_clock*]]
-disconnect_net -net [get_nets RST_N_unused_reset*] -objects [get_pins -of_objects [get_nets RST_N_unused_reset*]]
+foreach {pat} {CLK_unused_clock* CLK_GATE_unused_clock* RST_N_unused_reset* CLK_pins_clock_if CLK_GATE_pins_clock_if RST_N_pins_reset_if} {
+    foreach {net} [get_nets $pat] {
+	disconnect_net -net $net -objects [get_pins -of_objects $net]
+    }
+}
 '''
 
 makefileTemplate='''
