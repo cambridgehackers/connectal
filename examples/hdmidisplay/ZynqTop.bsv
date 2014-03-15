@@ -61,6 +61,7 @@ endinterface
 typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt(Clock clk1)) MkPortalTop#(type ipins);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
+   // B2C converts a bit to a clock, enabling us to break the apparent cycle
    Vector#(4, B2C) fclk <- replicateM(mkB2C());
    B2C mainclock = fclk[0];
    PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
@@ -168,6 +169,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        ps7.interrupt(interrupt_bit);
    endrule
 
+   // this rule connects the bits to the clock net via B2C
    for (Integer i = 0; i < 4; i = i + 1) begin
       ReadOnly#(Bit#(4)) fclkclk;
       if (i == 0) begin
@@ -190,6 +192,8 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        endmethod
    endinterface
    interface pins = top.pins;
+
+   // these are exported to make bsc happy, and then the ports are disconnected after synthesis
    interface unused_clock0 = fclk[0].c;
    interface unused_reset0 = fclk[0].r;
    interface unused_clock1 = fclk[1].c;
