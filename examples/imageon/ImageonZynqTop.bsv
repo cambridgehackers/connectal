@@ -48,7 +48,7 @@ interface ZynqTop#(type pins);
    interface LEDS             leds;
    (* prefix="XADC" *)
    interface XADC             xadc;
-   (* prefix="hdmi" *)
+   (* prefix="" *)
    interface pins             pins;
    interface Clock unused_clock0;
    interface Clock unused_clock1;
