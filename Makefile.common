@@ -6,7 +6,7 @@ all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe: gen
 	make -C $(BOARD) $@
 
 
-ifeq ($(TOP),)
+ifeq ($(origin TOP),undefined)
     ifeq ($(BOARD),bluesim_pcie)
     TOP=$(XBSVDIR)/bsv/BsimTopPcie.bsv
     MKTOP=mkBsimTop
