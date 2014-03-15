@@ -61,7 +61,6 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
     MIMO#(4,busWidthWords,8,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
     MIMO#(4,busWidthWords,8,TLPTag) completionTagMimo <- mkMIMO(mimoCfg);
     MIMO#(busWidthWords,4,8,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
-    Reg#(TLPTag) lastTag <- mkReg(0);
     Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
     Reg#(TLPLength)  writeDwCount <- mkReg(0);
     Reg#(TLPTag) writeTag <- mkReg(0);
@@ -168,12 +167,14 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
       end
    endrule
 
+   Reg#(TLPTag) lastTag <- mkReg(0);
    rule handleTlpIn;
       let tlp = tlpInFifo.first;
       Bool handled = False;
       TLPMemoryIO3DWHeader h = unpack(tlp.data);
       hitReg <= tlp.hit;
       TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+      TLPCompletionHeader hdr_completion = unpack(tlp.data);
       Vector#(4, Bit#(32)) vec = unpack(0);
       Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
 
@@ -196,7 +197,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	    && completionTagMimo.enqReadyN(fromInteger(count)))
 	    begin
 	       completionMimo.enq(fromInteger(count), vec);
-	       completionTagMimo.enq(fromInteger(count), replicate(lastTag));
+	       Vector#(4, TLPTag) tagvec = replicate(lastTag);
+	       completionTagMimo.enq(fromInteger(count), tagvec);
 	       handled = True;
 	    end
       end
@@ -206,8 +208,9 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	       && completionTagMimo.enqReadyN(1)) begin
 	    vec[0] = hdr_3dw.data;
 	    completionMimo.enq(1, vec);
-	    lastTag <= hdr_3dw.tag;
-	    completionTagMimo.enq(1, replicate(hdr_3dw.tag));
+            TLPTag tag = hdr_completion.tag;
+	    lastTag <= tag;
+	    completionTagMimo.enq(1, replicate(tag));
 	    handled = True;
       end
       //$display("tlpIn handled=%d tlp=%h\n", handled, tlp);
@@ -323,7 +326,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
            endmethod
        endinterface : req_ar
        interface GetF resp_read;
-	   method ActionValue#(Axi3ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
+	   method ActionValue#(Axi3ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords)))
+									&& completionTagMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
 	      let tag_v = completionTagMimo.first;
 	      completionMimo.deq(fromInteger(valueOf(busWidthWords)));
