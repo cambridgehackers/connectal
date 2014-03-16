@@ -19,6 +19,7 @@ test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidi
 testnames = echo             \
             echo2            \
 	    hdmidisplay      \
+	    imageon          \
             memcpy_buff      \
             memcpy_nobuff    \
             memread_buff     \
