@@ -124,14 +124,14 @@ module mkPortalTop#(FromPS7 fromPS7)(PortalTop#(addrWidth,64,ImageonVita));
    //interface leds = captureRequestInternal.leds;
 
    interface ImageonVita pins;
-      interface ImageonTopPins toppins;
-	  method Clock fbbozo();
-	     return mmcmhack.mmcmadv.clkfbout;
-	  endmethod
-	  method Action fbbozoin(Bit#(1) v);
-	     mmcmhack.mmcmadv.clkfbin(v);
-	  endmethod
-       endinterface
+      // interface ImageonTopPins toppins;
+      // 	  method Clock fbbozo();
+      // 	     return mmcmhack.mmcmadv.clkfbout;
+      // 	  endmethod
+      // 	  method Action fbbozoin(Bit#(1) v);
+      // 	     mmcmhack.mmcmadv.clkfbin(v);
+      // 	  endmethod
+      //  endinterface
 
        interface SpiPins spi = spiController.pins;
        interface ImageonSensorPins pins = fromSensor.pins;
