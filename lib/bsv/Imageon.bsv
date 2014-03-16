@@ -60,7 +60,7 @@ endinterface
 interface ImageonVita;
    interface SpiPins spi;
    interface ImageonSensorPins pins;
-   interface ImageonTopPins toppins;
+   //interface ImageonTopPins toppins;
    interface ImageonSerdesPins serpins;
 endinterface
 
