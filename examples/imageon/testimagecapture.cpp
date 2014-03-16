@@ -1,5 +1,12 @@
 
-#include "ImageCapture.h"
+#include "ImageCaptureRequestProxy.h"
+#include "ImageCaptureIndicationWrapper.h"
+#include "ImageonSensorRequestProxy.h"
+#include "ImageonSerdesRequestProxy.h"
+#include "ImageonSerdesIndicationWrapper.h"
+#include "HdmiInternalRequestProxy.h"
+#include "HdmiInternalIndicationWrapper.h"
+#include "GeneratedTypes.h"
 #include <stdio.h>
 #include <sys/mman.h>
 #include <stdlib.h>
@@ -13,10 +20,10 @@
 #include "i2chdmi.h"
 #include "i2ccamera.h"
 
-static CoreRequest *device = 0;
-static ImageonSensorRequest *sensordevice;
-static ImageonSerdesRequest *serdesdevice;
-static HdmiInternalRequest *hdmidevice;
+static ImageCaptureRequestProxy *device = 0;
+static ImageonSensorRequestProxy *sensordevice;
+static ImageonSerdesRequestProxy *serdesdevice;
+static HdmiInternalRequestProxy *hdmidevice;
 static int trace_spi = 0;
 
 #define DECL(A) \
@@ -34,24 +41,30 @@ DECL(spi_response)
         return cv_ ## A; \
     }
 
-class TestImageonSerdesIndication : public ImageonSerdesIndication {
+class ImageonSerdesIndication : public ImageonSerdesIndicationWrapper {
+public:
+    ImageonSerdesIndication(int id, PortalPoller *poller = 0) : ImageonSerdesIndicationWrapper(id, poller) {}
     virtual void iserdes_control_value ( uint32_t v ){
         cv_iserdes_control = v;
         sem_post(&sem_iserdes_control);
     }
 };
 
-class TestImageCaptureIndications : public CoreIndication {
+class ImageCaptureIndication : public ImageCaptureIndicationWrapper {
+public:
+    ImageCaptureIndication(int id, PortalPoller *poller = 0) : ImageCaptureIndicationWrapper(id, poller) {}
     void spi_response(uint32_t v){
       //fprintf(stderr, "spi_response: %x\n", v);
       cv_spi_response = v;
       sem_post(&sem_spi_response);
     }
-    void debugind(long unsigned int v) {
+    void debugind(uint32_t v) {
 printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
     }
 };
-class TestHdmiInternal: public HdmiInternalIndication {
+class HdmiInternal: public HdmiInternalIndicationWrapper {
+public:
+    HdmiInternal(int id, PortalPoller *poller = 0) : HdmiInternalIndicationWrapper(id, poller) {}
     virtual void vsync ( uint64_t v ){
 //printf("[%s:%d] %lx\n", __FUNCTION__, __LINE__, v);
     }
@@ -407,13 +420,19 @@ int main(int argc, const char **argv)
     pthread_t threaddata;
 
     init_local_semaphores();
-    device = CoreRequest::createCoreRequest(new TestImageCaptureIndications);
-    sensordevice = ImageonSensorRequest::createImageonSensorRequest(new ImageonSensorIndication);
-    serdesdevice = ImageonSerdesRequest::createImageonSerdesRequest(new TestImageonSerdesIndication);
+    PortalPoller *poller = new PortalPoller();
+
+    device = new ImageCaptureRequestProxy(IfcNames_ImageCaptureRequest, poller);
+    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
+    serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
+    
+    ImageCaptureIndicationWrapper *imageCaptureIndication = new ImageCaptureIndication(IfcNames_ImageCaptureIndication);
+    ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndication);
+
     //hdmidevice = HdmiInternalRequest::createHdmiInternalRequest(new TestHdmiInternal);
     // for surfaceflinger 
-    int status = PortalRequest::setClockFrequency(1, 160000000, 0);
-    //int status = PortalRequest::setClockFrequency(1, 200000000, 0);
+    int status = poller->setClockFrequency(1, 160000000, 0);
+    //int status = poller->setClockFrequency(1, 200000000, 0);
     pthread_create(&threaddata, NULL, &pthread_worker, (void *)device);
     //hdmidevice->setTestPattern(0, 1);
     fmc_imageon_demo_init(argc, argv);
