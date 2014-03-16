@@ -27,6 +27,7 @@ import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiMasterSlave    :: *;
+import XilinxCells       :: *;
 import XbsvXilinxCells   :: *;
 import PS7LIB::*;
 import PPS7LIB::*;
@@ -62,7 +63,8 @@ endinterface
 
 typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt(FromPS7 fromPS7)) MkPortalTop#(type ipins);
 
-module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
+module [Module] mkZynqTopFromPortal#(Clock io_vita_clk_out_p, Clock io_vita_clk_out_n, MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
+   Clock io_vita_clk <- XilinxCells::mkClockIBUFDS(io_vita_clk_out_p, io_vita_clk_out_n);
    // B2C converts a bit to a clock, enabling us to break the apparent cycle
    Vector#(4, B2C) fclk <- replicateM(mkB2C());
    B2C mainclock = fclk[0];
@@ -70,7 +72,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 
    FromPS7 fromPS7 = (interface FromPS7;
 			 interface Clock processing_system7_1_fclk_clk3 = fclk[3].c;
-			 interface Clock fmc_imageon_video_clk1 = fclk[2].c; // FIXME
+			 interface Clock fmc_imageon_video_clk1 = io_vita_clk;
 		      endinterface);
    let top <- constructor(fromPS7, clocked_by mainclock.c, reset_by mainclock.r);
    Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
@@ -210,7 +212,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    interface unused_reset3 = fclk[3].r;
 endmodule
 
-module mkImageonZynqTop(ZynqTop#(ImageonVita));
-   let top <- mkZynqTopFromPortal(mkPortalTop);
+module mkImageonZynqTop#(Clock io_vita_clk_out_p, Clock io_vita_clk_out_n)(ZynqTop#(ImageonVita));
+   let top <- mkZynqTopFromPortal(io_vita_clk_out_p, io_vita_clk_out_n, mkPortalTop);
    return top;
 endmodule
