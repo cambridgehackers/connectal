@@ -6,8 +6,21 @@ CPPFILES=testimagecapture.cpp
 XBSVFLAGS = -C imageon-$(BOARD).xdc
 Dma = 
 PINS = ImageonVita
+
+ifeq ($(BOARD),zedboard)
+HAS_PS7=true
+endif
+ifeq ($(BOARD),zc702)
+HAS_PS7=true
+endif
+
+ifeq ($(HAS_PS7),true)
 TOP=ImageonZynqTop.bsv
 MKTOP=mkImageonZynqTop
+else
+TOP=ImageonPcieTop.bsv
+MKTOP=mkImageonPcieTop
+endif
 
 include ../../Makefile.common
 

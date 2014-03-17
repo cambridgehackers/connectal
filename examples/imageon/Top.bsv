@@ -44,12 +44,7 @@ import Imageon :: *;
 typedef enum { ImageCaptureRequest, ImageonSerdesRequest, HdmiInternalRequest, ImageonSensorRequest,
     ImageCaptureIndication, ImageonSerdesIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
 
-interface FromPS7;
-   interface Clock processing_system7_1_fclk_clk3;
-   interface Clock fmc_imageon_video_clk1;
-endinterface
-
-module mkPortalTop#(FromPS7 fromPS7)(PortalTop#(addrWidth,64,ImageonVita));
+module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,ImageonVita));
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -61,8 +56,8 @@ module mkPortalTop#(FromPS7 fromPS7)(PortalTop#(addrWidth,64,ImageonVita));
    //ImageCaptureRequest captureRequestInternal <- mkImageCaptureRequest(captureIndicationProxy.ifc);
 
 //////
-    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by fromPS7.processing_system7_1_fclk_clk3);
-    Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by fromPS7.fmc_imageon_video_clk1);
+    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200);
+    Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by io_vita_clk);
     MMCMHACK mmcmhack <- mkMMCMHACK(clocked_by imageon_video_clk1_buf_wire);
     Clock hdmi_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout0);
     Clock imageon_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout1);
