@@ -74,7 +74,7 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
    rule loadReq(i < n);
-      $display("mkBRAMReadClient::loadReq ptr=%d %d %d", ptr, roff+rbase, bus_width_in_bytes);
+      //$display("mkBRAMReadClient::loadReq ptr=%d %d %d", ptr, roff+rbase, bus_width_in_bytes);
       re.start(ptr, roff + rbase, bus_width_in_bytes, bus_width_in_bytes);
       i <= i+fromInteger(valueOf(nd));
       roff <= roff+bus_width_in_bytes;
@@ -86,7 +86,7 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
       let rv = readFifo.first;
       Vector#(nd,d) rvv = unpack(rv);
       gb.enq(rvv);
-      $display("mkBRAMReadClient::loadResp ptr=%d", ptr);
+      //$display("mkBRAMReadClient::loadResp ptr=%d", ptr);
    endrule
    
    rule load(j < n);
@@ -95,10 +95,12 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
       j <= j+1;
       if (j+1 == n)
 	 f.enq(?);
+      //$display("mkBRAMReadClient::load ptr=%d", ptr);
    endrule
    
    rule discard(j >= n);
       gb.deq;
+      //$display("mkBRAMReadClient::discard ptr=%d", ptr);
    endrule
    
    method Action start(DmaPointer h, Bit#(DmaOffsetSize) rb, bramIdx num, bramIdx wb);
