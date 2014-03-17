@@ -174,19 +174,16 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
       let req = tpl_2(readDelayFifo.first);
       readDelayFifo.deq;
       Bit#(5) rlen = extend(req.len)+1;
-      //$display("req_ar: addr=%h len=%d", req.address, rlen);
-      $display("req_ar: id=%d", req.id);
       readAddrr <= req.address;
       readLen <= rlen;
       readId <= req.id;
+      //$display("mkBsimHost::req_ar_b: id=%d len=%d", req.id, rlen);
    endrule
 
    rule req_aw_b if (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency);
       let req = tpl_2(writeDelayFifo.first);
       writeDelayFifo.deq;
       Bit#(5) wlen = extend(req.len)+1;
-      //$display("req_aw: addr=%h len=%d", req.address, wlen);
-      //$display("req_aw: id=%d", req.id);
       writeAddrr <= req.address;
       writeLen <= wlen;
       writeId <= req.id;
@@ -213,7 +210,6 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
    interface Axi3Slave axi_server;
       interface Put req_ar;
 	 method Action put(Axi3ReadRequest#(serverAddrWidth,serverIdWidth) req);
-	    $display("req_ar::put %d", req.id);
 	    readDelayFifo.enq(tuple2(cycle,req));
 	 endmethod
       endinterface
@@ -224,6 +220,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	    Bit#(serverBusWidth) v <- rw.read_pareff(extend(handle), addr);
 	    readLen <= readLen - 1;
 	    readAddrr <= readAddrr + fromInteger(valueOf(serverBusWidth)/8);
+	    //$display("mkBsimHost::resp_read id=%d %d", readId, readLen); 
 	    return Axi3ReadResponse { data: v, resp: 0, last: pack(readLen == 1), id: readId};
 	 endmethod
 	 method Bool notEmpty();

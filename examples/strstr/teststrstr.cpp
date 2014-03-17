@@ -160,7 +160,7 @@ int main(int argc, const char **argv)
   }
 
 
-  if(1){
+  if(0){
     fprintf(stderr, "benchmarks\n");
     PortalAlloc *needleAlloc;
     PortalAlloc *haystackAlloc;

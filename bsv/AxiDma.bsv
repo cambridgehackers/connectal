@@ -67,31 +67,34 @@ function Bool bad_pointer(DmaPointer p);
 endfunction
 
 typedef enum {Idle, Translate, Address, Data, Done} InternalState deriving(Eq,Bits);
+
+typedef struct {DmaRequest req;
+		Bit#(6)    id;
+		Bit#(addrWidth) pa;
+		DmaChannelId chan; } IRec#(type addrWidth) deriving(Bits);
 		 
-		 
-module mkAxiDmaReadInternal#(Integer numRequests, 
-			     Vector#(numReadClients, DmaReadClient#(dsz)) readClients, 
+module mkAxiDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) readClients, 
 			     DmaIndication dmaIndication,
 			     Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth)) sgl) 
    (AxiDmaReadInternal#(addrWidth, dsz))
 
-   provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
+   provisos(Add#(1,a__,dsz), 
+	    Add#(b__, addrWidth, 64), 
+	    Add#(c__, 12, addrWidth), 
+	    Add#(1, c__, d__));
    
-   FIFO#(DmaRequest)    lreqFifo <- mkSizedFIFO(1);
-   FIFO#(DmaRequest)     reqFifo <- mkSizedFIFO(1);
-   FIFO#(Bit#(addrWidth)) paFifo <- mkSizedFIFO(1);
+   FIFO#(IRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
+   FIFO#(IRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
+   FIFO#(IRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
 
-   FIFO#(DmaChannelId)  chanFifo <- mkSizedFIFO(numRequests);
-   FIFO#(DmaRequest)    dreqFifo <- mkSizedFIFO(numRequests);
-
-   Reg#(Bit#(8))        burstReg <- mkReg(0);   
-   Reg#(Bit#(64))      beatCount <- mkReg(0);
+   Reg#(Bit#(8))           burstReg <- mkReg(0);
+   Reg#(Bit#(64))         beatCount <- mkReg(0);
    
-   // the choice of 5 is based on PCIE limitations
-   Vector#(numReadClients, Reg#(Bit#(5)))  tag_gen   <- replicateM(mkReg(0)); 
-   // a depth of 32 will guarantee per/client uniqueness of outstanding requests
-   Vector#(numReadClients, FIFO#(Bit#(6))) tag_store <- replicateM(mkSizedFIFO(32)); 
-   // report a tag mismatch for oo write completions (in which case we will need to introduce completion buffers)
+   // the choice of 5 is based on PCIE limitations.   
+   // uniqueness is enforced by the depth of dreqFIFO
+   Reg#(Bit#(5))  id_gen   <- mkReg(0); 
+   // report a tag mismatch for oo completions (in which 
+   // case we will need to introduce completion buffers)
    FIFO#(Tuple2#(Bit#(6),Bit#(6))) tag_mismatch <- mkSizedFIFO(32);
    
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
@@ -101,33 +104,27 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 	  if (bad_pointer(req.pointer))
 	     dmaIndication.badPointer(req.pointer);
 	  else begin
-	     lreqFifo.enq(req);
-	     chanFifo.enq(fromInteger(selectReg));
+	     lreqFifo.enq(IRec{req:req, id:?, pa:?, chan:fromInteger(selectReg)});
 	     sgl.request.put(tuple2(truncate(req.pointer),req.offset));
 	  end
        endrule
    
    rule checkSglResp;
       let physAddr <- sgl.response.get;
-      let req = lreqFifo.first();
+      let req = lreqFifo.first.req;
+      let chan = lreqFifo.first.chan;
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
 	 $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
-	 chanFifo.deq;
       end
       else begin
-	 let chan = chanFifo.first;
 	 if (False && physAddr[31:24] != 0)
 	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 // overwrite user-supplied tag and store the original for the responses
-	 if (valueOf(numReadClients) > 0) begin
-	    reqFifo.enq(DmaRequest{pointer:req.pointer, offset:req.offset, burstLen:req.burstLen, tag:{0,tag_gen[chan]}});
-	    tag_gen[chan] <= tag_gen[chan]+1;
-	    tag_store[chan].enq(req.tag);
-	 end
-	 paFifo.enq(physAddr);
+	 //$display("mkAxiDmaReadInternal::checkSglResp tag=%d, id=%d, activeChan=%d", req.tag, id_gen, chan);
+	 reqFifo.enq(IRec{req:req, id:{0,id_gen}, pa:physAddr, chan:chan});
+	 id_gen <= id_gen+1;
       end
    endrule
 
@@ -143,25 +140,26 @@ module mkAxiDmaReadInternal#(Integer numRequests,
    interface Axi3Master m_axi;
       interface Get req_ar;
 	 method ActionValue#(Axi3ReadRequest#(addrWidth,6)) get();
-	    let req = reqFifo.first();
-	    reqFifo.deq();
-	    let physAddr = paFifo.first();
-	    paFifo.deq();
-
+	    let req = reqFifo.first.req;
+	    let physAddr = reqFifo.first.pa;
+	    let id = reqFifo.first.id;
+	    reqFifo.deq;
+	    //$display("mkAxiDmaReadInternal::req_ar tag=%d id=%d len=%d activeChan=%d", req.tag, id, req.burstLen, reqFifo.first.chan);
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 
-	    dreqFifo.enq(req);
-	    return Axi3ReadRequest{address:physAddr, len:truncate(req.burstLen-1), id:req.tag,
+	    dreqFifo.enq(reqFifo.first);
+	    return Axi3ReadRequest{address:physAddr, len:truncate(req.burstLen-1), id:id,
 				   size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
 	 endmethod
       endinterface
       interface Put resp_read;
 	 method Action put(Axi3ReadResponse#(dsz,6) response);
-	    let activeChan = chanFifo.first();
-	    let req = dreqFifo.first();
+	    let activeChan = dreqFifo.first.chan;
+	    let req = dreqFifo.first.req;
+	    let id = dreqFifo.first.id;
 	    if (valueOf(numReadClients) > 0)
-	       readClients[activeChan].readData.put(DmaData { data: response.data, tag: tag_store[activeChan].first});
+	      readClients[activeChan].readData.put(DmaData { data: response.data, tag: req.tag});
 
 	    let burstLen = burstReg;
 	    if (burstLen == 0)
@@ -169,15 +167,13 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 
 	    if (burstLen == 1  && valueOf(numReadClients) > 0) begin
 	       dreqFifo.deq();
-	       chanFifo.deq();
-	       tag_store[activeChan].deq;
 	    end
    
-	    if (response.id != req.tag) begin
-	       tag_mismatch.enq(tuple2(response.id,req.tag));
-	       $display("mkAxiDmaReadInternal::tag_mismatch %d %d", response.id, req.tag);
+	    if (response.id != id) begin
+	       tag_mismatch.enq(tuple2(response.id,id));
+	       $display("mkAxiDmaReadInternal::tag_mismatch %d %d", response.id, id);
 	    end
-	       
+	    //$display("mkAxiDmaReadInternal::resp_read id=%d burstLen=%d activeChan=%d", id, burstLen, activeChan);
 	    burstReg <= burstLen-1;
 	    beatCount <= beatCount+1;
 	 endmethod
@@ -190,31 +186,30 @@ module mkAxiDmaReadInternal#(Integer numRequests,
 endmodule
 
 
-module mkAxiDmaWriteInternal#(Integer numRequests, 
-			      Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients,
+module mkAxiDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients,
 			      DmaIndication dmaIndication, 
 			      Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth)) sgl)
 
    (AxiDmaWriteInternal#(addrWidth, dsz))
    
-   provisos(Add#(1,a__,dsz), Add#(b__, addrWidth, 64), Add#(c__, 12, addrWidth), Add#(1, c__, d__));
+   provisos(Add#(1,a__,dsz), 
+	    Add#(b__, addrWidth, 64), 
+	    Add#(c__, 12, addrWidth), 
+	    Add#(1, c__, d__));
    
-   FIFO#(DmaRequest)      lreqFifo <- mkSizedFIFO(1);
-   FIFO#(DmaRequest)       reqFifo <- mkSizedFIFO(1);
-   FIFO#(Bit#(addrWidth))   paFifo <- mkSizedFIFO(1);
-
-   FIFO#(DmaRequest)      dreqFifo <- mkSizedFIFO(numRequests);
-   FIFO#(DmaChannelId)    chanFifo <- mkSizedFIFO(numRequests);
-   FIFO#(Tuple2#(DmaChannelId,Bit#(6))) respFifo <- mkSizedFIFO(numRequests);
+   FIFO#(IRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
+   FIFO#(IRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
+   FIFO#(IRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
+   FIFO#(IRec#(addrWidth)) respFifo <- mkSizedFIFO(1);
 
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
    Reg#(Bit#(64))       beatCount <- mkReg(0);
 
-   // the choice of 5 is based on PCIE limitations
-   Vector#(numWriteClients, Reg#(Bit#(5)))  tag_gen   <- replicateM(mkReg(0)); 
-   // a depth of 32 will guarantee per/client uniqueness of outstanding requests
-   Vector#(numWriteClients, FIFO#(Bit#(6))) tag_store <- replicateM(mkSizedFIFO(32)); 
-   // report a tag mismatch for oo write completions (in which case we will need to introduce completion buffers)
+   // the choice of 5 is based on PCIE limitations.   
+   // uniqueness is enforced by the depth of dreqFIFO
+   Reg#(Bit#(5))  id_gen   <- mkReg(0); 
+   // report a tag mismatch for oo completions (in which 
+   // case we will need to introduce completion buffers)
    FIFO#(Tuple2#(Bit#(6),Bit#(6))) tag_mismatch <- mkSizedFIFO(32);
 
    for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
@@ -224,31 +219,24 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
 	  if (bad_pointer(req.pointer))
 	     dmaIndication.badPointer(req.pointer);
 	  else begin
-	     lreqFifo.enq(req);
-	     chanFifo.enq(fromInteger(selectReg));
+	     lreqFifo.enq(IRec{req:req, id:?, pa:?, chan:fromInteger(selectReg)});
 	     sgl.request.put(tuple2(truncate(req.pointer),req.offset));
 	  end
        endrule
    
    rule checkSglResp;
       let physAddr <- sgl.response.get;
-      let req = lreqFifo.first();
+      let req = lreqFifo.first.req;
+      let chan = lreqFifo.first.chan;
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
 	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
-	 chanFifo.deq;
       end
       else begin
-	 let chan = chanFifo.first;
-	 // overwrite user-supplied tag and store the original for the responses
-	 if (valueOf(numWriteClients) > 0) begin
-	    reqFifo.enq(DmaRequest{pointer:req.pointer, offset:req.offset, burstLen:req.burstLen, tag:{0,tag_gen[chan]}});
-	    tag_gen[chan] <= tag_gen[chan]+1;
-	    tag_store[chan].enq(req.tag);
-	 end
-	 paFifo.enq(physAddr);
+	 reqFifo.enq(IRec{req:req, id:{0,id_gen}, pa:physAddr, chan:chan});
+	 id_gen <= id_gen+1;
       end
    endrule
 
@@ -266,21 +254,22 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
    interface Put resp_read = ?;
    interface Get req_aw;
       method ActionValue#(Axi3WriteRequest#(addrWidth,6)) get();
-	 let req = reqFifo.first();
-	 reqFifo.deq();
-	 let physAddr = paFifo.first();
-	 paFifo.deq();
+	 let req = reqFifo.first.req;
+	 let physAddr = reqFifo.first.pa;
+	 let id = reqFifo.first.id;
+	 reqFifo.deq;
 	 //$display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
 
-	 dreqFifo.enq(req);
-	 return Axi3WriteRequest{address:physAddr, len:truncate(req.burstLen-1), id:req.tag,
+	 dreqFifo.enq(reqFifo.first);
+	 return Axi3WriteRequest{address:physAddr, len:truncate(req.burstLen-1), id:id,
 				 size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
    interface Get resp_write;
 	 method ActionValue#(Axi3WriteData#(dsz,6)) get();
-	    let activeChan = chanFifo.first();
-	    let req = dreqFifo.first();
+	    let activeChan = dreqFifo.first.chan;
+	    let req = dreqFifo.first.req;
+	    let id = dreqFifo.first.id;
 	    DmaData#(dsz) tagdata = unpack(0);
 	    if (valueOf(numWriteClients) > 0)
 	       tagdata <- writeClients[activeChan].writeData.get();
@@ -290,8 +279,7 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
 
 	    if (burstLen == 1) begin
 	       dreqFifo.deq();
-	       chanFifo.deq();
-	       respFifo.enq(tuple2(activeChan,req.tag));
+	       respFifo.enq(dreqFifo.first);
 	    end
 
 	    //$display("dmaWrite data data=%h burstLen=%d", tagdata.data, burstLen);
@@ -299,22 +287,19 @@ module mkAxiDmaWriteInternal#(Integer numRequests,
 	    beatCount <= beatCount+1;
 	    
 	    Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
-	    if(valueOf(numWriteClients) > 0)
-	       dynamicAssert(tagdata.tag == tag_store[activeChan].first, "mkAxiDmaWriteInternal badness");
-
-	    return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: req.tag };
+	    return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: id };
 	 endmethod
       endinterface
       interface Put resp_b;
 	 method Action put(Axi3WriteResponse#(6) resp);
-	    let activeChan = tpl_1(respFifo.first);
-	    let tag = tpl_2(respFifo.first);
-	    if (resp.id != tag)
-	       tag_mismatch.enq(tuple2(resp.id,tag));
+	    let activeChan = respFifo.first.chan;
+	    let id = respFifo.first.id;
+	    let tag = respFifo.first.req.tag;
+	    if (resp.id != id)
+	       tag_mismatch.enq(tuple2(resp.id,id));
 	    respFifo.deq();
 	    if (valueOf(numWriteClients) > 0) begin
-	       writeClients[activeChan].writeDone.put(extend(tag_store[activeChan].first));
-	       tag_store[activeChan].deq;
+	       writeClients[activeChan].writeDone.put(tag);
 	    end
 	 endmethod
       endinterface
@@ -330,7 +315,6 @@ endmodule
 // @param writeClients The writeclients.
 //
 module mkAxiDmaServer#(DmaIndication dmaIndication,
-		       Integer numRequests,
 		       Vector#(numReadClients, DmaReadClient#(dsz)) readClients,
 		       Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients)
 
@@ -347,8 +331,8 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
 
-   AxiDmaReadInternal#(addrWidth, dsz) reader <- mkAxiDmaReadInternal(numRequests, readClients, dmaIndication, sgl.addr[0]);
-   AxiDmaWriteInternal#(addrWidth, dsz) writer <- mkAxiDmaWriteInternal(numRequests, writeClients, dmaIndication, sgl.addr[1]);
+   AxiDmaReadInternal#(addrWidth, dsz) reader <- mkAxiDmaReadInternal(readClients, dmaIndication, sgl.addr[0]);
+   AxiDmaWriteInternal#(addrWidth, dsz) writer <- mkAxiDmaWriteInternal(writeClients, dmaIndication, sgl.addr[1]);
    
    rule tag_mismatch_read;
       let rv <- reader.tagMismatch.get;

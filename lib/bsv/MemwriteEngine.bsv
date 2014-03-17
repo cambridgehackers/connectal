@@ -47,14 +47,14 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 
    Reg#(DmaPointer)        pointer <- mkReg(0);
    Reg#(Bit#(8))          burstLen <- mkReg(0);
-   FIFO#(Bool)                acks <- mkSizedFIFO(32);
+   FIFO#(Bool)                acks <- mkSizedFIFO(256);
 
-   FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
-   FIFOF#(void)                 wf <- mkSizedFIFOF(1);
+   FIFOF#(Bool)                 ff <- mkSizedFIFOF(32);
+   FIFOF#(void)                 wf <- mkSizedFIFOF(32);
 
    let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
    
-   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) wl, Bit#(32) bl);
+   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) wl, Bit#(32) bl)  if (reqCnt >= numBeats);
       numBeats <= wl/bytes_per_beat;
       reqCnt   <= 0;
       off      <= 0;

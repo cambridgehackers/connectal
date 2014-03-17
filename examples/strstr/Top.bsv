@@ -26,6 +26,8 @@ import DmaIndicationProxy::*;
 import Strstr::*;
 
 typedef enum {StrstrIndication, StrstrRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
+typedef 1 DegPar;
+
 
 module mkPortalTop(StdPortalTop#(addrWidth)) 
 
@@ -37,21 +39,19 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(f__, addrWidth, 40));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   Vector#(2,DmaReadBuffer#(64,1)) haystack_read_chans <- replicateM(mkDmaReadBuffer());
-   Vector#(2,DmaReadBuffer#(64,1)) needle_read_chans <- replicateM(mkDmaReadBuffer());
-   Vector#(2,DmaReadBuffer#(64,1)) mp_next_read_chans <- replicateM(mkDmaReadBuffer());
+   Vector#(DegPar,DmaReadBuffer#(64,1)) haystack_read_chans <- replicateM(mkDmaReadBuffer());
+   Vector#(DegPar,DmaReadBuffer#(64,1)) needle_read_chans <- replicateM(mkDmaReadBuffer());
+   Vector#(DegPar,DmaReadBuffer#(64,1)) mp_next_read_chans <- replicateM(mkDmaReadBuffer());
    
-   Vector#(6, DmaReadClient#(64)) readClients = newVector();
-   readClients[0] = haystack_read_chans[0].dmaClient;
-   readClients[1] = needle_read_chans[0].dmaClient;
-   readClients[2] = mp_next_read_chans[0].dmaClient;
-   readClients[3] = haystack_read_chans[1].dmaClient;
-   readClients[4] = needle_read_chans[1].dmaClient;
-   readClients[5] = mp_next_read_chans[1].dmaClient;
+   Vector#(TMul#(3,DegPar), DmaReadClient#(64)) readClients = newVector();
+   for(Integer i = 0; i < valueOf(DegPar); i=i+1) begin
+      readClients[(3*i)+0] = haystack_read_chans[i].dmaClient;
+      readClients[(3*i)+1] = needle_read_chans[i].dmaClient;
+      readClients[(3*i)+2] = mp_next_read_chans[i].dmaClient;
+   end
 
    Vector#(0, DmaWriteClient#(64)) writeClients = newVector();
-   Integer numRequests = 8;
-   AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
+   AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
    
    function DmaReadServer#(x) rs(DmaReadBuffer#(x,y) rb);

@@ -74,7 +74,7 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
    rule loadReq(i < n);
-      //$display("lloadReq %d %d %d", ptr, roff+rbase, bus_width_in_bytes);
+      $display("mkBRAMReadClient::loadReq ptr=%d %d %d", ptr, roff+rbase, bus_width_in_bytes);
       re.start(ptr, roff + rbase, bus_width_in_bytes, bus_width_in_bytes);
       i <= i+fromInteger(valueOf(nd));
       roff <= roff+bus_width_in_bytes;
@@ -86,10 +86,10 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
       let rv = readFifo.first;
       Vector#(nd,d) rvv = unpack(rv);
       gb.enq(rvv);
+      $display("mkBRAMReadClient::loadResp ptr=%d", ptr);
    endrule
    
    rule load(j < n);
-      //$display("%d %d %h", ptr, gb.first[0], j+wbase);
       br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:j+wbase, datain:gb.first[0]});
       gb.deq;
       j <= j+1;
@@ -164,7 +164,7 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,Bit#(busWidth)) br)(BRAMWriteClien
    endrule
    
    method Action start(DmaPointer h, Bit#(DmaOffsetSize) wb, bramIdx num, bramIdx rb);
-      $display("mkBRAMWriteClient::start(%h, %h, %h %h)", h, wb, num, rb);
+      //$display("mkBRAMWriteClient::start(%h, %h, %h %h)", h, wb, num, rb);
       i <= 0;
       j <= 0;
       n <= num;

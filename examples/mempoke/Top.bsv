@@ -43,8 +43,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    Vector#(1, DmaWriteClient#(64)) writeClients = newVector();
    writeClients[0] = dma_stream_write_chan.dmaClient;
    readClients[0]  = dma_stream_read_chan.dmaClient;
-   Integer               numRequests = 8;
-   AxiDmaServer#(addrWidth,64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, numRequests, readClients, writeClients);
+   AxiDmaServer#(addrWidth,64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    

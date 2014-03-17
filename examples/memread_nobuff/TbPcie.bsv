@@ -68,9 +68,8 @@ module mkTbPcie(Empty);
    Vector#(1,  DmaReadClient#(64))   readClients = newVector();
    readClients[0] = memread.dmaClient;
    Vector#(0, DmaWriteClient#(64)) writeClients = newVector();
-   Integer               numRequests = 8;
 
-   AxiDmaServer#(addrWidth,64)   dma <- mkAxiDmaServer(dmaIndication, numRequests, readClients, writeClients);
+   AxiDmaServer#(addrWidth,64)   dma <- mkAxiDmaServer(dmaIndication, readClients, writeClients);
 
    PciId myId = PciId { bus: 1, dev: 1, func: 0 };
    AxiSlaveEngine#(64) axiSlaveEngine <- mkAxiSlaveEngine(myId);

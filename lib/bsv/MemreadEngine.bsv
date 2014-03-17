@@ -48,12 +48,12 @@ module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
 
    Reg#(DmaPointer )       pointer <- mkReg(0);
    Reg#(Bit#(8))          burstLen <- mkReg(0);
-   FIFO#(Bool)                  ff <- mkSizedFIFO(1);
-   FIFO#(void)                  wf <- mkSizedFIFO(1);
+   FIFO#(Bool)                  ff <- mkSizedFIFO(32);
+   FIFO#(void)                  wf <- mkSizedFIFO(32);
    
    let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
 
-   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) rl, Bit#(32) bl);
+   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) rl, Bit#(32) bl) if (reqCnt >= numBeats);
       numBeats <= rl/bytes_per_beat;
       reqCnt   <= 0;
       respCnt  <= 0;
@@ -76,6 +76,7 @@ module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
 	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
+	    //$display("mkMemreadEngine::readReq: ptr=%d", pointer);
 	    return DmaRequest { pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0 };
 	 endmethod
 	 method Bool notEmpty();
@@ -88,7 +89,7 @@ module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
 	    if (respCnt+1 == numBeats)
 	       ff.enq(True);
 	    f.enq(d.data);
-	    //$display("readData: tag=%d", d.tag);
+	    //$display("mkMemreadEngine::readData: ptr=%d", pointer);
 	 endmethod
 	 method Bool notFull();
 	    return f.notFull;
