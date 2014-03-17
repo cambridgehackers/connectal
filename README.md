@@ -63,13 +63,13 @@ Echo Example
     ## this has only been tested with the Vivado 2013.2 release
     . Xilinx/Vivado/2013.2/settings64.sh
 
-    BOARD=zedboard make -C examples/echo
+    make echo.zedboard
 or
-    BOARD=zc702 make -C examples/echo
+    make echo.zc702
 or
-    BOARD=kc705 make -C examples/echo
+    make echo.kc705
 or
-    BOARD=vc707 make -C examples/echo
+    make echo.vc707
 
 To run on a zedboard with IP address aa.bb.cc.dd:
     RUNPARAM=aa.bb.cc.dd make echo.zedrun
@@ -78,36 +78,6 @@ Memcpy Example
 --------------
 
     BOARD=vc707 make -C examples/memcpy
-
-
-LoadStore Example
-------------
-
-    ## this has only been tested with the Vivado 2013.2 release
-    . Xilinx/Vivado/2013.2/settings64.sh
-
-    ./genxpsprojfrombsv -B kc705 -p loadstoreproj -b LoadStore examples/loadstore/LoadStore.bsv
-or
-    ./genxpsprojfrombsv -B vc707 -p loadstoreproj -b LoadStore examples/loadstore/LoadStore.bsv
-
-    cd loadstoreproj; make verilog implementation
-
-    ## building the test executable
-    cd loadstoreproj/jni; make
-
-    ## to install the bitfile
-    make program
-
-    ## run the example
-    ./loadstoreproj/jni/loadstore
-
-ReadBW
-------
-
-    ./genxpsprojfrombsv -B vc707 -p readbwproj -b ReadBW examples/readbw/ReadBW.bsv
-or
-    ./genxpsprojfrombsv -B kc705 -p readbwproj -b ReadBW examples/readbw/ReadBW.bsv
-
 
 HDMI Example
 ------------
@@ -150,12 +120,7 @@ Imageon Example
 This is an example using the Avnet Imageon board and ZC702 (not tested with Zedboard yet):
 
 To generate code for a ZC702 board:
-    ./genxpsprojfrombsv  -B zc702 -p fooproj -x HDMI -x ImageonVita -b ImageCapture examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/PortalMemory.bsv bsv/AxiSDma.bsv bsv/Imageon.bsv bsv/IserdesDatadeser.bsv bsv/HDMI.bsv
-
-Test program:
-    cp examples/imageon/testimagecapture.cpp fooproj/jni
-    cp examples/imageon/i2c*h fooproj/jni
-    ndk-build -C fooproj
+    make imageon.zc702
 
 Installation
 ------------
