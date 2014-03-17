@@ -22,5 +22,8 @@ TOP=ImageonPcieTop.bsv
 MKTOP=mkImageonPcieTop
 endif
 
+imageon-$(BOARD).xdc: imageon-fmc.json ../../boardinfo/$(BOARD).json
+	../../scripts/generate-constraints.py ../../boardinfo/$(BOARD).json imageon-fmc.json > imageon-$(BOARD).xdc
+
 include ../../Makefile.common
 

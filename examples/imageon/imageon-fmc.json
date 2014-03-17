@@ -1,0 +1,110 @@
+{
+    "spi_sclk": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA12_p"
+    },
+    "spi_ssel_n": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA12_n"
+    },
+    "spi_mosi": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA11_p"
+    },
+    "spi_miso_v": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA11_n"
+    },
+    "*io_vita_clk_pll": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA13_p"
+    },
+    "*io_vita_reset_n": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA12_n"
+    },
+    "*_io_vita_trigger_0*": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA14_n"
+    },
+    "*_io_vita_trigger_1*": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA14_p"
+    },
+    "*_io_vita_trigger_2*": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA13_n"
+    },
+    "*_io_vita_monitor[0]": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA15_p"
+    },
+    "*_io_vita_monitor[1]": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA15_n"
+    },
+    "*io_vita_spi_sclk": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA12_p"
+    },
+    "*io_vita_spi_ssel_n": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA12_n"
+    },
+    "*io_vita_spi_mosi": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA11_p"
+    },
+    "*io_vita_spi_miso_v": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA11_n"
+    },
+    "*io_vita_clk_out_p": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA00_p_CC"
+    },
+    "*io_vita_clk_out_n": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA00_n_CC"
+    },
+    "*io_vita_sync_p": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA10_p"
+    },
+    "*io_vita_sync_n": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA10_n"
+    },
+    "*io_vita_data_p[0]": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA09_p"
+    },
+    "*io_vita_data_n[0]": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA09_n"
+    },
+    "*io_vita_data_p[1]": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA01_p_CC"
+    },
+    "*io_vita_data_n[1]": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA01_n_CC"
+    },
+    "*io_vita_data_p[2]": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA08_p"
+    },
+    "*io_vita_data_n[2]": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA08_n"
+    },
+    "*io_vita_data_p[3]": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA05_p"
+    },
+    "*io_vita_data_n[3]": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "LA05_n"
+    }
+}
