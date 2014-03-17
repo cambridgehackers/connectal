@@ -49,35 +49,29 @@ interface ZynqTop#(type pins);
    interface XADC             xadc;
    (* prefix="hdmi" *)
    interface pins             pins;
-   interface Clock unused_clock0;
-   interface Clock unused_clock1;
-   interface Clock unused_clock2;
-   interface Clock unused_clock3;
-   interface Reset unused_reset0;
-   interface Reset unused_reset1;
-   interface Reset unused_reset2;
-   interface Reset unused_reset3;
+   interface Vector#(4, Clock) unused_clock;
+   interface Vector#(4, Reset) unused_reset;
 endinterface
 
 typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt(Clock clk1)) MkPortalTop#(type ipins);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
    // B2C converts a bit to a clock, enabling us to break the apparent cycle
-   Vector#(4, B2C) fclk <- replicateM(mkB2C());
-   B2C mainclock = fclk[0];
-   PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
+   PS7 ps7 <- mkPS7();
+   Clock mainclock = ps7.fclkclk[0];
+   Reset mainreset = ps7.fclkreset[0];
 
-   let top <- constructor(fclk[1].c, clocked_by mainclock.c, reset_by mainclock.r);
-   Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
-   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
+   let top <- constructor(ps7.fclkclk[1], clocked_by mainclock, reset_by mainreset);
+   Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock, reset_by mainreset);
+   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg, clocked_by mainclock, reset_by mainreset);
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = 256;
    bramCfg.latency = 1;
-   BRAM2Port#(Bit#(8), Bit#(64)) traceBram <- mkSyncBRAM2Server(bramCfg, mainclock.c, mainclock.r,
+   BRAM2Port#(Bit#(8), Bit#(64)) traceBram <- mkSyncBRAM2Server(bramCfg, mainclock, mainreset,
 								bscanBram.jtagClock, bscanBram.jtagReset);
    mkConnection(bscanBram.bramClient, traceBram.portB);
 
-   ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock.c, bscanBram.debug());
+   ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock, bscanBram.debug());
    
    let interrupt_bit = top.interrupt ? 1'b1 : 1'b0;
    
@@ -85,7 +79,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
 `else
    
-   Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF(clocked_by mainclock.c, reset_by mainclock.r));
+   Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF(clocked_by mainclock, reset_by mainreset));
 
    rule write_bscanBram;
       Bit#(64) data = ?;
@@ -112,7 +106,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
       traceBram.portA.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:data});
       addrReg <= addrReg + 1;
    endrule
-   Reg#(Bit#(16)) seqCounter <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
+   Reg#(Bit#(16)) seqCounter <- mkReg(0, clocked_by mainclock, reset_by mainreset);
    rule seqinc;
        seqCounter <= seqCounter + 1;
    endrule
@@ -170,21 +164,6 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        ps7.interrupt(interrupt_bit);
    endrule
 
-   // this rule connects the bits to the clock net via B2C
-   for (Integer i = 0; i < 4; i = i + 1) begin
-      ReadOnly#(Bit#(4)) fclkclk;
-      if (i == 0) begin
-	 fclkclk = (interface ReadOnly; method Bit#(4) _read(); return ps7.fclkclk; endmethod endinterface);
-      end
-      else begin
-	 fclkclk <- mkNullCrossingWire(fclk[i].c, ps7.fclkclk);
-      end
-       rule b2c_rule1;
-	   fclk[i].inputclock(fclkclk[i]);
-	   fclk[i].inputreset(fclkclk[i]);
-       endrule
-   end
-
    interface zynq = ps7.pins;
    interface leds = top.leds;
    interface XADC xadc;
@@ -195,14 +174,8 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    interface pins = top.pins;
 
    // these are exported to make bsc happy, and then the ports are disconnected after synthesis
-   interface unused_clock0 = fclk[0].c;
-   interface unused_reset0 = fclk[0].r;
-   interface unused_clock1 = fclk[1].c;
-   interface unused_reset1 = fclk[1].r;
-   interface unused_clock2 = fclk[2].c;
-   interface unused_reset2 = fclk[2].r;
-   interface unused_clock3 = fclk[3].c;
-   interface unused_reset3 = fclk[3].r;
+   interface unused_clock = ps7.fclkclk;
+   interface unused_reset = ps7.fclkreset;
 endmodule
 
 module mkHdmiZynqTop(ZynqTop#(HDMI));

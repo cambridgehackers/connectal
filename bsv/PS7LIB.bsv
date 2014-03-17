@@ -31,6 +31,7 @@ import CtrlMux::*;
 import Portal::*;
 import AxiMasterSlave::*;
 import GetPutF::*;
+import XbsvXilinxCells::*;
 
 interface AxiMasterCommon;
     method Bit#(1)            aresetn();
@@ -539,12 +540,37 @@ interface PS7;
     interface Vector#(2, AxiSlaveCommon#(32)) s_axi_gp;
     interface Vector#(4, AxiSlaveHighSpeed)   s_axi_hp;
     method Action                             interrupt(Bit#(1) v);
-    method Bit#(4)     fclkclk();
-    method Bit#(4)     fclkresetn();
+    interface Vector#(4, Clock) fclkclk;
+    interface Vector#(4, Reset) fclkreset;
 endinterface
 
-module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
-    PS7LIB ps7 <- mkPS7LIB(axi_clock, axi_reset);
+module mkPS7(PS7);
+   // B2C converts a bit to a clock, enabling us to break the apparent cycle
+   Vector#(4, B2C) b2c <- replicateM(mkB2C());
+
+   PS7LIB ps7 <- mkPS7LIB(b2c[0].c, b2c[0].r, clocked_by b2c[0].c, reset_by b2c[0].r);
+   Vector#(4, Clock) fclk;
+   Vector#(4, Reset) freset;
+
+   // this rule connects the fclkclk wires to the clock net via B2C
+   for (Integer i = 0; i < 4; i = i + 1) begin
+      ReadOnly#(Bit#(4)) fclkb;
+      ReadOnly#(Bit#(4)) fclkresetnb;
+      if (i == 0) begin
+	 fclkb       = (interface ReadOnly; method Bit#(4) _read(); return ps7.fclkclk; endmethod endinterface);
+	 fclkresetnb = (interface ReadOnly; method Bit#(4) _read(); return ps7.fclkresetn; endmethod endinterface);
+      end
+      else begin
+	 fclkb       <- mkNullCrossingWire(b2c[i].c, ps7.fclkclk);
+	 fclkresetnb <- mkNullCrossingWire(b2c[i].c, ps7.fclkresetn);
+      end
+       rule b2c_rule1;
+	   b2c[i].inputclock(fclkb[i]);
+	   b2c[i].inputreset(fclkresetnb[i]);
+       endrule
+      fclk[i] = b2c[i].c;
+      freset[i] = b2c[i].r;
+   end
 
     rule arb_rule;
         ps7.ddr.arb(4'b0);
@@ -574,8 +600,8 @@ module mkPS7#(Clock axi_clock, Reset axi_reset)(PS7);
     interface AxiMasterCommon m_axi_gp = ps7.m_axi_gp;
     interface AxiSlaveCommon s_axi_gp = ps7.s_axi_gp;
     interface AxiSlaveHighSpeed s_axi_hp = ps7.s_axi_hp;
-    method Bit#(4)     fclkclk() = ps7.fclkclk;
-    method Bit#(4)     fclkresetn() = ps7.fclkresetn;
+    interface fclkclk = fclk;
+    interface fclkreset = freset;
     method Action interrupt(Bit#(1) v);
         ps7.irq.f2p({19'b0, v});
     endmethod
