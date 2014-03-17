@@ -302,6 +302,19 @@ if __name__=='__main__':
     xbsvdir = os.path.dirname(exename)
     namespace = argparser.parse_args()
 
+    if not namespace.export:
+        sys.stderr.write('Must specify top level module name via -x/--export flag\n')
+        sys.exit(-1)
+    if not namespace.topbsv:
+        sys.stderr.write('Must specify top BSV file via -t/--topbsv flag\n')
+        sys.exit(-1)
+    if not namespace.source:
+        namespace.source = []
+    if not namespace.constraint:
+        namespace.constraint = []
+    if not namespace.verilog:
+        namespace.verilog = []
+
     project_dir = os.path.expanduser(namespace.project_dir)
     srcdirs = []
 
@@ -335,10 +348,6 @@ if __name__=='__main__':
 
     needs_pcie_7x_v2_1 = False
     rewireclockstring = ''
-    if not namespace.constraint:
-        namespace.constraint = []
-    if not namespace.verilog:
-        namespace.verilog = []
     topmodulename = dutname
     if boardname == 'kc705':
         if not 'os' in namespace: namespace.os = 'ubuntu'
@@ -383,6 +392,11 @@ if __name__=='__main__':
     hwProxies = []
     swWrappers = []
     hwWrappers = []
+
+    if not namespace.s2hinterface:
+        namespace.s2hinterface = []
+    if not namespace.h2sinterface:
+        namespace.h2sinterface = []
 
     for i in set(namespace.s2hinterface + namespace.h2sinterface):
         ifc = syntax.globalvars[i]
@@ -450,7 +464,6 @@ if __name__=='__main__':
             v.emitCDeclaration(hpp)
     hpp.write('#endif //__GENERATED_TYPES__\n');
     hpp.close();
-    cpp.close();
 
     def create_bsv_package(pname, files=[]):
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)
