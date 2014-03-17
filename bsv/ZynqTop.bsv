@@ -54,19 +54,21 @@ endinterface
 typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt()) MkPortalTop#(type ipins);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
-   B2C mainclock <- mkB2C();
-   PS7 ps7 <- mkPS7(mainclock.c, mainclock.r, clocked_by mainclock.c, reset_by mainclock.r);
-   let top <- constructor(clocked_by mainclock.c, reset_by mainclock.r);
-   Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock.c, reset_by mainclock.r);
-   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg, clocked_by mainclock.c, reset_by mainclock.r);
+   PS7 ps7 <- mkPS7();
+   Clock mainclock = ps7.fclkclk[0];
+   Reset mainreset = ps7.fclkreset[0];
+
+   let top <- constructor(clocked_by mainclock, reset_by mainreset);
+   Reg#(Bit#(8)) addrReg <- mkReg(9, clocked_by mainclock, reset_by mainreset);
+   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg, clocked_by mainclock, reset_by mainreset);
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = 256;
    bramCfg.latency = 1;
-   BRAM2Port#(Bit#(8), Bit#(64)) traceBram <- mkSyncBRAM2Server(bramCfg, mainclock.c, mainclock.r,
+   BRAM2Port#(Bit#(8), Bit#(64)) traceBram <- mkSyncBRAM2Server(bramCfg, mainclock, mainreset,
 								bscanBram.jtagClock, bscanBram.jtagReset);
    mkConnection(bscanBram.bramClient, traceBram.portB);
 
-   ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock.c, bscanBram.debug());
+   ReadOnly#(Bit#(4)) debugReg <- mkNullCrossingWire(mainclock, bscanBram.debug());
    
    let interrupt_bit = top.interrupt ? 1'b1 : 1'b0;
    
@@ -74,7 +76,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
 `else
    
-   Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF(clocked_by mainclock.c, reset_by mainclock.r));
+   Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF(clocked_by mainclock, reset_by mainreset));
 
    rule write_bscanBram;
       Bit#(64) data = ?;
@@ -101,7 +103,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
       traceBram.portA.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:data});
       addrReg <= addrReg + 1;
    endrule
-   Reg#(Bit#(16)) seqCounter <- mkReg(0, clocked_by mainclock.c, reset_by mainclock.r);
+   Reg#(Bit#(16)) seqCounter <- mkReg(0, clocked_by mainclock, reset_by mainreset);
    rule seqinc;
        seqCounter <= seqCounter + 1;
    endrule
@@ -159,11 +161,6 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        ps7.interrupt(interrupt_bit);
    endrule
 
-   rule b2c_rule;
-       mainclock.inputclock(ps7.fclkclk()[0]);
-       mainclock.inputreset(ps7.fclkresetn()[0]);
-   endrule
-
    interface zynq = ps7.pins;
    interface leds = top.leds;
    interface XADC xadc;
@@ -184,8 +181,8 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
        endmethod
    endinterface
    interface pins = top.pins;
-   interface unused_clock = mainclock.c;
-   interface unused_reset = mainclock.r;
+   interface unused_clock = mainclock;
+   interface unused_reset = mainreset;
 endmodule
 
 module mkZynqTop(ZynqTop#(Empty));
