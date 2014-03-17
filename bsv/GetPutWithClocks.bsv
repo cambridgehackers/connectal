@@ -43,41 +43,6 @@ instance ConnectableWithClocks#(Get#(a), Put#(a)) provisos (Bits#(a, awidth));
    endmodule: mkConnectionWithClocks
 endinstance: ConnectableWithClocks
 
-instance ConnectableWithClocks#(GetF#(a), PutF#(a)) provisos (Bits#(a, awidth));
-   module mkConnectionWithClocks#(GetF#(a) in, PutF#(a) out,
-                                  Clock inClock, Reset inReset,
-                                  Clock outClock, Reset outReset)(Empty) provisos (Bits#(a, awidth));
-       SyncFIFOIfc#(a) synchronizer <- mkSyncFIFO(1, inClock, inReset, outClock);
-       rule doGet;
-           let v <- in.get();
-	   synchronizer.enq(v);
-       endrule
-       rule doPut;
-           let v = synchronizer.first;
-	   synchronizer.deq;
-	   out.put(v);
-       endrule
-   endmodule: mkConnectionWithClocks
-endinstance: ConnectableWithClocks
-
-instance ConnectableWithClocks#(GetF#(a), Put#(a)) provisos (Bits#(a, awidth));
-   module mkConnectionWithClocks#(GetF#(a) in, Put#(a) out,
-                                  Clock inClock, Reset inReset,
-                                  Clock outClock, Reset outReset)(Empty) provisos (Bits#(a, awidth));
-       SyncFIFOIfc#(a) synchronizer <- mkSyncFIFO(1, inClock, inReset, outClock);
-       rule doGet;
-           let v <- in.get();
-	   synchronizer.enq(v);
-       endrule
-       rule doPut;
-           let v = synchronizer.first;
-	   synchronizer.deq;
-	   out.put(v);
-       endrule
-   endmodule: mkConnectionWithClocks
-endinstance: ConnectableWithClocks
-
-
 module mkClockBinder#(a ifc) (a);
    return ifc;
 endmodule
