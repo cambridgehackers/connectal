@@ -30,6 +30,8 @@ interface X7PcieSplitter#(numeric type lanes);
    interface Reset reset250;
    interface Clock clock125;
    interface Reset reset125;
+   interface Clock clock200;
+   interface Reset reset200;
    (* prefix = "" *)
    //interface DDR3_Pins_X7      ddr3;
    interface GetPut#(TLPData#(16)) master; // to the portal dma
@@ -54,6 +56,8 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    provisos(Add#(1,_,lanes), XbsvXilinx7Pcie::SelectXilinx7PCIE#(lanes));
 
    Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
+   Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
+   Reset sys_clk_200mhz_reset <- mkAsyncReset(2, pci_sys_reset, sys_clk_200mhz_buf);
 
    ClockGenerator7Params clk_params = defaultValue();
    clk_params.clkin1_period     = 5.000;       // 200 MHz reference
@@ -200,6 +204,8 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface reset250 = epReset250;
    interface clock125 = epClock125;
    interface reset125 = epReset125;
+   interface clock200 = sys_clk_200mhz_buf;
+   interface reset200 = sys_clk_200mhz_reset;
 
    method Bool isLinkUp        = link_is_up;
 //   method Bool isCalibrated  = ddr3_ctrl.user.init_done;
