@@ -36,7 +36,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(f__, addrWidth, 40));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   DmaWriteBuffer#(64,8) dma_write_chan <- mkDmaWriteBuffer();
+   DmaWriteBuffer#(64,32) dma_write_chan <- mkDmaWriteBuffer();
    Vector#(1, DmaWriteClient#(64)) writeClients = cons(dma_write_chan.dmaClient, nil);
    Integer               numRequests = 8;
    AxiDmaServer#(addrWidth, 64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, numRequests, nil, writeClients);
