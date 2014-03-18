@@ -369,14 +369,21 @@ Requests and responses are tagged in order to enable pipelining.
        Bit#(6) tag;
        } DmaData#(numeric type dsz) deriving (Bits);
 
-Read clients implement the `DmaReadClient` interface:
+Read clients implement the `DmaReadClient` interface. On response to
+the read, `burstLen` `DmaData` items will be put to the `readData`
+interface. The design must be ready to consume the data when it is
+delivered from the memory bus or the system may hang.
 
     interface DmaReadClient#(numeric type dsz);
        interface GetF#(DmaRequest)    readReq;
        interface PutF#(DmaData#(dsz)) readData;
     endinterface
 
-Write clients implement `DmaWriteClient`:
+Write clients implement `DmaWriteClient`. To complete the transaction,
+`burstLen` data items will be consumed from the `writeData`
+interace. Upon completion of the request, the specified tag will be
+put to the `writeDone` interface. The data must be available when the
+write request is issued to the memory bus or the system may hang.
 
     interface DmaWriteClient#(numeric type dsz);
        interface GetF#(DmaRequest)    writeReq;
