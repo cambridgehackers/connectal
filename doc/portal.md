@@ -88,7 +88,6 @@ In the examples directory, see [echo](../examples/echo/).  The file [Echo.bsv](.
 
 Echo.bsv defines the actions (called Requests) that software can use to cause the hardware to act, and defines the notifications (called Indications) that the hardware can use to signal the software.
 
-```bluespec
     interface EchoIndication;
     	method Action heard(Bit#(32) v);
     	method Action heard2(Bit#(16) a, Bit#(16) b);
@@ -98,15 +97,14 @@ Echo.bsv defines the actions (called Requests) that software can use to cause th
        method Action say2(Bit#(16) a, Bit#(16) b);
        method Action setLeds(Bit#(8) v);
     endinterface
-```
+
 
 Swallow.bsv defines another group of actions:
 
-```bluespec
     interface Swallow; 
        method Action swallow(Bit#(32) v);
     endinterface
-```
+
 
 Software can start the hardware working via say, say2, setLeds, and swallow. Hardware signals back to software with heard and heard2.  In the case of this example, say and say2 merely echo their arguments back to software. setLeds blinks the zedboard lights, and swallow throws away its argument.
 
@@ -143,6 +141,30 @@ Here is the Makefile for the `echo` example:
 
     include ../../Makefile.common
 ```
+
+### genxpsprojfrombsv parameters
+
+
+| Option | Long Option | Default | Description |
+---------|-------------|---------|-------------------------------------|
+| -B     | --board     | zc702   | Board to generate code for (Mandatory) [bluesim, zedboard, zc702, vc707, kc705, ...]|
+| -C     | --constraint|         | Additional constraint files (Optional) |
+| -I     | --contentid |         | Specify 64-bit contentid for PCIe designs (Optional) |
+| -M     | --make      |         | Run make on the specified targets after generating code (Optional) |
+| -O     | --OS        |         | Operating system of platform, inferred from board (Optional) |
+| -V     | --verilog   |         | Additional verilog sources to include in hardware synthesis. (Optional) |
+| -h2s   | --h2sinterface |      | Hardware to software interface |
+| -l     | --clib      |         | Additional C++ libary (Optional) |
+| -p     | --project-dir | ./xpsproj | Directory in which to generate files (Optional) |
+| -s     | --source    |         | C++ source files (Optional) |
+| -s2h   |--s2hinterface |       | Software to hardware interface |
+| -t     | --topbsv    |         | Top-level bsv file (Required) |
+| -x     | --export    |         | Promote/export named interface from top module (Required) |
+
+
+### Generated files
+
+
 
 ## Design Structure
 
