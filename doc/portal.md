@@ -84,10 +84,11 @@ The application developer is free to specify whatever hardware-software interfac
 
 Refer to [https://github.com/cambridgehackers/xbsv](https://github.com/cambridgehackers/xbsv)
 
-in the examples directory, see echo.  The file Echo.bsv defines the hardware, and testecho.cpp supplies the software part. In this case, the software part is a test framework for the hardware.  This example has a second interface, defined by Swallow.bsv.
+In the examples directory, see [echo](../examples/echo/).  The file [Echo.bsv](../examples/echo/Echo.bsv) defines the hardware, and testecho.cpp supplies the software part. In this case, the software part is a test framework for the hardware.  This example has a second interface, defined by [Swallow.bsv](../examples/echo/Swallow.bsv).
 
 Echo.bsv defines the actions (called Requests) that software can use to cause the hardware to act, and defines the notifications (called Indications) that the hardware can use to signal the software.
 
+```bluespec
     interface EchoIndication;
     	method Action heard(Bit#(32) v);
     	method Action heard2(Bit#(16) a, Bit#(16) b);
@@ -97,12 +98,15 @@ Echo.bsv defines the actions (called Requests) that software can use to cause th
        method Action say2(Bit#(16) a, Bit#(16) b);
        method Action setLeds(Bit#(8) v);
     endinterface
+```
 
 Swallow.bsv defines another group of actions:
 
+```bluespec
     interface Swallow; 
        method Action swallow(Bit#(32) v);
     endinterface
+```
 
 Software can start the hardware working via say, say2, setLeds, and swallow. Hardware signals back to software with heard and heard2.  In the case of this example, say and say2 merely echo their arguments back to software. setLeds blinks the zedboard lights, and swallow throws away its argument.
 
@@ -120,7 +124,40 @@ genxpsprojfrombsv constructs all the hardware and software modules needed to wir
 
 The user must also create a toplevel bsv module Top.bsv, which instantiates the user portals, the standard hardware environment, and any additional hardware modules.
 
-### Shared Memory
+Rather than constructing the `genxpsprojfrombsv` command line from
+scratch, the examples in xbsv use include
+[Makefile.common](../Makefile.common) and define some `make`
+variables.
+
+Here is the Makefile for the `echo` example:
+
+```make
+    ## hardware interfaces invoked from software (requests)
+    S2H = Swallow EchoRequest
+    ## software interfaces invoked from hardware (indications)
+    H2S = EchoIndication
+    ## all the BSV files to be scanned for types and interfaces
+    BSVFILES = Echo.bsv Swallow.bsv Top.bsv
+    ## the source files in the example
+    CPPFILES=testecho.cpp
+
+    include ../../Makefile.common
+```
+
+## Design Structure
+
+Designs using `xbsv` may also include `xbsv/Makefile.common` if they define `XBSVDIR` in their Makefile:
+
+```make
+    XBSVDIR=/scratch/xbsv
+    S2H = FooRequest
+    H2S = FooIndication
+    BSVFILES = Foo.bsv
+    CPPFILES = foo.cpp
+    include $(XBSVDIR)/Makefile.common
+```
+
+## Shared Memory
 
 In order to use shared memory, the hardware design instantiates a DMA module.  In Memread.bsv, this is
 
