@@ -258,6 +258,7 @@ Running `make bits` in the zedboard directory results in timing reports:
     zedboard/hw/mkzynqtop_post_route_timing.rpt
 
 and some design checkpoints:
+
     zedboard/hw/mkzynqtop_post_synth.dcp
     zedboard/hw/mkzynqtop_post_place.dcp
     zedboard/hw/mkzynqtop_post_route.dcp
