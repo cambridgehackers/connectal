@@ -275,7 +275,8 @@ For Zynq platforms,
     make run
 
 will copy the Android executable and FPGA configuration file to the
-target device, program the FPGA, and run the executable.
+target device, program the FPGA, and run the executable. See
+[run.zedboard](../scripts/run.zedboard) for details.
 
 It uses `xbsv/consolable/checkip` to determine the IP address of the
 device via a USB console connection to the device. If the target is
