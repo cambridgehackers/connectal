@@ -153,6 +153,59 @@ Designs using `xbsv` may also include `xbsv/Makefile.common` if they define `XBS
     include $(XBSVDIR)/Makefile.common
 ```
 
+### echo/Top.bsv
+
+Each XBSV design implements [Top.bsv](../examples/echo/Top.bsv) with some standard components.
+
+It defines the `IfcNames` enum, for use in identifying the portals between software and hardware:
+
+    typedef enum {EchoIndication, EchoRequest, Swallow} IfcNames deriving (Eq,Bits);
+
+It defines `mkPortalTop`, which instantiates the wrappers, proxies, and the design itself:
+
+    module mkPortalTop(PortalTop#(addrWidth,64,Empty));
+
+Instantiate user portals:
+
+       EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);
+       EchoRequestInternal echoRequestInternal <- mkEchoRequestInternal(echoIndicationProxy.ifc);
+       EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(EchoRequest,echoRequestInternal.ifc);
+
+Instantiate the design:
+
+       Swallow swallow <- mkSwallow();
+
+Instantiate the wrapper forthe design:
+
+       SwallowWrapper swallowWrapper <- mkSwallowWrapper(Swallow, swallow);
+
+Collect the portals into a vector:
+
+       Vector#(3,StdPortal) portals;
+       portals[0] = echoIndicationProxy.portalIfc;
+       portals[1] = echoRequestWrapper.portalIfc; 
+       portals[2] = swallowWrapper.portalIfc; 
+
+Create an interrupt multiplexer from the vector of portals:
+
+       let interrupt_mux <- mkInterruptMux(portals);
+
+Create the system directory, which is used by software to locate each portal via the `IfcNames` enum:
+
+       // instantiate system directory
+       StdDirectory dir <- mkStdDirectory(portals);
+       let ctrl_mux <- mkAxiSlaveMux(dir,portals);
+
+The following generic interfaces are used by the platform specific top BSV module:
+
+       interface interrupt = interrupt_mux;
+       interface ctrl = ctrl_mux;
+       interface m_axi = null_axi_master;
+       interface leds = echoRequestInternal.leds;
+
+    endmodule : mkPortalTop
+
+
 ## Using genxpsprojfrombsv
 
 
@@ -293,9 +346,9 @@ For bluesim, `make run` invokes bluesim on the design and runs the software loca
 
 In order to use shared memory, the hardware design instantiates a DMA module.  In Memread.bsv, this is
 
-`   AxiDMA          	dma <- mkAxiDMA(indication.dmaIndication);`
+`   AxiDma          	dma <- mkAxiDma(indication.dmaIndication);`
 
-The hardware design must also include the standard Request and Indications interfaces that support shared memory, which are DMARequest and DMAIndications.
+The hardware design must also include the standard Request and Indications interfaces that support shared memory, which are DmaConfig and DmaIndication.
 
 The code generation tools will then produce the software glue necessary for the shared memory support libraries to initialize the DMA "library module" included in the hardware.
 
