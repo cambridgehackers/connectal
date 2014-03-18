@@ -68,7 +68,7 @@ bsimruns = $(addsuffix .bsimrun, $(testnames))
 bsimruns: $(bsimruns)
 
 $(bsimruns):
-	(cd examples/$(basename $@)/bluesim; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
+	(cd examples/$(basename $@)/bluesim; make run)
 
 #################################################################################################
 # bsim_pcie
@@ -79,13 +79,6 @@ bsim_pcietests: $(bsim_pcietests)
 $(bsim_pcietests):
 	rm -fr examples/$(basename $@)/bluesim_pcie
 	make BOARD=bluesim_pcie -C examples/$(basename $@) bsim_exe bsim
-
-
-bsim_pcieruns = $(addsuffix .bsim_pcierun, $(testnames))
-bsim_pcieruns: $(bsim_pcieruns)
-
-$(bsim_pcieruns):
-	(cd examples/$(basename $@)/bluesim_pcie; ./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode)
 
 #################################################################################################
 # zedboard
