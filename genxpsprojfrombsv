@@ -248,6 +248,11 @@ endif
 android_exe:
 	ndk-build
 
+ifeq ($(OS),android)
+run: $(XBSVDIR)/consolable/checkip bits
+	$(XBSVDIR)/scripts/run.zedboard $(RUNPARAM) `find . -name \*.gz` `find . -name android_exe | grep libs`
+endif
+
 hwclean:
 	rm -fr obj hw vivado*.jou vivado*.log fsm_encoding.os .Xil
 
