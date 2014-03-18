@@ -268,6 +268,22 @@ and the FPGA configuration file in .bit and .bin formats:
     zedboard/hw/mkZynqTop.bit
     zedboard/hw/mkZynqTop.bin
 
+### make run
+
+For Zynq platforms,
+
+    make run
+
+will copy the Android executable and FPGA configuration file to the
+target device, program the FPGA, and run the executable.
+
+It uses `xbsv/consolable/checkip` to determine the IP address of the
+device via a USB console connection to the device. If the target is
+not connected to the build machine via USB, specify the IP address of
+the target manually:
+
+    make RUNPARAM=ipaddr run
+
 ## Shared Memory
 
 In order to use shared memory, the hardware design instantiates a DMA module.  In Memread.bsv, this is
