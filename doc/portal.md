@@ -218,18 +218,6 @@ XBSV also generates `GeneratedTypes.h` for struct and enum types in the processe
 
     zedboard/jni/GeneratedTypes.h
 
-Compiling to verilog results in the following verilog files:
-    zedboard/verilog/top/mkEchoIndicationProxySynth.v
-    zedboard/verilog/top/mkZynqTop.v
-
-The following verilog library files are copied for use in synthesis
-    zedboard/verilog/top/FIFO1.v
-    zedboard/verilog/top/FIFO10.v
-    zedboard/verilog/top/SizedFIFO.v
-    zedboard/verilog/top/FIFO2.v
-    zedboard/sources/verilog/GenBIBUF.v
-    zedboard/sources/verilog/B2C.v
-
 XBSV copies in standard and specified constraints files:
     zedboard/constraints/design_1_processing_system7_1_0.xdc
     zedboard/constraints/zedboard.xdc
@@ -249,6 +237,35 @@ The following two TCL scripts are used to program the FPGA via USB:
     zedboard/mkzynqtop-program.tcl
     zedboard/mkzynqtop-reprogram.tcl
 
+### make verilog
+
+Compiling to verilog results in the following verilog files:
+
+    zedboard/verilog/top/mkEchoIndicationProxySynth.v
+    zedboard/verilog/top/mkZynqTop.v
+
+Verilog library files referenced in the design are copied for use in synthesis.
+
+    zedboard/verilog/top/FIFO1.v
+    ...
+
+### make bits
+
+Running `make bits` in the zedboard directory results in timing reports:
+
+    zedboard/hw/mkzynqtop_post_place_timing_summary.rpt
+    zedboard/hw/mkzynqtop_post_route_timing_summary.rpt
+    zedboard/hw/mkzynqtop_post_route_timing.rpt
+
+and some design checkpoints:
+    zedboard/hw/mkzynqtop_post_synth.dcp
+    zedboard/hw/mkzynqtop_post_place.dcp
+    zedboard/hw/mkzynqtop_post_route.dcp
+
+and the FPGA configuration file in .bit and .bin formats:
+
+    zedboard/hw/mkZynqTop.bit
+    zedboard/hw/mkZynqTop.bin
 
 ## Shared Memory
 
