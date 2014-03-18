@@ -492,6 +492,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          9: return board_content_id[63:32];
 	 
 	 768: return extend(bramMuxRdAddrReg);
+	 774: return fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
 	 775: return (tlpTracingReg ? 1 : 0);
 	 776: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
 	 777: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
