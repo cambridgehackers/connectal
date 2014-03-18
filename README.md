@@ -149,6 +149,7 @@ Zynq Portal Driver
 Get the kernel source tree and build it:
 
     git clone git://github.com/cambridgehackers/device_xilinx_kernel
+    git checkout origin/december -b december
     cd device_xilinx_kernel
     make ARCH=arm xilinx_zynq_portal_defconfig 
     make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- -j20 zImage modules
