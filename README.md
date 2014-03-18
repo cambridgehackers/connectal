@@ -146,12 +146,20 @@ PLY's home is http://www.dabeaz.com/ply/
 Zynq Portal Driver
 -------------
 
+Get the kernel source tree and build it:
+
+    git clone git://github.com/cambridgehackers/device_xilinx_kernel
+    cd device_xilinx_kernel
+    make ARCH=arm xilinx_zynq_portal_defconfig 
+    make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- -j20 zImage modules
+
 To Build the zynq portal driver, Makefile needs to be pointed to the root of the kernel source tree:
 
-    export DEVICE_XILINX_KERNEL=/scratch/mdk/device_xilinx_kernel/
+    export DEVICE_XILINX_KERNEL=/path/to/device_xilinx_kernel/
 
 The driver sources are located in the xbsv project:
 
+    cd xbsv
     (cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)
     (cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portalmem.ko)
     adb push drivers/zynqportal/zynqportal.ko /mnt/sdcard
