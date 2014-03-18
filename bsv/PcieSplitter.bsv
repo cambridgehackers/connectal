@@ -37,8 +37,10 @@ import ClientServer         :: *;
 import Memory               :: *;
 import Portal               :: *;
 import Bscan                :: *;
+import BramMux              :: *;
 
 typedef 11 TlpTraceAddrSize;
+typedef TAdd#(TlpTraceAddrSize,1) TlpTraceAddrSize1;
 
 typedef struct {
     Bit#(32) timestamp;
@@ -363,9 +365,11 @@ interface ControlAndStatusRegs;
    interface Reg#(Bool)     tlpTracing;
    interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimit;
    interface Reg#(Bool) use4dw;
-   interface Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramWrAddr;
+   interface Reg#(Bit#(TlpTraceAddrSize)) fromPcieTraceBramWrAddr;
+   interface Reg#(Bit#(TlpTraceAddrSize))   toPcieTraceBramWrAddr;
    interface Reg#(Bit#(32)) tlpOutCount;
-   interface BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData) tlpDataBram;
+   interface BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBramPort;
+   interface BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)   toPcieTraceBramPort;
 endinterface: ControlAndStatusRegs
 
 // This module encapsulates all of the logic for instantiating and
@@ -414,15 +418,17 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Reg#(Bool) tlpTracingReg        <- mkReg(False);
    Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimitReg <- mkReg(0);
    Reg#(Bool) use4dwReg <- mkReg(True);
-   Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramRdAddrReg <- mkReg(0);
-   Reg#(Bit#(TlpTraceAddrSize)) tlpDataBramWrAddrReg <- mkReg(0);
+   Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bramMuxRdAddrReg <- mkReg(0);
+   Reg#(Bit#(TlpTraceAddrSize)) fromPcieTraceBramWrAddrReg <- mkReg(0);
+   Reg#(Bit#(TlpTraceAddrSize))   toPcieTraceBramWrAddrReg <- mkReg(0);
    Integer memorySize = 2**valueOf(TlpTraceAddrSize);
    // TODO: lift BscanBram to *Top.bsv
 `ifdef BSIM
    Clock jtagClock = defaultClock;
    Reset jtagReset = defaultReset;
 `else
-   BscanBram#(Bit#(TlpTraceAddrSize), TimestampedTlpData) pcieBscanBram <- mkBscanBram(1, tlpDataBramWrAddrReg);
+   Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
+   BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(1, bscanPcieTraceBramWrAddrReg);
    Clock jtagClock = pcieBscanBram.jtagClock;
    Reset jtagReset = pcieBscanBram.jtagReset;
 `endif
@@ -430,21 +436,31 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = memorySize;
    bramCfg.latency = 1;
-   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) pcieTraceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
+   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
 												 jtagClock, jtagReset);
+   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
+											       jtagClock, jtagReset);
+   Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bramServers;
+   bramServers[0] = fromPcieTraceBram.portA;
+   bramServers[1] =   toPcieTraceBram.portA;
+   BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bramMux <- mkBramServerMux(bramServers);
+
 `ifndef BSIM
-   mkConnection(pcieBscanBram.bramClient, pcieTraceBram.portB, clocked_by jtagClock, reset_by jtagReset);
+   Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bscanBramServers;
+   bscanBramServers[0] = fromPcieTraceBram.portB;
+   bscanBramServers[1] =   toPcieTraceBram.portB;
+   BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bscanBramMux <- mkBramServerMux(bscanBramServers, clocked_by jtagClock, reset_by jtagReset);
+   mkConnection(pcieBscanBram.bramClient, bscanBramMux.bramServer, clocked_by jtagClock, reset_by jtagReset);
 `endif
    
-   Reg#(TimestampedTlpData) tlpDataBramResponse <- mkReg(unpack(0));
-   Vector#(6, Reg#(Bit#(32))) tlpDataScratchpad <- replicateM(mkReg(0));
+   Reg#(TimestampedTlpData) pcieTraceBramResponse <- mkReg(unpack(0));
    Reg#(Bit#(32)) tlpOutCountReg <- mkReg(0);
 
-   // Function to return a one-word slice of the tlpDataBramResponse
-   function Bit#(32) tlpDataBramResponseSlice(Bit#(3) i);
+   // Function to return a one-word slice of the tlpTraceBramResponse
+   function Bit#(32) tlpTraceBramResponseSlice(Reg#(TimestampedTlpData) data, Bit#(3) i);
        Bit#(8) i8 = zeroExtend(i);
        begin
-           Bit#(192) v = extend(pack(tlpDataBramResponse));
+           Bit#(192) v = extend(pack(data));
            return v[31 + (i8*32) : 0 + (i8*32)];
        end
    endfunction
@@ -462,19 +478,21 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          7: return {24'd0,fromInteger(bytes_per_beat)};
          8: return board_content_id[31:0];
          9: return board_content_id[63:32];
-	 768: return 0;
+	 
+	 768: return extend(bramMuxRdAddrReg);
 	 775: return (tlpTracingReg ? 1 : 0);
-	 776: return tlpDataBramResponseSlice(0);
-	 777: return tlpDataBramResponseSlice(1);
-	 778: return tlpDataBramResponseSlice(2);
-	 779: return tlpDataBramResponseSlice(3);
-	 780: return tlpDataBramResponseSlice(4);
-	 781: return tlpDataBramResponseSlice(5);
+	 776: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
+	 777: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
+	 778: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 2);
+	 779: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
+	 780: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
+	 781: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
 	 782: return zeroExtend(rcb_mask);
 	 783: return zeroExtend(pack(max_read_req_bytes));
 	 784: return zeroExtend(pack(max_payload_bytes));
-	 792: return extend(tlpDataBramWrAddrReg);
-	 793: return extend(tlpTraceLimitReg);
+	 792: return extend(fromPcieTraceBramWrAddrReg);
+	 793: return extend(  toPcieTraceBramWrAddrReg);
+	 794: return extend(tlpTraceLimitReg);
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
@@ -518,15 +536,10 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
       action
          case (addr % 8192)
 	    775: tlpTracingReg <= (dword != 0) ? True : False;
-	    776: tlpDataScratchpad[0] <= dword;
-	    777: tlpDataScratchpad[1] <= dword;
-	    778: tlpDataScratchpad[2] <= dword;
-	    779: tlpDataScratchpad[3] <= dword;
-	    780: tlpDataScratchpad[4] <= dword;
-	    781: tlpDataScratchpad[5] <= dword;
 
-	    792: tlpDataBramWrAddrReg <= truncate(dword);
-	    793: tlpTraceLimitReg <= truncate(dword);
+	    792: fromPcieTraceBramWrAddrReg <= truncate(dword);
+	    793:   toPcieTraceBramWrAddrReg <= truncate(dword);
+	    794: tlpTraceLimitReg <= truncate(dword);
 
             //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
             // MSIx table entries
@@ -588,9 +601,9 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
       endactionvalue
    endfunction: do_read
 
-   rule pcieBramResponse;
-       let v <- pcieTraceBram.portA.response.get();
-       tlpDataBramResponse <= v;
+   rule brmMuxResponse;
+       let v <- bramMux.bramServer.response.get();
+       pcieTraceBramResponse <= v;
    endrule
 
    // Supply data (with dword granularity and byte enables) to be
@@ -598,19 +611,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    function Action do_write(UInt#(30) addr, Vector#(4,Tuple2#(Bit#(4),Bit#(32))) value);
       action
          if ((addr % 8192) == 768) begin
-	     pcieTraceBram.portA.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: truncate(tlpDataBramRdAddrReg), datain: unpack(0)});
-	     tlpDataBramRdAddrReg <= tlpDataBramRdAddrReg + 1;
-	 end else if ((addr % 8192) == 792) begin
-	     // update tplDataBramWrAddrReg and write back scratchpad
-	     Bit#(TimestampedTlpDataSize) ttd = 0;
-	     ttd[31+(0*32):0+(0*32)] = tlpDataScratchpad[0];
-	     ttd[31+(1*32):0+(1*32)] = tlpDataScratchpad[1];
-	     ttd[31+(2*32):0+(2*32)] = tlpDataScratchpad[2];
-	     ttd[31+(3*32):0+(3*32)] = tlpDataScratchpad[3];
-	     ttd[31+(4*32):0+(4*32)] = tlpDataScratchpad[4];
-	     ttd[31+(5*32):0+(5*32)] = tlpDataScratchpad[5];
-	     pcieTraceBram.portA.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(tpl_2(value[0])),
-							     datain: unpack(ttd)});
+	     bramMux.bramServer.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: unpack(0)});
+	     bramMuxRdAddrReg <= bramMuxRdAddrReg + 1;
          end else if ((addr % 8192) == 795) begin
 					       portalResetIfc.assertReset();
          end
@@ -851,9 +853,11 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    interface Reg tlpTracing    = tlpTracingReg;
    interface Reg tlpTraceLimit = tlpTraceLimitReg;
    interface Reg use4dw = use4dwReg;
-   interface Reg tlpDataBramWrAddr = tlpDataBramWrAddrReg;
+   interface Reg fromPcieTraceBramWrAddr = fromPcieTraceBramWrAddrReg;
+   interface Reg   toPcieTraceBramWrAddr =   toPcieTraceBramWrAddrReg;
    interface Reg tlpOutCount = tlpOutCountReg;
-   interface BRAMServer tlpDataBram = pcieTraceBram.portA;
+   interface BRAMServer fromPcieTraceBramPort = fromPcieTraceBram.portA;
+   interface BRAMServer   toPcieTraceBramPort =   toPcieTraceBram.portA;
 endmodule: mkControlAndStatusRegs
 
 // The PCIe-to-AXI bridge puts all of the elements together
@@ -880,7 +884,6 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
    MakeResetIfc portalResetIfc <- mkReset(10, False, defaultClock);
 
    // instantiate sub-components
-   //AxiMasterEngine            portalEngine <- mkAxiMasterEngine( my_id );
 
    TLPDispatcher        dispatcher <- mkTLPDispatcher();
    TLPArbiter           arbiter    <- mkTLPArbiter();
@@ -899,7 +902,7 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
    rule incTimestamp;
        timestamp <= timestamp + 1;
    endrule
-//   rule endTrace if (csr.tlpTracing && csr.tlpTraceLimit != 0 && csr.tlpDataBramWrAddr > truncate(csr.tlpTraceLimit));
+//   rule endTrace if (csr.tlpTracing && csr.tlpTraceLimit != 0 && csr.tlpTraceBramWrAddr > truncate(csr.tlpTraceLimit));
 //       csr.tlpTracing <= False;
 //   endrule
 
@@ -934,8 +937,8 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
 	   end
 	   else begin
 	       TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: tlp };
-	       csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
-	       csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
+	       csr.fromPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.fromPcieTraceBramWrAddr), datain: ttd });
+	       csr.fromPcieTraceBramWrAddr <= csr.fromPcieTraceBramWrAddr + 1;
 	       skippingIncomingTlps <= False;
 	   end
        end
@@ -947,8 +950,8 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
        tlpToBusFifo.enq(tlp);
        if (csr.tlpTracing) begin
 	   TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, source: 7'h08, tlp: tlp };
-	   csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
-	   csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
+	   csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: ttd });
+	   csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
        end
    endrule: traceTlpToBus
 
@@ -973,8 +976,8 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
        method Action put(TimestampedTlpData ttd);
 	   if (csr.tlpTracing) begin
 	       ttd.timestamp = timestamp;
-	       csr.tlpDataBram.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.tlpDataBramWrAddr), datain: ttd });
-	       csr.tlpDataBramWrAddr <= csr.tlpDataBramWrAddr + 1;
+	       csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: ttd });
+	       csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
 	   end
        endmethod
    endinterface: trace
