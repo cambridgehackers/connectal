@@ -285,6 +285,10 @@ the target manually:
 
     make RUNPARAM=ipaddr run
 
+For PCIe platforms, `make run` programs the FPGA via USB and runs the software locally.
+
+For bluesim, `make run` invokes bluesim on the design and runs the software locally.
+
 ## Shared Memory
 
 In order to use shared memory, the hardware design instantiates a DMA module.  In Memread.bsv, this is
