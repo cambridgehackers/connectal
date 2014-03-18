@@ -88,6 +88,8 @@ interface TLPDispatcher;
    interface Get#(TLPData#(16)) tlp_out_to_portal;
    interface Get#(TLPData#(16)) tlp_out_to_axi;
 
+   interface Reg#(Bit#(32)) tlp_portal_drop_count;
+   interface Reg#(Bit#(32)) tlp_axi_drop_count;
    // activity indicators
    (* always_ready *)
    method Bool read_tlp();
@@ -111,6 +113,8 @@ module mkTLPDispatcher(TLPDispatcher);
    Reg#(Bool) route_to_portal <- mkReg(False);
    Reg#(Bool) route_to_axi <- mkReg(False);
 
+   Reg#(Bit#(32)) tlp_portal_drop_count_reg <- mkReg(0);
+   Reg#(Bit#(32)) tlp_axi_drop_count_reg <- mkReg(0);
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
@@ -161,6 +165,9 @@ module mkTLPDispatcher(TLPDispatcher);
                if (!tlp.eof)
                   route_to_portal <= True;
             end
+	    else begin
+	       tlp_portal_drop_count_reg <= tlp_portal_drop_count_reg + 1;
+	    end
          end
 	 else if (is_axi_completion) begin
             // send to AXI interface if it will accept
@@ -170,6 +177,9 @@ module mkTLPDispatcher(TLPDispatcher);
                if (!tlp.eof)
                   route_to_axi <= True;
             end
+	    else begin
+	       tlp_axi_drop_count_reg <= tlp_axi_drop_count_reg + 1;
+	    end
 	 end
          else begin
             // unknown packet type -- just discard it
@@ -385,6 +395,8 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 			       , Bool      msix_enabled
 			       , Bool      msix_mask_all_intr
 			       , Bool      msi_enabled
+			       , Reg#(Bit#(32)) tlp_portal_drop_count
+			       , Reg#(Bit#(32)) tlp_axi_drop_count
 			       , MakeResetIfc portalResetIfc
                               )
                               (ControlAndStatusRegs);
@@ -494,6 +506,9 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
 	 793: return extend(  toPcieTraceBramWrAddrReg);
 	 794: return extend(tlpTraceLimitReg);
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
+
+	 900: return tlp_portal_drop_count;
+	 901: return tlp_axi_drop_count;
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
          // 4-entry MSIx table
@@ -896,6 +911,8 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
                                                             , msix_enabled
                                                             , msix_mask_all_intr
                                                             , msi_enabled
+							    , dispatcher.tlp_portal_drop_count
+							    , dispatcher.tlp_axi_drop_count
 							    , portalResetIfc
                                                             );
    Reg#(Bit#(32)) timestamp <- mkReg(0);
