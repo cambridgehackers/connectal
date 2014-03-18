@@ -175,7 +175,7 @@ Instantiate the design:
 
        Swallow swallow <- mkSwallow();
 
-Instantiate the wrapper forthe design:
+Instantiate the wrapper for the design:
 
        SwallowWrapper swallowWrapper <- mkSwallowWrapper(Swallow, swallow);
 
@@ -344,35 +344,81 @@ For bluesim, `make run` invokes bluesim on the design and runs the software loca
 
 ## Shared Memory
 
-In order to use shared memory, the hardware design instantiates a DMA module.  In Memread.bsv, this is
+In order to use shared memory, the hardware design instantiates a DMA module in Top.bsv:
 
-`   AxiDma          	dma <- mkAxiDma(indication.dmaIndication);`
+   AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
 
-The hardware design must also include the standard Request and Indications interfaces that support shared memory, which are DmaConfig and DmaIndication.
+The `AxiDmaServer` multiplexes read and write requests from the
+clients, translates DMA addresses to physical addresses, initiates bus
+transactions to memory, and delivers responses to the clients.
+
+DMA requests are specified with respect to "portal" memory allocated
+by software and identified by a `pointer`.
+
+Requests and responses are tagged in order to enable pipelining.
+
+    typedef struct {
+       DmaPointer pointer;
+       Bit#(DmaOffsetSize) offset;
+       Bit#(8) burstLen;
+       Bit#(6)  tag;
+       } DmaRequest deriving (Bits);
+
+    typedef struct {
+       Bit#(dsz) data;
+       Bit#(6) tag;
+       } DmaData#(numeric type dsz) deriving (Bits);
+
+Read clients implement the `DmaReadClient` interface:
+
+    interface DmaReadClient#(numeric type dsz);
+       interface GetF#(DmaRequest)    readReq;
+       interface PutF#(DmaData#(dsz)) readData;
+    endinterface
+
+Write clients implement `DmaWriteClient`:
+
+    interface DmaWriteClient#(numeric type dsz);
+       interface GetF#(DmaRequest)    writeReq;
+       interface GetF#(DmaData#(dsz)) writeData;
+       interface PutF#(Bit#(6))       writeDone;
+    endinterface
+
+A design may implement `DmaReadClient` and `DmaWriteClient` interfaces directly, or it may instantiate DmaReadBuffer or DmaWriteBuffer.
+
+ The `AxiDmaServer` is configured with physical address translations
+for each region of memory identified by a `pointer`. A design using
+DMA must export the `DmaConfig` and `DmaIndication` interfaces of the
+DMA server.
+
+Here are the DMA components of [memread_nobuff/Top.bsv](../examples/memread_nobuff/Top.bsv):
+
+Instantiate the design and its interface wrappers and proxies:
+
+   MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
+   Memread memread <- mkMemread(memreadIndicationProxy.ifc);
+   MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequest,memread.request);
+
+Collect the read and write clients:
+
+   Vector#(1, DmaReadClient#(64)) readClients = cons(memread.dmaClient, nil);
+   Vector#(0, DmaReadClient#(64)) writeClients = nil;
+
+Instantiate the DMA server and its wrapper and proxy:
+
+   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
+   AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
+
+Include `DmaConfig` and `DmaIndication` in the portals of the design:
+
+   Vector#(4,StdPortal) portals;
+   portals[0] = memreadRequestWrapper.portalIfc;
+   portals[1] = memreadIndicationProxy.portalIfc; 
+   portals[2] = dmaConfigWrapper.portalIfc;
+   portals[3] = dmaIndicationProxy.portalIfc; 
 
 The code generation tools will then produce the software glue necessary for the shared memory support libraries to initialize the DMA "library module" included in the hardware.
-
-There are several implementations of the DMA interfaces:
-
-AxiSDMA  - axi  (fpga) sequential DMA
-
-AxiRDMA - axi (fpga) random access DMA
-
-BsimSDMA - Bluesim simulator sequential DMA
-
-BsimRDMA - Bluesim simulator random access DMA
-
-the hardware design will use whichever implementation is appropriate, but all have the same Request and Indications interface, so software can does not have to change.  [Although one presumes that the software knows it is sequential or random, so it kind of needs to know.]
-
-Sequential Interface
-
-If the designer chooses a sequential interface, the DMA hardware interface module includes a memory that is initialized with a list of base-address,length pairs. As the hardware makes memory references, the memory address is automatically incremented and stepped through the list of descriptors. This is a hardware instance of the iovec data type common to software, and is called an sglist, for scatter-gather list.
-
-In order to start again from the beginning of the address list, a special reset action is invoked, either by software [or by hardware?].
-
-Random Access Interface
-
-If the designer chooses a random access interface, the DMA hardware interface module includes a memory that is initialized with a page table spanning the allocated memory region. As the hardware makes requests, the interface module uses the high part of the address to look up the proper physical address.
 
 [stewart notes
 
