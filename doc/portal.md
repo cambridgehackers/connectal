@@ -344,6 +344,8 @@ For bluesim, `make run` invokes bluesim on the design and runs the software loca
 
 ## Shared Memory
 
+### Shared Memory Hardware
+
 In order to use shared memory, the hardware design instantiates a DMA module in Top.bsv:
 
    AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
@@ -426,6 +428,39 @@ Include `DmaConfig` and `DmaIndication` in the portals of the design:
     portals[3] = dmaIndicationProxy.portalIfc; 
 
 The code generation tools will then produce the software glue necessary for the shared memory support libraries to initialize the DMA "library module" included in the hardware.
+
+### Shared Memory Software
+
+The software side instantiates the DmaConfig proxy and the DmaIndication wrapper:
+
+    dma = new DmaConfigProxy(IfcNames_DmaConfig);
+    dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
+
+Call `dma->alloc()` to allocate DMA memory. Each chunk of portal
+memory is identified by a file descriptor. Portal memory may be shared
+with other processes. Portal memory is reference counted according to
+the number of file descriptors associated with it.
+
+    PortalAlloc *srcAlloc;
+    dma->alloc(alloc_sz, &srcAlloc);
+
+Memory map it to make it accessible to software:
+
+    srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
+
+XBSV is currently using non-snooped interfaces, so the cache must be flushed and invalidated before hardware accesses portal memory:
+
+    dma->dCacheFlushInval(srcAlloc, srcBuffer);
+
+Call `dma->reference()` to get a pointer that may be passed to hardware:
+
+    unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+
+This also transfers the DMA-to-physical address translation information to the hardware via the `DmaConfig` interface.
+
+    device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
+
+## Notes
 
 [stewart notes
 
