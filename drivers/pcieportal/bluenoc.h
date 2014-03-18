@@ -44,6 +44,12 @@ typedef struct {
   unsigned long dma_handle;
 } tDmaMap;
 
+typedef struct {
+  unsigned int trace;
+  unsigned int oldTrace;
+  unsigned int traceLength;
+} tTraceInfo;
+
 typedef unsigned int tTlpData[6];
 
 /* IOCTL code definitions */
@@ -52,7 +58,7 @@ typedef unsigned int tTlpData[6];
 #define BNOC_SOFT_RESET      _IO(BNOC_IOC_MAGIC,1)
 #define BNOC_IDENTIFY_PORTAL _IOR(BNOC_IOC_MAGIC,6,tPortalInfo*)
 #define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
-#define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,int*)
+#define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,tTraceInfo*)
 
 /* maximum valid IOCTL number */
 #define BNOC_IOC_MAXNR 11

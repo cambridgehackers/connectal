@@ -45,6 +45,7 @@
 #define CSR_BYTES_PER_BEAT            (   7 << 2)
 #define CSR_BOARD_CONTENT_ID          (   8 << 2)
 #define CSR_TLPDATAFIFO_DEQ           ( 768 << 2)
+#define CSR_TLPTRACELENGTHREG         ( 774 << 2)
 #define CSR_TLPTRACINGREG             ( 775 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE0 ( 776 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE1 ( 777 << 2)
@@ -249,15 +250,18 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
         case BNOC_TRACE:
                 {
                 /* copy board identification info to a user-space struct */
-                unsigned trace, old_trace;
-                err = copy_from_user(&trace, (void __user *) arg, sizeof(int));
+		tTraceInfo traceInfo;
+                err = copy_from_user(&traceInfo, (void __user *) arg, sizeof(tTraceInfo));
                 if (!err) {
                          // update tlpBramWrAddr, which also writes the scratchpad to BRAM
                          iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
-                         old_trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
-                         iowrite32(trace, this_board->bar0io + CSR_TLPTRACINGREG); 
-                         printk("new trace=%d old trace=%d\n", trace, old_trace);
-                         err = copy_to_user((void __user *) arg, &old_trace, sizeof(int));
+                         traceInfo.oldTrace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
+                         traceInfo.traceLength = ioread32(this_board->bar0io + CSR_TLPTRACELENGTHREG);
+			 if (traceInfo.traceLength == 0xbad0add0) // unimplemented
+				 traceInfo.traceLength = 2048; // default value
+                         iowrite32(traceInfo.trace, this_board->bar0io + CSR_TLPTRACINGREG); 
+                         printk("new trace=%d old trace=%d\n", traceInfo.trace, traceInfo.oldTrace);
+                         err = copy_to_user((void __user *) arg, &traceInfo, sizeof(tTraceInfo));
                 }
                 }
                 break;

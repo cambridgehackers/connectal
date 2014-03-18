@@ -145,16 +145,16 @@ static int process(const char* file, tMode mode, unsigned int strict)
     break;
   }
   case TLP: {
-    int trace = 0;
+    tTraceInfo traceInfo;
     //int seqno = 0;
     int res, i;
 
     // disable tracing
-    res = ioctl(fd,BNOC_TRACE,&trace);
+    res = ioctl(fd,BNOC_TRACE,&traceInfo);
     // set pointer to 0
     //res = ioctl(fd,BNOC_SEQNO,&seqno);
 
-    for (i = 0; i < 2048; i++) {
+    for (i = 0; i < traceInfo.traceLength; i++) {
       tTlpData tlp;
       memset(&tlp, 0x5a, sizeof(tlp));
       res = ioctl(fd,BNOC_GET_TLP,&tlp);
@@ -172,14 +172,14 @@ static int process(const char* file, tMode mode, unsigned int strict)
     }
   } break;
   case TRACE: {
-    int trace = 1;
-    int res = ioctl(fd,BNOC_TRACE,&trace);
-    printf("old trace=%d\n", trace);
+    tTraceInfo traceInfo = { trace: 1 };
+    int res = ioctl(fd,BNOC_TRACE,&traceInfo);
+    printf("old trace=%d traceLength=%d\n", traceInfo.oldTrace, traceInfo.traceLength);
   } break;
   case NOTRACE: {
-    int trace = 0;
-    int res = ioctl(fd,BNOC_TRACE,&trace);
-    printf("old trace=%d\n", trace);
+    tTraceInfo traceInfo = { trace: 0 };
+    int res = ioctl(fd,BNOC_TRACE,&traceInfo);
+    printf("old trace=%d traceLength=%d\n", traceInfo.oldTrace, traceInfo.traceLength);
   } break;
   case MMAP: {
     int *portal = (int *)mmap(NULL, 1<<16, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
