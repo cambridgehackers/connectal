@@ -125,7 +125,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 end 
 	 else begin
 	    $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-	    dmaIndication.badAddrTrans(extend(ptr), truncate(off));
+	    dmaIndication.badAddrTrans(extend(ptr), extend(off));
 	 end
 	 offs[i].enq(o);
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{ptr-1,p}, datain:?});

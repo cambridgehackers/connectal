@@ -52,8 +52,8 @@ public:
   virtual void badPageSize (uint32_t pointer, uint32_t len) {
     fprintf(stderr, "DmaIndication::badPageSize(pointer=%x, len=%x)\n", pointer, len);
   }
-  virtual void badAddrTrans (uint32_t pointer, uint32_t offset) {
-    fprintf(stderr, "DmaIndication::badAddrTrans(pointer=%x, offset=%x)\n", pointer, offset);
+  virtual void badAddrTrans (uint32_t pointer, uint64_t offset) {
+    fprintf(stderr, "DmaIndication::badAddrTrans(pointer=%x, offset=%zx)\n", pointer, offset);
   }
   virtual void badAddr (uint32_t pointer, uint64_t offset , uint64_t physAddr) {
     fprintf(stderr, "DmaIndication::badAddr(pointer=%x offset=%zx physAddr=%zx)\n", pointer, offset, physAddr);
