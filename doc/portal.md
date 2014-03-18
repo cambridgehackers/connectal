@@ -395,28 +395,28 @@ Here are the DMA components of [memread_nobuff/Top.bsv](../examples/memread_nobu
 
 Instantiate the design and its interface wrappers and proxies:
 
-   MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
-   Memread memread <- mkMemread(memreadIndicationProxy.ifc);
-   MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequest,memread.request);
+    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
+    Memread memread <- mkMemread(memreadIndicationProxy.ifc);
+    MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequest,memread.request);
 
 Collect the read and write clients:
 
-   Vector#(1, DmaReadClient#(64)) readClients = cons(memread.dmaClient, nil);
-   Vector#(0, DmaReadClient#(64)) writeClients = nil;
+    Vector#(1, DmaReadClient#(64)) readClients = cons(memread.dmaClient, nil);
+    Vector#(0, DmaReadClient#(64)) writeClients = nil;
 
 Instantiate the DMA server and its wrapper and proxy:
 
-   DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
-   DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
+    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
+    AxiDmaServer#(addrWidth,64) dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
+    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
 Include `DmaConfig` and `DmaIndication` in the portals of the design:
 
-   Vector#(4,StdPortal) portals;
-   portals[0] = memreadRequestWrapper.portalIfc;
-   portals[1] = memreadIndicationProxy.portalIfc; 
-   portals[2] = dmaConfigWrapper.portalIfc;
-   portals[3] = dmaIndicationProxy.portalIfc; 
+    Vector#(4,StdPortal) portals;
+    portals[0] = memreadRequestWrapper.portalIfc;
+    portals[1] = memreadIndicationProxy.portalIfc; 
+    portals[2] = dmaConfigWrapper.portalIfc;
+    portals[3] = dmaIndicationProxy.portalIfc; 
 
 The code generation tools will then produce the software glue necessary for the shared memory support libraries to initialize the DMA "library module" included in the hardware.
 
