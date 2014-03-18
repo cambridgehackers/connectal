@@ -53,15 +53,16 @@ Preparation for PCIe
 
 1. Build the drivers
 
-    cd drivers/pcie; make
+    cd drivers/pcieportal; make && sudo make install
 
 2. Load the drivers
 
-    cd drivers/pcie; make insmod
+    cd drivers/pcieportal; make insmod
 
 3. Install the Digilent cable driver
-   cd /scratch/Xilinx/Vivado/2013.2/data/xicom/cable_drivers/lin64/digilent
-   sudo ./install_digilent.sh
+
+    cd /scratch/Xilinx/Vivado/2013.2/data/xicom/cable_drivers/lin64/digilent
+    sudo ./install_digilent.sh
 
 
 Echo Example
@@ -146,26 +147,30 @@ Zynq Portal Driver
 -------------
 
 To Build the zynq portal driver, Makefile needs to be pointed to the root of the kernel source tree:
-   export DEVICE_XILINX_KERNEL=/scratch/mdk/device_xilinx_kernel/
+
+    export DEVICE_XILINX_KERNEL=/scratch/mdk/device_xilinx_kernel/
 
 The driver sources are located in the xbsv project:
-   (cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)
-   (cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portalmem.ko)
-   adb push drivers/zynqportal/zynqportal.ko /mnt/sdcard
-   adb push drivers/portalmem/portalmem.ko /mnt/sdcard
+
+    (cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)
+    (cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portalmem.ko)
+    adb push drivers/zynqportal/zynqportal.ko /mnt/sdcard
+    adb push drivers/portalmem/portalmem.ko /mnt/sdcard
 
 To update the zynq portal driver running on the Zync platform, set ADB_PORT appropriately and run the following commands:
-   adb -s $ADB_PORT push zynqportal.ko /mnt/sdcard/
-   adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs rm -rf"
-   adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mkdir"
-   adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mv zynqportal.ko"
-   adb -s $ADB_PORT shell "modprobe -r zynqportal"
-   adb -s $ADB_PORT shell "modprobe zynqportal"
+
+    adb -s $ADB_PORT push zynqportal.ko /mnt/sdcard/
+    adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs rm -rf"
+    adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mkdir"
+    adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mv zynqportal.ko"
+    adb -s $ADB_PORT shell "modprobe -r zynqportal"
+    adb -s $ADB_PORT shell "modprobe zynqportal"
 
 Zynq Hints
 -------------
 
 To remount /system read/write:
+
     mount -o rw,remount /dev/block/mmcblk0p1 /system
 
 
