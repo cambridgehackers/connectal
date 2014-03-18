@@ -142,7 +142,18 @@ Here is the Makefile for the `echo` example:
     include ../../Makefile.common
 ```
 
-### genxpsprojfrombsv parameters
+Designs using `xbsv` may also include `xbsv/Makefile.common` if they define `XBSVDIR` in their Makefile:
+
+```make
+    XBSVDIR=/scratch/xbsv
+    S2H = ...
+    H2S = ...
+    BSVFILES = ...
+    CPPFILES = ...
+    include $(XBSVDIR)/Makefile.common
+```
+
+## Using genxpsprojfrombsv
 
 
 | Option | Long Option | Default | Description |
@@ -162,22 +173,82 @@ Here is the Makefile for the `echo` example:
 | -x     | --export    |         | Promote/export named interface from top module (Required) |
 
 
-### Generated files
+### Echo Design Structure
 
+The `echo` example consists of the following files:
 
+    Echo.bsv
+    Makefile
+    Swallow.bsv
+    Top.bsv
+    testecho.cpp
 
-## Design Structure
+After running `make BOARD=zedboard verilog` in the `echo` directory,
+the `zedboard` project directory is created, populated by the generated files.
 
-Designs using `xbsv` may also include `xbsv/Makefile.common` if they define `XBSVDIR` in their Makefile:
+A top level `Makefile` is created:
 
-```make
-    XBSVDIR=/scratch/xbsv
-    S2H = FooRequest
-    H2S = FooIndication
-    BSVFILES = Foo.bsv
-    CPPFILES = foo.cpp
-    include $(XBSVDIR)/Makefile.common
-```
+    zedboard/Makefile
+
+genxpsprojfrombsv generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:
+
+    zedboard/sources/mkzynqtop/EchoIndicationProxy.bsv
+    zedboard/sources/mkzynqtop/SwallowWrapper.bsv
+    zedboard/sources/mkzynqtop/EchoRequestWrapper.bsv
+
+XBSV supports Android on Zynq platforms, so genxpsprojfrombsv generates `jni/Android.mk` for `ndk-build`.
+
+    zedboard/jni/Android.mk
+    zedboard/jni/Application.mk
+
+XBSV generates `jni/Makefile` to compile the software for PCIe platforms (vc707 and kc705).
+
+    zedboard/jni/Makefile
+
+XBSV generates software proxies for software-to-hardware interfaces and software wrappers for hardware-to-software interfaces:
+
+    zedboard/jni/EchoIndicationWrapper.h
+    zedboard/jni/EchoIndicationWrapper.cpp
+    zedboard/jni/SwallowProxy.cpp
+    zedboard/jni/SwallowProxy.h
+    zedboard/jni/EchoRequestProxy.cpp
+    zedboard/jni/EchoRequestProxy.h
+
+XBSV also generates `GeneratedTypes.h` for struct and enum types in the processed BSV source files:
+
+    zedboard/jni/GeneratedTypes.h
+
+Compiling to verilog results in the following verilog files:
+    zedboard/verilog/top/mkEchoIndicationProxySynth.v
+    zedboard/verilog/top/mkZynqTop.v
+
+The following verilog library files are copied for use in synthesis
+    zedboard/verilog/top/FIFO1.v
+    zedboard/verilog/top/FIFO10.v
+    zedboard/verilog/top/SizedFIFO.v
+    zedboard/verilog/top/FIFO2.v
+    zedboard/sources/verilog/GenBIBUF.v
+    zedboard/sources/verilog/B2C.v
+
+XBSV copies in standard and specified constraints files:
+    zedboard/constraints/design_1_processing_system7_1_0.xdc
+    zedboard/constraints/zedboard.xdc
+
+XBSV generates several TCL files to run `vivado`. 
+
+The `board.tcl` file specifies `partname`, `boardname`, and `xbsvdir` for the other TCL scripts.
+
+    zedboard/board.tcl
+
+To generate an FPGA bit file, run `make bits`. This runs vivado with the `mkzynqtop-impl.tcl` script.
+
+    zedboard/mkzynqtop-impl.tcl
+
+The following two TCL scripts are used to program the FPGA via USB:
+
+    zedboard/mkzynqtop-program.tcl
+    zedboard/mkzynqtop-reprogram.tcl
+
 
 ## Shared Memory
 
