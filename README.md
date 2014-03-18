@@ -20,11 +20,18 @@ Preparation for Zynq
      (actual file might be:
          http://dl.google.com/android/ndk/android-ndk-r8e-linux-x86_64.tar.bz2
      )
-2. Get the Zynq Base TRD files, which will contain zynq_fsbl.elf and u-boot.elf
-     See: http://www.wiki.xilinx.com/Zynq+Base+TRD+14.3
-     (this will require a xilinx login)
-   Or:
-      git clone git://github.com/cambridgehackers/zynq-axi-blue.git
+2. git clone git://github.com/cambridgehackers/zynq-boot.git
+
+The boot.bin is board-specific, because the first stage boot loader
+(fsbl) and the devicetree are both board-specific.
+
+To build a boot.bin for a zedboard:
+
+    make BOARD=zedboard all
+
+To build a boot.bin for a zc702:
+
+   make BOARD=zc702 all
 
 Setting up the SD Card
 ----------------------
