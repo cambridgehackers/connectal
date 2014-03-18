@@ -88,7 +88,7 @@ module mkAxiDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) readCl
    FIFO#(IRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
 
    Reg#(Bit#(8))           burstReg <- mkReg(0);
-   Reg#(Bit#(64))         beatCount <- mkReg(0);
+   Vector#(numReadClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
    
    // the choice of 5 is based on PCIE limitations.   
    // uniqueness is enforced by the depth of dreqFIFO
@@ -130,10 +130,10 @@ module mkAxiDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) readCl
 
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
-	 return ?;
+	 return DmaDbgRec{x:fromInteger(valueOf(numReadClients)), y:?, z:?, w:?};
       endmethod
-      method ActionValue#(Bit#(64)) getMemoryTraffic();
-	 return beatCount;
+      method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
+	 return (valueOf(numReadClients) > 0 && client < fromInteger(valueOf(numReadClients))) ? beatCounts[client] : 0;
       endmethod
    endinterface
 
@@ -175,7 +175,8 @@ module mkAxiDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) readCl
 	    end
 	    //$display("mkAxiDmaReadInternal::resp_read id=%d burstLen=%d activeChan=%d", id, burstLen, activeChan);
 	    burstReg <= burstLen-1;
-	    beatCount <= beatCount+1;
+	    if(valueOf(numReadClients) > 0)
+	       beatCounts[activeChan] <= beatCounts[activeChan]+1;
 	 endmethod
       endinterface
       interface Get req_aw = ?;
@@ -203,7 +204,7 @@ module mkAxiDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)) wri
    FIFO#(IRec#(addrWidth)) respFifo <- mkSizedFIFO(1);
 
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
-   Reg#(Bit#(64))       beatCount <- mkReg(0);
+   Vector#(numWriteClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
 
    // the choice of 5 is based on PCIE limitations.   
    // uniqueness is enforced by the depth of dreqFIFO
@@ -242,10 +243,10 @@ module mkAxiDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)) wri
 
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
-	 return ?;
+	 return DmaDbgRec{x:fromInteger(valueOf(numWriteClients)), y:?, z:?, w:?};
       endmethod
-      method ActionValue#(Bit#(64)) getMemoryTraffic();
-	 return beatCount;
+      method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
+	 return (valueOf(numWriteClients) > 0 && client < fromInteger(valueOf(numWriteClients))) ? beatCounts[client] : 0;
       endmethod
    endinterface
 
@@ -284,7 +285,8 @@ module mkAxiDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)) wri
 
 	    //$display("dmaWrite data data=%h burstLen=%d", tagdata.data, burstLen);
 	    burstReg <= burstLen-1;
-	    beatCount <= beatCount+1;
+	    if(valueOf(numWriteClients) > 0)
+	       beatCounts[activeChan] <= beatCounts[activeChan]+1;
 	    
 	    Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
 	    return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: id };
@@ -359,13 +361,13 @@ module mkAxiDmaServer#(DmaIndication dmaIndication,
 	    rv <- writer.dbg.dbg;
 	 dmaIndication.reportStateDbg(rv);
       endmethod
-      method Action getMemoryTraffic(ChannelType rc);
+      method Action getMemoryTraffic(ChannelType rc, Bit#(32) client);
 	 if (rc == Read) begin
-	    let rv <- reader.dbg.getMemoryTraffic;
+	    let rv <- reader.dbg.getMemoryTraffic(client);
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
 	 else begin
-	    let rv <- writer.dbg.getMemoryTraffic;
+	    let rv <- writer.dbg.getMemoryTraffic(client);
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
       endmethod

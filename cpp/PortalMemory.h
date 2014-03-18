@@ -32,10 +32,11 @@ class PortalMemory : public PortalInternal
 {
  private:
   int handle;
-  bool callBacksRegistered;
   sem_t confSem;
   sem_t mtSem;
+  sem_t dbgSem;
   uint64_t mtCnt;
+  DmaDbgRec dbgRec;
 #ifndef MMAP_HW
   portal p_fd;
 #endif
@@ -50,12 +51,13 @@ class PortalMemory : public PortalInternal
   int alloc(size_t size, PortalAlloc **portalAlloc);
   int reference(PortalAlloc* pa);
   uint64_t show_mem_stats(ChannelType rc);
-  void configResp(uint32_t channelId);
-  void reportMemoryTraffic(uint64_t words);
-  void useSemaphore() { callBacksRegistered = true; }
+  void confResp(uint32_t channelId);
+  void mtResp(uint64_t words);
+  void dbgResp(const DmaDbgRec& rec);
   virtual void sglist(uint32_t pointer, uint64_t paddr, uint32_t len) = 0;
   virtual void region(uint32_t pointer, uint64_t barr8, uint32_t off8, uint64_t barr4, uint32_t off4, uint64_t barr0, uint32_t off0) = 0;
-  virtual void getMemoryTraffic (const ChannelType &rc) = 0;
+  virtual void getMemoryTraffic (const ChannelType &rc, uint32_t client) = 0;
+  virtual void getStateDbg(const ChannelType& rc) = 0;
 };
 
 // ugly hack (mdk)

@@ -28,17 +28,11 @@ class DmaIndication : public DmaIndicationWrapper
 {
   PortalMemory *portalMemory;
   int tag_mismatch_cnt;
-public:
- DmaIndication(unsigned int id) : DmaIndicationWrapper(id), portalMemory(0), tag_mismatch_cnt(0) {}
-  DmaIndication(PortalMemory *pm, unsigned int id)
-    : DmaIndicationWrapper(id), portalMemory(pm)
-  {
-    pm->useSemaphore();
-  }
+ public:
+  DmaIndication(PortalMemory *pm, unsigned int id) : DmaIndicationWrapper(id), portalMemory(pm), tag_mismatch_cnt(0){}
   virtual void configResp(uint32_t pointer){
-    //fprintf(stderr, "configResp: %lx\n", pointer);
-    if (portalMemory)
-      portalMemory->configResp(pointer);
+    //fprintf(stderr, "configResp: %x\n", pointer);
+    portalMemory->confResp(pointer);
   }
   virtual void addrResponse(uint64_t physAddr){
     fprintf(stderr, "DmaIndication::addrResponse(physAddr=%zx)\n", physAddr);
@@ -59,12 +53,12 @@ public:
     fprintf(stderr, "DmaIndication::badAddr(pointer=%x offset=%zx physAddr=%zx)\n", pointer, offset, physAddr);
   }
   virtual void reportStateDbg(const DmaDbgRec& rec){
-    fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
+    //fprintf(stderr, "reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
+    portalMemory->dbgResp(rec);
   }
   virtual void reportMemoryTraffic(uint64_t words){
-    fprintf(stderr, "reportMemoryTraffic: words=%zx\n", words);
-    if (portalMemory)
-      portalMemory->reportMemoryTraffic(words);
+    //fprintf(stderr, "reportMemoryTraffic: words=%zx\n", words);
+    portalMemory->mtResp(words);
   }
   virtual void tagMismatch(const ChannelType& t, uint32_t a, uint32_t b){
     //if (tag_mismatch_cnt++ < 10)

@@ -49,6 +49,9 @@ void PortalMemory::InitSemaphores()
   if (sem_init(&mtSem, 0, 0)){
     fprintf(stderr, "failed to init mtSem errno=%d:%s\n", errno, strerror(errno));
   }
+  if (sem_init(&dbgSem, 0, 0)){
+    fprintf(stderr, "failed to init dbgSem errno=%d:%s\n", errno, strerror(errno));
+  }
 }
 
 void PortalMemory::InitFds()
@@ -105,15 +108,15 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 
 uint64_t PortalMemory::show_mem_stats(ChannelType rc)
 {
-  mtCnt = 0;
-  getMemoryTraffic(rc);
-  if (callBacksRegistered) {
+  uint64_t rv = 0;
+  getStateDbg(rc);
+  sem_wait(&dbgSem);
+  for(int i = dbgRec.x; i > 0; i--){ 
+    getMemoryTraffic(rc, i-1);
     sem_wait(&mtSem);
-  } else {
-    fprintf(stderr, "ugly hack\n");
-    sleep(1);
+    rv += mtCnt;
   }
-  return mtCnt;
+  return rv;
 }
 
 int PortalMemory::reference(PortalAlloc* pa)
@@ -160,13 +163,8 @@ int PortalMemory::reference(PortalAlloc* pa)
     sglist(id, addr , e->length);
 #endif
     size_accum += e->length;
-    if (callBacksRegistered) {
-      // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
-      sem_wait(&confSem);
-    } else {
-      fprintf(stderr, "ugly hack\n");
-      sleep(1);
-    }
+    // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
+    sem_wait(&confSem);
   }
 
   uint64_t border = 0;
@@ -201,23 +199,24 @@ int PortalMemory::reference(PortalAlloc* pa)
 	 borders[0].border, borders[0].idxOffset,
 	 borders[1].border, borders[1].idxOffset,
 	 borders[2].border, borders[2].idxOffset);
-  if (callBacksRegistered) {
-    //fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
-    sem_wait(&confSem);
-  } else {
-    fprintf(stderr, "ugly hack\n");
-    sleep(1);
-  }
+  //fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
+  sem_wait(&confSem);
   return id;
 }
 
-void PortalMemory::reportMemoryTraffic(uint64_t words)
+void PortalMemory::mtResp(uint64_t words)
 {
   mtCnt = words;
   sem_post(&mtSem);
 }
 
-void PortalMemory::configResp(uint32_t channelId)
+void PortalMemory::dbgResp(const DmaDbgRec& rec)
+{
+  dbgRec = rec;
+  sem_post(&dbgSem);
+}
+
+void PortalMemory::confResp(uint32_t channelId)
 {
   // fprintf(stderr, "configResp %d\n", channelId);
   sem_post(&confSem);

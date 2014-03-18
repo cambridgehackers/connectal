@@ -71,7 +71,7 @@ interface DmaWriteServer#(numeric type dsz);
 endinterface
 
 interface DmaDbg;
-   method ActionValue#(Bit#(64)) getMemoryTraffic();
+   method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 
