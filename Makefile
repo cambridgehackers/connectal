@@ -1,5 +1,16 @@
 
 all: parsetab.py
+	make -C drivers/pcieportal
+	make -C pcie/xbsvutil
+	make -C consolable
+
+install:
+	make -C drivers/pcieportal install
+	make -C pcie/xbsvutil install
+
+uninstall:
+	make -C drivers/pcieportal uninstall
+	make -C pcie/xbsvutil uninstall
 
 docs:
 	doxygen Doxyfile
@@ -10,7 +21,6 @@ parsetab.py: syntax.py
 	python syntax.py
 
 test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidisplay.bit.bin.gz
-
 
 #################################################################################################
 # Generate bsim and zynq make targets for each test in testnames.
