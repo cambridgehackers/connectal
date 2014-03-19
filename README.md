@@ -98,6 +98,12 @@ Preparation for PCIe
     sudo ./install_digilent.sh
 
 
+4. Get fpgajtag
+
+    git clone git://github.com/cambridgehackers/fpgajtag
+    cd fpgajtag
+    make all && sudo make install
+
 Echo Example
 ------------
 
