@@ -41,8 +41,8 @@ testnames = echo             \
             memread128       \
             memread2         \
             mempoke          \
+            simple           \
             strstr           \
-            struct           \
 	    ring             \
 	    perf             \
 	    nandsim          \

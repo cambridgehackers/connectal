@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "StructIndicationWrapper.h"
-#include "StructRequestProxy.h"
+#include "SimpleIndicationWrapper.h"
+#include "SimpleRequestProxy.h"
 #include "GeneratedTypes.h"
 
 
@@ -31,7 +31,7 @@ E1 v7b = E1_E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
 
-class StructIndication : public StructIndicationWrapper
+class SimpleIndication : public SimpleIndicationWrapper
 {  
 public:
   uint32_t cnt;
@@ -83,15 +83,15 @@ public:
     assert(b == v7b);
     incr_cnt();
   }
-  StructIndication(unsigned int id) : StructIndicationWrapper(id), cnt(0){}
+  SimpleIndication(unsigned int id) : SimpleIndicationWrapper(id), cnt(0){}
 };
 
 
 
 int main(int argc, const char **argv)
 {
-  StructIndication *indication = new StructIndication(IfcNames_StructIndication);
-  StructRequestProxy *device = new StructRequestProxy(IfcNames_StructRequest);
+  SimpleIndication *indication = new SimpleIndication(IfcNames_SimpleIndication);
+  SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequest);
 
   pthread_t tid;
   fprintf(stderr, "Main::creating exec thread\n");
