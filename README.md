@@ -48,6 +48,8 @@ Currently, all files must be in the first partition of an SD card.
 
 Eject the card and plug it into the zc702 and boot.
 
+After Android is running on the ac702, follow the instructions below to build and install the zynq portal driver.
+
 Preparation for PCIe
 --------------------
 
