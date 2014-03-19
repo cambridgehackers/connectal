@@ -138,6 +138,9 @@ int main(int argc, const char **argv)
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   
+  fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
+  fprintf(stderr, "ref_dstAlloc=%d\n", ref_dstAlloc);
+
   sleep(1);
   dma->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
   sleep(1);

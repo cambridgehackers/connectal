@@ -48,7 +48,7 @@ module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
 
    Reg#(DmaPointer )       pointer <- mkReg(0);
    Reg#(Bit#(8))          burstLen <- mkReg(0);
-   FIFO#(Bool)                  ff <- mkSizedFIFO(1);
+   FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
    FIFO#(Bit#(32))              wf <- mkSizedFIFO(32);
    
    let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
@@ -94,7 +94,8 @@ module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
 	    f.enq(d.data);
 	 endmethod
 	 method Bool notFull();
-	    return f.notFull;
+	    let rv = (respCnt+1 == wf.first) ? ff.notFull : True;
+	    return f.notFull && True;
 	 endmethod
       endinterface
    endinterface   

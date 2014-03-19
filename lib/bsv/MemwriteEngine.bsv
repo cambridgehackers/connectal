@@ -47,7 +47,7 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 
    Reg#(DmaPointer)        pointer <- mkReg(0);
    Reg#(Bit#(8))          burstLen <- mkReg(0);
-   FIFO#(Bool)                acks <- mkSizedFIFO(256);
+   FIFOF#(Bool)               acks <- mkSizedFIFOF(256);
 
    FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
    FIFOF#(void)                 wf <- mkSizedFIFOF(32);
@@ -80,7 +80,7 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 	    return DmaRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0};
 	 endmethod
 	 method Bool notEmpty;
-	    return (reqCnt < numBeats);
+	    return (reqCnt < numBeats && acks.notEmpty);
 	 endmethod
       endinterface
       interface GetF writeData;
