@@ -400,6 +400,18 @@ and the FPGA configuration file in .bit and .bin formats:
     zedboard/hw/mkZynqTop.bit
     zedboard/hw/mkZynqTop.bin
 
+### make android_exe
+
+XBSV supports Android 4.0 on Zynq platforms. It generates
+`jni/Android.mk` which is used by `ndk-build` to create a native
+Android executable.
+
+    make android_exe
+
+This produces the ARM elf executable:
+
+    libs/armeabi/android_exe
+
 ### make run
 
 For Zynq platforms,
