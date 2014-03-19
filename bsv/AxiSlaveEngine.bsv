@@ -63,8 +63,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
     MIMO#(busWidthWords,4,8,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     Reg#(Bit#(9)) writeBurstCount <- mkReg(0);
     Reg#(TLPLength)  writeDwCount <- mkReg(0);
-    Reg#(TLPTag) writeTag <- mkReg(0);
-    FIFOF#(TLPTag) doneTag <- mkFIFOF();
+    FIFOF#(TLPTag) writeTag <- mkSizedFIFOF(16);
+    FIFOF#(TLPTag) doneTag <- mkSizedFIFOF(16);
 
     function Integer tlpWordCount(TLPData#(16) tlp);
        if (tlp.be == 16'h0000)
@@ -119,6 +119,10 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	 tlpOutFifo.enq(tlp);
 	 $display("writeHeaderTlp dwCount=%d", dwCount);
 	 writeDwCount <= dwCount;
+	 if (dwCount == 0) begin
+	    doneTag.enq(writeTag.first());
+	    writeTag.deq();
+	 end
       end
    endrule
 
@@ -142,7 +146,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	 v = writeDataMimo.first();
 	 writeDataMimo.deq(unpack(truncate(writeDwCount)));
 	 writeDwCount <= 0;
-	 doneTag.enq(writeTag);
+	 doneTag.enq(writeTag.first());
+	 writeTag.deq();
 	 $display("writeDwCount=%d will be zero", writeDwCount);
 	 tlp.eof = True;
 	 if (writeDwCount == 4)
@@ -265,7 +270,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	      end
 	      tlpWriteHeaderFifo.enq(tlp);
 	      writeBurstCount <= zeroExtend(burstLen)+1;
-	      writeTag <= extend(awid);
+	      writeTag.enq(extend(awid));
            endmethod
 	endinterface : req_aw
        interface Put resp_write;
