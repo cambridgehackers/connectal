@@ -31,7 +31,7 @@ class DmaIndication : public DmaIndicationWrapper
  public:
   DmaIndication(PortalMemory *pm, unsigned int id) : DmaIndicationWrapper(id), portalMemory(pm), tag_mismatch_cnt(0){}
   virtual void configResp(uint32_t pointer){
-    //fprintf(stderr, "configResp: %x\n", pointer);
+    fprintf(stderr, "configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
   }
   virtual void addrResponse(uint64_t physAddr){
@@ -46,8 +46,8 @@ class DmaIndication : public DmaIndicationWrapper
   virtual void badPageSize (uint32_t pointer, uint32_t len) {
     fprintf(stderr, "DmaIndication::badPageSize(pointer=%x, len=%x)\n", pointer, len);
   }
-  virtual void badAddrTrans (uint32_t pointer, uint64_t offset) {
-    fprintf(stderr, "DmaIndication::badAddrTrans(pointer=%x, offset=%zx)\n", pointer, offset);
+  virtual void badAddrTrans (uint32_t pointer, uint64_t offset, uint32_t barrier8, uint32_t barrier4, uint32_t barrier0) {
+    fprintf(stderr, "DmaIndication::badAddrTrans(pointer=%x, offset=%zx (%x %x %x))\n", pointer, offset, barrier8, barrier4, barrier0);
   }
   virtual void badAddr (uint32_t pointer, uint64_t offset , uint64_t physAddr) {
     fprintf(stderr, "DmaIndication::badAddr(pointer=%x offset=%zx physAddr=%zx)\n", pointer, offset, physAddr);

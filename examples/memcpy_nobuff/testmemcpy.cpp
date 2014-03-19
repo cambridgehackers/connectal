@@ -138,12 +138,21 @@ int main(int argc, const char **argv)
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   
-  sleep(1);
-  dma->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
-  sleep(1);
-  dma->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
-  sleep(1);
-  
+  fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
+  fprintf(stderr, "ref_dstAlloc=%d\n", ref_dstAlloc);
+
+
+  // unsigned int refs[2] = {ref_srcAlloc, ref_dstAlloc};
+  // for(int j = 0; j < 2; j++){
+  //   unsigned int ref = refs[j];
+  //   for(int i = 0; i < numWords; i = i+(numWords/4)){
+  //     dma->addrRequest(ref, i*sizeof(unsigned int));
+  //     sleep(1);
+  //   }
+  //   dma->addrRequest(ref, (1<<16)*sizeof(unsigned int));
+  //   sleep(1);
+  // }
+
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   int burstLen = 16;
 #ifdef MMAP_HW

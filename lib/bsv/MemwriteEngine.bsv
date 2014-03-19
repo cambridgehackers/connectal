@@ -49,12 +49,12 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
    Reg#(Bit#(8))          burstLen <- mkReg(0);
    FIFO#(Bool)                acks <- mkSizedFIFO(256);
 
-   FIFOF#(Bool)                 ff <- mkSizedFIFOF(32);
+   FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
    FIFOF#(void)                 wf <- mkSizedFIFOF(32);
 
    let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
    
-   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) wl, Bit#(32) bl)  if (reqCnt >= numBeats);
+   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) wl, Bit#(32) bl) if (reqCnt >= numBeats);
       numBeats <= wl/bytes_per_beat;
       reqCnt   <= 0;
       off      <= 0;
@@ -76,7 +76,7 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
-	    acks.enq(reqCnt+extend(burstLen) == numBeats);
+	    acks.enq(reqCnt+extend(burstLen) >= numBeats);
 	    return DmaRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0};
 	 endmethod
 	 method Bool notEmpty;

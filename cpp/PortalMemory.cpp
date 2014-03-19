@@ -190,11 +190,10 @@ int PortalMemory::reference(PortalAlloc* pa)
     borders[i].border = border;
     entryCount += regions[i];
   }
-
   // fprintf(stderr, "shifts %d (%zd %zd %zd)\n", id,shifts[0], shifts[1], shifts[2]);
-  // fprintf(stderr, "regions %d (%zd %zd %zd)\n", id,regions[0], regions[1], regions[2]);
-  // fprintf(stderr, "borders %d (%zx %zx %zx)\n", id,borders[0].border, borders[1].border, borders[2].border);
-  // fprintf(stderr, "idxoff  %d (%d %d %d)\n", id,borders[0].idxOffset, borders[1].idxOffset, borders[2].idxOffset);
+  fprintf(stderr, "regions %d (%zd %zd %zd)\n", id,regions[0], regions[1], regions[2]);
+  fprintf(stderr, "borders %d (%zx %zx %zx)\n", id,borders[0].border, borders[1].border, borders[2].border);
+  fprintf(stderr, "idxoff  %d (%d %d %d)\n", id,borders[0].idxOffset, borders[1].idxOffset, borders[2].idxOffset);
   region(id,
 	 borders[0].border, borders[0].idxOffset,
 	 borders[1].border, borders[1].idxOffset,

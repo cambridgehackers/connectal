@@ -76,7 +76,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       //$display("start_read %d", rdCnt);
       re.start(rdPointer, extend(rdCnt*4), burstLen*4, burstLen*4);
       rdBuffer <= rdBuffer-burstLen;
-      if(rdCnt+burstLen == numWords) begin
+      if(rdCnt+burstLen >= numWords) begin
 	 rdCnt <= 0;
 	 rdIterCnt <= rdIterCnt-1;
       end
@@ -89,7 +89,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       //$display("                    start_write %d", wrCnt);
       we.start(wrPointer, extend(wrCnt*4), burstLen*4, burstLen*4);
       wrBuffer <= wrBuffer-burstLen;
-      if(wrCnt+burstLen == numWords) begin
+      if(wrCnt+burstLen >= numWords) begin
 	 wrCnt <= 0;
 	 wrIterCnt <= wrIterCnt-1;
       end
