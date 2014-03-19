@@ -84,60 +84,96 @@ The application developer is free to specify whatever hardware-software interfac
 
 Refer to [https://github.com/cambridgehackers/xbsv](https://github.com/cambridgehackers/xbsv)
 
-In the examples directory, see [echo](../examples/echo/).  The file [Echo.bsv](../examples/echo/Echo.bsv) defines the hardware, and testecho.cpp supplies the software part. In this case, the software part is a test framework for the hardware.  This example has a second interface, defined by [Swallow.bsv](../examples/echo/Swallow.bsv).
+In the examples directory, see [simple](../examples/simple/).  The file [Simple.bsv](../examples/simple/Simple.bsv) defines the hardware, and testsimple.cpp supplies the software part. In this case, the software part is a test framework for the hardware.
 
-Echo.bsv defines the actions (called Requests) that software can use to cause the hardware to act, and defines the notifications (called Indications) that the hardware can use to signal the software.
+Simple.bsv declares a few `struct` and `enum` types:
 
-    interface EchoIndication;
-    	method Action heard(Bit#(32) v);
-    	method Action heard2(Bit#(16) a, Bit#(16) b);
+    typedef struct{
+       Bit#(32) a;
+       Bit#(32) b;
+       } S1 deriving (Bits);
+
+    typedef struct{
+       Bit#(32) a;
+       Bit#(16) b;
+       Bit#(7) c;
+       } S2 deriving (Bits);
+
+    typedef enum {
+       E1Choice1,
+       E1Choice2,
+       E1Choice3
+       } E1 deriving (Bits,Eq);
+
+    typedef struct{
+       Bit#(32) a;
+       E1 e1;
+       } S3 deriving (Bits);
+
+Simple.bsv defines the actions (called Requests) that software can use to cause the hardware to act, and defines the notifications (called Indications) that the hardware can use to signal the software.
+
+    interface SimpleIndication;
+	method Action heard1(Bit#(32) v);
+	method Action heard2(Bit#(16) a, Bit#(16) b);
+	method Action heard3(S1 v);
+	method Action heard4(S2 v);
+	method Action heard5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
+	method Action heard6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
+	method Action heard7(Bit#(32) a, E1 e1);
     endinterface
-    interface EchoRequest;
-       method Action say(Bit#(32) v);
-       method Action say2(Bit#(16) a, Bit#(16) b);
-       method Action setLeds(Bit#(8) v);
+
+    interface SimpleRequest;
+	method Action say1(Bit#(32) v);
+	method Action say2(Bit#(16) a, Bit#(16) b);
+	method Action say3(S1 v);
+	method Action say4(S2 v);
+	method Action say5(Bit#(32)a, Bit#(64) b, Bit#(32) c);
+	method Action say6(Bit#(32)a, Bit#(40) b, Bit#(32) c);
+	method Action say7(S3 v);
     endinterface
 
-
-Swallow.bsv defines another group of actions:
-
-    interface Swallow; 
-       method Action swallow(Bit#(32) v);
-    endinterface
-
-
-Software can start the hardware working via say, say2, setLeds, and swallow. Hardware signals back to software with heard and heard2.  In the case of this example, say and say2 merely echo their arguments back to software. setLeds blinks the zedboard lights, and swallow throws away its argument.
+Software can start the hardware working via say, say2, ... Hardware
+signals back to software with heard and heard2 and so fort.  In the
+case of this example, say and say2 merely echo their arguments back to
+software.
 
 The definitions in the bsv file are used by the xbsv infrastructure ( a python program)  to automatically create corresponding c++ interfaces.
 
     ../../genxpsprojfrombsv -Bbluesim -p bluesim -x mkBsimTop \
-         -s2h Swallow  -s2h EchoRequest \
-         -h2s EchoIndication \
-         -s testecho.cpp \
-         -t ../../bsv/BsimTop.bsv  Echo.bsv Swallow.bsv Top.bsv
+         -s2h SimpleRequest \
+         -h2s SimpleIndication \
+         -s testsimple.cpp \
+         -t ../../bsv/BsimTop.bsv  Simple.bsv Top.bsv
 
-The tools have to be told which interface records should be used for Software to Hardware messages and which should be used for Hardware to Software messages. These interfaces are given on the command line for genxpprojfrombsv
+The tools have to be told which interface records should be used for
+Software to Hardware messages and which should be used for Hardware to
+Software messages. These interfaces are given on the command line for
+genxpprojfrombsv
 
-genxpsprojfrombsv constructs all the hardware and software modules needed to wire up portals. This is sort of like an RPC compiler for the hardware-software interface.
+genxpsprojfrombsv constructs all the hardware and software modules
+needed to wire up portals. This is sort of like an RPC compiler for
+the hardware-software interface. However, unlike an RPC each method is
+asynchronous.
 
-The user must also create a toplevel bsv module Top.bsv, which instantiates the user portals, the standard hardware environment, and any additional hardware modules.
+The user must also create a toplevel bsv module Top.bsv, which
+instantiates the user portals, the standard hardware environment, and
+any additional hardware modules.
 
 Rather than constructing the `genxpsprojfrombsv` command line from
 scratch, the examples in xbsv use include
 [Makefile.common](../Makefile.common) and define some `make`
 variables.
 
-Here is the Makefile for the `echo` example:
+Here is the Makefile for the `simple` example:
 
 ```make
-    ## hardware interfaces invoked from software (requests)
-    S2H = Swallow EchoRequest
-    ## software interfaces invoked from hardware (indications)
-    H2S = EchoIndication
-    ## all the BSV files to be scanned for types and interfaces
-    BSVFILES = Echo.bsv Swallow.bsv Top.bsv
-    ## the source files in the example
-    CPPFILES=testecho.cpp
+    BSVDIR=../../bsv
+    S2H = SimpleRequest
+    H2S = SimpleIndication
+    BSVFILES = Simple.bsv Top.bsv
+    CPPFILES=testsimple.cpp
+    Dma = 
+    PINS = Std
 
     include ../../Makefile.common
 ```
@@ -153,38 +189,46 @@ Designs using `xbsv` may also include `xbsv/Makefile.common` if they define `XBS
     include $(XBSVDIR)/Makefile.common
 ```
 
-### echo/Top.bsv
+### simple/Top.bsv
 
-Each XBSV design implements [Top.bsv](../examples/echo/Top.bsv) with some standard components.
+Each XBSV design implements [Top.bsv](../examples/simple/Top.bsv) with some standard components.
 
 It defines the `IfcNames` enum, for use in identifying the portals between software and hardware:
 
-    typedef enum {EchoIndication, EchoRequest, Swallow} IfcNames deriving (Eq,Bits);
+    typedef enum {SimpleIndication, SimpleRequest} IfcNames deriving (Eq,Bits);
 
 It defines `mkPortalTop`, which instantiates the wrappers, proxies, and the design itself:
 
-    module mkPortalTop(PortalTop#(addrWidth,64,Empty));
+    module mkPortalTop(StdPortalTop#(addrWidth));
 
-Instantiate user portals:
+`StdPortalTop` is parameterized by `addrWidth` because Zynq and x86 have different width addressing. `StdPortalTop` is a typedef:
 
-       EchoIndicationProxy echoIndicationProxy <- mkEchoIndicationProxy(EchoIndication);
-       EchoRequestInternal echoRequestInternal <- mkEchoRequestInternal(echoIndicationProxy.ifc);
-       EchoRequestWrapper echoRequestWrapper <- mkEchoRequestWrapper(EchoRequest,echoRequestInternal.ifc);
+    typedef PortalTop#(addrWidth,64,Empty)     StdPortalTop#(numeric type addrWidth);
+
+The "64" specifies the data width and `Empty` specifies the empty
+interface is exposed as pins from the design. In designs using HDMI,
+for example, `Empty` is replaced by `HDMI`.  On some platforms, the
+design may be able to use different data widths, such as 128 bits on
+x86/PCIe.
+
+Next, `mkPortalTop` instantiates user portals:
+
+    // instantiate user portals
+       SimpleIndicationProxy simpleIndicationProxy <- mkSimpleIndicationProxy(SimpleIndication);
 
 Instantiate the design:
 
-       Swallow swallow <- mkSwallow();
+       SimpleRequest simpleRequest <- mkSimpleRequest(simpleIndicationProxy.ifc);
 
 Instantiate the wrapper for the design:
 
-       SwallowWrapper swallowWrapper <- mkSwallowWrapper(Swallow, swallow);
+       SimpleRequestWrapper simpleRequestWrapper <- mkSimpleRequestWrapper(SimpleRequest,simpleRequest);
 
 Collect the portals into a vector:
 
-       Vector#(3,StdPortal) portals;
-       portals[0] = echoIndicationProxy.portalIfc;
-       portals[1] = echoRequestWrapper.portalIfc; 
-       portals[2] = swallowWrapper.portalIfc; 
+       Vector#(2,StdPortal) portals;
+       portals[0] = simpleRequestWrapper.portalIfc; 
+       portals[1] = simpleIndicationProxy.portalIfc;
 
 Create an interrupt multiplexer from the vector of portals:
 
@@ -204,6 +248,65 @@ The following generic interfaces are used by the platform specific top BSV modul
        interface leds = echoRequestInternal.leds;
 
     endmodule : mkPortalTop
+
+
+### simple/testsimple.cpp
+
+XBSV generates header files declaring wrappers for
+hardware-to-software interfaces and proxies for software-to-hardware
+interfaces. These will be in the "jni/" subdirectory of the project directory.
+
+    #include "SimpleIndicationWrapper.h"
+    #include "SimpleRequestProxy.h"
+
+It also declares software equivalents for structs and enums declared in the processed BSV files:
+
+    #include "GeneratedTypes.h"
+
+XBSV generates abstract virtual base classes for each Indication interface.
+
+    class SimpleIndicationWrapper : public Portal {
+
+    public:
+	...
+	SimpleIndicationWrapper(int id, PortalPoller *poller = 0);
+	virtual void heard1 ( const uint32_t v )= 0;
+	...
+    };
+
+Implement subclasses of the wrapper in order to define the callbacks
+
+    class SimpleIndication : public SimpleIndicationWrapper
+    {  
+    public:
+      ...
+	virtual void heard1(uint32_t a) {
+	  fprintf(stderr, "heard1(%d)\n", a);
+	  assert(a == v1a);
+	  incr_cnt();
+	}
+	...
+    };
+
+To connect these classes to the hardware, instantiate them using the
+`IfcNames` enum identifiers. XBSV prepends the name of the type
+because C++ does not support overloading of enum tags.
+
+    SimpleIndication *indication = new SimpleIndication(IfcNames_SimpleIndication);
+    SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequest);
+
+Create a thread for handling notifications from hardware:
+
+    pthread_t tid;
+    if(pthread_create(&tid, NULL,  portalExec, NULL)){
+      exit(1);
+    }
+
+Now the software invokes hardware methods via the proxy:
+
+    device->say1(v1a);  
+
+    device->say2(v2a,v2b);
 
 
 ## Using genxpsprojfrombsv
@@ -226,17 +329,16 @@ The following generic interfaces are used by the platform specific top BSV modul
 | -x     | --export    |         | Promote/export named interface from top module (Required) |
 
 
-### Echo Design Structure
+### Simple Example Design Structure
 
-The `echo` example consists of the following files:
+The `simple` example consists of the following files:
 
-    Echo.bsv
+    Simple.bsv
     Makefile
-    Swallow.bsv
     Top.bsv
-    testecho.cpp
+    testsimple.cpp
 
-After running `make BOARD=zedboard verilog` in the `echo` directory,
+After running `make BOARD=zedboard verilog` in the `simple` directory,
 the `zedboard` project directory is created, populated by the generated files.
 
 A top level `Makefile` is created:
@@ -245,9 +347,8 @@ A top level `Makefile` is created:
 
 genxpsprojfrombsv generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:
 
-    zedboard/sources/mkzynqtop/EchoIndicationProxy.bsv
-    zedboard/sources/mkzynqtop/SwallowWrapper.bsv
-    zedboard/sources/mkzynqtop/EchoRequestWrapper.bsv
+    zedboard/sources/mkzynqtop/SimpleIndicationProxy.bsv
+    zedboard/sources/mkzynqtop/SimpleRequestWrapper.bsv
 
 XBSV supports Android on Zynq platforms, so genxpsprojfrombsv generates `jni/Android.mk` for `ndk-build`.
 
@@ -260,12 +361,10 @@ XBSV generates `jni/Makefile` to compile the software for PCIe platforms (vc707 
 
 XBSV generates software proxies for software-to-hardware interfaces and software wrappers for hardware-to-software interfaces:
 
-    zedboard/jni/EchoIndicationWrapper.h
-    zedboard/jni/EchoIndicationWrapper.cpp
-    zedboard/jni/SwallowProxy.cpp
-    zedboard/jni/SwallowProxy.h
-    zedboard/jni/EchoRequestProxy.cpp
-    zedboard/jni/EchoRequestProxy.h
+    zedboard/jni/SimpleIndicationWrapper.h
+    zedboard/jni/SimpleIndicationWrapper.cpp
+    zedboard/jni/SimpleRequestProxy.cpp
+    zedboard/jni/SimpleRequestProxy.h
 
 XBSV also generates `GeneratedTypes.h` for struct and enum types in the processed BSV source files:
 
@@ -294,7 +393,7 @@ The following two TCL scripts are used to program the FPGA via USB:
 
 Compiling to verilog results in the following verilog files:
 
-    zedboard/verilog/top/mkEchoIndicationProxySynth.v
+    zedboard/verilog/top/mkSimpleIndicationProxySynth.v
     zedboard/verilog/top/mkZynqTop.v
 
 Verilog library files referenced in the design are copied for use in synthesis.
