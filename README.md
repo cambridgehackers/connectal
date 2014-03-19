@@ -1,11 +1,42 @@
 XBSV
 ====
 
+
+XBSV provides a hardware-software interface for applications split
+between user mode code and custom hardware in an FPGA.  Portal can
+automatically build the software and hardware glue for a message based
+interface and also provides for configuring and using shared memory
+between applications and hardware. Communications between hardware and
+software are provided by a bidirectional flow of events and regions of
+memory shared between hardware and software.  Events from software to
+hardware are called requests and events from hardware to software are
+called indications, but in fact they are symmetric.
+
+A logical request/indication pair is referred to as a portal".  An
+application can make use of multiple portals, which may be specified
+independently. A portal is specified by a BSV interface declaration,
+from which `genxpsprojfrombsv` generates BSV and C++ wrappers and
+proxies.
+
+Supported Platforms
+-------------------
+
+XBSV supports Android on Zynq platforms, including zedboard and zc702.
+
+XBSV supports Linux on x86 with PCIe-attached Virtex and Kintex boards (vc707, kc705).
+
+XBSV supports bluesim as a simulated hardware platform. 
+
+genxpsprojfrombsv
+-----------------
+
 The script genxpsprojfrombsv enables you to take a Bluespec System
 Verilog (BSV) file and generate a bitstream for a Xilinx Zynq FPGA. 
 
 It generates C++ and BSV stubs so that you can write code that runs on
 the Zynq's ARM CPUs to interact with your BSV componet.
+
+See [doc/genxpsprojfrombsv.md](doc/genxpsprojfrombsv.md) for a description of its options.
 
 Preparation
 -----------
