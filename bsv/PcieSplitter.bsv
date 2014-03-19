@@ -54,6 +54,14 @@ interface TlpTrace;
    interface Get#(TimestampedTlpData) tlp;
 endinterface
 
+// An MSIX table entry, as defined in the PCIe spec
+interface MSIX_Entry;
+   interface Reg#(Bit#(32)) addr_lo;
+   interface Reg#(Bit#(32)) addr_hi;
+   interface Reg#(Bit#(32)) msg_data;
+   interface Reg#(Bool)     masked;
+endinterface
+
 // The top-level interface of the PCIe-to-AXI bridge
 interface PcieSplitter#(numeric type bpb);
 
@@ -70,8 +78,7 @@ interface PcieSplitter#(numeric type bpb);
 
    interface Put#(TimestampedTlpData) trace;
 
-   interface ReadOnly#(Bit#(64))       interruptAddr;
-   interface ReadOnly#(Bit#(32))       interruptData;
+   interface Vector#(16,MSIX_Entry) msixEntry;
 
 endinterface: PcieSplitter
 
@@ -353,14 +360,6 @@ module mkTLPArbiter(TLPArbiter);
 
 endmodule
 
-// An MSIX table entry, as defined in the PCIe spec
-interface MSIX_Entry;
-   interface Reg#(Bit#(32)) addr_lo;
-   interface Reg#(Bit#(32)) addr_hi;
-   interface Reg#(Bit#(32)) msg_data;
-   interface Reg#(Bool)     masked;
-endinterface
-
 // The control and status registers which are accessible from the PCIe
 // bus.
 interface ControlAndStatusRegs;
@@ -369,8 +368,7 @@ interface ControlAndStatusRegs;
    interface Put#(TLPData#(16)) csr_read_and_write_tlps;
    interface Get#(TLPData#(16)) csr_read_completion_tlps;
 
-   interface ReadOnly#(Bit#(64)) interruptAddr;
-   interface ReadOnly#(Bit#(32)) interruptData;
+   interface Vector#(16,MSIX_Entry) msixEntry;
 
    interface Reg#(Bool)     tlpTracing;
    interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimit;
@@ -420,7 +418,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
    Integer minor_rev = 0;
 
    // Registers and their default values
-   Vector#(4,MSIX_Entry) msix_entry               <- replicateM(mkMSIXEntry);
+   Vector#(16,MSIX_Entry) msix_entry              <- replicateM(mkMSIXEntry);
 
    // Clocks and Resets
    Clock defaultClock <- exposeCurrentClock();
@@ -529,6 +527,54 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
          4109: return msix_entry[3].addr_hi;            // entry 3 upper address
          4110: return msix_entry[3].msg_data;           // entry 3 msg data
          4111: return {'0, pack(msix_entry[3].masked)}; // entry 3 vector control
+         4112: return msix_entry[4].addr_lo;            // entry 0 lower address
+         4113: return msix_entry[4].addr_hi;            // entry 0 upper address
+         4114: return msix_entry[4].msg_data;           // entry 0 msg data
+         4115: return {'0, pack(msix_entry[4].masked)}; // entry 0 vector control
+         4116: return msix_entry[5].addr_lo;            // entry 1 lower address
+         4117: return msix_entry[5].addr_hi;            // entry 1 upper address
+         4118: return msix_entry[5].msg_data;           // entry 1 msg data
+         4119: return {'0, pack(msix_entry[5].masked)}; // entry 1 vector control
+         4120: return msix_entry[6].addr_lo;            // entry 2 lower address
+         4121: return msix_entry[6].addr_hi;            // entry 2 upper address
+         4122: return msix_entry[6].msg_data;           // entry 2 msg data
+         4123: return {'0, pack(msix_entry[6].masked)}; // entry 2 vector control
+         4124: return msix_entry[7].addr_lo;            // entry 3 lower address
+         4125: return msix_entry[7].addr_hi;            // entry 3 upper address
+         4126: return msix_entry[7].msg_data;           // entry 3 msg data
+         4127: return {'0, pack(msix_entry[7].masked)}; // entry 3 vector control
+         4128: return msix_entry[8].addr_lo;            // entry 0 lower address
+         4129: return msix_entry[8].addr_hi;            // entry 0 upper address
+         4130: return msix_entry[8].msg_data;           // entry 0 msg data
+         4131: return {'0, pack(msix_entry[8].masked)}; // entry 0 vector control
+         4132: return msix_entry[9].addr_lo;            // entry 1 lower address
+         4133: return msix_entry[9].addr_hi;            // entry 1 upper address
+         4134: return msix_entry[9].msg_data;           // entry 1 msg data
+         4135: return {'0, pack(msix_entry[9].masked)}; // entry 1 vector control
+         4136: return msix_entry[10].addr_lo;            // entry 2 lower address
+         4137: return msix_entry[10].addr_hi;            // entry 2 upper address
+         4138: return msix_entry[10].msg_data;           // entry 2 msg data
+         4139: return {'0, pack(msix_entry[10].masked)}; // entry 2 vector control
+         4140: return msix_entry[11].addr_lo;            // entry 3 lower address
+         4141: return msix_entry[11].addr_hi;            // entry 3 upper address
+         4142: return msix_entry[11].msg_data;           // entry 3 msg data
+         4143: return {'0, pack(msix_entry[11].masked)}; // entry 3 vector control
+         4144: return msix_entry[12].addr_lo;            // entry 0 lower address
+         4145: return msix_entry[12].addr_hi;            // entry 0 upper address
+         4146: return msix_entry[12].msg_data;           // entry 0 msg data
+         4147: return {'0, pack(msix_entry[12].masked)}; // entry 0 vector control
+         4148: return msix_entry[13].addr_lo;            // entry 1 lower address
+         4149: return msix_entry[13].addr_hi;            // entry 1 upper address
+         4150: return msix_entry[13].msg_data;           // entry 1 msg data
+         4151: return {'0, pack(msix_entry[13].masked)}; // entry 1 vector control
+         4152: return msix_entry[14].addr_lo;            // entry 2 lower address
+         4153: return msix_entry[14].addr_hi;            // entry 2 upper address
+         4154: return msix_entry[14].msg_data;           // entry 2 msg data
+         4155: return {'0, pack(msix_entry[14].masked)}; // entry 2 vector control
+         4156: return msix_entry[15].addr_lo;            // entry 3 lower address
+         4157: return msix_entry[15].addr_hi;            // entry 3 upper address
+         4158: return msix_entry[15].msg_data;           // entry 3 msg data
+         4159: return {'0, pack(msix_entry[15].masked)}; // entry 3 vector control
          // 4-bit MSIx pending bit field
          5120: return '0;                               // PBA structure (low)
          5121: return '0;                               // PBA structure (high)
@@ -575,6 +621,54 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
             4109: msix_entry[3].addr_hi  <= update_dword(msix_entry[3].addr_hi, be, dword);
             4110: msix_entry[3].msg_data <= update_dword(msix_entry[3].msg_data, be, dword);
             4111: if (be[0] == 1) msix_entry[3].masked <= unpack(dword[0]);
+            4112: msix_entry[4].addr_lo  <= update_dword(msix_entry[4].addr_lo, be, (dword & 32'hfffffffc));
+            4113: msix_entry[4].addr_hi  <= update_dword(msix_entry[4].addr_hi, be, dword);
+            4114: msix_entry[4].msg_data <= update_dword(msix_entry[4].msg_data, be, dword);
+            4115: if (be[0] == 1) msix_entry[4].masked <= unpack(dword[0]);
+            4116: msix_entry[5].addr_lo  <= update_dword(msix_entry[5].addr_lo, be, (dword & 32'hfffffffc));
+            4117: msix_entry[5].addr_hi  <= update_dword(msix_entry[5].addr_hi, be, dword);
+            4118: msix_entry[5].msg_data <= update_dword(msix_entry[5].msg_data, be, dword);
+            4119: if (be[0] == 1) msix_entry[5].masked <= unpack(dword[0]);
+            4120: msix_entry[6].addr_lo  <= update_dword(msix_entry[6].addr_lo, be, (dword & 32'hfffffffc));
+            4121: msix_entry[6].addr_hi  <= update_dword(msix_entry[6].addr_hi, be, dword);
+            4122: msix_entry[6].msg_data <= update_dword(msix_entry[6].msg_data, be, dword);
+            4123: if (be[0] == 1) msix_entry[6].masked <= unpack(dword[0]);
+            4124: msix_entry[7].addr_lo  <= update_dword(msix_entry[7].addr_lo, be, (dword & 32'hfffffffc));
+            4125: msix_entry[7].addr_hi  <= update_dword(msix_entry[7].addr_hi, be, dword);
+            4126: msix_entry[7].msg_data <= update_dword(msix_entry[7].msg_data, be, dword);
+            4127: if (be[0] == 1) msix_entry[7].masked <= unpack(dword[0]);
+            4128: msix_entry[8].addr_lo  <= update_dword(msix_entry[8].addr_lo, be, (dword & 32'hfffffffc));
+            4129: msix_entry[8].addr_hi  <= update_dword(msix_entry[8].addr_hi, be, dword);
+            4130: msix_entry[8].msg_data <= update_dword(msix_entry[8].msg_data, be, dword);
+            4131: if (be[0] == 1) msix_entry[8].masked <= unpack(dword[0]);
+            4132: msix_entry[9].addr_lo  <= update_dword(msix_entry[9].addr_lo, be, (dword & 32'hfffffffc));
+            4133: msix_entry[9].addr_hi  <= update_dword(msix_entry[9].addr_hi, be, dword);
+            4134: msix_entry[9].msg_data <= update_dword(msix_entry[9].msg_data, be, dword);
+            4135: if (be[0] == 1) msix_entry[9].masked <= unpack(dword[0]);
+            4136: msix_entry[10].addr_lo  <= update_dword(msix_entry[10].addr_lo, be, (dword & 32'hfffffffc));
+            4137: msix_entry[10].addr_hi  <= update_dword(msix_entry[10].addr_hi, be, dword);
+            4138: msix_entry[10].msg_data <= update_dword(msix_entry[10].msg_data, be, dword);
+            4139: if (be[0] == 1) msix_entry[10].masked <= unpack(dword[0]);
+            4140: msix_entry[11].addr_lo  <= update_dword(msix_entry[11].addr_lo, be, (dword & 32'hfffffffc));
+            4141: msix_entry[11].addr_hi  <= update_dword(msix_entry[11].addr_hi, be, dword);
+            4142: msix_entry[11].msg_data <= update_dword(msix_entry[11].msg_data, be, dword);
+            4143: if (be[0] == 1) msix_entry[11].masked <= unpack(dword[0]);
+            4144: msix_entry[12].addr_lo  <= update_dword(msix_entry[12].addr_lo, be, (dword & 32'hfffffffc));
+            4145: msix_entry[12].addr_hi  <= update_dword(msix_entry[12].addr_hi, be, dword);
+            4146: msix_entry[12].msg_data <= update_dword(msix_entry[12].msg_data, be, dword);
+            4147: if (be[0] == 1) msix_entry[12].masked <= unpack(dword[0]);
+            4148: msix_entry[13].addr_lo  <= update_dword(msix_entry[13].addr_lo, be, (dword & 32'hfffffffc));
+            4149: msix_entry[13].addr_hi  <= update_dword(msix_entry[13].addr_hi, be, dword);
+            4150: msix_entry[13].msg_data <= update_dword(msix_entry[13].msg_data, be, dword);
+            4151: if (be[0] == 1) msix_entry[13].masked <= unpack(dword[0]);
+            4152: msix_entry[14].addr_lo  <= update_dword(msix_entry[14].addr_lo, be, (dword & 32'hfffffffc));
+            4153: msix_entry[14].addr_hi  <= update_dword(msix_entry[14].addr_hi, be, dword);
+            4154: msix_entry[14].msg_data <= update_dword(msix_entry[14].msg_data, be, dword);
+            4155: if (be[0] == 1) msix_entry[14].masked <= unpack(dword[0]);
+            4156: msix_entry[15].addr_lo  <= update_dword(msix_entry[15].addr_lo, be, (dword & 32'hfffffffc));
+            4157: msix_entry[15].addr_hi  <= update_dword(msix_entry[15].addr_hi, be, dword);
+            4158: msix_entry[15].msg_data <= update_dword(msix_entry[15].msg_data, be, dword);
+            4159: if (be[0] == 1) msix_entry[15].masked <= unpack(dword[0]);
             //******************************** end of area referenced from xilinx_x7_pcie_wrapper.v
          endcase
       endaction
@@ -859,12 +953,7 @@ module mkControlAndStatusRegs#( Bit#(64)  board_content_id
       endmethod
    endinterface
 
-   interface ReadOnly interruptAddr;
-      method Bit#(64) _read();
-	 return { msix_entry[0].addr_hi, msix_entry[0].addr_lo };
-      endmethod
-   endinterface
-   interface ReadOnly interruptData = regToReadOnly(msix_entry[0].msg_data);
+   interface Vector msixEntry = msix_entry;
 
    interface Reg tlpTracing    = tlpTracingReg;
    interface Reg tlpTraceLimit = tlpTraceLimitReg;
@@ -925,11 +1014,6 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
 //   endrule
 
    // connect the sub-components to each other
-
-   // rule interruptConfig;
-   //    portalEngine.interruptAddr <= csr.interruptAddr;
-   //    portalEngine.interruptData <= csr.interruptData;
-   // endrule
 
    mkConnection(dispatcher.tlp_out_to_config,    csr.csr_read_and_write_tlps);
    // mkConnection(dispatcher.tlp_out_to_portal,    portalEngine.tlp_in);
@@ -1000,9 +1084,7 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
        endmethod
    endinterface: trace
    
-   interface ReadOnly interruptAddr = csr.interruptAddr;
-   interface ReadOnly interruptData = csr.interruptData;
-
+   interface Vector msixEntry = csr.msixEntry;
       
 endmodule: mkPcieSplitter
 

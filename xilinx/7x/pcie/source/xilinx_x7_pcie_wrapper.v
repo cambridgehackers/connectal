@@ -305,7 +305,7 @@ module xilinx_x7_pcie_wrapper #(
 		  .MSIX_CAP_ON         ( "TRUE" ),
 		  .MSIX_CAP_PBA_OFFSET ( 29'ha00 ),
 		  .MSIX_CAP_TABLE_OFFSET ( 29'h800 ),
-		  .MSIX_CAP_TABLE_SIZE ( 11'h003 ),
+		  .MSIX_CAP_TABLE_SIZE ( 11'h00f ),
 		  .PCIE_CAP_NEXTPTR    ( 8'h9C ),
 		  .USER_CLK_FREQ       ( 3 ), // 250 MHz
 // add 26 to replay timeout

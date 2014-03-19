@@ -72,7 +72,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    // instantiate user portals
    let portalTop <- mkPortalTop(clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
    AxiSlaveEngine#(dsz) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(x7pcie.msixEntry, x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
@@ -84,15 +84,10 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    mkConnection(axiMasterEngine.master, portalTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
-   rule interruptConfig;
-      axiMasterEngine.interruptAddr <= x7pcie.interruptAddr;
-      axiMasterEngine.interruptData <= x7pcie.interruptData;
-   endrule
-
    // going from level to edge-triggered interrupt
    rule interruptRequest;
       if (portalTop.interrupt && !interruptRequested)
-	 axiMasterEngine.interruptRequested <= True;
+	 axiMasterEngine.interruptRequested <= tagged Valid 0;
       interruptRequested <= portalTop.interrupt;
    endrule
 
