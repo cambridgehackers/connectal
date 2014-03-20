@@ -152,6 +152,11 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,d) br)(BRAMWriteClient#(bramIdx,bu
    FIFOF#(Bit#(busWidth)) writeFifo = (interface FIFOF;
 				       method Bit#(busWidth) first(); return pack(gb.first); endmethod
 				       method Bool notEmpty(); return gb.notEmpty(); endmethod
+				       method Action enq(Bit#(busWidth) d); endmethod
+				       method Action deq; endmethod
+				       method Action clear; endmethod
+				       method Bool notFull(); return(False); endmethod
+      
 				       endinterface);
    MemwriteEngine#(busWidth) we <- mkMemwriteEngine(writeFifo);
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
