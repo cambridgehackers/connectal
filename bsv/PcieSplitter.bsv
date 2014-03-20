@@ -1023,6 +1023,10 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
    Reg#(Bool) skippingIncomingTlps <- mkReg(False);
+   PulseWire fromPcie <- mkPulseWire;
+   PulseWire   toPcie <- mkPulseWire;
+   Wire#(TLPData#(16)) fromPcieTlp <- mkDWire(unpack(0));
+   Wire#(TLPData#(16))   toPcieTlp <- mkDWire(unpack(0));
    rule traceTlpFromBus;
        let tlp = tlpFromBusFifo.first;
        tlpFromBusFifo.deq();
@@ -1038,9 +1042,8 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
 	      // do nothing
 	   end
 	   else begin
-	       TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: tlp };
-	       csr.fromPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.fromPcieTraceBramWrAddr), datain: ttd });
-	       csr.fromPcieTraceBramWrAddr <= csr.fromPcieTraceBramWrAddr + 1;
+	      fromPcie.send();
+	      fromPcieTlp <= tlp;
 	       skippingIncomingTlps <= False;
 	   end
        end
@@ -1051,11 +1054,22 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
        let tlp <- arbiter.tlp_out_to_bus.get();
        tlpToBusFifo.enq(tlp);
        if (csr.tlpTracing) begin
-	   TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, source: 7'h08, tlp: tlp };
-	   csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: ttd });
-	   csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
+	  toPcie.send();
+	  toPcieTlp <= tlp;
        end
    endrule: traceTlpToBus
+
+   rule doTracing if (fromPcie || toPcie);
+      TLPData#(16) fromtlp = (fromPcie) ? fromPcieTlp : unpack(0);
+      TLPData#(16)   totlp =   (toPcie) ?   toPcieTlp : unpack(0);
+      TimestampedTlpData fromttd = TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: fromtlp };
+      csr.fromPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.fromPcieTraceBramWrAddr), datain: fromttd });
+      csr.fromPcieTraceBramWrAddr <= csr.fromPcieTraceBramWrAddr + 1;
+
+      TimestampedTlpData   tottd = TimestampedTlpData { timestamp: timestamp, source: 7'h08, tlp: totlp };
+      csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: tottd });
+      csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
+   endrule
 
    // route the interfaces to the sub-components
 
