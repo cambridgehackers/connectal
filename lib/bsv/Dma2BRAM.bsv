@@ -123,12 +123,21 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
 
 endmodule
 
-module mkBRAMWriteClient#(BRAMServer#(bramIdx,Bit#(busWidth)) br)(BRAMWriteClient#(bramIdx,busWidth))
+module mkBRAMWriteClient#(BRAMServer#(bramIdx,d) br)(BRAMWriteClient#(bramIdx,busWidth))
    
-   provisos(Eq#(bramIdx),
-	    Bits#(bramIdx, a__),
+   provisos(Bits#(d,dsz),
+	    Div#(busWidth,dsz,nd),
+	    Mul#(nd,dsz,busWidth),
+	    Add#(1,a__,nd),
+	    Add#(1, b__, TMul#(2, nd)),
+	    Add#(nd, c__, TMul#(2, nd)),
+	    Eq#(bramIdx),
+	    Bits#(bramIdx, d__),
 	    Ord#(bramIdx),
 	    Arith#(bramIdx));
+
+   Clock clk <- exposeCurrentClock;
+   Reset rst <- exposeCurrentReset;
 
    FIFO#(void) f <- mkSizedFIFO(1);
    Reg#(bramIdx) n <- mkReg(0);
@@ -138,8 +147,12 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,Bit#(busWidth)) br)(BRAMWriteClien
    Reg#(DmaPointer) ptr <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) woff <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) wbase <- mkReg(0);
+   Gearbox#(1,nd,Bit#(dsz)) gb <- mk1toNGearbox(clk,rst,clk,rst);
    
-   let writeFifo <- mkFIFOF;
+   FIFOF#(Bit#(busWidth)) writeFifo = (interface FIFOF;
+				       method Bit#(busWidth) first(); return pack(gb.first); endmethod
+				       method Bool notEmpty(); return gb.notEmpty(); endmethod
+				       endinterface);
    MemwriteEngine#(busWidth) we <- mkMemwriteEngine(writeFifo);
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
@@ -149,8 +162,8 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,Bit#(busWidth)) br)(BRAMWriteClien
    endrule
 
    rule bramResp;
-      let rv <- br.response.get;
-      writeFifo.enq(rv);
+      d rv <- br.response.get;
+      gb.enq(cons(pack(rv), nil));
    endrule
    
    rule loadReq(i < n);
