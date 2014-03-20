@@ -58,7 +58,8 @@ endinterface
 
 interface MaxcommonsubseqIndication;
    method Action searchResult(Int#(32) v);
-   method Action setupComplete(); 
+   method Action setupAComplete(); 
+   method Action setupBComplete(); 
    method Action fetchComplete(); 
 endinterface
 
@@ -126,20 +127,20 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       $display("finish setupA");
       let x <- n2a.finish;
       aReady.enq(?);
-      indication.setupComplete;
+      indication.setupAComplete();
    endrule
 
    rule finish_setupB;
       $display("finish setupB");
       let x <- n2b.finish;
       bReady.enq(?);
-      indication.setupComplete;
+      indication.setupBComplete();
    endrule
 
    rule finish_fetch;
       $display("finish fetch");
       let x <- l2n.finish;
-      indication.fetchComplete;
+      indication.fetchComplete();
    endrule
 
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
@@ -154,7 +155,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    
    method Action fetch(Bit#(32) strPointer, Bit#(32) strLen);
       rLenReg <= strLen;
-      l2n.start(strPointer, 0, pack(trunate(strLen)), 0);
+      l2n.start(strPointer, 0, pack(truncate(strLen)), 0);
    endmethod
 
    method Action start();
