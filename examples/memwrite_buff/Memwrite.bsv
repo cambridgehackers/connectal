@@ -23,7 +23,6 @@
 import FIFO::*;
 import SpecialFIFOs::*;
 import FIFOF::*;
-import GetPutF::*;
 import Connectable::*;
 
 import AxiMasterSlave::*;

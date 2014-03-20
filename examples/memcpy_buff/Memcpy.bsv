@@ -20,9 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Vector::*;
 import FIFOF::*;
-import GetPutF::*;
 import FIFO::*;
 import Connectable::*;
 
@@ -68,8 +66,10 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    rule finish;
       let rv0 <- re.finish;
       let rv1 <- we.finish;
-      if(iterCnt==0)
+      if(iterCnt==0) begin
+	 $display("Feck");
 	 indication.done;
+      end
    endrule
    
    rule xfer;

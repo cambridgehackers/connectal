@@ -20,9 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Vector::*;
 import FIFOF::*;
-import GetPutF::*;
 import FIFO::*;
 import Connectable::*;
 

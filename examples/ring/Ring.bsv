@@ -25,10 +25,10 @@ import BRAMFIFO::*;
 import GetPut::*;
 import StmtFSM::*;
 import ClientServer::*;
+import GetPut::*;
 
 import PortalMemory::*;
 import Dma::*;
-import GetPutF::*;
 import CompletionBuffer::*;
 
 import RingTypes::*;
@@ -60,9 +60,9 @@ module mkRingRequest#(RingIndication indication,
 		      DmaReadServer#(64) cmd_read_chan,
 		      DmaWriteServer#(64) status_write_chan )(RingRequest);
 
-   ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
-   ServerF#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
-   ServerF#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
+   Server#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
+   Server#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
+   Server#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
    CompletionBuffer#(4,void) fetchComplete <- mkCompletionBuffer;
    
    RingBuffer cmdRing <- mkRingBuffer;
@@ -77,7 +77,7 @@ module mkRingRequest#(RingIndication indication,
    Reg#(Bool) cmdFetchEn <- mkReg(False);
 
    let engineselect = cmd.data[63:56];
-   function ServerF#(Bit#(64), Bit#(64)) cmdifc();
+   function Server#(Bit#(64), Bit#(64)) cmdifc();
       if (engineselect == zeroExtend(pack(CmdNOP))) 
 	 return nopEngine;
       else if (engineselect == zeroExtend(pack(CmdCOPY))) 
@@ -157,7 +157,7 @@ module mkRingRequest#(RingIndication indication,
 	       statusRing.push();
 	       statusTag <= statusTag + 1;
 	    endseq
-
+	 
 	 if (statusRing.notFull() && echoEngine.response.notEmpty())
 	    seq
 //	       $display("responseArbiter echoEngine completion");

@@ -21,9 +21,7 @@
 // SOFTWARE.
 
 import FIFO::*;
-import SpecialFIFOs::*;
 import FIFOF::*;
-import GetPutF::*;
 
 import AxiMasterSlave::*;
 import Dma::*;

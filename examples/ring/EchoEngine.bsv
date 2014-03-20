@@ -21,14 +21,15 @@
 // SOFTWARE.
 
 import FIFOF::*;
-import GetPutF::*;
 import RingTypes::*;
+import ClientServer::*;
+import GetPut::*;
 
-module mkEchoEngine ( ServerF#(Bit#(64), Bit#(64)));
+module mkEchoEngine ( Server#(Bit#(64), Bit#(64)));
    FIFOF#(Bit#(64)) f_echo <- mkSizedFIFOF(16);   // buffer incoming requests
    
-   interface PutF request = toPutF(f_echo);
-   interface GetF response = toGetF(f_echo);
+   interface Put request = toPut(f_echo);
+   interface Get response = toGet(f_echo);
 
 endmodule: mkEchoEngine
 

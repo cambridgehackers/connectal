@@ -21,10 +21,11 @@
 // SOFTWARE.
 
 import FIFOF::*;
-import GetPutF::*;
 import Dma::*;
 import RingTypes::*;
 import StmtFSM::*;
+import ClientServer::*;
+import GetPut::*;
 
 // The interface to the copyengine is a pair of fifos which supply and accept
 // blocks of 8 64 bit words
@@ -41,7 +42,7 @@ import StmtFSM::*;
 //  word0-6 all 0
 //  word7  TAG[31:0]
 
-module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy_write_chan) ( ServerF#(Bit#(64), Bit#(64)));
+module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy_write_chan) ( Server#(Bit#(64), Bit#(64)));
    FIFOF#(Bit#(64)) f_in  <- mkSizedFIFOF(16);    // to buffer incoming requests
    FIFOF#(Bit#(64)) f_out <- mkSizedFIFOF(16);    // to buffer outgoing responses
    Reg#(Bit#(16)) copyReadCount <- mkReg(0);
@@ -133,8 +134,8 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
    mkAutoFSM(copyStart);
    mkAutoFSM(copyFinish);
    
-   interface PutF request = toPutF(f_in);
-   interface GetF response = toGetF (f_out);
+   interface Put request = toPut(f_in);
+   interface Get response = toGet (f_out);
    
 endmodule: mkCopyEngine
 

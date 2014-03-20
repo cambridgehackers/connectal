@@ -474,7 +474,7 @@ int main(int argc, const char **argv)
   completion_list_init();
   ring = new RingRequestProxy(IfcNames_RingRequest);
   dma = new DmaConfigProxy(IfcNames_DmaRequest);
-  dmaIndication = new DmaIndication(IfcNames_DmaIndication);
+  dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
   ringIndication = new RingIndication(IfcNames_RingIndication);
 
   fprintf(stderr, "allocating memory...\n");

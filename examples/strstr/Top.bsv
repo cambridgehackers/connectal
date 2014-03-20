@@ -10,7 +10,6 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import BlueScope::*;
 import PortalMemory::*;
 import Dma::*;
 import DmaUtils::*;

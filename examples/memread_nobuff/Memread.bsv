@@ -22,7 +22,6 @@
 
 import FIFO::*;
 import FIFOF::*;
-import GetPutF::*;
 import Vector::*;
 
 import Dma::*;
