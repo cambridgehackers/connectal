@@ -414,6 +414,7 @@ void* PortalPoller::portalExec_event(int timeout)
 	fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
 	return (void*)rc;
     }
+    int mcnt = 0;
     for (int i = 0; i < numFds; i++) {
       if (!portal_wrappers) {
         fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
@@ -434,10 +435,13 @@ void* PortalPoller::portalExec_event(int timeout)
           fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
         }
         instance->handleMessage(queue_status-1);
+	mcnt++;
       }
       // re-enable interrupt which was disabled by portal_isr
       ENABLE_INTERRUPTS(instance);
     }
+    //if(timeout == -1 && !mcnt)
+    //  fprintf(stderr, "poll returned even though no messages were detected\n");
     return NULL;
 }
 

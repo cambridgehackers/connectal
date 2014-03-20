@@ -14,7 +14,6 @@ package PcieSplitter;
 // the other.
 
 import GetPut       :: *;
-import GetPutF      :: *;
 import Connectable  :: *;
 import Vector       :: *;
 import FIFO         :: *;
@@ -1060,13 +1059,11 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
    endrule: traceTlpToBus
 
    rule doTracing if (fromPcie || toPcie);
-      TLPData#(16) fromtlp = (fromPcie) ? fromPcieTlp : unpack(0);
-      TLPData#(16)   totlp =   (toPcie) ?   toPcieTlp : unpack(0);
-      TimestampedTlpData fromttd = TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: fromtlp };
+      TimestampedTlpData fromttd = fromPcie ? TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: fromPcieTlp } : unpack(0);
       csr.fromPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.fromPcieTraceBramWrAddr), datain: fromttd });
       csr.fromPcieTraceBramWrAddr <= csr.fromPcieTraceBramWrAddr + 1;
 
-      TimestampedTlpData   tottd = TimestampedTlpData { timestamp: timestamp, source: 7'h08, tlp: totlp };
+      TimestampedTlpData   tottd = toPcie ? TimestampedTlpData { timestamp: timestamp, source: 7'h08, tlp: toPcieTlp } : unpack(0);
       csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: tottd });
       csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
    endrule

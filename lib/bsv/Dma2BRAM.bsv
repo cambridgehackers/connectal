@@ -29,7 +29,6 @@ import FIFOF::*;
 import SpecialFIFOs::*;
 
 import BRAMFIFOFLevel::*;
-import GetPutF::*;
 import Dma::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;

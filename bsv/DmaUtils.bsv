@@ -29,7 +29,7 @@ import FIFOF::*;
 import SpecialFIFOs::*;
 
 import BRAMFIFOFLevel::*;
-import GetPutF::*;
+import GetPut::*;
 import Dma::*;
 
 //
@@ -72,27 +72,21 @@ module mkDmaReadBuffer(DmaReadBuffer#(bsz, maxBurst))
    Bit#(TAdd#(1,TLog#(maxBurst))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
 
    interface DmaReadServer dmaServer;
-      interface PutF readReq = toPutF(reqOutstanding);
-      interface GetF readData = toGetF(readBuffer);
+      interface Put readReq = toPut(reqOutstanding);
+      interface Get readData = toGet(readBuffer);
    endinterface
    interface DmaReadClient dmaClient;
-      interface GetF readReq;
+      interface Get readReq;
 	 method ActionValue#(DmaRequest) get if (readBuffer.lowWater(sreq));
 	    reqOutstanding.deq;
 	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
 	    return reqOutstanding.first;
 	 endmethod
-         method Bool notEmpty();
-	    return readBuffer.lowWater(sreq);
-	 endmethod
       endinterface
-      interface PutF readData;
+      interface Put readData;
 	 method Action put(DmaData#(bsz) x);
 	    readBuffer.fifo.enq(x);
 	    unfulfilled.decrement(1);
-	 endmethod
-	 method notFull();
-	    return readBuffer.fifo.notFull();
 	 endmethod
       endinterface
    endinterface
@@ -117,31 +111,25 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, maxBurst))
    Bit#(TAdd#(1,TLog#(maxBurst))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
 
    interface DmaWriteServer dmaServer;
-      interface PutF writeReq = toPutF(reqOutstanding);
-      interface PutF writeData = toPutF(writeBuffer);
-      interface GetF writeDone = toGetF(doneTags);
+      interface Put writeReq = toPut(reqOutstanding);
+      interface Put writeData = toPut(writeBuffer);
+      interface Get writeDone = toGet(doneTags);
    endinterface
    interface DmaWriteClient dmaClient;
-      interface GetF writeReq;
+      interface Get writeReq;
 	 method ActionValue#(DmaRequest) get if (writeBuffer.highWater(sreq));
 	    reqOutstanding.deq;
 	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
 	    return reqOutstanding.first;
 	 endmethod
-	 method Bool notEmpty();
-	    return writeBuffer.highWater(sreq);
-	 endmethod
       endinterface
-      interface GetF writeData;
+      interface Get writeData;
 	 method ActionValue#(DmaData#(bsz)) get();
 	    unfulfilled.decrement(1);
 	    writeBuffer.fifo.deq;
 	    return writeBuffer.fifo.first;
 	 endmethod
-	 method Bool notEmpty();
-	    return writeBuffer.fifo.notEmpty;
-	 endmethod
       endinterface
-      interface PutF writeDone = toPutF(doneTags);
+      interface Put writeDone = toPut(doneTags);
    endinterface
 endmodule

@@ -22,8 +22,8 @@
 
 import Vector::*;
 import FIFOF::*;
-import GetPutF::*;
 import FIFO::*;
+import GetPut::*;
 
 import PortalMemory::*;
 import Dma::*;
@@ -70,18 +70,15 @@ module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
    endmethod
    
    interface DmaReadClient dmaClient;
-      interface GetF readReq;
+      interface Get readReq;
 	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
 	    //$display("mkMemreadEngine::readReq: ptr=%d", pointer);
 	    return DmaRequest { pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0 };
 	 endmethod
-	 method Bool notEmpty();
-	    return (reqCnt < numBeats);
-	 endmethod
       endinterface
-      interface PutF readData;
+      interface Put readData;
 	 method Action put(DmaData#(busWidth) d);
 	    if (respCnt+1 == wf.first) begin
 	       ff.enq(True);
@@ -92,10 +89,6 @@ module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
 	       respCnt <= respCnt+1;
 	    end
 	    f.enq(d.data);
-	 endmethod
-	 method Bool notFull();
-	    let rv = (respCnt+1 == wf.first) ? ff.notFull : True;
-	    return f.notFull && True;
 	 endmethod
       endinterface
    endinterface   

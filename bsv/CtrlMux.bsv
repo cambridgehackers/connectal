@@ -28,7 +28,6 @@ import GetPut::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 import FIFO::*;
-import GetPutF::*;
 
 import AxiMasterSlave::*;
 import Portal::*;
@@ -56,6 +55,75 @@ module mkInterruptMux#(Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (ReadOn
 
 endmodule
 
+module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
+		      Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Slave#(_a,_b,_c))
+
+   provisos(Add#(1,numPortals,numInputs),
+	    Add#(1,numInputs,numIfcs),
+	    Add#(nz, TLog#(numIfcs), 4));
+   
+   Axi3Slave#(_a,_b,_c) out_of_range <- mkAxi3SlaveOutOfRange;
+   Vector#(numIfcs, Axi3Slave#(_a,_b,_c)) ifcs = append(cons(dir.portalIfc.ctrl,map(getCtrl, portals)),cons(out_of_range, nil));
+   let port_sel_low = valueOf(aw);
+   let port_sel_high = valueOf(TAdd#(3,aw));
+   function Bit#(4) psel(Bit#(_a) a);
+      return a[port_sel_high:port_sel_low];
+   endfunction
+   
+   FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
+   Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
+   
+   FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
+   Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
+   
+   interface Put req_aw;
+      method Action put(Axi3WriteRequest#(_a,_c) req);
+	 Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.address));
+	 if (wsv > fromInteger(valueOf(numInputs)))
+	    wsv = fromInteger(valueOf(numInputs));
+	 ifcs[wsv].req_aw.put(req);
+	 ws <= wsv;
+	 req_aw_fifo.enq(?);
+	 if (wsv > 0)
+	    dir.writeEvent <= ?;
+      endmethod
+   endinterface
+   interface Put resp_write;
+      method Action put(Axi3WriteData#(_b,_c) wdata);
+	 ifcs[ws].resp_write.put(wdata);
+      endmethod
+   endinterface
+   interface Get resp_b;
+      method ActionValue#(Axi3WriteResponse#(_c)) get();
+	 let rv <- ifcs[ws].resp_b.get();
+	 req_aw_fifo.deq;
+	 return rv;
+      endmethod
+   endinterface
+   interface Put req_ar;
+      method Action put(Axi3ReadRequest#(_a,_c) req);
+	 Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.address)); 
+	 if (rsv > fromInteger(valueOf(numInputs)))
+	    rsv = fromInteger(valueOf(numInputs));
+	 ifcs[rsv].req_ar.put(req);
+	 if (rsv > 0)
+	    dir.readEvent <= ?;
+	 req_ar_fifo.enq(?);
+	 rs <= rsv;
+      endmethod
+   endinterface
+   interface Get resp_read;
+      method ActionValue#(Axi3ReadResponse#(_b,_c)) get();
+	 let rv <- ifcs[rs].resp_read.get();
+	 req_ar_fifo.deq;
+	 return rv;
+      endmethod
+   endinterface
+   
+endmodule
+
+/*
+ 
 module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 		      Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (Axi3Slave#(_a,_b,_c))
 
@@ -187,3 +255,4 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
    endinterface
    
 endmodule
+*/

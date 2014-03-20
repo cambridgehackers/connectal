@@ -29,7 +29,6 @@
 import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
-import GetPutF::*;
 import Vector::*;
 import BRAM::*;
 import Gearbox::*;

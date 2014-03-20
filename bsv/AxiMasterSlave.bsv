@@ -25,7 +25,21 @@ import FIFO::*;
 import GetPut::*;
 import Connectable::*;
 import RegFile::*;
-import GetPutF::*;
+
+
+typeclass RegToWriteOnly#(type a);
+   function WriteOnly#(a) regToWriteOnly(Reg#(a) x);
+endtypeclass
+
+instance RegToWriteOnly#(a);
+   function WriteOnly#(a) regToWriteOnly(Reg#(a) x);
+      return (interface WriteOnly;
+		 method Action _write(a v);
+		    x._write(v);
+		 endmethod
+	      endinterface);
+   endfunction
+endinstance
 
 typedef struct {
    Bit#(addrWidth) address;
@@ -81,11 +95,11 @@ typedef struct {
     Bit#(idWidth) id;
 } Axi3WriteResponse#(type idWidth) deriving (Bits);
 
-function GetF#(Axi3ReadResponse#(_b,_c)) get_resp_read(Axi3Slave#(_a,_b,_c) x);
+function Get#(Axi3ReadResponse#(_b,_c)) get_resp_read(Axi3Slave#(_a,_b,_c) x);
    return x.resp_read;
 endfunction
 
-function GetF#(Axi3WriteResponse#(_c)) get_resp_b(Axi3Slave#(_a,_b,_c) x);
+function Get#(Axi3WriteResponse#(_c)) get_resp_b(Axi3Slave#(_a,_b,_c) x);
    return x.resp_b;
 endfunction
 
@@ -99,10 +113,10 @@ endinterface
 
 interface Axi3Slave#(type addrWidth, type busWidth, type idWidth);
    interface Put#(Axi3ReadRequest#(addrWidth, idWidth)) req_ar;
-   interface GetF#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
+   interface Get#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
    interface Put#(Axi3WriteRequest#(addrWidth, idWidth)) req_aw;
    interface Put#(Axi3WriteData#(busWidth, idWidth)) resp_write;
-   interface GetF#(Axi3WriteResponse#(idWidth)) resp_b;
+   interface Get#(Axi3WriteResponse#(idWidth)) resp_b;
 endinterface
 
 function Put#(t) null_put();
@@ -171,7 +185,7 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
    	 req_ar_fifo.enq(req);
       endmethod
    endinterface: req_ar
-   interface GetF resp_read;
+   interface Get resp_read;
       method ActionValue#(Axi3ReadResponse#(busWidth,idWidth)) get();
    	 let addr = readAddrReg;
    	 let id = readIdReg;
@@ -189,9 +203,6 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
          readAddrReg <= addr + 1;
    	 readIdReg <= id;
          return Axi3ReadResponse { data: data, last: (burstCount == 1) ? 1 : 0, id: id, resp: 0 };
-      endmethod
-      method Bool notEmpty();
-	 return (readBurstCountReg==0) ? req_ar_fifo.notEmpty : True;
       endmethod
    endinterface: resp_read
    interface Put req_aw;
@@ -220,14 +231,11 @@ module mkAxi3SlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) 
                writeRespFifo.enq(0);
       endmethod
    endinterface: resp_write
-   interface GetF resp_b;
+   interface Get resp_b;
       method ActionValue#(Axi3WriteResponse#(idWidth)) get();
          writeRespFifo.deq;
 	 writeIdFifo.deq;
          return Axi3WriteResponse { resp: writeRespFifo.first, id: writeIdFifo.first };
-      endmethod
-      method Bool notEmpty();
-	 return (writeRespFifo.notEmpty() && writeIdFifo.notEmpty());
       endmethod
    endinterface: resp_b
 endmodule
@@ -244,3 +252,4 @@ instance Connectable#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrW
 
    endmodule
 endinstance
+

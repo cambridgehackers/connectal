@@ -23,7 +23,6 @@
 import FIFOF        :: *;
 import Vector       :: *;
 import GetPut       :: *;
-import GetPutF      :: *;
 import Connectable  :: *;
 import PCIE         :: *;
 import DefaultValue :: *;

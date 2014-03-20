@@ -22,8 +22,8 @@
 
 import Vector::*;
 import FIFOF::*;
-import GetPutF::*;
 import FIFO::*;
+import GetPut::*;
 
 import PortalMemory::*;
 import Dma::*;
@@ -72,35 +72,26 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
    endmethod
 
    interface DmaWriteClient dmaClient;
-      interface GetF writeReq;
+      interface Get writeReq;
 	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
 	    acks.enq(reqCnt+extend(burstLen) >= numBeats);
 	    return DmaRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0};
 	 endmethod
-	 method Bool notEmpty;
-	    return (reqCnt < numBeats && acks.notEmpty);
-	 endmethod
       endinterface
-      interface GetF writeData;
+      interface Get writeData;
 	 method ActionValue#(DmaData#(busWidth)) get();
 	    f.deq;
 	    return DmaData{data:f.first, tag: 0};
 	 endmethod
-	 method Bool notEmpty;
-	    return f.notEmpty;
-	 endmethod
       endinterface
-      interface PutF writeDone;
+      interface Put writeDone;
 	 method Action put(Bit#(6) tag);
 	    if (acks.first)
 	       ff.enq(True);
 	    acks.deq;
 	    //$display("writeDone: tag=%d", tag);
-	 endmethod
-	 method Bool notFull;
-	    return acks.first ? ff.notFull : True;
 	 endmethod
       endinterface
    endinterface

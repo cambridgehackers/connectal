@@ -24,7 +24,6 @@
 import FIFO::*;
 import Vector::*;
 import GetPut::*;
-import GetPutF::*;
 import ClientServer::*;
 import Assert::*;
 

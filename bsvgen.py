@@ -46,7 +46,6 @@ import Vector::*;
 import SpecialFIFOs::*;
 import PortalMemory::*;
 import Portal::*;
-import GetPutF::*;
 %(extraImports)s
 
 typedef struct {
@@ -199,13 +198,10 @@ portalIfcTemplate='''
                 axiSlaveWriteIdReg <= wid;
             endmethod
         endinterface
-        interface GetF resp_b;
+        interface Get resp_b;
             method ActionValue#(Axi3WriteResponse#(12)) get();
                 axiSlaveBrespFifo.deq;
                 return axiSlaveBrespFifo.first;
-            endmethod
-            method Bool notEmpty();
-                return axiSlaveBrespFifo.notEmpty;
             endmethod
         endinterface
         interface Put req_ar;
@@ -213,21 +209,13 @@ portalIfcTemplate='''
                 req_ar_fifo.enq(req);
             endmethod
         endinterface
-        interface GetF resp_read;
+        interface Get resp_read;
             method ActionValue#(Axi3ReadResponse#(32,12)) get();
                 let info = axiSlaveReadReqInfoFifo.first();
                 axiSlaveReadReqInfoFifo.deq();
                 let v = axiSlaveReadDataFifos[info.select].first;
                 axiSlaveReadDataFifos[info.select].deq;
                 return Axi3ReadResponse { data: v, last: info.last, id: info.id, resp: 0 };
-            endmethod
-            method Bool notEmpty();
-                Bool rv = False;
-                if(axiSlaveReadReqInfoFifo.notEmpty) begin
-                    let info = axiSlaveReadReqInfoFifo.first();
-                    rv = axiSlaveReadDataFifos[info.select].notEmpty();
-                end
-                return rv;
             endmethod
         endinterface
     endinterface

@@ -22,7 +22,6 @@
 
 import FIFOF        :: *;
 import GetPut       :: *;
-import GetPutF      :: *;
 import Connectable  :: *;
 import PCIE         :: *;
 import DefaultValue :: *;
@@ -282,13 +281,12 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
            endmethod
        endinterface : resp_write
-       interface GetF resp_b;
+       interface Get resp_b;
 	   method ActionValue#(Axi3WriteResponse#(6)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
 	      return Axi3WriteResponse { resp: 0, id: truncate(tag)};
            endmethod
-	   method Bool notEmpty() = doneTag.notEmpty();
 	endinterface: resp_b
        interface Put req_ar;
 	   method Action put(Axi3ReadRequest#(40,6) req) if (writeDwCount == 0);
@@ -330,7 +328,7 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	       tlpOutFifo.enq(tlp);
            endmethod
        endinterface : req_ar
-       interface GetF resp_read;
+       interface Get resp_read;
 	   method ActionValue#(Axi3ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords)))
 									&& completionTagMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
@@ -342,9 +340,6 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
 	      return Axi3ReadResponse { data: v, last: 0, id: truncate(tag_v[0]), resp: 0 };
            endmethod
-	  method Bool notEmpty();
-	     return (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
-	  endmethod
 	endinterface: resp_read
     endinterface: slave
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;

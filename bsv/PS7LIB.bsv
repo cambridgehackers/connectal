@@ -30,7 +30,6 @@ import PPS7LIB::*;
 import CtrlMux::*;
 import Portal::*;
 import AxiMasterSlave::*;
-import GetPutF::*;
 import XbsvXilinxCells::*;
 
 interface AxiMasterCommon;
@@ -338,7 +337,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
 	            vtopsw_axi_gp[i].wvalid <= 1;
                 endmethod
             endinterface
-            interface GetF resp_read;
+            interface Get resp_read;
                 method ActionValue#(Axi3ReadResponse#(32, 6)) get() if (vs_axi_gp[i].rvalid() != 0);
                     Axi3ReadResponse#(32, 6) v;
                     v.id = vs_axi_gp[i].rid();
@@ -349,11 +348,8 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
 	            vtopsw_axi_gp[i].rready <= 1;
                     return v;
                 endmethod
-		method Bool notEmpty();
-		    return (vs_axi_gp[i].rvalid() != 0);
-	        endmethod
 	    endinterface
-            interface GetF resp_b;
+            interface Get resp_b;
                 method ActionValue#(Axi3WriteResponse#(6)) get() if (vs_axi_gp[i].bvalid() != 0);
                     Axi3WriteResponse#(6) v;
                     v.id = vs_axi_gp[i].bid();
@@ -362,9 +358,6 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
 	            vtopsw_axi_gp[i].bready <= 1;
                     return v;
                 endmethod
-	        method Bool notEmpty();
-		    return (vs_axi_gp[i].bvalid() != 0);
-	        endmethod
               endinterface
             endinterface
             method aresetn = vs_axi_gp[i].aresetn;
@@ -431,7 +424,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
 	            vtopsw_axi_hp[i].wvalid <= 1;
                 endmethod
             endinterface
-            interface GetF resp_read;
+            interface Get resp_read;
                 method ActionValue#(Axi3ReadResponse#(64,6)) get() if (vs_axi_hp[i].rvalid() != 0);
                     Axi3ReadResponse#(64, 6) v;
                     v.id = vs_axi_hp[i].rid();
@@ -442,11 +435,8 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
 	            vtopsw_axi_hp[i].rready <= 1;
                     return v;
                 endmethod
-	        method Bool notEmpty();
-		    return (vs_axi_hp[i].rvalid() != 0);
-                endmethod
             endinterface
-            interface GetF resp_b;
+            interface Get resp_b;
                 method ActionValue#(Axi3WriteResponse#(6)) get() if (vs_axi_hp[i].bvalid() != 0);
                     Axi3WriteResponse#(6) v;
                     v.id = vs_axi_hp[i].bid();
@@ -454,9 +444,6 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
 
 		    vtopsw_axi_hp[i].bready <= 1;
                     return v;
-                endmethod
-	        method Bool notEmpty();
-		    return (vs_axi_hp[i].bvalid() != 0);
                 endmethod
               endinterface: resp_b
             endinterface: server

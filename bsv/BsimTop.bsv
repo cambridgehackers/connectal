@@ -31,7 +31,6 @@ import Portal            :: *;
 import AxiMasterSlave    :: *;
 import Leds              :: *;
 import Top               :: *;
-import GetPutF           :: *;
 import AxiMasterSlave    :: *;
 
 // implemented in BsimCtrl.cxx
@@ -213,7 +212,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	    readDelayFifo.enq(tuple2(cycle,req));
 	 endmethod
       endinterface
-      interface GetF resp_read;
+      interface Get resp_read;
 	 method ActionValue#(Axi3ReadResponse#(serverBusWidth,serverIdWidth)) get if (readLen > 0);
 	    let handle = readAddrr[39:32];
 	    let addr = readAddrr[31:0];
@@ -222,9 +221,6 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	    readAddrr <= readAddrr + fromInteger(valueOf(serverBusWidth)/8);
 	    //$display("mkBsimHost::resp_read id=%d %d", readId, readLen); 
 	    return Axi3ReadResponse { data: v, resp: 0, last: pack(readLen == 1), id: readId};
-	 endmethod
-	 method Bool notEmpty();
-	    return (readLen > 0);
 	 endmethod
       endinterface
       interface Put req_aw;
@@ -244,13 +240,10 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	       bFifo.enq(Axi3WriteResponse { id: writeId, resp: 0 });
 	 endmethod
       endinterface
-      interface GetF resp_b;
+      interface Get resp_b;
 	 method ActionValue#(Axi3WriteResponse#(serverIdWidth)) get;
 	    bFifo.deq();
 	    return bFifo.first();
-	 endmethod
-	 method Bool notEmpty();
-	    return bFifo.notEmpty();
 	 endmethod
       endinterface
    endinterface

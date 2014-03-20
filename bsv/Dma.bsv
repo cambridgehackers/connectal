@@ -24,10 +24,10 @@
 // BSV Libraries
 import FIFOF::*;
 import Adapter::*;
-import GetPutF::*;
 import Vector::*;
 import Connectable::*;
 import BRAMFIFO::*;
+import GetPut::*;
 
 // XBSV Libraries
 import PortalMemory::*;
@@ -49,25 +49,25 @@ typedef struct {
    } DmaData#(numeric type dsz) deriving (Bits);
 
 interface DmaReadClient#(numeric type dsz);
-   interface GetF#(DmaRequest)    readReq;
-   interface PutF#(DmaData#(dsz)) readData;
+   interface Get#(DmaRequest)    readReq;
+   interface Put#(DmaData#(dsz)) readData;
 endinterface
 
 interface DmaWriteClient#(numeric type dsz);
-   interface GetF#(DmaRequest)    writeReq;
-   interface GetF#(DmaData#(dsz)) writeData;
-   interface PutF#(Bit#(6))       writeDone;
+   interface Get#(DmaRequest)    writeReq;
+   interface Get#(DmaData#(dsz)) writeData;
+   interface Put#(Bit#(6))       writeDone;
 endinterface
 
 interface DmaReadServer#(numeric type dsz);
-   interface PutF#(DmaRequest) readReq;
-   interface GetF#(DmaData#(dsz))     readData;
+   interface Put#(DmaRequest) readReq;
+   interface Get#(DmaData#(dsz))     readData;
 endinterface
 
 interface DmaWriteServer#(numeric type dsz);
-   interface PutF#(DmaRequest) writeReq;
-   interface PutF#(DmaData#(dsz))     writeData;
-   interface GetF#(Bit#(6))           writeDone;
+   interface Put#(DmaRequest) writeReq;
+   interface Put#(DmaData#(dsz))     writeData;
+   interface Get#(Bit#(6))           writeDone;
 endinterface
 
 interface DmaDbg;
