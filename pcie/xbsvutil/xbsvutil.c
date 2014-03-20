@@ -150,6 +150,7 @@ static int process(const char* file, tMode mode, unsigned int strict)
     int res, i;
 
     // disable tracing
+    traceInfo.trace = 0;
     res = ioctl(fd,BNOC_TRACE,&traceInfo);
     // set pointer to 0
     //res = ioctl(fd,BNOC_SEQNO,&seqno);
