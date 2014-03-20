@@ -48,6 +48,8 @@
 #ifdef ZYNQ
 #include <android/log.h>
 #include <zynqportal.h>
+#else
+#include <../drivers/pcieportal/bluenoc.h>
 #endif
 
 #include "portal.h"
@@ -573,3 +575,32 @@ void Directory::scan(int display)
   }
 }
 
+void Directory::traceStart()
+{
+#ifndef ZYNQ
+  tTraceInfo traceInfo;
+  traceInfo.trace = 1;
+  int res = ioctl(fd,BNOC_TRACE,&traceInfo);
+  if (res)
+    fprintf(stderr, "Failed to start tracing. errno=%d\n", errno);
+#endif
+}
+
+void Directory::traceEnd()
+{
+#ifndef ZYNQ
+  tTraceInfo traceInfo;
+  traceInfo.trace = 0;
+  int res = ioctl(fd,BNOC_TRACE,&traceInfo);
+  if (res)
+    fprintf(stderr, "Failed to end tracing. errno=%d\n", errno);
+#endif
+}
+void portalTrace_start()
+{
+  pdir->traceStart();
+}
+void portalTrace_stop()
+{
+  pdir->traceEnd();
+}
