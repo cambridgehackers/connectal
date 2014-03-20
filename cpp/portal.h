@@ -139,7 +139,7 @@ class Directory : public PortalInternal
   uint64_t cycle_count();
   void printDbgRequestIntervals();
   void traceStart();
-  void traceEnd();
+  void traceStop();
 };
 
 #ifdef MMAP_HW

@@ -586,14 +586,14 @@ void Directory::traceStart()
 #endif
 }
 
-void Directory::traceEnd()
+void Directory::traceStop()
 {
 #ifndef ZYNQ
   tTraceInfo traceInfo;
   traceInfo.trace = 0;
   int res = ioctl(fd,BNOC_TRACE,&traceInfo);
   if (res)
-    fprintf(stderr, "Failed to end tracing. errno=%d\n", errno);
+    fprintf(stderr, "Failed to stop tracing. errno=%d\n", errno);
 #endif
 }
 void portalTrace_start()
@@ -602,5 +602,5 @@ void portalTrace_start()
 }
 void portalTrace_stop()
 {
-  pdir->traceEnd();
+  pdir->traceStop();
 }
