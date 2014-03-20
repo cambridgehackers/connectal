@@ -81,7 +81,7 @@ typedef struct tBoard {
         tBoardInfo        info; /* board identification fields */
         unsigned int      uses_msix;
         unsigned int      irq_num;
-        wait_queue_head_t intr_wq; /* used for interrupt notifications */
+        wait_queue_head_t wait_queue; /* used for interrupt notifications */
         unsigned int      activation_level; /* activation status */
         unsigned int      open_count;
 } tBoard;
@@ -105,8 +105,9 @@ static irqreturn_t intr_handler(int irq, void *brd)
 {
         tBoard *this_board = brd;
 
-        //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_board->board_number);
-        wake_up_interruptible(&(this_board->intr_wq)); 
+        //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_board->info.board_number);
+        printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_board->info.board_number);
+        wake_up_interruptible(&(this_board->wait_queue)); 
         return IRQ_HANDLED;
 }
 
@@ -129,6 +130,7 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
                 printk(KERN_ERR "%s_%d: Unable to locate board\n", DEV_NAME, this_board_number);
                 return -ENXIO;
         }
+        init_waitqueue_head(&(this_board->wait_queue));
         filp->private_data = (void *) &this_board->portal[this_portal_number];
         /* increment the open file count */
         this_board->open_count += 1; 
@@ -143,25 +145,27 @@ static int bluenoc_release(struct inode *inode, struct file *filp)
 {
         tPortal *this_portal = (tPortal *) filp->private_data;
         /* decrement the open file count */
+        init_waitqueue_head(&(this_portal->board->wait_queue));
         this_portal->board->open_count -= 1;
         //printk(KERN_INFO "%s_%d: Closed device file\n", DEV_NAME, this_board_number);
         return 0;                /* success */
 }
 
 /* poll operation to predict blocking of reads & writes */
-static unsigned int pcieportal_poll(struct file *filp, poll_table * wait)
+static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
 {
         unsigned int mask = 0;
         tPortal *this_portal = (tPortal *) filp->private_data;
         tBoard *this_board = this_portal->board;
 
-        //printk(KERN_INFO "%s_%d: poll function called\n", DEV_NAME, this_board->board_number);
+        //printk(KERN_INFO "%s_%d: poll function called, active %d\n", DEV_NAME, this_board->info.board_number, this_board->activation_level == BLUENOC_ACTIVE);
         if (this_board->activation_level != BLUENOC_ACTIVE)
                 return 0;
-        poll_wait(filp, &this_board->intr_wq, wait);
+        poll_wait(filp, &this_board->wait_queue, poll_table);
 	mask |= POLLIN  | POLLRDNORM; /* readable */
         //mask |= POLLOUT | POLLWRNORM; /* writable */
-        //printk(KERN_INFO "%s_%d: poll return status is %x\n", DEV_NAME, this_board->board_number, mask);
+        //printk(KERN_INFO "%s_%d: poll return status is %x\n", DEV_NAME, this_board->info.board_number, mask);
+        printk(KERN_INFO "%s_%d: poll return status is %x\n", DEV_NAME, this_board->info.board_number, mask);
         return mask;
 }
 
@@ -382,7 +386,6 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         this_board = &board_map[board_number];
         printk(KERN_INFO "%s: board_number = %d\n", DEV_NAME, board_number);
         memset(this_board, 0, sizeof(tBoard));
-        init_waitqueue_head(&(this_board->intr_wq));
         this_board->info.board_number = board_number;
         this_board->pci_dev = dev;
         /* enable the PCI device */
