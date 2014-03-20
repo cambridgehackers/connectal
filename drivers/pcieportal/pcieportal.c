@@ -56,7 +56,8 @@
 #define CSR_RCB_MASK                  ( 782 << 2)
 #define CSR_MAX_READ_REQ_BYTES        ( 783 << 2)
 #define CSR_MAX_PAYLOAD_BYTES         ( 784 << 2)
-#define CSR_TLPDATABRAMWRADDRREG      ( 792 << 2)
+#define CSR_TLPFROMPCIEWRADDRREG      ( 792 << 2)
+#define CSR_TLPTOPCIEWRADDRREG        ( 793 << 2)
 #define CSR_RESETISASSERTED           ( 795 << 2)
 #define CSR_MSIX_ADDR_LO              (4096 << 2)
 #define CSR_MSIX_ADDR_HI              (4097 << 2)
@@ -258,7 +259,8 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
                 err = copy_from_user(&traceInfo, (void __user *) arg, sizeof(tTraceInfo));
                 if (!err) {
                          // update tlpBramWrAddr, which also writes the scratchpad to BRAM
-                         iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
+                         iowrite32(0, this_board->bar0io + CSR_TLPFROMPCIEWRADDRREG);
+                         iowrite32(0, this_board->bar0io + CSR_TLPTOPCIEWRADDRREG);
                          traceInfo.oldTrace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
                          traceInfo.traceLength = ioread32(this_board->bar0io + CSR_TLPTRACELENGTHREG);
 			 if (traceInfo.traceLength == 0xbad0add0) // unimplemented
@@ -430,7 +432,8 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         this_board->activation_level = BARS_MAPPED;
 	// this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
 	// but why is it needed?...
-	iowrite32(0, this_board->bar0io + CSR_TLPDATABRAMWRADDRREG); 
+	iowrite32(0, this_board->bar0io + CSR_TLPFROMPCIEWRADDRREG);
+	iowrite32(0, this_board->bar0io + CSR_TLPTOPCIEWRADDRREG);
 	// enable tracing
         iowrite32(1, this_board->bar0io + CSR_TLPTRACINGREG);
         /* check the magic number in BAR 0 */
