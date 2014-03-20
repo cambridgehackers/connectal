@@ -138,6 +138,8 @@ class Directory : public PortalInternal
   unsigned int get_addrbits(unsigned int id);
   uint64_t cycle_count();
   void printDbgRequestIntervals();
+  void traceStart();
+  void traceStop();
 };
 
 #ifdef MMAP_HW
@@ -164,6 +166,8 @@ void* portalExec_init(void);
 void* portalExec_event(int timeout);
 void portalExec_start();
 void portalExec_end(void);
+void portalTrace_start();
+void portalTrace_stop();
 extern int portalExec_timeout;
 
 #endif // _PORTAL_H_
