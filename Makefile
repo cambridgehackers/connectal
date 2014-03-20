@@ -49,7 +49,7 @@ testnames = echo             \
             flowcontrol      \
             bluescope        \
             bscan            \
-
+	    maxcommonsubseq  \
 
 
 
