@@ -47,8 +47,12 @@ class MaxcommonsubseqIndication : public MaxcommonsubseqIndicationWrapper
 public:
   MaxcommonsubseqIndication(unsigned int id) : MaxcommonsubseqIndicationWrapper(id){};
 
-  virtual void setupComplete() {
-    fprintf(stderr, "setupComplete\n");
+  virtual void setupAComplete() {
+    fprintf(stderr, "setupAComplete\n");
+    sem_post(&setup_sem);
+  }
+  virtual void setupBComplete() {
+    fprintf(stderr, "setupBComplete\n");
     sem_post(&setup_sem);
   }
   virtual void fetchComplete() {
