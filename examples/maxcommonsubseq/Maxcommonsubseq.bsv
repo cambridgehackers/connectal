@@ -25,6 +25,7 @@ import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 import GetPutF::*;
+import StmtFSM::*;
 //import Vector::*;
 import BRAM::*;
 //import Gearbox::*;
@@ -86,9 +87,11 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
   Reg#(Bit#(32)) aLenReg <- mkReg(0);
   Reg#(Bit#(32)) bLenReg <- mkReg(0);
   Reg#(Bit#(32)) rLenReg <- mkReg(0);
+  Reg#(Bit#(32)) copyCountReg <- mkReg(0);
   
    BRAM2Port#(StringIdx, Char) strA  <- mkBRAM2Server(defaultValue);
    BRAM2Port#(StringIdx, Char) strB <- mkBRAM2Server(defaultValue);
+   
 
    BRAM2Port#(LIdx, Bit#(16)) matL <- mkBRAM2Server(defaultValue);
 
@@ -98,17 +101,38 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    mkConnection(n2b.dmaClient, setupB_read_server);
    BRAMWriteClient#(LIdx, 16) l2n <- mkBRAMWriteClient(matL.portB);
 
+   FIFOF#(void) aReady <- mkFIFOF;
+   FIFOF#(void) bReady <- mkFIFOF;
+   Stmt splice =
+   seq
+      action
+	 let ra <- aReady.deq();
+	 $display("Splice A Ready");
+      endaction
+      action
+	 let rb <- aReady.deq();
+	 $display("Splice B Ready");
+      endaction
+      if (aLenReg > bLenReg)
+	 rLenReg <= aLenReg;
+      else
+	 rLenReg <= bLenReg;
+   endseq;
+	 
+   
    // create BRAM Write client for matL
 
    rule finish_setupA;
       $display("finish setupA");
       let x <- n2a.finish;
+      aReady.enq(?);
       indication.setupComplete;
    endrule
 
    rule finish_setupB;
       $display("finish setupB");
       let x <- n2b.finish;
+      bReady.enq(?);
       indication.setupComplete;
    endrule
 
