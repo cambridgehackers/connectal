@@ -79,9 +79,9 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
 	    Log#(p,lp));
    
-  Reg#(Bit#(32)) aLen <- mkreg(0);
-  Reg#(Bit#(32)) bLen <- mkreg(0);
-  Reg#(Bit#(32)) rLen <- mkreg(0);
+  Reg#(Bit#(32)) aLenReg <- mkreg(0);
+  Reg#(Bit#(32)) bLenReg <- mkreg(0);
+  Reg#(Bit#(32)) rLenReg <- mkreg(0);
   
    BRAM2Port#(StringIdx, Char) strA  <- mkBRAM2Server(defaultValue);
    BRAM2Port#(StringIdx, Char) strB <- mkBRAM2Server(defaultValue);
@@ -92,7 +92,45 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    mkConnection(n2a.dmaClient, setupA_read_server);
    BRAMReadClient#(StringIdx,busWidth) n2b <- mkBRAMReadClient(strB.portB);
    mkConnection(n2b.dmaClient, setupB_read_server);
-
+   BRAMWriteClient#(LIdx, Bit#(StringIdx)) l2n <- mkBRAMWrieClient(matL.portB);
 
    // create BRAM Write client for matL
 
+   rule finish_setupA;
+      $display("finish setupA");
+      let x <- n2a.finish;
+      indication.setupComplete;
+   endrule
+
+   rule finish_setupB;
+      $display("finish setupB");
+      let x <- n2b.finish;
+      indication.setupComplete;
+   endrule
+
+   rule finish_fetch;
+      $display("finish fetch");
+      let x <- l2n.finish;
+      indication.fetchComplete;
+   endrule
+
+   method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
+      aLenReg <= strLen;
+      n2a.start(strPointer, 0, pack(truncate(strLen+1)), 0);
+   endmethod
+
+   method Action setupB(Bit#(32) strPointer, Bit#(32) strLen);
+      bLenReg <= strLen;
+      n2b.start(strPointer, 0, pack(truncate(strLen+1)), 0);
+   endmethod
+   
+   method Action fetch(Bit#(32) strPointer, Bit#(32) strLen);
+      rLenReg <= strLen;
+      l2n.start(strPointer, 0, pack(trunate(strLen+1)), 0);
+   endmethod
+
+   method Action start();
+      indication.searchResult(0);
+   endmethod
+
+endmodule
