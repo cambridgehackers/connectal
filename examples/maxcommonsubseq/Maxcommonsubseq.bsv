@@ -25,14 +25,15 @@ import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 import GetPutF::*;
-import Vector::*;
+//import Vector::*;
 import BRAM::*;
-import Gearbox::*;
+//import Gearbox::*;
+import Connectable::*;
 
-import AxiMasterSlave::*;
+//import AxiMasterSlave::*;
 import Dma::*;
 import DmaUtils::*;
-import MPEngine::*;
+import Dma2BRAM::*;
 
 /* This module solves the maximum common subsequence problem.
  * It finds the longest subsequence of characters present in both input strings
@@ -60,10 +61,14 @@ interface MaxcommonsubseqIndication;
    method Action fetchComplete(); 
 endinterface
 
+typedef Bit#(8) Char;
+typedef Bit#(64) DWord;
+typedef Bit#(32) Word;
 
 typedef 128 MaxStringLen;
+typedef 16384 MaxFetchLen;
 typedef Bit#(TLog#(MaxStringLen)) StringIdx;
-typedef Bit#TLog#(MaxStringLen*MaxStringLen)) LIdx;
+typedef Bit#(TLog#(MaxFetchLen)) LIdx;
 
 module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 			DmaReadServer#(busWidth)   setupA_read_server,
@@ -76,23 +81,22 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 	    Add#(1, b__, nc),
 	    Add#(c__, 32, busWidth),
 	    Add#(1, d__, TDiv#(busWidth, 32)),
-	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
-	    Log#(p,lp));
+	    Mul#(TDiv#(busWidth, 32), 32, busWidth));
    
-  Reg#(Bit#(32)) aLenReg <- mkreg(0);
-  Reg#(Bit#(32)) bLenReg <- mkreg(0);
-  Reg#(Bit#(32)) rLenReg <- mkreg(0);
+  Reg#(Bit#(32)) aLenReg <- mkReg(0);
+  Reg#(Bit#(32)) bLenReg <- mkReg(0);
+  Reg#(Bit#(32)) rLenReg <- mkReg(0);
   
    BRAM2Port#(StringIdx, Char) strA  <- mkBRAM2Server(defaultValue);
    BRAM2Port#(StringIdx, Char) strB <- mkBRAM2Server(defaultValue);
 
-   BRAM2Port#(LIdx, Bit#(StringIdx)) matL <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(LIdx, Bit#(16)) matL <- mkBRAM2Server(defaultValue);
 
    BRAMReadClient#(StringIdx,busWidth) n2a <- mkBRAMReadClient(strA.portB);
    mkConnection(n2a.dmaClient, setupA_read_server);
    BRAMReadClient#(StringIdx,busWidth) n2b <- mkBRAMReadClient(strB.portB);
    mkConnection(n2b.dmaClient, setupB_read_server);
-   BRAMWriteClient#(LIdx, Bit#(StringIdx)) l2n <- mkBRAMWrieClient(matL.portB);
+   BRAMWriteClient#(LIdx, 16) l2n <- mkBRAMWriteClient(matL.portB);
 
    // create BRAM Write client for matL
 
@@ -116,17 +120,17 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
       aLenReg <= strLen;
-      n2a.start(strPointer, 0, pack(truncate(strLen+1)), 0);
+      n2a.start(strPointer, 0, pack(truncate(strLen)), 0);
    endmethod
 
    method Action setupB(Bit#(32) strPointer, Bit#(32) strLen);
       bLenReg <= strLen;
-      n2b.start(strPointer, 0, pack(truncate(strLen+1)), 0);
+      n2b.start(strPointer, 0, pack(truncate(strLen)), 0);
    endmethod
    
    method Action fetch(Bit#(32) strPointer, Bit#(32) strLen);
       rLenReg <= strLen;
-      l2n.start(strPointer, 0, pack(trunate(strLen+1)), 0);
+      l2n.start(strPointer, 0, pack(trunate(strLen)), 0);
    endmethod
 
    method Action start();
