@@ -63,13 +63,11 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    portals[2] = dmaIndicationProxy.portalIfc;
    portals[3] = dmaRequestWrapper.portalIfc; 
 
-   let interrupt_mux <- mkInterruptMux(portals);
-   
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkAxiSlaveMux(dir,portals);
 
-   interface interrupt = interrupt_mux;
+   interface interrupt = getInterruptVector(portals);
    interface ctrl = ctrl_mux;
    interface m_axi = dma.m_axi;
    interface leds = ?;

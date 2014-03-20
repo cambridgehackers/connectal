@@ -37,13 +37,12 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    portals[0] = echoIndicationProxy.portalIfc;
    portals[1] = echoRequestWrapper.portalIfc; 
    portals[2] = swallowWrapper.portalIfc; 
-   let interrupt_mux <- mkInterruptMux(portals);
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkAxiSlaveMux(dir,portals);
    
-   interface interrupt = interrupt_mux;
+   interface interrupt = getInterruptVector(portals);
    interface ctrl = ctrl_mux;
    interface m_axi = null_axi_master;
    interface leds = echoRequestInternal.leds;

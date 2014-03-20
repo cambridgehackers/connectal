@@ -34,12 +34,10 @@ import Portal::*;
 import Directory::*;
 
 
-module mkInterruptMux#(Vector#(numPortals,Portal#(aw,_a,_b,_c)) portals) (ReadOnly#(Bool))
+module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bool))
 
    provisos(Add#(nz, TLog#(numPortals), 4),
 	    Add#(1, a__, numPortals));
-   
-   Vector#(numPortals, ReadOnly#(Bool)) inputs = map(getInterrupt, portals);
    
    function Bool my_read(ReadOnly#(Bool) x);
       return x._read;

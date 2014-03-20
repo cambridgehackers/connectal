@@ -27,7 +27,6 @@ import Connectable  :: *;
 import PCIE         :: *;
 import DefaultValue :: *;
 
-import PcieSplitter   :: *;
 import AxiMasterSlave :: *;
 
 //
@@ -38,12 +37,13 @@ interface AxiMasterEngine;
     interface Put#(TLPData#(16))   tlp_in;
     interface Get#(TLPData#(16))   tlp_out;
     interface Axi3Master#(32,32,12) master;
-    interface WriteOnly#(Maybe#(Bit#(4))) interruptRequested;
+    interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
     interface Reg#(Bit#(12))       bTag;
 endinterface
 
-module mkAxiMasterEngine#(Vector#(16,MSIX_Entry) msixEntries, PciId my_id)(AxiMasterEngine);
-    Reg#(Maybe#(Bit#(4))) interruptRequestedReg <- mkReg(tagged Invalid);
+(* synthesize *)
+module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
+    FIFOF#(Tuple2#(Bit#(64),Bit#(32))) interruptRequestFifo <- mkSizedFIFOF(16);
     Reg#(Maybe#(Bit#(32))) interruptSecondHalf <- mkReg(tagged Invalid);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bit#(4)) timerReg <- mkReg(0);
@@ -59,21 +59,21 @@ module mkAxiMasterEngine#(Vector#(16,MSIX_Entry) msixEntries, PciId my_id)(AxiMa
         timerReg <= timerReg - 1;
     endrule
 
-    rule interruptTlpOut if (interruptRequestedReg matches tagged Valid .interruptNum &&& interruptSecondHalf matches tagged Invalid);
+    rule interruptTlpOut if (interruptRequestFifo.notEmpty &&& interruptSecondHalf matches tagged Invalid);
        TLPData#(16) tlp = defaultValue;
        tlp.sof = True;
        tlp.eof = False;
        tlp.hit = 7'h00;
        tlp.be = 16'hffff;
 
+       let interruptRequested = True;
        let sendInterrupt = False;
-       let interruptRequested = interruptRequestedReg;
 
-       Bit#(64) interruptAddr = {msixEntries[interruptNum].addr_hi, msixEntries[interruptNum].addr_lo};
-       Bit#(32) interruptData = msixEntries[interruptNum].msg_data;
+       Bit#(64) interruptAddr = tpl_1(interruptRequestFifo.first);
+       Bit#(32) interruptData = tpl_2(interruptRequestFifo.first);
        if (interruptAddr == '0) begin
 	  // do not write to 0 -- it wedges the host
-	  interruptRequested = tagged Invalid;
+	  interruptRequested = False;
        end
        else if (interruptAddr[63:32] == '0) begin
           TLPMemoryIO3DWHeader hdr_3dw = defaultValue();
@@ -89,7 +89,7 @@ module mkAxiMasterEngine#(Vector#(16,MSIX_Entry) msixEntries, PciId my_id)(AxiMa
 	  tlp.data = pack(hdr_3dw);
 	  tlp.eof = True;
 	  sendInterrupt = True;
-	  interruptRequested = tagged Invalid;
+	  interruptRequested = False;
        end
        else begin
 	  TLPMemory4DWHeader hdr_4dw = defaultValue;
@@ -108,8 +108,8 @@ module mkAxiMasterEngine#(Vector#(16,MSIX_Entry) msixEntries, PciId my_id)(AxiMa
 	  interruptSecondHalf <= tagged Valid interruptData;
        end
 
-       if (interruptRequested matches tagged Invalid)
-	  interruptRequestedReg <= tagged Invalid;
+       if (!interruptRequested)
+	  interruptRequestFifo.deq();
        if (sendInterrupt)
 	  tlpOutFifo.enq(tlp);
     endrule
@@ -123,7 +123,7 @@ module mkAxiMasterEngine#(Vector#(16,MSIX_Entry) msixEntries, PciId my_id)(AxiMa
        tlp.data[7+8*15:8*12] = byteSwap(interruptData);
        tlpOutFifo.enq(tlp);
        interruptSecondHalf <= tagged Invalid;
-       interruptRequestedReg <= tagged Invalid;
+       interruptRequestFifo.deq();
     endrule
 
     interface Put tlp_in;
@@ -208,6 +208,10 @@ module mkAxiMasterEngine#(Vector#(16,MSIX_Entry) msixEntries, PciId my_id)(AxiMa
 	    endmethod
 	endinterface: resp_read
     endinterface: master
-    interface WriteOnly interruptRequested = regToWriteOnly(interruptRequestedReg);
+    interface Put interruptRequest;
+       method Action put(Tuple2#(Bit#(64),Bit#(32)) intr);
+          interruptRequestFifo.enq(intr);
+       endmethod
+    endinterface
     interface Reg bTag = bTagReg;
 endmodule: mkAxiMasterEngine

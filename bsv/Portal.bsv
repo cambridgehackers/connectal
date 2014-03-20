@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 
+import Vector::*;
 import AxiMasterSlave::*;
 import Leds::*;
 
@@ -45,12 +46,19 @@ function Axi3Slave#(_a,_b,_c) getCtrl(Portal#(_n,_a,_b,_c) p);
    return p.ctrl;
 endfunction
 
+function Vector#(16, ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, Portal#(_n,_a,_b,_c)) portals);
+   Vector#(16, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
+   for (Integer i = 0; i < valueOf(numPortals); i = i + 1)
+      interrupts[i] = getInterrupt(portals[i]);
+   return interrupts;
+endfunction
+
 typedef Portal#(16,32,32,12) StdPortal;
 
 interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins);
-   interface Axi3Slave#(32,32,12) ctrl;
+   interface Axi3Slave#(32,32,12)               ctrl;
    interface Axi3Master#(addrWidth,dataWidth,6) m_axi;
-   interface ReadOnly#(Bool)  interrupt;
+   interface Vector#(16,ReadOnly#(Bool))        interrupt;
    interface LEDS             leds;
    interface pins             pins;
 endinterface

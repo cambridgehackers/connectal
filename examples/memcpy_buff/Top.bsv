@@ -78,9 +78,8 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkAxiSlaveMux(dir,portals);
-   let interrupt_mux <- mkInterruptMux(portals);
    
-   interface interrupt = interrupt_mux;
+   interface interrupt = getInterruptVector(portals);
    interface ctrl = ctrl_mux;
    interface m_axi = dma.m_axi;
    interface leds = default_leds;

@@ -107,13 +107,12 @@ module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,I
    portals[1] = serdesRequestWrapper.portalIfc; 
    portals[2] = hdmiRequestWrapper.portalIfc; 
    portals[3] = sensorRequestWrapper.portalIfc; 
-   let interrupt_mux <- mkInterruptMux(portals);
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkAxiSlaveMux(dir,portals);
    
-   interface interrupt = interrupt_mux;
+   interface interrupt = getInterruptVector(portals);
    interface ctrl = ctrl_mux;
    interface m_axi = null_axi_master;
    //interface leds = captureRequestInternal.leds;

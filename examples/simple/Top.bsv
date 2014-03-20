@@ -29,13 +29,12 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    Vector#(2,StdPortal) portals;
    portals[0] = simpleRequestWrapper.portalIfc; 
    portals[1] = simpleIndicationProxy.portalIfc;
-   let interrupt_mux <- mkInterruptMux(portals);
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkAxiSlaveMux(dir,portals);
    
-   interface interrupt = interrupt_mux;
+   interface interrupt = getInterruptVector(portals);
    interface ctrl = ctrl_mux;
    interface m_axi = null_axi_master;
    interface leds = default_leds;
