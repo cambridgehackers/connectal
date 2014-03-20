@@ -7,6 +7,7 @@
 // PCI-Express for Xilinx 7
 // FPGAs.
 
+import Vector          :: *;
 import GetPut          :: *;
 import PCIE            :: *;
 import Clocks          :: *;
@@ -39,8 +40,7 @@ interface X7PcieSplitter#(numeric type lanes);
    interface Put#(TimestampedTlpData) trace;
    interface Reset portalReset;
    interface ReadOnly#(PciId) pciId;
-   interface ReadOnly#(Bit#(64))       interruptAddr;
-   interface ReadOnly#(Bit#(32))       interruptData;
+   interface Vector#(16, MSIX_Entry) msixEntry;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
@@ -209,7 +209,6 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 
    method Bool isLinkUp        = link_is_up;
 //   method Bool isCalibrated  = ddr3_ctrl.user.init_done;
-   interface ReadOnly interruptAddr = bridge.interruptAddr;
-   interface ReadOnly interruptData = bridge.interruptData;
+   interface Vector msixEntry = bridge.msixEntry;
    
 endmodule: mkX7PcieSplitter
