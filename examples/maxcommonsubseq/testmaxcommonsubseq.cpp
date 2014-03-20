@@ -98,7 +98,6 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  if(1){
     fprintf(stderr, "simple tests\n");
     PortalAlloc *strAAlloc;
     PortalAlloc *strBAlloc;
