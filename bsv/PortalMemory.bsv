@@ -46,10 +46,10 @@ typedef struct {
 // @brief Events sent from a Dma engine
 //
 interface DmaIndication;
-   method Action configResp(Bit#(32) pointer);
+   method Action configResp(Bit#(32) pointer, Bit#(40) msg);
    method Action addrResponse(Bit#(64) physAddr);
    method Action badPointer(Bit#(32) pointer);
-   method Action badAddrTrans(Bit#(32) pointer, Bit#(64) offset, Bit#(32) barrier8, Bit#(32) barrier4, Bit#(32) barrier0);
+   method Action badAddrTrans(Bit#(32) pointer, Bit#(64) offset, Bit#(40) barrier);
    method Action badPageSize(Bit#(32) pointer, Bit#(32) sz);
    method Action badAddr(Bit#(32) pointer, Bit#(40) offset, Bit#(64) physAddr);
    method Action reportStateDbg(DmaDbgRec rec);

@@ -67,7 +67,6 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       let rv0 <- re.finish;
       let rv1 <- we.finish;
       if(iterCnt==0) begin
-	 $display("Feck");
 	 indication.done;
       end
    endrule

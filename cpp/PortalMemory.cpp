@@ -41,6 +41,9 @@
 #include "sock_utils.h"
 #include "sock_fd.h"
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 void PortalMemory::InitSemaphores()
 {
   if (sem_init(&confSem, 1, 0)){
@@ -166,7 +169,6 @@ int PortalMemory::reference(PortalAlloc* pa)
     // fprintf(stderr, "%s:%d sem_wait\n", __FILE__, __LINE__);
     sem_wait(&confSem);
   }
-
   uint64_t border = 0;
   unsigned char entryCount = 0;
   struct {
@@ -190,10 +192,8 @@ int PortalMemory::reference(PortalAlloc* pa)
     borders[i].border = border;
     entryCount += regions[i];
   }
-  // fprintf(stderr, "shifts %d (%zd %zd %zd)\n", id,shifts[0], shifts[1], shifts[2]);
-  fprintf(stderr, "regions %d (%zd %zd %zd)\n", id,regions[0], regions[1], regions[2]);
-  fprintf(stderr, "borders %d (%zx %zx %zx)\n", id,borders[0].border, borders[1].border, borders[2].border);
-  fprintf(stderr, "idxoff  %d (%d %d %d)\n", id,borders[0].idxOffset, borders[1].idxOffset, borders[2].idxOffset);
+  //fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
+  //fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
   region(id,
 	 borders[0].border, borders[0].idxOffset,
 	 borders[1].border, borders[1].idxOffset,

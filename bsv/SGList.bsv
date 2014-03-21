@@ -125,7 +125,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 end 
 	 else begin
 	    $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-	    dmaIndication.badAddrTrans(extend(ptr), extend(off), truncate(barrier8), truncate(barrier4), truncate(barrier0));
+	    dmaIndication.badAddrTrans(extend(ptr), extend(off), barrier0);
 	 end
 	 offs[i].enq(o);
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{ptr-1,p}, datain:?});
@@ -199,7 +199,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region4});
       portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region0});
       //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
-      dmaIndication.configResp(ptr);
+      dmaIndication.configResp(ptr, barr0);
    endmethod
 	       
    
@@ -231,7 +231,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    end
 	 end
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:{truncate(ptr-1),idxReg}, datain:page});
-	 dmaIndication.configResp(ptr);
+	 dmaIndication.configResp(ptr, 40'haaaaaaaa);
       end
    endmethod   
    

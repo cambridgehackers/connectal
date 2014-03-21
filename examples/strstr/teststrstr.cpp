@@ -160,12 +160,16 @@ int main(int argc, const char **argv)
   }
 
 
-  if(0){
+  if(1){
     fprintf(stderr, "benchmarks\n");
     PortalAlloc *needleAlloc;
     PortalAlloc *haystackAlloc;
     PortalAlloc *mpNextAlloc;
     const char *needle_text = "I have control\n";
+    const char* needles[numNeedles];
+    for(int i = 0; i < numNeedles; i++){
+      needles[i] = needle_text;
+    }
 #ifdef MMAP_HW
     unsigned int BENCHMARK_INPUT_SIZE = 16 << 18;
 #else

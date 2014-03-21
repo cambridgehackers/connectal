@@ -385,7 +385,7 @@ void* PortalPoller::portalExec_init(void)
     }
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
-      fprintf(stderr, "portalExec::enabling interrupts portal %d %s\n", i, instance->name);
+      //fprintf(stderr, "portalExec::enabling interrupts portal %d %s\n", i, instance->name);
       ENABLE_INTERRUPTS(instance);
     }
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
