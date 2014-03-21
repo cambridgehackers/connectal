@@ -6,6 +6,6 @@ BSVFILES = Memread2.bsv Top.bsv
 CPPFILES=testmemread2.cpp
 DMA = Dma
 PINS = Std
-#XBSVFLAGS=-DTRACE_AXI
+#XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
 include ../../Makefile.common

@@ -6,6 +6,6 @@ BSVFILES = Strstr.bsv Top.bsv
 CPPFILES=teststrstr.cpp
 Dma = Dma
 PINS = Std
-#XBSVFLAGS=-DTRACE_AXI
+#XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
 include ../../Makefile.common

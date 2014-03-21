@@ -6,6 +6,6 @@ BSVFILES = Maxcommonsubseq.bsv Top.bsv
 CPPFILES=testmaxcommonsubseq.cpp
 Dma = Dma
 PINS = Std
-#XBSVFLAGS=-DTRACE_AXI
+#XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
 include ../../Makefile.common

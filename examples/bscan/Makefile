@@ -5,7 +5,7 @@ BSVFILES = BscanRequest.bsv Top.bsv
 CPPFILES=testbscan.cpp
 Dma = 
 PINS = Std
-#XBSVFLAGS=-DTRACE_AXI
+#XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
 include ../../Makefile.common
 
