@@ -7,7 +7,12 @@
 
 2. Install openocd
       Linux: sudo apt-get install openocd
-      Mac: sudo port install openocd
+
+      Mac: 
+
+          sudo port install libftdi
+
+          sudo port install openocd
 
 ### Compile time
 
