@@ -256,7 +256,7 @@ else
 
     ifeq ($(OS),android)
 
-run: $(XBSVDIR)/consolable/checkip bits
+run:
 	$(XBSVDIR)/scripts/run.zedboard $(RUNPARAM) `find . -name \*.gz` `find . -name android_exe | grep libs`
 
     else
