@@ -44,7 +44,7 @@ module mkMemread#(MemreadIndication indication,
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
    FIFOF#(Bit#(64))       readFifo <- mkFIFOF;
-   let                          re <- mkMemreadEngine(readFifo);
+   let                          re <- mkMemreadEngine(1, readFifo);
 
    Reg#(DmaPointer)        pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);

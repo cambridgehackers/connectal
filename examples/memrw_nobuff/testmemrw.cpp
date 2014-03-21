@@ -149,16 +149,16 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::starting memrw numWords:%d\n", numWords);
   int burstLen = 16;
 #ifdef MMAP_HW
-  int iterCnt = 64;
+  int iterCnt = 128;
 #else
-  int iterCnt = 2;
+  int iterCnt = 3;
 #endif
   start_timer(0);
-  portalTrace_start();
+  //portalTrace_start();
   device->start(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&read_done_sem);
   sem_wait(&write_done_sem);
-  portalTrace_stop();
+  //portalTrace_stop();
   uint64_t hw_cycles = lap_timer(0); 
   uint64_t read_beats = dma->show_mem_stats(ChannelType_Write);
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);

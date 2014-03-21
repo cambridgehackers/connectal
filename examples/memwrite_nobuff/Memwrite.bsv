@@ -52,7 +52,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    FIFOF#(Bit#(64))      writeFifo <- mkFIFOF;
-   let                          we <- mkMemwriteEngine(writeFifo);
+   let                          we <- mkMemwriteEngine(1, writeFifo);
 
    rule start (iterCnt > 0);
       iterCnt <= iterCnt-1;
