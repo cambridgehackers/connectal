@@ -7,6 +7,7 @@ H2S = EchoIndication
 BSVFILES = Echo.bsv Swallow.bsv Top.bsv
 ## the source files in the example
 CPPFILES=testecho.cpp
+#XBSVFLAGS=-DTRACE_AXI
 
 include ../../Makefile.common
 

@@ -11,5 +11,6 @@ Dma = Dma
 PINS = Std
 TOP=ZynqTop.bsv
 MKTOP=mkHdmiZynqTop
+#XBSVFLAGS=-DTRACE_AXI
 
 include ../../Makefile.common

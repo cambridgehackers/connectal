@@ -5,5 +5,6 @@ BSVFILES = Memrw.bsv Top.bsv
 CPPFILES=testmemrw.cpp
 Dma = Dma
 PINS = Std
+#XBSVFLAGS=-DTRACE_AXI
 
 include ../../Makefile.common

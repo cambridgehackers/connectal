@@ -6,5 +6,6 @@ BSVFILES = NandSim.bsv Top.bsv
 CPPFILES=testnandsim.cpp
 Dma = Dma
 PINS = Std
+#XBSVFLAGS=-DTRACE_AXI
 
 include ../../Makefile.common

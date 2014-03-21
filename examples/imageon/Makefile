@@ -6,6 +6,7 @@ CPPFILES=testimagecapture.cpp
 XBSVFLAGS = -C imageon-$(BOARD).xdc
 Dma = 
 PINS = ImageonVita
+#XBSVFLAGS=-DTRACE_AXI
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true

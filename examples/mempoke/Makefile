@@ -6,5 +6,6 @@ BSVFILES = Mempoke.bsv Top.bsv
 CPPFILES=testmempoke.cpp
 Dma = Dma
 PINS = Std
+#XBSVFLAGS=-DTRACE_AXI
 
 include ../../Makefile.common
