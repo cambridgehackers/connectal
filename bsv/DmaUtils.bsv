@@ -36,9 +36,9 @@ import Dma::*;
 // @brief A buffer for reading from a bus of width bsz.
 //
 // @param bsz The number of bits in the bus.
-// @param maxBurst The number of words to buffer
+// @param bufferDepth The depth of the internal buffer
 //
-interface DmaReadBuffer#(numeric type bsz, numeric type maxBurst);
+interface DmaReadBuffer#(numeric type bsz, numeric type bufferDepth);
    interface DmaReadServer #(bsz) dmaServer;
    interface DmaReadClient#(bsz) dmaClient;
 endinterface
@@ -47,9 +47,9 @@ endinterface
 // @brief A buffer for writing to a bus of width bsz.
 //
 // @param bsz The number of bits in the bus.
-// @param maxBurst The number of words to buffer
+// @param bufferDepth The depth of the internal buffer
 //
-interface DmaWriteBuffer#(numeric type bsz, numeric type maxBurst);
+interface DmaWriteBuffer#(numeric type bsz, numeric type bufferDepth);
    interface DmaWriteServer#(bsz) dmaServer;
    interface DmaWriteClient#(bsz) dmaClient;
 endinterface
@@ -58,18 +58,18 @@ endinterface
 // @brief Makes a Dma buffer for reading wordSize words from memory.
 //
 // @param bsz The width of the bus in bits.
-// @param maxBurst The max number of words to transfer per request.
+// @param bufferDepth The depth of the internal buffer
 //
-module mkDmaReadBuffer(DmaReadBuffer#(bsz, maxBurst))
+module mkDmaReadBuffer(DmaReadBuffer#(bsz, bufferDepth))
    provisos(Add#(1,a__,bsz),
-	    Add#(b__, TAdd#(1,TLog#(maxBurst)), 8));
+	    Add#(b__, TAdd#(1,TLog#(bufferDepth)), 8));
 
-   FIFOFLevel#(DmaData#(bsz),maxBurst)  readBuffer <- mkBRAMFIFOFLevel;
+   FIFOFLevel#(DmaData#(bsz),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(DmaRequest)        reqOutstanding <- mkFIFOF();
-   Ratchet#(TAdd#(1,TLog#(maxBurst))) unfulfilled <- mkRatchet(0);
+   Ratchet#(TAdd#(1,TLog#(bufferDepth))) unfulfilled <- mkRatchet(0);
    
    // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
-   Bit#(TAdd#(1,TLog#(maxBurst))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
+   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
 
    interface DmaReadServer dmaServer;
       interface Put readReq = toPut(reqOutstanding);
@@ -96,19 +96,19 @@ endmodule
 // @brief Makes a Dma channel for writing wordSize words from memory.
 //
 // @param bsz The width of the bus in bits.
-// @param maxBurst The max number of words to transfer per request.
+// @param bufferDepth The depth of the internal buffer
 //
-module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, maxBurst))
+module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, bufferDepth))
    provisos(Add#(1,a__,bsz),
-	    Add#(b__, TAdd#(1, TLog#(maxBurst)), 8));
+	    Add#(b__, TAdd#(1, TLog#(bufferDepth)), 8));
 
-   FIFOFLevel#(DmaData#(bsz),maxBurst) writeBuffer <- mkBRAMFIFOFLevel;
+   FIFOFLevel#(DmaData#(bsz),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(DmaRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
-   Ratchet#(TAdd#(1,TLog#(maxBurst)))  unfulfilled <- mkRatchet(0);
+   Ratchet#(TAdd#(1,TLog#(bufferDepth)))  unfulfilled <- mkRatchet(0);
    
    // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.
-   Bit#(TAdd#(1,TLog#(maxBurst))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
+   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
 
    interface DmaWriteServer dmaServer;
       interface Put writeReq = toPut(reqOutstanding);

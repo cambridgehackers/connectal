@@ -54,7 +54,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
    FIFOF#(Bit#(128))       readFifo <- mkFIFOF;
-   let                          re <- mkMemreadEngine(readFifo);
+   let                          re <- mkMemreadEngine(1, readFifo);
    
    rule start (iterCnt > 0);
       iterCnt <= iterCnt-1;

@@ -51,10 +51,10 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount <- mkReg(0);
    FIFOF#(Bit#(64)) dfifo <- mkSizedFIFOF(16);
-   let re0 <- mkMemreadEngine(dfifo);
+   let re0 <- mkMemreadEngine(1, dfifo);
    Reg#(Bit#(32)) mismatchCount2 <- mkReg(0);
    FIFOF#(Bit#(64)) dfifo2 <- mkSizedFIFOF(16);
-   let re1 <- mkMemreadEngine(dfifo2);
+   let re1 <- mkMemreadEngine(1, dfifo2);
 
    FIFOF#(Tuple3#(Bit#(32),Bit#(64),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
 

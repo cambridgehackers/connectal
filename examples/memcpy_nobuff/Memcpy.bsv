@@ -54,8 +54,8 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    let rdFifo <- mkFIFOF;
    let wrFifo <- mkFIFOF;
    
-   MemreadEngine#(64) re <- mkMemreadEngine(rdFifo);
-   MemwriteEngine#(64) we <- mkMemwriteEngine(wrFifo);
+   MemreadEngine#(64) re <- mkMemreadEngine(1, rdFifo);
+   MemwriteEngine#(64) we <- mkMemwriteEngine(1, wrFifo);
 
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
