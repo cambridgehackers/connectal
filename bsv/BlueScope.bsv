@@ -25,7 +25,7 @@ import Clocks::*;
 import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
-import GetPutF::*;
+import GetPut::*;
 
 import Dma::*;
 import ClientServer::*;

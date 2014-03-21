@@ -22,7 +22,7 @@
 
 import FIFOF::*;
 import BRAMFIFO::*;
-import GetPutF::*;
+import GetPut::*;
 
 import AxiMasterSlave::*;
 import Dma::*;

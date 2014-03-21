@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 import FIFOF::*;
-import GetPutF::*;
+import GetPut::*;
 import Vector::*;
 import BRAM::*;
 
