@@ -24,29 +24,35 @@ import AxiMasterSlave::*;
 import Connectable::*;
 import BRAM::*;
 import Bscan::*;
+import Vector::*;
+import FIFOF::*;
 
 typeclass ConnectableWithTrace#(type a, type b);
    module mkConnectionWithTrace#(a x1, b x2)(Empty);
 endtypeclass
 
-instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrWidth, busWidth,idWidth));
+instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrWidth, busWidth,idWidth))
+   provisos(Add#(0,idWidth,12), Add#(0,addrWidth,32), Add#(0,busWidth,32));
    module mkConnectionWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth) m, Axi3Slave#(addrWidth, busWidth,idWidth) s)(Empty);
 
 `ifndef TRACE_AXI
    mkConnection(m, s);
 `else
    
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
    Reg#(Bit#(8)) addrReg <- mkReg(9);
    BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg);
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = 256;
    bramCfg.latency = 1;
-   BRAM2Port#(Bit#(8), Bit#(64)) traceBram <- mkSyncBRAM2Server(bramCfg, mainclock, mainreset,
+   BRAM2Port#(Bit#(8), Bit#(64)) traceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
 								bscanBram.jtagClock, bscanBram.jtagReset);
    mkConnection(bscanBram.bramClient, traceBram.portB);
 
-   Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF(clocked_by mainclock, reset_by mainreset));
+   Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF);
 
+   let interrupt_bit = 1'b0;
    rule write_bscanBram;
       Bit#(64) data = ?;
       if (bscan_fifos[0].notEmpty) begin
@@ -78,7 +84,6 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
    endrule
 
    // AXI trace for JTAG
-   let s = top.ctrl;
    //mkConnection(m.req_ar, s.req_ar);
    rule connect_req_ar;
        let req <- m.req_ar.get();

@@ -60,7 +60,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 
    let top <- constructor(clocked_by mainclock, reset_by mainreset);
    
-   mkConnectionWithTrace(ps7.m_axi_gp[0].client, top.ctrl);
+   mkConnectionWithTrace(ps7.m_axi_gp[0].client, top.ctrl, clocked_by mainclock, reset_by mainreset);
    mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
 
    let intr_mux <- mkInterruptMux(top.interrupt);
