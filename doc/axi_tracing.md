@@ -14,6 +14,8 @@
 In the project makefile, add the line:
      XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
+For getting timestamps inserted in read request data, also specify the conditional compile flag AXI_READ_TIMING.
+
 This will compile ConnectableWithTrace to trace transactions into BRAM.
 
 ### After running the test:
