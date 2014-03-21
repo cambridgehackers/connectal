@@ -67,6 +67,7 @@ argparser.add_argument('-M', '--make', help='Run make on the specified targets',
 argparser.add_argument('-x', '--export', help='Promote/export named interface from top module')
 argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
+argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to the BSV compiler', action='append')
 
 tclReadVerilogTemplate='read_verilog [ glob %(verilog)s/*.v ]'
 
@@ -153,7 +154,7 @@ else
 ALLTARGETS=ubuntu_exe implementation
 endif
 
-BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s
+BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s %(bscflags)s
 BSIM_CXX = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.cxx $(XBSVDIR)/cpp/sock_fd.cxx
 
 all: $(ALLTARGETS)
@@ -595,7 +596,8 @@ if __name__=='__main__':
                                    'dut' : namespace.export.lower(),
                                    'Dut': topmodulename,
                                    'timestamp' : int(time.time()),
-                                   'clibs': ' '.join(['-l%s' % l for l in namespace.clib])
+                                   'clibs': ' '.join(['-l%s' % l for l in namespace.clib]),
+                                   'bscflags': ' '.join(namespace.bscflags)
                                    })
     make.close()
     timestamp = util.createDirAndOpen(timestampname, 'w')

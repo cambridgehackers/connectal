@@ -7,7 +7,8 @@ H2S = EchoIndication
 BSVFILES = Echo.bsv Swallow.bsv Top.bsv
 ## the source files in the example
 CPPFILES=testecho.cpp
-#XBSVFLAGS=-DTRACE_AXI
+## uncomment the following line to enable AXI trace
+# XBSVFLAGS="--bscflags=-D TRACE_AXI"
 
 include ../../Makefile.common
 

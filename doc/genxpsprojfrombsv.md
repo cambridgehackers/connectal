@@ -4,6 +4,7 @@ Here are the options supported by `genxpsprojfrombsv`
 
 | Option | Long Option | Default | Description |
 ---------|-------------|---------|-------------------------------------|
+| -b     | --bscflags  |         | Options to pass to the BSV compiler |
 | -B     | --board     | zc702   | Board to generate code for (Mandatory) [bluesim, zedboard, zc702, vc707, kc705, ...]|
 | -C     | --constraint|         | Additional constraint files (Optional) |
 | -I     | --contentid |         | Specify 64-bit contentid for PCIe designs (Optional) |
