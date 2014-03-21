@@ -200,7 +200,7 @@ module mkAxiDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)) wri
    FIFO#(IRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(IRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
    FIFO#(IRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
-   FIFO#(IRec#(addrWidth)) respFifo <- mkSizedFIFO(1);
+   FIFO#(IRec#(addrWidth)) respFifo <- mkSizedFIFO(32);
 
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
    Vector#(numWriteClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
