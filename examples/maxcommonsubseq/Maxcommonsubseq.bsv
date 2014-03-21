@@ -24,7 +24,7 @@
 import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
-import GetPutF::*;
+import GetPut::*;
 import StmtFSM::*;
 //import Vector::*;
 import BRAM::*;

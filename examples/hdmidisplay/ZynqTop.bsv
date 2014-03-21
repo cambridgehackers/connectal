@@ -34,6 +34,7 @@ import XADC::*;
 import FIFOF::*;
 import HDMI::*;
 import ConnectableWithTrace::*;
+import CtrlMux::*;
 
 //`define TRACE_AXI
 //`define AXI_READ_TIMING
@@ -64,8 +65,9 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    mkConnectionWithTrace(ps7.m_axi_gp[0].client, top.ctrl);
    mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
 
+   let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;
-       ps7.interrupt(pack(top.interrupt));
+      ps7.interrupt(pack(intr_mux));
    endrule
 
    interface zynq = ps7.pins;

@@ -25,7 +25,6 @@
 import FIFOF::*;
 import Clocks::*;
 import GetPut::*;
-import GetPutF::*;
 import PCIE::*;
 import GetPutWithClocks::*;
 import Connectable::*;
@@ -72,7 +71,7 @@ module mkHdmiDisplay#(Clock processing_system7_1_fclk_clk1,
         streamRdOff <= streamRdOff + 16*8;
         dmaReadBuffer.dmaServer.readReq.put(DmaRequest {pointer: referenceReg, offset: streamRdOff, burstLen: 16, tag: 0});
     endrule
-   PutF#(DmaData#(64)) sink = (interface PutF;
+   Put#(DmaData#(64)) sink = (interface Put;
       method Action put(DmaData#(64) dmadata);
          hdmiGen.request.put(dmadata.data);
       endmethod

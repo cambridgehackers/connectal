@@ -22,7 +22,6 @@
 // SOFTWARE.
 
 import GetPut :: *;
-import GetPutF :: *;
 import PCIE :: *; // ConnectableWithClocks
 import Clocks :: *;
 
