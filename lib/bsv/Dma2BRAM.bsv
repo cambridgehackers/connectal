@@ -69,7 +69,7 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
    Reg#(Bit#(DmaOffsetSize)) rbase <- mkReg(0);
    
    let readFifo <- mkFIFOF;
-   MemreadEngine#(busWidth) re <- mkMemreadEngine(1, readFifo);
+   MemreadEngine#(busWidth) re <- mkMemreadEngine(readFifo);
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
    rule loadReq(i < n);
@@ -157,7 +157,7 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,d) br)(BRAMWriteClient#(bramIdx,bu
 				       method Bool notFull(); return(False); endmethod
       
 				       endinterface);
-   MemwriteEngine#(busWidth) we <- mkMemwriteEngine(1, writeFifo);
+   MemwriteEngine#(busWidth) we <- mkMemwriteEngine(writeFifo);
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
    rule bramReq(j < n);

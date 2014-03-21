@@ -94,18 +94,15 @@ int main(int argc, const char **argv)
   start_timer(0);
   int burstLen = 16;
 #ifdef MMAP_HW
-  int iterCnt = 128;
+  int iterCnt = 64;
 #else
-  int iterCnt = 3;
+  int iterCnt = 2;
 #endif
   device->startRead(ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&test_sem);
   uint64_t cycles = lap_timer(0);
   uint64_t beats = dma->show_mem_stats(ChannelType_Read);
   float read_util = (float)beats/(float)cycles;
-  fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-  fprintf(stderr, "numWords: %x\n", numWords);
-  fprintf(stderr, "     est: %"PRIx64"\n", (beats*2)/iterCnt);
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
 
   MonkitFile("perf.monkit")

@@ -34,13 +34,12 @@ interface MemwriteEngine#(numeric type busWidth);
    interface DmaWriteClient#(busWidth) dmaClient;
 endinterface
 
-module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
+module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 
    provisos (Div#(busWidth,8,busWidthBytes));
 
    Reg#(Bit#(32))         numBeats <- mkReg(0);
    Reg#(Bit#(32))           reqCnt <- mkReg(0);
-   Reg#(Bit#(32))          respCnt <- mkReg(0);
    
    Reg#(Bit#(DmaOffsetSize))   off <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) delta <- mkReg(0);
@@ -48,9 +47,10 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
 
    Reg#(DmaPointer)        pointer <- mkReg(0);
    Reg#(Bit#(8))          burstLen <- mkReg(0);
+   FIFOF#(Bool)               acks <- mkSizedFIFOF(256);
 
    FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
-   FIFOF#(Bit#(32))             wf <- mkSizedFIFOF(cmdQDepth);
+   FIFOF#(void)                 wf <- mkSizedFIFOF(32);
 
    let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
    
@@ -62,10 +62,11 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
       pointer  <= p;
       burstLen <= truncate(bl/bytes_per_beat);
       base     <= b;
-      wf.enq(wl/bl); // writeLen/burstLen == numBursts.  We receive 1 writeDone for each burst transmitted
+      wf.enq(?);
    endmethod
 
    method ActionValue#(Bool) finish();
+      wf.deq;
       ff.deq;
       return ff.first;
    endmethod
@@ -75,6 +76,7 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
 	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
+	    acks.enq(reqCnt+extend(burstLen) >= numBeats);
 	    return DmaRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0};
 	 endmethod
       endinterface
@@ -86,14 +88,10 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
       endinterface
       interface Put writeDone;
 	 method Action put(Bit#(6) tag);
-	    if (respCnt+1 == wf.first) begin
+	    if (acks.first)
 	       ff.enq(True);
-	       respCnt <= 0;
-	       wf.deq;
-	    end
-	    else begin
-	       respCnt <= respCnt+1;
-	    end
+	    acks.deq;
+	    //$display("writeDone: tag=%d", tag);
 	 endmethod
       endinterface
    endinterface

@@ -34,7 +34,7 @@ interface MemreadEngine#(numeric type busWidth);
    interface DmaReadClient#(busWidth) dmaClient;
 endinterface
 
-module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
+module mkMemreadEngine#(FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
    
    provisos (Div#(busWidth,8,busWidthBytes));
    
@@ -48,9 +48,8 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemreadEng
 
    Reg#(DmaPointer )       pointer <- mkReg(0);
    Reg#(Bit#(8))          burstLen <- mkReg(0);
-   
    FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
-   FIFO#(Bit#(32))              wf <- mkSizedFIFO(cmdQDepth);
+   FIFO#(Bit#(32))              wf <- mkSizedFIFO(32);
    
    let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
 

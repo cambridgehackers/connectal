@@ -110,30 +110,25 @@ void parent(int rd_sock, int wr_sock)
   // for(int i = 0; i < dstAlloc->header.numEntries; i++)
   //   fprintf(stderr, "%lx %lx\n", dstAlloc->entries[i].dma_address, dstAlloc->entries[i].length);
 
-  // sleep(1);
-  // dma->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
-  // sleep(1);
+  sleep(1);
+  dma->addrRequest(ref_dstAlloc, 2*sizeof(unsigned int));
+  sleep(1);
 
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);
   start_timer(0);
   int burstLen = 16;
 #ifdef MMAP_HW
-  int iterCnt = 128;
+  int iterCnt = 64;
 #else
-  int iterCnt = 3;
+  int iterCnt = 2;
 #endif
-  //portalTrace_start();
   device->startWrite(ref_dstAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
-  //portalTrace_stop();
   uint64_t cycles = lap_timer(0);
   uint64_t beats = dma->show_mem_stats(ChannelType_Write);
   float write_util = (float)beats/(float)cycles;
-  fprintf(stderr, "   beats: %"PRIx64"\n", beats);
-  fprintf(stderr, "numWords: %x\n", numWords);
-  fprintf(stderr, "     est: %"PRIx64"\n", (beats*2)/iterCnt);
-  fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
+fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
 
   MonkitFile("perf.monkit")
     .setHwCycles(cycles)
