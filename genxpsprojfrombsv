@@ -267,6 +267,10 @@ run: program
     endif
 endif
 
+JENKINS_HOST=sj9.qrclab.com
+jenkins:
+	$(XBSVDIR)/scripts/run.jenkins $(JENKINS_HOST) %(dut)s $(BOARD)
+
 hwclean:
 	rm -fr obj hw vivado*.jou vivado*.log fsm_encoding.os .Xil
 

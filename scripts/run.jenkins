@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -x
+
+JENKINS_HOST=$1
+TESTNAME=$2
+ARCHNAME=$3
+
+ARCHIVENAME="$USER-$TESTNAME-$ARCHNAME"
+
+rm -fr /tmp/$ARCHIVENAME;
+tar -zcf /tmp/$ARCHIVENAME.tar.gz .
+scp /tmp/$ARCHIVENAME.tar.gz $JENKINS_HOST:/tmp;
+jenkins-cli -s http://$JENKINS_HOST/ build upload-test -p TESTNAME=echo -p ARCHNAME=$ARCHNAME -p TARGZ=/tmp/$ARCHIVENAME.tar.gz -s -v
+jenkins-cli -s http://$JENKINS_HOST/ build xbsv-test-$ARCHNAME -p TESTNAME=echo -p ARCHNAME=$ARCHNAME -p TARGZ=/scratch/jenkins/workspace/remote-test/$ARCHIVENAME.tar.gz -s -v
+rm -fr /tmp/$ARCHIVENAME*
