@@ -14,6 +14,10 @@
 
           sudo port install openocd
 
+	  brew install openocd --enable-ft2232_libftdi
+
+	  brew install libftdi
+
 ### Compile time
 
 In the project makefile, add the line:
