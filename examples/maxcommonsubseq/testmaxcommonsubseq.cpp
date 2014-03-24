@@ -41,6 +41,7 @@ sem_t test_sem;
 sem_t setup_sem;
 int sw_match_cnt = 0;
 int hw_match_cnt = 0;
+unsigned result_len = 0;
 
 class MaxcommonsubseqIndication : public MaxcommonsubseqIndicationWrapper
 {
@@ -62,6 +63,7 @@ public:
 
   virtual void searchResult (int v){
     fprintf(stderr, "searchResult = %d\n", v);
+    result_len = v;
     if (v == -1)
       sem_post(&test_sem);
     else 
@@ -128,7 +130,7 @@ int main(int argc, const char **argv)
 
     int strA_len = strlen(strA);
     int strB_len = strlen(strB);
-    int swFetch[alloc_len][alloc_len];
+    uint16_t swFetch[fetch_len];
 
 
 
@@ -157,6 +159,17 @@ int main(int argc, const char **argv)
     uint64_t cycles = lap_timer(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
+    assert(result_len < alloc_len * alloc_len);
+    device->fetch(ref_fetchAlloc, result_len);
+    sem_wait(&setup_sem);
+
+    memcpy(swFetch, fetch, result_len * sizeof(uint16_t));
+    for (int i = 0; i < result_len; i += 1) {
+      if (swFetch[i] != (strA[i] << 8 | strB[i]))
+	printf("mismatch A %02x B %02x R %04x\n", 
+		strA[i], strB[i], swFetch[i]);
+    }
+
 
     close(strAAlloc->header.fd);
     close(strBAlloc->header.fd);
