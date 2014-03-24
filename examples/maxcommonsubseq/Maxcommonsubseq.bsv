@@ -89,7 +89,8 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
   Reg#(Bit#(32)) bLenReg <- mkReg(0);
   Reg#(Bit#(32)) rLenReg <- mkReg(0);
   Reg#(Bit#(32)) ii <- mkReg(0);
-  
+   Reg#(Char) aData <- mkReg(0);
+   Reg#(Char) bData <- mkReg(0);
    BRAM2Port#(StringIdx, Char) strA  <- mkBRAM2Server(defaultValue);
    BRAM2Port#(StringIdx, Char) strB <- mkBRAM2Server(defaultValue);
    BRAM2Port#(LIdx, Bit#(16)) matL <- mkBRAM2Server(defaultValue);
@@ -125,11 +126,14 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 	    strB.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: truncate(ii), datain: 0});
 	    action
 	       let left <- strA.portA.response.get();
-	       let right <- strA.portB.response.get();
-	    matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: truncate(ii), datain: {left, right}});
+	       let right <- strB.portA.response.get();
+	       aData <= left;
+	       bData <= right;
 	    endaction
+	    $display("aData %d bData %d", aData, bData);
+	    matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: truncate(ii), datain: {aData, bData}});
 	 endseq
-      indication.searchResult(0);
+      indication.searchResult(unpack(rLenReg));
    endseq
    endseq;
    
@@ -159,11 +163,13 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
       aLenReg <= strLen;
+      $display("setupA %h %d", strPointer, strLen);
       n2a.start(strPointer, 0, pack(truncate(strLen)), 0);
    endmethod
 
    method Action setupB(Bit#(32) strPointer, Bit#(32) strLen);
       bLenReg <= strLen;
+      $display("setupB %h %d", strPointer, strLen);
       n2b.start(strPointer, 0, pack(truncate(strLen)), 0);
    endmethod
    
