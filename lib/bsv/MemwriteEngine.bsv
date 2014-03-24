@@ -50,19 +50,19 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
    Reg#(Bit#(8))          burstLen <- mkReg(0);
 
    FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
-   FIFOF#(Bit#(32))             wf <- mkSizedFIFOF(cmdQDepth);
+   FIFOF#(Tuple2#(Bit#(32),Bit#(32))) wf <- mkSizedFIFOF(cmdQDepth);
 
-   let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
+   let bytes_per_beat = fromInteger(valueOf(TLog#(busWidthBytes)));
    
    method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) wl, Bit#(32) bl) if (reqCnt >= numBeats);
-      numBeats <= wl/bytes_per_beat;
+      numBeats <= wl>>bytes_per_beat;
       reqCnt   <= 0;
       off      <= 0;
       delta    <= extend(bl);
       pointer  <= p;
-      burstLen <= truncate(bl/bytes_per_beat);
+      burstLen <= truncate(bl>>bytes_per_beat);
       base     <= b;
-      wf.enq(wl/bl); // writeLen/burstLen == numBursts.  We receive 1 writeDone for each burst transmitted
+      wf.enq(tuple2(wl>>bytes_per_beat,bl>>bytes_per_beat)); 
    endmethod
 
    method ActionValue#(Bool) finish();
@@ -86,13 +86,15 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
       endinterface
       interface Put writeDone;
 	 method Action put(Bit#(6) tag);
-	    if (respCnt+1 == wf.first) begin
+	    let wl = tpl_1(wf.first);
+	    let bl = tpl_2(wf.first);
+	    if (respCnt+bl == wl) begin
 	       ff.enq(True);
 	       respCnt <= 0;
 	       wf.deq;
 	    end
 	    else begin
-	       respCnt <= respCnt+1;
+	       respCnt <= respCnt+bl;
 	    end
 	 endmethod
       endinterface

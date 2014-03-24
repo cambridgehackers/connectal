@@ -35,9 +35,6 @@ import FIFOF::*;
 import ConnectableWithTrace::*;
 import CtrlMux::*;
 
-//`define TRACE_AXI
-//`define AXI_READ_TIMING
-
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
    (* prefix="" *)
@@ -60,9 +57,9 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 
    let top <- constructor(clocked_by mainclock, reset_by mainreset);
    
-   mkConnectionWithTrace(ps7.m_axi_gp[0].client, top.ctrl, clocked_by mainclock, reset_by mainreset);
-   mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
-
+   mkConnection(ps7.m_axi_gp[0].client, top.ctrl, clocked_by mainclock, reset_by mainreset);
+   mkConnectionWithTrace(top.m_axi, ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
+   
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;
       ps7.interrupt(pack(intr_mux));
