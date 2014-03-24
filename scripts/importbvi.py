@@ -196,78 +196,102 @@ def parse_lib(filename):
 #
 # parser for .v files
 #
-def parse_verilog(filename):
+def processline(line, phase):
     global masterlist
     global paramnames, modulename
-    indata = open(filename).read().expandtabs().split('\n')
-    for line in indata:
-        ind = line.find('//')
-        if ind >= 0:
-            line = line[:ind]
-        line = line.strip().strip(',').strip()
-        ind = line.find('[')
-        if ind >= 0:
-            f = line[ind+1:].split(']')
-            f.insert(0, line[:ind])
-            subs = f[1].translate(None,' ').lower()
-            if subs[-2:] == ':0':
-                subs = subs[:-2]
-            if subs.find('(') >= 0 and subs[-1] == ')':
-                subs = subs[1:-1]
-            if subs[-2:] == '-1':
-                subs = subs[:-2]
-            else:
-                subs = str(int(subs) + 1)
-            if subs.find('(') >= 0 and subs[-1] == ')':
-                subs = subs[1:-1]
-            ind = subs.find('/')
-            if ind > 0:
-                item = subs[:ind]
-                newitem = parammap.get(item)
-                if newitem:
-                    item = newitem
-                subs = 'TDiv#('+item+','+subs[ind+1:]+')'
-            else:
-                newitem = parammap.get(subs)
-                if newitem:
-                    subs = newitem
-            f[1] = subs
-            line = f
+    ind = line.find('//')
+    if ind >= 0:
+        line = line[:ind]
+    line = line.strip().strip(',').strip()
+    ind = line.find('[')
+    if ind >= 0:
+        f = line[ind+1:].split(']')
+        f.insert(0, line[:ind])
+        subs = f[1].translate(None,' ').lower()
+        if subs[-2:] == ':0':
+            subs = subs[:-2]
+        if subs.find('(') >= 0 and subs[-1] == ')':
+            subs = subs[1:-1]
+        if subs[-2:] == '-1':
+            subs = subs[:-2]
         else:
-            line = line.split()
-        f = []
-        for ind in range(len(line)):
-            item = line[ind].strip()
-            if item[-3:] == 'reg':
-               item = item[:-3].strip()
-            if item != '' and item != 'integer' and item != '=':
-                f.append(item)
-        if len(f) > 0:
-            if f[0][-1] == ';':
-                break
-            if f[0] == 'module':
-                modulename = f[1]
-            if f[0] == 'input' or f[0] == 'output' or f[0] == 'inout':
-                if len(f) == 2:
-                    f = [f[0], '1', f[1]]
-                # check for parameterized declarations
-                pname = f[1].strip('0123456789/')
-                if len(pname) > 0 and pname not in paramnames and pname[:4] != 'TDiv':
-                    print('Missing parameter declaration', pname, file=sys.stderr)
-                    paramnames.append(pname)
-                f[1] = 'Bit#(' + f[1] + ')'
-                if options.delete and f[2] in options.delete:
-                    continue
-                if options.clock and f[2] in options.clock:
-                    f[1] = 'Clock'
-                #print('FF', f, file=sys.stderr)
-            if len(f) == 3:
-                masterlist.append(PinType(f[0], f[1], f[2], f[2]))
-            elif len(f) == 2:
-                print('FFDDDDD', f, file=sys.stderr)
-                masterlist.append(PinType(f[0], '', f[1], f[1]))
-            else:
-                print('FFDDDDD', f, file=sys.stderr)
+            subs = str(int(subs) + 1)
+        if subs.find('(') >= 0 and subs[-1] == ')':
+            subs = subs[1:-1]
+        ind = subs.find('/')
+        if ind > 0:
+            item = subs[:ind]
+            newitem = parammap.get(item)
+            if newitem:
+                item = newitem
+            subs = 'TDiv#('+item+','+subs[ind+1:]+')'
+        else:
+            newitem = parammap.get(subs)
+            if newitem:
+                subs = newitem
+        f[1] = subs
+        line = f
+    else:
+        line = line.split()
+    f = []
+    for ind in range(len(line)):
+        item = line[ind].strip()
+        if item[-3:] == 'reg':
+           item = item[:-3].strip()
+        if item != '' and item != 'integer' and item != '=':
+            f.append(item)
+    if len(f) > 0:
+        if f[0][-1] == ';':
+            return True
+        if f[-1][-1] == ';':
+            f[-1] = f[-1][:-1]
+        if f[0] == 'module':
+            modulename = f[1]
+        if f[0] == 'input' or f[0] == 'output' or f[0] == 'inout':
+            if len(f) == 2:
+                f = [f[0], '1', f[1]]
+            # check for parameterized declarations
+            pname = f[1].strip('0123456789/')
+            if len(pname) > 0 and pname not in paramnames and pname[:4] != 'TDiv':
+                print('Missing parameter declaration', pname, file=sys.stderr)
+                paramnames.append(pname)
+            f[1] = 'Bit#(' + f[1] + ')'
+            if options.delete and f[2] in options.delete:
+                return False
+            if options.clock and f[2] in options.clock:
+                f[1] = 'Clock'
+            #print('FF', f, file=sys.stderr)
+        elif phase == 2:
+            return True
+        if phase == 2:
+            itemfound = False
+            for item in masterlist:
+                if item.origname == f[2]:
+                    item.mode = f[0]
+                    item.type = f[1]
+                    itemfound = True
+                    break
+            if not itemfound:
+                print('UNK not found', f)
+            return False
+        if len(f) == 3:
+            masterlist.append(PinType(f[0], f[1], f[2], f[2]))
+        elif len(f) == 2:
+            print('FFDDDDD2', f, file=sys.stderr)
+            masterlist.append(PinType(f[0], '', f[1], f[1]))
+        else:
+            #print('FFDDDDDE', f, file=sys.stderr)
+            masterlist.append(PinType('UNK', 'FOO', f[0], f[0]))
+    return False
+
+def parse_verilog(filename):
+    indata = open(filename).read().expandtabs().split('\n')
+    phase = 1
+    for line in indata:
+        if processline(line, phase):
+            if phase == 2:
+               break
+            phase = 2
 
 def generate_condition(interfacename):
     global ifdefmap
@@ -400,7 +424,10 @@ def locate_clocks(item, prefix):
     elif item.mode == 'interface':
         temp = commoninterfaces[item.type].get('0')
         if not temp:
-            temp = commoninterfaces[item.type]['']
+            temp = commoninterfaces[item.type].get('')
+        if not temp:
+            print('Missing interface definition', item.type, commoninterfaces[item.type])
+            return
         for titem in temp:
             locate_clocks(titem, item.origname)
 
@@ -413,7 +440,10 @@ def generate_clocks(item, indent, prefix):
     elif item.mode == 'interface':
         temp = commoninterfaces[item.type].get('0')
         if not temp:
-            temp = commoninterfaces[item.type]['']
+            temp = commoninterfaces[item.type].get('')
+        if not temp:
+            print('Missing interface clock', item.type, commoninterfaces[item.type])
+            return
         for titem in temp:
              generate_clocks(titem, '        ', item.origname)
 
@@ -445,7 +475,10 @@ def generate_instance(item, indent, prefix, clockedby_arg):
         print(indent + 'interface '+item.type+'     '+item.name.lower()+';', file=options.outfile)
         temp = commoninterfaces[item.type].get('0')
         if not temp:
-            temp = commoninterfaces[item.type]['']
+            temp = commoninterfaces[item.type].get('')
+        if not temp:
+            print('Missing ifc', item.type)
+            return ''
         clockedby_name = ''
         for titem in temp:
             if titem.mode == 'input' and titem.type == 'Clock':
@@ -540,7 +573,10 @@ if __name__=='__main__':
     parser.add_option("-P", "--ifprefix", dest="ifprefix")
     parser.add_option("-I", "--ifname", dest="ifname")
     (options, args) = parser.parse_args()
-    #print('KK', options, args, file=sys.stderr)
+    print('KK', options, args, file=sys.stderr)
+    if options.filename is None or len(args) == 0 or options.ifname is None or options.ifprefix is None:
+        print('Missing "--o" option or missing input filenames.  Run " importbvi.py -h " to see available options')
+        sys.exit(1)
     options.outfile = open(options.filename, 'w')
     if options.notfactor == None:
         options.notfactor = []
