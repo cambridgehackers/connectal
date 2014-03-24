@@ -175,6 +175,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    
    method Action fetch(Bit#(32) strPointer, Bit#(32) strLen);
       rLenReg <= strLen;
+      $display("fetch %h %d", strPointer, strLen);
       l2n.start(strPointer, 0, pack(truncate(strLen)), 0);
    endmethod
 
