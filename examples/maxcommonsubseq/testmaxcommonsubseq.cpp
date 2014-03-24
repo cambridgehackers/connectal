@@ -64,10 +64,7 @@ public:
   virtual void searchResult (int v){
     fprintf(stderr, "searchResult = %d\n", v);
     result_len = v;
-    if (v == -1)
-      sem_post(&test_sem);
-    else 
-      hw_match_cnt++;
+    sem_post(&test_sem);
   }
 };
 
@@ -161,7 +158,9 @@ int main(int argc, const char **argv)
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     assert(result_len < alloc_len * alloc_len);
     device->fetch(ref_fetchAlloc, result_len);
+    printf("fetch called %d\n", result_len);
     sem_wait(&setup_sem);
+    printf("fetch finished \n");
 
     memcpy(swFetch, fetch, result_len * sizeof(uint16_t));
     for (int i = 0; i < result_len; i += 1) {
