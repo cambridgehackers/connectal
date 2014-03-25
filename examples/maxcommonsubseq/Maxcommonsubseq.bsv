@@ -83,7 +83,12 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 	    Add#(1, b__, nc),
 	    Add#(c__, 32, busWidth),
 	    Add#(1, d__, TDiv#(busWidth, 32)),
-	    Mul#(TDiv#(busWidth, 32), 32, busWidth));
+	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
+            Mul#(TDiv#(busWidth, 16), 16, busWidth),
+            Add#(1, e__, TDiv#(busWidth, 16)),
+            Add#(1, f__, TMul#(2, TDiv#(busWidth, 16))),
+            Add#(TDiv#(busWidth, 16), g__, TMul#(2, TDiv#(busWidth, 16))));
+
    
   Reg#(Bit#(32)) aLenReg <- mkReg(0);
   Reg#(Bit#(32)) bLenReg <- mkReg(0);
@@ -99,7 +104,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    mkConnection(n2a.dmaClient, setupA_read_server);
    BRAMReadClient#(StringIdx,busWidth) n2b <- mkBRAMReadClient(strB.portB);
    mkConnection(n2b.dmaClient, setupB_read_server);
-   BRAMWriteClient#(LIdx, 16) l2n <- mkBRAMWriteClient(matL.portB);
+   BRAMWriteClient#(LIdx, busWidth) l2n <- mkBRAMWriteClient(matL.portB);
    mkConnection(l2n.dmaClient, fetch_write_server);
 
    FIFOF#(void) aReady <- mkFIFOF;
@@ -131,7 +136,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 	       aData <= left;
 	       bData <= right;
 	    endaction
-	    $display("aData %d bData %d", aData, bData);
+	    $display("aData %h bData %h", aData, bData);
 	    matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: truncate(ii), datain: {aData, bData}});
 	 endseq
       indication.searchResult(unpack(rLenReg));
