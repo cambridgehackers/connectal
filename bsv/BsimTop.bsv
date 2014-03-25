@@ -160,7 +160,10 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
    Bit#(64) readLatency = 32;
    Bit#(64) writeLatency = 32;
    
+   Reg#(Bit#(64)) req_ar_b_ts <- mkReg(0);
+   Reg#(Bit#(64)) req_aw_b_ts <- mkReg(0);
    Reg#(Bit#(64)) cycle <- mkReg(0);
+
    FIFO#(Tuple2#(Bit#(64), Axi3ReadRequest#(serverAddrWidth,serverIdWidth))) readDelayFifo <- mkSizedFIFO(32);
    FIFO#(Tuple2#(Bit#(64),Axi3WriteRequest#(serverAddrWidth,serverIdWidth))) writeDelayFifo <- mkSizedFIFO(32);
    FIFOF#(Axi3WriteResponse#(serverIdWidth)) bFifo <- mkFIFOF();
@@ -170,22 +173,25 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
    endrule
    
    rule req_ar_b if (readLen == 0 && (cycle-tpl_1(readDelayFifo.first)) > readLatency);
+      req_ar_b_ts <= cycle;
       let req = tpl_2(readDelayFifo.first);
       readDelayFifo.deq;
       Bit#(5) rlen = extend(req.len)+1;
       readAddrr <= req.address;
       readLen <= rlen;
       readId <= req.id;
-      //$display("mkBsimHost::req_ar_b: id=%d len=%d", req.id, rlen);
+      $display("mkBsimHost::req_ar_b(%h): id=%d len=%d", cycle-req_ar_b_ts, req.id, rlen);
    endrule
 
    rule req_aw_b if (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency);
+      req_aw_b_ts <= cycle;
       let req = tpl_2(writeDelayFifo.first);
       writeDelayFifo.deq;
       Bit#(5) wlen = extend(req.len)+1;
       writeAddrr <= req.address;
       writeLen <= wlen;
       writeId <= req.id;
+      $display("mkBsimHost::req_aw_b(%h): id=%d len=%d", cycle-req_aw_b_ts, req.id, wlen);
    endrule
 
    FIFO#(Bit#(clientBusWidth)) wf <- mkPipelineFIFO;
@@ -232,7 +238,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	 method Action put(Axi3WriteData#(serverBusWidth,serverIdWidth) resp) if (writeLen > 0);
 	    let handle = writeAddrr[39:32];
 	    let addr = writeAddrr[31:0];
-	    //$display("write_resp: handle=%d addr=%h v=%h", handle, addr, resp.data);
+	    $display("write_resp(%d): handle=%d addr=%h v=%h", cycle, handle, addr, resp.data);
 	    rw.write_pareff(extend(handle), addr, resp.data);
 	    writeLen <= writeLen - 1;
 	    writeAddrr <= writeAddrr + fromInteger(valueOf(serverBusWidth)/8);

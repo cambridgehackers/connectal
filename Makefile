@@ -176,6 +176,11 @@ memtests.kc705: $(addsuffix .kc705, $(memtests))
 memtests.kc705.regression:
 	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.kc705
 
+
+memtests.bsim: $(addsuffix .bsim, $(memtests))
+memtests.bsim.regression:
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.bsim
+
 android_exetests = $(addsuffix .android_exe, $(testnames))
 android_exetests: $(android_exetests)
 
