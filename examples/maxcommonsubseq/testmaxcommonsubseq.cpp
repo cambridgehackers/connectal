@@ -129,7 +129,7 @@ int main(int argc, const char **argv)
     int strB_len = strlen(strB);
     uint16_t swFetch[fetch_len];
 
-    for (int i = 0; i < strA_len; i += 1) {
+    for (int i = 0; i < alloc_len; i += 1) {
       strA[i] = i;
       strB[i] = 255 - i;
     }
@@ -169,7 +169,7 @@ int main(int argc, const char **argv)
 
     memcpy(swFetch, fetch, result_len * sizeof(uint16_t));
     for (int i = 0; i < result_len; i += 1) {
-      if (swFetch[i] != (strA[i] << 8 | strB[i]))
+      if ((swFetch[i] & 0xffff) != ((strA[i] << 8) & 0xff00 | (strB[i] & 0xff)))
 	printf("mismatch i %d A %02x B %02x R %04x\n", 
 	       i, strA[i], strB[i], swFetch[i]);
     }
