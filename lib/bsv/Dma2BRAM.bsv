@@ -152,7 +152,7 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,d) br)(BRAMWriteClient#(bramIdx,bu
 				       method Bit#(busWidth) first(); return pack(gb.first); endmethod
 				       method Bool notEmpty(); return gb.notEmpty(); endmethod
 				       method Action enq(Bit#(busWidth) d); endmethod
-				       method Action deq; endmethod
+				       method Action deq; gb.deq(); endmethod
 				       method Action clear; endmethod
 				       method Bool notFull(); return(False); endmethod
       
@@ -172,7 +172,7 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,d) br)(BRAMWriteClient#(bramIdx,bu
    
    rule loadReq(i < n);
       we.start(ptr, woff + wbase, bus_width_in_bytes, bus_width_in_bytes);
-      i <= i+1;
+      i <= i+fromInteger(valueOf(nd));
       woff <= woff+bus_width_in_bytes;
    endrule
    
