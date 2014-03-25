@@ -36,13 +36,13 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(f__, addrWidth, 40));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   DmaReadBuffer#(64,32)   dma_read_chan <- mkDmaReadBuffer();
-   Vector#(1,  DmaReadClient#(64))   readClients = cons(dma_read_chan.dmaClient, nil);
+   DmaReadBuffer#(64,80)   dma_read_buff <- mkDmaReadBuffer();
+   Vector#(1,  DmaReadClient#(64))   readClients = cons(dma_read_buff.dmaClient, nil);
    AxiDmaServer#(addrWidth, 64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, nil);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
-   MemreadRequest memreadRequest <- mkMemread(memreadIndicationProxy.ifc, dma_read_chan.dmaServer);
+   MemreadRequest memreadRequest <- mkMemread(memreadIndicationProxy.ifc, dma_read_buff.dmaServer);
    MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequest,memreadRequest);
 
    Vector#(4,StdPortal) portals;
