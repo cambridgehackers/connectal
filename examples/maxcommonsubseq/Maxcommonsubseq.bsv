@@ -100,6 +100,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    BRAMReadClient#(StringIdx,busWidth) n2b <- mkBRAMReadClient(strB.portB);
    mkConnection(n2b.dmaClient, setupB_read_server);
    BRAMWriteClient#(LIdx, 16) l2n <- mkBRAMWriteClient(matL.portB);
+   mkConnection(l2n.dmaClient, fetch_write_server);
 
    FIFOF#(void) aReady <- mkFIFOF;
    FIFOF#(void) bReady <- mkFIFOF;
