@@ -110,6 +110,59 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    FIFOF#(void) aReady <- mkFIFOF;
    FIFOF#(void) bReady <- mkFIFOF;
    FIFOF#(void) mReady <- mkFIFOF;
+   
+   function Bit#(14) mkAdr(Bit#(7) x, Bit#(7) y)
+      return {x,y};
+   endfunction
+   
+   Stmt MaxQuadratic =
+   seq while(True)
+   seq
+      action
+	 let ra <- aReady.deq();
+	 $display("Splice A Ready");
+      endaction
+      action
+	 let rb <- bReady.deq();
+	 $display("Splice B Ready");
+      endaction
+      for (ii<= 0; ii < aLenReg; ii <= ii + 1)
+	 seq
+	    matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: mkAdr(ii,0), datain: 0});
+	    matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: mkAdr(0,ii), datain: 0});
+	 endseq
+      for (ii<= 0; ii < aLenReg; ii <= ii + 1)
+	 for (jj<= 0; jj < bLenReg; jj <= jj + 1)
+	    seq
+	       strA.portA.request.put(BRAMRequest{write: false, responseOnWrite: False, address: ii, datain: 0});
+	       strB.portA.request.put(BRAMRequest{write: false, responseOnWrite: False, address: jj, datain: 0});
+	       ca <= strA.portA.response.get();
+	       cb <= streB.portA.response.get();
+	       if (ca == cb)
+		  seq
+		     matL.portA.request.put(BRAMRequest{write: false, responseOnWrite: False, address: mkAdr(ii-1,jj-1), datain: 0});
+		     lim1jm1 <= matL.portA.response.get();
+		     matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: mkAdr(ii,jj), datain: lim1jmi+1});
+		     
+		  endseq
+	       else
+		  seq
+		     matL.portA.request.put(BRAMRequest{write: false, responseOnWrite: False, address: mkAdr(ii,jj-1), datain: 0});
+		     lijm1 <= matL.portA.response.get();
+		     matL.portA.request.put(BRAMRequest{write: false, responseOnWrite: False, address: mkAdr(ii-1,jj), datain: 0});
+		     lim1j <= matL.portA.response.get();
+		     matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: mkAdr(ii,jj), datain: max(lijm1,lim1j)});
+		  endseq
+	    endseq
+      matL.portA.request.put(BRAMRequest{write: false, responseOnWrite: False, address: mkAdr(aLenReg, bLenReg), datain: 0});
+      action
+	 let result <= matL.portA.response.get();
+	 indication.searchResult(unpack(result));
+      endaction
+   endseq
+   endseq;
+   
+   
    Stmt splice =
    seq while(True)
    seq
@@ -165,7 +218,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       indication.fetchComplete();
    endrule
 
-   mkAutoFSM(splice);
+   mkAutoFSM(maxQuadratic);
    
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
       aLenReg <= strLen;
