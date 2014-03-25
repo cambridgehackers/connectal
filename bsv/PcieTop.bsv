@@ -33,6 +33,7 @@ import AxiSlaveEngine    :: *;
 import AxiMasterEngine   :: *;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
+import AxiCsr            :: *;
 
 typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins);
 

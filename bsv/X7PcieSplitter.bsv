@@ -16,6 +16,7 @@ import TieOff          :: *;
 import XilinxCells     :: *;
 import PcieSplitter :: *;
 import XbsvXilinx7Pcie :: *;
+import AxiCsr          :: *;
 //import XbsvXilinx7DDR3      :: *;
 
 // from SceMiDefines
