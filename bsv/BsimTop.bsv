@@ -180,7 +180,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
       readAddrr <= req.address;
       readLen <= rlen;
       readId <= req.id;
-      $display("mkBsimHost::req_ar_b(%h): id=%d len=%d", cycle-req_ar_b_ts, req.id, rlen);
+      //$display("mkBsimHost::req_ar_b(%h): id=%d len=%d", cycle-req_ar_b_ts, req.id, rlen);
    endrule
 
    rule req_aw_b if (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency);
@@ -191,7 +191,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
       writeAddrr <= req.address;
       writeLen <= wlen;
       writeId <= req.id;
-      $display("mkBsimHost::req_aw_b(%h): id=%d len=%d", cycle-req_aw_b_ts, req.id, wlen);
+      //$display("mkBsimHost::req_aw_b(%h): id=%d len=%d", cycle-req_aw_b_ts, req.id, wlen);
    endrule
 
    FIFO#(Bit#(clientBusWidth)) wf <- mkPipelineFIFO;
@@ -238,7 +238,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	 method Action put(Axi3WriteData#(serverBusWidth,serverIdWidth) resp) if (writeLen > 0);
 	    let handle = writeAddrr[39:32];
 	    let addr = writeAddrr[31:0];
-	    $display("write_resp(%d): handle=%d addr=%h v=%h", cycle, handle, addr, resp.data);
+	    //$display("write_resp(%d): handle=%d addr=%h v=%h", cycle, handle, addr, resp.data);
 	    rw.write_pareff(extend(handle), addr, resp.data);
 	    writeLen <= writeLen - 1;
 	    writeAddrr <= writeAddrr + fromInteger(valueOf(serverBusWidth)/8);
