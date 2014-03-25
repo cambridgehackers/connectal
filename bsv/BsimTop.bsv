@@ -312,14 +312,18 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 
 endmodule
    
-//typedef (function Module#(PortalTop#(40, dsz, ipins)) mkpt()) MkPortalTop#(numeric type dsz, type ipins);
+typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins);
 
-module mkBsimTop(Empty);
-
-   BsimHost#(32,32,12,40,64,6) host <- mkBsimHost;
-   StdPortalTop#(40) top <- mkPortalTop;
+module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,Empty) mkPortalTop)(Empty)
+   provisos (SelectBsimRdmaReadWrite#(dsz));
+   BsimHost#(32,32,12,40,dsz,6) host <- mkBsimHost;
+   PortalTop#(40,dsz,Empty) top <- mkPortalTop;
    
    mkConnection(host.axi_client, top.ctrl);
    mkConnection(top.m_axi, host.axi_server);
-   
+endmodule
+
+module mkBsimTop(Empty);
+   let top <- mkBsimTopFromPortal(mkPortalTop);
+   return top;
 endmodule
