@@ -357,22 +357,24 @@ def regroup_items(masterlist):
             indexname = ''
             if prevlist != [] and not litem.startswith(currentgroup):
                 print('UU', currentgroup, litem, prevlist, file=sys.stderr)
-            skipcheck = False
-            for checkitem in options.notfactor:
-                if litem.startswith(checkitem):
-                    skipcheck = True
-            if skipcheck:
-                newlist.append(item)
-                continue
             if options.factor:
                 for tstring in options.factor:
-                    if litem.startswith(tstring):
+                    if len(litem) > len(tstring) and litem.startswith(tstring):
                         groupname = tstring
                         fieldname = litem[len(tstring):]
+                        if fieldname[0] == '_':
+                            fieldname = fieldname[1:]
                         separator = ''
                         m = None
                         break
             if m:
+                skipcheck = False
+                for checkitem in options.notfactor:
+                    if litem.startswith(checkitem):
+                        skipcheck = True
+                if skipcheck:
+                    newlist.append(item)
+                    continue
                 groupname = goback(m.group(1))
                 indexname = goback(m.group(2))
                 separator = goback(m.group(3))
