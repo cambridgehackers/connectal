@@ -31,11 +31,15 @@ typeclass ConnectableWithTrace#(type a, type b);
    module mkConnectionWithTrace#(a x1, b x2)(Empty);
 endtypeclass
 
+//`define TRACE_AXI
+//`define AXI_READ_TIMING
+
 instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrWidth, busWidth,idWidth))
-   provisos(Add#(0,idWidth,12), Add#(0,addrWidth,32), Add#(0,busWidth,32));
+   provisos(Add#(0,addrWidth,32));
    module mkConnectionWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth) m, Axi3Slave#(addrWidth, busWidth,idWidth) s)(Empty);
 
-`ifndef TRACE_AXI
+`ifdef 0 //ndef TRACE_AXI
+   blah
    mkConnection(m, s);
 `else
    
@@ -89,7 +93,7 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
        let req <- m.req_ar.get();
        s.req_ar.put(req);
        bscan_fifos[0].enq(
-	   {3'h1, interrupt_bit, req.id,
+	   {3'h1, interrupt_bit, 6'h0, req.id[5:0],
 `ifdef AXI_READ_TIMING
                     seqCounter,
 `else
@@ -103,14 +107,14 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
        let resp <- s.resp_read.get();
        m.resp_read.put(resp);
        bscan_fifos[1].enq(
-           {3'h2, interrupt_bit, resp.id, resp.resp, resp.last, 13'b0, resp.data});
+           {3'h2, interrupt_bit, 6'h0, resp.id[5:0], resp.resp, resp.last, 13'b0, resp.data[31:0]});
    endrule
    //mkConnection(m.req_aw, s.req_aw);
    rule connect_req_aw;
        let req <- m.req_aw.get();
        s.req_aw.put(req);
        bscan_fifos[2].enq(
-           {3'h3, interrupt_bit, req.id, req.len, req.cache, req.prot, req.size,
+           {3'h3, interrupt_bit, 6'h0, req.id[5:0], req.len, req.cache, req.prot, req.size,
                     pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0), req.address});
    endrule
    //mkConnection(m.resp_write, s.resp_write);
@@ -118,14 +122,14 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
        let resp <- m.resp_write.get();
        s.resp_write.put(resp);
        bscan_fifos[3].enq(
-           {3'h4, interrupt_bit, resp.id, resp.last, resp.byteEnable, 11'b0, resp.data});
+           {3'h4, interrupt_bit, 6'h0, resp.id[5:0], resp.last, resp.byteEnable[3:0], 11'b0, resp.data[31:0]});
    endrule
    //mkConnection(s.resp_b, m.resp_b);
    rule connect_resp_b;
        let resp <- s.resp_b.get();
        m.resp_b.put(resp);
        bscan_fifos[4].enq(
-           {3'h5, interrupt_bit, resp.id, resp.resp, 46'b0});
+           {3'h5, interrupt_bit, 6'h0, resp.id[5:0], resp.resp, 46'b0});
    endrule
 `endif
    endmodule

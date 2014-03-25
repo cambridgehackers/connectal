@@ -34,12 +34,13 @@ interface MemwriteEngine#(numeric type busWidth);
    interface DmaWriteClient#(busWidth) dmaClient;
 endinterface
 
-module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
+module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 
    provisos (Div#(busWidth,8,busWidthBytes));
 
    Reg#(Bit#(32))         numBeats <- mkReg(0);
    Reg#(Bit#(32))           reqCnt <- mkReg(0);
+   Reg#(Bit#(32))          respCnt <- mkReg(0);
    
    Reg#(Bit#(DmaOffsetSize))   off <- mkReg(0);
    Reg#(Bit#(DmaOffsetSize)) delta <- mkReg(0);
@@ -47,26 +48,24 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 
    Reg#(DmaPointer)        pointer <- mkReg(0);
    Reg#(Bit#(8))          burstLen <- mkReg(0);
-   FIFOF#(Bool)               acks <- mkSizedFIFOF(256);
 
    FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
-   FIFOF#(void)                 wf <- mkSizedFIFOF(32);
+   FIFOF#(Tuple2#(Bit#(32),Bit#(32))) wf <- mkSizedFIFOF(cmdQDepth);
 
-   let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
+   let bytes_per_beat = fromInteger(valueOf(TLog#(busWidthBytes)));
    
    method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) wl, Bit#(32) bl) if (reqCnt >= numBeats);
-      numBeats <= wl/bytes_per_beat;
+      numBeats <= wl>>bytes_per_beat;
       reqCnt   <= 0;
       off      <= 0;
       delta    <= extend(bl);
       pointer  <= p;
-      burstLen <= truncate(bl/bytes_per_beat);
+      burstLen <= truncate(bl>>bytes_per_beat);
       base     <= b;
-      wf.enq(?);
+      wf.enq(tuple2(wl>>bytes_per_beat,bl>>bytes_per_beat)); 
    endmethod
 
    method ActionValue#(Bool) finish();
-      wf.deq;
       ff.deq;
       return ff.first;
    endmethod
@@ -76,7 +75,6 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
 	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
-	    acks.enq(reqCnt+extend(burstLen) >= numBeats);
 	    return DmaRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0};
 	 endmethod
       endinterface
@@ -88,10 +86,16 @@ module  mkMemwriteEngine#(FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
       endinterface
       interface Put writeDone;
 	 method Action put(Bit#(6) tag);
-	    if (acks.first)
+	    let wl = tpl_1(wf.first);
+	    let bl = tpl_2(wf.first);
+	    if (respCnt+bl == wl) begin
 	       ff.enq(True);
-	    acks.deq;
-	    //$display("writeDone: tag=%d", tag);
+	       respCnt <= 0;
+	       wf.deq;
+	    end
+	    else begin
+	       respCnt <= respCnt+bl;
+	    end
 	 endmethod
       endinterface
    endinterface

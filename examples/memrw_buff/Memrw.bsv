@@ -46,8 +46,8 @@ module mkMemrwRequest#(MemrwIndication indication,
    let readFifo <- mkFIFOF;
    let writeFifo <- mkFIFOF;
 
-   MemreadEngine#(64) re <- mkMemreadEngine(readFifo);
-   MemwriteEngine#(64) we <- mkMemwriteEngine(writeFifo);
+   MemreadEngine#(64) re <- mkMemreadEngine(1, readFifo);
+   MemwriteEngine#(64) we <- mkMemwriteEngine(1, writeFifo);
 
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
