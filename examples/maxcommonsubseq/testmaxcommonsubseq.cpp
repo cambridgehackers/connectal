@@ -161,14 +161,15 @@ int main(int argc, const char **argv)
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     assert(result_len < alloc_len * alloc_len);
-    device->fetch(ref_fetchAlloc, result_len);
+    //    device->fetch(ref_fetchAlloc, (result_len+7)& ~7);
+    device->fetch(ref_fetchAlloc, 32);
     printf("fetch called %d\n", result_len);
     sem_wait(&setup_sem);
     printf("fetch finished \n");
 
     memcpy(swFetch, fetch, result_len * sizeof(uint16_t));
     for (int i = 0; i < result_len; i += 1) {
-      //      if (swFetch[i] != (strA[i] << 8 | strB[i]))
+      if (swFetch[i] != (strA[i] << 8 | strB[i]))
 	printf("mismatch i %d A %02x B %02x R %04x\n", 
 	       i, strA[i], strB[i], swFetch[i]);
     }
