@@ -8,17 +8,8 @@ scripts/importbvi.py -o PCIEWRAPPER.bsv -I PcieWrap -P PcieWrap \
     -n pipe_userclk1_in \
     -n pipe_userclk2_in \
     -n pl_link_gen2_cap \
-    -f cfg_aer_rooterr -f cfg_msg \
--f cfg_root_control \
--f cfg_interrupt \
--f cfg_err \
--f cfg_mgmt \
--f cfg_pmcsr \
--f cfg_pm \
--f cfg_ds \
--f cfg_aer \
--f pipe \
--f pl_link \
--f pcie_drp \
--f pci_exp \
+    -f cfg_aer -f cfg_ds -f cfg_err -f cfg_interrupt \
+    -f cfg_mgmt -f cfg_msg -f cfg_pmcsr -f cfg_pm \
+    -f cfg_root_control \
+    -f pipe -f pl_link -f pci_exp -f pcie_drp \
     xilinx/pcie_7x_v2_1/synth/pcie_7x_0.v

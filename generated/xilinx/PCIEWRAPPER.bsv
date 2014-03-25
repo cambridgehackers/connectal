@@ -20,33 +20,31 @@
    -n
    pl_link_gen2_cap
    -f
-   cfg_aer_rooterr
+   cfg_aer
    -f
-   cfg_msg
-   -f
-   cfg_root_control
-   -f
-   cfg_interrupt
+   cfg_ds
    -f
    cfg_err
    -f
+   cfg_interrupt
+   -f
    cfg_mgmt
+   -f
+   cfg_msg
    -f
    cfg_pmcsr
    -f
    cfg_pm
    -f
-   cfg_ds
-   -f
-   cfg_aer
+   cfg_root_control
    -f
    pipe
    -f
    pl_link
    -f
-   pcie_drp
-   -f
    pci_exp
+   -f
+   pcie_drp
    xilinx/pcie_7x_v2_1/synth/pcie_7x_0.v
 */
 
@@ -82,15 +80,12 @@ interface PciewrapCfg_aer;
     method Bit#(1)     ecrc_check_en();
     method Bit#(1)     ecrc_gen_en();
     method Action      interrupt_msgnum(Bit#(5) v);
-endinterface
-(* always_ready, always_enabled *)
-interface PciewrapCfg_aer_rooterr;
-    method Bit#(1)     corr_err_received();
-    method Bit#(1)     corr_err_reporting_en();
-    method Bit#(1)     fatal_err_received();
-    method Bit#(1)     fatal_err_reporting_en();
-    method Bit#(1)     non_fatal_err_received();
-    method Bit#(1)     non_fatal_err_reporting_en();
+    method Bit#(1)     rooterr_corr_err_received();
+    method Bit#(1)     rooterr_corr_err_reporting_en();
+    method Bit#(1)     rooterr_fatal_err_received();
+    method Bit#(1)     rooterr_fatal_err_reporting_en();
+    method Bit#(1)     rooterr_non_fatal_err_received();
+    method Bit#(1)     rooterr_non_fatal_err_reporting_en();
 endinterface
 (* always_ready, always_enabled *)
 interface PciewrapCfg_ds;
@@ -327,7 +322,6 @@ endinterface
 (* always_ready, always_enabled *)
 interface PcieWrap;
     interface PciewrapCfg_aer     cfg_aer;
-    interface PciewrapCfg_aer_rooterr     cfg_aer_rooterr;
     interface PciewrapCfg     cfg;
     interface PciewrapCfg_ds     cfg_ds;
     interface PciewrapCfg_err     cfg_err;
@@ -360,14 +354,12 @@ module mkPcieWrap(PcieWrap);
         method cfg_aerecrc_check_en ecrc_check_en();
         method cfg_aerecrc_gen_en ecrc_gen_en();
         method interrupt_msgnum(cfg_aerinterrupt_msgnum) enable((*inhigh*) EN_cfg_aerinterrupt_msgnum);
-    endinterface
-    interface PciewrapCfg_aer_rooterr     cfg_aer_rooterr;
-        method cfg_aer_rooterrcorr_err_received corr_err_received();
-        method cfg_aer_rooterrcorr_err_reporting_en corr_err_reporting_en();
-        method cfg_aer_rooterrfatal_err_received fatal_err_received();
-        method cfg_aer_rooterrfatal_err_reporting_en fatal_err_reporting_en();
-        method cfg_aer_rooterrnon_fatal_err_received non_fatal_err_received();
-        method cfg_aer_rooterrnon_fatal_err_reporting_en non_fatal_err_reporting_en();
+        method cfg_aerrooterr_corr_err_received rooterr_corr_err_received();
+        method cfg_aerrooterr_corr_err_reporting_en rooterr_corr_err_reporting_en();
+        method cfg_aerrooterr_fatal_err_received rooterr_fatal_err_received();
+        method cfg_aerrooterr_fatal_err_reporting_en rooterr_fatal_err_reporting_en();
+        method cfg_aerrooterr_non_fatal_err_received rooterr_non_fatal_err_received();
+        method cfg_aerrooterr_non_fatal_err_reporting_en rooterr_non_fatal_err_reporting_en();
     endinterface
     interface PciewrapCfg     cfg;
         method cfg_bridge_serr_en bridge_serr_en();
@@ -600,5 +592,5 @@ module mkPcieWrap(PcieWrap);
         method user_lnk_up lnk_up();
         method user_reset_out reset_out();
     endinterface
-    schedule (cfg_aer.ecrc_check_en, cfg_aer.ecrc_gen_en, cfg_aer.interrupt_msgnum, cfg_aer_rooterr.corr_err_received, cfg_aer_rooterr.corr_err_reporting_en, cfg_aer_rooterr.fatal_err_received, cfg_aer_rooterr.fatal_err_reporting_en, cfg_aer_rooterr.non_fatal_err_received, cfg_aer_rooterr.non_fatal_err_reporting_en, cfg.bridge_serr_en, cfg.bus_number, cfg.command, cfg.dcommand, cfg.dcommand2, cfg.device_number, cfg.function_number, cfg.interrupt, cfg.lcommand, cfg.lstatus, cfg.pcie_link_state, cfg.pciecap_interrupt_msgnum, cfg.received_func_lvl_rst, cfg.slot_control_electromech_il_ctl_pulse, cfg.status, cfg.to_turnoff, cfg.trn_pending, cfg.turnoff_ok, cfg.vc_tcvc_map, cfg_ds.bus_number, cfg_ds.device_number, cfg_ds.function_number, cfg_ds.n, cfg_ds.tatus, cfg_err.acs, cfg_err.aer_headerlog, cfg_err.aer_headerlog_set, cfg_err.atomic_egress_blocked, cfg_err.cor, cfg_err.cpl_abort, cfg_err.cpl_rdy, cfg_err.cpl_timeout, cfg_err.cpl_unexpect, cfg_err.ecrc, cfg_err.internal_cor, cfg_err.internal_uncor, cfg_err.locked, cfg_err.malformed, cfg_err.mc_blocked, cfg_err.norecovery, cfg_err.poisoned, cfg_err.posted, cfg_err.tlp_cpl_header, cfg_err.ur, cfg_interrupt.assert, cfg_interrupt.di, cfg_interrupt.do, cfg_interrupt.mmenable, cfg_interrupt.msienable, cfg_interrupt.msixenable, cfg_interrupt.msixfm, cfg_interrupt.rdy, cfg_interrupt.stat, cfg_mgmt.byte_en, cfg_mgmt.di, cfg_mgmt.do, cfg_mgmt.dwaddr, cfg_mgmt.rd_en, cfg_mgmt.rd_wr_done, cfg_mgmt.wr_en, cfg_mgmt.wr_readonly, cfg_mgmt.wr_rw1c_as_rw, cfg_msg.data, cfg_msg.received, cfg_msg.received_assert_int_a, cfg_msg.received_assert_int_b, cfg_msg.received_assert_int_c, cfg_msg.received_assert_int_d, cfg_msg.received_deassert_int_a, cfg_msg.received_deassert_int_b, cfg_msg.received_deassert_int_c, cfg_msg.received_deassert_int_d, cfg_msg.received_err_cor, cfg_msg.received_err_fatal, cfg_msg.received_err_non_fatal, cfg_msg.received_pm_as_nak, cfg_msg.received_pm_pme, cfg_msg.received_pme_to_ack, cfg_msg.received_setslotpowerlimit, cfg_pm.force_state, cfg_pm.force_state_en, cfg_pm.halt_aspm_l0s, cfg_pm.halt_aspm_l1, cfg_pm.send_pme_to, cfg_pm.wake, cfg_pmcsr.pme_en, cfg_pmcsr.pme_status, cfg_pmcsr.powerstate, cfg_root_control.pme_int_en, cfg_root_control.syserr_corr_err_en, cfg_root_control.syserr_fatal_err_en, cfg_root_control.syserr_non_fatal_err_en, fc.cpld, fc.cplh, fc.npd, fc.nph, fc.pd, fc.ph, fc.sel, icap.clk, icap.csib, icap.i, icap.o, icap.rdwrb, m_axis_rx.tdata, m_axis_rx.tkeep, m_axis_rx.tlast, m_axis_rx.tready, m_axis_rx.tuser, m_axis_rx.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie_drp.addr, pcie_drp.clk, pcie_drp.di, pcie_drp.do, pcie_drp.en, pcie_drp.rdy, pcie_drp.we, pipe.dclk_in, pipe.gen3_out, pipe.mmcm_lock_in, pipe.mmcm_rst_n, pipe.oobclk_in, pipe.pclk_in, pipe.pclk_sel_out, pipe.rxoutclk_in, pipe.rxoutclk_out, pipe.rxusrclk_in, pipe.txoutclk_out, pipe.userclk1_in, pipe.userclk2_in, pl.directed_change_done, pl.directed_link_auton, pl.directed_link_change, pl.directed_link_speed, pl.directed_link_width, pl.downstream_deemph_source, pl.initial_link_width, pl.lane_reversal_mode, pl.ltssm_state, pl.phy_lnk_up, pl.received_hot_rst, pl.rx_pm_state, pl.sel_lnk_rate, pl.sel_lnk_width, pl.transmit_hot_rst, pl.tx_pm_state, pl.upstream_prefer_deemph, pl_link.gen2_cap, pl_link.partner_gen2_supported, pl_link.upcfg_cap, rx.np_ok, rx.np_req, s_axis_tx.tdata, s_axis_tx.tkeep, s_axis_tx.tlast, s_axis_tx.tready, s_axis_tx.tuser, s_axis_tx.tvalid, startup.cfgclk, startup.cfgmclk, startup.clk, startup.eos, startup.gsr, startup.gts, startup.keyclearb, startup.pack, startup.preq, startup.usrcclko, startup.usrcclkts, startup.usrdoneo, startup.usrdonets, sys.clk, sys.rst_n, tx.buf_av, tx.cfg_gnt, tx.cfg_req, tx.err_drop, user.app_rdy, user.clk_out, user.lnk_up, user.reset_out) CF (cfg_aer.ecrc_check_en, cfg_aer.ecrc_gen_en, cfg_aer.interrupt_msgnum, cfg_aer_rooterr.corr_err_received, cfg_aer_rooterr.corr_err_reporting_en, cfg_aer_rooterr.fatal_err_received, cfg_aer_rooterr.fatal_err_reporting_en, cfg_aer_rooterr.non_fatal_err_received, cfg_aer_rooterr.non_fatal_err_reporting_en, cfg.bridge_serr_en, cfg.bus_number, cfg.command, cfg.dcommand, cfg.dcommand2, cfg.device_number, cfg.function_number, cfg.interrupt, cfg.lcommand, cfg.lstatus, cfg.pcie_link_state, cfg.pciecap_interrupt_msgnum, cfg.received_func_lvl_rst, cfg.slot_control_electromech_il_ctl_pulse, cfg.status, cfg.to_turnoff, cfg.trn_pending, cfg.turnoff_ok, cfg.vc_tcvc_map, cfg_ds.bus_number, cfg_ds.device_number, cfg_ds.function_number, cfg_ds.n, cfg_ds.tatus, cfg_err.acs, cfg_err.aer_headerlog, cfg_err.aer_headerlog_set, cfg_err.atomic_egress_blocked, cfg_err.cor, cfg_err.cpl_abort, cfg_err.cpl_rdy, cfg_err.cpl_timeout, cfg_err.cpl_unexpect, cfg_err.ecrc, cfg_err.internal_cor, cfg_err.internal_uncor, cfg_err.locked, cfg_err.malformed, cfg_err.mc_blocked, cfg_err.norecovery, cfg_err.poisoned, cfg_err.posted, cfg_err.tlp_cpl_header, cfg_err.ur, cfg_interrupt.assert, cfg_interrupt.di, cfg_interrupt.do, cfg_interrupt.mmenable, cfg_interrupt.msienable, cfg_interrupt.msixenable, cfg_interrupt.msixfm, cfg_interrupt.rdy, cfg_interrupt.stat, cfg_mgmt.byte_en, cfg_mgmt.di, cfg_mgmt.do, cfg_mgmt.dwaddr, cfg_mgmt.rd_en, cfg_mgmt.rd_wr_done, cfg_mgmt.wr_en, cfg_mgmt.wr_readonly, cfg_mgmt.wr_rw1c_as_rw, cfg_msg.data, cfg_msg.received, cfg_msg.received_assert_int_a, cfg_msg.received_assert_int_b, cfg_msg.received_assert_int_c, cfg_msg.received_assert_int_d, cfg_msg.received_deassert_int_a, cfg_msg.received_deassert_int_b, cfg_msg.received_deassert_int_c, cfg_msg.received_deassert_int_d, cfg_msg.received_err_cor, cfg_msg.received_err_fatal, cfg_msg.received_err_non_fatal, cfg_msg.received_pm_as_nak, cfg_msg.received_pm_pme, cfg_msg.received_pme_to_ack, cfg_msg.received_setslotpowerlimit, cfg_pm.force_state, cfg_pm.force_state_en, cfg_pm.halt_aspm_l0s, cfg_pm.halt_aspm_l1, cfg_pm.send_pme_to, cfg_pm.wake, cfg_pmcsr.pme_en, cfg_pmcsr.pme_status, cfg_pmcsr.powerstate, cfg_root_control.pme_int_en, cfg_root_control.syserr_corr_err_en, cfg_root_control.syserr_fatal_err_en, cfg_root_control.syserr_non_fatal_err_en, fc.cpld, fc.cplh, fc.npd, fc.nph, fc.pd, fc.ph, fc.sel, icap.clk, icap.csib, icap.i, icap.o, icap.rdwrb, m_axis_rx.tdata, m_axis_rx.tkeep, m_axis_rx.tlast, m_axis_rx.tready, m_axis_rx.tuser, m_axis_rx.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie_drp.addr, pcie_drp.clk, pcie_drp.di, pcie_drp.do, pcie_drp.en, pcie_drp.rdy, pcie_drp.we, pipe.dclk_in, pipe.gen3_out, pipe.mmcm_lock_in, pipe.mmcm_rst_n, pipe.oobclk_in, pipe.pclk_in, pipe.pclk_sel_out, pipe.rxoutclk_in, pipe.rxoutclk_out, pipe.rxusrclk_in, pipe.txoutclk_out, pipe.userclk1_in, pipe.userclk2_in, pl.directed_change_done, pl.directed_link_auton, pl.directed_link_change, pl.directed_link_speed, pl.directed_link_width, pl.downstream_deemph_source, pl.initial_link_width, pl.lane_reversal_mode, pl.ltssm_state, pl.phy_lnk_up, pl.received_hot_rst, pl.rx_pm_state, pl.sel_lnk_rate, pl.sel_lnk_width, pl.transmit_hot_rst, pl.tx_pm_state, pl.upstream_prefer_deemph, pl_link.gen2_cap, pl_link.partner_gen2_supported, pl_link.upcfg_cap, rx.np_ok, rx.np_req, s_axis_tx.tdata, s_axis_tx.tkeep, s_axis_tx.tlast, s_axis_tx.tready, s_axis_tx.tuser, s_axis_tx.tvalid, startup.cfgclk, startup.cfgmclk, startup.clk, startup.eos, startup.gsr, startup.gts, startup.keyclearb, startup.pack, startup.preq, startup.usrcclko, startup.usrcclkts, startup.usrdoneo, startup.usrdonets, sys.clk, sys.rst_n, tx.buf_av, tx.cfg_gnt, tx.cfg_req, tx.err_drop, user.app_rdy, user.clk_out, user.lnk_up, user.reset_out);
+    schedule (cfg_aer.ecrc_check_en, cfg_aer.ecrc_gen_en, cfg_aer.interrupt_msgnum, cfg_aer.rooterr_corr_err_received, cfg_aer.rooterr_corr_err_reporting_en, cfg_aer.rooterr_fatal_err_received, cfg_aer.rooterr_fatal_err_reporting_en, cfg_aer.rooterr_non_fatal_err_received, cfg_aer.rooterr_non_fatal_err_reporting_en, cfg.bridge_serr_en, cfg.bus_number, cfg.command, cfg.dcommand, cfg.dcommand2, cfg.device_number, cfg.function_number, cfg.interrupt, cfg.lcommand, cfg.lstatus, cfg.pcie_link_state, cfg.pciecap_interrupt_msgnum, cfg.received_func_lvl_rst, cfg.slot_control_electromech_il_ctl_pulse, cfg.status, cfg.to_turnoff, cfg.trn_pending, cfg.turnoff_ok, cfg.vc_tcvc_map, cfg_ds.bus_number, cfg_ds.device_number, cfg_ds.function_number, cfg_ds.n, cfg_ds.tatus, cfg_err.acs, cfg_err.aer_headerlog, cfg_err.aer_headerlog_set, cfg_err.atomic_egress_blocked, cfg_err.cor, cfg_err.cpl_abort, cfg_err.cpl_rdy, cfg_err.cpl_timeout, cfg_err.cpl_unexpect, cfg_err.ecrc, cfg_err.internal_cor, cfg_err.internal_uncor, cfg_err.locked, cfg_err.malformed, cfg_err.mc_blocked, cfg_err.norecovery, cfg_err.poisoned, cfg_err.posted, cfg_err.tlp_cpl_header, cfg_err.ur, cfg_interrupt.assert, cfg_interrupt.di, cfg_interrupt.do, cfg_interrupt.mmenable, cfg_interrupt.msienable, cfg_interrupt.msixenable, cfg_interrupt.msixfm, cfg_interrupt.rdy, cfg_interrupt.stat, cfg_mgmt.byte_en, cfg_mgmt.di, cfg_mgmt.do, cfg_mgmt.dwaddr, cfg_mgmt.rd_en, cfg_mgmt.rd_wr_done, cfg_mgmt.wr_en, cfg_mgmt.wr_readonly, cfg_mgmt.wr_rw1c_as_rw, cfg_msg.data, cfg_msg.received, cfg_msg.received_assert_int_a, cfg_msg.received_assert_int_b, cfg_msg.received_assert_int_c, cfg_msg.received_assert_int_d, cfg_msg.received_deassert_int_a, cfg_msg.received_deassert_int_b, cfg_msg.received_deassert_int_c, cfg_msg.received_deassert_int_d, cfg_msg.received_err_cor, cfg_msg.received_err_fatal, cfg_msg.received_err_non_fatal, cfg_msg.received_pm_as_nak, cfg_msg.received_pm_pme, cfg_msg.received_pme_to_ack, cfg_msg.received_setslotpowerlimit, cfg_pm.force_state, cfg_pm.force_state_en, cfg_pm.halt_aspm_l0s, cfg_pm.halt_aspm_l1, cfg_pm.send_pme_to, cfg_pm.wake, cfg_pmcsr.pme_en, cfg_pmcsr.pme_status, cfg_pmcsr.powerstate, cfg_root_control.pme_int_en, cfg_root_control.syserr_corr_err_en, cfg_root_control.syserr_fatal_err_en, cfg_root_control.syserr_non_fatal_err_en, fc.cpld, fc.cplh, fc.npd, fc.nph, fc.pd, fc.ph, fc.sel, icap.clk, icap.csib, icap.i, icap.o, icap.rdwrb, m_axis_rx.tdata, m_axis_rx.tkeep, m_axis_rx.tlast, m_axis_rx.tready, m_axis_rx.tuser, m_axis_rx.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie_drp.addr, pcie_drp.clk, pcie_drp.di, pcie_drp.do, pcie_drp.en, pcie_drp.rdy, pcie_drp.we, pipe.dclk_in, pipe.gen3_out, pipe.mmcm_lock_in, pipe.mmcm_rst_n, pipe.oobclk_in, pipe.pclk_in, pipe.pclk_sel_out, pipe.rxoutclk_in, pipe.rxoutclk_out, pipe.rxusrclk_in, pipe.txoutclk_out, pipe.userclk1_in, pipe.userclk2_in, pl.directed_change_done, pl.directed_link_auton, pl.directed_link_change, pl.directed_link_speed, pl.directed_link_width, pl.downstream_deemph_source, pl.initial_link_width, pl.lane_reversal_mode, pl.ltssm_state, pl.phy_lnk_up, pl.received_hot_rst, pl.rx_pm_state, pl.sel_lnk_rate, pl.sel_lnk_width, pl.transmit_hot_rst, pl.tx_pm_state, pl.upstream_prefer_deemph, pl_link.gen2_cap, pl_link.partner_gen2_supported, pl_link.upcfg_cap, rx.np_ok, rx.np_req, s_axis_tx.tdata, s_axis_tx.tkeep, s_axis_tx.tlast, s_axis_tx.tready, s_axis_tx.tuser, s_axis_tx.tvalid, startup.cfgclk, startup.cfgmclk, startup.clk, startup.eos, startup.gsr, startup.gts, startup.keyclearb, startup.pack, startup.preq, startup.usrcclko, startup.usrcclkts, startup.usrdoneo, startup.usrdonets, sys.clk, sys.rst_n, tx.buf_av, tx.cfg_gnt, tx.cfg_req, tx.err_drop, user.app_rdy, user.clk_out, user.lnk_up, user.reset_out) CF (cfg_aer.ecrc_check_en, cfg_aer.ecrc_gen_en, cfg_aer.interrupt_msgnum, cfg_aer.rooterr_corr_err_received, cfg_aer.rooterr_corr_err_reporting_en, cfg_aer.rooterr_fatal_err_received, cfg_aer.rooterr_fatal_err_reporting_en, cfg_aer.rooterr_non_fatal_err_received, cfg_aer.rooterr_non_fatal_err_reporting_en, cfg.bridge_serr_en, cfg.bus_number, cfg.command, cfg.dcommand, cfg.dcommand2, cfg.device_number, cfg.function_number, cfg.interrupt, cfg.lcommand, cfg.lstatus, cfg.pcie_link_state, cfg.pciecap_interrupt_msgnum, cfg.received_func_lvl_rst, cfg.slot_control_electromech_il_ctl_pulse, cfg.status, cfg.to_turnoff, cfg.trn_pending, cfg.turnoff_ok, cfg.vc_tcvc_map, cfg_ds.bus_number, cfg_ds.device_number, cfg_ds.function_number, cfg_ds.n, cfg_ds.tatus, cfg_err.acs, cfg_err.aer_headerlog, cfg_err.aer_headerlog_set, cfg_err.atomic_egress_blocked, cfg_err.cor, cfg_err.cpl_abort, cfg_err.cpl_rdy, cfg_err.cpl_timeout, cfg_err.cpl_unexpect, cfg_err.ecrc, cfg_err.internal_cor, cfg_err.internal_uncor, cfg_err.locked, cfg_err.malformed, cfg_err.mc_blocked, cfg_err.norecovery, cfg_err.poisoned, cfg_err.posted, cfg_err.tlp_cpl_header, cfg_err.ur, cfg_interrupt.assert, cfg_interrupt.di, cfg_interrupt.do, cfg_interrupt.mmenable, cfg_interrupt.msienable, cfg_interrupt.msixenable, cfg_interrupt.msixfm, cfg_interrupt.rdy, cfg_interrupt.stat, cfg_mgmt.byte_en, cfg_mgmt.di, cfg_mgmt.do, cfg_mgmt.dwaddr, cfg_mgmt.rd_en, cfg_mgmt.rd_wr_done, cfg_mgmt.wr_en, cfg_mgmt.wr_readonly, cfg_mgmt.wr_rw1c_as_rw, cfg_msg.data, cfg_msg.received, cfg_msg.received_assert_int_a, cfg_msg.received_assert_int_b, cfg_msg.received_assert_int_c, cfg_msg.received_assert_int_d, cfg_msg.received_deassert_int_a, cfg_msg.received_deassert_int_b, cfg_msg.received_deassert_int_c, cfg_msg.received_deassert_int_d, cfg_msg.received_err_cor, cfg_msg.received_err_fatal, cfg_msg.received_err_non_fatal, cfg_msg.received_pm_as_nak, cfg_msg.received_pm_pme, cfg_msg.received_pme_to_ack, cfg_msg.received_setslotpowerlimit, cfg_pm.force_state, cfg_pm.force_state_en, cfg_pm.halt_aspm_l0s, cfg_pm.halt_aspm_l1, cfg_pm.send_pme_to, cfg_pm.wake, cfg_pmcsr.pme_en, cfg_pmcsr.pme_status, cfg_pmcsr.powerstate, cfg_root_control.pme_int_en, cfg_root_control.syserr_corr_err_en, cfg_root_control.syserr_fatal_err_en, cfg_root_control.syserr_non_fatal_err_en, fc.cpld, fc.cplh, fc.npd, fc.nph, fc.pd, fc.ph, fc.sel, icap.clk, icap.csib, icap.i, icap.o, icap.rdwrb, m_axis_rx.tdata, m_axis_rx.tkeep, m_axis_rx.tlast, m_axis_rx.tready, m_axis_rx.tuser, m_axis_rx.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie_drp.addr, pcie_drp.clk, pcie_drp.di, pcie_drp.do, pcie_drp.en, pcie_drp.rdy, pcie_drp.we, pipe.dclk_in, pipe.gen3_out, pipe.mmcm_lock_in, pipe.mmcm_rst_n, pipe.oobclk_in, pipe.pclk_in, pipe.pclk_sel_out, pipe.rxoutclk_in, pipe.rxoutclk_out, pipe.rxusrclk_in, pipe.txoutclk_out, pipe.userclk1_in, pipe.userclk2_in, pl.directed_change_done, pl.directed_link_auton, pl.directed_link_change, pl.directed_link_speed, pl.directed_link_width, pl.downstream_deemph_source, pl.initial_link_width, pl.lane_reversal_mode, pl.ltssm_state, pl.phy_lnk_up, pl.received_hot_rst, pl.rx_pm_state, pl.sel_lnk_rate, pl.sel_lnk_width, pl.transmit_hot_rst, pl.tx_pm_state, pl.upstream_prefer_deemph, pl_link.gen2_cap, pl_link.partner_gen2_supported, pl_link.upcfg_cap, rx.np_ok, rx.np_req, s_axis_tx.tdata, s_axis_tx.tkeep, s_axis_tx.tlast, s_axis_tx.tready, s_axis_tx.tuser, s_axis_tx.tvalid, startup.cfgclk, startup.cfgmclk, startup.clk, startup.eos, startup.gsr, startup.gts, startup.keyclearb, startup.pack, startup.preq, startup.usrcclko, startup.usrcclkts, startup.usrdoneo, startup.usrdonets, sys.clk, sys.rst_n, tx.buf_av, tx.cfg_gnt, tx.cfg_req, tx.err_drop, user.app_rdy, user.clk_out, user.lnk_up, user.reset_out);
 endmodule
