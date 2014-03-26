@@ -259,7 +259,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	    writeId <= write_id;
 	    writeLen <= write_len - 1;
 	    writeAddrr <= write_addr + fromInteger(valueOf(serverBusWidth)/8);
-	    if (writeLen == 1)
+	    if (write_len == 1)
 	       bFifo.enq(Axi3WriteResponse { id: write_id, resp: 0 });
 	 endmethod
       endinterface
