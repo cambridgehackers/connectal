@@ -29,57 +29,6 @@
 
 #include "testmemrw.h"
 
-#include "StdDmaIndication.h"
-#include "DmaConfigProxy.h"
-#include "GeneratedTypes.h"
-#include "MemrwIndicationWrapper.h"
-#include "MemrwRequestProxy.h"
-
-sem_t read_done_sem;
-sem_t write_done_sem;
-PortalAlloc *srcAlloc;
-PortalAlloc *dstAlloc;
-unsigned int *srcBuffer = 0;
-unsigned int *dstBuffer = 0;
-#ifdef MMAP_HW
-int numWords = 16 << 18;
-#else
-int numWords = 16 << 10;
-#endif
-size_t alloc_sz = numWords*sizeof(unsigned int);
-bool finished = false;
-uint64_t read_cycles;
-uint64_t write_cycles;
-
-class MemrwIndication : public MemrwIndicationWrapper
-{
-
-public:
-  MemrwIndication(unsigned int id) : MemrwIndicationWrapper(id){}
-
-  virtual void started(){
-    fprintf(stderr, "started\n");
-  }
-  virtual void readDone() {
-    read_cycles = lap_timer(0);
-    sem_post(&read_done_sem);
-    fprintf(stderr, "readDone\n");
-  }
-  virtual void writeDone() {
-    write_cycles = lap_timer(0);
-    sem_post(&write_done_sem);
-    fprintf(stderr, "writeDone\n");
-  }
-};
-
-
-// we can use the data synchronization barrier instead of flushing the 
-// cache only because the ps7 is configured to run in buffered-write mode
-//
-// an opc2 of '4' and CRm of 'c10' encodes "CP15DSB, Data Synchronization Barrier 
-// operation". this is a legal instruction to execute in non-privileged mode (mdk)
-//
-// #define DATA_SYNC_BARRIER   __asm __volatile( "MCR p15, 0, %0, c7, c10, 4" ::  "r" (0) );
 
 int main(int argc, const char **argv)
 {
