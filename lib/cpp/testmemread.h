@@ -5,11 +5,11 @@
  *       and zedboard platforms.
  *       
  *       dma_read_buff: the zedboard requires at least 5 outstanding read commands to achieve full
- *       memory read bandwidth of 0.89 (40 64-bit beats at a burst-len of 16 32-bit words).  We are unsure 
+ *       memory read bandwidth of 0.89 (40 64-bit beats with a burst-len of 8 beats).  We are unsure 
  *       exactly why, but each time a read request is transmitted, there is a 1-cycle delay in the 
  *       pipelined read responses (which otherwise return 64 bits per cycle).   With a burst length of 8 
- *       beats, this implies an 11% overhead.  The kc705 requires at least 16 outstanding read commands
- *       to achieve full read bandwidth of 1.0 (128 64-bit beats at a burst-len of 16 32-bit words).  The
+ *       beats, this implies an 11% overhead.  The kc705 requires at least 8 outstanding read commands
+ *       to achieve full read bandwidth of 1.0 (64 64-bit beats with a burst-len of 8 beats).  The
  *       unbuffered version of this test (memread_nobuff) achieves full throughput simply by permitting
  *       an unlimited number of outstanding read commands.  This is only safe if the application can 
  *       guarantee the availability of buffering to receive read responses.  If you don't know, be safe and

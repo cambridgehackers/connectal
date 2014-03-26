@@ -41,7 +41,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    DmaReadBuffer#(64, 32)   dma_read_buff <- mkDmaReadBuffer();
 `else
 `ifdef PCIE
-   DmaReadBuffer#(64, 128)   dma_read_buff <- mkDmaReadBuffer();
+   DmaReadBuffer#(64, 64)   dma_read_buff <- mkDmaReadBuffer();
 `else
    DmaReadBuffer#(64, 32)   dma_read_buff <- mkDmaReadBuffer();
 `endif
