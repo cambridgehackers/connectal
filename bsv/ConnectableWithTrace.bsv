@@ -32,7 +32,8 @@ typeclass ConnectableWithTrace#(type a, type b);
 endtypeclass
 
 //`define TRACE_AXI
-//`define AXI_READ_TIMING
+`define AXI_READ_TIMING
+`define AXI_WRITE_TIMING
 
 instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrWidth, busWidth,idWidth))
    provisos(Add#(0,addrWidth,32));
@@ -114,8 +115,14 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
        let req <- m.req_aw.get();
        s.req_aw.put(req);
        bscan_fifos[2].enq(
-           {3'h3, interrupt_bit, 6'h0, req.id[5:0], req.len, req.cache, req.prot, req.size,
-                    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0), req.address});
+           {3'h3, interrupt_bit, 6'h0, req.id[5:0], 
+`ifdef AXI_WRITE_TIMING
+	    seqCounter,
+`else	    
+	    req.len, req.cache, req.prot, req.size,
+	    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0), 
+`endif
+	    req.address});
    endrule
    //mkConnection(m.resp_write, s.resp_write);
    rule connect_resp_write;

@@ -38,6 +38,10 @@ ifeq ($(origin TOP),undefined)
     TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
     endif
+    ifeq ($(BOARD),zc706)
+    TOP=$(XBSVDIR)/bsv/Zc706Top.bsv
+    MKTOP=mkZynqTop
+    endif
 endif
 
 gen:

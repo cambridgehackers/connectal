@@ -128,6 +128,24 @@ $(zcruns):
 	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zc702 -name \*.gz` `find examples/$(basename $@)/zc702 -name android_exe | grep libs`
 
 #################################################################################################
+# zc706
+
+zc706tests = $(addsuffix .zc706, $(testnames))
+zc706tests: $(zc706tests)
+
+$(zc706tests):
+	rm -fr examples/$(basename $@)/zc706
+	make BOARD=zc706 -C examples/$(basename $@) all
+
+zc706runs = $(addsuffix .zc706run, $(testnames))
+zc706runs: $(zc706runs)
+
+# RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc706
+$(zc706runs):
+	(cd consolable; make)
+	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zc706 -name \*.gz` `find examples/$(basename $@)/zc706 -name android_exe | grep libs`
+
+#################################################################################################
 # vc707
 
 vc707tests = $(addsuffix .vc707, $(testnames))
@@ -175,6 +193,11 @@ memtests.zedboard.regression:
 memtests.kc705: $(addsuffix .kc705, $(memtests))
 memtests.kc705.regression:
 	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.kc705
+
+
+memtests.bsim: $(addsuffix .bsim, $(memtests))
+memtests.bsim.regression:
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.bsim
 
 android_exetests = $(addsuffix .android_exe, $(testnames))
 android_exetests: $(android_exetests)

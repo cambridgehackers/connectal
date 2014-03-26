@@ -37,15 +37,15 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   DmaReadBuffer#(64,32)   dma_read_chan <- mkDmaReadBuffer();
-   DmaWriteBuffer#(64,32) dma_write_chan <- mkDmaWriteBuffer();
-   Vector#(1,  DmaReadClient#(64))   readClients = cons(dma_read_chan.dmaClient, nil);
-   Vector#(1, DmaWriteClient#(64)) writeClients = cons(dma_write_chan.dmaClient, nil);
+   DmaReadBuffer#(64,80)   dma_read_buff <- mkDmaReadBuffer();
+   DmaWriteBuffer#(64,80) dma_write_buff <- mkDmaWriteBuffer();
+   Vector#(1,  DmaReadClient#(64))   readClients = cons(dma_read_buff.dmaClient, nil);
+   Vector#(1, DmaWriteClient#(64)) writeClients = cons(dma_write_buff.dmaClient, nil);
    AxiDmaServer#(addrWidth, 64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    MemrwIndicationProxy memrwIndicationProxy <- mkMemrwIndicationProxy(MemrwIndication);
-   MemrwRequest memrwRequest <- mkMemrwRequest(memrwIndicationProxy.ifc, dma_read_chan.dmaServer, dma_write_chan.dmaServer);
+   MemrwRequest memrwRequest <- mkMemrwRequest(memrwIndicationProxy.ifc, dma_read_buff.dmaServer, dma_write_buff.dmaServer);
    MemrwRequestWrapper memrwRequestWrapper <- mkMemrwRequestWrapper(MemrwRequest,memrwRequest);
       
    Vector#(4,StdPortal) portals;
