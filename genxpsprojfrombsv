@@ -352,11 +352,15 @@ if __name__=='__main__':
 
     bsvdefines = []
     if boardname == 'kc705':
-        bsvdefines += ['Kintex7']
+        bsvdefines += ['Kintex7', 'PCIE']
     elif boardname == 'vc707':
-        bsvdefines += ['Virtex7']
+        bsvdefines += ['Virtex7', 'PCIE']
     elif boardname == 'ac701':
-        bsvdefines += ['Artix7']
+        bsvdefines += ['Artix7',  'PCIE']
+    elif boardname == 'zedboard':
+        bsvdefines += ['ZYNQ']
+    elif boardname == 'zc702':
+        bsvdefines += ['ZYNQ']
 
     if not (os.path.abspath(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv')) in map(os.path.abspath, namespace.bsvfile)):
         namespace.bsvfile.append(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv'))

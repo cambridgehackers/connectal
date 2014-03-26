@@ -88,6 +88,17 @@ module mkAxiDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) readCl
 
    Reg#(Bit#(8))           burstReg <- mkReg(0);
    Vector#(numReadClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
+   Reg#(Bit#(32)) bin1 <- mkReg(0);
+   Reg#(Bit#(32)) bin4 <- mkReg(0);
+   Reg#(Bit#(32)) binx <- mkReg(0);
+   Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
+   Reg#(Bit#(64)) last_resp_read <- mkReg(0);
+
+   
+   (* fire_when_enabled *)
+   rule cycle;
+      cycle_cnt <= cycle_cnt+1;
+   endrule
    
    // the choice of 5 is based on PCIE limitations.   
    // uniqueness is enforced by the depth of dreqFIFO
@@ -129,7 +140,7 @@ module mkAxiDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) readCl
 
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
-	 return DmaDbgRec{x:fromInteger(valueOf(numReadClients)), y:?, z:?, w:?};
+	 return DmaDbgRec{x:fromInteger(valueOf(numReadClients)), y:bin1, z:bin4, w:binx};
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
 	 return (valueOf(numReadClients) > 0 && client < fromInteger(valueOf(numReadClients))) ? beatCounts[client] : 0;
@@ -154,11 +165,13 @@ module mkAxiDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) readCl
       endinterface
       interface Put resp_read;
 	 method Action put(Axi3ReadResponse#(dsz,6) response);
+	    last_resp_read <= cycle_cnt;
+	    let interval = cycle_cnt - last_resp_read;
 	    let activeChan = dreqFifo.first.chan;
 	    let req = dreqFifo.first.req;
 	    let id = dreqFifo.first.id;
 	    if (valueOf(numReadClients) > 0)
-	      readClients[activeChan].readData.put(DmaData { data: response.data, tag: req.tag});
+	       readClients[activeChan].readData.put(DmaData { data: response.data, tag: req.tag});
 
 	    let burstLen = burstReg;
 	    if (burstLen == 0)
@@ -174,8 +187,16 @@ module mkAxiDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) readCl
 	    end
 	    //$display("mkAxiDmaReadInternal::resp_read id=%d burstLen=%d activeChan=%d", id, burstLen, activeChan);
 	    burstReg <= burstLen-1;
+
 	    if(valueOf(numReadClients) > 0)
 	       beatCounts[activeChan] <= beatCounts[activeChan]+1;
+	    if (interval <= 1)
+	       bin1 <= bin1+1;
+	    else if (interval <= 4)
+	       bin4 <= bin4+1;
+	    else
+	       binx <= binx+1;
+
 	 endmethod
       endinterface
       interface Get req_aw = ?;

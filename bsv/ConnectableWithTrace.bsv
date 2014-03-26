@@ -83,7 +83,9 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
       traceBram.portA.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addrReg, datain:data});
       addrReg <= addrReg + 1;
    endrule
+
    Reg#(Bit#(16)) seqCounter <- mkReg(0);
+   (* fire_when_enabled *)
    rule seqinc;
        seqCounter <= seqCounter + 1;
    endrule
@@ -96,19 +98,25 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
        bscan_fifos[0].enq(
 	   {3'h1, interrupt_bit, 6'h0, req.id[5:0],
 `ifdef AXI_READ_TIMING
-                    seqCounter,
+	    seqCounter,
 `else
-                    req.len, req.cache, req.prot, req.size,
-                    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0),
+	    req.len, req.cache, req.prot, req.size,
+	    pack(req.burst == 2'b01), pack(req.lock == 0 && req.qos == 0),
 `endif
-                    req.address});
+	    req.address});
    endrule
    //mkConnection(s.resp_read, m.resp_read);
    rule connect_resp_read;
        let resp <- s.resp_read.get();
        m.resp_read.put(resp);
        bscan_fifos[1].enq(
-           {3'h2, interrupt_bit, 6'h0, resp.id[5:0], resp.resp, resp.last, 13'b0, resp.data[31:0]});
+           {3'h2, interrupt_bit, 6'h0, resp.id[5:0], 
+`ifdef AXI_READ_TIMING
+	    seqCounter,
+`else
+	    resp.resp, resp.last, 13'b0, 
+`endif
+	    resp.data[31:0]});
    endrule
    //mkConnection(m.req_aw, s.req_aw);
    rule connect_req_aw;
@@ -129,7 +137,13 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
        let resp <- m.resp_write.get();
        s.resp_write.put(resp);
        bscan_fifos[3].enq(
-           {3'h4, interrupt_bit, 6'h0, resp.id[5:0], resp.last, resp.byteEnable[3:0], 11'b0, resp.data[31:0]});
+           {3'h4, interrupt_bit, 6'h0, resp.id[5:0], 
+`ifdef AXI_WRITE_TIMING
+	    seqCounter,
+`else
+	    resp.last, resp.byteEnable[3:0], 11'b0, 
+`endif
+	    resp.data[31:0]});
    endrule
    //mkConnection(s.resp_b, m.resp_b);
    rule connect_resp_b;

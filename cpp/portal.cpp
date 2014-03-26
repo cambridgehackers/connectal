@@ -534,7 +534,8 @@ void print_dbg_request_intervals()
 uint64_t Directory::cycle_count()
 {
   unsigned int high_bits = READL(this, counter_offset+0);
-  return (((uint64_t)high_bits)<<32) | READL(this, counter_offset+1);
+  unsigned int low_bits  = READL(this, counter_offset+1);
+  return (((uint64_t)high_bits)<<32) | ((uint64_t)low_bits);
 }
 unsigned int Directory::get_fpga(unsigned int id)
 {
