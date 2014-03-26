@@ -132,7 +132,7 @@ int main(int argc, const char **argv)
     assert(strB != MAP_FAILED);
 
     const char *strA_text = "   a     b      c    ";
-    const char *strB_text = "..a........b......";
+    const char *strB_text = "..a........b.c....";
     
     assert(strlen(strA_text) < alloc_len);
     assert(strlen(strB_text) < alloc_len);
@@ -178,13 +178,14 @@ int main(int argc, const char **argv)
 
     memcpy(swFetch, fetch, fetch_len * sizeof(uint16_t));
     printf("   ");
-    for (int j = 0; j < strB_len; j += 1) {
+    for (int j = 0; j <= strB_len; j += 1) {
       printf("%4d", j);
     }
-    for (int i = 0; i < strA_len; i += 1) {
+    printf("\n");
+    for (int i = 0; i <= strA_len; i += 1) {
       printf("%4d", i);
-      for (int j = 0; j < strB_len; j += 1) {
-	printf("%4d", swFetch[i << 7 + j] & 0xff);
+      for (int j = 0; j <= strB_len; j += 1) {
+	printf("%4d", swFetch[(i << 7) + j] & 0xff);
       }
     printf("\n");
     }
