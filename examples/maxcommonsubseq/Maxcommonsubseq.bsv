@@ -90,16 +90,12 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
             Add#(TDiv#(busWidth, 16), g__, TMul#(2, TDiv#(busWidth, 16))));
 
    
-  Reg#(Bit#(7)) aLenReg <- mkReg(0);
-  Reg#(Bit#(7)) bLenReg <- mkReg(0);
-  Reg#(Bit#(14)) rLenReg <- mkReg(0);
-  Reg#(Bit#(7)) ii <- mkReg(0);
-  Reg#(Bit#(7)) jj <- mkReg(0);
+  Reg#(Bit#(32)) aLenReg <- mkReg(0);
+  Reg#(Bit#(32)) bLenReg <- mkReg(0);
+  Reg#(Bit#(32)) rLenReg <- mkReg(0);
+  Reg#(Bit#(32)) ii <- mkReg(0);
    Reg#(Char) aData <- mkReg(0);
    Reg#(Char) bData <- mkReg(0);
-   Reg#(Bit#(16)) lim1jm1 <- mkReg(0);
-   Reg#(Bit#(16)) lim1j <- mkReg(0);
-   Reg#(Bit#(16)) lijm1 <- mkReg(0);
    BRAM2Port#(StringIdx, Char) strA  <- mkBRAM2Server(defaultValue);
    BRAM2Port#(StringIdx, Char) strB <- mkBRAM2Server(defaultValue);
    BRAM2Port#(LIdx, Bit#(16)) matL <- mkBRAM2Server(defaultValue);
@@ -114,8 +110,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    FIFOF#(void) aReady <- mkFIFOF;
    FIFOF#(void) bReady <- mkFIFOF;
    FIFOF#(void) mReady <- mkFIFOF;
-
-   Stmt maxQuadratic =
+   Stmt splice =
    seq while(True)
    seq
       action
@@ -126,56 +121,27 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 	 let rb <- bReady.deq();
 	 $display("Splice B Ready");
       endaction
-      for (ii<= 0; ii < aLenReg; ii <= ii + 1)
+      if (aLenReg > bLenReg)
+	 rLenReg <= aLenReg;
+      else
+	 rLenReg <= bLenReg;
+      for (ii <= 0; ii < rLenReg; ii <= ii + 1)
 	 seq
-	    matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,0}, datain: 0});
-	    matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,ii}, datain: 0});
+	    $display("Splice ii %d ", ii);
+	    strA.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: truncate(ii), datain: 0});
+	    strB.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: truncate(ii), datain: 0});
+	    action
+	       let left <- strA.portA.response.get();
+	       let right <- strB.portA.response.get();
+	       aData <= left;
+	       bData <= right;
+	    endaction
+	    $display("aData %h bData %h", aData, bData);
+	    matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: truncate(ii), datain: {aData, bData}});
 	 endseq
-      for (ii<= 0; ii < aLenReg; ii <= ii + 1)
-	 for (jj<= 0; jj < bLenReg; jj <= jj + 1)
-	    seq
-	       strA.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii, datain: 0});
-	       strB.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj, datain: 0});
-	       action
-		  let ta <- strA.portA.response.get();
-		  let tb <- strB.portA.response.get();
-		  aData <= ta;
-		  bData <= tb;
-	       endaction
-	       if (aData == bData)
-		  seq
-		     matL.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii-1,jj-1}, datain: 0});
-		     action
-			let temp <- matL.portA.response.get();
-			lim1jm1 <= temp;
-		     endaction
-		     matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,jj}, datain: lim1jm1+1});
-		     
-		  endseq
-	       else
-		  seq
-		     matL.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii,jj-1}, datain: 0});
-		     matL.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii-1,jj}, datain: 0});
-		     action
-			let tlijm1 <- matL.portA.response.get();
-			lijm1 <= tlijm1;
-		     endaction
-		     action
-			let tlim1j <- matL.portA.response.get();
-			lim1j <= tlim1j;
-		     endaction
-			matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,jj}, datain: max(lijm1,lim1j)});
-		  endseq
-	    endseq
-      matL.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {aLenReg, bLenReg}, datain: 0});
-      action
-	 let result <- matL.portA.response.get();
-	 indication.searchResult(zeroExtend(unpack(result)));
-      endaction
+      indication.searchResult(unpack(rLenReg));
    endseq
    endseq;
-   
-   
    
    // create BRAM Write client for matL
 
@@ -199,22 +165,22 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       indication.fetchComplete();
    endrule
 
-   mkAutoFSM(maxQuadratic);
+   mkAutoFSM(splice);
    
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
-      aLenReg <= truncate(strLen);
+      aLenReg <= strLen;
       $display("setupA %h %d", strPointer, strLen);
       n2a.start(strPointer, 0, pack(truncate(strLen)), 0);
    endmethod
 
    method Action setupB(Bit#(32) strPointer, Bit#(32) strLen);
-      bLenReg <= truncate(strLen);
+      bLenReg <= strLen;
       $display("setupB %h %d", strPointer, strLen);
       n2b.start(strPointer, 0, pack(truncate(strLen)), 0);
    endmethod
    
    method Action fetch(Bit#(32) strPointer, Bit#(32) strLen);
-      rLenReg <= truncate(strLen);
+      rLenReg <= strLen;
       $display("fetch %h %d", strPointer, strLen);
       l2n.start(strPointer, 0, pack(truncate(strLen)), 0);
    endmethod
