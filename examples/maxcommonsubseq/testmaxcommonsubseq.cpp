@@ -30,6 +30,8 @@
 #include <monkit.h>
 #include <mp.h>
 #include "StdDmaIndication.h"
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "MaxcommonsubseqIndicationWrapper.h"
 #include "MaxcommonsubseqRequestProxy.h"
@@ -41,7 +43,6 @@ sem_t test_sem;
 sem_t setup_sem;
 int sw_match_cnt = 0;
 int hw_match_cnt = 0;
-unsigned result_len = 0;
 
 class MaxcommonsubseqIndication : public MaxcommonsubseqIndicationWrapper
 {
@@ -63,7 +64,6 @@ public:
 
   virtual void searchResult (int v){
     fprintf(stderr, "searchResult = %d\n", v);
-    result_len = v;
     sem_post(&test_sem);
   }
 };
@@ -107,15 +107,30 @@ int main(int argc, const char **argv)
     PortalAlloc *fetchAlloc;
     unsigned int alloc_len = 128;
     unsigned int fetch_len = alloc_len * alloc_len;
+    int rcA, rcB, rcFetch;
+    struct stat statAbuf, statBbuf, statFetchbuf;
     
-    dma->alloc(alloc_len, &strAAlloc);
-    dma->alloc(alloc_len, &strBAlloc);
-    dma->alloc(fetch_len, &fetchAlloc);
+    dma->alloc(fetch_len*sizeof(uint16_t), &fetchAlloc);
+    rcFetch = fstat(fetchAlloc->header.fd, &statFetchbuf);
+    if (rcA < 0) perror("fstatFetch");
+    int *fetch = (int *)mmap(0, fetch_len * sizeof(uint16_t), PROT_READ|PROT_WRITE, MAP_SHARED, fetchAlloc->header.fd, 0);
+    if (fetch == MAP_FAILED) perror("fetch mmap failed");
+    assert(fetch != MAP_FAILED);
 
+    dma->alloc(alloc_len, &strAAlloc);
+    rcA = fstat(strAAlloc->header.fd, &statAbuf);
+    if (rcA < 0) perror("fstatA");
     char *strA = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE, MAP_SHARED, strAAlloc->header.fd, 0);
+    if (strA == MAP_FAILED) perror("strA mmap failed");
+    assert(strA != MAP_FAILED);
+
+    dma->alloc(alloc_len, &strBAlloc);
+    rcB = fstat(strBAlloc->header.fd, &statBbuf);
+    if (rcA < 0) perror("fstatB");
     char *strB = (char *)mmap(0, alloc_len, PROT_READ|PROT_WRITE, MAP_SHARED, strBAlloc->header.fd, 0);
-    int *fetch = (int *)mmap(0, fetch_len, PROT_READ|PROT_WRITE, MAP_SHARED, fetchAlloc->header.fd, 0);
-    
+    if (strB == MAP_FAILED) perror("strB mmap failed");
+    assert(strB != MAP_FAILED);
+
     const char *strA_text = "   a     b      c    ";
     const char *strB_text = "..a........b......";
     
@@ -128,12 +143,6 @@ int main(int argc, const char **argv)
     int strA_len = strlen(strA);
     int strB_len = strlen(strB);
     uint16_t swFetch[fetch_len];
-
-    for (int i = 0; i < alloc_len; i += 1) {
-      strA[i] = i;
-      strB[i] = 255 - i;
-    }
-
 
     start_timer(0);
 
@@ -160,18 +169,24 @@ int main(int argc, const char **argv)
     uint64_t cycles = lap_timer(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
-    assert(result_len < alloc_len * alloc_len);
-    //    device->fetch(ref_fetchAlloc, (result_len+7)& ~7);
-    device->fetch(ref_fetchAlloc, 32);
-    printf("fetch called %d\n", result_len);
+    device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
     sem_wait(&setup_sem);
-    printf("fetch finished \n");
+    printf("fetch 1 finished \n");
+    device->fetch(ref_fetchAlloc, fetch_len, fetch_len / 2, fetch_len / 2);
+    sem_wait(&setup_sem);
+    printf("fetch 2 finished \n");
 
-    memcpy(swFetch, fetch, result_len * sizeof(uint16_t));
-    for (int i = 0; i < result_len; i += 1) {
-      if ((swFetch[i] & 0xffff) != ((strA[i] << 8) & 0xff00 | (strB[i] & 0xff)))
-	printf("mismatch i %d A %02x B %02x R %04x\n", 
-	       i, strA[i], strB[i], swFetch[i]);
+    memcpy(swFetch, fetch, fetch_len * sizeof(uint16_t));
+    printf("   ");
+    for (int j = 0; j < strB_len; j += 1) {
+      printf("%4d", j);
+    }
+    for (int i = 0; i < strA_len; i += 1) {
+      printf("%4d", i);
+      for (int j = 0; j < strB_len; j += 1) {
+	printf("%4d", swFetch[i << 7 + j] & 0xff);
+      }
+    printf("\n");
     }
 
 
@@ -179,4 +194,5 @@ int main(int argc, const char **argv)
     close(strBAlloc->header.fd);
     close(fetchAlloc->header.fd);
   }
+
 
