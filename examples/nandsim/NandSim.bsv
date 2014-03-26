@@ -52,8 +52,8 @@ typedef 14 Asz;
 module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(Asz), Bit#(64)) br) (NandSim);
 
 
-   BRAMReadClient#(Bit#(Asz), 64) rc <- mkBRAMReadClient(br);
-   BRAMWriteClient#(Bit#(Asz), 64) wc <- mkBRAMWriteClient(br);
+   BRAMReadClient#(Asz, 64) rc <- mkBRAMReadClient(br);
+   BRAMWriteClient#(Asz, 64) wc <- mkBRAMWriteClient(br);
    
    Reg#(Bit#(Asz)) nandEraseAddr <- mkReg(0);
    Reg#(Bit#(Asz)) nandEraseLimit <- mkReg(0);
@@ -86,14 +86,18 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(Asz), Bit#(64))
       * Reads from NAND and writes to DRAM
       */
       method Action startRead(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) __bl);
-	 wc.start(pointer, extend(dramOffset), truncate(numBytes>>3), truncate(nandAddr>>3));
+	 let bram_start_idx = truncate(nandAddr>>3);
+	 let bram_finish_idx = bram_start_idx+truncate((numBytes>>3)-1);
+	 wc.start(pointer, extend(dramOffset), bram_start_idx, bram_finish_idx);
       endmethod
 
       /*!
       * Reads from DRAM and writes to NAND
       */
       method Action startWrite(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) __bl);
-	 rc.start(pointer, extend(dramOffset), truncate(numBytes>>3), truncate(nandAddr>>3)); 
+	 let bram_start_idx = truncate(nandAddr>>3);
+	 let bram_finish_idx = bram_start_idx+truncate((numBytes>>3)-1);
+	 rc.start(pointer, extend(dramOffset), bram_start_idx, bram_finish_idx); 
       endmethod
 
       method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);

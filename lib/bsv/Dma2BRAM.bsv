@@ -33,87 +33,79 @@ import Dma::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
 
-interface BRAMReadClient#(type bramIdx, numeric type busWidth);
-   method Action start(DmaPointer h, Bit#(DmaOffsetSize) rbase, bramIdx num, bramIdx wbase);
+interface BRAMReadClient#(numeric type bramIdxWidth, numeric type busWidth);
+   method Action start(DmaPointer h, Bit#(DmaOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
    method ActionValue#(Bool) finish();
    interface DmaReadClient#(busWidth) dmaClient;
 endinterface
 
-interface BRAMWriteClient#(type bramIdx, numeric type busWidth);
-   method Action start(DmaPointer h, Bit#(DmaOffsetSize) rbase, bramIdx num, bramIdx wbase);
+interface BRAMWriteClient#(numeric type bramIdxWidth, numeric type busWidth);
+   method Action start(DmaPointer h, Bit#(DmaOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
    method ActionValue#(Bool) finish();
    interface DmaWriteClient#(busWidth) dmaClient;
 endinterface
 
-module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busWidth))
+module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(bramIdxWidth,busWidth))
    provisos(Bits#(d,dsz),
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),
 	    Add#(1,a__,nd),
-	    Eq#(bramIdx),
-	    Ord#(bramIdx),
-	    Arith#(bramIdx),
-	    Bits#(bramIdx,b__));
+	    Add#(1,bramIdxWidth,cntW));
    
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
-   
    FIFO#(void) f <- mkSizedFIFO(1);
-   Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst); 
-   Reg#(bramIdx) i <- mkReg(0);
-   Reg#(bramIdx) j <- mkReg(0);
-   Reg#(bramIdx) n <- mkReg(0);
-   Reg#(bramIdx) wbase <- mkReg(0);
+   Reg#(Bit#(cntW)) i <- mkReg(maxBound);
+   Reg#(Bit#(cntW)) j <- mkReg(maxBound);
+   Reg#(Bit#(cntW)) n <- mkReg(0);
    Reg#(DmaPointer) ptr <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) roff <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) rbase <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) off <- mkReg(0);
+   Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst); 
    
-   let readFifo <- mkFIFOF;
+   FIFOF#(Bit#(busWidth)) readFifo = (interface FIFOF;
+				      method Bit#(busWidth) first(); return ?; endmethod
+				      method Bool notEmpty(); return False; endmethod
+				      method Action enq(Bit#(busWidth) d); gb.enq(unpack(d)); endmethod
+				      method Action deq; endmethod
+				      method Action clear; endmethod
+				      method Bool notFull(); return gb.notFull(); endmethod
+				      endinterface);
    MemreadEngine#(busWidth) re <- mkMemreadEngine(1, readFifo);
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
-   rule loadReq(i < n);
-      //$display("mkBRAMReadClient::loadReq ptr=%d %d %d", ptr, roff+rbase, bus_width_in_bytes);
-      re.start(ptr, roff + rbase, bus_width_in_bytes, bus_width_in_bytes);
+   rule loadReq(i <= n);
+      re.start(ptr, off, bus_width_in_bytes, bus_width_in_bytes);
+      off <= off+bus_width_in_bytes;
       i <= i+fromInteger(valueOf(nd));
-      roff <= roff+bus_width_in_bytes;
    endrule
    
    rule loadResp;
       let __x <- re.finish;
-      readFifo.deq;
-      let rv = readFifo.first;
-      Vector#(nd,d) rvv = unpack(rv);
-      gb.enq(rvv);
-      //$display("mkBRAMReadClient::loadResp ptr=%d", ptr);
    endrule
    
-   rule load(j < n);
-      br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:j+wbase, datain:gb.first[0]});
+   rule load(j <= n);
+      br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(j), datain:gb.first[0]});
       gb.deq;
       j <= j+1;
-      if (j+1 == n)
+      if (j == n)
 	 f.enq(?);
-      //$display("mkBRAMReadClient::load ptr=%d", ptr);
    endrule
    
-   rule discard(j >= n);
+   rule discard(j > n);
       gb.deq;
-      //$display("mkBRAMReadClient::discard ptr=%d", ptr);
    endrule
    
-   method Action start(DmaPointer h, Bit#(DmaOffsetSize) rb, bramIdx num, bramIdx wb);
-      $display("mkBRAMReadClient::start(%h, %h, %h %h)", h, wb, num, rb);
-      i <= 0;
-      j <= 0;
-      n <= num;
+   method Action start(DmaPointer h, Bit#(DmaOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+      $display("mkBRAMReadClient::start(%h, %h, %h %h)", h, b, start_idx, finish_idx);
+      i <= extend(start_idx);
+      j <= extend(start_idx);
+      n <= extend(finish_idx);
       ptr <= h;
-      roff <= 0;
-      rbase <= rb;
-      wbase <= wb;
+      off <= b;
    endmethod
    
    method ActionValue#(Bool) finish();
+      $display("mkBRAMReadClient::finish");
       f.deq;
       return True;
    endmethod
@@ -122,30 +114,23 @@ module mkBRAMReadClient#(BRAMServer#(bramIdx,d) br)(BRAMReadClient#(bramIdx,busW
 
 endmodule
 
-module mkBRAMWriteClient#(BRAMServer#(bramIdx,d) br)(BRAMWriteClient#(bramIdx,busWidth))
-   
+module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#(bramIdxWidth,busWidth))
    provisos(Bits#(d,dsz),
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),
 	    Add#(1,a__,nd),
 	    Add#(1, b__, TMul#(2, nd)),
 	    Add#(nd, c__, TMul#(2, nd)),
-	    Eq#(bramIdx),
-	    Bits#(bramIdx, d__),
-	    Ord#(bramIdx),
-	    Arith#(bramIdx));
-
+	    Add#(1,bramIdxWidth,cntW));
+   
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
-
    FIFO#(void) f <- mkSizedFIFO(1);
-   Reg#(bramIdx) n <- mkReg(0);
-   Reg#(bramIdx) i <- mkReg(0);
-   Reg#(bramIdx) j <- mkReg(0);
-   Reg#(bramIdx) rbase <- mkReg(0);
+   Reg#(Bit#(cntW)) i <- mkReg(maxBound);
+   Reg#(Bit#(cntW)) j <- mkReg(maxBound);
+   Reg#(Bit#(cntW)) n <- mkReg(0);
    Reg#(DmaPointer) ptr <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) woff <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) wbase <- mkReg(0);
+   Reg#(Bit#(DmaOffsetSize)) off <- mkReg(0);
    Gearbox#(1,nd,Bit#(dsz)) gb <- mk1toNGearbox(clk,rst,clk,rst);
    
    FIFOF#(Bit#(busWidth)) writeFifo = (interface FIFOF;
@@ -155,13 +140,13 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,d) br)(BRAMWriteClient#(bramIdx,bu
 				       method Action deq; gb.deq(); endmethod
 				       method Action clear; endmethod
 				       method Bool notFull(); return(False); endmethod
-      
 				       endinterface);
    MemwriteEngine#(busWidth) we <- mkMemwriteEngine(1, writeFifo);
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
    
-   rule bramReq(j < n);
-      br.request.put(BRAMRequest{write:False, responseOnWrite:False, address:j+rbase, datain:?});
+   rule bramReq(j <= n);
+      //$display("mkBRAMWriteClient::bramReq %h", j);
+      br.request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(j), datain:?});
       j <= j+1;
    endrule
 
@@ -170,30 +155,30 @@ module mkBRAMWriteClient#(BRAMServer#(bramIdx,d) br)(BRAMWriteClient#(bramIdx,bu
       gb.enq(cons(pack(rv), nil));
    endrule
    
-   rule loadReq(i < n);
-      we.start(ptr, woff + wbase, bus_width_in_bytes, bus_width_in_bytes);
+   rule loadReq(i <= n);
+      we.start(ptr, off, bus_width_in_bytes, bus_width_in_bytes);
+      off <= off+bus_width_in_bytes;
       i <= i+fromInteger(valueOf(nd));
-      woff <= woff+bus_width_in_bytes;
+      //$display("mkBRAMWriteClient::loadReq %h", i);
    endrule
    
    rule loadResp;
       let __x <- we.finish;
-      if (i == n)
+      if (i > n)
 	 f.enq(?);
    endrule
    
-   method Action start(DmaPointer h, Bit#(DmaOffsetSize) wb, bramIdx num, bramIdx rb);
-      //$display("mkBRAMWriteClient::start(%h, %h, %h %h)", h, wb, num, rb);
-      i <= 0;
-      j <= 0;
-      n <= num;
+   method Action start(DmaPointer h, Bit#(DmaOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+      $display("mkBRAMWriteClient::start(%h, %h, %h %h)", h, b, start_idx, finish_idx);
+      i <= extend(start_idx);
+      j <= extend(start_idx);
+      n <= extend(finish_idx);
       ptr <= h;
-      rbase <= rb;
-      wbase <= wb;
-      woff <= 0;
+      off <= b;
    endmethod
    
    method ActionValue#(Bool) finish();
+      $display("mkBRAMWriteClient::finish");
       f.deq;
       return True;
    endmethod

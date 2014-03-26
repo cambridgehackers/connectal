@@ -49,7 +49,8 @@ typedef Bit#(64) DWord;
 typedef Bit#(32) Word;
 
 typedef 1024 MaxNeedleLen;
-typedef Bit#(TLog#(MaxNeedleLen)) NeedleIdx;
+typedef TLog#(MaxNeedleLen) NeedleIdxWidth;
+typedef Bit#(NeedleIdxWidth) NeedleIdx;
 
 typedef enum {Idle, Ready, Run} Stage deriving (Eq, Bits);
 
@@ -85,9 +86,9 @@ module mkMPEngine#(FIFOF#(void) compf,
    Reg#(Bit#(32)) haystackOff <- mkReg(0);
    Reg#(DmaPointer) haystackPointer <- mkReg(0);
    
-   BRAMReadClient#(NeedleIdx,busWidth) n2b <- mkBRAMReadClient(needle.portB);
+   BRAMReadClient#(NeedleIdxWidth,busWidth) n2b <- mkBRAMReadClient(needle.portB);
    mkConnection(n2b.dmaClient, needle_read_server);
-   BRAMReadClient#(NeedleIdx,busWidth) mp2b <- mkBRAMReadClient(mpNext.portB);
+   BRAMReadClient#(NeedleIdxWidth,busWidth) mp2b <- mkBRAMReadClient(mpNext.portB);
    mkConnection(mp2b.dmaClient, mp_next_read_server);
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
 
@@ -180,8 +181,8 @@ module mkMPEngine#(FIFOF#(void) compf,
    
    method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
       needleLenReg <= extend(needle_len);
-      n2b.start(needle_pointer, 0, pack(truncate(needle_len+1)), 0);
-      mp2b.start(mpNext_pointer, 0, pack(truncate(needle_len+1)), 0);
+      n2b.start(needle_pointer, 0, 0, pack(truncate(needle_len)));
+      mp2b.start(mpNext_pointer, 0, 0, pack(truncate(needle_len)));
       jReg <= 0;
       iReg <= 0;
    endmethod

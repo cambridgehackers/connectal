@@ -69,8 +69,10 @@ typedef Bit#(32) Word;
 
 typedef 128 MaxStringLen;
 typedef 16384 MaxFetchLen;
-typedef Bit#(TLog#(MaxStringLen)) StringIdx;
-typedef Bit#(TLog#(MaxFetchLen)) LIdx;
+typedef TLog#(MaxStringLen) StringIdxWidth;
+typedef Bit#(StringIdxWidth) StringIdx;
+typedef TLog#(MaxFetchLen) LIdxWidth;
+typedef Bit#(LIdxWidth) LIdx;
 
 module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 			DmaReadServer#(busWidth)   setupA_read_server,
@@ -104,11 +106,11 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    BRAM2Port#(StringIdx, Char) strB <- mkBRAM2Server(defaultValue);
    BRAM2Port#(LIdx, Bit#(16)) matL <- mkBRAM2Server(defaultValue);
 
-   BRAMReadClient#(StringIdx,busWidth) n2a <- mkBRAMReadClient(strA.portB);
+   BRAMReadClient#(StringIdxWidth,busWidth) n2a <- mkBRAMReadClient(strA.portB);
    mkConnection(n2a.dmaClient, setupA_read_server);
-   BRAMReadClient#(StringIdx,busWidth) n2b <- mkBRAMReadClient(strB.portB);
+   BRAMReadClient#(StringIdxWidth,busWidth) n2b <- mkBRAMReadClient(strB.portB);
    mkConnection(n2b.dmaClient, setupB_read_server);
-   BRAMWriteClient#(LIdx, busWidth) l2n <- mkBRAMWriteClient(matL.portB);
+   BRAMWriteClient#(LIdxWidth, busWidth) l2n <- mkBRAMWriteClient(matL.portB);
    mkConnection(l2n.dmaClient, fetch_write_server);
 
    FIFOF#(void) aReady <- mkFIFOF;
@@ -207,19 +209,21 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
       aLenReg <= truncate(strLen);
       $display("setupA %h %d", strPointer, strLen);
-      n2a.start(strPointer, 0, pack(truncate(strLen)), 0);
+      n2a.start(strPointer, 0, 0, pack(truncate(strLen-1)));
    endmethod
 
    method Action setupB(Bit#(32) strPointer, Bit#(32) strLen);
       bLenReg <= truncate(strLen);
       $display("setupB %h %d", strPointer, strLen);
-      n2b.start(strPointer, 0, pack(truncate(strLen)), 0);
+      n2b.start(strPointer, 0, 0, pack(truncate(strLen-1)));
    endmethod
    
    method Action fetch(Bit#(32) strPointer, Bit#(32) dest, Bit#(32) src, Bit#(32) strLen);
       //rLenReg <= truncate(strLen);
       $display("fetch %h %h %h %h", strPointer, dest, src, strLen);
-      l2n.start(strPointer, zeroExtend(dest), pack(truncate(strLen)), pack(truncate(src)));
+      let bram_start_idx = pack(truncate(src));
+      let bram_finish_idx = bram_start_idx+pack(truncate(strLen-1));
+      l2n.start(strPointer, zeroExtend(dest), bram_start_idx, bram_finish_idx);
    endmethod
 
    method Action start();

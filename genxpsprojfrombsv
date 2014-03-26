@@ -190,7 +190,7 @@ ubuntu_exe:
 	cd jni; make
 
 bsim: $(timestampfile)
-	cd sources; mkdir -p $(DTOP)/obj; bsc -DBSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
+	cd sources; mkdir -p $(DTOP)/obj; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
 	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
 
 verilog: $(vfile)
