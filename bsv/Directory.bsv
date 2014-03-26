@@ -36,8 +36,6 @@ interface Directory#(numeric type _n,
 		     numeric type _b, 
 		     numeric type _c);
    interface Portal#(_n,_a,_b,_c) portalIfc;
-   interface WriteOnly#(void) writeEvent;
-   interface WriteOnly#(void) readEvent;
 endinterface
 
 typedef Directory#(16,32,32,12) StdDirectory;
@@ -59,9 +57,6 @@ module mkStdDirectoryPortalIfc#(RegFileA#(Bit#(32), Bit#(32)) rf)(StdPortal);
 endmodule
 
 module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
-
-   Vector#(3,Reg#(Bit#(64))) writeIntervals <- replicateM(mkReg(0));
-   Vector#(3,Reg#(Bit#(64)))  readIntervals <- replicateM(mkReg(0));
 
    Reg#(Bit#(64)) cycle_count <- mkReg(0);
    Reg#(Bit#(32)) snapshot    <- mkReg(0);
@@ -99,10 +94,6 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 		   end
 		   else if (addr == cco+1)
 		      return snapshot;
-		   else if (addr < cco+8) /* address in range [cco+2 .. cco+7] */ // read low order bits
-      		      return truncate(append(readIntervals,writeIntervals)[addr-(cco+2)]);
-		   else if (addr < cco+13) /* address in range [cco+8 .. cco+13] */ // read high order bits
-      		      return truncate(append(readIntervals,writeIntervals)[addr-(cco+8)]>>32);
 		   else begin
       		      $display("directory addr out bounds %d", addr);
 		      return 0;
@@ -111,20 +102,6 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
       	     endinterface);
    let ifc <- mkStdDirectoryPortalIfc(rf);
    interface StdPortal portalIfc = ifc;
-   interface WriteOnly writeEvent;
-      method Action _write(void x);
-	 writeIntervals[2] <= writeIntervals[1];
-	 writeIntervals[1] <= writeIntervals[0];
-	 writeIntervals[0] <= cycle_count;
-      endmethod
-   endinterface
-   interface WriteOnly readEvent;
-      method Action _write(void x);
-	 readIntervals[2] <= readIntervals[1];
-	 readIntervals[1] <= readIntervals[0];
-	 readIntervals[0] <= cycle_count;
-      endmethod
-   endinterface
 endmodule
 
 

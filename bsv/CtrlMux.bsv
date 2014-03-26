@@ -82,8 +82,6 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 	 ifcs[wsv].req_aw.put(req);
 	 ws <= wsv;
 	 req_aw_fifo.enq(?);
-	 if (wsv > 0)
-	    dir.writeEvent <= ?;
       endmethod
    endinterface
    interface Put resp_write;
@@ -104,8 +102,6 @@ module mkAxiSlaveMux#(Directory#(aw,_a,_b,_c) dir,
 	 if (rsv > fromInteger(valueOf(numInputs)))
 	    rsv = fromInteger(valueOf(numInputs));
 	 ifcs[rsv].req_ar.put(req);
-	 if (rsv > 0)
-	    dir.readEvent <= ?;
 	 req_ar_fifo.enq(?);
 	 rs <= rsv;
       endmethod

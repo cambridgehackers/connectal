@@ -12,9 +12,28 @@
 #include "MemreadIndicationWrapper.h"
 #include "MemreadRequestProxy.h"
 
+/*
+ *
+ * Note: the parameters set in this file and Top.bsv have been chose carefully.  They represent the
+ *       minimal resource usage required to achieve maximum memory bandwidth utilization on the kc705
+ *       and zedboard platforms.
+ *       
+ *       dma_read_buff: the zedboard requires at least 5 outstanding read commands to achieve full
+ *       memory read bandwidth of 0.89 (40 64-bit beats at a burst-len of 16 32-bit words).  We are unsure 
+ *       exactly why, but each time a read request is transmitted, there is a 1-cycle delay in the 
+ *       pipelined read responses (which otherwise return 64 bits per cycle).   With a burst length of 8 
+ *       beats, this implies an 11% overhead.  The kc705 requires at least 16 outstanding read commands
+ *       to achieve full read bandwidth of 1.0 (128 14-bit beats at a burst-len of 16 32-bit words).  The
+ *       unbuffered version of this test (memread_nobuff) achieves full throughput simply by permitting
+ *       an unlimited number of outstanding read commands.  This is only safe if the application can 
+ *       guarantee the availability of buffering to receive read responses.  If you don't know, be safe and
+ *       use buffering.
+ *        
+ */
+
 
 sem_t test_sem;
-int numWords = 0x124000/4; // make sure to allocate at least one entry of each size
+int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;

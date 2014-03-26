@@ -36,7 +36,16 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(f__, addrWidth, 40));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   DmaReadBuffer#(64,80)   dma_read_buff <- mkDmaReadBuffer();
+   // see comments in testmemread.cpp about buffering requirements
+`ifdef ZYNQ
+   DmaReadBuffer#(64, 32)   dma_read_buff <- mkDmaReadBuffer();
+`else
+`ifdef PCIE
+   DmaReadBuffer#(64, 128)   dma_read_buff <- mkDmaReadBuffer();
+`else
+   DmaReadBuffer#(64, 32)   dma_read_buff <- mkDmaReadBuffer();
+`endif
+`endif
    Vector#(1,  DmaReadClient#(64))   readClients = cons(dma_read_buff.dmaClient, nil);
    AxiDmaServer#(addrWidth, 64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, nil);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
