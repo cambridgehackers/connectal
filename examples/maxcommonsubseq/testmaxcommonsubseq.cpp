@@ -177,13 +177,18 @@ int main(int argc, const char **argv)
     printf("fetch 2 finished \n");
 
     memcpy(swFetch, fetch, fetch_len * sizeof(uint16_t));
-    printf("   ");
+    printf("        ");
     for (int j = 0; j <= strB_len; j += 1) {
       printf("%4d", j);
     }
     printf("\n");
+    printf("        ");
+    for (int j = 0; j <= strB_len; j += 1) {
+      printf("%4c", strB[j-1]);
+    }
+    printf("\n");
     for (int i = 0; i <= strA_len; i += 1) {
-      printf("%4d", i);
+      printf("%4c%4d", strA[i-1], i);
       for (int j = 0; j <= strB_len; j += 1) {
 	printf("%4d", swFetch[(i << 7) + j] & 0xff);
       }
