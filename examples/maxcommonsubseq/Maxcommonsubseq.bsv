@@ -38,6 +38,7 @@ import Dma2BRAM::*;
 
 // algorithm
 import HirschA::*;
+import Hirsch::*;
 
 /* This module solves the maximum common subsequence problem.
  * It finds the longest subsequence of characters present in both input strings
@@ -77,119 +78,6 @@ typedef Bit#(StringIdxWidth) StringIdx;
 typedef TLog#(MaxFetchLen) LIdxWidth;
 typedef Bit#(LIdxWidth) LIdx;
 
-module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
-			DmaReadServer#(busWidth)   setupA_read_server,
-			DmaReadServer#(busWidth)   setupB_read_server,
-			DmaWriteServer#(busWidth)   fetch_write_server )(MaxcommonsubseqRequest)
-   
-   provisos(Add#(a__, 8, busWidth),
-	    Div#(busWidth,8,nc),
-	    Mul#(nc,8,busWidth),
-	    Add#(1, b__, nc),
-	    Add#(c__, 32, busWidth),
-	    Add#(1, d__, TDiv#(busWidth, 32)),
-	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
-            Mul#(TDiv#(busWidth, 16), 16, busWidth),
-            Add#(1, e__, TDiv#(busWidth, 16)),
-            Add#(1, f__, TMul#(2, TDiv#(busWidth, 16))),
-            Add#(TDiv#(busWidth, 16), g__, TMul#(2, TDiv#(busWidth, 16))));
-
-   
-  Reg#(Bit#(7)) aLenReg <- mkReg(0);
-  Reg#(Bit#(7)) bLenReg <- mkReg(0);
-  Reg#(Bit#(14)) rLenReg <- mkReg(0);
-  Reg#(Bit#(7)) ii <- mkReg(0);
-  Reg#(Bit#(7)) jj <- mkReg(0);
-   Reg#(Char) aData <- mkReg(0);
-   Reg#(Char) bData <- mkReg(0);
-   Reg#(Bit#(16)) k0j <- mkReg(0);
-   Reg#(Bit#(16)) k1jm1 <- mkReg(0);
-
-
-   BRAM2Port#(StringIdx, Char) strA  <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(StringIdx, Char) strB <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(LIdx, Bit#(16)) matL <- mkBRAM2Server(defaultValue);
-
-   BRAMReadClient#(StringIdxWidth,busWidth) n2a <- mkBRAMReadClient(strA.portB);
-   mkConnection(n2a.dmaClient, setupA_read_server);
-   BRAMReadClient#(StringIdxWidth,busWidth) n2b <- mkBRAMReadClient(strB.portB);
-   mkConnection(n2b.dmaClient, setupB_read_server);
-   BRAMWriteClient#(LIdxWidth, busWidth) l2n <- mkBRAMWriteClient(matL.portB);
-   mkConnection(l2n.dmaClient, fetch_write_server);
-
-   FIFOF#(void) aReady <- mkFIFOF;
-   FIFOF#(void) bReady <- mkFIFOF;
-   FIFOF#(void) mReady <- mkFIFOF;
-
-   /* string A and B are preloaded in the respective BRAMs.
-    * aLenReg and bLenReg are set
-    * matL is available for use
-    */
-  Stmt hirschB =
-   seq
-      /* initialize two rows of temporary storage */
-      for (jj <= 0; jj < aLenReg; jj <= jj + 1)
-	 seq
-	    matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: 0});
-	    matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {1,jj}, datain: 0});
-	 endseq
-      /* Loop through string a */
-      for (ii <= 1; ii <= aLenReg; ii <= ii + 1)
-	 seq
-	    /* Copy L[1] to L[0].  could pingpong instead, or unroll loop */
-	    for (jj <= 0; jj <= bLenReg; jj <= jj + 1)
-	       seq
-		  matL.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {0,jj}, datain: 0});
-		  action
-		     let ta <- matL.portA.response.get();
-		     matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {1,jj}, datain: ta});
-		  endaction
-	       endseq
-	    /* Loop through string B */
-	    for (jj <= 0; jj <= bLenReg; jj <= jj + 1)
-	       seq
-		  /* Read a[i] and b[j] */
-		  strA.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
-		  strB.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
-		  action
-		     let ta <- strA.portA.response.get();
-		     let tb <- strB.portA.response.get();
-		     aData <= ta;
-		     bData <= tb;
-		  endaction
-		  if (aData == bData)
-		     seq
-			matL.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {1,jj-1}, datain: 0});
-			action
-			   let ta <- matL.portA.response.get();
-			   matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: ta + 1});
-			endaction
-		     endseq
-		  else
-		     seq
-			/* read K[0][j] and K[1][j-1] */
-			matL.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {1,jj}, datain: 0});
-			action
-			   let ta <- matL.portA.response.get();
-			   k0j <= ta;
-			endaction
-			matL.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {0,jj-1}, datain: 0});
-			action
-			   let ta <- matL.portA.response.get();
-			   k1jm1 <= ta
-			endaction
-			matL.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: max(k0j,k1jm1)});
-		     endseq
-		  endseq
-	 endseq
-      indication.searchResult(1);
-   endseq;
-
-   
-   Stmt hirschC =
-   seq
-      indication.searchResult(2);
-   endseq;
    
    
    // create BRAM Write client for matL
@@ -241,7 +129,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       case (alg) 
 	 0: hirschA.start();
 	 1: hirschB.start();
-	 2: hirschC.start();
+//	 2: hirschC.start();
 	 default:
       endcase
    endmethod
