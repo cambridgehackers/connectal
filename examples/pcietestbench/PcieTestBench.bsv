@@ -90,9 +90,9 @@ typedef enum {
    } TLPPacketType deriving (Bits, Eq);
 
 // copied from PCIE.bsv because xbsvgen cannot parse the file
-typedef struct {Bit#(7) hit;
-		Bit#(1) sof;
-		Bit#(1) eof;
+typedef struct {Bit#(8) hit;
+		Bit#(8) sof;
+		Bit#(8) eof;
 		Bit#(16) tlpbe;
 		Bit#(16) tag;
 		Bit#(16) length;
@@ -109,7 +109,7 @@ interface PcieTestBenchIndication;
 endinterface
 
 interface PcieTestBenchRequest;
-   method Action send3dwRequest(Pcie3dwHeader req);
+   method Action sendReadRequest(Bit#(8) hit, Bit#(32) addr, Bit#(8) length, Bit#(8) tag);
 endinterface
 
 
@@ -119,7 +119,7 @@ module mkPcieTestBenchRequest#(PcieTestBenchIndication indication)(PcieTestBench
    Reset defaultReset <- exposeCurrentReset();
    MakeResetIfc portalResetIfc <- mkReset(10, False, defaultClock);
    PciId my_id = PciId { bus: 1, dev: 1, func: 0};
-   Bit#(64) board_content_id = 'hf00d;
+   Bit#(64) board_content_id = 'hdeadbeefd00df00d;
    Reg#(Bit#(32)) tlp_portal_drop_count <- mkReg(0);
    Reg#(Bit#(32)) tlp_axi_drop_count <- mkReg(0);
 
@@ -132,27 +132,34 @@ module mkPcieTestBenchRequest#(PcieTestBenchIndication indication)(PcieTestBench
 								tlp_portal_drop_count,
 								tlp_axi_drop_count,
 								portalResetIfc);
+   Reg#(Bit#(32)) timestamp <- mkReg(0);
+   rule timebase;
+      timestamp <= timestamp + 1;
+   endrule
    mkConnection(axiMasterEngine.master, axiCsr.slave);
    rule tlp_out;
       let tlp <- axiMasterEngine.tlp_out.get();
-      $display("tlp_out: %h", tlp);
+      TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, source: 4, tlp: tlp };
+      $display("%h", ttd);
+      indication.tlpout(unpack(pack(tlp)));
    endrule
    
-   method Action send3dwRequest(Pcie3dwHeader req);
+   method Action sendReadRequest(Bit#(8) hit, Bit#(32) addr, Bit#(8) length, Bit#(8) tag);
+      $display("send3dwRequest hit=%d addr=%h length=%h tag=%d", hit, addr, length, tag);
       TLPMemoryIO3DWHeader hdr = defaultValue;
-      hdr.tag = truncate(req.tag);
-      hdr.length = truncate(req.length);
-      hdr.format = unpack(pack(req.format));
-      hdr.pkttype = unpack(pack(req.pkttype));
-      hdr.firstbe = truncate(req.firstbe);
-      hdr.lastbe = truncate(req.lastbe);
-      hdr.addr = truncate(req.addr >> 2);
-      hdr.data = req.data;
+      hdr.tag = truncate(tag);
+      hdr.length = extend(length);
+      hdr.format = PCIE::MEM_READ_3DW_NO_DATA;
+      hdr.pkttype = PCIE::MEMORY_READ_WRITE;
+      hdr.firstbe = 4'hf;
+      hdr.lastbe = (length == 1) ? 0 : 4'hf;
+      hdr.addr = truncate(addr >> 2);
+      hdr.data = 0;
       TLPData#(16) tlp;
-      tlp.be = req.tlpbe;
-      tlp.sof = unpack(req.sof);
-      tlp.eof = unpack(req.eof);
-      tlp.hit = req.hit;
+      tlp.be = 16'hfff0;
+      tlp.sof = True;
+      tlp.eof = True;
+      tlp.hit = truncate(hit);
       tlp.data = pack(hdr);
       $display("tlp_in=%h", tlp);
       axiMasterEngine.tlp_in.put(tlp);
