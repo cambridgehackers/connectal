@@ -31,58 +31,73 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), 8) strA, BRAMServer#(Bit#(str
   Reg#(Bit#(7)) jj <- mkReg(0);
    Reg#(Char) aData <- mkReg(0);
    Reg#(Char) bData <- mkReg(0);
-   Reg#(Bit#(16)) lim1jm1 <- mkReg(0);
-   Reg#(Bit#(16)) lim1j <- mkReg(0);
-   Reg#(Bit#(16)) lijm1 <- mkReg(0);
+   Reg#(Bit#(16)) k0jm1 <- mkReg(0);
+  Reg#(Bit#(16)) k1j <- mkReg(0);
 
-   Stmt hirschA =
+  Stmt hirschB =
    seq
-      for (ii<= 0; ii < aLenReg; ii <= ii + 1)
+      /* initialize two rows of temporary storage */
+      for (jj <= 0; jj < aLenReg; jj <= jj + 1)
 	 seq
-	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,0}, datain: 0});
-	    endseq
-      for (ii<= 0; ii < aLenReg; ii <= ii + 1)
-	 seq
-	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,ii}, datain: 0});
+	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: 0});
+	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {1,jj}, datain: 0});
 	 endseq
-      for (ii<= 1; ii <= aLenReg; ii <= ii + 1)
-	 for (jj<= 1; jj <= bLenReg; jj <= jj + 1)
-	    seq
-	       strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
-	       strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
-	       action
-		  let ta <- strA.response.get();
-		  let tb <- strB.response.get();
-		  aData <= ta;
-		  bData <= tb;
-	       endaction
-	       if (aData == bData)
-		  seq
-		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii-1,jj-1}, datain: 0});
-		     action
-			let temp <- matL.response.get();
-			lim1jm1 <= temp;
-		     endaction
-		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,jj}, datain: lim1jm1+1});
-		     
+      /* Loop through string a */
+      for (ii <= 1; ii <= aLenReg; ii <= ii + 1)
+	 seq
+	    /* Copy L[1] to L[0].  could pingpong instead, or unroll loop */
+	    for (jj <= 0; jj <= bLenReg; jj <= jj + 1)
+	       seq
+		  matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {0,jj}, datain: 0});
+		  action
+		     let ta <- matL.response.get();
+		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {1,jj}, datain: ta});
+		  endaction
+	       endseq
+	    /* Loop through string B */
+	    for (jj <= 0; jj <= bLenReg; jj <= jj + 1)
+	       seq
+		  /* Read a[i] and b[j] */
+		  strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
+		  strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
+		  action
+		     let ta <- strA.response.get();
+		     let tb <- strB.response.get();
+		     aData <= ta;
+		     bData <= tb;
+		  endaction
+		  if (aData == bData)
+		     seq
+			matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {1,jj-1}, datain: 0});
+			action
+			   let ta <- matL.response.get();
+			   matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: ta + 1});
+			endaction
+		     endseq
+		  else
+		     seq
+			/* read K[0][j] and K[1][j-1] */
+			matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {1,jj}, datain: 0});
+			action
+			   let ta <- matL.response.get();
+			   k0j <= ta;
+			endaction
+			matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {0,jj-1}, datain: 0});
+			action
+			   let ta <- matL.response.get();
+			   k1jm1 <= ta
+			endaction
+			matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: max(k0j,k1jm1)});
+		     endseq
 		  endseq
-	       else
-		  seq
-		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii,jj-1}, datain: 0});
-		     action
-			let tlijm1 <- matL.response.get();
-			lijm1 <= tlijm1;
-		     endaction
-		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii-1,jj}, datain: 0});
-		     action
-			let tlim1j <- matL.response.get();
-			lim1j <= tlim1j;
-		     endaction
-			matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,jj}, datain: max(lijm1,lim1j)});
-		  endseq
-	    endseq
-      ff.enq(?);
+	 endseq
    endseq;
-   mkFSM(HirschA);
 
+   
+   Stmt hirschC =
+   seq
+
+   endseq;
+
+   mkFSM(hirschB);
 endmodule
