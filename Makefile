@@ -83,16 +83,6 @@ $(bsimruns):
 	(cd examples/$(basename $@)/bluesim; make run)
 
 #################################################################################################
-# bsim_pcie
-
-bsim_pcietests = $(addsuffix .bsim_pcie, $(testnames))
-bsim_pcietests: $(bsim_pcietests)
-
-$(bsim_pcietests):
-	rm -fr examples/$(basename $@)/bluesim_pcie
-	make BOARD=bluesim_pcie -C examples/$(basename $@) bsim_exe bsim
-
-#################################################################################################
 # zedboard
 
 zedtests = $(addsuffix .zedboard, $(testnames))

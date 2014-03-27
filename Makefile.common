@@ -10,10 +10,6 @@ ifeq ($(origin PINS),undefined)
 endif
 
 ifeq ($(origin TOP),undefined)
-    ifeq ($(BOARD),bluesim_pcie)
-    TOP=$(XBSVDIR)/bsv/BsimTopPcie.bsv
-    MKTOP=mkBsimTop
-    endif
     ifeq ($(BOARD),bluesim)
     TOP=$(XBSVDIR)/bsv/BsimTop.bsv
     MKTOP=mkBsimTop

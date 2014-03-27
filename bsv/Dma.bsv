@@ -48,23 +48,40 @@ typedef struct {
    Bit#(6) tag;
    } DmaData#(numeric type dsz) deriving (Bits);
 
-interface DmaReadClient#(numeric type dsz);
+typedef enum {CompleteBursts} CompleteBursts;
+typedef enum {IncompleteBursts} IncompleteBursts;
+
+typeclass DmaDescriptor#(type a);
+endtypeclass
+
+instance DmaDescriptor#(CompleteBursts);
+endinstance
+
+instance DmaDescriptor#(IncompleteBursts);
+endinstance
+
+typedef DmaReadClientConfig#(CompleteBursts, dsz)  DmaReadClient#(numeric type dsz);
+typedef DmaWriteClientConfig#(CompleteBursts, dsz) DmaWriteClient#(numeric type dsz);
+typedef DmaReadServerConfig#(CompleteBursts, dsz)  DmaReadServer#(numeric type dsz);
+typedef DmaWriteServerConfig#(CompleteBursts, dsz) DmaWriteServer#(numeric type dsz);
+			     
+interface DmaReadClientConfig#(type desc, numeric type dsz);
    interface Get#(DmaRequest)    readReq;
    interface Put#(DmaData#(dsz)) readData;
 endinterface
 
-interface DmaWriteClient#(numeric type dsz);
+interface DmaWriteClientConfig#(type desc, numeric type dsz);
    interface Get#(DmaRequest)    writeReq;
    interface Get#(DmaData#(dsz)) writeData;
    interface Put#(Bit#(6))       writeDone;
 endinterface
 
-interface DmaReadServer#(numeric type dsz);
+interface DmaReadServerConfig#(type desc, numeric type dsz);
    interface Put#(DmaRequest) readReq;
    interface Get#(DmaData#(dsz))     readData;
 endinterface
 
-interface DmaWriteServer#(numeric type dsz);
+interface DmaWriteServerConfig#(type desc, numeric type dsz);
    interface Put#(DmaRequest) writeReq;
    interface Put#(DmaData#(dsz))     writeData;
    interface Get#(Bit#(6))           writeDone;
@@ -76,8 +93,8 @@ interface DmaDbg;
 endinterface
 
 
-instance Connectable#(DmaReadClient#(dsz), DmaReadServer#(dsz));
-   module mkConnection#(DmaReadClient#(dsz) source, DmaReadServer#(dsz) sink)(Empty);
+instance Connectable#(DmaReadClientConfig#(desc,dsz), DmaReadServerConfig#(desc,dsz));
+   module mkConnection#(DmaReadClientConfig#(desc,dsz) source, DmaReadServerConfig#(desc,dsz) sink)(Empty);
       rule request;
 	 let req <- source.readReq.get();
 	 sink.readReq.put(req);
@@ -89,8 +106,8 @@ instance Connectable#(DmaReadClient#(dsz), DmaReadServer#(dsz));
    endmodule
 endinstance
 
-instance Connectable#(DmaWriteClient#(dsz), DmaWriteServer#(dsz));
-   module mkConnection#(DmaWriteClient#(dsz) source, DmaWriteServer#(dsz) sink)(Empty);
+instance Connectable#(DmaWriteClientConfig#(desc,dsz), DmaWriteServerConfig#(desc,dsz));
+   module mkConnection#(DmaWriteClientConfig#(desc,dsz) source, DmaWriteServerConfig#(desc,dsz) sink)(Empty);
       rule request;
 	 let req <- source.writeReq.get();
 	 sink.writeReq.put(req);
