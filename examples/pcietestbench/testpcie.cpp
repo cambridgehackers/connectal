@@ -19,6 +19,9 @@ public:
     if (++cnt == 7)
       exit(0);
   }
+  void tlpout(const TLPData16 &tlp) {
+    fprintf(stderr, "Received tlp: %08x%08x%08x%08x\n", tlp.data3, tlp.data2, tlp.data1, tlp.data0);
+  }
   PcieTestBenchIndication(unsigned int id) : PcieTestBenchIndicationWrapper(id), cnt(0){}
 };
 

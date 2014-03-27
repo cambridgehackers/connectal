@@ -39,7 +39,10 @@ typedef struct {
    Bit#(1)               eof;
    Bit#(7)               hit;
    Bit#(16)              be;
-   Bit#(128) data;
+   Bit#(32)              data0;
+   Bit#(32)              data1;
+   Bit#(32)              data2;
+   Bit#(32)              data3;
 } TLPData16 deriving (Bits, Eq);
 
 // copied from PCIE.bsv because xbsvgen cannot parse the file
