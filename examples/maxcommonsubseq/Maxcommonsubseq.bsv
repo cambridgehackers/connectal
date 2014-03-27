@@ -78,6 +78,49 @@ typedef Bit#(StringIdxWidth) StringIdx;
 typedef TLog#(MaxFetchLen) LIdxWidth;
 typedef Bit#(LIdxWidth) LIdx;
 
+module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
+			DmaReadServer#(busWidth)   setupA_read_server,
+			DmaReadServer#(busWidth)   setupB_read_server,
+			DmaWriteServer#(busWidth)   fetch_write_server )(MaxcommonsubseqRequest)
+   
+   provisos(Add#(a__, 8, busWidth),
+	    Div#(busWidth,8,nc),
+	    Mul#(nc,8,busWidth),
+	    Add#(1, b__, nc),
+	    Add#(c__, 32, busWidth),
+	    Add#(1, d__, TDiv#(busWidth, 32)),
+	    Mul#(TDiv#(busWidth, 32), 32, busWidth),
+            Mul#(TDiv#(busWidth, 16), 16, busWidth),
+            Add#(1, e__, TDiv#(busWidth, 16)),
+            Add#(1, f__, TMul#(2, TDiv#(busWidth, 16))),
+            Add#(TDiv#(busWidth, 16), g__, TMul#(2, TDiv#(busWidth, 16))));
+
+   
+  Reg#(Bit#(7)) aLenReg <- mkReg(0);
+  Reg#(Bit#(7)) bLenReg <- mkReg(0);
+  Reg#(Bit#(14)) rLenReg <- mkReg(0);
+  Reg#(Bit#(7)) ii <- mkReg(0);
+  Reg#(Bit#(7)) jj <- mkReg(0);
+   Reg#(Char) aData <- mkReg(0);
+   Reg#(Char) bData <- mkReg(0);
+   Reg#(Bit#(16)) lim1jm1 <- mkReg(0);
+   Reg#(Bit#(16)) lim1j <- mkReg(0);
+   Reg#(Bit#(16)) lijm1 <- mkReg(0);
+   BRAM2Port#(StringIdx, Char) strA  <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(StringIdx, Char) strB <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(LIdx, Bit#(16)) matL <- mkBRAM2Server(defaultValue);
+
+   BRAMReadClient#(StringIdxWidth,busWidth) n2a <- mkBRAMReadClient(strA.portB);
+   mkConnection(n2a.dmaClient, setupA_read_server);
+   BRAMReadClient#(StringIdxWidth,busWidth) n2b <- mkBRAMReadClient(strB.portB);
+   mkConnection(n2b.dmaClient, setupB_read_server);
+   BRAMWriteClient#(LIdxWidth, busWidth) l2n <- mkBRAMWriteClient(matL.portB);
+   mkConnection(l2n.dmaClient, fetch_write_server);
+
+   FIFOF#(void) aReady <- mkFIFOF;
+   FIFOF#(void) bReady <- mkFIFOF;
+   FIFOF#(void) mReady <- mkFIFOF;
+
    
    
    // create BRAM Write client for matL
