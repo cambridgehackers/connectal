@@ -41,6 +41,7 @@ testnames = echo             \
             memread128       \
             memread2         \
             mempoke          \
+            pcietestbench    \
             simple           \
             strstr           \
 	    ring             \
