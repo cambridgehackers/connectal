@@ -46,7 +46,7 @@ AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
 AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
 
-supported_boards = ['ac701', 'zedboard', 'zc702', 'zc706', 'kc705', 'vc707', 'bluesim', 'bluesim_pcie']
+supported_boards = ['ac701', 'zedboard', 'zc702', 'zc706', 'kc705', 'vc707', 'bluesim']
 supported_os = ['android', 'ubuntu']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
