@@ -69,8 +69,8 @@ typedef Bit#(32) Word;
 
 typedef 128 MaxStringLen;
 typedef 16384 MaxFetchLen;
-typedef Bit#(TLog#(MaxStringLen)) StringIdx;
-typedef Bit#(TLog#(MaxFetchLen)) LIdx;
+typedef TLog#(MaxStringLen) StringIdx;
+typedef TLog#(MaxFetchLen) LIdx;
 
 module mkSpliceRequest#(SpliceIndication indication,
 			DmaReadServer#(busWidth)   setupA_read_server,
@@ -96,9 +96,9 @@ module mkSpliceRequest#(SpliceIndication indication,
   Reg#(Bit#(32)) ii <- mkReg(0);
    Reg#(Char) aData <- mkReg(0);
    Reg#(Char) bData <- mkReg(0);
-   BRAM2Port#(StringIdx, Char) strA  <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(StringIdx, Char) strB <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(LIdx, Bit#(16)) matL <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(StringIdx), Char) strA  <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(StringIdx), Char) strB <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(LIdx), Bit#(16)) matL <- mkBRAM2Server(defaultValue);
 
    BRAMReadClient#(StringIdx,busWidth) n2a <- mkBRAMReadClient(strA.portB);
    mkConnection(n2a.dmaClient, setupA_read_server);
@@ -170,19 +170,19 @@ module mkSpliceRequest#(SpliceIndication indication,
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
       aLenReg <= strLen;
       $display("setupA %h %d", strPointer, strLen);
-      n2a.start(strPointer, 0, pack(truncate(strLen)), 0);
+      n2a.start(strPointer, 0, 0, truncate(strLen - 1));
    endmethod
 
    method Action setupB(Bit#(32) strPointer, Bit#(32) strLen);
       bLenReg <= strLen;
       $display("setupB %h %d", strPointer, strLen);
-      n2b.start(strPointer, 0, pack(truncate(strLen)), 0);
+      n2b.start(strPointer, 0, 0, truncate(strLen - 1));
    endmethod
    
    method Action fetch(Bit#(32) strPointer, Bit#(32) strLen);
       rLenReg <= strLen;
       $display("fetch %h %d", strPointer, strLen);
-      l2n.start(strPointer, 0, pack(truncate(strLen)), 0);
+      l2n.start(strPointer, 0, 0, truncate(strLen - 1));
    endmethod
 
    method Action start();
