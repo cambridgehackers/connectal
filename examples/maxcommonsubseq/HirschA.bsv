@@ -21,16 +21,17 @@
 // SOFTWARE.
 
 import StmtFSM::*;
+import BRAM::*;
 
-module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), 8) strA, BRAMServer#(Bit#(strIndexWidth), 8) strB, BRAMServer#(Bit#(lIndexWidth), 16) matL)(FSM)
+module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL)(FSM);
 
     Reg#(Bit#(7)) aLenReg <- mkReg(0);
   Reg#(Bit#(7)) bLenReg <- mkReg(0);
   Reg#(Bit#(14)) rLenReg <- mkReg(0);
   Reg#(Bit#(7)) ii <- mkReg(0);
   Reg#(Bit#(7)) jj <- mkReg(0);
-   Reg#(Char) aData <- mkReg(0);
-   Reg#(Char) bData <- mkReg(0);
+   Reg#(Bit#(8)) aData <- mkReg(0);
+   Reg#(Bit#(8)) bData <- mkReg(0);
    Reg#(Bit#(16)) lim1jm1 <- mkReg(0);
    Reg#(Bit#(16)) lim1j <- mkReg(0);
    Reg#(Bit#(16)) lijm1 <- mkReg(0);

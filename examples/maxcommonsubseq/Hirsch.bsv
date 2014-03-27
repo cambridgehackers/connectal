@@ -21,16 +21,17 @@
 // SOFTWARE.
 
 import StmtFSM::*;
+import BRAM::*;
 
-module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), 8) strA, BRAMServer#(Bit#(strIndexWidth), 8) strB, BRAMServer#(Bit#(lIndexWidth), 16) matL)(FSM)
+module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL)(FSM);
 
     Reg#(Bit#(7)) aLenReg <- mkReg(0);
   Reg#(Bit#(7)) bLenReg <- mkReg(0);
   Reg#(Bit#(14)) rLenReg <- mkReg(0);
   Reg#(Bit#(7)) ii <- mkReg(0);
   Reg#(Bit#(7)) jj <- mkReg(0);
-   Reg#(Char) aData <- mkReg(0);
-   Reg#(Char) bData <- mkReg(0);
+   Reg#(Bit#(8)) aData <- mkReg(0);
+   Reg#(Bit#(8)) bData <- mkReg(0);
    Reg#(Bit#(16)) k0jm1 <- mkReg(0);
   Reg#(Bit#(16)) k1j <- mkReg(0);
 
@@ -85,7 +86,7 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), 8) strA, BRAMServer#(Bit#(str
 			matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {0,jj-1}, datain: 0});
 			action
 			   let ta <- matL.response.get();
-			   k1jm1 <= ta
+			   k1jm1 <= ta;
 			endaction
 			matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: max(k0j,k1jm1)});
 		     endseq

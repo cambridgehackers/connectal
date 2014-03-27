@@ -57,7 +57,7 @@ interface MaxcommonsubseqRequest;
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
    method Action setupB(Bit#(32) strPointer, Bit#(32) strLen);
    method Action fetch(Bit#(32) strPointer, Bit#(32) dest, Bit#(32) src, Bit#(32) strLen);
-   method Action start();
+   method Action start(Bit#(32) alg);
 endinterface
 
 interface MaxcommonsubseqIndication;
@@ -67,7 +67,6 @@ interface MaxcommonsubseqIndication;
    method Action fetchComplete(); 
 endinterface
 
-typedef Bit#(8) Char;
 typedef Bit#(64) DWord;
 typedef Bit#(32) Word;
 
@@ -101,13 +100,13 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
   Reg#(Bit#(14)) rLenReg <- mkReg(0);
   Reg#(Bit#(7)) ii <- mkReg(0);
   Reg#(Bit#(7)) jj <- mkReg(0);
-   Reg#(Char) aData <- mkReg(0);
-   Reg#(Char) bData <- mkReg(0);
+   Reg#(Bit#(8)) aData <- mkReg(0);
+   Reg#(Bit#(8)) bData <- mkReg(0);
    Reg#(Bit#(16)) lim1jm1 <- mkReg(0);
    Reg#(Bit#(16)) lim1j <- mkReg(0);
    Reg#(Bit#(16)) lijm1 <- mkReg(0);
-   BRAM2Port#(StringIdx, Char) strA  <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(StringIdx, Char) strB <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(StringIdx, Bit#(8)) strA  <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(StringIdx, Bit#(8)) strB <- mkBRAM2Server(defaultValue);
    BRAM2Port#(LIdx, Bit#(16)) matL <- mkBRAM2Server(defaultValue);
 
    BRAMReadClient#(StringIdxWidth,busWidth) n2a <- mkBRAMReadClient(strA.portB);
@@ -145,8 +144,8 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       indication.fetchComplete();
    endrule
 
-   mkHirschA(strA.portA, strB.portA, matL.portA)
-   mkFSM(hirschB);
+   mkHirschA(strA.portA, strB.portA, matL.portA);
+
    
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
       aLenReg <= truncate(strLen);
@@ -168,12 +167,11 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       l2n.start(strPointer, zeroExtend(dest), bram_start_idx, bram_finish_idx);
    endmethod
 
-   method Action start(int alg);
+   method Action start(Bit#(32) alg);
       case (alg) 
 	 0: hirschA.start();
 	 1: hirschB.start();
 //	 2: hirschC.start();
-	 default:
       endcase
    endmethod
 
