@@ -35,6 +35,7 @@ import FIFOF::*;
 import HDMI::*;
 import ConnectableWithTrace::*;
 import CtrlMux::*;
+import AxiDma            :: *;
 
 //`define TRACE_AXI
 //`define AXI_READ_TIMING
@@ -62,8 +63,9 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 
    let top <- constructor(ps7.fclkclk[1], clocked_by mainclock, reset_by mainreset);
    
-   mkConnectionWithTrace(ps7.m_axi_gp[0].client, top.ctrl);
-   mkConnection(top.m_axi, ps7.s_axi_hp[0].axi.server);
+   mkConnectionWithTrace(ps7.m_axi_gp[0].client, top.ctrl, clocked_by mainclock, reset_by mainreset);
+   Axi3Master#(32,64,6) m_axi <- mkAxiDmaServer(top.read_client, top.write_client, clocked_by mainclock, reset_by mainreset);
+   mkConnection(m_axi, ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;
