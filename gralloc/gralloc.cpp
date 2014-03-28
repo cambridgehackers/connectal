@@ -40,7 +40,11 @@
 #include "gralloc_priv.h"
 #include "gr.h"
 
-#include "HdmiDisplay.h"
+#include "DmaConfigProxy.h"
+#include "DmaIndicationWrapper.h"
+#include "GeneratedTypes.h"
+#include "HdmiControlRequestProxy.h"
+#include "portal.h"
 #include "i2chdmi.h"
 
 class TestDmaIndication : public DmaIndication
