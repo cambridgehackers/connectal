@@ -31,6 +31,8 @@ import Leds              :: *;
 import Top               :: *;
 import AxiSlaveEngine    :: *;
 import AxiMasterEngine   :: *;
+import AxiMasterSlave    :: *;
+import AxiDma            :: *;
 
 typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins);
 
@@ -76,8 +78,8 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-
-   mkConnection(portalTop.m_axi, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   Axi3Master#(40,dsz,6) m_axi <- mkAxiDmaServer(portalTop.read_client, portalTop.write_client,clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
+   mkConnection(m_axi, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    mkConnection(tpl_1(x7pcie.master), axiMasterEngine.tlp_in);
    mkConnection(axiMasterEngine.tlp_out, tpl_2(x7pcie.master));

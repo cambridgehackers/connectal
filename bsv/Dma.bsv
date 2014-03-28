@@ -38,6 +38,11 @@ typedef 40 DmaOffsetSize;
 
 
 typedef struct {
+   Bit#(addrWidth) paddr;
+   Bit#(8) burstLen;
+   Bit#(6) tag;
+   } PhysicalRequest#(numeric type addrWidth) deriving (Bits);
+typedef struct {
    DmaPointer pointer;
    Bit#(DmaOffsetSize) offset;
    Bit#(8) burstLen;
@@ -59,6 +64,9 @@ endinstance
 
 instance DmaDescriptor#(IncompleteBursts);
 endinstance
+
+///////////////////////////////////////////////////////////////////////////////////
+// virtual addresses
 
 typedef DmaReadClientConfig#(CompleteBursts, dsz)  DmaReadClient#(numeric type dsz);
 typedef DmaWriteClientConfig#(CompleteBursts, dsz) DmaWriteClient#(numeric type dsz);
@@ -86,6 +94,40 @@ interface DmaWriteServerConfig#(type desc, numeric type dsz);
    interface Put#(DmaData#(dsz))     writeData;
    interface Get#(Bit#(6))           writeDone;
 endinterface
+
+//
+///////////////////////////////////////////////////////////////////////////////////
+// physical addresses
+
+typedef PhysicalReadClientConfig#(CompleteBursts, asz, dsz)  PhysicalReadClient#(numeric type asz, numeric type dsz);
+typedef PhysicalWriteClientConfig#(CompleteBursts, asz, dsz) PhysicalWriteClient#(numeric type asz, numeric type dsz);
+typedef PhysicalReadServerConfig#(CompleteBursts, asz, dsz)  PhysicalReadServer#(numeric type asz, numeric type dsz);
+typedef PhysicalWriteServerConfig#(CompleteBursts, asz, dsz) PhysicalWriteServer#(numeric type asz, numeric type dsz);
+			     
+interface PhysicalReadClientConfig#(type desc, numeric type asz, numeric type dsz);
+   interface Get#(PhysicalRequest#(asz))    readReq;
+   interface Put#(DmaData#(dsz)) readData;
+endinterface
+
+interface PhysicalWriteClientConfig#(type desc, numeric type asz, numeric type dsz);
+   interface Get#(PhysicalRequest#(asz))    writeReq;
+   interface Get#(DmaData#(dsz)) writeData;
+   interface Put#(Bit#(6))       writeDone;
+endinterface
+
+interface PhysicalReadServerConfig#(type desc, numeric type asz, numeric type dsz);
+   interface Put#(PhysicalRequest#(asz)) readReq;
+   interface Get#(DmaData#(dsz))     readData;
+endinterface
+
+interface PhysicalWriteServerConfig#(type desc, numeric type asz, numeric type dsz);
+   interface Put#(PhysicalRequest#(asz)) writeReq;
+   interface Put#(DmaData#(dsz))     writeData;
+   interface Get#(Bit#(6))           writeDone;
+endinterface
+
+//
+///////////////////////////////////////////////////////////////////////////////////
 
 interface DmaDbg;
    method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);

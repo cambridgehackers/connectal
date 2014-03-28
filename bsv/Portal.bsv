@@ -23,6 +23,7 @@
 
 import Vector::*;
 import AxiMasterSlave::*;
+import Dma::*;
 import Leds::*;
 
 interface Portal#(numeric type portalAddrBits, 
@@ -57,7 +58,8 @@ typedef Portal#(16,32,32,12) StdPortal;
 
 interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins);
    interface Axi3Slave#(32,32,12)               ctrl;
-   interface Axi3Master#(addrWidth,dataWidth,6) m_axi;
+   interface PhysicalReadClient#(addrWidth, dataWidth) read_client;
+   interface PhysicalWriteClient#(addrWidth, dataWidth) write_client;
    interface Vector#(16,ReadOnly#(Bool))        interrupt;
    interface LEDS             leds;
    interface pins             pins;
