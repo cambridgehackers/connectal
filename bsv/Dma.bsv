@@ -164,3 +164,34 @@ instance Connectable#(DmaWriteClientConfig#(desc,dsz), DmaWriteServerConfig#(des
       endrule
    endmodule
 endinstance
+
+function Put#(t) null_put();
+   return (interface Put;
+	      method Action put(t x) if (False);
+		 noAction;
+	      endmethod
+	   endinterface);
+endfunction
+
+function Get#(t) null_get();
+   return (interface Get;
+	      method ActionValue#(t) get() if (False);
+		 return ?;
+	      endmethod
+	   endinterface);
+endfunction
+      
+function  PhysicalWriteClient#(addrWidth, busWidth) null_physical_write_client();
+   return (interface PhysicalWriteClient;
+	      interface Get writeReq = null_get;
+	      interface Get writeData = null_get;
+	      interface Put writeDone = null_put;
+	   endinterface);
+endfunction
+
+function  PhysicalReadClient#(addrWidth, busWidth) null_physical_read_client();
+   return (interface PhysicalReadClient;
+	      interface Get readReq = null_get;
+	      interface Put readData = null_put;
+	   endinterface);
+endfunction
