@@ -1,6 +1,5 @@
 
 all:
-	gcc -o dumpbit dumpbit.c
 	gcc -o pciescanportal pciescanportal.c
 
 install: all
