@@ -185,15 +185,17 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       $display ("start %d", alg);
       case (alg) 
 	 0: begin
-	       hirschA.setupA(aLenReg);
-	       hirschA.setupB(bLenReg);
+	       hirschA.setupA(0, aLenReg);
+	       hirschA.setupB(0, bLenReg);
+	       hirschA.setupL(0);
 	       hirschA.fsm.start();
 	       hirschARunning <= True;
 	       end
 	 1: begin
-	       hirschB.setupA(aLenReg);
-	       hirschB.setupB(bLenReg);
+	       hirschB.setupA(0, aLenReg);
+	       hirschB.setupB(0, bLenReg);
 	       hirschB.fsm.start();
+	       hirschB.setupL(0);
 	       hirschBRunning <= True;
 	       end
 //	 2: hirschC.start();
