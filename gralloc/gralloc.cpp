@@ -44,26 +44,13 @@
 #include "DmaIndicationWrapper.h"
 #include "GeneratedTypes.h"
 #include "HdmiControlRequestProxy.h"
+#include "HdmiInternalRequestProxy.h"
+#include "HdmiInternalIndicationWrapper.h"
+#include "StdDmaIndication.h"
 #include "portal.h"
 #include "i2chdmi.h"
 
-class TestDmaIndication : public DmaIndication
-{
-  virtual void reportStateDbg(DmaDbgRec& rec){
-    ALOGD("Dma::reportStateDbg: {x:%08lx y:%08lx z:%08lx w:%08lx}\n", rec.x,rec.y,rec.z,rec.w);
-  }
-  virtual void configResp(unsigned long channelId){
-    ALOGD("Dma::configResp: %lx\n", channelId);
-  }
-  virtual void sglistResp(unsigned long channelId){
-    ALOGD("Dma::sglistResp: %lx\n", channelId);
-  }
-  virtual void parefResp(unsigned long channelId){
-    ALOGD("Dma::parefResp: %lx\n", channelId);
-  }
-};
-
-class TestHdmiIndication : public HdmiInternalIndication {
+class TestHdmiIndication : public HdmiInternalIndicationWrapper {
 public:
     virtual void vsync ( unsigned long long v ) {
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
@@ -78,9 +65,11 @@ struct gralloc_context_t {
     volatile int vsync;
     pthread_mutex_t vsync_lock;
     pthread_cond_t vsync_cond;
-    HdmiControlRequest *hdmiDisplay;
-    HdmiInternalRequest *hdmiInternal;
-    DmaConfig *dma;
+    PortalPoller *poller;
+    HdmiControlRequestProxy *hdmiDisplay;
+    HdmiInternalRequestProxy *hdmiInternal;
+    DmaConfigProxy *dma;
+    DmaIndicationWrapper *dmaIndication;
     unsigned int ref_srcAlloc;
     uint32_t nextSegmentNumber;
 };
@@ -155,11 +144,10 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
     struct gralloc_context_t *ctx = reinterpret_cast<gralloc_context_t*>(dev);
 
     if (ctx->hdmiDisplay != 0) {
-        PortalAlloc portalAlloc;
-        memset(&portalAlloc, 0, sizeof(portalAlloc));
+	PortalAlloc *portalAlloc = 0;;
         err = ctx->dma->alloc(size, &portalAlloc);
-        ctx->ref_srcAlloc = ctx->dma->reference(&portalAlloc);
-        fd = portalAlloc.header.fd;
+        ctx->ref_srcAlloc = ctx->dma->reference(portalAlloc);
+        fd = portalAlloc->header.fd;
         //ptr = mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
     }
     if (fd < 0) {
@@ -280,7 +268,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return 0;
 }
 
-class GrallocHdmiDisplayIndications : public HdmiControlIndication {
+class GrallocHdmiDisplayIndications : public HdmiInternalIndicationWrapper {
     virtual void vsync(unsigned long long v) {
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         if (1)
@@ -369,9 +357,11 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         pthread_condattr_t condattr;
         pthread_condattr_init(&condattr);
         pthread_cond_init(&dev->vsync_cond, &condattr);
-        dev->hdmiDisplay = HdmiControlRequest::createHdmiControlRequest(new HdmiControlIndication);
-        dev->hdmiInternal = HdmiInternalRequest::createHdmiInternalRequest(new TestHdmiIndication);
-        dev->dma = DmaConfig::createDmaConfig(new TestDmaIndication);
+	dev->poller = new PortalPoller();
+        dev->hdmiDisplay = new HdmiControlRequestProxy(IfcNames_HdmiControlRequest, dev->poller);
+        dev->hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest, dev->poller);
+        dev->dma = new DmaConfigProxy(IfcNames_DmaConfig);
+        dev->dmaIndication = new DmaIndication(dev->dma, IfcNames_DmaIndication);
         dev->nextSegmentNumber = 0;
 
         status = 0;
@@ -477,9 +467,9 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
             gralloc_dev->hdmiInternal->setDeLineCountMinMax (lmin - vsyncwidth, lmin + nlines - vsyncwidth);
             gralloc_dev->hdmiInternal->setDePixelCountMinMax (pmin, pmin + npixels);
 	    ALOGD("setting clock frequency %ld\n", 60l * (long)(pmin + npixels) * (long)(lmin + nlines));
-	    int status = PortalRequest::setClockFrequency(1,
-							   60l * (long)(pmin + npixels) * (long)(lmin + nlines),
-							   0);
+	    gralloc_dev->poller->setClockFrequency(1,
+						   60l * (long)(pmin + npixels) * (long)(lmin + nlines),
+						   0);
 	    ALOGD("setClockFrequency returned %d", status);
             *device = &dev->common;
         }
