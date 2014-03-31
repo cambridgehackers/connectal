@@ -39,7 +39,7 @@ import Dma2BRAM::*;
 
 // algorithm
 import HirschA::*;
-import Hirsch::*;
+import HirschB::*;
 
 
 /* This module solves the maximum common subsequence problem.
