@@ -1,25 +1,22 @@
 
 #include <linux/types.h>
+#include <fcntl.h>
 #include <sys/ioctl.h>
 #include "/usr/include/linux/i2c.h"
 #include "/usr/include/linux/i2c-dev.h"
-static int i2c_smbus_write_byte_data(int fd, __u8 command, __u8 value)
+static void i2c_write_array(int fd, int device, unsigned char *datap, int size)
 {
-	struct i2c_smbus_ioctl_data args;
-	union i2c_smbus_data data;
-	data.byte = value;
-	args.read_write = I2C_SMBUS_WRITE;
-	args.command = command;
-	args.size = I2C_SMBUS_BYTE_DATA;
-	args.data = &data;
-	return ioctl(fd, I2C_SMBUS, &args);
-}
-static void i2c_write_array(int fd, int device, unsigned char *data, int size)
-{
+    struct i2c_smbus_ioctl_data args;
+    union i2c_smbus_data ioctl_data;
+    args.read_write = I2C_SMBUS_WRITE;
+    args.size = I2C_SMBUS_BYTE_DATA;
+    args.data = &ioctl_data;
+
     ioctl(fd, I2C_SLAVE, device);
     while (size) {
-        unsigned char first = *data++;
-        i2c_smbus_write_byte_data(fd, first, *data++);
+        args.command = *datap++;
+        ioctl_data.byte = *datap++;
+        ioctl(fd, I2C_SMBUS, &args);
         size -= 2;
     }
 }
