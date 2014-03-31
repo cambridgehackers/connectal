@@ -83,6 +83,6 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		  endseq
 	    endseq
    endseq;
-   mkFSM(HirschA);
+   mkFSM(hirschA);
 
 endmodule
