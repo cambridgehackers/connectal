@@ -97,7 +97,7 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       aLenReg <= length;
    endmethod
    
-   method Action setupB(Bit#(7) start, Bit#(7) strLen);
+   method Action setupB(Bit#(7) start, Bit#(7) length);
       bStartReg <= start;
       bLenReg <= length;
    endmethod
