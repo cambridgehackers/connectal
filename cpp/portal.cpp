@@ -168,12 +168,12 @@ void PortalInternal::portalClose()
 
 PortalInternal::PortalInternal(PortalInternal *p)
   : fd(p->fd),
+    p(p->p),
+    name(strdup(p->name)),
     ind_reg_base(p->ind_reg_base),
     ind_fifo_base(p->ind_fifo_base),
     req_reg_base(p->req_reg_base),
-    req_fifo_base(p->req_fifo_base),
-    name(strdup(p->name)),
-    p(p->p)
+    req_fifo_base(p->req_fifo_base)
 {
 }
 
@@ -479,6 +479,7 @@ void portalExec_end(void)
 static void *pthread_worker(void *__x)
 {
     ((PortalPoller *)__x)->portalExec(__x);
+    return 0;
 }
 void PortalPoller::portalExec_start()
 {
