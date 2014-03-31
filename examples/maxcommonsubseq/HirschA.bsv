@@ -28,6 +28,8 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       provisos(Add#(0, 7, strIndexWidth),
 	       Add#(0, 14, lIndexWidth));
 
+   Reg#(Bit#(7)) aStartReg <- mkReg(0);
+   Reg#(Bit#(7)) bStartReg <- mkReg(0);
    Reg#(Bit#(7)) aLenReg <- mkReg(0);
    Reg#(Bit#(7)) bLenReg <- mkReg(0);
    Reg#(Bit#(14)) rLenReg <- mkReg(0);
@@ -53,8 +55,8 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       for (ii<= 1; ii <= aLenReg; ii <= ii + 1)
 	 for (jj<= 1; jj <= bLenReg; jj <= jj + 1)
 	    seq
-	       strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
-	       strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
+	       strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: aStartReg + ii-1, datain: 0});
+	       strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: bStartReg + jj-1, datain: 0});
 	       action
 		  let ta <- strA.response.get();
 		  let tb <- strB.response.get();
@@ -90,12 +92,14 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    
    FSM hA <- mkFSM(hirschA);
   
-   method Action setupA(Bit#(7) strLen);
-      aLenReg <= strLen;
+   method Action setupA(Bit#(7) start, Bit#(7) length);
+      aStartReg <= start;
+      aLenReg <= length;
    endmethod
    
-   method Action setupB(Bit#(7) strLen);
-      bLenReg <= strLen;
+   method Action setupB(Bit#(7) start, Bit#(7) strLen);
+      bStartReg <= start;
+      bLenReg <= length;
    endmethod
   
    interface FSM fsm = hA;
