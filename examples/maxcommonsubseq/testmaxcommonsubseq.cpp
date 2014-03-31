@@ -164,7 +164,7 @@ int main(int argc, const char **argv)
     sem_wait(&setup_sem);
     start_timer(0);
 
-    device->start();
+    device->start(0);
     sem_wait(&test_sem);
     uint64_t cycles = lap_timer(0);
     uint64_t beats = dma->show_mem_stats(ChannelType_Read);
