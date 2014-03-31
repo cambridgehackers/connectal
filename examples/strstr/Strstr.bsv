@@ -43,9 +43,9 @@ interface StrstrIndication;
 endinterface
 
 module mkStrstrRequest#(StrstrIndication indication,
-			Vector#(p,DmaReadServer#(busWidth))   haystack_read_servers,
-			Vector#(p,DmaReadServer#(busWidth))     needle_read_servers,
-			Vector#(p,DmaReadServer#(busWidth))    mp_next_read_servers )(StrstrRequest)
+			Vector#(p,ObjectReadServer#(busWidth))   haystack_read_servers,
+			Vector#(p,ObjectReadServer#(busWidth))     needle_read_servers,
+			Vector#(p,ObjectReadServer#(busWidth))    mp_next_read_servers )(StrstrRequest)
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),

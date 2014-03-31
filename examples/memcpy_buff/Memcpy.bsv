@@ -39,8 +39,8 @@ interface MemcpyIndication;
 endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication,
-			DmaReadServer#(64) dma_read_server,
-			DmaWriteServer#(64) dma_write_server)(MemcpyRequest);
+			ObjectReadServer#(64) dma_read_server,
+			ObjectWriteServer#(64) dma_write_server)(MemcpyRequest);
 
    let readFifo <- mkFIFOF;
    let writeFifo <- mkFIFOF;
@@ -50,8 +50,8 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
-   Reg#(DmaPointer)      rdPointer <- mkReg(0);
-   Reg#(DmaPointer)      wrPointer <- mkReg(0);
+   Reg#(ObjectPointer)      rdPointer <- mkReg(0);
+   Reg#(ObjectPointer)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    
    mkConnection(re.dmaClient,dma_read_server);

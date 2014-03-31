@@ -114,7 +114,7 @@ module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,I
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = null_physical_dma_master;
+   interface master = null_mem_master;
    //interface leds = captureRequestInternal.leds;
 
    interface ImageonVita pins;

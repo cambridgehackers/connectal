@@ -27,7 +27,7 @@ import StmtFSM::*;
 import FIFO::*;
 
 // portz libraries
-import PhysicalDma::*;
+import MemServer::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
@@ -52,16 +52,16 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(b__, addrWidth, 64),
 	    Add#(c__, 12, addrWidth),
 	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, DmaOffsetSize),
+	    Add#(e__, c__, ObjectOffsetSize),
 	    Add#(f__, addrWidth, 40));
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
    Memread memread <- mkMemread(memreadIndicationProxy.ifc);
    MemreadRequestWrapper memreadRequestWrapper <- mkMemreadRequestWrapper(MemreadRequest,memread.request);
 
-   Vector#(1, DmaReadClient#(64)) clients = cons(memread.dmaClient, nil);
+   Vector#(1, ObjectReadClient#(64)) clients = cons(memread.dmaClient, nil);
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   PhysicalDmaServer#(addrWidth,64) dma <- mkPhysicalDmaServer(dmaIndicationProxy.ifc, clients, nil);
+   MemServer#(addrWidth,64) dma <- mkMemServer(dmaIndicationProxy.ifc, clients, nil);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    Vector#(4,StdPortal) portals;

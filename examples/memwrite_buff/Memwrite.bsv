@@ -41,13 +41,13 @@ interface MemwriteIndication;
 endinterface
 
 module  mkMemwriteRequest#(MemwriteIndication indication,
-			   DmaWriteServer#(64) dma_write_server)(MemwriteRequest);
+			   ObjectWriteServer#(64) dma_write_server)(MemwriteRequest);
 
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    FIFOF#(Bit#(64))      writeFifo <- mkFIFOF;
    let                          we <- mkMemwriteEngine(1, writeFifo);
 
-   Reg#(DmaPointer)        pointer <- mkReg(0);
+   Reg#(ObjectPointer)        pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    Reg#(Bit#(32))          iterCnt <- mkReg(0);

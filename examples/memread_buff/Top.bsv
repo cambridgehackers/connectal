@@ -10,7 +10,7 @@ import CtrlMux::*;
 import Portal::*;
 import PortalMemory::*;
 import Dma::*;
-import PhysicalDma::*;
+import MemServer::*;
 import Leds::*;
 import DmaUtils::*;
 
@@ -31,7 +31,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 	    Add#(b__, addrWidth, 64),
 	    Add#(c__, 12, addrWidth),
 	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, DmaOffsetSize),
+	    Add#(e__, c__, ObjectOffsetSize),
 	    Add#(f__, addrWidth, 40));
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
@@ -45,8 +45,8 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    DmaReadBuffer#(64, 32)   dma_read_buff <- mkDmaReadBuffer();
 `endif
 `endif
-   Vector#(1,  DmaReadClient#(64))   readClients = cons(dma_read_buff.dmaClient, nil);
-   PhysicalDmaServer#(addrWidth, 64)   dma <- mkPhysicalDmaServer(dmaIndicationProxy.ifc, readClients, nil);
+   Vector#(1,  ObjectReadClient#(64))   readClients = cons(dma_read_buff.dmaClient, nil);
+   MemServer#(addrWidth, 64)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, nil);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);

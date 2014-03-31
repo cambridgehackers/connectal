@@ -53,13 +53,13 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
 endmodule
 
 module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
-		   Vector#(numPortals,Portal#(addrWidth,dataWidth)) portals) (PhysicalDmaSlave#(addrWidth,dataWidth))
+		   Vector#(numPortals,Portal#(addrWidth,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
    provisos(Add#(1,numPortals,numInputs),
 	    Add#(1,numInputs,numIfcs),
 	    Add#(nz, TLog#(numIfcs), 4));
    
-   PhysicalDmaSlave#(addrWidth,dataWidth) out_of_range <- mkPhysicalDmaSlaveOutOfRange;
-   Vector#(numIfcs, PhysicalDmaSlave#(addrWidth,dataWidth)) ifcs = append(cons(dir.portalIfc.slave,map(getSlave, portals)),cons(out_of_range, nil));
+   MemSlave#(addrWidth,dataWidth) out_of_range <- mkMemSlaveOutOfRange;
+   Vector#(numIfcs, MemSlave#(addrWidth,dataWidth)) ifcs = append(cons(dir.portalIfc.slave,map(getSlave, portals)),cons(out_of_range, nil));
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
    function Bit#(4) psel(Bit#(addrWidth) a);
@@ -72,9 +72,9 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
    FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
    
-   interface PhysicalWriteServer write_server;
+   interface MemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(PhysicalRequest#(addrWidth) req);
+	 method Action put(MemRequest#(addrWidth) req);
 	    Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.paddr));
 	    if (wsv > fromInteger(valueOf(numInputs)))
 	       wsv = fromInteger(valueOf(numInputs));
@@ -84,7 +84,7 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(DmaData#(dataWidth) wdata);
+	 method Action put(ObjectData#(dataWidth) wdata);
 	    ifcs[ws].write_server.writeData.put(wdata);
 	 endmethod
       endinterface
@@ -96,9 +96,9 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
 	 endmethod
       endinterface
    endinterface
-   interface PhysicalReadServer read_server;
+   interface MemReadServer read_server;
       interface Put readReq;
-	 method Action put(PhysicalRequest#(addrWidth) req);
+	 method Action put(MemRequest#(addrWidth) req);
 	    Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.paddr)); 
 	    if (rsv > fromInteger(valueOf(numInputs)))
 	       rsv = fromInteger(valueOf(numInputs));
@@ -108,7 +108,7 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
 	 endmethod
       endinterface
       interface Get readData;
-	 method ActionValue#(DmaData#(dataWidth)) get();
+	 method ActionValue#(ObjectData#(dataWidth)) get();
 	    let rv <- ifcs[rs].read_server.readData.get();
 	    req_ar_fifo.deq;
 	    return rv;

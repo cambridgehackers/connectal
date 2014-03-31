@@ -42,13 +42,13 @@ module mkRegFileANull#(data_t defv) (RegFileA#(index_t,data_t));
    endmethod
 endmodule
 
-module mkPhysicalDmaSlaveOutOfRange (PhysicalDmaSlave#(addrWidth, busWidth));
+module mkMemSlaveOutOfRange (MemSlave#(addrWidth, busWidth));
    RegFileA#(Bit#(addrWidth), Bit#(busWidth)) rf <- mkRegFileANull(0);
-   let rv <- mkPhysicalDmaSlaveFromRegFile(rf);
+   let rv <- mkMemSlaveFromRegFile(rf);
    return rv;
 endmodule
 
-module mkPhysicalDmaSlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) rf) (PhysicalDmaSlave#(addrWidth, busWidth))
+module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) rf) (MemSlave#(addrWidth, busWidth))
    provisos(Add#(nz, regFileBusWidth, addrWidth));
 
    Reg#(Bit#(regFileBusWidth)) readAddrReg <- mkReg(0);
@@ -58,19 +58,19 @@ module mkPhysicalDmaSlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busW
    Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
    FIFOF#(void) writeRespFifo <- mkFIFOF();
    FIFOF#(Bit#(6)) writeTagFifo <- mkFIFOF();
-   FIFOF#(PhysicalRequest#(addrWidth)) req_ar_fifo <- mkSizedFIFOF(1);
-   FIFO#(PhysicalRequest#(addrWidth)) req_aw_fifo <- mkSizedFIFO(1);
+   FIFOF#(MemRequest#(addrWidth)) req_ar_fifo <- mkSizedFIFOF(1);
+   FIFO#(MemRequest#(addrWidth)) req_aw_fifo <- mkSizedFIFO(1);
    
    Bool verbose = False;
-   interface PhysicalReadServer read_server;
+   interface MemReadServer read_server;
       interface Put readReq;
-	 method Action put(PhysicalRequest#(addrWidth) req);
+	 method Action put(MemRequest#(addrWidth) req);
             if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.paddr, req.burstLen);
    	    req_ar_fifo.enq(req);
 	 endmethod
       endinterface
       interface Get readData;
-	 method ActionValue#(DmaData#(busWidth)) get();
+	 method ActionValue#(ObjectData#(busWidth)) get();
    	    let addr = readAddrReg;
    	    let id = readTagReg;
    	    let burstCount = readBurstCountReg;
@@ -86,19 +86,19 @@ module mkPhysicalDmaSlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busW
             readBurstCountReg <= burstCount - 1;
             readAddrReg <= addr + 1;
    	    readTagReg <= id;
-            return DmaData { data: data, tag: id };
+            return ObjectData { data: data, tag: id };
 	 endmethod
       endinterface
    endinterface
-   interface PhysicalWriteServer write_server;
+   interface MemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(PhysicalRequest#(addrWidth) req);
+	 method Action put(MemRequest#(addrWidth) req);
             req_aw_fifo.enq(req);
             if (verbose) $display("write_server.writeAddr %h bc %d", req.paddr, req.burstLen);
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(DmaData#(busWidth) resp);
+	 method Action put(ObjectData#(busWidth) resp);
 	    let addr = writeAddrReg;
             let burstCount = writeBurstCountReg;
             if (burstCount == 0) begin

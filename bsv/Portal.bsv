@@ -28,12 +28,12 @@ import Leds::*;
 interface Portal#(numeric type slaveAddrWidth, numeric type slaveDataWidth);
    method Bit#(32) ifcId();
    method Bit#(32) ifcType();
-   interface PhysicalDmaSlave#(slaveAddrWidth,slaveDataWidth) slave;
+   interface MemSlave#(slaveAddrWidth,slaveDataWidth) slave;
    interface ReadOnly#(Bool) interrupt;
 endinterface
 
 
-function PhysicalDmaSlave#(_a,_d) getSlave(Portal#(_a,_d) p);
+function MemSlave#(_a,_d) getSlave(Portal#(_a,_d) p);
    return p.slave;
 endfunction
 
@@ -51,8 +51,8 @@ endfunction
 typedef Portal#(32,32) StdPortal;
 
 interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins);
-   interface PhysicalDmaSlave#(32,32) slave;
-   interface PhysicalDmaMaster#(addrWidth, dataWidth) master;
+   interface MemSlave#(32,32) slave;
+   interface MemMaster#(addrWidth, dataWidth) master;
    interface Vector#(16,ReadOnly#(Bool))        interrupt;
    interface LEDS             leds;
    interface pins             pins;

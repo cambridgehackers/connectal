@@ -473,7 +473,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
   completion_list_init();
   ring = new RingRequestProxy(IfcNames_RingRequest);
-  dma = new DmaConfigProxy(IfcNames_DmaRequest);
+  dma = new DmaConfigProxy(IfcNames_ObjectRequest);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
   ringIndication = new RingIndication(IfcNames_RingIndication);
 

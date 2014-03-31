@@ -48,7 +48,7 @@ endinterface
 
 typedef enum { Idle, Enabled, Triggered } State deriving (Bits,Eq);
 
-module mkBlueScope#(Integer samples, DmaWriteServer#(dataWidth) wchan, BlueScopeIndication indication)(BlueScope#(dataWidth))
+module mkBlueScope#(Integer samples, ObjectWriteServer#(dataWidth) wchan, BlueScopeIndication indication)(BlueScope#(dataWidth))
    provisos(Add#(a__,dataWidth,64),
 	    Add#(1,b__,dataWidth));
    
@@ -58,19 +58,19 @@ module mkBlueScope#(Integer samples, DmaWriteServer#(dataWidth) wchan, BlueScope
    return rv;
 endmodule
 
-module mkSyncBlueScope#(Integer samples, DmaWriteServer#(dataWidth) wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth))
+module mkSyncBlueScope#(Integer samples, ObjectWriteServer#(dataWidth) wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth))
    provisos(Add#(a__,dataWidth,64),
 	    Add#(1,b__,dataWidth),
 	    Div#(dataWidth,8,dataBytes));
 
    SyncFIFOIfc#(Bit#(dataWidth)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
-   Reg#(DmaPointer) pointerReg <- mkSyncReg(0, dClk, dRst, sClk);
+   Reg#(ObjectPointer) pointerReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(dataWidth))       maskReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(dataWidth))      valueReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
    Reg#(State)                stateReg <- mkReg(Idle, clocked_by sClk, reset_by sRst);
    Reg#(Bit#(32))             countReg <- mkReg(0,    clocked_by sClk, reset_by sRst);
-   Reg#(Bit#(DmaOffsetSize)) writeOffsetReg <- mkReg(0,    clocked_by dClk, reset_by dRst);
+   Reg#(Bit#(ObjectOffsetSize)) writeOffsetReg <- mkReg(0,    clocked_by dClk, reset_by dRst);
    
    SyncPulseIfc             startPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);
@@ -87,13 +87,13 @@ module mkSyncBlueScope#(Integer samples, DmaWriteServer#(dataWidth) wchan, BlueS
    endrule
 
    rule writeReq if (dfifo.notEmpty);
-      wchan.writeReq.put(DmaRequest { pointer: pointerReg, offset: zeroExtend(writeOffsetReg), burstLen: 2, tag: 0});
+      wchan.writeReq.put(ObjectRequest { pointer: pointerReg, offset: zeroExtend(writeOffsetReg), burstLen: 2, tag: 0});
       writeOffsetReg <= writeOffsetReg + (fromInteger(valueOf(dataBytes)) * 2);
    endrule
 
    rule  writeData;
       dfifo.deq();
-      wchan.writeData.put(DmaData { data: dfifo.first, tag: 0});
+      wchan.writeData.put(ObjectData { data: dfifo.first, tag: 0});
    endrule
    
    rule writeDone;

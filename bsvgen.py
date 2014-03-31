@@ -163,15 +163,15 @@ portalIfcTemplate='''
     method Bit#(32) ifcType;
         return %(ifcType)s;
     endmethod
-    interface PhysicalDmaSlave slave;
-        interface PhysicalWriteServer write_server;
+    interface MemSlave slave;
+        interface MemWriteServer write_server;
             interface Put writeReq;
-                method Action put(PhysicalRequest#(32) req);
+                method Action put(MemRequest#(32) req);
                      req_aw_fifo.enq(req);
                 endmethod
             endinterface
             interface Put writeData;
-                method Action put(DmaData#(32) wdata);
+                method Action put(ObjectData#(32) wdata);
                     let ws = slaveWS;
                     let wbc = slaveWriteBurstCountReg;
                     let wa = slaveWriteAddrReg;
@@ -205,19 +205,19 @@ portalIfcTemplate='''
                 endmethod
             endinterface
         endinterface
-        interface PhysicalReadServer read_server;
+        interface MemReadServer read_server;
             interface Put readReq;
-                method Action put(PhysicalRequest#(32) req);
+                method Action put(MemRequest#(32) req);
                     req_ar_fifo.enq(req);
                 endmethod
             endinterface
             interface Get readData;
-                method ActionValue#(DmaData#(32)) get();
+                method ActionValue#(ObjectData#(32)) get();
                     let info = slaveReadReqInfoFifo.first();
                     slaveReadReqInfoFifo.deq();
                     let v = slaveReadDataFifos[info.select].first;
                     slaveReadDataFifos[info.select].deq;
-                    return DmaData { data: v, tag: info.tag};
+                    return ObjectData { data: v, tag: info.tag};
                 endmethod
             endinterface
         endinterface
@@ -270,8 +270,8 @@ slaveStateTemplate='''
     Reg#(Bit#(1)) slaveRS <- mkReg(0);
     Reg#(Bit#(1)) slaveWS <- mkReg(0);
 
-    FIFO#(PhysicalRequest#(32))  req_ar_fifo <- mkSizedFIFO(1);
-    FIFO#(PhysicalRequest#(32)) req_aw_fifo <- mkSizedFIFO(1);
+    FIFO#(MemRequest#(32))  req_ar_fifo <- mkSizedFIFO(1);
+    FIFO#(MemRequest#(32)) req_aw_fifo <- mkSizedFIFO(1);
 
     let slaveWriteAddrFifo = slaveWriteAddrFifos[%(slaveFifoSelExposed)s];
     let slaveReadAddrFifo  = slaveReadAddrFifos[%(slaveFifoSelExposed)s];

@@ -29,9 +29,9 @@ import PortalMemory::*;
 import Dma::*;
 
 interface MemwriteEngine#(numeric type busWidth);
-   method Action start(DmaPointer pointer, Bit#(DmaOffsetSize) base, Bit#(32) writeLen, Bit#(32) burstLen);
+   method Action start(ObjectPointer pointer, Bit#(ObjectOffsetSize) base, Bit#(32) writeLen, Bit#(32) burstLen);
    method ActionValue#(Bool) finish();
-   interface DmaWriteClient#(busWidth) dmaClient;
+   interface ObjectWriteClient#(busWidth) dmaClient;
 endinterface
 
 module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
@@ -42,11 +42,11 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
    Reg#(Bit#(32))           reqCnt <- mkReg(0);
    Reg#(Bit#(32))          respCnt <- mkReg(0);
    
-   Reg#(Bit#(DmaOffsetSize))   off <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) delta <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize))  base <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize))   off <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) delta <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize))  base <- mkReg(0);
 
-   Reg#(DmaPointer)        pointer <- mkReg(0);
+   Reg#(ObjectPointer)        pointer <- mkReg(0);
    Reg#(Bit#(8))          burstLen <- mkReg(0);
 
    FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
@@ -54,7 +54,7 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
 
    let bytes_per_beat = fromInteger(valueOf(TLog#(busWidthBytes)));
    
-   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) wl, Bit#(32) bl) if (reqCnt >= numBeats);
+   method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) b, Bit#(32) wl, Bit#(32) bl) if (reqCnt >= numBeats);
       numBeats <= wl>>bytes_per_beat;
       reqCnt   <= 0;
       off      <= 0;
@@ -70,18 +70,18 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
       return ff.first;
    endmethod
 
-   interface DmaWriteClient dmaClient;
+   interface ObjectWriteClient dmaClient;
       interface Get writeReq;
-	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
+	 method ActionValue#(ObjectRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
-	    return DmaRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0};
+	    return ObjectRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0};
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(DmaData#(busWidth)) get();
+	 method ActionValue#(ObjectData#(busWidth)) get();
 	    f.deq;
-	    return DmaData{data:f.first, tag: 0};
+	    return ObjectData{data:f.first, tag: 0};
 	 endmethod
       endinterface
       interface Put writeDone;

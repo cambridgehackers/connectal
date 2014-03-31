@@ -31,10 +31,10 @@ import Dma::*;
 import PortalMemory::*;
 
 
-module mkAxiDmaSlave#(PhysicalDmaSlave#(addrWidth,dsz) slave) (Axi3Slave#(addrWidth,dsz,12));
+module mkAxiDmaSlave#(MemSlave#(addrWidth,dsz) slave) (Axi3Slave#(addrWidth,dsz,12));
    interface Put req_ar;
       method Action put((Axi3ReadRequest#(addrWidth, 12)) req);
-	 slave.read_server.readReq.put(PhysicalRequest{paddr:req.address, burstLen:extend(req.len+1),  tag:truncate(req.id)});
+	 slave.read_server.readReq.put(MemRequest{paddr:req.address, burstLen:extend(req.len+1),  tag:truncate(req.id)});
       endmethod
    endinterface
    interface Get resp_read;
@@ -45,12 +45,12 @@ module mkAxiDmaSlave#(PhysicalDmaSlave#(addrWidth,dsz) slave) (Axi3Slave#(addrWi
    endinterface
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(addrWidth, 12) req);
-	 slave.write_server.writeReq.put(PhysicalRequest{paddr:req.address, burstLen:extend(req.len+1), tag:truncate(req.id)});
+	 slave.write_server.writeReq.put(MemRequest{paddr:req.address, burstLen:extend(req.len+1), tag:truncate(req.id)});
       endmethod
    endinterface
    interface Put resp_write;
       method Action put(Axi3WriteData#(dsz, 12) resp);
-	 slave.write_server.writeData.put(DmaData{data:resp.data, tag:truncate(resp.id)});
+	 slave.write_server.writeData.put(MemData{data:resp.data, tag:truncate(resp.id)});
       endmethod
    endinterface
    interface Get resp_b;
@@ -61,7 +61,7 @@ module mkAxiDmaSlave#(PhysicalDmaSlave#(addrWidth,dsz) slave) (Axi3Slave#(addrWi
    endinterface
 endmodule
 
-module mkAxiDmaMaster#(PhysicalDmaMaster#(addrWidth,dsz) master) (Axi3Master#(addrWidth,dsz,6));
+module mkAxiDmaMaster#(MemMaster#(addrWidth,dsz) master) (Axi3Master#(addrWidth,dsz,6));
    
    Reg#(Bit#(8))  burstReg <- mkReg(0);
    FIFO#(Bit#(8)) reqs <- mkSizedFIFO(32);
@@ -99,7 +99,7 @@ module mkAxiDmaMaster#(PhysicalDmaMaster#(addrWidth,dsz) master) (Axi3Master#(ad
    endinterface
    interface Put resp_read;
       method Action put(Axi3ReadResponse#(dsz,6) response);
-	 master.read_client.readData.put(DmaData { data: response.data, tag: response.id});
+	 master.read_client.readData.put(MemData { data: response.data, tag: response.id});
       endmethod
    endinterface
 

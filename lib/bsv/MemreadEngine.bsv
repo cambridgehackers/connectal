@@ -29,9 +29,9 @@ import PortalMemory::*;
 import Dma::*;
 
 interface MemreadEngine#(numeric type busWidth);
-   method Action start(DmaPointer pointer, Bit#(DmaOffsetSize) base, Bit#(32) readLen, Bit#(32) burstLen);
+   method Action start(ObjectPointer pointer, Bit#(ObjectOffsetSize) base, Bit#(32) readLen, Bit#(32) burstLen);
    method ActionValue#(Bool) finish();
-   interface DmaReadClient#(busWidth) dmaClient;
+   interface ObjectReadClient#(busWidth) dmaClient;
 endinterface
 
 module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
@@ -42,11 +42,11 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemreadEng
    Reg#(Bit#(32))           reqCnt <- mkReg(0);
    Reg#(Bit#(32))          respCnt <- mkReg(0);
    
-   Reg#(Bit#(DmaOffsetSize))   off <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) delta <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize))  base <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize))   off <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) delta <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize))  base <- mkReg(0);
 
-   Reg#(DmaPointer )       pointer <- mkReg(0);
+   Reg#(ObjectPointer )       pointer <- mkReg(0);
    Reg#(Bit#(8))          burstLen <- mkReg(0);
    
    FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
@@ -54,7 +54,7 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemreadEng
    
    let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
 
-   method Action start(DmaPointer p, Bit#(DmaOffsetSize) b, Bit#(32) rl, Bit#(32) bl) if (reqCnt >= numBeats);
+   method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) b, Bit#(32) rl, Bit#(32) bl) if (reqCnt >= numBeats);
       numBeats <= rl/bytes_per_beat;
       reqCnt   <= 0;
       off      <= 0;
@@ -70,17 +70,17 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemreadEng
       return ff.first;
    endmethod
    
-   interface DmaReadClient dmaClient;
+   interface ObjectReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(DmaRequest) get() if (reqCnt < numBeats);
+	 method ActionValue#(ObjectRequest) get() if (reqCnt < numBeats);
 	    reqCnt <= reqCnt+extend(burstLen);
 	    off <= off + delta;
 	    //$display("mkMemreadEngine::readReq: ptr=%d", pointer);
-	    return DmaRequest { pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0 };
+	    return ObjectRequest { pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0 };
 	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(DmaData#(busWidth) d);
+	 method Action put(ObjectData#(busWidth) d);
 	    if (respCnt+1 == wf.first) begin
 	       ff.enq(True);
 	       respCnt <= 0;

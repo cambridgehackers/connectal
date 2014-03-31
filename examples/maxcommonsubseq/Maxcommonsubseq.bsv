@@ -80,9 +80,9 @@ typedef TLog#(MaxFetchLen) LIdxWidth;
 typedef Bit#(LIdxWidth) LIdx;
 
 module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
-			DmaReadServer#(busWidth)   setupA_read_server,
-			DmaReadServer#(busWidth)   setupB_read_server,
-			DmaWriteServer#(busWidth)   fetch_write_server )(MaxcommonsubseqRequest)
+			ObjectReadServer#(busWidth)   setupA_read_server,
+			ObjectReadServer#(busWidth)   setupB_read_server,
+			ObjectWriteServer#(busWidth)   fetch_write_server )(MaxcommonsubseqRequest)
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),

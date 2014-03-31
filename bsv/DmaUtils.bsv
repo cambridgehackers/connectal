@@ -39,8 +39,8 @@ import Dma::*;
 // @param bufferDepth The depth of the internal buffer
 //
 interface DmaReadBuffer#(numeric type bsz, numeric type bufferDepth);
-   interface DmaReadServer #(bsz) dmaServer;
-   interface DmaReadClient#(bsz) dmaClient;
+   interface ObjectReadServer #(bsz) dmaServer;
+   interface ObjectReadClient#(bsz) dmaClient;
 endinterface
 
 //
@@ -50,8 +50,8 @@ endinterface
 // @param bufferDepth The depth of the internal buffer
 //
 interface DmaWriteBuffer#(numeric type bsz, numeric type bufferDepth);
-   interface DmaWriteServer#(bsz) dmaServer;
-   interface DmaWriteClient#(bsz) dmaClient;
+   interface ObjectWriteServer#(bsz) dmaServer;
+   interface ObjectWriteClient#(bsz) dmaClient;
 endinterface
 
 //
@@ -64,27 +64,27 @@ module mkDmaReadBuffer(DmaReadBuffer#(bsz, bufferDepth))
    provisos(Add#(1,a__,bsz),
 	    Add#(b__, TAdd#(1,TLog#(bufferDepth)), 8));
 
-   FIFOFLevel#(DmaData#(bsz),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
-   FIFOF#(DmaRequest)        reqOutstanding <- mkFIFOF();
+   FIFOFLevel#(ObjectData#(bsz),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(bufferDepth))) unfulfilled <- mkRatchet(0);
    
    // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
    Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
 
-   interface DmaReadServer dmaServer;
+   interface ObjectReadServer dmaServer;
       interface Put readReq = toPut(reqOutstanding);
       interface Get readData = toGet(readBuffer);
    endinterface
-   interface DmaReadClient dmaClient;
+   interface ObjectReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(DmaRequest) get if (readBuffer.lowWater(sreq));
+	 method ActionValue#(ObjectRequest) get if (readBuffer.lowWater(sreq));
 	    reqOutstanding.deq;
 	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
 	    return reqOutstanding.first;
 	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(DmaData#(bsz) x);
+	 method Action put(ObjectData#(bsz) x);
 	    readBuffer.fifo.enq(x);
 	    unfulfilled.decrement(1);
 	 endmethod
@@ -102,29 +102,29 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, bufferDepth))
    provisos(Add#(1,a__,bsz),
 	    Add#(b__, TAdd#(1, TLog#(bufferDepth)), 8));
 
-   FIFOFLevel#(DmaData#(bsz),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
-   FIFOF#(DmaRequest)        reqOutstanding <- mkFIFOF();
+   FIFOFLevel#(ObjectData#(bsz),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
+   FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(bufferDepth)))  unfulfilled <- mkRatchet(0);
    
    // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.
    Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
 
-   interface DmaWriteServer dmaServer;
+   interface ObjectWriteServer dmaServer;
       interface Put writeReq = toPut(reqOutstanding);
       interface Put writeData = toPut(writeBuffer);
       interface Get writeDone = toGet(doneTags);
    endinterface
-   interface DmaWriteClient dmaClient;
+   interface ObjectWriteClient dmaClient;
       interface Get writeReq;
-	 method ActionValue#(DmaRequest) get if (writeBuffer.highWater(sreq));
+	 method ActionValue#(ObjectRequest) get if (writeBuffer.highWater(sreq));
 	    reqOutstanding.deq;
 	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
 	    return reqOutstanding.first;
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(DmaData#(bsz)) get();
+	 method ActionValue#(ObjectData#(bsz)) get();
 	    unfulfilled.decrement(1);
 	    writeBuffer.fifo.deq;
 	    return writeBuffer.fifo.first;

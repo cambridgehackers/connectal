@@ -43,7 +43,7 @@ endinterface
 interface HdmiDisplay;
     interface HdmiControlRequest controlRequest;
     interface HdmiInternalRequest internalRequest;
-    interface DmaReadClient#(64) dmaClient;
+    interface ObjectReadClient#(64) dmaClient;
     interface HDMI hdmi;
     interface XADC xadc;
 endinterface
@@ -60,7 +60,7 @@ module mkHdmiDisplay#(Clock processing_system7_1_fclk_clk1,
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
     Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
 
-    Reg#(DmaPointer) referenceReg <- mkReg(-1);
+    Reg#(ObjectPointer) referenceReg <- mkReg(-1);
     Reg#(Bit#(40)) streamRdOff <- mkReg(0);
 
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
@@ -69,10 +69,10 @@ module mkHdmiDisplay#(Clock processing_system7_1_fclk_clk1,
     DmaReadBuffer#(64, 1) dmaReadBuffer <- mkDmaReadBuffer();
     rule readReq if(referenceReg >= 0);
         streamRdOff <= streamRdOff + 16*8;
-        dmaReadBuffer.dmaServer.readReq.put(DmaRequest {pointer: referenceReg, offset: streamRdOff, burstLen: 16, tag: 0});
+        dmaReadBuffer.dmaServer.readReq.put(ObjectRequest {pointer: referenceReg, offset: streamRdOff, burstLen: 16, tag: 0});
     endrule
-   Put#(DmaData#(64)) sink = (interface Put;
-      method Action put(DmaData#(64) dmadata);
+   Put#(ObjectData#(64)) sink = (interface Put;
+      method Action put(ObjectData#(64) dmadata);
          hdmiGen.request.put(dmadata.data);
       endmethod
       endinterface);
@@ -94,7 +94,7 @@ module mkHdmiDisplay#(Clock processing_system7_1_fclk_clk1,
 	endmethod
     endinterface: controlRequest
 
-    interface DmaReadClient dmaClient = dmaReadBuffer.dmaClient;
+    interface ObjectReadClient dmaClient = dmaReadBuffer.dmaClient;
     interface HDMI hdmi = hdmiGen.hdmi;
     interface HdmiInternalRequest internalRequest = hdmiGen.control;
     interface XADC xadc;

@@ -38,7 +38,7 @@ typedef 12 SGListPageShift0;
 typedef 16 SGListPageShift4;
 typedef 20 SGListPageShift8;
 typedef Bit#(TLog#(MaxNumSGLists)) RegionsIdx;
-typedef Tuple2#(SGListId,Bit#(DmaOffsetSize)) ReqTup;
+typedef Tuple2#(SGListId,Bit#(ObjectOffsetSize)) ReqTup;
 
 interface SGListMMU#(numeric type addrWidth);
    method Action sglist(Bit#(32) pointer, Bit#(40) paddr, Bit#(32) len);
@@ -53,13 +53,13 @@ typedef union tagged{
 } Offset deriving (Eq,Bits,FShow);
 
 typedef union tagged{
-   Bit#(TSub#(DmaOffsetSize,SGListPageShift0)) POrd0;
-   Bit#(TSub#(DmaOffsetSize,SGListPageShift4)) POrd4;
-   Bit#(TSub#(DmaOffsetSize,SGListPageShift8)) POrd8;
+   Bit#(TSub#(ObjectOffsetSize,SGListPageShift0)) POrd0;
+   Bit#(TSub#(ObjectOffsetSize,SGListPageShift4)) POrd4;
+   Bit#(TSub#(ObjectOffsetSize,SGListPageShift8)) POrd8;
 } Page deriving (Eq,Bits,FShow);
 
 typedef struct {
-   Bit#(DmaOffsetSize) barrier;
+   Bit#(ObjectOffsetSize) barrier;
    Bit#(8) idxOffset;
    } Region deriving (Eq,Bits,FShow);
 
@@ -67,7 +67,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
-	    Add#(c__, addrWidth, DmaOffsetSize));
+	    Add#(c__, addrWidth, ObjectOffsetSize));
 
    BRAM2Port#(Bit#(entryIdxSize), Page)       pages <- mkBRAM2Server(defaultValue);
    BRAM2Port#(RegionsIdx, Region) reg8 <- mkBRAM2Server(defaultValue);
@@ -147,7 +147,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	  endinterface
 	  interface Get response;
 	     method ActionValue#(Bit#(addrWidth)) get();
-		Bit#(DmaOffsetSize) rv = 0;
+		Bit#(ObjectOffsetSize) rv = 0;
 		let page <- portsel(pages, i).response.get;
 		let offset = offs[i].first;
 		case (offset) matches

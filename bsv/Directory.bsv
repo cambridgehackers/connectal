@@ -41,14 +41,14 @@ endinterface
 typedef Directory#(16,32,32) StdDirectory;
 
 module mkStdDirectoryPortalIfc#(RegFileA#(Bit#(32), Bit#(32)) rf)(StdPortal);
-   PhysicalDmaSlave#(32,32) ctrl <- mkPhysicalDmaSlaveFromRegFile(rf);
+   MemSlave#(32,32) ctrl <- mkMemSlaveFromRegFile(rf);
    method Bit#(32) ifcId();
       return 0;
    endmethod
    method Bit#(32) ifcType();
       return 0;
    endmethod
-   interface PhysicalDmaSlave slave = ctrl;
+   interface MemSlave slave = ctrl;
    interface ReadOnly interrupt;
       method Bool _read;
 	 return False;

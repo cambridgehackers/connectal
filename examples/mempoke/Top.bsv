@@ -11,7 +11,7 @@ import CtrlMux::*;
 import Portal::*;
 import Leds::*;
 import PortalMemory::*;
-import PhysicalDma::*;
+import MemServer::*;
 import Dma::*;
 import DmaUtils::*;
 
@@ -39,11 +39,11 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    DmaWriteBuffer#(64,16) dma_stream_write_chan <- mkDmaWriteBuffer();
    DmaReadBuffer#(64,16) dma_stream_read_chan <- mkDmaReadBuffer();
 
-   Vector#(1, DmaReadClient#(64))   readClients = newVector();
-   Vector#(1, DmaWriteClient#(64)) writeClients = newVector();
+   Vector#(1, ObjectReadClient#(64))   readClients = newVector();
+   Vector#(1, ObjectWriteClient#(64)) writeClients = newVector();
    writeClients[0] = dma_stream_write_chan.dmaClient;
    readClients[0]  = dma_stream_read_chan.dmaClient;
-   PhysicalDmaServer#(addrWidth,64)   dma <- mkPhysicalDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(addrWidth,64)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    

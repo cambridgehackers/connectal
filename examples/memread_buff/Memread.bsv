@@ -39,14 +39,14 @@ interface MemreadIndication;
 endinterface
 
 module mkMemread#(MemreadIndication indication,
-		  DmaReadServer#(64) dma_read_server)(MemreadRequest);
+		  ObjectReadServer#(64) dma_read_server)(MemreadRequest);
    
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
    FIFOF#(Bit#(64))       readFifo <- mkFIFOF;
    let                          re <- mkMemreadEngine(1, readFifo);
 
-   Reg#(DmaPointer)        pointer <- mkReg(0);
+   Reg#(ObjectPointer)        pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    Reg#(Bit#(32))          iterCnt <- mkReg(0);

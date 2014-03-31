@@ -34,15 +34,15 @@ import MemreadEngine::*;
 import MemwriteEngine::*;
 
 interface BRAMReadClient#(numeric type bramIdxWidth, numeric type busWidth);
-   method Action start(DmaPointer h, Bit#(DmaOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
    method ActionValue#(Bool) finish();
-   interface DmaReadClient#(busWidth) dmaClient;
+   interface ObjectReadClient#(busWidth) dmaClient;
 endinterface
 
 interface BRAMWriteClient#(numeric type bramIdxWidth, numeric type busWidth);
-   method Action start(DmaPointer h, Bit#(DmaOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
    method ActionValue#(Bool) finish();
-   interface DmaWriteClient#(busWidth) dmaClient;
+   interface ObjectWriteClient#(busWidth) dmaClient;
 endinterface
 
 module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(bramIdxWidth,busWidth))
@@ -58,8 +58,8 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
    Reg#(Bit#(cntW)) i <- mkReg(maxBound);
    Reg#(Bit#(cntW)) j <- mkReg(maxBound);
    Reg#(Bit#(cntW)) n <- mkReg(0);
-   Reg#(DmaPointer) ptr <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) off <- mkReg(0);
+   Reg#(ObjectPointer) ptr <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) off <- mkReg(0);
    Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst); 
    
    FIFOF#(Bit#(busWidth)) readFifo = (interface FIFOF;
@@ -95,7 +95,7 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
       gb.deq;
    endrule
    
-   method Action start(DmaPointer h, Bit#(DmaOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
       $display("mkBRAMReadClient::start(%h, %h, %h %h)", h, b, start_idx, finish_idx);
       i <= extend(start_idx);
       j <= extend(start_idx);
@@ -129,8 +129,8 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
    Reg#(Bit#(cntW)) i <- mkReg(maxBound);
    Reg#(Bit#(cntW)) j <- mkReg(maxBound);
    Reg#(Bit#(cntW)) n <- mkReg(0);
-   Reg#(DmaPointer) ptr <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) off <- mkReg(0);
+   Reg#(ObjectPointer) ptr <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) off <- mkReg(0);
    Gearbox#(1,nd,Bit#(dsz)) gb <- mk1toNGearbox(clk,rst,clk,rst);
    
    FIFOF#(Bit#(busWidth)) writeFifo = (interface FIFOF;
@@ -168,7 +168,7 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
 	 f.enq(?);
    endrule
    
-   method Action start(DmaPointer h, Bit#(DmaOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
       $display("mkBRAMWriteClient::start(%h, %h, %h %h)", h, b, start_idx, finish_idx);
       i <= extend(start_idx);
       j <= extend(start_idx);
