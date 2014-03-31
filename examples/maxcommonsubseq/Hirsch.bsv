@@ -36,8 +36,10 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
   Reg#(Bit#(7)) jj <- mkReg(0);
    Reg#(Bit#(8)) aData <- mkReg(0);
    Reg#(Bit#(8)) bData <- mkReg(0);
+   Reg#(Bit#(16)) k1j <- mkReg(0);
    Reg#(Bit#(16)) k1jm1 <- mkReg(0);
   Reg#(Bit#(16)) k0j <- mkReg(0);
+  Reg#(Bit#(16)) k0jm1 <- mkReg(0);
 
   Stmt hirschB =
    seq
@@ -62,49 +64,44 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {1,jj}, datain: ta});
 		  endaction
 	       endseq
+	    /* initialize pipelining */
+	    k0j <= 0;
+	    k1j <= 0;
 	    /* Loop through string B */
 	    for (jj <= 1; jj <= bLenReg; jj <= jj + 1)
 	       seq
-		  /* Read a[i] and b[j] */
-		  strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
-		  strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
+		  action
+		     /* Read a[i] and b[j] */
+		     strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
+		     strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
+		     k0jm1 <= k0j;  /* pipeline from previous cycle */
+		     k1jm1 <= k1j;
+		     /* start read of k0j */
+		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {1,jj}, datain: 0});
+		  endaction
 		  action
 		     let ta <- strA.response.get();
 		     let tb <- strB.response.get();
+		     let tk <- matL.response.get();
 		     aData <= ta;
 		     bData <= tb;
+		     k0j <= tk;
 		  endaction
-		  //$display("hirschB ii %d jj %d A %d B %d", ii, jj, aData, bData);
+		  /* $display("hirschB ii %d jj %d A %d B %d", ii, jj, aData, bData);	*/
 		  if (aData == bData)
-		     seq
-			matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {1,jj-1}, datain: 0});
-			action
-			   let ta <- matL.response.get();
-			   //$display("   EQ L[%d][%d] = %d", ii, jj, ta+1);
-			   
-			   matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: ta + 1});
-			endaction
-		     endseq
+		     action
+			k1j <= k0jm1 + 1;
+			/*$display("   EQ L[%d][%d] = %d", ii, jj, ta+1); */
+		     endaction
 		  else
-		     seq
-			/* read K[0][j] and K[1][j-1] */
-			matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {1,jj}, datain: 0});
-			action
-			   let ta <- matL.response.get();
-			   k0j <= ta;
-			endaction
-			matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {0,jj-1}, datain: 0});
-			action
-			   let ta <- matL.response.get();
-			   k1jm1 <= ta;
-			endaction
-			action
-			   let tmax = max(k0j,k1jm1);
-			   //$display("     L[%d][%d] = %d = max(%d, %d)", ii, jj, tmax, k0j, k1jm1);
-			   matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: tmax});
-			endaction
-		     endseq
-		  endseq
+		     action
+			let tmax = max(k0j,k1jm1);
+			//$display("     L[%d][%d] = %d = max(%d, %d)", ii, jj, tmax, k0j, k1jm1);
+			k1j <= tmax;
+		     endaction
+		  matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: k1j});
+		  
+	       endseq
 	 endseq
    endseq;
 
