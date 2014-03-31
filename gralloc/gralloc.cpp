@@ -444,7 +444,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
                 lmin = screen_types[index].vblank;
                 pmin = screen_types[index].hblank;
             }
-            printf("[%s:%d] code %d: %d x %d blank %d x %d\n", __FUNCTION__, __LINE__, screen_types[index].code, nlines, npixels, lmin, pmin);
+            ALOGD("[%s:%d] code %d: %d x %d blank %d x %d\n", __FUNCTION__, __LINE__, screen_types[index].code, nlines, npixels, lmin, pmin);
             unsigned short stridebytes = (npixels * 4 + 31) & ~31;
             const_cast<uint32_t&>(dev->flags) = 0;
             const_cast<uint32_t&>(dev->width) = npixels;
