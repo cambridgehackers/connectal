@@ -29,17 +29,19 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	       Add#(0, 14, lIndexWidth));
 
 
-    Reg#(Bit#(7)) aLenReg <- mkReg(0);
-  Reg#(Bit#(7)) bLenReg <- mkReg(0);
-  Reg#(Bit#(14)) rLenReg <- mkReg(0);
-  Reg#(Bit#(7)) ii <- mkReg(0);
-  Reg#(Bit#(7)) jj <- mkReg(0);
+   Reg#(Bit#(7)) aStartReg <- mkReg(0);
+   Reg#(Bit#(7)) bStartReg <- mkReg(0);
+   Reg#(Bit#(7)) aLenReg <- mkReg(0);
+   Reg#(Bit#(7)) bLenReg <- mkReg(0);
+   Reg#(Bit#(14)) rLenReg <- mkReg(0);
+   Reg#(Bit#(7)) ii <- mkReg(0);
+   Reg#(Bit#(7)) jj <- mkReg(0);
    Reg#(Bit#(8)) aData <- mkReg(0);
    Reg#(Bit#(8)) bData <- mkReg(0);
    Reg#(Bit#(16)) k1j <- mkReg(0);
    Reg#(Bit#(16)) k1jm1 <- mkReg(0);
-  Reg#(Bit#(16)) k0j <- mkReg(0);
-  Reg#(Bit#(16)) k0jm1 <- mkReg(0);
+   Reg#(Bit#(16)) k0j <- mkReg(0);
+   Reg#(Bit#(16)) k0jm1 <- mkReg(0);
 
   Stmt hirschB =
    seq
@@ -107,14 +109,20 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 
    FSM hB <- mkFSM(hirschB);
    
-   method Action setupA(Bit#(7) strLen);
-      aLenReg <= strLen;
+   method Action setupA(Bit#(7) start, Bit#(7) length);
+      aStartReg <= start;
+      aLenReg <= length;
    endmethod
    
-   method Action setupB(Bit#(7) strLen);
-      bLenReg <= strLen;
+   method Action setupB(Bit#(7) start, Bit#(7) length);
+      bStartReg <= start;
+      bLenReg <= length;
    endmethod
 
+   method Action setupL(Bit#(14) start);
+   endmethod
+
+   
    interface FSM fsm = hB;
 
 endmodule
