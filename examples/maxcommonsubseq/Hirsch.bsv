@@ -23,7 +23,10 @@
 import StmtFSM::*;
 import BRAM::*;
 
-module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL)(FSM);
+module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL)(FSM)
+         provisos(Add#(0, 7, strIndexWidth),
+	       Add#(0, 14, lIndexWidth));
+
 
     Reg#(Bit#(7)) aLenReg <- mkReg(0);
   Reg#(Bit#(7)) bLenReg <- mkReg(0);
@@ -32,8 +35,8 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
   Reg#(Bit#(7)) jj <- mkReg(0);
    Reg#(Bit#(8)) aData <- mkReg(0);
    Reg#(Bit#(8)) bData <- mkReg(0);
-   Reg#(Bit#(16)) k0jm1 <- mkReg(0);
-  Reg#(Bit#(16)) k1j <- mkReg(0);
+   Reg#(Bit#(16)) k1jm1 <- mkReg(0);
+  Reg#(Bit#(16)) k0j <- mkReg(0);
 
   Stmt hirschB =
    seq
@@ -100,5 +103,10 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 
    endseq;
 
-   mkFSM(hirschB);
+   FSM hB <- mkFSM(hirschB);
+   
+   method Action start = hB.start;
+   method Action waitTillDone = hB.waitTillDone;
+   method Bool done = hB.done;
+   method Action abort = hB.abort;
 endmodule
