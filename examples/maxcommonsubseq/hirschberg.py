@@ -38,7 +38,7 @@ def hirschbergalgb(A, B):
     n = len(B)
     K = [[0 for j in xrange(n+1)] for i in xrange(2)]
     for i in xrange(1,m+1):
-        for j in xrange(n+1):
+        for j in xrange(1,n+1):
             K[0][j] = K[1][j]
         for j in xrange(1, n+1):
             if A[i-1]==B[j-1]:
