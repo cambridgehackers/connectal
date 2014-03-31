@@ -126,7 +126,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    Reg#(Bool) hirschBRunning <- mkReg(False);
 
    MCSAlgorithm hirschA <- mkHirschA(strA.portA, strB.portA, matL.portA);
-   MCSAlgorithm hirschB <- mkHirschB(strA.portA, strB.portA, matL.portA);
+   MCSAlgorithm hirschB <- mkHirschB(strA.portA, strB.portA, matL.portA, 1);
    
    // create BRAM Write client for matL
 
