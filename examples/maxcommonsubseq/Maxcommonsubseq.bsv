@@ -125,7 +125,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    Reg#(Bool) hirschARunning <- mkReg(False);
    Reg#(Bool) hirschBRunning <- mkReg(False);
 
-   MCSAlgortihm hirschA <- mkHirschA(strA.portA, strB.portA, matL.portA);
+   MCSAlgorithm hirschA <- mkHirschA(strA.portA, strB.portA, matL.portA);
    MCSAlgorithm hirschB <- mkHirschB(strA.portA, strB.portA, matL.portA);
    
    // create BRAM Write client for matL
@@ -185,15 +185,15 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       $display ("start %d", alg);
       case (alg) 
 	 0: begin
-	       hirschA.setupA(strLenA);
-	       hirschA.setupB(strLenB);
+	       hirschA.setupA(aLenReg);
+	       hirschA.setupB(bLenReg);
 	       hirschA.fsm.start();
 	       hirschARunning <= True;
 	       end
 	 1: begin
-	       hirschB.setupA(strLenA);
-	       hirschB.setupB(strLenB);
-	       hirschB.start();
+	       hirschB.setupA(aLenReg);
+	       hirschB.setupB(bLenReg);
+	       hirschB.fsm.start();
 	       hirschBRunning <= True;
 	       end
 //	 2: hirschC.start();
