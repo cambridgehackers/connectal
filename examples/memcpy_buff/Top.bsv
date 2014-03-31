@@ -27,7 +27,6 @@ import StmtFSM::*;
 import FIFO::*;
 
 // portz libraries
-import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
@@ -77,12 +76,11 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    portals[3] = dmaIndicationProxy.portalIfc; 
    
    StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkAxiSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(dir,portals);
    
    interface interrupt = getInterruptVector(portals);
-   interface ctrl = ctrl_mux;
-   interface read_client = dma.read_client;
-   interface write_client = dma.write_client;
+   interface slave = ctrl_mux;
+   interface master = dma.master;
    interface leds = default_leds;
 endmodule
 

@@ -29,26 +29,26 @@ import SpecialFIFOs::*;
 
 //portz libraries
 import Portal::*;
-import AxiMasterSlave::*;
+import Dma::*;
+import RegFileA::*;
 
-interface Directory#(numeric type _n, 
+interface Directory#(numeric type _n,
 		     numeric type _a, 
-		     numeric type _b, 
-		     numeric type _c);
-   interface Portal#(_n,_a,_b,_c) portalIfc;
+		     numeric type _d);
+   interface Portal#(_a,_d) portalIfc;
 endinterface
 
-typedef Directory#(16,32,32,12) StdDirectory;
+typedef Directory#(16,32,32) StdDirectory;
 
 module mkStdDirectoryPortalIfc#(RegFileA#(Bit#(32), Bit#(32)) rf)(StdPortal);
-   Axi3Slave#(32,32,12) ctrl_mod <- mkAxi3SlaveFromRegFile(rf);
+   PhysicalDmaSlave#(32,32) ctrl <- mkPhysicalDmaSlaveFromRegFile(rf);
    method Bit#(32) ifcId();
       return 0;
    endmethod
    method Bit#(32) ifcType();
       return 0;
    endmethod
-   interface Axi3Slave ctrl = ctrl_mod;
+   interface PhysicalDmaSlave slave = ctrl;
    interface ReadOnly interrupt;
       method Bool _read;
 	 return False;

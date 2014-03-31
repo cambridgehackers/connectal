@@ -40,18 +40,17 @@ import GetPut::*;
 import Connectable::*;
 import Clocks::*;
 import Adapter::*;
-import AxiMasterSlave::*;
 import Leds::*;
 import Vector::*;
 import SpecialFIFOs::*;
 import PortalMemory::*;
 import Portal::*;
+import Dma::*;
 %(extraImports)s
 
 typedef struct {
     Bit#(1) select;
-    Bit#(1) last;
-    Bit#(12) id;
+    Bit#(6) tag;
 } ReadReqInfo deriving (Bits);
 
 '''
@@ -116,11 +115,11 @@ wrapperCtrlTemplate='''
         requestFiredCount <= requestFiredCount+1;
     endrule
 
-    rule writeCtrlReg if (axiSlaveWriteAddrFifo.first[14] == 1);
-        axiSlaveWriteAddrFifo.deq;
-        axiSlaveWriteDataFifo.deq;
-	let addr = axiSlaveWriteAddrFifo.first[13:0];
-	let v = axiSlaveWriteDataFifo.first;
+    rule writeCtrlReg if (slaveWriteAddrFifo.first[14] == 1);
+        slaveWriteAddrFifo.deq;
+        slaveWriteDataFifo.deq;
+	let addr = slaveWriteAddrFifo.first[13:0];
+	let v = slaveWriteDataFifo.first;
 	if (addr == 14'h000)
 	    noAction;
 	if (addr == 14'h004)
@@ -129,29 +128,29 @@ wrapperCtrlTemplate='''
             putEnable <= v[0] == 1'd1;
     endrule
 
-    rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
-        axiSlaveReadAddrFifo.deq;
-	let addr = axiSlaveReadAddrFifo.first[13:0];
+    rule readCtrlReg if (slaveReadAddrFifo.first[14] == 1);
+        slaveReadAddrFifo.deq;
+	let addr = slaveReadAddrFifo.first[13:0];
         // $display(\"wrapper readCtrlReg %%h\", addr);
 	Bit#(32) v = 32'h05a05a0;
 	if (addr == 14'h000)
 	    v = requestFiredCount;
 	if (addr == 14'h004)
 	    v = outOfRangeWriteCount;
-%(readAxiState)s
-        axiSlaveReadDataFifo.enq(v);
+%(slaveReadState)s
+        slaveReadDataFifo.enq(v);
     endrule
-    rule readWriteFifo if (axiSlaveReadAddrFifo.first[14] == 0);
-        axiSlaveReadAddrFifo.deq;
-        axiSlaveReadDataFifo.enq(32'h05b05b0);
+    rule readWriteFifo if (slaveReadAddrFifo.first[14] == 0);
+        slaveReadAddrFifo.deq;
+        slaveReadDataFifo.enq(32'h05b05b0);
     endrule
 %(methodRules)s
 
     %(requestFailureRuleNames)s
-    rule outOfRangeWrite if (axiSlaveWriteAddrFifo.first[14] == 0 && 
-                             axiSlaveWriteAddrFifo.first[13:8] >= %(channelCount)s);
-        axiSlaveWriteAddrFifo.deq;
-        axiSlaveWriteDataFifo.deq;
+    rule outOfRangeWrite if (slaveWriteAddrFifo.first[14] == 0 && 
+                             slaveWriteAddrFifo.first[13:8] >= %(channelCount)s);
+        slaveWriteAddrFifo.deq;
+        slaveWriteDataFifo.deq;
         outOfRangeWriteCount <= outOfRangeWriteCount+1;
     endrule
 '''
@@ -164,59 +163,63 @@ portalIfcTemplate='''
     method Bit#(32) ifcType;
         return %(ifcType)s;
     endmethod
-    interface Axi3Slave ctrl;
-        interface Put req_aw;
-            method Action put(Axi3WriteRequest#(32,12) req);
-                 req_aw_fifo.enq(req);
-            endmethod
-        endinterface: req_aw
-        interface Put resp_write;
-            method Action put(Axi3WriteData#(32,12) wdata);
-                let ws = axiSlaveWS;
-                let wbc = axiSlaveWriteBurstCountReg;
-                let wa = axiSlaveWriteAddrReg;
-                let wid = axiSlaveWriteIdReg;
-                if (axiSlaveWriteBurstCountReg == 0) begin
-                    let req = req_aw_fifo.first;
-                    ws = req.address[15];
-                    wbc = req.len + 1;
-                    wa = truncate(req.address);
-	   	    wid = req.id;
-                    req_aw_fifo.deq;
-                end
-                let addr = wa;
-                axiSlaveWriteAddrReg <= wa + 4;
-                axiSlaveWriteBurstCountReg <= wbc - 1;
-
-                axiSlaveWriteAddrFifos[ws].enq(wa[14:0]);
-                axiSlaveWriteDataFifos[ws].enq(wdata.data);
-
-                if (wdata.last == 1'b1)
-                    axiSlaveBrespFifo.enq(Axi3WriteResponse { resp: 0, id: wdata.id });
-
-                axiSlaveWS <= ws;
-                axiSlaveWriteIdReg <= wid;
-            endmethod
+    interface PhysicalDmaSlave slave;
+        interface PhysicalWriteServer write_server;
+            interface Put writeReq;
+                method Action put(PhysicalRequest#(32) req);
+                     req_aw_fifo.enq(req);
+                endmethod
+            endinterface
+            interface Put writeData;
+                method Action put(DmaData#(32) wdata);
+                    let ws = slaveWS;
+                    let wbc = slaveWriteBurstCountReg;
+                    let wa = slaveWriteAddrReg;
+                    let wid = slaveWriteTagReg;
+                    if (slaveWriteBurstCountReg == 0) begin
+                        let req = req_aw_fifo.first;
+                        ws = req.paddr[15];
+                        wbc = req.burstLen;
+                        wa = truncate(req.paddr);
+      	   	        wid = req.tag;
+                        req_aw_fifo.deq;
+                    end
+                    let addr = wa;
+                    slaveWriteAddrReg <= wa + 4;
+                    slaveWriteBurstCountReg <= wbc - 1;
+    
+                    slaveWriteAddrFifos[ws].enq(wa[14:0]);
+                    slaveWriteDataFifos[ws].enq(wdata.data);
+    
+                    if (wbc == 1)
+                        slaveBrespFifo.enq(wdata.tag);
+    
+                    slaveWS <= ws;
+                    slaveWriteTagReg <= wid;
+                endmethod
+            endinterface
+            interface Get writeDone;
+                method ActionValue#(Bit#(6)) get();
+                    slaveBrespFifo.deq;
+                    return slaveBrespFifo.first;
+                endmethod
+            endinterface
         endinterface
-        interface Get resp_b;
-            method ActionValue#(Axi3WriteResponse#(12)) get();
-                axiSlaveBrespFifo.deq;
-                return axiSlaveBrespFifo.first;
-            endmethod
-        endinterface
-        interface Put req_ar;
-            method Action put(Axi3ReadRequest#(32,12) req);
-                req_ar_fifo.enq(req);
-            endmethod
-        endinterface
-        interface Get resp_read;
-            method ActionValue#(Axi3ReadResponse#(32,12)) get();
-                let info = axiSlaveReadReqInfoFifo.first();
-                axiSlaveReadReqInfoFifo.deq();
-                let v = axiSlaveReadDataFifos[info.select].first;
-                axiSlaveReadDataFifos[info.select].deq;
-                return Axi3ReadResponse { data: v, last: info.last, id: info.id, resp: 0 };
-            endmethod
+        interface PhysicalReadServer read_server;
+            interface Put readReq;
+                method Action put(PhysicalRequest#(32) req);
+                    req_ar_fifo.enq(req);
+                endmethod
+            endinterface
+            interface Get readData;
+                method ActionValue#(DmaData#(32)) get();
+                    let info = slaveReadReqInfoFifo.first();
+                    slaveReadReqInfoFifo.deq();
+                    let v = slaveReadDataFifos[info.select].first;
+                    slaveReadDataFifos[info.select].deq;
+                    return DmaData { data: v, tag: info.tag};
+                endmethod
+            endinterface
         endinterface
     endinterface
 %(portalIfcInterrupt)s
@@ -232,63 +235,63 @@ proxyInterruptImplTemplate='''
 '''
 
 
-readAxiStateTemplate='''
+slaveReadStateTemplate='''
 	if (addr == 14'h01C)
-	    v = zeroExtend(axiSlaveReadAddrReg);
+	    v = zeroExtend(slaveReadAddrReg);
 	if (addr == 14'h020)
-	    v = zeroExtend(axiSlaveWriteAddrReg);
+	    v = zeroExtend(slaveWriteAddrReg);
 	if (addr == 14'h024)
-	    v = zeroExtend(axiSlaveReadIdReg);
+	    v = zeroExtend(slaveReadTagReg);
 	if (addr == 14'h028)
-	    v = zeroExtend(axiSlaveWriteIdReg);
+	    v = zeroExtend(slaveWriteTagReg);
 	if (addr == 14'h02C)
-	    v = zeroExtend(axiSlaveReadBurstCountReg);
+	    v = zeroExtend(slaveReadBurstCountReg);
 	if (addr == 14'h030)
-	    v = zeroExtend(axiSlaveWriteBurstCountReg);
+	    v = zeroExtend(slaveWriteBurstCountReg);
 
 '''
 
-axiStateTemplate='''
-    // state used to implement Axi Slave interface
-    Reg#(Bit#(15)) axiSlaveReadAddrReg <- mkReg(0);
-    Reg#(Bit#(15)) axiSlaveWriteAddrReg <- mkReg(0);
-    Reg#(Bit#(12)) axiSlaveReadIdReg <- mkReg(0);
-    Reg#(Bit#(12)) axiSlaveWriteIdReg <- mkReg(0);
-    FIFOF#(ReadReqInfo) axiSlaveReadReqInfoFifo <- mkFIFOF;
-    Reg#(Bit#(4)) axiSlaveReadBurstCountReg <- mkReg(0);
-    Reg#(Bit#(4)) axiSlaveWriteBurstCountReg <- mkReg(0);
-    FIFOF#(Axi3WriteResponse#(12)) axiSlaveBrespFifo <- mkFIFOF();
+slaveStateTemplate='''
+    // state used to implement Slave interface
+    Reg#(Bit#(15)) slaveReadAddrReg <- mkReg(0);
+    Reg#(Bit#(15)) slaveWriteAddrReg <- mkReg(0);
+    Reg#(Bit#(6)) slaveReadTagReg <- mkReg(0);
+    Reg#(Bit#(6)) slaveWriteTagReg <- mkReg(0);
+    FIFOF#(ReadReqInfo) slaveReadReqInfoFifo <- mkFIFOF;
+    Reg#(Bit#(8)) slaveReadBurstCountReg <- mkReg(0);
+    Reg#(Bit#(8)) slaveWriteBurstCountReg <- mkReg(0);
+    FIFOF#(Bit#(6)) slaveBrespFifo <- mkFIFOF();
 
-    Vector#(2,FIFO#(Bit#(15))) axiSlaveWriteAddrFifos <- replicateM(mkFIFO);
-    Vector#(2,FIFO#(Bit#(15))) axiSlaveReadAddrFifos <- replicateM(mkFIFO);
-    Vector#(2,FIFO#(Bit#(32))) axiSlaveWriteDataFifos <- replicateM(mkFIFO);
-    Vector#(2,FIFOF#(Bit#(32))) axiSlaveReadDataFifos <- replicateM(mkFIFOF);
+    Vector#(2,FIFO#(Bit#(15))) slaveWriteAddrFifos <- replicateM(mkFIFO);
+    Vector#(2,FIFO#(Bit#(15))) slaveReadAddrFifos <- replicateM(mkFIFO);
+    Vector#(2,FIFO#(Bit#(32))) slaveWriteDataFifos <- replicateM(mkFIFO);
+    Vector#(2,FIFOF#(Bit#(32))) slaveReadDataFifos <- replicateM(mkFIFOF);
 
-    Reg#(Bit#(1)) axiSlaveRS <- mkReg(0);
-    Reg#(Bit#(1)) axiSlaveWS <- mkReg(0);
+    Reg#(Bit#(1)) slaveRS <- mkReg(0);
+    Reg#(Bit#(1)) slaveWS <- mkReg(0);
 
-    FIFO#(Axi3ReadRequest#(32,12))  req_ar_fifo <- mkSizedFIFO(1);
-    FIFO#(Axi3WriteRequest#(32,12)) req_aw_fifo <- mkSizedFIFO(1);
+    FIFO#(PhysicalRequest#(32))  req_ar_fifo <- mkSizedFIFO(1);
+    FIFO#(PhysicalRequest#(32)) req_aw_fifo <- mkSizedFIFO(1);
 
-    let axiSlaveWriteAddrFifo = axiSlaveWriteAddrFifos[%(slaveFifoSelExposed)s];
-    let axiSlaveReadAddrFifo  = axiSlaveReadAddrFifos[%(slaveFifoSelExposed)s];
-    let axiSlaveWriteDataFifo = axiSlaveWriteDataFifos[%(slaveFifoSelExposed)s];
-    let axiSlaveReadDataFifo  = axiSlaveReadDataFifos[%(slaveFifoSelExposed)s];
+    let slaveWriteAddrFifo = slaveWriteAddrFifos[%(slaveFifoSelExposed)s];
+    let slaveReadAddrFifo  = slaveReadAddrFifos[%(slaveFifoSelExposed)s];
+    let slaveWriteDataFifo = slaveWriteDataFifos[%(slaveFifoSelExposed)s];
+    let slaveReadDataFifo  = slaveReadDataFifos[%(slaveFifoSelExposed)s];
 
-    rule axiSlaveReadAddressGenerator;
-         if (axiSlaveReadBurstCountReg == 0) begin
+    rule slaveReadAddressGenerator;
+         if (slaveReadBurstCountReg == 0) begin
              let req = req_ar_fifo.first;
-             axiSlaveRS <= req.address[15];
-             axiSlaveReadBurstCountReg <= req.len + 1;
-             axiSlaveReadAddrReg <= truncate(req.address);
-	     axiSlaveReadIdReg <= req.id;
+             slaveRS <= req.paddr[15];
+             slaveReadBurstCountReg <= req.burstLen;
+             slaveReadAddrReg <= truncate(req.paddr);
+	     slaveReadTagReg <= req.tag;
              req_ar_fifo.deq;
          end
          else begin
-             axiSlaveReadAddrFifos[axiSlaveRS].enq(truncate(axiSlaveReadAddrReg));
-             axiSlaveReadAddrReg <= axiSlaveReadAddrReg + 4;
-             axiSlaveReadBurstCountReg <= axiSlaveReadBurstCountReg - 1;
-             axiSlaveReadReqInfoFifo.enq(ReadReqInfo { select: axiSlaveRS, last: axiSlaveReadBurstCountReg == 1 ? 1 : 0, id: axiSlaveReadIdReg });
+             slaveReadAddrFifos[slaveRS].enq(truncate(slaveReadAddrReg));
+             slaveReadAddrReg <= slaveReadAddrReg + 4;
+             slaveReadBurstCountReg <= slaveReadBurstCountReg - 1;
+             slaveReadReqInfoFifo.enq(ReadReqInfo { select: slaveRS, tag: slaveReadTagReg });
          end
     endrule 
 '''
@@ -311,19 +314,19 @@ proxyCtrlTemplate='''
         responseFiredCntReg <= responseFiredCntReg + fold(my_add, map(read_wire_cvt, responseFiredWires));
     endrule
     
-    rule writeCtrlReg if (axiSlaveWriteAddrFifo.first[14] == 1);
-        axiSlaveWriteAddrFifo.deq;
-        axiSlaveWriteDataFifo.deq;
-	let addr = axiSlaveWriteAddrFifo.first[13:0];
-	let v = axiSlaveWriteDataFifo.first;
+    rule writeCtrlReg if (slaveWriteAddrFifo.first[14] == 1);
+        slaveWriteAddrFifo.deq;
+        slaveWriteDataFifo.deq;
+	let addr = slaveWriteAddrFifo.first[13:0];
+	let v = slaveWriteDataFifo.first;
 	if (addr == 14'h000)
 	    noAction;
 	if (addr == 14'h004)
 	    interruptEnableReg <= v[0] == 1'd1;
     endrule
-    rule writeIndicatorFifo if (axiSlaveWriteAddrFifo.first[14] == 0);
-        axiSlaveWriteAddrFifo.deq;
-        axiSlaveWriteDataFifo.deq;
+    rule writeIndicatorFifo if (slaveWriteAddrFifo.first[14] == 0);
+        slaveWriteAddrFifo.deq;
+        slaveWriteDataFifo.deq;
         outOfRangeWriteCount <= outOfRangeWriteCount + 1;
     endrule
 
@@ -338,10 +341,10 @@ proxyCtrlTemplate='''
         end
     end
 
-    rule readCtrlReg if (axiSlaveReadAddrFifo.first[14] == 1);
+    rule readCtrlReg if (slaveReadAddrFifo.first[14] == 1);
 
-        axiSlaveReadAddrFifo.deq;
-	let addr = axiSlaveReadAddrFifo.first[13:0];
+        slaveReadAddrFifo.deq;
+	let addr = slaveReadAddrFifo.first[13:0];
 
         //$display(\"proxy readCtrlReg %%h\", addr);
 
@@ -364,14 +367,14 @@ proxyCtrlTemplate='''
             else 
               v = 0;
         end
-%(readAxiState)s
-        axiSlaveReadDataFifo.enq(v);
+%(slaveReadState)s
+        slaveReadDataFifo.enq(v);
     endrule
 
-    rule outOfRangeRead if (axiSlaveReadAddrFifo.first[14] == 0 && 
-                            axiSlaveReadAddrFifo.first[13:8] >= %(indicationChannelCount)s);
-        axiSlaveReadAddrFifo.deq;
-        axiSlaveReadDataFifo.enq(0);
+    rule outOfRangeRead if (slaveReadAddrFifo.first[14] == 0 && 
+                            slaveReadAddrFifo.first[13:8] >= %(indicationChannelCount)s);
+        slaveReadAddrFifo.deq;
+        slaveReadDataFifo.enq(0);
         outOfRangeReadCountReg <= outOfRangeReadCountReg+1;
     endrule
 
@@ -383,10 +386,10 @@ proxyCtrlTemplate='''
 
 requestRuleTemplate='''
     FromBit#(32,%(MethodName)s$Request) %(methodName)s$requestFifo <- mkFromBit();
-    rule axiSlaveWrite$%(methodName)s if (axiSlaveWriteAddrFifo.first[14] == 0 && axiSlaveWriteAddrFifo.first[13:8] == %(methodName)s$Offset);
-        axiSlaveWriteAddrFifo.deq;
-        axiSlaveWriteDataFifo.deq;
-        %(methodName)s$requestFifo.enq(axiSlaveWriteDataFifo.first);
+    rule slaveWrite$%(methodName)s if (slaveWriteAddrFifo.first[14] == 0 && slaveWriteAddrFifo.first[13:8] == %(methodName)s$Offset);
+        slaveWriteAddrFifo.deq;
+        slaveWriteDataFifo.deq;
+        %(methodName)s$requestFifo.enq(slaveWriteDataFifo.first);
     endrule
     (* descending_urgency = "handle$%(methodName)s$request, handle$%(methodName)s$requestFailure" *)
     rule handle$%(methodName)s$request if (putEnable);
@@ -404,9 +407,9 @@ requestRuleTemplate='''
 
 indicationRuleTemplate='''
     ToBit#(32,%(MethodName)s$Response) %(methodName)s$responseFifo <- mkToBit();
-    rule %(methodName)s$read if (axiSlaveReadAddrFifo.first[14] == 0 && 
-                                         axiSlaveReadAddrFifo.first[13:8] == %(methodName)s$Offset);
-        axiSlaveReadAddrFifo.deq;
+    rule %(methodName)s$read if (slaveReadAddrFifo.first[14] == 0 && 
+                                         slaveReadAddrFifo.first[13:8] == %(methodName)s$Offset);
+        slaveReadAddrFifo.deq;
         let v = 32'hbad0dada;
         if (%(methodName)s$responseFifo.notEmpty) begin
             %(methodName)s$responseFifo.deq;
@@ -416,7 +419,7 @@ indicationRuleTemplate='''
             underflowReadCountReg <= underflowReadCountReg + 1;
             $display("underflow");
         end
-        axiSlaveReadDataFifo.enq(v);
+        slaveReadDataFifo.enq(v);
     endrule
     readyBits[%(methodName)s$Offset] = %(methodName)s$responseFifo.notEmpty;
 '''
@@ -434,10 +437,10 @@ indicationMethodTemplate='''
 
 mkHiddenWrapperInterfaceTemplate='''
 // hidden wrapper implementation
-module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
-                            FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
-                            FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFOF#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s);
+module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) slaveWriteAddrFifo,
+                            FIFO#(Bit#(15)) slaveReadAddrFifo,
+                            FIFO#(Bit#(32)) slaveWriteDataFifo,
+                            FIFOF#(Bit#(32)) slaveReadDataFifo)(%(Dut)s);
 %(wrapperCtrl)s
 endmodule
 '''
@@ -447,12 +450,12 @@ mkExposedWrapperInterfaceTemplate='''
 module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
     provisos (Bits#(idType, __a), 
               Add#(a__, __a, 32));
-%(axiState)s
+%(slaveState)s
     // instantiate hidden proxy to report put failures
-    %(hiddenProxy)s p <- mk%(hiddenProxy)s(axiSlaveWriteAddrFifos[%(slaveFifoSelHidden)s],
-                                           axiSlaveReadAddrFifos[%(slaveFifoSelHidden)s],
-                                           axiSlaveWriteDataFifos[%(slaveFifoSelHidden)s],
-                                           axiSlaveReadDataFifos[%(slaveFifoSelHidden)s]);
+    %(hiddenProxy)s p <- mk%(hiddenProxy)s(slaveWriteAddrFifos[%(slaveFifoSelHidden)s],
+                                           slaveReadAddrFifos[%(slaveFifoSelHidden)s],
+                                           slaveWriteDataFifos[%(slaveFifoSelHidden)s],
+                                           slaveReadDataFifos[%(slaveFifoSelHidden)s]);
 %(wrapperCtrl)s
 %(portalIfc)s
 endmodule
@@ -460,10 +463,10 @@ endmodule
 
 mkHiddenProxyInterfaceTemplate='''
 // hidden proxy implementation
-module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) axiSlaveWriteAddrFifo,
-                            FIFO#(Bit#(15)) axiSlaveReadAddrFifo,
-                            FIFO#(Bit#(32)) axiSlaveWriteDataFifo,
-                            FIFOF#(Bit#(32)) axiSlaveReadDataFifo)(%(Dut)s);
+module %(moduleContext)s mk%(Dut)s#(FIFO#(Bit#(15)) slaveWriteAddrFifo,
+                            FIFO#(Bit#(15)) slaveReadAddrFifo,
+                            FIFO#(Bit#(32)) slaveWriteDataFifo,
+                            FIFOF#(Bit#(32)) slaveReadDataFifo)(%(Dut)s);
 %(proxyCtrl)s
 %(portalIfcInterrupt)s
 endmodule
@@ -472,12 +475,12 @@ endmodule
 mkExposedProxyInterfaceTemplate='''
 (* synthesize *)
 module %(moduleContext)s mk%(Dut)sSynth#(Bit#(32) id) (%(Dut)s);
-%(axiState)s
+%(slaveState)s
     // instantiate hidden wrapper to receive failure notifications
-    %(hiddenWrapper)s p <- mk%(hiddenWrapper)s(axiSlaveWriteAddrFifos[%(slaveFifoSelHidden)s],
-                                           axiSlaveReadAddrFifos[%(slaveFifoSelHidden)s],
-                                           axiSlaveWriteDataFifos[%(slaveFifoSelHidden)s],
-                                           axiSlaveReadDataFifos[%(slaveFifoSelHidden)s]);
+    %(hiddenWrapper)s p <- mk%(hiddenWrapper)s(slaveWriteAddrFifos[%(slaveFifoSelHidden)s],
+                                           slaveReadAddrFifos[%(slaveFifoSelHidden)s],
+                                           slaveWriteDataFifos[%(slaveFifoSelHidden)s],
+                                           slaveReadDataFifos[%(slaveFifoSelHidden)s]);
 %(proxyCtrl)s
 %(portalIfc)s
 endmodule
@@ -653,10 +656,10 @@ class InterfaceMixin:
             'slaveFifoSelHidden'  : '0' if proxy else '1',
             }
 
-        substs['readAxiState'] = '' if not expose else readAxiStateTemplate % substs
+        substs['slaveReadState'] = '' if not expose else slaveReadStateTemplate % substs
         substs['portalIfcInterrupt'] = 'interface ReadOnly interrupt = p.interrupt;' if not proxy else proxyInterruptImplTemplate
         substs['ifcType'] = 'truncate(128\'h%s)' % m.hexdigest()
-        substs['axiState'] = axiStateTemplate % substs
+        substs['slaveState'] = slaveStateTemplate % substs
         substs['portalIfc'] = portalIfcTemplate % substs
         substs['wrapperCtrl'] = wrapperCtrlTemplate % substs
         substs['proxyCtrl'] = proxyCtrlTemplate % substs
@@ -714,7 +717,7 @@ class InterfaceMixin:
             if m.type == 'Method':
                 methodRule = m.collectMethodRule(outerTypeName)
                 if methodRule:
-                    methodRuleNames.append('axiSlaveWrite$%s' % m.name)
+                    methodRuleNames.append('slaveWrite$%s' % m.name)
         return methodRuleNames
     def collectMethodNames(self,outerTypeName):
         methodRuleNames = []
@@ -732,7 +735,7 @@ class InterfaceMixin:
             if m.type == 'Method':
                 methodRule = m.collectIndicationMethodRule(outerTypeName)
                 if methodRule:
-                    methodRuleNames.append("%s$axiSlaveRead" % m.name)
+                    methodRuleNames.append("%s$slaveRead" % m.name)
         return methodRuleNames
     def collectIndicationMethodRules(self,outerTypeName):
         methodRules = []

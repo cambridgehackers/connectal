@@ -172,7 +172,13 @@ unsigned int portal_poll (struct file *filep, poll_table *poll_table)
 {
         struct portal_data *portal_data = filep->private_data;
         poll_wait(filep, &portal_data->wait_queue, poll_table);
-        return POLLIN | POLLRDNORM; /* when we wake up, always return back to user */
+	u32 int_status = 0;
+	if(portal_data->interrupt_virt)
+	  int_status = readl(portal_data->interrupt_virt);
+	if (int_status)
+	  return POLLIN | POLLRDNORM; /* when we wake up, always return back to user */
+	else
+	  return 0;
 }
 
 static int portal_release(struct inode *inode, struct file *filep)

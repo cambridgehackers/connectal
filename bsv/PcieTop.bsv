@@ -78,13 +78,14 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   Axi3Master#(40,dsz,6) m_axi <- mkAxiDmaServer(portalTop.read_client, portalTop.write_client,clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
+   Axi3Master#(40,dsz,6) m_axi <- mkAxiDmaMaster(portalTop.master,clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
    mkConnection(m_axi, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    mkConnection(tpl_1(x7pcie.master), axiMasterEngine.tlp_in);
    mkConnection(axiMasterEngine.tlp_out, tpl_2(x7pcie.master));
 
-   mkConnection(axiMasterEngine.master, portalTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(axiMasterEngine.master, ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    // going from level to edge-triggered interrupt
    Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125));

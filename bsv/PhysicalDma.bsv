@@ -38,8 +38,7 @@ import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) s
 
 interface PhysicalDmaServer#(numeric type addrWidth, numeric type dsz);
    interface DmaConfig request;
-   interface PhysicalReadClient#(addrWidth, dsz) read_client;
-   interface PhysicalWriteClient#(addrWidth, dsz) write_client;
+   interface PhysicalDmaMaster#(addrWidth, dsz) master;
 endinterface
 
 interface PhysicalDmaWriteInternal#(numeric type addrWidth, numeric type dsz);
@@ -292,7 +291,7 @@ module mkPhysicalDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)
 	    if(valueOf(numWriteClients) > 0)
 	       beatCounts[activeChan] <= beatCounts[activeChan]+1;
 	    
-	    return DmaData { data: tagdata.data,  tag: req.tag };
+	    return DmaData { data: tagdata.data,  tag: rename_tag };
 	 endmethod
       endinterface
       interface Put writeDone;
@@ -300,8 +299,10 @@ module mkPhysicalDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)
 	    let activeChan = respFifo.first.chan;
 	    let rename_tag = respFifo.first.rename_tag;
 	    let orig_tag = respFifo.first.req.tag;
-	    if (resp != rename_tag)
+	    if (resp != rename_tag) begin
 	       tag_mismatch.enq(tuple2(resp,rename_tag));
+	       $display("mkPhysicalDmaWriteInternal::tag_mismatch %d %d", resp, rename_tag);
+	    end
 	    respFifo.deq();
 	    if (valueOf(numWriteClients) > 0) begin
 	       writeClients[activeChan].writeDone.put(orig_tag);
@@ -391,7 +392,10 @@ module mkPhysicalDmaServer#(DmaIndication dmaIndication,
 	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
       endmethod
    endinterface
-   interface PhysicalReadClient read_client = reader.read_client;
-   interface PhysicalWriteClient write_client = writer.write_client;
+
+   interface PhysicalDmaMaster master;
+      interface PhysicalReadClient read_client = reader.read_client;
+      interface PhysicalWriteClient write_client = writer.write_client;
+   endinterface
 endmodule
 

@@ -104,6 +104,16 @@ typedef PhysicalWriteClientConfig#(CompleteBursts, asz, dsz) PhysicalWriteClient
 typedef PhysicalReadServerConfig#(CompleteBursts, asz, dsz)  PhysicalReadServer#(numeric type asz, numeric type dsz);
 typedef PhysicalWriteServerConfig#(CompleteBursts, asz, dsz) PhysicalWriteServer#(numeric type asz, numeric type dsz);
 			     
+interface PhysicalDmaSlave#(numeric type addrWidth, numeric type dataWidth);
+   interface PhysicalReadServer#(addrWidth, dataWidth) read_server;
+   interface PhysicalWriteServer#(addrWidth, dataWidth) write_server; 
+endinterface
+
+interface PhysicalDmaMaster#(numeric type addrWidth, numeric type dataWidth);
+   interface PhysicalReadClient#(addrWidth, dataWidth) read_client;
+   interface PhysicalWriteClient#(addrWidth, dataWidth) write_client; 
+endinterface
+
 interface PhysicalReadClientConfig#(type desc, numeric type asz, numeric type dsz);
    interface Get#(PhysicalRequest#(asz))    readReq;
    interface Put#(DmaData#(dsz)) readData;
@@ -125,6 +135,7 @@ interface PhysicalWriteServerConfig#(type desc, numeric type asz, numeric type d
    interface Put#(DmaData#(dsz))     writeData;
    interface Get#(Bit#(6))           writeDone;
 endinterface
+
 
 //
 ///////////////////////////////////////////////////////////////////////////////////
@@ -193,5 +204,12 @@ function  PhysicalReadClient#(addrWidth, busWidth) null_physical_read_client();
    return (interface PhysicalReadClient;
 	      interface Get readReq = null_get;
 	      interface Put readData = null_put;
+	   endinterface);
+endfunction
+
+function PhysicalDmaMaster#(addrWidth, busWidth) null_physical_dma_master();
+   return (interface PhysicalDmaMaster;
+	      interface PhysicalReadClient read_client = null_physical_read_client;
+	      interface PhysicalWriteClient write_client = null_physical_write_client;
 	   endinterface);
 endfunction
