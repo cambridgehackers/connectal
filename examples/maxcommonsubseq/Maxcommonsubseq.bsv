@@ -120,7 +120,10 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    FIFOF#(void) bReady <- mkFIFOF;
    FIFOF#(void) mReady <- mkFIFOF;
 
-   
+   Reg#(Bool) hirschARunning <- mkReg(False);
+
+   FSM hirschA <- mkHirschA(strA.portA, strB.portA, matL.portA);
+   FSM hirschB <- mkHirschB(strA.portA, strB.portA, matL.portA);
    
    // create BRAM Write client for matL
 
@@ -144,8 +147,11 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       indication.fetchComplete();
    endrule
 
-   mkHirschA(strA.portA, strB.portA, matL.portA);
-
+   rule hirschA_completion (hirschARunning && hirschA.done);
+      hirschARunning <= False;
+      indication.searchResult(22);
+      endrule
+   
    
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
       aLenReg <= truncate(strLen);
@@ -168,8 +174,12 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    endmethod
 
    method Action start(Bit#(32) alg);
+      $display ("start %d", alg);
       case (alg) 
-	 0: hirschA.start();
+	 0: begin
+	       hirschA.start();
+	       hirschARunning <= True;
+	       end
 	 1: hirschB.start();
 //	 2: hirschC.start();
       endcase
