@@ -40,6 +40,12 @@ import Dma2BRAM::*;
 import HirschA::*;
 import Hirsch::*;
 
+interface MCSAlgorithm;
+   method Action setupA (Bit#(7) strLen);
+   method Action setupB (Bit#(7) strLen);
+   interface FSM fsm;
+endinterface;
+
 /* This module solves the maximum common subsequence problem.
  * It finds the longest subsequence of characters present in both input strings
  * the subsequence does not have to be contiguous and the characters can have different locations
@@ -122,8 +128,8 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 
    Reg#(Bool) hirschARunning <- mkReg(False);
 
-   FSM hirschA <- mkHirschA(strA.portA, strB.portA, matL.portA);
-   FSM hirschB <- mkHirschB(strA.portA, strB.portA, matL.portA);
+   MCSAlgortihm hirschA <- mkHirschA(strA.portA, strB.portA, matL.portA);
+   MCSAlgorithm hirschB <- mkHirschB(strA.portA, strB.portA, matL.portA);
    
    // create BRAM Write client for matL
 
@@ -147,7 +153,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       indication.fetchComplete();
    endrule
 
-   rule hirschA_completion (hirschARunning && hirschA.done);
+   rule hirschA_completion (hirschARunning && hirschA.fsm.done);
       hirschARunning <= False;
       indication.searchResult(22);
       endrule
@@ -177,7 +183,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       $display ("start %d", alg);
       case (alg) 
 	 0: begin
-	       hirschA.start();
+	       hirschA.fsm.start();
 	       hirschARunning <= True;
 	       end
 	 1: hirschB.start();
