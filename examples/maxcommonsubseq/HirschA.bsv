@@ -23,10 +23,12 @@
 import StmtFSM::*;
 import BRAM::*;
 
-module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL)(FSM);
+module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL)(FSM)
+      provisos(Add#(0, 7, strIndexWidth),
+	       Add#(0, 14, lIndexWidth));
 
-    Reg#(Bit#(7)) aLenReg <- mkReg(0);
-  Reg#(Bit#(7)) bLenReg <- mkReg(0);
+    Reg#(Bit#(7)) aLenReg <- mkReg(21);
+  Reg#(Bit#(7)) bLenReg <- mkReg(18);
   Reg#(Bit#(14)) rLenReg <- mkReg(0);
   Reg#(Bit#(7)) ii <- mkReg(0);
   Reg#(Bit#(7)) jj <- mkReg(0);
@@ -38,6 +40,7 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 
    Stmt hirschA =
    seq
+//      $display("hirschA running alen %d blen %d", aLenReg, bLenReg);
       for (ii<= 0; ii < aLenReg; ii <= ii + 1)
 	 seq
 	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,0}, datain: 0});
@@ -83,6 +86,7 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		  endseq
 	    endseq
    endseq;
-   mkFSM(hirschA);
+   FSM hA <- mkFSM(hirschA);
+   return(hA);
 
 endmodule
