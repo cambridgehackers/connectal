@@ -144,6 +144,7 @@ int main(int argc, const char **argv)
     int strB_len = strlen(strB);
     uint16_t swFetch[fetch_len];
 
+    init_timer();
     start_timer(0);
 
 
@@ -162,6 +163,10 @@ int main(int argc, const char **argv)
 
     device->setupB(ref_strBAlloc, strB_len);
     sem_wait(&setup_sem);
+
+    fprintf(stderr, "starting algorithm A\n");
+
+    init_timer();
     start_timer(0);
 
     device->start(0);
@@ -195,6 +200,33 @@ int main(int argc, const char **argv)
     printf("\n");
     }
 
+    fprintf(stderr, "starting algorithm B\n");
+
+    device->start(1);
+    sem_wait(&test_sem);
+    cycles = lap_timer(0);
+    fprintf(stderr, "hw cycles: %f\n", (float)cycles);
+    device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
+    sem_wait(&setup_sem);
+
+    memcpy(swFetch, fetch, fetch_len * sizeof(uint16_t));
+
+    for (int j = 0; j <= strB_len; j += 1) {
+      printf("%4d", j);
+    }
+    printf("\n");
+    printf("        ");
+    for (int j = 0; j <= strB_len; j += 1) {
+      printf("%4c", strB[j-1]);
+    }
+    printf("\n");
+    for (int i = 0; i < 1; i += 1) {
+      printf("%4c%4d", strA[i-1], i);
+      for (int j = 0; j <= strB_len; j += 1) {
+	printf("%4d", swFetch[(i << 7) + j] & 0xff);
+      }
+    printf("\n");
+    }
 
     close(strAAlloc->header.fd);
     close(strBAlloc->header.fd);
