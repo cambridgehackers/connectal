@@ -42,15 +42,15 @@ import GetPut::*;
 //  word0-6 all 0
 //  word7  TAG[31:0]
 
-module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy_write_chan) ( Server#(Bit#(64), Bit#(64)));
+module mkCopyEngine#(ObjectReadServer#(64) copy_read_chan, ObjectWriteServer#(64) copy_write_chan) ( Server#(Bit#(64), Bit#(64)));
    FIFOF#(Bit#(64)) f_in  <- mkSizedFIFOF(16);    // to buffer incoming requests
    FIFOF#(Bit#(64)) f_out <- mkSizedFIFOF(16);    // to buffer outgoing responses
    Reg#(Bit#(16)) copyReadCount <- mkReg(0);
    Reg#(Bit#(16)) copyWriteCount <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) copyReadAddr <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) copyWriteAddr <- mkReg(0);
-   Reg#(DmaPointer) copyReadPointer <- mkReg(0);
-   Reg#(DmaPointer) copyWritePointer <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) copyReadAddr <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) copyWriteAddr <- mkReg(0);
+   Reg#(ObjectPointer) copyReadPointer <- mkReg(0);
+   Reg#(ObjectPointer) copyWritePointer <- mkReg(0);
    Reg#(Bit#(32)) copyTag <- mkReg(0);
    Reg#(Bool) copyBusy <- mkReg(False);
    Reg#(Bit#(4)) cmdCtr <- mkReg(0);
@@ -95,7 +95,7 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
       
     rule copyReadRule (copyBusy && (copyReadCount != 0));
        //$display("copyRead %h, count %h", copyReadAddr, copyReadCount);
-       copy_read_chan.readReq.put(DmaRequest{pointer: copyReadPointer, offset: copyReadAddr, burstLen: 1, tag: copyReadAddr[8:3]});
+       copy_read_chan.readReq.put(ObjectRequest{pointer: copyReadPointer, offset: copyReadAddr, burstLen: 1, tag: copyReadAddr[8:3]});
        copyReadAddr <= copyReadAddr + 8;
        copyReadCount <= copyReadCount - 8;
     endrule
@@ -103,8 +103,8 @@ module mkCopyEngine#(DmaReadServer#(64) copy_read_chan, DmaWriteServer#(64) copy
     rule copyReadWriteRule (copyBusy);
        let data <- copy_read_chan.readData.get;
        //$display("copyReadWrite addr %h", copyWriteAddr);
-       copy_write_chan.writeReq.put(DmaRequest{pointer: copyWritePointer, offset: copyWriteAddr, burstLen: 1, tag: copyWriteAddr[8:3]});
-       copy_write_chan.writeData.put(DmaData{data: data.data, tag: copyWriteAddr[8:3]});
+       copy_write_chan.writeReq.put(ObjectRequest{pointer: copyWritePointer, offset: copyWriteAddr, burstLen: 1, tag: copyWriteAddr[8:3]});
+       copy_write_chan.writeData.put(ObjectData{data: data.data, tag: copyWriteAddr[8:3]});
        copyWriteAddr <= copyWriteAddr + 8;
     endrule
     

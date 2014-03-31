@@ -40,8 +40,8 @@ endinterface
 
 interface Memcpy;
    interface MemcpyRequest request;
-   interface DmaReadClient#(64) dmaReadClient;
-   interface DmaWriteClient#(64) dmaWriteClient;
+   interface ObjectReadClient#(64) dmaReadClient;
+   interface ObjectWriteClient#(64) dmaWriteClient;
 endinterface
 
 
@@ -61,8 +61,8 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
    Reg#(Bit#(32))            rdCnt <- mkReg(0);
    Reg#(Bit#(32))            wrCnt <- mkReg(0);
-   Reg#(DmaPointer)      rdPointer <- mkReg(0);
-   Reg#(DmaPointer)      wrPointer <- mkReg(0);
+   Reg#(ObjectPointer)      rdPointer <- mkReg(0);
+   Reg#(ObjectPointer)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    
@@ -135,6 +135,6 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
       burstLen  <= bl;
    endmethod
    endinterface
-   interface DmaReadClient dmaReadClient = re.dmaClient;
-   interface DmaWriteClient dmaWriteClient = we.dmaClient;
+   interface ObjectReadClient dmaReadClient = re.dmaClient;
+   interface ObjectWriteClient dmaWriteClient = we.dmaClient;
 endmodule

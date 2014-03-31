@@ -9,7 +9,6 @@ import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import Leds::*;
-import AxiMasterSlave::*;
 import Dma::*;
 
 
@@ -35,11 +34,10 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkAxiSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(dir,portals);
    
    interface interrupt = getInterruptVector(portals);
-   interface ctrl = ctrl_mux;
-   interface read_client = null_physical_read_client;
-   interface write_client = null_physical_write_client;
+   interface slave = ctrl_mux;
+   interface master = null_mem_master;
 
 endmodule : mkPortalTop

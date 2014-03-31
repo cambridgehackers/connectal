@@ -32,8 +32,8 @@ typeclass ConnectableWithTrace#(type a, type b);
 endtypeclass
 
 //`define TRACE_AXI
-`define AXI_READ_TIMING
-`define AXI_WRITE_TIMING
+//`define AXI_READ_TIMING
+//`define AXI_WRITE_TIMING
 
 instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrWidth, busWidth,idWidth))
    provisos(Add#(0,addrWidth,32));

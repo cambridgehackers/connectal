@@ -45,8 +45,8 @@ interface MemcpyIndication;
 endinterface
 
 module mkMemcpyRequest#(MemcpyIndication indication,
-			DmaReadServer#(busWidth) dma_read_server,
-			DmaWriteServer#(busWidth) dma_write_server,
+			ObjectReadServer#(busWidth) dma_read_server,
+			ObjectWriteServer#(busWidth) dma_write_server,
 			BlueScope#(busWidth) bs)(MemcpyRequest)
 
    provisos (Div#(busWidth,8,busWidthBytes),
@@ -61,12 +61,12 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(32))            rdCnt <- mkReg(0);
    Reg#(Bit#(32))            wrCnt <- mkReg(0);
    
-   Reg#(Bit#(DmaOffsetSize)) rdOff <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) wrOff <- mkReg(0);
-   Reg#(Bit#(DmaOffsetSize)) delta <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) rdOff <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) wrOff <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) delta <- mkReg(0);
 
-   Reg#(DmaPointer)      rdPointer <- mkReg(0);
-   Reg#(DmaPointer)      wrPointer <- mkReg(0);
+   Reg#(ObjectPointer)      rdPointer <- mkReg(0);
+   Reg#(ObjectPointer)      wrPointer <- mkReg(0);
 
    Reg#(Bool)         dataMismatch <- mkReg(False);  
    Reg#(Bit#(8))          burstLen <- mkReg(0);
@@ -86,7 +86,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 	 //$display("rdReq: pointer=%d offset=%h burstlen=%d", rdPointer, rdOff, burstLen);
 	 rdCnt <= rdCnt+extend(burstLen);
 	 rdOff <= rdOff + delta;
-	 dma_read_server.readReq.put(DmaRequest {pointer: rdPointer, offset: rdOff, burstLen: extend(burstLen), tag: truncate(rdOff>>5)});
+	 dma_read_server.readReq.put(ObjectRequest {pointer: rdPointer, offset: rdOff, burstLen: extend(burstLen), tag: truncate(rdOff>>5)});
       end
    endrule
    
@@ -100,7 +100,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 	 //$display("wrReq: pointer=%d offset=%h burstlen=%d", wrPointer, wrOff, burstLen);
 	 wrCnt <= wrCnt+extend(burstLen);
 	 wrOff <= wrOff + delta;
-	 dma_write_server.writeReq.put(DmaRequest {pointer: wrPointer, offset: wrOff, burstLen: extend(burstLen), tag: truncate(wrOff>>5)});
+	 dma_write_server.writeReq.put(ObjectRequest {pointer: wrPointer, offset: wrOff, burstLen: extend(burstLen), tag: truncate(wrOff>>5)});
 	 ackFIFO.enq(wrIterCnt == 1 && wrCnt == (numWords>>1)-extend(burstLen));
       end
    endrule

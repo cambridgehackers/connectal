@@ -451,40 +451,40 @@ by software and identified by a `pointer`.
 Requests and responses are tagged in order to enable pipelining.
 
     typedef struct {
-       DmaPointer pointer;
-       Bit#(DmaOffsetSize) offset;
+       ObjectPointer pointer;
+       Bit#(ObjectOffsetSize) offset;
        Bit#(8) burstLen;
        Bit#(6)  tag;
-       } DmaRequest deriving (Bits);
+       } ObjectRequest deriving (Bits);
 
     typedef struct {
        Bit#(dsz) data;
        Bit#(6) tag;
-       } DmaData#(numeric type dsz) deriving (Bits);
+       } ObjectData#(numeric type dsz) deriving (Bits);
 
-Read clients implement the `DmaReadClient` interface. On response to
-the read, `burstLen` `DmaData` items will be put to the `readData`
+Read clients implement the `ObjectReadClient` interface. On response to
+the read, `burstLen` `ObjectData` items will be put to the `readData`
 interface. The design must be ready to consume the data when it is
 delivered from the memory bus or the system may hang.
 
-    interface DmaReadClient#(numeric type dsz);
-       interface GetF#(DmaRequest)    readReq;
-       interface PutF#(DmaData#(dsz)) readData;
+    interface ObjectReadClient#(numeric type dsz);
+       interface GetF#(ObjectRequest)    readReq;
+       interface PutF#(ObjectData#(dsz)) readData;
     endinterface
 
-Write clients implement `DmaWriteClient`. To complete the transaction,
+Write clients implement `ObjectWriteClient`. To complete the transaction,
 `burstLen` data items will be consumed from the `writeData`
 interace. Upon completion of the request, the specified tag will be
 put to the `writeDone` interface. The data must be available when the
 write request is issued to the memory bus or the system may hang.
 
-    interface DmaWriteClient#(numeric type dsz);
-       interface GetF#(DmaRequest)    writeReq;
-       interface GetF#(DmaData#(dsz)) writeData;
+    interface ObjectWriteClient#(numeric type dsz);
+       interface GetF#(ObjectRequest)    writeReq;
+       interface GetF#(ObjectData#(dsz)) writeData;
        interface PutF#(Bit#(6))       writeDone;
     endinterface
 
-A design may implement `DmaReadClient` and `DmaWriteClient` interfaces directly, or it may instantiate DmaReadBuffer or DmaWriteBuffer.
+A design may implement `ObjectReadClient` and `ObjectWriteClient` interfaces directly, or it may instantiate DmaReadBuffer or DmaWriteBuffer.
 
  The `AxiDmaServer` is configured with physical address translations
 for each region of memory identified by a `pointer`. A design using
@@ -501,8 +501,8 @@ Instantiate the design and its interface wrappers and proxies:
 
 Collect the read and write clients:
 
-    Vector#(1, DmaReadClient#(64)) readClients = cons(memread.dmaClient, nil);
-    Vector#(0, DmaReadClient#(64)) writeClients = nil;
+    Vector#(1, ObjectReadClient#(64)) readClients = cons(memread.dmaClient, nil);
+    Vector#(0, ObjectReadClient#(64)) writeClients = nil;
 
 Instantiate the DMA server and its wrapper and proxy:
 

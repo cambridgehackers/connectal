@@ -34,7 +34,7 @@ endinterface
 
 interface Memwrite;
    interface MemwriteRequest request;
-   interface DmaWriteClient#(64) dmaClient;
+   interface ObjectWriteClient#(64) dmaClient;
 endinterface
 
 interface MemwriteIndication;
@@ -45,7 +45,7 @@ endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
-   Reg#(DmaPointer)        pointer <- mkReg(0);
+   Reg#(ObjectPointer)        pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
@@ -73,7 +73,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       writeFifo.enq({srcGen+1,srcGen});
    endrule
 
-   interface DmaWriteClient dmaClient = we.dmaClient;
+   interface ObjectWriteClient dmaClient = we.dmaClient;
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	  $display("startWrite pointer=%d numWords=%h burstLen=%d iterCnt=%d", pointer, nw, bl, ic);

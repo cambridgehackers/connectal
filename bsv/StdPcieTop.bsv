@@ -31,9 +31,8 @@ import PcieTop           :: *;
 (* synthesize *)
 module mkSynthesizeablePortalTop(PortalTop#(40, 64, Empty));
    let top <- mkPortalTop();
-   interface ctrl = top.ctrl;
-   interface read_client = top.read_client;
-   interface write_client = top.write_client;
+   interface master = top.master;
+   interface slave = top.slave;
    interface interrupt = top.interrupt;
    interface leds = top.leds;
    interface pins = top.pins;

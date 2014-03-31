@@ -57,9 +57,9 @@ typedef enum {Idle, Ready, Run} Stage deriving (Eq, Bits);
 module mkMPEngine#(FIFOF#(void) compf, 
 		   FIFOF#(void) conff, 
 		   FIFOF#(Int#(32)) locf,
-		   DmaReadServer#(busWidth)   haystack_read_server,
-		   DmaReadServer#(busWidth)     needle_read_server,
-		   DmaReadServer#(busWidth)    mp_next_read_server )(MPEngine)
+		   ObjectReadServer#(busWidth)   haystack_read_server,
+		   ObjectReadServer#(busWidth)     needle_read_server,
+		   ObjectReadServer#(busWidth)    mp_next_read_server )(MPEngine)
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
@@ -84,7 +84,7 @@ module mkMPEngine#(FIFOF#(void) compf,
    Reg#(Bit#(2))  epochReg <- mkReg(0);
    Reg#(Bit#(6))  dmaTag <- mkReg(0);
    Reg#(Bit#(32)) haystackOff <- mkReg(0);
-   Reg#(DmaPointer) haystackPointer <- mkReg(0);
+   Reg#(ObjectPointer) haystackPointer <- mkReg(0);
    
    BRAMReadClient#(NeedleIdxWidth,busWidth) n2b <- mkBRAMReadClient(needle.portB);
    mkConnection(n2b.dmaClient, needle_read_server);
@@ -102,7 +102,7 @@ module mkMPEngine#(FIFOF#(void) compf,
       
    rule haystackReq (stage == Run && haystackOff < extend(haystackLenReg));
       //$display("haystackReq %x", haystackOff);
-      haystack_read_server.readReq.put(DmaRequest {pointer: haystackPointer, offset: extend(haystackBase+haystackOff), burstLen: 1, tag: dmaTag});
+      haystack_read_server.readReq.put(ObjectRequest {pointer: haystackPointer, offset: extend(haystackBase+haystackOff), burstLen: 1, tag: dmaTag});
       haystackOff <= haystackOff + fromInteger(valueOf(nc));
    endrule
    

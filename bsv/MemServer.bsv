@@ -36,39 +36,38 @@ import SGList::*;
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
 `endif
 
-interface PhysicalDmaServer#(numeric type addrWidth, numeric type dsz);
+interface MemServer#(numeric type addrWidth, numeric type dsz);
    interface DmaConfig request;
-   interface PhysicalReadClient#(addrWidth, dsz) read_client;
-   interface PhysicalWriteClient#(addrWidth, dsz) write_client;
+   interface MemMaster#(addrWidth, dsz) master;
 endinterface
 
-interface PhysicalDmaWriteInternal#(numeric type addrWidth, numeric type dsz);
+interface MemWriteInternal#(numeric type addrWidth, numeric type dsz);
    interface DmaDbg dbg;
-   interface PhysicalWriteClient#(addrWidth,dsz) write_client;
+   interface MemWriteClient#(addrWidth,dsz) write_client;
    interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
 endinterface
 
-interface PhysicalDmaReadInternal#(numeric type addrWidth, numeric type dsz);
+interface MemReadInternal#(numeric type addrWidth, numeric type dsz);
    interface DmaDbg dbg;
-   interface PhysicalReadClient#(addrWidth,dsz) read_client;
+   interface MemReadClient#(addrWidth,dsz) read_client;
    interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
 endinterface
 
-function Bool bad_pointer(DmaPointer p);
+function Bool bad_pointer(ObjectPointer p);
    return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
 endfunction
 
 typedef enum {Idle, Translate, Address, Data, Done} InternalState deriving(Eq,Bits);
 
-typedef struct {DmaRequest req;
+typedef struct {ObjectRequest req;
 		Bit#(6) rename_tag;
 		Bit#(addrWidth) pa;
 		DmaChannelId chan; } IRec#(type addrWidth) deriving(Bits);
 		 
-module mkPhysicalDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) readClients, 
+module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dsz)) readClients, 
 			     DmaIndication dmaIndication,
-			     Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth)) sgl) 
-   (PhysicalDmaReadInternal#(addrWidth, dsz))
+			     Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl) 
+   (MemReadInternal#(addrWidth, dsz))
 
    provisos(Add#(1,a__,dsz), 
 	    Add#(b__, addrWidth, 64), 
@@ -101,7 +100,7 @@ module mkPhysicalDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) r
    
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
       rule loadChannel;
-	 DmaRequest req <- readClients[selectReg].readReq.get();
+	 ObjectRequest req <- readClients[selectReg].readReq.get();
 	 //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.pointer, req.offset, req.burstLen);
 	 if (bad_pointer(req.pointer))
 	    dmaIndication.badPointer(req.pointer);
@@ -124,7 +123,7 @@ module mkPhysicalDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) r
       else begin
 	 if (False && physAddr[31:24] != 0)
 	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 //$display("mkPhysicalDmaReadInternal::checkSglResp tag=%d, id=%d, activeChan=%d", req.tag, tag_gen, chan);
+	 //$display("mkMemReadInternal::checkSglResp tag=%d, id=%d, activeChan=%d", req.tag, tag_gen, chan);
 	 reqFifo.enq(IRec{req:req, rename_tag:tag_gen, pa:physAddr, chan:chan});
 	 tag_gen <= tag_gen+1;
       end
@@ -139,29 +138,29 @@ module mkPhysicalDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) r
       endmethod
    endinterface
 
-   interface PhysicalReadClient read_client;
+   interface MemReadClient read_client;
       interface Get readReq;
-	 method ActionValue#(PhysicalRequest#(addrWidth)) get;
+	 method ActionValue#(MemRequest#(addrWidth)) get;
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
 	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
-	    //$display("mkPhysicalDmaReadInternal::req_ar tag=%d id=%d len=%d activeChan=%d", req.tag, id, req.burstLen, reqFifo.first.chan);
+	    //$display("mkMemReadInternal::req_ar tag=%d id=%d len=%d activeChan=%d", req.tag, id, req.burstLen, reqFifo.first.chan);
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	    dreqFifo.enq(reqFifo.first);
-	    return PhysicalRequest{paddr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(DmaData#(dsz) response);
+	 method Action put(MemData#(dsz) response);
 	    last_resp_read <= cycle_cnt;
 	    let interval = cycle_cnt - last_resp_read;
 	    let activeChan = dreqFifo.first.chan;
 	    let req = dreqFifo.first.req;
 	    let rename_tag = dreqFifo.first.rename_tag;
 	    if (valueOf(numReadClients) > 0)
-	       readClients[activeChan].readData.put(DmaData { data: response.data, tag: req.tag});
+	       readClients[activeChan].readData.put(ObjectData { data: response.data, tag: req.tag});
 
 	    let burstLen = burstReg;
 	    if (burstLen == 0)
@@ -173,9 +172,9 @@ module mkPhysicalDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) r
    
 	    if (response.tag != rename_tag) begin
 	       tag_mismatch.enq(tuple2(response.tag,rename_tag));
-	       $display("mkPhysicalDmaReadInternal::tag_mismatch %d %d", response.tag, rename_tag);
+	       $display("mkMemReadInternal::tag_mismatch %d %d", response.tag, rename_tag);
 	    end
-	    //$display("mkPhysicalDmaReadInternal::resp_read id=%d burstLen=%d activeChan=%d", id, burstLen, activeChan);
+	    //$display("mkMemReadInternal::resp_read id=%d burstLen=%d activeChan=%d", id, burstLen, activeChan);
 	    burstReg <= burstLen-1;
 
 	    if(valueOf(numReadClients) > 0)
@@ -194,11 +193,11 @@ module mkPhysicalDmaReadInternal#(Vector#(numReadClients, DmaReadClient#(dsz)) r
 endmodule
 
 
-module mkPhysicalDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients,
+module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dsz)) writeClients,
 			      DmaIndication dmaIndication, 
-			      Server#(Tuple2#(SGListId,Bit#(DmaOffsetSize)),Bit#(addrWidth)) sgl)
+			      Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl)
 
-   (PhysicalDmaWriteInternal#(addrWidth, dsz))
+   (MemWriteInternal#(addrWidth, dsz))
    
    provisos(Add#(1,a__,dsz), 
 	    Add#(b__, addrWidth, 64), 
@@ -222,7 +221,7 @@ module mkPhysicalDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)
 
    for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
        rule loadChannel;
-	  DmaRequest req <- writeClients[selectReg].writeReq.get();
+	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
 	  //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.pointer, req.offset, req.burstLen, debugReg);
 	  if (bad_pointer(req.pointer))
 	     dmaIndication.badPointer(req.pointer);
@@ -257,9 +256,9 @@ module mkPhysicalDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)
       endmethod
    endinterface
    
-   interface PhysicalWriteClient write_client;
+   interface MemWriteClient write_client;
       interface Get writeReq;
-	 method ActionValue#(PhysicalRequest#(addrWidth)) get();
+	 method ActionValue#(MemRequest#(addrWidth)) get();
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
 	    let rename_tag = reqFifo.first.rename_tag;
@@ -267,15 +266,15 @@ module mkPhysicalDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)
 	    //$display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
    
 	    dreqFifo.enq(reqFifo.first);
-	    return PhysicalRequest{paddr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(DmaData#(dsz)) get();
+	 method ActionValue#(MemData#(dsz)) get();
 	    let activeChan = dreqFifo.first.chan;
 	    let req = dreqFifo.first.req;
 	    let rename_tag = dreqFifo.first.rename_tag;
-	    DmaData#(dsz) tagdata = unpack(0);
+	    ObjectData#(dsz) tagdata = unpack(0);
 	    if (valueOf(numWriteClients) > 0)
 	       tagdata <- writeClients[activeChan].writeData.get();
 	    let burstLen = burstReg;
@@ -292,7 +291,7 @@ module mkPhysicalDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)
 	    if(valueOf(numWriteClients) > 0)
 	       beatCounts[activeChan] <= beatCounts[activeChan]+1;
 	    
-	    return DmaData { data: tagdata.data,  tag: req.tag };
+	    return MemData { data: tagdata.data,  tag: rename_tag };
 	 endmethod
       endinterface
       interface Put writeDone;
@@ -300,8 +299,10 @@ module mkPhysicalDmaWriteInternal#(Vector#(numWriteClients, DmaWriteClient#(dsz)
 	    let activeChan = respFifo.first.chan;
 	    let rename_tag = respFifo.first.rename_tag;
 	    let orig_tag = respFifo.first.req.tag;
-	    if (resp != rename_tag)
+	    if (resp != rename_tag) begin
 	       tag_mismatch.enq(tuple2(resp,rename_tag));
+	       $display("mkMemWriteInternal::tag_mismatch %d %d", resp, rename_tag);
+	    end
 	    respFifo.deq();
 	    if (valueOf(numWriteClients) > 0) begin
 	       writeClients[activeChan].writeDone.put(orig_tag);
@@ -319,25 +320,25 @@ endmodule
 // @param readClients The read clients.
 // @param writeClients The writeclients.
 //
-module mkPhysicalDmaServer#(DmaIndication dmaIndication,
-		       Vector#(numReadClients, DmaReadClient#(dsz)) readClients,
-		       Vector#(numWriteClients, DmaWriteClient#(dsz)) writeClients)
+module mkMemServer#(DmaIndication dmaIndication,
+		       Vector#(numReadClients, ObjectReadClient#(dsz)) readClients,
+		       Vector#(numWriteClients, ObjectWriteClient#(dsz)) writeClients)
 
-   (PhysicalDmaServer#(addrWidth, dsz))
+   (MemServer#(addrWidth, dsz))
    
    provisos (Add#(1,a__,dsz),
         Add#(b__, TSub#(addrWidth, 12), 32),
         Add#(c__, 12, addrWidth),
         Add#(d__, addrWidth, 64),
-        Add#(e__, TSub#(addrWidth, 12), DmaOffsetSize),
-        Add#(f__, c__, DmaOffsetSize),
+        Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+        Add#(f__, c__, ObjectOffsetSize),
 	Add#(g__, addrWidth, 40));
    
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
 
-   PhysicalDmaReadInternal#(addrWidth, dsz) reader <- mkPhysicalDmaReadInternal(readClients, dmaIndication, sgl.addr[0]);
-   PhysicalDmaWriteInternal#(addrWidth, dsz) writer <- mkPhysicalDmaWriteInternal(writeClients, dmaIndication, sgl.addr[1]);
+   MemReadInternal#(addrWidth, dsz) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0]);
+   MemWriteInternal#(addrWidth, dsz) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1]);
    
    rule tag_mismatch_read;
       let rv <- reader.tagMismatch.get;
@@ -374,7 +375,7 @@ module mkPhysicalDmaServer#(DmaIndication dmaIndication,
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
       endmethod
-      method Action sglist(Bit#(32) pref, Bit#(DmaOffsetSize) addr, Bit#(32) len);
+      method Action sglist(Bit#(32) pref, Bit#(ObjectOffsetSize) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
 `ifdef BSIM
@@ -391,7 +392,10 @@ module mkPhysicalDmaServer#(DmaIndication dmaIndication,
 	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
       endmethod
    endinterface
-   interface PhysicalReadClient read_client = reader.read_client;
-   interface PhysicalWriteClient write_client = writer.write_client;
+
+   interface MemMaster master;
+      interface MemReadClient read_client = reader.read_client;
+      interface MemWriteClient write_client = writer.write_client;
+   endinterface
 endmodule
 

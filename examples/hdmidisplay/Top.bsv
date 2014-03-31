@@ -5,13 +5,12 @@ import StmtFSM::*;
 import FIFO::*;
 
 // portz libraries
-import AxiMasterSlave::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
 import PortalMemory::*;
 import Dma::*;
-import PhysicalDma::*;
+import MemServer::*;
 import Leds::*;
 import DmaUtils::*;
 import HDMI::*;
@@ -33,7 +32,7 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI))
 	    Add#(b__, addrWidth, 64),
 	    Add#(c__, 12, addrWidth),
 	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, DmaOffsetSize),
+	    Add#(e__, c__, ObjectOffsetSize),
 	    Add#(f__, addrWidth, 40));
 
    HdmiInternalIndicationProxy hdmiInternalIndicationProxy <- mkHdmiInternalIndicationProxy(HdmiInternalIndication);
@@ -42,8 +41,8 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI))
    HdmiInternalRequestWrapper hdmiInternalRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiDisplay.internalRequest);
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   Vector#(1,  DmaReadClient#(64))   readClients = cons(hdmiDisplay.dmaClient, nil);
-   PhysicalDmaServer#(addrWidth, 64)   dma <- mkPhysicalDmaServer(dmaIndicationProxy.ifc, readClients, nil);
+   Vector#(1,  ObjectReadClient#(64))   readClients = cons(hdmiDisplay.dmaClient, nil);
+   MemServer#(addrWidth, 64)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, nil);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    Vector#(5,StdPortal) portals;
@@ -54,12 +53,11 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI))
    portals[4] = dmaIndicationProxy.portalIfc; 
    
    StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkAxiSlaveMux(dir,portals);
+   let ctrl_mux <- mkSlaveMux(dir,portals);
    
    interface interrupt = getInterruptVector(portals);
-   interface ctrl = ctrl_mux;
-   interface read_client = dma.read_client;
-   interface write_client = dma.write_client;
+   interface slave = ctrl_mux;
+   interface master = dma.master;
    interface leds = default_leds;
    interface pins = hdmiDisplay.hdmi;      
 endmodule : mkPortalTop

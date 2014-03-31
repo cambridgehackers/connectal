@@ -33,25 +33,26 @@ import GetPut::*;
 import PortalMemory::*;
 import BRAMFIFOFLevel::*;
 
-typedef Bit#(32) DmaPointer;
-typedef 40 DmaOffsetSize;
+typedef Bit#(32) ObjectPointer;
+typedef 40 ObjectOffsetSize;
 
 
 typedef struct {
-   Bit#(addrWidth) paddr;
+   Bit#(addrWidth) addr;
    Bit#(8) burstLen;
    Bit#(6) tag;
-   } PhysicalRequest#(numeric type addrWidth) deriving (Bits);
+   } MemRequest#(numeric type addrWidth) deriving (Bits);
 typedef struct {
-   DmaPointer pointer;
-   Bit#(DmaOffsetSize) offset;
+   ObjectPointer pointer;
+   Bit#(ObjectOffsetSize) offset;
    Bit#(8) burstLen;
    Bit#(6)  tag;
-   } DmaRequest deriving (Bits);
+   } ObjectRequest deriving (Bits);
 typedef struct {
    Bit#(dsz) data;
    Bit#(6) tag;
-   } DmaData#(numeric type dsz) deriving (Bits);
+   } ObjectData#(numeric type dsz) deriving (Bits);
+typedef ObjectData#(dsz) MemData#(numeric type dsz);
 
 typedef enum {CompleteBursts} CompleteBursts;
 typedef enum {IncompleteBursts} IncompleteBursts;
@@ -66,63 +67,73 @@ instance DmaDescriptor#(IncompleteBursts);
 endinstance
 
 ///////////////////////////////////////////////////////////////////////////////////
-// virtual addresses
+// 
 
-typedef DmaReadClientConfig#(CompleteBursts, dsz)  DmaReadClient#(numeric type dsz);
-typedef DmaWriteClientConfig#(CompleteBursts, dsz) DmaWriteClient#(numeric type dsz);
-typedef DmaReadServerConfig#(CompleteBursts, dsz)  DmaReadServer#(numeric type dsz);
-typedef DmaWriteServerConfig#(CompleteBursts, dsz) DmaWriteServer#(numeric type dsz);
+typedef ObjectReadClientConfig#(CompleteBursts, dsz)  ObjectReadClient#(numeric type dsz);
+typedef ObjectWriteClientConfig#(CompleteBursts, dsz) ObjectWriteClient#(numeric type dsz);
+typedef ObjectReadServerConfig#(CompleteBursts, dsz)  ObjectReadServer#(numeric type dsz);
+typedef ObjectWriteServerConfig#(CompleteBursts, dsz) ObjectWriteServer#(numeric type dsz);
 			     
-interface DmaReadClientConfig#(type desc, numeric type dsz);
-   interface Get#(DmaRequest)    readReq;
-   interface Put#(DmaData#(dsz)) readData;
+interface ObjectReadClientConfig#(type desc, numeric type dsz);
+   interface Get#(ObjectRequest)    readReq;
+   interface Put#(ObjectData#(dsz)) readData;
 endinterface
 
-interface DmaWriteClientConfig#(type desc, numeric type dsz);
-   interface Get#(DmaRequest)    writeReq;
-   interface Get#(DmaData#(dsz)) writeData;
+interface ObjectWriteClientConfig#(type desc, numeric type dsz);
+   interface Get#(ObjectRequest)    writeReq;
+   interface Get#(ObjectData#(dsz)) writeData;
    interface Put#(Bit#(6))       writeDone;
 endinterface
 
-interface DmaReadServerConfig#(type desc, numeric type dsz);
-   interface Put#(DmaRequest) readReq;
-   interface Get#(DmaData#(dsz))     readData;
+interface ObjectReadServerConfig#(type desc, numeric type dsz);
+   interface Put#(ObjectRequest) readReq;
+   interface Get#(ObjectData#(dsz))     readData;
 endinterface
 
-interface DmaWriteServerConfig#(type desc, numeric type dsz);
-   interface Put#(DmaRequest) writeReq;
-   interface Put#(DmaData#(dsz))     writeData;
+interface ObjectWriteServerConfig#(type desc, numeric type dsz);
+   interface Put#(ObjectRequest) writeReq;
+   interface Put#(ObjectData#(dsz))     writeData;
    interface Get#(Bit#(6))           writeDone;
 endinterface
 
 //
 ///////////////////////////////////////////////////////////////////////////////////
-// physical addresses
+// 
 
-typedef PhysicalReadClientConfig#(CompleteBursts, asz, dsz)  PhysicalReadClient#(numeric type asz, numeric type dsz);
-typedef PhysicalWriteClientConfig#(CompleteBursts, asz, dsz) PhysicalWriteClient#(numeric type asz, numeric type dsz);
-typedef PhysicalReadServerConfig#(CompleteBursts, asz, dsz)  PhysicalReadServer#(numeric type asz, numeric type dsz);
-typedef PhysicalWriteServerConfig#(CompleteBursts, asz, dsz) PhysicalWriteServer#(numeric type asz, numeric type dsz);
+typedef MemReadClientConfig#(CompleteBursts, asz, dsz)  MemReadClient#(numeric type asz, numeric type dsz);
+typedef MemWriteClientConfig#(CompleteBursts, asz, dsz) MemWriteClient#(numeric type asz, numeric type dsz);
+typedef MemReadServerConfig#(CompleteBursts, asz, dsz)  MemReadServer#(numeric type asz, numeric type dsz);
+typedef MemWriteServerConfig#(CompleteBursts, asz, dsz) MemWriteServer#(numeric type asz, numeric type dsz);
 			     
-interface PhysicalReadClientConfig#(type desc, numeric type asz, numeric type dsz);
-   interface Get#(PhysicalRequest#(asz))    readReq;
-   interface Put#(DmaData#(dsz)) readData;
+interface MemSlave#(numeric type addrWidth, numeric type dataWidth);
+   interface MemReadServer#(addrWidth, dataWidth) read_server;
+   interface MemWriteServer#(addrWidth, dataWidth) write_server; 
 endinterface
 
-interface PhysicalWriteClientConfig#(type desc, numeric type asz, numeric type dsz);
-   interface Get#(PhysicalRequest#(asz))    writeReq;
-   interface Get#(DmaData#(dsz)) writeData;
+interface MemMaster#(numeric type addrWidth, numeric type dataWidth);
+   interface MemReadClient#(addrWidth, dataWidth) read_client;
+   interface MemWriteClient#(addrWidth, dataWidth) write_client; 
+endinterface
+
+interface MemReadClientConfig#(type desc, numeric type asz, numeric type dsz);
+   interface Get#(MemRequest#(asz))    readReq;
+   interface Put#(MemData#(dsz)) readData;
+endinterface
+
+interface MemWriteClientConfig#(type desc, numeric type asz, numeric type dsz);
+   interface Get#(MemRequest#(asz))    writeReq;
+   interface Get#(MemData#(dsz)) writeData;
    interface Put#(Bit#(6))       writeDone;
 endinterface
 
-interface PhysicalReadServerConfig#(type desc, numeric type asz, numeric type dsz);
-   interface Put#(PhysicalRequest#(asz)) readReq;
-   interface Get#(DmaData#(dsz))     readData;
+interface MemReadServerConfig#(type desc, numeric type asz, numeric type dsz);
+   interface Put#(MemRequest#(asz)) readReq;
+   interface Get#(MemData#(dsz))     readData;
 endinterface
 
-interface PhysicalWriteServerConfig#(type desc, numeric type asz, numeric type dsz);
-   interface Put#(PhysicalRequest#(asz)) writeReq;
-   interface Put#(DmaData#(dsz))     writeData;
+interface MemWriteServerConfig#(type desc, numeric type asz, numeric type dsz);
+   interface Put#(MemRequest#(asz)) writeReq;
+   interface Put#(MemData#(dsz))     writeData;
    interface Get#(Bit#(6))           writeDone;
 endinterface
 
@@ -135,8 +146,8 @@ interface DmaDbg;
 endinterface
 
 
-instance Connectable#(DmaReadClientConfig#(desc,dsz), DmaReadServerConfig#(desc,dsz));
-   module mkConnection#(DmaReadClientConfig#(desc,dsz) source, DmaReadServerConfig#(desc,dsz) sink)(Empty);
+instance Connectable#(ObjectReadClientConfig#(desc,dsz), ObjectReadServerConfig#(desc,dsz));
+   module mkConnection#(ObjectReadClientConfig#(desc,dsz) source, ObjectReadServerConfig#(desc,dsz) sink)(Empty);
       rule request;
 	 let req <- source.readReq.get();
 	 sink.readReq.put(req);
@@ -148,8 +159,8 @@ instance Connectable#(DmaReadClientConfig#(desc,dsz), DmaReadServerConfig#(desc,
    endmodule
 endinstance
 
-instance Connectable#(DmaWriteClientConfig#(desc,dsz), DmaWriteServerConfig#(desc,dsz));
-   module mkConnection#(DmaWriteClientConfig#(desc,dsz) source, DmaWriteServerConfig#(desc,dsz) sink)(Empty);
+instance Connectable#(ObjectWriteClientConfig#(desc,dsz), ObjectWriteServerConfig#(desc,dsz));
+   module mkConnection#(ObjectWriteClientConfig#(desc,dsz) source, ObjectWriteServerConfig#(desc,dsz) sink)(Empty);
       rule request;
 	 let req <- source.writeReq.get();
 	 sink.writeReq.put(req);
@@ -181,17 +192,24 @@ function Get#(t) null_get();
 	   endinterface);
 endfunction
       
-function  PhysicalWriteClient#(addrWidth, busWidth) null_physical_write_client();
-   return (interface PhysicalWriteClient;
+function  MemWriteClient#(addrWidth, busWidth) null_mem_write_client();
+   return (interface MemWriteClient;
 	      interface Get writeReq = null_get;
 	      interface Get writeData = null_get;
 	      interface Put writeDone = null_put;
 	   endinterface);
 endfunction
 
-function  PhysicalReadClient#(addrWidth, busWidth) null_physical_read_client();
-   return (interface PhysicalReadClient;
+function  MemReadClient#(addrWidth, busWidth) null_mem_read_client();
+   return (interface MemReadClient;
 	      interface Get readReq = null_get;
 	      interface Put readData = null_put;
+	   endinterface);
+endfunction
+
+function MemMaster#(addrWidth, busWidth) null_mem_master();
+   return (interface MemMaster;
+	      interface MemReadClient read_client = null_mem_read_client;
+	      interface MemWriteClient write_client = null_mem_write_client;
 	   endinterface);
 endfunction

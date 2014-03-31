@@ -42,8 +42,8 @@ endinterface
 
 interface NandSim;
    interface NandSimRequest request;
-   interface DmaReadClient#(64) readClient;
-   interface DmaWriteClient#(64) writeClient;
+   interface ObjectReadClient#(64) readClient;
+   interface ObjectWriteClient#(64) writeClient;
 endinterface
 
 // Asz useded to be a type parameter to mkNandSim, but bsc couldn't handle that much polymorphism (mdk)
@@ -108,7 +108,7 @@ module mkNandSim#(NandSimIndication indication, BRAMServer#(Bit#(Asz), Bit#(64))
 
    endinterface
 
-   interface DmaReadClient readClient = rc.dmaClient;
-   interface DmaWriteClient writeClient = wc.dmaClient;
+   interface ObjectReadClient readClient = rc.dmaClient;
+   interface ObjectWriteClient writeClient = wc.dmaClient;
 
 endmodule
