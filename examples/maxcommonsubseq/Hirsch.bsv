@@ -22,6 +22,7 @@
 
 import StmtFSM::*;
 import BRAM::*;
+import MCSAlgorithm::*;
 
 module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL)(MCSAlgorithm)
          provisos(Add#(0, 7, strIndexWidth),
@@ -97,6 +98,8 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	 endseq
    endseq;
 
+   FSM hB <- mkFSM(hirschB);
+   
    method Action setupA(Bit#(7) strLen);
       strLenA <= strLen;
    endmethod
@@ -105,6 +108,6 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       strLenB <= strLen;
    endmethod
 
-   FSM fsm <- mkFSM(hirschB);
+   interface FSM fsm = hB;
 
 endmodule
