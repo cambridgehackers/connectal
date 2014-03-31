@@ -67,15 +67,18 @@ int main(int argc, char **argv)
     struct timeval timeout;
     int matchcount = 0, loopcount = 0, slowdown = 0;
     char *lfind;
+    char *basestring = TTYCLASS;
 
-    fprintf(stderr, "checkip: Waiting for USB device\n");
+    if (argc == 2)
+        basestring = argv[1];
+    fprintf(stderr, "checkip: Waiting for USB device %s\n", basestring);
     while (1) {
         if (fd == -1) {
             struct dirent *direntp;
             DIR *dirptr = opendir("/dev/");
             if (dirptr) {
                 while ((direntp = readdir(dirptr))) {
-                    if (!strncmp(direntp->d_name, TTYCLASS, strlen(TTYCLASS))) {
+                    if (!strncmp(direntp->d_name, basestring, strlen(basestring))) {
                         sprintf(buf, "/dev/%s", direntp->d_name);
                         fprintf(stderr, "consolable: opening %s\n", buf);
                         fd = open(buf, O_RDWR | O_NONBLOCK);

@@ -78,7 +78,7 @@ class PortalInternal
   void portalClose();
   PortalInternal(int id);
   PortalInternal(PortalInternal* p);
-  ~PortalInternal();
+  virtual ~PortalInternal();
   int fd;
   struct portal *p;
   char *name;
@@ -93,10 +93,10 @@ class PortalInternal
 class Portal : public PortalInternal
 {
  public:
-  ~Portal();
+  virtual ~Portal();
   Portal(PortalInternal *p, PortalPoller *poller = 0);
   Portal(int id, PortalPoller *poller = 0);
-  virtual int handleMessage(unsigned int channel) {};
+  virtual int handleMessage(unsigned int channel) { return 0; };
 };
 
 class PortalPoller {
