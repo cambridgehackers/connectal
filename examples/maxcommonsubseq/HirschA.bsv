@@ -28,11 +28,11 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       provisos(Add#(0, 7, strIndexWidth),
 	       Add#(0, 14, lIndexWidth));
 
-    Reg#(Bit#(7)) aLenReg <- mkReg(21);
-  Reg#(Bit#(7)) bLenReg <- mkReg(18);
-  Reg#(Bit#(14)) rLenReg <- mkReg(0);
-  Reg#(Bit#(7)) ii <- mkReg(0);
-  Reg#(Bit#(7)) jj <- mkReg(0);
+   Reg#(Bit#(7)) aLenReg <- mkReg(0);
+   Reg#(Bit#(7)) bLenReg <- mkReg(0);
+   Reg#(Bit#(14)) rLenReg <- mkReg(0);
+   Reg#(Bit#(7)) ii <- mkReg(0);
+   Reg#(Bit#(7)) jj <- mkReg(0);
    Reg#(Bit#(8)) aData <- mkReg(0);
    Reg#(Bit#(8)) bData <- mkReg(0);
    Reg#(Bit#(16)) lim1jm1 <- mkReg(0);
