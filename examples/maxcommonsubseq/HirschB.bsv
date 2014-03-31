@@ -44,7 +44,21 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    Reg#(Bit#(16)) k0jm1 <- mkReg(0);
    BRAM1Port#(Bit#(lIndexWidth), Bit#(16)) k0  <- mkBRAM1Server(defaultValue);
 
-
+/* The original algorithm B uses two vectors K0 and K1 to store two rows of the full L
+ * matrix from algoritm A.  For any particular iteration, K[0][j-1] K[0][j]
+ * and K[1][j-1] are used to compute K[1][j]
+ * 
+ * Each cycle, K[1] is copied to K[0], and then a new K[1] is computed.  First, the
+ * the previous K[0][j] is copied to K[0][j-1] and the previous K[1][j] is copied to
+ * K[1][j-1].  Then a new K[1][j] is computed.
+ * 
+ * In the revised version, a single vector is used, plus auxiliary registers.
+ * First the old K[0][j] auxiliary is copied to K[0][j-1] and the K[1][j] auxiliary
+ * is copied to K[1][j-1].  Then K[0][j] is read. Then K[1][j] is computed <and written> to
+ * K[0][j].  When the row is finished, K[0] is effectively K[1]
+ *  
+ */
+   
   Stmt hirschB =
    seq
       $display("hirschB running ");
@@ -57,16 +71,6 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       for (ii <= 1; ii <= aLenReg; ii <= ii + 1)
 	 seq
 	    //$display("hirschB ii = %d", ii);
-	    /* Copy L[1] to L[0].  could pingpong instead, or unroll loop */
-	    /* L[1] is stored in matL[0] and L[0] is stored in k0[1] so that the result is in the right place at the end */
-	    for (jj <= 0; jj <= bLenReg; jj <= jj + 1)
-	       seq
-		  matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: rStartReg + zeroExtend(jj), datain: 0});
-		  action
-		     let ta <- matL.response.get();
-		     k0.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: rStartReg + zeroExtend(jj), datain: ta});
-		  endaction
-	       endseq
 	    /* initialize pipelining */
 	    k0j <= 0;
 	    k1j <= 0;
@@ -81,12 +85,12 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		     k0jm1 <= k0j;  /* pipeline from previous cycle */
 		     k1jm1 <= k1j;
 		     /* start read of k0j */
-		     k0.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj), datain: 0});
+		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj), datain: 0});
 		  endaction
 		  action
 		     let ta <- strA.response.get();
 		     let tb <- strB.response.get();
-		     let tk <- k0.portA.response.get();
+		     let tk <- matL.response.get();
 		     aData <= ta;
 		     bData <= tb;
 		     k0j <= tk;
@@ -102,7 +106,6 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		     k1j <= tmp;
 		  endaction
 		     //$display("     L[%d][%d] = %d ", ii, jj, k1j);
-		  
 	       endseq
 	 endseq
    endseq;
