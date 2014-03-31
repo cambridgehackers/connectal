@@ -82,7 +82,6 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 			matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,jj}, datain: max(lijm1,lim1j)});
 		  endseq
 	    endseq
-      ff.enq(?);
    endseq;
    mkFSM(HirschA);
 
