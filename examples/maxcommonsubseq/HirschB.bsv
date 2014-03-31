@@ -24,16 +24,16 @@ import StmtFSM::*;
 import BRAM::*;
 import MCSAlgorithm::*;
 
-module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL)(MCSAlgorithm)
+module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL, int dir)(MCSAlgorithm)
          provisos(Add#(0, 7, strIndexWidth),
 	       Add#(0, 14, lIndexWidth));
 
 
    Reg#(Bit#(7)) aStartReg <- mkReg(0);
    Reg#(Bit#(7)) bStartReg <- mkReg(0);
+   Reg#(Bit#(14)) rStartReg <- mkReg(0);
    Reg#(Bit#(7)) aLenReg <- mkReg(0);
    Reg#(Bit#(7)) bLenReg <- mkReg(0);
-   Reg#(Bit#(14)) rLenReg <- mkReg(0);
    Reg#(Bit#(7)) ii <- mkReg(0);
    Reg#(Bit#(7)) jj <- mkReg(0);
    Reg#(Bit#(8)) aData <- mkReg(0);
@@ -42,28 +42,29 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    Reg#(Bit#(16)) k1jm1 <- mkReg(0);
    Reg#(Bit#(16)) k0j <- mkReg(0);
    Reg#(Bit#(16)) k0jm1 <- mkReg(0);
+   BRAM1Port#(Bit#(lIndexWidth), Bit#(16)) k0  <- mkBRAM1Server(defaultValue);
+
 
   Stmt hirschB =
    seq
       $display("hirschB running ");
-      /* initialize two rows of temporary storage */
-      for (jj <= 0; jj < aLenReg; jj <= jj + 1)
+      /* initialize K1 (stored in lMat) of temporary storage */
+      for (jj <= 0; jj <= bLenReg; jj <= jj + 1)
 	 seq
-	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: 0});
-	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {1,jj}, datain: 0});
+	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: rStartReg + zeroExtend(jj), datain: 0});
 	 endseq
       /* Loop through string a */
       for (ii <= 1; ii <= aLenReg; ii <= ii + 1)
 	 seq
 	    //$display("hirschB ii = %d", ii);
 	    /* Copy L[1] to L[0].  could pingpong instead, or unroll loop */
-	    /* L[1] is stored in matL[0] and L[0] is stored in matL[1] so that the result is in the right place at the end */
+	    /* L[1] is stored in matL[0] and L[0] is stored in k0[1] so that the result is in the right place at the end */
 	    for (jj <= 0; jj <= bLenReg; jj <= jj + 1)
 	       seq
-		  matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {0,jj}, datain: 0});
+		  matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: rStartReg + zeroExtend(jj), datain: 0});
 		  action
 		     let ta <- matL.response.get();
-		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {1,jj}, datain: ta});
+		     k0.portA.request.put(BRAMRequest{write: True, responseOnWrite: False, address: rStartReg + zeroExtend(jj), datain: ta});
 		  endaction
 	       endseq
 	    /* initialize pipelining */
@@ -72,6 +73,7 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	    /* Loop through string B */
 	    for (jj <= 1; jj <= bLenReg; jj <= jj + 1)
 	       seq
+		  //$display("hirschB jj = %d", jj);
 		  action
 		     /* Read a[i] and b[j] */
 		     strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
@@ -79,29 +81,27 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		     k0jm1 <= k0j;  /* pipeline from previous cycle */
 		     k1jm1 <= k1j;
 		     /* start read of k0j */
-		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {1,jj}, datain: 0});
+		     k0.portA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj), datain: 0});
 		  endaction
 		  action
 		     let ta <- strA.response.get();
 		     let tb <- strB.response.get();
-		     let tk <- matL.response.get();
+		     let tk <- k0.portA.response.get();
 		     aData <= ta;
 		     bData <= tb;
 		     k0j <= tk;
 		  endaction
-		  /* $display("hirschB ii %d jj %d A %d B %d", ii, jj, aData, bData);	*/
-		  if (aData == bData)
-		     action
-			k1j <= k0jm1 + 1;
-			/*$display("   EQ L[%d][%d] = %d", ii, jj, ta+1); */
-		     endaction
-		  else
-		     action
-			let tmax = max(k0j,k1jm1);
-			//$display("     L[%d][%d] = %d = max(%d, %d)", ii, jj, tmax, k0j, k1jm1);
-			k1j <= tmax;
-		     endaction
-		  matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: k1j});
+		  //$display("hirschB ii %d jj %d A %d B %d", ii, jj, aData, bData);
+		  action
+		     let tmp = ?;
+		     if (aData == bData)
+			tmp = k0jm1 + 1;
+		     else
+		        tmp = max(k0j,k1jm1);
+		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: rStartReg + zeroExtend(jj), datain: tmp});
+		     k1j <= tmp;
+		  endaction
+		     //$display("     L[%d][%d] = %d ", ii, jj, k1j);
 		  
 	       endseq
 	 endseq
@@ -120,6 +120,7 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    endmethod
 
    method Action setupL(Bit#(14) start);
+      rStartReg <= start;
    endmethod
 
    
