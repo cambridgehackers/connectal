@@ -201,6 +201,8 @@ int main(int argc, const char **argv)
     }
 
     fprintf(stderr, "starting algorithm B\n");
+    init_timer();
+    start_timer(0);
 
     device->start(1);
     sem_wait(&test_sem);
