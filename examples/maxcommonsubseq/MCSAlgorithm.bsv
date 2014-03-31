@@ -25,6 +25,7 @@ import StmtFSM::*;
 interface MCSAlgorithm;
    method Action setupA (Bit#(7) start, Bit#(7) length);
    method Action setupB (Bit#(7) start, Bit#(7) length);
+   method Action setupL (Bit#(14) start);
    interface FSM fsm;
 endinterface
 
