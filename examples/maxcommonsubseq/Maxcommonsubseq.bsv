@@ -1,4 +1,4 @@
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -30,6 +30,7 @@ import StmtFSM::*;
 import BRAM::*;
 //import Gearbox::*;
 import Connectable::*;
+import MCSAlgorithm::*;
 
 //import AxiMasterSlave::*;
 import Dma::*;
@@ -40,11 +41,6 @@ import Dma2BRAM::*;
 import HirschA::*;
 import Hirsch::*;
 
-interface MCSAlgorithm;
-   method Action setupA (Bit#(7) strLen);
-   method Action setupB (Bit#(7) strLen);
-   interface FSM fsm;
-endinterface;
 
 /* This module solves the maximum common subsequence problem.
  * It finds the longest subsequence of characters present in both input strings
