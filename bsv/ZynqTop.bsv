@@ -34,6 +34,8 @@ import XADC::*;
 import FIFOF::*;
 import ConnectableWithTrace::*;
 import CtrlMux::*;
+import AxiMasterSlave    :: *;
+import AxiDma            :: *;
 
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
@@ -58,7 +60,8 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    let top <- constructor(clocked_by mainclock, reset_by mainreset);
    
    mkConnection(ps7.m_axi_gp[0].client, top.ctrl, clocked_by mainclock, reset_by mainreset);
-   mkConnectionWithTrace(top.m_axi, ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
+   Axi3Master#(32,64,6) m_axi <- mkAxiDmaServer(top.read_client, top.write_client, clocked_by mainclock, reset_by mainreset);
+   mkConnectionWithTrace(m_axi, ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
    
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;

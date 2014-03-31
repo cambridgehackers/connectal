@@ -27,7 +27,6 @@ test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidi
 # For test 'foo', we will generate 'foo.bits' and 'foo.bsim'
 
 testnames = echo             \
-            echo2            \
 	    hdmidisplay      \
 	    imageon          \
             memcpy_buff      \

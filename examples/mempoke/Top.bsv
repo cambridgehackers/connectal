@@ -11,7 +11,7 @@ import CtrlMux::*;
 import Portal::*;
 import Leds::*;
 import PortalMemory::*;
-import AxiDma::*;
+import PhysicalDma::*;
 import Dma::*;
 import DmaUtils::*;
 
@@ -43,7 +43,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    Vector#(1, DmaWriteClient#(64)) writeClients = newVector();
    writeClients[0] = dma_stream_write_chan.dmaClient;
    readClients[0]  = dma_stream_read_chan.dmaClient;
-   AxiDmaServer#(addrWidth,64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   PhysicalDmaServer#(addrWidth,64)   dma <- mkPhysicalDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    
@@ -62,6 +62,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    
    interface interrupt = getInterruptVector(portals);
    interface ctrl = ctrl_mux;
-   interface m_axi = dma.m_axi;
+   interface read_client = dma.read_client;
+   interface write_client = dma.write_client;
    interface leds = default_leds;
 endmodule

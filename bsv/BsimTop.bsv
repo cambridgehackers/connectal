@@ -32,6 +32,7 @@ import AxiMasterSlave    :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiMasterSlave    :: *;
+import AxiDma            :: *;
 
 // implemented in BsimCtrl.cxx
 import "BDPI" function Action      initPortal(Bit#(32) d);
@@ -318,9 +319,10 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,Empty) mkPortalTop)(Empty)
    provisos (SelectBsimRdmaReadWrite#(dsz));
    BsimHost#(32,32,12,40,dsz,6) host <- mkBsimHost;
    PortalTop#(40,dsz,Empty) top <- mkPortalTop;
+   Axi3Master#(40,dsz,6) m_axi <- mkAxiDmaServer(top.read_client, top.write_client);
    
    mkConnection(host.axi_client, top.ctrl);
-   mkConnection(top.m_axi, host.axi_server);
+   mkConnection(m_axi, host.axi_server);
 endmodule
 
 module mkBsimTop(Empty);

@@ -11,7 +11,7 @@ import CtrlMux::*;
 import Portal::*;
 import PortalMemory::*;
 import Dma::*;
-import AxiDma::*;
+import PhysicalDma::*;
 import Leds::*;
 import DmaUtils::*;
 import HDMI::*;
@@ -43,7 +43,7 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI))
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    Vector#(1,  DmaReadClient#(64))   readClients = cons(hdmiDisplay.dmaClient, nil);
-   AxiDmaServer#(addrWidth, 64)   dma <- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, nil);
+   PhysicalDmaServer#(addrWidth, 64)   dma <- mkPhysicalDmaServer(dmaIndicationProxy.ifc, readClients, nil);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    Vector#(5,StdPortal) portals;
@@ -58,7 +58,8 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI))
    
    interface interrupt = getInterruptVector(portals);
    interface ctrl = ctrl_mux;
-   interface m_axi = dma.m_axi;
+   interface read_client = dma.read_client;
+   interface write_client = dma.write_client;
    interface leds = default_leds;
    interface pins = hdmiDisplay.hdmi;      
 endmodule : mkPortalTop

@@ -116,7 +116,8 @@ endmodule: mkPcieTopFromPortal
 module mkSynthesizeablePortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(40, 64, ImageonVita));
    let top <- mkPortalTop(clock200, io_vita_clk);
    interface ctrl = top.ctrl;
-   interface m_axi = top.m_axi;
+   interface read_client = top.read_client;
+   interface write_clinet = top.write_client;
    interface interrupt = top.interrupt;
    interface leds = top.leds;
    interface pins = top.pins;
