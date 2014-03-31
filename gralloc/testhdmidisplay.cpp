@@ -6,6 +6,7 @@
 #include "portal.h"
 #include <stdio.h>
 #include <sys/mman.h>
+#include "i2chdmi.h"
 
 HdmiControlRequestProxy *device = 0;
 PortalAlloc srcAlloc;
@@ -30,5 +31,6 @@ int main(int argc, const char **argv)
     device = new HdmiControlRequestProxy(IfcNames_HdmiControlRequest, poller);
     
     int status = poller->setClockFrequency(1, 160000000, 0);
-    //portalExec();
+    init_i2c_hdmi();
+    portalExec(0);
 }
