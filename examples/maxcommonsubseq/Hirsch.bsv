@@ -51,7 +51,7 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       /* Loop through string a */
       for (ii <= 1; ii <= aLenReg; ii <= ii + 1)
 	 seq
-	    $display("hirschB ii = %d", ii);
+	    //$display("hirschB ii = %d", ii);
 	    /* Copy L[1] to L[0].  could pingpong instead, or unroll loop */
 	    /* L[1] is stored in matL[0] and L[0] is stored in matL[1] so that the result is in the right place at the end */
 	    for (jj <= 0; jj <= bLenReg; jj <= jj + 1)
@@ -74,13 +74,13 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		     aData <= ta;
 		     bData <= tb;
 		  endaction
-		  $display("hirschB ii %d jj %d A %d B %d", ii, jj, aData, bData);
+		  //$display("hirschB ii %d jj %d A %d B %d", ii, jj, aData, bData);
 		  if (aData == bData)
 		     seq
 			matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {1,jj-1}, datain: 0});
 			action
 			   let ta <- matL.response.get();
-			   $display("   EQ L[%d][%d] = %d", ii, jj, ta+1);
+			   //$display("   EQ L[%d][%d] = %d", ii, jj, ta+1);
 			   
 			   matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: ta + 1});
 			endaction
@@ -100,7 +100,7 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 			endaction
 			action
 			   let tmax = max(k0j,k1jm1);
-			   $display("     L[%d][%d] = %d = max(%d, %d)", ii, jj, tmax, k0j, k1jm1);
+			   //$display("     L[%d][%d] = %d = max(%d, %d)", ii, jj, tmax, k0j, k1jm1);
 			   matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,jj}, datain: tmax});
 			endaction
 		     endseq
