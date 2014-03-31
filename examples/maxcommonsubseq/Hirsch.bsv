@@ -101,11 +101,11 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    FSM hB <- mkFSM(hirschB);
    
    method Action setupA(Bit#(7) strLen);
-      strLenA <= strLen;
+      aLenReg <= strLen;
    endmethod
    
    method Action setupB(Bit#(7) strLen);
-      strLenB <= strLen;
+      bLenReg <= strLen;
    endmethod
 
    interface FSM fsm = hB;
