@@ -78,7 +78,7 @@ int main(int argc, char **argv)
             DIR *dirptr = opendir("/dev/");
             if (dirptr) {
                 while ((direntp = readdir(dirptr))) {
-                    if (!strncmp(direntp->d_name, basestring, strlen(TTYCLASS))) {
+                    if (!strncmp(direntp->d_name, basestring, strlen(basestring))) {
                         sprintf(buf, "/dev/%s", direntp->d_name);
                         fprintf(stderr, "consolable: opening %s\n", buf);
                         fd = open(buf, O_RDWR | O_NONBLOCK);
