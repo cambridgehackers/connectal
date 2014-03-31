@@ -127,6 +127,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    FIFOF#(void) mReady <- mkFIFOF;
 
    Reg#(Bool) hirschARunning <- mkReg(False);
+   Reg#(Bool) hirschBRunning <- mkReg(False);
 
    MCSAlgortihm hirschA <- mkHirschA(strA.portA, strB.portA, matL.portA);
    MCSAlgorithm hirschB <- mkHirschB(strA.portA, strB.portA, matL.portA);
@@ -158,6 +159,11 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       indication.searchResult(22);
       endrule
    
+   rule hirschB_completion (hirschBRunning && hirschB.fsm.done);
+      hirschBRunning <= False;
+      indication.searchResult(23);
+      endrule
+   
    
    method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
       aLenReg <= truncate(strLen);
@@ -183,10 +189,17 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       $display ("start %d", alg);
       case (alg) 
 	 0: begin
+	       hirschA.setupA(strLenA);
+	       hirschA.setupB(strLenB);
 	       hirschA.fsm.start();
 	       hirschARunning <= True;
 	       end
-	 1: hirschB.start();
+	 1: begin
+	       hirschB.setupA(strLenA);
+	       hirschB.setupB(strLenB);
+	       hirschB.start();
+	       hirschBRunning <= True;
+	       end
 //	 2: hirschC.start();
       endcase
    endmethod
