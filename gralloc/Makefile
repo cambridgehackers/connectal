@@ -1,4 +1,6 @@
-TOP=/scratch/jamey/xlaatu
+##
+## Usage: make TOP=/path/to/android
+##
 
 all: gralloc.portal.so
 
