@@ -38,7 +38,7 @@ typedef 40 ObjectOffsetSize;
 
 
 typedef struct {
-   Bit#(addrWidth) paddr;
+   Bit#(addrWidth) addr;
    Bit#(8) burstLen;
    Bit#(6) tag;
    } MemRequest#(numeric type addrWidth) deriving (Bits);

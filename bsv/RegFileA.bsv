@@ -65,7 +65,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) r
    interface MemReadServer read_server;
       interface Put readReq;
 	 method Action put(MemRequest#(addrWidth) req);
-            if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.paddr, req.burstLen);
+            if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.addr, req.burstLen);
    	    req_ar_fifo.enq(req);
 	 endmethod
       endinterface
@@ -76,7 +76,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) r
    	    let burstCount = readBurstCountReg;
    	    if (readBurstCountReg == 0) begin
 	       let req = req_ar_fifo.first;
-               addr = truncate(req.paddr/fromInteger(valueOf(TDiv#(busWidth,8))));
+               addr = truncate(req.addr/fromInteger(valueOf(TDiv#(busWidth,8))));
    	       id = req.tag;
                burstCount = req.burstLen;
    	       req_ar_fifo.deq;
@@ -94,7 +94,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) r
       interface Put writeReq;
 	 method Action put(MemRequest#(addrWidth) req);
             req_aw_fifo.enq(req);
-            if (verbose) $display("write_server.writeAddr %h bc %d", req.paddr, req.burstLen);
+            if (verbose) $display("write_server.writeAddr %h bc %d", req.addr, req.burstLen);
 	 endmethod
       endinterface
       interface Put writeData;
@@ -103,7 +103,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) r
             let burstCount = writeBurstCountReg;
             if (burstCount == 0) begin
 	       let req = req_aw_fifo.first;
-               addr = truncate(req.paddr/fromInteger(valueOf(TDiv#(busWidth,8))));
+               addr = truncate(req.addr/fromInteger(valueOf(TDiv#(busWidth,8))));
                burstCount = req.burstLen;
                writeTagFifo.enq(req.tag);
 	       req_aw_fifo.deq;

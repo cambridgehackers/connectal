@@ -149,7 +149,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dsz)) readCl
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	    dreqFifo.enq(reqFifo.first);
-	    return MemRequest{paddr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Put readData;
@@ -266,7 +266,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dsz)) wri
 	    //$display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
    
 	    dreqFifo.enq(reqFifo.first);
-	    return MemRequest{paddr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Get writeData;

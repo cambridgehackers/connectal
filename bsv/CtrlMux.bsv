@@ -75,7 +75,7 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
    interface MemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(MemRequest#(addrWidth) req);
-	    Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.paddr));
+	    Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.addr));
 	    if (wsv > fromInteger(valueOf(numInputs)))
 	       wsv = fromInteger(valueOf(numInputs));
 	    ifcs[wsv].write_server.writeReq.put(req);
@@ -99,7 +99,7 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
    interface MemReadServer read_server;
       interface Put readReq;
 	 method Action put(MemRequest#(addrWidth) req);
-	    Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.paddr)); 
+	    Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.addr)); 
 	    if (rsv > fromInteger(valueOf(numInputs)))
 	       rsv = fromInteger(valueOf(numInputs));
 	    ifcs[rsv].read_server.readReq.put(req);

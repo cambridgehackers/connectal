@@ -178,9 +178,9 @@ portalIfcTemplate='''
                     let wid = slaveWriteTagReg;
                     if (slaveWriteBurstCountReg == 0) begin
                         let req = req_aw_fifo.first;
-                        ws = req.paddr[15];
+                        ws = req.addr[15];
                         wbc = req.burstLen;
-                        wa = truncate(req.paddr);
+                        wa = truncate(req.addr);
       	   	        wid = req.tag;
                         req_aw_fifo.deq;
                     end
@@ -281,9 +281,9 @@ slaveStateTemplate='''
     rule slaveReadAddressGenerator;
          if (slaveReadBurstCountReg == 0) begin
              let req = req_ar_fifo.first;
-             slaveRS <= req.paddr[15];
+             slaveRS <= req.addr[15];
              slaveReadBurstCountReg <= req.burstLen;
-             slaveReadAddrReg <= truncate(req.paddr);
+             slaveReadAddrReg <= truncate(req.addr);
 	     slaveReadTagReg <= req.tag;
              req_ar_fifo.deq;
          end

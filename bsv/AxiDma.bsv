@@ -34,7 +34,7 @@ import PortalMemory::*;
 module mkAxiDmaSlave#(MemSlave#(addrWidth,dsz) slave) (Axi3Slave#(addrWidth,dsz,12));
    interface Put req_ar;
       method Action put((Axi3ReadRequest#(addrWidth, 12)) req);
-	 slave.read_server.readReq.put(MemRequest{paddr:req.address, burstLen:extend(req.len+1),  tag:truncate(req.id)});
+	 slave.read_server.readReq.put(MemRequest{addr:req.address, burstLen:extend(req.len+1),  tag:truncate(req.id)});
       endmethod
    endinterface
    interface Get resp_read;
@@ -45,7 +45,7 @@ module mkAxiDmaSlave#(MemSlave#(addrWidth,dsz) slave) (Axi3Slave#(addrWidth,dsz,
    endinterface
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(addrWidth, 12) req);
-	 slave.write_server.writeReq.put(MemRequest{paddr:req.address, burstLen:extend(req.len+1), tag:truncate(req.id)});
+	 slave.write_server.writeReq.put(MemRequest{addr:req.address, burstLen:extend(req.len+1), tag:truncate(req.id)});
       endmethod
    endinterface
    interface Put resp_write;
@@ -70,7 +70,7 @@ module mkAxiDmaMaster#(MemMaster#(addrWidth,dsz) master) (Axi3Master#(addrWidth,
       method ActionValue#(Axi3WriteRequest#(addrWidth,6)) get();
 	 let req <- master.write_client.writeReq.get;
 	 reqs.enq(req.burstLen);
-	 return Axi3WriteRequest{address:req.paddr, len:truncate(req.burstLen-1), id:req.tag, size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
+	 return Axi3WriteRequest{address:req.addr, len:truncate(req.burstLen-1), id:req.tag, size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
    interface Get resp_write;
@@ -94,7 +94,7 @@ module mkAxiDmaMaster#(MemMaster#(addrWidth,dsz) master) (Axi3Master#(addrWidth,
    interface Get req_ar;
       method ActionValue#(Axi3ReadRequest#(addrWidth,6)) get();
 	 let req <- master.read_client.readReq.get;
-	 return Axi3ReadRequest{address:req.paddr, len:truncate(req.burstLen-1), id:req.tag, size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
+	 return Axi3ReadRequest{address:req.addr, len:truncate(req.burstLen-1), id:req.tag, size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
    interface Put resp_read;
