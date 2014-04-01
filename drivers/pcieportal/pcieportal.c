@@ -30,8 +30,8 @@
 /* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
 
-/* Bluespec's NoC device ID */
-#define BLUESPEC_NOC_DEVICE_ID 0xb100
+/* XBSV device ID */
+#define XBSV_DEVICE_ID 0xc100
 
 /* Number of boards to support */
 #define NUM_BOARDS 1
@@ -375,7 +375,7 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
 printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &bluenoc_probe, dev, id, pci_get_drvdata(dev));
         printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
         /* double-check vendor and device */
-        if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != BLUESPEC_NOC_DEVICE_ID) {
+        if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != XBSV_DEVICE_ID) {
                 printk(KERN_ERR "%s: probe with invalid vendor or device ID\n", DEV_NAME);
                 err = -EINVAL;
                 goto exit_bluenoc_probe;
@@ -560,7 +560,7 @@ printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
 
 /* PCI ID pattern table */
 static DEFINE_PCI_DEVICE_TABLE(bluenoc_id_table) = {{
-        PCI_DEVICE(BLUESPEC_VENDOR_ID, BLUESPEC_NOC_DEVICE_ID)}, { /* end: all zeros */ } };
+        PCI_DEVICE(BLUESPEC_VENDOR_ID, XBSV_DEVICE_ID)}, { /* end: all zeros */ } };
 
 MODULE_DEVICE_TABLE(pci, bluenoc_id_table);
 
