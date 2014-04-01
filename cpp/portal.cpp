@@ -49,7 +49,7 @@
 #include <android/log.h>
 #include <zynqportal.h>
 #else
-#include <../drivers/pcieportal/bluenoc.h>
+#include <../drivers/pcieportal/pcieportal.h>
 #endif
 
 #include "portal.h"
