@@ -73,12 +73,14 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	    //$display("hirschB ii = %d", ii);
 	    par
 	       /* initialize pipelining */
-	       jj <= 0;
+	       jj <= 1;
 	       k0j <= 0;
 	       k1j <= 0;
 	       strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
 	       /* Read b[j] */
 	       strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: 0, datain: 0});
+	       /* start read of k0j */
+	       matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: 1, datain: 0});
 	    endpar
 	    action
 	       let ta <- strA.response.get(); /* read a[i] */
@@ -90,16 +92,13 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	       seq
 		  //$display("hirschB jj = %d", jj);
 		  action
-		     /* start read of k0j */
-		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj), datain: 0});
-		  endaction
-		  action
 		     let tb <- strB.response.get();
 		     let tk <- matL.response.get();
 		     k0jm1 <= k0j;  /* pipeline from previous cycle */
 		     k1jm1 <= k1j;
 		     bData <= tb;   /* read b[j] from bram */
 		     k0j <= tk;     /* read k[0][j] from bram */
+		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: rStartReg + zeroExtend(jj-1), datain: k1j});
 		  endaction
 		  //$display("hirschB ii %d jj %d A %d B %d", ii, jj, aData, bData);
 		  action
@@ -110,14 +109,17 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 			tmp = k0jm1 + 1;
 		     else
 		        tmp = max(k0j,k1jm1);
-		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: rStartReg + zeroExtend(jj), datain: tmp});
 		     k1j <= tmp;
 		     jj <= jj + 1;
+		     /* start read of k0j */
+		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj+1), datain: 0});
 		  endaction
 		  //$display("     L[%d][%d] = %d ", ii, jj, k1j);
 	       endseq
 	    action
 	       let tb <- strB.response.get();
+	       let tk <- matL.response.get();
+	       matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: rStartReg + zeroExtend(jj-1), datain: k1j});
 	    endaction
 	 endseq
    endseq;
