@@ -213,6 +213,7 @@ int main(int argc, const char **argv)
 
     memcpy(swFetch, fetch, fetch_len * sizeof(uint16_t));
 
+    printf("        ");
     for (int j = 0; j <= strB_len; j += 1) {
       printf("%4d", j);
     }
