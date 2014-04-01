@@ -71,19 +71,22 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       for (ii <= 1; ii <= aLenReg; ii <= ii + 1)
 	 seq
 	    //$display("hirschB ii = %d", ii);
-	    /* initialize pipelining */
-	    k0j <= 0;
-	    k1j <= 0;
-	    strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
-	    /* Read b[j] */
-	    strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
+	    par
+	       /* initialize pipelining */
+	       jj <= 0;
+	       k0j <= 0;
+	       k1j <= 0;
+	       strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
+	       /* Read b[j] */
+	       strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: 0, datain: 0});
+	    endpar
 	    action
 	       let ta <- strA.response.get(); /* read a[i] */
 	       aData <= ta;
 	    endaction
 
 	    /* Loop through string B */
-	    for (jj <= 1; jj <= bLenReg; jj <= jj + 1)
+	    while (jj <= bLenReg)
 	       seq
 		  //$display("hirschB jj = %d", jj);
 		  action
@@ -109,6 +112,7 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		        tmp = max(k0j,k1jm1);
 		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: rStartReg + zeroExtend(jj), datain: tmp});
 		     k1j <= tmp;
+		     jj <= jj + 1;
 		  endaction
 		  //$display("     L[%d][%d] = %d ", ii, jj, k1j);
 	       endseq
