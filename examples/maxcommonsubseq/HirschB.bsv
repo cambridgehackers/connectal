@@ -74,30 +74,35 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	    /* initialize pipelining */
 	    k0j <= 0;
 	    k1j <= 0;
+	    strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
+	    /* Read b[j] */
+	    strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
+	    action
+	       let ta <- strA.response.get(); /* read a[i] */
+	       aData <= ta;
+	    endaction
+
 	    /* Loop through string B */
 	    for (jj <= 1; jj <= bLenReg; jj <= jj + 1)
 	       seq
 		  //$display("hirschB jj = %d", jj);
 		  action
-		     /* Read a[i] and b[j] */
-		     strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
-		     strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
-		     k0jm1 <= k0j;  /* pipeline from previous cycle */
-		     k1jm1 <= k1j;
 		     /* start read of k0j */
 		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj), datain: 0});
 		  endaction
 		  action
-		     let ta <- strA.response.get();
 		     let tb <- strB.response.get();
 		     let tk <- matL.response.get();
-		     aData <= ta;
-		     bData <= tb;
-		     k0j <= tk;
+		     k0jm1 <= k0j;  /* pipeline from previous cycle */
+		     k1jm1 <= k1j;
+		     bData <= tb;   /* read b[j] from bram */
+		     k0j <= tk;     /* read k[0][j] from bram */
 		  endaction
 		  //$display("hirschB ii %d jj %d A %d B %d", ii, jj, aData, bData);
 		  action
 		     let tmp = ?;
+		     /* Read b[j] */
+		     strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
 		     if (aData == bData)
 			tmp = k0jm1 + 1;
 		     else
@@ -105,8 +110,11 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: rStartReg + zeroExtend(jj), datain: tmp});
 		     k1j <= tmp;
 		  endaction
-		     //$display("     L[%d][%d] = %d ", ii, jj, k1j);
+		  //$display("     L[%d][%d] = %d ", ii, jj, k1j);
 	       endseq
+	    action
+	       let tb <- strB.response.get();
+	    endaction
 	 endseq
    endseq;
 
