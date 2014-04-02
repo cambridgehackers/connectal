@@ -88,7 +88,7 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
       fibstate <= stack.load(fsoffsetnext);
    endfunction
 
-  rule fib1 (fibstate == fs1):
+   rule fib1 (fibstate == fibstate1);
      if ((fibn == 0)) || (fibn == 1)) 
 	begin
 	   fibreturn(1);
@@ -99,7 +99,7 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
 	end
      endrule
 
-   rule fib2 (fibstate == fibstate2):
+   rule fib2 (fibstate == fibstate2);
       callfib(fibn - 2, fibstate3);
    endrule
    
