@@ -36,20 +36,20 @@ import SGList::*;
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
 `endif
 
-interface MemServer#(numeric type addrWidth, numeric type dsz);
+interface MemServer#(numeric type addrWidth, numeric type dataWidth);
    interface DmaConfig request;
-   interface MemMaster#(addrWidth, dsz) master;
+   interface MemMaster#(addrWidth, dataWidth) master;
 endinterface
 
-interface MemWriteInternal#(numeric type addrWidth, numeric type dsz);
+interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
-   interface MemWriteClient#(addrWidth,dsz) write_client;
+   interface MemWriteClient#(addrWidth,dataWidth) write_client;
    interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
 endinterface
 
-interface MemReadInternal#(numeric type addrWidth, numeric type dsz);
+interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
-   interface MemReadClient#(addrWidth,dsz) read_client;
+   interface MemReadClient#(addrWidth,dataWidth) read_client;
    interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
 endinterface
 
@@ -57,22 +57,22 @@ function Bool bad_pointer(ObjectPointer p);
    return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
 endfunction
 
-typedef enum {Idle, Translate, Address, Data, Done} InternalState deriving(Eq,Bits);
-
 typedef struct {ObjectRequest req;
 		Bit#(6) rename_tag;
 		Bit#(addrWidth) pa;
 		DmaChannelId chan; } IRec#(type addrWidth) deriving(Bits);
 		 
-module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dsz)) readClients, 
+module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients, 
 			     DmaIndication dmaIndication,
 			     Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl) 
-   (MemReadInternal#(addrWidth, dsz))
+   (MemReadInternal#(addrWidth, dataWidth))
 
-   provisos(Add#(1,a__,dsz), 
-	    Add#(b__, addrWidth, 64), 
+   provisos(Add#(b__, addrWidth, 64), 
 	    Add#(c__, 12, addrWidth), 
-	    Add#(1, c__, d__));
+	    Add#(1, c__, d__),
+	    Div#(dataWidth,8,dataWidthBytes),
+	    Mul#(dataWidthBytes,8,dataWidth),
+	    Log#(dataWidthBytes,beatShift));
    
    FIFO#(IRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(IRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
@@ -80,24 +80,27 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dsz)) readCl
 
    Reg#(Bit#(8))           burstReg <- mkReg(0);
    Vector#(numReadClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
-   Reg#(Bit#(32)) bin1 <- mkReg(0);
-   Reg#(Bit#(32)) bin4 <- mkReg(0);
-   Reg#(Bit#(32)) binx <- mkReg(0);
-   Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
-   Reg#(Bit#(64)) last_resp_read <- mkReg(0);
-   
-   (* fire_when_enabled *)
-   rule cycle;
-      cycle_cnt <= cycle_cnt+1;
-   endrule
-   
+   let beat_shift = fromInteger(valueOf(beatShift));
+
    // the choice of 5 is based on PCIE limitations.   
    // uniqueness is enforced by the depth of dreqFIFO
    Reg#(Bit#(6))  tag_gen   <- mkReg(0); 
    // report a tag mismatch for oo completions (in which 
    // case we will need to introduce completion buffers)
    FIFO#(Tuple2#(Bit#(6),Bit#(6))) tag_mismatch <- mkSizedFIFO(32);
-   
+
+`ifdef	INTERVAL_ANAlYSIS
+   Reg#(Bit#(32)) bin1 <- mkReg(0);
+   Reg#(Bit#(32)) bin4 <- mkReg(0);
+   Reg#(Bit#(32)) binx <- mkReg(0);
+   Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
+   Reg#(Bit#(64)) last_resp_read <- mkReg(0);
+   (* fire_when_enabled *)
+   rule cycle;
+      cycle_cnt <= cycle_cnt+1;
+   endrule
+`endif
+      
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
       rule loadChannel;
 	 ObjectRequest req <- readClients[selectReg].readReq.get();
@@ -131,7 +134,11 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dsz)) readCl
 
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
+`ifdef INTERVAL_ANAlYSIS
 	 return DmaDbgRec{x:fromInteger(valueOf(numReadClients)), y:bin1, z:bin4, w:binx};
+`else
+	 return DmaDbgRec{x:fromInteger(valueOf(numReadClients)), y:0, z:0, w:0};
+`endif
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
 	 return (valueOf(numReadClients) > 0 && client < fromInteger(valueOf(numReadClients))) ? beatCounts[client] : 0;
@@ -145,7 +152,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dsz)) readCl
 	    let physAddr = reqFifo.first.pa;
 	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
-	    //$display("mkMemReadInternal::req_ar tag=%d id=%d len=%d activeChan=%d", req.tag, id, req.burstLen, reqFifo.first.chan);
+	    //$display("mkMemReadInternal::req_ar tag=%d rename_tag=%d len=%d activeChan=%d", req.tag, rename_tag, req.burstLen, reqFifo.first.chan);
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	    dreqFifo.enq(reqFifo.first);
@@ -153,9 +160,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dsz)) readCl
 	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(MemData#(dsz) response);
-	    last_resp_read <= cycle_cnt;
-	    let interval = cycle_cnt - last_resp_read;
+	 method Action put(MemData#(dataWidth) response);
 	    let activeChan = dreqFifo.first.chan;
 	    let req = dreqFifo.first.req;
 	    let rename_tag = dreqFifo.first.rename_tag;
@@ -164,28 +169,30 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dsz)) readCl
 
 	    let burstLen = burstReg;
 	    if (burstLen == 0)
-	       burstLen = req.burstLen;
+	       burstLen = req.burstLen >> beat_shift;
 
-	    if (burstLen == 1  && valueOf(numReadClients) > 0) begin
+	    if (burstLen == 1)
 	       dreqFifo.deq();
-	    end
    
 	    if (response.tag != rename_tag) begin
 	       tag_mismatch.enq(tuple2(response.tag,rename_tag));
 	       $display("mkMemReadInternal::tag_mismatch %d %d", response.tag, rename_tag);
 	    end
-	    //$display("mkMemReadInternal::resp_read id=%d burstLen=%d activeChan=%d", id, burstLen, activeChan);
+	    //$display("mkMemReadInternal::resp_read rename_tag=%d response.tag=%d burstLen=%d activeChan=%d", rename_tag, response.tag, burstLen, activeChan);
 	    burstReg <= burstLen-1;
 
 	    if(valueOf(numReadClients) > 0)
 	       beatCounts[activeChan] <= beatCounts[activeChan]+1;
+`ifdef INTERVAL_ANAlYSIS
+	    last_resp_read <= cycle_cnt;
+	    let interval = cycle_cnt - last_resp_read;
 	    if (interval <= 1)
 	       bin1 <= bin1+1;
 	    else if (interval <= 4)
 	       bin4 <= bin4+1;
 	    else
 	       binx <= binx+1;
-
+`endif
 	 endmethod
       endinterface
    endinterface
@@ -193,16 +200,18 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dsz)) readCl
 endmodule
 
 
-module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dsz)) writeClients,
+module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
 			      DmaIndication dmaIndication, 
 			      Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl)
 
-   (MemWriteInternal#(addrWidth, dsz))
+   (MemWriteInternal#(addrWidth, dataWidth))
    
-   provisos(Add#(1,a__,dsz), 
-	    Add#(b__, addrWidth, 64), 
+   provisos(Add#(b__, addrWidth, 64), 
 	    Add#(c__, 12, addrWidth), 
-	    Add#(1, c__, d__));
+	    Add#(1, c__, d__),
+	    Div#(dataWidth,8,dataWidthBytes),
+	    Mul#(dataWidthBytes,8,dataWidth),
+	    Log#(dataWidthBytes,beatShift));
    
    FIFO#(IRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(IRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
@@ -211,7 +220,8 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dsz)) wri
 
    Reg#(Bit#(8))         burstReg <- mkReg(0);   
    Vector#(numWriteClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
-
+   let beat_shift = fromInteger(valueOf(beatShift));
+   
    // the choice of 5 is based on PCIE limitations.   
    // uniqueness is enforced by the depth of dreqFIFO
    Reg#(Bit#(6))  tag_gen   <- mkReg(0); 
@@ -270,16 +280,16 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dsz)) wri
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(MemData#(dsz)) get();
+	 method ActionValue#(MemData#(dataWidth)) get();
 	    let activeChan = dreqFifo.first.chan;
 	    let req = dreqFifo.first.req;
 	    let rename_tag = dreqFifo.first.rename_tag;
-	    ObjectData#(dsz) tagdata = unpack(0);
+	    ObjectData#(dataWidth) tagdata = unpack(0);
 	    if (valueOf(numWriteClients) > 0)
 	       tagdata <- writeClients[activeChan].writeData.get();
 	    let burstLen = burstReg;
 	    if (burstLen == 0)
-	       burstLen = req.burstLen;
+	       burstLen = req.burstLen >> beat_shift;
 
 	    if (burstLen == 1) begin
 	       dreqFifo.deq();
@@ -321,24 +331,25 @@ endmodule
 // @param writeClients The writeclients.
 //
 module mkMemServer#(DmaIndication dmaIndication,
-		       Vector#(numReadClients, ObjectReadClient#(dsz)) readClients,
-		       Vector#(numWriteClients, ObjectWriteClient#(dsz)) writeClients)
+		    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
+		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
 
-   (MemServer#(addrWidth, dsz))
+   (MemServer#(addrWidth, dataWidth))
    
-   provisos (Add#(1,a__,dsz),
-        Add#(b__, TSub#(addrWidth, 12), 32),
-        Add#(c__, 12, addrWidth),
-        Add#(d__, addrWidth, 64),
-        Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
-        Add#(f__, c__, ObjectOffsetSize),
-	Add#(g__, addrWidth, 40));
+   provisos (Add#(1,a__,dataWidth),
+	     Add#(b__, TSub#(addrWidth, 12), 32),
+	     Add#(c__, 12, addrWidth),
+	     Add#(d__, addrWidth, 64),
+	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	     Add#(f__, c__, ObjectOffsetSize),
+	     Add#(g__, addrWidth, 40),
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
    
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
 
-   MemReadInternal#(addrWidth, dsz) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0]);
-   MemWriteInternal#(addrWidth, dsz) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1]);
+   MemReadInternal#(addrWidth, dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0]);
+   MemWriteInternal#(addrWidth, dataWidth) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1]);
    
    rule tag_mismatch_read;
       let rv <- reader.tagMismatch.get;

@@ -24,12 +24,16 @@ import FIFOF::*;
 import RingTypes::*;
 import ClientServer::*;
 import GetPut::*;
+import GetPutF::*;
 
-module mkEchoEngine ( Server#(Bit#(64), Bit#(64)));
+module mkEchoEngine ( ServerF#(Bit#(64), Bit#(64)));
    FIFOF#(Bit#(64)) f_echo <- mkSizedFIFOF(16);   // buffer incoming requests
    
-   interface Put request = toPut(f_echo);
-   interface Get response = toGet(f_echo);
+   PutF#(Bit#(64)) req_ifc <- toPutF(toPut(f_echo));
+   GetF#(Bit#(64)) resp_ifc <- toGetF(toGet(f_echo));
+   
+   interface PutF request = req_ifc;
+   interface GetF response = resp_ifc;
 
 endmodule: mkEchoEngine
 

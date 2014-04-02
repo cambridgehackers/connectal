@@ -287,10 +287,10 @@ module xilinx_x7_pcie_wrapper #(
   pcie_7x_v2_1_core_top #(
 // bluenoc vend/dev id			  
 		  .CFG_VEND_ID         (16'h1BE7),
-		  .CFG_DEV_ID          (16'hB100),
+		  .CFG_DEV_ID          (16'hC100),
 		  .CFG_REV_ID          (8'h00),
 		  .CFG_SUBSYS_VEND_ID  (16'h1BE7),
-		  .CFG_SUBSYS_ID       (16'hA705),
+		  .CFG_SUBSYS_ID       (16'hc101),
 // configured gen1 x8 with msix etc
                   .PL_FAST_TRAIN       ( PL_FAST_TRAIN ),
                   .PCIE_EXT_CLK        ( PCIE_EXT_CLK ),

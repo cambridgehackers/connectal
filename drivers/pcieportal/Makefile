@@ -13,7 +13,7 @@ cflags-y += -I$(PWD)
 ../portalmem/portalmem.ko: ../portalmem/portalmem.c
 	cd ../portalmem; make -f Makefile.x86
 
-pcieportal.ko: pcieportal.c bluenoc.h
+pcieportal.ko: pcieportal.c pcieportal.h
 	@$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check

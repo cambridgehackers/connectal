@@ -50,7 +50,8 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),
 	    Add#(1,a__,nd),
-	    Add#(1,bramIdxWidth,cntW));
+	    Add#(1,bramIdxWidth,cntW),
+	    Mul#(TDiv#(busWidth, 8), 8, busWidth));
    
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
@@ -121,7 +122,8 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
 	    Add#(1,a__,nd),
 	    Add#(1, b__, TMul#(2, nd)),
 	    Add#(nd, c__, TMul#(2, nd)),
-	    Add#(1,bramIdxWidth,cntW));
+	    Add#(1,bramIdxWidth,cntW),
+	    Mul#(TDiv#(busWidth, 8), 8, busWidth));
    
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;

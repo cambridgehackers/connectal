@@ -24,45 +24,44 @@ import Vector::*;
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
+import Assert::*;
 
 import PortalMemory::*;
 import Dma::*;
 
-interface MemreadEngine#(numeric type busWidth);
+interface MemreadEngine#(numeric type dataWidth);
    method Action start(ObjectPointer pointer, Bit#(ObjectOffsetSize) base, Bit#(32) readLen, Bit#(32) burstLen);
    method ActionValue#(Bool) finish();
-   interface ObjectReadClient#(busWidth) dmaClient;
+   interface ObjectReadClient#(dataWidth) dmaClient;
 endinterface
 
-module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemreadEngine#(busWidth))
+module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (MemreadEngine#(dataWidth))
+   provisos (Div#(dataWidth,8,dataWidthBytes),
+	     Mul#(dataWidthBytes,8,dataWidth),
+	     Log#(dataWidthBytes,beatShift));
    
-   provisos (Div#(busWidth,8,busWidthBytes));
+   Reg#(Bit#(32))             reqLen <- mkReg(0);
+   Reg#(Bit#(32))            respCnt <- mkReg(0);
    
-   Reg#(Bit#(32))         numBeats <- mkReg(0);
-   Reg#(Bit#(32))           reqCnt <- mkReg(0);
-   Reg#(Bit#(32))          respCnt <- mkReg(0);
-   
-   Reg#(Bit#(ObjectOffsetSize))   off <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) delta <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize))  base <- mkReg(0);
+   Reg#(Bit#(32))                off <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) base <- mkReg(0);
 
-   Reg#(ObjectPointer )       pointer <- mkReg(0);
-   Reg#(Bit#(8))          burstLen <- mkReg(0);
+   Reg#(ObjectPointer)       pointer <- mkReg(0);
+   Reg#(Bit#(8))            burstLen <- mkReg(0);
    
-   FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
-   FIFO#(Bit#(32))              wf <- mkSizedFIFO(cmdQDepth);
+   FIFOF#(Bool)                   ff <- mkSizedFIFOF(1);
+   FIFO#(Bit#(32))                wf <- mkSizedFIFO(cmdQDepth);
    
-   let bytes_per_beat = fromInteger(valueOf(busWidthBytes));
+   let beat_shift = fromInteger(valueOf(beatShift));
 
-   method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) b, Bit#(32) rl, Bit#(32) bl) if (reqCnt >= numBeats);
-      numBeats <= rl/bytes_per_beat;
-      reqCnt   <= 0;
+   method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) b, Bit#(32) rl, Bit#(32) bl) if (off >= reqLen);
+      dynamicAssert(bl[31:8]==0, "mkMemreadEngine::start");
+      reqLen   <= rl;
       off      <= 0;
-      delta    <= extend(bl);
       pointer  <= p;
-      burstLen <= truncate(bl/bytes_per_beat);
+      burstLen <= truncate(bl);
       base     <= b;
-      wf.enq(rl/bytes_per_beat);
+      wf.enq(rl >> beat_shift);
    endmethod
    
    method ActionValue#(Bool) finish;
@@ -72,22 +71,23 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemreadEng
    
    interface ObjectReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(ObjectRequest) get() if (reqCnt < numBeats);
-	    reqCnt <= reqCnt+extend(burstLen);
-	    off <= off + delta;
-	    //$display("mkMemreadEngine::readReq: ptr=%d", pointer);
-	    return ObjectRequest { pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0 };
+	 method ActionValue#(ObjectRequest) get() if (off < reqLen);
+	    //$display("mkMemreadEngine.dmaClient.readReq: %d %h %h", pointer, extend(off)+base, burstLen);
+	    off <= off + extend(burstLen);
+	    return ObjectRequest { pointer: pointer, offset: extend(off)+base, burstLen: burstLen, tag: 0 };
 	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(ObjectData#(busWidth) d);
-	    if (respCnt+1 == wf.first) begin
+	 method Action put(ObjectData#(dataWidth) d);
+	    let new_respCnt = respCnt+1;
+	    if (new_respCnt == wf.first) begin
 	       ff.enq(True);
 	       respCnt <= 0;
 	       wf.deq;
+	       //$display("mkMemreadEngine.dmaClient.readData: %h", new_respCnt);
 	    end
 	    else begin
-	       respCnt <= respCnt+1;
+	       respCnt <= new_respCnt;
 	    end
 	    f.enq(d.data);
 	 endmethod

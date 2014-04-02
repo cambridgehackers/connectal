@@ -24,6 +24,7 @@ import GetPut::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 
+
 interface GetF#(type a);
    method ActionValue#(a) get;
    method Bool notEmpty;
@@ -34,16 +35,22 @@ interface PutF#(type a);
    method Bool notFull;
 endinterface
 
+interface ServerF#(type req_type, type resp_type);
+   interface PutF#(req_type)  request;
+   interface GetF#(resp_type) response;
+endinterface
+
 typeclass ToGetF#(type a, type b);
-   module toGetF#(a x) GetF#(b);
+   module toGetF#(a x)(GetF#(b));
 endtypeclass
 
 typeclass ToPutF#(type a, type b);
-   module toPutF(a x) PutF#(b);
+   module toPutF#(a x)(PutF#(b));
 endtypeclass
 
-instance ToGetF#(Get#(b), b);
-   module toGetF#(Get#(b) g) GetF#(b);
+instance ToGetF#(Get#(b), b)
+   provisos(Bits#(b,__a));
+   module toGetF#(Get#(b) g)(GetF#(b));
       let f <- mkPipelineFIFOF;
       rule xfer;
 	 let rv <- g.get;
@@ -59,8 +66,9 @@ instance ToGetF#(Get#(b), b);
    endmodule
 endinstance
 
-instance ToPutF#(Put#(b), b);
-   module toPutF#(Put#(b) p) PutF#(b);
+instance ToPutF#(Put#(b), b)
+   provisos(Bits#(b,__a));
+   module toPutF#(Put#(b) p)(PutF#(b));
       let f <- mkPipelineFIFOF;
       rule xfer;
 	 p.put(f.first);

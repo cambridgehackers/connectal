@@ -1,27 +1,11 @@
 {
-    "spi_sclk": {
-	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA12_p"
-    },
-    "spi_ssel_n": {
-	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA12_n"
-    },
-    "spi_mosi": {
-	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA11_p"
-    },
-    "spi_miso_v": {
-	"PIO_DIRECTION": "INPUT",
-	"fmc": "LA11_n"
-    },
     "*io_vita_clk_pll": {
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA13_p"
     },
     "*io_vita_reset_n": {
 	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA12_n"
+	"fmc": "CLK0_M2C_n"
     },
     "*_io_vita_trigger_0*": {
 	"PIO_DIRECTION": "OUTPUT",
@@ -85,11 +69,11 @@
     },
     "*io_vita_data_p[1]": {
 	"PIO_DIRECTION": "INPUT",
-	"fmc": "LA01_p_CC"
+	"fmc": "LA07_p"
     },
     "*io_vita_data_n[1]": {
 	"PIO_DIRECTION": "INPUT",
-	"fmc": "LA01_n_CC"
+	"fmc": "LA07_n"
     },
     "*io_vita_data_p[2]": {
 	"PIO_DIRECTION": "INPUT",
@@ -106,5 +90,21 @@
     "*io_vita_data_n[3]": {
 	"PIO_DIRECTION": "INPUT",
 	"fmc": "LA05_n"
+    },
+    "fmc_imageon_video_clk1": {
+	"PIO_DIRECTION": "INPUT",
+	"fmc": "CLK0_M2C_p"
+    },
+    "fmc_imageon_iic_1_rst_pin": {
+	"PIO_DIRECTION": "OUTPUT",
+	"fmc": "LA01_n_CC"
+    },
+    "fmc_imageon_iic_1_scl": {
+	"PIO_DIRECTION": "BIDIR",
+	"fmc": "LA16_p"
+    },
+    "fmc_imageon_iic_1_sda": {
+	"PIO_DIRECTION": "BIDIR",
+	"fmc": "LA16_n"
     }
 }

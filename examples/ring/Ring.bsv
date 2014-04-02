@@ -23,9 +23,9 @@ import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
 import GetPut::*;
+import GetPutF::*;
 import StmtFSM::*;
 import ClientServer::*;
-import GetPut::*;
 
 import PortalMemory::*;
 import Dma::*;
@@ -60,9 +60,9 @@ module mkRingRequest#(RingIndication indication,
 		      ObjectReadServer#(64) cmd_read_chan,
 		      ObjectWriteServer#(64) status_write_chan )(RingRequest);
 
-   Server#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
-   Server#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
-   Server#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
+   ServerF#(Bit#(64), Bit#(64)) copyEngine <- mkCopyEngine(dma_read_chan, dma_write_chan);   
+   ServerF#(Bit#(64), Bit#(64)) nopEngine <- mkNopEngine();
+   ServerF#(Bit#(64), Bit#(64)) echoEngine <- mkEchoEngine();
    CompletionBuffer#(4,void) fetchComplete <- mkCompletionBuffer;
    
    RingBuffer cmdRing <- mkRingBuffer;
@@ -77,7 +77,7 @@ module mkRingRequest#(RingIndication indication,
    Reg#(Bool) cmdFetchEn <- mkReg(False);
 
    let engineselect = cmd.data[63:56];
-   function Server#(Bit#(64), Bit#(64)) cmdifc();
+   function ServerF#(Bit#(64), Bit#(64)) cmdifc();
       if (engineselect == zeroExtend(pack(CmdNOP))) 
 	 return nopEngine;
       else if (engineselect == zeroExtend(pack(CmdCOPY))) 
@@ -102,7 +102,7 @@ module mkRingRequest#(RingIndication indication,
 //		      cmdRing.mempointer, cmdRing.bufferlastfetch, 8, ct );
 		     cmd_read_chan.readReq.put(
 			ObjectRequest{pointer: cmdRing.mempointer,
-			   offset: cmdRing.bufferlastfetch, burstLen: 8, tag: zeroExtend(unpack(ct))});
+			   offset: cmdRing.bufferlastfetch, burstLen: 8*8, tag: zeroExtend(unpack(ct))});
 		     cmdRing.popfetch();
 		  endaction
 	       endseq
@@ -148,7 +148,7 @@ module mkRingRequest#(RingIndication indication,
 //		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  ObjectRequest{pointer: statusRing.mempointer, 
-		     offset: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
+		     offset: statusRing.bufferfirst, burstLen: 8*8, tag: statusTag});
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- copyEngine.response.get();
@@ -165,7 +165,7 @@ module mkRingRequest#(RingIndication indication,
 //		  statusRing.mempointer, statusRing.bufferfirst, 8, statusTag);
 	       status_write_chan.writeReq.put(
 		  ObjectRequest{pointer: statusRing.mempointer, 
-		     offset: statusRing.bufferfirst, burstLen: 8, tag: statusTag});
+		     offset: statusRing.bufferfirst, burstLen: 8*8, tag: statusTag});
 	       for (respCtr <= 0; respCtr < 8; respCtr <= respCtr + 1)
 		  action
 		     let rv <- echoEngine.response.get();
@@ -194,7 +194,7 @@ module mkRingRequest#(RingIndication indication,
 	 let ct <- fetchComplete.reserve.get();
 	 cmd_read_chan.readReq.put(
 				   ObjectRequest{pointer: truncate(pointer),
-	 offset: truncate(addr), burstLen: 8, tag: zeroExtend(unpack(ct))});
+	 offset: truncate(addr), burstLen: 8*8, tag: zeroExtend(unpack(ct))});
       endmethod
    
       method Action doCommandImmediate(Bit#(64) data);

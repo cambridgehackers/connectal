@@ -1,5 +1,5 @@
 /*
- * Linux device driver for Bluespec FPGA-based interconnect networks.
+ * Linux device driver for XBSV portals on FPGAs connected via PCIe.
  */
 
 #include <linux/module.h>
@@ -19,19 +19,19 @@
 #include <linux/poll.h>         /* poll_table, etc. */
 #include <asm/uaccess.h>        /* copy_to_user, copy_from_user */
 
-#include "bluenoc.h"
+#include "pcieportal.h"
 
 /* stem used for module and device names */
 #define DEV_NAME "fpga"
 
 /* version string for the driver */
-#define DEV_VERSION "1.0jeh1"
+#define DEV_VERSION "1.0xbsv"
 
 /* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
 
-/* Bluespec's NoC device ID */
-#define BLUESPEC_NOC_DEVICE_ID 0xb100
+/* XBSV device ID */
+#define XBSV_DEVICE_ID 0xc100
 
 /* Number of boards to support */
 #define NUM_BOARDS 1
@@ -90,7 +90,7 @@ typedef struct tBoard {
 
 /* static device data */
 static dev_t device_number;
-static struct class *bluenoc_class = NULL;
+static struct class *pcieportal_class = NULL;
 static tBoard board_map[NUM_BOARDS + 1];
 static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 'u' << 16) | ((unsigned long long) 'e' << 24)
@@ -98,7 +98,7 @@ static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 'e' << 48) | ((unsigned long long) 'c' << 56);
 
 enum {BOARD_UNACTIVATED=0, PCI_DEV_ENABLED, BARS_ALLOCATED,
-    BARS_MAPPED, MSI_ENABLED, BLUENOC_ACTIVE};
+    BARS_MAPPED, MSI_ENABLED, PCIEPORTAL_ACTIVE};
 
 /*
  * interrupt handler
@@ -117,7 +117,7 @@ static irqreturn_t intr_handler(int irq, void *p)
  */
 
 /* open the device file */
-static int bluenoc_open(struct inode *inode, struct file *filp)
+static int pcieportal_open(struct inode *inode, struct file *filp)
 {
         int err = 0;
         int minor = iminor(inode) - MINOR(device_number);
@@ -126,7 +126,7 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
         tBoard *this_board = &board_map[this_board_number];
         tPortal *this_portal = &this_board->portal[this_portal_number];
 
-        printk("bluenoc_open: device_number=%x board_number=%d portal_number=%d\n",
+        printk("pcieportal_open: device_number=%x board_number=%d portal_number=%d\n",
              device_number, this_board_number, this_portal_number);
         if (!this_board) {
                 printk(KERN_ERR "%s_%d: Unable to locate board\n", DEV_NAME, this_board_number);
@@ -143,7 +143,7 @@ static int bluenoc_open(struct inode *inode, struct file *filp)
 }
 
 /* close the device file */
-static int bluenoc_release(struct inode *inode, struct file *filp)
+static int pcieportal_release(struct inode *inode, struct file *filp)
 {
         tPortal *this_portal = (tPortal *) filp->private_data;
         /* decrement the open file count */
@@ -160,8 +160,8 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
         tPortal *this_portal = (tPortal *) filp->private_data;
         tBoard *this_board = this_portal->board;
 
-        //printk(KERN_INFO "%s_%d: poll function called, active %d\n", DEV_NAME, this_board->info.board_number, this_board->activation_level == BLUENOC_ACTIVE);
-        if (this_board->activation_level != BLUENOC_ACTIVE)
+        //printk(KERN_INFO "%s_%d: poll function called, active %d\n", DEV_NAME, this_board->info.board_number, this_board->activation_level == PCIEPORTAL_ACTIVE);
+        if (this_board->activation_level != PCIEPORTAL_ACTIVE)
                 return 0;
         poll_wait(filp, &this_portal->wait_queue, poll_table);
 	mask |= POLLIN  | POLLRDNORM; /* readable */
@@ -174,7 +174,7 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
  * driver IOCTL operations
  */
 
-static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
         int err = 0;
         tPortal *this_portal = (tPortal *) filp->private_data;
@@ -198,7 +198,7 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
         case BNOC_IDENTIFY:
                 /* copy board identification info to a user-space struct */
                 info = this_board->info;
-                info.is_active = (this_board->activation_level == BLUENOC_ACTIVE) ? 1 : 0;
+                info.is_active = (this_board->activation_level == PCIEPORTAL_ACTIVE) ? 1 : 0;
                 info.portal_number = this_portal->portal_number;
                 if (1) {        // msix info
 		  int i;
@@ -214,7 +214,7 @@ static long bluenoc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
         case BNOC_SOFT_RESET:
                 printk(KERN_INFO "%s: /dev/%s_%d soft reset\n",
                        DEV_NAME, DEV_NAME, this_board->info.board_number);
-                if (this_board->activation_level == BLUENOC_ACTIVE) {
+                if (this_board->activation_level == PCIEPORTAL_ACTIVE) {
 			// reset the portal
 			iowrite32(1, this_board->bar0io + CSR_RESETISASSERTED); 
                 }
@@ -315,13 +315,13 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
 }
 
 /* file operations pointers */
-static const struct file_operations bluenoc_fops = {
+static const struct file_operations pcieportal_fops = {
         .owner = THIS_MODULE,
-        .open = bluenoc_open,
-        .release = bluenoc_release,
+        .open = pcieportal_open,
+        .release = pcieportal_release,
         .poll = pcieportal_poll,
-        .unlocked_ioctl = bluenoc_ioctl,
-        .compat_ioctl = bluenoc_ioctl,
+        .unlocked_ioctl = pcieportal_ioctl,
+        .compat_ioctl = pcieportal_ioctl,
         .mmap = portal_mmap
 };
 
@@ -329,7 +329,7 @@ static void deactivate(tBoard *this_board, struct pci_dev *dev)
 {
 	int i;
         switch (this_board->activation_level) {
-        case BLUENOC_ACTIVE:
+        case PCIEPORTAL_ACTIVE:
                 pci_clear_master(dev); /* disable PCI bus master */
                 /* set MSIX Entry 0 Vector Control value to 1 (masked) */
                 if (this_board->uses_msix)
@@ -363,7 +363,7 @@ static void deactivate(tBoard *this_board, struct pci_dev *dev)
 
 /* driver PCI operations */
 
-static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id *id)
+static int __init pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
         int err = 0;
         tBoard *this_board = NULL;
@@ -372,13 +372,13 @@ static int __init bluenoc_probe(struct pci_dev *dev, const struct pci_device_id 
         int dn;
         unsigned long long magic_num;
 
-printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &bluenoc_probe, dev, id, pci_get_drvdata(dev));
+printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &pcieportal_probe, dev, id, pci_get_drvdata(dev));
         printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
         /* double-check vendor and device */
-        if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != BLUESPEC_NOC_DEVICE_ID) {
+        if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != XBSV_DEVICE_ID) {
                 printk(KERN_ERR "%s: probe with invalid vendor or device ID\n", DEV_NAME);
                 err = -EINVAL;
-                goto exit_bluenoc_probe;
+                goto exit_pcieportal_probe;
         }
         /* assign a board number */
         while (board_map[board_number].activation_level != BOARD_UNACTIVATED && board_number < NUM_BOARDS)
@@ -398,7 +398,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         if (pci_enable_device(dev)) {
                 printk(KERN_ERR "%s: failed to enable %s\n", DEV_NAME, pci_name(dev));
                 err = -EFAULT;
-                goto exit_bluenoc_probe;
+                goto exit_pcieportal_probe;
         }
         this_board->activation_level = PCI_DEV_ENABLED;
         /* reserve PCI memory regions */
@@ -410,7 +410,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         if ((rc = pci_request_region(dev, 0, "bar0"))) {
                 printk("failed to request region bar0 rc=%d\n", rc);
                 err = -EBUSY;
-                goto exit_bluenoc_probe;
+                goto exit_pcieportal_probe;
         }
         rc = pci_request_region(dev, 1, "bar1");
         printk("reserving region bar1 rc=%d\n", rc);
@@ -431,7 +431,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         if (!this_board->bar0io) {
                 printk("failed to map bar0\n");
                 err = -EFAULT;
-                goto exit_bluenoc_probe;
+                goto exit_pcieportal_probe;
         }
         this_board->activation_level = BARS_MAPPED;
 	// this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
@@ -446,7 +446,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 printk(KERN_ERR "%s: magic number %llx does not match expected %llx\n",
                        DEV_NAME, magic_num, expected_magic);
                 err = -EINVAL;
-                goto exit_bluenoc_probe;
+                goto exit_pcieportal_probe;
         }
         this_board->info.minor_rev = ioread32(this_board->bar0io + CSR_MINOR_REV);
         this_board->info.major_rev = ioread32(this_board->bar0io + CSR_MAJOR_REV);
@@ -464,7 +464,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         if (pci_set_dma_mask(dev, DMA_BIT_MASK(48))) {
                 printk(KERN_ERR "%s: pci_set_dma_mask failed for 48-bit DMA\n", DEV_NAME);
                 err = -EIO;
-                goto exit_bluenoc_probe;
+                goto exit_pcieportal_probe;
         }
         /* enable MSIX */
 	{
@@ -477,7 +477,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
 		if (pci_enable_msix(dev, msix_entries, num_entries)) {
 			printk(KERN_ERR "%s: Failed to setup MSIX interrupts\n", DEV_NAME);
 			err = -EFAULT;
-			goto exit_bluenoc_probe;
+			goto exit_pcieportal_probe;
 		}
 		this_board->uses_msix = 1;
 		this_board->irq_num = msix_entries[0].vector;
@@ -492,7 +492,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
 			if (request_irq(this_board->irq_num + i, intr_handler, 0, DEV_NAME, (void *) &this_board->portal[i])) {
 				printk(KERN_ERR "%s: Failed to get requested IRQ %d\n", DEV_NAME, this_board->irq_num);
 				err = -EBUSY;
-				goto exit_bluenoc_probe;
+				goto exit_pcieportal_probe;
 			}
 		}
 		if (this_board->uses_msix) {
@@ -503,7 +503,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
 		}
 	}
         pci_set_master(dev); /* enable PCI bus master */
-        this_board->activation_level = BLUENOC_ACTIVE;
+        this_board->activation_level = PCIEPORTAL_ACTIVE;
         for (dn = 0; dn < NUM_PORTALS && err >= 0; dn++) {
                 int fpga_number = board_number * NUM_PORTALS + dn;
                 dev_t this_device_number = MKDEV(MAJOR(device_number),
@@ -511,20 +511,20 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 this_board->portal[dn].portal_number = dn;
                 this_board->portal[dn].board = this_board;
                 /* add the device operations */
-                cdev_init(&this_board->portal[dn].cdev, &bluenoc_fops);
+                cdev_init(&this_board->portal[dn].cdev, &pcieportal_fops);
                 if (cdev_add(&this_board->portal[dn].cdev, this_device_number, 1)) {
                         printk(KERN_ERR "%s: cdev_add %x failed\n",
                                DEV_NAME, this_device_number);
                         err = -EFAULT;
                 } else {
                         /* create a device node via udev */
-                        device_create(bluenoc_class, NULL,
+                        device_create(pcieportal_class, NULL,
                                 this_device_number, NULL, "%s%d", DEV_NAME, fpga_number);
                         printk(KERN_INFO "%s: /dev/%s%d = %x created\n",
                                 DEV_NAME, DEV_NAME, fpga_number, this_device_number);
                 }
         }
-      exit_bluenoc_probe:
+      exit_pcieportal_probe:
         if (err < 0) {
                 if (this_board)
                        deactivate(this_board, dev);
@@ -534,7 +534,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         return err;
 }
 
-static void __exit bluenoc_remove(struct pci_dev *dev)
+static void __exit pcieportal_remove(struct pci_dev *dev)
 {
         tBoard *this_board = pci_get_drvdata(dev);
         int dn;
@@ -549,7 +549,7 @@ printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
                 /* remove device node in udev */
                 dev_t this_device_number = MKDEV(MAJOR(device_number),
                           MINOR(device_number) + this_board->info.board_number * NUM_PORTALS + dn);
-                device_destroy(bluenoc_class, this_device_number);
+                device_destroy(pcieportal_class, this_device_number);
                 printk(KERN_INFO "%s: /dev/%s_%d = %x removed\n",
                        DEV_NAME, DEV_NAME, this_board->info.board_number * NUM_PORTALS + dn, this_device_number); 
                 /* remove device */
@@ -559,17 +559,17 @@ printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
 }
 
 /* PCI ID pattern table */
-static DEFINE_PCI_DEVICE_TABLE(bluenoc_id_table) = {{
-        PCI_DEVICE(BLUESPEC_VENDOR_ID, BLUESPEC_NOC_DEVICE_ID)}, { /* end: all zeros */ } };
+static DEFINE_PCI_DEVICE_TABLE(pcieportal_id_table) = {{
+        PCI_DEVICE(BLUESPEC_VENDOR_ID, XBSV_DEVICE_ID)}, { /* end: all zeros */ } };
 
-MODULE_DEVICE_TABLE(pci, bluenoc_id_table);
+MODULE_DEVICE_TABLE(pci, pcieportal_id_table);
 
 /* PCI driver operations pointers */
-static struct pci_driver bluenoc_ops = {
+static struct pci_driver pcieportal_ops = {
         .name = DEV_NAME,
-        .id_table = bluenoc_id_table,
-        .probe = bluenoc_probe,
-        .remove = __exit_p(bluenoc_remove)
+        .id_table = pcieportal_id_table,
+        .probe = pcieportal_probe,
+        .remove = __exit_p(pcieportal_remove)
 };
 
 /*
@@ -582,32 +582,32 @@ static struct pci_driver bluenoc_ops = {
  */
 
 /* first routine called on module load */
-static int __init bluenoc_init(void)
+static int __init pcieportal_init(void)
 {
         int status;
 
-        bluenoc_class = class_create(THIS_MODULE, "Bluespec");
-        if (IS_ERR(bluenoc_class)) {
+        pcieportal_class = class_create(THIS_MODULE, "Bluespec");
+        if (IS_ERR(pcieportal_class)) {
                 printk(KERN_ERR "%s: failed to create class Bluespec\n", DEV_NAME);
-                return PTR_ERR(bluenoc_class);
+                return PTR_ERR(pcieportal_class);
         }
         /* dynamically allocate a device number */
         if (alloc_chrdev_region(&device_number, 1, NUM_BOARDS * NUM_PORTALS, DEV_NAME) < 0) {
                 printk(KERN_ERR "%s: failed to allocate character device region\n", DEV_NAME);
-                class_destroy(bluenoc_class);
+                class_destroy(pcieportal_class);
                 return -1;
         }
         /* initialize driver data */
         memset(board_map, 0, sizeof(board_map));
         /* register the driver with the PCI subsystem */
-        status = pci_register_driver(&bluenoc_ops);
+        status = pci_register_driver(&pcieportal_ops);
         if (status < 0) {
                 printk(KERN_ERR "%s: failed to register PCI driver\n", DEV_NAME);
-                class_destroy(bluenoc_class);
+                class_destroy(pcieportal_class);
                 return status;
         }
         /* log the fact that we loaded the driver module */
-        printk(KERN_INFO "%s: Registered Bluespec BlueNoC driver %s\n", DEV_NAME, DEV_VERSION);
+        printk(KERN_INFO "%s: Registered Bluespec Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
         printk(KERN_INFO "%s: Major = %d  Minors = %d to %d\n", DEV_NAME,
                MAJOR(device_number), MINOR(device_number),
                MINOR(device_number) + NUM_BOARDS * NUM_BOARDS - 1);
@@ -615,24 +615,24 @@ static int __init bluenoc_init(void)
 }
 
 /* routine called on module unload */
-static void __exit bluenoc_exit(void)
+static void __exit pcieportal_exit(void)
 {
         /* unregister the driver with the PCI subsystem */
-        pci_unregister_driver(&bluenoc_ops);
+        pci_unregister_driver(&pcieportal_ops);
         /* release reserved device numbers */
         unregister_chrdev_region(device_number, NUM_BOARDS * NUM_PORTALS);
-        class_destroy(bluenoc_class);
+        class_destroy(pcieportal_class);
         /* log that the driver module has been unloaded */
-        printk(KERN_INFO "%s: Unregistered Bluespec BlueNoC driver %s\n", DEV_NAME, DEV_VERSION);
+        printk(KERN_INFO "%s: Unregistered Bluespec Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
 }
 
 /*
  * driver module data for the kernel
  */
 
-module_init(bluenoc_init);
-module_exit(bluenoc_exit);
+module_init(pcieportal_init);
+module_exit(pcieportal_exit);
 
-MODULE_AUTHOR("Bluespec, Inc.");
-MODULE_DESCRIPTION("PCIe device driver for Bluespec FPGA interconnect");
+MODULE_AUTHOR("Bluespec, Inc., Cambridge hackers");
+MODULE_DESCRIPTION("PCIe device driver for PCIe FPGA portals");
 MODULE_LICENSE("Dual BSD/GPL");

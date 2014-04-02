@@ -102,7 +102,7 @@ module mkMPEngine#(FIFOF#(void) compf,
       
    rule haystackReq (stage == Run && haystackOff < extend(haystackLenReg));
       //$display("haystackReq %x", haystackOff);
-      haystack_read_server.readReq.put(ObjectRequest {pointer: haystackPointer, offset: extend(haystackBase+haystackOff), burstLen: 1, tag: dmaTag});
+      haystack_read_server.readReq.put(ObjectRequest {pointer: haystackPointer, offset: extend(haystackBase+haystackOff), burstLen: fromInteger(valueOf(nc)), tag: dmaTag});
       haystackOff <= haystackOff + fromInteger(valueOf(nc));
    endrule
    

@@ -69,7 +69,7 @@ module mkHdmiDisplay#(Clock processing_system7_1_fclk_clk1,
     DmaReadBuffer#(64, 1) dmaReadBuffer <- mkDmaReadBuffer();
     rule readReq if(referenceReg >= 0);
         streamRdOff <= streamRdOff + 16*8;
-        dmaReadBuffer.dmaServer.readReq.put(ObjectRequest {pointer: referenceReg, offset: streamRdOff, burstLen: 16, tag: 0});
+        dmaReadBuffer.dmaServer.readReq.put(ObjectRequest {pointer: referenceReg, offset: streamRdOff, burstLen: 16*8, tag: 0});
     endrule
    Put#(ObjectData#(64)) sink = (interface Put;
       method Action put(ObjectData#(64) dmadata);

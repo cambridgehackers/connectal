@@ -31,14 +31,14 @@ import Dma::*;
 import PortalMemory::*;
 
 
-module mkAxiDmaSlave#(MemSlave#(addrWidth,dsz) slave) (Axi3Slave#(addrWidth,dsz,12));
+module mkAxiDmaSlave#(MemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidth,dataWidth,12));
    interface Put req_ar;
       method Action put((Axi3ReadRequest#(addrWidth, 12)) req);
 	 slave.read_server.readReq.put(MemRequest{addr:req.address, burstLen:extend(req.len+1),  tag:truncate(req.id)});
       endmethod
    endinterface
    interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(dsz, 12)) get;
+      method ActionValue#(Axi3ReadResponse#(dataWidth, 12)) get;
 	 let resp <- slave.read_server.readData.get;
 	 return Axi3ReadResponse{data:resp.data, resp:0, last:1, id:extend(resp.tag)};
       endmethod
@@ -49,7 +49,7 @@ module mkAxiDmaSlave#(MemSlave#(addrWidth,dsz) slave) (Axi3Slave#(addrWidth,dsz,
       endmethod
    endinterface
    interface Put resp_write;
-      method Action put(Axi3WriteData#(dsz, 12) resp);
+      method Action put(Axi3WriteData#(dataWidth, 12) resp);
 	 slave.write_server.writeData.put(MemData{data:resp.data, tag:truncate(resp.id)});
       endmethod
    endinterface
@@ -61,26 +61,32 @@ module mkAxiDmaSlave#(MemSlave#(addrWidth,dsz) slave) (Axi3Slave#(addrWidth,dsz,
    endinterface
 endmodule
 
-module mkAxiDmaMaster#(MemMaster#(addrWidth,dsz) master) (Axi3Master#(addrWidth,dsz,6));
+module mkAxiDmaMaster#(MemMaster#(addrWidth,dataWidth) master) (Axi3Master#(addrWidth,dataWidth,6))
    
+   provisos(Div#(dataWidth,8,dataWidthBytes),
+	    Mul#(dataWidthBytes,8,dataWidth),
+	    Log#(dataWidthBytes,beatShift));
+
    Reg#(Bit#(8))  burstReg <- mkReg(0);
    FIFO#(Bit#(8)) reqs <- mkSizedFIFO(32);
+   
+   let beat_shift = fromInteger(valueOf(beatShift));
 
    interface Get req_aw;
       method ActionValue#(Axi3WriteRequest#(addrWidth,6)) get();
 	 let req <- master.write_client.writeReq.get;
 	 reqs.enq(req.burstLen);
-	 return Axi3WriteRequest{address:req.addr, len:truncate(req.burstLen-1), id:req.tag, size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
+	 return Axi3WriteRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:req.tag, size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
    interface Get resp_write;
-      method ActionValue#(Axi3WriteData#(dsz,6)) get();
+      method ActionValue#(Axi3WriteData#(dataWidth,6)) get();
 	 let tagdata <- master.write_client.writeData.get();
 	 let burstLen = burstReg;
-	 if (burstLen == 0)
-	    burstLen = reqs.first;
-	 if (burstLen == 1)
+	 if (burstLen == 0) begin
+	    burstLen = reqs.first >> beat_shift;
 	    reqs.deq;
+	 end
 	 burstReg <= burstLen-1;
 	 Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
 	 return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: tagdata.tag };
@@ -94,11 +100,11 @@ module mkAxiDmaMaster#(MemMaster#(addrWidth,dsz) master) (Axi3Master#(addrWidth,
    interface Get req_ar;
       method ActionValue#(Axi3ReadRequest#(addrWidth,6)) get();
 	 let req <- master.read_client.readReq.get;
-	 return Axi3ReadRequest{address:req.addr, len:truncate(req.burstLen-1), id:req.tag, size: axiBusSize(valueOf(dsz)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
+	 return Axi3ReadRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:req.tag, size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
    interface Put resp_read;
-      method Action put(Axi3ReadResponse#(dsz,6) response);
+      method Action put(Axi3ReadResponse#(dataWidth,6) response);
 	 master.read_client.readData.put(MemData { data: response.data, tag: response.id});
       endmethod
    endinterface

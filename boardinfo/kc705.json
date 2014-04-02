@@ -158,5 +158,13 @@
     "LA19_n": {
         "LOC": "AK26",
         "IOSTANDARD": "LVCMOS25"
+        },
+    "CLK0_M2C_p": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "CLK0_M2C_n": {
+        "LOC": "bogus",
+        "IOSTANDARD": "LVCMOS25"
         }
 }

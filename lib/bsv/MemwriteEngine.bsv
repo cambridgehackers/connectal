@@ -24,45 +24,44 @@ import Vector::*;
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
+import Assert::*;
 
 import PortalMemory::*;
 import Dma::*;
 
-interface MemwriteEngine#(numeric type busWidth);
+interface MemwriteEngine#(numeric type dataWidth);
    method Action start(ObjectPointer pointer, Bit#(ObjectOffsetSize) base, Bit#(32) writeLen, Bit#(32) burstLen);
    method ActionValue#(Bool) finish();
-   interface ObjectWriteClient#(busWidth) dmaClient;
+   interface ObjectWriteClient#(dataWidth) dmaClient;
 endinterface
 
-module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteEngine#(busWidth))
+module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (MemwriteEngine#(dataWidth))
+   provisos (Div#(dataWidth,8,dataWidthBytes),
+	     Mul#(dataWidthBytes,8,dataWidth),
+	     Log#(dataWidthBytes,beatShift));
 
-   provisos (Div#(busWidth,8,busWidthBytes));
-
-   Reg#(Bit#(32))         numBeats <- mkReg(0);
-   Reg#(Bit#(32))           reqCnt <- mkReg(0);
-   Reg#(Bit#(32))          respCnt <- mkReg(0);
+   Reg#(Bit#(32))             reqLen <- mkReg(0);
+   Reg#(Bit#(32))            respCnt <- mkReg(0);
    
-   Reg#(Bit#(ObjectOffsetSize))   off <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) delta <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize))  base <- mkReg(0);
+   Reg#(Bit#(32))                off <- mkReg(0);
+   Reg#(Bit#(ObjectOffsetSize)) base <- mkReg(0);
 
-   Reg#(ObjectPointer)        pointer <- mkReg(0);
-   Reg#(Bit#(8))          burstLen <- mkReg(0);
+   Reg#(ObjectPointer)       pointer <- mkReg(0);
+   Reg#(Bit#(8))            burstLen <- mkReg(0);
 
-   FIFOF#(Bool)                 ff <- mkSizedFIFOF(1);
-   FIFOF#(Tuple2#(Bit#(32),Bit#(32))) wf <- mkSizedFIFOF(cmdQDepth);
+   FIFOF#(Bool)                   ff <- mkSizedFIFOF(1);
+   FIFOF#(Tuple2#(Bit#(32),Bit#(8))) wf <- mkSizedFIFOF(cmdQDepth);
 
-   let bytes_per_beat = fromInteger(valueOf(TLog#(busWidthBytes)));
+   let beat_shift = fromInteger(valueOf(beatShift));
    
-   method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) b, Bit#(32) wl, Bit#(32) bl) if (reqCnt >= numBeats);
-      numBeats <= wl>>bytes_per_beat;
-      reqCnt   <= 0;
+   method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) b, Bit#(32) wl, Bit#(32) bl) if (off >= reqLen);
+      dynamicAssert(bl[31:8]==0, "mkMemwriteEngine::start");
+      reqLen   <= wl;
       off      <= 0;
-      delta    <= extend(bl);
       pointer  <= p;
-      burstLen <= truncate(bl>>bytes_per_beat);
+      burstLen <= truncate(bl);
       base     <= b;
-      wf.enq(tuple2(wl>>bytes_per_beat,bl>>bytes_per_beat)); 
+      wf.enq(tuple2(wl>>beat_shift,truncate(bl>>beat_shift))); 
    endmethod
 
    method ActionValue#(Bool) finish();
@@ -72,14 +71,13 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
 
    interface ObjectWriteClient dmaClient;
       interface Get writeReq;
-	 method ActionValue#(ObjectRequest) get() if (reqCnt < numBeats);
-	    reqCnt <= reqCnt+extend(burstLen);
-	    off <= off + delta;
-	    return ObjectRequest {pointer: pointer, offset: off+base, burstLen: burstLen, tag: 0};
+	 method ActionValue#(ObjectRequest) get() if (off < reqLen);
+	    off <= off + extend(burstLen);
+	    return ObjectRequest {pointer: pointer, offset: extend(off)+base, burstLen: burstLen, tag: 0};
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(ObjectData#(busWidth)) get();
+	 method ActionValue#(ObjectData#(dataWidth)) get();
 	    f.deq;
 	    return ObjectData{data:f.first, tag: 0};
 	 endmethod
@@ -88,13 +86,13 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(busWidth)) f) (MemwriteE
 	 method Action put(Bit#(6) tag);
 	    let wl = tpl_1(wf.first);
 	    let bl = tpl_2(wf.first);
-	    if (respCnt+bl == wl) begin
+	    if (respCnt+extend(bl) == wl) begin
 	       ff.enq(True);
 	       respCnt <= 0;
 	       wf.deq;
 	    end
 	    else begin
-	       respCnt <= respCnt+bl;
+	       respCnt <= respCnt+extend(bl);
 	    end
 	 endmethod
       endinterface

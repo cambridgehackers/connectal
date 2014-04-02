@@ -27,6 +27,7 @@ import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiMasterSlave    :: *;
+import AxiDma            :: *;
 import XilinxCells       :: *;
 import XbsvXilinxCells   :: *;
 import PS7LIB::*;
@@ -66,8 +67,12 @@ module [Module] mkZynqTopFromPortal#(Clock io_vita_clk_out_p, Clock io_vita_clk_
    // I have a feeling the fclkclk[3] is not what we want. Jamey
    let top <- constructor(ps7.fclkclk[3], io_vita_clk, clocked_by mainclock, reset_by mainreset);
 
-   mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
-   mkConnectionWithTrace(top.m_axi, ps7.s_axi_hp[0].axi.server);
+   //mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
+   //mkConnectionWithTrace(top.m_axi, ps7.s_axi_hp[0].axi.server);
+   Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
+   mkConnection(ps7.m_axi_gp[0].client, ctrl, clocked_by mainclock, reset_by mainreset);
+   Axi3Master#(32,64,6) m_axi <- mkAxiDmaMaster(top.master, clocked_by mainclock, reset_by mainreset);
+   mkConnectionWithTrace(m_axi, ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;
