@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import Stack::*;
+import StmtFSM::*;
 
 interface FibIndication;
     method Action fibresult(Bit#(32) v);
@@ -31,17 +32,17 @@ interface FibRequest;
 endinterface
 
 typedef enum {FIBSTATEIDLE, FIBSTATE1, FIBSTATE2, 
-   FIBSTATE3, FIBSTATECOMPLETE} FSState
-deriving (Eq, Bits);
+   FIBSTATE3, FIBSTATECOMPLETE, FIBCALLING, FIBRETURNING} FSState
+deriving (Bits,Eq);
 
-module mkFibRequest#(FibIndication indication)(FibRequest)
-   provisos(Literal#(FSState));
+module mkFibRequest#(FibIndication indication)(FibRequest);
+//   provisos(Literal#(FSState));
 
 
    /* stack frame */
    Reg#(Bit#(16)) fibn <- mkReg(0);
    Reg#(Bit#(16)) fibtmp1 <- mkReg(0);
-   Reg#(FSState) fibstate <- mkReg(0);
+   Reg#(FSState) fibstate <- mkReg(FIBSTATEIDLE);
 
    /* function variables that do not need to be saved or restored */
    Reg#(Bit#(16)) fibretval <- mkReg(0);
@@ -73,34 +74,69 @@ module mkFibRequest#(FibIndication indication)(FibRequest)
     * 
     */
    
+   Reg#(Bit#(16)) fibcallarg <- mkReg(0);
+   Reg#(FSState) fibcallreturnto <- mkReg(FIBSTATEIDLE);
+   
+   Stmt callfibstmt =
+   seq
+      $display("FIBCALL");
+      stack.store(fsoffsetn, fibn);
+      stack.store(fsoffsettmp1, fibtmp1);
+      stack.store(fsoffsetnext, zeroExtend(pack(fibcallreturnto)));
+      par
+	 stack.push();
+	 fibn <= fibcallarg;
+	 fibstate <= FIBSTATE1;
+      endpar
+   endseq;
+   
+   FSM callFibFSM <- mkFSM(callfibstmt);
+   
+   Stmt fibreturnstmt =
+   seq
+      $display("FIBRETURN");
+      stack.pop();
+      $display("FIBRETURN pop");
+      action
+	 let t <- stack.load(fsoffsetn);
+	 fibn <= t;
+      endaction
+      $display("FIBRETURN n");
+      action
+	 let t <- stack.load(fsoffsettmp1);
+	 fibtmp1 <= t;
+      endaction
+      $display("FIBRETURN tmp1");
+      action
+	 let t <- stack.load(fsoffsetnext);
+	 $display("FIBRETURN set state %d", t);
+	 fibstate <= unpack(truncate(t));
+      endaction
+   endseq;
+
+   FSM fibreturnFSM <- mkFSM(fibreturnstmt);
+
    function Action callfib(Bit#(16) arg,  FSState returnto);
-      return action
-		stack.store(fsoffsetn, fibn);
-		stack.store(fsoffsettmp1, fibtmp1);
-		stack.store(fsoffsetnext, zeroExtend(pack(returnto)));
-		stack.push();
-		fibn <= arg;
-		fibstate <= FIBSTATE1;
-	     endaction;
+   return action
+	     fibstate <= FIBCALLING;
+	     fibcallarg <= arg;
+	     fibcallreturnto <= returnto;
+	     callFibFSM.start();
+	  endaction;
    endfunction
+   
+   
    
    function Action fibreturn(Bit#(16) returnval);
       return action
-		let ta = ?;
-		let tb = ?;
-		let tc = ?;
+		fibstate <= FIBRETURNING;
 		fibretval <= returnval;      
-		stack.pop();
-		ta <- stack.load(fsoffsetn);
-		tb <- stack.load(fsoffsettmp1);
-		tc <- stack.load(fsoffsetnext);
-		fibn <= ta;
-		fibtmp1 <= tb;
-		fibstate <= unpack(truncate(tc));
+		fibreturnFSM.start();
 	     endaction;
    endfunction
 
    rule fib1 (fibstate == FIBSTATE1);
+      $display("FIBSTATE1");
      if (fibn == 0)
 	fibreturn(1);
      else if (fibn == 1)
@@ -110,15 +146,17 @@ module mkFibRequest#(FibIndication indication)(FibRequest)
      endrule
 
    rule fib2 (fibstate == FIBSTATE2);
+      $display("FIBSTATE2");
       callfib(fibn - 2, FIBSTATE3);
    endrule
    
    rule fib3 (fibstate == FIBSTATE3);
+      $display("FIBSTATE3");
       fibreturn(fibtmp1 + fibretval);
    endrule
       
    rule fibcomplete (fibstate == FIBSTATECOMPLETE);
-      $display("fib completion");
+      $display("FIBSTATECOMPLETE");
       indication.fibresult(zeroExtend(fibretval));
       fibstate <= FIBSTATEIDLE;
    endrule

@@ -49,7 +49,7 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    // instantiate user portals
    FibIndicationProxy fibIndicationProxy <- mkFibIndicationProxy(FibIndication);
    FibRequest fibRequest <- mkFibRequest(fibIndicationProxy.ifc);
-   FibRequestWrapper fibRequestWrapper <- mkFibRequestWrapper(FibRequest,fibRequestInternal.ifc);
+   FibRequestWrapper fibRequestWrapper <- mkFibRequestWrapper(FibRequest,fibRequest);
    
    Vector#(2,StdPortal) portals;
    portals[0] = fibIndicationProxy.portalIfc;
