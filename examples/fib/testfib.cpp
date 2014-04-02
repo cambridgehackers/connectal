@@ -10,11 +10,6 @@
 #include "FibRequestProxy.h"
 #include "GeneratedTypes.h"
 
-FibRequestProxy *fibRequestProxy;
-FibIndication *fibIndication;
-
-sem_t test_sem;
-
 class FibIndication : public FibIndicationWrapper
 {
 public:
@@ -24,6 +19,12 @@ public:
     }
     FibIndication(unsigned int id) : FibIndicationWrapper(id) {}
 };
+
+FibRequestProxy *fibRequestProxy;
+FibIndication *fibIndication;
+
+sem_t test_sem;
+
 
 int main(int argc, const char **argv)
 {
