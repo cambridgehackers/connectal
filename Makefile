@@ -51,6 +51,7 @@ testnames = echo             \
             bscan            \
 	    splice  \
 	    maxcommonsubseq  \
+	    fib  \
 
 
 
