@@ -158,5 +158,13 @@
     "LA19_n": {
         "LOC": "E20",
         "IOSTANDARD": "LVCMOS25"
+        },
+    "CLK0_M2C_p": {
+        "LOC": "Y18",
+        "IOSTANDARD": "LVCMOS25"
+        },
+    "CLK0_M2C_n": {
+        "LOC": "AA18",
+        "IOSTANDARD": "LVCMOS25"
         }
 }
