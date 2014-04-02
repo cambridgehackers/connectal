@@ -30,9 +30,8 @@
 class DmaIndication : public DmaIndicationWrapper
 {
   PortalMemory *portalMemory;
-  int tag_mismatch_cnt;
  public:
-  DmaIndication(PortalMemory *pm, unsigned int  id) : DmaIndicationWrapper(id), portalMemory(pm), tag_mismatch_cnt(0){}
+  DmaIndication(PortalMemory *pm, unsigned int  id) : DmaIndicationWrapper(id), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer, uint64_t msg){
     //fprintf(stderr, "configResp: %x, %"PRIx64"\n", pointer, msg);
     portalMemory->confResp(pointer);
@@ -62,9 +61,5 @@ class DmaIndication : public DmaIndicationWrapper
   virtual void reportMemoryTraffic(uint64_t words){
     //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
     portalMemory->mtResp(words);
-  }
-  virtual void tagMismatch(const ChannelType& t, uint32_t a, uint32_t b){
-    //if (tag_mismatch_cnt++ < 10)
-    fprintf(stderr, "tagMismatch: %s %d %d\n", t==ChannelType_Read ? "Read" : "Write", a, b);
   }
 };
