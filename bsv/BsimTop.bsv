@@ -316,7 +316,8 @@ endmodule
 typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins);
 
 module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,Empty) mkPortalTop)(Empty)
-   provisos (SelectBsimRdmaReadWrite#(dsz));
+   provisos (SelectBsimRdmaReadWrite#(dsz),
+	     Mul#(TDiv#(dsz, 8), 8, dsz));
    BsimHost#(32,32,12,40,dsz,6) host <- mkBsimHost;
    PortalTop#(40,dsz,Empty) top <- mkPortalTop;
    Axi3Master#(40,dsz,6) m_axi <- mkAxiDmaMaster(top.master);

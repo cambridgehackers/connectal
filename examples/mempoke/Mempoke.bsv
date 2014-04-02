@@ -57,11 +57,11 @@ module mkMempokeRequest#(MempokeIndication indication,
    endrule
    
    method Action readWord(Bit#(32) pointer, Bit#(32) offset);
-      dma_read_server.readReq.put(ObjectRequest{pointer:pointer, offset:extend(offset), burstLen:1, tag:0});
+      dma_read_server.readReq.put(ObjectRequest{pointer:pointer, offset:extend(offset), burstLen:8, tag:0});
    endmethod
    
    method Action writeWord(Bit#(32) pointer, Bit#(32) offset, S0 data);
-      dma_write_server.writeReq.put(ObjectRequest{pointer:pointer, offset:extend(offset), burstLen:1, tag:0});
+      dma_write_server.writeReq.put(ObjectRequest{pointer:pointer, offset:extend(offset), burstLen:8, tag:0});
       dma_write_server.writeData.put(ObjectData{data:pack(data),tag:0});
    endmethod         
 

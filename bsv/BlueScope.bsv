@@ -87,8 +87,9 @@ module mkSyncBlueScope#(Integer samples, ObjectWriteServer#(dataWidth) wchan, Bl
    endrule
 
    rule writeReq if (dfifo.notEmpty);
-      wchan.writeReq.put(ObjectRequest { pointer: pointerReg, offset: zeroExtend(writeOffsetReg), burstLen: 2, tag: 0});
-      writeOffsetReg <= writeOffsetReg + (fromInteger(valueOf(dataBytes)) * 2);
+      let bl = fromInteger(valueOf(dataBytes)) * 2;
+      wchan.writeReq.put(ObjectRequest { pointer: pointerReg, offset: zeroExtend(writeOffsetReg), burstLen: bl, tag: 0});
+      writeOffsetReg <= writeOffsetReg + bl;
    endrule
 
    rule  writeData;

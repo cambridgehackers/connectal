@@ -119,9 +119,11 @@ uint64_t PortalMemory::show_mem_stats(ChannelType rc)
     sem_wait(&mtSem);
     rv += mtCnt;
   }
-  //fprintf(stderr, "bin1: %d\n", dbgRec.y);
-  //fprintf(stderr, "bin4: %d\n", dbgRec.z);
-  //fprintf(stderr, "binx: %d\n", dbgRec.w);
+#ifdef INTERVAL_ANAlYSIS
+  fprintf(stderr, "bin1: %d\n", dbgRec.y);
+  fprintf(stderr, "bin4: %d\n", dbgRec.z);
+  fprintf(stderr, "binx: %d\n", dbgRec.w);
+#endif
   return rv;
 }
 

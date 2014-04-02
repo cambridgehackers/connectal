@@ -56,7 +56,7 @@ module mkPerfRequest#(PerfIndication indication,
    let busWidthWords = busWidthBytes/4;
 
    Reg#(Bit#(32))      srcGen <- mkReg(0);
-   Reg#(Bit#(32)) wordCnt <- mkReg(0);
+   Reg#(Bit#(32)) byteCnt <- mkReg(0);
    Reg#(Bit#(32)) streamRdCnt <- mkReg(0);
    Reg#(Bit#(32)) streamWrCnt <- mkReg(0);
    Reg#(Bit#(32)) streamAckCnt <- mkReg(0);
@@ -69,7 +69,7 @@ module mkPerfRequest#(PerfIndication indication,
    Reg#(Bool)               iterInProg <- mkReg(False);
    Reg#(Bool)              dataMismatch <- mkReg(False);  
    
-   Reg#(Bit#(8)) burstLen <- mkReg(8);
+   Reg#(Bit#(8)) burstLen <- mkReg(8*fromInteger(busWidthBytes));
    Reg#(Bit#(ObjectOffsetSize)) deltaOffset <- mkReg(8*fromInteger(busWidthBytes));
 
    rule readReq(streamRdCnt > 0);
@@ -122,25 +122,24 @@ module mkPerfRequest#(PerfIndication indication,
    rule startIteration((iterInProg == False) && (repeatCnt > 0));
       streamRdOff <= 0;
       streamWrOff <= 0;
-      streamRdCnt <= wordCnt;
-      streamWrCnt <= wordCnt;
-      streamAckCnt <= wordCnt;
+      streamRdCnt <= byteCnt;
+      streamWrCnt <= byteCnt;
+      streamAckCnt <= byteCnt;
       iterInProg <= True;
       repeatCnt <= repeatCnt - 1;
    endrule
    
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) repeatCount) if (streamRdCnt == 0 && streamWrCnt == 0);
       //$display("startCopy wrPointer=%h rdPointer=%h numWords=%d", wrPointer, rdPointer, numWords);
-
       streamWrPointer <= wrPointer;
       streamRdPointer <= rdPointer;
-      wordCnt <= numWords >> 1;
+      byteCnt <= numWords << 2;
       repeatCnt <= repeatCount;
       indication.started(numWords);
    endmethod
 
    method Action readWord();
-      dma_word_read_server.readReq.put(ObjectRequest {pointer: streamWrPointer, offset: 0, burstLen: 1, tag: 1});
+      dma_word_read_server.readReq.put(ObjectRequest {pointer: streamWrPointer, offset: 0, burstLen: fromInteger(busWidthBytes), tag: 1});
    endmethod
 
    method Action getStateDbg();

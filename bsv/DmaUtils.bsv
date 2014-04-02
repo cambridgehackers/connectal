@@ -33,43 +33,46 @@ import GetPut::*;
 import Dma::*;
 
 //
-// @brief A buffer for reading from a bus of width bsz.
+// @brief A buffer for reading from a bus of width dataWidth.
 //
-// @param bsz The number of bits in the bus.
+// @param dataWidth The number of bits in the bus.
 // @param bufferDepth The depth of the internal buffer
 //
-interface DmaReadBuffer#(numeric type bsz, numeric type bufferDepth);
-   interface ObjectReadServer #(bsz) dmaServer;
-   interface ObjectReadClient#(bsz) dmaClient;
+interface DmaReadBuffer#(numeric type dataWidth, numeric type bufferDepth);
+   interface ObjectReadServer #(dataWidth) dmaServer;
+   interface ObjectReadClient#(dataWidth) dmaClient;
 endinterface
 
 //
-// @brief A buffer for writing to a bus of width bsz.
+// @brief A buffer for writing to a bus of width dataWidth.
 //
-// @param bsz The number of bits in the bus.
+// @param dataWidth The number of bits in the bus.
 // @param bufferDepth The depth of the internal buffer
 //
-interface DmaWriteBuffer#(numeric type bsz, numeric type bufferDepth);
-   interface ObjectWriteServer#(bsz) dmaServer;
-   interface ObjectWriteClient#(bsz) dmaClient;
+interface DmaWriteBuffer#(numeric type dataWidth, numeric type bufferDepth);
+   interface ObjectWriteServer#(dataWidth) dmaServer;
+   interface ObjectWriteClient#(dataWidth) dmaClient;
 endinterface
 
 //
 // @brief Makes a Dma buffer for reading wordSize words from memory.
 //
-// @param bsz The width of the bus in bits.
+// @param dataWidth The width of the bus in bits.
 // @param bufferDepth The depth of the internal buffer
 //
-module mkDmaReadBuffer(DmaReadBuffer#(bsz, bufferDepth))
-   provisos(Add#(1,a__,bsz),
-	    Add#(b__, TAdd#(1,TLog#(bufferDepth)), 8));
+module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
+   provisos(Add#(b__, TAdd#(1,TLog#(bufferDepth)), 8),
+	    Div#(dataWidth,8,dataWidthBytes),
+	    Mul#(dataWidthBytes,8,dataWidth),
+	    Log#(dataWidthBytes,beatShift));
 
-   FIFOFLevel#(ObjectData#(bsz),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
+   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(bufferDepth))) unfulfilled <- mkRatchet(0);
+   let beat_shift = fromInteger(valueOf(beatShift));
    
    // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
-   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
+   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
 
    interface ObjectReadServer dmaServer;
       interface Put readReq = toPut(reqOutstanding);
@@ -79,12 +82,12 @@ module mkDmaReadBuffer(DmaReadBuffer#(bsz, bufferDepth))
       interface Get readReq;
 	 method ActionValue#(ObjectRequest) get if (readBuffer.lowWater(sreq));
 	    reqOutstanding.deq;
-	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
+	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
 	    return reqOutstanding.first;
 	 endmethod
       endinterface
       interface Put readData;
-	 method Action put(ObjectData#(bsz) x);
+	 method Action put(ObjectData#(dataWidth) x);
 	    readBuffer.fifo.enq(x);
 	    unfulfilled.decrement(1);
 	 endmethod
@@ -95,20 +98,23 @@ endmodule
 //
 // @brief Makes a Dma channel for writing wordSize words from memory.
 //
-// @param bsz The width of the bus in bits.
+// @param dataWidth The width of the bus in bits.
 // @param bufferDepth The depth of the internal buffer
 //
-module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, bufferDepth))
-   provisos(Add#(1,a__,bsz),
-	    Add#(b__, TAdd#(1, TLog#(bufferDepth)), 8));
+module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
+   provisos(Add#(b__, TAdd#(1, TLog#(bufferDepth)), 8),
+	    Div#(dataWidth,8,dataWidthBytes),
+	    Mul#(dataWidthBytes,8,dataWidth),
+	    Log#(dataWidthBytes,beatShift));
 
-   FIFOFLevel#(ObjectData#(bsz),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
+   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(bufferDepth)))  unfulfilled <- mkRatchet(0);
+   let beat_shift = fromInteger(valueOf(beatShift));
    
    // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.
-   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen)), unfulfilled.read()));
+   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
 
    interface ObjectWriteServer dmaServer;
       interface Put writeReq = toPut(reqOutstanding);
@@ -119,12 +125,12 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(bsz, bufferDepth))
       interface Get writeReq;
 	 method ActionValue#(ObjectRequest) get if (writeBuffer.highWater(sreq));
 	    reqOutstanding.deq;
-	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen)));
+	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
 	    return reqOutstanding.first;
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(ObjectData#(bsz)) get();
+	 method ActionValue#(ObjectData#(dataWidth)) get();
 	    unfulfilled.decrement(1);
 	    writeBuffer.fifo.deq;
 	    return writeBuffer.fifo.first;
