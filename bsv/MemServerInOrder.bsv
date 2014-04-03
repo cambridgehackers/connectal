@@ -33,6 +33,10 @@ import PortalMemory::*;
 import SGList::*;
 import MemServerInternal::*;
 		 		 
+typedef struct {ObjectRequest req;
+		Bit#(addrWidth) pa;
+		ClientId client; } IRec#(numeric type addrWidth) deriving(Bits);
+
 instance MemServerInternals#(InOrderCompletion, addrWidth, dataWidth)	 
 provisos(Add#(b__, addrWidth, 64), 
 	 Add#(c__, 12, addrWidth), 
@@ -66,12 +70,12 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 `endif
       
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
-      rule loadChannel;
+      rule loadClient;
 	 ObjectRequest req <- readClients[selectReg].readReq.get();
 	 if (bad_pointer(req.pointer))
 	    dmaIndication.badPointer(req.pointer);
 	 else begin
-	    lreqFifo.enq(IRec{req:req, pa:?, chan:fromInteger(selectReg)});
+	    lreqFifo.enq(IRec{req:req, pa:?, client:fromInteger(selectReg)});
 	    sgl.request.put(tuple2(truncate(req.pointer),req.offset));
 	 end
       endrule
@@ -79,7 +83,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
    rule checkSglResp;
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
-      let chan = lreqFifo.first.chan;
+      let client = lreqFifo.first.client;
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
@@ -89,7 +93,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
       else begin
 	 if (False && physAddr[31:24] != 0)
 	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 reqFifo.enq(IRec{req:req, pa:physAddr, chan:chan});
+	 reqFifo.enq(IRec{req:req, pa:physAddr, client:client});
       end
    endrule
 
@@ -101,11 +105,11 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 	       reqFifo.deq;
 	       let req = reqFifo.first.req;
 	       let physAddr = reqFifo.first.pa;
-	       let chan = reqFifo.first.chan;
+	       let client = reqFifo.first.client;
 	       if (False && physAddr[31:24] != 0)
 		  $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	       dreqFifos[chan].enq(req);
-	       rv = MemRequest{addr:physAddr, burstLen:req.burstLen, tag:chan};
+	       dreqFifos[client].enq(req);
+	       rv = MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(client)};
 	    end
 	    return rv;
 	 endmethod
@@ -113,16 +117,16 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
       interface Put readData;
 	 method Action put(MemData#(dataWidth) response);
 	    if (valueOf(numReadClients) > 0) begin
-	       let chan = response.tag;
-	       let req = dreqFifos[chan].first;
-	       let burstLen = burstRegs[chan];
-	       readClients[chan].readData.put(ObjectData { data: response.data, tag: req.tag});
+	       let client = response.tag;
+	       let req = dreqFifos[client].first;
+	       let burstLen = burstRegs[client];
+	       readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
 	       if (burstLen == 0)
 		  burstLen = req.burstLen >> beat_shift;
 	       if (burstLen == 1)
-		  dreqFifos[chan].deq();
-	       burstRegs[chan] <= burstLen-1;
-	       beatCounts[chan] <= beatCounts[chan]+1;
+		  dreqFifos[client].deq();
+	       burstRegs[client] <= burstLen-1;
+	       beatCounts[client] <= beatCounts[client]+1;
 	    end
 `ifdef INTERVAL_ANAlYSIS
 	    last_resp_read <= cycle_cnt;
@@ -166,12 +170,12 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
    let beat_shift = fromInteger(valueOf(beatShift));
    
    for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
-       rule loadChannel;
+       rule loadClient;
 	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
 	  if (bad_pointer(req.pointer))
 	     dmaIndication.badPointer(req.pointer);
 	  else begin
-	     lreqFifo.enq(IRec{req:req, pa:?, chan:fromInteger(selectReg)});
+	     lreqFifo.enq(IRec{req:req, pa:?, client:fromInteger(selectReg)});
 	     sgl.request.put(tuple2(truncate(req.pointer),req.offset));
 	  end
        endrule
@@ -179,7 +183,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
    rule checkSglResp;
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
-      let chan = lreqFifo.first.chan;
+      let client = lreqFifo.first.client;
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
@@ -187,7 +191,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
       end
       else begin
-	 reqFifo.enq(IRec{req:req, pa:physAddr, chan:chan});
+	 reqFifo.enq(IRec{req:req, pa:physAddr, client:client});
       end
    endrule
 
@@ -196,29 +200,29 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	 method ActionValue#(MemRequest#(addrWidth)) get();
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
-	    let chan = reqFifo.first.chan;
+	    let client = reqFifo.first.client;
 	    reqFifo.deq;
 	    dreqFifo.enq(reqFifo.first);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:chan};
+	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(client)};
 	 endmethod
       endinterface
       interface Get writeData;
 	 method ActionValue#(MemData#(dataWidth)) get() if (valueOf(numWriteClients) > 0);
 	    let rv = ?;
 	    if (valueOf(numWriteClients) > 0) begin
-	       let chan = dreqFifo.first.chan;
+	       let client = dreqFifo.first.client;
 	       let req = dreqFifo.first.req;
-	       ObjectData#(dataWidth) tagdata <- writeClients[chan].writeData.get();
+	       ObjectData#(dataWidth) tagdata <- writeClients[client].writeData.get();
 	       let burstLen = burstReg;
 	       if (burstLen == 0)
 		  burstLen = req.burstLen >> beat_shift;
 	       burstReg <= burstLen-1;
-	       beatCounts[chan] <= beatCounts[chan]+1;
+	       beatCounts[client] <= beatCounts[client]+1;
 	       if (burstLen == 1) begin
 		  dreqFifo.deq();
-		  respFifos[chan].enq(req.tag);
+		  respFifos[client].enq(req.tag);
 	       end
-	       rv = MemData { data: tagdata.data,  tag:chan };
+	       rv = MemData { data: tagdata.data,  tag:extend(client) };
 	    end
 	    return rv;
 	 endmethod
@@ -226,10 +230,10 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
       interface Put writeDone;
 	 method Action put(Bit#(6) resp);
 	    if (valueOf(numWriteClients) > 0) begin
-	       let chan = resp;
+	       let client = resp;
 	       let orig_tag = respFifos[resp].first;
-	       respFifos[chan].deq;
-	       writeClients[chan].writeDone.put(orig_tag);
+	       respFifos[client].deq;
+	       writeClients[client].writeDone.put(orig_tag);
 	    end
 	 endmethod
       endinterface

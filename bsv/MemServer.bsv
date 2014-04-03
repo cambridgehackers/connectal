@@ -46,7 +46,7 @@ interface MemServerConfig#(type desc, numeric type addrWidth, numeric type dataW
    interface DmaConfig request;
    interface MemMaster#(addrWidth, dataWidth) master;
 endinterface
-		 
+
 module mkMemServer#(DmaIndication dmaIndication,
 		    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
@@ -62,7 +62,23 @@ module mkMemServer#(DmaIndication dmaIndication,
    let rv <- mkMemServerConfig(dmaIndication, readClients, writeClients);
    return rv;
 endmodule   
-
+		 
+module mkMemServerOO#(DmaIndication dmaIndication,
+		      Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
+		      Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
+   (MemServerOO#(addrWidth, dataWidth))
+   provisos (Add#(1,a__,dataWidth),
+	     Add#(b__, TSub#(addrWidth, 12), 32),
+	     Add#(c__, 12, addrWidth),
+	     Add#(d__, addrWidth, 64),
+	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	     Add#(f__, c__, ObjectOffsetSize),
+	     Add#(g__, addrWidth, 40),
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
+   let rv <- mkMemServerConfig(dmaIndication, readClients, writeClients);
+   return rv;
+endmodule   
+		 
 //
 // @brief Creates a Dma controller for Dma read and write clients
 //
