@@ -16,8 +16,11 @@ class FibIndication : public FibIndicationWrapper
 {
 public:
     virtual void fibresult(uint32_t v) {
-        printf("fibresult: %d\n", v);
+      fprintf(stderr, "fibresult: %d\n", v);
 	sem_post(&test_sem);
+    }
+    virtual void fibnote(uint32_t v) {
+      fprintf(stderr, "fibnote: %d\n", v);
     }
     FibIndication(unsigned int id) : FibIndicationWrapper(id) {}
 };
@@ -29,19 +32,26 @@ FibIndication *fibIndication;
 int main(int argc, const char **argv)
 {
   int i;
-  fibIndication = new FibIndication(IfcNames_FibIndication);
   // these use the default poller
   fibRequestProxy = new FibRequestProxy(IfcNames_FibRequest);
+  fibIndication = new FibIndication(IfcNames_FibIndication);
   
   if(sem_init(&test_sem, 1, 0)){
-    printf("failed to init test_sem\n");
+    fprintf(stderr, "failed to init test_sem\n");
     return -1;
   }
+  pthread_t tid;
+  fprintf(stderr, "creating exec thread\n");
+  if(pthread_create(&tid, NULL,  portalExec, NULL)){
+   fprintf(stderr, "error creating exec thread\n");
+   exit(1);
+  }
 
-  for (i = 0; i < 5; i += 1) {
-    printf("fib(%d)\n", i);
+  for (i = 0; i < 10; i += 1) {
+    fprintf(stderr, "fib(%d)\n", i);
     fibRequestProxy->fib(i);
     sem_wait(&test_sem);
   }
+
   return 0;
 }
