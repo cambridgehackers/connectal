@@ -1,16 +1,19 @@
 
-all: parsetab.py
-	make -C drivers/pcieportal
+all:
+	make parsetab.py
+	(cd drivers/pcieportal; make)
 	make -C pcie/xbsvutil
 	make -C consolable
 
 install:
-	make -C drivers/pcieportal install
+	(cd drivers/pcieportal; make install)
 	make -C pcie/xbsvutil install
+	make -C util install
 
 uninstall:
-	make -C drivers/pcieportal uninstall
+	(cd drivers/pcieportal; make uninstall)
 	make -C pcie/xbsvutil uninstall
+	make -C util uninstall
 
 docs:
 	doxygen Doxyfile
