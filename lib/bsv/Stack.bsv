@@ -27,9 +27,15 @@
 
 import BRAM::*;
 
+
+/* the methods for load are split.  loadstart puts a request to the BRAM
+ * and loadfinish gets the result
+ */
+
 interface Stack#(numeric type stackSize, numeric type frameSize, type a);
    method Action store(Bit#(TLog#(frameSize)) offset, a v);
-   method ActionValue#(a) load(Bit#(TLog#(frameSize)) offset);
+   method Action loadstart(Bit#(TLog#(frameSize)) offset);
+   method ActionValue#(a) loadfinish();
    method Action push();
    method Action pop();
    method Action reset();
@@ -64,11 +70,16 @@ module mkStack#(int stackSize, int frameSize)(Stack#(stackSize, frameSize, a))
    endmethod
    
    /* read a value from current stack frame */
-   method ActionValue#(a) load(Bit#(TLog#(frameSize)) offset);
-      let v = ?;
+   method Action loadstart(Bit#(TLog#(frameSize)) offset);
       stack.portA.request.put(BRAMRequest{write: False, 
 	 responseOnWrite: False, 
 	 address: {pack(fp), offset}, datain: 0});
+   endmethod
+   
+   /* maybe this should just expose a server interface? */
+   
+   method ActionValue#(a) loadfinish();
+      let v = ?;
       v <- stack.portA.response.get();
       return(v);
    endmethod
