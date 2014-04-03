@@ -188,7 +188,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       l2n.start(strPointer, zeroExtend(dest), bram_start_idx, bram_finish_idx);
    endmethod
 
-   method Action start(Bit#(32) alg, Bit#(32) dir);
+   method Action start(Bit#(32) alg);
       $display ("start %d", alg);
       case (alg) 
 	 0: begin

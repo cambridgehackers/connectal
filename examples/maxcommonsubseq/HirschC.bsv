@@ -44,7 +44,11 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    Reg#(Bit#(16)) k0jm1 <- mkReg(0);
    BRAM1Port#(Bit#(lIndexWidth), Bit#(16)) k0  <- mkBRAM1Server(defaultValue);
 
-
+/*
+ * HirschC(Astart, Alen, Bstart, Blen, output fifo)
+ * implicit A storage, B storage
+ * 
+ */
   Stmt hirschC =
    seq
       $display("hirschC running ");
