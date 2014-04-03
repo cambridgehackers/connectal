@@ -48,36 +48,37 @@ endfunction
 
 typedef 16 MaxNumClients;		 
 typedef Bit#(TLog#(MaxNumClients)) ClientId;
+typedef 32 MaxNumTags;
+typedef Bit#(TLog#(MaxNumTags)) Tag;
 
-interface TagGen#(numeric type numTags);
-   method ActionValue#(Bit#(TLog#(numTags))) get_tag(ClientId client, Bit#(6) client_tag);
-   method Action return_tag(Bit#(TLog#(numTags)) tag);
+interface TagGen;
+   method ActionValue#(Tag) get_tag(ClientId client, Bit#(6) client_tag);
+   method Action return_tag(Tag tag);
 endinterface
 
-module mkTagGenOO(TagGen#(numTags));
-   Vector#(numTags, Reg#(Bit#(4))) tag_regs <- replicateM(mkReg(0));
-   Vector#(numTags, Reg#(Maybe#(ClientId))) client_map <- replicateM(mkReg(tagged Invalid));
-   Maybe#(UInt#(TLog#(numTags))) next_free = findElem(0, readVReg(tag_regs));
-   method ActionValue#(Bit#(TLog#(numTags))) get_tag(ClientId client, Bit#(6) client_tag);
+module mkTagGenOO(TagGen);
+   Vector#(MaxNumTags, Reg#(Bit#(4))) tag_regs <- replicateM(mkReg(0));
+   Vector#(MaxNumTags, Reg#(Maybe#(ClientId))) client_map <- replicateM(mkReg(tagged Invalid));
+   Maybe#(UInt#(TLog#(MaxNumTags))) next_free = findElem(0, readVReg(tag_regs));
+   method ActionValue#(Tag) get_tag(ClientId client, Bit#(6) client_tag);
       let rv = case (findElem(tagged Valid client, readVReg(client_map))) matches
 		  tagged Valid .tag: return (_when_(tag_regs[tag] < maxBound) (tag));
 		  tagged Invalid: return (_when_(isValid(next_free)) (fromMaybe(?, next_free)));
 	       endcase;
       client_map[rv] <= tagged Valid client;
       tag_regs[rv] <= tag_regs[rv]+1;
-      return pack(rv);
+      return extend(pack(rv));
    endmethod      
-   method Action return_tag(Bit#(TLog#(numTags)) tag);
+   method Action return_tag(Tag tag);
       tag_regs[tag] <= tag_regs[tag]-1;
    endmethod
 endmodule
 
-module mkTagGenIO(TagGen#(numTags))
-   provisos(Add#(a__, TLog#(numTags), 4));
-   method ActionValue#(Bit#(TLog#(numTags))) get_tag(ClientId client, Bit#(6) client_tag);
-      return truncate(pack(client));
+module mkTagGenIO(TagGen);
+   method ActionValue#(Tag) get_tag(ClientId client, Bit#(6) client_tag);
+      return extend(pack(client));
    endmethod      
-   method Action return_tag(Bit#(TLog#(numTags)) tag);
+   method Action return_tag(Tag tag);
       noAction;
    endmethod
 endmodule
@@ -100,7 +101,7 @@ typedef struct {Bit#(6) orig_tag;
 module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients, 
 			  DmaIndication dmaIndication,
 			  Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
-			  TagGen#(numTags) tag_gen) 
+			  TagGen tag_gen) 
    (MemReadInternal#(addrWidth, dataWidth))
 
    provisos(Add#(b__, addrWidth, 64), 
@@ -108,13 +109,12 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 	    Add#(1, c__, d__),
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
-	    Log#(dataWidthBytes,beatShift),
-	    Add#(a__, TLog#(numTags), 6));
+	    Log#(dataWidthBytes,beatShift));
    
    FIFO#(LRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(RRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
-   Vector#(numTags, FIFO#(DRec#(addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(4));
-   Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
+   Vector#(MaxNumTags, FIFO#(DRec#(addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(4));
+   Vector#(MaxNumTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
    Vector#(numReadClients, Reg#(Bit#(64)))  beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
       
@@ -224,7 +224,7 @@ endmodule
 module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
 			   DmaIndication dmaIndication, 
 			   Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
-			   TagGen#(numTags) tag_gen)
+			   TagGen tag_gen)
    (MemWriteInternal#(addrWidth, dataWidth))
    
    provisos(Add#(b__, addrWidth, 64), 
@@ -232,13 +232,12 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	    Add#(1, c__, d__),
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
-	    Log#(dataWidthBytes,beatShift),
-	    Add#(a__, TLog#(numTags), 6));
+	    Log#(dataWidthBytes,beatShift));
    
    FIFO#(LRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(RRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
    FIFO#(DRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
-   Vector#(numTags, FIFO#(RResp#(addrWidth))) respFifos <- replicateM(mkSizedFIFO(4));
+   Vector#(MaxNumTags, FIFO#(RResp#(addrWidth))) respFifos <- replicateM(mkSizedFIFO(4));
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
    Vector#(numWriteClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));

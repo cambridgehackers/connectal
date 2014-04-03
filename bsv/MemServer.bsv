@@ -53,13 +53,9 @@ module mkMemServer#(DmaIndication dmaIndication,
 	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
 	     Add#(f__, c__, ObjectOffsetSize),
 	     Add#(g__, addrWidth, 40),
-	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Add#(h__, TLog#(numReadClients), 6),
-	     Add#(i__, TLog#(numWriteClients), 6),
-	     Add#(j__, TLog#(numWriteClients), 4),
-	     Add#(k__, TLog#(numReadClients), 4));
-   TagGen#(numReadClients) readTagGen <- mkTagGenIO;
-   TagGen#(numWriteClients) writeTagGen <- mkTagGenIO;
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
+   TagGen readTagGen <- mkTagGenIO;
+   TagGen writeTagGen <- mkTagGenIO;
    let rv <- mkMemServerConfig(dmaIndication, readClients, writeClients, readTagGen, writeTagGen);
    return rv;
 endmodule   
@@ -76,8 +72,8 @@ module mkMemServerOO#(DmaIndication dmaIndication,
 	     Add#(f__, c__, ObjectOffsetSize),
 	     Add#(g__, addrWidth, 40),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
-   TagGen#(32) readTagGen <- mkTagGenOO;
-   TagGen#(32) writeTagGen <- mkTagGenOO;
+   TagGen readTagGen <- mkTagGenOO;
+   TagGen writeTagGen <- mkTagGenOO;
    let rv <- mkMemServerConfig(dmaIndication, readClients, writeClients, readTagGen, writeTagGen);
    return rv;
 endmodule   
@@ -92,8 +88,8 @@ endmodule
 module mkMemServerConfig#(DmaIndication dmaIndication,
 			  Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 			  Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
-			  TagGen#(numReadTags) readTagGen,
-			  TagGen#(numWriteTags) writeTagGen)
+			  TagGen readTagGen,
+			  TagGen writeTagGen)
    (MemServer#(addrWidth, dataWidth))
    
    provisos (Add#(1,a__,dataWidth),
@@ -103,9 +99,7 @@ module mkMemServerConfig#(DmaIndication dmaIndication,
 	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
 	     Add#(f__, c__, ObjectOffsetSize),
 	     Add#(g__, addrWidth, 40),
-	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Add#(h__, TLog#(numReadTags), 6),
-	     Add#(i__, TLog#(numWriteTags), 6));
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
    
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
