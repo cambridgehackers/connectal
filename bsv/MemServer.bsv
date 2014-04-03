@@ -32,17 +32,12 @@ import Dma::*;
 import PortalMemory::*;
 import SGList::*;
 import MemServerInternal::*;
-import MemServerInOrder::*;
-import MemServerOutOfOrder::*;
 
 `ifdef BSIM
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
 `endif
 		 
-typedef MemServerConfig#(InOrderCompletion, addrWidth, dataWidth) MemServer#(numeric type addrWidth, numeric type dataWidth);
-typedef MemServerConfig#(OutOfOrderCompletion, addrWidth, dataWidth) MemServerOO#(numeric type addrWidth, numeric type dataWidth);
-		 
-interface MemServerConfig#(type desc, numeric type addrWidth, numeric type dataWidth);
+interface MemServer#(numeric type addrWidth, numeric type dataWidth);
    interface DmaConfig request;
    interface MemMaster#(addrWidth, dataWidth) master;
 endinterface
@@ -58,15 +53,21 @@ module mkMemServer#(DmaIndication dmaIndication,
 	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
 	     Add#(f__, c__, ObjectOffsetSize),
 	     Add#(g__, addrWidth, 40),
-	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
-   let rv <- mkMemServerConfig(dmaIndication, readClients, writeClients);
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     Add#(h__, TLog#(numReadClients), 6),
+	     Add#(i__, TLog#(numWriteClients), 6),
+	     Add#(j__, TLog#(numWriteClients), 4),
+	     Add#(k__, TLog#(numReadClients), 4));
+   TagGen#(numReadClients) readTagGen <- mkTagGenIO;
+   TagGen#(numWriteClients) writeTagGen <- mkTagGenIO;
+   let rv <- mkMemServerConfig(dmaIndication, readClients, writeClients, readTagGen, writeTagGen);
    return rv;
 endmodule   
 		 
 module mkMemServerOO#(DmaIndication dmaIndication,
 		      Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 		      Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
-   (MemServerOO#(addrWidth, dataWidth))
+   (MemServer#(addrWidth, dataWidth))
    provisos (Add#(1,a__,dataWidth),
 	     Add#(b__, TSub#(addrWidth, 12), 32),
 	     Add#(c__, 12, addrWidth),
@@ -75,7 +76,9 @@ module mkMemServerOO#(DmaIndication dmaIndication,
 	     Add#(f__, c__, ObjectOffsetSize),
 	     Add#(g__, addrWidth, 40),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
-   let rv <- mkMemServerConfig(dmaIndication, readClients, writeClients);
+   TagGen#(32) readTagGen <- mkTagGenOO;
+   TagGen#(32) writeTagGen <- mkTagGenOO;
+   let rv <- mkMemServerConfig(dmaIndication, readClients, writeClients, readTagGen, writeTagGen);
    return rv;
 endmodule   
 		 
@@ -88,8 +91,10 @@ endmodule
 //
 module mkMemServerConfig#(DmaIndication dmaIndication,
 			  Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
-			  Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
-   (MemServerConfig#(desc, addrWidth, dataWidth))
+			  Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
+			  TagGen#(numReadTags) readTagGen,
+			  TagGen#(numWriteTags) writeTagGen)
+   (MemServer#(addrWidth, dataWidth))
    
    provisos (Add#(1,a__,dataWidth),
 	     Add#(b__, TSub#(addrWidth, 12), 32),
@@ -99,13 +104,14 @@ module mkMemServerConfig#(DmaIndication dmaIndication,
 	     Add#(f__, c__, ObjectOffsetSize),
 	     Add#(g__, addrWidth, 40),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     MemServerInternals#(desc, addrWidth, dataWidth));
+	     Add#(h__, TLog#(numReadTags), 6),
+	     Add#(i__, TLog#(numWriteTags), 6));
    
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
-
-   MemReadInternal#(desc, addrWidth, dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0]);
-   MemWriteInternal#(desc, addrWidth, dataWidth) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1]);
+      
+   MemReadInternal#(addrWidth, dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0], readTagGen);
+   MemWriteInternal#(addrWidth, dataWidth) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1], writeTagGen);
    
    rule sglistEntry;
       addrReqFifo.deq;
@@ -156,3 +162,5 @@ module mkMemServerConfig#(DmaIndication dmaIndication,
    endinterface
 endmodule
 
+		 
+		 
