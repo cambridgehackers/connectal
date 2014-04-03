@@ -76,8 +76,10 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	       jj <= 1;
 	       k0j <= 0;
 	       k1j <= 0;
+      /* if backwards, A[aStartReg + aLenReg - i] */
 	       strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: ii-1, datain: 0});
 	       /* Read b[j] */
+	       /* if backwards, [bStartReg + bLenReg - 1]
 	       strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: 0, datain: 0});
 	       /* start read of k0j */
 	       matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: 1, datain: 0});
@@ -104,7 +106,8 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		  action
 		     let tmp = ?;
 		     /* Read b[j] */
-		     strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj-1, datain: 0});
+		     /* ib backwards B[bStartReg + bLenReg - jj] */
+		     strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: jj, datain: 0});
 		     if (aData == bData)
 			tmp = k0jm1 + 1;
 		     else
