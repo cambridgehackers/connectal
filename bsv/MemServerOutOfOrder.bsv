@@ -33,6 +33,50 @@ import PortalMemory::*;
 import SGList::*;
 import MemServerInternal::*;
 		 		 
+interface TagGen#(numeric type numTags);
+   method ActionValue#(Bit#(TLog#(numTags))) get_tag(ClientId client, Bit#(6) client_tag);
+   method Action return_tag(Bit#(TLog#(numTags)) tag);
+endinterface
+
+module mkTagGenOO(TagGen#(numTags));
+   
+   Vector#(numTags, Reg#(Bit#(4))) tag_regs <- replicateM(mkReg(0));
+   Vector#(numTags, Reg#(Maybe#(ClientId))) client_map <- replicateM(mkReg(tagged Invalid));
+   Maybe#(UInt#(TLog#(numTags))) next_free = findElem(0, readVReg(tag_regs));
+   
+   method ActionValue#(Bit#(TLog#(numTags))) get_tag(ClientId client, Bit#(6) client_tag);
+      let rv = case (findElem(tagged Valid client, readVReg(client_map))) matches
+		  tagged Valid .tag: return (_when_(tag_regs[tag] < maxBound) (tag));
+		  tagged Invalid: return (_when_(isValid(next_free)) (fromMaybe(?, next_free)));
+	       endcase;
+      client_map[rv] <= tagged Valid client;
+      tag_regs[rv] <= tag_regs[rv]+1;
+      return pack(rv);
+   endmethod      
+   
+   method Action return_tag(Bit#(TLog#(numTags)) tag);
+      tag_regs[tag] <= tag_regs[tag]-1;
+   endmethod
+   
+endmodule
+
+typedef struct {ObjectRequest req;
+		ClientId client; } LRec#(numeric type addrWidth) deriving(Bits);
+
+typedef struct {ObjectRequest req;
+		Bit#(addrWidth) pa;
+		Bit#(6) rename_tag;
+		ClientId client; } RRec#(numeric type addrWidth) deriving(Bits);
+
+typedef struct {ObjectRequest req;
+		Bit#(6) rename_tag;
+		ClientId client; } DRec#(numeric type addrWidth) deriving(Bits);
+
+typedef struct {Bit#(6) orig_tag;
+		ClientId client; } RResp#(numeric type addrWidth) deriving(Bits);
+
+typedef 32 NumTags;
+
 instance MemServerInternals#(OutOfOrderCompletion, addrWidth, dataWidth)	 
 provisos(Add#(b__, addrWidth, 64), 
 	 Add#(c__, 12, addrWidth), 
@@ -40,19 +84,20 @@ provisos(Add#(b__, addrWidth, 64),
 	 Div#(dataWidth,8,dataWidthBytes),
 	 Mul#(dataWidthBytes,8,dataWidth),
 	 Log#(dataWidthBytes,beatShift));
-   
+
 module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients, 
 			  DmaIndication dmaIndication,
 			  Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl) 
    (MemReadInternal#(OutOfOrderCompletion, addrWidth, dataWidth));
    
-   FIFO#(IRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
-   FIFO#(IRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
-   Vector#(numReadClients, FIFO#(ObjectRequest)) dreqFifos <- replicateM(mkSizedFIFO(32)); // too big? (mdk)
-   Vector#(numReadClients, Reg#(Bit#(8)))        burstRegs <- replicateM(mkReg(0));
-   Vector#(numReadClients, Reg#(Bit#(64)))      beatCounts <- replicateM(mkReg(0));
+   FIFO#(LRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
+   FIFO#(RRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
+   Vector#(NumTags, FIFO#(DRec#(addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(32)); // too big (mdk)
+   Vector#(NumTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
+   Vector#(numReadClients, Reg#(Bit#(64)))  beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
-
+   TagGen#(NumTags) tag_gen <- mkTagGenOO;
+      
 `ifdef	INTERVAL_ANAlYSIS
    Reg#(Bit#(32)) bin1 <- mkReg(0);
    Reg#(Bit#(32)) bin4 <- mkReg(0);
@@ -66,12 +111,12 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 `endif
       
    for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
-      rule loadChannel;
+      rule loadClient;
 	 ObjectRequest req <- readClients[selectReg].readReq.get();
 	 if (bad_pointer(req.pointer))
 	    dmaIndication.badPointer(req.pointer);
 	 else begin
-	    lreqFifo.enq(IRec{req:req, pa:?, chan:fromInteger(selectReg)});
+	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
 	    sgl.request.put(tuple2(truncate(req.pointer),req.offset));
 	 end
       endrule
@@ -79,7 +124,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
    rule checkSglResp;
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
-      let chan = lreqFifo.first.chan;
+      let client = lreqFifo.first.client;
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
@@ -89,7 +134,8 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
       else begin
 	 if (False && physAddr[31:24] != 0)
 	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 reqFifo.enq(IRec{req:req, pa:physAddr, chan:chan});
+	 let rename_tag <- tag_gen.get_tag(client, req.tag);
+	 reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
       end
    endrule
 
@@ -101,11 +147,12 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 	       reqFifo.deq;
 	       let req = reqFifo.first.req;
 	       let physAddr = reqFifo.first.pa;
-	       let chan = reqFifo.first.chan;
+	       let client = reqFifo.first.client;
+	       let rename_tag = reqFifo.first.rename_tag;
 	       if (False && physAddr[31:24] != 0)
 		  $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	       dreqFifos[chan].enq(req);
-	       rv = MemRequest{addr:physAddr, burstLen:req.burstLen, tag:chan};
+	       dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag});
+	       rv = MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	    end
 	    return rv;
 	 endmethod
@@ -113,16 +160,19 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
       interface Put readData;
 	 method Action put(MemData#(dataWidth) response);
 	    if (valueOf(numReadClients) > 0) begin
-	       let chan = response.tag;
-	       let req = dreqFifos[chan].first;
-	       let burstLen = burstRegs[chan];
-	       readClients[chan].readData.put(ObjectData { data: response.data, tag: req.tag});
+	       dynamicAssert(response.tag == dreqFifos[response.tag].first.rename_tag, "mkMemReadInternal");
+	       let client = dreqFifos[response.tag].first.client;
+	       let req = dreqFifos[response.tag].first.req;
+	       let burstLen = burstRegs[response.tag];
+	       readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
 	       if (burstLen == 0)
 		  burstLen = req.burstLen >> beat_shift;
-	       if (burstLen == 1)
-		  dreqFifos[chan].deq();
-	       burstRegs[chan] <= burstLen-1;
-	       beatCounts[chan] <= beatCounts[chan]+1;
+	       if (burstLen == 1) begin
+		  dreqFifos[client].deq();
+		  tag_gen.return_tag(truncate(response.tag));
+	       end
+	       burstRegs[response.tag] <= burstLen-1;
+	       beatCounts[client] <= beatCounts[client]+1;
 	    end
 `ifdef INTERVAL_ANAlYSIS
 	    last_resp_read <= cycle_cnt;
@@ -157,21 +207,22 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 			   Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl)
    (MemWriteInternal#(OutOfOrderCompletion, addrWidth, dataWidth));
    
-   FIFO#(IRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
-   FIFO#(IRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
-   FIFO#(IRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
-   Vector#(numWriteClients, FIFO#(Bit#(6))) respFifos <- replicateM(mkSizedFIFO(32)); // too big? (mdk)
+   FIFO#(LRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
+   FIFO#(RRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
+   FIFO#(DRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
+   Vector#(NumTags, FIFO#(RResp#(addrWidth))) respFifos <- replicateM(mkSizedFIFO(32)); // too big (mdk)
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
    Vector#(numWriteClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
+   TagGen#(NumTags) tag_gen <- mkTagGenOO;
    
    for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
-       rule loadChannel;
+       rule loadClient;
 	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
 	  if (bad_pointer(req.pointer))
 	     dmaIndication.badPointer(req.pointer);
 	  else begin
-	     lreqFifo.enq(IRec{req:req, pa:?, chan:fromInteger(selectReg)});
+	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
 	     sgl.request.put(tuple2(truncate(req.pointer),req.offset));
 	  end
        endrule
@@ -179,7 +230,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
    rule checkSglResp;
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
-      let chan = lreqFifo.first.chan;
+      let client = lreqFifo.first.client;
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
@@ -187,7 +238,8 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
       end
       else begin
-	 reqFifo.enq(IRec{req:req, pa:physAddr, chan:chan});
+	 let rename_tag <- tag_gen.get_tag(client, req.tag);
+	 reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
       end
    endrule
 
@@ -196,29 +248,31 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	 method ActionValue#(MemRequest#(addrWidth)) get();
 	    let req = reqFifo.first.req;
 	    let physAddr = reqFifo.first.pa;
-	    let chan = reqFifo.first.chan;
+	    let client = reqFifo.first.client;
+	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
-	    dreqFifo.enq(reqFifo.first);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:chan};
+	    dreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag});
+	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
 	 endmethod
       endinterface
       interface Get writeData;
 	 method ActionValue#(MemData#(dataWidth)) get() if (valueOf(numWriteClients) > 0);
 	    let rv = ?;
 	    if (valueOf(numWriteClients) > 0) begin
-	       let chan = dreqFifo.first.chan;
+	       let client = dreqFifo.first.client;
 	       let req = dreqFifo.first.req;
-	       ObjectData#(dataWidth) tagdata <- writeClients[chan].writeData.get();
+	       let rename_tag =dreqFifo.first.rename_tag;
+	       ObjectData#(dataWidth) tagdata <- writeClients[client].writeData.get();
 	       let burstLen = burstReg;
 	       if (burstLen == 0)
 		  burstLen = req.burstLen >> beat_shift;
 	       burstReg <= burstLen-1;
-	       beatCounts[chan] <= beatCounts[chan]+1;
+	       beatCounts[client] <= beatCounts[client]+1;
 	       if (burstLen == 1) begin
 		  dreqFifo.deq();
-		  respFifos[chan].enq(req.tag);
+		  respFifos[rename_tag].enq(RResp{orig_tag:req.tag, client:client});
 	       end
-	       rv = MemData { data: tagdata.data,  tag:chan };
+	       rv = MemData { data: tagdata.data,  tag:rename_tag };
 	    end
 	    return rv;
 	 endmethod
@@ -226,10 +280,11 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
       interface Put writeDone;
 	 method Action put(Bit#(6) resp);
 	    if (valueOf(numWriteClients) > 0) begin
-	       let chan = resp;
-	       let orig_tag = respFifos[resp].first;
-	       respFifos[chan].deq;
-	       writeClients[chan].writeDone.put(orig_tag);
+	       let client = respFifos[resp].first.client;
+	       let orig_tag = respFifos[resp].first.orig_tag;
+	       respFifos[resp].deq;
+	       writeClients[client].writeDone.put(orig_tag);
+	       tag_gen.return_tag(truncate(resp));
 	    end
 	 endmethod
       endinterface

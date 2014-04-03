@@ -53,7 +53,6 @@ endtypeclass
 function Bool bad_pointer(ObjectPointer p);
    return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
 endfunction
-		 
-typedef struct {ObjectRequest req;
-		Bit#(addrWidth) pa;
-		Bit#(6) chan; } IRec#(numeric type addrWidth) deriving(Bits);
+
+typedef 16 MaxNumClients;		 
+typedef Bit#(TLog#(MaxNumClients)) ClientId;

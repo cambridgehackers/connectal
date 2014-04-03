@@ -30,6 +30,7 @@ testnames = echo             \
 	    hdmidisplay      \
 	    imageon          \
             memcpy_buff      \
+            memcpy_buff_oo   \
             memcpy_nobuff    \
             memread_buff     \
             memread_nobuff   \
@@ -49,13 +50,14 @@ testnames = echo             \
             flowcontrol      \
             bluescope        \
             bscan            \
-	    splice  \
+	    splice           \
 	    maxcommonsubseq  \
-	    fib  \
+	    fib              \
 
 
 
 memtests =  memcpy_buff      \
+	    memcpy_buff_oo   \
             memcpy_nobuff    \
             memread_buff     \
             memread_nobuff   \
