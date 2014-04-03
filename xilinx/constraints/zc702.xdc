@@ -139,164 +139,167 @@ set_property PACKAGE_PIN "T16" [get_ports "hdmi_data[15]"]
 set_property slew "SLOW" [get_ports "hdmi_data[15]"]
 set_property PIO_DIRECTION "OUTPUT" [get_ports "hdmi_data[15]"]
 
-set_property iostandard "LVCMOS25" [get_ports "fmc_imageon_video_clk1"]
-set_property PACKAGE_PIN "Y18" [get_ports "fmc_imageon_video_clk1"]
-set_property slew "SLOW" [get_ports "fmc_imageon_video_clk1"]
-set_property PIO_DIRECTION "INPUT" [get_ports "fmc_imageon_video_clk1"]
-
-set_property iostandard "LVCMOS25" [get_ports "fmc_imageon_iic_1_rst_pin"]
-set_property PACKAGE_PIN "Y16" [get_ports "fmc_imageon_iic_1_rst_pin"]
-set_property slew "SLOW" [get_ports "fmc_imageon_iic_1_rst_pin"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "fmc_imageon_iic_1_rst_pin"]
-
-set_property iostandard "LVCMOS25" [get_ports "fmc_imageon_iic_1_scl"]
-set_property PACKAGE_PIN "AB14" [get_ports "fmc_imageon_iic_1_scl"]
-set_property slew "SLOW" [get_ports "fmc_imageon_iic_1_scl"]
-set_property PIO_DIRECTION "BIDIR" [get_ports "fmc_imageon_iic_1_scl"]
-
-set_property iostandard "LVCMOS25" [get_ports "fmc_imageon_iic_1_sda"]
-set_property PACKAGE_PIN "AB15" [get_ports "fmc_imageon_iic_1_sda"]
-set_property slew "SLOW" [get_ports "fmc_imageon_iic_1_sda"]
-set_property PIO_DIRECTION "BIDIR" [get_ports "fmc_imageon_iic_1_sda"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_clk_pll"]
-set_property PACKAGE_PIN "V22" [get_ports "io_vita_clk_pll"]
-set_property slew "SLOW" [get_ports "io_vita_clk_pll"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_clk_pll"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_reset_n"]
-set_property PACKAGE_PIN "AA18" [get_ports "io_vita_reset_n"]
-set_property slew "SLOW" [get_ports "io_vita_reset_n"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_reset_n"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_trigger[2]"]
-set_property PACKAGE_PIN "W22" [get_ports "io_vita_trigger[2]"]
-set_property slew "SLOW" [get_ports "io_vita_trigger[2]"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_trigger[2]"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_trigger[1]"]
-set_property PACKAGE_PIN "T22" [get_ports "io_vita_trigger[1]"]
-set_property slew "SLOW" [get_ports "io_vita_trigger[1]"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_trigger[1]"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_trigger[0]"]
-set_property PACKAGE_PIN "U22" [get_ports "io_vita_trigger[0]"]
-set_property slew "SLOW" [get_ports "io_vita_trigger[0]"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_trigger[0]"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_monitor[1]"]
-set_property PACKAGE_PIN "AA13" [get_ports "io_vita_monitor[1]"]
-set_property slew "SLOW" [get_ports "io_vita_monitor[1]"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_monitor[1]"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_monitor[0]"]
-set_property PACKAGE_PIN "Y13" [get_ports "io_vita_monitor[0]"]
-set_property slew "SLOW" [get_ports "io_vita_monitor[0]"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_monitor[0]"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_spi_sclk"]
-set_property PACKAGE_PIN "W15" [get_ports "io_vita_spi_sclk"]
-set_property slew "SLOW" [get_ports "io_vita_spi_sclk"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_spi_sclk"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_spi_ssel_n"]
-set_property PACKAGE_PIN "Y15" [get_ports "io_vita_spi_ssel_n"]
-set_property slew "SLOW" [get_ports "io_vita_spi_ssel_n"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_spi_ssel_n"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_spi_mosi"]
-set_property PACKAGE_PIN "Y14" [get_ports "io_vita_spi_mosi"]
-set_property slew "SLOW" [get_ports "io_vita_spi_mosi"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_spi_mosi"]
-
-set_property iostandard "LVCMOS25" [get_ports "io_vita_spi_miso"]
-set_property PACKAGE_PIN "AA14" [get_ports "io_vita_spi_miso"]
-set_property slew "SLOW" [get_ports "io_vita_spi_miso"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_spi_miso"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_clk_out_p"]
-set_property PACKAGE_PIN "Y19" [get_ports "io_vita_clk_out_p"]
-set_property slew "SLOW" [get_ports "io_vita_clk_out_p"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_clk_out_p"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_clk_out_p"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_clk_out_n"]
-set_property PACKAGE_PIN "AA19" [get_ports "io_vita_clk_out_n"]
-set_property slew "SLOW" [get_ports "io_vita_clk_out_n"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_clk_out_n"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_clk_out_n"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_sync_p"]
-set_property PACKAGE_PIN "Y20" [get_ports "io_vita_sync_p"]
-set_property slew "SLOW" [get_ports "io_vita_sync_p"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_sync_p"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_sync_p"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_sync_n"]
-set_property PACKAGE_PIN "Y21" [get_ports "io_vita_sync_n"]
-set_property slew "SLOW" [get_ports "io_vita_sync_n"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_sync_n"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_sync_n"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_data_p[0]"]
-set_property PACKAGE_PIN "U15" [get_ports "io_vita_data_p[0]"]
-set_property slew "SLOW" [get_ports "io_vita_data_p[0]"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_p[0]"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_p[0]"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_data_p[1]"]
-set_property PACKAGE_PIN "T21" [get_ports "io_vita_data_p[1]"]
-set_property slew "SLOW" [get_ports "io_vita_data_p[1]"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_p[1]"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_p[1]"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_data_p[2]"]
-set_property PACKAGE_PIN "AA17" [get_ports "io_vita_data_p[2]"]
-set_property slew "SLOW" [get_ports "io_vita_data_p[2]"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_p[2]"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_p[2]"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_data_p[3]"]
-set_property PACKAGE_PIN "AB19" [get_ports "io_vita_data_p[3]"]
-set_property slew "SLOW" [get_ports "io_vita_data_p[3]"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_p[3]"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_p[3]"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_data_n[0]"]
-set_property PACKAGE_PIN "U16" [get_ports "io_vita_data_n[0]"]
-set_property slew "SLOW" [get_ports "io_vita_data_n[0]"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_n[0]"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_n[0]"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_data_n[1]"]
-set_property PACKAGE_PIN "U21" [get_ports "io_vita_data_n[1]"]
-set_property slew "SLOW" [get_ports "io_vita_data_n[1]"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_n[1]"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_n[1]"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_data_n[2]"]
-set_property PACKAGE_PIN "AB17" [get_ports "io_vita_data_n[2]"]
-set_property slew "SLOW" [get_ports "io_vita_data_n[2]"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_n[2]"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_n[2]"]
-
-set_property iostandard "LVDS_25" [get_ports "io_vita_data_n[3]"]
-set_property PACKAGE_PIN "AB20" [get_ports "io_vita_data_n[3]"]
-set_property slew "SLOW" [get_ports "io_vita_data_n[3]"]
-set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_n[3]"]
-
-set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_n[3]"]
+# FMC pin mapping moved to board files + project specific FMC pin usage map
+# (processed by scripts/generate-constraints.py
+#
+#set_property iostandard "LVCMOS25" [get_ports "fmc_imageon_video_clk1"]
+#set_property PACKAGE_PIN "Y18" [get_ports "fmc_imageon_video_clk1"]
+#set_property slew "SLOW" [get_ports "fmc_imageon_video_clk1"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "fmc_imageon_video_clk1"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "fmc_imageon_iic_1_rst_pin"]
+#set_property PACKAGE_PIN "Y16" [get_ports "fmc_imageon_iic_1_rst_pin"]
+#set_property slew "SLOW" [get_ports "fmc_imageon_iic_1_rst_pin"]
+#set_property PIO_DIRECTION "OUTPUT" [get_ports "fmc_imageon_iic_1_rst_pin"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "fmc_imageon_iic_1_scl"]
+#set_property PACKAGE_PIN "AB14" [get_ports "fmc_imageon_iic_1_scl"]
+#set_property slew "SLOW" [get_ports "fmc_imageon_iic_1_scl"]
+#set_property PIO_DIRECTION "BIDIR" [get_ports "fmc_imageon_iic_1_scl"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "fmc_imageon_iic_1_sda"]
+#set_property PACKAGE_PIN "AB15" [get_ports "fmc_imageon_iic_1_sda"]
+#set_property slew "SLOW" [get_ports "fmc_imageon_iic_1_sda"]
+#set_property PIO_DIRECTION "BIDIR" [get_ports "fmc_imageon_iic_1_sda"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_clk_pll"]
+#set_property PACKAGE_PIN "V22" [get_ports "io_vita_clk_pll"]
+#set_property slew "SLOW" [get_ports "io_vita_clk_pll"]
+#set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_clk_pll"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_reset_n"]
+#set_property PACKAGE_PIN "AA18" [get_ports "io_vita_reset_n"]
+#set_property slew "SLOW" [get_ports "io_vita_reset_n"]
+#set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_reset_n"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_trigger[2]"]
+#set_property PACKAGE_PIN "W22" [get_ports "io_vita_trigger[2]"]
+#set_property slew "SLOW" [get_ports "io_vita_trigger[2]"]
+#set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_trigger[2]"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_trigger[1]"]
+#set_property PACKAGE_PIN "T22" [get_ports "io_vita_trigger[1]"]
+#set_property slew "SLOW" [get_ports "io_vita_trigger[1]"]
+#set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_trigger[1]"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_trigger[0]"]
+#set_property PACKAGE_PIN "U22" [get_ports "io_vita_trigger[0]"]
+#set_property slew "SLOW" [get_ports "io_vita_trigger[0]"]
+#set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_trigger[0]"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_monitor[1]"]
+#set_property PACKAGE_PIN "AA13" [get_ports "io_vita_monitor[1]"]
+#set_property slew "SLOW" [get_ports "io_vita_monitor[1]"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_monitor[1]"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_monitor[0]"]
+#set_property PACKAGE_PIN "Y13" [get_ports "io_vita_monitor[0]"]
+#set_property slew "SLOW" [get_ports "io_vita_monitor[0]"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_monitor[0]"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_spi_sclk"]
+#set_property PACKAGE_PIN "W15" [get_ports "io_vita_spi_sclk"]
+#set_property slew "SLOW" [get_ports "io_vita_spi_sclk"]
+#set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_spi_sclk"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_spi_ssel_n"]
+#set_property PACKAGE_PIN "Y15" [get_ports "io_vita_spi_ssel_n"]
+#set_property slew "SLOW" [get_ports "io_vita_spi_ssel_n"]
+#set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_spi_ssel_n"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_spi_mosi"]
+#set_property PACKAGE_PIN "Y14" [get_ports "io_vita_spi_mosi"]
+#set_property slew "SLOW" [get_ports "io_vita_spi_mosi"]
+#set_property PIO_DIRECTION "OUTPUT" [get_ports "io_vita_spi_mosi"]
+#
+#set_property iostandard "LVCMOS25" [get_ports "io_vita_spi_miso"]
+#set_property PACKAGE_PIN "AA14" [get_ports "io_vita_spi_miso"]
+#set_property slew "SLOW" [get_ports "io_vita_spi_miso"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_spi_miso"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_clk_out_p"]
+#set_property PACKAGE_PIN "Y19" [get_ports "io_vita_clk_out_p"]
+#set_property slew "SLOW" [get_ports "io_vita_clk_out_p"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_clk_out_p"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_clk_out_p"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_clk_out_n"]
+#set_property PACKAGE_PIN "AA19" [get_ports "io_vita_clk_out_n"]
+#set_property slew "SLOW" [get_ports "io_vita_clk_out_n"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_clk_out_n"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_clk_out_n"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_sync_p"]
+#set_property PACKAGE_PIN "Y20" [get_ports "io_vita_sync_p"]
+#set_property slew "SLOW" [get_ports "io_vita_sync_p"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_sync_p"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_sync_p"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_sync_n"]
+#set_property PACKAGE_PIN "Y21" [get_ports "io_vita_sync_n"]
+#set_property slew "SLOW" [get_ports "io_vita_sync_n"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_sync_n"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_sync_n"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_data_p[0]"]
+#set_property PACKAGE_PIN "U15" [get_ports "io_vita_data_p[0]"]
+#set_property slew "SLOW" [get_ports "io_vita_data_p[0]"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_p[0]"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_p[0]"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_data_p[1]"]
+#set_property PACKAGE_PIN "T21" [get_ports "io_vita_data_p[1]"]
+#set_property slew "SLOW" [get_ports "io_vita_data_p[1]"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_p[1]"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_p[1]"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_data_p[2]"]
+#set_property PACKAGE_PIN "AA17" [get_ports "io_vita_data_p[2]"]
+#set_property slew "SLOW" [get_ports "io_vita_data_p[2]"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_p[2]"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_p[2]"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_data_p[3]"]
+#set_property PACKAGE_PIN "AB19" [get_ports "io_vita_data_p[3]"]
+#set_property slew "SLOW" [get_ports "io_vita_data_p[3]"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_p[3]"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_p[3]"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_data_n[0]"]
+#set_property PACKAGE_PIN "U16" [get_ports "io_vita_data_n[0]"]
+#set_property slew "SLOW" [get_ports "io_vita_data_n[0]"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_n[0]"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_n[0]"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_data_n[1]"]
+#set_property PACKAGE_PIN "U21" [get_ports "io_vita_data_n[1]"]
+#set_property slew "SLOW" [get_ports "io_vita_data_n[1]"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_n[1]"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_n[1]"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_data_n[2]"]
+#set_property PACKAGE_PIN "AB17" [get_ports "io_vita_data_n[2]"]
+#set_property slew "SLOW" [get_ports "io_vita_data_n[2]"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_n[2]"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_n[2]"]
+#
+#set_property iostandard "LVDS_25" [get_ports "io_vita_data_n[3]"]
+#set_property PACKAGE_PIN "AB20" [get_ports "io_vita_data_n[3]"]
+#set_property slew "SLOW" [get_ports "io_vita_data_n[3]"]
+#set_property PIO_DIRECTION "INPUT" [get_ports "io_vita_data_n[3]"]
+#
+#set_property DIFF_TERM "TRUE" [get_ports "io_vita_data_n[3]"]
 
 set_property iostandard "LVCMOS25" [get_ports "XADC_gpio[0]"]
 set_property PACKAGE_PIN "H17" [get_ports "XADC_gpio[0]"]

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
 # invalidate existing device (so that scan will look for new one)
-BLUEDEVICE=`lspci -d 1be7:b100 | sed -e "s/ .*//"`
+BLUEDEVICE=`lspci -d 1be7:c100 | sed -e "s/ .*//"`
 if [ "$BLUEDEVICE" != "" ]; then
     sudo sh -c "echo 1 >/sys/bus/pci/devices/0000:$BLUEDEVICE/remove"
 fi
@@ -11,4 +11,4 @@ fi
 # it is still registered (and causing a segv on the probe call)
 sudo rmmod pcieportal
 sudo sh -c "echo 1 >/sys/bus/pci/rescan"
-#lspci -vv -d 1be7:b100
+#lspci -vv -d 1be7:c100
