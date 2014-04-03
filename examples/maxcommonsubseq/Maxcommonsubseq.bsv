@@ -123,10 +123,12 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    FIFOF#(void) mReady <- mkFIFOF;
 
    Reg#(Bool) hirschARunning <- mkReg(False);
-   Reg#(Bool) hirschBRunning <- mkReg(False);
+   Reg#(Bool) hirschB0Running <- mkReg(False);
+   Reg#(Bool) hirschB1Running <- mkReg(False);
 
    MCSAlgorithm hirschA <- mkHirschA(strA.portA, strB.portA, matL.portA);
-   MCSAlgorithm hirschB <- mkHirschB(strA.portA, strB.portA, matL.portA, 1);
+   MCSAlgorithm hirschB1 <- mkHirschB(strA.portA, strB.portA, matL.portA, 1);
+   MCSAlgorithm hirschB0 <- mkHirschB(strA.portA, strB.portA, matL.portA, 0);
    
    // create BRAM Write client for matL
 
@@ -155,9 +157,14 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       indication.searchResult(22);
       endrule
    
-   rule hirschB_completion (hirschBRunning && hirschB.fsm.done);
+   rule hirschB0_completion (hirschB0Running && hirschB0.fsm.done);
       hirschBRunning <= False;
       indication.searchResult(23);
+      endrule
+   
+   rule hirschB1_completion (hirschB1Running && hirschB1.fsm.done);
+      hirschBRunning <= False;
+      indication.searchResult(24);
       endrule
    
    
@@ -181,7 +188,7 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       l2n.start(strPointer, zeroExtend(dest), bram_start_idx, bram_finish_idx);
    endmethod
 
-   method Action start(Bit#(32) alg);
+   method Action start(Bit#(32) alg, Bit#(32) dir);
       $display ("start %d", alg);
       case (alg) 
 	 0: begin
@@ -192,13 +199,20 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 	       hirschARunning <= True;
 	       end
 	 1: begin
-	       hirschB.setupA(0, aLenReg);
-	       hirschB.setupB(0, bLenReg);
-	       hirschB.fsm.start();
-	       hirschB.setupL(0);
-	       hirschBRunning <= True;
+	       hirschB0.setupA(0, aLenReg);
+	       hirschB0.setupB(0, bLenReg);
+	       hirschB0.fsm.start();
+	       hirschB0.setupL(0);
+	       hirschB0Running <= True;
 	       end
-//	 2: hirschC.start();
+	 2: begin
+	       hirschB1.setupA(0, aLenReg);
+	       hirschB1.setupB(0, bLenReg);
+	       hirschB1.fsm.start();
+	       hirschB1.setupL(0);
+	       hirschB1Running <= True;
+	       end
+//	 3: hirschC.start();
       endcase
    endmethod
 
