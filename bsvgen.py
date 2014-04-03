@@ -137,7 +137,7 @@ wrapperCtrlTemplate='''
 	    v = requestFiredCount;
 	if (addr == 14'h004)
 	    v = outOfRangeWriteCount;
-%(slaveReadState)s
+
         slaveReadDataFifo.enq(v);
     endrule
     rule readWriteFifo if (slaveReadAddrFifo.first[14] == 0);
@@ -234,22 +234,6 @@ proxyInterruptImplTemplate='''
     endinterface
 '''
 
-
-slaveReadStateTemplate='''
-	if (addr == 14'h01C)
-	    v = zeroExtend(slaveReadAddrReg);
-	if (addr == 14'h020)
-	    v = zeroExtend(slaveWriteAddrReg);
-	if (addr == 14'h024)
-	    v = zeroExtend(slaveReadTagReg);
-	if (addr == 14'h028)
-	    v = zeroExtend(slaveWriteTagReg);
-	if (addr == 14'h02C)
-	    v = zeroExtend(slaveReadBurstCountReg);
-	if (addr == 14'h030)
-	    v = zeroExtend(slaveWriteBurstCountReg);
-
-'''
 
 slaveStateTemplate='''
     // state used to implement Slave interface
@@ -367,7 +351,7 @@ proxyCtrlTemplate='''
             else 
               v = 0;
         end
-%(slaveReadState)s
+
         slaveReadDataFifo.enq(v);
     endrule
 
@@ -656,7 +640,6 @@ class InterfaceMixin:
             'slaveFifoSelHidden'  : '0' if proxy else '1',
             }
 
-        substs['slaveReadState'] = '' if not expose else slaveReadStateTemplate % substs
         substs['portalIfcInterrupt'] = 'interface ReadOnly interrupt = p.interrupt;' if not proxy else proxyInterruptImplTemplate
         substs['ifcType'] = 'truncate(128\'h%s)' % m.hexdigest()
         substs['slaveState'] = slaveStateTemplate % substs
