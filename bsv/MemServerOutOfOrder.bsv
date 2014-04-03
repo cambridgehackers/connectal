@@ -92,7 +92,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
    
    FIFO#(LRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(RRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
-   Vector#(NumTags, FIFO#(DRec#(addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(32)); // too big (mdk)
+   Vector#(NumTags, FIFO#(DRec#(addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(4));
    Vector#(NumTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
    Vector#(numReadClients, Reg#(Bit#(64)))  beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
@@ -210,7 +210,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
    FIFO#(LRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(RRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
    FIFO#(DRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
-   Vector#(NumTags, FIFO#(RResp#(addrWidth))) respFifos <- replicateM(mkSizedFIFO(32)); // too big (mdk)
+   Vector#(NumTags, FIFO#(RResp#(addrWidth))) respFifos <- replicateM(mkSizedFIFO(4));
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
    Vector#(numWriteClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
