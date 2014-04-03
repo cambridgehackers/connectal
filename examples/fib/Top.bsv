@@ -52,8 +52,8 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    FibRequestWrapper fibRequestWrapper <- mkFibRequestWrapper(FibRequest,fibRequest);
    
    Vector#(2,StdPortal) portals;
-   portals[0] = fibIndicationProxy.portalIfc;
-   portals[1] = fibRequestWrapper.portalIfc; 
+   portals[0] = fibRequestWrapper.portalIfc; 
+   portals[1] = fibIndicationProxy.portalIfc;
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
