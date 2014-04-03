@@ -1,6 +1,6 @@
 CC ?= gcc
 
-xbsvutil: xbsvutil.c ../../drivers/pcieportal/bluenoc.h
+xbsvutil: xbsvutil.c ../../drivers/pcieportal/pcieportal.h
 	$(CC) -g -O2 -o xbsvutil xbsvutil.c
 
 .PHONY: install
