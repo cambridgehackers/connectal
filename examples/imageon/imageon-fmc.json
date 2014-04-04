@@ -45,10 +45,14 @@
     },
     "*io_vita_clk_out_p": {
 	"PIO_DIRECTION": "INPUT",
+	"IOSTANDARD": "LVDS_25",
+	"DIFF_TERM": "TRUE",
 	"fmc": "LA00_p_CC"
     },
     "*io_vita_clk_out_n": {
 	"PIO_DIRECTION": "INPUT",
+	"IOSTANDARD": "LVDS_25",
+	"DIFF_TERM": "TRUE",
 	"fmc": "LA00_n_CC"
     },
     "*io_vita_sync_p": {
