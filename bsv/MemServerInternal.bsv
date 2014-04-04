@@ -46,62 +46,71 @@ function Bool bad_pointer(ObjectPointer p);
    return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
 endfunction
 
-typedef 16 MaxNumClients;		 
-typedef Bit#(TLog#(MaxNumClients)) ClientId;
-typedef 32 MaxNumTags;
-typedef Bit#(TLog#(MaxNumTags)) Tag;
-
-interface TagGen;
-   method ActionValue#(Tag) get_tag(ClientId client, Bit#(6) client_tag);
-   method Action return_tag(Tag tag);
+interface TagGen#(numeric type numClients, numeric type numTags);
+   method ActionValue#(Bit#(TLog#(numTags))) get_tag(Bit#(TLog#(numClients)) client, Bit#(6) orig_tag);
+   method Action return_tag(Bit#(TLog#(numTags)) tag);
 endinterface
 
-module mkTagGenOO(TagGen);
-   Vector#(MaxNumTags, Reg#(Bit#(4))) tag_regs <- replicateM(mkReg(0));
-   Vector#(MaxNumTags, Reg#(Maybe#(ClientId))) client_map <- replicateM(mkReg(tagged Invalid));
-   Maybe#(UInt#(TLog#(MaxNumTags))) next_free = findElem(0, readVReg(tag_regs));
-   method ActionValue#(Tag) get_tag(ClientId client, Bit#(6) client_tag);
-      let rv = case (findElem(tagged Valid client, readVReg(client_map))) matches
+module mkTagGenOO(TagGen#(numClients,numTags))
+   provisos(Log#(numTags,tagWidth),
+	    Log#(numClients,clientWidth));
+
+   Vector#(numTags, Reg#(Bit#(tagWidth))) tag_regs <- replicateM(mkReg(0));
+   Vector#(numTags, Reg#(Maybe#(Tuple2#(Bit#(clientWidth),Bit#(6))))) client_map <- replicateM(mkReg(tagged Invalid));
+   Maybe#(UInt#(tagWidth)) next_free = findElem(0, readVReg(tag_regs));
+
+   method ActionValue#(Bit#(tagWidth)) get_tag(Bit#(clientWidth) client, Bit#(6) orig_tag);
+      let rv = case (findElem(tagged Valid tuple2(client,orig_tag), readVReg(client_map))) matches
 		  tagged Valid .tag: return (_when_(tag_regs[tag] < maxBound) (tag));
 		  tagged Invalid: return (_when_(isValid(next_free)) (fromMaybe(?, next_free)));
 	       endcase;
-      client_map[rv] <= tagged Valid client;
+      client_map[rv] <= tagged Valid tuple2(client,orig_tag);
       tag_regs[rv] <= tag_regs[rv]+1;
       return extend(pack(rv));
    endmethod      
-   method Action return_tag(Tag tag);
+
+   method Action return_tag(Bit#(tagWidth) tag);
       tag_regs[tag] <= tag_regs[tag]-1;
+      if (tag_regs[tag]==1)
+	 client_map[tag] <= tagged Invalid;
    endmethod
+
 endmodule
 
-module mkTagGenIO(TagGen);
-   method ActionValue#(Tag) get_tag(ClientId client, Bit#(6) client_tag);
-      return extend(pack(client));
+module mkTagGenIO(TagGen#(numClients,numTags))
+   provisos(Log#(numTags,tagWidth),
+	    Log#(numClients,clientWidth),
+	    Bits#(Bit#(clientWidth), tagWidth));
+
+   method ActionValue#(Bit#(tagWidth)) get_tag(Bit#(clientWidth) client, Bit#(6) client_tag);
+      return pack(client);
    endmethod      
-   method Action return_tag(Tag tag);
+
+   method Action return_tag(Bit#(tagWidth) tag);
       noAction;
    endmethod
+
 endmodule
 
 typedef struct {ObjectRequest req;
-		ClientId client; } LRec#(numeric type addrWidth) deriving(Bits);
+		Bit#(TLog#(numClients)) client; } LRec#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
 
 typedef struct {ObjectRequest req;
 		Bit#(addrWidth) pa;
-		Bit#(6) rename_tag;
-		ClientId client; } RRec#(numeric type addrWidth) deriving(Bits);
+		Bit#(TLog#(numTags)) rename_tag;
+		Bit#(TLog#(numClients)) client; } RRec#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
 
 typedef struct {ObjectRequest req;
-		Bit#(6) rename_tag;
-		ClientId client; } DRec#(numeric type addrWidth) deriving(Bits);
+		Bit#(TLog#(numTags)) rename_tag;
+		Bit#(TLog#(numClients)) client; } DRec#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
 
 typedef struct {Bit#(6) orig_tag;
-		ClientId client; } RResp#(numeric type addrWidth) deriving(Bits);
+		Bit#(TLog#(numClients)) client; } RResp#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
 
-module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients, 
+module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) readClients, 
 			  DmaIndication dmaIndication,
 			  Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
-			  TagGen tag_gen) 
+			  TagGen#(numClients, numTags) tag_gen) 
    (MemReadInternal#(addrWidth, dataWidth))
 
    provisos(Add#(b__, addrWidth, 64), 
@@ -109,13 +118,14 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 	    Add#(1, c__, d__),
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
-	    Log#(dataWidthBytes,beatShift));
+	    Log#(dataWidthBytes,beatShift),
+	    Add#(a__, TLog#(numTags), 6));
    
-   FIFO#(LRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
-   FIFO#(RRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
-   Vector#(MaxNumTags, FIFO#(DRec#(addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(4));
-   Vector#(MaxNumTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
-   Vector#(numReadClients, Reg#(Bit#(64)))  beatCounts <- replicateM(mkReg(0));
+   FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(1);
+   FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkSizedFIFO(1);
+   Vector#(numTags, FIFO#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(4));
+   Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
+   Vector#(numClients, Reg#(Bit#(64)))  beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
       
 `ifdef	INTERVAL_ANAlYSIS
@@ -130,7 +140,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
    endrule
 `endif
       
-   for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
+   for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1)
       rule loadClient;
 	 ObjectRequest req <- readClients[selectReg].readReq.get();
 	 if (bad_pointer(req.pointer))
@@ -161,39 +171,33 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 
    interface MemReadClient read_client;
       interface Get readReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get() if (valueOf(numReadClients) > 0);
-	    let rv = ?;
-	    if (valueOf(numReadClients) > 0) begin
-	       reqFifo.deq;
-	       let req = reqFifo.first.req;
-	       let physAddr = reqFifo.first.pa;
-	       let client = reqFifo.first.client;
-	       let rename_tag = reqFifo.first.rename_tag;
-	       if (False && physAddr[31:24] != 0)
-		  $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	       dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag});
-	       rv = MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
-	    end
-	    return rv;
+	 method ActionValue#(MemRequest#(addrWidth)) get();
+	    reqFifo.deq;
+	    let req = reqFifo.first.req;
+	    let physAddr = reqFifo.first.pa;
+	    let client = reqFifo.first.client;
+	    let rename_tag = reqFifo.first.rename_tag;
+	    if (False && physAddr[31:24] != 0)
+	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
+	    dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag});
+	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
       interface Put readData;
 	 method Action put(MemData#(dataWidth) response);
-	    if (valueOf(numReadClients) > 0) begin
-	       dynamicAssert(response.tag == dreqFifos[response.tag].first.rename_tag, "mkMemReadInternal");
-	       let client = dreqFifos[response.tag].first.client;
-	       let req = dreqFifos[response.tag].first.req;
-	       let burstLen = burstRegs[response.tag];
-	       readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
-	       if (burstLen == 0)
-		  burstLen = req.burstLen >> beat_shift;
-	       if (burstLen == 1) begin
-		  dreqFifos[client].deq();
-		  tag_gen.return_tag(truncate(response.tag));
-	       end
-	       burstRegs[response.tag] <= burstLen-1;
-	       beatCounts[client] <= beatCounts[client]+1;
+	    dynamicAssert(truncate(response.tag) == dreqFifos[response.tag].first.rename_tag, "mkMemReadInternal");
+	    let client = dreqFifos[response.tag].first.client;
+	    let req = dreqFifos[response.tag].first.req;
+	    let burstLen = burstRegs[response.tag];
+	    readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
+	    if (burstLen == 0)
+	       burstLen = req.burstLen >> beat_shift;
+	    if (burstLen == 1) begin
+	       dreqFifos[client].deq();
+	       tag_gen.return_tag(truncate(response.tag));
 	    end
+	    burstRegs[response.tag] <= burstLen-1;
+	    beatCounts[client] <= beatCounts[client]+1;
 `ifdef INTERVAL_ANAlYSIS
 	    last_resp_read <= cycle_cnt;
 	    let interval = cycle_cnt - last_resp_read;
@@ -210,21 +214,21 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
 `ifdef INTERVAL_ANAlYSIS
-	 return DmaDbgRec{x:fromInteger(valueOf(numReadClients)), y:bin1, z:bin4, w:binx};
+	 return DmaDbgRec{x:fromInteger(valueOf(numClients)), y:bin1, z:bin4, w:binx};
 `else
-	 return DmaDbgRec{x:fromInteger(valueOf(numReadClients)), y:0, z:0, w:0};
+	 return DmaDbgRec{x:fromInteger(valueOf(numClients)), y:0, z:0, w:0};
 `endif
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
-	 return (valueOf(numReadClients) > 0 && client < fromInteger(valueOf(numReadClients))) ? beatCounts[client] : 0;
+	 return beatCounts[client];
       endmethod
    endinterface
 endmodule
 
-module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
+module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
 			   DmaIndication dmaIndication, 
 			   Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
-			   TagGen tag_gen)
+			   TagGen#(numClients, numTags) tag_gen)
    (MemWriteInternal#(addrWidth, dataWidth))
    
    provisos(Add#(b__, addrWidth, 64), 
@@ -232,17 +236,18 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	    Add#(1, c__, d__),
 	    Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
-	    Log#(dataWidthBytes,beatShift));
+	    Log#(dataWidthBytes,beatShift),
+	    Add#(a__, TLog#(numTags), 6));
    
-   FIFO#(LRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
-   FIFO#(RRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
-   FIFO#(DRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
-   Vector#(MaxNumTags, FIFO#(RResp#(addrWidth))) respFifos <- replicateM(mkSizedFIFO(4));
+   FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(1);
+   FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkSizedFIFO(1);
+   FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedFIFO(32);
+   Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedFIFO(4));
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
-   Vector#(numWriteClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
+   Vector#(numClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
    
-   for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
+   for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1)
        rule loadClient;
 	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
 	  if (bad_pointer(req.pointer))
@@ -278,49 +283,43 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
 	    dreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag});
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(MemData#(dataWidth)) get() if (valueOf(numWriteClients) > 0);
-	    let rv = ?;
-	    if (valueOf(numWriteClients) > 0) begin
-	       let client = dreqFifo.first.client;
-	       let req = dreqFifo.first.req;
-	       let rename_tag =dreqFifo.first.rename_tag;
-	       ObjectData#(dataWidth) tagdata <- writeClients[client].writeData.get();
-	       let burstLen = burstReg;
-	       if (burstLen == 0)
-		  burstLen = req.burstLen >> beat_shift;
-	       burstReg <= burstLen-1;
-	       beatCounts[client] <= beatCounts[client]+1;
-	       if (burstLen == 1) begin
-		  dreqFifo.deq();
-		  respFifos[rename_tag].enq(RResp{orig_tag:req.tag, client:client});
-	       end
-	       rv = MemData { data: tagdata.data,  tag:rename_tag };
+	 method ActionValue#(MemData#(dataWidth)) get();
+	    let client = dreqFifo.first.client;
+	    let req = dreqFifo.first.req;
+	    let rename_tag =dreqFifo.first.rename_tag;
+	    ObjectData#(dataWidth) tagdata <- writeClients[client].writeData.get();
+	    let burstLen = burstReg;
+	    if (burstLen == 0)
+	       burstLen = req.burstLen >> beat_shift;
+	    burstReg <= burstLen-1;
+	    beatCounts[client] <= beatCounts[client]+1;
+	    if (burstLen == 1) begin
+	       dreqFifo.deq();
+	       respFifos[rename_tag].enq(RResp{orig_tag:req.tag, client:client});
 	    end
-	    return rv;
+	    return MemData { data: tagdata.data,  tag:extend(rename_tag) };
 	 endmethod
       endinterface
       interface Put writeDone;
 	 method Action put(Bit#(6) resp);
-	    if (valueOf(numWriteClients) > 0) begin
-	       let client = respFifos[resp].first.client;
-	       let orig_tag = respFifos[resp].first.orig_tag;
-	       respFifos[resp].deq;
-	       writeClients[client].writeDone.put(orig_tag);
-	       tag_gen.return_tag(truncate(resp));
-	    end
+	    let client = respFifos[resp].first.client;
+	    let orig_tag = respFifos[resp].first.orig_tag;
+	    respFifos[resp].deq;
+	    writeClients[client].writeDone.put(orig_tag);
+	    tag_gen.return_tag(truncate(resp));
 	 endmethod
       endinterface
    endinterface
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
-	 return DmaDbgRec{x:fromInteger(valueOf(numWriteClients)), y:?, z:?, w:?};
+	 return DmaDbgRec{x:fromInteger(valueOf(numClients)), y:?, z:?, w:?};
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
-	 return (valueOf(numWriteClients) > 0 && client < fromInteger(valueOf(numWriteClients))) ? beatCounts[client] : 0;
+	 return beatCounts[client];
       endmethod
    endinterface
 endmodule

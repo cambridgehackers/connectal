@@ -192,6 +192,21 @@ function Get#(t) null_get();
 	   endinterface);
 endfunction
       
+function  ObjectWriteClient#(busWidth) null_object_write_client();
+   return (interface ObjectWriteClient;
+	      interface Get writeReq = null_get;
+	      interface Get writeData = null_get;
+	      interface Put writeDone = null_put;
+	   endinterface);
+endfunction
+
+function  ObjectReadClient#(busWidth) null_object_read_client();
+   return (interface ObjectReadClient;
+	      interface Get readReq = null_get;
+	      interface Put readData = null_put;
+	   endinterface);
+endfunction
+
 function  MemWriteClient#(addrWidth, busWidth) null_mem_write_client();
    return (interface MemWriteClient;
 	      interface Get writeReq = null_get;

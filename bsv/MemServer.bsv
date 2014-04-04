@@ -37,59 +37,70 @@ import MemServerInternal::*;
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
 `endif
 		 
+
+
 interface MemServer#(numeric type addrWidth, numeric type dataWidth);
    interface DmaConfig request;
    interface MemMaster#(addrWidth, dataWidth) master;
 endinterface
-
+		 
+	 
 module mkMemServer#(DmaIndication dmaIndication,
 		    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
    (MemServer#(addrWidth, dataWidth))
-   provisos (Add#(1,a__,dataWidth),
-	     Add#(b__, TSub#(addrWidth, 12), 32),
-	     Add#(c__, 12, addrWidth),
-	     Add#(d__, addrWidth, 64),
-	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
-	     Add#(f__, c__, ObjectOffsetSize),
-	     Add#(g__, addrWidth, 40),
-	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
-   TagGen readTagGen <- mkTagGenIO;
-   TagGen writeTagGen <- mkTagGenIO;
-   let rv <- mkMemServerConfig(dmaIndication, readClients, writeClients, readTagGen, writeTagGen);
+   provisos(Add#(1,a__,dataWidth),
+	    Add#(b__, TSub#(addrWidth, 12), 32),
+	    Add#(c__, 12, addrWidth),
+	    Add#(d__, addrWidth, 64),
+	    Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	    Add#(f__, c__, ObjectOffsetSize),
+	    Add#(g__, addrWidth, 40),
+	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	    Add#(1, numReadClients, augNumReadClients),
+	    Add#(1, numWriteClients, augNumWriteClients),
+	    Add#(h__, TLog#(augNumReadClients), 6),
+	    Add#(i__, TLog#(augNumWriteClients), 6));
+   
+   TagGen#(augNumWriteClients,augNumWriteClients) writeTagGen <- mkTagGenIO;
+   TagGen#(augNumReadClients,augNumReadClients) readTagGen <- mkTagGenIO;
+   let rv <- mkMemServerRW(dmaIndication, readTagGen, writeTagGen, 
+			   cons(null_object_read_client,readClients), 
+			   cons(null_object_write_client,writeClients));
    return rv;
-endmodule   
-		 
+   
+endmodule
+
+   
 module mkMemServerOO#(DmaIndication dmaIndication,
 		      Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 		      Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
    (MemServer#(addrWidth, dataWidth))
-   provisos (Add#(1,a__,dataWidth),
-	     Add#(b__, TSub#(addrWidth, 12), 32),
-	     Add#(c__, 12, addrWidth),
-	     Add#(d__, addrWidth, 64),
-	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
-	     Add#(f__, c__, ObjectOffsetSize),
-	     Add#(g__, addrWidth, 40),
-	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
-   TagGen readTagGen <- mkTagGenOO;
-   TagGen writeTagGen <- mkTagGenOO;
-   let rv <- mkMemServerConfig(dmaIndication, readClients, writeClients, readTagGen, writeTagGen);
+   provisos(Add#(1,a__,dataWidth),
+	    Add#(b__, TSub#(addrWidth, 12), 32),
+	    Add#(c__, 12, addrWidth),
+	    Add#(d__, addrWidth, 64),
+	    Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	    Add#(f__, c__, ObjectOffsetSize),
+	    Add#(g__, addrWidth, 40),
+	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	    Add#(1, numReadClients, augNumReadClients),
+	    Add#(1, numWriteClients, augNumWriteClients));
+
+   TagGen#(augNumWriteClients,32) writeTagGen <- mkTagGenOO;
+   TagGen#(augNumReadClients,32) readTagGen <- mkTagGenOO;
+   let rv <- mkMemServerRW(dmaIndication, readTagGen, writeTagGen, 
+			   cons(null_object_read_client,readClients), 
+			   cons(null_object_write_client,writeClients));
    return rv;
-endmodule   
-		 
-//
-// @brief Creates a Dma controller for Dma read and write clients
-//
-// @param dmaIndication Interface for notifying software
-// @param readClients The read clients.
-// @param writeClients The writeclients.
-//
-module mkMemServerConfig#(DmaIndication dmaIndication,
-			  Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
-			  Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
-			  TagGen readTagGen,
-			  TagGen writeTagGen)
+
+endmodule
+   
+module mkMemServerRW#(DmaIndication dmaIndication,
+		      TagGen#(numReadClients, numReadTags) readTagGen,
+		      TagGen#(numWriteClients,numWriteTags) writeTagGen,
+		      Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
+		      Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
    (MemServer#(addrWidth, dataWidth))
    
    provisos (Add#(1,a__,dataWidth),
@@ -99,13 +110,16 @@ module mkMemServerConfig#(DmaIndication dmaIndication,
 	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
 	     Add#(f__, c__, ObjectOffsetSize),
 	     Add#(g__, addrWidth, 40),
-	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
-   
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     Add#(h__, TLog#(numReadTags), 6),
+	     Add#(j__, TLog#(numWriteTags), 6));
+
+
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
-      
-   MemReadInternal#(addrWidth, dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0], readTagGen);
-   MemWriteInternal#(addrWidth, dataWidth) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1], writeTagGen);
+   
+   MemReadInternal#(addrWidth,dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0], readTagGen);
+   MemWriteInternal#(addrWidth,dataWidth) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1], writeTagGen);
    
    rule sglistEntry;
       addrReqFifo.deq;
@@ -155,6 +169,17 @@ module mkMemServerConfig#(DmaIndication dmaIndication,
       interface MemWriteClient write_client = writer.write_client;
    endinterface
 endmodule
+		 
+		 
+	 
+	
+		 
+		 
+		 
+		 
 
+		 
+		 
+		 
 		 
 		 
