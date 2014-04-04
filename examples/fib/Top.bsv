@@ -40,7 +40,7 @@ import FibIndicationProxy::*;
 import FibRequestWrapper::*;
 
 // defined by user
-import Fib::*;
+import FibWide::*;
 
 typedef enum {FibIndication, FibRequest} IfcNames deriving (Eq,Bits);
 
