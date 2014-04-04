@@ -38,6 +38,10 @@ set_property LOC "%(LOC)s" [get_ports "%(name)s"]
 set_property IOSTANDARD "%(IOSTANDARD)s" [get_ports "%(name)s"]
 set_property PIO_DIRECTION "%(PIO_DIRECTION)s" [get_ports "%(name)s"]
 '''
+setPropertyTemplate='''\
+set_property %(prop)s "%(val)s" [get_ports "%(name)s"]
+'''
+
 for pin in pinout:
     pinInfo = pinout[pin]
     loc = 'TBD'
@@ -50,10 +54,19 @@ for pin in pinout:
         else:
             print('Missing pin description for', fmcPin, file=sys.stderr)
             loc = 'fmc.%s' % (fmcPin)
+        if pinInfo.has_key('IOSTANDARD'):
+            iostandard = pinInfo['IOSTANDARD']
     print(template % {
         'name': pin,
         'LOC': loc,
         'IOSTANDARD': iostandard,
         'PIO_DIRECTION': pinInfo['PIO_DIRECTION']
         })
+    for k in pinInfo:
+        if k in ['fmc', 'IOSTANDARD', 'PIO_DIRECTION']: continue
+        print (setPropertyTemplate % {
+                'name': pin,
+                'prop': k,
+                'val': pinInfo[k],
+                })
 
