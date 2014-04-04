@@ -34,28 +34,44 @@ endinterface
 module mkBramServerMux#(Vector#(numServers, BRAMServer#(Bit#(asz),dtype)) bramServers)(BramServerMux#(aszn,dtype))
    provisos (Add#(1,a__,numServers),
 	     Log#(numServers,csz),
-	     Add#(asz,csz,aszn)
+	     Add#(asz,csz,aszn),
+	     Bits#(dtype,dsz),
+	     Bits#(Tuple2#(Bit#(csz), BRAM::BRAMRequest#(Bit#(asz), dtype)), c__)
 	     );
    FIFO#(Bit#(csz)) clientNumberFifo <- mkPipelineFIFO();
+   FIFO#(Tuple2#(Bit#(csz),BRAMRequest#(Bit#(asz), dtype))) reqFifo <- mkPipelineFIFO();
+   FIFO#(dtype) responseFifo <- mkPipelineFIFO();
+   rule request;
+      let clientreq = reqFifo.first();
+      reqFifo.deq();
+      let clientNumber = tpl_1(clientreq);
+      let req          = tpl_2(clientreq);
+      bramServers[clientNumber].request.put(req);
+   endrule
+   rule respond;
+      let clientNumber = clientNumberFifo.first();
+      clientNumberFifo.deq();
+      let response <- bramServers[clientNumber].response.get();
+      responseFifo.enq(response);
+   endrule
    interface BRAMServer bramServer;
       interface Put request;
 	 method Action put(BRAMRequest#(Bit#(aszn), dtype) request);
 	    Bit#(csz) clientNumber = request.address[valueOf(aszn)-1:valueOf(asz)];
 	    clientNumberFifo.enq(clientNumber);
-	    bramServers[clientNumber].request.put(BRAMRequest {
-							       write: request.write,
-							       responseOnWrite: request.responseOnWrite,
-							       address: truncate(request.address),
-							       datain: request.datain
-							       });
+	    reqFifo.enq(tuple2(clientNumber,
+			       BRAMRequest {
+					    write: request.write,
+					    responseOnWrite: request.responseOnWrite,
+					    address: truncate(request.address),
+					    datain: request.datain
+					    }));
 	 endmethod
       endinterface
       interface Get response;
 	 method ActionValue#(dtype) get();
-	    let clientNumber = clientNumberFifo.first();
-	    clientNumberFifo.deq();
-	    let response <- bramServers[clientNumber].response.get();
-	    return response;
+	    responseFifo.deq();
+	    return responseFifo.first();
 	 endmethod
       endinterface
    endinterface
