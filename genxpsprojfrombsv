@@ -552,7 +552,7 @@ if __name__=='__main__':
     tclsubsts = {'dut': topmodulename.lower(),
                  'Dut': topmodulename,
                  'rewire_clock': rewireclockstring,
-                 'sourceTcl': ''.join['source {%s}\n' % os.path.basename(tcl) for tcl in namespace.tcl],
+                 'sourceTcl': ''.join(['source {%s}\n' % os.path.basename(tcl) for tcl in namespace.tcl]),
                  'project_dir': project_dir,
                  'partname': partname,
                  'boardname': boardname,
