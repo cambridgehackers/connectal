@@ -39,7 +39,7 @@
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA11_p"
     },
-    "*io_vita_spi_miso_v": {
+    "*miso_v": {
 	"PIO_DIRECTION": "INPUT",
 	"fmc": "LA11_n"
     },
