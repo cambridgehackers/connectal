@@ -47,7 +47,7 @@ import Memcpy::*;
 
 typedef enum {MemcpyIndication, MemcpyRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth)) 
+module [Module] mkPortalTop(StdPortalTop#(addrWidth)) 
 
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
@@ -61,7 +61,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    DmaWriteBuffer#(64,32) dma_write_chan <- mkDmaWriteBuffer();
    Vector#(1,  ObjectReadClient#(64))   readClients = cons(dma_read_chan.dmaClient, nil);
    Vector#(1, ObjectWriteClient#(64)) writeClients = cons(dma_write_chan.dmaClient, nil);
-   MemServerOO#(addrWidth, 64)   dma <- mkMemServerOO(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(addrWidth, 64)   dma <- mkMemServerOO(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(MemcpyIndication);
