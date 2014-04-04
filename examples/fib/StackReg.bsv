@@ -33,6 +33,10 @@ import BRAM::*;
 interface StackReg#(numeric type stackSize, type pctype, type argstype, type varstype);
    method Action doreturn();
    method Action docall(pctype jumpto, pctype returnto, argtype args);
+   method Action nextpc(pctype jumpto);
+   method Bit#(16) setjmp();
+   method Action longjump(Bit#(16) where);
+   interface Reg#(pctype) pc;
    interface Reg#(argstype) args;
    interface Reg#(varstype) vars;
 endinterface
@@ -109,7 +113,20 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
       varstop <= varsnext;
    endmethod
 
+   method Action nextpc(pctype jumpto);
+      pctop <= jumpto;
+   endmethod
+
+   method Bit#(16) setjmp();
+      return 0;
+   endmethod
+
+   method Action longjump(Bit#(16) where);
+   // set fp <= where and pop? something like that
+   endmethod
+
    
+interface pc = pctop;
 interface args = argstop;
 interface vars = varstop;
    
