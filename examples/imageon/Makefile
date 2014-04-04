@@ -23,6 +23,8 @@ TOP=ImageonPcieTop.bsv
 MKTOP=mkImageonPcieTop
 endif
 
+gen:: pregen
+
 pregen: imageon-$(BOARD).xdc
 
 imageon-$(BOARD).xdc: imageon-fmc.json ../../boardinfo/$(BOARD).json
