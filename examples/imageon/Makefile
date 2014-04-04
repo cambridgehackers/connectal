@@ -3,11 +3,10 @@ S2H = ImageCaptureRequest ImageonSerdesRequest HdmiInternalRequest ImageonSensor
 H2S = ImageCaptureIndication ImageonSerdesIndication HdmiInternalIndication
 BSVFILES = ImageCapture.bsv $(XBSVDIR)/lib/bsv/IserdesDatadeser.bsv $(XBSVDIR)/lib/bsv/HDMI.bsv $(XBSVDIR)/lib/bsv/Imageon.bsv Top.bsv
 CPPFILES=testimagecapture.cpp
-XBSVFLAGS = -C imageon-$(BOARD).xdc
+XBSVFLAGS = -C imageon-$(BOARD).xdc --tcl clock.tcl
 Dma = 
 PINS = ImageonVita
-#XBSVFLAGS=--bscflags " -D TRACE_AXI"
-XBSVFLAGS=--tcl clock.tcl
+#XBSVFLAGS += --bscflags " -D TRACE_AXI"
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true
