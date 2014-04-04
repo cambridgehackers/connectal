@@ -284,41 +284,41 @@ module xilinx_x7_pcie_wrapper #(
    endgenerate
    
    
-  pcie_7x_v2_1_core_top #(
+  pcie_7x_0 #(
 // bluenoc vend/dev id			  
-		  .CFG_VEND_ID         (16'h1BE7),
-		  .CFG_DEV_ID          (16'hC100),
-		  .CFG_REV_ID          (8'h00),
-		  .CFG_SUBSYS_VEND_ID  (16'h1BE7),
-		  .CFG_SUBSYS_ID       (16'hc101),
+//		  .CFG_VEND_ID         (16'h1BE7),
+//		  .CFG_DEV_ID          (16'hC100),
+//		  .CFG_REV_ID          (8'h00),
+//		  .CFG_SUBSYS_VEND_ID  (16'h1BE7),
+//		  .CFG_SUBSYS_ID       (16'hc101),
 // configured gen1 x8 with msix etc
-                  .PL_FAST_TRAIN       ( PL_FAST_TRAIN ),
-                  .PCIE_EXT_CLK        ( PCIE_EXT_CLK ),
-	          .C_DATA_WIDTH        ( 64 ),
-		  .PIPE_PIPELINE_STAGES( 1 ),
-		  .CLASS_CODE          ( 24'h050000 ), 
-		  .DSN_CAP_NEXTPTR     ( 12'hffc ),
-                  .LINK_CAP_ASPM_OPTIONALITY ( "TRUE" ),
-	          .LINK_CAP_ASPM_SUPPORT ( 0 ),
-		  .LINK_CAP_MAX_LINK_WIDTH ( LINK_CAP_MAX_LINK_WIDTH ),
-                  .LTSSM_MAX_LINK_WIDTH( 6'h8 ),
-		  .MSIX_CAP_ON         ( "TRUE" ),
-		  .MSIX_CAP_PBA_OFFSET ( 29'ha00 ),
-		  .MSIX_CAP_TABLE_OFFSET ( 29'h800 ),
-		  .MSIX_CAP_TABLE_SIZE ( 11'h00f ),
-		  .PCIE_CAP_NEXTPTR    ( 8'h9C ),
-		  .USER_CLK_FREQ       ( 3 ), // 250 MHz
+//                  .PL_FAST_TRAIN       ( PL_FAST_TRAIN ),
+//                  .PCIE_EXT_CLK        ( PCIE_EXT_CLK ),
+//	          .C_DATA_WIDTH        ( 64 ),
+//		  .PIPE_PIPELINE_STAGES( 1 ),
+//		  .CLASS_CODE          ( 24'h050000 ), 
+//		  .DSN_CAP_NEXTPTR     ( 12'hffc ),
+//                  .LINK_CAP_ASPM_OPTIONALITY ( "TRUE" ),
+//	          .LINK_CAP_ASPM_SUPPORT ( 0 ),
+//		  .LINK_CAP_MAX_LINK_WIDTH ( LINK_CAP_MAX_LINK_WIDTH ),
+//                  .LTSSM_MAX_LINK_WIDTH( 6'h8 ),
+//		  .MSIX_CAP_ON         ( "TRUE" ),
+//		  .MSIX_CAP_PBA_OFFSET ( 29'ha00 ),
+//		  .MSIX_CAP_TABLE_OFFSET ( 29'h800 ),
+//		  .MSIX_CAP_TABLE_SIZE ( 11'h00f ),
+//		  .PCIE_CAP_NEXTPTR    ( 8'h9C ),
+//		  .USER_CLK_FREQ       ( 3 ), // 250 MHz
 // add 26 to replay timeout
-		  .LL_REPLAY_TIMEOUT   ( 15'h001a ),
-		  .LL_REPLAY_TIMEOUT_EN ( "TRUE" ),
+//		  .LL_REPLAY_TIMEOUT   ( 15'h001a ),
+//		  .LL_REPLAY_TIMEOUT_EN ( "TRUE" ),
 // xbsv
-		  .BAR0                ( BAR0 ),
-		  .BAR1                ( BAR1 ),
-		  .BAR2                ( BAR2 ),
-		  .BAR3                ( BAR3 ),
-		  .BAR4                ( BAR4 ),
-		  .BAR5                ( BAR5 ),
-                  .PCIE_GT_DEVICE      ( PCIE_GT_DEVICE )
+//		  .BAR0                ( BAR0 ),
+//		  .BAR1                ( BAR1 ),
+//		  .BAR2                ( BAR2 ),
+//		  .BAR3                ( BAR3 ),
+//		  .BAR4                ( BAR4 ),
+//		  .BAR5                ( BAR5 ),
+//                  .PCIE_GT_DEVICE      ( PCIE_GT_DEVICE )
 // xbsv
                   )
    pcie_7x_v2_1_i

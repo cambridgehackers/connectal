@@ -193,6 +193,7 @@ endgroup
 ######################################################################################################
 
 # # clocks
+create_clock -name pci_refclk -period 10 [get_pins *x7pcie*_bscan/TCK]
 create_clock -name pci_refclk -period 10 [get_pins *x7pcie_pci_clk_100mhz_buf/O]
 create_clock -name sys_clk -period 5 [get_pins *x7pcie_sys_clk_200mhz/O]
 
