@@ -7,6 +7,7 @@ XBSVFLAGS = -C imageon-$(BOARD).xdc
 Dma = 
 PINS = ImageonVita
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
+XBSVFLAGS=--tcl clock.tcl
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true
@@ -22,6 +23,8 @@ else
 TOP=ImageonPcieTop.bsv
 MKTOP=mkImageonPcieTop
 endif
+
+pregen: imageon-$(BOARD).xdc
 
 imageon-$(BOARD).xdc: imageon-fmc.json ../../boardinfo/$(BOARD).json
 	../../scripts/generate-constraints.py ../../boardinfo/$(BOARD).json imageon-fmc.json > imageon-$(BOARD).xdc

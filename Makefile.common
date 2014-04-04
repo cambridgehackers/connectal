@@ -40,7 +40,7 @@ ifeq ($(origin TOP),undefined)
     endif
 endif
 
-gen:
+gen: pregen
 	$(XBSVDIR)/genxpsprojfrombsv -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
