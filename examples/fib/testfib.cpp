@@ -47,7 +47,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  for (i = 0; i < 10; i += 1) {
+  for (i = 0; i < 20; i += 1) {
     fprintf(stderr, "fib(%d)\n", i);
     fibRequestProxy->fib(i);
     sem_wait(&test_sem);
