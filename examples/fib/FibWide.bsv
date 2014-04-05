@@ -33,7 +33,7 @@ interface FibRequest;
 endinterface
 
 typedef enum {FIBSTATEIDLE, FIBSTATE1, FIBSTATE2, 
-   FIBSTATE3, FIBSTATE4, FIBSTATECOMPLETE} FSState
+   FIBSTATE2A, FIBSTATE3, FIBSTATE4, FIBSTATECOMPLETE} FSState
 deriving (Bits,Eq);
 
 
@@ -59,7 +59,7 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
    
 
    rule fib1 (frame.pc == FIBSTATE1);
-      $display("FIBSTATE1 %d", frame.args);
+      //$display("FIBSTATE1 %d", frame.args);
       if (frame.args == 0)
 	 begin
 	    fibretval <= 0;
@@ -75,31 +75,39 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
      endrule
 
    rule fib2 (frame.pc == FIBSTATE2);
-      $display("FIBSTATE2");
+      //$display("FIBSTATE2 (retval %d)", fibretval);
       frame.vars <= fibretval;
+      frame.nextpc(FIBSTATE2A);
+   endrule
+   
+   /* This state is here so the return value can get into frame.vars before
+    * the next call
+    */
+   rule fib2a (frame.pc == FIBSTATE2A);
+      //$display("FIBSTATE2A (retval %d)", fibretval);
       frame.docall(FIBSTATE1, FIBSTATE3, frame.args - 2);
    endrule
    
    rule fib3 (frame.pc == FIBSTATE3);
-      $display("FIBSTATE3 tmp1 %d fibretval %d return %d", frame.vars, fibretval, frame.vars + fibretval);
+      //$display("FIBSTATE3 tmp1 %d fibretval %d return %d", frame.vars, fibretval, frame.vars + fibretval);
       fibretval <= frame.vars + fibretval;
       frame.nextpc(FIBSTATE4);
    endrule
       
 // stall cycle to avoid doreturns in adjacent cycles
    rule fib4 (frame.pc == FIBSTATE4);
-      $display("FIBSTATE4 ");
+      //$display("FIBSTATE4 ");
       frame.doreturn();
    endrule
       
    rule fibcomplete (frame.pc == FIBSTATECOMPLETE);
-      $display("FIBSTATECOMPLETE %d %d", frame.args, fibretval);
+      //$display("FIBSTATECOMPLETE %d %d", frame.args, fibretval);
       indication.fibresult(zeroExtend(fibretval));
       frame.nextpc(FIBSTATEIDLE);
    endrule
    
    method Action fib(Bit#(32) v);
-      $display("request fib %d", v);
+      //$display("request fib %d", v);
       frame.docall(FIBSTATE1, FIBSTATECOMPLETE, truncate(v));
    endmethod
       
