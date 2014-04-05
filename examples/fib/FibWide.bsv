@@ -33,12 +33,11 @@ interface FibRequest;
 endinterface
 
 typedef enum {FIBSTATEIDLE, FIBSTATE1, FIBSTATE2, 
-   FIBSTATE3, FIBSTATECOMPLETE} FSState
+   FIBSTATE3, FIBSTATE4, FIBSTATECOMPLETE} FSState
 deriving (Bits,Eq);
 
 
-module mkFibRequest#(FibIndication indication)(FibRequest)
-   provisos(Literal#(FSState));
+module mkFibRequest#(FibIndication indication)(FibRequest);
 
    /* pc, args, vars */
    StackReg#(128, FSState, Bit#(16), Bit#(16)) frame <- mkStackReg(128, FIBSTATEIDLE);
@@ -60,10 +59,10 @@ module mkFibRequest#(FibIndication indication)(FibRequest)
    
 
    rule fib1 (frame.pc == FIBSTATE1);
-      $display("FIBSTATE1");
+      $display("FIBSTATE1 %d", frame.args);
       if (frame.args == 0)
 	 begin
-	    fibretval <= 1;
+	    fibretval <= 0;
 	    frame.doreturn();
 	 end
      else if (frame.args == 1)
@@ -84,6 +83,12 @@ module mkFibRequest#(FibIndication indication)(FibRequest)
    rule fib3 (frame.pc == FIBSTATE3);
       $display("FIBSTATE3 tmp1 %d fibretval %d return %d", frame.vars, fibretval, frame.vars + fibretval);
       fibretval <= frame.vars + fibretval;
+      frame.nextpc(FIBSTATE4);
+   endrule
+      
+// stall cycle to avoid doreturns in adjacent cycles
+   rule fib4 (frame.pc == FIBSTATE4);
+      $display("FIBSTATE4 ");
       frame.doreturn();
    endrule
       
@@ -95,7 +100,7 @@ module mkFibRequest#(FibIndication indication)(FibRequest)
    
    method Action fib(Bit#(32) v);
       $display("request fib %d", v);
-      frame.docall(FIBSTATE1, FIBSTATECOMPLETE, v);
+      frame.docall(FIBSTATE1, FIBSTATECOMPLETE, truncate(v));
    endmethod
       
 endmodule

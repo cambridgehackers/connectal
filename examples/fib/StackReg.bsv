@@ -32,7 +32,7 @@ import BRAM::*;
 
 interface StackReg#(numeric type stackSize, type pctype, type argstype, type varstype);
    method Action doreturn();
-   method Action docall(pctype jumpto, pctype returnto, argtype args);
+   method Action docall(pctype jumpto, pctype returnto, argstype args);
    method Action nextpc(pctype jumpto);
    method Bit#(16) setjmp();
    method Action longjump(Bit#(16) where);
@@ -43,9 +43,6 @@ endinterface
 
 module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype, argstype, varstype))
    provisos(Log#(stackSize, addressBits),
-      Literal#(pctype),
-      Literal#(argstype),
-      Literal#(varstype),
       Bits#(pctype, a__),
       Bits#(argstype, b__),
       Bits#(varstype, c__));
@@ -63,7 +60,8 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
    
    rule poppc;
      let v = ?;
-      v <- pcstack.portA.response.get();
+      $display("poppc");
+    v <- pcstack.portA.response.get();
       pcnext <= v;
    endrule
 
@@ -80,8 +78,9 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
    endrule
 
 
-   method Action docall(pctype jumpto, pctype returnto, argtype args);
+   method Action docall(pctype jumpto, pctype returnto, argstype args);
       fp <= min(fp+1, maxBound);
+      $display("docall jumpto %d returnto %d", jumpto, returnto);
       pcstack.portA.request.put(BRAMRequest{write: True, 
 	 responseOnWrite: False, 
 	 address: fp, datain: pcnext});
@@ -94,6 +93,7 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
       pcnext <= returnto;
       pctop <= jumpto;
       argsnext <= argstop;
+      argstop <= args;
       varsnext <= varstop;
    endmethod
 
@@ -101,13 +101,14 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
       fp <= max(fp-1, 0);
       pcstack.portA.request.put(BRAMRequest{write: False, 
 	 responseOnWrite: False, 
-	 address: fp-1, datain: 0});
+	 address: fp-1, datain: ?});
       argsstack.portA.request.put(BRAMRequest{write: False, 
 	 responseOnWrite: False, 
-	 address: fp-1, datain: 0});
+	 address: fp-1, datain: ?});
       varsstack.portA.request.put(BRAMRequest{write: False, 
 	 responseOnWrite: False, 
-	 address: fp-1, datain: 0});
+	 address: fp-1, datain: ?});
+      $display("doreturn pctop getting %d", pcnext);
       pctop <= pcnext;
       argstop <= argsnext;
       varstop <= varsnext;
