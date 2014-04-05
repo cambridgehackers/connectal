@@ -2,6 +2,7 @@
 import Vector::*;
 import FIFO::*;
 import Connectable::*;
+import DefaultValue::*;
 
 // portz libraries
 import Portal::*;
@@ -45,8 +46,8 @@ typedef enum { ImageCaptureRequest, ImageonSerdesRequest, HdmiInternalRequest, I
     ImageCaptureIndication, ImageonSerdesIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
 
 module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,ImageonVita));
-    Clock defaultClock <- exposeCurrentClock();
-    Reset defaultReset <- exposeCurrentReset();
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
 
    // instantiate user portals
    ImageCaptureIndicationProxy captureIndicationProxy <- mkImageCaptureIndicationProxy(ImageCaptureIndication);
@@ -56,11 +57,29 @@ module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,I
    //ImageCaptureRequest captureRequestInternal <- mkImageCaptureRequest(captureIndicationProxy.ifc);
 
 //////
-    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200);
-    Clock imageon_video_clk1_buf_wire <- mkClockIBUFG(clocked_by io_vita_clk);
-    MMCMHACK mmcmhack <- mkMMCMHACK(clocked_by imageon_video_clk1_buf_wire);
-    Clock hdmi_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout0);
-    Clock imageon_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout1);
+   IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200);
+
+   ClockGenerator7AdvParams clockParams = defaultValue;
+   clockParams.bandwidth          = "OPTIMIZED";
+   clockParams.compensation       = "ZHOLD";
+   clockParams.clkfbout_mult_f    = 8.000;
+   clockParams.clkfbout_phase     = 0.0;
+   clockParams.clkin1_period      = 6.734007;
+   clockParams.clkin2_period      = 6.734007;
+   clockParams.clkout0_divide_f   = 8.000;
+   clockParams.clkout0_duty_cycle = 0.5;
+   clockParams.clkout0_phase      = 0.0000;
+   clockParams.clkout1_divide     = 32;
+   clockParams.clkout1_duty_cycle = 0.5;
+   clockParams.clkout1_phase      = 0.0000;
+   clockParams.divclk_divide      = 1;
+   clockParams.ref_jitter1        = 0.010;
+   clockParams.ref_jitter2        = 0.010;
+
+   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by io_vita_clk);
+   Clock hdmi_clock = clockGen.clkout0;
+   Clock imageon_clock = clockGen.clkout1;
+
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
@@ -118,15 +137,6 @@ module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,I
    //interface leds = captureRequestInternal.leds;
 
    interface ImageonVita pins;
-      // interface ImageonTopPins toppins;
-      // 	  method Clock fbbozo();
-      // 	     return mmcmhack.mmcmadv.clkfbout;
-      // 	  endmethod
-      // 	  method Action fbbozoin(Bit#(1) v);
-      // 	     mmcmhack.mmcmadv.clkfbin(v);
-      // 	  endmethod
-      //  endinterface
-
        interface SpiPins spi = spiController.pins;
        interface ImageonSensorPins pins = fromSensor.pins;
        interface ImageonSerdesPins serpins = serdes.pins;

@@ -446,6 +446,279 @@ module mkMMCMHACK(MMCMHACK);
     interface XbsvMMCME2 mmcmadv = mm;
 endmodule
 
+////////////////////////////////////////////////////////////////////////////////
+/// ClockGenerator Xilinx 7 Adv
+////////////////////////////////////////////////////////////////////////////////
+typedef struct {
+   String      bandwidth;
+   String      compensation;
+   Bool        clkin_buffer;
+   Real        clkin1_period;
+   Real        clkin2_period;
+   Integer     reset_stages;
+   Real        clkfbout_mult_f;
+   Real        clkfbout_phase;
+   Integer     divclk_divide;
+   Bool        clkout0_buffer;
+   Bool        clkout0n_buffer;
+   Real        clkout0_divide_f;
+   Real        clkout0_duty_cycle;
+   Real        clkout0_phase;
+   Bool        clkout1_buffer;
+   Bool        clkout1n_buffer;
+   Integer     clkout1_divide;
+   Real        clkout1_duty_cycle;
+   Real        clkout1_phase;
+   Bool        clkout2_buffer;
+   Bool        clkout2n_buffer;
+   Integer     clkout2_divide;
+   Real        clkout2_duty_cycle;
+   Real        clkout2_phase;
+   Bool        clkout3_buffer;
+   Bool        clkout3n_buffer;
+   Integer     clkout3_divide;
+   Real        clkout3_duty_cycle;
+   Real        clkout3_phase;
+   Bool        clkout4_buffer;
+   Integer     clkout4_divide;
+   Real        clkout4_duty_cycle;
+   Real        clkout4_phase;
+   Bool        clkout5_buffer;
+   Integer     clkout5_divide;
+   Real        clkout5_duty_cycle;
+   Real        clkout5_phase;
+   Bool        clkout6_buffer;
+   Integer     clkout6_divide;
+   Real        clkout6_duty_cycle;
+   Real        clkout6_phase;
+   Real        ref_jitter1;
+   Real        ref_jitter2;
+   Bool        use_same_family;
+} ClockGenerator7AdvParams deriving (Bits, Eq);
+
+instance DefaultValue#(ClockGenerator7AdvParams);
+   defaultValue = ClockGenerator7AdvParams {
+      bandwidth:          "OPTIMIZED",
+      compensation:       "ZHOLD",
+      clkin_buffer:       True,
+      clkin1_period:      5.000,
+      clkin2_period:      0.000,
+      reset_stages:       3,
+      clkfbout_mult_f:    1.000,
+      clkfbout_phase:     0.000,
+      divclk_divide:      1,
+      clkout0_buffer:     True,
+      clkout0n_buffer:    True,
+      clkout0_divide_f:   1.000,
+      clkout0_duty_cycle: 0.500,
+      clkout0_phase:      0.000,
+      clkout1_buffer:     True,
+      clkout1n_buffer:    True,
+      clkout1_divide:     1,
+      clkout1_duty_cycle: 0.500,
+      clkout1_phase:      0.000,
+      clkout2_buffer:     True,
+      clkout2n_buffer:    True,
+      clkout2_divide:     1,
+      clkout2_duty_cycle: 0.500,
+      clkout2_phase:      0.000,
+      clkout3_buffer:     True,
+      clkout3n_buffer:    True,
+      clkout3_divide:     1,
+      clkout3_duty_cycle: 0.500,
+      clkout3_phase:      0.000,
+      clkout4_buffer:     True,
+      clkout4_divide:     1,
+      clkout4_duty_cycle: 0.500,
+      clkout4_phase:      0.000,
+      clkout5_buffer:     True,
+      clkout5_divide:     1,
+      clkout5_duty_cycle: 0.500,
+      clkout5_phase:      0.000,
+      clkout6_buffer:     True,
+      clkout6_divide:     1,
+      clkout6_duty_cycle: 0.500,
+      clkout6_phase:      0.000,
+      ref_jitter1:        0.010,
+      ref_jitter2:        0.010,
+      use_same_family:    False
+      };
+endinstance
+
+module mkClockGenerator7Adv#(ClockGenerator7AdvParams params)(ClockGenerator7);
+
+   ////////////////////////////////////////////////////////////////////////////////
+   /// Clocks & Resets
+   ////////////////////////////////////////////////////////////////////////////////
+   Clock                                     clk                 <- exposeCurrentClock;
+   Clock                                     clk_buffered         = ?;
+
+   if (params.clkin_buffer) begin
+      Clock inbuffer <- mkClockIBUFG;
+      clk_buffered = inbuffer;
+   end
+   else begin
+      clk_buffered = clk;
+   end
+
+   Reset                                     rst_n               <- mkAsyncResetFromCR(params.reset_stages, clk_buffered);
+   Reset                                     rst                 <- mkResetInverter(rst_n);
+
+   ////////////////////////////////////////////////////////////////////////////////
+   /// Design Elements
+   ////////////////////////////////////////////////////////////////////////////////
+   MMCMParams                                clkgen_params        = defaultValue;
+   clkgen_params.bandwidth          = params.bandwidth;
+   clkgen_params.compensation       = params.compensation;
+   clkgen_params.clkin1_period      = params.clkin1_period;
+   clkgen_params.clkin2_period      = params.clkin2_period;
+   clkgen_params.clkfbout_mult_f    = params.clkfbout_mult_f;
+   clkgen_params.clkfbout_phase     = params.clkfbout_phase;
+   clkgen_params.divclk_divide      = params.divclk_divide;
+   clkgen_params.clkout0_divide_f   = params.clkout0_divide_f;
+   clkgen_params.clkout0_duty_cycle = params.clkout0_duty_cycle;
+   clkgen_params.clkout0_phase      = params.clkout0_phase;
+   clkgen_params.clkout1_divide     = params.clkout1_divide;
+   clkgen_params.clkout1_duty_cycle = params.clkout1_duty_cycle;
+   clkgen_params.clkout1_phase      = params.clkout1_phase;
+   clkgen_params.clkout2_divide     = params.clkout2_divide;
+   clkgen_params.clkout2_duty_cycle = params.clkout2_duty_cycle;
+   clkgen_params.clkout2_phase      = params.clkout2_phase;
+   clkgen_params.clkout3_divide     = params.clkout3_divide;
+   clkgen_params.clkout3_duty_cycle = params.clkout3_duty_cycle;
+   clkgen_params.clkout3_phase      = params.clkout3_phase;
+   clkgen_params.clkout4_divide     = params.clkout4_divide;
+   clkgen_params.clkout4_duty_cycle = params.clkout4_duty_cycle;
+   clkgen_params.clkout4_phase      = params.clkout4_phase;
+   clkgen_params.clkout5_divide     = params.clkout5_divide;
+   clkgen_params.clkout5_duty_cycle = params.clkout5_duty_cycle;
+   clkgen_params.clkout5_phase      = params.clkout5_phase;
+   clkgen_params.clkout6_divide     = params.clkout6_divide;
+   clkgen_params.clkout6_duty_cycle = params.clkout6_duty_cycle;
+   clkgen_params.clkout6_phase      = params.clkout6_phase;
+   clkgen_params.ref_jitter1        = params.ref_jitter1;
+   clkgen_params.ref_jitter2        = params.ref_jitter2;
+   clkgen_params.use_same_family    = params.use_same_family;
+
+   MMCME2                                    pll                 <- mkMMCME2(clkgen_params);
+
+   Clock                                     clkout0_buf          = ?;
+   Clock                                     clkout0n_buf         = ?;
+   Clock                                     clkout1_buf          = ?;
+   Clock                                     clkout1n_buf         = ?;
+   Clock                                     clkout2_buf          = ?;
+   Clock                                     clkout2n_buf         = ?;
+   Clock                                     clkout3_buf          = ?;
+   Clock                                     clkout3n_buf         = ?;
+   Clock                                     clkout4_buf          = ?;
+   Clock                                     clkout5_buf          = ?;
+   Clock                                     clkout6_buf          = ?;
+
+   if (params.clkout0_buffer) begin
+      Clock clkout0buffer <- mkClockBUFG(clocked_by pll.clkout0);
+      clkout0_buf = clkout0buffer;
+   end
+   else begin
+      clkout0_buf = pll.clkout0;
+   end
+
+   if (params.clkout0n_buffer) begin
+      Clock clkout0nbuffer <- mkClockBUFG(clocked_by pll.clkout0_n);
+      clkout0n_buf = clkout0nbuffer;
+   end
+   else begin
+      clkout0n_buf = pll.clkout0_n;
+   end
+
+   if (params.clkout1_buffer) begin
+      Clock clkout1buffer <- mkClockBUFG(clocked_by pll.clkout1);
+      clkout1_buf = clkout1buffer;
+   end
+   else begin
+      clkout1_buf = pll.clkout1;
+   end
+
+   if (params.clkout1n_buffer) begin
+      Clock clkout1nbuffer <- mkClockBUFG(clocked_by pll.clkout1_n);
+      clkout1n_buf = clkout1nbuffer;
+   end
+   else begin
+      clkout1n_buf = pll.clkout1_n;
+   end
+
+   if (params.clkout2_buffer) begin
+      Clock clkout2buffer <- mkClockBUFG(clocked_by pll.clkout2);
+      clkout2_buf = clkout2buffer;
+   end
+   else begin
+      clkout2_buf = pll.clkout2;
+   end
+
+   if (params.clkout2n_buffer) begin
+      Clock clkout2nbuffer <- mkClockBUFG(clocked_by pll.clkout2_n);
+      clkout2n_buf = clkout2nbuffer;
+   end
+   else begin
+      clkout2n_buf = pll.clkout2_n;
+   end
+
+   if (params.clkout3_buffer) begin
+      Clock clkout3buffer <- mkClockBUFG(clocked_by pll.clkout3);
+      clkout3_buf = clkout3buffer;
+   end
+   else begin
+      clkout3_buf = pll.clkout3;
+   end
+
+   if (params.clkout3n_buffer) begin
+      Clock clkout3nbuffer <- mkClockBUFG(clocked_by pll.clkout3_n);
+      clkout3n_buf = clkout3nbuffer;
+   end
+   else begin
+      clkout3n_buf = pll.clkout3_n;
+   end
+
+   if (params.clkout4_buffer) begin
+      Clock clkout4buffer <- mkClockBUFG(clocked_by pll.clkout4);
+      clkout4_buf = clkout4buffer;
+   end
+   else begin
+      clkout4_buf = pll.clkout4;
+   end
+
+   if (params.clkout5_buffer) begin
+      Clock clkout5buffer <- mkClockBUFG(clocked_by pll.clkout5);
+      clkout5_buf = clkout5buffer;
+   end
+   else begin
+      clkout5_buf = pll.clkout5;
+   end
+
+   if (params.clkout6_buffer) begin
+      Clock clkout6buffer <- mkClockBUFG(clocked_by pll.clkout6);
+      clkout6_buf = clkout6buffer;
+   end
+   else begin
+      clkout6_buf = pll.clkout6;
+   end
+
+   ////////////////////////////////////////////////////////////////////////////////
+   /// Interface Connections / Methods
+   ////////////////////////////////////////////////////////////////////////////////
+
+   interface Clock        clkout0   = clkout0_buf;
+   interface Clock        clkout0_n = clkout0n_buf;
+   interface Clock        clkout1   = clkout1_buf;
+   interface Clock        clkout1_n = clkout1n_buf;
+   interface Clock        clkout2   = clkout2_buf;
+   interface Clock        clkout2_n = clkout2n_buf;
+   interface Clock        clkout3   = clkout3_buf;
+   interface Clock        clkout3_n = clkout3n_buf;
+   interface Clock        clkout4   = clkout4_buf;
+   interface Clock        clkout5   = clkout5_buf;
+   interface Clock        clkout6   = clkout6_buf;
+   method    Bool         locked    = pll.locked;
+endmodule: mkClockGenerator7Adv
 
 ////////////////////////////////////////////////////////////
 

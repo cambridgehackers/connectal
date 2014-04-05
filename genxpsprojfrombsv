@@ -67,6 +67,7 @@ argparser.add_argument('-M', '--make', help='Run make on the specified targets',
 argparser.add_argument('-x', '--export', help='Promote/export named interface from top module')
 argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
+argparser.add_argument('-T', '--tcl', default=[], help='Vivado tcl script', action='append')
 argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to the BSV compiler', action='append')
 
 tclReadVerilogTemplate='read_verilog [ glob %(verilog)s/*.v ]'
@@ -105,6 +106,7 @@ write_verilog -force $outputDir/%(dut)s_netlist.v
 #
 # STEP#3: run placement and logic optimization, report utilization and timing estimates, write checkpoint design
 #
+%(sourceTcl)s
 %(rewire_clock)s
 opt_design
 # power_opt_design
@@ -337,6 +339,8 @@ if __name__=='__main__':
         namespace.constraint = []
     if not namespace.verilog:
         namespace.verilog = []
+    if not namespace.tcl:
+        namespace.tcl = []
 
     project_dir = os.path.expanduser(namespace.project_dir)
     srcdirs = []
@@ -548,6 +552,7 @@ if __name__=='__main__':
     tclsubsts = {'dut': topmodulename.lower(),
                  'Dut': topmodulename,
                  'rewire_clock': rewireclockstring,
+                 'sourceTcl': ''.join(['source {%s}\n' % os.path.basename(tcl) for tcl in namespace.tcl]),
                  'project_dir': project_dir,
                  'partname': partname,
                  'boardname': boardname,
@@ -588,6 +593,12 @@ if __name__=='__main__':
                 os.makedirs(dstconstraintdir)
             ## this path is here so we can overwrite sources
             shutil.copy(constraint, dstconstraintdir)
+    if namespace.tcl:
+        for tcl in namespace.tcl:
+            print 'Copying tcl file from', tcl
+            ## this path is here so we can overwrite sources
+            shutil.copy(tcl, project_dir)
+
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
     make.write(makefileTemplate % {'xbsvdir': xbsvdir,
