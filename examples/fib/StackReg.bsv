@@ -57,39 +57,56 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
    Reg#(varstype) varstop <- mkReg(?);
    Reg#(varstype) varsnext <- mkReg(?);
    Reg#(Bit#(addressBits)) fp <- mkReg(0);
+   PulseWire calling <- mkPulseWire();
+   PulseWire returning <- mkPulseWire();
+   Reg#(Bool) returningd1 <- mkReg(False);
+/*
+   Reg#(Bit#(8)) cyc <- mkReg(0);
    
+   rule cc;
+      cyc <= cyc + 1;
+   endrule
+  */ 
    rule poppc;
      let v = ?;
-      $display("poppc");
-    v <- pcstack.portA.response.get();
-      pcnext <= v;
+      //$display("%d poppc (c %d)", cyc, calling);
+      v <- pcstack.portA.response.get();
+      if (!calling) pcnext <= v;
    endrule
 
    rule popargs;
      let v = ?;
       v <- argsstack.portA.response.get();
-      argsnext <= v;
+      if (!calling) argsnext <= v;
    endrule
    
    rule popvars;
      let v = ?;
       v <- varsstack.portA.response.get();
-      varsnext <= v;
+      if (!calling) varsnext <= v;
    endrule
-
+   
+   (* fire_when_enabled, no_implicit_conditions *)
+   rule returning_delay;
+      returningd1 <= returning;
+   endrule
 
    method Action docall(pctype jumpto, pctype returnto, argstype args);
       fp <= min(fp+1, maxBound);
-      $display("docall jumpto %d returnto %d", jumpto, returnto);
-      pcstack.portA.request.put(BRAMRequest{write: True, 
-	 responseOnWrite: False, 
-	 address: fp, datain: pcnext});
-      argsstack.portA.request.put(BRAMRequest{write: True, 
-	 responseOnWrite: False, 
-	 address: fp, datain: argsnext});
-      varsstack.portA.request.put(BRAMRequest{write: True, 
-	 responseOnWrite: False, 
-	 address: fp, datain: varsnext});
+      calling.send();
+      //$display("%d docall jumpto %d returnto %d (d1 %d)", cyc, jumpto, returnto, returningd1);
+      if (! returningd1) 
+	 begin
+	    pcstack.portA.request.put(BRAMRequest{write: True, 
+	       responseOnWrite: False, 
+	       address: fp, datain: pcnext});
+	    argsstack.portA.request.put(BRAMRequest{write: True, 
+	       responseOnWrite: False, 
+	       address: fp, datain: argsnext});
+	    varsstack.portA.request.put(BRAMRequest{write: True, 
+	       responseOnWrite: False, 
+	       address: fp, datain: varsnext});
+	 end
       pcnext <= returnto;
       pctop <= jumpto;
       argsnext <= argstop;
@@ -99,6 +116,8 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
 
    method Action doreturn();
       fp <= max(fp-1, 0);
+      returning.send();
+      
       pcstack.portA.request.put(BRAMRequest{write: False, 
 	 responseOnWrite: False, 
 	 address: fp-1, datain: ?});
@@ -108,7 +127,7 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
       varsstack.portA.request.put(BRAMRequest{write: False, 
 	 responseOnWrite: False, 
 	 address: fp-1, datain: ?});
-      $display("doreturn pctop getting %d", pcnext);
+      //$display("%d doreturn pctop getting %d", cyc, pcnext);
       pctop <= pcnext;
       argstop <= argsnext;
       varstop <= varsnext;
