@@ -60,6 +60,25 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
    PulseWire calling <- mkPulseWire();
    PulseWire returning <- mkPulseWire();
    Reg#(Bool) returningd1 <- mkReg(False);
+
+/* The "next" registers are there to compensate for the pipelined reads
+ * of the BRAMs.  
+ * A return in isolation pops next to top, and then replaces the contents of
+ * next the following cycle when the BRAM read completes.
+ * In the event that there are multiple returns in consecutive cycles, the
+ * first return values are fed from the next registers into top, and the
+ * following values are bypassed from the BRAMs direct to TOP.
+ * Once return cycles stop happening, the final pending BRAM read data is
+ * loaded into next
+ * 
+ * If a call happens in the cycle after a return, the BRAM read <into> next and
+ * the bram write <from> next are both supressed, and next is pushed from top
+ * 
+ * The wire calling says there is a call in the current cycle. The signal
+ * returning says there is a return in the current cycle. The signal returningd1
+ * says there was a return in the previous cycle.
+ */
+
 /*
    Reg#(Bit#(8)) cyc <- mkReg(0);
    
@@ -67,23 +86,28 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
       cyc <= cyc + 1;
    endrule
   */ 
+   
+   /* The pop rules fire exactly when returningd1 is true */
    rule poppc;
      let v = ?;
       //$display("%d poppc (c %d)", cyc, calling);
       v <- pcstack.portA.response.get();
       if (!calling) pcnext <= v;
+      if (returning) pctop <= v;
    endrule
 
    rule popargs;
      let v = ?;
       v <- argsstack.portA.response.get();
       if (!calling) argsnext <= v;
+      if (returning) argstop <= v;
    endrule
    
    rule popvars;
      let v = ?;
       v <- varsstack.portA.response.get();
       if (!calling) varsnext <= v;
+      if (returning) varstop <= v;
    endrule
    
    (* fire_when_enabled, no_implicit_conditions *)
@@ -128,9 +152,12 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
 	 responseOnWrite: False, 
 	 address: fp-1, datain: ?});
       //$display("%d doreturn pctop getting %d", cyc, pcnext);
-      pctop <= pcnext;
-      argstop <= argsnext;
-      varstop <= varsnext;
+     if (!returningd1)
+	begin
+	   pctop <= pcnext;
+	   argstop <= argsnext;
+	   varstop <= varsnext;
+	end;
    endmethod
 
    method Action nextpc(pctype jumpto);
