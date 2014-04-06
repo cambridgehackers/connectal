@@ -33,7 +33,7 @@ interface FibRequest;
 endinterface
 
 typedef enum {FIBSTATEIDLE, FIBSTATE1, FIBSTATE2, 
-   FIBSTATE2A, FIBSTATE3, FIBSTATECOMPLETE} FSState
+   FIBSTATE3, FIBSTATECOMPLETE} FSState
 deriving (Bits,Eq);
 
 
@@ -71,23 +71,15 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
 	   frame.doreturn();
 	end
      else
-	frame.docall(FIBSTATE1, FIBSTATE2, frame.args - 1);
+	frame.docall(FIBSTATE1, FIBSTATE2, frame.args - 1, 0);
      endrule
 
    rule fib2 (frame.pc == FIBSTATE2);
       //$display("FIBSTATE2 (retval %d)", fibretval);
-      frame.vars <= fibretval;
-      frame.nextpc(FIBSTATE2A);
+      // frame.vars <= fibretval; subsumed in docall
+      frame.docall(FIBSTATE1, FIBSTATE3, frame.args - 2, fibretval);
    endrule
-   
-   /* This state is here so the return value can get into frame.vars before
-    * the next call
-    */
-   rule fib2a (frame.pc == FIBSTATE2A);
-      //$display("FIBSTATE2A (retval %d)", fibretval);
-      frame.docall(FIBSTATE1, FIBSTATE3, frame.args - 2);
-   endrule
-   
+      
    rule fib3 (frame.pc == FIBSTATE3);
       //$display("FIBSTATE3 tmp1 %d fibretval %d return %d", frame.vars, fibretval, frame.vars + fibretval);
       fibretval <= frame.vars + fibretval;
@@ -102,7 +94,7 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
    
    method Action fib(Bit#(32) v);
       //$display("request fib %d", v);
-      frame.docall(FIBSTATE1, FIBSTATECOMPLETE, truncate(v));
+      frame.docall(FIBSTATE1, FIBSTATECOMPLETE, truncate(v), 0);
    endmethod
       
 endmodule
