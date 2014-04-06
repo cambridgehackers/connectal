@@ -115,7 +115,7 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
       returningd1 <= returning;
    endrule
 
-   method Action docall(pctype jumpto, pctype returnto, argstype args);
+   method Action docall(pctype jumpto, pctype returnto, argstype args, varstype vars);
       fp <= min(fp+1, maxBound);
       calling.send();
       //$display("%d docall jumpto %d returnto %d (d1 %d)", cyc, jumpto, returnto, returningd1);
@@ -157,7 +157,7 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
 	   pctop <= pcnext;
 	   argstop <= argsnext;
 	   varstop <= varsnext;
-	end;
+	end
    endmethod
 
    method Action nextpc(pctype jumpto);
