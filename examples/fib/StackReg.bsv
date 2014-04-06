@@ -136,6 +136,7 @@ module mkStackReg#(int stackSize, pctype initialpc)(StackReg#(stackSize, pctype,
       argsnext <= argstop;
       argstop <= args;
       varsnext <= varstop;
+      varstp[ <= vars;
    endmethod
 
    method Action doreturn();
