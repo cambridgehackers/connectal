@@ -32,7 +32,7 @@ import BRAM::*;
 
 interface StackReg#(numeric type stackSize, type pctype, type argstype, type varstype);
    method Action doreturn();
-   method Action docall(pctype jumpto, pctype returnto, argstype args);
+   method Action docall(pctype jumpto, pctype returnto, argstype args, varstype vars);
    method Action nextpc(pctype jumpto);
    method Bit#(16) setjmp();
    method Action longjump(Bit#(16) where);
