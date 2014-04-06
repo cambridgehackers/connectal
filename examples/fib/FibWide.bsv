@@ -33,7 +33,7 @@ interface FibRequest;
 endinterface
 
 typedef enum {FIBSTATEIDLE, FIBSTATE1, FIBSTATE2, 
-   FIBSTATE2A, FIBSTATE3, FIBSTATE4, FIBSTATECOMPLETE} FSState
+   FIBSTATE2A, FIBSTATE3, FIBSTATECOMPLETE} FSState
 deriving (Bits,Eq);
 
 
@@ -91,12 +91,6 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
    rule fib3 (frame.pc == FIBSTATE3);
       //$display("FIBSTATE3 tmp1 %d fibretval %d return %d", frame.vars, fibretval, frame.vars + fibretval);
       fibretval <= frame.vars + fibretval;
-      frame.nextpc(FIBSTATE4);
-   endrule
-      
-// stall cycle to avoid doreturns in adjacent cycles
-   rule fib4 (frame.pc == FIBSTATE4);
-      //$display("FIBSTATE4 ");
       frame.doreturn();
    endrule
       
