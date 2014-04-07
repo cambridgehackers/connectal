@@ -56,11 +56,7 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    Reg#(Bit#(7)) jj <- mkReg(0);
    Reg#(Bit#(8)) aData <- mkReg(0);
    Reg#(Bit#(8)) bData <- mkReg(0);
-   Reg#(Bit#(16)) k1j <- mkReg(0);
-   Reg#(Bit#(16)) k1jm1 <- mkReg(0);
-   Reg#(Bit#(16)) k0j <- mkReg(0);
-   Reg#(Bit#(16)) k0jm1 <- mkReg(0);
-   BRAM1Port#(Bit#(lIndexWidth), Bit#(16)) k0  <- mkBRAM1Server(defaultValue);
+   Reg#(Bit#(14)) outcounter <- mkReg(0);
 
 /*
  * HirschC(Astart, Alen, Bstart, Blen, output fifo)
@@ -88,7 +84,8 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	    endaction
 	    if (aData == bData)
 	       seq
-		  out.put(aData);
+		  matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: outcounter, datain: aData});
+		  outcounter <= outcounter + 1;
 		  break;
 	       endseq
 	 endseq
@@ -171,6 +168,10 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       rStartReg <= start;
    endmethod
 
+   method Action start();
+      docall(HCS1, HCSComplere, {startA: 0, aLen: aLenReg,
+	 startB: 0, bLen: bLenReg}, {0, 0})
+   endmethod
    
    interface FSM fsm = hC;
 

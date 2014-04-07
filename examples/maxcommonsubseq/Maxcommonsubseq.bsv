@@ -109,6 +109,8 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    Reg#(Bit#(16)) lijm1 <- mkReg(0);
    BRAM2Port#(StringIdx, Bit#(8)) strA  <- mkBRAM2Server(defaultValue);
    BRAM2Port#(StringIdx, Bit#(8)) strB <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(LIdx, Bit#(16)) matL0 <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(LIdx, Bit#(16)) matL1 <- mkBRAM2Server(defaultValue);
    BRAM2Port#(LIdx, Bit#(16)) matL <- mkBRAM2Server(defaultValue);
 
    BRAMReadClient#(StringIdxWidth,busWidth) n2a <- mkBRAMReadClient(strA.portB);
@@ -129,7 +131,9 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    MCSAlgorithm hirschA <- mkHirschA(strA.portA, strB.portA, matL.portA);
    MCSAlgorithm hirschB1 <- mkHirschB(strA.portA, strB.portA, matL.portA, 1);
    MCSAlgorithm hirschB0 <- mkHirschB(strA.portA, strB.portA, matL.portA, 0);
-   
+   MCSAlgorithm chirschB1 <- mkHirschB(strA.portA, strB.portA, matL0.portA, 1);
+   MCSAlgorithm chirschB0 <- mkHirschB(strA.portA, strB.portA, matL1.portA, 0);
+   MCSAlgorithm hirschC <- mkHirschC(strA.portA, strB.portA, matL, chirschB0, chirschB1, matL0.portB, matL1.portB);
    // create BRAM Write client for matL
 
    rule finish_setupA;
@@ -197,22 +201,24 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 	       hirschA.setupL(0);
 	       hirschA.fsm.start();
 	       hirschARunning <= True;
-	       end
+	    end
 	 1: begin
 	       hirschB0.setupA(0, aLenReg);
 	       hirschB0.setupB(0, bLenReg);
 	       hirschB0.fsm.start();
 	       hirschB0.setupL(0);
 	       hirschB0Running <= True;
-	       end
+	    end
 	 2: begin
 	       hirschB1.setupA(0, aLenReg);
 	       hirschB1.setupB(0, bLenReg);
 	       hirschB1.fsm.start();
 	       hirschB1.setupL(0);
 	       hirschB1Running <= True;
-	       end
-//	 3: hirschC.start();
+	    end
+	 3: begin
+	       hirschC.start();
+	    end
       endcase
    endmethod
 
