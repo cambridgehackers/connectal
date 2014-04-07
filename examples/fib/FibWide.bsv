@@ -25,7 +25,6 @@ import StmtFSM::*;
 
 interface FibIndication;
     method Action fibresult(Bit#(32) v);
-    method Action fibnote(Bit#(32) v);
 endinterface
 
 interface FibRequest;
@@ -53,10 +52,9 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
     *   if n == 0 return 0  // fibstate1
     *   if n == 1 return 1
     *   tmp1 = fib(n-1)
-    *   tmp2 = fib(n-2      // fibstate2
+    *   tmp2 = fib(n-2)     // fibstate2
     *   return tmp1 + tmp2  // fibstate3
     */
-   
 
    rule fib1 (frame.pc == FIBSTATE1);
       //$display("FIBSTATE1 %d", frame.args);
@@ -71,6 +69,8 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
 	   frame.doreturn();
 	end
      else
+	// call FIBSTATE1 and return to FIBSTATE2
+	// call with argument frame.args -1 and tmp2 = 0
 	frame.docall(FIBSTATE1, FIBSTATE2, frame.args - 1, 0);
      endrule
 
@@ -89,11 +89,14 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
    rule fibcomplete (frame.pc == FIBSTATECOMPLETE);
       //$display("FIBSTATECOMPLETE %d %d", frame.args, fibretval);
       indication.fibresult(zeroExtend(fibretval));
+      // our work here is done
       frame.nextpc(FIBSTATEIDLE);
    endrule
    
    method Action fib(Bit#(32) v);
       //$display("request fib %d", v);
+      // call FIBSTATE1 and return to FIBSTATECOMPLETE
+      // with argument v
       frame.docall(FIBSTATE1, FIBSTATECOMPLETE, truncate(v), 0);
    endmethod
       
