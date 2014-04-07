@@ -62,12 +62,15 @@ public:
 printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
     }
 };
-class HdmiInternal: public HdmiInternalIndicationWrapper {
+
+class HdmiInternalIndication: public HdmiInternalIndicationWrapper {
+  HdmiInternalRequestProxy *hdmiRequest;
 public:
-    HdmiInternal(int id, PortalPoller *poller = 0) : HdmiInternalIndicationWrapper(id, poller) {}
-    virtual void vsync ( uint64_t v ){
-//printf("[%s:%d] %lx\n", __FUNCTION__, __LINE__, v);
-    }
+  HdmiInternalIndication(int id, HdmiInternalRequestProxy *proxy, PortalPoller *poller = 0) : HdmiInternalIndicationWrapper(id, poller), hdmiRequest(proxy) {}
+  virtual void vsync ( const uint64_t v ) {
+    printf("vsync v=%llx\n", v);
+    hdmiRequest->waitForVsync(v+1);
+  }
 };
 
 static void init_local_semaphores(void)
@@ -422,23 +425,29 @@ int main(int argc, const char **argv)
     init_local_semaphores();
     PortalPoller *poller = new PortalPoller();
 
-    device = new ImageCaptureRequestProxy(IfcNames_ImageCaptureRequest, poller);
+    device = new ImageCaptureRequestProxy(IfcNames_ImageCapture, poller);
     sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
+    hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
     
     ImageCaptureIndicationWrapper *imageCaptureIndication = new ImageCaptureIndication(IfcNames_ImageCaptureIndication);
     ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndication);
+    HdmiInternalIndicationWrapper *hdmiIndication = new HdmiInternalIndication(IfcNames_HdmiInternalIndication, hdmidevice);
 
-    //hdmidevice = HdmiInternalRequest::createHdmiInternalRequest(new TestHdmiInternal);
     // for surfaceflinger 
-    int status = poller->setClockFrequency(1, 160000000, 0);
-    //int status = poller->setClockFrequency(1, 200000000, 0);
+    long actualFrequency = 0;
+    int status = poller->setClockFrequency(1, 160000000, &actualFrequency);
+    printf("[%s:%d] setClockFrequency 1 160000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
+    status = poller->setClockFrequency(3, 200000000, &actualFrequency);
+    printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     pthread_create(&threaddata, NULL, &pthread_worker, (void *)device);
-    //hdmidevice->setTestPattern(0, 1);
+    hdmidevice->setTestPattern(1);
     fmc_imageon_demo_init(argc, argv);
-    printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    usleep(200000);
-    while (getchar() != EOF) {
+    printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);
+    //usleep(200000);
+    hdmidevice->waitForVsync(0);
+    usleep(2000000);
+    while (1/*getchar() != EOF*/) {
         device->set_debugreq(1);
         device->get_debugind();
         printf("[%s:%d] iserdes %lx\n", __FUNCTION__, __LINE__, read_iserdes_control());
@@ -446,6 +455,7 @@ int main(int argc, const char **argv)
         int i;
         for (i = 0; regids[i]; i++)
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
+	usleep(1000000);
     }
     return 0;
 }

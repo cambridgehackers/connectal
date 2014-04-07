@@ -529,6 +529,7 @@ interface PS7;
     method Action                             interrupt(Bit#(1) v);
     interface Vector#(4, Clock) fclkclk;
     interface Vector#(4, Reset) fclkreset;
+    interface Vector#(2, Pps7Emioi2c)  i2c;
 endinterface
 
 module mkPS7(PS7);
@@ -592,4 +593,5 @@ module mkPS7(PS7);
     method Action interrupt(Bit#(1) v);
         ps7.irq.f2p({19'b0, v});
     endmethod
+    interface Pps7Emioi2c       i2c = ps7.i2c;
 endmodule

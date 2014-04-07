@@ -42,10 +42,10 @@ import YUV::*;
 import PS7LIB :: *;
 import Imageon :: *;
 
-typedef enum { ImageCaptureRequest, ImageonSerdesRequest, HdmiInternalRequest, ImageonSensorRequest,
+typedef enum { ImageCapture, ImageonSerdesRequest, HdmiInternalRequest, ImageonSensorRequest,
     ImageCaptureIndication, ImageonSerdesIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,ImageonVita));
+module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageonVita));
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
 
@@ -57,7 +57,8 @@ module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,I
    //ImageCaptureRequest captureRequestInternal <- mkImageCaptureRequest(captureIndicationProxy.ifc);
 
 //////
-   IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200);
+   Clock clock200_buf <- mkClockBUFG(clocked_by clock200);
+   IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200_buf);
 
    ClockGenerator7AdvParams clockParams = defaultValue;
    clockParams.bandwidth          = "OPTIMIZED";
@@ -76,7 +77,7 @@ module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,I
    clockParams.ref_jitter1        = 0.010;
    clockParams.ref_jitter2        = 0.010;
 
-   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by io_vita_clk);
+   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
    Clock hdmi_clock = clockGen.clkout0;
    Clock imageon_clock = clockGen.clkout1;
 
@@ -85,7 +86,7 @@ module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,I
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
 
     ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
-        clocked_by imageon_clock, reset_by imageon_reset);
+				clocked_by imageon_clock, reset_by imageon_reset);
     SPI#(Bit#(26)) spiController <- mkSPI(1000);
     SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
@@ -93,7 +94,21 @@ module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,I
     ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
         hdmiGen.control, hdmi_clock, hdmi_reset, clocked_by imageon_clock, reset_by imageon_reset);
 
-    //ImageCaptureRequestWrapper captureRequestWrapper <- mkImageCaptureRequestWrapper(ImageCaptureRequest,captureRequestInternal.ifc);
+    rule spiControllerResponse;
+        Bit#(26) v <- spiController.response.get();
+       captureIndicationProxy.ifc.spi_response(extend(v));
+    endrule
+
+   ImageCaptureRequest imageCaptureRequest = (interface ImageCaptureRequest;
+    method Action get_debugind();
+        captureIndicationProxy.ifc.debugind(fromSensor.control.get_debugind());
+    endmethod
+    method Action put_spi_request(Bit#(32) v);
+        spiController.request.put(truncate(v));
+    endmethod
+      endinterface);
+
+    ImageCaptureRequestWrapper captureRequestWrapper <- mkImageCaptureRequestWrapper(ImageCapture, imageCaptureRequest);
     ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequest,serdes.control);
     HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiGen.control);
     ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequest,fromSensor.control);
@@ -108,24 +123,17 @@ module mkPortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(addrWidth,64,I
 //        hdmiGen.request.put(pixel);
 //    endrule
 //
-//    rule spiControllerResponse;
-//        Bit#(26) v <- spiController.response.get();
-//        indication.coreIndication.spi_response(extend(v));
-//    endrule
 //
-//    method Action get_debugind();
-//        indication.coreIndication.debugind(fromSensor.control.get_debugind());
-//    endmethod
-//    method Action put_spi_request(Bit#(32) v);
-//        spiController.request.put(truncate(v));
-//    endmethod
 ///////////
    
-   Vector#(4,StdPortal) portals;
-   portals[0] = captureIndicationProxy.portalIfc;
-   portals[1] = serdesRequestWrapper.portalIfc; 
-   portals[2] = hdmiRequestWrapper.portalIfc; 
-   portals[3] = sensorRequestWrapper.portalIfc; 
+   Vector#(7,StdPortal) portals;
+   portals[0] = captureRequestWrapper.portalIfc;
+   portals[1] = captureIndicationProxy.portalIfc;
+   portals[2] = serdesRequestWrapper.portalIfc; 
+   portals[3] = serdesIndicationProxy.portalIfc;
+   portals[4] = hdmiRequestWrapper.portalIfc; 
+   portals[5] = hdmiIndicationProxy.portalIfc; 
+   portals[6] = sensorRequestWrapper.portalIfc; 
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);

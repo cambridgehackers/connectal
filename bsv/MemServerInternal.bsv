@@ -166,6 +166,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 let rename_tag <- tag_gen.get_tag(client, req.tag);
 	 reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
+	 //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       end
    endrule
 
@@ -180,6 +181,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	    dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag});
+	    //$display("readReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
@@ -190,10 +192,11 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	    let req = dreqFifos[response.tag].first.req;
 	    let burstLen = burstRegs[response.tag];
 	    readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
+	    //$display("readData: client=%d, rename_tag=%d", client, response.tag);
 	    if (burstLen == 0)
 	       burstLen = req.burstLen >> beat_shift;
 	    if (burstLen == 1) begin
-	       dreqFifos[client].deq();
+	       dreqFifos[response.tag].deq();
 	       tag_gen.return_tag(truncate(response.tag));
 	    end
 	    burstRegs[response.tag] <= burstLen-1;

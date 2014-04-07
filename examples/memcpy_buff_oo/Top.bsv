@@ -47,7 +47,7 @@ import Memcpy::*;
 
 typedef enum {MemcpyIndication, MemcpyRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module [Module] mkPortalTop(StdPortalTop#(addrWidth)) 
+module mkPortalTop(StdPortalTop#(addrWidth)) 
 
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),

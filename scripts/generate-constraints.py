@@ -48,9 +48,10 @@ for pin in pinout:
     iostandard = 'TBD'
     if pinInfo.has_key('fmc'):
         fmcPin = pinInfo['fmc']
-        if boardInfo.has_key(fmcPin):
-            loc = boardInfo[fmcPin]['LOC']
-            iostandard = boardInfo[fmcPin]['IOSTANDARD']
+        fmcInfo = boardInfo['fmc2']
+        if fmcInfo.has_key(fmcPin):
+            loc = fmcInfo[fmcPin]['LOC']
+            iostandard = fmcInfo[fmcPin]['IOSTANDARD']
         else:
             print('Missing pin description for', fmcPin, file=sys.stderr)
             loc = 'fmc.%s' % (fmcPin)
