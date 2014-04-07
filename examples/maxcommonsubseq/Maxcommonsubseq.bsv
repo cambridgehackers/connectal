@@ -40,6 +40,7 @@ import Dma2BRAM::*;
 // algorithm
 import HirschA::*;
 import HirschB::*;
+import HirschC::*;
 
 
 /* This module solves the maximum common subsequence problem.
@@ -217,6 +218,9 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 	       hirschB1Running <= True;
 	    end
 	 3: begin
+	       hirschC.setupA(0, aLenReg);
+	       hirschC.setupB(0, bLenReg);
+	       hirschC.setupL(0);
 	       hirschC.start();
 	    end
       endcase
