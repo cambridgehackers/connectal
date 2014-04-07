@@ -126,13 +126,14 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
 //
 ///////////
    
-   Vector#(6,StdPortal) portals;
+   Vector#(7,StdPortal) portals;
    portals[0] = captureRequestWrapper.portalIfc;
    portals[1] = captureIndicationProxy.portalIfc;
    portals[2] = serdesRequestWrapper.portalIfc; 
    portals[3] = serdesIndicationProxy.portalIfc;
    portals[4] = hdmiRequestWrapper.portalIfc; 
-   portals[5] = sensorRequestWrapper.portalIfc; 
+   portals[5] = hdmiIndicationProxy.portalIfc; 
+   portals[6] = sensorRequestWrapper.portalIfc; 
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
