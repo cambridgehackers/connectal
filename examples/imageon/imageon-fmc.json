@@ -116,19 +116,19 @@
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA05_n"
     },
-    "fmc_imageon_video_clk1": {
+    "CLK_fmc_video_clk1": {
 	"PIO_DIRECTION": "INPUT",
 	"fmc": "CLK0_M2C_p"
     },
-    "fmc_imageon_iic_1_rst_pin": {
+    "I2C_rst_pin": {
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA01_n_CC"
     },
-    "fmc_imageon_iic_1_scl": {
+    "I2C_scl": {
 	"PIO_DIRECTION": "BIDIR",
 	"fmc": "LA16_p"
     },
-    "fmc_imageon_iic_1_sda": {
+    "I2C_sda": {
 	"PIO_DIRECTION": "BIDIR",
 	"fmc": "LA16_n"
     }
