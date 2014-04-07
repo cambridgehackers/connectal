@@ -39,7 +39,7 @@ typedef struct {
 
 typedef enum {HCSIdle, HCS1, HCS2, HCSComplete} HCState deriving (Bits, Eq);
 
-module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL, MCSAlgorithm chirschB0, chirschB1, BRAMServer#(Bit#(lIndexWidth)) l0, BRAMServer#(lIndexWidth)) l1)(MCSAlgorithm)
+module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL, MCSAlgorithm chirschB0,  MCSAlgorithm chirschB1, BRAMServer#(Bit#(lIndexWidth)) l0, BRAMServer#(Bit#(lIndexWidth)) l1)(MCSAlgorithm)
          provisos(Add#(0, 7, strIndexWidth),
 	       Add#(0, 14, lIndexWidth));
 
@@ -65,7 +65,7 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
  */
    
   // This FSM searches string B looking for the first char of string A
-  Stmt hirschC2stmt =
+   Stmt hirschC2stmt =
    seq
       $display("hirschC running ");
       // read A[0]
@@ -95,12 +95,13 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    FSM hC2fsm <- mkFSM(hirschC2Stmt);
    
    // AlgC step 1, 2, and 3
-   rule hc1 (fr.pc == HCS1)
+   rule hc1 (fr.pc == HCS1);
+      $display("HCS1 aStart %d aLen %d bStart %d bLen %d", fr.args.aStart, fr.args.aLen, fr.args.bStart, fr.args.bLen);
       if (fr.args.bLen == 0)
 	doreturn();
      else if (fr.args.aLen == 1)
 	begin
-	   hc2fsm.start()
+	   hc2fsm.start();
 	   fr.nextpc(HCS2);
 	end
      else
@@ -136,7 +137,7 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	    endaction
 	 endseq
       
-      fr.docall(HCS1, HCS5, {startA: fr.args.startA, lenA: fr.vars.midi, startB: fr.args.startB, lenB: fr.vars.maxj});
+      fr.docall(HCS1, HCS5, CArgs {aStart: fr.args.aStart, aLen: fr.vars.midi, bStart: fr.args.bStart, bLen: fr.vars.maxj}, fr.vars);
    endseq
 
    FSM hc4fsm <- mkFSM(hirschC4Stmt);
@@ -147,7 +148,7 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    endrule
    
    rule hc5 (fr.pc == HCS5);
-      fr.docall(HCS1, HCS6, {startA: 0, lenA: maxj, startB: 0, lenB: fr.args.bLen});
+      fr.docall(HCS1, HCS6, CArgs{aStart: fr.args.aStart + fr.vars.midi, aLen: fr.args.aLen - fr.vars.midi, bStart: fr.args.bStart + fr.vars.maxj, bLen: fr.args.bLen - fr.vars.maxj}, fr.vars);
    endrule
    
    rule hc6 (fr.pc == HCS6);
@@ -169,8 +170,8 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    endmethod
 
    method Action start();
-      docall(HCS1, HCSComplere, {startA: 0, aLen: aLenReg,
-	 startB: 0, bLen: bLenReg}, {0, 0})
+      docall(HCS1, HCSComplere, {aStart: 0, aLen: aLenReg,
+	 bStart: 0, bLen: bLenReg}, {0, 0})
    endmethod
    
    interface FSM fsm = hC;
