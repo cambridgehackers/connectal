@@ -19,9 +19,6 @@ public:
       fprintf(stderr, "fibresult: %d\n", v);
 	sem_post(&test_sem);
     }
-    virtual void fibnote(uint32_t v) {
-      fprintf(stderr, "fibnote: %d\n", v);
-    }
     FibIndication(unsigned int id) : FibIndicationWrapper(id) {}
 };
 
