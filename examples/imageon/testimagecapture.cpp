@@ -422,7 +422,7 @@ int main(int argc, const char **argv)
     init_local_semaphores();
     PortalPoller *poller = new PortalPoller();
 
-    device = new ImageCaptureRequestProxy(IfcNames_ImageCaptureRequest, poller);
+    device = new ImageCaptureRequestProxy(IfcNames_ImageCapture, poller);
     sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
     

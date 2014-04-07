@@ -58,14 +58,13 @@ endinterface
 
 typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt(Clock clock200, Clock io_vita_clk)) MkPortalTop#(type ipins);
 
-module [Module] mkZynqTopFromPortal#(Clock io_vita_clk_out_p, Clock io_vita_clk_out_n, MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
-   Clock io_vita_clk <- XilinxCells::mkClockIBUFDS(io_vita_clk_out_p, io_vita_clk_out_n);
+module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
    PS7 ps7 <- mkPS7();
    Clock mainclock = ps7.fclkclk[0];
    Reset mainreset = ps7.fclkreset[0];
 
-   // I have a feeling the fclkclk[3] is not what we want. Jamey
-   let top <- constructor(ps7.fclkclk[3], io_vita_clk, clocked_by mainclock, reset_by mainreset);
+   Clock fmc_video_clk1_buf <- mkClockBUFG(clocked_by fmc_video_clk1);
+   let top <- constructor(ps7.fclkclk[3], fmc_video_clk1_buf, clocked_by mainclock, reset_by mainreset);
 
    //mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
    //mkConnectionWithTrace(top.m_axi, ps7.s_axi_hp[0].axi.server);
@@ -93,7 +92,7 @@ module [Module] mkZynqTopFromPortal#(Clock io_vita_clk_out_p, Clock io_vita_clk_
    interface unused_reset = ps7.fclkreset;
 endmodule
 
-module mkImageonZynqTop#(Clock io_vita_clk_out_p, Clock io_vita_clk_out_n)(ZynqTop#(ImageonVita));
-   let top <- mkZynqTopFromPortal(io_vita_clk_out_p, io_vita_clk_out_n, mkPortalTop);
+module mkImageonZynqTop#(Clock fmc_video_clk1)(ZynqTop#(ImageonVita));
+   let top <- mkZynqTopFromPortal(fmc_video_clk1, mkPortalTop);
    return top;
 endmodule
