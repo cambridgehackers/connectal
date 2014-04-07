@@ -21,7 +21,7 @@ resume execution in the middle of an FSM after a return.
 Likewise, FSM server doesn't help, because you cannot call yourself.
 
 Instead, Fib is implemented using an FSM constructed out of individual rules
-which fire according to a state variable.  Fib takes four rules:
+which fire according to a state variable.  Fib takes three rules:
 
 
    rule fib1 (fibstate == FIBSTATE1);
@@ -44,7 +44,32 @@ which fire according to a state variable.  Fib takes four rules:
 
 In accordance with bluespec, each rule takes exactly one cycle to run,
 once its guards are satisfied.
+
+The newest version of thisfib is in the module FibWide.bsv, which uses
+the library module lib/bsv/StackReg.bsv
+
+The idea of StackReg is that it stores the entire "local frame" on a stack.
+The local frame includes the program counter, the function arguments,
+and any local variables.  These are all stored in parallel, so it takes
+three BRAMs of the appropriate widths.  Additional registers are used
+for the "top of stack" and a bypass register that permits single cycle
+returns.
+
+To use the StackReg library, you instantiate a StackReg, with
+parameters for stack depth, types for the PC, arguments, and locals,
+and a parameter for the initial value of the PC.
+
+Thereafter, you can use the docall and doreturn methods to implement
+recursive algorithms.
+
       
+The original version of thisFib is in the module Fib.bsv, which uses
+the library module lib/bsv/Stack.bsv
+
+Stack uses a single 16 bit wide BRAM to store all the stack data in the
+local frame.  This is a multicycle operation, and requires the caller to
+implement the FSMs to do the save and restore.  It uses less hardware, more
+time, and is messy to code.
 
 The original caller of this FSM uses "callfib" to start the run.
 The first argument to callfib is the argument to this invocation of
