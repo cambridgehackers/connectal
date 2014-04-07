@@ -42,6 +42,17 @@ import YUV::*;
 import PS7LIB :: *;
 import Imageon :: *;
 
+interface ImageCaptureIndication;
+    method Action debugind(Bit#(32) v);
+    method Action spi_response(Bit#(32) v);
+endinterface
+
+interface ImageCaptureRequest;
+    method Action set_debugreq(Bit#(32) v);
+    method Action get_debugind();
+    method Action put_spi_request(Bit#(32) v);
+endinterface
+
 typedef enum { ImageCapture, ImageonSerdesRequest, HdmiInternalRequest, ImageonSensorRequest,
     ImageCaptureIndication, ImageonSerdesIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
 
