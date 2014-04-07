@@ -38,6 +38,13 @@ import HDMI::*;
 import Imageon::*;
 import ConnectableWithTrace::*;
 import CtrlMux::*;
+import TriState::*;
+
+interface I2C_Pins;
+   interface Inout#(Bit#(1)) scl;
+   interface Inout#(Bit#(1)) sda;
+   interface Bit#(1) rst_pin;
+endinterface
 
 //`define TRACE_AXI
 //`define AXI_READ_TIMING
@@ -50,6 +57,8 @@ interface ZynqTop#(type pins);
    interface LEDS             leds;
    (* prefix="XADC" *)
    interface XADC             xadc;
+   (* prefix="I2C" *)
+   interface I2C_Pins         i2c;
    (* prefix="" *)
    interface pins             pins;
    interface Vector#(4, Clock) unused_clock;
@@ -62,6 +71,12 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
    PS7 ps7 <- mkPS7();
    Clock mainclock = ps7.fclkclk[0];
    Reset mainreset = ps7.fclkreset[0];
+
+   let tscl <- mkTriState(unpack(ps7.i2c[1].scltn), ps7.i2c[1].sclo, clocked_by mainclock, reset_by mainreset);
+   let tsda <- mkTriState(unpack(ps7.i2c[1].sdatn), ps7.i2c[1].sdao, clocked_by mainclock, reset_by mainreset);
+   rule sdai;
+      ps7.i2c[1].sdai(tsda);
+   endrule
 
    Clock fmc_video_clk1_buf <- mkClockBUFG(clocked_by fmc_video_clk1);
    let top <- constructor(ps7.fclkclk[3], fmc_video_clk1_buf, clocked_by mainclock, reset_by mainreset);
@@ -85,6 +100,13 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
            return 0;
        endmethod
    endinterface
+
+    interface I2C_Pins i2c;
+       interface Inout scl = tscl.io;
+       interface Inout sda = tsda.io;
+       interface Bit rst_pin = 0;
+    endinterface
+
    interface pins = top.pins;
 
    // these are exported to make bsc happy, and then the ports are disconnected after synthesis
