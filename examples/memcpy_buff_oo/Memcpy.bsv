@@ -23,11 +23,11 @@
 import FIFOF::*;
 import FIFO::*;
 import Connectable::*;
+import GetPut::*;
 
 import PortalMemory::*;
 import Dma::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+
 
 interface MemcpyRequest;
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -42,50 +42,77 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 			ObjectReadServer#(64) dma_read_server,
 			ObjectWriteServer#(64) dma_write_server)(MemcpyRequest);
 
-   let readFifo <- mkFIFOF;
-   let writeFifo <- mkFIFOF;
+   Reg#(ObjectPointer)       rdPointer <- mkReg(0);
+   Reg#(ObjectPointer)       wrPointer <- mkReg(0);
+   Reg#(Bit#(8))              burstLen <- mkReg(0);
+   Reg#(Bit#(32))               reqLen <- mkReg(0);
 
-   MemreadEngine#(64) re <- mkMemreadEngine(1, readFifo);
-   MemwriteEngine#(64) we <- mkMemwriteEngine(1, writeFifo);
+   Reg#(Bit#(32))            wrRespCnt <- mkReg(0);
+   Reg#(Bit#(32))                wrOff <- mkReg(0);
+   FIFO#(Bool)                    wrFF <- mkSizedFIFO(1);
+   Reg#(Bit#(6))                 wrTag <- mkReg(0);
 
-   Reg#(Bit#(32))          iterCnt <- mkReg(0);
-   Reg#(Bit#(32))         numWords <- mkReg(0);
-   Reg#(ObjectPointer)      rdPointer <- mkReg(0);
-   Reg#(ObjectPointer)      wrPointer <- mkReg(0);
-   Reg#(Bit#(32))         burstLen <- mkReg(0);
+   Reg#(Bit#(32))            rdRespCnt <- mkReg(0);
+   Reg#(Bit#(32))                rdOff <- mkReg(0);
+   FIFO#(Bool)                    rdFF <- mkSizedFIFO(1);
+   Reg#(Bit#(6))                 rdTag <- mkReg(0);
    
-   mkConnection(re.dmaClient,dma_read_server);
-   mkConnection(we.dmaClient,dma_write_server);
+   FIFO#(ObjectData#(64))            f <- mkFIFO;
    
-   rule start(iterCnt > 0);
-      re.start(rdPointer, 0, numWords*4, burstLen*4);
-      we.start(wrPointer, 0, numWords*4, burstLen*4);
-      iterCnt <= iterCnt-1;
-   endrule
-
    rule finish;
-      let rv0 <- re.finish;
-      let rv1 <- we.finish;
-      if(iterCnt==0) begin
-	 indication.done;
-      end
+      rdFF.deq;
+      wrFF.deq;
+      indication.done;
    endrule
    
-   rule xfer;
-      //$display("xfer: %h", readFifo.first);
-      readFifo.deq;
-      writeFifo.enq(readFifo.first);
+   rule rdReq if (rdOff < reqLen);
+      rdOff <= rdOff + extend(burstLen);
+      dma_read_server.readReq.put(ObjectRequest { pointer: rdPointer, offset: extend(rdOff), burstLen: burstLen, tag: rdTag });
+      rdTag <= rdTag+1;
+      //$display("rdReq %h %h", rdOff, burstLen);
+   endrule
+   
+   rule rdData;
+      ObjectData#(64) d <- dma_read_server.readData.get;
+      if (rdRespCnt+(64/8) >= reqLen)
+	 rdFF.enq(True);
+      rdRespCnt <= rdRespCnt+(64/8);
+      f.enq(d);
+      //$display("rdData %h", rdRespCnt);
+   endrule
+
+   rule wrReq if (wrOff < reqLen);
+      wrOff <= wrOff + extend(burstLen);
+      dma_write_server.writeReq.put(ObjectRequest { pointer: wrPointer, offset: extend(wrOff), burstLen: burstLen, tag: wrTag });
+      wrTag <= wrTag+1;
+      //$display("wrReq %h %h", wrOff, reqLen);
+   endrule
+
+   rule wrData;
+      f.deq;
+      dma_write_server.writeData.put(ObjectData{data:f.first.data, tag: 0});
+      //$display("wrData");
+   endrule
+   
+   rule wrDone;
+      let rv <- dma_write_server.writeDone.get;
+      if (wrRespCnt+extend(burstLen) >= reqLen)
+   	 wrFF.enq(True);
+      wrRespCnt <= wrRespCnt+extend(burstLen);
+      //$display("wrDone %h", wrRespCnt);
    endrule
    
    method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
       $display("startCopy wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
       indication.started;
-      // initialized
       wrPointer <= wp;
       rdPointer <= rp;
-      numWords  <= nw;
-      iterCnt   <= ic;
-      burstLen  <= bl;
+      reqLen    <= nw*4;
+      burstLen  <= truncate(bl*4);
+      wrRespCnt <= 0;
+      wrOff     <= 0;
+      rdRespCnt <= 0;
+      rdOff     <= 0;
    endmethod
 
 endmodule
