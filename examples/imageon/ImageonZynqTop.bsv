@@ -75,6 +75,7 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
    let tsda <- mkTriState(unpack(ps7.i2c[1].sdatn), ps7.i2c[1].sdao, clocked_by mainclock, reset_by mainreset);
    rule sdai;
       ps7.i2c[1].sdai(tsda);
+      ps7.i2c[1].scli(tscl);
    endrule
 
    Clock fmc_video_clk1_buf <- mkClockBUFG(clocked_by fmc_video_clk1);
