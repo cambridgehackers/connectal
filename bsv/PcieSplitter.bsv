@@ -70,10 +70,10 @@ interface PcieSplitter#(numeric type bpb);
    interface Reset portalReset;
 
    // status for FPGA LEDs
-   (* always_ready *)
-   method Bool rx_activity();
-   (* always_ready *)
-   method Bool tx_activity();
+   //unused--jca (* always_ready *)
+   //unused--jca method Bool rx_activity();
+   //unused--jca (* always_ready *)
+   //unused--jca method Bool tx_activity();
 
    interface Put#(TimestampedTlpData) trace;
 
@@ -1078,8 +1078,8 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
 
    interface Reset portalReset = portalResetIfc.new_rst;
 
-   method Bool rx_activity  = dispatcher.read_tlp() || dispatcher.write_tlp() || arbiter.completion_tlp();
-   method Bool tx_activity  = arbiter.read_tlp()    || arbiter.write_tlp()    || dispatcher.completion_tlp();
+   //unused--jca method Bool rx_activity  = dispatcher.read_tlp() || dispatcher.write_tlp() || arbiter.completion_tlp();
+   //unused--jca method Bool tx_activity  = arbiter.read_tlp()    || arbiter.write_tlp()    || dispatcher.completion_tlp();
 
    // method Action interrupt();
    //     portalEngine.interruptRequested <= True;
