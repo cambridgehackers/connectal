@@ -24,6 +24,7 @@ import FIFOF::*;
 import FIFO::*;
 import Connectable::*;
 import GetPut::*;
+import Vector::*;
 
 import PortalMemory::*;
 import Dma::*;
@@ -42,64 +43,56 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 			ObjectReadServer#(64) dma_read_server,
 			ObjectWriteServer#(64) dma_write_server)(MemcpyRequest);
 
-   Reg#(ObjectPointer)       rdPointer <- mkReg(0);
-   Reg#(ObjectPointer)       wrPointer <- mkReg(0);
-   Reg#(Bit#(8))              burstLen <- mkReg(0);
-   Reg#(Bit#(32))               reqLen <- mkReg(0);
+   Reg#(ObjectPointer)     rdPointer <- mkReg(0);
+   Reg#(ObjectPointer)     wrPointer <- mkReg(0);
+   Reg#(Bit#(8))            burstLen <- mkReg(0);
+   Reg#(Bit#(32))             reqLen <- mkReg(0);
 
-   Reg#(Bit#(32))            wrRespCnt <- mkReg(0);
-   Reg#(Bit#(32))                wrOff <- mkReg(0);
-   FIFO#(Bool)                    wrFF <- mkSizedFIFO(1);
-   Reg#(Bit#(6))                 wrTag <- mkReg(0);
-
-   Reg#(Bit#(32))            rdRespCnt <- mkReg(0);
-   Reg#(Bit#(32))                rdOff <- mkReg(0);
-   FIFO#(Bool)                    rdFF <- mkSizedFIFO(1);
-   Reg#(Bit#(6))                 rdTag <- mkReg(0);
+   Reg#(Bit#(6))               wrTag <- mkReg(0);
+   Reg#(Bit#(3))               rdTag <- mkReg(0);
+   Reg#(Bit#(32))            respCnt <- mkReg(0);
+   Reg#(Bit#(32))           burstCnt <- mkReg(0);
+   Reg#(Bit#(32))              rdOff <- mkReg(0);
    
-   FIFO#(ObjectData#(64))            f <- mkFIFO;
-   
-   rule finish;
-      rdFF.deq;
-      wrFF.deq;
-      indication.done;
-   endrule
-   
+   Vector#(8,FIFO#(Bit#(32)))    rcb <- replicateM(mkFIFO);
+   Reg#(Bit#(6))           lastWrTag <- mkReg(maxBound);
+   Reg#(Bit#(3))           lastRdTag <- mkReg(maxBound);
+      
    rule rdReq if (rdOff < reqLen);
       rdOff <= rdOff + extend(burstLen);
-      dma_read_server.readReq.put(ObjectRequest { pointer: rdPointer, offset: extend(rdOff), burstLen: burstLen, tag: rdTag });
+      dma_read_server.readReq.put(ObjectRequest { pointer: rdPointer, offset: extend(rdOff), burstLen: burstLen, tag: extend(rdTag) });
       rdTag <= rdTag+1;
-      //$display("rdReq %h %h", rdOff, burstLen);
+      rcb[rdTag].enq(rdOff);
    endrule
    
    rule rdData;
+      let new_burstCnt = burstCnt+(64/8);
       ObjectData#(64) d <- dma_read_server.readData.get;
-      if (rdRespCnt+(64/8) >= reqLen)
-	 rdFF.enq(True);
-      rdRespCnt <= rdRespCnt+(64/8);
-      f.enq(d);
-      //$display("rdData %h", rdRespCnt);
-   endrule
-
-   rule wrReq if (wrOff < reqLen);
-      wrOff <= wrOff + extend(burstLen);
-      dma_write_server.writeReq.put(ObjectRequest { pointer: wrPointer, offset: extend(wrOff), burstLen: burstLen, tag: wrTag });
-      wrTag <= wrTag+1;
-      //$display("wrReq %h %h", wrOff, reqLen);
-   endrule
-
-   rule wrData;
-      f.deq;
-      dma_write_server.writeData.put(ObjectData{data:f.first.data, tag: 0});
-      //$display("wrData");
+      dma_write_server.writeData.put(ObjectData{data:d.data, tag: wrTag});
+      if (burstCnt == 0) begin
+	 dma_write_server.writeReq.put(ObjectRequest { pointer: wrPointer, offset: extend(rcb[d.tag].first), burstLen: burstLen, tag: wrTag});
+	 rcb[d.tag].deq;
+	 lastRdTag <= truncate(d.tag);
+	 // if(lastRdTag+1 != truncate(d.tag))
+	 //    $display("OO rd completion");
+      end
+      if (new_burstCnt == extend(burstLen)) begin 
+	 burstCnt <= 0;
+	 wrTag <= wrTag+1;
+      end
+      else 
+	 burstCnt <= new_burstCnt;
    endrule
    
    rule wrDone;
+      let new_respCnt = respCnt+extend(burstLen);
+      respCnt <= new_respCnt;
+      if (new_respCnt >= reqLen)
+	 indication.done;
       let rv <- dma_write_server.writeDone.get;
-      if (wrRespCnt+extend(burstLen) >= reqLen)
-   	 wrFF.enq(True);
-      wrRespCnt <= wrRespCnt+extend(burstLen);
-      //$display("wrDone %h", wrRespCnt);
+      lastWrTag <= rv;
+      // if(lastWrTag+1 != rv)
+      // 	 $display("OO wr completion");
    endrule
    
    method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
@@ -109,9 +102,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       rdPointer <= rp;
       reqLen    <= nw*4;
       burstLen  <= truncate(bl*4);
-      wrRespCnt <= 0;
-      wrOff     <= 0;
-      rdRespCnt <= 0;
+      respCnt <= 0;
       rdOff     <= 0;
    endmethod
 
