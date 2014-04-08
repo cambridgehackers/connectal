@@ -104,6 +104,10 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
   
    method Action setupL(Bit#(14) start);
    endmethod
+
+   method Bit#(14) result();
+      return(zeroExtend(aLenReg) * zeroExtend(bLenReg));
+   endmethod
   
    interface FSM fsm = hA;
 
