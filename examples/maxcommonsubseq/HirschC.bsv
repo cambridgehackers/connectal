@@ -70,7 +70,7 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
   // This FSM searches string B looking for the first char of string A
    Stmt hirschC2Stmt =
    seq
-      $display("hirschC2Stmt running ");
+      //$display("hirschC2Stmt running ");
       // read A[0]
       strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: fr.args.aStart, datain: ?});
       action
@@ -87,6 +87,7 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	    endaction
 	    if (aData == bData)
 	       seq
+		  //$display("output %d", aData);
 		  matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: outcounter, datain: zeroExtend(aData)});
 		  outcounter <= outcounter + 1;
 		  break;
@@ -99,7 +100,7 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    
    // AlgC step 1, 2, and 3
    rule hc1 (fr.pc == HCS1);
-      $display("HCS1 aStart %d aLen %d bStart %d bLen %d", fr.args.aStart, fr.args.aLen, fr.args.bStart, fr.args.bLen);
+      //$display("HCS1 aStart %d aLen %d bStart %d bLen %d", fr.args.aStart, fr.args.aLen, fr.args.bStart, fr.args.bLen);
       if (fr.args.bLen == 0)
 	fr.doreturn();
      else if (fr.args.aLen == 1)
@@ -111,10 +112,10 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	action
 	   let midi = fr.args.aLen >> 1;
 	   fr.vars.midi <= midi;
-	   chirschB0.setupA(fr.args.aStart, midi);
-	   chirschB0.setupB(fr.args.bStart, fr.args.bLen);
-	   chirschB1.setupA(fr.args.aStart+midi, fr.args.aLen - midi);
+	   chirschB1.setupA(fr.args.aStart, midi);
 	   chirschB1.setupB(fr.args.bStart, fr.args.bLen);
+	   chirschB0.setupA(fr.args.aStart+midi, fr.args.aLen - midi);
+	   chirschB0.setupB(fr.args.bStart, fr.args.bLen);
 	   chirschB0.fsm.start();
 	   chirschB1.fsm.start();
 	   fr.nextpc(HCS3);
@@ -124,8 +125,9 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    // This FSM searches the results of the two calls to HirschB
    Stmt hirschC4Stmt =
    seq
-      $display ("hirschC4A stmt running");
+      //$display ("hirschC4A stmt running");
       maxjvalue <= 0;
+      fr.vars.maxj <= 0;
       for (jj <= 0; jj <= fr.args.bLen; jj <= jj + 1)
 	 seq
 	    l0.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj), datain: ?});
@@ -133,6 +135,8 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	    action
 	       let t1 <- l0.response.get();
 	       let t2 <- l1.response.get();
+	       //$display(" j %d l0 %d l1 %d, sum %d oldmax %d",
+		  jj, t1, t2, t1 + t2, maxjvalue);
 	       if ((t1 + t2) > maxjvalue)
 		  action
 		     maxjvalue <= t1 + t2;
@@ -140,26 +144,33 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		  endaction
 	    endaction
 	 endseq
-      
+      //$display ("midi %d maxj %d", fr.vars.midi, fr.vars.maxj);
       fr.docall(HCS1, HCS5, CArgs {aStart: fr.args.aStart, aLen: fr.vars.midi, bStart: fr.args.bStart, bLen: fr.vars.maxj}, fr.vars);
    endseq;
 
    FSM hc4fsm <- mkFSM(hirschC4Stmt);
    
    rule hc3 (fr.pc == HCS3 && chirschB0.fsm.done() && chirschB1.fsm.done());
-      $display("HSC3");
+      //$display("HSC3");
       hc4fsm.start();
       fr.nextpc(HCS4);
    endrule
    
    rule hc5 (fr.pc == HCS5);
-      $display("HSC35");
+      //$display("HSC5 aStart %d aLen %d bStart %d bLen %d midi %d maxj %d",
+	 fr.args.aStart, fr.args.aLen, fr.args.bStart, fr.args.bLen,
+	 fr.vars.midi, fr.vars.maxj);
       fr.docall(HCS1, HCS6, CArgs{aStart: fr.args.aStart + fr.vars.midi, aLen: fr.args.aLen - fr.vars.midi, bStart: fr.args.bStart + fr.vars.maxj, bLen: fr.args.bLen - fr.vars.maxj}, fr.vars);
    endrule
    
    rule hc6 (fr.pc == HCS6);
-      $display("HSCC");
+      //$display("HSC6");
       fr.doreturn();
+   endrule
+
+   rule hccomplete (fr.pc == HCSComplete);
+      $display("HSCComplete, result size %d", outcounter);
+      fr.nextpc(HCSIdle);
    endrule
    
    method Action setupA(Bit#(7) start, Bit#(7) length);
@@ -178,10 +189,14 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       rStartReg <= start;
    endmethod
 
+   method Bit#(14) result();
+      return(outcounter);
+   endmethod
+
    
    interface FSM fsm;
       method Action start();
-         $display("HirschC running");
+         $display("HirschC running aLen %d bLen %d", aLenReg, bLenReg);
 	 fr.docall(HCS1, HCSComplete, CArgs{aStart: 0, aLen: aLenReg,
 	    bStart: 0, bLen: bLenReg}, CVars {midi: 0, maxj: 0});
       endmethod
