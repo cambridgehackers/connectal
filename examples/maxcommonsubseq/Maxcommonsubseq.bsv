@@ -57,14 +57,14 @@ import HirschC::*;
 /* First pass implements Hirschberg Algorithm A and the fetch call returns the L matrix
  */
 interface MaxcommonsubseqRequest;
-   method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
-   method Action setupB(Bit#(32) strPointer, Bit#(32) strLen);
+   method Action setupA(Bit#(32) strPointer, Bit#(32) strOffset, Bit#(32) strLen);
+   method Action setupB(Bit#(32) strPointer, Bit#(32) strOffset, Bit#(32) strLen);
    method Action fetch(Bit#(32) strPointer, Bit#(32) dest, Bit#(32) src, Bit#(32) strLen);
    method Action start(Bit#(32) alg);
 endinterface
 
 interface MaxcommonsubseqIndication;
-   method Action searchResult(Int#(32) v);
+   method Action searchResult(Bit#(32) v);
    method Action setupAComplete(); 
    method Action setupBComplete(); 
    method Action fetchComplete(); 
@@ -128,13 +128,14 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    Reg#(Bool) hirschARunning <- mkReg(False);
    Reg#(Bool) hirschB0Running <- mkReg(False);
    Reg#(Bool) hirschB1Running <- mkReg(False);
+   Reg#(Bool) hirschCRunning <- mkReg(False);
 
    MCSAlgorithm hirschA <- mkHirschA(strA.portA, strB.portA, matL.portA);
    MCSAlgorithm hirschB1 <- mkHirschB(strA.portA, strB.portA, matL.portA, 1);
    MCSAlgorithm hirschB0 <- mkHirschB(strA.portA, strB.portA, matL.portA, 0);
    MCSAlgorithm chirschB1 <- mkHirschB(strA.portA, strB.portA, matL0.portA, 1);
    MCSAlgorithm chirschB0 <- mkHirschB(strA.portA, strB.portA, matL1.portA, 0);
-   MCSAlgorithm hirschC <- mkHirschC(strA.portA, strB.portA, matL, chirschB0, chirschB1, matL0.portB, matL1.portB);
+   MCSAlgorithm hirschC <- mkHirschC(strA.portA, strB.portA, matL.portA, chirschB0, chirschB1, matL0.portB, matL1.portB);
    // create BRAM Write client for matL
 
    rule finish_setupA;
@@ -159,30 +160,43 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
 
    rule hirschA_completion (hirschARunning && hirschA.fsm.done);
       hirschARunning <= False;
-      indication.searchResult(22);
+      indication.searchResult(pack(zeroExtend(hirschA.result())));
       endrule
    
    rule hirschB0_completion (hirschB0Running && hirschB0.fsm.done);
-      hirschBRunning <= False;
-      indication.searchResult(23);
+      hirschB0Running <= False;
+      indication.searchResult(pack(zeroExtend(hirschB0.result())));
       endrule
    
    rule hirschB1_completion (hirschB1Running && hirschB1.fsm.done);
-      hirschBRunning <= False;
-      indication.searchResult(24);
+      hirschB1Running <= False;
+      indication.searchResult(pack(zeroExtend(hirschB1.result())));
+      endrule
+   
+   rule hirschC_completion (hirschCRunning && hirschC.fsm.done);
+      hirschCRunning <= False;
+      indication.searchResult(pack(zeroExtend(hirschC.result())));
       endrule
    
    
-   method Action setupA(Bit#(32) strPointer, Bit#(32) strLen);
+   method Action setupA(Bit#(32) strPointer, Bit#(32) strOffset, Bit#(32) strLen);
       aLenReg <= truncate(strLen);
-      $display("setupA %h %d", strPointer, strLen);
-      n2a.start(strPointer, 0, 0, pack(truncate(strLen-1)));
+      $display("setupA %h %h %d", strPointer, strOffset, strLen);
+      n2a.start(strPointer, 0, pack(truncate(strOffset)), pack(truncate(strOffset + strLen-1)));
+      hirschA.setupA(truncate(strOffset), pack(truncate(strLen)));
+      hirschB0.setupA(truncate(strOffset), pack(truncate(strLen)));
+      hirschB1.setupA(truncate(strOffset), pack(truncate(strLen)));
+      hirschC.setupA(truncate(strOffset), pack(truncate(strLen)));
    endmethod
 
-   method Action setupB(Bit#(32) strPointer, Bit#(32) strLen);
+   method Action setupB(Bit#(32) strPointer, Bit#(32) strOffset, Bit#(32) strLen);
       bLenReg <= truncate(strLen);
-      $display("setupB %h %d", strPointer, strLen);
-      n2b.start(strPointer, 0, 0, pack(truncate(strLen-1)));
+      $display("setupB %h %h %d", strPointer, strOffset, strLen);
+      n2b.start(strPointer, 0, pack(truncate(strOffset)), pack(truncate(strOffset + strLen-1)));
+      hirschA.setupB(truncate(strOffset), pack(truncate(strLen)));
+      hirschB0.setupB(truncate(strOffset), pack(truncate(strLen)));
+      hirschB1.setupB(truncate(strOffset), pack(truncate(strLen)));
+      hirschC.setupB(truncate(strOffset), pack(truncate(strLen)));
    endmethod
    
    method Action fetch(Bit#(32) strPointer, Bit#(32) dest, Bit#(32) src, Bit#(32) strLen);
@@ -197,31 +211,24 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
       $display ("start %d", alg);
       case (alg) 
 	 0: begin
-	       hirschA.setupA(0, aLenReg);
-	       hirschA.setupB(0, bLenReg);
 	       hirschA.setupL(0);
 	       hirschA.fsm.start();
 	       hirschARunning <= True;
 	    end
 	 1: begin
-	       hirschB0.setupA(0, aLenReg);
-	       hirschB0.setupB(0, bLenReg);
-	       hirschB0.fsm.start();
-	       hirschB0.setupL(0);
-	       hirschB0Running <= True;
-	    end
-	 2: begin
-	       hirschB1.setupA(0, aLenReg);
-	       hirschB1.setupB(0, bLenReg);
 	       hirschB1.fsm.start();
 	       hirschB1.setupL(0);
 	       hirschB1Running <= True;
 	    end
+	 2: begin
+	       hirschB0.fsm.start();
+	       hirschB0.setupL(0);
+	       hirschB0Running <= True;
+	    end
 	 3: begin
-	       hirschC.setupA(0, aLenReg);
-	       hirschC.setupB(0, bLenReg);
 	       hirschC.setupL(0);
-	       hirschC.start();
+	       hirschC.fsm.start();
+	       hirschCRunning <= True;
 	    end
       endcase
    endmethod
