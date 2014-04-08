@@ -30,4 +30,5 @@ interface ImageCaptureRequest;
     method Action set_debugreq(Bit#(32) v);
     method Action get_debugind();
     method Action put_spi_request(Bit#(32) v);
+    method Action set_i2c_mux_reset_n(Bit#(1) v);
 endinterface

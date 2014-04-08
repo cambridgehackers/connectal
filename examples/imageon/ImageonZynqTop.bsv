@@ -43,7 +43,6 @@ import TriState::*;
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
    interface Inout#(Bit#(1)) sda;
-   interface Bit#(1) rst_pin;
 endinterface
 
 //`define TRACE_AXI
@@ -104,7 +103,6 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
     interface I2C_Pins i2c;
        interface Inout scl = tscl.io;
        interface Inout sda = tsda.io;
-       interface Bit rst_pin = 0;
     endinterface
 
    interface pins = top.pins;
@@ -114,7 +112,7 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
    interface unused_reset = ps7.fclkreset;
 endmodule
 
-module mkImageonZynqTop#(Clock fmc_video_clk1)(ZynqTop#(ImageonVita));
+module mkImageonZynqTop#(Clock fmc_video_clk1)(ZynqTop#(ImageCapturePins));
    let top <- mkZynqTopFromPortal(fmc_video_clk1, mkPortalTop);
    return top;
 endmodule

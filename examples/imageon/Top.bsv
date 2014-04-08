@@ -45,7 +45,15 @@ import Imageon :: *;
 typedef enum { ImageCapture, ImageonSerdesRequest, HdmiInternalRequest, ImageonSensorRequest,
     ImageCaptureIndication, ImageonSerdesIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageonVita));
+interface ImageCapturePins;
+   interface SpiPins spi;
+   interface ImageonSensorPins pins;
+   //interface ImageonTopPins toppins;
+   interface ImageonSerdesPins serpins;
+   method Bit#(1) i2c_mux_reset_n();
+endinterface
+
+module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageCapturePins));
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
 
@@ -99,13 +107,18 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
        captureIndicationProxy.ifc.spi_response(extend(v));
     endrule
 
+   Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0);
+
    ImageCaptureRequest imageCaptureRequest = (interface ImageCaptureRequest;
-    method Action get_debugind();
-        captureIndicationProxy.ifc.debugind(fromSensor.control.get_debugind());
-    endmethod
-    method Action put_spi_request(Bit#(32) v);
-        spiController.request.put(truncate(v));
-    endmethod
+      method Action get_debugind();
+         captureIndicationProxy.ifc.debugind(fromSensor.control.get_debugind());
+      endmethod
+      method Action put_spi_request(Bit#(32) v);
+         spiController.request.put(truncate(v));
+      endmethod
+      method Action set_i2c_mux_reset_n(Bit#(1) v);
+	 i2c_mux_reset_n_reg <= v;
+      endmethod
       endinterface);
 
     ImageCaptureRequestWrapper captureRequestWrapper <- mkImageCaptureRequestWrapper(ImageCapture, imageCaptureRequest);
@@ -144,10 +157,11 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    interface master = null_mem_master;
    //interface leds = captureRequestInternal.leds;
 
-   interface ImageonVita pins;
+   interface ImageCapturePins pins;
        interface SpiPins spi = spiController.pins;
        interface ImageonSensorPins pins = fromSensor.pins;
        interface ImageonSerdesPins serpins = serdes.pins;
+       method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
    endinterface
 
 endmodule : mkPortalTop
