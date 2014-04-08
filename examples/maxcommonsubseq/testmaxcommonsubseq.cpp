@@ -40,9 +40,7 @@
 
 
 sem_t test_sem;
-sem_t setup_sem;
-int sw_match_cnt = 0;
-int hw_match_cnt = 0;
+int result_length;
 
 class MaxcommonsubseqIndication : public MaxcommonsubseqIndicationWrapper
 {
@@ -51,18 +49,18 @@ public:
 
   virtual void setupAComplete() {
     fprintf(stderr, "setupAComplete\n");
-    sem_post(&setup_sem);
+    sem_post(&test_sem);
   }
   virtual void setupBComplete() {
     fprintf(stderr, "setupBComplete\n");
-    sem_post(&setup_sem);
+    sem_post(&test_sem);
   }
   virtual void fetchComplete() {
     fprintf(stderr, "fetchComplete\n");
-    sem_post(&setup_sem);
+    sem_post(&test_sem);
   }
-
-  virtual void searchResult (int v){
+  virtual void searchResult (uint32_t v){
+    result_length = v;
     fprintf(stderr, "searchResult = %d\n", v);
     sem_post(&test_sem);
   }
@@ -86,11 +84,6 @@ int main(int argc, const char **argv)
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
-    return -1;
-  }
-
-  if(sem_init(&setup_sem, 1, 0)){
-    fprintf(stderr, "failed to init setup_sem\n");
     return -1;
   }
 
@@ -131,8 +124,12 @@ int main(int argc, const char **argv)
     if (strB == MAP_FAILED) perror("strB mmap failed");
     assert(strB != MAP_FAILED);
 
-    const char *strA_text = "   a     b      c    ";
+/*
+    const char *strA_text = "___a_____b______c____";
     const char *strB_text = "..a........b.c....";
+*/
+    const char *strA_text = "012a45678b012345c7890";
+    const char *strB_text = "ABaDEFGHIJKbMcOPQR";
     
     assert(strlen(strA_text) < alloc_len);
     assert(strlen(strB_text) < alloc_len);
@@ -158,12 +155,15 @@ int main(int argc, const char **argv)
     unsigned int ref_strBAlloc = dma->reference(strBAlloc);
     unsigned int ref_fetchAlloc = dma->reference(fetchAlloc);
 
-    device->setupA(ref_strAAlloc, strA_len);
-    sem_wait(&setup_sem);
+    device->setupA(ref_strAAlloc, 0, strA_len);
+    sem_wait(&test_sem);
 
-    device->setupB(ref_strBAlloc, strB_len);
-    sem_wait(&setup_sem);
+    device->setupB(ref_strBAlloc, 0, strB_len);
+    sem_wait(&test_sem);
 
+    uint64_t cycles;
+    uint64_t beats;
+#if 0
     fprintf(stderr, "starting algorithm A\n");
 
     init_timer();
@@ -171,14 +171,14 @@ int main(int argc, const char **argv)
 
     device->start(0);
     sem_wait(&test_sem);
-    uint64_t cycles = lap_timer(0);
-    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    cycles = lap_timer(0);
+    beats = dma->show_mem_stats(ChannelType_Read);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
-    sem_wait(&setup_sem);
+    sem_wait(&test_sem);
     printf("fetch 1 finished \n");
     device->fetch(ref_fetchAlloc, fetch_len, fetch_len / 2, fetch_len / 2);
-    sem_wait(&setup_sem);
+    sem_wait(&test_sem);
     printf("fetch 2 finished \n");
 
     memcpy(swFetch, fetch, fetch_len * sizeof(uint16_t));
@@ -200,6 +200,7 @@ int main(int argc, const char **argv)
     printf("\n");
     }
 
+
     fprintf(stderr, "starting algorithm B, forward\n");
     init_timer();
     start_timer(0);
@@ -209,7 +210,7 @@ int main(int argc, const char **argv)
     cycles = lap_timer(0);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
-    sem_wait(&setup_sem);
+    sem_wait(&test_sem);
 
     memcpy(swFetch, fetch, fetch_len * sizeof(uint16_t));
 
@@ -230,16 +231,33 @@ int main(int argc, const char **argv)
       }
     printf("\n");
     }
-    fprintf(stderr, "starting algorithm B, backward\2n");
+
+    /* reverse argument strings */
+    for (int i = 0; i < strA_len; i += 1) {
+      strA[i] = strA_text[strA_len - i - 1];
+    }
+    for (int i = 0; i < strB_len; i += 1) {
+      strB[i] = strB_text[strB_len - i - 1];
+    }
+    device->setupA(ref_strAAlloc, 0, strA_len);
+    sem_wait(&test_sem);
+
+    device->setupB(ref_strBAlloc, 0, strB_len);
+    sem_wait(&test_sem);
+
+    fprintf(stderr, "starting algorithm B, backward\n");
+
+
+
     init_timer();
     start_timer(0);
 
-    device->start(1);
+    device->start(2);
     sem_wait(&test_sem);
     cycles = lap_timer(0);
     fprintf(stderr, "hw cycles: %f\n", (float)cycles);
     device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
-    sem_wait(&setup_sem);
+    sem_wait(&test_sem);
 
     memcpy(swFetch, fetch, fetch_len * sizeof(uint16_t));
 
@@ -260,6 +278,42 @@ int main(int argc, const char **argv)
       }
     printf("\n");
     }
+
+    /* forward argument strings */
+    for (int i = 0; i < strA_len; i += 1) {
+      strA[i] = strA_text[i];
+    }
+    for (int i = 0; i < strB_len; i += 1) {
+      strB[i] = strB_text[i];
+    }
+    device->setupA(ref_strAAlloc, 0, strA_len);
+    sem_wait(&test_sem);
+
+    device->setupB(ref_strBAlloc, 0, strB_len);
+    sem_wait(&test_sem);
+#endif
+
+    fprintf(stderr, "starting algorithm C\n");
+    init_timer();
+    start_timer(0);
+
+    device->start(3);
+    sem_wait(&test_sem);
+    cycles = lap_timer(0);
+    fprintf(stderr, "hw cycles: %f\n", (float)cycles);
+    device->fetch(ref_fetchAlloc, 0, 0, fetch_len / 2);
+    sem_wait(&test_sem);
+
+    memcpy(swFetch, fetch, fetch_len * sizeof(uint16_t));
+
+    if (result_length > strB_len) result_length = strB_len;
+    
+    printf("Algorithm C results\n");
+    for (int j = 0; j <= result_length; j += 1) {
+      char c =  swFetch[j] & 0xff;
+      printf(" %02x (%c)", 0xff & c, (isalnum(c) ? c: '_'));
+    }
+    printf("\n");
 
 
 
