@@ -63,7 +63,7 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    seq
       jj <= 17;  // one cycle delay to permit the control registers to get set
       //$display("hirschB running %d %d %d %d dir %d",
-	 aStartReg, aLenReg, bStartReg, bLenReg, dir);
+	// aStartReg, aLenReg, bStartReg, bLenReg, dir);
       /* initialize K1 (stored in lMat) of temporary storage */
       for (jj <= 0; jj <= bLenReg; jj <= jj + 1)
 	 seq
