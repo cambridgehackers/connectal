@@ -90,13 +90,16 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Yuv422Stage) yuv422StageReg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
 
+   Reg#(Bit#(32)) counter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+   Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+   rule axicyclecount;
+      counter <= counter + 1;
+   endrule
+      
     rule vsyncReceived if (sendVsyncIndication.pulse());
-        Bit#(64) v = 0;
-        //v[31:0] = vsyncPulseCountReg;
-        //v[47:32] = extend(numberOfPixels);
-        //v[63:48] = extend(numberOfLines);
-        indication.vsync(v);
-        waitingForVsync <= False;
+       elapsed <= counter;
+       indication.vsync(extend(counter - elapsed));
+       waitingForVsync <= False;
     endrule
 
     rule init_pattern;
@@ -112,8 +115,9 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         if (lineCount == 0 && pixelCount == 0)
             begin
             vsyncPulse.send();
-            if (waitingForVsync)
-                sendVsyncIndication.send();
+            if (waitingForVsync) begin
+	       sendVsyncIndication.send();
+	    end
             testPatternEnabled <= shadowTestPatternEnabled;
             end
         if (pixelCount == numberOfPixels-1)
