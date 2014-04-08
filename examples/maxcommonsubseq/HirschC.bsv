@@ -136,7 +136,7 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	       let t1 <- l0.response.get();
 	       let t2 <- l1.response.get();
 	       //$display(" j %d l0 %d l1 %d, sum %d oldmax %d",
-		  jj, t1, t2, t1 + t2, maxjvalue);
+		 // jj, t1, t2, t1 + t2, maxjvalue);
 	       if ((t1 + t2) > maxjvalue)
 		  action
 		     maxjvalue <= t1 + t2;
