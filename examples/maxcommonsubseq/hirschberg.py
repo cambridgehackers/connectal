@@ -52,6 +52,7 @@ def hirschbergalgb(A, B):
 # The natural order of execution will return the parts of the answer <in order> so the results
 # could be pushed into a stream or fifo
 def hirschbergalgc(A, B):
+    print "algC ", A, B
     m = len(A)
     n = len(B)
     if n == 0:
@@ -64,8 +65,10 @@ def hirschbergalgc(A, B):
     i = m / 2
     # solve the forward problem, using string prefixes
     L1 = hirschbergalgb(A[0:i], B)
+    print "algB ", " A ", A[0:i], " B ", B, " L1 ", L1
     # solve the reverse problem, using string suffixes
-    L2 = hirschbergalgb(A[:i:-1], B[::-1])
+    L2 = hirschbergalgb(A[i:][::-1], B[::-1])
+    print "algB ", " A ", A[i:][::-1], " B ", B, " L2 ", L2
     # find k, the j at which m is maximized
     m = -1
     for j in xrange(n+1):
@@ -78,5 +81,41 @@ def hirschbergalgc(A, B):
     C2 = hirschbergalgc(A[i:], B[k:])
     return C1 + C2
 
+def hirschbergalgc2(sa, sb, A, B):
+    m = len(A)
+    n = len(B)
+    print "algC ", "sa ", sa, " la ", m, " sb ", sb, " lb ", n, A, B
+    if n == 0:
+        return ""
+    if m == 1:
+        if A[0] in B:
+            return A
+        else:
+            return ""
+    i = m / 2
+    print "m= ", m, " i = ", i
+    # solve the forward problem, using string prefixes
+    L1 = hirschbergalgb(A[0:i], B)
+    print "algB ", " A ", A[0:i], " B ", B, " L1 ", L1
+    # solve the reverse problem, using string suffixes
+    L2 = hirschbergalgb(A[i:][::-1], B[::-1])
+    print "algB ", " A ", A[i:][::-1], " B ", B, " L2 ", L2
+    # find k, the j at which m is maximized
+    m = -1
+    for j in xrange(n+1):
+        t = L1[j] + L2[n-j];
+        if t > m:
+            m = t
+            k = j
+    # given break points i and k, solve the two subproblems recursively
+    C1 = hirschbergalgc2(sa, sb, A[0:i],B[0:k])
+    C2 = hirschbergalgc2(sa +i, sb + k, A[i:], B[k:])
+    return C1 + C2
 
+
+strA = "___a_____b______c____"
+strB = "..a........b.c....";    
+strA = "012a45678b012345c7890";
+strB = "ABaDEFGHIJKbMcOPQR";
     
+hirschbergalgc2(0, 0, strA, strB)
