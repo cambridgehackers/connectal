@@ -158,8 +158,8 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
    
    rule hc5 (fr.pc == HCS5);
       //$display("HSC5 aStart %d aLen %d bStart %d bLen %d midi %d maxj %d",
-	 fr.args.aStart, fr.args.aLen, fr.args.bStart, fr.args.bLen,
-	 fr.vars.midi, fr.vars.maxj);
+	// fr.args.aStart, fr.args.aLen, fr.args.bStart, fr.args.bLen,
+	// fr.vars.midi, fr.vars.maxj);
       fr.docall(HCS1, HCS6, CArgs{aStart: fr.args.aStart + fr.vars.midi, aLen: fr.args.aLen - fr.vars.midi, bStart: fr.args.bStart + fr.vars.maxj, bLen: fr.args.bLen - fr.vars.maxj}, fr.vars);
    endrule
    
