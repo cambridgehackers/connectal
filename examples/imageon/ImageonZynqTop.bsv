@@ -43,7 +43,6 @@ import TriState::*;
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
    interface Inout#(Bit#(1)) sda;
-   interface Bit#(1) rst_pin;
 endinterface
 
 //`define TRACE_AXI
@@ -72,10 +71,11 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
    Clock mainclock = ps7.fclkclk[0];
    Reset mainreset = ps7.fclkreset[0];
 
-   let tscl <- mkTriState(!unpack(ps7.i2c[1].scltn), ps7.i2c[1].sclo, clocked_by mainclock, reset_by mainreset);
-   let tsda <- mkTriState(!unpack(ps7.i2c[1].sdatn), ps7.i2c[1].sdao, clocked_by mainclock, reset_by mainreset);
+   let tscl <- mkTriState(unpack(ps7.i2c[1].scltn), ps7.i2c[1].sclo, clocked_by mainclock, reset_by mainreset);
+   let tsda <- mkTriState(unpack(ps7.i2c[1].sdatn), ps7.i2c[1].sdao, clocked_by mainclock, reset_by mainreset);
    rule sdai;
       ps7.i2c[1].sdai(tsda);
+      ps7.i2c[1].scli(tscl);
    endrule
 
    Clock fmc_video_clk1_buf <- mkClockBUFG(clocked_by fmc_video_clk1);
@@ -104,7 +104,6 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
     interface I2C_Pins i2c;
        interface Inout scl = tscl.io;
        interface Inout sda = tsda.io;
-       interface Bit rst_pin = 0;
     endinterface
 
    interface pins = top.pins;
@@ -114,7 +113,7 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
    interface unused_reset = ps7.fclkreset;
 endmodule
 
-module mkImageonZynqTop#(Clock fmc_video_clk1)(ZynqTop#(ImageonVita));
+module mkImageonZynqTop#(Clock fmc_video_clk1)(ZynqTop#(ImageCapturePins));
    let top <- mkZynqTopFromPortal(fmc_video_clk1, mkPortalTop);
    return top;
 endmodule

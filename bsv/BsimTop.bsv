@@ -137,13 +137,13 @@ instance SelectBsimRdmaReadWrite#(128);
 endinstance
 
 // this interface should allow for different master and slave bus paraters;		 
-interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, numeric type clientIdWidth, 
+interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, numeric type clientIdWidth,  
 		    numeric type serverAddrWidth, numeric type serverBusWidth, numeric type serverIdWidth);
    interface Axi3Master#(clientAddrWidth, clientBusWidth, clientIdWidth)  axi_client;
    interface Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth)  axi_server;
 endinterface
       
-module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth, 
+module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
 				      serverAddrWidth, serverBusWidth, serverIdWidth))
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth),
 	     SelectBsimCtrlReadWrite#(clientAddrWidth, clientBusWidth));
@@ -158,16 +158,18 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
    Reg#(Bit#(5))  writeLen <- mkReg(0);
    Reg#(Bit#(serverIdWidth)) writeId <- mkReg(0);
    
-   Bit#(64) readLatency = 64;
-   Bit#(64) writeLatency = 64;
+   Bit#(64) readLatency = 128;
+   Bit#(64) writeLatency = 128;
    
    Reg#(Bit#(64)) req_ar_b_ts <- mkReg(0);
    Reg#(Bit#(64)) req_aw_b_ts <- mkReg(0);
    Reg#(Bit#(64)) cycle <- mkReg(0);
 
-   FIFO#(Tuple2#(Bit#(64), Axi3ReadRequest#(serverAddrWidth,serverIdWidth))) readDelayFifo <- mkSizedFIFO(32);
-   FIFO#(Tuple2#(Bit#(64),Axi3WriteRequest#(serverAddrWidth,serverIdWidth))) writeDelayFifo <- mkSizedFIFO(32);
-   FIFOF#(Axi3WriteResponse#(serverIdWidth)) bFifo <- mkFIFOF();
+   Vector#(4,FIFOF#(Tuple2#(Bit#(64), Axi3ReadRequest#(serverAddrWidth,serverIdWidth)))) readDelayFifos <- replicateM(mkSizedFIFOF(8));
+   FIFOF#(Tuple2#(Bit#(64),Axi3WriteRequest#(serverAddrWidth,serverIdWidth))) writeDelayFifo <- mkSizedFIFOF(32);
+   Vector#(4,FIFOF#(Tuple2#(Bit#(64), Axi3WriteResponse#(serverIdWidth)))) bFifos <- replicateM(mkFIFOF());
+   let readDelayFifo = (readDelayFifos[3].notEmpty ? readDelayFifos[3] : (readDelayFifos[2].notEmpty ? readDelayFifos[2] : (readDelayFifos[1].notEmpty ? readDelayFifos[1] : readDelayFifos[0])));
+   let bFifo = (bFifos[3].notEmpty ? bFifos[3] : (bFifos[2].notEmpty ? bFifos[2] : (bFifos[1].notEmpty ? bFifos[1] : bFifos[0])));
 				    
    rule increment_cycle;
       cycle <= cycle+1;
@@ -194,7 +196,8 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
    interface Axi3Slave axi_server;
       interface Put req_ar;
 	 method Action put(Axi3ReadRequest#(serverAddrWidth,serverIdWidth) req);
-	    readDelayFifo.enq(tuple2(cycle,req));
+	    //$display("mkBsimHost::req_ar id=%d", req.id);
+	    readDelayFifos[req.id[1:0]].enq(tuple2(cycle,req));
 	 endmethod
       endinterface
       interface Get resp_read;
@@ -211,7 +214,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	       read_addr = req.address;
 	       read_id = req.id;
 	       handle = req.address[39:32];
-	       //$display("mkBsimHost::req_ar_b(%h): id=%d len=%d", cycle-req_ar_b_ts, req.id, read_len);
+	       //$display("mkBsimHost::req_ar_b: id=%d len=%d", req.id, read_len);
 	    end 
 	    else begin
 	       handle = readAddrr[39:32];
@@ -261,13 +264,13 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	    writeLen <= write_len - 1;
 	    writeAddrr <= write_addr + fromInteger(valueOf(serverBusWidth)/8);
 	    if (write_len == 1)
-	       bFifo.enq(Axi3WriteResponse { id: write_id, resp: 0 });
+	       bFifos[write_id[1:0]].enq(tuple2(cycle,Axi3WriteResponse { id: write_id, resp: 0 }));
 	 endmethod
       endinterface
       interface Get resp_b;
-	 method ActionValue#(Axi3WriteResponse#(serverIdWidth)) get;
+	 method ActionValue#(Axi3WriteResponse#(serverIdWidth)) get if ((cycle-tpl_1(bFifo.first)) > writeLatency);
 	    bFifo.deq();
-	    return bFifo.first();
+	    return tpl_2(bFifo.first());
 	 endmethod
       endinterface
    endinterface

@@ -436,11 +436,15 @@ int main(int argc, const char **argv)
 
     // for surfaceflinger 
     long actualFrequency = 0;
-    int status = poller->setClockFrequency(1, 160000000, &actualFrequency);
+    int status;
+    status = poller->setClockFrequency(0, 100000000, &actualFrequency);
+    printf("[%s:%d] setClockFrequency 0 100000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
+    status = poller->setClockFrequency(1, 160000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 1 160000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     status = poller->setClockFrequency(3, 200000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     pthread_create(&threaddata, NULL, &pthread_worker, (void *)device);
+    device->set_i2c_mux_reset_n(1);
     hdmidevice->setTestPattern(1);
     fmc_imageon_demo_init(argc, argv);
     printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);

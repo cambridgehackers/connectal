@@ -69,12 +69,6 @@ interface PcieSplitter#(numeric type bpb);
    interface GetPut#(TLPData#(16)) slave;  // to the portal DMA
    interface Reset portalReset;
 
-   // status for FPGA LEDs
-   (* always_ready *)
-   method Bool rx_activity();
-   (* always_ready *)
-   method Bool tx_activity();
-
    interface Put#(TimestampedTlpData) trace;
 
    interface Vector#(16,MSIX_Entry) msixEntry;
@@ -96,15 +90,6 @@ interface TLPDispatcher;
 
    interface Reg#(Bit#(32)) tlp_portal_drop_count;
    interface Reg#(Bit#(32)) tlp_axi_drop_count;
-   // activity indicators
-   (* always_ready *)
-   method Bool read_tlp();
-   (* always_ready *)
-   method Bool write_tlp();
-   (* always_ready *)
-   method Bool completion_tlp();
-
-
 endinterface: TLPDispatcher
 
 (* synthesize *)
@@ -236,10 +221,6 @@ module mkTLPDispatcher(TLPDispatcher);
    interface Get tlp_out_to_config  = toGet(tlp_in_cfg_fifo);
    interface Get tlp_out_to_portal  = toGet(tlp_in_portal_fifo);
    interface Get tlp_out_to_axi     = toGet(tlp_in_axi_fifo);
-
-   method Bool read_tlp       = is_read;
-   method Bool write_tlp      = is_write;
-   method Bool completion_tlp = is_completion;
 endmodule: mkTLPDispatcher
 
 // Multiple sources of TLP packets must all share the PCIe bus. There
@@ -255,15 +236,6 @@ interface TLPArbiter;
    interface Put#(TLPData#(16)) tlp_in_from_config; // read completions
    interface Put#(TLPData#(16)) tlp_in_from_portal; // read completions
    interface Put#(TLPData#(16)) tlp_in_from_axi;    // read and write requests
-
-   // activity indicators
-   (* always_ready *)
-   method Bool read_tlp();
-   (* always_ready *)
-   method Bool write_tlp();
-   (* always_ready *)
-   method Bool completion_tlp();
-
 endinterface: TLPArbiter
 
 (* synthesize *)
@@ -352,11 +324,6 @@ module mkTLPArbiter(TLPArbiter);
    interface Put tlp_in_from_config = toPut(tlp_out_cfg_fifo);
    interface Put tlp_in_from_portal = toPut(tlp_out_portal_fifo);
    interface Put tlp_in_from_axi    = toPut(tlp_out_axi_fifo);
-
-   method Bool read_tlp       = is_read;
-   method Bool write_tlp      = is_write;
-   method Bool completion_tlp = is_completion;
-
 endmodule
 
 // The control and status registers which are accessible from the PCIe
@@ -1077,9 +1044,6 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
    interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
 
    interface Reset portalReset = portalResetIfc.new_rst;
-
-   method Bool rx_activity  = dispatcher.read_tlp() || dispatcher.write_tlp() || arbiter.completion_tlp();
-   method Bool tx_activity  = arbiter.read_tlp()    || arbiter.write_tlp()    || dispatcher.completion_tlp();
 
    // method Action interrupt();
    //     portalEngine.interruptRequested <= True;

@@ -274,6 +274,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       else begin
 	 let rename_tag <- tag_gen.get_tag(client, req.tag);
 	 reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
+	 //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       end
    endrule
 
@@ -286,6 +287,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
 	    let rename_tag = reqFifo.first.rename_tag;
 	    reqFifo.deq;
 	    dreqFifo.enq(DRec{req:req, client:client, rename_tag:rename_tag});
+	    //$display("writeReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
@@ -304,6 +306,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
 	       dreqFifo.deq();
 	       respFifos[rename_tag].enq(RResp{orig_tag:req.tag, client:client});
 	    end
+	    //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
 	    return MemData { data: tagdata.data,  tag:extend(rename_tag) };
 	 endmethod
       endinterface

@@ -2,6 +2,7 @@
 #include <linux/types.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <errno.h>
 #include "/usr/include/linux/i2c.h"
 #include "/usr/include/linux/i2c-dev.h"
 static void i2c_write_array(int fd, int device, unsigned char *datap, int size)
@@ -12,11 +13,15 @@ static void i2c_write_array(int fd, int device, unsigned char *datap, int size)
     args.size = I2C_SMBUS_BYTE_DATA;
     args.data = &ioctl_data;
 
-    ioctl(fd, I2C_SLAVE, device);
+    int status = ioctl(fd, I2C_SLAVE, device);
+    if (status != 0)
+	 fprintf(stderr, "ioctl I2C_SLAVE status=%d errno=%d\n", status, errno);
     while (size) {
         args.command = *datap++;
         ioctl_data.byte = *datap++;
-        ioctl(fd, I2C_SMBUS, &args);
+        status = ioctl(fd, I2C_SMBUS, &args);
+	if (status != 0)
+	     fprintf(stderr, "ioctl I2C_SLAVE status=%d errno=%d\n", status, errno);
         size -= 2;
     }
 }
