@@ -61,6 +61,18 @@ public:
     void debugind(uint32_t v) {
 printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
     }
+  void axi_clock_period(uint32_t axi_cycles) {
+    printf("[%s:%d] axi_cycles %ld\n", __FUNCTION__, __LINE__, axi_cycles);
+  }
+  void hdmi_clock_period(uint32_t hdmi_cycles) {
+    printf("[%s:%d] hdmi_cycles %ld\n", __FUNCTION__, __LINE__, hdmi_cycles);
+  }
+  void imageon_clock_period(uint32_t imageon_cycles) {
+    printf("[%s:%d] imageon_cycles %ld\n", __FUNCTION__, __LINE__, imageon_cycles);
+  }
+  void fmc_clock_period(uint32_t fmc_cycles) {
+    printf("[%s:%d] fmc_cycles %ld\n", __FUNCTION__, __LINE__, fmc_cycles);
+  }
 };
 
 class HdmiInternalIndication: public HdmiInternalIndicationWrapper {
@@ -448,9 +460,15 @@ int main(int argc, const char **argv)
     hdmidevice->setTestPattern(1);
     fmc_imageon_demo_init(argc, argv);
     printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);
+    device->measure_axi_clock_period(100);
+    device->measure_hdmi_clock_period(100);
+    device->measure_imageon_clock_period(100);
+    device->measure_fmc_clock_period(100);
     //usleep(200000);
     hdmidevice->waitForVsync(0);
     usleep(2000000);
+    device->measure_hdmi_clock_period(100);
+    device->measure_imageon_clock_period(100);
     while (1/*getchar() != EOF*/) {
         device->set_debugreq(1);
         device->get_debugind();
@@ -460,6 +478,10 @@ int main(int argc, const char **argv)
         for (i = 0; regids[i]; i++)
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
 	usleep(1000000);
+	device->measure_axi_clock_period(100);
+	device->measure_hdmi_clock_period(100);
+	device->measure_imageon_clock_period(100);
+	device->measure_fmc_clock_period(100);
     }
     return 0;
 }
