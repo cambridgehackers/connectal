@@ -35,6 +35,7 @@ testnames = echo             \
             memcpy_buff      \
             memcpy_buff_oo   \
             memcpy_nobuff    \
+            memread_buff_oo  \
             memread_buff     \
             memread_nobuff   \
 	    memwrite_buff    \
@@ -63,6 +64,7 @@ memtests =  memcpy_buff      \
 	    memcpy_buff_oo   \
             memcpy_nobuff    \
             memread_buff     \
+            memread_buff_oo  \
             memread_nobuff   \
 	    memwrite_buff    \
 	    memwrite_nobuff  \
@@ -185,7 +187,6 @@ $(kc705runs):
 #################################################################################################
 # misc
 
-
 memtests.zedboard: $(addsuffix .zedboard, $(memtests))
 memtests.zedboard.regression:
 	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.zedboard
@@ -194,10 +195,13 @@ memtests.kc705: $(addsuffix .kc705, $(memtests))
 memtests.kc705.regression:
 	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.kc705
 
-
 memtests.bsim: $(addsuffix .bsim, $(memtests))
 memtests.bsim.regression:
 	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.bsim
+memtests.bsimrun: $(addsuffix .bsimrun, $(memtests))
+memtests.bsimrun.regression:
+	make LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.bsimrun
+
 
 android_exetests = $(addsuffix .android_exe, $(testnames))
 android_exetests: $(android_exetests)
