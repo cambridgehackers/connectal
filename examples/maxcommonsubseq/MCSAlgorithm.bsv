@@ -23,8 +23,8 @@
 import StmtFSM::*;
 
 interface MCSAlgorithm;
-   method Action setupA (Bit#(7) start, Bit#(7) length);
-   method Action setupB (Bit#(7) start, Bit#(7) length);
+   method Action setupA (Bit#(14) start, Bit#(14) length);
+   method Action setupB (Bit#(14) start, Bit#(14) length);
    method Action setupL (Bit#(14) start);
    method Bit#(14) result();
    interface FSM fsm;
