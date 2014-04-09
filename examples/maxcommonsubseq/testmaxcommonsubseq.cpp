@@ -163,7 +163,7 @@ int main(int argc, const char **argv)
 
     uint64_t cycles;
     uint64_t beats;
-#if 0
+
     fprintf(stderr, "starting algorithm A\n");
 
     init_timer();
@@ -291,7 +291,7 @@ int main(int argc, const char **argv)
 
     device->setupB(ref_strBAlloc, 0, strB_len);
     sem_wait(&test_sem);
-#endif
+
 
     fprintf(stderr, "starting algorithm C\n");
     init_timer();
@@ -309,7 +309,7 @@ int main(int argc, const char **argv)
     if (result_length > strB_len) result_length = strB_len;
     
     printf("Algorithm C results\n");
-    for (int j = 0; j <= result_length; j += 1) {
+    for (int j = 0; j < result_length; j += 1) {
       char c =  swFetch[j] & 0xff;
       printf(" %02x (%c)", 0xff & c, (isalnum(c) ? c: '_'));
     }
