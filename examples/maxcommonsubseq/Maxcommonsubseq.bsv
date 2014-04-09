@@ -73,7 +73,7 @@ endinterface
 typedef Bit#(64) DWord;
 typedef Bit#(32) Word;
 
-typedef 128 MaxStringLen;
+typedef 16384 MaxStringLen;
 typedef 16384 MaxFetchLen;
 typedef TLog#(MaxStringLen) StringIdxWidth;
 typedef Bit#(StringIdxWidth) StringIdx;
@@ -98,16 +98,9 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
             Add#(TDiv#(busWidth, 16), g__, TMul#(2, TDiv#(busWidth, 16))));
 
    
-  Reg#(Bit#(7)) aLenReg <- mkReg(0);
-  Reg#(Bit#(7)) bLenReg <- mkReg(0);
+  Reg#(Bit#(14)) aLenReg <- mkReg(0);
+  Reg#(Bit#(14)) bLenReg <- mkReg(0);
   Reg#(Bit#(14)) rLenReg <- mkReg(0);
-  Reg#(Bit#(7)) ii <- mkReg(0);
-  Reg#(Bit#(7)) jj <- mkReg(0);
-   Reg#(Bit#(8)) aData <- mkReg(0);
-   Reg#(Bit#(8)) bData <- mkReg(0);
-   Reg#(Bit#(16)) lim1jm1 <- mkReg(0);
-   Reg#(Bit#(16)) lim1j <- mkReg(0);
-   Reg#(Bit#(16)) lijm1 <- mkReg(0);
    BRAM2Port#(StringIdx, Bit#(8)) strA  <- mkBRAM2Server(defaultValue);
    BRAM2Port#(StringIdx, Bit#(8)) strB <- mkBRAM2Server(defaultValue);
    BRAM2Port#(LIdx, Bit#(16)) matL0 <- mkBRAM2Server(defaultValue);
