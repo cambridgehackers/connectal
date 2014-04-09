@@ -27,35 +27,35 @@ import StackReg::*;
 
 /* frame arguments */
 typedef struct {
-   Bit#(7) aStart;
-   Bit#(7) bStart;
-   Bit#(7) aLen;
-   Bit#(7) bLen;
+   Bit#(14) aStart;
+   Bit#(14) bStart;
+   Bit#(14) aLen;
+   Bit#(14) bLen;
    } CArgs deriving(Bits);
 
 typedef struct {
-   Bit#(7) midi;
-   Bit#(7) maxj;
+   Bit#(14) midi;
+   Bit#(14) maxj;
    } CVars deriving(Bits);
 
 typedef enum {HCSIdle, HCS1, HCS2, HCS3, HCS4, HCS5, HCS6, 
    HCSComplete} HCState deriving (Bits, Eq);
 
 module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL, MCSAlgorithm chirschB0,  MCSAlgorithm chirschB1, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) l0, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) l1)(MCSAlgorithm)
-         provisos(Add#(0, 7, strIndexWidth),
+         provisos(Add#(0, 14, strIndexWidth),
 	       Add#(0, 14, lIndexWidth));
 
       /* pc, args, vars */
    StackReg#(128, HCState, CArgs, CVars) fr <- mkStackReg(128, HCSIdle);
 
 
-   Reg#(Bit#(7)) aStartReg <- mkReg(0);
-   Reg#(Bit#(7)) bStartReg <- mkReg(0);
+   Reg#(Bit#(14)) aStartReg <- mkReg(0);
+   Reg#(Bit#(14)) bStartReg <- mkReg(0);
    Reg#(Bit#(14)) rStartReg <- mkReg(0);
-   Reg#(Bit#(7)) aLenReg <- mkReg(0);
-   Reg#(Bit#(7)) bLenReg <- mkReg(0);
-   Reg#(Bit#(7)) ii <- mkReg(0);
-   Reg#(Bit#(7)) jj <- mkReg(0);
+   Reg#(Bit#(14)) aLenReg <- mkReg(0);
+   Reg#(Bit#(14)) bLenReg <- mkReg(0);
+   Reg#(Bit#(14)) ii <- mkReg(0);
+   Reg#(Bit#(14)) jj <- mkReg(0);
    Reg#(Bit#(8)) aData <- mkReg(0);
    Reg#(Bit#(8)) bData <- mkReg(0);
    Reg#(Bit#(14)) outcounter <- mkReg(0);
@@ -173,13 +173,13 @@ module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
       fr.nextpc(HCSIdle);
    endrule
    
-   method Action setupA(Bit#(7) start, Bit#(7) length);
+   method Action setupA(Bit#(14) start, Bit#(14) length);
       $display("HirschC setupA %d %d", start, length);
       aStartReg <= start;
       aLenReg <= length;
    endmethod
    
-   method Action setupB(Bit#(7) start, Bit#(7) length);
+   method Action setupB(Bit#(14) start, Bit#(14) length);
       $display("HirschC setupB %d %d", start, length);
       bStartReg <= start;
       bLenReg <= length;
