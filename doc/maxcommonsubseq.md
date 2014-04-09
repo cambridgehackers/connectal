@@ -92,7 +92,7 @@ where L' is the "reverse problem", the maximum length subsequence from subscript
 		return ""
 	i = m / 2
 	L1 = hirschbergalgb(A[0:i], B)
-	L2 = hirschbergalgb(A[:i:-1], B[::-1])
+	L2 = hirschbergalgb(A[i:][::-1], B[::-1])
 	m = -1
 	for j in xrange(n+1):
 	    t = L1[j] + L2[n-j];
