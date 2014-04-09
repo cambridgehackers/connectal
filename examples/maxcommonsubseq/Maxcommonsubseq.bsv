@@ -121,9 +121,6 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    BRAMWriteClient#(LIdxWidth, busWidth) l2n <- mkBRAMWriteClient(matL.portB);
    mkConnection(l2n.dmaClient, fetch_write_server);
 
-   FIFOF#(void) aReady <- mkFIFOF;
-   FIFOF#(void) bReady <- mkFIFOF;
-   FIFOF#(void) mReady <- mkFIFOF;
 
    Reg#(Bool) hirschARunning <- mkReg(False);
    Reg#(Bool) hirschB0Running <- mkReg(False);
@@ -141,14 +138,12 @@ module mkMaxcommonsubseqRequest#(MaxcommonsubseqIndication indication,
    rule finish_setupA;
       $display("finish setupA");
       let x <- n2a.finish;
-      aReady.enq(?);
       indication.setupAComplete();
    endrule
 
    rule finish_setupB;
       $display("finish setupB");
       let x <- n2b.finish;
-      bReady.enq(?);
       indication.setupBComplete();
    endrule
 
