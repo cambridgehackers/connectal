@@ -25,16 +25,16 @@ import BRAM::*;
 import MCSAlgorithm::*;
 
 module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL)(MCSAlgorithm)
-      provisos(Add#(0, 7, strIndexWidth),
+      provisos(Add#(0, 14, strIndexWidth),
 	       Add#(0, 14, lIndexWidth));
 
-   Reg#(Bit#(7)) aStartReg <- mkReg(0);
-   Reg#(Bit#(7)) bStartReg <- mkReg(0);
-   Reg#(Bit#(7)) aLenReg <- mkReg(0);
-   Reg#(Bit#(7)) bLenReg <- mkReg(0);
+   Reg#(Bit#(14)) aStartReg <- mkReg(0);
+   Reg#(Bit#(14)) bStartReg <- mkReg(0);
+   Reg#(Bit#(14)) aLenReg <- mkReg(0);
+   Reg#(Bit#(14)) bLenReg <- mkReg(0);
    Reg#(Bit#(14)) rLenReg <- mkReg(0);
-   Reg#(Bit#(7)) ii <- mkReg(0);
-   Reg#(Bit#(7)) jj <- mkReg(0);
+   Reg#(Bit#(14)) ii <- mkReg(0);
+   Reg#(Bit#(14)) jj <- mkReg(0);
    Reg#(Bit#(8)) aData <- mkReg(0);
    Reg#(Bit#(8)) bData <- mkReg(0);
    Reg#(Bit#(16)) lim1jm1 <- mkReg(0);
@@ -46,11 +46,11 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 //      $display("hirschA running alen %d blen %d", aLenReg, bLenReg);
       for (ii<= 0; ii < aLenReg; ii <= ii + 1)
 	 seq
-	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,0}, datain: 0});
+	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii[6:0],0}, datain: 0});
 	    endseq
       for (ii<= 0; ii < aLenReg; ii <= ii + 1)
 	 seq
-	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,ii}, datain: 0});
+	    matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {0,ii[6:0]}, datain: 0});
 	 endseq
       for (ii<= 1; ii <= aLenReg; ii <= ii + 1)
 	 for (jj<= 1; jj <= bLenReg; jj <= jj + 1)
@@ -65,39 +65,39 @@ module mkHirschA#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 	       endaction
 	       if (aData == bData)
 		  seq
-		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii-1,jj-1}, datain: 0});
+		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii[6:0]-1,jj[6:0]-1}, datain: 0});
 		     action
 			let temp <- matL.response.get();
 			lim1jm1 <= temp;
 		     endaction
-		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,jj}, datain: lim1jm1+1});
+		     matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii[6:0],jj[6:0]}, datain: lim1jm1+1});
 		     
 		  endseq
 	       else
 		  seq
-		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii,jj-1}, datain: 0});
+		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii[6:0],jj[6:0]-1}, datain: 0});
 		     action
 			let tlijm1 <- matL.response.get();
 			lijm1 <= tlijm1;
 		     endaction
-		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii-1,jj}, datain: 0});
+		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: {ii[6:0]-1,jj[6:0]}, datain: 0});
 		     action
 			let tlim1j <- matL.response.get();
 			lim1j <= tlim1j;
 		     endaction
-			matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii,jj}, datain: max(lijm1,lim1j)});
+			matL.request.put(BRAMRequest{write: True, responseOnWrite: False, address: {ii[6:0],jj[6:0]}, datain: max(lijm1,lim1j)});
 		  endseq
 	    endseq
    endseq;
    
    FSM hA <- mkFSM(hirschA);
   
-   method Action setupA(Bit#(7) start, Bit#(7) length);
+   method Action setupA(Bit#(14) start, Bit#(14) length);
       aStartReg <= start;
       aLenReg <= length;
    endmethod
    
-   method Action setupB(Bit#(7) start, Bit#(7) length);
+   method Action setupB(Bit#(14) start, Bit#(14) length);
       bStartReg <= start;
       bLenReg <= length;
    endmethod
