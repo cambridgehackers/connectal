@@ -41,6 +41,16 @@ typedef struct {
 typedef enum {HCSIdle, HCS1, HCS2, HCS3, HCS4, HCS5, HCS6, 
    HCSComplete} HCState deriving (Bits, Eq);
 
+/* Strings A and B are passed in as BRAMs, they are loaded in
+ * the caller
+ * matL is a bram for the output.  It is Bit#(16) here but it should
+ * be Bit#(8) like the strings
+ * The forward and backwards Hirsch algorithm B modules are passed in.
+ * They share access to the strings, but have their own result matrixes.
+ * used here (l0 and l1). 
+ */
+
+
 module mkHirschC#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matL, MCSAlgorithm chirschB0,  MCSAlgorithm chirschB1, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) l0, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) l1)(MCSAlgorithm)
          provisos(Add#(0, 14, strIndexWidth),
 	       Add#(0, 14, lIndexWidth));
