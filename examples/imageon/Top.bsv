@@ -24,6 +24,7 @@ import ImageonSensorRequestWrapper::*;
 import ImageCaptureRequestWrapper::*;
 
 // defined by user
+import FrequencyCounter::*;
 import ImageCapture::*;
 import GetPut::*;
 import Connectable :: *;
@@ -73,12 +74,12 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    clockParams.compensation       = "ZHOLD";
    clockParams.clkfbout_mult_f    = 8.000;
    clockParams.clkfbout_phase     = 0.0;
-   clockParams.clkin1_period      = 6.734007;
+   clockParams.clkin1_period      = 6.734007; // 148.5 MHz
    clockParams.clkin2_period      = 6.734007;
-   clockParams.clkout0_divide_f   = 8.000;
+   clockParams.clkout0_divide_f   = 8.000;    // 148.5 MHz
    clockParams.clkout0_duty_cycle = 0.5;
    clockParams.clkout0_phase      = 0.0000;
-   clockParams.clkout1_divide     = 32;
+   clockParams.clkout1_divide     = 32;       // 37.125 MHz
    clockParams.clkout1_duty_cycle = 0.5;
    clockParams.clkout1_phase      = 0.0000;
    clockParams.divclk_divide      = 1;
@@ -86,9 +87,10 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    clockParams.ref_jitter2        = 0.010;
 
    ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
-   Clock hdmi_clock = clockGen.clkout0;
-   Clock imageon_clock = clockGen.clkout1;
+   Clock hdmi_clock = clockGen.clkout0;    // 148.5   MHz
+   Clock imageon_clock = clockGen.clkout1; //  37.125 MHz
 
+    Reset fmc_imageon_reset <- mkAsyncReset(2, defaultReset, fmc_imageon_clk1);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
@@ -108,6 +110,27 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
     endrule
 
    Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0);
+   FrequencyCounter axiFreqCounter <- mkFrequencyCounter(defaultClock, defaultReset);
+   FrequencyCounter hdmiFreqCounter <- mkFrequencyCounter(hdmi_clock, hdmi_reset);
+   FrequencyCounter imageonFreqCounter <- mkFrequencyCounter(imageon_clock, imageon_reset);
+   FrequencyCounter fmcFreqCounter <- mkFrequencyCounter(fmc_imageon_clk1, fmc_imageon_reset);
+
+   rule gotAxiClockPeriod;
+      let cycles <- axiFreqCounter.elapsedCycles();
+      captureIndicationProxy.ifc.axi_clock_period(cycles);
+   endrule
+   rule gotHdmiClockPeriod;
+      let cycles <- hdmiFreqCounter.elapsedCycles();
+      captureIndicationProxy.ifc.hdmi_clock_period(cycles);
+   endrule
+   rule gotImageonClockPeriod;
+      let cycles <- imageonFreqCounter.elapsedCycles();
+      captureIndicationProxy.ifc.imageon_clock_period(cycles);
+   endrule
+   rule gotFmcClockPeriod;
+      let cycles <- fmcFreqCounter.elapsedCycles();
+      captureIndicationProxy.ifc.fmc_clock_period(cycles);
+   endrule
 
    ImageCaptureRequest imageCaptureRequest = (interface ImageCaptureRequest;
       method Action get_debugind();
@@ -119,6 +142,18 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
       method Action set_i2c_mux_reset_n(Bit#(1) v);
 	 i2c_mux_reset_n_reg <= v;
       endmethod
+      method Action measure_axi_clock_period(Bit#(32) cycles_100mhz);
+	 axiFreqCounter.start(cycles_100mhz);
+      endmethod
+      method Action measure_hdmi_clock_period(Bit#(32) cycles_100mhz);
+         hdmiFreqCounter.start(cycles_100mhz);
+      endmethod
+      method Action measure_imageon_clock_period(Bit#(32) cycles_100mhz);
+         imageonFreqCounter.start(cycles_100mhz);
+      endmethod
+      method Action measure_fmc_clock_period(Bit#(32) cycles_100mhz);
+         fmcFreqCounter.start(cycles_100mhz);
+      endmethod
       endinterface);
 
     ImageCaptureRequestWrapper captureRequestWrapper <- mkImageCaptureRequestWrapper(ImageCapture, imageCaptureRequest);
@@ -126,18 +161,15 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
     HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiGen.control);
     ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequest,fromSensor.control);
 
-//    rule xsviConnection;
-//        let xsvi <- fromSensor.get_data();
-//        //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
-//        //converter.in.put(xsvi);
-//        //let xvideo <- converter.out.get();
-//        //hdmiGen.rgb(xvideo);
-//        Bit#(64) pixel = {40'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
-//        hdmiGen.request.put(pixel);
-//    endrule
-//
-//
-///////////
+    rule xsviConnection;
+        let xsvi <- fromSensor.get_data();
+        //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
+        //converter.in.put(xsvi);
+        //let xvideo <- converter.out.get();
+        //hdmiGen.rgb(xvideo);
+        Bit#(64) pixel = {40'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
+        hdmiGen.request.put(pixel);
+    endrule
    
    Vector#(7,StdPortal) portals;
    portals[0] = captureRequestWrapper.portalIfc;
