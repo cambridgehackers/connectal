@@ -62,10 +62,8 @@ testnames = echo             \
 
 
 memtests =  memcpy_buff      \
-	    memcpy_buff_oo   \
             memcpy_nobuff    \
             memread_buff     \
-            memread_buff_oo  \
             memread_nobuff   \
 	    memwrite_buff    \
 	    memwrite_nobuff  \
