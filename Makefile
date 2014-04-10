@@ -71,7 +71,7 @@ memtests =  memcpy_buff      \
 	    memwrite_nobuff  \
             memrw_buff       \
             memrw_nobuff     \
-	    echo
+            echo             \
 
 
 #################################################################################################
@@ -194,7 +194,7 @@ memtests.zedboard.regression:
 
 memtests.kc705: $(addsuffix .kc705, $(memtests))
 memtests.kc705.regression:
-	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.kc705
+	make -j 6 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.kc705
 
 memtests.bsim: $(addsuffix .bsim, $(memtests))
 memtests.bsim.regression:

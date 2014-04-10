@@ -65,8 +65,8 @@ module mkMemServer#(DmaIndication dmaIndication,
    TagGen#(augNumWriteClients,augNumWriteClients) writeTagGen <- mkTagGenIO;
    TagGen#(augNumReadClients,augNumReadClients) readTagGen <- mkTagGenIO;
    let rv <- mkMemServerRW(dmaIndication, readTagGen, writeTagGen, 
-			   cons(null_object_read_client,readClients), 
-			   cons(null_object_write_client,writeClients));
+			   append(readClients,cons(null_object_read_client,nil)), 
+			   append(writeClients,cons(null_object_write_client,nil)));
    return rv;
    
 endmodule
@@ -90,8 +90,8 @@ module mkMemServerOO#(DmaIndication dmaIndication,
    TagGen#(augNumWriteClients,32) writeTagGen <- mkTagGenOO;
    TagGen#(augNumReadClients,32) readTagGen <- mkTagGenOO;
    let rv <- mkMemServerRW(dmaIndication, readTagGen, writeTagGen, 
-			   cons(null_object_read_client,readClients), 
-			   cons(null_object_write_client,writeClients));
+			   append(readClients,cons(null_object_read_client,nil)), 
+			   append(writeClients,cons(null_object_write_client,nil)));
    return rv;
 
 endmodule

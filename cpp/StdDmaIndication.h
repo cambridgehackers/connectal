@@ -45,6 +45,9 @@ class DmaIndication : public DmaIndicationWrapper
   virtual void badPointer (uint32_t pointer) {
     fprintf(stderr, "DmaIndication::badPointer(pointer=%x)\n", pointer);
   }
+  virtual void badTag (uint32_t tag) {
+    fprintf(stderr, "DmaIndication::badTag(tag=%x)\n", tag);
+  }
   virtual void badPageSize (uint32_t pointer, uint32_t len) {
     fprintf(stderr, "DmaIndication::badPageSize(pointer=%x, len=%x)\n", pointer, len);
   }

@@ -142,7 +142,9 @@ interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, n
    interface Axi3Master#(clientAddrWidth, clientBusWidth, clientIdWidth)  axi_client;
    interface Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth)  axi_server;
 endinterface
-      
+		 
+`define OO_MEM_COMPLETION		 
+		 
 module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
 				      serverAddrWidth, serverBusWidth, serverIdWidth))
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth),
@@ -165,12 +167,22 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
    Reg#(Bit#(64)) req_aw_b_ts <- mkReg(0);
    Reg#(Bit#(64)) cycle <- mkReg(0);
 
+`ifdef OO_MEM_COMPLETION
    Vector#(4,FIFOF#(Tuple2#(Bit#(64), Axi3ReadRequest#(serverAddrWidth,serverIdWidth)))) readDelayFifos <- replicateM(mkSizedFIFOF(8));
-   FIFOF#(Tuple2#(Bit#(64),Axi3WriteRequest#(serverAddrWidth,serverIdWidth))) writeDelayFifo <- mkSizedFIFOF(32);
-   Vector#(4,FIFOF#(Tuple2#(Bit#(64), Axi3WriteResponse#(serverIdWidth)))) bFifos <- replicateM(mkFIFOF());
    let readDelayFifo = (readDelayFifos[3].notEmpty ? readDelayFifos[3] : (readDelayFifos[2].notEmpty ? readDelayFifos[2] : (readDelayFifos[1].notEmpty ? readDelayFifos[1] : readDelayFifos[0])));
+`else
+   FIFOF#(Tuple2#(Bit#(64), Axi3ReadRequest#(serverAddrWidth,serverIdWidth))) readDelayFifo <- mkSizedFIFOF(8);
+`endif
+   
+   FIFOF#(Tuple2#(Bit#(64),Axi3WriteRequest#(serverAddrWidth,serverIdWidth))) writeDelayFifo <- mkSizedFIFOF(32);
+
+`ifdef OO_MEM_COMPLETION
+   Vector#(4,FIFOF#(Tuple2#(Bit#(64), Axi3WriteResponse#(serverIdWidth)))) bFifos <- replicateM(mkFIFOF());
    let bFifo = (bFifos[3].notEmpty ? bFifos[3] : (bFifos[2].notEmpty ? bFifos[2] : (bFifos[1].notEmpty ? bFifos[1] : bFifos[0])));
-				    
+`else
+   FIFOF#(Tuple2#(Bit#(64), Axi3WriteResponse#(serverIdWidth))) bFifo <- mkFIFOF();		 
+`endif 
+  
    rule increment_cycle;
       cycle <= cycle+1;
    endrule
@@ -197,7 +209,11 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
       interface Put req_ar;
 	 method Action put(Axi3ReadRequest#(serverAddrWidth,serverIdWidth) req);
 	    //$display("mkBsimHost::req_ar id=%d", req.id);
+`ifdef OO_MEM_COMPLETION
 	    readDelayFifos[req.id[1:0]].enq(tuple2(cycle,req));
+`else
+	    readDelayFifo.enq(tuple2(cycle,req));
+`endif	    
 	 endmethod
       endinterface
       interface Get resp_read;
@@ -263,8 +279,13 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	    writeId <= write_id;
 	    writeLen <= write_len - 1;
 	    writeAddrr <= write_addr + fromInteger(valueOf(serverBusWidth)/8);
-	    if (write_len == 1)
+	    if (write_len == 1) begin
+`ifdef OO_MEM_COMPLETION	       
 	       bFifos[write_id[1:0]].enq(tuple2(cycle,Axi3WriteResponse { id: write_id, resp: 0 }));
+`else
+	       bFifo.enq(tuple2(cycle,Axi3WriteResponse { id: write_id, resp: 0 }));
+`endif	       
+	    end
 	 endmethod
       endinterface
       interface Get resp_b;
