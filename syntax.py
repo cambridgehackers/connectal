@@ -813,6 +813,7 @@ def parse(data, inputfilename):
     lexer = lex.lex(errorlog=lex.NullLogger())
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger())
     globalfilename = [inputfilename]
+    print 'Parsing:', inputfilename
     return  parser.parse(data)
     
 if __name__=='__main__':
