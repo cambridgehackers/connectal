@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import Vector            :: *;
+import GetPut            :: *;
 import Connectable       :: *;
 import Xilinx            :: *;
 import XilinxCells       :: *;
@@ -30,6 +31,9 @@ import Leds              :: *;
 import Top               :: *;
 import AxiSlaveEngine    :: *;
 import AxiMasterEngine   :: *;
+import AxiMasterSlave    :: *;
+import AxiDma            :: *;
+import AxiCsr            :: *;
 import HDMI::*;
 import Imageon::*;
 
@@ -63,7 +67,8 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 	     Add#(c__, dsz, 256),
 	     Add#(d__, TMul#(8, TDiv#(dsz, 32)), 64),
 	     Add#(e__, TMul#(32, TDiv#(dsz, 32)), 256),
-	     Add#(f__, TDiv#(dsz, 32), 8)
+	     Add#(f__, TDiv#(dsz, 32), 8),
+	     Mul#(TDiv#(dsz, 8), 8, dsz)
       );
 
    let contentId = 0;
@@ -71,8 +76,6 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    X7PcieSplitter#(PcieLanes) x7pcie <- mkX7PcieSplitter(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
 							 contentId );
    
-   Reg#(Bool) interruptRequested <- mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-
    // instantiate user portals
    Clock io_vita_clk <- XilinxCells::mkClockIBUFDS(io_vita_clk_out_p, io_vita_clk_out_n);
    let portalTop <- mkPortalTop(x7pcie.clock200, io_vita_clk, clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
@@ -83,24 +86,27 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
-   mkConnection(portalTop.m_axi, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   Axi3Master#(40,dsz,6) m_axi <- mkAxiDmaMaster(portalTop.master,clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
+   mkConnection(m_axi, axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    mkConnection(tpl_1(x7pcie.master), axiMasterEngine.tlp_in);
    mkConnection(axiMasterEngine.tlp_out, tpl_2(x7pcie.master));
 
-   mkConnection(axiMasterEngine.master, portalTop.ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-
-   rule interruptConfig;
-      axiMasterEngine.interruptAddr <= x7pcie.interruptAddr;
-      axiMasterEngine.interruptData <= x7pcie.interruptData;
-   endrule
+   Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(axiMasterEngine.master, ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
    // going from level to edge-triggered interrupt
-   rule interruptRequest;
-      if (portalTop.interrupt && !interruptRequested)
-	 axiMasterEngine.interruptRequested <= True;
-      interruptRequested <= portalTop.interrupt;
-   endrule
+   Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by x7pcie.clock125, reset_by x7pcie.reset125));
+   for (Integer i = 0; i < 15; i = i + 1) begin
+      // intr_num 0 for the directory
+      Integer intr_num = i+1;
+      MSIX_Entry msixEntry = x7pcie.msixEntry[intr_num];
+      rule interruptRequest;
+	 if (portalTop.interrupt[i] && !interruptRequested[i])
+	    axiMasterEngine.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
+	 interruptRequested[i] <= portalTop.interrupt[i];
+      endrule
+   end
 
    interface pcie = x7pcie.pcie;
    //interface ddr3 = x7pcie.ddr3;
@@ -113,11 +119,10 @@ endmodule: mkPcieTopFromPortal
 
 
 (* synthesize *)
-module mkSynthesizeablePortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(40, 64, ImageonVita));
+module mkSynthesizeablePortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(40, 64, ImageCapturePins));
    let top <- mkPortalTop(clock200, io_vita_clk);
-   interface ctrl = top.ctrl;
-   interface read_client = top.read_client;
-   interface write_clinet = top.write_client;
+   interface master = top.master;
+   interface slave = top.slave;
    interface interrupt = top.interrupt;
    interface leds = top.leds;
    interface pins = top.pins;
@@ -127,7 +132,7 @@ module mkImageonPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Clock sys_clk_p,     Clock sys_clk_n,
    Clock io_vita_clk_out_p, Clock io_vita_clk_out_n,
    Reset pci_sys_reset_n)
-   (PcieTop#(ImageonVita));
+   (PcieTop#(ImageCapturePins));
 
    let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n,
 				  io_vita_clk_out_p, io_vita_clk_out_n,
