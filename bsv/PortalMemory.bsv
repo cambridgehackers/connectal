@@ -55,6 +55,7 @@ interface DmaIndication;
    method Action reportStateDbg(DmaDbgRec rec);
    method Action reportMemoryTraffic(Bit#(64) words);
    method Action badTag(Bit#(6) tag);
+   method Action tagMismatch(ChannelType x, Bit#(32) a, Bit#(32) b);
 endinterface
 
 //
