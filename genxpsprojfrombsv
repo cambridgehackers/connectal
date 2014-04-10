@@ -315,8 +315,12 @@ def preprocess(source, defs):
             stack.append((new_cond,valid))
         elif tok == 'endif':
             stack.pop()
+        elif tok == 'define':
+            k = re.search('\s', s)
+            sym = s[:k.start()]
+            defs.append(sym)
         else:
-            assert(false)
+            assert(False)
         prv = pre if valid and cond else '\n\n'
         return prv+pp('\n'+s)
 

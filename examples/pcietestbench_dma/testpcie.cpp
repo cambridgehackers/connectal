@@ -33,9 +33,9 @@ public:
     fprintf(stderr, "started(%x)\n", words);
   }
   void tlpout(const TLPData16 &tlp) {
-    fprintf(stderr, "Received tlp: %08x%08x%08x%08x\n", tlp.data3, tlp.data2, tlp.data1, tlp.data0);
-    TLPData16 resp;
-    device->tlpin(resp);
+    fprintf(stderr, "Received sof=%d eof=%d hit=%d be=%04x data=%08x%08x%08x%08x\n", tlp.sof, tlp.eof, tlp.hit, tlp.be, tlp.data3, tlp.data2, tlp.data1, tlp.data0);
+    //TLPData16 resp;
+    //device->tlpin(resp);
   }
   PcieTestBenchIndication(PcieTestBenchRequestProxy *device, unsigned int id) : PcieTestBenchIndicationWrapper(id), device(device){}
 };
@@ -44,8 +44,8 @@ public:
 
 int main(int argc, const char **argv)
 {
-  PcieTestBenchRequestProxy *device = new PcieTestBenchRequestProxy(IfcNames_PcieTestBenchRequest);
-  PcieTestBenchIndication *deviceIndication = new PcieTestBenchIndication(device, IfcNames_PcieTestBenchIndication);
+  PcieTestBenchRequestProxy *device = new PcieTestBenchRequestProxy(IfcNames_TestBenchRequest);
+  PcieTestBenchIndication *deviceIndication = new PcieTestBenchIndication(device, IfcNames_TestBenchIndication);
 
   DmaConfigProxy *dma = new DmaConfigProxy(IfcNames_DmaConfig);
   DmaIndication *dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);

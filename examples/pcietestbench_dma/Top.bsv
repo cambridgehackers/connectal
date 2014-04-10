@@ -17,11 +17,11 @@ import PcieTestBenchRequestWrapper::*;
 // defined by user
 import PcieTestBench::*;
 
-module mkPortalTop(StdPortalTop#(addrWidth));
+module mkPortalTop(StdPortalTop#(40));
 
    // instantiate user portals
    PcieTestBenchIndicationProxy pcieTestBenchIndicationProxy <- mkPcieTestBenchIndicationProxy(TestBenchIndication);
-   PcieTestBench pcieTestBench <- mkPcieTestBench(pcieTestBenchIndicationProxy.ifc);
+   PcieTestBench#(40,64) pcieTestBench <- mkPcieTestBench(pcieTestBenchIndicationProxy.ifc);
    PcieTestBenchRequestWrapper pcieTestBenchRequestWrapper <- mkPcieTestBenchRequestWrapper(TestBenchRequest,pcieTestBench.request);
    
    Vector#(4,StdPortal) portals;
@@ -36,7 +36,7 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = null_mem_master;
+   interface master = pcieTestBench.master;
    interface leds = default_leds;
 
 endmodule : mkPortalTop

@@ -36,6 +36,8 @@ import Portal            :: *;
 import MemServer         :: *;
 import MemreadEngine     :: *;
 import AxiDma            :: *;
+import Dma               :: *;
+import AxiMasterSlave    :: *;
 
 import DmaConfigWrapper::*;
 import DmaIndicationProxy::*;
@@ -122,15 +124,18 @@ interface PcieTestBenchRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen);
 endinterface
 
-interface PcieTestBench;
+interface PcieTestBench#(numeric type addrWidth, numeric type dataWidth);
    interface PcieTestBenchRequest request;
    interface StdPortal dmaConfig;
    interface StdPortal dmaIndication;
+   interface MemMaster#(addrWidth,dataWidth) master;
 endinterface
 
 typedef enum {TestBenchIndication, TestBenchRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench);
+//`define SANITY
+
+module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64));
    
    // memread state
    FIFOF#(Bit#(64)) readFifo <- mkFIFOF;
@@ -140,8 +145,12 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench);
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    MemServer#(40,64) dma <- mkMemServer(dmaIndicationProxy.ifc, cons(re.dmaClient,nil), nil);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
-   let  m_axi <- mkAxiDmaMaster(dma.master);
-
+`ifdef SANITY
+   Axi3Master#(40,64,6) m_axi <- mkAxiDmaMaster(null_mem_master);
+`else   
+   Axi3Master#(40,64,6)  m_axi <- mkAxiDmaMaster(dma.master);
+`endif
+   
    // tlp state
    PciId my_id = PciId { bus: 1, dev: 1, func: 0};
    Bit#(64) board_content_id = 'hdeadbeefd00df00d;
@@ -159,7 +168,6 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench);
    rule tlp_out;
       let tlp <- tpl_1(axiSlaveEngine.tlps).get();
       TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, source: 4, tlp: tlp };
-      $display("%h", ttd);
       indication.tlpout(unpack(pack(tlp)));
    endrule
    
@@ -185,4 +193,9 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench);
    endinterface
    interface StdPortal dmaConfig = dmaRequestWrapper.portalIfc;
    interface StdPortal dmaIndication = dmaIndicationProxy.portalIfc;
+`ifdef SANITY
+   interface MemMaster master = dma.master;
+`else
+   interface MemMaster master = null_mem_master;
+`endif
 endmodule
