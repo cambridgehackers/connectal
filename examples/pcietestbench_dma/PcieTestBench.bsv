@@ -44,15 +44,13 @@ import DmaIndicationProxy::*;
 
 // copied from PCIE.bsv because xbsvgen cannot handle TMul#()
 typedef struct {
-   Bit#(1)               sof;
-   Bit#(1)               eof;
-   Bit#(7)               hit;
-   Bit#(16)              be;
    Bit#(32)              data0;
    Bit#(32)              data1;
    Bit#(32)              data2;
    Bit#(32)              data3;
-} TLPData16 deriving (Bits, Eq);
+   Bit#(32)              data4;
+   Bit#(32)              data5;
+} TsTLPData16 deriving (Bits, Eq);
 
 // copied from PCIE.bsv because xbsvgen cannot parse the file
 typedef enum {
@@ -114,13 +112,13 @@ typedef struct {Bit#(8) hit;
    } Pcie3dwHeader deriving (Bits);
 
 interface PcieTestBenchIndication;
-   method Action tlpout(TLPData16 tlp);
+   method Action tlpout(TsTLPData16 tlp);
    method Action started(Bit#(32) numWords);
    method Action finished(Bit#(32) v);
 endinterface
 
 interface PcieTestBenchRequest;
-   method Action tlpin(TLPData16 tlp);
+   method Action tlpin(TsTLPData16 tlp);
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen);
 endinterface
 
@@ -159,6 +157,7 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
    AxiSlaveEngine#(64) axiSlaveEngine <- mkAxiSlaveEngine(my_id);
    Reg#(Bit#(32)) timestamp <- mkReg(0);
    mkConnection(m_axi, axiSlaveEngine.slave);
+   FIFO#(TimestampedTlpData) tlpin_fifo <- mkSizedFIFO(20);
    
    // tlp rules
    rule timebase;
@@ -168,7 +167,14 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
    rule tlp_out;
       let tlp <- tpl_1(axiSlaveEngine.tlps).get();
       TimestampedTlpData ttd = TimestampedTlpData { timestamp: timestamp, source: 4, tlp: tlp };
-      indication.tlpout(unpack(pack(tlp)));
+      indication.tlpout(unpack(pack(ttd)));
+      //$display("%h",ttd);
+   endrule
+
+   rule tlp_in;
+      let ttd = tlpin_fifo.first;
+      tlpin_fifo.deq;
+      tpl_2(axiSlaveEngine.tlps).put(unpack(pack(ttd.tlp)));
    endrule
    
    // memread rules
@@ -187,8 +193,9 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
 	 indication.started(nw);
 	 re.start(rp, 0, nw*4, bl*4);
       endmethod
-      method Action tlpin(TLPData16 tlp);
-	 tpl_2(axiSlaveEngine.tlps).put(unpack(pack(tlp)));
+      method Action tlpin(TsTLPData16 tstlp);
+	 TimestampedTlpData ttd = unpack(pack(tstlp));
+	 tlpin_fifo.enq(ttd);
       endmethod
    endinterface
    interface StdPortal dmaConfig = dmaRequestWrapper.portalIfc;
