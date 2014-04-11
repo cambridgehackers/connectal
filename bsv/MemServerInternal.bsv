@@ -120,6 +120,8 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift),
 	    Add#(a__, TLog#(numTags), 6));
+
+   FIFO#(Tuple2#(DRec#(numClients,numTags,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
    
    FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkSizedFIFO(1);
@@ -170,6 +172,16 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       end
    endrule
 
+   rule readDataComp;
+      readDataPipelineFifo.deq;
+      let drq = tpl_1(readDataPipelineFifo.first);
+      let response = tpl_2(readDataPipelineFifo.first);
+      let client = drq.client;
+      let req = drq.req;
+      readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
+      beatCounts[client] <= beatCounts[client]+1;
+   endrule
+
    interface MemReadClient read_client;
       interface Get readReq;
 	 method ActionValue#(MemRequest#(addrWidth)) get();
@@ -190,20 +202,16 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	    Bit#(6) response_tag = response.tag;
 	    dynamicAssert(truncate(response_tag) == dreqFifos[response_tag].first.rename_tag, "mkMemReadInternal");
 	    let dreqFifo = dreqFifos[response_tag];
-	    let client = dreqFifo.first.client;
-	    let req = dreqFifo.first.req;
+	    readDataPipelineFifo.enq(tuple2(dreqFifo.first, response));
 	    let burstLen = burstRegs[response_tag];
-	    //$display("readData: client=%d, rename_tag=%d", client, response_tag);
 	    if (burstLen == 0)
-	       burstLen = req.burstLen >> beat_shift;
+	       burstLen = dreqFifo.first.req.burstLen >> beat_shift;
 	    if (burstLen == 1) begin
 	       //$display("eob");
 	       dreqFifo.deq();
 	       tag_gen.return_tag(truncate(response_tag));
 	    end
-	    readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
 	    burstRegs[response_tag] <= burstLen-1;
-	    beatCounts[client] <= beatCounts[client]+1;
 `ifdef INTERVAL_ANAlYSIS
 	    last_resp_read <= cycle_cnt;
 	    let interval = cycle_cnt - last_resp_read;
@@ -245,6 +253,8 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
 	    Log#(dataWidthBytes,beatShift),
 	    Add#(a__, TLog#(numTags), 6));
    
+   FIFO#(Tuple2#(RResp#(numClients,numTags,addrWidth),Bit#(6))) writeDonePipelineFifo <- mkFIFO;
+   
    FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkSizedFIFO(1);
    FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedFIFO(32);
@@ -280,7 +290,16 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
 	 //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       end
    endrule
-
+   
+   rule writeDoneComp;
+      writeDonePipelineFifo.deq;
+      let client = tpl_1(writeDonePipelineFifo.first).client;
+      let orig_tag = tpl_1(writeDonePipelineFifo.first).orig_tag;
+      let response_tag = tpl_2(writeDonePipelineFifo.first);
+      writeClients[client].writeDone.put(orig_tag);
+      tag_gen.return_tag(truncate(response_tag));
+   endrule
+   
    interface MemWriteClient write_client;
       interface Get writeReq;
 	 method ActionValue#(MemRequest#(addrWidth)) get();
@@ -316,11 +335,9 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       interface Put writeDone;
 	 method Action put(Bit#(6) resp);
 	    let response_tag = resp;
-	    let client = respFifos[response_tag].first.client;
-	    let orig_tag = respFifos[response_tag].first.orig_tag;
-	    respFifos[response_tag].deq;
-	    writeClients[client].writeDone.put(orig_tag);
-	    tag_gen.return_tag(truncate(response_tag));
+	    let respFifo = respFifos[response_tag];
+	    writeDonePipelineFifo.enq(tuple2(respFifo.first,resp));
+	    respFifo.deq;
 	 endmethod
       endinterface
    endinterface
