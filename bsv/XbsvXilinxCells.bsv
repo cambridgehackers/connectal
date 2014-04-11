@@ -755,7 +755,6 @@ module mkBIBUF#(Inout#(a) v)(BIBUF#(sa)) provisos(Bits#(a, sa));
     ifc_inout pad(PAD);
 endmodule
 
-
 (* always_ready, always_enabled *)
 interface B2C;
     interface Clock c;
@@ -772,5 +771,22 @@ module mkB2C(B2C);
     method inputclock(BC) enable((*inhigh*) en_inputclock) clocked_by(c);
     method inputreset(BR) enable((*inhigh*) en_inputreset) clocked_by(c);
     schedule ( inputclock, inputreset) CF ( inputclock, inputreset);
+endmodule
+
+
+(* always_ready, always_enabled *)
+interface IOBUF;
+    method Bit#(1)            o();
+    interface Inout#(Bit#(1)) io;
+endinterface
+import "BVI" IOBUF =
+module mkIOBUF#(Bit#(1) t, Bit#(1) i)(IOBUF);
+    default_clock clk();
+    default_reset rst();
+    port I = i;
+    port T = t;
+    method O o();
+    ifc_inout io(IO);
+    schedule (o) CF (o);
 endmodule
 
