@@ -29,6 +29,19 @@ import Echo::*;
 
 typedef enum {EchoIndication, EchoRequest} IfcNames deriving (Eq,Bits);
 
+interface VEcho;
+   method Bit#(32) heard();
+endinterface
+
+import "BVI" echo =
+module mkVEcho#(Bit#(32) say)(VEcho);
+   default_clock clk();
+   default_reset rst();
+   port say = say;
+   path(say,heard);
+   method heard heard() clocked_by(clk) reset_by (rst);
+endmodule
+
 module mkXsim(Empty);
    let indication = (interface Echo::EchoIndication;
 	  method Action heard(Bit#(32) v);
@@ -40,11 +53,18 @@ module mkXsim(Empty);
       endinterface);
    let echo <- mkEchoRequestInternal(indication);
    
+   Reg#(Bit#(32)) echoReg <- mkReg(0);
+   let vecho <- mkVEcho(echoReg);
+
    mkAutoFSM(seq
       $display("hello");
       echo.ifc.say(42);
       echo.ifc.say2(68,27);
       $display(".");
+      echoReg <= 22;
+      $display("vecho %d", vecho.heard());
+      echoReg <= 42;
+      $display("vecho %d", vecho.heard());
       $display(".");
       $display(".");
       endseq);
