@@ -95,6 +95,22 @@ $(bsimruns):
 	(cd examples/$(basename $@)/bluesim; make run)
 
 #################################################################################################
+# xsim
+
+xsimtests = $(addsuffix .xsim, $(testnames))
+xsimtests: $(xsimtests)
+
+$(xsimtests):
+	rm -fr examples/$(basename $@)/bluesim
+	make BOARD=bluesim -C examples/$(basename $@) xsim
+
+xsimruns = $(addsuffix .xsimrun, $(testnames))
+xsimruns: $(xsimruns)
+
+$(xsimruns):
+	(cd examples/$(basename $@)/bluesim; make xsimrun)
+
+#################################################################################################
 # zedboard
 
 zedtests = $(addsuffix .zedboard, $(testnames))

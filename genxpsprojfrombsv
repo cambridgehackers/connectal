@@ -271,7 +271,10 @@ endif
 
 xsim: verilog
 	xvlog verilog/top/*.v
-	xelab work.$(MKTOP) -R
+	xelab work.$(MKTOP)
+
+xsimrun: xsim
+	xsim work.$(MKTOP) -R
 
 JENKINS_HOST=sj9.qrclab.com
 jenkins:
