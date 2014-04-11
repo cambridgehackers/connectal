@@ -117,8 +117,8 @@ module mkMemServerOO#(DmaIndication dmaIndication,
 	    Add#(g__, addrWidth, 40),
 	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
 
-   TagGen#(numWriteClients,8) writeTagGen <- mkTagGenOO;
-   TagGen#(numReadClients,8) readTagGen <- mkTagGenOO;
+   TagGen#(numWriteClients,4) writeTagGen <- mkTagGenOO;
+   TagGen#(numReadClients,4) readTagGen <- mkTagGenOO;
    let rv <- mkConfigMemServerRW(dmaIndication, readTagGen, writeTagGen, readClients, writeClients);
    return rv;
 
@@ -136,7 +136,7 @@ module mkMemServerOOR#(DmaIndication dmaIndication,
 	    Add#(g__, addrWidth, 40),
 	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
    
-   TagGen#(numReadClients,8) readTagGen <- mkTagGenOO;
+   TagGen#(numReadClients,4) readTagGen <- mkTagGenOO;
    let rv <- mkConfigMemServerR(dmaIndication, readTagGen,readClients);
    return rv;
    
@@ -154,7 +154,7 @@ module mkMemServerOOW#(DmaIndication dmaIndication,
 	    Add#(g__, addrWidth, 40),
 	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
    
-   TagGen#(numWriteClients,8) writeTagGen <- mkTagGenOO;
+   TagGen#(numWriteClients,4) writeTagGen <- mkTagGenOO;
    let rv <- mkConfigMemServerW(dmaIndication, writeTagGen,writeClients);
    return rv;
    

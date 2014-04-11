@@ -200,8 +200,8 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       interface Put readData;
 	 method Action put(MemData#(dataWidth) response);
 	    Bit#(6) response_tag = response.tag;
-	    dynamicAssert(truncate(response_tag) == dreqFifos[response_tag].first.rename_tag, "mkMemReadInternal");
 	    let dreqFifo = dreqFifos[response_tag];
+	    dynamicAssert(truncate(response_tag) == dreqFifo.first.rename_tag, "mkMemReadInternal");
 	    readDataPipelineFifo.enq(tuple2(dreqFifo.first, response));
 	    let burstLen = burstRegs[response_tag];
 	    if (burstLen == 0)
@@ -320,14 +320,14 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
 	    let rename_tag =dreqFifo.first.rename_tag;
 	    ObjectData#(dataWidth) tagdata <- writeClients[client].writeData.get();
 	    let burstLen = burstReg;
-	    if (burstLen == 0)
+	    if (burstLen == 0) begin
 	       burstLen = req.burstLen >> beat_shift;
-	    burstReg <= burstLen-1;
-	    beatCounts[client] <= beatCounts[client]+1;
-	    if (burstLen == 1) begin
-	       dreqFifo.deq();
 	       respFifos[rename_tag].enq(RResp{orig_tag:req.tag, client:client});
 	    end
+	    burstReg <= burstLen-1;
+	    beatCounts[client] <= beatCounts[client]+1;
+	    if (burstLen == 1) 
+	       dreqFifo.deq();
 	    //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
 	    return MemData { data: tagdata.data,  tag:extend(rename_tag) };
 	 endmethod
