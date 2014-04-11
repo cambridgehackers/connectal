@@ -100,11 +100,13 @@ module mkAxiDmaMaster#(MemMaster#(addrWidth,dataWidth) master) (Axi3Master#(addr
    interface Get req_ar;
       method ActionValue#(Axi3ReadRequest#(addrWidth,6)) get();
 	 let req <- master.read_client.readReq.get;
+	 //$display("req_ar %h", req.tag);
 	 return Axi3ReadRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:req.tag, size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
    interface Put resp_read;
       method Action put(Axi3ReadResponse#(dataWidth,6) response);
+	 //$display("resp_read %h %h", response.data, response.id);
 	 master.read_client.readData.put(MemData { data: response.data, tag: response.id});
       endmethod
    endinterface

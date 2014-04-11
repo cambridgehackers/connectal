@@ -33,7 +33,7 @@ import AxiCsr            :: *;
 import PCIE              :: *;
 import AxiSlaveEngine    :: *;
 import Portal            :: *;
-import MemServer         :: *;
+import ExperimentalMemServer         :: *;
 import MemreadEngine     :: *;
 import AxiDma            :: *;
 import Dma               :: *;

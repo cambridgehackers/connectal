@@ -46,7 +46,8 @@ testnames = echo             \
             memread2         \
             mempoke          \
             pcietestbench    \
-            pcietestbench_dma  \
+            pcietestbench_dma_io  \
+            pcietestbench_dma_oo  \
             simple           \
             strstr           \
 	    ring             \
@@ -69,6 +70,8 @@ memtests =  memcpy_buff      \
 	    memwrite_nobuff  \
             memrw_buff       \
             memrw_nobuff     \
+            memcpy_buff_oo   \
+            memread_buff_oo  \
             echo             \
 
 

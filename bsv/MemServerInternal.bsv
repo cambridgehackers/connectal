@@ -127,13 +127,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
    Vector#(numClients, Reg#(Bit#(64)))  beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
-   FIFO#(Bit#(6)) bad_tag <- mkFIFO;
-   
-   rule bad_tags;
-      bad_tag.deq;
-      dmaIndication.badTag(bad_tag.first);
-   endrule
-      
+         
 `ifdef	INTERVAL_ANAlYSIS
    Reg#(Bit#(32)) bin1 <- mkReg(0);
    Reg#(Bit#(32)) bin4 <- mkReg(0);
@@ -194,23 +188,20 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       interface Put readData;
 	 method Action put(MemData#(dataWidth) response);
 	    Bit#(6) response_tag = response.tag;
-	    if (response_tag >= fromInteger(valueOf(numClients))) begin
-	       bad_tag.enq(response_tag);
-	       response_tag = 0; 
-	    end
 	    dynamicAssert(truncate(response_tag) == dreqFifos[response_tag].first.rename_tag, "mkMemReadInternal");
 	    let dreqFifo = dreqFifos[response_tag];
 	    let client = dreqFifo.first.client;
 	    let req = dreqFifo.first.req;
 	    let burstLen = burstRegs[response_tag];
-	    readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
 	    //$display("readData: client=%d, rename_tag=%d", client, response_tag);
 	    if (burstLen == 0)
 	       burstLen = req.burstLen >> beat_shift;
 	    if (burstLen == 1) begin
+	       //$display("eob");
 	       dreqFifo.deq();
 	       tag_gen.return_tag(truncate(response_tag));
 	    end
+	    readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
 	    burstRegs[response_tag] <= burstLen-1;
 	    beatCounts[client] <= beatCounts[client]+1;
 `ifdef INTERVAL_ANAlYSIS
@@ -261,12 +252,6 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
    Vector#(numClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
-   FIFO#(Bit#(6)) bad_tag <- mkFIFO;
-   
-   rule bad_tags;
-      bad_tag.deq;
-      dmaIndication.badTag(bad_tag.first);
-   endrule
    
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1)
        rule loadClient;
@@ -331,10 +316,6 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       interface Put writeDone;
 	 method Action put(Bit#(6) resp);
 	    let response_tag = resp;
-	    if (resp >= fromInteger(valueOf(numClients))) begin
-	       bad_tag.enq(resp);
-	       response_tag = 0;  
-	    end
 	    let client = respFifos[response_tag].first.client;
 	    let orig_tag = respFifos[response_tag].first.orig_tag;
 	    respFifos[response_tag].deq;

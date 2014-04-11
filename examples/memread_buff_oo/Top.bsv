@@ -10,7 +10,7 @@ import CtrlMux::*;
 import Portal::*;
 import PortalMemory::*;
 import Dma::*;
-import MemServer::*;
+import ExperimentalMemServer::*;
 import Leds::*;
 import DmaUtils::*;
 

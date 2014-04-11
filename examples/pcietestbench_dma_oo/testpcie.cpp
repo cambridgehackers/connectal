@@ -73,7 +73,7 @@ public:
     fprintf(stderr, "started(%x)\n", words);
   }
   void tlpout(const TsTLPData16 &tlp) {
-    fprintf(stderr, "Received data= %08x%08x%08x%08x%08x%08x\n", tlp.data0, tlp.data1, tlp.data2, tlp.data3, tlp.data4, tlp.data5);
+    //fprintf(stderr, "Received data= %08x%08x%08x%08x%08x%08x\n", tlp.data0, tlp.data1, tlp.data2, tlp.data3, tlp.data4, tlp.data5);
     sem_post(&tlp_sem);
     sem_wait(&tlp_ack);
   }
@@ -93,7 +93,7 @@ int main(int argc, const char **argv)
   PortalAlloc *srcAlloc;
   unsigned int *srcBuffer = 0;
 
-  std::ifstream infile("../memread_nobuff.tstlp");
+  std::ifstream infile("../memread_nobuff_oo.tstlp");
 
   dma->alloc(alloc_sz, &srcAlloc);
   srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc->header.fd, 0);
@@ -112,6 +112,7 @@ int main(int argc, const char **argv)
 
   device->startRead(ref_srcAlloc, numWords, burstLen);
   
+#ifndef SANITY
   int i;
   while(i++ < 4){
     sem_wait(&tlp_sem);
@@ -137,13 +138,14 @@ int main(int argc, const char **argv)
 	rv.data4 = scan_int(line.substr(32,8).c_str());
 	rv.data5 = scan_int(line.substr(40,8).c_str());
 	//fprintf(stdout, "%08x%08x%08x%08x%08x%08x\n", rv.data0, rv.data1, rv.data2, rv.data3, rv.data4, rv.data5);
-	fprintf(stdout, "%s\n", line.c_str());
+	//fprintf(stdout, "%s\n", line.c_str());
 	device->tlpin(rv);
 	cnt++;
       }
     }
     sem_post(&tlp_ack);
   }
+#endif
 
   sem_wait(&test_sem);
 }
