@@ -178,7 +178,7 @@ endinstance
 
 function Put#(t) null_put();
    return (interface Put;
-	      method Action put(t x) if (False);
+	      method Action put(t x) if (True);
 		 noAction;
 	      endmethod
 	   endinterface);

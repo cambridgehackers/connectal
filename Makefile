@@ -39,6 +39,7 @@ testnames = echo             \
             memread_buff     \
             memread_nobuff   \
 	    memwrite_buff    \
+	    memwrite_buff_oo \
 	    memwrite_nobuff  \
             memrw_buff       \
             memrw_nobuff     \
@@ -72,6 +73,7 @@ memtests =  memcpy_buff      \
             memrw_nobuff     \
             memcpy_buff_oo   \
             memread_buff_oo  \
+            memwrite_buff_oo \
             echo             \
 
 
