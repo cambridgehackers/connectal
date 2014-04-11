@@ -63,6 +63,11 @@ testnames = echo             \
 
 
 
+oo_memtests =  memcpy_buff_oo   \
+            memread_buff_oo  \
+            memwrite_buff_oo \
+
+
 memtests =  memcpy_buff      \
             memcpy_nobuff    \
             memread_buff     \
@@ -71,9 +76,6 @@ memtests =  memcpy_buff      \
 	    memwrite_nobuff  \
             memrw_buff       \
             memrw_nobuff     \
-            memcpy_buff_oo   \
-            memread_buff_oo  \
-            memwrite_buff_oo \
             echo             \
 
 
@@ -189,7 +191,7 @@ $(kc705runs):
 
 
 #################################################################################################
-# misc
+# memtests
 
 memtests.zedboard: $(addsuffix .zedboard, $(memtests))
 memtests.zedboard.regression:
@@ -206,6 +208,26 @@ memtests.bsimrun: $(addsuffix .bsimrun, $(memtests))
 memtests.bsimrun.regression:
 	make LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.bsimrun
 
+#################################################################################################
+# oo_memtests
+
+oo_memtests.zedboard: $(addsuffix .zedboard, $(oo_memtests))
+oo_memtests.zedboard.regression:
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.zedboard
+
+oo_memtests.kc705: $(addsuffix .kc705, $(oo_memtests))
+oo_memtests.kc705.regression:
+	make -j 6 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.kc705
+
+oo_memtests.bsim: $(addsuffix .bsim, $(oo_memtests))
+oo_memtests.bsim.regression:
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.bsim
+oo_memtests.bsimrun: $(addsuffix .bsimrun, $(oo_memtests))
+oo_memtests.bsimrun.regression:
+	make LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.bsimrun
+
+#################################################################################################
+# misc
 
 android_exetests = $(addsuffix .android_exe, $(testnames))
 android_exetests: $(android_exetests)
