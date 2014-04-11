@@ -61,7 +61,7 @@ argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps pro
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument('-I', '--contentid', help='Specify 64-bit contentid for PCIe designs')
-argparser.add_argument('-V', '--verilog', help='Additional verilog sources', action='append')
+argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-x', '--export', help='Promote/export named interface from top module')
@@ -69,6 +69,8 @@ argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
 argparser.add_argument('-T', '--tcl', default=[], help='Vivado tcl script', action='append')
 argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to the BSV compiler', action='append')
+argparser.add_argument('--xelabflags', default=[], help='Options to pass to the xelab compiler', action='append')
+argparser.add_argument('--xsimflags', default=['-R'], help='Options to pass to the xsim simulator', action='append')
 
 tclReadVerilogTemplate='read_verilog [ glob %(verilog)s/*.v ]'
 
@@ -158,6 +160,10 @@ endif
 
 BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s %(bscflags)s
 BSIM_CXX = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.cxx $(XBSVDIR)/cpp/sock_fd.cxx
+
+XVLOGFLAGS =
+XELABFLAGS = %(xelabflags)s
+XSIMFLAGS  = %(xsimflags)s
 
 all: $(ALLTARGETS)
 
@@ -270,11 +276,11 @@ run: program
 endif
 
 xsim: verilog
-	xvlog verilog/top/*.v
-	xelab work.$(MKTOP)
+	xvlog $(XVLOGFLAGS) verilog/top/*.v
+	xelab $(XELABFLAGS) work.$(MKTOP)
 
 xsimrun: xsim
-	xsim work.$(MKTOP) -R
+	xsim $(XSIMFLAGS) work.$(MKTOP)
 
 JENKINS_HOST=sj9.qrclab.com
 jenkins:
@@ -633,7 +639,9 @@ if __name__=='__main__':
                                    'Dut': topmodulename,
                                    'timestamp' : int(time.time()),
                                    'clibs': ' '.join(['-l%s' % l for l in namespace.clib]),
-                                   'bscflags': ' '.join(namespace.bscflags)
+                                   'bscflags': ' '.join(namespace.bscflags),
+                                   'xelabflags': ' '.join(namespace.xelabflags),
+                                   'xsimflags': ' '.join(namespace.xsimflags)
                                    })
     make.close()
     timestamp = util.createDirAndOpen(timestampname, 'w')
