@@ -82,9 +82,6 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
    Vector#(numReadClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
 
-   // the choice of 5 is based on PCIE limitations.   
-   // uniqueness is enforced by the depth of dreqFIFO
-   Reg#(Bit#(6))  tag_gen   <- mkReg(0); 
    // report a tag mismatch for oo completions (in which 
    // case we will need to introduce completion buffers)
    FIFO#(Tuple2#(Bit#(6),Bit#(6))) tag_mismatch <- mkSizedFIFO(32);
@@ -126,9 +123,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
       else begin
 	 if (False && physAddr[31:24] != 0)
 	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 //$display("mkMemReadInternal::checkSglResp tag=%d, id=%d, activeChan=%d", req.tag, tag_gen, chan);
 	 reqFifo.enq(IRec{req:req, rename_tag:truncate(chan), pa:physAddr, chan:chan});
-	 tag_gen <= tag_gen+1;
       end
    endrule
 
@@ -222,9 +217,6 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
    Vector#(numWriteClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
    let beat_shift = fromInteger(valueOf(beatShift));
    
-   // the choice of 5 is based on PCIE limitations.   
-   // uniqueness is enforced by the depth of dreqFIFO
-   Reg#(Bit#(6))  tag_gen   <- mkReg(0); 
    // report a tag mismatch for oo completions (in which 
    // case we will need to introduce completion buffers)
    FIFO#(Tuple2#(Bit#(6),Bit#(6))) tag_mismatch <- mkSizedFIFO(32);
@@ -252,8 +244,7 @@ module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
       end
       else begin
-	 reqFifo.enq(IRec{req:req, rename_tag:tag_gen, pa:physAddr, chan:chan});
-	 tag_gen <= tag_gen+1;
+	 reqFifo.enq(IRec{req:req, rename_tag:truncate(chan), pa:physAddr, chan:chan});
       end
    endrule
 
