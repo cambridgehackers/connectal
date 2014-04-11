@@ -51,6 +51,7 @@ interface ImageCapturePins;
    interface ImageonSensorPins pins;
    //interface ImageonTopPins toppins;
    interface ImageonSerdesPins serpins;
+   interface HDMI hdmi;
    method Bit#(1) i2c_mux_reset_n();
 endinterface
 
@@ -193,6 +194,7 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
        interface SpiPins spi = spiController.pins;
        interface ImageonSensorPins pins = fromSensor.pins;
        interface ImageonSerdesPins serpins = serdes.pins;
+       interface HDMI hdmi = hdmiGen.hdmi;
        method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
    endinterface
 
