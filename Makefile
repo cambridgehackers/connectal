@@ -108,7 +108,7 @@ xsimruns = $(addsuffix .xsimrun, $(testnames))
 xsimruns: $(xsimruns)
 
 $(xsimruns):
-	(cd examples/$(basename $@)/bluesim; make xsimrun)
+	make BOARD=bluesim -C examples/$(basename $@) xsimrun
 
 #################################################################################################
 # zedboard
