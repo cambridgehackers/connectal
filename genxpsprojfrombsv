@@ -193,7 +193,7 @@ ubuntu_exe:
 
 bsim: $(timestampfile)
 	cd sources; mkdir -p $(DTOP)/obj; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
-	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e mkBsimTop -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
+	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
 
 verilog: $(vfile)
 
@@ -268,6 +268,10 @@ run: program
 
     endif
 endif
+
+xsim: verilog
+	xvlog verilog/top/*.v
+	xelab work.$(MKTOP) -R
 
 JENKINS_HOST=sj9.qrclab.com
 jenkins:

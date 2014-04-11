@@ -60,8 +60,7 @@ testnames = echo             \
 	    splice           \
 	    maxcommonsubseq  \
 	    fib              \
-
-
+	    xsim-echo        \
 
 oo_memtests =  memcpy_buff_oo   \
             memread_buff_oo  \
