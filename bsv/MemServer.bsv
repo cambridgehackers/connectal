@@ -127,7 +127,7 @@ module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) 
 	 if (False && physAddr[31:24] != 0)
 	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 //$display("mkMemReadInternal::checkSglResp tag=%d, id=%d, activeChan=%d", req.tag, tag_gen, chan);
-	 reqFifo.enq(IRec{req:req, rename_tag:tag_gen, pa:physAddr, chan:chan});
+	 reqFifo.enq(IRec{req:req, rename_tag:truncate(chan), pa:physAddr, chan:chan});
 	 tag_gen <= tag_gen+1;
       end
    endrule
