@@ -38,7 +38,7 @@ import HDMI::*;
 import Imageon::*;
 import ConnectableWithTrace::*;
 import CtrlMux::*;
-import TriState::*;
+//import TriState::*;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
@@ -71,11 +71,11 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
    Clock mainclock = ps7.fclkclk[0];
    Reset mainreset = ps7.fclkreset[0];
 
-   let tscl <- mkTriState(unpack(ps7.i2c[1].scltn), ps7.i2c[1].sclo, clocked_by mainclock, reset_by mainreset);
-   let tsda <- mkTriState(unpack(ps7.i2c[1].sdatn), ps7.i2c[1].sdao, clocked_by mainclock, reset_by mainreset);
+   let tscl <- mkIOBUF(ps7.i2c[1].scltn, ps7.i2c[1].sclo, clocked_by mainclock, reset_by mainreset);
+   let tsda <- mkIOBUF(ps7.i2c[1].sdatn, ps7.i2c[1].sdao, clocked_by mainclock, reset_by mainreset);
    rule sdai;
-      ps7.i2c[1].sdai(tsda);
-      ps7.i2c[1].scli(tscl);
+      ps7.i2c[1].sdai(tsda.o);
+      ps7.i2c[1].scli(tscl.o);
    endrule
 
    Clock fmc_video_clk1_buf <- mkClockBUFG(clocked_by fmc_video_clk1);
