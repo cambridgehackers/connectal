@@ -70,7 +70,7 @@ argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='ap
 argparser.add_argument('-T', '--tcl', default=[], help='Vivado tcl script', action='append')
 argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to the BSV compiler', action='append')
 argparser.add_argument('--xelabflags', default=[], help='Options to pass to the xelab compiler', action='append')
-argparser.add_argument('--xsimflags', default=['-R'], help='Options to pass to the xsim simulator', action='append')
+argparser.add_argument('--xsimflags', default=[], help='Options to pass to the xsim simulator', action='append')
 
 tclReadVerilogTemplate='read_verilog [ glob %(verilog)s/*.v ]'
 
@@ -358,6 +358,8 @@ if __name__=='__main__':
         namespace.verilog = []
     if not namespace.tcl:
         namespace.tcl = []
+    if not namespace.xsimflags:
+        namespace.xsimflags = ['-R']
 
     project_dir = os.path.expanduser(namespace.project_dir)
     srcdirs = []
@@ -644,6 +646,7 @@ if __name__=='__main__':
                                    'xsimflags': ' '.join(namespace.xsimflags)
                                    })
     make.close()
+    print namespace.xsimflags
     timestamp = util.createDirAndOpen(timestampname, 'w')
     timestamp.close()
 
