@@ -78,7 +78,7 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
       ps7.i2c[1].scli(tscl.o);
    endrule
 
-   Clock fmc_video_clk1_buf <- mkClockBUFG(clocked_by fmc_video_clk1);
+   Clock fmc_video_clk1_buf <- mkClockIBUFG(clocked_by fmc_video_clk1);
    let top <- constructor(ps7.fclkclk[3], fmc_video_clk1_buf, clocked_by mainclock, reset_by mainreset);
 
    //mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
