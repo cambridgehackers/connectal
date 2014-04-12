@@ -32,3 +32,9 @@ input BR;
 assign C = BC;
 assign R = BR;
 endmodule
+
+module CONNECTNET(IN, OUT);
+output OUT;
+input IN;
+assign OUT = IN;
+endmodule

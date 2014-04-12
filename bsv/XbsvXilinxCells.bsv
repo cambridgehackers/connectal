@@ -773,6 +773,19 @@ module mkB2C(B2C);
     schedule ( inputclock, inputreset) CF ( inputclock, inputreset);
 endmodule
 
+(* always_ready, always_enabled *)
+interface C2B;
+    method Bit#(1) o();
+endinterface
+import "BVI" CONNECTNET =
+module mkC2B#(Clock c)(C2B);
+    default_clock clk();
+    default_reset rst();
+    input_clock ck(IN) = c;
+    method OUT o();
+    schedule ( o) CF ( o);
+endmodule
+
 
 (* always_ready, always_enabled *)
 interface IOBUF;
