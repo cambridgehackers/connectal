@@ -52,7 +52,7 @@ interface ImageCapturePins;
    //interface ImageonTopPins toppins;
    interface ImageonSerdesPins serpins;
    interface HDMI hdmi;
-   method Bit#(1) i2c_mux_reset_n();
+   //method Bit#(1) i2c_mux_reset_n();
 endinterface
 
 module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageCapturePins));
@@ -69,7 +69,7 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
 //////
    Clock clock200_buf <- mkClockBUFG(clocked_by clock200);
    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200_buf);
-
+/*
    ClockGenerator7AdvParams clockParams = defaultValue;
    clockParams.bandwidth          = "OPTIMIZED";
    clockParams.compensation       = "ZHOLD";
@@ -90,6 +90,16 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
    Clock hdmi_clock = clockGen.clkout0;    // 148.5   MHz
    Clock imageon_clock = clockGen.clkout1; //  37.125 MHz
+*/
+    MMCMHACK mmcmhack <- mkMMCMHACK(clocked_by fmc_imageon_clk1);
+    Clock hdmi_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout0);
+    Clock imageon_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout1);
+    C2B fblink <- mkC2B(mmcmhack.mmcmadv.clkfbout, clocked_by fmc_imageon_clk1);
+    rule foorule;
+    mmcmhack.mmcmadv.clkfbin(fblink.o());
+    //let foo = fblink.o();
+    //mmcmhack.mmcmadv.clkfbin(foo);
+    endrule
 
     Reset fmc_imageon_reset <- mkAsyncReset(2, defaultReset, fmc_imageon_clk1);
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
@@ -195,7 +205,7 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
        interface ImageonSensorPins pins = fromSensor.pins;
        interface ImageonSerdesPins serpins = serdes.pins;
        interface HDMI hdmi = hdmiGen.hdmi;
-       method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
+       //method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
    endinterface
 
 endmodule : mkPortalTop
