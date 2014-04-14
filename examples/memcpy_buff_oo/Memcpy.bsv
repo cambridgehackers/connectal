@@ -49,18 +49,25 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(32))             reqLen <- mkReg(0);
 
    Reg#(Bit#(6))               wrTag <- mkReg(0);
-   Reg#(Bit#(3))               rdTag <- mkReg(0);
+   Reg#(Bit#(2))               rdTag <- mkReg(0);
    Reg#(Bit#(32))            respCnt <- mkReg(0);
    Reg#(Bit#(32))           burstCnt <- mkReg(0);
    Reg#(Bit#(32))              rdOff <- mkReg(0);
+   Reg#(Bit#(32))            iterCnt <- mkReg(0);
    
-   Vector#(8,FIFO#(Bit#(32)))    rcb <- replicateM(mkFIFO);
-   Reg#(Bit#(6))           lastWrTag <- mkReg(maxBound);
-   Reg#(Bit#(3))           lastRdTag <- mkReg(maxBound);
+   Vector#(4,FIFO#(Bit#(32)))    rcb <- replicateM(mkFIFO);
+   // Reg#(Bit#(6))           lastWrTag <- mkReg(maxBound);
+   // Reg#(Bit#(3))           lastRdTag <- mkReg(maxBound);
       
    rule rdReq if (rdOff < reqLen);
-      rdOff <= rdOff + extend(burstLen);
+      let new_rdOff = rdOff + extend(burstLen);
       dma_read_server.readReq.put(ObjectRequest { pointer: rdPointer, offset: extend(rdOff), burstLen: burstLen, tag: extend(rdTag) });
+      if (new_rdOff >= reqLen) begin
+	 if (iterCnt > 1) 
+	    new_rdOff = 0;
+	 iterCnt <= iterCnt-1;
+      end
+      rdOff <= new_rdOff;
       rdTag <= rdTag+1;
       rcb[rdTag].enq(rdOff);
    endrule
@@ -72,25 +79,27 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       if (burstCnt == 0) begin
 	 dma_write_server.writeReq.put(ObjectRequest { pointer: wrPointer, offset: extend(rcb[d.tag].first), burstLen: burstLen, tag: wrTag});
 	 rcb[d.tag].deq;
-	 lastRdTag <= truncate(d.tag);
+	 // lastRdTag <= truncate(d.tag);
 	 // if(lastRdTag+1 != truncate(d.tag))
 	 //    $display("OO rd completion");
       end
       if (new_burstCnt == extend(burstLen)) begin 
-	 burstCnt <= 0;
+	 new_burstCnt = 0;
 	 wrTag <= wrTag+1;
       end
-      else 
-	 burstCnt <= new_burstCnt;
+      burstCnt <= new_burstCnt;
    endrule
    
    rule wrDone;
       let new_respCnt = respCnt+extend(burstLen);
+      if (new_respCnt >= reqLen) begin
+	 new_respCnt = 0;
+	 if(iterCnt == 0)
+	    indication.done;
+      end
       respCnt <= new_respCnt;
-      if (new_respCnt >= reqLen)
-	 indication.done;
       let rv <- dma_write_server.writeDone.get;
-      lastWrTag <= rv;
+      // lastWrTag <= rv;
       // if(lastWrTag+1 != rv)
       // 	 $display("OO wr completion");
    endrule
@@ -102,8 +111,9 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       rdPointer <= rp;
       reqLen    <= nw*4;
       burstLen  <= truncate(bl*4);
-      respCnt <= 0;
+      respCnt   <= 0;
       rdOff     <= 0;
+      iterCnt   <= ic;
    endmethod
 
 endmodule

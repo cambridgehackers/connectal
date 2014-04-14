@@ -48,19 +48,29 @@ module mkMemread#(MemreadIndication indication,
    Reg#(Bit#(3))               rdTag <- mkReg(0);
    Reg#(Bit#(32))            respCnt <- mkReg(0);
    Reg#(Bit#(32))              rdOff <- mkReg(0);
+   Reg#(Bit#(32))            iterCnt <- mkReg(0);
          
    rule rdReq if (rdOff < reqLen);
-      rdOff <= rdOff + extend(burstLen);
+      let new_rdOff = rdOff + extend(burstLen);
       dma_read_server.readReq.put(ObjectRequest { pointer: rdPointer, offset: extend(rdOff), burstLen: burstLen, tag: extend(rdTag) });
+      if (new_rdOff >= reqLen) begin
+	 if (iterCnt > 1) 
+	    new_rdOff = 0;
+	 iterCnt <= iterCnt-1;
+      end
+      rdOff <= new_rdOff;
       rdTag <= rdTag+1;
    endrule
    
    rule rdData;
-      ObjectData#(64) d <- dma_read_server.readData.get;
       let new_respCnt = respCnt+(64/8);
+      if (new_respCnt >= reqLen) begin
+	 new_respCnt = 0;
+	 if (iterCnt == 0)
+	    indication.readDone(0);
+      end
+      ObjectData#(64) d <- dma_read_server.readData.get;
       respCnt <= new_respCnt;
-      if (new_respCnt >= reqLen)
-	 indication.readDone(0);
    endrule
      
    method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
@@ -71,6 +81,7 @@ module mkMemread#(MemreadIndication indication,
       reqLen    <= nw*4;
       respCnt   <= 0;
       rdOff     <= 0;
+      iterCnt   <= ic;
    endmethod
    
    method Action getStateDbg();

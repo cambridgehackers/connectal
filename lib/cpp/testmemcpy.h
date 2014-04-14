@@ -142,6 +142,11 @@ int runtest(int argc, const char **argv)
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   float read_util = (float)read_beats/(float)cycles;
   float write_util = (float)write_beats/(float)cycles;
+  fprintf(stderr, "wr_beats: %"PRIx64"\n", write_beats);
+  fprintf(stderr, "rd_beats: %"PRIx64"\n", read_beats);
+  fprintf(stderr, "numWords: %x\n", numWords);
+  fprintf(stderr, "  wr_est: %"PRIx64"\n", (write_beats*2)/iterCnt);
+  fprintf(stderr, "  rd_est: %"PRIx64"\n", (read_beats*2)/iterCnt);
   fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
   fprintf(stderr, "memory write utilization (beats/cycle): %f\n", write_util);
   

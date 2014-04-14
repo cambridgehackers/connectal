@@ -53,28 +53,43 @@ module  mkMemwriteRequest#(MemwriteIndication indication,
    Reg#(Bit#(32))           burstCnt <- mkReg(0);
    Reg#(Bit#(32))              wrOff <- mkReg(0);
    Reg#(Bit#(32))             srcGen <- mkReg(0);
-      
-   rule wrData if (wrOff < reqLen);
+   Reg#(Bit#(32))            iterCnt <- mkReg(0);
+   FIFO#(Bit#(6))            tagFifo <- mkSizedFIFO(6);
+   
+   rule wrReq if (wrOff < reqLen);
+      let new_wrOff = wrOff + extend(burstLen);
+      dma_write_server.writeReq.put(ObjectRequest { pointer: wrPointer, offset: extend(wrOff), burstLen: burstLen, tag: wrTag});      
+      if (new_wrOff >= reqLen) begin
+	 if (iterCnt > 1) 
+	    new_wrOff = 0;
+	 iterCnt <= iterCnt-1;
+      end
+      wrOff <= new_wrOff;
+      wrTag <= wrTag+1;
+      tagFifo.enq(wrTag);
+   endrule
+   
+   rule wrData;
       let new_burstCnt = burstCnt+(64/8);
-      if (burstCnt == 0) begin
-	 dma_write_server.writeReq.put(ObjectRequest { pointer: wrPointer, offset: extend(wrOff), burstLen: burstLen, tag: wrTag});
+      let new_srcGen = srcGen+2;
+      if (new_burstCnt >= extend(burstLen)) begin 
+	 new_burstCnt = 0;
+	 new_srcGen = 0;
+	 tagFifo.deq;
       end
-      if (new_burstCnt == extend(burstLen)) begin 
-	 burstCnt <= 0;
-	 wrTag <= wrTag+1;
-	 wrOff <= wrOff+extend(burstLen);
-      end
-      else 
-	 burstCnt <= new_burstCnt;
-      srcGen <= srcGen+2;
-      dma_write_server.writeData.put(ObjectData{data:{srcGen+1,srcGen}, tag: wrTag});
+      burstCnt <= new_burstCnt;
+      srcGen <= new_srcGen;
+      dma_write_server.writeData.put(ObjectData{data:{srcGen+1,srcGen}, tag: tagFifo.first});
    endrule
    
    rule wrDone;
       let new_respCnt = respCnt+extend(burstLen);
+      if (new_respCnt >= reqLen) begin
+	 new_respCnt = 0;
+	 if (iterCnt == 0)
+	    indication.writeDone(new_respCnt);
+      end
       respCnt <= new_respCnt;
-      if (new_respCnt >= reqLen)
-	 indication.writeDone(0);
       let rv <- dma_write_server.writeDone.get;
    endrule
 
@@ -86,6 +101,7 @@ module  mkMemwriteRequest#(MemwriteIndication indication,
       burstLen  <= truncate(bl*4);
       respCnt   <= 0;
       wrOff     <= 0;
+      iterCnt   <= ic;
    endmethod
    
    method Action getStateDbg();

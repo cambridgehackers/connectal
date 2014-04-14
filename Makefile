@@ -221,7 +221,7 @@ memtests.bsim.regression:
 	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.bsim
 memtests.bsimrun: $(addsuffix .bsimrun, $(memtests))
 memtests.bsimrun.regression:
-	make LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.bsimrun
+	make memtests.bsimrun
 
 #################################################################################################
 # oo_memtests
@@ -239,7 +239,7 @@ oo_memtests.bsim.regression:
 	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.bsim
 oo_memtests.bsimrun: $(addsuffix .bsimrun, $(oo_memtests))
 oo_memtests.bsimrun.regression:
-	make LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.bsimrun
+	make oo_memtests.bsimrun
 
 #################################################################################################
 # misc
