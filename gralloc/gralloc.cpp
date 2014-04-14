@@ -32,8 +32,6 @@
 #include <cutils/atomic.h>
 #include <cutils/properties.h>
 
-#include <ion/ion.h>
-
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
 
@@ -230,7 +228,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     private_handle_t *private_handle = const_cast<private_handle_t*>(hnd);
     if (ctx->hdmiDisplay) {
-        ALOGD("freeing ion buffer fd %d\n", private_handle->fd);
+        ALOGD("freeing portal buffer fd %d\n", private_handle->fd);
         close(private_handle->fd);
     } else {
         ALOGD("freeing ashmem buffer %p\n", private_handle);
