@@ -60,16 +60,16 @@ module mkHdmiDisplay#(Clock processing_system7_1_fclk_clk1,
     Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
     Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
 
-    Reg#(ObjectPointer) referenceReg <- mkReg(-1);
+    Reg#(Maybe#(ObjectPointer)) referenceReg <- mkReg(tagged Invalid);
     Reg#(Bit#(40)) streamRdOff <- mkReg(0);
 
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
 					     vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
    
     DmaReadBuffer#(64, 1) dmaReadBuffer <- mkDmaReadBuffer();
-    rule readReq if(referenceReg >= 0);
+    rule readReq if(referenceReg matches tagged Valid .reference);
         streamRdOff <= streamRdOff + 16*8;
-        dmaReadBuffer.dmaServer.readReq.put(ObjectRequest {pointer: referenceReg, offset: streamRdOff, burstLen: 16*8, tag: 0});
+        dmaReadBuffer.dmaServer.readReq.put(ObjectRequest {pointer: reference, offset: streamRdOff, burstLen: 16*8, tag: 0});
     endrule
    Put#(ObjectData#(64)) sink = (interface Put;
       method Action put(ObjectData#(64) dmadata);
@@ -78,7 +78,7 @@ module mkHdmiDisplay#(Clock processing_system7_1_fclk_clk1,
       endinterface);
     mkConnectionWithClocks(dmaReadBuffer.dmaServer.readData, sink, defaultClock, defaultReset, hdmi_clock, hdmi_reset);
 
-    rule vsyncrule if (vsyncPulse.pulse() && referenceReg >= 0);
+    rule vsyncrule if (vsyncPulse.pulse() &&& referenceReg matches tagged Valid .reference);
        streamRdOff <= 0;
     endrule
 
@@ -89,7 +89,7 @@ module mkHdmiDisplay#(Clock processing_system7_1_fclk_clk1,
     interface HdmiControlRequest controlRequest;
 	method Action startFrameBuffer0(Int#(32) base);
 	    $display("startFrameBuffer %h", base);
-            referenceReg <= truncate(pack(base));
+            referenceReg <= tagged Valid truncate(pack(base));
 	    hdmiGen.control.setTestPattern(0);
 	endmethod
     endinterface: controlRequest
