@@ -48,7 +48,10 @@ for pin in pinout:
     iostandard = 'TBD'
     if pinInfo.has_key('fmc'):
         fmcPin = pinInfo['fmc']
-        fmcInfo = boardInfo['fmc2']
+        if boardInfo.has_key('fmc2'):
+            fmcInfo = boardInfo['fmc2']
+        else:
+            fmcInfo = boardInfo['fmc']
         if fmcInfo.has_key(fmcPin):
             loc = fmcInfo[fmcPin]['LOC']
             iostandard = fmcInfo[fmcPin]['IOSTANDARD']
