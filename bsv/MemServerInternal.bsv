@@ -47,32 +47,49 @@ function Bool bad_pointer(ObjectPointer p);
 endfunction
 
 interface TagGen#(numeric type numClients, numeric type numTags);
-   method ActionValue#(Bit#(TLog#(numTags))) get_tag(Bit#(TLog#(numClients)) client, Bit#(6) orig_tag);
+   method Action tag_request(Bit#(TLog#(numClients)) client, Bit#(6) orig_tag);
+   method ActionValue#(Bit#(TLog#(numTags)))  tag_response;
    method Action return_tag(Bit#(TLog#(numTags)) tag);
 endinterface
 
 module mkTagGenOO(TagGen#(numClients,numTags))
    provisos(Log#(numTags,tagWidth),
 	    Log#(numClients,clientWidth));
-
+   
+   let request_fifo <- mkSizedFIFO(1);
+   let return_fifo <- mkSizedFIFO(1);
    Vector#(numTags, Reg#(Bit#(tagWidth))) tag_regs <- replicateM(mkReg(0));
    Vector#(numTags, Reg#(Maybe#(Tuple2#(Bit#(clientWidth),Bit#(6))))) client_map <- replicateM(mkReg(tagged Invalid));
    Maybe#(UInt#(tagWidth)) next_free = findElem(0, readVReg(tag_regs));
 
-   method ActionValue#(Bit#(tagWidth)) get_tag(Bit#(clientWidth) client, Bit#(6) orig_tag);
+   rule return_tag_rule;
+      return_fifo.deq;
+      let tag = return_fifo.first;
+      tag_regs[tag] <= tag_regs[tag]-1;
+      if (tag_regs[tag]==1)
+	 client_map[tag] <= tagged Invalid;
+   endrule
+
+   method Action tag_request(Bit#(clientWidth) client, Bit#(6) orig_tag);
       let rv = case (findElem(tagged Valid tuple2(client,orig_tag), readVReg(client_map))) matches
 		  tagged Valid .tag: return (_when_(tag_regs[tag] < maxBound) (tag));
 		  tagged Invalid: return (_when_(isValid(next_free)) (fromMaybe(?, next_free)));
 	       endcase;
+      request_fifo.enq(tuple3(rv,client,orig_tag));
+   endmethod      
+   
+   method ActionValue#(Bit#(tagWidth)) tag_response;
+      request_fifo.deq;
+      let rv = tpl_1(request_fifo.first);
+      let client = tpl_2(request_fifo.first);
+      let orig_tag = tpl_3(request_fifo.first);
       client_map[rv] <= tagged Valid tuple2(client,orig_tag);
       tag_regs[rv] <= tag_regs[rv]+1;
       return extend(pack(rv));
    endmethod      
 
    method Action return_tag(Bit#(tagWidth) tag);
-      tag_regs[tag] <= tag_regs[tag]-1;
-      if (tag_regs[tag]==1)
-	 client_map[tag] <= tagged Invalid;
+      return_fifo.enq(tag);
    endmethod
 
 endmodule
@@ -81,8 +98,16 @@ module mkTagGenIO(TagGen#(numClients,numTags))
    provisos(Log#(numTags,tagWidth),
 	    Log#(numClients,clientWidth),
 	    Bits#(Bit#(clientWidth), tagWidth));
-
-   method ActionValue#(Bit#(tagWidth)) get_tag(Bit#(clientWidth) client, Bit#(6) client_tag);
+   
+   let request_fifo <- mkSizedFIFO(1);
+   
+   method Action tag_request(Bit#(clientWidth) client, Bit#(6) client_tag);
+      request_fifo.enq(client);
+   endmethod      
+   
+   method ActionValue#(Bit#(tagWidth)) tag_response;
+      request_fifo.deq;
+      let client = request_fifo.first;
       return pack(client);
    endmethod      
 
@@ -148,6 +173,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    	 if (bad_pointer(req.pointer))
    	    dmaIndication.badPointer(req.pointer);
    	 else begin
+	    tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	    lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
    	    sgl.request.put(tuple2(truncate(req.pointer),req.offset));
    	 end
@@ -157,16 +183,17 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
+      let rename_tag <- tag_gen.tag_response;
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
 	 $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
+	 tag_gen.return_tag(rename_tag);
       end
       else begin
 	 if (False && physAddr[31:24] != 0)
 	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 let rename_tag <- tag_gen.get_tag(client, req.tag);
 	 reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
 	 //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       end
@@ -269,6 +296,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
    	  if (bad_pointer(req.pointer))
    	     dmaIndication.badPointer(req.pointer);
    	  else begin
+	     tag_gen.tag_request(fromInteger(selectReg), req.tag);
    	     lreqFifo.enq(LRec{req:req, client:fromInteger(selectReg)});
    	     sgl.request.put(tuple2(truncate(req.pointer),req.offset));
    	  end
@@ -278,14 +306,15 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       let physAddr <- sgl.response.get;
       let req = lreqFifo.first.req;
       let client = lreqFifo.first.client;
+      let rename_tag <- tag_gen.tag_response;
       lreqFifo.deq();
       if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
 	 // squash request
 	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
+	 tag_gen.return_tag(rename_tag);
       end
       else begin
-	 let rename_tag <- tag_gen.get_tag(client, req.tag);
 	 reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
 	 //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       end
