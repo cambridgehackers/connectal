@@ -429,6 +429,7 @@ endmodule: vMkXilinx7PCIExpress
 interface PCIE_TRN_COMMON_X7;
    interface Clock       clk;
    interface Clock       clk2;
+   interface Clock       clk3;
    interface Reset       reset_n;
    method    Bool        link_up;
    method    Bool        app_ready;
@@ -525,8 +526,10 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    params.clkin_buffer     = False;
    params.clkfbout_mult_f  = 4.000;
    params.clkout0_divide_f = 8.000;
+   params.clkout1_divide   = 16;
    ClockGenerator7                           clkgen              <- mkClockGenerator7(params, clocked_by user_clk, reset_by user_reset_n);
    Clock                                     user_clk_half        = clkgen.clkout0;
+   Clock                                     user_clk_quarter     = clkgen.clkout1;
    
    ////////////////////////////////////////////////////////////////////////////////
    /// Rules
@@ -578,6 +581,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    interface PCIE_TRN_COMMON_X7 trn;
       interface clk     = user_clk;
       interface clk2    = user_clk_half;
+      interface clk3    = user_clk_quarter;
       interface reset_n = user_reset_n;
       method    link_up = pcie_ep.trn.lnk_up;
       method    app_ready = pcie_ep.trn.app_rdy;
