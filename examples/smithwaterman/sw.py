@@ -42,10 +42,11 @@ def gotoh(A, B):
             D[i][j] = min(D[i-1][j], C[i-1][j] + g) + h
             C[i][j] = min(D[i][j], I[i][j], C[i-1][j-1] + w(A[i-1], B[j-1]))
     print A, B, D, I, C
+    return(C[m][n])
 
 A = "agtac"
 B = "aag"
-goto(A, B)
+gotoh(A, B)
 
 
 # The recurrances in Gotoh only depend on the previous row, so
@@ -59,6 +60,28 @@ def gotohb(A, B):
     e = 0
     c = 0
     s = 0
-    t = 0
     CC = [0 for j in xrange(n+1)]
     DD = [0 for j in xrange(n+1)]
+    CC[0] = 0
+    for j in xrange(1,n+1):
+        CC[j] = gap(j)
+        DD[j] = CC[j] + g
+    print 0, CC, DD, e, c, s
+    for i in xrange(1,m+1):
+        s = CC[0]
+        c = gap(i)
+        CC[0] = c
+        e = c + g
+        for j in xrange(1, n+1):
+            e = min(e, c + g) + h
+            DD[j] = min(DD[j], CC[j] + g) + h
+            c = min(DD[j], e, s+w(A[i-1], B[j-1]))
+            s = CC[j]
+            CC[j] = c
+        print i, CC, DD, e, c, s
+    print CC
+    return(CC[n])
+
+gotohb(A, B)
+
+              
