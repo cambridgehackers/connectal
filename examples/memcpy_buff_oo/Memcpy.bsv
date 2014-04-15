@@ -39,6 +39,8 @@ interface MemcpyIndication;
    method Action done;
 endinterface
 
+typedef 2 TagWidth;
+
 module mkMemcpyRequest#(MemcpyIndication indication,
 			ObjectReadServer#(64) dma_read_server,
 			ObjectWriteServer#(64) dma_write_server)(MemcpyRequest);
@@ -48,16 +50,16 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(8))            burstLen <- mkReg(0);
    Reg#(Bit#(32))             reqLen <- mkReg(0);
 
-   Reg#(Bit#(6))               wrTag <- mkReg(0);
-   Reg#(Bit#(2))               rdTag <- mkReg(0);
+   Reg#(Bit#(TagWidth))        wrTag <- mkReg(0);
+   Reg#(Bit#(TagWidth))        rdTag <- mkReg(0);
    Reg#(Bit#(32))            respCnt <- mkReg(0);
    Reg#(Bit#(32))           burstCnt <- mkReg(0);
    Reg#(Bit#(32))              rdOff <- mkReg(0);
    Reg#(Bit#(32))            iterCnt <- mkReg(0);
    
    Vector#(4,FIFO#(Bit#(32)))    rcb <- replicateM(mkFIFO);
-   // Reg#(Bit#(6))           lastWrTag <- mkReg(maxBound);
-   // Reg#(Bit#(3))           lastRdTag <- mkReg(maxBound);
+   // Reg#(Bit#(TagWidth))    lastWrTag <- mkReg(maxBound);
+   // Reg#(Bit#(TagWidth))    lastRdTag <- mkReg(maxBound);
       
    rule rdReq if (rdOff < reqLen);
       let new_rdOff = rdOff + extend(burstLen);
@@ -75,13 +77,13 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    rule rdData;
       let new_burstCnt = burstCnt+(64/8);
       ObjectData#(64) d <- dma_read_server.readData.get;
-      dma_write_server.writeData.put(ObjectData{data:d.data, tag: wrTag});
+      dma_write_server.writeData.put(ObjectData{data:d.data, tag: extend(wrTag)});
       if (burstCnt == 0) begin
-	 dma_write_server.writeReq.put(ObjectRequest { pointer: wrPointer, offset: extend(rcb[d.tag].first), burstLen: burstLen, tag: wrTag});
+	 dma_write_server.writeReq.put(ObjectRequest { pointer: wrPointer, offset: extend(rcb[d.tag].first), burstLen: burstLen, tag: extend(wrTag)});
 	 rcb[d.tag].deq;
 	 // lastRdTag <= truncate(d.tag);
 	 // if(lastRdTag+1 != truncate(d.tag))
-	 //    $display("OO rd completion");
+	 //    $display("OO rd completion %d %d", lastRdTag, d.tag);
       end
       if (new_burstCnt == extend(burstLen)) begin 
 	 new_burstCnt = 0;
@@ -99,9 +101,9 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       end
       respCnt <= new_respCnt;
       let rv <- dma_write_server.writeDone.get;
-      // lastWrTag <= rv;
-      // if(lastWrTag+1 != rv)
-      // 	 $display("OO wr completion");
+      // lastWrTag <= truncate(rv);
+      // if(lastWrTag+1 != truncate(rv))
+      // 	 $display("OO wr completion %d %d", lastWrTag, rv);
    endrule
    
    method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);

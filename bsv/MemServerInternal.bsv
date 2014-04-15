@@ -22,6 +22,7 @@
 
 // BSV Libraries
 import FIFO::*;
+import FIFOF::*;
 import Vector::*;
 import GetPut::*;
 import ClientServer::*;
@@ -56,7 +57,8 @@ module mkTagGenOO(TagGen#(numClients,numTags))
    provisos(Log#(numTags,tagWidth),
 	    Log#(numClients,clientWidth));
    
-   let request_fifo <- mkSizedFIFO(1);
+   let request_fifo0 <- mkSizedFIFOF(1);
+   let request_fifo1 <- mkSizedFIFOF(1);
    let return_fifo <- mkSizedFIFO(1);
    Vector#(numTags, Reg#(Bit#(tagWidth))) tag_regs <- replicateM(mkReg(0));
    Vector#(numTags, Reg#(Maybe#(Tuple2#(Bit#(clientWidth),Bit#(6))))) client_map <- replicateM(mkReg(tagged Invalid));
@@ -70,19 +72,27 @@ module mkTagGenOO(TagGen#(numClients,numTags))
 	 client_map[tag] <= tagged Invalid;
    endrule
 
-   method Action tag_request(Bit#(clientWidth) client, Bit#(6) orig_tag);
-      let rv = case (findElem(tagged Valid tuple2(client,orig_tag), readVReg(client_map))) matches
+   rule tag_request_rule;
+      request_fifo0.deq;
+      let client = tpl_2(request_fifo0.first);
+      let orig_tag = tpl_3(request_fifo0.first);
+      let rv = case  (tpl_1(request_fifo0.first)) matches
 		  tagged Valid .tag: return (_when_(tag_regs[tag] < maxBound) (tag));
 		  tagged Invalid: return (_when_(isValid(next_free)) (fromMaybe(?, next_free)));
 	       endcase;
-      request_fifo.enq(tuple3(rv,client,orig_tag));
+      request_fifo1.enq(tuple3(rv,client,orig_tag));
+   endrule
+   
+   method Action tag_request(Bit#(clientWidth) client, Bit#(6) orig_tag) if (request_fifo0.notFull);
+      let rv = findElem(tagged Valid tuple2(client,orig_tag), readVReg(client_map));
+      request_fifo0.enq(tuple3(rv,client,orig_tag));
    endmethod      
    
    method ActionValue#(Bit#(tagWidth)) tag_response;
-      request_fifo.deq;
-      let rv = tpl_1(request_fifo.first);
-      let client = tpl_2(request_fifo.first);
-      let orig_tag = tpl_3(request_fifo.first);
+      request_fifo1.deq;
+      let rv = tpl_1(request_fifo1.first);
+      let client = tpl_2(request_fifo1.first);
+      let orig_tag = tpl_3(request_fifo1.first);
       client_map[rv] <= tagged Valid tuple2(client,orig_tag);
       tag_regs[rv] <= tag_regs[rv]+1;
       return extend(pack(rv));
