@@ -89,6 +89,6 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 endmodule
 
 module mkHdmiZynqTop(ZynqTop#(HDMI));
-   let top <- mkZynqTopFromPortal(mkPortalTop);
+   let top <- mkZynqTopFromPortal(mkZynqPortalTop);
    return top;
 endmodule

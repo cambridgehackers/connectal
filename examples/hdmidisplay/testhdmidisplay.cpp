@@ -51,6 +51,12 @@ public:
     virtual void transferStarted ( uint32_t v ) {
       fprintf(stderr, "[%s:%d] v=%d\n", __FUNCTION__, __LINE__, v);
     }
+    virtual void transferFinished ( uint32_t v ) {
+      fprintf(stderr, "[%s:%d] v=%d\n", __FUNCTION__, __LINE__, v);
+    }
+    virtual void transferStats ( uint32_t count, uint32_t cycles, uint64_t sumcycles ) {
+	fprintf(stderr, "[%s:%d] count=%d cycles=%d sumcycles=%lld avgcycles=%f\n", __FUNCTION__, __LINE__, count, cycles, sumcycles, (double)sumcycles / count);
+    }
 };
 
 int main(int argc, const char **argv)
@@ -72,7 +78,9 @@ int main(int argc, const char **argv)
     pthread_attr_init(&attr);
     pthread_create(&thread, &attr, thread_routine, 0);
 
-    int status = poller->setClockFrequency(1, 160000000, 0);
+    int status;
+    status = poller->setClockFrequency(0,  80000000, 0);
+    status = poller->setClockFrequency(1, 160000000, 0);
     init_i2c_hdmi();
 
     int lines = 1080;
