@@ -55,7 +55,7 @@ interface ImageCapturePins;
    //method Bit#(1) i2c_mux_reset_n();
 endinterface
 
-module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageCapturePins));
+module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageCapturePins,0));
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
 
@@ -197,7 +197,7 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = null_mem_master;
+   interface masters = nil;
    //interface leds = captureRequestInternal.leds;
 
    interface ImageCapturePins pins;

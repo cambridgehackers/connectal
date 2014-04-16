@@ -33,19 +33,50 @@ import PortalMemory::*;
 import SGList::*;
 import MemServerInternal::*;
 
+function Put#(t) null_put();
+   return (interface Put;
+              method Action put(t x) if (False);
+                 noAction;
+              endmethod
+           endinterface);
+endfunction
+
+function Get#(t) null_get();
+   return (interface Get;
+              method ActionValue#(t) get() if (False);
+                 return ?;
+              endmethod
+           endinterface);
+endfunction
+
+function  MemWriteClient#(addrWidth, busWidth) null_mem_write_client();
+   return (interface MemWriteClient;
+              interface Get writeReq = null_get;
+              interface Get writeData = null_get;
+              interface Put writeDone = null_put;
+           endinterface);
+endfunction
+
+function  MemReadClient#(addrWidth, busWidth) null_mem_read_client();
+   return (interface MemReadClient;
+              interface Get readReq = null_get;
+              interface Put readData = null_put;
+           endinterface);
+endfunction
+
 `ifdef BSIM
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
 `endif
 
-interface MemServer#(numeric type addrWidth, numeric type dataWidth);
+interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
    interface DmaConfig request;
-   interface MemMaster#(addrWidth, dataWidth) master;
+   interface Vector#(nMasters,MemMaster#(addrWidth, dataWidth)) masters;
 endinterface
 		 	 
 module mkMemServer#(DmaIndication dmaIndication,
 		    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
-   (MemServer#(addrWidth, dataWidth))
+   (MemServer#(addrWidth, dataWidth, 1))
    provisos(Add#(1,a__,dataWidth),
 	    Add#(b__, TSub#(addrWidth, 12), 32),
 	    Add#(c__, 12, addrWidth),
@@ -67,7 +98,7 @@ endmodule
 		 
 module mkMemServerR#(DmaIndication dmaIndication,
 		     Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
-   (MemServer#(addrWidth, dataWidth))
+   (MemServer#(addrWidth, dataWidth, 1))
    provisos(Add#(1,a__,dataWidth),
 	    Add#(b__, TSub#(addrWidth, 12), 32),
 	    Add#(c__, 12, addrWidth),
@@ -86,7 +117,7 @@ endmodule
 		 
 module mkMemServerW#(DmaIndication dmaIndication,
 		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
-   (MemServer#(addrWidth, dataWidth))
+   (MemServer#(addrWidth, dataWidth, 1))
    provisos(Add#(1,a__,dataWidth),
 	    Add#(b__, TSub#(addrWidth, 12), 32),
 	    Add#(c__, 12, addrWidth),
@@ -107,7 +138,7 @@ endmodule
 module mkMemServerOO#(DmaIndication dmaIndication,
 		      Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 		      Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
-   (MemServer#(addrWidth, dataWidth))
+   (MemServer#(addrWidth, dataWidth, 1))
    provisos(Add#(1,a__,dataWidth),
 	    Add#(b__, TSub#(addrWidth, 12), 32),
 	    Add#(c__, 12, addrWidth),
@@ -126,7 +157,7 @@ endmodule
 
 module mkMemServerOOR#(DmaIndication dmaIndication,
 		       Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
-   (MemServer#(addrWidth, dataWidth))
+   (MemServer#(addrWidth, dataWidth, 1))
    provisos(Add#(1,a__,dataWidth),
 	    Add#(b__, TSub#(addrWidth, 12), 32),
 	    Add#(c__, 12, addrWidth),
@@ -144,7 +175,7 @@ endmodule
 		 
 module mkMemServerOOW#(DmaIndication dmaIndication,
 		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
-   (MemServer#(addrWidth, dataWidth))
+   (MemServer#(addrWidth, dataWidth, 1))
    provisos(Add#(1,a__,dataWidth),
 	    Add#(b__, TSub#(addrWidth, 12), 32),
 	    Add#(c__, 12, addrWidth),
@@ -166,7 +197,7 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 			    TagGen#(numWriteClients,numWriteTags) writeTagGen,
 			    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 			    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
-   (MemServer#(addrWidth, dataWidth))
+   (MemServer#(addrWidth, dataWidth, 1))
    
    provisos (Add#(1,a__,dataWidth),
 	     Add#(b__, TSub#(addrWidth, 12), 32),
@@ -192,6 +223,11 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
+   let master = (interface MemMaster#(addrWidth,dataWidth);
+		    interface MemReadClient read_client = reader.read_client;
+		    interface MemWriteClient write_client = writer.write_client;
+		 endinterface);
+
    interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
@@ -228,17 +264,13 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
       endmethod
    endinterface
-
-   interface MemMaster master;
-      interface MemReadClient read_client = reader.read_client;
-      interface MemWriteClient write_client = writer.write_client;
-   endinterface
+   interface masters = cons(master,nil);
 endmodule
 	
 module mkConfigMemServerR#(DmaIndication dmaIndication,
 			   TagGen#(numReadClients, numReadTags) readTagGen,
 			   Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
-   (MemServer#(addrWidth, dataWidth))
+   (MemServer#(addrWidth, dataWidth, 1))
    
    provisos (Add#(1,a__,dataWidth),
 	     Add#(b__, TSub#(addrWidth, 12), 32),
@@ -262,6 +294,11 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
+   let master = (interface MemMaster#(addrWidth,dataWidth);
+		    interface MemReadClient read_client = reader.read_client;
+		    interface MemWriteClient write_client = null_mem_write_client;
+		 endinterface);
+
    interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
@@ -295,17 +332,13 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
       endmethod
    endinterface
-
-   interface MemMaster master;
-      interface MemReadClient read_client = reader.read_client;
-      interface MemWriteClient write_client = null_mem_write_client;
-   endinterface
+   interface masters = cons(master,nil);
 endmodule
 	
 module mkConfigMemServerW#(DmaIndication dmaIndication,
 			   TagGen#(numWriteClients,numWriteTags) writeTagGen,
 			   Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
-   (MemServer#(addrWidth, dataWidth))
+   (MemServer#(addrWidth, dataWidth, 1))
    
    provisos (Add#(1,a__,dataWidth),
 	     Add#(b__, TSub#(addrWidth, 12), 32),
@@ -328,6 +361,11 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
       let physAddr <- sgl.addr[0].response.get;
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
+
+   let master = (interface MemMaster#(addrWidth,dataWidth);
+		    interface MemWriteClient write_client = writer.write_client;
+		    interface MemReadClient read_client = null_mem_read_client;
+		 endinterface);
    
    interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
@@ -362,11 +400,7 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
 	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
       endmethod
    endinterface
-
-   interface MemMaster master;
-      interface MemReadClient read_client = null_mem_read_client;
-      interface MemWriteClient write_client = writer.write_client;
-   endinterface
+   interface masters = cons(master,nil);
 endmodule
 		 
 		 

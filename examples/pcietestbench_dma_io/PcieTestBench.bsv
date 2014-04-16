@@ -33,7 +33,7 @@ import AxiCsr            :: *;
 import PCIE              :: *;
 import AxiSlaveEngine    :: *;
 import Portal            :: *;
-import ExperimentalMemServer         :: *;
+import MemServer         :: *;
 import MemreadEngine     :: *;
 import AxiDma            :: *;
 import Dma               :: *;
@@ -126,7 +126,7 @@ interface PcieTestBench#(numeric type addrWidth, numeric type dataWidth);
    interface PcieTestBenchRequest request;
    interface StdPortal dmaConfig;
    interface StdPortal dmaIndication;
-   interface MemMaster#(addrWidth,dataWidth) master;
+   interface Vector#(1,MemMaster#(addrWidth,dataWidth)) masters;
 endinterface
 
 typedef enum {TestBenchIndication, TestBenchRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
@@ -141,12 +141,12 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
    
    // dma state
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   MemServer#(40,64) dma <- mkMemServer(dmaIndicationProxy.ifc, cons(re.dmaClient,nil), nil);
+   MemServer#(40,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, cons(re.dmaClient,nil));
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 `ifdef SANITY
-   Axi3Master#(40,64,6) m_axi <- mkAxiDmaMaster(null_mem_master);
+   Axi3Master#(40,64,6) m_axi = ?;
 `else   
-   Axi3Master#(40,64,6)  m_axi <- mkAxiDmaMaster(dma.master);
+   Axi3Master#(40,64,6)  m_axi <- mkAxiDmaMaster(dma.masters[0]);
 `endif
    
    // tlp state
@@ -201,8 +201,8 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
    interface StdPortal dmaConfig = dmaRequestWrapper.portalIfc;
    interface StdPortal dmaIndication = dmaIndicationProxy.portalIfc;
 `ifdef SANITY
-   interface MemMaster master = dma.master;
+   interface masters = dma.masters;
 `else
-   interface MemMaster master = null_mem_master;
+   interface masters = ?;
 `endif
 endmodule

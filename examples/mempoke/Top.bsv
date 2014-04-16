@@ -26,7 +26,7 @@ import Mempoke::*;
 
 typedef enum {MempokeIndication, MempokeRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth)) 
+module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
 
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
@@ -43,7 +43,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    Vector#(1, ObjectWriteClient#(64)) writeClients = newVector();
    writeClients[0] = dma_stream_write_chan.dmaClient;
    readClients[0]  = dma_stream_read_chan.dmaClient;
-   MemServer#(addrWidth,64)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(addrWidth,64,1)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    
@@ -62,6 +62,6 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = dma.master;
+   interface masters = dma.masters;
    interface leds = default_leds;
 endmodule

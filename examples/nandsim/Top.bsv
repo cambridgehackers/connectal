@@ -26,7 +26,7 @@ import NandSim::*;
 
 typedef enum {DmaIndication, DmaConfig, NandSimIndication, NandSimRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth)) provisos (
+module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
     Add#(addrWidth, a__, 52),
     Add#(b__, addrWidth, 64),
     Add#(c__, 12, addrWidth),
@@ -44,7 +44,7 @@ module mkPortalTop(StdPortalTop#(addrWidth)) provisos (
 
    Vector#(1, ObjectReadClient#(64)) readClients = cons(nandSim.readClient, nil);
    Vector#(1, ObjectWriteClient#(64)) writeClients = cons(nandSim.writeClient, nil);
-   MemServer#(addrWidth,64) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(addrWidth,64,1) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
 
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
@@ -59,7 +59,7 @@ module mkPortalTop(StdPortalTop#(addrWidth)) provisos (
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = dma.master;
+   interface masters = dma.masters;
    interface leds = default_leds;
       
 endmodule : mkPortalTop

@@ -28,7 +28,7 @@ import HdmiDisplay::*;
 
 typedef enum {HdmiDisplayRequest, HdmiDisplayIndication, HdmiInternalRequest, HdmiInternalIndication, DmaConfig, DmaIndication} IfcNames deriving (Eq,Bits);
 
-module mkZynqPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI))
+module mkZynqPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI,1))
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
 	    Add#(c__, 12, addrWidth),
@@ -44,7 +44,7 @@ module mkZynqPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI))
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    Vector#(1,  ObjectReadClient#(64))   readClients = cons(hdmiDisplay.dmaClient, nil);
-   MemServer#(addrWidth, 64)   dma <- mkMemServerR(dmaIndicationProxy.ifc, readClients);
+   MemServer#(addrWidth, 64, 1)   dma <- mkMemServerR(dmaIndicationProxy.ifc, readClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    Vector#(6,StdPortal) portals;
@@ -60,12 +60,12 @@ module mkZynqPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI))
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = dma.master;
+   interface masters = dma.masters;
    interface leds = default_leds;
    interface pins = hdmiDisplay.hdmi;      
 endmodule : mkZynqPortalTop
 
-module mkPortalTop(PortalTop#(addrWidth,64,Empty))
+module mkPortalTop(PortalTop#(addrWidth,64,Empty,1))
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
 	    Add#(c__, 12, addrWidth),
@@ -78,6 +78,6 @@ module mkPortalTop(PortalTop#(addrWidth,64,Empty))
    
    interface interrupt = portalTop.interrupt;
    interface slave = portalTop.slave;
-   interface master = portalTop.master;
+   interface masters = portalTop.masters;
    interface leds = portalTop.leds;
 endmodule
