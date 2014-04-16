@@ -2,8 +2,8 @@
 BSVDIR=../../bsv
 LIBBSVDIR=../../lib/bsv
 GRALLOCDIR=../../gralloc
-S2H = HdmiControlRequest HdmiInternalRequest DmaConfig
-H2S = HdmiInternalIndication DmaIndication
+S2H = HdmiDisplayRequest HdmiInternalRequest DmaConfig
+H2S = HdmiDisplayIndication HdmiInternalIndication DmaIndication
 BSVFILES = $(LIBBSVDIR)/HdmiDisplay.bsv $(LIBBSVDIR)/HDMI.bsv Top.bsv
 CPPFILES= testhdmidisplay.cpp
 XBSVFLAGS = -C hdmidisplay-$(BOARD).xdc

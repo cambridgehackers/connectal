@@ -32,69 +32,96 @@ import PortalMemory::*;
 import Dma::*;
 import DmaUtils::*;
 import AxiMasterSlave::*;
+import MemreadEngine::*;
 import HDMI::*;
 import XADC::*;
 import YUV::*;
 
-interface HdmiControlRequest;
+interface HdmiDisplayRequest;
     method Action startFrameBuffer0(Int#(32) base);
+endinterface
+interface HdmiDisplayIndication;
+   method Action transferStarted(Bit#(32) count);
 endinterface
 
 interface HdmiDisplay;
-    interface HdmiControlRequest controlRequest;
+    interface HdmiDisplayRequest displayRequest;
     interface HdmiInternalRequest internalRequest;
     interface ObjectReadClient#(64) dmaClient;
     interface HDMI hdmi;
     interface XADC xadc;
 endinterface
 
-module mkHdmiDisplay#(Clock processing_system7_1_fclk_clk1,
+module mkHdmiDisplay#(Clock hdmi_clock,
+		      HdmiDisplayIndication hdmiDisplayIndication,
 		      HdmiInternalIndication hdmiInternalIndication)(HdmiDisplay);
     Clock defaultClock <- exposeCurrentClock;
     Reset defaultReset <- exposeCurrentReset;
-    Clock hdmi_clock = processing_system7_1_fclk_clk1;
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
     Reg#(Bool) sendVsyncIndication <- mkReg(False);
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
     Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
-    Reg#(Bit#(8)) segmentIndexReg <- mkReg(0);
-    Reg#(Bit#(24)) segmentOffsetReg <- mkReg(0);
 
-    Reg#(Maybe#(ObjectPointer)) referenceReg <- mkReg(tagged Invalid);
-    Reg#(Bit#(40)) streamRdOff <- mkReg(0);
+    Reg#(Maybe#(Bit#(32))) referenceReg <- mkReg(tagged Invalid);
+    FIFOF#(Bit#(64))   mrFifo  <- mkSizedFIFOF(32);
+    MemreadEngine#(64) memreadEngine <- mkMemreadEngine(8, mrFifo);
 
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
 					     vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
    
-    DmaReadBuffer#(64, 1) dmaReadBuffer <- mkDmaReadBuffer();
-    rule readReq if(referenceReg matches tagged Valid .reference);
-        streamRdOff <= streamRdOff + 16*8;
-        dmaReadBuffer.dmaServer.readReq.put(ObjectRequest {pointer: reference, offset: streamRdOff, burstLen: 16*8, tag: 0});
-    endrule
-   Put#(ObjectData#(64)) sink = (interface Put;
-      method Action put(ObjectData#(64) dmadata);
-         hdmiGen.request.put(dmadata.data);
-      endmethod
-      endinterface);
-    mkConnectionWithClocks(dmaReadBuffer.dmaServer.readData, sink, defaultClock, defaultReset, hdmi_clock, hdmi_reset);
+   if (False) begin
+      rule consumeit;
+	 mrFifo.deq();
+      endrule
+      rule produceit;
+	 hdmiGen.request.put(64'hff0000);
+      endrule
+   end
+   else begin
+       SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncFIFO(32, defaultClock, defaultReset, hdmi_clock);
+       rule doGet;
+          let v = mrFifo.first();
+	  mrFifo.deq();
+	  synchronizer.enq(v);
+       endrule
+       rule doPut;
+          let v = synchronizer.first;
+	  synchronizer.deq;
+	  hdmiGen.request.put(v);
+       endrule
+   end
 
-    rule vsyncrule if (vsyncPulse.pulse() &&& referenceReg matches tagged Valid .reference);
-       streamRdOff <= 0;
-    endrule
+   FIFOF#(Bool) vsyncFifo <- mkFIFOF();
+   rule vsyncrule if (vsyncPulse.pulse());
+      if (vsyncFifo.notFull())
+	 vsyncFifo.enq(True);
+   endrule
+   Reg#(Bit#(32)) transferCount <- mkReg(0);
+
+   rule startTransfer if (referenceReg matches tagged Valid .reference);
+      memreadEngine.start(reference, 0, (1080*1920)*4, 64);
+      //hdmiDisplayIndication.transferStarted(transferCount);
+      transferCount <= transferCount + 1;
+      //vsyncFifo.deq();
+   endrule
+
+   rule finishTransferRule;
+      let b <- memreadEngine.finish();
+   endrule
 
     rule bozobit_rule;
         bozobit <= ~bozobit;
     endrule
 
-    interface HdmiControlRequest controlRequest;
+    interface HdmiDisplayRequest displayRequest;
 	method Action startFrameBuffer0(Int#(32) base);
 	    $display("startFrameBuffer %h", base);
             referenceReg <= tagged Valid truncate(pack(base));
 	    hdmiGen.control.setTestPattern(0);
 	endmethod
-    endinterface: controlRequest
+    endinterface: displayRequest
 
-    interface ObjectReadClient dmaClient = dmaReadBuffer.dmaClient;
+    interface ObjectReadClient dmaClient = memreadEngine.dmaClient;
     interface HDMI hdmi = hdmiGen.hdmi;
     interface HdmiInternalRequest internalRequest = hdmiGen.control;
     interface XADC xadc;

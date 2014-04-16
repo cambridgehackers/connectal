@@ -61,6 +61,7 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (MemreadEn
       pointer  <= p;
       burstLen <= truncate(bl);
       base     <= b;
+      $display("mkMemreadEngine.start p=%d b=%d rl=%d beat_shift=%d", p, b, rl, beat_shift);
       wf.enq(rl >> beat_shift);
    endmethod
    
@@ -72,7 +73,7 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (MemreadEn
    interface ObjectReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(ObjectRequest) get() if (off < reqLen);
-	    //$display("mkMemreadEngine.dmaClient.readReq: %d %h %h", pointer, extend(off)+base, burstLen);
+	    $display("mkMemreadEngine.dmaClient.readReq: %d %h %h", pointer, extend(off)+base, burstLen);
 	    off <= off + extend(burstLen);
 	    return ObjectRequest { pointer: pointer, offset: extend(off)+base, burstLen: burstLen, tag: 0 };
 	 endmethod
@@ -80,11 +81,12 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (MemreadEn
       interface Put readData;
 	 method Action put(ObjectData#(dataWidth) d);
 	    let new_respCnt = respCnt+1;
+	    $display("mkMemreadEngine.dmaClient.readData new_respCnt=%d wf.first=%d", new_respCnt, wf.first);
 	    if (new_respCnt == wf.first) begin
 	       ff.enq(True);
 	       respCnt <= 0;
 	       wf.deq;
-	       //$display("mkMemreadEngine.dmaClient.readData: %h", new_respCnt);
+	       $display("mkMemreadEngine.dmaClient.readData: %h", new_respCnt);
 	    end
 	    else begin
 	       respCnt <= new_respCnt;

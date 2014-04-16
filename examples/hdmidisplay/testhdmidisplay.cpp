@@ -3,13 +3,17 @@
 #include "DmaIndicationWrapper.h"
 #include "StdDmaIndication.h"
 #include "GeneratedTypes.h"
-#include "HdmiControlRequestProxy.h"
+#include "HdmiDisplayRequestProxy.h"
+#include "HdmiDisplayIndicationWrapper.h"
+#include "HdmiInternalIndicationWrapper.h"
+#include "HdmiInternalRequestProxy.h"
 #include "portal.h"
 #include <stdio.h>
 #include <sys/mman.h>
 #include "i2chdmi.h"
 
-HdmiControlRequestProxy *device = 0;
+HdmiInternalRequestProxy *hdmiInternal = 0;
+HdmiDisplayRequestProxy *device = 0;
 PortalAlloc srcAlloc;
 PortalAlloc dstAlloc;
 int srcFd = -1;
@@ -33,6 +37,22 @@ static void *thread_routine(void *data)
     return data;
 }
 
+class HdmiIndication : public HdmiInternalIndicationWrapper {
+public:
+    HdmiIndication(int id) : HdmiInternalIndicationWrapper(id) {}
+    virtual void vsync ( uint64_t v ) {
+      fprintf(stderr, "[%s:%d] v=%d\n", __FUNCTION__, __LINE__, (uint32_t) v);
+      //hdmiInternal->waitForVsync(0);
+    }
+};
+class DisplayIndication : public HdmiDisplayIndicationWrapper {
+public:
+    DisplayIndication(int id) : HdmiDisplayIndicationWrapper(id) {}
+    virtual void transferStarted ( uint32_t v ) {
+      fprintf(stderr, "[%s:%d] v=%d\n", __FUNCTION__, __LINE__, v);
+    }
+};
+
 int main(int argc, const char **argv)
 {
     PortalPoller *poller = new PortalPoller();
@@ -40,10 +60,13 @@ int main(int argc, const char **argv)
     DmaConfigProxy *dma;
     DmaIndicationWrapper *dmaIndication;
 
-    device = new HdmiControlRequestProxy(IfcNames_HdmiControlRequest, poller);
+    device = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, poller);
     dma = new DmaConfigProxy(IfcNames_DmaConfig);
     dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
-    
+    HdmiInternalIndicationWrapper *hdmiIndication = new HdmiIndication(IfcNames_HdmiInternalIndication);
+    HdmiDisplayIndicationWrapper *displayIndication = new DisplayIndication(IfcNames_HdmiDisplayIndication);
+    hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
+
     pthread_t thread;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -74,13 +97,14 @@ int main(int argc, const char **argv)
     dma->dCacheFlushInval(portalAlloc, ptr);
     fprintf(stderr, "calling dma->reference\n");
     unsigned int ref_srcAlloc = dma->reference(portalAlloc);
-    dma->show_mem_stats(ChannelType_Read);
+    fprintf(stderr, "mem_stats=%d\n", dma->show_mem_stats(ChannelType_Read));
     sleep(10);
+    if (0) hdmiInternal->waitForVsync(0);
     fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc);
     device->startFrameBuffer0(ref_srcAlloc);
     fprintf(stderr, "done\n");
     while (1) {
-      dma->show_mem_stats(ChannelType_Read);
+      fprintf(stderr, "mem_stats=%d\n", dma->show_mem_stats(ChannelType_Read));
       sleep(1);
     }
 }
