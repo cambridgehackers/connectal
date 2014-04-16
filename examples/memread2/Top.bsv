@@ -51,7 +51,7 @@ module mkPortalTop(StdPortalTop#(addrWidth)) provisos (
       clients = cons(memread.dmaClient, cons(memread.dmaClient2, nil));
    end
 
-   MemServer#(addrWidth,64) dma <- mkMemServer(dmaIndicationProxy.ifc, clients, nil);
+   MemServer#(addrWidth,64) dma <- mkMemServerR(dmaIndicationProxy.ifc, clients);
 
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 

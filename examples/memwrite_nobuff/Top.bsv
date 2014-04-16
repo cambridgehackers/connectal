@@ -39,7 +39,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 
    Vector#(1, ObjectWriteClient#(64)) writeClients = cons(memwrite.dmaClient,nil);
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
-   MemServer#(addrWidth,64)   dma <- mkMemServer(dmaIndicationProxy.ifc, nil, writeClients);
+   MemServer#(addrWidth,64)   dma <- mkMemServerW(dmaIndicationProxy.ifc, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig ,dma.request);
 
    

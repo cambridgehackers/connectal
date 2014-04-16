@@ -178,7 +178,7 @@ endinstance
 
 function Put#(t) null_put();
    return (interface Put;
-	      method Action put(t x) if (True);
+	      method Action put(t x) if (False);
 		 noAction;
 	      endmethod
 	   endinterface);
@@ -189,21 +189,6 @@ function Get#(t) null_get();
 	      method ActionValue#(t) get() if (False);
 		 return ?;
 	      endmethod
-	   endinterface);
-endfunction
-      
-function  ObjectWriteClient#(busWidth) null_object_write_client();
-   return (interface ObjectWriteClient;
-	      interface Get writeReq = null_get;
-	      interface Get writeData = null_get;
-	      interface Put writeDone = null_put;
-	   endinterface);
-endfunction
-
-function  ObjectReadClient#(busWidth) null_object_read_client();
-   return (interface ObjectReadClient;
-	      interface Get readReq = null_get;
-	      interface Put readData = null_put;
 	   endinterface);
 endfunction
 

@@ -44,7 +44,7 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI))
 
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    Vector#(1,  ObjectReadClient#(64))   readClients = cons(hdmiDisplay.dmaClient, nil);
-   MemServer#(addrWidth, 64)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, nil);
+   MemServer#(addrWidth, 64)   dma <- mkMemServerR(dmaIndicationProxy.ifc, readClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    Vector#(6,StdPortal) portals;
