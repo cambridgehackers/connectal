@@ -48,8 +48,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
       readClients[(3*i)+2] = mp_next_read_chans[i].dmaClient;
    end
 
-   Vector#(0, ObjectWriteClient#(64)) writeClients = newVector();
-   MemServer#(addrWidth,64) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(addrWidth,64) dma <- mkMemServerR(dmaIndicationProxy.ifc, readClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
    
    function ObjectReadServer#(x) rs(DmaReadBuffer#(x,y) rb);
