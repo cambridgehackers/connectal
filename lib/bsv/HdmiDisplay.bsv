@@ -38,10 +38,13 @@ import XADC::*;
 import YUV::*;
 
 interface HdmiDisplayRequest;
-    method Action startFrameBuffer0(Int#(32) base);
+   method Action startFrameBuffer0(Int#(32) base);
+   method Action getTransferStats();
 endinterface
 interface HdmiDisplayIndication;
    method Action transferStarted(Bit#(32) count);
+   method Action transferFinished(Bit#(32) count);
+   method Action transferStats(Bit#(32) count, Bit#(32) transferCycles, Bit#(64) sumOfCycles);
 endinterface
 
 interface HdmiDisplay;
@@ -69,27 +72,17 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
 					     vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
    
-   if (False) begin
-      rule consumeit;
-	 mrFifo.deq();
-      endrule
-      rule produceit;
-	 hdmiGen.request.put(64'hff0000);
-      endrule
-   end
-   else begin
-       SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncFIFO(32, defaultClock, defaultReset, hdmi_clock);
-       rule doGet;
-          let v = mrFifo.first();
-	  mrFifo.deq();
-	  synchronizer.enq(v);
-       endrule
-       rule doPut;
-          let v = synchronizer.first;
-	  synchronizer.deq;
-	  hdmiGen.request.put(v);
-       endrule
-   end
+   SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncFIFO(32, defaultClock, defaultReset, hdmi_clock);
+   rule doGet;
+      let v = mrFifo.first();
+      mrFifo.deq();
+      synchronizer.enq(v);
+   endrule
+   rule doPut;
+      let v = synchronizer.first;
+      synchronizer.deq;
+      hdmiGen.request.put(v);
+   endrule
 
    FIFOF#(Bool) vsyncFifo <- mkFIFOF();
    rule vsyncrule if (vsyncPulse.pulse());
@@ -97,16 +90,27 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 	 vsyncFifo.enq(True);
    endrule
    Reg#(Bit#(32)) transferCount <- mkReg(0);
+   Reg#(Bit#(32)) transferCycles <- mkReg(0);
+   Reg#(Bit#(48)) transferSumOfCycles<- mkReg(0);
 
-   rule startTransfer if (referenceReg matches tagged Valid .reference);
-      memreadEngine.start(reference, 0, (1080*1920)*4, 64);
-      //hdmiDisplayIndication.transferStarted(transferCount);
-      transferCount <= transferCount + 1;
-      //vsyncFifo.deq();
+   rule notransfer if (referenceReg matches tagged Invalid);
+      vsyncFifo.deq();
    endrule
-
+   rule startTransfer if (referenceReg matches tagged Valid .reference);
+      //memreadEngine.start(reference, 0, (1080*1920)*4, 8);
+      memreadEngine.start(reference, 0, (64800)*4, 8);
+      hdmiDisplayIndication.transferStarted(transferCount);
+      transferCycles <= 0;
+      vsyncFifo.deq();
+   endrule
+   rule countCycles;
+      transferCycles <= transferCycles + 1;
+   endrule
    rule finishTransferRule;
       let b <- memreadEngine.finish();
+      transferCount <= transferCount + 1;
+      transferSumOfCycles <= transferSumOfCycles + extend(transferCycles);
+      hdmiDisplayIndication.transferFinished(transferCount);
    endrule
 
     rule bozobit_rule;
@@ -119,6 +123,9 @@ module mkHdmiDisplay#(Clock hdmi_clock,
             referenceReg <= tagged Valid truncate(pack(base));
 	    hdmiGen.control.setTestPattern(0);
 	endmethod
+       method Action getTransferStats();
+          hdmiDisplayIndication.transferStats(transferCount, transferCycles, extend(transferSumOfCycles));
+       endmethod
     endinterface: displayRequest
 
     interface ObjectReadClient dmaClient = memreadEngine.dmaClient;
