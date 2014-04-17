@@ -23,9 +23,11 @@
 // BSV Libraries
 import FIFO::*;
 import Vector::*;
+import List::*;
 import GetPut::*;
 import ClientServer::*;
 import Assert::*;
+import StmtFSM::*;
 
 // XBSV Libraries
 import Dma::*;
@@ -98,7 +100,7 @@ endmodule
 		 
 module mkMemServerR#(DmaIndication dmaIndication,
 		     Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
-   (MemServer#(addrWidth, dataWidth, 1))
+   (MemServer#(addrWidth, dataWidth, nMasters))
    provisos(Add#(1,a__,dataWidth),
 	    Add#(b__, TSub#(addrWidth, 12), 32),
 	    Add#(c__, 12, addrWidth),
@@ -107,10 +109,12 @@ module mkMemServerR#(DmaIndication dmaIndication,
 	    Add#(f__, c__, ObjectOffsetSize),
 	    Add#(g__, addrWidth, 40),
 	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	    Add#(h__, TLog#(numReadClients), 6));
+	    Div#(numReadClients, nMasters, nrc),
+	    Mul#(nrc, nMasters, numReadClients),
+	    Add#(i__, TLog#(nrc), 6));
    
-   TagGen#(numReadClients,numReadClients) readTagGen <- mkTagGenIO;
-   let rv <- mkConfigMemServerR(dmaIndication, readTagGen,readClients);
+   Vector#(nMasters,TagGen#(nrc,nrc)) readTagGens <- replicateM(mkTagGenIO);
+   let rv <- mkConfigMemServerR(dmaIndication,readTagGens,readClients);
    return rv;
    
 endmodule
@@ -167,8 +171,8 @@ module mkMemServerOOR#(DmaIndication dmaIndication,
 	    Add#(g__, addrWidth, 40),
 	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
    
-   TagGen#(numReadClients,4) readTagGen <- mkTagGenOO;
-   let rv <- mkConfigMemServerR(dmaIndication, readTagGen,readClients);
+   Vector#(1,TagGen#(numReadClients,4)) readTagGens <- replicateM(mkTagGenOO);
+   let rv <- mkConfigMemServerR(dmaIndication,readTagGens,readClients);
    return rv;
    
 endmodule
@@ -214,7 +218,7 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
    
-   MemReadInternal#(addrWidth,dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0], readTagGen);
+   MemReadInternal#(addrWidth,dataWidth) reader <- mkMemReadInternal(0, readClients, dmaIndication, sgl.addr[0], readTagGen);
    MemWriteInternal#(addrWidth,dataWidth) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1], writeTagGen);
    
    rule sglistEntry;
@@ -237,13 +241,13 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 	    rv <- writer.dbg.dbg;
 	 dmaIndication.reportStateDbg(rv);
       endmethod
-      method Action getMemoryTraffic(ChannelType rc, Bit#(32) client);
+      method Action getMemoryTraffic(ChannelType rc);
 	 if (rc == Read) begin
-	    let rv <- reader.dbg.getMemoryTraffic(client);
+	    let rv <- reader.dbg.getMemoryTraffic();
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
 	 else begin
-	    let rv <- writer.dbg.getMemoryTraffic(client);
+	    let rv <- writer.dbg.getMemoryTraffic();
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
       endmethod
@@ -268,9 +272,9 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 endmodule
 	
 module mkConfigMemServerR#(DmaIndication dmaIndication,
-			   TagGen#(numReadClients, numReadTags) readTagGen,
+			   Vector#(nMasters,TagGen#(nrc, numReadTags)) readTagGens,
 			   Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
-   (MemServer#(addrWidth, dataWidth, 1))
+   (MemServer#(addrWidth, dataWidth, nMasters))
    
    provisos (Add#(1,a__,dataWidth),
 	     Add#(b__, TSub#(addrWidth, 12), 32),
@@ -280,13 +284,25 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 	     Add#(f__, c__, ObjectOffsetSize),
 	     Add#(g__, addrWidth, 40),
 	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Add#(h__, TLog#(numReadTags), 6));
+	     Add#(h__, TLog#(numReadTags), 6),
+	     Mul#(nrc, nMasters, numReadClients));
 
 
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
+   Reg#(Bit#(8)) dbgPtr <- mkReg(0);
+   Reg#(Bit#(8)) trafficPtr <- mkReg(0);
+   Reg#(Bit#(64)) trafficAccum <- mkReg(0);
+
    
-   MemReadInternal#(addrWidth,dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0], readTagGen);
+   Vector#(nMasters,List#(ObjectReadClient#(dataWidth))) client_bins = replicate(Nil);
+   for(Integer i = 0; i < valueOf(numReadClients); i=i+1)
+      client_bins[i%valueOf(nMasters)] = List::cons(readClients[i], client_bins[i%valueOf(nMasters)]);
+
+   SglAddrServer#(addrWidth,nMasters) sgl_server <- mkSglAddrServer(sgl.addr[0]);
+   Vector#(nMasters,MemReadInternal#(addrWidth,dataWidth)) readers;
+   for(Integer i = 0; i < valueOf(nMasters); i = i+1)
+      readers[i] <- mkMemReadInternal(i, toVector(client_bins[i]), dmaIndication, sgl_server.servers[i], readTagGens[i]);
    
    rule sglistEntry;
       addrReqFifo.deq;
@@ -294,26 +310,39 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
-   let master = (interface MemMaster#(addrWidth,dataWidth);
-		    interface MemReadClient read_client = reader.read_client;
-		    interface MemWriteClient write_client = null_mem_write_client;
-		 endinterface);
+   function MemMaster#(addrWidth,dataWidth) mkm(Integer i) = (interface MemMaster#(addrWidth,dataWidth);
+								 interface MemReadClient read_client = readers[i].read_client;
+								 interface MemWriteClient write_client = null_mem_write_client;
+							      endinterface);
 
+   Stmt dbgStmt = seq
+		     for(dbgPtr <= 0; dbgPtr < fromInteger(valueOf(nMasters)); dbgPtr <= dbgPtr+1)
+			(action
+			    let rv <- readers[dbgPtr].dbg.dbg;
+			    dmaIndication.reportStateDbg(rv);
+			 endaction);
+		  endseq;
+   FSM dbgFSM <- mkFSM(dbgStmt);
+
+   Stmt trafficStmt = seq
+			 trafficAccum <= 0;
+			 for(trafficPtr <= 0; trafficPtr < fromInteger(valueOf(nMasters)); trafficPtr <= trafficPtr+1)
+			    (action
+				let rv <- readers[trafficPtr].dbg.getMemoryTraffic();
+				trafficAccum <= trafficAccum + rv;
+			     endaction);
+			 dmaIndication.reportMemoryTraffic(trafficAccum);
+		  endseq;
+   FSM trafficFSM <- mkFSM(trafficStmt);
+      
    interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
-	 let rv = ?;
 	 if (rc == Read)
-	    rv <- reader.dbg.dbg;
-	 dmaIndication.reportStateDbg(rv);
+	    dbgFSM.start;
       endmethod
-      method Action getMemoryTraffic(ChannelType rc, Bit#(32) client);
-	 if (rc == Read) begin
-	    let rv <- reader.dbg.getMemoryTraffic(client);
-	    dmaIndication.reportMemoryTraffic(rv);
-	 end
-	 else begin
-	    dmaIndication.reportMemoryTraffic(0);
-	 end
+      method Action getMemoryTraffic(ChannelType rc);
+	 if (rc == Read)
+	    trafficFSM.start;
       endmethod
       method Action sglist(Bit#(32) pref, Bit#(ObjectOffsetSize) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
@@ -332,7 +361,7 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
       endmethod
    endinterface
-   interface masters = cons(master,nil);
+   interface masters = map(mkm,genVector);
 endmodule
 	
 module mkConfigMemServerW#(DmaIndication dmaIndication,
@@ -369,17 +398,14 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
    
    interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
-	 let rv = ?;
-	 if (rc == Write)
-	    rv <- writer.dbg.dbg;
-	 dmaIndication.reportStateDbg(rv);
-      endmethod
-      method Action getMemoryTraffic(ChannelType rc, Bit#(32) client);
-	 if (rc == Read) begin
-	    dmaIndication.reportMemoryTraffic(0);
+	 if (rc == Write) begin
+	    let rv <- writer.dbg.dbg;
+	    dmaIndication.reportStateDbg(rv);
 	 end
-	 else begin
-	    let rv <- writer.dbg.getMemoryTraffic(client);
+      endmethod
+      method Action getMemoryTraffic(ChannelType rc);
+	 if (rc == Write) begin
+	    let rv <- writer.dbg.getMemoryTraffic();
 	    dmaIndication.reportMemoryTraffic(rv);
 	 end
       endmethod

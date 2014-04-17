@@ -141,7 +141,7 @@ endinterface
 ///////////////////////////////////////////////////////////////////////////////////
 
 interface DmaDbg;
-   method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
+   method ActionValue#(Bit#(64)) getMemoryTraffic();
    method ActionValue#(DmaDbgRec) dbg();
 endinterface
 

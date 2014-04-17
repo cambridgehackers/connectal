@@ -61,6 +61,7 @@ testnames = echo             \
 	    xsim-echo        \
 	    imageon          \
             bscan            \
+            memread_nobuff_zynq \
 
 oo_memtests =  memcpy_buff_oo   \
             memread_buff_oo  \

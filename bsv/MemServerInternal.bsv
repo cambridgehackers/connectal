@@ -142,7 +142,8 @@ typedef struct {ObjectRequest req;
 typedef struct {Bit#(6) orig_tag;
 		Bit#(TLog#(numClients)) client; } RResp#(numeric type numClients, numeric type numTags, numeric type addrWidth) deriving(Bits);
 
-module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) readClients, 
+module mkMemReadInternal#(Integer id,
+			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients, 
 			  DmaIndication dmaIndication,
 			  Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
 			  TagGen#(numClients, numTags) tag_gen) 
@@ -162,7 +163,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
    FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkSizedFIFO(1);
    Vector#(numTags, FIFO#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(4));
    Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
-   Vector#(numClients, Reg#(Bit#(64)))  beatCounts <- replicateM(mkReg(0));
+   Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
          
 `ifdef	INTERVAL_ANAlYSIS
@@ -216,7 +217,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
       let client = drq.client;
       let req = drq.req;
       readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
-      beatCounts[client] <= beatCounts[client]+1;
+      beatCount <= beatCount+1;
    endrule
 
    interface MemReadClient read_client;
@@ -230,7 +231,7 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	    if (False && physAddr[31:24] != 0)
 	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
 	    dreqFifos[rename_tag].enq(DRec{req:req, client:client, rename_tag:rename_tag});
-	    //$display("readReq: client=%d, rename_tag=%d", client,rename_tag);
+	    //$display("readReq: client=%d, rename_tag=%d, physAddr=%h", client,rename_tag,physAddr);
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
@@ -270,8 +271,8 @@ module mkMemReadInternal#(Vector#(numClients, ObjectReadClient#(dataWidth)) read
 	 return DmaDbgRec{x:fromInteger(valueOf(numClients)), y:0, z:0, w:0};
 `endif
       endmethod
-      method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
-	 return beatCounts[client];
+      method ActionValue#(Bit#(64)) getMemoryTraffic();
+	 return beatCount;
       endmethod
    endinterface
 endmodule
@@ -297,7 +298,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
    FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedFIFO(32);
    Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedFIFO(4));
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
-   Vector#(numClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
+   Reg#(Bit#(64)) beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1)
@@ -364,7 +365,7 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
 	       respFifos[rename_tag].enq(RResp{orig_tag:req.tag, client:client});
 	    end
 	    burstReg <= burstLen-1;
-	    beatCounts[client] <= beatCounts[client]+1;
+	    beatCount <= beatCount+1;
 	    if (burstLen == 1) 
 	       dreqFifo.deq();
 	    //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
@@ -384,8 +385,8 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
       method ActionValue#(DmaDbgRec) dbg();
 	 return DmaDbgRec{x:fromInteger(valueOf(numClients)), y:?, z:?, w:?};
       endmethod
-      method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
-	 return beatCounts[client];
+      method ActionValue#(Bit#(64)) getMemoryTraffic();
+	 return beatCount;
       endmethod
    endinterface
 endmodule

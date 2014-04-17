@@ -112,18 +112,9 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 uint64_t PortalMemory::show_mem_stats(ChannelType rc)
 {
   uint64_t rv = 0;
-  getStateDbg(rc);
-  sem_wait(&dbgSem);
-  for(int i = dbgRec.x; i > 0; i--){ 
-    getMemoryTraffic(rc, i-1);
-    sem_wait(&mtSem);
-    rv += mtCnt;
-  }
-#ifdef INTERVAL_ANAlYSIS
-  fprintf(stderr, "bin1: %d\n", dbgRec.y);
-  fprintf(stderr, "bin4: %d\n", dbgRec.z);
-  fprintf(stderr, "binx: %d\n", dbgRec.w);
-#endif
+  getMemoryTraffic(rc);
+  sem_wait(&mtSem);
+  rv += mtCnt;
   return rv;
 }
 
@@ -218,6 +209,11 @@ void PortalMemory::dbgResp(const DmaDbgRec& rec)
 {
   dbgRec = rec;
   sem_post(&dbgSem);
+#ifdef INTERVAL_ANAlYSIS
+  fprintf(stderr, "bin1: %d\n", dbgRec.y);
+  fprintf(stderr, "bin4: %d\n", dbgRec.z);
+  fprintf(stderr, "binx: %d\n", dbgRec.w);
+#endif
 }
 
 void PortalMemory::confResp(uint32_t channelId)

@@ -75,7 +75,7 @@ interface DmaConfig;
    // @brief Requests debug info for the specified channel type
    //
    method Action getStateDbg(ChannelType rc);
-   method Action getMemoryTraffic(ChannelType rc, Bit#(32) client);
+   method Action getMemoryTraffic(ChannelType rc);
 endinterface
 
 //

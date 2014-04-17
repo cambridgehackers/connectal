@@ -238,3 +238,31 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    interface addr = addrServers;
 
 endmodule
+
+interface SglAddrServer#(numeric type addrWidth, numeric type numServers);
+   interface Vector#(numServers,Server#(ReqTup,Bit#(addrWidth))) servers;
+endinterface
+
+module mkSglAddrServer#(Server#(ReqTup,Bit#(addrWidth)) server) (SglAddrServer#(addrWidth,numServers));
+   
+   FIFOF#(Bit#(TAdd#(1,TLog#(numServers)))) tokFifo <- mkSizedFIFOF(1);
+   Vector#(numServers, Server#(ReqTup,Bit#(addrWidth))) addrServers;
+   for(Integer i = 0; i < valueOf(numServers); i=i+1)
+      addrServers[i] = 
+      (interface Server#(ReqTup,Bit#(addrWidth));
+	  interface Put request;
+	     method Action put(ReqTup req);
+		tokFifo.enq(fromInteger(i));
+		server.request.put(req);
+	     endmethod
+	  endinterface
+	  interface Get response;
+	     method ActionValue#(Bit#(addrWidth)) get() if (tokFifo.first == fromInteger(i));
+		tokFifo.deq;
+		let rv <- server.response.get;
+		return rv;
+	     endmethod
+	  endinterface
+       endinterface);
+   interface servers = addrServers;
+endmodule
