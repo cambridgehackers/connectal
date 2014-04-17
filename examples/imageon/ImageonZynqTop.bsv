@@ -64,7 +64,7 @@ interface ZynqTop#(type pins);
    interface Vector#(4, Reset) unused_reset;
 endinterface
 
-typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt(Clock clock200, Clock io_vita_clk)) MkPortalTop#(type ipins);
+typedef (function Module#(PortalTop#(32, 64, ipins, 0)) mkpt(Clock clock200, Clock io_vita_clk)) MkPortalTop#(type ipins);
 
 module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
    PS7 ps7 <- mkPS7();
@@ -85,8 +85,8 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
    //mkConnectionWithTrace(top.m_axi, ps7.s_axi_hp[0].axi.server);
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
    mkConnection(ps7.m_axi_gp[0].client, ctrl, clocked_by mainclock, reset_by mainreset);
-   Axi3Master#(32,64,6) m_axi <- mkAxiDmaMaster(top.master, clocked_by mainclock, reset_by mainreset);
-   mkConnectionWithTrace(m_axi, ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
+   //Axi3Master#(32,64,6) m_axi <- mkAxiDmaMaster(top.masters[0], clocked_by mainclock, reset_by mainreset);
+   //mkConnectionWithTrace(m_axi, ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;
