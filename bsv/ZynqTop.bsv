@@ -70,15 +70,15 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    end
    if(valueOf(nMasters) > 1) begin
       m_axis[1] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[1]);
-      mkConnectionWithTrace(m_axis[1], ps7.s_axi_hp[1].axi.server, clocked_by mainclock, reset_by mainreset);
+      mkConnection(m_axis[1], ps7.s_axi_hp[1].axi.server, clocked_by mainclock, reset_by mainreset);
    end
    if(valueOf(nMasters) > 2) begin
       m_axis[2] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[2]);
-      mkConnectionWithTrace(m_axis[2], ps7.s_axi_hp[2].axi.server, clocked_by mainclock, reset_by mainreset);
+      mkConnection(m_axis[2], ps7.s_axi_hp[2].axi.server, clocked_by mainclock, reset_by mainreset);
    end   
    if(valueOf(nMasters) > 3) begin
       m_axis[3] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[3]);
-      mkConnectionWithTrace(m_axis[3], ps7.s_axi_hp[3].axi.server, clocked_by mainclock, reset_by mainreset);
+      mkConnection(m_axis[3], ps7.s_axi_hp[3].axi.server, clocked_by mainclock, reset_by mainreset);
    end
    
    let intr_mux <- mkInterruptMux(top.interrupt);

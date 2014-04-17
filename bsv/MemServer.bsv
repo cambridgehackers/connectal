@@ -332,7 +332,7 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 				trafficAccum <= trafficAccum + rv;
 			     endaction);
 			 dmaIndication.reportMemoryTraffic(trafficAccum);
-		  endseq;
+		      endseq;
    FSM trafficFSM <- mkFSM(trafficStmt);
       
    interface DmaConfig request;
