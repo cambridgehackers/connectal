@@ -170,6 +170,29 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
     HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiGen.control);
     ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequest,fromSensor.control);
 
+   Reg#(Bool) frameStart <- mkReg(False, clocked_by imageon_clock, reset_by imageon_reset);
+   Reg#(Bit#(32)) frameCount <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
+   SyncFIFOIfc#(Tuple2#(Bit#(2),Bit#(32))) frameStartSynchronizer <- mkSyncFIFO(2, imageon_clock, imageon_reset, defaultClock);
+
+   rule frameStartRule;
+       let monitor = fromSensor.monitor();
+       Bool fs = unpack(monitor[0]);
+       if (fs && !frameStart) begin
+	  // start of frame?
+	  // need to cross the clock domain
+	  frameStartSynchronizer.enq(tuple2(monitor, frameCount));
+	  frameCount <= frameCount + 1;
+       end
+      frameStart <= fs;
+   endrule
+   rule frameStartIndication;
+      let tpl = frameStartSynchronizer.first();
+      frameStartSynchronizer.deq();
+      let monitor = tpl_1(tpl);
+      let count = tpl_2(tpl);
+      captureIndicationProxy.ifc.frameStart(monitor, count);
+   endrule
+
     rule xsviConnection;
         let xsvi <- fromSensor.get_data();
         //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));

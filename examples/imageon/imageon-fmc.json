@@ -19,12 +19,12 @@
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA13_n"
     },
-    "*_io_vita_monitor[0]": {
-	"PIO_DIRECTION": "OUTPUT",
+    "*_io_vita_monitor*[0]": {
+	"PIO_DIRECTION": "INPUT",
 	"fmc": "LA15_p"
     },
-    "*_io_vita_monitor[1]": {
-	"PIO_DIRECTION": "OUTPUT",
+    "*_io_vita_monitor*[1]": {
+	"PIO_DIRECTION": "INPUT",
 	"fmc": "LA15_n"
     },
     "CLK_spi_invertedClock": {

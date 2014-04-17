@@ -35,6 +35,7 @@ interface ImageonSensorPins;
     method Bit#(1) io_vita_clk_pll();
     method Bit#(1) io_vita_reset_n();
     method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
+    method Action io_vita_monitor(Bit#(2) v);
     interface Clock clock_if;
     interface Reset reset_if;
 endinterface
@@ -49,6 +50,7 @@ interface ImageonSensor;
     interface ImageonSensorRequest control;
     interface ImageonSensorPins pins;
     method ActionValue#(Bit#(10)) get_data();
+    method Bit#(2) monitor();
 endinterface
 
 (* always_enabled *)
@@ -71,6 +73,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 
     XbsvODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
     XbsvODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
+   Wire#(Bit#(2)) monitor_wires <- mkDWire(0);
     Wire#(Bit#(1)) poutq <- mkDWire(0);
     Wire#(Bit#(1)) ptq <- mkDWire(0);
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);
@@ -148,6 +151,9 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
         dataGearbox.deq;
         return dataGearbox.first[0];
     endmethod
+   method Bit#(2) monitor();
+      return monitor_wires;
+   endmethod
     interface ImageonSensorPins pins;
         method Bit#(1) io_vita_clk_pll();
             return vita_clk_pll;
@@ -158,6 +164,9 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
         method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
             return vita_trigger_wire;
         endmethod
+       method Action io_vita_monitor(Bit#(2) v);
+	  monitor_wires <= v;
+       endmethod
         interface clock_if = defaultClock;
         interface reset_if = defaultReset;
     endinterface

@@ -28,6 +28,7 @@ interface ImageCaptureIndication;
     method Action hdmi_clock_period(Bit#(32) hdmi_cycles);
     method Action imageon_clock_period(Bit#(32) imageon_cycles);
     method Action fmc_clock_period(Bit#(32) imageon_cycles);
+    method Action frameStart(Bit#(2) monitor, Bit#(32) count);
 endinterface
 
 interface ImageCaptureRequest;

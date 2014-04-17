@@ -73,6 +73,9 @@ printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
   void fmc_clock_period(uint32_t fmc_cycles) {
     printf("[%s:%d] fmc_cycles %ld\n", __FUNCTION__, __LINE__, fmc_cycles);
   }
+  void frameStart(uint32_t monitor, uint32_t frameCount) {
+    printf("[%s:%d] frame_start %d %ld\n", __FUNCTION__, __LINE__, monitor, frameCount);
+  }
 };
 
 class HdmiInternalIndication: public HdmiInternalIndicationWrapper {
@@ -391,7 +394,9 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    vita_spi_write(194, 0x0400);
    vita_spi_write(0x29, 0x0700);
    uint16_t vspi_data = vita_spi_read(192) | 0x71; usleep(100);
+   vspi_data |= (4 << 11); // monitor0 Frame Start, monitor1 row-overhead-time (ROT)
    vita_spi_write(192, vspi_data); usleep(100);
+   fprintf(stderr, "VITA SPI 192 %x\n", vspi_data);
    usleep(10000);
 }
 
