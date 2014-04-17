@@ -37,7 +37,7 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = null_mem_master;
+   interface masters = nil;
    interface leds = default_leds;
 
 endmodule : mkPortalTop

@@ -10,7 +10,7 @@ import CtrlMux::*;
 import Portal::*;
 import PortalMemory::*;
 import Dma::*;
-import VExperimentalMemServer::*;
+import MemServer::*;
 import Leds::*;
 import DmaUtils::*;
 
@@ -25,7 +25,7 @@ import Memread::*;
 
 typedef enum {MemreadIndication, MemreadRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth)) 
+module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
 
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
@@ -46,7 +46,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
 `endif
 `endif
    Vector#(1,  ObjectReadClient#(64))   readClients = cons(dma_read_buff.dmaClient, nil);
-   MemServer#(addrWidth, 64)   dma <- mkMemServerOOR(dmaIndicationProxy.ifc, readClients);
+   MemServer#(addrWidth, 64, 1)   dma <- mkMemServerOOR(dmaIndicationProxy.ifc, readClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    MemreadIndicationProxy memreadIndicationProxy <- mkMemreadIndicationProxy(MemreadIndication);
@@ -64,7 +64,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = dma.master;
+   interface masters = dma.masters;
    interface leds = default_leds;
       
 endmodule : mkPortalTop

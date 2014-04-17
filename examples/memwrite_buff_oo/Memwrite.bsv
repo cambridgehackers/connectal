@@ -54,19 +54,21 @@ module  mkMemwriteRequest#(MemwriteIndication indication,
    Reg#(Bit#(32))              wrOff <- mkReg(0);
    Reg#(Bit#(32))             srcGen <- mkReg(0);
    Reg#(Bit#(32))            iterCnt <- mkReg(0);
-   FIFO#(Bit#(6))            tagFifo <- mkSizedFIFO(6);
+   FIFO#(Tuple2#(Bool,Bit#(6))) tagFifo <- mkSizedFIFO(6);
    
    rule wrReq if (wrOff < reqLen);
       let new_wrOff = wrOff + extend(burstLen);
       dma_write_server.writeReq.put(ObjectRequest { pointer: wrPointer, offset: extend(wrOff), burstLen: burstLen, tag: wrTag});      
+      Bool last = False;
       if (new_wrOff >= reqLen) begin
+	 last = True;
 	 if (iterCnt > 1) 
 	    new_wrOff = 0;
 	 iterCnt <= iterCnt-1;
       end
       wrOff <= new_wrOff;
       wrTag <= wrTag+1;
-      tagFifo.enq(wrTag);
+      tagFifo.enq(tuple2(last,wrTag));
    endrule
    
    rule wrData;
@@ -74,12 +76,14 @@ module  mkMemwriteRequest#(MemwriteIndication indication,
       let new_srcGen = srcGen+2;
       if (new_burstCnt >= extend(burstLen)) begin 
 	 new_burstCnt = 0;
-	 new_srcGen = 0;
 	 tagFifo.deq;
+	 if (tpl_1(tagFifo.first)) begin
+	    new_srcGen = 0;
+	 end
       end
       burstCnt <= new_burstCnt;
       srcGen <= new_srcGen;
-      dma_write_server.writeData.put(ObjectData{data:{srcGen+1,srcGen}, tag: tagFifo.first});
+      dma_write_server.writeData.put(ObjectData{data:{srcGen+1,srcGen}, tag: tpl_2(tagFifo.first)});
    endrule
    
    rule wrDone;

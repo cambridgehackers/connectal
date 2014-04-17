@@ -31,301 +31,173 @@ import Assert::*;
 import Dma::*;
 import PortalMemory::*;
 import SGList::*;
+import MemServerInternal::*;
+
+function Put#(t) null_put();
+   return (interface Put;
+              method Action put(t x) if (False);
+                 noAction;
+              endmethod
+           endinterface);
+endfunction
+
+function Get#(t) null_get();
+   return (interface Get;
+              method ActionValue#(t) get() if (False);
+                 return ?;
+              endmethod
+           endinterface);
+endfunction
+
+function  MemWriteClient#(addrWidth, busWidth) null_mem_write_client();
+   return (interface MemWriteClient;
+              interface Get writeReq = null_get;
+              interface Get writeData = null_get;
+              interface Put writeDone = null_put;
+           endinterface);
+endfunction
+
+function  MemReadClient#(addrWidth, busWidth) null_mem_read_client();
+   return (interface MemReadClient;
+              interface Get readReq = null_get;
+              interface Put readData = null_put;
+           endinterface);
+endfunction
 
 `ifdef BSIM
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
 `endif
 
-interface MemServer#(numeric type addrWidth, numeric type dataWidth);
+interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
    interface DmaConfig request;
-   interface MemMaster#(addrWidth, dataWidth) master;
+   interface Vector#(nMasters,MemMaster#(addrWidth, dataWidth)) masters;
 endinterface
-
-interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth);
-   interface DmaDbg dbg;
-   interface MemWriteClient#(addrWidth,dataWidth) write_client;
-   interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
-endinterface
-
-interface MemReadInternal#(numeric type addrWidth, numeric type dataWidth);
-   interface DmaDbg dbg;
-   interface MemReadClient#(addrWidth,dataWidth) read_client;
-   interface Get#(Tuple2#(Bit#(6),Bit#(6))) tagMismatch;
-endinterface
-
-function Bool bad_pointer(ObjectPointer p);
-   return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
-endfunction
-
-typedef struct {ObjectRequest req;
-		Bit#(6) rename_tag;
-		Bit#(addrWidth) pa;
-		DmaChannelId chan; } IRec#(type addrWidth) deriving(Bits);
-		 
-module mkMemReadInternal#(Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients, 
-			     DmaIndication dmaIndication,
-			     Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl) 
-   (MemReadInternal#(addrWidth, dataWidth))
-
-   provisos(Add#(b__, addrWidth, 64), 
-	    Add#(c__, 12, addrWidth), 
-	    Add#(1, c__, d__),
-	    Div#(dataWidth,8,dataWidthBytes),
-	    Mul#(dataWidthBytes,8,dataWidth),
-	    Log#(dataWidthBytes,beatShift));
-   
-   FIFO#(IRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
-   FIFO#(IRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
-   FIFO#(IRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
-
-   Reg#(Bit#(8))           burstReg <- mkReg(0);
-   Vector#(numReadClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
-   let beat_shift = fromInteger(valueOf(beatShift));
-
-   // report a tag mismatch for oo completions (in which 
-   // case we will need to introduce completion buffers)
-   FIFO#(Tuple2#(Bit#(6),Bit#(6))) tag_mismatch <- mkSizedFIFO(32);
-
-`ifdef	INTERVAL_ANAlYSIS
-   Reg#(Bit#(32)) bin1 <- mkReg(0);
-   Reg#(Bit#(32)) bin4 <- mkReg(0);
-   Reg#(Bit#(32)) binx <- mkReg(0);
-   Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
-   Reg#(Bit#(64)) last_resp_read <- mkReg(0);
-   (* fire_when_enabled *)
-   rule cycle;
-      cycle_cnt <= cycle_cnt+1;
-   endrule
-`endif
-      
-   for (Integer selectReg = 0; selectReg < valueOf(numReadClients); selectReg = selectReg + 1)
-      rule loadChannel;
-	 ObjectRequest req <- readClients[selectReg].readReq.get();
-	 //$display("dmaread.loadChannel activeChan=%d handle=%h addr=%h burst=%h", selectReg, req.pointer, req.offset, req.burstLen);
-	 if (bad_pointer(req.pointer))
-	    dmaIndication.badPointer(req.pointer);
-	 else begin
-	    lreqFifo.enq(IRec{req:req, rename_tag:?, pa:?, chan:fromInteger(selectReg)});
-	    sgl.request.put(tuple2(truncate(req.pointer),req.offset));
-	 end
-      endrule
-   
-   rule checkSglResp;
-      let physAddr <- sgl.response.get;
-      let req = lreqFifo.first.req;
-      let chan = lreqFifo.first.chan;
-      lreqFifo.deq();
-      if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
-	 // squash request
-	 $display("dmaRead: badAddr pointer=%d offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
-      end
-      else begin
-	 if (False && physAddr[31:24] != 0)
-	    $display("checkSglResp: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 reqFifo.enq(IRec{req:req, rename_tag:truncate(chan), pa:physAddr, chan:chan});
-      end
-   endrule
-
-   interface DmaDbg dbg;
-      method ActionValue#(DmaDbgRec) dbg();
-`ifdef INTERVAL_ANAlYSIS
-	 return DmaDbgRec{x:fromInteger(valueOf(numReadClients)), y:bin1, z:bin4, w:binx};
-`else
-	 return DmaDbgRec{x:fromInteger(valueOf(numReadClients)), y:0, z:0, w:0};
-`endif
-      endmethod
-      method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
-	 return (valueOf(numReadClients) > 0 && client < fromInteger(valueOf(numReadClients))) ? beatCounts[client] : 0;
-      endmethod
-   endinterface
-
-   interface MemReadClient read_client;
-      interface Get readReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get;
-	    let req = reqFifo.first.req;
-	    let physAddr = reqFifo.first.pa;
-	    let rename_tag = reqFifo.first.rename_tag;
-	    reqFifo.deq;
-	    //$display("mkMemReadInternal::req_ar tag=%d rename_tag=%d len=%d activeChan=%d", req.tag, rename_tag, req.burstLen, reqFifo.first.chan);
-	    if (False && physAddr[31:24] != 0)
-	       $display("req_ar: funny physAddr req.pointer=%d req.offset=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	    dreqFifo.enq(reqFifo.first);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
-	 endmethod
-      endinterface
-      interface Put readData;
-	 method Action put(MemData#(dataWidth) response);
-	    let activeChan = dreqFifo.first.chan;
-	    let req = dreqFifo.first.req;
-	    let rename_tag = dreqFifo.first.rename_tag;
-	    if (valueOf(numReadClients) > 0)
-	       readClients[activeChan].readData.put(ObjectData { data: response.data, tag: req.tag});
-
-	    let burstLen = burstReg;
-	    if (burstLen == 0)
-	       burstLen = req.burstLen >> beat_shift;
-
-	    if (burstLen == 1)
-	       dreqFifo.deq();
-   
-	    if (response.tag != rename_tag) begin
-	       tag_mismatch.enq(tuple2(response.tag,rename_tag));
-	       $display("mkMemReadInternal::tag_mismatch %d %d", response.tag, rename_tag);
-	    end
-	    //$display("mkMemReadInternal::resp_read rename_tag=%d response.tag=%d burstLen=%d activeChan=%d", rename_tag, response.tag, burstLen, activeChan);
-	    burstReg <= burstLen-1;
-
-	    if(valueOf(numReadClients) > 0)
-	       beatCounts[activeChan] <= beatCounts[activeChan]+1;
-`ifdef INTERVAL_ANAlYSIS
-	    last_resp_read <= cycle_cnt;
-	    let interval = cycle_cnt - last_resp_read;
-	    if (interval <= 1)
-	       bin1 <= bin1+1;
-	    else if (interval <= 4)
-	       bin4 <= bin4+1;
-	    else
-	       binx <= binx+1;
-`endif
-	 endmethod
-      endinterface
-   endinterface
-   interface Get tagMismatch = fifoToGet(tag_mismatch);
-endmodule
-
-
-module mkMemWriteInternal#(Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients,
-			      DmaIndication dmaIndication, 
-			      Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl)
-
-   (MemWriteInternal#(addrWidth, dataWidth))
-   
-   provisos(Add#(b__, addrWidth, 64), 
-	    Add#(c__, 12, addrWidth), 
-	    Add#(1, c__, d__),
-	    Div#(dataWidth,8,dataWidthBytes),
-	    Mul#(dataWidthBytes,8,dataWidth),
-	    Log#(dataWidthBytes,beatShift));
-   
-   FIFO#(IRec#(addrWidth)) lreqFifo <- mkSizedFIFO(1);
-   FIFO#(IRec#(addrWidth))  reqFifo <- mkSizedFIFO(1);
-   FIFO#(IRec#(addrWidth)) dreqFifo <- mkSizedFIFO(32);
-   FIFO#(IRec#(addrWidth)) respFifo <- mkSizedFIFO(32);
-
-   Reg#(Bit#(8))         burstReg <- mkReg(0);   
-   Vector#(numWriteClients, Reg#(Bit#(64))) beatCounts <- replicateM(mkReg(0));
-   let beat_shift = fromInteger(valueOf(beatShift));
-   
-   // report a tag mismatch for oo completions (in which 
-   // case we will need to introduce completion buffers)
-   FIFO#(Tuple2#(Bit#(6),Bit#(6))) tag_mismatch <- mkSizedFIFO(32);
-
-   for (Integer selectReg = 0; selectReg < valueOf(numWriteClients); selectReg = selectReg + 1)
-       rule loadChannel;
-	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
-	  //$display("dmawrite.loadChannel activeChan=%d handle=%h addr=%h burst=%h debugReq=%d", selectReg, req.pointer, req.offset, req.burstLen, debugReg);
-	  if (bad_pointer(req.pointer))
-	     dmaIndication.badPointer(req.pointer);
-	  else begin
-	     lreqFifo.enq(IRec{req:req, rename_tag:?, pa:?, chan:fromInteger(selectReg)});
-	     sgl.request.put(tuple2(truncate(req.pointer),req.offset));
-	  end
-       endrule
-   
-   rule checkSglResp;
-      let physAddr <- sgl.response.get;
-      let req = lreqFifo.first.req;
-      let chan = lreqFifo.first.chan;
-      lreqFifo.deq();
-      if (physAddr <= (1 << valueOf(SGListPageShift0))) begin
-	 // squash request
-	 $display("dmaWrite: badAddr handle=%d addr=%h physAddr=%h", req.pointer, req.offset, physAddr);
-	 dmaIndication.badAddr(req.pointer, extend(req.offset), extend(physAddr));
-      end
-      else begin
-	 reqFifo.enq(IRec{req:req, rename_tag:truncate(chan), pa:physAddr, chan:chan});
-      end
-   endrule
-
-   interface DmaDbg dbg;
-      method ActionValue#(DmaDbgRec) dbg();
-	 return DmaDbgRec{x:fromInteger(valueOf(numWriteClients)), y:?, z:?, w:?};
-      endmethod
-      method ActionValue#(Bit#(64)) getMemoryTraffic(Bit#(32) client);
-	 return (valueOf(numWriteClients) > 0 && client < fromInteger(valueOf(numWriteClients))) ? beatCounts[client] : 0;
-      endmethod
-   endinterface
-   
-   interface MemWriteClient write_client;
-      interface Get writeReq;
-	 method ActionValue#(MemRequest#(addrWidth)) get();
-	    let req = reqFifo.first.req;
-	    let physAddr = reqFifo.first.pa;
-	    let rename_tag = reqFifo.first.rename_tag;
-	    reqFifo.deq;
-	    //$display("dmaWrite addr physAddr=%h burstReg=%d", physAddr, req.burstLen);
-   
-	    dreqFifo.enq(reqFifo.first);
-	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
-	 endmethod
-      endinterface
-      interface Get writeData;
-	 method ActionValue#(MemData#(dataWidth)) get();
-	    let activeChan = dreqFifo.first.chan;
-	    let req = dreqFifo.first.req;
-	    let rename_tag = dreqFifo.first.rename_tag;
-	    ObjectData#(dataWidth) tagdata = unpack(0);
-	    if (valueOf(numWriteClients) > 0)
-	       tagdata <- writeClients[activeChan].writeData.get();
-	    let burstLen = burstReg;
-	    if (burstLen == 0)
-	       burstLen = req.burstLen >> beat_shift;
-
-	    if (burstLen == 1) begin
-	       dreqFifo.deq();
-	       respFifo.enq(dreqFifo.first);
-	    end
-
-	    //$display("dmaWrite data data=%h burstLen=%d", tagdata.data, burstLen);
-	    burstReg <= burstLen-1;
-	    if(valueOf(numWriteClients) > 0)
-	       beatCounts[activeChan] <= beatCounts[activeChan]+1;
-	    
-	    return MemData { data: tagdata.data,  tag: rename_tag };
-	 endmethod
-      endinterface
-      interface Put writeDone;
-	 method Action put(Bit#(6) resp);
-	    let activeChan = respFifo.first.chan;
-	    let rename_tag = respFifo.first.rename_tag;
-	    let orig_tag = respFifo.first.req.tag;
-	    if (resp != rename_tag) begin
-	       tag_mismatch.enq(tuple2(resp,rename_tag));
-	       $display("mkMemWriteInternal::tag_mismatch %d %d", resp, rename_tag);
-	    end
-	    respFifo.deq();
-	    if (valueOf(numWriteClients) > 0) begin
-	       writeClients[activeChan].writeDone.put(orig_tag);
-	    end
-	 endmethod
-      endinterface
-   endinterface
-   interface Get tagMismatch = fifoToGet(tag_mismatch);
-endmodule
-
-//
-// @brief Creates a Dma controller for Dma read and write clients
-//
-// @param dmaIndication Interface for notifying software
-// @param readClients The read clients.
-// @param writeClients The writeclients.
-//
+		 	 
 module mkMemServer#(DmaIndication dmaIndication,
 		    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
 		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
+   (MemServer#(addrWidth, dataWidth, 1))
+   provisos(Add#(1,a__,dataWidth),
+	    Add#(b__, TSub#(addrWidth, 12), 32),
+	    Add#(c__, 12, addrWidth),
+	    Add#(d__, addrWidth, 64),
+	    Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	    Add#(f__, c__, ObjectOffsetSize),
+	    Add#(g__, addrWidth, 40),
+	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	    Add#(h__, TLog#(numReadClients), 6),
+	    Add#(i__, TLog#(numWriteClients), 6));
+   
+   TagGen#(numWriteClients,numWriteClients) writeTagGen <- mkTagGenIO;
+   TagGen#(numReadClients,numReadClients) readTagGen <- mkTagGenIO;
+   let rv <- mkConfigMemServerRW(dmaIndication, readTagGen, writeTagGen, 
+				 readClients, writeClients);
+   return rv;
+   
+endmodule
+		 
+module mkMemServerR#(DmaIndication dmaIndication,
+		     Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
+   (MemServer#(addrWidth, dataWidth, 1))
+   provisos(Add#(1,a__,dataWidth),
+	    Add#(b__, TSub#(addrWidth, 12), 32),
+	    Add#(c__, 12, addrWidth),
+	    Add#(d__, addrWidth, 64),
+	    Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	    Add#(f__, c__, ObjectOffsetSize),
+	    Add#(g__, addrWidth, 40),
+	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	    Add#(h__, TLog#(numReadClients), 6));
+   
+   TagGen#(numReadClients,numReadClients) readTagGen <- mkTagGenIO;
+   let rv <- mkConfigMemServerR(dmaIndication, readTagGen,readClients);
+   return rv;
+   
+endmodule
+		 
+module mkMemServerW#(DmaIndication dmaIndication,
+		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
+   (MemServer#(addrWidth, dataWidth, 1))
+   provisos(Add#(1,a__,dataWidth),
+	    Add#(b__, TSub#(addrWidth, 12), 32),
+	    Add#(c__, 12, addrWidth),
+	    Add#(d__, addrWidth, 64),
+	    Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	    Add#(f__, c__, ObjectOffsetSize),
+	    Add#(g__, addrWidth, 40),
+	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	    Add#(i__, TLog#(numWriteClients), 6));
+   
+   TagGen#(numWriteClients,numWriteClients) writeTagGen <- mkTagGenIO;
+   let rv <- mkConfigMemServerW(dmaIndication, writeTagGen, writeClients);
+   return rv;
+   
+endmodule
 
-   (MemServer#(addrWidth, dataWidth))
+   
+module mkMemServerOO#(DmaIndication dmaIndication,
+		      Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
+		      Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
+   (MemServer#(addrWidth, dataWidth, 1))
+   provisos(Add#(1,a__,dataWidth),
+	    Add#(b__, TSub#(addrWidth, 12), 32),
+	    Add#(c__, 12, addrWidth),
+	    Add#(d__, addrWidth, 64),
+	    Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	    Add#(f__, c__, ObjectOffsetSize),
+	    Add#(g__, addrWidth, 40),
+	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
+
+   TagGen#(numWriteClients,4) writeTagGen <- mkTagGenOO;
+   TagGen#(numReadClients,4) readTagGen <- mkTagGenOO;
+   let rv <- mkConfigMemServerRW(dmaIndication, readTagGen, writeTagGen, readClients, writeClients);
+   return rv;
+
+endmodule
+
+module mkMemServerOOR#(DmaIndication dmaIndication,
+		       Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
+   (MemServer#(addrWidth, dataWidth, 1))
+   provisos(Add#(1,a__,dataWidth),
+	    Add#(b__, TSub#(addrWidth, 12), 32),
+	    Add#(c__, 12, addrWidth),
+	    Add#(d__, addrWidth, 64),
+	    Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	    Add#(f__, c__, ObjectOffsetSize),
+	    Add#(g__, addrWidth, 40),
+	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
+   
+   TagGen#(numReadClients,4) readTagGen <- mkTagGenOO;
+   let rv <- mkConfigMemServerR(dmaIndication, readTagGen,readClients);
+   return rv;
+   
+endmodule
+		 
+module mkMemServerOOW#(DmaIndication dmaIndication,
+		    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
+   (MemServer#(addrWidth, dataWidth, 1))
+   provisos(Add#(1,a__,dataWidth),
+	    Add#(b__, TSub#(addrWidth, 12), 32),
+	    Add#(c__, 12, addrWidth),
+	    Add#(d__, addrWidth, 64),
+	    Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	    Add#(f__, c__, ObjectOffsetSize),
+	    Add#(g__, addrWidth, 40),
+	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
+   
+   TagGen#(numWriteClients,4) writeTagGen <- mkTagGenOO;
+   let rv <- mkConfigMemServerW(dmaIndication, writeTagGen,writeClients);
+   return rv;
+   
+endmodule
+
+   
+module mkConfigMemServerRW#(DmaIndication dmaIndication,
+			    TagGen#(numReadClients, numReadTags) readTagGen,
+			    TagGen#(numWriteClients,numWriteTags) writeTagGen,
+			    Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients,
+			    Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
+   (MemServer#(addrWidth, dataWidth, 1))
    
    provisos (Add#(1,a__,dataWidth),
 	     Add#(b__, TSub#(addrWidth, 12), 32),
@@ -334,30 +206,28 @@ module mkMemServer#(DmaIndication dmaIndication,
 	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
 	     Add#(f__, c__, ObjectOffsetSize),
 	     Add#(g__, addrWidth, 40),
-	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth));
-   
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     Add#(h__, TLog#(numReadTags), 6),
+	     Add#(j__, TLog#(numWriteTags), 6));
+
+
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
    FIFO#(void)   addrReqFifo <- mkFIFO;
-
-   MemReadInternal#(addrWidth, dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0]);
-   MemWriteInternal#(addrWidth, dataWidth) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1]);
    
-   rule tag_mismatch_read;
-      let rv <- reader.tagMismatch.get;
-      dmaIndication.tagMismatch(Read, extend(tpl_1(rv)), extend(tpl_2(rv)));
-   endrule
+   MemReadInternal#(addrWidth,dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0], readTagGen);
+   MemWriteInternal#(addrWidth,dataWidth) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1], writeTagGen);
    
-   rule tag_mismatch_write;
-      let rv <- writer.tagMismatch.get;
-      dmaIndication.tagMismatch(Write, extend(tpl_1(rv)), extend(tpl_2(rv)));
-   endrule
-
    rule sglistEntry;
       addrReqFifo.deq;
       let physAddr <- sgl.addr[0].response.get;
       dmaIndication.addrResponse(zeroExtend(physAddr));
    endrule
    
+   let master = (interface MemMaster#(addrWidth,dataWidth);
+		    interface MemReadClient read_client = reader.read_client;
+		    interface MemWriteClient write_client = writer.write_client;
+		 endinterface);
+
    interface DmaConfig request;
       method Action getStateDbg(ChannelType rc);
 	 let rv = ?;
@@ -394,10 +264,155 @@ module mkMemServer#(DmaIndication dmaIndication,
 	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
       endmethod
    endinterface
-
-   interface MemMaster master;
-      interface MemReadClient read_client = reader.read_client;
-      interface MemWriteClient write_client = writer.write_client;
-   endinterface
+   interface masters = cons(master,nil);
 endmodule
+	
+module mkConfigMemServerR#(DmaIndication dmaIndication,
+			   TagGen#(numReadClients, numReadTags) readTagGen,
+			   Vector#(numReadClients, ObjectReadClient#(dataWidth)) readClients)
+   (MemServer#(addrWidth, dataWidth, 1))
+   
+   provisos (Add#(1,a__,dataWidth),
+	     Add#(b__, TSub#(addrWidth, 12), 32),
+	     Add#(c__, 12, addrWidth),
+	     Add#(d__, addrWidth, 64),
+	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	     Add#(f__, c__, ObjectOffsetSize),
+	     Add#(g__, addrWidth, 40),
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     Add#(h__, TLog#(numReadTags), 6));
 
+
+   SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
+   FIFO#(void)   addrReqFifo <- mkFIFO;
+   
+   MemReadInternal#(addrWidth,dataWidth) reader <- mkMemReadInternal(readClients, dmaIndication, sgl.addr[0], readTagGen);
+   
+   rule sglistEntry;
+      addrReqFifo.deq;
+      let physAddr <- sgl.addr[0].response.get;
+      dmaIndication.addrResponse(zeroExtend(physAddr));
+   endrule
+   
+   let master = (interface MemMaster#(addrWidth,dataWidth);
+		    interface MemReadClient read_client = reader.read_client;
+		    interface MemWriteClient write_client = null_mem_write_client;
+		 endinterface);
+
+   interface DmaConfig request;
+      method Action getStateDbg(ChannelType rc);
+	 let rv = ?;
+	 if (rc == Read)
+	    rv <- reader.dbg.dbg;
+	 dmaIndication.reportStateDbg(rv);
+      endmethod
+      method Action getMemoryTraffic(ChannelType rc, Bit#(32) client);
+	 if (rc == Read) begin
+	    let rv <- reader.dbg.getMemoryTraffic(client);
+	    dmaIndication.reportMemoryTraffic(rv);
+	 end
+	 else begin
+	    dmaIndication.reportMemoryTraffic(0);
+	 end
+      endmethod
+      method Action sglist(Bit#(32) pref, Bit#(ObjectOffsetSize) addr, Bit#(32) len);
+	 if (bad_pointer(pref))
+	    dmaIndication.badPointer(pref);
+`ifdef BSIM
+	 let va <- pareff(pref, len);
+         addr[39:32] = truncate(pref);
+`endif
+	 sgl.sglist(pref, addr, len);
+      endmethod
+      method Action region(Bit#(32) pointer, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
+	 sgl.region(pointer,barr8,off8,barr4,off4,barr0,off0);
+      endmethod
+      method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
+	 addrReqFifo.enq(?);
+	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
+      endmethod
+   endinterface
+   interface masters = cons(master,nil);
+endmodule
+	
+module mkConfigMemServerW#(DmaIndication dmaIndication,
+			   TagGen#(numWriteClients,numWriteTags) writeTagGen,
+			   Vector#(numWriteClients, ObjectWriteClient#(dataWidth)) writeClients)
+   (MemServer#(addrWidth, dataWidth, 1))
+   
+   provisos (Add#(1,a__,dataWidth),
+	     Add#(b__, TSub#(addrWidth, 12), 32),
+	     Add#(c__, 12, addrWidth),
+	     Add#(d__, addrWidth, 64),
+	     Add#(e__, TSub#(addrWidth, 12), ObjectOffsetSize),
+	     Add#(f__, c__, ObjectOffsetSize),
+	     Add#(g__, addrWidth, 40),
+	     Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
+	     Add#(j__, TLog#(numWriteTags), 6));
+
+
+   SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
+   FIFO#(void)   addrReqFifo <- mkFIFO;
+   
+   MemWriteInternal#(addrWidth,dataWidth) writer <- mkMemWriteInternal(writeClients, dmaIndication, sgl.addr[1], writeTagGen);
+   
+   rule sglistEntry;
+      addrReqFifo.deq;
+      let physAddr <- sgl.addr[0].response.get;
+      dmaIndication.addrResponse(zeroExtend(physAddr));
+   endrule
+
+   let master = (interface MemMaster#(addrWidth,dataWidth);
+		    interface MemWriteClient write_client = writer.write_client;
+		    interface MemReadClient read_client = null_mem_read_client;
+		 endinterface);
+   
+   interface DmaConfig request;
+      method Action getStateDbg(ChannelType rc);
+	 let rv = ?;
+	 if (rc == Write)
+	    rv <- writer.dbg.dbg;
+	 dmaIndication.reportStateDbg(rv);
+      endmethod
+      method Action getMemoryTraffic(ChannelType rc, Bit#(32) client);
+	 if (rc == Read) begin
+	    dmaIndication.reportMemoryTraffic(0);
+	 end
+	 else begin
+	    let rv <- writer.dbg.getMemoryTraffic(client);
+	    dmaIndication.reportMemoryTraffic(rv);
+	 end
+      endmethod
+      method Action sglist(Bit#(32) pref, Bit#(ObjectOffsetSize) addr, Bit#(32) len);
+	 if (bad_pointer(pref))
+	    dmaIndication.badPointer(pref);
+`ifdef BSIM
+	 let va <- pareff(pref, len);
+         addr[39:32] = truncate(pref);
+`endif
+	 sgl.sglist(pref, addr, len);
+      endmethod
+      method Action region(Bit#(32) pointer, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
+	 sgl.region(pointer,barr8,off8,barr4,off4,barr0,off0);
+      endmethod
+      method Action addrRequest(Bit#(32) pointer, Bit#(32) offset);
+	 addrReqFifo.enq(?);
+	 sgl.addr[0].request.put(tuple2(truncate(pointer), extend(offset)));
+      endmethod
+   endinterface
+   interface masters = cons(master,nil);
+endmodule
+		 
+		 
+	 
+	
+		 
+		 
+		 
+		 
+
+		 
+		 
+		 
+		 
+		 

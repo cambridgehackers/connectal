@@ -31,7 +31,6 @@ test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidi
 
 testnames = echo             \
 	    hdmidisplay      \
-	    imageon          \
             memcpy_buff      \
             memcpy_buff_oo   \
             memcpy_nobuff    \
@@ -56,11 +55,12 @@ testnames = echo             \
 	    nandsim          \
             flowcontrol      \
             bluescope        \
-            bscan            \
 	    splice           \
 	    maxcommonsubseq  \
 	    fib              \
 	    xsim-echo        \
+	    imageon          \
+            bscan            \
 
 oo_memtests =  memcpy_buff_oo   \
             memread_buff_oo  \
@@ -87,6 +87,10 @@ bsimtests: $(bsimtests)
 $(bsimtests):
 	rm -fr examples/$(basename $@)/bluesim
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
+
+bsimtests.regression:
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu bsimtests
+
 
 bsimruns = $(addsuffix .bsimrun, $(testnames))
 bsimruns: $(bsimruns)

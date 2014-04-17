@@ -25,7 +25,7 @@ import Memread2::*;
 
 typedef enum {Memread2Indication, Memread2Request, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth)) provisos (
+module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
     Add#(addrWidth, a__, 52),
     Add#(b__, addrWidth, 64),
     Add#(c__, 12, addrWidth),
@@ -51,7 +51,7 @@ module mkPortalTop(StdPortalTop#(addrWidth)) provisos (
       clients = cons(memread.dmaClient, cons(memread.dmaClient2, nil));
    end
 
-   MemServer#(addrWidth,64) dma <- mkMemServer(dmaIndicationProxy.ifc, clients, nil);
+   MemServer#(addrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, clients);
 
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
@@ -66,6 +66,6 @@ module mkPortalTop(StdPortalTop#(addrWidth)) provisos (
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = dma.master;
+   interface masters = dma.masters;
    interface leds = ?;
 endmodule : mkPortalTop

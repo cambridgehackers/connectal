@@ -27,7 +27,7 @@ typedef enum {StrstrIndication, StrstrRequest, DmaIndication, DmaConfig} IfcName
 typedef 2 DegPar;
 
 
-module mkPortalTop(StdPortalTop#(addrWidth)) 
+module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
 
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
@@ -48,8 +48,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
       readClients[(3*i)+2] = mp_next_read_chans[i].dmaClient;
    end
 
-   Vector#(0, ObjectWriteClient#(64)) writeClients = newVector();
-   MemServer#(addrWidth,64) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(addrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, readClients);
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
    
    function ObjectReadServer#(x) rs(DmaReadBuffer#(x,y) rb);
@@ -72,6 +71,6 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = dma.master;
+   interface masters = dma.masters;
    interface leds = default_leds;
 endmodule

@@ -50,16 +50,17 @@ endfunction
 
 typedef Portal#(32,32) StdPortal;
 
-interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins);
+interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
    interface MemSlave#(32,32) slave;
-   interface MemMaster#(addrWidth, dataWidth) master;
-   interface Vector#(16,ReadOnly#(Bool))        interrupt;
+   interface Vector#(numMasters,MemMaster#(addrWidth, dataWidth)) masters;
+   interface Vector#(16,ReadOnly#(Bool)) interrupt;
    interface LEDS             leds;
    interface pins             pins;
 endinterface
 
-typedef PortalTop#(addrWidth,64,Empty)     StdPortalTop#(numeric type addrWidth);
+typedef PortalTop#(addrWidth,64,Empty,0) StdPortalTop#(numeric type addrWidth);
+typedef PortalTop#(addrWidth,64,Empty,1) StdPortalDmaTop#(numeric type addrWidth);
 
-typeclass SynthesizablePortalTop#(numeric type addrWidth, numeric type dataWidth, type pins);
-   module mkSynthesizablePortalTop(PortalTop#(addrWidth,dataWidth,pins) ifc);
+typeclass SynthesizablePortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
+   module mkSynthesizablePortalTop(PortalTop#(addrWidth,dataWidth,pins,numMasters) ifc);
 endtypeclass

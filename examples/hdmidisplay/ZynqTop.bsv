@@ -55,7 +55,7 @@ interface ZynqTop#(type pins);
    interface Vector#(4, Reset) unused_reset;
 endinterface
 
-typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt(Clock clk1)) MkPortalTop#(type ipins);
+typedef (function Module#(PortalTop#(32, 64, ipins, 1)) mkpt(Clock clk1)) MkPortalTop#(type ipins);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
    PS7 ps7 <- mkPS7();
@@ -66,7 +66,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
    mkConnectionWithTrace(ps7.m_axi_gp[0].client, ctrl, clocked_by mainclock, reset_by mainreset);
-   Axi3Master#(32,64,6) m_axi <- mkAxiDmaMaster(top.master, clocked_by mainclock, reset_by mainreset);
+   Axi3Master#(32,64,6) m_axi <- mkAxiDmaMaster(top.masters[0], clocked_by mainclock, reset_by mainreset);
    mkConnection(m_axi, ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);
@@ -89,6 +89,6 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
 endmodule
 
 module mkHdmiZynqTop(ZynqTop#(HDMI));
-   let top <- mkZynqTopFromPortal(mkPortalTop);
+   let top <- mkZynqTopFromPortal(mkZynqPortalTop);
    return top;
 endmodule

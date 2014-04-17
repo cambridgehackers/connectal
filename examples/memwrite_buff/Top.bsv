@@ -25,7 +25,7 @@ import Memwrite::*;
 
 typedef enum {DmaIndication, DmaConfig, MemwriteIndication, MemwriteRequest} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalTop#(addrWidth)) 
+module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
 
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
@@ -37,7 +37,7 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    DmaWriteBuffer#(64,32) dma_write_buff <- mkDmaWriteBuffer();
    Vector#(1, ObjectWriteClient#(64)) writeClients = cons(dma_write_buff.dmaClient, nil);
-   MemServer#(addrWidth, 64)   dma <- mkMemServer(dmaIndicationProxy.ifc, nil, writeClients);
+   MemServer#(addrWidth, 64, 1)   dma <- mkMemServerW(dmaIndicationProxy.ifc, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    MemwriteIndicationProxy memwriteIndicationProxy <- mkMemwriteIndicationProxy(MemwriteIndication);
@@ -55,6 +55,6 @@ module mkPortalTop(StdPortalTop#(addrWidth))
    
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface master = dma.master;
+   interface masters = dma.masters;
    interface leds = default_leds;
 endmodule

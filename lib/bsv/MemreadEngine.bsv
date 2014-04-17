@@ -61,6 +61,7 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (MemreadEn
       pointer  <= p;
       burstLen <= truncate(bl);
       base     <= b;
+      //$display("mkMemreadEngine.start p=%d b=%d rl=%d beat_shift=%d", p, b, rl, beat_shift);
       wf.enq(rl >> beat_shift);
    endmethod
    
@@ -80,6 +81,7 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (MemreadEn
       interface Put readData;
 	 method Action put(ObjectData#(dataWidth) d);
 	    let new_respCnt = respCnt+1;
+	    //$display("mkMemreadEngine.dmaClient.readData new_respCnt=%d wf.first=%d", new_respCnt, wf.first);
 	    if (new_respCnt == wf.first) begin
 	       ff.enq(True);
 	       respCnt <= 0;

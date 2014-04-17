@@ -26,6 +26,7 @@ import Vector::*;
 import Clocks::*;
 import FIFO::*;
 import FIFOF::*;
+import SpecialFIFOs::*;
 import GetPut::*;
 import SyncBits::*;
 import YUV::*;
@@ -53,9 +54,14 @@ endinterface
 interface HdmiInternalIndication;
     method Action vsync(Bit#(64) v);
 endinterface
+interface HdmiInternalStatus;
+    method Bit#(11) getNumberOfLines();
+    method Bit#(12) getNumberOfPixels();
+endinterface
 
 interface HdmiGenerator;
     interface HdmiInternalRequest control;
+    interface HdmiInternalStatus  status;
     interface HDMI hdmi;
     interface Put#(Bit#(64)) request;
 endinterface
@@ -82,7 +88,8 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
     SyncPulseIfc sendVsyncIndication <- mkSyncPulse(defaultClock, defaultReset, axi_clock);
-    Reg#(Bit#(24)) pixelData <- mkReg(24'h00ff00ff);
+    Reg#(Bit#(24)) pixelData <- mkReg(24'hFF00FF);
+    FIFOF#(Bit#(24)) pixelFifo <- mkPipelineFIFOF();
 
     Reg#(Rgb888Stage) rgb888StageReg <- mkReg(unpack(0));
     Reg#(Yuv444IntermediatesStage) yuv444IntermediatesStageReg <- mkReg(unpack(0));
@@ -137,14 +144,23 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         let vsync = (lineCount < vsyncWidth) ? 1 : 0;
         let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
         let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
-        Rgb888 pixel = unpack(pixelData);
+       Rgb888 pixel = unpack(0);
+       if (dataEnable) begin
+	  if (pixelFifo.notEmpty) begin
+	     pixel = unpack(pixelFifo.first());
+	     pixelFifo.deq();
+	  end
+	  else begin
+	     pixel = unpack(0);
+	  end
+       end
         rgb888StageReg <= Rgb888Stage{de: pack(dataEnable),
-            vsync: vsync, hsync: hsync, pixel: pixel };
+				      vsync: vsync, hsync: hsync, pixel: pixel };
     endrule
 
-    rule test_rule if (testPatternEnabled != 0);
-        pixelData <= patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}];
-    endrule
+   rule testpattern_rule if (testPatternEnabled != 0);
+      pixelFifo.enq(patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}]);
+   endrule
 
     rule yuv444int_rule;
         let previous = rgb888StageReg;
@@ -177,10 +193,18 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 
     interface Put request;
         method Action put(Bit#(64) v) if (testPatternEnabled == 0);
-	    pixelData <= v[23:0];
+	   pixelFifo.enq(v[23:0]);
         endmethod
     endinterface: request
 
+    interface HdmiInternalStatus status;
+	method Bit#(11) getNumberOfLines();
+	   return numberOfLines;
+	endmethod
+	method Bit#(12) getNumberOfPixels();
+	   return numberOfPixels;
+	endmethod
+    endinterface
     interface HdmiInternalRequest control;
         method Action setPatternColor(Bit#(32) v);
             patternRegs[0] <= v[23:0]; 
