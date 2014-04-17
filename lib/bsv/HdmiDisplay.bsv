@@ -83,7 +83,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    endrule
    Reg#(Bit#(1)) evenOdd <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
    Reg#(Vector#(2,Bit#(32))) doublePixelReg <- mkReg(unpack(0), clocked_by hdmi_clock, reset_by hdmi_reset);
-   rule doPut; // if (mimo.enqReadyN(2));
+   rule doPut;
       Vector#(2,Bit#(32)) doublePixel = doublePixelReg;
       let pixel = doublePixel[evenOdd];
       if (evenOdd == 0) begin
@@ -91,6 +91,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 	 synchronizer.deq;
 	 pixel = doublePixel[0];
       end
+      doublePixelReg <= doublePixel;
       evenOdd <= evenOdd + 1;
       hdmiGen.request.put(pixel);
    endrule      
