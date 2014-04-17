@@ -22,9 +22,13 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import FIFO::*;
 import FIFOF::*;
+import SpecialFIFOs::*;
+import Gearbox::*;
 import Clocks::*;
 import GetPut::*;
+import MIMO::*;
 import PCIE::*;
 import GetPutWithClocks::*;
 import Connectable::*;
@@ -72,17 +76,29 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
 					     vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
    
+   Gearbox#(2, 1, Bit#(32)) gearbox <- mkNto1Gearbox(hdmi_clock, hdmi_reset, hdmi_clock, hdmi_reset);
+   //MIMOConfiguration mimocfg = MIMOConfiguration { unguarded: False, bram_based: True };
+   //MIMO#(2, 1, 1920, Bit#(32)) mimo <- mkMIMO(mimocfg, clocked_by hdmi_clock, reset_by hdmi_reset);
    SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncFIFO(32, defaultClock, defaultReset, hdmi_clock);
+   FIFO#(Bit#(32)) pipelineFifo <- mkLFIFO(clocked_by hdmi_clock, reset_by hdmi_reset);
    rule doGet;
       let v = mrFifo.first();
       mrFifo.deq();
       synchronizer.enq(v);
    endrule
-   rule doPut;
+   rule doPut; // if (mimo.enqReadyN(2));
       let v = synchronizer.first;
       synchronizer.deq;
-      hdmiGen.request.put(v);
+      //mimo.enq(2, unpack(v));
+      gearbox.enq(unpack(v));
    endrule
+   rule frommimo if (hdmiGen.status.dataEnable()); // mimo.deqReadyN(1)
+      //let v = mimo.first();
+      //mimo.deq(1);
+      let v = gearbox.first();
+      gearbox.deq();
+      hdmiGen.request.put(v[0]);
+   endrule      
 
    FIFOF#(Bool) vsyncFifo <- mkFIFOF();
    rule vsyncrule if (vsyncPulse.pulse());
@@ -97,8 +113,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       vsyncFifo.deq();
    endrule
    rule startTransfer if (referenceReg matches tagged Valid .reference);
-      //memreadEngine.start(reference, 0, (1080*1920)*4, 8);
-      memreadEngine.start(reference, 0, (64800)*4, 8);
+      memreadEngine.start(reference, 0, (1080*1920)*4, 64);
       hdmiDisplayIndication.transferStarted(transferCount);
       transferCycles <= 0;
       vsyncFifo.deq();

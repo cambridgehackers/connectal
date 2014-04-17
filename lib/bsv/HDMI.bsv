@@ -57,13 +57,14 @@ endinterface
 interface HdmiInternalStatus;
     method Bit#(11) getNumberOfLines();
     method Bit#(12) getNumberOfPixels();
+    method Bool dataEnable();
 endinterface
 
 interface HdmiGenerator;
     interface HdmiInternalRequest control;
     interface HdmiInternalStatus  status;
     interface HDMI hdmi;
-    interface Put#(Bit#(64)) request;
+    interface Put#(Bit#(32)) request;
 endinterface
 
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
@@ -89,7 +90,8 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
     SyncPulseIfc sendVsyncIndication <- mkSyncPulse(defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(24)) pixelData <- mkReg(24'hFF00FF);
-    FIFOF#(Bit#(24)) pixelFifo <- mkPipelineFIFOF();
+    FIFOF#(Bit#(24)) pixelFifo <- mkLFIFOF();
+    Wire#(Maybe#(Bit#(24))) pixelWires <- mkDWire(tagged Invalid);
 
     Reg#(Rgb888Stage) rgb888StageReg <- mkReg(unpack(0));
     Reg#(Yuv444IntermediatesStage) yuv444IntermediatesStageReg <- mkReg(unpack(0));
@@ -146,9 +148,12 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
        Rgb888 pixel = unpack(0);
        if (dataEnable) begin
-	  if (pixelFifo.notEmpty) begin
-	     pixel = unpack(pixelFifo.first());
-	     pixelFifo.deq();
+//	  if (pixelFifo.notEmpty) begin
+//	     pixel = unpack(pixelFifo.first());
+//	     pixelFifo.deq();
+//	  end
+	  if (pixelWires matches tagged Valid .pixelbits) begin
+	     pixel = unpack(pixelbits);
 	  end
 	  else begin
 	     pixel = unpack(0);
@@ -192,8 +197,9 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     interface Put request;
-        method Action put(Bit#(64) v) if (testPatternEnabled == 0);
-	   pixelFifo.enq(v[23:0]);
+        method Action put(Bit#(32) v) if (testPatternEnabled == 0);
+	   //pixelFifo.enq(v[23:0]);
+	   pixelWires <= tagged Valid v[23:0];
         endmethod
     endinterface: request
 
@@ -204,6 +210,11 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	method Bit#(12) getNumberOfPixels();
 	   return numberOfPixels;
 	endmethod
+   method Bool dataEnable();
+        let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
+      return (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
+   endmethod
+
     endinterface
     interface HdmiInternalRequest control;
         method Action setPatternColor(Bit#(32) v);
