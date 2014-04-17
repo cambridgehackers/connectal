@@ -178,7 +178,7 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
         //converter.in.put(xsvi);
         //let xvideo <- converter.out.get();
         //hdmiGen.rgb(xvideo);
-        Bit#(64) pixel = {40'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
+        Bit#(32) pixel = {8'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
         hdmiGen.request.put(pixel);
     endrule
    
