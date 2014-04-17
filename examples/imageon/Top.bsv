@@ -36,7 +36,6 @@ import GetPutWithClocks :: *;
 import Imageon::*;
 import IserdesDatadeser::*;
 import HDMI::*;
-import SensorToVideo::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 import YUV::*;
@@ -109,7 +108,6 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
     ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
 				clocked_by imageon_clock, reset_by imageon_reset);
     SPI#(Bit#(26)) spiController <- mkSPI(1000);
-    SensorToVideo converter <- mkSensorToVideo(clocked_by hdmi_clock, reset_by hdmi_reset);
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
         vsyncPulse, hdmiIndicationProxy.ifc, clocked_by hdmi_clock, reset_by hdmi_reset);
     ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
@@ -175,9 +173,6 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
     rule xsviConnection;
         let xsvi <- fromSensor.get_data();
         //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
-        //converter.in.put(xsvi);
-        //let xvideo <- converter.out.get();
-        //hdmiGen.rgb(xvideo);
         Bit#(32) pixel = {8'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
         hdmiGen.request.put(pixel);
     endrule
