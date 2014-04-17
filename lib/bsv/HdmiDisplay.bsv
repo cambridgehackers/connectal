@@ -24,11 +24,9 @@
 
 import FIFO::*;
 import FIFOF::*;
-import SpecialFIFOs::*;
-import Gearbox::*;
+import Vector::*;
 import Clocks::*;
 import GetPut::*;
-import MIMO::*;
 import PCIE::*;
 import GetPutWithClocks::*;
 import Connectable::*;
@@ -44,6 +42,7 @@ import YUV::*;
 interface HdmiDisplayRequest;
    method Action startFrameBuffer0(Int#(32) base);
    method Action getTransferStats();
+   method Action setTraceTransfers(Bool trace);
 endinterface
 interface HdmiDisplayIndication;
    method Action transferStarted(Bit#(32) count);
@@ -76,28 +75,24 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
 					     vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
    
-   Gearbox#(2, 1, Bit#(32)) gearbox <- mkNto1Gearbox(hdmi_clock, hdmi_reset, hdmi_clock, hdmi_reset);
-   //MIMOConfiguration mimocfg = MIMOConfiguration { unguarded: False, bram_based: True };
-   //MIMO#(2, 1, 1920, Bit#(32)) mimo <- mkMIMO(mimocfg, clocked_by hdmi_clock, reset_by hdmi_reset);
    SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncFIFO(32, defaultClock, defaultReset, hdmi_clock);
-   FIFO#(Bit#(32)) pipelineFifo <- mkLFIFO(clocked_by hdmi_clock, reset_by hdmi_reset);
    rule doGet;
       let v = mrFifo.first();
       mrFifo.deq();
       synchronizer.enq(v);
    endrule
+   Reg#(Bit#(1)) evenOdd <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
+   Reg#(Vector#(2,Bit#(32))) doublePixelReg <- mkReg(unpack(0), clocked_by hdmi_clock, reset_by hdmi_reset);
    rule doPut; // if (mimo.enqReadyN(2));
-      let v = synchronizer.first;
-      synchronizer.deq;
-      //mimo.enq(2, unpack(v));
-      gearbox.enq(unpack(v));
-   endrule
-   rule frommimo if (hdmiGen.status.dataEnable()); // mimo.deqReadyN(1)
-      //let v = mimo.first();
-      //mimo.deq(1);
-      let v = gearbox.first();
-      gearbox.deq();
-      hdmiGen.request.put(v[0]);
+      Vector#(2,Bit#(32)) doublePixel = doublePixelReg;
+      let pixel = doublePixel[evenOdd];
+      if (evenOdd == 0) begin
+	 doublePixel = unpack(synchronizer.first);
+	 synchronizer.deq;
+	 pixel = doublePixel[0];
+      end
+      evenOdd <= evenOdd + 1;
+      hdmiGen.request.put(pixel);
    endrule      
 
    FIFOF#(Bool) vsyncFifo <- mkFIFOF();
@@ -109,12 +104,14 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    Reg#(Bit#(32)) transferCycles <- mkReg(0);
    Reg#(Bit#(48)) transferSumOfCycles<- mkReg(0);
 
+   Reg#(Bool) traceTransfers <- mkReg(False);
    rule notransfer if (referenceReg matches tagged Invalid);
       vsyncFifo.deq();
    endrule
    rule startTransfer if (referenceReg matches tagged Valid .reference);
       memreadEngine.start(reference, 0, (1080*1920)*4, 64);
-      hdmiDisplayIndication.transferStarted(transferCount);
+      if (traceTransfers)
+	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCycles <= 0;
       vsyncFifo.deq();
    endrule
@@ -125,7 +122,8 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       let b <- memreadEngine.finish();
       transferCount <= transferCount + 1;
       transferSumOfCycles <= transferSumOfCycles + extend(transferCycles);
-      hdmiDisplayIndication.transferFinished(transferCount);
+      if (traceTransfers)
+	 hdmiDisplayIndication.transferFinished(transferCount);
    endrule
 
     rule bozobit_rule;
@@ -140,6 +138,9 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 	endmethod
        method Action getTransferStats();
           hdmiDisplayIndication.transferStats(transferCount, transferCycles, extend(transferSumOfCycles));
+       endmethod
+       method Action setTraceTransfers(Bool trace);
+	  traceTransfers <= trace;
        endmethod
     endinterface: displayRequest
 
