@@ -68,7 +68,9 @@ typedef (function Module#(PortalTop#(32, 64, ipins, 0)) mkpt(Clock clock200, Clo
 
 module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
    PS7 ps7 <- mkPS7();
-   Clock mainclock = ps7.fclkclk[0];
+
+   Clock mainclock <- mkClockBUFG(clocked_by ps7.fclkclk[0]);
+   Clock clock200 <- mkClockBUFG(clocked_by ps7.fclkclk[3]);
    Reset mainreset = ps7.fclkreset[0];
 
    let tscl <- mkIOBUF(~ps7.i2c[1].scltn, ps7.i2c[1].sclo, clocked_by mainclock, reset_by mainreset);
@@ -79,10 +81,8 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
    endrule
 
    Clock fmc_video_clk1_buf <- mkClockIBUFG(clocked_by fmc_video_clk1);
-   let top <- constructor(ps7.fclkclk[3], fmc_video_clk1_buf, clocked_by mainclock, reset_by mainreset);
+   let top <- constructor(clock200, fmc_video_clk1_buf, clocked_by mainclock, reset_by mainreset);
 
-   //mkConnection(ps7.m_axi_gp[0].client, top.ctrl);
-   //mkConnectionWithTrace(top.m_axi, ps7.s_axi_hp[0].axi.server);
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
    mkConnection(ps7.m_axi_gp[0].client, ctrl, clocked_by mainclock, reset_by mainreset);
    //Axi3Master#(32,64,6) m_axi <- mkAxiDmaMaster(top.masters[0], clocked_by mainclock, reset_by mainreset);

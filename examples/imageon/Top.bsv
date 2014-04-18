@@ -66,8 +66,7 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    //ImageCaptureRequest captureRequestInternal <- mkImageCaptureRequest(captureIndicationProxy.ifc);
 
 //////
-   Clock clock200_buf <- mkClockBUFG(clocked_by clock200);
-   IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200_buf);
+   IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200);
 /*
    ClockGenerator7AdvParams clockParams = defaultValue;
    clockParams.bandwidth          = "OPTIMIZED";
@@ -94,10 +93,9 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
     Clock hdmi_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout0);
     Clock imageon_clock <- mkClockBUFG(clocked_by mmcmhack.mmcmadv.clkout1);
     C2B fblink <- mkC2B(mmcmhack.mmcmadv.clkfbout, clocked_by fmc_imageon_clk1);
-    rule foorule;
-    mmcmhack.mmcmadv.clkfbin(fblink.o());
-    //let foo = fblink.o();
-    //mmcmhack.mmcmadv.clkfbin(foo);
+
+    rule mmcm_feedback_rule;
+        mmcmhack.mmcmadv.clkfbin(fblink.o());
     endrule
 
     Reset fmc_imageon_reset <- mkAsyncReset(2, defaultReset, fmc_imageon_clk1);
