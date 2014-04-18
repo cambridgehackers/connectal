@@ -74,6 +74,8 @@ printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
     printf("[%s:%d] fmc_cycles %ld\n", __FUNCTION__, __LINE__, fmc_cycles);
   }
   void frameStart(uint32_t monitor, uint32_t frameCount) {
+static int limit = 30;
+if (limit > 0 && limit-- > 0)
     printf("[%s:%d] frame_start %d %ld\n", __FUNCTION__, __LINE__, monitor, frameCount);
   }
 };
