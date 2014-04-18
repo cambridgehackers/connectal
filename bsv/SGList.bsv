@@ -247,11 +247,18 @@ module mkSglAddrServer#(Server#(ReqTup,Bit#(addrWidth)) server) (SglAddrServer#(
    
    FIFOF#(Bit#(TAdd#(1,TLog#(numServers)))) tokFifo <- mkSizedFIFOF(1);
    Vector#(numServers, Server#(ReqTup,Bit#(addrWidth))) addrServers;
+   Reg#(Bit#(TLog#(numServers))) arb <- mkReg(0);
+
+   // this is a very crude arbiter.  something more sophisticated may be required (mdk)
+   rule inc_arb;
+      arb <= arb+1;
+   endrule
+   
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
       addrServers[i] = 
       (interface Server#(ReqTup,Bit#(addrWidth));
 	  interface Put request;
-	     method Action put(ReqTup req);
+	     method Action put(ReqTup req) if (arb == fromInteger(i));
 		tokFifo.enq(fromInteger(i));
 		server.request.put(req);
 	     endmethod
@@ -264,5 +271,7 @@ module mkSglAddrServer#(Server#(ReqTup,Bit#(addrWidth)) server) (SglAddrServer#(
 	     endmethod
 	  endinterface
        endinterface);
+
    interface servers = addrServers;
+
 endmodule

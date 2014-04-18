@@ -47,20 +47,20 @@ function Bool bad_pointer(ObjectPointer p);
    return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
 endfunction
 
-interface TagGen#(numeric type numClients, numeric type numTags);
+interface TagGen#(numeric type numClients, numeric type numTags, numeric type tagDepth);
    method Action tag_request(Bit#(TLog#(numClients)) client, Bit#(6) orig_tag);
    method ActionValue#(Bit#(TLog#(numTags)))  tag_response;
    method Action return_tag(Bit#(TLog#(numTags)) tag);
 endinterface
 
-module mkTagGenOO(TagGen#(numClients,numTags))
+module mkTagGenOO(TagGen#(numClients,numTags,tagDepth))
    provisos(Log#(numTags,tagWidth),
 	    Log#(numClients,clientWidth));
    
    let request_fifo0 <- mkSizedFIFOF(1);
    let request_fifo1 <- mkSizedFIFOF(1);
    let return_fifo <- mkSizedFIFO(1);
-   Vector#(numTags, Reg#(Bit#(tagWidth))) tag_regs <- replicateM(mkReg(0));
+   Vector#(numTags, Reg#(Bit#(TLog#(tagDepth)))) tag_regs <- replicateM(mkReg(0));
    Vector#(numTags, Reg#(Maybe#(Tuple2#(Bit#(clientWidth),Bit#(6))))) client_map <- replicateM(mkReg(tagged Invalid));
    Maybe#(UInt#(tagWidth)) next_free = findElem(0, readVReg(tag_regs));
 
@@ -104,7 +104,7 @@ module mkTagGenOO(TagGen#(numClients,numTags))
 
 endmodule
 
-module mkTagGenIO(TagGen#(numClients,numTags))
+module mkTagGenIO(TagGen#(numClients,numTags,tagDepth))
    provisos(Log#(numTags,tagWidth),
 	    Log#(numClients,clientWidth),
 	    Bits#(Bit#(clientWidth), tagWidth));
@@ -146,7 +146,7 @@ module mkMemReadInternal#(Integer id,
 			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients, 
 			  DmaIndication dmaIndication,
 			  Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
-			  TagGen#(numClients, numTags) tag_gen) 
+			  TagGen#(numClients, numTags, tagDepth) tag_gen) 
    (MemReadInternal#(addrWidth, dataWidth))
 
    provisos(Add#(b__, addrWidth, 64), 
@@ -161,7 +161,7 @@ module mkMemReadInternal#(Integer id,
    
    FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkSizedFIFO(1);
-   Vector#(numTags, FIFO#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(4));
+   Vector#(numTags, FIFO#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(valueOf(tagDepth)));
    Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
    Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
@@ -280,7 +280,7 @@ endmodule
 module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
 			   DmaIndication dmaIndication, 
 			   Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
-			   TagGen#(numClients, numTags) tag_gen)
+			   TagGen#(numClients, numTags, tagDepth) tag_gen)
    (MemWriteInternal#(addrWidth, dataWidth))
    
    provisos(Add#(b__, addrWidth, 64), 
@@ -295,8 +295,8 @@ module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) wr
    
    FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(1);
    FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkSizedFIFO(1);
-   FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedFIFO(32);
-   Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedFIFO(4));
+   FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedFIFO(32); // Is this the right size?? (mdk)
+   Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedFIFO(valueOf(tagDepth)));
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
    Reg#(Bit#(64)) beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
