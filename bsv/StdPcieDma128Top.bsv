@@ -29,7 +29,7 @@ import Top               :: *;
 import PcieTop           :: *;
 
 (* synthesize *)
-module mkSynthesizeablePortalTop(PortalTop#(40, 128, Empty));
+module mkSynthesizeablePortalTop(PortalTop#(40, 128, Empty, 1));
    let top <- mkPortalTop();
    interface ctrl = top.ctrl;
    interface read_client = top.read_client;
