@@ -17,7 +17,6 @@ import ImageCaptureIndicationProxy::*;
 import ImageCaptureRequestWrapper::*;
 import ImageonSerdesIndicationProxy::*;
 import HdmiInternalIndicationProxy::*;
-//import ImageCaptureRequestInternal::*;
 import ImageonSerdesRequestWrapper::*;
 import HdmiInternalRequestWrapper::*;
 import ImageonSensorRequestWrapper::*;
@@ -28,7 +27,7 @@ import FrequencyCounter::*;
 import ImageCapture::*;
 import GetPut::*;
 import Connectable :: *;
-import PCIE :: *; // ConnectableWithClocks
+//import PCIE :: *; // ConnectableWithClocks
 import Clocks :: *;
 import XbsvSpi :: *;
 
@@ -48,10 +47,9 @@ typedef enum { ImageCapture, ImageonSerdesRequest, HdmiInternalRequest, ImageonS
 interface ImageCapturePins;
    interface SpiPins spi;
    interface ImageonSensorPins pins;
-   //interface ImageonTopPins toppins;
    interface ImageonSerdesPins serpins;
    interface HDMI hdmi;
-   //method Bit#(1) i2c_mux_reset_n();
+   method Bit#(1) i2c_mux_reset_n();
 endinterface
 
 module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageCapturePins,0));
@@ -62,8 +60,6 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    ImageCaptureIndicationProxy captureIndicationProxy <- mkImageCaptureIndicationProxy(ImageCaptureIndication);
    ImageonSerdesIndicationProxy serdesIndicationProxy <- mkImageonSerdesIndicationProxy(ImageonSerdesIndication);
    HdmiInternalIndicationProxy hdmiIndicationProxy <- mkHdmiInternalIndicationProxy(HdmiInternalIndication);
-
-   //ImageCaptureRequest captureRequestInternal <- mkImageCaptureRequest(captureIndicationProxy.ifc);
 
    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200);
    ClockGenerator7AdvParams clockParams = defaultValue;
@@ -87,23 +83,23 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    Clock hdmi_clock <- mkClockBUFG(clocked_by clockGen.clkout0);    // 148.5   MHz
    Clock imageon_clock <- mkClockBUFG(clocked_by clockGen.clkout1); //  37.125 MHz
 
-    Reset fmc_imageon_reset <- mkAsyncReset(2, defaultReset, fmc_imageon_clk1);
-    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
-    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
-    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
+   Reset fmc_imageon_reset <- mkAsyncReset(2, defaultReset, fmc_imageon_clk1);
+   Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
+   Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
+   SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
 
-    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
-				clocked_by imageon_clock, reset_by imageon_reset);
-    SPI#(Bit#(26)) spiController <- mkSPI(1000);
-    HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
-        vsyncPulse, hdmiIndicationProxy.ifc, clocked_by hdmi_clock, reset_by hdmi_reset);
-    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
-        hdmiGen.control, hdmi_clock, hdmi_reset, clocked_by imageon_clock, reset_by imageon_reset);
+   ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
+			clocked_by imageon_clock, reset_by imageon_reset);
+   SPI#(Bit#(26)) spiController <- mkSPI(1000);
+   HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
+       vsyncPulse, hdmiIndicationProxy.ifc, clocked_by hdmi_clock, reset_by hdmi_reset);
+   ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
+       hdmiGen.control, hdmi_clock, hdmi_reset, clocked_by imageon_clock, reset_by imageon_reset);
 
-    rule spiControllerResponse;
-        Bit#(26) v <- spiController.response.get();
+   rule spiControllerResponse;
+       Bit#(26) v <- spiController.response.get();
        captureIndicationProxy.ifc.spi_response(extend(v));
-    endrule
+   endrule
 
    Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0);
    FrequencyCounter axiFreqCounter <- mkFrequencyCounter(defaultClock, defaultReset);
@@ -182,7 +178,6 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
 
     rule xsviConnection;
         let xsvi <- fromSensor.get_data();
-        //bsi.dataIn(extend(pack(xsvi)), extend(pack(xsvi)));
         Bit#(32) pixel = {8'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
         hdmiGen.request.put(pixel);
     endrule
@@ -210,7 +205,7 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
        interface ImageonSensorPins pins = fromSensor.pins;
        interface ImageonSerdesPins serpins = serdes.pins;
        interface HDMI hdmi = hdmiGen.hdmi;
-       //method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
+       method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
    endinterface
 
 endmodule : mkPortalTop
