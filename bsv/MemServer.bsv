@@ -92,7 +92,7 @@ module mkMemServer#(DmaIndication dmaIndication,
 	    Add#(i__, TLog#(nrc), 6),
 	    Div#(numWriteClients, nMasters, nwc),
 	    Mul#(nwc, nMasters, numWriteClients),
-	    Add#(i__, TLog#(nwc), 6));
+	    Add#(j__, TLog#(nwc), 6));
    
    Vector#(nMasters,TagGen#(nwc,nwc,8)) writeTagGens <- replicateM(mkTagGenIO);
    Vector#(nMasters,TagGen#(nrc,nrc,8)) readTagGens  <- replicateM(mkTagGenIO);
@@ -163,7 +163,7 @@ module mkMemServerOO#(DmaIndication dmaIndication,
 	    Add#(i__, TLog#(nrc), 6),
 	    Div#(numWriteClients, nMasters, nwc),
 	    Mul#(nwc, nMasters, numWriteClients),
-	    Add#(i__, TLog#(nwc), 6));
+	    Add#(j__, TLog#(nwc), 6));
 
 
    Vector#(nMasters,TagGen#(nwc,4,2)) writeTagGens <- replicateM(mkTagGenOO);
