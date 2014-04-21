@@ -677,14 +677,14 @@ interface B2C;
     method Action inputclock(Bit#(1) v);
     method Action inputreset(Bit#(1) v);
 endinterface
-import "BVI" B2C =
+import "BVI" CONNECTNET2 =
 module mkB2C(B2C);
     default_clock no_clock;
     default_reset no_reset;
-    output_clock c(C);
-    output_reset r(R);
-    method inputclock(BC) enable((*inhigh*) en_inputclock) clocked_by(c);
-    method inputreset(BR) enable((*inhigh*) en_inputreset) clocked_by(c);
+    output_clock c(OUT1);
+    output_reset r(OUT2);
+    method inputclock(IN1) enable((*inhigh*) en_inputclock) clocked_by(c);
+    method inputreset(IN2) enable((*inhigh*) en_inputreset) clocked_by(c);
     schedule ( inputclock, inputreset) CF ( inputclock, inputreset);
 endmodule
 
