@@ -38,7 +38,6 @@ import HDMI::*;
 import Imageon::*;
 import ConnectableWithTrace::*;
 import CtrlMux::*;
-//import TriState::*;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
