@@ -32,6 +32,11 @@ import BRAMFIFOFLevel::*;
 import GetPut::*;
 import Dma::*;
 
+function ObjectReadClient#(dataWidth) orc(DmaReadBuffer#(dataWidth,bufferDepth) rb) = rb.dmaClient;
+function ObjectWriteClient#(dataWidth) owc(DmaWriteBuffer#(dataWidth,bufferDepth) wb) = wb.dmaClient;
+function ObjectReadServer#(dataWidth) ors(DmaReadBuffer#(dataWidth,bufferDepth) rb) = rb.dmaServer;
+function ObjectWriteServer#(dataWidth) ows(DmaWriteBuffer#(dataWidth,bufferDepth) wb) = wb.dmaServer;
+
 //
 // @brief A buffer for reading from a bus of width dataWidth.
 //
@@ -53,6 +58,8 @@ interface DmaWriteBuffer#(numeric type dataWidth, numeric type bufferDepth);
    interface ObjectWriteServer#(dataWidth) dmaServer;
    interface ObjectWriteClient#(dataWidth) dmaClient;
 endinterface
+
+
 
 //
 // @brief Makes a Dma buffer for reading wordSize words from memory.
