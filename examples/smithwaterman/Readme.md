@@ -90,17 +90,17 @@ expresses matrix values as functions of "earlier" values.
 
     C[i][j] = min (
         D[i][j],
-	I[i][j],
-	C[i-1][j-1] + w(a[i], b[j]))
+    	I[i][j],
+        C[i-1][j-1] + w(a[i], b[j]))
 
     D[i][j] = min(
         D[i-1][j] + h,          // extend an old gap
-	C[i-1][j] + g + h)      // start a new gap
+        C[i-1][j] + g + h)      // start a new gap
 
 
     I[i][j] = min(
         I[i][j-1] + h,          // extend an old gap
-	C[i][j-1] + g + h)	// start a new gap
+        C[i][j-1] + g + h)	// start a new gap
 
 The Gotoh version of Smith-Waterman does exactly this, building the full
 C, D, and I matrices.
@@ -154,7 +154,17 @@ min over j (CC[j] + RR[N-j], DD[j] + SS[N-j] -g)
 Given the split points i and j, we can run step 3, to solve the prefix
 and suffix problems recursively.
 
-Below the top level of the recursion, it may be necessary to coalesce gaps at either the beginning or end of the string, and for this reason, additional parameters are passed in to control this accounting.
+Below the top level of the recursion, it may be necessary to coalesce
+gaps at either the beginning or end of the string, and for this
+reason, additional parameters are passed in to control this
+accounting.
 
-def gotohc(A, B, tb, te):
-...
+    def gotohc(A, B, tb, te):
+    ...
+
+In order to make the python version more like the eventual hardware
+version, we also pass in sa and sb,  the starting indices in A and B,
+and m and n, the lengths of the active substrings in A and B.
+ 
+    def gotohc(A, B, sa, sb, m, n, tb, te):
+    ...
