@@ -1,7 +1,28 @@
+// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use, copy,
+// modify, merge, publish, distribute, sublicense, and/or sell copies
+// of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 // bsv libraries
 import Vector::*;
 import FIFO::*;
-import Connectable::*;
 import DefaultValue::*;
 
 // portz libraries
@@ -27,11 +48,9 @@ import FrequencyCounter::*;
 import ImageCapture::*;
 import GetPut::*;
 import Connectable :: *;
-//import PCIE :: *; // ConnectableWithClocks
 import Clocks :: *;
 import XbsvSpi :: *;
 
-import GetPutWithClocks :: *;
 import Imageon::*;
 import IserdesDatadeser::*;
 import HDMI::*;
@@ -55,12 +74,6 @@ endinterface
 module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageCapturePins,0));
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
-
-   // instantiate user portals
-   ImageCaptureIndicationProxy captureIndicationProxy <- mkImageCaptureIndicationProxy(ImageCaptureIndication);
-   ImageonSerdesIndicationProxy serdesIndicationProxy <- mkImageonSerdesIndicationProxy(ImageonSerdesIndication);
-   HdmiInternalIndicationProxy hdmiIndicationProxy <- mkHdmiInternalIndicationProxy(HdmiInternalIndication);
-
    IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200);
    ClockGenerator7AdvParams clockParams = defaultValue;
    clockParams.bandwidth          = "OPTIMIZED";
@@ -86,44 +99,30 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    Reset fmc_imageon_reset <- mkAsyncReset(2, defaultReset, fmc_imageon_clk1);
    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
+   SPI#(Bit#(26)) spiController <- mkSPI(1000);
    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
+   Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0);
 
+   // instantiate user portals
+   ImageonSerdesIndicationProxy serdesIndicationProxy <- mkImageonSerdesIndicationProxy(ImageonSerdesIndication);
    ISerdes serdes <- mkISerdes(defaultClock, defaultReset, serdesIndicationProxy.ifc,
 			clocked_by imageon_clock, reset_by imageon_reset);
-   SPI#(Bit#(26)) spiController <- mkSPI(1000);
+   ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequest,serdes.control);
+
+   HdmiInternalIndicationProxy hdmiIndicationProxy <- mkHdmiInternalIndicationProxy(HdmiInternalIndication);
    HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
        vsyncPulse, hdmiIndicationProxy.ifc, clocked_by hdmi_clock, reset_by hdmi_reset);
+   HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiGen.control);
+
    ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
        hdmiGen.control, hdmi_clock, hdmi_reset, clocked_by imageon_clock, reset_by imageon_reset);
+   ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequest,fromSensor.control);
 
-   rule spiControllerResponse;
-       Bit#(26) v <- spiController.response.get();
-       captureIndicationProxy.ifc.spi_response(extend(v));
-   endrule
-
-   Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0);
+   ImageCaptureIndicationProxy captureIndicationProxy <- mkImageCaptureIndicationProxy(ImageCaptureIndication);
    FrequencyCounter axiFreqCounter <- mkFrequencyCounter(defaultClock, defaultReset);
    FrequencyCounter hdmiFreqCounter <- mkFrequencyCounter(hdmi_clock, hdmi_reset);
    FrequencyCounter imageonFreqCounter <- mkFrequencyCounter(imageon_clock, imageon_reset);
    FrequencyCounter fmcFreqCounter <- mkFrequencyCounter(fmc_imageon_clk1, fmc_imageon_reset);
-
-   rule gotAxiClockPeriod;
-      let cycles <- axiFreqCounter.elapsedCycles();
-      captureIndicationProxy.ifc.axi_clock_period(cycles);
-   endrule
-   rule gotHdmiClockPeriod;
-      let cycles <- hdmiFreqCounter.elapsedCycles();
-      captureIndicationProxy.ifc.hdmi_clock_period(cycles);
-   endrule
-   rule gotImageonClockPeriod;
-      let cycles <- imageonFreqCounter.elapsedCycles();
-      captureIndicationProxy.ifc.imageon_clock_period(cycles);
-   endrule
-   rule gotFmcClockPeriod;
-      let cycles <- fmcFreqCounter.elapsedCycles();
-      captureIndicationProxy.ifc.fmc_clock_period(cycles);
-   endrule
-
    ImageCaptureRequest imageCaptureRequest = (interface ImageCaptureRequest;
       method Action get_debugind();
          captureIndicationProxy.ifc.debugind(fromSensor.control.get_debugind());
@@ -147,11 +146,29 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
          fmcFreqCounter.start(cycles_100mhz);
       endmethod
       endinterface);
+   ImageCaptureRequestWrapper captureRequestWrapper <- mkImageCaptureRequestWrapper(ImageCapture, imageCaptureRequest);
 
-    ImageCaptureRequestWrapper captureRequestWrapper <- mkImageCaptureRequestWrapper(ImageCapture, imageCaptureRequest);
-    ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequest,serdes.control);
-    HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiGen.control);
-    ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequest,fromSensor.control);
+   rule spiControllerResponse;
+       Bit#(26) v <- spiController.response.get();
+       captureIndicationProxy.ifc.spi_response(extend(v));
+   endrule
+
+   rule gotAxiClockPeriod;
+      let cycles <- axiFreqCounter.elapsedCycles();
+      captureIndicationProxy.ifc.axi_clock_period(cycles);
+   endrule
+   rule gotHdmiClockPeriod;
+      let cycles <- hdmiFreqCounter.elapsedCycles();
+      captureIndicationProxy.ifc.hdmi_clock_period(cycles);
+   endrule
+   rule gotImageonClockPeriod;
+      let cycles <- imageonFreqCounter.elapsedCycles();
+      captureIndicationProxy.ifc.imageon_clock_period(cycles);
+   endrule
+   rule gotFmcClockPeriod;
+      let cycles <- fmcFreqCounter.elapsedCycles();
+      captureIndicationProxy.ifc.fmc_clock_period(cycles);
+   endrule
 
    Reg#(Bool) frameStart <- mkReg(False, clocked_by imageon_clock, reset_by imageon_reset);
    Reg#(Bit#(32)) frameCount <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
@@ -176,11 +193,11 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
       captureIndicationProxy.ifc.frameStart(monitor, count);
    endrule
 
-    rule xsviConnection;
-        let xsvi <- fromSensor.get_data();
-        Bit#(32) pixel = {8'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
-        hdmiGen.request.put(pixel);
-    endrule
+   rule xsviConnection;
+       let xsvi <- fromSensor.get_data();
+       Bit#(32) pixel = {8'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
+       hdmiGen.request.put(pixel);
+   endrule
    
    Vector#(7,StdPortal) portals;
    portals[0] = captureRequestWrapper.portalIfc;
