@@ -38,6 +38,7 @@ interface ImageonSensorPins;
     method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
     method Action io_vita_monitor(Bit#(2) v);
     interface SpiPins spi;
+    method Bit#(1) i2c_mux_reset_n();
     interface Clock clock_if;
     interface Reset reset_if;
 endinterface
@@ -47,6 +48,7 @@ interface ImageonSensorRequest;
     method Action set_host_oe(Bit#(1) v);
     method Action set_trigger_cnt_trigger(Bit#(32) v);
     method Action put_spi_request(Bit#(32) v);
+    method Action set_i2c_mux_reset_n(Bit#(1) v);
 endinterface
 
 interface ImageonSensorIndication;
@@ -100,6 +102,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(serdes.reset(), imageon_oe);
     Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset);
     SPI#(Bit#(26)) spiController <- mkSPI(1000, clocked_by axi_clock, reset_by axi_reset);
+    Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
 
     rule pll_rule;
         poutq <= pll_out.q();
@@ -161,6 +164,9 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
         method Action put_spi_request(Bit#(32) v);
             spiController.request.put(truncate(v));
         endmethod
+        method Action set_i2c_mux_reset_n(Bit#(1) v);
+            i2c_mux_reset_n_reg <= v;
+        endmethod
     endinterface: control
     method ActionValue#(Bit#(10)) get_data();
         dataGearbox.deq;
@@ -179,10 +185,11 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
         method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
             return vita_trigger_wire;
         endmethod
-       method Action io_vita_monitor(Bit#(2) v);
-	  monitor_wires <= v;
-       endmethod
-       interface SpiPins spi = spiController.pins;
+        method Action io_vita_monitor(Bit#(2) v);
+	    monitor_wires <= v;
+        endmethod
+        method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
+        interface SpiPins spi = spiController.pins;
         interface clock_if = defaultClock;
         interface reset_if = defaultReset;
     endinterface

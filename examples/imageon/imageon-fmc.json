@@ -120,7 +120,7 @@
 	"PIO_DIRECTION": "INPUT",
 	"fmc": "CLK0_M2C_p"
     },
-    "i2c_mux_reset_n": {
+    "pins_i2c_mux_reset_n": {
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA01_n_CC"
     },
