@@ -2,6 +2,7 @@
 #include "ImageCaptureRequestProxy.h"
 #include "ImageCaptureIndicationWrapper.h"
 #include "ImageonSensorRequestProxy.h"
+#include "ImageonSensorIndicationWrapper.h"
 #include "ImageonSerdesRequestProxy.h"
 #include "ImageonSerdesIndicationWrapper.h"
 #include "HdmiInternalRequestProxy.h"
@@ -50,14 +51,19 @@ public:
     }
 };
 
-class ImageCaptureIndication : public ImageCaptureIndicationWrapper {
+class ImageonSensorIndication : public ImageonSensorIndicationWrapper {
 public:
-    ImageCaptureIndication(int id, PortalPoller *poller = 0) : ImageCaptureIndicationWrapper(id, poller) {}
+    ImageonSensorIndication(int id, PortalPoller *poller = 0) : ImageonSensorIndicationWrapper(id, poller) {}
     void spi_response(uint32_t v){
       //fprintf(stderr, "spi_response: %x\n", v);
       cv_spi_response = v;
       sem_post(&sem_spi_response);
     }
+};
+
+class ImageCaptureIndication : public ImageCaptureIndicationWrapper {
+public:
+    ImageCaptureIndication(int id, PortalPoller *poller = 0) : ImageCaptureIndicationWrapper(id, poller) {}
     void debugind(uint32_t v) {
 printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
     }
@@ -219,7 +225,7 @@ static uint32_t spi_transfer (uint32_t v)
 {
     if (trace_spi)
         printf("SPITRANSFER: %x\n", v);
-    device->put_spi_request(v);
+    sensordevice->put_spi_request(v);
     sem_wait(&sem_spi_response);
     return cv_spi_response;
 }
@@ -452,6 +458,7 @@ int main(int argc, const char **argv)
     
     ImageCaptureIndicationWrapper *imageCaptureIndication = new ImageCaptureIndication(IfcNames_ImageCaptureIndication);
     ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndication);
+    ImageonSensorIndicationWrapper *imageonSensorIndication = new ImageonSensorIndication(IfcNames_ImageonSensorIndication);
     HdmiInternalIndicationWrapper *hdmiIndication = new HdmiInternalIndication(IfcNames_HdmiInternalIndication, hdmidevice);
 
     // for surfaceflinger 

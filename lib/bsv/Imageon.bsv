@@ -22,6 +22,7 @@
 // SOFTWARE.
 
 import Vector::*;
+import GetPut::*;
 import Gearbox::*;
 import Clocks::*;
 import IserdesDatadeser::*;
@@ -36,6 +37,7 @@ interface ImageonSensorPins;
     method Bit#(1) io_vita_reset_n();
     method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
     method Action io_vita_monitor(Bit#(2) v);
+    interface SpiPins spi;
     interface Clock clock_if;
     interface Reset reset_if;
 endinterface
@@ -44,6 +46,11 @@ interface ImageonSensorRequest;
     method Bit#(32) get_debugind();
     method Action set_host_oe(Bit#(1) v);
     method Action set_trigger_cnt_trigger(Bit#(32) v);
+    method Action put_spi_request(Bit#(32) v);
+endinterface
+
+interface ImageonSensorIndication;
+    method Action spi_response(Bit#(32) v);
 endinterface
 
 interface ImageonSensor;
@@ -67,7 +74,7 @@ interface ImageonVita;
 endinterface
 
 module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Bool send_trigger,
-        HdmiInternalRequest hdmicontrol, Clock hdmi_clock, Reset hdmi_reset)(ImageonSensor);
+        Clock hdmi_clock, Reset hdmi_reset, ImageonSensorIndication indication)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
 
@@ -92,6 +99,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     vita_trigger_wire[0] <- mkOBUFT(trigger_active, imageon_oe);
     ReadOnly#(Bit#(1)) vita_reset_n_wire <- mkOBUFT(serdes.reset(), imageon_oe);
     Gearbox#(4, 1, Bit#(10)) dataGearbox <- mkNto1Gearbox(defaultClock, defaultReset, hdmi_clock, hdmi_reset);
+    SPI#(Bit#(26)) spiController <- mkSPI(1000, clocked_by axi_clock, reset_by axi_reset);
 
     rule pll_rule;
         poutq <= pll_out.q();
@@ -135,6 +143,11 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
             remapkernel_reg <= 0;
     endrule
 
+    rule spiControllerResponse;
+        Bit#(26) v <- spiController.response.get();
+        indication.spi_response(extend(v));
+    endrule
+
     interface ImageonSensorRequest control;
         method Bit#(32) get_debugind();
             return 0;
@@ -145,14 +158,17 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 	method Action set_trigger_cnt_trigger(Bit#(32) v);
 	    trigger_cnt_trigger_reg <= v;
 	endmethod
+        method Action put_spi_request(Bit#(32) v);
+            spiController.request.put(truncate(v));
+        endmethod
     endinterface: control
     method ActionValue#(Bit#(10)) get_data();
         dataGearbox.deq;
         return dataGearbox.first[0];
     endmethod
-   method Bit#(2) monitor();
-      return monitor_wires;
-   endmethod
+    method Bit#(2) monitor();
+        return monitor_wires;
+    endmethod
     interface ImageonSensorPins pins;
         method Bit#(1) io_vita_clk_pll();
             return vita_clk_pll;
@@ -166,6 +182,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
        method Action io_vita_monitor(Bit#(2) v);
 	  monitor_wires <= v;
        endmethod
+       interface SpiPins spi = spiController.pins;
         interface clock_if = defaultClock;
         interface reset_if = defaultReset;
     endinterface

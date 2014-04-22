@@ -22,7 +22,6 @@
 
 interface ImageCaptureIndication;
     method Action debugind(Bit#(32) v);
-    method Action spi_response(Bit#(32) v);
     method Action axi_clock_period(Bit#(32) hdmi_cycles);
     method Action hdmi_clock_period(Bit#(32) hdmi_cycles);
     method Action imageon_clock_period(Bit#(32) imageon_cycles);
@@ -33,7 +32,6 @@ endinterface
 interface ImageCaptureRequest;
     method Action set_debugreq(Bit#(32) v);
     method Action get_debugind();
-    method Action put_spi_request(Bit#(32) v);
     method Action set_i2c_mux_reset_n(Bit#(1) v);
     method Action measure_axi_clock_period(Bit#(32) cycles_100mhz);
     method Action measure_hdmi_clock_period(Bit#(32) cycles_100mhz);

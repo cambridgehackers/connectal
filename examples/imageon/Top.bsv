@@ -41,6 +41,7 @@ import ImageonSerdesRequestWrapper::*;
 import HdmiInternalIndicationProxy::*;
 import HdmiInternalRequestWrapper::*;
 import ImageonSensorRequestWrapper::*;
+import ImageonSensorIndicationProxy::*;
 
 // defined by user
 import FrequencyCounter::*;
@@ -48,7 +49,6 @@ import ImageCapture::*;
 import GetPut::*;
 import Connectable :: *;
 import Clocks :: *;
-import XbsvSpi :: *;
 
 import Imageon::*;
 import IserdesDatadeser::*;
@@ -56,14 +56,12 @@ import HDMI::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 import YUV::*;
-//import PS7LIB :: *;
 import Imageon :: *;
 
-typedef enum { ImageCapture, ImageonSerdesRequest, HdmiInternalRequest, ImageonSensorRequest,
-    ImageCaptureIndication, ImageonSerdesIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
+typedef enum { ImageCapture, ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest,
+    ImageCaptureIndication, ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
 
 interface ImageCapturePins;
-   interface SpiPins spi;
    interface ImageonSensorPins pins;
    interface ImageonSerdesPins serpins;
    interface HDMI hdmi;
@@ -98,7 +96,6 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    Reset fmc_imageon_reset <- mkAsyncReset(2, defaultReset, fmc_imageon_clk1);
    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
-   SPI#(Bit#(26)) spiController <- mkSPI(1000);
    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
    Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0);
 
@@ -109,16 +106,17 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
 			clocked_by imageon_clock, reset_by imageon_reset);
    ImageonSerdesRequestWrapper serdesRequestWrapper <- mkImageonSerdesRequestWrapper(ImageonSerdesRequest,serdes.control);
 
+   // fromSensor: sensor specific processing of serdes input, resulting in pixels
+   ImageonSensorIndicationProxy sensorIndicationProxy <- mkImageonSensorIndicationProxy(ImageonSensorIndication);
+   ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
+       hdmi_clock, hdmi_reset, sensorIndicationProxy.ifc, clocked_by imageon_clock, reset_by imageon_reset);
+   ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequest,fromSensor.control);
+
    // hdmi: output to display
    HdmiInternalIndicationProxy hdmiIndicationProxy <- mkHdmiInternalIndicationProxy(HdmiInternalIndication);
    HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
        vsyncPulse, hdmiIndicationProxy.ifc, clocked_by hdmi_clock, reset_by hdmi_reset);
    HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiGen.control);
-
-   // fromSensor: sensor specific processing of serdes input, resulting in pixels
-   ImageonSensor fromSensor <- mkImageonSensor(defaultClock, defaultReset, serdes.data, vsyncPulse.pulse(),
-       hdmiGen.control, hdmi_clock, hdmi_reset, clocked_by imageon_clock, reset_by imageon_reset);
-   ImageonSensorRequestWrapper sensorRequestWrapper <- mkImageonSensorRequestWrapper(ImageonSensorRequest,fromSensor.control);
 
    ImageCaptureIndicationProxy captureIndicationProxy <- mkImageCaptureIndicationProxy(ImageCaptureIndication);
    FrequencyCounter axiFreqCounter <- mkFrequencyCounter(defaultClock, defaultReset);
@@ -128,9 +126,6 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    ImageCaptureRequest imageCaptureRequest = (interface ImageCaptureRequest;
       method Action get_debugind();
          captureIndicationProxy.ifc.debugind(fromSensor.control.get_debugind());
-      endmethod
-      method Action put_spi_request(Bit#(32) v);
-         spiController.request.put(truncate(v));
       endmethod
       method Action set_i2c_mux_reset_n(Bit#(1) v);
 	 i2c_mux_reset_n_reg <= v;
@@ -149,11 +144,6 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
       endmethod
       endinterface);
    ImageCaptureRequestWrapper captureRequestWrapper <- mkImageCaptureRequestWrapper(ImageCapture, imageCaptureRequest);
-
-   rule spiControllerResponse;
-       Bit#(26) v <- spiController.response.get();
-       captureIndicationProxy.ifc.spi_response(extend(v));
-   endrule
 
    rule gotAxiClockPeriod;
       let cycles <- axiFreqCounter.elapsedCycles();
@@ -202,7 +192,7 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
        hdmiGen.request.put(pixel);
    endrule
    
-   Vector#(7,StdPortal) portals;
+   Vector#(8,StdPortal) portals;
    portals[0] = captureRequestWrapper.portalIfc;
    portals[1] = captureIndicationProxy.portalIfc;
    portals[2] = serdesRequestWrapper.portalIfc; 
@@ -210,6 +200,7 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    portals[4] = hdmiRequestWrapper.portalIfc; 
    portals[5] = hdmiIndicationProxy.portalIfc; 
    portals[6] = sensorRequestWrapper.portalIfc; 
+   portals[7] = sensorIndicationProxy.portalIfc; 
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);
@@ -221,7 +212,6 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
    //interface leds = captureRequestInternal.leds;
 
    interface ImageCapturePins pins;
-       interface SpiPins spi = spiController.pins;
        interface ImageonSensorPins pins = fromSensor.pins;
        interface ImageonSerdesPins serpins = serdes.pins;
        interface HDMI hdmi = hdmiGen.hdmi;
