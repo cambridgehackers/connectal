@@ -73,7 +73,10 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (Memwrite
       interface Get writeReq;
 	 method ActionValue#(ObjectRequest) get() if (off < reqLen);
 	    off <= off + extend(burstLen);
-	    return ObjectRequest {pointer: pointer, offset: extend(off)+base, burstLen: burstLen, tag: 0};
+	    let bl = burstLen;
+	    if (off + extend(burstLen) > reqLen)
+	       bl = truncate(reqLen - off);
+	    return ObjectRequest {pointer: pointer, offset: extend(off)+base, burstLen: bl, tag: 0};
 	 endmethod
       endinterface
       interface Get writeData;
@@ -86,7 +89,7 @@ module mkMemwriteEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (Memwrite
 	 method Action put(Bit#(6) tag);
 	    let wl = tpl_1(wf.first);
 	    let bl = tpl_2(wf.first);
-	    if (respCnt+extend(bl) == wl) begin
+	    if (respCnt+extend(bl) >= wl) begin
 	       ff.enq(True);
 	       respCnt <= 0;
 	       wf.deq;

@@ -75,7 +75,10 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (MemreadEn
 	 method ActionValue#(ObjectRequest) get() if (off < reqLen);
 	    //$display("mkMemreadEngine.dmaClient.readReq: %d %h %h", pointer, extend(off)+base, burstLen);
 	    off <= off + extend(burstLen);
-	    return ObjectRequest { pointer: pointer, offset: extend(off)+base, burstLen: burstLen, tag: 0 };
+	    let bl = burstLen;
+	    if (off + extend(burstLen) > reqLen)
+	       bl = truncate(reqLen - off);
+	    return ObjectRequest { pointer: pointer, offset: extend(off)+base, burstLen: bl, tag: 0 };
 	 endmethod
       endinterface
       interface Put readData;
