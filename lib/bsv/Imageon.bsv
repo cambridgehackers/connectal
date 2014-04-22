@@ -141,7 +141,6 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 	endmethod
 	method Action set_host_oe(Bit#(1) v);
 	    imageon_oe <= ~v;
-            hdmicontrol.setTestPattern(0);
 	endmethod
 	method Action set_trigger_cnt_trigger(Bit#(32) v);
 	    trigger_cnt_trigger_reg <= v;

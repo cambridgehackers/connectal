@@ -409,6 +409,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     //ret = fmc_iic_axi_init(uBaseAddr_IIC_FmcImageon);
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 2);
     sensordevice->set_host_oe(1);
+    hdmidevice->setTestPattern(0);
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     init_i2c_camera();
