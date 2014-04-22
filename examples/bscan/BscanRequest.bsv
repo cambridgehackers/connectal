@@ -41,7 +41,7 @@ module mkBscanRequest#(BscanIndication indication)(BscanRequest);
 
    Reg#(Bit#(8)) addrReg <- mkReg(0);
 
-   BscanBram#(Bit#(8),Bit#(32)) bscanBram <- mkBscanBram(1, 256, addrReg);
+   BscanBram#(Bit#(8),Bit#(32)) bscanBram <- mkBscanBram(1, addrReg);
    //let bscan <- mkBscan(3);
 
     //rule bscanGetRule1;

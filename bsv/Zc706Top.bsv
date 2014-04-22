@@ -26,7 +26,6 @@ import Connectable       :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
-import AxiMasterSlave    :: *;
 import XbsvXilinxCells   :: *;
 import PS7LIB::*;
 import PPS7LIB::*;
@@ -34,6 +33,8 @@ import XADC::*;
 import FIFOF::*;
 import ConnectableWithTrace::*;
 import CtrlMux::*;
+import AxiMasterSlave    :: *;
+import AxiDma            :: *;
 
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
@@ -48,17 +49,36 @@ interface ZynqTop#(type pins);
    interface Reset unused_reset;
 endinterface
 
-typedef (function Module#(PortalTop#(32, 64, ipins)) mkpt()) MkPortalTop#(type ipins);
+typedef (function Module#(PortalTop#(32, 64, ipins, nMasters)) mkpt()) MkPortalTop#(type ipins, numeric type nMasters);
 
-module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
+module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(ZynqTop#(ipins))
+   provisos(Add#(a__,nMasters,4));
+
    PS7 ps7 <- mkPS7();
    Clock mainclock = ps7.fclkclk[0];
    Reset mainreset = ps7.fclkreset[0];
 
    let top <- constructor(clocked_by mainclock, reset_by mainreset);
    
-   mkConnection(ps7.m_axi_gp[0].client, top.ctrl, clocked_by mainclock, reset_by mainreset);
-   mkConnectionWithTrace(top.m_axi, ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
+   Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
+   mkConnection(ps7.m_axi_gp[0].client, ctrl, clocked_by mainclock, reset_by mainreset);
+   Vector#(nMasters,Axi3Master#(32,64,6)) m_axis;   
+   if(valueOf(nMasters) > 0) begin
+      m_axis[0] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[0]);
+      mkConnectionWithTrace(m_axis[0], ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
+   end
+   if(valueOf(nMasters) > 1) begin
+      m_axis[1] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[1]);
+      mkConnection(m_axis[1], ps7.s_axi_hp[1].axi.server, clocked_by mainclock, reset_by mainreset);
+   end
+   if(valueOf(nMasters) > 2) begin
+      m_axis[2] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[2]);
+      mkConnection(m_axis[2], ps7.s_axi_hp[2].axi.server, clocked_by mainclock, reset_by mainreset);
+   end   
+   if(valueOf(nMasters) > 3) begin
+      m_axis[3] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[3]);
+      mkConnection(m_axis[3], ps7.s_axi_hp[3].axi.server, clocked_by mainclock, reset_by mainreset);
+   end
    
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;

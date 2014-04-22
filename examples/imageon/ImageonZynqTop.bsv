@@ -38,15 +38,11 @@ import HDMI::*;
 import Imageon::*;
 import ConnectableWithTrace::*;
 import CtrlMux::*;
-//import TriState::*;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
    interface Inout#(Bit#(1)) sda;
 endinterface
-
-//`define TRACE_AXI
-//`define AXI_READ_TIMING
 
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);

@@ -54,43 +54,27 @@ typedef struct {
    } ObjectData#(numeric type dsz) deriving (Bits);
 typedef ObjectData#(dsz) MemData#(numeric type dsz);
 
-typedef enum {CompleteBursts} CompleteBursts;
-typedef enum {IncompleteBursts} IncompleteBursts;
-
-typeclass DmaDescriptor#(type a);
-endtypeclass
-
-instance DmaDescriptor#(CompleteBursts);
-endinstance
-
-instance DmaDescriptor#(IncompleteBursts);
-endinstance
-
 ///////////////////////////////////////////////////////////////////////////////////
 // 
 
-typedef ObjectReadClientConfig#(CompleteBursts, dsz)  ObjectReadClient#(numeric type dsz);
-typedef ObjectWriteClientConfig#(CompleteBursts, dsz) ObjectWriteClient#(numeric type dsz);
-typedef ObjectReadServerConfig#(CompleteBursts, dsz)  ObjectReadServer#(numeric type dsz);
-typedef ObjectWriteServerConfig#(CompleteBursts, dsz) ObjectWriteServer#(numeric type dsz);
 			     
-interface ObjectReadClientConfig#(type desc, numeric type dsz);
+interface ObjectReadClient#(numeric type dsz);
    interface Get#(ObjectRequest)    readReq;
    interface Put#(ObjectData#(dsz)) readData;
 endinterface
 
-interface ObjectWriteClientConfig#(type desc, numeric type dsz);
+interface ObjectWriteClient#(numeric type dsz);
    interface Get#(ObjectRequest)    writeReq;
    interface Get#(ObjectData#(dsz)) writeData;
    interface Put#(Bit#(6))       writeDone;
 endinterface
 
-interface ObjectReadServerConfig#(type desc, numeric type dsz);
+interface ObjectReadServer#(numeric type dsz);
    interface Put#(ObjectRequest) readReq;
    interface Get#(ObjectData#(dsz))     readData;
 endinterface
 
-interface ObjectWriteServerConfig#(type desc, numeric type dsz);
+interface ObjectWriteServer#(numeric type dsz);
    interface Put#(ObjectRequest) writeReq;
    interface Put#(ObjectData#(dsz))     writeData;
    interface Get#(Bit#(6))           writeDone;
@@ -100,11 +84,6 @@ endinterface
 ///////////////////////////////////////////////////////////////////////////////////
 // 
 
-typedef MemReadClientConfig#(CompleteBursts, asz, dsz)  MemReadClient#(numeric type asz, numeric type dsz);
-typedef MemWriteClientConfig#(CompleteBursts, asz, dsz) MemWriteClient#(numeric type asz, numeric type dsz);
-typedef MemReadServerConfig#(CompleteBursts, asz, dsz)  MemReadServer#(numeric type asz, numeric type dsz);
-typedef MemWriteServerConfig#(CompleteBursts, asz, dsz) MemWriteServer#(numeric type asz, numeric type dsz);
-			     
 interface MemSlave#(numeric type addrWidth, numeric type dataWidth);
    interface MemReadServer#(addrWidth, dataWidth) read_server;
    interface MemWriteServer#(addrWidth, dataWidth) write_server; 
@@ -115,23 +94,23 @@ interface MemMaster#(numeric type addrWidth, numeric type dataWidth);
    interface MemWriteClient#(addrWidth, dataWidth) write_client; 
 endinterface
 
-interface MemReadClientConfig#(type desc, numeric type asz, numeric type dsz);
+interface MemReadClient#(numeric type asz, numeric type dsz);
    interface Get#(MemRequest#(asz))    readReq;
    interface Put#(MemData#(dsz)) readData;
 endinterface
 
-interface MemWriteClientConfig#(type desc, numeric type asz, numeric type dsz);
+interface MemWriteClient#(numeric type asz, numeric type dsz);
    interface Get#(MemRequest#(asz))    writeReq;
    interface Get#(MemData#(dsz)) writeData;
    interface Put#(Bit#(6))       writeDone;
 endinterface
 
-interface MemReadServerConfig#(type desc, numeric type asz, numeric type dsz);
+interface MemReadServer#(numeric type asz, numeric type dsz);
    interface Put#(MemRequest#(asz)) readReq;
    interface Get#(MemData#(dsz))     readData;
 endinterface
 
-interface MemWriteServerConfig#(type desc, numeric type asz, numeric type dsz);
+interface MemWriteServer#(numeric type asz, numeric type dsz);
    interface Put#(MemRequest#(asz)) writeReq;
    interface Put#(MemData#(dsz))     writeData;
    interface Get#(Bit#(6))           writeDone;
@@ -146,8 +125,8 @@ interface DmaDbg;
 endinterface
 
 
-instance Connectable#(ObjectReadClientConfig#(desc,dsz), ObjectReadServerConfig#(desc,dsz));
-   module mkConnection#(ObjectReadClientConfig#(desc,dsz) source, ObjectReadServerConfig#(desc,dsz) sink)(Empty);
+instance Connectable#(ObjectReadClient#(dsz), ObjectReadServer#(dsz));
+   module mkConnection#(ObjectReadClient#(dsz) source, ObjectReadServer#(dsz) sink)(Empty);
       rule request;
 	 let req <- source.readReq.get();
 	 sink.readReq.put(req);
@@ -159,8 +138,8 @@ instance Connectable#(ObjectReadClientConfig#(desc,dsz), ObjectReadServerConfig#
    endmodule
 endinstance
 
-instance Connectable#(ObjectWriteClientConfig#(desc,dsz), ObjectWriteServerConfig#(desc,dsz));
-   module mkConnection#(ObjectWriteClientConfig#(desc,dsz) source, ObjectWriteServerConfig#(desc,dsz) sink)(Empty);
+instance Connectable#(ObjectWriteClient#(dsz), ObjectWriteServer#(dsz));
+   module mkConnection#(ObjectWriteClient#(dsz) source, ObjectWriteServer#(dsz) sink)(Empty);
       rule request;
 	 let req <- source.writeReq.get();
 	 sink.writeReq.put(req);

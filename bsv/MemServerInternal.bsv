@@ -277,7 +277,8 @@ module mkMemReadInternal#(Integer id,
    endinterface
 endmodule
 
-module mkMemWriteInternal#(Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
+module mkMemWriteInternal#(Integer iid,
+			   Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
 			   DmaIndication dmaIndication, 
 			   Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
 			   TagGen#(numClients, numTags, tagDepth) tag_gen)

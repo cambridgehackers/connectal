@@ -316,75 +316,6 @@ module mkBUFIO#(Clock clk)(ClockGenIfc);
    path(I, O);
 endmodule
 
-interface XbsvMMCME2;
-   interface Clock     clkout0;
-   interface Clock     clkout1;
-   interface Clock     clkfbout;
-   (* always_ready, always_enabled *)
-   method    Bool      locked;
-   (* always_enabled *)
-   method    Action    clkfbin(Bit#(1) v);
-endinterface
-
-typedef struct {
-   String      bandwidth;
-   String      compensation;
-   Real        clkfbout_mult_f;
-   Real        clkfbout_phase;
-   Real        clkin1_period;
-   Real        clkin2_period;
-   Integer     divclk_divide;
-   Real        clkout0_divide_f;
-   Real        clkout0_duty_cycle;
-   Real        clkout0_phase;
-   Integer     clkout1_divide;
-   Real        clkout1_duty_cycle;
-   Real        clkout1_phase;
-   Real        ref_jitter1;
-   Real        ref_jitter2;
-} XbsvMMCMParams deriving (Bits, Eq);
-
-import "BVI" MMCM_ADV =
-module mkXbsvMMCM#(XbsvMMCMParams params)(XbsvMMCME2);
-   //Reset reset <- exposeCurrentReset;
-   //default_reset rst() = reset;
-   no_reset;
-   default_clock clk1(CLKIN1);
-   parameter BANDWIDTH            = params.bandwidth;
-   parameter COMPENSATION         = params.compensation;
-   parameter CLKFBOUT_MULT_F      = params.clkfbout_mult_f;
-   parameter CLKFBOUT_PHASE       = params.clkfbout_phase;
-   parameter CLKIN1_PERIOD        = params.clkin1_period;
-   parameter CLKIN2_PERIOD        = params.clkin2_period;
-   parameter DIVCLK_DIVIDE        = params.divclk_divide;
-   parameter CLKOUT0_DIVIDE_F     = params.clkout0_divide_f;
-   parameter CLKOUT0_DUTY_CYCLE   = params.clkout0_duty_cycle;
-   parameter CLKOUT0_PHASE        = params.clkout0_phase;
-   parameter CLKOUT1_DIVIDE       = params.clkout1_divide;
-   parameter CLKOUT1_DUTY_CYCLE   = params.clkout1_duty_cycle;
-   parameter CLKOUT1_PHASE        = params.clkout1_phase;
-   parameter REF_JITTER1          = params.ref_jitter1;
-   parameter REF_JITTER2          = params.ref_jitter2;
-   port CLKIN2       = Bit#(1)'(0);
-   port CLKINSEL     = Bit#(1)'(1);
-   port DADDR        = Bit#(7)'(0);
-   port DCLK         = Bit#(1)'(0);
-   port DEN          = Bit#(1)'(0);
-   port DI           = Bit#(16)'(0);
-   port DWE          = Bit#(1)'(0);
-   port PSCLK        = Bit#(1)'(0);
-   port PSEN         = Bit#(1)'(0);
-   port PSINCDEC     = Bit#(1)'(0);
-   port PWRDWN       = Bit#(1)'(0);
-   output_clock clkfbout(CLKFBOUT);
-   output_clock clkout0(CLKOUT0);
-   output_clock clkout1(CLKOUT1);
-   method LOCKED     locked()     clocked_by(no_clock) reset_by(no_reset);
-   method            clkfbin(CLKFBIN) enable((*inhigh*)en1);
-   schedule clkfbin C clkfbin;
-   schedule locked CF (clkfbin, locked);
-endmodule
-
 (* always_ready, always_enabled *)
 interface XbsvODDR#(type a);
    method    a            q();
@@ -429,22 +360,6 @@ module mkXbsvODDR#(ODDRParams#(a) params)(XbsvODDR#(a))
    schedule (ce, s)  CF (ce, s);
    schedule (ce, s)  SB (d1, d2, q);
 endmodule: mkXbsvODDR
-
-interface MMCMHACK;
-    interface XbsvMMCME2 mmcmadv;
-endinterface
-
-module mkMMCMHACK(MMCMHACK);
-    XbsvMMCME2 mm <- mkXbsvMMCM(XbsvMMCMParams {
-        bandwidth:"OPTIMIZED", compensation:"ZHOLD",
-        clkfbout_mult_f:8.000, clkfbout_phase:0.0,
-        clkin1_period:6.734007, clkin2_period:6.734007,
-        clkout0_divide_f:8.000, clkout0_duty_cycle:0.5, clkout0_phase:0.0000,
-        clkout1_divide:32, clkout1_duty_cycle:0.5, clkout1_phase:0.0000,
-        divclk_divide:1, ref_jitter1:0.010, ref_jitter2:0.010
-        });
-    interface XbsvMMCME2 mmcmadv = mm;
-endmodule
 
 ////////////////////////////////////////////////////////////////////////////////
 /// ClockGenerator Xilinx 7 Adv
@@ -762,14 +677,14 @@ interface B2C;
     method Action inputclock(Bit#(1) v);
     method Action inputreset(Bit#(1) v);
 endinterface
-import "BVI" B2C =
+import "BVI" CONNECTNET2 =
 module mkB2C(B2C);
     default_clock no_clock;
     default_reset no_reset;
-    output_clock c(C);
-    output_reset r(R);
-    method inputclock(BC) enable((*inhigh*) en_inputclock) clocked_by(c);
-    method inputreset(BR) enable((*inhigh*) en_inputreset) clocked_by(c);
+    output_clock c(OUT1);
+    output_reset r(OUT2);
+    method inputclock(IN1) enable((*inhigh*) en_inputclock) clocked_by(c);
+    method inputreset(IN2) enable((*inhigh*) en_inputreset) clocked_by(c);
     schedule ( inputclock, inputreset) CF ( inputclock, inputreset);
 endmodule
 

@@ -61,7 +61,9 @@ testnames = echo             \
 	    xsim-echo        \
 	    imageon          \
             bscan            \
-            memread_nobuff_4s\
+            memread_nobuff_4m\
+            memwrite_nobuff_4m\
+            memcpy_buff_4m\
 
 oo_memtests =  memcpy_buff_oo\
             memread_buff_oo  \
@@ -79,6 +81,11 @@ memtests =  memcpy_buff      \
 	    memread2         \
             echo             \
 
+
+zmemtests = memread_nobuff_4m\
+            memwrite_nobuff_4m\
+            memcpy_buff_4m\
+            memtests
 
 #################################################################################################
 # bsim
@@ -225,9 +232,25 @@ memtests.kc705.regression:
 memtests.bsim: $(addsuffix .bsim, $(memtests))
 memtests.bsim.regression:
 	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.bsim
+
 memtests.bsimrun: $(addsuffix .bsimrun, $(memtests))
 memtests.bsimrun.regression:
 	make memtests.bsimrun
+
+#################################################################################################
+# zmemtests
+
+zmemtests.zedboard: $(addsuffix .zedboard, $(zmemtests))
+zmemtests.zedboard.regression:
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu zmemtests.zedboard
+
+zmemtests.bsim: $(addsuffix .bsim, $(zmemtests))
+zmemtests.bsim.regression:
+	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu zmemtests.bsim
+
+zmemtests.bsimrun: $(addsuffix .bsimrun, $(zmemtests))
+zmemtests.bsimrun.regression:
+	make zmemtests.bsimrun
 
 #################################################################################################
 # oo_memtests
@@ -243,6 +266,7 @@ oo_memtests.kc705.regression:
 oo_memtests.bsim: $(addsuffix .bsim, $(oo_memtests))
 oo_memtests.bsim.regression:
 	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.bsim
+
 oo_memtests.bsimrun: $(addsuffix .bsimrun, $(oo_memtests))
 oo_memtests.bsimrun.regression:
 	make oo_memtests.bsimrun

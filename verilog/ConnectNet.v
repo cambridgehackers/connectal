@@ -22,19 +22,17 @@
 // SOFTWARE.
 
 
-module B2C(C, R, BC, BR);
-
-output C;
-output R;
-input BC;
-input BR;
-
-assign C = BC;
-assign R = BR;
-endmodule
-
 module CONNECTNET(IN, OUT);
 output OUT;
 input IN;
 assign OUT = IN;
+endmodule
+
+module CONNECTNET2(OUT1, OUT2, IN1, IN2);
+output OUT1;
+output OUT2;
+input IN1;
+input IN2;
+assign OUT1 = IN1;
+assign OUT2 = IN2;
 endmodule
