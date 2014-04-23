@@ -40,14 +40,14 @@ interface PipeMulTB;
 endinterface
 
 module mkPipeMulTB#(PipeMulIndication indication)(PipeMulTB);
-   PipeMul#(1,32) multiplier <- mkPipeMul;
+   PipeMul#(1,32,void) multiplier <- mkPipeMul;
    rule res;
-      let rv <- multiplier.get;
+      match {.rv, .*} <- multiplier.get;
       indication.res(pack(rv));
    endrule
    interface PipeMulRequest ifc;
       method Action mul(Bit#(32) a, Bit#(32) b);
-	 multiplier.put(unpack(a),unpack(b));
+	 multiplier.put(unpack(a),unpack(b),?);
       endmethod
    endinterface
    interface LEDS leds;

@@ -6,23 +6,24 @@ import Vector::*;
 import StmtFSM::*;
 
 
-interface PipeMul#(numeric type stages, numeric type dsz);
-   method Action put(UInt#(dsz) x, UInt#(dsz) y);
-   method ActionValue#(UInt#(dsz)) get();
+interface PipeMul#(numeric type stages, numeric type dsz, type marker);
+   method Action put(UInt#(dsz) x, UInt#(dsz) y, marker m);
+   method ActionValue#(Tuple2#(UInt#(dsz),marker)) get();
 endinterface	     
 
-module mkPipeMul(PipeMul#(stages,dsz))
+module mkPipeMul(PipeMul#(stages,dsz,marker))
    provisos(Mul#(2,dsz,buff_width),
-	    Add#(a__,dsz,buff_width));
+	    Add#(a__,dsz,buff_width),
+	    Bits#(marker, b__));
 
    Vector#(stages, Reg#(UInt#(buff_width))) mul_data <- replicateM(mkReg(0));
-   Vector#(TAdd#(stages,1),FIFO#(void)) mul_ctrl <- replicateM(mkLFIFO);
+   Vector#(TAdd#(stages,1),FIFO#(marker)) mul_ctrl <- replicateM(mkLFIFO);
 	    
    Reg#(UInt#(dsz))  a <- mkRegU;
    Reg#(UInt#(dsz))  b <- mkRegU;
    FIFO#(UInt#(dsz)) out <- mkLFIFO;
-   FIFO#(UInt#(dsz)) inx <- mkLFIFO;
-   FIFO#(UInt#(dsz)) iny <- mkLFIFO;
+   FIFO#(Tuple3#(UInt#(dsz),UInt#(dsz),marker)) inf <- mkLFIFO;
+   FIFO#(Tuple2#(UInt#(dsz),marker)) outf <- mkLFIFO;
       
    rule do_mul;
       UInt#(buff_width) bits = extend(b) * extend(a);
@@ -33,7 +34,7 @@ module mkPipeMul(PipeMul#(stages,dsz))
    
    for(Integer i = 0; i < valueOf(stages); i = i+1)
       rule do_ctrl;
-   	 mul_ctrl[i+1].enq(?);
+   	 mul_ctrl[i+1].enq(mul_ctrl[i].first);
    	 mul_ctrl[i].deq;
       endrule
    
@@ -41,25 +42,23 @@ module mkPipeMul(PipeMul#(stages,dsz))
       mul_ctrl[valueOf(stages)].deq;
       UInt#(buff_width) bits = mul_data[valueOf(stages)-1];
       UInt#(dsz) rv  = truncate(bits);
-      out.enq(rv);
+      outf.enq(tuple2(rv,mul_ctrl[valueOf(stages)].first));
    endrule
    
    rule start;
-      inx.deq;
-      iny.deq;				
-      a <= inx.first;
-      b <= iny.first;
-      mul_ctrl[0].enq(?);
+      inf.deq;
+      a <= tpl_1(inf.first);
+      b <= tpl_2(inf.first);
+      mul_ctrl[0].enq(tpl_3(inf.first));
    endrule
 
-   method Action put(UInt#(dsz) x, UInt#(dsz) y);
-      inx.enq(x);
-      iny.enq(y);
+   method Action put(UInt#(dsz) x, UInt#(dsz) y, marker m);
+      inf.enq(tuple3(x,y,m));
    endmethod
    
-   method ActionValue#(UInt#(dsz)) get();
-      out.deq;
-      return out.first;
+   method ActionValue#(Tuple2#(UInt#(dsz),marker)) get();
+      outf.deq;
+      return outf.first;
    endmethod
    
 endmodule
