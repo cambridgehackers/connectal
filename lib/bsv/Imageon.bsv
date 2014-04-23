@@ -62,19 +62,6 @@ interface ImageonSensor;
     method Bit#(2) monitor();
 endinterface
 
-(* always_enabled *)
-interface ImageonTopPins;
-    method Clock fbbozo();
-    method Action fbbozoin(Bit#(1) v);
-endinterface
-
-interface ImageonVita;
-   interface SpiPins spi;
-   interface ImageonSensorPins pins;
-   //interface ImageonTopPins toppins;
-   interface ImageonSerdesPins serpins;
-endinterface
-
 module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Bool send_trigger,
         Clock hdmi_clock, Reset hdmi_reset, ImageonSensorIndication indication)(ImageonSensor);
     Clock defaultClock <- exposeCurrentClock();
@@ -82,7 +69,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 
     XbsvODDR#(Bit#(1)) pll_out <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
     XbsvODDR#(Bit#(1)) pll_t <- mkXbsvODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"});
-   Wire#(Bit#(2)) monitor_wires <- mkDWire(0);
+    Wire#(Bit#(2)) monitor_wires <- mkDWire(0);
     Wire#(Bit#(1)) poutq <- mkDWire(0);
     Wire#(Bit#(1)) ptq <- mkDWire(0);
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(poutq, ptq);

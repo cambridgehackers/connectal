@@ -5,7 +5,7 @@ BSVFILES = ImageonDebug.bsv $(XBSVDIR)/lib/bsv/IserdesDatadeser.bsv $(XBSVDIR)/l
 CPPFILES=testimagecapture.cpp
 XBSVFLAGS = -C imageon-$(BOARD).xdc --tcl clock.tcl
 Dma = 
-PINS = ImageonVita
+PINS = Std
 #XBSVFLAGS += --bscflags " -D TRACE_AXI"
 
 ifeq ($(BOARD),zedboard)

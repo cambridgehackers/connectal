@@ -306,19 +306,6 @@ zynqdrivers:
 	(cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portalmem.ko)
 
 #################################################################################################
-# not yet updated.
-
-test-hdmi/hdmidisplay.bit.bin.gz: bsv/HdmiDisplay.bsv
-	rm -fr test-hdmi
-	./genxpsprojfrombsv -B $(BOARD) -p test-hdmi -x HDMI -b HdmiDisplay bsv/HdmiDisplay.bsv bsv/HDMI.bsv bsv/PortalMemory.bsv
-	cd test-hdmi; make verilog && make bits && make hdmidisplay.bit.bin.gz
-	echo test-hdmi built successfully
-
-test-imageon/imagecapture.bit.bin.gz: examples/imageon/ImageCapture.bsv
-	rm -fr test-imageon
-	./genxpsprojfrombsv -B zc702 -p test-imageon -x ImageonVita -x HDMI -b ImageCapture --verilog=../imageon/sources/fmc_imageon_vita_receiver_v1_13_a examples/imageon/ImageCapture.bsv bsv/BlueScope.bsv bsv/AxiDma.bsv bsv/PortalMemory.bsv bsv/Imageon.bsv bsv/HDMI.bsv bsv/IserdesDatadeser.bsv
-	cd test-imageon; make verilog && make bits && make imagecapture.bit.bin.gz
-	echo test-imageon built successfully
 
 xilinx/pcie_7x_v2_1: scripts/generate-pcie.tcl
 	rm -fr proj_pcie
