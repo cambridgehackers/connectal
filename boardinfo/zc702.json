@@ -251,7 +251,7 @@
             "IOSTANDARD": "LVCMOS25"
 	},
 	"LA10_p": {
-            "LOC": "Y21",
+            "LOC": "Y20",
             "IOSTANDARD": "LVCMOS25"
 	},
 	"LA10_n": {
