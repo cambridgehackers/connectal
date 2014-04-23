@@ -20,7 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-interface ImageCaptureIndication;
+interface ImageonDebugIndication;
     method Action debugind(Bit#(32) v);
     method Action axi_clock_period(Bit#(32) hdmi_cycles);
     method Action hdmi_clock_period(Bit#(32) hdmi_cycles);
@@ -29,7 +29,7 @@ interface ImageCaptureIndication;
     method Action frameStart(Bit#(2) monitor, Bit#(32) count);
 endinterface
 
-interface ImageCaptureRequest;
+interface ImageonDebugRequest;
     method Action set_debugreq(Bit#(32) v);
     method Action get_debugind();
     method Action measure_axi_clock_period(Bit#(32) cycles_100mhz);

@@ -1,6 +1,6 @@
 
-#include "ImageCaptureRequestProxy.h"
-#include "ImageCaptureIndicationWrapper.h"
+#include "ImageonDebugRequestProxy.h"
+#include "ImageonDebugIndicationWrapper.h"
 #include "ImageonSensorRequestProxy.h"
 #include "ImageonSensorIndicationWrapper.h"
 #include "ImageonSerdesRequestProxy.h"
@@ -21,7 +21,7 @@
 #include "i2chdmi.h"
 #include "i2ccamera.h"
 
-static ImageCaptureRequestProxy *device = 0;
+static ImageonDebugRequestProxy *device = 0;
 static ImageonSensorRequestProxy *sensordevice;
 static ImageonSerdesRequestProxy *serdesdevice;
 static HdmiInternalRequestProxy *hdmidevice;
@@ -61,9 +61,9 @@ public:
     }
 };
 
-class ImageCaptureIndication : public ImageCaptureIndicationWrapper {
+class ImageonDebugIndication : public ImageonDebugIndicationWrapper {
 public:
-    ImageCaptureIndication(int id, PortalPoller *poller = 0) : ImageCaptureIndicationWrapper(id, poller) {}
+    ImageonDebugIndication(int id, PortalPoller *poller = 0) : ImageonDebugIndicationWrapper(id, poller) {}
     void debugind(uint32_t v) {
 printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
     }
@@ -451,12 +451,12 @@ int main(int argc, const char **argv)
     init_local_semaphores();
     PortalPoller *poller = new PortalPoller();
 
-    device = new ImageCaptureRequestProxy(IfcNames_ImageCapture, poller);
+    device = new ImageonDebugRequestProxy(IfcNames_ImageonDebugRequestID, poller);
     sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
     hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
     
-    ImageCaptureIndicationWrapper *imageCaptureIndication = new ImageCaptureIndication(IfcNames_ImageCaptureIndication);
+    ImageonDebugIndicationWrapper *imageCaptureIndication = new ImageonDebugIndication(IfcNames_ImageonDebugIndication);
     ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndication);
     ImageonSensorIndicationWrapper *imageonSensorIndication = new ImageonSensorIndication(IfcNames_ImageonSensorIndication);
     HdmiInternalIndicationWrapper *hdmiIndication = new HdmiInternalIndication(IfcNames_HdmiInternalIndication, hdmidevice);
