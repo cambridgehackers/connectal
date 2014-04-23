@@ -53,8 +53,8 @@ interface ZynqTop#(type pins);
    interface I2C_Pins         i2c;
    (* prefix="" *)
    interface pins             pins;
-   interface Vector#(4, Clock) unused_clock;
-   interface Vector#(4, Reset) unused_reset;
+   interface Vector#(4, Clock) deleteme_unused_clock;
+   interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
 
 typedef (function Module#(PortalTop#(32, 64, ipins, 0)) mkpt(Clock clock200, Clock io_vita_clk)) MkPortalTop#(type ipins);
@@ -100,8 +100,8 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
    interface pins = top.pins;
 
    // these are exported to make bsc happy, and then the ports are disconnected after synthesis
-   interface unused_clock = ps7.fclkclk;
-   interface unused_reset = ps7.fclkreset;
+   interface deleteme_unused_clock = ps7.fclkclk;
+   interface deleteme_unused_reset = ps7.fclkreset;
 endmodule
 
 module mkImageonZynqTop#(Clock fmc_video_clk1)(ZynqTop#(ImageCapturePins));

@@ -22,6 +22,9 @@
 
 // bsv libraries
 import Vector::*;
+import GetPut::*;
+import Connectable :: *;
+import Clocks :: *;
 import FIFO::*;
 import DefaultValue::*;
 
@@ -37,25 +40,20 @@ import ImageonDebugIndicationProxy::*;
 import ImageonDebugRequestWrapper::*;
 import ImageonSerdesIndicationProxy::*;
 import ImageonSerdesRequestWrapper::*;
-import HdmiInternalIndicationProxy::*;
-import HdmiInternalRequestWrapper::*;
 import ImageonSensorRequestWrapper::*;
 import ImageonSensorIndicationProxy::*;
+import HdmiInternalIndicationProxy::*;
+import HdmiInternalRequestWrapper::*;
 
 // defined by user
+import IserdesDatadeser::*;
+import Imageon::*;
 import FrequencyCounter::*;
 import ImageonDebug::*;
-import GetPut::*;
-import Connectable :: *;
-import Clocks :: *;
-
-import Imageon::*;
-import IserdesDatadeser::*;
 import HDMI::*;
+import YUV::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
-import YUV::*;
-import Imageon :: *;
 
 typedef enum { ImageonDebugRequestID, ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest,
     ImageonDebugIndication, ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);

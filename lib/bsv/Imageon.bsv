@@ -39,8 +39,8 @@ interface ImageonSensorPins;
     method Action io_vita_monitor(Bit#(2) v);
     interface SpiPins spi;
     method Bit#(1) i2c_mux_reset_n();
-    interface Clock clock_if;
-    interface Reset reset_if;
+    interface Clock deleteme_unused_clock;
+    interface Reset deleteme_unused_reset;
 endinterface
 
 interface ImageonSensorRequest;
@@ -190,7 +190,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
         endmethod
         method Bit#(1) i2c_mux_reset_n(); return i2c_mux_reset_n_reg; endmethod
         interface SpiPins spi = spiController.pins;
-        interface clock_if = defaultClock;
-        interface reset_if = defaultReset;
+        interface deleteme_unused_clock = defaultClock;
+        interface deleteme_unused_reset = defaultReset;
     endinterface
 endmodule

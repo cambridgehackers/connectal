@@ -37,7 +37,7 @@ interface HDMI;
     method Bit#(1) de;
     method Bit#(16) data;
     interface Clock clock_if;
-    interface Reset reset_if;
+    interface Reset deleteme_unused_reset;
 endinterface
 
 interface HdmiInternalRequest;
@@ -263,6 +263,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
             return yuv422StageReg.data;
         endmethod
         interface clock_if = defaultClock;
-        interface reset_if = defaultReset;
+        interface deleteme_unused_reset = defaultReset;
     endinterface
 endmodule

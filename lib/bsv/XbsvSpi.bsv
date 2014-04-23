@@ -37,7 +37,7 @@ interface SpiPins;
     method Action miso(Bit#(1) v);
     interface Clock clock;
     interface Clock invertedClock;
-    interface Reset reset;
+    interface Reset deleteme_unused_reset;
 endinterface: SpiPins
 
 interface SPI#(type a);
@@ -102,7 +102,7 @@ module mkSpiShifter(SPI#(a)) provisos(Bits#(a,awidth),Add#(1,awidth1,awidth),Log
       endmethod
       interface Clock clock = defaultClock;
       interface Clock invertedClock = clockInverter.slowClock;
-      interface Reset reset = defaultReset;
+      interface Reset deleteme_unused_reset = defaultReset;
    endinterface: pins
    interface clock = clockInverter.slowClock;
    interface reset = spiReset;
@@ -137,9 +137,9 @@ module mkSpiTestBench(Empty);
    Bit#(20) masterV = 20'h8baeb;
 
    SPI#(Bit#(20)) spi <- mkSPI(4);
-   Reg#(Bit#(20)) slaveCount <- mkReg(20, clocked_by spi.pins.clock, reset_by spi.pins.reset);
-   Reg#(Bit#(20)) slaveValue <- mkReg(slaveV, clocked_by spi.pins.clock, reset_by spi.pins.reset);
-   Reg#(Bit#(20)) responseValue <- mkReg(0, clocked_by spi.pins.clock, reset_by spi.pins.reset);
+   Reg#(Bit#(20)) slaveCount <- mkReg(20, clocked_by spi.pins.clock, reset_by spi.pins.deleteme_unused_reset);
+   Reg#(Bit#(20)) slaveValue <- mkReg(slaveV, clocked_by spi.pins.clock, reset_by spi.pins.deleteme_unused_reset);
+   Reg#(Bit#(20)) responseValue <- mkReg(0, clocked_by spi.pins.clock, reset_by spi.pins.deleteme_unused_reset);
 
    rule slaveIn if (spi.pins.sel_n == 0);
       slaveCount <= slaveCount - 1;

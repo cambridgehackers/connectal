@@ -1,5 +1,5 @@
 ## disconnect unused CLK and RST ports inserted by bsc
-foreach {pat} {CLK_unused_clock* CLK_GATE_unused_clock* RST_N_unused_reset* CLK_pins_clock_if CLK_GATE_*_if RST_N_hdmi_reset_if CLK_GATE_* RST_N_* CLK_pins_spi_clock} {
+foreach {pat} {CLK_GATE_* CLK_pins_spi_clock} {
     foreach {net} [get_nets $pat] {
 	disconnect_net -net $net -objects [get_pins -of_objects $net]
     }
