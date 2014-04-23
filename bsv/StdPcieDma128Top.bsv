@@ -31,9 +31,8 @@ import PcieTop           :: *;
 (* synthesize *)
 module mkSynthesizeablePortalTop(PortalTop#(40, 128, Empty, 1));
    let top <- mkPortalTop();
-   interface ctrl = top.ctrl;
-   interface read_client = top.read_client;
-   interface write_client = top.write_client;
+   interface masters = top.masters;
+   interface slave = top.slave;
    interface interrupt = top.interrupt;
    interface leds = top.leds;
    interface pins = top.pins;
@@ -43,8 +42,6 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Clock sys_clk_p,     Clock sys_clk_n,
    Reset pci_sys_reset_n)
    (PcieTop#(Empty));
-
-   let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,
-				  mkSynthesizeablePortalTop);
+   let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,mkSynthesizeablePortalTop);
    return top;
 endmodule: mkPcieTop
