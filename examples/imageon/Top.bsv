@@ -48,15 +48,14 @@ import HdmiInternalRequestWrapper::*;
 // defined by user
 import IserdesDatadeser::*;
 import Imageon::*;
-import FrequencyCounter::*;
 import ImageonDebug::*;
 import HDMI::*;
 import YUV::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 
-typedef enum { ImageonDebugRequestID, ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest,
-    ImageonDebugIndication, ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
+typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest,
+    ImageonSerdesIndication, ImageonSensorIndication, HdmiInternalIndication} IfcNames deriving (Eq,Bits);
 
 interface ImageCapturePins;
    interface ImageonSensorPins pins;
@@ -113,47 +112,6 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
        vsyncPulse, hdmiIndicationProxy.ifc, clocked_by hdmi_clock, reset_by hdmi_reset);
    HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiGen.control);
 
-   ImageonDebugIndicationProxy captureIndicationProxy <- mkImageonDebugIndicationProxy(ImageonDebugIndication);
-   FrequencyCounter axiFreqCounter <- mkFrequencyCounter(defaultClock, defaultReset);
-   FrequencyCounter hdmiFreqCounter <- mkFrequencyCounter(hdmi_clock, hdmi_reset);
-   FrequencyCounter imageonFreqCounter <- mkFrequencyCounter(imageon_clock, imageon_reset);
-   FrequencyCounter fmcFreqCounter <- mkFrequencyCounter(fmc_imageon_clk1, fmc_imageon_reset);
-   ImageonDebugRequest imageCaptureRequest = (interface ImageonDebugRequest;
-      method Action get_debugind();
-         captureIndicationProxy.ifc.debugind(fromSensor.control.get_debugind());
-      endmethod
-      method Action measure_axi_clock_period(Bit#(32) cycles_100mhz);
-	 axiFreqCounter.start(cycles_100mhz);
-      endmethod
-      method Action measure_hdmi_clock_period(Bit#(32) cycles_100mhz);
-         hdmiFreqCounter.start(cycles_100mhz);
-      endmethod
-      method Action measure_imageon_clock_period(Bit#(32) cycles_100mhz);
-         imageonFreqCounter.start(cycles_100mhz);
-      endmethod
-      method Action measure_fmc_clock_period(Bit#(32) cycles_100mhz);
-         fmcFreqCounter.start(cycles_100mhz);
-      endmethod
-      endinterface);
-   ImageonDebugRequestWrapper captureRequestWrapper <- mkImageonDebugRequestWrapper(ImageonDebugRequestID, imageCaptureRequest);
-
-   rule gotAxiClockPeriod;
-      let cycles <- axiFreqCounter.elapsedCycles();
-      captureIndicationProxy.ifc.axi_clock_period(cycles);
-   endrule
-   rule gotHdmiClockPeriod;
-      let cycles <- hdmiFreqCounter.elapsedCycles();
-      captureIndicationProxy.ifc.hdmi_clock_period(cycles);
-   endrule
-   rule gotImageonClockPeriod;
-      let cycles <- imageonFreqCounter.elapsedCycles();
-      captureIndicationProxy.ifc.imageon_clock_period(cycles);
-   endrule
-   rule gotFmcClockPeriod;
-      let cycles <- fmcFreqCounter.elapsedCycles();
-      captureIndicationProxy.ifc.fmc_clock_period(cycles);
-   endrule
-
    Reg#(Bool) frameStart <- mkReg(False, clocked_by imageon_clock, reset_by imageon_reset);
    Reg#(Bit#(32)) frameCount <- mkReg(0, clocked_by imageon_clock, reset_by imageon_reset);
    SyncFIFOIfc#(Tuple2#(Bit#(2),Bit#(32))) frameStartSynchronizer <- mkSyncFIFO(2, imageon_clock, imageon_reset, defaultClock);
@@ -174,7 +132,7 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
       frameStartSynchronizer.deq();
       let monitor = tpl_1(tpl);
       let count = tpl_2(tpl);
-      captureIndicationProxy.ifc.frameStart(monitor, count);
+      //captureIndicationProxy.ifc.frameStart(monitor, count);
    endrule
 
    rule xsviConnection;
@@ -184,15 +142,13 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
        hdmiGen.request.put(pixel);
    endrule
    
-   Vector#(8,StdPortal) portals;
-   portals[0] = captureRequestWrapper.portalIfc;
-   portals[1] = captureIndicationProxy.portalIfc;
-   portals[2] = serdesRequestWrapper.portalIfc; 
-   portals[3] = serdesIndicationProxy.portalIfc;
+   Vector#(6,StdPortal) portals;
+   portals[0] = serdesRequestWrapper.portalIfc; 
+   portals[1] = serdesIndicationProxy.portalIfc;
+   portals[2] = sensorRequestWrapper.portalIfc; 
+   portals[3] = sensorIndicationProxy.portalIfc; 
    portals[4] = hdmiRequestWrapper.portalIfc; 
    portals[5] = hdmiIndicationProxy.portalIfc; 
-   portals[6] = sensorRequestWrapper.portalIfc; 
-   portals[7] = sensorIndicationProxy.portalIfc; 
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);

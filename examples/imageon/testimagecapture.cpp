@@ -21,7 +21,6 @@
 #include "i2chdmi.h"
 #include "i2ccamera.h"
 
-static ImageonDebugRequestProxy *device = 0;
 static ImageonSensorRequestProxy *sensordevice;
 static ImageonSerdesRequestProxy *serdesdevice;
 static HdmiInternalRequestProxy *hdmidevice;
@@ -64,22 +63,7 @@ public:
 class ImageonDebugIndication : public ImageonDebugIndicationWrapper {
 public:
     ImageonDebugIndication(int id, PortalPoller *poller = 0) : ImageonDebugIndicationWrapper(id, poller) {}
-    void debugind(uint32_t v) {
-printf("[%s:%d] valu %lx\n", __FUNCTION__, __LINE__, v);
-    }
-  void axi_clock_period(uint32_t axi_cycles) {
-    printf("[%s:%d] axi_cycles %ld\n", __FUNCTION__, __LINE__, axi_cycles);
-  }
-  void hdmi_clock_period(uint32_t hdmi_cycles) {
-    printf("[%s:%d] hdmi_cycles %ld\n", __FUNCTION__, __LINE__, hdmi_cycles);
-  }
-  void imageon_clock_period(uint32_t imageon_cycles) {
-    printf("[%s:%d] imageon_cycles %ld\n", __FUNCTION__, __LINE__, imageon_cycles);
-  }
-  void fmc_clock_period(uint32_t fmc_cycles) {
-    printf("[%s:%d] fmc_cycles %ld\n", __FUNCTION__, __LINE__, fmc_cycles);
-  }
-  void frameStart(uint32_t monitor, uint32_t frameCount) {
+    void frameStart(uint32_t monitor, uint32_t frameCount) {
 static int limit = 30;
 if (limit > 0 && limit-- > 0)
     printf("[%s:%d] frame_start %d %ld\n", __FUNCTION__, __LINE__, monitor, frameCount);
@@ -440,7 +424,9 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
 static void *pthread_worker(void *ptr)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     portalExec(NULL);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return NULL;
 }
 
@@ -449,54 +435,56 @@ int main(int argc, const char **argv)
     pthread_t threaddata;
 
     init_local_semaphores();
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     PortalPoller *poller = new PortalPoller();
 
-    device = new ImageonDebugRequestProxy(IfcNames_ImageonDebugRequestID, poller);
-    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     
-    ImageonDebugIndicationWrapper *imageCaptureIndication = new ImageonDebugIndication(IfcNames_ImageonDebugIndication);
     ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndication);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     ImageonSensorIndicationWrapper *imageonSensorIndication = new ImageonSensorIndication(IfcNames_ImageonSensorIndication);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     HdmiInternalIndicationWrapper *hdmiIndication = new HdmiInternalIndication(IfcNames_HdmiInternalIndication, hdmidevice);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     // for surfaceflinger 
     long actualFrequency = 0;
     int status;
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     status = poller->setClockFrequency(0, 100000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 0 100000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     status = poller->setClockFrequency(1, 160000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 1 160000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     status = poller->setClockFrequency(3, 200000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
-    pthread_create(&threaddata, NULL, &pthread_worker, (void *)device);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+    pthread_create(&threaddata, NULL, &pthread_worker, NULL);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     sensordevice->set_i2c_mux_reset_n(1);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     hdmidevice->setTestPattern(1);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     fmc_imageon_demo_init(argc, argv);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);
-    device->measure_axi_clock_period(1000);
-    device->measure_hdmi_clock_period(1000);
-    device->measure_imageon_clock_period(1000);
-    device->measure_fmc_clock_period(1000);
     //usleep(200000);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     hdmidevice->waitForVsync(0);
     usleep(2000000);
-    device->measure_hdmi_clock_period(1000);
-    device->measure_imageon_clock_period(1000);
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     while (1/*getchar() != EOF*/) {
-        device->set_debugreq(1);
-        device->get_debugind();
         printf("[%s:%d] iserdes %lx\n", __FUNCTION__, __LINE__, read_iserdes_control());
         static int regids[] = {24, 97, 186, 0};
         int i;
         for (i = 0; regids[i]; i++)
             printf("[%s:%d] spi %d. %x\n", __FUNCTION__, __LINE__, regids[i], vita_spi_read(regids[i]));
 	usleep(1000000);
-	device->measure_axi_clock_period(1000);
-	device->measure_hdmi_clock_period(1000);
-	device->measure_imageon_clock_period(1000);
-	device->measure_fmc_clock_period(1000);
     }
     return 0;
 }

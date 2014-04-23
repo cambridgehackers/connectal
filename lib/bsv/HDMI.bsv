@@ -44,9 +44,9 @@ interface HdmiInternalRequest;
     method Action setTestPattern(Bit#(1) v);
     method Action setPatternColor(Bit#(32) v);
     method Action setHsyncWidth(Bit#(12) hsyncWidth);
-    method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max);
+    method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max, Bit#(12) mid);
     method Action setVsyncWidth(Bit#(11) vsyncWidth);
-    method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max);
+    method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max, Bit#(11) mid);
     method Action setNumberOfLines(Bit#(11) lines);
     method Action setNumberOfPixels(Bit#(12) pixels);
     method Action waitForVsync(Bit#(32) unused);
@@ -99,11 +99,11 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Yuv422Stage) yuv422StageReg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
 
-   Reg#(Bit#(32)) counter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
-   Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
-   rule axicyclecount;
-      counter <= counter + 1;
-   endrule
+    Reg#(Bit#(32)) counter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+    Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+    rule axicyclecount;
+       counter <= counter + 1;
+    endrule
       
     rule vsyncReceived if (sendVsyncIndication.pulse());
        elapsed <= counter;
@@ -226,18 +226,18 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         method Action setHsyncWidth(Bit#(12) width);
             hsyncWidth <= width;
         endmethod
-        method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max);
+        method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max, Bit#(12) mid);
             dePixelCountMinimum <= min;
             dePixelCountMaximum <= max;
-            pixelMidpoint <= (min + max) / 2;
+            pixelMidpoint <= mid;
         endmethod
         method Action setVsyncWidth(Bit#(11) width);
             vsyncWidth <= width;
         endmethod
-        method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max);
+        method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max, Bit#(11) mid);
             deLineCountMinimum <= min;
             deLineCountMaximum <= max;
-            lineMidpoint <= (min + max) / 2;
+            lineMidpoint <= mid;
         endmethod
         method Action setNumberOfLines(Bit#(11) lines);
             numberOfLines <= lines;
