@@ -84,7 +84,7 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		     idx = aStartReg + ii - 1;  // 0 to aLen - 1
 		  else
 		     idx = aStartReg + aLenReg - ii;  // aLen-1 downto 0
-		  strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: idx, datain: 0});
+		  strA.request.put(BRAMRequest{write: False, responseOnWrite: False, address: idx, datain: ?});
 	       endaction
 	       /* Read b[j] */
 	       action
@@ -93,10 +93,10 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		     idx = bStartReg;
 		  else
 		     idx = bStartReg + bLenReg - 1;
-		  strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: idx, datain: 0});
+		  strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: idx, datain: ?});
 	       endaction
 	       /* start read of k0j */
-	       matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: rStartReg + 1, datain: 0});
+	       matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: rStartReg + 1, datain: ?});
 	    endpar
 	    action
 	       let ta <- strA.response.get(); /* read a[i] */
@@ -127,7 +127,7 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 			   idx = bStartReg + jj;
 			else
 			   idx = bStartReg + bLenReg - jj - 1;
-			strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: idx, datain: 0});
+			strB.request.put(BRAMRequest{write: False, responseOnWrite: False, address: idx, datain: ?});
 		     endaction
 		     if (aData == bData)
 			tmp = k0jm1 + 1;
@@ -136,7 +136,7 @@ module mkHirschB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bi
 		     k1j <= tmp;
 		     jj <= jj + 1;
 		     /* start read of k0j */
-		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: rStartReg + zeroExtend(jj+1), datain: 0});
+		     matL.request.put(BRAMRequest{write: False, responseOnWrite: False, address: rStartReg + zeroExtend(jj+1), datain: ?});
 		  endaction
 		  //$display("     L[%d][%d] = %d ", ii, jj, k1j);
 	       endseq
