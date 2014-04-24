@@ -18,6 +18,10 @@ independently. A portal is specified by a BSV interface declaration,
 from which `genxpsprojfrombsv` generates BSV and C++ wrappers and
 proxies.
 
+XBSV has a mailing list:
+   https://groups.google.com/forum/#!forum/xbsv
+
+
 Supported Platforms
 -------------------
 
