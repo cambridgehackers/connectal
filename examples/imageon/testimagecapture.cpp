@@ -1,6 +1,37 @@
+/* Copyright (c) 2014 Quanta Research Cambridge, Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 
-#include "ImageonDebugRequestProxy.h"
-#include "ImageonDebugIndicationWrapper.h"
+#include <stdio.h>
+//#include <sys/mman.h>
+//#include <stdlib.h>
+//#include <string.h>
+//#include <stdarg.h>
+//#include <unistd.h>
+//#include <stdint.h>
+//#include <fcntl.h>
+//#include <pthread.h>
+//#include <semaphore.h>
+#include "i2chdmi.h"
+#include "i2ccamera.h"
+
 #include "ImageonSensorRequestProxy.h"
 #include "ImageonSensorIndicationWrapper.h"
 #include "ImageonSerdesRequestProxy.h"
@@ -8,18 +39,6 @@
 #include "HdmiInternalRequestProxy.h"
 #include "HdmiInternalIndicationWrapper.h"
 #include "GeneratedTypes.h"
-#include <stdio.h>
-#include <sys/mman.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include "i2chdmi.h"
-#include "i2ccamera.h"
 
 static ImageonSensorRequestProxy *sensordevice;
 static ImageonSerdesRequestProxy *serdesdevice;
@@ -54,30 +73,20 @@ class ImageonSensorIndication : public ImageonSensorIndicationWrapper {
 public:
     ImageonSensorIndication(int id, PortalPoller *poller = 0) : ImageonSensorIndicationWrapper(id, poller) {}
     void spi_response(uint32_t v){
-      //fprintf(stderr, "spi_response: %x\n", v);
-      cv_spi_response = v;
-      sem_post(&sem_spi_response);
+        //fprintf(stderr, "spi_response: %x\n", v);
+        cv_spi_response = v;
+        sem_post(&sem_spi_response);
     }
 };
 
-class ImageonDebugIndication : public ImageonDebugIndicationWrapper {
-public:
-    ImageonDebugIndication(int id, PortalPoller *poller = 0) : ImageonDebugIndicationWrapper(id, poller) {}
-    void frameStart(uint32_t monitor, uint32_t frameCount) {
-static int limit = 30;
-if (limit > 0 && limit-- > 0)
-    printf("[%s:%d] frame_start %d %ld\n", __FUNCTION__, __LINE__, monitor, frameCount);
-  }
-};
-
 class HdmiInternalIndication: public HdmiInternalIndicationWrapper {
-  HdmiInternalRequestProxy *hdmiRequest;
+    HdmiInternalRequestProxy *hdmiRequest;
 public:
-  HdmiInternalIndication(int id, HdmiInternalRequestProxy *proxy, PortalPoller *poller = 0) : HdmiInternalIndicationWrapper(id, poller), hdmiRequest(proxy) {}
-  virtual void vsync ( const uint64_t v ) {
-    printf("vsync v=%llx\n", v);
-    hdmiRequest->waitForVsync(v+1);
-  }
+    HdmiInternalIndication(int id, HdmiInternalRequestProxy *proxy, PortalPoller *poller = 0) : HdmiInternalIndicationWrapper(id, poller), hdmiRequest(proxy) {}
+    virtual void vsync ( const uint64_t v ) {
+        printf("vsync v=%llx\n", v);
+        hdmiRequest->waitForVsync(v+1);
+    }
 };
 
 static void init_local_semaphores(void)
@@ -95,8 +104,6 @@ GETFN(iserdes_control)
 //#define VITA_DECODER_CONTROL_REG           0x20
    #define VITA_DECODER_RESET_BIT            0x01
    #define VITA_DECODER_ENABLE_BIT           0x02
-
-static uint32_t uManualTap;
 
 #define VITA_SPI_SEQ1_QTY  8
 /* Table 6. enable clock management register upload - part 1 */
@@ -270,6 +277,7 @@ static void fmc_imageon_demo_enable_ipipe( void)
    uint32_t uStatus;
    int timeout;
    serdesdevice->set_serdes_training(0x03A6);
+uint32_t uManualTap = 25;
    printf( "VITA ISERDES - Setting Manual Tap to 0x%08X\n\r", uManualTap);
    serdesdevice->set_serdes_manual_tap(uManualTap);
 
@@ -341,13 +349,13 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
    timeout = 9;
    while ( !(uStatus & 0x0200) && --timeout) {
-      uStatus = read_iserdes_control();
-      printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
-      usleep(1);
+       uStatus = read_iserdes_control();
+       printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
+       usleep(1);
    }
    if ( !timeout) {
-      printf( "\tTimed Out !!!\n\r");
-      return;
+       printf( "\tTimed Out !!!\n\r");
+       return;
    }
    serdesdevice->set_iserdes_control( 0);
    printf( "VITA ISERDES - Waiting for ALIGN_BUSY to de-assert\n\r");
@@ -355,12 +363,12 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
    timeout = 9;
    while ( (uStatus & 0x0200) && --timeout) {
-      uStatus = read_iserdes_control();
-      printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
-      usleep(1);
+       uStatus = read_iserdes_control();
+       printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
+       usleep(1);
    }
    if ( !timeout)
-      printf( "\tTimed Out !!!\n\r");
+       printf( "\tTimed Out !!!\n\r");
    uStatus = read_iserdes_control();
    printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
    vita_spi_write_sequence(vita_roi0_crop_1080p_seq, VITA_ROI0_CROP_1080P_QTY);
@@ -395,15 +403,12 @@ printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
 static void fmc_imageon_demo_init(int argc, const char **argv)
 {
     int ret;
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     //ret = fmc_iic_axi_init(uBaseAddr_IIC_FmcImageon);
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 2);
     sensordevice->set_host_oe(1);
     hdmidevice->setTestPattern(0);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     init_i2c_camera();
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     init_i2c_hdmi();
     //init_vclk();
 
@@ -415,18 +420,14 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) & ~4);
 
     usleep(500000);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     // FMC-IMAGEON VITA Receiver Initialization
     printf( "FMC-IMAGEON VITA Receiver Initialization ...\n\r");
-    uManualTap = 25;
     fmc_imageon_demo_enable_ipipe();
 }
 
 static void *pthread_worker(void *ptr)
 {
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     portalExec(NULL);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     return NULL;
 }
 
@@ -435,49 +436,33 @@ int main(int argc, const char **argv)
     pthread_t threaddata;
 
     init_local_semaphores();
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     PortalPoller *poller = new PortalPoller();
 
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     serdesdevice = new ImageonSerdesRequestProxy(IfcNames_ImageonSerdesRequest, poller);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     sensordevice = new ImageonSensorRequestProxy(IfcNames_ImageonSensorRequest, poller);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     hdmidevice = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     
     ImageonSerdesIndicationWrapper *imageonSerdesIndication = new ImageonSerdesIndication(IfcNames_ImageonSerdesIndication);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     ImageonSensorIndicationWrapper *imageonSensorIndication = new ImageonSensorIndication(IfcNames_ImageonSensorIndication);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     HdmiInternalIndicationWrapper *hdmiIndication = new HdmiInternalIndication(IfcNames_HdmiInternalIndication, hdmidevice);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 
     // for surfaceflinger 
     long actualFrequency = 0;
     int status;
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     status = poller->setClockFrequency(0, 100000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 0 100000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     status = poller->setClockFrequency(1, 160000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 1 160000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     status = poller->setClockFrequency(3, 200000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     pthread_create(&threaddata, NULL, &pthread_worker, NULL);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     sensordevice->set_i2c_mux_reset_n(1);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     hdmidevice->setTestPattern(1);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     fmc_imageon_demo_init(argc, argv);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);
     //usleep(200000);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     hdmidevice->waitForVsync(0);
     usleep(2000000);
-printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     while (1/*getchar() != EOF*/) {
         printf("[%s:%d] iserdes %lx\n", __FUNCTION__, __LINE__, read_iserdes_control());
         static int regids[] = {24, 97, 186, 0};

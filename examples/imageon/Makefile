@@ -1,7 +1,7 @@
 
-S2H = ImageonDebugRequest    ImageonSerdesRequest    ImageonSensorRequest    HdmiInternalRequest
-H2S = ImageonDebugIndication ImageonSerdesIndication ImageonSensorIndication HdmiInternalIndication
-BSVFILES = ImageonDebug.bsv $(XBSVDIR)/lib/bsv/IserdesDatadeser.bsv $(XBSVDIR)/lib/bsv/HDMI.bsv $(XBSVDIR)/lib/bsv/Imageon.bsv Top.bsv
+S2H = ImageonSerdesRequest    ImageonSensorRequest    HdmiInternalRequest
+H2S = ImageonSerdesIndication ImageonSensorIndication HdmiInternalIndication
+BSVFILES = $(XBSVDIR)/lib/bsv/IserdesDatadeser.bsv $(XBSVDIR)/lib/bsv/HDMI.bsv $(XBSVDIR)/lib/bsv/Imageon.bsv Top.bsv
 CPPFILES=testimagecapture.cpp
 XBSVFLAGS = -C imageon-$(BOARD).xdc --tcl clock.tcl
 Dma = 
