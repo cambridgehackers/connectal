@@ -48,6 +48,8 @@ testnames = echo             \
             pcietestbench    \
             pcietestbench_dma_io  \
             pcietestbench_dma_oo  \
+            pipe_mul         \
+            pipe_mul2        \
             simple           \
             strstr           \
 	    ring             \
@@ -60,6 +62,7 @@ testnames = echo             \
 	    fib              \
 	    xsim-echo        \
 	    imageon          \
+	    imageonfb        \
             bscan            \
             memread_nobuff_4m\
             memwrite_nobuff_4m\
