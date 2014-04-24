@@ -59,33 +59,14 @@ interface ImageCapturePins;
    interface ImageonSerdesPins serpins;
    interface HDMI hdmi;
 endinterface
+interface ImageCapture;
+   interface Vector#(6,StdPortal) portals;
+   interface ImageCapturePins pins;
+endinterface
 
-module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageCapturePins,0));
+module mkImageCapture#(Clock hdmi_clock, Clock imageon_clock)(ImageCapture);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
-   IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200);
-   ClockGenerator7AdvParams clockParams = defaultValue;
-   clockParams.bandwidth          = "OPTIMIZED";
-   clockParams.compensation       = "ZHOLD";
-   clockParams.clkfbout_mult_f    = 8.000;
-   clockParams.clkfbout_phase     = 0.0;
-   clockParams.clkin1_period      = 6.734007; // 148.5 MHz
-   clockParams.clkin2_period      = 6.734007;
-   clockParams.clkout0_divide_f   = 8.000;    // 148.5 MHz
-   clockParams.clkout0_duty_cycle = 0.5;
-   clockParams.clkout0_phase      = 0.0000;
-   clockParams.clkout1_divide     = 32;       // 37.125 MHz
-   clockParams.clkout1_duty_cycle = 0.5;
-   clockParams.clkout1_phase      = 0.0000;
-   clockParams.divclk_divide      = 1;
-   clockParams.ref_jitter1        = 0.010;
-   clockParams.ref_jitter2        = 0.010;
-
-   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
-   Clock hdmi_clock <- mkClockBUFG(clocked_by clockGen.clkout0);    // 148.5   MHz
-   Clock imageon_clock <- mkClockBUFG(clocked_by clockGen.clkout1); //  37.125 MHz
-
-   Reset fmc_imageon_reset <- mkAsyncReset(2, defaultReset, fmc_imageon_clk1);
    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
@@ -139,26 +120,52 @@ module mkPortalTop#(Clock clock200, Clock fmc_imageon_clk1)(PortalTop#(addrWidth
        hdmiGen.request.put(pixel);
    endrule
    
-   Vector#(6,StdPortal) portals;
-   portals[0] = serdesRequestWrapper.portalIfc; 
-   portals[1] = serdesIndicationProxy.portalIfc;
-   portals[2] = sensorRequestWrapper.portalIfc; 
-   portals[3] = sensorIndicationProxy.portalIfc; 
-   portals[4] = hdmiRequestWrapper.portalIfc; 
-   portals[5] = hdmiIndicationProxy.portalIfc; 
-   
-   // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(portals);
-   let ctrl_mux <- mkSlaveMux(dir,portals);
-   
-   interface interrupt = getInterruptVector(portals);
-   interface slave = ctrl_mux;
-   interface masters = nil;
-   //interface leds = captureRequestInternal.leds;
+   Vector#(6,StdPortal) portal_array;
+   portal_array[0] = serdesRequestWrapper.portalIfc; 
+   portal_array[1] = serdesIndicationProxy.portalIfc;
+   portal_array[2] = sensorRequestWrapper.portalIfc; 
+   portal_array[3] = sensorIndicationProxy.portalIfc; 
+   portal_array[4] = hdmiRequestWrapper.portalIfc; 
+   portal_array[5] = hdmiIndicationProxy.portalIfc; 
+   interface Vector portals = portal_array;
 
    interface ImageCapturePins pins;
        interface ImageonSensorPins pins = fromSensor.pins;
        interface ImageonSerdesPins serpins = serdes.pins;
        interface HDMI hdmi = hdmiGen.hdmi;
    endinterface
+endmodule
+
+module mkPortalTop#(Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageCapturePins,0));
+   ClockGenerator7AdvParams clockParams = defaultValue;
+   clockParams.bandwidth          = "OPTIMIZED";
+   clockParams.compensation       = "ZHOLD";
+   clockParams.clkfbout_mult_f    = 8.000;
+   clockParams.clkfbout_phase     = 0.0;
+   clockParams.clkin1_period      = 6.734007; // 148.5 MHz
+   clockParams.clkin2_period      = 6.734007;
+   clockParams.clkout0_divide_f   = 8.000;    // 148.5 MHz
+   clockParams.clkout0_duty_cycle = 0.5;
+   clockParams.clkout0_phase      = 0.0000;
+   clockParams.clkout1_divide     = 32;       // 37.125 MHz
+   clockParams.clkout1_duty_cycle = 0.5;
+   clockParams.clkout1_phase      = 0.0000;
+   clockParams.divclk_divide      = 1;
+   clockParams.ref_jitter1        = 0.010;
+   clockParams.ref_jitter2        = 0.010;
+
+   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
+   Clock hdmi_clock <- mkClockBUFG(clocked_by clockGen.clkout0);    // 148.5   MHz
+   Clock imageon_clock <- mkClockBUFG(clocked_by clockGen.clkout1); //  37.125 MHz
+   ImageCapture ic <- mkImageCapture(hdmi_clock, imageon_clock);
+   
+   // instantiate system directory
+   StdDirectory dir <- mkStdDirectory(ic.portals);
+   let ctrl_mux <- mkSlaveMux(dir,ic.portals);
+   
+   interface interrupt = getInterruptVector(ic.portals);
+   interface slave = ctrl_mux;
+   interface masters = nil;
+   //interface leds = captureRequestInternal.leds;
+   interface ImageCapturePins pins = ic.pins;
 endmodule : mkPortalTop
