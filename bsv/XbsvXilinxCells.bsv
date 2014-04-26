@@ -689,6 +689,20 @@ module mkB2C(B2C);
 endmodule
 
 (* always_ready, always_enabled *)
+interface B2C1;
+    interface Clock c;
+    method Action inputclock(Bit#(1) v);
+endinterface
+import "BVI" CONNECTNET =
+module mkB2C1(B2C1);
+    default_clock clk();
+    default_reset rst();
+    output_clock c(OUT);
+    method inputclock(IN) enable((*inhigh*) en_inputclock);
+    schedule ( inputclock) CF ( inputclock);
+endmodule
+
+(* always_ready, always_enabled *)
 interface C2B;
     method Bit#(1) o();
 endinterface
