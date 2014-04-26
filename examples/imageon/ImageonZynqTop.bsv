@@ -50,8 +50,10 @@ interface ZynqTop#(type pins);
    interface LEDS             leds;
    (* prefix="XADC" *)
    interface XADC             xadc;
+`ifdef USE_I2C
    (* prefix="I2C" *)
    interface I2C_Pins         i2c;
+`endif
    (* prefix="" *)
    interface pins             pins;
    interface Vector#(4, Clock) deleteme_unused_clock;
@@ -110,10 +112,12 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
            return 0;
        endmethod
    endinterface
+`ifdef USE_I2C
    interface I2C_Pins i2c;
       interface Inout scl = tscl.io;
       interface Inout sda = tsda.io;
    endinterface
+`endif
    interface pins = top.pins;
    interface deleteme_unused_clock = ps7.fclkclk;
    interface deleteme_unused_reset = ps7.fclkreset;

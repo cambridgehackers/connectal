@@ -7,6 +7,7 @@ XBSVFLAGS = -C imageon-$(BOARD).xdc --tcl clock.tcl
 Dma = 
 PINS = Std
 #XBSVFLAGS += --bscflags " -D TRACE_AXI"
+XBSVFLAGS += --bscflags " -D USE_I2C"
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true
