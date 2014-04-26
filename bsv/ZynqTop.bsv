@@ -56,8 +56,8 @@ interface ZynqTop#(type pins);
 `endif
    (* prefix="" *)
    interface pins             pins;
-   interface Clock unused_clock;
-   interface Reset unused_reset;
+   interface Vector#(4, Clock) deleteme_unused_clock;
+   interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
 
 typedef (function Module#(PortalTop#(32, 64, ipins, nMasters)) mkpt()) MkPortalTop#(type ipins, numeric type nMasters);
@@ -119,8 +119,8 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    endinterface
 `endif
    interface pins = top.pins;
-   interface unused_clock = mainclock;
-   interface unused_reset = mainreset;
+   interface deleteme_unused_clock = ps7.fclkclk;
+   interface deleteme_unused_reset = ps7.fclkreset;
 endmodule
 
 module mkZynqTop(ZynqTop#(Empty));
