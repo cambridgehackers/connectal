@@ -58,15 +58,36 @@ interface ImageCapturePins;
    interface ImageonSensorPins pins;
    interface ImageonSerdesPins serpins;
    interface HDMI hdmi;
+   method Action fmc_video_clk1(Bit#(1) v);
 endinterface
 interface ImageCapture;
    interface Vector#(6,StdPortal) portals;
    interface ImageCapturePins pins;
 endinterface
 
-module mkImageCapture#(Clock hdmi_clock, Clock imageon_clock)(ImageCapture);
+module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
+   ClockGenerator7AdvParams clockParams = defaultValue;
+   clockParams.bandwidth          = "OPTIMIZED";
+   clockParams.compensation       = "ZHOLD";
+   clockParams.clkfbout_mult_f    = 8.000;
+   clockParams.clkfbout_phase     = 0.0;
+   clockParams.clkin1_period      = 6.734007; // 148.5 MHz
+   clockParams.clkin2_period      = 6.734007;
+   clockParams.clkout0_divide_f   = 8.000;    // 148.5 MHz
+   clockParams.clkout0_duty_cycle = 0.5;
+   clockParams.clkout0_phase      = 0.0000;
+   clockParams.clkout1_divide     = 32;       // 37.125 MHz
+   clockParams.clkout1_duty_cycle = 0.5;
+   clockParams.clkout1_phase      = 0.0000;
+   clockParams.divclk_divide      = 1;
+   clockParams.ref_jitter1        = 0.010;
+   clockParams.ref_jitter2        = 0.010;
+
+   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
+   Clock hdmi_clock <- mkClockBUFG(clocked_by clockGen.clkout0);    // 148.5   MHz
+   Clock imageon_clock <- mkClockBUFG(clocked_by clockGen.clkout1); //  37.125 MHz
    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
    Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, imageon_clock);
@@ -136,28 +157,12 @@ module mkImageCapture#(Clock hdmi_clock, Clock imageon_clock)(ImageCapture);
    endinterface
 endmodule
 
-module mkPortalTop#(Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageCapturePins,0));
-   ClockGenerator7AdvParams clockParams = defaultValue;
-   clockParams.bandwidth          = "OPTIMIZED";
-   clockParams.compensation       = "ZHOLD";
-   clockParams.clkfbout_mult_f    = 8.000;
-   clockParams.clkfbout_phase     = 0.0;
-   clockParams.clkin1_period      = 6.734007; // 148.5 MHz
-   clockParams.clkin2_period      = 6.734007;
-   clockParams.clkout0_divide_f   = 8.000;    // 148.5 MHz
-   clockParams.clkout0_duty_cycle = 0.5;
-   clockParams.clkout0_phase      = 0.0000;
-   clockParams.clkout1_divide     = 32;       // 37.125 MHz
-   clockParams.clkout1_duty_cycle = 0.5;
-   clockParams.clkout1_phase      = 0.0000;
-   clockParams.divclk_divide      = 1;
-   clockParams.ref_jitter1        = 0.010;
-   clockParams.ref_jitter2        = 0.010;
-
-   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
-   Clock hdmi_clock <- mkClockBUFG(clocked_by clockGen.clkout0);    // 148.5   MHz
-   Clock imageon_clock <- mkClockBUFG(clocked_by clockGen.clkout1); //  37.125 MHz
-   ImageCapture ic <- mkImageCapture(hdmi_clock, imageon_clock);
+module mkPortalTop(PortalTop#(addrWidth,64,ImageCapturePins,0));
+   //Clock defaultClock <- exposeCurrentClock();
+   //Reset defaultReset <- exposeCurrentReset();
+   B2C1 iclock <- mkB2C1();
+   Clock iclock_buf <- mkClockBUFG(clocked_by iclock.c);
+   ImageCapture ic <- mkImageCapture(iclock_buf);
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(ic.portals);
@@ -167,5 +172,12 @@ module mkPortalTop#(Clock fmc_imageon_clk1)(PortalTop#(addrWidth,64,ImageCapture
    interface slave = ctrl_mux;
    interface masters = nil;
    //interface leds = captureRequestInternal.leds;
-   interface ImageCapturePins pins = ic.pins;
+   interface ImageCapturePins pins;
+       method Action fmc_video_clk1(Bit#(1) v);
+           iclock.inputclock(v);
+       endmethod
+       interface ImageonSensorPins pins = ic.pins.pins;
+       interface ImageonSerdesPins serpins = ic.pins.serpins;
+       interface HDMI hdmi = ic.pins.hdmi;
+   endinterface
 endmodule : mkPortalTop

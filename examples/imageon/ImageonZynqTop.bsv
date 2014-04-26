@@ -57,9 +57,10 @@ interface ZynqTop#(type pins);
    interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
 
-typedef (function Module#(PortalTop#(32, 64, ipins, 0)) mkpt(Clock io_vita_clk)) MkPortalTop#(type ipins);
+typedef (function Module#(PortalTop#(32, 64, ipins, 0)) mkpt()) MkPortalTop#(type ipins);
+//typedef (function Module#(PortalTop#(32, 64, ipins, nMasters)) mkpt()) MkPortalTop#(type ipins, numeric type nMasters);
 
-module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
+module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(ipins));
    PS7 ps7 <- mkPS7();
    Clock mainclock <- mkClockBUFG(clocked_by ps7.fclkclk[0]);
    Clock clock200 <- mkClockBUFG(clocked_by ps7.fclkclk[3]);
@@ -73,8 +74,7 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
       ps7.i2c[1].scli(tscl.o);
    endrule
 
-   Clock fmc_video_clk1_buf <- mkClockIBUFG(clocked_by fmc_video_clk1);
-   let top <- constructor(fmc_video_clk1_buf, clocked_by mainclock, reset_by mainreset);
+   let top <- constructor(clocked_by mainclock, reset_by mainreset);
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
    mkConnection(ps7.m_axi_gp[0].client, ctrl, clocked_by mainclock, reset_by mainreset);
    //Axi3Master#(32,64,6) m_axi <- mkAxiDmaMaster(top.masters[0], clocked_by mainclock, reset_by mainreset);
@@ -105,7 +105,7 @@ module [Module] mkZynqTopFromPortal#(Clock fmc_video_clk1, MkPortalTop#(ipins) c
    interface deleteme_unused_reset = ps7.fclkreset;
 endmodule
 
-module mkImageonZynqTop#(Clock fmc_video_clk1)(ZynqTop#(ImageCapturePins));
-   let top <- mkZynqTopFromPortal(fmc_video_clk1, mkPortalTop);
+module mkImageonZynqTop(ZynqTop#(ImageCapturePins));
+   let top <- mkZynqTopFromPortal(mkPortalTop);
    return top;
 endmodule
