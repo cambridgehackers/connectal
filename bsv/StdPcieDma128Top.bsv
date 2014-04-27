@@ -38,10 +38,13 @@ module mkSynthesizeablePortalTop(PortalTop#(40, 128, Empty, 1));
    interface pins = top.pins;
 endmodule
 
+`ifndef PinType
+`define PinType Empty
+`endif
 module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    Clock sys_clk_p,     Clock sys_clk_n,
    Reset pci_sys_reset_n)
-   (PcieTop#(Empty));
+   (PcieTop#(`PinType));
    let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,mkSynthesizeablePortalTop);
    return top;
 endmodule: mkPcieTop

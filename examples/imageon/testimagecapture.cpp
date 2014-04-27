@@ -456,7 +456,9 @@ int main(int argc, const char **argv)
     status = poller->setClockFrequency(3, 200000000, &actualFrequency);
     printf("[%s:%d] setClockFrequency 3 200000000 status=%d actualfreq=%ld\n", __FUNCTION__, __LINE__, status, actualFrequency);
     pthread_create(&threaddata, NULL, &pthread_worker, NULL);
+    printf("[%s:%d] before set_i2c_mux_reset_n\n", __FUNCTION__, __LINE__);
     sensordevice->set_i2c_mux_reset_n(1);
+    printf("[%s:%d] before setTestPattern\n", __FUNCTION__, __LINE__);
     hdmidevice->setTestPattern(1);
     fmc_imageon_demo_init(argc, argv);
     printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);

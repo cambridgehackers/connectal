@@ -7,7 +7,7 @@ XBSVFLAGS = -C imageon-$(BOARD).xdc --tcl clock.tcl
 Dma = 
 PINS = Std
 #XBSVFLAGS += --bscflags " -D TRACE_AXI"
-XBSVFLAGS += --bscflags " -D USE_I2C -D CUSTOM_TOP"
+XBSVFLAGS += --bscflags " -D USE_I2C -D PinType=ImageCapturePins"
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true
@@ -16,10 +16,7 @@ ifeq ($(BOARD),zc702)
 HAS_PS7=true
 endif
 
-ifeq ($(HAS_PS7),true)
-TOP=ImageonZynqTop.bsv
-MKTOP=mkImageonZynqTop
-else
+ifneq ($(HAS_PS7),true)
 TOP=ImageonPcieTop.bsv
 MKTOP=mkImageonPcieTop
 endif
