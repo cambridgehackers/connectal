@@ -123,7 +123,9 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    interface deleteme_unused_reset = ps7.fclkreset;
 endmodule
 
+`ifndef CUSTOM_TOP
 module mkZynqTop(ZynqTop#(Empty));
    let top <- mkZynqTopFromPortal(mkPortalTop);
    return top;
 endmodule
+`endif
