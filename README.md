@@ -65,9 +65,32 @@ Preparation for Zynq
        tar -jxvf `basename $URL`
        PATH=$PATH:/scratch/android-ndk-r9d/
 
-2. Download the Android Development Tools:
+2. Download and install ADB from the Android Development Tools.
 
-   http://dl.google.com/android/adt/22.6.2/adt-bundle-linux-x86_64-20140321.zip
+   The Android Debug Bridge (adb) is packaged in platform-tools. XBSV
+   uses [adb](http://developer.android.com/tools/help/adb.html) to
+   transfer files to and from the Zedboard over ethernet and to run
+   commands on the Zedboard.
+
+   User your browser to accept the conditions and download the SDK installation tarball:
+
+       http://dl.google.com/android/android-sdk_r22.6.2-linux.tgz
+
+   Unpack the installation tarball:
+
+       tar -zxvf android-sdk_r22.6.2-linux.tgz
+
+   Run the `android` tool to install SDK components
+
+       ./android-sdk-linux/tools/android
+
+   Deselect all components except for "Android SDK Platform-Tools" [(screenshot)](doc/android-sdk-screenshots/android-sdk-manager.png) and
+   then click the "Install ... package" button to install [(screenshot)][(doc/android-sdk-screenshots/android-sdk-license.png) and then
+   accept the license. [(screenshot)](doc/android-sdk-screenshots/android-sdk-manager-log.png)
+
+   Add adb to your path:
+
+       PATH=$PATH:$PWD/android-sdk-linux/platform-tools
 
 3. git clone git://github.com/cambridgehackers/zynq-boot.git
 
