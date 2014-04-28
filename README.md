@@ -50,12 +50,26 @@ Preparation
 Preparation for Zynq
 --------------------
 
-1. Download ndk toolchain from: 
+1. Download the Android Native Development Kit (NDK) from: 
      http://developer.android.com/tools/sdk/ndk/index.html
      (actual file might be:
          http://dl.google.com/android/ndk/android-ndk-r9d-linux-x86_64.tar.bz2
      )
-2. git clone git://github.com/cambridgehackers/zynq-boot.git
+
+   XBSV uses NDK to compile code to run on Zynq platforms.
+
+   Add the NDK to your PATH.
+
+       URL=http://dl.google.com/android/ndk/android-ndk-r9d-linux-x86_64.tar.bz2
+       curl -O `basename $URL` $URL
+       tar -jxvf `basename $URL`
+       PATH=$PATH:/scratch/android-ndk-r9d/
+
+2. Download the Android Development Tools:
+
+   http://dl.google.com/android/adt/22.6.2/adt-bundle-linux-x86_64-20140321.zip
+
+3. git clone git://github.com/cambridgehackers/zynq-boot.git
 
 The boot.bin is board-specific, because the first stage boot loader
 (fsbl) and the devicetree are both board-specific.
