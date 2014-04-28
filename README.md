@@ -85,7 +85,7 @@ Preparation for Zynq
        ./android-sdk-linux/tools/android
 
    Deselect all components except for "Android SDK Platform-Tools" [(screenshot)](doc/android-sdk-screenshots/android-sdk-manager.png) and
-   then click the "Install ... package" button to install [(screenshot)][(doc/android-sdk-screenshots/android-sdk-license.png) and then
+   then click the "Install ... package" button to install [(screenshot)](doc/android-sdk-screenshots/android-sdk-license.png) and then
    accept the license. [(screenshot)](doc/android-sdk-screenshots/android-sdk-manager-log.png)
 
    Add adb to your path:
