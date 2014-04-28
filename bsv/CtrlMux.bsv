@@ -51,23 +51,26 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
 
 endmodule
 
-module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
-		   Vector#(numPortals,Portal#(addrWidth,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
+module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
+		   Vector#(numPortals,Portal#(aw,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
    provisos(Add#(1,numPortals,numIfcs),
 	    Add#(nz, TLog#(numIfcs), 4));
    
-   Vector#(numIfcs, MemSlave#(addrWidth,dataWidth)) ifcs = cons(dir.portalIfc.slave,map(getSlave, portals));
+   Vector#(numIfcs, MemSlave#(aw,dataWidth)) ifcs = cons(dir.portalIfc.slave,map(getSlave, portals));
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
    function Bit#(4) psel(Bit#(addrWidth) a);
       return a[port_sel_high:port_sel_low];
    endfunction
+   function Bit#(aw) asel(Bit#(addrWidth) a);
+      return a[(port_sel_low-1):0];
+   endfunction
    
-   FIFO#(MemRequest#(addrWidth)) req_ars <- mkSizedFIFO(1);
+   FIFO#(MemRequest#(aw)) req_ars <- mkSizedFIFO(1);
    FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
    Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
 
-   FIFO#(MemRequest#(addrWidth)) req_aws <- mkSizedFIFO(1);
+   FIFO#(MemRequest#(aw)) req_aws <- mkSizedFIFO(1);
    FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
    
@@ -85,7 +88,7 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
       interface Put writeReq;
 	 method Action put(MemRequest#(addrWidth) req);
 	    ws <= truncate(psel(req.addr));
-	    req_aws.enq(req);
+	    req_aws.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    req_aw_fifo.enq(?);
 	 endmethod
       endinterface
@@ -106,7 +109,7 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
       interface Put readReq;
 	 method Action put(MemRequest#(addrWidth) req);
 	    rs <= truncate(psel(req.addr)); 
-	    req_ars.enq(req);
+	    req_ars.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    req_ar_fifo.enq(?);
 	 endmethod
       endinterface

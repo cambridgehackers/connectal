@@ -42,10 +42,10 @@ interface Directory#(numeric type _n,
    interface Portal#(_a,_d) portalIfc;
 endinterface
 
-typedef Directory#(16,32,32) StdDirectory;
+typedef Directory#(16,16,32) StdDirectory;
 
-module mkStdDirectoryPortalIfc#(BRAMServer#(Bit#(32), Bit#(32)) br)(StdPortal);
-   MemSlave#(32,32) ctrl <- mkCtrl2BRAM(br);
+module mkStdDirectoryPortalIfc#(BRAMServer#(Bit#(16), Bit#(32)) br)(StdPortal);
+   MemSlave#(16,32) ctrl <- mkCtrl2BRAM(br);
    method Bit#(32) ifcId();
       return 0;
    endmethod
@@ -85,9 +85,9 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 	 dataFifo.enq(portals[idx>>1].ifcType);
    endrule
    
-   let br = (interface BRAMServer#(Bit#(32), Bit#(32));
+   let br = (interface BRAMServer#(Bit#(16), Bit#(32));
 		interface Put request;
-		   method Action put(BRAMRequest#(Bit#(32),Bit#(32)) req) if (!addrFifo.notEmpty);
+		   method Action put(BRAMRequest#(Bit#(16),Bit#(32)) req) if (!addrFifo.notEmpty);
 		      if (!req.write) begin
       			 if (req.address == 0+base)
 			    dataFifo.enq(1); // directory version
