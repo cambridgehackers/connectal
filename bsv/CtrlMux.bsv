@@ -32,7 +32,6 @@ import FIFO::*;
 import Portal::*;
 import Directory::*;
 import Dma::*;
-import RegFileA::*;
 
 module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bool))
    provisos(Add#(nz, TLog#(numPortals), 4),
@@ -54,12 +53,10 @@ endmodule
 
 module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
 		   Vector#(numPortals,Portal#(addrWidth,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
-   provisos(Add#(1,numPortals,numInputs),
-	    Add#(1,numInputs,numIfcs),
+   provisos(Add#(1,numPortals,numIfcs),
 	    Add#(nz, TLog#(numIfcs), 4));
    
-   MemSlave#(addrWidth,dataWidth) out_of_range <- mkMemSlaveOutOfRange;
-   Vector#(numIfcs, MemSlave#(addrWidth,dataWidth)) ifcs = append(cons(dir.portalIfc.slave,map(getSlave, portals)),cons(out_of_range, nil));
+   Vector#(numIfcs, MemSlave#(addrWidth,dataWidth)) ifcs = cons(dir.portalIfc.slave,map(getSlave, portals));
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
    function Bit#(4) psel(Bit#(addrWidth) a);
@@ -69,12 +66,10 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
    FIFO#(MemRequest#(addrWidth)) req_ars <- mkSizedFIFO(1);
    FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
    Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
-   
 
    FIFO#(MemRequest#(addrWidth)) req_aws <- mkSizedFIFO(1);
    FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
-   
    
    rule req_aw;
       let req <- toGet(req_aws).get;
@@ -89,10 +84,7 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
    interface MemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(MemRequest#(addrWidth) req);
-	    Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.addr));
-	    if (wsv > fromInteger(valueOf(numInputs)))
-	       wsv = fromInteger(valueOf(numInputs));
-	    ws <= wsv;
+	    ws <= truncate(psel(req.addr));
 	    req_aws.enq(req);
 	    req_aw_fifo.enq(?);
 	 endmethod
@@ -113,12 +105,9 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
    interface MemReadServer read_server;
       interface Put readReq;
 	 method Action put(MemRequest#(addrWidth) req);
-	    Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.addr)); 
-	    if (rsv > fromInteger(valueOf(numInputs)))
-	       rsv = fromInteger(valueOf(numInputs));
+	    rs <= truncate(psel(req.addr)); 
 	    req_ars.enq(req);
 	    req_ar_fifo.enq(?);
-	    rs <= rsv;
 	 endmethod
       endinterface
       interface Get readData;

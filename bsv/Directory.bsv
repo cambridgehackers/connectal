@@ -24,13 +24,17 @@
 // bsv libraries
 import Vector::*;
 import FIFO::*;
+import FIFOF::*;
 import RegFile::*;
 import SpecialFIFOs::*;
+import GetPut::*;
+import BRAM::*;
+import Assert::*;
 
 //portz libraries
 import Portal::*;
 import Dma::*;
-import RegFileA::*;
+import Ctrl2BRAM::*;
 
 interface Directory#(numeric type _n,
 		     numeric type _a, 
@@ -40,8 +44,8 @@ endinterface
 
 typedef Directory#(16,32,32) StdDirectory;
 
-module mkStdDirectoryPortalIfc#(RegFileA#(Bit#(32), Bit#(32)) rf)(StdPortal);
-   MemSlave#(32,32) ctrl <- mkMemSlaveFromRegFile(rf);
+module mkStdDirectoryPortalIfc#(BRAMServer#(Bit#(32), Bit#(32)) br)(StdPortal);
+   MemSlave#(32,32) ctrl <- mkCtrl2BRAM(br);
    method Bit#(32) ifcId();
       return 0;
    endmethod
@@ -59,48 +63,61 @@ endmodule
 module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
 
    Reg#(Bit#(64)) cycle_count <- mkReg(0);
-   Reg#(Bit#(32)) snapshot    <- mkReg(0);
-
+   Reg#(Bit#(32))    snapshot <- mkReg(0);
+   FIFOF#(Bit#(16))  addrFifo <- mkSizedFIFOF(1);
+   FIFO#(Bit#(32))   dataFifo <- mkSizedFIFO(1);
+   
+   let base = 128;
+   let cco = fromInteger(valueOf(TAdd#(TMul#(2,n),4)))+base;
+   
    rule count;
       cycle_count <= cycle_count+1;
    endrule
    
-   let rf = (interface RegFileA#(Bit#(32), Bit#(32));
-		method Action upd(Bit#(32) addr, Bit#(32) data);
-		   noAction;
-		endmethod
-		method ActionValue#(Bit#(32)) sub(Bit#(32) _addr);
-		   let base = 128;
-		   let cco = fromInteger(valueOf(TAdd#(TMul#(2,n),4)))+base;
-		   let addr = _addr[15:0]; 
-		   if (addr == 0+base)
-		      return 1; // directory version
-		   else if (addr == 1+base)
-		      return `TimeStamp;
-		   else if (addr == 2+base)
-		      return fromInteger(valueOf(n));
-		   else if (addr == 3+base)
-		      return 16; // portal Addr bits
-		   else if (addr < cco) begin
-		      let idx = (addr-4-base);
-		      if (idx[0] == 0)
-		   	 return portals[idx>>1].ifcId;
-		      else
-		   	 return portals[idx>>1].ifcType;
-		   end
-		   else if (addr == cco) begin
-		      snapshot <= truncate(cycle_count);
-		      return cycle_count[63:32];
-		   end
-		   else if (addr == cco+1)
-		      return snapshot;
-		   else begin
-      		      $display("directory addr out bounds %d", addr);
-		      return 0;
-		   end
-		endmethod
+   
+   rule req1;
+      let addr = addrFifo.first;
+      addrFifo.deq;
+      let idx = (addr-4-base);
+      if (idx[0] == 0)
+	 dataFifo.enq(portals[idx>>1].ifcId);
+      else
+	 dataFifo.enq(portals[idx>>1].ifcType);
+   endrule
+   
+   let br = (interface BRAMServer#(Bit#(32), Bit#(32));
+		interface Put request;
+		   method Action put(BRAMRequest#(Bit#(32),Bit#(32)) req) if (!addrFifo.notEmpty);
+		      if (!req.write) begin
+      			 if (req.address == 0+base)
+			    dataFifo.enq(1); // directory version
+			 else if (req.address == 1+base)
+			    dataFifo.enq(`TimeStamp);
+			 else if (req.address == 2+base)
+			    dataFifo.enq(fromInteger(valueOf(n)));
+			 else if (req.address == 3+base)
+			    dataFifo.enq(16); // portal Addr bits
+			 else if (req.address == cco) begin
+			    snapshot <= truncate(cycle_count);
+			    dataFifo.enq(cycle_count[63:32]);
+			 end
+			 else if (req.address == cco+1)
+			    dataFifo.enq(snapshot);
+			 else begin
+			    dynamicAssert((req.address < cco) && (req.address > base), "mkStdDirectory: invalid address");
+			    addrFifo.enq(truncate(req.address));
+			 end
+		      end
+		   endmethod
+		endinterface
+		interface Get response;
+		   method ActionValue#(Bit#(32)) get;
+		      dataFifo.deq;
+		      return dataFifo.first;
+      		   endmethod
+		endinterface
       	     endinterface);
-   let ifc <- mkStdDirectoryPortalIfc(rf);
+   let ifc <- mkStdDirectoryPortalIfc(br);
    interface StdPortal portalIfc = ifc;
 endmodule
 
