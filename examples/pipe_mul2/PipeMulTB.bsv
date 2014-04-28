@@ -1,4 +1,6 @@
-// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+
+// Copyright (c) 2013 Nokia, Inc.
+// Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -20,31 +22,43 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Vector            :: *;
-import Connectable       :: *;
-import Xilinx            :: *;
-import Portal            :: *;
-import Leds              :: *;
-import Top               :: *;
-import PcieTop           :: *;
+import FIFO::*;
+import Leds::*;
+import PipeMul::*;
+
+interface PipeMulIndication;
+    method Action res(Bit#(64) v);
+endinterface
+
+interface PipeMulRequest;
+   method Action mul(Bit#(32) x, Bit#(32) y);
+endinterface
+
+interface PipeMulTB;
+   interface PipeMulRequest ifc;
+   interface LEDS leds;
+endinterface
 
 (* synthesize *)
-module mkSynthesizeablePortalTop(PortalTop#(40, 64, Empty, 0));
-   let top <- mkPortalTop();
-   interface masters = top.masters;
-   interface slave = top.slave;
-   interface interrupt = top.interrupt;
-   interface leds = top.leds;
-   interface pins = top.pins;
+module mkPipeMul2Synth(PipeMul2#(2,24,void));
+   let pm <- mkPipeMul2();
+   return pm;
 endmodule
 
-`ifndef PinType
-`define PinType Empty
-`endif
-module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
-   Clock sys_clk_p,     Clock sys_clk_n,
-   Reset pci_sys_reset_n)
-   (PcieTop#(`PinType));
-   let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,mkSynthesizeablePortalTop);
-   return top;
-endmodule: mkPcieTop
+module mkPipeMulTB#(PipeMulIndication indication)(PipeMulTB);
+   PipeMul2#(2,24,void) multiplier <- mkPipeMul2Synth;
+   rule res;
+      match {.rv, .*} <- multiplier.get;
+      indication.res(extend(pack(rv)));
+   endrule
+   interface PipeMulRequest ifc;
+      method Action mul(Bit#(32) a, Bit#(32) b);
+	 multiplier.put(unpack(truncate(a)),unpack(truncate(b)),?);
+      endmethod
+   endinterface
+   interface LEDS leds;
+      method Bit#(8) leds();
+         return maxBound;
+      endmethod
+   endinterface
+endmodule

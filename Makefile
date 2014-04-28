@@ -48,6 +48,8 @@ testnames = echo             \
             pcietestbench    \
             pcietestbench_dma_io  \
             pcietestbench_dma_oo  \
+            pipe_mul         \
+            pipe_mul2        \
             simple           \
             strstr           \
 	    ring             \
@@ -60,6 +62,7 @@ testnames = echo             \
 	    fib              \
 	    xsim-echo        \
 	    imageon          \
+	    imageonfb        \
             bscan            \
             memread_nobuff_4m\
             memwrite_nobuff_4m\
@@ -153,11 +156,11 @@ $(zctests):
 	rm -fr examples/$(basename $@)/zc702
 	make BOARD=zc702 -C examples/$(basename $@) all
 
-zcruns = $(addsuffix .zcrun, $(testnames))
-zcruns: $(zcruns)
+zc702runs = $(addsuffix .zc702run, $(testnames))
+zc702runs: $(zc702runs)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc702
-$(zcruns):
+$(zc702runs):
 	(cd consolable; make)
 	(cd timelimit; ndk-build)
 	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zc702 -name \*.gz` `find examples/$(basename $@)/zc702 -name android_exe | grep libs`

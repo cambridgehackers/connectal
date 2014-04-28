@@ -97,7 +97,10 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    interface unused_reset = mainreset;
 endmodule
 
-module mkZynqTop(ZynqTop#(Empty));
+`ifndef PinType
+`define PinType Empty
+`endif
+module mkZynqTop(ZynqTop#(`PinType));
    let top <- mkZynqTopFromPortal(mkPortalTop);
    return top;
 endmodule

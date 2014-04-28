@@ -116,7 +116,7 @@
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA05_n"
     },
-    "CLK_fmc_video_clk1": {
+    "fmc_video_clk1_v": {
 	"PIO_DIRECTION": "INPUT",
 	"fmc": "CLK0_M2C_p"
     },

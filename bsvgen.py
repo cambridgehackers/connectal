@@ -282,22 +282,15 @@ slaveStateTemplate='''
 
 proxyCtrlTemplate='''
     // indication-specific state
-    Reg#(Bit#(32)) responseFiredCntReg <- mkReg(0);
     Reg#(Bit#(32)) underflowReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
     Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
-    Vector#(%(indicationChannelCount)s, PulseWire) responseFiredWires <- replicateM(mkPulseWire);
     Vector#(%(indicationChannelCount)s, Bool) readyBits = replicate(False);
 
     Reg#(Bool) interruptEnableReg <- mkReg(False);
     function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
     function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
 
-    // count the number of times indication methods are invoked
-    rule increment_responseFiredCntReg;
-        responseFiredCntReg <= responseFiredCntReg + fold(my_add, map(read_wire_cvt, responseFiredWires));
-    endrule
-    
     rule writeCtrlReg if (slaveWriteAddrFifo.first[14] == 1);
         slaveWriteAddrFifo.deq;
         slaveWriteDataFifo.deq;
@@ -414,7 +407,6 @@ indicationMethodDeclTemplate='''
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
         %(methodName)s$responseFifo.enq(%(MethodName)s$Response {%(structElements)s});
-        responseFiredWires[%(channelNumber)s].send();
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 

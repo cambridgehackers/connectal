@@ -31,6 +31,8 @@ import XbsvXilinxCells::*;
 import XbsvSpi::*;
 import HDMI::*;
 
+Bit#(10) imageData = 10'h035;
+
 (* always_enabled *)
 interface ImageonSensorPins;
     method Bit#(1) io_vita_clk_pll();
@@ -44,7 +46,6 @@ interface ImageonSensorPins;
 endinterface
 
 interface ImageonSensorRequest;
-    method Bit#(32) get_debugind();
     method Action set_host_oe(Bit#(1) v);
     method Action set_trigger_cnt_trigger(Bit#(32) v);
     method Action put_spi_request(Bit#(32) v);
@@ -118,7 +119,7 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
 
     rule calculate_framedata;
         Vector#(5, Bit#(10)) v = serdes.raw_data();
-        if (v[0] == 10'h035)
+        if (v[0] == imageData)
             begin
             Vector#(4, Bit#(10)) dor;
             for (Integer i = 0; i < 4; i = i + 1)
@@ -139,9 +140,6 @@ module mkImageonSensor#(Clock axi_clock, Reset axi_reset, SerdesData serdes, Boo
     endrule
 
     interface ImageonSensorRequest control;
-        method Bit#(32) get_debugind();
-            return 0;
-	endmethod
 	method Action set_host_oe(Bit#(1) v);
 	    imageon_oe <= ~v;
 	endmethod

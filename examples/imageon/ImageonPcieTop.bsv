@@ -37,7 +37,7 @@ import AxiCsr            :: *;
 import HDMI::*;
 import Imageon::*;
 
-typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop(Clock clock200, Clock io_vita_clk)) MkPortalTop#(numeric type dsz, type ipins);
+typedef (function Module#(PortalTop#(40, dsz, ipins)) mkPortalTop(Clock io_vita_clk)) MkPortalTop#(numeric type dsz, type ipins);
 
 `ifdef Artix7
 typedef 4 PcieLanes;
@@ -78,7 +78,8 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    
    // instantiate user portals
    Clock io_vita_clk <- XilinxCells::mkClockIBUFDS(io_vita_clk_out_p, io_vita_clk_out_n);
-   let portalTop <- mkPortalTop(x7pcie.clock200, io_vita_clk, clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
+   IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by x7pcie.clock200, reset_by x7pcie.portalReset);
+   let portalTop <- mkPortalTop(io_vita_clk, clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
 
    AxiSlaveEngine#(dsz) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
@@ -119,8 +120,8 @@ endmodule: mkPcieTopFromPortal
 
 
 (* synthesize *)
-module mkSynthesizeablePortalTop#(Clock clock200, Clock io_vita_clk)(PortalTop#(40, 64, ImageCapturePins));
-   let top <- mkPortalTop(clock200, io_vita_clk);
+module mkSynthesizeablePortalTop#(Clock io_vita_clk)(PortalTop#(40, 64, ImageCapturePins));
+   let top <- mkPortalTop(io_vita_clk);
    interface master = top.master;
    interface slave = top.slave;
    interface interrupt = top.interrupt;

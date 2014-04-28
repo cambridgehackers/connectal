@@ -1,3 +1,5 @@
+
+// Copyright (c) 2013 Nokia, Inc.
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -20,20 +22,37 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-interface ImageonDebugIndication;
-    method Action debugind(Bit#(32) v);
-    method Action axi_clock_period(Bit#(32) hdmi_cycles);
-    method Action hdmi_clock_period(Bit#(32) hdmi_cycles);
-    method Action imageon_clock_period(Bit#(32) imageon_cycles);
-    method Action fmc_clock_period(Bit#(32) imageon_cycles);
-    method Action frameStart(Bit#(2) monitor, Bit#(32) count);
+import FIFO::*;
+import Leds::*;
+import PipeMul::*;
+
+interface PipeMulIndication;
+    method Action res(Bit#(32) v);
 endinterface
 
-interface ImageonDebugRequest;
-    method Action set_debugreq(Bit#(32) v);
-    method Action get_debugind();
-    method Action measure_axi_clock_period(Bit#(32) cycles_100mhz);
-    method Action measure_hdmi_clock_period(Bit#(32) cycles_100mhz);
-    method Action measure_imageon_clock_period(Bit#(32) cycles_100mhz);
-    method Action measure_fmc_clock_period(Bit#(32) cycles_100mhz);
+interface PipeMulRequest;
+   method Action mul(Bit#(32) x, Bit#(32) y);
 endinterface
+
+interface PipeMulTB;
+   interface PipeMulRequest ifc;
+   interface LEDS leds;
+endinterface
+
+module mkPipeMulTB#(PipeMulIndication indication)(PipeMulTB);
+   PipeMul#(1,16,void) multiplier <- mkPipeMul;
+   rule res;
+      match {.rv, .*} <- multiplier.get;
+      indication.res(pack(extend(rv)));
+   endrule
+   interface PipeMulRequest ifc;
+      method Action mul(Bit#(32) a, Bit#(32) b);
+	 multiplier.put(unpack(truncate(a)),unpack(truncate(b)),?);
+      endmethod
+   endinterface
+   interface LEDS leds;
+      method Bit#(8) leds();
+         return maxBound;
+      endmethod
+   endinterface
+endmodule

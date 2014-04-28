@@ -18,6 +18,10 @@ independently. A portal is specified by a BSV interface declaration,
 from which `genxpsprojfrombsv` generates BSV and C++ wrappers and
 proxies.
 
+XBSV has a mailing list:
+   https://groups.google.com/forum/#!forum/xbsv
+
+
 Supported Platforms
 -------------------
 
@@ -67,8 +71,8 @@ To build a boot.bin for a zc702:
 Setting up the SD Card
 ----------------------
 
-1. Download http://xbsv.googlecode.com/files/sdcard-130611.tar.bz
-2. tar -jxvf sdcard-130611.tar.bz
+1. Download http://xbsv.googlecode.com/files/sdcard-130611.tar.gz
+2. tar -zxvf sdcard-130611.tar.gz
 
 Currently, all files must be in the first partition of an SD card.
 
@@ -191,6 +195,17 @@ Get the kernel source tree and build it:
     git checkout origin/december -b december
     cd device_xilinx_kernel
     make ARCH=arm xilinx_zynq_portal_defconfig 
+
+If you use a Xilinx toolchain:
+
+    make ARCH=arm CROSS_COMPILE=arm-xilinx-linux-gnueabi- -j20 zImage modules
+
+If you use an Android NDK toolchain:
+
+    make ARCH=arm CROSS_COMPILE=arm-linux-androideabi- -j20 zImage modules
+
+If you use a Code Sourcery toolchain:
+
     make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- -j20 zImage modules
 
 To Build the zynq portal driver, Makefile needs to be pointed to the root of the kernel source tree:

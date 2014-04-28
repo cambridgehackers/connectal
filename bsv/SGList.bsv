@@ -23,6 +23,7 @@
 // BSV Libraries
 import RegFile::*;
 import FIFOF::*;
+import FIFO::*;
 import Vector::*;
 import GetPut::*;
 import BRAMFIFO::*;
@@ -69,11 +70,15 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(c__, addrWidth, ObjectOffsetSize));
 
-   BRAM2Port#(Bit#(entryIdxSize), Page)       pages <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(entryIdxSize), Page) pages <- mkBRAM2Server(defaultValue);
    BRAM2Port#(RegionsIdx, Region) reg8 <- mkBRAM2Server(defaultValue);
    BRAM2Port#(RegionsIdx, Region) reg4 <- mkBRAM2Server(defaultValue);
    BRAM2Port#(RegionsIdx, Region) reg0 <- mkBRAM2Server(defaultValue);
 
+   Vector#(2,FIFOF#(Bit#(addrWidth)))       rvfifos <- replicateM(mkFIFOF);
+   Vector#(2,FIFO#(Region))            region8_buff <- replicateM(mkFIFO);
+   Vector#(2,FIFO#(Region))            region4_buff <- replicateM(mkFIFO);
+   Vector#(2,FIFO#(Region))            region0_buff <- replicateM(mkFIFO);
    Vector#(2,FIFOF#(Offset))                   offs <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(ReqTup))                   reqs <- replicateM(mkFIFOF);
    Reg#(Bit#(8))                             idxReg <- mkReg(0);
@@ -94,16 +99,30 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    endfunction
 
    
-   for(int i = 0; i < 2; i=i+1)
-      rule req;
+   for(int i = 0; i < 2; i=i+1) begin
+      rule req0;
+	 Region region8 <- portsel(reg8,i).response.get;
+	 Region region4 <- portsel(reg4,i).response.get;
+	 Region region0 <- portsel(reg0,i).response.get;
+	 region8_buff[i].enq(region8);
+	 region4_buff[i].enq(region4);
+	 region0_buff[i].enq(region0);
+      endrule
+
+      rule req1;
 	 reqs[i].deq;
 	 let ptr = tpl_1(reqs[i].first);
 	 let off = tpl_2(reqs[i].first);
 	 Offset o = tagged OOrd0 0;
 	 Bit#(8) p = 0;
-	 Region region8 <- portsel(reg8,i).response.get;
-	 Region region4 <- portsel(reg4,i).response.get;
-	 Region region0 <- portsel(reg0,i).response.get;
+	 Region region8 = region8_buff[i].first;
+	 Region region4 = region4_buff[i].first;
+	 Region region0 = region0_buff[i].first;
+
+	 region8_buff[i].deq;
+	 region4_buff[i].deq;
+	 region0_buff[i].deq;
+
 	 Bit#(40) barrier8 = region8.barrier;
 	 Bit#(40) barrier4 = region4.barrier;
 	 Bit#(40) barrier0 = region0.barrier;
@@ -125,12 +144,54 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 end 
 	 else begin
 	    $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-	    dmaIndication.badAddrTrans(extend(ptr), extend(off), barrier0);
+	    dmaIndication.badAddrTrans(extend(ptr), extend(off), 0);
 	 end
 	 offs[i].enq(o);
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{ptr-1,p}, datain:?});
       endrule
-
+      rule req2;
+	 Bit#(ObjectOffsetSize) rv = 0;
+	 let page <- portsel(pages, i).response.get;
+	 let offset = offs[i].first;
+	 case (offset) matches
+	    tagged OOrd0 .o:
+	       begin
+		  case (page) matches
+		     tagged POrd4 .p:
+			$display("OOrd0 vs POrd4");
+		     tagged POrd8 .p:
+			$display("OOrd0 vs POrd8");
+		  endcase
+		  rv = {page.POrd0,o};
+	       end
+	    tagged OOrd4 .o:
+	       begin
+		  case (page) matches
+		     tagged POrd0 .p:
+			$display("OOrd4 vs POrd0");
+		     tagged POrd8 .p:
+			$display("OOrd4 vs POrd8");
+		  endcase
+		  rv = {page.POrd4,o};
+	       end
+	    tagged OOrd8 .o:
+	       begin
+		  case (page) matches
+		     tagged POrd0 .p:
+			$display("OOrd8 vs POrd0");
+		     tagged POrd4 .p:
+			$display("OOrd8 vs POrd4");
+		  endcase
+		  rv = {page.POrd8,o};
+	       end
+	 endcase
+	 if (False && rv[31:24] != 0)
+	    $display($format("SGList response: funny r",fshow(rv),fshow(offset),fshow(page)));
+	 offs[i].deq;
+	 rvfifos[i].enq(truncate(rv));
+      endrule
+   end
+   
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
    for(int i = 0; i < 2; i=i+1)
       addrServers[i] = 
@@ -145,49 +206,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 		reqs[i].enq(req);
 	     endmethod
 	  endinterface
-	  interface Get response;
-	     method ActionValue#(Bit#(addrWidth)) get();
-		Bit#(ObjectOffsetSize) rv = 0;
-		let page <- portsel(pages, i).response.get;
-		let offset = offs[i].first;
-		case (offset) matches
-		   tagged OOrd0 .o:
-		      begin
-			 case (page) matches
-			    tagged POrd4 .p:
-			       $display("OOrd0 vs POrd4");
-			    tagged POrd8 .p:
-			       $display("OOrd0 vs POrd8");
-			 endcase
-			 rv = {page.POrd0,o};
-		      end
-		   tagged OOrd4 .o:
-		      begin
-			  case (page) matches
-			     tagged POrd0 .p:
-				$display("OOrd4 vs POrd0");
-			     tagged POrd8 .p:
-				$display("OOrd4 vs POrd8");
-			  endcase
-			  rv = {page.POrd4,o};
-		      end
-		   tagged OOrd8 .o:
-		      begin
-			 case (page) matches
-			    tagged POrd0 .p:
-			       $display("OOrd8 vs POrd0");
-			    tagged POrd4 .p:
-			       $display("OOrd8 vs POrd4");
-			 endcase
-			 rv = {page.POrd8,o};
-		      end
-		endcase
-		if (False && rv[31:24] != 0)
-		   $display($format("SGList response: funny r",fshow(rv),fshow(offset),fshow(page)));
-		offs[i].deq;
-		return truncate(rv);
-	     endmethod
-	  endinterface
+	  interface Get response = toGet(rvfifos[i]);
        endinterface);
 
 
