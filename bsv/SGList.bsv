@@ -78,6 +78,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    Vector#(2,FIFO#(Bit#(addrWidth)))        rvfifos <- replicateM(mkSizedFIFO(1));
    Vector#(2,FIFO#(Offset))                    offs <- replicateM(mkSizedFIFO(1));
    Vector#(2,FIFO#(ReqTup))                    reqs <- replicateM(mkSizedFIFO(1));
+   Vector#(2,FIFO#(Bit#(entryIdxSize)))   addresses <- replicateM(mkSizedFIFO(1));
    
    Reg#(Bit#(8))                             idxReg <- mkReg(0);
    
@@ -98,7 +99,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 
    
    for(int i = 0; i < 2; i=i+1) begin
-      rule req1;
+      rule req0;
 	 reqs[i].deq;
 	 let ptr = tpl_1(reqs[i].first);
 	 let off = tpl_2(reqs[i].first);
@@ -133,7 +134,11 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    dmaIndication.badAddrTrans(extend(ptr), extend(off), 0);
 	 end
 	 offs[i].enq(o);
-	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{ptr-1,p}, datain:?});
+	 addresses[i].enq({ptr-1,p});
+      endrule
+      rule req1;
+	 addresses[i].deq;
+	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:addresses[i].first, datain:?});
       endrule
       rule req2;
 	 Bit#(ObjectOffsetSize) rv = 0;
