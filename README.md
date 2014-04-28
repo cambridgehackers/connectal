@@ -53,7 +53,7 @@ Preparation for Zynq
 1. Download ndk toolchain from: 
      http://developer.android.com/tools/sdk/ndk/index.html
      (actual file might be:
-         http://dl.google.com/android/ndk/android-ndk-r8e-linux-x86_64.tar.bz2
+         http://dl.google.com/android/ndk/android-ndk-r9d-linux-x86_64.tar.bz2
      )
 2. git clone git://github.com/cambridgehackers/zynq-boot.git
 
