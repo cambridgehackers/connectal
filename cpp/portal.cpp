@@ -512,7 +512,7 @@ Directory::Directory()
   int status = ioctl(fd, PORTAL_SET_FCLK_RATE, (long)&request);
   if (status < 0)
     fprintf(stderr, "Directory::Directory() error setting fclk0, errno=%d\n", errno);
-  fprintf(stderr, "Directory::Directory() set fclk0 (%d,%ld)\n", reqF, request.actual_rate);
+  fprintf(stderr, "Directory::Directory() set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
 
   // finally scan
   scan(1);

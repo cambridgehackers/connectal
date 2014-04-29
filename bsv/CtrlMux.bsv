@@ -32,6 +32,7 @@ import FIFO::*;
 import Portal::*;
 import Directory::*;
 import Dma::*;
+import RegFileA::*;
 
 module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bool))
    provisos(Add#(nz, TLog#(numPortals), 4),
@@ -51,28 +52,29 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
 
 endmodule
 
-module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
-		   Vector#(numPortals,Portal#(aw,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
-   provisos(Add#(1,numPortals,numIfcs),
+module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
+		   Vector#(numPortals,Portal#(addrWidth,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
+   provisos(Add#(1,numPortals,numInputs),
+	    Add#(1,numInputs,numIfcs),
 	    Add#(nz, TLog#(numIfcs), 4));
    
-   Vector#(numIfcs, MemSlave#(aw,dataWidth)) ifcs = cons(dir.portalIfc.slave,map(getSlave, portals));
+   MemSlave#(addrWidth,dataWidth) out_of_range <- mkMemSlaveOutOfRange;
+   Vector#(numIfcs, MemSlave#(addrWidth,dataWidth)) ifcs = append(cons(dir.portalIfc.slave,map(getSlave, portals)),cons(out_of_range, nil));
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
    function Bit#(4) psel(Bit#(addrWidth) a);
       return a[port_sel_high:port_sel_low];
    endfunction
-   function Bit#(aw) asel(Bit#(addrWidth) a);
-      return a[(port_sel_low-1):0];
-   endfunction
    
-   FIFO#(MemRequest#(aw)) req_ars <- mkSizedFIFO(1);
+   FIFO#(MemRequest#(addrWidth)) req_ars <- mkSizedFIFO(1);
    FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
    Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
+   
 
-   FIFO#(MemRequest#(aw)) req_aws <- mkSizedFIFO(1);
+   FIFO#(MemRequest#(addrWidth)) req_aws <- mkSizedFIFO(1);
    FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
+   
    
    rule req_aw;
       let req <- toGet(req_aws).get;
@@ -87,8 +89,11 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    interface MemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(MemRequest#(addrWidth) req);
-	    ws <= truncate(psel(req.addr));
-	    req_aws.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	    Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.addr));
+	    if (wsv > fromInteger(valueOf(numInputs)))
+	       wsv = fromInteger(valueOf(numInputs));
+	    ws <= wsv;
+	    req_aws.enq(req);
 	    req_aw_fifo.enq(?);
 	 endmethod
       endinterface
@@ -108,9 +113,12 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    interface MemReadServer read_server;
       interface Put readReq;
 	 method Action put(MemRequest#(addrWidth) req);
-	    rs <= truncate(psel(req.addr)); 
-	    req_ars.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	    Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.addr)); 
+	    if (rsv > fromInteger(valueOf(numInputs)))
+	       rsv = fromInteger(valueOf(numInputs));
+	    req_ars.enq(req);
 	    req_ar_fifo.enq(?);
+	    rs <= rsv;
 	 endmethod
       endinterface
       interface Get readData;

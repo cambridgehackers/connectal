@@ -75,11 +75,12 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    BRAM2Port#(RegionsIdx, Region) reg4 <- mkBRAM2Server(defaultValue);
    BRAM2Port#(RegionsIdx, Region) reg0 <- mkBRAM2Server(defaultValue);
 
-   Vector#(2,FIFO#(Bit#(addrWidth)))        rvfifos <- replicateM(mkSizedFIFO(1));
-   Vector#(2,FIFO#(Offset))                    offs <- replicateM(mkSizedFIFO(1));
-   Vector#(2,FIFO#(ReqTup))                    reqs <- replicateM(mkSizedFIFO(1));
-   Vector#(2,FIFO#(Bit#(entryIdxSize)))   addresses <- replicateM(mkSizedFIFO(1));
-   
+   Vector#(2,FIFOF#(Bit#(addrWidth)))       rvfifos <- replicateM(mkFIFOF);
+   Vector#(2,FIFO#(Region))            region8_buff <- replicateM(mkFIFO);
+   Vector#(2,FIFO#(Region))            region4_buff <- replicateM(mkFIFO);
+   Vector#(2,FIFO#(Region))            region0_buff <- replicateM(mkFIFO);
+   Vector#(2,FIFOF#(Offset))                   offs <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(ReqTup))                   reqs <- replicateM(mkFIFOF);
    Reg#(Bit#(8))                             idxReg <- mkReg(0);
    
    let page_shift0 = fromInteger(valueOf(SGListPageShift0));
@@ -100,15 +101,27 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    
    for(int i = 0; i < 2; i=i+1) begin
       rule req0;
+	 Region region8 <- portsel(reg8,i).response.get;
+	 Region region4 <- portsel(reg4,i).response.get;
+	 Region region0 <- portsel(reg0,i).response.get;
+	 region8_buff[i].enq(region8);
+	 region4_buff[i].enq(region4);
+	 region0_buff[i].enq(region0);
+      endrule
+
+      rule req1;
 	 reqs[i].deq;
 	 let ptr = tpl_1(reqs[i].first);
 	 let off = tpl_2(reqs[i].first);
 	 Offset o = tagged OOrd0 0;
 	 Bit#(8) p = 0;
+	 Region region8 = region8_buff[i].first;
+	 Region region4 = region4_buff[i].first;
+	 Region region0 = region0_buff[i].first;
 
-	 Region region8 <- portsel(reg8,i).response.get;
-	 Region region4 <- portsel(reg4,i).response.get;
-	 Region region0 <- portsel(reg0,i).response.get;
+	 region8_buff[i].deq;
+	 region4_buff[i].deq;
+	 region0_buff[i].deq;
 
 	 Bit#(40) barrier8 = region8.barrier;
 	 Bit#(40) barrier4 = region4.barrier;
@@ -134,11 +147,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    dmaIndication.badAddrTrans(extend(ptr), extend(off), 0);
 	 end
 	 offs[i].enq(o);
-	 addresses[i].enq({ptr-1,p});
-      endrule
-      rule req1;
-	 addresses[i].deq;
-	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:addresses[i].first, datain:?});
+	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{ptr-1,p}, datain:?});
       endrule
       rule req2;
 	 Bit#(ObjectOffsetSize) rv = 0;
