@@ -506,7 +506,7 @@ Directory::Directory()
   
   // start by setting the clock frequency (this only has any effect on the zynq platform)
   PortalClockRequest request;
-  long reqF = 150000000; // 150 Mhz
+  long reqF = 100000000; // 100 Mhz
   request.clknum = 0;
   request.requested_rate = reqF;
   int status = ioctl(fd, PORTAL_SET_FCLK_RATE, (long)&request);
