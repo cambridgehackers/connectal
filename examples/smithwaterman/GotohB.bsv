@@ -26,6 +26,7 @@ import BRAM::*;
 interface GotohAlgorithm;
    method Action setupA (Bit#(14) start, Bit#(14) length);
    method Action setupB (Bit#(14) start, Bit#(14) length);
+   method Action setupG (Bit#(16) g);
    method Action setupCC (Bit#(14) start);
    method Action setupDD (Bit#(14) start);
    method Bit#(14) result();
@@ -33,7 +34,7 @@ interface GotohAlgorithm;
 endinterface
 
 
-module mkGotohB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matCC, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matDD, int dir, Bit#(16) argt)(GotohAlgorithm)
+module mkGotohB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strB, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matCC, BRAMServer#(Bit#(lIndexWidth), Bit#(16)) matDD, int dir)(GotohAlgorithm)
          provisos(Add#(0, 14, strIndexWidth),
 	       Add#(0, 14, lIndexWidth));
 
@@ -58,6 +59,7 @@ module mkGotohB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit
    Reg#(Bit#(16)) ccData <- mkReg(0);
    Reg#(Bit#(16)) ddData <- mkReg(0);
    Reg#(Bit#(16)) wdata <- mkReg(0);
+   Reg#(Bit#(16)) argt <- mkReg(0);
    
   Stmt gotohB =
    seq
@@ -177,6 +179,10 @@ module mkGotohB#(BRAMServer#(Bit#(strIndexWidth), Bit#(8)) strA, BRAMServer#(Bit
    method Action setupB(Bit#(14) start, Bit#(14) length);
       bStartReg <= start;
       bLenReg <= length;
+   endmethod
+
+   method Action setupG(Bit#(16) g);
+      argt <= g;
    endmethod
 
    method Action setupCC(Bit#(14) start);
