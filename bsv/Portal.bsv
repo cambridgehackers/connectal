@@ -48,7 +48,7 @@ function Vector#(16, ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, Por
    return interrupts;
 endfunction
 
-typedef Portal#(32,32) StdPortal;
+typedef Portal#(16,32) StdPortal;
 
 interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
    interface MemSlave#(32,32) slave;

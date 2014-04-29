@@ -38,10 +38,10 @@ interface Directory#(numeric type _n,
    interface Portal#(_a,_d) portalIfc;
 endinterface
 
-typedef Directory#(16,32,32) StdDirectory;
+typedef Directory#(16,16,32) StdDirectory;
 
-module mkStdDirectoryPortalIfc#(RegFileA#(Bit#(32), Bit#(32)) rf)(StdPortal);
-   MemSlave#(32,32) ctrl <- mkMemSlaveFromRegFile(rf);
+module mkStdDirectoryPortalIfc#(RegFileA#(Bit#(16), Bit#(32)) rf)(StdPortal);
+   MemSlave#(16,32) ctrl <- mkMemSlaveFromRegFile(rf);
    method Bit#(32) ifcId();
       return 0;
    endmethod
@@ -65,11 +65,11 @@ module mkStdDirectory#(Vector#(n,StdPortal) portals) (StdDirectory);
       cycle_count <= cycle_count+1;
    endrule
    
-   let rf = (interface RegFileA#(Bit#(32), Bit#(32));
-		method Action upd(Bit#(32) addr, Bit#(32) data);
+   let rf = (interface RegFileA#(Bit#(16), Bit#(32));
+		method Action upd(Bit#(16) addr, Bit#(32) data);
 		   noAction;
 		endmethod
-		method ActionValue#(Bit#(32)) sub(Bit#(32) _addr);
+		method ActionValue#(Bit#(32)) sub(Bit#(16) _addr);
 		   let base = 128;
 		   let cco = fromInteger(valueOf(TAdd#(TMul#(2,n),4)))+base;
 		   let addr = _addr[15:0]; 

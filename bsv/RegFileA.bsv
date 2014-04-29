@@ -101,32 +101,32 @@ module mkAddressGenerator(AddressGenerator#(addrWidth));
    endinterface
 endmodule
 
-module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) rf) (MemSlave#(addrWidth, busWidth))
-   provisos(Add#(nz, regFileBusWidth, addrWidth));
+module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidth)) rf) (MemSlave#(busAddrWidth, busDataWidth))
+   provisos(Add#(a__, regFileAddrWidth, busAddrWidth));
 
-   Reg#(Bit#(regFileBusWidth)) writeAddrReg <- mkReg(0);
+   Reg#(Bit#(regFileAddrWidth)) writeAddrReg <- mkReg(0);
    Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
    FIFOF#(void) writeRespFifo <- mkFIFOF();
    FIFOF#(Bit#(6)) writeTagFifo <- mkFIFOF();
-   FIFO#(MemRequest#(addrWidth)) req_aw_fifo <- mkSizedFIFO(1);
+   FIFO#(MemRequest#(busAddrWidth)) req_aw_fifo <- mkSizedFIFO(1);
    
-   AddressGenerator#(addrWidth) readAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(busAddrWidth) readAddrGenerator <- mkAddressGenerator();
 
    Bool verbose = False;
    interface MemReadServer read_server;
       interface Put readReq;
-	 method Action put(MemRequest#(addrWidth) req);
+	 method Action put(MemRequest#(busAddrWidth) req);
             if (verbose) $display("axiSlave.read.readAddr %h bc %d", req.addr, req.burstLen);
 	    readAddrGenerator.request.put(req);
 	 endmethod
       endinterface
       interface Get readData;
-	 method ActionValue#(ObjectData#(busWidth)) get();
+	 method ActionValue#(ObjectData#(busDataWidth)) get();
 	    let addrBeat <- readAddrGenerator.addrBeat.get();
    	    let addr = addrBeat.addr;
    	    let tag = addrBeat.tag;
    	    let burstCount = addrBeat.bc;
-            Bit#(regFileBusWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busWidth,8))));
+            Bit#(regFileAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
             let data <- rf.sub(regFileAddr);
             if (verbose) $display("read_server.readData %h %h %d", addr, data, burstCount);
             return ObjectData { data: data, tag: tag };
@@ -135,18 +135,18 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileBusWidth), Bit#(busWidth)) r
    endinterface
    interface MemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(MemRequest#(addrWidth) req);
+	 method Action put(MemRequest#(busAddrWidth) req);
             req_aw_fifo.enq(req);
             if (verbose) $display("write_server.writeAddr %h bc %d", req.addr, req.burstLen);
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(ObjectData#(busWidth) resp);
+	 method Action put(ObjectData#(busDataWidth) resp);
 	    let addr = writeAddrReg;
             let burstCount = writeBurstCountReg;
             if (burstCount == 0) begin
 	       let req = req_aw_fifo.first;
-               addr = truncate(req.addr/fromInteger(valueOf(TDiv#(busWidth,8))));
+               addr = truncate(req.addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
                burstCount = req.burstLen;
                writeTagFifo.enq(req.tag);
 	       req_aw_fifo.deq;

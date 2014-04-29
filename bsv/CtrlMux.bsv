@@ -52,19 +52,23 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
 
 endmodule
 
-module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
-		   Vector#(numPortals,Portal#(addrWidth,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
+module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
+		   Vector#(numPortals,Portal#(aw,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
    provisos(Add#(1,numPortals,numInputs),
 	    Add#(1,numInputs,numIfcs),
 	    Add#(nz, TLog#(numIfcs), 4));
    
-   MemSlave#(addrWidth,dataWidth) out_of_range <- mkMemSlaveOutOfRange;
-   Vector#(numIfcs, MemSlave#(addrWidth,dataWidth)) ifcs = append(cons(dir.portalIfc.slave,map(getSlave, portals)),cons(out_of_range, nil));
+   MemSlave#(aw,dataWidth) out_of_range <- mkMemSlaveOutOfRange;
+   Vector#(numIfcs, MemSlave#(aw,dataWidth)) ifcs = append(cons(dir.portalIfc.slave,map(getSlave, portals)),cons(out_of_range, nil));
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
    function Bit#(4) psel(Bit#(addrWidth) a);
       return a[port_sel_high:port_sel_low];
    endfunction
+   function Bit#(aw) asel(Bit#(addrWidth) a);
+      return a[(port_sel_low-1):0];
+   endfunction
+   
    
    FIFO#(MemRequest#(addrWidth)) req_ars <- mkSizedFIFO(1);
    FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
@@ -78,12 +82,12 @@ module mkSlaveMux#(Directory#(aw,addrWidth,dataWidth) dir,
    
    rule req_aw;
       let req <- toGet(req_aws).get;
-      ifcs[ws].write_server.writeReq.put(req);
+      ifcs[ws].write_server.writeReq.put(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
    endrule
       
    rule req_ar;
       let req <- toGet(req_ars).get;
-      ifcs[rs].read_server.readReq.put(req);
+      ifcs[rs].read_server.readReq.put(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
    endrule
       
    interface MemWriteServer write_server;
