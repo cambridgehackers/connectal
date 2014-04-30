@@ -59,6 +59,7 @@ testnames = echo             \
             bluescope        \
 	    splice           \
 	    maxcommonsubseq  \
+	    smithwaterman    \
 	    fib              \
 	    xsim-echo        \
 	    imageon          \
