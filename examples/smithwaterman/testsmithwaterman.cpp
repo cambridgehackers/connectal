@@ -111,12 +111,8 @@ int main(int argc, const char **argv)
     if (strB == MAP_FAILED) perror("strB mmap failed");
     assert(strB != MAP_FAILED);
 
-/*
-    const char *strA_text = "___a_____b______c____";
-    const char *strB_text = "..a........b.c....";
-*/
-    const char *strA_text = "012a45678b012345c7890";
-    const char *strB_text = "ABaDEFGHIJKbMcOPQR";
+    const char *strA_text = "agtac";
+    const char *strB_text = "aag";
     
     assert(strlen(strA_text) < alloc_len);
     assert(strlen(strB_text) < alloc_len);
