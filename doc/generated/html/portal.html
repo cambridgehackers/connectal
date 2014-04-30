@@ -1047,28 +1047,31 @@ scratch, the examples in xbsv use include
 variables.</p></div>
 <div class="paragraph"><p>Here is the Makefile for the <tt>simple</tt> example:</p></div>
 <div class="listingblock">
-<div class="content">
-<pre><tt>    make
-    BSVDIR=../../bsv
-    S2H = SimpleRequest
-    H2S = SimpleIndication
-    BSVFILES = Simple.bsv Top.bsv
-    CPPFILES=testsimple.cpp
-    Dma =
-    PINS = Std
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="color: #009900">BSVDIR</span><span style="color: #990000">=../..</span>/bsv
+    S2H <span style="color: #990000">=</span> SimpleRequest
+    H2S <span style="color: #990000">=</span> SimpleIndication
+    BSVFILES <span style="color: #990000">=</span> Simple.bsv Top.bsv
+    <span style="color: #009900">CPPFILES</span><span style="color: #990000">=</span>testsimple.cpp
+    Dma <span style="color: #990000">=</span>
+    PINS <span style="color: #990000">=</span> Std
 
-    include ../../Makefile.common</tt></pre>
-</div></div>
+    include <span style="color: #990000">../..</span>/Makefile.common</tt></pre></div></div>
 <div class="paragraph"><p>Designs using <tt>xbsv</tt> may also include <tt>xbsv/Makefile.common</tt> if they define <tt>XBSVDIR</tt> in their Makefile:</p></div>
 <div class="listingblock">
-<div class="content">
-<pre><tt>    XBSVDIR=/scratch/xbsv
-    S2H = ...
-    H2S = ...
-    BSVFILES = ...
-    CPPFILES = ...
-    include $(XBSVDIR)/Makefile.common</tt></pre>
-</div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="color: #009900">XBSVDIR</span><span style="color: #990000">=</span>/scratch/xbsv
+    S2H <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+    H2S <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+    BSVFILES <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+    CPPFILES <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+    include <span style="color: #009900">$(XBSVDIR)</span>/Makefile.common</tt></pre></div></div>
 <div class="sect2">
 <h3 id="_simple_top_bsv">simple/Top.bsv</h3>
 <div class="paragraph"><p>Each XBSV design implements [Top.bsv](../examples/simple/Top.bsv) with some standard components.</p></div>
@@ -1144,65 +1147,79 @@ x86/PCIe.</p></div>
 hardware-to-software interfaces and proxies for software-to-hardware
 interfaces. These will be in the "jni/" subdirectory of the project directory.</p></div>
 <div class="listingblock">
-<div class="content">
-<pre><tt>    #include "SimpleIndicationWrapper.h"
-    #include "SimpleRequestProxy.h"</tt></pre>
-</div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">    #include</span></span> <span style="color: #FF0000">"SimpleIndicationWrapper.h"</span>
+<span style="font-weight: bold"><span style="color: #000080">    #include</span></span> <span style="color: #FF0000">"SimpleRequestProxy.h"</span></tt></pre></div></div>
 <div class="paragraph"><p>It also declares software equivalents for structs and enums declared in the processed BSV files:</p></div>
 <div class="listingblock">
-<div class="content">
-<pre><tt>    #include "GeneratedTypes.h"</tt></pre>
-</div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">    #include</span></span> <span style="color: #FF0000">"GeneratedTypes.h"</span></tt></pre></div></div>
 <div class="paragraph"><p>XBSV generates abstract virtual base classes for each Indication interface.</p></div>
 <div class="listingblock">
-<div class="content">
-<pre><tt>    class SimpleIndicationWrapper : public Portal {
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="font-weight: bold"><span style="color: #0000FF">class</span></span> <span style="color: #008080">SimpleIndicationWrapper</span> <span style="color: #990000">:</span> <span style="font-weight: bold"><span style="color: #0000FF">public</span></span> Portal <span style="color: #FF0000">{</span>
 
-    public:
-        ...
-        SimpleIndicationWrapper(int id, PortalPoller *poller = 0);
-        virtual void heard1 ( const uint32_t v )= 0;
-        ...
-    };</tt></pre>
-</div></div>
+    <span style="font-weight: bold"><span style="color: #0000FF">public</span></span><span style="color: #990000">:</span>
+        <span style="color: #990000">...</span>
+        <span style="font-weight: bold"><span style="color: #000000">SimpleIndicationWrapper</span></span><span style="color: #990000">(</span><span style="color: #009900">int</span> id<span style="color: #990000">,</span> <span style="color: #008080">PortalPoller</span> <span style="color: #990000">*</span>poller <span style="color: #990000">=</span> <span style="color: #993399">0</span><span style="color: #990000">);</span>
+        <span style="font-weight: bold"><span style="color: #0000FF">virtual</span></span> <span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">heard1</span></span> <span style="color: #990000">(</span> <span style="font-weight: bold"><span style="color: #0000FF">const</span></span> <span style="color: #008080">uint32_t</span> v <span style="color: #990000">)=</span> <span style="color: #993399">0</span><span style="color: #990000">;</span>
+        <span style="color: #990000">...</span>
+    <span style="color: #FF0000">}</span><span style="color: #990000">;</span></tt></pre></div></div>
 <div class="paragraph"><p>Implement subclasses of the wrapper in order to define the callbacks</p></div>
 <div class="listingblock">
-<div class="content">
-<pre><tt>    class SimpleIndication : public SimpleIndicationWrapper
-    {
-    public:
-      ...
-        virtual void heard1(uint32_t a) {
-          fprintf(stderr, "heard1(%d)\n", a);
-          assert(a == v1a);
-          incr_cnt();
-        }
-        ...
-    };</tt></pre>
-</div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="font-weight: bold"><span style="color: #0000FF">class</span></span> <span style="color: #008080">SimpleIndication</span> <span style="color: #990000">:</span> <span style="font-weight: bold"><span style="color: #0000FF">public</span></span> SimpleIndicationWrapper
+    <span style="color: #FF0000">{</span>
+    <span style="font-weight: bold"><span style="color: #0000FF">public</span></span><span style="color: #990000">:</span>
+      <span style="color: #990000">...</span>
+        <span style="font-weight: bold"><span style="color: #0000FF">virtual</span></span> <span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">heard1</span></span><span style="color: #990000">(</span><span style="color: #008080">uint32_t</span> a<span style="color: #990000">)</span> <span style="color: #FF0000">{</span>
+          <span style="font-weight: bold"><span style="color: #000000">fprintf</span></span><span style="color: #990000">(</span>stderr<span style="color: #990000">,</span> <span style="color: #FF0000">"heard1(%d)</span><span style="color: #CC33CC">\n</span><span style="color: #FF0000">"</span><span style="color: #990000">,</span> a<span style="color: #990000">);</span>
+          <span style="font-weight: bold"><span style="color: #000000">assert</span></span><span style="color: #990000">(</span>a <span style="color: #990000">==</span> v1a<span style="color: #990000">);</span>
+          <span style="font-weight: bold"><span style="color: #000000">incr_cnt</span></span><span style="color: #990000">();</span>
+        <span style="color: #FF0000">}</span>
+        <span style="color: #990000">...</span>
+    <span style="color: #FF0000">}</span><span style="color: #990000">;</span></tt></pre></div></div>
 <div class="paragraph"><p>To connect these classes to the hardware, instantiate them using the
 <tt>IfcNames</tt> enum identifiers. XBSV prepends the name of the type
-because C++ does not support overloading of enum tags.</p></div>
+because C does not support overloading of enum tags.</p></div>
 <div class="listingblock">
-<div class="content">
-<pre><tt>    SimpleIndication *indication = new SimpleIndication(IfcNames_SimpleIndication);
-    SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequest);</tt></pre>
-</div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="color: #008080">SimpleIndication</span> <span style="color: #990000">*</span>indication <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #0000FF">new</span></span> <span style="font-weight: bold"><span style="color: #000000">SimpleIndication</span></span><span style="color: #990000">(</span>IfcNames_SimpleIndication<span style="color: #990000">);</span>
+    <span style="color: #008080">SimpleRequestProxy</span> <span style="color: #990000">*</span>device <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #0000FF">new</span></span> <span style="font-weight: bold"><span style="color: #000000">SimpleRequestProxy</span></span><span style="color: #990000">(</span>IfcNames_SimpleRequest<span style="color: #990000">);</span></tt></pre></div></div>
 <div class="paragraph"><p>Create a thread for handling notifications from hardware:</p></div>
 <div class="listingblock">
-<div class="content">
-<pre><tt>    pthread_t tid;
-    if(pthread_create(&amp;tid, NULL,  portalExec, NULL)){
-      exit(1);
-    }</tt></pre>
-</div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="color: #008080">pthread_t</span> tid<span style="color: #990000">;</span>
+    <span style="font-weight: bold"><span style="color: #0000FF">if</span></span><span style="color: #990000">(</span><span style="font-weight: bold"><span style="color: #000000">pthread_create</span></span><span style="color: #990000">(&amp;</span>tid<span style="color: #990000">,</span> NULL<span style="color: #990000">,</span>  portalExec<span style="color: #990000">,</span> NULL<span style="color: #990000">))</span><span style="color: #FF0000">{</span>
+      <span style="font-weight: bold"><span style="color: #000000">exit</span></span><span style="color: #990000">(</span><span style="color: #993399">1</span><span style="color: #990000">);</span>
+    <span style="color: #FF0000">}</span></tt></pre></div></div>
 <div class="paragraph"><p>Now the software invokes hardware methods via the proxy:</p></div>
 <div class="listingblock">
-<div class="content">
-<pre><tt>    device-&gt;say1(v1a);
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    device<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">say1</span></span><span style="color: #990000">(</span>v1a<span style="color: #990000">);</span>
 
-    device-&gt;say2(v2a,v2b);</tt></pre>
-</div></div>
+    device<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">say2</span></span><span style="color: #990000">(</span>v2a<span style="color: #990000">,</span>v2b<span style="color: #990000">);</span></tt></pre></div></div>
 </div>
 <div class="sect2">
 <h3 id="_simple_example_design_structure">Simple Example Design Structure</h3>
@@ -1494,7 +1511,7 @@ the number of file descriptors associated with it.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2014-04-30 10:58:53 EDT
+Last updated 2014-04-30 11:38:27 EDT
 </div>
 </div>
 </body>
