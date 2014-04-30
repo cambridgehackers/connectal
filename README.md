@@ -42,8 +42,22 @@ the Zynq's ARM CPUs to interact with your BSV componet.
 
 See [doc/xbsvgen.md](doc/xbsvgen.md) for a description of its options.
 
-Preparation
------------
+Installation
+------------
+
+1. Install the Bluespec compiler. XBSV is known to work with 2013.09beta1
+
+Install the bluespec compiler. Make sure the BLUESPECDIR environment
+variable is set:
+
+    export BLUESPECDIR=~/bluespec/Bluespec-2013.09.beta1/lib
+
+2. Install xbsv dependences:
+
+    cd xbsv;
+    sudo make install-dependences
+    make all
+    sudo make install
 
 
 Preparation for Zynq
@@ -117,7 +131,8 @@ Eject the card and plug it into the zedboard/zc702 and boot.
 
 
 
-== Preparation for Kintex and Virtex boards
+Preparation for Kintex and Virtex boards
+----------------------------------------
 
 0. Get [http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2013-2.html](Vivado 2013.2)
 
@@ -141,9 +156,11 @@ Eject the card and plug it into the zedboard/zc702 and boot.
     cd fpgajtag
     make all && sudo make install
 
-== Examples
+Examples
+--------
 
-=== Echo Example
+Echo Example
+~~~~~~~~~~~~~
 
     ## this has only been tested with the Vivado 2013.2 release
     . Xilinx/Vivado/2013.2/settings64.sh
@@ -159,11 +176,13 @@ or
 To run on a zedboard with IP address aa.bb.cc.dd:
     RUNPARAM=aa.bb.cc.dd make echo.zedrun
 
-=== Memcpy Example
+Memcpy Example
+~~~~~~~~~~~~~
 
     BOARD=vc707 make -C examples/memcpy
 
-=== HDMI Example
+HDMI Example
+~~~~~~~~~~~~~
 
 [Note]
 This example does not work. -Jamey 4/29/2014.
@@ -195,25 +214,14 @@ Restart surfaceflinger:
 
 Sometimes multiple restarts are required.
 
-=== Imageon Example
+Imageon Example
+~~~~~~~~~~~~~~~
 
 This is an example using the Avnet Imageon board and ZC702 (not tested with Zedboard yet):
 
 To generate code for a ZC702 board:
     make imageon.zc702
 
-Installation
-------------
-
-Install the bluespec compiler. Make sure the BLUESPECDIR environment
-variable is set:
-    export BLUESPECDIR=~/bluespec/Bluespec-2013.09.beta1/lib
-	
-Install the python-ply package, e.g.,
-
-    sudo apt-get install python-ply
-
-PLY's home is http://www.dabeaz.com/ply/
 
 Zynq Hints
 -------------
