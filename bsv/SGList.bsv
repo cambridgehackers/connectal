@@ -69,14 +69,15 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(c__, addrWidth, ObjectOffsetSize));
 
-   BRAM2Port#(Bit#(entryIdxSize), Page)       pages <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(RegionsIdx, Region) reg8 <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(RegionsIdx, Region) reg4 <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(RegionsIdx, Region) reg0 <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(Bit#(entryIdxSize),Page) pages <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(RegionsIdx, Region)       reg8 <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(RegionsIdx, Region)       reg4 <- mkBRAM2Server(defaultValue);
+   BRAM2Port#(RegionsIdx, Region)       reg0 <- mkBRAM2Server(defaultValue);
 
-   Vector#(2,FIFOF#(Offset))                   offs <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(ReqTup))                   reqs <- replicateM(mkFIFOF);
-   Reg#(Bit#(8))                             idxReg <- mkReg(0);
+   Vector#(2,FIFOF#(Bit#(entryIdxSize)))  rp <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Offset))            offs <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(ReqTup))            reqs <- replicateM(mkFIFOF);
+   Reg#(Bit#(8))                      idxReg <- mkReg(0);
    
    let page_shift0 = fromInteger(valueOf(SGListPageShift0));
    let page_shift4 = fromInteger(valueOf(SGListPageShift4));
@@ -86,16 +87,16 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    let ord4 = 40'd1 << page_shift4;
    let ord8 = 40'd1 << page_shift8;
 
-   function BRAMServer#(a,b) portsel(BRAM2Port#(a,b) x, int i);
+   function BRAMServer#(a,b) portsel(BRAM2Port#(a,b) x, Integer i);
       if(i==0)
 	 return x.portA;
       else
 	 return x.portB;
    endfunction
 
-   
-   for(int i = 0; i < 2; i=i+1)
-      rule req;
+   // pipeline the address lookup
+   for(Integer i = 0; i < 2; i=i+1) begin
+      rule req0;
 	 reqs[i].deq;
 	 let ptr = tpl_1(reqs[i].first);
 	 let off = tpl_2(reqs[i].first);
@@ -128,11 +129,16 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    dmaIndication.badAddrTrans(extend(ptr), extend(off), barrier0);
 	 end
 	 offs[i].enq(o);
-	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:{ptr-1,p}, datain:?});
+	 rp[i].enq({ptr-1,p});
       endrule
-
+      rule req1;
+	 rp[i].deq;
+	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:rp[i].first, datain:?});
+      endrule
+   end
+   
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
-   for(int i = 0; i < 2; i=i+1)
+   for(Integer i = 0; i < 2; i=i+1)
       addrServers[i] = 
       (interface Server#(ReqTup,Bit#(addrWidth));
 	  interface Put request;
