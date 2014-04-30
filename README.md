@@ -45,10 +45,14 @@ See [doc/xbsvgen.md](doc/xbsvgen.md) for a description of its options.
 Preparation
 -----------
 
-1. Get Vivado 2013.2
 
 Preparation for Zynq
 --------------------
+
+0. Get [http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2013-2.html](Vivado 2013.2)
+
+[Note]
+XBSV for Zynq also works with 2013.4 and 2014.1.
 
 1. Download the Android Native Development Kit (NDK) from: 
      http://developer.android.com/tools/sdk/ndk/index.html
@@ -101,29 +105,21 @@ To build a boot.bin for a zedboard:
 
     make BOARD=zedboard all
 
+Then copy sdcard-zedboard/* /media/sdcard
+
 To build a boot.bin for a zc702:
 
    make BOARD=zc702 all
 
-Setting up the SD Card
-----------------------
+Then copy sdcard-zc702/* /media/sdcard
 
-1. Download http://xbsv.googlecode.com/files/sdcard-130611.tar.gz
-2. tar -zxvf sdcard-130611.tar.gz
+Eject the card and plug it into the zedboard/zc702 and boot.
 
-Currently, all files must be in the first partition of an SD card.
 
-3. Copy files
-   cd sdcard-130611
-   cp boot.bin devicetree.dtb ramdisk8M.image.gz zImage system.img /media/zynq
-   cp empty.img /media/zynq/userdata.img
 
-Eject the card and plug it into the zc702 and boot.
+== Preparation for Kintex and Virtex boards
 
-After Android is running on the ac702, follow the instructions below to build and install the zynq portal driver.
-
-Preparation for PCIe
---------------------
+0. Get [http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2013-2.html](Vivado 2013.2)
 
 1. Build the drivers
 
@@ -145,8 +141,9 @@ Preparation for PCIe
     cd fpgajtag
     make all && sudo make install
 
-Echo Example
-------------
+== Examples
+
+=== Echo Example
 
     ## this has only been tested with the Vivado 2013.2 release
     . Xilinx/Vivado/2013.2/settings64.sh
@@ -162,13 +159,14 @@ or
 To run on a zedboard with IP address aa.bb.cc.dd:
     RUNPARAM=aa.bb.cc.dd make echo.zedrun
 
-Memcpy Example
---------------
+=== Memcpy Example
 
     BOARD=vc707 make -C examples/memcpy
 
-HDMI Example
-------------
+=== HDMI Example
+
+[Note]
+This example does not work. -Jamey 4/29/2014.
 
 For example, to create an HDMI frame buffer from the example code:
 
@@ -192,18 +190,12 @@ Loading the bitfile on the device:
     cat /sys/devices/amba.0/f8007000.devcfg/prog_done
     chmod agu+rwx /dev/fpga0
 
-On the zedboard, configure the adv7511:
-   echo RGB > /sys/bus/i2c/devices/1-0039/format
-On the zc702, configure the adv7511:
-   echo RGB > /sys/bus/i2c/devices/0-0039/format
-
 Restart surfaceflinger:
    stop surfaceflinger; start surfaceflinger
 
 Sometimes multiple restarts are required.
 
-Imageon Example
----------------
+=== Imageon Example
 
 This is an example using the Avnet Imageon board and ZC702 (not tested with Zedboard yet):
 
@@ -215,56 +207,13 @@ Installation
 
 Install the bluespec compiler. Make sure the BLUESPECDIR environment
 variable is set:
-    export BLUESPECDIR=~/bluespec/Bluespec-2012.10.beta2/lib
+    export BLUESPECDIR=~/bluespec/Bluespec-2013.09.beta1/lib
 	
 Install the python-ply package, e.g.,
 
     sudo apt-get install python-ply
 
 PLY's home is http://www.dabeaz.com/ply/
-
-Zynq Portal Driver
--------------
-
-Get the kernel source tree and build it:
-
-    git clone git://github.com/cambridgehackers/device_xilinx_kernel
-    git checkout origin/december -b december
-    cd device_xilinx_kernel
-    make ARCH=arm xilinx_zynq_portal_defconfig 
-
-If you use a Xilinx toolchain:
-
-    make ARCH=arm CROSS_COMPILE=arm-xilinx-linux-gnueabi- -j20 zImage modules
-
-If you use an Android NDK toolchain:
-
-    make ARCH=arm CROSS_COMPILE=arm-linux-androideabi- -j20 zImage modules
-
-If you use a Code Sourcery toolchain:
-
-    make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- -j20 zImage modules
-
-To Build the zynq portal driver, Makefile needs to be pointed to the root of the kernel source tree:
-
-    export DEVICE_XILINX_KERNEL=/path/to/device_xilinx_kernel/
-
-The driver sources are located in the xbsv project:
-
-    cd xbsv
-    (cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)
-    (cd drivers/portalmem/;  DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make portalmem.ko)
-    adb push drivers/zynqportal/zynqportal.ko /mnt/sdcard
-    adb push drivers/portalmem/portalmem.ko /mnt/sdcard
-
-To update the zynq portal driver running on the Zync platform, set ADB_PORT appropriately and run the following commands:
-
-    adb -s $ADB_PORT push zynqportal.ko /mnt/sdcard/
-    adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs rm -rf"
-    adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mkdir"
-    adb -s $ADB_PORT shell "cd /mnt/sdcard/ && uname -r | xargs mv zynqportal.ko"
-    adb -s $ADB_PORT shell "modprobe -r zynqportal"
-    adb -s $ADB_PORT shell "modprobe zynqportal"
 
 Zynq Hints
 -------------
