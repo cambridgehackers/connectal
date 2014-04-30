@@ -18,6 +18,16 @@ uninstall:
 docs:
 	doxygen Doxyfile
 
+install-dependences:
+ifeq ($(shell uname), Darwin)
+	port install asciidoc
+else
+	apt-get install asciidoc python-dev python-setuptools
+endif
+	easy_install blockdiag seqdiag actdiag nwdiag
+        wget https://asciidoc-diag-filter.googlecode.com/files/diag_filter.zip
+	asciidoc --filters install diag_filter.zip
+
 BOARD=zedboard
 
 parsetab.py: syntax.py
