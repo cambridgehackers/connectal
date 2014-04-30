@@ -223,7 +223,7 @@ module mkGotohC#(
 	 endaction
       else /* fr.vars.mintype == 2 */
 	 action
-	    fr.docall(GCS1, GCS5, CArgs {aStart: fr.args.aStart, aLen: fr.vars.midi - 1, bStart: fr.args.bStart, bLen: fr.vars.minj, tb: fr.args.tb, te: initialG}, fr.vars);
+	    fr.docall(GCS1, GCS5, CArgs {aStart: fr.args.aStart, aLen: fr.vars.midi - 1, bStart: fr.args.bStart, bLen: fr.vars.minj, tb: fr.args.tb, te: 0}, fr.vars);
 	 endaction
    endseq;
 
@@ -241,11 +241,11 @@ module mkGotohC#(
 	 fr.vars.midi, fr.vars.minj);
       if (fr.vars.mintype == 1)
 	 action
-	    fr.docall(GCS1, GCS6, CArgs{aStart: fr.args.aStart + fr.vars.midi, aLen: fr.args.aLen - fr.vars.midi, bStart: fr.args.bStart + fr.vars.minj, bLen: fr.args.bLen - fr.vars.minj}, fr.vars);
+	    fr.docall(GCS1, GCS6, CArgs{aStart: fr.args.aStart + fr.vars.midi, aLen: fr.args.aLen - fr.vars.midi, bStart: fr.args.bStart + fr.vars.minj, bLen: fr.args.bLen - fr.vars.minj, tb: initialG, te: fr.args.te}, fr.vars);
 	 endaction
       else
 	 action
-	    fr.docall(GCS1, GCS6, CArgs{aStart: fr.args.aStart + fr.vars.midi + 1, aLen: fr.args.aLen - fr.vars.midi- 1, bStart: fr.args.bStart + fr.vars.minj, bLen: fr.args.bLen - fr.vars.minj}, fr.vars);
+	    fr.docall(GCS1, GCS6, CArgs{aStart: fr.args.aStart + fr.vars.midi + 1, aLen: fr.args.aLen - fr.vars.midi- 1, bStart: fr.args.bStart + fr.vars.minj, bLen: fr.args.bLen - fr.vars.minj, tb: 0, te: fr.args.te}, fr.vars);
 	 endaction
    endrule
    
