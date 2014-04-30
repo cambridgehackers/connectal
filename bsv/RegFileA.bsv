@@ -33,21 +33,6 @@ interface RegFileA#(type index_t, type data_t);
    method ActionValue#(data_t) sub(index_t addr);
 endinterface
 
-module mkRegFileANull#(data_t defv) (RegFileA#(index_t,data_t));
-   method Action upd(index_t addr, data_t d);
-      noAction;
-   endmethod
-   method ActionValue#(data_t) sub(index_t addr);
-      return defv;
-   endmethod
-endmodule
-
-module mkMemSlaveOutOfRange (MemSlave#(addrWidth, busWidth));
-   RegFileA#(Bit#(addrWidth), Bit#(busWidth)) rf <- mkRegFileANull(0);
-   let rv <- mkMemSlaveFromRegFile(rf);
-   return rv;
-endmodule
-
 typedef struct {
    Bit#(addrWidth) addr;
    Bit#(8) bc;

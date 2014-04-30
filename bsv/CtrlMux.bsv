@@ -55,11 +55,9 @@ endmodule
 module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 		   Vector#(numPortals,Portal#(aw,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
    provisos(Add#(1,numPortals,numInputs),
-	    Add#(1,numInputs,numIfcs),
-	    Add#(nz, TLog#(numIfcs), 4));
+	    Add#(a__,TLog#(numInputs),4));
    
-   MemSlave#(aw,dataWidth) out_of_range <- mkMemSlaveOutOfRange;
-   Vector#(numIfcs, MemSlave#(aw,dataWidth)) ifcs = append(cons(dir.portalIfc.slave,map(getSlave, portals)),cons(out_of_range, nil));
+   Vector#(numInputs, MemSlave#(aw,dataWidth)) ifcs = cons(dir.portalIfc.slave,map(getSlave, portals));
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TAdd#(3,aw));
    function Bit#(4) psel(Bit#(addrWidth) a);
@@ -71,12 +69,11 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    
    FIFO#(MemRequest#(aw)) req_ars <- mkSizedFIFO(1);
    FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
-   Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
+   Reg#(Bit#(TLog#(numInputs))) rs <- mkReg(0);
    
    FIFO#(MemRequest#(aw)) req_aws <- mkSizedFIFO(1);
    FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
-   Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
-   
+   Reg#(Bit#(TLog#(numInputs))) ws <- mkReg(0);
    
    rule req_aw;
       let req <- toGet(req_aws).get;
@@ -91,12 +88,9 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    interface MemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(MemRequest#(addrWidth) req);
-	    Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.addr));
-	    if (wsv > fromInteger(valueOf(numInputs)))
-	       wsv = fromInteger(valueOf(numInputs));
 	    req_aws.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    req_aw_fifo.enq(?);
-	    ws <= wsv;
+	    ws <= truncate(psel(req.addr));
 	 endmethod
       endinterface
       interface Put writeData;
@@ -115,12 +109,9 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    interface MemReadServer read_server;
       interface Put readReq;
 	 method Action put(MemRequest#(addrWidth) req);
-	    Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.addr)); 
-	    if (rsv > fromInteger(valueOf(numInputs)))
-	       rsv = fromInteger(valueOf(numInputs));
 	    req_ars.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    req_ar_fifo.enq(?);
-	    rs <= rsv;
+	    rs <= truncate(psel(req.addr)); 
 	 endmethod
       endinterface
       interface Get readData;

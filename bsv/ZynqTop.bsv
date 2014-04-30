@@ -79,13 +79,13 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    endrule
 
    let top <- constructor(clocked_by mainclock, reset_by mainreset);
-
+   
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
-   mkConnection(ps7.m_axi_gp[0].client, ctrl, clocked_by mainclock, reset_by mainreset);
+   mkConnectionWithTrace(ps7.m_axi_gp[0].client, ctrl, clocked_by mainclock, reset_by mainreset);
    Vector#(nMasters,Axi3Master#(32,64,6)) m_axis;   
    if(valueOf(nMasters) > 0) begin
       m_axis[0] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[0]);
-      mkConnectionWithTrace(m_axis[0], ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
+      mkConnection(m_axis[0], ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
    end
    if(valueOf(nMasters) > 1) begin
       m_axis[1] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[1]);
