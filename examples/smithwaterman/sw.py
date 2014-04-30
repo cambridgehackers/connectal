@@ -131,7 +131,7 @@ print alternate
 def gotohc(A, B, sa, sb, m, n, tb, te):
     # m = len(A) - sa
     # n = len(B) - sb
-    #print "in gotohc", A, B, sa, sb, n, m, tb, te
+    print "in gotohc", A, B, sa, sb, m, n, tb, te
     if n == 0:
         if m > 0:
             print "delete A[%d] through A[%d]" % (sa, sa + m - 1)
@@ -158,8 +158,8 @@ def gotohc(A, B, sa, sb, m, n, tb, te):
         rev = gotohb2(A[sa + i:sa + m][::-1],B[sb:sb+n][::-1], te)
         minfound = 0
         minsofar = 0
-        #print "CC ", fwd[0], " DD ", fwd[1]
-        #print "RR ", rev[0], " SS ", rev[1]
+        print "CC ", fwd[0], " DD ", fwd[1]
+        print "RR ", rev[0], " SS ", rev[1]
         for j in xrange(0,n+1):
             t1 = fwd[0][j] + rev[0][n-j]
             t2 = fwd[1][j] + rev[1][n-j] - g
