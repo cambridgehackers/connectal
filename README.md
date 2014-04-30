@@ -174,7 +174,7 @@ or
     make echo.vc707
 
 To run on a zedboard with IP address aa.bb.cc.dd:
-    RUNPARAM=aa.bb.cc.dd make echo.zedrun
+    RUNPARAM=aa.bb.cc.dd make echo.zedboardrun
 
 Memcpy Example
 ~~~~~~~~~~~~~
