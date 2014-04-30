@@ -40,26 +40,21 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    DmaReadBuffer#(64,1) setupA_read_chan <- mkDmaReadBuffer();
    DmaReadBuffer#(64,1) setupB_read_chan <- mkDmaReadBuffer();
-   DmaWriteBuffer#(64,1) fetch_write_chan <- mkDmaWriteBuffer();
    
    ObjectReadClient#(64) setupA_read_client = setupA_read_chan.dmaClient;
    ObjectReadClient#(64) setupB_read_client = setupB_read_chan.dmaClient;
-   ObjectWriteClient#(64) fetch_write_client = fetch_write_chan.dmaClient;
    
    Vector#(2,  ObjectReadClient#(64)) readClients;
    readClients[0] = setupA_read_client;
    readClients[1] = setupB_read_client;
 
-   Vector#(1, ObjectWriteClient#(64)) writeClients;
-   writeClients[0] = fetch_write_client;
-
+   Vector#(0, ObjectWriteClient#(64)) writeClients;
 
    MemServer#(addrWidth,64,1) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
-   
    SmithwatermanIndicationProxy smithwatermanIndicationProxy <- mkSmithwatermanIndicationProxy(SmithwatermanIndication);
-   SmithwatermanRequest smithwatermanRequest <- mkSmithwatermanRequest(smithwatermanIndicationProxy.ifc, setupA_read_chan.dmaServer, setupB_read_chan.dmaServer, fetch_write_chan.dmaServer);
+   SmithwatermanRequest smithwatermanRequest <- mkSmithwatermanRequest(smithwatermanIndicationProxy.ifc, setupA_read_chan.dmaServer, setupB_read_chan.dmaServer);
    SmithwatermanRequestWrapper smithwatermanRequestWrapper <- mkSmithwatermanRequestWrapper(SmithwatermanRequest,smithwatermanRequest);
 
    Vector#(4,StdPortal) portals;
