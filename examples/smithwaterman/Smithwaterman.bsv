@@ -30,7 +30,6 @@ import StmtFSM::*;
 import BRAM::*;
 //import Gearbox::*;
 import Connectable::*;
-import MCSAlgorithm::*;
 
 //import AxiMasterSlave::*;
 import Dma::*;
