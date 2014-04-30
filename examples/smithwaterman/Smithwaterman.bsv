@@ -65,8 +65,7 @@ typedef Bit#(LIdxWidth) LIdx;
 
 module mkSmithwatermanRequest#(SmithwatermanIndication indication,
 			ObjectReadServer#(busWidth)   setupA_read_server,
-			ObjectReadServer#(busWidth)   setupB_read_server,
-			ObjectWriteServer#(busWidth)   fetch_write_server )(SmithwatermanRequest)
+			ObjectReadServer#(busWidth)   setupB_read_server)(SmithwatermanRequest)
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
