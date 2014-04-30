@@ -69,11 +69,24 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
       return a[(port_sel_low-1):0];
    endfunction
    
+   FIFO#(MemRequest#(aw)) req_ars <- mkSizedFIFO(1);
    FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
    Reg#(Bit#(TLog#(numIfcs))) rs <- mkReg(0);
    
+   FIFO#(MemRequest#(aw)) req_aws <- mkSizedFIFO(1);
    FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
    Reg#(Bit#(TLog#(numIfcs))) ws <- mkReg(0);
+   
+   
+   rule req_aw;
+      let req <- toGet(req_aws).get;
+      ifcs[ws].write_server.writeReq.put(req);
+   endrule
+         
+   rule req_ar;
+      let req <- toGet(req_ars).get;
+      ifcs[rs].read_server.readReq.put(req);
+   endrule
    
    interface MemWriteServer write_server;
       interface Put writeReq;
@@ -81,9 +94,9 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 	    Bit#(TLog#(numIfcs)) wsv = truncate(psel(req.addr));
 	    if (wsv > fromInteger(valueOf(numInputs)))
 	       wsv = fromInteger(valueOf(numInputs));
-	    ifcs[wsv].write_server.writeReq.put(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
-	    ws <= wsv;
+	    req_aws.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    req_aw_fifo.enq(?);
+	    ws <= wsv;
 	 endmethod
       endinterface
       interface Put writeData;
@@ -105,7 +118,7 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 	    Bit#(TLog#(numIfcs)) rsv = truncate(psel(req.addr)); 
 	    if (rsv > fromInteger(valueOf(numInputs)))
 	       rsv = fromInteger(valueOf(numInputs));
-	    ifcs[rsv].read_server.readReq.put(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	    req_ars.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    req_ar_fifo.enq(?);
 	    rs <= rsv;
 	 endmethod
