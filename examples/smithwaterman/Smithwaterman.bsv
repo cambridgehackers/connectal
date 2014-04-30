@@ -97,9 +97,9 @@ module mkSmithwatermanRequest#(SmithwatermanIndication indication,
    
    Reg#(Bool) gotohCRunning <- mkReg(False);
 
-   MCSAlgorithm cgotohB1 <- mkGotohB(strA.portA, strB.portA, matL0.portA, 1);
-   MCSAlgorithm cgotohB0 <- mkGotohB(strA.portA, strB.portA, matL1.portA, 0);
-   MCSAlgorithm gotohC <- mkGotohC(strA.portA, strB.portA, cgotohB0, cgotohB1, cc.portB, dd.portB, rr.portB, ss.portB);
+   GotohAlgorithm cgotohB1 <- mkGotohB(strA.portA, strB.portA, matL0.portA, 1);
+   GotohAlgorithm cgotohB0 <- mkGotohB(strA.portA, strB.portA, matL1.portA, 0);
+   SWAlgorithm gotohC <- mkGotohC(strA.portA, strB.portA, cgotohB0, cgotohB1, cc.portB, dd.portB, rr.portB, ss.portB);
    // create BRAM Write client for matL
 
    rule finish_setupA;
