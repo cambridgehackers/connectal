@@ -25,6 +25,14 @@ import BRAM::*;
 import GotohB::*;
 import StackReg::*;
 
+interface SWAlgorithm;
+   method Action setupA (Bit#(14) start, Bit#(14) length);
+   method Action setupB (Bit#(14) start, Bit#(14) length);
+   method Bit#(14) result();
+   interface FSM fsm;
+endinterface
+
+
 /* frame arguments */
 typedef struct {
    Bit#(14) aStart;
@@ -52,7 +60,7 @@ module mkGotohC#(
    BRAMServer#(Bit#(lIndexWidth), Bit#(16)) cc, 
    BRAMServer#(Bit#(lIndexWidth), Bit#(16)) dd, 
    BRAMServer#(Bit#(lIndexWidth), Bit#(16)) rr, 
-   BRAMServer#(Bit#(lIndexWidth), Bit#(16)) ss)(GotohAlgorithm)
+   BRAMServer#(Bit#(lIndexWidth), Bit#(16)) ss)(SWAlgorithm)
    provisos(Add#(0, 14, strIndexWidth),
 	    Add#(0, 14, lIndexWidth));
 
