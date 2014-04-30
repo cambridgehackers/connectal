@@ -249,8 +249,8 @@ variables.
 
 Here is the Makefile for the `simple` example:
 
+[source,makefile]
 ---------------------------------
-    make
     BSVDIR=../../bsv
     S2H = SimpleRequest
     H2S = SimpleIndication
@@ -265,6 +265,7 @@ Here is the Makefile for the `simple` example:
 
 Designs using `xbsv` may also include `xbsv/Makefile.common` if they define `XBSVDIR` in their Makefile:
 
+[source,makefile]
 ---------------------------------
     XBSVDIR=/scratch/xbsv
     S2H = ...
@@ -369,6 +370,7 @@ XBSV generates header files declaring wrappers for
 hardware-to-software interfaces and proxies for software-to-hardware
 interfaces. These will be in the "jni/" subdirectory of the project directory.
 
+[source,C]
 ---------------------------------
     #include "SimpleIndicationWrapper.h"
     #include "SimpleRequestProxy.h"
@@ -377,6 +379,7 @@ interfaces. These will be in the "jni/" subdirectory of the project directory.
 
 It also declares software equivalents for structs and enums declared in the processed BSV files:
 
+[source,C]
 ---------------------------------
     #include "GeneratedTypes.h"
 ---------------------------------
@@ -384,6 +387,7 @@ It also declares software equivalents for structs and enums declared in the proc
 
 XBSV generates abstract virtual base classes for each Indication interface.
 
+[source,C]
 ---------------------------------
     class SimpleIndicationWrapper : public Portal {
 
@@ -397,6 +401,7 @@ XBSV generates abstract virtual base classes for each Indication interface.
 
 Implement subclasses of the wrapper in order to define the callbacks
 
+[source,C]
 ---------------------------------
     class SimpleIndication : public SimpleIndicationWrapper
     {  
@@ -415,6 +420,7 @@ To connect these classes to the hardware, instantiate them using the
 `IfcNames` enum identifiers. XBSV prepends the name of the type
 because C++ does not support overloading of enum tags.
 
+[source,C]
 ---------------------------------
     SimpleIndication *indication = new SimpleIndication(IfcNames_SimpleIndication);
     SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequest);
@@ -422,6 +428,7 @@ because C++ does not support overloading of enum tags.
 
 Create a thread for handling notifications from hardware:
 
+[source,C]
 ---------------------------------
     pthread_t tid;
     if(pthread_create(&tid, NULL,  portalExec, NULL)){
@@ -431,6 +438,7 @@ Create a thread for handling notifications from hardware:
 
 Now the software invokes hardware methods via the proxy:
 
+[source,C]
 ---------------------------------
     device->say1(v1a);  
 
