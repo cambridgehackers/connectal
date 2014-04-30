@@ -48,9 +48,7 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
    readClients[0] = setupA_read_client;
    readClients[1] = setupB_read_client;
 
-   Vector#(0, ObjectWriteClient#(64)) writeClients;
-
-   MemServer#(addrWidth,64,1) dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
+   MemServer#(addrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, readClients);
    
    DmaConfigWrapper dmaConfigWrapper <- mkDmaConfigWrapper(DmaConfig, dma.request);
    SmithwatermanIndicationProxy smithwatermanIndicationProxy <- mkSmithwatermanIndicationProxy(SmithwatermanIndication);
