@@ -200,17 +200,19 @@ module mkGotohC#(
 	       let t2 = td + ts;
 	       $display(" j %d cc %d dd %d rr %d ss %d",
 		  jj, tc, td, tr, ts);
-	       if ((minfound == 0) || (t1 < minsofar))
+	       if ((minfound == 0) || (t1 < minsofar) || (t2 < minsofar))
 		  action
-		     fr.vars.mintype <= 1;
 		     fr.vars.minj <= jj;
-		     minsofar <= t1;
-		  endaction
-	       if (t2 < minsofar)
-		  action
-		     fr.vars.mintype <= 2;
-		     fr.vars.minj <= jj;
-		     minsofar <= t2;
+		     if (t1 < t2)
+			action
+			   fr.vars.mintype <= 1;
+			   minsofar <= t1;
+			endaction
+		     else
+			action
+			   fr.vars.mintype <= 2;
+			   minsofar <= t2;
+			endaction
 		  endaction
 	       minfound <= 1;
 	    endaction
@@ -280,7 +282,7 @@ module mkGotohC#(
       method Action start();
          $display("GotohC running aLen %d bLen %d", aLenReg, bLenReg);
 	 fr.docall(GCS1, GCSComplete, CArgs{aStart: 0, aLen: aLenReg,
-	    bStart: 0, bLen: bLenReg}, CVars {midi: 0, minj: 0});
+	    bStart: 0, bLen: bLenReg, tb: initialG, te: initialG}, CVars {midi: 0, minj: 0, mintype: 1});
       endmethod
       method Bool done();
 	 return(fr.pc == GCSIdle);
