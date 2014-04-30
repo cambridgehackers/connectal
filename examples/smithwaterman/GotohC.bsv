@@ -105,9 +105,9 @@ module mkGotohC#(
 	 let tmp <- strA.response.get();
 	 aData <= tmp;
       endaction
-      alt1 <= min(fr.args.tb, fr.args.te) + gap(zeroExtend(fr.args.bLen));
+      alt1 <= min(fr.args.tb, fr.args.te) + initialH + gap(zeroExtend(fr.args.bLen));
       minsofar <= alt1;
-      fr.vars.minj <= 1;
+      fr.vars <= CVars{midi: 0, minj: 1, mintype: 1};
       // scan B
       for (jj <= 1; jj <= fr.args.bLen; jj <= jj + 1)
 	 seq
@@ -124,7 +124,7 @@ module mkGotohC#(
 	    if (min(alt1, alt2) < minsofar)
 	       par
 		  minsofar <= min(alt1, alt2);
-		  fr.vars.minj <= jj;
+		  fr.vars <= CVars{midi: 0, minj: jj, mintype: 1};
 	       endpar
 	 endseq
       if (fr.vars.minj > 1)
@@ -135,6 +135,8 @@ module mkGotohC#(
       if (fr.vars.minj < fr.args.bLen)
 	 $display("delete B[%d] through B[%d]",
 		  fr.args.bStart + fr.vars.minj, fr.args.bStart + fr.args.bLen - 1);
+      $display("notes fr.vars.minj %f fr.args.bLen %d",
+	 fr.vars.minj, fr.args.bLen);
       fr.doreturn();
    endseq;
 
@@ -146,11 +148,12 @@ module mkGotohC#(
 	 fr.args.aStart, fr.args.aLen, fr.args.bStart, fr.args.bLen);
       if (fr.args.bLen == 0)
 	 begin
-	    $display("delete A[%d] through A[%d]", 
-	       fr.args.aStart, fr.args.aStart + fr.args.aLen - 1);
+	    if (fr.args.aLen > 0)
+	       $display("delete A[%d] through A[%d]", 
+		  fr.args.aStart, fr.args.aStart + fr.args.aLen - 1);
 	    fr.doreturn();
 	 end
-     else if (fr.args.bLen == 0)
+     else if (fr.args.aLen == 0)
 	begin
 	   $display("insert B[%d] through B[%d]",
 	      fr.args.bStart, fr.args.bStart + fr.args.bLen - 1);
@@ -199,7 +202,7 @@ module mkGotohC#(
 	       let tr <- rr.response.get();
 	       let ts <- ss.response.get();
 	       let t1 = tc + tr;
-	       let t2 = td + ts;
+	       let t2 = td + ts - initialG;
 	       $display(" j %d cc %d dd %d rr %d ss %d",
 		  jj, tc, td, tr, ts);
 	       if ((minfound == 0) || (t1 < minsofar) || (t2 < minsofar))
@@ -248,6 +251,9 @@ module mkGotohC#(
 	 endaction
       else
 	 action
+	    $display("delete A[%d] and A[%d]",
+	       fr.args.aStart + fr.vars.midi,
+	       fr.args.aStart + fr.vars.midi + 1);
 	    fr.docall(GCS1, GCS6, CArgs{aStart: fr.args.aStart + fr.vars.midi + 1, aLen: fr.args.aLen - fr.vars.midi- 1, bStart: fr.args.bStart + fr.vars.minj, bLen: fr.args.bLen - fr.vars.minj, tb: 0, te: fr.args.te}, fr.vars);
 	 endaction
    endrule
