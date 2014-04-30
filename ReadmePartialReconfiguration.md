@@ -5,12 +5,12 @@ XBSV supports partial reconfiguration on pcie-based platforms (kc705
 and vc707). There's not enough static logic on the zedboard to make
 this worthwhile at the moment.
 
-Run genxpsprojfrombsv as usual to create the project directory.
+Run xbsvgen as usual to create the project directory.
 
 Create proxies, wrappers, scripts, and Makefiles:
 
     cd examples/echo
-    genxpsprojfrombsv -Bkc705 -p kc705 -x mkPcieTop -s2h Say -h2s Say -s test.cpp -t ../../bsv/StdPcieTop.bsv  Say.bsv
+    xbsvgen -Bkc705 -p kc705 -x mkPcieTop -s2h Say -h2s Say -s test.cpp -t ../../bsv/StdPcieTop.bsv  Say.bsv
 
 Compile the full bitstream:
 

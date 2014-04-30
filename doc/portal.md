@@ -139,7 +139,7 @@ software.
 
 The definitions in the bsv file are used by the xbsv infrastructure ( a python program)  to automatically create corresponding c++ interfaces.
 
-    ../../genxpsprojfrombsv -Bbluesim -p bluesim -x mkBsimTop \
+    ../../xbsvgen -Bbluesim -p bluesim -x mkBsimTop \
          -s2h SimpleRequest \
          -h2s SimpleIndication \
          -s testsimple.cpp \
@@ -150,7 +150,7 @@ Software to Hardware messages and which should be used for Hardware to
 Software messages. These interfaces are given on the command line for
 genxpprojfrombsv
 
-genxpsprojfrombsv constructs all the hardware and software modules
+xbsvgen constructs all the hardware and software modules
 needed to wire up portals. This is sort of like an RPC compiler for
 the hardware-software interface. However, unlike an RPC each method is
 asynchronous.
@@ -159,7 +159,7 @@ The user must also create a toplevel bsv module Top.bsv, which
 instantiates the user portals, the standard hardware environment, and
 any additional hardware modules.
 
-Rather than constructing the `genxpsprojfrombsv` command line from
+Rather than constructing the `xbsvgen` command line from
 scratch, the examples in xbsv use include
 [Makefile.common](../Makefile.common) and define some `make`
 variables.
@@ -325,12 +325,12 @@ A top level `Makefile` is created:
 
     zedboard/Makefile
 
-genxpsprojfrombsv generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:
+xbsvgen generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:
 
     zedboard/sources/mkzynqtop/SimpleIndicationProxy.bsv
     zedboard/sources/mkzynqtop/SimpleRequestWrapper.bsv
 
-XBSV supports Android on Zynq platforms, so genxpsprojfrombsv generates `jni/Android.mk` for `ndk-build`.
+XBSV supports Android on Zynq platforms, so xbsvgen generates `jni/Android.mk` for `ndk-build`.
 
     zedboard/jni/Android.mk
     zedboard/jni/Application.mk

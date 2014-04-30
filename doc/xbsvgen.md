@@ -1,6 +1,6 @@
-# Using genxpsprojfrombsv
+# Using xbsvgen
 
-Here are the options supported by `genxpsprojfrombsv`
+Here are the options supported by `xbsvgen`
 
 | Option | Long Option | Default | Description |
 ---------|-------------|---------|-------------------------------------|

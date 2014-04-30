@@ -1024,7 +1024,7 @@ software.</p></div>
 <div class="paragraph"><p>The definitions in the bsv file are used by the xbsv infrastructure ( a python program)  to automatically create corresponding c++ interfaces.</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><tt>    ../../genxpsprojfrombsv -Bbluesim -p bluesim -x mkBsimTop \
+<pre><tt>    ../../xbsvgen -Bbluesim -p bluesim -x mkBsimTop \
          -s2h SimpleRequest \
          -h2s SimpleIndication \
          -s testsimple.cpp \
@@ -1034,14 +1034,14 @@ software.</p></div>
 Software to Hardware messages and which should be used for Hardware to
 Software messages. These interfaces are given on the command line for
 genxpprojfrombsv</p></div>
-<div class="paragraph"><p>genxpsprojfrombsv constructs all the hardware and software modules
+<div class="paragraph"><p>xbsvgen constructs all the hardware and software modules
 needed to wire up portals. This is sort of like an RPC compiler for
 the hardware-software interface. However, unlike an RPC each method is
 asynchronous.</p></div>
 <div class="paragraph"><p>The user must also create a toplevel bsv module Top.bsv, which
 instantiates the user portals, the standard hardware environment, and
 any additional hardware modules.</p></div>
-<div class="paragraph"><p>Rather than constructing the <tt>genxpsprojfrombsv</tt> command line from
+<div class="paragraph"><p>Rather than constructing the <tt>xbsvgen</tt> command line from
 scratch, the examples in xbsv use include
 [Makefile.common](../Makefile.common) and define some <tt>make</tt>
 variables.</p></div>
@@ -1238,13 +1238,13 @@ the <tt>zedboard</tt> project directory is created, populated by the generated f
 <div class="content">
 <pre><tt>    zedboard/Makefile</tt></pre>
 </div></div>
-<div class="paragraph"><p>genxpsprojfrombsv generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:</p></div>
+<div class="paragraph"><p>xbsvgen generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    zedboard/sources/mkzynqtop/SimpleIndicationProxy.bsv
     zedboard/sources/mkzynqtop/SimpleRequestWrapper.bsv</tt></pre>
 </div></div>
-<div class="paragraph"><p>XBSV supports Android on Zynq platforms, so genxpsprojfrombsv generates <tt>jni/Android.mk</tt> for <tt>ndk-build</tt>.</p></div>
+<div class="paragraph"><p>XBSV supports Android on Zynq platforms, so xbsvgen generates <tt>jni/Android.mk</tt> for <tt>ndk-build</tt>.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>    zedboard/jni/Android.mk
