@@ -187,10 +187,12 @@ module mkGotohC#(
       endaction
       for (jj <= 0; jj <= fr.args.bLen; jj <= jj + 1)
 	 seq
-	    cc.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj), datain: ?});
-	    rr.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(fr.args.bLen - jj), datain: ?});
-	    dd.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj), datain: ?});
-	    ss.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(fr.args.bLen - jj), datain: ?});
+	    action
+	       cc.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj), datain: ?});
+	       rr.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(fr.args.bLen - jj), datain: ?});
+	       dd.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(jj), datain: ?});
+	       ss.request.put(BRAMRequest{write: False, responseOnWrite: False, address: zeroExtend(fr.args.bLen - jj), datain: ?});
+	    endaction
 	    action
 	       let tc <- cc.response.get();
 	       let td <- dd.response.get();
@@ -202,15 +204,14 @@ module mkGotohC#(
 		  jj, tc, td, tr, ts);
 	       if ((minfound == 0) || (t1 < minsofar) || (t2 < minsofar))
 		  action
-		     fr.vars.minj <= jj;
 		     if (t1 < t2)
 			action
-			   fr.vars.mintype <= 1;
+			   fr.vars <= CVars{midi: fr.vars.midi, minj: jj, mintype: 1};
 			   minsofar <= t1;
 			endaction
 		     else
 			action
-			   fr.vars.mintype <= 2;
+			   fr.vars <= CVars{midi: fr.vars.midi, minj: jj, mintype: 2};
 			   minsofar <= t2;
 			endaction
 		  endaction
