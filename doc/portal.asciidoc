@@ -1,8 +1,8 @@
 XBSV
 ====
 Jamey Hicks <jamey.hicks@gmail.com>, John Ankcorn, Myron King, L. Stewart - Scribe
-0.001
-January 21, 2014
+0.002
+April 29, 2014
 
 
 == What is XBSV?
@@ -90,13 +90,35 @@ It is desirable to have
 
 * support for shared memory (DMA) between hardware and software
 
+
 == Overview
 
 Portal is implemented as a loadable kernel module device driver for Linux/Android and a set of tools to automatically construct the hardware and software glue necessary for communications.
 
 Short messages are handled by programmed I/O.  The message interface from software to hardware (so called "requests") is defined as a bsv interface containing a number of Action methods, each with a name and typed arguments.  The interface generator creates all the software and hardware glue so that software invocations of the interface stubs flow through to, and are turned into bsv invocations of the matching hardware.  The machinery does not have flow control. Software is responsible for not overrunning the hardware.  There is a debug mechanism which will return the request type of a failed method, but it does not tell which invocation failed.  Hardware to software interfaces (so called “indications”) are likewise defined by bsv interfaces containing Action methods. Hardware invocations of these methods flow through to and cause software calls to corresponding user-supplied functions.  In the current implementation there is flow control, in that the hardware will stall until there is room for a hardware to software message.  There is also a mechanism for software to report a failure, and there is machinery for these failures to be returned to the hardware.
 
+["seqdiag",target="request-response-1.png"]
+---------------------------------------------------------------------
+{
+  // edge label
+  SW -> HW [label = "request"];
+  SW <- HW [label = "indication"];
+}
+---------------------------------------------------------------------
+
+Portals do not have to be structured as request/response. Hardware can
+send messages to software without a prior request from software.
+
+["seqdiag",target="indication-only.png"]
+---------------------------------------------------------------------
+{
+  // edge label
+  SW <- HW [label = "indication"];
+}
+---------------------------------------------------------------------
+
 Incoming messages can cause host interrupts, which wake up the device driver, which can wake up the user mode application by using the select(2) or poll(2) interfaces.
+
 
 Most of the time, communications between hardware and software will
 proceed without requiring use of the OS.  User code will read and
