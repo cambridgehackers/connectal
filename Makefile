@@ -21,8 +21,10 @@ docs:
 install-dependences:
 ifeq ($(shell uname), Darwin)
 	port install asciidoc
+	## PLY's home is http://www.dabeaz.com/ply/
+	easy_install ply
 else
-	apt-get install asciidoc python-dev python-setuptools
+	apt-get install asciidoc python-dev python-setuptools python-ply
 endif
 	easy_install blockdiag seqdiag actdiag nwdiag
         wget https://asciidoc-diag-filter.googlecode.com/files/diag_filter.zip
