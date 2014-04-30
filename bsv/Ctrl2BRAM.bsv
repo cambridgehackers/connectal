@@ -23,81 +23,36 @@
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
-import Connectable::*;
-import RegFile::*;
 import Dma::*;
+import AddressGenerator::*;
+import BRAM::*;
 
 
-interface RegFileA#(type index_t, type data_t);
-   method Action upd(index_t addr, data_t d);
-   method ActionValue#(data_t) sub(index_t addr);
-endinterface
+module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (MemSlave#(busAddrWidth, busDataWidth))
+   provisos(Add#(a__, bramAddrWidth, busAddrWidth));
 
-typedef struct {
-   Bit#(addrWidth) addr;
-   Bit#(8) bc;
-   Bit#(6) tag;
-   Bool    last;
-   } AddrBeat#(numeric type addrWidth) deriving (Bits);
-
-interface AddressGenerator#(numeric type addrWidth);
-   interface Put#(MemRequest#(addrWidth)) request;
-   interface Get#(AddrBeat#(addrWidth)) addrBeat;
-endinterface
-
-module mkAddressGenerator(AddressGenerator#(addrWidth));
-   FIFOF#(MemRequest#(addrWidth)) requestFifo <- mkFIFOF();
-   FIFOF#(AddrBeat#(addrWidth)) addrBeatFifo <- mkFIFOF();
-   Reg#(Bit#(addrWidth)) addrReg <- mkReg(0);
-   Reg#(Bit#(8)) burstCountReg <- mkReg(0);
-   Reg#(Bool) isLastReg <- mkReg(False);
-
-   rule addrBeatRule;
-      let req = requestFifo.first();
-      let addr = addrReg;
-      let burstCount = burstCountReg;
-      let isLast = isLastReg;
-
-      let nextIsLast = burstCount == 2;
-      let nextBurstCount = burstCount - 1;
-
-      addrReg <= addr + 1;
-      burstCountReg <= nextBurstCount;
-      isLastReg <= nextIsLast;
-      if (isLast) begin
-	 requestFifo.deq();
-      end
-      addrBeatFifo.enq(AddrBeat { addr: addr, bc: burstCount, last: isLast, tag: req.tag});
-   endrule
-
-   interface Put request;
-      method Action put(MemRequest#(addrWidth) req);
-	 requestFifo.enq(req);
-	 addrReg <= req.addr;
-	 burstCountReg <= req.burstLen;
-	 isLastReg <= (req.burstLen == 1);
-      endmethod
-   endinterface
-   interface Get addrBeat;
-      method ActionValue#(AddrBeat#(addrWidth)) get();
-	 addrBeatFifo.deq();
-	 return addrBeatFifo.first();
-      endmethod
-   endinterface
-endmodule
-
-module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidth)) rf) (MemSlave#(busAddrWidth, busDataWidth))
-   provisos(Add#(a__, regFileAddrWidth, busAddrWidth));
-
-   Reg#(Bit#(regFileAddrWidth)) writeAddrReg <- mkReg(0);
+   Reg#(Bit#(bramAddrWidth)) writeAddrReg <- mkReg(0);
    Reg#(Bit#(8)) writeBurstCountReg <- mkReg(0);
    FIFOF#(void) writeRespFifo <- mkFIFOF();
    FIFOF#(Bit#(6)) writeTagFifo <- mkFIFOF();
    FIFO#(MemRequest#(busAddrWidth)) req_aw_fifo <- mkSizedFIFO(1);
-   
-   AddressGenerator#(busAddrWidth) readAddrGenerator <- mkAddressGenerator();
 
+
+   FIFOF#(Bit#(6)) readTagFifo <- mkFIFOF();
+   AddressGenerator#(busAddrWidth) readAddrGenerator <- mkAddressGenerator();
    Bool verbose = False;
+
+   rule read_req;
+      let addrBeat <- readAddrGenerator.addrBeat.get();
+      let addr = addrBeat.addr;
+      let tag = addrBeat.tag;
+      let burstCount = addrBeat.bc;
+      readTagFifo.enq(tag);
+      Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
+      br.request.put(BRAMRequest{write:False, responseOnWrite:False, address:regFileAddr, datain:?});
+      if (verbose) $display("read_server.readData (a) %h %d", addr, burstCount);
+   endrule
+
    interface MemReadServer read_server;
       interface Put readReq;
 	 method Action put(MemRequest#(busAddrWidth) req);
@@ -107,13 +62,10 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidt
       endinterface
       interface Get readData;
 	 method ActionValue#(ObjectData#(busDataWidth)) get();
-	    let addrBeat <- readAddrGenerator.addrBeat.get();
-   	    let addr = addrBeat.addr;
-   	    let tag = addrBeat.tag;
-   	    let burstCount = addrBeat.bc;
-            Bit#(regFileAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
-            let data <- rf.sub(regFileAddr);
-            if (verbose) $display("read_server.readData %h %h %d", addr, data, burstCount);
+   	    let tag = readTagFifo.first;
+	    readTagFifo.deq;
+            let data <- br.response.get;
+            if (verbose) $display("read_server.readData (b) %h", data);
             return ObjectData { data: data, tag: tag };
 	 endmethod
       endinterface
@@ -137,7 +89,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidt
 	       req_aw_fifo.deq;
 	    end
             if (verbose) $display("writeData %h %h %d", addr, resp.data, burstCount);
-            rf.upd(addr, resp.data);
+            br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:addr, datain:resp.data});
             writeAddrReg <= addr + 1;
             writeBurstCountReg <= burstCount - 1;
             if (verbose) $display("write_server.writeData %h %h %d", addr, resp.data, burstCount);

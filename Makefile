@@ -18,6 +18,18 @@ uninstall:
 docs:
 	doxygen Doxyfile
 
+install-dependences:
+ifeq ($(shell uname), Darwin)
+	port install asciidoc
+	## PLY's home is http://www.dabeaz.com/ply/
+	easy_install ply
+else
+	apt-get install asciidoc python-dev python-setuptools python-ply
+endif
+	easy_install blockdiag seqdiag actdiag nwdiag
+        wget https://asciidoc-diag-filter.googlecode.com/files/diag_filter.zip
+	asciidoc --filters install diag_filter.zip
+
 BOARD=zedboard
 
 parsetab.py: syntax.py
@@ -227,11 +239,11 @@ $(kc705runs):
 
 memtests.zedboard: $(addsuffix .zedboard, $(memtests))
 memtests.zedboard.regression:
-	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.zedboard
+	make -j 5 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.zedboard
 
 memtests.kc705: $(addsuffix .kc705, $(memtests))
 memtests.kc705.regression:
-	make -j 6 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.kc705
+	make -j 5 LM_LICENSE_FILE=1709@chastity.csail.mit.edu memtests.kc705
 
 memtests.bsim: $(addsuffix .bsim, $(memtests))
 memtests.bsim.regression:
@@ -246,11 +258,11 @@ memtests.bsimrun.regression:
 
 zmemtests.zedboard: $(addsuffix .zedboard, $(zmemtests))
 zmemtests.zedboard.regression:
-	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu zmemtests.zedboard
+	make -j 7 LM_LICENSE_FILE=1709@chastity.csail.mit.edu zmemtests.zedboard
 
 zmemtests.bsim: $(addsuffix .bsim, $(zmemtests))
 zmemtests.bsim.regression:
-	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu zmemtests.bsim
+	make -j 7 LM_LICENSE_FILE=1709@chastity.csail.mit.edu zmemtests.bsim
 
 zmemtests.bsimrun: $(addsuffix .bsimrun, $(zmemtests))
 zmemtests.bsimrun.regression:
@@ -261,15 +273,15 @@ zmemtests.bsimrun.regression:
 
 oo_memtests.zedboard: $(addsuffix .zedboard, $(oo_memtests))
 oo_memtests.zedboard.regression:
-	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.zedboard
+	make -j 5 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.zedboard
 
 oo_memtests.kc705: $(addsuffix .kc705, $(oo_memtests))
 oo_memtests.kc705.regression:
-	make -j 6 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.kc705
+	make -j 5 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.kc705
 
 oo_memtests.bsim: $(addsuffix .bsim, $(oo_memtests))
 oo_memtests.bsim.regression:
-	make -j 10 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.bsim
+	make -j 5 LM_LICENSE_FILE=1709@chastity.csail.mit.edu oo_memtests.bsim
 
 oo_memtests.bsimrun: $(addsuffix .bsimrun, $(oo_memtests))
 oo_memtests.bsimrun.regression:

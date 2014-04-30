@@ -17,7 +17,7 @@
 ############################################################################
 # Clock constraints                                                        #
 ############################################################################
-create_clock -name clk_fpga_0 -period "6" [get_pins "top_ps7_ps7_foo/FCLKCLK[0]"]
+create_clock -name clk_fpga_0 -period "10" [get_pins "top_ps7_ps7_foo/FCLKCLK[0]"]
 set_input_jitter clk_fpga_0 0.6
 set_clock_groups -asynchronous -group {clk_fpga_0}
 create_clock -name clk_fpga_1 -period "6" [get_pins "top_ps7_ps7_foo/FCLKCLK[1]"]

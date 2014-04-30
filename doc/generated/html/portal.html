@@ -1,0 +1,1518 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.6" />
+<title>XBSV</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+pre {
+  padding: 0;
+  margin: 0;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+tt {
+  font-family: monospace;
+  font-size: inherit;
+  color: navy;
+}
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+.monospaced {
+  font-family: monospace;
+  font-size: inherit;
+  color: navy;
+}
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([2-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install();
+/*]]>*/
+</script>
+</head>
+<body class="article">
+<div id="header">
+<h1>XBSV</h1>
+<span id="author">Jamey Hicks &lt;jamey.hicks@gmail.com&gt;, John Ankcorn, Myron King, L. Stewart - Scribe</span><br />
+<span id="revdate">0.002</span>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph"><p>April 29, 2014</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_what_is_xbsv">What is XBSV?</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>XBSV provides a hardware-software interface for applications split
+between user mode code and custom hardware in an FPGA or ASIC.  XBSV
+can automaticaly build the software and hardware glue for a message
+based interface and also provides for configuring and using shared
+memory between applications and hardware. Communications between
+hardware and software are provided by a bidirectional flow of events
+and regions of memory shared between hardware and software.  Events
+from software to hardware are called requests and events from hardware
+to software are called indications, but in fact they are symmetric.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_lexicon">Lexicon</h2>
+<div class="sectionbody">
+<div class="dlist"><dl>
+<dt class="hdlist1">
+xbsv
+</dt>
+<dd>
+<p>
+The name of the project, whose goal is to ease the task of
+building applications composed of hardware and software components.
+Programmers use bsv as an IDL to specify the interface between the
+hardware and software components.  A combination of generated code and
+libraries coordinate the data-flow between the program modules.
+Because the HW and SW stacks are customized for each application, the
+overheads associated with communicating across the HW/SW boundary are
+low.
+</p>
+</dd>
+<dt class="hdlist1">
+HW/SW interface 
+</dt>
+<dd>
+<p>
+portal
+</p>
+</dd>
+<dt class="hdlist1">
+bsv
+</dt>
+<dd>
+<p>
+Bluespec System Verilog.  bsv is a language for describing hardware that is might higher level than verilog. See <a href="http://wiki.bluespec.com/Home/BSV-Documentation">BSV Documentation</a> and <a href="http://www.bluespec.com/">Bluespec, Inc</a>.
+</p>
+</dd>
+<dt class="hdlist1">
+bluespec
+</dt>
+<dd>
+<p>
+Shorthand for Bluespec System Verilog (bsv)
+</p>
+</dd>
+<dt class="hdlist1">
+portal
+</dt>
+<dd>
+<p>
+a logical request/indication pair is referred to as a portal.  current tools require their specification in the IDL to be syntactically identifiable (i.e. fooRequest/fooIndication).  An application can make use of multiple portals, which may be specified independently.
+</p>
+</dd>
+<dt class="hdlist1">
+request interface
+</dt>
+<dd>
+<p>
+These methods are implemented by the application hardware to be invoked by application software.   A bsv interface consisting of ‘Action’ methods.  Because of the ‘Action’ type, data flow across this interface is unidirectional (SW &#8594; HW).
+</p>
+</dd>
+<dt class="hdlist1">
+indication interface
+</dt>
+<dd>
+<p>
+The dual of a request interface, indication interfaces are ‘Action’ methods implemented by application software to be invoked by application hardware.   As with request interfaces, the data flow across this interface is unidirectional, but in the opposite direction.
+</p>
+</dd>
+<dt class="hdlist1">
+pcieportal/zynqportal
+</dt>
+<dd>
+<p>
+these two loadable kernel modules implement the minimal set of driver functionality.  Specifically, they expose portal HW registers to SW through mmap, and set up interrupts to notify SW that an indication method has been invoked by HW.
+</p>
+</dd>
+<dt class="hdlist1">
+portalalloc
+</dt>
+<dd>
+<p>
+This loadable kernel module exposes a subset of dma-buf functionality to user-space software (though a set of ioctl commands) to allocate and manage memory regions which can be shared between SW and HW processes.   Maintaining coherence of the allocated buffers between processes is not automatic: ioctl commands for flush/invalidate are provided to be invoked explicitly by the users if necessary.
+</p>
+</dd>
+<dt class="hdlist1">
+genxprogfrombsv
+</dt>
+<dd>
+<p>
+The name of the interface compiler which takes as input the bsv interface specification along with a description of a target platform and generates logic in both HW and SW to support this interface across the communication fabric.
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_example_setups">Example setups:</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>A zedboard ( <a href="http://www.zedboard.org/">http://www.zedboard.org/</a> ),
+with Android running on the embedded ARM processors (the Processing
+System 7), an application running as a user process, and custom
+hardware configured into the Programmable Logic FPGA.</p></div>
+<div class="paragraph"><p>An x86 server, with Linux running on the host processor, an
+application running partly as a user process on the host and partly as
+hardware configured into an FPGA connected by PCI express (such as the
+Xilinx VC707
+(<a href="http://www.xilinx.com/products/boards-and-kits/EK-V7-VC707-G.htm">http://www.xilinx.com/products/boards-and-kits/EK-V7-VC707-G.htm</a>).</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_background">Background</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>When running part or all of an application in an FPGA, it is usually
+necessary to communicate between code running in user mode on the host
+and the hardware.  Typically this has been accomplished by custom
+device drivers in the OS, or by shared memory mapped between the
+software and the hardware, or both.  Shared memory has been
+particularly troublesome under Linux or Android, because devices
+frequently require contiguous memory, and the mechanisms for
+guaranteeing successful memory allocation often require reserving the
+maximum amount of memory at boot time.</p></div>
+<div class="paragraph"><p>Portal tries to provide convenient solutions to these problems in a portable way.</p></div>
+<div class="paragraph"><p>It is desirable to have</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+low latency for small messages
+</p>
+</li>
+<li>
+<p>
+high bandwidth for large messages
+</p>
+</li>
+<li>
+<p>
+notification of arriving messages
+</p>
+</li>
+<li>
+<p>
+asynchronous replies to messages
+</p>
+</li>
+<li>
+<p>
+support for hardware simulation by a separate user mode process
+</p>
+</li>
+<li>
+<p>
+support for shared memory (DMA) between hardware and software
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_overview">Overview</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Portal is implemented as a loadable kernel module device driver for Linux/Android and a set of tools to automatically construct the hardware and software glue necessary for communications.</p></div>
+<div class="paragraph"><p>Short messages are handled by programmed I/O.  The message interface from software to hardware (so called "requests") is defined as a bsv interface containing a number of Action methods, each with a name and typed arguments.  The interface generator creates all the software and hardware glue so that software invocations of the interface stubs flow through to, and are turned into bsv invocations of the matching hardware.  The machinery does not have flow control. Software is responsible for not overrunning the hardware.  There is a debug mechanism which will return the request type of a failed method, but it does not tell which invocation failed.  Hardware to software interfaces (so called “indications”) are likewise defined by bsv interfaces containing Action methods. Hardware invocations of these methods flow through to and cause software calls to corresponding user-supplied functions.  In the current implementation there is flow control, in that the hardware will stall until there is room for a hardware to software message.  There is also a mechanism for software to report a failure, and there is machinery for these failures to be returned to the hardware.</p></div>
+<div class="imageblock seqdiag">
+<div class="content">
+<img src="request-response-1.png" alt="request-response-1.png" />
+</div>
+</div>
+<div class="paragraph"><p>Portals do not have to be structured as request/response. Hardware can
+send messages to software without a prior request from software.</p></div>
+<div class="imageblock seqdiag">
+<div class="content">
+<img src="indication-only.png" alt="indication-only.png" />
+</div>
+</div>
+<div class="paragraph"><p>Incoming messages can cause host interrupts, which wake up the device driver, which can wake up the user mode application by using the select(2) or poll(2) interfaces.</p></div>
+<div class="paragraph"><p>Most of the time, communications between hardware and software will
+proceed without requiring use of the OS.  User code will read and
+write directly to memory mapped I/O space. Library code will poll for
+incoming messages, and [true? eventually time out and call poll(2).
+Only when poll(2) or select(2) are called will the device driver
+enable hardware interrupts.  Thus interrupts are only used to wake up
+software after a quiet period.</p></div>
+<div class="paragraph"><p>The designer specifies a set of hardware functions that can be called
+from software, and a set of actions that the hardware can take which
+result in messages to software. Portal tools take this specification
+and build software glue modules to translate software function calls
+into I/O writes to hardware registers, and to report hardware events
+to software.</p></div>
+<div class="paragraph"><p>For larger memory and OS bypass (OS bypass means letting the user mode
+application talk directly to the hardware without using the OS except
+for setup), portal implements shared memory.  Portal memory objects
+are allocated by the user mode program, and appear as Linux file
+descriptors. The user can mmap(2) the file to obtain user mode access
+to the shared memory region. Portal does not assure that the memory is
+physically contiguous, but does pin it to prevent the OS from reusing
+the memory.  An FPGA DMA controller module is provided that gives the
+illusion of contiguous memory to application hardware, while under the
+covers using a translation table of scattered addresses.</p></div>
+<div class="paragraph"><p>The physical addresses are provided to the user code in order to
+initialize the dma controller, and address "handles" are provided for
+the application hardware to use.</p></div>
+<div class="paragraph"><p>The DMA controller provides Bluespec objects that support streaming access with automatic page crossings, or random access.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_an_example">An Example</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>An application developer will typically write the hardware part of the application in Bluespec and the software part of the application in C or C++.  In a short example, there will be a bsv source file for the hardware and a cpp source file for the application.</p></div>
+<div class="paragraph"><p>The application developer is free to specify whatever hardware-software interface makes sense.</p></div>
+<div class="paragraph"><p>Refer to <a href="https://github.com/cambridgehackers/xbsv">https://github.com/cambridgehackers/xbsv</a></p></div>
+<div class="paragraph"><p>In the examples directory, see [simple](../examples/simple/).  The file [Simple.bsv](../examples/simple/Simple.bsv) defines the hardware, and testsimple.cpp supplies the software part. In this case, the software part is a test framework for the hardware.</p></div>
+<div class="paragraph"><p>Simple.bsv declares a few <tt>struct</tt> and <tt>enum</tt> types:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    typedef struct{
+       Bit#(32) a;
+       Bit#(32) b;
+       } S1 deriving (Bits);
+
+    typedef struct{
+       Bit#(32) a;
+       Bit#(16) b;
+       Bit#(7) c;
+       } S2 deriving (Bits);
+
+    typedef enum {
+       E1Choice1,
+       E1Choice2,
+       E1Choice3
+       } E1 deriving (Bits,Eq);
+
+    typedef struct{
+       Bit#(32) a;
+       E1 e1;
+       } S3 deriving (Bits);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Simple.bsv defines the actions (called Requests) that software can use to cause the hardware to act, and defines the notifications (called Indications) that the hardware can use to signal the software.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    interface SimpleIndication;
+        method Action heard1(Bit#(32) v);
+        method Action heard2(Bit#(16) a, Bit#(16) b);
+        method Action heard3(S1 v);
+        method Action heard4(S2 v);
+        method Action heard5(Bit#(32) a, Bit#(64) b, Bit#(32) c);
+        method Action heard6(Bit#(32) a, Bit#(40) b, Bit#(32) c);
+        method Action heard7(Bit#(32) a, E1 e1);
+    endinterface
+
+    interface SimpleRequest;
+        method Action say1(Bit#(32) v);
+        method Action say2(Bit#(16) a, Bit#(16) b);
+        method Action say3(S1 v);
+        method Action say4(S2 v);
+        method Action say5(Bit#(32)a, Bit#(64) b, Bit#(32) c);
+        method Action say6(Bit#(32)a, Bit#(40) b, Bit#(32) c);
+        method Action say7(S3 v);
+    endinterface</tt></pre>
+</div></div>
+<div class="paragraph"><p>Software can start the hardware working via say, say2, &#8230; Hardware
+signals back to software with heard and heard2 and so fort.  In the
+case of this example, say and say2 merely echo their arguments back to
+software.</p></div>
+<div class="paragraph"><p>The definitions in the bsv file are used by the xbsv infrastructure ( a python program)  to automatically create corresponding c++ interfaces.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    ../../xbsvgen -Bbluesim -p bluesim -x mkBsimTop \
+         -s2h SimpleRequest \
+         -h2s SimpleIndication \
+         -s testsimple.cpp \
+         -t ../../bsv/BsimTop.bsv  Simple.bsv Top.bsv</tt></pre>
+</div></div>
+<div class="paragraph"><p>The tools have to be told which interface records should be used for
+Software to Hardware messages and which should be used for Hardware to
+Software messages. These interfaces are given on the command line for
+genxpprojfrombsv</p></div>
+<div class="paragraph"><p>xbsvgen constructs all the hardware and software modules
+needed to wire up portals. This is sort of like an RPC compiler for
+the hardware-software interface. However, unlike an RPC each method is
+asynchronous.</p></div>
+<div class="paragraph"><p>The user must also create a toplevel bsv module Top.bsv, which
+instantiates the user portals, the standard hardware environment, and
+any additional hardware modules.</p></div>
+<div class="paragraph"><p>Rather than constructing the <tt>xbsvgen</tt> command line from
+scratch, the examples in xbsv use include
+[Makefile.common](../Makefile.common) and define some <tt>make</tt>
+variables.</p></div>
+<div class="paragraph"><p>Here is the Makefile for the <tt>simple</tt> example:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="color: #009900">BSVDIR</span><span style="color: #990000">=../..</span>/bsv
+    S2H <span style="color: #990000">=</span> SimpleRequest
+    H2S <span style="color: #990000">=</span> SimpleIndication
+    BSVFILES <span style="color: #990000">=</span> Simple.bsv Top.bsv
+    <span style="color: #009900">CPPFILES</span><span style="color: #990000">=</span>testsimple.cpp
+    Dma <span style="color: #990000">=</span>
+    PINS <span style="color: #990000">=</span> Std
+
+    include <span style="color: #990000">../..</span>/Makefile.common</tt></pre></div></div>
+<div class="paragraph"><p>Designs using <tt>xbsv</tt> may also include <tt>xbsv/Makefile.common</tt> if they define <tt>XBSVDIR</tt> in their Makefile:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="color: #009900">XBSVDIR</span><span style="color: #990000">=</span>/scratch/xbsv
+    S2H <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+    H2S <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+    BSVFILES <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+    CPPFILES <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+    include <span style="color: #009900">$(XBSVDIR)</span>/Makefile.common</tt></pre></div></div>
+<div class="sect2">
+<h3 id="_simple_top_bsv">simple/Top.bsv</h3>
+<div class="paragraph"><p>Each XBSV design implements [Top.bsv](../examples/simple/Top.bsv) with some standard components.</p></div>
+<div class="paragraph"><p>It defines the <tt>IfcNames</tt> enum, for use in identifying the portals between software and hardware:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    typedef enum {SimpleIndication, SimpleRequest} IfcNames deriving (Eq,Bits);</tt></pre>
+</div></div>
+<div class="paragraph"><p>It defines <tt>mkPortalTop</tt>, which instantiates the wrappers, proxies, and the design itself:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    module mkPortalTop(StdPortalTop#(addrWidth));</tt></pre>
+</div></div>
+<div class="paragraph"><p><tt>StdPortalTop</tt> is parameterized by <tt>addrWidth</tt> because Zynq and x86 have different width addressing. <tt>StdPortalTop</tt> is a typedef:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    typedef PortalTop#(addrWidth,64,Empty)     StdPortalTop#(numeric type addrWidth);</tt></pre>
+</div></div>
+<div class="paragraph"><p>The "64" specifies the data width and <tt>Empty</tt> specifies the empty
+interface is exposed as pins from the design. In designs using HDMI,
+for example, <tt>Empty</tt> is replaced by <tt>HDMI</tt>.  On some platforms, the
+design may be able to use different data widths, such as 128 bits on
+x86/PCIe.</p></div>
+<div class="paragraph"><p>Next, <tt>mkPortalTop</tt> instantiates user portals:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    // instantiate user portals
+       SimpleIndicationProxy simpleIndicationProxy &lt;- mkSimpleIndicationProxy(SimpleIndication);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Instantiate the design:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>       SimpleRequest simpleRequest &lt;- mkSimpleRequest(simpleIndicationProxy.ifc);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Instantiate the wrapper for the design:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>       SimpleRequestWrapper simpleRequestWrapper &lt;- mkSimpleRequestWrapper(SimpleRequest,simpleRequest);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Collect the portals into a vector:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>       Vector#(2,StdPortal) portals;
+       portals[0] = simpleRequestWrapper.portalIfc;
+       portals[1] = simpleIndicationProxy.portalIfc;</tt></pre>
+</div></div>
+<div class="paragraph"><p>Create an interrupt multiplexer from the vector of portals:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>       let interrupt_mux &lt;- mkInterruptMux(portals);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Create the system directory, which is used by software to locate each portal via the <tt>IfcNames</tt> enum:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>       // instantiate system directory
+       StdDirectory dir &lt;- mkStdDirectory(portals);
+       let ctrl_mux &lt;- mkAxiSlaveMux(dir,portals);</tt></pre>
+</div></div>
+<div class="paragraph"><p>The following generic interfaces are used by the platform specific top BSV module:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>       interface interrupt = interrupt_mux;
+       interface ctrl = ctrl_mux;
+       interface m_axi = null_axi_master;
+       interface leds = echoRequestInternal.leds;
+
+    endmodule : mkPortalTop</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_simple_testsimple_cpp">simple/testsimple.cpp</h3>
+<div class="paragraph"><p>XBSV generates header files declaring wrappers for
+hardware-to-software interfaces and proxies for software-to-hardware
+interfaces. These will be in the "jni/" subdirectory of the project directory.</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">    #include</span></span> <span style="color: #FF0000">"SimpleIndicationWrapper.h"</span>
+<span style="font-weight: bold"><span style="color: #000080">    #include</span></span> <span style="color: #FF0000">"SimpleRequestProxy.h"</span></tt></pre></div></div>
+<div class="paragraph"><p>It also declares software equivalents for structs and enums declared in the processed BSV files:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">    #include</span></span> <span style="color: #FF0000">"GeneratedTypes.h"</span></tt></pre></div></div>
+<div class="paragraph"><p>XBSV generates abstract virtual base classes for each Indication interface.</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="font-weight: bold"><span style="color: #0000FF">class</span></span> <span style="color: #008080">SimpleIndicationWrapper</span> <span style="color: #990000">:</span> <span style="font-weight: bold"><span style="color: #0000FF">public</span></span> Portal <span style="color: #FF0000">{</span>
+
+    <span style="font-weight: bold"><span style="color: #0000FF">public</span></span><span style="color: #990000">:</span>
+        <span style="color: #990000">...</span>
+        <span style="font-weight: bold"><span style="color: #000000">SimpleIndicationWrapper</span></span><span style="color: #990000">(</span><span style="color: #009900">int</span> id<span style="color: #990000">,</span> <span style="color: #008080">PortalPoller</span> <span style="color: #990000">*</span>poller <span style="color: #990000">=</span> <span style="color: #993399">0</span><span style="color: #990000">);</span>
+        <span style="font-weight: bold"><span style="color: #0000FF">virtual</span></span> <span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">heard1</span></span> <span style="color: #990000">(</span> <span style="font-weight: bold"><span style="color: #0000FF">const</span></span> <span style="color: #008080">uint32_t</span> v <span style="color: #990000">)=</span> <span style="color: #993399">0</span><span style="color: #990000">;</span>
+        <span style="color: #990000">...</span>
+    <span style="color: #FF0000">}</span><span style="color: #990000">;</span></tt></pre></div></div>
+<div class="paragraph"><p>Implement subclasses of the wrapper in order to define the callbacks</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="font-weight: bold"><span style="color: #0000FF">class</span></span> <span style="color: #008080">SimpleIndication</span> <span style="color: #990000">:</span> <span style="font-weight: bold"><span style="color: #0000FF">public</span></span> SimpleIndicationWrapper
+    <span style="color: #FF0000">{</span>
+    <span style="font-weight: bold"><span style="color: #0000FF">public</span></span><span style="color: #990000">:</span>
+      <span style="color: #990000">...</span>
+        <span style="font-weight: bold"><span style="color: #0000FF">virtual</span></span> <span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">heard1</span></span><span style="color: #990000">(</span><span style="color: #008080">uint32_t</span> a<span style="color: #990000">)</span> <span style="color: #FF0000">{</span>
+          <span style="font-weight: bold"><span style="color: #000000">fprintf</span></span><span style="color: #990000">(</span>stderr<span style="color: #990000">,</span> <span style="color: #FF0000">"heard1(%d)</span><span style="color: #CC33CC">\n</span><span style="color: #FF0000">"</span><span style="color: #990000">,</span> a<span style="color: #990000">);</span>
+          <span style="font-weight: bold"><span style="color: #000000">assert</span></span><span style="color: #990000">(</span>a <span style="color: #990000">==</span> v1a<span style="color: #990000">);</span>
+          <span style="font-weight: bold"><span style="color: #000000">incr_cnt</span></span><span style="color: #990000">();</span>
+        <span style="color: #FF0000">}</span>
+        <span style="color: #990000">...</span>
+    <span style="color: #FF0000">}</span><span style="color: #990000">;</span></tt></pre></div></div>
+<div class="paragraph"><p>To connect these classes to the hardware, instantiate them using the
+<tt>IfcNames</tt> enum identifiers. XBSV prepends the name of the type
+because C does not support overloading of enum tags.</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="color: #008080">SimpleIndication</span> <span style="color: #990000">*</span>indication <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #0000FF">new</span></span> <span style="font-weight: bold"><span style="color: #000000">SimpleIndication</span></span><span style="color: #990000">(</span>IfcNames_SimpleIndication<span style="color: #990000">);</span>
+    <span style="color: #008080">SimpleRequestProxy</span> <span style="color: #990000">*</span>device <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #0000FF">new</span></span> <span style="font-weight: bold"><span style="color: #000000">SimpleRequestProxy</span></span><span style="color: #990000">(</span>IfcNames_SimpleRequest<span style="color: #990000">);</span></tt></pre></div></div>
+<div class="paragraph"><p>Create a thread for handling notifications from hardware:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    <span style="color: #008080">pthread_t</span> tid<span style="color: #990000">;</span>
+    <span style="font-weight: bold"><span style="color: #0000FF">if</span></span><span style="color: #990000">(</span><span style="font-weight: bold"><span style="color: #000000">pthread_create</span></span><span style="color: #990000">(&amp;</span>tid<span style="color: #990000">,</span> NULL<span style="color: #990000">,</span>  portalExec<span style="color: #990000">,</span> NULL<span style="color: #990000">))</span><span style="color: #FF0000">{</span>
+      <span style="font-weight: bold"><span style="color: #000000">exit</span></span><span style="color: #990000">(</span><span style="color: #993399">1</span><span style="color: #990000">);</span>
+    <span style="color: #FF0000">}</span></tt></pre></div></div>
+<div class="paragraph"><p>Now the software invokes hardware methods via the proxy:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.5
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>    device<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">say1</span></span><span style="color: #990000">(</span>v1a<span style="color: #990000">);</span>
+
+    device<span style="color: #990000">-&gt;</span><span style="font-weight: bold"><span style="color: #000000">say2</span></span><span style="color: #990000">(</span>v2a<span style="color: #990000">,</span>v2b<span style="color: #990000">);</span></tt></pre></div></div>
+</div>
+<div class="sect2">
+<h3 id="_simple_example_design_structure">Simple Example Design Structure</h3>
+<div class="paragraph"><p>The <tt>simple</tt> example consists of the following files:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    Simple.bsv
+    Makefile
+    Top.bsv
+    testsimple.cpp</tt></pre>
+</div></div>
+<div class="paragraph"><p>After running <tt>make BOARD=zedboard verilog</tt> in the <tt>simple</tt> directory,
+the <tt>zedboard</tt> project directory is created, populated by the generated files.</p></div>
+<div class="paragraph"><p>A top level <tt>Makefile</tt> is created:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/Makefile</tt></pre>
+</div></div>
+<div class="paragraph"><p>xbsvgen generates wrappers for software-to-hardware interfaces and proxies for hardware-to-software interfaces:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/sources/mkzynqtop/SimpleIndicationProxy.bsv
+    zedboard/sources/mkzynqtop/SimpleRequestWrapper.bsv</tt></pre>
+</div></div>
+<div class="paragraph"><p>XBSV supports Android on Zynq platforms, so xbsvgen generates <tt>jni/Android.mk</tt> for <tt>ndk-build</tt>.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/jni/Android.mk
+    zedboard/jni/Application.mk</tt></pre>
+</div></div>
+<div class="paragraph"><p>XBSV generates <tt>jni/Makefile</tt> to compile the software for PCIe platforms (vc707 and kc705).</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/jni/Makefile</tt></pre>
+</div></div>
+<div class="paragraph"><p>XBSV generates software proxies for software-to-hardware interfaces and software wrappers for hardware-to-software interfaces:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/jni/SimpleIndicationWrapper.h
+    zedboard/jni/SimpleIndicationWrapper.cpp
+    zedboard/jni/SimpleRequestProxy.cpp
+    zedboard/jni/SimpleRequestProxy.h</tt></pre>
+</div></div>
+<div class="paragraph"><p>XBSV also generates <tt>GeneratedTypes.h</tt> for struct and enum types in the processed BSV source files:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/jni/GeneratedTypes.h</tt></pre>
+</div></div>
+<div class="paragraph"><p>XBSV copies in standard and specified constraints files:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/constraints/design_1_processing_system7_1_0.xdc
+    zedboard/constraints/zedboard.xdc</tt></pre>
+</div></div>
+<div class="paragraph"><p>XBSV generates several TCL files to run <tt>vivado</tt>.</p></div>
+<div class="paragraph"><p>The <tt>board.tcl</tt> file specifies <tt>partname</tt>, <tt>boardname</tt>, and <tt>xbsvdir</tt> for the other TCL scripts.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/board.tcl</tt></pre>
+</div></div>
+<div class="paragraph"><p>To generate an FPGA bit file, run <tt>make bits</tt>. This runs vivado with the <tt>mkzynqtop-impl.tcl</tt> script.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/mkzynqtop-impl.tcl</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_make_verilog">make verilog</h3>
+<div class="paragraph"><p>Compiling to verilog results in the following verilog files:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/verilog/top/mkSimpleIndicationProxySynth.v
+    zedboard/verilog/top/mkZynqTop.v</tt></pre>
+</div></div>
+<div class="paragraph"><p>Verilog library files referenced in the design are copied for use in synthesis.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/verilog/top/FIFO1.v
+    ...</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_make_bits">make bits</h3>
+<div class="paragraph"><p>Running <tt>make bits</tt> in the zedboard directory results in timing reports:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/hw/mkzynqtop_post_place_timing_summary.rpt
+    zedboard/hw/mkzynqtop_post_route_timing_summary.rpt
+    zedboard/hw/mkzynqtop_post_route_timing.rpt</tt></pre>
+</div></div>
+<div class="paragraph"><p>and some design checkpoints:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/hw/mkzynqtop_post_synth.dcp
+    zedboard/hw/mkzynqtop_post_place.dcp
+    zedboard/hw/mkzynqtop_post_route.dcp</tt></pre>
+</div></div>
+<div class="paragraph"><p>and the FPGA configuration file in .bit and .bin formats:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    zedboard/hw/mkZynqTop.bit
+    zedboard/hw/mkZynqTop.bin</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_make_android_exe">make android_exe</h3>
+<div class="paragraph"><p>XBSV supports Android 4.0 on Zynq platforms. It generates
+<tt>jni/Android.mk</tt> which is used by <tt>ndk-build</tt> to create a native
+Android executable.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    make android_exe</tt></pre>
+</div></div>
+<div class="paragraph"><p>This produces the ARM elf executable:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    libs/armeabi/android_exe</tt></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_make_run">make run</h3>
+<div class="paragraph"><p>For Zynq platforms,</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    make run</tt></pre>
+</div></div>
+<div class="paragraph"><p>will copy the Android executable and FPGA configuration file to the
+target device, program the FPGA, and run the executable. See
+[run.zedboard](../scripts/run.zedboard) for details.</p></div>
+<div class="paragraph"><p>It uses <tt>xbsv/consolable/checkip</tt> to determine the IP address of the
+device via a USB console connection to the device. If the target is
+not connected to the build machine via USB, specify the IP address of
+the target manually:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    make RUNPARAM=ipaddr run</tt></pre>
+</div></div>
+<div class="paragraph"><p>For PCIe platforms, <tt>make run</tt> programs the FPGA via USB and runs the software locally.</p></div>
+<div class="paragraph"><p>For bluesim, <tt>make run</tt> invokes bluesim on the design and runs the software locally.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_shared_memory">Shared Memory</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_shared_memory_hardware">Shared Memory Hardware</h3>
+<div class="paragraph"><p>In order to use shared memory, the hardware design instantiates a DMA module in Top.bsv:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>   AxiDmaServer#(addrWidth,64) dma &lt;- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);</tt></pre>
+</div></div>
+<div class="paragraph"><p>The <tt>AxiDmaServer</tt> multiplexes read and write requests from the
+clients, translates DMA addresses to physical addresses, initiates bus
+transactions to memory, and delivers responses to the clients.</p></div>
+<div class="paragraph"><p>DMA requests are specified with respect to "portal" memory allocated
+by software and identified by a <tt>pointer</tt>.</p></div>
+<div class="paragraph"><p>Requests and responses are tagged in order to enable pipelining.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    typedef struct {
+       ObjectPointer pointer;
+       Bit#(ObjectOffsetSize) offset;
+       Bit#(8) burstLen;
+       Bit#(6)  tag;
+       } ObjectRequest deriving (Bits);
+
+    typedef struct {
+       Bit#(dsz) data;
+       Bit#(6) tag;
+       } ObjectData#(numeric type dsz) deriving (Bits);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Read clients implement the <tt>ObjectReadClient</tt> interface. On response to
+the read, <tt>burstLen</tt> <tt>ObjectData</tt> items will be put to the <tt>readData</tt>
+interface. The design must be ready to consume the data when it is
+delivered from the memory bus or the system may hang.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    interface ObjectReadClient#(numeric type dsz);
+       interface GetF#(ObjectRequest)    readReq;
+       interface PutF#(ObjectData#(dsz)) readData;
+    endinterface</tt></pre>
+</div></div>
+<div class="paragraph"><p>Write clients implement <tt>ObjectWriteClient</tt>. To complete the transaction,
+<tt>burstLen</tt> data items will be consumed from the <tt>writeData</tt>
+interace. Upon completion of the request, the specified tag will be
+put to the <tt>writeDone</tt> interface. The data must be available when the
+write request is issued to the memory bus or the system may hang.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    interface ObjectWriteClient#(numeric type dsz);
+       interface GetF#(ObjectRequest)    writeReq;
+       interface GetF#(ObjectData#(dsz)) writeData;
+       interface PutF#(Bit#(6))       writeDone;
+    endinterface</tt></pre>
+</div></div>
+<div class="paragraph"><p>A design may implement <tt>ObjectReadClient</tt> and <tt>ObjectWriteClient</tt> interfaces directly, or it may instantiate DmaReadBuffer or DmaWriteBuffer.</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt> The `AxiDmaServer` is configured with physical address translations
+for each region of memory identified by a `pointer`. A design using
+DMA must export the `DmaConfig` and `DmaIndication` interfaces of the
+DMA server.</tt></pre>
+</div></div>
+<div class="paragraph"><p>Here are the DMA components of [memread_nobuff/Top.bsv](../examples/memread_nobuff/Top.bsv):</p></div>
+<div class="paragraph"><p>Instantiate the design and its interface wrappers and proxies:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    MemreadIndicationProxy memreadIndicationProxy &lt;- mkMemreadIndicationProxy(MemreadIndication);
+    Memread memread &lt;- mkMemread(memreadIndicationProxy.ifc);
+    MemreadRequestWrapper memreadRequestWrapper &lt;- mkMemreadRequestWrapper(MemreadRequest,memread.request);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Collect the read and write clients:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    Vector#(1, ObjectReadClient#(64)) readClients = cons(memread.dmaClient, nil);
+    Vector#(0, ObjectReadClient#(64)) writeClients = nil;</tt></pre>
+</div></div>
+<div class="paragraph"><p>Instantiate the DMA server and its wrapper and proxy:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    DmaIndicationProxy dmaIndicationProxy &lt;- mkDmaIndicationProxy(DmaIndication);
+    AxiDmaServer#(addrWidth,64) dma &lt;- mkAxiDmaServer(dmaIndicationProxy.ifc, readClients, writeClients);
+    DmaConfigWrapper dmaConfigWrapper &lt;- mkDmaConfigWrapper(DmaConfig,dma.request);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Include <tt>DmaConfig</tt> and <tt>DmaIndication</tt> in the portals of the design:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    Vector#(4,StdPortal) portals;
+    portals[0] = memreadRequestWrapper.portalIfc;
+    portals[1] = memreadIndicationProxy.portalIfc;
+    portals[2] = dmaConfigWrapper.portalIfc;
+    portals[3] = dmaIndicationProxy.portalIfc;</tt></pre>
+</div></div>
+<div class="paragraph"><p>The code generation tools will then produce the software glue necessary for the shared memory support libraries to initialize the DMA "library module" included in the hardware.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_shared_memory_software">Shared Memory Software</h3>
+<div class="paragraph"><p>The software side instantiates the DmaConfig proxy and the DmaIndication wrapper:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    dma = new DmaConfigProxy(IfcNames_DmaConfig);
+    dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Call <tt>dma-&gt;alloc()</tt> to allocate DMA memory. Each chunk of portal
+memory is identified by a file descriptor. Portal memory may be shared
+with other processes. Portal memory is reference counted according to
+the number of file descriptors associated with it.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    PortalAlloc *srcAlloc;
+    dma-&gt;alloc(alloc_sz, &amp;srcAlloc);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Memory map it to make it accessible to software:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    srcBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, srcAlloc-&gt;header.fd, 0);</tt></pre>
+</div></div>
+<div class="paragraph"><p>XBSV is currently using non-snooped interfaces, so the cache must be flushed and invalidated before hardware accesses portal memory:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    dma-&gt;dCacheFlushInval(srcAlloc, srcBuffer);</tt></pre>
+</div></div>
+<div class="paragraph"><p>Call <tt>dma-&gt;reference()</tt> to get a pointer that may be passed to hardware:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    unsigned int ref_srcAlloc = dma-&gt;reference(srcAlloc);</tt></pre>
+</div></div>
+<div class="paragraph"><p>This also transfers the DMA-to-physical address translation information to the hardware via the <tt>DmaConfig</tt> interface.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    device-&gt;startRead(ref_srcAlloc, numWords, burstLen, iterCnt);</tt></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_notes">Notes</h2>
+<div class="sectionbody">
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph"><p>stewart notes</p></div>
+<div class="paragraph"><p>Currently there are no valid bits and no protections against bursts crossing page boundaries]</p></div>
+<div class="paragraph"><p>There needs to be a way to synchronize Request actions and DMA reads, and to synchronize DMA writes with Indications, so that the writes complete to the coherence point before the indication is delivered to software. One could imagine an absurdly buffered memory interface and a rather direct path for I/O reads that could get out of order.</p></div>
+</div></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2014-04-30 11:38:27 EDT
+</div>
+</div>
+</body>
+</html>

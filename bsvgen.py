@@ -166,7 +166,7 @@ portalIfcTemplate='''
     interface MemSlave slave;
         interface MemWriteServer write_server;
             interface Put writeReq;
-                method Action put(MemRequest#(32) req);
+                method Action put(MemRequest#(16) req);
                      req_aw_fifo.enq(req);
                 endmethod
             endinterface
@@ -207,7 +207,7 @@ portalIfcTemplate='''
         endinterface
         interface MemReadServer read_server;
             interface Put readReq;
-                method Action put(MemRequest#(32) req);
+                method Action put(MemRequest#(16) req);
                     req_ar_fifo.enq(req);
                 endmethod
             endinterface
@@ -254,8 +254,8 @@ slaveStateTemplate='''
     Reg#(Bit#(1)) slaveRS <- mkReg(0);
     Reg#(Bit#(1)) slaveWS <- mkReg(0);
 
-    FIFO#(MemRequest#(32))  req_ar_fifo <- mkSizedFIFO(1);
-    FIFO#(MemRequest#(32)) req_aw_fifo <- mkSizedFIFO(1);
+    FIFO#(MemRequest#(16))  req_ar_fifo <- mkSizedFIFO(1);
+    FIFO#(MemRequest#(16)) req_aw_fifo <- mkSizedFIFO(1);
 
     let slaveWriteAddrFifo = slaveWriteAddrFifos[%(slaveFifoSelExposed)s];
     let slaveReadAddrFifo  = slaveReadAddrFifos[%(slaveFifoSelExposed)s];

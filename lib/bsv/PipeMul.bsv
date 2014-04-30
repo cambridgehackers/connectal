@@ -87,7 +87,7 @@ module mkPipeMul2(PipeMul2#(2,dsz,marker))
       
    rule do_mul;
       UInt#(odsz) lsbits = extend(b) * extend(unpack(pack(a)[15:0]));
-      UInt#(odsz) amsbits = unpack(pack(a)[valueOf(dsz)-1:valueOf(aszm16)]);
+      UInt#(odsz) amsbits = unpack(pack(a)[valueOf(dsz)-1:16]);
       UInt#(odsz) msbits = extend(b) * amsbits;
       mul_data[0] <= tuple2(lsbits,msbits);
    endrule

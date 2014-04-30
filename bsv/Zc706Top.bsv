@@ -26,6 +26,8 @@ import Connectable       :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
+import AxiMasterSlave    :: *;
+import XilinxCells       :: *;
 import XbsvXilinxCells   :: *;
 import PS7LIB::*;
 import PPS7LIB::*;
@@ -36,6 +38,11 @@ import CtrlMux::*;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
 
+interface I2C_Pins;
+   interface Inout#(Bit#(1)) scl;
+   interface Inout#(Bit#(1)) sda;
+endinterface
+
 (* always_ready, always_enabled *)
 interface ZynqTop#(type pins);
    (* prefix="" *)
@@ -44,9 +51,14 @@ interface ZynqTop#(type pins);
 //   interface LEDS             leds;
 //   (* prefix="XADC" *)
 //   interface XADC             xadc;
+`ifdef USE_I2C
+   (* prefix="I2C" *)
+   interface I2C_Pins         i2c;
+`endif
+   (* prefix="" *)
    interface pins             pins;
-   interface Clock unused_clock;
-   interface Reset unused_reset;
+   interface Vector#(4, Clock) deleteme_unused_clock;
+   interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
 
 typedef (function Module#(PortalTop#(32, 64, ipins, nMasters)) mkpt()) MkPortalTop#(type ipins, numeric type nMasters);
@@ -55,14 +67,23 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    provisos(Add#(a__,nMasters,4));
 
    PS7 ps7 <- mkPS7();
-   Clock mainclock = ps7.fclkclk[0];
+   Clock mainclock <- mkClockBUFG(clocked_by ps7.fclkclk[0]);
+   Clock clock200 <- mkClockBUFG(clocked_by ps7.fclkclk[3]);
    Reset mainreset = ps7.fclkreset[0];
+   IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200, reset_by mainreset);
+
+   let tscl <- mkIOBUF(~ps7.i2c[1].scltn, ps7.i2c[1].sclo, clocked_by mainclock, reset_by mainreset);
+   let tsda <- mkIOBUF(~ps7.i2c[1].sdatn, ps7.i2c[1].sdao, clocked_by mainclock, reset_by mainreset);
+   rule sdai;
+      ps7.i2c[1].sdai(tsda.o);
+      ps7.i2c[1].scli(tscl.o);
+   endrule
 
    let top <- constructor(clocked_by mainclock, reset_by mainreset);
-   
+
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
    mkConnection(ps7.m_axi_gp[0].client, ctrl, clocked_by mainclock, reset_by mainreset);
-   Vector#(nMasters,Axi3Master#(32,64,6)) m_axis;   
+   Vector#(nMasters,Axi3Master#(32,64,6)) m_axis;
    if(valueOf(nMasters) > 0) begin
       m_axis[0] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[0]);
       mkConnectionWithTrace(m_axis[0], ps7.s_axi_hp[0].axi.server, clocked_by mainclock, reset_by mainreset);
@@ -74,12 +95,12 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    if(valueOf(nMasters) > 2) begin
       m_axis[2] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[2]);
       mkConnection(m_axis[2], ps7.s_axi_hp[2].axi.server, clocked_by mainclock, reset_by mainreset);
-   end   
+   end
    if(valueOf(nMasters) > 3) begin
       m_axis[3] <- mkAxiDmaMaster(clocked_by mainclock, reset_by mainreset, top.masters[3]);
       mkConnection(m_axis[3], ps7.s_axi_hp[3].axi.server, clocked_by mainclock, reset_by mainreset);
    end
-   
+
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;
       ps7.interrupt(pack(intr_mux));
@@ -92,9 +113,15 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    //         return 0;
    //     endmethod
    // endinterface
+`ifdef USE_I2C
+   interface I2C_Pins i2c;
+      interface Inout scl = tscl.io;
+      interface Inout sda = tsda.io;
+   endinterface
+`endif
    interface pins = top.pins;
-   interface unused_clock = mainclock;
-   interface unused_reset = mainreset;
+   interface deleteme_unused_clock = ps7.fclkclk;
+   interface deleteme_unused_reset = ps7.fclkreset;
 endmodule
 
 `ifndef PinType
