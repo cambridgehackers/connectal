@@ -23,7 +23,7 @@ import FIFO::*;
 
 interface SerialconfigIndication;
     method Action writeack(Bit#(32) a);
-    method Action readdata(Bit#(32) a, Bit#(32) );
+    method Action readdata(Bit#(32) a, Bit#(32) d );
 endinterface
 
 interface SerialconfigRequest;
@@ -38,29 +38,25 @@ typedef struct {
    } Cmd deriving(Bits);
 
 
-module mkSerialconfigRequestInternal#(SerialconfigIndication indication)(SerialconfigRequestInternal);
+module mkSerialconfigRequest#(SerialconfigIndication indication)(SerialconfigRequest);
 
     FIFO#(Cmd) cmd <- mkSizedFIFO(8);
 
     rule echo;
 	cmd.deq;
-       if (cmd.first.dowrite)
+       if (cmd.first.dowrite == 1)
           indication.writeack(cmd.first.a);
        else
           indication.readdata(cmd.first.a, cmd.first.d);
     endrule
 
-   interface SerialconfigRequest ifc;
 
-      method Action read(Bit#(32) a);
-	 cmd.enq(Cmd{a: a, d: ?});
-      endmethod
+   method Action read(Bit#(32) a);
+      cmd.enq(Cmd{dowrite: 0, a: a, d: ?});
+   endmethod
+   
+   method Action write(Bit#(32) a, Bit#(32) d);
+      cmd.enq(Cmd{dowrite: 1, a: a, d: ?});
+   endmethod
       
-      method Action write(Bit#(32) a, Bit#(32) d);
-	 cmd.enq(Cmd{a: a, d: ?});
-      endmethod
-      
-   endinterface
-
-
 endmodule

@@ -47,7 +47,7 @@ public:
     sem_post(&test_sem);
   }
   virtual void readdata(uint32_t a, uint32_t d) {
-    fprintf(stderr, "writeack %p %p\n", a, d);
+    fprintf(stderr, "readdata %p %p\n", a, d);
     sem_post(&test_sem);
   }
 };
