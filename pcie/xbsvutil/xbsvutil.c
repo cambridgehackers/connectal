@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <stropts.h>
+#include <sys/ioctl.h>
 #include <getopt.h>
 #include <string.h>
 #include <libgen.h>
