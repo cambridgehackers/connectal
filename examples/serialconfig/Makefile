@@ -1,6 +1,6 @@
 
 ## hardware interfaces invoked from software (requests)
-S2H = Swallow SerialconfigRequest
+S2H = SerialconfigRequest
 ## software interfaces invoked from hardware (indications)
 H2S = SerialconfigIndication
 ## all the BSV files to be scanned for types and interfaces
