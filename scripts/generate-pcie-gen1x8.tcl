@@ -1,6 +1,6 @@
 create_project -force project_pcie_gen1x8 project_pcie_gen1x8 -part xc7k325tffg900-2
 set_property board xilinx.com:kintex7:kc705:1.1 [current_project]
-create_ip -name pcie_7x -version 2.1 -vendor xilinx.com -library ip -module_name pcie_7x_0
+create_ip -name pcie_7x -version 3.0 -vendor xilinx.com -library ip -module_name pcie_7x_0
 set_property -dict [list \
 		    CONFIG.ASPM_Optionality {true} \
 		    CONFIG.Bar0_64bit {true} \
