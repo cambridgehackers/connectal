@@ -106,21 +106,28 @@ read_verilog [ glob {verilog/top/*.v} ]
 if $needspcie {
     set pcieversion {3.0}
     set maxlinkwidth {X8}
+    set board_part "xilinx.com:$boardname:part0:1.0"
     if {$boardname == {zc706}} {
         set maxlinkwidth {X4}
     }
     if {$boardname == {ac701}} {
         set maxlinkwidth {X4}
     }
+    if {$boardname == {kc705}} {
+    }
+    if {$boardname == {vc707}} {
+    }
     if {[version -short] == "2013.2"} {
         set pcieversion {2.1}
     }
+    set_property board_part $board_part [current_project]
     if [file exists $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci] {
        read_ip $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci
     }  else {
         file mkdir $xbsvdir/generated/xilinx/$boardname
         create_ip -name pcie_7x -version $pcieversion -vendor xilinx.com -library ip -module_name pcie_7x_0 -dir $xbsvdir/generated/xilinx/$boardname
         set_property -dict [list \
+                            CONFIG.mode_selection {Advanced} \
                             CONFIG.ASPM_Optionality {true} \
                             CONFIG.Bar0_64bit {true} \
                             CONFIG.Bar0_Size {8} \
@@ -141,13 +148,13 @@ if $needspcie {
                             CONFIG.MSIx_PBA_Offset {a00} \
                             CONFIG.MSIx_Table_Offset {800} \
                             CONFIG.MSIx_Table_Size {10} \
-                            CONFIG.Maximum_Link_Width {X8} \
+                            CONFIG.Maximum_Link_Width $maxlinkwidth \
                             CONFIG.Subsystem_ID {a705} \
                             CONFIG.Subsystem_Vendor_ID {1be7} \
                             CONFIG.Use_Class_Code_Lookup_Assistant {false} \
                             CONFIG.Vendor_ID {1be7} \
-                            CONFIG.mode_selection {Advanced} \
                            ] [get_ips pcie_7x_0]
+        report_property [get_ips pcie_7x_0]
         generate_target all [get_files $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci]
     }
         if [file exists $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.dcp] {
