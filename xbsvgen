@@ -129,6 +129,7 @@ if $needspcie {
         set_property -dict [list \
                             CONFIG.mode_selection {Advanced} \
                             CONFIG.ASPM_Optionality {true} \
+                            CONFIG.Buf_Opt_BMA {true} \
                             CONFIG.Bar0_64bit {true} \
                             CONFIG.Bar0_Size {8} \
                             CONFIG.Bar2_64bit {true} \
