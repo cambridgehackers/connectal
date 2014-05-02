@@ -729,7 +729,7 @@ install: function(toclevels) {
 }
 
 }
-asciidoc.install();
+asciidoc.install(2);
 /*]]>*/
 </script>
 </head>
@@ -738,6 +738,10 @@ asciidoc.install();
 <h1>XBSV</h1>
 <span id="author">Jamey Hicks &lt;jamey.hicks@gmail.com&gt;, John Ankcorn, Myron King, L. Stewart - Scribe</span><br />
 <span id="revdate">0.002</span>
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
 </div>
 <div id="content">
 <div id="preamble">
@@ -748,15 +752,16 @@ asciidoc.install();
 <div class="sect1">
 <h2 id="_what_is_xbsv">What is XBSV?</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>XBSV provides a hardware-software interface for applications split
-between user mode code and custom hardware in an FPGA or ASIC.  XBSV
-can automaticaly build the software and hardware glue for a message
-based interface and also provides for configuring and using shared
-memory between applications and hardware. Communications between
-hardware and software are provided by a bidirectional flow of events
-and regions of memory shared between hardware and software.  Events
-from software to hardware are called requests and events from hardware
-to software are called indications, but in fact they are symmetric.</p></div>
+<div class="paragraph lead"><p>XBSV provides a hardware-software interface for applications split
+between user mode code and custom hardware in an FPGA or ASIC.</p></div>
+<div class="paragraph"><p>XBSV can automaticaly build the software and hardware glue for a
+message based interface and also provides for configuring and using
+shared memory between applications and hardware. Communications
+between hardware and software are provided by a bidirectional flow of
+events and regions of memory shared between hardware and software.
+Events from software to hardware are called requests and events from
+hardware to software are called indications, but in fact they are
+symmetric.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -802,14 +807,10 @@ bluespec
 Shorthand for Bluespec System Verilog (bsv)
 </p>
 </dd>
-<dt class="hdlist1">
-portal
-</dt>
-<dd>
-<p>
-a logical request/indication pair is referred to as a portal.  current tools require their specification in the IDL to be syntactically identifiable (i.e. fooRequest/fooIndication).  An application can make use of multiple portals, which may be specified independently.
-</p>
-</dd>
+</dl></div>
+<div class="paragraph"><p>indexterm:portal
+portal:: a logical request/indication pair is referred to as a portal.  current tools require their specification in the IDL to be syntactically identifiable (i.e. fooRequest/fooIndication).  An application can make use of multiple portals, which may be specified independently.</p></div>
+<div class="dlist"><dl>
 <dt class="hdlist1">
 request interface
 </dt>
@@ -1193,7 +1194,7 @@ http://www.gnu.org/software/src-highlite -->
     <span style="color: #FF0000">}</span><span style="color: #990000">;</span></tt></pre></div></div>
 <div class="paragraph"><p>To connect these classes to the hardware, instantiate them using the
 <tt>IfcNames</tt> enum identifiers. XBSV prepends the name of the type
-because C does not support overloading of enum tags.</p></div>
+because C++ does not support overloading of enum tags.</p></div>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.5
 by Lorenzo Bettini
@@ -1507,11 +1508,16 @@ the number of file descriptors associated with it.</p></div>
 </div></div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_index">Index</h2>
+<div class="sectionbody">
+</div>
+</div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2014-04-30 11:38:27 EDT
+Last updated 2014-05-02 09:26:31 EDT
 </div>
 </div>
 </body>

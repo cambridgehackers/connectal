@@ -30,7 +30,7 @@ pcieportal/zynqportal: these two loadable kernel modules implement the minimal s
 
 portalalloc: This loadable kernel module exposes a subset of dma-buf functionality to user-space software (though a set of ioctl commands) to allocate and manage memory regions which can be shared between SW and HW processes.   Maintaining coherence of the allocated buffers between processes is not automatic: ioctl commands for flush/invalidate are provided to be invoked explicitly by the users if necessary. 
 
-genxprogfrombsv: The name of the interface compiler which takes as input the bsv interface specification along with a description of a target platform and generates logic in both HW and SW to support this interface across the communication fabric.
+xbsvgen: The name of the interface compiler which takes as input the bsv interface specification along with a description of a target platform and generates logic in both HW and SW to support this interface across the communication fabric.
 
 ## Example setups:
 

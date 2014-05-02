@@ -7,15 +7,18 @@ April 29, 2014
 
 == What is XBSV?
 
+[role="lead"]
 XBSV provides a hardware-software interface for applications split
-between user mode code and custom hardware in an FPGA or ASIC.  XBSV
-can automaticaly build the software and hardware glue for a message
-based interface and also provides for configuring and using shared
-memory between applications and hardware. Communications between
-hardware and software are provided by a bidirectional flow of events
-and regions of memory shared between hardware and software.  Events
-from software to hardware are called requests and events from hardware
-to software are called indications, but in fact they are symmetric.
+between user mode code and custom hardware in an FPGA or ASIC.
+
+XBSV can automaticaly build the software and hardware glue for a
+message based interface and also provides for configuring and using
+shared memory between applications and hardware. Communications
+between hardware and software are provided by a bidirectional flow of
+events and regions of memory shared between hardware and software.
+Events from software to hardware are called requests and events from
+hardware to software are called indications, but in fact they are
+symmetric.
 
 :bsvdocumentation: http://wiki.bluespec.com/Home/BSV-Documentation
 :bluespecdotcom:     http://www.bluespec.com/
@@ -37,6 +40,7 @@ bsv:: Bluespec System Verilog.  bsv is a language for describing hardware that i
 
 bluespec:: Shorthand for Bluespec System Verilog (bsv)
 
+indexterm:portal
 portal:: a logical request/indication pair is referred to as a portal.  current tools require their specification in the IDL to be syntactically identifiable (i.e. fooRequest/fooIndication).  An application can make use of multiple portals, which may be specified independently.
 
 request interface:: These methods are implemented by the application hardware to be invoked by application software.   A bsv interface consisting of ‘Action’ methods.  Because of the ‘Action’ type, data flow across this interface is unidirectional (SW -> HW).
@@ -760,3 +764,4 @@ Currently there are no valid bits and no protections against bursts crossing pag
 There needs to be a way to synchronize Request actions and DMA reads, and to synchronize DMA writes with Indications, so that the writes complete to the coherence point before the indication is delivered to software. One could imagine an absurdly buffered memory interface and a rather direct path for I/O reads that could get out of order.
 *****
 
+== Index
