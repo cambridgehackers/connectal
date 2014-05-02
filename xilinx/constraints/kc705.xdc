@@ -193,41 +193,18 @@ endgroup
 ######################################################################################################
 
 # # clocks
-create_clock -name pci_refclk -period 10 [get_pins *x7pcie*_bscan/TCK]
+create_clock -name bscan_refclk -period 20 [get_pins top_x7pcie_bridge_csr_pcieBscanBram_bscan/TCK]
 create_clock -name pci_refclk -period 10 [get_pins *x7pcie_pci_clk_100mhz_buf/O]
-create_clock -name sys_clk -period 5 [get_pins *x7pcie_sys_clk_200mhz/O]
 
-create_clock -name pci_extclk -period 10 [get_pins *x7pcie_pcie_ep/pcie_7x_v2_1_i/gt_top_i/PIPE_TXOUTCLK_OUT]
-
-# # False Paths
-# set_false_path -from [get_ports { RST_N_pci_sys_reset_n }]
-set_false_path -through [get_pins -hierarchical {*pcie_block_i/PLPHYLNKUPN*}]
-set_false_path -through [get_pins -hierarchical {*pcie_block_i/PLRECEIVEDHOTRST*}]
-
-#set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/user_resetdone*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[0].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[1].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[2].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[3].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[4].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[5].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[6].pipe_rate.pipe_rate_i/*}]
-set_false_path -through [get_nets {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_lane[7].pipe_rate.pipe_rate_i/*}]
-
-set_false_path -through [get_cells {*/pcie_7x_i/gt_top_i/pipe_wrapper_i/pipe_reset.pipe_reset_i/cpllreset_reg*}]
-
-set_false_path -through [get_nets {*/ext_clk.pipe_clock_i/pclk_sel*}]
-
-set_case_analysis 1 [get_pins {*/ext_clk.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/S0}] 
-set_case_analysis 0 [get_pins {*/ext_clk.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/S1}] 
+## no longer needed?
+create_clock -name pci_extclk -period 10 [get_pins top_x7pcie_pcie_ep/pcie_7x_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK]
+#set_false_path -through [get_nets {*/pcie_7x_v2_1_i/gt_top_i/pipe_wrapper_i/user_resetdone*}]
 
 set_clock_groups -name ___clk_groups_generated_0_1_0_0_0 -physically_exclusive -group [get_clocks clk_125mhz] -group [get_clocks clk_250mhz]
 
-set_clock_groups -name async_sysclk_coreclk -asynchronous -group [get_clocks -include_generated_clocks sys_clk] -group [get_clocks -include_generated_clocks user_clk] -group [get_clocks -include_generated_clocks pci_refclk]
-
-set_max_delay -from [get_clocks noc_clk] -to [get_clocks clk_userclk2] 8.000 -datapath_only
-set_max_delay -from [get_clocks clk_userclk2] -to [get_clocks noc_clk] 8.000 -datapath_only
-set_max_delay -from [get_clocks cclock] -to [get_clocks core_clock] 20.000 -datapath_only
-set_max_delay -from [get_clocks uclock] -to [get_clocks core_clock] 20.000 -datapath_only
-set_max_delay -from [get_clocks core_clock] -to [get_clocks cclock] 20.000 -datapath_only
-set_max_delay -from [get_clocks core_clock] -to [get_clocks uclock] 20.000 -datapath_only
+#set_max_delay -from [get_clocks noc_clk] -to [get_clocks clk_userclk2] 8.000 -datapath_only
+#set_max_delay -from [get_clocks clk_userclk2] -to [get_clocks noc_clk] 8.000 -datapath_only
+#set_max_delay -from [get_clocks cclock] -to [get_clocks core_clock] 20.000 -datapath_only
+#set_max_delay -from [get_clocks uclock] -to [get_clocks core_clock] 20.000 -datapath_only
+#set_max_delay -from [get_clocks core_clock] -to [get_clocks cclock] 20.000 -datapath_only
+#set_max_delay -from [get_clocks core_clock] -to [get_clocks uclock] 20.000 -datapath_only
