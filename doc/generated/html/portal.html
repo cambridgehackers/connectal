@@ -844,7 +844,7 @@ This loadable kernel module exposes a subset of dma-buf functionality to user-sp
 </p>
 </dd>
 <dt class="hdlist1">
-genxprogfrombsv
+xbsvgen
 </dt>
 <dd>
 <p>
@@ -1509,6 +1509,306 @@ the number of file descriptors associated with it.</p></div>
 </div>
 </div>
 <div class="sect1">
+<h2 id="_portal_interface_structure">Portal Interface Structure</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>XBSV connects software and hardware via portals, where each portal is
+an interface that allows one side to invoke methods on the other side.</p></div>
+<div class="paragraph"><p>We generally call a portal from software to hardware to be a "request"
+and from hardware to software to be an "indication" interface.</p></div>
+<div class="imageblock seqdiag">
+<div class="content">
+<img src="request-response-21.png" alt="request-response-21.png" />
+</div>
+</div>
+<div class="paragraph"><p>A portal is conceptually a FIFO, where the arguments to a method are
+packaged as a message. XBSV generates a "proxy" that marshalls the
+arguments to the method into a message and a "wrapper" that unpacks
+the arguments and invokes the method.</p></div>
+<div class="paragraph"><p>Currently, xbsvgen includes a library that implements portals via
+memory mapped hardware.</p></div>
+<div class="sect2">
+<h3 id="_portal_device_drivers">Portal Device Drivers</h3>
+<div class="paragraph"><p>XBSV uses a platform-specific driver to enable user-space applications
+to memory-map each portal used by the application and to enable the
+application to wait for interrupts from the hardware.</p></div>
+<div class="paragraph"><p>indexterm:pcieportal
+indexterm:zynqportal</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+pcieportal.ko
+</p>
+</li>
+<li>
+<p>
+zynqportal.ko
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>XBSV also uses a generic driver to enable the applications to allocate DRAM that will be shared with the hardware and to send the memory mapping of that memory to the hardware.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+portalmem.ko
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_portal_memory_map">Portal Memory Map</h3>
+<div class="paragraph"><p>XBSV currently supports up to 15 portals connected between software and hardware, for a total of 1MB of address space. It also provides a directory.</p></div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="50%" />
+<col width="50%" />
+<thead>
+<tr>
+<th align="left" valign="top"> Base address </th>
+<th align="left" valign="top"> Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">0x00000</p></td>
+<td align="left" valign="top"><p class="table">Directory that maps portal identifier to portal number</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x10000</p></td>
+<td align="left" valign="top"><p class="table">Portal 0</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x20000</p></td>
+<td align="left" valign="top"><p class="table">Portal 1</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x30000</p></td>
+<td align="left" valign="top"><p class="table">Portal 2</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x40000</p></td>
+<td align="left" valign="top"><p class="table">Portal 3</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x50000</p></td>
+<td align="left" valign="top"><p class="table">Portal 4</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x60000</p></td>
+<td align="left" valign="top"><p class="table">Portal 5</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x70000</p></td>
+<td align="left" valign="top"><p class="table">Portal 6</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x80000</p></td>
+<td align="left" valign="top"><p class="table">Portal 7</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x90000</p></td>
+<td align="left" valign="top"><p class="table">Portal 8</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xa0000</p></td>
+<td align="left" valign="top"><p class="table">Portal 9</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xb0000</p></td>
+<td align="left" valign="top"><p class="table">Portal 10</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xc0000</p></td>
+<td align="left" valign="top"><p class="table">Portal 11</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xd0000</p></td>
+<td align="left" valign="top"><p class="table">Portal 12</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xe0000</p></td>
+<td align="left" valign="top"><p class="table">Portal 13</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xf0000</p></td>
+<td align="left" valign="top"><p class="table">Portal 14</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="paragraph"><p>Each portal uses 64KB of address space, divided equally into 4 sections:</p></div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="50%" />
+<col width="50%" />
+<thead>
+<tr>
+<th align="left" valign="top"> Base address </th>
+<th align="left" valign="top"> Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">0x0000</p></td>
+<td align="left" valign="top"><p class="table">Request FIFO base</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x4000</p></td>
+<td align="left" valign="top"><p class="table">Request register base</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x8000</p></td>
+<td align="left" valign="top"><p class="table">Indication FIFO base</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xc000</p></td>
+<td align="left" valign="top"><p class="table">Indication register base</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="paragraph"><p>Although each portal only passes messages in one direction, it
+supports two way communication. For "request" portals, the indication
+path is used to communicate that a message send failed.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_portal_fifos">Portal FIFOs</h3>
+<div class="paragraph"><p>Each method is implemented as a FIFO to or from hardware. Each FIFO is allocated 256 bytes of address space.</p></div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="50%" />
+<col width="50%" />
+<thead>
+<tr>
+<th align="left" valign="top"> base address </th>
+<th align="left" valign="top"> Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">0x0000</p></td>
+<td align="left" valign="top"><p class="table">Request method 0 FIFO</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x0100</p></td>
+<td align="left" valign="top"><p class="table">Request method 1 FIFO</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">&#8230;</p></td>
+<td align="left" valign="top"><p class="table">&#8230;</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x8000</p></td>
+<td align="left" valign="top"><p class="table">Indication method 0 FIFO</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x0100</p></td>
+<td align="left" valign="top"><p class="table">Indication method 1 FIFO</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">&#8230;</p></td>
+<td align="left" valign="top"><p class="table">&#8230;</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_portal_request_registers">Portal Request Registers</h3>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="50%" />
+<col width="50%" />
+<thead>
+<tr>
+<th align="left" valign="top"> Base address </th>
+<th align="left" valign="top"> Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">0x4000</p></td>
+<td align="left" valign="top"><p class="table">Request fired count</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0x4004</p></td>
+<td align="left" valign="top"><p class="table">Out of range write count</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_portal_indication_registers">Portal Indication Registers</h3>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+<thead>
+<tr>
+<th align="left" valign="top"> Base address </th>
+<th align="left" valign="top"> Function                    </th>
+<th align="left" valign="top"> Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">0xc000</p></td>
+<td align="left" valign="top"><p class="table">Interrupt status register</p></td>
+<td align="left" valign="top"><p class="table">1 if this portal has any messages ready, 0 otherwise</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xC004</p></td>
+<td align="left" valign="top"><p class="table">Interrupt enable register</p></td>
+<td align="left" valign="top"><p class="table">Write 1 to enable interrupts, 0 to disable</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xC008</p></td>
+<td align="left" valign="top"><p class="table">Method count?</p></td>
+<td align="left" valign="top"><p class="table">Number of methods implemented by this portal</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xC00C</p></td>
+<td align="left" valign="top"><p class="table">Underflow read count reg</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xC010</p></td>
+<td align="left" valign="top"><p class="table">Out of range read count reg</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xC014</p></td>
+<td align="left" valign="top"><p class="table">Out of range write count reg</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">0xC018</p></td>
+<td align="left" valign="top"><p class="table">Ready channel indication</p></td>
+<td align="left" valign="top"><p class="table">channel number + 1 if message is available, 0 otherwise</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_index">Index</h2>
 <div class="sectionbody">
 </div>
@@ -1517,7 +1817,7 @@ the number of file descriptors associated with it.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2014-05-02 09:26:31 EDT
+Last updated 2014-05-02 16:02:41 EDT
 </div>
 </div>
 </body>

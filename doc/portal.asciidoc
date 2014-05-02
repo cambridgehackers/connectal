@@ -51,7 +51,7 @@ pcieportal/zynqportal:: these two loadable kernel modules implement the minimal 
 
 portalalloc:: This loadable kernel module exposes a subset of dma-buf functionality to user-space software (though a set of ioctl commands) to allocate and manage memory regions which can be shared between SW and HW processes.   Maintaining coherence of the allocated buffers between processes is not automatic: ioctl commands for flush/invalidate are provided to be invoked explicitly by the users if necessary. 
 
-genxprogfrombsv:: The name of the interface compiler which takes as input the bsv interface specification along with a description of a target platform and generates logic in both HW and SW to support this interface across the communication fabric.
+xbsvgen:: The name of the interface compiler which takes as input the bsv interface specification along with a description of a target platform and generates logic in both HW and SW to support this interface across the communication fabric.
 
 == Example setups:
 
@@ -763,5 +763,7 @@ Currently there are no valid bits and no protections against bursts crossing pag
 
 There needs to be a way to synchronize Request actions and DMA reads, and to synchronize DMA writes with Indications, so that the writes complete to the coherence point before the indication is delivered to software. One could imagine an absurdly buffered memory interface and a rather direct path for I/O reads that could get out of order.
 *****
+
+include::portalstructure.asciidoc[]
 
 == Index
