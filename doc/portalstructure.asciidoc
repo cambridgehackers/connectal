@@ -1,0 +1,57 @@
+== Portal Interface Structure
+Jamey Hicks <jamey.hicks@qrclab.com>
+
+XBSV connects software and hardware via portals, where each portal is
+an interface that allows one side to invoke methods on the other side.
+
+We generally call a portal from software to hardware to be a "request"
+and from hardware to software to be an "indication" interface.
+
+["seqdiag",target="request-response-21.png"]
+---------------------------------------------------------------------
+{
+  SW; HW
+  SW -> HW [label = "request"];
+  SW <- HW [label = "indication"];
+}
+---------------------------------------------------------------------
+
+A portal is conceptually a FIFO, where the arguments to a method are
+packaged as a message. XBSV generates a "proxy" that marshalls the
+arguments to the method into a message and a "wrapper" that unpacks
+the arguments and invokes the method.
+
+Currently, xbsvgen includes a library that implements portals via
+memory mapped hardware.
+
+=== Portal Device Drivers
+
+XBSV uses a platform-specific driver to enable user-space applications
+to memory-map each portal used by the application and to enable the
+application to wait for interrupts from the hardware.
+
+indexterm:pcieportal
+indexterm:zynqportal
+
+* pcieportal.ko
+* zynqportal.ko
+
+XBSV also uses a generic driver to enable the applications to allocate DRAM that will be shared with the hardware and to send the memory mapping of that memory to the hardware.
+
+* portalmem.ko
+
+=== Portal Memory Map
+
+XBSV currently supports up to 16 portals connected between software and hardware, for a total of 1MB of address space.
+
+Each portal uses 64KB of address space, divided equally into 4 sections:
+
+ * Request FIFO base
+ * Request register base
+ * Indication FIFO base
+ * Indication register base
+
+Although each portal only passes messages in one direction, it
+supports two way communication. For "request" portals, the indication
+path is used to communicate that a message send failed.
+
