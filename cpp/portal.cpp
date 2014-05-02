@@ -278,7 +278,8 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   }
 #endif
   for (int i = msg->size()/4-1; i >= 0; i--)
-    WRITEL(this, req_fifo_base + msg->channel * (256/4), buf[i]);
+    // req_fifo_base is derived from dev_base, which is the address returned from mmap in PortalInternal::PortalInternal(int id)
+    WRITEL(this, req_fifo_base + msg->fifo_offset, buf[i]);
   //uint64_t after_requestt = catch_timer(12);
   //print_dbg_request_intervals();
   //fprintf(stderr, "(%s) sendMessage\n", name);

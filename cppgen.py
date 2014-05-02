@@ -71,6 +71,8 @@ public:
     %(className)s(int id, PortalPoller *poller = 0);
 '''
 proxyClassSuffixTemplate='''
+%(reqChanNums)s
+%(reqFifoOffsets)s
 };
 '''
 
@@ -84,6 +86,9 @@ public:
 wrapperClassSuffixTemplate='''
 protected:
     virtual int handleMessage(unsigned int channel);
+public:
+%(indChanNums)s
+%(indFifoOffsets)s
 };
 '''
 
@@ -119,7 +124,7 @@ responseSzCaseTemplate='''
     { 
         %(msg)s msg;
         for (int i = (msg.size()/4)-1; i >= 0; i--) {
-            volatile unsigned int *ptr = (volatile unsigned int*)(((long)ind_fifo_base) + channel * 256);
+            volatile unsigned int *ptr = (volatile unsigned int*)(((long)ind_fifo_base) + %(fifoOffset)s);
             unsigned int val = READL(this, ptr);
             buf[i] = val;
         }
@@ -154,6 +159,7 @@ void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
     %(className)s%(methodName)sMSG msg;
     msg.channel = %(methodChannelOffset)s;
+    msg.fifo_offset = %(methodFifoOffset)s;
 %(paramSetters)s
     sendMessage(&msg);
 };
@@ -370,7 +376,8 @@ class MethodMixin:
             'paramSetters': ''.join(paramSetters),
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
-            'methodChannelOffset': self.channelNumber,
+            'methodChannelOffset': '%s_CHAN_NUM' % cName(self.name),
+            'methodFifoOffset': '%s_FIFO_OFFSET' % cName(self.name),
             # if message is empty, we still send an int of padding
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
@@ -477,20 +484,38 @@ class InterfaceMixin:
     def emitCProxyDeclaration(self, f, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
         statusDecl = "%s%s *proxyStatus;" % (cName(self.name), 'ProxyStatus')
+	reqChanNums = []
+	reqFifoOffsets = []
+	for d in self.decls:
+            reqChanNums.append('    const static int %s_CHAN_NUM=%d;\n' % (d.name, d.channelNumber))
+	for d in self.decls:
+            reqFifoOffsets.append('    const static int %s_FIFO_OFFSET= %s_CHAN_NUM * (256/4);\n' % (d.name, d.name))
         subs = {'className': className,
                 'namespace': namespace,
 		'statusDecl' : '' if self.hasPutFailed() else statusDecl,
-                'parentClass': self.parentClass('PortalInternal')}
+                'parentClass': self.parentClass('PortalInternal'),
+		'reqChanNums' : ''.join(reqChanNums),
+		'reqFifoOffsets' : ''.join(reqFifoOffsets)}
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitCDeclaration(f, True, indentation + 4, namespace)
+
+	
         f.write(proxyClassSuffixTemplate % subs)
     def emitCWrapperDeclaration(self, f, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
         indent(f, indentation)
+	indChanNums = []
+	indFifoOffsets = []
+	for d in self.decls:
+            indChanNums.append('    const static int %s_CHAN_NUM=%d;\n' % (cName(d.name),d.channelNumber));
+	for d in self.decls:
+            indFifoOffsets.append('    const static int %s_FIFO_OFFSET= %s_CHAN_NUM * 256;\n' % (d.name, d.name))
         subs = {'className': className,
                 'namespace': namespace,
-                'parentClass': self.parentClass('Portal')}
+                'parentClass': self.parentClass('Portal'),
+		'indChanNums' : ''.join(indChanNums),
+		'indFifoOffsets' : ''.join(indFifoOffsets)}
         f.write(wrapperClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitCDeclaration(f, False, indentation + 4, namespace)
@@ -513,7 +538,8 @@ class InterfaceMixin:
                          'className': className,
 			 'putFailedMethodName' : putFailedMethodName,
                          'parentClass': self.parentClass('Portal'),
-                         'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': d.channelNumber,
+                         'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': '%s_CHAN_NUM' % cName(d.name),
+										'fifoOffset': '%s_FIFO_OFFSET' % cName(d.name),
                                                                                 'msg': '%s%sMSG' % (className, d.name)}
                                                      for d in self.decls 
                                                      if d.type == 'Method' and d.return_type.name == 'Action']),

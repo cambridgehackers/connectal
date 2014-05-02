@@ -58,6 +58,7 @@ class PortalMessage
 {
  public:
   size_t channel;
+  size_t fifo_offset;
   // size of bsv bit-representation in bytes
   virtual size_t size() = 0; 
   // convert to bsv bit-representation
