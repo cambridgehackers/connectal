@@ -70,10 +70,12 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(c__, addrWidth, ObjectOffsetSize));
 
-   BRAM2Port#(Bit#(entryIdxSize),Page) pages <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(RegionsIdx, Region)       reg8 <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(RegionsIdx, Region)       reg4 <- mkBRAM2Server(defaultValue);
-   BRAM2Port#(RegionsIdx, Region)       reg0 <- mkBRAM2Server(defaultValue);
+   BRAM_Configure bramConfig = defaultValue;
+   bramConfig.latency        = 2;
+   BRAM2Port#(Bit#(entryIdxSize),Page) pages <- mkBRAM2Server(bramConfig);
+   BRAM2Port#(RegionsIdx, Region)       reg8 <- mkBRAM2Server(bramConfig);
+   BRAM2Port#(RegionsIdx, Region)       reg4 <- mkBRAM2Server(bramConfig);
+   BRAM2Port#(RegionsIdx, Region)       reg0 <- mkBRAM2Server(bramConfig);
 
    Vector#(2,FIFOF#(SGListId))          ptrs <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(Bit#(8)))         pbases <- replicateM(mkFIFOF);
