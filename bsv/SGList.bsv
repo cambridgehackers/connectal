@@ -199,6 +199,11 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	  endinterface
        endinterface);
 
+   FIFO#(Tuple2#(Bit#(32),Bit#(40))) configRespFifo <- mkFIFO;
+   rule sendConfigResp;
+      match { .ptr, .barr0 } <- toGet(configRespFifo).get();
+      dmaIndication.configResp(ptr, barr0);
+   endrule
 
    method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
       Region region8 = Region { barrier: barr8, idxOffset: off8 };
@@ -208,7 +213,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region4});
       portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region0});
       //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
-      dmaIndication.configResp(ptr, barr0);
+      configRespFifo.enq(tuple2(ptr, barr0));
    endmethod
 	       
    
@@ -240,7 +245,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    end
 	 end
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:{truncate(ptr-1),idxReg}, datain:page});
-	 dmaIndication.configResp(ptr, 40'haaaaaaaa);
+	 configRespFifo.enq(tuple2(ptr, 40'haaaaaaaa));
       end
    endmethod   
    
