@@ -22,6 +22,7 @@
 
 // BSV Libraries
 import RegFile::*;
+import FIFO::*;
 import FIFOF::*;
 import Vector::*;
 import GetPut::*;
@@ -77,6 +78,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    Vector#(2,FIFOF#(Bit#(entryIdxSize)))  rp <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(Offset))            offs <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(ReqTup))            reqs <- replicateM(mkFIFOF);
+   Vector#(2,FIFO#(Bit#(addrWidth))) pageResponseFifos <- replicateM(mkFIFO);
    Reg#(Bit#(8))                      idxReg <- mkReg(0);
    
    let page_shift0 = fromInteger(valueOf(SGListPageShift0));
@@ -135,6 +137,44 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 rp[i].deq;
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:rp[i].first, datain:?});
       endrule
+      rule pageResponse;
+	 let page <- portsel(pages, i).response.get;
+	 let offset <- toGet(offs[i]).get();
+	 Bit#(ObjectOffsetSize) rv = 0;
+	 case (offset) matches
+	    tagged OOrd0 .o:
+	       begin
+		  case (page) matches
+		     tagged POrd4 .p:
+			$display("OOrd0 vs POrd4");
+		     tagged POrd8 .p:
+			$display("OOrd0 vs POrd8");
+		  endcase
+		  rv = {page.POrd0,o};
+	       end
+	    tagged OOrd4 .o:
+	       begin
+		  case (page) matches
+		     tagged POrd0 .p:
+			$display("OOrd4 vs POrd0");
+		     tagged POrd8 .p:
+			$display("OOrd4 vs POrd8");
+		  endcase
+		  rv = {page.POrd4,o};
+	       end
+	    tagged OOrd8 .o:
+	       begin
+		  case (page) matches
+		     tagged POrd0 .p:
+			$display("OOrd8 vs POrd0");
+		     tagged POrd4 .p:
+			$display("OOrd8 vs POrd4");
+		  endcase
+		  rv = {page.POrd8,o};
+	       end
+	 endcase
+	 pageResponseFifos[i].enq(truncate(rv));
+      endrule
    end
    
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
@@ -153,45 +193,8 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	  endinterface
 	  interface Get response;
 	     method ActionValue#(Bit#(addrWidth)) get();
-		Bit#(ObjectOffsetSize) rv = 0;
-		let page <- portsel(pages, i).response.get;
-		let offset = offs[i].first;
-		case (offset) matches
-		   tagged OOrd0 .o:
-		      begin
-			 case (page) matches
-			    tagged POrd4 .p:
-			       $display("OOrd0 vs POrd4");
-			    tagged POrd8 .p:
-			       $display("OOrd0 vs POrd8");
-			 endcase
-			 rv = {page.POrd0,o};
-		      end
-		   tagged OOrd4 .o:
-		      begin
-			  case (page) matches
-			     tagged POrd0 .p:
-				$display("OOrd4 vs POrd0");
-			     tagged POrd8 .p:
-				$display("OOrd4 vs POrd8");
-			  endcase
-			  rv = {page.POrd4,o};
-		      end
-		   tagged OOrd8 .o:
-		      begin
-			 case (page) matches
-			    tagged POrd0 .p:
-			       $display("OOrd8 vs POrd0");
-			    tagged POrd4 .p:
-			       $display("OOrd8 vs POrd4");
-			 endcase
-			 rv = {page.POrd8,o};
-		      end
-		endcase
-		if (False && rv[31:24] != 0)
-		   $display($format("SGList response: funny r",fshow(rv),fshow(offset),fshow(page)));
-		offs[i].deq;
-		return truncate(rv);
+		let rv <- toGet(pageResponseFifos[i]).get();
+		return rv;
 	     endmethod
 	  endinterface
        endinterface);
