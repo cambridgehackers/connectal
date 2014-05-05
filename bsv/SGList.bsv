@@ -231,6 +231,12 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       dmaIndication.configResp(ptr, barr0);
    endrule
 
+   FIFO#(Tuple2#(Bit#(entryIdxSize),Page)) sglistPageReadFifo <- mkFIFO();
+   rule sglistPageRead;
+      match { .addr, .page } <- toGet(sglistPageReadFifo).get();
+      portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:addr, datain:page});
+   endrule
+
    method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
       Region region8 = Region { barrier: barr8, idxOffset: off8 };
       Region region4 = Region { barrier: barr4, idxOffset: off4 };
@@ -270,7 +276,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	       dmaIndication.badPageSize(ptr, len);
 	    end
 	 end
-	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:{truncate(ptr-1),idxReg}, datain:page});
+	 sglistPageReadFifo.enq(tuple2({truncate(ptr-1),idxReg}, page));
 	 configRespFifo.enq(tuple2(ptr, 40'haaaaaaaa));
       end
    endmethod   
