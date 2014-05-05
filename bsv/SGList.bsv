@@ -216,7 +216,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       // $display("sglist(ptr=%d, paddr=%h, len=%h", ptr, paddr,len);
       if (idxReg+1 == 0) begin
 	 $display("sglist: exceeded maximun length of sglist");
-	 dmaIndication.badPageSize(ptr,len);
+	 dmaIndication.badNumberEntries(ptr,len);
       end
       else begin
 	 Page page = tagged POrd0 0;
@@ -234,7 +234,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    else if (extend(len) == ord8) begin
 	       page = tagged POrd8 truncate(paddr>>page_shift8);
 	    end
-	    else begin
+	    if (extend(len) > ord8) begin
 	       $display("mkSGListMMU::sglist unsupported length %h", len);
 	       dmaIndication.badPageSize(ptr, len);
 	    end
