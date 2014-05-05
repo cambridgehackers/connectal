@@ -75,6 +75,9 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    BRAM2Port#(RegionsIdx, Region)       reg4 <- mkBRAM2Server(defaultValue);
    BRAM2Port#(RegionsIdx, Region)       reg0 <- mkBRAM2Server(defaultValue);
 
+   Vector#(2,FIFOF#(SGListId))          ptrs <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Bit#(8)))         pbases <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Bit#(8)))     idxOffsets <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(Bit#(entryIdxSize)))  rp <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(Offset))            offs <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(ReqTup))            reqs <- replicateM(mkFIFOF);
@@ -103,7 +106,8 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 let ptr = tpl_1(reqs[i].first);
 	 let off = tpl_2(reqs[i].first);
 	 Offset o = tagged OOrd0 0;
-	 Bit#(8) p = 0;
+	 Bit#(8) pbase = 0;
+	 Bit#(8) idxOffset = 0;
 	 Region region8 <- portsel(reg8,i).response.get;
 	 Region region4 <- portsel(reg4,i).response.get;
 	 Region region0 <- portsel(reg0,i).response.get;
@@ -114,32 +118,46 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 if (off < barrier8) begin
 	    //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
 	    o = tagged OOrd8 truncate(off);
-	    p = truncate(off>>page_shift8) + region8.idxOffset;
+	    pbase = truncate(off>>page_shift8);
+	    idxOffset = region8.idxOffset;
 	 end 
 	 else if (off < barrier4) begin
 	    //$display("request: ptr=%h off=%h barrier4=%h", ptr, off, barrier4);
 	    o = tagged OOrd4 truncate(off);
-	    p = truncate(off>>page_shift4) + region4.idxOffset;
+	    pbase = truncate(off>>page_shift4);
+	    idxOffset = region4.idxOffset;
 	 end
 	 else if (off < barrier0) begin
 	    //$display("request: ptr=%h off=%h barrier0=%h", ptr, off, barrier0);
 	    o = tagged OOrd0 truncate(off);
-	    p = truncate(off>>page_shift0) + region0.idxOffset;
+	    pbase = truncate(off>>page_shift0);
+	    idxOffset = region0.idxOffset;
 	 end 
 	 else begin
 	    $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
 	    dmaIndication.badAddrTrans(extend(ptr), extend(off), barrier0);
 	 end
 	 offs[i].enq(o);
-	 rp[i].enq({ptr-1,p});
+	 pbases[i].enq(pbase);
+	 idxOffsets[i].enq(idxOffset);
+	 ptrs[i].enq(ptr);
       endrule
       rule req1;
+	 let ptr <- toGet(ptrs[i]).get();
+	 let pbase <- toGet(pbases[i]).get();
+	 let idxOffset <- toGet(idxOffsets[i]).get();
+	 Bit#(8) p = pbase + idxOffset;
+	 rp[i].enq({ptr-1,p});
+      endrule
+      rule req2;
 	 rp[i].deq;
+	 //$display("pages[%d].read %h", i, rp[i].first());
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:rp[i].first, datain:?});
       endrule
       rule pageResponse;
 	 let page <- portsel(pages, i).response.get;
 	 let offset <- toGet(offs[i]).get();
+	 //$display("pages[%d].response page=%h offset=%h", i, page, offset);
 	 Bit#(ObjectOffsetSize) rv = 0;
 	 case (offset) matches
 	    tagged OOrd0 .o:
@@ -177,18 +195,24 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       endrule
    end
    
+   Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
+   for (Integer i = 0; i < 2; i=i+1)
+      rule incomingReqRule;
+	 let req <- toGet(incomingReqs[i]).get();
+	 match { .ptr, .off } = req;
+	 portsel(reg8, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
+	 portsel(reg4, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
+	 portsel(reg0, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
+	 reqs[i].enq(req);
+      endrule
+
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
    for(Integer i = 0; i < 2; i=i+1)
       addrServers[i] = 
       (interface Server#(ReqTup,Bit#(addrWidth));
 	  interface Put request;
 	     method Action put(ReqTup req);
-		let ptr = tpl_1(req);
-		let off = tpl_2(req);
-		portsel(reg8, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
-		portsel(reg4, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
-		portsel(reg0, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
-		reqs[i].enq(req);
+		incomingReqs[i].enq(req);
 	     endmethod
 	  endinterface
 	  interface Get response;
