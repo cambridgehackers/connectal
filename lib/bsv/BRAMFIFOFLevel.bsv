@@ -133,3 +133,40 @@ module mkBRAMFIFOFLevel(FIFOFLevel#(element_type, fifo_depth))
    endinterface
    
 endmodule
+
+module mkFIFOFLevel(FIFOFLevel#(element_type, fifo_depth))
+   provisos(Log#(fifo_depth, log_fifo_depth),
+	    Add#(log_fifo_depth,1,mark_width),
+	    Bits#(element_type, __a),
+	    Add#(1, a__, __a));
+
+   Counter#(mark_width) cnt <- mkCounter(0);
+   FIFOF#(element_type) fif <- mkSizedFIFOF(valueOf(fifo_depth));
+
+   method Bool highWater(Bit#(mark_width) mark);
+      return (cnt.read >= mark);
+   endmethod
+
+   method Bool lowWater(Bit#(mark_width) mark);
+      return (fromInteger(valueOf(fifo_depth))-cnt.read >= mark);
+   endmethod
+
+   interface FIFOF fifo;
+      method Action enq (element_type x);
+	 cnt.increment;
+	 fif.enq(x);
+      endmethod
+      method Action deq;
+	 cnt.decrement;
+	 fif.deq;
+      endmethod
+      method Action clear;
+	 cnt.reset;
+	 fif.clear;
+      endmethod
+      method element_type first = fif.first;
+      method Bool notFull = fif.notFull;
+      method Bool notEmpty = fif.notEmpty;
+   endinterface
+
+endmodule
