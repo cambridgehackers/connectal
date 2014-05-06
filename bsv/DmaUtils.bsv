@@ -73,14 +73,18 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth)  readBuffer <- mkFIFOFLevel;
+   FIFO#(ObjectData#(dataWidth))  readBuffer <- mkSizedFIFO(valueOf(bufferDepth));
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(bufferDepth))) availableBuffers <- mkRatchet(fromInteger(valueOf(bufferDepth)));
    let beat_shift = fromInteger(valueOf(beatShift));
    
-   FIFO#(Bool) readyToGet <- mkFIFO();
+   FIFOF#(Bool) hasEnoughCapacity <- mkFIFOF();
    rule updateReady;
-      readyToGet.enq(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)) <= availableBuffers.read());
+      Bit#(TAdd#(1,TLog#(bufferDepth))) requested = truncate(reqOutstanding.first.burstLen>>beat_shift);
+      Bool ready = (unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)) <= availableBuffers.read());
+      if (ready) begin
+	 hasEnoughCapacity.enq(True);
+      end
    endrule
 
    // only issue the readRequest when sufficient buffering is available.  This includes the buffering we have already committed.
@@ -96,8 +100,8 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
    endinterface
    interface ObjectReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(ObjectRequest) get;
-	    readyToGet.deq();
+	 method ActionValue#(ObjectRequest) get if (hasEnoughCapacity.notEmpty);
+	    hasEnoughCapacity.deq();
 	    reqOutstanding.deq;
 	    availableBuffers.decrement(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
 	    return reqOutstanding.first;
@@ -105,7 +109,7 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
       endinterface
       interface Put readData;
 	 method Action put(ObjectData#(dataWidth) x);
-	    readBuffer.fifo.enq(x);
+	    readBuffer.enq(x);
 	 endmethod
       endinterface
    endinterface
@@ -123,15 +127,17 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth) writeBuffer <- mkFIFOFLevel;
+   FIFO#(ObjectData#(dataWidth)) writeBuffer <- mkSizedFIFO(valueOf(bufferDepth));
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(bufferDepth))) availableWords <- mkRatchet(fromInteger(valueOf(bufferDepth)));
    let beat_shift = fromInteger(valueOf(beatShift));
    
-   FIFO#(Bool) readyToGet <- mkFIFO();
+   FIFOF#(Bool) hasEnoughCapacity <- mkFIFOF();
    rule updateReady;
-      readyToGet.enq(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)) <= availableWords.read());
+      Bit#(TAdd#(1,TLog#(bufferDepth))) requested = truncate(reqOutstanding.first.burstLen>>beat_shift);
+      if (unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)) <= availableWords.read())
+	 hasEnoughCapacity.enq(True);
    endrule
 
    // only issue the writeRequest when sufficient data is available.  This includes the data we have already committed.
@@ -139,7 +145,7 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
       interface Put writeReq = toPut(reqOutstanding);
       interface Put writeData;
 	 method Action put(ObjectData#(dataWidth) d);
-	    writeBuffer.fifo.enq(d);
+	    writeBuffer.enq(d);
 	    availableWords.increment(1);
 	 endmethod
       endinterface
@@ -147,8 +153,8 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
    endinterface
    interface ObjectWriteClient dmaClient;
       interface Get writeReq;
-	 method ActionValue#(ObjectRequest) get;
-	    readyToGet.deq();
+	 method ActionValue#(ObjectRequest) get if (hasEnoughCapacity.notEmpty());
+	    hasEnoughCapacity.deq();
 	    reqOutstanding.deq;
 	    availableWords.decrement(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
 	    return reqOutstanding.first;
@@ -156,8 +162,8 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
       endinterface
       interface Get writeData;
 	 method ActionValue#(ObjectData#(dataWidth)) get();
-	    writeBuffer.fifo.deq;
-	    return writeBuffer.fifo.first;
+	    writeBuffer.deq;
+	    return writeBuffer.first;
 	 endmethod
       endinterface
       interface Put writeDone = toPut(doneTags);
