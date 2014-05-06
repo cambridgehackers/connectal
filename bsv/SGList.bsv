@@ -102,6 +102,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 return x.portB;
    endfunction
 
+   FIFO#(Tuple4#(RegionsIdx,Region,Region,Region)) regionFifo <- mkFIFO();
    FIFO#(Region) region8Fifo <- mkFIFO();
    FIFO#(Region) region4Fifo <- mkFIFO();
    FIFO#(Region) region0Fifo <- mkFIFO();
@@ -254,20 +255,20 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	  endinterface
        endinterface);
 
-   FIFO#(Tuple2#(Bit#(32),Bit#(40))) configRespFifo <- mkFIFO;
+   FIFO#(Tuple2#(SGListId,Bit#(40))) configRespFifo <- mkFIFO;
    rule sendConfigResp;
       match { .ptr, .barr0 } <- toGet(configRespFifo).get();
-      dmaIndication.configResp(ptr, barr0);
+      dmaIndication.configResp(extend(ptr), barr0);
    endrule
 
-   FIFO#(Tuple3#(Bit#(32),Bit#(40),Bit#(32))) sglistFifo <- mkFIFO();
+   FIFO#(Tuple3#(SGListId,Bit#(40),Bit#(32))) sglistFifo <- mkFIFO();
    rule sglistRule;
       match { .ptr, .paddr, .len } <- toGet(sglistFifo).get();
 
       // $display("sglist(ptr=%d, paddr=%h, len=%h", ptr, paddr,len);
       if (idxReg+1 == 0) begin
 	 $display("sglist: exceeded maximun length of sglist");
-	 dmaIndication.badNumberEntries(ptr,len);
+	 dmaIndication.badNumberEntries(extend(ptr),len);
       end
       else begin
 	 Page page = tagged POrd0 0;
@@ -287,28 +288,34 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    end
 	    if (extend(len) > ord8) begin
 	       $display("mkSGListMMU::sglist unsupported length %h", len);
-	       dmaIndication.badPageSize(ptr, len);
+	       dmaIndication.badPageSize(extend(ptr), len);
 	    end
 	 end
-	 configRespFifo.enq(tuple2(ptr, 40'haaaaaaaa));
+	 configRespFifo.enq(tuple2(truncate(ptr), 40'haaaaaaaa));
 	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:{truncate(ptr-1),idxReg}, datain:page});
       end
    endrule
 
+   rule regionRule;
+      match { .ptr, .region8, .region4, .region0 } <- toGet(regionFifo).get();
+      let idx = ptr-1;
+      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address: idx, datain: region8});
+      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address: idx, datain: region4});
+      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address: idx, datain: region0});
+      //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
+      configRespFifo.enq(tuple2(ptr, region0.barrier));
+   endrule
+
+   // FIXME: split this into three methods?
    method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
       Region region8 = Region { barrier: barr8, idxOffset: off8 };
       Region region4 = Region { barrier: barr4, idxOffset: off4 };
       Region region0 = Region { barrier: barr0, idxOffset: off0 };
-      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region8});
-      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region4});
-      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region0});
-      //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
-      configRespFifo.enq(tuple2(ptr, barr0));
+      regionFifo.enq(tuple4(truncate(ptr),region8,region4,region0));
    endmethod
 
-
    method Action sglist(Bit#(32) ptr, Bit#(40) paddr, Bit#(32) len);
-      sglistFifo.enq(tuple3(ptr, paddr, len));
+      sglistFifo.enq(tuple3(truncate(ptr), paddr, len));
    endmethod
 
    interface addr = addrServers;
