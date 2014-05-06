@@ -106,7 +106,6 @@ read_verilog [ glob {verilog/top/*.v} ]
 if $needspcie {
     set pcieversion {3.0}
     set maxlinkwidth {X8}
-    set board_part "xilinx.com:$boardname:part0:1.0"
     if {$boardname == {zc706}} {
         set maxlinkwidth {X4}
     }
@@ -120,7 +119,14 @@ if $needspcie {
     if {[version -short] == "2013.2"} {
         set pcieversion {2.1}
     }
-    set_property board_part $board_part [current_project]
+    if {[lsearch [list_property [current_project]] board_part] >= 0} {
+        set_property board_part "xilinx.com:$boardname:part0:1.0" [current_project]
+    } else {
+        ## vivado 2013.2 uses the BOARD property instead
+        set board_candidates [get_boards *$boardname*]
+        set_property BOARD [lindex $board_candidates [expr [llength $board_candidates] - 1]] [current_project]
+    }
+    report_property [current_project]
     if [file exists $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci] {
        read_ip $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci
     }  else {
@@ -160,7 +166,9 @@ if $needspcie {
     }
         if [file exists $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.dcp] {
         } else {
-            synth_ip [get_ips pcie_7x_0]
+            catch {
+                synth_ip [get_ips pcie_7x_0]
+            }
         }
 }
 
