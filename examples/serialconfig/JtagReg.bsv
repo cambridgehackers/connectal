@@ -54,3 +54,28 @@ module mkSerialReg#(type regtype)(SerialReg);
    interface tdo = regToReadOnly(oreg);
       
 endmodule
+
+module mkReadOnlySerialReg#(type regtype, regtype v)(SerialReg);
+   
+   Reg#(regtype) dreg <- mkReg(v);
+   Reg#(regtype) sreg <- mkReg(?);
+   Reg#(bit) oreg <- mkReg(?);
+   
+   method Action update ();
+      // dreg <= sreg;
+   endmethod
+
+   method Action capture ();
+      sreg <= dreg;
+   endmethod
+   
+   method Action shift (bit d);
+      sreg <= {d, (sreg >> 1)};
+      oreg <= sreg[0];
+   endmethod
+   
+   interface r = dreg;
+   interface tdo = regToReadOnly(oreg);
+      
+endmodule
+
