@@ -83,6 +83,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
    Vector#(2,FIFOF#(Bit#(entryIdxSize)))  rp <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(Offset))            offs <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(ReqTup))            reqs <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Bit#(3)))      pageSizes <- replicateM(mkFIFOF);
    Vector#(2,FIFO#(Bit#(addrWidth))) pageResponseFifos <- replicateM(mkFIFO);
    Reg#(Bit#(8))                      idxReg <- mkReg(0);
    
@@ -101,60 +102,88 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 return x.portB;
    endfunction
 
+   FIFO#(Region) region8Fifo <- mkFIFO();
+   FIFO#(Region) region4Fifo <- mkFIFO();
+   FIFO#(Region) region0Fifo <- mkFIFO();
    // pipeline the address lookup
    for(Integer i = 0; i < 2; i=i+1) begin
       rule req0;
+	 Region region8 <- portsel(reg8,i).response.get;
+	 Region region4 <- portsel(reg4,i).response.get;
+	 Region region0 <- portsel(reg0,i).response.get;
+
+	 region8Fifo.enq(region8);
+	 region4Fifo.enq(region4);
+	 region0Fifo.enq(region0);
+      endrule
+      rule req1;
 	 reqs[i].deq;
 	 let ptr = tpl_1(reqs[i].first);
 	 let off = tpl_2(reqs[i].first);
 	 Offset o = tagged OOrd0 0;
 	 Bit#(8) pbase = 0;
 	 Bit#(8) idxOffset = 0;
-	 Region region8 <- portsel(reg8,i).response.get;
-	 Region region4 <- portsel(reg4,i).response.get;
-	 Region region0 <- portsel(reg0,i).response.get;
+
+	 Region region8 <- toGet(region8Fifo).get();
+	 Region region4 <- toGet(region4Fifo).get();
+	 Region region0 <- toGet(region0Fifo).get();
 	 Bit#(40) barrier8 = region8.barrier;
 	 Bit#(40) barrier4 = region4.barrier;
 	 Bit#(40) barrier0 = region0.barrier;
 
+	 Bit#(3) pageSize = 0;
 	 if (off < barrier8) begin
 	    //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
 	    o = tagged OOrd8 truncate(off);
 	    pbase = truncate(off>>page_shift8);
+	    pageSize = 3;
 	    idxOffset = region8.idxOffset;
-	 end 
+	 end
 	 else if (off < barrier4) begin
 	    //$display("request: ptr=%h off=%h barrier4=%h", ptr, off, barrier4);
 	    o = tagged OOrd4 truncate(off);
 	    pbase = truncate(off>>page_shift4);
+	    pageSize = 2;
 	    idxOffset = region4.idxOffset;
 	 end
 	 else if (off < barrier0) begin
 	    //$display("request: ptr=%h off=%h barrier0=%h", ptr, off, barrier0);
 	    o = tagged OOrd0 truncate(off);
 	    pbase = truncate(off>>page_shift0);
+	    pageSize = 1;
 	    idxOffset = region0.idxOffset;
-	 end 
+	 end
 	 else begin
-	    $display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-	    dmaIndication.badAddrTrans(extend(ptr), extend(off), barrier0);
+	    pageSize = 0;
+	    //dmaIndication.badAddrTrans(extend(ptr), extend(off), barrier0);
 	 end
 	 offs[i].enq(o);
 	 pbases[i].enq(pbase);
 	 idxOffsets[i].enq(idxOffset);
 	 ptrs[i].enq(ptr);
+	 pageSizes[i].enq(pageSize);
       endrule
-      rule req1;
+      rule req2;
 	 let ptr <- toGet(ptrs[i]).get();
 	 let pbase <- toGet(pbases[i]).get();
 	 let idxOffset <- toGet(idxOffsets[i]).get();
+	 let pageSize <- toGet(pageSizes[i]).get();
 	 Bit#(8) p = pbase + idxOffset;
-	 rp[i].enq({ptr-1,p});
-      endrule
-      rule req2;
-	 rp[i].deq;
+	 if (pageSize == 3) begin
+	    //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
+	 end
+	 else if (pageSize == 2) begin
+	 end
+	 else if (pageSize == 1) begin
+	 end
+	 else if (pageSize == 0) begin
+	    //FIXME offset
+	    //$display("mkSGListMMU.addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
+	    dmaIndication.badAddrTrans(extend(ptr), -1, 0);
+	 end
+	 let address = {ptr-1,p};
 	 //$display("pages[%d].read %h", i, rp[i].first());
-	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:rp[i].first, datain:?});
+	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:address, datain:?});
       endrule
       rule pageResponse;
 	 let page <- portsel(pages, i).response.get;
@@ -196,7 +225,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 pageResponseFifos[i].enq(truncate(rv));
       endrule
    end
-   
+
    Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
    for (Integer i = 0; i < 2; i=i+1)
       rule incomingReqRule;
@@ -210,7 +239,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
    for(Integer i = 0; i < 2; i=i+1)
-      addrServers[i] = 
+      addrServers[i] =
       (interface Server#(ReqTup,Bit#(addrWidth));
 	  interface Put request;
 	     method Action put(ReqTup req);
@@ -231,25 +260,10 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       dmaIndication.configResp(ptr, barr0);
    endrule
 
-   FIFO#(Tuple2#(Bit#(entryIdxSize),Page)) sglistPageReadFifo <- mkFIFO();
-   rule sglistPageRead;
-      match { .addr, .page } <- toGet(sglistPageReadFifo).get();
-      portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:addr, datain:page});
-   endrule
+   FIFO#(Tuple3#(Bit#(32),Bit#(40),Bit#(32))) sglistFifo <- mkFIFO();
+   rule sglistRule;
+      match { .ptr, .paddr, .len } <- toGet(sglistFifo).get();
 
-   method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
-      Region region8 = Region { barrier: barr8, idxOffset: off8 };
-      Region region4 = Region { barrier: barr4, idxOffset: off4 };
-      Region region0 = Region { barrier: barr0, idxOffset: off0 };
-      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region8});
-      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region4});
-      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region0});
-      //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
-      configRespFifo.enq(tuple2(ptr, barr0));
-   endmethod
-	       
-   
-   method Action sglist(Bit#(32) ptr, Bit#(40) paddr, Bit#(32) len);
       // $display("sglist(ptr=%d, paddr=%h, len=%h", ptr, paddr,len);
       if (idxReg+1 == 0) begin
 	 $display("sglist: exceeded maximun length of sglist");
@@ -257,9 +271,9 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       end
       else begin
 	 Page page = tagged POrd0 0;
-	 if(len == 0) begin
+	 if (len == 0) begin
 	    idxReg <= 0;
-	 end 
+	 end
 	 else begin
 	    idxReg <= idxReg+1;
 	    if (extend(len) == ord0) begin
@@ -276,11 +290,27 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	       dmaIndication.badPageSize(ptr, len);
 	    end
 	 end
-	 sglistPageReadFifo.enq(tuple2({truncate(ptr-1),idxReg}, page));
 	 configRespFifo.enq(tuple2(ptr, 40'haaaaaaaa));
+	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:{truncate(ptr-1),idxReg}, datain:page});
       end
-   endmethod   
-   
+   endrule
+
+   method Action region(Bit#(32) ptr, Bit#(40) barr8, Bit#(8) off8, Bit#(40) barr4, Bit#(8) off4, Bit#(40) barr0, Bit#(8) off0);
+      Region region8 = Region { barrier: barr8, idxOffset: off8 };
+      Region region4 = Region { barrier: barr4, idxOffset: off4 };
+      Region region0 = Region { barrier: barr0, idxOffset: off0 };
+      portsel(reg8, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region8});
+      portsel(reg4, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region4});
+      portsel(reg0, 0).request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(ptr-1), datain: region0});
+      //$display("region ptr=%d off8=%h off4=%h off0=%h", ptr, off8, off4, off0);
+      configRespFifo.enq(tuple2(ptr, barr0));
+   endmethod
+
+
+   method Action sglist(Bit#(32) ptr, Bit#(40) paddr, Bit#(32) len);
+      sglistFifo.enq(tuple3(ptr, paddr, len));
+   endmethod
+
    interface addr = addrServers;
 
 endmodule
