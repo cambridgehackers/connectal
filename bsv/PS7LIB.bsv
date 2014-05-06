@@ -30,6 +30,7 @@ import PPS7LIB::*;
 import CtrlMux::*;
 import Portal::*;
 import AxiMasterSlave::*;
+import XilinxCells::*;
 import XbsvXilinxCells::*;
 
 interface AxiMasterCommon;
@@ -536,9 +537,12 @@ module mkPS7(PS7);
    // B2C converts a bit to a clock, enabling us to break the apparent cycle
    Vector#(4, B2C) b2c <- replicateM(mkB2C());
 
-   PS7LIB ps7 <- mkPS7LIB(b2c[0].c, b2c[0].r, clocked_by b2c[0].c, reset_by b2c[0].r);
-   Vector#(4, Clock) fclk;
+   // need the bufg here to reduce clock skew
+   module mkBufferedClock#(Integer i)(Clock); let c <- mkClockBUFG(clocked_by b2c[i].c); return c; endmodule
+   Vector#(4, Clock) fclk <- genWithM(mkBufferedClock);
    Vector#(4, Reset) freset;
+
+   PS7LIB ps7 <- mkPS7LIB(fclk[0], b2c[0].r, clocked_by fclk[0], reset_by b2c[0].r);
 
    // this rule connects the fclkclk wires to the clock net via B2C
    for (Integer i = 0; i < 4; i = i + 1) begin
@@ -556,7 +560,6 @@ module mkPS7(PS7);
 	   b2c[i].inputclock(fclkb[i]);
 	   b2c[i].inputreset(fclkresetnb[i]);
        endrule
-      fclk[i] = b2c[i].c;
       freset[i] = b2c[i].r;
    end
 
