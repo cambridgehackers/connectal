@@ -21,20 +21,21 @@
 
 // The Jtag state machine is copied from the Bluespec Small Examples Tap.bsv
 
-interface SerialReg#(type regtype);
+interface JtagReg#(type a);
    method Action update();
    method Action capture();
    method Action shift(bit d);
-   interface Reg#(regtype) r;
-   interface Readonly#(bit) tdo;
+   interface Reg#(a) r;
+   interface ReadOnly#(bit) tdo;
 endinterface
 
 // can I pass in an initial value for the register?
 
-module mkSerialReg#(type regtype)(SerialReg);
+module mkJtagReg(JtagReg#(a))
+   provisos(Bits#(a,asize), Add#(1,__a,asize));
    
-   Reg#(regtype) dreg <- mkReg(?);
-   Reg#(regtype) sreg <- mkReg(?);
+   Reg#(a) dreg <- mkReg(?);
+   Reg#(a) sreg <- mkReg(?);
    Reg#(bit) oreg <- mkReg(?);
    
    method Action update ();
@@ -46,8 +47,10 @@ module mkSerialReg#(type regtype)(SerialReg);
    endmethod
    
    method Action shift (bit d);
-      sreg <= {d, (sreg >> 1)};
-      oreg <= sreg[0];
+      Bit#(asize) svalue = pack(sreg);
+      svalue = {d, svalue[(valueof(asize)-1):1]};
+      sreg <= unpack(svalue);
+      oreg <= svalue[0];
    endmethod
    
    interface r = dreg;
@@ -55,14 +58,16 @@ module mkSerialReg#(type regtype)(SerialReg);
       
 endmodule
 
-module mkReadOnlySerialReg#(type regtype, regtype v)(SerialReg);
+
+module mkReadOnlyJtagReg#(a v)(JtagReg#(a))
+   provisos(Bits#(a,asize), Add#(1,__a,asize));
    
-   Reg#(regtype) dreg <- mkReg(v);
-   Reg#(regtype) sreg <- mkReg(?);
+   Reg#(a) dreg <- mkReg(v);
+   Reg#(a) sreg <- mkReg(?);
    Reg#(bit) oreg <- mkReg(?);
    
    method Action update ();
-      // dreg <= sreg;
+
    endmethod
 
    method Action capture ();
@@ -70,12 +75,13 @@ module mkReadOnlySerialReg#(type regtype, regtype v)(SerialReg);
    endmethod
    
    method Action shift (bit d);
-      sreg <= {d, (sreg >> 1)};
-      oreg <= sreg[0];
+      Bit#(asize) svalue = pack(sreg);
+      svalue = {d, svalue[(valueof(asize)-1):1]};
+      sreg <= unpack(svalue);
+      oreg <= svalue[0];
    endmethod
    
    interface r = dreg;
    interface tdo = regToReadOnly(oreg);
       
 endmodule
-
