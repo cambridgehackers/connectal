@@ -19,44 +19,39 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import FIFO::*;
+import JtagTap::*;
 
 interface SerialconfigIndication;
-    method Action writeack(Bit#(32) a);
-    method Action readdata(Bit#(32) a, Bit#(32) d );
+   method Action sendack(bit tms, bit tdi);
+   method Action recvack(bit tdo);
+   method Action stateack(TapState s1, TapState s2);
 endinterface
-
+      
 interface SerialconfigRequest;
-   method Action read(Bit#(32) a);
-   method Action write(Bit#(32) a, Bit#(32) d);
+   method Action write(bit tms, bit tdi);
+   method Action read();
+   method Action getstate();
 endinterface
-
-typedef struct {
-   Bit#(1) dowrite;
-   Bit#(32) a;
-   Bit#(32) d;
-   } Cmd deriving(Bits);
-
 
 module mkSerialconfigRequest#(SerialconfigIndication indication)(SerialconfigRequest);
 
-    FIFO#(Cmd) cmd <- mkSizedFIFO(8);
-
-    rule echo;
-	cmd.deq;
-       if (cmd.first.dowrite == 1)
-          indication.writeack(cmd.first.a);
-       else
-          indication.readdata(cmd.first.a, cmd.first.d);
-    endrule
-
-
-   method Action read(Bit#(32) a);
-      cmd.enq(Cmd{dowrite: 0, a: a, d: ?});
+   JtagTap tap1 <- mkJtagTap('hdeadbeef);
+   JtagTap tap2 <- mkJtagTap('hfeedface);
+   
+   method Action read();
+      indicaton.recv(tap2.tdo);
    endmethod
    
-   method Action write(Bit#(32) a, Bit#(32) d);
-      cmd.enq(Cmd{dowrite: 1, a: a, d: ?});
+   method Action write(bit tms, bit tdi);
+      tap1.tms(tms);
+      tap2.tms(tms);
+      tap1.tdi(tdi);
+      tap2.tdi(tap1.tdo);
+      indication.sendack(tms, tdi);
    endmethod
-      
+   
+   method Action getstate();
+      indication.stateack(tap1.getstate, tap2.getstate);
+   endmethod
+   
 endmodule
