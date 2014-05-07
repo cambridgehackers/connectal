@@ -42,16 +42,34 @@ class SerialconfigIndication : public SerialconfigIndicationWrapper
 public:
   SerialconfigIndication(unsigned int id) : SerialconfigIndicationWrapper(id){};
 
-  virtual void writeack(uint32_t a) {
-    fprintf(stderr, "writeack %p\n", a);
+  virtual void sendack(uint32_t tms, uint32_t tdi) {
+    fprintf(stderr, "writeack tms %d tdi %d\n", tms,i);
     sem_post(&test_sem);
   }
-  virtual void readdata(uint32_t a, uint32_t d) {
-    fprintf(stderr, "readdata %p %p\n", a, d);
+  virtual void recvack(uint32_t tdo) {
+    fprintf(stderr, "recvack tdo %d\n", tdo);
+    sem_post(&test_sem);
+  }
+  virtual void stateack(uint32_t s1, uint32_t s2) {
+    fprintf(stderr, "stateack s1 %d s2 %d\n", s1, s2);
     sem_post(&test_sem);
   }
 };
 
+
+void doreset(SerialconfigRequestProxy *dev)
+{
+  dev->write(1, 1);
+  sem_wait(&test_sem);
+  dev->write(1, 1);
+  sem_wait(&test_sem);
+  dev->write(1, 1);
+  sem_wait(&test_sem);
+  dev->write(1, 1);
+  sem_wait(&test_sem);
+  dev->write(1, 1);
+  sem_wait(&test_sem);
+}
 
 int main(int argc, const char **argv)
 {
@@ -78,30 +96,14 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "simple tests\n");
     
-    init_timer();
-    start_timer(0);
-
-
-    fprintf(stderr, "elapsed time (hw cycles): %zd\n", lap_timer(0));
-    
-
+    doreset();
+    device->getstate
     device->write(0x12345, 0xdeadbeef);
     sem_wait(&test_sem);
 
     device->read(0xfeedface);
     sem_wait(&test_sem);
 
-    uint64_t cycles;
-    uint64_t beats;
-
-    fprintf(stderr, "starting algorithm A\n");
-
-    init_timer();
-    start_timer(0);
-
-    cycles = lap_timer(0);
-
-    fprintf(stderr, "hw cycles: %f\n", (float)cycles);
 
   }
 
