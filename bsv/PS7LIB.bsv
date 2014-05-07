@@ -25,11 +25,13 @@ import Clocks::*;
 import DefaultValue::*;
 import GetPut::*;
 import Connectable::*;
+import ConnectableWithTrace::*;
 import Vector::*;
 import PPS7LIB::*;
 import CtrlMux::*;
 import Portal::*;
 import AxiMasterSlave::*;
+import AxiDma::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 
@@ -598,3 +600,19 @@ module mkPS7(PS7);
     endmethod
     interface Pps7Emioi2c       i2c = ps7.i2c;
 endmodule
+
+instance Connectable#(PS7, PortalTop#(32,64,ipins,nMasters));
+   module mkConnection#(PS7 ps7, PortalTop#(32,64,ipins,nMasters) top)(Empty);
+
+      Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
+      mkConnectionWithTrace(ps7.m_axi_gp[0].client, ctrl);
+
+      module mkAxiMasterConnection#(Integer i)(Axi3Master#(32,64,6));
+	 let m_axi <- mkAxiDmaMaster(top.masters[i]);
+	 mkConnection(m_axi, ps7.s_axi_hp[i].axi.server);
+	 return m_axi;
+      endmodule
+      Vector#(nMasters, Axi3Master#(32,64,6)) m_axis <- genWithM(mkAxiMasterConnection);
+
+   endmodule
+endinstance
