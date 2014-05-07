@@ -62,7 +62,6 @@ endmodule
 module mkReadOnlyJtagReg#(a v)(JtagReg#(a))
    provisos(Bits#(a,asize), Add#(1,__a,asize));
    
-   Reg#(a) dreg <- mkReg(v);
    Reg#(a) sreg <- mkReg(?);
    Reg#(bit) oreg <- mkReg(?);
    
@@ -71,7 +70,7 @@ module mkReadOnlyJtagReg#(a v)(JtagReg#(a))
    endmethod
 
    method Action capture ();
-      sreg <= dreg;
+      sreg <= v;
    endmethod
    
    method Action shift (bit d);
@@ -81,7 +80,7 @@ module mkReadOnlyJtagReg#(a v)(JtagReg#(a))
       oreg <= svalue[0];
    endmethod
    
-   interface r = dreg;
+   interface r = ?;
    interface tdo = regToReadOnly(oreg);
       
 endmodule
