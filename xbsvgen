@@ -137,7 +137,8 @@ if $needspcie {
                             CONFIG.ASPM_Optionality {true} \
                             CONFIG.Buf_Opt_BMA {true} \
                             CONFIG.Bar0_64bit {true} \
-                            CONFIG.Bar0_Size {8} \
+                            CONFIG.Bar0_Size {128} \
+                            CONFIG.Bar0_Scale {Kilobytes} \
                             CONFIG.Bar2_64bit {true} \
                             CONFIG.Bar2_Enabled {true} \
                             CONFIG.Bar2_Scale {Megabytes} \
