@@ -232,9 +232,10 @@ kc705runs = $(addsuffix .kc705run, $(testnames))
 kc705runs: $(kc705runs)
 
 $(kc705runs):
-	(cd examples/$(basename $@)/kc705; make program)
-	pciescanportal
-	timeout 3m catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
+	#(cd examples/$(basename $@)/kc705; make program)
+	scripts/run.pcietest $(RUNPARAM) examples/$(basename $@)/kc705/hw/mk*.bin examples/$(basename $@)/kc705/jni/mkpcietop
+	#fpgajtag examples/$(basename $@)/kc705/hw/mk*.bin
+	#timeout 3m catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
 
 
 #################################################################################################
