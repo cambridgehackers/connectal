@@ -8,7 +8,7 @@ if [ "$#" -lt 3 ]; then
     timeout 3m catchsegv $2
 else
     BOARD_IPADDR=$1
-    TEMPDIR=/tmp/`uname -n`/$$/pcie
+    TEMPDIR=/tmp/`uname -n`-$PPID-pcie
     shift
     ssh $BOARD_IPADDR "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
     scp $1 $2 $BOARD_IPADDR:$TEMPDIR
