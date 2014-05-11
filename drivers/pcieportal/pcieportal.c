@@ -157,7 +157,7 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
 {
         unsigned int mask = 0;
         tPortal *this_portal = (tPortal *) filp->private_data;
-        tBoard *this_board = this_portal->board;
+        //tBoard *this_board = this_portal->board;
 
         //printk(KERN_INFO "%s_%d: poll function called\n", DEV_NAME, this_board->info.board_number);
         poll_wait(filp, &this_portal->wait_queue, poll_table);
@@ -320,74 +320,14 @@ static const struct file_operations pcieportal_fops = {
         .mmap = portal_mmap
 };
 
-static void deactivate(tBoard *this_board, struct pci_dev *dev)
+static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
 {
 	int i;
-        switch (this_board->activation_level) {
-        case PCIEPORTAL_ACTIVE:
-                pci_clear_master(dev); /* disable PCI bus master */
-                /* set MSIX Entry 0 Vector Control value to 1 (masked) */
-                if (this_board->uses_msix)
-                        iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
-                disable_irq(this_board->irq_num);
-		for (i = 0; i < 16; i++) 
-			free_irq(this_board->irq_num + i, (void *) &this_board->portal[i]);
-                /* fall through */
-        case MSI_ENABLED:
-                /* disable MSI/MSIX */
-                if (this_board->uses_msix)
-                        pci_disable_msix(dev);
-                /* fall through */
-        case BARS_MAPPED:
-                /* unmap PCI BARs */
-                if (this_board->bar0io)
-                        pci_iounmap(dev, this_board->bar0io);
-                if (this_board->bar1io)
-                        pci_iounmap(dev, this_board->bar1io);
-                if (this_board->bar2io)
-                        pci_iounmap(dev, this_board->bar2io);
-                /* fall through */
-        case BARS_ALLOCATED:
-                pci_release_regions(dev); /* release PCI memory regions */
-                /* fall through */
-        case PCI_DEV_ENABLED:
-                pci_disable_device(dev); /* disable pci device */
-        }
-        this_board->pci_dev = NULL;
-}
-
-/* driver PCI operations */
-
-static int __init pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
-{
-        int err = 0;
-        tBoard *this_board = NULL;
-        int board_number = 0;
-        int rc, i;
-        int dn;
+        int dn, rc, err = 0;
         unsigned long long magic_num;
-
-printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &pcieportal_probe, dev, id, pci_get_drvdata(dev));
-        printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
-        /* double-check vendor and device */
-        if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != XBSV_DEVICE_ID) {
-                printk(KERN_ERR "%s: probe with invalid vendor or device ID\n", DEV_NAME);
-                err = -EINVAL;
-                goto exit_pcieportal_probe;
-        }
-        /* assign a board number */
-        while (board_map[board_number].pci_dev && board_number < NUM_BOARDS)
-                board_number++;
-        if (board_number >= NUM_BOARDS) {
-                printk(KERN_ERR "%s: %d boards are already in use!\n", DEV_NAME, NUM_BOARDS);
-                return -EBUSY;
-        }
-        this_board = &board_map[board_number];
-        printk(KERN_INFO "%s: board_number = %d\n", DEV_NAME, board_number);
-        memset(this_board, 0, sizeof(tBoard));
+        if (activate) {
 	for (i = 0; i < NUM_PORTALS; i++)
 		init_waitqueue_head(&(this_board->portal[i].wait_queue));
-        this_board->info.board_number = board_number;
         this_board->pci_dev = dev;
         /* enable the PCI device */
         if (pci_enable_device(dev)) {
@@ -500,7 +440,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         pci_set_master(dev); /* enable PCI bus master */
         this_board->activation_level = PCIEPORTAL_ACTIVE;
         for (dn = 0; dn < NUM_PORTALS && err >= 0; dn++) {
-                int fpga_number = board_number * NUM_PORTALS + dn;
+                int fpga_number = this_board->info.board_number * NUM_PORTALS + dn;
                 dev_t this_device_number = MKDEV(MAJOR(device_number),
                           MINOR(device_number) + fpga_number);
                 this_board->portal[dn].portal_number = dn;
@@ -519,14 +459,75 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                                 DEV_NAME, DEV_NAME, fpga_number, this_device_number);
                 }
         }
-      exit_pcieportal_probe:
+exit_pcieportal_probe:
         if (err < 0) {
                 if (this_board)
-                       deactivate(this_board, dev);
+                       board_activate(0, this_board, dev);
                 this_board = NULL;
         }
         pci_set_drvdata(dev, this_board);
-        return err;
+               return err;
+        }
+        switch (this_board->activation_level) {
+        case PCIEPORTAL_ACTIVE:
+                pci_clear_master(dev); /* disable PCI bus master */
+                /* set MSIX Entry 0 Vector Control value to 1 (masked) */
+                if (this_board->uses_msix)
+                        iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
+                disable_irq(this_board->irq_num);
+		for (i = 0; i < 16; i++) 
+			free_irq(this_board->irq_num + i, (void *) &this_board->portal[i]);
+                /* fall through */
+        case MSI_ENABLED:
+                /* disable MSI/MSIX */
+                if (this_board->uses_msix)
+                        pci_disable_msix(dev);
+                /* fall through */
+        case BARS_MAPPED:
+                /* unmap PCI BARs */
+                if (this_board->bar0io)
+                        pci_iounmap(dev, this_board->bar0io);
+                if (this_board->bar1io)
+                        pci_iounmap(dev, this_board->bar1io);
+                if (this_board->bar2io)
+                        pci_iounmap(dev, this_board->bar2io);
+                /* fall through */
+        case BARS_ALLOCATED:
+                pci_release_regions(dev); /* release PCI memory regions */
+                /* fall through */
+        case PCI_DEV_ENABLED:
+                pci_disable_device(dev); /* disable pci device */
+        }
+        this_board->pci_dev = NULL;
+        return 0;
+}
+
+/* driver PCI operations */
+
+static int __init pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
+{
+        tBoard *this_board = NULL;
+        int board_number = 0;
+
+printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &pcieportal_probe, dev, id, pci_get_drvdata(dev));
+        printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
+        /* double-check vendor and device */
+        if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != XBSV_DEVICE_ID) {
+                printk(KERN_ERR "%s: probe with invalid vendor or device ID\n", DEV_NAME);
+                return -EINVAL;
+        }
+        /* assign a board number */
+        while (board_map[board_number].pci_dev && board_number < NUM_BOARDS)
+                board_number++;
+        if (board_number >= NUM_BOARDS) {
+                printk(KERN_ERR "%s: %d boards are already in use!\n", DEV_NAME, NUM_BOARDS);
+                return -EBUSY;
+        }
+        this_board = &board_map[board_number];
+        printk(KERN_INFO "%s: board_number = %d\n", DEV_NAME, board_number);
+        memset(this_board, 0, sizeof(tBoard));
+        this_board->info.board_number = board_number;
+        return board_activate(1, this_board, dev);
 }
 
 static void __exit pcieportal_remove(struct pci_dev *dev)
@@ -539,7 +540,7 @@ printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
                 printk(KERN_ERR "%s: Unable to locate board when removing PCI device %p\n", DEV_NAME, dev);
                 return;
         }
-        deactivate(this_board, dev);
+        board_activate(0, this_board, dev);
         for (dn = 0; dn < NUM_PORTALS; dn++) {
                 /* remove device node in udev */
                 dev_t this_device_number = MKDEV(MAJOR(device_number),
