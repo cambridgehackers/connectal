@@ -326,147 +326,150 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
         int dn, rc, err = 0;
         unsigned long long magic_num;
         if (activate) {
-	for (i = 0; i < NUM_PORTALS; i++)
-		init_waitqueue_head(&(this_board->portal[i].wait_queue));
-        this_board->pci_dev = dev;
-        /* enable the PCI device */
-        if (pci_enable_device(dev)) {
-                printk(KERN_ERR "%s: failed to enable %s\n", DEV_NAME, pci_name(dev));
-                err = -EFAULT;
-                goto exit_pcieportal_probe;
-        }
-        this_board->activation_level = PCI_DEV_ENABLED;
-        /* reserve PCI memory regions */
-        for (i = 0; i < 5; i++)
-                printk("pci bar %d start=%08lx end=%08lx flags=%lx\n", i,
-                     (unsigned long) dev->resource[i].start,
-                     (unsigned long) dev->resource[i].end,
-                     dev->resource[i].flags);
-        if ((rc = pci_request_region(dev, 0, "bar0"))) {
-                printk("failed to request region bar0 rc=%d\n", rc);
-                err = -EBUSY;
-                goto exit_pcieportal_probe;
-        }
-        rc = pci_request_region(dev, 1, "bar1");
-        printk("reserving region bar1 rc=%d\n", rc);
-        rc = pci_request_region(dev, 2, "bar2");
-        printk("reserving region bar2 rc=%d\n", rc);
-        this_board->activation_level = BARS_ALLOCATED;
-        /* map BARs */
-        this_board->bar0io = pci_iomap(dev, 0, 0);
-        printk("bar0io=%p\n", this_board->bar0io);
-        this_board->bar1io = pci_iomap(dev, 1, 0);
-        printk("bar1io=%p\n", this_board->bar1io);
-        this_board->bar2io = pci_iomap(dev, 2, 0);
-        printk("bar2io=%p\n", this_board->bar2io);
-        if (!this_board->bar1io) {
-                this_board->bar1io = pci_iomap(dev, 1, 8192);
-                printk("bar1io=%p\n", this_board->bar1io);
-        }
-        if (!this_board->bar0io) {
-                printk("failed to map bar0\n");
-                err = -EFAULT;
-                goto exit_pcieportal_probe;
-        }
-        this_board->activation_level = BARS_MAPPED;
-	// this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
-	// but why is it needed?...
-	iowrite32(0, this_board->bar0io + CSR_TLPFROMPCIEWRADDRREG);
-	iowrite32(0, this_board->bar0io + CSR_TLPTOPCIEWRADDRREG);
-	// enable tracing
-        iowrite32(1, this_board->bar0io + CSR_TLPTRACINGREG);
-        /* check the magic number in BAR 0 */
-        magic_num = readq(this_board->bar0io + CSR_ID);
-        if (magic_num != expected_magic) {
-                printk(KERN_ERR "%s: magic number %llx does not match expected %llx\n",
-                       DEV_NAME, magic_num, expected_magic);
-                err = -EINVAL;
-                goto exit_pcieportal_probe;
-        }
-        this_board->info.minor_rev = ioread32(this_board->bar0io + CSR_MINOR_REV);
-        this_board->info.major_rev = ioread32(this_board->bar0io + CSR_MAJOR_REV);
-        this_board->info.build = ioread32(this_board->bar0io + CSR_BUILDVERSION);
-        this_board->info.timestamp = ioread32(this_board->bar0io + CSR_EPOCHTIME);
-        this_board->info.bytes_per_beat = ioread32(this_board->bar0io + CSR_BYTES_PER_BEAT) & 0xff;
-        this_board->info.content_id = readq(this_board->bar0io + CSR_BOARD_CONTENT_ID);
-        /* basic board info */
-        printk(KERN_INFO "%s: revision = %d.%d\n", DEV_NAME, this_board->info.major_rev, this_board->info.minor_rev);
-        printk(KERN_INFO "%s: build_version = %d\n", DEV_NAME, this_board->info.build);
-        printk(KERN_INFO "%s: timestamp = %d\n", DEV_NAME, this_board->info.timestamp);
-        printk(KERN_INFO "%s: NoC is using %d byte beats\n", DEV_NAME, this_board->info.bytes_per_beat);
-        printk(KERN_INFO "%s: Content identifier is %llx\n", DEV_NAME, this_board->info.content_id); 
-        /* set DMA mask */
-        if (pci_set_dma_mask(dev, DMA_BIT_MASK(48))) {
-                printk(KERN_ERR "%s: pci_set_dma_mask failed for 48-bit DMA\n", DEV_NAME);
-                err = -EIO;
-                goto exit_pcieportal_probe;
-        }
-        /* enable MSIX */
-	{
-		int num_entries = 16;
-		struct msix_entry msix_entries[16];
-		int i;
-		for (i = 0; i < num_entries; i++)
-			msix_entries[i].entry = i;
-
-		if (pci_enable_msix(dev, msix_entries, num_entries)) {
-			printk(KERN_ERR "%s: Failed to setup MSIX interrupts\n", DEV_NAME);
-			err = -EFAULT;
-			goto exit_pcieportal_probe;
-		}
-		this_board->uses_msix = 1;
-		this_board->irq_num = msix_entries[0].vector;
-		printk(KERN_INFO "%s: Using MSIX interrupts num_entries=%d check_device\n", DEV_NAME, num_entries);
-
-		for (i = 0; i < num_entries; i++)
-			printk(KERN_INFO "%s: msix_entries[%d] vector=%d entry=%08x\n", DEV_NAME, i, msix_entries[i].vector, msix_entries[i].entry);
-
-		this_board->activation_level = MSI_ENABLED;
-		/* install the IRQ handler */
-		for (i = 0; i < num_entries; i++) {
-			if (request_irq(this_board->irq_num + i, intr_handler, 0, DEV_NAME, (void *) &this_board->portal[i])) {
-				printk(KERN_ERR "%s: Failed to get requested IRQ %d\n", DEV_NAME, this_board->irq_num);
-				err = -EBUSY;
-				goto exit_pcieportal_probe;
-			}
-		}
-		if (this_board->uses_msix) {
-			/* set MSIX Entry 0 Vector Control value to 0 (unmasked) */
-			printk(KERN_INFO "%s: MSIX interrupts enabled with %d IRQs starting at %d\n",
-			       DEV_NAME, num_entries, this_board->irq_num);
-			iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
-		}
-	}
-        pci_set_master(dev); /* enable PCI bus master */
-        this_board->activation_level = PCIEPORTAL_ACTIVE;
-        for (dn = 0; dn < NUM_PORTALS && err >= 0; dn++) {
-                int fpga_number = this_board->info.board_number * NUM_PORTALS + dn;
-                dev_t this_device_number = MKDEV(MAJOR(device_number),
-                          MINOR(device_number) + fpga_number);
-                this_board->portal[dn].portal_number = dn;
-                this_board->portal[dn].board = this_board;
-                /* add the device operations */
-                cdev_init(&this_board->portal[dn].cdev, &pcieportal_fops);
-                if (cdev_add(&this_board->portal[dn].cdev, this_device_number, 1)) {
-                        printk(KERN_ERR "%s: cdev_add %x failed\n",
-                               DEV_NAME, this_device_number);
+        	for (i = 0; i < NUM_PORTALS; i++)
+        		init_waitqueue_head(&(this_board->portal[i].wait_queue));
+                this_board->pci_dev = dev;
+                /* enable the PCI device */
+                if (pci_enable_device(dev)) {
+                        printk(KERN_ERR "%s: failed to enable %s\n", DEV_NAME, pci_name(dev));
                         err = -EFAULT;
-                } else {
-                        /* create a device node via udev */
-                        device_create(pcieportal_class, NULL,
-                                this_device_number, NULL, "%s%d", DEV_NAME, fpga_number);
-                        printk(KERN_INFO "%s: /dev/%s%d = %x created\n",
-                                DEV_NAME, DEV_NAME, fpga_number, this_device_number);
+                        goto exit_pcieportal_probe;
                 }
-        }
-exit_pcieportal_probe:
-        if (err < 0) {
-                if (this_board)
-                       board_activate(0, this_board, dev);
-                this_board = NULL;
-        }
-        pci_set_drvdata(dev, this_board);
-               return err;
+                this_board->activation_level = PCI_DEV_ENABLED;
+                /* reserve PCI memory regions */
+                for (i = 0; i < 5; i++)
+                        printk("pci bar %d start=%08lx end=%08lx flags=%lx\n", i,
+                             (unsigned long) dev->resource[i].start,
+                             (unsigned long) dev->resource[i].end,
+                             dev->resource[i].flags);
+                if ((rc = pci_request_region(dev, 0, "bar0"))) {
+                        printk("failed to request region bar0 rc=%d\n", rc);
+                        err = -EBUSY;
+                        goto exit_pcieportal_probe;
+                }
+                rc = pci_request_region(dev, 1, "bar1");
+                printk("reserving region bar1 rc=%d\n", rc);
+                rc = pci_request_region(dev, 2, "bar2");
+                printk("reserving region bar2 rc=%d\n", rc);
+                this_board->activation_level = BARS_ALLOCATED;
+                /* map BARs */
+                this_board->bar0io = pci_iomap(dev, 0, 0);
+                printk("bar0io=%p\n", this_board->bar0io);
+                this_board->bar1io = pci_iomap(dev, 1, 0);
+                printk("bar1io=%p\n", this_board->bar1io);
+                this_board->bar2io = pci_iomap(dev, 2, 0);
+                printk("bar2io=%p\n", this_board->bar2io);
+                if (!this_board->bar1io) {
+                        this_board->bar1io = pci_iomap(dev, 1, 8192);
+                        printk("bar1io=%p\n", this_board->bar1io);
+                }
+                if (!this_board->bar0io) {
+                        printk("failed to map bar0\n");
+                        err = -EFAULT;
+                        goto exit_pcieportal_probe;
+                }
+                this_board->activation_level = BARS_MAPPED;
+        	// this replaces 'xbsv/pcie/xbsvutil/xbsvutil trace /dev/fpga0'
+        	// but why is it needed?...
+        	iowrite32(0, this_board->bar0io + CSR_TLPFROMPCIEWRADDRREG);
+        	iowrite32(0, this_board->bar0io + CSR_TLPTOPCIEWRADDRREG);
+        	// enable tracing
+                iowrite32(1, this_board->bar0io + CSR_TLPTRACINGREG);
+                /* check the magic number in BAR 0 */
+                magic_num = readq(this_board->bar0io + CSR_ID);
+                if (magic_num != expected_magic) {
+                        printk(KERN_ERR "%s: magic number %llx does not match expected %llx\n",
+                               DEV_NAME, magic_num, expected_magic);
+                        err = -EINVAL;
+                        goto exit_pcieportal_probe;
+                }
+                this_board->info.minor_rev = ioread32(this_board->bar0io + CSR_MINOR_REV);
+                this_board->info.major_rev = ioread32(this_board->bar0io + CSR_MAJOR_REV);
+                this_board->info.build = ioread32(this_board->bar0io + CSR_BUILDVERSION);
+                this_board->info.timestamp = ioread32(this_board->bar0io + CSR_EPOCHTIME);
+                this_board->info.bytes_per_beat = ioread32(this_board->bar0io + CSR_BYTES_PER_BEAT) & 0xff;
+                this_board->info.content_id = readq(this_board->bar0io + CSR_BOARD_CONTENT_ID);
+                /* basic board info */
+                printk(KERN_INFO "%s: revision = %d.%d\n", DEV_NAME, this_board->info.major_rev, this_board->info.minor_rev);
+                printk(KERN_INFO "%s: build_version = %d\n", DEV_NAME, this_board->info.build);
+                printk(KERN_INFO "%s: timestamp = %d\n", DEV_NAME, this_board->info.timestamp);
+                printk(KERN_INFO "%s: NoC is using %d byte beats\n", DEV_NAME, this_board->info.bytes_per_beat);
+                printk(KERN_INFO "%s: Content identifier is %llx\n", DEV_NAME, this_board->info.content_id); 
+                /* set DMA mask */
+                if (pci_set_dma_mask(dev, DMA_BIT_MASK(48))) {
+                        printk(KERN_ERR "%s: pci_set_dma_mask failed for 48-bit DMA\n", DEV_NAME);
+                        err = -EIO;
+                        goto exit_pcieportal_probe;
+                }
+                /* enable MSIX */
+        	{
+        		int num_entries = 16;
+        		struct msix_entry msix_entries[16];
+        		int i;
+        		for (i = 0; i < num_entries; i++)
+        			msix_entries[i].entry = i;
+        
+        		if (pci_enable_msix(dev, msix_entries, num_entries)) {
+        			printk(KERN_ERR "%s: Failed to setup MSIX interrupts\n", DEV_NAME);
+        			err = -EFAULT;
+        			goto exit_pcieportal_probe;
+        		}
+        		this_board->uses_msix = 1;
+        		this_board->irq_num = msix_entries[0].vector;
+        		printk(KERN_INFO "%s: Using MSIX interrupts num_entries=%d check_device\n", DEV_NAME, num_entries);
+        
+        		for (i = 0; i < num_entries; i++)
+        			printk(KERN_INFO "%s: msix_entries[%d] vector=%d entry=%08x\n", DEV_NAME, i, msix_entries[i].vector, msix_entries[i].entry);
+        
+        		this_board->activation_level = MSI_ENABLED;
+        		/* install the IRQ handler */
+        		for (i = 0; i < num_entries; i++) {
+        			if (request_irq(this_board->irq_num + i, intr_handler, 0, DEV_NAME, (void *) &this_board->portal[i])) {
+        				printk(KERN_ERR "%s: Failed to get requested IRQ %d\n", DEV_NAME, this_board->irq_num);
+        				err = -EBUSY;
+        				goto exit_pcieportal_probe;
+        			}
+        		}
+        		if (this_board->uses_msix) {
+        			/* set MSIX Entry 0 Vector Control value to 0 (unmasked) */
+        			printk(KERN_INFO "%s: MSIX interrupts enabled with %d IRQs starting at %d\n",
+        			       DEV_NAME, num_entries, this_board->irq_num);
+        			iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
+        		}
+        	}
+                pci_set_master(dev); /* enable PCI bus master */
+                this_board->activation_level = PCIEPORTAL_ACTIVE;
+                for (dn = 0; dn < NUM_PORTALS && err >= 0; dn++) {
+                        int fpga_number = this_board->info.board_number * NUM_PORTALS + dn;
+                        dev_t this_device_number = MKDEV(MAJOR(device_number),
+                                  MINOR(device_number) + fpga_number);
+                        this_board->portal[dn].portal_number = dn;
+                        this_board->portal[dn].board = this_board;
+                        /* add the device operations */
+                        cdev_init(&this_board->portal[dn].cdev, &pcieportal_fops);
+                        if (cdev_add(&this_board->portal[dn].cdev, this_device_number, 1)) {
+                                printk(KERN_ERR "%s: cdev_add %x failed\n",
+                                       DEV_NAME, this_device_number);
+                                err = -EFAULT;
+                        } else {
+                                /* create a device node via udev */
+                                device_create(pcieportal_class, NULL,
+                                        this_device_number, NULL, "%s%d", DEV_NAME, fpga_number);
+                                printk(KERN_INFO "%s: /dev/%s%d = %x created\n",
+                                        DEV_NAME, DEV_NAME, fpga_number, this_device_number);
+                        }
+                }
+        exit_pcieportal_probe:
+                pci_set_drvdata(dev, this_board);
+#if 0
+                if (err < 0) {
+                        if (this_board)
+                               board_activate(0, this_board, dev);
+                        this_board = NULL;
+                }
+#endif
+                if (err == 0)
+                    return err;
         }
         switch (this_board->activation_level) {
         case PCIEPORTAL_ACTIVE:
@@ -499,7 +502,18 @@ exit_pcieportal_probe:
                 pci_disable_device(dev); /* disable pci device */
         }
         this_board->pci_dev = NULL;
-        return 0;
+        for (dn = 0; dn < NUM_PORTALS; dn++) {
+                /* remove device node in udev */
+                dev_t this_device_number = MKDEV(MAJOR(device_number),
+                          MINOR(device_number) + this_board->info.board_number * NUM_PORTALS + dn);
+                device_destroy(pcieportal_class, this_device_number);
+                printk(KERN_INFO "%s: /dev/%s_%d = %x removed\n",
+                       DEV_NAME, DEV_NAME, this_board->info.board_number * NUM_PORTALS + dn, this_device_number); 
+                /* remove device */
+                cdev_del(&this_board->portal[dn].cdev);
+        }
+        pci_set_drvdata(dev, NULL);
+        return err;
 }
 
 /* driver PCI operations */
@@ -533,25 +547,12 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
 static void __exit pcieportal_remove(struct pci_dev *dev)
 {
         tBoard *this_board = pci_get_drvdata(dev);
-        int dn;
-
 printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
         if (!this_board) {
                 printk(KERN_ERR "%s: Unable to locate board when removing PCI device %p\n", DEV_NAME, dev);
                 return;
         }
         board_activate(0, this_board, dev);
-        for (dn = 0; dn < NUM_PORTALS; dn++) {
-                /* remove device node in udev */
-                dev_t this_device_number = MKDEV(MAJOR(device_number),
-                          MINOR(device_number) + this_board->info.board_number * NUM_PORTALS + dn);
-                device_destroy(pcieportal_class, this_device_number);
-                printk(KERN_INFO "%s: /dev/%s_%d = %x removed\n",
-                       DEV_NAME, DEV_NAME, this_board->info.board_number * NUM_PORTALS + dn, this_device_number); 
-                /* remove device */
-                cdev_del(&this_board->portal[dn].cdev);
-        }
-        pci_set_drvdata(dev, NULL);
 }
 
 /* PCI ID pattern table */
