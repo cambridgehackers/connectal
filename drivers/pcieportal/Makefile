@@ -42,12 +42,12 @@ clean:
 
 .PHONY: rmmod
 rmmod:
-	sudo rmmod portalmem || true
-	sudo rmmod pcieportal || true
+	rmmod portalmem || true
+	rmmod pcieportal || true
 
 .PHONY: insmod
 insmod: rmmod
-	sudo insmod pcieportal.ko
-	-sudo chmod agu+rw /dev/fpga*
-	sudo insmod ../portalmem/portalmem.ko
-	sudo chmod agu+rw /dev/portalmem
+	insmod pcieportal.ko
+	-chmod agu+rw /dev/fpga*
+	insmod ../portalmem/portalmem.ko
+	chmod agu+rw /dev/portalmem
