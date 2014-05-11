@@ -97,8 +97,7 @@ static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 's' << 32) | ((unsigned long long) 'p' << 40)
     | ((unsigned long long) 'e' << 48) | ((unsigned long long) 'c' << 56);
 
-enum {BOARD_UNACTIVATED=0, PCI_DEV_ENABLED, BARS_ALLOCATED,
-    BARS_MAPPED, MSI_ENABLED, PCIEPORTAL_ACTIVE};
+enum {PCI_DEV_ENABLED=1, BARS_ALLOCATED, BARS_MAPPED, MSI_ENABLED, PCIEPORTAL_ACTIVE};
 
 /*
  * interrupt handler
@@ -160,9 +159,7 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
         tPortal *this_portal = (tPortal *) filp->private_data;
         tBoard *this_board = this_portal->board;
 
-        //printk(KERN_INFO "%s_%d: poll function called, active %d\n", DEV_NAME, this_board->info.board_number, this_board->activation_level == PCIEPORTAL_ACTIVE);
-        if (this_board->activation_level != PCIEPORTAL_ACTIVE)
-                return 0;
+        //printk(KERN_INFO "%s_%d: poll function called\n", DEV_NAME, this_board->info.board_number);
         poll_wait(filp, &this_portal->wait_queue, poll_table);
 	mask |= POLLIN  | POLLRDNORM; /* readable */
         //mask |= POLLOUT | POLLWRNORM; /* writable */
@@ -198,7 +195,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         case BNOC_IDENTIFY:
                 /* copy board identification info to a user-space struct */
                 info = this_board->info;
-                info.is_active = (this_board->activation_level == PCIEPORTAL_ACTIVE) ? 1 : 0;
+                info.is_active = 1;
                 info.portal_number = this_portal->portal_number;
                 if (1) {        // msix info
 		  int i;
@@ -214,10 +211,8 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         case BNOC_SOFT_RESET:
                 printk(KERN_INFO "%s: /dev/%s_%d soft reset\n",
                        DEV_NAME, DEV_NAME, this_board->info.board_number);
-                if (this_board->activation_level == PCIEPORTAL_ACTIVE) {
-			// reset the portal
-			iowrite32(1, this_board->bar0io + CSR_RESETISASSERTED); 
-                }
+		// reset the portal
+		iowrite32(1, this_board->bar0io + CSR_RESETISASSERTED); 
                 break;
         case BNOC_IDENTIFY_PORTAL:
                 {
@@ -358,7 +353,7 @@ static void deactivate(tBoard *this_board, struct pci_dev *dev)
         case PCI_DEV_ENABLED:
                 pci_disable_device(dev); /* disable pci device */
         }
-        this_board->activation_level = BOARD_UNACTIVATED;
+        this_board->pci_dev = NULL;
 }
 
 /* driver PCI operations */
@@ -381,7 +376,7 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
                 goto exit_pcieportal_probe;
         }
         /* assign a board number */
-        while (board_map[board_number].activation_level != BOARD_UNACTIVATED && board_number < NUM_BOARDS)
+        while (board_map[board_number].pci_dev && board_number < NUM_BOARDS)
                 board_number++;
         if (board_number >= NUM_BOARDS) {
                 printk(KERN_ERR "%s: %d boards are already in use!\n", DEV_NAME, NUM_BOARDS);
