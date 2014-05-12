@@ -37,37 +37,39 @@
 
 sem_t test_sem;
 
+uint32_t lasta;
+uint32_t lastd;
+
 class SerialconfigIndication : public SerialconfigIndicationWrapper
 {
 public:
   SerialconfigIndication(unsigned int id) : SerialconfigIndicationWrapper(id){};
 
-  virtual void sendack(uint32_t tms, uint32_t tdi) {
-    fprintf(stderr, "writeack tms %d tdi %d\n", tms,i);
-    sem_post(&test_sem);
-  }
-  virtual void recvack(uint32_t tdo) {
-    fprintf(stderr, "recvack tdo %d\n", tdo);
-    sem_post(&test_sem);
-  }
-  virtual void stateack(uint32_t s1, uint32_t s2) {
-    fprintf(stderr, "stateack s1 %d s2 %d\n", s1, s2);
+  virtual void ack(uint32_t a, uint32_t d) {
+    fprintf(stderr, "writeack a %lx d %lx\n", a, d);
+    lasttms = tms;
+    lasttdi = tdi;
     sem_post(&test_sem);
   }
 };
 
 
-void doreset(SerialconfigRequestProxy *dev)
+void dotest(SerialconfigRequestProxy *dev)
 {
-  dev->write(1, 1);
+  dev->send(0x0, 0xf00f00);
   sem_wait(&test_sem);
-  dev->write(1, 1);
+  dev->send(0xdeadbeef, 0x11111111);
   sem_wait(&test_sem);
-  dev->write(1, 1);
+  dev->send(0xdeadbeee, 0x22222222);
   sem_wait(&test_sem);
-  dev->write(1, 1);
   sem_wait(&test_sem);
-  dev->write(1, 1);
+  dev->send(0xdeadbeef, 0x11111111);
+  sem_wait(&test_sem);
+  dev->send(0xdeadbeee, 0x22222222);
+  sem_wait(&test_sem);
+  dev->send(0x0, 0xf00f00);
+  sem_wait(&test_sem);
+  dev->send(0x1, 0xf00f00);
   sem_wait(&test_sem);
 }
 
@@ -96,14 +98,7 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "simple tests\n");
     
-    doreset();
-    device->getstate
-    device->write(0x12345, 0xdeadbeef);
-    sem_wait(&test_sem);
-
-    device->read(0xfeedface);
-    sem_wait(&test_sem);
-
+    dotest(device);
 
   }
 
