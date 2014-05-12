@@ -27,60 +27,59 @@ typedef struct {
    Bit#(32) d;
    } SpiItem deriving(Bits);
 
-
-
 module mkSpiRoot#(SpiTap root)(FIFO#(SpiItem));
-   FIFO#(Item) request <- mkSizedFIFO(8);
-   FIFO#(Item) response <- mkSizedFIFO(8);
+   FIFO#(SpiItem) request <- mkSizedFIFO(8);
+   FIFO#(SpiItem) response <- mkSizedFIFO(8);
 
    Reg#(Bit#(6)) countin <- mkReg(0);   /* overflow at 63 -> 0 */
    Reg#(Bit#(6)) countout <- mkReg(0);
    Reg#(Bit#(64)) shifter <- mkReg(0);
-   DWire#(bit) framedrive <- mkDWire();
+   Wire#(bit) framedrive <- mkDWire(0);
    
    /* implicit dependence on request fifo not empty */
-   rule send_item
+   rule send_item;
       if (countin < 32)
 	 begin
-	    root.datain(request.first.a[count&31]);
+	    root.in.data(request.first.a[countin&31]);
 	    framedrive <= 1;
 	    countin <= countin + 1;
 	 end
       else
 	 begin
-	    root.datain(request.first.d[count&31]);
-	    framedrive <- 1;
+	    root.in.data(request.first.d[countin&31]);
+	    framedrive <= 1;
 	    countin <= countin + 1;
 	 end
       if (countin == 63)
 	 request.deq();
       endrule
    
-   rule genframe
-      root.framein(framedrive);
+   rule genframe;
+      root.in.frame(framedrive);
    endrule
    
    rule handleFrame;
       Bit#(64) tmp;
-      if (root.frameout() == 0)
-	 countout <= 0;
+      if (root.out.frame() == 0)
+	 begin
+	    tmp = 0;
+	    countout <= 0;
+	 end
       else
 	 begin
 	    countout <= countout + 1;
 	    tmp = shifter;
 	    tmp = tmp >> 1;
-	    tmp[63] = root.dataout();
+	    tmp[63] = root.out.data();
 	    shifter <= tmp;
 	 end
       if (countout == 63)
-	 begin
-	    response.put(SpiItem(a: tmp[31:0], d: tmp[63:32]});
-	 end
+	    response.enq(SpiItem{a: tmp[31:0], d: tmp[63:32]});
    endrule
    // method Action enq = request.enq;
    
    
-   method Action enq(SpiType x);
+   method Action enq(SpiItem x);
       request.enq(x);
    endmethod
    
@@ -88,14 +87,14 @@ module mkSpiRoot#(SpiTap root)(FIFO#(SpiItem));
       response.deq();
    endmethod
    
-   method SpiType first();
+   method SpiItem first();
       return response.first();
    endmethod
    
    method Action clear();
       request.clear();
       response.clear();
-      countoutin <= 0;
+      countout <= 0;
    endmethod
 
 endmodule
