@@ -28,13 +28,13 @@ import Connectable::*;
  */
 
 interface SpiTapIn;
-   method Action framein(bit f);
-   method Action datain(bit d);
+   method Action frame(bit f);
+   method Action data(bit d);
 endinterface
 
 interface SpiTapOut;
-   method bit frameout();
-   method bit dataout();
+   method bit frame();
+   method bit data();
 endinterface
 
 interface SpiTap;
@@ -45,15 +45,17 @@ endinterface
 instance Connectable#(SpiTapOut, SpiTapIn);
    module mkConnection#(SpiTapOut out, SpiTapIn in)(Empty);
       rule move_data;
-	 in.framein(out.frameout());
-	 in.datain(out.dataout());
+	 in.frame(out.frame());
+	 in.data(out.data());
 	 endrule
    endmodule
 endinstance
 
+(* synthesize *)
 module mkSpiTap#(Bit#(32) id)(SpiTap);
    Reg#(bit) frameinbit <- mkReg(0);
    Reg#(bit) datainbit <- mkReg(0);
+   Wire#(bit) dataoutwire <- mkDWire(0);
    
    Reg#(Bit#(6)) count <- mkReg(0);
    Reg#(Bit#(32)) shifter <- mkReg(0);
@@ -70,21 +72,25 @@ module mkSpiTap#(Bit#(32) id)(SpiTap);
    rule handleShift (frameinbit == 1);
       Bit#(32) tmp = shifter;
       tmp = tmp >> 1;
-      tmp[31] = datainwire;
+      tmp[31] = datainbit;
       shifter <= tmp;
       if (count == 31) 
 	 address <= tmp;
-      if ((count == 63) && (address == id))
+      if ((count == 63) && (address[31:1] == id[31:1]) && (address[0] == 1))
 	 data <= tmp;
+      if ((count[5] == 1) && (address[31:1] == id[31:1]) && (address[0] == 0))
+	 dataoutwire <= data[count & 31];
+      else
+	 dataoutwire <= datainbit;
    endrule
 
    interface SpiTapIn in;
    
-      method Action framein(bit i );
+      method Action frame(bit i );
 	 frameinbit <= i ;
       endmethod
 
-      method Action datain( bit i );
+      method Action data( bit i );
 	 datainbit <= i;
       endmethod
 
@@ -92,17 +98,12 @@ module mkSpiTap#(Bit#(32) id)(SpiTap);
    
    interface SpiTapOut out;
    
-      method bit frameout();
+      method bit frame();
 	 return frameinbit;
       endmethod
    
-      method bit dataout();
-         bit tmp;
-         if ((count < 32) || (address[31:1] != id[31:1]) || (address[0] == 0))
-	    tmp = datainbit;
-	 else
-	    tmp = (data[count & 31]);
-         return tmp;
+      method bit data();
+	 return dataoutwire;
       endmethod
 
    endinterface
