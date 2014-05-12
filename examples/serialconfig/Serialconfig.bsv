@@ -21,6 +21,8 @@
 
 import FIFO::*;
 import SpiTap::*;
+import SpiRoot::*;
+import Connectable::*;
 
 interface SerialconfigIndication;
    method Action ack(Bit#(32) a, Bit#(32) d);
@@ -34,18 +36,25 @@ endinterface
 module mkSerialconfigRequest#(SerialconfigIndication indication)(SerialconfigRequest);
 
    
-   SpiTap tap1 <- mkSpiTap('hdeadbeef);
-//   SpiTap tap2 <- mkSpiTap('hfeedface);
-   FIFO#(SpiItem) spi <- mkSpiRoot(tap1);
+   SpiTap tap1 <- mkSpiTap('h11110000);
+   SpiTap tap2 <- mkSpiTap('h22220000);
+   SpiTap tap3 <- mkSpiTap('h33330000);
+   SpiTap tap4 <- mkSpiTap('h44440000);
+
+   mkConnection(tap1.out, tap2.in);
+   mkConnection(tap2.out, tap3.in);
+   mkConnection(tap3.out, tap4.in);
+
+   FIFO#(SpiItem) spi <- mkSpiRoot(SpiTap{in: tap1.in, out: tap4.out});
   
    rule getresults;
-      indication.ack(spi.first());
+      indication.ack(spi.first().a, spi.first().d);
       spi.deq();
    endrule
 
  
    method Action send(Bit#(32) a, Bit#(32) d);
-      spi.enq(Item{a: a, d: d});
+      spi.enq(SpiItem{a: a, d: d});
    endmethod
   
    
