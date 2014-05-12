@@ -158,7 +158,6 @@ zedboardruns: $(zedboardruns)
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
 $(zedboardruns):
 	(cd consolable; make)
-	(cd timelimit; ndk-build)
 	scripts/run.zedboard `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
 
 
@@ -178,7 +177,6 @@ zc702runs: $(zc702runs)
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc702
 $(zc702runs):
 	(cd consolable; make)
-	(cd timelimit; ndk-build)
 	scripts/run.zedboard `find examples/$(basename $@)/zc702 -name \*.gz` `find examples/$(basename $@)/zc702 -name android_exe | grep libs`
 
 #################################################################################################
@@ -197,7 +195,6 @@ zc706runs: $(zc706runs)
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc706
 $(zc706runs):
 	(cd consolable; make)
-	(cd timelimit; ndk-build)
 	scripts/run.zedboard `find examples/$(basename $@)/zc706 -name \*.gz` `find examples/$(basename $@)/zc706 -name android_exe | grep libs`
 
 #################################################################################################

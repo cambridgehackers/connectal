@@ -26,7 +26,6 @@ adb -s $ANDROID_SERIAL shell "pwd"
 adb -s $ANDROID_SERIAL shell touch /mnt/sdcard/perf.monkit
 adb -s $ANDROID_SERIAL shell "sync"
 adb -s $ANDROID_SERIAL shell "sync"
-adb -s $ANDROID_SERIAL push $SCRIPT_DIR/../timelimit/libs/armeabi/timelimit /mnt/sdcard
 adb -s $ANDROID_SERIAL shell "cd /mnt/sdcard/; ./timelimit -t 180 ./$exename"
 adb -s $ANDROID_SERIAL pull /mnt/sdcard/perf.monkit `dirname $1`
 adb -s $ANDROID_SERIAL shell rm -f /mnt/sdcard/`basename $1` /mnt/sdcard/`basename $2` perf.monkit
