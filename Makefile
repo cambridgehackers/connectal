@@ -7,12 +7,10 @@ all:
 install:
 	(cd drivers/pcieportal; make install)
 	make -C pcie/xbsvutil install
-	make -C util install
 
 uninstall:
 	(cd drivers/pcieportal; make uninstall)
 	make -C pcie/xbsvutil uninstall
-	make -C util uninstall
 
 docs:
 	doxygen Doxyfile
