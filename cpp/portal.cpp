@@ -505,6 +505,7 @@ Directory::Directory()
 {
   pdir=this;
   
+#ifdef ZYNQ /* There is no way to set userclock freq from host on PCIE */
   // start by setting the clock frequency (this only has any effect on the zynq platform)
   PortalClockRequest request;
   long reqF = 100000000; // 100 Mhz
@@ -514,6 +515,7 @@ Directory::Directory()
   if (status < 0)
     fprintf(stderr, "Directory::Directory() error setting fclk0, errno=%d\n", errno);
   fprintf(stderr, "Directory::Directory() set fclk0 (%ld,%ld)\n", reqF, request.actual_rate);
+#endif
 
   // finally scan
   scan(1);
