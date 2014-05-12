@@ -215,7 +215,6 @@ vc707runs: $(vc707runs)
 
 $(vc707runs):
 	(cd examples/$(basename $@)/vc707; make program)
-	pciescanportal
 	timeout 3m catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
 
 #################################################################################################
@@ -318,7 +317,6 @@ acruns: $(acruns)
 
 $(acruns):
 	(cd examples/$(basename $@)/ac701; make program)
-	pciescanportal
 	timeout 3m catchsegv examples/$(basename $@)/ac701/jni/mkpcietop
 
 zynqdrivers:
