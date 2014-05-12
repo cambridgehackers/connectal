@@ -19,39 +19,34 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import JtagTap::*;
+import FIFO::*;
+import SpiTap::*;
 
 interface SerialconfigIndication;
-   method Action sendack(bit tms, bit tdi);
-   method Action recvack(bit tdo);
-   method Action stateack(TapState s1, TapState s2);
+   method Action ack(Bit#(32) a, Bit#(32) d);
 endinterface
       
 interface SerialconfigRequest;
-   method Action write(bit tms, bit tdi);
-   method Action read();
-   method Action getstate();
+   method Action send(Bit#(32) a, Bit#(32) d);
 endinterface
+
 
 module mkSerialconfigRequest#(SerialconfigIndication indication)(SerialconfigRequest);
 
-   JtagTap tap1 <- mkJtagTap('hdeadbeef);
-   JtagTap tap2 <- mkJtagTap('hfeedface);
    
-   method Action read();
-      indicaton.recv(tap2.tdo);
+   SpiTap tap1 <- mkSpiTap('hdeadbeef);
+//   SpiTap tap2 <- mkSpiTap('hfeedface);
+   FIFO#(SpiItem) spi <- mkSpiRoot(tap1);
+  
+   rule getresults;
+      indication.ack(spi.first());
+      spi.deq();
+   endrule
+
+ 
+   method Action send(Bit#(32) a, Bit#(32) d);
+      spi.enq(Item{a: a, d: d});
    endmethod
-   
-   method Action write(bit tms, bit tdi);
-      tap1.tms(tms);
-      tap2.tms(tms);
-      tap1.tdi(tdi);
-      tap2.tdi(tap1.tdo);
-      indication.sendack(tms, tdi);
-   endmethod
-   
-   method Action getstate();
-      indication.stateack(tap1.getstate, tap2.getstate);
-   endmethod
+  
    
 endmodule
