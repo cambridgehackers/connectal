@@ -6,7 +6,7 @@ echo "run.zedboard parameters are:" $*
 if [ "$RUNPARAM" != "" ]; then
     ZEDBOARD_IPADDR=$RUNPARAM
 else
-    ZEDBOARD_IPADDR=`$SCRIPT_DIR/../consolable/checkip`
+    ZEDBOARD_IPADDR=`checkip`
 fi
 ANDROID_SERIAL=$ZEDBOARD_IPADDR:5555
 exename=`basename $2`
