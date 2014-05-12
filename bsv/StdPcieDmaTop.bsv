@@ -28,8 +28,14 @@ import Leds              :: *;
 import Top               :: *;
 import PcieTop           :: *;
 
+`ifndef DataBusWidth
+`define DataBusWidth 64
+`endif
+`ifndef NumberOfMasters
+`define NumberOfMasters 1
+`endif
 (* synthesize *)
-module mkSynthesizeablePortalTop(PortalTop#(40, 64, Empty, 1));
+module mkSynthesizeablePortalTop(PortalTop#(40, `DataBusWidth, Empty, `NumberOfMasters));
    let top <- mkPortalTop();
    interface masters = top.masters;
    interface slave = top.slave;

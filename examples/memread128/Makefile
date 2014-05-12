@@ -4,9 +4,9 @@ S2H = MemreadRequest DmaConfig
 H2S = MemreadIndication DmaIndication
 BSVFILES = Memread.bsv Top.bsv
 CPPFILES=testmemread.cpp
-Dma = Dma128
+Dma = Dma
 PINS = Std
-#XBSVFLAGS=--bscflags " -D TRACE_AXI"
+XBSVFLAGS += --bscflags " -D DataBusWidth=128"
 
 include ../../Makefile.common
 
