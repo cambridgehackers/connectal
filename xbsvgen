@@ -213,7 +213,7 @@ write_xdc -no_fixed_only -force $outputDir/%(dut)s_impl.xdc
 #
 # STEP#5: generate a bitstream
 # 
-write_bitstream -force -bin_file $outputDir/%(Dut)s.bit
+write_bitstream -force -bin_file $outputDir/mkTop.bit
 '''
 
 tclzynqrewireclock = '''
@@ -287,13 +287,13 @@ verilog: $(vfile)
 lint: $(vfile)
 	verilator --error-limit 200 --lint-only -Isources/%(dut)s -Isources/source $(vfile)
 
-hw/%(Dut)s.bit: $(vfile)
+hw/mkTop.bit: $(vfile)
 	vivado -mode batch -source %(dut)s-impl.tcl
 
-implementation: hw/%(Dut)s.bit
+implementation: hw/mkTop.bit
 
 program:
-	fpgajtag hw/%(Dut)s.bin
+	fpgajtag hw/mkTop.bin
 
 reprogram:
 	vivado -mode batch -source %(dut)s-reprogram.tcl
@@ -324,13 +324,13 @@ partial: hw/mkPcieTop_pblock_portalTop_partial.bit
 
 ifeq ($(OS),android)
 
-%(Dut)s.bit.bin.gz: hw/%(Dut)s.bit
-	xxd hw/%(Dut)s.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >%(Dut)s.bit.bin
-	gzip -f %(Dut)s.bit.bin
-bits: %(Dut)s.bit.bin.gz
+mkTop.bit.bin.gz: hw/mkTop.bit
+	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r >mkTop.bit.bin
+	gzip -f mkTop.bit.bin
+bits: mkTop.bit.bin.gz
 
 else
-bits: hw/%(Dut)s.bit
+bits: hw/mkTop.bit
 endif
 
 android_exe:
