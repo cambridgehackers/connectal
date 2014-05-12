@@ -11,15 +11,15 @@ ifeq ($(origin TOP),undefined)
     MKTOP=mkBsimTop
     endif
     ifeq ($(BOARD),ac701)
-    TOP=$(XBSVDIR)/bsv/StdPcieTop.bsv
+    TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     endif
     ifeq ($(BOARD),kc705)
-    TOP=$(XBSVDIR)/bsv/StdPcieTop.bsv
+    TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     endif
     ifeq ($(BOARD),vc707)
-    TOP=$(XBSVDIR)/bsv/StdPcieTop.bsv
+    TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     endif
     ifeq ($(BOARD),zedboard)
