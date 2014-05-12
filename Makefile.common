@@ -5,25 +5,21 @@ endif
 all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe xsim xsimrun: gen
 	make -C $(BOARD) $@
 
-ifeq ($(origin PINS),undefined)
-     PINS=Std
-endif
-
 ifeq ($(origin TOP),undefined)
     ifeq ($(BOARD),bluesim)
     TOP=$(XBSVDIR)/bsv/BsimTop.bsv
     MKTOP=mkBsimTop
     endif
     ifeq ($(BOARD),ac701)
-    TOP=$(XBSVDIR)/bsv/$(PINS)Pcie$(Dma)Top.bsv
+    TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     endif
     ifeq ($(BOARD),kc705)
-    TOP=$(XBSVDIR)/bsv/$(PINS)Pcie$(Dma)Top.bsv
+    TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     endif
     ifeq ($(BOARD),vc707)
-    TOP=$(XBSVDIR)/bsv/$(PINS)Pcie$(Dma)Top.bsv
+    TOP=$(XBSVDIR)/bsv/PcieTop.bsv
     MKTOP=mkPcieTop
     endif
     ifeq ($(BOARD),zedboard)

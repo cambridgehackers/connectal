@@ -7,8 +7,6 @@ H2S = HdmiDisplayIndication HdmiInternalIndication DmaIndication
 BSVFILES = $(LIBBSVDIR)/HdmiDisplay.bsv $(LIBBSVDIR)/HDMI.bsv Top.bsv
 CPPFILES= testhdmidisplay.cpp
 XBSVFLAGS = -C hdmidisplay-$(BOARD).xdc
-Dma = Dma
-PINS = Std
 ifeq ($(BOARD),bluesim)
 else
 TOP=ZynqTop.bsv

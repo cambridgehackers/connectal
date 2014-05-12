@@ -115,3 +115,29 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
 endmodule: mkPcieTopFromPortal
 
+`ifndef DataBusWidth
+`define DataBusWidth 64
+`endif
+`ifndef NumberOfMasters
+`define NumberOfMasters 1
+`endif
+(* synthesize *)
+module mkSynthesizeablePortalTop(PortalTop#(40, `DataBusWidth, Empty, `NumberOfMasters));
+   let top <- mkPortalTop();
+   interface masters = top.masters;
+   interface slave = top.slave;
+   interface interrupt = top.interrupt;
+   interface leds = top.leds;
+   interface pins = top.pins;
+endmodule
+
+`ifndef PinType
+`define PinType Empty
+`endif
+module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
+   Clock sys_clk_p,     Clock sys_clk_n,
+   Reset pci_sys_reset_n)
+   (PcieTop#(`PinType));
+   let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,mkSynthesizeablePortalTop);
+   return top;
+endmodule: mkPcieTop
