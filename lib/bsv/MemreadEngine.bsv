@@ -56,12 +56,15 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (MemreadEn
 
    method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) b, Bit#(32) rl, Bit#(32) bl) if (off >= reqLen);
       dynamicAssert(bl[31:8]==0, "mkMemreadEngine::start");
+      dynamicAssert(bl[7:0]!=0, "mkMemreadEngine::start");
+      if (bl[31:8] != 0 || bl[7:0] == 0)
+	 $display("MemreadEngine.start burstLen %d out of range [0-255]", bl);
       reqLen   <= rl;
       off      <= 0;
       pointer  <= p;
       burstLen <= truncate(bl);
       base     <= b;
-      //$display("mkMemreadEngine.start p=%d b=%d rl=%d beat_shift=%d", p, b, rl, beat_shift);
+      //$display("mkMemreadEngine.start p=%d b=%d rl=%d beat_shift=%d bl=%d", p, b, rl, beat_shift, bl);
       wf.enq(rl >> beat_shift);
    endmethod
    
@@ -73,7 +76,7 @@ module mkMemreadEngine#(Integer cmdQDepth, FIFOF#(Bit#(dataWidth)) f) (MemreadEn
    interface ObjectReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(ObjectRequest) get() if (off < reqLen);
-	    //$display("mkMemreadEngine.dmaClient.readReq: %d %h %h", pointer, extend(off)+base, burstLen);
+	    //$display("mkMemreadEngine.dmaClient.readReq: ptr=%d off=%d reqLen=%d burstLen=%d", pointer, off, reqLen, burstLen);
 	    off <= off + extend(burstLen);
 	    let bl = burstLen;
 	    if (off + extend(burstLen) > reqLen)

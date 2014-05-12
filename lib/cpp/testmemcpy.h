@@ -138,7 +138,7 @@ int runtest(int argc, const char **argv)
   device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
   uint64_t cycles = lap_timer(0);
-  uint64_t read_beats = dma->show_mem_stats(ChannelType_Write);
+  uint64_t read_beats = dma->show_mem_stats(ChannelType_Read);
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   float read_util = (float)read_beats/(float)cycles;
   float write_util = (float)write_beats/(float)cycles;

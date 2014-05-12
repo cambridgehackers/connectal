@@ -73,30 +73,43 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth)  readBuffer <- mkBRAMFIFOFLevel;
+   FIFO#(ObjectData#(dataWidth))  readBuffer <- mkSizedFIFO(valueOf(bufferDepth));
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
-   Ratchet#(TAdd#(1,TLog#(bufferDepth))) unfulfilled <- mkRatchet(0);
+   Ratchet#(TAdd#(1,TLog#(bufferDepth))) availableBuffers <- mkRatchet(fromInteger(valueOf(bufferDepth)));
    let beat_shift = fromInteger(valueOf(beatShift));
    
-   // only issue the readRequest when sufficient buffering is available.  This includes the bufering we have already comitted.
-   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
+   FIFOF#(Bool) hasEnoughCapacity <- mkFIFOF();
+   rule updateReady;
+      Bit#(TAdd#(1,TLog#(bufferDepth))) requested = truncate(reqOutstanding.first.burstLen>>beat_shift);
+      Bool ready = (unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)) <= availableBuffers.read());
+      if (ready) begin
+	 hasEnoughCapacity.enq(True);
+      end
+   endrule
 
+   // only issue the readRequest when sufficient buffering is available.  This includes the buffering we have already committed.
    interface ObjectReadServer dmaServer;
       interface Put readReq = toPut(reqOutstanding);
-      interface Get readData = toGet(readBuffer);
+      interface Get readData;
+	 method ActionValue#(ObjectData#(dataWidth)) get();
+	    availableBuffers.increment(1);
+	    let resp <- toGet(readBuffer).get();
+	    return resp;
+	 endmethod
+      endinterface
    endinterface
    interface ObjectReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(ObjectRequest) get if (readBuffer.lowWater(sreq));
+	 method ActionValue#(ObjectRequest) get if (hasEnoughCapacity.notEmpty);
+	    hasEnoughCapacity.deq();
 	    reqOutstanding.deq;
-	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
+	    availableBuffers.decrement(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
 	    return reqOutstanding.first;
 	 endmethod
       endinterface
       interface Put readData;
 	 method Action put(ObjectData#(dataWidth) x);
-	    readBuffer.fifo.enq(x);
-	    unfulfilled.decrement(1);
+	    readBuffer.enq(x);
 	 endmethod
       endinterface
    endinterface
@@ -114,33 +127,43 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift));
 
-   FIFOFLevel#(ObjectData#(dataWidth),bufferDepth) writeBuffer <- mkBRAMFIFOFLevel;
+   FIFO#(ObjectData#(dataWidth)) writeBuffer <- mkSizedFIFO(valueOf(bufferDepth));
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
    FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
-   Ratchet#(TAdd#(1,TLog#(bufferDepth)))  unfulfilled <- mkRatchet(0);
+   Ratchet#(TAdd#(1,TLog#(bufferDepth))) availableWords <- mkRatchet(fromInteger(valueOf(bufferDepth)));
    let beat_shift = fromInteger(valueOf(beatShift));
    
-   // only issue the writeRequest when sufficient data is available.  This includes the data we have already comitted.
-   Bit#(TAdd#(1,TLog#(bufferDepth))) sreq = pack(satPlus(Sat_Bound, unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)), unfulfilled.read()));
+   FIFOF#(Bool) hasEnoughCapacity <- mkFIFOF();
+   rule updateReady;
+      Bit#(TAdd#(1,TLog#(bufferDepth))) requested = truncate(reqOutstanding.first.burstLen>>beat_shift);
+      if (unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)) <= availableWords.read())
+	 hasEnoughCapacity.enq(True);
+   endrule
 
+   // only issue the writeRequest when sufficient data is available.  This includes the data we have already committed.
    interface ObjectWriteServer dmaServer;
       interface Put writeReq = toPut(reqOutstanding);
-      interface Put writeData = toPut(writeBuffer);
+      interface Put writeData;
+	 method Action put(ObjectData#(dataWidth) d);
+	    writeBuffer.enq(d);
+	    availableWords.increment(1);
+	 endmethod
+      endinterface
       interface Get writeDone = toGet(doneTags);
    endinterface
    interface ObjectWriteClient dmaClient;
       interface Get writeReq;
-	 method ActionValue#(ObjectRequest) get if (writeBuffer.highWater(sreq));
+	 method ActionValue#(ObjectRequest) get if (hasEnoughCapacity.notEmpty());
+	    hasEnoughCapacity.deq();
 	    reqOutstanding.deq;
-	    unfulfilled.increment(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
+	    availableWords.decrement(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
 	    return reqOutstanding.first;
 	 endmethod
       endinterface
       interface Get writeData;
 	 method ActionValue#(ObjectData#(dataWidth)) get();
-	    unfulfilled.decrement(1);
-	    writeBuffer.fifo.deq;
-	    return writeBuffer.fifo.first;
+	    writeBuffer.deq;
+	    return writeBuffer.first;
 	 endmethod
       endinterface
       interface Put writeDone = toPut(doneTags);

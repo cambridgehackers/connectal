@@ -128,7 +128,7 @@ int runtest(int argc, const char **argv)
   sem_wait(&read_done_sem);
   sem_wait(&write_done_sem);
   uint64_t hw_cycles = lap_timer(0); 
-  uint64_t read_beats = dma->show_mem_stats(ChannelType_Write);
+  uint64_t read_beats = dma->show_mem_stats(ChannelType_Read);
   uint64_t write_beats = dma->show_mem_stats(ChannelType_Write);
   float read_util = (float)read_beats/(float)read_cycles;
   float write_util = (float)write_beats/(float)write_cycles;

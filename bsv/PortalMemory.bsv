@@ -51,6 +51,7 @@ interface DmaIndication;
    method Action badPointer(Bit#(32) pointer);
    method Action badAddrTrans(Bit#(32) pointer, Bit#(64) offset, Bit#(40) barrier);
    method Action badPageSize(Bit#(32) pointer, Bit#(32) sz);
+   method Action badNumberEntries(Bit#(32) pointer, Bit#(32) sz);
    method Action badAddr(Bit#(32) pointer, Bit#(40) offset, Bit#(64) physAddr);
    method Action reportStateDbg(DmaDbgRec rec);
    method Action reportMemoryTraffic(Bit#(64) words);

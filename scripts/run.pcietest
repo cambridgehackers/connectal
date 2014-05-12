@@ -1,0 +1,26 @@
+#
+set -x
+set -e
+export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+echo "run.pcie parameters are:" $*
+echo XXXXXXXXXXXXXX $SERIALNO
+if [ "$SERIALNO" != "" ]; then
+    BOARD_SERIAL="-s $SERIALNO"
+else
+    BOARD_SERIAL=""
+fi
+if [ "$#" -lt 3 ]; then
+    fpgajtag $1
+    timeout 3m catchsegv $2
+else
+    BOARD_IPADDR=$1
+    TEMPDIR=/tmp/`uname -n`-$PPID-pcie
+    shift
+    ssh $BOARD_IPADDR "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
+    scp $1 $2 $BOARD_IPADDR:$TEMPDIR
+    BINNAME=`basename $1`
+    EXENAME=`basename $2`
+    ssh $BOARD_IPADDR "fpgajtag $BOARD_SERIAL $TEMPDIR/$BINNAME"
+    ssh $BOARD_IPADDR "timeout 3m catchsegv $TEMPDIR/$EXENAME"
+    ssh $BOARD_IPADDR "rm -rf $TEMPDIR"
+fi
