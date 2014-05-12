@@ -159,7 +159,7 @@ zedboardruns: $(zedboardruns)
 $(zedboardruns):
 	(cd consolable; make)
 	(cd timelimit; ndk-build)
-	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
+	scripts/run.zedboard `find examples/$(basename $@)/zedboard -name \*.gz` `find examples/$(basename $@)/zedboard -name android_exe | grep libs`
 
 
 #################################################################################################
@@ -179,7 +179,7 @@ zc702runs: $(zc702runs)
 $(zc702runs):
 	(cd consolable; make)
 	(cd timelimit; ndk-build)
-	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zc702 -name \*.gz` `find examples/$(basename $@)/zc702 -name android_exe | grep libs`
+	scripts/run.zedboard `find examples/$(basename $@)/zc702 -name \*.gz` `find examples/$(basename $@)/zc702 -name android_exe | grep libs`
 
 #################################################################################################
 # zc706
@@ -198,7 +198,7 @@ zc706runs: $(zc706runs)
 $(zc706runs):
 	(cd consolable; make)
 	(cd timelimit; ndk-build)
-	scripts/run.zedboard $(RUNPARAM) `find examples/$(basename $@)/zc706 -name \*.gz` `find examples/$(basename $@)/zc706 -name android_exe | grep libs`
+	scripts/run.zedboard `find examples/$(basename $@)/zc706 -name \*.gz` `find examples/$(basename $@)/zc706 -name android_exe | grep libs`
 
 #################################################################################################
 # vc707
@@ -232,7 +232,7 @@ kc705runs: $(kc705runs)
 
 $(kc705runs):
 	#(cd examples/$(basename $@)/kc705; make program)
-	scripts/run.pcietest $(RUNPARAM) examples/$(basename $@)/kc705/hw/mk*.bin examples/$(basename $@)/kc705/jni/mkpcietop
+	scripts/run.pcietest examples/$(basename $@)/kc705/hw/mk*.bin examples/$(basename $@)/kc705/jni/mkpcietop
 	#fpgajtag examples/$(basename $@)/kc705/hw/mk*.bin
 	#timeout 3m catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
 

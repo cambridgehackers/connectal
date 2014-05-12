@@ -346,7 +346,7 @@ else
     ifeq ($(OS),android)
 
 run:
-	$(XBSVDIR)/scripts/run.zedboard $(RUNPARAM) `find . -name \*.gz` `find . -name android_exe | grep libs`
+	$(XBSVDIR)/scripts/run.zedboard `find . -name \*.gz` `find . -name android_exe | grep libs`
 
     else
 
