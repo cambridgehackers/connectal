@@ -4,8 +4,7 @@ H2S = ImageonSerdesIndication ImageonSensorIndication HdmiInternalIndication
 BSVFILES = $(XBSVDIR)/lib/bsv/IserdesDatadeser.bsv $(XBSVDIR)/lib/bsv/HDMI.bsv $(XBSVDIR)/lib/bsv/Imageon.bsv Top.bsv
 CPPFILES=testimagecapture.cpp
 XBSVFLAGS = -C imageon-$(BOARD).xdc --tcl clock.tcl
-Dma = 
-PINS = Std
+XBSVFLAGS += --bscflags " -D NumberOfMasters=0"
 #XBSVFLAGS += --bscflags " -D TRACE_AXI"
 XBSVFLAGS += --bscflags " -D USE_I2C -D PinType=ImageCapturePins"
 

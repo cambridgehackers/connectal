@@ -260,8 +260,6 @@ Here is the Makefile for the `simple` example:
     H2S = SimpleIndication
     BSVFILES = Simple.bsv Top.bsv
     CPPFILES=testsimple.cpp
-    Dma = 
-    PINS = Std
 
     include ../../Makefile.common
 ---------------------------------
