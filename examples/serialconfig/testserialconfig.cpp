@@ -46,9 +46,9 @@ public:
   SerialconfigIndication(unsigned int id) : SerialconfigIndicationWrapper(id){};
 
   virtual void ack(uint32_t a, uint32_t d) {
-    fprintf(stderr, "writeack a %lx d %lx\n", a, d);
-    lasttms = tms;
-    lasttdi = tdi;
+    fprintf(stderr, "writeack a %x d %x\n", a, d);
+    lasta = a;
+    lastd = d;
     sem_post(&test_sem);
   }
 };
@@ -58,18 +58,44 @@ void dotest(SerialconfigRequestProxy *dev)
 {
   dev->send(0x0, 0xf00f00);
   sem_wait(&test_sem);
-  dev->send(0xdeadbeef, 0x11111111);
+  dev->send(0x11110001, 0x00000000);
   sem_wait(&test_sem);
-  dev->send(0xdeadbeee, 0x22222222);
+  dev->send(0x22220001, 0x00000000);
   sem_wait(&test_sem);
+  dev->send(0x33330001, 0x00000000);
   sem_wait(&test_sem);
-  dev->send(0xdeadbeef, 0x11111111);
+  dev->send(0x44440001, 0x00000000);
   sem_wait(&test_sem);
-  dev->send(0xdeadbeee, 0x22222222);
+  dev->send(0x11110000, 0x00000000);
   sem_wait(&test_sem);
-  dev->send(0x0, 0xf00f00);
+  dev->send(0x22220000, 0x00000000);
   sem_wait(&test_sem);
-  dev->send(0x1, 0xf00f00);
+  dev->send(0x33330000, 0x00000000);
+  sem_wait(&test_sem);
+  dev->send(0x44440000, 0x00000000);
+  sem_wait(&test_sem);
+  dev->send(0x11110001, 0x00001111);
+  sem_wait(&test_sem);
+  dev->send(0x22220001, 0x00002222);
+  sem_wait(&test_sem);
+  dev->send(0x33330001, 0x00003333);
+  sem_wait(&test_sem);
+  dev->send(0x44440001, 0x00004444);
+  sem_wait(&test_sem);
+  dev->send(0x11110000, 0x00000000);
+  sem_wait(&test_sem);
+  dev->send(0x22220000, 0x00000000);
+  sem_wait(&test_sem);
+  dev->send(0x33330000, 0x00000000);
+  sem_wait(&test_sem);
+  dev->send(0x44440000, 0x00000000);
+  sem_wait(&test_sem);
+
+
+
+  dev->send(0x0, 0xdeadbeef);
+  sem_wait(&test_sem);
+  dev->send(0x1, 0xdeadbeef);
   sem_wait(&test_sem);
 }
 
