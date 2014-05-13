@@ -40,73 +40,85 @@ sem_t test_sem;
 uint32_t lasta;
 uint32_t lastd;
 
+  SerialconfigRequestProxy *dev = 0;
+
 class SerialconfigIndication : public SerialconfigIndicationWrapper
 {
 public:
   SerialconfigIndication(unsigned int id) : SerialconfigIndicationWrapper(id){};
 
   virtual void ack(uint32_t a, uint32_t d) {
-    fprintf(stderr, "writeack a %x d %x\n", a, d);
+    fprintf(stderr, "ack a %x d %x\n", a, d);
     lasta = a;
     lastd = d;
     sem_post(&test_sem);
   }
 };
 
-
-void dotest(SerialconfigRequestProxy *dev)
+void lastdshouldbe(uint32_t v)
 {
-  dev->send(0x0, 0xf00f00);
+  if (lastd != v)
+    printf("error, expected data %08x got %08x\n", v, lastd);
+}
+void lastashouldbe(uint32_t a)
+{
+  if ((lasta & ~1) != a)
+    printf("error, expected address %08x got %08x\n", a, lasta & ~1);
+}
+
+void doread(uint32_t a, uint32_t expect)
+{
+  dev->send(a & ~1, 0xfeedface);
   sem_wait(&test_sem);
-  dev->send(0x11110001, 0x00000000);
+  lastashouldbe(a);
+  lastdshouldbe(expect);
+}
+
+void dowrite(uint32_t a, uint32_t d)
+{
+  dev->send(a | 1, d);
   sem_wait(&test_sem);
-  dev->send(0x22220001, 0x00000000);
-  sem_wait(&test_sem);
-  dev->send(0x33330001, 0x00000000);
-  sem_wait(&test_sem);
-  dev->send(0x44440001, 0x00000000);
-  sem_wait(&test_sem);
-  dev->send(0x11110000, 0x00000000);
-  sem_wait(&test_sem);
-  dev->send(0x22220000, 0x00000000);
-  sem_wait(&test_sem);
-  dev->send(0x33330000, 0x00000000);
-  sem_wait(&test_sem);
-  dev->send(0x44440000, 0x00000000);
-  sem_wait(&test_sem);
-  dev->send(0x11110001, 0x11111111);
-  sem_wait(&test_sem);
-  dev->send(0x22220001, 0x22222222);
-  sem_wait(&test_sem);
-  dev->send(0x33330001, 0x33333333);
-  sem_wait(&test_sem);
-  dev->send(0x44440001, 0x44444444);
-  sem_wait(&test_sem);
-  dev->send(0x11110000, 0x00000000);
-  sem_wait(&test_sem);
-  dev->send(0x22220000, 0x00000000);
-  sem_wait(&test_sem);
-  dev->send(0x33330000, 0x00000000);
-  sem_wait(&test_sem);
-  dev->send(0x44440000, 0x00000000);
-  sem_wait(&test_sem);
+  lastashouldbe(a);
+  lastdshouldbe(d);
+}
+
+void dotest()
+{
+  dowrite(0x0, 0xf00f00);
+
+  dowrite(0x11110000, 0x00000000);
+  dowrite(0x22220000, 0x00000000);
+  dowrite(0x33330000, 0x00000000);
+  dowrite(0x44440000, 0x00000000);
+
+  doread(0x11110000, 0x00000000);
+  doread(0x22220000, 0x00000000);
+  doread(0x33330000, 0x00000000);
+  doread(0x44440000, 0x00000000);
 
 
+  dowrite(0x11110000, 0x11111111);
+  dowrite(0x22220000, 0x22222222);
+  dowrite(0x33330000, 0x33333333);
+  dowrite(0x44440000, 0x44444444);
 
-  dev->send(0x0, 0xdeadbeef);
-  sem_wait(&test_sem);
-  dev->send(0x1, 0xdeadbeef);
-  sem_wait(&test_sem);
+  doread(0x11110000, 0x11111111);
+  doread(0x22220000, 0x00222222);
+  doread(0x33330000, 0x00003333);
+  doread(0x44440000, 0x00000044);
+
+
+  dowrite(0x0, 0xdeadbeef);
+  doread(0x0, 0xfeedface);
 }
 
 int main(int argc, const char **argv)
 {
-  SerialconfigRequestProxy *device = 0;
   
   SerialconfigIndication *deviceIndication = 0;
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  device = new SerialconfigRequestProxy(IfcNames_SerialconfigRequest);
+  dev = new SerialconfigRequestProxy(IfcNames_SerialconfigRequest);
 
   deviceIndication = new SerialconfigIndication(IfcNames_SerialconfigIndication);
 
@@ -124,7 +136,7 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "simple tests\n");
     
-    dotest(device);
+    dotest();
 
   }
 
