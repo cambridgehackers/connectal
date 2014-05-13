@@ -265,8 +265,8 @@ $(timestampfile): %(bsvfiles)s
 	touch $(timestampfile)
 
 $(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
-	mkdir -p verilog/top verilog/portal
-	cd sources/%(dut)s; mkdir -p $(DTOP)/obj; bsc %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
+	mkdir -p verilog/top verilog/portal $(DTOP)/obj $(DTOP)/generatedbsv
+	cd sources/%(dut)s; bsc %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(DTOP)/generatedbsv:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
 	for v in verilog/top/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
 BSIM_EXE_CXX_FILES = BsimDma.cxx BsimCtrl.cxx portal.cpp sock_fd.cxx sock_utils.cxx PortalMemory.cpp
@@ -279,7 +279,8 @@ ubuntu_exe:
 	cd jni; make
 
 bsim: $(timestampfile)
-	cd sources; mkdir -p $(DTOP)/obj; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
+	mkdir -p $(DTOP)/obj
+	cd sources; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
 	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
 
 verilog: $(vfile)
