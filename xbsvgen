@@ -334,7 +334,7 @@ bits: hw/mkTop.bit
 endif
 
 android_exe:
-	ndk-build
+	ndk-build -B V=1 NDK_DEBUG=1
 
 ifeq ($(BOARD),bluesim)
 
