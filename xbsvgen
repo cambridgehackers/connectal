@@ -239,7 +239,7 @@ else
 ALLTARGETS=ubuntu_exe implementation
 endif
 
-BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj  -D TimeStamp=%(timestamp)s %(bscflags)s
+BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj -info-dir $(DTOP)/obj -D TimeStamp=%(timestamp)s %(bscflags)s
 BSIM_CXX = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.cxx $(XBSVDIR)/cpp/sock_fd.cxx
 
 XVLOGFLAGS =
