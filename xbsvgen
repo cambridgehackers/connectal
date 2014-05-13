@@ -265,7 +265,7 @@ $(timestampfile): %(bsvfiles)s
 	touch $(timestampfile)
 
 $(vfile): %(topbsvfile)s %(bsvfiles)s $(timestampefile)
-	mkdir -p verilog/top verilog/portal $(DTOP)/obj $(DTOP)/generatedbsv
+	mkdir -p verilog/top verilog/portal $(DTOP)/obj
 	cd sources/%(dut)s; bsc %(bsvdefines)s $(BSCFLAGS) -remove-dollar -p +:$(DTOP)/generatedbsv:$(BSVPATH) -verilog -u -g %(topbsvmod)s %(topbsvfile)s
 	for v in verilog/top/*.v; do $(XBSVDIR)/scripts/copy_verilog.py $$v $(subst :, ,$(BSVPATH)); done
 
