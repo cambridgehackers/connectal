@@ -37,9 +37,9 @@ module mkSerialconfigRequest#(SerialconfigIndication indication)(SerialconfigReq
 
    
    SpiReg#(Bit#(32)) tap1 <- mkSpiReg('h11110000);
-   SpiReg#(Bit#(32)) tap2 <- mkSpiReg('h22220000);
-   SpiReg#(Bit#(32)) tap3 <- mkSpiReg('h33330000);
-   SpiReg#(Bit#(32)) tap4 <- mkSpiReg('h44440000);
+   SpiReg#(Bit#(24)) tap2 <- mkSpiReg('h22220000);
+   SpiReg#(Bit#(16)) tap3 <- mkSpiReg('h33330000);
+   SpiReg#(Bit#(8)) tap4 <- mkSpiReg('h44440000);
 
    mkConnection(tap1.tap.out, tap2.tap.in);
    mkConnection(tap2.tap.out, tap3.tap.in);
