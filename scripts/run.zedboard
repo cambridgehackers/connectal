@@ -26,7 +26,7 @@ adb -s $ANDROID_SERIAL shell "pwd"
 adb -s $ANDROID_SERIAL shell touch /mnt/sdcard/perf.monkit
 adb -s $ANDROID_SERIAL shell "sync"
 adb -s $ANDROID_SERIAL shell "sync"
-if [ "$NDK_DEBUG" != "" ]; then
+if [ "$XBSV_DEBUG" != "" ]; then
 adb -s $ANDROID_SERIAL forward tcp:5039 tcp:5039   
 adb -s $ANDROID_SERIAL shell gdbserver :5039 /mnt/sdcard/android_exe &    
 TEMP=`dirname $2`/../..

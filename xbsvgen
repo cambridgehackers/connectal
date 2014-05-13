@@ -234,7 +234,7 @@ BOARD=%(boardname)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
 ifeq ($(OS),android)
-ALLTARGETS=android_exe bits
+ALLTARGETS=android_exe%(debug)s bits
 else
 ALLTARGETS=ubuntu_exe implementation
 endif
@@ -334,6 +334,9 @@ bits: hw/mkTop.bit
 endif
 
 android_exe:
+	ndk-build
+
+android_exe_debug:
 	ndk-build -B V=1 NDK_DEBUG=1
 
 ifeq ($(BOARD),bluesim)
@@ -702,6 +705,9 @@ if __name__=='__main__':
 
     print 'Writing Makefile', makename
     make = util.createDirAndOpen(makename, 'w')
+    debug_flag = ''
+    if os.environ.has_key('XBSV_DEBUG'):
+        debug_flag = '_debug'
     make.write(makefileTemplate % {'xbsvdir': xbsvdir,
                                    'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in namespace.bsvfile]
                                                                 + [os.path.join(xbsvdir, 'bsv')]
@@ -710,6 +716,7 @@ if __name__=='__main__':
                                    'bsvdefines': util.foldl((lambda e,a: e+' -D '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': namespace.os,
+                                   'debug': debug_flag,
                                    's2hinterface': ' '.join(namespace.s2hinterface),
                                    'h2sinterface': ' '.join(namespace.h2sinterface),
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in namespace.bsvfile]),
