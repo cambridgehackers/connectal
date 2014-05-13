@@ -64,6 +64,7 @@ module mkEchoRequestInternal#(EchoIndication indication)(EchoRequestInternal);
    
    interface EchoRequest ifc;
       method Action say(Bit#(32) v);
+         $display("Echo: say %x", v);
 	 delay.enq(v);
       endmethod
       
