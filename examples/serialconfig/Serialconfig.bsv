@@ -36,16 +36,16 @@ endinterface
 module mkSerialconfigRequest#(SerialconfigIndication indication)(SerialconfigRequest);
 
    
-   SpiTap tap1 <- mkSpiTap('h11110000);
-   SpiTap tap2 <- mkSpiTap('h22220000);
-   SpiTap tap3 <- mkSpiTap('h33330000);
-   SpiTap tap4 <- mkSpiTap('h44440000);
+   SpiReg#(Bit#(32)) tap1 <- mkSpiReg('h11110000);
+   SpiReg#(Bit#(32)) tap2 <- mkSpiReg('h22220000);
+   SpiReg#(Bit#(32)) tap3 <- mkSpiReg('h33330000);
+   SpiReg#(Bit#(32)) tap4 <- mkSpiReg('h44440000);
 
-   mkConnection(tap1.out, tap2.in);
-   mkConnection(tap2.out, tap3.in);
-   mkConnection(tap3.out, tap4.in);
+   mkConnection(tap1.tap.out, tap2.tap.in);
+   mkConnection(tap2.tap.out, tap3.tap.in);
+   mkConnection(tap3.tap.out, tap4.tap.in);
 
-   FIFO#(SpiItem) spi <- mkSpiRoot(SpiTap{in: tap1.in, out: tap4.out});
+   FIFO#(SpiItem) spi <- mkSpiRoot(SpiTap{in: tap1.tap.in, out: tap4.tap.out});
   
    rule getresults;
       indication.ack(spi.first().a, spi.first().d);
