@@ -68,9 +68,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
 
    PS7 ps7 <- mkPS7();
    Clock mainclock = ps7.fclkclk[0];
-   Clock clock200  = ps7.fclkclk[3];
    Reset mainreset = ps7.fclkreset[0];
-   IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by clock200, reset_by mainreset);
 
    let tscl <- mkIOBUF(~ps7.i2c[1].scltn, ps7.i2c[1].sclo, clocked_by mainclock, reset_by mainreset);
    let tsda <- mkIOBUF(~ps7.i2c[1].sdatn, ps7.i2c[1].sdao, clocked_by mainclock, reset_by mainreset);

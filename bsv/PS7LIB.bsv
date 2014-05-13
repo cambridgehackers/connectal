@@ -565,6 +565,8 @@ module mkPS7(PS7);
       freset[i] = b2c[i].r;
    end
 
+   IDELAYCTRL idel <- mkIDELAYCTRL(2, clocked_by fclk[3], reset_by freset[0]);
+
     rule arb_rule;
         ps7.ddr.arb(4'b0);
     endrule
