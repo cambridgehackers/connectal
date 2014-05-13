@@ -74,13 +74,13 @@ void dotest(SerialconfigRequestProxy *dev)
   sem_wait(&test_sem);
   dev->send(0x44440000, 0x00000000);
   sem_wait(&test_sem);
-  dev->send(0x11110001, 0x00001111);
+  dev->send(0x11110001, 0x11111111);
   sem_wait(&test_sem);
-  dev->send(0x22220001, 0x00002222);
+  dev->send(0x22220001, 0x22222222);
   sem_wait(&test_sem);
-  dev->send(0x33330001, 0x00003333);
+  dev->send(0x33330001, 0x33333333);
   sem_wait(&test_sem);
-  dev->send(0x44440001, 0x00004444);
+  dev->send(0x44440001, 0x44444444);
   sem_wait(&test_sem);
   dev->send(0x11110000, 0x00000000);
   sem_wait(&test_sem);
