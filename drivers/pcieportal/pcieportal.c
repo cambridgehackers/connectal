@@ -38,13 +38,7 @@
 #define NUM_PORTALS 16
 
 /* CSR address space offsets */
-#define CSR_ID                        (   0 << 2)
-#define CSR_MINOR_REV                 (   2 << 2)
-#define CSR_MAJOR_REV                 (   3 << 2)
-#define CSR_BUILDVERSION              (   4 << 2)
-#define CSR_EPOCHTIME                 (   5 << 2)
-#define CSR_BYTES_PER_BEAT            (   7 << 2)
-#define CSR_BOARD_CONTENT_ID          (   8 << 2)
+#define CSR_ID                        (   0 << 2) /* 64-bit */
 #define CSR_TLPDATAFIFO_DEQ           ( 768 << 2)
 #define CSR_TLPTRACELENGTHREG         ( 774 << 2)
 #define CSR_TLPTRACINGREG             ( 775 << 2)
@@ -54,9 +48,6 @@
 #define CSR_TLPDATABRAMRESPONSESLICE3 ( 779 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE4 ( 780 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE5 ( 781 << 2)
-#define CSR_RCB_MASK                  ( 782 << 2)
-#define CSR_MAX_READ_REQ_BYTES        ( 783 << 2)
-#define CSR_MAX_PAYLOAD_BYTES         ( 784 << 2)
 #define CSR_TLPFROMPCIEWRADDRREG      ( 792 << 2)
 #define CSR_TLPTOPCIEWRADDRREG        ( 793 << 2)
 #define CSR_RESETISASSERTED           ( 795 << 2)
@@ -82,7 +73,6 @@ typedef struct tBoard {
         struct pci_dev   *pci_dev; /* pci device pointer */
         tPortal           portal[NUM_PORTALS];
         tBoardInfo        info; /* board identification fields */
-        unsigned int      uses_msix;
         unsigned int      irq_num;
         unsigned int      open_count;
 } tBoard;
@@ -103,7 +93,7 @@ static irqreturn_t intr_handler(int irq, void *p)
 {
         tPortal *this_portal = p;
 
-        printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_portal->portal_number);
+        //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_portal->portal_number);
         wake_up_interruptible(&(this_portal->wait_queue)); 
         return IRQ_HANDLED;
 }
@@ -192,7 +182,6 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         case BNOC_IDENTIFY:
                 /* copy board identification info to a user-space struct */
                 info = this_board->info;
-                info.is_active = 1;
                 info.portal_number = this_portal->portal_number;
                 if (1) {        // msix info
 		  int i;
@@ -216,10 +205,6 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 /* copy board identification info to a user-space struct */
                 tPortalInfo portalinfo;
                 memset(&portalinfo, 0, sizeof(portalinfo));
-                printk("rcb_mask=%#x max_read_req_bytes=%#x max_payload_bytes=%#x\n",
-                     ioread32(this_board->bar0io + CSR_RCB_MASK),
-                     ioread32(this_board->bar0io + CSR_MAX_READ_REQ_BYTES),
-                     ioread32(this_board->bar0io + CSR_MAX_PAYLOAD_BYTES));
                 err = copy_to_user((void __user *) arg, &portalinfo, sizeof(tPortalInfo));
                 break;
                 }
@@ -377,18 +362,6 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
                         err = -EINVAL;
                         goto BARS_MAPPED_label;
                 }
-                this_board->info.minor_rev = ioread32(this_board->bar0io + CSR_MINOR_REV);
-                this_board->info.major_rev = ioread32(this_board->bar0io + CSR_MAJOR_REV);
-                this_board->info.build = ioread32(this_board->bar0io + CSR_BUILDVERSION);
-                this_board->info.timestamp = ioread32(this_board->bar0io + CSR_EPOCHTIME);
-                this_board->info.bytes_per_beat = ioread32(this_board->bar0io + CSR_BYTES_PER_BEAT) & 0xff;
-                this_board->info.content_id = readq(this_board->bar0io + CSR_BOARD_CONTENT_ID);
-                /* basic board info */
-                printk(KERN_INFO "%s: revision = %d.%d\n", DEV_NAME, this_board->info.major_rev, this_board->info.minor_rev);
-                printk(KERN_INFO "%s: build_version = %d\n", DEV_NAME, this_board->info.build);
-                printk(KERN_INFO "%s: timestamp = %d\n", DEV_NAME, this_board->info.timestamp);
-                printk(KERN_INFO "%s: NoC is using %d byte beats\n", DEV_NAME, this_board->info.bytes_per_beat);
-                printk(KERN_INFO "%s: Content identifier is %llx\n", DEV_NAME, this_board->info.content_id); 
                 /* set DMA mask */
                 if (pci_set_dma_mask(dev, DMA_BIT_MASK(48))) {
                         printk(KERN_ERR "%s: pci_set_dma_mask failed for 48-bit DMA\n", DEV_NAME);
@@ -396,7 +369,6 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
                         goto BARS_MAPPED_label;
                 }
                 /* enable MSIX */
-        	{
 		for (i = 0; i < num_entries; i++)
 			msix_entries[i].entry = i;
 		if (pci_enable_msix(dev, msix_entries, num_entries)) {
@@ -404,13 +376,10 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
 			err = -EFAULT;
                         goto BARS_MAPPED_label;
 		}
-		this_board->uses_msix = 1;
 		this_board->irq_num = msix_entries[0].vector;
 		printk(KERN_INFO "%s: Using MSIX interrupts num_entries=%d check_device\n", DEV_NAME, num_entries);
-
 		for (i = 0; i < num_entries; i++)
 			printk(KERN_INFO "%s: msix_entries[%d] vector=%d entry=%08x\n", DEV_NAME, i, msix_entries[i].vector, msix_entries[i].entry);
-
 		/* install the IRQ handler */
 		for (i = 0; i < num_entries; i++) {
 			if (request_irq(this_board->irq_num + i, intr_handler, 0, DEV_NAME, (void *) &this_board->portal[i])) {
@@ -419,13 +388,10 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
 				goto MSI_ENABLED_label;
 			}
 		}
-		if (this_board->uses_msix) {
-			/* set MSIX Entry 0 Vector Control value to 0 (unmasked) */
-			printk(KERN_INFO "%s: MSIX interrupts enabled with %d IRQs starting at %d\n",
-			       DEV_NAME, num_entries, this_board->irq_num);
-			iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
-		}
-        	}
+		/* set MSIX Entry 0 Vector Control value to 0 (unmasked) */
+		printk(KERN_INFO "%s: MSIX interrupts enabled with %d IRQs starting at %d\n",
+		       DEV_NAME, num_entries, this_board->irq_num);
+		iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
                 pci_set_master(dev); /* enable PCI bus master */
                 for (dn = 0; dn < NUM_PORTALS && err >= 0; dn++) {
                         int fpga_number = this_board->info.board_number * NUM_PORTALS + dn;
@@ -465,15 +431,13 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
         }
         pci_clear_master(dev); /* disable PCI bus master */
         /* set MSIX Entry 0 Vector Control value to 1 (masked) */
-        if (this_board->uses_msix)
-                iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
+        iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
         disable_irq(this_board->irq_num);
 	for (i = 0; i < 16; i++) 
 		free_irq(this_board->irq_num + i, (void *) &this_board->portal[i]);
 MSI_ENABLED_label:
         /* disable MSI/MSIX */
-        if (this_board->uses_msix)
-                pci_disable_msix(dev);
+        pci_disable_msix(dev);
 BARS_MAPPED_label:
         /* unmap PCI BARs */
         if (this_board->bar0io)

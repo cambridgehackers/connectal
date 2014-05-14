@@ -15,13 +15,6 @@
 typedef struct {
   unsigned int       board_number;
   unsigned int       portal_number;
-  unsigned int       is_active;
-  unsigned int       major_rev;
-  unsigned int       minor_rev;
-  unsigned int       build;
-  unsigned int       timestamp;
-  unsigned int       bytes_per_beat;
-  unsigned long long content_id;
 } tBoardInfo;
 
 typedef struct {
