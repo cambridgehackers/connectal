@@ -17,7 +17,7 @@ ifeq ($(origin XBSVDIR),undefined)
 XBSVDIR=../..
 endif
 
-all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe xsim xsimrun: gen
+all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe xsim xsimrun: gentarget
 	make -C $(BOARD) $@
 
 ifeq ($(origin TOP),undefined)
