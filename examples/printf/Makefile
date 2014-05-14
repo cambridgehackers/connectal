@@ -11,5 +11,7 @@ CPPFILES=testecho.cpp
 # XBSVFLAGS="--bscflags=-D TRACE_AXI"
 XBSVFLAGS += --bscflags " -D NumberOfMasters=0"
 
+USE_PRINTF = 1
+
 include ../../Makefile.common
 

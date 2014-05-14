@@ -43,4 +43,6 @@ gen::
 	$(foreach f, $(CPPFILES), -s $f) \
         -t $(TOP) $(XBSVFLAGS) $(BSVFILES)
 	[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
-	#$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
+ifeq ($(USE_PRINTF),1)
+	$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
+endif

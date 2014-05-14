@@ -61,6 +61,7 @@ testnames = echo             \
             pcietestbench_dma_oo  \
             pipe_mul         \
             pipe_mul2        \
+            printf           \
             simple           \
             strstr           \
 	    ring             \
