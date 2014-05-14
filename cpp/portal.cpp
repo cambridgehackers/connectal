@@ -386,7 +386,7 @@ void* PortalPoller::portalExec_init(void)
     }
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
-      //fprintf(stderr, "portalExec::enabling interrupts portal %d %s\n", i, instance->name);
+      fprintf(stderr, "portalExec::enabling interrupts portal %d %s\n", i, instance->name);
       ENABLE_INTERRUPTS(instance);
     }
     fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
@@ -429,7 +429,7 @@ void* PortalPoller::portalExec_event(int timeout)
     
       // handle all messasges from this portal instance
       while ((queue_status= READL(instance, ind_reg_base + REG_QUEUE_STATUS))) {
-        if(0) {
+        if(1) {
           unsigned int int_src = READL(instance, ind_reg_base + REG_INTERRUPT_FLAG);
           unsigned int int_en  = READL(instance, ind_reg_base + REG_INTERRUPT_MASK);
           unsigned int ind_count  = READL(instance, ind_reg_base + REG_INTERRUPT_COUNT);

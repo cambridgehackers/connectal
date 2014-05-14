@@ -36,13 +36,18 @@ ifeq ($(origin TOP),undefined)
     endif
 endif
 
+ifeq ($(USE_PRINTF),1)
+PRINTF_EXTRA=$(BOARD)/generatedbsv/DisplayInd.bsv
+endif
+
 gen::
+	[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
+	[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
+ifeq ($(USE_PRINTF),1)
+	$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
+endif
 	$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
-        -t $(TOP) $(XBSVFLAGS) $(BSVFILES)
-	[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
-ifeq ($(USE_PRINTF),1)
-	$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
-endif
+        -t $(TOP) $(XBSVFLAGS) $(BSVFILES) $(PRINTF_EXTRA)

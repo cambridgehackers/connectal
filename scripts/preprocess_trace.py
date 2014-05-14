@@ -24,6 +24,8 @@ from __future__ import print_function
 import sys
 
 print('preprocess_trace.py:', sys.argv)
+cppind = []
+bsvind = []
 for filename in sys.argv[2:]:
     data = open(filename).readlines()
     hasdisplay = False
@@ -35,15 +37,12 @@ for filename in sys.argv[2:]:
             hasdispind = True
     if hasdisplay and hasdispind:
         fname = sys.argv[1] + '/generatedbsv/' + filename
-        print('IIII', fname)
-        fn = open(fname, 'w')
+        fh = open(fname, 'w')
         for line in data:
             ind = line.find('$display')
             if ind >= 0:
-                print('DDDDD', ind, line)
                 param = line[ind+8:].strip()[1:][:-2].strip()
-                print('PPP', param)
-                format = ''
+                formatstr = ''
                 pitem = ''
                 level = 0
                 informat = True
@@ -54,7 +53,7 @@ for filename in sys.argv[2:]:
                             if level == 0:
                                 informat = False
                         else:
-                            format = format + ch
+                            formatstr = formatstr + ch
                     elif ch == ',':
                         if pitem != '':
                             pactual.append(pitem.strip())
@@ -62,10 +61,10 @@ for filename in sys.argv[2:]:
                     else:
                         pitem = pitem + ch
                 pactual.append(pitem.strip())
-                freplace = ''
+                freplace = 'printfind_'
                 lastch = ''
                 plist = []
-                for ch in format:
+                for ch in formatstr:
                     if lastch == '%':
                         if ch == 'x':
                             plist.append('Bit#(32)')
@@ -76,9 +75,7 @@ for filename in sys.argv[2:]:
                     elif (ch >= 'A' and ch <= 'Z') or (ch >= 'a' and ch <= 'z') or (ch >= '0' and ch <= '9'):
                         freplace = freplace + ch
                     else:
-                        i = ord(ch)
-                        j = int(i / 10)
-                        freplace = freplace + '_' + str(j) + str(i - 10 * j)
+                        freplace = freplace + '_' + '{:02x}'.format(ord(ch))
                     lastch = ch
                 line = line[:ind] + 'printfInd.' + freplace + '(' + ','.join(pactual) + ');\n'
                 pformal = ''
@@ -96,9 +93,27 @@ for filename in sys.argv[2:]:
                         pformal = pformal + 'uint32_t ' + pvar
                         pactual = pactual + pvar
                     pbsv = pbsv + item + ' ' + pvar
-                print('FFF void ' + freplace + '(' + pformal + ') { printf("' + format + '\\n", ' + pactual + '); }')
-                print('GGG method Action ' + freplace + '(' + pbsv + ');')
-                print('RRR', line.strip())
-            fn.write(line)
-        fn.close()
-sys.exit(1)
+                cppind.append('    void ' + freplace + '(' + pformal + ') { printf("' + formatstr + '\\n", ' + pactual + '); }\n')
+                bsvind.append('    method Action ' + freplace + '(' + pbsv + ');\n')
+            fh.write(line)
+        fh.close()
+if cppind != []:
+    fname = sys.argv[1] + '/jni/printfind.h'
+    fh = open(fname, 'w')
+    fh.write('class DisplayInd : public DisplayIndWrapper\n')
+    fh.write('{\n')
+    fh.write('public:\n')
+    fh.write('    DisplayInd(unsigned int id, PortalPoller *poller) : DisplayIndWrapper(id, poller) {}\n')
+    for item in cppind:
+        fh.write(item)
+    fh.write('};\n')
+    fh.close()
+if bsvind != []:
+    fname = sys.argv[1] + '/generatedbsv/DisplayInd.bsv'
+    fh = open(fname, 'w')
+    fh.write('interface DisplayInd;\n')
+    for item in bsvind:
+        fh.write(item)
+    fh.write('endinterface\n')
+    fh.close()
+sys.exit(0)

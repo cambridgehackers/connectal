@@ -13,7 +13,7 @@
 #include "GeneratedTypes.h"
 #include "SwallowProxy.h"
 
-#define LOOP_COUNT 1000
+#define LOOP_COUNT 1//000
 #define SEPARATE_EVENT_THREAD
 //#define USE_MUTEX_SYNC
 
@@ -79,11 +79,7 @@ public:
     EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
 };
 
-class DisplayInd : public DisplayIndWrapper
-{
-public:
-    DisplayInd(unsigned int id, PortalPoller *poller) : DisplayIndWrapper(id, poller) {}
-};
+#include "printfind.h"
 
 static void call_say(int v)
 {

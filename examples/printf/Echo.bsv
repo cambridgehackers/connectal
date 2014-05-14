@@ -67,10 +67,10 @@ module mkEchoRequestInternal#(EchoIndication indication, DisplayInd printfInd)(E
       method Action say(Bit#(32) v);
          $display("Echo: say %x", v);
 	 delay.enq(v);
-         $display("Echo: aftersay %x %x", v, v);
       endmethod
       
       method Action say2(Bit#(16) a, Bit#(16) b);
+         $display("Echo: say2 %x %x", extend(a), extend(b));
 	 delay2.enq(EchoPair { a: a, b: b});
       endmethod
       
