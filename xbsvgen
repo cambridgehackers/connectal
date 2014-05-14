@@ -342,8 +342,14 @@ android_exe_debug:
 
 ifeq ($(BOARD),bluesim)
 
+ifeq ($(XBSV_DEBUG),1)
+GDB=gdb
+else
+GDB=
+endif
+
 run:
-	./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode
+	./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode
 
 else
 
