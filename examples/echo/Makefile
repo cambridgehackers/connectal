@@ -2,9 +2,9 @@
 ## hardware interfaces invoked from software (requests)
 S2H = Swallow EchoRequest
 ## software interfaces invoked from hardware (indications)
-H2S = EchoIndication
+H2S = EchoIndication DisplayInd
 ## all the BSV files to be scanned for types and interfaces
-BSVFILES = Echo.bsv Swallow.bsv Top.bsv
+BSVFILES = Echo.bsv Swallow.bsv Top.bsv ../../bsv/DisplayInd.bsv
 ## the source files in the example
 CPPFILES=testecho.cpp
 ## uncomment the following line to enable AXI trace
