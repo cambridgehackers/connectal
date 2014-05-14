@@ -8,6 +8,7 @@
 #include <inttypes.h>
 
 #include "EchoIndicationWrapper.h"
+#include "DisplayIndWrapper.h"
 #include "EchoRequestProxy.h"
 #include "GeneratedTypes.h"
 #include "SwallowProxy.h"
@@ -78,6 +79,12 @@ public:
     EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
 };
 
+class DisplayInd : public DisplayIndWrapper
+{
+public:
+    DisplayInd(unsigned int id, PortalPoller *poller) : DisplayIndWrapper(id, poller) {}
+};
+
 static void call_say(int v)
 {
     printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
@@ -103,6 +110,7 @@ int main(int argc, const char **argv)
 {
     poller = new PortalPoller();
     EchoIndication *echoIndication = new EchoIndication(IfcNames_EchoIndication, poller);
+    DisplayInd *dispIndication = new DisplayInd(IfcNames_DisplayInd, poller);
     // these use the default poller
     SwallowProxy *swallowProxy = new SwallowProxy(IfcNames_Swallow);
     echoRequestProxy = new EchoRequestProxy(IfcNames_EchoRequest);

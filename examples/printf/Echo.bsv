@@ -24,6 +24,7 @@
 
 import FIFO::*;
 import Leds::*;
+import DisplayInd::*;
 
 interface EchoIndication;
     method Action heard(Bit#(32) v);
@@ -46,7 +47,7 @@ typedef struct {
 	Bit#(16) b;
 } EchoPair deriving (Bits);
 
-module mkEchoRequestInternal#(EchoIndication indication)(EchoRequestInternal);
+module mkEchoRequestInternal#(EchoIndication indication, DisplayInd printfInd)(EchoRequestInternal);
 
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
@@ -64,7 +65,9 @@ module mkEchoRequestInternal#(EchoIndication indication)(EchoRequestInternal);
    
    interface EchoRequest ifc;
       method Action say(Bit#(32) v);
+         $display("Echo: say %x", v);
 	 delay.enq(v);
+         $display("Echo: aftersay %x %x", v, v);
       endmethod
       
       method Action say2(Bit#(16) a, Bit#(16) b);
