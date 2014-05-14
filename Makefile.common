@@ -38,6 +38,8 @@ endif
 
 ifeq ($(USE_PRINTF),1)
 PRINTF_EXTRA=$(BOARD)/generatedbsv/DisplayInd.bsv
+else
+PRINTF_EXTRA=$(XBSVDIR)/bsv/DisplayInd.bsv
 endif
 
 gen::
