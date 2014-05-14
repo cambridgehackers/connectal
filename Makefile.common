@@ -1,9 +1,17 @@
 #################################################################################################
 
 ## use "make gen.board" to generate the build directory
+gen.%:
+	make BOARD=$* gentarget
 
-gen\.%:
-	make BOARD=$* gen
+build.%: generate.%
+	make -C $* BOARD=$* all
+
+run.%:
+	make -C $* BOARD=$* run
+
+%.gdb:
+	make XBSV_DEBUG=1 $*
 
 ifeq ($(origin XBSVDIR),undefined)
 XBSVDIR=../..
@@ -49,7 +57,7 @@ else
 PRINTF_EXTRA=$(XBSVDIR)/bsv/DisplayInd.bsv
 endif
 
-gen::
+gentarget::
 	[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
 	[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
 ifeq ($(USE_PRINTF),1)
