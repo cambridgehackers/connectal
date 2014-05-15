@@ -46,7 +46,7 @@ interface TlpTrace;
    interface Get#(TimestampedTlpData) tlp;
 endinterface
 
-`define msix_base 4096
+`define msix_base 1024
 
 // An MSIX table entry, as defined in the PCIe spec
 interface MSIX_Entry;
