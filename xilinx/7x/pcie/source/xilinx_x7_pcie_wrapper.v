@@ -129,34 +129,24 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
  input wire           sys_reset_n);
    // Wires used for external clocking connectivity
    wire                PIPE_PCLK_IN;
-   wire                PIPE_RXUSRCLK_IN;
-   wire [7:0]          PIPE_RXOUTCLK_IN;
+   //wire                PIPE_RXUSRCLK_IN;
    wire                PIPE_DCLK_IN;
    wire                PIPE_USERCLK1_IN;
-   wire                PIPE_USERCLK2_IN;
    wire                PIPE_MMCM_LOCK_IN;
    wire                PIPE_TXOUTCLK_OUT;
-   wire [7:0]          PIPE_RXOUTCLK_OUT;
+   //wire [7:0]          PIPE_RXOUTCLK_OUT;
    wire [7:0]          PIPE_PCLK_SEL_OUT;
-   wire                PIPE_GEN3_OUT;
-   wire                PIPE_OOBCLK_IN;
-   localparam USER_CLK_FREQ = 3;
-  pcie_7x_0_foo_pipe_clock #(.PCIE_LANE         ( 6'h08 ),     // PCIe number of lanes
-                   .PCIE_USERCLK1_FREQ ( USER_CLK_FREQ +1 ),     // PCIe user clock 1 frequency
-                   .PCIE_USERCLK2_FREQ ( USER_CLK_FREQ +1 )     // PCIe user clock 2 frequency
-                   ) pipe_clock_i (
+   //wire                PIPE_GEN3_OUT;
+   //wire                PIPE_OOBCLK_IN;
+  pcie_7x_0_foo_pipe_clock #(.PCIE_LANE ( 6'h08 )) pipe_clock_i (
             .CLK_CLK                        ( sys_clk ),
             .CLK_TXOUTCLK                   ( PIPE_TXOUTCLK_OUT ),     // Reference clock from lane 0
-            .CLK_RXOUTCLK_IN                ( PIPE_RXOUTCLK_OUT ),
             .CLK_PCLK_SEL                   ( PIPE_PCLK_SEL_OUT ),
-            .CLK_GEN3                       ( PIPE_GEN3_OUT ),
             .CLK_PCLK                       ( PIPE_PCLK_IN ),
-            .CLK_RXUSRCLK                   ( PIPE_RXUSRCLK_IN ),
-            .CLK_RXOUTCLK_OUT               ( PIPE_RXOUTCLK_IN ),
+            //.CLK_RXUSRCLK                   ( PIPE_RXUSRCLK_IN ),
             .CLK_DCLK                       ( PIPE_DCLK_IN ),
-            .CLK_OOBCLK                     ( PIPE_OOBCLK_IN ),
+            //.CLK_OOBCLK                     ( PIPE_OOBCLK_IN ),
             .CLK_USERCLK1                   ( PIPE_USERCLK1_IN ),
-            .CLK_USERCLK2                   ( PIPE_USERCLK2_IN ),
             .CLK_MMCM_LOCK                  ( PIPE_MMCM_LOCK_IN ));
   pcie_7x_0 #() pcie_7x_i (
       .pci_exp_txn                                ( pci_exp_txn ),
@@ -164,17 +154,15 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
       .pci_exp_rxn                                ( pci_exp_rxn ),
       .pci_exp_rxp                                ( pci_exp_rxp ),
       .pipe_pclk_in                              ( PIPE_PCLK_IN ),
-      .pipe_rxusrclk_in                          ( PIPE_RXUSRCLK_IN ),
-      .pipe_rxoutclk_in                          ( PIPE_RXOUTCLK_IN ),
+      .pipe_rxusrclk_in                          ( PIPE_PCLK_IN ),
+      .pipe_rxoutclk_in                          ( 8'd0),
       .pipe_dclk_in                              ( PIPE_DCLK_IN ),
       .pipe_userclk1_in                          ( PIPE_USERCLK1_IN ),
-      .pipe_userclk2_in                          ( PIPE_USERCLK2_IN ),
-      .pipe_oobclk_in                            ( PIPE_OOBCLK_IN ),
+      .pipe_userclk2_in                          ( PIPE_USERCLK1_IN ),
+      .pipe_oobclk_in                            ( PIPE_DCLK_IN ),
       .pipe_mmcm_lock_in                         ( PIPE_MMCM_LOCK_IN ),
       .pipe_txoutclk_out                         ( PIPE_TXOUTCLK_OUT ),
-      .pipe_rxoutclk_out                         ( PIPE_RXOUTCLK_OUT ),
       .pipe_pclk_sel_out                         ( PIPE_PCLK_SEL_OUT ),
-      .pipe_gen3_out                             ( PIPE_GEN3_OUT ),
       .user_clk_out                               ( user_clk_out ),
       .user_reset_out                             ( user_reset_out ),
       .user_lnk_up                                ( user_lnk_up ),
