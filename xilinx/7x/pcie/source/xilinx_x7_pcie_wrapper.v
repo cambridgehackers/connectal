@@ -1,10 +1,8 @@
 // Copyright (c) 2012  Bluespec, Inc.  ALL RIGHTS RESERVED
-
 `ifdef BSV_ASSIGNMENT_DELAY
 `else
  `define BSV_ASSIGNMENT_DELAY
 `endif
-
 module xilinx_x7_pcie_wrapper #(
                                 parameter            PL_FAST_TRAIN = "FALSE",
                                 parameter            PCIE_EXT_CLK  = "TRUE",
@@ -16,7 +14,9 @@ module xilinx_x7_pcie_wrapper #(
 				parameter [31:0]  BAR4 = 32'h00000000,
 				parameter [31:0]  BAR5 = 32'h00000000,
                                 parameter         PCIE_GT_DEVICE = "GTX",
-				parameter [5:0]   LINK_CAP_MAX_LINK_WIDTH = 6'd8
+				parameter [5:0]   LINK_CAP_MAX_LINK_WIDTH = 6'd8,
+				parameter C_DATA_WIDTH        = 64, // RX/TX interface data width
+				parameter KEEP_WIDTH          = C_DATA_WIDTH / 8 // TSTRB width
 // xbsv
                                 )
 (
@@ -42,15 +42,15 @@ module xilinx_x7_pcie_wrapper #(
  output                                     tx_err_drop,
  output                                     tx_cfg_req,
  output                                     s_axis_tx_tready,
- input   [63:0]                             s_axis_tx_tdata,
- input   [7:0]                              s_axis_tx_tkeep,
+ input   [C_DATA_WIDTH-1:0]                             s_axis_tx_tdata,
+ input   [KEEP_WIDTH-1:0]                              s_axis_tx_tkeep,
  input   [3:0]                              s_axis_tx_tuser,
  input                                      s_axis_tx_tlast,
  input                                      s_axis_tx_tvalid,
  input                                      tx_cfg_gnt,
  // Rx
- output  [63:0]                             m_axis_rx_tdata,
- output  [7:0]                              m_axis_rx_tkeep,
+ output  [C_DATA_WIDTH-1:0]                             m_axis_rx_tdata,
+ output  [KEEP_WIDTH-1:0]                              m_axis_rx_tkeep,
  output                                     m_axis_rx_tlast,
  output                                     m_axis_rx_tvalid,
  input                                      m_axis_rx_tready,
@@ -73,7 +73,6 @@ module xilinx_x7_pcie_wrapper #(
  //------------------------------------------------//
  output wire  [31:0]  cfg_mgmt_do,
  output wire          cfg_mgmt_rd_wr_done,
-
  output wire  [15:0]  cfg_status,
  output wire  [15:0]  cfg_command,
  output wire  [15:0]  cfg_dstatus,
@@ -118,7 +117,6 @@ module xilinx_x7_pcie_wrapper #(
  input wire           cfg_pm_force_state_en,
  input wire   [1:0]   cfg_pm_force_state,
  input wire  [63:0]   cfg_dsn,
-
  //------------------------------------------------//
  // EP Only                                        //
  //------------------------------------------------//
@@ -134,14 +132,12 @@ module xilinx_x7_pcie_wrapper #(
  output wire          cfg_interrupt_msixfm,
  input wire           cfg_interrupt_stat,
  input wire   [4:0]   cfg_pciecap_interrupt_msgnum,
-
  output               cfg_to_turnoff,
  input wire           cfg_turnoff_ok,
  output wire  [7:0]   cfg_bus_number,
  output wire  [4:0]   cfg_device_number,
  output wire  [2:0]   cfg_function_number,
  input wire           cfg_pm_wake,
-
  //----------------------------------------------------------------------------------------------------------------//
  // 5. Physical Layer Control and Status (PL) Interface                                                            //
  //----------------------------------------------------------------------------------------------------------------//
@@ -185,7 +181,7 @@ module xilinx_x7_pcie_wrapper #(
  // 8. System(SYS) Interface                                                                                       //
  //----------------------------------------------------------------------------------------------------------------//
  input wire           sys_clk,
- input wire           sys_reset_n); 
+ input wire           sys_reset_n);
    // Wires used for external clocking connectivity
    wire                PIPE_PCLK_IN;
    wire                PIPE_RXUSRCLK_IN;
@@ -199,7 +195,6 @@ module xilinx_x7_pcie_wrapper #(
    wire [7:0]          PIPE_PCLK_SEL_OUT;
    wire                PIPE_GEN3_OUT;
    wire                PIPE_OOBCLK_IN;
-
    localparam USER_CLK_FREQ = 3;
    localparam USER_CLK2_DIV2 = "FALSE";
    localparam USERCLK2_FREQ = (USER_CLK2_DIV2 == "TRUE") ? (USER_CLK_FREQ == 4) ? 3 : (USER_CLK_FREQ == 3) ? 2 : USER_CLK_FREQ
@@ -235,8 +230,7 @@ module xilinx_x7_pcie_wrapper #(
             );
       end
    endgenerate
-
-  pcie_7x_0 #() pcie_7x_v2_1_i (
+  pcie_7x_0 #() pcie_7x_i (
       //----------------------------------------------------------------------------------------------------------------//
       // 1. PCI Express (pci_exp) Interface                                                                             //
       //----------------------------------------------------------------------------------------------------------------//
@@ -261,7 +255,6 @@ module xilinx_x7_pcie_wrapper #(
       .pipe_rxoutclk_out                         ( PIPE_RXOUTCLK_OUT ),
       .pipe_pclk_sel_out                         ( PIPE_PCLK_SEL_OUT ),
       .pipe_gen3_out                             ( PIPE_GEN3_OUT ),
-
       //----------------------------------------------------------------------------------------------------------------//
       // 3. AXI-S Interface                                                                                             //
       //----------------------------------------------------------------------------------------------------------------//
@@ -325,7 +318,6 @@ module xilinx_x7_pcie_wrapper #(
       .cfg_mgmt_wr_en                             ( cfg_mgmt_wr_en ),
       .cfg_mgmt_rd_en                             ( cfg_mgmt_rd_en ),
       .cfg_mgmt_wr_readonly                       ( cfg_mgmt_wr_readonly ),
-
       // Error Reporting Interface
       .cfg_err_ecrc                               ( cfg_err_ecrc ),
       .cfg_err_ur                                 ( cfg_err_ur ),
@@ -371,7 +363,6 @@ module xilinx_x7_pcie_wrapper #(
       .cfg_device_number                          ( cfg_device_number ),
       .cfg_function_number                        ( cfg_function_number ),
       .cfg_pm_wake                                ( cfg_pm_wake ),
-
       //------------------------------------------------//
       // RP Only                                        //
       //------------------------------------------------//
