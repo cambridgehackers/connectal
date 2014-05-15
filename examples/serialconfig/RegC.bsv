@@ -21,68 +21,54 @@
 
 // The Jtag state machine is copied from the Bluespec Small Examples Tap.bsv
 
-interface JtagReg#(type a);
+interface RegControl;
    method Action update();
    method Action capture();
    method Action shift(bit d);
+   interface ReadOnly#(bit) sout;
+endinterface
+
+interface RegC#(type a);
    interface Reg#(a) r;
-   interface ReadOnly#(bit) tdo;
+   interface RegControl ctl;
 endinterface
 
 // can I pass in an initial value for the register?
 
-module mkJtagReg(JtagReg#(a))
-   provisos(Bits#(a,asize), Max#(asize,32,32));
+module mkRegC(RegC#(a))
+   provisos(Bits#(a,asize), 
+      Add#(1,__a,asize),
+      PrimSelectable#(a, Bit#(1)));
    
    Reg#(a) dreg <- mkReg(?);
    Reg#(a) sreg <- mkReg(?);
    Reg#(bit) oreg <- mkReg(?);
    
-   method Action update ();
-      dreg <= sreg;
-   endmethod
+   interface RegControl ctl;
 
-   method Action capture ();
-      sreg <= dreg;
-   endmethod
+      method Action update ();
+	 dreg <= sreg;
+      endmethod
+
+      method Action capture ();
+	 sreg <= dreg;
+	 oreg <= dreg[0];
+      endmethod
    
-   method Action shift (bit d);
-      Bit#(asize) svalue = pack(sreg);
-      Bit#(asize) svalue2;
-      svalue2 = svalue >> 1;
-      svalue2[valueof(asize) - 1] = d;
-      sreg <= unpack(svalue2);
-      oreg <= svalue[0];
-   endmethod
+      method Action shift (bit d);
+	 Bit#(asize) svalue = pack(sreg);
+	 svalue = svalue >> 1;
+	 svalue[valueof(asize) - 1] = d;
+	 sreg <= unpack(svalue);
+	 oreg <= svalue[0];
+      endmethod
+
+   interface sout = regToReadOnly(oreg);
+
+   endinterface
    
    interface r = dreg;
-   interface tdo = regToReadOnly(oreg);
+
       
 endmodule
 
-
-module mkReadOnlyJtagReg#(a v)(JtagReg#(a))
-   provisos(Bits#(a,asize), Add#(1,__a,asize));
-   
-   Reg#(a) sreg <- mkReg(?);
-   Reg#(bit) oreg <- mkReg(?);
-   
-   method Action update ();
-
-   endmethod
-
-   method Action capture ();
-      sreg <= v;
-   endmethod
-   
-   method Action shift (bit d);
-      Bit#(asize) svalue = pack(sreg);
-      svalue = {d, svalue[(valueof(asize)-1):1]};
-      sreg <= unpack(svalue);
-      oreg <= svalue[0];
-   endmethod
-   
-   interface r = ?;
-   interface tdo = regToReadOnly(oreg);
-      
-endmodule

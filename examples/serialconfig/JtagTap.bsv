@@ -41,7 +41,7 @@ typedef enum {TapTestLogicReset,
               TapExit2IR,
 	      TapUpdateIR} TapState deriving (Bits, Eq);
 
-interface Tap;
+interface JtagTap;
    (* always_ready, always_enabled *) method Action tms(bit i);
    (* always_ready, always_enabled *) method Action tdi(bit i);
    (* always_ready, always_enabled *) method bit tdo();
@@ -77,7 +77,7 @@ function String getStateString( TapState st );
 endfunction
 
    
-module mkTap#(Bit#(32) id)(Tap);
+module mkJtagTap#(Bit#(32) id)(JtagTap);
    Wire#(bit) wtdi <- mkWire();
    Wire#(bit) wtdo <- mkWire();
    Wire#(bit) wtms <- mkWire();
@@ -140,7 +140,7 @@ module mkTap#(Bit#(32) id)(Tap);
    ////////////////////////////////////////////////////////
    method Action tdi( bit i );
       // write input directly to the tdi wire
-      wtdi._write( i );
+      wtdi <= i ;
    endmethod
 
    method bit    tdo();
@@ -150,7 +150,7 @@ module mkTap#(Bit#(32) id)(Tap);
 
    method Action tms( bit i );
       // write the state in
-      wtms._write(i);
+      wtms <= i;
    endmethod
 
    method TapState getstate();
