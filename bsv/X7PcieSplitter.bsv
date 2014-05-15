@@ -27,7 +27,7 @@ interface X7PcieSplitter#(numeric type lanes);
    interface PCIE_EXP#(lanes) pcie;
    (* always_ready *)
    method Bool isLinkUp();
-   method Bool isCalibrated();
+   //method Bool isCalibrated();
    interface Clock clock250;
    interface Reset reset250;
    interface Clock clock125;
