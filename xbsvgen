@@ -564,39 +564,53 @@ if __name__=='__main__':
         f.write('#include <stdlib.h>\n')
         return f
 
+    def create_bare_file(name):
+        fname = os.path.join(project_dir, 'jni', name)
+        f = util.createDirAndOpen(fname, 'w')
+        print "Writing file ",fname
+        return f
+
     generatedCFiles = []
 
     for i in swProxies:
         cppname = '%sProxy.cpp' % i.name
         hppname = '%sProxy.h' % i.name
+        offname = '%sProxyOffsets.h' % i.name
         hpp = create_cpp_file(hppname)
+        off = create_bare_file(offname)
         cpp = create_cpp_file(cppname)
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
         cpp.write('#include "%s"' % hppname)
+        cpp.write('\n#include "%s"' % offname)
         hpp.write('#include "%s.h"' % i.parentClass("portal"))
-        i.ind.emitCWrapperDeclaration(hpp, "ProxyStatus")
-        i.emitCProxyDeclaration(hpp, "Proxy")
+        i.ind.emitCWrapperDeclaration(hpp, off, "ProxyStatus")
+        i.emitCProxyDeclaration(hpp, off, "Proxy")
         i.ind.emitCWrapperImplementation(cpp, "ProxyStatus")
         i.emitCProxyImplementation(cpp, "Proxy")
         hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
         hpp.close();
         cpp.close();
+        off.close();
         generatedCFiles.append(cppname)
 
     for i in swWrappers:
         cppname = '%sWrapper.cpp' % i.name
         hppname = '%sWrapper.h' % i.name
+        offname = '%sWrapperOffsets.h' % i.name
         hpp = create_cpp_file(hppname)
+        off = create_bare_file(offname)
         cpp = create_cpp_file(cppname)
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
         cpp.write('#include "%s"' % hppname)
-        i.ind.emitCProxyDeclaration(hpp, "WrapperStatus")
-        i.emitCWrapperDeclaration(hpp, "Wrapper")
+        cpp.write('\n#include "%s"' % offname)
+        i.ind.emitCProxyDeclaration(hpp, off, "WrapperStatus")
+        i.emitCWrapperDeclaration(hpp, off, "Wrapper")
         i.ind.emitCProxyImplementation(cpp, "WrapperStatus")
         i.emitCWrapperImplementation(cpp, "Wrapper")
         hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
         hpp.close();
         cpp.close();
+        off.close();
         generatedCFiles.append(cppname)
     
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')

@@ -277,9 +277,11 @@ int PortalInternal::sendMessage(PortalMessage *msg)
     //addr[2] = 0xffffffff;
   }
 #endif
-  for (int i = msg->size()/4-1; i >= 0; i--)
+  for (int i = msg->size()/4-1; i >= 0; i--){
+    volatile unsigned int *ptr = (volatile unsigned int*)(((long)req_fifo_base) + msg->fifo_offset);
     // req_fifo_base is derived from dev_base, which is the address returned from mmap in PortalInternal::PortalInternal(int id)
-    WRITEL(this, req_fifo_base + msg->fifo_offset, buf[i]);
+    WRITEL(this, ptr, buf[i]);
+  }
   //uint64_t after_requestt = catch_timer(12);
   //print_dbg_request_intervals();
   //fprintf(stderr, "(%s) sendMessage\n", name);
