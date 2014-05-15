@@ -226,7 +226,6 @@ module vMkXilinx7PCIExpress#(PCIEParams params)(PCIE_X7#(lanes))
    default_reset rstn(sys_reset_n) = sys_reset_n;
    
    parameter PL_FAST_TRAIN = (params.fast_train_sim_only) ? "TRUE" : "FALSE";
-   parameter PCIE_EXT_CLK  = "TRUE";
    parameter BAR0 = 32'hFFF00004;
    parameter BAR1 = 32'hFFFFFFFF;
    parameter BAR2 = 32'hFFF00004;

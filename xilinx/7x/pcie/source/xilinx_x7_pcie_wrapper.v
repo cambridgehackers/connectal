@@ -5,7 +5,6 @@
 `endif
 module xilinx_x7_pcie_wrapper #(
                                 parameter            PL_FAST_TRAIN = "FALSE",
-                                parameter            PCIE_EXT_CLK  = "TRUE",
 // xbsv
 				parameter [31:0]  BAR0 = 32'hFFFF8000,
 				parameter [31:0]  BAR1 = 32'h00000000,
@@ -200,7 +199,6 @@ module xilinx_x7_pcie_wrapper #(
    localparam USERCLK2_FREQ = (USER_CLK2_DIV2 == "TRUE") ? (USER_CLK_FREQ == 4) ? 3 : (USER_CLK_FREQ == 3) ? 2 : USER_CLK_FREQ
                                                                                     : USER_CLK_FREQ;
    generate
-      if (PCIE_EXT_CLK == "TRUE") begin: ext_clk
          pcie_7x_0_pipe_clock #( .PCIE_ASYNC_EN                  ( "FALSE" ),     // PCIe async enable
                                    .PCIE_TXBUF_EN                  ( "FALSE" ),     // PCIe TX buffer enable for Gen1/Gen2 only
                                    .PCIE_LANE                      ( 6'h08 ),     // PCIe number of lanes
@@ -209,8 +207,7 @@ module xilinx_x7_pcie_wrapper #(
                                    .PCIE_USERCLK1_FREQ             ( USER_CLK_FREQ +1 ),     // PCIe user clock 1 frequency
                                    .PCIE_USERCLK2_FREQ             ( USERCLK2_FREQ +1 ),     // PCIe user clock 2 frequency
                                    .PCIE_DEBUG_MODE                ( 0 )
-                                   )
-         pipe_clock_i (
+                                   ) pipe_clock_i (
             //---------- Input -------------------------------------
             .CLK_CLK                        ( sys_clk ),
             .CLK_TXOUTCLK                   ( PIPE_TXOUTCLK_OUT ),     // Reference clock from lane 0
@@ -228,7 +225,6 @@ module xilinx_x7_pcie_wrapper #(
             .CLK_USERCLK2                   ( PIPE_USERCLK2_IN ),
             .CLK_MMCM_LOCK                  ( PIPE_MMCM_LOCK_IN )
             );
-      end
    endgenerate
   pcie_7x_0 #() pcie_7x_i (
       //----------------------------------------------------------------------------------------------------------------//
