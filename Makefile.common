@@ -1,8 +1,23 @@
+#################################################################################################
+
+## use "make gen.board" to generate the build directory
+gen.%:
+	make BOARD=$* gentarget
+
+build.%: generate.%
+	make -C $* BOARD=$* all
+
+run.%:
+	make -C $* BOARD=$* run
+
+%.gdb:
+	make XBSV_DEBUG=1 $*
+
 ifeq ($(origin XBSVDIR),undefined)
 XBSVDIR=../..
 endif
 
-all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe xsim xsimrun: gen
+all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe xsim xsimrun: gentarget
 	make -C $(BOARD) $@
 
 ifeq ($(origin TOP),undefined)
@@ -36,9 +51,20 @@ ifeq ($(origin TOP),undefined)
     endif
 endif
 
-gen::
+ifeq ($(USE_PRINTF),1)
+PRINTF_EXTRA=$(BOARD)/generatedbsv/DisplayInd.bsv
+else
+PRINTF_EXTRA=$(XBSVDIR)/bsv/DisplayInd.bsv
+endif
+
+gentarget::
+	[ -e $(BOARD)/generatedbsv ] || mkdir -p $(BOARD)/generatedbsv
+	[ -e $(BOARD)/jni ] || mkdir -p $(BOARD)/jni
+ifeq ($(USE_PRINTF),1)
+	$(XBSVDIR)/scripts/preprocess_trace.py $(BOARD) $(BSVFILES)
+endif
 	$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
-        -t $(TOP) $(XBSVFLAGS) $(BSVFILES)
+        -t $(TOP) $(XBSVFLAGS) $(BSVFILES) $(PRINTF_EXTRA)

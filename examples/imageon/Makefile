@@ -20,9 +20,7 @@ TOP=ImageonPcieTop.bsv
 MKTOP=mkImageonPcieTop
 endif
 
-gen:: pregen
-
-pregen: imageon-$(BOARD).xdc
+gentarget:: imageon-$(BOARD).xdc
 
 imageon-$(BOARD).xdc: imageon-fmc.json ../../boardinfo/$(BOARD).json
 	../../scripts/generate-constraints.py ../../boardinfo/$(BOARD).json imageon-fmc.json > imageon-$(BOARD).xdc

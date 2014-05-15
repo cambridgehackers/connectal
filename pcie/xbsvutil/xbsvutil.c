@@ -94,23 +94,10 @@ static int process(const char* file, tMode mode, unsigned int strict)
       printf("Found BlueNoC device at %s\n", file);
       printf("  Board number:     %d\n", board_info.board_number);
       printf("  Portal number:    %d\n", board_info.portal_number);
-      if (board_info.is_active) {
-        time_t t = board_info.timestamp;
-        printf("  BlueNoC revision: %d.%d\n", board_info.major_rev, board_info.minor_rev);
-        printf("  Build number:     %d\n", board_info.build);
-        printf("  Timestamp:        %s", ctime(&t));
-        printf("  Network width:    %d bytes per beat\n", board_info.bytes_per_beat);
-        printf("  Content ID:       %llx\n", board_info.content_id);
-      } else {
-        printf("  *** BOARD IS DEACTIVATED ***\n");
-      }
       ret = 1;
       break;
     }
     case RESET: {
-      if (!board_info.is_active) {
-        printf("Cannot reset portals at %s because it is deactivated\n", file);
-      } else {
         res = ioctl(fd,BNOC_SOFT_RESET);
         if (res == -1) {
           perror("reset ioctl");
@@ -119,7 +106,6 @@ static int process(const char* file, tMode mode, unsigned int strict)
           printf("Reset portals at %s\n", file);
           ret = 1;
         }
-      }
       break;
     }
   case PORTAL: {
