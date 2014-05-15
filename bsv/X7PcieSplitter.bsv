@@ -16,6 +16,7 @@ import TieOff          :: *;
 import XilinxCells     :: *;
 import PcieSplitter :: *;
 import XbsvXilinx7Pcie :: *;
+import PcieConnection :: *;
 import AxiCsr          :: *;
 //import XbsvXilinx7DDR3      :: *;
 

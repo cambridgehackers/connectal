@@ -143,7 +143,6 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
     wire                        clk_250mhz;
     wire                        userclk1;
     reg                         pclk_sel = 1'd0;
-    wire                        pclk_1;
     BUFG txoutclk_i ( .I (PIPE_TXOUTCLK_OUT), .O (refclk) );
     MMCME2_ADV #( .BANDWIDTH("OPTIMIZED"), .CLKOUT4_CASCADE("FALSE"),
         .COMPENSATION("ZHOLD"), .STARTUP_WAIT("FALSE"), .DIVCLK_DIVIDE(1),
@@ -163,11 +162,10 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
         .PSCLK(1'd0), .PSEN(1'd0), .PSINCDEC(1'd0));
     BUFGCTRL pclk_i1 ( .CE0 (1'd1), .CE1 (1'd1),
         .I0 (clk_125mhz), .I1 (clk_250mhz), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
-        .S0 (~pclk_sel), .S1 ( pclk_sel), .O (pclk_1));
+        .S0 (~pclk_sel), .S1 ( pclk_sel), .O (PIPE_PCLK_IN));
     BUFG dclk_i ( .I (clk_125mhz), .O (PIPE_DCLK_IN));
     BUFG usrclk1_i1 ( .I (userclk1), .O (PIPE_USERCLK1_IN));
-    assign PIPE_PCLK_IN      = pclk_1;
-    always @ (posedge pclk_1)
+    always @ (posedge PIPE_PCLK_IN)
     begin
         pclk_sel_reg1 <= PIPE_PCLK_SEL_OUT;
         pclk_sel_reg2 <= pclk_sel_reg1;
@@ -178,7 +176,6 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
         else
             pclk_sel <= pclk_sel;
     end
-//jcajca
   pcie_7x_0 #() pcie_7x_i(
       .pci_exp_txn ( pci_exp_txn ), .pci_exp_txp ( pci_exp_txp ),
       .pci_exp_rxn ( pci_exp_rxn ), .pci_exp_rxp ( pci_exp_rxp ),
