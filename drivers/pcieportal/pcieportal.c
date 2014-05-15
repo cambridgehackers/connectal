@@ -51,10 +51,10 @@
 #define CSR_TLPFROMPCIEWRADDRREG      ( 792 << 2)
 #define CSR_TLPTOPCIEWRADDRREG        ( 793 << 2)
 #define CSR_RESETISASSERTED           ( 795 << 2)
-#define CSR_MSIX_ADDR_LO              (4096 << 2)
-#define CSR_MSIX_ADDR_HI              (4097 << 2)
-#define CSR_MSIX_MSG_DATA             (4098 << 2)
-#define CSR_MSIX_MASKED               (4099 << 2)
+#define CSR_MSIX_ADDR_LO              (1024 << 2)
+#define CSR_MSIX_ADDR_HI              (1025 << 2)
+#define CSR_MSIX_MSG_DATA             (1026 << 2)
+#define CSR_MSIX_MASKED               (1027 << 2)
 
 /*
  * Per-device data
