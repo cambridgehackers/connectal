@@ -577,7 +577,7 @@ if __name__=='__main__':
     (options, args) = parser.parse_args()
     print('KK', options, args, file=sys.stderr)
     if options.filename is None or len(args) == 0 or options.ifname is None or options.ifprefix is None:
-        print('Missing "--o" option or missing input filenames.  Run " importbvi.py -h " to see available options')
+        print('Missing "--o" option, missing input filenames, missing ifname or missing ifprefix.  Run " importbvi.py -h " to see available options')
         sys.exit(1)
     options.outfile = open(options.filename, 'w')
     if options.notfactor == None:
