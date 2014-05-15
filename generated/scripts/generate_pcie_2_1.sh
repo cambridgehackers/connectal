@@ -5,7 +5,7 @@ scripts/importbvi.py -o PCIE_2_1.bsv -C PCIE_2_1 -P PCIE -I PcieIf \
     -f LL2 -f PL2 -f TL2 -f PLLINK -f DBG -f DRP -f MIM -f PL -f TRN \
     -f CFGAER -f CFGCOMMAND -f CFGDEV -f CFGPMR -f CFGDS -f CFGERR \
     -f CFGFORCE -f CFGINTERRUPT -f CFGLINK -f CFGMGMT -f CFGMSG \
-    -f CFGPM -f CFGROOT -f CFGSUBSYS -f CFGTRANSACTION \
+    -f CFGPM -f CFGROOT -f CFGSUBSYS -f CFGTRANS \
     -e C_DATA_WIDTH:64 \
     -e "CFG_VEND_ID:16'h1BE7" -e "CFG_DEV_ID:16'hB100" -e "CFG_REV_ID:8'h00" \
     -e "CFG_SUBSYS_VEND_ID:16'h1BE7" -e "CFG_SUBSYS_ID:16'hA705" \
@@ -14,13 +14,7 @@ scripts/importbvi.py -o PCIE_2_1.bsv -C PCIE_2_1 -P PCIE -I PcieIf \
     -e 'LL_REPLAY_TIMEOUT_EN:"TRUE"' -e "LL_REPLAY_TIMEOUT:15'h001a" -e "LTSSM_MAX_LINK_WIDTH:6'h8" \
     -e "MSIX_CAP_PBA_OFFSET:29'ha00" -e "MSIX_CAP_TABLE_OFFSET:29'h800" \
     -e "MSIX_CAP_TABLE_SIZE:11'h003" -e 'MSIX_CAP_ON:"TRUE"' \
-    -e "PCIE_CAP_NEXTPTR:8'h9C" -e PCIE_EXT_CLK:PCIE_EXT_CLK \
+    -e "PCIE_CAP_NEXTPTR:8'h9C" \
     -e PIPE_PIPELINE_STAGES:1 -e PL_FAST_TRAIN:PL_FAST_TRAIN -e USER_CLK_FREQ:3 \
     -e BAR0:BAR0 -e BAR1:BAR1 -e BAR2:BAR2 -e BAR3:BAR3 -e BAR4:BAR4 -e BAR5:BAR5 \
     ../import_components/Xilinx/Vivado/2013.2/data/parts/xilinx/zynq/zynq.lib
-
-#    -e "BAR0:32'hFFF00004" -e "BAR1:32'hFFFFFFFF" -e "BAR2:32'hFFF00004" -e "BAR3:32'hFFFFFFFF" \
-#    --param=PL_FAST_TRAIN --param=PCIE_EXT_CLK \
-#    --param=BAR0 --param=BAR1 --param=BAR2 --param=BAR3 \
-
-

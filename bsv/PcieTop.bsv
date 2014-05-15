@@ -26,6 +26,7 @@ import Connectable       :: *;
 import Xilinx            :: *;
 import PcieSplitter      :: *;
 import X7PcieSplitter    :: *;
+import PCIEWRAPPER       :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
@@ -47,7 +48,7 @@ typedef 8 NumLeds;
 
 interface PcieTop#(type ipins);
    (* prefix="PCIE" *)
-   interface PCIE_EXP#(PcieLanes) pcie;
+   interface PciewrapPci_exp#(PcieLanes) pcie;
    (* always_ready *)
    method Bit#(NumLeds) leds();
    interface ipins       pins;

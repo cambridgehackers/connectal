@@ -71,8 +71,6 @@ public:
     %(className)s(int id, PortalPoller *poller = 0);
 '''
 proxyClassSuffixTemplate='''
-%(reqChanNums)s
-%(reqFifoOffsets)s
 };
 '''
 
@@ -86,9 +84,6 @@ public:
 wrapperClassSuffixTemplate='''
 protected:
     virtual int handleMessage(unsigned int channel);
-public:
-%(indChanNums)s
-%(indFifoOffsets)s
 };
 '''
 
@@ -376,8 +371,8 @@ class MethodMixin:
             'paramSetters': ''.join(paramSetters),
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
-            'methodChannelOffset': '%s_CHAN_NUM' % cName(self.name),
-            'methodFifoOffset': '%s_FIFO_OFFSET' % cName(self.name),
+            'methodChannelOffset': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
+            'methodFifoOffset': 'FIFO_OFFSET_%s_%s' % (className, cName(self.name)),
             # if message is empty, we still send an int of padding
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
@@ -481,45 +476,45 @@ class InterfaceMixin:
     def hasPutFailed(self):
 	rv = True in [d.name == putFailedMethodName for d in self.decls]
 	return rv
-    def emitCProxyDeclaration(self, f, suffix, indentation=0, namespace=''):
+    def global_name(self, s, suffix):
+        return '%s%s_%s' % (cName(self.name), suffix, s)
+    def emitCProxyDeclaration(self, f, of, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
         statusDecl = "%s%s *proxyStatus;" % (cName(self.name), 'ProxyStatus')
 	reqChanNums = []
 	reqFifoOffsets = []
+        for d in self.decls:
+            reqChanNums.append('#define CHAN_NUM_%s %d\n' % (self.global_name(d.name, suffix), d.channelNumber))
 	for d in self.decls:
-            reqChanNums.append('    const static int %s_CHAN_NUM=%d;\n' % (d.name, d.channelNumber))
-	for d in self.decls:
-            reqFifoOffsets.append('    const static int %s_FIFO_OFFSET= %s_CHAN_NUM * (256/4);\n' % (d.name, d.name))
+            reqFifoOffsets.append('#define FIFO_OFFSET_%s (CHAN_NUM_%s * 256)\n' % (self.global_name(d.name, suffix), self.global_name(d.name, suffix)))
         subs = {'className': className,
                 'namespace': namespace,
 		'statusDecl' : '' if self.hasPutFailed() else statusDecl,
-                'parentClass': self.parentClass('PortalInternal'),
-		'reqChanNums' : ''.join(reqChanNums),
-		'reqFifoOffsets' : ''.join(reqFifoOffsets)}
+                'parentClass': self.parentClass('PortalInternal')}
         f.write(proxyClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitCDeclaration(f, True, indentation + 4, namespace)
-
-	
         f.write(proxyClassSuffixTemplate % subs)
-    def emitCWrapperDeclaration(self, f, suffix, indentation=0, namespace=''):
+	of.write(''.join(reqChanNums))
+	of.write(''.join(reqFifoOffsets))
+    def emitCWrapperDeclaration(self, f, of, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
         indent(f, indentation)
 	indChanNums = []
 	indFifoOffsets = []
 	for d in self.decls:
-            indChanNums.append('    const static int %s_CHAN_NUM=%d;\n' % (cName(d.name),d.channelNumber));
+            indChanNums.append('#define CHAN_NUM_%s %d\n' % (self.global_name(cName(d.name), suffix),d.channelNumber));
 	for d in self.decls:
-            indFifoOffsets.append('    const static int %s_FIFO_OFFSET= %s_CHAN_NUM * 256;\n' % (d.name, d.name))
+            indFifoOffsets.append('#define FIFO_OFFSET_%s (CHAN_NUM_%s * 256)\n' % (self.global_name(d.name, suffix), self.global_name(d.name, suffix)))
         subs = {'className': className,
                 'namespace': namespace,
-                'parentClass': self.parentClass('Portal'),
-		'indChanNums' : ''.join(indChanNums),
-		'indFifoOffsets' : ''.join(indFifoOffsets)}
+                'parentClass': self.parentClass('Portal')}
         f.write(wrapperClassPrefixTemplate % subs)
         for d in self.decls:
             d.emitCDeclaration(f, False, indentation + 4, namespace)
         f.write(wrapperClassSuffixTemplate % subs)
+	of.write(''.join(indChanNums))
+	of.write(''.join(indFifoOffsets))
     def emitCProxyImplementation(self, f,  suffix, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
 	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')
@@ -538,8 +533,8 @@ class InterfaceMixin:
                          'className': className,
 			 'putFailedMethodName' : putFailedMethodName,
                          'parentClass': self.parentClass('Portal'),
-                         'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': '%s_CHAN_NUM' % cName(d.name),
-										'fifoOffset': '%s_FIFO_OFFSET' % cName(d.name),
+                         'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': 'CHAN_NUM_%s' % self.global_name(cName(d.name), suffix),
+										'fifoOffset': 'FIFO_OFFSET_%s' % self.global_name(cName(d.name), suffix),
                                                                                 'msg': '%s%sMSG' % (className, d.name)}
                                                      for d in self.decls 
                                                      if d.type == 'Method' and d.return_type.name == 'Action']),
