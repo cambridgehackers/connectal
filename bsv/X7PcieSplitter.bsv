@@ -53,7 +53,6 @@ endinterface
 module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 		       , Clock sys_clk_p,    Clock sys_clk_n
 		       , Reset pci_sys_reset
-                       , Bit#(64) contentId
 		       )
 		       (X7PcieSplitter#(lanes))
    provisos(Add#(1,_,lanes), XbsvXilinx7Pcie::SelectXilinx7PCIE#(lanes));
@@ -125,41 +124,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    // epClock125 domain.
 
    Bool link_is_up = _ep.trn.link_up();
-   UInt#(13) max_read_req_bytes_250       = 128 << _ep.cfg.dcommand[14:12];
-   UInt#(13) max_payload_bytes_250        = 128 << _ep.cfg.dcommand[7:5];
    UInt#(8)  read_completion_boundary_250 = 64 << _ep.cfg.lcommand[3];
-   Bool      msix_enable_250              = (_ep.cfg_interrupt.msixenable() == 1);
-   Bool      msix_masked_250              = (_ep.cfg_interrupt.msixfm()     == 1);
-
-   CrossingReg#(UInt#(13)) max_rd_req_cr  <- mkNullCrossingReg(epClock125, 128,   clocked_by epClock250, reset_by epReset250);
-   CrossingReg#(UInt#(13)) max_payload_cr <- mkNullCrossingReg(epClock125, 128,   clocked_by epClock250, reset_by epReset250);
-   CrossingReg#(UInt#(8))  rcb_cr         <- mkNullCrossingReg(epClock125, 128,   clocked_by epClock250, reset_by epReset250);
-   CrossingReg#(Bool)      msix_enable_cr <- mkNullCrossingReg(epClock125, False, clocked_by epClock250, reset_by epReset250);
-   CrossingReg#(Bool)      msix_masked_cr <- mkNullCrossingReg(epClock125, True,  clocked_by epClock250, reset_by epReset250);
-
-   Reg#(UInt#(13)) max_read_req_bytes <- mkReg(128,   clocked_by epClock125, reset_by epReset125);
-   Reg#(UInt#(13)) max_payload_bytes  <- mkReg(128,   clocked_by epClock125, reset_by epReset125);
-   Reg#(Bit#(7))   rcb_mask           <- mkReg(7'h3f, clocked_by epClock125, reset_by epReset125);
-   Reg#(Bool)      msix_enable        <- mkReg(False, clocked_by epClock125, reset_by epReset125);
-   Reg#(Bool)      msix_masked        <- mkReg(True,  clocked_by epClock125, reset_by epReset125);
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule cross_config_values;
-      max_rd_req_cr  <= max_read_req_bytes_250;
-      max_payload_cr <= max_payload_bytes_250;
-      rcb_cr         <= read_completion_boundary_250;
-      msix_enable_cr <= msix_enable_250;
-      msix_masked_cr <= msix_masked_250;
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule register_config_values;
-      max_read_req_bytes <= max_rd_req_cr.crossed();
-      max_payload_bytes  <= max_payload_cr.crossed();
-      rcb_mask           <= (rcb_cr.crossed() == 64) ? 7'h3f : 7'h7f;
-      msix_enable        <= msix_enable_cr.crossed();
-      msix_masked        <= msix_masked_cr.crossed();
-   endrule
 
    // setup PCIe interrupt for MSI-X
    // this rule executes in the epClock250 domain
@@ -171,16 +136,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    endrule: intr_ifc_ctl
 
    // Build the PCIe-to-AXI bridge
-   PcieSplitter#(BPB)  bridge <- mkPcieSplitter( contentId
-						, my_id
-						, max_read_req_bytes
-						, max_payload_bytes
-						, rcb_mask
-						, msix_enable
-						, msix_masked
-						, False // no MSI, only MSI-X
-						, clocked_by epClock125, reset_by epReset125
-						);
+   PcieSplitter#(BPB)  bridge <- mkPcieSplitter(my_id, clocked_by epClock125, reset_by epReset125);
    mkConnectionWithClocks(_ep.trn_rx, tpl_2(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
    mkConnectionWithClocks(_ep.trn_tx, tpl_1(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
 

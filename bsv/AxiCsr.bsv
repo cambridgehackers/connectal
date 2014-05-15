@@ -74,14 +74,7 @@ endinterface: AxiControlAndStatusRegs
 // accessing the control and status registers. It defines the
 // registers, the address map, and how the registers respond to reads
 // and writes.
-module mkAxiControlAndStatusRegs#( Bit#(64)  board_content_id
-				  , PciId     my_id
-				  , UInt#(13) max_read_req_bytes
-				  , UInt#(13) max_payload_bytes
-				  , Reg#(Bit#(32)) tlp_portal_drop_count
-				  , Reg#(Bit#(32)) tlp_axi_drop_count
-				  , MakeResetIfc portalResetIfc
-				  )
+module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc)
    (AxiControlAndStatusRegs);
 
    // Utility for module creating all of the storage for a single MSIX
@@ -97,10 +90,6 @@ module mkAxiControlAndStatusRegs#( Bit#(64)  board_content_id
       interface msg_data = _msg_data;
       interface masked   = _masked;
    endmodule: mkMSIXEntry
-
-   // Revision information for this implementation
-   Integer major_rev = 1;
-   Integer minor_rev = 0;
 
    // Registers and their default values
    Vector#(16,MSIX_Entry) msix_entry              <- replicateM(mkMSIXEntry);
@@ -164,12 +153,6 @@ module mkAxiControlAndStatusRegs#( Bit#(64)  board_content_id
          // board identification
          0: return 32'h65756c42; // Blue
          1: return 32'h63657073; // spec
-         2: return fromInteger(minor_rev);
-         3: return fromInteger(major_rev);
-         4: return pack(buildVersion);
-         5: return pack(epochTime);
-         8: return board_content_id[31:0];
-         9: return board_content_id[63:32];
 	 
 	 768: return extend(bramMuxRdAddrReg);
 	 774: return fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
@@ -184,9 +167,6 @@ module mkAxiControlAndStatusRegs#( Bit#(64)  board_content_id
 	 793: return extend(  toPcieTraceBramWrAddrReg);
 	 794: return extend(tlpTraceLimitReg);
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
-
-	 900: return tlp_portal_drop_count;
-	 901: return tlp_axi_drop_count;
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
          // 4-entry MSIx table

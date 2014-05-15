@@ -65,9 +65,6 @@ interface TLPDispatcher;
    interface Get#(TLPData#(16)) tlp_out_to_config;
    interface Get#(TLPData#(16)) tlp_out_to_portal;
    interface Get#(TLPData#(16)) tlp_out_to_axi;
-
-   interface Reg#(Bit#(32)) tlp_portal_drop_count;
-   interface Reg#(Bit#(32)) tlp_axi_drop_count;
 endinterface: TLPDispatcher
 
 (* synthesize *)
@@ -81,9 +78,6 @@ module mkTLPDispatcher(TLPDispatcher);
    Reg#(Bool) route_to_cfg <- mkReg(False);
    Reg#(Bool) route_to_portal <- mkReg(False);
    Reg#(Bool) route_to_axi <- mkReg(False);
-
-   Reg#(Bit#(32)) tlp_portal_drop_count_reg <- mkReg(0);
-   Reg#(Bit#(32)) tlp_axi_drop_count_reg <- mkReg(0);
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
@@ -134,9 +128,6 @@ module mkTLPDispatcher(TLPDispatcher);
                if (!tlp.eof)
                   route_to_portal <= True;
             end
-	    else begin
-	       tlp_portal_drop_count_reg <= tlp_portal_drop_count_reg + 1;
-	    end
          end
 	 else if (is_axi_completion) begin
             // send to AXI interface if it will accept
@@ -146,9 +137,6 @@ module mkTLPDispatcher(TLPDispatcher);
                if (!tlp.eof)
                   route_to_axi <= True;
             end
-	    else begin
-	       tlp_axi_drop_count_reg <= tlp_axi_drop_count_reg + 1;
-	    end
 	 end
          else begin
             // unknown packet type -- just discard it
@@ -305,16 +293,7 @@ module mkTLPArbiter(TLPArbiter);
 endmodule
 
 // The PCIe-to-AXI bridge puts all of the elements together
-module mkPcieSplitter#( Bit#(64)  board_content_id
-			 , PciId     my_id
-			 , UInt#(13) max_read_req_bytes
-			 , UInt#(13) max_payload_bytes
-			 , Bit#(7)   rcb_mask
-			 , Bool      msix_enabled
-			 , Bool      msix_mask_all_intr
-			 , Bool      msi_enabled
-			 )
-			 (PcieSplitter#(bpb))
+module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
    provisos( Add#(1, __1, TDiv#(bpb,4))
            // the compiler should be able to figure these out ...
            , Log#(TAdd#(1,bpb), TLog#(TAdd#(bpb,1)))
@@ -331,14 +310,7 @@ module mkPcieSplitter#( Bit#(64)  board_content_id
 
    TLPDispatcher        dispatcher <- mkTLPDispatcher();
    TLPArbiter           arbiter    <- mkTLPArbiter();
-   AxiControlAndStatusRegs csr     <- mkAxiControlAndStatusRegs( board_content_id
-								, my_id
-								, max_read_req_bytes
-								, max_payload_bytes
-								, dispatcher.tlp_portal_drop_count
-								, dispatcher.tlp_axi_drop_count
-								, portalResetIfc
-								);
+   AxiControlAndStatusRegs csr     <- mkAxiControlAndStatusRegs(portalResetIfc);
    AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(my_id);
    mkConnection(axiMasterEngine.master, csr.slave);
 
