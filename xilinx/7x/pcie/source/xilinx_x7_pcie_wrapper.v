@@ -3,40 +3,18 @@
 `else
  `define BSV_ASSIGNMENT_DELAY
 `endif
-module xilinx_x7_pcie_wrapper #(
-                                parameter            PL_FAST_TRAIN = "FALSE",
-// xbsv
-				parameter [31:0]  BAR0 = 32'hFFFF8000,
-				parameter [31:0]  BAR1 = 32'h00000000,
-				parameter [31:0]  BAR2 = 32'h00000000,
-				parameter [31:0]  BAR3 = 32'h00000000,
-				parameter [31:0]  BAR4 = 32'h00000000,
-				parameter [31:0]  BAR5 = 32'h00000000,
-                                parameter         PCIE_GT_DEVICE = "GTX",
-				parameter [5:0]   LINK_CAP_MAX_LINK_WIDTH = 6'd8,
-				parameter C_DATA_WIDTH        = 64, // RX/TX interface data width
+module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX interface data width
 				parameter KEEP_WIDTH          = C_DATA_WIDTH / 8 // TSTRB width
-// xbsv
                                 )
 (
- //----------------------------------------------------------------------------------------------------------------//
- // 1. PCI Express (pci_exp) Interface                                                                             //
- //----------------------------------------------------------------------------------------------------------------//
- // Tx
  output [7:0]                                pci_exp_txn,
  output [7:0]                                pci_exp_txp,
- // Rx
  input  [7:0]                                pci_exp_rxn,
  input  [7:0]                                pci_exp_rxp,
- //----------------------------------------------------------------------------------------------------------------//
- // 3. AXI-S Interface                                                                                             //
- //----------------------------------------------------------------------------------------------------------------//
- // Common
  output                                     user_clk_out,
  output wire                                user_reset_out,
  output wire                                user_lnk_up,
  output wire                                user_app_rdy,
- // Tx
  output  [5:0]                              tx_buf_av,
  output                                     tx_err_drop,
  output                                     tx_cfg_req,
@@ -47,7 +25,6 @@ module xilinx_x7_pcie_wrapper #(
  input                                      s_axis_tx_tlast,
  input                                      s_axis_tx_tvalid,
  input                                      tx_cfg_gnt,
- // Rx
  output  [C_DATA_WIDTH-1:0]                             m_axis_rx_tdata,
  output  [KEEP_WIDTH-1:0]                              m_axis_rx_tkeep,
  output                                     m_axis_rx_tlast,
@@ -56,7 +33,6 @@ module xilinx_x7_pcie_wrapper #(
  output  [21:0]                             m_axis_rx_tuser,
  input                                      rx_np_ok,
  input                                      rx_np_req,
- // Flow Control
  output  [11:0]                             fc_cpld,
  output  [7:0]                              fc_cplh,
  output  [11:0]                             fc_npd,
@@ -64,12 +40,6 @@ module xilinx_x7_pcie_wrapper #(
  output  [11:0]                             fc_pd,
  output  [7:0]                              fc_ph,
  input   [2:0]                              fc_sel,
- //----------------------------------------------------------------------------------------------------------------//
- // 4. Configuration (CFG) Interface                                                                               //
- //----------------------------------------------------------------------------------------------------------------//
- //------------------------------------------------//
- // EP and RP                                      //
- //------------------------------------------------//
  output wire  [31:0]  cfg_mgmt_do,
  output wire          cfg_mgmt_rd_wr_done,
  output wire  [15:0]  cfg_status,
@@ -84,14 +54,12 @@ module xilinx_x7_pcie_wrapper #(
  output wire  [1:0]   cfg_pmcsr_powerstate,
  output wire          cfg_pmcsr_pme_status,
  output wire          cfg_received_func_lvl_rst,
- // Management Interface
  input wire   [31:0]  cfg_mgmt_di,
  input wire   [3:0]   cfg_mgmt_byte_en,
  input wire   [9:0]   cfg_mgmt_dwaddr,
  input wire           cfg_mgmt_wr_en,
  input wire           cfg_mgmt_rd_en,
  input wire           cfg_mgmt_wr_readonly,
- // Error Reporting Interface
  input wire           cfg_err_ecrc,
  input wire           cfg_err_ur,
  input wire           cfg_err_cpl_timeout,
@@ -116,10 +84,6 @@ module xilinx_x7_pcie_wrapper #(
  input wire           cfg_pm_force_state_en,
  input wire   [1:0]   cfg_pm_force_state,
  input wire  [63:0]   cfg_dsn,
- //------------------------------------------------//
- // EP Only                                        //
- //------------------------------------------------//
- // Interrupt Interface Signals
  input wire           cfg_interrupt,
  output wire          cfg_interrupt_rdy,
  input wire           cfg_interrupt_assert,
@@ -137,12 +101,6 @@ module xilinx_x7_pcie_wrapper #(
  output wire  [4:0]   cfg_device_number,
  output wire  [2:0]   cfg_function_number,
  input wire           cfg_pm_wake,
- //----------------------------------------------------------------------------------------------------------------//
- // 5. Physical Layer Control and Status (PL) Interface                                                            //
- //----------------------------------------------------------------------------------------------------------------//
- //------------------------------------------------//
- // EP and RP                                      //
- //------------------------------------------------//
  input wire   [1:0]   pl_directed_link_change,
  input wire   [1:0]   pl_directed_link_width,
  input wire           pl_directed_link_speed,
@@ -160,25 +118,13 @@ module xilinx_x7_pcie_wrapper #(
  output wire          pl_link_partner_gen2_supported,
  output wire  [2:0]   pl_initial_link_width,
  output wire          pl_directed_change_done,
- //------------------------------------------------//
- // EP Only                                        //
- //------------------------------------------------//
  output wire          pl_received_hot_rst,
- //----------------------------------------------------------------------------------------------------------------//
- // 6. AER interface                                                                                               //
- //----------------------------------------------------------------------------------------------------------------//
  input wire [127:0]   cfg_err_aer_headerlog,
  input wire   [4:0]   cfg_aer_interrupt_msgnum,
  output wire          cfg_err_aer_headerlog_set,
  output wire          cfg_aer_ecrc_check_en,
  output wire          cfg_aer_ecrc_gen_en,
- //----------------------------------------------------------------------------------------------------------------//
- // 7. VC interface                                                                                                //
- //----------------------------------------------------------------------------------------------------------------//
  output wire [6:0]    cfg_vc_tcvc_map,
- //----------------------------------------------------------------------------------------------------------------//
- // 8. System(SYS) Interface                                                                                       //
- //----------------------------------------------------------------------------------------------------------------//
  input wire           sys_clk,
  input wire           sys_reset_n);
    // Wires used for external clocking connectivity
@@ -195,27 +141,15 @@ module xilinx_x7_pcie_wrapper #(
    wire                PIPE_GEN3_OUT;
    wire                PIPE_OOBCLK_IN;
    localparam USER_CLK_FREQ = 3;
-   localparam USER_CLK2_DIV2 = "FALSE";
-   localparam USERCLK2_FREQ = (USER_CLK2_DIV2 == "TRUE") ? (USER_CLK_FREQ == 4) ? 3 : (USER_CLK_FREQ == 3) ? 2 : USER_CLK_FREQ
-                                                                                    : USER_CLK_FREQ;
-   generate
-         pcie_7x_0_pipe_clock #( .PCIE_ASYNC_EN                  ( "FALSE" ),     // PCIe async enable
-                                   .PCIE_TXBUF_EN                  ( "FALSE" ),     // PCIe TX buffer enable for Gen1/Gen2 only
-                                   .PCIE_LANE                      ( 6'h08 ),     // PCIe number of lanes
-                                   .PCIE_LINK_SPEED                ( 3 ),
-                                   .PCIE_REFCLK_FREQ               ( 0 ),     // PCIe reference clock frequency
-                                   .PCIE_USERCLK1_FREQ             ( USER_CLK_FREQ +1 ),     // PCIe user clock 1 frequency
-                                   .PCIE_USERCLK2_FREQ             ( USERCLK2_FREQ +1 ),     // PCIe user clock 2 frequency
-                                   .PCIE_DEBUG_MODE                ( 0 )
-                                   ) pipe_clock_i (
-            //---------- Input -------------------------------------
+  pcie_7x_0_foo_pipe_clock #(.PCIE_LANE         ( 6'h08 ),     // PCIe number of lanes
+                   .PCIE_USERCLK1_FREQ ( USER_CLK_FREQ +1 ),     // PCIe user clock 1 frequency
+                   .PCIE_USERCLK2_FREQ ( USER_CLK_FREQ +1 )     // PCIe user clock 2 frequency
+                   ) pipe_clock_i (
             .CLK_CLK                        ( sys_clk ),
             .CLK_TXOUTCLK                   ( PIPE_TXOUTCLK_OUT ),     // Reference clock from lane 0
             .CLK_RXOUTCLK_IN                ( PIPE_RXOUTCLK_OUT ),
-            .CLK_RST_N                      ( 1'b1 ),
             .CLK_PCLK_SEL                   ( PIPE_PCLK_SEL_OUT ),
             .CLK_GEN3                       ( PIPE_GEN3_OUT ),
-            //---------- Output ------------------------------------
             .CLK_PCLK                       ( PIPE_PCLK_IN ),
             .CLK_RXUSRCLK                   ( PIPE_RXUSRCLK_IN ),
             .CLK_RXOUTCLK_OUT               ( PIPE_RXOUTCLK_IN ),
@@ -223,22 +157,12 @@ module xilinx_x7_pcie_wrapper #(
             .CLK_OOBCLK                     ( PIPE_OOBCLK_IN ),
             .CLK_USERCLK1                   ( PIPE_USERCLK1_IN ),
             .CLK_USERCLK2                   ( PIPE_USERCLK2_IN ),
-            .CLK_MMCM_LOCK                  ( PIPE_MMCM_LOCK_IN )
-            );
-   endgenerate
+            .CLK_MMCM_LOCK                  ( PIPE_MMCM_LOCK_IN ));
   pcie_7x_0 #() pcie_7x_i (
-      //----------------------------------------------------------------------------------------------------------------//
-      // 1. PCI Express (pci_exp) Interface                                                                             //
-      //----------------------------------------------------------------------------------------------------------------//
-      // Tx
       .pci_exp_txn                                ( pci_exp_txn ),
       .pci_exp_txp                                ( pci_exp_txp ),
-      // Rx
       .pci_exp_rxn                                ( pci_exp_rxn ),
       .pci_exp_rxp                                ( pci_exp_rxp ),
-      //----------------------------------------------------------------------------------------------------------------//
-      // 2. Clocking Interface                                                                                          //
-      //----------------------------------------------------------------------------------------------------------------//
       .pipe_pclk_in                              ( PIPE_PCLK_IN ),
       .pipe_rxusrclk_in                          ( PIPE_RXUSRCLK_IN ),
       .pipe_rxoutclk_in                          ( PIPE_RXOUTCLK_IN ),
@@ -251,15 +175,10 @@ module xilinx_x7_pcie_wrapper #(
       .pipe_rxoutclk_out                         ( PIPE_RXOUTCLK_OUT ),
       .pipe_pclk_sel_out                         ( PIPE_PCLK_SEL_OUT ),
       .pipe_gen3_out                             ( PIPE_GEN3_OUT ),
-      //----------------------------------------------------------------------------------------------------------------//
-      // 3. AXI-S Interface                                                                                             //
-      //----------------------------------------------------------------------------------------------------------------//
-      // Common
       .user_clk_out                               ( user_clk_out ),
       .user_reset_out                             ( user_reset_out ),
       .user_lnk_up                                ( user_lnk_up ),
       .user_app_rdy                               ( user_app_rdy ),
-      // TX
       .tx_buf_av                                  ( tx_buf_av ),
       .tx_err_drop                                ( tx_err_drop ),
       .tx_cfg_req                                 ( tx_cfg_req ),
@@ -270,7 +189,6 @@ module xilinx_x7_pcie_wrapper #(
       .s_axis_tx_tlast                            ( s_axis_tx_tlast ),
       .s_axis_tx_tvalid                           ( s_axis_tx_tvalid ),
       .tx_cfg_gnt                                 ( tx_cfg_gnt ),
-      // Rx
       .m_axis_rx_tdata                            ( m_axis_rx_tdata ),
       .m_axis_rx_tkeep                            ( m_axis_rx_tkeep ),
       .m_axis_rx_tlast                            ( m_axis_rx_tlast ),
@@ -279,7 +197,6 @@ module xilinx_x7_pcie_wrapper #(
       .m_axis_rx_tuser                            ( m_axis_rx_tuser ),
       .rx_np_ok                                   ( rx_np_ok ),
       .rx_np_req                                  ( rx_np_req ),
-      // Flow Control
       .fc_cpld                                    ( fc_cpld ),
       .fc_cplh                                    ( fc_cplh ),
       .fc_npd                                     ( fc_npd ),
@@ -287,12 +204,6 @@ module xilinx_x7_pcie_wrapper #(
       .fc_pd                                      ( fc_pd ),
       .fc_ph                                      ( fc_ph ),
       .fc_sel                                     ( fc_sel ),
-      //----------------------------------------------------------------------------------------------------------------//
-      // 4. Configuration (CFG) Interface                                                                               //
-      //----------------------------------------------------------------------------------------------------------------//
-      //------------------------------------------------//
-      // EP and RP                                      //
-      //------------------------------------------------//
       .cfg_mgmt_do                                ( cfg_mgmt_do ),
       .cfg_mgmt_rd_wr_done                        ( cfg_mgmt_rd_wr_done ),
       .cfg_status                                 ( cfg_status ),
@@ -307,14 +218,12 @@ module xilinx_x7_pcie_wrapper #(
       .cfg_pmcsr_powerstate                       ( cfg_pmcsr_powerstate ),
       .cfg_pmcsr_pme_status                       ( cfg_pmcsr_pme_status ),
       .cfg_received_func_lvl_rst                  ( cfg_received_func_lvl_rst ),
-      // Management Interface
       .cfg_mgmt_di                                ( cfg_mgmt_di ),
       .cfg_mgmt_byte_en                           ( cfg_mgmt_byte_en ),
       .cfg_mgmt_dwaddr                            ( cfg_mgmt_dwaddr ),
       .cfg_mgmt_wr_en                             ( cfg_mgmt_wr_en ),
       .cfg_mgmt_rd_en                             ( cfg_mgmt_rd_en ),
       .cfg_mgmt_wr_readonly                       ( cfg_mgmt_wr_readonly ),
-      // Error Reporting Interface
       .cfg_err_ecrc                               ( cfg_err_ecrc ),
       .cfg_err_ur                                 ( cfg_err_ur ),
       .cfg_err_cpl_timeout                        ( cfg_err_cpl_timeout ),
@@ -339,9 +248,6 @@ module xilinx_x7_pcie_wrapper #(
       .cfg_pm_force_state_en                      ( cfg_pm_force_state_en ),
       .cfg_pm_force_state                         ( cfg_pm_force_state ),
       .cfg_dsn                                    ( cfg_dsn ),
-      //------------------------------------------------//
-      // EP Only                                        //
-      //------------------------------------------------//
       .cfg_interrupt                              ( cfg_interrupt ),
       .cfg_interrupt_rdy                          ( cfg_interrupt_rdy ),
       .cfg_interrupt_assert                       ( cfg_interrupt_assert ),
@@ -359,44 +265,11 @@ module xilinx_x7_pcie_wrapper #(
       .cfg_device_number                          ( cfg_device_number ),
       .cfg_function_number                        ( cfg_function_number ),
       .cfg_pm_wake                                ( cfg_pm_wake ),
-      //------------------------------------------------//
-      // RP Only                                        //
-      //------------------------------------------------//
       .cfg_pm_send_pme_to                         ( 1'b0 ),
       .cfg_ds_bus_number                          ( 8'b0 ),
       .cfg_ds_device_number                       ( 5'b0 ),
       .cfg_ds_function_number                     ( 3'b0 ),
       .cfg_mgmt_wr_rw1c_as_rw                     ( 1'b0 ),
-      .cfg_msg_received                           ( ),
-      .cfg_msg_data                               ( ),
-      .cfg_bridge_serr_en                         ( ),
-      .cfg_slot_control_electromech_il_ctl_pulse  ( ),
-      .cfg_root_control_syserr_corr_err_en        ( ),
-      .cfg_root_control_syserr_non_fatal_err_en   ( ),
-      .cfg_root_control_syserr_fatal_err_en       ( ),
-      .cfg_root_control_pme_int_en                ( ),
-      .cfg_aer_rooterr_corr_err_reporting_en      ( ),
-      .cfg_aer_rooterr_non_fatal_err_reporting_en ( ),
-      .cfg_aer_rooterr_fatal_err_reporting_en     ( ),
-      .cfg_aer_rooterr_corr_err_received          ( ),
-      .cfg_aer_rooterr_non_fatal_err_received     ( ),
-      .cfg_aer_rooterr_fatal_err_received         ( ),
-      .cfg_msg_received_err_cor                   ( ),
-      .cfg_msg_received_err_non_fatal             ( ),
-      .cfg_msg_received_err_fatal                 ( ),
-      .cfg_msg_received_pm_as_nak                 ( ),
-      .cfg_msg_received_pme_to_ack                ( ),
-      .cfg_msg_received_assert_int_a              ( ),
-      .cfg_msg_received_assert_int_b              ( ),
-      .cfg_msg_received_assert_int_c              ( ),
-      .cfg_msg_received_assert_int_d              ( ),
-      .cfg_msg_received_deassert_int_a            ( ),
-      .cfg_msg_received_deassert_int_b            ( ),
-      .cfg_msg_received_deassert_int_c            ( ),
-      .cfg_msg_received_deassert_int_d            ( ),
-      //----------------------------------------------------------------------------------------------------------------//
-      // 5. Physical Layer Control and Status (PL) Interface                                                            //
-      //----------------------------------------------------------------------------------------------------------------//
       .pl_directed_link_change                    ( pl_directed_link_change ),
       .pl_directed_link_width                     ( pl_directed_link_width ),
       .pl_directed_link_speed                     ( pl_directed_link_speed ),
@@ -414,31 +287,15 @@ module xilinx_x7_pcie_wrapper #(
       .pl_link_partner_gen2_supported             ( pl_link_partner_gen2_supported ),
       .pl_initial_link_width                      ( pl_initial_link_width ),
       .pl_directed_change_done                    ( pl_directed_change_done ),
-      //------------------------------------------------//
-      // EP Only                                        //
-      //------------------------------------------------//
       .pl_received_hot_rst                        ( pl_received_hot_rst ),
-      //------------------------------------------------//
-      // RP Only                                        //
-      //------------------------------------------------//
       .pl_transmit_hot_rst                        ( 1'b0 ),
       .pl_downstream_deemph_source                ( 1'b0 ),
-      //----------------------------------------------------------------------------------------------------------------//
-      // 6. AER Interface                                                                                               //
-      //----------------------------------------------------------------------------------------------------------------//
       .cfg_err_aer_headerlog                      ( cfg_err_aer_headerlog ),
       .cfg_aer_interrupt_msgnum                   ( cfg_aer_interrupt_msgnum ),
       .cfg_err_aer_headerlog_set                  ( cfg_err_aer_headerlog_set ),
       .cfg_aer_ecrc_check_en                      ( cfg_aer_ecrc_check_en ),
       .cfg_aer_ecrc_gen_en                        ( cfg_aer_ecrc_gen_en ),
-      //----------------------------------------------------------------------------------------------------------------//
-      // 7. VC interface                                                                                                //
-      //----------------------------------------------------------------------------------------------------------------//
       .cfg_vc_tcvc_map                            ( cfg_vc_tcvc_map ),
-      //----------------------------------------------------------------------------------------------------------------//
-      // 8. System  (SYS) Interface                                                                                     //
-      //----------------------------------------------------------------------------------------------------------------//
       .sys_clk                                    ( sys_clk ),
-      .sys_rst_n                                  ( sys_reset_n )
-      );
+      .sys_rst_n                                  ( sys_reset_n ));
 endmodule // xilinx_k7_pcie_wrapper

@@ -210,29 +210,12 @@ endinterface
 import "BVI" xilinx_x7_pcie_wrapper =
 module vMkXilinx7PCIExpress#(PCIEParams params)(PCIE_X7#(lanes))
    provisos( Add#(1, z, lanes));
-   
-`ifdef Artix7
-   String gt_device = "GTP";
-   Integer max_link_width = 4;
-`else
-   String gt_device = "GTX";
-   Integer max_link_width = 8;
-`endif
-
    // PCIe wrapper takes active low reset
    let sys_reset_n <- exposeCurrentReset;
    
    default_clock clk(sys_clk); // 100 MHz refclk
    default_reset rstn(sys_reset_n) = sys_reset_n;
    
-   parameter PL_FAST_TRAIN = (params.fast_train_sim_only) ? "TRUE" : "FALSE";
-   parameter BAR0 = 32'hFFF00004;
-   parameter BAR1 = 32'hFFFFFFFF;
-   parameter BAR2 = 32'hFFF00004;
-   parameter BAR3 = 32'hFFFFFFFF;
-   parameter PCIE_GT_DEVICE = gt_device;
-   parameter LINK_CAP_MAX_LINK_WIDTH = max_link_width;
-
    interface PCIE_EXP pcie;
       method                            rxp(pci_exp_rxp) enable((*inhigh*)en0)                              reset_by(no_reset);
       method                            rxn(pci_exp_rxn) enable((*inhigh*)en1)                              reset_by(no_reset);
