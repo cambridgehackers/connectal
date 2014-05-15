@@ -26,6 +26,7 @@ import SpecialFIFOs      ::*;
 
 import XilinxCells       ::*;
 import PCIE              ::*;
+import PCIEWRAPPER       ::*;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Types
@@ -48,7 +49,7 @@ typedef struct {
 ////////////////////////////////////////////////////////////////////////////////
 (* always_ready, always_enabled *)
 interface PCIE_X7#(numeric type lanes);
-   interface PCIE_EXP#(lanes) pcie;
+   interface PciewrapPci_exp#(lanes) pcie;
    interface PCIE_TRN_X7      trn;
    interface PCIE_AXI_TX_X7   axi_tx;
    interface PCIE_AXI_RX_X7   axi_rx;
@@ -216,7 +217,7 @@ module vMkXilinx7PCIExpress#(PCIEParams params)(PCIE_X7#(lanes))
    default_clock clk(sys_clk); // 100 MHz refclk
    default_reset rstn(sys_reset_n) = sys_reset_n;
    
-   interface PCIE_EXP pcie;
+   interface PciewrapPci_exp pcie;
       method                            rxp(pci_exp_rxp) enable((*inhigh*)en0)                              reset_by(no_reset);
       method                            rxn(pci_exp_rxn) enable((*inhigh*)en1)                              reset_by(no_reset);
       method pci_exp_txp                txp                                                                 reset_by(no_reset);
@@ -436,7 +437,7 @@ interface PCIE_TRN_RECV_X7;
 endinterface
 
 interface PCIExpressX7#(numeric type lanes);
-   interface PCIE_EXP#(lanes)   pcie;
+   interface PciewrapPci_exp#(lanes)   pcie;
    interface PCIE_TRN_COMMON_X7 trn;
    interface PCIE_TRN_XMIT_X7   trn_tx;
    interface PCIE_TRN_RECV_X7   trn_rx;

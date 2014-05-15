@@ -136,13 +136,12 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
    wire [7:0]          PIPE_PCLK_SEL_OUT;
 (* ASYNC_REG = "TRUE", SHIFT_EXTRACT = "NO" *)    reg         [PCIE_LANE-1:0] pclk_sel_reg1 = {PCIE_LANE{1'd0}};
 (* ASYNC_REG = "TRUE", SHIFT_EXTRACT = "NO" *)    reg         [PCIE_LANE-1:0] pclk_sel_reg2 = {PCIE_LANE{1'd0}};
-    wire                        refclk;
-    wire                        mmcm_fb;
-    wire                        clk_125mhz;
-    wire                        clk_125mhz_buf;
-    wire                        clk_250mhz;
-    wire                        userclk1;
-    reg                         pclk_sel = 1'd0;
+    wire               refclk;
+    wire               mmcm_fb;
+    wire               clk_125mhz;
+    wire               clk_250mhz;
+    wire               userclk1;
+    reg                pclk_sel = 1'd0;
     BUFG txoutclk_i ( .I (PIPE_TXOUTCLK_OUT), .O (refclk) );
     MMCME2_ADV #( .BANDWIDTH("OPTIMIZED"), .CLKOUT4_CASCADE("FALSE"),
         .COMPENSATION("ZHOLD"), .STARTUP_WAIT("FALSE"), .DIVCLK_DIVIDE(1),
