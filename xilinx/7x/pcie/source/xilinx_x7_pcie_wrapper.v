@@ -139,33 +139,12 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
 (* ASYNC_REG = "TRUE", SHIFT_EXTRACT = "NO" *)    reg         [PCIE_LANE-1:0] pclk_sel_reg2 = {PCIE_LANE{1'd0}};
     wire               clk_250mhz;
     reg                pclk_sel = 1'd0;
-    wire               clk_125mhz;
-    wire               userclk1;
-    wire               refclk;
-    wire               mmcm_fb;
-    BUFG txoutclk_i ( .I (PIPE_TXOUTCLK_OUT), .O (refclk) );
-    MMCME2_ADV #( .BANDWIDTH("OPTIMIZED"), .COMPENSATION("ZHOLD"), .DIVCLK_DIVIDE(1),
-        .CLKFBOUT_MULT_F(10), .CLKFBOUT_PHASE(0.000),
-        .CLKOUT0_DIVIDE_F(8), .CLKOUT0_PHASE(0.000), .CLKOUT0_DUTY_CYCLE(0.500),
-        .CLKOUT1_DIVIDE(4), .CLKOUT1_PHASE(0.000), .CLKOUT1_DUTY_CYCLE(0.500),
-        .CLKOUT2_DIVIDE(4), .CLKOUT2_PHASE(0.000), .CLKOUT2_DUTY_CYCLE(0.500),
-        .CLKOUT3_DIVIDE(4), .CLKOUT3_PHASE(0.000), .CLKOUT3_DUTY_CYCLE(0.500),
-        .CLKOUT4_DIVIDE(20), .CLKOUT4_PHASE(0.000), .CLKOUT4_DUTY_CYCLE(0.500),
-        .CLKIN1_PERIOD(10), .REF_JITTER1 (0.010) )
-    mmcm_i ( .CLKIN1(refclk), .CLKINSEL(1'd1),
-        .CLKFBIN(mmcm_fb), .CLKFBOUT(mmcm_fb),
-        .CLKOUT0(clk_125mhz), .CLKOUT1(clk_250mhz), .CLKOUT2(userclk1),
-        .LOCKED(PIPE_MMCM_LOCK_IN));
-    BUFG dclk_i ( .I (clk_125mhz), .O (PIPE_DCLK_IN));
-    BUFG usrclk1_i1 ( .I (userclk1), .O (PIPE_USERCLK1_IN));
-/*
 assign PIPE_DCLK_IN = clk_125mhz_;
 assign clk_250mhz = clk_250mhz_;
 assign PIPE_USERCLK1_IN = clkout2;
 assign PIPE_MMCM_LOCK_IN = locked;
-*/
     BUFGCTRL pclk_i1 ( .CE0 (1'd1), .CE1 (1'd1),
-        .I0 (clk_125mhz), .I1 (clk_250mhz), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
+        .I0 (clk_125mhz_), .I1 (clk_250mhz), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
         .S0 (~pclk_sel), .S1 ( pclk_sel), .O (PIPE_PCLK_IN));
     always @ (posedge PIPE_PCLK_IN)
     begin
