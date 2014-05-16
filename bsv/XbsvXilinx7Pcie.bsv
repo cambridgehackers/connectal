@@ -460,12 +460,37 @@ endinterface
 ///
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-typeclass SelectXilinx7PCIE#(numeric type lanes);
-   module selectXilinx7PCIE(PCIEParams params, PCIE_X7#(lanes) ifc);
+typeclass MkXilinx7PCIE#(numeric type lanes);
+   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, Bit#(1) locked, PCIE_X7#(lanes) ifc);
 endtypeclass
 
-instance SelectXilinx7PCIE#(8);
-   module selectXilinx7PCIE(PCIEParams params, PCIE_X7#(8) ifc);
+instance MkXilinx7PCIE#(8);
+   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, Bit#(1) locked, PCIE_X7#(8) ifc);
+      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clk_250mhz, clkout2, locked);
+      return _ifc;
+   endmodule
+endinstance
+
+instance MkXilinx7PCIE#(4);
+   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, Bit#(1) locked, PCIE_X7#(4) ifc);
+      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clk_250mhz, clkout2, locked);
+      return _ifc;
+   endmodule
+endinstance
+
+instance MkXilinx7PCIE#(1);
+   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, Bit#(1) locked, PCIE_X7#(1) ifc);
+      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clk_250mhz, clkout2, locked);
+      return _ifc;
+   endmodule
+endinstance
+
+module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
+   provisos(Add#(1, z, lanes), MkXilinx7PCIE#(lanes));
+   
+   ////////////////////////////////////////////////////////////////////////////////
+   /// Design Elements
+   ////////////////////////////////////////////////////////////////////////////////
    B2C1 b2c <- mkB2C1();
 /*
    ClockGenerator7AdvParams clockParams = defaultValue;
@@ -527,38 +552,13 @@ reg         [PCIE_LANE-1:0] pclk_sel_reg2 = {PCIE_LANE{1'd0}};
     end
 */
 ////////JJJJJJJJJJJJJJJJJJJJ
-      //let _ifc <- vMkXilinx7PCIExpress(params, clockGen.clkout0, clockGen.clkout1, clockGen.clkout2, pack(clockGen.locked));
-Clock defaultClock <- exposeCurrentClock();
-      let _ifc <- vMkXilinx7PCIExpress(params, defaultClock, defaultClock, defaultClock, pack(1'b0));
-      C2B c2b <- mkC2B(_ifc.txoutclk);
-      rule txoutrule;
-         b2c.inputclock(c2b.o());
-      endrule
-      return _ifc;
-   endmodule
-endinstance
-/*jjj
-instance SelectXilinx7PCIE#(4);
-   module selectXilinx7PCIE(PCIEParams params, PCIE_X7#(4) ifc);
-      let _ifc <- vMkXilinx7PCIExpress(params);
-      return _ifc;
-   endmodule
-endinstance
-
-instance SelectXilinx7PCIE#(1);
-   module selectXilinx7PCIE(PCIEParams params, PCIE_X7#(1) ifc);
-      let _ifc <- vMkXilinx7PCIExpress(params);
-      return _ifc;
-   endmodule
-endinstance
-*/
-module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
-   provisos(Add#(1, z, lanes), SelectXilinx7PCIE#(lanes));
-   
-   ////////////////////////////////////////////////////////////////////////////////
-   /// Design Elements
-   ////////////////////////////////////////////////////////////////////////////////
-   PCIE_X7#(lanes)                           pcie_ep             <- selectXilinx7PCIE(params);
+   Clock defaultClock <- exposeCurrentClock();
+   //PCIE_X7#(lanes)                           pcie_ep             <- mkXilinx7PCIE(params, clockGen.clkout0, clockGen.clkout1, clockGen.clkout2, pack(clockGen.locked));
+   PCIE_X7#(lanes)                           pcie_ep             <- mkXilinx7PCIE(params, defaultClock, defaultClock, defaultClock, 1'b0);
+   C2B c2b <- mkC2B(pcie_ep.txoutclk);
+   rule txoutrule;
+      b2c.inputclock(c2b.o());
+   endrule
 
    Clock                                     user_clk             = pcie_ep.trn.clk;
    Reset                                     user_reset_n        <- mkResetInverter(pcie_ep.trn.reset);
