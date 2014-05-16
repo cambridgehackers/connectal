@@ -130,21 +130,12 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
  input wire           sys_clk,
  input wire           sys_reset_n);
    wire                PIPE_PCLK_IN;
-   wire                PIPE_DCLK_IN;
-   wire                PIPE_USERCLK1_IN;
-   wire                PIPE_MMCM_LOCK_IN;
-   wire                PIPE_TXOUTCLK_OUT;
    wire [7:0]          PIPE_PCLK_SEL_OUT;
 (* ASYNC_REG = "TRUE", SHIFT_EXTRACT = "NO" *)    reg         [PCIE_LANE-1:0] pclk_sel_reg1 = {PCIE_LANE{1'd0}};
 (* ASYNC_REG = "TRUE", SHIFT_EXTRACT = "NO" *)    reg         [PCIE_LANE-1:0] pclk_sel_reg2 = {PCIE_LANE{1'd0}};
-    wire               clk_250mhz;
     reg                pclk_sel = 1'd0;
-assign PIPE_DCLK_IN = clk_125mhz_;
-assign clk_250mhz = clk_250mhz_;
-assign PIPE_USERCLK1_IN = clkout2;
-assign PIPE_MMCM_LOCK_IN = locked;
     BUFGCTRL pclk_i1 ( .CE0 (1'd1), .CE1 (1'd1),
-        .I0 (clk_125mhz_), .I1 (clk_250mhz), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
+        .I0 (clk_125mhz_), .I1 (clk_250mhz_), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
         .S0 (~pclk_sel), .S1 ( pclk_sel), .O (PIPE_PCLK_IN));
     always @ (posedge PIPE_PCLK_IN)
     begin
@@ -157,17 +148,16 @@ assign PIPE_MMCM_LOCK_IN = locked;
         else
             pclk_sel <= pclk_sel;
     end
-  assign txoutclk = PIPE_TXOUTCLK_OUT;
   pcie_7x_0 #() pcie_7x_i(
       .pci_exp_txn ( pci_exp_txn ), .pci_exp_txp ( pci_exp_txp ),
       .pci_exp_rxn ( pci_exp_rxn ), .pci_exp_rxp ( pci_exp_rxp ),
       .pipe_pclk_in ( PIPE_PCLK_IN ),
       .pipe_rxusrclk_in ( PIPE_PCLK_IN ), .pipe_rxoutclk_in ( 8'd0),
-      .pipe_dclk_in ( PIPE_DCLK_IN ),
-      .pipe_userclk1_in ( PIPE_USERCLK1_IN ), .pipe_userclk2_in ( PIPE_USERCLK1_IN ),
-      .pipe_oobclk_in ( PIPE_DCLK_IN ),
-      .pipe_mmcm_lock_in ( PIPE_MMCM_LOCK_IN ),
-      .pipe_txoutclk_out ( PIPE_TXOUTCLK_OUT ),
+      .pipe_dclk_in ( clk_125mhz_ ),
+      .pipe_userclk1_in ( clkout2 ), .pipe_userclk2_in ( clkout2 ),
+      .pipe_oobclk_in ( clk_125mhz_ ),
+      .pipe_mmcm_lock_in ( locked ),
+      .pipe_txoutclk_out ( txoutclk ),
       .pipe_pclk_sel_out ( PIPE_PCLK_SEL_OUT ),
       .user_clk_out ( user_clk_out ), .user_reset_out ( user_reset_out ), .user_lnk_up ( user_lnk_up ), .user_app_rdy ( user_app_rdy ),
       .tx_buf_av ( tx_buf_av ),
