@@ -506,15 +506,14 @@ if __name__=='__main__':
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z045ffg900-2'
         rewireclockstring = tclzynqrewireclock
-        namespace.verilog.append(os.path.join(xbsvdir, 'verilog'))
         #namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z045ffg900.xdc'))
     else:
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z020clg484-1'
         rewireclockstring = tclzynqrewireclock
-        namespace.verilog.append(os.path.join(xbsvdir, 'verilog'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z020clg484.xdc'))
+    namespace.verilog.append(os.path.join(xbsvdir, 'verilog'))
 
     namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/%s.xdc' % boardname))
     if needs_pcie_7x_gen1x8:
