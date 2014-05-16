@@ -188,7 +188,7 @@ def parse_lib(filename):
             if tname.startswith(sitem):
                 tname = tname[len(sitem):]
                 ind = 0
-                while tname[ind] >= '0' and tname[ind] <= '9':
+                while tname[ind] >= '0' and tname[ind] <= '9' and ind < len(tname) - 1:
                     ind = ind + 1
                 item.name = sitem + tname[:ind] + item.separator + tname[ind:]
                 break
