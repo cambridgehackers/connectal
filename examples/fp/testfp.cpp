@@ -13,12 +13,12 @@ class FpIndication : public FpIndicationWrapper
 public:
   uint32_t cnt;
   void incr_cnt(){
-    if (++cnt == 7)
+    if (++cnt == 1)
       exit(0);
   }
-  virtual void heard1(uint32_t a) {
-    fprintf(stderr, "heard1(%d)\n", a);
-    assert(a == v1a);
+  void added ( const uint32_t a ) {
+    float af = *(float *)&a;
+    fprintf(stderr, "Result a=%f\n", af);
     incr_cnt();
   }
   FpIndication(unsigned int id) : FpIndicationWrapper(id), cnt(0){}
@@ -36,5 +36,10 @@ int main(int argc, const char **argv)
     fprintf(stderr, "Main::error creating exec thread\n");
     exit(1);
   }
+
+  float a = 1.0;
+  float b = 0.5;
+
+  device->add(*(int*)&a, *(int*)&b);
 
 }
