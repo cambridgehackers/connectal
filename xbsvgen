@@ -239,10 +239,14 @@ vfile=verilog/top/%(topbsvmod)s.v
 BOARD=%(boardname)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
-ifeq ($(OS),android)
-ALLTARGETS=android_exe%(debug)s bits
+ifeq ($(BOARD),bluesim)
+    ALLTARGETS=bsim bsim_exe
 else
-ALLTARGETS=ubuntu_exe implementation
+  ifeq ($(OS),android)
+    ALLTARGETS=android_exe%(debug)s bits
+  else
+    ALLTARGETS=ubuntu_exe implementation
+  endif
 endif
 
 BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj -info-dir $(DTOP)/obj -D TimeStamp=%(timestamp)s %(bscflags)s
