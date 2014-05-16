@@ -112,6 +112,7 @@ if {[lsearch [list_property [current_project]] board_part] >= 0} {
     set_property BOARD [lindex $board_candidates [expr [llength $board_candidates] - 1]] [current_project]
 }
 report_property [current_project]
+source $xbsvdir/scripts/xbsv-synth-ip.tcl
 if $needspcie {
     set pcieversion {3.0}
     set maxlinkwidth {X8}
@@ -172,6 +173,9 @@ if $needspcie {
                 synth_ip [get_ips pcie_7x_0]
             }
         }
+}
+if [file exists ../synth-ip.tcl] {
+    source ../synth-ip.tcl
 }
 
 # STEP#2: run synthesis, report utilization and timing estimates, write checkpoint design
