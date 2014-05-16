@@ -67,6 +67,7 @@ argparser.add_argument('-C', '--constraint', help='Additional constraint files',
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-x', '--export', help='Promote/export named interface from top module')
 argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
+argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
 argparser.add_argument('-T', '--tcl', default=[], help='Vivado tcl script', action='append')
 argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to the BSV compiler', action='append')
@@ -474,7 +475,7 @@ if __name__=='__main__':
     dutname = namespace.export
     boardname = namespace.board.lower()
 
-    bsvdefines = []
+    bsvdefines = namespace.bsvdefine
     if boardname == 'kc705':
         bsvdefines += ['Kintex7', 'PCIE']
     elif boardname == 'vc707':
