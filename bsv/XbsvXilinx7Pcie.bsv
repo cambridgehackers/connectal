@@ -24,6 +24,7 @@ import FIFO              ::*;
 import FIFOF             ::*;
 import SpecialFIFOs      ::*;
 
+import XbsvXilinxCells   ::*;
 import XilinxCells       ::*;
 import PCIE              ::*;
 import PCIEWRAPPER       ::*;
@@ -57,6 +58,7 @@ interface PCIE_X7#(numeric type lanes);
    interface PCIE_CFG_X7      cfg;
    interface PCIE_INT_X7      cfg_interrupt;
    interface PCIE_ERR_X7      cfg_err;
+   interface Clock            txoutclk;
 endinterface
 
 (* always_ready, always_enabled *)
@@ -209,7 +211,7 @@ endinterface
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 import "BVI" xilinx_x7_pcie_wrapper =
-module vMkXilinx7PCIExpress#(PCIEParams params)(PCIE_X7#(lanes))
+module vMkXilinx7PCIExpress#(PCIEParams params, Clock clkout0, Clock clkout1, Clock clkout2, Bit#(1) locked)(PCIE_X7#(lanes))
    provisos( Add#(1, z, lanes));
    // PCIe wrapper takes active low reset
    let sys_reset_n <- exposeCurrentReset;
@@ -358,6 +360,7 @@ module vMkXilinx7PCIExpress#(PCIEParams params)(PCIE_X7#(lanes))
       method         			aer_interrupt_msgnum(cfg_aer_interrupt_msgnum)    enable((*inhigh*)en54) clocked_by(trn_clk) reset_by(no_reset);
       method         			acs(cfg_err_acs)                                  enable((*inhigh*)en55) clocked_by(trn_clk) reset_by(no_reset);
    endinterface
+   output_clock txoutclk(txoutclk);
       
    schedule (trn_lnk_up, trn_app_rdy, trn_fc_ph, trn_fc_pd, trn_fc_nph, trn_fc_npd, trn_fc_cplh, trn_fc_cpld, trn_fc_sel, axi_tx_tlast,
 	     axi_tx_tdata, axi_tx_tkeep, axi_tx_tvalid, axi_tx_tready, axi_tx_tuser, axi_tx_tbuf_av, axi_tx_terr_drop,
@@ -460,11 +463,78 @@ endtypeclass
 
 instance SelectXilinx7PCIE#(8);
    module selectXilinx7PCIE(PCIEParams params, PCIE_X7#(8) ifc);
-      let _ifc <- vMkXilinx7PCIExpress(params);
+   B2C1 b2c <- mkB2C1();
+/*
+   ClockGenerator7AdvParams clockParams = defaultValue;
+   clockParams.bandwidth          = "OPTIMIZED";
+   clockParams.compensation       = "ZHOLD";
+   clockParams.clkfbout_mult_f    = 10.000;
+   clockParams.clkfbout_phase     = 0.0;
+   clockParams.clkin1_period      = 10.000;
+   clockParams.clkout0_divide_f   = 8.000;
+   clockParams.clkout0_duty_cycle = 0.5;
+   clockParams.clkout0_phase      = 0.0000;
+   clockParams.clkout1_divide     = 4;
+   clockParams.clkout1_duty_cycle = 0.5;
+   clockParams.clkout1_phase      = 0.0000;
+   clockParams.clkout2_divide     = 4;
+   clockParams.clkout2_duty_cycle = 0.5;
+   clockParams.clkout2_phase      = 0.0000;
+   clockParams.clkout3_divide     = 4;
+   clockParams.clkout3_duty_cycle = 0.5;
+   clockParams.clkout3_phase      = 0.0000;
+   clockParams.clkout4_divide     = 20;
+   clockParams.clkout4_duty_cycle = 0.5;
+   clockParams.clkout4_phase      = 0.0000;
+   clockParams.divclk_divide      = 1;
+   clockParams.ref_jitter1        = 0.010;
+
+   clockParams.clkin_buffer = True;
+   clockParams.clkout0_buffer = True;
+   clockParams.clkout2_buffer = True;
+   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by b2c.c);
+*/
+    //mmcm_i ( .CLKINSEL(1'd1), .RST(1'b0), .PWRDWN(0), .DCLK(0), .DADDR( 7'd0), .DEN(0), .DWE(0), .DI(16'd0), .PSCLK(0), .PSEN(0), .PSINCDEC(0));
+   //.LOCKED(clockGen.locked),
+   //PIPE_DCLK_IN clockGen.clkout0);
+   //PIPE_USERCLK1_IN clockGen.clkout2);
+/*
+    BUFGCTRL pclk_i1 ( .CE0 (1'd1), .CE1 (1'd1),
+        .I0 (clockGen.clkout0), .I1 (clockGen.clkout1), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
+        .S0 (~pclk_sel), .S1 ( pclk_sel), .O (PIPE_PCLK_IN));
+
+   wire                PIPE_PCLK_IN;
+   wire                PIPE_MMCM_LOCK_IN;
+   wire                PIPE_TXOUTCLK_OUT;
+   wire [7:0]          PIPE_PCLK_SEL_OUT;
+
+reg         [PCIE_LANE-1:0] pclk_sel_reg1 = {PCIE_LANE{1'd0}};
+reg         [PCIE_LANE-1:0] pclk_sel_reg2 = {PCIE_LANE{1'd0}};
+    reg                pclk_sel = 1'd0;
+    always @ (posedge PIPE_PCLK_IN)
+    begin
+        pclk_sel_reg1 <= PIPE_PCLK_SEL_OUT;
+        pclk_sel_reg2 <= pclk_sel_reg1;
+        if (&pclk_sel_reg2)
+            pclk_sel <= 1'd1;
+        else if (&(~pclk_sel_reg2))
+            pclk_sel <= 1'd0;
+        else
+            pclk_sel <= pclk_sel;
+    end
+*/
+////////JJJJJJJJJJJJJJJJJJJJ
+      //let _ifc <- vMkXilinx7PCIExpress(params, clockGen.clkout0, clockGen.clkout1, clockGen.clkout2, pack(clockGen.locked));
+Clock defaultClock <- exposeCurrentClock();
+      let _ifc <- vMkXilinx7PCIExpress(params, defaultClock, defaultClock, defaultClock, pack(1'b0));
+      C2B c2b <- mkC2B(_ifc.txoutclk);
+      rule txoutrule;
+         b2c.inputclock(c2b.o());
+      endrule
       return _ifc;
    endmodule
 endinstance
-
+/*jjj
 instance SelectXilinx7PCIE#(4);
    module selectXilinx7PCIE(PCIEParams params, PCIE_X7#(4) ifc);
       let _ifc <- vMkXilinx7PCIExpress(params);
@@ -478,7 +548,7 @@ instance SelectXilinx7PCIE#(1);
       return _ifc;
    endmodule
 endinstance
-
+*/
 module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    provisos(Add#(1, z, lanes), SelectXilinx7PCIE#(lanes));
    

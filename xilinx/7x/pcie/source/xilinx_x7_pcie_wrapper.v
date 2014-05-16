@@ -8,6 +8,7 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
 				parameter KEEP_WIDTH          = C_DATA_WIDTH / 8 // TSTRB width
                                 )
 (
+ output txoutclk, input clkout0, input clkout1, input clkout2, input locked,
  output [7:0]                                pci_exp_txn,
  output [7:0]                                pci_exp_txp,
  input  [7:0]                                pci_exp_rxn,
@@ -159,6 +160,12 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
         .LOCKED(PIPE_MMCM_LOCK_IN),
         .DCLK( 1'd0), .DADDR( 7'd0), .DEN( 1'd0), .DWE( 1'd0), .DI(16'd0),
         .PSCLK(1'd0), .PSEN(1'd0), .PSINCDEC(1'd0));
+/*
+assign clk_125mhz = clkout0;
+assign clk_250mhz = clkout1;
+assign userclk1 = clkout2;
+assign PIPE_MMCM_LOCK_IN = locked;
+*/
     BUFGCTRL pclk_i1 ( .CE0 (1'd1), .CE1 (1'd1),
         .I0 (clk_125mhz), .I1 (clk_250mhz), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
         .S0 (~pclk_sel), .S1 ( pclk_sel), .O (PIPE_PCLK_IN));
@@ -175,6 +182,7 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
         else
             pclk_sel <= pclk_sel;
     end
+  assign txoutclk = PIPE_TXOUTCLK_OUT;
   pcie_7x_0 #() pcie_7x_i(
       .pci_exp_txn ( pci_exp_txn ), .pci_exp_txp ( pci_exp_txp ),
       .pci_exp_rxn ( pci_exp_rxn ), .pci_exp_rxp ( pci_exp_rxp ),
