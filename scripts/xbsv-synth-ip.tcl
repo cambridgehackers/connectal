@@ -1,6 +1,26 @@
 
+proc xbsv_set_board_part {} {
+    global boardname
+    if [catch {current_project}] {
+	create_project -name synth_ip -in_memory
+    }
+    if {[lsearch [list_property [current_project]] board_part] >= 0} {
+	set_property board_part "xilinx.com:$boardname:part0:1.0" [current_project]
+    } else {
+	## vivado 2013.2 uses the BOARD property instead
+	set board_candidates [get_boards *$boardname*]
+	set_property BOARD [lindex $board_candidates [expr [llength $board_candidates] - 1]] [current_project]
+    }
+}
+
 proc xbsv_synth_ip {core_name core_version ip_name params} {
     global xbsvdir boardname
+
+    ## make sure we have a project configured for the correct board
+    if [catch {current_project}] {
+	xbsv_set_board_part
+    }
+
     if [file exists $xbsvdir/generated/xilinx/$boardname/$ip_name/$ip_name.xci] {
 	read_ip $xbsvdir/generated/xilinx/$boardname/$ip_name/$ip_name.xci
     }  else {
