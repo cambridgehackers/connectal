@@ -225,6 +225,12 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 '''
 
 makefileTemplate='''
+## make targets
+##    all: make software and programmable logic binaries
+##    run: run the program
+##         pass parameters to software via 'make RUN_ARGS= run'
+RUN_ARGS=
+
 DTOP=%(project_dir)s
 XBSVDIR=%(xbsvdir)s
 BSVPATH = %(bsvpath)s
@@ -349,19 +355,19 @@ GDB=
 endif
 
 run:
-	./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode
+	./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./jni/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
 
 else
 
     ifeq ($(OS),android)
 
 run:
-	$(XBSVDIR)/scripts/run.zedboard `find . -name \*.gz` `find . -name android_exe | grep libs`
+	$(XBSVDIR)/scripts/run.zedboard `find . -name \*.gz` `find . -name android_exe | grep libs` $(RUN_ARGS)
 
     else
 
 run: program
-	timeout 3m catchsegv ./jni/mkpcietop
+	timeout 3m catchsegv ./jni/mkpcietop $(RUN_ARGS)
 
     endif
 endif
@@ -761,7 +767,9 @@ if __name__=='__main__':
 
     print '############################################################'
     print '## To build:'
-    print '    cd %s; make verilog; make bits' % (project_dir)
+    print '    cd %s; make all' % (project_dir)
+    print '## To run:'
+    print '    cd %s; make run' % (project_dir)
     print '## You can use XPS to generate bit file or exit and let make complete the process.'
 
     if namespace.make:
