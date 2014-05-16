@@ -26,7 +26,25 @@ import Clocks::*;
 import GetPut::*;
 import ClientServer::*;
 import FloatingPoint::*;
+import FIFO::*;
 
+`ifdef BSIM
+
+module mkXilinxFPAdder(Server#(Tuple2#(Float,Float), Float));
+
+   FIFO#(Float) resultFifo <- mkFIFO();
+
+   interface Put request;
+      method Action put(Tuple2#(Float,Float) req);
+	 match { .a, .b } = req;
+	 resultFifo.enq(a+b);
+      endmethod
+   endinterface
+   interface Get response = toGet(resultFifo);
+
+endmodule: mkXilinxFPAdder
+
+`else
 module mkXilinxFPAdder(Server#(Tuple2#(Float,Float), Float));
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
@@ -62,3 +80,4 @@ module mkXilinxFPAdder(Server#(Tuple2#(Float,Float), Float));
 
 endmodule: mkXilinxFPAdder
 
+`endif
