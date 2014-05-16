@@ -494,7 +494,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    B2C1 b2c <- mkB2C1();
    ClockGenerator7AdvParams clockParams = defaultValue;
    clockParams.bandwidth          = "OPTIMIZED";
-   clockParams.compensation       = "ZHOLD";
+   clockParams.compensation       = "BUF_IN";
    clockParams.clkfbout_mult_f    = 10.000;
    clockParams.clkfbout_phase     = 0.0;
    clockParams.clkin1_period      = 10.000;
@@ -519,11 +519,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    clockParams.clkin_buffer = True;
    clockParams.clkout0_buffer = True;
    clockParams.clkout2_buffer = True;
-   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by b2c.c);
-    //mmcm_i ( .CLKINSEL(1'd1), .RST(1'b0), .PWRDWN(0), .DCLK(0), .DADDR( 7'd0), .DEN(0), .DWE(0), .DI(16'd0), .PSCLK(0), .PSEN(0), .PSINCDEC(0));
-   //.LOCKED(clockGen.locked),
-   //PIPE_DCLK_IN clockGen.clkout0);
-   //PIPE_USERCLK1_IN clockGen.clkout2);
+   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by b2c.c); //mmcm_i ( .RST(1'b0)
 /*
     BUFGCTRL pclk_i1 ( .CE0 (1'd1), .CE1 (1'd1),
         .I0 (clockGen.clkout0), .I1 (clockGen.clkout1), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
@@ -550,6 +546,7 @@ reg         [PCIE_LANE-1:0] pclk_sel_reg2 = {PCIE_LANE{1'd0}};
     end
 */
 ////////JJJJJJJJJJJJJJJJJJJJ
+   //PIPE_DCLK_IN clockGen.clkout0); //PIPE_USERCLK1_IN clockGen.clkout2); //.LOCKED(clockGen.locked),
    PCIE_X7#(lanes)                           pcie_ep             <- mkXilinx7PCIE(params, clockGen.clkout0, clockGen.clkout1, clockGen.clkout2, pack(clockGen.locked));
    Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.txoutclk);
    C2B c2b <- mkC2B(txoutclk_buf);

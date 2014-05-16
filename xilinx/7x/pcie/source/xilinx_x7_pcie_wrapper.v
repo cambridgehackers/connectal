@@ -144,33 +144,29 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
     wire               userclk1;
     reg                pclk_sel = 1'd0;
     BUFG txoutclk_i ( .I (PIPE_TXOUTCLK_OUT), .O (refclk) );
-    MMCME2_ADV #( .BANDWIDTH("OPTIMIZED"), .CLKOUT4_CASCADE("FALSE"),
-        .COMPENSATION("ZHOLD"), .STARTUP_WAIT("FALSE"), .DIVCLK_DIVIDE(1),
-        .CLKFBOUT_MULT_F(10), .CLKFBOUT_PHASE(0.000), .CLKFBOUT_USE_FINE_PS("FALSE"),
-        .CLKOUT0_DIVIDE_F(8), .CLKOUT0_PHASE(0.000), .CLKOUT0_DUTY_CYCLE(0.500), .CLKOUT0_USE_FINE_PS("FALSE"),
-        .CLKOUT1_DIVIDE(4), .CLKOUT1_PHASE(0.000), .CLKOUT1_DUTY_CYCLE(0.500), .CLKOUT1_USE_FINE_PS("FALSE"),
-        .CLKOUT2_DIVIDE(4), .CLKOUT2_PHASE(0.000), .CLKOUT2_DUTY_CYCLE(0.500), .CLKOUT2_USE_FINE_PS("FALSE"),
-        .CLKOUT3_DIVIDE(4), .CLKOUT3_PHASE(0.000), .CLKOUT3_DUTY_CYCLE(0.500), .CLKOUT3_USE_FINE_PS("FALSE"),
-        .CLKOUT4_DIVIDE(20), .CLKOUT4_PHASE(0.000), .CLKOUT4_DUTY_CYCLE(0.500), .CLKOUT4_USE_FINE_PS("FALSE"),
+    MMCME2_ADV #( .BANDWIDTH("OPTIMIZED"), .COMPENSATION("ZHOLD"), .DIVCLK_DIVIDE(1),
+        .CLKFBOUT_MULT_F(10), .CLKFBOUT_PHASE(0.000),
+        .CLKOUT0_DIVIDE_F(8), .CLKOUT0_PHASE(0.000), .CLKOUT0_DUTY_CYCLE(0.500),
+        .CLKOUT1_DIVIDE(4), .CLKOUT1_PHASE(0.000), .CLKOUT1_DUTY_CYCLE(0.500),
+        .CLKOUT2_DIVIDE(4), .CLKOUT2_PHASE(0.000), .CLKOUT2_DUTY_CYCLE(0.500),
+        .CLKOUT3_DIVIDE(4), .CLKOUT3_PHASE(0.000), .CLKOUT3_DUTY_CYCLE(0.500),
+        .CLKOUT4_DIVIDE(20), .CLKOUT4_PHASE(0.000), .CLKOUT4_DUTY_CYCLE(0.500),
         .CLKIN1_PERIOD(10), .REF_JITTER1 (0.010) )
-    mmcm_i ( .CLKIN1(refclk), .CLKIN2(1'd0),  // not used, comment out CLKIN2 if it cause implementation issues
-        .CLKINSEL(1'd1), .RST(1'b0), .PWRDWN(1'd0),
+    mmcm_i ( .CLKIN1(refclk), .CLKINSEL(1'd1),
         .CLKFBIN(mmcm_fb), .CLKFBOUT(mmcm_fb),
         .CLKOUT0(clk_125mhz), .CLKOUT1(clk_250mhz), .CLKOUT2(userclk1),
-        .LOCKED(PIPE_MMCM_LOCK_IN),
-        .DCLK( 1'd0), .DADDR( 7'd0), .DEN( 1'd0), .DWE( 1'd0), .DI(16'd0),
-        .PSCLK(1'd0), .PSEN(1'd0), .PSINCDEC(1'd0));
+        .LOCKED(PIPE_MMCM_LOCK_IN));
+    BUFG dclk_i ( .I (clk_125mhz), .O (PIPE_DCLK_IN));
+    BUFG usrclk1_i1 ( .I (userclk1), .O (PIPE_USERCLK1_IN));
 /*
-assign clk_125mhz = clkout0;
-assign clk_250mhz = clkout1;
+assign clk_125mhz = clk_125mhz_;
+assign clk_250mhz = clk_250mhz_;
 assign userclk1 = clkout2;
 assign PIPE_MMCM_LOCK_IN = locked;
 */
     BUFGCTRL pclk_i1 ( .CE0 (1'd1), .CE1 (1'd1),
         .I0 (clk_125mhz), .I1 (clk_250mhz), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
         .S0 (~pclk_sel), .S1 ( pclk_sel), .O (PIPE_PCLK_IN));
-    BUFG dclk_i ( .I (clk_125mhz), .O (PIPE_DCLK_IN));
-    BUFG usrclk1_i1 ( .I (userclk1), .O (PIPE_USERCLK1_IN));
     always @ (posedge PIPE_PCLK_IN)
     begin
         pclk_sel_reg1 <= PIPE_PCLK_SEL_OUT;
@@ -215,27 +211,17 @@ assign PIPE_MMCM_LOCK_IN = locked;
       .cfg_pmcsr_pme_en ( cfg_pmcsr_pme_en ), .cfg_pmcsr_powerstate ( cfg_pmcsr_powerstate ), .cfg_pmcsr_pme_status ( cfg_pmcsr_pme_status ),
       .cfg_received_func_lvl_rst ( cfg_received_func_lvl_rst ),
       .cfg_mgmt_di ( cfg_mgmt_di ),
-      .cfg_mgmt_byte_en ( cfg_mgmt_byte_en ),
-      .cfg_mgmt_dwaddr ( cfg_mgmt_dwaddr ),
-      .cfg_mgmt_wr_en ( cfg_mgmt_wr_en ),
-      .cfg_mgmt_rd_en ( cfg_mgmt_rd_en ),
-      .cfg_mgmt_wr_readonly ( cfg_mgmt_wr_readonly ),
-      .cfg_err_ecrc ( cfg_err_ecrc ),
-      .cfg_err_ur ( cfg_err_ur ),
+      .cfg_mgmt_byte_en ( cfg_mgmt_byte_en ), .cfg_mgmt_dwaddr ( cfg_mgmt_dwaddr ),
+      .cfg_mgmt_wr_en ( cfg_mgmt_wr_en ), .cfg_mgmt_rd_en ( cfg_mgmt_rd_en ), .cfg_mgmt_wr_readonly ( cfg_mgmt_wr_readonly ),
+      .cfg_err_ecrc ( cfg_err_ecrc ), .cfg_err_ur ( cfg_err_ur ),
       .cfg_err_cpl_timeout ( cfg_err_cpl_timeout ), .cfg_err_cpl_unexpect ( cfg_err_cpl_unexpect ), .cfg_err_cpl_abort ( cfg_err_cpl_abort ),
-      .cfg_err_posted ( cfg_err_posted ),
-      .cfg_err_cor ( cfg_err_cor ),
+      .cfg_err_posted ( cfg_err_posted ), .cfg_err_cor ( cfg_err_cor ),
       .cfg_err_atomic_egress_blocked ( cfg_err_atomic_egress_blocked ),
-      .cfg_err_internal_cor ( cfg_err_internal_cor ),
-      .cfg_err_malformed ( cfg_err_malformed ),
-      .cfg_err_mc_blocked ( cfg_err_mc_blocked ),
-      .cfg_err_poisoned ( cfg_err_poisoned ),
-      .cfg_err_norecovery ( cfg_err_norecovery ),
+      .cfg_err_internal_cor ( cfg_err_internal_cor ), .cfg_err_malformed ( cfg_err_malformed ),
+      .cfg_err_mc_blocked ( cfg_err_mc_blocked ), .cfg_err_poisoned ( cfg_err_poisoned ), .cfg_err_norecovery ( cfg_err_norecovery ),
       .cfg_err_tlp_cpl_header ( cfg_err_tlp_cpl_header ),
-      .cfg_err_cpl_rdy ( cfg_err_cpl_rdy ),
-      .cfg_err_locked ( cfg_err_locked ),
-      .cfg_err_acs ( cfg_err_acs ),
-      .cfg_err_internal_uncor ( cfg_err_internal_uncor ),
+      .cfg_err_cpl_rdy ( cfg_err_cpl_rdy ), .cfg_err_locked ( cfg_err_locked ),
+      .cfg_err_acs ( cfg_err_acs ), .cfg_err_internal_uncor ( cfg_err_internal_uncor ),
       .cfg_trn_pending ( cfg_trn_pending ),
       .cfg_pm_halt_aspm_l0s ( cfg_pm_halt_aspm_l0s ), .cfg_pm_halt_aspm_l1 ( cfg_pm_halt_aspm_l1 ),
       .cfg_pm_force_state_en ( cfg_pm_force_state_en ), .cfg_pm_force_state ( cfg_pm_force_state ),
@@ -249,8 +235,7 @@ assign PIPE_MMCM_LOCK_IN = locked;
       .cfg_pciecap_interrupt_msgnum ( cfg_pciecap_interrupt_msgnum ),
       .cfg_to_turnoff ( cfg_to_turnoff ), .cfg_turnoff_ok ( cfg_turnoff_ok ),
       .cfg_bus_number ( cfg_bus_number ), .cfg_device_number ( cfg_device_number ), .cfg_function_number ( cfg_function_number ),
-      .cfg_pm_wake ( cfg_pm_wake ),
-      .cfg_pm_send_pme_to ( 1'b0 ),
+      .cfg_pm_wake ( cfg_pm_wake ), .cfg_pm_send_pme_to ( 1'b0 ),
       .cfg_ds_bus_number ( 8'b0 ), .cfg_ds_device_number ( 5'b0 ), .cfg_ds_function_number ( 3'b0 ),
       .cfg_mgmt_wr_rw1c_as_rw ( 1'b0 ),
       .pl_directed_link_change ( pl_directed_link_change ), .pl_directed_link_width ( pl_directed_link_width ),
