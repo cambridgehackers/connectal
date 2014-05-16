@@ -2,9 +2,9 @@
 
 ## use "make gen.board" to generate the build directory
 gen.%:
-	make BOARD=$* gentarget
+	make BOARD=$* gentarget prebuild
 
-build.%: generate.%
+build.%: gen.%
 	make -C $* BOARD=$* all
 
 run.%:
@@ -68,3 +68,6 @@ endif
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
         -t $(TOP) $(XBSVFLAGS) $(BSVFILES) $(PRINTF_EXTRA)
+
+prebuild::
+	# additional steps needed before making verilog etc
