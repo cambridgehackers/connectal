@@ -8,7 +8,7 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
 				parameter KEEP_WIDTH          = C_DATA_WIDTH / 8 // TSTRB width
                                 )
 (
- output txoutclk, input clkout0, input clkout1, input clkout2, input locked,
+ output txoutclk, input clk_125mhz_, input clk_250mhz_, input clkout2, input locked,
  output [7:0]                                pci_exp_txn,
  output [7:0]                                pci_exp_txp,
  input  [7:0]                                pci_exp_rxn,

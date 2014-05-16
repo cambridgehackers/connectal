@@ -211,13 +211,16 @@ endinterface
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 import "BVI" xilinx_x7_pcie_wrapper =
-module vMkXilinx7PCIExpress#(PCIEParams params, Clock clkout0, Clock clkout1, Clock clkout2, Bit#(1) locked)(PCIE_X7#(lanes))
+module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, Bit#(1) locked)(PCIE_X7#(lanes))
    provisos( Add#(1, z, lanes));
    // PCIe wrapper takes active low reset
    let sys_reset_n <- exposeCurrentReset;
    
    default_clock clk(sys_clk); // 100 MHz refclk
    default_reset rstn(sys_reset_n) = sys_reset_n;
+   input_clock clk_125mhz(clk_125mhz_) = clk_125mhz;
+   input_clock clk_250mhz(clk_250mhz_) = clk_250mhz;
+   input_clock clkout2(clkout2) = clkout2;
    
    interface PciewrapPci_exp pcie;
       method                            rxp(pci_exp_rxp) enable((*inhigh*)en0)                              reset_by(no_reset);
