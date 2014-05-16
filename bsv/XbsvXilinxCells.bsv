@@ -460,7 +460,127 @@ instance DefaultValue#(ClockGenerator7AdvParams);
       };
 endinstance
 
-module mkClockGenerator7Adv#(ClockGenerator7AdvParams params)(ClockGenerator7);
+interface XVMMCME2;
+   interface Clock     clkout0;
+   interface Clock     clkout0_n;
+   interface Clock     clkout1;
+   interface Clock     clkout1_n;
+   interface Clock     clkout2;
+   interface Clock     clkout2_n;
+   interface Clock     clkout3;
+   interface Clock     clkout3_n;
+   interface Clock     clkout4;
+   interface Clock     clkout5;
+   interface Clock     clkout6;
+   interface Clock     clkfbout;
+   interface Clock     clkfbout_n;
+   (* always_ready, always_enabled *)
+   method    Bool      locked;
+   (* always_ready, always_enabled *)
+   method    Action    clkfbin(Bit#(1) clk);
+endinterface
+
+import "BVI" MMCME2_ADV =
+module vMkXMMCME2_ADV#(MMCMParams params)(XVMMCME2);
+   Reset reset <- invertCurrentReset;
+   
+   default_clock clk1(CLKIN1);
+   default_reset rst(RST) = reset;
+   
+   parameter BANDWIDTH            = params.bandwidth;
+   parameter CLKFBOUT_USE_FINE_PS = params.clkfbout_use_fine_ps;
+   parameter CLKOUT0_USE_FINE_PS  = params.clkout0_use_fine_ps;
+   parameter CLKOUT1_USE_FINE_PS  = params.clkout1_use_fine_ps;
+   parameter CLKOUT2_USE_FINE_PS  = params.clkout2_use_fine_ps;
+   parameter CLKOUT3_USE_FINE_PS  = params.clkout3_use_fine_ps;
+   parameter CLKOUT4_CASCADE      = params.clkout4_cascade;
+   parameter CLKOUT4_USE_FINE_PS  = params.clkout4_use_fine_ps;
+   parameter CLKOUT5_USE_FINE_PS  = params.clkout5_use_fine_ps;
+   parameter CLKOUT6_USE_FINE_PS  = params.clkout6_use_fine_ps;
+   parameter COMPENSATION         = params.compensation;
+   parameter STARTUP_WAIT         = params.startup_wait;
+   parameter CLKFBOUT_MULT_F      = params.clkfbout_mult_f;
+   parameter CLKFBOUT_PHASE       = params.clkfbout_phase;
+   parameter CLKIN1_PERIOD        = params.clkin1_period;
+   parameter CLKIN2_PERIOD        = params.clkin2_period;
+   parameter DIVCLK_DIVIDE        = params.divclk_divide;
+   parameter CLKOUT0_DIVIDE_F     = params.clkout0_divide_f;
+   parameter CLKOUT0_DUTY_CYCLE   = params.clkout0_duty_cycle;
+   parameter CLKOUT0_PHASE        = params.clkout0_phase;
+   parameter CLKOUT1_DIVIDE       = params.clkout1_divide;
+   parameter CLKOUT1_DUTY_CYCLE   = params.clkout1_duty_cycle;
+   parameter CLKOUT1_PHASE        = params.clkout1_phase;
+   parameter CLKOUT2_DIVIDE       = params.clkout2_divide;
+   parameter CLKOUT2_DUTY_CYCLE   = params.clkout2_duty_cycle;
+   parameter CLKOUT2_PHASE        = params.clkout2_phase;
+   parameter CLKOUT3_DIVIDE       = params.clkout3_divide;
+   parameter CLKOUT3_DUTY_CYCLE   = params.clkout3_duty_cycle;
+   parameter CLKOUT3_PHASE        = params.clkout3_phase;
+   parameter CLKOUT4_DIVIDE       = params.clkout4_divide;
+   parameter CLKOUT4_DUTY_CYCLE   = params.clkout4_duty_cycle;
+   parameter CLKOUT4_PHASE        = params.clkout4_phase;
+   parameter CLKOUT5_DIVIDE       = params.clkout5_divide;
+   parameter CLKOUT5_DUTY_CYCLE   = params.clkout5_duty_cycle;
+   parameter CLKOUT5_PHASE        = params.clkout5_phase;
+   parameter CLKOUT6_DIVIDE       = params.clkout6_divide;
+   parameter CLKOUT6_DUTY_CYCLE   = params.clkout6_duty_cycle;
+   parameter CLKOUT6_PHASE        = params.clkout6_phase;
+   parameter REF_JITTER1          = params.ref_jitter1;
+   parameter REF_JITTER2          = params.ref_jitter2;
+   
+   port CLKIN2       = Bit#(1)'(0);
+   port CLKINSEL     = Bit#(1)'(1);
+   port DADDR        = Bit#(7)'(0);
+   port DCLK         = Bit#(1)'(0);
+   port DEN          = Bit#(1)'(0);
+   port DI           = Bit#(16)'(0);
+   port DWE          = Bit#(1)'(0);
+   port PSCLK        = Bit#(1)'(0);
+   port PSEN         = Bit#(1)'(0);
+   port PSINCDEC     = Bit#(1)'(0);
+   port PWRDWN       = Bit#(1)'(0);
+   
+   output_clock clkfbout(CLKFBOUT);
+   output_clock clkfbout_n(CLKFBOUTB);
+   output_clock clkout0(CLKOUT0);
+   output_clock clkout0_n(CLKOUT0B);
+   output_clock clkout1(CLKOUT1);
+   output_clock clkout1_n(CLKOUT1B);
+   output_clock clkout2(CLKOUT2);
+   output_clock clkout2_n(CLKOUT2B);
+   output_clock clkout3(CLKOUT3);
+   output_clock clkout3_n(CLKOUT3B);
+   output_clock clkout4(CLKOUT4);
+   output_clock clkout5(CLKOUT5);
+   output_clock clkout6(CLKOUT6);
+   
+   method LOCKED     locked()     clocked_by(no_clock) reset_by(no_reset);
+   method            clkfbin(CLKFBIN) enable((*inhigh*)en1) clocked_by(clkfbout) reset_by(no_reset);
+      
+   schedule clkfbin C clkfbin;
+   schedule locked CF (clkfbin, locked);
+endmodule
+
+interface XClockGenerator7;
+   interface Clock        clkout0;
+   interface Clock        clkout0_n;
+   interface Clock        clkout1;
+   interface Clock        clkout1_n;
+   interface Clock        clkout2;
+   interface Clock        clkout2_n;
+   interface Clock        clkout3;
+   interface Clock        clkout3_n;
+   interface Clock        clkout4;
+   interface Clock        clkout5;
+   interface Clock        clkout6;
+   interface Clock     clkfbout;
+   (* always_ready *)
+   method    Bool         locked;
+   (* always_ready, always_enabled *)
+   method    Action    clkfbin(Bit#(1) clk);
+endinterface
+
+module mkClockGenerator7Adv#(ClockGenerator7AdvParams params)(XClockGenerator7);
 
    ////////////////////////////////////////////////////////////////////////////////
    /// Clocks & Resets
@@ -476,8 +596,8 @@ module mkClockGenerator7Adv#(ClockGenerator7AdvParams params)(ClockGenerator7);
       clk_buffered = clk;
    end
 
-   Reset                                     rst_n               <- mkAsyncResetFromCR(params.reset_stages, clk_buffered);
-   Reset                                     rst                 <- mkResetInverter(rst_n);
+   //Reset                                     rst_n               <- mkAsyncResetFromCR(params.reset_stages, clk_buffered);
+   //Reset                                     rst                 <- mkResetInverter(rst_n);
 
    ////////////////////////////////////////////////////////////////////////////////
    /// Design Elements
@@ -515,7 +635,12 @@ module mkClockGenerator7Adv#(ClockGenerator7AdvParams params)(ClockGenerator7);
    clkgen_params.ref_jitter2        = params.ref_jitter2;
    clkgen_params.use_same_family    = params.use_same_family;
 
-   MMCME2                                    pll                 <- mkMMCME2(clkgen_params);
+   XVMMCME2 pll <- vMkXMMCME2_ADV(clkgen_params);
+
+   //(* fire_when_enabled, no_implicit_conditions *)
+   //rule connect_feedback;
+      //pll.clkfbin( pll.clkfbout);
+   //endrule
 
    Clock                                     clkout0_buf          = ?;
    Clock                                     clkout0n_buf         = ?;
@@ -633,6 +758,8 @@ module mkClockGenerator7Adv#(ClockGenerator7AdvParams params)(ClockGenerator7);
    interface Clock        clkout5   = clkout5_buf;
    interface Clock        clkout6   = clkout6_buf;
    method    Bool         locked    = pll.locked;
+   interface Clock        clkfbout = pll.clkfbout;
+   method                 clkfbin = pll.clkfbin;
 endmodule: mkClockGenerator7Adv
 
 ////////////////////////////////////////////////////////////
@@ -709,7 +836,8 @@ endinterface
 import "BVI" CONNECTNET =
 module mkC2B#(Clock c)(C2B);
     default_clock clk();
-    default_reset rst();
+    default_reset no_reset;
+    //default_reset rst();
     input_clock ck(IN) = c;
     method OUT o();
     schedule ( o) CF ( o);
