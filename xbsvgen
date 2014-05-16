@@ -129,12 +129,7 @@ if $needspcie {
     if {[version -short] == "2013.2"} {
         set pcieversion {2.1}
     }
-    if [file exists $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci] {
-       read_ip $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci
-    }  else {
-        file mkdir $xbsvdir/generated/xilinx/$boardname
-        create_ip -name pcie_7x -version $pcieversion -vendor xilinx.com -library ip -module_name pcie_7x_0 -dir $xbsvdir/generated/xilinx/$boardname
-        set_property -dict [list \
+    xbsv_synth_ip pcie_7x $pcieversion pcie_7x_0 [list \
                             CONFIG.mode_selection {Advanced} \
                             CONFIG.ASPM_Optionality {true} \
                             CONFIG.Buf_Opt_BMA {true} \
@@ -163,17 +158,9 @@ if $needspcie {
                             CONFIG.Subsystem_Vendor_ID {1be7} \
                             CONFIG.Use_Class_Code_Lookup_Assistant {false} \
                             CONFIG.Vendor_ID {1be7} \
-                           ] [get_ips pcie_7x_0]
-        report_property [get_ips pcie_7x_0]
-        generate_target all [get_files $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci]
-    }
-        if [file exists $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.dcp] {
-        } else {
-            catch {
-                synth_ip [get_ips pcie_7x_0]
-            }
-        }
+                           ]
 }
+
 if [file exists ../synth-ip.tcl] {
     source ../synth-ip.tcl
 }
