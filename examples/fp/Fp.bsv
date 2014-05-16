@@ -21,6 +21,11 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import FloatingPoint::*;
+import GetPut::*;
+import ClientServer::*;
+import FpOps::*;
+
 interface FpRequest;
    method Action add(Bit#(32) a, Bit#(32) b);
 endinterface
@@ -30,10 +35,15 @@ endinterface
 
 module mkFpRequest#(FpIndication indication)(FpRequest);
 
-   method Action add(Bit#(32) a, Bit#(32) v);
-      //TBD call fp_add(a,b)
+   Server#(Tuple2#(Float,Float),Float) adder <- mkXilinxFPAdder();
 
-      indication.added(v);
+   rule result;
+      let v <- adder.response.get();
+      indication.added(pack(v));
+   endrule
+
+   method Action add(Bit#(32) a, Bit#(32) b);
+      adder.request.put(tuple2(unpack(a), unpack(b)));
    endmethod
 
 endmodule
