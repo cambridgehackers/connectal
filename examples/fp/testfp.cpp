@@ -16,9 +16,8 @@ public:
     if (++cnt == 1)
       exit(0);
   }
-  void added ( const uint32_t a ) {
-    float af = *(float *)&a;
-    fprintf(stderr, "Result=%f\n", af);
+  void added ( const float &a ) {
+    fprintf(stderr, "Result=%f\n", a);
     incr_cnt();
   }
   FpIndication(unsigned int id) : FpIndicationWrapper(id), cnt(0){}
@@ -40,7 +39,7 @@ int main(int argc, const char **argv)
   float a = 1.0;
   float b = 0.5;
 
-  device->add(*(int*)&a, *(int*)&b);
+  device->add(a, b);
 
   // wait for answer
   while(true){sleep(2);}

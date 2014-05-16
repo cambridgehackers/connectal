@@ -27,10 +27,10 @@ import ClientServer::*;
 import FpOps::*;
 
 interface FpRequest;
-   method Action add(Bit#(32) a, Bit#(32) b);
+   method Action add(Float a, Float b);
 endinterface
 interface FpIndication;
-   method Action added(Bit#(32) a);
+   method Action added(Float a);
 endinterface
 
 module mkFpRequest#(FpIndication indication)(FpRequest);
@@ -39,11 +39,11 @@ module mkFpRequest#(FpIndication indication)(FpRequest);
 
    rule result;
       let v <- adder.response.get();
-      indication.added(pack(v));
+      indication.added(v);
    endrule
 
-   method Action add(Bit#(32) a, Bit#(32) b);
-      adder.request.put(tuple2(unpack(a), unpack(b)));
+   method Action add(Float a, Float b);
+      adder.request.put(tuple2(a, b));
    endmethod
 
 endmodule
