@@ -59,8 +59,8 @@ instance Connectable#(Put#(TLPData#(8)), PCIE_TRN_RECV_X7);
    module mkConnection#(Put#(TLPData#(8)) p, PCIE_TRN_RECV_X7 r)(Empty);
       (* no_implicit_conditions, fire_when_enabled *)
       rule every;
-         r.non_posted_ok(True);
-	 r.non_posted_req(True);
+         r.non_posted_ok(1);
+	 r.non_posted_req(1);
       endrule
       rule connect;
          let data <- r.recv;
@@ -115,8 +115,8 @@ instance Connectable#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
 
       (* no_implicit_conditions, fire_when_enabled *)
       rule every;
-         r.non_posted_ok(True);
-	 r.non_posted_req(True);
+         r.non_posted_ok(1);
+	 r.non_posted_req(1);
       endrule
 
       rule connect;
@@ -224,8 +224,8 @@ instance ConnectableWithClocks#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
       ////////////////////////////////////////////////////////////////////////////////
       (* no_implicit_conditions, fire_when_enabled *)
       rule every;
-         g.non_posted_ok(True);
-	 g.non_posted_req(True);
+         g.non_posted_ok(1);
+	 g.non_posted_req(1);
       endrule
 
       rule accept_data;

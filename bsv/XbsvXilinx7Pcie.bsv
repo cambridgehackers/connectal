@@ -55,6 +55,7 @@ interface PCIE_X7#(numeric type lanes);
    interface PCIE_TRN_X7      trn;
    interface PCIE_AXI_TX_X7   axi_tx;
    interface PCIE_AXI_RX_X7   axi_rx;
+   interface PciewrapRx     rx;
    interface PCIE_PL_X7       pl;
    interface PCIE_CFG_X7      cfg;
    interface PCIE_INT_X7      cfg_interrupt;
@@ -103,8 +104,6 @@ interface PCIE_AXI_RX_X7;
    method    Bit#(22)         ruser();
    method    Bool             rvalid();
    method    Action           rready(Bool i);
-   method    Action           rnp_ok(Bool i);
-   method    Action           rnp_req(Bool i);
 endinterface
 
 (* always_ready, always_enabled *)
@@ -273,8 +272,10 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
       method m_axis_rx_tuser            ruser                                                               clocked_by(trn_clk)  reset_by(no_reset);
       method m_axis_rx_tvalid           rvalid                                                              clocked_by(trn_clk)  reset_by(no_reset);
       method                            rready(m_axis_rx_tready)                     enable((*inhigh*)en08) clocked_by(trn_clk)  reset_by(no_reset);
-      method                            rnp_ok(rx_np_ok)                             enable((*inhigh*)en09) clocked_by(trn_clk)  reset_by(no_reset);
-      method                            rnp_req(rx_np_req)                           enable((*inhigh*)en10) clocked_by(trn_clk)  reset_by(no_reset);
+   endinterface
+   interface PciewrapRx     rx;
+      method                            np_ok(rx_np_ok)                             enable((*inhigh*)en09) clocked_by(trn_clk)  reset_by(no_reset);
+      method                            np_req(rx_np_req)                           enable((*inhigh*)en10) clocked_by(trn_clk)  reset_by(no_reset);
    endinterface
 
    interface PCIE_PL_X7 pl;
@@ -378,7 +379,7 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
    schedule (trn_lnk_up, trn_app_rdy, trn_fc_ph, trn_fc_pd, trn_fc_nph, trn_fc_npd, trn_fc_cplh, trn_fc_cpld, trn_fc_sel, axi_tx_tlast,
 	     axi_tx_tdata, axi_tx_tkeep, axi_tx_tvalid, axi_tx_tready, axi_tx_tuser, axi_tx_tbuf_av, axi_tx_terr_drop,
 	     axi_tx_tcfg_req, axi_tx_tcfg_gnt, axi_rx_rlast, axi_rx_rdata, axi_rx_rkeep, axi_rx_ruser, axi_rx_rvalid,
-	     axi_rx_rready, axi_rx_rnp_ok, axi_rx_rnp_req, pl_initial_link_width, pl_phy_link_up, pl_lane_reversal_mode,
+	     axi_rx_rready, rx_np_ok, rx_np_req, pl_initial_link_width, pl_phy_link_up, pl_lane_reversal_mode,
 	     pl_link_gen2_capable, pl_link_partner_gen2_supported, pl_link_upcfg_capable, pl_sel_link_rate, pl_sel_link_width,
 	     pl_ltssm_state, pl_rx_pm_state, pl_tx_pm_state, pl_directed_link_auton, pl_directed_link_change, 
 	     pl_directed_link_speed, pl_directed_link_width, pl_directed_change_done, pl_upstream_prefer_deemph, 
@@ -400,7 +401,7 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
             (trn_lnk_up, trn_app_rdy, trn_fc_ph, trn_fc_pd, trn_fc_nph, trn_fc_npd, trn_fc_cplh, trn_fc_cpld, trn_fc_sel, axi_tx_tlast,
 	     axi_tx_tdata, axi_tx_tkeep, axi_tx_tvalid, axi_tx_tready, axi_tx_tuser, axi_tx_tbuf_av, axi_tx_terr_drop,
 	     axi_tx_tcfg_req, axi_tx_tcfg_gnt, axi_rx_rlast, axi_rx_rdata, axi_rx_rkeep, axi_rx_ruser, axi_rx_rvalid,
-	     axi_rx_rready, axi_rx_rnp_ok, axi_rx_rnp_req, pl_initial_link_width, pl_phy_link_up, pl_lane_reversal_mode,
+	     axi_rx_rready, rx_np_ok, rx_np_req, pl_initial_link_width, pl_phy_link_up, pl_lane_reversal_mode,
 	     pl_link_gen2_capable, pl_link_partner_gen2_supported, pl_link_upcfg_capable, pl_sel_link_rate, pl_sel_link_width,
 	     pl_ltssm_state, pl_rx_pm_state, pl_tx_pm_state, pl_directed_link_auton, pl_directed_link_change, 
 	     pl_directed_link_speed, pl_directed_link_width, pl_directed_change_done, pl_upstream_prefer_deemph, 
@@ -448,8 +449,8 @@ endinterface
 
 interface PCIE_TRN_RECV_X7;
    method    ActionValue#(Tuple3#(Bool, Bool, TLPData#(8))) recv();
-   method    Action      non_posted_ok(Bool i);
-   method    Action      non_posted_req(Bool i);
+   method    Action      non_posted_ok(Bit#(1) i);
+   method    Action      non_posted_req(Bit#(1) i);
 endinterface
 
 interface PCIExpressX7#(numeric type lanes);
@@ -566,6 +567,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    endrule
 
    PCIE_X7#(lanes)     pcie_ep <- mkXilinx7PCIE(params, clockGen.clkout0, clockGen.clkout1, clockGen.clkout2, bbufc.o);
+   //new PcieWrap#(lanes)  pciew <- mkPcieWrap();
    Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.txoutclk);
    C2B c2b <- mkC2B(txoutclk_buf);
    rule txoutrule;
@@ -690,8 +692,8 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 	 retval.data = dwordSwap64(info.data);
 	 return tuple3(info.user[1] == 1, info.user[0] == 1, retval);
       endmethod
-      method non_posted_ok(i)  = pcie_ep.axi_rx.rnp_ok(i);
-      method non_posted_req(i) = pcie_ep.axi_rx.rnp_req(i);
+      method non_posted_ok(i)  = pcie_ep.rx.np_ok(i);
+      method non_posted_req(i) = pcie_ep.rx.np_req(i);
    endinterface
       
    interface pl = pcie_ep.pl;
