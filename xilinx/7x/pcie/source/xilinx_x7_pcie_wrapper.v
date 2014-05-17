@@ -9,6 +9,10 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
                                 )
 (
  output txoutclk, input clk_125mhz_, input clk_250mhz_, input clkout2, input locked,
+ input PIPE_PCLK_IN,
+ input [PCIE_LANE-1:0] pclk_sel_reg1,
+ input [PCIE_LANE-1:0] pclk_sel_reg2,
+ output [PCIE_LANE-1:0]          PIPE_PCLK_SEL_OUT,
  output [7:0]                                pci_exp_txn,
  output [7:0]                                pci_exp_txp,
  input  [7:0]                                pci_exp_rxn,
@@ -129,25 +133,7 @@ module xilinx_x7_pcie_wrapper #( parameter C_DATA_WIDTH        = 64, // RX/TX in
  output wire [6:0]    cfg_vc_tcvc_map,
  input wire           sys_clk,
  input wire           sys_reset_n);
-   wire                PIPE_PCLK_IN;
    wire [7:0]          PIPE_PCLK_SEL_OUT;
-(* ASYNC_REG = "TRUE", SHIFT_EXTRACT = "NO" *)    reg         [PCIE_LANE-1:0] pclk_sel_reg1 = {PCIE_LANE{1'd0}};
-(* ASYNC_REG = "TRUE", SHIFT_EXTRACT = "NO" *)    reg         [PCIE_LANE-1:0] pclk_sel_reg2 = {PCIE_LANE{1'd0}};
-    reg                pclk_sel = 1'd0;
-    BUFGCTRL pclk_i1 ( .CE0 (1'd1), .CE1 (1'd1),
-        .I0 (clk_125mhz_), .I1 (clk_250mhz_), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
-        .S0 (~pclk_sel), .S1 ( pclk_sel), .O (PIPE_PCLK_IN));
-    always @ (posedge PIPE_PCLK_IN)
-    begin
-        pclk_sel_reg1 <= PIPE_PCLK_SEL_OUT;
-        pclk_sel_reg2 <= pclk_sel_reg1;
-        if (&pclk_sel_reg2)
-            pclk_sel <= 1'd1;
-        else if (&(~pclk_sel_reg2))
-            pclk_sel <= 1'd0;
-        else
-            pclk_sel <= pclk_sel;
-    end
   pcie_7x_0 #() pcie_7x_i(
       .pci_exp_txn ( pci_exp_txn ), .pci_exp_txp ( pci_exp_txp ),
       .pci_exp_rxn ( pci_exp_rxn ), .pci_exp_rxp ( pci_exp_rxp ),

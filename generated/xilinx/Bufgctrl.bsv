@@ -46,7 +46,7 @@ module mkBufgctrl#(Clock i0, Reset i0_reset, Clock i1, Reset i1_reset)(Bufgctrl)
     method ignore0(IGNORE0) enable((*inhigh*) EN_IGNORE0);
     method ignore1(IGNORE1) enable((*inhigh*) EN_IGNORE1);
     output_clock o(O);
-    method s0(S0) enable((*inhigh*) EN_S0);
-    method s1(S1) enable((*inhigh*) EN_S1);
+    method s0(S0) clocked_by(o) enable((*inhigh*) EN_S0);
+    method s1(S1) clocked_by(o) enable((*inhigh*) EN_S1);
     schedule (ce0, ce1, ignore0, ignore1, s0, s1) CF (ce0, ce1, ignore0, ignore1, s0, s1);
 endmodule

@@ -61,6 +61,9 @@ interface PCIE_X7#(numeric type lanes);
    interface PCIE_ERR_X7      cfg_err;
    interface Clock            txoutclk;
    method    Action           locked(Bit#(1) v);
+   method    Action pclk_sel_reg1(Bit#(lanes) v);
+   method    Action pclk_sel_reg2(Bit#(lanes) v);
+   method    Bit#(lanes) pipe_pclk_sel_out();
 endinterface
 
 (* always_ready, always_enabled *)
@@ -213,7 +216,7 @@ endinterface
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 import "BVI" xilinx_x7_pcie_wrapper =
-module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2)(PCIE_X7#(lanes))
+module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, Clock pclk_in)(PCIE_X7#(lanes))
    provisos( Add#(1, z, lanes));
    // PCIe wrapper takes active low reset
    let sys_reset_n <- exposeCurrentReset;
@@ -223,7 +226,11 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
    input_clock clk_125mhz(clk_125mhz_) = clk_125mhz;
    input_clock clk_250mhz(clk_250mhz_) = clk_250mhz;
    input_clock clkout2(clkout2) = clkout2;
+   input_clock pclk_in(PIPE_PCLK_IN) = pclk_in;
    method locked(locked) enable((*inhigh*)en_locked);
+   method pclk_sel_reg1(pclk_sel_reg1) enable((*inhigh*)en_selreg1) clocked_by(pclk_in);
+   method pclk_sel_reg2(pclk_sel_reg2) enable((*inhigh*)en_selreg2) clocked_by(pclk_in);
+   method PIPE_PCLK_SEL_OUT pipe_pclk_sel_out clocked_by(pclk_in);
    
    interface PciewrapPci_exp pcie;
       method                            rxp(pci_exp_rxp) enable((*inhigh*)en0)                              reset_by(no_reset);
@@ -388,7 +395,7 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
 	     cfg_err_cor, cfg_err_atomic_egress_blocked, cfg_err_internal_cor, cfg_err_internal_uncor, cfg_err_malformed,
 	     cfg_err_mc_blocked, cfg_err_poisoned, cfg_err_no_recovery, cfg_err_tlp_cpl_header, cfg_err_cpl_rdy, cfg_err_locked,
 	     cfg_err_aer_headerlog, cfg_err_aer_headerlog_set, cfg_err_aer_interrupt_msgnum, cfg_err_acs,
-	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked
+	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked, pclk_sel_reg1, pclk_sel_reg2, pipe_pclk_sel_out
 	     ) CF 
             (trn_lnk_up, trn_app_rdy, trn_fc_ph, trn_fc_pd, trn_fc_nph, trn_fc_npd, trn_fc_cplh, trn_fc_cpld, trn_fc_sel, axi_tx_tlast,
 	     axi_tx_tdata, axi_tx_tkeep, axi_tx_tvalid, axi_tx_tready, axi_tx_tuser, axi_tx_tbuf_av, axi_tx_terr_drop,
@@ -410,7 +417,7 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
 	     cfg_err_cor, cfg_err_atomic_egress_blocked, cfg_err_internal_cor, cfg_err_internal_uncor, cfg_err_malformed,
 	     cfg_err_mc_blocked, cfg_err_poisoned, cfg_err_no_recovery, cfg_err_tlp_cpl_header, cfg_err_cpl_rdy, cfg_err_locked,
 	     cfg_err_aer_headerlog, cfg_err_aer_headerlog_set, cfg_err_aer_interrupt_msgnum, cfg_err_acs,
-	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked
+	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked, pclk_sel_reg1, pclk_sel_reg2, pipe_pclk_sel_out
              );
 
 endmodule: vMkXilinx7PCIExpress
@@ -464,26 +471,26 @@ endinterface
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 typeclass MkXilinx7PCIE#(numeric type lanes);
-   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, PCIE_X7#(lanes) ifc);
+   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, Clock pclk_in, PCIE_X7#(lanes) ifc);
 endtypeclass
 
 instance MkXilinx7PCIE#(8);
-   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, PCIE_X7#(8) ifc);
-      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clk_250mhz, clkout2);
+   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, Clock pclk_in, PCIE_X7#(8) ifc);
+      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clk_250mhz, clkout2, pclk_in);
       return _ifc;
    endmodule
 endinstance
 
 instance MkXilinx7PCIE#(4);
-   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, PCIE_X7#(4) ifc);
-      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clk_250mhz, clkout2);
+   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, Clock pclk_in, PCIE_X7#(4) ifc);
+      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clk_250mhz, clkout2, pclk_in);
       return _ifc;
    endmodule
 endinstance
 
 instance MkXilinx7PCIE#(1);
-   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, PCIE_X7#(1) ifc);
-      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clk_250mhz, clkout2);
+   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clk_250mhz, Clock clkout2, Clock pclk_in, PCIE_X7#(1) ifc);
+      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clk_250mhz, clkout2, pclk_in);
       return _ifc;
    endmodule
 endinstance
@@ -535,7 +542,6 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    Reset rsto <- mkAsyncReset(2, defaultReset, bbufc.o);
 
    Reg#(Bit#(1)) pclk_sel <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
-   SyncBitIfc#(Bit#(1)) pclk_sel_sync <-  mkSyncBit(bbufc.o, rsto, defaultClock);
    Reg#(Bit#(lanes)) pclk_sel_reg1 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
    Reg#(Bit#(lanes)) pclk_sel_reg2 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
    rule bufcruleinit;
@@ -545,14 +551,12 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       bbufc.ignore1(0);
    endrule
    rule bufcrule;
-      bbufc.s0(~pclk_sel_sync.read());
-      bbufc.s1(pclk_sel_sync.read());
+      bbufc.s0(~pclk_sel);
+      bbufc.s1(pclk_sel);
    endrule
 
-   //.S0 (~pclk_sel), .S1 ( pclk_sel), .O (PIPE_PCLK_IN));
    rule update_psel;
        let ps = pclk_sel;
-       pclk_sel_reg1 <= 0; //PIPE_PCLK_SEL_OUT;
        pclk_sel_reg2 <= pclk_sel_reg1;
        if ((~pclk_sel_reg2) == 0)
            ps = 1;
@@ -560,10 +564,8 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
            ps = 0;
        pclk_sel <= ps;
    endrule
-   rule update_psels;
-       pclk_sel_sync.send(pclk_sel);
-   endrule
-   PCIE_X7#(lanes)     pcie_ep <- mkXilinx7PCIE(params, clockGen.clkout0, clockGen.clkout1, clockGen.clkout2);
+
+   PCIE_X7#(lanes)     pcie_ep <- mkXilinx7PCIE(params, clockGen.clkout0, clockGen.clkout1, clockGen.clkout2, bbufc.o);
    Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.txoutclk);
    C2B c2b <- mkC2B(txoutclk_buf);
    rule txoutrule;
@@ -571,6 +573,13 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    endrule
    rule lockedrule;
       pcie_ep.locked(pack(clockGen.locked));
+   endrule
+   rule selr;
+      pcie_ep.pclk_sel_reg1(pclk_sel_reg1);
+      pcie_ep.pclk_sel_reg2(pclk_sel_reg2);
+   endrule
+   rule selr3;
+      pclk_sel_reg1 <= pcie_ep.pipe_pclk_sel_out();
    endrule
 
    Clock                                     user_clk             = pcie_ep.trn.clk;
