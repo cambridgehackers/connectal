@@ -28,6 +28,7 @@ import XbsvXilinxCells   ::*;
 import XilinxCells       ::*;
 import PCIE              ::*;
 import PCIEWRAPPER       ::*;
+import Bufgctrl           ::*;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Types
@@ -526,34 +527,43 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    rule txoutrule5;
       clockGen.clkfbin(c2b_fb.o());
    endrule
-/*
-    BUFGCTRL pclk_i1 ( .CE0 (1'd1), .CE1 (1'd1),
-        .I0 (clockGen.clkout0), .I1 (clockGen.clkout1), .IGNORE0 (1'd0), .IGNORE1 (1'd0),
-        .S0 (~pclk_sel), .S1 ( pclk_sel), .O (PIPE_PCLK_IN));
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
+   Reset rst0 <- mkAsyncReset(2, defaultReset, clockGen.clkout0);
+   Reset rst1 <- mkAsyncReset(2, defaultReset, clockGen.clkout1);
+   Bufgctrl bbufc <- mkBufgctrl(clockGen.clkout0, defaultReset, clockGen.clkout1, defaultReset);
+   Reset rsto <- mkAsyncReset(2, defaultReset, bbufc.o);
 
-   wire                PIPE_PCLK_IN;
-   wire                PIPE_MMCM_LOCK_IN;
-   wire                PIPE_TXOUTCLK_OUT;
-   wire [7:0]          PIPE_PCLK_SEL_OUT;
+   Reg#(Bit#(1)) pclk_sel <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
+   SyncBitIfc#(Bit#(1)) pclk_sel_sync <-  mkSyncBit(bbufc.o, rsto, defaultClock);
+   Reg#(Bit#(lanes)) pclk_sel_reg1 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
+   Reg#(Bit#(lanes)) pclk_sel_reg2 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
+   rule bufcruleinit;
+      bbufc.ce0(1);
+      bbufc.ce1(1);
+      bbufc.ignore0(0);
+      bbufc.ignore1(0);
+   endrule
+   rule bufcrule;
+      bbufc.s0(~pclk_sel_sync.read());
+      bbufc.s1(pclk_sel_sync.read());
+   endrule
 
-reg         [PCIE_LANE-1:0] pclk_sel_reg1 = {PCIE_LANE{1'd0}};
-reg         [PCIE_LANE-1:0] pclk_sel_reg2 = {PCIE_LANE{1'd0}};
-    reg                pclk_sel = 1'd0;
-    always @ (posedge PIPE_PCLK_IN)
-    begin
-        pclk_sel_reg1 <= PIPE_PCLK_SEL_OUT;
-        pclk_sel_reg2 <= pclk_sel_reg1;
-        if (&pclk_sel_reg2)
-            pclk_sel <= 1'd1;
-        else if (&(~pclk_sel_reg2))
-            pclk_sel <= 1'd0;
-        else
-            pclk_sel <= pclk_sel;
-    end
-*/
-////////JJJJJJJJJJJJJJJJJJJJ
-   //PIPE_DCLK_IN clockGen.clkout0); //PIPE_USERCLK1_IN clockGen.clkout2); //.LOCKED(clockGen.locked),
-   PCIE_X7#(lanes)                           pcie_ep             <- mkXilinx7PCIE(params, clockGen.clkout0, clockGen.clkout1, clockGen.clkout2);
+   //.S0 (~pclk_sel), .S1 ( pclk_sel), .O (PIPE_PCLK_IN));
+   rule update_psel;
+       let ps = pclk_sel;
+       pclk_sel_reg1 <= 0; //PIPE_PCLK_SEL_OUT;
+       pclk_sel_reg2 <= pclk_sel_reg1;
+       if ((~pclk_sel_reg2) == 0)
+           ps = 1;
+       else if (pclk_sel_reg2 == 0)
+           ps = 0;
+       pclk_sel <= ps;
+   endrule
+   rule update_psels;
+       pclk_sel_sync.send(pclk_sel);
+   endrule
+   PCIE_X7#(lanes)     pcie_ep <- mkXilinx7PCIE(params, clockGen.clkout0, clockGen.clkout1, clockGen.clkout2);
    Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.txoutclk);
    C2B c2b <- mkC2B(txoutclk_buf);
    rule txoutrule;
