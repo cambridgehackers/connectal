@@ -125,7 +125,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    // all in the epClock250 domain, so we have to cross them into the
    // epClock125 domain.
 
-   Bool link_is_up = _ep.trn.link_up();
+   Bool link_is_up = (_ep.trn.link_up() != 0);
    UInt#(8)  read_completion_boundary_250 = 64 << _ep.cfg.lcommand[3];
 
    // setup PCIe interrupt for MSI-X
