@@ -347,7 +347,7 @@ interface PcieWrap#(numeric type lanes);
     interface PciewrapUser     user;
 endinterface
 import "BVI" pcie_7x_0 =
-module mkPcieWrap(PcieWrap#(1));
+module mkPcieWrap(PcieWrap#(lanes));
     default_clock clk();
     default_reset rst();
     interface PciewrapCfg_aer     cfg_aer;
