@@ -34,8 +34,6 @@ interface X7PcieSplitter#(numeric type lanes);
    interface Reset reset250;
    interface Clock clock125;
    interface Reset reset125;
-   interface Clock clock0625;
-   interface Reset reset0625;
    interface Clock clock200;
    interface Reset reset200;
    (* prefix = "" *)
@@ -113,8 +111,6 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    Reset epReset250 <- mkAsyncReset(4, _ep.trn.reset_n, epClock250);
    Clock epClock125 = _ep.trn.clk2;
    Reset epReset125 <- mkAsyncReset(4, _ep.trn.reset_n, epClock125);
-   Clock epClock0625 = _ep.trn.clk3;
-   Reset epReset0625 <- mkAsyncReset(4, _ep.trn.reset_n, epClock0625);
 
    // Extract some status info from the PCIE endpoint. These values are
    // all in the epClock250 domain, so we have to cross them into the
@@ -153,8 +149,6 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface reset250 = epReset250;
    interface clock125 = epClock125;
    interface reset125 = epReset125;
-   interface clock0625 = epClock0625;
-   interface reset0625 = epReset0625;
    interface clock200 = sys_clk_200mhz_buf;
    interface reset200 = sys_clk_200mhz_reset;
 
