@@ -96,9 +96,6 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 						  , clocked_by pci_clk_100mhz_buf
 						  , reset_by pci_sys_reset
 						  );
-   mkTieOff(_ep.zz1cfg);
-   mkTieOff(_ep.zzcfg_interrupt);
-
    // note our PCI ID
    PciId my_id = PciId { bus:  _ep.zz1cfg.bus_number()
 		       , dev:  _ep.zz1cfg.device_number()
@@ -125,15 +122,6 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 
    Bool link_is_up = (_ep.trn.link_up() != 0);
    UInt#(8)  read_completion_boundary_250 = 64 << _ep.zz1cfg.lcommand[3];
-
-   // setup PCIe interrupt for MSI-X
-   // this rule executes in the epClock250 domain
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule intr_ifc_ctl;
-      _ep.zzcfg_interrupt.di('0);      // tied off for MSI-X
-      _ep.zzcfg_interrupt.assrt('0);  // tied off for MSI-X
-      _ep.zzcfg_interrupt.req(0);      // tied off for MSI-X
-   endrule: intr_ifc_ctl
 
    // Build the PCIe-to-AXI bridge
    PcieSplitter#(BPB)  bridge <- mkPcieSplitter(my_id, clocked_by epClock125, reset_by epReset125);

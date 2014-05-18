@@ -277,41 +277,5 @@ instance ConnectableWithClocks#(PCIE_TRN_RECV_X7, Put#(TLPData#(16)));
    endmodule
 endinstance
 
-// interface tie-offs
-
-
-instance TieOff#(PCIE_CFG_X7);
-   module mkTieOff#(PCIE_CFG_X7 ifc)(Empty);
-      rule tie_off_inputs;
-	 ifc.di(0);
-	 ifc.dwaddr(0);
-	 ifc.byte_en(0);
-	 ifc.wr_en(0);
-	 ifc.rd_en(0);
-	 ifc.wr_readonly(0);
-	 ifc.trn_pending(0);
-	 ifc.dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
-	 ifc.pm_halt_aspm_l0s(0);
-	 ifc.pm_halt_aspm_l1(0);
-	 ifc.pm_force_state(0);
-	 ifc.pm_force_state_en(0);
-	 ifc.turnoff_ok(0);
-	 ifc.pm_wake(0);
-      endrule
-   endmodule
-endinstance
-
-instance TieOff#(PCIE_INT_X7);
-   module mkTieOff#(PCIE_INT_X7 ifc)(Empty);
-      rule tie_off_inputs;
-	 ifc.req(0);
-	 ifc.assrt(0);
-	 ifc.di(0);
-	 ifc.pciecap_msgnum(0);
-	 ifc.stat(0);
-      endrule
-   endmodule
-endinstance
-
 endpackage: PcieConnection
 
