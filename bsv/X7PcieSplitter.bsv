@@ -94,11 +94,6 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 						  , clocked_by pci_clk_100mhz_buf
 						  , reset_by pci_sys_reset
 						  );
-   // note our PCI ID
-   PciId my_id = PciId { bus:  _ep.zz1cfg.bus_number()
-		       , dev:  _ep.zz1cfg.device_number()
-		       , func: _ep.zz1cfg.function_number()
-		       };
 
    // The PCIE endpoint is processing TLPWord#(8)s at 250MHz.  The
    // AXI bridge is accepting TLPWord#(16)s at 125 MHz. The
@@ -117,10 +112,9 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    // epClock125 domain.
 
    Bool link_is_up = (_ep.trn.link_up() != 0);
-   UInt#(8)  read_completion_boundary_250 = 64 << _ep.zz1cfg.lcommand[3];
 
    // Build the PCIe-to-AXI bridge
-   PcieSplitter#(BPB)  bridge <- mkPcieSplitter(my_id, clocked_by epClock125, reset_by epReset125);
+   PcieSplitter#(BPB)  bridge <- mkPcieSplitter(_ep.pciId._read(), clocked_by epClock125, reset_by epReset125);
    mkConnectionWithClocks(_ep.trn_rx, tpl_2(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
    mkConnectionWithClocks(_ep.trn_tx, tpl_1(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
 
@@ -140,11 +134,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface slave    = bridge.slave;
    interface trace    = bridge.trace;
    interface portalReset = bridge.portalReset;
-   interface ReadOnly pciId;
-      method PciId _read();
-         return my_id;
-      endmethod
-   endinterface
+   interface ReadOnly pciId = _ep.pciId;
    interface clock250 = epClock250;
    interface reset250 = epReset250;
    interface clock125 = epClock125;

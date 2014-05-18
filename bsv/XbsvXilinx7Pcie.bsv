@@ -223,7 +223,7 @@ interface PCIExpressX7#(numeric type lanes);
    interface PCIE_TRN_COMMON_X7 trn;
    interface PCIE_TRN_XMIT_X7   trn_tx;
    interface PCIE_TRN_RECV_X7   trn_rx;
-   interface PciewrapCfg     zz1cfg;
+   interface ReadOnly#(PciId)   pciId;
 endinterface
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -407,6 +407,11 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       pcie_ep.dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
    endrule
 
+   PciId my_id = PciId { bus:  pcie_ep.cfg.bus_number()
+		       , dev:  pcie_ep.cfg.device_number()
+		       , func: pcie_ep.cfg.function_number()
+		       };
+
    ////////////////////////////////////////////////////////////////////////////////
    /// Interface Connections / Methods
    ////////////////////////////////////////////////////////////////////////////////
@@ -449,7 +454,11 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       method non_posted_req(i) = pcie_ep.rx.np_req(i);
    endinterface
 
-   interface zz1cfg = pcie_ep.cfg;
+   interface ReadOnly pciId;
+      method PciId _read();
+         return my_id;
+      endmethod
+   endinterface
 endmodule: mkPCIExpressEndpointX7
 
 endpackage: XbsvXilinx7Pcie
