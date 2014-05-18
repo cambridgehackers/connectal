@@ -402,8 +402,11 @@ def regroup_items(masterlist):
                 t.separator = separator
                 newlist.append(t)
             foo = copy.copy(item)
-            foo.name = fieldname.lower()
             foo.origname = fieldname
+            lfield = fieldname.lower()
+            if lfield in ['assert', 'do']:
+                lfield = 'zz' + lfield      # prefix prohibited names with 'zz'
+            foo.name = lfield
             commoninterfaces[interfacename][indexname].append(foo)
     return newlist
 
