@@ -34,6 +34,7 @@ clock_names = []
 commoninterfaces = {}
 tokgenerator = 0
 clock_params = []
+reset_params = []
 toknum = 0
 tokval = 0
 modulename = ''
@@ -425,11 +426,14 @@ def generate_inter_declarations(paramlist, paramval):
                 #print('     ', kuse, json.dumps(vuse), file=sys.stderr)
 
 def locate_clocks(item, prefix):
-    global clock_params
+    global clock_params, reset_params
     pname = prefix + item.name
     if item.mode == 'input':
         if item.type == 'Clock':
             clock_params.append(pname.lower())
+            reset_params.append(pname.lower() + '_reset')
+        if item.type == 'Reset':
+            reset_params.append(pname.lower())
     elif item.mode == 'interface':
         temp = commoninterfaces[item.type].get('0')
         if not temp:
@@ -445,7 +449,9 @@ def generate_clocks(item, indent, prefix):
     if item.mode == 'input':
         if item.type == 'Clock':
             print(indent + 'input_clock '+prefname.lower()+'('+ prefname+') = '+prefname.lower() + ';', file=options.outfile)
-            print(indent + 'input_reset '+prefname.lower()+'_reset() = '+prefname.lower() + '_reset;', file=options.outfile)
+            print(indent + 'input_reset '+prefname.lower()+'_reset() = '+prefname.lower() + '_reset; /* from clock*/', file=options.outfile)
+        if item.type == 'Reset':
+            print(indent + 'input_reset '+prefname.lower()+'('+ prefname +') = '+prefname.lower() + ';', file=options.outfile)
     elif item.mode == 'interface':
         temp = commoninterfaces[item.type].get('0')
         if not temp:
@@ -468,7 +474,7 @@ def generate_instance(item, indent, prefix, clockedby_arg):
             pname = 'event_.'
     prefname = prefix + item.origname
     if item.mode == 'input':
-        if item.type != 'Clock':
+        if item.type != 'Clock' and item.type != 'Reset':
             print(indent + 'method '+item.name.lower()+'('+ prefname +')' + clockedby_arg + ' enable((*inhigh*) EN_'+prefname+');', file=options.outfile)
             methodlist = methodlist + ', ' + pname + item.name.lower()
     elif item.mode == 'output':
@@ -510,7 +516,7 @@ def generate_instance(item, indent, prefix, clockedby_arg):
 
 def generate_bsv():
     global paramnames, modulename, clock_names
-    global clock_params, options
+    global clock_params, reset_params, options
     # generate output file
     print('\n/*', file=options.outfile)
     for item in sys.argv:
@@ -531,11 +537,13 @@ def generate_bsv():
     temp = 'module mk' + options.ifname
     for item in masterlist:
         locate_clocks(item, '')
-    if clock_params != []:
+    if clock_params != [] or reset_params != []:
         sepstring = '#('
         for item in clock_params:
-            temp = temp + sepstring + 'Clock ' + item + ', Reset ' + item + '_reset'
+            temp = temp + sepstring + 'Clock ' + item
             sepstring = ', '
+        for item in reset_params:
+            temp = temp + sepstring + 'Reset ' + item
         temp = temp + ')'
     temp = temp + '(' + options.ifname + paramval + ');'
     print(temp, file=options.outfile)
