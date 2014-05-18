@@ -37,7 +37,7 @@ instance Connectable#(Get#(TLPData#(8)), PCIE_TRN_XMIT_X7);
    module mkConnection#(Get#(TLPData#(8)) g, PCIE_TRN_XMIT_X7 p)(Empty);
       rule every;
          p.cut_through_mode(False);
-         p.configuration_completion_grant(True);  // Core gets to choose
+         p.configuration_completion_grant(1);  // Core gets to choose
          p.error_forward(False);
 	 p.ecrc_generate(False);
 	 p.discontinue(False);
@@ -86,7 +86,7 @@ instance Connectable#(Get#(TLPData#(16)), PCIE_TRN_XMIT_X7);
       (* no_implicit_conditions, fire_when_enabled *)
       rule every;
          t.cut_through_mode(False);
-         t.configuration_completion_grant(True);  // True means core gets to choose
+         t.configuration_completion_grant(1);  // True means core gets to choose
          t.error_forward(False);
 	 t.ecrc_generate(False);
 	 t.discontinue(False);
@@ -155,7 +155,7 @@ instance ConnectableWithClocks#(PCIE_TRN_XMIT_X7, Get#(TLPData#(16)));
       (* no_implicit_conditions, fire_when_enabled *)
       rule every;
          p.cut_through_mode(False);
-         p.configuration_completion_grant(True);  // Means the core gets to choose
+         p.configuration_completion_grant(1);  // Means the core gets to choose
          p.error_forward(False);
 	 p.ecrc_generate(False);
 	 p.discontinue(False);

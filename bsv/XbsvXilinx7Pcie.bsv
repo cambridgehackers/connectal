@@ -6,11 +6,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 package XbsvXilinx7Pcie;
 
-// Notes :
-
-////////////////////////////////////////////////////////////////////////////////
-/// Imports
-////////////////////////////////////////////////////////////////////////////////
 import Clocks            ::*;
 import Vector            ::*;
 import Connectable       ::*;
@@ -30,25 +25,6 @@ import PCIE              ::*;
 import PCIEWRAPPER       ::*;
 import Bufgctrl           ::*;
 
-////////////////////////////////////////////////////////////////////////////////
-/// Types
-////////////////////////////////////////////////////////////////////////////////
-typedef struct {
-   Bit#(22)      user;
-   Bit#(1)       last;
-   Bit#(8)       keep;
-   Bit#(64)      data;
-} AxiRx deriving (Bits, Eq);
-
-typedef struct {
-   Bit#(1)       last;
-   Bit#(8)       keep;
-   Bit#(64)      data;
-} AxiTx deriving (Bits, Eq);
-
-////////////////////////////////////////////////////////////////////////////////
-/// Interfaces
-////////////////////////////////////////////////////////////////////////////////
 (* always_ready, always_enabled *)
 interface PCIE_X7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes) pcie;
@@ -65,17 +41,9 @@ interface PCIE_X7#(numeric type lanes);
    method    Bit#(lanes) pipe_pclk_sel_out();
 endinterface
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Implementation
-///
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 import "BVI" pcie_7x_0 =
 module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clkout2, Clock pclk_in)(PCIE_X7#(lanes))
    provisos( Add#(1, z, lanes));
-   // PCIe wrapper takes active low reset
    let sys_rst_n <- exposeCurrentReset;
 
    default_clock clk(sys_clk); // 100 MHz refclk
@@ -208,8 +176,7 @@ interface PCIE_TRN_XMIT_X7;
    method    Action      cut_through_mode(Bool i);
    method    Bool        dropped;
    method    Bit#(6)     buffers_available;
-   method    Bool        configuration_completion_request;
-   method    Action      configuration_completion_grant(Bool i);
+   method    Action      configuration_completion_grant(Bit#(1) i);
 endinterface
 
 interface PCIE_TRN_RECV_X7;
@@ -226,40 +193,21 @@ interface PCIExpressX7#(numeric type lanes);
    interface ReadOnly#(PciId)   pciId;
 endinterface
 
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-///
-/// Implementation
-///
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-typeclass MkXilinx7PCIE#(numeric type lanes);
-   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clkout2, Clock pclk_in, PCIE_X7#(lanes) ifc);
-endtypeclass
+typedef struct {
+   Bit#(22)      user;
+   Bit#(1)       last;
+   Bit#(8)       keep;
+   Bit#(64)      data;
+} AxiRx deriving (Bits, Eq);
 
-instance MkXilinx7PCIE#(8);
-   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clkout2, Clock pclk_in, PCIE_X7#(8) ifc);
-      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clkout2, pclk_in);
-      return _ifc;
-   endmodule
-endinstance
-
-instance MkXilinx7PCIE#(4);
-   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clkout2, Clock pclk_in, PCIE_X7#(4) ifc);
-      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clkout2, pclk_in);
-      return _ifc;
-   endmodule
-endinstance
-
-instance MkXilinx7PCIE#(1);
-   module mkXilinx7PCIE(PCIEParams params, Clock clk_125mhz, Clock clkout2, Clock pclk_in, PCIE_X7#(1) ifc);
-      let _ifc <- vMkXilinx7PCIExpress(params, clk_125mhz, clkout2, pclk_in);
-      return _ifc;
-   endmodule
-endinstance
+typedef struct {
+   Bit#(1)       last;
+   Bit#(8)       keep;
+   Bit#(64)      data;
+} AxiTx deriving (Bits, Eq);
 
 module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
-   provisos(Add#(1, z, lanes), MkXilinx7PCIE#(lanes));
+   provisos(Add#(1, z, lanes));
 
    ////////////////////////////////////////////////////////////////////////////////
    /// Design Elements
@@ -326,7 +274,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
        pclk_sel <= ps;
    endrule
 
-   PCIE_X7#(lanes)     pcie_ep <- mkXilinx7PCIE(params, clockGen.clkout0, clockGen.clkout2, bbufc.o);
+   PCIE_X7#(lanes) pcie_ep <- vMkXilinx7PCIExpress(params, clockGen.clkout0, clockGen.clkout2, bbufc.o);
    //new PcieWrap#(lanes)  pciew <- mkPcieWrap();
    Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.txoutclk);
    C2B c2b <- mkC2B(txoutclk_buf);
@@ -395,10 +343,10 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    (* fire_when_enabled *)
    rule sink_axi_rx if (pcie_ep.m_axis_rx.tvalid != 0);
       let info = AxiRx {
-	 user:    pcie_ep.m_axis_rx.tuser,
-	 last:    pcie_ep.m_axis_rx.tlast,
-	 keep:    pcie_ep.m_axis_rx.tkeep,
-	 data:    pcie_ep.m_axis_rx.tdata
+	 user: pcie_ep.m_axis_rx.tuser,
+	 last: pcie_ep.m_axis_rx.tlast,
+	 keep: pcie_ep.m_axis_rx.tkeep,
+	 data: pcie_ep.m_axis_rx.tdata
 	 };
       fAxiRx.enq(info);
    endrule
@@ -406,11 +354,6 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    rule dsnrule;
       pcie_ep.dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
    endrule
-
-   PciId my_id = PciId { bus:  pcie_ep.cfg.bus_number()
-		       , dev:  pcie_ep.cfg.device_number()
-		       , func: pcie_ep.cfg.function_number()
-		       };
 
    ////////////////////////////////////////////////////////////////////////////////
    /// Interface Connections / Methods
@@ -435,8 +378,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       method cut_through_mode(i)       	       = wCutThrough._write(pack(i));
       method dropped                   	       = (pcie_ep.tx.err_drop != 0);
       method buffers_available         	       = pcie_ep.tx.buf_av;
-      method configuration_completion_request  = (pcie_ep.tx.cfg_req != 0);
-      method configuration_completion_grant(i) = pcie_ep.tx.cfg_gnt(pack(i));
+      method configuration_completion_grant(i) = pcie_ep.tx.cfg_gnt(i);
    endinterface
 
    interface PCIE_TRN_RECV_X7 trn_rx;
@@ -456,7 +398,8 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 
    interface ReadOnly pciId;
       method PciId _read();
-         return my_id;
+         return PciId { bus:  pcie_ep.cfg.bus_number(),
+	    dev: pcie_ep.cfg.device_number(), func: pcie_ep.cfg.function_number()};
       endmethod
    endinterface
 endmodule: mkPCIExpressEndpointX7

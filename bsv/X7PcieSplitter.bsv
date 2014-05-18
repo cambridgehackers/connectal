@@ -55,7 +55,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 		       , Reset pci_sys_reset
 		       )
 		       (X7PcieSplitter#(lanes))
-   provisos(Add#(1,_,lanes), XbsvXilinx7Pcie::MkXilinx7PCIE#(lanes));
+   provisos(Add#(1,_,lanes));
 
    Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
