@@ -134,6 +134,8 @@ def parse_item():
                             ptemp = 'Bit#(1)'
                             if options.clock and k in options.clock:
                                 ptemp = 'Clock'
+                            if options.reset and k in options.reset:
+                                ptemp = 'Reset'
                         else:
                             ptemp = 'Bit#(' + str(int(v[1])+1) + ')'
                         ttemp = PinType(v[0], ptemp, k, k)
@@ -260,6 +262,8 @@ def processline(line, phase):
                 return False
             if options.clock and f[2] in options.clock:
                 f[1] = 'Clock'
+            if options.reset and f[2] in options.reset:
+                f[1] = 'Reset'
             #print('FF', f, file=sys.stderr)
         elif phase == 2:
             return True
@@ -310,10 +314,10 @@ def generate_interface(interfacename, paramlist, paramval, ilist, cname):
         if item.mode != 'input' and item.mode != 'output' and item.mode != 'inout' and item.mode != 'interface':
             continue
         if item.mode == 'input':
-            if item.type != 'Clock':
+            if item.type != 'Clock' and item.type != 'Reset':
                 print('    method Action      '+item.name+'('+item.type+' v);', file=options.outfile)
         elif item.mode == 'output':
-            if item.type == 'Clock':
+            if item.type == 'Clock' and item.type != 'Reset':
                 print('    interface Clock     '+item.name+';', file=options.outfile)
                 clock_names.append(item)
             else:
@@ -470,6 +474,8 @@ def generate_instance(item, indent, prefix, clockedby_arg):
     elif item.mode == 'output':
         if item.type == 'Clock':
             print(indent + 'output_clock '+ item.name.lower()+ '(' + prefname+');', file=options.outfile)
+        elif item.type == 'Reset':
+            print(indent + 'output_reset '+ item.name.lower()+ '(' + prefname+');', file=options.outfile)
         else:
             print(indent + 'method '+ prefname + ' ' + item.name.lower()+'()' + clockedby_arg + ';', file=options.outfile)
             methodlist = methodlist + ', ' + pname + item.name.lower()
@@ -570,6 +576,7 @@ if __name__=='__main__':
     parser.add_option("-p", "--param", action="append", dest="param")
     parser.add_option("-f", "--factor", action="append", dest="factor")
     parser.add_option("-c", "--clock", action="append", dest="clock")
+    parser.add_option("-r", "--reset", action="append", dest="reset")
     parser.add_option("-d", "--delete", action="append", dest="delete")
     parser.add_option("-e", "--export", action="append", dest="export")
     parser.add_option("-i", "--ifdef", action="append", dest="ifdef")
