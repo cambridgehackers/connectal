@@ -54,7 +54,7 @@ interface PCIE_X7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes) pcie;
    interface PciewrapUser     user;
    interface PciewrapFc     fc;
-   interface PCIE_AXI_TX_X7   axi_tx;
+   interface PciewrapTx     tx;
    interface PciewrapS_axis_tx     s_axis_tx;
    interface PciewrapM_axis_rx     m_axis_rx;
 
@@ -68,14 +68,6 @@ interface PCIE_X7#(numeric type lanes);
    method    Action pclk_sel_reg1(Bit#(lanes) v);
    method    Action pclk_sel_reg2(Bit#(lanes) v);
    method    Bit#(lanes) pipe_pclk_sel_out();
-endinterface
-
-(* always_ready, always_enabled *)
-interface PCIE_AXI_TX_X7;
-   method    Bit#(6)          tbuf_av();
-   method    Bool             terr_drop();
-   method    Bool             tcfg_req();
-   method    Action           tcfg_gnt(Bool i);
 endinterface
 
 (* always_ready, always_enabled *)
@@ -226,11 +218,11 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
       method                            sel(fc_sel)                               enable((*inhigh*)en01) clocked_by(user_clk_out)  reset_by(no_reset);      
    endinterface
    
-   interface PCIE_AXI_TX_X7 axi_tx;
-      method tx_buf_av                  tbuf_av                                                             clocked_by(user_clk_out)  reset_by(no_reset);
-      method tx_err_drop                terr_drop                                                           clocked_by(user_clk_out)  reset_by(no_reset);
-      method tx_cfg_req                 tcfg_req                                                            clocked_by(user_clk_out)  reset_by(no_reset);
-      method                            tcfg_gnt(tx_cfg_gnt)                         enable((*inhigh*)en07) clocked_by(user_clk_out)  reset_by(no_reset);
+   interface PciewrapTx     tx;
+      method tx_buf_av                  buf_av                                                             clocked_by(user_clk_out)  reset_by(no_reset);
+      method tx_err_drop                err_drop                                                           clocked_by(user_clk_out)  reset_by(no_reset);
+      method tx_cfg_req                 cfg_req                                                            clocked_by(user_clk_out)  reset_by(no_reset);
+      method                            cfg_gnt(tx_cfg_gnt)                         enable((*inhigh*)en07) clocked_by(user_clk_out)  reset_by(no_reset);
    endinterface
 
     interface PciewrapS_axis_tx     s_axis_tx;
@@ -356,8 +348,8 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
    output_clock txoutclk(txoutclk);
       
    schedule (user_lnk_up, user_app_rdy, fc_ph, fc_pd, fc_nph, fc_npd, fc_cplh, fc_cpld, fc_sel, s_axis_tx_tlast,
-	     s_axis_tx_tdata, s_axis_tx_tkeep, s_axis_tx_tvalid, s_axis_tx_tready, s_axis_tx_tuser, axi_tx_tbuf_av, axi_tx_terr_drop,
-	     axi_tx_tcfg_req, axi_tx_tcfg_gnt, m_axis_rx_tlast, m_axis_rx_tdata, m_axis_rx_tkeep, m_axis_rx_tuser, m_axis_rx_tvalid,
+	     s_axis_tx_tdata, s_axis_tx_tkeep, s_axis_tx_tvalid, s_axis_tx_tready, s_axis_tx_tuser, tx_buf_av, tx_err_drop,
+	     tx_cfg_req, tx_cfg_gnt, m_axis_rx_tlast, m_axis_rx_tdata, m_axis_rx_tkeep, m_axis_rx_tuser, m_axis_rx_tvalid,
 	     m_axis_rx_tready, rx_np_ok, rx_np_req, pl_initial_link_width, pl_phy_link_up, pl_lane_reversal_mode,
 	     pl_link_gen2_capable, pl_link_partner_gen2_supported, pl_link_upcfg_capable, pl_sel_link_rate, pl_sel_link_width,
 	     pl_ltssm_state, pl_rx_pm_state, pl_tx_pm_state, pl_directed_link_auton, pl_directed_link_change, 
@@ -378,8 +370,8 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
 	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked, pclk_sel_reg1, pclk_sel_reg2, pipe_pclk_sel_out
 	     ) CF 
             (user_lnk_up, user_app_rdy, fc_ph, fc_pd, fc_nph, fc_npd, fc_cplh, fc_cpld, fc_sel, s_axis_tx_tlast,
-	     s_axis_tx_tdata, s_axis_tx_tkeep, s_axis_tx_tvalid, s_axis_tx_tready, s_axis_tx_tuser, axi_tx_tbuf_av, axi_tx_terr_drop,
-	     axi_tx_tcfg_req, axi_tx_tcfg_gnt, m_axis_rx_tlast, m_axis_rx_tdata, m_axis_rx_tkeep, m_axis_rx_tuser, m_axis_rx_tvalid,
+	     s_axis_tx_tdata, s_axis_tx_tkeep, s_axis_tx_tvalid, s_axis_tx_tready, s_axis_tx_tuser, tx_buf_av, tx_err_drop,
+	     tx_cfg_req, tx_cfg_gnt, m_axis_rx_tlast, m_axis_rx_tdata, m_axis_rx_tkeep, m_axis_rx_tuser, m_axis_rx_tvalid,
 	     m_axis_rx_tready, rx_np_ok, rx_np_req, pl_initial_link_width, pl_phy_link_up, pl_lane_reversal_mode,
 	     pl_link_gen2_capable, pl_link_partner_gen2_supported, pl_link_upcfg_capable, pl_sel_link_rate, pl_sel_link_width,
 	     pl_ltssm_state, pl_rx_pm_state, pl_tx_pm_state, pl_directed_link_auton, pl_directed_link_change, 
@@ -654,10 +646,10 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       method ecrc_generate(i)          	       = wEcrcGen._write(pack(i));
       method error_forward(i)          	       = wErrFwd._write(pack(i));
       method cut_through_mode(i)       	       = wCutThrough._write(pack(i));
-      method dropped                   	       = pcie_ep.axi_tx.terr_drop;
-      method buffers_available         	       = pcie_ep.axi_tx.tbuf_av;
-      method configuration_completion_request  = pcie_ep.axi_tx.tcfg_req;
-      method configuration_completion_grant(i) = pcie_ep.axi_tx.tcfg_gnt(i);
+      method dropped                   	       = (pcie_ep.tx.err_drop != 0);
+      method buffers_available         	       = pcie_ep.tx.buf_av;
+      method configuration_completion_request  = (pcie_ep.tx.cfg_req != 0);
+      method configuration_completion_grant(i) = pcie_ep.tx.cfg_gnt(pack(i));
    endinterface
       
    interface PCIE_TRN_RECV_X7 trn_rx;
