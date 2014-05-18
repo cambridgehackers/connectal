@@ -170,12 +170,10 @@ endinterface
 
 interface PCIE_TRN_XMIT_X7;
    method    Action      xmit(TLPData#(8) data);
-   method    Action      discontinue(Bool i);
-   method    Action      ecrc_generate(Bool i);
-   method    Action      error_forward(Bool i);
-   method    Action      cut_through_mode(Bool i);
-   method    Bool        dropped;
-   method    Bit#(6)     buffers_available;
+   method    Action      discontinue(Bit#(1) i);
+   method    Action      ecrc_generate(Bit#(1) i);
+   method    Action      error_forward(Bit#(1) i);
+   method    Action      cut_through_mode(Bit#(1) i);
    method    Action      configuration_completion_grant(Bit#(1) i);
 endinterface
 
@@ -372,12 +370,10 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       method Action xmit(data);
 	 fAxiTx.enq(AxiTx { last: pack(data.eof), keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
       endmethod
-      method discontinue(i)                    = wDiscontinue._write(pack(i));
-      method ecrc_generate(i)          	       = wEcrcGen._write(pack(i));
-      method error_forward(i)          	       = wErrFwd._write(pack(i));
-      method cut_through_mode(i)       	       = wCutThrough._write(pack(i));
-      method dropped                   	       = (pcie_ep.tx.err_drop != 0);
-      method buffers_available         	       = pcie_ep.tx.buf_av;
+      method discontinue(i)                    = wDiscontinue._write(i);
+      method ecrc_generate(i)          	       = wEcrcGen._write(i);
+      method error_forward(i)          	       = wErrFwd._write(i);
+      method cut_through_mode(i)       	       = wCutThrough._write(i);
       method configuration_completion_grant(i) = pcie_ep.tx.cfg_gnt(i);
    endinterface
 
