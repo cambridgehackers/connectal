@@ -17,4 +17,4 @@ scripts/importbvi.py -o PCIE_2_1.bsv -C PCIE_2_1 -P PCIE -I PcieIf \
     -e "PCIE_CAP_NEXTPTR:8'h9C" \
     -e PIPE_PIPELINE_STAGES:1 -e PL_FAST_TRAIN:PL_FAST_TRAIN -e USER_CLK_FREQ:3 \
     -e BAR0:BAR0 -e BAR1:BAR1 -e BAR2:BAR2 -e BAR3:BAR3 -e BAR4:BAR4 -e BAR5:BAR5 \
-    ../import_components/Xilinx/Vivado/2013.2/data/parts/xilinx/zynq/zynq.lib
+    ../../import_components/Xilinx/Vivado/2013.2/data/parts/xilinx/zynq/zynq.lib
