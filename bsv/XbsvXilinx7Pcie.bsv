@@ -28,13 +28,13 @@ import Bufgctrl           ::*;
 (* always_ready, always_enabled *)
 interface PCIE_X7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes) pcie;
-   interface PciewrapUser   user;
-   interface PciewrapFc     fc;
-   interface PciewrapTx     tx;
-   interface PciewrapS_axis_tx     s_axis_tx;
-   interface PciewrapM_axis_rx     m_axis_rx;
-   interface PciewrapRx     rx;
-   interface PciewrapCfg    cfg;
+   interface PciewrapUser#(lanes)   user;
+   interface PciewrapFc#(lanes)     fc;
+   interface PciewrapTx#(lanes)     tx;
+   interface PciewrapS_axis_tx#(lanes)     s_axis_tx;
+   interface PciewrapM_axis_rx#(lanes)     m_axis_rx;
+   interface PciewrapRx#(lanes)     rx;
+   interface PciewrapCfg#(lanes)    cfg;
    method    Action      dsn(Bit#(64) i);
    interface Clock       txoutclk;
    method    Action      locked(Bit#(1) v);
@@ -118,6 +118,7 @@ method                        dsn(cfg_dsn)    enable((*inhigh*)en25)   clocked_b
       method cfg_lcommand        lcommand   clocked_by(user_clk_out) reset_by(no_reset);
       method                     interrupt(cfg_interrupt)    enable((*inhigh*)en32)   clocked_by(user_clk_out) reset_by(no_reset);
 
+        method cfg_bridge_serr_en bridge_serr_en();
         method cfg_command command();
         method cfg_dcommand dcommand();
         method cfg_dcommand2 dcommand2();
@@ -125,6 +126,7 @@ method                        dsn(cfg_dsn)    enable((*inhigh*)en25)   clocked_b
         method cfg_pcie_link_state pcie_link_state();
         method pciecap_interrupt_msgnum(cfg_pciecap_interrupt_msgnum) enable((*inhigh*) EN_cfg_pciecap_interrupt_msgnum);
         method cfg_received_func_lvl_rst received_func_lvl_rst();
+        method cfg_slot_control_electromech_il_ctl_pulse slot_control_electromech_il_ctl_pulse();
         method cfg_status status();
         method cfg_to_turnoff to_turnoff();
         method trn_pending(cfg_trn_pending) enable((*inhigh*) EN_cfg_trn_pending);
@@ -140,6 +142,7 @@ method                        dsn(cfg_dsn)    enable((*inhigh*)en25)   clocked_b
 	     m_axis_rx_tready, rx_np_ok, rx_np_req,
 	     cfg_bus_number, cfg_device_number, cfg_function_number, cfg_lcommand,
 cfg_command, cfg_dcommand, cfg_dcommand2, cfg_lstatus, cfg_pcie_link_state, cfg_received_func_lvl_rst, cfg_status, cfg_to_turnoff, cfg_vc_tcvc_map,
+cfg_bridge_serr_en, cfg_slot_control_electromech_il_ctl_pulse,
 cfg_pciecap_interrupt_msgnum, cfg_trn_pending, cfg_turnoff_ok,
 cfg_interrupt, dsn,
 	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked, pipe_pclk_sel_out
@@ -150,6 +153,7 @@ cfg_interrupt, dsn,
 	     m_axis_rx_tready, rx_np_ok, rx_np_req,
 	     cfg_bus_number, cfg_device_number, cfg_function_number, cfg_lcommand,
 cfg_command, cfg_dcommand, cfg_dcommand2, cfg_lstatus, cfg_pcie_link_state, cfg_received_func_lvl_rst, cfg_status, cfg_to_turnoff, cfg_vc_tcvc_map,
+cfg_bridge_serr_en, cfg_slot_control_electromech_il_ctl_pulse,
 cfg_pciecap_interrupt_msgnum, cfg_trn_pending, cfg_turnoff_ok,
 cfg_interrupt, dsn,
 	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked, pipe_pclk_sel_out
