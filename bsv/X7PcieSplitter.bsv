@@ -96,15 +96,13 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 						  , clocked_by pci_clk_100mhz_buf
 						  , reset_by pci_sys_reset
 						  );
-   mkTieOff(_ep.cfg);
-   mkTieOff(_ep.cfg_interrupt);
-   mkTieOff(_ep.cfg_err);
-   mkTieOff(_ep.pl);
+   mkTieOff(_ep.zz1cfg);
+   mkTieOff(_ep.zzcfg_interrupt);
 
    // note our PCI ID
-   PciId my_id = PciId { bus:  _ep.cfg.bus_number()
-		       , dev:  _ep.cfg.device_number()
-		       , func: _ep.cfg.function_number()
+   PciId my_id = PciId { bus:  _ep.zz1cfg.bus_number()
+		       , dev:  _ep.zz1cfg.device_number()
+		       , func: _ep.zz1cfg.function_number()
 		       };
 
    // The PCIE endpoint is processing TLPWord#(8)s at 250MHz.  The
@@ -126,15 +124,15 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    // epClock125 domain.
 
    Bool link_is_up = (_ep.trn.link_up() != 0);
-   UInt#(8)  read_completion_boundary_250 = 64 << _ep.cfg.lcommand[3];
+   UInt#(8)  read_completion_boundary_250 = 64 << _ep.zz1cfg.lcommand[3];
 
    // setup PCIe interrupt for MSI-X
    // this rule executes in the epClock250 domain
    (* fire_when_enabled, no_implicit_conditions *)
    rule intr_ifc_ctl;
-      _ep.cfg_interrupt.di('0);      // tied off for MSI-X
-      _ep.cfg_interrupt.assrt('0);  // tied off for MSI-X
-      _ep.cfg_interrupt.req(0);      // tied off for MSI-X
+      _ep.zzcfg_interrupt.di('0);      // tied off for MSI-X
+      _ep.zzcfg_interrupt.assrt('0);  // tied off for MSI-X
+      _ep.zzcfg_interrupt.req(0);      // tied off for MSI-X
    endrule: intr_ifc_ctl
 
    // Build the PCIe-to-AXI bridge

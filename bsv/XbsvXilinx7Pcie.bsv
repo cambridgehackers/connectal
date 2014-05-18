@@ -35,13 +35,13 @@ import Bufgctrl           ::*;
 ////////////////////////////////////////////////////////////////////////////////
 typedef struct {
    Bit#(22)      user;
-   Bool          last;
+   Bit#(1)       last;
    Bit#(8)       keep;
    Bit#(64)      data;
 } AxiRx deriving (Bits, Eq);
 
 typedef struct {
-   Bool          last;
+   Bit#(1)       last;
    Bit#(8)       keep;
    Bit#(64)      data;
 } AxiTx deriving (Bits, Eq);		
@@ -429,10 +429,8 @@ interface PCIExpressX7#(numeric type lanes);
    interface PCIE_TRN_COMMON_X7 trn;
    interface PCIE_TRN_XMIT_X7   trn_tx;
    interface PCIE_TRN_RECV_X7   trn_rx;
-   interface PCIE_CFG_X7        cfg;
-   interface PCIE_INT_X7        cfg_interrupt;
-   interface PCIE_ERR_X7        cfg_err;
-   interface PCIE_PL_X7         pl;
+   interface PCIE_CFG_X7        zz1cfg;
+   interface PCIE_INT_X7        zzcfg_interrupt;
 endinterface   
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -603,7 +601,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    rule drive_axi_tx_info if (pcie_ep.s_axis_tx.tready != 0);
       let info <- toGet(fAxiTx).get;
       wAxiTxValid <= 1;
-      wAxiTxLast  <= pack(info.last);
+      wAxiTxLast  <= info.last;
       wAxiTxData  <= info.data;
       wAxiTxKeep  <= info.keep;
    endrule
@@ -617,7 +615,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    rule sink_axi_rx if (pcie_ep.m_axis_rx.tvalid != 0);
       let info = AxiRx {
 	 user:    pcie_ep.m_axis_rx.tuser,
-	 last:    pcie_ep.m_axis_rx.tlast != 0,
+	 last:    pcie_ep.m_axis_rx.tlast,
 	 keep:    pcie_ep.m_axis_rx.tkeep,
 	 data:    pcie_ep.m_axis_rx.tdata
 	 };
@@ -640,7 +638,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       
    interface PCIE_TRN_XMIT_X7 trn_tx;
       method Action xmit(data);
-	 fAxiTx.enq(AxiTx { last: data.eof, keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
+	 fAxiTx.enq(AxiTx { last: pack(data.eof), keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
       endmethod
       method discontinue(i)                    = wDiscontinue._write(pack(i));
       method ecrc_generate(i)          	       = wEcrcGen._write(pack(i));
@@ -657,7 +655,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 	 let info <- toGet(fAxiRx).get;
 	 TLPData#(8) retval = defaultValue;
 	 retval.sof  = (info.user[14] == 1);
-	 retval.eof  = info.last;
+	 retval.eof  = info.last != 0;
 	 retval.hit  = info.user[8:2];
 	 retval.be   = dwordSwap64BE(info.keep);
 	 retval.data = dwordSwap64(info.data);
@@ -667,10 +665,8 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       method non_posted_req(i) = pcie_ep.rx.np_req(i);
    endinterface
       
-   interface pl = pcie_ep.pl;
-   interface cfg = pcie_ep.cfg;
-   interface cfg_interrupt = pcie_ep.cfg_interrupt;
-   interface cfg_err = pcie_ep.cfg_err;
+   interface zz1cfg = pcie_ep.cfg;
+   interface zzcfg_interrupt = pcie_ep.cfg_interrupt;
 endmodule: mkPCIExpressEndpointX7
 
 endpackage: XbsvXilinx7Pcie
