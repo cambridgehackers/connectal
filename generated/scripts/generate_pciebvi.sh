@@ -8,8 +8,8 @@ scripts/importbvi.py -o PCIEWRAPPER.bsv -I PcieWrap -P PcieWrap \
     -n pipe_userclk1_in \
     -n pipe_userclk2_in \
     -n pl_link_gen2_cap \
-    -c user_clk_out \
-    -r user_reset_out \
+    -c user_clk_out -r user_reset_out \
+    -c sys_clk -r sys_rst_n \
     -f cfg_aer -f cfg_ds -f cfg_err -f cfg_interrupt \
     -f cfg_mgmt -f cfg_msg -f cfg_pmcsr -f cfg_pm \
     -f cfg_root_control \
