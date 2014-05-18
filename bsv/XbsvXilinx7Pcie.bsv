@@ -59,37 +59,13 @@ interface PCIE_X7#(numeric type lanes);
    interface PciewrapM_axis_rx     m_axis_rx;
 
    interface PciewrapRx     rx;
-   interface PCIE_PL_X7       pl;
    interface PCIE_CFG_X7      cfg;
    interface PCIE_INT_X7      cfg_interrupt;
-   interface PCIE_ERR_X7      cfg_err;
    interface Clock            txoutclk;
    method    Action           locked(Bit#(1) v);
    method    Action pclk_sel_reg1(Bit#(lanes) v);
    method    Action pclk_sel_reg2(Bit#(lanes) v);
    method    Bit#(lanes) pipe_pclk_sel_out();
-endinterface
-
-(* always_ready, always_enabled *)
-interface PCIE_PL_X7;
-   method    Bit#(3)     initial_link_width;
-   method    Bool        phy_link_up;
-   method    Bit#(2)     lane_reversal_mode;
-   method    Bit#(1)     link_gen2_capable;
-   method    Bit#(1)     link_partner_gen2_supported;
-   method    Bit#(1)     link_upcfg_capable;
-   method    Bit#(1)     sel_link_rate;
-   method    Bit#(2)     sel_link_width;
-   method    Bit#(6)     ltssm_state;
-   method    Bit#(2)     rx_pm_state;
-   method    Bit#(3)     tx_pm_state;
-   method    Action      directed_link_auton(Bit#(1) i);
-   method    Action      directed_link_change(Bit#(2) i);
-   method    Action      directed_link_speed(Bit#(1) i);
-   method    Action      directed_link_width(Bit#(2) i);
-   method    Bit#(1)     directed_change_done;
-   method    Action      upstream_prefer_deemph(Bit#(1) i);
-   method    Bit#(1)     received_hot_rst;   
 endinterface
 
 (* always_ready, always_enabled *)
@@ -144,31 +120,6 @@ interface PCIE_INT_X7;
    method    Bit#(1)     msixfm;
    method    Action      pciecap_msgnum(Bit#(5) i);
    method    Action      stat(Bit#(1) i);
-endinterface
-
-(* always_ready, always_enabled *)
-interface PCIE_ERR_X7;
-   method    Action      ecrc(Bit#(1) i);
-   method    Action      ur(Bit#(1) i);
-   method    Action      cpl_timeout(Bit#(1) i);
-   method    Action      cpl_unexpect(Bit#(1) i);
-   method    Action      cpl_abort(Bit#(1) i);
-   method    Action      posted(Bit#(1) i);
-   method    Action      cor(Bit#(1) i);
-   method    Action      atomic_egress_blocked(Bit#(1) i);
-   method    Action      internal_cor(Bit#(1) i);
-   method    Action      internal_uncor(Bit#(1) i);
-   method    Action      malformed(Bit#(1) i);
-   method    Action      mc_blocked(Bit#(1) i);
-   method    Action      poisoned(Bit#(1) i);
-   method    Action      no_recovery(Bit#(1) i);
-   method    Action      tlp_cpl_header(Bit#(48) i);
-   method    Bit#(1)     cpl_rdy;
-   method    Action      locked(Bit#(1) i);
-   method    Action      aer_headerlog(Bit#(128) i);
-   method    Bit#(1)     aer_headerlog_set;
-   method    Action      aer_interrupt_msgnum(Bit#(5) i);
-   method    Action      acs(Bit#(1) i);
 endinterface
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -249,27 +200,6 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
       method                            np_req(rx_np_req)                           enable((*inhigh*)en10) clocked_by(user_clk_out)  reset_by(no_reset);
    endinterface
 
-   interface PCIE_PL_X7 pl;
-      method pl_initial_link_width      initial_link_width                                                       clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_phy_lnk_up              phy_link_up                                                              clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_lane_reversal_mode      lane_reversal_mode                                                       clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_link_gen2_cap           link_gen2_capable                                                        clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_link_partner_gen2_supported link_partner_gen2_supported                                          clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_link_upcfg_cap          link_upcfg_capable                                                       clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_sel_lnk_rate            sel_link_rate                                                            clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_sel_lnk_width           sel_link_width                                                           clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_ltssm_state             ltssm_state                                                              clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_rx_pm_state             rx_pm_state                                                              clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_tx_pm_state             tx_pm_state                                                              clocked_by(user_clk_out)  reset_by(no_reset);
-      method                            directed_link_auton(pl_directed_link_auton)       enable((*inhigh*)en13) clocked_by(user_clk_out)  reset_by(no_reset);
-      method                            directed_link_change(pl_directed_link_change)     enable((*inhigh*)en14) clocked_by(user_clk_out)  reset_by(no_reset);
-      method                            directed_link_speed(pl_directed_link_speed)       enable((*inhigh*)en15) clocked_by(user_clk_out)  reset_by(no_reset);
-      method                            directed_link_width(pl_directed_link_width)       enable((*inhigh*)en16) clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_directed_change_done    directed_change_done                                                     clocked_by(user_clk_out)  reset_by(no_reset);
-      method                            upstream_prefer_deemph(pl_upstream_prefer_deemph) enable((*inhigh*)en17) clocked_by(user_clk_out)  reset_by(no_reset);
-      method pl_received_hot_rst        received_hot_rst                                                         clocked_by(user_clk_out)  reset_by(no_reset);
-   endinterface
-   
    interface PCIE_CFG_X7 cfg;
       method cfg_mgmt_do                dout                                                                     clocked_by(user_clk_out) reset_by(no_reset);
       method cfg_mgmt_rd_wr_done        rd_wr_done                                                               clocked_by(user_clk_out) reset_by(no_reset);
@@ -322,39 +252,13 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
       method                            stat(cfg_interrupt_stat)                          enable((*inhigh*)en36) clocked_by(user_clk_out) reset_by(no_reset);
    endinterface
       
-   interface PCIE_ERR_X7 cfg_err;
-      method                            ecrc(cfg_err_ecrc)                           	  enable((*inhigh*)en37) clocked_by(user_clk_out) reset_by(no_reset);
-      method                            ur(cfg_err_ur)                               	  enable((*inhigh*)en38) clocked_by(user_clk_out) reset_by(no_reset);
-      method                            cpl_timeout(cfg_err_cpl_timeout)             	  enable((*inhigh*)en39) clocked_by(user_clk_out) reset_by(no_reset);
-      method                            cpl_unexpect(cfg_err_cpl_unexpect)           	  enable((*inhigh*)en40) clocked_by(user_clk_out) reset_by(no_reset);
-      method                            cpl_abort(cfg_err_cpl_abort)                 	  enable((*inhigh*)en41) clocked_by(user_clk_out) reset_by(no_reset);
-      method                            posted(cfg_err_posted)                       	  enable((*inhigh*)en42) clocked_by(user_clk_out) reset_by(no_reset);
-      method                            cor(cfg_err_cor)                             	  enable((*inhigh*)en43) clocked_by(user_clk_out) reset_by(no_reset);
-      method          			atomic_egress_blocked(cfg_err_atomic_egress_blocked) enable((*inhigh*)en44) clocked_by(user_clk_out) reset_by(no_reset);
-      method          			internal_cor(cfg_err_internal_cor)           	  enable((*inhigh*)en45) clocked_by(user_clk_out) reset_by(no_reset);
-      method          			internal_uncor(cfg_err_internal_uncor)       	  enable((*inhigh*)en46) clocked_by(user_clk_out) reset_by(no_reset);
-      method          			malformed(cfg_err_malformed)                 	  enable((*inhigh*)en47) clocked_by(user_clk_out) reset_by(no_reset);
-      method          			mc_blocked(cfg_err_mc_blocked)               	  enable((*inhigh*)en48) clocked_by(user_clk_out) reset_by(no_reset);
-      method          			poisoned(cfg_err_poisoned)                   	  enable((*inhigh*)en49) clocked_by(user_clk_out) reset_by(no_reset);
-      method          			no_recovery(cfg_err_norecovery)             	  enable((*inhigh*)en50) clocked_by(user_clk_out) reset_by(no_reset);
-      method                            tlp_cpl_header(cfg_err_tlp_cpl_header)       	  enable((*inhigh*)en51) clocked_by(user_clk_out) reset_by(no_reset);
-      method cfg_err_cpl_rdy            cpl_rdy                                      	                         clocked_by(user_clk_out) reset_by(no_reset);
-      method                            locked(cfg_err_locked)                       	  enable((*inhigh*)en52) clocked_by(user_clk_out) reset_by(no_reset);
-      method         			aer_headerlog(cfg_err_aer_headerlog)         	  enable((*inhigh*)en53) clocked_by(user_clk_out) reset_by(no_reset);
-      method cfg_err_aer_headerlog_set  aer_headerlog_set                                                        clocked_by(user_clk_out) reset_by(no_reset);
-      method         			aer_interrupt_msgnum(cfg_aer_interrupt_msgnum)    enable((*inhigh*)en54) clocked_by(user_clk_out) reset_by(no_reset);
-      method         			acs(cfg_err_acs)                                  enable((*inhigh*)en55) clocked_by(user_clk_out) reset_by(no_reset);
-   endinterface
    output_clock txoutclk(txoutclk);
       
    schedule (user_lnk_up, user_app_rdy, fc_ph, fc_pd, fc_nph, fc_npd, fc_cplh, fc_cpld, fc_sel, s_axis_tx_tlast,
 	     s_axis_tx_tdata, s_axis_tx_tkeep, s_axis_tx_tvalid, s_axis_tx_tready, s_axis_tx_tuser, tx_buf_av, tx_err_drop,
 	     tx_cfg_req, tx_cfg_gnt, m_axis_rx_tlast, m_axis_rx_tdata, m_axis_rx_tkeep, m_axis_rx_tuser, m_axis_rx_tvalid,
-	     m_axis_rx_tready, rx_np_ok, rx_np_req, pl_initial_link_width, pl_phy_link_up, pl_lane_reversal_mode,
-	     pl_link_gen2_capable, pl_link_partner_gen2_supported, pl_link_upcfg_capable, pl_sel_link_rate, pl_sel_link_width,
-	     pl_ltssm_state, pl_rx_pm_state, pl_tx_pm_state, pl_directed_link_auton, pl_directed_link_change, 
-	     pl_directed_link_speed, pl_directed_link_width, pl_directed_change_done, pl_upstream_prefer_deemph, 
-	     pl_received_hot_rst, cfg_dout, cfg_rd_wr_done, cfg_di, cfg_dwaddr, cfg_byte_en, cfg_wr_en, cfg_rd_en, 
+	     m_axis_rx_tready, rx_np_ok, rx_np_req, 
+	     cfg_dout, cfg_rd_wr_done, cfg_di, cfg_dwaddr, cfg_byte_en, cfg_wr_en, cfg_rd_en, 
 	     cfg_wr_readonly, cfg_bus_number, cfg_device_number, cfg_function_number, cfg_status, cfg_command, cfg_dstatus,
 	     cfg_dcommand, cfg_dcommand2, cfg_lstatus, cfg_lcommand, cfg_aer_ecrc_gen_en, cfg_aer_ecrc_check_en,
 	     cfg_pcie_link_state, cfg_trn_pending, cfg_dsn, cfg_pmcsr_pme_en, cfg_pmcsr_pme_status, cfg_pmcsr_powerstate,
@@ -363,20 +267,13 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
 	     cfg_interrupt_req, cfg_interrupt_rdy,
 	     cfg_interrupt_assrt, cfg_interrupt_di, cfg_interrupt_dout, cfg_interrupt_mmenable, cfg_interrupt_msienable,
 	     cfg_interrupt_msixenable, cfg_interrupt_msixfm, cfg_interrupt_pciecap_msgnum, cfg_interrupt_stat,
-	     cfg_err_ecrc, cfg_err_ur, cfg_err_cpl_timeout, cfg_err_cpl_unexpect, cfg_err_cpl_abort, cfg_err_posted,
-	     cfg_err_cor, cfg_err_atomic_egress_blocked, cfg_err_internal_cor, cfg_err_internal_uncor, cfg_err_malformed,
-	     cfg_err_mc_blocked, cfg_err_poisoned, cfg_err_no_recovery, cfg_err_tlp_cpl_header, cfg_err_cpl_rdy, cfg_err_locked,
-	     cfg_err_aer_headerlog, cfg_err_aer_headerlog_set, cfg_err_aer_interrupt_msgnum, cfg_err_acs,
 	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked, pclk_sel_reg1, pclk_sel_reg2, pipe_pclk_sel_out
 	     ) CF 
             (user_lnk_up, user_app_rdy, fc_ph, fc_pd, fc_nph, fc_npd, fc_cplh, fc_cpld, fc_sel, s_axis_tx_tlast,
 	     s_axis_tx_tdata, s_axis_tx_tkeep, s_axis_tx_tvalid, s_axis_tx_tready, s_axis_tx_tuser, tx_buf_av, tx_err_drop,
 	     tx_cfg_req, tx_cfg_gnt, m_axis_rx_tlast, m_axis_rx_tdata, m_axis_rx_tkeep, m_axis_rx_tuser, m_axis_rx_tvalid,
-	     m_axis_rx_tready, rx_np_ok, rx_np_req, pl_initial_link_width, pl_phy_link_up, pl_lane_reversal_mode,
-	     pl_link_gen2_capable, pl_link_partner_gen2_supported, pl_link_upcfg_capable, pl_sel_link_rate, pl_sel_link_width,
-	     pl_ltssm_state, pl_rx_pm_state, pl_tx_pm_state, pl_directed_link_auton, pl_directed_link_change, 
-	     pl_directed_link_speed, pl_directed_link_width, pl_directed_change_done, pl_upstream_prefer_deemph, 
-	     pl_received_hot_rst, cfg_dout, cfg_rd_wr_done, cfg_di, cfg_dwaddr, cfg_byte_en, cfg_wr_en, cfg_rd_en, 
+	     m_axis_rx_tready, rx_np_ok, rx_np_req,
+	     cfg_dout, cfg_rd_wr_done, cfg_di, cfg_dwaddr, cfg_byte_en, cfg_wr_en, cfg_rd_en, 
 	     cfg_wr_readonly, cfg_bus_number, cfg_device_number, cfg_function_number, cfg_status, cfg_command, cfg_dstatus,
 	     cfg_dcommand, cfg_dcommand2, cfg_lstatus, cfg_lcommand, cfg_aer_ecrc_gen_en, cfg_aer_ecrc_check_en,
 	     cfg_pcie_link_state, cfg_trn_pending, cfg_dsn, cfg_pmcsr_pme_en, cfg_pmcsr_pme_status, cfg_pmcsr_powerstate,
@@ -385,10 +282,6 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clk_250m
 	     cfg_interrupt_req, cfg_interrupt_rdy,
 	     cfg_interrupt_assrt, cfg_interrupt_di, cfg_interrupt_dout, cfg_interrupt_mmenable, cfg_interrupt_msienable,
 	     cfg_interrupt_msixenable, cfg_interrupt_msixfm, cfg_interrupt_pciecap_msgnum, cfg_interrupt_stat,
-	     cfg_err_ecrc, cfg_err_ur, cfg_err_cpl_timeout, cfg_err_cpl_unexpect, cfg_err_cpl_abort, cfg_err_posted,
-	     cfg_err_cor, cfg_err_atomic_egress_blocked, cfg_err_internal_cor, cfg_err_internal_uncor, cfg_err_malformed,
-	     cfg_err_mc_blocked, cfg_err_poisoned, cfg_err_no_recovery, cfg_err_tlp_cpl_header, cfg_err_cpl_rdy, cfg_err_locked,
-	     cfg_err_aer_headerlog, cfg_err_aer_headerlog_set, cfg_err_aer_interrupt_msgnum, cfg_err_acs,
 	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked, pclk_sel_reg1, pclk_sel_reg2, pipe_pclk_sel_out
              );
 

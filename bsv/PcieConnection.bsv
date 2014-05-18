@@ -313,43 +313,5 @@ instance TieOff#(PCIE_INT_X7);
    endmodule
 endinstance
 
-instance TieOff#(PCIE_ERR_X7);
-   module mkTieOff#(PCIE_ERR_X7 ifc)(Empty);
-      rule tie_off_inputs;
-	 ifc.ecrc(0);
-	 ifc.ur(0);
-	 ifc.cpl_timeout(0);
-	 ifc.cpl_unexpect(0);
-	 ifc.cpl_abort(0);
-	 ifc.posted(0);
-	 ifc.cor(0);
-	 ifc.atomic_egress_blocked(0);
-	 ifc.internal_cor(0);
-	 ifc.internal_uncor(0);
-	 ifc.malformed(0);
-	 ifc.mc_blocked(0);
-	 ifc.poisoned(0);
-	 ifc.no_recovery(0);
-	 ifc.tlp_cpl_header(0);
-	 ifc.locked(0);
-	 ifc.aer_headerlog(0);
-	 ifc.aer_interrupt_msgnum(0);
-	 ifc.acs(0);
-      endrule
-   endmodule
-endinstance
-
-instance TieOff#(PCIE_PL_X7);
-   module mkTieOff#(PCIE_PL_X7 ifc)(Empty);
-      rule tie_off_inputs;
-	 ifc.directed_link_auton(0);
-	 ifc.directed_link_change(0);
-	 ifc.directed_link_speed(0);
-	 ifc.directed_link_width(0);
-	 ifc.upstream_prefer_deemph(1);
-      endrule
-   endmodule
-endinstance
-
 endpackage: PcieConnection
 
