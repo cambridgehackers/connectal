@@ -259,7 +259,7 @@ timestampfile=sources/%(dut)s/.timestamp
 
 $(timestampfile): %(bsvfiles)s
 	cd $(DTOP); \
-	$(XBSVDIR)/xbsvgen -B$(BOARD) -p $(BOARD) -x $(MKTOP) \
+	$(XBSVDIR)/xbsvgen -B$(BOARD) -p %(project_dir)s -x $(MKTOP) \
 	$(foreach s2h, $(S2H), -s2h $(s2h)) \
 	$(foreach h2s, $(H2S), -h2s $(h2s)) \
 	$(foreach f, $(CPPFILES), -s $f) \
