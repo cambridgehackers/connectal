@@ -310,6 +310,18 @@ def generate_interface(interfacename, paramlist, paramval, ilist, cname):
     global clock_names
     cflag = generate_condition(interfacename)
     print('(* always_ready, always_enabled *)', file=options.outfile)
+    methodfound = False
+    for item in ilist:
+        if item.mode == 'input' and (item.type != 'Clock' and item.type != 'Reset'):
+            methodfound = True
+        elif item.mode == 'output':
+            methodfound = True
+        elif item.mode == 'inout':
+            methodfound = True
+        elif item.mode == 'interface':
+            methodfound = True
+    if not methodfound:
+        return
     print('interface ' + interfacename + paramlist + ';', file=options.outfile)
     for item in ilist:
         if item.mode != 'input' and item.mode != 'output' and item.mode != 'inout' and item.mode != 'interface':

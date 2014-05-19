@@ -311,8 +311,6 @@ interface PciewrapStartup#(numeric type lanes);
     method Action      usrdonets(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface PciewrapSys#(numeric type lanes);
-endinterface
 (* always_ready, always_enabled *)
 interface PciewrapTx#(numeric type lanes);
     method Bit#(6)     buf_av();
