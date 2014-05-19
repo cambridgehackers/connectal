@@ -495,7 +495,7 @@ class TypeMixin:
             return self.params[0].numeric()
         if (self.name == 'Vector'):
             return self.params[0].numeric() * self.params[1].numBitsBSV()
-        if (self.name == 'Int'):
+        if (self.name == 'Int' or self.name == 'UInt'):
             return self.params[0].numeric()
         if (self.name == 'Float'):
             return 32
