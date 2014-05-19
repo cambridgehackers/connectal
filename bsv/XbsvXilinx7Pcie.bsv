@@ -172,26 +172,11 @@ interface PCIE_TRN_COMMON_X7;
    method    Bit#(1)     app_ready;
 endinterface
 
-interface PCIE_TRN_XMIT_X7;
-   method    Action      xmit(TLPData#(8) data);
-   method    Action      discontinue(Bit#(1) i);
-   method    Action      ecrc_generate(Bit#(1) i);
-   method    Action      error_forward(Bit#(1) i);
-   method    Action      cut_through_mode(Bit#(1) i);
-   method    Action      configuration_completion_grant(Bit#(1) i);
-endinterface
-
-interface PCIE_TRN_RECV_X7;
-   method    ActionValue#(Tuple3#(Bool, Bool, TLPData#(8))) recv();
-   method    Action      non_posted_ok(Bit#(1) i);
-   method    Action      non_posted_req(Bit#(1) i);
-endinterface
-
 interface PCIExpressX7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)   pcie;
    interface PCIE_TRN_COMMON_X7 trn;
-   interface PCIE_TRN_XMIT_X7   trn_tx;
-   interface PCIE_TRN_RECV_X7   trn_rx;
+   method    Action      xmit(TLPData#(8) data);
+   method    ActionValue#(Tuple3#(Bool, Bool, TLPData#(8))) recv();
    interface ReadOnly#(PciId)   pciId;
 endinterface
 
@@ -354,6 +339,20 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       pcie_ep.cfg_dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
    endrule
 
+   (* no_implicit_conditions, fire_when_enabled *)
+   rule every1;
+      pcie_ep.rx.np_ok(1);
+      pcie_ep.rx.np_req(1);
+   endrule
+   (* no_implicit_conditions, fire_when_enabled *)
+   rule every;
+      wDiscontinue._write(0);
+      wEcrcGen._write(0);
+      wErrFwd._write(0);
+      wCutThrough._write(0);
+      pcie_ep.tx.cfg_gnt(1);
+   endrule
+
    ////////////////////////////////////////////////////////////////////////////////
    /// Interface Connections / Methods
    ////////////////////////////////////////////////////////////////////////////////
@@ -367,20 +366,12 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       method    app_ready = pcie_ep.user.app_rdy;
    endinterface
 
-   interface PCIE_TRN_XMIT_X7 trn_tx;
       method Action xmit(data);
 	 fAxiTx.enq(AxiTx {last: pack(data.eof),
                            keep: dwordSwap64BE(data.be),
                            data: dwordSwap64(data.data) });
       endmethod
-      method discontinue(i)                    = wDiscontinue._write(i);
-      method ecrc_generate(i)          	       = wEcrcGen._write(i);
-      method error_forward(i)          	       = wErrFwd._write(i);
-      method cut_through_mode(i)       	       = wCutThrough._write(i);
-      method configuration_completion_grant(i) = pcie_ep.tx.cfg_gnt(i);
-   endinterface
 
-   interface PCIE_TRN_RECV_X7 trn_rx;
       method ActionValue#(Tuple3#(Bool, Bool, TLPData#(8))) recv();
 	 let info <- toGet(fAxiRx).get;
 	 TLPData#(8) retval = defaultValue;
@@ -391,9 +382,6 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 	 retval.data = dwordSwap64(info.data);
 	 return tuple3(info.user[1] == 1, info.user[0] == 1, retval);
       endmethod
-      method non_posted_ok(i)  = pcie_ep.rx.np_ok(i);
-      method non_posted_req(i) = pcie_ep.rx.np_req(i);
-   endinterface
 
    interface ReadOnly pciId;
       method PciId _read();

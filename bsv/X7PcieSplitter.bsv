@@ -17,9 +17,18 @@ import XilinxCells     :: *;
 import PcieSplitter :: *;
 import XbsvXilinx7Pcie :: *;
 import PCIEWRAPPER     :: *;
-import PcieConnection  :: *;
 import AxiCsr          :: *;
 //import XbsvXilinx7DDR3      :: *;
+
+import Connectable       ::*;
+import GetPut            ::*;
+import Reserved          ::*;
+import DefaultValue      ::*;
+import DReg              ::*;
+import Gearbox           ::*;
+import FIFO              ::*;
+import FIFOF             ::*;
+import SpecialFIFOs      ::*;
 
 // from SceMiDefines
 typedef 4 BPB;
@@ -113,8 +122,81 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 
    // Build the PCIe-to-AXI bridge
    PcieSplitter#(BPB)  bridge <- mkPcieSplitter(_ep.pciId._read(), clocked_by epClock125, reset_by epReset125);
-   mkConnectionWithClocks(_ep.trn_rx, tpl_2(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
-   mkConnectionWithClocks(_ep.trn_tx, tpl_1(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
+   Get#(TLPData#(16)) g = tpl_1(bridge.tlps);
+   Put#(TLPData#(16)) p = tpl_2(bridge.tlps);
+   FIFO#(TLPData#(8))                        inFifo              <- mkFIFO(clocked_by epClock250, reset_by epReset250);
+   // Connections between TLPData#(16) and a PCIE endpoint, using a gearbox
+   // to match data rates between the endpoint and design clocks.
+   Gearbox#(1, 2, TLPData#(8))               fifoRxData          <- mk1toNGearbox(epClock250, epReset250, epClock125, epReset125);
+   Reg#(Bool)                                rOddBeat            <- mkRegA(False, clocked_by epClock250, reset_by epReset250);
+   Reg#(Bool)                                rSendInvalid        <- mkRegA(False, clocked_by epClock250, reset_by epReset250);
+   FIFO#(TLPData#(8))                     outFifo             <- mkFIFO(clocked_by epClock250, reset_by epReset250);
+   Gearbox#(2, 1, TLPData#(8))            fifoTxData          <- mkNto1Gearbox(epClock125, epReset125, epClock250, epReset250);
+
+   rule accept_data1;
+      let data <- _ep.recv();
+      inFifo.enq(tpl_3(data));
+   endrule
+
+   rule process_incoming_packets1(!rSendInvalid);
+      let data = inFifo.first; inFifo.deq;
+      rOddBeat     <= !rOddBeat;
+      rSendInvalid <= !rOddBeat && data.eof;
+      Vector#(1, TLPData#(8)) v = defaultValue;
+      v[0] = data;
+      fifoRxData.enq(v);
+   endrule
+
+   rule send_invalid_packets1(rSendInvalid);
+      rOddBeat     <= !rOddBeat;
+      rSendInvalid <= False;
+      Vector#(1, TLPData#(8)) v = defaultValue;
+      v[0].eof = True;
+      v[0].be  = 0;
+      fifoRxData.enq(v);
+   endrule
+
+   rule send_data1;
+      function TLPData#(16) combine(Vector#(2, TLPData#(8)) in);
+         return TLPData {sof:   in[0].sof, eof:   in[1].eof, hit:   in[0].hit,
+                         be:    { in[0].be,   in[1].be },
+                         data:  { in[0].data, in[1].data } };
+      endfunction
+      fifoRxData.deq;
+      p.put(combine(fifoRxData.first));
+   endrule
+
+   rule get_data;
+      function Vector#(2, TLPData#(8)) split(TLPData#(16) in);
+         Vector#(2, TLPData#(8)) v = defaultValue;
+         v[0].sof  = in.sof;
+         v[0].eof  = (in.be[7:0] == 0) ? in.eof : False;
+         v[0].hit  = in.hit;
+         v[0].be   = in.be[15:8];
+         v[0].data = in.data[127:64];
+         v[1].sof  = False;
+         v[1].eof  = in.eof;
+         v[1].hit  = in.hit;
+         v[1].be   = in.be[7:0];
+         v[1].data = in.data[63:0];
+         return v;
+      endfunction
+
+      let data <- g.get;
+      fifoTxData.enq(split(data));
+   endrule
+
+   rule process_outgoing_packets;
+      let data = fifoTxData.first; fifoTxData.deq;
+      outFifo.enq(head(data));
+   endrule
+
+   rule send_data;
+      let data = outFifo.first; outFifo.deq;
+      // filter out TLPs with 00 byte enable
+      if (data.be != 0)
+         _ep.xmit(data);
+   endrule
 
    //SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, clk, rst_n, ddr3clk);
    //SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, clk);
