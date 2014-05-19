@@ -532,7 +532,7 @@ def p_functionBody(p):
     '''functionBody : SEMICOLON expressionStmts endFunction''' 
 
 def p_functionValue(p):
-    '''functionValue : EQUAL SEMICOLON'''
+    '''functionValue : EQUAL expression SEMICOLON'''
 
 def p_functionFormal(p):
     '''functionFormal : type VAR'''
