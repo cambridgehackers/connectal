@@ -20,37 +20,58 @@
 // SOFTWARE.
 
 import Connectable::*;
+import FIFO::*;
+import Vector::*;
 
-/* This is a simple serial bus
- * The frame bit indicates the valid period of a message
- * 
+/* This is a serial to parallel converter for messages of type a
+ * The data register is assumed to always be available, so an arriving
+ * message must be removed ASAP or be overwritten 
  */
-
-interface SpiTapIn;
+interface LinkIn#(type a);
    method Action frame(bit f);
    method Action data(bit d);
+   interface FIFO#(?) new;
+   interface ReadOnly#(a) r;
 endinterface
 
-interface SpiTapOut;
+interface LinkOut;
    method bit frame();
    method bit data();
 endinterface
 
-interface SpiTap;
-   interface SpiTapIn in;
-   interface SpiTapOut inrev;
-   interface SpiTapOut out;
-   interface SpiTapIn outrev;
+
+
+
+
+typedef struct {
+	Bit#(4) address;
+	Bit#(64) payload;
+	} DataMessage deriving(Bits);
+
+typedef struct {
+	Bit#(4) lsn;
+	Bit#(12) busy;
+	} FlowMessage deriving(Bits);
+
+
+
+interface NocNode;
+   interface NocNodeIn in;
+   interface NocNodeOut inrev;
+   interface NocNodeOut out;
+   interface NocNodeIn outrev;
 endinterface
 
 interface SpiReg#(type a);
-   interface SpiTap tap;
+   interface NocNode tap;
    interface FIFO#(a) send;
    interface FIFO#(a) recv;
 endinterface
 
-instance Connectable#(SpiTapOut, SpiTapIn);
-   module mkConnection#(SpiTapOut out, SpiTapIn in)(Empty);
+
+
+instance Connectable#(NocNodeOut, NocNodeIn);
+   module mkConnection#(NocNodeOut out, NocNodeIn in)(Empty);
       rule move_data;
 	 in.frame(out.frame());
 	 in.data(out.data());
@@ -58,58 +79,118 @@ instance Connectable#(SpiTapOut, SpiTapIn);
    endmodule
 endinstance
 
-module mkSpiReg#(Bit#(32) id)(SpiReg#(a))
-   provisos(Bits#(a,asize),
-      Add#(a__, asize, 32));
-   Reg#(bit) frameinbit <- mkReg(0);
-   Reg#(bit) datainbit <- mkReg(0);
-   Wire#(bit) dataoutwire <- mkDWire(0);
-   
-   Reg#(Bit#(6)) count <- mkReg(0);
-   Reg#(Bit#(32)) shifter <- mkReg(0);
-   Reg#(Bool) addressmatch <- mkReg(False);
-   Reg#(Bool) iswrite <- mkReg(False);
-   Reg#(Bit#(asize)) data <- mkReg(0);
-   
-   rule handleFrame;
-      if (frameinbit == 0)
+module mkNocNode#(Bit#(4) id)(NocNode#(a))
+   provisos(Bits#(a,asize)),
+            Log#(asize, k);
+
+
+
+
+
+   NocLink east <- mkNocLink();
+   NocLink west <- mkNocLink();
+   NocHost host <- mkNocHost();
+
+
+
+endmodule
+/* numlinks controls how many fifos to other links there are */
+
+module mkLinkIn(
+
+module mkLinkIn(LinkIn#(a))
+       provisos(Bits#(a,asize)),
+	        Log#(asize, k);
+
+   // registers for receiving data messages
+   Reg#(bit) framebit <- mkReg(0);
+   Reg#(bit) databit <- mkReg(0);
+   Reg#(Bit#(6)) incount <= mkReg(0);
+   Reg#(a) shifter <- mkReg(0);
+   Reg#(a) data <- mkReg(0);
+
+
+   rule handleDataFrame;
+      if (datainframebit == 0)
 	 begin
-            count <= 0;
-	    addressmatch <= False;
+            dataincount <= 0;
 	 end
       else
-	 count <= count + 1;
+	 dataincount <= dataincount + 1;
    endrule
    
-   rule handleShift (frameinbit == 1);
-      Bit#(32) tmp = shifter;
+   rule handleDataInShift (datainframebit == 1);
+      Bit#(SizeOf(DataMessage)) tmp = datainshifter;
       tmp = tmp >> 1;
-      tmp[31] = datainbit;
-      shifter <= tmp;
-      if (count == 31) 
-	 begin
-	    iswrite <= tmp[0] == 1;
-            addressmatch <= (id[31:1] == tmp[31:1]);
-         end
-      if ((count == 63) && addressmatch && iswrite)
-	 data <= truncate(tmp);
-      if ((count[5] == 1) && addressmatch && (!iswrite))
-          begin
-	     if (valueof(asize) == 32)
-		dataoutwire <= data[count & 31];
-	     else
-		begin
-		   if ((count & 31) < fromInteger(valueof(asize)))
-                      dataoutwire <= data[count & 31];
-		end
-	  end
-      else
-	 dataoutwire <= datainbit;
+      tmp[SizeOf(DataMessage)-1] = datainbit;
+      datainshifter <= tmp;
+      if (dataincount == (SizeOf(DataMessage) - 1))
+         begin
+	 let msg
+	 end;
    endrule
-
-   interface SpiTap tap;
    
-      interface SpiTapIn in;
+   interface LinkIn;
+   
+   		method Action frame(bit i );
+	    frameinbit <= i ;
+	 endmethod
+   
+	 method Action data( bit i );
+	    datainbit <= i;
+	 endmethod
+
+	       endinterface
+
+
+
+
+
+   // registers for sending flow control messages
+   Wire#(bit) fcoutwire <- mkDWire(0);
+
+   // registers for sending data messages
+   Wire#(bit) dataoutwire <- mkDWire(0);
+
+   // registers for receiving flow control messages
+   Reg#(bit) fcinbit <- mkReg(0);
+   Reg#(bit) fcinframeinbit <- mkReg(0);
+   Reg#(Bit#(6)) fcincount <= mkReg(0);
+   Reg#(FlowMessage) fcinshifter <- mkReg(0);
+   Reg#(FlowMessage) fcindata <- mkReg(0);
+
+   // buffers for incoming messages
+
+   FIFOF#(DataMessage) bufinhost <- mkSizedFIFOF(4);
+   Vector#(numlinks, FIFOF#(DataMessage)) bufinlink = newVector; 
+
+   for (Integer i = 0; i < numlinks; i = i + 1) 
+   begin
+     bufinlink[i] = mkSizedFIFOF#(4);
+   end
+   // XXX how to decode address?  Source routing? Node id?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   interface NocNode tap;
+   
+      interface NocNodeIn in;
    
 	 method Action frame(bit i );
 	    frameinbit <= i ;
@@ -121,7 +202,7 @@ module mkSpiReg#(Bit#(32) id)(SpiReg#(a))
 
       endinterface
    
-      interface SpiTapOut out;
+      interface NocNodeOut out;
       
 	 method bit frame();
 	    return frameinbit;

@@ -42,3 +42,14 @@ on a link will arbitrate among packets that are eligible to send,
 probably with round-robin priority among candidates
 
 
+Module LinkPort parameters for how many output channels 
+   datain link
+   reverse channel out
+   pktbuffer out   // does there need to be a buffer per crosspoint?
+                           // or just one per incoming link?
+	mux inputs to accept packets from host or link outs
+	
+   
+Module HostPort
+   parameters for how many links
+   PktBuffer in
