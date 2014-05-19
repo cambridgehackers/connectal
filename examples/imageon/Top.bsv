@@ -85,7 +85,11 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    clockParams.ref_jitter1        = 0.010;
    clockParams.ref_jitter2        = 0.010;
 
-   ClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
+   XClockGenerator7 clockGen <- mkClockGenerator7Adv(clockParams, clocked_by fmc_imageon_clk1);
+   C2B c2b_fb <- mkC2B(clockGen.clkfbout, clocked_by clockGen.clkfbout);
+   rule txoutrule5;
+      clockGen.clkfbin(c2b_fb.o());
+   endrule
    Clock hdmi_clock <- mkClockBUFG(clocked_by clockGen.clkout0);    // 148.5   MHz
    Clock imageon_clock <- mkClockBUFG(clocked_by clockGen.clkout1); //  37.125 MHz
    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
