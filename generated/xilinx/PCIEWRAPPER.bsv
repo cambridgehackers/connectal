@@ -348,7 +348,6 @@ interface PcieWrap#(numeric type lanes);
     interface PciewrapRx#(lanes)     rx;
     interface PciewrapS_axis_tx#(lanes)     s_axis_tx;
     interface PciewrapStartup#(lanes)     startup;
-    interface PciewrapSys#(lanes)     sys;
     interface PciewrapTx#(lanes)     tx;
     interface PciewrapUser#(lanes)     user;
 endinterface
@@ -585,8 +584,6 @@ module mkPcieWrap#(Clock sys_clk, Reset sys_clk_reset, Reset sys_rst_n)(PcieWrap
         method usrcclkts(startup_usrcclkts) enable((*inhigh*) EN_startup_usrcclkts);
         method usrdoneo(startup_usrdoneo) enable((*inhigh*) EN_startup_usrdoneo);
         method usrdonets(startup_usrdonets) enable((*inhigh*) EN_startup_usrdonets);
-    endinterface
-    interface PciewrapSys     sys;
     endinterface
     interface PciewrapTx     tx;
         method tx_buf_av buf_av();

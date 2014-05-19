@@ -31,6 +31,7 @@ paramnames = []
 ifdefmap = {}
 conditionalcf = {}
 clock_names = []
+deleted_interface = []
 commoninterfaces = {}
 tokgenerator = 0
 clock_params = []
@@ -307,7 +308,7 @@ def generate_condition(interfacename):
     return None
 
 def generate_interface(interfacename, paramlist, paramval, ilist, cname):
-    global clock_names
+    global clock_names, deleted_interface
     cflag = generate_condition(interfacename)
     print('(* always_ready, always_enabled *)', file=options.outfile)
     methodfound = False
@@ -321,6 +322,7 @@ def generate_interface(interfacename, paramlist, paramval, ilist, cname):
         elif item.mode == 'interface':
             methodfound = True
     if not methodfound:
+        deleted_interface.append(interfacename)
         return
     print('interface ' + interfacename + paramlist + ';', file=options.outfile)
     for item in ilist:
@@ -337,7 +339,7 @@ def generate_interface(interfacename, paramlist, paramval, ilist, cname):
                 print('    method '+item.type+'     '+item.name+'();', file=options.outfile)
         elif item.mode == 'inout':
             print('    interface Inout#('+item.type+')     '+item.name+';', file=options.outfile)
-        elif item.mode == 'interface':
+        elif item.mode == 'interface' and item.type not in deleted_interface:
             cflag2 = generate_condition(item.type)
             print('    interface '+item.type+ paramval +'     '+item.name+';', file=options.outfile)
             if cflag2:
@@ -475,6 +477,7 @@ def generate_clocks(item, indent, prefix):
              generate_clocks(titem, '        ', item.origname)
 
 def generate_instance(item, indent, prefix, clockedby_arg):
+    global deleted_interface
     methodlist = ''
     pname = ''
     if prefix:
@@ -500,20 +503,22 @@ def generate_instance(item, indent, prefix, clockedby_arg):
     elif item.mode == 'inout':
         print(indent + 'ifc_inout '+item.name.lower()+'('+ prefname+');', file=options.outfile)
     elif item.mode == 'interface':
+        if item.type in deleted_interface:
+            return ''
         cflag = generate_condition(item.type)
         print(indent + 'interface '+item.type+'     '+item.name.lower()+';', file=options.outfile)
-        temp = commoninterfaces[item.type].get('0')
-        if not temp:
-            temp = commoninterfaces[item.type].get('')
-        if not temp:
+        baseitem = commoninterfaces[item.type].get('0')
+        if not baseitem:
+            baseitem = commoninterfaces[item.type].get('')
+        if not baseitem:
             print('Missing ifc', item.type)
             return ''
         clockedby_name = ''
-        for titem in temp:
+        for titem in baseitem:
             if titem.mode == 'input' and titem.type == 'Clock':
                 clockedby_name = ' clocked_by (' + (item.origname+titem.name).lower() + ') reset_by (' + (item.origname+titem.name).lower() + '_reset)'
         templist = ''
-        for titem in temp:
+        for titem in baseitem:
             templist = templist + generate_instance(titem, '        ', item.origname, clockedby_name)
         if cflag:
             if not conditionalcf.get(cflag):
