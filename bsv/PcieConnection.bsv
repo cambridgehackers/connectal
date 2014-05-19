@@ -107,26 +107,14 @@ instance Connectable#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
    endmodule
 endinstance
 
-instance Connectable#(PCIE_TRN_XMIT_X7, Get#(TLPData#(8)));
-   module mkConnection#(PCIE_TRN_XMIT_X7 p, Get#(TLPData#(8)) g)(Empty);
+instance Connectable#(PCIE_TRN_XMIT_X7, Get#(TLPData#(numLanes)));
+   module mkConnection#(PCIE_TRN_XMIT_X7 p, Get#(TLPData#(numLanes)) g)(Empty);
       mkConnection(g, p);
    endmodule
 endinstance
 
-instance Connectable#(PCIE_TRN_XMIT_X7, Get#(TLPData#(16)));
-   module mkConnection#(PCIE_TRN_XMIT_X7 p, Get#(TLPData#(16)) g)(Empty);
-      mkConnection(g, p);
-   endmodule
-endinstance
-
-instance Connectable#(PCIE_TRN_RECV_X7, Put#(TLPData#(8)));
-   module mkConnection#(PCIE_TRN_RECV_X7 r, Put#(TLPData#(8)) p)(Empty);
-      mkConnection(p, r);
-   endmodule
-endinstance
-
-instance Connectable#(PCIE_TRN_RECV_X7, Put#(TLPData#(16)));
-   module mkConnection#(PCIE_TRN_RECV_X7 r, Put#(TLPData#(16)) p)(Empty);
+instance Connectable#(PCIE_TRN_RECV_X7, Put#(TLPData#(numLanes)));
+   module mkConnection#(PCIE_TRN_RECV_X7 r, Put#(TLPData#(numLanes)) p)(Empty);
       mkConnection(p, r);
    endmodule
 endinstance
