@@ -164,20 +164,17 @@ endmodule: vMkXilinx7PCIExpress
 ////////////////////////////////////////////////////////////////////////////////
 /// Interfaces
 ////////////////////////////////////////////////////////////////////////////////
-interface PCIE_TRN_COMMON_X7;
+
+interface PCIExpressX7#(numeric type lanes);
+   interface PciewrapPci_exp#(lanes)   pcie;
    interface Clock       clk;
    interface Clock       clk2;
    interface Reset       reset_n;
    method    Bit#(1)     link_up;
    method    Bit#(1)     app_ready;
-endinterface
-
-interface PCIExpressX7#(numeric type lanes);
-   interface PciewrapPci_exp#(lanes)   pcie;
-   interface PCIE_TRN_COMMON_X7 trn;
    method    Action      xmit(TLPData#(8) data);
    method    ActionValue#(Tuple3#(Bool, Bool, TLPData#(8))) recv();
-   interface ReadOnly#(PciId)   pciId;
+   method    PciId       pciId;
 endinterface
 
 typedef struct {
@@ -278,10 +275,6 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 
    Clock                     user_clk             = pcie_ep.user.clk_out;
    Reset                     user_reset_n        <- mkResetInverter(pcie_ep.user.reset_out);
-   Wire#(Bit#(1))            wDiscontinue        <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   Wire#(Bit#(1))            wEcrcGen            <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   Wire#(Bit#(1))            wErrFwd             <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   Wire#(Bit#(1))            wCutThrough         <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
    Wire#(Bit#(1))            wAxiTxValid         <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
    Wire#(Bit#(1))            wAxiTxLast          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
    Wire#(Bit#(64))           wAxiTxData          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
@@ -296,17 +289,9 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    params.clkout0_divide_f = 8.000;
    ClockGenerator7           clkgen              <- mkClockGenerator7(params,   clocked_by user_clk, reset_by user_reset_n);
 
-   ////////////////////////////////////////////////////////////////////////////////
-   /// Rules
-   ////////////////////////////////////////////////////////////////////////////////
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule others;
-      pcie_ep.fc.sel(0 /*RECEIVE_BUFFER_AVAILABLE_SPACE*/);
-   endrule
-
    (* fire_when_enabled, no_implicit_conditions *)
    rule drive_axi_tx;
-      pcie_ep.s_axis_tx.tuser({ wDiscontinue, wCutThrough, wErrFwd, wEcrcGen });
+      pcie_ep.s_axis_tx.tuser(4'b0);
       pcie_ep.s_axis_tx.tvalid(wAxiTxValid);
       pcie_ep.s_axis_tx.tlast(wAxiTxLast);
       pcie_ep.s_axis_tx.tdata(wAxiTxData);
@@ -335,60 +320,42 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
                         data: pcie_ep.m_axis_rx.tdata });
    endrule
 
-   rule dsnrule;
-      pcie_ep.cfg_dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
-   endrule
-
-   (* no_implicit_conditions, fire_when_enabled *)
+   (* fire_when_enabled, no_implicit_conditions *)
    rule every1;
+      pcie_ep.fc.sel(0 /*RECEIVE_BUFFER_AVAILABLE_SPACE*/);
+      pcie_ep.cfg_dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
       pcie_ep.rx.np_ok(1);
       pcie_ep.rx.np_req(1);
-   endrule
-   (* no_implicit_conditions, fire_when_enabled *)
-   rule every;
-      wDiscontinue._write(0);
-      wEcrcGen._write(0);
-      wErrFwd._write(0);
-      wCutThrough._write(0);
       pcie_ep.tx.cfg_gnt(1);
    endrule
 
-   ////////////////////////////////////////////////////////////////////////////////
-   /// Interface Connections / Methods
-   ////////////////////////////////////////////////////////////////////////////////
    interface pcie = pcie_ep.pcie;
+   interface clk     = user_clk;
+   interface clk2    = clkgen.clkout0; /* half speed user_clk */
+   interface reset_n = user_reset_n;
+   method    link_up = pcie_ep.user.lnk_up;
+   method    app_ready = pcie_ep.user.app_rdy;
 
-   interface PCIE_TRN_COMMON_X7 trn;
-      interface clk     = user_clk;
-      interface clk2    = clkgen.clkout0; /* half speed user_clk */
-      interface reset_n = user_reset_n;
-      method    link_up = pcie_ep.user.lnk_up;
-      method    app_ready = pcie_ep.user.app_rdy;
-   endinterface
+   method Action xmit(data);
+	fAxiTx.enq(AxiTx {last: pack(data.eof),
+           keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
+   endmethod
 
-      method Action xmit(data);
-	 fAxiTx.enq(AxiTx {last: pack(data.eof),
-                           keep: dwordSwap64BE(data.be),
-                           data: dwordSwap64(data.data) });
-      endmethod
+   method ActionValue#(Tuple3#(Bool, Bool, TLPData#(8))) recv();
+	let info <- toGet(fAxiRx).get;
+	TLPData#(8) retval = defaultValue;
+	retval.sof  = (info.user[14] == 1);
+	retval.eof  = info.last != 0;
+	retval.hit  = info.user[8:2];
+	retval.be= dwordSwap64BE(info.keep);
+	retval.data = dwordSwap64(info.data);
+	return tuple3(info.user[1] == 1, info.user[0] == 1, retval);
+   endmethod
 
-      method ActionValue#(Tuple3#(Bool, Bool, TLPData#(8))) recv();
-	 let info <- toGet(fAxiRx).get;
-	 TLPData#(8) retval = defaultValue;
-	 retval.sof  = (info.user[14] == 1);
-	 retval.eof  = info.last != 0;
-	 retval.hit  = info.user[8:2];
-	 retval.be   = dwordSwap64BE(info.keep);
-	 retval.data = dwordSwap64(info.data);
-	 return tuple3(info.user[1] == 1, info.user[0] == 1, retval);
-      endmethod
-
-   interface ReadOnly pciId;
-      method PciId _read();
-         return PciId { bus:  pcie_ep.cfg.bus_number(),
-	    dev: pcie_ep.cfg.device_number(), func: pcie_ep.cfg.function_number()};
-      endmethod
-   endinterface
+   method PciId pciId();
+      return PciId { bus:  pcie_ep.cfg.bus_number(),
+	 dev: pcie_ep.cfg.device_number(), func: pcie_ep.cfg.function_number()};
+   endmethod
 endmodule: mkPCIExpressEndpointX7
 
 endpackage: XbsvXilinx7Pcie

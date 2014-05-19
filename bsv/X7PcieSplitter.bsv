@@ -51,7 +51,7 @@ interface X7PcieSplitter#(numeric type lanes);
    interface GetPut#(TLPData#(16)) slave;  // to the portal control
    interface Put#(TimestampedTlpData) trace;
    interface Reset portalReset;
-   interface ReadOnly#(PciId) pciId;
+   method    PciId       pciId;
    interface Vector#(16, MSIX_Entry) msixEntry;
 endinterface
 
@@ -111,17 +111,17 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    // conversion.
 
    // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
-   Clock epClock250 = _ep.trn.clk;
-   Reset epReset250 <- mkAsyncReset(4, _ep.trn.reset_n, epClock250);
-   Clock epClock125 = _ep.trn.clk2;
-   Reset epReset125 <- mkAsyncReset(4, _ep.trn.reset_n, epClock125);
+   Clock epClock250 = _ep.clk;
+   Reset epReset250 <- mkAsyncReset(4, _ep.reset_n, epClock250);
+   Clock epClock125 = _ep.clk2;
+   Reset epReset125 <- mkAsyncReset(4, _ep.reset_n, epClock125);
 
    // Extract some status info from the PCIE endpoint. These values are
    // all in the epClock250 domain, so we have to cross them into the
    // epClock125 domain.
 
    // Build the PCIe-to-AXI bridge
-   PcieSplitter#(BPB)  bridge <- mkPcieSplitter(_ep.pciId._read(), clocked_by epClock125, reset_by epReset125);
+   PcieSplitter#(BPB)  bridge <- mkPcieSplitter(_ep.pciId(), clocked_by epClock125, reset_by epReset125);
    Get#(TLPData#(16)) g = tpl_1(bridge.tlps);
    Put#(TLPData#(16)) p = tpl_2(bridge.tlps);
    FIFO#(TLPData#(8))                        inFifo              <- mkFIFO(clocked_by epClock250, reset_by epReset250);
@@ -214,7 +214,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface slave    = bridge.slave;
    interface trace    = bridge.trace;
    interface portalReset = bridge.portalReset;
-   interface ReadOnly pciId = _ep.pciId;
+   interface pciId = _ep.pciId;
    interface clock250 = epClock250;
    interface reset250 = epReset250;
    interface clock125 = epClock125;
@@ -222,7 +222,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface clock200 = sys_clk_200mhz_buf;
    interface reset200 = sys_clk_200mhz_reset;
 
-   method isLinkUp    = _ep.trn.link_up();
+   method isLinkUp    = _ep.link_up();
 //   method Bool isCalibrated  = ddr3_ctrl.user.init_done;
    interface Vector msixEntry = bridge.msixEntry;
    
