@@ -129,7 +129,7 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
 
    FIFO#(ObjectData#(dataWidth)) writeBuffer <- mkSizedFIFO(valueOf(bufferDepth));
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
-   FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
+   FIFOF#(Bit#(ObjectTagSize))  doneTags <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(bufferDepth))) availableWords <- mkRatchet(fromInteger(valueOf(bufferDepth)));
    let beat_shift = fromInteger(valueOf(beatShift));
    
@@ -168,4 +168,67 @@ module mkDmaWriteBuffer(DmaWriteBuffer#(dataWidth, bufferDepth))
       endinterface
       interface Put writeDone = toPut(doneTags);
    endinterface
+endmodule
+
+module mkDmaReadMux#(Vector#(numClients,ObjectReadClient#(dataWidth)) readClients)(ObjectReadClient#(dataWidth))
+   provisos(Log#(numClients,tagsz),
+	    Add#(tagsz,a__,ObjectTagSize));
+
+   FIFO#(ObjectRequest)          readReqFifo  <- mkFIFO();
+   FIFO#(ObjectData#(dataWidth)) readRespFifo <- mkFIFO();
+
+   for (Integer i = 0; i < valueOf(numClients); i = i + 1) begin
+      // assume fixed tag per client
+      Reg#(Bit#(ObjectTagSize)) tagReg <- mkReg(0);
+      rule getreq;
+	 let req <- readClients[i].readReq.get();
+	 tagReg <= req.tag;
+	 req.tag = fromInteger(i);
+	 readReqFifo.enq(req);
+      endrule
+      rule sendresp if (readRespFifo.first.tag == fromInteger(i));
+	 let resp <- toGet(readRespFifo).get();
+	 resp.tag = tagReg;
+	 readClients[i].readData.put(resp);
+      endrule
+   end
+
+   interface Get readReq = toGet(readReqFifo);
+   interface Put readData = toPut(readRespFifo);
+endmodule
+
+module mkDmaWriteMux#(Vector#(numClients,ObjectWriteClient#(dataWidth)) writeClients)(ObjectWriteClient#(dataWidth))
+   provisos(Log#(numClients,tagsz),
+	    Add#(tagsz,a__,ObjectTagSize));
+
+   FIFO#(ObjectRequest)          writeReqFifo  <- mkFIFO();
+   FIFO#(ObjectData#(dataWidth)) writeDataFifo <- mkFIFO();
+   FIFO#(Bit#(ObjectTagSize))    writeDoneFifo <- mkFIFO();
+   FIFO#(Bit#(ObjectTagSize))    arbFifo       <- mkFIFO();
+
+   for (Integer i = 0; i < valueOf(numClients); i = i + 1) begin
+      // assume fixed tag per client
+      Reg#(Bit#(ObjectTagSize)) tagReg <- mkReg(0);
+      rule getreq;
+	 let req <- writeClients[i].writeReq.get();
+	 tagReg <= req.tag;
+	 req.tag = fromInteger(i);
+	 writeReqFifo.enq(req);
+	 arbFifo.enq(req.tag);
+      endrule
+      rule senddata if (fromInteger(i) == arbFifo.first);
+	 let data <- writeClients[i].writeData.get();
+	 data.tag = tagReg;
+	 writeDataFifo.enq(data);
+      endrule
+      rule senddone if (writeDoneFifo.first == fromInteger(i));
+	 arbFifo.deq();
+	 let done <- toGet(writeDoneFifo).get();
+	 writeClients[i].writeDone.put(tagReg);
+      endrule
+   end
+
+   interface Get writeReq = toGet(writeReqFifo);
+   interface Get writeData = toGet(writeDataFifo);
+   interface Put writeDone = toPut(writeDoneFifo);
 endmodule

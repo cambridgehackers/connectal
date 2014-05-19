@@ -262,6 +262,8 @@ class MethodMixin:
                 return [('%s.%s'%(scope,member.name),t)]
             elif tn == 'Int':
                 return [('%s.%s'%(scope,member.name),t)]
+            elif tn == 'Float':
+                return [('%s.%s'%(scope,member.name),t)]
             elif tn == 'Vector':
                 return [('%s.%s'%(scope,member.name),t)]
             else:
@@ -324,6 +326,8 @@ class MethodMixin:
             word = []
             for e in w:
                 field = e[0];
+		if e[3].cName() == 'float':
+		    return '        buff[i++] = *(int*)&%s;\n' % e[0];
                 if e[2]:
                     field = '(%s>>%s)' % (field, e[2])
                 if off:
@@ -341,12 +345,15 @@ class MethodMixin:
                 # print e[0]+' (d)'
                 ass = '=' if e[4] else '|='
                 field = 'buff[i]'
+		if e[3].cName() == 'float':
+		    word.append('        %s = *(float*)&(%s);\n'%(e[0],field))
+		    continue
                 if off:
-                    field = '(%s>>%s)' % (field, off)
-                field = '(%s&0x%xul)' % (field, ((1 << e[3].bitWidth())-1))
+                    field = '%s>>%s' % (field, off)
+                field = '((%s)&0x%xul)' % (field, ((1 << e[3].bitWidth())-1))
                 if e[2]:
-                    field = '((%s)%s<<%s)' % (e[3].cName(),field, e[2])
-                word.append('        %s %s (%s)%s;\n'%(e[0],ass,e[3].cName(),field))
+                    field = '((%s)(%s)<<%s)' % (e[3].cName(),field, e[2])
+		word.append('        %s %s (%s)(%s);\n'%(e[0],ass,e[3].cName(),field))
                 off = off+e[1]-e[2]
             word.append('        i++;\n');
             # print ''
@@ -575,6 +582,8 @@ class TypeMixin:
                 return 'int'
             else:
                 assert(False)
+        elif cid == 'Float':
+	    return 'float'
         elif cid == 'Vector':
             return 'bsvvector<%d,%s>' % (self.params[0].numeric(), self.params[1].cName())
         elif cid == 'Action':
@@ -591,6 +600,8 @@ class TypeMixin:
     def bitWidth(self):
         if self.name == 'Bit' or self.name == 'Int':
             return int(self.params[0].name)
+        if self.name == 'Float':
+            return 32
         else:
             return 0
     def bitSpec(self):

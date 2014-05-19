@@ -112,7 +112,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    interface pcie = x7pcie.pcie;
    //interface ddr3 = x7pcie.ddr3;
    method Bit#(NumLeds) leds();
-      return extend({pack(x7pcie.isLinkUp()),3'd2});
+      return extend({x7pcie.isLinkUp(),3'd2});
    endmethod
    interface pins = portalTop.pins;
 

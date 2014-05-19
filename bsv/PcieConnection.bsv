@@ -36,11 +36,11 @@ import XbsvXilinx7Pcie   ::*;
 instance Connectable#(Get#(TLPData#(8)), PCIE_TRN_XMIT_X7);
    module mkConnection#(Get#(TLPData#(8)) g, PCIE_TRN_XMIT_X7 p)(Empty);
       rule every;
-         p.cut_through_mode(False);
-         p.configuration_completion_grant(True);  // Core gets to choose
-         p.error_forward(False);
-	 p.ecrc_generate(False);
-	 p.discontinue(False);
+         p.cut_through_mode(0);
+         p.configuration_completion_grant(1);  // Core gets to choose
+         p.error_forward(0);
+	 p.ecrc_generate(0);
+	 p.discontinue(0);
       endrule
       rule connect;
          let data <- g.get;
@@ -49,29 +49,17 @@ instance Connectable#(Get#(TLPData#(8)), PCIE_TRN_XMIT_X7);
    endmodule
 endinstance
 
-instance Connectable#(PCIE_TRN_XMIT_X7, Get#(TLPData#(8)));
-   module mkConnection#(PCIE_TRN_XMIT_X7 p, Get#(TLPData#(8)) g)(Empty);
-      mkConnection(g, p);
-   endmodule
-endinstance
-
 instance Connectable#(Put#(TLPData#(8)), PCIE_TRN_RECV_X7);
    module mkConnection#(Put#(TLPData#(8)) p, PCIE_TRN_RECV_X7 r)(Empty);
       (* no_implicit_conditions, fire_when_enabled *)
       rule every;
-         r.non_posted_ok(True);
-	 r.non_posted_req(True);
+         r.non_posted_ok(1);
+	 r.non_posted_req(1);
       endrule
       rule connect;
          let data <- r.recv;
          p.put(tpl_3(data));
       endrule
-   endmodule
-endinstance
-
-instance Connectable#(PCIE_TRN_RECV_X7, Put#(TLPData#(8)));
-   module mkConnection#(PCIE_TRN_RECV_X7 r, Put#(TLPData#(8)) p)(Empty);
-      mkConnection(p, r);
    endmodule
 endinstance
 
@@ -85,40 +73,30 @@ instance Connectable#(Get#(TLPData#(16)), PCIE_TRN_XMIT_X7);
 
       (* no_implicit_conditions, fire_when_enabled *)
       rule every;
-         t.cut_through_mode(False);
-         t.configuration_completion_grant(True);  // True means core gets to choose
-         t.error_forward(False);
-	 t.ecrc_generate(False);
-	 t.discontinue(False);
+         t.cut_through_mode(0);
+         t.configuration_completion_grant(1);  // 1 means core gets to choose
+         t.error_forward(0);
+	 t.ecrc_generate(0);
+	 t.discontinue(0);
       endrule
-
       rule connect;
          let data = outFifo.first; outFifo.deq;
          if (data.be != 0)
             t.xmit(data);
       endrule
-
       Put#(TLPData#(8)) p = fifoToPut(outFifo);
       mkConnection(g,p);
-   endmodule
-endinstance
-
-instance Connectable#(PCIE_TRN_XMIT_X7, Get#(TLPData#(16)));
-   module mkConnection#(PCIE_TRN_XMIT_X7 p, Get#(TLPData#(16)) g)(Empty);
-      mkConnection(g, p);
    endmodule
 endinstance
 
 instance Connectable#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
    module mkConnection#(Put#(TLPData#(16)) p, PCIE_TRN_RECV_X7 r)(Empty);
       FIFO#(TLPData#(8)) inFifo <- mkFIFO();
-
       (* no_implicit_conditions, fire_when_enabled *)
       rule every;
-         r.non_posted_ok(True);
-	 r.non_posted_req(True);
+         r.non_posted_ok(1);
+	 r.non_posted_req(1);
       endrule
-
       rule connect;
          let data <- r.recv;
          inFifo.enq(tpl_3(data));
@@ -129,8 +107,14 @@ instance Connectable#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
    endmodule
 endinstance
 
-instance Connectable#(PCIE_TRN_RECV_X7, Put#(TLPData#(16)));
-   module mkConnection#(PCIE_TRN_RECV_X7 r, Put#(TLPData#(16)) p)(Empty);
+instance Connectable#(PCIE_TRN_XMIT_X7, Get#(TLPData#(numLanes)));
+   module mkConnection#(PCIE_TRN_XMIT_X7 p, Get#(TLPData#(numLanes)) g)(Empty);
+      mkConnection(g, p);
+   endmodule
+endinstance
+
+instance Connectable#(PCIE_TRN_RECV_X7, Put#(TLPData#(numLanes)));
+   module mkConnection#(PCIE_TRN_RECV_X7 r, Put#(TLPData#(numLanes)) p)(Empty);
       mkConnection(p, r);
    endmodule
 endinstance
@@ -154,11 +138,11 @@ instance ConnectableWithClocks#(PCIE_TRN_XMIT_X7, Get#(TLPData#(16)));
       ////////////////////////////////////////////////////////////////////////////////
       (* no_implicit_conditions, fire_when_enabled *)
       rule every;
-         p.cut_through_mode(False);
-         p.configuration_completion_grant(True);  // Means the core gets to choose
-         p.error_forward(False);
-	 p.ecrc_generate(False);
-	 p.discontinue(False);
+         p.cut_through_mode(0);
+         p.configuration_completion_grant(1);  // Means the core gets to choose
+         p.error_forward(0);
+	 p.ecrc_generate(0);
+	 p.discontinue(0);
       endrule
 
       rule get_data;
@@ -224,10 +208,9 @@ instance ConnectableWithClocks#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
       ////////////////////////////////////////////////////////////////////////////////
       (* no_implicit_conditions, fire_when_enabled *)
       rule every;
-         g.non_posted_ok(True);
-	 g.non_posted_req(True);
+         g.non_posted_ok(1);
+	 g.non_posted_req(1);
       endrule
-
       rule accept_data;
          let data <- g.recv;
          inFifo.enq(tpl_3(data));
@@ -253,8 +236,7 @@ instance ConnectableWithClocks#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
 
       rule send_data;
          function TLPData#(16) combine(Vector#(2, TLPData#(8)) in);
-            return TLPData {
-                            sof:   in[0].sof,
+            return TLPData {sof:   in[0].sof,
                             eof:   in[1].eof,
                             hit:   in[0].hit,
                             be:    { in[0].be,   in[1].be },
@@ -274,80 +256,6 @@ instance ConnectableWithClocks#(PCIE_TRN_RECV_X7, Put#(TLPData#(16)));
                                   Clock fastClock, Reset fastReset,
                                   Clock slowClock, Reset slowReset)(Empty);
       mkConnectionWithClocks(p, g, fastClock, fastReset, slowClock, slowReset);
-   endmodule
-endinstance
-
-// interface tie-offs
-
-
-instance TieOff#(PCIE_CFG_X7);
-   module mkTieOff#(PCIE_CFG_X7 ifc)(Empty);
-      rule tie_off_inputs;
-	 ifc.di(0);
-	 ifc.dwaddr(0);
-	 ifc.byte_en(0);
-	 ifc.wr_en(0);
-	 ifc.rd_en(0);
-	 ifc.wr_readonly(0);
-	 ifc.trn_pending(0);
-	 ifc.dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
-	 ifc.pm_halt_aspm_l0s(0);
-	 ifc.pm_halt_aspm_l1(0);
-	 ifc.pm_force_state(0);
-	 ifc.pm_force_state_en(0);
-	 ifc.turnoff_ok(0);
-	 ifc.pm_wake(0);
-      endrule
-   endmodule
-endinstance
-
-instance TieOff#(PCIE_INT_X7);
-   module mkTieOff#(PCIE_INT_X7 ifc)(Empty);
-      rule tie_off_inputs;
-	 ifc.req(0);
-	 ifc.assrt(0);
-	 ifc.di(0);
-	 ifc.pciecap_msgnum(0);
-	 ifc.stat(0);
-      endrule
-   endmodule
-endinstance
-
-instance TieOff#(PCIE_ERR_X7);
-   module mkTieOff#(PCIE_ERR_X7 ifc)(Empty);
-      rule tie_off_inputs;
-	 ifc.ecrc(0);
-	 ifc.ur(0);
-	 ifc.cpl_timeout(0);
-	 ifc.cpl_unexpect(0);
-	 ifc.cpl_abort(0);
-	 ifc.posted(0);
-	 ifc.cor(0);
-	 ifc.atomic_egress_blocked(0);
-	 ifc.internal_cor(0);
-	 ifc.internal_uncor(0);
-	 ifc.malformed(0);
-	 ifc.mc_blocked(0);
-	 ifc.poisoned(0);
-	 ifc.no_recovery(0);
-	 ifc.tlp_cpl_header(0);
-	 ifc.locked(0);
-	 ifc.aer_headerlog(0);
-	 ifc.aer_interrupt_msgnum(0);
-	 ifc.acs(0);
-      endrule
-   endmodule
-endinstance
-
-instance TieOff#(PCIE_PL_X7);
-   module mkTieOff#(PCIE_PL_X7 ifc)(Empty);
-      rule tie_off_inputs;
-	 ifc.directed_link_auton(0);
-	 ifc.directed_link_change(0);
-	 ifc.directed_link_speed(0);
-	 ifc.directed_link_width(0);
-	 ifc.upstream_prefer_deemph(1);
-      endrule
    endmodule
 endinstance
 

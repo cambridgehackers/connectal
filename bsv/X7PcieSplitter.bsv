@@ -28,14 +28,12 @@ typedef 4 BPB;
 interface X7PcieSplitter#(numeric type lanes);
    interface PciewrapPci_exp#(lanes) pcie;
    (* always_ready *)
-   method Bool isLinkUp();
+   method Bit#(1) isLinkUp();
    //method Bool isCalibrated();
    interface Clock clock250;
    interface Reset reset250;
    interface Clock clock125;
    interface Reset reset125;
-   interface Clock clock0625;
-   interface Reset reset0625;
    interface Clock clock200;
    interface Reset reset200;
    (* prefix = "" *)
@@ -57,7 +55,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 		       , Reset pci_sys_reset
 		       )
 		       (X7PcieSplitter#(lanes))
-   provisos(Add#(1,_,lanes), XbsvXilinx7Pcie::SelectXilinx7PCIE#(lanes));
+   provisos(Add#(1,_,lanes));
 
    Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
@@ -96,16 +94,6 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 						  , clocked_by pci_clk_100mhz_buf
 						  , reset_by pci_sys_reset
 						  );
-   mkTieOff(_ep.cfg);
-   mkTieOff(_ep.cfg_interrupt);
-   mkTieOff(_ep.cfg_err);
-   mkTieOff(_ep.pl);
-
-   // note our PCI ID
-   PciId my_id = PciId { bus:  _ep.cfg.bus_number()
-		       , dev:  _ep.cfg.device_number()
-		       , func: _ep.cfg.function_number()
-		       };
 
    // The PCIE endpoint is processing TLPWord#(8)s at 250MHz.  The
    // AXI bridge is accepting TLPWord#(16)s at 125 MHz. The
@@ -118,27 +106,13 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    Reset epReset250 <- mkAsyncReset(4, _ep.trn.reset_n, epClock250);
    Clock epClock125 = _ep.trn.clk2;
    Reset epReset125 <- mkAsyncReset(4, _ep.trn.reset_n, epClock125);
-   Clock epClock0625 = _ep.trn.clk3;
-   Reset epReset0625 <- mkAsyncReset(4, _ep.trn.reset_n, epClock0625);
 
    // Extract some status info from the PCIE endpoint. These values are
    // all in the epClock250 domain, so we have to cross them into the
    // epClock125 domain.
 
-   Bool link_is_up = _ep.trn.link_up();
-   UInt#(8)  read_completion_boundary_250 = 64 << _ep.cfg.lcommand[3];
-
-   // setup PCIe interrupt for MSI-X
-   // this rule executes in the epClock250 domain
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule intr_ifc_ctl;
-      _ep.cfg_interrupt.di('0);      // tied off for MSI-X
-      _ep.cfg_interrupt.assrt('0);  // tied off for MSI-X
-      _ep.cfg_interrupt.req(0);      // tied off for MSI-X
-   endrule: intr_ifc_ctl
-
    // Build the PCIe-to-AXI bridge
-   PcieSplitter#(BPB)  bridge <- mkPcieSplitter(my_id, clocked_by epClock125, reset_by epReset125);
+   PcieSplitter#(BPB)  bridge <- mkPcieSplitter(_ep.pciId._read(), clocked_by epClock125, reset_by epReset125);
    mkConnectionWithClocks(_ep.trn_rx, tpl_2(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
    mkConnectionWithClocks(_ep.trn_tx, tpl_1(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
 
@@ -158,21 +132,15 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface slave    = bridge.slave;
    interface trace    = bridge.trace;
    interface portalReset = bridge.portalReset;
-   interface ReadOnly pciId;
-      method PciId _read();
-         return my_id;
-      endmethod
-   endinterface
+   interface ReadOnly pciId = _ep.pciId;
    interface clock250 = epClock250;
    interface reset250 = epReset250;
    interface clock125 = epClock125;
    interface reset125 = epReset125;
-   interface clock0625 = epClock0625;
-   interface reset0625 = epReset0625;
    interface clock200 = sys_clk_200mhz_buf;
    interface reset200 = sys_clk_200mhz_reset;
 
-   method Bool isLinkUp        = link_is_up;
+   method isLinkUp    = _ep.trn.link_up();
 //   method Bool isCalibrated  = ddr3_ctrl.user.init_done;
    interface Vector msixEntry = bridge.msixEntry;
    

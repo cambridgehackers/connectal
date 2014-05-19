@@ -31,9 +31,11 @@ paramnames = []
 ifdefmap = {}
 conditionalcf = {}
 clock_names = []
+deleted_interface = []
 commoninterfaces = {}
 tokgenerator = 0
 clock_params = []
+reset_params = []
 toknum = 0
 tokval = 0
 modulename = ''
@@ -134,6 +136,8 @@ def parse_item():
                             ptemp = 'Bit#(1)'
                             if options.clock and k in options.clock:
                                 ptemp = 'Clock'
+                            if options.reset and k in options.reset:
+                                ptemp = 'Reset'
                         else:
                             ptemp = 'Bit#(' + str(int(v[1])+1) + ')'
                         ttemp = PinType(v[0], ptemp, k, k)
@@ -188,7 +192,7 @@ def parse_lib(filename):
             if tname.startswith(sitem):
                 tname = tname[len(sitem):]
                 ind = 0
-                while tname[ind] >= '0' and tname[ind] <= '9':
+                while tname[ind] >= '0' and tname[ind] <= '9' and ind < len(tname) - 1:
                     ind = ind + 1
                 item.name = sitem + tname[:ind] + item.separator + tname[ind:]
                 break
@@ -260,6 +264,8 @@ def processline(line, phase):
                 return False
             if options.clock and f[2] in options.clock:
                 f[1] = 'Clock'
+            if options.reset and f[2] in options.reset:
+                f[1] = 'Reset'
             #print('FF', f, file=sys.stderr)
         elif phase == 2:
             return True
@@ -302,25 +308,38 @@ def generate_condition(interfacename):
     return None
 
 def generate_interface(interfacename, paramlist, paramval, ilist, cname):
-    global clock_names
+    global clock_names, deleted_interface
     cflag = generate_condition(interfacename)
     print('(* always_ready, always_enabled *)', file=options.outfile)
+    methodfound = False
+    for item in ilist:
+        if item.mode == 'input' and (item.type != 'Clock' and item.type != 'Reset'):
+            methodfound = True
+        elif item.mode == 'output':
+            methodfound = True
+        elif item.mode == 'inout':
+            methodfound = True
+        elif item.mode == 'interface':
+            methodfound = True
+    if not methodfound:
+        deleted_interface.append(interfacename)
+        return
     print('interface ' + interfacename + paramlist + ';', file=options.outfile)
     for item in ilist:
         if item.mode != 'input' and item.mode != 'output' and item.mode != 'inout' and item.mode != 'interface':
             continue
         if item.mode == 'input':
-            if item.type != 'Clock':
+            if item.type != 'Clock' and item.type != 'Reset':
                 print('    method Action      '+item.name+'('+item.type+' v);', file=options.outfile)
         elif item.mode == 'output':
-            if item.type == 'Clock':
+            if item.type == 'Clock' and item.type != 'Reset':
                 print('    interface Clock     '+item.name+';', file=options.outfile)
                 clock_names.append(item)
             else:
                 print('    method '+item.type+'     '+item.name+'();', file=options.outfile)
         elif item.mode == 'inout':
             print('    interface Inout#('+item.type+')     '+item.name+';', file=options.outfile)
-        elif item.mode == 'interface':
+        elif item.mode == 'interface' and item.type not in deleted_interface:
             cflag2 = generate_condition(item.type)
             print('    interface '+item.type+ paramval +'     '+item.name+';', file=options.outfile)
             if cflag2:
@@ -402,8 +421,11 @@ def regroup_items(masterlist):
                 t.separator = separator
                 newlist.append(t)
             foo = copy.copy(item)
-            foo.name = fieldname.lower()
             foo.origname = fieldname
+            lfield = fieldname.lower()
+            if lfield in ['assert', 'do']:
+                lfield = 'zz' + lfield      # prefix prohibited names with 'zz'
+            foo.name = lfield
             commoninterfaces[interfacename][indexname].append(foo)
     return newlist
 
@@ -418,11 +440,14 @@ def generate_inter_declarations(paramlist, paramval):
                 #print('     ', kuse, json.dumps(vuse), file=sys.stderr)
 
 def locate_clocks(item, prefix):
-    global clock_params
+    global clock_params, reset_params
     pname = prefix + item.name
     if item.mode == 'input':
         if item.type == 'Clock':
             clock_params.append(pname.lower())
+            reset_params.append(pname.lower() + '_reset')
+        if item.type == 'Reset':
+            reset_params.append(pname.lower())
     elif item.mode == 'interface':
         temp = commoninterfaces[item.type].get('0')
         if not temp:
@@ -438,7 +463,9 @@ def generate_clocks(item, indent, prefix):
     if item.mode == 'input':
         if item.type == 'Clock':
             print(indent + 'input_clock '+prefname.lower()+'('+ prefname+') = '+prefname.lower() + ';', file=options.outfile)
-            print(indent + 'input_reset '+prefname.lower()+'_reset() = '+prefname.lower() + '_reset;', file=options.outfile)
+            print(indent + 'input_reset '+prefname.lower()+'_reset() = '+prefname.lower() + '_reset; /* from clock*/', file=options.outfile)
+        if item.type == 'Reset':
+            print(indent + 'input_reset '+prefname.lower()+'('+ prefname +') = '+prefname.lower() + ';', file=options.outfile)
     elif item.mode == 'interface':
         temp = commoninterfaces[item.type].get('0')
         if not temp:
@@ -450,6 +477,7 @@ def generate_clocks(item, indent, prefix):
              generate_clocks(titem, '        ', item.origname)
 
 def generate_instance(item, indent, prefix, clockedby_arg):
+    global deleted_interface
     methodlist = ''
     pname = ''
     if prefix:
@@ -461,32 +489,36 @@ def generate_instance(item, indent, prefix, clockedby_arg):
             pname = 'event_.'
     prefname = prefix + item.origname
     if item.mode == 'input':
-        if item.type != 'Clock':
+        if item.type != 'Clock' and item.type != 'Reset':
             print(indent + 'method '+item.name.lower()+'('+ prefname +')' + clockedby_arg + ' enable((*inhigh*) EN_'+prefname+');', file=options.outfile)
             methodlist = methodlist + ', ' + pname + item.name.lower()
     elif item.mode == 'output':
         if item.type == 'Clock':
             print(indent + 'output_clock '+ item.name.lower()+ '(' + prefname+');', file=options.outfile)
+        elif item.type == 'Reset':
+            print(indent + 'output_reset '+ item.name.lower()+ '(' + prefname+');', file=options.outfile)
         else:
             print(indent + 'method '+ prefname + ' ' + item.name.lower()+'()' + clockedby_arg + ';', file=options.outfile)
             methodlist = methodlist + ', ' + pname + item.name.lower()
     elif item.mode == 'inout':
         print(indent + 'ifc_inout '+item.name.lower()+'('+ prefname+');', file=options.outfile)
     elif item.mode == 'interface':
+        if item.type in deleted_interface:
+            return ''
         cflag = generate_condition(item.type)
         print(indent + 'interface '+item.type+'     '+item.name.lower()+';', file=options.outfile)
-        temp = commoninterfaces[item.type].get('0')
-        if not temp:
-            temp = commoninterfaces[item.type].get('')
-        if not temp:
+        baseitem = commoninterfaces[item.type].get('0')
+        if not baseitem:
+            baseitem = commoninterfaces[item.type].get('')
+        if not baseitem:
             print('Missing ifc', item.type)
             return ''
         clockedby_name = ''
-        for titem in temp:
+        for titem in baseitem:
             if titem.mode == 'input' and titem.type == 'Clock':
                 clockedby_name = ' clocked_by (' + (item.origname+titem.name).lower() + ') reset_by (' + (item.origname+titem.name).lower() + '_reset)'
         templist = ''
-        for titem in temp:
+        for titem in baseitem:
             templist = templist + generate_instance(titem, '        ', item.origname, clockedby_name)
         if cflag:
             if not conditionalcf.get(cflag):
@@ -501,7 +533,7 @@ def generate_instance(item, indent, prefix, clockedby_arg):
 
 def generate_bsv():
     global paramnames, modulename, clock_names
-    global clock_params, options
+    global clock_params, reset_params, options
     # generate output file
     print('\n/*', file=options.outfile)
     for item in sys.argv:
@@ -522,11 +554,13 @@ def generate_bsv():
     temp = 'module mk' + options.ifname
     for item in masterlist:
         locate_clocks(item, '')
-    if clock_params != []:
+    if clock_params != [] or reset_params != []:
         sepstring = '#('
         for item in clock_params:
-            temp = temp + sepstring + 'Clock ' + item + ', Reset ' + item + '_reset'
+            temp = temp + sepstring + 'Clock ' + item
             sepstring = ', '
+        for item in reset_params:
+            temp = temp + sepstring + 'Reset ' + item
         temp = temp + ')'
     temp = temp + '(' + options.ifname + paramval + ');'
     print(temp, file=options.outfile)
@@ -567,6 +601,7 @@ if __name__=='__main__':
     parser.add_option("-p", "--param", action="append", dest="param")
     parser.add_option("-f", "--factor", action="append", dest="factor")
     parser.add_option("-c", "--clock", action="append", dest="clock")
+    parser.add_option("-r", "--reset", action="append", dest="reset")
     parser.add_option("-d", "--delete", action="append", dest="delete")
     parser.add_option("-e", "--export", action="append", dest="export")
     parser.add_option("-i", "--ifdef", action="append", dest="ifdef")

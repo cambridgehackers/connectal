@@ -67,6 +67,7 @@ argparser.add_argument('-C', '--constraint', help='Additional constraint files',
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
 argparser.add_argument('-x', '--export', help='Promote/export named interface from top module')
 argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
+argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
 argparser.add_argument('-T', '--tcl', default=[], help='Vivado tcl script', action='append')
 argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to the BSV compiler', action='append')
@@ -103,6 +104,15 @@ read_verilog [ glob {verilog/top/*.v} ]
 %(read_verilog)s
 %(read_xci)s
 %(tclfileConstraints)s
+if {[lsearch [list_property [current_project]] board_part] >= 0} {
+    set_property board_part "xilinx.com:$boardname:part0:1.0" [current_project]
+} else {
+    ## vivado 2013.2 uses the BOARD property instead
+    set board_candidates [get_boards *$boardname*]
+    set_property BOARD [lindex $board_candidates [expr [llength $board_candidates] - 1]] [current_project]
+}
+report_property [current_project]
+source $xbsvdir/scripts/xbsv-synth-ip.tcl
 if $needspcie {
     set pcieversion {3.0}
     set maxlinkwidth {X8}
@@ -119,20 +129,7 @@ if $needspcie {
     if {[version -short] == "2013.2"} {
         set pcieversion {2.1}
     }
-    if {[lsearch [list_property [current_project]] board_part] >= 0} {
-        set_property board_part "xilinx.com:$boardname:part0:1.0" [current_project]
-    } else {
-        ## vivado 2013.2 uses the BOARD property instead
-        set board_candidates [get_boards *$boardname*]
-        set_property BOARD [lindex $board_candidates [expr [llength $board_candidates] - 1]] [current_project]
-    }
-    report_property [current_project]
-    if [file exists $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci] {
-       read_ip $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci
-    }  else {
-        file mkdir $xbsvdir/generated/xilinx/$boardname
-        create_ip -name pcie_7x -version $pcieversion -vendor xilinx.com -library ip -module_name pcie_7x_0 -dir $xbsvdir/generated/xilinx/$boardname
-        set_property -dict [list \
+    xbsv_synth_ip pcie_7x $pcieversion pcie_7x_0 [list \
                             CONFIG.mode_selection {Advanced} \
                             CONFIG.ASPM_Optionality {true} \
                             CONFIG.Buf_Opt_BMA {true} \
@@ -161,16 +158,11 @@ if $needspcie {
                             CONFIG.Subsystem_Vendor_ID {1be7} \
                             CONFIG.Use_Class_Code_Lookup_Assistant {false} \
                             CONFIG.Vendor_ID {1be7} \
-                           ] [get_ips pcie_7x_0]
-        report_property [get_ips pcie_7x_0]
-        generate_target all [get_files $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.xci]
-    }
-        if [file exists $xbsvdir/generated/xilinx/$boardname/pcie_7x_0/pcie_7x_0.dcp] {
-        } else {
-            catch {
-                synth_ip [get_ips pcie_7x_0]
-            }
-        }
+                           ]
+}
+
+if [file exists ../synth-ip.tcl] {
+    source ../synth-ip.tcl
 }
 
 # STEP#2: run synthesis, report utilization and timing estimates, write checkpoint design
@@ -225,6 +217,12 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 '''
 
 makefileTemplate='''
+## make targets
+##    all: make software and programmable logic binaries
+##    run: run the program
+##         pass parameters to software via 'make RUN_ARGS= run'
+RUN_ARGS=
+
 DTOP=%(project_dir)s
 XBSVDIR=%(xbsvdir)s
 BSVPATH = %(bsvpath)s
@@ -233,10 +231,14 @@ vfile=verilog/top/%(topbsvmod)s.v
 BOARD=%(boardname)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
-ifeq ($(OS),android)
-ALLTARGETS=android_exe%(debug)s bits
+ifeq ($(BOARD),bluesim)
+    ALLTARGETS=bsim bsim_exe
 else
-ALLTARGETS=ubuntu_exe implementation
+  ifeq ($(OS),android)
+    ALLTARGETS=android_exe%(debug)s bits
+  else
+    ALLTARGETS=ubuntu_exe implementation
+  endif
 endif
 
 BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -bdir $(DTOP)/obj -vdir $(DTOP)/verilog/top -simdir $(DTOP)/obj -info-dir $(DTOP)/obj -D TimeStamp=%(timestamp)s %(bscflags)s
@@ -349,19 +351,19 @@ GDB=
 endif
 
 run:
-	./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./jni/bsim_exe; retcode=$$?; kill $$bsimpid; exit $$retcode
+	./sources/bsim& bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./jni/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
 
 else
 
     ifeq ($(OS),android)
 
 run:
-	$(XBSVDIR)/scripts/run.zedboard `find . -name \*.gz` `find . -name android_exe | grep libs`
+	$(XBSVDIR)/scripts/run.zedboard `find . -name \*.gz` `find . -name android_exe | grep libs` $(RUN_ARGS)
 
     else
 
 run: program
-	timeout 3m catchsegv ./jni/mkpcietop
+	timeout 3m catchsegv ./jni/mkpcietop $(RUN_ARGS)
 
     endif
 endif
@@ -464,7 +466,7 @@ if __name__=='__main__':
     dutname = namespace.export
     boardname = namespace.board.lower()
 
-    bsvdefines = []
+    bsvdefines = namespace.bsvdefine
     if boardname == 'kc705':
         bsvdefines += ['Kintex7', 'PCIE']
     elif boardname == 'vc707':
@@ -506,21 +508,19 @@ if __name__=='__main__':
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z045ffg900-2'
         rewireclockstring = tclzynqrewireclock
-        namespace.verilog.append(os.path.join(xbsvdir, 'verilog'))
         #namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z045ffg900.xdc'))
     else:
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z020clg484-1'
         rewireclockstring = tclzynqrewireclock
-        namespace.verilog.append(os.path.join(xbsvdir, 'verilog'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z020clg484.xdc'))
+    namespace.verilog.append(os.path.join(xbsvdir, 'verilog'))
 
     namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/%s.xdc' % boardname))
-    if needs_pcie_7x_gen1x8:
+    #if needs_pcie_7x_gen1x8:
         #subprocess.call(['make', '-C', xbsvdir, 'xilinx/pcie_7x_gen1x8'])
         #namespace.xci.append(os.path.join(xbsvdir, 'xilinx', 'pcie_7x_gen1x8', 'pcie_7x_0.xci'))
-        namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', '7x', 'pcie', 'source'))
 
     # this is an ugly abuse of typeclassinstance
     for v in syntax.globaldecls:
@@ -762,7 +762,9 @@ if __name__=='__main__':
 
     print '############################################################'
     print '## To build:'
-    print '    cd %s; make verilog; make bits' % (project_dir)
+    print '    cd %s; make all' % (project_dir)
+    print '## To run:'
+    print '    cd %s; make run' % (project_dir)
     print '## You can use XPS to generate bit file or exit and let make complete the process.'
 
     if namespace.make:

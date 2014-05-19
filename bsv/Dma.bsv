@@ -36,21 +36,21 @@ import BRAMFIFOFLevel::*;
 typedef Bit#(32) ObjectPointer;
 typedef 40 ObjectOffsetSize;
 
-
+typedef 6 ObjectTagSize;
 typedef struct {
    Bit#(addrWidth) addr;
    Bit#(8) burstLen;
-   Bit#(6) tag;
+   Bit#(ObjectTagSize) tag;
    } MemRequest#(numeric type addrWidth) deriving (Bits);
 typedef struct {
    ObjectPointer pointer;
    Bit#(ObjectOffsetSize) offset;
    Bit#(8) burstLen;
-   Bit#(6)  tag;
+   Bit#(ObjectTagSize)  tag;
    } ObjectRequest deriving (Bits);
 typedef struct {
    Bit#(dsz) data;
-   Bit#(6) tag;
+   Bit#(ObjectTagSize) tag;
    } ObjectData#(numeric type dsz) deriving (Bits);
 typedef ObjectData#(dsz) MemData#(numeric type dsz);
 
@@ -66,7 +66,7 @@ endinterface
 interface ObjectWriteClient#(numeric type dsz);
    interface Get#(ObjectRequest)    writeReq;
    interface Get#(ObjectData#(dsz)) writeData;
-   interface Put#(Bit#(6))       writeDone;
+   interface Put#(Bit#(ObjectTagSize))       writeDone;
 endinterface
 
 interface ObjectReadServer#(numeric type dsz);
@@ -77,7 +77,7 @@ endinterface
 interface ObjectWriteServer#(numeric type dsz);
    interface Put#(ObjectRequest) writeReq;
    interface Put#(ObjectData#(dsz))     writeData;
-   interface Get#(Bit#(6))           writeDone;
+   interface Get#(Bit#(ObjectTagSize))           writeDone;
 endinterface
 
 //
@@ -102,7 +102,7 @@ endinterface
 interface MemWriteClient#(numeric type asz, numeric type dsz);
    interface Get#(MemRequest#(asz))    writeReq;
    interface Get#(MemData#(dsz)) writeData;
-   interface Put#(Bit#(6))       writeDone;
+   interface Put#(Bit#(ObjectTagSize))       writeDone;
 endinterface
 
 interface MemReadServer#(numeric type asz, numeric type dsz);
@@ -113,7 +113,7 @@ endinterface
 interface MemWriteServer#(numeric type asz, numeric type dsz);
    interface Put#(MemRequest#(asz)) writeReq;
    interface Put#(MemData#(dsz))     writeData;
-   interface Get#(Bit#(6))           writeDone;
+   interface Get#(Bit#(ObjectTagSize))           writeDone;
 endinterface
 
 //

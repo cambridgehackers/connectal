@@ -39,6 +39,7 @@ import FIFOF::*;
 import GetPut::*;
 import Connectable::*;
 import Clocks::*;
+import FloatingPoint::*;
 import Adapter::*;
 import Leds::*;
 import Vector::*;
@@ -496,6 +497,8 @@ class TypeMixin:
             return self.params[0].numeric() * self.params[1].numBitsBSV()
         if (self.name == 'Int'):
             return self.params[0].numeric()
+        if (self.name == 'Float'):
+            return 32
 	sdef = syntax.globalvars[self.name].tdtype
         if (sdef.type == 'Struct'):
             return sum([e.type.numBitsBSV() for e in sdef.elements])
