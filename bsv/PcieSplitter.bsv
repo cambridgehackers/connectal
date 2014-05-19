@@ -42,7 +42,7 @@ import AxiCsr               :: *;
 interface PcieSplitter#(numeric type bpb);
 
    interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
-   interface GetPut#(TLPData#(16)) csr; // to csr
+   //interface GetPut#(TLPData#(16)) csr; // to csr
    interface GetPut#(TLPData#(16)) master; // to the portal control
    interface GetPut#(TLPData#(16)) slave;  // to the portal DMA
    interface Reset portalReset;

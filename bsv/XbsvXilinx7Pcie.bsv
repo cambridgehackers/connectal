@@ -27,18 +27,18 @@ import Bufgctrl           ::*;
 
 (* always_ready, always_enabled *)
 interface PCIE_X7#(numeric type lanes);
-   interface PciewrapPci_exp#(lanes) pcie;
-   interface PciewrapUser#(lanes)   user;
-   interface PciewrapFc#(lanes)     fc;
-   interface PciewrapTx#(lanes)     tx;
-   interface PciewrapS_axis_tx#(lanes)     s_axis_tx;
-   interface PciewrapM_axis_rx#(lanes)     m_axis_rx;
-   interface PciewrapRx#(lanes)     rx;
-   interface PciewrapCfg#(lanes)    cfg;
-   method    Action      dsn(Bit#(64) i);
-   interface Clock       txoutclk;
-   method    Action      locked(Bit#(1) v);
-   method    Bit#(lanes) pipe_pclk_sel_out();
+   interface PciewrapPci_exp#(lanes)   pcie;
+   interface PciewrapUser#(lanes)      user;
+   interface PciewrapFc#(lanes)        fc;
+   interface PciewrapTx#(lanes)        tx;
+   interface PciewrapS_axis_tx#(lanes) s_axis_tx;
+   interface PciewrapM_axis_rx#(lanes) m_axis_rx;
+   interface PciewrapRx#(lanes)        rx;
+   interface PciewrapCfg#(lanes)       cfg;
+   method    Action                    cfg_dsn(Bit#(64) i);
+   interface Clock                     pipe_txoutclk_out;
+   method    Action                    pipe_mmcm_lock_in(Bit#(1) v);
+   method    Bit#(lanes)               pipe_pclk_sel_out();
 endinterface
 
 import "BVI" pcie_7x_0 =
@@ -54,7 +54,7 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clkout2,
    input_clock clkout2user(pipe_userclk2_in) = clkout2;
    input_clock pclk_in(pipe_pclk_in) = pclk_in;
    input_clock pclk_usrin(pipe_rxusrclk_in) = pclk_in;
-   method locked(pipe_mmcm_lock_in) enable((*inhigh*)en_locked);
+   method pipe_mmcm_lock_in(pipe_mmcm_lock_in) enable((*inhigh*)en_pipe_mmcm_lock_in);
    method pipe_pclk_sel_out pipe_pclk_sel_out   clocked_by(pclk_in);
 
    interface PciewrapPci_exp pcie;
@@ -109,7 +109,7 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clkout2,
       method                  np_req(rx_np_req)    enable((*inhigh*)en10)   clocked_by(user_clk_out)    reset_by(no_reset);
    endinterface
 
-method                        dsn(cfg_dsn)    enable((*inhigh*)en25)   clocked_by(user_clk_out);
+   method                    cfg_dsn(cfg_dsn)    enable((*inhigh*)en25)   clocked_by(user_clk_out);
 
    interface PciewrapCfg     cfg;
       method cfg_bus_number      bus_number   clocked_by(no_clock) reset_by(no_reset);
@@ -118,23 +118,23 @@ method                        dsn(cfg_dsn)    enable((*inhigh*)en25)   clocked_b
       method cfg_lcommand        lcommand   clocked_by(user_clk_out) reset_by(no_reset);
       method                     interrupt(cfg_interrupt)    enable((*inhigh*)en32)   clocked_by(user_clk_out) reset_by(no_reset);
 
-        method cfg_bridge_serr_en bridge_serr_en();
-        method cfg_command command();
-        method cfg_dcommand dcommand();
-        method cfg_dcommand2 dcommand2();
-        method cfg_lstatus lstatus();
-        method cfg_pcie_link_state pcie_link_state();
-        method pciecap_interrupt_msgnum(cfg_pciecap_interrupt_msgnum) enable((*inhigh*) EN_cfg_pciecap_interrupt_msgnum);
-        method cfg_received_func_lvl_rst received_func_lvl_rst();
-        method cfg_slot_control_electromech_il_ctl_pulse slot_control_electromech_il_ctl_pulse();
-        method cfg_status status();
-        method cfg_to_turnoff to_turnoff();
-        method trn_pending(cfg_trn_pending) enable((*inhigh*) EN_cfg_trn_pending);
-        method turnoff_ok(cfg_turnoff_ok) enable((*inhigh*) EN_cfg_turnoff_ok);
-        method cfg_vc_tcvc_map vc_tcvc_map();
+      method cfg_bridge_serr_en bridge_serr_en();
+      method cfg_command command();
+      method cfg_dcommand dcommand();
+      method cfg_dcommand2 dcommand2();
+      method cfg_lstatus lstatus();
+      method cfg_pcie_link_state pcie_link_state();
+      method pciecap_interrupt_msgnum(cfg_pciecap_interrupt_msgnum) enable((*inhigh*) EN_cfg_pciecap_interrupt_msgnum);
+      method cfg_received_func_lvl_rst received_func_lvl_rst();
+      method cfg_slot_control_electromech_il_ctl_pulse slot_control_electromech_il_ctl_pulse();
+      method cfg_status status();
+      method cfg_to_turnoff to_turnoff();
+      method trn_pending(cfg_trn_pending) enable((*inhigh*) EN_cfg_trn_pending);
+      method turnoff_ok(cfg_turnoff_ok) enable((*inhigh*) EN_cfg_turnoff_ok);
+      method cfg_vc_tcvc_map vc_tcvc_map();
    endinterface
 
-   output_clock txoutclk(pipe_txoutclk_out);
+   output_clock pipe_txoutclk_out(pipe_txoutclk_out);
 
    schedule (user_lnk_up, user_app_rdy, fc_ph, fc_pd, fc_nph, fc_npd, fc_cplh, fc_cpld, fc_sel, s_axis_tx_tlast,
 	     s_axis_tx_tdata, s_axis_tx_tkeep, s_axis_tx_tvalid, s_axis_tx_tready, s_axis_tx_tuser, tx_buf_av, tx_err_drop,
@@ -144,8 +144,8 @@ method                        dsn(cfg_dsn)    enable((*inhigh*)en25)   clocked_b
 cfg_command, cfg_dcommand, cfg_dcommand2, cfg_lstatus, cfg_pcie_link_state, cfg_received_func_lvl_rst, cfg_status, cfg_to_turnoff, cfg_vc_tcvc_map,
 cfg_bridge_serr_en, cfg_slot_control_electromech_il_ctl_pulse,
 cfg_pciecap_interrupt_msgnum, cfg_trn_pending, cfg_turnoff_ok,
-cfg_interrupt, dsn,
-	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked, pipe_pclk_sel_out
+cfg_interrupt, cfg_dsn,
+	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, pipe_mmcm_lock_in, pipe_pclk_sel_out
 	     ) CF
             (user_lnk_up, user_app_rdy, fc_ph, fc_pd, fc_nph, fc_npd, fc_cplh, fc_cpld, fc_sel, s_axis_tx_tlast,
 	     s_axis_tx_tdata, s_axis_tx_tkeep, s_axis_tx_tvalid, s_axis_tx_tready, s_axis_tx_tuser, tx_buf_av, tx_err_drop,
@@ -155,8 +155,8 @@ cfg_interrupt, dsn,
 cfg_command, cfg_dcommand, cfg_dcommand2, cfg_lstatus, cfg_pcie_link_state, cfg_received_func_lvl_rst, cfg_status, cfg_to_turnoff, cfg_vc_tcvc_map,
 cfg_bridge_serr_en, cfg_slot_control_electromech_il_ctl_pulse,
 cfg_pciecap_interrupt_msgnum, cfg_trn_pending, cfg_turnoff_ok,
-cfg_interrupt, dsn,
-	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, locked, pipe_pclk_sel_out
+cfg_interrupt, cfg_dsn,
+	     pcie_txp, pcie_txn, pcie_rxp, pcie_rxn, pipe_mmcm_lock_in, pipe_pclk_sel_out
              );
 
 endmodule: vMkXilinx7PCIExpress
@@ -242,8 +242,8 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    clockParams.clkin_buffer = False;
    clockParams.clkout0_buffer = True;
    clockParams.clkout2_buffer = True;
-   XClockGenerator7   clockGen <- mkClockGenerator7Adv(clockParams, clocked_by b2c.c); //mmcm_i ( .RST(1'b0)
-   C2B c2b_fb <- mkC2B(clockGen.clkfbout,   clocked_by clockGen.clkfbout);
+   XClockGenerator7   clockGen <- mkClockGenerator7Adv(clockParams, clocked_by b2c.c);
+   C2B c2b_fb <- mkC2B(clockGen.clkfbout, clocked_by clockGen.clkfbout);
    rule txoutrule5;
       clockGen.clkfbin(c2b_fb.o());
    endrule
@@ -251,10 +251,10 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    Reset defaultReset <- exposeCurrentReset();
    Bufgctrl bbufc <- mkBufgctrl(clockGen.clkout0, defaultReset, clockGen.clkout1, defaultReset);
    Reset rsto <- mkAsyncReset(2, defaultReset, bbufc.o);
+   Reg#(Bit#(1)) pclk_sel <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
+   Reg#(Bit#(lanes)) pclk_sel_reg1 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
+   Reg#(Bit#(lanes)) pclk_sel_reg2 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
 
-   Reg#(Bit#(1)) pclk_sel <- mkReg(0,   clocked_by bbufc.o, reset_by rsto);
-   Reg#(Bit#(lanes)) pclk_sel_reg1 <- mkReg(0,   clocked_by bbufc.o, reset_by rsto);
-   Reg#(Bit#(lanes)) pclk_sel_reg2 <- mkReg(0,   clocked_by bbufc.o, reset_by rsto);
    rule bufcruleinit;
       bbufc.ce0(1);
       bbufc.ce1(1);
@@ -266,6 +266,21 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       bbufc.s1(pclk_sel);
    endrule
 
+   PCIE_X7#(lanes) pcie_ep <- vMkXilinx7PCIExpress(params, clockGen.clkout0, clockGen.clkout2, bbufc.o);
+   //new PcieWrap#(lanes)  pciew <- mkPcieWrap();
+   Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.pipe_txoutclk_out);
+   C2B c2b <- mkC2B(txoutclk_buf);
+   rule txoutrule;
+      b2c.inputclock(c2b.o());
+   endrule
+   rule lockedrule;
+      pcie_ep.pipe_mmcm_lock_in(pack(clockGen.locked));
+   endrule
+
+   rule selr3;
+      pclk_sel_reg1 <= pcie_ep.pipe_pclk_sel_out();
+   endrule
+
    rule update_psel;
        let ps = pclk_sel;
        pclk_sel_reg2 <= pclk_sel_reg1;
@@ -274,20 +289,6 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
        else if (pclk_sel_reg2 == 0)
            ps = 0;
        pclk_sel <= ps;
-   endrule
-
-   PCIE_X7#(lanes) pcie_ep <- vMkXilinx7PCIExpress(params, clockGen.clkout0, clockGen.clkout2, bbufc.o);
-   //new PcieWrap#(lanes)  pciew <- mkPcieWrap();
-   Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.txoutclk);
-   C2B c2b <- mkC2B(txoutclk_buf);
-   rule txoutrule;
-      b2c.inputclock(c2b.o());
-   endrule
-   rule lockedrule;
-      pcie_ep.locked(pack(clockGen.locked));
-   endrule
-   rule selr3;
-      pclk_sel_reg1 <= pcie_ep.pipe_pclk_sel_out();
    endrule
 
    Clock                     user_clk             = pcie_ep.user.clk_out;
@@ -309,7 +310,6 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    params.clkfbout_mult_f  = 4.000;
    params.clkout0_divide_f = 8.000;
    ClockGenerator7           clkgen              <- mkClockGenerator7(params,   clocked_by user_clk, reset_by user_reset_n);
-   Clock                     user_clk_half        = clkgen.clkout0;
 
    ////////////////////////////////////////////////////////////////////////////////
    /// Rules
@@ -344,17 +344,14 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 
    (* fire_when_enabled *)
    rule sink_axi_rx if (pcie_ep.m_axis_rx.tvalid != 0);
-      let info = AxiRx {
-	 user: pcie_ep.m_axis_rx.tuser,
-	 last: pcie_ep.m_axis_rx.tlast,
-	 keep: pcie_ep.m_axis_rx.tkeep,
-	 data: pcie_ep.m_axis_rx.tdata
-	 };
-      fAxiRx.enq(info);
+      fAxiRx.enq(AxiRx {user: pcie_ep.m_axis_rx.tuser,
+                        last: pcie_ep.m_axis_rx.tlast,
+                        keep: pcie_ep.m_axis_rx.tkeep,
+                        data: pcie_ep.m_axis_rx.tdata });
    endrule
 
    rule dsnrule;
-      pcie_ep.dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
+      pcie_ep.cfg_dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
    endrule
 
    ////////////////////////////////////////////////////////////////////////////////
@@ -364,7 +361,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 
    interface PCIE_TRN_COMMON_X7 trn;
       interface clk     = user_clk;
-      interface clk2    = user_clk_half;
+      interface clk2    = clkgen.clkout0; /* half speed user_clk */
       interface reset_n = user_reset_n;
       method    link_up = pcie_ep.user.lnk_up;
       method    app_ready = pcie_ep.user.app_rdy;
@@ -372,7 +369,9 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 
    interface PCIE_TRN_XMIT_X7 trn_tx;
       method Action xmit(data);
-	 fAxiTx.enq(AxiTx { last: pack(data.eof), keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
+	 fAxiTx.enq(AxiTx {last: pack(data.eof),
+                           keep: dwordSwap64BE(data.be),
+                           data: dwordSwap64(data.data) });
       endmethod
       method discontinue(i)                    = wDiscontinue._write(i);
       method ecrc_generate(i)          	       = wEcrcGen._write(i);

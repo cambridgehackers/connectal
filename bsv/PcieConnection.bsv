@@ -49,12 +49,6 @@ instance Connectable#(Get#(TLPData#(8)), PCIE_TRN_XMIT_X7);
    endmodule
 endinstance
 
-instance Connectable#(PCIE_TRN_XMIT_X7, Get#(TLPData#(8)));
-   module mkConnection#(PCIE_TRN_XMIT_X7 p, Get#(TLPData#(8)) g)(Empty);
-      mkConnection(g, p);
-   endmodule
-endinstance
-
 instance Connectable#(Put#(TLPData#(8)), PCIE_TRN_RECV_X7);
    module mkConnection#(Put#(TLPData#(8)) p, PCIE_TRN_RECV_X7 r)(Empty);
       (* no_implicit_conditions, fire_when_enabled *)
@@ -66,12 +60,6 @@ instance Connectable#(Put#(TLPData#(8)), PCIE_TRN_RECV_X7);
          let data <- r.recv;
          p.put(tpl_3(data));
       endrule
-   endmodule
-endinstance
-
-instance Connectable#(PCIE_TRN_RECV_X7, Put#(TLPData#(8)));
-   module mkConnection#(PCIE_TRN_RECV_X7 r, Put#(TLPData#(8)) p)(Empty);
-      mkConnection(p, r);
    endmodule
 endinstance
 
@@ -91,15 +79,37 @@ instance Connectable#(Get#(TLPData#(16)), PCIE_TRN_XMIT_X7);
 	 t.ecrc_generate(0);
 	 t.discontinue(0);
       endrule
-
       rule connect;
          let data = outFifo.first; outFifo.deq;
          if (data.be != 0)
             t.xmit(data);
       endrule
-
       Put#(TLPData#(8)) p = fifoToPut(outFifo);
       mkConnection(g,p);
+   endmodule
+endinstance
+
+instance Connectable#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
+   module mkConnection#(Put#(TLPData#(16)) p, PCIE_TRN_RECV_X7 r)(Empty);
+      FIFO#(TLPData#(8)) inFifo <- mkFIFO();
+      (* no_implicit_conditions, fire_when_enabled *)
+      rule every;
+         r.non_posted_ok(1);
+	 r.non_posted_req(1);
+      endrule
+      rule connect;
+         let data <- r.recv;
+         inFifo.enq(tpl_3(data));
+      endrule
+
+      Get#(TLPData#(8)) g = fifoToGet(inFifo);
+      mkConnection(g,p);
+   endmodule
+endinstance
+
+instance Connectable#(PCIE_TRN_XMIT_X7, Get#(TLPData#(8)));
+   module mkConnection#(PCIE_TRN_XMIT_X7 p, Get#(TLPData#(8)) g)(Empty);
+      mkConnection(g, p);
    endmodule
 endinstance
 
@@ -109,23 +119,9 @@ instance Connectable#(PCIE_TRN_XMIT_X7, Get#(TLPData#(16)));
    endmodule
 endinstance
 
-instance Connectable#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
-   module mkConnection#(Put#(TLPData#(16)) p, PCIE_TRN_RECV_X7 r)(Empty);
-      FIFO#(TLPData#(8)) inFifo <- mkFIFO();
-
-      (* no_implicit_conditions, fire_when_enabled *)
-      rule every;
-         r.non_posted_ok(1);
-	 r.non_posted_req(1);
-      endrule
-
-      rule connect;
-         let data <- r.recv;
-         inFifo.enq(tpl_3(data));
-      endrule
-
-      Get#(TLPData#(8)) g = fifoToGet(inFifo);
-      mkConnection(g,p);
+instance Connectable#(PCIE_TRN_RECV_X7, Put#(TLPData#(8)));
+   module mkConnection#(PCIE_TRN_RECV_X7 r, Put#(TLPData#(8)) p)(Empty);
+      mkConnection(p, r);
    endmodule
 endinstance
 
@@ -227,7 +223,6 @@ instance ConnectableWithClocks#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
          g.non_posted_ok(1);
 	 g.non_posted_req(1);
       endrule
-
       rule accept_data;
          let data <- g.recv;
          inFifo.enq(tpl_3(data));
@@ -253,8 +248,7 @@ instance ConnectableWithClocks#(Put#(TLPData#(16)), PCIE_TRN_RECV_X7);
 
       rule send_data;
          function TLPData#(16) combine(Vector#(2, TLPData#(8)) in);
-            return TLPData {
-                            sof:   in[0].sof,
+            return TLPData {sof:   in[0].sof,
                             eof:   in[1].eof,
                             hit:   in[0].hit,
                             be:    { in[0].be,   in[1].be },

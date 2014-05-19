@@ -28,7 +28,7 @@ typedef 4 BPB;
 interface X7PcieSplitter#(numeric type lanes);
    interface PciewrapPci_exp#(lanes) pcie;
    (* always_ready *)
-   method Bool isLinkUp();
+   method Bit#(1) isLinkUp();
    //method Bool isCalibrated();
    interface Clock clock250;
    interface Reset reset250;
@@ -111,8 +111,6 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    // all in the epClock250 domain, so we have to cross them into the
    // epClock125 domain.
 
-   Bool link_is_up = (_ep.trn.link_up() != 0);
-
    // Build the PCIe-to-AXI bridge
    PcieSplitter#(BPB)  bridge <- mkPcieSplitter(_ep.pciId._read(), clocked_by epClock125, reset_by epReset125);
    mkConnectionWithClocks(_ep.trn_rx, tpl_2(bridge.tlps), epClock250, epReset250, epClock125, epReset125);
@@ -142,7 +140,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
    interface clock200 = sys_clk_200mhz_buf;
    interface reset200 = sys_clk_200mhz_reset;
 
-   method Bool isLinkUp        = link_is_up;
+   method isLinkUp    = _ep.trn.link_up();
 //   method Bool isCalibrated  = ddr3_ctrl.user.init_done;
    interface Vector msixEntry = bridge.msixEntry;
    
