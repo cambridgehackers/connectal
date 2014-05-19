@@ -681,19 +681,16 @@ def p_formalParam(p):
     param = AST.Param(p[2], p[1])
     p[0] = param
 
-def p_functionAction(p):
-    '''functionAction : TOKFUNCTION type'''
-
 def p_moduleFormalParams(p):
     '''moduleFormalParams : formalParam
-                          | functionAction VAR
+                          | TOKFUNCTION type VAR parenthesizedFormalParams
                           | moduleFormalParams COMMA formalParam
                           |'''
     if len(p) == 1:
         p[0] = []
     elif len(p) == 2:
         p[0] = [p[1]]
-    elif len(p) == 3:
+    elif len(p) == 5:
         p[0] = p[2]
     elif len(p) == 4:
         p[0] = p[1] + [p[3]]
