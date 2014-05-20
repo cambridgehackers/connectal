@@ -39,25 +39,20 @@ import AxiMasterEngine      :: *;
 import AxiCsr               :: *;
 
 interface PcieBridge;
-   interface GetPut#(TLPData#(16)) master; // to the portal dma
-   interface GetPut#(TLPData#(16)) slave;  // to the portal control
+   interface Get#(TLPData#(16)) outToPortal;
+   interface Put#(TLPData#(16)) inFromPortal;
+   interface Get#(TLPData#(16)) outToAxi;
+   interface Put#(TLPData#(16)) inFromAxi;
    interface Put#(TimestampedTlpData) trace;
    interface Reset portalReset;
 endinterface
 
 // The top-level interface of the PCIe-to-AXI bridge
 interface PcieSplitter#(numeric type bpb);
-   interface Get#(TLPData#(16)) toPciGet;
-   interface Put#(TLPData#(16)) fromPciPut;
-   //interface GetPut#(TLPData#(16)) csr; // to csr
+   interface Get#(TLPData#(16)) outToPci;
+   interface Put#(TLPData#(16)) inFromPci;
    interface PcieBridge brif;
-   //interface GetPut#(TLPData#(16)) master; // to the portal control
-   //interface GetPut#(TLPData#(16)) slave;  // to the portal DMA
-   //interface Reset portalReset;
-   //interface Put#(TimestampedTlpData) trace;
-
    interface Vector#(16,MSIX_Entry) msixEntry;
-
 endinterface: PcieSplitter
 
 // When TLP packets come in from the PCIe bus, they are dispatched to
@@ -66,12 +61,12 @@ endinterface: PcieSplitter
 interface TLPDispatcher;
 
    // TLPs in from PCIe
-   interface Put#(TLPData#(16)) tlp_in_from_bus;
+   interface Put#(TLPData#(16)) inFromBus;
 
    // TLPs out to the bridge implementation
-   interface Get#(TLPData#(16)) tlp_out_to_config;
-   interface Get#(TLPData#(16)) tlp_out_to_portal;
-   interface Get#(TLPData#(16)) tlp_out_to_axi;
+   interface Get#(TLPData#(16)) outToConfig;
+   interface Get#(TLPData#(16)) outToPortal;
+   interface Get#(TLPData#(16)) outToAxi;
 endinterface: TLPDispatcher
 
 (* synthesize *)
@@ -190,10 +185,10 @@ module mkTLPDispatcher(TLPDispatcher);
       end
    endrule: dispatch_incoming_TLP
 
-   interface Put tlp_in_from_bus    = toPut(tlp_in_fifo);
-   interface Get tlp_out_to_config  = toGet(tlp_in_cfg_fifo);
-   interface Get tlp_out_to_portal  = toGet(tlp_in_portal_fifo);
-   interface Get tlp_out_to_axi     = toGet(tlp_in_axi_fifo);
+   interface Put inFromBus    = toPut(tlp_in_fifo);
+   interface Get outToConfig  = toGet(tlp_in_cfg_fifo);
+   interface Get outToPortal  = toGet(tlp_in_portal_fifo);
+   interface Get outToAxi     = toGet(tlp_in_axi_fifo);
 endmodule: mkTLPDispatcher
 
 // Multiple sources of TLP packets must all share the PCIe bus. There
@@ -203,12 +198,12 @@ endmodule: mkTLPDispatcher
 interface TLPArbiter;
 
    // TLPs out to PCIe
-   interface Get#(TLPData#(16)) tlp_out_to_bus;
+   interface Get#(TLPData#(16)) outToBus;
 
    // TLPs in from the bridge implementation
-   interface Put#(TLPData#(16)) tlp_in_from_config; // read completions
-   interface Put#(TLPData#(16)) tlp_in_from_portal; // read completions
-   interface Put#(TLPData#(16)) tlp_in_from_axi;    // read and write requests
+   interface Put#(TLPData#(16)) inFromConfig; // read completions
+   interface Put#(TLPData#(16)) inFromPortal; // read completions
+   interface Put#(TLPData#(16)) inFromAxi;    // read and write requests
 endinterface: TLPArbiter
 
 (* synthesize *)
@@ -293,10 +288,10 @@ module mkTLPArbiter(TLPArbiter);
       end
    endrule: arbitrate_outgoing_TLP
 
-   interface Get tlp_out_to_bus     = toGet(tlp_out_fifo);
-   interface Put tlp_in_from_config = toPut(tlp_out_cfg_fifo);
-   interface Put tlp_in_from_portal = toPut(tlp_out_portal_fifo);
-   interface Put tlp_in_from_axi    = toPut(tlp_out_axi_fifo);
+   interface Get outToBus     = toGet(tlp_out_fifo);
+   interface Put inFromConfig = toPut(tlp_out_cfg_fifo);
+   interface Put inFromPortal = toPut(tlp_out_portal_fifo);
+   interface Put inFromAxi    = toPut(tlp_out_axi_fifo);
 endmodule
 
 // The PCIe-to-AXI bridge puts all of the elements together
@@ -331,11 +326,11 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
 
    // connect the sub-components to each other
 
-   mkConnection(dispatcher.tlp_out_to_config,    axiMasterEngine.tlp_in);
-   // mkConnection(dispatcher.tlp_out_to_portal,    portalEngine.tlp_in);
+   mkConnection(dispatcher.outToConfig,    axiMasterEngine.tlp_in);
+   // mkConnection(dispatcher.outToPortal,    portalEngine.tlp_in);
 
-   mkConnection(axiMasterEngine.tlp_out,                     arbiter.tlp_in_from_config);
-   //mkConnection(portalEngine.tlp_out,            arbiter.tlp_in_from_portal);
+   mkConnection(axiMasterEngine.tlp_out,                     arbiter.inFromConfig);
+   //mkConnection(portalEngine.tlp_out,            arbiter.inFromPortal);
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
    Reg#(Bool) skippingIncomingTlps <- mkReg(False);
@@ -346,7 +341,7 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
    rule traceTlpFromBus;
        let tlp = tlpFromBusFifo.first;
        tlpFromBusFifo.deq();
-       dispatcher.tlp_in_from_bus.put(tlp);
+       dispatcher.inFromBus.put(tlp);
        $display("tlp in: %h\n", tlp);
        if (csr.tlpTracing) begin
            TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
@@ -367,7 +362,7 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
 
    FIFO#(TLPData#(16)) tlpToBusFifo <- mkFIFO();
    rule traceTlpToBus;
-       let tlp <- arbiter.tlp_out_to_bus.get();
+       let tlp <- arbiter.outToBus.get();
        tlpToBusFifo.enq(tlp);
        if (csr.tlpTracing) begin
 	  toPcie.send();
@@ -385,11 +380,13 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
       csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
    endrule
 
-   interface toPciGet = toGet(tlpToBusFifo);
-   interface fromPciPut = toPut(tlpFromBusFifo);
+   interface outToPci = toGet(tlpToBusFifo);
+   interface inFromPci = toPut(tlpFromBusFifo);
    interface PcieBridge brif;
-       interface GetPut master = tuple2(dispatcher.tlp_out_to_portal, arbiter.tlp_in_from_portal); //portalEngine.master;
-       interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
+       interface outToPortal = dispatcher.outToPortal;
+       interface inFromPortal = arbiter.inFromPortal;
+       interface outToAxi = dispatcher.outToAxi;
+       interface inFromAxi = arbiter.inFromAxi;
        interface Reset portalReset = portalResetIfc.new_rst;
        interface Put trace;
            method Action put(TimestampedTlpData ttd);

@@ -158,7 +158,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
                          data:  { in[0].data, in[1].data } };
       endfunction
       fifoRxData.deq;
-      bridge.fromPciPut.put(combine(fifoRxData.first));
+      bridge.inFromPci.put(combine(fifoRxData.first));
    endrule
 
    rule get_data;
@@ -177,7 +177,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
          return v;
       endfunction
 
-      let data <- bridge.toPciGet.get;
+      let data <- bridge.outToPci.get;
       fifoTxData.enq(split(data));
    endrule
 

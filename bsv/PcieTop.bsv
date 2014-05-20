@@ -77,16 +77,16 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    AxiSlaveEngine#(dsz) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
-   mkConnection(tpl_1(x7pcie.brif.slave), axiSlaveEngine.fromPciPut, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(axiSlaveEngine.toPciGet, tpl_2(x7pcie.brif.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(x7pcie.brif.outToAxi, axiSlaveEngine.inFromPci, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(axiSlaveEngine.outToPci, x7pcie.brif.inFromAxi, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis;   
    if(valueOf(nMasters) > 0) begin
       m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0],clocked_by x7pcie.clock125, reset_by x7pcie.brif.portalReset);
       mkConnection(m_axis[0], axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    end
 
-   mkConnection(tpl_1(x7pcie.brif.master), axiMasterEngine.tlp_in);
-   mkConnection(axiMasterEngine.tlp_out, tpl_2(x7pcie.brif.master));
+   mkConnection(x7pcie.brif.outToPortal, axiMasterEngine.tlp_in);
+   mkConnection(axiMasterEngine.tlp_out, x7pcie.brif.inFromPortal);
 
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(axiMasterEngine.master, ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
