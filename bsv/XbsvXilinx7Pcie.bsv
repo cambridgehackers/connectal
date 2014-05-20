@@ -167,14 +167,10 @@ endmodule: vMkXilinx7PCIExpress
 
 interface PCIExpressX7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)   pcie;
-   interface Clock       clk;
-   interface Clock       clk2;
-   interface Reset       reset_n;
-   method    Bit#(1)     link_up;
-   method    Bit#(1)     app_ready;
+   interface PciewrapUser#(lanes)      user;
+   interface PciewrapCfg#(lanes)       cfg;
    method    Action      xmit(TLPData#(8) data);
    method    ActionValue#(TLPData#(8)) recv();
-   method    PciId       pciId;
 endinterface
 
 typedef struct {
@@ -199,7 +195,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    B2C1 b2c <- mkB2C1();
    ClockGenerator7AdvParams   clockParams = defaultValue;
    clockParams.bandwidth          = "OPTIMIZED";
-   clockParams.compensation       = "INTERNAL"; //ZHOLD
+   clockParams.compensation       = "INTERNAL";
    clockParams.clkfbout_mult_f    = 10.000;
    clockParams.clkfbout_phase     = 0.0;
    clockParams.clkin1_period      = 10.000;
@@ -212,18 +208,12 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    clockParams.clkout2_divide     = 4;
    clockParams.clkout2_duty_cycle = 0.5;
    clockParams.clkout2_phase      = 0.0000;
-   //clockParams.clkout3_divide     = 4;
-   //clockParams.clkout3_duty_cycle = 0.5;
-   //clockParams.clkout3_phase      = 0.0000;
-   //clockParams.clkout4_divide     = 20;
-   //clockParams.clkout4_duty_cycle = 0.5;
-   //clockParams.clkout4_phase      = 0.0000;
    clockParams.divclk_divide      = 1;
    clockParams.ref_jitter1        = 0.010;
 
    clockParams.clkin_buffer = False;
-   clockParams.clkout0_buffer = True;
-   clockParams.clkout2_buffer = True;
+   //clockParams.clkout0_buffer = True;
+   //clockParams.clkout2_buffer = True;
    XClockGenerator7   clockGen <- mkClockGenerator7Adv(clockParams, clocked_by b2c.c);
    C2B c2b_fb <- mkC2B(clockGen.clkfbout, clocked_by clockGen.clkfbout);
    rule txoutrule5;
@@ -250,7 +240,18 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 
    PCIE_X7#(lanes) pcie_ep <- vMkXilinx7PCIExpress(params, clockGen.clkout0, clockGen.clkout2, bbufc.o);
    //new PcieWrap#(lanes)  pciew <- mkPcieWrap();
+
+   (* fire_when_enabled, no_implicit_conditions *)
+   rule every1;
+      pcie_ep.fc.sel(0 /*RECEIVE_BUFFER_AVAILABLE_SPACE*/);
+      pcie_ep.cfg_dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
+      pcie_ep.rx.np_ok(1);
+      pcie_ep.rx.np_req(1);
+      pcie_ep.tx.cfg_gnt(1);
+   endrule
+
    Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.pipe_txoutclk_out);
+
    C2B c2b <- mkC2B(txoutclk_buf);
    rule txoutrule;
       b2c.inputclock(c2b.o());
@@ -274,20 +275,12 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    endrule
 
    Clock                     user_clk             = pcie_ep.user.clk_out;
-   Reset                     user_reset_n        <- mkResetInverter(pcie_ep.user.reset_out);
    Wire#(Bit#(1))            wAxiTxValid         <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
    Wire#(Bit#(1))            wAxiTxLast          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
    Wire#(Bit#(64))           wAxiTxData          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
    Wire#(Bit#(8))            wAxiTxKeep          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
    FIFOF#(AxiTx)             fAxiTx              <- mkBypassFIFOF(clocked_by user_clk, reset_by noReset);
    FIFOF#(AxiRx)             fAxiRx              <- mkBypassFIFOF(clocked_by user_clk, reset_by noReset);
-
-   ClockGenerator7Params     params               = defaultValue;
-   params.clkin1_period    = 4.000;
-   params.clkin_buffer     = False;
-   params.clkfbout_mult_f  = 4.000;
-   params.clkout0_divide_f = 8.000;
-   ClockGenerator7           clkgen              <- mkClockGenerator7(params,   clocked_by user_clk, reset_by user_reset_n);
 
    (* fire_when_enabled, no_implicit_conditions *)
    rule drive_axi_tx;
@@ -320,22 +313,6 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
                         data: pcie_ep.m_axis_rx.tdata });
    endrule
 
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule every1;
-      pcie_ep.fc.sel(0 /*RECEIVE_BUFFER_AVAILABLE_SPACE*/);
-      pcie_ep.cfg_dsn({ 32'h0000_0001, {{ 8'h1 } , 24'h000A35 }});
-      pcie_ep.rx.np_ok(1);
-      pcie_ep.rx.np_req(1);
-      pcie_ep.tx.cfg_gnt(1);
-   endrule
-
-   interface pcie = pcie_ep.pcie;
-   interface clk     = user_clk;
-   interface clk2    = clkgen.clkout0; /* half speed user_clk */
-   interface reset_n = user_reset_n;
-   method    link_up = pcie_ep.user.lnk_up;
-   method    app_ready = pcie_ep.user.app_rdy;
-
    method Action xmit(data);
 	fAxiTx.enq(AxiTx {last: pack(data.eof),
            keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
@@ -352,10 +329,9 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 	return retval;
    endmethod
 
-   method PciId pciId();
-      return PciId { bus:  pcie_ep.cfg.bus_number(),
-	 dev: pcie_ep.cfg.device_number(), func: pcie_ep.cfg.function_number()};
-   endmethod
+   interface pcie    = pcie_ep.pcie;
+   interface PciewrapUser user = pcie_ep.user;
+   interface PciewrapCfg cfg = pcie_ep.cfg;
 endmodule: mkPCIExpressEndpointX7
 
 endpackage: XbsvXilinx7Pcie
