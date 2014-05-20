@@ -73,6 +73,7 @@ testnames = echo             \
 	    maxcommonsubseq  \
 	    smithwaterman    \
 	    serialconfig     \
+	    noc              \
 	    fib              \
 	    xsim-echo        \
 	    imageon          \
