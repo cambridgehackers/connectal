@@ -134,17 +134,13 @@ if $needspcie {
                             CONFIG.ASPM_Optionality {true} \
                             CONFIG.Buf_Opt_BMA {true} \
                             CONFIG.Bar0_64bit {true} \
-                            CONFIG.Bar0_Size {128} \
+                            CONFIG.Bar0_Size {16} \
                             CONFIG.Bar0_Scale {Kilobytes} \
+                            CONFIG.Bar0_Prefetchable {true} \
                             CONFIG.Bar2_64bit {true} \
                             CONFIG.Bar2_Enabled {true} \
                             CONFIG.Bar2_Scale {Megabytes} \
                             CONFIG.Bar2_Size {1} \
-                            CONFIG.Bar4_64bit {true} \
-                            CONFIG.Bar4_Enabled {true} \
-                            CONFIG.Bar4_Prefetchable {true} \
-                            CONFIG.Bar4_Scale {Megabytes} \
-                            CONFIG.Bar4_Size {1} \
                             CONFIG.Base_Class_Menu {Memory_controller} \
                             CONFIG.Device_ID {c100} \
                             CONFIG.IntX_Generation {false} \
