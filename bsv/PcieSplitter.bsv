@@ -326,11 +326,11 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
 
    // connect the sub-components to each other
 
-   mkConnection(dispatcher.outToConfig,    axiMasterEngine.tlp_in);
-   // mkConnection(dispatcher.outToPortal,    portalEngine.tlp_in);
+   mkConnection(dispatcher.outToConfig,    axiMasterEngine.inFromTlp);
+   // mkConnection(dispatcher.outToPortal,    portalEngine.inFromTlp);
 
-   mkConnection(axiMasterEngine.tlp_out,                     arbiter.inFromConfig);
-   //mkConnection(portalEngine.tlp_out,            arbiter.inFromPortal);
+   mkConnection(axiMasterEngine.outToTlp,                     arbiter.inFromConfig);
+   //mkConnection(portalEngine.outToTlp,            arbiter.inFromPortal);
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
    Reg#(Bool) skippingIncomingTlps <- mkReg(False);

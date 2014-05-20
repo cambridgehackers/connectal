@@ -35,8 +35,8 @@ import AxiMasterSlave :: *;
 // Bottom interface: AXI3 Master that sends read/write requests to an Axi3Slave
 // Also sources interrupt MSIX requests
 interface AxiMasterEngine;
-    interface Put#(TLPData#(16))   tlp_in;
-    interface Get#(TLPData#(16))   tlp_out;
+    interface Put#(TLPData#(16))   inFromTlp;
+    interface Get#(TLPData#(16))   outToTlp;
     interface Axi3Master#(32,32,12) master;
     interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
     interface Reg#(Bit#(12))       bTag;
@@ -219,7 +219,7 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
        interruptRequestFifo.deq();
     endrule
 
-    interface Put tlp_in;
+    interface Put inFromTlp;
         method Action put(TLPData#(16) tlp);
 	    //$display("AxiMasterEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
@@ -238,8 +238,8 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
 	    end
             timerReg <= truncate(32'hFFFFFFFF);
 	endmethod
-    endinterface: tlp_in
-    interface Get tlp_out = toGet(tlpOutFifo);
+    endinterface: inFromTlp
+    interface Get outToTlp = toGet(tlpOutFifo);
     interface Axi3Master master;
        interface Get req_aw;
 	  method ActionValue#(Axi3WriteRequest#(32,12)) get() if (interruptSecondHalf matches tagged Invalid);

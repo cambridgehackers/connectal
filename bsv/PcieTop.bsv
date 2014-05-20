@@ -85,8 +85,8 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
       mkConnection(m_axis[0], axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    end
 
-   mkConnection(x7pcie.brif.outToPortal, axiMasterEngine.tlp_in);
-   mkConnection(axiMasterEngine.tlp_out, x7pcie.brif.inFromPortal);
+   mkConnection(x7pcie.brif.outToPortal, axiMasterEngine.inFromTlp);
+   mkConnection(axiMasterEngine.outToTlp, x7pcie.brif.inFromPortal);
 
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(axiMasterEngine.master, ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
