@@ -62,7 +62,7 @@ module mkLinkIn(LinkIn#(a))
       datainshifter <= tmp;
       if (dataincount == (SizeOf(DataMessage) - 1))
          action
-	    new <= tmp;
+	    data <= tmp;
 	    dataready <= True;
 	 end;
    endrule
