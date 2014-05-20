@@ -38,16 +38,23 @@ import Portal               :: *;
 import AxiMasterEngine      :: *;
 import AxiCsr               :: *;
 
+interface PcieBridge;
+   interface GetPut#(TLPData#(16)) master; // to the portal dma
+   interface GetPut#(TLPData#(16)) slave;  // to the portal control
+   interface Put#(TimestampedTlpData) trace;
+   interface Reset portalReset;
+endinterface
+
 // The top-level interface of the PCIe-to-AXI bridge
 interface PcieSplitter#(numeric type bpb);
-
-   interface GetPut#(TLPData#(16)) tlps; // to the PCIe bus
+   interface Get#(TLPData#(16)) toPciGet;
+   interface Put#(TLPData#(16)) fromPciPut;
    //interface GetPut#(TLPData#(16)) csr; // to csr
-   interface GetPut#(TLPData#(16)) master; // to the portal control
-   interface GetPut#(TLPData#(16)) slave;  // to the portal DMA
-   interface Reset portalReset;
-
-   interface Put#(TimestampedTlpData) trace;
+   interface PcieBridge brif;
+   //interface GetPut#(TLPData#(16)) master; // to the portal control
+   //interface GetPut#(TLPData#(16)) slave;  // to the portal DMA
+   //interface Reset portalReset;
+   //interface Put#(TimestampedTlpData) trace;
 
    interface Vector#(16,MSIX_Entry) msixEntry;
 
@@ -378,29 +385,26 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
       csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
    endrule
 
-   // route the interfaces to the sub-components
-
-   //interface GetPut tlps = tuple2(arbiter.tlp_out_to_bus,dispatcher.tlp_in_from_bus);
-   interface GetPut tlps = tuple2(toGet(tlpToBusFifo),toPut(tlpFromBusFifo));
-
-   interface GetPut master = tuple2(dispatcher.tlp_out_to_portal, arbiter.tlp_in_from_portal); //portalEngine.master;
-   interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
-
-   interface Reset portalReset = portalResetIfc.new_rst;
+   interface toPciGet = toGet(tlpToBusFifo);
+   interface fromPciPut = toPut(tlpFromBusFifo);
+   interface PcieBridge brif;
+       interface GetPut master = tuple2(dispatcher.tlp_out_to_portal, arbiter.tlp_in_from_portal); //portalEngine.master;
+       interface GetPut slave = tuple2(dispatcher.tlp_out_to_axi, arbiter.tlp_in_from_axi);
+       interface Reset portalReset = portalResetIfc.new_rst;
+       interface Put trace;
+           method Action put(TimestampedTlpData ttd);
+	       if (csr.tlpTracing) begin
+	           ttd.timestamp = timestamp;
+	           csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: ttd });
+	           csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
+	       end
+           endmethod
+       endinterface: trace
+   endinterface
 
    // method Action interrupt();
    //     portalEngine.interruptRequested <= True;
    // endmethod
-
-   interface Put trace;
-       method Action put(TimestampedTlpData ttd);
-	   if (csr.tlpTracing) begin
-	       ttd.timestamp = timestamp;
-	       csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: ttd });
-	       csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
-	   end
-       endmethod
-   endinterface: trace
    
    interface Vector msixEntry = csr.msixEntry;
       

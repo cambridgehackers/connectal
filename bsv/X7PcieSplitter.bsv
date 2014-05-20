@@ -47,10 +47,7 @@ interface X7PcieSplitter#(numeric type lanes);
    interface Reset reset200;
    (* prefix = "" *)
    //interface DDR3_Pins_X7      ddr3;
-   interface GetPut#(TLPData#(16)) master; // to the portal dma
-   interface GetPut#(TLPData#(16)) slave;  // to the portal control
-   interface Put#(TimestampedTlpData) trace;
-   interface Reset portalReset;
+   interface PcieBridge brif;
    method    PciId       pciId;
    interface Vector#(16, MSIX_Entry) msixEntry;
 endinterface
@@ -122,20 +119,18 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 
    // Build the PCIe-to-AXI bridge
    PcieSplitter#(BPB)  bridge <- mkPcieSplitter(_ep.pciId(), clocked_by epClock125, reset_by epReset125);
-   Get#(TLPData#(16)) g = tpl_1(bridge.tlps);
-   Put#(TLPData#(16)) p = tpl_2(bridge.tlps);
-   FIFO#(TLPData#(8))                        inFifo              <- mkFIFO(clocked_by epClock250, reset_by epReset250);
+   FIFO#(TLPData#(8))          inFifo              <- mkFIFO(clocked_by epClock250, reset_by epReset250);
    // Connections between TLPData#(16) and a PCIE endpoint, using a gearbox
    // to match data rates between the endpoint and design clocks.
-   Gearbox#(1, 2, TLPData#(8))               fifoRxData          <- mk1toNGearbox(epClock250, epReset250, epClock125, epReset125);
-   Reg#(Bool)                                rOddBeat            <- mkRegA(False, clocked_by epClock250, reset_by epReset250);
-   Reg#(Bool)                                rSendInvalid        <- mkRegA(False, clocked_by epClock250, reset_by epReset250);
-   FIFO#(TLPData#(8))                     outFifo             <- mkFIFO(clocked_by epClock250, reset_by epReset250);
-   Gearbox#(2, 1, TLPData#(8))            fifoTxData          <- mkNto1Gearbox(epClock125, epReset125, epClock250, epReset250);
+   Gearbox#(1, 2, TLPData#(8)) fifoRxData          <- mk1toNGearbox(epClock250, epReset250, epClock125, epReset125);
+   Reg#(Bool)                  rOddBeat            <- mkRegA(False, clocked_by epClock250, reset_by epReset250);
+   Reg#(Bool)                  rSendInvalid        <- mkRegA(False, clocked_by epClock250, reset_by epReset250);
+   FIFO#(TLPData#(8))          outFifo             <- mkFIFO(clocked_by epClock250, reset_by epReset250);
+   Gearbox#(2, 1, TLPData#(8)) fifoTxData          <- mkNto1Gearbox(epClock125, epReset125, epClock250, epReset250);
 
    rule accept_data1;
       let data <- _ep.recv();
-      inFifo.enq(tpl_3(data));
+      inFifo.enq(data);
    endrule
 
    rule process_incoming_packets1(!rSendInvalid);
@@ -163,7 +158,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
                          data:  { in[0].data, in[1].data } };
       endfunction
       fifoRxData.deq;
-      p.put(combine(fifoRxData.first));
+      bridge.fromPciPut.put(combine(fifoRxData.first));
    endrule
 
    rule get_data;
@@ -182,7 +177,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
          return v;
       endfunction
 
-      let data <- g.get;
+      let data <- bridge.toPciGet.get;
       fifoTxData.enq(split(data));
    endrule
 
@@ -210,10 +205,7 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
 
    interface pcie     = _ep.pcie;
    //interface ddr3     = ddr3_ctrl.ddr3;
-   interface master   = bridge.master;
-   interface slave    = bridge.slave;
-   interface trace    = bridge.trace;
-   interface portalReset = bridge.portalReset;
+   interface PcieBridge brif = bridge.brif;
    interface pciId = _ep.pciId;
    interface clock250 = epClock250;
    interface reset250 = epReset250;

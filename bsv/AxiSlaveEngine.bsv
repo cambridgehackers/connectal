@@ -31,7 +31,8 @@ import Vector       :: *;
 import AxiMasterSlave :: *;
 
 interface AxiSlaveEngine#(type buswidth);
-    interface GetPut#(TLPData#(16))   tlps;
+    interface Get#(TLPData#(16)) toPciGet;
+    interface Put#(TLPData#(16)) fromPciPut;
     interface Axi3Slave#(40,buswidth,6)  slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
@@ -222,7 +223,8 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	 tlpInFifo.deq();
    endrule
 
-    interface GetPut tlps = tuple2(toGet(tlpOutFifo),toPut(tlpInFifo));
+    interface toPciGet = toGet(tlpOutFifo);
+    interface fromPciPut = toPut(tlpInFifo);
     interface Axi3Slave slave;
 	interface Put req_aw;
 	   method Action put(Axi3WriteRequest#(40, 6) req)

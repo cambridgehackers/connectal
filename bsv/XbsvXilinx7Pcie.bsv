@@ -42,7 +42,7 @@ interface PCIE_X7#(numeric type lanes);
 endinterface
 
 import "BVI" pcie_7x_0 =
-module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clkout2, Clock pclk_in)(PCIE_X7#(lanes))
+module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock pipe_userclk1_in, Clock pclk_in)(PCIE_X7#(lanes))
    provisos( Add#(1, z, lanes));
    let sys_rst_n <- exposeCurrentReset;
 
@@ -50,8 +50,8 @@ module vMkXilinx7PCIExpress#(PCIEParams params, Clock clk_125mhz, Clock clkout2,
    default_reset rstn(sys_rst_n) = sys_rst_n;
    input_clock clk_125mhz(pipe_dclk_in) = clk_125mhz;
    input_clock clk_oobclk_in(pipe_oobclk_in) = clk_125mhz;
-   input_clock clkout2(pipe_userclk1_in) = clkout2;
-   input_clock clkout2user(pipe_userclk2_in) = clkout2;
+   input_clock pipe_userclk1_in(pipe_userclk1_in) = pipe_userclk1_in;
+   input_clock pipe_userclk2_in(pipe_userclk2_in) = pipe_userclk1_in;
    input_clock pclk_in(pipe_pclk_in) = pclk_in;
    input_clock pclk_usrin(pipe_rxusrclk_in) = pclk_in;
    method pipe_mmcm_lock_in(pipe_mmcm_lock_in) enable((*inhigh*)en_pipe_mmcm_lock_in);
@@ -173,7 +173,7 @@ interface PCIExpressX7#(numeric type lanes);
    method    Bit#(1)     link_up;
    method    Bit#(1)     app_ready;
    method    Action      xmit(TLPData#(8) data);
-   method    ActionValue#(Tuple3#(Bool, Bool, TLPData#(8))) recv();
+   method    ActionValue#(TLPData#(8)) recv();
    method    PciId       pciId;
 endinterface
 
@@ -212,12 +212,12 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    clockParams.clkout2_divide     = 4;
    clockParams.clkout2_duty_cycle = 0.5;
    clockParams.clkout2_phase      = 0.0000;
-   clockParams.clkout3_divide     = 4;
-   clockParams.clkout3_duty_cycle = 0.5;
-   clockParams.clkout3_phase      = 0.0000;
-   clockParams.clkout4_divide     = 20;
-   clockParams.clkout4_duty_cycle = 0.5;
-   clockParams.clkout4_phase      = 0.0000;
+   //clockParams.clkout3_divide     = 4;
+   //clockParams.clkout3_duty_cycle = 0.5;
+   //clockParams.clkout3_phase      = 0.0000;
+   //clockParams.clkout4_divide     = 20;
+   //clockParams.clkout4_duty_cycle = 0.5;
+   //clockParams.clkout4_phase      = 0.0000;
    clockParams.divclk_divide      = 1;
    clockParams.ref_jitter1        = 0.010;
 
@@ -279,7 +279,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    Wire#(Bit#(1))            wAxiTxLast          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
    Wire#(Bit#(64))           wAxiTxData          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
    Wire#(Bit#(8))            wAxiTxKeep          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   FIFO#(AxiTx)              fAxiTx              <- mkBypassFIFO(clocked_by user_clk, reset_by noReset);
+   FIFOF#(AxiTx)             fAxiTx              <- mkBypassFIFOF(clocked_by user_clk, reset_by noReset);
    FIFOF#(AxiRx)             fAxiRx              <- mkBypassFIFOF(clocked_by user_clk, reset_by noReset);
 
    ClockGenerator7Params     params               = defaultValue;
@@ -341,7 +341,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
            keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
    endmethod
 
-   method ActionValue#(Tuple3#(Bool, Bool, TLPData#(8))) recv();
+   method ActionValue#(TLPData#(8)) recv();
 	let info <- toGet(fAxiRx).get;
 	TLPData#(8) retval = defaultValue;
 	retval.sof  = (info.user[14] == 1);
@@ -349,7 +349,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
 	retval.hit  = info.user[8:2];
 	retval.be= dwordSwap64BE(info.keep);
 	retval.data = dwordSwap64(info.data);
-	return tuple3(info.user[1] == 1, info.user[0] == 1, retval);
+	return retval;
    endmethod
 
    method PciId pciId();

@@ -73,20 +73,20 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    X7PcieSplitter#(PcieLanes) x7pcie <- mkX7PcieSplitter(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
    
    // instantiate user portals
-   let portalTop <- mkPortalTop(clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
+   let portalTop <- mkPortalTop(clocked_by x7pcie.clock125, reset_by x7pcie.brif.portalReset);
    AxiSlaveEngine#(dsz) axiSlaveEngine <- mkAxiSlaveEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(x7pcie.pciId(), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
 
-   mkConnection(tpl_1(x7pcie.slave), tpl_2(axiSlaveEngine.tlps), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
-   mkConnection(tpl_1(axiSlaveEngine.tlps), tpl_2(x7pcie.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(tpl_1(x7pcie.brif.slave), axiSlaveEngine.fromPciPut, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
+   mkConnection(axiSlaveEngine.toPciGet, tpl_2(x7pcie.brif.slave), clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis;   
    if(valueOf(nMasters) > 0) begin
-      m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0],clocked_by x7pcie.clock125, reset_by x7pcie.portalReset);
+      m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0],clocked_by x7pcie.clock125, reset_by x7pcie.brif.portalReset);
       mkConnection(m_axis[0], axiSlaveEngine.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    end
 
-   mkConnection(tpl_1(x7pcie.master), axiMasterEngine.tlp_in);
-   mkConnection(axiMasterEngine.tlp_out, tpl_2(x7pcie.master));
+   mkConnection(tpl_1(x7pcie.brif.master), axiMasterEngine.tlp_in);
+   mkConnection(axiMasterEngine.tlp_out, tpl_2(x7pcie.brif.master));
 
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
    mkConnection(axiMasterEngine.master, ctrl, clocked_by x7pcie.clock125, reset_by x7pcie.reset125);
