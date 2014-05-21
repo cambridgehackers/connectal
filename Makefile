@@ -212,8 +212,7 @@ vc707runs = $(addsuffix .vc707run, $(testnames))
 vc707runs: $(vc707runs)
 
 $(vc707runs):
-	(cd examples/$(basename $@)/vc707; make program)
-	timeout 3m catchsegv examples/$(basename $@)/vc707/jni/mkpcietop
+	scripts/run.pcietest examples/$(basename $@)/vc707/hw/mk*.bin examples/$(basename $@)/vc707/jni/mkpcietop
 
 #################################################################################################
 # kc705
