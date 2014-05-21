@@ -260,7 +260,7 @@ class MethodMixin:
             tn = member.type.name
             if tn == 'Bit':
                 return [('%s.%s'%(scope,member.name),t)]
-            elif tn == 'Int':
+            elif tn == 'Int' or tn == 'UInt':
                 return [('%s.%s'%(scope,member.name),t)]
             elif tn == 'Float':
                 return [('%s.%s'%(scope,member.name),t)]
@@ -582,6 +582,11 @@ class TypeMixin:
                 return 'int'
             else:
                 assert(False)
+        elif cid == 'UInt':
+            if self.params[0].numeric() == 32:
+                return 'unsigned int'
+            else:
+                assert(False)
         elif cid == 'Float':
 	    return 'float'
         elif cid == 'Vector':
@@ -596,9 +601,9 @@ class TypeMixin:
             name = cid
         return name
     def isBitField(self):
-        return self.name == 'Bit' or self.name == 'Int'
+        return self.name == 'Bit' or self.name == 'Int' or self.name == 'UInt'
     def bitWidth(self):
-        if self.name == 'Bit' or self.name == 'Int':
+        if self.name == 'Bit' or self.name == 'Int' or self.name == 'UInt':
             return int(self.params[0].name)
         if self.name == 'Float':
             return 32

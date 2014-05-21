@@ -1,3 +1,7 @@
+VERSION=140520.1
+
+# On Centos: sudo yum install kernel-headers
+
 obj-m += pcieportal.o
 
 export KROOT=/lib/modules/$(shell uname -r)/build
@@ -51,3 +55,10 @@ insmod: rmmod
 	-chmod agu+rw /dev/fpga*
 	insmod ../portalmem/portalmem.ko
 	chmod agu+rw /dev/portalmem
+
+.PHONY: install-dkms
+install-dkms:
+	mkdir -p /usr/src/pcieportal-$(VERSION)
+	cp -fv pcieportal.c pcieportal.h dkms.conf /usr/src/pcieportal-$(VERSION)
+	cp -fv ../portalmem/portalmem.h ../portalmem/portalmem.c /usr/src/pcieportal-$(VERSION)
+	cp -fv Makefile.dkms /usr/src/pcieportal-$(VERSION)/Makefile

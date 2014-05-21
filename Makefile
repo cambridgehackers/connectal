@@ -22,6 +22,7 @@ ifeq ($(shell uname), Darwin)
 	easy_install ply
 else
 	apt-get install asciidoc python-dev python-setuptools python-ply
+	apt-get install libgmp3c2
 endif
 	easy_install blockdiag seqdiag actdiag nwdiag
         wget https://asciidoc-diag-filter.googlecode.com/files/diag_filter.zip
@@ -228,10 +229,7 @@ kc705runs = $(addsuffix .kc705run, $(testnames))
 kc705runs: $(kc705runs)
 
 $(kc705runs):
-	#(cd examples/$(basename $@)/kc705; make program)
 	scripts/run.pcietest examples/$(basename $@)/kc705/hw/mk*.bin examples/$(basename $@)/kc705/jni/mkpcietop
-	#fpgajtag examples/$(basename $@)/kc705/hw/mk*.bin
-	#timeout 3m catchsegv examples/$(basename $@)/kc705/jni/mkpcietop
 
 
 #################################################################################################
@@ -287,12 +285,11 @@ $(ac701tests):
 	rm -fr examples/$(basename $@)/ac701
 	make BOARD=ac701 -C examples/$(basename $@) all
 
-acruns = $(addsuffix .acrun, $(testnames))
-acruns: $(acruns)
+ac701runs = $(addsuffix .ac701run, $(testnames))
+ac701runs: $(ac701runs)
 
-$(acruns):
-	(cd examples/$(basename $@)/ac701; make program)
-	timeout 3m catchsegv examples/$(basename $@)/ac701/jni/mkpcietop
+$(ac701runs):
+	scripts/run.pcietest examples/$(basename $@)/ac701/hw/mk*.bin examples/$(basename $@)/ac701/jni/mkpcietop
 
 zynqdrivers:
 	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)

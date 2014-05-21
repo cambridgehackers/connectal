@@ -13,12 +13,20 @@
 
 sem_t done_sem;
 #ifdef MMAP_HW
-int numWords = 16 << 18;
+int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 #else
-int numWords = 16 << 10;
+int numWords = 0x124000/4;
 #endif
 size_t test_sz  = numWords*sizeof(unsigned int);
 size_t alloc_sz = test_sz;
+
+int burstLen = 16;
+#ifdef MMAP_HW
+int iterCnt = 128;
+#else
+int iterCnt = 2;
+#endif
+
 
 class MemwriteIndication : public MemwriteIndicationWrapper
 {
@@ -113,12 +121,6 @@ void parent(int rd_sock, int wr_sock)
 
   fprintf(stderr, "parent::starting write %08x\n", numWords);
   start_timer(0);
-  int burstLen = 16;
-#ifdef MMAP_HW
-  int iterCnt = 128;
-#else
-  int iterCnt = 3;
-#endif
   //portalTrace_start();
   device->startWrite(ref_dstAlloc, numWords, burstLen, iterCnt);
   sem_wait(&done_sem);
