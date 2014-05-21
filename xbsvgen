@@ -46,7 +46,7 @@ AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
 AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
 
-supported_boards = ['ac701', 'zedboard', 'zc702', 'zc706', 'kc705', 'vc707', 'bluesim']
+supported_boards = ['ac701', 'zedboard', 'zc702', 'zc706', 'kc705', 'vc707', 'v2000t', 'bluesim']
 supported_os = ['android', 'ubuntu']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
@@ -121,10 +121,6 @@ if $needspcie {
     }
     if {$boardname == {ac701}} {
         set maxlinkwidth {X4}
-    }
-    if {$boardname == {kc705}} {
-    }
-    if {$boardname == {vc707}} {
     }
     if {[version -short] == "2013.2"} {
         set pcieversion {2.1}
@@ -468,6 +464,8 @@ if __name__=='__main__':
         bsvdefines += ['Virtex7', 'PCIE']
     elif boardname == 'ac701':
         bsvdefines += ['Artix7',  'PCIE']
+    elif boardname == 'v2000t':
+        bsvdefines += ['Virtex7', 'PCIE']
     elif boardname == 'zedboard':
         bsvdefines += ['ZYNQ']
     elif boardname == 'zc702':
@@ -494,6 +492,10 @@ if __name__=='__main__':
     elif boardname == 'vc707':
         if not 'os' in namespace: namespace.os = 'ubuntu'
         partname = 'xc7vx485tffg1761-2'
+        needs_pcie_7x_gen1x8 = True
+    elif boardname == 'v2000t':
+        if not 'os' in namespace: namespace.os = 'ubuntu'
+        partname = 'xc7v2000tflg1925-2'
         needs_pcie_7x_gen1x8 = True
     elif boardname == 'ac701':
         if not 'os' in namespace: namespace.os = 'ubuntu'
