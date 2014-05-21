@@ -14,39 +14,30 @@ import Clocks          :: *;
 import DefaultValue    :: *;
 import TieOff          :: *;
 import XilinxCells     :: *;
-import PcieSplitter :: *;
 import XbsvXilinx7Pcie :: *;
+import TlpConnect      :: *;
 import PCIEWRAPPER     :: *;
 import AxiCsr          :: *;
-//import XbsvXilinx7DDR3      :: *;
 
-import Connectable       ::*;
-import GetPut            ::*;
-import Reserved          ::*;
-import DefaultValue      ::*;
-import DReg              ::*;
-import Gearbox           ::*;
-import FIFO              ::*;
-import FIFOF             ::*;
-import SpecialFIFOs      ::*;
-
-// from SceMiDefines
-typedef 4 BPB;
+import Connectable     ::*;
+import Reserved        ::*;
+import DReg            ::*;
+import Gearbox         ::*;
+import FIFO            ::*;
+import FIFOF           ::*;
+import SpecialFIFOs    ::*;
 
 // Interface wrapper for PCIE
-interface X7PcieSplitter#(numeric type lanes);
+interface PcieGearbox#(numeric type lanes);
    //method Bool isCalibrated();
-   interface Vector#(16, MSIX_Entry) msixEntry;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
 //, synthesize *)
-module mkX7PcieSplitter#(Clock epClock250, Reset epReset250, Clock epClock125, Reset epReset125
-, XbsvXilinx7Pcie::PCIExpressX7#(lanes) _ep, PcieSplitter#(BPB)  bridge
-		       )
-		       (X7PcieSplitter#(lanes))
+module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Reset epReset125
+, XbsvXilinx7Pcie::PCIExpressX7#(lanes) _ep, TlpConnect#(16) pci) (PcieGearbox#(lanes))
    provisos(Add#(1,_,lanes));
    FIFO#(TLPData#(8))          inFifo              <- mkFIFO(clocked_by epClock250, reset_by epReset250);
    // Connections between TLPData#(16) and a PCIE endpoint, using a gearbox
@@ -87,7 +78,7 @@ module mkX7PcieSplitter#(Clock epClock250, Reset epReset250, Clock epClock125, R
                          data:  { in[0].data, in[1].data } };
       endfunction
       fifoRxData.deq;
-      bridge.inFromPci.put(combine(fifoRxData.first));
+      pci.inFrom.put(combine(fifoRxData.first));
    endrule
 
    rule get_data;
@@ -106,7 +97,7 @@ module mkX7PcieSplitter#(Clock epClock250, Reset epReset250, Clock epClock125, R
          return v;
       endfunction
 
-      let data <- bridge.outToPci.get;
+      let data <- pci.outTo.get;
       fifoTxData.enq(split(data));
    endrule
 
@@ -121,4 +112,4 @@ module mkX7PcieSplitter#(Clock epClock250, Reset epReset250, Clock epClock125, R
       if (data.be != 0)
          _ep.xmit(data);
    endrule
-endmodule: mkX7PcieSplitter
+endmodule: mkPcieGearbox

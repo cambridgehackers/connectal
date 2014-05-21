@@ -26,6 +26,7 @@ import ConfigReg    :: *;
 import PCIE         :: *;
 import DReg         :: *;
 import Clocks       :: *;
+import TlpConnect   :: *;
 
 import ByteBuffer    :: *;
 import ByteCompactor :: *;
@@ -39,19 +40,16 @@ import AxiMasterEngine      :: *;
 import AxiCsr               :: *;
 
 interface PcieBridge;
-   interface Get#(TLPData#(16)) outToPortal;
-   interface Put#(TLPData#(16)) inFromPortal;
-   interface Get#(TLPData#(16)) outToAxi;
-   interface Put#(TLPData#(16)) inFromAxi;
+   interface TlpConnect#(16)          portal;
+   interface TlpConnect#(16)          axi;
    interface Put#(TimestampedTlpData) trace;
    interface Reset portalReset;
 endinterface
 
 // The top-level interface of the PCIe-to-AXI bridge
 interface PcieSplitter#(numeric type bpb);
-   interface Get#(TLPData#(16)) outToPci;
-   interface Put#(TLPData#(16)) inFromPci;
-   interface PcieBridge brif;
+   interface TlpConnect#(16)    pci;
+   interface PcieBridge         brif;
    interface Vector#(16,MSIX_Entry) msixEntry;
 endinterface: PcieSplitter
 
@@ -326,11 +324,11 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
 
    // connect the sub-components to each other
 
-   mkConnection(dispatcher.outToConfig,    axiMasterEngine.inFromTlp);
-   // mkConnection(dispatcher.outToPortal,    portalEngine.inFromTlp);
+   mkConnection(dispatcher.outToConfig, axiMasterEngine.tlp.inFrom);
+   // mkConnection(dispatcher.outToPortal, portalEngine.tlp.inFrom);
 
-   mkConnection(axiMasterEngine.outToTlp,                     arbiter.inFromConfig);
-   //mkConnection(portalEngine.outToTlp,            arbiter.inFromPortal);
+   mkConnection(axiMasterEngine.tlp.outTo, arbiter.inFromConfig);
+   //mkConnection(portalEngine.tlp.outTo, arbiter.inFromPortal);
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
    Reg#(Bool) skippingIncomingTlps <- mkReg(False);
@@ -380,13 +378,19 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
       csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
    endrule
 
-   interface outToPci = toGet(tlpToBusFifo);
-   interface inFromPci = toPut(tlpFromBusFifo);
+   interface TlpConnect    pci;
+   interface outTo = toGet(tlpToBusFifo);
+   interface inFrom = toPut(tlpFromBusFifo);
+   endinterface
    interface PcieBridge brif;
-       interface outToPortal = dispatcher.outToPortal;
-       interface inFromPortal = arbiter.inFromPortal;
-       interface outToAxi = dispatcher.outToAxi;
-       interface inFromAxi = arbiter.inFromAxi;
+       interface TlpConnect    portal;
+          interface outTo = dispatcher.outToPortal;
+          interface inFrom = arbiter.inFromPortal;
+       endinterface
+       interface TlpConnect    axi;
+          interface outTo = dispatcher.outToAxi;
+          interface inFrom = arbiter.inFromAxi;
+       endinterface
        interface Reset portalReset = portalResetIfc.new_rst;
        interface Put trace;
            method Action put(TimestampedTlpData ttd);
