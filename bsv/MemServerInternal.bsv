@@ -35,6 +35,7 @@ import PortalMemory::*;
 import SGList::*;
 
 typedef 9 SGL_PIPELINE_DEPTH;
+typedef 32 TAG_DEPTH;		 
 
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
@@ -50,20 +51,20 @@ function Bool bad_pointer(ObjectPointer p);
    return (p > fromInteger(valueOf(MaxNumSGLists)) || p == 0);
 endfunction
 
-interface TagGen#(numeric type numClients, numeric type numTags, numeric type tagDepth);
+interface TagGen#(numeric type numClients, numeric type numTags);
    method Action tag_request(Bit#(TLog#(numClients)) client, Bit#(6) orig_tag);
    method ActionValue#(Bit#(TLog#(numTags)))  tag_response;
    method Action return_tag(Bit#(TLog#(numTags)) tag);
 endinterface
 
-module mkTagGenOO(TagGen#(numClients,numTags,tagDepth))
+module mkTagGenOO(TagGen#(numClients,numTags))
    provisos(Log#(numTags,tagWidth),
 	    Log#(numClients,clientWidth));
    
    let request_fifo0 <- mkSizedFIFOF(valueOf(SGL_PIPELINE_DEPTH));
    let request_fifo1 <- mkSizedFIFOF(valueOf(SGL_PIPELINE_DEPTH));
-   let return_fifo <- mkSizedFIFO(1);
-   Vector#(numTags, Reg#(Bit#(TLog#(tagDepth)))) tag_regs <- replicateM(mkReg(0));
+   let return_fifo <- mkFIFO;
+   Vector#(numTags, Reg#(Bit#(TLog#(TAG_DEPTH)))) tag_regs <- replicateM(mkReg(0));
    Vector#(numTags, Reg#(Maybe#(Tuple2#(Bit#(clientWidth),Bit#(6))))) client_map <- replicateM(mkReg(tagged Invalid));
    Maybe#(UInt#(tagWidth)) next_free = findElem(0, readVReg(tag_regs));
 
@@ -107,7 +108,7 @@ module mkTagGenOO(TagGen#(numClients,numTags,tagDepth))
 
 endmodule
 
-module mkTagGenIO(TagGen#(numClients,numTags,tagDepth))
+module mkTagGenIO(TagGen#(numClients,numTags))
    provisos(Log#(numTags,tagWidth),
 	    Log#(numClients,clientWidth),
 	    Bits#(Bit#(clientWidth), tagWidth));
@@ -149,7 +150,7 @@ module mkMemReadInternal#(Integer id,
 			  Vector#(numClients, ObjectReadClient#(dataWidth)) readClients, 
 			  DmaIndication dmaIndication,
 			  Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
-			  TagGen#(numClients, numTags, tagDepth) tag_gen) 
+			  TagGen#(numClients, numTags) tag_gen) 
    (MemReadInternal#(addrWidth, dataWidth))
 
    provisos(Add#(b__, addrWidth, 64), 
@@ -159,16 +160,20 @@ module mkMemReadInternal#(Integer id,
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift),
 	    Add#(a__, TLog#(numTags), 6));
-
-   FIFO#(Tuple2#(DRec#(numClients,numTags,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
    
+   // stage 0: address translation (latency = SGL_PIPELINE_DEPTH)
    FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
+   // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkFIFO;
-   Vector#(numTags, FIFO#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedBRAMFIFO(valueOf(tagDepth)));
+   // stage 2: read commands (maximum buffering to handle high latency read response times)
+   Vector#(numTags, FIFO#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(valueOf(TAG_DEPTH)));
+   // stage 3: read data (minimal buffering required) 
+   FIFO#(Tuple2#(DRec#(numClients,numTags,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
    Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
    Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
-
+   
+   // performance analytics 
    Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
    Reg#(Bit#(64)) last_loadClient <- mkReg(0);
    Reg#(Bit#(64)) last_sglResp <- mkReg(0);
@@ -178,13 +183,6 @@ module mkMemReadInternal#(Integer id,
       cycle_cnt <= cycle_cnt+1;
    endrule
          
-`ifdef	INTERVAL_ANAlYSIS
-   Reg#(Bit#(32)) bin1 <- mkReg(0);
-   Reg#(Bit#(32)) bin4 <- mkReg(0);
-   Reg#(Bit#(32)) binx <- mkReg(0);
-   Reg#(Bit#(64)) last_resp_read <- mkReg(0);
-`endif
-      
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1) 
       rule loadClient;
       	 //$display("mkMemReadInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
@@ -262,26 +260,12 @@ module mkMemReadInternal#(Integer id,
 	       tag_gen.return_tag(truncate(response_tag));
 	    end
 	    burstRegs[response_tag] <= burstLen-1;
-`ifdef INTERVAL_ANAlYSIS
-	    last_resp_read <= cycle_cnt;
-	    let interval = cycle_cnt - last_resp_read;
-	    if (interval <= 1)
-	       bin1 <= bin1+1;
-	    else if (interval <= 4)
-	       bin4 <= bin4+1;
-	    else
-	       binx <= binx+1;
-`endif
 	 endmethod
       endinterface
    endinterface
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
-`ifdef INTERVAL_ANAlYSIS
-	 return DmaDbgRec{x:fromInteger(valueOf(numClients)), y:bin1, z:bin4, w:binx};
-`else
 	 return DmaDbgRec{x:fromInteger(valueOf(numClients)), y:0, z:0, w:0};
-`endif
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic();
 	 return beatCount;
@@ -293,7 +277,7 @@ module mkMemWriteInternal#(Integer iid,
 			   Vector#(numClients, ObjectWriteClient#(dataWidth)) writeClients,
 			   DmaIndication dmaIndication, 
 			   Server#(Tuple2#(SGListId,Bit#(ObjectOffsetSize)),Bit#(addrWidth)) sgl,
-			   TagGen#(numClients, numTags, tagDepth) tag_gen)
+			   TagGen#(numClients, numTags) tag_gen)
    (MemWriteInternal#(addrWidth, dataWidth))
    
    provisos(Add#(b__, addrWidth, 64), 
@@ -304,12 +288,18 @@ module mkMemWriteInternal#(Integer iid,
 	    Log#(dataWidthBytes,beatShift),
 	    Add#(a__, TLog#(numTags), 6));
    
-   FIFO#(Tuple2#(RResp#(numClients,numTags,addrWidth),Bit#(6))) writeDonePipelineFifo <- mkFIFO;
    
+   // stage 0: address translation (latency = SGL_PIPELINE_DEPTH)
    FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
+   // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkFIFO;
-   FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedBRAMFIFO(32);
-   Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedBRAMFIFO(valueOf(tagDepth)));
+   // stage 2: write commands (maximum buffering to handle high latency writes)
+   FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedBRAMFIFO(valueOf(TMul#(TAG_DEPTH,numTags)));
+   // stage 3: write data (maximum buffering, though I have no idea if any hosts will begin the next data transfer before sending the write ack)
+   Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedFIFO(valueOf(TAG_DEPTH)));
+   // stage 4: write done (minimal buffering required)
+   FIFO#(Tuple2#(RResp#(numClients,numTags,addrWidth),Bit#(6))) writeDonePipelineFifo <- mkFIFO;
+
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
    Reg#(Bit#(64)) beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
