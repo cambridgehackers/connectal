@@ -35,20 +35,7 @@ typedef 4 BPB;
 
 // Interface wrapper for PCIE
 interface X7PcieSplitter#(numeric type lanes);
-   interface PciewrapPci_exp#(lanes) pcie;
-   (* always_ready *)
-   method Bit#(1)  isLinkUp();
    //method Bool isCalibrated();
-   method PciId    pciId();
-   interface Clock clock250;
-   interface Reset reset250;
-   interface Clock clock125;
-   interface Reset reset125;
-   interface Clock clock200;
-   interface Reset reset200;
-   //(* prefix = "" *)
-   //interface DDR3_Pins_X7      ddr3;
-   interface PcieBridge brif;
    interface Vector#(16, MSIX_Entry) msixEntry;
 endinterface
 
@@ -56,80 +43,11 @@ endinterface
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
 //, synthesize *)
-module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
-		       , Clock sys_clk_p,    Clock sys_clk_n
-		       , Reset pci_sys_reset
+module mkX7PcieSplitter#(Clock epClock250, Reset epReset250, Clock epClock125, Reset epReset125
+, XbsvXilinx7Pcie::PCIExpressX7#(lanes) _ep, PcieSplitter#(BPB)  bridge
 		       )
 		       (X7PcieSplitter#(lanes))
    provisos(Add#(1,_,lanes));
-
-   Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
-   Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
-   Reset sys_clk_200mhz_reset <- mkAsyncReset(2, pci_sys_reset, sys_clk_200mhz_buf);
-
-   ClockGenerator7Params clk_params = defaultValue();
-   clk_params.clkin1_period     = 5.000;       // 200 MHz reference
-   clk_params.clkin_buffer      = False;       // necessary buffer is instanced above
-   clk_params.reset_stages      = 0;           // no sync on reset so input clock has pll as only load
-   clk_params.clkfbout_mult_f   = 5.000;       // 1000 MHz VCO
-   clk_params.clkout0_divide_f  = 10;          // unused clock 
-   clk_params.clkout1_divide    = 5;           // ddr3 reference clock (200 MHz)
-
-   ClockGenerator7 clk_gen <- mkClockGenerator7(clk_params, clocked_by sys_clk_200mhz, reset_by pci_sys_reset);
-
-   Clock clk = clk_gen.clkout0;
-   Reset rst_n <- mkAsyncReset( 1, pci_sys_reset, clk );
-   Reset ddr3ref_rst_n <- mkAsyncReset( 1, rst_n, clk_gen.clkout1 );
-   
-   //DDR3_Configure_X7 ddr3_cfg;
-   //ddr3_cfg.num_reads_in_flight = 2;   // adjust as needed
-   //ddr3_cfg.fast_train_sim_only = False; // adjust if simulating
-   
-   //DDR3_Controller_X7 ddr3_ctrl <- mkXilinx7DDR3Controller(ddr3_cfg, clocked_by clk_gen.clkout1, reset_by ddr3ref_rst_n);
-
-   // ddr3_ctrl.user needs to connect to user logic and should use ddr3clk and ddr3rstn
-   //Clock ddr3clk = ddr3_ctrl.user.clock;
-   //Reset ddr3rstn = ddr3_ctrl.user.reset_n;
-   
-   // Buffer clocks and reset before they are used
-   Clock pci_clk_100mhz_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
-
-   // Instantiate the PCIE endpoint
-   XbsvXilinx7Pcie::PCIExpressX7#(lanes) _ep
-       <- XbsvXilinx7Pcie::mkPCIExpressEndpointX7( defaultValue
-						  , clocked_by pci_clk_100mhz_buf
-						  , reset_by pci_sys_reset
-						  );
-
-   // The PCIE endpoint is processing TLPWord#(8)s at 250MHz.  The
-   // AXI bridge is accepting TLPWord#(16)s at 125 MHz. The
-   // connection between the endpoint and the AXI contains GearBox
-   // instances for the TLPWord#(8)@250 <--> TLPWord#(16)@125
-   // conversion.
-
-   // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
-   Clock epClock250 = _ep.user.clk_out;
-   Reset user_reset_n <- mkResetInverter(_ep.user.reset_out);
-   Reset epReset250 <- mkAsyncReset(4, user_reset_n, epClock250);
-
-   ClockGenerator7Params     params = defaultValue;
-   params.clkin1_period    = 4.000;
-   params.clkin_buffer     = False;
-   params.clkfbout_mult_f  = 4.000;
-   params.clkout0_divide_f = 8.000;
-   ClockGenerator7           clkgen <- mkClockGenerator7(params, clocked_by _ep.user.clk_out, reset_by user_reset_n);
-   Clock epClock125 = clkgen.clkout0; /* half speed user_clk */
-   Reset epReset125 <- mkAsyncReset(4, user_reset_n, epClock125);
-
-   // Extract some status info from the PCIE endpoint. These values are
-   // all in the epClock250 domain, so we have to cross them into the
-   // epClock125 domain.
-
-   let my_pciId = PciId { bus:  _ep.cfg.bus_number(),
-	 dev: _ep.cfg.device_number(), func: _ep.cfg.function_number()};
-
-   // Build the PCIe-to-AXI bridge
-   PcieSplitter#(BPB)  bridge <- mkPcieSplitter(my_pciId, clocked_by epClock125, reset_by epReset125);
    FIFO#(TLPData#(8))          inFifo              <- mkFIFO(clocked_by epClock250, reset_by epReset250);
    // Connections between TLPData#(16) and a PCIE endpoint, using a gearbox
    // to match data rates between the endpoint and design clocks.
@@ -203,32 +121,4 @@ module mkX7PcieSplitter#( Clock pci_sys_clk_p, Clock pci_sys_clk_n
       if (data.be != 0)
          _ep.xmit(data);
    endrule
-
-   //SyncFIFOIfc#(MemoryRequest#(32,256)) fMemReq <- mkSyncFIFO(1, clk, rst_n, ddr3clk);
-   //SyncFIFOIfc#(MemoryResponse#(256))   fMemResp <- mkSyncFIFO(1, ddr3clk, ddr3rstn, clk);
-
-   //let memclient = interface Client;
-   //		      interface request  = toGet(fMemReq);
-   //		      interface response = toPut(fMemResp);
-   //		   endinterface;
-			 
-   //mkConnection( memclient, ddr3_ctrl.user, clocked_by ddr3clk, reset_by ddr3rstn );
-
-   interface pcie     = _ep.pcie;
-   //interface ddr3     = ddr3_ctrl.ddr3;
-   interface PcieBridge brif = bridge.brif;
-   method    PciId       pciId();
-      return my_pciId;
-   endmethod
-   interface clock250 = epClock250;
-   interface reset250 = epReset250;
-   interface clock125 = epClock125;
-   interface reset125 = epReset125;
-   interface clock200 = sys_clk_200mhz_buf;
-   interface reset200 = sys_clk_200mhz_reset;
-
-   method isLinkUp    = _ep.user.lnk_up();
-//   method Bool isCalibrated  = ddr3_ctrl.user.init_done;
-   interface Vector msixEntry = bridge.msixEntry;
-   
 endmodule: mkX7PcieSplitter
