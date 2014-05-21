@@ -25,62 +25,67 @@ import FIFO::*;
  * The data register is assumed to always be available, so an arriving
  * message must be removed ASAP or be overwritten 
  */
-interface LinkIn#(type a);
+
+interface SerialLinkIn;
    method Action frame(bit f);
    method Action data(bit d);
+endinterface
+
+interface LinkIn#(type a);
+   interface SerialLinkIn link;
    interface Reg#(Bool) dataready;
    interface ReadOnly#(a) ror;
 endinterface
 
 
 module mkLinkIn(LinkIn#(a))
-       provisos(Bits#(a,asize)),
-	        Log#(asize, k);
+       provisos(Bits#(a,asize),
+	        Log#(asize, k));
 
    // registers for receiving data messages
    Reg#(bit) framebit <- mkReg(0);
    Reg#(bit) databit <- mkReg(0);
-   Reg#(Bit#(6)) incount <= mkReg(0);
-   Reg#(a) shifter <- mkReg(0);
-   Reg#(a) data <- mkReg(0);
-   FIFOF#(?) <- mkSizedFIFOF(1);
-
+   Reg#(Bit#(k)) count <- mkReg(0);
+   Reg#(a) shifter <- mkReg(?);
+   Reg#(a) data <- mkReg(?);
+   Reg#(Bool) drdy <- mkReg(False);
 
    rule handleDataFrame;
-      if (datainframebit == 0)
+      if (framebit == 0)
 	 begin
-            dataincount <= 0;
+            count <= 0;
 	 end
       else
-	 dataincount <= dataincount + 1;
+	 count <= count + 1;
    endrule
    
-   rule handleDataInShift (datainframebit == 1);
-      Bit#(SizeOf(DataMessage)) tmp = datainshifter;
+   rule handleDataInShift (framebit == 1);
+      Bit#(asize) tmp = pack(shifter);
       tmp = tmp >> 1;
-      tmp[SizeOf(DataMessage)-1] = datainbit;
-      datainshifter <= tmp;
-      if (dataincount == (SizeOf(DataMessage) - 1))
+      tmp[valueOf(asize)-1] = databit;
+      shifter <= unpack(tmp);
+      if (count == fromInteger(valueof(asize) - 1))
          action
-	    data <= tmp;
-	    dataready <= True;
-	 end;
+	    data <= unpack(tmp);
+	    drdy <= True;
+	 endaction
    endrule
    
-   interface LinkIn;
+   interface SerialLinkIn link;
    
       method Action frame(bit i );
-	 frameinbit <= i ;
+	 framebit <= i ;
       endmethod
       
       method Action data( bit i );
-	 datainbit <= i;
+	 databit <= i;
       endmethod
 
-      interface ReadOnly#(a) ror = regToReadOnly(r);
-      
-      interface Reg#(Bool) ready = dataready;
-   
    endinterface
+
+   interface ReadOnly ror = regToReadOnly(data);
+      
+   interface Reg dataready = drdy;
+   
 
 endmodule
