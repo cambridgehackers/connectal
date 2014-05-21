@@ -26,8 +26,8 @@ import FIFOF::*;
  * message must be removed ASAP or be overwritten 
  */
 interface SerialLinkOut;
-   method bit frame(bit f);
-   method bit data(bit d);
+   method bit frame();
+   method bit data();
 endinterface
 
 interface LinkOut#(type a);
@@ -38,16 +38,19 @@ endinterface
 
 
 module mkLinkOut(LinkOut#(a))
-       provisos(Bits#(a,asize)),
-	        Log#(asize, k);
+       provisos(Bits#(a,asize),
+	        Log#(asize, k),
+	        PrimSelectable#(a, Bit#(1)),
+	        Bitwise#(a),
+	        Literal#(a));
 
    // registers for sending data messages
    Reg#(bit) framebit <- mkReg(0);
    Reg#(bit) databit <- mkReg(0);
    
-   Reg#(Bit#(k)) count <= mkReg(0);
+   Reg#(Bit#(k)) count <- mkReg(0);
    Reg#(a) shifter <- mkReg(0);
-   FIFO#(a) datafifo <- mkSizedFIFOF(1);
+   FIFOF#(a) datafifo <- mkSizedFIFOF(1);
 
 
    
@@ -65,7 +68,7 @@ module mkLinkOut(LinkOut#(a))
    rule continueshift;
       if (count != 0)
 	 begin
-	    if (count == asize - 1)
+	    if (count == fromInteger(valueof(asize) - 1))
 	       begin
 		  count <= 0;
 		  framebit <= 0;
@@ -80,7 +83,7 @@ module mkLinkOut(LinkOut#(a))
 	 end
    endrule
    
-   interface LinkOut;
+   interface SerialLinkOut link;
    
       method bit frame();
          return framebit;
@@ -90,8 +93,9 @@ module mkLinkOut(LinkOut#(a))
          return databit;
       endmethod
 
-      interface FIFO#(a) data = datafifo;
-      
    endinterface
+
+   interface FIFOF data = datafifo;
+      
 
 endmodule
