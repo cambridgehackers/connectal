@@ -18,6 +18,7 @@ import Gearbox           ::*;
 import FIFO              ::*;
 import FIFOF             ::*;
 import SpecialFIFOs      ::*;
+import TlpConnect        ::*;
 
 import XbsvXilinxCells   ::*;
 import XilinxCells       ::*;
@@ -169,8 +170,9 @@ interface PCIExpressX7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)   pcie;
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
-   method    Action      xmit(TLPData#(8) data);
-   method    ActionValue#(TLPData#(8)) recv();
+   interface TlpConnect#(8)            tlp;
+   //interface Put#(TLPData#(8)) inFrom;
+   //interface Get#(TLPData#(8)) outTo;
 endinterface
 
 typedef struct {
@@ -313,21 +315,26 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
                         data: pcie_ep.m_axis_rx.tdata });
    endrule
 
-   method Action xmit(data);
-	fAxiTx.enq(AxiTx {last: pack(data.eof),
-           keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
-   endmethod
-
-   method ActionValue#(TLPData#(8)) recv();
-	let info <- toGet(fAxiRx).get;
-	TLPData#(8) retval = defaultValue;
-	retval.sof  = (info.user[14] == 1);
-	retval.eof  = info.last != 0;
-	retval.hit  = info.user[8:2];
-	retval.be= dwordSwap64BE(info.keep);
-	retval.data = dwordSwap64(info.data);
-	return retval;
-   endmethod
+   interface TlpConnect      tlp;
+      interface Put inFrom;
+         method Action put(TLPData#(8) data);
+	   fAxiTx.enq(AxiTx {last: pack(data.eof),
+              keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
+         endmethod
+      endinterface
+      interface Get outTo;
+         method ActionValue#(TLPData#(8)) get();
+	   let info <- toGet(fAxiRx).get;
+	   TLPData#(8) retval = defaultValue;
+	   retval.sof  = (info.user[14] == 1);
+	   retval.eof  = info.last != 0;
+	   retval.hit  = info.user[8:2];
+	   retval.be= dwordSwap64BE(info.keep);
+	   retval.data = dwordSwap64(info.data);
+	   return retval;
+         endmethod
+      endinterface
+   endinterface
 
    interface pcie    = pcie_ep.pcie;
    interface PciewrapUser user = pcie_ep.user;

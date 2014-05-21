@@ -49,7 +49,7 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
    Gearbox#(2, 1, TLPData#(8)) fifoTxData          <- mkNto1Gearbox(epClock125, epReset125, epClock250, epReset250);
 
    rule accept_data1;
-      let data <- _ep.recv();
+      let data <- _ep.tlp.outTo.get();
       inFifo.enq(data);
    endrule
 
@@ -97,7 +97,7 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
          return v;
       endfunction
 
-      let data <- pci.outTo.get;
+      let data <- pci.outTo.get();
       fifoTxData.enq(split(data));
    endrule
 
@@ -110,6 +110,6 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
       let data = outFifo.first; outFifo.deq;
       // filter out TLPs with 00 byte enable
       if (data.be != 0)
-         _ep.xmit(data);
+         _ep.tlp.inFrom.put(data);
    endrule
 endmodule: mkPcieGearbox
