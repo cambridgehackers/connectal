@@ -20,6 +20,9 @@
 // SOFTWARE.
 
 import Connectable::*;
+import LinkIn::*;
+import LinkOut::*;
+import LinkHost::*;
 import FIFO::*;
 import Vector::*;
 
@@ -27,21 +30,6 @@ import Vector::*;
  * The data register is assumed to always be available, so an arriving
  * message must be removed ASAP or be overwritten 
  */
-interface LinkIn#(type a);
-   method Action frame(bit f);
-   method Action data(bit d);
-   interface FIFO#(?) new;
-   interface ReadOnly#(a) r;
-endinterface
-
-interface LinkOut;
-   method bit frame();
-   method bit data();
-endinterface
-
-
-
-
 
 typedef struct {
 	Bit#(4) address;
@@ -50,125 +38,65 @@ typedef struct {
 
 typedef struct {
 	Bit#(4) lsn;
-	Bit#(12) busy;
+	Bit#(2) busy;
 	} FlowMessage deriving(Bits);
 
-
-
-interface NocNode;
-   interface NocNodeIn in;
-   interface NocNodeOut inrev;
-   interface NocNodeOut out;
-   interface NocNodeIn outrev;
+interface NocLinks;
+   interface LinkIn#(DataMessage) ie;
+   interface LinkIn#(DataMessage) iw;
+   interface LinkIn#(FlowMessage) iefc;
+   interface LinkIn#(FlowMessage) iwfc;
+   interface LinkOut#(DataMessage) oe;
+   interface LinkOut#(DataMessage) ow;
+   interface LinkOut#(FlowMessage) oefc;
+   interface LinkOut#(FlowMessage) owfc;
+   interface LinkHost#(DataMessage) host;
 endinterface
-
-interface SpiReg#(type a);
-   interface NocNode tap;
-   interface FIFO#(a) send;
-   interface FIFO#(a) recv;
-endinterface
-
-
-
-instance Connectable#(NocNodeOut, NocNodeIn);
-   module mkConnection#(NocNodeOut out, NocNodeIn in)(Empty);
-      rule move_data;
-	 in.frame(out.frame());
-	 in.data(out.data());
-	 endrule
-   endmodule
-endinstance
 
 module mkNocNode#(Bit#(4) id)(NocNode#(a))
    provisos(Bits#(a,asize)),
             Log#(asize, k);
 
-
-
-
-
    NocLink east <- mkNocLink();
    NocLink west <- mkNocLink();
    NocHost host <- mkNocHost();
-
-
 
 endmodule
 /* numlinks controls how many fifos to other links there are */
 
 module mkLinkIn(
 
-module mkLinkIn(LinkIn#(a))
-       provisos(Bits#(a,asize)),
-	        Log#(asize, k);
+   // buffers for transiting messages
 
-   // registers for receiving data messages
-   Reg#(bit) framebit <- mkReg(0);
-   Reg#(bit) databit <- mkReg(0);
-   Reg#(Bit#(6)) incount <= mkReg(0);
-   Reg#(a) shifter <- mkReg(0);
-   Reg#(a) data <- mkReg(0);
-
-
-   rule handleDataFrame;
-      if (datainframebit == 0)
-	 begin
-            dataincount <= 0;
-	 end
-      else
-	 dataincount <= dataincount + 1;
+   FIFOF#(DataMessage) ew <- mkSizedFIFOF(4);
+   FIFOF#(DataMessage) we <- mkSizedFIFOF(4);
+   FIFOF#(DataMessage) eh <- mkSizedFIFOF(4);
+   FIFOF#(DataMessage) wh <- mkSizedFIFOF(4);
+   Bit#(4) lastiwlsn <- mkReg(0);  // most recent lsn from w
+   Bit#(4) lastielsn <- mkReg(0);  // most recent lsn from e
+   
+   
+   // arbiter to send data messages to e
+   
+   rule genow;
    endrule
    
-   rule handleDataInShift (datainframebit == 1);
-      Bit#(SizeOf(DataMessage)) tmp = datainshifter;
-      tmp = tmp >> 1;
-      tmp[SizeOf(DataMessage)-1] = datainbit;
-      datainshifter <= tmp;
-      if (dataincount == (SizeOf(DataMessage) - 1))
-         begin
-	 let msg
-	 end;
+   // arbiter to send data messages to w
+   
+   rule genoe;
    endrule
    
-   interface LinkIn;
+   // composer to create flow message to e
+
+   rule genoefc;
+      owfc.enq(FlowMessage{lsn: lastielsn, busy: {eh.notFull, ew.notFull});
+   endrule
+
+   // composer to create flow message to w
    
-   		method Action frame(bit i );
-	    frameinbit <= i ;
-	 endmethod
-   
-	 method Action data( bit i );
-	    datainbit <= i;
-	 endmethod
-
-	       endinterface
-
-
-
-
-
-   // registers for sending flow control messages
-   Wire#(bit) fcoutwire <- mkDWire(0);
-
-   // registers for sending data messages
-   Wire#(bit) dataoutwire <- mkDWire(0);
-
-   // registers for receiving flow control messages
-   Reg#(bit) fcinbit <- mkReg(0);
-   Reg#(bit) fcinframeinbit <- mkReg(0);
-   Reg#(Bit#(6)) fcincount <= mkReg(0);
-   Reg#(FlowMessage) fcinshifter <- mkReg(0);
-   Reg#(FlowMessage) fcindata <- mkReg(0);
-
-   // buffers for incoming messages
-
-   FIFOF#(DataMessage) bufinhost <- mkSizedFIFOF(4);
-   Vector#(numlinks, FIFOF#(DataMessage)) bufinlink = newVector; 
-
-   for (Integer i = 0; i < numlinks; i = i + 1) 
-   begin
-     bufinlink[i] = mkSizedFIFOF#(4);
-   end
-   // XXX how to decode address?  Source routing? Node id?
+   rule genowfc;
+      owfc.enq(FlowMessage{lsn: lastielsn, busy: {wh.notFull, ew.notFull});
+   endrule
 
 
 
@@ -181,52 +109,6 @@ module mkLinkIn(LinkIn#(a))
 
 
 
-
-
-
-
-
-
-
-   interface NocNode tap;
-   
-      interface NocNodeIn in;
-   
-	 method Action frame(bit i );
-	    frameinbit <= i ;
-	 endmethod
-   
-	 method Action data( bit i );
-	    datainbit <= i;
-	 endmethod
-
-      endinterface
-   
-      interface NocNodeOut out;
-      
-	 method bit frame();
-	    return frameinbit;
-	 endmethod
-      
-	 method bit data();
-	    return dataoutwire;
-	 endmethod
-   
-      endinterface
-   
-   endinterface
-
-   interface Reg r;
-
-      method Action _write(a v);
-	 data <= pack(v);
-      endmethod
-   
-      method a _read();
-	 return(unpack(data));
-      endmethod
-
-   endinterface
 
 endmodule
 
