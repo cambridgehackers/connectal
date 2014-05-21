@@ -1,5 +1,7 @@
 VERSION=140520.1
 
+# On Centos: sudo yum install kernel-headers
+
 obj-m += pcieportal.o
 
 export KROOT=/lib/modules/$(shell uname -r)/build
