@@ -31,7 +31,7 @@ sem_t test_sem;
 #ifdef MMAP_HW
 int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 #else
-int numWords = 0x12400/4;
+int numWords = 0x124000/4;
 #endif
 
 int burstLen = 16;

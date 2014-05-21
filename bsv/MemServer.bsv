@@ -69,7 +69,10 @@ endfunction
 `ifdef BSIM
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
 `endif
-
+		 
+typedef 32 TAG_DEPTH;		 
+typedef 4 NUM_OO_TAGS;		
+ 
 interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
    interface DmaConfig request;
    interface Vector#(nMasters,MemMaster#(addrWidth, dataWidth)) masters;
@@ -94,8 +97,8 @@ module mkMemServer#(DmaIndication dmaIndication,
 	    Mul#(nwc, nMasters, numWriteClients),
 	    Add#(j__, TLog#(nwc), 6));
    
-   Vector#(nMasters,TagGen#(nwc,nwc,8)) writeTagGens <- replicateM(mkTagGenIO);
-   Vector#(nMasters,TagGen#(nrc,nrc,8)) readTagGens  <- replicateM(mkTagGenIO);
+   Vector#(nMasters,TagGen#(nwc,nwc,TAG_DEPTH)) writeTagGens <- replicateM(mkTagGenIO);
+   Vector#(nMasters,TagGen#(nrc,nrc,TAG_DEPTH)) readTagGens  <- replicateM(mkTagGenIO);
    let rv <- mkConfigMemServerRW(dmaIndication, readTagGens, writeTagGens, readClients, writeClients);
    return rv;
    
@@ -117,7 +120,7 @@ module mkMemServerR#(DmaIndication dmaIndication,
 	    Add#(i__, TLog#(nrc), 6));
    
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
-   Vector#(nMasters,TagGen#(nrc,nrc,8)) readTagGens <- replicateM(mkTagGenIO);
+   Vector#(nMasters,TagGen#(nrc,nrc,TAG_DEPTH)) readTagGens <- replicateM(mkTagGenIO);
    let rv <- mkConfigMemServerR(dmaIndication,readTagGens,readClients,sgl);
    return rv;
    
@@ -139,7 +142,7 @@ module mkMemServerW#(DmaIndication dmaIndication,
 	    Add#(i__, TLog#(nwc), 6));
    
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
-   Vector#(nMasters,TagGen#(nwc,nwc,8)) writeTagGens <- replicateM(mkTagGenIO);
+   Vector#(nMasters,TagGen#(nwc,nwc,TAG_DEPTH)) writeTagGens <- replicateM(mkTagGenIO);
    let rv <- mkConfigMemServerW(dmaIndication, writeTagGens, writeClients,sgl);
    return rv;
    
@@ -166,8 +169,8 @@ module mkMemServerOO#(DmaIndication dmaIndication,
 	    Add#(j__, TLog#(nwc), 6));
 
 
-   Vector#(nMasters,TagGen#(nwc,4,2)) writeTagGens <- replicateM(mkTagGenOO);
-   Vector#(nMasters,TagGen#(nrc,4,2)) readTagGens <- replicateM(mkTagGenOO);
+   Vector#(nMasters,TagGen#(nwc,NUM_OO_TAGS,TAG_DEPTH)) writeTagGens <- replicateM(mkTagGenOO);
+   Vector#(nMasters,TagGen#(nrc,NUM_OO_TAGS,TAG_DEPTH)) readTagGens <- replicateM(mkTagGenOO);
    let rv <- mkConfigMemServerRW(dmaIndication, readTagGens, writeTagGens, readClients, writeClients);
    return rv;
 
@@ -188,7 +191,7 @@ module mkMemServerOOR#(DmaIndication dmaIndication,
 	    Mul#(nrc, nMasters, numReadClients));
    
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
-   Vector#(nMasters,TagGen#(nrc,4,2)) readTagGens <- replicateM(mkTagGenOO);
+   Vector#(nMasters,TagGen#(nrc,NUM_OO_TAGS,TAG_DEPTH)) readTagGens <- replicateM(mkTagGenOO);
    let rv <- mkConfigMemServerR(dmaIndication,readTagGens,readClients,sgl);
    return rv;
    
@@ -209,7 +212,7 @@ module mkMemServerOOW#(DmaIndication dmaIndication,
 	    Mul#(nwc, nMasters, numWriteClients));
    
    SGListMMU#(addrWidth) sgl <- mkSGListMMU(dmaIndication);
-   Vector#(nMasters,TagGen#(nwc,4,2)) writeTagGens <- replicateM(mkTagGenOO);
+   Vector#(nMasters,TagGen#(nwc,NUM_OO_TAGS,TAG_DEPTH)) writeTagGens <- replicateM(mkTagGenOO);
    let rv <- mkConfigMemServerW(dmaIndication, writeTagGens,writeClients,sgl);
    return rv;
    

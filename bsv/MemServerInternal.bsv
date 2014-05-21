@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 // BSV Libraries
+import BRAMFIFO::*;
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
@@ -32,6 +33,8 @@ import Assert::*;
 import Dma::*;
 import PortalMemory::*;
 import SGList::*;
+
+typedef 9 SGL_PIPELINE_DEPTH;
 
 interface MemWriteInternal#(numeric type addrWidth, numeric type dataWidth);
    interface DmaDbg dbg;
@@ -57,8 +60,8 @@ module mkTagGenOO(TagGen#(numClients,numTags,tagDepth))
    provisos(Log#(numTags,tagWidth),
 	    Log#(numClients,clientWidth));
    
-   let request_fifo0 <- mkSizedFIFOF(1);
-   let request_fifo1 <- mkSizedFIFOF(1);
+   let request_fifo0 <- mkSizedFIFOF(valueOf(SGL_PIPELINE_DEPTH));
+   let request_fifo1 <- mkSizedFIFOF(valueOf(SGL_PIPELINE_DEPTH));
    let return_fifo <- mkSizedFIFO(1);
    Vector#(numTags, Reg#(Bit#(TLog#(tagDepth)))) tag_regs <- replicateM(mkReg(0));
    Vector#(numTags, Reg#(Maybe#(Tuple2#(Bit#(clientWidth),Bit#(6))))) client_map <- replicateM(mkReg(tagged Invalid));
@@ -109,7 +112,7 @@ module mkTagGenIO(TagGen#(numClients,numTags,tagDepth))
 	    Log#(numClients,clientWidth),
 	    Bits#(Bit#(clientWidth), tagWidth));
    
-   let request_fifo <- mkSizedFIFO(1);
+   let request_fifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
    
    method Action tag_request(Bit#(clientWidth) client, Bit#(6) client_tag);
       request_fifo.enq(client);
@@ -159,27 +162,33 @@ module mkMemReadInternal#(Integer id,
 
    FIFO#(Tuple2#(DRec#(numClients,numTags,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
    
-   FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(1);
-   FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkSizedFIFO(1);
-   Vector#(numTags, FIFO#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(valueOf(tagDepth)));
+   FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
+   FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkFIFO;
+   Vector#(numTags, FIFO#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedBRAMFIFO(valueOf(tagDepth)));
    Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
    Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
+
+   Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
+   Reg#(Bit#(64)) last_loadClient <- mkReg(0);
+   Reg#(Bit#(64)) last_sglResp <- mkReg(0);
+   Reg#(Bit#(64)) last_eob <- mkReg(0);
+   (* fire_when_enabled *)
+   rule cycle;
+      cycle_cnt <= cycle_cnt+1;
+   endrule
          
 `ifdef	INTERVAL_ANAlYSIS
    Reg#(Bit#(32)) bin1 <- mkReg(0);
    Reg#(Bit#(32)) bin4 <- mkReg(0);
    Reg#(Bit#(32)) binx <- mkReg(0);
-   Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
    Reg#(Bit#(64)) last_resp_read <- mkReg(0);
-   (* fire_when_enabled *)
-   rule cycle;
-      cycle_cnt <= cycle_cnt+1;
-   endrule
 `endif
       
-   for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1)
+   for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1) 
       rule loadClient;
+      	 //$display("mkMemReadInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
+	 //last_loadClient <= cycle_cnt;
    	 ObjectRequest req <- readClients[selectReg].readReq.get();
    	 if (bad_pointer(req.pointer))
    	    dmaIndication.badPointer(req.pointer);
@@ -208,6 +217,8 @@ module mkMemReadInternal#(Integer id,
 	 reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
 	 //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       end
+      //$display("mkMemReadInternal::sglResp %d %d", client, cycle_cnt-last_sglResp);
+      //last_sglResp <= cycle_cnt;
    endrule
 
    rule readDataComp;
@@ -245,7 +256,8 @@ module mkMemReadInternal#(Integer id,
 	    if (burstLen == 0)
 	       burstLen = dreqFifo.first.req.burstLen >> beat_shift;
 	    if (burstLen == 1) begin
-	       //$display("eob");
+	       //$display("mkMemReadInternal::eob %d", cycle_cnt-last_eob);
+	       last_eob <= cycle_cnt;
 	       dreqFifo.deq();
 	       tag_gen.return_tag(truncate(response_tag));
 	    end
@@ -294,16 +306,27 @@ module mkMemWriteInternal#(Integer iid,
    
    FIFO#(Tuple2#(RResp#(numClients,numTags,addrWidth),Bit#(6))) writeDonePipelineFifo <- mkFIFO;
    
-   FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(1);
-   FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkSizedFIFO(1);
-   FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedFIFO(32); // Is this the right size?? (mdk)
-   Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedFIFO(valueOf(tagDepth)));
+   FIFO#(LRec#(numClients,numTags,addrWidth)) lreqFifo <- mkSizedFIFO(valueOf(SGL_PIPELINE_DEPTH));
+   FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkFIFO;
+   FIFO#(DRec#(numClients,numTags,addrWidth)) dreqFifo <- mkSizedBRAMFIFO(32);
+   Vector#(numTags, FIFO#(RResp#(numClients,numTags,addrWidth))) respFifos <- replicateM(mkSizedBRAMFIFO(valueOf(tagDepth)));
    Reg#(Bit#(8)) burstReg <- mkReg(0);   
    Reg#(Bit#(64)) beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
+
+   Reg#(Bit#(64)) cycle_cnt <- mkReg(0);
+   Reg#(Bit#(64)) last_loadClient <- mkReg(0);
+   Reg#(Bit#(64)) last_sglResp <- mkReg(0);
+   Reg#(Bit#(64)) last_eob <- mkReg(0);
+   (* fire_when_enabled *)
+   rule cycle;
+      cycle_cnt <= cycle_cnt+1;
+   endrule
    
    for (Integer selectReg = 0; selectReg < valueOf(numClients); selectReg = selectReg + 1)
        rule loadClient;
+      	  //$display("mkMemWriteInternal::loadClient %d %d", selectReg, cycle_cnt-last_loadClient);
+	  //last_loadClient <= cycle_cnt;
    	  ObjectRequest req <- writeClients[selectReg].writeReq.get();
    	  if (bad_pointer(req.pointer))
    	     dmaIndication.badPointer(req.pointer);
@@ -330,6 +353,8 @@ module mkMemWriteInternal#(Integer iid,
 	 reqFifo.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
 	 //$display("checkSglResp: client=%d, rename_tag=%d", client,rename_tag);
       end
+      //$display("mkMemWriteInternal::sglResp %d %d", client, cycle_cnt-last_sglResp);
+      //last_sglResp <= cycle_cnt;
    endrule
    
    rule writeDoneComp;

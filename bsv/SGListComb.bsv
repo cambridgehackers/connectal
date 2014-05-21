@@ -71,20 +71,15 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    Add#(c__, addrWidth, ObjectOffsetSize));
 
    BRAM_Configure bramConfig = defaultValue;
-   bramConfig.latency        = 2;
+   bramConfig.latency        = 1;
    BRAM2Port#(Bit#(entryIdxSize),Page) pages <- mkBRAM2Server(bramConfig);
    BRAM2Port#(RegionsIdx, Region)       reg8 <- mkBRAM2Server(bramConfig);
    BRAM2Port#(RegionsIdx, Region)       reg4 <- mkBRAM2Server(bramConfig);
    BRAM2Port#(RegionsIdx, Region)       reg0 <- mkBRAM2Server(bramConfig);
 
-   Vector#(2,FIFOF#(SGListId))          ptrs <- replicateM(mkSizedFIFOF(4));
-   Vector#(2,FIFOF#(Bit#(8)))         pbases <- replicateM(mkSizedFIFOF(4));
-   Vector#(2,FIFOF#(Bit#(8)))     idxOffsets <- replicateM(mkSizedFIFOF(4));
-   Vector#(2,FIFOF#(Bit#(entryIdxSize)))  rp <- replicateM(mkSizedFIFOF(4));
-   Vector#(2,FIFOF#(Offset))            offs <- replicateM(mkSizedFIFOF(4));
-   Vector#(2,FIFOF#(ReqTup))            reqs <- replicateM(mkSizedFIFOF(4));
-   Vector#(2,FIFOF#(Bit#(3)))      pageSizes <- replicateM(mkSizedFIFOF(4));
-   Vector#(2,FIFOF#(Bit#(addrWidth))) pageResponseFifos <- replicateM(mkSizedFIFOF(4));
+   Vector#(2,FIFOF#(Bit#(entryIdxSize)))  rp <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Offset))            offs <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(ReqTup))            reqs <- replicateM(mkFIFOF);
    Reg#(Bit#(8))                      idxReg <- mkReg(0);
    
    let page_shift0 = fromInteger(valueOf(SGListPageShift0));
@@ -102,22 +97,14 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 return x.portB;
    endfunction
 
-   FIFOF#(Tuple4#(RegionsIdx,Region,Region,Region)) regionFifo <- mkSizedFIFOF(4);
-   FIFOF#(Region) region8Fifo <- mkSizedFIFOF(4);
-   FIFOF#(Region) region4Fifo <- mkSizedFIFOF(4);
-   FIFOF#(Region) region0Fifo <- mkSizedFIFOF(4);
-   // pipeline the address lookup
+   FIFO#(Tuple4#(RegionsIdx,Region,Region,Region)) regionFifo <- mkFIFO();
+
    for(Integer i = 0; i < 2; i=i+1) begin
-      rule req0;
+      rule req;
 	 Region region8 <- portsel(reg8,i).response.get;
 	 Region region4 <- portsel(reg4,i).response.get;
 	 Region region0 <- portsel(reg0,i).response.get;
 
-	 region8Fifo.enq(region8);
-	 region4Fifo.enq(region4);
-	 region0Fifo.enq(region0);
-      endrule
-      rule req1;
 	 reqs[i].deq;
 	 let ptr = tpl_1(reqs[i].first);
 	 let off = tpl_2(reqs[i].first);
@@ -125,9 +112,6 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 Bit#(8) pbase = 0;
 	 Bit#(8) idxOffset = 0;
 
-	 Region region8 <- toGet(region8Fifo).get();
-	 Region region4 <- toGet(region4Fifo).get();
-	 Region region0 <- toGet(region0Fifo).get();
 	 Bit#(40) barrier8 = region8.barrier;
 	 Bit#(40) barrier4 = region4.barrier;
 	 Bit#(40) barrier0 = region0.barrier;
@@ -159,16 +143,6 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	    //dmaIndication.badAddrTrans(extend(ptr), extend(off), barrier0);
 	 end
 	 offs[i].enq(o);
-	 pbases[i].enq(pbase);
-	 idxOffsets[i].enq(idxOffset);
-	 ptrs[i].enq(ptr);
-	 pageSizes[i].enq(pageSize);
-      endrule
-      rule req2;
-	 let ptr <- toGet(ptrs[i]).get();
-	 let pbase <- toGet(pbases[i]).get();
-	 let idxOffset <- toGet(idxOffsets[i]).get();
-	 let pageSize <- toGet(pageSizes[i]).get();
 	 Bit#(8) p = pbase + idxOffset;
 	 if (pageSize == 3) begin
 	    //$display("request: ptr=%h off=%h barrier8=%h", ptr, off, barrier8);
@@ -186,57 +160,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
 	 //$display("pages[%d].read %h", i, rp[i].first());
 	 portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:address, datain:?});
       endrule
-      rule pageResponse;
-	 let page <- portsel(pages, i).response.get;
-	 let offset <- toGet(offs[i]).get();
-	 //$display("pages[%d].response page=%h offset=%h", i, page, offset);
-	 Bit#(ObjectOffsetSize) rv = 0;
-	 case (offset) matches
-	    tagged OOrd0 .o:
-	       begin
-		  case (page) matches
-		     tagged POrd4 .p:
-			$display("OOrd0 vs POrd4");
-		     tagged POrd8 .p:
-			$display("OOrd0 vs POrd8");
-		  endcase
-		  rv = {page.POrd0,o};
-	       end
-	    tagged OOrd4 .o:
-	       begin
-		  case (page) matches
-		     tagged POrd0 .p:
-			$display("OOrd4 vs POrd0");
-		     tagged POrd8 .p:
-			$display("OOrd4 vs POrd8");
-		  endcase
-		  rv = {page.POrd4,o};
-	       end
-	    tagged OOrd8 .o:
-	       begin
-		  case (page) matches
-		     tagged POrd0 .p:
-			$display("OOrd8 vs POrd0");
-		     tagged POrd4 .p:
-			$display("OOrd8 vs POrd4");
-		  endcase
-		  rv = {page.POrd8,o};
-	       end
-	 endcase
-	 pageResponseFifos[i].enq(truncate(rv));
-      endrule
    end
-
-   Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
-   for (Integer i = 0; i < 2; i=i+1)
-      rule incomingReqRule;
-	 let req <- toGet(incomingReqs[i]).get();
-	 match { .ptr, .off } = req;
-	 portsel(reg8, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
-	 portsel(reg4, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
-	 portsel(reg0, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
-	 reqs[i].enq(req);
-      endrule
 
    Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
    for(Integer i = 0; i < 2; i=i+1)
@@ -244,13 +168,52 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       (interface Server#(ReqTup,Bit#(addrWidth));
 	  interface Put request;
 	     method Action put(ReqTup req);
-		incomingReqs[i].enq(req);
+	     	 match { .ptr, .off } = req;
+	 	 portsel(reg8, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
+	 	 portsel(reg4, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
+	 	 portsel(reg0, i).request.put(BRAMRequest{write:False, responseOnWrite:False, address:truncate(ptr-1), datain:?});
+	 	 reqs[i].enq(req);
 	     endmethod
 	  endinterface
 	  interface Get response;
 	     method ActionValue#(Bit#(addrWidth)) get();
-		let rv <- toGet(pageResponseFifos[i]).get();
-		return rv;
+	     	    let page <- portsel(pages, i).response.get;
+    	      	    let offset <- toGet(offs[i]).get();
+	  	    //$display("pages[%d].response page=%h offset=%h", i, page, offset);
+	 	    Bit#(ObjectOffsetSize) rv = 0;
+	            case (offset) matches
+	            tagged OOrd0 .o:
+        	       begin
+        		  case (page) matches
+        		     tagged POrd4 .p:
+        			$display("OOrd0 vs POrd4");
+        		     tagged POrd8 .p:
+        			$display("OOrd0 vs POrd8");
+        		  endcase
+        		  rv = {page.POrd0,o};
+        	       end
+        	    tagged OOrd4 .o:
+        	       begin
+        		  case (page) matches
+        		     tagged POrd0 .p:
+        			$display("OOrd4 vs POrd0");
+        		     tagged POrd8 .p:
+        			$display("OOrd4 vs POrd8");
+        		  endcase
+        		  rv = {page.POrd4,o};
+        	       end
+        	    tagged OOrd8 .o:
+        	       begin
+        		  case (page) matches
+        		     tagged POrd0 .p:
+        			$display("OOrd8 vs POrd0");
+        		     tagged POrd4 .p:
+        			$display("OOrd8 vs POrd4");
+        		  endcase
+        		  rv = {page.POrd8,o};
+        	       end
+        	endcase
+		return truncate(rv);
 	     endmethod
 	  endinterface
        endinterface);
@@ -328,7 +291,7 @@ endinterface
 
 module mkSglAddrServer#(Server#(ReqTup,Bit#(addrWidth)) server) (SglAddrServer#(addrWidth,numServers));
    
-   FIFOF#(Bit#(TAdd#(1,TLog#(numServers)))) tokFifo <- mkSizedFIFOF(9);
+   FIFOF#(Bit#(TAdd#(1,TLog#(numServers)))) tokFifo <- mkSizedFIFOF(3);
    Vector#(numServers, Server#(ReqTup,Bit#(addrWidth))) addrServers;
    Reg#(Bit#(TLog#(numServers))) arb <- mkReg(0);
 
