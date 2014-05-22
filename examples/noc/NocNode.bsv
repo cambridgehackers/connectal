@@ -20,10 +20,9 @@
 // SOFTWARE.
 
 import Connectable::*;
-import LinkIn::*;
-import LinkOut::*;
+import SerialFIFO::*;
 import LinkHost::*;
-import FIFO::*;
+import FIFOF::*;
 import Vector::*;
 
 /* This is a serial to parallel converter for messages of type a
@@ -37,67 +36,48 @@ typedef struct {
 	Bit#(64) payload;
 	} DataMessage deriving(Bits);
 
-typedef struct {
-	Bit#(4) lsn;
-	Bit#(2) busy;
-	} FlowMessage deriving(Bits);
-
-interface NocLinks;
-   interface SerialLinkIn ie;
-   interface SerialLinkIn iw;
-   interface SerialLinkIn iefc;
-   interface SerialLinkIn iwfc;
-   interface SerialLinkOut oe;
-   interface SerialLinkOut ow;
-   interface SerialLinkOut oefc;
-   interface SerialLinkOut owfc;
-endinterface
-
 interface NocNode#(type a);
-   interface NocLinks links;
    interface LinkHost#(a) host;
 endinterface
       
-function Action move(FIFOF#(DataMessage) from, FIFOF#(DataMessage) to);
-   to.enq(from.first);
-   from.deq();
+function Action movetolink(FIFOF#(DataMessage) from, SerialFIFOIn#(DataMessage) to);
+   return action
+	     to.enq(from.first);
+	     from.deq();
+	  endaction;
 endfunction
 
 function Action outputarbitrate(FIFOF#(DataMessage) a,
-			       FIFOF#(DataMessage) b,
+				FIFOF#(DataMessage) b,
 			       Reg#(Bool) select,
-			       LinkOut#(DataMessage) r);
-   if (a.notEmpty && !b.notEmpty)
-      move(a, r.data);
-   else if (!a.notEmpty && b.notEmpty)
-      move(b, r.data);
-   else if (a.notEmpty && b.notEmpty)
-      begin
-	 if (select == 0)
-	    move(a, r.data);
-	 else
-	    move(b, r.data);
-	 select <= select ^ 1;
-      end
+			       SerialFIFOIn#(DataMessage) r);
+   return action
+	     if (a.notEmpty && !b.notEmpty)
+		movetolink(a, r);
+	     else if (!a.notEmpty && b.notEmpty)
+		movetolink(b, r);
+	     else if (a.notEmpty && b.notEmpty)
+		begin
+		   if (select)
+		      movetolink(a, r);
+		   else
+		      movetolink(b, r);
+		   select <= select != True;
+		end
+	  endaction;
 endfunction
 
-module mkNocNode#(Bit#(4) id)(NocNode#(a))
-   provisos(Bits#(a,asize)),
-            Log#(asize, k);
+module mkNocNode#(Bit#(4) id, 
+   SerialFIFO#(DataMessage) east,
+   SerialFIFO#(DataMessage) west)(NocNode#(a))
+   provisos(Bits#(a,asize),
+            Log#(asize, k));
 
    // out Links
-   LinkHost#(DataMessage) lhost <- mkHost(id);
-   LinkOut#(DataMessage) low <- mkLinkOut();
-   LinkOut#(DataMessage) loe <- mkLinkOut();
+   LinkHost#(DataMessage) lhost <- mkLinkHost(id);
 
-   // in Links and flow control
-   LinkIn#(DataMessage) liw <- mkLinkIn();
-   LinkIn#(DataMessage) lie <- mkLinkIn();
-   LinkOut#(FlowMessage) lowfc <- mkLinkOut();
-   LinkOut#(FlowMessage) loefc <- mkLinkOut();
-   LinkIn#(FlowMessage) liwfc <- mkLinkIn();
-   LinkIn#(FlowMessage) liefc <- mkLinkIn();
-   
+
+  
    // buffers for crossbar switch
    
    FIFOF#(DataMessage) he <- mkSizedFIFOF(4);
@@ -108,9 +88,6 @@ module mkNocNode#(Bit#(4) id)(NocNode#(a))
    FIFOF#(DataMessage) eh <- mkSizedFIFOF(4);
    FIFOF#(DataMessage) wh <- mkSizedFIFOF(4);
    
-   
-   Bit#(4) lastiwlsn <- mkReg(0);  // most recent lsn from w
-   Bit#(4) lastielsn <- mkReg(0);  // most recent lsn from e
    
    
    // sort host messages to proper queue
@@ -139,54 +116,28 @@ module mkNocNode#(Bit#(4) id)(NocNode#(a))
       outputarbitrate(we, he, oeselect, loe);
    endrule
    
-   // composer to create flow message to e
-
-   rule genoefc;
-      owfc.enq(FlowMessage{lsn: lastielsn, busy: {eh.notFull, ew.notFull}});
-   endrule
-
-   // composer to create flow message to w
-   
-   rule genowfc;
-      owfc.enq(FlowMessage{lsn: lastielsn, busy: {wh.notFull, ew.notFull}});
-   endrule
-
-
    // Handle arriving messages from East
 
-   rule fromeast (lie.dataready);
-      lastielsn <= lie.ror.lsn;
-      if (lie.ror.address == id)
-	 eh.enq(lie.ror);
+   rule fromeast;
+      if (east.first.address == id)
+	 eh.enq(east.first);
       else
-	 ew.enq(lie.ror);
-      lie.dataready <= False;
+	 ew.enq(east.first);
+      east.deq();
       endrule
 
    // Handle arriving messages from West
 
-   rule fromwest (liw.dataready);
-      lastiwlsn <= liw.ror.lsn;
-      if (liw.ror.address == id)
-	 wh.enq(liw.ror);
+   rule fromwest;
+      if (west.first.address == id)
+	 wh.enq(west.first);
       else
-	 we.enq(liw.ror);
-      liw.dataready <= False;
-   endrule
-
+	 we.enq(west.first);
+      west.deq();
+      endrule
 
 
   // interface wiring
-
-
-   interface SerialLinkOut oe = loe.link;
-   interface SerialLinkOut ow = low.link;
-   interface SerialLinkOut oefc = loefc.link;
-   interface SerialLinkOut owfc = lowfc.link;
-   interface SerialLinkIn ie = lie.link;
-   interface SerialLinkIn iw = liw.link;
-   interface SerialLinkIn iefc = liefc.link;
-   interface SerialLinkIn iwfc = liwfc.link;
 
    interface LinkHost host = lhost;
 
