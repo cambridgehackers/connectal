@@ -112,25 +112,27 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    AxiControlAndStatusRegs csr     <- mkAxiControlAndStatusRegs(portalResetIfc, clocked_by epClock125, reset_by epReset125);
    AxiMasterEngine splitMaster     <- mkAxiMasterEngine(my_pciId, clocked_by epClock125, reset_by epReset125);
    mkConnection(splitMaster.master, csr.slave, clocked_by epClock125, reset_by epReset125);
-   mkConnection(dispatcher.outToConfig, splitMaster.tlp.response, clocked_by epClock125, reset_by epReset125);
-   mkConnection(splitMaster.tlp.request, arbiter.inFromConfig, clocked_by epClock125, reset_by epReset125);
+   mkConnection(
+       (interface Server;
+          interface response = dispatcher.outToConfig;
+          interface request = arbiter.inFromConfig;
+       endinterface), splitMaster.tlp, clocked_by epClock125, reset_by epReset125);
 
-   PcieTracer  bridge <- mkPcieTracer(csr, clocked_by epClock125, reset_by epReset125);
-   //mkConnection(arbiter.outToBus, bridge.bus.request, clocked_by epClock125, reset_by epReset125);
-   mkConnection(bridge.bus,
+   PcieTracer  traceif <- mkPcieTracer(csr, clocked_by epClock125, reset_by epReset125);
+   mkConnection(traceif.bus,
        (interface Client;
           interface request = arbiter.outToBus;
           interface response = dispatcher.inFromBus;
        endinterface), clocked_by epClock125, reset_by epReset125);
 
-   // The PCIE endpoint is processing TLPWord#(8)s at 250MHz.  The
-   // AXI bridge is accepting TLPWord#(16)s at 125 MHz. The
+   // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
+   // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
    // connection between the endpoint and the AXI contains GearBox
-   // instances for the TLPWord#(8)@250 <--> TLPWord#(16)@125
+   // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
    // conversion.
    PcieGearbox gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125);
    mkConnection(gb.tlp, _ep.tlp, clocked_by epClock250, reset_by epReset250);
-   mkConnection(gb.pci, bridge.pci, clocked_by epClock125, reset_by epReset125);
+   mkConnection(gb.pci, traceif.pci, clocked_by epClock125, reset_by epReset125);
    
    // instantiate user portals
    let portalTop <- mkPortalTop(clocked_by epClock125, reset_by portalResetIfc.new_rst);
@@ -162,7 +164,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    for (Integer i = 0; i < 15; i = i + 1) begin
       // intr_num 0 for the directory
       Integer intr_num = i+1;
-      MSIX_Entry msixEntry = bridge.msixEntry[intr_num];
+      MSIX_Entry msixEntry = csr.msixEntry[intr_num];
       rule interruptRequest;
 	 if (portalTop.interrupt[i] && !interruptRequested[i])
 	    axiMasterEngine.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));

@@ -59,11 +59,8 @@ endinterface
 // The control and status registers which are accessible from the PCIe
 // bus.
 interface AxiControlAndStatusRegs;
-
    interface Axi3Slave#(32,32,12)  slave;
-
    interface Vector#(16,MSIX_Entry) msixEntry;
-
    interface Reg#(Bool)     tlpTracing;
    interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimit;
    interface Reg#(Bit#(TlpTraceAddrSize)) fromPcieTraceBramWrAddr;
@@ -151,7 +148,21 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc)
 
    // Function to read from the CSR address space (using DW address)
    function Bit#(32) rd_csr(UInt#(30) addr);
-      case (addr % 8192)
+      let modaddr = (addr % 8192);
+      if (modaddr >= `msix_base && modaddr <= (`msix_base+63))
+         begin
+         let groupaddr = (modaddr / 4);
+         //******************************** area referenced from xilinx_x7_pcie_wrapper.v
+         case (modaddr % 4)
+         0: return msix_entry[groupaddr].addr_lo;
+         1: return msix_entry[groupaddr].addr_hi;
+         2: return msix_entry[groupaddr].msg_data;
+         3: return {'0, pack(msix_entry[groupaddr].masked)}; // vector control
+         default: return 32'hbad0add0;
+         endcase
+         end
+      else
+      case (modaddr)
          // board identification
          0: return 32'h65756c42; // Blue
          1: return 32'h63657073; // spec
@@ -171,71 +182,6 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc)
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
-         // 4-entry MSIx table
-         `msix_base: return msix_entry[0].addr_lo;            // entry 0 lower address
-         (`msix_base+1): return msix_entry[0].addr_hi;            // entry 0 upper address
-         (`msix_base+2): return msix_entry[0].msg_data;           // entry 0 msg data
-         (`msix_base+3): return {'0, pack(msix_entry[0].masked)}; // entry 0 vector control
-         (`msix_base+4): return msix_entry[1].addr_lo;            // entry 1 lower address
-         (`msix_base+5): return msix_entry[1].addr_hi;            // entry 1 upper address
-         (`msix_base+6): return msix_entry[1].msg_data;           // entry 1 msg data
-         (`msix_base+7): return {'0, pack(msix_entry[1].masked)}; // entry 1 vector control
-         (`msix_base+8): return msix_entry[2].addr_lo;            // entry 2 lower address
-         (`msix_base+9): return msix_entry[2].addr_hi;            // entry 2 upper address
-         (`msix_base+10): return msix_entry[2].msg_data;           // entry 2 msg data
-         (`msix_base+11): return {'0, pack(msix_entry[2].masked)}; // entry 2 vector control
-         (`msix_base+12): return msix_entry[3].addr_lo;            // entry 3 lower address
-         (`msix_base+13): return msix_entry[3].addr_hi;            // entry 3 upper address
-         (`msix_base+14): return msix_entry[3].msg_data;           // entry 3 msg data
-         (`msix_base+15): return {'0, pack(msix_entry[3].masked)}; // entry 3 vector control
-         (`msix_base+16): return msix_entry[4].addr_lo;            // entry 0 lower address
-         (`msix_base+17): return msix_entry[4].addr_hi;            // entry 0 upper address
-         (`msix_base+18): return msix_entry[4].msg_data;           // entry 0 msg data
-         (`msix_base+19): return {'0, pack(msix_entry[4].masked)}; // entry 0 vector control
-         (`msix_base+20): return msix_entry[5].addr_lo;            // entry 1 lower address
-         (`msix_base+21): return msix_entry[5].addr_hi;            // entry 1 upper address
-         (`msix_base+22): return msix_entry[5].msg_data;           // entry 1 msg data
-         (`msix_base+23): return {'0, pack(msix_entry[5].masked)}; // entry 1 vector control
-         (`msix_base+24): return msix_entry[6].addr_lo;            // entry 2 lower address
-         (`msix_base+25): return msix_entry[6].addr_hi;            // entry 2 upper address
-         (`msix_base+26): return msix_entry[6].msg_data;           // entry 2 msg data
-         (`msix_base+27): return {'0, pack(msix_entry[6].masked)}; // entry 2 vector control
-         (`msix_base+28): return msix_entry[7].addr_lo;            // entry 3 lower address
-         (`msix_base+29): return msix_entry[7].addr_hi;            // entry 3 upper address
-         (`msix_base+30): return msix_entry[7].msg_data;           // entry 3 msg data
-         (`msix_base+31): return {'0, pack(msix_entry[7].masked)}; // entry 3 vector control
-         (`msix_base+32): return msix_entry[8].addr_lo;            // entry 0 lower address
-         (`msix_base+33): return msix_entry[8].addr_hi;            // entry 0 upper address
-         (`msix_base+34): return msix_entry[8].msg_data;           // entry 0 msg data
-         (`msix_base+35): return {'0, pack(msix_entry[8].masked)}; // entry 0 vector control
-         (`msix_base+36): return msix_entry[9].addr_lo;            // entry 1 lower address
-         (`msix_base+37): return msix_entry[9].addr_hi;            // entry 1 upper address
-         (`msix_base+38): return msix_entry[9].msg_data;           // entry 1 msg data
-         (`msix_base+39): return {'0, pack(msix_entry[9].masked)}; // entry 1 vector control
-         (`msix_base+40): return msix_entry[10].addr_lo;            // entry 2 lower address
-         (`msix_base+41): return msix_entry[10].addr_hi;            // entry 2 upper address
-         (`msix_base+42): return msix_entry[10].msg_data;           // entry 2 msg data
-         (`msix_base+43): return {'0, pack(msix_entry[10].masked)}; // entry 2 vector control
-         (`msix_base+44): return msix_entry[11].addr_lo;            // entry 3 lower address
-         (`msix_base+45): return msix_entry[11].addr_hi;            // entry 3 upper address
-         (`msix_base+46): return msix_entry[11].msg_data;           // entry 3 msg data
-         (`msix_base+47): return {'0, pack(msix_entry[11].masked)}; // entry 3 vector control
-         (`msix_base+48): return msix_entry[12].addr_lo;            // entry 0 lower address
-         (`msix_base+49): return msix_entry[12].addr_hi;            // entry 0 upper address
-         (`msix_base+50): return msix_entry[12].msg_data;           // entry 0 msg data
-         (`msix_base+51): return {'0, pack(msix_entry[12].masked)}; // entry 0 vector control
-         (`msix_base+52): return msix_entry[13].addr_lo;            // entry 1 lower address
-         (`msix_base+53): return msix_entry[13].addr_hi;            // entry 1 upper address
-         (`msix_base+54): return msix_entry[13].msg_data;           // entry 1 msg data
-         (`msix_base+55): return {'0, pack(msix_entry[13].masked)}; // entry 1 vector control
-         (`msix_base+56): return msix_entry[14].addr_lo;            // entry 2 lower address
-         (`msix_base+57): return msix_entry[14].addr_hi;            // entry 2 upper address
-         (`msix_base+58): return msix_entry[14].msg_data;           // entry 2 msg data
-         (`msix_base+59): return {'0, pack(msix_entry[14].masked)}; // entry 2 vector control
-         (`msix_base+60): return msix_entry[15].addr_lo;            // entry 3 lower address
-         (`msix_base+61): return msix_entry[15].addr_hi;            // entry 3 upper address
-         (`msix_base+62): return msix_entry[15].msg_data;           // entry 3 msg data
-         (`msix_base+63): return {'0, pack(msix_entry[15].masked)}; // entry 3 vector control
          // 4-bit MSIx pending bit field
          (`msix_base+1024): return '0;                               // PBA structure (low)
          (`msix_base+1025): return '0;                               // PBA structure (high)
@@ -257,86 +203,30 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc)
    // Function to write to the CSR address space (using DW address)
    function Action wr_csr(UInt#(30) addr, Bit#(4) be, Bit#(32) dword);
       action
-         case (addr % 8192)
+         let modaddr = (addr % 8192);
+         if (modaddr >= `msix_base && modaddr <= (`msix_base+63))
+            begin
+            let groupaddr = (modaddr / 4);
+            //******************************** area referenced from xilinx_x7_pcie_wrapper.v
+            case (modaddr % 4)
+            0: msix_entry[groupaddr].addr_lo  <= update_dword(msix_entry[groupaddr].addr_lo, be, (dword & 32'hfffffffc));
+            1: msix_entry[groupaddr].addr_hi  <= update_dword(msix_entry[groupaddr].addr_hi, be, dword);
+            2: msix_entry[groupaddr].msg_data <= update_dword(msix_entry[groupaddr].msg_data, be, dword);
+            3: if (be[0] == 1) msix_entry[groupaddr].masked <= unpack(dword[0]);
+            endcase
+            end
+         else
+         case (modaddr)
 	    775: tlpTracingReg <= (dword != 0) ? True : False;
 
 	    768: begin
 		    bramMux.bramServer.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: unpack(0)});
 		    bramMuxRdAddrReg <= bramMuxRdAddrReg + 1;
 		    end
-
 	    792: fromPcieTraceBramWrAddrReg <= truncate(dword);
 	    793:   toPcieTraceBramWrAddrReg <= truncate(dword);
 	    794: tlpTraceLimitReg <= truncate(dword);
 	    795: portalResetIfc.assertReset();
-
-            //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
-            // MSIx table entries
-            (`msix_base): msix_entry[0].addr_lo  <= update_dword(msix_entry[0].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+1): msix_entry[0].addr_hi  <= update_dword(msix_entry[0].addr_hi, be, dword);
-            (`msix_base+2): msix_entry[0].msg_data <= update_dword(msix_entry[0].msg_data, be, dword);
-            (`msix_base+3): if (be[0] == 1) msix_entry[0].masked <= unpack(dword[0]);
-            (`msix_base+4): msix_entry[1].addr_lo  <= update_dword(msix_entry[1].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+5): msix_entry[1].addr_hi  <= update_dword(msix_entry[1].addr_hi, be, dword);
-            (`msix_base+6): msix_entry[1].msg_data <= update_dword(msix_entry[1].msg_data, be, dword);
-            (`msix_base+7): if (be[0] == 1) msix_entry[1].masked <= unpack(dword[0]);
-            (`msix_base+8): msix_entry[2].addr_lo  <= update_dword(msix_entry[2].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+9): msix_entry[2].addr_hi  <= update_dword(msix_entry[2].addr_hi, be, dword);
-            (`msix_base+10): msix_entry[2].msg_data <= update_dword(msix_entry[2].msg_data, be, dword);
-            (`msix_base+11): if (be[0] == 1) msix_entry[2].masked <= unpack(dword[0]);
-            (`msix_base+12): msix_entry[3].addr_lo  <= update_dword(msix_entry[3].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+13): msix_entry[3].addr_hi  <= update_dword(msix_entry[3].addr_hi, be, dword);
-            (`msix_base+14): msix_entry[3].msg_data <= update_dword(msix_entry[3].msg_data, be, dword);
-            (`msix_base+15): if (be[0] == 1) msix_entry[3].masked <= unpack(dword[0]);
-            (`msix_base+16): msix_entry[4].addr_lo  <= update_dword(msix_entry[4].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+17): msix_entry[4].addr_hi  <= update_dword(msix_entry[4].addr_hi, be, dword);
-            (`msix_base+18): msix_entry[4].msg_data <= update_dword(msix_entry[4].msg_data, be, dword);
-            (`msix_base+19): if (be[0] == 1) msix_entry[4].masked <= unpack(dword[0]);
-            (`msix_base+20): msix_entry[5].addr_lo  <= update_dword(msix_entry[5].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+21): msix_entry[5].addr_hi  <= update_dword(msix_entry[5].addr_hi, be, dword);
-            (`msix_base+22): msix_entry[5].msg_data <= update_dword(msix_entry[5].msg_data, be, dword);
-            (`msix_base+23): if (be[0] == 1) msix_entry[5].masked <= unpack(dword[0]);
-            (`msix_base+24): msix_entry[6].addr_lo  <= update_dword(msix_entry[6].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+25): msix_entry[6].addr_hi  <= update_dword(msix_entry[6].addr_hi, be, dword);
-            (`msix_base+26): msix_entry[6].msg_data <= update_dword(msix_entry[6].msg_data, be, dword);
-            (`msix_base+27): if (be[0] == 1) msix_entry[6].masked <= unpack(dword[0]);
-            (`msix_base+28): msix_entry[7].addr_lo  <= update_dword(msix_entry[7].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+29): msix_entry[7].addr_hi  <= update_dword(msix_entry[7].addr_hi, be, dword);
-            (`msix_base+30): msix_entry[7].msg_data <= update_dword(msix_entry[7].msg_data, be, dword);
-            (`msix_base+31): if (be[0] == 1) msix_entry[7].masked <= unpack(dword[0]);
-            (`msix_base+32): msix_entry[8].addr_lo  <= update_dword(msix_entry[8].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+33): msix_entry[8].addr_hi  <= update_dword(msix_entry[8].addr_hi, be, dword);
-            (`msix_base+34): msix_entry[8].msg_data <= update_dword(msix_entry[8].msg_data, be, dword);
-            (`msix_base+35): if (be[0] == 1) msix_entry[8].masked <= unpack(dword[0]);
-            (`msix_base+36): msix_entry[9].addr_lo  <= update_dword(msix_entry[9].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+37): msix_entry[9].addr_hi  <= update_dword(msix_entry[9].addr_hi, be, dword);
-            (`msix_base+38): msix_entry[9].msg_data <= update_dword(msix_entry[9].msg_data, be, dword);
-            (`msix_base+39): if (be[0] == 1) msix_entry[9].masked <= unpack(dword[0]);
-            (`msix_base+40): msix_entry[10].addr_lo  <= update_dword(msix_entry[10].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+41): msix_entry[10].addr_hi  <= update_dword(msix_entry[10].addr_hi, be, dword);
-            (`msix_base+42): msix_entry[10].msg_data <= update_dword(msix_entry[10].msg_data, be, dword);
-            (`msix_base+43): if (be[0] == 1) msix_entry[10].masked <= unpack(dword[0]);
-            (`msix_base+44): msix_entry[11].addr_lo  <= update_dword(msix_entry[11].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+45): msix_entry[11].addr_hi  <= update_dword(msix_entry[11].addr_hi, be, dword);
-            (`msix_base+46): msix_entry[11].msg_data <= update_dword(msix_entry[11].msg_data, be, dword);
-            (`msix_base+47): if (be[0] == 1) msix_entry[11].masked <= unpack(dword[0]);
-            (`msix_base+48): msix_entry[12].addr_lo  <= update_dword(msix_entry[12].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+49): msix_entry[12].addr_hi  <= update_dword(msix_entry[12].addr_hi, be, dword);
-            (`msix_base+50): msix_entry[12].msg_data <= update_dword(msix_entry[12].msg_data, be, dword);
-            (`msix_base+51): if (be[0] == 1) msix_entry[12].masked <= unpack(dword[0]);
-            (`msix_base+52): msix_entry[13].addr_lo  <= update_dword(msix_entry[13].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+53): msix_entry[13].addr_hi  <= update_dword(msix_entry[13].addr_hi, be, dword);
-            (`msix_base+54): msix_entry[13].msg_data <= update_dword(msix_entry[13].msg_data, be, dword);
-            (`msix_base+55): if (be[0] == 1) msix_entry[13].masked <= unpack(dword[0]);
-            (`msix_base+56): msix_entry[14].addr_lo  <= update_dword(msix_entry[14].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+57): msix_entry[14].addr_hi  <= update_dword(msix_entry[14].addr_hi, be, dword);
-            (`msix_base+58): msix_entry[14].msg_data <= update_dword(msix_entry[14].msg_data, be, dword);
-            (`msix_base+59): if (be[0] == 1) msix_entry[14].masked <= unpack(dword[0]);
-            (`msix_base+60): msix_entry[15].addr_lo  <= update_dword(msix_entry[15].addr_lo, be, (dword & 32'hfffffffc));
-            (`msix_base+61): msix_entry[15].addr_hi  <= update_dword(msix_entry[15].addr_hi, be, dword);
-            (`msix_base+62): msix_entry[15].msg_data <= update_dword(msix_entry[15].msg_data, be, dword);
-            (`msix_base+63): if (be[0] == 1) msix_entry[15].masked <= unpack(dword[0]);
-            //******************************** end of area referenced from xilinx_x7_pcie_wrapper.v
          endcase
       endaction
    endfunction: wr_csr

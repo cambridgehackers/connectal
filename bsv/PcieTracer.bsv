@@ -33,7 +33,6 @@ import BRAM         :: *;
 interface PcieTracer;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
    interface Put#(TimestampedTlpData) trace;
-   interface Vector#(16,MSIX_Entry) msixEntry;
    interface Server#(TLPData#(16), TLPData#(16)) bus;
 endinterface: PcieTracer
 
@@ -115,6 +114,4 @@ module mkPcieTracer#(AxiControlAndStatusRegs csr)(PcieTracer);
 	   end
        endmethod
    endinterface: trace
-
-   interface Vector msixEntry = csr.msixEntry;
 endmodule: mkPcieTracer
