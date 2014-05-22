@@ -16,7 +16,6 @@ import TieOff          :: *;
 import XilinxCells     :: *;
 import XbsvXilinx7Pcie :: *;
 import PCIEWRAPPER     :: *;
-import AxiCsr          :: *;
 import ClientServer    :: *;
 
 import Connectable     ::*;

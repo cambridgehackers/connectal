@@ -30,6 +30,7 @@ import ClientServer      :: *;
 import Xilinx            :: *;
 import DefaultValue    :: *;
 import PcieSplitter      :: *;
+import PcieTracer        :: *;
 import PcieGearbox    :: *;
 import XbsvXilinx7Pcie   :: *;
 import PCIEWRAPPER       :: *;
@@ -62,98 +63,6 @@ interface PcieTop#(type ipins);
    method Bit#(NumLeds) leds();
    interface ipins       pins;
 endinterface
-
-// The top-level interface of the PCIe-to-AXI bridge
-interface PcieSplitter;
-   interface Client#(TLPData#(16), TLPData#(16)) pci;
-   interface Put#(TimestampedTlpData) trace;
-   interface Vector#(16,MSIX_Entry) msixEntry;
-endinterface: PcieSplitter
-
-// The PCIe-to-AXI bridge puts all of the elements together
-module mkPcieSplitter#(TLPDispatcher dispatcher, TLPArbiter arbiter, AxiControlAndStatusRegs csr)(PcieSplitter);
-
-   Reg#(Bit#(32)) timestamp <- mkReg(0);
-   rule incTimestamp;
-       timestamp <= timestamp + 1;
-   endrule
-//   rule endTrace if (csr.tlpTracing && csr.tlpTraceLimit != 0 && csr.tlpTraceBramWrAddr > truncate(csr.tlpTraceLimit));
-//       csr.tlpTracing <= False;
-//   endrule
-
-   FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
-   Reg#(Bool) skippingIncomingTlps <- mkReg(False);
-   PulseWire fromPcie <- mkPulseWire;
-   PulseWire   toPcie <- mkPulseWire;
-   Wire#(TLPData#(16)) fromPcieTlp <- mkDWire(unpack(0));
-   Wire#(TLPData#(16))   toPcieTlp <- mkDWire(unpack(0));
-   rule traceTlpFromBus;
-       let tlp = tlpFromBusFifo.first;
-       tlpFromBusFifo.deq();
-       dispatcher.inFromBus.put(tlp);
-       $display("tlp in: %h\n", tlp);
-       if (csr.tlpTracing) begin
-           TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-           // skip root_broadcast_messages sent to tlp.hit 0                                                                                                  
-           if (tlp.sof && tlp.hit == 0 && hdr_3dw.pkttype != COMPLETION) begin
- 	      skippingIncomingTlps <= True;
-	   end
-	   else if (skippingIncomingTlps && !tlp.sof) begin
-	      // do nothing
-	   end
-	   else begin
-	      fromPcie.send();
-	      fromPcieTlp <= tlp;
-	       skippingIncomingTlps <= False;
-	   end
-       end
-   endrule: traceTlpFromBus
-
-   FIFO#(TLPData#(16)) tlpToBusFifo <- mkFIFO();
-   rule traceTlpToBus;
-       let tlp <- arbiter.outToBus.get();
-       tlpToBusFifo.enq(tlp);
-       if (csr.tlpTracing) begin
-	  toPcie.send();
-	  toPcieTlp <= tlp;
-       end
-   endrule: traceTlpToBus
-
-   rule doTracing if (fromPcie || toPcie);
-      TimestampedTlpData fromttd = fromPcie ? TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: fromPcieTlp } : unpack(0);
-      csr.fromPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.fromPcieTraceBramWrAddr), datain: fromttd });
-      csr.fromPcieTraceBramWrAddr <= csr.fromPcieTraceBramWrAddr + 1;
-
-      TimestampedTlpData   tottd = toPcie ? TimestampedTlpData { timestamp: timestamp, source: 7'h08, tlp: toPcieTlp } : unpack(0);
-      csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: tottd });
-      csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
-   endrule
-
-   interface Client    pci;
-      interface request = toGet(tlpToBusFifo);
-      interface response = toPut(tlpFromBusFifo);
-   endinterface
-/*
-   interface Server    axi;
-      interface response = dispatcher.outToAxi;
-      interface request = arbiter.inFromAxi;
-   endinterface
-*/
-   interface Put trace;
-       method Action put(TimestampedTlpData ttd);
-	   if (csr.tlpTracing) begin
-	       ttd.timestamp = timestamp;
-	       csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: ttd });
-	       csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
-	   end
-       endmethod
-   endinterface: trace
-
-   // method Action interrupt();
-   //     portalEngine.interruptRequested <= True;
-   // endmethod
-   interface Vector msixEntry = csr.msixEntry;
-endmodule: mkPcieSplitter
 
 (* no_default_clock, no_default_reset *)
 module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
@@ -201,12 +110,18 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    TLPDispatcher        dispatcher <- mkTLPDispatcher(clocked_by epClock125, reset_by epReset125);
    TLPArbiter           arbiter    <- mkTLPArbiter(clocked_by epClock125, reset_by epReset125);
    AxiControlAndStatusRegs csr     <- mkAxiControlAndStatusRegs(portalResetIfc, clocked_by epClock125, reset_by epReset125);
-   AxiMasterEngine splitMaster <- mkAxiMasterEngine(my_pciId, clocked_by epClock125, reset_by epReset125);
+   AxiMasterEngine splitMaster     <- mkAxiMasterEngine(my_pciId, clocked_by epClock125, reset_by epReset125);
    mkConnection(splitMaster.master, csr.slave, clocked_by epClock125, reset_by epReset125);
    mkConnection(dispatcher.outToConfig, splitMaster.tlp.response, clocked_by epClock125, reset_by epReset125);
    mkConnection(splitMaster.tlp.request, arbiter.inFromConfig, clocked_by epClock125, reset_by epReset125);
 
-   PcieSplitter  bridge <- mkPcieSplitter(dispatcher, arbiter, csr, clocked_by epClock125, reset_by epReset125);
+   PcieTracer  bridge <- mkPcieTracer(csr, clocked_by epClock125, reset_by epReset125);
+   //mkConnection(arbiter.outToBus, bridge.bus.request, clocked_by epClock125, reset_by epReset125);
+   mkConnection(bridge.bus,
+       (interface Client;
+          interface request = arbiter.outToBus;
+          interface response = dispatcher.inFromBus;
+       endinterface), clocked_by epClock125, reset_by epReset125);
 
    // The PCIE endpoint is processing TLPWord#(8)s at 250MHz.  The
    // AXI bridge is accepting TLPWord#(16)s at 125 MHz. The
@@ -224,24 +139,20 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 
    // Build the PCIe-to-AXI bridge
    mkConnection(
-//bridge.axi
-   (interface Server;
-      interface response = dispatcher.outToAxi;
-      interface request = arbiter.inFromAxi;
-   endinterface)
-, axiSlaveEngine.pci, clocked_by epClock125, reset_by epReset125);
+       (interface Server;
+          interface response = dispatcher.outToAxi;
+          interface request = arbiter.inFromAxi;
+       endinterface), axiSlaveEngine.pci, clocked_by epClock125, reset_by epReset125);
    Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis;   
    if(valueOf(nMasters) > 0) begin
       m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0],clocked_by epClock125, reset_by portalResetIfc.new_rst);
       mkConnection(m_axis[0], axiSlaveEngine.slave, clocked_by epClock125, reset_by epReset125);
    end
-
    mkConnection(
        (interface Server;
           interface response = dispatcher.outToPortal;
           interface request = arbiter.inFromPortal;
-       endinterface),
-       axiMasterEngine.tlp);
+       endinterface), axiMasterEngine.tlp);
 
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave, clocked_by epClock125, reset_by epReset125);
    mkConnection(axiMasterEngine.master, ctrl, clocked_by epClock125, reset_by epReset125);

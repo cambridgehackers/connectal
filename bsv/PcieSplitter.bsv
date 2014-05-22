@@ -19,23 +19,9 @@ import Vector       :: *;
 import FIFO         :: *;
 import FIFOF        :: *;
 import Counter      :: *;
-import DefaultValue :: *;
-import BRAM         :: *;
-import BRAMFIFO     :: *;
-import ConfigReg    :: *;
 import PCIE         :: *;
-import DReg         :: *;
 import Clocks       :: *;
-
-import ByteBuffer    :: *;
-import ByteCompactor :: *;
-
-import BUtils               :: *;
 import ClientServer         :: *;
-import Memory               :: *;
-import Portal               :: *;
-import AxiMasterEngine      :: *;
-import AxiCsr               :: *;
 
 // When TLP packets come in from the PCIe bus, they are dispatched to
 // either the configuration register block, the portal (AXI slave) or
