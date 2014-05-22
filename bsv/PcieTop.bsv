@@ -110,9 +110,11 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    // connection between the endpoint and the AXI contains GearBox
    // instances for the TLPWord#(8)@250 <--> TLPWord#(16)@125
    // conversion.
-   PcieGearbox gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125, bridge.pci);
+   PcieGearbox gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125);
    mkConnection(gb.tlpif.outTo, _ep.tlp.inFrom, clocked_by epClock250, reset_by epReset250);
    mkConnection(_ep.tlp.outTo, gb.tlpif.inFrom, clocked_by epClock250, reset_by epReset250);
+   mkConnection(gb.pciif.outTo, bridge.pci.inFrom, clocked_by epClock125, reset_by epReset125);
+   mkConnection(bridge.pci.outTo, gb.pciif.inFrom, clocked_by epClock125, reset_by epReset125);
    
    // instantiate user portals
    let portalTop <- mkPortalTop(clocked_by epClock125, reset_by bridge.portalReset);

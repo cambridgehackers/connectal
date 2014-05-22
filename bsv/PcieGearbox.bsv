@@ -30,13 +30,14 @@ import SpecialFIFOs    ::*;
 // Interface wrapper for PCIE
 interface PcieGearbox;
    interface TlpConnect#(8) tlpif;
+   interface TlpConnect#(16) pciif;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
 //, synthesize *)
-module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Reset epReset125, TlpConnect#(16) pci)(PcieGearbox);
+module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Reset epReset125)(PcieGearbox);
    // Connections between TLPData#(16) and a PCIE endpoint, using a gearbox
    // to match data rates between the endpoint and design clocks.
    Gearbox#(1, 2, TLPData#(8)) fifoRxData   <- mk1toNGearbox(epClock250, epReset250, epClock125, epReset125);
@@ -72,46 +73,38 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
           outFifo.enq(temp);
    endrule
 
-   rule send_data1;
-      function TLPData#(16) combine(Vector#(2, TLPData#(8)) in);
-         return TLPData {sof:   in[0].sof, eof: in[1].eof, hit: in[0].hit,
-             be: { in[0].be, in[1].be }, data: { in[0].data, in[1].data } };
-      endfunction
-      fifoRxData.deq;
-      pci.inFrom.put(combine(fifoRxData.first));
-   endrule
+   interface TlpConnect pciif;
+      interface Get outTo;
+         method ActionValue#(TLPData#(16)) get();
+            function TLPData#(16) combine(Vector#(2, TLPData#(8)) in);
+               return TLPData {sof:   in[0].sof, eof: in[1].eof, hit: in[0].hit,
+                   be: { in[0].be, in[1].be }, data: { in[0].data, in[1].data } };
+            endfunction
+            fifoRxData.deq;
+            return combine(fifoRxData.first);
+         endmethod
+      endinterface
+      interface Put inFrom;
+         method Action put(TLPData#(16) data);
+            function Vector#(2, TLPData#(8)) split(TLPData#(16) in);
+               Vector#(2, TLPData#(8)) v = defaultValue;
+               v[0].sof  = in.sof;
+               v[0].eof  = (in.be[7:0] == 0) ? in.eof : False;
+               v[0].hit  = in.hit;
+               v[0].be   = in.be[15:8];
+               v[0].data = in.data[127:64];
+               v[1].sof  = False;
+               v[1].eof  = in.eof;
+               v[1].hit  = in.hit;
+               v[1].be   = in.be[7:0];
+               v[1].data = in.data[63:0];
+               return v;
+            endfunction
+            fifoTxData.enq(split(data));
+         endmethod
+      endinterface
+   endinterface
 
-   rule get_data;
-      function Vector#(2, TLPData#(8)) split(TLPData#(16) in);
-         Vector#(2, TLPData#(8)) v = defaultValue;
-         v[0].sof  = in.sof;
-         v[0].eof  = (in.be[7:0] == 0) ? in.eof : False;
-         v[0].hit  = in.hit;
-         v[0].be   = in.be[15:8];
-         v[0].data = in.data[127:64];
-         v[1].sof  = False;
-         v[1].eof  = in.eof;
-         v[1].hit  = in.hit;
-         v[1].be   = in.be[7:0];
-         v[1].data = in.data[63:0];
-         return v;
-      endfunction
-
-      let data <- pci.outTo.get();
-      fifoTxData.enq(split(data));
-   endrule
-
-/*
-   rule accept_data1;
-      let data <- tlp.outTo.get();
-      inFifo.enq(data);
-   endrule
-
-   rule send_data;
-      let data = outFifo.first; outFifo.deq;
-      tlp.inFrom.put(data);
-   endrule
-*/
    interface TlpConnect tlpif;
       interface outTo = toGet(outFifo);
       interface inFrom = toPut(inFifo);
