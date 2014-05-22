@@ -36,8 +36,7 @@ endinterface
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
 //, synthesize *)
-module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Reset epReset125
-, XbsvXilinx7Pcie::PCIExpressX7#(lanes) _ep, TlpConnect#(16) pci) (PcieGearbox#(lanes))
+module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Reset epReset125, TlpConnect#(8) tlp, TlpConnect#(16) pci) (PcieGearbox#(lanes))
    provisos(Add#(1,_,lanes));
    FIFO#(TLPData#(8))          inFifo              <- mkFIFO(clocked_by epClock250, reset_by epReset250);
    // Connections between TLPData#(16) and a PCIE endpoint, using a gearbox
@@ -49,7 +48,7 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
    Gearbox#(2, 1, TLPData#(8)) fifoTxData          <- mkNto1Gearbox(epClock125, epReset125, epClock250, epReset250);
 
    rule accept_data1;
-      let data <- _ep.tlp.outTo.get();
+      let data <- tlp.outTo.get();
       inFifo.enq(data);
    endrule
 
@@ -110,6 +109,6 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
       let data = outFifo.first; outFifo.deq;
       // filter out TLPs with 00 byte enable
       if (data.be != 0)
-         _ep.tlp.inFrom.put(data);
+         tlp.inFrom.put(data);
    endrule
 endmodule: mkPcieGearbox

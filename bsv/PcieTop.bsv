@@ -53,7 +53,6 @@ typedef 8 NumLeds;
 // from SceMiDefines
 typedef 4 BPB;
 
-
 interface PcieTop#(type ipins);
    (* prefix="PCIE" *)
    interface PciewrapPci_exp#(PcieLanes) pcie;
@@ -111,24 +110,24 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    // connection between the endpoint and the AXI contains GearBox
    // instances for the TLPWord#(8)@250 <--> TLPWord#(16)@125
    // conversion.
-   PcieGearbox#(PcieLanes) gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125, _ep, bridge.pci);
+   PcieGearbox#(PcieLanes) gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125, _ep.tlp, bridge.pci);
    
    // instantiate user portals
-   let portalTop <- mkPortalTop(clocked_by epClock125, reset_by bridge.brif.portalReset);
+   let portalTop <- mkPortalTop(clocked_by epClock125, reset_by bridge.portalReset);
    AxiSlaveEngine#(dsz) axiSlaveEngine <- mkAxiSlaveEngine(my_pciId, clocked_by epClock125, reset_by epReset125);
    AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(my_pciId, clocked_by epClock125, reset_by epReset125);
 
    // Build the PCIe-to-AXI bridge
-   mkConnection(bridge.brif.axi.outTo, axiSlaveEngine.pci.inFrom, clocked_by epClock125, reset_by epReset125);
-   mkConnection(axiSlaveEngine.pci.outTo, bridge.brif.axi.inFrom, clocked_by epClock125, reset_by epReset125);
+   mkConnection(bridge.axi.outTo, axiSlaveEngine.pci.inFrom, clocked_by epClock125, reset_by epReset125);
+   mkConnection(axiSlaveEngine.pci.outTo, bridge.axi.inFrom, clocked_by epClock125, reset_by epReset125);
    Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis;   
    if(valueOf(nMasters) > 0) begin
-      m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0],clocked_by epClock125, reset_by bridge.brif.portalReset);
+      m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0],clocked_by epClock125, reset_by bridge.portalReset);
       mkConnection(m_axis[0], axiSlaveEngine.slave, clocked_by epClock125, reset_by epReset125);
    end
 
-   mkConnection(bridge.brif.portal.outTo, axiMasterEngine.tlp.inFrom);
-   mkConnection(axiMasterEngine.tlp.outTo, bridge.brif.portal.inFrom);
+   mkConnection(bridge.portal.outTo, axiMasterEngine.tlp.inFrom);
+   mkConnection(axiMasterEngine.tlp.outTo, bridge.portal.inFrom);
 
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave, clocked_by epClock125, reset_by epReset125);
    mkConnection(axiMasterEngine.master, ctrl, clocked_by epClock125, reset_by epReset125);

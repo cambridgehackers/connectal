@@ -171,8 +171,6 @@ interface PCIExpressX7#(numeric type lanes);
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
    interface TlpConnect#(8)            tlp;
-   //interface Put#(TLPData#(8)) inFrom;
-   //interface Get#(TLPData#(8)) outTo;
 endinterface
 
 typedef struct {
@@ -212,10 +210,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    clockParams.clkout2_phase      = 0.0000;
    clockParams.divclk_divide      = 1;
    clockParams.ref_jitter1        = 0.010;
-
    clockParams.clkin_buffer = False;
-   //clockParams.clkout0_buffer = True;
-   //clockParams.clkout2_buffer = True;
    XClockGenerator7   clockGen <- mkClockGenerator7Adv(clockParams, clocked_by b2c.c);
    C2B c2b_fb <- mkC2B(clockGen.clkfbout, clocked_by clockGen.clkfbout);
    rule txoutrule5;
@@ -276,34 +271,30 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
        pclk_sel <= ps;
    endrule
 
-   Clock                     user_clk             = pcie_ep.user.clk_out;
-   Wire#(Bit#(1))            wAxiTxValid         <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   Wire#(Bit#(1))            wAxiTxLast          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   Wire#(Bit#(64))           wAxiTxData          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   Wire#(Bit#(8))            wAxiTxKeep          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   FIFOF#(AxiTx)             fAxiTx              <- mkBypassFIFOF(clocked_by user_clk, reset_by noReset);
-   FIFOF#(AxiRx)             fAxiRx              <- mkBypassFIFOF(clocked_by user_clk, reset_by noReset);
+   FIFOF#(AxiTx)             fAxiTx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
+   FIFOF#(AxiRx)             fAxiRx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
 
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule drive_axi_tx;
-      pcie_ep.s_axis_tx.tuser(4'b0);
-      pcie_ep.s_axis_tx.tvalid(wAxiTxValid);
-      pcie_ep.s_axis_tx.tlast(wAxiTxLast);
-      pcie_ep.s_axis_tx.tdata(wAxiTxData);
-      pcie_ep.s_axis_tx.tkeep(wAxiTxKeep);
+   let txready = (pcie_ep.s_axis_tx.tready != 0 && fAxiTx.notEmpty);
+
+   //(* fire_when_enabled, no_implicit_conditions *)
+   rule drive_axi_tx if (txready);
+      let info = fAxiTx.first; fAxiTx.deq;
+      pcie_ep.s_axis_tx.tvalid(1);
+      pcie_ep.s_axis_tx.tlast(info.last);
+      pcie_ep.s_axis_tx.tdata(info.data);
+      pcie_ep.s_axis_tx.tkeep(info.keep);
    endrule
 
-   (* fire_when_enabled *)
-   rule drive_axi_tx_info if (pcie_ep.s_axis_tx.tready != 0);
-      let info <- toGet(fAxiTx).get;
-      wAxiTxValid <= 1;
-      wAxiTxLast  <= info.last;
-      wAxiTxData  <= info.data;
-      wAxiTxKeep  <= info.keep;
+   rule drive_axi_tx2 if (!txready);
+      pcie_ep.s_axis_tx.tvalid(0);
+      pcie_ep.s_axis_tx.tlast(0);
+      pcie_ep.s_axis_tx.tdata(0);
+      pcie_ep.s_axis_tx.tkeep(0);
    endrule
 
    (* fire_when_enabled, no_implicit_conditions *)
    rule drive_axi_rx_ready;
+      pcie_ep.s_axis_tx.tuser(4'b0);
       pcie_ep.m_axis_rx.tready(pack(fAxiRx.notFull));
    endrule
 

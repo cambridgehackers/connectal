@@ -31,7 +31,6 @@ import TlpConnect   :: *;
 import ByteBuffer    :: *;
 import ByteCompactor :: *;
 
-import DefaultValue         :: *;
 import BUtils               :: *;
 import ClientServer         :: *;
 import Memory               :: *;
@@ -39,17 +38,13 @@ import Portal               :: *;
 import AxiMasterEngine      :: *;
 import AxiCsr               :: *;
 
-interface PcieBridge;
+// The top-level interface of the PCIe-to-AXI bridge
+interface PcieSplitter#(numeric type bpb);
+   interface TlpConnect#(16)          pci;
    interface TlpConnect#(16)          portal;
    interface TlpConnect#(16)          axi;
    interface Put#(TimestampedTlpData) trace;
    interface Reset portalReset;
-endinterface
-
-// The top-level interface of the PCIe-to-AXI bridge
-interface PcieSplitter#(numeric type bpb);
-   interface TlpConnect#(16)    pci;
-   interface PcieBridge         brif;
    interface Vector#(16,MSIX_Entry) msixEntry;
 endinterface: PcieSplitter
 
@@ -57,10 +52,8 @@ endinterface: PcieSplitter
 // either the configuration register block, the portal (AXI slave) or
 // the AXI master.
 interface TLPDispatcher;
-
    // TLPs in from PCIe
    interface Put#(TLPData#(16)) inFromBus;
-
    // TLPs out to the bridge implementation
    interface Get#(TLPData#(16)) outToConfig;
    interface Get#(TLPData#(16)) outToPortal;
@@ -69,7 +62,6 @@ endinterface: TLPDispatcher
 
 (* synthesize *)
 module mkTLPDispatcher(TLPDispatcher);
-
    FIFO#(TLPData#(16))  tlp_in_fifo     <- mkFIFO();
    FIFOF#(TLPData#(16)) tlp_in_cfg_fifo <- mkGFIFOF(True,False); // unguarded enq
    FIFOF#(TLPData#(16)) tlp_in_portal_fifo <- mkGFIFOF(True,False); // unguarded enq
@@ -194,10 +186,8 @@ endmodule: mkTLPDispatcher
 // endpoint.
 
 interface TLPArbiter;
-
    // TLPs out to PCIe
    interface Get#(TLPData#(16)) outToBus;
-
    // TLPs in from the bridge implementation
    interface Put#(TLPData#(16)) inFromConfig; // read completions
    interface Put#(TLPData#(16)) inFromPortal; // read completions
@@ -206,7 +196,6 @@ endinterface: TLPArbiter
 
 (* synthesize *)
 module mkTLPArbiter(TLPArbiter);
-
    FIFO#(TLPData#(16))  tlp_out_fifo     <- mkFIFO();
    FIFOF#(TLPData#(16)) tlp_out_cfg_fifo <- mkGFIFOF(False,True); // unguarded deq
    FIFOF#(TLPData#(16)) tlp_out_portal_fifo <- mkGFIFOF(False,True); // unguarded deq
@@ -325,9 +314,8 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
    // connect the sub-components to each other
 
    mkConnection(dispatcher.outToConfig, axiMasterEngine.tlp.inFrom);
-   // mkConnection(dispatcher.outToPortal, portalEngine.tlp.inFrom);
-
    mkConnection(axiMasterEngine.tlp.outTo, arbiter.inFromConfig);
+   // mkConnection(dispatcher.outToPortal, portalEngine.tlp.inFrom);
    //mkConnection(portalEngine.tlp.outTo, arbiter.inFromPortal);
 
    FIFO#(TLPData#(16)) tlpFromBusFifo <- mkFIFO();
@@ -379,36 +367,31 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
    endrule
 
    interface TlpConnect    pci;
-   interface outTo = toGet(tlpToBusFifo);
-   interface inFrom = toPut(tlpFromBusFifo);
+      interface outTo = toGet(tlpToBusFifo);
+      interface inFrom = toPut(tlpFromBusFifo);
    endinterface
-   interface PcieBridge brif;
-       interface TlpConnect    portal;
-          interface outTo = dispatcher.outToPortal;
-          interface inFrom = arbiter.inFromPortal;
-       endinterface
-       interface TlpConnect    axi;
-          interface outTo = dispatcher.outToAxi;
-          interface inFrom = arbiter.inFromAxi;
-       endinterface
-       interface Reset portalReset = portalResetIfc.new_rst;
-       interface Put trace;
-           method Action put(TimestampedTlpData ttd);
-	       if (csr.tlpTracing) begin
-	           ttd.timestamp = timestamp;
-	           csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: ttd });
-	           csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
-	       end
-           endmethod
-       endinterface: trace
+   interface TlpConnect    portal;
+      interface outTo = dispatcher.outToPortal;
+      interface inFrom = arbiter.inFromPortal;
    endinterface
+   interface TlpConnect    axi;
+      interface outTo = dispatcher.outToAxi;
+      interface inFrom = arbiter.inFromAxi;
+   endinterface
+   interface Reset portalReset = portalResetIfc.new_rst;
+   interface Put trace;
+       method Action put(TimestampedTlpData ttd);
+	   if (csr.tlpTracing) begin
+	       ttd.timestamp = timestamp;
+	       csr.toPcieTraceBramPort.request.put(BRAMRequest{ write: True, responseOnWrite: False, address: truncate(csr.toPcieTraceBramWrAddr), datain: ttd });
+	       csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
+	   end
+       endmethod
+   endinterface: trace
 
    // method Action interrupt();
    //     portalEngine.interruptRequested <= True;
    // endmethod
-   
    interface Vector msixEntry = csr.msixEntry;
-      
 endmodule: mkPcieSplitter
-
 endpackage: PcieSplitter
