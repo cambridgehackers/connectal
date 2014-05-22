@@ -25,26 +25,12 @@ import BRAM           :: *;
 import FIFOF          :: *;
 import GetPut         :: *;
 import PCIE           :: *;
-import Connectable    :: *;
+//import Connectable    :: *;
 import AxiMasterSlave :: *;
 import Bscan          :: *;
 import BramMux        :: *;
 import Clocks         :: *;
-
-typedef 11 TlpTraceAddrSize;
-typedef TAdd#(TlpTraceAddrSize,1) TlpTraceAddrSize1;
-
-typedef struct {
-    Bit#(32) timestamp;
-    Bit#(7) source;   // 4==frombus 8=tobus
-    TLPData#(16) tlp; // 153 bits
-} TimestampedTlpData deriving (Bits);
-typedef SizeOf#(TimestampedTlpData) TimestampedTlpDataSize;
-typedef SizeOf#(TLPData#(16)) TlpData16Size;
-typedef SizeOf#(TLPCompletionHeader) TLPCompletionHeaderSize;
-interface TlpTrace;
-   interface Get#(TimestampedTlpData) tlp;
-endinterface
+import PcieTracer     :: *;
 
 `define msix_base 1024
 
@@ -61,20 +47,13 @@ endinterface
 interface AxiControlAndStatusRegs;
    interface Axi3Slave#(32,32,12)  slave;
    interface Vector#(16,MSIX_Entry) msixEntry;
-   interface Reg#(Bool)     tlpTracing;
-   interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimit;
-   interface Reg#(Bit#(TlpTraceAddrSize)) fromPcieTraceBramWrAddr;
-   interface Reg#(Bit#(TlpTraceAddrSize))   toPcieTraceBramWrAddr;
-   interface BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBramPort;
-   interface BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)   toPcieTraceBramPort;
 endinterface: AxiControlAndStatusRegs
 
 // This module encapsulates all of the logic for instantiating and
 // accessing the control and status registers. It defines the
 // registers, the address map, and how the registers respond to reads
 // and writes.
-module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc)
-   (AxiControlAndStatusRegs);
+module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlp)(AxiControlAndStatusRegs);
 
    // Utility for module creating all of the storage for a single MSIX
    // table entry
@@ -92,50 +71,8 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc)
 
    // Registers and their default values
    Vector#(16,MSIX_Entry) msix_entry              <- replicateM(mkMSIXEntry);
-
-   // Clocks and Resets
-   Clock defaultClock <- exposeCurrentClock();
-   Reset defaultReset <- exposeCurrentReset();
-   
-   // Trace Support
-   Reg#(Bool) tlpTracingReg        <- mkReg(False);
-   Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimitReg <- mkReg(0);
-   Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bramMuxRdAddrReg <- mkReg(0);
-   Reg#(Bit#(TlpTraceAddrSize)) fromPcieTraceBramWrAddrReg <- mkReg(0);
-   Reg#(Bit#(TlpTraceAddrSize))   toPcieTraceBramWrAddrReg <- mkReg(0);
-   Integer memorySize = 2**valueOf(TlpTraceAddrSize);
-   // TODO: lift BscanBram to *Top.bsv
-`ifdef BSIM
-   Clock jtagClock = defaultClock;
-   Reset jtagReset = defaultReset;
-`else
-   Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
-   BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(1, bscanPcieTraceBramWrAddrReg);
-   Clock jtagClock = pcieBscanBram.jtagClock;
-   Reset jtagReset = pcieBscanBram.jtagReset;
-`endif
-
-   BRAM_Configure bramCfg = defaultValue;
-   bramCfg.memorySize = memorySize;
-   bramCfg.latency = 1;
-   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
-												 jtagClock, jtagReset);
-   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
-											       jtagClock, jtagReset);
-   Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bramServers;
-   bramServers[0] = fromPcieTraceBram.portA;
-   bramServers[1] =   toPcieTraceBram.portA;
-   BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bramMux <- mkBramServerMux(bramServers);
-
-`ifndef BSIM
-   Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bscanBramServers;
-   bscanBramServers[0] = fromPcieTraceBram.portB;
-   bscanBramServers[1] =   toPcieTraceBram.portB;
-   BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bscanBramMux <- mkBramServerMux(bscanBramServers, clocked_by jtagClock, reset_by jtagReset);
-   mkConnection(pcieBscanBram.bramClient, bscanBramMux.bramServer, clocked_by jtagClock, reset_by jtagReset);
-`endif
-   
    Reg#(TimestampedTlpData) pcieTraceBramResponse <- mkReg(unpack(0));
+   Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bramMuxRdAddrReg <- mkReg(0);
 
    // Function to return a one-word slice of the tlpTraceBramResponse
    function Bit#(32) tlpTraceBramResponseSlice(Reg#(TimestampedTlpData) data, Bit#(3) i);
@@ -169,16 +106,16 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc)
 	 
 	 768: return extend(bramMuxRdAddrReg);
 	 774: return fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
-	 775: return (tlpTracingReg ? 1 : 0);
+	 775: return (tlp.tlpTracing ? 1 : 0);
 	 776: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
 	 777: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
 	 778: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 2);
 	 779: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
 	 780: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
 	 781: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
-	 792: return extend(fromPcieTraceBramWrAddrReg);
-	 793: return extend(  toPcieTraceBramWrAddrReg);
-	 794: return extend(tlpTraceLimitReg);
+	 792: return extend(tlp.fromPcieTraceBramWrAddr);
+	 793: return extend(  tlp.toPcieTraceBramWrAddr);
+	 794: return extend(tlp.tlpTraceLimit);
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
@@ -217,15 +154,15 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc)
             end
          else
          case (modaddr)
-	    775: tlpTracingReg <= (dword != 0) ? True : False;
+	    775: tlp.tlpTracing <= (dword != 0) ? True : False;
 
 	    768: begin
-		    bramMux.bramServer.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: unpack(0)});
+		    tlp.bramMux.bramServer.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: unpack(0)});
 		    bramMuxRdAddrReg <= bramMuxRdAddrReg + 1;
 		    end
-	    792: fromPcieTraceBramWrAddrReg <= truncate(dword);
-	    793:   toPcieTraceBramWrAddrReg <= truncate(dword);
-	    794: tlpTraceLimitReg <= truncate(dword);
+	    792: tlp.fromPcieTraceBramWrAddr <= truncate(dword);
+	    793:   tlp.toPcieTraceBramWrAddr <= truncate(dword);
+	    794: tlp.tlpTraceLimit <= truncate(dword);
 	    795: portalResetIfc.assertReset();
          endcase
       endaction
@@ -234,7 +171,7 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc)
    // State used to actually service read and write requests
 
    rule brmMuxResponse;
-       let v <- bramMux.bramServer.response.get();
+       let v <- tlp.bramMux.bramServer.response.get();
        pcieTraceBramResponse <= v;
    endrule
 
@@ -328,11 +265,4 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc)
    endinterface: slave
 
    interface Vector msixEntry = msix_entry;
-
-   interface Reg tlpTracing    = tlpTracingReg;
-   interface Reg tlpTraceLimit = tlpTraceLimitReg;
-   interface Reg fromPcieTraceBramWrAddr = fromPcieTraceBramWrAddrReg;
-   interface Reg   toPcieTraceBramWrAddr =   toPcieTraceBramWrAddrReg;
-   interface BRAMServer fromPcieTraceBramPort = fromPcieTraceBram.portA;
-   interface BRAMServer   toPcieTraceBramPort =   toPcieTraceBram.portA;
 endmodule: mkAxiControlAndStatusRegs

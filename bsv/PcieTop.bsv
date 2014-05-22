@@ -109,7 +109,8 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    MakeResetIfc portalResetIfc <- mkReset(10, False, epClock125, clocked_by epClock125, reset_by epReset125);
    TLPDispatcher        dispatcher <- mkTLPDispatcher(clocked_by epClock125, reset_by epReset125);
    TLPArbiter           arbiter    <- mkTLPArbiter(clocked_by epClock125, reset_by epReset125);
-   AxiControlAndStatusRegs csr     <- mkAxiControlAndStatusRegs(portalResetIfc, clocked_by epClock125, reset_by epReset125);
+   PcieTracer  traceif <- mkPcieTracer(clocked_by epClock125, reset_by epReset125);
+   AxiControlAndStatusRegs csr     <- mkAxiControlAndStatusRegs(portalResetIfc, traceif.tlp, clocked_by epClock125, reset_by epReset125);
    AxiMasterEngine splitMaster     <- mkAxiMasterEngine(my_pciId, clocked_by epClock125, reset_by epReset125);
    mkConnection(splitMaster.master, csr.slave, clocked_by epClock125, reset_by epReset125);
    mkConnection(
@@ -118,7 +119,6 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
           interface request = arbiter.inFromConfig;
        endinterface), splitMaster.tlp, clocked_by epClock125, reset_by epReset125);
 
-   PcieTracer  traceif <- mkPcieTracer(csr, clocked_by epClock125, reset_by epReset125);
    mkConnection(traceif.bus,
        (interface Client;
           interface request = arbiter.outToBus;
