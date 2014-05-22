@@ -238,6 +238,9 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    PCIE_X7#(lanes) pcie_ep <- vMkXilinx7PCIExpress(params, clockGen.clkout0, clockGen.clkout2, bbufc.o);
    //new PcieWrap#(lanes)  pciew <- mkPcieWrap();
 
+   FIFOF#(AxiTx)             fAxiTx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
+   FIFOF#(AxiRx)             fAxiRx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
+
    (* fire_when_enabled, no_implicit_conditions *)
    rule every1;
       pcie_ep.fc.sel(0 /*RECEIVE_BUFFER_AVAILABLE_SPACE*/);
@@ -245,6 +248,14 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       pcie_ep.rx.np_ok(1);
       pcie_ep.rx.np_req(1);
       pcie_ep.tx.cfg_gnt(1);
+      pcie_ep.s_axis_tx.tuser(4'b0);
+      pcie_ep.m_axis_rx.tready(pack(fAxiRx.notFull));
+   endrule
+   rule every2;
+      pcie_ep.pipe_mmcm_lock_in(pack(clockGen.locked));
+   endrule
+   rule every3;
+      pclk_sel_reg1 <= pcie_ep.pipe_pclk_sel_out();
    endrule
 
    Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.pipe_txoutclk_out);
@@ -252,13 +263,6 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    C2B c2b <- mkC2B(txoutclk_buf);
    rule txoutrule;
       b2c.inputclock(c2b.o());
-   endrule
-   rule lockedrule;
-      pcie_ep.pipe_mmcm_lock_in(pack(clockGen.locked));
-   endrule
-
-   rule selr3;
-      pclk_sel_reg1 <= pcie_ep.pipe_pclk_sel_out();
    endrule
 
    rule update_psel;
@@ -271,9 +275,6 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
        pclk_sel <= ps;
    endrule
 
-   FIFOF#(AxiTx)             fAxiTx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
-   FIFOF#(AxiRx)             fAxiRx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
-
    let txready = (pcie_ep.s_axis_tx.tready != 0 && fAxiTx.notEmpty);
 
    //(* fire_when_enabled, no_implicit_conditions *)
@@ -285,17 +286,12 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       pcie_ep.s_axis_tx.tkeep(info.keep);
    endrule
 
+   (* fire_when_enabled, no_implicit_conditions *)
    rule drive_axi_tx2 if (!txready);
       pcie_ep.s_axis_tx.tvalid(0);
       pcie_ep.s_axis_tx.tlast(0);
       pcie_ep.s_axis_tx.tdata(0);
       pcie_ep.s_axis_tx.tkeep(0);
-   endrule
-
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule drive_axi_rx_ready;
-      pcie_ep.s_axis_tx.tuser(4'b0);
-      pcie_ep.m_axis_rx.tready(pack(fAxiRx.notFull));
    endrule
 
    (* fire_when_enabled *)

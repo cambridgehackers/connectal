@@ -28,29 +28,23 @@ import FIFOF           ::*;
 import SpecialFIFOs    ::*;
 
 // Interface wrapper for PCIE
-interface PcieGearbox#(numeric type lanes);
-   //method Bool isCalibrated();
+interface PcieGearbox;
+   interface TlpConnect#(8) tlpif;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
 (* no_default_clock, no_default_reset *)
 //, synthesize *)
-module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Reset epReset125, TlpConnect#(8) tlp, TlpConnect#(16) pci) (PcieGearbox#(lanes))
-   provisos(Add#(1,_,lanes));
-   FIFO#(TLPData#(8))          inFifo              <- mkFIFO(clocked_by epClock250, reset_by epReset250);
+module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Reset epReset125, TlpConnect#(16) pci)(PcieGearbox);
    // Connections between TLPData#(16) and a PCIE endpoint, using a gearbox
    // to match data rates between the endpoint and design clocks.
-   Gearbox#(1, 2, TLPData#(8)) fifoRxData          <- mk1toNGearbox(epClock250, epReset250, epClock125, epReset125);
-   Reg#(Bool)                  rOddBeat            <- mkRegA(False, clocked_by epClock250, reset_by epReset250);
-   Reg#(Bool)                  rSendInvalid        <- mkRegA(False, clocked_by epClock250, reset_by epReset250);
-   FIFO#(TLPData#(8))          outFifo             <- mkFIFO(clocked_by epClock250, reset_by epReset250);
-   Gearbox#(2, 1, TLPData#(8)) fifoTxData          <- mkNto1Gearbox(epClock125, epReset125, epClock250, epReset250);
-
-   rule accept_data1;
-      let data <- tlp.outTo.get();
-      inFifo.enq(data);
-   endrule
+   Gearbox#(1, 2, TLPData#(8)) fifoRxData   <- mk1toNGearbox(epClock250, epReset250, epClock125, epReset125);
+   Reg#(Bool)                  rOddBeat     <- mkRegA(False, clocked_by epClock250, reset_by epReset250);
+   Reg#(Bool)                  rSendInvalid <- mkRegA(False, clocked_by epClock250, reset_by epReset250);
+   FIFO#(TLPData#(8))          inFifo       <- mkFIFO(clocked_by epClock250, reset_by epReset250);
+   FIFO#(TLPData#(8))          outFifo      <- mkFIFO(clocked_by epClock250, reset_by epReset250);
+   Gearbox#(2, 1, TLPData#(8)) fifoTxData   <- mkNto1Gearbox(epClock125, epReset125, epClock250, epReset250);
 
    rule process_incoming_packets1(!rSendInvalid);
       let data = inFifo.first; inFifo.deq;
@@ -70,11 +64,18 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
       fifoRxData.enq(v);
    endrule
 
+   rule process_outgoing_packets;
+      let data = fifoTxData.first; fifoTxData.deq;
+      let temp = head(data);
+      // filter out TLPs with 00 byte enable
+      if (temp.be != 0)
+          outFifo.enq(temp);
+   endrule
+
    rule send_data1;
       function TLPData#(16) combine(Vector#(2, TLPData#(8)) in);
-         return TLPData {sof:   in[0].sof, eof:   in[1].eof, hit:   in[0].hit,
-                         be:    { in[0].be,   in[1].be },
-                         data:  { in[0].data, in[1].data } };
+         return TLPData {sof:   in[0].sof, eof: in[1].eof, hit: in[0].hit,
+             be: { in[0].be, in[1].be }, data: { in[0].data, in[1].data } };
       endfunction
       fifoRxData.deq;
       pci.inFrom.put(combine(fifoRxData.first));
@@ -100,15 +101,19 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
       fifoTxData.enq(split(data));
    endrule
 
-   rule process_outgoing_packets;
-      let data = fifoTxData.first; fifoTxData.deq;
-      outFifo.enq(head(data));
+/*
+   rule accept_data1;
+      let data <- tlp.outTo.get();
+      inFifo.enq(data);
    endrule
 
    rule send_data;
       let data = outFifo.first; outFifo.deq;
-      // filter out TLPs with 00 byte enable
-      if (data.be != 0)
-         tlp.inFrom.put(data);
+      tlp.inFrom.put(data);
    endrule
+*/
+   interface TlpConnect tlpif;
+      interface outTo = toGet(outFifo);
+      interface inFrom = toPut(inFifo);
+   endinterface
 endmodule: mkPcieGearbox
