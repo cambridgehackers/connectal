@@ -27,12 +27,12 @@ import PCIE         :: *;
 import DefaultValue :: *;
 import MIMO         :: *;
 import Vector       :: *;
-import TlpConnect   :: *;
+import ClientServer :: *;
 
 import AxiMasterSlave :: *;
 
 interface AxiSlaveEngine#(type buswidth);
-    interface TlpConnect#(16)        pci;
+    interface Client#(TLPData#(16), TLPData#(16)) pci;
     interface Axi3Slave#(40,buswidth,6)  slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
@@ -223,9 +223,9 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	 tlpInFifo.deq();
    endrule
 
-    interface TlpConnect        pci;
-    interface outTo = toGet(tlpOutFifo);
-    interface inFrom = toPut(tlpInFifo);
+    interface Client        pci;
+    interface request = toGet(tlpOutFifo);
+    interface response = toPut(tlpInFifo);
     endinterface
     interface Axi3Slave slave;
 	interface Put req_aw;

@@ -18,7 +18,7 @@ import Gearbox           ::*;
 import FIFO              ::*;
 import FIFOF             ::*;
 import SpecialFIFOs      ::*;
-import TlpConnect        ::*;
+import ClientServer      ::*;
 
 import XbsvXilinxCells   ::*;
 import XilinxCells       ::*;
@@ -170,7 +170,7 @@ interface PCIExpressX7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)   pcie;
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
-   interface TlpConnect#(8)            tlp;
+   interface Server#(TLPData#(8), TLPData#(8)) tlp;
 endinterface
 
 typedef struct {
@@ -302,14 +302,14 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
                         data: pcie_ep.m_axis_rx.tdata });
    endrule
 
-   interface TlpConnect      tlp;
-      interface Put inFrom;
+   interface Server      tlp;
+      interface Put request;
          method Action put(TLPData#(8) data);
 	   fAxiTx.enq(AxiTx {last: pack(data.eof),
               keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
          endmethod
       endinterface
-      interface Get outTo;
+      interface Get response;
          method ActionValue#(TLPData#(8)) get();
 	   let info <- toGet(fAxiRx).get;
 	   TLPData#(8) retval = defaultValue;

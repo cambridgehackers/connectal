@@ -15,9 +15,9 @@ import DefaultValue    :: *;
 import TieOff          :: *;
 import XilinxCells     :: *;
 import XbsvXilinx7Pcie :: *;
-import TlpConnect      :: *;
 import PCIEWRAPPER     :: *;
 import AxiCsr          :: *;
+import ClientServer    :: *;
 
 import Connectable     ::*;
 import Reserved        ::*;
@@ -29,8 +29,8 @@ import SpecialFIFOs    ::*;
 
 // Interface wrapper for PCIE
 interface PcieGearbox;
-   interface TlpConnect#(8) tlpif;
-   interface TlpConnect#(16) pciif;
+   interface Client#(TLPData#(8), TLPData#(8)) tlp;
+   interface Server#(TLPData#(16), TLPData#(16)) pci;
 endinterface
 
 // This module builds the transactor hierarchy, the clock
@@ -73,8 +73,8 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
           outFifo.enq(temp);
    endrule
 
-   interface TlpConnect pciif;
-      interface Get outTo;
+   interface Server pci;
+      interface Get response;
          method ActionValue#(TLPData#(16)) get();
             function TLPData#(16) combine(Vector#(2, TLPData#(8)) in);
                return TLPData {sof:   in[0].sof, eof: in[1].eof, hit: in[0].hit,
@@ -84,7 +84,7 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
             return combine(fifoRxData.first);
          endmethod
       endinterface
-      interface Put inFrom;
+      interface Put request;
          method Action put(TLPData#(16) data);
             function Vector#(2, TLPData#(8)) split(TLPData#(16) in);
                Vector#(2, TLPData#(8)) v = defaultValue;
@@ -104,9 +104,8 @@ module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Rese
          endmethod
       endinterface
    endinterface
-
-   interface TlpConnect tlpif;
-      interface outTo = toGet(outFifo);
-      interface inFrom = toPut(inFifo);
+   interface Client tlp;
+      interface request = toGet(outFifo);
+      interface response = toPut(inFifo);
    endinterface
 endmodule: mkPcieGearbox

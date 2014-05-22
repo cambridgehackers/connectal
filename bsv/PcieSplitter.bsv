@@ -26,7 +26,6 @@ import ConfigReg    :: *;
 import PCIE         :: *;
 import DReg         :: *;
 import Clocks       :: *;
-import TlpConnect   :: *;
 
 import ByteBuffer    :: *;
 import ByteCompactor :: *;
@@ -40,9 +39,9 @@ import AxiCsr               :: *;
 
 // The top-level interface of the PCIe-to-AXI bridge
 interface PcieSplitter#(numeric type bpb);
-   interface TlpConnect#(16)          pci;
-   interface TlpConnect#(16)          portal;
-   interface TlpConnect#(16)          axi;
+   interface Client#(TLPData#(16), TLPData#(16)) pci;
+   interface Server#(TLPData#(16), TLPData#(16)) portal;
+   interface Server#(TLPData#(16), TLPData#(16)) axi;
    interface Put#(TimestampedTlpData) trace;
    interface Reset portalReset;
    interface Vector#(16,MSIX_Entry) msixEntry;
@@ -313,8 +312,8 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
 
    // connect the sub-components to each other
 
-   mkConnection(dispatcher.outToConfig, axiMasterEngine.tlp.inFrom);
-   mkConnection(axiMasterEngine.tlp.outTo, arbiter.inFromConfig);
+   mkConnection(dispatcher.outToConfig, axiMasterEngine.tlp.response);
+   mkConnection(axiMasterEngine.tlp.request, arbiter.inFromConfig);
    // mkConnection(dispatcher.outToPortal, portalEngine.tlp.inFrom);
    //mkConnection(portalEngine.tlp.outTo, arbiter.inFromPortal);
 
@@ -366,17 +365,17 @@ module mkPcieSplitter#(PciId my_id)(PcieSplitter#(bpb))
       csr.toPcieTraceBramWrAddr <= csr.toPcieTraceBramWrAddr + 1;
    endrule
 
-   interface TlpConnect    pci;
-      interface outTo = toGet(tlpToBusFifo);
-      interface inFrom = toPut(tlpFromBusFifo);
+   interface Client    pci;
+      interface request = toGet(tlpToBusFifo);
+      interface response = toPut(tlpFromBusFifo);
    endinterface
-   interface TlpConnect    portal;
-      interface outTo = dispatcher.outToPortal;
-      interface inFrom = arbiter.inFromPortal;
+   interface Server    portal;
+      interface response = dispatcher.outToPortal;
+      interface request = arbiter.inFromPortal;
    endinterface
-   interface TlpConnect    axi;
-      interface outTo = dispatcher.outToAxi;
-      interface inFrom = arbiter.inFromAxi;
+   interface Server    axi;
+      interface response = dispatcher.outToAxi;
+      interface request = arbiter.inFromAxi;
    endinterface
    interface Reset portalReset = portalResetIfc.new_rst;
    interface Put trace;
