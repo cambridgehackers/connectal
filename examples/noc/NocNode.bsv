@@ -25,11 +25,6 @@ import LinkHost::*;
 import FIFOF::*;
 import Vector::*;
 
-/* This is a serial to parallel converter for messages of type a
- * The data register is assumed to always be available, so an arriving
- * message must be removed ASAP or be overwritten 
- */
-
 typedef struct {
 	Bit#(4) address;
 	Bit#(4) lsn;
@@ -75,8 +70,6 @@ module mkNocNode#(Bit#(4) id,
 
    // out Links
    LinkHost#(DataMessage) lhost <- mkLinkHost(id);
-
-
   
    // buffers for crossbar switch
    
@@ -85,10 +78,9 @@ module mkNocNode#(Bit#(4) id,
    
    FIFOF#(DataMessage) ew <- mkSizedFIFOF(4);
    FIFOF#(DataMessage) we <- mkSizedFIFOF(4);
+
    FIFOF#(DataMessage) eh <- mkSizedFIFOF(4);
    FIFOF#(DataMessage) wh <- mkSizedFIFOF(4);
-   
-   
    
    // sort host messages to proper queue
    
@@ -101,17 +93,18 @@ module mkNocNode#(Bit#(4) id,
 	 move(lhost.tonet, he);
    endrule
    
-   // arbiter to send data messages to e
+   // arbiter to send data messages to w
    
    Bit#(1) owselect <- mkReg(0);
-   Bit#(1) oeselect <- mkReg(0);
    
    rule genow;
       outputarbitrate(ew, hw, owselect, low);
    endrule
    
-   // arbiter to send data messages to w
+   // arbiter to send data messages to e
    
+   Bit#(1) oeselect <- mkReg(0);
+
    rule genoe;
       outputarbitrate(we, he, oeselect, loe);
    endrule
