@@ -23,11 +23,14 @@
 import Vector            :: *;
 import Clocks          :: *;
 import GetPut            :: *;
+import FIFO              :: *;
+import FIFOF        :: *;
 import Connectable       :: *;
+import ClientServer      :: *;
 import Xilinx            :: *;
 import DefaultValue    :: *;
-import TlpConnect   :: *;
 import PcieSplitter      :: *;
+import PcieTracer        :: *;
 import PcieGearbox    :: *;
 import XbsvXilinx7Pcie   :: *;
 import PCIEWRAPPER       :: *;
@@ -40,6 +43,9 @@ import AxiMasterSlave    :: *;
 import AxiDma            :: *;
 import AxiCsr            :: *;
 
+import BRAM         :: *;
+//import BRAMFIFO     :: *;
+
 typedef (function Module#(PortalTop#(40, dsz, ipins,nMasters)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins, numeric type nMasters);
 
 `ifdef Artix7
@@ -49,10 +55,6 @@ typedef 4 NumLeds;
 typedef 8 PcieLanes;
 typedef 8 NumLeds;
 `endif
-
-// from SceMiDefines
-typedef 4 BPB;
-
 
 interface PcieTop#(type ipins);
    (* prefix="PCIE" *)
@@ -104,31 +106,55 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    let my_pciId = PciId { bus:  _ep.cfg.bus_number(),
 	 dev: _ep.cfg.device_number(), func: _ep.cfg.function_number()};
 
-   PcieSplitter#(BPB)  bridge <- mkPcieSplitter(my_pciId, clocked_by epClock125, reset_by epReset125);
+   MakeResetIfc portalResetIfc <- mkReset(10, False, epClock125, clocked_by epClock125, reset_by epReset125);
+   TLPDispatcher        dispatcher <- mkTLPDispatcher(clocked_by epClock125, reset_by epReset125);
+   TLPArbiter           arbiter    <- mkTLPArbiter(clocked_by epClock125, reset_by epReset125);
+   PcieTracer  traceif <- mkPcieTracer(clocked_by epClock125, reset_by epReset125);
+   AxiControlAndStatusRegs csr     <- mkAxiControlAndStatusRegs(portalResetIfc, traceif.tlp, clocked_by epClock125, reset_by epReset125);
+   AxiMasterEngine splitMaster     <- mkAxiMasterEngine(my_pciId, clocked_by epClock125, reset_by epReset125);
+   mkConnection(splitMaster.master, csr.slave, clocked_by epClock125, reset_by epReset125);
+   mkConnection(
+       (interface Server;
+          interface response = dispatcher.outToConfig;
+          interface request = arbiter.inFromConfig;
+       endinterface), splitMaster.tlp, clocked_by epClock125, reset_by epReset125);
 
-   // The PCIE endpoint is processing TLPWord#(8)s at 250MHz.  The
-   // AXI bridge is accepting TLPWord#(16)s at 125 MHz. The
+   mkConnection(traceif.bus,
+       (interface Client;
+          interface request = arbiter.outToBus;
+          interface response = dispatcher.inFromBus;
+       endinterface), clocked_by epClock125, reset_by epReset125);
+
+   // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
+   // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
    // connection between the endpoint and the AXI contains GearBox
-   // instances for the TLPWord#(8)@250 <--> TLPWord#(16)@125
+   // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
    // conversion.
-   PcieGearbox#(PcieLanes) gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125, _ep, bridge.pci);
+   PcieGearbox gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125);
+   mkConnection(gb.tlp, _ep.tlp, clocked_by epClock250, reset_by epReset250);
+   mkConnection(gb.pci, traceif.pci, clocked_by epClock125, reset_by epReset125);
    
    // instantiate user portals
-   let portalTop <- mkPortalTop(clocked_by epClock125, reset_by bridge.brif.portalReset);
+   let portalTop <- mkPortalTop(clocked_by epClock125, reset_by portalResetIfc.new_rst);
    AxiSlaveEngine#(dsz) axiSlaveEngine <- mkAxiSlaveEngine(my_pciId, clocked_by epClock125, reset_by epReset125);
    AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(my_pciId, clocked_by epClock125, reset_by epReset125);
 
    // Build the PCIe-to-AXI bridge
-   mkConnection(bridge.brif.axi.outTo, axiSlaveEngine.pci.inFrom, clocked_by epClock125, reset_by epReset125);
-   mkConnection(axiSlaveEngine.pci.outTo, bridge.brif.axi.inFrom, clocked_by epClock125, reset_by epReset125);
+   mkConnection(
+       (interface Server;
+          interface response = dispatcher.outToAxi;
+          interface request = arbiter.inFromAxi;
+       endinterface), axiSlaveEngine.pci, clocked_by epClock125, reset_by epReset125);
    Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis;   
    if(valueOf(nMasters) > 0) begin
-      m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0],clocked_by epClock125, reset_by bridge.brif.portalReset);
+      m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0],clocked_by epClock125, reset_by portalResetIfc.new_rst);
       mkConnection(m_axis[0], axiSlaveEngine.slave, clocked_by epClock125, reset_by epReset125);
    end
-
-   mkConnection(bridge.brif.portal.outTo, axiMasterEngine.tlp.inFrom);
-   mkConnection(axiMasterEngine.tlp.outTo, bridge.brif.portal.inFrom);
+   mkConnection(
+       (interface Server;
+          interface response = dispatcher.outToPortal;
+          interface request = arbiter.inFromPortal;
+       endinterface), axiMasterEngine.tlp);
 
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave, clocked_by epClock125, reset_by epReset125);
    mkConnection(axiMasterEngine.master, ctrl, clocked_by epClock125, reset_by epReset125);
@@ -138,7 +164,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    for (Integer i = 0; i < 15; i = i + 1) begin
       // intr_num 0 for the directory
       Integer intr_num = i+1;
-      MSIX_Entry msixEntry = bridge.msixEntry[intr_num];
+      MSIX_Entry msixEntry = csr.msixEntry[intr_num];
       rule interruptRequest;
 	 if (portalTop.interrupt[i] && !interruptRequested[i])
 	    axiMasterEngine.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));

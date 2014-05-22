@@ -27,7 +27,7 @@ import Connectable  :: *;
 import MIMO         :: *;
 import PCIE         :: *;
 import DefaultValue :: *;
-import TlpConnect   :: *;
+import ClientServer   :: *;
 
 import AxiMasterSlave :: *;
 
@@ -36,7 +36,7 @@ import AxiMasterSlave :: *;
 // Bottom interface: AXI3 Master that sends read/write requests to an Axi3Slave
 // Also sources interrupt MSIX requests
 interface AxiMasterEngine;
-    interface TlpConnect#(16)        tlp;
+    interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface Axi3Master#(32,32,12) master;
     interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
     interface Reg#(Bit#(12))       bTag;
@@ -219,8 +219,8 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
        interruptRequestFifo.deq();
     endrule
 
-    interface TlpConnect        tlp;
-    interface Put inFrom;
+    interface Client        tlp;
+    interface Put response;
         method Action put(TLPData#(16) tlp);
 	    //$display("AxiMasterEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
@@ -239,8 +239,8 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
 	    end
             timerReg <= truncate(32'hFFFFFFFF);
 	endmethod
-    endinterface: inFrom
-    interface Get outTo = toGet(tlpOutFifo);
+    endinterface
+    interface Get request = toGet(tlpOutFifo);
     endinterface: tlp
     interface Axi3Master master;
        interface Get req_aw;

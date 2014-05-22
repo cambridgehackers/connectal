@@ -18,6 +18,7 @@ import Gearbox           ::*;
 import FIFO              ::*;
 import FIFOF             ::*;
 import SpecialFIFOs      ::*;
+import ClientServer      ::*;
 
 import XbsvXilinxCells   ::*;
 import XilinxCells       ::*;
@@ -169,8 +170,7 @@ interface PCIExpressX7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)   pcie;
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
-   method    Action      xmit(TLPData#(8) data);
-   method    ActionValue#(TLPData#(8)) recv();
+   interface Server#(TLPData#(8), TLPData#(8)) tlp;
 endinterface
 
 typedef struct {
@@ -210,10 +210,7 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    clockParams.clkout2_phase      = 0.0000;
    clockParams.divclk_divide      = 1;
    clockParams.ref_jitter1        = 0.010;
-
    clockParams.clkin_buffer = False;
-   //clockParams.clkout0_buffer = True;
-   //clockParams.clkout2_buffer = True;
    XClockGenerator7   clockGen <- mkClockGenerator7Adv(clockParams, clocked_by b2c.c);
    C2B c2b_fb <- mkC2B(clockGen.clkfbout, clocked_by clockGen.clkfbout);
    rule txoutrule5;
@@ -241,6 +238,9 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    PCIE_X7#(lanes) pcie_ep <- vMkXilinx7PCIExpress(params, clockGen.clkout0, clockGen.clkout2, bbufc.o);
    //new PcieWrap#(lanes)  pciew <- mkPcieWrap();
 
+   FIFOF#(AxiTx)             fAxiTx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
+   FIFOF#(AxiRx)             fAxiRx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
+
    (* fire_when_enabled, no_implicit_conditions *)
    rule every1;
       pcie_ep.fc.sel(0 /*RECEIVE_BUFFER_AVAILABLE_SPACE*/);
@@ -248,6 +248,14 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       pcie_ep.rx.np_ok(1);
       pcie_ep.rx.np_req(1);
       pcie_ep.tx.cfg_gnt(1);
+      pcie_ep.s_axis_tx.tuser(4'b0);
+      pcie_ep.m_axis_rx.tready(pack(fAxiRx.notFull));
+   endrule
+   rule every2;
+      pcie_ep.pipe_mmcm_lock_in(pack(clockGen.locked));
+   endrule
+   rule every3;
+      pclk_sel_reg1 <= pcie_ep.pipe_pclk_sel_out();
    endrule
 
    Clock txoutclk_buf <- mkClockBUFG(clocked_by pcie_ep.pipe_txoutclk_out);
@@ -255,13 +263,6 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    C2B c2b <- mkC2B(txoutclk_buf);
    rule txoutrule;
       b2c.inputclock(c2b.o());
-   endrule
-   rule lockedrule;
-      pcie_ep.pipe_mmcm_lock_in(pack(clockGen.locked));
-   endrule
-
-   rule selr3;
-      pclk_sel_reg1 <= pcie_ep.pipe_pclk_sel_out();
    endrule
 
    rule update_psel;
@@ -274,35 +275,23 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
        pclk_sel <= ps;
    endrule
 
-   Clock                     user_clk             = pcie_ep.user.clk_out;
-   Wire#(Bit#(1))            wAxiTxValid         <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   Wire#(Bit#(1))            wAxiTxLast          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   Wire#(Bit#(64))           wAxiTxData          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   Wire#(Bit#(8))            wAxiTxKeep          <- mkDWire(0,   clocked_by user_clk, reset_by noReset);
-   FIFOF#(AxiTx)             fAxiTx              <- mkBypassFIFOF(clocked_by user_clk, reset_by noReset);
-   FIFOF#(AxiRx)             fAxiRx              <- mkBypassFIFOF(clocked_by user_clk, reset_by noReset);
+   let txready = (pcie_ep.s_axis_tx.tready != 0 && fAxiTx.notEmpty);
 
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule drive_axi_tx;
-      pcie_ep.s_axis_tx.tuser(4'b0);
-      pcie_ep.s_axis_tx.tvalid(wAxiTxValid);
-      pcie_ep.s_axis_tx.tlast(wAxiTxLast);
-      pcie_ep.s_axis_tx.tdata(wAxiTxData);
-      pcie_ep.s_axis_tx.tkeep(wAxiTxKeep);
-   endrule
-
-   (* fire_when_enabled *)
-   rule drive_axi_tx_info if (pcie_ep.s_axis_tx.tready != 0);
-      let info <- toGet(fAxiTx).get;
-      wAxiTxValid <= 1;
-      wAxiTxLast  <= info.last;
-      wAxiTxData  <= info.data;
-      wAxiTxKeep  <= info.keep;
+   //(* fire_when_enabled, no_implicit_conditions *)
+   rule drive_axi_tx if (txready);
+      let info = fAxiTx.first; fAxiTx.deq;
+      pcie_ep.s_axis_tx.tvalid(1);
+      pcie_ep.s_axis_tx.tlast(info.last);
+      pcie_ep.s_axis_tx.tdata(info.data);
+      pcie_ep.s_axis_tx.tkeep(info.keep);
    endrule
 
    (* fire_when_enabled, no_implicit_conditions *)
-   rule drive_axi_rx_ready;
-      pcie_ep.m_axis_rx.tready(pack(fAxiRx.notFull));
+   rule drive_axi_tx2 if (!txready);
+      pcie_ep.s_axis_tx.tvalid(0);
+      pcie_ep.s_axis_tx.tlast(0);
+      pcie_ep.s_axis_tx.tdata(0);
+      pcie_ep.s_axis_tx.tkeep(0);
    endrule
 
    (* fire_when_enabled *)
@@ -313,21 +302,26 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
                         data: pcie_ep.m_axis_rx.tdata });
    endrule
 
-   method Action xmit(data);
-	fAxiTx.enq(AxiTx {last: pack(data.eof),
-           keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
-   endmethod
-
-   method ActionValue#(TLPData#(8)) recv();
-	let info <- toGet(fAxiRx).get;
-	TLPData#(8) retval = defaultValue;
-	retval.sof  = (info.user[14] == 1);
-	retval.eof  = info.last != 0;
-	retval.hit  = info.user[8:2];
-	retval.be= dwordSwap64BE(info.keep);
-	retval.data = dwordSwap64(info.data);
-	return retval;
-   endmethod
+   interface Server      tlp;
+      interface Put request;
+         method Action put(TLPData#(8) data);
+	   fAxiTx.enq(AxiTx {last: pack(data.eof),
+              keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
+         endmethod
+      endinterface
+      interface Get response;
+         method ActionValue#(TLPData#(8)) get();
+	   let info <- toGet(fAxiRx).get;
+	   TLPData#(8) retval = defaultValue;
+	   retval.sof  = (info.user[14] == 1);
+	   retval.eof  = info.last != 0;
+	   retval.hit  = info.user[8:2];
+	   retval.be= dwordSwap64BE(info.keep);
+	   retval.data = dwordSwap64(info.data);
+	   return retval;
+         endmethod
+      endinterface
+   endinterface
 
    interface pcie    = pcie_ep.pcie;
    interface PciewrapUser user = pcie_ep.user;
