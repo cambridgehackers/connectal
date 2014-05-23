@@ -80,11 +80,22 @@ provisos(
    Clock epClock125 <- exposeCurrentClock();
    Reset epReset125 <- exposeCurrentReset();
    MakeResetIfc portalResetIfc <- mkReset(10, False, epClock125);
-   TLPDispatcher        dispatcher <- mkTLPDispatcher();
-   TLPArbiter           arbiter    <- mkTLPArbiter();
-   PcieTracer  traceif <- mkPcieTracer();
-   AxiControlAndStatusRegs csr     <- mkAxiControlAndStatusRegs(portalResetIfc, traceif.tlp);
+   let portalTop <- mkPortalTop(reset_by portalResetIfc.new_rst);
+
+   PcieTracer      traceif <- mkPcieTracer();
+   // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
+   // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
+   // connection between the endpoint and the AXI contains GearBox
+   // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
+   // conversion.
+   PcieGearbox gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125);
+   mkConnection(gb.tlp, ep_tlp, clocked_by epClock250, reset_by epReset250);
+   mkConnection(gb.pci, traceif.pci);
+
+   TLPDispatcher   dispatcher <- mkTLPDispatcher();
+   TLPArbiter      arbiter    <- mkTLPArbiter();
    AxiMasterEngine splitMaster     <- mkAxiMasterEngine(my_pciId);
+   AxiControlAndStatusRegs csr     <- mkAxiControlAndStatusRegs(portalResetIfc, traceif.tlp);
    mkConnection(splitMaster.master, csr.slave);
    mkConnection(
        (interface Server;
@@ -98,39 +109,27 @@ provisos(
           interface response = dispatcher.inFromBus;
        endinterface));
 
-   // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
-   // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
-   // connection between the endpoint and the AXI contains GearBox
-   // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
-   // conversion.
-   PcieGearbox gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125);
-   mkConnection(gb.tlp, ep_tlp, clocked_by epClock250, reset_by epReset250);
-   mkConnection(gb.pci, traceif.pci);
-   
-   // instantiate user portals
-   let portalTop <- mkPortalTop(reset_by portalResetIfc.new_rst);
-   AxiSlaveEngine#(dsz) axiSlaveEngine <- mkAxiSlaveEngine(my_pciId);
-   AxiMasterEngine axiMasterEngine <- mkAxiMasterEngine(my_pciId);
-
    // Build the PCIe-to-AXI bridge
+   AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);
+   Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis;   
    mkConnection(
        (interface Server;
           interface response = dispatcher.outToAxi;
           interface request = arbiter.inFromAxi;
-       endinterface), axiSlaveEngine.pci);
-   Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis;   
+       endinterface), dmaEngine.pci);
    if(valueOf(nMasters) > 0) begin
       m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0], reset_by portalResetIfc.new_rst);
-      mkConnection(m_axis[0], axiSlaveEngine.slave);
+      mkConnection(m_axis[0], dmaEngine.slave);
    end
+
+   AxiMasterEngine portalEngine <- mkAxiMasterEngine(my_pciId);
+   Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave);
    mkConnection(
        (interface Server;
           interface response = dispatcher.outToPortal;
           interface request = arbiter.inFromPortal;
-       endinterface), axiMasterEngine.tlp);
-
-   Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave);
-   mkConnection(axiMasterEngine.master, ctrl);
+       endinterface), portalEngine.tlp);
+   mkConnection(portalEngine.master, ctrl);
 
    // going from level to edge-triggered interrupt
    Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False));
@@ -140,10 +139,11 @@ provisos(
       MSIX_Entry msixEntry = csr.msixEntry[intr_num];
       rule interruptRequest;
 	 if (portalTop.interrupt[i] && !interruptRequested[i])
-	    axiMasterEngine.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
+	    portalEngine.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
 	 interruptRequested[i] <= portalTop.interrupt[i];
       endrule
    end
+
    interface pins = portalTop.pins;
 endmodule: mkPcieHost
 
