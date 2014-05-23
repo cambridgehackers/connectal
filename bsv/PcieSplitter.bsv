@@ -21,7 +21,12 @@ import FIFOF        :: *;
 import Counter      :: *;
 import PCIE         :: *;
 import Clocks       :: *;
-import ClientServer         :: *;
+import ClientServer :: *;
+
+Integer portConfig = 0;
+Integer portPortal = 1;
+Integer portAxi    = 2;
+typedef 3 PortMax;
 
 // When TLP packets come in from the PCIe bus, they are dispatched to
 // either the configuration register block, the portal (AXI slave) or
@@ -30,21 +35,14 @@ interface TLPDispatcher;
    // TLPs in from PCIe
    interface Put#(TLPData#(16)) inFromBus;
    // TLPs out to the bridge implementation
-   interface Get#(TLPData#(16)) outToConfig;
-   interface Get#(TLPData#(16)) outToPortal;
-   interface Get#(TLPData#(16)) outToAxi;
+   interface Vector#(PortMax, Get#(TLPData#(16))) out;
 endinterface: TLPDispatcher
 
 (* synthesize *)
 module mkTLPDispatcher(TLPDispatcher);
    FIFO#(TLPData#(16))  tlp_in_fifo     <- mkFIFO();
-   FIFOF#(TLPData#(16)) tlp_in_cfg_fifo <- mkGFIFOF(True,False); // unguarded enq
-   FIFOF#(TLPData#(16)) tlp_in_portal_fifo <- mkGFIFOF(True,False); // unguarded enq
-   FIFOF#(TLPData#(16)) tlp_in_axi_fifo <- mkGFIFOF(True,False); // unguarded enq
-
-   Reg#(Bool) route_to_cfg <- mkReg(False);
-   Reg#(Bool) route_to_portal <- mkReg(False);
-   Reg#(Bool) route_to_axi <- mkReg(False);
+   Vector#(PortMax, FIFOF#(TLPData#(16))) tlp_out_fifo <- replicateM(mkGFIFOF(True,False)); // unguarded enq
+   Vector#(PortMax, Reg#(Bool)) route_to <- replicateM(mkReg(False));
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
@@ -80,29 +78,29 @@ module mkTLPDispatcher(TLPDispatcher);
          // route the packet based on this header
          if (is_config_read || is_config_write) begin
             // send to config interface if it will accept
-            if (tlp_in_cfg_fifo.notFull()) begin
+            if (tlp_out_fifo[portConfig].notFull()) begin
                tlp_in_fifo.deq();
-               tlp_in_cfg_fifo.enq(tlp);
+               tlp_out_fifo[portConfig].enq(tlp);
                if (!tlp.eof)
-                  route_to_cfg <= True;
+                  route_to[portConfig] <= True;
             end
          end
          else if (is_axi_read || is_axi_write) begin
             // send to portal interface if it will accept
-            if (tlp_in_portal_fifo.notFull()) begin
+            if (tlp_out_fifo[portPortal].notFull()) begin
                tlp_in_fifo.deq();
-               tlp_in_portal_fifo.enq(tlp);
+               tlp_out_fifo[portPortal].enq(tlp);
                if (!tlp.eof)
-                  route_to_portal <= True;
+                  route_to[portPortal] <= True;
             end
          end
 	 else if (is_axi_completion) begin
             // send to AXI interface if it will accept
-            if (tlp_in_axi_fifo.notFull()) begin
+            if (tlp_out_fifo[portAxi].notFull()) begin
                tlp_in_fifo.deq();
-               tlp_in_axi_fifo.enq(tlp);
+               tlp_out_fifo[portAxi].enq(tlp);
                if (!tlp.eof)
-                  route_to_axi <= True;
+                  route_to[portAxi] <= True;
             end
 	 end
          else begin
@@ -116,31 +114,31 @@ module mkTLPDispatcher(TLPDispatcher);
       else begin
          // this is a continuation of a previous TLP packet, so route
          // based on the last header
-         if (route_to_cfg) begin
+         if (route_to[portConfig]) begin
             // send to config interface if it will accept
-            if (tlp_in_cfg_fifo.notFull()) begin
+            if (tlp_out_fifo[portConfig].notFull()) begin
                tlp_in_fifo.deq();
-               tlp_in_cfg_fifo.enq(tlp);
+               tlp_out_fifo[portConfig].enq(tlp);
                if (tlp.eof)
-                  route_to_cfg <= False;
+                  route_to[portConfig] <= False;
             end
          end
-         else if (route_to_portal) begin
+         else if (route_to[portPortal]) begin
             // send to portal interface if it will accept
-            if (tlp_in_portal_fifo.notFull()) begin
+            if (tlp_out_fifo[portPortal].notFull()) begin
                tlp_in_fifo.deq();
-               tlp_in_portal_fifo.enq(tlp);
+               tlp_out_fifo[portPortal].enq(tlp);
                if (tlp.eof)
-                  route_to_portal <= False;
+                  route_to[portPortal] <= False;
             end
          end
-         else if (route_to_axi) begin
+         else if (route_to[portAxi]) begin
             // send to AXI interface if it will accept
-            if (tlp_in_axi_fifo.notFull()) begin
+            if (tlp_out_fifo[portAxi].notFull()) begin
                tlp_in_fifo.deq();
-               tlp_in_axi_fifo.enq(tlp);
+               tlp_out_fifo[portAxi].enq(tlp);
                if (tlp.eof)
-                  route_to_axi <= False;
+                  route_to[portAxi] <= False;
             end
          end
          else begin
@@ -150,10 +148,11 @@ module mkTLPDispatcher(TLPDispatcher);
       end
    endrule: dispatch_incoming_TLP
 
+   Vector#(PortMax, Get#(TLPData#(16))) outtemp;
+   for (Integer i = 0; i < valueOf(PortMax); i=i+1)
+       outtemp[i] = toGet(tlp_out_fifo[i]);
+   interface out = outtemp;
    interface Put inFromBus    = toPut(tlp_in_fifo);
-   interface Get outToConfig  = toGet(tlp_in_cfg_fifo);
-   interface Get outToPortal  = toGet(tlp_in_portal_fifo);
-   interface Get outToAxi     = toGet(tlp_in_axi_fifo);
 endmodule: mkTLPDispatcher
 
 // Multiple sources of TLP packets must all share the PCIe bus. There
@@ -164,21 +163,14 @@ interface TLPArbiter;
    // TLPs out to PCIe
    interface Get#(TLPData#(16)) outToBus;
    // TLPs in from the bridge implementation
-   interface Put#(TLPData#(16)) inFromConfig; // read completions
-   interface Put#(TLPData#(16)) inFromPortal; // read completions
-   interface Put#(TLPData#(16)) inFromAxi;    // read and write requests
+   interface Vector#(PortMax, Put#(TLPData#(16))) in;
 endinterface: TLPArbiter
 
 (* synthesize *)
 module mkTLPArbiter(TLPArbiter);
    FIFO#(TLPData#(16))  tlp_out_fifo     <- mkFIFO();
-   FIFOF#(TLPData#(16)) tlp_out_cfg_fifo <- mkGFIFOF(False,True); // unguarded deq
-   FIFOF#(TLPData#(16)) tlp_out_portal_fifo <- mkGFIFOF(False,True); // unguarded deq
-   FIFOF#(TLPData#(16)) tlp_out_axi_fifo <- mkGFIFOF(False,True); // unguarded deq
-
-   Reg#(Bool) route_from_cfg <- mkReg(False);
-   Reg#(Bool) route_from_portal <- mkReg(False);
-   Reg#(Bool) route_from_axi <- mkReg(False);
+   Vector#(PortMax, FIFOF#(TLPData#(16))) tlp_in_fifo <- replicateM(mkGFIFOF(False,True)); // unguarded deq
+   Vector#(PortMax, Reg#(Bool)) route_from <- replicateM(mkReg(False));
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
@@ -186,73 +178,74 @@ module mkTLPArbiter(TLPArbiter);
 
    (* fire_when_enabled *)
    rule arbitrate_outgoing_TLP;
-      if (route_from_cfg) begin
+      if (route_from[portConfig]) begin
          // continue taking from the config FIFO until end-of-frame
-         if (tlp_out_cfg_fifo.notEmpty()) begin
-            TLPData#(16) tlp = tlp_out_cfg_fifo.first();
-            tlp_out_cfg_fifo.deq();
+         if (tlp_in_fifo[portConfig].notEmpty()) begin
+            TLPData#(16) tlp = tlp_in_fifo[portConfig].first();
+            tlp_in_fifo[portConfig].deq();
             tlp_out_fifo.enq(tlp);
             if (tlp.eof)
-               route_from_cfg <= False;
+               route_from[portConfig] <= False;
          end
       end
-      else if (route_from_portal) begin
+      else if (route_from[portPortal]) begin
          // continue taking from the portal FIFO until end-of-frame
-         if (tlp_out_portal_fifo.notEmpty()) begin
-            TLPData#(16) tlp = tlp_out_portal_fifo.first();
-            tlp_out_portal_fifo.deq();
+         if (tlp_in_fifo[portPortal].notEmpty()) begin
+            TLPData#(16) tlp = tlp_in_fifo[portPortal].first();
+            tlp_in_fifo[portPortal].deq();
             tlp_out_fifo.enq(tlp);
             if (tlp.eof)
-               route_from_portal <= False;
+               route_from[portPortal] <= False;
          end
       end
-      else if (route_from_axi) begin
+      else if (route_from[portAxi]) begin
          // continue taking from the axi FIFO until end-of-frame
-         if (tlp_out_axi_fifo.notEmpty()) begin
-            TLPData#(16) tlp = tlp_out_axi_fifo.first();
-            tlp_out_axi_fifo.deq();
+         if (tlp_in_fifo[portAxi].notEmpty()) begin
+            TLPData#(16) tlp = tlp_in_fifo[portAxi].first();
+            tlp_in_fifo[portAxi].deq();
             tlp_out_fifo.enq(tlp);
             if (tlp.eof)
-               route_from_axi <= False;
+               route_from[portAxi] <= False;
          end
       end
-      else if (tlp_out_cfg_fifo.notEmpty()) begin
+      else if (tlp_in_fifo[portConfig].notEmpty()) begin
          // prioritize config read completions over portal traffic
-         TLPData#(16) tlp = tlp_out_cfg_fifo.first();
-         tlp_out_cfg_fifo.deq();
+         TLPData#(16) tlp = tlp_in_fifo[portConfig].first();
+         tlp_in_fifo[portConfig].deq();
          if (tlp.sof) begin
             tlp_out_fifo.enq(tlp);
             if (!tlp.eof)
-               route_from_cfg <= True;
+               route_from[portConfig] <= True;
             is_completion.send();
          end
       end
-      else if (tlp_out_portal_fifo.notEmpty()) begin
+      else if (tlp_in_fifo[portPortal].notEmpty()) begin
          // prioritize portal read completions over AXI master traffic
-         TLPData#(16) tlp = tlp_out_portal_fifo.first();
-         tlp_out_portal_fifo.deq();
+         TLPData#(16) tlp = tlp_in_fifo[portPortal].first();
+         tlp_in_fifo[portPortal].deq();
          if (tlp.sof) begin
             tlp_out_fifo.enq(tlp);
             if (!tlp.eof)
-               route_from_portal <= True;
+               route_from[portPortal] <= True;
             is_completion.send();
          end
       end
-      else if (tlp_out_axi_fifo.notEmpty()) begin
-         TLPData#(16) tlp = tlp_out_axi_fifo.first();
-         tlp_out_axi_fifo.deq();
+      else if (tlp_in_fifo[portAxi].notEmpty()) begin
+         TLPData#(16) tlp = tlp_in_fifo[portAxi].first();
+         tlp_in_fifo[portAxi].deq();
          if (tlp.sof) begin
             tlp_out_fifo.enq(tlp);
             if (!tlp.eof)
-               route_from_axi <= True;
+               route_from[portAxi] <= True;
             is_completion.send();
          end
       end
    endrule: arbitrate_outgoing_TLP
 
+   Vector#(PortMax, Put#(TLPData#(16))) intemp;
+   for (Integer i = 0; i < valueOf(PortMax); i=i+1)
+       intemp[i] = toPut(tlp_in_fifo[i]);
+   interface in = intemp;
    interface Get outToBus     = toGet(tlp_out_fifo);
-   interface Put inFromConfig = toPut(tlp_out_cfg_fifo);
-   interface Put inFromPortal = toPut(tlp_out_portal_fifo);
-   interface Put inFromAxi    = toPut(tlp_out_axi_fifo);
 endmodule
 endpackage: PcieSplitter
