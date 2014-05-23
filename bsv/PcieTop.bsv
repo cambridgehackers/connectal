@@ -82,7 +82,7 @@ provisos(
    MakeResetIfc portalResetIfc <- mkReset(10, False, epClock125);
    let portalTop <- mkPortalTop(reset_by portalResetIfc.new_rst);
 
-   PcieTracer      traceif <- mkPcieTracer();
+   PcieTracer      traceif     <- mkPcieTracer();
    // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
    // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
    // connection between the endpoint and the AXI contains GearBox
@@ -92,31 +92,30 @@ provisos(
    mkConnection(gb.tlp, ep_tlp, clocked_by epClock250, reset_by epReset250);
    mkConnection(gb.pci, traceif.pci);
 
-   TLPDispatcher   dispatcher <- mkTLPDispatcher();
-   TLPArbiter      arbiter    <- mkTLPArbiter();
-   AxiMasterEngine splitMaster     <- mkAxiMasterEngine(my_pciId);
-   AxiControlAndStatusRegs csr     <- mkAxiControlAndStatusRegs(portalResetIfc, traceif.tlp);
-   mkConnection(splitMaster.master, csr.slave);
-   mkConnection(
-       (interface Server;
-          interface response = dispatcher.outToConfig;
-          interface request = arbiter.inFromConfig;
-       endinterface), splitMaster.tlp);
-
+   TLPDispatcher   dispatcher  <- mkTLPDispatcher();
+   TLPArbiter      arbiter     <- mkTLPArbiter();
    mkConnection(traceif.bus,
        (interface Client;
           interface request = arbiter.outToBus;
           interface response = dispatcher.inFromBus;
        endinterface));
 
-   // Build the PCIe-to-AXI bridge
+   AxiMasterEngine splitEngine <- mkAxiMasterEngine(my_pciId);
+   AxiControlAndStatusRegs csr <- mkAxiControlAndStatusRegs(portalResetIfc, traceif.tlpdata);
+   mkConnection(
+       (interface Server;
+          interface response = dispatcher.outToConfig;
+          interface request = arbiter.inFromConfig;
+       endinterface), splitEngine.tlp);
+   mkConnection(splitEngine.master, csr.slave);
+
    AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);
    Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis;   
    mkConnection(
        (interface Server;
           interface response = dispatcher.outToAxi;
           interface request = arbiter.inFromAxi;
-       endinterface), dmaEngine.pci);
+       endinterface), dmaEngine.tlp);
    if(valueOf(nMasters) > 0) begin
       m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0], reset_by portalResetIfc.new_rst);
       mkConnection(m_axis[0], dmaEngine.slave);

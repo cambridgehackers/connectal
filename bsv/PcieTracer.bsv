@@ -59,7 +59,7 @@ interface PcieTracer;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
    interface Put#(TimestampedTlpData) trace;
    interface Server#(TLPData#(16), TLPData#(16)) bus;
-   interface TlpTraceData tlp;
+   interface TlpTraceData tlpdata;
 endinterface: PcieTracer
 
 // The PCIe-to-AXI bridge puts all of the elements together
@@ -181,7 +181,7 @@ module mkPcieTracer(PcieTracer);
 	   end
        endmethod
    endinterface: trace
-   interface TlpTraceData tlp;
+   interface TlpTraceData tlpdata;
       interface Reg tlpTracing    = tlpTracingReg;
       interface Reg tlpTraceLimit = tlpTraceLimitReg;
       interface Reg fromPcieTraceBramWrAddr = fromPcieTraceBramWrAddrReg;
