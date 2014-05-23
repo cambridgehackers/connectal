@@ -176,12 +176,12 @@ module mkTLPArbiter(TLPArbiter);
 	 Bool sentOne = False;
 	 for (Integer port = 0; port < valueOf(PortMax); port = port+1) begin
 	    if (!sentOne && tlp_in_fifo[port].notEmpty()) begin
-               TLPData#(16) tlp <- toget(tlp_in_fifo[port]).get();
+               TLPData#(16) tlp <- toGet(tlp_in_fifo[port]).get();
 	       sentOne = True;
                if (tlp.sof) begin
 		  tlp_out_fifo.enq(tlp);
 		  if (!tlp.eof)
-		     routeFrom <= tagged Valid port;
+		     routeFrom <= tagged Valid fromInteger(port);
                end
 	    end
 	 end
