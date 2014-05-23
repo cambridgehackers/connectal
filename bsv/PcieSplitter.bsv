@@ -156,7 +156,7 @@ endinterface: TLPArbiter
 module mkTLPArbiter(TLPArbiter);
    FIFO#(TLPData#(16))  tlp_out_fifo     <- mkFIFO();
    Vector#(PortMax, FIFOF#(TLPData#(16))) tlp_in_fifo <- replicateM(mkGFIFOF(False,True)); // unguarded deq
-   Vector#(PortMax, Reg#(Bool)) route_from <- replicateM(mkReg(False));
+   Reg#(Maybe#(Bit#(TLog#(PortMax)))) routeFrom <- mkReg(tagged Invalid);
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
@@ -164,67 +164,27 @@ module mkTLPArbiter(TLPArbiter);
 
    (* fire_when_enabled *)
    rule arbitrate_outgoing_TLP;
-      if (route_from[portConfig]) begin
-         // continue taking from the config FIFO until end-of-frame
-         if (tlp_in_fifo[portConfig].notEmpty()) begin
-            TLPData#(16) tlp = tlp_in_fifo[portConfig].first();
-            tlp_in_fifo[portConfig].deq();
+      if (routeFrom matches tagged Valid .port) begin
+         if (tlp_in_fifo[port].notEmpty()) begin
+            TLPData#(16) tlp <- toGet(tlp_in_fifo[port]).get();
             tlp_out_fifo.enq(tlp);
             if (tlp.eof)
-               route_from[portConfig] <= False;
+               routeFrom <= tagged Invalid;
          end
       end
-      else if (route_from[portPortal]) begin
-         // continue taking from the portal FIFO until end-of-frame
-         if (tlp_in_fifo[portPortal].notEmpty()) begin
-            TLPData#(16) tlp = tlp_in_fifo[portPortal].first();
-            tlp_in_fifo[portPortal].deq();
-            tlp_out_fifo.enq(tlp);
-            if (tlp.eof)
-               route_from[portPortal] <= False;
-         end
-      end
-      else if (route_from[portAxi]) begin
-         // continue taking from the axi FIFO until end-of-frame
-         if (tlp_in_fifo[portAxi].notEmpty()) begin
-            TLPData#(16) tlp = tlp_in_fifo[portAxi].first();
-            tlp_in_fifo[portAxi].deq();
-            tlp_out_fifo.enq(tlp);
-            if (tlp.eof)
-               route_from[portAxi] <= False;
-         end
-      end
-      else if (tlp_in_fifo[portConfig].notEmpty()) begin
-         // prioritize config read completions over portal traffic
-         TLPData#(16) tlp = tlp_in_fifo[portConfig].first();
-         tlp_in_fifo[portConfig].deq();
-         if (tlp.sof) begin
-            tlp_out_fifo.enq(tlp);
-            if (!tlp.eof)
-               route_from[portConfig] <= True;
-            is_completion.send();
-         end
-      end
-      else if (tlp_in_fifo[portPortal].notEmpty()) begin
-         // prioritize portal read completions over AXI master traffic
-         TLPData#(16) tlp = tlp_in_fifo[portPortal].first();
-         tlp_in_fifo[portPortal].deq();
-         if (tlp.sof) begin
-            tlp_out_fifo.enq(tlp);
-            if (!tlp.eof)
-               route_from[portPortal] <= True;
-            is_completion.send();
-         end
-      end
-      else if (tlp_in_fifo[portAxi].notEmpty()) begin
-         TLPData#(16) tlp = tlp_in_fifo[portAxi].first();
-         tlp_in_fifo[portAxi].deq();
-         if (tlp.sof) begin
-            tlp_out_fifo.enq(tlp);
-            if (!tlp.eof)
-               route_from[portAxi] <= True;
-            is_completion.send();
-         end
+      else begin
+	 Bool sentOne = False;
+	 for (Integer port = 0; port < valueOf(PortMax); port = port+1) begin
+	    if (!sentOne && tlp_in_fifo[port].notEmpty()) begin
+               TLPData#(16) tlp <- toget(tlp_in_fifo[port]).get();
+	       sentOne = True;
+               if (tlp.sof) begin
+		  tlp_out_fifo.enq(tlp);
+		  if (!tlp.eof)
+		     routeFrom <= tagged Valid port;
+               end
+	    end
+	 end
       end
    endrule: arbitrate_outgoing_TLP
 
