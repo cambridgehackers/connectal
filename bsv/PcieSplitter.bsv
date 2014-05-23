@@ -38,19 +38,19 @@ interface TLPDispatcher;
    interface Vector#(PortMax, Get#(TLPData#(16))) out;
 endinterface: TLPDispatcher
 
+typedef function Bool tlpMatchFunction(TLPData#(16) tlp) TlpMatchFunction;
+
 (* synthesize *)
 module mkTLPDispatcher(TLPDispatcher);
    FIFO#(TLPData#(16))  tlp_in_fifo     <- mkFIFO();
    Vector#(PortMax, FIFOF#(TLPData#(16))) tlp_out_fifo <- replicateM(mkGFIFOF(True,False)); // unguarded enq
-   Vector#(PortMax, Reg#(Bool)) route_to <- replicateM(mkReg(False));
+   Reg#(Maybe#(Bit#(TLog#(PortMax)))) routeToPort <- mkReg(tagged Invalid);
 
    PulseWire is_read       <- mkPulseWire();
    PulseWire is_write      <- mkPulseWire();
    PulseWire is_completion <- mkPulseWire();
 
-   (* fire_when_enabled *)
-   rule dispatch_incoming_TLP;
-      TLPData#(16) tlp = tlp_in_fifo.first();
+   function Bool configMatch(TLPData#(16) tlp);
       TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
       Bool is_config_read    =  tlp.sof
                              && (tlp.hit == 7'h01)
@@ -61,6 +61,11 @@ module mkTLPDispatcher(TLPDispatcher);
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
                              ;
+      return is_config_read || is_config_write;
+   endfunction
+
+   function Bool axiMatch(TLPData#(16) tlp);
+      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
       Bool is_axi_read       =  tlp.sof
                              && (tlp.hit == 7'h04)
                              && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
@@ -70,75 +75,56 @@ module mkTLPDispatcher(TLPDispatcher);
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
                              ;
+      return is_axi_read || is_axi_write;
+   endfunction
+
+   function Bool axiCompletionMatch(TLPData#(16) tlp);
+      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
       Bool is_axi_completion =  tlp.sof
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype == COMPLETION)
                              ;
+      return is_axi_completion;
+   endfunction
+
+   Vector#(PortMax, TlpMatchFunction) matchFunctions = newVector;
+   matchFunctions[portConfig] = configMatch;
+   matchFunctions[portPortal] = axiMatch;
+   matchFunctions[portAxi]    = axiCompletionMatch;
+
+   (* fire_when_enabled *)
+   rule dispatch_incoming_TLP;
+      TLPData#(16) tlp = tlp_in_fifo.first();
+      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+
       if (tlp.sof) begin
+	 Bool matched = False;
          // route the packet based on this header
-         if (is_config_read || is_config_write) begin
-            // send to config interface if it will accept
-            if (tlp_out_fifo[portConfig].notFull()) begin
-               tlp_in_fifo.deq();
-               tlp_out_fifo[portConfig].enq(tlp);
-               if (!tlp.eof)
-                  route_to[portConfig] <= True;
+	 for (Integer port = 0; port < valueOf(PortMax); port = port+1)
+            if (!matched && matchFunctions[port](tlp)) begin
+	       matched = True;
+               if (tlp_out_fifo[port].notFull()) begin
+		  tlp_in_fifo.deq();
+		  tlp_out_fifo[port].enq(tlp);
+		  if (!tlp.eof)
+                     routeToPort <= tagged Valid fromInteger(port);
+               end
             end
-         end
-         else if (is_axi_read || is_axi_write) begin
-            // send to portal interface if it will accept
-            if (tlp_out_fifo[portPortal].notFull()) begin
-               tlp_in_fifo.deq();
-               tlp_out_fifo[portPortal].enq(tlp);
-               if (!tlp.eof)
-                  route_to[portPortal] <= True;
-            end
-         end
-	 else if (is_axi_completion) begin
-            // send to AXI interface if it will accept
-            if (tlp_out_fifo[portAxi].notFull()) begin
-               tlp_in_fifo.deq();
-               tlp_out_fifo[portAxi].enq(tlp);
-               if (!tlp.eof)
-                  route_to[portAxi] <= True;
-            end
-	 end
-         else begin
+         if (!matched) begin
             // unknown packet type -- just discard it
             tlp_in_fifo.deq();
          end
          // indicate activity type
-         if (is_config_read)                     is_read.send();
-         if (is_config_write)                    is_write.send();
+         //if (is_config_read)                     is_read.send();
+         //if (is_config_write)                    is_write.send();
       end
       else begin
-         // this is a continuation of a previous TLP packet, so route
-         // based on the last header
-         if (route_to[portConfig]) begin
-            // send to config interface if it will accept
-            if (tlp_out_fifo[portConfig].notFull()) begin
+	 if (routeToPort matches tagged Valid .port) begin
+            if (tlp_out_fifo[port].notFull()) begin
                tlp_in_fifo.deq();
-               tlp_out_fifo[portConfig].enq(tlp);
+               tlp_out_fifo[port].enq(tlp);
                if (tlp.eof)
-                  route_to[portConfig] <= False;
-            end
-         end
-         else if (route_to[portPortal]) begin
-            // send to portal interface if it will accept
-            if (tlp_out_fifo[portPortal].notFull()) begin
-               tlp_in_fifo.deq();
-               tlp_out_fifo[portPortal].enq(tlp);
-               if (tlp.eof)
-                  route_to[portPortal] <= False;
-            end
-         end
-         else if (route_to[portAxi]) begin
-            // send to AXI interface if it will accept
-            if (tlp_out_fifo[portAxi].notFull()) begin
-               tlp_in_fifo.deq();
-               tlp_out_fifo[portAxi].enq(tlp);
-               if (tlp.eof)
-                  route_to[portAxi] <= False;
+                  routeToPort <= tagged Invalid;
             end
          end
          else begin
