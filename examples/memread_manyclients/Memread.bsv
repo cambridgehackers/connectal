@@ -24,19 +24,21 @@ import FIFO::*;
 import FIFOF::*;
 import Vector::*;
 import GetPut::*;
+import ClientServer::*;
 
 import Dma::*;
 import MemreadEngine::*;
 
-typedef 32 NumReadClients;
+typedef 32 NumEngineServers;
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
+   method Action getStateDbg();   
 endinterface
 
 interface Memread;
    interface MemreadRequest request;
-   interface Vector#(NumReadClients,ObjectReadClient#(64)) dmaClients;
+   interface ObjectReadClient#(64) dmaClient;
 endinterface
 
 interface MemreadIndication;
@@ -57,15 +59,17 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32))      finishPtr <- mkReg(0);
    Reg#(Bit#(32))    mismatchCnt <- mkReg(0);
    
-   Vector#(NumReadClients, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
-   Vector#(NumReadClients, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   Vector#(NumReadClients, FIFOF#(Bit#(64)))    readFifos <- replicateM(mkFIFOF);
-   Vector#(NumReadClients, MemreadEngine#(64))        res <- mapM(uncurry(mkMemreadEngine), zip(replicate(1), readFifos));
    
-   Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumReadClients)))*4;
+   Vector#(NumEngineServers, FIFO#(void))                cf <- replicateM(mkSizedFIFO(1));
+   Vector#(NumEngineServers, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
+   Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
+   Vector#(NumEngineServers, FIFOF#(Bit#(64)))    readFifos <- replicateM(mkFIFOF);
+   MemreadEngineV#(64,1,NumEngineServers)                re <- mkMemreadEngineV(readFifos);
+   Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
+   
    
    rule start (sIterCnt > 0 && !readFifos[startPtr].notEmpty);
-      if (startPtr+1 == fromInteger(valueOf(NumReadClients))) begin
+      if (startPtr+1 == fromInteger(valueOf(NumEngineServers))) begin
 	 sIterCnt <= sIterCnt-1;
 	 startPtr <= 0;
 	 startBase <= 0;
@@ -74,14 +78,15 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 startPtr <= startPtr+1;
 	 startBase <= startBase+chunk;
       end
-      res[startPtr].start(pointer, startBase, truncate(chunk), burstLen*4);
+      re.readServers[startPtr].request.put(MemengineCmd{pointer:pointer, base:startBase, readLen:truncate(chunk), burstLen:burstLen*4});
       let srcGen = startPtr * truncate(chunk/4);
       srcGens[startPtr] <= srcGen;
       $display("start %h %d", srcGen, sIterCnt);
+      cf[startPtr].enq(?);
    endrule
    
    rule finish;
-      if (finishPtr+1 == fromInteger(valueOf(NumReadClients))) begin
+      if (finishPtr+1 == fromInteger(valueOf(NumEngineServers))) begin
 	 fIterCnt <= fIterCnt-1;
 	 finishPtr <= 0;
 	 if (fIterCnt-1==0)
@@ -91,12 +96,13 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 finishPtr <= finishPtr+1;
       end
       $display("finish %d %d", finishPtr, fIterCnt);
-      let rv <- res[finishPtr].finish;
+      let rv <- re.readServers[finishPtr].response.get;
       mismatchCnt <= mismatchCnt+mismatchCounts[finishPtr];
       mismatchCounts[finishPtr] <= 0;
+      cf[finishPtr].deq;
    endrule
    
-   for(Integer i = 0; i < valueOf(NumReadClients); i=i+1)
+   for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1)
       rule check;
 	 let v <- toGet(readFifos[i]).get;
 	 let expectedV = {srcGens[i]+1,srcGens[i]};
@@ -105,8 +111,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 srcGens[i] <= srcGens[i]+2;
       endrule
    
-   function ObjectReadClient#(64) getClient(MemreadEngine#(64) re) = re.dmaClient; 
-   interface dmaClients = map(getClient,res);
+   interface dmaClient = re.dmaClient;
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	 indication.started(nw);
