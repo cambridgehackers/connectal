@@ -52,12 +52,10 @@ module mkTLPDispatcher(TLPDispatcher);
 
    function Bool configMatch(TLPData#(16) tlp);
       TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      Bool is_config_read    =  tlp.sof
-                             && (tlp.hit == 7'h01)
+      Bool is_config_read    = (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
                              ;
-      Bool is_config_write   =  tlp.sof
-                             && (tlp.hit == 7'h01)
+      Bool is_config_write   = (tlp.hit == 7'h01)
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
                              ;
@@ -66,12 +64,10 @@ module mkTLPDispatcher(TLPDispatcher);
 
    function Bool axiMatch(TLPData#(16) tlp);
       TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      Bool is_axi_read       =  tlp.sof
-                             && (tlp.hit == 7'h04)
+      Bool is_axi_read       = (tlp.hit == 7'h04)
                              && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
                              ;
-      Bool is_axi_write      =  tlp.sof
-                             && (tlp.hit == 7'h04)
+      Bool is_axi_write      = (tlp.hit == 7'h04)
                              && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype != COMPLETION)
                              ;
@@ -80,8 +76,7 @@ module mkTLPDispatcher(TLPDispatcher);
 
    function Bool axiCompletionMatch(TLPData#(16) tlp);
       TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      Bool is_axi_completion =  tlp.sof
-                             && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
+      Bool is_axi_completion = (hdr_3dw.format == MEM_WRITE_3DW_DATA)
                              && (hdr_3dw.pkttype == COMPLETION)
                              ;
       return is_axi_completion;
@@ -118,19 +113,17 @@ module mkTLPDispatcher(TLPDispatcher);
          //if (is_config_read)                     is_read.send();
          //if (is_config_write)                    is_write.send();
       end
-      else begin
-	 if (routeToPort matches tagged Valid .port) begin
-            if (tlp_out_fifo[port].notFull()) begin
-               tlp_in_fifo.deq();
-               tlp_out_fifo[port].enq(tlp);
-               if (tlp.eof)
-                  routeToPort <= tagged Invalid;
-            end
-         end
-         else begin
-            // unknown packet type -- just discard it
+      else if (routeToPort matches tagged Valid .port) begin
+         if (tlp_out_fifo[port].notFull()) begin
             tlp_in_fifo.deq();
+            tlp_out_fifo[port].enq(tlp);
+            if (tlp.eof)
+               routeToPort <= tagged Invalid;
          end
+      end
+      else begin
+         // unknown packet type -- just discard it
+         tlp_in_fifo.deq();
       end
    endrule: dispatch_incoming_TLP
 

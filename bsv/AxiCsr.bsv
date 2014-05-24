@@ -53,7 +53,7 @@ endinterface: AxiControlAndStatusRegs
 // accessing the control and status registers. It defines the
 // registers, the address map, and how the registers respond to reads
 // and writes.
-module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlp)(AxiControlAndStatusRegs);
+module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlpdata)(AxiControlAndStatusRegs);
 
    // Utility for module creating all of the storage for a single MSIX
    // table entry
@@ -106,16 +106,16 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlp)
 	 
 	 768: return extend(bramMuxRdAddrReg);
 	 774: return fromInteger(2**valueOf(TAdd#(TlpTraceAddrSize,1)));
-	 775: return (tlp.tlpTracing ? 1 : 0);
+	 775: return (tlpdata.tlpTracing ? 1 : 0);
 	 776: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 0);
 	 777: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 1);
 	 778: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 2);
 	 779: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 3);
 	 780: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 4);
 	 781: return tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
-	 792: return extend(tlp.fromPcieTraceBramWrAddr);
-	 793: return extend(  tlp.toPcieTraceBramWrAddr);
-	 794: return extend(tlp.tlpTraceLimit);
+	 792: return extend(tlpdata.fromPcieTraceBramWrAddr);
+	 793: return extend(  tlpdata.toPcieTraceBramWrAddr);
+	 794: return extend(tlpdata.tlpTraceLimit);
 	 795: return portalResetIfc.isAsserted() ? 1 : 0;
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
@@ -154,15 +154,15 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlp)
             end
          else
          case (modaddr)
-	    775: tlp.tlpTracing <= (dword != 0) ? True : False;
+	    775: tlpdata.tlpTracing <= (dword != 0) ? True : False;
 
 	    768: begin
-		    tlp.bramMux.bramServer.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: unpack(0)});
+		    tlpdata.bramServer.request.put(BRAMRequest{ write: False, responseOnWrite: False, address: bramMuxRdAddrReg, datain: unpack(0)});
 		    bramMuxRdAddrReg <= bramMuxRdAddrReg + 1;
 		    end
-	    792: tlp.fromPcieTraceBramWrAddr <= truncate(dword);
-	    793:   tlp.toPcieTraceBramWrAddr <= truncate(dword);
-	    794: tlp.tlpTraceLimit <= truncate(dword);
+	    792: tlpdata.fromPcieTraceBramWrAddr <= truncate(dword);
+	    793:   tlpdata.toPcieTraceBramWrAddr <= truncate(dword);
+	    794: tlpdata.tlpTraceLimit <= truncate(dword);
 	    795: portalResetIfc.assertReset();
          endcase
       endaction
@@ -171,7 +171,7 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlp)
    // State used to actually service read and write requests
 
    rule brmMuxResponse;
-       let v <- tlp.bramMux.bramServer.response.get();
+       let v <- tlpdata.bramServer.response.get();
        pcieTraceBramResponse <= v;
    endrule
 
