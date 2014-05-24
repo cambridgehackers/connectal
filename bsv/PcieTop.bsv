@@ -42,6 +42,7 @@ import AxiMasterEngine   :: *;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
 import AxiCsr            :: *;
+import AxiSlave          :: *;
 
 import BRAM         :: *;
 
@@ -109,8 +110,9 @@ provisos(
 
    AxiMasterEngine splitEngine <- mkAxiMasterEngine(my_pciId);
    AxiControlAndStatusRegs csr <- mkAxiControlAndStatusRegs(portalResetIfc, traceif.tlpdata);
+   Axi3Slave#(32,32,12) my_slave <- mkAxiSlave(csr.csr);
    mkConnection(serv[portConfig], splitEngine.tlp);
-   mkConnection(splitEngine.master, csr.slave);
+   mkConnection(splitEngine.master, my_slave);
 
    AxiMasterEngine portalEngine <- mkAxiMasterEngine(my_pciId);
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave);
