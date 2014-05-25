@@ -25,23 +25,24 @@ import FIFOF          :: *;
 import GetPut         :: *;
 import AxiMasterSlave :: *;
 import Clocks         :: *;
+import Dma            :: *;
 
-interface CsrIf;
+interface AxiSlaveClient;
     method Bit#(32) rd(UInt#(30) addr);
     method Action wr(UInt#(30) addr, Bit#(4) be, Bit#(32) dword);
 endinterface
 
-module mkAxiSlave#(CsrIf csr)(Axi3Slave#(32,32,12));
+module mkAxiSlave#(AxiSlaveClient csr)(Axi3Slave#(32,32,12));
    FIFOF#(Axi3ReadRequest#(32,12)) req_ar_fifo <- mkFIFOF();
    FIFOF#(Axi3ReadResponse#(32,12)) resp_read_fifo <- mkSizedFIFOF(8);
    FIFOF#(Axi3WriteRequest#(32,12)) req_aw_fifo <- mkFIFOF();
    FIFOF#(Axi3WriteData#(32,12)) resp_write_fifo <- mkSizedFIFOF(8);
-   FIFOF#(Axi3WriteResponse#(12)) resp_b_fifo <- mkFIFOF();
+   FIFOF#(Bit#(12)) resp_b_fifo <- mkFIFOF();
 
-   Reg#(Bit#(5)) readBurstCount <- mkReg(0);
+   Reg#(Bit#(8)) readBurstCount <- mkReg(0);
    Reg#(Bit#(30)) readAddr <- mkReg(0);
    rule do_read if (req_ar_fifo.notEmpty());
-      Bit#(5) bc = readBurstCount;
+      Bit#(8) bc = readBurstCount;
       Bit#(30) addr = readAddr;
       let req = req_ar_fifo.first();
       if (bc == 0) begin
@@ -62,10 +63,10 @@ module mkAxiSlave#(CsrIf csr)(Axi3Slave#(32,32,12));
 	 req_ar_fifo.deq();
    endrule
 
-   Reg#(Bit#(5)) writeBurstCount <- mkReg(0);
+   Reg#(Bit#(8)) writeBurstCount <- mkReg(0);
    Reg#(Bit#(30)) writeAddr <- mkReg(0);
    rule do_write if (req_aw_fifo.notEmpty());
-      Bit#(5) bc = writeBurstCount;
+      Bit#(8) bc = writeBurstCount;
       Bit#(30) addr = writeAddr;
       let req = req_aw_fifo.first();
       if (bc == 0) begin
@@ -85,7 +86,7 @@ module mkAxiSlave#(CsrIf csr)(Axi3Slave#(32,32,12));
       writeAddr <= addr;
       if (bc == 0) begin
 	 req_aw_fifo.deq();
-	 resp_b_fifo.enq(Axi3WriteResponse { resp: 0, id: req.id});
+	 resp_b_fifo.enq(req.id);
       end
    endrule
 
@@ -93,29 +94,29 @@ module mkAxiSlave#(CsrIf csr)(Axi3Slave#(32,32,12));
       method Action put(Axi3ReadRequest#(32,12) req);
          req_ar_fifo.enq(req);
       endmethod
-   endinterface: req_ar
+   endinterface
    interface Get resp_read;
       method ActionValue#(Axi3ReadResponse#(32,12)) get();
          let resp = resp_read_fifo.first();
          resp_read_fifo.deq();
          return resp;
       endmethod
-   endinterface: resp_read
+   endinterface
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(32,12) req);
          req_aw_fifo.enq(req);
       endmethod
-   endinterface: req_aw
+   endinterface
    interface Put resp_write;
       method Action put(Axi3WriteData#(32,12) resp);
          resp_write_fifo.enq(resp);
       endmethod
-   endinterface: resp_write
+   endinterface
    interface Get resp_b;
       method ActionValue#(Axi3WriteResponse#(12)) get();
          let b = resp_b_fifo.first();
          resp_b_fifo.deq();
-         return b;
+         return Axi3WriteResponse { resp: 0, id: b};
       endmethod
-   endinterface: resp_b
+   endinterface
 endmodule

@@ -42,10 +42,9 @@ interface MSIX_Entry;
    interface Reg#(Bool)     masked;
 endinterface
 
-// The control and status registers which are accessible from the PCIe
-// bus.
+// control and status registers accessed from PCIe
 interface AxiControlAndStatusRegs;
-   interface CsrIf csr;
+   interface AxiSlaveClient client;
    interface Vector#(16,MSIX_Entry) msixEntry;
 endinterface: AxiControlAndStatusRegs
 
@@ -98,7 +97,7 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlpd
        pcieTraceBramResponse <= v;
    endrule
 
-   interface CsrIf csr;
+   interface AxiSlaveClient client;
    // Function to read from the CSR address space (using DW address)
    method Bit#(32) rd(UInt#(30) addr);
       let modaddr = (addr % 8192);
