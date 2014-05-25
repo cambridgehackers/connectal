@@ -29,10 +29,10 @@ import Dma            :: *;
 
 interface AxiSlaveClient;
     method Bit#(32) rd(UInt#(30) addr);
-    method Action wr(UInt#(30) addr, Bit#(4) be, Bit#(32) dword);
+    method Action wr(UInt#(30) addr, Bit#(32) dword);
 endinterface
 
-module mkAxiSlave#(AxiSlaveClient csr)(MemSlave#(32,32));
+module mkAxiSlave#(AxiSlaveClient client)(MemSlave#(32,32));
    FIFOF#(MemRequest#(32)) req_ar_fifo <- mkFIFOF();
    FIFOF#(MemData#(32)) resp_read_fifo <- mkSizedFIFOF(8);
    FIFOF#(MemRequest#(32)) req_aw_fifo <- mkFIFOF();
@@ -50,7 +50,7 @@ module mkAxiSlave#(AxiSlaveClient csr)(MemSlave#(32,32));
 	 addr = truncate(req.addr);
       end
 
-      let v = csr.rd(unpack(addr >> 2));
+      let v = client.rd(unpack(addr >> 2));
       $display("AxiCsr do_read addr=%h len=%d v=%h", addr, bc, v);
       resp_read_fifo.enq(MemData { data: v, tag: req.tag });
 
@@ -77,7 +77,7 @@ module mkAxiSlave#(AxiSlaveClient csr)(MemSlave#(32,32));
       let resp_write = resp_write_fifo.first();
       resp_write_fifo.deq();
 
-      csr.wr(unpack(addr >> 2), 'hf, resp_write.data);
+      client.wr(unpack(addr >> 2), resp_write.data);
 
       addr = addr + 4;
       bc = bc - 1;

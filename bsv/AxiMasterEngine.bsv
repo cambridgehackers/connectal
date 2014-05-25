@@ -252,7 +252,7 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
 	     return Axi3WriteRequest { address: extend(writeHeaderFifo.first.addr) << 2, len: truncate(axilen), id: extend(writeHeaderFifo.first.tag),
 				       size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
 	  endmethod
-       endinterface: req_aw
+       endinterface
        interface Get resp_write;
 	  method ActionValue#(Axi3WriteData#(32,12)) get();
 	     writeDataFifo.deq;
@@ -260,12 +260,12 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
 	     data = byteSwap(data);
 	     return Axi3WriteData { data: data, id: extend(writeDataFifo.first.tag), byteEnable: writeDataFifo.first.firstbe, last: 1 };
 	  endmethod
-       endinterface: resp_write
+       endinterface
        interface Put resp_b;
 	  method Action put(Axi3WriteResponse#(12) resp);
              bTagReg <= resp.id;
 	  endmethod
-       endinterface: resp_b
+       endinterface
        interface Get req_ar;
 	  method ActionValue#(Axi3ReadRequest#(32,12)) get();
 	     let hdr = readHeaderFifo.first;
@@ -276,13 +276,13 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
 	     return Axi3ReadRequest { address: extend(readHeaderFifo.first.addr) << 2, len: truncate(axilen), id: extend(readHeaderFifo.first.tag),
 				     size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
 	    endmethod
-       endinterface: req_ar
+       endinterface
        interface Put resp_read;
 	  method Action put(Axi3ReadResponse#(32,12) resp) if (completionMimo.enqReadyN(1));
 	     Vector#(1, Bit#(32)) vec = cons(resp.data, nil);
 	     completionMimo.enq(1, vec);
 	  endmethod
-	endinterface: resp_read
+	endinterface
     endinterface: master
     interface Put interruptRequest;
        method Action put(Tuple2#(Bit#(64),Bit#(32)) intr);

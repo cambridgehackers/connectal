@@ -82,15 +82,6 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlpd
        end
    endfunction
 
-   // Utility function for managing partial writes
-   function t update_dword(t dword_orig, Bit#(4) be, Bit#(32) dword_in) provisos(Bits#(t,32));
-      Vector#(4,Bit#(8)) result = unpack(pack(dword_orig));
-      Vector#(4,Bit#(8)) vin    = unpack(dword_in);
-      for (Integer i = 0; i < 4; i = i + 1)
-         if (be[i] != 0) result[i] = vin[i];
-      return unpack(pack(result));
-   endfunction: update_dword
-
    // State used to actually service read and write requests
    rule brmMuxResponse;
        let v <- tlpdata.bramServer.response.get();
@@ -144,17 +135,17 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlpd
    endmethod
 
    // Function to write to the CSR address space (using DW address)
-   method Action wr(UInt#(30) addr, Bit#(4) be, Bit#(32) dword);
+   method Action wr(UInt#(30) addr, Bit#(32) dword);
          let modaddr = (addr % 8192);
          if (modaddr >= `msix_base && modaddr <= (`msix_base+63))
             begin
             let groupaddr = (modaddr / 4);
             //******************************** area referenced from xilinx_x7_pcie_wrapper.v
             case (modaddr % 4)
-            0: msix_entry[groupaddr].addr_lo  <= update_dword(msix_entry[groupaddr].addr_lo, be, (dword & 32'hfffffffc));
-            1: msix_entry[groupaddr].addr_hi  <= update_dword(msix_entry[groupaddr].addr_hi, be, dword);
-            2: msix_entry[groupaddr].msg_data <= update_dword(msix_entry[groupaddr].msg_data, be, dword);
-            3: if (be[0] == 1) msix_entry[groupaddr].masked <= unpack(dword[0]);
+            0: msix_entry[groupaddr].addr_lo  <= (dword & 32'hfffffffc);
+            1: msix_entry[groupaddr].addr_hi  <= dword;
+            2: msix_entry[groupaddr].msg_data <= dword;
+            3: msix_entry[groupaddr].masked <= unpack(dword[0]);
             endcase
             end
          else
