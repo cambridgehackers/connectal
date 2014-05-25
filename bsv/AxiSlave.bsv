@@ -32,12 +32,12 @@ interface AxiSlaveClient;
     method Action wr(UInt#(30) addr, Bit#(4) be, Bit#(32) dword);
 endinterface
 
-module mkAxiSlave#(AxiSlaveClient csr)(Axi3Slave#(32,32,12));
-   FIFOF#(Axi3ReadRequest#(32,12)) req_ar_fifo <- mkFIFOF();
-   FIFOF#(Axi3ReadResponse#(32,12)) resp_read_fifo <- mkSizedFIFOF(8);
-   FIFOF#(Axi3WriteRequest#(32,12)) req_aw_fifo <- mkFIFOF();
-   FIFOF#(Axi3WriteData#(32,12)) resp_write_fifo <- mkSizedFIFOF(8);
-   FIFOF#(Bit#(12)) resp_b_fifo <- mkFIFOF();
+module mkAxiSlave#(AxiSlaveClient csr)(MemSlave#(32,32));
+   FIFOF#(MemRequest#(32)) req_ar_fifo <- mkFIFOF();
+   FIFOF#(MemData#(32)) resp_read_fifo <- mkSizedFIFOF(8);
+   FIFOF#(MemRequest#(32)) req_aw_fifo <- mkFIFOF();
+   FIFOF#(MemData#(32)) resp_write_fifo <- mkSizedFIFOF(8);
+   FIFOF#(Bit#(ObjectTagSize)) resp_b_fifo <- mkFIFOF();
 
    Reg#(Bit#(8)) readBurstCount <- mkReg(0);
    Reg#(Bit#(30)) readAddr <- mkReg(0);
@@ -46,13 +46,13 @@ module mkAxiSlave#(AxiSlaveClient csr)(Axi3Slave#(32,32,12));
       Bit#(30) addr = readAddr;
       let req = req_ar_fifo.first();
       if (bc == 0) begin
-	 bc = extend(req.len)+1;
-	 addr = truncate(req.address);
+	 bc = extend(req.burstLen);
+	 addr = truncate(req.addr);
       end
 
       let v = csr.rd(unpack(addr >> 2));
       $display("AxiCsr do_read addr=%h len=%d v=%h", addr, bc, v);
-      resp_read_fifo.enq(Axi3ReadResponse { data: v, resp: 0, last: pack(bc == 1), id: req.id });
+      resp_read_fifo.enq(MemData { data: v, tag: req.tag });
 
       addr = addr + 4;
       bc = bc - 1;
@@ -70,8 +70,8 @@ module mkAxiSlave#(AxiSlaveClient csr)(Axi3Slave#(32,32,12));
       Bit#(30) addr = writeAddr;
       let req = req_aw_fifo.first();
       if (bc == 0) begin
-	 bc = extend(req.len)+1;
-	 addr = truncate(req.address);
+	 bc = extend(req.burstLen);
+	 addr = truncate(req.addr);
       end
 
       let resp_write = resp_write_fifo.first();
@@ -86,37 +86,41 @@ module mkAxiSlave#(AxiSlaveClient csr)(Axi3Slave#(32,32,12));
       writeAddr <= addr;
       if (bc == 0) begin
 	 req_aw_fifo.deq();
-	 resp_b_fifo.enq(req.id);
+	 resp_b_fifo.enq(req.tag);
       end
    endrule
 
-   interface Put req_ar;
-      method Action put(Axi3ReadRequest#(32,12) req);
-         req_ar_fifo.enq(req);
-      endmethod
+   interface MemReadServer read_server;
+      interface Put readReq;
+         method Action put(MemRequest#(32) req);
+            req_ar_fifo.enq(req);
+         endmethod
+      endinterface
+      interface Get     readData;
+         method ActionValue#(MemData#(32)) get();
+            let resp = resp_read_fifo.first();
+            resp_read_fifo.deq();
+            return resp;
+         endmethod
+      endinterface
    endinterface
-   interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(32,12)) get();
-         let resp = resp_read_fifo.first();
-         resp_read_fifo.deq();
-         return resp;
-      endmethod
-   endinterface
-   interface Put req_aw;
-      method Action put(Axi3WriteRequest#(32,12) req);
-         req_aw_fifo.enq(req);
-      endmethod
-   endinterface
-   interface Put resp_write;
-      method Action put(Axi3WriteData#(32,12) resp);
-         resp_write_fifo.enq(resp);
-      endmethod
-   endinterface
-   interface Get resp_b;
-      method ActionValue#(Axi3WriteResponse#(12)) get();
-         let b = resp_b_fifo.first();
-         resp_b_fifo.deq();
-         return Axi3WriteResponse { resp: 0, id: b};
-      endmethod
+   interface MemWriteServer write_server; 
+      interface Put writeReq;
+         method Action put(MemRequest#(32) req);
+            req_aw_fifo.enq(req);
+         endmethod
+      endinterface
+      interface Put writeData;
+         method Action put(MemData#(32) resp);
+            resp_write_fifo.enq(resp);
+         endmethod
+      endinterface
+      interface Get writeDone;
+         method ActionValue#(Bit#(ObjectTagSize)) get();
+            let b = resp_b_fifo.first();
+            resp_b_fifo.deq();
+            return b;
+         endmethod
+      endinterface
    endinterface
 endmodule

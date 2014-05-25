@@ -111,9 +111,10 @@ provisos(
 
    AxiMasterEngine splitEngine <- mkAxiMasterEngine(my_pciId);
    AxiControlAndStatusRegs csr <- mkAxiControlAndStatusRegs(portalResetIfc, traceif.tlpdata);
-   Axi3Slave#(32,32,12) my_slave <- mkAxiSlave(csr.client);
+   MemSlave#(32,32) my_slave <- mkAxiSlave(csr.client);
+   Axi3Slave#(32,32,12) axicsr <- mkAxiDmaSlave(my_slave);
    mkConnection(serv[portConfig], splitEngine.tlp);
-   mkConnection(splitEngine.master, my_slave);
+   mkConnection(splitEngine.master, axicsr);
 
    AxiMasterEngine portalEngine <- mkAxiMasterEngine(my_pciId);
    Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave);
