@@ -23,16 +23,15 @@
 import Vector         :: *;
 import FIFOF          :: *;
 import GetPut         :: *;
-import AxiMasterSlave :: *;
 import Clocks         :: *;
 import Dma            :: *;
 
-interface AxiSlaveClient;
+interface MemSlaveClient;
     method Bit#(32) rd(UInt#(30) addr);
     method Action wr(UInt#(30) addr, Bit#(32) dword);
 endinterface
 
-module mkAxiSlave#(AxiSlaveClient client)(MemSlave#(32,32));
+module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
    FIFOF#(MemRequest#(32)) req_ar_fifo <- mkFIFOF();
    FIFOF#(MemData#(32)) resp_read_fifo <- mkSizedFIFOF(8);
    FIFOF#(MemRequest#(32)) req_aw_fifo <- mkFIFOF();
@@ -51,7 +50,7 @@ module mkAxiSlave#(AxiSlaveClient client)(MemSlave#(32,32));
       end
 
       let v = client.rd(unpack(addr >> 2));
-      $display("AxiCsr do_read addr=%h len=%d v=%h", addr, bc, v);
+      $display("MemSlave do_read addr=%h len=%d v=%h", addr, bc, v);
       resp_read_fifo.enq(MemData { data: v, tag: req.tag });
 
       addr = addr + 4;

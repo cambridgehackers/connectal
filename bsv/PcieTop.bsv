@@ -38,11 +38,11 @@ import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiSlaveEngine    :: *;
-import AxiMasterEngine   :: *;
+import MemMasterEngine   :: *;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
 import AxiCsr            :: *;
-import AxiSlave          :: *;
+import MemSlave          :: *;
 import Dma               :: *;
 
 import BRAM         :: *;
@@ -109,17 +109,15 @@ provisos(
           interface response = dispatcher.inFromBus;
        endinterface));
 
-   AxiMasterEngine splitEngine <- mkAxiMasterEngine(my_pciId);
+   MemMasterEngine splitEngine <- mkMemMasterEngine(my_pciId);
    AxiControlAndStatusRegs csr <- mkAxiControlAndStatusRegs(portalResetIfc, traceif.tlpdata);
-   MemSlave#(32,32) my_slave <- mkAxiSlave(csr.client);
-   Axi3Slave#(32,32,12) axicsr <- mkAxiDmaSlave(my_slave);
+   MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
    mkConnection(serv[portConfig], splitEngine.tlp);
-   mkConnection(splitEngine.master, axicsr);
+   mkConnection(splitEngine.master, my_slave);
 
-   AxiMasterEngine portalEngine <- mkAxiMasterEngine(my_pciId);
-   Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(portalTop.slave);
+   MemMasterEngine portalEngine <- mkMemMasterEngine(my_pciId);
    mkConnection(serv[portPortal], portalEngine.tlp);
-   mkConnection(portalEngine.master, ctrl);
+   mkConnection(portalEngine.master, portalTop.slave);
 
    if(valueOf(nMasters) > 0) begin
       AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);

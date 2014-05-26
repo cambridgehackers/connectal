@@ -27,23 +27,22 @@ import Connectable  :: *;
 import MIMO         :: *;
 import PCIE         :: *;
 import DefaultValue :: *;
-import ClientServer   :: *;
-
-import AxiMasterSlave :: *;
+import ClientServer :: *;
+import Dma          :: *;
 
 //
 // Top interface: PCIe transaction level packets (TLPs)
-// Bottom interface: AXI3 Master that sends read/write requests to an Axi3Slave
+// Bottom interface: MemMaster that sends read/write requests to an MemSlave
 // Also sources interrupt MSIX requests
-interface AxiMasterEngine;
+interface MemMasterEngine;
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
-    interface Axi3Master#(32,32,12) master;
+    interface MemMaster#(32,32) master;
     interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
-    interface Reg#(Bit#(12))       bTag;
+    interface Reg#(Bit#(ObjectTagSize))       bTag;
 endinterface
 
 (* synthesize *)
-module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
+module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     FIFOF#(Tuple2#(Bit#(64),Bit#(32))) interruptRequestFifo <- mkSizedFIFOF(16);
     Reg#(Maybe#(Bit#(32))) interruptSecondHalf <- mkReg(tagged Invalid);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
@@ -54,7 +53,7 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
     FIFOF#(TLPMemoryIO3DWHeader) writeDataFifo <- mkSizedFIFOF(8);
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkSizedFIFOF(8);
     Reg#(TLPTag) tlpTag <- mkReg(0);
-    Reg#(Bit#(12)) bTagReg <- mkReg(0);
+    Reg#(Bit#(ObjectTagSize)) bTagReg <- mkReg(0);
 
     MIMOConfiguration mimoCfg = defaultValue;
     MIMO#(1,4,16,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
@@ -222,7 +221,7 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
     interface Client        tlp;
     interface Put response;
         method Action put(TLPData#(16) tlp);
-	    //$display("AxiMasterEngine.put tlp=%h", tlp);
+	    //$display("MemMasterEngine.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
@@ -242,47 +241,49 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
     endinterface
     interface Get request = toGet(tlpOutFifo);
     endinterface: tlp
-    interface Axi3Master master;
-       interface Get req_aw;
-	  method ActionValue#(Axi3WriteRequest#(32,12)) get() if (interruptSecondHalf matches tagged Invalid);
+    interface MemMaster master;
+    interface MemWriteClient write_client;
+        interface Get    writeReq;
+	  method ActionValue#(MemRequest#(32)) get() if (interruptSecondHalf matches tagged Invalid);
 	     let hdr = writeHeaderFifo.first;
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
-	     let axilen = hdr.length - 1;
-	     return Axi3WriteRequest { address: extend(writeHeaderFifo.first.addr) << 2, len: truncate(axilen), id: extend(writeHeaderFifo.first.tag),
-				       size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
+	     let axilen = hdr.length;
+	     return MemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: truncate(axilen), tag: truncate(writeHeaderFifo.first.tag)};
 	  endmethod
        endinterface
-       interface Get resp_write;
-	  method ActionValue#(Axi3WriteData#(32,12)) get();
+        interface Get writeData;
+	  method ActionValue#(MemData#(32)) get();
 	     writeDataFifo.deq;
 	     let data = writeDataFifo.first.data;
 	     data = byteSwap(data);
-	     return Axi3WriteData { data: data, id: extend(writeDataFifo.first.tag), byteEnable: writeDataFifo.first.firstbe, last: 1 };
+	     return MemData { data: data, tag: truncate(writeDataFifo.first.tag)};
 	  endmethod
        endinterface
-       interface Put resp_b;
-	  method Action put(Axi3WriteResponse#(12) resp);
-             bTagReg <= resp.id;
+        interface Put       writeDone;
+	  method Action put(Bit#(ObjectTagSize) resp);
+             bTagReg <= resp;
 	  endmethod
        endinterface
-       interface Get req_ar;
-	  method ActionValue#(Axi3ReadRequest#(32,12)) get();
+     endinterface
+    interface MemReadClient read_client;
+        interface Get    readReq;
+	  method ActionValue#(MemRequest#(32)) get();
 	     let hdr = readHeaderFifo.first;
 	     readHeaderFifo.deq;
 	     //$display("req_ar hdr.length=%d hdr.addr=%h", hdr.length, hdr.addr);
 	     readDataFifo.enq(hdr);
-	     let axilen = hdr.length -1;
-	     return Axi3ReadRequest { address: extend(readHeaderFifo.first.addr) << 2, len: truncate(axilen), id: extend(readHeaderFifo.first.tag),
-				     size: axiBusSize(32), burst: 1, prot: 0, cache: 'b011, lock:0, qos: 0 };
+	     let axilen = hdr.length;
+	     return MemRequest { addr: extend(readHeaderFifo.first.addr) << 2, burstLen: truncate(axilen), tag: truncate(readHeaderFifo.first.tag)};
 	    endmethod
        endinterface
-       interface Put resp_read;
-	  method Action put(Axi3ReadResponse#(32,12) resp) if (completionMimo.enqReadyN(1));
+        interface Put readData;
+	  method Action put(MemData#(32) resp) if (completionMimo.enqReadyN(1));
 	     Vector#(1, Bit#(32)) vec = cons(resp.data, nil);
 	     completionMimo.enq(1, vec);
 	  endmethod
 	endinterface
+    endinterface
     endinterface: master
     interface Put interruptRequest;
        method Action put(Tuple2#(Bit#(64),Bit#(32)) intr);
@@ -290,4 +291,4 @@ module mkAxiMasterEngine#(PciId my_id)(AxiMasterEngine);
        endmethod
     endinterface
     interface Reg bTag = bTagReg;
-endmodule: mkAxiMasterEngine
+endmodule: mkMemMasterEngine

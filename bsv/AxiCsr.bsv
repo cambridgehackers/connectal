@@ -30,7 +30,7 @@ import Bscan          :: *;
 import BramMux        :: *;
 import Clocks         :: *;
 import PcieTracer     :: *;
-import AxiSlave       :: *;
+import MemSlave       :: *;
 
 `define msix_base 1024
 
@@ -44,7 +44,7 @@ endinterface
 
 // control and status registers accessed from PCIe
 interface AxiControlAndStatusRegs;
-   interface AxiSlaveClient client;
+   interface MemSlaveClient client;
    interface Vector#(16,MSIX_Entry) msixEntry;
 endinterface: AxiControlAndStatusRegs
 
@@ -88,7 +88,7 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlpd
        pcieTraceBramResponse <= v;
    endrule
 
-   interface AxiSlaveClient client;
+   interface MemSlaveClient client;
    // Function to read from the CSR address space (using DW address)
    method Bit#(32) rd(UInt#(30) addr);
       let modaddr = (addr % 8192);
