@@ -38,51 +38,31 @@ interface TLPDispatcher;
    interface Vector#(PortMax, Get#(TLPData#(16))) out;
 endinterface: TLPDispatcher
 
-typedef function Bool tlpMatchFunction(TLPData#(16) tlp) TlpMatchFunction;
+typedef function Bool tlpMatchFunction(TLPData#(16) tlp, TLPMemoryIO3DWHeader hdr_3dw) TlpMatchFunction;
 
 (* synthesize *)
 module mkTLPDispatcher(TLPDispatcher);
    FIFO#(TLPData#(16))  tlp_in_fifo     <- mkFIFO();
    Vector#(PortMax, FIFOF#(TLPData#(16))) tlp_out_fifo <- replicateM(mkGFIFOF(True,False)); // unguarded enq
    Reg#(Maybe#(Bit#(TLog#(PortMax)))) routeToPort <- mkReg(tagged Invalid);
-
-   PulseWire is_read       <- mkPulseWire();
-   PulseWire is_write      <- mkPulseWire();
-   PulseWire is_completion <- mkPulseWire();
-
-   function Bool configMatch(TLPData#(16) tlp);
-      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      Bool is_config_read    = (tlp.hit == 7'h01)
-                             && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
-                             ;
-      Bool is_config_write   = (tlp.hit == 7'h01)
-                             && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
-                             && (hdr_3dw.pkttype != COMPLETION)
-                             ;
-      return is_config_read || is_config_write;
-   endfunction
-
-   function Bool axiMatch(TLPData#(16) tlp);
-      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      Bool is_axi_read       = (tlp.hit == 7'h04)
-                             && (hdr_3dw.format == MEM_READ_3DW_NO_DATA)
-                             ;
-      Bool is_axi_write      = (tlp.hit == 7'h04)
-                             && (hdr_3dw.format == MEM_WRITE_3DW_DATA)
-                             && (hdr_3dw.pkttype != COMPLETION)
-                             ;
-      return is_axi_read || is_axi_write;
-   endfunction
-
-   function Bool axiCompletionMatch(TLPData#(16) tlp);
-      TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-      Bool is_axi_completion = (hdr_3dw.format == MEM_WRITE_3DW_DATA)
-                             && (hdr_3dw.pkttype == COMPLETION)
-                             ;
-      return is_axi_completion;
-   endfunction
-
    Vector#(PortMax, TlpMatchFunction) matchFunctions = newVector;
+
+   function Bool configMatch(TLPData#(16) tlp, TLPMemoryIO3DWHeader hdr_3dw);
+      return tlp.hit == 7'h01 &&
+          (hdr_3dw.format == MEM_READ_3DW_NO_DATA /* read */
+        || (hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype != COMPLETION)); /* write */
+   endfunction
+
+   function Bool axiMatch(TLPData#(16) tlp, TLPMemoryIO3DWHeader hdr_3dw);
+      return tlp.hit == 7'h04 &&
+          (hdr_3dw.format == MEM_READ_3DW_NO_DATA /* read */
+        || (hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype != COMPLETION)); /* write */
+   endfunction
+
+   function Bool axiCompletionMatch(TLPData#(16) tlp, TLPMemoryIO3DWHeader hdr_3dw);
+      return hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype == COMPLETION;
+   endfunction
+
    matchFunctions[portConfig] = configMatch;
    matchFunctions[portPortal] = axiMatch;
    matchFunctions[portAxi]    = axiCompletionMatch;
@@ -96,7 +76,7 @@ module mkTLPDispatcher(TLPDispatcher);
 	 Bool matched = False;
          // route the packet based on this header
 	 for (Integer port = 0; port < valueOf(PortMax); port = port+1)
-            if (!matched && matchFunctions[port](tlp)) begin
+            if (!matched && matchFunctions[port](tlp, hdr_3dw)) begin
 	       matched = True;
                if (tlp_out_fifo[port].notFull()) begin
 		  tlp_in_fifo.deq();
@@ -109,9 +89,6 @@ module mkTLPDispatcher(TLPDispatcher);
             // unknown packet type -- just discard it
             tlp_in_fifo.deq();
          end
-         // indicate activity type
-         //if (is_config_read)                     is_read.send();
-         //if (is_config_write)                    is_write.send();
       end
       else if (routeToPort matches tagged Valid .port) begin
          if (tlp_out_fifo[port].notFull()) begin
@@ -150,10 +127,6 @@ module mkTLPArbiter(TLPArbiter);
    FIFO#(TLPData#(16))  tlp_out_fifo     <- mkFIFO();
    Vector#(PortMax, FIFOF#(TLPData#(16))) tlp_in_fifo <- replicateM(mkGFIFOF(False,True)); // unguarded deq
    Reg#(Maybe#(Bit#(TLog#(PortMax)))) routeFrom <- mkReg(tagged Invalid);
-
-   PulseWire is_read       <- mkPulseWire();
-   PulseWire is_write      <- mkPulseWire();
-   PulseWire is_completion <- mkPulseWire();
 
    (* fire_when_enabled *)
    rule arbitrate_outgoing_TLP;
