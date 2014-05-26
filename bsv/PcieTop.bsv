@@ -41,7 +41,7 @@ import AxiSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
-import AxiCsr            :: *;
+import PcieCsr           :: *;
 import MemSlave          :: *;
 import Dma               :: *;
 
@@ -110,7 +110,7 @@ provisos(
        endinterface));
 
    MemMasterEngine splitEngine <- mkMemMasterEngine(my_pciId);
-   AxiControlAndStatusRegs csr <- mkAxiControlAndStatusRegs(portalResetIfc, traceif.tlpdata);
+   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(portalResetIfc, traceif.tlpdata);
    MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
    mkConnection(serv[portConfig], splitEngine.tlp);
    mkConnection(splitEngine.master, my_slave);

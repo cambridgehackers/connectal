@@ -25,7 +25,6 @@ import BRAM           :: *;
 import FIFOF          :: *;
 import GetPut         :: *;
 import PCIE           :: *;
-import AxiMasterSlave :: *;
 import Bscan          :: *;
 import BramMux        :: *;
 import Clocks         :: *;
@@ -43,16 +42,16 @@ interface MSIX_Entry;
 endinterface
 
 // control and status registers accessed from PCIe
-interface AxiControlAndStatusRegs;
+interface PcieControlAndStatusRegs;
    interface MemSlaveClient client;
    interface Vector#(16,MSIX_Entry) msixEntry;
-endinterface: AxiControlAndStatusRegs
+endinterface: PcieControlAndStatusRegs
 
 // This module encapsulates all of the logic for instantiating and
 // accessing the control and status registers. It defines the
 // registers, the address map, and how the registers respond to reads
 // and writes.
-module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlpdata)(AxiControlAndStatusRegs);
+module mkPcieControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlpdata)(PcieControlAndStatusRegs);
 
    // Utility for module creating all of the storage for a single MSIX
    // table entry
@@ -164,4 +163,4 @@ module mkAxiControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlpd
    endmethod
    endinterface
    interface Vector msixEntry = msix_entry;
-endmodule: mkAxiControlAndStatusRegs
+endmodule: mkPcieControlAndStatusRegs
