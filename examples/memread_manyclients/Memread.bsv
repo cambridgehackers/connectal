@@ -27,7 +27,7 @@ import GetPut::*;
 import ClientServer::*;
 
 import Dma::*;
-import MemreadEngine::*;
+import MemreadEngineV::*;
 
 typedef 32 NumEngineServers;
 
@@ -65,7 +65,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, readLen:truncate(chunk), burstLen:burstLen*4});
+	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, readLen:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 Bit#(32) srcGen = fromInteger(i)*truncate(chunk/4);
 	 srcGens[i] <= srcGen;
 	 $display("start %d, %h %d", i, srcGen, iterCnts[i]);
