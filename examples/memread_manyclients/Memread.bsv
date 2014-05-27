@@ -60,7 +60,6 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32))    mismatchCnt <- mkReg(0);
    
    
-   Vector#(NumEngineServers, FIFO#(void))                cf <- replicateM(mkSizedFIFO(1));
    Vector#(NumEngineServers, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, FIFOF#(Bit#(64)))    readFifos <- replicateM(mkFIFOF);
@@ -82,7 +81,6 @@ module mkMemread#(MemreadIndication indication) (Memread);
       let srcGen = startPtr * truncate(chunk/4);
       srcGens[startPtr] <= srcGen;
       $display("start %h %d", srcGen, sIterCnt);
-      cf[startPtr].enq(?);
    endrule
    
    rule finish;
@@ -99,7 +97,6 @@ module mkMemread#(MemreadIndication indication) (Memread);
       let rv <- re.readServers[finishPtr].response.get;
       mismatchCnt <= mismatchCnt+mismatchCounts[finishPtr];
       mismatchCounts[finishPtr] <= 0;
-      cf[finishPtr].deq;
    endrule
    
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1)
