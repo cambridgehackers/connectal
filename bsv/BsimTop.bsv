@@ -32,6 +32,7 @@ import AxiMasterSlave    :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiMasterSlave    :: *;
+import Dma               :: *;
 import AxiDma            :: *;
 
 // implemented in BsimCtrl.cxx
@@ -140,7 +141,7 @@ endinstance
 interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, numeric type clientIdWidth,  
 		    numeric type serverAddrWidth, numeric type serverBusWidth, numeric type serverIdWidth,
 		    numeric type nSlaves);
-   interface Axi3Master#(clientAddrWidth, clientBusWidth, clientIdWidth)  axi_client;
+   interface MemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
    interface Vector#(nSlaves,Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))  axi_servers;
 endinterface
 		 
@@ -296,46 +297,50 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
    endrule
 
    interface axi_servers = servers;
-   interface Axi3Master axi_client;
-      interface Get req_ar;
-	 method ActionValue#(Axi3ReadRequest#(clientAddrWidth,clientIdWidth)) get() if (crw.readReq);
+   interface MemMaster mem_client;
+      interface MemReadClient read_client;
+        interface Get readReq;
+	 method ActionValue#(MemRequest#(clientAddrWidth)) get() if (crw.readReq);
 	    //$write("req_ar: ");
 	    let ra <- crw.readAddr;
 	    //$display("ra=%h", ra);
-	    return Axi3ReadRequest { address: ra, len: 0, size: axiBusSize(32), id: 0, prot: 0, burst: 1, cache: 'b11, qos: 0, lock: 0 };
+	    return MemRequest { addr: ra, burstLen: 1, tag: 0};
 	 endmethod
-      endinterface
-      interface Put resp_read;
-	 method Action put(Axi3ReadResponse#(clientBusWidth,clientIdWidth) rd);
+        endinterface
+        interface Put readData;
+	 method Action put(MemData#(clientBusWidth) rd);
 	    //$display("resp_read: rd=%h", rd);
 	    crw.readData(rd.data);
 	 endmethod
+        endinterface
       endinterface
-      interface Get req_aw;
-	 method ActionValue#(Axi3WriteRequest#(clientAddrWidth,clientIdWidth)) get() if (crw.writeReq());
+      interface MemWriteClient write_client;
+        interface Get writeReq;
+	 method ActionValue#(MemRequest#(clientAddrWidth)) get() if (crw.writeReq());
 	    //$write("req_aw: ");
 	    let wa <- crw.writeAddr;
 	    let wd <- crw.writeData;
 	    //$display("wa=%h, wd=%h", wa,wd);
 	    wf.enq(wd);
-	    return Axi3WriteRequest { address: wa, len: 0, size: axiBusSize(32), id: 0, prot: 0, burst: 1, cache: 'b11, qos: 0, lock: 0 };
+	    return MemRequest { addr: wa, burstLen: 1, tag: 0 };
 	 endmethod
-      endinterface
-      interface Get resp_write;
-	 method ActionValue#(Axi3WriteData#(clientBusWidth,clientIdWidth)) get;
+        endinterface
+        interface Get writeData;
+	 method ActionValue#(MemData#(clientBusWidth)) get;
 	    wf.deq;
 	    //$display("resp_write %h", wf.first);
-	    return Axi3WriteData { data: wf.first, id: 0, last: 1 };
+	    return MemData { data: wf.first, tag: 0};
 	 endmethod
-      endinterface
-      interface Put resp_b;
-	 method Action put(Axi3WriteResponse#(clientIdWidth) resp);
+        endinterface
+        interface Put writeDone;
+	 method Action put(Bit#(ObjectTagSize) resp);
 	    noAction;
 	 endmethod
+        endinterface
       endinterface
    endinterface
 endmodule
-   
+
 typedef (function Module#(PortalTop#(40, dsz, ipins, nMasters)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins, numeric type nMasters);
 
 module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,Empty,nMasters) mkPortalTop)(Empty)
@@ -344,8 +349,7 @@ module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,Empty,nMasters) mkPortalTo
    BsimHost#(32,32,12,40,dsz,6,nMasters) host <- mkBsimHost;
    PortalTop#(40,dsz,Empty,nMasters) top <- mkPortalTop;
    Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters);
-   Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
-   mkConnection(host.axi_client, ctrl);
+   mkConnection(host.mem_client, top.slave);
    mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers));
 
    // mkConnection(m_axis[0].req_ar, host.axi_servers[0].req_ar);

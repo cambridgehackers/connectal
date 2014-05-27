@@ -127,12 +127,12 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
 	     Add#(a__, serverIdxSz, cmdBuffAddrSz));
    
    function Bit#(cmdBuffAddrSz) hf(Integer i) = fromInteger(i*valueOf(cmdQDepth));
-   
-   Vector#(numServers, Reg#(Bit#(TAdd#(1,TLog#(cmdQDepth))))) outstanding <- replicateM(mkReg(0));
+   Vector#(numServers, Reg#(Bit#(TAdd#(1,TLog#(cmdQDepth))))) outs1 <- replicateM(mkReg(0));
+   Vector#(numServers, Reg#(Bit#(TAdd#(1,TLog#(cmdQDepth))))) outs0 <- replicateM(mkReg(0));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) head <- mapM(mkReg, genWith(hf));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) tail <- mapM(mkReg, genWith(hf));
-   BRAM1Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM1Server(defaultValue);
 
+   BRAM1Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM1Server(defaultValue);
    FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd))  inf <- mkSizedFIFO(1);
    FIFO#(Bit#(serverIdxSz))                       outf <- mkSizedFIFO(1);   
    FIFO#(Bit#(serverIdxSz))                      loadf <- mkSizedFIFO(1);
@@ -155,7 +155,7 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
    
    rule load_ctxt;
       loadIdx <= loadIdx+1;
-      if (outstanding[loadIdx] > 0) begin
+      if (outs1[loadIdx] > 0) begin
 	 cmdBuf.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:head[loadIdx], datain:?});
 	 loadf.enq(loadIdx);
 	 //$display("load_ctxt %d, %h", loadIdx, head[loadIdx]);
@@ -166,8 +166,9 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
       rs[i] =  (interface Server#(MemengineCmd,Bool);
 		   interface Put request;
-		      method Action put(MemengineCmd c) if (outstanding[i] < cmd_q_depth);
-			 outstanding[i] <= outstanding[i]+1;
+		      method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
+			 outs0[i] <= outs0[i]+1;
+			 outs1[i] <= outs1[i]+1;
 			 inf.enq(tuple2(fromInteger(i),c));
  		      endmethod
 		   endinterface
@@ -189,7 +190,7 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
 	    if (cmd.readLen <= bl) begin
 	       last = True;
 	       bl = cmd.readLen;
-	       outstanding[idx] <= outstanding[idx]-1;
+	       outs1[idx] <= outs1[idx]-1;
 	       let new_head = head[idx]+1;
 	       if (new_head >= extend(idx+1)*cmd_q_depth)
 		  new_head = extend(idx)*cmd_q_depth;
@@ -212,8 +213,10 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
 	       respCnt <= 0;
 	       workf.deq;
 	       //$display("eob %d", idx);
-	       if(last)
+	       if(last) begin
+		  outs0[idx] <= outs0[idx]-1;
 		  outf.enq(idx);
+	       end
 	    end
 	    else begin
 	       respCnt <= new_respCnt;
