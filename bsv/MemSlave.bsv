@@ -33,10 +33,10 @@ endinterface
 
 module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
    FIFOF#(MemRequest#(32)) req_ar_fifo <- mkFIFOF();
-   FIFOF#(MemData#(32)) resp_read_fifo <- mkSizedFIFOF(8);
+   FIFOF#(MemData#(32)) slaveReadDataFifos <- mkSizedFIFOF(8);
    FIFOF#(MemRequest#(32)) req_aw_fifo <- mkFIFOF();
-   FIFOF#(MemData#(32)) resp_write_fifo <- mkSizedFIFOF(8);
-   FIFOF#(Bit#(ObjectTagSize)) resp_b_fifo <- mkFIFOF();
+   FIFOF#(MemData#(32)) slaveWriteDataFifos <- mkSizedFIFOF(8);
+   FIFOF#(Bit#(ObjectTagSize)) slaveBrespFifo <- mkFIFOF();
 
    Reg#(Bit#(8)) readBurstCount <- mkReg(0);
    Reg#(Bit#(30)) readAddr <- mkReg(0);
@@ -51,7 +51,7 @@ module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
 
       let v = client.rd(unpack(addr >> 2));
       $display("MemSlave do_read addr=%h len=%d v=%h", addr, bc, v);
-      resp_read_fifo.enq(MemData { data: v, tag: req.tag });
+      slaveReadDataFifos.enq(MemData { data: v, tag: req.tag });
 
       addr = addr + 4;
       bc = bc - 1;
@@ -73,8 +73,8 @@ module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
 	 addr = truncate(req.addr);
       end
 
-      let resp_write = resp_write_fifo.first();
-      resp_write_fifo.deq();
+      let resp_write = slaveWriteDataFifos.first();
+      slaveWriteDataFifos.deq();
 
       client.wr(unpack(addr >> 2), resp_write.data);
 
@@ -85,24 +85,10 @@ module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
       writeAddr <= addr;
       if (bc == 0) begin
 	 req_aw_fifo.deq();
-	 resp_b_fifo.enq(req.tag);
+	 slaveBrespFifo.enq(req.tag);
       end
    endrule
 
-   interface MemReadServer read_server;
-      interface Put readReq;
-         method Action put(MemRequest#(32) req);
-            req_ar_fifo.enq(req);
-         endmethod
-      endinterface
-      interface Get     readData;
-         method ActionValue#(MemData#(32)) get();
-            let resp = resp_read_fifo.first();
-            resp_read_fifo.deq();
-            return resp;
-         endmethod
-      endinterface
-   endinterface
    interface MemWriteServer write_server; 
       interface Put writeReq;
          method Action put(MemRequest#(32) req);
@@ -111,14 +97,26 @@ module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
       endinterface
       interface Put writeData;
          method Action put(MemData#(32) resp);
-            resp_write_fifo.enq(resp);
+            slaveWriteDataFifos.enq(resp);
          endmethod
       endinterface
       interface Get writeDone;
          method ActionValue#(Bit#(ObjectTagSize)) get();
-            let b = resp_b_fifo.first();
-            resp_b_fifo.deq();
-            return b;
+            slaveBrespFifo.deq;
+            return slaveBrespFifo.first;
+         endmethod
+      endinterface
+   endinterface
+   interface MemReadServer read_server;
+      interface Put readReq;
+         method Action put(MemRequest#(32) req);
+            req_ar_fifo.enq(req);
+         endmethod
+      endinterface
+      interface Get     readData;
+         method ActionValue#(MemData#(32)) get();
+            slaveReadDataFifos.deq;
+            return slaveReadDataFifos.first;
          endmethod
       endinterface
    endinterface
