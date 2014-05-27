@@ -32,7 +32,7 @@ import ClientServer :: *;
 import AxiMasterSlave :: *;
 
 interface AxiSlaveEngine#(type buswidth);
-    interface Client#(TLPData#(16), TLPData#(16)) pci;
+    interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface Axi3Slave#(40,buswidth,6)  slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
@@ -223,9 +223,9 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	 tlpInFifo.deq();
    endrule
 
-    interface Client        pci;
-    interface request = toGet(tlpOutFifo);
-    interface response = toPut(tlpInFifo);
+    interface Client        tlp;
+        interface request = toGet(tlpOutFifo);
+        interface response = toPut(tlpInFifo);
     endinterface
     interface Axi3Slave slave;
 	interface Put req_aw;

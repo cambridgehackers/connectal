@@ -51,15 +51,13 @@ interface TlpTraceData;
    interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimit;
    interface Reg#(Bit#(TlpTraceAddrSize)) fromPcieTraceBramWrAddr;
    interface Reg#(Bit#(TlpTraceAddrSize))   toPcieTraceBramWrAddr;
-   interface BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBramPort;
-   interface BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)   toPcieTraceBramPort;
-   interface BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bramMux;
+   interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) bramServer;
 endinterface
 interface PcieTracer;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
    interface Put#(TimestampedTlpData) trace;
    interface Server#(TLPData#(16), TLPData#(16)) bus;
-   interface TlpTraceData tlp;
+   interface TlpTraceData tlpdata;
 endinterface: PcieTracer
 
 // The PCIe-to-AXI bridge puts all of the elements together
@@ -181,13 +179,11 @@ module mkPcieTracer(PcieTracer);
 	   end
        endmethod
    endinterface: trace
-   interface TlpTraceData tlp;
+   interface TlpTraceData tlpdata;
       interface Reg tlpTracing    = tlpTracingReg;
       interface Reg tlpTraceLimit = tlpTraceLimitReg;
       interface Reg fromPcieTraceBramWrAddr = fromPcieTraceBramWrAddrReg;
       interface Reg   toPcieTraceBramWrAddr =   toPcieTraceBramWrAddrReg;
-      interface BRAMServer fromPcieTraceBramPort = fromPcieTraceBram.portA;
-      interface BRAMServer   toPcieTraceBramPort =   toPcieTraceBram.portA;
-      interface BramServerMux bramMux = bramMuxReg;
+      interface Server bramServer = bramMuxReg.bramServer;
    endinterface
 endmodule: mkPcieTracer

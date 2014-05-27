@@ -154,3 +154,14 @@ instance Connectable#(ObjectWriteClient#(dsz), ObjectWriteServer#(dsz));
       endrule
    endmodule
 endinstance
+
+instance Connectable#(MemMaster#(addrWidth, busWidth), MemSlave#(addrWidth, busWidth));
+   module mkConnection#(MemMaster#(addrWidth, busWidth) m, MemSlave#(addrWidth, busWidth) s)(Empty);
+      mkConnection(m.read_client.readReq, s.read_server.readReq);
+      mkConnection(s.read_server.readData, m.read_client.readData);
+      mkConnection(m.write_client.writeReq, s.write_server.writeReq);
+      mkConnection(m.write_client.writeData, s.write_server.writeData);
+      mkConnection(s.write_server.writeDone, m.write_client.writeDone);
+   endmodule
+endinstance
+

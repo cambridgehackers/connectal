@@ -136,7 +136,6 @@ if $needspcie {
                             CONFIG.Bar0_64bit {true} \
                             CONFIG.Bar0_Size {16} \
                             CONFIG.Bar0_Scale {Kilobytes} \
-                            CONFIG.Bar0_Prefetchable {true} \
                             CONFIG.Bar2_64bit {true} \
                             CONFIG.Bar2_Enabled {true} \
                             CONFIG.Bar2_Scale {Megabytes} \
