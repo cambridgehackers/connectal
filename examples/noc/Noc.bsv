@@ -21,8 +21,11 @@
 
 import SerialFIFO::*;
 import NocNode::*;
+import LinkHost::*;
 import Connectable::*;
 import StmtFSM::*;
+import Vector::*;
+import FIFOF::*;
 
 interface NocIndication;
    method Action ack(Bit#(4) recvnode, Bit#(4) to, Bit#(32) message);
@@ -35,27 +38,22 @@ endinterface
 
 module mkNocRequest#(NocIndication indication)(NocRequest);
    
-   SerialFIFO#(DataMessage) we[5];
-   SerialFIFO#(DataMessage) ew[5];
-
-   for (int i = 0; i < 5; i = i + 1)
-   begin    
-       ew[i] <- mkSerialFIFO();
-       we[i] <- mkSerialFIFO();
-   end
+   SerialFIFO#(DataMessage) xxx <- mkSerialFIFO();
+   Vector#(5, SerialFIFO#(DataMessage)) we <- replicateM( mkSerialFIFO );
+   Vector#(5, SerialFIFO#(DataMessage)) ew <- replicateM( mkSerialFIFO );
 
    // discard traffic from loose ends
    rule discardeast;
-      we[4].deq();
+      we[4].out.deq();
       endrule
 
    rule discardwest;
-      ew[0].deq();
+      ew[0].out.deq();
       endrule
 
-   NocNode#(DataMessage) node[4];
+   Vector#(4, NocNode) node;
 
-    for (int i = 0; i < 4; i = i + 1)
+    for (Bit#(4) i = 0; i < 4; i = i + 1)
     begin
         node[i] <- mkNocNode(unpack(i), 
 	    SerialFIFO {in: ew[0].in, out: we[0].out},
@@ -66,18 +64,18 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
   
   // fsm to read from host ports and generate indications
 
-  Bit#(4) id <- mkReg(0);
+  Reg#(Bit#(4)) id <- mkReg(0);
 
   Stmt readindications =
     seq
     while(True) seq
       for(id <= 0; id < 4; id <= id + 1)
-          if (node[i].host.tohost.notEmpty())
-	      par
-	      indication.ack(id, hode[i].host.tohost.first.address,
-	          node[i].host.tohost.first.payload);
-		  node[i].host.tohost.deq();
-              endpar
+          if (node[id].host.tohost.notEmpty())
+	      seq
+		 indication.ack(id, node[id].host.tohost.first.address,
+	            node[id].host.tohost.first.payload);
+		 node[id].host.tohost.deq();
+              endseq
       endseq
     endseq;
 
