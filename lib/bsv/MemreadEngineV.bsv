@@ -47,29 +47,25 @@ interface Funnel#(numeric type numInputs, type a);
    interface Get#(Tuple2#(Bit#(TLog#(numInputs)), a)) out;
 endinterface
 
-module mkFunnelUnfair(Funnel#(numInputs,a))
+module mkFunnel(Funnel#(numInputs,a))
    provisos (Log#(numInputs, logNumInputs),
 	     Bits#(a,a__));
    
-   Vector#(logNumInputs, Vector#(numInputs, FIFOF#(Tuple2#(Bit#(logNumInputs),a)))) infss <- replicateM(replicateM(mkSizedFIFOF(1)));
-   for(Integer j = 0; j < valueOf(logNumInputs)-1; j=j+1)
-      for(Integer i = 0; i < 2**j; i=i+1)
+   Vector#(TAdd#(logNumInputs,1), Vector#(numInputs, FIFO#(Tuple2#(Bit#(logNumInputs),a)))) infss <- replicateM(replicateM(mkFIFO));
+   for(Integer j = valueOf(logNumInputs); j > 0; j=j-1) 
+      for(Integer i = 0; i < 2**j; i=i+1) 
 	 rule xfer;
-	    let x = ?;
-	    if(infss[j+1][2*j].notEmpty) 
-	       x <- toGet(infss[j+1][2*j].first).get;
-	    else 
-	       x <- toGet(infss[j+1][2*j+1].first).get;
-	    infss[j][i].enq(x);
+	    let x <- toGet(infss[j][i]).get;
+	    infss[j-1][i/2].enq(x);
 	 endrule
    
-   function Put#(a) my_toPut(FIFOF#(Tuple2#(Bit#(logNumInputs),a)) f, Integer i) = 
+   function Put#(a) my_toPut(FIFO#(Tuple2#(Bit#(logNumInputs),a)) f, Integer i) = 
       (interface Put;
 	  method Action put(a x);
 	     f.enq(tuple2(fromInteger(i),x));
 	  endmethod
        endinterface);
-   interface Vector inputs = zipWith(my_toPut, infss[valueOf(logNumInputs)-1], genVector);
+   interface Vector inputs = zipWith(my_toPut, infss[valueOf(logNumInputs)], genVector);
    interface out = toGet(infss[0][0]);
 endmodule
 
@@ -81,6 +77,7 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
 	     Log#(cmdBuffSz, cmdBuffAddrSz),
 	     Log#(numServers, serverIdxSz),
 	     Add#(1,cmdQDepth, outCntSz),
+	     Add#(b__, TLog#(numServers), cmdBuffAddrSz),
 	     Add#(a__, serverIdxSz, cmdBuffAddrSz));
    
    function Bit#(cmdBuffAddrSz) hf(Integer i) = fromInteger(i*valueOf(cmdQDepth));
@@ -88,7 +85,7 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) head <- mapM(mkReg, genWith(hf));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) tail <- mapM(mkReg, genWith(hf));
-   Vector#(numServers, FIFO#(MemengineCmd))       infs <- replicateM(mkSizedFIFO(1));
+   Funnel#(numServers, MemengineCmd)              infs <- mkFunnel;
 
    BRAM1Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM1Server(defaultValue);
    FIFO#(Bit#(serverIdxSz))                       outf <- mkSizedFIFO(1);   
@@ -100,17 +97,16 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
    let beat_shift = fromInteger(valueOf(beatShift));
    let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
 
-   for(Integer i = 0; i < valueOf(numServers); i = i+1) 
-      rule store_cmd;
-	 let cmd <- toGet(infs[i]).get;
-	 let new_tail = tail[i]+1;
-	 if (new_tail >= (fromInteger(i)+1)*cmd_q_depth)
-	    new_tail = fromInteger(i)*cmd_q_depth;
-	 tail[i] <= new_tail;
-	 outs1[i] <= outs1[i]+1;
-	 cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[i], datain:cmd});
-	 //$display("store_cmd: %d %h", i, tail[i]);
-      endrule
+   rule store_cmd;
+      match {.idx, .cmd} <- infs.out.get;
+      let new_tail = tail[idx]+1;
+      if (new_tail >= extend(idx+1)*cmd_q_depth)
+	 new_tail = extend(idx)*cmd_q_depth;
+      tail[idx] <= new_tail;
+      outs1[idx] <= outs1[idx]+1;
+      cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
+      $display("store_cmd: %d %h", idx, tail[idx]);
+   endrule
    
    rule load_ctxt;
       loadIdx <= loadIdx+1;
@@ -127,7 +123,7 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
 		   interface Put request;
 		      method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
 			 outs0[i] <= outs0[i]+1;
-			 infs[i].enq(c);
+			 infs.inputs[i].put(c);
  		      endmethod
 		   endinterface
 		   interface Get response;
