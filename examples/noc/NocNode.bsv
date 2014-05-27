@@ -26,12 +26,12 @@ import FIFOF::*;
 import Vector::*;
 
 typedef struct {
-	Bit#(4) address;
-	Bit#(32) payload;
-	} DataMessage deriving(Bits);
+   Bit#(4) address;
+   Bit#(32) payload;
+   } DataMessage deriving(Bits);
 
-interface NocNode#(type a);
-   interface LinkHost#(a) host;
+interface NocNode;
+   interface LinkHost#(DataMessage) host;
 endinterface
       
 function Action movetolink(FIFOF#(DataMessage) from, SerialFIFOIn#(DataMessage) to);
@@ -41,10 +41,17 @@ function Action movetolink(FIFOF#(DataMessage) from, SerialFIFOIn#(DataMessage) 
 	  endaction;
 endfunction
 
-function Action outputarbitrate(FIFOF#(DataMessageSeria) a,
+function Action move(FIFOF#(DataMessage) from, FIFOF#(DataMessage) to);
+   return action
+	     to.enq(from.first);
+	     from.deq();
+	  endaction;
+endfunction
+
+function Action outputarbitrate(FIFOF#(DataMessage) a,
 				FIFOF#(DataMessage) b,
-			       Reg#(Bool) select,
-			       SerialFIFOIn#(DataMessage) r);
+				Reg#(Bit#(1)) select,
+				SerialFIFOIn#(DataMessage) r);
    return action
 	     if (a.notEmpty && !b.notEmpty)
 		movetolink(a, r);
@@ -52,23 +59,28 @@ function Action outputarbitrate(FIFOF#(DataMessageSeria) a,
 		movetolink(b, r);
 	     else if (a.notEmpty && b.notEmpty)
 		begin
-		   if (select)
+		   if (select == 2)
 		      movetolink(a, r);
 		   else
 		      movetolink(b, r);
-		   select <= select != True;
+		   select <= select ^ 1;
 		end
 	  endaction;
 endfunction
 
 module mkNocNode#(Bit#(4) id, 
-   SerialFIFO#(DataMessage) east,
-   SerialFIFO#(DataMessage) west)(NocNode#(a))
-   provisos(Bits#(a,asize),
-            Log#(asize, k));
+		  SerialFIFO#(DataMessage) east,
+		  SerialFIFO#(DataMessage) west)(NocNode);
+//	    Log#(asize, k),
+//	    PrimSelectable#(DataMessage, Bit#(1)),
+//	    Bitwise#(DataMessage),
+//            Literal#(DataMessage));
+
+   Reg#(Bit#(1)) oeselect <- mkReg(0);
+   Reg#(Bit#(1)) owselect <- mkReg(0);
 
    // out Links
-   LinkHost#(DataMessage) lhost <- mkLinkHost(id);
+   LinkHost#(DataMessage) lhost <- mkLinkHost();
   
    // buffers for crossbar switch
    
@@ -80,6 +92,7 @@ module mkNocNode#(Bit#(4) id,
 
    FIFOF#(DataMessage) eh <- mkSizedFIFOF(4);
    FIFOF#(DataMessage) wh <- mkSizedFIFOF(4);
+
    
    // sort host messages to proper queue
    
@@ -94,41 +107,39 @@ module mkNocNode#(Bit#(4) id,
    
    // arbiter to send data messages to w
    
-   Bit#(1) owselect <- mkReg(0);
    
    rule genow;
-      outputarbitrate(ew, hw, owselect, low);
+      outputarbitrate(ew, hw, owselect, west.in);
    endrule
    
    // arbiter to send data messages to e
    
-   Bit#(1) oeselect <- mkReg(0);
-
+   
    rule genoe;
-      outputarbitrate(we, he, oeselect, loe);
+      outputarbitrate(we, he, oeselect, east.in);
    endrule
    
    // Handle arriving messages from East
-
+   
    rule fromeast;
-      if (east.first.address == id)
-	 eh.enq(east.first);
+      if (east.out.first.address == id)
+	 eh.enq(east.out.first);
       else
-	 ew.enq(east.first);
-      east.deq();
-      endrule
-
+	 ew.enq(east.out.first);
+      east.out.deq();
+   endrule
+   
    // Handle arriving messages from West
 
    rule fromwest;
-      if (west.first.address == id)
-	 wh.enq(west.first);
+      if (west.out.first.address == id)
+	 wh.enq(west.out.first);
       else
-	 we.enq(west.first);
-      west.deq();
+	 we.enq(west.out.first);
+      west.out.deq();
       endrule
-
-
+   
+   
   // interface wiring
 
    interface LinkHost host = lhost;

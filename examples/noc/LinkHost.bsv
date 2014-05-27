@@ -26,12 +26,13 @@ interface LinkHost#(type a);
    interface FIFOF#(a) tonet;
 endinterface
 
-module mkLinkHost#(Bit#(4) id)(LinkHost#(a))
-   provisos(Bits#(a,asize),
-	    Log#(asize, k),
-	    PrimSelectable#(a, Bit#(1)),
-	    Bitwise#(a),
-	    Literal#(a));
+module mkLinkHost(LinkHost#(a))
+   provisos(Bits#(a,a__));
+//	    Log#(asize, k),
+//	    PrimSelectable#(a, Bit#(1)),
+//	    Bitwise#(a),
+//	    Literal#(a))
+
 
    FIFOF#(a) toh <- mkSizedFIFOF(4);
    FIFOF#(a) ton <- mkSizedFIFOF(4);
