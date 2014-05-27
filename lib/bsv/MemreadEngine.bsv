@@ -131,9 +131,9 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
    Vector#(numServers, Reg#(Bit#(TAdd#(1,TLog#(cmdQDepth))))) outs0 <- replicateM(mkReg(0));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) head <- mapM(mkReg, genWith(hf));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) tail <- mapM(mkReg, genWith(hf));
+   Vector#(numServers, FIFO#(MemengineCmd))       infs <- replicateM(mkSizedFIFO(1));
 
    BRAM1Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM1Server(defaultValue);
-   FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd))  inf <- mkSizedFIFO(1);
    FIFO#(Bit#(serverIdxSz))                       outf <- mkSizedFIFO(1);   
    FIFO#(Bit#(serverIdxSz))                      loadf <- mkSizedFIFO(1);
    FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool)) workf <- mkSizedFIFO(32); // isthis the right size?
@@ -142,16 +142,18 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
    Reg#(Bit#(serverIdxSz))                     loadIdx <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
-   
-   rule store_cmd;
-      match {.idx, .cmd} <- toGet(inf).get;
-      let new_tail = tail[idx]+1;
-      if (new_tail >= extend(idx+1)*cmd_q_depth)
-	 new_tail = extend(idx)*cmd_q_depth;
-      tail[idx] <= new_tail;
-      cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
-      //$display("store_cmd: %d %h", idx, tail[idx]);
-   endrule
+
+   for(Integer i = 0; i < valueOf(numServers); i=i+1)
+    rule store_cmd;
+       let cmd <- toGet(infs[i]).get;
+       let new_tail = tail[i]+1;
+       if (new_tail >= (fromInteger(i)+1)*cmd_q_depth)
+	  new_tail = fromInteger(i)*cmd_q_depth;
+       tail[i] <= new_tail;
+       outs1[i] <= outs1[i]+1;
+       cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[i], datain:cmd});
+       //$display("store_cmd: %d %h", i, tail[i]);
+    endrule
    
    rule load_ctxt;
       loadIdx <= loadIdx+1;
@@ -168,13 +170,13 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
 		   interface Put request;
 		      method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
 			 outs0[i] <= outs0[i]+1;
-			 outs1[i] <= outs1[i]+1;
-			 inf.enq(tuple2(fromInteger(i),c));
+			 infs[i].enq(c);
  		      endmethod
 		   endinterface
 		   interface Get response;
 		      method ActionValue#(Bool) get if (outf.first == fromInteger(i));
 			 outf.deq;
+	 		 outs0[outf.first] <= outs0[outf.first]-1;
 			 return True;
 		      endmethod
 		   endinterface
@@ -214,8 +216,8 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
 	       workf.deq;
 	       //$display("eob %d", idx);
 	       if(last) begin
-		  outs0[idx] <= outs0[idx]-1;
 		  outf.enq(idx);
+		  //$display("eob %d", idx);
 	       end
 	    end
 	    else begin
