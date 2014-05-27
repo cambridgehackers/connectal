@@ -55,11 +55,11 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
 
    NocNode#(DataMessage) node[4];
 
-    for (Bit#(4) i = 0; i < 4; i += 1)
+    for (int i = 0; i < 4; i = i + 1)
     begin
-        node[i] <= mkNocNode(unpack(i), 
-	    SerialFIFO#(DataMessage){in: ew[0].in, out: we[0].out},
-	    SerialFIFO#(DataMessage){in: we[1].in, out: ew[1].out});
+        node[i] <- mkNocNode(unpack(i), 
+	    SerialFIFO {in: ew[0].in, out: we[0].out},
+	    SerialFIFO {in: we[1].in, out: ew[1].out});
     end
 
 
@@ -78,7 +78,8 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
 	          node[i].host.tohost.first.payload);
 		  node[i].host.tohost.deq();
               endpar
-      endseq;
+      endseq
+    endseq;
 
     mkAutoFSM(readindications);
  
