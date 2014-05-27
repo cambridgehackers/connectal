@@ -27,8 +27,7 @@ import Vector::*;
 
 typedef struct {
 	Bit#(4) address;
-	Bit#(4) lsn;
-	Bit#(64) payload;
+	Bit#(32) payload;
 	} DataMessage deriving(Bits);
 
 interface NocNode#(type a);
@@ -42,7 +41,7 @@ function Action movetolink(FIFOF#(DataMessage) from, SerialFIFOIn#(DataMessage) 
 	  endaction;
 endfunction
 
-function Action outputarbitrate(FIFOF#(DataMessage) a,
+function Action outputarbitrate(FIFOF#(DataMessageSeria) a,
 				FIFOF#(DataMessage) b,
 			       Reg#(Bool) select,
 			       SerialFIFOIn#(DataMessage) r);
