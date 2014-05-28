@@ -61,7 +61,7 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) head <- mapM(mkReg, genWith(hf));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) tail <- mapM(mkReg, genWith(hf));
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) infs <- replicateM(mkSizedFIFOF(1));
-   PipeOut#(Tuple2#(Bit#(serverIdxSz), MemengineCmd)) infunnel <- mkFunnel1Pipelined(map(toPipeOut,infs));
+   PipeOut#(Tuple2#(Bit#(serverIdxSz), MemengineCmd)) infunnel <- mkFunnel1PipesPipelined(map(toPipeOut,infs));
       
    BRAM1Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM1Server(defaultValue);
    FIFO#(Bit#(serverIdxSz))                       outf <- mkSizedFIFO(1);   

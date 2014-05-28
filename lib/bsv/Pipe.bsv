@@ -195,7 +195,7 @@ module mkFunnel1#(PipeOut#(Vector#(k,a)) in)(PipeOut#(a))
    endmethod
 endmodule
 
-module mkFunnel1Pipelined#(Vector#(k,PipeOut#(a)) in) (PipeOut#(a))
+module mkFunnel1PipesPipelined#(Vector#(k,PipeOut#(a)) in) (PipeOut#(a))
    provisos (Log#(k, logk),
 	     Bits#(a,a__));
    Vector#(logk, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkSizedFIFOF(1)));
