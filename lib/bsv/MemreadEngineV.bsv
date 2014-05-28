@@ -99,7 +99,7 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
       tail[idx] <= new_tail;
       outs1[idx] <= outs1[idx]+1;
       cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
-      $display("store_cmd: %d %h", idx, tail[idx]);
+      //$display("MemreadEngineV.store_cmd: %d %h", idx, tail[idx]);
    endrule
    
    rule load_ctxt;
@@ -107,7 +107,7 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
       if (outs1[loadIdx] > 0) begin
 	 cmdBuf.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:head[loadIdx], datain:?});
 	 loadf.enq(loadIdx);
-	 //$display("load_ctxt %d, %h", loadIdx, head[loadIdx]);
+	 //$display("MemreadEngineV.load_ctxt: %d, %h", loadIdx, head[loadIdx]);
       end
    endrule
    
