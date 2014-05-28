@@ -402,6 +402,9 @@ typeclass ReducePipe#( numeric type n, type a);
    module [Module] mkReducePipe (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
 				 PipeOut#(Vector#(n,a)) inpipe,
 				 PipeOut#(a) ifc);
+   module [Module] mkReducePipes (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
+				  Vector#(n,PipeOut#(a)) inpipe,
+				  PipeOut#(a) ifc);
 endtypeclass
 instance ReducePipe#(1, a);
    module [Module] mkReducePipe (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
@@ -417,6 +420,17 @@ instance ReducePipe#(2, a);
 				 PipeOut#(a) ifc);
       function Tuple2#(a,a) foo(Vector#(2,a) invec); return tuple2(invec[0], invec[1]); endfunction
       PipeOut#(Tuple2#(a,a)) zippipe <- mkMap(foo, inpipe);
+      let pipe <- combinepipe(zippipe);
+      return pipe;
+   endmodule
+   module [Module] mkReducePipes (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
+				  Vector#(2,PipeOut#(a)) inpipes,
+				  PipeOut#(a) ifc);
+      PipeOut#(Tuple2#(a,a)) zippipe = (interface PipeOut#(Tuple2#(a,a));
+				       method Tuple2#(a,a) first(); return tuple2(inpipes[0].first(), inpipes[1].first()); endmethod
+				       method Action deq(); inpipes[0].deq(); inpipes[1].deq(); endmethod
+				       method Bool notEmpty(); return inpipes[0].notEmpty && inpipes[1].notEmpty(); endmethod
+				       endinterface);
       let pipe <- combinepipe(zippipe);
       return pipe;
    endmodule
@@ -452,6 +466,19 @@ instance ReducePipe#(n, a)
 					method notEmpty(); return p0.notEmpty() && p1.notEmpty(); endmethod
 					endinterface);
       PipeOut#(a) outpipe <- combinepipe(tplpipe);
+      return outpipe;
+   endmodule
+
+   module [Module] mkReducePipes (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
+				  Vector#(n, PipeOut#(a)) inpipes,
+				 PipeOut#(a) ifc);
+      Vector#(TDiv#(n,2),PipeOut#(a)) pipes0 = takeAt(0, inpipes);
+      Vector#(TDiv#(n,2),PipeOut#(a)) pipes1 = takeAt(valueOf(TDiv#(n,2)), inpipes);
+
+      PipeOut#(a) p0 <- mkReducePipes(combinepipe, pipes0);
+      PipeOut#(a) p1 <- mkReducePipes(combinepipe, pipes1);
+
+      PipeOut#(a) outpipe <- combinepipe(zipPipeOut(p0, p1));
       return outpipe;
    endmodule
 endinstance
