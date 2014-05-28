@@ -60,13 +60,8 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-<<<<<<< HEAD
    MemreadEngineV#(64,1,NumEngineServers)                re <- mkMemreadEngineV;
-=======
    Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
-   Vector#(NumEngineServers, FIFOF#(Bit#(64)))    readFifos <- replicateM(mkFIFOF);
-   MemreadEngineV#(64,1,NumEngineServers)                re <- mkMemreadEngineV(readFifos);
->>>>>>> b4452463fbac2d1b20c2f6d7078530876f1459c0
    Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
    

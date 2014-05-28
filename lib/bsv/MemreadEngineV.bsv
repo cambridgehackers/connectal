@@ -121,15 +121,9 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
  		      endmethod
 		   endinterface
 		   interface Get response;
-<<<<<<< HEAD
 		      method ActionValue#(Bool) get;
 			 outfs[i].deq;
 	 		 outs0[i] <= outs0[i]-1;
-=======
-		      method ActionValue#(Bool) get if (outf.first == fromInteger(i));
-			 outf.deq;
-			 outs0[i] <= outs0[i]-1;
->>>>>>> b4452463fbac2d1b20c2f6d7078530876f1459c0
 			 return True;
 		      endmethod
 		   endinterface
