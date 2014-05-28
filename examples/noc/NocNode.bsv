@@ -36,6 +36,7 @@ endinterface
       
 function Action movetolink(FIFOF#(DataMessage) from, SerialFIFOIn#(DataMessage) to);
    return action
+	     $display("movetolink %x", from.first);
 	     to.enq(from.first);
 	     from.deq();
 	  endaction;
@@ -43,6 +44,7 @@ endfunction
 
 function Action move(FIFOF#(DataMessage) from, FIFOF#(DataMessage) to);
    return action
+	     $display("move %x", from.first);
 	     to.enq(from.first);
 	     from.deq();
 	  endaction;
@@ -59,7 +61,7 @@ function Action outputarbitrate(FIFOF#(DataMessage) a,
 		movetolink(b, r);
 	     else if (a.notEmpty && b.notEmpty)
 		begin
-		   if (select == 2)
+		   if (select == 1)
 		      movetolink(a, r);
 		   else
 		      movetolink(b, r);
@@ -69,8 +71,8 @@ function Action outputarbitrate(FIFOF#(DataMessage) a,
 endfunction
 
 module mkNocNode#(Bit#(4) id, 
-		  SerialFIFO#(DataMessage) east,
-		  SerialFIFO#(DataMessage) west)(NocNode);
+		  SerialFIFO#(DataMessage) west,
+		  SerialFIFO#(DataMessage) east)(NocNode);
 //	    Log#(asize, k),
 //	    PrimSelectable#(DataMessage, Bit#(1)),
 //	    Bitwise#(DataMessage),
