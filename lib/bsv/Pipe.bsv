@@ -423,17 +423,15 @@ function PipeOut#(b) mapPipe(function b f(a av), PipeOut#(a) apipe);
       endinterface);
 endfunction
 
-module mkMap#(function b f(a av), PipeOut#(a) apipe)(PipeOut#(b));
-   method b first();
-      let av = apipe.first();
-      return f(av);
-   endmethod
-   method Action deq();
-      apipe.deq();
-   endmethod
-   method Bool notEmpty();
-      return apipe.notEmpty();
-   endmethod
+// buffered version of mapPipe
+module mkMap#(function b f(a av), PipeOut#(a) apipe)(PipeOut#(b))
+   provisos (Bits#(b,bsz));
+   FIFOF#(b) fifo <- mkFIFOF();
+   rule compute;
+      let v <- toGet(apipe).get();
+      fifo.enq(f(v));
+   endrule
+   return toPipeOut(fifo);
 endmodule
 
 typedef (function Module #(PipeOut #(tb)) mkPipeOut(PipeOut#(ta) ifc)) PipeOutConstructor#(type ta, type tb);
@@ -450,8 +448,13 @@ instance ReducePipe#(1, a);
    module [Module] mkReducePipe (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
 				 PipeOut#(Vector#(1,a)) inpipe,
 				 PipeOut#(a) ifc);
-      let pipe <- mkMap(head, inpipe);
+      let pipe = mapPipe(head, inpipe);
       return pipe;
+   endmodule
+   module [Module] mkReducePipes (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
+				  Vector#(1,PipeOut#(a)) inpipes,
+				  PipeOut#(a) ifc);
+      return inpipes[0];
    endmodule
 endinstance
 instance ReducePipe#(2, a);
@@ -459,19 +462,14 @@ instance ReducePipe#(2, a);
 				 PipeOut#(Vector#(2,a)) inpipe,
 				 PipeOut#(a) ifc);
       function Tuple2#(a,a) foo(Vector#(2,a) invec); return tuple2(invec[0], invec[1]); endfunction
-      PipeOut#(Tuple2#(a,a)) zippipe <- mkMap(foo, inpipe);
+      PipeOut#(Tuple2#(a,a)) zippipe = mapPipe(foo, inpipe);
       let pipe <- combinepipe(zippipe);
       return pipe;
    endmodule
    module [Module] mkReducePipes (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
 				  Vector#(2,PipeOut#(a)) inpipes,
 				  PipeOut#(a) ifc);
-      PipeOut#(Tuple2#(a,a)) zippipe = (interface PipeOut#(Tuple2#(a,a));
-				       method Tuple2#(a,a) first(); return tuple2(inpipes[0].first(), inpipes[1].first()); endmethod
-				       method Action deq(); inpipes[0].deq(); inpipes[1].deq(); endmethod
-				       method Bool notEmpty(); return inpipes[0].notEmpty && inpipes[1].notEmpty(); endmethod
-				       endinterface);
-      let pipe <- combinepipe(zippipe);
+      let pipe <- combinepipe(zipPipeOut(inpipes[0], inpipes[1]));
       return pipe;
    endmodule
 endinstance
@@ -497,15 +495,7 @@ instance ReducePipe#(n, a)
       PipeOut#(a) p0 <- mkReducePipe(combinepipe, inpipe0);
       PipeOut#(a) p1 <- mkReducePipe(combinepipe, inpipe1);
 
-      PipeOut#(Tuple2#(a,a)) tplpipe = (interface PipeOut;
-					method Tuple2#(a,a) first(); return tuple2(p0.first, p1.first); endmethod
-					method Action deq();
-					   p0.deq();
-					   p1.deq();
-					endmethod
-					method notEmpty(); return p0.notEmpty() && p1.notEmpty(); endmethod
-					endinterface);
-      PipeOut#(a) outpipe <- combinepipe(tplpipe);
+      PipeOut#(a) outpipe <- combinepipe(zipPipeOut(p0, p1));
       return outpipe;
    endmodule
 

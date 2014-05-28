@@ -26,6 +26,7 @@ import Vector::*;
 import GetPut::*;
 import ClientServer::*;
 
+import Pipe::*;
 import Dma::*;
 import MemreadEngineV::*;
 import Pipe::*;
@@ -48,7 +49,7 @@ interface MemreadIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-module mkMemread#(MemreadIndication indication) (Memread);
+module [Module] mkMemread#(MemreadIndication indication) (Memread);
 
    Reg#(ObjectPointer)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
@@ -59,7 +60,13 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
+<<<<<<< HEAD
    MemreadEngineV#(64,1,NumEngineServers)                re <- mkMemreadEngineV;
+=======
+   Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
+   Vector#(NumEngineServers, FIFOF#(Bit#(64)))    readFifos <- replicateM(mkFIFOF);
+   MemreadEngineV#(64,1,NumEngineServers)                re <- mkMemreadEngineV(readFifos);
+>>>>>>> b4452463fbac2d1b20c2f6d7078530876f1459c0
    Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
    
@@ -74,8 +81,10 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 $display("finish %d %d", i, iterCnts[i]);
 	 iterCnts[i] <= iterCnts[i]-1;
 	 let rv <- re.readServers[i].response.get;
-	 mismatchCnt <= mismatchCnt+mismatchCounts[i];
+	 // need to pipeline this also
+	 //mismatchCnt <= mismatchCnt+mismatchCounts[i];
 	 mismatchCounts[i] <= 0;
+	 mismatchFifos[i].enq(mismatchCounts[i]);
       endrule
       rule check;
 	 let v <- toGet(re.data_pipes[i]).get;
@@ -86,11 +95,13 @@ module mkMemread#(MemreadIndication indication) (Memread);
       endrule
    end
    
-   function Bool equal_zero(Bit#(32) x) = x==0;
-   function Bool my_and(Bool x, Bool y) = x && y;
-   Vector#(NumEngineServers, Bool) ics = map(equal_zero, readVReg(iterCnts)); 
+   function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) xy); match { .x, .y } = xy; return x + y; endfunction
    
-   rule indicate_finish (fold(my_and, ics));
+   PipeOut#(Vector#(NumEngineServers, Bit#(32))) mismatchCountsPipe <- mkJoinVector(id, map(toPipeOut, mismatchFifos));
+   PipeOut#(Bit#(32)) mismatchCountPipe <- mkReducePipe(mkMap(my_add), mismatchCountsPipe);
+
+   rule indicate_finish;
+      let mismatchCount <- toGet(mismatchCountPipe).get();
       cf.deq;
       indication.readDone(mismatchCnt);
    endrule
