@@ -198,7 +198,7 @@ endmodule
 module mkFunnel1PipesPipelined#(Vector#(k,PipeOut#(a)) in) (PipeOut#(a))
    provisos (Log#(k, logk),
 	     Bits#(a,a__));
-   Vector#(logk, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkSizedFIFOF(1)));
+   Vector#(logk, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
    Vector#(TAdd#(logk,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
    for(Integer j = valueOf(logk); j > 0; j=j-1) 
       for(Integer i = 0; i < 2**j; i=i+1) 
@@ -207,6 +207,32 @@ module mkFunnel1PipesPipelined#(Vector#(k,PipeOut#(a)) in) (PipeOut#(a))
 	    buffs[j-1][i/2].enq(x);
 	 endrule
    return infss[0][0];
+endmodule
+
+module mkUnFunnel1PipesPipelined#(PipeOut#(Tuple2#(Bit#(TLog#(k)),a)) in) (Vector#(k,PipeOut#(a)))
+   provisos (Log#(k, logk),
+	     Bits#(a,a__),
+	     Add#(1,b__,k));
+   Vector#(logk, Vector#(k, FIFOF#(Tuple2#(Bit#(logk),a)))) buffs  <- replicateM(replicateM(mkFIFOF));
+   Vector#(TAdd#(logk,1), Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a)))) infss = cons(cons(in,replicate(?)), map(map(toPipeOut),buffs));
+   for(Integer j = 0; j < valueOf(logk); j=j+1) 
+      for(Integer i = 0; i < 2**j; i=i+1) 
+	 rule xfer;
+	    match{.idx, .v} <- toGet(infss[j][i]).get;
+	    if(idx[valueOf(logk)-1] == 1'b1)
+	       buffs[j][2*i+1].enq(tuple2(idx<<1, v));
+	    else
+	       buffs[j][2*i].enq(tuple2(idx<<1, v));
+	 endrule
+   function PipeOut#(a) payload(PipeOut#(Tuple2#(Bit#(logk),a)) x) = 
+      (interface PipeOut;
+	  method a first;
+	     return tpl_2(x.first);
+	  endmethod
+	  method Action deq = x.deq;
+	  method Bool notEmpty = x.notEmpty;
+       endinterface);
+   return map(payload,infss[valueOf(logk)]);
 endmodule
 
 module mkUnfunnel#(PipeOut#(Vector#(m,a)) in)(PipeOut#(Vector#(mk, a)))

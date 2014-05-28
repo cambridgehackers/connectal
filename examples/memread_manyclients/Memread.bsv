@@ -28,6 +28,7 @@ import ClientServer::*;
 
 import Dma::*;
 import MemreadEngineV::*;
+import Pipe::*;
 
 typedef 32 NumEngineServers;
 
@@ -58,8 +59,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   Vector#(NumEngineServers, FIFOF#(Bit#(64)))    readFifos <- replicateM(mkFIFOF);
-   MemreadEngineV#(64,1,NumEngineServers)                re <- mkMemreadEngineV(readFifos);
+   MemreadEngineV#(64,1,NumEngineServers)                re <- mkMemreadEngineV;
    Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
    
@@ -78,7 +78,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 mismatchCounts[i] <= 0;
       endrule
       rule check;
-	 let v <- toGet(readFifos[i]).get;
+	 let v <- toGet(re.data_pipes[i]).get;
 	 let expectedV = {srcGens[i]+1,srcGens[i]};
 	 let misMatch = v != expectedV;
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
