@@ -44,10 +44,12 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
 
    // discard traffic from loose ends
    rule discardeast;
+      $display("we[4] discard %x", we[4].out.first);
       we[4].out.deq();
       endrule
 
    rule discardwest;
+      $display("ew[0] discard %x", ew[0].out.first);
       ew[0].out.deq();
       endrule
 
