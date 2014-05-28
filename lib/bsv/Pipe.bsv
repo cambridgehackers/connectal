@@ -397,17 +397,15 @@ function PipeOut#(b) mapPipe(function b f(a av), PipeOut#(a) apipe);
       endinterface);
 endfunction
 
-module mkMap#(function b f(a av), PipeOut#(a) apipe)(PipeOut#(b));
-   method b first();
-      let av = apipe.first();
-      return f(av);
-   endmethod
-   method Action deq();
-      apipe.deq();
-   endmethod
-   method Bool notEmpty();
-      return apipe.notEmpty();
-   endmethod
+// buffered version of mapPipe
+module mkMap#(function b f(a av), PipeOut#(a) apipe)(PipeOut#(b))
+   provisos (Bits#(b,bsz));
+   FIFOF#(b) fifo <- mkFIFOF();
+   rule compute;
+      let v <- toGet(apipe).get();
+      fifo.enq(f(v));
+   endrule
+   return toPipeOut(fifo);
 endmodule
 
 typedef (function Module #(PipeOut #(tb)) mkPipeOut(PipeOut#(ta) ifc)) PipeOutConstructor#(type ta, type tb);
