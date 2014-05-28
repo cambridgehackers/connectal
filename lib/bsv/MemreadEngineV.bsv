@@ -105,7 +105,7 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
 		   interface Get response;
 		      method ActionValue#(Bool) get if (outf.first == fromInteger(i));
 			 outf.deq;
-	 		 outs0[outf.first] <= outs0[outf.first]-1;
+			 outs0[i] <= outs0[i]-1;
 			 return True;
 		      endmethod
 		   endinterface
