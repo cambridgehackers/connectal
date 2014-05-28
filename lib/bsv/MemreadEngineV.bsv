@@ -41,7 +41,7 @@ typedef struct {ObjectPointer pointer;
 interface MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
    interface Vector#(numServers, Server#(MemengineCmd,Bool)) readServers;
    interface ObjectReadClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, PipeOut#(Bit#(dataWidth))) data_pipes;
+   interface Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes;
 endinterface
 
 
@@ -172,5 +172,5 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	 endmethod
       endinterface
    endinterface 
-   interface data_pipes = out_data_pipes;
+   interface dataPipes = out_data_pipes;
 endmodule

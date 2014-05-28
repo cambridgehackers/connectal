@@ -83,7 +83,7 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
 	 mismatchFifos[i].enq(mismatchCounts[i]);
       endrule
       rule check;
-	 let v <- toGet(re.data_pipes[i]).get;
+	 let v <- toGet(re.dataPipes[i]).get;
 	 let expectedV = {srcGens[i]+1,srcGens[i]};
 	 let misMatch = v != expectedV;
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
