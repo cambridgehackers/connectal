@@ -30,6 +30,7 @@ import BRAM::*;
 
 import PortalMemory::*;
 import Dma::*;
+import Pipe::*;
 
 typedef struct {ObjectPointer pointer;
 		Bit#(ObjectOffsetSize) base;
@@ -42,32 +43,6 @@ interface MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeri
    interface ObjectReadClient#(dataWidth) dmaClient;
 endinterface
 
-interface Funnel#(numeric type numInputs, type a);
-   interface Vector#(numInputs, Put#(a)) inputs;
-   interface Get#(Tuple2#(Bit#(TLog#(numInputs)), a)) out;
-endinterface
-
-module mkFunnel(Funnel#(numInputs,a))
-   provisos (Log#(numInputs, logNumInputs),
-	     Bits#(a,a__));
-   
-   Vector#(TAdd#(logNumInputs,1), Vector#(numInputs, FIFO#(Tuple2#(Bit#(logNumInputs),a)))) infss <- replicateM(replicateM(mkFIFO));
-   for(Integer j = valueOf(logNumInputs); j > 0; j=j-1) 
-      for(Integer i = 0; i < 2**j; i=i+1) 
-	 rule xfer;
-	    let x <- toGet(infss[j][i]).get;
-	    infss[j-1][i/2].enq(x);
-	 endrule
-   
-   function Put#(a) my_toPut(FIFO#(Tuple2#(Bit#(logNumInputs),a)) f, Integer i) = 
-      (interface Put;
-	  method Action put(a x);
-	     f.enq(tuple2(fromInteger(i),x));
-	  endmethod
-       endinterface);
-   interface Vector inputs = zipWith(my_toPut, infss[valueOf(logNumInputs)], genVector);
-   interface out = toGet(infss[0][0]);
-endmodule
 
 module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (MemreadEngineV#(dataWidth, cmdQDepth, numServers))
    provisos (Div#(dataWidth,8,dataWidthBytes),
@@ -85,8 +60,9 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) head <- mapM(mkReg, genWith(hf));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) tail <- mapM(mkReg, genWith(hf));
-   Funnel#(numServers, MemengineCmd)              infs <- mkFunnel;
-
+   Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) infs <- replicateM(mkSizedFIFOF(1));
+   PipeOut#(Tuple2#(Bit#(serverIdxSz), MemengineCmd)) infunnel <- mkFunnel1Pipelined(map(toPipeOut,infs));
+      
    BRAM1Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM1Server(defaultValue);
    FIFO#(Bit#(serverIdxSz))                       outf <- mkSizedFIFO(1);   
    FIFO#(Bit#(serverIdxSz))                      loadf <- mkSizedFIFO(1);
@@ -98,7 +74,7 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
    let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
 
    rule store_cmd;
-      match {.idx, .cmd} <- infs.out.get;
+      match {.idx, .cmd} <- toGet(infunnel).get;
       let new_tail = tail[idx]+1;
       if (new_tail >= extend(idx+1)*cmd_q_depth)
 	 new_tail = extend(idx)*cmd_q_depth;
@@ -123,7 +99,7 @@ module mkMemreadEngineV#(Vector#(numServers, FIFOF#(Bit#(dataWidth))) fs) (Memre
 		   interface Put request;
 		      method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
 			 outs0[i] <= outs0[i]+1;
-			 infs.inputs[i].put(c);
+			 infs[i].enq(tuple2(fromInteger(i),c));
  		      endmethod
 		   endinterface
 		   interface Get response;

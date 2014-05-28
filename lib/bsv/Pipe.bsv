@@ -195,6 +195,20 @@ module mkFunnel1#(PipeOut#(Vector#(k,a)) in)(PipeOut#(a))
    endmethod
 endmodule
 
+module mkFunnel1Pipelined#(Vector#(k,PipeOut#(a)) in) (PipeOut#(a))
+   provisos (Log#(k, logk),
+	     Bits#(a,a__));
+   Vector#(logk, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkSizedFIFOF(1)));
+   Vector#(TAdd#(logk,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
+   for(Integer j = valueOf(logk); j > 0; j=j-1) 
+      for(Integer i = 0; i < 2**j; i=i+1) 
+	 rule xfer;
+	    let x <- toGet(infss[j][i]).get;
+	    buffs[j-1][i/2].enq(x);
+	 endrule
+   return infss[0][0];
+endmodule
+
 module mkUnfunnel#(PipeOut#(Vector#(m,a)) in)(PipeOut#(Vector#(mk, a)))
    provisos (Mul#(m, k, mk),
 	     Bits#(a, asz),
