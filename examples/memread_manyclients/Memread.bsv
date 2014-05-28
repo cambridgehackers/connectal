@@ -57,6 +57,7 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32))    mismatchCnt <- mkReg(0);
    FIFO#(void)                cf <- mkSizedFIFO(1);
    
+   Reg#(Bit#(32))                                   iterCnt <- mkReg(0);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
@@ -96,9 +97,15 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
    PipeOut#(Bit#(32)) mismatchCountPipe <- mkReducePipe(mkMap(my_add), mismatchCountsPipe);
 
    rule indicate_finish;
-      let mismatchCount <- toGet(mismatchCountPipe).get();
-      cf.deq;
-      indication.readDone(mismatchCnt);
+      let mc <- toGet(mismatchCountPipe).get();
+      mc = mc + mismatchCnt;
+      if (iterCnt == 1) begin
+	 cf.deq;
+	 indication.readDone(mc);
+	 mc = 0;
+      end
+      mismatchCnt <= mc;
+      iterCnt <= iterCnt - 1;
    endrule
    
    interface dmaClient = re.dmaClient;
@@ -109,6 +116,7 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
 	 cf.enq(?);
 	 numWords  <= nw;
 	 burstLen  <= bl;
+	 iterCnt <= ic;
 	 for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
 	    iterCnts[i] <= ic;
 	    mismatchCounts[i] <= 0;
