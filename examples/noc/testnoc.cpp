@@ -89,6 +89,7 @@ void dotest()
   uint32_t from, to, msg;
   for (from = 0; from < 4; from += 1) {
     for (to = 0; to < 4; to += 1) {
+      printf("send from %d to %d v %08x\n", from, to, (from << 16) + to);
       dosend(from, to, (from << 16) + to);
     }
   }
