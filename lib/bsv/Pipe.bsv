@@ -201,6 +201,7 @@ module mkFunnel1PipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(1,a,bpc)
    provisos (Log#(k, logk),
 	     Bits#(a,a__),
 	     Div#(logk,bpc,stages));
+   // this relies on the fact that dead-code will remove unused fifo instantiations (see foo in mkUnFunnel1PipesPipelined)
    Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
    Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
    for(Integer j = valueOf(stages); j > 0; j=j-1)
@@ -217,7 +218,14 @@ module mkUnFunnel1PipesPipelined#(PipeOut#(Tuple2#(Bit#(TLog#(k)),a)) in) (Funne
 	     Bits#(a,a__),
 	     Add#(1,b__,k),
 	     Div#(logk,bpc,stages));
-   Vector#(stages, Vector#(k, FIFOF#(Tuple2#(Bit#(logk),a)))) buffs  <- replicateM(replicateM(mkFIFOF));
+   // the only reason to have foo is if you don't believe that dead-code will remove unused fifo instantiations
+   module foo#(Integer i) (Vector#(k, FIFOF#(Tuple2#(Bit#(logk),a))));
+      Vector#(k, FIFOF#(Tuple2#(Bit#(logk),a))) rv;
+      for(Integer j = 0; j < 2**((i+1)*valueOf(bpc)) && j < valueOf(k); j=j+1) 
+	 rv[j] <- mkFIFOF;
+      return rv;
+   endmodule
+   Vector#(stages, Vector#(k, FIFOF#(Tuple2#(Bit#(logk),a)))) buffs  <- genWithM(foo);
    Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a)))) infss = cons(cons(in,replicate(?)), map(map(toPipeOut),buffs));
    for(Integer j = 0; j < valueOf(stages); j=j+1) 
       for(Integer i = 0; i < 2**(j*valueOf(bpc)); i=i+1) 
