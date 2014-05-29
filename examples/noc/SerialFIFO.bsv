@@ -21,21 +21,11 @@
 
 
 import Gearbox :: *;
-
-interface SerialFIFOIn#(type a);
-   method Action enq(a din);
-   method Bool notFull();
-endinterface
-
-interface SerialFIFOOut#(type a);
-   method a first();
-   method Action deq();
-   method Bool notEmpty();
-endinterface
+import Pipe :: *;
 
 interface SerialFIFO#(type a);
-   interface SerialFIFOIn#(a) in;
-   interface SerialFIFOOut#(a) out;
+   interface PipeIn#(a) in;
+   interface PipeOut#(a) out;
 endinterface
 
 module mkSerialFIFO(SerialFIFO#(a))
@@ -56,27 +46,25 @@ module mkSerialFIFO(SerialFIFO#(a))
       gin.deq();
    endrule
    
-   interface SerialFIFOIn in;
+   interface PipeIn in;
       
-   method Action enq(a din);
-      $display("SerialFIFO enq %x", pack(din));
-      gin.enq(unpack(pack(din)));
-   endmethod
+      method Action enq(a din);
+	 gin.enq(unpack(pack(din)));
+      endmethod
       
-   method Bool notFull() = gin.notFull;
+      method Bool notFull() = gin.notFull;
       
    endinterface
    
-   interface SerialFIFOOut out;
+   interface PipeOut out;
    
-   method a first();
-//      $display("SerialFIFO first %x", pack(gout.first));
-      return(unpack(pack(gout.first)));
-   endmethod
+      method a first();
+	 return(unpack(pack(gout.first)));
+      endmethod
       
-   method Action deq() = gout.deq;
-      
-   method Bool notEmpty() = gout.notEmpty;
+      method Action deq() = gout.deq;
+   
+      method Bool notEmpty() = gout.notEmpty;
       
    endinterface
    
