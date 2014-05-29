@@ -58,8 +58,8 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
     for (Bit#(4) i = 0; i < 4; i = i + 1)
     begin
         node[i] <- mkNocNode(unpack(i), 
-	    SerialFIFO {in: ew[0].in, out: we[0].out},
-	    SerialFIFO {in: we[1].in, out: ew[1].out});
+	    SerialFIFO {in: ew[i+0].in, out: we[i+0].out},
+	    SerialFIFO {in: we[i+1].in, out: ew[i+1].out});
     end
 
 

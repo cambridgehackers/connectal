@@ -59,6 +59,7 @@ module mkSerialFIFO(SerialFIFO#(a))
    interface SerialFIFOIn in;
       
    method Action enq(a din);
+      $display("SerialFIFO enq %x", pack(din));
       gin.enq(unpack(pack(din)));
    endmethod
       
@@ -69,6 +70,7 @@ module mkSerialFIFO(SerialFIFO#(a))
    interface SerialFIFOOut out;
    
    method a first();
+//      $display("SerialFIFO first %x", pack(gout.first));
       return(unpack(pack(gout.first)));
    endmethod
       

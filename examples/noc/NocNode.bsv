@@ -70,6 +70,26 @@ function Action outputarbitrate(FIFOF#(DataMessage) a,
 	  endaction;
 endfunction
 
+function Action hostarbitrate(FIFOF#(DataMessage) a,
+				FIFOF#(DataMessage) b,
+				Reg#(Bit#(1)) select,
+				FIFOF#(DataMessage) r);
+   return action
+	     if (a.notEmpty && !b.notEmpty)
+		move(a, r);
+	     else if (!a.notEmpty && b.notEmpty)
+		move(b, r);
+	     else if (a.notEmpty && b.notEmpty)
+		begin
+		   if (select == 1)
+		      move(a, r);
+		   else
+		      move(b, r);
+		   select <= select ^ 1;
+		end
+	  endaction;
+endfunction
+
 module mkNocNode#(Bit#(4) id, 
 		  SerialFIFO#(DataMessage) west,
 		  SerialFIFO#(DataMessage) east)(NocNode);
@@ -80,6 +100,7 @@ module mkNocNode#(Bit#(4) id,
 
    Reg#(Bit#(1)) oeselect <- mkReg(0);
    Reg#(Bit#(1)) owselect <- mkReg(0);
+   Reg#(Bit#(1)) ohselect <- mkReg(0);
 
    // out Links
    LinkHost#(DataMessage) lhost <- mkLinkHost();
@@ -100,24 +121,40 @@ module mkNocNode#(Bit#(4) id,
    
    rule fromhost;
       if (lhost.tonet.first.address < id)
-	 move(lhost.tonet, hw);
+	 begin
+	    $display("host to west");
+	    move(lhost.tonet, hw);
+	 end
       else if (lhost.tonet.first.address == id)
-	 move(lhost.tonet, lhost.tohost);
+	 begin
+	    $display("host to host");
+	    move(lhost.tonet, lhost.tohost);
+	 end
       else
-	 move(lhost.tonet, he);
+	 begin
+	    $display("host to east");
+	    move(lhost.tonet, he);
+	 end
+   endrule
+   
+   // arbiter to send data messages to host
+      
+   rule genoh (eh.notEmpty || wh.notEmpty);
+      $display("genoh");
+      hostarbitrate(eh, wh, ohselect, lhost.tohost);
    endrule
    
    // arbiter to send data messages to w
-   
-   
-   rule genow;
+      
+   rule genow (ew.notEmpty || hw.notEmpty);
+      $display("genow");
       outputarbitrate(ew, hw, owselect, west.in);
    endrule
    
    // arbiter to send data messages to e
-   
-   
-   rule genoe;
+      
+   rule genoe (we.notEmpty || he.notEmpty);
+      $display("genoe");
       outputarbitrate(we, he, oeselect, east.in);
    endrule
    
@@ -125,9 +162,15 @@ module mkNocNode#(Bit#(4) id,
    
    rule fromeast;
       if (east.out.first.address == id)
-	 eh.enq(east.out.first);
+	 begin
+	    $display("fromeast %d to host v %x", id, east.out.first);
+	    eh.enq(east.out.first);
+	 end
       else
-	 ew.enq(east.out.first);
+	 begin
+	    $display("fromeast %d to west v %x", id, east.out.first);
+	    ew.enq(east.out.first);
+	 end
       east.out.deq();
    endrule
    
@@ -135,9 +178,15 @@ module mkNocNode#(Bit#(4) id,
 
    rule fromwest;
       if (west.out.first.address == id)
-	 wh.enq(west.out.first);
+	 begin
+	    $display("fromwest %d to host v %x", id, west.out.first);
+	    wh.enq(west.out.first);
+	 end
       else
-	 we.enq(west.out.first);
+	 begin
+	    $display("fromwest %d  to east v %x", id, west.out.first);
+	    we.enq(west.out.first);
+	    end
       west.out.deq();
       endrule
    
