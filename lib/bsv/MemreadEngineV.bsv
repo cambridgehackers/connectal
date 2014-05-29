@@ -69,9 +69,9 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
-   PipeOut#(Tuple2#(Bit#(serverIdxSz), MemengineCmd)) in_funnel <- mkFunnel1PipesPipelined(map(toPipeOut,cmds_in));
+   FunnelPipe#(1, Tuple2#(Bit#(serverIdxSz), MemengineCmd),2) in_funnel <- mkFunnel1PipesPipelined(map(toPipeOut,cmds_in));
    FIFOF#(Tuple2#(Bit#(TLog#(numServers)), Tuple2#(Bit#(dataWidth),Bool))) read_data <- mkFIFOF;
-   Vector#(numServers, PipeOut#(Tuple2#(Bit#(dataWidth),Bool))) out_unfunnel <- mkUnFunnel1PipesPipelined(toPipeOut(read_data));
+   FunnelPipe#(numServers, Tuple2#(Bit#(dataWidth),Bool),2) out_unfunnel <- mkUnFunnel1PipesPipelined(toPipeOut(read_data));
    function PipeOut#(Bit#(dataWidth)) check_out(PipeOut#(Tuple2#(Bit#(dataWidth),Bool)) x, Integer i) = 
       (interface PipeOut;
 	  method Bit#(dataWidth) first;
@@ -92,7 +92,7 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
    let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
 
    rule store_cmd;
-      match {.idx, .cmd} <- toGet(in_funnel).get;
+      match {.idx, .cmd} <- toGet(in_funnel[0]).get;
       let new_tail = tail[idx]+1;
       if (new_tail >= extend(idx+1)*cmd_q_depth)
 	 new_tail = extend(idx)*cmd_q_depth;
