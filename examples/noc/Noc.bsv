@@ -26,6 +26,7 @@ import Connectable::*;
 import StmtFSM::*;
 import Vector::*;
 import FIFOF::*;
+import Pipe::*;
 
 interface NocIndication;
    method Action ack(Bit#(4) recvnode, Bit#(4) to, Bit#(32) message);
@@ -53,7 +54,7 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
       ew[0].out.deq();
       endrule
 
-   Vector#(4, NocNode) node;
+   Vector#(4, SerialFIFO#(DataMessage)) node;
 
     for (Bit#(4) i = 0; i < 4; i = i + 1)
     begin
@@ -72,11 +73,11 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
     seq
     while(True) seq
       for(id <= 0; id < 4; id <= id + 1)
-          if (node[id].host.tohost.notEmpty())
+          if (node[id].out.notEmpty())
 	      seq
-		 indication.ack(id, node[id].host.tohost.first.address,
-	            node[id].host.tohost.first.payload);
-		 node[id].host.tohost.deq();
+		 indication.ack(id, node[id].out.first.address,
+	            node[id].out.first.payload);
+		 node[id].out.deq();
               endseq
       endseq
     endseq;
@@ -84,7 +85,7 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
     mkAutoFSM(readindications);
  
    method Action send(Bit#(4) sendnode, Bit#(4) to, Bit#(32) message);
-      node[sendnode].host.tonet.enq(DataMessage{address: to, payload: message});
+      node[sendnode].in.enq(DataMessage{address: to, payload: message});
    endmethod
   
    
