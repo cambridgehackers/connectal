@@ -71,7 +71,7 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
 	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, readLen:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 Bit#(32) srcGen = fromInteger(i)*truncate(chunk/4);
 	 srcGens[i] <= srcGen;
-	 //$display("start %d, %h %d", i, srcGen, iterCnts[i]);
+	 $display("start %d, %h %d", i, srcGen, iterCnts[i]);
       endrule
       rule finish;
 	 $display("finish %d %d", i, iterCnts[i]);
@@ -95,7 +95,7 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
    
    PipeOut#(Vector#(NumEngineServers, Bit#(32))) mismatchCountsPipe <- mkJoinVector(id, map(toPipeOut, mismatchFifos));
    PipeOut#(Bit#(32)) mismatchCountPipe <- mkReducePipe(mkMap(my_add), mismatchCountsPipe);
-
+   
    rule indicate_finish;
       let mc <- toGet(mismatchCountPipe).get();
       mc = mc + mismatchCnt;
