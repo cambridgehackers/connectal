@@ -203,32 +203,33 @@ module mkFunnel1PipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(1,a,bpc)
 	     Div#(logk,bpc,stages));
    Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
    Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
-   for(Integer j = valueOf(stages); j > 0; j=j-1) begin
-      messageM("stage");
+   for(Integer j = valueOf(stages); j > 0; j=j-1)
       for(Integer i = 0; i < 2**(j*valueOf(bpc)) && i < valueOf(k); i=i+1) 
 	 rule xfer;
 	    let x <- toGet(infss[j][i]).get;
 	    buffs[j-1][i/(2**valueOf(bpc))].enq(x);
-	    messageM("xfer");
 	 endrule
-   end
    return cons(infss[0][0],nil);
 endmodule
 
 module mkUnFunnel1PipesPipelined#(PipeOut#(Tuple2#(Bit#(TLog#(k)),a)) in) (FunnelPipe#(k,a,bpc))
    provisos (Log#(k, logk),
 	     Bits#(a,a__),
-	     Add#(1,b__,k));
-   Vector#(logk, Vector#(k, FIFOF#(Tuple2#(Bit#(logk),a)))) buffs  <- replicateM(replicateM(mkFIFOF));
-   Vector#(TAdd#(logk,1), Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a)))) infss = cons(cons(in,replicate(?)), map(map(toPipeOut),buffs));
-   for(Integer j = 0; j < valueOf(logk); j=j+1) 
-      for(Integer i = 0; i < 2**j; i=i+1) 
+	     Add#(1,b__,k),
+	     Div#(logk,bpc,stages));
+   Vector#(stages, Vector#(k, FIFOF#(Tuple2#(Bit#(logk),a)))) buffs  <- replicateM(replicateM(mkFIFOF));
+   Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a)))) infss = cons(cons(in,replicate(?)), map(map(toPipeOut),buffs));
+   for(Integer j = 0; j < valueOf(stages); j=j+1) 
+      for(Integer i = 0; i < 2**(j*valueOf(bpc)); i=i+1) 
 	 rule xfer;
 	    match{.idx, .v} <- toGet(infss[j][i]).get;
-	    if(idx[valueOf(logk)-1] == 1'b1)
-	       buffs[j][2*i+1].enq(tuple2(idx<<1, v));
-	    else
-	       buffs[j][2*i].enq(tuple2(idx<<1, v));
+	    Integer bits = (j == valueOf(stages)-1) ? valueOf(logk)-(j*valueOf(bpc)) : valueOf(bpc);
+	    Integer sh = valueOf(bpc)-bits;
+	    for(Integer l = 0; l < 2**bits; l=l+1) begin
+	       Bit#(bpc) x = fromInteger(l)<<fromInteger(sh);
+	       if(idx[(valueOf(logk)-1):(valueOf(logk)-valueOf(bpc))] == x) 
+		  buffs[j][(2**bits)*i+l].enq(tuple2(idx<<valueOf(bpc), v));
+	    end
 	 endrule
    function PipeOut#(a) payload(PipeOut#(Tuple2#(Bit#(logk),a)) x) = 
       (interface PipeOut;
@@ -238,7 +239,7 @@ module mkUnFunnel1PipesPipelined#(PipeOut#(Tuple2#(Bit#(TLog#(k)),a)) in) (Funne
 	  method Action deq = x.deq;
 	  method Bool notEmpty = x.notEmpty;
        endinterface);
-   return map(payload,infss[valueOf(logk)]);
+   return map(payload,infss[valueOf(stages)]);
 endmodule
 
 module mkUnfunnel#(PipeOut#(Vector#(m,a)) in)(PipeOut#(Vector#(mk, a)))
