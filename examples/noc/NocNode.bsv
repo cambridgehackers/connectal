@@ -24,6 +24,7 @@ import SerialFIFO::*;
 import FIFOF::*;
 import Vector::*;
 import Pipe::*;
+import Arbiter::*;
 
 typedef struct {
    Bit#(4) address;
@@ -42,17 +43,18 @@ endfunction
 
 module mkNocArbitrate#(Vector#(n, PipeOut#(a)) in, PipeIn#(a) out)(Empty);
    Arbiter_IFC#(n) arb <- mkArbiter(False);   
-   for (int i = 0; i < n; i = i + 1)
+   for (Integer i = 0; i < valueOf(n); i = i + 1)
       rule send_request (out.notFull && in[i].notEmpty);
 	 arb.clients[i].request();
       endrule
    
-   rule move
-      if (out.notFUll && arb.clients[arb.grant_id].notEmpty)
-	 begin
+   rule move;
+      if (out.notFull && in[arb.grant_id].notEmpty)
+	 action
 	    out.enq(in[arb.grant_id].first());
-	    in[arb.grantid].deq();
-	 end
+	    in[arb.grant_id].deq();
+	 endaction
+   endrule
 endmodule
 
 module mkNocNode#(Bit#(4) id, 
@@ -62,9 +64,8 @@ module mkNocNode#(Bit#(4) id,
    // host Links
    FIFOF#(DataMessage) fifofromhost <- mkSizedFIFOF(4);
    FIFOF#(DataMessage) fifotohost <- mkSizedFIFOF(4);
-   SerialFIFO#(DataMessage) host;
-   host.in = ToPipein(fifotohost);
-   host.out = ToPipeOut(fifofromhost);
+   SerialFIFO#(DataMessage) host = SerialFIFO{in: toPipeIn(fifotohost),
+				    out: toPipeOut(fifofromhost)}; 
   
    // buffers for crossbar switch
    
@@ -83,15 +84,15 @@ module mkNocNode#(Bit#(4) id,
    Vector#(2,PipeOut#(DataMessage)) vToEast = newVector;
    Vector#(2,PipeOut#(DataMessage)) vToWest = newVector;
    
-   vToHost[0] = ToPipeOut(hh);
-   vToHost[1] = ToPipeOut(eh);
-   vToHost[2] = ToPipeOut(wh);
+   vToHost[0] = toPipeOut(hh);
+   vToHost[1] = toPipeOut(eh);
+   vToHost[2] = toPipeOut(wh);
    
-   vToEast[0] = ToPipeOut(he);
-   vToEast[1] = ToPipeOut(we);
+   vToEast[0] = toPipeOut(he);
+   vToEast[1] = toPipeOut(we);
    
-   vToWest[0] = ToPipeOut(hw);
-   vToWest[1] = ToPipeOut(ew);
+   vToWest[0] = toPipeOut(hw);
+   vToWest[1] = toPipeOut(ew);
    
    mkNocArbitrate(vToHost, host.in);
    mkNocArbitrate(vToEast, east.in);
@@ -103,17 +104,17 @@ module mkNocNode#(Bit#(4) id,
       if (host.out.first.address < id)
 	 begin
 	    $display("id %d host to west", id);
-	    move(host.out, ToPipeIn(hw));
+	    move(host.out, toPipeIn(hw));
 	 end
       else if (host.out.first.address == id)
 	 begin
 	    $display("id %d host to host", id);
-	    move(host.out, ToPipeIn(hh));
+	    move(host.out, toPipeIn(hh));
 	 end
       else
 	 begin
 	    $display("id %d host to east", id);
-	    move(host.out, ToPipeIn(he));
+	    move(host.out, toPipeIn(he));
 	 end
    endrule
    
@@ -123,12 +124,12 @@ module mkNocNode#(Bit#(4) id,
       if (east.out.first.address == id)
 	 begin
 	    $display("fromeast %d to host v %x", id, east.out.first);
-	    move(east.out, eh);
+	    move(east.out, toPipeIn(eh));
 	 end
       else
 	 begin
 	    $display("fromeast %d to west v %x", id, east.out.first);
-	    move(east.out, ew);
+	    move(east.out, toPipeIn(ew));
 	 end
    endrule
    
@@ -138,19 +139,19 @@ module mkNocNode#(Bit#(4) id,
       if (west.out.first.address == id)
 	 begin
 	    $display("fromwest %d to host v %x", id, west.out.first);
-	    move(west.out, wh);
+	    move(west.out, toPipeIn(wh));
 	 end
       else
 	 begin
 	    $display("fromwest %d  to east v %x", id, west.out.first);
-	    from(west.out, we);
+	    move(west.out, toPipeIn(we));
 	 end
       endrule
       
   // interface wiring
 
-   interface PipeIn fromhost = ToPipeIn(fifotohost);
-   interface PipeOut tohost = ToPipeOut(fifofromhost);
+   interface PipeIn in = toPipeIn(fifotohost);
+   interface PipeOut out = toPipeOut(fifofromhost);
 
 endmodule
 
