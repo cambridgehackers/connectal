@@ -26,8 +26,10 @@ import Vector::*;
 import GetPut::*;
 import ClientServer::*;
 
+import Pipe::*;
 import Dma::*;
-import MemreadEngine::*;
+import MemreadEngineV::*;
+import Pipe::*;
 
 typedef 32 NumEngineServers;
 
@@ -47,78 +49,78 @@ interface MemreadIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-module mkMemread#(MemreadIndication indication) (Memread);
+module [Module] mkMemread#(MemreadIndication indication) (Memread);
 
    Reg#(ObjectPointer)   pointer <- mkReg(0);
-   Reg#(Bit#(ObjectOffsetSize)) startBase <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
-   Reg#(Bit#(32))       sIterCnt <- mkReg(0);
-   Reg#(Bit#(32))       fIterCnt <- mkReg(0);
-   Reg#(Bit#(32))       startPtr <- mkReg(0);
-   Reg#(Bit#(32))      finishPtr <- mkReg(0);
    Reg#(Bit#(32))    mismatchCnt <- mkReg(0);
+   FIFO#(void)                cf <- mkSizedFIFO(1);
    
-   
+   Reg#(Bit#(32))                                   iterCnt <- mkReg(0);
+   Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   Vector#(NumEngineServers, FIFOF#(Bit#(64)))    readFifos <- replicateM(mkFIFOF);
-   MemreadEngineV#(64,1,NumEngineServers)                re <- mkMemreadEngineV(readFifos);
+   MemreadEngineV#(64,1,NumEngineServers)                re <- mkMemreadEngineV;
+   Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
    Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
    
-   rule start (sIterCnt > 0 && !readFifos[startPtr].notEmpty);
-      if (startPtr+1 == fromInteger(valueOf(NumEngineServers))) begin
-	 sIterCnt <= sIterCnt-1;
-	 startPtr <= 0;
-	 startBase <= 0;
-      end
-      else begin
-	 startPtr <= startPtr+1;
-	 startBase <= startBase+chunk;
-      end
-      re.readServers[startPtr].request.put(MemengineCmd{pointer:pointer, base:startBase, readLen:truncate(chunk), burstLen:burstLen*4});
-      let srcGen = startPtr * truncate(chunk/4);
-      srcGens[startPtr] <= srcGen;
-      $display("start %h %d", srcGen, sIterCnt);
-   endrule
-   
-   rule finish;
-      if (finishPtr+1 == fromInteger(valueOf(NumEngineServers))) begin
-	 fIterCnt <= fIterCnt-1;
-	 finishPtr <= 0;
-	 if (fIterCnt-1==0)
-	    indication.readDone(mismatchCnt);	    
-      end
-      else begin
-	 finishPtr <= finishPtr+1;
-      end
-      $display("finish %d %d", finishPtr, fIterCnt);
-      let rv <- re.readServers[finishPtr].response.get;
-      mismatchCnt <= mismatchCnt+mismatchCounts[finishPtr];
-      mismatchCounts[finishPtr] <= 0;
-   endrule
-   
-   for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1)
+   for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
+      rule start (iterCnts[i] > 0);
+	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, readLen:truncate(chunk), burstLen:truncate(burstLen*4)});
+	 Bit#(32) srcGen = fromInteger(i)*truncate(chunk/4);
+	 srcGens[i] <= srcGen;
+	 //$display("start %d, %h %d", i, srcGen, iterCnts[i]);
+      endrule
+      rule finish;
+	 $display("finish %d %d", i, iterCnts[i]);
+	 iterCnts[i] <= iterCnts[i]-1;
+	 let rv <- re.readServers[i].response.get;
+	 // need to pipeline this also
+	 //mismatchCnt <= mismatchCnt+mismatchCounts[i];
+	 mismatchCounts[i] <= 0;
+	 mismatchFifos[i].enq(mismatchCounts[i]);
+      endrule
       rule check;
-	 let v <- toGet(readFifos[i]).get;
+	 let v <- toGet(re.dataPipes[i]).get;
 	 let expectedV = {srcGens[i]+1,srcGens[i]};
 	 let misMatch = v != expectedV;
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
 	 srcGens[i] <= srcGens[i]+2;
       endrule
+   end
+   
+   function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) xy); match { .x, .y } = xy; return x + y; endfunction
+   
+   PipeOut#(Vector#(NumEngineServers, Bit#(32))) mismatchCountsPipe <- mkJoinVector(id, map(toPipeOut, mismatchFifos));
+   PipeOut#(Bit#(32)) mismatchCountPipe <- mkReducePipe(mkMap(my_add), mismatchCountsPipe);
+
+   rule indicate_finish;
+      let mc <- toGet(mismatchCountPipe).get();
+      mc = mc + mismatchCnt;
+      if (iterCnt == 1) begin
+	 cf.deq;
+	 indication.readDone(mc);
+	 mc = 0;
+      end
+      mismatchCnt <= mc;
+      iterCnt <= iterCnt - 1;
+   endrule
    
    interface dmaClient = re.dmaClient;
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	 indication.started(nw);
 	 pointer <= rp;
+	 cf.enq(?);
 	 numWords  <= nw;
 	 burstLen  <= bl;
-	 sIterCnt <= ic;
-	 fIterCnt <= ic;
-	 startPtr <= 0;
-	 finishPtr <= 0;
+	 iterCnt <= ic;
+	 for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
+	    iterCnts[i] <= ic;
+	    mismatchCounts[i] <= 0;
+	 end
       endmethod
    endinterface
 endmodule

@@ -46,7 +46,7 @@ import Memread::*;
 
 typedef enum {MemreadIndication, MemreadRequest, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
+module [Module] mkPortalTop(StdPortalDmaTop#(addrWidth)) 
 
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
