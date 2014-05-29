@@ -21,28 +21,17 @@
 
 import Connectable::*;
 import SerialFIFO::*;
-import LinkHost::*;
 import FIFOF::*;
 import Vector::*;
+import Pipe::*;
 
 typedef struct {
    Bit#(4) address;
    Bit#(32) payload;
    } DataMessage deriving(Bits);
 
-interface NocNode;
-   interface LinkHost#(DataMessage) host;
-endinterface
       
-function Action movetolink(FIFOF#(DataMessage) from, SerialFIFOIn#(DataMessage) to);
-   return action
-	     $display("movetolink %x", from.first);
-	     to.enq(from.first);
-	     from.deq();
-	  endaction;
-endfunction
-
-function Action move(FIFOF#(DataMessage) from, FIFOF#(DataMessage) to);
+function Action move(PipeOut#(DataMessage) from, PipeIn#(DataMessage) to);
    return action
 	     $display("move %x", from.first);
 	     to.enq(from.first);
@@ -50,65 +39,38 @@ function Action move(FIFOF#(DataMessage) from, FIFOF#(DataMessage) to);
 	  endaction;
 endfunction
 
-function Action outputarbitrate(FIFOF#(DataMessage) a,
-				FIFOF#(DataMessage) b,
-				Reg#(Bit#(1)) select,
-				SerialFIFOIn#(DataMessage) r);
-   return action
-	     if (a.notEmpty && !b.notEmpty)
-		movetolink(a, r);
-	     else if (!a.notEmpty && b.notEmpty)
-		movetolink(b, r);
-	     else if (a.notEmpty && b.notEmpty)
-		begin
-		   if (select == 1)
-		      movetolink(a, r);
-		   else
-		      movetolink(b, r);
-		   select <= select ^ 1;
-		end
-	  endaction;
-endfunction
 
-function Action hostarbitrate(FIFOF#(DataMessage) a,
-				FIFOF#(DataMessage) b,
-				Reg#(Bit#(1)) select,
-				FIFOF#(DataMessage) r);
-   return action
-	     if (a.notEmpty && !b.notEmpty)
-		move(a, r);
-	     else if (!a.notEmpty && b.notEmpty)
-		move(b, r);
-	     else if (a.notEmpty && b.notEmpty)
-		begin
-		   if (select == 1)
-		      move(a, r);
-		   else
-		      move(b, r);
-		   select <= select ^ 1;
-		end
-	  endaction;
-endfunction
+module mkNocArbitrate#(Vector#(n, PipeOut#(a)) in, PipeIn#(a) out)(Empty);
+   Arbiter_IFC#(n) arb <- mkArbiter(False);   
+   for (int i = 0; i < n; i = i + 1)
+      rule send_request (out.notFull && in[i].notEmpty);
+	 arb.clients[i].request();
+      endrule
+   
+   rule move
+      if (out.notFUll && arb.clients[arb.grant_id].notEmpty)
+	 begin
+	    out.enq(in[arb.grant_id].first());
+	    in[arb.grantid].deq();
+	 end
+endmodule
 
 module mkNocNode#(Bit#(4) id, 
 		  SerialFIFO#(DataMessage) west,
-		  SerialFIFO#(DataMessage) east)(NocNode);
-//	    Log#(asize, k),
-//	    PrimSelectable#(DataMessage, Bit#(1)),
-//	    Bitwise#(DataMessage),
-//            Literal#(DataMessage));
+		  SerialFIFO#(DataMessage) east)(SerialFIFO#(DataMessage));
 
-   Reg#(Bit#(1)) oeselect <- mkReg(0);
-   Reg#(Bit#(1)) owselect <- mkReg(0);
-   Reg#(Bit#(1)) ohselect <- mkReg(0);
-
-   // out Links
-   LinkHost#(DataMessage) lhost <- mkLinkHost();
+   // host Links
+   FIFOF#(DataMessage) fifofromhost <- mkSizedFIFOF(4);
+   FIFOF#(DataMessage) fifotohost <- mkSizedFIFOF(4);
+   SerialFIFO#(DataMessage) host;
+   host.in = ToPipein(fifotohost);
+   host.out = ToPipeOut(fifofromhost);
   
    // buffers for crossbar switch
    
    FIFOF#(DataMessage) he <- mkSizedFIFOF(4);
    FIFOF#(DataMessage) hw <- mkSizedFIFOF(4);
+   FIFOF#(DataMessage) hh <- mkSizedFIFOF(4);
    
    FIFOF#(DataMessage) ew <- mkSizedFIFOF(4);
    FIFOF#(DataMessage) we <- mkSizedFIFOF(4);
@@ -116,84 +78,79 @@ module mkNocNode#(Bit#(4) id,
    FIFOF#(DataMessage) eh <- mkSizedFIFOF(4);
    FIFOF#(DataMessage) wh <- mkSizedFIFOF(4);
 
+   // collate for inputs to host, east, west
+   Vector#(3,PipeOut#(DataMessage)) vToHost = newVector;
+   Vector#(2,PipeOut#(DataMessage)) vToEast = newVector;
+   Vector#(2,PipeOut#(DataMessage)) vToWest = newVector;
+   
+   vToHost[0] = ToPipeOut(hh);
+   vToHost[1] = ToPipeOut(eh);
+   vToHost[2] = ToPipeOut(wh);
+   
+   vToEast[0] = ToPipeOut(he);
+   vToEast[1] = ToPipeOut(we);
+   
+   vToWest[0] = ToPipeOut(hw);
+   vToWest[1] = ToPipeOut(ew);
+   
+   mkNocArbitrate(vToHost, host.in);
+   mkNocArbitrate(vToEast, east.in);
+   mkNocArbitrate(vToWest, west.in);
    
    // sort host messages to proper queue
    
-   rule fromhost;
-      if (lhost.tonet.first.address < id)
+   rule fromhost (host.out.notEmpty);
+      if (host.out.first.address < id)
 	 begin
-	    $display("host to west");
-	    move(lhost.tonet, hw);
+	    $display("id %d host to west", id);
+	    move(host.out, ToPipeIn(hw));
 	 end
-      else if (lhost.tonet.first.address == id)
+      else if (host.out.first.address == id)
 	 begin
-	    $display("host to host");
-	    move(lhost.tonet, lhost.tohost);
+	    $display("id %d host to host", id);
+	    move(host.out, ToPipeIn(hh));
 	 end
       else
 	 begin
-	    $display("host to east");
-	    move(lhost.tonet, he);
+	    $display("id %d host to east", id);
+	    move(host.out, ToPipeIn(he));
 	 end
-   endrule
-   
-   // arbiter to send data messages to host
-      
-   rule genoh (eh.notEmpty || wh.notEmpty);
-      $display("genoh");
-      hostarbitrate(eh, wh, ohselect, lhost.tohost);
-   endrule
-   
-   // arbiter to send data messages to w
-      
-   rule genow (ew.notEmpty || hw.notEmpty);
-      $display("genow");
-      outputarbitrate(ew, hw, owselect, west.in);
-   endrule
-   
-   // arbiter to send data messages to e
-      
-   rule genoe (we.notEmpty || he.notEmpty);
-      $display("genoe");
-      outputarbitrate(we, he, oeselect, east.in);
    endrule
    
    // Handle arriving messages from East
    
-   rule fromeast;
+   rule fromeast (east.out.notEmpty);
       if (east.out.first.address == id)
 	 begin
 	    $display("fromeast %d to host v %x", id, east.out.first);
-	    eh.enq(east.out.first);
+	    move(east.out, eh);
 	 end
       else
 	 begin
 	    $display("fromeast %d to west v %x", id, east.out.first);
-	    ew.enq(east.out.first);
+	    move(east.out, ew);
 	 end
-      east.out.deq();
    endrule
    
    // Handle arriving messages from West
 
-   rule fromwest;
+   rule fromwest (west.out.notEmpty);
       if (west.out.first.address == id)
 	 begin
 	    $display("fromwest %d to host v %x", id, west.out.first);
-	    wh.enq(west.out.first);
+	    move(west.out, wh);
 	 end
       else
 	 begin
 	    $display("fromwest %d  to east v %x", id, west.out.first);
-	    we.enq(west.out.first);
-	    end
-      west.out.deq();
+	    from(west.out, we);
+	 end
       endrule
-   
-   
+      
   // interface wiring
 
-   interface LinkHost host = lhost;
+   interface PipeIn fromhost = ToPipeIn(fifotohost);
+   interface PipeOut tohost = ToPipeOut(fifofromhost);
 
 endmodule
 
