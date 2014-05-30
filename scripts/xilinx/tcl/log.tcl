@@ -134,6 +134,7 @@ proc parse_log { log } {
       foreach line $log_lines {
          if {[string match "CRITICAL WARNING*" $line]} {
             puts $wfh "\t$line"
+            puts "\t$line"
          }
          if {[string match "ERROR:*" $line]} {
             puts $rfh $line
