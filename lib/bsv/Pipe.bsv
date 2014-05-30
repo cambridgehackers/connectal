@@ -128,6 +128,16 @@ instance Connectable#(PipeOut#(a),Put#(a));
    endmodule
 endinstance
 
+instance Connectable#(PipeOut#(a),PipeIn#(a));
+   module mkConnection#(PipeOut#(a) in, PipeIn#(a) out)(Empty);
+      rule connect;
+	 let v = in.first;
+	 in.deq();
+	 out.enq(v);
+      endrule
+   endmodule
+endinstance
+
 function PipeOut#(a) unvectorPipeOut(PipeOut#(Vector#(1,a)) in);
    return (interface PipeOut#(a);
 	      method first = in.first[0];
