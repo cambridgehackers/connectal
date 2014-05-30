@@ -65,10 +65,11 @@ module mkMemwriteEngineV(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
    BRAM1Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM1Server(defaultValue);
    FIFO#(Bit#(serverIdxSz))                      loadf <- mkSizedFIFO(1);
    FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))workf <- mkSizedFIFO(32); // isthis the right size?
-   FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))        donef <- mkFIFO;
+   FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))        donef <- mkSizedFIFO(32);
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
-   Vector#(numServers, FIFOF#(MemengineCmd))   cmds_in <- replicateM(mkSizedFIFOF(1));
+   Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
+   FunnelPipe#(1, Tuple2#(Bit#(serverIdxSz), MemengineCmd),2) cmds_in_funnel <- mkFunnel1PipesPipelined(map(toPipeOut,cmds_in));
    Vector#(numServers, FIFOF#(Bit#(dataWidth))) write_data <- replicateM(mkFIFOF);
    Vector#(numServers, PipeIn#(Bit#(dataWidth))) write_data_pipes = map(toPipeIn, write_data);
    
@@ -78,17 +79,15 @@ module mkMemwriteEngineV(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
    let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
 
    
-   for(Integer i = 0; i < valueOf(numServers); i=i+1)
-      rule store_cmd;
-	 Bit#(serverIdxSz) idx = fromInteger(i);
-	 let cmd <- toGet(cmds_in[idx]).get;
-	 let new_tail = tail[idx]+1;
-	 if (new_tail >= extend(idx+1)*cmd_q_depth)
-	    new_tail = extend(idx)*cmd_q_depth;
-	 tail[idx] <= new_tail;
-	 outs1[idx] <= outs1[idx]+1;
-	 cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
-      endrule
+   rule store_cmd;
+      match {.idx, .cmd} <- toGet(cmds_in_funnel[0]).get;
+      let new_tail = tail[idx]+1;
+      if (new_tail >= extend(idx+1)*cmd_q_depth)
+	 new_tail = extend(idx)*cmd_q_depth;
+      tail[idx] <= new_tail;
+      outs1[idx] <= outs1[idx]+1;
+      cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
+   endrule
    
    rule load_ctxt;
       loadIdx <= loadIdx+1;
@@ -104,7 +103,7 @@ module mkMemwriteEngineV(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
 		   interface Put request;
 		      method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
 			 outs0[i] <= outs0[i]+1;
-			 cmds_in[i].enq(c);
+			 cmds_in[i].enq(tuple2(fromInteger(i),c));
  		      endmethod
 		   endinterface
 		   interface Get response;
