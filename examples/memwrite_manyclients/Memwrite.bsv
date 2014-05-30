@@ -22,10 +22,16 @@
 
 import FIFO::*;
 import FIFOF::*;
+import Vector::*;
+import ClientServer::*;
+import GetPut::*;
 
 import AxiMasterSlave::*;
 import Dma::*;
-import MemwriteEngine::*;
+import MemwriteEngineV::*;
+import Pipe::*;
+
+typedef 32 NumEngineServers;
 
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -43,49 +49,71 @@ interface MemwriteIndication;
    method Action writeDone(Bit#(32) v);
 endinterface
 
-module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
+module [Module] mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
-   Reg#(ObjectPointer)        pointer <- mkReg(0);
-   Reg#(Bit#(32))         numWords <- mkReg(0);
-   Reg#(Bit#(32))         burstLen <- mkReg(0);
-   Reg#(Bit#(32))          iterCnt <- mkReg(0);
+   Reg#(ObjectPointer)   pointer <- mkReg(0);
+   Reg#(Bit#(32))       numWords <- mkReg(0);
+   Reg#(Bit#(32))       burstLen <- mkReg(0);
+   FIFOF#(void)               cf <- mkSizedFIFOF(1);
 
-   Reg#(Bit#(32))           srcGen <- mkReg(0);
-   FIFOF#(Bit#(64))      writeFifo <- mkFIFOF;
-   let                          we <- mkMemwriteEngine(1, writeFifo);
+   Vector#(NumEngineServers, Reg#(Bit#(32)))         srcGens <- replicateM(mkReg(0));
+   Reg#(Bit#(32))                                    iterCnt <- mkReg(0);
+   Vector#(NumEngineServers, Reg#(Bit#(32)))        iterCnts <- replicateM(mkReg(0));
+   Vector#(NumEngineServers, FIFOF#(void))               cfs <- replicateM(mkSizedFIFOF(1));
+   Vector#(NumEngineServers, FIFOF#(Bool))       finishFifos <- replicateM(mkFIFOF);
+   MemwriteEngineV#(64,1,NumEngineServers)                we <- mkMemwriteEngineV;
+   Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
 
-   rule start (iterCnt > 0);
-      iterCnt <= iterCnt-1;
-      we.start(pointer, 0, numWords*4, burstLen*4);
-   endrule
+   for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
+      rule start (iterCnts[i] > 0);
+	 we.writeServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, len:truncate(chunk), burstLen:truncate(burstLen*4)});
+	 Bit#(32) srcGen = fromInteger(i)*truncate(chunk/4);
+	 srcGens[i] <= srcGen;
+	 $display("start %d, %h %d", i, srcGen, iterCnts[i]);
+	 cfs[i].enq(?);
+      endrule
+      rule finish;
+	 $display("finish %d %d", i, iterCnts[i]);
+	 iterCnts[i] <= iterCnts[i]-1;
+	 let rv <- we.writeServers[i].response.get;
+	 finishFifos[i].enq(rv);
+      endrule
+      rule src if (cfs[i].notEmpty);
+	 let v = {srcGens[i]+1,srcGens[i]};
+	 we.dataPipes[i].enq(v);
+	 let new_srcGen = srcGens[i]+2;
+	 srcGens[i] <= new_srcGen;
+	 if(new_srcGen == fromInteger(i+1)*truncate(chunk/4))
+	    cfs[i].deq;
+      endrule
+   end
+ 
+   function Bool my_and(Tuple2#(Bool,Bool) xy); match { .x, .y } = xy; return x && y; endfunction
    
-   rule finish;
-      let rv <- we.finish;
-      if (iterCnt == 0)
+   PipeOut#(Vector#(NumEngineServers, Bool)) finishPipe <- mkJoinVector(id, map(toPipeOut, finishFifos));
+   PipeOut#(Bool) finishReducePipe <- mkReducePipe(mkMap(my_and), finishPipe);
+
+   rule indicate_finish;
+      let rv <- toGet(finishReducePipe).get();
+      if (iterCnt == 1) begin
+	 cf.deq;
 	 indication.writeDone(0);
+      end
+      iterCnt <= iterCnt - 1;
    endrule
    
-   rule src (numWords > 0);
-      if (srcGen+2 == numWords)
-	 srcGen <= 0;
-      else
-	 srcGen <= srcGen+2;
-      writeFifo.enq({srcGen+1,srcGen});
-   endrule
-
    interface ObjectWriteClient dmaClient = we.dmaClient;
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
 	  $display("startWrite pointer=%d numWords=%h burstLen=%d iterCnt=%d", pointer, nw, bl, ic);
 	  indication.started(nw);
 	  pointer <= wp;
-	  numWords <= nw;
-	  burstLen <= bl;
+	  cf.enq(?);
+	  numWords  <= nw;
+	  burstLen  <= bl;
 	  iterCnt <= ic;
-	  srcGen <= 0;
-       endmethod
-       method Action getStateDbg();
-	  indication.reportStateDbg(iterCnt, srcGen);
+	  for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1)
+	     iterCnts[i] <= ic;
        endmethod
    endinterface
 endmodule

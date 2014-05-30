@@ -68,7 +68,7 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
    
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, readLen:truncate(chunk), burstLen:truncate(burstLen*4)});
+	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 Bit#(32) srcGen = fromInteger(i)*truncate(chunk/4);
 	 srcGens[i] <= srcGen;
 	 $display("start %d, %h %d", i, srcGen, iterCnts[i]);

@@ -214,7 +214,7 @@ module mkFunnel1PipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(1,a,bpc)
    provisos (Log#(k, logk),
 	     Bits#(a,a__),
 	     Div#(logk,bpc,stages));
-   Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkSizedFIFOF(1)));
+   Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
    Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
    for(Integer j = valueOf(stages); j > 0; j=j-1)
       for(Integer i = 0; i < 2**(j*valueOf(bpc)) && i < valueOf(k); i=i+1) 
@@ -243,7 +243,7 @@ module mkUnFunnel1PipesPipelined#(PipeOut#(Tuple2#(Bit#(TLog#(k)),a)) in) (Funne
 	 Integer bits = (j == valueOf(stages)-1) ? valueOf(logk)-(j*valueOf(bpc)) : valueOf(bpc);
 	 function Bit#(bpc) sh(Bit#(bpc) x) = x<<(valueOf(bpc)-bits);
 	 for(Integer l = 0; l < 2**bits; l=l+1)  begin
-	    let buff <- mkSizedFIFOF(1);
+	    let buff <- mkFIFOF;
 	    outs[(2**bits)*i+l] = toPipeOut(buff);
 	    rule xfer if(tpl_1(ins[i].first)[(valueOf(logk)-1):(valueOf(logk)-valueOf(bpc))] == sh(fromInteger(l)));
 	       match{.idx, .v} <- toGet(ins[i]).get;
