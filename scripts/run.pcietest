@@ -18,6 +18,6 @@ if [ "$RUNPARAM" != "" ]; then
     ssh $RUNPARAM "timeout 3m catchsegv $TEMPDIR/$EXENAME"
     ssh $RUNPARAM "rm -rf $TEMPDIR"
 else
-    fpgajtag $1
+    fpgajtag $BOARD_SERIAL $1
     timeout 3m catchsegv $2
 fi
