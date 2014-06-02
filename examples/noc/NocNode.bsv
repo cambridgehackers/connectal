@@ -41,7 +41,7 @@ function Action move(PipeOut#(DataMessage) from, PipeIn#(DataMessage) to);
 endfunction
 
 
-module mkNocArbitrate#(int id, String name, Vector#(n, PipeOut#(a)) in, PipeIn#(a) out)(Empty);
+module mkNocArbitrate#(Bit#(4) id, String name, Vector#(n, PipeOut#(a)) in, PipeIn#(a) out)(Empty);
    Arbiter_IFC#(n) arb <- mkArbiter(False);   
    for (Integer i = 0; i < valueOf(n); i = i + 1)
       rule send_request (out.notFull && in[i].notEmpty);
