@@ -82,7 +82,7 @@ set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 # Please refer to the Virtex-7 GT Transceiver User Guide
 # (UG) for guidelines regarding clock resource selection.
 #
-set_property LOC IBUFDS_GTE2_X1Y5  [get_cells { *x7pcie_pci_clk_100mhz_buf }]
+set_property LOC IBUFDS_GTE2_X1Y5  [get_cells { *pci_clk_100mhz_buf }]
 
 set_property LOC MMCME2_ADV_X1Y2 [get_cells -hier -filter { NAME =~ */ext_clk.pipe_clock_i/mmcm_i }]
 set_property LOC MMCME2_ADV_X1Y1 [get_cells -hier -filter { NAME =~ *clkgen_pll }]
@@ -161,9 +161,9 @@ set_property LOC RAMB36_X14Y19 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i
 ######################################################################################################
 # TIMING CONSTRAINTS
 ######################################################################################################
-create_clock -name bscan_refclk -period 20 [get_pins top_x7pcie_bridge_csr_pcieBscanBram_bscan/TCK]
-create_clock -name pci_refclk -period 10 [get_pins *x7pcie_pci_clk_100mhz_buf/O]
+create_clock -name bscan_refclk -period 20 [get_pins *pcieBscanBram_bscan/TCK]
+create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
 
 ## no longer needed?
-create_clock -name pci_extclk -period 10 [get_pins top_x7pcie_pcie_ep/pcie_7x_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK]
+create_clock -name pci_extclk -period 10 [get_pins *_ep/pcie_7x_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK]
 set_clock_groups -name ___clk_groups_generated_0_1_0_0_0 -physically_exclusive -group [get_clocks clk_125mhz] -group [get_clocks clk_250mhz]

@@ -38,14 +38,13 @@ typedef struct {ObjectPointer pointer;
 		Bit#(32) len;
 		} MemengineCmd deriving (Eq,Bits);
 
-interface MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
-   interface Vector#(numServers, Server#(MemengineCmd,Bool)) readServers;
-   interface ObjectReadClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes;
+interface MemwriteEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
+   interface Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers;
+   interface ObjectWriteClient#(dataWidth) dmaClient;
+   interface Vector#(numServers, PipeIn#(Bit#(dataWidth))) dataPipes;
 endinterface
 
-
-module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
+module mkMemwriteEngineV(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
    provisos (Div#(dataWidth,8,dataWidthBytes),
 	     Mul#(dataWidthBytes,8,dataWidth),
 	     Log#(dataWidthBytes,beatShift),
@@ -66,31 +65,20 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
    BRAM1Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM1Server(defaultValue);
    FIFO#(Bit#(serverIdxSz))                      loadf <- mkSizedFIFO(1);
    FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))workf <- mkSizedFIFO(32); // isthis the right size?
+   FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))        donef <- mkSizedFIFO(32);
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
    FunnelPipe#(1, Tuple2#(Bit#(serverIdxSz), MemengineCmd),2) cmds_in_funnel <- mkFunnel1PipesPipelined(map(toPipeOut,cmds_in));
-   FIFOF#(Tuple2#(Bit#(TLog#(numServers)), Tuple2#(Bit#(dataWidth),Bool))) read_data <- mkFIFOF;
-   FunnelPipe#(numServers, Tuple2#(Bit#(dataWidth),Bool),2) read_data_unfunnel <- mkUnFunnel1PipesPipelined(toPipeOut(read_data));
-   function PipeOut#(Bit#(dataWidth)) check_out(PipeOut#(Tuple2#(Bit#(dataWidth),Bool)) x, Integer i) = 
-      (interface PipeOut;
-	  method Bit#(dataWidth) first;
-	     return tpl_1(x.first);
-	  endmethod
-	  method Action deq;
-	     x.deq;
-	     if (tpl_2(x.first)) 
-		outfs[i].enq(?);
-	  endmethod
-	  method Bool notEmpty = x.notEmpty;
-       endinterface);
-   Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, read_data_unfunnel, genVector);
+   Vector#(numServers, FIFOF#(Bit#(dataWidth))) write_data <- replicateM(mkFIFOF);
+   Vector#(numServers, PipeIn#(Bit#(dataWidth))) write_data_pipes = map(toPipeIn, write_data);
    
    Reg#(Bit#(8))                               respCnt <- mkReg(0);
    Reg#(Bit#(serverIdxSz))                     loadIdx <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
    let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
 
+   
    rule store_cmd;
       match {.idx, .cmd} <- toGet(cmds_in_funnel[0]).get;
       let new_tail = tail[idx]+1;
@@ -99,7 +87,6 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
       tail[idx] <= new_tail;
       outs1[idx] <= outs1[idx]+1;
       cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
-      //$display("MemreadEngineV.store_cmd: %d %h", idx, tail[idx]);
    endrule
    
    rule load_ctxt;
@@ -107,7 +94,6 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
       if (outs1[loadIdx] > 0) begin
 	 cmdBuf.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:head[loadIdx], datain:?});
 	 loadf.enq(loadIdx);
-	 //$display("MemreadEngineV.load_ctxt: %d, %h", loadIdx, head[loadIdx]);
       end
    endrule
    
@@ -128,9 +114,9 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 		      endmethod
 		   endinterface
 		endinterface);
-   interface readServers = rs;
-   interface ObjectReadClient dmaClient;
-      interface Get readReq;
+   interface writeServers = rs;
+   interface ObjectWriteClient dmaClient;
+      interface Get writeReq;
 	 method ActionValue#(ObjectRequest) get();
 	    let cmd <- cmdBuf.portA.response.get;
 	    let idx <- toGet(loadf).get;
@@ -153,24 +139,29 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	    return ObjectRequest { pointer: cmd.pointer, offset: cmd.base, burstLen:bl, tag: 0 };
 	 endmethod
       endinterface
-      interface Put readData;
-	 method Action put(ObjectData#(dataWidth) d);
+      interface Get writeData;
+	 method ActionValue#(ObjectData#(dataWidth)) get;
 	    match {.rc, .idx, .last} = workf.first;
 	    let new_respCnt = respCnt+1;
-	    let l = False;
-	    //$display("%h %d", d.data, idx);
 	    if (new_respCnt == rc) begin
 	       respCnt <= 0;
 	       workf.deq;
-	       //$display("eob %d", idx);
-	       l = last;
+	       donef.enq(tuple2(idx,last));
 	    end
 	    else begin
 	       respCnt <= new_respCnt;
 	    end
-	    read_data.enq(tuple2(idx,tuple2(d.data,l)));
+	    write_data[idx].deq;
+	    return ObjectData{data:write_data[idx].first, tag:0};
+	 endmethod
+      endinterface
+      interface Put writeDone;
+	 method Action put(Bit#(6) tag);
+	    match {.idx, .last} <- toGet(donef).get;
+	    if (last)
+	       outfs[idx].enq(?);
 	 endmethod
       endinterface
    endinterface 
-   interface dataPipes = read_data_pipes;
+   interface dataPipes = write_data_pipes;
 endmodule
