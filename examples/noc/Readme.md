@@ -12,44 +12,23 @@ Each node has two links, called East and West, and an address which is
 its coordinate.
 
 Each node therefore has inputs from East, West, and Local. plus three
-outputs to East, West, and Local
+outputs to East, West, and Local.  The local link is called "host"
 
 The switch is a 3x3 crossbar, implemented with three three input
 muxes.  (In the alternative, we could choose not to support loopback
 traffic, simplifying the switch by 1 leg on the muxes.)
 
-The switch has input buffers only.  Each incoming link (East, West, Local)
-has two flit buffers.
+The Each swith input is a FIFOF.  Each output (row) is a round-robin
+arbiter that selects the next message to send from the various inputs.
 
-Each link transmits flits (a flit is the unit of flow control).
-The reverse channel of a link transmits buffer occupancy data.
-
-Messages on the reverse channel consist of a bitmap of occupied
-buffers and an "as of" counters.
-
-The forward channel messages include a link sequence number and
-a buffer selector.  The LSN is echoed back in the reverse link
-message.
-
-Alternate:
-
-A link has a fifo at the receiving end, and a return path that shows space 
-remaining "as of" the last LSN received.
+Each input link has a distributor switch column) rule that routes an 
+arriving message to the proper swith FIFO.
 
 
-It is ok to send a packet on a link when there is room for it at the next switch and when the packet is ready to send.  The logic that sends packets
-on a link will arbitrate among packets that are eligible to send,
-probably with round-robin priority among candidates
+Each link is a SerialFIFO, which is two back-to-back Gearbox modules,
+so the node ends of a link have the DataMessage type, while the "middle" of
+the link is serial (a 1-bit wide FIFO, really).
 
+Test Program
 
-Module LinkPort parameters for how many output channels 
-   datain link
-   reverse channel out
-   pktbuffer out   // does there need to be a buffer per crosspoint?
-                           // or just one per incoming link?
-	mux inputs to accept packets from host or link outs
-	
-   
-Module HostPort
-   parameters for how many links
-   PktBuffer in
+The test program sends a message from each node to each other node
