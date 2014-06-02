@@ -75,7 +75,12 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
       for(id <= 0; id < 4; id <= id + 1)
           if (node[id].out.notEmpty())
 	      seq
-		 indication.ack(id, node[id].out.first.address,
+		 $display("recv at %d to %d m %x", 
+		    id,
+		    node[id].out.first.address,
+	            node[id].out.first.payload);
+		 indication.ack(id, 
+		    node[id].out.first.address,
 	            node[id].out.first.payload);
 		 node[id].out.deq();
               endseq
@@ -85,6 +90,7 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
     mkAutoFSM(readindications);
  
    method Action send(Bit#(4) sendnode, Bit#(4) to, Bit#(32) message);
+      $display("send f %d t %d m %x", sendnode, to, message);
       node[sendnode].in.enq(DataMessage{address: to, payload: message});
    endmethod
   
