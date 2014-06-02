@@ -1,4 +1,5 @@
 import SerialFIFO::*;
+import Pipe :: *;
 
 (* synthesize *)
 module mkTb(Empty);
