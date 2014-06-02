@@ -56,27 +56,24 @@ module mkBurstFunnel(BurstFunnel#(k,w))
    Vector#(k, FIFOF#(Tuple2#(Bit#(logk), Bit#(w)))) data_in <- replicateM(mkFIFOF);
    Vector#(k,Reg#(Bit#(8))) burst_len <- replicateM(mkReg(0));
    Vector#(k,Reg#(Bit#(8))) inj_ctrl <- replicateM(mkReg(0));
-   FIFO#(Bit#(logk)) loadIdxs <- mkSizedFIFO(1);
+   FIFO#(Bit#(logk)) loadIdxs <- mkSizedFIFO(32);
    function PipeIn#(Bit#(w)) enter_data(FIFOF#(Tuple2#(Bit#(logk), Bit#(w))) f, Integer i) = 
       (interface PipeIn;
    	  method Bool notFull = f.notFull;
-   	  method Action enq(Bit#(w) v) if (inj_ctrl[i] > 0);
+   	  method Action enq(Bit#(w) v) if (loadIdxs.first == fromInteger(i));
+	     let cnt = (inj_ctrl[i] == 0) ? burst_len[i] : inj_ctrl[i];
+	     let new_cnt = cnt-1;
+	     inj_ctrl[i] <= new_cnt;
+	     if (new_cnt == 0)
+		loadIdxs.deq;
 	     //$display("enq %d %d", i, inj_ctrl[i]);
 	     f.enq(tuple2(fromInteger(i), v));
-	     let new_inj_ctrl = inj_ctrl[i]-1;
-	     inj_ctrl[i] <= new_inj_ctrl;
-	     if(new_inj_ctrl==0) begin
-		//$display("endBurst %d", i);
-		loadIdxs.deq;
-	     end
 	  endmethod
        endinterface);
    Vector#(k, PipeIn#(Bit#(w))) data_in_pipes = zipWith(enter_data, data_in, genVector);
    FunnelPipe#(1, Tuple2#(Bit#(logk), Bit#(w)),2) data_in_funnel <- mkFunnel1PipesPipelined(map(toPipeOut,data_in));
    method Action loadIdx(Bit#(logk) idx);
       loadIdxs.enq(idx);
-      inj_ctrl[idx] <= burst_len[idx];
-      //$display("loadIdx %d", idx);
    endmethod
    interface burstLen = burst_len;
    interface dataIn = data_in_pipes;
