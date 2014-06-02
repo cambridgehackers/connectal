@@ -41,7 +41,7 @@ function Action move(PipeOut#(DataMessage) from, PipeIn#(DataMessage) to);
 endfunction
 
 
-module mkNocArbitrate#(Vector#(n, PipeOut#(a)) in, PipeIn#(a) out)(Empty);
+module mkNocArbitrate#(int id, String name, Vector#(n, PipeOut#(a)) in, PipeIn#(a) out)(Empty);
    Arbiter_IFC#(n) arb <- mkArbiter(False);   
    for (Integer i = 0; i < valueOf(n); i = i + 1)
       rule send_request (out.notFull && in[i].notEmpty);
@@ -51,6 +51,7 @@ module mkNocArbitrate#(Vector#(n, PipeOut#(a)) in, PipeIn#(a) out)(Empty);
    rule move;
       if (out.notFull && in[arb.grant_id].notEmpty)
 	 action
+	    $display("%s id %d from %d", name, id, arb.grant_id);
 	    out.enq(in[arb.grant_id].first());
 	    in[arb.grant_id].deq();
 	 endaction
@@ -94,9 +95,9 @@ module mkNocNode#(Bit#(4) id,
    vToWest[0] = toPipeOut(hw);
    vToWest[1] = toPipeOut(ew);
    
-   mkNocArbitrate(vToHost, host.in);
-   mkNocArbitrate(vToEast, east.in);
-   mkNocArbitrate(vToWest, west.in);
+   mkNocArbitrate(id, "toHost", vToHost, host.in);
+   mkNocArbitrate(id, "toEast", vToEast, east.in);
+   mkNocArbitrate(id, "toWest", vToWest, west.in);
    
    // sort host messages to proper queue
    
@@ -150,8 +151,8 @@ module mkNocNode#(Bit#(4) id,
       
   // interface wiring
 
-   interface PipeIn in = toPipeIn(fifotohost);
-   interface PipeOut out = toPipeOut(fifofromhost);
+   interface PipeIn in = toPipeIn(fifofromhost);
+   interface PipeOut out = toPipeOut(fifotohost);
 
 endmodule
 
