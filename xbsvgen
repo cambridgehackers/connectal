@@ -164,6 +164,9 @@ if $needspcie {
                             CONFIG.Use_Class_Code_Lookup_Assistant {false} \
                             CONFIG.Vendor_ID {1be7} \
                            ]
+# Description of MSIx_Table_Offset is in:
+# Xilinx/Vivado/2013.2/data/ip/xilinx/pcie_7x_v2_1/xgui/pcie_7x_v2_1.tcl
+# (it is byteoffset/8, expressed in hex)
 }
 
 if [file exists ../synth-ip.tcl] {
