@@ -49,9 +49,11 @@ testnames = echo             \
             memread_buff_oo  \
             memread_buff     \
             memread_nobuff   \
+            memread_manyclients \
 	    memwrite_buff    \
 	    memwrite_buff_oo \
 	    memwrite_nobuff  \
+            memwrite_manyclients \
             memrw_buff       \
             memrw_nobuff     \
             memread128       \
