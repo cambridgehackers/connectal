@@ -85,8 +85,6 @@ testnames = echo             \
             memread_nobuff_4m    \
             memwrite_nobuff_4m   \
             memcpy_buff_4m       \
-            memread_manyclients  \
-            memwrite_manyclients \
 
 oo_memtests =  memcpy_buff_oo\
             memread_buff_oo  \
