@@ -82,25 +82,30 @@ testnames = echo             \
 	    imageon          \
 	    imageonfb        \
             bscan            \
-            memread_nobuff_4m\
-            memwrite_nobuff_4m\
-            memcpy_buff_4m\
+            memread_nobuff_4m    \
+            memwrite_nobuff_4m   \
+            memcpy_buff_4m       \
+            memread_manyclients  \
+            memwrite_manyclients \
 
 oo_memtests =  memcpy_buff_oo\
             memread_buff_oo  \
             memwrite_buff_oo \
 
 
-memtests =  memcpy_buff      \
-            memcpy_nobuff    \
-            memread_buff     \
-            memread_nobuff   \
-	    memwrite_buff    \
-	    memwrite_nobuff  \
-            memrw_buff       \
-            memrw_nobuff     \
-	    memread2         \
-            echo             \
+memtests =  memcpy_buff          \
+            memcpy_nobuff        \
+            memread_buff         \
+            memread_nobuff       \
+	    memwrite_buff        \
+	    memwrite_nobuff      \
+            memrw_buff           \
+            memrw_nobuff         \
+	    memread2             \
+            echo                 \
+            memread_manyclients  \
+            memwrite_manyclients \
+
 
 
 zmemtests = memread_nobuff_4m\
