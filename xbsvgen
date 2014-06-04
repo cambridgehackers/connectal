@@ -155,7 +155,7 @@ if $needspcie {
                             CONFIG.IntX_Generation {false} \
                             CONFIG.MSI_Enabled {false} \
                             CONFIG.MSIx_Enabled {true} \
-                            CONFIG.MSIx_PBA_Offset {7c} \
+                            CONFIG.MSIx_PBA_Offset {1f0} \
                             CONFIG.MSIx_Table_Offset {200} \
                             CONFIG.MSIx_Table_Size {10} \
                             CONFIG.Maximum_Link_Width $maxlinkwidth \
