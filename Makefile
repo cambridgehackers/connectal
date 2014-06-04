@@ -75,6 +75,7 @@ testnames = echo             \
 	    smithwaterman    \
 	    serialconfig     \
 	    noc              \
+	    noc2d            \
 	    fib              \
 	    xsim-echo        \
 	    imageon          \
