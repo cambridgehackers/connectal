@@ -79,15 +79,17 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
    Ratchet#(TAdd#(1,TLog#(bufferDepth))) availableBuffers <- mkRatchet(fromInteger(valueOf(bufferDepth)));
    let beat_shift = fromInteger(valueOf(beatShift));
    
-   rule updateReady;
-      Bit#(TAdd#(1,TLog#(bufferDepth))) requested = truncate(reqOutstanding.first.burstLen>>beat_shift);
-      Bool ready = (unpack(requested) <= availableBuffers.read());
-      if (ready) begin
-	 let req <- toGet(reqOutstanding).get();
-	 reqReady.enq(req);
-	 availableBuffers.decrement(unpack(requested));
-      end
-   endrule
+   Bit#(TAdd#(1,TLog#(bufferDepth))) requested = truncate(reqOutstanding.first.burstLen>>beat_shift);
+   Bool ready = reqOutstanding.notEmpty && (unpack(requested) <= availableBuffers.read());
+   // rule updateReady;
+   //    Bit#(TAdd#(1,TLog#(bufferDepth))) requested = truncate(reqOutstanding.first.burstLen>>beat_shift);
+   //    Bool ready = (unpack(requested) <= availableBuffers.read());
+   //    if (ready) begin
+   // 	 let req <- toGet(reqOutstanding).get();
+   // 	 reqReady.enq(req);
+   // 	 availableBuffers.decrement(unpack(requested));
+   //    end
+   // endrule
 
    // only issue the readRequest when sufficient buffering is available.  This includes the buffering we have already committed.
    interface ObjectReadServer dmaServer;
@@ -102,8 +104,9 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
    endinterface
    interface ObjectReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(ObjectRequest) get;
-	    let req <- toGet(reqReady).get();
+	 method ActionValue#(ObjectRequest) get if (ready);
+	    let req <- toGet(reqOutstanding).get();
+	    availableBuffers.decrement(unpack(requested));
 	    return req;
 	 endmethod
       endinterface
