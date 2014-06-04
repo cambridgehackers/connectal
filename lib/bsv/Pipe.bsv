@@ -26,6 +26,7 @@ import Connectable::*;
 import Vector::*;
 import MIMO::*;
 import DefaultValue::*;
+import Gearbox::*;
 
 interface PipeIn#(type a);
    method Action enq(a v);
@@ -70,6 +71,15 @@ instance ToPipeOut#(a, Reg#(a));
    endfunction
 endinstance
 
+instance ToPipeIn#(Vector#(m, a), Gearbox#(m, n, a));
+   function PipeIn#(Vector#(m, a)) toPipeIn(Gearbox#(m, n, a) in);
+      return (interface PipeIn#(Vector#(m, a));
+		 method enq = in.enq;
+		 method notFull = in.notFull;
+	      endinterface);
+   endfunction
+endinstance
+
 instance ToPipeOut#(a, FIFOF#(a));
    function PipeOut#(a) toPipeOut(FIFOF#(a) in);
       return (interface PipeOut#(a);
@@ -90,6 +100,16 @@ instance ToPipeOut#(Vector#(n,a), MIMO#(k,n,sz,a));
 		 method Bool notEmpty();
 		    return in.deqReadyN(fromInteger(valueOf(n)));
 		 endmethod
+	      endinterface);
+   endfunction
+endinstance
+
+instance ToPipeOut#(Vector#(n, a), Gearbox#(m, n, a));
+   function PipeOut#(Vector#(n, a)) toPipeOut(Gearbox#(m, n, a) in);
+      return (interface PipeOut#(Vector#(n,a));
+		 method first = in.first;
+		 method deq = in.deq;
+		 method notEmpty = in.notEmpty;
 	      endinterface);
    endfunction
 endinstance
