@@ -42,11 +42,10 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 			ObjectReadServer#(64) dma_read_server,
 			ObjectWriteServer#(64) dma_write_server)(MemcpyRequest);
 
-   let readFifo <- mkFIFOF;
-   let writeFifo <- mkFIFOF;
+   let dataFifo <- mkFIFOF;
 
-   MemreadEngine#(64) re <- mkMemreadEngine(1, readFifo);
-   MemwriteEngine#(64) we <- mkMemwriteEngine(1, writeFifo);
+   MemreadEngine#(64) re <- mkMemreadEngine(1, dataFifo);
+   MemwriteEngine#(64) we <- mkMemwriteEngine(1, dataFifo);
 
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
@@ -70,13 +69,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
 	 indication.done;
       end
    endrule
-   
-   rule xfer;
-      //$display("xfer: %h", readFifo.first);
-      readFifo.deq;
-      writeFifo.enq(readFifo.first);
-   endrule
-   
+      
    method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
       $display("startCopy wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
       indication.started;
