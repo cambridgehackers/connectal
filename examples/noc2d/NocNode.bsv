@@ -31,6 +31,23 @@ typedef struct {
    Bit#(32) payload;
    } DataMessage deriving(Bits);
 
+interface NocNode#(numeric type dim);
+   interface PipeIn#(DataMessage) hosttonode;
+   interface PipeOut#(DataMessage) nodetohost;
+   interface Vector#(dim, PipeIn#(Bit#(width))) linkupin;
+   interface Vector#(dim, PipeOut#(Bit#(width))) linkupout;
+   interface Vector#(dim, PipeIn#(Bit#(width))) linkdownin;
+   interface Vector#(dim, PipeOut#(Bit#(width))) linkdownout;
+endinterface
+	 
+function PipeOut#(Bit#(1)) selectoutput(SerialFIFOTX#(DataMessage) x);
+   return x.out;
+endfunction
+
+function PipeIn#(Bit#(1)) selectinput(SerialFIFORX#(DataMessage) x);
+   return x.in;
+endfunction
+
 function Action move(PipeOut#(DataMessage) from, PipeIn#(DataMessage) to);
    return action
 	     $display("move %x", from.first);
@@ -40,7 +57,7 @@ function Action move(PipeOut#(DataMessage) from, PipeIn#(DataMessage) to);
 endfunction
 
 
-module mkNocArbitrate#(Vector#(n, Bit#(4)) id, String name, Vector#(n, PipeOut#(a)) in, PipeIn#(a) out)(Empty);
+module mkNocArbitrate#(Vector#(n, Bit#(4)) id, Vector#(n, PipeOut#(a)) in, PipeIn#(a) out)(Empty);
    Arbiter_IFC#(n) arb <- mkArbiter(False);   
    for (Integer i = 0; i < valueOf(n); i = i + 1)
       rule send_request (out.notFull && in[i].notEmpty);
@@ -50,16 +67,16 @@ module mkNocArbitrate#(Vector#(n, Bit#(4)) id, String name, Vector#(n, PipeOut#(
    rule move;
       if (out.notFull && in[arb.grant_id].notEmpty)
 	 action
-	    $display("%s id %d,%d from %d", name, id[0], id[1], arb.grant_id);
+	    $display("arb id [%d,%d] from %d", id[0], id[1], arb.grant_id);
 	    out.enq(in[arb.grant_id].first());
 	    in[arb.grant_id].deq();
 	 endaction
    endrule
 endmodule
 
-module mkDistribute#(Vector(n, Bit#(4)) id, String name, PipeOut#(a) in, Vector#(n, PipeIn#(a)) out)(Empty);
+module mkDistribute#(Vector(n, Bit#(4)) id, PipeOut#(a) in, Vector#(n, PipeIn#(a)) out)(Empty);
    rule move;
-      $display("distrib %s[%d,%d] to [%d,%d] v %x",
+      $display("distrib [%d,%d] to [%d,%d] v %x",
 	 name, id[0], id[1], in.first.address[0], in.first.address[1],
 	 in.first.payload);
       if (in.address[0] < id[0]) 
@@ -97,36 +114,38 @@ module mkDiscard(FIFOF#(DataMessage));
       endmethod
 endmodule
 
-module mkNocNode#(Vector(dim, int) id, 
-		  Vector(dim, PipeIn#(DataMessage)) upIn,
-		  Vector(dim, PipeOut#(DataMessage)) upOut,
-		  Vector(dim, PipeIn#(DataMessage)) downIn,
-		  Vector(dim, PipeOut#(DataMessage)) downOut)
-   (SerialFIFO#(DataMessage));
+
+module mkNocNode#(Vector(dim, Bit#(4)) id)(NocNode#(dim));
    Bit#(4) radix = (ValueOf(dim) * 2) + 1;
    
    // host Links
-   FIFOF#(DataMessage) fifofromhost <- mkSizedFIFOF(4);
+   FIFOF#(msg) fifofromhost <- mkSizedFIFOF(4);
    FIFOF#(DataMessage) fifotohost <- mkSizedFIFOF(4);
    PipeIn#(DataMessage) tohost = toPipeIn(fifotohost);
    PipeOut#(DataMessage) fromhost = toPipeOut(fifofromhost); 
   
+   Vector#(dim, SerialFIFOTX#(DataMessage)) txup <- replicateM(mkSerialFIFOTX);
+   Vector#(dim, SerialFIFORX#(DataMessage)) rxup <- replicateM(mkSerialFIFORX);
+   Vector#(dim, SerialFIFOTX#(DataMessage)) txdown <- replicateM(mkSerialFIFOTX);
+   Vector#(dim, SerialFIFORX#(DataMessage)) rxdown <- replicateM(mkSerialFIFORX);
+	 
+	 
    // sources
-   Vector#(radix, PipeOut#(DataMessage)) linkin;
-   Vector#(radix, PipeOut#(DataMessage)) linkout;
-   for (Bit#(4) x = 0; x < ValueOf(dim); x = x + 1)
+   Vector#(radix, PipeOut#(DataMessage)) switchin = newVector;
+   Vector#(radix, PipeOut#(DataMessage)) switchout = newVector;
+   for (Bit#(4) i = 0; i < ValueOf(dim); i = i + 1)
       begin
-	 linkin[(2*x) + 0] = upIn;
-	 linkin[(2*x) + 1] = downIn;
-	 linkout[(2*x) + 0] = upOut;
-	 linkout[(2*x) + 1] = downOut;
+	 switchin[(2*i) + 0] = rxup[i].out;
+	 switchin[(2*i) + 1] = rxdown[i].out;
+	 switchout[(2*i) + 0] = txup[i].in;
+	 switchout[(2*i) + 1] = txdown[i].out;
       end
-   linkin[radix - 1] = fromhost;
-   linkout[radix - 1] = tohost;
+   switchin[radix - 1] = fromhost;
+   switchout[radix - 1] = tohost;
    
    // buffers for crossbar switch
-   Vector#(radix, Vector#(radix, FIFOF#(DataMessage))) xp;
-   
+   Vector#(radix, Vector#(radix, FIFOF#(DataMessage))) xp = replicate(newVector);
+
    for (Bit#(4) x = 0; x < radix; x = x + 1)
       for (Bit#(4) y = 0; y < radix; y = y + 1)
 	 if (x != y) xp[x][y] <- mkSizedFIFOF(4);
@@ -136,11 +155,10 @@ module mkNocNode#(Vector(dim, int) id,
    
    xp[radix - 1][radix - 1] < mkSizedFIFOF(4);
    
-   
    // create distributors
    
    for (Bit#(4) x = 0; x < radix; x = x + 1)
-      mkdistributor("n", id, linkin[x], map(toPipeOut, xp[x]));
+      mkdistributor(id, linkin[x], map(toPipeOut, xp[x]));
 
    // create arbiters
    for (Bit#(4) y = 0; y < radix; y = y + 1)
@@ -153,8 +171,12 @@ module mkNocNode#(Vector(dim, int) id,
 
   // interface wiring
 
-   interface PipeIn in = toPipeIn(fifofromhost);
-   interface PipeOut out = toPipeOut(fifotohost);
+   interface PipeIn hosttonode = toPipeIn(fifofromhost);
+   interface PipeOut nodetohost = toPipeOut(fifotohost);
+   interface Vector linkupin = map(selectinput, rxup)
+   interface Vector linkupout = map(selectoutput, txup);
+   interface Vector linkdownin = map(selectinput, rxdown)
+   interface Vector linkdownout = map(selectoutput, txdown);
 
 endmodule
 
