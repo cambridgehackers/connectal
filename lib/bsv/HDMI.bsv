@@ -31,11 +31,11 @@ import GetPut::*;
 import SyncBits::*;
 import YUV::*;
 
-interface HDMI;
+interface HDMI#(type pixelType);
     method Bit#(1) vsync;
     method Bit#(1) hsync;
     method Bit#(1) de;
-    method Bit#(16) data;
+    method pixelType data;
     interface Clock clock_if;
     interface Reset deleteme_unused_reset;
 endinterface
@@ -60,15 +60,15 @@ interface HdmiInternalStatus;
     method Bool dataEnable();
 endinterface
 
-interface HdmiGenerator;
+interface HdmiGenerator#(type pixelType);
     interface HdmiInternalRequest control;
     interface HdmiInternalStatus  status;
-    interface HDMI hdmi;
+    interface Get#(VideoData#(pixelType)) rgb888;
     interface Put#(Bit#(32)) request;
 endinterface
 
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
-        SyncPulseIfc vsyncPulse, HdmiInternalIndication indication)(HdmiGenerator);
+   SyncPulseIfc vsyncPulse, HdmiInternalIndication indication)(HdmiGenerator#(Rgb888));
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
@@ -93,10 +93,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     FIFOF#(Bit#(24)) pixelFifo <- mkLFIFOF();
     Wire#(Maybe#(Bit#(24))) pixelWires <- mkDWire(tagged Invalid);
 
-    Reg#(Rgb888Stage) rgb888StageReg <- mkReg(unpack(0));
-    Reg#(Yuv444IntermediatesStage) yuv444IntermediatesStageReg <- mkReg(unpack(0));
-    Reg#(Yuv444Stage) yuv444StageReg <- mkReg(unpack(0));
-    Reg#(Yuv422Stage) yuv422StageReg <- mkReg(unpack(0));
+    Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
 
     Reg#(Bit#(32)) counter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
@@ -159,42 +156,14 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	     pixel = unpack(0);
 	  end
        end
-        rgb888StageReg <= Rgb888Stage{de: pack(dataEnable),
-				      vsync: vsync, hsync: hsync, pixel: pixel };
+        rgb888StageReg <= VideoData {de: pack(dataEnable),
+				     vsync: vsync, hsync: hsync, pixel: pixel };
     endrule
 
    rule testpattern_rule if (testPatternEnabled != 0);
       pixelFifo.enq(patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}]);
    endrule
 
-    rule yuv444int_rule;
-        let previous = rgb888StageReg;
-        let pixel = previous.pixel;
-        yuv444IntermediatesStageReg <= Yuv444IntermediatesStage {
-            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
-            data: (previous.de != 0) ? rgbToYuvIntermediates(pixel) : unpack(0)
-        };
-    endrule
-
-    rule yuv444_rule;
-        let previous = yuv444IntermediatesStageReg;
-        yuv444StageReg <= Yuv444Stage {
-            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
-            data: (previous.de != 0) ? yuvIntermediatesToYuv444(previous.data) : unpack(0)
-        };
-    endrule
-
-    rule yuv422_rule;
-        let previous = yuv444StageReg;
-        if (previous.de != 0)
-            evenOddPixelReg <= !evenOddPixelReg;
-        Bit#(16) data = { evenOddPixelReg ? previous.data.u : previous.data.v,
-                          previous.data.y };
-        yuv422StageReg <= Yuv422Stage {
-            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
-            data: data
-        };
-    endrule
 
     interface Put request;
         method Action put(Bit#(32) v) if (testPatternEnabled == 0);
@@ -249,20 +218,88 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
             waitingForVsync <= True;
         endmethod
     endinterface
-    interface HDMI hdmi;
-        method Bit#(1) vsync;
-            return yuv422StageReg.vsync;
-        endmethod
-        method Bit#(1) hsync;
-            return yuv422StageReg.hsync;
-        endmethod
-        method Bit#(1) de;
-            return yuv422StageReg.de;
-        endmethod
-        method Bit#(16) data;
-            return yuv422StageReg.data;
-        endmethod
-        interface clock_if = defaultClock;
-        interface deleteme_unused_reset = defaultReset;
-    endinterface
+   interface Get rgb888;
+      method ActionValue#(VideoData#(Rgb888)) get();
+	 return rgb888StageReg;
+      endmethod
+   endinterface
+endmodule
+
+module mkHDMI#(Get#(VideoData#(pixelType)) videoInput)(HDMI#(Bit#(pixelsz)))
+   provisos (Bits#(VideoData#(pixelType), a__), Bits#(pixelType,pixelsz));
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
+   Wire#(VideoData#(pixelType)) video <- mkDWire(unpack(0));
+   rule getvideo;
+      let v <- videoInput.get();
+      video <= v;
+   endrule
+
+   method Bit#(1) vsync;
+      return video.vsync;
+   endmethod
+   method Bit#(1) hsync;
+      return video.hsync;
+   endmethod
+   method Bit#(1) de;
+      return video.de;
+   endmethod
+   method Bit#(pixelsz) data;
+      return pack(video.pixel);
+   endmethod
+   interface clock_if = defaultClock;
+   interface deleteme_unused_reset = defaultReset;
+endmodule
+
+interface Rgb888ToYyuv;
+   interface Put#(VideoData#(Rgb888)) rgb888;
+   interface Get#(VideoData#(Yyuv)) yyuv;
+endinterface
+
+module mkRgb888ToYyuv(Rgb888ToYyuv);
+    Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
+    Reg#(VideoData#(Yuv444Intermediates)) yuv444IntermediatesStageReg <- mkReg(unpack(0));
+    Reg#(VideoData#(Yuv444)) yuv444StageReg <- mkReg(unpack(0));
+    Reg#(VideoData#(Yyuv)) yuv422StageReg <- mkReg(unpack(0));
+    Reg#(Bool) evenOddPixelReg <- mkReg(False);
+   
+    rule yuv444int_rule;
+        let previous = rgb888StageReg;
+        let pixel = previous.pixel;
+        yuv444IntermediatesStageReg <= VideoData {
+            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
+            pixel: (previous.de != 0) ? rgbToYuvIntermediates(pixel) : unpack(0)
+        };
+    endrule
+
+    rule yuv444_rule;
+        let previous = yuv444IntermediatesStageReg;
+        yuv444StageReg <= VideoData {
+            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
+	    pixel: (previous.de != 0) ? yuvIntermediatesToYuv444(previous.pixel) : unpack(0)
+        };
+    endrule
+
+    rule yuv422_rule;
+        let previous = yuv444StageReg;
+        if (previous.de != 0)
+            evenOddPixelReg <= !evenOddPixelReg;
+        Yyuv data = Yyuv { uv: evenOddPixelReg ? previous.pixel.u : previous.pixel.v,
+                           yy: previous.pixel.y };
+        yuv422StageReg <= VideoData {
+            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
+            pixel: data
+        };
+    endrule
+
+   interface Put rgb888;
+      method Action put(VideoData#(Rgb888) v);
+	 rgb888StageReg <= v;
+      endmethod
+   endinterface
+   interface Get yyuv;
+      method ActionValue#(VideoData#(Yyuv)) get();
+	 return yuv422StageReg;
+      endmethod
+   endinterface
 endmodule

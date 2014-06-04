@@ -32,11 +32,9 @@ typedef struct {
 typedef struct {
     Bit#(1) vsync;
     Bit#(1) hsync;
-    Bit#(1) active_video;
-    Bit#(8) r;
-    Bit#(8) g;
-    Bit#(8) b;
-} Rgb888VideoData deriving (Bits);
+    Bit#(1) de;
+    pixelType pixel;
+} VideoData#(type pixelType) deriving (Bits);
 
 typedef struct {
     Bit#(8) y;
@@ -50,6 +48,11 @@ typedef struct {
     Bit#(8) y2;
     Bit#(8) v;
 } Yuv422 deriving (Bits);
+
+typedef struct {
+    Bit#(8) uv;
+    Bit#(8) yy;
+} Yyuv deriving (Bits);
 
 interface Rgb888ToYuv422;
     method Action putRgb888(Rgb888 rgb888);
@@ -74,34 +77,6 @@ typedef struct {
     Bit#(16) v2;
     Bit#(16) v3;
 } Yuv444Intermediates deriving (Bits);
-
-typedef struct {
-    Bit#(1) vsync;
-    Bit#(1) hsync;
-    Bit#(1) de;
-    Rgb888 pixel;
-} Rgb888Stage deriving (Bits);
-
-typedef struct {
-    Bit#(1) vsync;
-    Bit#(1) hsync;
-    Bit#(1) de;
-    Yuv444Intermediates data;
-} Yuv444IntermediatesStage deriving (Bits);
-
-typedef struct {
-    Bit#(1) vsync;
-    Bit#(1) hsync;
-    Bit#(1) de;
-    Yuv444 data;
-} Yuv444Stage deriving (Bits);
-
-typedef struct {
-    Bit#(1) vsync;
-    Bit#(1) hsync;
-    Bit#(1) de;
-    Bit#(16) data;
-} Yuv422Stage deriving (Bits);
 
 function Yuv444Intermediates rgbToYuvIntermediates(Rgb888 rgb);
     return Yuv444Intermediates {

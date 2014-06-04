@@ -42,7 +42,7 @@ import YUV::*;
 interface HdmiDisplayRequest;
    method Action startFrameBuffer0(Int#(32) base);
    method Action getTransferStats();
-   method Action setTraceTransfers(Bool trace);
+   method Action setTraceTransfers(Bit#(1) trace);
 endinterface
 interface HdmiDisplayIndication;
    method Action transferStarted(Bit#(32) count);
@@ -50,11 +50,17 @@ interface HdmiDisplayIndication;
    method Action transferStats(Bit#(32) count, Bit#(32) transferCycles, Bit#(64) sumOfCycles);
 endinterface
 
+`ifdef ZC706
+typedef 24 HdmiBits;
+`else
+typedef 16 HdmiBits;
+`endif
+
 interface HdmiDisplay;
     interface HdmiDisplayRequest displayRequest;
     interface HdmiInternalRequest internalRequest;
     interface ObjectReadClient#(64) dmaClient;
-    interface HDMI hdmi;
+    interface HDMI#(Bit#(HdmiBits)) hdmi;
     interface XADC xadc;
 endinterface
 
@@ -72,9 +78,16 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     FIFOF#(Bit#(64))   mrFifo  <- mkSizedFIFOF(32);
     MemreadEngine#(64) memreadEngine <- mkMemreadEngine(8, mrFifo);
 
-    HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
-					     vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
-   
+    HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
+							vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
+`ifndef ZC706
+   Rgb888ToYyuv converter <- mkRgb888ToYyuv(clocked_by hdmi_clock, reset_by hdmi_reset);
+   mkConnection(hdmiGen.rgb888, converter.rgb888);
+   HDMI#(Bit#(HdmiBits)) hdmisignals <- mkHDMI(converter.yyuv, clocked_by hdmi_clock, reset_by hdmi_reset);
+`else
+   HDMI#(Bit#(HdmiBits)) hdmisignals <- mkHDMI(hdmiGen.rgb888, clocked_by hdmi_clock, reset_by hdmi_reset);
+`endif   
+
    SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncFIFO(32, defaultClock, defaultReset, hdmi_clock);
    rule doGet;
       let v = mrFifo.first();
@@ -140,18 +153,18 @@ module mkHdmiDisplay#(Clock hdmi_clock,
        method Action getTransferStats();
           hdmiDisplayIndication.transferStats(transferCount, transferCycles, extend(transferSumOfCycles));
        endmethod
-       method Action setTraceTransfers(Bool trace);
-	  traceTransfers <= trace;
+       method Action setTraceTransfers(Bit#(1) trace);
+	  traceTransfers <= unpack(trace);
        endmethod
     endinterface: displayRequest
 
     interface ObjectReadClient dmaClient = memreadEngine.dmaClient;
-    interface HDMI hdmi = hdmiGen.hdmi;
+    interface HDMI hdmi = hdmisignals;
     interface HdmiInternalRequest internalRequest = hdmiGen.control;
     interface XADC xadc;
         method Bit#(4) gpio;
-            return { bozobit, hdmiGen.hdmi.vsync,
-                hdmiGen.hdmi.data[8], hdmiGen.hdmi.data[0]};
+            return { bozobit, hdmisignals.vsync,
+                hdmisignals.data[8], hdmisignals.data[0]};
                 //hdmiGen.hdmi.hsync, hdmi_de};
         endmethod
     endinterface: xadc
