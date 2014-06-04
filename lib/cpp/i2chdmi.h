@@ -42,7 +42,6 @@ static unsigned char i2c_read_reg(int fd, int device, unsigned char reg)
     status = ioctl(fd, I2C_SMBUS, &args);
     if (status != 0)
       fprintf(stderr, "ioctl I2C_SLAVE status=%d errno=%d\n", status, errno);
-    fprintf(stderr, "reg=%x byte=%x\n", reg, ioctl_data.byte);
     return ioctl_data.byte;
 }
 static int i2c_open()
