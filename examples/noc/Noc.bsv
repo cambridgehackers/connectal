@@ -21,7 +21,6 @@
 
 import SerialFIFO::*;
 import NocNode::*;
-import LinkHost::*;
 import Connectable::*;
 import StmtFSM::*;
 import Vector::*;
