@@ -28,7 +28,6 @@ interface SerialFIFO#(type a);
    interface PipeOut#(a) out;
 endinterface
 
-
 interface SerialFIFOTX#(type a);
    interface PipeIn#(a) in;
    interface PipeOut#(Bit#(1)) out;
@@ -39,7 +38,6 @@ interface SerialFIFORX#(type a);
    interface PipeOut#(a) out;
 endinterface
 
-
 module mkSerialFIFOTX(SerialFIFOTX#(a))
    provisos(Bits#(a, asize),
 	    Add#(1,a__,TMul#(2,asize)),
@@ -48,27 +46,27 @@ module mkSerialFIFOTX(SerialFIFOTX#(a))
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
 
-   Gearbox#(asize, 1, Bit#(1)) gin <- mkNto1Gearbox(clk,rst,clk,rst);
+   Gearbox#(asize, 1, Bit#(1)) gb <- mkNto1Gearbox(clk,rst,clk,rst);
 
    interface PipeIn in;
       
       method Action enq(a din);
-	 gin.enq(unpack(pack(din)));
+	 gb.enq(unpack(pack(din)));
       endmethod
       
-      method Bool notFull() = gin.notFull;
+      method Bool notFull() = gb.notFull;
       
    endinterface
    
    interface PipeOut out;
    
-      method a first();
-	 return(gin.first);
+      method Bit#(1) first();
+	 return(unpack(pack(gb.first)));
       endmethod
       
-      method Action deq() = gin.deq;
+      method Action deq() = gb.deq;
    
-      method Bool notEmpty() = gout.notEmpty;
+      method Bool notEmpty() = gb.notEmpty;
       
    endinterface
 endmodule
@@ -80,32 +78,38 @@ module mkSerialFIFORX(SerialFIFORX#(a))
 	    Add#(1, c__, asize));
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
-   Gearbox#(1, asize, Bit#(1)) gout <- mk1toNGearbox(clk,rst,clk,rst);
+   Gearbox#(1, asize, Bit#(1)) gb <- mk1toNGearbox(clk,rst,clk,rst);
 
    interface PipeIn in;
       
-      method Action enq(a din);
-	 gout.enq(din);
+      method Action enq(Bit#(1) din);
+	 gb.enq(unpack(pack(din)));
       endmethod
       
-      method Bool notFull() = gout.notFull;
+      method Bool notFull() = gb.notFull;
       
    endinterface
    
    interface PipeOut out;
    
       method a first();
-	 return(unpack(pack(gout.first)));
+	 return(unpack(pack(gb.first)));
       endmethod
       
-      method Action deq() = gout.deq;
+      method Action deq() = gb.deq;
    
-      method Bool notEmpty() = gout.notEmpty;
+      method Bool notEmpty() = gb.notEmpty;
       
    endinterface
 endmodule
    
-module mkSerialFIFO(SerialFIFO#(a));
+module mkSerialFIFO(SerialFIFO#(a))
+   provisos(
+	    Bits#(a,a__),
+	    Add#(1,b__,TMul#(2,a__)),
+	    Add#(1,c__,a__),
+	    Add#(a__,d__,TMul#(2,a__))
+      );
    
    SerialFIFOTX#(a) tx <- mkSerialFIFOTX;
    SerialFIFORX#(a) rx <- mkSerialFIFORX;
@@ -114,5 +118,8 @@ module mkSerialFIFO(SerialFIFO#(a));
       rx.in.enq(tx.out.first);
       tx.out.deq();
    endrule
+   
+    interface  PipeIn in = tx.in;
+    interface  PipeOut out = rx.out;
    
 endmodule
