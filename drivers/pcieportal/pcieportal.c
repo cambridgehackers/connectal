@@ -51,6 +51,7 @@
 #define CSR_TLPFROMPCIEWRADDRREG      ( 792 << 2)
 #define CSR_TLPTOPCIEWRADDRREG        ( 793 << 2)
 #define CSR_RESETISASSERTED           ( 795 << 2)
+/* MSIX must be in separate 4kb page */
 #define CSR_MSIX_ADDR_LO              (1024 << 2)
 #define CSR_MSIX_ADDR_HI              (1025 << 2)
 #define CSR_MSIX_MSG_DATA             (1026 << 2)
