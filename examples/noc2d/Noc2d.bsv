@@ -29,19 +29,38 @@ import FIFOF::*;
 import Pipe::*;
 
 interface NocIndication;
-   method Action ack(Bit#(4) recvnode, Bit#(4) to, Bit#(32) message);
+   method Action ack(Bit#(8) recvnode, Bit#(8) to, Bit#(32) message);
 endinterface
       
 interface NocRequest;
-   method Action send(Bit#(4) sendnode, Bit#(4) to, Bit#(32) message);
+   method Action send(Bit#(8) sendnode, Bit#(8) to, Bit#(32) message);
 endinterface
+
+module mkPipeOutDiscard#(PipeOut x)(Empty);
+   rule toss;
+      x.deq();
+   endrule;
+endmodule
+
+module mkPipeInStub#(PipeIn x)(Empty);
+   
 
 
 module mkNocRequest#(NocIndication indication)(NocRequest);
    
-   SerialFIFO#(DataMessage) xxx <- mkSerialFIFO();
-   Vector#(5, SerialFIFO#(DataMessage)) we <- replicateM( mkSerialFIFO );
-   Vector#(5, SerialFIFO#(DataMessage)) ew <- replicateM( mkSerialFIFO );
+  
+   Vector#(4, Vector#(4, SerialFIFO#(DataMessage))) node = replicateM(newVector);
+
+   for (Bit#(4) x = 0; x < 4; x = x + 1)
+      for (Bit#(4) y = 0; y < 4; y = y + 1)
+	 begin
+	    Vector(2, Bit#(4)) id = newVector;
+	    id[0] = x;
+	    id[1] = y;
+	    node[x][y] <- mkNocNode(id, upIn, upOut, downIn, downOut);
+	 end
+	    
+	    
 
    // discard traffic from loose ends
    rule discardeast;
@@ -53,16 +72,6 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
       $display("ew[0] discard %x", ew[0].out.first);
       ew[0].out.deq();
       endrule
-
-   Vector#(4, SerialFIFO#(DataMessage)) node;
-
-    for (Bit#(4) i = 0; i < 4; i = i + 1)
-    begin
-        node[i] <- mkNocNode(unpack(i), 
-	    SerialFIFO {in: ew[i+0].in, out: we[i+0].out},
-	    SerialFIFO {in: we[i+1].in, out: ew[i+1].out});
-    end
-
 
   
   // fsm to read from host ports and generate indications
