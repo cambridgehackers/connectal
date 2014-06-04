@@ -28,24 +28,28 @@ interface SerialFIFO#(type a);
    interface PipeOut#(a) out;
 endinterface
 
-module mkSerialFIFO(SerialFIFO#(a))
+
+interface SerialFIFOTX#(type a);
+   interface PipeIn#(a) in;
+   interface PipeOut#(Bit#(1)) out;
+endinterface
+
+interface SerialFIFORX#(type a);
+   interface PipeIn#(Bit#(1)) in;
+   interface PipeOut#(a) out;
+endinterface
+
+
+module mkSerialFIFOTX(SerialFIFOTX#(a))
    provisos(Bits#(a, asize),
 	    Add#(1,a__,TMul#(2,asize)),
 	    Add#(asize,b__,TMul#(2,asize)),
 	    Add#(1, c__, asize));
-
-   
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
 
    Gearbox#(asize, 1, Bit#(1)) gin <- mkNto1Gearbox(clk,rst,clk,rst);
-   Gearbox#(1, asize, Bit#(1)) gout <- mk1toNGearbox(clk,rst,clk,rst);
-   
-   rule movebits;
-      gout.enq(gin.first);
-      gin.deq();
-   endrule
-   
+
    interface PipeIn in;
       
       method Action enq(a din);
@@ -53,6 +57,38 @@ module mkSerialFIFO(SerialFIFO#(a))
       endmethod
       
       method Bool notFull() = gin.notFull;
+      
+   endinterface
+   
+   interface PipeOut out;
+   
+      method a first();
+	 return(gin.first);
+      endmethod
+      
+      method Action deq() = gin.deq;
+   
+      method Bool notEmpty() = gout.notEmpty;
+      
+   endinterface
+endmodule
+
+module mkSerialFIFORX(SerialFIFORX#(a))
+   provisos(Bits#(a, asize),
+	    Add#(1,a__,TMul#(2,asize)),
+	    Add#(asize,b__,TMul#(2,asize)),
+	    Add#(1, c__, asize));
+   Clock clk <- exposeCurrentClock;
+   Reset rst <- exposeCurrentReset;
+   Gearbox#(1, asize, Bit#(1)) gout <- mk1toNGearbox(clk,rst,clk,rst);
+
+   interface PipeIn in;
+      
+      method Action enq(a din);
+	 gout.enq(din);
+      endmethod
+      
+      method Bool notFull() = gout.notFull;
       
    endinterface
    
@@ -67,5 +103,16 @@ module mkSerialFIFO(SerialFIFO#(a))
       method Bool notEmpty() = gout.notEmpty;
       
    endinterface
+endmodule
+   
+module mkSerialFIFO(SerialFIFO#(a));
+   
+   SerialFIFOTX#(a) tx <- mkSerialFIFOTX;
+   SerialFIFORX#(a) rx <- mkSerialFIFORX;
+   
+   rule movebits;
+      rx.in.enq(tx.out.first);
+      tx.out.deq();
+   endrule
    
 endmodule
