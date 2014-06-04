@@ -75,15 +75,17 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
 
    FIFO#(ObjectData#(dataWidth))  readBuffer <- mkSizedFIFO(valueOf(bufferDepth));
    FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF();
+   FIFOF#(ObjectRequest)        reqReady       <- mkFIFOF();
    Ratchet#(TAdd#(1,TLog#(bufferDepth))) availableBuffers <- mkRatchet(fromInteger(valueOf(bufferDepth)));
    let beat_shift = fromInteger(valueOf(beatShift));
    
-   FIFOF#(Bool) hasEnoughCapacity <- mkFIFOF();
    rule updateReady;
       Bit#(TAdd#(1,TLog#(bufferDepth))) requested = truncate(reqOutstanding.first.burstLen>>beat_shift);
-      Bool ready = (unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)) <= availableBuffers.read());
+      Bool ready = (unpack(requested) <= availableBuffers.read());
       if (ready) begin
-	 hasEnoughCapacity.enq(True);
+	 let req <- toGet(reqOutstanding).get();
+	 reqReady.enq(req);
+	 availableBuffers.decrement(unpack(requested));
       end
    endrule
 
@@ -100,11 +102,9 @@ module mkDmaReadBuffer(DmaReadBuffer#(dataWidth, bufferDepth))
    endinterface
    interface ObjectReadClient dmaClient;
       interface Get readReq;
-	 method ActionValue#(ObjectRequest) get if (hasEnoughCapacity.notEmpty);
-	    hasEnoughCapacity.deq();
-	    reqOutstanding.deq;
-	    availableBuffers.decrement(unpack(truncate(reqOutstanding.first.burstLen>>beat_shift)));
-	    return reqOutstanding.first;
+	 method ActionValue#(ObjectRequest) get;
+	    let req <- toGet(reqReady).get();
+	    return req;
 	 endmethod
       endinterface
       interface Put readData;
