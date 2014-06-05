@@ -112,6 +112,8 @@ void runtest(int argc, const char ** argv)
     
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   fprintf(stderr, "Main::flush and invalidate complete\n");
+  device->getStateDbg();
+  fprintf(stderr, "Main::after getStateDbg\n");
 
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   fprintf(stderr, "ref_srcAlloc=%d\n", ref_srcAlloc);
