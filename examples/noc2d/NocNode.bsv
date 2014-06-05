@@ -121,9 +121,10 @@ module mkDiscard(FIFOF#(DataMessage));
    method Action clear = ?;
 endmodule
 
-
-module mkNocNode#(Vector#(dim, Bit#(4)) id)(NocNode#(dim));
-   Integer radix = (valueOf(dim) * 2) + 1;
+typedef 2 NumDims;
+(* synthesize *)
+module mkNocNode#(Vector#(NumDims, Bit#(4)) id)(NocNode#(NumDims));
+   Integer radix = (valueOf(NumDims) * 2) + 1;
 
    // host Links
    FIFOF#(DataMessage) fifofromhost <- mkSizedFIFOF(4);
@@ -131,23 +132,23 @@ module mkNocNode#(Vector#(dim, Bit#(4)) id)(NocNode#(dim));
    PipeIn#(DataMessage) tohost = toPipeIn(fifotohost);
    PipeOut#(DataMessage) fromhost = toPipeOut(fifofromhost); 
   
-   Vector#(dim, SerialFIFOTX#(DataMessage)) txup <- replicateM(mkSerialFIFOTX);
-   Vector#(dim, SerialFIFORX#(DataMessage)) rxup <- replicateM(mkSerialFIFORX);
-   Vector#(dim, SerialFIFOTX#(DataMessage)) txdown <- replicateM(mkSerialFIFOTX);
-   Vector#(dim, SerialFIFORX#(DataMessage)) rxdown <- replicateM(mkSerialFIFORX);
+   Vector#(NumDims, SerialFIFOTX#(DataMessage)) txup <- replicateM(mkSerialFIFOTX);
+   Vector#(NumDims, SerialFIFORX#(DataMessage)) rxup <- replicateM(mkSerialFIFORX);
+   Vector#(NumDims, SerialFIFOTX#(DataMessage)) txdown <- replicateM(mkSerialFIFOTX);
+   Vector#(NumDims, SerialFIFORX#(DataMessage)) rxdown <- replicateM(mkSerialFIFORX);
 	 
 	 
    // sources
-   Vector#(TAdd#(TMul#(dim, 2), 1), PipeOut#(DataMessage)) switchin = newVector;
-   Vector#(TAdd#(TMul#(dim, 2), 1), PipeIn#(DataMessage)) switchout = newVector;
+   Vector#(TAdd#(TMul#(NumDims, 2), 1), PipeOut#(DataMessage)) switchin = newVector;
+   Vector#(TAdd#(TMul#(NumDims, 2), 1), PipeIn#(DataMessage)) switchout = newVector;
    // buffers for crossbar switch
-   Vector#(TAdd#(TMul#(dim, 2), 1), Vector#(TAdd#(TMul#(dim, 2), 1), FIFOF#(DataMessage))) xp = replicate(newVector);
+   Vector#(TAdd#(TMul#(NumDims, 2), 1), Vector#(TAdd#(TMul#(NumDims, 2), 1), FIFOF#(DataMessage))) xp = replicate(newVector);
    // temps for building switch
-   Vector#(TAdd#(TMul#(dim, 2), 1), PipeIn#(DataMessage)) tmpin = newVector;
-   Vector#(TAdd#(TMul#(dim, 2), 1), PipeOut#(DataMessage)) tmpout = newVector;
+   Vector#(TAdd#(TMul#(NumDims, 2), 1), PipeIn#(DataMessage)) tmpin = newVector;
+   Vector#(TAdd#(TMul#(NumDims, 2), 1), PipeOut#(DataMessage)) tmpout = newVector;
 
 
-   for (Integer i = 0; i < valueOf(dim); i = i + 1)
+   for (Integer i = 0; i < valueOf(NumDims); i = i + 1)
       begin
 	 switchin[(2*i) + 0] = rxup[i].out;
 	 switchin[(2*i) + 1] = rxdown[i].out;
