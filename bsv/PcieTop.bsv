@@ -21,17 +21,16 @@
 // SOFTWARE.
 
 import Vector            :: *;
-import Clocks          :: *;
+import Clocks            :: *;
 import GetPut            :: *;
 import FIFO              :: *;
-import FIFOF        :: *;
 import Connectable       :: *;
 import ClientServer      :: *;
 import Xilinx            :: *;
-import DefaultValue    :: *;
+import DefaultValue      :: *;
 import PcieSplitter      :: *;
 import PcieTracer        :: *;
-import PcieGearbox    :: *;
+import PcieGearbox       :: *;
 import XbsvXilinx7Pcie   :: *;
 import PCIEWRAPPER       :: *;
 import Portal            :: *;
@@ -45,10 +44,6 @@ import PcieCsr           :: *;
 import MemSlave          :: *;
 import Dma               :: *;
 
-import BRAM         :: *;
-
-typedef (function Module#(PortalTop#(40, dsz, ipins,nMasters)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins, numeric type nMasters);
-
 `ifdef Artix7
 typedef 4 PcieLanes;
 typedef 4 NumLeds;
@@ -56,6 +51,17 @@ typedef 4 NumLeds;
 typedef 8 PcieLanes;
 typedef 8 NumLeds;
 `endif
+`ifndef DataBusWidth
+`define DataBusWidth 64
+`endif
+`ifndef NumberOfMasters
+`define NumberOfMasters 1
+`endif
+`ifndef PinType
+`define PinType Empty
+`endif
+
+typedef (function Module#(PortalTop#(40, dsz, ipins, `NumberOfMasters)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins);
 
 interface PcieTop#(type ipins);
    (* prefix="PCIE" *)
@@ -69,7 +75,7 @@ interface PcieHost#(type ipins);
    interface ipins       pins;
 endinterface
 
-module [Module] mkPcieHost #(Clock epClock250, Reset epReset250, PciId my_pciId, MkPortalTop#(dsz, ipins, nMasters) mkPortalTop,
+module [Module] mkPcieHost #(Clock epClock250, Reset epReset250, PciId my_pciId, MkPortalTop#(dsz, ipins) mkPortalTop,
 Server#(TLPData#(8), TLPData#(8)) ep_tlp)(PcieHost#(ipins))
 provisos(
    Mul#(TDiv#(dsz, 8), 8, dsz),
@@ -108,9 +114,9 @@ provisos(
    mkConnection(splitter.servers[portPortal], portalEngine.tlp);
    mkConnection(portalEngine.master, portalTop.slave);
 
-   if(valueOf(nMasters) > 0) begin
+   if (`NumberOfMasters > 0) begin
       AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);
-      Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis;   
+      Vector#(`NumberOfMasters,Axi3Master#(40,dsz,6)) m_axis;   
       m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0], reset_by portalResetIfc.new_rst);
       mkConnection(splitter.servers[portAxi], dmaEngine.tlp);
       mkConnection(m_axis[0], dmaEngine.slave);
@@ -132,10 +138,8 @@ provisos(
 endmodule: mkPcieHost
 
 (* no_default_clock, no_default_reset *)
-module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
-				      Clock sys_clk_p,     Clock sys_clk_n,
-				      Reset pci_sys_reset_n,
-				      MkPortalTop#(dsz, ipins, nMasters) mkPortalTop)
+module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n,
+				      MkPortalTop#(dsz, ipins) mkPortalTop)
    (PcieTop#(ipins))
    provisos (Mul#(TDiv#(dsz, 32), 32, dsz),
 	     Add#(b__, 32, dsz),
@@ -143,8 +147,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 	     Add#(d__, TMul#(8, TDiv#(dsz, 32)), 64),
 	     Add#(e__, TMul#(32, TDiv#(dsz, 32)), 256),
 	     Add#(f__, TDiv#(dsz, 32), 8),
-	     Mul#(TDiv#(dsz, 8), 8, dsz),
-	     Add#(g__, nMasters, 1)
+	     Mul#(TDiv#(dsz, 8), 8, dsz)
       );
 
    Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
@@ -181,12 +184,6 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
    interface pins = pciehost.pins;
 endmodule: mkPcieTopFromPortal
 
-`ifndef DataBusWidth
-`define DataBusWidth 64
-`endif
-`ifndef NumberOfMasters
-`define NumberOfMasters 1
-`endif
 (* synthesize *)
 module mkSynthesizeablePortalTop(PortalTop#(40, `DataBusWidth, Empty, `NumberOfMasters));
    let top <- mkPortalTop();
@@ -197,12 +194,7 @@ module mkSynthesizeablePortalTop(PortalTop#(40, `DataBusWidth, Empty, `NumberOfM
    interface pins = top.pins;
 endmodule
 
-`ifndef PinType
-`define PinType Empty
-`endif
-module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
-   Clock sys_clk_p,     Clock sys_clk_n,
-   Reset pci_sys_reset_n)
+module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)
    (PcieTop#(`PinType));
    let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,mkSynthesizeablePortalTop);
    return top;
