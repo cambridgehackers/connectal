@@ -40,7 +40,7 @@ import NocIndicationProxy::*;
 import NocRequestWrapper::*;
 
 // defined by user
-import Noc::*;
+import Noc2d::*;
 
 typedef enum {NocIndication, NocRequest} IfcNames deriving (Eq,Bits);
 
