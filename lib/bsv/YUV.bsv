@@ -24,9 +24,9 @@
 
 // little endian RGB
 typedef struct {
-    Bit#(8) b;
-    Bit#(8) g;
     Bit#(8) r;
+    Bit#(8) g;
+    Bit#(8) b;
 } Rgb888 deriving (Bits);
 
 typedef struct {
