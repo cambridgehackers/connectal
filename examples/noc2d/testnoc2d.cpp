@@ -49,7 +49,10 @@ public:
   NocIndication(unsigned int id) : NocIndicationWrapper(id){};
 
   virtual void ack(uint32_t heardby, uint32_t to, uint32_t msg) {
-    fprintf(stderr, "ack h %d t %d msg %08x\n", heardby, to, msg);
+    fprintf(stderr, "ack h [%d.%d] t [%d.%d] msg %08x\n", 
+	    (heardby >> 4) & 0x0f, heardby & 0xf, 
+	    (to >> 4) & 0xf, to & 0xf, 
+	    msg);
     lastheardby = heardby;
     lastto = to;
     lastmsg = msg;
@@ -86,7 +89,7 @@ void dosend(uint32_t from, uint32_t to, uint32_t msg)
 
 void dotest()
 {
-  uint32_t from, to, msg;
+  uint32_t fromx, fromy, tox, toy, msg;
   for (fromx = 0; fromx < 4; fromx += 1) {
     for (fromy = 0; fromy < 4; fromy += 1) {
       for (tox = 0; tox < 4; tox += 1) {
