@@ -89,17 +89,32 @@ module mkDistributor#(Vector#(n, Bit#(4)) id, PipeOut#(DataMessage) in, Vector#(
 	 id[0], id[1], in.first.address[0], in.first.address[1],
 	 in.first.payload);
       if (in.first.address[0] < id[0]) 
-	 move(in, out[1]);
+	 begin
+	    $display(" to link 1");
+	    move(in, out[1]);
+	 end
       else if (in.first.address[0] > id[0]) 
-	 move(in, out[0]);
+	 begin
+	    $display(" to link 0");
+	    move(in, out[0]);
+	 end
       else /* in.first.address[0] == id[0] */
 	 begin
 	    if (in.first.address[1] < id[1]) 
-	       move (in, out[3]);
+	       begin
+		  $display(" to link 3");
+		  move (in, out[3]);
+	       end
 	    else if (in.first.address[1] > id[1]) 
-	       move (in, out[2]);
+	       begin
+		  $display(" to link 2");
+		  move (in, out[2]);
+	       end
 	    else
-	       move(in, out[4]);
+	       begin
+		  $display(" to link 4");
+		  move(in, out[4]);
+	       end
 	 end
    endrule
 endmodule
