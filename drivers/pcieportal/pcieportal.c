@@ -64,6 +64,7 @@ typedef struct {
         unsigned int      portal_number;
         struct tBoard    *board;
         void             *virt;
+        volatile uint32_t *count;
         wait_queue_head_t wait_queue; /* used for interrupt notifications */
         dma_addr_t        dma_handle;
         struct cdev       cdev; /* per-portal cdev structure */
@@ -144,12 +145,18 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
 static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
 {
         unsigned int mask = 0;
+        uint32_t tc = 1;
         tPortal *this_portal = (tPortal *) filp->private_data;
         //tBoard *this_board = this_portal->board;
 
         //printk(KERN_INFO "%s_%d: poll function called\n", DEV_NAME, this_board->info.board_number);
         poll_wait(filp, &this_portal->wait_queue, poll_table);
-	mask |= POLLIN  | POLLRDNORM; /* readable */
+        if (this_portal->count) {
+            tc = *this_portal->count;
+            //printk(KERN_INFO "%s_%d: count %x\n", DEV_NAME, this_portal->portal_number, tc);
+        }
+        if (tc)
+            mask |= POLLIN  | POLLRDNORM; /* readable */
         //mask |= POLLOUT | POLLWRNORM; /* writable */
         //printk(KERN_INFO "%s_%d: poll return status is %x\n", DEV_NAME, this_board->info.board_number, mask);
         return mask;
@@ -377,6 +384,20 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
 			err = -EFAULT;
                         goto BARS_MAPPED_label;
 		}
+#if 0
+{
+int i;
+int pos = pci_find_capability(dev, PCI_CAP_ID_MSIX);
+for (i = 0; i < 10; i++) {
+        u16 control;
+        pci_read_config_word(dev, pos + i * 2, &control);
+        printk("[%s:%d] [%x] = %x\n", __FUNCTION__, __LINE__, i*2, control);
+}
+int nr_entries = 0; //pci_msix_table_size(dev);
+printk("[%s:%d] nr_entries %x msi %x msix %x\n", __FUNCTION__, __LINE__, nr_entries, dev->msi_enabled, dev->msix_enabled);
+
+}
+#endif
 		this_board->irq_num = msix_entries[0].vector;
 		printk(KERN_INFO "%s: Using MSIX interrupts num_entries=%d check_device\n", DEV_NAME, num_entries);
 		for (i = 0; i < num_entries; i++)
@@ -400,6 +421,8 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
                                   MINOR(device_number) + fpga_number);
                         this_board->portal[dn].portal_number = dn;
                         this_board->portal[dn].board = this_board;
+                        if (this_board->bar2io)
+                                this_board->portal[dn].count = (volatile uint32_t *)(this_board->bar2io + 0x10000 * dn + 0xc000);
                         /* add the device operations */
                         cdev_init(&this_board->portal[dn].cdev, &pcieportal_fops);
                         if (cdev_add(&this_board->portal[dn].cdev, this_device_number, 1)) {

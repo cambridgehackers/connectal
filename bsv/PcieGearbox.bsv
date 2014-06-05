@@ -34,8 +34,7 @@ endinterface
 
 // This module builds the transactor hierarchy, the clock
 // generation logic and the PCIE-to-port logic.
-(* no_default_clock, no_default_reset *)
-//, synthesize *)
+(* no_default_clock, no_default_reset, synthesize *)
 module mkPcieGearbox#(Clock epClock250, Reset epReset250, Clock epClock125, Reset epReset125)(PcieGearbox);
    // Connections between TLPData#(16) and a PCIE endpoint, using a gearbox
    // to match data rates between the endpoint and design clocks.
