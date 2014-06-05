@@ -89,15 +89,15 @@ module mkDistributor#(Vector#(n, Bit#(4)) id, PipeOut#(DataMessage) in, Vector#(
 	 id[0], id[1], in.first.address[0], in.first.address[1],
 	 in.first.payload);
       if (in.first.address[0] < id[0]) 
-	 move(in, out[0]);
-      else if (in.first.address[0] > id[0]) 
 	 move(in, out[1]);
+      else if (in.first.address[0] > id[0]) 
+	 move(in, out[0]);
       else /* in.first.address[0] == id[0] */
 	 begin
 	    if (in.first.address[1] < id[1]) 
-	       move (in, out[2]);
-	    else if (in.first.address[1] > id[1]) 
 	       move (in, out[3]);
+	    else if (in.first.address[1] > id[1]) 
+	       move (in, out[2]);
 	    else
 	       move(in, out[4]);
 	 end
