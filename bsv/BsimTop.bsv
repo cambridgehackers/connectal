@@ -288,6 +288,14 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 		      initPortal(5);
 		      initPortal(6);
 		      initPortal(7);
+		      initPortal(8);
+		      initPortal(9);
+		      initPortal(10);
+		      initPortal(11);
+		      initPortal(12);
+		      initPortal(13);
+		      initPortal(14);
+		      initPortal(15);
                    endaction);
    let init_fsm <- mkOnce(init_seq);
    

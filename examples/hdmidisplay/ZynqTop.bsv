@@ -45,14 +45,14 @@ import AxiDma            :: *;
 interface ZynqTop#(type pins);
    (* prefix="" *)
    interface ZynqPins zynq;
-   (* prefix="GPIO" *)
-   interface LEDS             leds;
-   (* prefix="XADC" *)
-   interface XADC             xadc;
+   // (* prefix="GPIO" *)
+   // interface LEDS             leds;
+   // (* prefix="XADC" *)
+   // interface XADC             xadc;
    (* prefix="hdmi" *)
    interface pins             pins;
-   interface Vector#(4, Clock) unused_clock;
-   interface Vector#(4, Reset) unused_reset;
+   interface Vector#(4, Clock) deleteme_unused_clock;
+   interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
 
 typedef (function Module#(PortalTop#(32, 64, ipins, 1)) mkpt(Clock clk1)) MkPortalTop#(type ipins);
@@ -75,20 +75,20 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins) constructor)(ZynqTop#(i
    endrule
 
    interface zynq = ps7.pins;
-   interface leds = top.leds;
-   interface XADC xadc;
-       method Bit#(4) gpio;
-           return 0;
-       endmethod
-   endinterface
+   // interface leds = top.leds;
+   // interface XADC xadc;
+   //     method Bit#(4) gpio;
+   //         return 0;
+   //     endmethod
+   // endinterface
    interface pins = top.pins;
 
    // these are exported to make bsc happy, and then the ports are disconnected after synthesis
-   interface unused_clock = ps7.fclkclk;
-   interface unused_reset = ps7.fclkreset;
+   interface deleteme_unused_clock = ps7.fclkclk;
+   interface deleteme_unused_reset = ps7.fclkreset;
 endmodule
 
-module mkHdmiZynqTop(ZynqTop#(HDMI));
+module mkHdmiZynqTop(ZynqTop#(HDMI#(Bit#(16))));
    let top <- mkZynqTopFromPortal(mkZynqPortalTop);
    return top;
 endmodule

@@ -91,11 +91,12 @@ module mkPcieControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlp
    // Function to read from the CSR address space (using DW address)
    method Bit#(32) rd(UInt#(30) addr);
       let modaddr = (addr % 8192);
-      if (modaddr >= `msix_base && modaddr <= (`msix_base+63))
+      let msixaddr = modaddr - `msix_base;
+      if (msixaddr >= 0 && msixaddr <= 63)
          begin
-         let groupaddr = (modaddr / 4);
+         let groupaddr = (msixaddr / 4);
          //******************************** area referenced from xilinx_x7_pcie_wrapper.v
-         case (modaddr % 4)
+         case (msixaddr % 4)
          0: return msix_entry[groupaddr].addr_lo;
          1: return msix_entry[groupaddr].addr_hi;
          2: return msix_entry[groupaddr].msg_data;
@@ -125,8 +126,8 @@ module mkPcieControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlp
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
          // 4-bit MSIx pending bit field
-         (`msix_base+1024): return '0;                               // PBA structure (low)
-         (`msix_base+1025): return '0;                               // PBA structure (high)
+         992: return '0;                               // PBA structure (low)
+         993: return '0;                               // PBA structure (high)
          //******************************** end of area referenced from xilinx_x7_pcie_wrapper.v
          // unused addresses
          default: return 32'hbad0add0;
@@ -136,11 +137,12 @@ module mkPcieControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlp
    // Function to write to the CSR address space (using DW address)
    method Action wr(UInt#(30) addr, Bit#(32) dword);
          let modaddr = (addr % 8192);
-         if (modaddr >= `msix_base && modaddr <= (`msix_base+63))
+         let msixaddr = modaddr - `msix_base;
+         if (msixaddr >= 0 && msixaddr <= 63)
             begin
-            let groupaddr = (modaddr / 4);
+            let groupaddr = (msixaddr / 4);
             //******************************** area referenced from xilinx_x7_pcie_wrapper.v
-            case (modaddr % 4)
+            case (msixaddr % 4)
             0: msix_entry[groupaddr].addr_lo  <= (dword & 32'hfffffffc);
             1: msix_entry[groupaddr].addr_hi  <= dword;
             2: msix_entry[groupaddr].msg_data <= dword;

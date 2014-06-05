@@ -84,14 +84,7 @@ provisos(
    MakeResetIfc portalResetIfc <- mkReset(10, False, epClock125);
    let portalTop <- mkPortalTop(reset_by portalResetIfc.new_rst);
 
-   TLPDispatcher   dispatcher  <- mkTLPDispatcher();
-   TLPArbiter      arbiter     <- mkTLPArbiter();
-   Vector#(PortMax, Server#(TLPData#(16), TLPData#(16))) serv;
-   for (Integer i = 0; i < valueOf(PortMax); i=i+1)
-       serv[i] = (interface Server;
-                     interface response = dispatcher.out[i];
-                     interface request = arbiter.in[i];
-                  endinterface);
+   PcieSplitter    splitter    <- mkPcieSplitter();
 
    // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
    // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
@@ -103,27 +96,23 @@ provisos(
 
    PcieTracer  traceif <- mkPcieTracer();
    mkConnection(gb.pci, traceif.pci);
-   mkConnection(traceif.bus,
-       (interface Client;
-          interface request = arbiter.outToBus;
-          interface response = dispatcher.inFromBus;
-       endinterface));
+   mkConnection(traceif.bus, splitter.busClient);
 
    MemMasterEngine splitEngine <- mkMemMasterEngine(my_pciId);
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(portalResetIfc, traceif.tlpdata);
    MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
-   mkConnection(serv[portConfig], splitEngine.tlp);
+   mkConnection(splitter.servers[portConfig], splitEngine.tlp);
    mkConnection(splitEngine.master, my_slave);
 
    MemMasterEngine portalEngine <- mkMemMasterEngine(my_pciId);
-   mkConnection(serv[portPortal], portalEngine.tlp);
+   mkConnection(splitter.servers[portPortal], portalEngine.tlp);
    mkConnection(portalEngine.master, portalTop.slave);
 
    if(valueOf(nMasters) > 0) begin
       AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);
       Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis;   
       m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0], reset_by portalResetIfc.new_rst);
-      mkConnection(serv[portAxi], dmaEngine.tlp);
+      mkConnection(splitter.servers[portAxi], dmaEngine.tlp);
       mkConnection(m_axis[0], dmaEngine.slave);
    end
 

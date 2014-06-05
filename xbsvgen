@@ -155,7 +155,7 @@ if $needspcie {
                             CONFIG.IntX_Generation {false} \
                             CONFIG.MSI_Enabled {false} \
                             CONFIG.MSIx_Enabled {true} \
-                            CONFIG.MSIx_PBA_Offset {400} \
+                            CONFIG.MSIx_PBA_Offset {1f0} \
                             CONFIG.MSIx_Table_Offset {200} \
                             CONFIG.MSIx_Table_Size {10} \
                             CONFIG.Maximum_Link_Width $maxlinkwidth \
@@ -164,6 +164,9 @@ if $needspcie {
                             CONFIG.Use_Class_Code_Lookup_Assistant {false} \
                             CONFIG.Vendor_ID {1be7} \
                            ]
+# Description of MSIx_Table_Offset is in:
+# Xilinx/Vivado/2013.2/data/ip/xilinx/pcie_7x_v2_1/xgui/pcie_7x_v2_1.tcl
+# (it is byteoffset/8, expressed in hex)
 }
 
 if [file exists ../synth-ip.tcl] {

@@ -28,7 +28,7 @@ import HdmiDisplay::*;
 
 typedef enum {HdmiDisplayRequest, HdmiDisplayIndication, HdmiInternalRequest, HdmiInternalIndication, DmaConfig, DmaIndication} IfcNames deriving (Eq,Bits);
 
-module mkZynqPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI,1))
+module mkZynqPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI#(Bit#(16)),1))
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
 	    Add#(c__, 12, addrWidth),
