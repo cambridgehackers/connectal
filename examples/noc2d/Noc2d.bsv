@@ -41,6 +41,8 @@ module mkPipeOutDiscard#(PipeOut#(Bit#(1)) x)(Empty);
    endrule
 endmodule
 
+
+
 module mkNocRequest#(NocIndication indication)(NocRequest);
    
   
@@ -54,22 +56,46 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
 	    id[1] = y;
 	    node[x][y] <- mkNocNode(id);
 	 end
-	    
+
    // wire up the links in the x direction
+   Vector#(3, Integer) indexes3 = genVector();
+   Vector#(4, Integer) indexes4 = genVector();
+   module mkXLinks#(Integer x)(Empty);
+      module mkXLink#(Integer x, Integer y)(Empty);
+	 mkConnection(node[x][y].linkupout[0], node[x+1][y].linkupin[0]);
+	 mkConnection(node[x+1][y].linkdownout[0], node[x][y].linkupin[0]);
+      endmodule
+      mapM_(mkXLink(x), indexes4);
+   endmodule
+
+   mapM_(mkXLinks, indexes3);
+   /*
    for (Bit#(4) x = 0; x < 3; x = x + 1)
-      for (Bit#(4) y = 0; y < 4; y = x + 1)
+      for (Bit#(4) y = 0; y < 4; y = y + 1)
 	 begin
 	    mkConnection(node[x][y].linkupout[0], node[x+1][y].linkupin[0]);
 	    mkConnection(node[x+1][y].linkdownout[0], node[x][y].linkupin[0]);
 	 end
+*/
    // wire up the links in the y direction
+   
+   module mkYLinks#(Integer x)(Empty);
+   module mkYLink#(Integer x, Integer y)(Empty);
+      mkConnection(node[x][y].linkupout[1], node[x][y+1].linkupin[1]);
+      mkConnection(node[x][y+1].linkdownout[1], node[x][y].linkupin[1]);
+   endmodule
+      mapM_(mkYLink(x), indexes4);
+   endmodule
+   mapM_(mkYLinks, indexes3);
+
+   /*
    for (Bit#(4) x = 0; x < 4; x = x + 1)
-      for (Bit#(4) y = 0; y < 3; y = x + 1)
+      for (Bit#(4) y = 0; y < 3; y = y + 1)
 	 begin
 	    mkConnection(node[x][y].linkupout[1], node[x][y+1].linkupin[1]);
 	    mkConnection(node[x][y+1].linkdownout[1], node[x][y].linkupin[1]);
 	 end
-
+*/
    // discard traffic from loose ends in x direction
    for (Bit#(4) x = 0; x < 4; x = x + 1)
       begin
