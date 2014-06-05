@@ -50,7 +50,6 @@
 #define CSR_TLPDATABRAMRESPONSESLICE5 ( 781 << 2)
 #define CSR_TLPFROMPCIEWRADDRREG      ( 792 << 2)
 #define CSR_TLPTOPCIEWRADDRREG        ( 793 << 2)
-#define CSR_RESETISASSERTED           ( 795 << 2)
 /* MSIX must be in separate 4kb page */
 #define CSR_MSIX_ADDR_LO              (1024 << 2)
 #define CSR_MSIX_ADDR_HI              (1025 << 2)
@@ -201,12 +200,6 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                              ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*i));
                 }
                 err = copy_to_user((void __user *) arg, &info, sizeof(tBoardInfo));
-                break;
-        case BNOC_SOFT_RESET:
-                printk(KERN_INFO "%s: /dev/%s_%d soft reset\n",
-                       DEV_NAME, DEV_NAME, this_board->info.board_number);
-		// reset the portal
-		iowrite32(1, this_board->bar0io + CSR_RESETISASSERTED); 
                 break;
         case BNOC_IDENTIFY_PORTAL:
                 {

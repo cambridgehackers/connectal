@@ -82,7 +82,6 @@ module [Module] mkPcieHost #(Clock epClock250, Reset epReset250, PciId my_pciId,
    //MemSlave#(32,32) ptslave,
    Vector#(`NumberOfMasters,MemMaster#(40, dsz)) masters,
    Vector#(16,ReadOnly#(Bool)) ptinterrupt,
-   MakeResetIfc portalResetIfc,
 Server#(TLPData#(8), TLPData#(8)) ep_tlp)(PcieHost#(dsz))
 provisos(
    Mul#(TDiv#(dsz, 8), 8, dsz),
@@ -110,7 +109,7 @@ provisos(
    mkConnection(traceif.bus, splitter.busClient);
 
    MemMasterEngine splitEngine <- mkMemMasterEngine(my_pciId);
-   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(portalResetIfc, traceif.tlpdata);
+   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
    MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
    mkConnection(splitter.servers[portConfig], splitEngine.tlp);
    mkConnection(splitEngine.master, my_slave);
@@ -123,7 +122,7 @@ provisos(
    mkConnection(splitter.servers[portAxi], dmaEngine.tlp);
    if (`NumberOfMasters > 0) begin
       Vector#(`NumberOfMasters,Axi3Master#(40,dsz,6)) m_axis;   
-      m_axis[0] <- mkAxiDmaMaster(masters[0], reset_by portalResetIfc.new_rst);
+      m_axis[0] <- mkAxiDmaMaster(masters[0]);
       mkConnection(m_axis[0], dmaEngine.slave);
    end
 
@@ -181,14 +180,12 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
    Clock epClock125 = clkgen.clkout0; /* half speed user_clk */
    Reset epReset125 <- mkAsyncReset(4, user_reset_n, epClock125);
 
-   MakeResetIfc portalResetIfc <- mkReset(10, False, epClock125, clocked_by epClock125, reset_by epReset125);
-   let portalTop <- mkPortalTop(clocked_by epClock125, reset_by portalResetIfc.new_rst);
+   let portalTop <- mkPortalTop(clocked_by epClock125, reset_by epReset125);
    PcieHost#(dsz) pciehost <- mkPcieHost(epClock250, epReset250,
          PciId{ bus:  _ep.cfg.bus_number(), dev: _ep.cfg.device_number(), func: _ep.cfg.function_number()},
          //portalTop.slave,
          portalTop.masters,
          portalTop.interrupt,
-         portalResetIfc,
          _ep.tlp, clocked_by epClock125, reset_by epReset125);
 
    mkConnection(pciehost.master, portalTop.slave, clocked_by epClock125, reset_by epReset125);
