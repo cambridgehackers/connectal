@@ -61,6 +61,7 @@ interface PcieTracer;
 endinterface: PcieTracer
 
 // The PCIe-to-AXI bridge puts all of the elements together
+(* synthesize *)
 module mkPcieTracer(PcieTracer);
 
    // Clocks and Resets
