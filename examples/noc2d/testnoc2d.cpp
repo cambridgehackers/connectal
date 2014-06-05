@@ -87,10 +87,14 @@ void dosend(uint32_t from, uint32_t to, uint32_t msg)
 void dotest()
 {
   uint32_t from, to, msg;
-  for (from = 0; from < 4; from += 1) {
-    for (to = 0; to < 4; to += 1) {
-      printf("send from %d to %d v %08x\n", from, to, (from << 16) + to);
-      dosend(from, to, (from << 16) + to);
+  for (fromx = 0; fromx < 4; fromx += 1) {
+    for (fromy = 0; fromy < 4; fromy += 1) {
+      for (tox = 0; tox < 4; tox += 1) {
+	for (toy = 0; toy < 4; toy += 1) {
+	  printf("send from [%d.%d] to [%d.%d] v %08x\n", fromx, fromy, tox, toy, (fromx << 20) + (fromy << 16) + (tox << 4) + toy);
+	  dosend((fromx << 4) + fromy, (tox << 4) + toy, (fromx << 20) + (fromy << 16) + (tox << 4) + toy);
+	}
+      }
     }
   }
 }
