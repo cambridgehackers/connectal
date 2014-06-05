@@ -79,12 +79,12 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
 */
    // wire up the links in the y direction
    
-   module mkYLinks#(Integer x)(Empty);
-   module mkYLink#(Integer x, Integer y)(Empty);
+   module mkYLinks#(Integer y)(Empty);
+   module mkYLink#(Integer y, Integer x)(Empty);
       mkConnection(node[x][y].linkupout[1], node[x][y+1].linkupin[1]);
       mkConnection(node[x][y+1].linkdownout[1], node[x][y].linkupin[1]);
    endmodule
-      mapM_(mkYLink(x), indexes4);
+      mapM_(mkYLink(y), indexes4);
    endmodule
    mapM_(mkYLinks, indexes3);
 
