@@ -62,40 +62,25 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
    Vector#(4, Integer) indexes4 = genVector();
    module mkXLinks#(Integer x)(Empty);
       module mkXLink#(Integer x, Integer y)(Empty);
-	 mkConnection(node[x][y].linkupout[0], node[x+1][y].linkupin[0]);
+	 mkConnection(node[x][y].linkupout[0], node[x+1][y].linkdownin[0]);
 	 mkConnection(node[x+1][y].linkdownout[0], node[x][y].linkupin[0]);
       endmodule
       mapM_(mkXLink(x), indexes4);
    endmodule
 
    mapM_(mkXLinks, indexes3);
-   /*
-   for (Bit#(4) x = 0; x < 3; x = x + 1)
-      for (Bit#(4) y = 0; y < 4; y = y + 1)
-	 begin
-	    mkConnection(node[x][y].linkupout[0], node[x+1][y].linkupin[0]);
-	    mkConnection(node[x+1][y].linkdownout[0], node[x][y].linkupin[0]);
-	 end
-*/
+
    // wire up the links in the y direction
    
    module mkYLinks#(Integer y)(Empty);
    module mkYLink#(Integer y, Integer x)(Empty);
-      mkConnection(node[x][y].linkupout[1], node[x][y+1].linkupin[1]);
+      mkConnection(node[x][y].linkupout[1], node[x][y+1].linkdownin[1]);
       mkConnection(node[x][y+1].linkdownout[1], node[x][y].linkupin[1]);
    endmodule
       mapM_(mkYLink(y), indexes4);
    endmodule
    mapM_(mkYLinks, indexes3);
 
-   /*
-   for (Bit#(4) x = 0; x < 4; x = x + 1)
-      for (Bit#(4) y = 0; y < 3; y = y + 1)
-	 begin
-	    mkConnection(node[x][y].linkupout[1], node[x][y+1].linkupin[1]);
-	    mkConnection(node[x][y+1].linkdownout[1], node[x][y].linkupin[1]);
-	 end
-*/
    // discard traffic from loose ends in x direction
    for (Bit#(4) x = 0; x < 4; x = x + 1)
       begin
@@ -126,8 +111,9 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
 		    node[idx][idy].nodetohost.first.address[0],
 		    node[idx][idy].nodetohost.first.address[1],
 	            node[idx][idy].nodetohost.first.payload);
-		 indication.ack({idx,idy}, 
-		    unpack(pack(node[idx][idy].nodetohost.first.address)),
+		 indication.ack((idx<<4) +idy, 
+		    (node[idx][idy].nodetohost.first.address[0]<<4)+
+		    node[idx][idy].nodetohost.first.address[1],
 	            node[idx][idy].nodetohost.first.payload);
 		 node[idx][idy].nodetohost.deq();
               endseq
