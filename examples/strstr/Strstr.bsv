@@ -29,7 +29,6 @@ import Gearbox::*;
 
 import AxiMasterSlave::*;
 import Dma::*;
-import DmaUtils::*;
 import MPEngine::*;
 
 interface StrstrRequest;
@@ -42,10 +41,14 @@ interface StrstrIndication;
    method Action setupComplete();
 endinterface
 
-module mkStrstrRequest#(StrstrIndication indication,
-			Vector#(p,ObjectReadServer#(busWidth))   haystack_read_servers,
-			Vector#(p,ObjectReadServer#(busWidth))     needle_read_servers,
-			Vector#(p,ObjectReadServer#(busWidth))    mp_next_read_servers )(StrstrRequest)
+interface Strstr#(numeric type p, numeric type busWidth);
+   interface StrstrRequest request;
+   interface Vector#(p,ObjectReadClient#(busWidth)) needle_read_clients;
+   interface Vector#(p,ObjectReadClient#(busWidth)) mp_next_read_clients;
+   interface Vector#(p,ObjectReadClient#(busWidth)) haystack_read_clients;
+endinterface
+
+module mkStrstrRequest#(StrstrIndication indication)(Strstr#(p,busWidth))
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
@@ -67,11 +70,9 @@ module mkStrstrRequest#(StrstrIndication indication,
    FIFO#(void) restartf <- mkSizedFIFO(1);
    
 	       
-   Vector#(p, MPEngine) engines;
-   for(Integer i = 0; i < valueOf(p); i=i+1) begin
-      let iv = fromInteger(i);
-      engines[iv] <- mkMPEngine(comps[iv], confs[iv], locs[iv], haystack_read_servers[iv], needle_read_servers[iv], mp_next_read_servers[iv]);
-   end
+   Vector#(p, MPEngine#(busWidth)) engines;
+   for(Integer i = 0; i < valueOf(p); i=i+1) 
+      engines[i] <- mkMPEngine(comps[i], confs[i], locs[i]);
    
    rule confr;
       for(Integer i = 0; i < valueOf(p); i=i+1) 
@@ -110,18 +111,28 @@ module mkStrstrRequest#(StrstrIndication indication,
       else
 	 restartf.enq(?);
    endrule
+   
+   
+   function ObjectReadClient#(busWidth) nrc (MPEngine#(busWidth) e) = e.needle_read_client;
+   function ObjectReadClient#(busWidth) mpnrc (MPEngine#(busWidth) e) = e.mp_next_read_client;
+   function ObjectReadClient#(busWidth) hsrc (MPEngine#(busWidth) e) = e.haystack_read_client;
       
-   method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
-      $display("setup(%d %d %d)", needle_pointer, mpNext_pointer, needle_len);
-      needleLen <= needle_len;
-      for(Integer i = 0; i < valueOf(p); i=i+1)
-	 engines[fromInteger(i)].setup(needle_pointer, mpNext_pointer, needle_len);
-   endmethod
-
-   method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) iter_cnt);
-      haystackLen <= haystack_len;
-      haystackPointer <= haystack_pointer;
-      iterCnt <= iter_cnt;
-      restartf.enq(?);
-   endmethod
+   interface StrstrRequest request;
+      method Action setup(Bit#(32) needle_pointer, Bit#(32) mpNext_pointer, Bit#(32) needle_len);
+	 $display("setup(%d %d %d)", needle_pointer, mpNext_pointer, needle_len);
+	 needleLen <= needle_len;
+	 for(Integer i = 0; i < valueOf(p); i=i+1)
+	    engines[fromInteger(i)].setup(needle_pointer, mpNext_pointer, needle_len);
+      endmethod
+   
+      method Action search(Bit#(32) haystack_pointer, Bit#(32) haystack_len, Bit#(32) iter_cnt);
+	 haystackLen <= haystack_len;
+	 haystackPointer <= haystack_pointer;
+	 iterCnt <= iter_cnt;
+	 restartf.enq(?);
+      endmethod
+   endinterface
+   interface needle_read_clients = map(nrc,engines);
+   interface mp_next_read_clients = map(mpnrc,engines);
+   interface haystack_read_clients = map(hsrc,engines);
 endmodule

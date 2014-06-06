@@ -33,15 +33,18 @@ import Vector::*;
 import BRAM::*;
 import Gearbox::*;
 import Connectable::*;
+import MemUtils::*;
 
 import AxiMasterSlave::*;
 import Dma::*;
-import DmaUtils::*;
 import Dma2BRAM::*;
 
-interface MPEngine;
+interface MPEngine#(numeric type busWidth);
    method Action setup(Bit#(32) needlePointer, Bit#(32) mpNextPointer, Bit#(32) needle_len);
    method Action search(Bit#(32) haystackPointer, Bit#(32) haystack_len, Bit#(32) haystack_base);
+   interface ObjectReadClient#(busWidth) needle_read_client;
+   interface ObjectReadClient#(busWidth) mp_next_read_client;
+   interface ObjectReadClient#(busWidth) haystack_read_client;
 endinterface
 
 typedef Bit#(8) Char;
@@ -56,10 +59,7 @@ typedef enum {Idle, Ready, Run} Stage deriving (Eq, Bits);
 
 module mkMPEngine#(FIFOF#(void) compf, 
 		   FIFOF#(void) conff, 
-		   FIFOF#(Int#(32)) locf,
-		   ObjectReadServer#(busWidth)   haystack_read_server,
-		   ObjectReadServer#(busWidth)     needle_read_server,
-		   ObjectReadServer#(busWidth)    mp_next_read_server )(MPEngine)
+		   FIFOF#(Int#(32)) locf )(MPEngine#(busWidth))
    
    provisos(Add#(a__, 8, busWidth),
 	    Div#(busWidth,8,nc),
@@ -87,9 +87,9 @@ module mkMPEngine#(FIFOF#(void) compf,
    Reg#(ObjectPointer) haystackPointer <- mkReg(0);
    
    BRAMReadClient#(NeedleIdxWidth,busWidth) n2b <- mkBRAMReadClient(needle.portB);
-   mkConnection(n2b.dmaClient, needle_read_server);
    BRAMReadClient#(NeedleIdxWidth,busWidth) mp2b <- mkBRAMReadClient(mpNext.portB);
-   mkConnection(mp2b.dmaClient, mp_next_read_server);
+   MemReader#(busWidth) hreader <- mkMemReader;
+
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
 
    rule finish_setup;
@@ -102,13 +102,13 @@ module mkMPEngine#(FIFOF#(void) compf,
       
    rule haystackReq (stage == Run && haystackOff < extend(haystackLenReg));
       //$display("haystackReq %x", haystackOff);
-      haystack_read_server.readReq.put(ObjectRequest {pointer: haystackPointer, offset: extend(haystackBase+haystackOff), burstLen: fromInteger(valueOf(nc)), tag: dmaTag});
+      hreader.memServer.readReq.put(ObjectRequest {pointer: haystackPointer, offset: extend(haystackBase+haystackOff), burstLen: fromInteger(valueOf(nc)), tag: dmaTag});
       haystackOff <= haystackOff + fromInteger(valueOf(nc));
    endrule
    
    rule haystackResp;
       //$display("haystackResp");
-      let rv <- haystack_read_server.readData.get;
+      let rv <- hreader.memServer.readData.get;
       Vector#(nc,Char) pv = unpack(rv.data);
       if(rv.tag == dmaTag)
 	 haystack.enq(pv);
@@ -200,5 +200,9 @@ module mkMPEngine#(FIFOF#(void) compf,
       efifo.clear;
       epochReg <= 0;
    endmethod
-
+   
+   interface needle_read_client = n2b.dmaClient;
+   interface mp_next_read_client = mp2b.dmaClient;
+   interface haystack_read_client = hreader.memClient; 
+      
 endmodule
