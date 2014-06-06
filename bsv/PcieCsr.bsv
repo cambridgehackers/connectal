@@ -51,7 +51,7 @@ endinterface: PcieControlAndStatusRegs
 // accessing the control and status registers. It defines the
 // registers, the address map, and how the registers respond to reads
 // and writes.
-module mkPcieControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlpdata)(PcieControlAndStatusRegs);
+module mkPcieControlAndStatusRegs#(TlpTraceData tlpdata)(PcieControlAndStatusRegs);
 
    // Utility for module creating all of the storage for a single MSIX
    // table entry
@@ -122,7 +122,6 @@ module mkPcieControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlp
 	 792: return extend(tlpdata.fromPcieTraceBramWrAddr);
 	 793: return extend(  tlpdata.toPcieTraceBramWrAddr);
 	 794: return extend(tlpdata.tlpTraceLimit);
-	 795: return portalResetIfc.isAsserted() ? 1 : 0;
 
          //******************************** start of area referenced from xilinx_x7_pcie_wrapper.v
          // 4-bit MSIx pending bit field
@@ -160,7 +159,6 @@ module mkPcieControlAndStatusRegs#(MakeResetIfc portalResetIfc, TlpTraceData tlp
 	    792: tlpdata.fromPcieTraceBramWrAddr <= truncate(dword);
 	    793:   tlpdata.toPcieTraceBramWrAddr <= truncate(dword);
 	    794: tlpdata.tlpTraceLimit <= truncate(dword);
-	    795: portalResetIfc.assertReset();
          endcase
    endmethod
    endinterface

@@ -35,9 +35,9 @@ module mkPortalTop(StdPortalTop#(addrWidth));
    SwallowWrapper swallowWrapper <- mkSwallowWrapper(Swallow, swallow);
    
    Vector#(3,StdPortal) portals;
-   portals[0] = echoIndicationProxy.portalIfc;
+   portals[0] = swallowWrapper.portalIfc; 
    portals[1] = echoRequestWrapper.portalIfc; 
-   portals[2] = swallowWrapper.portalIfc; 
+   portals[2] = echoIndicationProxy.portalIfc;
    
    // instantiate system directory
    StdDirectory dir <- mkStdDirectory(portals);

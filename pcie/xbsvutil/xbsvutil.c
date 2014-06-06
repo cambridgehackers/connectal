@@ -55,7 +55,7 @@ static void print_usage(const char* argv0)
   free(argv0_copy);
 }
 
-typedef enum { HELP, INFO, RESET, PORTAL, TLP, TRACE, NOTRACE, MMAP } tMode;
+typedef enum { HELP, INFO, PORTAL, TLP, TRACE, NOTRACE, MMAP } tMode;
 
 static int is_bluenoc_file(const struct dirent* ent)
 {
@@ -95,17 +95,6 @@ static int process(const char* file, tMode mode, unsigned int strict)
       printf("  Board number:     %d\n", board_info.board_number);
       printf("  Portal number:    %d\n", board_info.portal_number);
       ret = 1;
-      break;
-    }
-    case RESET: {
-        res = ioctl(fd,BNOC_SOFT_RESET);
-        if (res == -1) {
-          perror("reset ioctl");
-          ret = -1;
-        } else {
-          printf("Reset portals at %s\n", file);
-          ret = 1;
-        }
       break;
     }
   case PORTAL: {
@@ -220,9 +209,6 @@ int main(int argc, char* const argv[])
     mode = HELP;
   } else if (strcmp("info",argv[optind]) == 0) {
     mode = INFO;
-    optind += 1;
-  } else if (strcmp("reset",argv[optind]) == 0) {
-    mode = RESET;
     optind += 1;
   } else if (strcmp("portal",argv[optind]) == 0) {
     mode = PORTAL;

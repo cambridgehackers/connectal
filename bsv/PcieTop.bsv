@@ -71,12 +71,15 @@ interface PcieTop#(type ipins);
    interface ipins       pins;
 endinterface
 
-interface PcieHost#(type ipins);
-   interface ipins       pins;
+interface PcieHost#(numeric type dsz);
+   interface Vector#(16,MSIX_Entry) msixEntry;
+   interface MemMaster#(32,32) master;
+   interface Axi3Slave#(40,dsz,6)  slave;
+   interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
 endinterface
 
-module [Module] mkPcieHost #(Clock epClock250, Reset epReset250, PciId my_pciId, MkPortalTop#(dsz, ipins) mkPortalTop,
-Server#(TLPData#(8), TLPData#(8)) ep_tlp)(PcieHost#(ipins))
+module [Module] mkPcieHost #(Clock epClock250, Reset epReset250, PciId my_pciId,
+Server#(TLPData#(8), TLPData#(8)) ep_tlp)(PcieHost#(dsz))
 provisos(
    Mul#(TDiv#(dsz, 8), 8, dsz),
     Add#(a__, TDiv#(dsz, 32), 8),
@@ -87,8 +90,6 @@ provisos(
     Mul#(TDiv#(dsz, 32), 32, dsz));
    Clock epClock125 <- exposeCurrentClock();
    Reset epReset125 <- exposeCurrentReset();
-   MakeResetIfc portalResetIfc <- mkReset(10, False, epClock125);
-   let portalTop <- mkPortalTop(reset_by portalResetIfc.new_rst);
 
    PcieSplitter    splitter    <- mkPcieSplitter();
 
@@ -105,36 +106,20 @@ provisos(
    mkConnection(traceif.bus, splitter.busClient);
 
    MemMasterEngine splitEngine <- mkMemMasterEngine(my_pciId);
-   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(portalResetIfc, traceif.tlpdata);
+   PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
    MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
    mkConnection(splitter.servers[portConfig], splitEngine.tlp);
    mkConnection(splitEngine.master, my_slave);
 
    MemMasterEngine portalEngine <- mkMemMasterEngine(my_pciId);
    mkConnection(splitter.servers[portPortal], portalEngine.tlp);
-   mkConnection(portalEngine.master, portalTop.slave);
 
-   if (`NumberOfMasters > 0) begin
-      AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);
-      Vector#(`NumberOfMasters,Axi3Master#(40,dsz,6)) m_axis;   
-      m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0], reset_by portalResetIfc.new_rst);
-      mkConnection(splitter.servers[portAxi], dmaEngine.tlp);
-      mkConnection(m_axis[0], dmaEngine.slave);
-   end
-
-   // going from level to edge-triggered interrupt
-   Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False));
-   for (Integer i = 0; i < 15; i = i + 1) begin
-      // intr_num 0 for the directory
-      Integer intr_num = i+1;
-      MSIX_Entry msixEntry = csr.msixEntry[intr_num];
-      rule interruptRequest;
-	 if (portalTop.interrupt[i] && !interruptRequested[i])
-	    portalEngine.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
-	 interruptRequested[i] <= portalTop.interrupt[i];
-      endrule
-   end
-   interface pins = portalTop.pins;
+   AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);
+   mkConnection(splitter.servers[portAxi], dmaEngine.tlp);
+   interface msixEntry = csr.msixEntry;
+   interface master = portalEngine.master;
+   interface slave = dmaEngine.slave;
+   interface interruptRequest = portalEngine.interruptRequest;
 endmodule: mkPcieHost
 
 (* no_default_clock, no_default_reset *)
@@ -173,15 +158,38 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
    Clock epClock125 = clkgen.clkout0; /* half speed user_clk */
    Reset epReset125 <- mkAsyncReset(4, user_reset_n, epClock125);
 
-   PcieHost#(ipins) pciehost <- mkPcieHost(epClock250, epReset250,
+   let portalTop <- mkPortalTop(clocked_by epClock125, reset_by epReset125);
+   PcieHost#(dsz) pciehost <- mkPcieHost(epClock250, epReset250,
          PciId{ bus:  _ep.cfg.bus_number(), dev: _ep.cfg.device_number(), func: _ep.cfg.function_number()},
-         mkPortalTop, _ep.tlp, clocked_by epClock125, reset_by epReset125);
+         _ep.tlp, clocked_by epClock125, reset_by epReset125);
+
+   mkConnection(pciehost.master, portalTop.slave, clocked_by epClock125, reset_by epReset125);
+   if (`NumberOfMasters > 0) begin
+      Vector#(`NumberOfMasters,Axi3Master#(40,dsz,6)) m_axis;   
+      m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0], clocked_by epClock125, reset_by epReset125);
+      mkConnection(m_axis[0], pciehost.slave, clocked_by epClock125, reset_by epReset125);
+   end
+
+   // going from level to edge-triggered interrupt
+   Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by epClock125, reset_by epReset125));
+   rule interrupt_rule;
+     Integer intr_num = 0;
+     for (Integer i = 0; i < 15; i = i + 1) begin
+	 if (intr_num == 0 && portalTop.interrupt[i] && !interruptRequested[i])
+             intr_num = i+1;
+	 interruptRequested[i] <= portalTop.interrupt[i];
+     end
+     if (intr_num != 0) begin // i= 0 for the directory
+        MSIX_Entry msixEntry = pciehost.msixEntry[intr_num];
+        pciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
+     end
+   endrule
 
    interface pcie = _ep.pcie;
    method Bit#(NumLeds) leds();
       return extend({_ep.user.lnk_up(),3'd2});
    endmethod
-   interface pins = pciehost.pins;
+   interface pins = portalTop.pins;
 endmodule: mkPcieTopFromPortal
 
 (* synthesize *)

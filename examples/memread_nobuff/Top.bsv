@@ -65,10 +65,10 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
 
    Vector#(4,StdPortal) portals;
-   portals[0] = memreadRequestWrapper.portalIfc;
+   portals[0] = dmaIndicationProxy.portalIfc; 
    portals[1] = memreadIndicationProxy.portalIfc; 
    portals[2] = dmaRequestWrapper.portalIfc;
-   portals[3] = dmaIndicationProxy.portalIfc; 
+   portals[3] = memreadRequestWrapper.portalIfc;
    
    StdDirectory dir <- mkStdDirectory(portals);
    let ctrl_mux <- mkSlaveMux(dir,portals);
