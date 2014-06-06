@@ -41,76 +41,56 @@ test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidi
 # Generate bsim and zynq make targets for each test in testnames.
 # For test 'foo', we will generate 'foo.bits' and 'foo.bsim'
 
-testnames = echo             \
-	    hdmidisplay      \
-            memcpy_buff      \
-            memcpy_buff_oo   \
-            memcpy_nobuff    \
-            memread_buff_oo  \
-            memread_buff     \
-            memread_nobuff   \
-            memread_manyclients \
-	    memwrite_buff    \
-	    memwrite_buff_oo \
-	    memwrite_nobuff  \
+testnames = echo                 \
+	    hdmidisplay          \
+            memcpy               \
+            memread              \
+            memread_manyclients  \
+	    memwrite             \
             memwrite_manyclients \
-            memrw_buff       \
-            memrw_nobuff     \
-            memread128       \
-            memread2         \
-            mempoke          \
-            pcietestbench    \
-            pcietestbench_dma_io  \
-            pcietestbench_dma_oo  \
-            pipe_mul         \
-            pipe_mul2        \
-            printf           \
-            simple           \
-            strstr           \
-	    ring             \
-	    perf             \
-	    nandsim          \
-            flowcontrol      \
-            bluescope        \
-	    splice           \
-	    maxcommonsubseq  \
-	    smithwaterman    \
-	    serialconfig     \
-	    noc              \
-	    noc2d            \
-	    fib              \
-	    xsim-echo        \
-	    imageon          \
-	    imageonfb        \
-            bscan            \
-            memread_nobuff_4m    \
-            memwrite_nobuff_4m   \
-            memcpy_buff_4m       \
+            memrw                \
+            memread128           \
+            memread2             \
+            mempoke              \
+            pcietestbench        \
+            pcietestbench_dma_io \
+            pcietestbench_dma_oo \
+            pipe_mul             \
+            pipe_mul2            \
+            printf               \
+            simple               \
+            strstr               \
+	    ring                 \
+	    perf                 \
+	    nandsim              \
+            flowcontrol          \
+            bluescope            \
+	    splice               \
+	    maxcommonsubseq      \
+	    smithwaterman        \
+	    serialconfig         \
+	    noc                  \
+	    noc2d                \
+	    fib                  \
+	    xsim-echo            \
+	    imageon              \
+	    imageonfb            \
+            bscan                \
+            memread_4m           \
+            memwrite_4m          \
 
-oo_memtests =  memcpy_buff_oo\
-            memread_buff_oo  \
-            memwrite_buff_oo \
-
-
-memtests =  memcpy_buff          \
-            memcpy_nobuff        \
-            memread_buff         \
-            memread_nobuff       \
-	    memwrite_buff        \
-	    memwrite_nobuff      \
-            memrw_buff           \
-            memrw_nobuff         \
+memtests =  memcpy               \
+            memread              \
+	    memwrite             \
+            memrw                \
 	    memread2             \
             echo                 \
             memread_manyclients  \
             memwrite_manyclients \
 
-
-
-zmemtests = memread_nobuff_4m\
-            memwrite_nobuff_4m\
-            memcpy_buff_4m\
-            memtests
+zmemtests = memread_4m           \
+            memwrite_4m          \
+            memtests             \
 
 
 #################################################################################################
