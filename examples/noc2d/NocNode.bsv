@@ -71,7 +71,7 @@ module mkNocArbitrate#(Vector#(n, Bit#(4)) id, Vector#(r, PipeOut#(a)) in, PipeI
    rule move;
       if (out.notFull && in[arb.grant_id].notEmpty)
 	 action
-	    $display("arb id [%d,%d] from %d", id[0], id[1], arb.grant_id);
+	    $display("arb id [%d,%d] link %d from %d", id[0], id[1], i, arb.grant_id);
 	    out.enq(in[arb.grant_id].first());
 	    in[arb.grant_id].deq();
 	 endaction
