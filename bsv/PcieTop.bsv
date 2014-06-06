@@ -91,7 +91,24 @@ provisos(
    Clock epClock125 <- exposeCurrentClock();
    Reset epReset125 <- exposeCurrentReset();
 
-   PcieSplitter    splitter    <- mkPcieSplitter();
+   let dispatcher <- mkTLPDispatcher;
+   let arbiter    <- mkTLPArbiter;
+
+   //Client#(TLPData#(16),TLPData#(16)) busClient;
+   Vector#(PortMax, Server#(TLPData#(16),TLPData#(16))) servers;
+   for (Integer i = 0; i < valueOf(PortMax); i=i+1) begin
+       servers[i] = (interface Server;
+                     interface response = dispatcher.out[i];
+                     interface request = arbiter.in[i];
+                  endinterface);
+   end
+
+   MemMasterEngine splitEngine <- mkMemMasterEngine(my_pciId);
+   mkConnection(servers[portConfig], splitEngine.tlp);
+   MemMasterEngine portalEngine <- mkMemMasterEngine(my_pciId);
+   mkConnection(servers[portPortal], portalEngine.tlp);
+   AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);
+   mkConnection(servers[portAxi], dmaEngine.tlp);
 
    // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
    // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
@@ -103,19 +120,16 @@ provisos(
 
    PcieTracer  traceif <- mkPcieTracer();
    mkConnection(gb.pci, traceif.pci);
-   mkConnection(traceif.bus, splitter.busClient);
+   mkConnection(traceif.bus, (
+       interface Client;
+          interface request = arbiter.outToBus;
+          interface response = dispatcher.inFromBus;
+       endinterface));
 
-   MemMasterEngine splitEngine <- mkMemMasterEngine(my_pciId);
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
    MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
-   mkConnection(splitter.servers[portConfig], splitEngine.tlp);
    mkConnection(splitEngine.master, my_slave);
 
-   MemMasterEngine portalEngine <- mkMemMasterEngine(my_pciId);
-   mkConnection(splitter.servers[portPortal], portalEngine.tlp);
-
-   AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);
-   mkConnection(splitter.servers[portAxi], dmaEngine.tlp);
    interface msixEntry = csr.msixEntry;
    interface master = portalEngine.master;
    interface slave = dmaEngine.slave;

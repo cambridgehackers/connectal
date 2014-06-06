@@ -161,27 +161,4 @@ module mkTLPArbiter(TLPArbiter);
    interface Get outToBus     = toGet(tlp_out_fifo);
 endmodule
 
-interface PcieSplitter;
-   interface Client#(TLPData#(16),TLPData#(16)) busClient;
-   interface Vector#(PortMax, Server#(TLPData#(16),TLPData#(16))) servers;
-endinterface
-
-module mkPcieSplitter(PcieSplitter);
-   let dispatcher <- mkTLPDispatcher;
-   let arbiter    <- mkTLPArbiter;
-
-   Vector#(PortMax, Server#(TLPData#(16), TLPData#(16))) serv;
-   for (Integer i = 0; i < valueOf(PortMax); i=i+1)
-       serv[i] = (interface Server;
-                     interface response = dispatcher.out[i];
-                     interface request = arbiter.in[i];
-                  endinterface);
-
-   interface Client busClient;
-      interface request = arbiter.outToBus;
-      interface response = dispatcher.inFromBus;
-   endinterface
-   interface servers = serv;
-endmodule
-
 endpackage: PcieSplitter

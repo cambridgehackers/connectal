@@ -38,7 +38,6 @@ interface MemMasterEngine;
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface MemMaster#(32,32) master;
     interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
-    interface Reg#(Bit#(ObjectTagSize))       bTag;
 endinterface
 
 (* synthesize *)
@@ -53,7 +52,6 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     FIFOF#(TLPMemoryIO3DWHeader) writeDataFifo <- mkSizedFIFOF(8);
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkSizedFIFOF(8);
     Reg#(TLPTag) tlpTag <- mkReg(0);
-    Reg#(Bit#(ObjectTagSize)) bTagReg <- mkReg(0);
 
     MIMOConfiguration mimoCfg = defaultValue;
     MIMO#(1,4,16,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
@@ -262,7 +260,6 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
        endinterface
         interface Put       writeDone;
 	  method Action put(Bit#(ObjectTagSize) resp);
-             bTagReg <= resp;
 	  endmethod
        endinterface
      endinterface
@@ -290,5 +287,4 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
           interruptRequestFifo.enq(intr);
        endmethod
     endinterface
-    interface Reg bTag = bTagReg;
 endmodule: mkMemMasterEngine
