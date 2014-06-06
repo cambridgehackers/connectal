@@ -77,10 +77,10 @@ interface PcieHost#(numeric type dsz);
    interface MemMaster#(32,32) master;
    interface Axi3Slave#(40,dsz,6)  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
+   interface Client#(TLPData#(16), TLPData#(16)) pci;
 endinterface
 
-module [Module] mkPcieHost #(Clock epClock250, Reset epReset250, PciId my_pciId,
-Server#(TLPData#(8), TLPData#(8)) ep_tlp)(PcieHost#(dsz))
+module [Module] mkPcieHost#(PciId my_pciId)(PcieHost#(dsz))
 provisos(
    Mul#(TDiv#(dsz, 8), 8, dsz),
     Add#(a__, TDiv#(dsz, 32), 8),
@@ -97,28 +97,19 @@ provisos(
 
    Vector#(PortMax, MemMasterEngine) mvec;
    for (Integer i = 0; i < valueOf(PortMax); i=i+1) begin
-       let serv = (interface Server;
-                     interface response = dispatcher.out[i];
-                     interface request = arbiter.in[i];
-                  endinterface);
-       if (i == portAxi)
-           mkConnection(serv, sEngine.tlp);
-       else begin
+       let tlp = sEngine.tlp;
+       if (i != portAxi) begin
            mvec[i] <- mkMemMasterEngine(my_pciId);
-           mkConnection(serv, mvec[i].tlp);
+           tlp = mvec[i].tlp;
        end
+       mkConnection((interface Server;
+                        interface response = dispatcher.out[i];
+                        interface request = arbiter.in[i];
+                     endinterface), tlp);
    end
 
-   // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
-   // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
-   // connection between the endpoint and the AXI contains GearBox
-   // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
-   // conversion.
-   PcieGearbox gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125);
-   mkConnection(ep_tlp, gb.tlp, clocked_by epClock250, reset_by epReset250);
-
    PcieTracer  traceif <- mkPcieTracer();
-   mkConnection(gb.pci, traceif.pci);
+   //mkConnection(gb.pci, traceif.pci);
    mkConnection(traceif.bus, (interface Client;
                                  interface request = arbiter.outToBus;
                                  interface response = dispatcher.inFromBus;
@@ -132,6 +123,7 @@ provisos(
    interface master = mvec[portPortal].master;
    interface slave = sEngine.slave;
    interface interruptRequest = mvec[portPortal].interruptRequest;
+   interface pci = traceif.pci;
 endmodule: mkPcieHost
 
 
@@ -173,9 +165,18 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
    Reset epReset125 <- mkAsyncReset(4, user_reset_n, epClock125);
 
    let portalTop <- mkSynthesizeablePortalTop(clocked_by epClock125, reset_by epReset125);
-   PcieHost#(DataBusWidth) pciehost <- mkPcieHost(epClock250, epReset250,
+   PcieHost#(DataBusWidth) pciehost <- mkPcieHost(
          PciId{ bus:  _ep.cfg.bus_number(), dev: _ep.cfg.device_number(), func: _ep.cfg.function_number()},
-         _ep.tlp, clocked_by epClock125, reset_by epReset125);
+         clocked_by epClock125, reset_by epReset125);
+
+   // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
+   // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
+   // connection between the endpoint and the AXI contains GearBox
+   // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
+   // conversion.
+   PcieGearbox gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125);
+   mkConnection(_ep.tlp, gb.tlp, clocked_by epClock250, reset_by epReset250);
+   mkConnection(gb.pci, pciehost.pci, clocked_by epClock125, reset_by epReset125);
 
    mkConnection(pciehost.master, portalTop.slave, clocked_by epClock125, reset_by epReset125);
    if (valueOf(NumberOfMasters) > 0) begin
