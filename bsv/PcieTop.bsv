@@ -79,7 +79,6 @@ interface PcieHost#(numeric type dsz);
 endinterface
 
 module [Module] mkPcieHost #(Clock epClock250, Reset epReset250, PciId my_pciId,
-   Vector#(`NumberOfMasters,MemMaster#(40, dsz)) masters,
 Server#(TLPData#(8), TLPData#(8)) ep_tlp)(PcieHost#(dsz))
 provisos(
    Mul#(TDiv#(dsz, 8), 8, dsz),
@@ -114,15 +113,9 @@ provisos(
 
    MemMasterEngine portalEngine <- mkMemMasterEngine(my_pciId);
    mkConnection(splitter.servers[portPortal], portalEngine.tlp);
-   //mkConnection(portalEngine.master, ptslave);
 
    AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);
    mkConnection(splitter.servers[portAxi], dmaEngine.tlp);
-   if (`NumberOfMasters > 0) begin
-      Vector#(`NumberOfMasters,Axi3Master#(40,dsz,6)) m_axis;   
-      m_axis[0] <- mkAxiDmaMaster(masters[0]);
-      mkConnection(m_axis[0], dmaEngine.slave);
-   end
    interface msixEntry = csr.msixEntry;
    interface master = portalEngine.master;
    interface slave = dmaEngine.slave;
@@ -168,10 +161,14 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
    let portalTop <- mkPortalTop(clocked_by epClock125, reset_by epReset125);
    PcieHost#(dsz) pciehost <- mkPcieHost(epClock250, epReset250,
          PciId{ bus:  _ep.cfg.bus_number(), dev: _ep.cfg.device_number(), func: _ep.cfg.function_number()},
-         portalTop.masters,
          _ep.tlp, clocked_by epClock125, reset_by epReset125);
 
    mkConnection(pciehost.master, portalTop.slave, clocked_by epClock125, reset_by epReset125);
+   if (`NumberOfMasters > 0) begin
+      Vector#(`NumberOfMasters,Axi3Master#(40,dsz,6)) m_axis;   
+      m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0], clocked_by epClock125, reset_by epReset125);
+      mkConnection(m_axis[0], pciehost.slave, clocked_by epClock125, reset_by epReset125);
+   end
 
    // going from level to edge-triggered interrupt
    Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by epClock125, reset_by epReset125));
