@@ -57,7 +57,7 @@ function Action move(PipeOut#(DataMessage) from, PipeIn#(DataMessage) to);
 endfunction
 
 
-module mkNocArbitrate#(Vector#(n, Bit#(4)) id, Vector#(r, PipeOut#(a)) in, PipeIn#(a) out)(Empty)
+module mkNocArbitrate#(Vector#(n, Bit#(4)) id, Bit#(4) outlink, Vector#(r, PipeOut#(a)) in, PipeIn#(a) out)(Empty)
 /*   provisos(
       Add#(0,n,2),
       Add#(0,r,5)
@@ -71,7 +71,7 @@ module mkNocArbitrate#(Vector#(n, Bit#(4)) id, Vector#(r, PipeOut#(a)) in, PipeI
    rule move;
       if (out.notFull && in[arb.grant_id].notEmpty)
 	 action
-	    $display("arb id [%d,%d] link %d from %d", id[0], id[1], i, arb.grant_id);
+	    $display("arb id [%d,%d] link %d from %d", id[0], id[1], outlink, arb.grant_id);
 	    out.enq(in[arb.grant_id].first());
 	    in[arb.grant_id].deq();
 	 endaction
@@ -196,7 +196,7 @@ module mkNocNode#(Vector#(NumDims, Bit#(4)) id)(NocNode#(NumDims));
       begin
 	 for (Integer x = 0; x < radix; x = x + 1)
 	    tmpout[x] = toPipeOut(xp[x][y]);
-	 mkNocArbitrate(id, tmpout, switchout[y]);
+	 mkNocArbitrate(id, y, tmpout, switchout[y]);
       end
 
   // interface wiring
