@@ -59,9 +59,10 @@ typedef 8 NumLeds;
 `endif
 `ifndef PinType
 `define PinType Empty
-`endif
 
-typedef (function Module#(PortalTop#(40, dsz, ipins, `NumberOfMasters)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins);
+typedef `DataBusWidth DataBusWidth;
+typedef `NumberOfMasters NumberOfMasters;
+typedef `PinType PinType;
 
 interface PcieTop#(type ipins);
    (* prefix="PCIE" *)
@@ -133,18 +134,20 @@ provisos(
    interface interruptRequest = mvec[portPortal].interruptRequest;
 endmodule: mkPcieHost
 
+
+(* synthesize *)
+module mkSynthesizeablePortalTop(PortalTop#(40, DataBusWidth, Empty, NumberOfMasters));
+   let top <- mkPortalTop();
+   interface masters = top.masters;
+   interface slave = top.slave;
+   interface interrupt = top.interrupt;
+   interface leds = top.leds;
+   interface pins = top.pins;
+endmodule
+
 (* no_default_clock, no_default_reset *)
-module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n,
-				      MkPortalTop#(dsz, ipins) mkPortalTop)
-   (PcieTop#(ipins))
-   provisos (Mul#(TDiv#(dsz, 32), 32, dsz),
-	     Add#(b__, 32, dsz),
-	     Add#(c__, dsz, 256),
-	     Add#(d__, TMul#(8, TDiv#(dsz, 32)), 64),
-	     Add#(e__, TMul#(32, TDiv#(dsz, 32)), 256),
-	     Add#(f__, TDiv#(dsz, 32), 8),
-	     Mul#(TDiv#(dsz, 8), 8, dsz)
-      );
+module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)
+   (PcieTop#(PinType));
 
    Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
@@ -169,16 +172,15 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
    Clock epClock125 = clkgen.clkout0; /* half speed user_clk */
    Reset epReset125 <- mkAsyncReset(4, user_reset_n, epClock125);
 
-   let portalTop <- mkPortalTop(clocked_by epClock125, reset_by epReset125);
-   PcieHost#(dsz) pciehost <- mkPcieHost(epClock250, epReset250,
+   let portalTop <- mkSynthesizeablePortalTop(clocked_by epClock125, reset_by epReset125);
+   PcieHost#(DataBusWidth) pciehost <- mkPcieHost(epClock250, epReset250,
          PciId{ bus:  _ep.cfg.bus_number(), dev: _ep.cfg.device_number(), func: _ep.cfg.function_number()},
          _ep.tlp, clocked_by epClock125, reset_by epReset125);
 
    mkConnection(pciehost.master, portalTop.slave, clocked_by epClock125, reset_by epReset125);
-   if (`NumberOfMasters > 0) begin
-      Vector#(`NumberOfMasters,Axi3Master#(40,dsz,6)) m_axis;   
-      m_axis[0] <- mkAxiDmaMaster(portalTop.masters[0], clocked_by epClock125, reset_by epReset125);
-      mkConnection(m_axis[0], pciehost.slave, clocked_by epClock125, reset_by epReset125);
+   if (valueOf(NumberOfMasters) > 0) begin
+      Axi3Master#(40,DataBusWidth,6) m_axis <- mkAxiDmaMaster(portalTop.masters[0], clocked_by epClock125, reset_by epReset125);
+      mkConnection(m_axis, pciehost.slave, clocked_by epClock125, reset_by epReset125);
    end
 
    // going from level to edge-triggered interrupt
@@ -203,18 +205,8 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
    interface pins = portalTop.pins;
 endmodule: mkPcieTopFromPortal
 
-(* synthesize *)
-module mkSynthesizeablePortalTop(PortalTop#(40, `DataBusWidth, Empty, `NumberOfMasters));
-   let top <- mkPortalTop();
-   interface masters = top.masters;
-   interface slave = top.slave;
-   interface interrupt = top.interrupt;
-   interface leds = top.leds;
-   interface pins = top.pins;
-endmodule
-
 module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)
-   (PcieTop#(`PinType));
-   let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n,mkSynthesizeablePortalTop);
+   (PcieTop#(PinType));
+   let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
    return top;
 endmodule: mkPcieTop
