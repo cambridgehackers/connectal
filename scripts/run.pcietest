@@ -3,6 +3,8 @@ set -x
 set -e
 export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 echo "run.pcie parameters are:" $*
+SSHPARAM="-o -o StrictHostKeyChecking=no"
+
 if [ "$SERIALNO" != "" ]; then
     BOARD_SERIAL="-s $SERIALNO"
 else
@@ -10,13 +12,13 @@ else
 fi
 if [ "$RUNPARAM" != "" ]; then
     TEMPDIR=/tmp/`uname -n`-$PPID-pcie
-    ssh $RUNPARAM "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
+    ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
     scp $1 $2 $RUNPARAM:$TEMPDIR
     BINNAME=`basename $1`
     EXENAME=`basename $2`
-    ssh $RUNPARAM "fpgajtag $BOARD_SERIAL $TEMPDIR/$BINNAME"
-    ssh $RUNPARAM "timeout 3m catchsegv $TEMPDIR/$EXENAME"
-    ssh $RUNPARAM "rm -rf $TEMPDIR"
+    ssh $SSHPARAM $RUNPARAM "fpgajtag $BOARD_SERIAL $TEMPDIR/$BINNAME"
+    ssh $SSHPARAM $RUNPARAM "timeout 3m catchsegv $TEMPDIR/$EXENAME"
+    ssh $SSHPARAM $RUNPARAM "rm -rf $TEMPDIR"
 else
     fpgajtag $BOARD_SERIAL $1
     timeout 3m catchsegv $2
