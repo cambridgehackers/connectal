@@ -249,7 +249,7 @@ module mkSGListMMU#(DmaIndication dmaIndication)(SGListMMU#(addrWidth))
       // $display("sglist(ptr=%d, paddr=%h, len=%h", ptr, paddr,len);
       if (idxReg+1 == 0) begin
 	 $display("sglist: exceeded maximun length of sglist");
-	 dmaIndication.badNumberEntries(extend(ptr),len);
+	 dmaIndication.badNumberEntries(extend(ptr),len, extend(idxReg));
       end
       else begin
 	 Page page = tagged POrd0 0;

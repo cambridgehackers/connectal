@@ -49,8 +49,8 @@ class DmaIndication : public DmaIndicationWrapper
   virtual void badPageSize (uint32_t pointer, uint32_t len) {
     fprintf(stderr, "DmaIndication::badPageSize(pointer=%x, len=%x)\n", pointer, len);
   }
-  virtual void badNumberEntries (uint32_t pointer, uint32_t len) {
-    fprintf(stderr, "DmaIndication::badNumberEntries(pointer=%x, len=%x)\n", pointer, len);
+  virtual void badNumberEntries (uint32_t pointer, uint32_t len, uint32_t idx) {
+    fprintf(stderr, "DmaIndication::badNumberEntries(pointer=%x, len=%x, idx=%x)\n", pointer, len, idx);
   }
   virtual void badAddrTrans (uint32_t pointer, uint64_t offset, uint64_t barrier) {
     fprintf(stderr, "DmaIndication::badAddrTrans(pointer=%x, offset=%"PRIx64" barrier=%"PRIx64"\n", pointer, offset, barrier);
