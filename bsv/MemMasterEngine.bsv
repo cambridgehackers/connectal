@@ -37,13 +37,11 @@ import Dma          :: *;
 interface MemMasterEngine;
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface MemMaster#(32,32) master;
-    interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
+    interface FIFOF#(TLPData#(16)) ofifo;
 endinterface
 
 (* synthesize *)
 module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
-    FIFOF#(Tuple2#(Bit#(64),Bit#(32))) interruptRequestFifo <- mkSizedFIFOF(16);
-    Reg#(Maybe#(Bit#(32))) interruptSecondHalf <- mkReg(tagged Invalid);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bit#(4)) timerReg <- mkReg(0);
     FIFOF#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkSizedFIFOF(8);
@@ -56,7 +54,8 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     MIMOConfiguration mimoCfg = defaultValue;
     MIMO#(1,4,16,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
    Reg#(TLPLength) readBurstCount <- mkReg(0);
-   rule completionHeader if (readBurstCount == 0 && readDataFifo.notEmpty() && completionMimo.deqReadyN(1) &&& interruptSecondHalf matches tagged Invalid);
+   rule completionHeader if (readBurstCount == 0 && readDataFifo.notEmpty() && completionMimo.deqReadyN(1));
+// &&& interruptSecondHalf matches tagged Invalid);
       let hdr = readDataFifo.first;
       TLPLength rbc = hdr.length;
 
@@ -149,6 +148,86 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
       timerReg <= timerReg - 1;
    endrule
 
+    interface Client        tlp;
+    interface Put response;
+        method Action put(TLPData#(16) tlp);
+	    //$display("MemMasterEngine.put tlp=%h", tlp);
+	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
+	    hitReg <= tlp.hit;
+	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
+	    if (hdr_3dw.format == MEM_READ_3DW_NO_DATA) begin
+	       if (readHeaderFifo.notFull())
+	          readHeaderFifo.enq(hdr_3dw);
+	       else begin
+		  // FIXME: should generate a response or host will lock up
+	       end
+	    end
+	    else begin
+	       if (writeHeaderFifo.notFull())
+		  writeHeaderFifo.enq(hdr_3dw);
+	    end
+            timerReg <= truncate(32'hFFFFFFFF);
+	endmethod
+    endinterface
+    interface Get request = toGet(tlpOutFifo);
+    endinterface: tlp
+    interface MemMaster master;
+    interface MemWriteClient write_client;
+        interface Get    writeReq;
+	  method ActionValue#(MemRequest#(32)) get();
+// if (interruptSecondHalf matches tagged Invalid);
+	     let hdr = writeHeaderFifo.first;
+	     writeHeaderFifo.deq;
+	     writeDataFifo.enq(hdr);
+	     let axilen = hdr.length;
+	     return MemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: truncate(axilen), tag: truncate(writeHeaderFifo.first.tag)};
+	  endmethod
+       endinterface
+        interface Get writeData;
+	  method ActionValue#(MemData#(32)) get();
+	     writeDataFifo.deq;
+	     let data = writeDataFifo.first.data;
+	     data = byteSwap(data);
+	     return MemData { data: data, tag: truncate(writeDataFifo.first.tag)};
+	  endmethod
+       endinterface
+        interface Put       writeDone;
+	  method Action put(Bit#(ObjectTagSize) resp);
+	  endmethod
+       endinterface
+     endinterface
+    interface MemReadClient read_client;
+        interface Get    readReq;
+	  method ActionValue#(MemRequest#(32)) get();
+	     let hdr = readHeaderFifo.first;
+	     readHeaderFifo.deq;
+	     //$display("req_ar hdr.length=%d hdr.addr=%h", hdr.length, hdr.addr);
+	     readDataFifo.enq(hdr);
+	     let axilen = hdr.length;
+	     return MemRequest { addr: extend(readHeaderFifo.first.addr) << 2, burstLen: truncate(axilen), tag: truncate(readHeaderFifo.first.tag)};
+	    endmethod
+       endinterface
+        interface Put readData;
+	  method Action put(MemData#(32) resp) if (completionMimo.enqReadyN(1));
+	     Vector#(1, Bit#(32)) vec = cons(resp.data, nil);
+	     completionMimo.enq(1, vec);
+	  endmethod
+	endinterface
+    endinterface
+    endinterface: master
+    interface ofifo = tlpOutFifo;
+endmodule: mkMemMasterEngine
+
+interface MemInterrupt;
+    interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
+endinterface
+
+//(* synthesize *)
+module mkMemInterrupt#(PciId my_id, FIFOF#(TLPData#(16)) tlpOutFifo)(MemInterrupt);
+    FIFOF#(Tuple2#(Bit#(64),Bit#(32))) interruptRequestFifo <- mkSizedFIFOF(16);
+    Reg#(Maybe#(Bit#(32))) interruptSecondHalf <- mkReg(tagged Invalid);
+    Reg#(TLPTag) tlpTag <- mkReg(0);
+
     rule interruptTlpOut if (interruptRequestFifo.notEmpty &&& interruptSecondHalf matches tagged Invalid);
        TLPData#(16) tlp = defaultValue;
        tlp.sof = True;
@@ -216,75 +295,9 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
        interruptRequestFifo.deq();
     endrule
 
-    interface Client        tlp;
-    interface Put response;
-        method Action put(TLPData#(16) tlp);
-	    //$display("MemMasterEngine.put tlp=%h", tlp);
-	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
-	    hitReg <= tlp.hit;
-	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
-	    if (hdr_3dw.format == MEM_READ_3DW_NO_DATA) begin
-	       if (readHeaderFifo.notFull())
-	          readHeaderFifo.enq(hdr_3dw);
-	       else begin
-		  // FIXME: should generate a response or host will lock up
-	       end
-	    end
-	    else begin
-	       if (writeHeaderFifo.notFull())
-		  writeHeaderFifo.enq(hdr_3dw);
-	    end
-            timerReg <= truncate(32'hFFFFFFFF);
-	endmethod
-    endinterface
-    interface Get request = toGet(tlpOutFifo);
-    endinterface: tlp
-    interface MemMaster master;
-    interface MemWriteClient write_client;
-        interface Get    writeReq;
-	  method ActionValue#(MemRequest#(32)) get() if (interruptSecondHalf matches tagged Invalid);
-	     let hdr = writeHeaderFifo.first;
-	     writeHeaderFifo.deq;
-	     writeDataFifo.enq(hdr);
-	     let axilen = hdr.length;
-	     return MemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: truncate(axilen), tag: truncate(writeHeaderFifo.first.tag)};
-	  endmethod
-       endinterface
-        interface Get writeData;
-	  method ActionValue#(MemData#(32)) get();
-	     writeDataFifo.deq;
-	     let data = writeDataFifo.first.data;
-	     data = byteSwap(data);
-	     return MemData { data: data, tag: truncate(writeDataFifo.first.tag)};
-	  endmethod
-       endinterface
-        interface Put       writeDone;
-	  method Action put(Bit#(ObjectTagSize) resp);
-	  endmethod
-       endinterface
-     endinterface
-    interface MemReadClient read_client;
-        interface Get    readReq;
-	  method ActionValue#(MemRequest#(32)) get();
-	     let hdr = readHeaderFifo.first;
-	     readHeaderFifo.deq;
-	     //$display("req_ar hdr.length=%d hdr.addr=%h", hdr.length, hdr.addr);
-	     readDataFifo.enq(hdr);
-	     let axilen = hdr.length;
-	     return MemRequest { addr: extend(readHeaderFifo.first.addr) << 2, burstLen: truncate(axilen), tag: truncate(readHeaderFifo.first.tag)};
-	    endmethod
-       endinterface
-        interface Put readData;
-	  method Action put(MemData#(32) resp) if (completionMimo.enqReadyN(1));
-	     Vector#(1, Bit#(32)) vec = cons(resp.data, nil);
-	     completionMimo.enq(1, vec);
-	  endmethod
-	endinterface
-    endinterface
-    endinterface: master
     interface Put interruptRequest;
        method Action put(Tuple2#(Bit#(64),Bit#(32)) intr);
           interruptRequestFifo.enq(intr);
        endmethod
     endinterface
-endmodule: mkMemMasterEngine
+endmodule: mkMemInterrupt

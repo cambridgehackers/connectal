@@ -26,7 +26,8 @@ import ClientServer :: *;
 Integer portConfig = 0;
 Integer portPortal = 1;
 Integer portAxi    = 2;
-typedef 3 PortMax;
+Integer portInterrupt = 3;
+typedef 4 PortMax;
 
 // When TLP packets come in from the PCIe bus, they are dispatched to
 // either the configuration register block, the portal (AXI slave) or

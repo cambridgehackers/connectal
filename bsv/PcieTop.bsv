@@ -109,7 +109,6 @@ provisos(
    end
 
    PcieTracer  traceif <- mkPcieTracer();
-   //mkConnection(gb.pci, traceif.pci);
    mkConnection(traceif.bus, (interface Client;
                                  interface request = arbiter.outToBus;
                                  interface response = dispatcher.inFromBus;
@@ -118,14 +117,14 @@ provisos(
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
    MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
    mkConnection(mvec[portConfig].master, my_slave);
+   MemInterrupt intr <- mkMemInterrupt(my_pciId, mvec[portInterrupt].ofifo);
 
    interface msixEntry = csr.msixEntry;
    interface master = mvec[portPortal].master;
    interface slave = sEngine.slave;
-   interface interruptRequest = mvec[portPortal].interruptRequest;
+   interface interruptRequest = intr.interruptRequest;
    interface pci = traceif.pci;
 endmodule: mkPcieHost
-
 
 (* synthesize *)
 module mkSynthesizeablePortalTop(PortalTop#(40, DataBusWidth, Empty, NumberOfMasters));
