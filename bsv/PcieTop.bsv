@@ -92,26 +92,19 @@ provisos(
    Reset epReset125 <- exposeCurrentReset();
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
-   Axi3Slave#(40,dsz,6) slav = ?;
-   Put#(Tuple2#(Bit#(64),Bit#(32))) intreq = ?;
+   AxiSlaveEngine#(dsz) sEngine <- mkAxiSlaveEngine(my_pciId);
 
-   Vector#(PortMax, MemMaster#(32,32)) mvec;
+   Vector#(PortMax, MemMasterEngine) mvec;
    for (Integer i = 0; i < valueOf(PortMax); i=i+1) begin
        let serv = (interface Server;
                      interface response = dispatcher.out[i];
                      interface request = arbiter.in[i];
                   endinterface);
-       if (i == portAxi) begin
-           AxiSlaveEngine#(dsz) sEngine <- mkAxiSlaveEngine(my_pciId);
+       if (i == portAxi)
            mkConnection(serv, sEngine.tlp);
-           slav = sEngine.slave;
-       end
        else begin
-           MemMasterEngine mEngine <- mkMemMasterEngine(my_pciId);
-           mkConnection(serv, mEngine.tlp);
-           mvec[i] = mEngine.master;
-           if (i == portPortal)
-               intreq = mEngine.interruptRequest;
+           mvec[i] <- mkMemMasterEngine(my_pciId);
+           mkConnection(serv, mvec[i].tlp);
        end
    end
 
@@ -132,12 +125,12 @@ provisos(
 
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
    MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
-   mkConnection(mvec[portConfig], my_slave);
+   mkConnection(mvec[portConfig].master, my_slave);
 
    interface msixEntry = csr.msixEntry;
-   interface master = mvec[portPortal];
-   interface slave = slav;
-   interface interruptRequest = intreq;
+   interface master = mvec[portPortal].master;
+   interface slave = sEngine.slave;
+   interface interruptRequest = mvec[portPortal].interruptRequest;
 endmodule: mkPcieHost
 
 (* no_default_clock, no_default_reset *)
