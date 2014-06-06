@@ -236,17 +236,6 @@ zmemtests.bluesim: $(addsuffix .bluesim, $(zmemtests))
 zmemtests.bluesimrun: $(addsuffix .bluesimrun, $(zmemtests))
 
 #################################################################################################
-# oo_memtests
-
-oo_memtests.zedboard: $(addsuffix .zedboard, $(oo_memtests))
-
-oo_memtests.kc705: $(addsuffix .kc705, $(oo_memtests))
-
-oo_memtests.bluesim: $(addsuffix .bluesim, $(oo_memtests))
-
-oo_memtests.bluesimrun: $(addsuffix .bluesimrun, $(oo_memtests))
-
-#################################################################################################
 # misc
 
 android_exetests = $(addsuffix .android_exe, $(testnames))
