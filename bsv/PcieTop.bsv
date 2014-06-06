@@ -128,16 +128,18 @@ provisos(
 
    // going from level to edge-triggered interrupt
    Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False));
-   for (Integer i = 0; i < 15; i = i + 1) begin
-      // intr_num 0 for the directory
-      Integer intr_num = i+1;
-      MSIX_Entry msixEntry = csr.msixEntry[intr_num];
-      rule interruptRequest;
-	 if (ptinterrupt[i] && !interruptRequested[i])
-	    portalEngine.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
+   rule interrupt_rule;
+     Integer intr_num = 0;
+     for (Integer i = 0; i < 15; i = i + 1) begin
+	 if (intr_num == 0 && ptinterrupt[i] && !interruptRequested[i])
+             intr_num = i+1;
 	 interruptRequested[i] <= ptinterrupt[i];
-      endrule
-   end
+     end
+     if (intr_num != 0) begin // i= 0 for the directory
+        MSIX_Entry msixEntry = csr.msixEntry[intr_num];
+        portalEngine.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
+     end
+   endrule
    interface msixEntry = csr.msixEntry;
    interface master = portalEngine.master;
    interface slave = dmaEngine.slave;
@@ -189,20 +191,6 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
          _ep.tlp, clocked_by epClock125, reset_by epReset125);
 
    mkConnection(pciehost.master, portalTop.slave, clocked_by epClock125, reset_by epReset125);
-   // going from level to edge-triggered interrupt
-   Vector#(15, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by epClock125, reset_by epReset125));
-   for (Integer i = 0; i < 15; i = i + 1) begin
-      // intr_num 0 for the directory
-      Integer intr_num = i+1;
-      MSIX_Entry msixEntry = pciehost.msixEntry[intr_num];
-/*
-      rule interruptRequest;
-	 if (portalTop.interrupt[i] && !interruptRequested[i])
-	    pciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
-	 interruptRequested[i] <= portalTop.interrupt[i];
-      endrule
-*/
-   end
 
    interface pcie = _ep.pcie;
    method Bit#(NumLeds) leds();
