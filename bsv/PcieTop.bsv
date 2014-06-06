@@ -94,11 +94,14 @@ provisos(
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
    AxiSlaveEngine#(dsz) sEngine <- mkAxiSlaveEngine(my_pciId);
+   MemInterrupt intr <- mkMemInterrupt(my_pciId);
 
    Vector#(PortMax, MemMasterEngine) mvec;
    for (Integer i = 0; i < valueOf(PortMax); i=i+1) begin
        let tlp = sEngine.tlp;
-       if (i != portAxi) begin
+       if (i == portInterrupt)
+           tlp = intr.tlp;
+       else if (i != portAxi) begin
            mvec[i] <- mkMemMasterEngine(my_pciId);
            tlp = mvec[i].tlp;
        end
@@ -117,7 +120,6 @@ provisos(
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
    MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
    mkConnection(mvec[portConfig].master, my_slave);
-   MemInterrupt intr <- mkMemInterrupt(my_pciId, mvec[portInterrupt].ofifo);
 
    interface msixEntry = csr.msixEntry;
    interface master = mvec[portPortal].master;

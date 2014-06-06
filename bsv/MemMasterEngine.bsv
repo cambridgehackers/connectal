@@ -37,7 +37,6 @@ import Dma          :: *;
 interface MemMasterEngine;
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface MemMaster#(32,32) master;
-    interface FIFOF#(TLPData#(16)) ofifo;
 endinterface
 
 (* synthesize *)
@@ -215,18 +214,19 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
 	endinterface
     endinterface
     endinterface: master
-    interface ofifo = tlpOutFifo;
 endmodule: mkMemMasterEngine
 
 interface MemInterrupt;
+    interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
 endinterface
 
 //(* synthesize *)
-module mkMemInterrupt#(PciId my_id, FIFOF#(TLPData#(16)) tlpOutFifo)(MemInterrupt);
+module mkMemInterrupt#(PciId my_id)(MemInterrupt);
     FIFOF#(Tuple2#(Bit#(64),Bit#(32))) interruptRequestFifo <- mkSizedFIFOF(16);
     Reg#(Maybe#(Bit#(32))) interruptSecondHalf <- mkReg(tagged Invalid);
     Reg#(TLPTag) tlpTag <- mkReg(0);
+    FIFOF#(TLPData#(16)) tlpOutFifo <- mkSizedFIFOF(8);
 
     rule interruptTlpOut if (interruptRequestFifo.notEmpty &&& interruptSecondHalf matches tagged Invalid);
        TLPData#(16) tlp = defaultValue;
@@ -295,6 +295,13 @@ module mkMemInterrupt#(PciId my_id, FIFOF#(TLPData#(16)) tlpOutFifo)(MemInterrup
        interruptRequestFifo.deq();
     endrule
 
+    interface Client        tlp;
+    interface Put response;
+        method Action put(TLPData#(16) tlp);
+	endmethod
+    endinterface
+    interface Get request = toGet(tlpOutFifo);
+    endinterface: tlp
     interface Put interruptRequest;
        method Action put(Tuple2#(Bit#(64),Bit#(32)) intr);
           interruptRequestFifo.enq(intr);
