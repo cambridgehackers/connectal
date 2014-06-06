@@ -218,7 +218,7 @@ vc707runs = $(addsuffix .vc707run, $(testnames))
 vc707runs: $(vc707runs)
 
 $(vc707runs):
-	scripts/run.pcietest examples/$(basename $@)/vc707/hw/mk*.bin examples/$(basename $@)/vc707/jni/mkpcietop
+	scripts/run.pcietest examples/$(basename $@)/vc707/bin/mk*.bin.gz examples/$(basename $@)/vc707/bin/mkpcietop
 
 #################################################################################################
 # kc705
@@ -234,7 +234,7 @@ kc705runs = $(addsuffix .kc705run, $(testnames))
 kc705runs: $(kc705runs)
 
 $(kc705runs):
-	scripts/run.pcietest examples/$(basename $@)/kc705/hw/mk*.bin examples/$(basename $@)/kc705/jni/mkpcietop
+	scripts/run.pcietest examples/$(basename $@)/kc705/bin/mk*.bin.gz examples/$(basename $@)/kc705/bin/mkpcietop
 
 
 #################################################################################################
@@ -294,7 +294,7 @@ ac701runs = $(addsuffix .ac701run, $(testnames))
 ac701runs: $(ac701runs)
 
 $(ac701runs):
-	scripts/run.pcietest examples/$(basename $@)/ac701/hw/mk*.bin examples/$(basename $@)/ac701/jni/mkpcietop
+	scripts/run.pcietest examples/$(basename $@)/ac701/bin/mk*.bin.gz examples/$(basename $@)/ac701/bin/mkpcietop
 
 zynqdrivers:
 	(cd drivers/zynqportal/; DEVICE_XILINX_KERNEL=`pwd`/../../../device_xilinx_kernel/ make zynqportal.ko)

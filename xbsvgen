@@ -331,7 +331,7 @@ hw/mkTop.bit: $(vfile)
 implementation: bits
 
 program:
-	fpgajtag hw/mkTop.bin
+	fpgajtag bin/mkTop.bin.gz
 
 reprogram:
 	vivado -mode batch -source %(dut)s-reprogram.tcl $(VIVADOFLAGS)
@@ -408,7 +408,7 @@ run:
     else
 
 run: program
-	timeout 3m catchsegv ./jni/mkpcietop $(RUN_ARGS)
+	timeout 3m catchsegv ./bin/mkpcietop $(RUN_ARGS)
 
     endif
 endif
