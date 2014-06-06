@@ -90,25 +90,30 @@ provisos(
     Mul#(TDiv#(dsz, 32), 32, dsz));
    Clock epClock125 <- exposeCurrentClock();
    Reset epReset125 <- exposeCurrentReset();
-
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
+   Axi3Slave#(40,dsz,6) slav = ?;
+   Put#(Tuple2#(Bit#(64),Bit#(32))) intreq = ?;
 
-   //Client#(TLPData#(16),TLPData#(16)) busClient;
-   Vector#(PortMax, Server#(TLPData#(16),TLPData#(16))) servers;
+   Vector#(PortMax, MemMaster#(32,32)) mvec;
    for (Integer i = 0; i < valueOf(PortMax); i=i+1) begin
-       servers[i] = (interface Server;
+       let serv = (interface Server;
                      interface response = dispatcher.out[i];
                      interface request = arbiter.in[i];
                   endinterface);
+       if (i == portAxi) begin
+           AxiSlaveEngine#(dsz) sEngine <- mkAxiSlaveEngine(my_pciId);
+           mkConnection(serv, sEngine.tlp);
+           slav = sEngine.slave;
+       end
+       else begin
+           MemMasterEngine mEngine <- mkMemMasterEngine(my_pciId);
+           mkConnection(serv, mEngine.tlp);
+           mvec[i] = mEngine.master;
+           if (i == portPortal)
+               intreq = mEngine.interruptRequest;
+       end
    end
-
-   MemMasterEngine splitEngine <- mkMemMasterEngine(my_pciId);
-   mkConnection(servers[portConfig], splitEngine.tlp);
-   MemMasterEngine portalEngine <- mkMemMasterEngine(my_pciId);
-   mkConnection(servers[portPortal], portalEngine.tlp);
-   AxiSlaveEngine#(dsz) dmaEngine <- mkAxiSlaveEngine(my_pciId);
-   mkConnection(servers[portAxi], dmaEngine.tlp);
 
    // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
    // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
@@ -120,20 +125,19 @@ provisos(
 
    PcieTracer  traceif <- mkPcieTracer();
    mkConnection(gb.pci, traceif.pci);
-   mkConnection(traceif.bus, (
-       interface Client;
-          interface request = arbiter.outToBus;
-          interface response = dispatcher.inFromBus;
-       endinterface));
+   mkConnection(traceif.bus, (interface Client;
+                                 interface request = arbiter.outToBus;
+                                 interface response = dispatcher.inFromBus;
+                              endinterface));
 
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
    MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
-   mkConnection(splitEngine.master, my_slave);
+   mkConnection(mvec[portConfig], my_slave);
 
    interface msixEntry = csr.msixEntry;
-   interface master = portalEngine.master;
-   interface slave = dmaEngine.slave;
-   interface interruptRequest = portalEngine.interruptRequest;
+   interface master = mvec[portPortal];
+   interface slave = slav;
+   interface interruptRequest = intreq;
 endmodule: mkPcieHost
 
 (* no_default_clock, no_default_reset *)
