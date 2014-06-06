@@ -196,7 +196,7 @@ module mkNocNode#(Vector#(NumDims, Bit#(4)) id)(NocNode#(NumDims));
       begin
 	 for (Integer x = 0; x < radix; x = x + 1)
 	    tmpout[x] = toPipeOut(xp[x][y]);
-	 mkNocArbitrate(id, y, tmpout, switchout[y]);
+	 mkNocArbitrate(id, truncate(y), tmpout, switchout[y]);
       end
 
   // interface wiring
