@@ -2,7 +2,7 @@
 BSVDIR=../../bsv
 S2H = PerfRequest DmaConfig
 H2S = PerfIndication DmaIndication
-BSVFILES = Perf.bsv $(BSVDIR)/PortalMemory.bsv Top.bsv
+BSVFILES = Perf.bsv $(BSVDIR)/PortalMemory.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
 CPPFILES=testperf.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 

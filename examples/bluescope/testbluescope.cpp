@@ -42,7 +42,7 @@ PortalAlloc *bsAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
 unsigned int *bsBuffer  = 0;
-int numWords = 16 << 10;
+int numWords = 128; //16 << 10;
 size_t alloc_sz = numWords*sizeof(unsigned int);
 bool trigger_fired = false;
 bool finished = false;
@@ -196,8 +196,7 @@ int main(int argc, const char **argv)
   
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   int burstLen = 16;
-  int iterCnt = 2;
-  device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen, iterCnt);
+  device->startCopy(ref_dstAlloc, ref_srcAlloc, numWords, burstLen);
   sem_wait(&done_sem);
   sleep(2);
   exit_test();

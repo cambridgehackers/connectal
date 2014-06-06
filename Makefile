@@ -49,7 +49,6 @@ testnames = echo                 \
             memrw                \
             memread128           \
             memread2             \
-            mempoke              \
             pcietestbench        \
             pcietestbench_dma_io \
             pcietestbench_dma_oo \

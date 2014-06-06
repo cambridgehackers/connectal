@@ -33,8 +33,8 @@ import GetPut::*;
 import Dma::*;
 
 interface MemReader#(numeric type dataWidth);
-   interface ObjectReadServer #(dataWidth) memServer;
-   interface ObjectReadClient#(dataWidth) memClient;
+   interface ObjectReadServer #(dataWidth) readServer;
+   interface ObjectReadClient#(dataWidth) readClient;
 endinterface
 
 module mkMemReader(MemReader#(dataWidth))
@@ -45,13 +45,42 @@ module mkMemReader(MemReader#(dataWidth))
    FIFOF#(ObjectData#(dataWidth))  readBuffer <- mkFIFOF;
    FIFOF#(ObjectRequest)       reqOutstanding <- mkFIFOF;
 
-   interface ObjectReadServer memServer;
+   interface ObjectReadServer readServer;
       interface Put readReq = toPut(reqOutstanding);
       interface Get readData = toGet(readBuffer);
    endinterface
-   interface ObjectReadClient memClient;
+   interface ObjectReadClient readClient;
       interface Get readReq = toGet(reqOutstanding);
       interface Put readData = toPut(readBuffer);
    endinterface
 endmodule
 
+
+interface MemWriter#(numeric type dataWidth);
+   interface ObjectWriteServer#(dataWidth) writeServer;
+   interface ObjectWriteClient#(dataWidth) writeClient;
+endinterface
+
+
+module mkMemWriter(MemWriter#(dataWidth))
+   provisos(Div#(dataWidth,8,dataWidthBytes),
+	    Mul#(dataWidthBytes,8,dataWidth),
+	    Log#(dataWidthBytes,beatShift));
+
+   FIFOF#(ObjectData#(dataWidth)) writeBuffer <- mkFIFOF;
+   FIFOF#(ObjectRequest)        reqOutstanding <- mkFIFOF;
+   FIFOF#(Bit#(6))                        doneTags <- mkFIFOF();
+
+   interface ObjectWriteServer writeServer;
+      interface Put writeReq = toPut(reqOutstanding);
+      interface Put writeData = toPut(writeBuffer);
+      interface Get writeDone = toGet(doneTags);
+   endinterface
+   interface ObjectWriteClient writeClient;
+      interface Get writeReq = toGet(reqOutstanding);
+      interface Get writeData = toGet(writeBuffer);
+      interface Put writeDone = toPut(doneTags);
+   endinterface
+
+endmodule
+   

@@ -34,7 +34,7 @@ import MemwriteEngine::*;
 
 
 interface MemcpyRequest;
-   method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
+   method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) burstLen);
 endinterface
 
 interface MemcpyIndication;
@@ -42,10 +42,14 @@ interface MemcpyIndication;
    method Action done();
 endinterface
 
+interface Memcpy;
+   interface MemcpyRequest request;
+   interface ObjectReadClient#(64) readClient;
+   interface ObjectWriteClient#(64) writeClient;
+endinterface
+
 module mkMemcpyRequest#(MemcpyIndication indication,
-			ObjectReadServer#(64) dma_read_server,
-			ObjectWriteServer#(64) dma_write_server,
-			BlueScope#(64) bs)(MemcpyRequest);
+			BlueScope#(64) bs)(Memcpy);
    
    let readFifo <- mkFIFOF;
    let writeFifo <- mkFIFOF;
@@ -58,10 +62,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(ObjectPointer)      rdPointer <- mkReg(0);
    Reg#(ObjectPointer)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
-   
-   mkConnection(re.dmaClient,dma_read_server);
-   mkConnection(we.dmaClient,dma_write_server);
-   
+      
    rule start(iterCnt > 0);
       re.start(rdPointer, 0, numWords*4, burstLen*4);
       we.start(wrPointer, 0, numWords*4, burstLen*4);
@@ -83,16 +84,19 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       bs.dataIn(readFifo.first,readFifo.first);
    endrule
    
-   method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
-      $display("startCopy wrPointer=%d rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", wp, rp, nw, bl, ic);
-      indication.started;
-      // initialized
-      wrPointer <= wp;
-      rdPointer <= rp;
-      numWords  <= nw;
-      iterCnt   <= ic;
-      burstLen  <= bl;
-   endmethod
-
+   interface MemcpyRequest request;
+      method Action startCopy(Bit#(32) wp, Bit#(32) rp, Bit#(32) nw, Bit#(32) bl);
+	 $display("startCopy wrPointer=%d rdPointer=%d numWords=%h burstLen=%d", wp, rp, nw, bl);
+	 indication.started;
+	 // initialized
+	 wrPointer <= wp;
+	 rdPointer <= rp;
+	 numWords  <= nw;
+	 iterCnt   <= 1;
+	 burstLen  <= bl;
+      endmethod
+   endinterface
+   interface readClient = re.dmaClient;
+   interface writeClient = we.dmaClient;
 endmodule
 

@@ -40,17 +40,10 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
    Memread2RequestWrapper memreadRequestWrapper <- mkMemread2RequestWrapper(Memread2Request,memread.request);
 
    Vector#(2, ObjectReadClient#(64)) clients;
-   Bool buffered = True;
-   if (buffered) begin
-      Vector#(2, DmaReadBuffer#(64, 16)) readBuffers <- replicateM(mkDmaReadBuffer);
-      mkConnection(memread.dmaClient, readBuffers[0].dmaServer);
-      mkConnection(memread.dmaClient2, readBuffers[1].dmaServer);
-      clients = cons(readBuffers[0].dmaClient, cons(readBuffers[1].dmaClient, nil));
-   end
-   else begin
-      clients = cons(memread.dmaClient, cons(memread.dmaClient2, nil));
-   end
-
+   Vector#(2, DmaReadBuffer#(64, 16)) readBuffers <- replicateM(mkDmaReadBuffer);
+   mkConnection(memread.dmaClient, readBuffers[0].dmaServer);
+   mkConnection(memread.dmaClient2, readBuffers[1].dmaServer);
+   clients = cons(readBuffers[0].dmaClient, cons(readBuffers[1].dmaClient, nil));
    MemServer#(addrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, clients);
 
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);

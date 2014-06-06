@@ -28,6 +28,7 @@ import BRAMFIFO::*;
 import GetPut::*;
 
 import Dma::*;
+import MemUtils::*;
 import ClientServer::*;
 
 interface BlueScopeIndication;
@@ -44,23 +45,26 @@ endinterface
 interface BlueScope#(numeric type dataWidth);
    method Action dataIn(Bit#(dataWidth) d, Bit#(dataWidth) t);
    interface BlueScopeRequest requestIfc;
+   interface ObjectWriteClient#(dataWidth) writeClient;
 endinterface
 
 typedef enum { Idle, Enabled, Triggered } State deriving (Bits,Eq);
 
-module mkBlueScope#(Integer samples, ObjectWriteServer#(dataWidth) wchan, BlueScopeIndication indication)(BlueScope#(dataWidth))
+module mkBlueScope#(Integer samples, BlueScopeIndication indication)(BlueScope#(dataWidth))
    provisos(Add#(a__,dataWidth,64),
+	    Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
 	    Add#(1,b__,dataWidth));
    
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
-   let rv  <- mkSyncBlueScope(samples, wchan, indication, clk, rst, clk,rst);
+   let rv  <- mkSyncBlueScope(samples, indication, clk, rst, clk,rst);
    return rv;
 endmodule
 
-module mkSyncBlueScope#(Integer samples, ObjectWriteServer#(dataWidth) wchan, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth))
+module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock sClk, Reset sRst, Clock dClk, Reset dRst)(BlueScope#(dataWidth))
    provisos(Add#(a__,dataWidth,64),
 	    Add#(1,b__,dataWidth),
+	    Mul#(dataBytes, 8, dataWidth),
 	    Div#(dataWidth,8,dataBytes));
 
    SyncFIFOIfc#(Bit#(dataWidth)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
@@ -76,6 +80,8 @@ module mkSyncBlueScope#(Integer samples, ObjectWriteServer#(dataWidth) wchan, Bl
    SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc         triggeredPulse <- mkSyncPulse(sClk, sRst, dClk);
    
+   MemWriter#(dataWidth) mwriter <- mkMemWriter;
+   
    (* descending_urgency = "resetState, startState" *)
    rule resetState if (resetPulse.pulse);
       stateReg <= Idle;
@@ -88,17 +94,18 @@ module mkSyncBlueScope#(Integer samples, ObjectWriteServer#(dataWidth) wchan, Bl
 
    rule writeReq if (dfifo.notEmpty);
       let bl = fromInteger(valueOf(dataBytes)) * 2;
-      wchan.writeReq.put(ObjectRequest { pointer: pointerReg, offset: zeroExtend(writeOffsetReg), burstLen: bl, tag: 0});
+      mwriter.writeServer.writeReq.put(ObjectRequest { pointer: pointerReg, offset: zeroExtend(writeOffsetReg), burstLen: bl, tag: 0});
       writeOffsetReg <= writeOffsetReg + bl;
    endrule
 
    rule  writeData;
+      //$display("mkSyncBlueScope::writeData");
       dfifo.deq();
-      wchan.writeData.put(ObjectData { data: dfifo.first, tag: 0});
+      mwriter.writeServer.writeData.put(ObjectData { data: dfifo.first, tag: 0});
    endrule
    
    rule writeDone;
-      let tag <- wchan.writeDone.get();
+      let tag <- mwriter.writeServer.writeDone.get();
    endrule
    
    rule triggerRule if (triggeredPulse.pulse);
@@ -170,5 +177,5 @@ module mkSyncBlueScope#(Integer samples, ObjectWriteServer#(dataWidth) wchan, Bl
 	 valueReg <= truncate(value);
       endmethod
    endinterface
-
+   interface writeClient = mwriter.writeClient;
 endmodule

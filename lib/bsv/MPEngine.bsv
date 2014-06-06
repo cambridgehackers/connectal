@@ -102,13 +102,13 @@ module mkMPEngine#(FIFOF#(void) compf,
       
    rule haystackReq (stage == Run && haystackOff < extend(haystackLenReg));
       //$display("haystackReq %x", haystackOff);
-      hreader.memServer.readReq.put(ObjectRequest {pointer: haystackPointer, offset: extend(haystackBase+haystackOff), burstLen: fromInteger(valueOf(nc)), tag: dmaTag});
+      hreader.readServer.readReq.put(ObjectRequest {pointer: haystackPointer, offset: extend(haystackBase+haystackOff), burstLen: fromInteger(valueOf(nc)), tag: dmaTag});
       haystackOff <= haystackOff + fromInteger(valueOf(nc));
    endrule
    
    rule haystackResp;
       //$display("haystackResp");
-      let rv <- hreader.memServer.readData.get;
+      let rv <- hreader.readServer.readData.get;
       Vector#(nc,Char) pv = unpack(rv.data);
       if(rv.tag == dmaTag)
 	 haystack.enq(pv);
@@ -203,6 +203,6 @@ module mkMPEngine#(FIFOF#(void) compf,
    
    interface needle_read_client = n2b.dmaClient;
    interface mp_next_read_client = mp2b.dmaClient;
-   interface haystack_read_client = hreader.memClient; 
+   interface haystack_read_client = hreader.readClient; 
       
 endmodule
