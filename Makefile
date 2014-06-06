@@ -38,8 +38,6 @@ parsetab.py: syntax.py
 test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidisplay.bit.bin.gz
 
 #################################################################################################
-# Generate bsim and zynq make targets for each test in testnames.
-# For test 'foo', we will generate 'foo.bits' and 'foo.bsim'
 
 testnames = echo                 \
 	    hdmidisplay          \
@@ -100,20 +98,20 @@ zmemtests = memread_4m           \
 	make XBSV_DEBUG=1 $*
 
 #################################################################################################
-# bsim
+# bluesim
 
-bsimtests = $(addsuffix .bsim, $(testnames))
-bsimtests: $(bsimtests)
+bluesimtests = $(addsuffix .bluesim, $(testnames))
+bluesimtests: $(bluesimtests)
 
-$(bsimtests):
+$(bluesimtests):
 	rm -fr examples/$(basename $@)/bluesim
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
 
 
-bsimruns = $(addsuffix .bsimrun, $(testnames))
-bsimruns: $(bsimruns)
+bluesimruns = $(addsuffix .bluesimrun, $(testnames))
+bluesimruns: $(bluesimruns)
 
-$(bsimruns):
+$(bluesimruns):
 	(cd examples/$(basename $@)/bluesim; make run)
 
 #################################################################################################
@@ -224,18 +222,18 @@ memtests.zedboard: $(addsuffix .zedboard, $(memtests))
 
 memtests.kc705: $(addsuffix .kc705, $(memtests))
 
-memtests.bsim: $(addsuffix .bsim, $(memtests))
+memtests.bluesim: $(addsuffix .bluesim, $(memtests))
 
-memtests.bsimrun: $(addsuffix .bsimrun, $(memtests))
+memtests.bluesimrun: $(addsuffix .bluesimrun, $(memtests))
 
 #################################################################################################
 # zmemtests
 
 zmemtests.zedboard: $(addsuffix .zedboard, $(zmemtests))
 
-zmemtests.bsim: $(addsuffix .bsim, $(zmemtests))
+zmemtests.bluesim: $(addsuffix .bluesim, $(zmemtests))
 
-zmemtests.bsimrun: $(addsuffix .bsimrun, $(zmemtests))
+zmemtests.bluesimrun: $(addsuffix .bluesimrun, $(zmemtests))
 
 #################################################################################################
 # oo_memtests
@@ -244,9 +242,9 @@ oo_memtests.zedboard: $(addsuffix .zedboard, $(oo_memtests))
 
 oo_memtests.kc705: $(addsuffix .kc705, $(oo_memtests))
 
-oo_memtests.bsim: $(addsuffix .bsim, $(oo_memtests))
+oo_memtests.bluesim: $(addsuffix .bluesim, $(oo_memtests))
 
-oo_memtests.bsimrun: $(addsuffix .bsimrun, $(oo_memtests))
+oo_memtests.bluesimrun: $(addsuffix .bluesimrun, $(oo_memtests))
 
 #################################################################################################
 # misc
