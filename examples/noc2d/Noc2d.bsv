@@ -81,13 +81,13 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
    endmodule
    mapM_(mkYLinks, indexes3);
 
-   // discard traffic from loose ends in x direction
+   // discard traffic from loose ends in y direction
    for (Bit#(4) x = 0; x < 4; x = x + 1)
       begin
 	 mkPipeOutDiscard(node[x][0].linkdownout[1]);
 	 mkPipeOutDiscard(node[x][3].linkupout[1]);
       end
-   // discard traffic from loose ends in y direction
+   // discard traffic from loose ends in x direction
    for (Bit#(4) y = 0; y < 4; y = y + 1)
       begin
 	 mkPipeOutDiscard(node[0][y].linkdownout[0]);
@@ -102,7 +102,7 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
   Stmt readindications =
     seq
     while(True) seq
-      for(idx <= 0; idx < 4; idx <= idy + 1)
+      for(idx <= 0; idx < 4; idx <= idx + 1)
 	 for(idy <= 0; idy < 4; idy <= idy + 1)
             if (node[idx][idy].nodetohost.notEmpty())
 	      seq
@@ -111,9 +111,9 @@ module mkNocRequest#(NocIndication indication)(NocRequest);
 		    node[idx][idy].nodetohost.first.address[0],
 		    node[idx][idy].nodetohost.first.address[1],
 	            node[idx][idy].nodetohost.first.payload);
-		 indication.ack((idx<<4) +idy, 
-		    (node[idx][idy].nodetohost.first.address[0]<<4)+
-		    node[idx][idy].nodetohost.first.address[1],
+		 indication.ack((zeroExtend(idx)<<4) + zeroExtend(idy), 
+		    (zeroExtend(node[idx][idy].nodetohost.first.address[0])<<4)+
+		    zeroExtend(node[idx][idy].nodetohost.first.address[1]),
 	            node[idx][idy].nodetohost.first.payload);
 		 node[idx][idy].nodetohost.deq();
               endseq
