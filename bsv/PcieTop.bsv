@@ -75,7 +75,7 @@ endinterface
 interface PcieHost#(numeric type dsz);
    interface Vector#(16,MSIX_Entry) msixEntry;
    interface MemMaster#(32,32) master;
-   interface Axi3Slave#(40,dsz,6)  slave;
+   interface MemSlave#(40,dsz)  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
 endinterface
@@ -181,8 +181,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
 
    mkConnection(pciehost.master, portalTop.slave, clocked_by epClock125, reset_by epReset125);
    if (valueOf(NumberOfMasters) > 0) begin
-      Axi3Master#(40,DataBusWidth,6) m_axis <- mkAxiDmaMaster(portalTop.masters[0], clocked_by epClock125, reset_by epReset125);
-      mkConnection(m_axis, pciehost.slave, clocked_by epClock125, reset_by epReset125);
+      mkConnection(portalTop.masters[0], pciehost.slave, clocked_by epClock125, reset_by epReset125);
    end
 
    // going from level to edge-triggered interrupt

@@ -28,12 +28,13 @@ import DefaultValue :: *;
 import MIMO         :: *;
 import Vector       :: *;
 import ClientServer :: *;
+import Dma          :: *;
 
 import AxiMasterSlave :: *;
 
 interface AxiSlaveEngine#(type buswidth);
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
-    interface Axi3Slave#(40,buswidth,6)  slave;
+    interface MemSlave#(40,buswidth) slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
 endinterface: AxiSlaveEngine
@@ -42,11 +43,14 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
    provisos (Div#(buswidth, 8, busWidthBytes),
 	     Div#(buswidth, 32, busWidthWords),
 	     Bits#(Vector#(busWidthWords, Bit#(32)), buswidth),
+            Log#(busWidthBytes,beatShift),
 	     Add#(aaa, 32, buswidth),
 	     Add#(bbb, buswidth, 256),
 	     Add#(ccc, TMul#(8, busWidthWords), 64),
 	     Add#(ddd, TMul#(32, busWidthWords), 256),
 	     Add#(eee, busWidthWords, 8));
+
+    let beat_shift = fromInteger(valueOf(beatShift));
 
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
     FIFOF#(TLPData#(16)) tlpInFifo <- mkFIFOF;
@@ -227,16 +231,17 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
         interface request = toGet(tlpOutFifo);
         interface response = toPut(tlpInFifo);
     endinterface
-    interface Axi3Slave slave;
-	interface Put req_aw;
-	   method Action put(Axi3WriteRequest#(40, 6) req)
+    interface MemSlave slave;
+   interface MemWriteServer write_server; 
+      interface Put writeReq;
+         method Action put(MemRequest#(40) req)
 	      if (writeBurstCount == 0);
 
-	      let burstLen = req.len;
-	      let addr = req.address;
-	      let awid = req.id;
+	      let burstLen = req.burstLen >> beat_shift;
+	      let addr = req.addr;
+	      let awid = req.tag;
 
-	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
+	      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen));
 	      TLPData#(16) tlp = defaultValue;
 	      tlp.sof = True;
 	      tlp.eof = False;
@@ -272,37 +277,39 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 		 tlp.data = pack(hdr_3dw);
 	      end
 	      tlpWriteHeaderFifo.enq(tlp);
-	      writeBurstCount <= zeroExtend(burstLen)+1;
+	      writeBurstCount <= zeroExtend(burstLen);
 	      writeTag.enq(extend(awid));
            endmethod
-	endinterface : req_aw
-       interface Put resp_write;
-	   method Action put(Axi3WriteData#(busWidth,6) wdata)
+	endinterface
+      interface Put writeData;
+         method Action put(MemData#(buswidth) wdata)
 	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeBurstCount > 0 && writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
 
 	      writeBurstCount <= writeBurstCount - 1;
 	      Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
 	      writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
            endmethod
-       endinterface : resp_write
-       interface Get resp_b;
-	   method ActionValue#(Axi3WriteResponse#(6)) get();
+       endinterface
+      interface Get writeDone;
+         method ActionValue#(Bit#(ObjectTagSize)) get();
 	      let tag = doneTag.first();
 	      doneTag.deq();
-	      return Axi3WriteResponse { resp: 0, id: truncate(tag)};
+	      return truncate(tag);
            endmethod
-	endinterface: resp_b
-       interface Put req_ar;
-	   method Action put(Axi3ReadRequest#(40,6) req) if (writeDwCount == 0);
-	      let burstLen = req.len;
-	      let addr = req.address;
-	      let arid = req.id;
+	endinterface
+   endinterface
+   interface MemReadServer read_server;
+      interface Put readReq;
+         method Action put(MemRequest#(40) req) if (writeDwCount == 0);
+	      let burstLen = req.burstLen >> beat_shift;
+	      let addr = req.addr;
+	      let arid = req.tag;
 
 	       TLPData#(16) tlp = defaultValue;
 	       tlp.sof = True;
 	       tlp.eof = True;
 	       tlp.hit = 7'h00;
-	       TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen) + 1);
+	       TLPLength tlplen = fromInteger(valueOf(busWidthWords))*(extend(burstLen));
 	       if (addr[39:32] != 0) begin
 		   TLPMemory4DWHeader hdr_4dw = defaultValue;
 		   hdr_4dw.format = MEM_READ_4DW_NO_DATA;
@@ -331,9 +338,9 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
 	       end
 	       tlpOutFifo.enq(tlp);
            endmethod
-       endinterface : req_ar
-       interface Get resp_read;
-	   method ActionValue#(Axi3ReadResponse#(buswidth,6)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords)))
+       endinterface
+      interface Get     readData;
+         method ActionValue#(MemData#(buswidth)) get() if (completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords)))
 									&& completionTagMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
 	      let tag_v = completionTagMimo.first;
@@ -342,9 +349,10 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
               Bit#(buswidth) v = 0;
 	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
-	      return Axi3ReadResponse { data: v, last: 0, id: truncate(tag_v[0]), resp: 0 };
+	      return MemData { data: v, tag: truncate(tag_v[0])};
            endmethod
-	endinterface: resp_read
+	endinterface
+   endinterface
     endinterface: slave
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
    interface Reg use4dw = use4dwReg;
