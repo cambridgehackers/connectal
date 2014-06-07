@@ -54,7 +54,6 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     MIMO#(1,4,16,Bit#(32)) completionMimo <- mkMIMO(mimoCfg);
    Reg#(TLPLength) readBurstCount <- mkReg(0);
    rule completionHeader if (readBurstCount == 0 && readDataFifo.notEmpty() && completionMimo.deqReadyN(1));
-// &&& interruptSecondHalf matches tagged Invalid);
       let hdr = readDataFifo.first;
       TLPLength rbc = hdr.length;
 
@@ -174,7 +173,6 @@ module mkMemMasterEngine#(PciId my_id)(MemMasterEngine);
     interface MemWriteClient write_client;
         interface Get    writeReq;
 	  method ActionValue#(MemRequest#(32)) get();
-// if (interruptSecondHalf matches tagged Invalid);
 	     let hdr = writeHeaderFifo.first;
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
