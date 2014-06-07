@@ -32,14 +32,14 @@ import Dma          :: *;
 
 import AxiMasterSlave :: *;
 
-interface AxiSlaveEngine#(type buswidth);
+interface MemSlaveEngine#(type buswidth);
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface MemSlave#(40,buswidth) slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
-endinterface: AxiSlaveEngine
+endinterface: MemSlaveEngine
 
-module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
+module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    provisos (Div#(buswidth, 8, busWidthBytes),
 	     Div#(buswidth, 32, busWidthWords),
 	     Bits#(Vector#(busWidthWords, Bit#(32)), buswidth),
@@ -356,5 +356,5 @@ module mkAxiSlaveEngine#(PciId my_id)(AxiSlaveEngine#(buswidth))
     endinterface: slave
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
    interface Reg use4dw = use4dwReg;
-endmodule: mkAxiSlaveEngine
+endmodule: mkMemSlaveEngine
 

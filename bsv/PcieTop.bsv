@@ -36,7 +36,7 @@ import PCIEWRAPPER       :: *;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
-import AxiSlaveEngine    :: *;
+import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
@@ -73,10 +73,10 @@ interface PcieTop#(type ipins);
 endinterface
 
 interface PcieHost#(numeric type dsz);
-   interface Vector#(16,MSIX_Entry) msixEntry;
-   interface MemMaster#(32,32) master;
-   interface MemSlave#(40,dsz)  slave;
-   interface Put#(Tuple2#(Bit#(64),Bit#(32))) interruptRequest;
+   interface Vector#(16,MSIX_Entry)              msixEntry;
+   interface MemMaster#(32,32)                   master;
+   interface MemSlave#(40,dsz)                   slave;
+   interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
 endinterface
 
@@ -93,7 +93,7 @@ provisos(
    Reset epReset125 <- exposeCurrentReset();
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
-   AxiSlaveEngine#(dsz) sEngine <- mkAxiSlaveEngine(my_pciId);
+   MemSlaveEngine#(dsz) sEngine <- mkMemSlaveEngine(my_pciId);
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 
    Vector#(PortMax, MemMasterEngine) mvec;
