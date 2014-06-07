@@ -3,7 +3,7 @@ set -x
 set -e
 export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 echo "run.pcie parameters are:" $*
-SSHPARAM="-o -o StrictHostKeyChecking=no"
+SSHPARAM=" -o StrictHostKeyChecking=no"
 
 if [ "$SERIALNO" != "" ]; then
     BOARD_SERIAL="-s $SERIALNO"
