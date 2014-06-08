@@ -38,8 +38,6 @@ import Leds              :: *;
 import Top               :: *;
 import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
-import AxiMasterSlave    :: *;
-import AxiDma            :: *;
 import PcieCsr           :: *;
 import MemSlave          :: *;
 import Dma               :: *;
@@ -72,15 +70,15 @@ interface PcieTop#(type ipins);
    interface ipins       pins;
 endinterface
 
-interface PcieHost#(numeric type dsz);
+interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(16,MSIX_Entry)              msixEntry;
    interface MemMaster#(32,32)                   master;
-   interface MemSlave#(40,dsz)                   slave;
+   interface Vector#(nSlaves,MemSlave#(40,dsz))  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
 endinterface
 
-module [Module] mkPcieHost#(PciId my_pciId)(PcieHost#(dsz))
+module [Module] mkPcieHost#(PciId my_pciId)(PcieHost#(dsz, nSlaves))
 provisos(
    Mul#(TDiv#(dsz, 8), 8, dsz),
     Add#(a__, TDiv#(dsz, 32), 8),
@@ -93,15 +91,20 @@ provisos(
    Reset epReset125 <- exposeCurrentReset();
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
-   MemSlaveEngine#(dsz) sEngine <- mkMemSlaveEngine(my_pciId);
+   Vector#(nSlaves,MemSlaveEngine#(dsz)) sEngine <- replicateM(mkMemSlaveEngine(my_pciId));
+   Vector#(nSlaves,MemSlave#(40,dsz)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 
    Vector#(PortMax, MemMasterEngine) mvec;
-   for (Integer i = 0; i < valueOf(PortMax); i=i+1) begin
-       let tlp = sEngine.tlp;
+   for (Integer i = 0; i < valueOf(PortMax) - 1 + valueOf(nSlaves); i=i+1) begin
+       let tlp;
        if (i == portInterrupt)
            tlp = intr.tlp;
-       else if (i != portAxi) begin
+       else if (i >= portAxi) begin
+           tlp = sEngine[i - portAxi].tlp;
+           slavearr[i - portAxi] = sEngine[i - portAxi].slave;
+       end
+       else begin
            mvec[i] <- mkMemMasterEngine(my_pciId);
            tlp = mvec[i].tlp;
        end
@@ -123,7 +126,7 @@ provisos(
 
    interface msixEntry = csr.msixEntry;
    interface master = mvec[portPortal].master;
-   interface slave = sEngine.slave;
+   interface slave = slavearr;
    interface interruptRequest = intr.interruptRequest;
    interface pci = traceif.pci;
 endmodule: mkPcieHost
@@ -166,7 +169,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
    Reset epReset125 <- mkAsyncReset(4, user_reset_n, epClock125);
 
    let portalTop <- mkSynthesizeablePortalTop(clocked_by epClock125, reset_by epReset125);
-   PcieHost#(DataBusWidth) pciehost <- mkPcieHost(
+   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
          PciId{ bus:  _ep.cfg.bus_number(), dev: _ep.cfg.device_number(), func: _ep.cfg.function_number()},
          clocked_by epClock125, reset_by epReset125);
 
@@ -181,7 +184,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
 
    mkConnection(pciehost.master, portalTop.slave, clocked_by epClock125, reset_by epReset125);
    if (valueOf(NumberOfMasters) > 0) begin
-      mkConnection(portalTop.masters[0], pciehost.slave, clocked_by epClock125, reset_by epReset125);
+      mapM(uncurry(mkConnection),zip(portalTop.masters, pciehost.slave));
    end
 
    // going from level to edge-triggered interrupt
