@@ -57,7 +57,7 @@ typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest,
 interface ImageCapturePins;
    interface ImageonSensorPins pins;
    interface ImageonSerdesPins serpins;
-   interface HDMI hdmi;
+   interface HDMI#(Bit#(HdmiBits)) hdmi;
    method Action fmc_video_clk1(Bit#(1) v);
 endinterface
 interface ImageCapture;
@@ -111,8 +111,11 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
 
    // hdmi: output to display
    HdmiInternalIndicationProxy hdmiIndicationProxy <- mkHdmiInternalIndicationProxy(HdmiInternalIndication);
-   HdmiGenerator hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
+   HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
        vsyncPulse, hdmiIndicationProxy.ifc, clocked_by hdmi_clock, reset_by hdmi_reset);
+   Rgb888ToYyuv converter <- mkRgb888ToYyuv(clocked_by hdmi_clock, reset_by hdmi_reset);
+   mkConnection(hdmiGen.rgb888, converter.rgb888);
+   HDMI#(Bit#(HdmiBits)) hdmisignals <- mkHDMI(converter.yyuv, clocked_by hdmi_clock, reset_by hdmi_reset);
    HdmiInternalRequestWrapper hdmiRequestWrapper <- mkHdmiInternalRequestWrapper(HdmiInternalRequest,hdmiGen.control);
 
    Reg#(Bool) frameStart <- mkReg(False, clocked_by imageon_clock, reset_by imageon_reset);
@@ -157,7 +160,7 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
    interface ImageCapturePins pins;
        interface ImageonSensorPins pins = fromSensor.pins;
        interface ImageonSerdesPins serpins = serdes.pins;
-       interface HDMI hdmi = hdmiGen.hdmi;
+       interface HDMI hdmi = hdmisignals;
    endinterface
 endmodule
 
