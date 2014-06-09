@@ -33,6 +33,7 @@ import Connectable::*;
 import PortalMemory::*;
 import MemTypes::*;
 import DmaUtils::*;
+import ClientServer::*;
 import AxiMasterSlave::*;
 import MemreadEngine::*;
 import HDMI::*;
