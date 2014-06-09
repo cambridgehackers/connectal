@@ -1,34 +1,42 @@
 Network on Chip
 
-This example is an extension of the serialconfig scheme to make
-more of an on-chip network.
+This is a two dimensional mesh network with 16 nodes.
 
-The network is composed of nodes, each of which can send or receive
-messages.  Point to point links between the nodes complete the design.
+Each node has four links to adjacent nodes, plus a link to the local
+"host". Each node has a crossbar switch for routing.
 
-Stage 1:  1-D mesh
+Messages are a compiled-in datatype, plus a message address which is
+the coordinates of the destination host in the X and Y directions.
 
-Each node has two links, called East and West, and an address which is
-its coordinate.
-
-Each node therefore has inputs from East, West, and Local. plus three
-outputs to East, West, and Local.  The local link is called "host"
-
-The switch is a 3x3 crossbar, implemented with three three input
-muxes.  (In the alternative, we could choose not to support loopback
-traffic, simplifying the switch by 1 leg on the muxes.)
-
-The Each swith input is a FIFOF.  Each output (row) is a round-robin
-arbiter that selects the next message to send from the various inputs.
-
-Each input link has a distributor switch column) rule that routes an 
-arriving message to the proper swith FIFO.
+Links are SerialFIFOs, from the xbsv library.  The link "transmitter"
+is a GearBox from the message datatype to a Bit#(1) serial datatype.
+The link "receiver" is a Gearbox from Bit#(1) back to the message
+datatype.
 
 
-Each link is a SerialFIFO, which is two back-to-back Gearbox modules,
-so the node ends of a link have the DataMessage type, while the "middle" of
-the link is serial (a 1-bit wide FIFO, really).
+The crossbar switch consists of a matrix of FIFOF.  A particular FIFO
+accepts messages from a particular input link which are routed to a
+particular output link.
 
-Test Program
+The four input links, plus a FIFO from the host, feed distributors.
+Each distributor examines the address of a message and copies the
+message to the correct crosspoint FIFO.
 
-The test program sends a message from each node to each other node
+A "row" in the crossbar consists of all the FIFOs which accept traffic
+from a particular link plus a row for messages from the host.  A
+"column" in the crossbar consists of all the FIFOs which send traffic
+to a particular link, plus a column for traffic to the host.
+
+Each output link has an arbiter, which merges traffic from the
+associated FIFOs.
+
+In order to avoid deadlock, the network uses dimension order routing.
+A message traverses links in the X direction until it reaches the
+correct X coordinate, and then traverses links in the Y direction
+until the Y coordinates match. The message is then delivered to the
+host.
+
+A message can never be routed back to the node from which it just
+arrived, so there are no FIFOs needed on the diagonal of the switch
+matrix.  There is a crosspoint to route host messages back to the
+local host.
