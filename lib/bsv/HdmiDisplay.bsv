@@ -155,8 +155,8 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     interface HdmiInternalRequest internalRequest = hdmiGen.control;
     interface XADC xadc;
         method Bit#(4) gpio;
-            return { bozobit, hdmisignals.vsync,
-                hdmisignals.data[8], hdmisignals.data[0]};
+            return { bozobit, hdmisignals.hdmi_vsync,
+                hdmisignals.hdmi_data[8], hdmisignals.hdmi_data[0]};
                 //hdmiGen.hdmi.hsync, hdmi_de};
         endmethod
     endinterface: xadc

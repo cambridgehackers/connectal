@@ -38,11 +38,11 @@ typedef 16 HdmiBits;
 `endif
 
 interface HDMI#(type pixelType);
-    method Bit#(1) vsync;
-    method Bit#(1) hsync;
-    method Bit#(1) de;
-    method pixelType data;
-    interface Clock clock_if;
+    method Bit#(1) hdmi_vsync;
+    method Bit#(1) hdmi_hsync;
+    method Bit#(1) hdmi_de;
+    method pixelType hdmi_data;
+    interface Clock hdmi_clock_if;
     interface Reset deleteme_unused_reset;
 endinterface
 
@@ -241,19 +241,19 @@ module mkHDMI#(Get#(VideoData#(pixelType)) videoInput)(HDMI#(Bit#(pixelsz)))
       video <= v;
    endrule
 
-   method Bit#(1) vsync;
+   method Bit#(1) hdmi_vsync;
       return video.vsync;
    endmethod
-   method Bit#(1) hsync;
+   method Bit#(1) hdmi_hsync;
       return video.hsync;
    endmethod
-   method Bit#(1) de;
+   method Bit#(1) hdmi_de;
       return video.de;
    endmethod
-   method Bit#(pixelsz) data;
+   method Bit#(pixelsz) hdmi_data;
       return pack(video.pixel);
    endmethod
-   interface clock_if = defaultClock;
+   interface hdmi_clock_if = defaultClock;
    interface deleteme_unused_reset = defaultReset;
 endmodule
 
@@ -262,6 +262,7 @@ interface Rgb888ToYyuv;
    interface Get#(VideoData#(Yyuv)) yyuv;
 endinterface
 
+(* synthesize *)
 module mkRgb888ToYyuv(Rgb888ToYyuv);
     Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
     Reg#(VideoData#(Yuv444Intermediates)) yuv444IntermediatesStageReg <- mkReg(unpack(0));
