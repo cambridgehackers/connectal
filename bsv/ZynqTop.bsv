@@ -61,7 +61,15 @@ interface ZynqTop#(type pins);
    interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
 
-typedef (function Module#(PortalTop#(32, 64, ipins, nMasters)) mkpt()) MkPortalTop#(type ipins, numeric type nMasters);
+`ifdef USES_FCLK1
+`define CLOCK_DECL Clock clk1
+`define CLOCK_ARG  ps7.fclkclk[1],
+`else
+`define CLOCK_DECL
+`define CLOCK_ARG
+`endif
+
+typedef (function Module#(PortalTop#(32, 64, ipins, nMasters)) mkpt(`CLOCK_DECL)) MkPortalTop#(type ipins, numeric type nMasters);
 
 module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(ZynqTop#(ipins))
    provisos(Add#(a__,nMasters,4));
@@ -77,7 +85,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
       ps7.i2c[1].scli(tscl.o);
    endrule
 
-   let top <- constructor(clocked_by mainclock, reset_by mainreset);
+   let top <- constructor(`CLOCK_ARG clocked_by mainclock, reset_by mainreset);
    mkConnection(ps7, top, clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);

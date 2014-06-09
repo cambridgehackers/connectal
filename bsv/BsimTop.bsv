@@ -349,29 +349,35 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
    endinterface
 endmodule
 
-typedef (function Module#(PortalTop#(40, dsz, ipins, nMasters)) mkPortalTop()) MkPortalTop#(numeric type dsz, type ipins, numeric type nMasters);
+`ifdef USES_FCLK1
+`define CLOCK_DECL Clock clk1
+`define CLOCK_ARG  defaultClock
+`else
+`define CLOCK_DECL
+`define CLOCK_ARG
+`endif
 
-module [Module] mkBsimTopFromPortal#(MkPortalTop#(dsz,Empty,nMasters) mkPortalTop)(Empty)
-   provisos (SelectBsimRdmaReadWrite#(dsz),
-	     Mul#(TDiv#(dsz, 8), 8, dsz));
-   BsimHost#(32,32,12,40,dsz,6,nMasters) host <- mkBsimHost;
-   PortalTop#(40,dsz,Empty,nMasters) top <- mkPortalTop;
-   Vector#(nMasters,Axi3Master#(40,dsz,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters);
+`ifndef DataBusWidth
+`define DataBusWidth 64
+`endif
+`ifndef NumberOfMasters
+`define NumberOfMasters 1
+`endif
+`ifndef PinType
+`define PinType Empty
+`endif
+
+typedef `PinType PinType;
+typedef `NumberOfMasters NumberOfMasters;
+typedef `DataBusWidth DataBusWidth;
+
+module [Module] mkBsimTop(Empty)
+   provisos (SelectBsimRdmaReadWrite#(DataBusWidth));
+   Clock defaultClock <- exposeCurrentClock();
+   BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost;
+   PortalTop#(40,DataBusWidth,PinType,NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG);
+   Vector#(NumberOfMasters,Axi3Master#(40,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters);
    mkConnection(host.mem_client, top.slave);
    mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers));
-
-   // mkConnection(m_axis[0].req_ar, host.axi_servers[0].req_ar);
-   // mkConnection(host.axi_servers[0].resp_read, m_axis[0].resp_read);
-   // rule yyy;
-   //    let rv <- host.axi_servers[0].resp_read.get;
-   // endrule
-   // rule xxx;
-   //          m_axis[0].resp_read.put(unpack(0));
-   // endrule
    
-endmodule
-
-module mkBsimTop(Empty);
-   let top <- mkBsimTopFromPortal(mkPortalTop);
-   return top;
 endmodule

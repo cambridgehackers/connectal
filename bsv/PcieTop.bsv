@@ -58,6 +58,11 @@ typedef 8 NumLeds;
 `ifndef PinType
 `define PinType Empty
 `endif
+`ifdef USES_FCLK1
+`define CLOCK_ARG  defaultClock
+`else
+`define CLOCK_ARG
+`endif
 
 typedef `DataBusWidth DataBusWidth;
 typedef `NumberOfMasters NumberOfMasters;
@@ -134,7 +139,8 @@ endmodule: mkPcieHost
 
 (* synthesize *)
 module mkSynthesizeablePortalTop(PortalTop#(40, DataBusWidth, Empty, NumberOfMasters));
-   let top <- mkPortalTop();
+   Clock defaultClock <- exposeCurrentClock();
+   let top <- mkPortalTop(`CLOCK_ARG);
    interface masters = top.masters;
    interface slave = top.slave;
    interface interrupt = top.interrupt;
