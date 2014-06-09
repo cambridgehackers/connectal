@@ -28,7 +28,7 @@ import GetPut::*;
 
 import AxiMasterSlave::*;
 import MemTypes::*;
-import MemwriteEngineV::*;
+import MemwriteEngine::*;
 import Pipe::*;
 
 typedef 32 NumEngineServers;

@@ -53,10 +53,8 @@ endinterface
 module mkMemcpyRequest#(MemcpyIndication indication,
 			BlueScope#(64) bs)(Memcpy);
    
-
-   let writeFifo <- mkFIFOF;
-   MemreadEngine#(64,1) re <- mkMemreadEngine;
-   MemwriteEngine#(64) we <- mkMemwriteEngine(1, writeFifo);
+   MemreadEngine#(64,1)  re <- mkMemreadEngine;
+   MemwriteEngine#(64,1) we <- mkMemwriteEngine;
 
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
@@ -66,13 +64,13 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       
    rule start(iterCnt > 0);
       re.readServers[0].request.put(MemengineCmd{pointer:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
-      we.start(wrPointer, 0, numWords*4, burstLen*4);
+      we.writeServers[0].request.put(MemengineCmd{pointer:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       iterCnt <= iterCnt-1;
    endrule
 
    rule finish;
       let rv0 <- re.readServers[0].response.get;
-      let rv1 <- we.finish;
+      let rv1 <- we.writeServers[0].response.get;
       if(iterCnt==0) begin
 	 indication.done;
       end
@@ -80,7 +78,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    
    rule xfer;
       let v <- toGet(re.dataPipes[0]).get;
-      writeFifo.enq(v);
+      we.dataPipes[0].enq(v);
       bs.dataIn(v,v);
    endrule
    

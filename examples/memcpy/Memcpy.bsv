@@ -54,9 +54,8 @@ endinterface
 
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   let wrFifo <- mkFIFOF;
-   MemreadEngine#(64,1) re <- mkMemreadEngine;
-   MemwriteEngine#(64) we <- mkMemwriteEngine(1, wrFifo);
+   MemreadEngine#(64,1)  re <- mkMemreadEngine;
+   MemwriteEngine#(64,1) we <- mkMemwriteEngine;
 
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
@@ -86,7 +85,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
    rule start_write(wrIterCnt > 0 && wrBuffer >= burstLen);
       //$display("                    start_write %d", wrCnt);
-      we.start(wrPointer, extend(wrCnt*4), burstLen*4, burstLen*4);
+      we.writeServers[0].request.put(MemengineCmd{pointer:wrPointer, base:extend(wrCnt*4), len:burstLen*4, burstLen:truncate(burstLen*4)});
       wrBuffer <= wrBuffer-burstLen;
       if(wrCnt+burstLen >= numWords) begin
 	 wrCnt <= 0;
@@ -104,7 +103,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
    rule write_finish;
       //$display("                    write_finish %d", wrIterCnt);
-      let rv1 <- we.finish;
+      let rv1 <- we.writeServers[0].response.get;
       if(wrIterCnt==0)
 	 indication.done;
    endrule
@@ -118,7 +117,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    
    rule drain_buffer;
       buffer.deq;
-      wrFifo.enq(buffer.first);
+      we.dataPipes[0].enq(buffer.first);
       rdBuffer <= rdBuffer+2;
       //$display("                    drain_buffer %h", buffer.first);
    endrule

@@ -22,10 +22,13 @@
 
 import FIFO::*;
 import FIFOF::*;
+import GetPut::*;
+import ClientServer::*;
 
 import AxiMasterSlave::*;
 import MemTypes::*;
 import MemwriteEngine::*;
+import Pipe::*;
 
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -45,22 +48,21 @@ endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
-   Reg#(ObjectPointer)        pointer <- mkReg(0);
+   Reg#(ObjectPointer)     pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
 
    Reg#(Bit#(32))           srcGen <- mkReg(0);
-   FIFOF#(Bit#(64))      writeFifo <- mkFIFOF;
-   let                          we <- mkMemwriteEngine(1, writeFifo);
+   MemwriteEngine#(64,1)        we <- mkMemwriteEngine;
 
    rule start (iterCnt > 0);
       iterCnt <= iterCnt-1;
-      we.start(pointer, 0, numWords*4, burstLen*4);
+      we.writeServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
    endrule
    
    rule finish;
-      let rv <- we.finish;
+      let rv <- we.writeServers[0].response.get;
       if (iterCnt == 0)
 	 indication.writeDone(0);
    endrule
@@ -70,7 +72,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	 srcGen <= 0;
       else
 	 srcGen <= srcGen+2;
-      writeFifo.enq({srcGen+1,srcGen});
+      we.dataPipes[0].enq({srcGen+1,srcGen});
    endrule
 
    interface ObjectWriteClient dmaClient = we.dmaClient;

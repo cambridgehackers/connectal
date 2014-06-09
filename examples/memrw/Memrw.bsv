@@ -50,9 +50,8 @@ endinterface
 module mkMemrw#(MemrwIndication indication)(Memrw);
 
 
-   let writeFifo <- mkFIFOF;
-   MemreadEngine#(64,1) re <- mkMemreadEngine;
-   MemwriteEngine#(64)  we <- mkMemwriteEngine(1, writeFifo);
+   MemreadEngine#(64,1)  re <- mkMemreadEngine;
+   MemwriteEngine#(64,1) we <- mkMemwriteEngine;
    
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
@@ -79,18 +78,18 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    
    rule startWrite(wrIterCnt > 0);
       $display("startWrite %d", wrIterCnt);
-      we.start(wrPointer, 0, numWords*4, burstLen*4);
+      we.writeServers[0].request.put(MemengineCmd{pointer:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       wrIterCnt <= wrIterCnt-1;
    endrule
 
    rule finishWrite;
-      let rv0 <- we.finish;
+      let rv0 <- we.writeServers[0].response.get;
       if(wrIterCnt==0)
 	 indication.writeDone;
    endrule
    
    rule writeProduce;
-      writeFifo.enq(1);
+      we.dataPipes[0].enq(1);
    endrule
    
    interface MemrwRequest request;

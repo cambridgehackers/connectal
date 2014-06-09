@@ -28,6 +28,8 @@ import Vector::*;
 import Connectable::*;
 import BRAMFIFO::*;
 import GetPut::*;
+import ClientServer::*;
+import Pipe::*;
 
 // XBSV Libraries
 import PortalMemory::*;
@@ -53,6 +55,34 @@ typedef struct {
    Bit#(ObjectTagSize) tag;
    } ObjectData#(numeric type dsz) deriving (Bits);
 typedef ObjectData#(dsz) MemData#(numeric type dsz);
+
+
+///////////////////////////////////////////////////////////////////////////////////
+// 
+
+typedef struct {ObjectPointer pointer;
+		Bit#(ObjectOffsetSize) base;
+		Bit#(8) burstLen;
+		Bit#(32) len;
+		} MemengineCmd deriving (Eq,Bits);
+
+interface MemwriteEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
+   interface Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers;
+   interface ObjectWriteClient#(dataWidth) dmaClient;
+   interface Vector#(numServers, PipeIn#(Bit#(dataWidth))) dataPipes;
+endinterface
+typedef MemwriteEngineV#(dataWidth, cmdQDepth, 1) MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth);
+
+interface MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
+   interface Vector#(numServers, Server#(MemengineCmd,Bool)) readServers;
+   interface ObjectReadClient#(dataWidth) dmaClient;
+   interface Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes;
+endinterface
+typedef MemreadEngineV#(dataWidth, cmdQDepth, 1) MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth);
+
+// 
+///////////////////////////////////////////////////////////////////////////////////
+
 
 ///////////////////////////////////////////////////////////////////////////////////
 // 

@@ -32,19 +32,6 @@ import PortalMemory::*;
 import MemTypes::*;
 import Pipe::*;
 
-typedef struct {ObjectPointer pointer;
-		Bit#(ObjectOffsetSize) base;
-		Bit#(8) burstLen;
-		Bit#(32) len;
-		} MemengineCmd deriving (Eq,Bits);
-
-interface MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
-   interface Vector#(numServers, Server#(MemengineCmd,Bool)) readServers;
-   interface ObjectReadClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes;
-endinterface
-typedef MemreadEngineV#(dataWidth, cmdQDepth, 1) MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth);
-
 
 module mkMemreadEngine(MemreadEngine#(dataWidth, cmdQDepth))
    provisos (Div#(dataWidth,8,dataWidthBytes),

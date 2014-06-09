@@ -24,10 +24,13 @@ import FIFO    ::*;
 import FIFOF   ::*;
 import Vector  ::*;
 import StmtFSM ::*;
+import GetPut::*;
+import ClientServer::*;
 
 import AxiMasterSlave::*;
 import MemTypes::*;
 import MemwriteEngine::*;
+import Pipe::*;
 
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -47,7 +50,7 @@ endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
 
-   Reg#(ObjectPointer)        pointer <- mkReg(0);
+   Reg#(ObjectPointer)     pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
@@ -57,15 +60,14 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    FIFO#(void)           startFifo <- mkFIFO;
 
    Vector#(4,Reg#(Bit#(32)))      srcGens <- replicateM(mkReg(0));
-   Vector#(4,FIFOF#(Bit#(64))) writeFifos <- replicateM(mkFIFOF);
-   Vector#(4,MemwriteEngine#(64))      wes <- mapM(uncurry(mkMemwriteEngine), zip(replicate(1), writeFifos));
+   Vector#(4,MemwriteEngine#(64,1))   wes <- replicateM(mkMemwriteEngine);
 
    Stmt startStmt = seq
 		       startBase <= 0;
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
 			      $display("start:%d %h %d %h (%d)", startPtr, startBase, numWords, burstLen*4, iterCnt);
-			      wes[startPtr].start(pointer, extend(startBase), numWords, burstLen*4);
+			      wes[startPtr].writeServers[0].request.put(MemengineCmd{pointer:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)});
 			      startBase <= startBase+numWords;
 			   endaction);
 		    endseq;
@@ -80,7 +82,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    rule finish;
       for(Integer i = 0; i < 4; i=i+1) begin
 	 $display("finish: %d (%d)", i, iterCnt);
-	 let rv <- wes[i].finish;
+	 let rv <- wes[i].writeServers[0].response.get;
       end
       if (iterCnt == 0)
 	 indication.writeDone(0);
@@ -90,7 +92,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    
    for(Integer i = 0; i < 4; i=i+1)
       rule src;
-	 writeFifos[i].enq({srcGens[i]+1,srcGens[i]});
+	 wes[i].dataPipes[0].enq({srcGens[i]+1,srcGens[i]});
 	 if (srcGens[i]+2 == fromInteger(i+1)*(numWords>>2)) begin
 	    //$display("src %d %d", i, srcGens[i]+1);
 	    srcGens[i] <= fromInteger(i)*(numWords>>2);
@@ -99,7 +101,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
 	    srcGens[i] <= srcGens[i]+2;
       endrule
 
-   function ObjectWriteClient#(64) dc(MemwriteEngine#(64) we) = we.dmaClient;
+   function ObjectWriteClient#(64) dc(MemwriteEngine#(64,1) we) = we.dmaClient;
    interface dmaClients = map(dc,wes);
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
