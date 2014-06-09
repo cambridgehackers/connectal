@@ -24,9 +24,12 @@ import FIFO::*;
 import FIFOF::*;
 import Vector::*;
 import StmtFSM::*;
+import GetPut::*;
+import ClientServer::*;
 
 import MemTypes::*;
 import MemreadEngine::*;
+import Pipe::*;
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -58,16 +61,16 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
    
    Vector#(4,Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(4,Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   Vector#(4,FIFOF#(Bit#(64)))    readFifos <- replicateM(mkFIFOF);
-   Vector#(4,MemreadEngine#(64))        res <- mapM(uncurry(mkMemreadEngine), zip(replicate(1), readFifos));
+   Vector#(4,MemreadEngine#(64,1))      res <- replicateM(mkMemreadEngine);
    
    Stmt startStmt = seq
 		       startBase <= 0;
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
-			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numWords, burstLen*4, iterCnt);
-			      res[startPtr].start(pointer, extend(startBase), numWords, burstLen*4);
+			      let cmd = MemengineCmd{pointer:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)};
+			      res[startPtr].readServers[0].request.put(cmd);
 			      startBase <= startBase+numWords;
+			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numWords, burstLen*4, iterCnt);
 			   endaction);
 		    endseq;
    FSM startFSM <- mkFSM(startStmt);
@@ -90,7 +93,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
    rule finish;
       for(Integer i = 0; i < 4; i=i+1) begin
 	 //$display("finish: %d (%d)", i, iterCnt);
-	 let rv <- res[i].finish;
+	 let rv <- res[i].readServers[0].response.get;
       end
       if (iterCnt == 0)
 	 finishFSM.start;
@@ -100,8 +103,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
    
    for(Integer i = 0; i < 4; i=i+1)
       rule check;
-	 readFifos[i].deq;
-	 let v = readFifos[i].first;
+	 let v <- toGet(res[i].dataPipes[0]).get;
 	 let expectedV = {srcGens[i]+1,srcGens[i]};
 	 let misMatch = v != expectedV;
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
@@ -113,7 +115,7 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
 	    srcGens[i] <= srcGens[i]+2;
       endrule
    
-   function ObjectReadClient#(64) dc(MemreadEngine#(64) re) = re.dmaClient;
+   function ObjectReadClient#(64) dc(MemreadEngine#(64,1) re) = re.dmaClient;
    interface dmaClients = map(dc,res);
    interface MemreadRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);

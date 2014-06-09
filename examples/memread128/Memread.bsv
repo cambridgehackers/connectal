@@ -23,10 +23,12 @@
 import FIFO::*;
 import FIFOF::*;
 import GetPut::*;
+import ClientServer::*;
 import Vector::*;
 
 import MemTypes::*;
 import MemreadEngine::*;
+import Pipe::*;
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -46,30 +48,28 @@ endinterface
 
 module mkMemread#(MemreadIndication indication) (Memread);
 
-   Reg#(ObjectPointer)        pointer <- mkReg(0);
+   Reg#(ObjectPointer)     pointer <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
    
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
-   FIFOF#(Bit#(128))       readFifo <- mkFIFOF;
-   let                          re <- mkMemreadEngine(1, readFifo);
+   MemreadEngine#(128,1)        re <- mkMemreadEngine;
    
    rule start (iterCnt > 0);
       iterCnt <= iterCnt-1;
-      re.start(pointer, 0, numWords, burstLen);
+      re.readServers[0].request.put(MemengineCmd{pointer:pointer, base:0, len:numWords, burstLen:truncate(burstLen)});
    endrule
    
    rule finish;
-      let rv <- re.finish;
+      let rv <- re.readServers[0].response.get;
       if (iterCnt == 0)
 	 indication.readDone(mismatchCount);
    endrule
    
    rule check;
-      readFifo.deq;
-      let v = readFifo.first;
+      let v <- toGet(re.dataPipes[0]).get;
       let expectedV = {srcGen+3,srcGen+2,srcGen+1,srcGen};
       let misMatch = v != expectedV;
       mismatchCount <= mismatchCount + (misMatch ? 1 : 0);

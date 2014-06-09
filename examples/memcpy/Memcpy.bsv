@@ -23,11 +23,14 @@
 import FIFOF::*;
 import FIFO::*;
 import BRAMFIFO::*;
+import GetPut::*;
+import ClientServer::*;
 
 import PortalMemory::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
+import Pipe::*;
 
 interface MemcpyRequest;
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -51,10 +54,8 @@ endinterface
 
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   let rdFifo <- mkFIFOF;
    let wrFifo <- mkFIFOF;
-   
-   MemreadEngine#(64) re <- mkMemreadEngine(1, rdFifo);
+   MemreadEngine#(64,1) re <- mkMemreadEngine;
    MemwriteEngine#(64) we <- mkMemwriteEngine(1, wrFifo);
 
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
@@ -72,7 +73,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    
    rule start_read(rdIterCnt > 0 && rdBuffer >= burstLen);
       //$display("start_read %d", rdCnt);
-      re.start(rdPointer, extend(rdCnt*4), burstLen*4, burstLen*4);
+      re.readServers[0].request.put(MemengineCmd{pointer:rdPointer, base:extend(rdCnt*4), len:(burstLen*4), burstLen:truncate(burstLen*4)});
       rdBuffer <= rdBuffer-burstLen;
       if(rdCnt+burstLen >= numWords) begin
 	 rdCnt <= 0;
@@ -98,7 +99,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    
    rule read_finish;
       //$display("read_finish %d", rdIterCnt);
-      let rv0 <- re.finish;
+      let rv0 <- re.readServers[0].response.get;
    endrule
 
    rule write_finish;
@@ -109,8 +110,8 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    endrule
    
    rule fill_buffer;
-      rdFifo.deq;
-      buffer.enq(rdFifo.first);
+      let v <- toGet(re.dataPipes[0]).get;
+      buffer.enq(v);
       wrBuffer <= wrBuffer+2;
       //$display("fill_buffer %h", rdFifo.first);
    endrule

@@ -22,6 +22,9 @@
 
 import FIFOF::*;
 import FIFO::*;
+import ClientServer::*;
+import GetPut::*;
+import Pipe::*;
 
 import PortalMemory::*;
 import MemTypes::*;
@@ -46,33 +49,32 @@ endinterface
 
 module mkMemrw#(MemrwIndication indication)(Memrw);
 
-   let readFifo <- mkFIFOF;
-   let writeFifo <- mkFIFOF;
 
-   MemreadEngine#(64) re <- mkMemreadEngine(1, readFifo);
-   MemwriteEngine#(64) we <- mkMemwriteEngine(1, writeFifo);
+   let writeFifo <- mkFIFOF;
+   MemreadEngine#(64,1) re <- mkMemreadEngine;
+   MemwriteEngine#(64)  we <- mkMemwriteEngine(1, writeFifo);
    
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
-   Reg#(ObjectPointer)      rdPointer <- mkReg(0);
-   Reg#(ObjectPointer)      wrPointer <- mkReg(0);
+   Reg#(ObjectPointer)   rdPointer <- mkReg(0);
+   Reg#(ObjectPointer)   wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
    
    rule startRead(rdIterCnt > 0);
       $display("startRead %d", rdIterCnt);
-      re.start(rdPointer, 0, numWords*4, burstLen*4);
+      re.readServers[0].request.put(MemengineCmd{pointer:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       rdIterCnt <= rdIterCnt-1;
    endrule
 
    rule finishRead;
-      let rv0 <- re.finish;
+      let rv0 <- re.readServers[0].response.get;
       if(rdIterCnt==0)
 	 indication.readDone;
    endrule
    
    rule readConsume;
-      readFifo.deq;
+      re.dataPipes[0].deq;
    endrule
    
    rule startWrite(wrIterCnt > 0);

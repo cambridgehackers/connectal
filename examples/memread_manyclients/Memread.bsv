@@ -28,7 +28,7 @@ import ClientServer::*;
 
 import Pipe::*;
 import MemTypes::*;
-import MemreadEngineV::*;
+import MemreadEngine::*;
 import Pipe::*;
 
 typedef 32 NumEngineServers;

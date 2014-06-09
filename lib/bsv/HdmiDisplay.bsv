@@ -69,8 +69,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
 
     Reg#(Maybe#(Bit#(32))) referenceReg <- mkReg(tagged Invalid);
-    FIFOF#(Bit#(64))   mrFifo  <- mkSizedFIFOF(32);
-    MemreadEngine#(64) memreadEngine <- mkMemreadEngine(8, mrFifo);
+    MemreadEngine#(64,8) memreadEngine <- mkMemreadEngine;
 
     HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
 							vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
@@ -84,8 +83,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 
    SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncFIFO(32, defaultClock, defaultReset, hdmi_clock);
    rule doGet;
-      let v = mrFifo.first();
-      mrFifo.deq();
+      let v <- toGet(memreadEngine.dataPipes[0]).get;
       synchronizer.enq(v);
    endrule
    Reg#(Bit#(1)) evenOdd <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
@@ -117,7 +115,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       vsyncFifo.deq();
    endrule
    rule startTransfer if (referenceReg matches tagged Valid .reference);
-      memreadEngine.start(reference, 0, (1080*1920)*4, 64);
+      memreadEngine.readServers[0].request.put(MemengineCmd{pointer:reference, base:0, len:(1080*1920)*4, burstLen:64});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCycles <= 0;
@@ -127,7 +125,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       transferCycles <= transferCycles + 1;
    endrule
    rule finishTransferRule;
-      let b <- memreadEngine.finish();
+      let b <- memreadEngine.readServers[0].response.get;
       transferCount <= transferCount + 1;
       transferSumOfCycles <= transferSumOfCycles + extend(transferCycles);
       if (traceTransfers)

@@ -30,8 +30,8 @@ import SpecialFIFOs::*;
 
 import BRAMFIFOFLevel::*;
 import MemTypes::*;
-import MemreadEngine::*;
 import MemwriteEngine::*;
+import MemUtils::*;
 
 interface BRAMReadClient#(numeric type bramIdxWidth, numeric type busWidth);
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) base, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx);
@@ -63,27 +63,20 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
    Reg#(Bit#(ObjectOffsetSize)) off <- mkReg(0);
    Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst); 
    
-   FIFOF#(Bit#(busWidth)) readFifo = (interface FIFOF;
-				      method Bit#(busWidth) first(); return ?; endmethod
-				      method Bool notEmpty(); return False; endmethod
-				      method Action enq(Bit#(busWidth) d); gb.enq(unpack(d)); endmethod
-				      method Action deq; endmethod
-				      method Action clear; endmethod
-				      method Bool notFull(); return gb.notFull(); endmethod
-				      endinterface);
-   MemreadEngine#(busWidth) re <- mkMemreadEngine(1, readFifo);
    let bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
+   MemReader#(busWidth) re <- mkMemReader;
+   
+   rule feed_gearbox;
+      let v <- re.readServer.readData.get;
+      gb.enq(unpack(v.data));
+   endrule
    
    rule loadReq(i <= n);
-      re.start(ptr, off, bus_width_in_bytes, bus_width_in_bytes);
+      re.readServer.readReq.put(ObjectRequest{pointer:ptr, offset:off, burstLen:bus_width_in_bytes, tag:0});
       off <= off+bus_width_in_bytes;
       i <= i+fromInteger(valueOf(nd));
    endrule
-   
-   rule loadResp;
-      let __x <- re.finish;
-   endrule
-   
+      
    rule load(j <= n);
       br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(j), datain:gb.first[0]});
       gb.deq;
@@ -111,7 +104,7 @@ module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(b
       return True;
    endmethod
    
-   interface dmaClient = re.dmaClient;
+   interface dmaClient = re.readClient;
 
 endmodule
 

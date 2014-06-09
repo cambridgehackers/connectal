@@ -22,6 +22,8 @@
 
 import FIFOF::*;
 import Vector::*;
+import GetPut::*;
+import ClientServer::*;
 
 import MemTypes::*;
 import MemreadEngine::*;
@@ -50,11 +52,9 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
 
    Reg#(Bit#(32))      srcGen <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount <- mkReg(0);
-   FIFOF#(Bit#(64)) dfifo <- mkSizedFIFOF(16);
-   let re0 <- mkMemreadEngine(1, dfifo);
+   MemreadEngine#(64,1) re0 <- mkMemreadEngine;
    Reg#(Bit#(32)) mismatchCount2 <- mkReg(0);
-   FIFOF#(Bit#(64)) dfifo2 <- mkSizedFIFOF(16);
-   let re1 <- mkMemreadEngine(1, dfifo2);
+   MemreadEngine#(64,1) re1 <- mkMemreadEngine;
 
    FIFOF#(Tuple3#(Bit#(32),Bit#(64),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
 
@@ -68,10 +68,8 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
       srcGen <= srcGen+2;
       let expectedV1 = {srcGen+1,srcGen};
       let expectedV2 = {(srcGen+1)*3,srcGen*3};
-      let v1 = dfifo.first;
-      dfifo.deq();
-      let v2 = dfifo2.first;
-      dfifo2.deq();
+      let v1 <- toGet(re0.dataPipes[0]).get;
+      let v2 <- toGet(re1.dataPipes[0]).get;
 
       let misMatch = v1 != expectedV1;
       mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
@@ -84,16 +82,16 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    endrule
    
    rule done;
-      let rv <- re0.finish;
-      let rv2 <- re1.finish;
+      let rv <- re0.readServers[0].response.get;
+      let rv2 <- re1.readServers[0].response.get;
       indication.readDone(mismatchCount);
    endrule
    
    interface Memread2Request request;
        method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) bl);
 	  $display("startRead(%d %d %d %d)", pointer, pointer2, numWords, bl);
-	  re0.start(pointer,  0, numWords*4, bl*4);
-	  re1.start(pointer2, 0, numWords*4, bl*4);
+	  re0.readServers[0].request.put(MemengineCmd{pointer:pointer,  base:0, len:numWords*4, burstLen:truncate(bl*4)});
+	  re1.readServers[0].request.put(MemengineCmd{pointer:pointer2, base:0, len:numWords*4, burstLen:truncate(bl*4)});
 	  indication.started(numWords);
        endmethod
 

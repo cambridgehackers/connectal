@@ -30,7 +30,7 @@ import SpecialFIFOs::*;
 
 import BRAMFIFOFLevel::*;
 import GetPut::*;
-import Dma::*;
+import MemTypes::*;
 
 interface MemReader#(numeric type dataWidth);
    interface ObjectReadServer #(dataWidth) readServer;
