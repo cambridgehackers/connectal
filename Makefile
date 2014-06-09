@@ -39,6 +39,12 @@ test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidi
 
 #################################################################################################
 
+dontcompile =                    \
+            pcietestbench        \
+            pcietestbench_dma_io \
+            pcietestbench_dma_oo \
+
+
 testnames = echo                 \
 	    hdmidisplay          \
             memcpy               \
@@ -49,9 +55,6 @@ testnames = echo                 \
             memrw                \
             memread128           \
             memread2             \
-            pcietestbench        \
-            pcietestbench_dma_io \
-            pcietestbench_dma_oo \
             pipe_mul             \
             pipe_mul2            \
             printf               \
