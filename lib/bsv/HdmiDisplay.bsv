@@ -50,12 +50,6 @@ interface HdmiDisplayIndication;
    method Action transferStats(Bit#(32) count, Bit#(32) transferCycles, Bit#(64) sumOfCycles);
 endinterface
 
-`ifdef ZC706
-typedef 24 HdmiBits;
-`else
-typedef 16 HdmiBits;
-`endif
-
 interface HdmiDisplay;
     interface HdmiDisplayRequest displayRequest;
     interface HdmiInternalRequest internalRequest;

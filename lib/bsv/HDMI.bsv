@@ -31,6 +31,12 @@ import GetPut::*;
 import SyncBits::*;
 import YUV::*;
 
+`ifdef ZC706
+typedef 24 HdmiBits;
+`else
+typedef 16 HdmiBits;
+`endif
+
 interface HDMI#(type pixelType);
     method Bit#(1) vsync;
     method Bit#(1) hsync;
