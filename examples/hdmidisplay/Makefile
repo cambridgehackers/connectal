@@ -6,12 +6,7 @@ S2H = HdmiDisplayRequest HdmiInternalRequest DmaConfig
 H2S = HdmiDisplayIndication HdmiInternalIndication DmaIndication
 BSVFILES = $(LIBBSVDIR)/HdmiDisplay.bsv $(LIBBSVDIR)/HDMI.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
 CPPFILES= testhdmidisplay.cpp
-XBSVFLAGS = -C hdmidisplay-$(BOARD).xdc
-ifeq ($(BOARD),bluesim)
-else
-TOP=ZynqTop.bsv
-MKTOP=mkHdmiZynqTop
-endif
+XBSVFLAGS = -C hdmidisplay-$(BOARD).xdc -D USES_FCLK1 -D PinType=HDMI16
 
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
