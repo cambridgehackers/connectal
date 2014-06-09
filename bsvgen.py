@@ -60,8 +60,8 @@ typedef struct {
 requestStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
-} %(MethodName)s$Request deriving (Bits);
-Bit#(6) %(methodName)s$Offset = %(channelNumber)s;
+} %(MethodName)s_Request deriving (Bits);
+Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 '''
 
 exposedProxyInterfaceTemplate='''
@@ -100,8 +100,8 @@ endinterface
 responseStructTemplate='''
 typedef struct {
 %(paramStructDeclarations)s
-} %(MethodName)s$Response deriving (Bits);
-Bit#(6) %(methodName)s$Offset = %(channelNumber)s;
+} %(MethodName)s_Response deriving (Bits);
+Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 '''
 
 wrapperCtrlTemplate='''
@@ -363,35 +363,35 @@ proxyCtrlTemplate='''
 
 
 requestRuleTemplate='''
-    FromBit#(32,%(MethodName)s$Request) %(methodName)s$requestFifo <- mkFromBit();
-    rule slaveWrite$%(methodName)s if (slaveWriteAddrFifo.first[14] == 0 && slaveWriteAddrFifo.first[13:8] == %(methodName)s$Offset);
+    FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
+    rule slaveWrite_%(methodName)s if (slaveWriteAddrFifo.first[14] == 0 && slaveWriteAddrFifo.first[13:8] == %(methodName)s_Offset);
         slaveWriteAddrFifo.deq;
         slaveWriteDataFifo.deq;
-        %(methodName)s$requestFifo.enq(slaveWriteDataFifo.first);
+        %(methodName)s_requestFifo.enq(slaveWriteDataFifo.first);
     endrule
-    (* descending_urgency = "handle$%(methodName)s$request, handle$%(methodName)s$requestFailure" *)
-    rule handle$%(methodName)s$request if (putEnable);
-        let request = %(methodName)s$requestFifo.first;
-        %(methodName)s$requestFifo.deq;
+    (* descending_urgency = "handle_%(methodName)s_request, handle_%(methodName)s_requestFailure" *)
+    rule handle_%(methodName)s_request if (putEnable);
+        let request = %(methodName)s_requestFifo.first;
+        %(methodName)s_requestFifo.deq;
         %(invokeMethod)s
         requestFiredPulse.send();
     endrule
-    rule handle$%(methodName)s$requestFailure;
+    rule handle_%(methodName)s_requestFailure;
         %(putFailed)s
-        %(methodName)s$requestFifo.deq;
-        $display("%(methodName)s$requestFailure");
+        %(methodName)s_requestFifo.deq;
+        $display("%(methodName)s_requestFailure");
     endrule
 '''
 
 indicationRuleTemplate='''
-    ToBit#(32,%(MethodName)s$Response) %(methodName)s$responseFifo <- mkToBit();
-    rule %(methodName)s$read if (slaveReadAddrFifo.first[14] == 0 && 
-                                         slaveReadAddrFifo.first[13:8] == %(methodName)s$Offset);
+    ToBit#(32,%(MethodName)s_Response) %(methodName)s_responseFifo <- mkToBit();
+    rule %(methodName)s_read if (slaveReadAddrFifo.first[14] == 0 && 
+                                         slaveReadAddrFifo.first[13:8] == %(methodName)s_Offset);
         slaveReadAddrFifo.deq;
         let v = 32'hbad0dada;
-        if (%(methodName)s$responseFifo.notEmpty) begin
-            %(methodName)s$responseFifo.deq;
-            v = %(methodName)s$responseFifo.first;
+        if (%(methodName)s_responseFifo.notEmpty) begin
+            %(methodName)s_responseFifo.deq;
+            v = %(methodName)s_responseFifo.first;
         end
         else begin
             underflowReadCountReg <= underflowReadCountReg + 1;
@@ -399,7 +399,7 @@ indicationRuleTemplate='''
         end
         slaveReadDataFifo.enq(v);
     endrule
-    readyBits[%(methodName)s$Offset] = %(methodName)s$responseFifo.notEmpty;
+    readyBits[%(methodName)s_Offset] = %(methodName)s_responseFifo.notEmpty;
 '''
 
 indicationMethodDeclTemplate='''
@@ -407,7 +407,7 @@ indicationMethodDeclTemplate='''
 
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
-        %(methodName)s$responseFifo.enq(%(MethodName)s$Response {%(structElements)s});
+        %(methodName)s_responseFifo.enq(%(MethodName)s_Response {%(structElements)s});
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
@@ -615,7 +615,7 @@ class InterfaceMixin:
             'Dut': util.capitalize(name),
             'requestElements': ''.join(requestElements),
             'methodRules': ''.join(methodRules),
-            'requestFailureRuleNames': "" if len(methodNames) == 0 else '(* descending_urgency = "'+', '.join(['handle$%s$requestFailure' % n for n in methodNames])+'"*)',
+            'requestFailureRuleNames': "" if len(methodNames) == 0 else '(* descending_urgency = "'+', '.join(['handle_%s_requestFailure' % n for n in methodNames])+'"*)',
             'channelCount': self.channelCount,
             'writeChannelCount': self.channelCount,
             'Ifc': self.name,
@@ -695,7 +695,7 @@ class InterfaceMixin:
             if m.type == 'Method':
                 methodRule = m.collectMethodRule(outerTypeName)
                 if methodRule:
-                    methodRuleNames.append('slaveWrite$%s' % m.name)
+                    methodRuleNames.append('slaveWrite_%s' % m.name)
         return methodRuleNames
     def collectMethodNames(self,outerTypeName):
         methodRuleNames = []
@@ -713,7 +713,7 @@ class InterfaceMixin:
             if m.type == 'Method':
                 methodRule = m.collectIndicationMethodRule(outerTypeName)
                 if methodRule:
-                    methodRuleNames.append("%s$slaveRead" % m.name)
+                    methodRuleNames.append("%s_slaveRead" % m.name)
         return methodRuleNames
     def collectIndicationMethodRules(self,outerTypeName):
         methodRules = []
