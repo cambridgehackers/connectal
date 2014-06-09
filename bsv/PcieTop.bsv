@@ -57,6 +57,7 @@ typedef 8 NumLeds;
 `endif
 `ifndef PinType
 `define PinType Empty
+`endif
 
 typedef `DataBusWidth DataBusWidth;
 typedef `NumberOfMasters NumberOfMasters;
