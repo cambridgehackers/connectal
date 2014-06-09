@@ -28,7 +28,9 @@ import HdmiDisplay::*;
 
 typedef enum {HdmiDisplayRequest, HdmiDisplayIndication, HdmiInternalRequest, HdmiInternalIndication, DmaConfig, DmaIndication} IfcNames deriving (Eq,Bits);
 
-module mkZynqPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI#(Bit#(16)),1))
+typedef HDMI#(Bit#(16)) HDMI16;
+
+module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI#(Bit#(16)),1))
    provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
 	    Add#(c__, 12, addrWidth),
@@ -63,21 +65,4 @@ module mkZynqPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI#(Bit#(16)),1))
    interface masters = dma.masters;
    interface leds = default_leds;
    interface pins = hdmiDisplay.hdmi;      
-endmodule : mkZynqPortalTop
-
-module mkPortalTop(PortalTop#(addrWidth,64,Empty,1))
-   provisos(Add#(addrWidth, a__, 52),
-	    Add#(b__, addrWidth, 64),
-	    Add#(c__, 12, addrWidth),
-	    Add#(addrWidth, d__, 44),
-	    Add#(e__, c__, ObjectOffsetSize),
-	    Add#(f__, addrWidth, 40));
-
-   Clock defaultClock <- exposeCurrentClock();
-   let portalTop <- mkZynqPortalTop(defaultClock);
-   
-   interface interrupt = portalTop.interrupt;
-   interface slave = portalTop.slave;
-   interface masters = portalTop.masters;
-   interface leds = portalTop.leds;
-endmodule
+endmodule : mkPortalTop
