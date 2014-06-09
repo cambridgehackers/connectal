@@ -22,49 +22,43 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import BRAM   :: *;
-import Bscan  :: *;
-import GetPut :: *;
+import BRAM         :: *;
+import Bscan        :: *;
+import GetPut       :: *;
+import Connectable  :: *;
+import DefaultValue :: *;
+import Clocks       :: *;
 
 interface BscanIndication;
     method Action bscanGet(Bit#(32) v);
-    //method Action addr(Bit#(32) v);
 endinterface
 
 interface BscanRequest;
    method Action bscanGet(Bit#(8) addr);
    method Action bscanPut(Bit#(8) addr, Bit#(32) v);
-   method Action addr();
 endinterface
 
 module mkBscanRequest#(BscanIndication indication)(BscanRequest);
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
 
    Reg#(Bit#(8)) addrReg <- mkReg(0);
 
    BscanBram#(Bit#(8),Bit#(32)) bscanBram <- mkBscanBram(1, addrReg);
-   //let bscan <- mkBscan(3);
+   let bram <- mkSyncBRAM2Server(defaultValue, defaultClock, defaultReset, bscanBram.jtagClock, bscanBram.jtagReset);
+   mkConnection(bscanBram.bramClient, bram.portB);
 
-    //rule bscanGetRule1;
-       //let v <- bscan.update.get();
-       //indication.bscanGet(v);
-    //endrule
-
-    rule bscanGetRule2;
-       let v <- bscanBram.server.response.get();
-       indication.bscanGet(v);
-    endrule
+   rule bscanGetRule2;
+      let v <- bram.portA.response.get();
+      indication.bscanGet(v);
+   endrule
    
    method Action bscanGet(Bit#(8) addr);
-      bscanBram.server.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addr, datain: ?});
+      bram.portA.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addr, datain: ?});
    endmethod
 
    method Action bscanPut(Bit#(8) addr, Bit#(32) v);
-      //bscan.capture.put(v);
-      bscanBram.server.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addr, datain: truncate(v)});
+      bram.portA.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addr, datain: truncate(v)});
    endmethod
-      
-   //method Action addr();
-      //indication.addr(extend(bscanBram.addr()));
-   //endmethod
 
 endmodule
