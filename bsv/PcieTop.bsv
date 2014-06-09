@@ -40,7 +40,7 @@ import MemSlaveEngine    :: *;
 import MemMasterEngine   :: *;
 import PcieCsr           :: *;
 import MemSlave          :: *;
-import Dma               :: *;
+import MemTypes          :: *;
 
 `ifdef Artix7
 typedef 4 PcieLanes;

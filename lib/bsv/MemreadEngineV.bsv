@@ -29,7 +29,7 @@ import ClientServer::*;
 import BRAM::*;
 
 import PortalMemory::*;
-import Dma::*;
+import MemTypes::*;
 import Pipe::*;
 
 typedef struct {ObjectPointer pointer;

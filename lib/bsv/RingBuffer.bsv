@@ -34,7 +34,7 @@
 // or by other means
 // 
 // Configuration.  
-import Dma::*;
+import MemTypes::*;
 
 interface RingBuffer;
    method Bool notEmpty();

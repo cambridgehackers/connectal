@@ -28,7 +28,7 @@ import MIMO         :: *;
 import PCIE         :: *;
 import DefaultValue :: *;
 import ClientServer :: *;
-import Dma          :: *;
+import MemTypes     :: *;
 
 //
 // Top interface: PCIe transaction level packets (TLPs)

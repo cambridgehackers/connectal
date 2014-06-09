@@ -27,7 +27,7 @@ import FIFO::*;
 import Connectable::*;
 
 import PortalMemory::*;
-import Dma::*;
+import MemTypes::*;
 import BlueScope::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;

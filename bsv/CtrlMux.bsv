@@ -31,7 +31,7 @@ import FIFO::*;
 
 import Portal::*;
 import Directory::*;
-import Dma::*;
+import MemTypes::*;
 import RegFileA::*;
 
 module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bool))

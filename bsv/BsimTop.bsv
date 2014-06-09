@@ -32,7 +32,7 @@ import AxiMasterSlave    :: *;
 import Leds              :: *;
 import Top               :: *;
 import AxiMasterSlave    :: *;
-import Dma               :: *;
+import MemTypes          :: *;
 import AxiDma            :: *;
 
 // implemented in BsimCtrl.cxx

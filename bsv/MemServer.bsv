@@ -30,7 +30,7 @@ import Assert::*;
 import StmtFSM::*;
 
 // XBSV Libraries
-import Dma::*;
+import MemTypes::*;
 import PortalMemory::*;
 import SGList::*;
 import MemServerInternal::*;

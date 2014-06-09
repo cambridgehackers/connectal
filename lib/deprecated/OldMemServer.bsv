@@ -28,7 +28,7 @@ import ClientServer::*;
 import Assert::*;
 
 // XBSV Libraries
-import Dma::*;
+import MemTypes::*;
 import PortalMemory::*;
 import SGList::*;
 

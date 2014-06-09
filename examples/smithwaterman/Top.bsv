@@ -11,7 +11,7 @@ import Portal::*;
 import Leds::*;
 import BlueScope::*;
 import PortalMemory::*;
-import Dma::*;
+import MemTypes::*;
 import DmaUtils::*;
 import MemServer::*;
 

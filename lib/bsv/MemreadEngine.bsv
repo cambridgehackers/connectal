@@ -29,7 +29,7 @@ import ClientServer::*;
 import BRAM::*;
 
 import PortalMemory::*;
-import Dma::*;
+import MemTypes::*;
 
 interface MemreadEngine#(numeric type dataWidth);
    method Action start(ObjectPointer pointer, Bit#(ObjectOffsetSize) base, Bit#(32) readLen, Bit#(32) burstLen);

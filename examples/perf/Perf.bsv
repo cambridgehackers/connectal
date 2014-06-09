@@ -25,7 +25,7 @@ import FIFOF::*;
 import GetPut::*;
 
 import PortalMemory::*;
-import Dma::*;
+import MemTypes::*;
 
 interface PerfRequest;
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) repeatCount);

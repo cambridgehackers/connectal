@@ -32,7 +32,7 @@ import BRAM::*;
 import Connectable::*;
 
 //import AxiMasterSlave::*;
-import Dma::*;
+import MemTypes::*;
 import DmaUtils::*;
 import Dma2BRAM::*;
 

@@ -29,7 +29,7 @@ import SpecialFIFOs::*;
 
 //portz libraries
 import Portal::*;
-import Dma::*;
+import MemTypes::*;
 import RegFileA::*;
 
 interface Directory#(numeric type _n,

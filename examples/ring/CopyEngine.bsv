@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 import FIFOF::*;
-import Dma::*;
+import MemTypes::*;
 import RingTypes::*;
 import StmtFSM::*;
 import ClientServer::*;

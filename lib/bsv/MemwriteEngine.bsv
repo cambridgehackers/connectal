@@ -27,7 +27,7 @@ import GetPut::*;
 import Assert::*;
 
 import PortalMemory::*;
-import Dma::*;
+import MemTypes::*;
 
 interface MemwriteEngine#(numeric type dataWidth);
    method Action start(ObjectPointer pointer, Bit#(ObjectOffsetSize) base, Bit#(32) writeLen, Bit#(32) burstLen);

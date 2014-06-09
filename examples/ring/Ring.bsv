@@ -28,7 +28,7 @@ import StmtFSM::*;
 import ClientServer::*;
 
 import PortalMemory::*;
-import Dma::*;
+import MemTypes::*;
 import CompletionBuffer::*;
 
 import RingTypes::*;

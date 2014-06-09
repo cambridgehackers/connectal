@@ -23,7 +23,7 @@
 import FIFO::*;
 import GetPut::*;
 import ClientServer::*;
-import Dma::*;
+import MemTypes::*;
 import RingTypes::*;
 
 

@@ -27,7 +27,7 @@ import ClientServer::*;
 
 // XBSV Libraries
 import AxiMasterSlave::*;
-import Dma::*;
+import MemTypes::*;
 import PortalMemory::*;
 
 

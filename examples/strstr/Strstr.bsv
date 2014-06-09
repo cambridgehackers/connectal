@@ -28,7 +28,7 @@ import BRAM::*;
 import Gearbox::*;
 
 import AxiMasterSlave::*;
-import Dma::*;
+import MemTypes::*;
 import MPEngine::*;
 
 interface StrstrRequest;

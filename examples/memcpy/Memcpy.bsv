@@ -25,7 +25,7 @@ import FIFO::*;
 import BRAMFIFO::*;
 
 import PortalMemory::*;
-import Dma::*;
+import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
 

@@ -33,7 +33,7 @@ import Connectable::*;
 import MCSAlgorithm::*;
 
 //import AxiMasterSlave::*;
-import Dma::*;
+import MemTypes::*;
 import DmaUtils::*;
 import Dma2BRAM::*;
 

@@ -24,7 +24,7 @@ import FIFO::*;
 import FIFOF::*;
 
 import AxiMasterSlave::*;
-import Dma::*;
+import MemTypes::*;
 import MemwriteEngine::*;
 
 interface MemwriteRequest;

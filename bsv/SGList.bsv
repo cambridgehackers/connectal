@@ -28,7 +28,7 @@ import Vector::*;
 import GetPut::*;
 import BRAMFIFO::*;
 import BRAM::*;
-import Dma::*;
+import MemTypes::*;
 import StmtFSM::*;
 import ClientServer::*;
 import PortalMemory::*;

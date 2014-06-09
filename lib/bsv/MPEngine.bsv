@@ -36,7 +36,7 @@ import Connectable::*;
 import MemUtils::*;
 
 import AxiMasterSlave::*;
-import Dma::*;
+import MemTypes::*;
 import Dma2BRAM::*;
 
 interface MPEngine#(numeric type busWidth);

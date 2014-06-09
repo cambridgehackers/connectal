@@ -25,7 +25,7 @@ import FIFO::*;
 import GetPut::*;
 import Connectable::*;
 import RegFile::*;
-import Dma::*;
+import MemTypes::*;
 
 
 interface RegFileA#(type index_t, type data_t);

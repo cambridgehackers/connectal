@@ -27,7 +27,7 @@ import FIFOF::*;
 import BRAMFIFO::*;
 import GetPut::*;
 
-import Dma::*;
+import MemTypes::*;
 import MemUtils::*;
 import ClientServer::*;
 

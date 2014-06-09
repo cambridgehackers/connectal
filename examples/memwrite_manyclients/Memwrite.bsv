@@ -27,7 +27,7 @@ import ClientServer::*;
 import GetPut::*;
 
 import AxiMasterSlave::*;
-import Dma::*;
+import MemTypes::*;
 import MemwriteEngineV::*;
 import Pipe::*;
 

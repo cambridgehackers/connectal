@@ -31,7 +31,7 @@ import PCIE::*;
 import GetPutWithClocks::*;
 import Connectable::*;
 import PortalMemory::*;
-import Dma::*;
+import MemTypes::*;
 import DmaUtils::*;
 import AxiMasterSlave::*;
 import MemreadEngine::*;

@@ -26,7 +26,7 @@ import Vector  ::*;
 import StmtFSM ::*;
 
 import AxiMasterSlave::*;
-import Dma::*;
+import MemTypes::*;
 import MemwriteEngine::*;
 
 interface MemwriteRequest;

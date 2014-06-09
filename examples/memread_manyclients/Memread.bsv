@@ -27,7 +27,7 @@ import GetPut::*;
 import ClientServer::*;
 
 import Pipe::*;
-import Dma::*;
+import MemTypes::*;
 import MemreadEngineV::*;
 import Pipe::*;
 

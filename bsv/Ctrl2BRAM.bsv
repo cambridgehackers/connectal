@@ -23,7 +23,7 @@
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
-import Dma::*;
+import MemTypes::*;
 import AddressGenerator::*;
 import BRAM::*;
 

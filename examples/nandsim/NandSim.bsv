@@ -25,7 +25,7 @@ import GetPut::*;
 import Vector::*;
 import BRAM::*;
 
-import Dma::*;
+import MemTypes::*;
 import Dma2BRAM::*;
 
 interface NandSimRequest;

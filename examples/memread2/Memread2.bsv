@@ -23,7 +23,7 @@
 import FIFOF::*;
 import Vector::*;
 
-import Dma::*;
+import MemTypes::*;
 import MemreadEngine::*;
 
 interface Memread2Request;

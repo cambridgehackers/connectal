@@ -25,7 +25,7 @@ import FIFO::*;
 import GetPut::*;
 import Connectable::*;
 import RegFile::*;
-import Dma::*;
+import MemTypes::*;
 
 typedef struct {
    Bit#(addrWidth) addr;

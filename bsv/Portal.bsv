@@ -22,7 +22,7 @@
 
 
 import Vector::*;
-import Dma::*;
+import MemTypes::*;
 import Leds::*;
 
 interface Portal#(numeric type slaveAddrWidth, numeric type slaveDataWidth);

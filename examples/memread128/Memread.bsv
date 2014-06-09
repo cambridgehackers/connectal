@@ -25,7 +25,7 @@ import FIFOF::*;
 import GetPut::*;
 import Vector::*;
 
-import Dma::*;
+import MemTypes::*;
 import MemreadEngine::*;
 
 interface MemreadRequest;

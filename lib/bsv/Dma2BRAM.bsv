@@ -29,7 +29,7 @@ import FIFOF::*;
 import SpecialFIFOs::*;
 
 import BRAMFIFOFLevel::*;
-import Dma::*;
+import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
 

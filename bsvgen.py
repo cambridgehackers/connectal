@@ -46,7 +46,7 @@ import Vector::*;
 import SpecialFIFOs::*;
 import PortalMemory::*;
 import Portal::*;
-import Dma::*;
+import MemTypes::*;
 %(extraImports)s
 
 typedef struct {

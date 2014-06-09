@@ -28,7 +28,7 @@ import DefaultValue :: *;
 import MIMO         :: *;
 import Vector       :: *;
 import ClientServer :: *;
-import Dma          :: *;
+import MemTypes     :: *;
 
 import AxiMasterSlave :: *;
 

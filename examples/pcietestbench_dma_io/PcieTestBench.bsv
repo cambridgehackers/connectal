@@ -36,7 +36,7 @@ import Portal            :: *;
 import MemServer         :: *;
 import MemreadEngine     :: *;
 import AxiDma            :: *;
-import Dma               :: *;
+import MemTypes          :: *;
 import AxiMasterSlave    :: *;
 
 import DmaConfigWrapper::*;

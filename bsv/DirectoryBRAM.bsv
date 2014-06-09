@@ -33,7 +33,7 @@ import Assert::*;
 
 //portz libraries
 import Portal::*;
-import Dma::*;
+import MemTypes::*;
 import Ctrl2BRAM::*;
 
 interface Directory#(numeric type _n,

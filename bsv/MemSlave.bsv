@@ -24,7 +24,7 @@ import Vector         :: *;
 import FIFOF          :: *;
 import GetPut         :: *;
 import Clocks         :: *;
-import Dma            :: *;
+import MemTypes       :: *;
 
 interface MemSlaveClient;
     method Bit#(32) rd(UInt#(30) addr);
