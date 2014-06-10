@@ -70,6 +70,7 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
       rule start (iterCnts[i] > 0);
 	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 $display("start %d, %d", i, iterCnts[i]);
+	 srcGens[i] <= fromInteger(i)*truncate(chunk/4);      
       endrule
       rule finish;
 	 $display("finish %d %d", i, iterCnts[i]);
@@ -79,7 +80,6 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
 	 //mismatchCnt <= mismatchCnt+mismatchCounts[i];
 	 mismatchCounts[i] <= 0;
 	 mismatchFifos[i].enq(mismatchCounts[i]);
-	 srcGens[i] <= fromInteger(i)*truncate(chunk/4);      
       endrule
       rule check;
 	 let v <- toGet(re.dataPipes[i]).get;
@@ -119,7 +119,6 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
 	 for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
 	    iterCnts[i] <= ic;
 	    mismatchCounts[i] <= 0;
-	    srcGens[i] <= fromInteger(i)*truncate(chunk/4);
 	 end
       endmethod
    endinterface
