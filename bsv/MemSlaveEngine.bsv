@@ -32,7 +32,7 @@ import MemTypes     :: *;
 
 import AxiMasterSlave :: *;
 
-interface MemSlaveEngine#(type buswidth);
+interface MemSlaveEngine#(numeric type buswidth);
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface MemSlave#(40,buswidth) slave;
     method Bool tlpOutFifoNotEmpty();

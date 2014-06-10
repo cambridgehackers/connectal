@@ -51,7 +51,7 @@ typedef struct {
    Bit#(idWidth) id;
    Bit#(2) lock;
    Bit#(4) qos;
-} Axi3ReadRequest#(type addrWidth, type idWidth) deriving (Bits);
+} Axi3ReadRequest#(numeric type addrWidth, numeric type idWidth) deriving (Bits);
 
 function Bit#(3) axiBusSize(Integer busWidth);
    if (busWidth == 32)
@@ -69,7 +69,7 @@ typedef struct {
    Bit#(2) resp;
    Bit#(1) last;
    Bit#(idWidth) id;
-} Axi3ReadResponse#(type busWidth, type idWidth) deriving (Bits);
+} Axi3ReadResponse#(numeric type busWidth, numeric type idWidth) deriving (Bits);
 
 typedef struct {
    Bit#(addrWidth) address;
@@ -81,19 +81,19 @@ typedef struct {
    Bit#(idWidth) id;
    Bit#(2) lock;
    Bit#(4) qos;
-} Axi3WriteRequest#(type addrWidth, type idWidth) deriving (Bits);
+} Axi3WriteRequest#(numeric type addrWidth, numeric type idWidth) deriving (Bits);
 
 typedef struct {
     Bit#(busWidth) data;
     Bit#(TDiv#(busWidth,8)) byteEnable;
     Bit#(1)        last;
     Bit#(idWidth) id;
-} Axi3WriteData#(type busWidth, type idWidth) deriving (Bits);
+} Axi3WriteData#(numeric type busWidth, numeric type idWidth) deriving (Bits);
 
 typedef struct {
     Bit#(2) resp;
     Bit#(idWidth) id;
-} Axi3WriteResponse#(type idWidth) deriving (Bits);
+} Axi3WriteResponse#(numeric type idWidth) deriving (Bits);
 
 function Get#(Axi3ReadResponse#(_b,_c)) get_resp_read(Axi3Slave#(_a,_b,_c) x);
    return x.resp_read;
@@ -103,7 +103,7 @@ function Get#(Axi3WriteResponse#(_c)) get_resp_b(Axi3Slave#(_a,_b,_c) x);
    return x.resp_b;
 endfunction
 
-interface Axi3Master#(type addrWidth, type busWidth, type idWidth);
+interface Axi3Master#(numeric type addrWidth, numeric type busWidth, numeric type idWidth);
    interface Get#(Axi3ReadRequest#(addrWidth, idWidth)) req_ar;
    interface Put#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
    interface Get#(Axi3WriteRequest#(addrWidth, idWidth)) req_aw;
@@ -111,7 +111,7 @@ interface Axi3Master#(type addrWidth, type busWidth, type idWidth);
    interface Put#(Axi3WriteResponse#(idWidth)) resp_b;
 endinterface
 
-interface Axi3Slave#(type addrWidth, type busWidth, type idWidth);
+interface Axi3Slave#(numeric type addrWidth, numeric type busWidth, numeric type idWidth);
    interface Put#(Axi3ReadRequest#(addrWidth, idWidth)) req_ar;
    interface Get#(Axi3ReadResponse#(busWidth, idWidth)) resp_read;
    interface Put#(Axi3WriteRequest#(addrWidth, idWidth)) req_aw;
