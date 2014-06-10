@@ -44,6 +44,8 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
+static int trace_memory;// = 1;
+
 void PortalMemory::InitSemaphores()
 {
   if (sem_init(&confSem, 1, 0)){
@@ -132,7 +134,8 @@ int PortalMemory::reference(PortalAlloc* pa)
   pa->entries[ne].dma_address = 0;
   pa->entries[ne].length = 0;
   pa->header.numEntries++;
-  // fprintf(stderr, "PortalMemory::reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, pa->header.size);
+  if (trace_memory)
+    fprintf(stderr, "PortalMemory::reference id=%08x, numEntries:=%d len=%08lx)\n", id, ne, pa->header.size);
 #ifndef MMAP_HW
   sock_fd_write(p_fd.write.s2, pa->header.fd);
 #endif
@@ -154,11 +157,13 @@ int PortalMemory::reference(PortalAlloc* pa)
       fprintf(stderr, "PortalMemory::unsupported sglist size %x\n", e->length);
     }
 #ifdef MMAP_HW
-    //fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, e->dma_address, e->length);
+    if (trace_memory)
+      fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08lx, len=%08x)\n", id, i, e->dma_address, e->length);
     sglist(id, e->dma_address, e->length);
 #else
     int addr = (e->length > 0) ? size_accum : 0;
-    // fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08x, len=%08x)\n", id, i, addr, e->length);
+    if (trace_memory)
+      fprintf(stderr, "PortalMemory::sglist(id=%08x, i=%d dma_addr=%08x, len=%08x)\n", id, i, addr, e->length);
     sglist(id, addr , e->length);
 #endif
     size_accum += e->length;
@@ -188,8 +193,10 @@ int PortalMemory::reference(PortalAlloc* pa)
     borders[i].border = border;
     entryCount += regions[i];
   }
-  //fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
-  //fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
+  if (trace_memory) {
+    fprintf(stderr, "regions %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,regions[0], regions[1], regions[2]);
+    fprintf(stderr, "borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borders[0].border, borders[1].border, borders[2].border);
+  }
   region(id,
 	 borders[0].border, borders[0].idxOffset,
 	 borders[1].border, borders[1].idxOffset,
@@ -218,7 +225,7 @@ void PortalMemory::dbgResp(const DmaDbgRec& rec)
 
 void PortalMemory::confResp(uint32_t channelId)
 {
-  // fprintf(stderr, "configResp %d\n", channelId);
+  //fprintf(stderr, "configResp %d\n", channelId);
   sem_post(&confSem);
 }
 
