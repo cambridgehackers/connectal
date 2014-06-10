@@ -42,8 +42,8 @@ static void *thread_routine(void *data)
 class HdmiIndication : public HdmiInternalIndicationWrapper {
 public:
     HdmiIndication(int id) : HdmiInternalIndicationWrapper(id) {}
-    virtual void vsync ( uint64_t v ) {
-      fprintf(stderr, "[%s:%d] v=%d\n", __FUNCTION__, __LINE__, (uint32_t) v);
+  virtual void vsync ( uint64_t v, uint32_t w ) {
+    fprintf(stderr, "[%s:%d] v=%d w=%d\n", __FUNCTION__, __LINE__, (uint32_t) v, w);
       //hdmiInternal->waitForVsync(0);
     }
 };
@@ -157,7 +157,7 @@ int main(int argc, const char **argv)
     if (0) hdmiInternal->waitForVsync(0);
     if (0) {
       fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc);
-      device->startFrameBuffer0(ref_srcAlloc);
+      device->startFrameBuffer(ref_srcAlloc, nlines, npixels, nlines*npixels);
       fprintf(stderr, "done\n");
     }
     while (1) {
