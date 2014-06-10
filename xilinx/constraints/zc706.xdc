@@ -204,13 +204,13 @@ set_property slew "SLOW" [get_ports "XADC_gpio[3]"]
 set_property PIO_DIRECTION "OUTPUT" [get_ports "XADC_gpio[3]"]
 
 # PS_MIO50
-set_property iostandard "LVCMOS25" [get_ports "I2C0_SCL"]
-set_property PACKAGE_PIN "A19" [get_ports "I2C0_SCL"]
-set_property slew "SLOW" [get_ports "I2C0_SCL"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "I2C0_SCL"]
+set_property iostandard "LVCMOS25" [get_ports "I2C0_scl"]
+set_property PACKAGE_PIN "A19" [get_ports "I2C0_scl"]
+set_property slew "SLOW" [get_ports "I2C0_scl"]
+set_property PIO_DIRECTION "OUTPUT" [get_ports "I2C0_scl"]
 
 # PS_MIO51
-set_property iostandard "LVCMOS25" [get_ports "I2C0_SDA"]
-set_property PACKAGE_PIN "F19" [get_ports "I2C0_SDA"]
-set_property slew "SLOW" [get_ports "I2C0_SDA"]
-set_property PIO_DIRECTION "OUTPUT" [get_ports "I2C0_SDA"]
+set_property iostandard "LVCMOS25" [get_ports "I2C0_sda"]
+set_property PACKAGE_PIN "F19" [get_ports "I2C0_sda"]
+set_property slew "SLOW" [get_ports "I2C0_sda"]
+set_property PIO_DIRECTION "OUTPUT" [get_ports "I2C0_sda"]
