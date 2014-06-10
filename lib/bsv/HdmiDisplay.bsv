@@ -41,7 +41,6 @@ import MemreadEngine::*;
 import HDMI::*;
 import XADC::*;
 import YUV::*;
-import FrequencyCounter::*;
 import Gearbox::*;
 import MIMO::*;
 import BlueScope::*;
@@ -51,13 +50,11 @@ interface HdmiDisplayRequest;
    method Action stopFrameBuffer();
    method Action getTransferStats();
    method Action setTraceTransfers(Bit#(1) trace);
-   method Action fcStart(Bit#(32) fclk0_cycles); 
 endinterface
 interface HdmiDisplayIndication;
    method Action transferStarted(Bit#(32) count);
    method Action transferFinished(Bit#(32) count);
    method Action transferStats(Bit#(32) count, Bit#(32) transferCycles, Bit#(64) sumOfCycles);
-   method Action fcElapsedCycles(Bit#(32) elapsedCycles);
 endinterface
 
 interface HdmiDisplay;
@@ -99,7 +96,6 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 `else
    HDMI#(Bit#(HdmiBits)) hdmisignals <- mkHDMI(hdmiGen.rgb888, clocked_by hdmi_clock, reset_by hdmi_reset);
 `endif   
-   let freqCounter <- mkFrequencyCounter(hdmi_clock, hdmi_reset);
    let bluescope <- mkSyncBlueScope(65536, bluescopeIndication, hdmi_clock, hdmi_reset, defaultClock, defaultReset);
    //Gearbox#(1, 16, Bit#(4)) gearbox <- mk1toNGearbox(hdmi_clock, hdmi_reset, hdmi_clock, hdmi_reset);
    MIMO#(1, 16, 64, Bit#(4)) mimo <- mkMIMO(MIMOConfiguration { unguarded: False, bram_based: False }, clocked_by hdmi_clock, reset_by hdmi_reset);
@@ -185,10 +181,6 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     rule bozobit_rule;
         bozobit <= ~bozobit;
     endrule
-   rule fc;
-      let ec <- freqCounter.elapsedCycles();
-      hdmiDisplayIndication.fcElapsedCycles(ec);
-   endrule
 
     interface HdmiDisplayRequest displayRequest;
 	method Action startFrameBuffer(Int#(32) base, UInt#(32) rows, UInt#(32) cols, UInt#(32) pixels);
@@ -208,9 +200,6 @@ module mkHdmiDisplay#(Clock hdmi_clock,
        endmethod
        method Action setTraceTransfers(Bit#(1) trace);
 	  traceTransfers <= unpack(trace);
-       endmethod
-       method Action fcStart(Bit#(32) fclk0_cycles); 
-	  freqCounter.start(fclk0_cycles);
        endmethod
     endinterface: displayRequest
 
