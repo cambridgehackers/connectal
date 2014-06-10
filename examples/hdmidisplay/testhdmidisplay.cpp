@@ -117,6 +117,7 @@ int main(int argc, const char **argv)
 	int vsyncwidth = edid.timing[i].vsyncwidth;
 	int hsyncwidth = edid.timing[i].hsyncwidth;
 
+	fprintf(stderr, "lines %d, pixels %d, lmin %d, pmin %d, vwidth %d, hwidth %d\n", nlines, npixels, lmin, pmin, vsyncwidth, hsyncwidth);
 	fprintf(stderr, "Using pixclk %d calc_pixclk %d npixels %d nlines %d\n",
 		pixclk,
 		60l * (long)(pmin + npixels) * (long)(lmin + nlines),
