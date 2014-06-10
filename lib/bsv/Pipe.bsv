@@ -138,6 +138,16 @@ instance ToGet #(PipeOut #(a), a);
    endfunction
 endinstance
 
+instance ToPut #(PipeIn #(a), a);
+   function Put #(a) toPut (PipeIn #(a) pi);
+      return (interface Put;
+		 method Action put(a v);
+                    pi.enq (v);
+                 endmethod
+              endinterface);
+   endfunction
+endinstance
+
 instance Connectable#(PipeOut#(a),Put#(a));
    module mkConnection#(PipeOut#(a) in, Put#(a) out)(Empty);
       rule connect;
