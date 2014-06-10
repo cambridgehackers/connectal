@@ -27,6 +27,8 @@ import GetPut::*;
 import Assert::*;
 import ClientServer::*;
 import BRAM::*;
+import BRAMFIFO::*;
+import Connectable::*;
 
 import PortalMemory::*;
 import MemTypes::*;
@@ -118,11 +120,17 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	     Add#(1, c__, numServers),
 	     Add#(b__, TLog#(numServers), cmdBuffAddrSz),
 	     Add#(a__, serverIdxSz, cmdBuffAddrSz),
-	     Min#(2,TLog#(numServers),bpc));
+	     Min#(2,TLog#(numServers),bpc),
+	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
+	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc));
+   
+   let maxBurstLen = 16;
+   let maxBufferedBursts = 2;
    
    function Bit#(cmdBuffAddrSz) hf(Integer i) = fromInteger(i*valueOf(cmdQDepth));
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs1 <- replicateM(mkReg(0));
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
+   Vector#(numServers, Reg#(Bit#(3)))          buffCap <- replicateM(mkReg(maxBufferedBursts));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) head <- mapM(mkReg, genWith(hf));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) tail <- mapM(mkReg, genWith(hf));
 
@@ -132,10 +140,13 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
-   FunnelPipe#(1, Tuple2#(Bit#(serverIdxSz), MemengineCmd),2) cmds_in_funnel <- mkFunnel1PipesPipelined(map(toPipeOut,cmds_in));
+   FunnelPipe#(1, numServers, Tuple2#(Bit#(serverIdxSz), MemengineCmd),bpc) cmds_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,cmds_in));
    FIFOF#(Tuple2#(Bit#(TLog#(numServers)), Tuple2#(Bit#(dataWidth),Bool))) read_data <- mkFIFOF;
-   FunnelPipe#(numServers, Tuple2#(Bit#(dataWidth),Bool),bpc) read_data_unfunnel <- mkUnFunnel1PipesPipelined(toPipeOut(read_data));
-   function PipeOut#(Bit#(dataWidth)) check_out(PipeOut#(Tuple2#(Bit#(dataWidth),Bool)) x, Integer i) = 
+   UnFunnelPipe#(1, numServers, Tuple2#(Bit#(dataWidth),Bool),bpc) read_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(read_data),nil));
+   Vector#(numServers, FIFOF#(Tuple2#(Bit#(dataWidth),Bool)))  read_data_unfunnel_buffs <- replicateM(mkSizedBRAMFIFOF(maxBufferedBursts*maxBurstLen));
+   Vector#(numServers, PipeIn#(Tuple2#(Bit#(dataWidth),Bool))) foo = map(toPipeIn, read_data_unfunnel_buffs); 
+   zipWithM(mkConnection, read_data_unfunnel, foo);
+   function PipeOut#(Bit#(dataWidth)) check_out(FIFOF#(Tuple2#(Bit#(dataWidth),Bool)) x, Integer i) = 
       (interface PipeOut;
 	  method Bit#(dataWidth) first;
 	     return tpl_1(x.first);
@@ -147,7 +158,7 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	  endmethod
 	  method Bool notEmpty = x.notEmpty;
        endinterface);
-   Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, read_data_unfunnel, genVector);
+   Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, read_data_unfunnel_buffs, genVector);
    
    Reg#(Bit#(8))                               respCnt <- mkReg(0);
    Reg#(Bit#(serverIdxSz))                     loadIdx <- mkReg(0);
@@ -162,12 +173,14 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
       tail[idx] <= new_tail;
       outs1[idx] <= outs1[idx]+1;
       cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
+      dynamicAssert(cmd.burstLen>>beat_shift <= maxBurstLen,  "mkMemreadEngineV.store_cmd::unsupportedBurstLen");
       //$display("MemreadEngineV.store_cmd: %d %h", idx, tail[idx]);
    endrule
    
    rule load_ctxt;
       loadIdx <= loadIdx+1;
-      if (outs1[loadIdx] > 0) begin
+      if (outs1[loadIdx] > 0 && buffCap[loadIdx] > 0) begin
+	 buffCap[loadIdx] <= buffCap[loadIdx]-1;
 	 cmdBuf.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:head[loadIdx], datain:?});
 	 loadf.enq(loadIdx);
 	 //$display("MemreadEngineV.load_ctxt: %d, %h", loadIdx, head[loadIdx]);
@@ -176,21 +189,21 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
    
    Vector#(numServers, Server#(MemengineCmd,Bool)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
-      rs[i] =  (interface Server#(MemengineCmd,Bool);
-		   interface Put request;
-		      method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
-			 outs0[i] <= outs0[i]+1;
-			 cmds_in[i].enq(tuple2(fromInteger(i),c));
- 		      endmethod
-		   endinterface
-		   interface Get response;
-		      method ActionValue#(Bool) get;
-			 outfs[i].deq;
-	 		 outs0[i] <= outs0[i]-1;
-			 return True;
-		      endmethod
-		   endinterface
-		endinterface);
+      rs[i] = (interface Server#(MemengineCmd,Bool);
+		  interface Put request;
+		     method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
+			outs0[i] <= outs0[i]+1;
+			cmds_in[i].enq(tuple2(fromInteger(i),c));
+ 		     endmethod
+		  endinterface
+		  interface Get response;
+		     method ActionValue#(Bool) get;
+			outfs[i].deq;
+	 		outs0[i] <= outs0[i]-1;
+			return True;
+		     endmethod
+		  endinterface
+	       endinterface);
    interface readServers = rs;
    interface ObjectReadClient dmaClient;
       interface Get readReq;
@@ -225,6 +238,7 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	    if (new_respCnt == rc) begin
 	       respCnt <= 0;
 	       workf.deq;
+	       buffCap[idx] <= buffCap[idx]+1;
 	       //$display("eob %d", idx);
 	       l = last;
 	    end

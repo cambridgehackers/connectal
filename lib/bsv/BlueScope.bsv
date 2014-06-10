@@ -26,17 +26,19 @@ import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
 import GetPut::*;
+import Connectable::*;
 
 import MemTypes::*;
-import MemUtils::*;
+import MemwriteEngine::*;
 import ClientServer::*;
 
 interface BlueScopeIndication;
    method Action triggerFired();
+   method Action done();
 endinterface
 
 interface BlueScopeRequest;
-   method Action start(Bit#(32) pointer);
+   method Action start(Bit#(32) pointer, Bit#(32) len);
    method Action reset();
    method Action setTriggerMask(Bit#(64) mask);
    method Action setTriggerValue(Bit#(64) value);
@@ -68,7 +70,6 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
 	    Div#(dataWidth,8,dataBytes));
 
    SyncFIFOIfc#(Bit#(dataWidth)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
-   Reg#(ObjectPointer) pointerReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(dataWidth))       maskReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(dataWidth))      valueReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
@@ -79,8 +80,9 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
    SyncPulseIfc             startPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc             resetPulse <- mkSyncPulse(dClk, dRst, sClk);
    SyncPulseIfc         triggeredPulse <- mkSyncPulse(sClk, sRst, dClk);
+   SyncPulseIfc              donePulse <- mkSyncPulse(sClk, sRst, dClk);
    
-   MemWriter#(dataWidth) mwriter <- mkMemWriter;
+   MemwriteEngine#(dataWidth, 2) mwriter <- mkMemwriteEngine;
    
    (* descending_urgency = "resetState, startState" *)
    rule resetState if (resetPulse.pulse);
@@ -92,54 +94,49 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
       stateReg <= Enabled;
    endrule
 
-   rule writeReq if (dfifo.notEmpty);
-      let bl = fromInteger(valueOf(dataBytes)) * 2;
-      mwriter.writeServer.writeReq.put(ObjectRequest { pointer: pointerReg, offset: zeroExtend(writeOffsetReg), burstLen: bl, tag: 0});
-      writeOffsetReg <= writeOffsetReg + bl;
-   endrule
+   mkConnection(toGet(dfifo), toPut(mwriter.dataPipes[0]));
 
-   rule  writeData;
-      //$display("mkSyncBlueScope::writeData");
-      dfifo.deq();
-      mwriter.writeServer.writeData.put(ObjectData { data: dfifo.first, tag: 0});
-   endrule
-   
    rule writeDone;
-      let tag <- mwriter.writeServer.writeDone.get();
+      let tag <- mwriter.writeServers[0].response.get();
    endrule
    
    rule triggerRule if (triggeredPulse.pulse);
       indication.triggerFired;
    endrule
+   rule doneRule if (donePulse.pulse);
+      indication.done;
+   endrule
    
-   method Action dataIn(Bit#(dataWidth) data, Bit#(dataWidth) trigger) if (stateReg != Idle);
+   method Action dataIn(Bit#(dataWidth) data, Bit#(dataWidth) trigger);// if (stateReg != Idle);
       let e = False;
       let s = stateReg;
       let c = countReg;
       let t = False;
+      let d = False;
  
       // if 'Enabled', we can transition to 'Triggered'
-      if (s == Enabled && ((trigger & maskReg) == (valueReg & maskReg)))
+      if (s == Enabled && ((trigger & maskReg) == (valueReg & maskReg) && dfifo.notFull()))
       	 begin
       	    s = Triggered;
-      	    e = True;
-      	    c = c+1;
+	    e = True;
+	    c = c + 1;
       	    t = True;
          end
       // if 'Triggered', we can transition to 'Enabled'
       else if (s == Triggered && c == fromInteger(samples))
       	 begin
-      	    s = Enabled;
+	    s = Idle;
       	    e = False;
-      	    c = 0;
+	    c = 0;
       	    t = False;
+	    d = True;
       	 end
       // if 'Triggered', we can remain in 'Triggered'
-      else if (s == Triggered && c <= fromInteger(samples))
+      else if (s == Triggered && c < fromInteger(samples))
       	 begin
       	    s = Triggered;
       	    e = True;
-      	    c = c+1;
+	    c = c + 1;
       	    t = False;
       	 end
       // else we must be enabled waiting for a Trigger
@@ -147,21 +144,27 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
       	 begin
       	    s = s;
       	    e = e;
-      	    c = c;
+	    c = c;
       	    t = t;
       	 end
    
-      if(e && dfifo.notFull)
-      	 dfifo.enq(data);
+      if (e) begin
+	 if (dfifo.notFull())
+	    dfifo.enq(data);
+	 else
+	    $display("bluescope.stall c=%d", c);
+      end
       if(t)
       	 triggeredPulse.send();
+      if(d)
+      	 donePulse.send();
       countReg <= c;
       stateReg <= s;
    endmethod
    
    interface BlueScopeRequest requestIfc;
-      method Action start(Bit#(32) pointer);
-         pointerReg <= pointer;
+      method Action start(Bit#(32) pointer, Bit#(32) len);
+	 mwriter.writeServers[0].request.put(MemengineCmd {pointer: pointer, base: 0, burstLen: 8*fromInteger(valueOf(TDiv#(dataWidth,8))), len: len});
 	 startPulse.send();
       endmethod
 
@@ -177,5 +180,5 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
 	 valueReg <= truncate(value);
       endmethod
    endinterface
-   interface writeClient = mwriter.writeClient;
+   interface writeClient = mwriter.dmaClient;
 endmodule

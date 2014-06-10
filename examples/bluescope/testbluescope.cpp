@@ -96,6 +96,9 @@ class BlueScopeIndication : public BlueScopeIndicationWrapper
 public:
   BlueScopeIndication(unsigned int id) : BlueScopeIndicationWrapper(id){}
 
+  virtual void done( ){
+    fprintf(stderr, "BlueScope::done\n");
+  }
   virtual void triggerFired( ){
     fprintf(stderr, "BlueScope::triggerFired\n");
     trigger_fired = true;
@@ -184,7 +187,7 @@ int main(int argc, const char **argv)
   bluescope->reset();
   bluescope->setTriggerMask (0xFFFFFFFF);
   bluescope->setTriggerValue(0x00000008);
-  bluescope->start(ref_bsAlloc);
+  bluescope->start(ref_bsAlloc, alloc_sz);
 
   sleep(1);
   dma->addrRequest(ref_srcAlloc, 1*sizeof(unsigned int));
