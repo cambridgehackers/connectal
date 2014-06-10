@@ -51,9 +51,11 @@ interface ZynqTop#(type pins);
    interface LEDS             leds;
    (* prefix="XADC" *)
    interface XADC             xadc;
+`ifdef USE_I2C0
    (* prefix="I2C0" *)
    interface I2C_Pins         i2c0;
-`ifdef USE_I2C
+`endif
+`ifdef USE_I2C1
    (* prefix="I2C1" *)
    interface I2C_Pins         i2c1;
 `endif
@@ -80,19 +82,23 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    Clock mainclock = ps7.fclkclk[0];
    Reset mainreset = ps7.fclkreset[0];
 
+`ifdef USE_I2C0
    let tscl0 <- mkIOBUF(~ps7.i2c[0].scltn, ps7.i2c[0].sclo, clocked_by mainclock, reset_by mainreset);
    let tsda0 <- mkIOBUF(~ps7.i2c[0].sdatn, ps7.i2c[0].sdao, clocked_by mainclock, reset_by mainreset);
    rule sdai0;
       ps7.i2c[0].sdai(tsda0.o);
       ps7.i2c[0].scli(tscl0.o);
    endrule
+`endif
 
+`ifdef USE_I2C1
    let tscl1 <- mkIOBUF(~ps7.i2c[1].scltn, ps7.i2c[1].sclo, clocked_by mainclock, reset_by mainreset);
    let tsda1 <- mkIOBUF(~ps7.i2c[1].sdatn, ps7.i2c[1].sdao, clocked_by mainclock, reset_by mainreset);
    rule sdai1;
       ps7.i2c[1].sdai(tsda1.o);
       ps7.i2c[1].scli(tscl1.o);
    endrule
+`endif
 
    let top <- constructor(`CLOCK_ARG clocked_by mainclock, reset_by mainreset);
    mkConnection(ps7, top, clocked_by mainclock, reset_by mainreset);
@@ -114,11 +120,13 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
            return 0;
        endmethod
    endinterface
+`ifdef USE_I2C0
    interface I2C_Pins i2c0;
       interface Inout scl = tscl0.io;
       interface Inout sda = tsda0.io;
    endinterface
-`ifdef USE_I2C
+`endif
+`ifdef USE_I2C1
    interface I2C_Pins i2c1;
       interface Inout scl = tscl1.io;
       interface Inout sda = tsda1.io;

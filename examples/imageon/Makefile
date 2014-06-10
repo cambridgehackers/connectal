@@ -6,10 +6,11 @@ CPPFILES=testimagecapture.cpp
 XBSVFLAGS = -C imageon-$(BOARD).xdc --tcl clock.tcl
 XBSVFLAGS += --bscflags " -D NumberOfMasters=0"
 #XBSVFLAGS += --bscflags " -D TRACE_AXI"
-XBSVFLAGS += --bscflags " -D USE_I2C -D PinType=ImageCapturePins"
+XBSVFLAGS += --bscflags " -D USE_I2C1 -D PinType=ImageCapturePins"
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true
+XBSVFLAGS += -D USES_I2C0
 endif
 ifeq ($(BOARD),zc702)
 HAS_PS7=true
