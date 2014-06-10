@@ -118,11 +118,14 @@ interface BurstFunnel#(numeric type k, numeric type w);
 endinterface
 
 module mkBurstFunnel(BurstFunnel#(k,w))
-   provisos(Log#(k,logk));
+   provisos(Log#(k,logk),
+	    Min#(2,logk,bpc),
+	    FunnelPipesPipelined#(1, k, Tuple2#(Bit#(logk), Bit#(w)), bpc));
    Vector#(k, FIFOF#(Tuple2#(Bit#(logk), Bit#(w)))) data_in <- replicateM(mkFIFOF);
    Vector#(k,Reg#(Bit#(8))) burst_len <- replicateM(mkReg(0));
    Vector#(k,Reg#(Bit#(8))) inj_ctrl <- replicateM(mkReg(0));
-   FIFO#(Bit#(logk)) loadIdxs <- mkSizedFIFO(32);
+   //TAdd#(1,logk) is because bsc is wierd about comparing literal '0' to a value of Bit#(0)
+   FIFO#(Bit#(TAdd#(1,logk))) loadIdxs <- mkSizedFIFO(32);
    function PipeIn#(Bit#(w)) enter_data(FIFOF#(Tuple2#(Bit#(logk), Bit#(w))) f, Integer i) = 
       (interface PipeIn;
    	  method Bool notFull = f.notFull;
@@ -137,9 +140,10 @@ module mkBurstFunnel(BurstFunnel#(k,w))
 	  endmethod
        endinterface);
    Vector#(k, PipeIn#(Bit#(w))) data_in_pipes = zipWith(enter_data, data_in, genVector);
-   FunnelPipe#(1, Tuple2#(Bit#(logk), Bit#(w)),2) data_in_funnel <- mkFunnel1PipesPipelined(map(toPipeOut,data_in));
+   FunnelPipe#(1, k, Tuple2#(Bit#(logk), Bit#(w)),bpc) data_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,data_in));
    method Action loadIdx(Bit#(logk) idx);
-      loadIdxs.enq(idx);
+      loadIdxs.enq(extend(idx));
+      //$display("loadIdxs %d", idx);
    endmethod
    interface burstLen = burst_len;
    interface dataIn = data_in_pipes;
@@ -156,7 +160,11 @@ module mkMemwriteEngineV(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
 	     Add#(1,cmdQDepth, outCntSz),
 	     Add#(1, c__, numServers),
 	     Add#(b__, TLog#(numServers), cmdBuffAddrSz),
-	     Add#(a__, serverIdxSz, cmdBuffAddrSz));
+	     Add#(a__, serverIdxSz, cmdBuffAddrSz),
+	     Min#(2,TLog#(numServers),bpc),
+	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
+	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz), Bit#(dataWidth)), TMin#(2, serverIdxSz)));
+   
    
    function Bit#(cmdBuffAddrSz) hf(Integer i) = fromInteger(i*valueOf(cmdQDepth));
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs1 <- replicateM(mkReg(0));
@@ -164,14 +172,14 @@ module mkMemwriteEngineV(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) head <- mapM(mkReg, genWith(hf));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) tail <- mapM(mkReg, genWith(hf));
 
-   BRAM1Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM1Server(defaultValue);
+   BRAM2Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM2Server(defaultValue);
    FIFO#(Bit#(serverIdxSz))                      loadf <- mkSizedFIFO(1);
    FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))workf <- mkSizedFIFO(32); // is this the right size?
    FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))        donef <- mkSizedFIFO(32); // is this the right size?
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
-   FunnelPipe#(1, Tuple2#(Bit#(serverIdxSz), MemengineCmd),2) cmds_in_funnel <- mkFunnel1PipesPipelined(map(toPipeOut,cmds_in));
+   FunnelPipe#(1, numServers, Tuple2#(Bit#(serverIdxSz), MemengineCmd),bpc) cmds_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,cmds_in));
    BurstFunnel#(numServers,dataWidth) write_data <- mkBurstFunnel;
       
    Reg#(Bit#(8))                               respCnt <- mkReg(0);
@@ -183,21 +191,23 @@ module mkMemwriteEngineV(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
       match {.idx, .cmd} <- toGet(cmds_in_funnel[0]).get;
       let new_tail = tail[idx]+1;
       if (new_tail >= extend(idx+1)*cmd_q_depth)
-	 new_tail = extend(idx)*cmd_q_depth;
+      	 new_tail = extend(idx)*cmd_q_depth;
       tail[idx] <= new_tail;
       outs1[idx] <= outs1[idx]+1;
-      cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
+      cmdBuf.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
+      //$display("store_cmd %d", idx);
    endrule
-   
+
    rule load_ctxt;
       loadIdx <= loadIdx+1;
       if (outs1[loadIdx] > 0) begin
 	 write_data.loadIdx(loadIdx);
 	 cmdBuf.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:head[loadIdx], datain:?});
 	 loadf.enq(loadIdx);
+	 //$display("load_ctxt %d", loadIdx);
       end
    endrule
-   
+      
    Vector#(numServers, Server#(MemengineCmd,Bool)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
       rs[i] =  (interface Server#(MemengineCmd,Bool);
@@ -206,6 +216,7 @@ module mkMemwriteEngineV(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
 			 outs0[i] <= outs0[i]+1;
 			 cmds_in[i].enq(tuple2(fromInteger(i),c));
 			 write_data.burstLen[i] <= c.burstLen >> beat_shift;
+			 //$display("writeServers[%d].request.put", i);
  		      endmethod
 		   endinterface
 		   interface Get response;
@@ -237,7 +248,7 @@ module mkMemwriteEngineV(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
 	    let new_cmd = MemengineCmd{pointer:cmd.pointer, base:cmd.base+extend(bl), burstLen:cmd.burstLen, len:cmd.len-extend(bl)};
 	    cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head[idx], datain:new_cmd});
 	    workf.enq(tuple3(truncate(bl>>beat_shift), idx, last));
-	    //$display("readReq %d, %h %h %h", idx, cmd.base, bl, last);
+	    //$display("writeReq %d, %h %h %h", idx, cmd.base, bl, last);
 	    return ObjectRequest { pointer: cmd.pointer, offset: cmd.base, burstLen:bl, tag: 0 };
 	 endmethod
       endinterface
@@ -255,6 +266,7 @@ module mkMemwriteEngineV(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
 	    end
 	    match {._idx, .wd} <- toGet(write_data.dataOut).get;
 	    dynamicAssert(idx==_idx, "MemwriteEngineV::dmaClient::writeData");
+	    //$display("writeData %d %h", idx, wd);
 	    return ObjectData{data:wd, tag:0};
 	 endmethod
       endinterface

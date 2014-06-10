@@ -226,22 +226,15 @@ module mkFunnel1#(PipeOut#(Vector#(k,a)) in)(PipeOut#(a))
    endmethod
 endmodule
 
-typedef Vector#(k,PipeOut#(a)) FunnelPipe#(numeric type k, type a, numeric type bitsPerCycle);
+// 'j' is the width of the narrow end, and 'k' is the width of the wide end
+typedef Vector#(j,PipeOut#(a))   FunnelPipe#(numeric type j, numeric type k, type a, numeric type bitsPerCycle);
+typedef Vector#(k,PipeOut#(a)) UnFunnelPipe#(numeric type j, numeric type k, type a, numeric type bitsPerCycle);
 
-// this relies on the fact that dead-code will remove unused fifo instantiations
-// if you are paranoid, your module will look like mkUnFunnel1PipesPipelined
-module mkFunnel1PipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(1,a,bpc))
-   provisos (Log#(k, logk),
-	     Bits#(a,a__),
-	     Div#(logk,bpc,stages));
-   Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
-   Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
-   for(Integer j = valueOf(stages); j > 0; j=j-1)
-      for(Integer i = 0; i < 2**(j*valueOf(bpc)) && i < valueOf(k); i=i+1) 
-	 mkConnection(infss[j][i], toPut(buffs[j-1][i/(2**valueOf(bpc))]));
-   return cons(infss[0][0],nil);
-endmodule
-   
+typeclass FunnelPipesPipelined#(numeric type j, numeric type k, type a, numeric type bpc);
+   module mkFunnelPipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(j,k,a,bpc));
+   module mkUnFunnelPipesPipelined#(Vector#(j,PipeOut#(Tuple2#(Bit#(TLog#(k)),a))) in) (UnFunnelPipe#(j,k,a,bpc));
+endtypeclass
+
 function PipeOut#(b) pipeSecond(PipeOut#(Tuple2#(a,b)) x) = 
    (interface PipeOut;
        method b first;
@@ -251,31 +244,53 @@ function PipeOut#(b) pipeSecond(PipeOut#(Tuple2#(a,b)) x) =
        method Bool notEmpty = x.notEmpty;
     endinterface);
    
-module mkUnFunnel1PipesPipelined#(PipeOut#(Tuple2#(Bit#(TLog#(k)),a)) in) (FunnelPipe#(k,a,bpc))
+instance FunnelPipesPipelined#(1,1,a,bpc)   
+   provisos (Bits#(a,a__));
+   module mkFunnelPipesPipelined#(Vector#(1,PipeOut#(a)) in) (FunnelPipe#(1,1,a,bpc));
+      return in;
+   endmodule
+   module mkUnFunnelPipesPipelined#(Vector#(1,PipeOut#(Tuple2#(Bit#(0),a))) in) (UnFunnelPipe#(1,1,a,bpc));
+      return map(pipeSecond, in);
+   endmodule
+endinstance
+   
+instance FunnelPipesPipelined#(1,k,a,bpc)
    provisos (Log#(k, logk),
 	     Bits#(a,a__),
 	     Add#(1,b__,k),
 	     Div#(logk,bpc,stages));
-   Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a))) ins  = cons(in,replicate(?));
-   Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a))) outs = newVector;
-   for(Integer j = 0; j < valueOf(stages); j=j+1) begin 
-      for(Integer i = 0; i < 2**(j*valueOf(bpc)); i=i+1) begin
-	 Integer bits = (j == valueOf(stages)-1) ? valueOf(logk)-(j*valueOf(bpc)) : valueOf(bpc);
-	 function Bit#(bpc) sh(Bit#(bpc) x) = x<<(valueOf(bpc)-bits);
-	 for(Integer l = 0; l < 2**bits; l=l+1)  begin
-	    let buff <- mkFIFOF;
-	    outs[(2**bits)*i+l] = toPipeOut(buff);
-	    rule xfer if(tpl_1(ins[i].first)[(valueOf(logk)-1):(valueOf(logk)-valueOf(bpc))] == sh(fromInteger(l)));
-	       match{.idx, .v} <- toGet(ins[i]).get;
-	       buff.enq(tuple2(idx<<valueOf(bpc), v));
-	    endrule
+   // this relies on the fact that dead-code will remove unused fifo instantiations
+   // if you are paranoid, your module will look like mkUnFunnelPipesPipelined
+   module mkFunnelPipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(1,k,a,bpc));
+      Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
+      Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), cons(in,nil));
+      for(Integer j = valueOf(stages); j > 0; j=j-1)
+	 for(Integer i = 0; i < 2**(j*valueOf(bpc)) && i < valueOf(k); i=i+1) 
+	    mkConnection(infss[j][i], toPut(buffs[j-1][i/(2**valueOf(bpc))]));
+      return cons(infss[0][0],nil);
+   endmodule
+   module mkUnFunnelPipesPipelined#(Vector#(1, PipeOut#(Tuple2#(Bit#(TLog#(k)),a))) in) (UnFunnelPipe#(1,k,a,bpc));
+      Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a))) ins  = append(in,replicate(?));
+      Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a))) outs = newVector;
+      for(Integer j = 0; j < valueOf(stages); j=j+1) begin 
+	 for(Integer i = 0; i < 2**(j*valueOf(bpc)); i=i+1) begin
+	    Integer bits = (j == valueOf(stages)-1) ? valueOf(logk)-(j*valueOf(bpc)) : valueOf(bpc);
+	    function Bit#(bpc) sh(Bit#(bpc) x) = x<<(valueOf(bpc)-bits);
+	    for(Integer l = 0; l < 2**bits; l=l+1)  begin
+	       let buff <- mkFIFOF;
+	       outs[(2**bits)*i+l] = toPipeOut(buff);
+	       rule xfer if(tpl_1(ins[i].first)[(valueOf(logk)-1):(valueOf(logk)-valueOf(bpc))] == sh(fromInteger(l)));
+		  match{.idx, .v} <- toGet(ins[i]).get;
+		  buff.enq(tuple2(idx<<valueOf(bpc), v));
+	       endrule
+	    end
 	 end
+	 ins = outs;
       end
-      ins = outs;
-   end
-   return map(pipeSecond,outs);
-endmodule
-
+      return map(pipeSecond,outs);
+   endmodule
+endinstance
+   
 module mkUnfunnel#(PipeOut#(Vector#(m,a)) in)(PipeOut#(Vector#(mk, a)))
    provisos (Mul#(m, k, mk),
 	     Bits#(a, asz),
