@@ -27,6 +27,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
+static int error_limit = 20;
 class DmaIndication : public DmaIndicationWrapper
 {
   PortalMemory *portalMemory;
@@ -54,6 +55,8 @@ class DmaIndication : public DmaIndicationWrapper
   }
   virtual void badAddrTrans (uint32_t pointer, uint64_t offset, uint64_t barrier) {
     fprintf(stderr, "DmaIndication::badAddrTrans(pointer=%x, offset=%"PRIx64" barrier=%"PRIx64"\n", pointer, offset, barrier);
+    if (--error_limit < 0)
+        exit(-1);
   }
   virtual void badAddr (uint32_t pointer, uint64_t offset , uint64_t physAddr) {
     fprintf(stderr, "DmaIndication::badAddr(pointer=%x offset=%"PRIx64" physAddr=%"PRIx64")\n", pointer, offset, physAddr);
