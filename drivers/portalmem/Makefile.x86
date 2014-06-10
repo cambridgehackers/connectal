@@ -4,9 +4,9 @@ export KROOT=/lib/modules/$(shell uname -r)/build
 
 default:
 	$(MAKE) -C $(KROOT) M=$(PWD) modules
-	rmmod portalmem || true
-	insmod ./portalmem.ko
-	chmod 777 /dev/portalmem
+	#rmmod portalmem || true
+	#insmod ./portalmem.ko
+	#chmod 777 /dev/portalmem
 
 clean:
 	$(MAKE) -C $(KROOT) M=$(PWD) clean
