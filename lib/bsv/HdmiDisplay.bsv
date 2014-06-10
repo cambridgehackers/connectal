@@ -58,19 +58,24 @@ interface HdmiDisplayIndication;
 endinterface
 
 interface HdmiDisplay;
+`ifdef HDMI_BLUESCOPE
    interface BlueScopeRequest  bluescopeRequest;
+   interface ObjectWriteClient#(64) bluescopeWriteClient;
+`endif
     interface HdmiDisplayRequest displayRequest;
     interface HdmiInternalRequest internalRequest;
     interface ObjectReadClient#(64) dmaClient;
-   interface ObjectWriteClient#(64) bluescopeWriteClient;
     interface HDMI#(Bit#(HdmiBits)) hdmi;
     interface XADC xadc;
 endinterface
 
 module mkHdmiDisplay#(Clock hdmi_clock,
 		      HdmiDisplayIndication hdmiDisplayIndication,
-		      HdmiInternalIndication hdmiInternalIndication,
-		      BlueScopeIndication bluescopeIndication)(HdmiDisplay);
+		      HdmiInternalIndication hdmiInternalIndication
+`ifdef HDMI_BLUESCOPE
+		      , BlueScopeIndication bluescopeIndication
+`endif
+)(HdmiDisplay);
     Clock defaultClock <- exposeCurrentClock;
     Reset defaultReset <- exposeCurrentReset;
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
@@ -96,8 +101,8 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 `else
    HDMI#(Bit#(HdmiBits)) hdmisignals <- mkHDMI(hdmiGen.rgb888, clocked_by hdmi_clock, reset_by hdmi_reset);
 `endif   
+`ifdef HDMI_BLUESCOPE
    let bluescope <- mkSyncBlueScope(65536, bluescopeIndication, hdmi_clock, hdmi_reset, defaultClock, defaultReset);
-   //Gearbox#(1, 16, Bit#(4)) gearbox <- mk1toNGearbox(hdmi_clock, hdmi_reset, hdmi_clock, hdmi_reset);
    MIMO#(1, 16, 64, Bit#(4)) mimo <- mkMIMO(MIMOConfiguration { unguarded: False, bram_based: False }, clocked_by hdmi_clock, reset_by hdmi_reset);
    Reg#(Bool) triggered <- mkReg(False, clocked_by hdmi_clock, reset_by hdmi_reset);
    rule toGearbox if ((hdmisignals.hdmi_vsync == 1) || triggered);
@@ -117,6 +122,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       mimo.deq(16);
       bluescope.dataIn(v, v);
    endrule
+`endif
 
    SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncFIFO(32, defaultClock, defaultReset, hdmi_clock);
    rule fromMemread;
@@ -206,8 +212,10 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     interface ObjectReadClient dmaClient = memreadEngine.dmaClient;
     interface HDMI hdmi = hdmisignals;
     interface HdmiInternalRequest internalRequest = hdmiGen.control;
+`ifdef HDMI_BLUESCOPE
     interface BlueScopeRequest bluescopeRequest = bluescope.requestIfc;
     interface ObjectWriteClient bluescopeWriteClient = bluescope.writeClient;
+`endif
     interface XADC xadc;
         method Bit#(4) gpio;
             return { bozobit, hdmisignals.hdmi_vsync,
