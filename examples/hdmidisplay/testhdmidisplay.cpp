@@ -155,7 +155,7 @@ int main(int argc, const char **argv)
     fprintf(stderr, "mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));
     sleep(10);
     if (0) hdmiInternal->waitForVsync(0);
-    if (0) {
+    if (1) {
       fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc);
       device->startFrameBuffer(ref_srcAlloc, nlines, npixels, nlines*npixels);
       fprintf(stderr, "done\n");
