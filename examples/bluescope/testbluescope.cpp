@@ -103,6 +103,9 @@ public:
     fprintf(stderr, "BlueScope::triggerFired\n");
     trigger_fired = true;
   }
+  virtual void done( ){
+    fprintf(stderr, "BlueScope::done\n");
+  }
   virtual void reportStateDbg(uint64_t mask, uint64_t value){
     //fprintf(stderr, "BlueScope::reportStateDbg mask=%016llx, value=%016llx\n", mask, value);
     fprintf(stderr, "BlueScope::reportStateDbg\n");
