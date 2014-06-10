@@ -58,7 +58,7 @@ interface HdmiInternalRequest;
     method Action waitForVsync(Bit#(32) unused);
 endinterface
 interface HdmiInternalIndication;
-    method Action vsync(Bit#(64) v);
+    method Action vsync(Bit#(64) v, Bit#(32) vs);
 endinterface
 interface HdmiInternalStatus;
     method Bit#(11) getNumberOfLines();
@@ -94,7 +94,8 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
-    SyncPulseIfc sendVsyncIndication <- mkSyncPulse(defaultClock, defaultReset, axi_clock);
+    SyncPulseIfc vsyncCountPulse <- mkSyncHandshake(defaultClock, defaultReset, axi_clock);
+    SyncPulseIfc sendVsyncIndication <- mkSyncHandshake(defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(24)) pixelData <- mkReg(24'hFF00FF);
     FIFOF#(Bit#(24)) pixelFifo <- mkLFIFOF();
     Wire#(Maybe#(Bit#(24))) pixelWires <- mkDWire(tagged Invalid);
@@ -102,15 +103,23 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
 
+    Reg#(Bit#(32)) underflowCount <- mkReg(0);
+    Reg#(Bit#(32)) underflowCountAxi <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(32)) counter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+    Reg#(Bit#(32)) vsyncCounter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+    Reg#(Bit#(32)) elapsedVsync <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     rule axicyclecount;
        counter <= counter + 1;
     endrule
       
+    rule vsyncCount if (vsyncCountPulse.pulse());
+       vsyncCounter <= vsyncCounter+1;
+    endrule
     rule vsyncReceived if (sendVsyncIndication.pulse());
        elapsed <= counter;
-       indication.vsync(extend(counter - elapsed));
+       elapsedVsync <= vsyncCounter;
+       indication.vsync(extend(counter - elapsed), extend(vsyncCounter - elapsedVsync));
        waitingForVsync <= False;
     endrule
 
@@ -124,14 +133,14 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule inc_counters;
-        if (lineCount == 0 && pixelCount == 0)
-            begin
+        if (lineCount == 0 && pixelCount == 0) begin
+	    vsyncCountPulse.send();
             vsyncPulse.send();
             if (waitingForVsync) begin
 	       sendVsyncIndication.send();
 	    end
             testPatternEnabled <= shadowTestPatternEnabled;
-            end
+        end
         if (pixelCount == numberOfPixels-1)
            begin
            pixelCount <= 0; 
@@ -159,6 +168,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	     pixel = unpack(pixelbits);
 	  end
 	  else begin
+	     underflowCount <= underflowCount + 1;
 	     pixel = unpack(0);
 	  end
        end
