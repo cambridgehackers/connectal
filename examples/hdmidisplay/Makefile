@@ -8,7 +8,7 @@ BSVFILES = $(LIBBSVDIR)/HdmiDisplay.bsv $(LIBBSVDIR)/HDMI.bsv Top.bsv ../../lib/
 CPPFILES= testhdmidisplay.cpp
 XBSVFLAGS = -C hdmidisplay-$(BOARD).xdc -D USES_FCLK1 -D PinType=HDMI16
 ifeq ($(BOARD),zedboard)
-XBSVFLAGS += -D USES_I2C0
+XBSVFLAGS += -D USE_I2C0
 endif
 
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
