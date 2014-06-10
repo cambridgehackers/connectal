@@ -167,7 +167,8 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
    rule testpattern_rule if (testPatternEnabled != 0);
-      pixelFifo.enq(patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}]);
+      //pixelFifo.enq(patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}]);
+      pixelWires <= tagged Valid patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}];
    endrule
 
 
