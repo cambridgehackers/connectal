@@ -68,7 +68,7 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
 	    Div#(dataWidth,8,dataBytes));
 
    SyncFIFOIfc#(Bit#(dataWidth)) dfifo <- mkSyncBRAMFIFO(samples, sClk, sRst, dClk, dRst);
-   Reg#(ObjectPointer) pointerReg <- mkSyncReg(0, dClk, dRst, sClk);
+   Reg#(ObjectPointer) pointerReg <- mkReg(0);
    Reg#(Bit#(dataWidth))       maskReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(dataWidth))      valueReg <- mkSyncReg(0, dClk, dRst, sClk);
    Reg#(Bit#(1))          triggeredReg <- mkReg(0,    clocked_by sClk, reset_by sRst);   
