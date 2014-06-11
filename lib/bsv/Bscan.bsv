@@ -53,17 +53,20 @@ module mkBscan#(Integer bus)(Bscan#(width));
    Reg#(Bit#(width)) shiftReg <- mkReg(0, clocked_by tck, reset_by rst);
    SyncFIFOIfc#(Bit#(width)) infifo <- mkSyncFIFO(2, defaultClock, defaultReset, tck);
    SyncFIFOIfc#(Bit#(width)) outfifo <- mkSyncFIFO(2, tck, rst, defaultClock);
+   Wire#(Bit#(1)) tdow <- mkDWire(0, clocked_by tck, reset_by rst);
+   rule tdo;
+      bscan.tdo(tdow);
+   endrule
 
    rule captureRule if (bscan.capture() == 1 && bscan.sel() == 1);
       if (infifo.notEmpty()) begin
-	 //shiftReg <= tagged Valid infifo.first();
 	 infifo.deq();
       end
       //else
       //shiftReg <= 0;
    endrule
    rule shift if (bscan.shift() == 1 && bscan.sel() == 1);
-      bscan.tdo(shiftReg[0]);
+      tdow <= shiftReg[0];
       let v = (shiftReg >> 1);
       v[width-1] = bscan.tdi();
       shiftReg <= v;
@@ -104,6 +107,10 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
    Reg#(Bit#(asz)) addrReg <- mkReg(0, clocked_by tck, reset_by rst);
    Reg#(Bool) capture_delay <- mkReg(False, clocked_by tck, reset_by rst);
    Reg#(Bool) selected_delay <- mkReg(False, clocked_by tck, reset_by rst);
+   Wire#(Bit#(1)) tdow <- mkDWire(0, clocked_by tck, reset_by rst);
+   rule tdo;
+      bscan.tdo(tdow);
+   endrule
 
    rule selected_rule;
        selected_delay <= bscan.sel() == 1;
@@ -112,10 +119,6 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
 
    rule addr_clock_crossing;
        addr_jtag.send(pack(addr));
-   endrule
-
-   rule reset_addr if (bscan.sel() == 1 && !selected_delay);
-       addrReg <= addr_jtag.read();  // first time USER1 selected, reset address
    endrule
 
    rule captureRule if (bscan.sel() == 1 && bscan.capture() == 1);
@@ -129,7 +132,7 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
 	  let d = fromMaybe(unpack(0), m);
 	  shift = pack(d);
        end
-       bscan.tdo(shift[0]);
+       tdow <= shift[0];
        let v = (shift >> 1);
        v[dsz-1] = bscan.tdi();
        shiftReg <= v;
@@ -137,7 +140,10 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
 
    rule updateRule if (bscan.sel() == 1 && bscan.update() == 1 && bscan.capture() == 0);
        requestWire <= tagged Valid (BRAMRequest {write:True, responseOnWrite:False, address:unpack(addrReg), datain:unpack(shiftReg)});
-       addrReg <= addrReg + 1;
+       let addr = addrReg + 1;
+       if (!selected_delay)
+	  addr = 0;  // first time USER1 selected, reset address
+       addrReg <= addr;
    endrule
 
    method Bit#(4) debug;
