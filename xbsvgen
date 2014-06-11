@@ -181,6 +181,7 @@ write_checkpoint -force $outputDir/%(dut)s_post_synth > hw/temp.log
 #not in 2013.2 report_timing_summary -warn_on_violation
 #not in 2013.2 report_timing_summary -warn_on_violation -verbose  -file $outputDir/%(dut)s_post_synth_timing_summary.rpt > hw/temp.log
 report_timing -nworst 20 -sort_by slack -path_type summary -slack_lesser_than 0.2 -unique_pins
+report -file_io $outputDir/%(dut)s_post_synth_io.rpt > hw/temp.log
 puts "****************************************"
 puts "If timing report says 'No timing paths found.' then the design met the timing constraints."
 puts "If it reported negative slack, then the design did not meet the timing constraints."
@@ -205,6 +206,7 @@ write_checkpoint -force $outputDir/%(dut)s_post_place > hw/temp.log
 #not in 2013.2 report_timing_summary -warn_on_violation -file $outputDir/%(dut)s_post_place_timing_summary.rpt > hw/temp.log
 report_timing_summary -file $outputDir/%(dut)s_post_place_timing_summary.rpt > hw/temp.log
 report_timing -nworst 20 -sort_by slack -path_type summary -slack_lesser_than 0.2 -unique_pins
+report_io -file $outputDir/%(dut)s_post_place_io.rpt > hw/temp.log
 #
 # STEP#4: run router, report actual utilization and timing, write checkpoint design, run drc, write verilog and xdc out
 #
@@ -222,6 +224,7 @@ report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/
 report_clock_utilization -file $outputDir/%(dut)s_clock_util.rpt > hw/temp.log
 report_utilization -file $outputDir/%(dut)s_post_route_util.rpt > hw/temp.log
 report_datasheet -file $outputDir/%(dut)s_post_route_datasheet.rpt > hw/temp.log
+report_io -file $outputDir/%(dut)s_post_place_io.rpt > hw/temp.log
 #report_power -file $outputDir/%(dut)s_post_route_power.rpt
 #report_drc -file $outputDir/%(dut)s_post_imp_drc.rpt
 #write_verilog -force $outputDir/%(dut)s_impl_netlist.v
