@@ -45,7 +45,7 @@ LOCAL_MODULE := %(exe)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni
+LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cdefines)s
 
 #NDK_OUT := obj/
 
@@ -53,7 +53,7 @@ include $(BUILD_EXECUTABLE)
 '''
 
 linuxmakefile_template='''
-CFLAGS = -DMMAP_HW -O -g -I. -I%(xbsvdir)s/cpp -I%(xbsvdir)s -I%(xbsvdir)s/lib/cpp %(sourceincludes)s
+CFLAGS = -DMMAP_HW -O -g -I. -I%(xbsvdir)s/cpp -I%(xbsvdir)s -I%(xbsvdir)s/lib/cpp %(sourceincludes)s %(cdefines)s
 
 PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.cpp PortalMemory.cpp sock_fd.cxx sock_utils.cxx)
 
@@ -182,14 +182,15 @@ public:
 
 
 
-def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xbsvdir, project_dir, silent=False):
+def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xbsvdir, project_dir, bsvdefine, silent=False):
         f = util.createDirAndOpen(androidmkname, 'w')
         substs = {
             'cfiles': ' '.join([os.path.abspath(x) for x in cfiles]),
 	    'generatedCFiles': ' '.join(generatedCFiles),
             'xbsvdir': xbsvdir,
 	    'project_dir': os.path.abspath(project_dir),
-	    'exe' : 'android_exe'
+	    'exe' : 'android_exe',
+	    'cdefines': ' '.join([ '-D%s' % d for d in bsvdefine ])
         }
         f.write(androidmk_template % substs)
         f.close()
@@ -197,7 +198,7 @@ def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xb
         f.write(applicationmk_template % substs)
         f.close()
 
-def writeLinuxMk(base, linuxmkname, xbsvdir, sourcefiles, swProxies, swWrappers, clibs):
+def writeLinuxMk(base, linuxmkname, xbsvdir, sourcefiles, swProxies, swWrappers, clibs, bsvdefine):
         f = util.createDirAndOpen(linuxmkname, 'w')
         className = cName(base)
         substs = {
@@ -208,7 +209,8 @@ def writeLinuxMk(base, linuxmkname, xbsvdir, sourcefiles, swProxies, swWrappers,
 	    'swWrappers': ' '.join(['%sWrapper.cpp' % w.name for w in swWrappers]),
             'source': ' '.join([os.path.abspath(sf) for sf in sourcefiles]) if sourcefiles else '',
             'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in sourcefiles]) if sourcefiles else '',
-	    'clibs': ' '.join(['-l%s' % l for l in clibs])
+	    'clibs': ' '.join(['-l%s' % l for l in clibs]),
+	    'cdefines': ' '.join([ '-D%s' % d for d in bsvdefine ])
         }
         f.write(linuxmakefile_template % substs)
         f.close()
