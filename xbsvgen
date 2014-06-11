@@ -87,6 +87,7 @@ set partname {%(partname)s}
 set boardname {%(boardname)s}
 set xbsvdir {%(xbsvdir)s}
 set needspcie {%(needspcie)s}
+%(tcldefines)s
 '''
 
 tclfileTemplate='''
@@ -749,7 +750,8 @@ if __name__=='__main__':
                                             % { 'verilog': f } for f in namespace.verilog]),
                  'read_xci': '\n'.join([tclReadXciTemplate
                                         % { 'xci': f } for f in namespace.xci]),
-                 'needspcie': 1 if needs_pcie_7x_gen1x8 else 0
+                 'needspcie': 1 if needs_pcie_7x_gen1x8 else 0,
+                 'tcldefines': '\n'.join(['set %s {%s}' % (var,val) for (var,val) in map(util.splitBinding, namespace.bsvdefine)])
                  }
     tcl = util.createDirAndOpen(tclimplname, 'w')
     tcl.write(tclfileTemplate % tclsubsts)
@@ -815,7 +817,7 @@ if __name__=='__main__':
                                    'timestamp' : int(time.time()),
                                    'clibs': ' '.join(['-l%s' % l for l in namespace.clib]),
                                    'cdefines': ' '.join([ '-D%s' % d for d in namespace.bsvdefine ]),
-                                   'mdefines': '\n'.join([ '%s%s' % (d, ('' if ('=' in d) else '=')) for d in namespace.bsvdefine ]),
+                                   'mdefines': '\n'.join(['%s="%s"' % (var,val) for (var,val) in map(util.splitBinding, namespace.bsvdefine)]),
                                    'bscflags': ' '.join(namespace.bscflags),
                                    'xelabflags': ' '.join(namespace.xelabflags),
                                    'xsimflags': ' '.join(namespace.xsimflags)
