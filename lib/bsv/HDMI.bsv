@@ -91,6 +91,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(11)) lineCount <- mkReg(0);
     Reg#(Bit#(12)) pixelCount <- mkReg(0);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
+    Reg#(Bit#(2)) patternIndex <- mkReg(0);
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
@@ -169,22 +170,25 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	  end
 	  else begin
 	     underflowCount <= underflowCount + 1;
-	     pixel = unpack(0);
+	     pixel = unpack(pixelData); //unpack(0);
 	  end
        end
         rgb888StageReg <= VideoData {de: pack(dataEnable),
 				     vsync: vsync, hsync: hsync, pixel: pixel };
     endrule
 
+   rule testpattern_setup;
+      //pixelData <= (patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}]);
+      patternIndex <= {pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)};
+   endrule
    rule testpattern_rule if (testPatternEnabled != 0);
-      //pixelFifo.enq(patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}]);
-      pixelWires <= tagged Valid patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}];
+      pixelWires <= tagged Valid patternRegs[patternIndex];
    endrule
 
 
     interface Put request;
         method Action put(Bit#(32) v) if (testPatternEnabled == 0);
-	   //pixelFifo.enq(v[23:0]);
+	   //pixelData <= v[23:0];
 	   pixelWires <= tagged Valid v[23:0];
         endmethod
     endinterface: request
