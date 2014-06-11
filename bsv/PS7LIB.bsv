@@ -61,32 +61,106 @@ interface AxiMasterWires;
    interface Wire#(Bit#(1)) rvalid;
    interface Wire#(Bit#(1)) wready;
    interface Wire#(Bit#(1)) bvalid;
+
+   interface Wire#(Bit#(12)) rid;
+   interface Wire#(Bit#(2))  rresp;
+   interface Wire#(Bit#(32)) rdata;
+   interface Wire#(Bit#(1))  rlast;
+   interface Wire#(Bit#(12)) bid;
+   interface Wire#(Bit#(2)) bresp;
 endinterface
 
-interface AxiSlaveWires;
+interface AxiSlaveWires#(numeric type data_width);
+   interface Wire#(Bit#(32)) araddr;
+   interface Wire#(Bit#(2)) arburst;
+   interface Wire#(Bit#(4)) arcache;
+   interface Wire#(Bit#(6)) arid;
+   interface Wire#(Bit#(4)) arlen;
+   interface Wire#(Bit#(2)) arlock;
+   interface Wire#(Bit#(3)) arprot;
+   interface Wire#(Bit#(4)) arqos;
+   interface Wire#(Bit#(2)) arsize;
    interface Wire#(Bit#(1)) arvalid;
+   interface Wire#(Bit#(32)) awaddr;
+   interface Wire#(Bit#(2)) awburst;
+   interface Wire#(Bit#(4)) awcache;
+   interface Wire#(Bit#(6)) awid;
+   interface Wire#(Bit#(4)) awlen;
+   interface Wire#(Bit#(2)) awlock;
+   interface Wire#(Bit#(3)) awprot;
+   interface Wire#(Bit#(4)) awqos;
+   interface Wire#(Bit#(2)) awsize;
    interface Wire#(Bit#(1)) awvalid;
    interface Wire#(Bit#(1)) rready;
+   interface Wire#(Bit#(6)) wid;
+   interface Wire#(Bit#(TDiv#(data_width,8))) wstrb;
+   interface Wire#(Bit#(data_width)) wdata;
+   interface Wire#(Bit#(1)) wlast;
    interface Wire#(Bit#(1)) wvalid;
    interface Wire#(Bit#(1)) bready;
 endinterface
 
 module mkAxiMasterWires(AxiMasterWires);
-   Vector#(5, Wire#(Bit#(1))) wires <- replicateM(mkDWire(0));
+   Vector#(6, Wire#(Bit#(1))) wires <- replicateM(mkDWire(0));
+   Vector#(1, Wire#(Bit#(32))) datawires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(12))) idwires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(2))) respwires <- replicateM(mkDWire(0));
    interface Wire arready = wires[0];
    interface Wire awready = wires[1];
    interface Wire rvalid = wires[2];
    interface Wire wready = wires[3];
-   interface Wire bvalid = wires[4];
+   interface Wire rid  = idwires[0];
+   interface Wire rresp  = respwires[0];
+   interface Wire rdata  = datawires[0];
+   interface Wire rlast  = wires[4];
+   interface Wire bvalid = wires[5];
+   interface Wire bid    = idwires[1];
+   interface Wire bresp  = respwires[1];
 endmodule
 
-module mkAxiSlaveWires(AxiSlaveWires);
+module mkAxiSlaveWires(AxiSlaveWires#(data_width));
    Vector#(5, Wire#(Bit#(1))) wires <- replicateM(mkDWire(0));
-   interface Wire arvalid = wires[0];
-   interface Wire awvalid = wires[1];
-   interface Wire rready = wires[2];
-   interface Wire wvalid = wires[3];
-   interface Wire bready = wires[4];
+   Vector#(2, Wire#(Bit#(32))) addrwires <- replicateM(mkDWire(0));
+   Vector#(1, Wire#(Bit#(data_width))) datawires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(2))) burstwires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(4))) cachewires <- replicateM(mkDWire(0));
+   Vector#(3, Wire#(Bit#(6))) idwires <- replicateM(mkDWire(0));
+   Vector#(1, Wire#(Bit#(TDiv#(data_width,8)))) strbwires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(4))) lenwires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(2))) lockwires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(3))) protwires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(4))) qoswires <- replicateM(mkDWire(0));
+   Vector#(3, Wire#(Bit#(1))) validwires <- replicateM(mkDWire(0));
+   Vector#(2, Wire#(Bit#(2))) sizewires <- replicateM(mkDWire(0));
+   Vector#(3, Wire#(Bit#(1))) readywires <- replicateM(mkDWire(0));
+   Vector#(1, Wire#(Bit#(1))) lastwires <- replicateM(mkDWire(0));
+   interface Wire araddr = addrwires[0];
+   interface Wire arburst = burstwires[0];
+   interface Wire arcache = cachewires[0];
+   interface Wire arid = idwires[0];
+   interface Wire arlen = lenwires[0];
+   interface Wire arlock = lockwires[0];
+   interface Wire arprot = protwires[0];
+   interface Wire arqos = qoswires[0];
+   interface Wire arsize = sizewires[0];
+   interface Wire arvalid = validwires[0];
+   interface Wire awaddr = addrwires[1];
+   interface Wire awburst = burstwires[1];
+   interface Wire awcache = cachewires[1];
+   interface Wire awid = idwires[1];
+   interface Wire awlen = lenwires[1];
+   interface Wire awlock = lockwires[1];
+   interface Wire awprot = protwires[1];
+   interface Wire awqos = qoswires[1];
+   interface Wire awsize = sizewires[1];
+   interface Wire awvalid = validwires[1];
+   interface Wire rready = readywires[0];
+   interface Wire wid = idwires[2];
+   interface Wire wstrb = strbwires[0];
+   interface Wire wdata = datawires[0];
+   interface Wire wlast = lastwires[0];
+   interface Wire wvalid = validwires[2];
+   interface Wire bready = readywires[1];
 endmodule
 
 (* always_ready, always_enabled *)
@@ -157,9 +231,9 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     Vector#(2, AxiMasterCommon) vtopm_axi_gp;
     Vector#(2, AxiMasterWires) vtopmw_axi_gp <- replicateM(mkAxiMasterWires(clocked_by axi_clock, reset_by axi_reset));
     Vector#(2, AxiSlaveCommon#(32)) vtops_axi_gp;
-    Vector#(2, AxiSlaveWires) vtopsw_axi_gp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
+    Vector#(2, AxiSlaveWires#(32)) vtopsw_axi_gp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
     Vector#(4, AxiSlaveHighSpeed) vtops_axi_hp;
-    Vector#(4, AxiSlaveWires) vtopsw_axi_hp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
+    Vector#(4, AxiSlaveWires#(64)) vtopsw_axi_hp <- replicateM(mkAxiSlaveWires(clocked_by axi_clock, reset_by axi_reset));
 
 `ifdef PS7EXTENDED
     vcan[0] = foo.can0;
@@ -200,6 +274,10 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
 	    vm_axi_gp[i].awready(vtopmw_axi_gp[i].awready);
        endrule
        rule axi_master_handshake3;
+            vm_axi_gp[i].rid(vtopmw_axi_gp[i].rid);
+            vm_axi_gp[i].rresp(vtopmw_axi_gp[i].rresp);
+            vm_axi_gp[i].rdata(vtopmw_axi_gp[i].rdata);
+            vm_axi_gp[i].rlast(vtopmw_axi_gp[i].rlast);
             vm_axi_gp[i].rvalid(vtopmw_axi_gp[i].rvalid);
        endrule
        rule axi_master_handshake4;
@@ -207,6 +285,8 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
        endrule
        rule axi_master_handshake5;
             vm_axi_gp[i].bvalid(vtopmw_axi_gp[i].bvalid);
+	    vm_axi_gp[i].bid(vtopmw_axi_gp[i].bid);
+	    vm_axi_gp[i].bresp(vtopmw_axi_gp[i].bresp);
        endrule
        end
     for (Integer i = 0; i < 2; i = i + 1)
@@ -226,6 +306,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
                      v.size = {0, vm_axi_gp[i].arsize()};
 
                     vtopmw_axi_gp[i].arready <= 1;
+
                     return v;
                 endmethod
             endinterface
@@ -248,11 +329,10 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
             endinterface
             interface Put resp_read;
                 method Action put(Axi3ReadResponse#(32, 12) v) if (vm_axi_gp[i].rready() != 0);
-                    vm_axi_gp[i].rid(v.id);
-                    vm_axi_gp[i].rresp(v.resp);
-                    vm_axi_gp[i].rdata(v.data);
-                    vm_axi_gp[i].rlast(v.last);
-
+                    vtopmw_axi_gp[i].rid <= v.id;
+                    vtopmw_axi_gp[i].rresp <= v.resp;
+                    vtopmw_axi_gp[i].rdata <= v.data;
+                    vtopmw_axi_gp[i].rlast <= v.last;
                     vtopmw_axi_gp[i].rvalid <= 1;
                 endmethod
             endinterface
@@ -270,10 +350,9 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
             endinterface
             interface Put resp_b;
                 method Action put(Axi3WriteResponse#(12) v) if (vm_axi_gp[i].bready() != 0);
-                    vm_axi_gp[i].bid(v.id);
-                    vm_axi_gp[i].bresp(v.resp);
-	       
                     vtopmw_axi_gp[i].bvalid <= 1;
+                    vtopmw_axi_gp[i].bid    <= v.id;
+                    vtopmw_axi_gp[i].bresp  <= v.resp;
                 endmethod
             endinterface
             endinterface
@@ -282,16 +361,38 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     for (Integer i = 0; i < 2; i = i + 1)
        begin
        rule axi_master_handshake1;
-	    vs_axi_gp[i].arvalid(vtopsw_axi_gp[i].arvalid);
+	  vs_axi_gp[i].araddr(vtopsw_axi_gp[i].araddr);
+	  vs_axi_gp[i].arburst(vtopsw_axi_gp[i].arburst);
+	  vs_axi_gp[i].arcache(vtopsw_axi_gp[i].arcache);
+	  vs_axi_gp[i].arid(vtopsw_axi_gp[i].arid);
+	  vs_axi_gp[i].arlen(vtopsw_axi_gp[i].arlen);
+	  vs_axi_gp[i].arlock(vtopsw_axi_gp[i].arlock);
+	  vs_axi_gp[i].arprot(vtopsw_axi_gp[i].arprot);
+	  vs_axi_gp[i].arqos(vtopsw_axi_gp[i].arqos);
+	  vs_axi_gp[i].arsize(vtopsw_axi_gp[i].arsize);
+	  vs_axi_gp[i].arvalid(vtopsw_axi_gp[i].arvalid);
        endrule
        rule axi_master_handshake2;
-	    vs_axi_gp[i].awvalid(vtopsw_axi_gp[i].awvalid);
+	  vs_axi_gp[i].awaddr(vtopsw_axi_gp[i].awaddr);
+	  vs_axi_gp[i].awburst(vtopsw_axi_gp[i].awburst);
+	  vs_axi_gp[i].awcache(vtopsw_axi_gp[i].awcache);
+	  vs_axi_gp[i].awid(vtopsw_axi_gp[i].awid);
+	  vs_axi_gp[i].awlen(vtopsw_axi_gp[i].awlen);
+	  vs_axi_gp[i].awlock(vtopsw_axi_gp[i].awlock);
+	  vs_axi_gp[i].awprot(vtopsw_axi_gp[i].awprot);
+	  vs_axi_gp[i].awqos(vtopsw_axi_gp[i].awqos);
+	  vs_axi_gp[i].awsize(vtopsw_axi_gp[i].awsize);
+	  vs_axi_gp[i].awvalid(vtopsw_axi_gp[i].awvalid);
        endrule
        rule axi_master_handshake3;
             vs_axi_gp[i].rready(vtopsw_axi_gp[i].rready);
        endrule
        rule axi_master_handshake4;
-	    vs_axi_gp[i].wvalid(vtopsw_axi_gp[i].wvalid);
+	  vs_axi_gp[i].wid(vtopsw_axi_gp[i].wid);
+	  vs_axi_gp[i].wstrb(vtopsw_axi_gp[i].wstrb);
+	  vs_axi_gp[i].wdata(vtopsw_axi_gp[i].wdata);
+	  vs_axi_gp[i].wlast(vtopsw_axi_gp[i].wlast);
+	  vs_axi_gp[i].wvalid(vtopsw_axi_gp[i].wvalid);
        endrule
        rule axi_master_handshake5;
             vs_axi_gp[i].bready(vtopsw_axi_gp[i].bready);
@@ -302,42 +403,42 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
           interface Axi3Slave server;
             interface Put req_ar;
                 method Action put(Axi3ReadRequest#(32,6) v) if (vs_axi_gp[i].arready() != 0);
-                    vs_axi_gp[i].araddr(v.address);
-                    vs_axi_gp[i].arburst(v.burst);
-                    vs_axi_gp[i].arcache(v.cache);
-                    vs_axi_gp[i].arid(v.id);
-                    vs_axi_gp[i].arlen(v.len);
-                    vs_axi_gp[i].arlock(v.lock);
-                    vs_axi_gp[i].arprot(v.prot);
-                    vs_axi_gp[i].arqos(v.qos);
-                    vs_axi_gp[i].arsize(v.size[1:0]);
+                   vtopsw_axi_gp[i].araddr <= v.address;
+                   vtopsw_axi_gp[i].arburst <= v.burst;
+                   vtopsw_axi_gp[i].arcache <= v.cache;
+                   vtopsw_axi_gp[i].arid <= v.id;
+                   vtopsw_axi_gp[i].arlen <= v.len;
+                   vtopsw_axi_gp[i].arlock <= v.lock;
+                   vtopsw_axi_gp[i].arprot <= v.prot;
+                   vtopsw_axi_gp[i].arqos <= v.qos;
+                   vtopsw_axi_gp[i].arsize <= v.size[1:0];
 
-	            vtopsw_axi_gp[i].arvalid <= 1;
+	           vtopsw_axi_gp[i].arvalid <= 1;
                 endmethod
             endinterface
             interface Put req_aw;
                 method Action put(Axi3WriteRequest#(32,6) v) if (vs_axi_gp[i].awready() != 0);
-                    vs_axi_gp[i].awaddr(v.address);
-                    vs_axi_gp[i].awburst(v.burst);
-                    vs_axi_gp[i].awcache(v.cache);
-                    vs_axi_gp[i].awid(v.id);
-                    vs_axi_gp[i].awlen(v.len);
-                    vs_axi_gp[i].awlock(v.lock);
-                    vs_axi_gp[i].awprot(v.prot);
-                    vs_axi_gp[i].awqos(v.qos);
-                    vs_axi_gp[i].awsize(v.size[1:0]);
+                   vtopsw_axi_gp[i].awaddr <= v.address;
+                   vtopsw_axi_gp[i].awburst <= v.burst;
+                   vtopsw_axi_gp[i].awcache <= v.cache;
+                   vtopsw_axi_gp[i].awid <= v.id;
+                   vtopsw_axi_gp[i].awlen <= v.len;
+                   vtopsw_axi_gp[i].awlock <= v.lock;
+                   vtopsw_axi_gp[i].awprot <= v.prot;
+                   vtopsw_axi_gp[i].awqos <= v.qos;
+                   vtopsw_axi_gp[i].awsize <= v.size[1:0];
 
-	            vtopsw_axi_gp[i].awvalid <= 1;
+	           vtopsw_axi_gp[i].awvalid <= 1;
                 endmethod
             endinterface
             interface Put resp_write;
                 method Action put(Axi3WriteData#(32,6) v) if (vs_axi_gp[i].wready() != 0);
-                    vs_axi_gp[i].wid(v.id);
-                    vs_axi_gp[i].wstrb(v.byteEnable);
-                    vs_axi_gp[i].wdata(v.data);
-                    vs_axi_gp[i].wlast(v.last);
+                   vtopsw_axi_gp[i].wid <= v.id;
+                   vtopsw_axi_gp[i].wstrb <= v.byteEnable;
+                   vtopsw_axi_gp[i].wdata <= v.data;
+                   vtopsw_axi_gp[i].wlast <= v.last;
 
-	            vtopsw_axi_gp[i].wvalid <= 1;
+	           vtopsw_axi_gp[i].wvalid <= 1;
                 endmethod
             endinterface
             interface Get resp_read;
@@ -496,7 +597,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     interface AxiMasterCommon m_axi_gp = vtopm_axi_gp;
     interface AxiSlaveCommon s_axi_gp = vtops_axi_gp;
     interface AxiSlaveHighSpeed s_axi_hp = vtops_axi_hp;
-    //interface AxiSlaveCommon s_axi_acp;
+    //interface AxiSlaveCommon s_axi_acp = vtops_axi_acp;
 endmodule
 
 interface ZynqPins;
