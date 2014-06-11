@@ -133,18 +133,17 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       let v <- toGet(mrFifo).get();
       synchronizer.enq(v);
    endrule
-   Reg#(Bit#(1)) evenOdd <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
-   Reg#(Vector#(2,Bit#(32))) doublePixelReg <- mkReg(unpack(0), clocked_by hdmi_clock, reset_by hdmi_reset);
+   Reg#(Bool) evenOdd <- mkReg(True, clocked_by hdmi_clock, reset_by hdmi_reset);
+   Reg#(Bit#(32)) doublePixelReg <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
    rule doPut;
-      Vector#(2,Bit#(32)) doublePixel = doublePixelReg;
-      let pixel = doublePixel[evenOdd];
-      if (evenOdd == 0) begin
-	 doublePixel = unpack(synchronizer.first);
+      let pixel = doublePixelReg;
+      if (evenOdd) begin
+	 Vector#(2,Bit#(32)) doublePixel = unpack(synchronizer.first);
 	 synchronizer.deq;
+         doublePixelReg <= doublePixel[1];
 	 pixel = doublePixel[0];
       end
-      doublePixelReg <= doublePixel;
-      evenOdd <= evenOdd + 1;
+      evenOdd <= !evenOdd;
       hdmiGen.request.put(pixel);
    endrule      
 
