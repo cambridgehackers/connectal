@@ -280,6 +280,8 @@ XVLOGFLAGS =
 XELABFLAGS = %(xelabflags)s
 XSIMFLAGS  = %(xsimflags)s
 
+%(mdefines)s
+
 all: $(ALLTARGETS)
 
 S2H = %(s2hinterface)s
@@ -813,6 +815,7 @@ if __name__=='__main__':
                                    'timestamp' : int(time.time()),
                                    'clibs': ' '.join(['-l%s' % l for l in namespace.clib]),
                                    'cdefines': ' '.join([ '-D%s' % d for d in namespace.bsvdefine ]),
+                                   'mdefines': '\n'.join([ '%s%s' % (d, ('' if ('=' in d) else '=')) for d in namespace.bsvdefine ]),
                                    'bscflags': ' '.join(namespace.bscflags),
                                    'xelabflags': ' '.join(namespace.xelabflags),
                                    'xsimflags': ' '.join(namespace.xsimflags)
