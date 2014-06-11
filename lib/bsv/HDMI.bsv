@@ -91,7 +91,8 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(11)) lineCount <- mkReg(0);
     Reg#(Bit#(12)) pixelCount <- mkReg(0);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
-    Reg#(Bit#(2)) patternIndex <- mkReg(0);
+    Reg#(Bit#(1)) patternIndex0 <- mkReg(0);
+    Reg#(Bit#(1)) patternIndex1 <- mkReg(0);
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
@@ -141,23 +142,31 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	    end
             testPatternEnabled <= shadowTestPatternEnabled;
         end
-        if (pixelCount == numberOfPixels-1)
-           begin
+        if (pixelCount == numberOfPixels-1) begin
            pixelCount <= 0; 
-           if (lineCount == numberOfLines-1)
+           patternIndex0 <= 0;
+           if (lineCount == numberOfLines-1) begin
                lineCount <= 0;
-           else
-               lineCount <= lineCount+1;
+               patternIndex1 <= 0;
            end
-        else
-            pixelCount <= pixelCount + 1;
+           else begin
+               lineCount <= lineCount+1;
+               if (lineCount >= lineMidpoint)
+                   patternIndex1 <= 1;
+           end
+        end
+        else begin
+           pixelCount <= pixelCount + 1;
+           if (pixelCount >= pixelMidpoint)
+               patternIndex0 <= 1;
+        end
     endrule
 
+        let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
+        let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
     rule output_data_rule;
         let hsync = (pixelCount < hsyncWidth) ? 1 : 0;
         let vsync = (lineCount < vsyncWidth) ? 1 : 0;
-        let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
-        let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
        Rgb888 pixel = unpack(0);
        if (dataEnable) begin
 	   pixel = unpack(pixelData);
@@ -166,16 +175,12 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 				     vsync: vsync, hsync: hsync, pixel: pixel };
     endrule
 
-   rule testpattern_setup;
-      patternIndex <= {pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)};
-   endrule
-
-   rule testpattern_rule if (testPatternEnabled != 0);
-      pixelData <= patternRegs[patternIndex];
-   endrule
+    rule testpattern_rule if (testPatternEnabled != 0);
+       pixelData <= patternRegs[{patternIndex1, patternIndex0}];
+    endrule
 
     interface Put request;
-        method Action put(Bit#(32) v) if (testPatternEnabled == 0);
+        method Action put(Bit#(32) v) if (testPatternEnabled == 0 && dataEnable);
 	   pixelData <= v[23:0];
         endmethod
     endinterface: request
