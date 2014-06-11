@@ -182,7 +182,7 @@ write_checkpoint -force $outputDir/%(dut)s_post_synth > hw/temp.log
 #not in 2013.2 report_timing_summary -warn_on_violation
 #not in 2013.2 report_timing_summary -warn_on_violation -verbose  -file $outputDir/%(dut)s_post_synth_timing_summary.rpt > hw/temp.log
 report_timing -nworst 20 -sort_by slack -path_type summary -slack_lesser_than 0.2 -unique_pins
-report -file_io $outputDir/%(dut)s_post_synth_io.rpt > hw/temp.log
+report_io -file $outputDir/%(dut)s_post_synth_io.rpt > hw/temp.log
 puts "****************************************"
 puts "If timing report says 'No timing paths found.' then the design met the timing constraints."
 puts "If it reported negative slack, then the design did not meet the timing constraints."
