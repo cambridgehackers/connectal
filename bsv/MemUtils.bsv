@@ -84,3 +84,59 @@ module mkMemWriter(MemWriter#(dataWidth))
 
 endmodule
    
+
+interface MemengineCmdBuf#(numeric type numServers, numeric type cmdQDepth);
+   method Action enq(Bit#(TLog#(numServers)) idx, MemengineCmd cmd);
+   method Action first_req(Bit#(TLog#(numServers)) idx);
+   method ActionValue#(MemengineCmd) first_resp();
+   method Action deq(Bit#(TLog#(numServers)) idx);
+   method Action upd(Bit#(TLog#(numServers)) idx, MemengineCmd cmd);
+endinterface
+
+
+module mkMemengineCmdBuf(MemengineCmdBuf#(numServers,cmdQDepth))
+   provisos(Mul#(cmdQDepth,numServers,cmdBuffSz),
+	    Log#(cmdBuffSz, cmdBuffAddrSz),
+	    Add#(a__, TLog#(numServers), TAdd#(1, cmdBuffAddrSz)));
+   
+   function Bit#(cmdBuffAddrSz) hf(Integer i) = fromInteger(i*valueOf(cmdQDepth));
+   Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) head <- mapM(mkReg, genWith(hf));
+   Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) tail <- mapM(mkReg, genWith(hf));
+   BRAM2Port#(Bit#(cmdBuffAddrSz),MemengineCmd)    cmdBuf <- mkBRAM2Server(defaultValue);
+   let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
+
+      
+   method Action enq(Bit#(TLog#(numServers)) idx, MemengineCmd cmd);
+      cmdBuf.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
+      Bit#(TAdd#(1,cmdBuffAddrSz)) nt = extend(tail[idx])+1;
+      Bit#(TAdd#(1,cmdBuffAddrSz)) li = (extend(idx)+1)*cmd_q_depth;
+      Bit#(TAdd#(1,cmdBuffAddrSz)) rs = (extend(idx)+0)*cmd_q_depth;
+      if (nt >= li) 
+	 nt = rs;
+      tail[idx] <= truncate(nt);
+   endmethod
+
+   method Action first_req(Bit#(TLog#(numServers)) idx);
+      cmdBuf.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:head[idx], datain:?});
+   endmethod
+   
+   method ActionValue#(MemengineCmd) first_resp();
+      let cmd <- cmdBuf.portA.response.get;
+      return cmd;
+   endmethod
+
+   method Action deq(Bit#(TLog#(numServers)) idx);
+      Bit#(TAdd#(1,cmdBuffAddrSz)) nt = extend(head[idx])+1;
+      Bit#(TAdd#(1,cmdBuffAddrSz)) li = (extend(idx)+1)*cmd_q_depth;
+      Bit#(TAdd#(1,cmdBuffAddrSz)) rs = (extend(idx)+0)*cmd_q_depth;
+      if (nt >= li) 
+	 nt = rs;
+      head[idx] <= truncate(nt);
+   endmethod
+
+   method Action upd(Bit#(TLog#(numServers)) idx, MemengineCmd cmd);
+      cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head[idx], datain:cmd});
+   endmethod
+
+endmodule
+
