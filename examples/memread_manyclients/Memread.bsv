@@ -61,7 +61,7 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
    Vector#(NumEngineServers, Reg#(Bit#(32)))       iterCnts <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(NumEngineServers, Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   MemreadEngineV#(64,1,NumEngineServers)                re <- mkMemreadEngineV;
+   MemreadEngineV#(64,2,NumEngineServers)                re <- mkMemreadEngineV;
    Vector#(NumEngineServers, FIFOF#(Bit#(32))) mismatchFifos <- replicateM(mkFIFOF);
    Bit#(ObjectOffsetSize) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
    
@@ -70,11 +70,10 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
       rule start (iterCnts[i] > 0);
 	 re.readServers[i].request.put(MemengineCmd{pointer:pointer, base:fromInteger(i)*chunk, len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 $display("start %d, %d", i, iterCnts[i]);
-	 srcGens[i] <= fromInteger(i)*truncate(chunk/4);      
+	 iterCnts[i] <= iterCnts[i]-1;
       endrule
       rule finish;
-	 $display("finish %d %d", i, iterCnts[i]);
-	 iterCnts[i] <= iterCnts[i]-1;
+	 $display("finish %d", i);
 	 let rv <- re.readServers[i].response.get;
 	 // need to pipeline this also
 	 //mismatchCnt <= mismatchCnt+mismatchCounts[i];
@@ -86,7 +85,10 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
 	 let expectedV = {srcGens[i]+1,srcGens[i]};
 	 let misMatch = v != expectedV;
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
-	 srcGens[i] <= srcGens[i]+2;
+	 let new_srcGens = srcGens[i]+2;
+	 if (new_srcGens >= fromInteger(i+1)*truncate(chunk/4))
+	    new_srcGens = fromInteger(i)*truncate(chunk/4); 
+	 srcGens[i] <= new_srcGens;
       endrule
    end
    
@@ -119,6 +121,7 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
 	 for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
 	    iterCnts[i] <= ic;
 	    mismatchCounts[i] <= 0;
+	    srcGens[i] <= fromInteger(i)*(nw/fromInteger(valueOf(NumEngineServers)));      
 	 end
       endmethod
    endinterface

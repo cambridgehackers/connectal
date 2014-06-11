@@ -28,17 +28,18 @@
 
 sem_t test_sem;
 
-#ifdef MMAP_HW
-int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
-#else
-int numWords = 0x124000/4;
-#endif
 
 int burstLen = 16;
 #ifdef MMAP_HW
 int iterCnt = 64;
 #else
-int iterCnt = 2;
+int iterCnt = 3;
+#endif
+
+#ifdef MMAP_HW
+int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
+#else
+int numWords = 0x124000/4;
 #endif
 
 size_t test_sz  = numWords*sizeof(unsigned int);

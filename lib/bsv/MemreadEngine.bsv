@@ -113,12 +113,14 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
    provisos (Div#(dataWidth,8,dataWidthBytes),
 	     Mul#(dataWidthBytes,8,dataWidth),
 	     Log#(dataWidthBytes,beatShift),
+	     Log#(cmdQDepth,logCmdQDepth),
 	     Mul#(cmdQDepth,numServers,cmdBuffSz),
 	     Log#(cmdBuffSz, cmdBuffAddrSz),
 	     Log#(numServers, serverIdxSz),
 	     Add#(1,cmdQDepth, outCntSz),
 	     Add#(1, c__, numServers),
 	     Add#(b__, TLog#(numServers), cmdBuffAddrSz),
+	     Add#(d__, serverIdxSz, TAdd#(1, cmdBuffAddrSz)),
 	     Add#(a__, serverIdxSz, cmdBuffAddrSz),
 	     Min#(2,TLog#(numServers),bpc),
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
@@ -134,14 +136,15 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) head <- mapM(mkReg, genWith(hf));
    Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) tail <- mapM(mkReg, genWith(hf));
 
-   BRAM2Port#(Bit#(cmdBuffAddrSz),MemengineCmd) cmdBuf <- mkBRAM2Server(defaultValue);
-   FIFO#(Bit#(serverIdxSz))                    loadf_a <- mkSizedFIFO(1);
+   BRAM2Port#(Bit#(cmdBuffAddrSz),MemengineCmd)    cmdBuf <- mkBRAM2Server(defaultValue);
+   FIFO#(Bit#(serverIdxSz))                       loadf_a <- mkSizedFIFO(1);
    FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_b <- mkSizedFIFO(1);
-   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))workf <- mkSizedFIFO(32); // isthis the right size?
+   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))   workf <- mkSizedFIFO(32); // isthis the right size?
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(serverIdxSz), MemengineCmd))) cmds_in <- replicateM(mkSizedFIFOF(1));
    FunnelPipe#(1, numServers, Tuple2#(Bit#(serverIdxSz), MemengineCmd),bpc) cmds_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,cmds_in));
+
    FIFOF#(Tuple2#(Bit#(TLog#(numServers)), Tuple2#(Bit#(dataWidth),Bool))) read_data <- mkFIFOF;
    UnFunnelPipe#(1, numServers, Tuple2#(Bit#(dataWidth),Bool),bpc) read_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(read_data),nil));
    Vector#(numServers, FIFOF#(Tuple2#(Bit#(dataWidth),Bool)))  read_data_unfunnel_buffs <- replicateM(mkSizedBRAMFIFOF(maxBufferedBursts*maxBurstBeats));
@@ -161,7 +164,6 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	  method Bool notEmpty = x.notEmpty;
        endinterface);
    Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, map(toPipeOut,read_data_unfunnel_buffs), genVector);
-   //Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, read_data_unfunnel, genVector);
    
    Reg#(Bit#(8))                               respCnt <- mkReg(0);
    Reg#(Bit#(serverIdxSz))                     loadIdx <- mkReg(0);
@@ -170,14 +172,17 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 
    rule store_cmd;
       match {.idx, .cmd} <- toGet(cmds_in_funnel[0]).get;
-      let new_tail = tail[idx]+1;
-      if (new_tail >= extend(idx+1)*cmd_q_depth)
-	 new_tail = extend(idx)*cmd_q_depth;
-      tail[idx] <= new_tail;
       outs1[idx] <= outs1[idx]+1;
       cmdBuf.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
       dynamicAssert(cmd.burstLen>>beat_shift <= maxBurstBeats,  "mkMemreadEngineV.store_cmd::unsupportedBurstLen");
-      //$display("MemreadEngineV.store_cmd: %d %h", idx, tail[idx]);
+      //$display("MemreadEngineV.store_cmd: %d %d", idx, tail[idx]);
+
+      Bit#(TAdd#(1,cmdBuffAddrSz)) nt = extend(tail[idx])+1;
+      Bit#(TAdd#(1,cmdBuffAddrSz)) li = (extend(idx)+1)*cmd_q_depth;
+      Bit#(TAdd#(1,cmdBuffAddrSz)) rs = (extend(idx)+0)*cmd_q_depth;
+      if (nt >= li) 
+	 nt = rs;
+      tail[idx] <= truncate(nt);
    endrule
    
    rule load_ctxt_a;
@@ -197,10 +202,13 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	 loadf_b.enq(tuple2(idx,cmd));
 	 if (cmd.len <= extend(cmd.burstLen)) begin
 	    outs1[idx] <= outs1[idx]-1;
-	    let new_head = head[idx]+1;
-	    if (new_head >= extend(idx+1)*cmd_q_depth)
-	       new_head = extend(idx)*cmd_q_depth;
-	    head[idx] <= new_head;
+
+	    Bit#(TAdd#(1,cmdBuffAddrSz)) nt = extend(head[idx])+1;
+	    Bit#(TAdd#(1,cmdBuffAddrSz)) li = (extend(idx)+1)*cmd_q_depth;
+	    Bit#(TAdd#(1,cmdBuffAddrSz)) rs = (extend(idx)+0)*cmd_q_depth;
+	    if (nt >= li) 
+	       nt = rs;
+	    head[idx] <= truncate(nt);
 	    //$display("new_head %d %d", idx, new_head);	 
 	 end
 	 let new_cmd = MemengineCmd{pointer:cmd.pointer, base:cmd.base+extend(cmd.burstLen), burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen)};
