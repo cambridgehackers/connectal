@@ -626,6 +626,10 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
        rule axi_master_handshake5;
             vs_axi_hp[i].bready(vtopsw_axi_hp[i].bready);
        endrule
+       rule issuecap;
+	  vs_axi_hp[i].rdissuecap1en(0);
+	  vs_axi_hp[i].wrissuecap1en(0);
+       endrule
        end
     for (Integer i = 0; i < 4; i = i + 1)
         vtops_axi_hp[i] = interface AxiSlaveHighSpeed;
