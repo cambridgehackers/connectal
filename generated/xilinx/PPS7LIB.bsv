@@ -972,11 +972,11 @@ module mkPPS7LIB#(Clock maxigp0aclk, Reset maxigp0aclk_reset, Clock maxigp1aclk,
         method MAXIGP1WSTRB wstrb() clocked_by (maxigp1aclk) reset_by (maxigp1aclk_reset);
         method MAXIGP1WVALID wvalid() clocked_by (maxigp1aclk) reset_by (maxigp1aclk_reset);
     endinterface
-    ifc_inout mio(MIO);
+    ifc_inout mio(MIO) clocked_by (no_clock) reset_by (no_reset);
     interface Pps7Ps     ps;
-        ifc_inout clk(PSCLK);
-        ifc_inout porb(PSPORB);
-        ifc_inout srstb(PSSRSTB);
+        ifc_inout clk(PSCLK) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout porb(PSPORB) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout srstb(PSSRSTB) clocked_by (no_clock) reset_by (no_reset);
     endinterface
     interface Pps7Saxiacp     saxiacp;
         method araddr(SAXIACPARADDR) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPARADDR);
