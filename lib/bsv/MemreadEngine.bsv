@@ -118,7 +118,7 @@ module mkMemreadEngineV(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	     Mul#(cmdQDepth,numServers,cmdBuffSz),
 	     Log#(cmdBuffSz, cmdBuffAddrSz),
 	     Log#(numServers, serverIdxSz),
-	     Add#(1,cmdQDepth, outCntSz),
+	     Add#(1,logCmdQDepth, outCntSz),
 	     Add#(1, c__, numServers),
 	     Add#(b__, TLog#(numServers), cmdBuffAddrSz),
 	     Add#(e__, TLog#(numServers), TAdd#(1, cmdBuffAddrSz)),
