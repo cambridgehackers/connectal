@@ -305,7 +305,7 @@ BSIM_EXE_CXX = $(addprefix $(XBSVDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 bsim_exe:  $(CPPFILES) $(BSIM_EXE_CXX)
 	mkdir -p bin
-	cd jni; g++ -g -O -o bsim_exe -I$(XBSVDIR)/lib/cpp -I%(project_dir)s/jni %(includepath)s $(BSIM_EXE_CXX) $(CPPFILES) -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -DBSIM %(clibs)s
+	cd jni; g++ -g -O -o bsim_exe %(cdefines)s -I$(XBSVDIR)/lib/cpp -I%(project_dir)s/jni %(includepath)s $(BSIM_EXE_CXX) $(CPPFILES) -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -DBSIM %(clibs)s
 	cp -v jni/bsim_exe bin
 
 ubuntu_exe:
@@ -718,8 +718,8 @@ if __name__=='__main__':
 
     print 'Writing Android.mk', androidmkname
     print 'Writing Application.mk', applicationmkname
-    cppgen.writeAndroidMk(namespace.source, generatedCFiles, androidmkname, applicationmkname, xbsvdir, project_dir)
-    cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source, swProxies, swWrappers, namespace.clib)
+    cppgen.writeAndroidMk(namespace.source, generatedCFiles, androidmkname, applicationmkname, xbsvdir, project_dir, namespace.bsvdefine)
+    cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source, swProxies, swWrappers, namespace.clib, namespace.bsvdefine)
 
     print 'Writing tcl impl file', tclimplname
     tclsubsts = {'dut': topmodulename.lower(),
@@ -802,6 +802,7 @@ if __name__=='__main__':
                                    'Dut': topmodulename,
                                    'timestamp' : int(time.time()),
                                    'clibs': ' '.join(['-l%s' % l for l in namespace.clib]),
+                                   'cdefines': ' '.join([ '-D%s' % d for d in namespace.bsvdefine ]),
                                    'bscflags': ' '.join(namespace.bscflags),
                                    'xelabflags': ' '.join(namespace.xelabflags),
                                    'xsimflags': ' '.join(namespace.xsimflags)
