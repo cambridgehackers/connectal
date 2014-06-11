@@ -39,10 +39,10 @@ def updatePao(vinput, libdirs):
     if os.environ.has_key('BLUESPECDIR'):
         libdirs.append(os.path.join(os.environ['BLUESPECDIR'], 'Verilog.Vivado'))
         libdirs.append(os.path.join(os.environ['BLUESPECDIR'], 'Verilog'))
-    print 'destdir', destdir
-    print 'libdirs', libdirs
+    #print 'destdir', destdir
+    #print 'libdirs', libdirs
     modules = findVerilogModules(vinput)
-    print modules
+    #print modules
     for mod in modules:
         modv = '%s.v' % mod
         if not os.path.exists(os.path.join(destdir, modv)):
