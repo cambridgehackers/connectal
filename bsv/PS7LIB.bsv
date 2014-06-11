@@ -707,6 +707,15 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
             method wcount = vs_axi_hp[i].wcount;
             method wrissuecap1en = vs_axi_hp[i].wrissuecap1en;
         endinterface;
+   Wire#(Bit#(1)) fpgaidlenw <- mkDWire(1);
+   rule fpgaidle;
+      foo.fpgaidlen(fpgaidlenw);
+   endrule
+   rule misc;
+      foo.emiosramintin(0);
+      // UG585 "fclkclktrign is currently not supported and must be tied to ground"
+      foo.fclkclktrign(0);
+   endrule
 
 `ifdef PS7EXTENDED
     interface Pps7Can can = vcan;
@@ -734,7 +743,7 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
         foo.fclkclktrign(v);
     endmethod
     method Action      fpgaidlen(Bit#(1) v);
-        foo.fpgaidlen(v);
+       fpgaidlenw <= v;
     endmethod
     interface Pps7Emiogpio     gpio = foo.emiogpio;
     interface Pps7Irq     irq = foo.irq;
