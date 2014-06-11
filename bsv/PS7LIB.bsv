@@ -469,16 +469,38 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
     for (Integer i = 0; i < 4; i = i + 1)
        begin
        rule axi_master_handshake1;
-	    vs_axi_hp[i].arvalid(vtopsw_axi_hp[i].arvalid);
+	  vs_axi_hp[i].araddr(vtopsw_axi_hp[i].araddr);
+	  vs_axi_hp[i].arburst(vtopsw_axi_hp[i].arburst);
+	  vs_axi_hp[i].arcache(vtopsw_axi_hp[i].arcache);
+	  vs_axi_hp[i].arid(vtopsw_axi_hp[i].arid);
+	  vs_axi_hp[i].arlen(vtopsw_axi_hp[i].arlen);
+	  vs_axi_hp[i].arlock(vtopsw_axi_hp[i].arlock);
+	  vs_axi_hp[i].arprot(vtopsw_axi_hp[i].arprot);
+	  vs_axi_hp[i].arqos(vtopsw_axi_hp[i].arqos);
+	  vs_axi_hp[i].arsize(vtopsw_axi_hp[i].arsize);
+	  vs_axi_hp[i].arvalid(vtopsw_axi_hp[i].arvalid);
        endrule
        rule axi_master_handshake2;
-	    vs_axi_hp[i].awvalid(vtopsw_axi_hp[i].awvalid);
+	  vs_axi_hp[i].awaddr(vtopsw_axi_hp[i].awaddr);
+	  vs_axi_hp[i].awburst(vtopsw_axi_hp[i].awburst);
+	  vs_axi_hp[i].awcache(vtopsw_axi_hp[i].awcache);
+	  vs_axi_hp[i].awid(vtopsw_axi_hp[i].awid);
+	  vs_axi_hp[i].awlen(vtopsw_axi_hp[i].awlen);
+	  vs_axi_hp[i].awlock(vtopsw_axi_hp[i].awlock);
+	  vs_axi_hp[i].awprot(vtopsw_axi_hp[i].awprot);
+	  vs_axi_hp[i].awqos(vtopsw_axi_hp[i].awqos);
+	  vs_axi_hp[i].awsize(vtopsw_axi_hp[i].awsize);
+	  vs_axi_hp[i].awvalid(vtopsw_axi_hp[i].awvalid);
        endrule
        rule axi_master_handshake3;
-            vs_axi_hp[i].rready(vtopsw_axi_hp[i].rready);
+          vs_axi_hp[i].rready(vtopsw_axi_hp[i].rready);
        endrule
        rule axi_master_handshake4;
-	    vs_axi_hp[i].wvalid(vtopsw_axi_hp[i].wvalid);
+	  vs_axi_hp[i].wid(vtopsw_axi_hp[i].wid);
+	  vs_axi_hp[i].wstrb(vtopsw_axi_hp[i].wstrb);
+	  vs_axi_hp[i].wdata(vtopsw_axi_hp[i].wdata);
+	  vs_axi_hp[i].wlast(vtopsw_axi_hp[i].wlast);
+	  vs_axi_hp[i].wvalid(vtopsw_axi_hp[i].wvalid);
        endrule
        rule axi_master_handshake5;
             vs_axi_hp[i].bready(vtopsw_axi_hp[i].bready);
@@ -490,42 +512,42 @@ module mkPS7LIB#(Clock axi_clock, Reset axi_reset)(PS7LIB);
             interface Axi3Slave server;
             interface Put req_ar;
                 method Action put(Axi3ReadRequest#(32,6) v) if (vs_axi_hp[i].arready() != 0);
-                    vs_axi_hp[i].araddr(v.address);
-                    vs_axi_hp[i].arburst(v.burst);
-                    vs_axi_hp[i].arcache(v.cache);
-                    vs_axi_hp[i].arid(v.id);
-                    vs_axi_hp[i].arlen(v.len);
-                    vs_axi_hp[i].arlock(v.lock);
-                    vs_axi_hp[i].arprot(v.prot);
-                    vs_axi_hp[i].arqos(v.qos);
-                    vs_axi_hp[i].arsize(v.size[1:0]);
+                   vtopsw_axi_hp[i].araddr <= v.address;
+                   vtopsw_axi_hp[i].arburst <= v.burst;
+                   vtopsw_axi_hp[i].arcache <= v.cache;
+                   vtopsw_axi_hp[i].arid <= v.id;
+                   vtopsw_axi_hp[i].arlen <= v.len;
+                   vtopsw_axi_hp[i].arlock <= v.lock;
+                   vtopsw_axi_hp[i].arprot <= v.prot;
+                   vtopsw_axi_hp[i].arqos <= v.qos;
+                   vtopsw_axi_hp[i].arsize <= v.size[1:0];
 
-		    vtopsw_axi_hp[i].arvalid <= 1;
+		   vtopsw_axi_hp[i].arvalid <= 1;
                 endmethod
             endinterface
             interface Put req_aw;
                 method Action put(Axi3WriteRequest#(32,6) v) if (vs_axi_hp[i].awready() != 0);
-                    vs_axi_hp[i].awaddr(v.address);
-                    vs_axi_hp[i].awburst(v.burst);
-                    vs_axi_hp[i].awcache(v.cache);
-                    vs_axi_hp[i].awid(v.id);
-                    vs_axi_hp[i].awlen(v.len);
-                    vs_axi_hp[i].awlock(v.lock);
-                    vs_axi_hp[i].awprot(v.prot);
-                    vs_axi_hp[i].awqos(v.qos);
-                    vs_axi_hp[i].awsize(v.size[1:0]);
+                   vtopsw_axi_hp[i].awaddr <= v.address;
+                   vtopsw_axi_hp[i].awburst <= v.burst;
+                   vtopsw_axi_hp[i].awcache <= v.cache;
+                   vtopsw_axi_hp[i].awid <= v.id;
+                   vtopsw_axi_hp[i].awlen <= v.len;
+                   vtopsw_axi_hp[i].awlock <= v.lock;
+                   vtopsw_axi_hp[i].awprot <= v.prot;
+                   vtopsw_axi_hp[i].awqos <= v.qos;
+                   vtopsw_axi_hp[i].awsize <= v.size[1:0];
 
-	            vtopsw_axi_hp[i].awvalid <= 1;
+	           vtopsw_axi_hp[i].awvalid <= 1;
                 endmethod
             endinterface
             interface Put resp_write;
                 method Action put(Axi3WriteData#(64,6) v) if (vs_axi_hp[i].wready() != 0);
-                    vs_axi_hp[i].wid(v.id);
-                    vs_axi_hp[i].wstrb(v.byteEnable);
-                    vs_axi_hp[i].wdata(v.data);
-                    vs_axi_hp[i].wlast(v.last);
+                   vtopsw_axi_hp[i].wid <= v.id;
+                   vtopsw_axi_hp[i].wstrb <= v.byteEnable;
+                   vtopsw_axi_hp[i].wdata <= v.data;
+                   vtopsw_axi_hp[i].wlast <= v.last;
 
-	            vtopsw_axi_hp[i].wvalid <= 1;
+	           vtopsw_axi_hp[i].wvalid <= 1;
                 endmethod
             endinterface
             interface Get resp_read;
