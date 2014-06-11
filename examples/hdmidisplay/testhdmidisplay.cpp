@@ -96,6 +96,8 @@ int main(int argc, const char **argv)
     close(i2cfd);
     parseEdid(edid);
 
+    device->stopFrameBuffer();
+
     pthread_t thread;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
