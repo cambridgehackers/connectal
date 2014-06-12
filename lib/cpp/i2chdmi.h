@@ -67,9 +67,11 @@ static unsigned char hdmidata[] = {
     int fd = open("/dev/i2c-0", O_RDWR);
     if (fd < 0)
         printf("[%s] open failed\n", __FUNCTION__);
+#ifndef BOARD_zedboard     // only initialize mux if not a zedboard
     //set mux for hdmi
     if (i2c_write_array(fd, 0x74, muxdata, sizeof(muxdata)))
         printf("[%s] write mux failed\n", __FUNCTION__);
+#endif
     //set hdmi data
     if (i2c_write_array(fd, 0x39, hdmidata, sizeof(hdmidata)))
         printf("[%s] write data failed\n", __FUNCTION__);
