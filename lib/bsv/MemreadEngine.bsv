@@ -38,21 +38,13 @@ import MemUtils::*;
 
 
 module mkMemreadEngine(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
-   provisos (Div#(dataWidth,8,dataWidthBytes),
-	     Mul#(dataWidthBytes,8,dataWidth),
-	     Log#(dataWidthBytes,beatShift),
-	     Log#(cmdQDepth,logCmdQDepth),
-	     Mul#(cmdQDepth,numServers,cmdBuffSz),
-	     Log#(cmdBuffSz, cmdBuffAddrSz),
-	     Log#(numServers, serverIdxSz),
-	     Add#(1,logCmdQDepth, outCntSz),
-	     Add#(1, c__, numServers),
-	     Add#(b__, TLog#(numServers), cmdBuffAddrSz),
-	     Add#(e__, TLog#(numServers), TAdd#(1, cmdBuffAddrSz)),
-	     Add#(a__, serverIdxSz, cmdBuffAddrSz),
-	     Min#(2,TLog#(numServers),bpc),
-	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
-	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc));
+   provisos( Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
+	    ,Add#(1, a__, numServers)
+	    ,Add#(b__, TLog#(numServers), TAdd#(1, TLog#(TMul#(cmdQDepth,numServers))))
+	    ,Pipe::FunnelPipesPipelined#(1, numServers,Tuple2#(Bit#(TLog#(numServers)), MemTypes::MemengineCmd), TMin#(2,TLog#(numServers)))
+	    ,Pipe::FunnelPipesPipelined#(1, numServers, Tuple2#(Bit#(dataWidth), Bool),TMin#(2, TLog#(numServers)))
+	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
+	    );
    let rv <- mkMemreadEngineBuff(128, 2);
    return rv;
 endmodule
@@ -203,7 +195,5 @@ module mkMemreadEngineBuff#(Integer maxBurstLen, Integer maxBufferedBursts) (Mem
    endinterface 
    interface dataPipes = read_data_pipes;
 endmodule
-
-
 
 
