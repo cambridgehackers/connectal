@@ -312,18 +312,21 @@ BSIM_EXE_CXX = $(addprefix $(XBSVDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 bsim_exe:  $(CPPFILES) $(BSIM_EXE_CXX)
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	cd jni; g++ -g -O -o bsim_exe %(cdefines)s -I$(XBSVDIR)/lib/cpp -I%(project_dir)s/jni %(includepath)s $(BSIM_EXE_CXX) $(CPPFILES) -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -DBSIM %(clibs)s
 	cp -v jni/bsim_exe bin
 
 ubuntu_exe:
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	cd jni; make
 	cp -v jni/mk* bin
 
 bsim: $(timestampfile)
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	mkdir -p $(DTOP)/obj
 	cd sources; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
 	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
@@ -376,6 +379,7 @@ ifeq ($(OS),android)
 bits: hw/mkTop.bit
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
 
@@ -384,6 +388,7 @@ else
 bits: hw/mkTop.bit
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 
 endif
@@ -391,12 +396,14 @@ endif
 android_exe:
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	ndk-build
 	cp -v libs/armeabi/android_exe bin
 
 android_exe_debug:
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	ndk-build -B V=1 NDK_DEBUG=1
 	cp -v libs/armeabi/android_exe bin
 
