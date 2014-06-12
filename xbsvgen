@@ -544,6 +544,7 @@ if __name__=='__main__':
         bsvdefines += ['ZYNQ']
     elif boardname == 'zc702':
         bsvdefines += ['ZYNQ']
+    bsvdefines += ['BOARD_'+boardname]
 
     if not (os.path.abspath(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv')) in map(os.path.abspath, namespace.bsvfile)):
         namespace.bsvfile.append(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv'))
