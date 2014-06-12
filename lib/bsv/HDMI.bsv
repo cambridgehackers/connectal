@@ -30,6 +30,7 @@ import SpecialFIFOs::*;
 import GetPut::*;
 import SyncBits::*;
 import YUV::*;
+import Arith::*;
 
 `ifdef ZC706
 typedef 24 HdmiBits;
@@ -264,36 +265,52 @@ endinterface
 
 (* synthesize *)
 module mkRgb888ToYyuv(Rgb888ToYyuv);
-    Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
-    Reg#(VideoData#(Yuv444Intermediates)) yuv444IntermediatesStageReg <- mkReg(unpack(0));
-    Reg#(VideoData#(Yuv444)) yuv444StageReg <- mkReg(unpack(0));
-    Reg#(VideoData#(Yyuv)) yuv422StageReg <- mkReg(unpack(0));
+    Reg#(VideoData#(Rgb888))                        stage0Reg <- mkReg(unpack(0));
+    Reg#(VideoData#(Yuv444Intermediates))           stage1Reg <- mkReg(unpack(0));
+    Reg#(VideoData#(Vector#(2,Vector#(3,Bit#(16))))) stage2Reg <- mkReg(unpack(0));
+    Reg#(VideoData#(Yuv444))                        stage3Reg <- mkReg(unpack(0));
+    Reg#(VideoData#(Yyuv))                          stage4Reg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
    
-    rule yuv444int_rule;
-        let previous = rgb888StageReg;
+    rule stage1_rule;
+        let previous = stage0Reg;
         let pixel = previous.pixel;
-        yuv444IntermediatesStageReg <= VideoData {
+        stage1Reg <= VideoData {
             vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
             pixel: (previous.de != 0) ? rgbToYuvIntermediates(pixel) : unpack(0)
         };
     endrule
 
-    rule yuv444_rule;
-        let previous = yuv444IntermediatesStageReg;
-        yuv444StageReg <= VideoData {
+    rule stage2_rule;
+        let previous = stage1Reg;
+       Vector#(4, Vector#(3, Bit#(16))) vprev = previous.pixel;
+       Vector#(2, Vector#(3, Bit#(16))) vnext;
+       vnext[0] = vadd(vprev[0], vprev[1]);
+       vnext[1] = vadd(vprev[2], vprev[3]);
+
+       stage2Reg <= VideoData {
             vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
-	    pixel: (previous.de != 0) ? yuvIntermediatesToYuv444(previous.pixel) : unpack(0)
+	    pixel: (previous.de != 0) ? vnext : unpack(0)
         };
     endrule
 
-    rule yuv422_rule;
-        let previous = yuv444StageReg;
+   rule stage3_rule;
+      let previous = stage2Reg;
+       Vector#(2, Vector#(3, Bit#(16))) vprev = previous.pixel;
+      Yuv444 pixel = yuv444FromVector(vrshift(vadd(vprev[0], vprev[1]), 8));
+
+      stage3Reg <= VideoData {
+            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
+	 pixel: (previous.de != 0) ? pixel : unpack(0) };
+   endrule
+
+    rule stage4_rule;
+        let previous = stage3Reg;
         if (previous.de != 0)
             evenOddPixelReg <= !evenOddPixelReg;
         Yyuv data = Yyuv { uv: evenOddPixelReg ? previous.pixel.u : previous.pixel.v,
                            yy: previous.pixel.y };
-        yuv422StageReg <= VideoData {
+        stage4Reg <= VideoData {
             vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
             pixel: data
         };
@@ -301,12 +318,12 @@ module mkRgb888ToYyuv(Rgb888ToYyuv);
 
    interface Put rgb888;
       method Action put(VideoData#(Rgb888) v);
-	 rgb888StageReg <= v;
+	 stage0Reg <= v;
       endmethod
    endinterface
    interface Get yyuv;
       method ActionValue#(VideoData#(Yyuv)) get();
-	 return yuv422StageReg;
+	 return stage4Reg;
       endmethod
    endinterface
 endmodule
