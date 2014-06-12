@@ -88,18 +88,18 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(11)) lineMidpoint <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) numberOfLines <- mkSyncReg(1080 + 45, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(12)) numberOfPixels <- mkSyncReg(1920 + 192 + 44 + 44, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) lineCount <- mkReg(0);
-    Reg#(Bit#(12)) pixelCount <- mkReg(0);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
-    Reg#(Bit#(1)) patternIndex0 <- mkReg(0);
-    Reg#(Bit#(1)) patternIndex1 <- mkReg(0);
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
     SyncPulseIfc vsyncCountPulse <- mkSyncHandshake(defaultClock, defaultReset, axi_clock);
     SyncPulseIfc sendVsyncIndication <- mkSyncHandshake(defaultClock, defaultReset, axi_clock);
+
+    Reg#(Bit#(11)) lineCount <- mkReg(0);
+    Reg#(Bit#(12)) pixelCount <- mkReg(0);
+    Reg#(Bit#(1)) patternIndex0 <- mkReg(0);
+    Reg#(Bit#(1)) patternIndex1 <- mkReg(0);
+    Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
     Reg#(Bit#(24)) pixelData <- mkReg(24'hFF00FF);
-    FIFOF#(Bit#(24)) pixelFifo <- mkLFIFOF();
 
     Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
@@ -110,6 +110,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(32)) vsyncCounter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsedVsync <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+
     rule axicyclecount;
        counter <= counter + 1;
     endrule
@@ -162,17 +163,11 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         end
     endrule
 
-        let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
-        let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
+    let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
+    let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
     rule output_data_rule;
-        let hsync = (pixelCount < hsyncWidth) ? 1 : 0;
-        let vsync = (lineCount < vsyncWidth) ? 1 : 0;
-       Rgb888 pixel = unpack(0);
-       if (dataEnable) begin
-	   pixel = unpack(pixelData);
-       end
         rgb888StageReg <= VideoData {de: pack(dataEnable),
-				     vsync: vsync, hsync: hsync, pixel: pixel };
+	     vsync: pack(lineCount < vsyncWidth), hsync: pack(pixelCount < hsyncWidth), pixel: unpack(pixelData) };
     endrule
 
     rule testpattern_rule if (testPatternEnabled != 0);
@@ -192,11 +187,9 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	method Bit#(12) getNumberOfPixels();
 	   return numberOfPixels;
 	endmethod
-   method Bool dataEnable();
-        let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
-      return (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
-   endmethod
-
+        method Bool dataEnable();
+            return dataEnable;
+        endmethod
     endinterface
     interface HdmiInternalRequest control;
         method Action setPatternColor(Bit#(32) v);
