@@ -57,6 +57,7 @@ typedef enum { ImageonSerdesRequest, ImageonSensorRequest, HdmiInternalRequest,
 interface ImageCapturePins;
    interface ImageonSensorPins pins;
    interface ImageonSerdesPins serpins;
+   (* prefix="" *)
    interface HDMI#(Bit#(HdmiBits)) hdmi;
    method Action fmc_video_clk1(Bit#(1) v);
 endinterface
