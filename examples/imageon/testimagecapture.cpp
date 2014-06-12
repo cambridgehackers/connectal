@@ -83,10 +83,11 @@ class HdmiInternalIndication: public HdmiInternalIndicationWrapper {
     HdmiInternalRequestProxy *hdmiRequest;
 public:
     HdmiInternalIndication(int id, HdmiInternalRequestProxy *proxy, PortalPoller *poller = 0) : HdmiInternalIndicationWrapper(id, poller), hdmiRequest(proxy) {}
-    virtual void vsync ( const uint64_t v ) {
-        printf("vsync v=%llx\n", v);
+    virtual void vsync ( uint64_t v, uint32_t w ) {
+        fprintf(stderr, "[%s:%d] v=%d w=%d\n", __FUNCTION__, __LINE__, (uint32_t) v, w);
         hdmiRequest->waitForVsync(v+1);
     }
+
 };
 
 static void init_local_semaphores(void)
