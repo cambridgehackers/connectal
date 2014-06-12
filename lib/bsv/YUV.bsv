@@ -86,8 +86,8 @@ function Yuv444Intermediates rgbToYuvIntermediates(Rgb888 rgb);
    Vector#(3, Vector#(4, Bit#(16))) rgbv = replicate(append(rgbToVector(rgb), replicate(1)));
    Vector#(3, Vector#(4, Bit#(16))) coeffs = replicate(newVector());
    coeffs[0][0] =  77; coeffs[0][1] =  150; coeffs[0][2] =  29; coeffs[0][3] = 0;
-   coeffs[1][0] =  43; coeffs[1][1] =  -85; coeffs[1][2] = 128; coeffs[1][3] = (128<<8);
-   coeffs[2][0] = 128; coeffs[2][1] = -107; coeffs[2][2] = -21; coeffs[2][3] = (128<<8);
+   coeffs[1][0] = -43; coeffs[1][1] =  -85; coeffs[1][2] = 128; coeffs[1][3] = 128;
+   coeffs[2][0] = 128; coeffs[2][1] = -107; coeffs[2][2] = -21; coeffs[2][3] = 128;
    return transpose(map(uncurry(vmul), zip(rgbv, coeffs)));
 endfunction
 
