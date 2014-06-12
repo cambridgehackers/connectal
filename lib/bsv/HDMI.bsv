@@ -30,6 +30,7 @@ import SpecialFIFOs::*;
 import GetPut::*;
 import SyncBits::*;
 import YUV::*;
+import Arith::*;
 
 `ifdef ZC706
 typedef 24 HdmiBits;
@@ -88,17 +89,18 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(11)) lineMidpoint <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) numberOfLines <- mkSyncReg(1080 + 45, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(12)) numberOfPixels <- mkSyncReg(1920 + 192 + 44 + 44, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) lineCount <- mkReg(0);
-    Reg#(Bit#(12)) pixelCount <- mkReg(0);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
     SyncPulseIfc vsyncCountPulse <- mkSyncHandshake(defaultClock, defaultReset, axi_clock);
     SyncPulseIfc sendVsyncIndication <- mkSyncHandshake(defaultClock, defaultReset, axi_clock);
+
+    Reg#(Bit#(11)) lineCount <- mkReg(0);
+    Reg#(Bit#(12)) pixelCount <- mkReg(0);
+    Reg#(Bit#(1)) patternIndex0 <- mkReg(0);
+    Reg#(Bit#(1)) patternIndex1 <- mkReg(0);
+    Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
     Reg#(Bit#(24)) pixelData <- mkReg(24'hFF00FF);
-    FIFOF#(Bit#(24)) pixelFifo <- mkLFIFOF();
-    Wire#(Maybe#(Bit#(24))) pixelWires <- mkDWire(tagged Invalid);
 
     Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
@@ -109,6 +111,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(32)) vsyncCounter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsedVsync <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+
     rule axicyclecount;
        counter <= counter + 1;
     endrule
@@ -141,51 +144,40 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	    end
             testPatternEnabled <= shadowTestPatternEnabled;
         end
-        if (pixelCount == numberOfPixels-1)
-           begin
+        if (pixelCount == numberOfPixels-1) begin
            pixelCount <= 0; 
-           if (lineCount == numberOfLines-1)
+           patternIndex0 <= 0;
+           if (lineCount == numberOfLines-1) begin
                lineCount <= 0;
-           else
-               lineCount <= lineCount+1;
+               patternIndex1 <= 0;
            end
-        else
-            pixelCount <= pixelCount + 1;
+           else begin
+               lineCount <= lineCount+1;
+               if (lineCount >= lineMidpoint)
+                   patternIndex1 <= 1;
+           end
+        end
+        else begin
+           pixelCount <= pixelCount + 1;
+           if (pixelCount >= pixelMidpoint)
+               patternIndex0 <= 1;
+        end
     endrule
 
+    let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
+    let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
     rule output_data_rule;
-        let hsync = (pixelCount < hsyncWidth) ? 1 : 0;
-        let vsync = (lineCount < vsyncWidth) ? 1 : 0;
-        let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
-        let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
-       Rgb888 pixel = unpack(0);
-       if (dataEnable) begin
-//	  if (pixelFifo.notEmpty) begin
-//	     pixel = unpack(pixelFifo.first());
-//	     pixelFifo.deq();
-//	  end
-	  if (pixelWires matches tagged Valid .pixelbits) begin
-	     pixel = unpack(pixelbits);
-	  end
-	  else begin
-	     underflowCount <= underflowCount + 1;
-	     pixel = unpack(0);
-	  end
-       end
         rgb888StageReg <= VideoData {de: pack(dataEnable),
-				     vsync: vsync, hsync: hsync, pixel: pixel };
+	     vsync: pack(lineCount < vsyncWidth), hsync: pack(pixelCount < hsyncWidth), pixel: unpack(pixelData) };
     endrule
 
-   rule testpattern_rule if (testPatternEnabled != 0);
-      //pixelFifo.enq(patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}]);
-      pixelWires <= tagged Valid patternRegs[{pack(lineCount >= lineMidpoint), pack(pixelCount >= pixelMidpoint)}];
-   endrule
-
+    rule testpattern_rule if (testPatternEnabled != 0);
+       pixelData <= patternRegs[{patternIndex1, patternIndex0}];
+    endrule
 
     interface Put request;
-        method Action put(Bit#(32) v) if (testPatternEnabled == 0);
-	   //pixelFifo.enq(v[23:0]);
-	   pixelWires <= tagged Valid v[23:0];
+        method Action put(Bit#(32) v) if (testPatternEnabled == 0 && dataEnable);
+	   pixelData <= v[23:0];
         endmethod
     endinterface: request
 
@@ -196,11 +188,9 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	method Bit#(12) getNumberOfPixels();
 	   return numberOfPixels;
 	endmethod
-   method Bool dataEnable();
-        let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
-      return (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
-   endmethod
-
+        method Bool dataEnable();
+            return dataEnable;
+        endmethod
     endinterface
     interface HdmiInternalRequest control;
         method Action setPatternColor(Bit#(32) v);
@@ -275,36 +265,52 @@ endinterface
 
 (* synthesize *)
 module mkRgb888ToYyuv(Rgb888ToYyuv);
-    Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
-    Reg#(VideoData#(Yuv444Intermediates)) yuv444IntermediatesStageReg <- mkReg(unpack(0));
-    Reg#(VideoData#(Yuv444)) yuv444StageReg <- mkReg(unpack(0));
-    Reg#(VideoData#(Yyuv)) yuv422StageReg <- mkReg(unpack(0));
+    Reg#(VideoData#(Rgb888))                        stage0Reg <- mkReg(unpack(0));
+    Reg#(VideoData#(Yuv444Intermediates))           stage1Reg <- mkReg(unpack(0));
+    Reg#(VideoData#(Vector#(2,Vector#(3,Bit#(16))))) stage2Reg <- mkReg(unpack(0));
+    Reg#(VideoData#(Yuv444))                        stage3Reg <- mkReg(unpack(0));
+    Reg#(VideoData#(Yyuv))                          stage4Reg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
    
-    rule yuv444int_rule;
-        let previous = rgb888StageReg;
+    rule stage1_rule;
+        let previous = stage0Reg;
         let pixel = previous.pixel;
-        yuv444IntermediatesStageReg <= VideoData {
+        stage1Reg <= VideoData {
             vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
             pixel: (previous.de != 0) ? rgbToYuvIntermediates(pixel) : unpack(0)
         };
     endrule
 
-    rule yuv444_rule;
-        let previous = yuv444IntermediatesStageReg;
-        yuv444StageReg <= VideoData {
+    rule stage2_rule;
+        let previous = stage1Reg;
+       Vector#(4, Vector#(3, Bit#(16))) vprev = previous.pixel;
+       Vector#(2, Vector#(3, Bit#(16))) vnext;
+       vnext[0] = vadd(vprev[0], vprev[1]);
+       vnext[1] = vadd(vprev[2], vprev[3]);
+
+       stage2Reg <= VideoData {
             vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
-	    pixel: (previous.de != 0) ? yuvIntermediatesToYuv444(previous.pixel) : unpack(0)
+	    pixel: (previous.de != 0) ? vnext : unpack(0)
         };
     endrule
 
-    rule yuv422_rule;
-        let previous = yuv444StageReg;
+   rule stage3_rule;
+      let previous = stage2Reg;
+       Vector#(2, Vector#(3, Bit#(16))) vprev = previous.pixel;
+      Yuv444 pixel = yuv444FromVector(vrshift(vadd(vprev[0], vprev[1]), 8));
+
+      stage3Reg <= VideoData {
+            vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
+	 pixel: (previous.de != 0) ? pixel : unpack(0) };
+   endrule
+
+    rule stage4_rule;
+        let previous = stage3Reg;
         if (previous.de != 0)
             evenOddPixelReg <= !evenOddPixelReg;
         Yyuv data = Yyuv { uv: evenOddPixelReg ? previous.pixel.u : previous.pixel.v,
                            yy: previous.pixel.y };
-        yuv422StageReg <= VideoData {
+        stage4Reg <= VideoData {
             vsync: previous.vsync, hsync: previous.hsync, de: previous.de,
             pixel: data
         };
@@ -312,12 +318,12 @@ module mkRgb888ToYyuv(Rgb888ToYyuv);
 
    interface Put rgb888;
       method Action put(VideoData#(Rgb888) v);
-	 rgb888StageReg <= v;
+	 stage0Reg <= v;
       endmethod
    endinterface
    interface Get yyuv;
       method ActionValue#(VideoData#(Yyuv)) get();
-	 return yuv422StageReg;
+	 return stage4Reg;
       endmethod
    endinterface
 endmodule

@@ -124,11 +124,11 @@
 	"PIO_DIRECTION": "OUTPUT",
 	"fmc": "LA01_n_CC"
     },
-    "I2C_scl": {
+    "I2C1_scl": {
 	"PIO_DIRECTION": "BIDIR",
 	"fmc": "LA16_p"
     },
-    "I2C_sda": {
+    "I2C1_sda": {
 	"PIO_DIRECTION": "BIDIR",
 	"fmc": "LA16_n"
     }

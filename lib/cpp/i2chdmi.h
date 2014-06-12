@@ -5,7 +5,7 @@
 #include <errno.h>
 #include "/usr/include/linux/i2c.h"
 #include "/usr/include/linux/i2c-dev.h"
-static void i2c_write_array(int fd, int device, unsigned char *datap, int size)
+static int i2c_write_array(int fd, int device, unsigned char *datap, int size)
 {
     struct i2c_smbus_ioctl_data args;
     union i2c_smbus_data ioctl_data;
@@ -14,16 +14,21 @@ static void i2c_write_array(int fd, int device, unsigned char *datap, int size)
     args.data = &ioctl_data;
 
     int status = ioctl(fd, I2C_SLAVE, device);
-    if (status != 0)
-	 fprintf(stderr, "ioctl I2C_SLAVE status=%d errno=%d\n", status, errno);
+    if (status != 0) {
+	 fprintf(stderr, "[i2chdmi] i2c_write_array: ioctl I2C_SLAVE status=%d errno=%d\n", status, errno);
+         return -1;
+    }
     while (size) {
         args.command = *datap++;
         ioctl_data.byte = *datap++;
         status = ioctl(fd, I2C_SMBUS, &args);
-	if (status != 0)
-	     fprintf(stderr, "ioctl I2C_SLAVE status=%d errno=%d\n", status, errno);
+	if (status != 0) {
+	     fprintf(stderr, "[i2chdmi] i2c_write_array: ioctl I2C_SMBUS status=%d errno=%d\n", status, errno);
+             return -1;
+        }
         size -= 2;
     }
+    return 0;
 }
 static unsigned char i2c_read_reg(int fd, int device, unsigned char reg)
 {
@@ -35,18 +40,14 @@ static unsigned char i2c_read_reg(int fd, int device, unsigned char reg)
 
     int status = ioctl(fd, I2C_SLAVE, device);
     if (status != 0)
-	 fprintf(stderr, "ioctl I2C_SLAVE status=%d errno=%d\n", status, errno);
+	 fprintf(stderr, "[i2chdmi] i2c_read_reg: ioctl I2C_SLAVE status=%d errno=%d\n", status, errno);
 
     args.command = reg;
     ioctl_data.byte = 0;
     status = ioctl(fd, I2C_SMBUS, &args);
     if (status != 0)
-      fprintf(stderr, "ioctl I2C_SLAVE status=%d errno=%d\n", status, errno);
+      fprintf(stderr, "[i2chdmi] i2c_read_reg: ioctl I2C_SMBUS status=%d errno=%d\n", status, errno);
     return ioctl_data.byte;
-}
-static int i2c_open()
-{
-  return open("/dev/i2c-0", O_RDWR);
 }
 static void init_i2c_hdmi(void)
 {
@@ -64,10 +65,16 @@ static unsigned char hdmidata[] = {
     0xA3, 0xA4,  0xAF, 0x04,  0xE0, 0xD0,  0xF9, 0x00};
 
     int fd = open("/dev/i2c-0", O_RDWR);
+    if (fd < 0)
+        printf("[%s] open failed\n", __FUNCTION__);
+#ifndef BOARD_zedboard     // only initialize mux if not a zedboard
     //set mux for hdmi
-    i2c_write_array(fd, 0x74, muxdata, sizeof(muxdata));
+    if (i2c_write_array(fd, 0x74, muxdata, sizeof(muxdata)))
+        printf("[%s] write mux failed\n", __FUNCTION__);
+#endif
     //set hdmi data
-    i2c_write_array(fd, 0x39, hdmidata, sizeof(hdmidata));
+    if (i2c_write_array(fd, 0x39, hdmidata, sizeof(hdmidata)))
+        printf("[%s] write data failed\n", __FUNCTION__);
 }
 static void init_i2c_hdmi_rgb24(void)
 {
@@ -85,8 +92,12 @@ static unsigned char hdmidata[] = {
     0xA3, 0xA4,  0xAF, 0x04,  0xE0, 0xD0,  0xF9, 0x00};
 
     int fd = open("/dev/i2c-0", O_RDWR);
+    if (fd < 0)
+        printf("[%s] open failed\n", __FUNCTION__);
     //set mux for hdmi
-    i2c_write_array(fd, 0x74, muxdata, sizeof(muxdata));
+    if (i2c_write_array(fd, 0x74, muxdata, sizeof(muxdata)))
+        printf("[%s] write mux failed\n", __FUNCTION__);
     //set hdmi data
-    i2c_write_array(fd, 0x39, hdmidata, sizeof(hdmidata));
+    if (i2c_write_array(fd, 0x39, hdmidata, sizeof(hdmidata)))
+        printf("[%s] write data failed\n", __FUNCTION__);
 }

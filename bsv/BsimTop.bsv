@@ -157,8 +157,8 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
    Reg#(Bit#(5))  writeLen <- mkReg(0);
    Reg#(Bit#(serverIdWidth)) writeId <- mkReg(0);
    
-   Bit#(64) readLatency = 128;
-   Bit#(64) writeLatency = 128;
+   Bit#(64) readLatency = 96;
+   Bit#(64) writeLatency = 96;
    
    Reg#(Bit#(64)) req_ar_b_ts <- mkReg(0);
    Reg#(Bit#(64)) req_aw_b_ts <- mkReg(0);

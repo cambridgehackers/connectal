@@ -40,3 +40,10 @@ def foldl(f, x, l):
     if len(l) == 0:
         return x
     return foldl(f, f(x, l[0]), l[1:])
+
+## Given a string V, V=, or V=VAL returns (V,VAL)
+def splitBinding(s):
+    if '=' in s:
+        return s.split('=')
+    else:
+        return (s,'')

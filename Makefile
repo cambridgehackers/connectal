@@ -78,6 +78,7 @@ testnames = echo                 \
             bscan                \
             memread_4m           \
             memwrite_4m          \
+            yuv                  \
 
 memtests =  memcpy               \
             memread              \

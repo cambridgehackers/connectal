@@ -79,7 +79,7 @@ int main(int argc, const char **argv)
     // read out monitor EDID from ADV7511
     struct edid edid;
     init_i2c_hdmi();
-    int i2cfd = i2c_open();
+    int i2cfd = open("/dev/i2c-0", O_RDWR);
     fprintf(stderr, "Monitor EDID:\n");
     for (int i = 0; i < 256; i++) {
       edid.raw[i] = i2c_read_reg(i2cfd, 0x3f, i);
@@ -95,6 +95,8 @@ int main(int argc, const char **argv)
     }
     close(i2cfd);
     parseEdid(edid);
+
+    device->stopFrameBuffer();
 
     pthread_t thread;
     pthread_attr_t attr;

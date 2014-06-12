@@ -87,6 +87,7 @@ set partname {%(partname)s}
 set boardname {%(boardname)s}
 set xbsvdir {%(xbsvdir)s}
 set needspcie {%(needspcie)s}
+%(tcldefines)s
 '''
 
 tclfileTemplate='''
@@ -181,6 +182,7 @@ write_checkpoint -force $outputDir/%(dut)s_post_synth > hw/temp.log
 #not in 2013.2 report_timing_summary -warn_on_violation
 #not in 2013.2 report_timing_summary -warn_on_violation -verbose  -file $outputDir/%(dut)s_post_synth_timing_summary.rpt > hw/temp.log
 report_timing -nworst 20 -sort_by slack -path_type summary -slack_lesser_than 0.2 -unique_pins
+report_io -file $outputDir/%(dut)s_post_synth_io.rpt > hw/temp.log
 puts "****************************************"
 puts "If timing report says 'No timing paths found.' then the design met the timing constraints."
 puts "If it reported negative slack, then the design did not meet the timing constraints."
@@ -205,6 +207,7 @@ write_checkpoint -force $outputDir/%(dut)s_post_place > hw/temp.log
 #not in 2013.2 report_timing_summary -warn_on_violation -file $outputDir/%(dut)s_post_place_timing_summary.rpt > hw/temp.log
 report_timing_summary -file $outputDir/%(dut)s_post_place_timing_summary.rpt > hw/temp.log
 report_timing -nworst 20 -sort_by slack -path_type summary -slack_lesser_than 0.2 -unique_pins
+report_io -file $outputDir/%(dut)s_post_place_io.rpt > hw/temp.log
 #
 # STEP#4: run router, report actual utilization and timing, write checkpoint design, run drc, write verilog and xdc out
 #
@@ -222,6 +225,7 @@ report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/
 report_clock_utilization -file $outputDir/%(dut)s_clock_util.rpt > hw/temp.log
 report_utilization -file $outputDir/%(dut)s_post_route_util.rpt > hw/temp.log
 report_datasheet -file $outputDir/%(dut)s_post_route_datasheet.rpt > hw/temp.log
+report_io -file $outputDir/%(dut)s_post_place_io.rpt > hw/temp.log
 #report_power -file $outputDir/%(dut)s_post_route_power.rpt
 #report_drc -file $outputDir/%(dut)s_post_imp_drc.rpt
 #write_verilog -force $outputDir/%(dut)s_impl_netlist.v
@@ -277,6 +281,8 @@ XVLOGFLAGS =
 XELABFLAGS = %(xelabflags)s
 XSIMFLAGS  = %(xsimflags)s
 
+%(mdefines)s
+
 all: $(ALLTARGETS)
 
 S2H = %(s2hinterface)s
@@ -305,16 +311,22 @@ BSIM_EXE_CXX = $(addprefix $(XBSVDIR)/cpp/, $(BSIM_EXE_CXX_FILES))
 
 bsim_exe:  $(CPPFILES) $(BSIM_EXE_CXX)
 	mkdir -p bin
+	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	cd jni; g++ -g -O -o bsim_exe %(cdefines)s -I$(XBSVDIR)/lib/cpp -I%(project_dir)s/jni %(includepath)s $(BSIM_EXE_CXX) $(CPPFILES) -pthread -I$(XBSVDIR) -I$(XBSVDIR)/cpp -DBSIM %(clibs)s
 	cp -v jni/bsim_exe bin
 
 ubuntu_exe:
 	mkdir -p bin
+	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	cd jni; make
 	cp -v jni/mk* bin
 
 bsim: $(timestampfile)
 	mkdir -p bin
+	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	mkdir -p $(DTOP)/obj
 	cd sources; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
 	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
@@ -366,6 +378,8 @@ ifeq ($(OS),android)
 
 bits: hw/mkTop.bit
 	mkdir -p bin
+	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
 
@@ -373,17 +387,23 @@ else
 
 bits: hw/mkTop.bit
 	mkdir -p bin
+	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 
 endif
 
 android_exe:
 	mkdir -p bin
+	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	ndk-build
 	cp -v libs/armeabi/android_exe bin
 
 android_exe_debug:
 	mkdir -p bin
+	git rev-parse HEAD > bin/githash
+	git diff > bin/gitdiff.patch
 	ndk-build -B V=1 NDK_DEBUG=1
 	cp -v libs/armeabi/android_exe bin
 
@@ -524,6 +544,7 @@ if __name__=='__main__':
         bsvdefines += ['ZYNQ']
     elif boardname == 'zc702':
         bsvdefines += ['ZYNQ']
+    bsvdefines += ['BOARD_'+boardname]
 
     if not (os.path.abspath(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv')) in map(os.path.abspath, namespace.bsvfile)):
         namespace.bsvfile.append(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv'))
@@ -737,7 +758,8 @@ if __name__=='__main__':
                                             % { 'verilog': f } for f in namespace.verilog]),
                  'read_xci': '\n'.join([tclReadXciTemplate
                                         % { 'xci': f } for f in namespace.xci]),
-                 'needspcie': 1 if needs_pcie_7x_gen1x8 else 0
+                 'needspcie': 1 if needs_pcie_7x_gen1x8 else 0,
+                 'tcldefines': '\n'.join(['set %s {%s}' % (var,val) for (var,val) in map(util.splitBinding, namespace.bsvdefine)])
                  }
     tcl = util.createDirAndOpen(tclimplname, 'w')
     tcl.write(tclfileTemplate % tclsubsts)
@@ -803,6 +825,7 @@ if __name__=='__main__':
                                    'timestamp' : int(time.time()),
                                    'clibs': ' '.join(['-l%s' % l for l in namespace.clib]),
                                    'cdefines': ' '.join([ '-D%s' % d for d in namespace.bsvdefine ]),
+                                   'mdefines': '\n'.join(['%s="%s"' % (var,val) for (var,val) in map(util.splitBinding, namespace.bsvdefine)]),
                                    'bscflags': ' '.join(namespace.bscflags),
                                    'xelabflags': ' '.join(namespace.xelabflags),
                                    'xsimflags': ' '.join(namespace.xsimflags)

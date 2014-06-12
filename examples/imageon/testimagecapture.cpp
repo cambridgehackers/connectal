@@ -83,10 +83,11 @@ class HdmiInternalIndication: public HdmiInternalIndicationWrapper {
     HdmiInternalRequestProxy *hdmiRequest;
 public:
     HdmiInternalIndication(int id, HdmiInternalRequestProxy *proxy, PortalPoller *poller = 0) : HdmiInternalIndicationWrapper(id, poller), hdmiRequest(proxy) {}
-    virtual void vsync ( const uint64_t v ) {
-        printf("vsync v=%llx\n", v);
+    virtual void vsync ( uint64_t v, uint32_t w ) {
+        fprintf(stderr, "[%s:%d] v=%d w=%d\n", __FUNCTION__, __LINE__, (uint32_t) v, w);
         hdmiRequest->waitForVsync(v+1);
     }
+
 };
 
 static void init_local_semaphores(void)
@@ -406,11 +407,15 @@ static void fmc_imageon_demo_init(int argc, const char **argv)
     //ret = fmc_iic_axi_init(uBaseAddr_IIC_FmcImageon);
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 2);
     sensordevice->set_host_oe(1);
-    hdmidevice->setTestPattern(0);
 
+printf("[%s:%d] before i2c_camera\n", __FUNCTION__, __LINE__);
     init_i2c_camera();
+printf("[%s:%d] before i2c_hdmi\n", __FUNCTION__, __LINE__);
     init_i2c_hdmi();
+printf("[%s:%d] after i2c_hdmi\n", __FUNCTION__, __LINE__);
     //init_vclk();
+sleep(5);
+    hdmidevice->setTestPattern(0);
 
     // Reset DCMs
     /* puts the DCM_0 PCORE into reset */
