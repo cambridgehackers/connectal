@@ -53,7 +53,7 @@ module mkMemreadEngine(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	     Min#(2,TLog#(numServers),bpc),
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc));
-   let rv <- mkMemreadEngineBuff(64, 2);
+   let rv <- mkMemreadEngineBuff(128, 2);
    return rv;
 endmodule
 
@@ -117,6 +117,7 @@ module mkMemreadEngineBuff#(Integer maxBurstLen, Integer maxBufferedBursts) (Mem
       match {.idx, .cmd} <- toGet(cmds_in_funnel[0]).get;
       outs1[idx] <= outs1[idx]+1;
       cmdBuf.enq(idx,cmd);
+      //$display("store_cmd %d", idx);
    endrule
    
    rule load_ctxt_a;
@@ -124,15 +125,16 @@ module mkMemreadEngineBuff#(Integer maxBurstLen, Integer maxBufferedBursts) (Mem
       if (outs1[loadIdx] > 0) begin
 	 cmdBuf.first_req(loadIdx);
 	 loadf_a.enq(loadIdx);
+	 //$display("load_ctxt_a %d", loadIdx);
       end
    endrule
 
    rule load_ctxt_b;
       let idx <- toGet(loadf_a).get;
       let cmd <- cmdBuf.first_resp;
-      if (outs1[idx] > 0 && buffCap[idx].read() > unpack(extend(cmd.burstLen>>beat_shift))) begin
-	 //$display("load_ctxt %h %d", cmd.base, idx);
-	  buffCap[idx].decrement(unpack(extend(cmd.burstLen>>beat_shift)));
+      if (outs1[idx] > 0 && buffCap[idx].read() >= unpack(extend(cmd.burstLen>>beat_shift))) begin
+	 //$display("load_ctxt_b %h %d", cmd.base, idx);
+	 buffCap[idx].decrement(unpack(extend(cmd.burstLen>>beat_shift)));
 	 loadf_b.enq(tuple2(idx,cmd));
 	 if (cmd.len <= extend(cmd.burstLen)) begin
 	    outs1[idx] <= outs1[idx]-1;
@@ -150,9 +152,10 @@ module mkMemreadEngineBuff#(Integer maxBurstLen, Integer maxBufferedBursts) (Mem
       rs[i] = (interface Server#(MemengineCmd,Bool);
 		  interface Put request;
 		     method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
-			outs0[i] <= outs0[i]+1;
+			if(c.burstLen > fromInteger(maxBurstLen)) 
+			   $display("mkMemreadEngineV.store_cmd::unsupportedBurstLen");
+	 		outs0[i] <= outs0[i]+1;
 			cmds_in[i].enq(tuple2(fromInteger(i),c));
-			dynamicAssert(c.burstLen <= fromInteger(maxBurstLen),  "mkMemreadEngineV.store_cmd::unsupportedBurstLen");
  		     endmethod
 		  endinterface
 		  interface Get response;
