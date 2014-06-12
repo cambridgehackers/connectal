@@ -70,7 +70,7 @@ static void fill_pixels(int offset)
 	*ptr++ = ((((128 *  line) /  nlines)+offset) % 128) << 16
 	       | ((((128 * pixel) / npixels)+offset) % 128);
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
-    device->startFrameBuffer(ref_srcAlloc[frame_index], nlines, npixels, nlines*npixels);
+    device->startFrameBuffer(ref_srcAlloc[frame_index], nlines*npixels);
     hdmiInternal->waitForVsync(0);
     frame_index = 1 - frame_index;
 }
@@ -184,7 +184,7 @@ int main(int argc, const char **argv)
     sleep(3);
     fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc[0]);
     fill_pixels(0);
-    //device->startFrameBuffer(ref_srcAlloc[frame_index], nlines, npixels, nlines*npixels);
+    //device->startFrameBuffer(ref_srcAlloc[frame_index], nlines*npixels);
     fprintf(stderr, "done\n");
     while (1) {
       fprintf(stderr, "mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));

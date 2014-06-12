@@ -46,7 +46,7 @@ import MIMO::*;
 import BlueScope::*;
 
 interface HdmiDisplayRequest;
-   method Action startFrameBuffer(Int#(32) base, UInt#(32) rows, UInt#(32) cols, UInt#(32) pixels);
+   method Action startFrameBuffer(Int#(32) base, UInt#(32) pixels);
    method Action stopFrameBuffer();
    method Action getTransferStats();
    method Action setTraceTransfers(Bit#(1) trace);
@@ -80,8 +80,6 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     Reset defaultReset <- exposeCurrentReset;
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
-   Reg#(UInt#(16)) rowsReg <- mkReg(1080);
-   Reg#(UInt#(16)) colsReg <- mkReg(1920);
    Reg#(UInt#(24)) pixelCountReg <- mkReg(1080*1920);
 
     Reg#(Bool) sendVsyncIndication <- mkReg(False);
@@ -188,9 +186,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     endrule
 
     interface HdmiDisplayRequest displayRequest;
-	method Action startFrameBuffer(Int#(32) base, UInt#(32) rows, UInt#(32) cols, UInt#(32) pixels);
-	   rowsReg <= truncate(rows);
-	   colsReg <= truncate(cols);
+	method Action startFrameBuffer(Int#(32) base, UInt#(32) pixels);
 	   pixelCountReg <= truncate(pixels);
 	   $display("startFrameBuffer %h", base);
            referenceReg <= tagged Valid truncate(pack(base));
