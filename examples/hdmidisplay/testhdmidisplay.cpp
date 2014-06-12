@@ -64,21 +64,15 @@ static void *thread_routine(void *data)
 
 static void fill_pixels(int offset)
 {
-    frame_index = 1 - frame_index;
     int *ptr = dataptr[frame_index];
-int extraw = -1; // always negative!!
-    //fprintf(stderr, "Filling frame buffer ptr=%p... ", ptr);
-    for (int line = 0; line < nlines; line++) {
-      for (int pixel = 0; pixel < npixels + extraw; pixel++) {
-	int red =  ((255 * ((line +offset)% nlines)) /  nlines) % 256;
-	int blue = ((255 * ((pixel+offset)%npixels)) / npixels) % 256;
-	//float blue = 0.0;
-	*ptr++ = red << 16 | blue;
-      }
-    }
+    for (int line = 0; line < nlines; line++)
+      for (int pixel = 0; pixel < npixels; pixel++)
+	*ptr++ = ((((128 *  line) /  nlines)+offset) % 128) << 16
+	       | ((((128 * pixel) / npixels)+offset) % 128);
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], nlines, npixels, nlines*npixels);
     hdmiInternal->waitForVsync(0);
+    frame_index = 1 - frame_index;
 }
 
 static int synccount = 0;
