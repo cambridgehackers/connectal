@@ -488,6 +488,17 @@ function PipeOut#(b) mapPipe(function b f(a av), PipeOut#(a) apipe);
       endmethod
       endinterface);
 endfunction
+   
+function PipeIn#(a) mapPipeIn(function b f(a av), PipeIn#(b) apipe);
+   return (interface PipeIn#(b);
+	      method Action enq(a v);
+		 apipe.enq(f(v));
+	      endmethod
+	      method Bool notFull();
+		 return apipe.notFull();
+	      endmethod
+	   endinterface);
+endfunction
 
 // buffered version of mapPipe
 module mkMap#(function b f(a av), PipeOut#(a) apipe)(PipeOut#(b))

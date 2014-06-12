@@ -54,7 +54,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
 
    Reg#(Bit#(32))           srcGen <- mkReg(0);
-   MemwriteEngine#(64,1)        we <- mkMemwriteEngine;
+   MemwriteEngine#(64,1)        we <- mkMemwriteEngineBuff(64*16);
 
    rule start (iterCnt > 0);
       iterCnt <= iterCnt-1;
@@ -67,6 +67,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	 indication.writeDone(0);
    endrule
    
+   (* fire_when_enabled *)
    rule src (numWords > 0);
       if (srcGen+2 == numWords)
 	 srcGen <= 0;
