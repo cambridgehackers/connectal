@@ -407,11 +407,15 @@ static void fmc_imageon_demo_init(int argc, const char **argv)
     //ret = fmc_iic_axi_init(uBaseAddr_IIC_FmcImageon);
     //fmc_iic_axi_GpoWrite(uBaseAddr_IIC_FmcImageon, fmc_iic_axi_GpoRead(uBaseAddr_IIC_FmcImageon) | 2);
     sensordevice->set_host_oe(1);
-    hdmidevice->setTestPattern(0);
 
+printf("[%s:%d] before i2c_camera\n", __FUNCTION__, __LINE__);
     init_i2c_camera();
+printf("[%s:%d] before i2c_hdmi\n", __FUNCTION__, __LINE__);
     init_i2c_hdmi();
+printf("[%s:%d] after i2c_hdmi\n", __FUNCTION__, __LINE__);
     //init_vclk();
+sleep(5);
+    hdmidevice->setTestPattern(0);
 
     // Reset DCMs
     /* puts the DCM_0 PCORE into reset */
