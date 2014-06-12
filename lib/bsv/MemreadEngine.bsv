@@ -29,8 +29,8 @@ import ClientServer::*;
 import BRAM::*;
 import BRAMFIFO::*;
 import Connectable::*;
-import BRAMFIFOFLevel::*;
 
+import BRAMFIFOFLevel::*;
 import PortalMemory::*;
 import MemTypes::*;
 import Pipe::*;
@@ -45,11 +45,11 @@ module mkMemreadEngine(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
 	    ,Pipe::FunnelPipesPipelined#(1, numServers, Tuple2#(Bit#(dataWidth), Bool),TMin#(2, TLog#(numServers)))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
 	    );
-   let rv <- mkMemreadEngineBuff(128, 2);
+   let rv <- mkMemreadEngineBuff(256);
    return rv;
 endmodule
 
-module mkMemreadEngineBuff#(Integer maxBurstLen, Integer maxBufferedBursts) (MemreadEngineV#(dataWidth, cmdQDepth, numServers))
+module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth, cmdQDepth, numServers))
    provisos (Div#(dataWidth,8,dataWidthBytes),
 	     Mul#(dataWidthBytes,8,dataWidth),
 	     Log#(dataWidthBytes,beatShift),
@@ -66,10 +66,10 @@ module mkMemreadEngineBuff#(Integer maxBurstLen, Integer maxBufferedBursts) (Mem
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc),
 	     FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc));
    
-   Integer maxBurstBeats = maxBurstLen/valueOf(dataWidthBytes);
+   Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs1 <- replicateM(mkReg(0));
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
-   Vector#(numServers, Ratchet#(16))           buffCap <- replicateM(mkRatchet(fromInteger(maxBurstBeats*maxBufferedBursts)));
+   Vector#(numServers, Ratchet#(16))           buffCap <- replicateM(mkRatchet(fromInteger(bufferSizeBeats)));
    MemengineCmdBuf#(numServers,cmdQDepth)       cmdBuf <- mkMemengineCmdBuf;
 
    FIFO#(Bit#(serverIdxSz))                       loadf_a <- mkSizedFIFO(1);
@@ -82,8 +82,8 @@ module mkMemreadEngineBuff#(Integer maxBurstLen, Integer maxBufferedBursts) (Mem
 
    FIFOF#(Tuple2#(Bit#(TLog#(numServers)), Tuple2#(Bit#(dataWidth),Bool))) read_data <- mkFIFOF;
    UnFunnelPipe#(1, numServers, Tuple2#(Bit#(dataWidth),Bool),bpc) read_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(read_data),nil));
-   Vector#(numServers, FIFOF#(Tuple2#(Bit#(dataWidth),Bool)))  read_data_unfunnel_buffs <- replicateM(mkSizedBRAMFIFOF(maxBufferedBursts*maxBurstBeats));
-   Vector#(numServers, PipeIn#(Tuple2#(Bit#(dataWidth),Bool))) foo = map(toPipeIn, read_data_unfunnel_buffs); 
+   Vector#(numServers, FIFOF#(Tuple2#(Bit#(dataWidth),Bool)))  read_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
+   Vector#(numServers, PipeIn#(Tuple2#(Bit#(dataWidth),Bool))) foo = map(toPipeIn, read_data_buffs); 
    zipWithM(mkConnection, read_data_unfunnel, foo);
    function PipeOut#(Bit#(dataWidth)) check_out(PipeOut#(Tuple2#(Bit#(dataWidth),Bool)) x, Integer i) = 
       (interface PipeOut;
@@ -98,7 +98,7 @@ module mkMemreadEngineBuff#(Integer maxBurstLen, Integer maxBufferedBursts) (Mem
 	  endmethod
 	  method Bool notEmpty = x.notEmpty;
        endinterface);
-   Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, map(toPipeOut,read_data_unfunnel_buffs), genVector);
+   Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, map(toPipeOut,read_data_buffs), genVector);
    
    Reg#(Bit#(8))                               respCnt <- mkReg(0);
    Reg#(Bit#(serverIdxSz))                     loadIdx <- mkReg(0);
@@ -144,8 +144,9 @@ module mkMemreadEngineBuff#(Integer maxBurstLen, Integer maxBufferedBursts) (Mem
       rs[i] = (interface Server#(MemengineCmd,Bool);
 		  interface Put request;
 		     method Action put(MemengineCmd c) if (outs0[i] < cmd_q_depth);
-			if(c.burstLen > fromInteger(maxBurstLen)) 
-			   $display("mkMemreadEngineV.store_cmd::unsupportedBurstLen");
+			Bit#(32) bsb = fromInteger(bufferSizeBytes);
+			if(extend(c.burstLen) > bsb)
+			   $display("mkMemreadEngineV::unsupportedBurstLen");
 	 		outs0[i] <= outs0[i]+1;
 			cmds_in[i].enq(tuple2(fromInteger(i),c));
  		     endmethod

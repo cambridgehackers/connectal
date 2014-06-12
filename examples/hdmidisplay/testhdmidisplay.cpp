@@ -1,3 +1,23 @@
+/* Copyright (c) 2014 Quanta Research Cambridge, Inc
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 
 #include "DmaConfigProxy.h"
 #include "DmaIndicationWrapper.h"
@@ -14,14 +34,17 @@
 #include "i2chdmi.h"
 #include "edid.h"
 
-HdmiInternalRequestProxy *hdmiInternal = 0;
-HdmiDisplayRequestProxy *device = 0;
-PortalAlloc srcAlloc;
-PortalAlloc dstAlloc;
-int srcFd = -1;
-int dstFd = -1;
-char *srcBuffer = 0;
-char *dstBuffer = 0;
+#define FRAME_COUNT 2
+
+static HdmiInternalRequestProxy *hdmiInternal;
+static HdmiDisplayRequestProxy *device;
+static DmaConfigProxy *dma;
+static PortalAlloc *portalAlloc[FRAME_COUNT];
+static unsigned int ref_srcAlloc[FRAME_COUNT];
+static int *dataptr[FRAME_COUNT];
+static int frame_index;
+static int nlines = 1080;
+static int npixels = 1920;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -39,12 +62,31 @@ static void *thread_routine(void *data)
     return data;
 }
 
+static void fill_pixels(int offset)
+{
+    int *ptr = dataptr[frame_index];
+    for (int line = 0; line < nlines; line++)
+      for (int pixel = 0; pixel < npixels; pixel++)
+	*ptr++ = ((((128 *  line) /  nlines)+offset) % 128) << 16
+	       | ((((128 * pixel) / npixels)+offset) % 128);
+    dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
+    device->startFrameBuffer(ref_srcAlloc[frame_index], nlines, npixels, nlines*npixels);
+    hdmiInternal->waitForVsync(0);
+    frame_index = 1 - frame_index;
+}
+
+static int synccount = 0;
 class HdmiIndication : public HdmiInternalIndicationWrapper {
 public:
     HdmiIndication(int id) : HdmiInternalIndicationWrapper(id) {}
   virtual void vsync ( uint64_t v, uint32_t w ) {
-    fprintf(stderr, "[%s:%d] v=%d w=%d\n", __FUNCTION__, __LINE__, (uint32_t) v, w);
-      //hdmiInternal->waitForVsync(0);
+      static int base = 0;
+
+      fill_pixels(2 * base++);
+      if (synccount++ >= 30) {
+          synccount = 0;
+          fprintf(stderr, "[%s:%d] v=%d w=%d\n", __FUNCTION__, __LINE__, (uint32_t) v, w);
+      }
     }
 };
 class DisplayIndication : public HdmiDisplayIndicationWrapper {
@@ -64,8 +106,6 @@ public:
 int main(int argc, const char **argv)
 {
     PortalPoller *poller = 0;
-    PortalAlloc *portalAlloc = 0;;
-    DmaConfigProxy *dma;
     DmaIndicationWrapper *dmaIndication;
 
     poller = new PortalPoller();
@@ -106,9 +146,6 @@ int main(int argc, const char **argv)
     int status;
     status = poller->setClockFrequency(0, 100000000, 0);
 
-    int nlines = 1080;
-    int npixels = 1920;
-
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
       if ((pixclk > 0) && (pixclk < 170000000)) {
@@ -135,33 +172,20 @@ int main(int argc, const char **argv)
     }
 
     int fbsize = nlines*npixels*4;
-    int err = dma->alloc(fbsize, &portalAlloc);
-    int fd = portalAlloc->header.fd;
-    int *ptr = (int*)mmap(0, fbsize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 
-    fprintf(stderr, "Filling frame buffer ptr=%p... ", ptr);
-    for (int line = 0; line < nlines; line++) {
-      for (int pixel = 0; pixel < npixels; pixel++) {
-	int i = line*npixels + pixel;
-	float red = (float)line / (float)nlines;
-	//float blue = (float)pixel / (float)npixels;
-	float blue = 0.0;
-	int v = (int)(255*red) << 16 | (int)(255*blue);
-	ptr[i] = v;
-      }
+    for (int i = 0; i < FRAME_COUNT; i++) {
+        int err = dma->alloc(fbsize, &portalAlloc[i]);
+        dataptr[i] = (int*)mmap(0, fbsize, PROT_READ|PROT_WRITE, MAP_SHARED, portalAlloc[i]->header.fd, 0);
+        fprintf(stderr, "calling dma->reference\n");
+        ref_srcAlloc[i] = dma->reference(portalAlloc[i]);
     }
+
+    fprintf(stderr, "first mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));
+    sleep(3);
+    fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc[0]);
+    fill_pixels(0);
+    //device->startFrameBuffer(ref_srcAlloc[frame_index], nlines, npixels, nlines*npixels);
     fprintf(stderr, "done\n");
-    dma->dCacheFlushInval(portalAlloc, ptr);
-    fprintf(stderr, "calling dma->reference\n");
-    unsigned int ref_srcAlloc = dma->reference(portalAlloc);
-    fprintf(stderr, "mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));
-    sleep(10);
-    if (0) hdmiInternal->waitForVsync(0);
-    if (1) {
-      fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc);
-      device->startFrameBuffer(ref_srcAlloc, nlines, npixels, nlines*npixels);
-      fprintf(stderr, "done\n");
-    }
     while (1) {
       fprintf(stderr, "mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));
       sleep(1);

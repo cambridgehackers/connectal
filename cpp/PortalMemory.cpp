@@ -106,7 +106,7 @@ int PortalMemory::dCacheFlushInval(PortalAlloc *portalAlloc, void *__p)
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
-  fprintf(stderr, "dcache flush\n");
+  //fprintf(stderr, "dcache flush\n");
   return 0;
 
 }
