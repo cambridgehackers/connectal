@@ -24,7 +24,6 @@
 import GetPut::*;
 import BRAMFIFO::*;
 import FIFOF::*;
-import Ratchet::*;
 
 interface Counter#(numeric type count_sz);
    method Action reset();

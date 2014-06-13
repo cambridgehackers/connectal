@@ -33,7 +33,6 @@ import Pipe::*;
 
 // XBSV Libraries
 import PortalMemory::*;
-import BRAMFIFOFLevel::*;
 
 typedef Bit#(32) ObjectPointer;
 typedef 40 ObjectOffsetSize;

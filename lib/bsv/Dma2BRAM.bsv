@@ -30,7 +30,6 @@ import SpecialFIFOs::*;
 import GetPut::*;
 import ClientServer::*;
 
-import BRAMFIFOFLevel::*;
 import MemTypes::*;
 import MemwriteEngine::*;
 import MemUtils::*;
