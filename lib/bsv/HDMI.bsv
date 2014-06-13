@@ -153,22 +153,21 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     let dataEnable = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum
-                   && pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum);
-    let vSync = pack(lineCount >= deLineOffset && lineCount <= deLineWidth);
-    let hSync = pack(pixelCount >= dePixelOffset && pixelCount <= dePixelWidth);
+               && pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum);
 
-    rule output_data_rule if (testPatternEnabled == 0 && !dataEnable);
-        rgb888StageReg <= VideoData {de: pack(dataEnable), vsync: vSync, hsync: hSync, pixel: unpack(0) };
+    rule output_data_rule if (!dataEnable);
+        rgb888StageReg <= VideoData {de: 0, pixel: unpack(0),
+               vsync: pack(lineCount >= deLineOffset && lineCount <= deLineWidth),
+               hsync: pack(pixelCount >= dePixelOffset && pixelCount <= dePixelWidth) };
     endrule
 
-    rule testpattern_rule if (testPatternEnabled != 0);
-        rgb888StageReg <= VideoData {de: pack(dataEnable),
-	     vsync: vSync, hsync: hSync, pixel: unpack(patternRegs[{patternIndex1, patternIndex0}]) };
+    rule testpattern_rule if (testPatternEnabled != 0 && dataEnable);
+        rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(patternRegs[{patternIndex1, patternIndex0}]) };
     endrule
 
     interface Put request;
         method Action put(Bit#(32) v) if (testPatternEnabled == 0 && dataEnable);
-           rgb888StageReg <= VideoData {de: pack(dataEnable), vsync: vSync, hsync: hSync, pixel: unpack(v[23:0])};
+           rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v[23:0])};
         endmethod
     endinterface: request
 
