@@ -75,24 +75,24 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 `ifdef HDMI_BLUESCOPE
 		      , BlueScopeIndication bluescopeIndication
 `endif
-)(HdmiDisplay);
-    Clock defaultClock <- exposeCurrentClock;
-    Reset defaultReset <- exposeCurrentReset;
-    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
+                      )(HdmiDisplay);
+   Clock defaultClock <- exposeCurrentClock;
+   Reset defaultReset <- exposeCurrentReset;
+   Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
+   MakeResetIfc fifo_reset <- mkReset(2, True, defaultClock);
+   Reset fifo_reset_hdmi <- mkAsyncReset(2, fifo_reset.new_rst, hdmi_clock);
 
    Reg#(UInt#(24)) byteCountReg <- mkReg(1080*1920);
 
-    Reg#(Bool) sendVsyncIndication <- mkReg(False);
-    SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
-    Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
+   Reg#(Bool) sendVsyncIndication <- mkReg(False);
+   SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
+   Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
 
-    Reg#(Maybe#(Bit#(32))) referenceReg <- mkReg(tagged Invalid);
-    MemreadEngine#(64,16) memreadEngine <- mkMemreadEngine;
+   Reg#(Maybe#(Bit#(32))) referenceReg <- mkReg(tagged Invalid);
+   MemreadEngine#(64,16) memreadEngine <- mkMemreadEngine;
 
-    HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
-							vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
-   MakeResetIfc fifo_reset <- mkReset(2, True, defaultClock);
-   Reset fifo_reset_hdmi <- mkAsyncReset(2, fifo_reset.new_rst, hdmi_clock);
+   HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
+			vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
 `ifndef ZC706
    Rgb888ToYyuv converter <- mkRgb888ToYyuv(clocked_by hdmi_clock, reset_by fifo_reset_hdmi);
    mkConnection(hdmiGen.rgb888, converter.rgb888);
@@ -124,18 +124,20 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 `endif
 
    SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(1024, defaultClock, fifo_reset.new_rst, hdmi_clock, fifo_reset_hdmi);
+   Reg#(Bool) evenOdd <- mkReg(True, clocked_by hdmi_clock, reset_by fifo_reset_hdmi);
+   Reg#(Bit#(32)) savedPixelReg <- mkReg(0, clocked_by hdmi_clock, reset_by fifo_reset_hdmi);
+
    rule fromMemread;
       let v <- toGet(memreadEngine.dataPipes[0]).get;
       synchronizer.enq(v);
    endrule
-   Reg#(Bool) evenOdd <- mkReg(True, clocked_by hdmi_clock, reset_by hdmi_reset);
-   Reg#(Bit#(32)) doublePixelReg <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
+
    rule doPut;
-      let pixel = doublePixelReg;
+      let pixel = savedPixelReg;
       if (evenOdd) begin
 	 Vector#(2,Bit#(32)) doublePixel = unpack(synchronizer.first);
 	 synchronizer.deq;
-         doublePixelReg <= doublePixel[1];
+         savedPixelReg <= doublePixel[1];
 	 pixel = doublePixel[0];
       end
       evenOdd <= !evenOdd;
@@ -148,26 +150,19 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    Reg#(Bit#(48)) transferSumOfCycles<- mkReg(0);
    Reg#(Bit#(32)) vsyncCount <- mkReg(0);
 
-   FIFOF#(Bool) vsyncFifo <- mkFIFOF();
    rule vsyncrule if (vsyncPulse.pulse());
       vsyncCount <= vsyncCount + 1;
-      if (vsyncFifo.notFull())
-	 vsyncFifo.enq(True);
-   endrule
-
-   Reg#(Bool) traceTransfers <- mkReg(False);
-   rule notransfer if (referenceReg matches tagged Invalid);
-      vsyncFifo.deq();
    endrule
    rule resetfiforule if (vsyncPulse.pulse());
       fifo_reset.assertReset();
    endrule
+
+   Reg#(Bool) traceTransfers <- mkReg(False);
    rule startTransfer if (vsyncPulse.pulse() &&& referenceReg matches tagged Valid .reference);
       memreadEngine.readServers[0].request.put(MemengineCmd{pointer:reference, base:0, len:pack(extend(byteCountReg)), burstLen:64});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCyclesSnapshot <= transferCycles;
-      vsyncFifo.deq();
    endrule
    rule countCycles;
       transferCycles <= transferCycles + 1;

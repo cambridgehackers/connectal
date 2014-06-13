@@ -73,7 +73,7 @@ begin = 200;
     for (int line = begin; line < nlines-20; line++)
       for (int pixel = 0; pixel < npixels; pixel++)
 	ptr[line * npixels + pixel] = ((((256 *  line) /  nlines)+offset) % 256) << 16
-	       | ((((128 * pixel) / npixels)+offset) % 128);
+	       | ((((256 * pixel) / npixels)+offset) % 256);
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->waitForVsync(0);
