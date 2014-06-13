@@ -52,8 +52,6 @@ interface HdmiInternalRequest;
     method Action setPatternColor(Bit#(32) v);
     method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max, Bit#(12) mid);
     method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max, Bit#(11) mid);
-    method Action setNumberOfLines(Bit#(11) lines);
-    method Action setNumberOfPixels(Bit#(12) pixels);
     method Action waitForVsync(Bit#(32) unused);
 endinterface
 interface HdmiInternalIndication;
@@ -77,7 +75,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(11)) deLineCountMinimum <- mkSyncReg(41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) deLineCountMaximum <- mkSyncReg(1080+41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) lineMidpoint <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) numberOfLines <- mkSyncReg(1080 + 45, axi_clock, axi_reset, defaultClock);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
@@ -135,7 +132,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         if (pixelCount == dePixelCountMaximum-1) begin
            pixelCount <= 0; 
            patternIndex0 <= 0;
-           if (lineCount == numberOfLines-1) begin
+           if (lineCount == deLineCountMaximum-1) begin
                lineCount <= 0;
                patternIndex1 <= 0;
            end
@@ -185,9 +182,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
             deLineCountMinimum <= min;
             deLineCountMaximum <= max;
             lineMidpoint <= mid;
-        endmethod
-        method Action setNumberOfLines(Bit#(11) lines);
-            numberOfLines <= lines;
         endmethod
         method Action waitForVsync(Bit#(32) unused);
             waitingForVsync <= True;

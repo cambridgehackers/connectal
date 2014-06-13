@@ -455,12 +455,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
             const_cast<int&>(dev->minSwapInterval) = 1;
             const_cast<int&>(dev->maxSwapInterval) = 1;
 
-            gralloc_dev->hdmiInternal->setNumberOfLines(lmin + nlines);
-            //gralloc_dev->hdmiDisplay->hdmiStrideBytes(stridebytes);
-            //gralloc_dev->hdmiInternal->setTestPattern ( unsigned long v );
-            //gralloc_dev->hdmiInternal->setPatternColor ( unsigned long v );
-            //gralloc_dev->hdmiInternal->setHsyncWidth ( unsigned long hsyncWidth );
-            //gralloc_dev->hdmiInternal->setVsyncWidth ( unsigned long vsyncWidth );
+vsyncwidth = 0;
             gralloc_dev->hdmiInternal->setDeLineCountMinMax (lmin - vsyncwidth, lmin + nlines - vsyncwidth, (lmin + lmin + nlines) / 2 - vsyncwidth);
             gralloc_dev->hdmiInternal->setDePixelCountMinMax (pmin, pmin + npixels, pmin + npixels / 2);
 	    ALOGD("setting clock frequency %ld\n", 60l * (long)(pmin + npixels) * (long)(lmin + nlines));

@@ -172,8 +172,7 @@ int main(int argc, const char **argv)
 		npixels, nlines);
 	status = poller->setClockFrequency(1, pixclk, 0);
 
-	hdmiInternal->setNumberOfLines(lmin + nlines);
-	hdmiInternal->setDeLineCountMinMax (lmin - vsyncwidth, lmin + nlines - vsyncwidth, lmin + nlines / 2 - vsyncwidth);
+	hdmiInternal->setDeLineCountMinMax (lmin, lmin + nlines, lmin + nlines / 2);
         hdmiInternal->setDePixelCountMinMax (pmin, pmin + npixels, pmin + npixels / 2);
 	break;
       }
