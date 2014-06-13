@@ -59,15 +59,9 @@ endinterface
 interface HdmiInternalIndication;
     method Action vsync(Bit#(64) v, Bit#(32) vs);
 endinterface
-interface HdmiInternalStatus;
-    method Bit#(11) getNumberOfLines();
-    method Bit#(12) getNumberOfPixels();
-    method Bool dataEnable();
-endinterface
 
 interface HdmiGenerator#(type pixelType);
     interface HdmiInternalRequest control;
-    interface HdmiInternalStatus  status;
     interface Get#(VideoData#(pixelType)) rgb888;
     interface Put#(Bit#(32)) request;
 endinterface
@@ -84,7 +78,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(11)) deLineCountMaximum <- mkSyncReg(1080+41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) lineMidpoint <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) numberOfLines <- mkSyncReg(1080 + 45, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) numberOfPixels <- mkSyncReg(1920 + 192 + 44 + 44, axi_clock, axi_reset, defaultClock);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
@@ -139,7 +132,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 	       sendVsyncIndication.send();
             testPatternEnabled <= shadowTestPatternEnabled;
         end
-        if (pixelCount == numberOfPixels-1) begin
+        if (pixelCount == dePixelCountMaximum-1) begin
            pixelCount <= 0; 
            patternIndex0 <= 0;
            if (lineCount == numberOfLines-1) begin
@@ -176,17 +169,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         endmethod
     endinterface: request
 
-    interface HdmiInternalStatus status;
-	method Bit#(11) getNumberOfLines();
-	   return numberOfLines;
-	endmethod
-	method Bit#(12) getNumberOfPixels();
-	   return numberOfPixels;
-	endmethod
-        method Bool dataEnable();
-            return dataEnable;
-        endmethod
-    endinterface
     interface HdmiInternalRequest control;
         method Action setPatternColor(Bit#(32) v);
             patternRegs[0] <= v[23:0]; 
@@ -206,9 +188,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         endmethod
         method Action setNumberOfLines(Bit#(11) lines);
             numberOfLines <= lines;
-        endmethod
-        method Action setNumberOfPixels(Bit#(12) pixels);
-            numberOfPixels <= pixels;
         endmethod
         method Action waitForVsync(Bit#(32) unused);
             waitingForVsync <= True;

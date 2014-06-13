@@ -456,7 +456,6 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
             const_cast<int&>(dev->maxSwapInterval) = 1;
 
             gralloc_dev->hdmiInternal->setNumberOfLines(lmin + nlines);
-            gralloc_dev->hdmiInternal->setNumberOfPixels(pmin + npixels);
             //gralloc_dev->hdmiDisplay->hdmiStrideBytes(stridebytes);
             //gralloc_dev->hdmiInternal->setTestPattern ( unsigned long v );
             //gralloc_dev->hdmiInternal->setPatternColor ( unsigned long v );
