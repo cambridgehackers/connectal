@@ -123,7 +123,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
        elapsed <= counter;
        elapsedVsync <= vsyncCounter;
        indication.vsync(extend(counter - elapsed), extend(vsyncCounter - elapsedVsync));
-       waitingForVsync <= False;
+       //waitingForVsync <= False;
     endrule
 
     rule init_pattern;
@@ -139,9 +139,8 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         if (lineCount == 0 && pixelCount == 0) begin
 	    vsyncCountPulse.send();
             vsyncPulse.send();
-            if (waitingForVsync) begin
+            if (waitingForVsync)
 	       sendVsyncIndication.send();
-	    end
             testPatternEnabled <= shadowTestPatternEnabled;
         end
         if (pixelCount == numberOfPixels-1) begin

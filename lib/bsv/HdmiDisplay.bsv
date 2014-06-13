@@ -46,7 +46,7 @@ import MIMO::*;
 import BlueScope::*;
 
 interface HdmiDisplayRequest;
-   method Action startFrameBuffer(Int#(32) base, UInt#(32) pixels);
+   method Action startFrameBuffer(Int#(32) base, UInt#(32) byteCount);
    method Action stopFrameBuffer();
    method Action getTransferStats();
    method Action setTraceTransfers(Bit#(1) trace);
@@ -80,14 +80,13 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     Reset defaultReset <- exposeCurrentReset;
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
 
-   Reg#(UInt#(24)) pixelCountReg <- mkReg(1080*1920);
+   Reg#(UInt#(24)) byteCountReg <- mkReg(1080*1920);
 
     Reg#(Bool) sendVsyncIndication <- mkReg(False);
     SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
     Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
 
     Reg#(Maybe#(Bit#(32))) referenceReg <- mkReg(tagged Invalid);
-    FIFO#(Bit#(64)) mrFifo <- mkSizedBRAMFIFO(1024);
     MemreadEngine#(64,16) memreadEngine <- mkMemreadEngine;
 
     HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
@@ -122,13 +121,9 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    endrule
 `endif
 
-   SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncFIFO(32, defaultClock, defaultReset, hdmi_clock);
+   SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(1024, defaultClock, defaultReset, hdmi_clock, hdmi_reset);
    rule fromMemread;
       let v <- toGet(memreadEngine.dataPipes[0]).get;
-      mrFifo.enq(v);
-   endrule
-   rule toSynch;
-      let v <- toGet(mrFifo).get();
       synchronizer.enq(v);
    endrule
    Reg#(Bool) evenOdd <- mkReg(True, clocked_by hdmi_clock, reset_by hdmi_reset);
@@ -162,8 +157,8 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    rule notransfer if (referenceReg matches tagged Invalid);
       vsyncFifo.deq();
    endrule
-   rule startTransfer if (referenceReg matches tagged Valid .reference);
-      memreadEngine.readServers[0].request.put(MemengineCmd{pointer:reference, base:0, len:pack(extend(pixelCountReg))*4, burstLen:64});
+   rule startTransfer if (vsyncPulse.pulse() &&& referenceReg matches tagged Valid .reference);
+      memreadEngine.readServers[0].request.put(MemengineCmd{pointer:reference, base:0, len:pack(extend(byteCountReg)), burstLen:64});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCyclesSnapshot <= transferCycles;
@@ -186,8 +181,8 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     endrule
 
     interface HdmiDisplayRequest displayRequest;
-	method Action startFrameBuffer(Int#(32) base, UInt#(32) pixels);
-	   pixelCountReg <= truncate(pixels);
+	method Action startFrameBuffer(Int#(32) base, UInt#(32) byteCount);
+	   byteCountReg <= truncate(byteCount);
 	   $display("startFrameBuffer %h", base);
            referenceReg <= tagged Valid truncate(pack(base));
 	   hdmiGen.control.setTestPattern(0);

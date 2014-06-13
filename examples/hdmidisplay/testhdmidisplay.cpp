@@ -45,6 +45,7 @@ static int *dataptr[FRAME_COUNT];
 static int frame_index;
 static int nlines = 1080;
 static int npixels = 1920;
+static int fbsize = nlines*npixels*4;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -64,28 +65,36 @@ static void *thread_routine(void *data)
 
 static void fill_pixels(int offset)
 {
+static int once = 1;
     int *ptr = dataptr[frame_index];
-    for (int line = 0; line < nlines; line++)
+    for (int line = 0; line < nlines-100; line++)
       for (int pixel = 0; pixel < npixels; pixel++)
-	*ptr++ = ((((128 *  line) /  nlines)+offset) % 128) << 16
+	*ptr++ = ((((256 *  line) /  nlines)+offset) % 256) << 16
 	       | ((((128 * pixel) / npixels)+offset) % 128);
+if (once) {
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
-    device->startFrameBuffer(ref_srcAlloc[frame_index], nlines*npixels);
+    device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->waitForVsync(0);
     frame_index = 1 - frame_index;
 }
+//once = 0;
+}
 
 static int synccount = 0;
+static long long totalcount;
+static int number;
 class HdmiIndication : public HdmiInternalIndicationWrapper {
 public:
     HdmiIndication(int id) : HdmiInternalIndicationWrapper(id) {}
   virtual void vsync ( uint64_t v, uint32_t w ) {
       static int base = 0;
 
-      fill_pixels(2 * base++);
+totalcount += v;
+number += w;
+      fill_pixels(base++);
       if (synccount++ >= 30) {
           synccount = 0;
-          fprintf(stderr, "[%s:%d] v=%d w=%d\n", __FUNCTION__, __LINE__, (uint32_t) v, w);
+          fprintf(stderr, "[%s:%d] avg %lld; v=%d w=%d\n", __FUNCTION__, __LINE__, totalcount/number, (uint32_t) v, w);
       }
     }
 };
@@ -171,7 +180,7 @@ int main(int argc, const char **argv)
       }
     }
 
-    int fbsize = nlines*npixels*4;
+    fbsize = nlines*npixels*4;
 
     for (int i = 0; i < FRAME_COUNT; i++) {
         int err = dma->alloc(fbsize, &portalAlloc[i]);
@@ -184,7 +193,6 @@ int main(int argc, const char **argv)
     sleep(3);
     fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc[0]);
     fill_pixels(0);
-    //device->startFrameBuffer(ref_srcAlloc[frame_index], nlines*npixels);
     fprintf(stderr, "done\n");
     while (1) {
       fprintf(stderr, "mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));
