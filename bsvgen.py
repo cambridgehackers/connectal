@@ -46,7 +46,9 @@ import Vector::*;
 import SpecialFIFOs::*;
 import PortalMemory::*;
 import Portal::*;
+import MemPortal::*;
 import MemTypes::*;
+import Pipe::*;
 %(extraImports)s
 
 typedef struct {
@@ -67,6 +69,10 @@ Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 exposedProxyInterfaceTemplate='''
 %(responseElements)s
 // exposed proxy interface
+interface %(Dut)sPortal;
+    interface Portal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+    interface %(Ifc)s ifc;
+endinterface
 interface %(Dut)s;
     interface StdPortal portalIfc;
     interface %(Ifc)s ifc;
@@ -84,7 +90,11 @@ endinterface
 
 exposedWrapperInterfaceTemplate='''
 %(requestElements)s
-// exposed wrapper interface
+// exposed wrapper portal interface
+interface %(Dut)sPortal;
+    interface Portal#(%(requestChannelCount)s, %(indicationChannelCount)s, 32) portalIfc;
+endinterface
+// exposed wrapper MemPortal interface
 interface %(Dut)s;
     interface StdPortal portalIfc;
 endinterface
@@ -105,125 +115,19 @@ Bit#(6) %(methodName)s_Offset = %(channelNumber)s;
 '''
 
 wrapperCtrlTemplate='''
-    // request-specific state
-    Reg#(Bit#(32)) requestFiredCount <- mkReg(0);
-    Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
-    PulseWire requestFiredPulse <- mkPulseWireOR();
-    // this is here to get rid of bsv warnings.  
-    Reg#(Bool) putEnable <- mkReg(True); 
-
-    rule requestFiredIncrement if (requestFiredPulse);
-        requestFiredCount <= requestFiredCount+1;
-    endrule
-
-    rule writeCtrlReg if (slaveWriteAddrFifo.first[14] == 1);
-        slaveWriteAddrFifo.deq;
-        slaveWriteDataFifo.deq;
-	let addr = slaveWriteAddrFifo.first[13:0];
-	let v = slaveWriteDataFifo.first;
-	if (addr == 14'h000)
-	    noAction;
-	if (addr == 14'h004)
-	    noAction;
-        if (addr == 14'h008)
-            putEnable <= v[0] == 1'd1;
-    endrule
-
-    rule readCtrlReg if (slaveReadAddrFifo.first[14] == 1);
-        slaveReadAddrFifo.deq;
-	let addr = slaveReadAddrFifo.first[13:0];
-        // $display(\"wrapper readCtrlReg %%h\", addr);
-	Bit#(32) v = 32'h05a05a0;
-	if (addr == 14'h000)
-	    v = requestFiredCount;
-	if (addr == 14'h004)
-	    v = outOfRangeWriteCount;
-
-        slaveReadDataFifo.enq(v);
-    endrule
-    rule readWriteFifo if (slaveReadAddrFifo.first[14] == 0);
-        slaveReadAddrFifo.deq;
-        slaveReadDataFifo.enq(32'h05b05b0);
-    endrule
 %(methodRules)s
-
-    %(requestFailureRuleNames)s
-    rule outOfRangeWrite if (slaveWriteAddrFifo.first[14] == 0 && 
-                             slaveWriteAddrFifo.first[13:8] >= %(channelCount)s);
-        slaveWriteAddrFifo.deq;
-        slaveWriteDataFifo.deq;
-        outOfRangeWriteCount <= outOfRangeWriteCount+1;
-    endrule
 '''
 
 portalIfcTemplate='''
-    interface StdPortal portalIfc;
-    method Bit#(32) ifcId;
-        return zeroExtend(pack(id));
-    endmethod
-    method Bit#(32) ifcType;
-        return %(ifcType)s;
-    endmethod
-    interface MemSlave slave;
-        interface MemWriteServer write_server;
-            interface Put writeReq;
-                method Action put(MemRequest#(16) req);
-                     req_aw_fifo.enq(req);
-                endmethod
-            endinterface
-            interface Put writeData;
-                method Action put(ObjectData#(32) wdata);
-                    let ws = slaveWS;
-                    let wbc = slaveWriteBurstCountReg;
-                    let wa = slaveWriteAddrReg;
-                    let wid = slaveWriteTagReg;
-                    if (slaveWriteBurstCountReg == 0) begin
-                        let req = req_aw_fifo.first;
-                        ws = req.addr[15];
-                        wbc = req.burstLen;
-                        wa = truncate(req.addr);
-      	   	        wid = req.tag;
-                        req_aw_fifo.deq;
-                    end
-                    let addr = wa;
-                    slaveWriteAddrReg <= wa + 4;
-                    slaveWriteBurstCountReg <= wbc - 1;
-    
-                    slaveWriteAddrFifos[ws].enq(wa[14:0]);
-                    slaveWriteDataFifos[ws].enq(wdata.data);
-    
-                    if (wbc == 1)
-                        slaveBrespFifo.enq(wdata.tag);
-    
-                    slaveWS <= ws;
-                    slaveWriteTagReg <= wid;
-                endmethod
-            endinterface
-            interface Get writeDone;
-                method ActionValue#(Bit#(6)) get();
-                    slaveBrespFifo.deq;
-                    return slaveBrespFifo.first;
-                endmethod
-            endinterface
-        endinterface
-        interface MemReadServer read_server;
-            interface Put readReq;
-                method Action put(MemRequest#(16) req);
-                    req_ar_fifo.enq(req);
-                endmethod
-            endinterface
-            interface Get readData;
-                method ActionValue#(ObjectData#(32)) get();
-                    let info = slaveReadReqInfoFifo.first();
-                    slaveReadReqInfoFifo.deq();
-                    let v = slaveReadDataFifos[info.select].first;
-                    slaveReadDataFifos[info.select].deq;
-                    return ObjectData { data: v, tag: info.tag};
-                endmethod
-            endinterface
-        endinterface
-    endinterface
-%(portalIfcInterrupt)s
+    interface Portal portalIfc;
+        method Bit#(32) ifcId;
+            return zeroExtend(pack(id));
+        endmethod
+        method Bit#(32) ifcType;
+            return %(ifcType)s;
+        endmethod
+        interface Vector requests = requestPipes;
+        interface Vector indications = indicationPipes;
     endinterface
 '''
 
@@ -236,126 +140,8 @@ proxyInterruptImplTemplate='''
 '''
 
 
-slaveStateTemplate='''
-    // state used to implement Slave interface
-    Reg#(Bit#(15)) slaveReadAddrReg <- mkReg(0);
-    Reg#(Bit#(15)) slaveWriteAddrReg <- mkReg(0);
-    Reg#(Bit#(6)) slaveReadTagReg <- mkReg(0);
-    Reg#(Bit#(6)) slaveWriteTagReg <- mkReg(0);
-    FIFOF#(ReadReqInfo) slaveReadReqInfoFifo <- mkFIFOF;
-    Reg#(Bit#(8)) slaveReadBurstCountReg <- mkReg(0);
-    Reg#(Bit#(8)) slaveWriteBurstCountReg <- mkReg(0);
-    FIFOF#(Bit#(6)) slaveBrespFifo <- mkFIFOF();
-
-    Vector#(2,FIFO#(Bit#(15))) slaveWriteAddrFifos <- replicateM(mkFIFO);
-    Vector#(2,FIFO#(Bit#(15))) slaveReadAddrFifos <- replicateM(mkFIFO);
-    Vector#(2,FIFO#(Bit#(32))) slaveWriteDataFifos <- replicateM(mkFIFO);
-    Vector#(2,FIFOF#(Bit#(32))) slaveReadDataFifos <- replicateM(mkFIFOF);
-
-    Reg#(Bit#(1)) slaveRS <- mkReg(0);
-    Reg#(Bit#(1)) slaveWS <- mkReg(0);
-
-    FIFO#(MemRequest#(16))  req_ar_fifo <- mkSizedFIFO(1);
-    FIFO#(MemRequest#(16)) req_aw_fifo <- mkSizedFIFO(1);
-
-    let slaveWriteAddrFifo = slaveWriteAddrFifos[%(slaveFifoSelExposed)s];
-    let slaveReadAddrFifo  = slaveReadAddrFifos[%(slaveFifoSelExposed)s];
-    let slaveWriteDataFifo = slaveWriteDataFifos[%(slaveFifoSelExposed)s];
-    let slaveReadDataFifo  = slaveReadDataFifos[%(slaveFifoSelExposed)s];
-
-    rule slaveReadAddressGenerator;
-         if (slaveReadBurstCountReg == 0) begin
-             let req = req_ar_fifo.first;
-             slaveRS <= req.addr[15];
-             slaveReadBurstCountReg <= req.burstLen;
-             slaveReadAddrReg <= truncate(req.addr);
-	     slaveReadTagReg <= req.tag;
-             req_ar_fifo.deq;
-         end
-         else begin
-             slaveReadAddrFifos[slaveRS].enq(truncate(slaveReadAddrReg));
-             slaveReadAddrReg <= slaveReadAddrReg + 4;
-             slaveReadBurstCountReg <= slaveReadBurstCountReg - 1;
-             slaveReadReqInfoFifo.enq(ReadReqInfo { select: slaveRS, tag: slaveReadTagReg });
-         end
-    endrule 
-'''
-
 proxyCtrlTemplate='''
-    // indication-specific state
-    Reg#(Bit#(32)) underflowReadCountReg <- mkReg(0);
-    Reg#(Bit#(32)) outOfRangeReadCountReg <- mkReg(0);
-    Reg#(Bit#(32)) outOfRangeWriteCount <- mkReg(0);
-    Vector#(%(indicationChannelCount)s, Bool) readyBits = replicate(False);
-
-    Reg#(Bool) interruptEnableReg <- mkReg(False);
-    function Bit#(32) read_wire_cvt (PulseWire a) = a._read ? 32'b1 : 32'b0;
-    function Bit#(32) my_add(Bit#(32) a, Bit#(32) b) = a+b;
-
-    rule writeCtrlReg if (slaveWriteAddrFifo.first[14] == 1);
-        slaveWriteAddrFifo.deq;
-        slaveWriteDataFifo.deq;
-	let addr = slaveWriteAddrFifo.first[13:0];
-	let v = slaveWriteDataFifo.first;
-	if (addr == 14'h000)
-	    noAction;
-	if (addr == 14'h004)
-	    interruptEnableReg <= v[0] == 1'd1;
-    endrule
-    rule writeIndicatorFifo if (slaveWriteAddrFifo.first[14] == 0);
-        slaveWriteAddrFifo.deq;
-        slaveWriteDataFifo.deq;
-        outOfRangeWriteCount <= outOfRangeWriteCount + 1;
-    endrule
-
 %(indicationMethodRules)s
-
-    Bool      interruptStatus = False;
-    Bit#(32)  readyChannel = -1;
-    for (Integer i = 0; i < %(indicationChannelCount)s; i = i + 1) begin
-        if (readyBits[i]) begin
-           interruptStatus = True;
-           readyChannel = fromInteger(i);
-        end
-    end
-
-    rule readCtrlReg if (slaveReadAddrFifo.first[14] == 1);
-
-        slaveReadAddrFifo.deq;
-	let addr = slaveReadAddrFifo.first[13:0];
-
-        //$display(\"proxy readCtrlReg %%h\", addr);
-
-	Bit#(32) v = 32'h05a05a0;
-	if (addr == 14'h000)
-	    v = interruptStatus ? 32'd1 : 32'd0;
-	if (addr == 14'h004)
-	    v = interruptEnableReg ? 32'd1 : 32'd0;
-	if (addr == 14'h008)
-	    v = %(indicationChannelCount)s;
-	if (addr == 14'h00C)
-	    v = underflowReadCountReg;
-	if (addr == 14'h010)
-	    v = outOfRangeReadCountReg;
-	if (addr == 14'h014)
-	    v = outOfRangeWriteCount;
-        if (addr == 14'h018) begin
-            if (interruptStatus)
-              v = readyChannel+1;
-            else 
-              v = 0;
-        end
-
-        slaveReadDataFifo.enq(v);
-    endrule
-
-    rule outOfRangeRead if (slaveReadAddrFifo.first[14] == 0 && 
-                            slaveReadAddrFifo.first[13:8] >= %(indicationChannelCount)s);
-        slaveReadAddrFifo.deq;
-        slaveReadDataFifo.enq(0);
-        outOfRangeReadCountReg <= outOfRangeReadCountReg+1;
-    endrule
-
 %(startIndicationMethods)s
 %(indicationMethods)s
 %(endIndicationMethods)s
@@ -364,42 +150,17 @@ proxyCtrlTemplate='''
 
 requestRuleTemplate='''
     FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
-    rule slaveWrite_%(methodName)s if (slaveWriteAddrFifo.first[14] == 0 && slaveWriteAddrFifo.first[13:8] == %(methodName)s_Offset);
-        slaveWriteAddrFifo.deq;
-        slaveWriteDataFifo.deq;
-        %(methodName)s_requestFifo.enq(slaveWriteDataFifo.first);
-    endrule
-    (* descending_urgency = "handle_%(methodName)s_request, handle_%(methodName)s_requestFailure" *)
-    rule handle_%(methodName)s_request if (putEnable);
+    requestPipes[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
+    rule handle_%(methodName)s_request;
         let request = %(methodName)s_requestFifo.first;
         %(methodName)s_requestFifo.deq;
         %(invokeMethod)s
-        requestFiredPulse.send();
-    endrule
-    rule handle_%(methodName)s_requestFailure;
-        %(putFailed)s
-        %(methodName)s_requestFifo.deq;
-        $display("%(methodName)s_requestFailure");
     endrule
 '''
 
 indicationRuleTemplate='''
     ToBit#(32,%(MethodName)s_Response) %(methodName)s_responseFifo <- mkToBit();
-    rule %(methodName)s_read if (slaveReadAddrFifo.first[14] == 0 && 
-                                         slaveReadAddrFifo.first[13:8] == %(methodName)s_Offset);
-        slaveReadAddrFifo.deq;
-        let v = 32'hbad0dada;
-        if (%(methodName)s_responseFifo.notEmpty) begin
-            %(methodName)s_responseFifo.deq;
-            v = %(methodName)s_responseFifo.first;
-        end
-        else begin
-            underflowReadCountReg <= underflowReadCountReg + 1;
-            $display("underflow");
-        end
-        slaveReadDataFifo.enq(v);
-    endrule
-    readyBits[%(methodName)s_Offset] = %(methodName)s_responseFifo.notEmpty;
+    indicationPipes[%(channelNumber)s] = toPipeOut(%(methodName)s_responseFifo);
 '''
 
 indicationMethodDeclTemplate='''
@@ -423,18 +184,23 @@ endmodule
 '''
 
 mkExposedWrapperInterfaceTemplate='''
-// exposed wrapper implementation
-module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
+// exposed wrapper Portal implementation
+module mk%(Dut)sPortal#(idType id, %(Ifc)s ifc)(%(Dut)sPortal)
     provisos (Bits#(idType, __a), 
               Add#(a__, __a, 32));
-%(slaveState)s
-    // instantiate hidden proxy to report put failures
-    %(hiddenProxy)s p <- mk%(hiddenProxy)s(slaveWriteAddrFifos[%(slaveFifoSelHidden)s],
-                                           slaveReadAddrFifos[%(slaveFifoSelHidden)s],
-                                           slaveWriteDataFifos[%(slaveFifoSelHidden)s],
-                                           slaveReadDataFifos[%(slaveFifoSelHidden)s]);
+    Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) requestPipes = newVector();
+    Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
 %(wrapperCtrl)s
 %(portalIfc)s
+endmodule
+
+// exposed wrapper MemPortal implementation
+module mk%(Dut)s#(idType id, %(Ifc)s ifc)(%(Dut)s)
+   provisos (Bits#(idType, a__),
+	     Add#(b__, a__, 32));
+  let dut <- mk%(Dut)sPortal(id, ifc);
+  let memSlave <- mkMemPortal(dut.portalIfc);
+  interface MemPortal portalIfc = memSlave;
 endmodule
 '''
 
@@ -451,23 +217,29 @@ endmodule
 
 mkExposedProxyInterfaceTemplate='''
 (* synthesize *)
-module %(moduleContext)s mk%(Dut)sSynth#(Bit#(32) id) (%(Dut)s);
-%(slaveState)s
-    // instantiate hidden wrapper to receive failure notifications
-    %(hiddenWrapper)s p <- mk%(hiddenWrapper)s(slaveWriteAddrFifos[%(slaveFifoSelHidden)s],
-                                           slaveReadAddrFifos[%(slaveFifoSelHidden)s],
-                                           slaveWriteDataFifos[%(slaveFifoSelHidden)s],
-                                           slaveReadDataFifos[%(slaveFifoSelHidden)s]);
+module %(moduleContext)s mk%(Dut)sSynth#(Bit#(32) id) (%(Dut)sPortal);
+    Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
+    Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
 %(proxyCtrl)s
 %(portalIfc)s
 endmodule
 
 // exposed proxy implementation
-module %(moduleContext)s mk%(Dut)s#(idType id) (%(Dut)s) 
+module %(moduleContext)s mk%(Dut)sPortal#(idType id) (%(Dut)sPortal)
     provisos (Bits#(idType, __a), 
               Add#(a__, __a, 32));
     let rv <- mk%(Dut)sSynth(extend(pack(id)));
     return rv;
+endmodule
+
+// exposed proxy MemPortal
+module mk%(Dut)s#(idType id)(%(Dut)s)
+   provisos (Bits#(idType, a__),
+	     Add#(b__, a__, 32));
+  let dut <- mk%(Dut)sPortal(id);
+  let memSlave <- mkMemPortal(dut.portalIfc);
+  interface MemPortal portalIfc = memSlave;
+  interface %(Ifc)s ifc = dut.ifc;
 endmodule
 '''
 
@@ -622,11 +394,12 @@ class InterfaceMixin:
             'hiddenProxy' : "%sStatus" % name,
             'moduleContext': '',
 
+            'requestChannelCount': len(methodRules) if not proxy else 0,
             'responseElements': ''.join(responseElements),
             'indicationMethodRules': ''.join(indicationMethodRules),
             'indicationMethods': ''.join(indicationMethods),
             'indicationMethodDecls' :''.join(indicationMethodDecls),
-            'indicationChannelCount': self.channelCount,
+            'indicationChannelCount': self.channelCount if proxy else 0,
             'indicationInterfaces': ''.join(indicationTemplate % { 'Indication': name }) if not self.hasSource else '',
             'hiddenWrapper' : "%sStatus" % name,
             'startIndicationMethods' : '' if not expose else '    interface %s ifc;' % self.name,
@@ -637,33 +410,20 @@ class InterfaceMixin:
 
         substs['portalIfcInterrupt'] = 'interface ReadOnly interrupt = p.interrupt;' if not proxy else proxyInterruptImplTemplate
         substs['ifcType'] = 'truncate(128\'h%s)' % m.hexdigest()
-        substs['slaveState'] = slaveStateTemplate % substs
         substs['portalIfc'] = portalIfcTemplate % substs
         substs['wrapperCtrl'] = wrapperCtrlTemplate % substs
         substs['proxyCtrl'] = proxyCtrlTemplate % substs
         return substs
 
-    def emitBsvWrapper(self,f,suffix,expose):
-        subs = self.substs(suffix,expose,False)
-        if expose:
-            #print "exposed wrapper: ", subs['dut']
-            f.write(exposedWrapperInterfaceTemplate % subs)
-            f.write(mkExposedWrapperInterfaceTemplate % subs)
-        else:
-            #print "hidden wrapper: ", subs['dut']
-            f.write(hiddenWrapperInterfaceTemplate % subs)
-            f.write(mkHiddenWrapperInterfaceTemplate % subs)
+    def emitBsvWrapper(self,f,suffix):
+        subs = self.substs(suffix,True,False)
+        f.write(exposedWrapperInterfaceTemplate % subs)
+        f.write(mkExposedWrapperInterfaceTemplate % subs)
 
-    def emitBsvProxy(self,f,suffix,expose):
-        subs = self.substs(suffix,expose,True)
-        if expose:
-            #print " exposed proxy: ", subs['dut']
-            f.write(exposedProxyInterfaceTemplate % subs)
-            f.write(mkExposedProxyInterfaceTemplate % subs)
-        else:
-            #print "   hidden proxy: ", subs['dut']
-            f.write(hiddenProxyInterfaceTemplate % subs)
-            f.write(mkHiddenProxyInterfaceTemplate % subs)
+    def emitBsvProxy(self,f,suffix):
+        subs = self.substs(suffix,True,True)
+        f.write(exposedProxyInterfaceTemplate % subs)
+        f.write(mkExposedProxyInterfaceTemplate % subs)
 
     def collectRequestElements(self, outerTypeName):
         requestElements = []
