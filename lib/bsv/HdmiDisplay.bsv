@@ -152,8 +152,6 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 
    rule vsyncrule if (vsyncPulse.pulse());
       vsyncCount <= vsyncCount + 1;
-   endrule
-   rule resetfiforule if (vsyncPulse.pulse());
       fifo_reset.assertReset();
    endrule
 

@@ -162,6 +162,8 @@ int main(int argc, const char **argv)
 	npixels = edid.timing[i].npixels;
 	int lmin = edid.timing[i].blines;
 	int pmin = edid.timing[i].bpixels;
+	int vsyncoff = edid.timing[i].vsyncoff;
+	int hsyncoff = edid.timing[i].hsyncoff;
 	int vsyncwidth = edid.timing[i].vsyncwidth;
 	int hsyncwidth = edid.timing[i].hsyncwidth;
 
@@ -172,8 +174,8 @@ int main(int argc, const char **argv)
 		npixels, nlines);
 	status = poller->setClockFrequency(1, pixclk, 0);
 
-	hdmiInternal->setDeLineCountMinMax (lmin, lmin + nlines, lmin + nlines / 2);
-        hdmiInternal->setDePixelCountMinMax (pmin, pmin + npixels, pmin + npixels / 2);
+	hdmiInternal->setDeLineCountMinMax (vsyncoff, vsyncoff + vsyncwidth, lmin, lmin + nlines, lmin + nlines / 2);
+        hdmiInternal->setDePixelCountMinMax (hsyncoff, hsyncoff + hsyncwidth, pmin, pmin + npixels, pmin + npixels / 2);
 	break;
       }
     }
