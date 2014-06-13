@@ -91,8 +91,10 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 
     HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
 							vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
+   MakeResetIfc fifo_reset <- mkReset(2, True, defaultClock);
+   Reset fifo_reset_hdmi <- mkAsyncReset(2, fifo_reset.new_rst, hdmi_clock);
 `ifndef ZC706
-   Rgb888ToYyuv converter <- mkRgb888ToYyuv(clocked_by hdmi_clock, reset_by hdmi_reset);
+   Rgb888ToYyuv converter <- mkRgb888ToYyuv(clocked_by hdmi_clock, reset_by fifo_reset_hdmi);
    mkConnection(hdmiGen.rgb888, converter.rgb888);
    HDMI#(Bit#(HdmiBits)) hdmisignals <- mkHDMI(converter.yyuv, clocked_by hdmi_clock, reset_by hdmi_reset);
 `else
@@ -121,7 +123,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    endrule
 `endif
 
-   SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(1024, defaultClock, defaultReset, hdmi_clock, hdmi_reset);
+   SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(1024, defaultClock, fifo_reset.new_rst, hdmi_clock, fifo_reset_hdmi);
    rule fromMemread;
       let v <- toGet(memreadEngine.dataPipes[0]).get;
       synchronizer.enq(v);
@@ -156,6 +158,9 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    Reg#(Bool) traceTransfers <- mkReg(False);
    rule notransfer if (referenceReg matches tagged Invalid);
       vsyncFifo.deq();
+   endrule
+   rule resetfiforule if (vsyncPulse.pulse());
+      fifo_reset.assertReset();
    endrule
    rule startTransfer if (vsyncPulse.pulse() &&& referenceReg matches tagged Valid .reference);
       memreadEngine.readServers[0].request.put(MemengineCmd{pointer:reference, base:0, len:pack(extend(byteCountReg)), burstLen:64});
