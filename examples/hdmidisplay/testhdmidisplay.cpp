@@ -65,19 +65,19 @@ static void *thread_routine(void *data)
 
 static void fill_pixels(int offset)
 {
-static int once = 1;
+int begin = 0;
+if (offset) {
+begin = 200;
+}
     int *ptr = dataptr[frame_index];
-    for (int line = 0; line < nlines-100; line++)
+    for (int line = begin; line < nlines-20; line++)
       for (int pixel = 0; pixel < npixels; pixel++)
-	*ptr++ = ((((256 *  line) /  nlines)+offset) % 256) << 16
+	ptr[line * npixels + pixel] = ((((256 *  line) /  nlines)+offset) % 256) << 16
 	       | ((((128 * pixel) / npixels)+offset) % 128);
-if (once) {
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->waitForVsync(0);
     frame_index = 1 - frame_index;
-}
-//once = 0;
 }
 
 static int synccount = 0;
@@ -185,6 +185,7 @@ int main(int argc, const char **argv)
     for (int i = 0; i < FRAME_COUNT; i++) {
         int err = dma->alloc(fbsize, &portalAlloc[i]);
         dataptr[i] = (int*)mmap(0, fbsize, PROT_READ|PROT_WRITE, MAP_SHARED, portalAlloc[i]->header.fd, 0);
+        memset(dataptr[i], i ? 0xff : 0, fbsize);
         fprintf(stderr, "calling dma->reference\n");
         ref_srcAlloc[i] = dma->reference(portalAlloc[i]);
     }
