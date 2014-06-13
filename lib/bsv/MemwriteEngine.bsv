@@ -31,7 +31,7 @@ import BRAM::*;
 import BRAMFIFO::*;
 import Connectable::*;
 
-import BRAMFIFOFLevel::*;
+import Ratchet::*;
 import PortalMemory::*;
 import MemTypes::*;
 import Pipe::*;
