@@ -50,9 +50,7 @@ endinterface
 interface HdmiInternalRequest;
     method Action setTestPattern(Bit#(1) v);
     method Action setPatternColor(Bit#(32) v);
-    method Action setHsyncWidth(Bit#(12) hsyncWidth);
     method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max, Bit#(12) mid);
-    method Action setVsyncWidth(Bit#(11) vsyncWidth);
     method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max, Bit#(11) mid);
     method Action setNumberOfLines(Bit#(11) lines);
     method Action setNumberOfPixels(Bit#(12) pixels);
@@ -79,11 +77,9 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
-    Reg#(Bit#(12)) hsyncWidth <- mkSyncReg(44, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(12)) dePixelCountMinimum <- mkSyncReg(192, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(12)) dePixelCountMaximum <- mkSyncReg(1920 + 192, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(12)) pixelMidpoint <- mkSyncReg((1920/2) + 192, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) vsyncWidth <- mkSyncReg(5, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) deLineCountMinimum <- mkSyncReg(41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) deLineCountMaximum <- mkSyncReg(1080+41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) lineMidpoint <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
@@ -167,7 +163,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
     rule output_data_rule;
         rgb888StageReg <= VideoData {de: pack(dataEnable),
-	     vsync: pack(lineCount < vsyncWidth), hsync: pack(pixelCount < hsyncWidth), pixel: unpack(pixelData) };
+	     vsync: pack(lineCount < 5), hsync: pack(pixelCount < 44), pixel: unpack(pixelData) };
     endrule
 
     rule testpattern_rule if (testPatternEnabled != 0);
@@ -198,16 +194,10 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         method Action setTestPattern(Bit#(1) v);
             shadowTestPatternEnabled <= v;
         endmethod
-        method Action setHsyncWidth(Bit#(12) width);
-            hsyncWidth <= width;
-        endmethod
         method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max, Bit#(12) mid);
             dePixelCountMinimum <= min;
             dePixelCountMaximum <= max;
             pixelMidpoint <= mid;
-        endmethod
-        method Action setVsyncWidth(Bit#(11) width);
-            vsyncWidth <= width;
         endmethod
         method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max, Bit#(11) mid);
             deLineCountMinimum <= min;
