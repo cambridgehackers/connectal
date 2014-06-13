@@ -163,7 +163,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
     rule output_data_rule;
         rgb888StageReg <= VideoData {de: pack(dataEnable),
-	     vsync: pack(lineCount < 5), hsync: pack(pixelCount < 44), pixel: unpack(pixelData) };
+	     vsync: pack(lineCount < deLineCountMinimum), hsync: pack(pixelCount < dePixelCountMinimum), pixel: unpack(pixelData) };
     endrule
 
     rule testpattern_rule if (testPatternEnabled != 0);
