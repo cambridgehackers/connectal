@@ -50,8 +50,8 @@ endinterface
 interface HdmiInternalRequest;
     method Action setTestPattern(Bit#(1) v);
     method Action setPatternColor(Bit#(32) v);
-    method Action setDePixel(Bit#(12) width, Bit#(12) min, Bit#(12) max, Bit#(12) last, Bit#(12) mid);
-    method Action setDeLine(Bit#(11) width, Bit#(11) min, Bit#(11) max, Bit#(11) last, Bit#(11) mid);
+    method Action setDePixel(Bit#(12) width, Bit#(12) porch, Bit#(12) visible, Bit#(12) last, Bit#(12) mid);
+    method Action setDeLine(Bit#(11) width, Bit#(11) porch, Bit#(11) visible, Bit#(11) last, Bit#(11) mid);
     method Action waitForVsync(Bit#(32) unused);
 endinterface
 interface HdmiInternalIndication;
@@ -71,13 +71,13 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     // 1920 * 1080
     Reg#(Bit#(12)) dePixelEnd <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(12)) dePixelWidth <- mkSyncReg(3, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelCountMinimum <- mkSyncReg(192, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelCountMaximum <- mkSyncReg(1920 + 192, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelPorch <- mkSyncReg(192, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelVisible <- mkSyncReg(1920 + 192, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(12)) pixelMidpoint <- mkSyncReg((1920/2) + 192, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) deLineEnd <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) deLineWidth <- mkSyncReg(3, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineCountMinimum <- mkSyncReg(41, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineCountMaximum <- mkSyncReg(1080+41, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLinePorch <- mkSyncReg(41, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineVisible <- mkSyncReg(1080+41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) lineMidpoint <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
@@ -151,11 +151,10 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
            if (pixelCount >= pixelMidpoint)
                patternIndex0 <= 1;
         end
-        dataEnable <= (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum
-                   && pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum);
+        dataEnable <= (lineCount >= deLinePorch && lineCount < deLineVisible
+                   && pixelCount >= dePixelPorch && pixelCount < dePixelVisible);
     endrule
 
-//width, blanking - offset, active + blanking-offset, active+blanking
     rule output_data_rule if (!dataEnable);
         rgb888StageReg <= VideoData {de: 0, pixel: unpack(0),
                vsync: pack(lineCount <= deLineWidth), hsync: pack(pixelCount <= dePixelWidth) };
@@ -178,17 +177,17 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         method Action setTestPattern(Bit#(1) v);
             shadowTestPatternEnabled <= v;
         endmethod
-        method Action setDePixel(Bit#(12) width, Bit#(12) min, Bit#(12) max, Bit#(12) last, Bit#(12) mid);
+        method Action setDePixel(Bit#(12) width, Bit#(12) porch, Bit#(12) visible, Bit#(12) last, Bit#(12) mid);
             dePixelWidth <= width;
-            dePixelCountMinimum <= min;
-            dePixelCountMaximum <= max;
+            dePixelPorch <= porch;
+            dePixelVisible <= visible;
             dePixelEnd <= last;
             pixelMidpoint <= mid;
         endmethod
-        method Action setDeLine(Bit#(11) width, Bit#(11) min, Bit#(11) max, Bit#(11) last, Bit#(11) mid);
+        method Action setDeLine(Bit#(11) width, Bit#(11) porch, Bit#(11) visible, Bit#(11) last, Bit#(11) mid);
             deLineWidth <= width;
-            deLineCountMinimum <= min;
-            deLineCountMaximum <= max;
+            deLinePorch <= porch;
+            deLineVisible <= visible;
             deLineEnd <= last;
             lineMidpoint <= mid;
         endmethod
