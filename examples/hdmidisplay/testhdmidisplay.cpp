@@ -158,24 +158,30 @@ int main(int argc, const char **argv)
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
       if ((pixclk > 0) && (pixclk < 148000000)) {
-	nlines = edid.timing[i].nlines;
+	nlines = edid.timing[i].nlines;    // number of visible lines
 	npixels = edid.timing[i].npixels;
-	int lmin = edid.timing[i].blines;
-	int pmin = edid.timing[i].bpixels;
-	int vsyncoff = edid.timing[i].vsyncoff;
+	int blines = edid.timing[i].blines; // number of blanking lines
+	int bpixels = edid.timing[i].bpixels;
+	int vsyncoff = edid.timing[i].vsyncoff; // number of lines in FrontPorch (within blanking)
 	int hsyncoff = edid.timing[i].hsyncoff;
-	int vsyncwidth = edid.timing[i].vsyncwidth;
+	int vsyncwidth = edid.timing[i].vsyncwidth; // width of Sync (within blanking)
 	int hsyncwidth = edid.timing[i].hsyncwidth;
 
-	fprintf(stderr, "lines %d, pixels %d, lmin %d, pmin %d, vwidth %d, hwidth %d\n", nlines, npixels, lmin, pmin, vsyncwidth, hsyncwidth);
+	fprintf(stderr, "lines %d, pixels %d, blines %d, bpixels %d, vwidth %d, hwidth %d\n", nlines, npixels, blines, bpixels, vsyncwidth, hsyncwidth);
 	fprintf(stderr, "Using pixclk %d calc_pixclk %d npixels %d nlines %d\n",
 		pixclk,
-		60l * (long)(pmin + npixels) * (long)(lmin + nlines),
+		60l * (long)(bpixels + npixels) * (long)(blines + nlines),
 		npixels, nlines);
 	status = poller->setClockFrequency(1, pixclk, 0);
 
-	hdmiInternal->setDeLine(vsyncwidth, lmin-vsyncoff-1, lmin + nlines-vsyncoff-1, nlines+lmin-1, lmin + nlines / 2);
-        hdmiInternal->setDePixel(hsyncwidth, pmin-hsyncoff-1, pmin + npixels-hsyncoff-1, npixels+pmin-1, pmin + npixels / 2);
+	hdmiInternal->setDeLine(vsyncwidth,                    // End of Sync
+                                blines - vsyncoff -1,          // End of BackPorch (start of visible)
+                                blines - vsyncoff + nlines -1, // End of Visible (start of FrontPorch)
+                                blines + nlines -1, blines + nlines / 2); // End
+        hdmiInternal->setDePixel(hsyncwidth,
+                                bpixels - hsyncoff -1,
+                                bpixels - hsyncoff + npixels -1,
+                                bpixels + npixels -1, bpixels + npixels / 2);
 	break;
       }
     }
