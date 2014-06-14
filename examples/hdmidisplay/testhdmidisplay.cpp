@@ -67,7 +67,7 @@ static void fill_pixels(int offset)
 {
 int begin = 0;
 if (offset) {
-begin = 200;
+begin = 100;
 }
     int *ptr = dataptr[frame_index];
     for (int line = begin; line < nlines-20; line++)
@@ -157,7 +157,7 @@ int main(int argc, const char **argv)
 
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
-      if ((pixclk > 0) && (pixclk < 170000000)) {
+      if ((pixclk > 0) && (pixclk < 148000000)) {
 	nlines = edid.timing[i].nlines;
 	npixels = edid.timing[i].npixels;
 	int lmin = edid.timing[i].blines;
@@ -174,8 +174,8 @@ int main(int argc, const char **argv)
 		npixels, nlines);
 	status = poller->setClockFrequency(1, pixclk, 0);
 
-	hdmiInternal->setDeLineCountMinMax (vsyncoff, vsyncoff + vsyncwidth, lmin, lmin + nlines, lmin + nlines / 2);
-        hdmiInternal->setDePixelCountMinMax (hsyncoff, hsyncoff + hsyncwidth, pmin, pmin + npixels, pmin + npixels / 2);
+	hdmiInternal->setDeLine(vsyncwidth, lmin-vsyncoff-1, lmin + nlines-vsyncoff-1, nlines+lmin-1, lmin + nlines / 2);
+        hdmiInternal->setDePixel(hsyncwidth, pmin-hsyncoff-1, pmin + npixels-hsyncoff-1, npixels+pmin-1, pmin + npixels / 2);
 	break;
       }
     }
