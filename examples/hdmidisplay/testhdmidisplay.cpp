@@ -67,17 +67,21 @@ static void fill_pixels(int offset)
 {
 int begin = 0;
 if (offset) {
-begin = 100;
+begin = 40;
 }
     int *ptr = dataptr[frame_index];
-    for (int line = begin; line < nlines-20; line++)
+    for (int line = begin; line < nlines; line++)
       for (int pixel = 0; pixel < npixels; pixel++) {
 	int v = ((((256 *  line) /  nlines)+offset) % 256) << 16
 	       | ((((256 * pixel) / npixels)+offset) % 256);
         if (line < 20 && pixel < 20)
             v = -1;
-        if (line < 30 && pixel > npixels - 28)
+        if (line < 30 && pixel > npixels - 80)
             v = 0;
+        if (line > nlines - 20 && pixel < 20)
+            v = 0xf00f;
+        if (line > nlines - 20 && pixel > npixels - 80)
+            v = 0x0f00ff;
 	ptr[line * npixels + pixel] = v;
       }
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
@@ -98,7 +102,7 @@ public:
 totalcount += v;
 number += w;
       fill_pixels(base++);
-      if (synccount++ >= 30) {
+      if (synccount++ >= 300) {
           synccount = 0;
           fprintf(stderr, "[%s:%d] avg %lld; v=%d w=%d\n", __FUNCTION__, __LINE__, totalcount/number, (uint32_t) v, w);
       }
@@ -185,8 +189,8 @@ int main(int argc, const char **argv)
                                 blines - vsyncoff + nlines -1, // End of Visible (start of FrontPorch)
                                 blines + nlines -1, blines + nlines / 2); // End
         hdmiInternal->setDePixel(hsyncwidth,
-                                bpixels - hsyncoff -1,
-                                bpixels - hsyncoff + npixels -1,
+                                hsyncwidth + hsyncoff -1,
+                                hsyncwidth + hsyncoff + npixels -1,
                                 bpixels + npixels -1, bpixels + npixels / 2);
 	break;
       }
