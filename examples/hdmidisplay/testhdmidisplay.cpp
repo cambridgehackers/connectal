@@ -65,27 +65,26 @@ static void *thread_routine(void *data)
     return data;
 }
 
+static int corner[] = {-1, 0, 0xf00f, 0x0fff};
+static int corner_index;
 static void fill_pixels(int offset)
 {
-int begin = 0;
-if (offset) {
-begin = 40;
-}
     int *ptr = dataptr[frame_index];
-    for (int line = begin; line < nlines; line++)
+    for (int line = 0; line < nlines; line++)
       for (int pixel = 0; pixel < npixels; pixel++) {
 	int v = ((((MAX_PIXEL *  line) /  nlines)+offset) % MAX_PIXEL) << 16
 	       | ((((MAX_PIXEL * pixel) / npixels)+offset) % MAX_PIXEL);
         if (line < 20 && pixel < 20)
-            v = -1;
-        if (line < 30 && pixel > npixels - 80)
-            v = 0;
+            v = corner[(corner_index+0) % 4];
+        if (line < 30 && pixel > npixels - 100)
+            v = corner[(corner_index+1) % 4];
         if (line > nlines - 20 && pixel < 20)
-            v = 0xf00f;
-        if (line > nlines - 20 && pixel > npixels - 80)
-            v = 0x0f00ff;
+            v = corner[(corner_index+2) % 4];
+        if (line > nlines - 30 && pixel > npixels - 100)
+            v = corner[(corner_index+3) % 4];
 	ptr[line * npixels + pixel] = v;
       }
+    corner_index = offset/128;
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->waitForVsync(0);

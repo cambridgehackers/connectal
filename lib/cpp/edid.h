@@ -1,3 +1,4 @@
+
 struct edid {
   unsigned char raw[256];
   struct edid_timing {
@@ -60,12 +61,15 @@ static void parseEdid(struct edid &edid)
     edid.timing[i].vborderpxls = rec[16];
     edid.timing[i].features = rec[17];
   }
-  for (int i = 0; i < 4; i++) {
-    if (edid.timing[i].pixclk)
-      fprintf(stderr, "pixclk=%d npixels=%d bpixels=%d nlines=%d blines=%d hsyncoff=%d hsyncwidth=%d vsyncoff=%d vsyncwidth=%d w=%dmm h=%dmm hbpxls=%d vbpxls=%d features=%x\n",
-	      edid.timing[i].pixclk, edid.timing[i].npixels, edid.timing[i].bpixels, edid.timing[i].nlines, edid.timing[i].blines,
-	      edid.timing[i].hsyncoff, edid.timing[i].hsyncwidth, edid.timing[i].vsyncoff, edid.timing[i].vsyncwidth,
-	      edid.timing[i].widthmm, edid.timing[i].heightmm, edid.timing[i].hborderpxls, edid.timing[i].vborderpxls, edid.timing[i].features);
-  }
+  for (int i = 0; i < 4; i++)
+    if (edid.timing[i].pixclk) {
+      fprintf(stderr, "pixclk=%d npixels=%d bpixels=%d hsyncoff=%d hsyncwidth=%d w=%dmm h=%dmm hbpxls=%d features=%x\n",
+	      edid.timing[i].pixclk, edid.timing[i].npixels, edid.timing[i].bpixels,
+	      edid.timing[i].hsyncoff, edid.timing[i].hsyncwidth,
+	      edid.timing[i].widthmm, edid.timing[i].heightmm, edid.timing[i].hborderpxls, edid.timing[i].features);
+      fprintf(stderr, "nlines=%d blines=%d vsyncoff=%d vsyncwidth=%d vbpxls=%d\n",
+	      edid.timing[i].nlines, edid.timing[i].blines,
+	      edid.timing[i].vsyncoff, edid.timing[i].vsyncwidth, edid.timing[i].vborderpxls);
+    }
   fprintf(stderr, "\n");
 }
