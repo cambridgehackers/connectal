@@ -35,6 +35,8 @@
 #include "edid.h"
 
 #define FRAME_COUNT 2
+#define MAX_PIXEL 256
+#define INCREMENT_PIXEL 2
 
 static HdmiInternalRequestProxy *hdmiInternal;
 static HdmiDisplayRequestProxy *device;
@@ -72,8 +74,8 @@ begin = 40;
     int *ptr = dataptr[frame_index];
     for (int line = begin; line < nlines; line++)
       for (int pixel = 0; pixel < npixels; pixel++) {
-	int v = ((((256 *  line) /  nlines)+offset) % 256) << 16
-	       | ((((256 * pixel) / npixels)+offset) % 256);
+	int v = ((((MAX_PIXEL *  line) /  nlines)+offset) % MAX_PIXEL) << 16
+	       | ((((MAX_PIXEL * pixel) / npixels)+offset) % MAX_PIXEL);
         if (line < 20 && pixel < 20)
             v = -1;
         if (line < 30 && pixel > npixels - 80)
@@ -101,8 +103,9 @@ public:
 
 totalcount += v;
 number += w;
-      fill_pixels(base++);
-      if (synccount++ >= 300) {
+      fill_pixels(base);
+base += INCREMENT_PIXEL;
+      if (synccount++ >= 2000) {
           synccount = 0;
           fprintf(stderr, "[%s:%d] avg %lld; v=%d w=%d\n", __FUNCTION__, __LINE__, totalcount/number, (uint32_t) v, w);
       }
