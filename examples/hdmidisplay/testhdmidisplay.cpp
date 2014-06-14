@@ -71,9 +71,15 @@ begin = 100;
 }
     int *ptr = dataptr[frame_index];
     for (int line = begin; line < nlines-20; line++)
-      for (int pixel = 0; pixel < npixels; pixel++)
-	ptr[line * npixels + pixel] = ((((256 *  line) /  nlines)+offset) % 256) << 16
+      for (int pixel = 0; pixel < npixels; pixel++) {
+	int v = ((((256 *  line) /  nlines)+offset) % 256) << 16
 	       | ((((256 * pixel) / npixels)+offset) % 256);
+        if (line < 20 && pixel < 20)
+            v = -1;
+        if (line < 30 && pixel > npixels - 28)
+            v = 0;
+	ptr[line * npixels + pixel] = v;
+      }
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->waitForVsync(0);
