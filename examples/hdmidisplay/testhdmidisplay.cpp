@@ -172,28 +172,31 @@ int main(int argc, const char **argv)
       if ((pixclk > 0) && (pixclk < 148000000)) {
 	nlines = edid.timing[i].nlines;    // number of visible lines
 	npixels = edid.timing[i].npixels;
-	int blines = edid.timing[i].blines; // number of blanking lines
-	int bpixels = edid.timing[i].bpixels;
+	int vblank = edid.timing[i].blines; // number of blanking lines
+	int hblank = edid.timing[i].bpixels;
 	int vsyncoff = edid.timing[i].vsyncoff; // number of lines in FrontPorch (within blanking)
 	int hsyncoff = edid.timing[i].hsyncoff;
 	int vsyncwidth = edid.timing[i].vsyncwidth; // width of Sync (within blanking)
 	int hsyncwidth = edid.timing[i].hsyncwidth;
 
-	fprintf(stderr, "lines %d, pixels %d, blines %d, bpixels %d, vwidth %d, hwidth %d\n", nlines, npixels, blines, bpixels, vsyncwidth, hsyncwidth);
+	fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
+             nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
 	fprintf(stderr, "Using pixclk %d calc_pixclk %d npixels %d nlines %d\n",
 		pixclk,
-		60l * (long)(bpixels + npixels) * (long)(blines + nlines),
+		60l * (long)(hblank + npixels) * (long)(vblank + nlines),
 		npixels, nlines);
 	status = poller->setClockFrequency(1, pixclk, 0);
 
-	hdmiInternal->setDeLine(vsyncwidth,                    // End of Sync
-                                blines - vsyncoff -1,          // End of BackPorch (start of visible)
-                                blines - vsyncoff + nlines -1, // End of Visible (start of FrontPorch)
-                                blines + nlines -1, blines + nlines / 2); // End
+        int vstart = vblank - vsyncoff;
+	hdmiInternal->setDeLine(vsyncwidth,         // End of Sync
+                                vstart -1,          // End of BackPorch (start of visible)
+                                vstart + nlines -1, // End of Visible (start of FrontPorch)
+                                vblank + nlines -1, vblank + nlines / 2); // End
+        //int hstart = hsyncwidth + hsyncoff;
+        int hstart = hblank - hsyncoff;
         hdmiInternal->setDePixel(hsyncwidth,
-                                hsyncwidth + hsyncoff -1,
-                                hsyncwidth + hsyncoff + npixels -1,
-                                bpixels + npixels -1, bpixels + npixels / 2);
+                                hstart -1, hstart + npixels -1,
+                                hblank + npixels -1, hblank + npixels / 2);
 	break;
       }
     }
