@@ -33,7 +33,6 @@ import Pipe::*;
 
 // XBSV Libraries
 import PortalMemory::*;
-import BRAMFIFOFLevel::*;
 
 typedef Bit#(32) ObjectPointer;
 typedef 40 ObjectOffsetSize;
@@ -53,6 +52,7 @@ typedef struct {
 typedef struct {
    Bit#(dsz) data;
    Bit#(ObjectTagSize) tag;
+   Bool                last;
    } ObjectData#(numeric type dsz) deriving (Bits);
 typedef ObjectData#(dsz) MemData#(numeric type dsz);
 

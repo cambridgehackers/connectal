@@ -50,7 +50,7 @@ module mkAxiDmaSlave#(MemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidt
    endinterface
    interface Put resp_write;
       method Action put(Axi3WriteData#(dataWidth, 12) resp);
-	 slave.write_server.writeData.put(MemData{data:resp.data, tag:truncate(resp.id)});
+	 slave.write_server.writeData.put(MemData{data:resp.data, tag:truncate(resp.id), last: resp.last == 1});
       endmethod
    endinterface
    interface Get resp_b;
@@ -107,7 +107,7 @@ module mkAxiDmaMaster#(MemMaster#(addrWidth,dataWidth) master) (Axi3Master#(addr
    interface Put resp_read;
       method Action put(Axi3ReadResponse#(dataWidth,6) response);
 	 //$display("resp_read %h %h", response.data, response.id);
-	 master.read_client.readData.put(MemData { data: response.data, tag: response.id});
+	 master.read_client.readData.put(MemData { data: response.data, tag: response.id, last: response.last == 1 });
       endmethod
    endinterface
 

@@ -39,6 +39,7 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
 
 
    FIFOF#(Bit#(6)) readTagFifo <- mkFIFOF();
+   FIFO#(Bool)    readLastFifo <- mkFIFO();
    AddressGenerator#(busAddrWidth) readAddrGenerator <- mkAddressGenerator();
    Bool verbose = False;
 
@@ -48,6 +49,7 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
       let tag = addrBeat.tag;
       let burstCount = addrBeat.bc;
       readTagFifo.enq(tag);
+      readLastFifo.enq(addrBeat.last);
       Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
       br.request.put(BRAMRequest{write:False, responseOnWrite:False, address:regFileAddr, datain:?});
       if (verbose) $display("read_server.readData (a) %h %d", addr, burstCount);
@@ -64,9 +66,10 @@ module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (Me
 	 method ActionValue#(ObjectData#(busDataWidth)) get();
    	    let tag = readTagFifo.first;
 	    readTagFifo.deq;
+	    readLastFifo.deq;
             let data <- br.response.get;
             if (verbose) $display("read_server.readData (b) %h", data);
-            return ObjectData { data: data, tag: tag };
+            return ObjectData { data: data, tag: tag, last: readLastFifo.first };
 	 endmethod
       endinterface
    endinterface

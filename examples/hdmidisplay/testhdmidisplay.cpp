@@ -35,6 +35,8 @@
 #include "edid.h"
 
 #define FRAME_COUNT 2
+#define MAX_PIXEL 256
+#define INCREMENT_PIXEL 2
 
 static HdmiInternalRequestProxy *hdmiInternal;
 static HdmiDisplayRequestProxy *device;
@@ -45,6 +47,7 @@ static int *dataptr[FRAME_COUNT];
 static int frame_index;
 static int nlines = 1080;
 static int npixels = 1920;
+static int fbsize = nlines*npixels*4;
 
 void dump(const char *prefix, char *buf, size_t len)
 {
@@ -62,30 +65,55 @@ static void *thread_routine(void *data)
     return data;
 }
 
+static int corner[] = {0, -1, 0xf00f, 0x0fff};
+static int corner_index;
 static void fill_pixels(int offset)
 {
     int *ptr = dataptr[frame_index];
     for (int line = 0; line < nlines; line++)
-      for (int pixel = 0; pixel < npixels; pixel++)
-	*ptr++ = ((((128 *  line) /  nlines)+offset) % 128) << 16
-	       | ((((128 * pixel) / npixels)+offset) % 128);
+      for (int pixel = 0; pixel < npixels; pixel++) {
+	int v = ((((MAX_PIXEL *  line) /  nlines)+offset) % MAX_PIXEL) << 16
+	       | ((((MAX_PIXEL * pixel) / npixels)+offset) % MAX_PIXEL);
+        if (!v)
+            v = 1;
+        if (line < 20 && pixel < 20)
+            v = corner[(corner_index+0) % 4];
+        if (line < 30 && pixel > npixels - 40)
+            v = corner[(corner_index+1) % 4];
+        if (line > nlines - 20 && pixel < 20)
+            v = corner[(corner_index+2) % 4];
+        if (line > nlines - 30 && pixel > npixels - 40)
+            v = corner[(corner_index+3) % 4];
+        if (line < 20 && pixel % 20 < 2)
+            v = corner[(corner_index+0) % 4];
+        if (line % 30 < 2 && pixel > npixels - 40)
+            v = corner[(corner_index+1) % 4];
+	ptr[line * npixels + pixel] = v;
+      }
+    corner_index = offset/16;
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
-    device->startFrameBuffer(ref_srcAlloc[frame_index], nlines, npixels, nlines*npixels);
+    device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->waitForVsync(0);
     frame_index = 1 - frame_index;
 }
 
 static int synccount = 0;
+static long long totalcount;
+static int number;
 class HdmiIndication : public HdmiInternalIndicationWrapper {
 public:
     HdmiIndication(int id) : HdmiInternalIndicationWrapper(id) {}
   virtual void vsync ( uint64_t v, uint32_t w ) {
       static int base = 0;
 
-      fill_pixels(2 * base++);
-      if (synccount++ >= 30) {
+totalcount += v;
+number += w;
+      fill_pixels(base);
+base += INCREMENT_PIXEL;
+      if (synccount++ >= 20) {
           synccount = 0;
-          fprintf(stderr, "[%s:%d] v=%d w=%d\n", __FUNCTION__, __LINE__, (uint32_t) v, w);
+uint32_t zeros = v & 0xffffffff, pix = v >> 32;
+          fprintf(stderr, "[%s] v %llx pix=%x:%d. zero=%x:%d. w=%x:%d.\n", __FUNCTION__,v,pix,pix,zeros,zeros,w,w);
       }
     }
 };
@@ -148,34 +176,41 @@ int main(int argc, const char **argv)
 
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
-      if ((pixclk > 0) && (pixclk < 170000000)) {
-	nlines = edid.timing[i].nlines;
+      if ((pixclk > 0) && (pixclk < 148000000)) {
+	nlines = edid.timing[i].nlines;    // number of visible lines
 	npixels = edid.timing[i].npixels;
-	int lmin = edid.timing[i].blines;
-	int pmin = edid.timing[i].bpixels;
-	int vsyncwidth = edid.timing[i].vsyncwidth;
+	int vblank = edid.timing[i].blines; // number of blanking lines
+	int hblank = edid.timing[i].bpixels;
+	int vsyncoff = edid.timing[i].vsyncoff; // number of lines in FrontPorch (within blanking)
+	int hsyncoff = edid.timing[i].hsyncoff;
+	int vsyncwidth = edid.timing[i].vsyncwidth; // width of Sync (within blanking)
 	int hsyncwidth = edid.timing[i].hsyncwidth;
 
-	fprintf(stderr, "lines %d, pixels %d, lmin %d, pmin %d, vwidth %d, hwidth %d\n", nlines, npixels, lmin, pmin, vsyncwidth, hsyncwidth);
+	fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
+             nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
 	fprintf(stderr, "Using pixclk %d calc_pixclk %d npixels %d nlines %d\n",
 		pixclk,
-		60l * (long)(pmin + npixels) * (long)(lmin + nlines),
+		60l * (long)(hblank + npixels) * (long)(vblank + nlines),
 		npixels, nlines);
 	status = poller->setClockFrequency(1, pixclk, 0);
 
-	hdmiInternal->setNumberOfLines(lmin + nlines);
-	hdmiInternal->setNumberOfPixels(pmin + npixels);
-	hdmiInternal->setDeLineCountMinMax (lmin - vsyncwidth, lmin + nlines - vsyncwidth, (lmin + lmin + nlines) / 2 - vsyncwidth);
-        hdmiInternal->setDePixelCountMinMax (pmin, pmin + npixels, pmin + npixels / 2);
+	hdmiInternal->setDeLine(vsyncoff,           // End of FrontPorch
+                                vsyncoff+vsyncwidth,// End of Sync
+                                vblank,             // Start of Visible (start of BackPorch)
+                                vblank + nlines, vblank + nlines / 2); // End
+        hdmiInternal->setDePixel(hsyncoff,
+                                hsyncoff+hsyncwidth, hblank,
+                                hblank + npixels, hblank + npixels / 2);
 	break;
       }
     }
 
-    int fbsize = nlines*npixels*4;
+    fbsize = nlines*npixels*4;
 
     for (int i = 0; i < FRAME_COUNT; i++) {
         int err = dma->alloc(fbsize, &portalAlloc[i]);
         dataptr[i] = (int*)mmap(0, fbsize, PROT_READ|PROT_WRITE, MAP_SHARED, portalAlloc[i]->header.fd, 0);
+        memset(dataptr[i], i ? 0xff : 0, fbsize);
         fprintf(stderr, "calling dma->reference\n");
         ref_srcAlloc[i] = dma->reference(portalAlloc[i]);
     }
@@ -184,7 +219,6 @@ int main(int argc, const char **argv)
     sleep(3);
     fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc[0]);
     fill_pixels(0);
-    //device->startFrameBuffer(ref_srcAlloc[frame_index], nlines, npixels, nlines*npixels);
     fprintf(stderr, "done\n");
     while (1) {
       fprintf(stderr, "mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));

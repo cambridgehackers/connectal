@@ -28,9 +28,9 @@ import Assert::*;
 import ClientServer::*;
 import BRAM::*;
 import BRAMFIFO::*;
+import Ratchet::*;
 import Connectable::*;
 
-import BRAMFIFOFLevel::*;
 import PortalMemory::*;
 import MemTypes::*;
 import Pipe::*;

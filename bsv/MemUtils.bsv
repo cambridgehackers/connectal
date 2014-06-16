@@ -28,7 +28,6 @@ import Gearbox::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 
-import BRAMFIFOFLevel::*;
 import GetPut::*;
 import MemTypes::*;
 

@@ -114,7 +114,7 @@ module mkMemSlaveFromRegFile#(RegFileA#(Bit#(regFileAddrWidth), Bit#(busDataWidt
             Bit#(regFileAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
             let data <- rf.sub(regFileAddr);
             if (verbose) $display("read_server.readData %h %h %d", addr, data, burstCount);
-            return ObjectData { data: data, tag: tag };
+            return ObjectData { data: data, tag: tag, last: addrBeat.last };
 	 endmethod
       endinterface
    endinterface

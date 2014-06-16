@@ -41,7 +41,7 @@
 #include "DmaConfigProxy.h"
 #include "DmaIndicationWrapper.h"
 #include "GeneratedTypes.h"
-#include "HdmiControlRequestProxy.h"
+#include "HdmiDisplayRequestProxy.h"
 #include "HdmiInternalRequestProxy.h"
 #include "HdmiInternalIndicationWrapper.h"
 #include "StdDmaIndication.h"
@@ -64,7 +64,7 @@ struct gralloc_context_t {
     pthread_mutex_t vsync_lock;
     pthread_cond_t vsync_cond;
     PortalPoller *poller;
-    HdmiControlRequestProxy *hdmiDisplay;
+    HdmiDisplayRequestProxy *hdmiDisplay;
     HdmiInternalRequestProxy *hdmiInternal;
     DmaConfigProxy *dma;
     DmaIndicationWrapper *dmaIndication;
@@ -193,11 +193,10 @@ static int gralloc_alloc(alloc_device_t* dev,
             bpp = 3;
             break;
         case HAL_PIXEL_FORMAT_RGB_565:
-        case HAL_PIXEL_FORMAT_RGBA_5551:
-        case HAL_PIXEL_FORMAT_RGBA_4444:
             bpp = 2;
             break;
         default:
+	  ALOGE("unknown pixel format %x in gralloc_alloc\n", format);
             return -EINVAL;
     }
     size_t bpr = (w*bpp + (align-1)) & ~(align-1);
@@ -293,7 +292,8 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         pthread_mutex_lock(&gralloc_dev->vsync_lock);
         gralloc_dev->vsync = 0;
         gralloc_dev->hdmiInternal->waitForVsync(0);
-        gralloc_dev->hdmiDisplay->startFrameBuffer0(gralloc_dev->ref_srcAlloc);
+        gralloc_dev->hdmiDisplay->startFrameBuffer(gralloc_dev->ref_srcAlloc,
+						   hnd->size/4);
         gralloc_dev->hdmiInternal->waitForVsync(0);
         while (!gralloc_dev->vsync) {
             pthread_cond_wait(&gralloc_dev->vsync_cond, &gralloc_dev->vsync_lock);
@@ -356,7 +356,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         pthread_condattr_init(&condattr);
         pthread_cond_init(&dev->vsync_cond, &condattr);
 	dev->poller = new PortalPoller();
-        dev->hdmiDisplay = new HdmiControlRequestProxy(IfcNames_HdmiControlRequest, dev->poller);
+        dev->hdmiDisplay = new HdmiDisplayRequestProxy(IfcNames_HdmiDisplayRequest, dev->poller);
         dev->hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest, dev->poller);
         dev->dma = new DmaConfigProxy(IfcNames_DmaConfig);
         dev->dmaIndication = new DmaIndication(dev->dma, IfcNames_DmaIndication);
@@ -455,13 +455,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
             const_cast<int&>(dev->minSwapInterval) = 1;
             const_cast<int&>(dev->maxSwapInterval) = 1;
 
-            gralloc_dev->hdmiInternal->setNumberOfLines(lmin + nlines);
-            gralloc_dev->hdmiInternal->setNumberOfPixels(pmin + npixels);
-            //gralloc_dev->hdmiDisplay->hdmiStrideBytes(stridebytes);
-            //gralloc_dev->hdmiInternal->setTestPattern ( unsigned long v );
-            //gralloc_dev->hdmiInternal->setPatternColor ( unsigned long v );
-            //gralloc_dev->hdmiInternal->setHsyncWidth ( unsigned long hsyncWidth );
-            //gralloc_dev->hdmiInternal->setVsyncWidth ( unsigned long vsyncWidth );
+vsyncwidth = 0;
             gralloc_dev->hdmiInternal->setDeLineCountMinMax (lmin - vsyncwidth, lmin + nlines - vsyncwidth, (lmin + lmin + nlines) / 2 - vsyncwidth);
             gralloc_dev->hdmiInternal->setDePixelCountMinMax (pmin, pmin + npixels, pmin + npixels / 2);
 	    ALOGD("setting clock frequency %ld\n", 60l * (long)(pmin + npixels) * (long)(lmin + nlines));

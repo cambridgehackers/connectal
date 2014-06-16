@@ -50,26 +50,16 @@ endinterface
 interface HdmiInternalRequest;
     method Action setTestPattern(Bit#(1) v);
     method Action setPatternColor(Bit#(32) v);
-    method Action setHsyncWidth(Bit#(12) hsyncWidth);
-    method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max, Bit#(12) mid);
-    method Action setVsyncWidth(Bit#(11) vsyncWidth);
-    method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max, Bit#(11) mid);
-    method Action setNumberOfLines(Bit#(11) lines);
-    method Action setNumberOfPixels(Bit#(12) pixels);
+    method Action setDePixel(Bit#(12) porch, Bit#(12) width, Bit#(12) visible, Bit#(12) last, Bit#(12) mid);
+    method Action setDeLine(Bit#(11) porch, Bit#(11) width, Bit#(11) visible, Bit#(11) last, Bit#(11) mid);
     method Action waitForVsync(Bit#(32) unused);
 endinterface
 interface HdmiInternalIndication;
     method Action vsync(Bit#(64) v, Bit#(32) vs);
 endinterface
-interface HdmiInternalStatus;
-    method Bit#(11) getNumberOfLines();
-    method Bit#(12) getNumberOfPixels();
-    method Bool dataEnable();
-endinterface
 
 interface HdmiGenerator#(type pixelType);
     interface HdmiInternalRequest control;
-    interface HdmiInternalStatus  status;
     interface Get#(VideoData#(pixelType)) rgb888;
     interface Put#(Bit#(32)) request;
 endinterface
@@ -79,16 +69,16 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
-    Reg#(Bit#(12)) hsyncWidth <- mkSyncReg(44, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelCountMinimum <- mkSyncReg(192, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelCountMaximum <- mkSyncReg(1920 + 192, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelEnd <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelWidth <- mkSyncReg(3, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelPorch <- mkSyncReg(192, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelVisible <- mkSyncReg(1920 + 192, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(12)) pixelMidpoint <- mkSyncReg((1920/2) + 192, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) vsyncWidth <- mkSyncReg(5, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineCountMinimum <- mkSyncReg(41, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineCountMaximum <- mkSyncReg(1080+41, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineEnd <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineWidth <- mkSyncReg(3, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLinePorch <- mkSyncReg(41, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineVisible <- mkSyncReg(1080+41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) lineMidpoint <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) numberOfLines <- mkSyncReg(1080 + 45, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) numberOfPixels <- mkSyncReg(1920 + 192 + 44 + 44, axi_clock, axi_reset, defaultClock);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
@@ -100,7 +90,10 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(1)) patternIndex0 <- mkReg(0);
     Reg#(Bit#(1)) patternIndex1 <- mkReg(0);
     Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
-    Reg#(Bit#(24)) pixelData <- mkReg(24'hFF00FF);
+    Reg#(Bool) dataEnable <- mkReg(False);
+    Reg#(Bool) lineVisible <- mkReg(False);
+    Reg#(Bit#(1)) vsync <- mkReg(0);
+    Reg#(Bit#(1)) hsync <- mkReg(0);
 
     Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
@@ -111,6 +104,18 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(32)) vsyncCounter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsedVsync <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+    Reg#(Bit#(32)) zeropixel <- mkReg(0);
+    Reg#(Bit#(32)) pixelcount <- mkReg(0);
+    Reg#(Bit#(32)) pixelcount2 <- mkReg(0);
+    SyncBitIfc#(Bit#(32)) zeropixels <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
+    SyncBitIfc#(Bit#(32)) pixelcounts <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
+    SyncBitIfc#(Bit#(32)) pixelcount2s <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
+
+    rule zerosyn;
+       zeropixels.send(zeropixel);
+       pixelcounts.send(pixelcount);
+       pixelcount2s.send(pixelcount2);
+    endrule
 
     rule axicyclecount;
        counter <= counter + 1;
@@ -122,8 +127,8 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     rule vsyncReceived if (sendVsyncIndication.pulse());
        elapsed <= counter;
        elapsedVsync <= vsyncCounter;
-       indication.vsync(extend(counter - elapsed), extend(vsyncCounter - elapsedVsync));
-       waitingForVsync <= False;
+       indication.vsync(extend(elapsed), vsyncCounter);
+       //waitingForVsync <= False;
     endrule
 
     rule init_pattern;
@@ -136,62 +141,61 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule inc_counters;
-        if (lineCount == 0 && pixelCount == 0) begin
+        if (lineCount == deLineWidth && pixelCount == 0) begin
 	    vsyncCountPulse.send();
             vsyncPulse.send();
-            if (waitingForVsync) begin
-	       sendVsyncIndication.send();
-	    end
             testPatternEnabled <= shadowTestPatternEnabled;
         end
-        if (pixelCount == numberOfPixels-1) begin
+        if (lineCount == deLinePorch)
+           vsync <= 1;
+        else if (lineCount == deLineWidth)
+           vsync <= 0;
+        if (pixelCount == dePixelPorch)
+           hsync <= 1;
+        else if (pixelCount == dePixelWidth)
+           hsync <= 0;
+        if (pixelCount == dePixelEnd) begin
            pixelCount <= 0; 
+           dataEnable <= False;
            patternIndex0 <= 0;
-           if (lineCount == numberOfLines-1) begin
+           if (lineCount == deLineEnd) begin
                lineCount <= 0;
                patternIndex1 <= 0;
+               lineVisible <= False;
+               if (waitingForVsync)
+	          sendVsyncIndication.send();
            end
            else begin
+               if (lineCount == deLineVisible)
+                   lineVisible <= True;
                lineCount <= lineCount+1;
                if (lineCount >= lineMidpoint)
                    patternIndex1 <= 1;
            end
         end
         else begin
+           if (pixelCount == dePixelVisible)
+               dataEnable <= lineVisible;
            pixelCount <= pixelCount + 1;
-           if (pixelCount >= pixelMidpoint)
+           if (pixelCount == pixelMidpoint)
                patternIndex0 <= 1;
         end
     endrule
 
-    let isActiveLine = (lineCount >= deLineCountMinimum && lineCount < deLineCountMaximum);
-    let dataEnable = (pixelCount >= dePixelCountMinimum && pixelCount < dePixelCountMaximum && isActiveLine);
-    rule output_data_rule;
-        rgb888StageReg <= VideoData {de: pack(dataEnable),
-	     vsync: pack(lineCount < vsyncWidth), hsync: pack(pixelCount < hsyncWidth), pixel: unpack(pixelData) };
+    rule output_data_rule if (!dataEnable);
+        rgb888StageReg <= VideoData {de: 0, pixel: unpack(0), vsync: vsync, hsync: hsync };
     endrule
 
-    rule testpattern_rule if (testPatternEnabled != 0);
-       pixelData <= patternRegs[{patternIndex1, patternIndex0}];
+    rule testpattern_rule if (testPatternEnabled != 0 && dataEnable);
+        rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(patternRegs[{patternIndex1, patternIndex0}]) };
     endrule
 
     interface Put request;
         method Action put(Bit#(32) v) if (testPatternEnabled == 0 && dataEnable);
-	   pixelData <= v[23:0];
+           rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v[23:0])};
         endmethod
     endinterface: request
 
-    interface HdmiInternalStatus status;
-	method Bit#(11) getNumberOfLines();
-	   return numberOfLines;
-	endmethod
-	method Bit#(12) getNumberOfPixels();
-	   return numberOfPixels;
-	endmethod
-        method Bool dataEnable();
-            return dataEnable;
-        endmethod
-    endinterface
     interface HdmiInternalRequest control;
         method Action setPatternColor(Bit#(32) v);
             patternRegs[0] <= v[23:0]; 
@@ -199,27 +203,19 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         method Action setTestPattern(Bit#(1) v);
             shadowTestPatternEnabled <= v;
         endmethod
-        method Action setHsyncWidth(Bit#(12) width);
-            hsyncWidth <= width;
-        endmethod
-        method Action setDePixelCountMinMax(Bit#(12) min, Bit#(12) max, Bit#(12) mid);
-            dePixelCountMinimum <= min;
-            dePixelCountMaximum <= max;
+        method Action setDePixel(Bit#(12) porch, Bit#(12) width, Bit#(12) visible, Bit#(12) last, Bit#(12) mid);
+            dePixelWidth <= width;
+            dePixelPorch <= porch;
+            dePixelVisible <= visible;
+            dePixelEnd <= last;
             pixelMidpoint <= mid;
         endmethod
-        method Action setVsyncWidth(Bit#(11) width);
-            vsyncWidth <= width;
-        endmethod
-        method Action setDeLineCountMinMax(Bit#(11) min, Bit#(11) max, Bit#(11) mid);
-            deLineCountMinimum <= min;
-            deLineCountMaximum <= max;
+        method Action setDeLine(Bit#(11) porch, Bit#(11) width, Bit#(11) visible, Bit#(11) last, Bit#(11) mid);
+            deLineWidth <= width;
+            deLinePorch <= porch;
+            deLineVisible <= visible;
+            deLineEnd <= last;
             lineMidpoint <= mid;
-        endmethod
-        method Action setNumberOfLines(Bit#(11) lines);
-            numberOfLines <= lines;
-        endmethod
-        method Action setNumberOfPixels(Bit#(12) pixels);
-            numberOfPixels <= pixels;
         endmethod
         method Action waitForVsync(Bit#(32) unused);
             waitingForVsync <= True;

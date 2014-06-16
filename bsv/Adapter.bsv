@@ -27,6 +27,7 @@ import FIFOF          ::*;
 import SpecialFIFOs   ::*;
 import StmtFSM        ::*;
 import Assert         ::*;
+import Pipe           ::*;
 
 function Bit#(a) rtruncate(Bit#(b) x) provisos(Add#(k,a,b));
    match {.v,.*} = split(x);
@@ -70,6 +71,25 @@ instance ToPut#(ToBit#(n,a),a);
 		       x.enq(v);
 		    endaction
 		 endmethod
+	      endinterface);
+   endfunction
+endinstance
+
+instance ToPipeIn#(Bit#(n), FromBit#(n,a));
+   function PipeIn#(Bit#(n)) toPipeIn(FromBit#(n,a) in);
+      return (interface PipeIn#(Bit#(n));
+		 method enq = in.enq;
+		 method notFull = in.notFull;
+	      endinterface);
+   endfunction
+endinstance
+
+instance ToPipeOut#(Bit#(n), ToBit#(n,a));
+   function PipeOut#(Bit#(n)) toPipeOut(ToBit#(n,a) in);
+      return (interface PipeOut#(Bit#(n));
+		 method first = in.first;
+		 method deq = in.deq;
+		 method notEmpty = in.notEmpty;
 	      endinterface);
    endfunction
 endinstance

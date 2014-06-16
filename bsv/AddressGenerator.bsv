@@ -40,10 +40,11 @@ interface AddressGenerator#(numeric type addrWidth);
 endinterface
 
 module mkAddressGenerator(AddressGenerator#(addrWidth));
-   FIFOF#(MemRequest#(addrWidth)) requestFifo <- mkFIFOF();
+   FIFOF#(MemRequest#(addrWidth)) requestFifo <- mkFIFOF1();
    FIFOF#(AddrBeat#(addrWidth)) addrBeatFifo <- mkFIFOF();
    Reg#(Bit#(addrWidth)) addrReg <- mkReg(0);
    Reg#(Bit#(8)) burstCountReg <- mkReg(0);
+   Reg#(Bool) isFirstReg <- mkReg(True);
    Reg#(Bool) isLastReg <- mkReg(False);
 
    rule addrBeatRule;
@@ -51,6 +52,11 @@ module mkAddressGenerator(AddressGenerator#(addrWidth));
       let addr = addrReg;
       let burstCount = burstCountReg;
       let isLast = isLastReg;
+      if (isFirstReg) begin
+	 addr = req.addr;
+	 burstCount = req.burstLen;
+	 isLast = (req.burstLen == 1);
+      end
 
       let nextIsLast = burstCount == 2;
       let nextBurstCount = burstCount - 1;
@@ -58,18 +64,19 @@ module mkAddressGenerator(AddressGenerator#(addrWidth));
       addrReg <= addr + 1;
       burstCountReg <= nextBurstCount;
       isLastReg <= nextIsLast;
+      Bool nextIsFirst = False;
       if (isLast) begin
 	 requestFifo.deq();
+	 nextIsFirst = True;
       end
+      isFirstReg <= nextIsFirst;
+
       addrBeatFifo.enq(AddrBeat { addr: addr, bc: burstCount, last: isLast, tag: req.tag});
    endrule
 
    interface Put request;
       method Action put(MemRequest#(addrWidth) req);
 	 requestFifo.enq(req);
-	 addrReg <= req.addr;
-	 burstCountReg <= req.burstLen;
-	 isLastReg <= (req.burstLen == 1);
       endmethod
    endinterface
    interface Get addrBeat;

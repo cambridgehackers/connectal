@@ -53,7 +53,7 @@ module mkInterruptMux#(Vector#(numPortals,ReadOnly#(Bool)) inputs) (ReadOnly#(Bo
 endmodule
 
 module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
-		   Vector#(numPortals,Portal#(aw,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
+		   Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (MemSlave#(addrWidth,dataWidth))
    provisos(Add#(1,numPortals,numInputs),
 	    Add#(a__,TLog#(numInputs),4));
    
@@ -69,39 +69,42 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
    
    FIFO#(MemRequest#(aw)) req_ars <- mkSizedFIFO(1);
    FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
-   Reg#(Bit#(TLog#(numInputs))) rs <- mkReg(0);
+   FIFO#(Bit#(TLog#(numInputs))) rs <- mkFIFO();
    
    FIFO#(MemRequest#(aw)) req_aws <- mkSizedFIFO(1);
    FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
-   Reg#(Bit#(TLog#(numInputs))) ws <- mkReg(0);
+   FIFO#(Bit#(TLog#(numInputs))) ws <- mkFIFO();
    
    rule req_aw;
       let req <- toGet(req_aws).get;
-      ifcs[ws].write_server.writeReq.put(req);
+      ifcs[ws.first].write_server.writeReq.put(req);
    endrule
          
    rule req_ar;
       let req <- toGet(req_ars).get;
-      ifcs[rs].read_server.readReq.put(req);
+      ifcs[rs.first].read_server.readReq.put(req);
    endrule
    
    interface MemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(MemRequest#(addrWidth) req);
 	    req_aws.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	    if (req.burstLen > 1) $display("**** \n\n mkSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
 	    req_aw_fifo.enq(?);
-	    ws <= truncate(psel(req.addr));
+	    ws.enq(truncate(psel(req.addr)));
+	    //$display("mkSlaveMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
       endinterface
       interface Put writeData;
 	 method Action put(ObjectData#(dataWidth) wdata);
-	    ifcs[ws].write_server.writeData.put(wdata);
+	    ifcs[ws.first].write_server.writeData.put(wdata);
 	 endmethod
       endinterface
       interface Get writeDone;
 	 method ActionValue#(Bit#(6)) get();
-	    let rv <- ifcs[ws].write_server.writeDone.get();
+	    let rv <- ifcs[ws.first].write_server.writeDone.get();
 	    req_aw_fifo.deq;
+	    ws.deq();
 	    return rv;
 	 endmethod
       endinterface
@@ -111,17 +114,104 @@ module mkSlaveMux#(Directory#(aw,aw,dataWidth) dir,
 	 method Action put(MemRequest#(addrWidth) req);
 	    req_ars.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
 	    req_ar_fifo.enq(?);
-	    rs <= truncate(psel(req.addr)); 
+	    rs.enq(truncate(psel(req.addr)));
+	    if (req.burstLen > 1) $display("**** \n\n mkSlaveMux.readReq len=%d \n\n ****", req.burstLen);
+	    //$display("mkSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
       endinterface
       interface Get readData;
 	 method ActionValue#(ObjectData#(dataWidth)) get();
-	    let rv <- ifcs[rs].read_server.readData.get();
+	    let rv <- ifcs[rs.first].read_server.readData.get();
 	    req_ar_fifo.deq;
+	    rs.deq();
+	    //$display("mkSlaveMux.readData rs=%d data=%h", rs.first, rv.data);
 	    return rv;
 	 endmethod
       endinterface
    endinterface
    
+endmodule
+
+module mkMemSlaveMux#(Vector#(numSlaves,MemSlave#(aw,dataWidth)) slaves) (MemSlave#(addrWidth,dataWidth))
+   provisos(Add#(selWidth,aw,addrWidth),
+	    Add#(a__, TLog#(numSlaves), selWidth)
+      );
+
+   Vector#(numSlaves, MemSlave#(aw,dataWidth)) ifcs = take(slaves);
+   let port_sel_low = valueOf(aw);
+   let port_sel_high = valueOf(TSub#(addrWidth,1));
+   function Bit#(selWidth) psel(Bit#(addrWidth) a);
+      return a[port_sel_high:port_sel_low];
+   endfunction
+   function Bit#(aw) asel(Bit#(addrWidth) a);
+      return a[(port_sel_low-1):0];
+   endfunction
+
+   FIFO#(MemRequest#(aw)) req_ars <- mkSizedFIFO(1);
+   FIFO#(void) req_ar_fifo <- mkSizedFIFO(1);
+   FIFO#(Bit#(TLog#(numSlaves))) rs <- mkFIFO();
+
+   FIFO#(MemRequest#(aw)) req_aws <- mkSizedFIFO(1);
+   FIFO#(void) req_aw_fifo <- mkSizedFIFO(1);
+   FIFO#(Bit#(TLog#(numSlaves))) ws <- mkFIFO();
+
+   rule req_aw;
+      let req <- toGet(req_aws).get;
+      ifcs[ws.first].write_server.writeReq.put(req);
+   endrule
+
+   rule req_ar;
+      let req <- toGet(req_ars).get;
+      ifcs[rs.first].read_server.readReq.put(req);
+   endrule
+
+   interface MemWriteServer write_server;
+      interface Put writeReq;
+	 method Action put(MemRequest#(addrWidth) req);
+	    req_aws.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	    req_aw_fifo.enq(?);
+	    if (req.burstLen > 1) $display("**** \n\n mkMemSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
+	    //$display("mkMemSlaveMux.writeReq addr=%h selWidth=%d aw=%d psel=%h", req.addr, valueOf(selWidth), valueOf(aw), psel(req.addr));
+	    ws.enq(truncate(psel(req.addr)));
+	 endmethod
+      endinterface
+      interface Put writeData;
+	 method Action put(ObjectData#(dataWidth) wdata);
+	    //$display("mkMemSlaveMux.writeData aw=%d ws=%d data=%h", valueOf(aw), ws.first, wdata.data);
+	    ifcs[ws.first].write_server.writeData.put(wdata);
+	 endmethod
+      endinterface
+      interface Get writeDone;
+	 method ActionValue#(Bit#(6)) get();
+	    let rv <- ifcs[ws.first].write_server.writeDone.get();
+	    req_aw_fifo.deq;
+	    ws.deq();
+	    return rv;
+	 endmethod
+      endinterface
+   endinterface
+   interface MemReadServer read_server;
+      interface Put readReq;
+	 method Action put(MemRequest#(addrWidth) req);
+	    req_ars.enq(MemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	    req_ar_fifo.enq(?);
+	    //$display("mkMemSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
+	    if (req.burstLen > 1) $display("**** \n\n mkMemSlaveMux.readReq len=%d \n\n ****", req.burstLen);
+	    rs.enq(truncate(psel(req.addr)));
+	 endmethod
+      endinterface
+      interface Get readData;
+	 method ActionValue#(ObjectData#(dataWidth)) get();
+	    let rv <- ifcs[rs.first].read_server.readData.get();
+	    //$display("mkMemSlaveMux.readData aw=%d rs=%d data=%h", valueOf(aw), rs.first, rv.data);
+	    //if (rv.last) begin
+	       req_ar_fifo.deq;
+	       rs.deq();
+	    //end
+	    return rv;
+	 endmethod
+      endinterface
+   endinterface
+
 endmodule
 
