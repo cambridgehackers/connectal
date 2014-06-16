@@ -20,6 +20,10 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import XilinxCells::*;
+import Gearbox::*;
+import Pipe::*;
+import BRAMFIFO::*;
 
 (* always_enabled *)
 interface FMComms1ADCPins;
@@ -36,12 +40,48 @@ interface FMComms1ADCData;
    method Bit#(1) in_or();
 endinterface
 
+typedef struct {
+   Bit#(14) data_i;
+   Bit#(1) z_i;
+   Bit#(1) or_i;
+   Bit#(14) data_q;
+   Bit#(1) z_q;
+   Bit#(1) or_q;
+   } IQ driving (Bits);
+
 interface FMComms1ADC;
    interface FMComms1ADCPins pins;
-   interface FMComms1ADCData adc;
+   interface PipeOut#(IQ) adc;
 endinterface
 
+/* This module accepts inputs from an Analog Devices FMComms1
+ * evaluation board Analog to Digital Converter, and delivers
+ * the data as a PipeOut type on the default clock.
+ * 
+ * Input is double data rate, with clock supplied by the FMComms1
+ * Input data is 14 bits twos-complement or offset binary, plus
+ * an overrange signal
+ * 
+ * Differential inputs are converted to single ended by using Xilinx IBUFDS
+ * cells. The clock is converted to single ended by an IBUFGDS cell
+ * 
+ * DDR data is convered to SDR using IDDR cells
+ * At this point, the data is a 14 bit in-phase data signal, plus in-phase
+ * overrange, but a 14 bit quadrature signal, plus overrange.
+ * 
+ * The data is packed into a 64-bit IQ datatype, with overrange as the LSB
+ * 
+ * The 32-bit data is converted to 64-bits by a Gearbox
+ * 
+ * Clock conversion happens 64-bits wide using a SyncBRAMFIFO, which
+ * presents a PipeOut channel to the rest of the logic.
+ */
+
+
 module mkFMComms1ADC(FMComms1ADC);
+   
+   Clock def_clock = exposeCurrentClock;
+   Reset def_reset <- exposeurrentReset;
    
    Vector#(14, Wire#(Bit#(1))) adc_data_p <- replicateM(mkDWire(0));
    Vector#(14, Wire#(Bit#(1))) adc_data_n <- replicateM(mkDWire(0));
@@ -51,13 +91,14 @@ module mkFMComms1ADC(FMComms1ADC);
    Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
    Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
 
-
    Vector#(14, Wire#(Bit#(1))) adc_data_p <- replicateM(mkDWire(0));
    ReadOnly#(bit#(14)) adc_data;   /* data */
    ReadOnly#(bit#(1)) adc_or;      /* overrange */
    Clock adc_dco;     /* DDR clock */
    
    adc_dco <- mkClockIBUFGDS(adc_dco_p, adc_dco_n);
+   
+   Reset adc_reset <- mkAsyncReset(3, def_reset, adc_dc0);
 
    for (Integer i = 0; i < 14; i = i + 1)
       adc_data[i] <- mkIBUFDS(adc_data_p[i], adc_data_n[i], clocked_by adc_dco);   
@@ -77,6 +118,18 @@ module mkFMComms1ADC(FMComms1ADC);
    
    rule sendup_adc_data;
       adc_sdr_or.d(adc_or);
+   endrule
+   
+   GearBox#(1, 2, IQ) gb <- mk1toNGearbox(adc_dco, adc_reset, adc_dco, adc_reset);
+   SyncFIFOIfc#(Vector#(2, IQ)) infifo <= mkSyncBRAMFIFO(128, adc_dco, adc_reset, def_clock, def_reset);
+   
+   rule sendup_gb_data;
+      gb.enq({data_i: adc_sdr_data.q1, z_i: 0, or_i: adc_sdr_or.q1,
+	 data_q: adc_sdr_data.q2, z_q: 0, or_q: adc_sdr_or.q2});
+   endrule
+
+   rule sendup_adc_fifo_data;
+      infifoq1.enq(gb.deq());
    endrule
    
    interface FMComms1ADCPins;
@@ -109,6 +162,17 @@ module mkFMComms1ADC(FMComms1ADC);
    
    endinterface;
    
+   interface PipeOut adc;
+   
+      method IQ first();
+	 return(unpack(pack(infifo.first)));
+      endmethod
+      
+      method Action deq() = infifo.deq;
+   
+      method Bool notEmpty() = infifo.notEmpty;
+      
+   endinterface
 
 
 endmodule
