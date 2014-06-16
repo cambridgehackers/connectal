@@ -337,7 +337,7 @@ module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdW
 	 method ActionValue#(MemData#(clientBusWidth)) get;
 	    wf.deq;
 	    //$display("resp_write %h", wf.first);
-	    return MemData { data: wf.first, tag: 0};
+	    return MemData { data: wf.first, tag: 0, last: True };
 	 endmethod
         endinterface
         interface Put writeDone;

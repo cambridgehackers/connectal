@@ -24,7 +24,6 @@ import Vector::*;
 import GetPut::*;
 import FIFO::*;
 import FIFOF::*;
-import Adapter::*;
 import CtrlMux::*;
 
 import Pipe::*;
@@ -91,7 +90,8 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 		  else 
 		     v = 0;
                end
-	       return MemData { data: v, tag: b.tag };
+	       //$display("mkCtrl.readData addr=%h data=%h", b.addr, v);
+	       return MemData { data: v, tag: b.tag, last: b.last };
 	    endmethod
 	 endinterface
       endinterface: read_server
@@ -100,13 +100,15 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 	 interface Put writeData;
 	    method Action put(MemData#(dataWidth) d);
 	       let b <- ctrlWriteAddrGenerator.addrBeat.get();
-	       $display("mkCtrl addr=%h data=%h", b.addr, d.data);
+	       $display("mkCtrl.writeData addr=%h data=%h last=%d", b.addr, d.data, b.last);
 	       let v = d.data;
 	       let addr = b.addr;
 	       if (addr == 'h000)
 		  noAction;
 	       if (addr == 'h004)
 		  interruptEnableReg <= v[0] == 1'd1;
+	       if (b.last)
+		  ctrlWriteDoneFifo.enq(b.tag);
 	    endmethod
 	 endinterface
 	 interface Get writeDone;
@@ -136,7 +138,7 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
 	    let b <- fifoReadAddrGenerator.addrBeat.get();
-	    return MemData { data: 0, tag: b.tag };
+	    return MemData { data: 0, tag: b.tag, last: b.last };
 	 endmethod
       endinterface
    endinterface
@@ -145,7 +147,7 @@ module mkPipeInMemSlave#(PipeIn#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWidt
       interface Put writeData;
 	 method Action put((MemData#(dataWidth)) d);
 	    let b <- fifoWriteAddrGenerator.addrBeat.get();
-	    $display("mkPipeInMemSlave.writeData.put addr=%h data=%h", b.addr, d.data);
+	    //$display("mkPipeInMemSlave.writeData.put addr=%h data=%h", b.addr, d.data);
 	    if (b.last)
 	       fifoWriteDoneFifo.enq(b.tag);
 	    if (methodPipe.notFull()) begin
@@ -163,12 +165,19 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
    AddressGenerator#(addrWidth) fifoWriteAddrGenerator <- mkAddressGenerator();
    FIFO#(Bit#(ObjectTagSize))                  fifoWriteDoneFifo <- mkFIFO();
    interface MemReadServer read_server;
-      interface Put readReq = fifoReadAddrGenerator.request;
+      interface Put readReq;
+	 method Action put(MemRequest#(addrWidth) req);
+	    fifoReadAddrGenerator.request.put(req);
+	    if (!methodPipe.notEmpty())
+	       $display("***\n\n underflow! \n\n****");
+	 endmethod
+      endinterface
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
 	    let b <- fifoReadAddrGenerator.addrBeat.get();
 	    let data <- toGet(methodPipe).get();
-	    return MemData { data: data, tag: b.tag };
+	    //$display("mkPipeOutMemSlave.readData.get addr=%h data=%h", b.addr, data);
+	    return MemData { data: data, tag: b.tag, last: b.last };
 	 endmethod
       endinterface
    endinterface
@@ -177,7 +186,7 @@ module mkPipeOutMemSlave#(PipeOut#(Bit#(dataWidth)) methodPipe)(MemSlave#(addrWi
       interface Put writeData;
 	 method Action put((MemData#(dataWidth)) d);
 	    let b <- fifoWriteAddrGenerator.addrBeat.get();
-	    $display("mkPipeOutMemSlave addr=%h data=%h", b.addr, d.data);
+	    //$display("mkPipeOutMemSlave.writeData.put addr=%h data=%h", b.addr, d.data);
 	    if (b.last)
 	       fifoWriteDoneFifo.enq(b.tag);
 	 endmethod
