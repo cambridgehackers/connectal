@@ -31,7 +31,6 @@ import Clocks::*;
 import DefaultValue::*;
 
 interface DiffOut;
-   method Action _write(Bit#(1) v);
    method Bit#(1) read_p();
    method Bit#(1) read_n();
 endinterface 
@@ -48,8 +47,6 @@ module mkxOBUFDS#(Wire#(Bit#(1)) i)(DiffOut);
    path(I, O);
    path(I, OB);
 
-  schedule _write  SB (read_p, read_n);
-  schedule _write C _write;
   schedule (read_p, read_n) CF (read_p, read_n);
 
 endmodule: mkxOBUFDS
@@ -66,11 +63,11 @@ endinterface
 typedef struct {
    Bit#(16) data_i;
    Bit#(16) data_q;
-   } IQ deriving (Bits);
+   } OIQ deriving (Bits);
 
 interface FMComms1DAC;
    interface FMComms1DACPins pins;
-   interface PipeIn#(Vector#(2, IQ)) dac;
+   interface PipeIn#(Vector#(2, OIQ)) dac;
 endinterface
 
 /* This module drives an Analog Devices FMComms1
@@ -88,7 +85,7 @@ endinterface
  * At this point, the data is a 14 bit in-phase data signal, 
  * plus a 14 bit quadrature signal, interleaved
  * 
- * The SDR data is a 32-bit IQ datatype
+ * The SDR data is a 32-bit OIQ datatype
  * 
  * The 32-bit data is converted from 64-bits by a Gearbox
  * 
@@ -105,15 +102,15 @@ module mkFMComms1DAC#(Clock clk_p, Clock clk_n)(FMComms1DAC);
    Clock dac_dco <- mkClockIBUFGDS(clk_p, clk_n);
    Reset dac_reset <- mkAsyncReset(3, def_reset, dac_dco);
    
-   SyncFIFOIfc#(Vector#(2, IQ)) outfifo <- mkSyncBRAMFIFO(128, def_clock, def_reset, dac_dco, dac_reset);
+   SyncFIFOIfc#(Vector#(2, OIQ)) outfifo <- mkSyncBRAMFIFO(128, def_clock, def_reset, dac_dco, dac_reset);
 
-   Gearbox#(2, 1, IQ) gb <- mkNto1Gearbox(dac_dco, dac_reset, dac_dco, dac_reset);
+   Gearbox#(2, 1, OIQ) gb <- mkNto1Gearbox(dac_dco, dac_reset, dac_dco, dac_reset);
    ODDRParams#(Bit#(14)) oddrparams = defaultValue;
    oddrparams.ddr_clk_edge = "SAME_EDGE_PIPELINED";
 
    ODDR#(Bit#(14)) dac_ddr <- mkODDR(oddrparams, clocked_by dac_dco);
 
-   Vector#(14, Wire#(Bit#(1))) dac_ddr_data <= replicateM(mkDWire(0));
+   Vector#(14, Wire#(Bit#(1))) dac_ddr_data <- replicateM(mkDWire(0));
    
    Vector#(14, DiffOut) dac_out = newVector;
    
@@ -129,24 +126,24 @@ module mkFMComms1DAC#(Clock clk_p, Clock clk_n)(FMComms1DAC);
    rule senddown_oddr;
       let d = gb.first;
       gb.deq();
-      dac_ddr.d1(d[0]);
-      dac_ddr.d2(d[1]);
+      dac_ddr.d1(d[0].data_i[15:2]);
+      dac_ddr.d2(d[0].data_q[15:2]);
    endrule
 
 
-   function Bit#(1) foo_p(DiffPair v);
+   function Bit#(1) foo_p(DiffOut v);
       return (v.read_p());
    endfunction
 
-   function Bit#(1) foo_n(DiffPair v);
+   function Bit#(1) foo_n(DiffOut v);
       return (v.read_n());
    endfunction
 
-   function Bit#(14) get_p(Vector#(14, DiffPair) v);
+   function Bit#(14) get_p(Vector#(14, DiffOut) v);
       return(pack(map(foo_p, v)));
    endfunction
    
-   function Bit#(14) get_n(Vector#(14, DiffPair) v);
+   function Bit#(14) get_n(Vector#(14, DiffOut) v);
       return(pack(map(foo_n, v)));
    endfunction
    
@@ -166,7 +163,7 @@ module mkFMComms1DAC#(Clock clk_p, Clock clk_n)(FMComms1DAC);
    
    interface PipeIn dac;
    
-      method Action enq(Vector#(2, IQ) v);
+      method Action enq(Vector#(2, OIQ) v);
 	 outfifo.enq(v);
       endmethod
       
