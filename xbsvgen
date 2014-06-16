@@ -487,9 +487,11 @@ def preprocess(source, defs):
         elif tok == 'endif':
             stack.pop()
         elif tok == 'define':
-            k = re.search('\s', s)
-            sym = s[:k.start()]
+            k = re.search('\n', s).start()
+            foo = re.search('\s',s).start()
+            sym = s[:min(k,foo)]
             defs.append(sym)
+            s = s[k:]
         else:
             assert(False)
         prv = pre if valid and cond else '\n\n'
