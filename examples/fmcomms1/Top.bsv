@@ -40,9 +40,6 @@ import FMComms1RequestWrapper::*;
 import FMComms1IndicationProxy::*;
 
 // defined by user
-import Imageon::*;
-import HDMI::*;
-import YUV::*;
 import XilinxCells::*;
 import XbsvXilinxCells::*;
 
@@ -52,7 +49,6 @@ interface FMComms1Pins;
    interface FMComms1ADCPins adcpins;
    interface FMComms1DACPins dacpins;
    (* prefix="" *)
-   method Action fmc_video_clk1(Bit#(1) v);
 endinterface
 
 interface FMComms1;
@@ -71,11 +67,17 @@ module mkFMComms1#(Clock fmc_imageon_clk1)(FMComms1);
    FMComms1 fmcomms1 <- mkFMComms1();
    FMComms1RequestWrapper fmcomms1RequestWrapper <- mkFMComms1RequestWrapper(FMComms1Request);
 
+   FMComms1ADC adc <- mkFMComms1ADC(adc_clk_p, adc_clk_n);
+   FMComms1DAC dac <- mkFMComms1ADC(dac_clk_p, dac_clk_n);
+   
+   
    Vector#(2,StdPortal) portal_array;
    portal_array[0] = fmcomms1RequestWrapper.portalIfc; 
    portal_array[1] = fmcomms1IndicationProxy.portalIfc;
-   interface Vector portals = portal_array;
 
+
+   interface Vector portals = portal_array;
+   
    interface FMComms1Pins pins;
        interface FMComms1ADCPins adcpins = fmcomms1adc.pins;
        interface FMComms1DACPins dacpins = fmcomms1dac.pins;
