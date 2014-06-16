@@ -101,6 +101,18 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(32)) vsyncCounter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsedVsync <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+    Reg#(Bit#(32)) zeropixel <- mkReg(0);
+    Reg#(Bit#(32)) pixelcount <- mkReg(0);
+    Reg#(Bit#(32)) pixelcount2 <- mkReg(0);
+    SyncBitIfc#(Bit#(32)) zeropixels <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
+    SyncBitIfc#(Bit#(32)) pixelcounts <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
+    SyncBitIfc#(Bit#(32)) pixelcount2s <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
+
+    rule zerosyn;
+       zeropixels.send(zeropixel);
+       pixelcounts.send(pixelcount);
+       pixelcount2s.send(pixelcount2);
+    endrule
 
     rule axicyclecount;
        counter <= counter + 1;
@@ -112,7 +124,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     rule vsyncReceived if (sendVsyncIndication.pulse());
        elapsed <= counter;
        elapsedVsync <= vsyncCounter;
-       indication.vsync(extend(counter - elapsed), extend(vsyncCounter - elapsedVsync));
+       indication.vsync({pixelcount2s.read(), zeropixels.read()}, pixelcounts.read());
        //waitingForVsync <= False;
     endrule
 
@@ -154,6 +166,14 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         dataEnable <= (lineCount >= deLinePorch && lineCount < deLineVisible
                    && pixelCount >= dePixelPorch && pixelCount < dePixelVisible);
     endrule
+    rule zzz if (!dataEnable && lineCount == deLinePorch-4);
+       zeropixel <= 0;
+       pixelcount <= 0;
+       pixelcount2 <= 0;
+    endrule
+    rule zz23 if (dataEnable);
+       pixelcount2 <= pixelcount2 + 1;
+    endrule
 
     rule output_data_rule if (!dataEnable);
         rgb888StageReg <= VideoData {de: 0, pixel: unpack(0),
@@ -166,6 +186,9 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 
     interface Put request;
         method Action put(Bit#(32) v) if (testPatternEnabled == 0 && dataEnable);
+           if (v[23:0] == 0 && lineCount < deLinePorch + 100 && pixelCount < dePixelPorch + 100)
+               zeropixel <= zeropixel + 1;
+           pixelcount <= pixelcount + 1;
            rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v[23:0])};
         endmethod
     endinterface: request

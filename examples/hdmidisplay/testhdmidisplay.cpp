@@ -36,7 +36,7 @@
 
 #define FRAME_COUNT 2
 #define MAX_PIXEL 256
-#define INCREMENT_PIXEL 2
+#define INCREMENT_PIXEL 1
 
 static HdmiInternalRequestProxy *hdmiInternal;
 static HdmiDisplayRequestProxy *device;
@@ -65,7 +65,7 @@ static void *thread_routine(void *data)
     return data;
 }
 
-static int corner[] = {-1, 0, 0xf00f, 0x0fff};
+static int corner[] = {0, -1, 0xf00f, 0x0fff};
 static int corner_index;
 static void fill_pixels(int offset)
 {
@@ -74,17 +74,19 @@ static void fill_pixels(int offset)
       for (int pixel = 0; pixel < npixels; pixel++) {
 	int v = ((((MAX_PIXEL *  line) /  nlines)+offset) % MAX_PIXEL) << 16
 	       | ((((MAX_PIXEL * pixel) / npixels)+offset) % MAX_PIXEL);
+        if (!v)
+            v = 1;
         if (line < 20 && pixel < 20)
             v = corner[(corner_index+0) % 4];
-        if (line < 30 && pixel > npixels - 100)
+        if (line < 30 && pixel > npixels - 40)
             v = corner[(corner_index+1) % 4];
         if (line > nlines - 20 && pixel < 20)
             v = corner[(corner_index+2) % 4];
-        if (line > nlines - 30 && pixel > npixels - 100)
+        if (line > nlines - 30 && pixel > npixels - 40)
             v = corner[(corner_index+3) % 4];
 	ptr[line * npixels + pixel] = v;
       }
-    corner_index = offset/128;
+    corner_index = offset/64;
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->waitForVsync(0);
@@ -104,9 +106,10 @@ totalcount += v;
 number += w;
       fill_pixels(base);
 base += INCREMENT_PIXEL;
-      if (synccount++ >= 2000) {
+      if (synccount++ >= 20) {
           synccount = 0;
-          fprintf(stderr, "[%s:%d] avg %lld; v=%d w=%d\n", __FUNCTION__, __LINE__, totalcount/number, (uint32_t) v, w);
+uint32_t zeros = v & 0xffffffff, pix = v >> 32;
+          fprintf(stderr, "[%s] v %llx pix=%x:%d. zero=%x:%d. w=%x:%d.\n", __FUNCTION__,v,pix,pix,zeros,zeros,w,w);
       }
     }
 };
@@ -192,7 +195,6 @@ int main(int argc, const char **argv)
                                 vstart,          // End of BackPorch (start of visible)
                                 vstart + nlines, // End of Visible (start of FrontPorch)
                                 vblank + nlines, vblank + nlines / 2); // End
-        //int hstart = hsyncwidth + hsyncoff;
         int hstart = hblank - hsyncoff;
         hdmiInternal->setDePixel(hsyncwidth,
                                 hstart, hstart + npixels,
