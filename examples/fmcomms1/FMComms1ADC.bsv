@@ -21,23 +21,21 @@
 // SOFTWARE.
 
 import XilinxCells::*;
+import XbsvXilinxCells::*;
 import Gearbox::*;
 import Pipe::*;
+import FIFO::*;
 import BRAMFIFO::*;
+import Vector::*;
+import Clocks::*;
+import DefaultValue::*;
 
 (* always_enabled *)
 interface FMComms1ADCPins;
-   method Action io_adc_p(Bit#(14) v);
-   method Action io_adc_n(Bit#(14) v);
-   method Action io_adc_dco_p(Bit#(1) v);
-   method Action io_adc_dco_n(Bit#(1) v);
+   method Action io_adc_data_p(Bit#(14) v);
+   method Action io_adc_data_n(Bit#(14) v);
    method Action io_adc_or_p(Bit#(1) v);
    method Action io_adc_or_n(Bit#(1) v);
-endinterface
-
-interface FMComms1ADCData;
-   method Bit#(14) in_data();
-   method Bit#(1) in_or();
 endinterface
 
 typedef struct {
@@ -47,12 +45,14 @@ typedef struct {
    Bit#(14) data_q;
    Bit#(1) z_q;
    Bit#(1) or_q;
-   } IQ driving (Bits);
+   } IQ deriving (Bits);
 
 interface FMComms1ADC;
    interface FMComms1ADCPins pins;
-   interface PipeOut#(IQ) adc;
+   interface PipeOut#(Vector#(2, IQ)) adc;
 endinterface
+
+
 
 /* This module accepts inputs from an Analog Devices FMComms1
  * evaluation board Analog to Digital Converter, and delivers
@@ -60,7 +60,7 @@ endinterface
  * 
  * Input is double data rate, with clock supplied by the FMComms1
  * Input data is 14 bits twos-complement or offset binary, plus
- * an overrange signal
+ * an overrange signa=
  * 
  * Differential inputs are converted to single ended by using Xilinx IBUFDS
  * cells. The clock is converted to single ended by an IBUFGDS cell
@@ -78,93 +78,109 @@ endinterface
  */
 
 
-module mkFMComms1ADC(FMComms1ADC);
+module mkFMComms1ADC#(Clock clk_p, Clock clk_n)(FMComms1ADC);
    
-   Clock def_clock = exposeCurrentClock;
-   Reset def_reset <- exposeurrentReset;
+   Clock def_clock <- exposeCurrentClock;
+   Reset def_reset <- exposeCurrentReset;
    
-   Vector#(14, Wire#(Bit#(1))) adc_data_p <- replicateM(mkDWire(0));
-   Vector#(14, Wire#(Bit#(1))) adc_data_n <- replicateM(mkDWire(0));
+   function Bit#(1) foo(ReadOnly#(Bit#(1)) v);
+      return (v._read());
+   endfunction
+   
+
+   function ReadOnly#(Bit#(14)) rofromrov(Vector#(14, ReadOnly#(Bit#(1))) v);
+      return(interface ReadOnly;
+	     method Bit#(14) _read;
+		return ( pack(map(foo, v)));
+	     endmethod
+	     endinterface
+	     );
+   endfunction
+   
+   
+   
+   Vector#(14, Wire#(Bit#(1))) adc_data_p = newVector;
+   
+   
+
+   for (Integer i = 0; i < 14; i = i + 1)
+      adc_data_p[i] <- mkDWire(0);
+   Vector#(14, Wire#(Bit#(1))) adc_data_n = newVector;
+   for (Integer i = 0; i < 14; i = i + 1)
+      adc_data_n[i] <- mkDWire(0);
 
    Wire#(Bit#(1)) adc_or_p <- mkDWire(0);
    Wire#(Bit#(1)) adc_or_n <- mkDWire(0);
-   Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
-   Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
 
-   Vector#(14, Wire#(Bit#(1))) adc_data_p <- replicateM(mkDWire(0));
-   ReadOnly#(bit#(14)) adc_data;   /* data */
-   ReadOnly#(bit#(1)) adc_or;      /* overrange */
+   Vector#(14, ReadOnly#(Bit#(1))) v_adc_data;   /* data */
+   ReadOnly#(Bit#(14)) adc_data;
+
+   ReadOnly#(Bit#(1)) adc_or;      /* overrange */
    Clock adc_dco;     /* DDR clock */
    
-   adc_dco <- mkClockIBUFGDS(adc_dco_p, adc_dco_n);
+   adc_dco <- mkClockIBUFGDS(clk_p, clk_n);
    
-   Reset adc_reset <- mkAsyncReset(3, def_reset, adc_dc0);
-
-   for (Integer i = 0; i < 14; i = i + 1)
-      adc_data[i] <- mkIBUFDS(adc_data_p[i], adc_data_n[i], clocked_by adc_dco);   
+   Reset adc_reset <- mkAsyncReset(3, def_reset, adc_dco);
+   for(Integer i = 0; i < 14; i = i + 1)
+      v_adc_data[i] <- mkIBUFDS(adc_data_p[i], adc_data_n[i], clocked_by adc_dco);   
+   adc_data = rofromrov(v_adc_data);
+   
    adc_or <- mkIBUFDS(adc_or_p, adc_or_n, clocked_by adc_dco);
    
    IDDRParams#(Bit#(14)) iddrparams_data = defaultValue;
    iddrparams_data.ddr_clk_edge = "SAME_EDGE_PIPELINED";
-   IDDR#(Bit#(14)) adc_sdr_data <= mkIDDR(iddrparams_data, clocked_by adc_dco);
+   IDDR#(Bit#(14)) adc_sdr_data <- mkIDDR(iddrparams_data, clocked_by adc_dco);
    
-   IDDRParams#(Bit#(11)) iddrparams_or = defaultValue;
+   IDDRParams#(Bit#(1)) iddrparams_or = defaultValue;
    iddrparams_or.ddr_clk_edge = "SAME_EDGE_PIPELINED";
-   IDDR#(Bit#(1)) adc_sdr_or <= mkIDDR(iddrparams_or, clocked_by adc_dco);
+   IDDR#(Bit#(1)) adc_sdr_or <- mkIDDR(iddrparams_or, clocked_by adc_dco);
    
    rule sendup_adc_data;
-      adc_sdr_data.d(adc_data);
+      adc_sdr_data.d(pack(adc_data));
    endrule
    
-   rule sendup_adc_data;
+   rule sendup_adc_or;
       adc_sdr_or.d(adc_or);
    endrule
    
-   GearBox#(1, 2, IQ) gb <- mk1toNGearbox(adc_dco, adc_reset, adc_dco, adc_reset);
-   SyncFIFOIfc#(Vector#(2, IQ)) infifo <= mkSyncBRAMFIFO(128, adc_dco, adc_reset, def_clock, def_reset);
+   Gearbox#(1, 2, IQ) gb <- mk1toNGearbox(adc_dco, adc_reset, adc_dco, adc_reset);
+   SyncFIFOIfc#(Vector#(2, IQ)) infifo <- mkSyncBRAMFIFO(128, adc_dco, adc_reset, def_clock, def_reset);
    
    rule sendup_gb_data;
-      gb.enq({data_i: adc_sdr_data.q1, z_i: 0, or_i: adc_sdr_or.q1,
-	 data_q: adc_sdr_data.q2, z_q: 0, or_q: adc_sdr_or.q2});
+      gb.enq(unpack(pack(IQ{data_i: adc_sdr_data.q1, z_i: 0, or_i: adc_sdr_or.q1,
+	 data_q: adc_sdr_data.q2, z_q: 0, or_q: adc_sdr_or.q2})));
    endrule
 
    rule sendup_adc_fifo_data;
-      infifoq1.enq(gb.deq());
+      gb.deq();
+      infifo.enq(gb.first());
    endrule
    
-   interface FMComms1ADCPins;
+   interface FMComms1ADCPins pins;
       
       method Action io_adc_data_p(Bit#(14) v);
-	 for (Integer i = 0; i < 14; i = i + 1)
-	    adc_data_p[i] = v[i];
+         for (Integer i = 0; i < 14; i = i + 1)
+	    adc_data_p[i] <= v[i];
       endmethod
       
       method Action io_adc_data_n(Bit#(14) v);
-	 for (Integer i = 0; i < 14; i = i + 1)
-	    adc_data_n[i] = v[i];
+         for (Integer i = 0; i < 14; i = i + 1)
+	    adc_data_n[i] <= v[i];
       endmethod
       
-      method Action io_adc_dco_p(Bit#(1));
-	 adc_dco_p <= v;
-      endmethod
-      
-      method Action io_adc_dco_n(Bit#(1));
-	 adc_dco_n <= v;
-      endmethod
-      
-      method Action io_adc_or_p(Bit#(1));
+      method Action io_adc_or_p(Bit#(1) v);
 	 adc_or_p <= v;
       endmethod
       
-      method Action io_adc_or_n(Bit#(1));
+      method Action io_adc_or_n(Bit#(1) v);
 	 adc_or_n <= v;
       endmethod
    
-   endinterface;
+   endinterface
    
    interface PipeOut adc;
    
-      method IQ first();
+      method Vector#(2, IQ) first();
 	 return(unpack(pack(infifo.first)));
       endmethod
       
