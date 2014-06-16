@@ -185,7 +185,14 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule testpattern_rule if (testPatternEnabled != 0 && dataEnable);
-        rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(patternRegs[{patternIndex1, patternIndex0}]) };
+        Bit#(24) v = patternRegs[{patternIndex1, patternIndex0}];
+        if (lineCount < deLineVisible + 20) begin
+            if (pixelCount < dePixelVisible + 20)
+                v = 0;
+            if (pixelCount > dePixelEnd-30)
+                v = 24'hffffff;
+        end
+        rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v)};
     endrule
 
     interface Put request;
