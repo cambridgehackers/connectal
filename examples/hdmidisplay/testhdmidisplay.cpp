@@ -190,14 +190,12 @@ int main(int argc, const char **argv)
 		npixels, nlines);
 	status = poller->setClockFrequency(1, pixclk, 0);
 
-        int vstart = vblank - vsyncoff;
-	hdmiInternal->setDeLine(vsyncwidth,      // End of Sync
-                                vstart,          // End of BackPorch (start of visible)
-                                vstart + nlines, // End of Visible (start of FrontPorch)
+	hdmiInternal->setDeLine(vsyncoff,           // End of FrontPorch
+                                vsyncoff+vsyncwidth,// End of Sync
+                                vblank,             // Start of Visible (start of BackPorch)
                                 vblank + nlines, vblank + nlines / 2); // End
-        int hstart = hblank - hsyncoff;
-        hdmiInternal->setDePixel(hsyncwidth,
-                                hstart, hstart + npixels,
+        hdmiInternal->setDePixel(hsyncoff,
+                                hsyncoff+hsyncwidth, hblank,
                                 hblank + npixels, hblank + npixels / 2);
 	break;
       }

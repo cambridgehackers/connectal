@@ -50,8 +50,8 @@ endinterface
 interface HdmiInternalRequest;
     method Action setTestPattern(Bit#(1) v);
     method Action setPatternColor(Bit#(32) v);
-    method Action setDePixel(Bit#(12) width, Bit#(12) porch, Bit#(12) visible, Bit#(12) last, Bit#(12) mid);
-    method Action setDeLine(Bit#(11) width, Bit#(11) porch, Bit#(11) visible, Bit#(11) last, Bit#(11) mid);
+    method Action setDePixel(Bit#(12) porch, Bit#(12) width, Bit#(12) visible, Bit#(12) last, Bit#(12) mid);
+    method Action setDeLine(Bit#(11) porch, Bit#(11) width, Bit#(11) visible, Bit#(11) last, Bit#(11) mid);
     method Action waitForVsync(Bit#(32) unused);
 endinterface
 interface HdmiInternalIndication;
@@ -91,6 +91,9 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(1)) patternIndex1 <- mkReg(0);
     Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
     Reg#(Bool) dataEnable <- mkReg(False);
+    Reg#(Bool) lineVisible <- mkReg(False);
+    Reg#(Bit#(1)) vsync <- mkReg(0);
+    Reg#(Bit#(1)) hsync <- mkReg(0);
 
     Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
@@ -124,7 +127,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     rule vsyncReceived if (sendVsyncIndication.pulse());
        elapsed <= counter;
        elapsedVsync <= vsyncCounter;
-       indication.vsync({pixelcount2s.read(), zeropixels.read()}, pixelcounts.read());
+       indication.vsync(extend(elapsed), vsyncCounter);
        //waitingForVsync <= False;
     endrule
 
@@ -138,46 +141,49 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule inc_counters;
-        if (lineCount == 0 && pixelCount == 0) begin
+        if (lineCount == deLineWidth && pixelCount == 0) begin
 	    vsyncCountPulse.send();
             vsyncPulse.send();
-            if (waitingForVsync)
-	       sendVsyncIndication.send();
             testPatternEnabled <= shadowTestPatternEnabled;
         end
+        if (lineCount == deLinePorch)
+           vsync <= 1;
+        else if (lineCount == deLineWidth)
+           vsync <= 0;
+        if (pixelCount == dePixelPorch)
+           hsync <= 1;
+        else if (pixelCount == dePixelWidth)
+           hsync <= 0;
         if (pixelCount == dePixelEnd) begin
            pixelCount <= 0; 
+           dataEnable <= False;
            patternIndex0 <= 0;
            if (lineCount == deLineEnd) begin
                lineCount <= 0;
                patternIndex1 <= 0;
+               lineVisible <= False;
+               if (waitingForVsync)
+	          sendVsyncIndication.send();
            end
            else begin
+               if (lineCount == deLineVisible)
+                   lineVisible <= True;
                lineCount <= lineCount+1;
                if (lineCount >= lineMidpoint)
                    patternIndex1 <= 1;
            end
         end
         else begin
+           if (pixelCount == dePixelVisible)
+               dataEnable <= lineVisible;
            pixelCount <= pixelCount + 1;
-           if (pixelCount >= pixelMidpoint)
+           if (pixelCount == pixelMidpoint)
                patternIndex0 <= 1;
         end
-        dataEnable <= (lineCount >= deLinePorch && lineCount < deLineVisible
-                   && pixelCount >= dePixelPorch && pixelCount < dePixelVisible);
-    endrule
-    rule zzz if (!dataEnable && lineCount == deLinePorch-4);
-       zeropixel <= 0;
-       pixelcount <= 0;
-       pixelcount2 <= 0;
-    endrule
-    rule zz23 if (dataEnable);
-       pixelcount2 <= pixelcount2 + 1;
     endrule
 
     rule output_data_rule if (!dataEnable);
-        rgb888StageReg <= VideoData {de: 0, pixel: unpack(0),
-               vsync: pack(lineCount <= deLineWidth), hsync: pack(pixelCount <= dePixelWidth) };
+        rgb888StageReg <= VideoData {de: 0, pixel: unpack(0), vsync: vsync, hsync: hsync };
     endrule
 
     rule testpattern_rule if (testPatternEnabled != 0 && dataEnable);
@@ -186,9 +192,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 
     interface Put request;
         method Action put(Bit#(32) v) if (testPatternEnabled == 0 && dataEnable);
-           if (v[23:0] == 0 && lineCount < deLinePorch + 100 && pixelCount < dePixelPorch + 100)
-               zeropixel <= zeropixel + 1;
-           pixelcount <= pixelcount + 1;
            rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v[23:0])};
         endmethod
     endinterface: request
@@ -200,14 +203,14 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         method Action setTestPattern(Bit#(1) v);
             shadowTestPatternEnabled <= v;
         endmethod
-        method Action setDePixel(Bit#(12) width, Bit#(12) porch, Bit#(12) visible, Bit#(12) last, Bit#(12) mid);
+        method Action setDePixel(Bit#(12) porch, Bit#(12) width, Bit#(12) visible, Bit#(12) last, Bit#(12) mid);
             dePixelWidth <= width;
             dePixelPorch <= porch;
             dePixelVisible <= visible;
             dePixelEnd <= last;
             pixelMidpoint <= mid;
         endmethod
-        method Action setDeLine(Bit#(11) width, Bit#(11) porch, Bit#(11) visible, Bit#(11) last, Bit#(11) mid);
+        method Action setDeLine(Bit#(11) porch, Bit#(11) width, Bit#(11) visible, Bit#(11) last, Bit#(11) mid);
             deLineWidth <= width;
             deLinePorch <= porch;
             deLineVisible <= visible;
