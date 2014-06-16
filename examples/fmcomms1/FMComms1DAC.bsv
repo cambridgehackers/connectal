@@ -51,9 +51,6 @@ module mkxOBUFDS#(Wire#(Bit#(1)) i)(DiffOut);
 
 endmodule: mkxOBUFDS
 
-
-
-
 (* always_enabled *)
 interface FMComms1DACPins;
    method Bit#(14) io_dac_data_p();
@@ -116,7 +113,6 @@ module mkFMComms1DAC#(Clock clk_p, Clock clk_n)(FMComms1DAC);
    
    for (Integer i = 0; i < 14; i = i + 1)
       dac_out[i] <- mkxOBUFDS(dac_ddr_data[i]);
-
    
    rule senddown_gb;
       outfifo.deq();
@@ -129,7 +125,6 @@ module mkFMComms1DAC#(Clock clk_p, Clock clk_n)(FMComms1DAC);
       dac_ddr.d1(d[0].data_i[15:2]);
       dac_ddr.d2(d[0].data_q[15:2]);
    endrule
-
 
    function Bit#(1) foo_p(DiffOut v);
       return (v.read_p());
@@ -146,8 +141,6 @@ module mkFMComms1DAC#(Clock clk_p, Clock clk_n)(FMComms1DAC);
    function Bit#(14) get_n(Vector#(14, DiffOut) v);
       return(pack(map(foo_n, v)));
    endfunction
-   
-
    
    interface FMComms1DACPins pins;
       
@@ -170,6 +163,5 @@ module mkFMComms1DAC#(Clock clk_p, Clock clk_n)(FMComms1DAC);
       method Bool notFull() = outfifo.notFull;
       
    endinterface
-
 
 endmodule
