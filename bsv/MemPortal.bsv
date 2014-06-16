@@ -100,7 +100,7 @@ module mkPortalCtrlMemSlave#(Vector#(numIndications, PipeOut#(Bit#(dataWidth))) 
 	 interface Put writeData;
 	    method Action put(MemData#(dataWidth) d);
 	       let b <- ctrlWriteAddrGenerator.addrBeat.get();
-	       $display("mkCtrl.writeData addr=%h data=%h last=%d", b.addr, d.data, b.last);
+	       //$display("mkCtrl.writeData addr=%h data=%h last=%d", b.addr, d.data, b.last);
 	       let v = d.data;
 	       let addr = b.addr;
 	       if (addr == 'h000)
