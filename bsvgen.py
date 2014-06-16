@@ -158,7 +158,7 @@ requestRuleTemplate='''
         let request = %(methodName)s_requestFifo.first;
         %(methodName)s_requestFifo.deq;
         %(invokeMethod)s
-        $display("invoked request method %(methodName)s");
+        //$display("invoked request method %(methodName)s");
     endrule
 '''
 
@@ -174,7 +174,7 @@ indicationMethodDeclTemplate='''
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
         %(methodName)s_responseFifo.enq(%(MethodName)s_Response {%(structElements)s});
-        $display(\"indicationMethod \'%(methodName)s\' invoked\");
+        //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
 
