@@ -36,7 +36,7 @@
 
 #define FRAME_COUNT 2
 #define MAX_PIXEL 256
-#define INCREMENT_PIXEL 1
+#define INCREMENT_PIXEL 2
 
 static HdmiInternalRequestProxy *hdmiInternal;
 static HdmiDisplayRequestProxy *device;
@@ -84,9 +84,13 @@ static void fill_pixels(int offset)
             v = corner[(corner_index+2) % 4];
         if (line > nlines - 30 && pixel > npixels - 40)
             v = corner[(corner_index+3) % 4];
+        if (line < 20 && pixel % 20 < 2)
+            v = corner[(corner_index+0) % 4];
+        if (line % 30 < 2 && pixel > npixels - 40)
+            v = corner[(corner_index+1) % 4];
 	ptr[line * npixels + pixel] = v;
       }
-    corner_index = offset/64;
+    corner_index = offset/16;
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiInternal->waitForVsync(0);
