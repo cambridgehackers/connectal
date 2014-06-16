@@ -127,7 +127,9 @@ portalIfcTemplate='''
             return %(ifcType)s;
         endmethod
         interface Vector requests = requestPipes;
+        interface Vector requestSizeBits = requestBits;
         interface Vector indications = indicationPipes;
+        interface Vector indicationSizeBits = indicationBits;
     endinterface
 '''
 
@@ -151,16 +153,19 @@ proxyCtrlTemplate='''
 requestRuleTemplate='''
     FromBit#(32,%(MethodName)s_Request) %(methodName)s_requestFifo <- mkFromBit();
     requestPipes[%(channelNumber)s] = toPipeIn(%(methodName)s_requestFifo);
+    requestBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Request)));
     rule handle_%(methodName)s_request;
         let request = %(methodName)s_requestFifo.first;
         %(methodName)s_requestFifo.deq;
         %(invokeMethod)s
+        $display("invoked request method %(methodName)s");
     endrule
 '''
 
 indicationRuleTemplate='''
     ToBit#(32,%(MethodName)s_Response) %(methodName)s_responseFifo <- mkToBit();
     indicationPipes[%(channelNumber)s] = toPipeOut(%(methodName)s_responseFifo);
+    indicationBits[%(channelNumber)s]  = fromInteger(valueOf(SizeOf#(%(MethodName)s_Response)));
 '''
 
 indicationMethodDeclTemplate='''
@@ -169,7 +174,7 @@ indicationMethodDeclTemplate='''
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
         %(methodName)s_responseFifo.enq(%(MethodName)s_Response {%(structElements)s});
-        //$display(\"indicationMethod \'%(methodName)s\' invoked\");
+        $display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
 
@@ -189,7 +194,9 @@ module mk%(Dut)sPortal#(idType id, %(Ifc)s ifc)(%(Dut)sPortal)
     provisos (Bits#(idType, __a), 
               Add#(a__, __a, 32));
     Vector#(%(requestChannelCount)s, PipeIn#(Bit#(32))) requestPipes = newVector();
+    Vector#(%(requestChannelCount)s, Bit#(32)) requestBits = newVector();
     Vector#(0, PipeOut#(Bit#(32))) indicationPipes = nil;
+    Vector#(0, Bit#(32))           indicationBits = nil;
 %(wrapperCtrl)s
 %(portalIfc)s
 endmodule
@@ -219,7 +226,9 @@ mkExposedProxyInterfaceTemplate='''
 (* synthesize *)
 module %(moduleContext)s mk%(Dut)sSynth#(Bit#(32) id) (%(Dut)sPortal);
     Vector#(0, PipeIn#(Bit#(32))) requestPipes = nil;
+    Vector#(0, Bit#(32))          requestBits = nil;
     Vector#(%(channelCount)s, PipeOut#(Bit#(32))) indicationPipes = newVector();
+    Vector#(%(channelCount)s, Bit#(32))           indicationBits = newVector();
 %(proxyCtrl)s
 %(portalIfc)s
 endmodule
