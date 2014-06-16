@@ -65,7 +65,7 @@ interface HdmiGenerator#(type pixelType);
 endinterface
 
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
-   SyncPulseIfc vsyncPulse, HdmiInternalIndication indication)(HdmiGenerator#(Rgb888));
+   SyncPulseIfc startDMA, HdmiInternalIndication indication)(HdmiGenerator#(Rgb888));
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
@@ -82,7 +82,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
-    SyncPulseIfc vsyncCountPulse <- mkSyncHandshake(defaultClock, defaultReset, axi_clock);
     SyncPulseIfc sendVsyncIndication <- mkSyncHandshake(defaultClock, defaultReset, axi_clock);
 
     Reg#(Bit#(11)) lineCount <- mkReg(0);
@@ -121,13 +120,13 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
        counter <= counter + 1;
     endrule
       
-    rule vsyncCount if (vsyncCountPulse.pulse());
+    rule vsyncCount if (startDMA.pulse());
        vsyncCounter <= vsyncCounter+1;
     endrule
     rule vsyncReceived if (sendVsyncIndication.pulse());
        elapsed <= counter;
        elapsedVsync <= vsyncCounter;
-       indication.vsync(extend(elapsed), vsyncCounter);
+       indication.vsync(extend(elapsed - counter), vsyncCounter - vsyncCounter);
        //waitingForVsync <= False;
     endrule
 
@@ -141,13 +140,11 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule inc_counters;
-        if (lineCount == deLineWidth && pixelCount == 0) begin
-	    vsyncCountPulse.send();
-            vsyncPulse.send();
-            testPatternEnabled <= shadowTestPatternEnabled;
-        end
-        if (lineCount == deLinePorch)
+        if (lineCount == deLinePorch) begin
            vsync <= 1;
+           if (pixelCount == 0)
+               startDMA.send();
+        end
         else if (lineCount == deLineWidth)
            vsync <= 0;
         if (pixelCount == dePixelPorch)
@@ -162,6 +159,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
                lineCount <= 0;
                patternIndex1 <= 0;
                lineVisible <= False;
+               testPatternEnabled <= shadowTestPatternEnabled;
                if (waitingForVsync)
 	          sendVsyncIndication.send();
            end
