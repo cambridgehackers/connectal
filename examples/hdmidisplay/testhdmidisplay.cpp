@@ -93,6 +93,7 @@ static void fill_pixels(int offset)
     corner_index = offset/16;
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
+    hdmiInternal->setTestPattern(0);
     hdmiInternal->waitForVsync(0);
     frame_index = 1 - frame_index;
 }
@@ -220,7 +221,6 @@ int main(int argc, const char **argv)
     fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc[0]);
     fill_pixels(0);
     fprintf(stderr, "done\n");
-    hdmiInternal->setTestPattern(0);
     while (1) {
       fprintf(stderr, "mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));
       sleep(1);
