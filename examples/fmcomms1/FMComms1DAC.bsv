@@ -37,6 +37,8 @@ import extraXilinxCells::*;
 interface FMComms1DACPins;
    method Bit#(14) io_dac_data_p();
    method Bit#(14) io_dac_data_n();
+   method Action io_dac_dco_p(Bit#(1) v);
+   method Action io_dac_dco_n(Bit#(1) v);
 endinterface
 
 typedef struct {
@@ -73,12 +75,14 @@ endinterface
  */
 
 
-module mkFMComms1DAC#(Clock clk_p, Clock clk_n)(FMComms1DAC);
+module mkFMComms1DAC(FMComms1DAC);
    
    Clock def_clock <- exposeCurrentClock;
    Reset def_reset <- exposeCurrentReset;
-   
-   Clock dac_dco <- mkClockIBUFGDS(clk_p, clk_n);
+   Wire#(Bit#(1)) dac_dco_p <- mkDWire(0);
+   Wire#(Bit#(1)) dac_dco_n <- mkDWire(0);
+
+   Clock dac_dco <- mkClockIBUFDS(dac_dco_p, dac_dco_n);
    Reset dac_reset <- mkAsyncReset(3, def_reset, dac_dco);
    
    SyncFIFOIfc#(Vector#(2, OIQ)) outfifo <- mkSyncBRAMFIFO(128, def_clock, def_reset, dac_dco, dac_reset);
@@ -133,7 +137,15 @@ module mkFMComms1DAC#(Clock clk_p, Clock clk_n)(FMComms1DAC);
       method Bit#(14) io_dac_data_n();
          return(get_n(dac_out));
       endmethod
-   
+
+      method Action io_dac_dco_p(Bit#(1) v);
+	 dac_dco_p <= v;
+      endmethod
+      
+      method Action io_dac_dco_n(Bit#(1) v);
+	 dac_dco_n <= v;
+      endmethod
+
    endinterface
    
    interface PipeIn dac;
