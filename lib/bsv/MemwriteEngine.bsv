@@ -235,7 +235,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	    end
 	    match {._idx, .wd} <- toGet(write_data_funnel.dataOut).get;
 	    //$display("writeData %d %h", idx, wd);
-	    return ObjectData{data:wd, tag:0};
+	    return ObjectData{data:wd, tag:0, last: False};
 	 endmethod
       endinterface
       interface Put writeDone;
