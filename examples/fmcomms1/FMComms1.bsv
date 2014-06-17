@@ -54,7 +54,7 @@ endinterface
  * 
  * Writes are the same
  */
-module mkFMComms1#(FMComms1Indication indication) (FMComms1);
+module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#64) dac, PipeOut#(Bit#(64) adc) (FMComms1);
 
    Reg#(ObjectPointer)     readPointer <- mkReg(0);
    Reg#(Bit#(32))         readNumWords <- mkReg(0);
@@ -70,6 +70,9 @@ module mkFMComms1#(FMComms1Indication indication) (FMComms1);
    Reg#(Bit#(1))          writeRun <- mkReg(0);
    
    MemwriteEngine#(64,1)        we <- mkMemwriteEngineBuff(64*16);
+   
+   mkConnection(adc, wr.dataPipe[0]);
+   mkConnection(re.dataPipe[0], dac);
    
    rule readStart (readRun == 1);
       readIterCount <= readIterCount + 1;
