@@ -1,0 +1,162 @@
+These measurements based on 
+  * dbn 9587023178c555dc8028cabb910e4571ae910798
+  * xbsv 53a86e0d2e5dfbe6a034d166c99aa39b999afd71
+
+Bluesim:
+
+N=2, J=1, K=4
+    MemLatency=1, FPLatency=1
+    NumMasters=1
+    64x64 * 64x64
+    mmfDone cycles=183352
+    macs 262144 cycles 183352.000000 macs/cycle: 1.429731
+    memory read beats 163840 utilization (beats/cycle): 0.893582
+    memory write beats 2048 utilization (beats/cycle): 0.011170
+
+N=2, J=1, K=4
+    MemLatency=1, FPLatency=1
+    NumMasters=5
+    64x64 * 64x64
+    mmfDone cycles=147480
+    macs 262144 cycles 147480.000000 macs/cycle: 1.777488
+    memory read beats 163840 utilization (beats/cycle): 1.110930
+    memory write beats 2048 utilization (beats/cycle): 0.013887
+
+N=4, J=1, K=16
+    MemLatency=1, FPLatency=1
+    NumMasters=17
+    64x64 * 64x64
+    mmfDone cycles=147483
+    macs 262144 cycles 147483.000000 macs/cycle: 1.777452
+    memory read beats 69632 utilization (beats/cycle): 0.472136
+    memory write beats 1024 utilization (beats/cycle): 0.006943
+
+N=4, J=1, K=16
+    MemLatency=1, FPLatency=1
+    NumMasters=1
+    64x64 * 64x64
+    mmfDone cycles=79674
+    macs 262144 cycles 79674.000000 macs/cycle: 3.290208
+    memory read beats 69632 utilization (beats/cycle): 0.873961
+    memory write beats 1024 utilization (beats/cycle): 0.012852
+
+N=4, J=1, K=32
+    MemLatency=1, FPLatency=1
+    NumMasters=1
+    64x64 * 64x64
+    mmfDone cycles=76689
+    macs 262144 cycles 76689.000000 macs/cycle: 3.418274
+    memory read beats 67584 utilization (beats/cycle): 0.881274
+    memory write beats 1024 utilization (beats/cycle): 0.013353
+
+
+ZC702, 100MHz:
+    N=2, J=1, K=4
+    MemLatency=?, FPLatency=5
+    NumMasters=1
+    64x64 * 64x64
+    mmfDone cycles=189029
+    macs 262144 cycles 189029.000000 macs/cycle: 1.386793
+    memory read beats 163840 utilization (beats/cycle): 0.866745
+    memory write beats 2048 utilization (beats/cycle): 0.010834
+
+============================================================
+
+Bluesim
+    N=2, J=4, K=4
+    MemLatency=1, NumMasters=1
+    mmfDone cycles=19876
+    macs 262144 cycles 19876.000000 macs/cycle: 13.188972
+    memory read beats 16384 utilization (beats/cycle): 0.824311
+    memory write beats 1024 utilization (beats/cycle): 0.051519
+
+    N=2, J=8, K=8
+    MemLatency=1, NumMasters=1
+    mmfDone cycles=34715
+    macs 262144 cycles 34715.000000 macs/cycle: 7.551318
+    memory read beats 32768 utilization (beats/cycle): 0.943915
+    memory write beats 2048 utilization (beats/cycle): 0.058995
+
+    N=2, J=16, K=16
+    MemLatency=1, NumMasters=1
+    mmfDone cycles=17291
+    macs 262144 cycles 17291.000000 macs/cycle: 15.160720
+    memory read beats 16384 utilization (beats/cycle): 0.947545
+    memory write beats 2048 utilization (beats/cycle): 0.118443
+
+    N=4, J=4, K=4
+    MemLatency=1, NumMasters=1
+    mmfDone cycles=36942
+    macs 262144 cycles 36942.000000 macs/cycle: 7.096097
+    memory read beats 32768 utilization (beats/cycle): 0.887012
+    memory write beats 1024 utilization (beats/cycle): 0.027719
+
+    N=4, J=8, K=8
+    MemLatency=1, NumMasters=1
+    mmfDone cycles=18793
+    macs 262144 cycles 18793.000000 macs/cycle: 13.949023
+    memory read beats 16384 utilization (beats/cycle): 0.871814
+    memory write beats 1024 utilization (beats/cycle): 0.054488
+
+    N=4, J=16, K=16
+    MemLatency=1, NumMasters=1
+    *failed to build*
+
+ZC706, 100MHz:
+    N=2, J=4, K=4
+    MemLatency=?, NumMasters=1
+    mmfDone cycles=195439
+    macs 262144 cycles 195439.000000 macs/cycle: 1.341309, 134 MFLOPs
+    memory read beats 163840 utilization (beats/cycle): 0.838318
+    memory write beats 2048 utilization (beats/cycle): 0.010479
+
+
+    N=2, J=4, K=4
+    MemLatency=?, NumMasters=4
+    mmfDone cycles=68374
+    macs 262144 cycles 68374.000000 macs/cycle: 3.833972, 383 MFLOPs
+    memory read beats 65536 utilization (beats/cycle): 0.958493
+    memory write beats 2048 utilization (beats/cycle): 0.029953
+
+    N=2, J=8, K=4
+    MemLatency=?, NumMasters=4
+    mmfDone cycles=46017
+    macs 262144 cycles 46017.000000 macs/cycle: 5.696677, 570 MFLOPS
+    memory read beats 49152 utilization (beats/cycle): 1.068127
+    memory write beats 2048 utilization (beats/cycle): 0.044505
+
+    N=2, J=8, K=4
+    MemLatency=?, NumMasters=4
+    mmfDone cycles=41844
+    macs 262144 cycles 41844.000000 macs/cycle: 6.264793, 626 MFLOPS
+    memory read beats 32768 utilization (beats/cycle): 0.783099
+    memory write beats 2048 utilization (beats/cycle): 0.048944
+
+============================================================
+Bluesim:
+
+    N=2, J=8, K=8
+    MemLatency=1, NumMasters=4
+
+    N=2, J=16, K=16, 64x64
+    MemLatency=1, NumMasters=4
+    mmfDone cycles=21048
+    macs 262144 cycles 21048.000000 macs/cycle: 12.454580
+    memory read beats 16384 utilization (beats/cycle): 0.778411
+    memory write beats 2048 utilization (beats/cycle): 0.097301
+
+    N=2, J=16, K=16, 256x256
+    MemLatency=1, NumMasters=4
+    mmfDone cycles=1131864
+    macs 16777216 cycles 1131864.000000 macs/cycle: 14.822643
+    memory read beats 1048576 utilization (beats/cycle): 0.926415
+    memory write beats 32768 utilization (beats/cycle): 0.028950
+
+ZC706, 100MHz:
+
+    N=2, J=8, K=8
+    MemLatency=?, NumMasters=4
+    mmfDone cycles=61676
+    macs 262144 cycles 61676.000000 macs/cycle: 4.250340 425 MFLOPs
+    memory read beats 32768 utilization (beats/cycle): 0.531293
+    memory write beats 2048 utilization (beats/cycle): 0.033206
