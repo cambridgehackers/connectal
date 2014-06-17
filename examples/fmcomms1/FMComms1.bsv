@@ -105,7 +105,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
       method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
 	 $display("startRead rdPointer=%d numWords=%h burstLen=%d run=%d",
 	    pointer, numWords, burstLen, run);
-	 if (run == 1) indication.readStatus(readInterCount, run);
+	 if (run == 1) indication.readStatus(readIterCount, run);
 	 readPointer <= pointer;
 	 readNumWords  <= numWords;
 	 readBurstLen  <= truncate(burstLen);
