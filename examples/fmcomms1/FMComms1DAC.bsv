@@ -48,7 +48,7 @@ typedef struct {
 
 interface FMComms1DAC;
    interface FMComms1DACPins pins;
-   interface PipeIn#(Vector#(2, OIQ)) dac;
+   interface PipeIn#(Bit#(64)) dac;
 endinterface
 
 /* This module drives an Analog Devices FMComms1
@@ -150,8 +150,8 @@ module mkFMComms1DAC(FMComms1DAC);
    
    interface PipeIn dac;
    
-      method Action enq(Vector#(2, OIQ) v);
-	 outfifo.enq(v);
+      method Action enq(Bit#(64) v);
+	 outfifo.enq(pack(unpack(v)));
       endmethod
       
       method Bool notFull() = outfifo.notFull;
