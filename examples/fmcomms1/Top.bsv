@@ -56,50 +56,17 @@ typedef enum { FMComms1Request, FMComms1Indication, DmaIndication, DmaConfig} If
 interface FMComms1Pins;
    interface FMComms1ADCPins adcpins;
    interface FMComms1DACPins dacpins;
-   (* prefix="" *)
+      method Action io_adc_dco_p(Bit#(1) v);
+      method Action io_adc_dco_n(Bit#(1) v);
+      method Action io_dac_dco_p(Bit#(1) v);
+      method Action io_dac_dco_n(Bit#(1) v);
+//   (* prefix="" *)
 endinterface
 
 interface FMComms1;
    interface Vector#(2,StdPortal) portals;
    interface FMComms1Pins pins;
 endinterface
-
-module mkFMComms1#(Clock fmc_imageon_clk1)(FMComms1);
-
-   // These need to be connected to the clocks for the ADC and DAC
-   Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
-   Wire#(Bit#(1)) adc_dco_n <- mkDWire(0);
-   Wire#(Bit#(1)) dac_dco_p <- mkDWire(0);
-   Wire#(Bit#(1)) dac_dco_n <- mkDWire(0);
-
-
-   // instantiate user portals
-   // fmcomms1
-   FMComms1IndicationProxy fmcomms1IndicationProxy <- mkFMComms1IndicationProxy(FMComms1Indication);
-   FMComms1 fmcomms1 <- mkFMComms1();
-   FMComms1RequestWrapper fmcomms1RequestWrapper <- mkFMComms1RequestWrapper(FMComms1Request);
-
-   FMComms1ADC adc <- mkFMComms1ADC(adc_clk_p, adc_clk_n);
-   FMComms1DAC dac <- mkFMComms1DAC(dac_clk_p, dac_clk_n);
-   
-   
-   Vector#(2,StdPortal) portal_array;
-   portal_array[0] = fmcomms1RequestWrapper.portalIfc; 
-   portal_array[1] = fmcomms1IndicationProxy.portalIfc;
-
-
-   interface Vector portals = portal_array;
-   
-   /* the names in this interface get mapped to real pins on the chip */
-   interface FMComms1Pins pins;
-      interface FMComms1ADCPins adcpins = fmcomms1adc.pins;
-      interface FMComms1DACPins dacpins = fmcomms1dac.pins;
-      method Action io_adc_dco_p(Bit#(1) v);
-      method Action io_adc_dco_n(Bit#(1) v);
-      method Action io_dac_dco_p(Bit#(1) v);
-      method Action io_dac_dco_n(Bit#(1) v);
-   endinterface
-endmodule
 
 module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,0))
       provisos(Add#(addrWidth, a__, 52),
@@ -109,6 +76,11 @@ module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,0))
 	    Add#(e__, c__, 40),
 	    Add#(f__, addrWidth, 40));
 
+   // These need to be connected to the clocks for the ADC and DAC
+   Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
+   Wire#(Bit#(1)) adc_dco_n <- mkDWire(0);
+   Wire#(Bit#(1)) dac_dco_p <- mkDWire(0);
+   Wire#(Bit#(1)) dac_dco_n <- mkDWire(0);
    Clock adc_clk_p;
    Clock adc_clk_n;
    Clock dac_clk_p;
