@@ -28,6 +28,7 @@ import GetPut::*;
 
 import MemTypes::*;
 import MemreadEngine::*;
+import MemwriteEngine::*;
 import Pipe::*;
 
 interface FMComms1Request;
