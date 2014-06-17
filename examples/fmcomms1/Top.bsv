@@ -65,8 +65,12 @@ interface FMComms1;
 endinterface
 
 module mkFMComms1#(Clock fmc_imageon_clk1)(FMComms1);
-   Clock defaultClock <- exposeCurrentClock();
-   Reset defaultReset <- exposeCurrentReset();
+
+   // These need to be connected to the clocks for the ADC and DAC
+   Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
+   Wire#(Bit#(1)) adc_dco_n <- mkDWire(0);
+   Wire#(Bit#(1)) dac_dco_p <- mkDWire(0);
+   Wire#(Bit#(1)) dac_dco_n <- mkDWire(0);
 
 
    // instantiate user portals
@@ -86,17 +90,29 @@ module mkFMComms1#(Clock fmc_imageon_clk1)(FMComms1);
 
    interface Vector portals = portal_array;
    
+   /* the names in this interface get mapped to real pins on the chip */
    interface FMComms1Pins pins;
-       interface FMComms1ADCPins adcpins = fmcomms1adc.pins;
-       interface FMComms1DACPins dacpins = fmcomms1dac.pins;
+      interface FMComms1ADCPins adcpins = fmcomms1adc.pins;
+      interface FMComms1DACPins dacpins = fmcomms1dac.pins;
+      method Action io_adc_dco_p(Bit#(1) v);
+      method Action io_adc_dco_n(Bit#(1) v);
+      method Action io_dac_dco_p(Bit#(1) v);
+      method Action io_dac_dco_n(Bit#(1) v);
    endinterface
 endmodule
 
-module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,0));
-   //Clock defaultClock <- exposeCurrentClock();
-   //Reset defaultReset <- exposeCurrentReset();
-   B2C1 iclock <- mkB2C1();
-   Clock iclock_buf <- mkClockBUFG(clocked_by iclock.c);
+module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,0))
+      provisos(Add#(addrWidth, a__, 52),
+	    Add#(b__, addrWidth, 64),
+	    Add#(c__, 12, addrWidth),
+	    Add#(addrWidth, d__, 44),
+	    Add#(e__, c__, 40),
+	    Add#(f__, addrWidth, 40));
+
+   Clock adc_clk_p;
+   Clock adc_clk_n;
+   Clock dac_clk_p;
+   Clock dac_clk_n;
 
    FMComms1ADC adc <- mkFMComms1ADC(adc_clk_p, adc_clk_n);
    FMComms1DAC dac <- mkFMComms1DAC(dac_clk_p, dac_clk_n);
@@ -123,15 +139,27 @@ module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,0));
    StdDirectory dir <- mkStdDirectory(ic.portals);
    let ctrl_mux <- mkSlaveMux(dir,ic.portals);
    
+
+
+   
    interface interrupt = getInterruptVector(ic.portals);
    interface slave = ctrl_mux;
    interface masters = nil;
    //interface leds = captureRequestInternal.leds;
    interface FMComms1Pins pins;
-       method Action fmc_video_clk1(Bit#(1) v);
-           iclock.inputclock(v);
-       endmethod
-       interface FMCOmms1ADCPins adcpins = ic.pins.pins;
-       interface FMCOmms1ADCPins dacpins = ic.pins.pins;
+      interface FMCOmms1ADCPins adcpins = adc.pins;
+      interface FMCOmms1ADCPins dacpins = dac.pins;
+      method Action io_adc_dco_p(Bit#(1) v);
+	 adc_dco_p <= v;
+      endmethod
+      method Action io_adc_dco_n(Bit#(1) v);
+	 adc_dco_n <= v;
+      endmethod
+      method Action io_dac_dco_p(Bit#(1) v);
+	 dac_dco_p <= v;
+      endmethod
+      method Action io_dac_dco_n(Bit#(1) v);
+	 dac_dco_n <= v;
+      endmethod
    endinterface
 endmodule : mkPortalTop
