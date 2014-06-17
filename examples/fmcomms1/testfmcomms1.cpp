@@ -32,7 +32,7 @@ class FMComms1Indication : public FMComms1IndicationWrapper
 {
 
 public:
-  FMComms1Indication(unsigned int id) : FMComm1IndicationWrapper(id){}
+  FMComms1Indication(unsigned int id) : FMComms1IndicationWrapper(id){}
 
   virtual void readStatus(unsigned iterCount, unsigned running){
     fprintf(stderr, "read %d %d\n", iterCount, running);
@@ -51,10 +51,10 @@ int main(int argc, const char **argv)
   unsigned int *srcBuffer = 0;
   unsigned int *dstBuffer = 0;
 
-  MemreadRequestProxy *device = 0;
+  FMComms1RequestProxy *device = 0;
   DmaConfigProxy *dma = 0;
   
-  MemreadIndication *deviceIndication = 0;
+  FMComms1Indication *deviceIndication = 0;
   DmaIndication *dmaIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
@@ -100,8 +100,8 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::starting read %08x\n", numWords);
 
-  device->startRead(ref_srcAlloc, numWords, burstLen, 1);
-  device->startWrite(ref_dstAlloc, numWords, burstLen, 1);
+  device->startRead(ref_srcAlloc, numWords, readBurstLen, 1);
+  device->startWrite(ref_dstAlloc, numWords, writeBurstLen, 1);
   sem_wait(&read_sem);
 
 
@@ -114,8 +114,8 @@ int main(int argc, const char **argv)
    sleep(5);
   fprintf(stderr, "Main::stopping reads\n");
   fprintf(stderr, "Main::stopping writes\n");
-  device->startRead(ref_srcAlloc, numWords, burstLen, 0);
-  device->startWrite(ref_dstAlloc, numWords, burstLen, 0);
+  device->startRead(ref_srcAlloc, numWords, readBurstLen, 0);
+  device->startWrite(ref_dstAlloc, numWords, writeBurstLen, 0);
   sem_wait(&read_sem);
   sem_wait(&write_sem);
 
