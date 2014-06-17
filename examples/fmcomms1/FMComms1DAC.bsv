@@ -30,26 +30,8 @@ import Vector::*;
 import Clocks::*;
 import DefaultValue::*;
 
-interface DiffOut;
-   method Bit#(1) read_p();
-   method Bit#(1) read_n();
-endinterface 
 
-import "BVI" OBUFDS =
-module mkxOBUFDS#(Wire#(Bit#(1)) i)(DiffOut);
-   default_clock no_clock;
-   default_reset no_reset;
-
-   port I = i;
-   method O    read_p();
-   method OB    read_n();
-
-   path(I, O);
-   path(I, OB);
-
-  schedule (read_p, read_n) CF (read_p, read_n);
-
-endmodule: mkxOBUFDS
+import extraXilinxCells::*;
 
 (* always_enabled *)
 interface FMComms1DACPins;
