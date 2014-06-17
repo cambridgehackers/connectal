@@ -39,6 +39,8 @@ interface FMComms1DACPins;
    method Bit#(14) io_dac_data_n();
    method Action io_dac_dco_p(Bit#(1) v);
    method Action io_dac_dco_n(Bit#(1) v);
+   interface Clock deleteme_unused_clock;
+   interface Reset deleteme_unused_reset;
 endinterface
 
 typedef struct {
@@ -79,26 +81,28 @@ module mkFMComms1DAC(FMComms1DAC);
    
    Clock def_clock <- exposeCurrentClock;
    Reset def_reset <- exposeCurrentReset;
+   Clock dac_dco; 
    Wire#(Bit#(1)) dac_dco_p <- mkDWire(0);
    Wire#(Bit#(1)) dac_dco_n <- mkDWire(0);
 
-   Clock dac_dco <- mkClockIBUFDS(dac_dco_p, dac_dco_n);
+   dac_dco <- mkClockIBUFDS(dac_dco_p, dac_dco_n);
    Reset dac_reset <- mkAsyncReset(3, def_reset, dac_dco);
    
    SyncFIFOIfc#(Vector#(2, OIQ)) outfifo <- mkSyncBRAMFIFO(128, def_clock, def_reset, dac_dco, dac_reset);
 
    Gearbox#(2, 1, OIQ) gb <- mkNto1Gearbox(dac_dco, dac_reset, dac_dco, dac_reset);
    ODDRParams#(Bit#(14)) oddrparams = defaultValue;
-   oddrparams.ddr_clk_edge = "SAME_EDGE_PIPELINED";
+//   oddrparams.ddr_clk_edge = "SAME_EDGE_PIPELINED";
+      oddrparams.ddr_clk_edge = "SAME_EDGE";
 
-   ODDR#(Bit#(14)) dac_ddr <- mkODDR(oddrparams, clocked_by dac_dco);
+   ODDR#(Bit#(14)) dac_ddr <- mkODDR(oddrparams, clocked_by (dac_dco));
 
-   Vector#(14, Wire#(Bit#(1))) dac_ddr_data <- replicateM(mkDWire(0));
+   Vector#(14, Wire#(Bit#(1))) dac_ddr_data <- replicateM(mkDWire(0, clocked_by(dac_dco)));
    
    Vector#(14, DiffOut) dac_out = newVector;
    
    for (Integer i = 0; i < 14; i = i + 1)
-      dac_out[i] <- mkxOBUFDS(dac_ddr_data[i]);
+      dac_out[i] <- mkxOBUFDS(dac_ddr_data[i], clocked_by (dac_dco));
    
    rule senddown_gb;
       outfifo.deq();
@@ -145,13 +149,15 @@ module mkFMComms1DAC(FMComms1DAC);
       method Action io_dac_dco_n(Bit#(1) v);
 	 dac_dco_n <= v;
       endmethod
+      interface deleteme_unused_clock = defaultClock;
+      interface deleteme_unused_reset = defaultReset;
 
    endinterface
    
    interface PipeIn dac;
    
       method Action enq(Bit#(64) v);
-	 outfifo.enq(pack(unpack(v)));
+	 outfifo.enq(unpack(pack(v)));
       endmethod
       
       method Bool notFull() = outfifo.notFull;
