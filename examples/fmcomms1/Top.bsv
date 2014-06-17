@@ -53,13 +53,9 @@ import FMComms1DAC::*;
 
 typedef enum { FMComms1Request, FMComms1Indication, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-interface FMComms1Pins;
+interface FMComms1Pins#(Clock adc_dco_p, Clock adc_dco_n, Clock dac_dco_p, Clock dac_dco_n);
    interface FMComms1ADCPins adcpins;
    interface FMComms1DACPins dacpins;
-      method Action io_adc_dco_p(Bit#(1) v);
-      method Action io_adc_dco_n(Bit#(1) v);
-      method Action io_dac_dco_p(Bit#(1) v);
-      method Action io_dac_dco_n(Bit#(1) v);
 //   (* prefix="" *)
 endinterface
 
@@ -77,17 +73,9 @@ module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,1))
 	    Add#(f__, addrWidth, 40));
 
    // These need to be connected to the clocks for the ADC and DAC
-   Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
-   Wire#(Bit#(1)) adc_dco_n <- mkDWire(0);
-   Wire#(Bit#(1)) dac_dco_p <- mkDWire(0);
-   Wire#(Bit#(1)) dac_dco_n <- mkDWire(0);
-   Clock adc_clk_p;
-   Clock adc_clk_n;
-   Clock dac_clk_p;
-   Clock dac_clk_n;
 
-   FMComms1ADC adc <- mkFMComms1ADC(adc_clk_p, adc_clk_n);
-   FMComms1DAC dac <- mkFMComms1DAC(dac_clk_p, dac_clk_n);
+   FMComms1ADC adc <- mkFMComms1ADC();
+   FMComms1DAC dac <- mkFMComms1DAC();
    
    FMComms1IndicationProxy fmcomms1IndicationProxy <- mkFMComms1IndicationProxy(FMComms1Indication);
    FMComms1 fmcomms1 <- mkFMComms1(fmcomms1IndicationProxy, dac.dac, adc.adc);
@@ -121,17 +109,5 @@ module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,1))
    interface FMComms1Pins pins;
       interface FMCOmms1ADCPins adcpins = adc.pins;
       interface FMCOmms1ADCPins dacpins = dac.pins;
-      method Action io_adc_dco_p(Bit#(1) v);
-	 adc_dco_p <= v;
-      endmethod
-      method Action io_adc_dco_n(Bit#(1) v);
-	 adc_dco_n <= v;
-      endmethod
-      method Action io_dac_dco_p(Bit#(1) v);
-	 dac_dco_p <= v;
-      endmethod
-      method Action io_dac_dco_n(Bit#(1) v);
-	 dac_dco_n <= v;
-      endmethod
    endinterface
 endmodule : mkPortalTop
