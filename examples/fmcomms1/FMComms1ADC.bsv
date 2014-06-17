@@ -51,7 +51,7 @@ typedef struct {
 
 interface FMComms1ADC;
    interface FMComms1ADCPins pins;
-   interface PipeOut#(Vector#(2, IQ)) adc;
+   interface PipeOut#(Bit#(64)) adc;
 endinterface
 
 
@@ -191,7 +191,7 @@ module mkFMComms1ADC(FMComms1ADC);
    
    interface PipeOut adc;
    
-      method Vector#(2, IQ) first();
+      method Bit#(64) first();
 	 return(unpack(pack(infifo.first)));
       endmethod
       
