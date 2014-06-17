@@ -353,16 +353,26 @@ void configureSigmoidTable(RbmRequestProxy *device, RbmIndication *indication)
 }
 
 template<typename T>
-void dumpMat(const char *prefix, const char *fmt, const cv::Mat &mat)
+void dumpMatF(const char *prefix, const char *fmt, const cv::Mat &mat, FILE *ofile)
 {
-  fprintf(stderr, "%s: rows=%d cols=%d mat=%p\n", prefix, mat.rows, mat.cols, &mat);
+  fprintf(ofile, "%s: rows=%d cols=%d mat=%p\n", prefix, mat.rows, mat.cols, &mat);
   for (int i = 0; i < mat.rows; i++) {
-    fprintf(stderr, "%s: %03d:", prefix, i);
+    fprintf(ofile, "%s: %03d:", prefix, i);
     for (int j = 0; j < mat.cols; j++) {
-      fprintf(stderr, " ");
-      fprintf(stderr, fmt, mat.at<T>(i, j));
+      fprintf(ofile, " ");
+      fprintf(ofile, fmt, mat.at<T>(i, j));
     }
-    fprintf(stderr, "\n");
+    fprintf(ofile, "\n");
   }
 }
+template void dumpMatF<float>(const char *prefix, const char *fmt, const cv::Mat &mat, FILE *ofile);
+
+template<typename T>
+void dumpMat(const char *prefix, const char *fmt, const cv::Mat &mat)
+{
+  dumpMatF<T>(prefix,fmt,mat,stderr);
+}
 template void dumpMat<float>(const char *prefix, const char *fmt, const cv::Mat &mat);
+template void dumpMat<int>(const char *prefix, const char *fmt, const cv::Mat &mat);
+
+

@@ -165,6 +165,18 @@ int main(int argc, const char **argv)
 		71,72,73,74,75,76,77,78,71,72,73,74,75,76,77,78,71,72,73,74,75,76,77,78,71,72,73,74,75,76,77,78,
 		81,82,83,84,85,86,87,88,81,82,83,84,85,86,87,88,81,82,83,84,85,86,87,88,81,82,83,84,85,86,87,88
 		);
+
+  // cv::Mat m1(matrixSize, matrixSize, CV_32F);
+  // cv::Mat m2(matrixSize, matrixSize, CV_32F);
+  // int v = 0;
+  // for(int i = 0; i < matrixSize; i++){
+  //   for(int j = 0; j < matrixSize; j++){
+  //     m2.at<float>(i,j) = v+(matrixSize*matrixSize);;
+  //     m1.at<float>(i,j) = v++;
+  //   }
+  // }
+  
+  
 #else
   cv::Mat m1 = (cv::Mat_<float>(4,8) <<
 		11,12,13,14,15,16,17,18,
