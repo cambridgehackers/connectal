@@ -85,14 +85,14 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    Reg#(UInt#(24)) byteCountReg <- mkReg(1080*1920);
 
    Reg#(Bool) sendVsyncIndication <- mkReg(False);
-   SyncPulseIfc vsyncPulse <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
+   SyncPulseIfc startDMA <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
    Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
 
    Reg#(Maybe#(Bit#(32))) referenceReg <- mkReg(tagged Invalid);
    MemreadEngine#(64,16) memreadEngine <- mkMemreadEngine;
 
    HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
-			vsyncPulse, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
+			startDMA, hdmiInternalIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
 `ifndef ZC706
    Rgb888ToYyuv converter <- mkRgb888ToYyuv(clocked_by hdmi_clock, reset_by fifo_reset_hdmi);
    mkConnection(hdmiGen.rgb888, converter.rgb888);
@@ -148,15 +148,13 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    Reg#(Bit#(32)) transferCyclesSnapshot <- mkReg(0);
    Reg#(Bit#(32)) transferCycles <- mkReg(0);
    Reg#(Bit#(48)) transferSumOfCycles<- mkReg(0);
-   Reg#(Bit#(32)) vsyncCount <- mkReg(0);
 
-   rule vsyncrule if (vsyncPulse.pulse());
-      vsyncCount <= vsyncCount + 1;
+   rule vsyncrule if (startDMA.pulse());
       fifo_reset.assertReset();
    endrule
 
    Reg#(Bool) traceTransfers <- mkReg(False);
-   rule startTransfer if (vsyncPulse.pulse() &&& referenceReg matches tagged Valid .reference);
+   rule startTransfer if (startDMA.pulse() &&& referenceReg matches tagged Valid .reference);
       memreadEngine.readServers[0].request.put(MemengineCmd{pointer:reference, base:0, len:pack(extend(byteCountReg)), burstLen:64});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
@@ -183,11 +181,9 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 	   byteCountReg <= truncate(byteCount);
 	   $display("startFrameBuffer %h", base);
            referenceReg <= tagged Valid truncate(pack(base));
-	   hdmiGen.control.setTestPattern(0);
 	endmethod
        method Action stopFrameBuffer();
 	  referenceReg <= tagged Invalid;
-	  hdmiGen.control.setTestPattern(1);
        endmethod
        method Action getTransferStats();
           hdmiDisplayIndication.transferStats(transferCount, transferCycles-transferCyclesSnapshot, extend(transferSumOfCycles));

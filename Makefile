@@ -79,6 +79,10 @@ testnames = echo                 \
             bscan                \
             memread_4m           \
             memwrite_4m          \
+            testmm2.2.2          \
+            testmm4.4.2          \
+            testmm8.8.2          \
+            testmm16.16.2        \
             yuv                  \
 
 memtests =  memcpy               \

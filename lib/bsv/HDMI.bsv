@@ -65,7 +65,7 @@ interface HdmiGenerator#(type pixelType);
 endinterface
 
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
-   SyncPulseIfc vsyncPulse, HdmiInternalIndication indication)(HdmiGenerator#(Rgb888));
+   SyncPulseIfc startDMA, HdmiInternalIndication indication)(HdmiGenerator#(Rgb888));
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
@@ -82,7 +82,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
     Reg#(Bool) waitingForVsync <- mkSyncReg(False, axi_clock, axi_reset, defaultClock);
-    SyncPulseIfc vsyncCountPulse <- mkSyncHandshake(defaultClock, defaultReset, axi_clock);
     SyncPulseIfc sendVsyncIndication <- mkSyncHandshake(defaultClock, defaultReset, axi_clock);
 
     Reg#(Bit#(11)) lineCount <- mkReg(0);
@@ -104,30 +103,18 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(32)) vsyncCounter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsedVsync <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
-    Reg#(Bit#(32)) zeropixel <- mkReg(0);
-    Reg#(Bit#(32)) pixelcount <- mkReg(0);
-    Reg#(Bit#(32)) pixelcount2 <- mkReg(0);
-    SyncBitIfc#(Bit#(32)) zeropixels <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
-    SyncBitIfc#(Bit#(32)) pixelcounts <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
-    SyncBitIfc#(Bit#(32)) pixelcount2s <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
-
-    rule zerosyn;
-       zeropixels.send(zeropixel);
-       pixelcounts.send(pixelcount);
-       pixelcount2s.send(pixelcount2);
-    endrule
 
     rule axicyclecount;
        counter <= counter + 1;
     endrule
       
-    rule vsyncCount if (vsyncCountPulse.pulse());
+    rule vsyncCount if (startDMA.pulse());
        vsyncCounter <= vsyncCounter+1;
     endrule
     rule vsyncReceived if (sendVsyncIndication.pulse());
        elapsed <= counter;
        elapsedVsync <= vsyncCounter;
-       indication.vsync(extend(elapsed), vsyncCounter);
+       indication.vsync(extend(elapsed - counter), vsyncCounter - vsyncCounter);
        //waitingForVsync <= False;
     endrule
 
@@ -141,19 +128,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule inc_counters;
-        if (lineCount == deLineWidth && pixelCount == 0) begin
-	    vsyncCountPulse.send();
-            vsyncPulse.send();
-            testPatternEnabled <= shadowTestPatternEnabled;
-        end
-        if (lineCount == deLinePorch)
-           vsync <= 1;
-        else if (lineCount == deLineWidth)
-           vsync <= 0;
-        if (pixelCount == dePixelPorch)
-           hsync <= 1;
-        else if (pixelCount == dePixelWidth)
-           hsync <= 0;
         if (pixelCount == dePixelEnd) begin
            pixelCount <= 0; 
            dataEnable <= False;
@@ -162,6 +136,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
                lineCount <= 0;
                patternIndex1 <= 0;
                lineVisible <= False;
+               testPatternEnabled <= shadowTestPatternEnabled;
                if (waitingForVsync)
 	          sendVsyncIndication.send();
            end
@@ -174,6 +149,17 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
            end
         end
         else begin
+           if (lineCount == deLinePorch) begin
+              vsync <= 1;
+              if (pixelCount == 0 && testPatternEnabled == 0)
+                  startDMA.send();
+           end
+           else if (lineCount == deLineWidth)
+              vsync <= 0;
+           if (pixelCount == dePixelPorch)
+              hsync <= 1;
+           else if (pixelCount == dePixelWidth)
+              hsync <= 0;
            if (pixelCount == dePixelVisible)
                dataEnable <= lineVisible;
            pixelCount <= pixelCount + 1;
@@ -187,7 +173,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule testpattern_rule if (testPatternEnabled != 0 && dataEnable);
-        rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(patternRegs[{patternIndex1, patternIndex0}]) };
+        rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(patternRegs[{patternIndex1, patternIndex0}])};
     endrule
 
     interface Put request;

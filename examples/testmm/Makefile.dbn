@@ -1,0 +1,20 @@
+BSVDIR=$(XBSVDIR)/bsv
+S2H = RbmRequest MmRequest SigmoidRequest TimerRequest DmaConfig FpMacRequest MmDebugRequest
+H2S = RbmIndication MmIndication SigmoidIndication TimerIndication DmaIndication FpMacIndication MmDebugIndication
+BSVFILES = $(DBNDIR)/bsv/RbmTypes.bsv $(DBNDIR)/bsv/Timer.bsv $(DBNDIR)/bsv/FpMacTb.bsv $(DBNTOPBSV)
+CPPFILES= $(DBNDIR)/cpp/portalmat.cpp $(DBNDIR)/cpp/rbm.cpp $(TESTCPPFILES)
+XBSVFLAGS += --clib opencv_core
+Dma = Dma
+PINS = Std
+
+gen:: $(DBNDIR)/datasets
+
+include $(XBSVDIR)/Makefile.common
+
+$(DBNDIR)/datasets:
+	mkdir -p $(DBNDIR)/datasets
+	wget -P $(DBNDIR)/datasets http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
+	wget -P $(DBNDIR)/datasets http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
+	wget -P $(DBNDIR)/datasets http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
+	wget -P $(DBNDIR)/datasets http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+	cd $(DBNDIR)/datasets; gunzip *.gz

@@ -93,6 +93,7 @@ static void fill_pixels(int offset)
     corner_index = offset/16;
     dma->dCacheFlushInval(portalAlloc[frame_index], dataptr[frame_index]);
     device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
+    hdmiInternal->setTestPattern(0);
     hdmiInternal->waitForVsync(0);
     frame_index = 1 - frame_index;
 }
