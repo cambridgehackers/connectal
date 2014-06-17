@@ -225,7 +225,7 @@ module mkMemReadInternal#(Integer id,
       let response = tpl_2(readDataPipelineFifo.first);
       let client = drq.client;
       let req = drq.req;
-      readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag});
+      readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag, last: False});
       beatCount <= beatCount+1;
    endrule
 
@@ -385,7 +385,7 @@ module mkMemWriteInternal#(Integer iid,
 	    if (burstLen == 1) 
 	       dreqFifo.deq();
 	    //$display("writeData: client=%d, rename_tag=%d", client, rename_tag);
-	    return MemData { data: tagdata.data,  tag:extend(rename_tag) };
+	    return MemData { data: tagdata.data,  tag:extend(rename_tag), last: False };
 	 endmethod
       endinterface
       interface Put writeDone;
