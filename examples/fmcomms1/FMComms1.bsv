@@ -54,7 +54,7 @@ endinterface
  * 
  * Writes are the same
  */
-module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#64) dac, PipeOut#(Bit#(64) adc) (FMComms1);
+module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut#(Bit#(64)) adc) (FMComms1);
 
    Reg#(ObjectPointer)     readPointer <- mkReg(0);
    Reg#(Bit#(32))         readNumWords <- mkReg(0);
