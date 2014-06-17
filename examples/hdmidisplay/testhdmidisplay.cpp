@@ -220,6 +220,7 @@ int main(int argc, const char **argv)
     fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc[0]);
     fill_pixels(0);
     fprintf(stderr, "done\n");
+    hdmiInternal->setTestPattern(0);
     while (1) {
       fprintf(stderr, "mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));
       sleep(1);

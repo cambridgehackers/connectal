@@ -103,18 +103,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(32)) vsyncCounter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsedVsync <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
-    Reg#(Bit#(32)) zeropixel <- mkReg(0);
-    Reg#(Bit#(32)) pixelcount <- mkReg(0);
-    Reg#(Bit#(32)) pixelcount2 <- mkReg(0);
-    SyncBitIfc#(Bit#(32)) zeropixels <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
-    SyncBitIfc#(Bit#(32)) pixelcounts <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
-    SyncBitIfc#(Bit#(32)) pixelcount2s <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
-
-    rule zerosyn;
-       zeropixels.send(zeropixel);
-       pixelcounts.send(pixelcount);
-       pixelcount2s.send(pixelcount2);
-    endrule
 
     rule axicyclecount;
        counter <= counter + 1;
@@ -186,12 +174,12 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
 
     rule testpattern_rule if (testPatternEnabled != 0 && dataEnable);
         Bit#(24) v = patternRegs[{patternIndex1, patternIndex0}];
-        if (lineCount < deLineVisible + 20) begin
-            if (pixelCount < dePixelVisible + 20)
-                v = 0;
-            if (pixelCount > dePixelEnd-30)
-                v = 24'hffffff;
-        end
+        //if (lineCount < deLineVisible + 20) begin
+            //if (pixelCount < dePixelVisible + 20)
+                //v = 0;
+            //if (pixelCount > dePixelEnd-30)
+                //v = 24'hffffff;
+        //end
         rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v)};
     endrule
 
