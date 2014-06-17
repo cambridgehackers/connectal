@@ -35,7 +35,6 @@ interface FMComms1Request;
    method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
    method Action getReadStatus();
    method Action getWriteStatus();
-   method Action getStateDbg();   
 endinterface
 
 interface FMComms1;
@@ -100,7 +99,7 @@ module mkFMComms1#(FMComms1Indication indication) (FMComms1);
       method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
 	 $display("startRead rdPointer=%d numWords=%h burstLen=%d run=%d",
 	    pointer, numWords, burstLen, run);
-	 indication.started(readInterCount, run);
+	 if (run == 1) indication.readStarted(readInterCount, run);
 	 readPointer <= pointer;
 	 readNumWords  <= numWords;
 	 readBurstLen  <= truncate(burstLen);
@@ -109,7 +108,7 @@ module mkFMComms1#(FMComms1Indication indication) (FMComms1);
       method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
 	 $display("startWrite rdPointer=%d numWords=%h burstLen=%d run=%d",
 	    pointer, numWords, burstLen, run);
-	 indication.started(writeInterCount, run);
+	 if (run == 1) indication.writeStarted(writeInterCount, run);
 	 writePointer <= pointer;
 	 writeNumWords  <= numWords;
 	 writeBurstLen  <= truncate(burstLen);
