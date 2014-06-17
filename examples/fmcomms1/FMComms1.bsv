@@ -30,6 +30,7 @@ import MemTypes::*;
 import MemreadEngine::*;
 import MemwriteEngine::*;
 import Pipe::*;
+import Connectable::*;
 
 interface FMComms1Request;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
@@ -66,14 +67,15 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    MemreadEngine#(64,1)         re <- mkMemreadEngineBuff(64*16);
 
    Reg#(ObjectPointer)     writePointer <- mkReg(0);
-   Reg#(Bit#(32))         writeNnumWords <- mkReg(0);
+   Reg#(Bit#(32))         writeNumWords <- mkReg(0);
+   Reg#(Bit#(32))         writeIterCount <- mkReg(0);
    Reg#(Bit#(8))          writeBurstLen <- mkReg(0);
    Reg#(Bit#(1))          writeRun <- mkReg(0);
    
    MemwriteEngine#(64,1)        we <- mkMemwriteEngineBuff(64*16);
    
-   mkConnection(adc, wr.dataPipe[0]);
-   mkConnection(re.dataPipe[0], dac);
+   mkConnection(adc, we.dataPipes[0]);
+   mkConnection(re.dataPipes[0], dac);
    
    rule readStart (readRun == 1);
       readIterCount <= readIterCount + 1;
@@ -83,18 +85,18 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    rule readFinish;
       let rv <- re.readServers[0].response.get;
       if (readRun == 0)
-	 indication.readStatus(readIterCount, readRun);
+	 indication.readStatus(readIterCount, zeroExtend(readRun));
    endrule
    
    rule writeStart (writeRun == 1);
       writeIterCount <= writeIterCount + 1;
-      re.writeServers[0].request.put(MemengineCmd{pointer:writePointer, base:0, len:writeNumWords*4, burstLen:writeBurstLen*4});
+      we.writeServers[0].request.put(MemengineCmd{pointer:writePointer, base:0, len:writeNumWords*4, burstLen:writeBurstLen*4});
    endrule
    
    rule writeFinish;
-      let rv <- re.writeServers[0].response.get;
+      let rv <- we.writeServers[0].response.get;
       if (writeRun == 0)
-	 indication.writeStatus(writeIterCount, writeRun);
+	 indication.writeStatus(writeIterCount, zeroExtend(writeRun));
    endrule
    
    interface ObjectReadClient readDmaClient = re.dmaClient;
@@ -103,7 +105,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
       method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
 	 $display("startRead rdPointer=%d numWords=%h burstLen=%d run=%d",
 	    pointer, numWords, burstLen, run);
-	 if (run == 1) indication.readStarted(readInterCount, run);
+	 if (run == 1) indication.readStatus(readInterCount, run);
 	 readPointer <= pointer;
 	 readNumWords  <= numWords;
 	 readBurstLen  <= truncate(burstLen);
@@ -112,17 +114,17 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
       method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) run);
 	 $display("startWrite rdPointer=%d numWords=%h burstLen=%d run=%d",
 	    pointer, numWords, burstLen, run);
-	 if (run == 1) indication.writeStarted(writeInterCount, run);
+	 if (run == 1) indication.writeStatus(writeIterCount, run);
 	 writePointer <= pointer;
 	 writeNumWords  <= numWords;
 	 writeBurstLen  <= truncate(burstLen);
 	 writeRun <= truncate(run);
       endmethod
       method Action getReadStatus();
-	 indication.readStatus(readIterCount, readRun);
+	 indication.readStatus(readIterCount, zeroExtend(readRun));
       endmethod
       method Action getWriteStatus();
-	 indication.writeStatus(writeIterCount, writeRun);
+	 indication.writeStatus(writeIterCount, zeroExtend(writeRun));
       endmethod
    endinterface
 endmodule
