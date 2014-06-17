@@ -68,7 +68,7 @@ interface FMComms1;
    interface FMComms1Pins pins;
 endinterface
 
-module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,0))
+module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,1))
       provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
 	    Add#(c__, 12, addrWidth),
