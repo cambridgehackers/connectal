@@ -128,17 +128,6 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule inc_counters;
-        if (lineCount == deLinePorch) begin
-           vsync <= 1;
-           if (pixelCount == 0)
-               startDMA.send();
-        end
-        else if (lineCount == deLineWidth)
-           vsync <= 0;
-        if (pixelCount == dePixelPorch)
-           hsync <= 1;
-        else if (pixelCount == dePixelWidth)
-           hsync <= 0;
         if (pixelCount == dePixelEnd) begin
            pixelCount <= 0; 
            dataEnable <= False;
@@ -160,6 +149,17 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
            end
         end
         else begin
+           if (lineCount == deLinePorch) begin
+              vsync <= 1;
+              if (pixelCount == 0 && testPatternEnabled == 0)
+                  startDMA.send();
+           end
+           else if (lineCount == deLineWidth)
+              vsync <= 0;
+           if (pixelCount == dePixelPorch)
+              hsync <= 1;
+           else if (pixelCount == dePixelWidth)
+              hsync <= 0;
            if (pixelCount == dePixelVisible)
                dataEnable <= lineVisible;
            pixelCount <= pixelCount + 1;
@@ -173,14 +173,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
 
     rule testpattern_rule if (testPatternEnabled != 0 && dataEnable);
-        Bit#(24) v = patternRegs[{patternIndex1, patternIndex0}];
-        //if (lineCount < deLineVisible + 20) begin
-            //if (pixelCount < dePixelVisible + 20)
-                //v = 0;
-            //if (pixelCount > dePixelEnd-30)
-                //v = 24'hffffff;
-        //end
-        rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v)};
+        rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(patternRegs[{patternIndex1, patternIndex0}])};
     endrule
 
     interface Put request;
