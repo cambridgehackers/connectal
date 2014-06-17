@@ -50,19 +50,16 @@ import XbsvXilinxCells::*;
 
 import FMComms1ADC::*;
 import FMComms1DAC::*;
+import FMComms1::*;
 
 typedef enum { FMComms1Request, FMComms1Indication, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
-interface FMComms1Pins#(Clock adc_dco_p, Clock adc_dco_n, Clock dac_dco_p, Clock dac_dco_n);
+interface FMComms1Pins;
    interface FMComms1ADCPins adcpins;
    interface FMComms1DACPins dacpins;
 //   (* prefix="" *)
 endinterface
 
-interface FMComms1;
-   interface Vector#(2,StdPortal) portals;
-   interface FMComms1Pins pins;
-endinterface
 
 module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,1))
       provisos(Add#(addrWidth, a__, 52),
