@@ -38,6 +38,8 @@ interface FMComms1ADCPins;
    method Action io_adc_or_n(Bit#(1) v);
    method Action io_adc_dco_p(Bit#(1) v);
    method Action io_adc_dco_n(Bit#(1) v);
+   interface Clock deleteme_unused_clock;
+   interface Reset deleteme_unused_reset;
 endinterface
 
 typedef struct {
@@ -99,30 +101,27 @@ module mkFMComms1ADC(FMComms1ADC);
 	     );
    endfunction
    
-   
-   
-   Vector#(14, Wire#(Bit#(1))) adc_data_p = newVector;
-   
-   
-
-   for (Integer i = 0; i < 14; i = i + 1)
-      adc_data_p[i] <- mkDWire(0);
-   Vector#(14, Wire#(Bit#(1))) adc_data_n = newVector;
-   for (Integer i = 0; i < 14; i = i + 1)
-      adc_data_n[i] <- mkDWire(0);
-
-   Wire#(Bit#(1)) adc_or_p <- mkDWire(0);
-   Wire#(Bit#(1)) adc_or_n <- mkDWire(0);
+   Clock adc_dco;     /* DDR clock */
    Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
    Wire#(Bit#(1)) adc_dco_n <- mkDWire(0);
+   adc_dco <- mkClockIBUFDS(adc_dco_p, adc_dco_n);
+   
+   Vector#(14, Wire#(Bit#(1))) adc_data_p = newVector;
+   for (Integer i = 0; i < 14; i = i + 1)
+      adc_data_p[i] <- mkDWire(0, clocked_by adc_dco);
+
+   Vector#(14, Wire#(Bit#(1))) adc_data_n = newVector;
+   for (Integer i = 0; i < 14; i = i + 1)
+      adc_data_n[i] <- mkDWire(0, clocked_by adc_dco);
+
+   Wire#(Bit#(1)) adc_or_p <- mkDWire(0, clocked_by adc_dco);
+   Wire#(Bit#(1)) adc_or_n <- mkDWire(0, clocked_by adc_dco);
 
    Vector#(14, ReadOnly#(Bit#(1))) v_adc_data;   /* data */
    ReadOnly#(Bit#(14)) adc_data;
 
    ReadOnly#(Bit#(1)) adc_or;      /* overrange */
-   Clock adc_dco;     /* DDR clock */
    
-   adc_dco <- mkClockIBUFDS(adc_dco_p, adc_dco_n);
    
    Reset adc_reset <- mkAsyncReset(3, def_reset, adc_dco);
    for(Integer i = 0; i < 14; i = i + 1)
@@ -132,11 +131,13 @@ module mkFMComms1ADC(FMComms1ADC);
    adc_or <- mkIBUFDS(adc_or_p, adc_or_n, clocked_by adc_dco);
    
    IDDRParams#(Bit#(14)) iddrparams_data = defaultValue;
-   iddrparams_data.ddr_clk_edge = "SAME_EDGE_PIPELINED";
+//   iddrparams_data.ddr_clk_edge = "SAME_EDGE_PIPELINED";
+      iddrparams_data.ddr_clk_edge = "SAME_EDGE";
    IDDR#(Bit#(14)) adc_sdr_data <- mkIDDR(iddrparams_data, clocked_by adc_dco);
    
    IDDRParams#(Bit#(1)) iddrparams_or = defaultValue;
-   iddrparams_or.ddr_clk_edge = "SAME_EDGE_PIPELINED";
+//   iddrparams_or.ddr_clk_edge = "SAME_EDGE_PIPELINED";
+   iddrparams_or.ddr_clk_edge = "SAME_EDGE";
    IDDR#(Bit#(1)) adc_sdr_or <- mkIDDR(iddrparams_or, clocked_by adc_dco);
    
    rule sendup_adc_data;
@@ -186,7 +187,9 @@ module mkFMComms1ADC(FMComms1ADC);
       method Action io_adc_dco_n(Bit#(1) v);
 	 adc_dco_n <= v;
       endmethod
-   
+      interface deleteme_unused_clock = defaultClock;
+      interface deleteme_unused_reset = defaultReset;
+
    endinterface
    
    interface PipeOut adc;
