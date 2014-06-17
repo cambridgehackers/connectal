@@ -75,6 +75,7 @@ testnames = echo                 \
 	    xsim-echo            \
 	    imageon              \
 	    imageonfb            \
+	    fmcomms1		 \
             bscan                \
             memread_4m           \
             memwrite_4m          \
