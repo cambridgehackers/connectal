@@ -97,12 +97,12 @@ module mkFMComms1DAC(FMComms1DAC);
 
    ODDR#(Bit#(14)) dac_ddr <- mkODDR(oddrparams, clocked_by (dac_dco));
 
-   Vector#(14, Wire#(Bit#(1))) dac_ddr_data <- replicateM(mkDWire(0, clocked_by(dac_dco)));
+   Vector#(14, Wire#(Bit#(1))) dac_ddr_data <- replicateM(mkDWire(0));
    
    Vector#(14, DiffOut) dac_out = newVector;
    
    for (Integer i = 0; i < 14; i = i + 1)
-      dac_out[i] <- mkxOBUFDS(dac_ddr_data[i], clocked_by (dac_dco));
+      dac_out[i] <- mkxOBUFDS(dac_ddr_data[i]);
    
    rule senddown_gb;
       outfifo.deq();
@@ -149,8 +149,8 @@ module mkFMComms1DAC(FMComms1DAC);
       method Action io_dac_dco_n(Bit#(1) v);
 	 dac_dco_n <= v;
       endmethod
-      interface deleteme_unused_clock = defaultClock;
-      interface deleteme_unused_reset = defaultReset;
+      interface deleteme_unused_clock = dac_dco;
+      interface deleteme_unused_reset = dac_reset;
 
    endinterface
    

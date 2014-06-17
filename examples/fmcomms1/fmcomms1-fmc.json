@@ -1,47 +1,47 @@
 {
-    "*dac_dco_p": {
+    "*dac_dco_p_v": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "CLK0_M2C_p"
     },
-    "*dac_dco_n": {
+    "*dac_dco_n_v": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "CLK0_M2C_n"
     },
-    "*adc_p_v[8]": {
+    "*adc_data_p_v[8]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA02_p"
     },
-    "*adc_n_v[8]": {
+    "*adc_data_n_v[8]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA02_n"
     },
-    "*adc_p_v[9]": {
+    "*adc_data_p_v[9]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA04_p"
     },
-    "*adc_n_v[9]": {
+    "*adc_data_n_v[9]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA04_n"
     },
-    "*adc_p_v[7]": {
+    "*adc_data_p_v[7]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA07_p"
     },
-    "*adc_n_v[7]": {
+    "*adc_data_n_v[7]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
@@ -59,277 +59,277 @@
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA11_n"
     },
-    "*dac_p_v[14]": {
+    "*dac_data_p[14]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA15_p"
     },
-    "*dac_n_v[14]": {
+    "*dac_data_n[14]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA15_n"
     },
-    "*dac_p_v[12]": {
+    "*dac_data_p[12]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA19_p"
     },
-    "*dac_n_v[12]": {
+    "*dac_data_n[12]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA19_n"
     },
-    "*dac_dci_p": {
+    "*dac_dci_p_v": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA21_p"
     },
-    "*dac_dci_n": {
+    "*dac_dci_n_v": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA21_n"
     },
-    "*dac_p_v[6]": {
+    "*dac_data_p[6]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA24_p"
     },
-    "*dac_n_v[6]": {
+    "*dac_data_n[6]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA24_n"
     },
-    "*dac_p_v[3]": {
+    "*dac_data_p[3]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA28_p"
     },
-    "*dac_n_v[3]": {
+    "*dac_data_n[3]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA28_n"
     },
-    "*dac_p_v[2]": {
+    "*dac_data_p[2]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA30_p"
     },
-    "*dac_n_v[2]": {
+    "*dac_data_n[2]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA30_n"
     },
-    "*dac_p_v[0]": {
+    "*dac_data_p[0]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA32_p"
     },
-    "*dac_n_v[0]": {
+    "*dac_data_n[0]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA32_n"
     },
-    "*adc_dco_p": {
+    "*adc_dco_p_v": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "CLK1_M2C_p"
     },
-    "*adc_dco_n": {
+    "*adc_dco_n_v": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "CLK1_M2C_n"
     },
-    "*or_p": {
+    "*adc_or_p_v": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA00_p_CC"
     },
-    "*or_n": {
+    "*adc_or_n_v": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA00_n_CC"
     },
-    "*adc_p_v[3]": {
+    "*adc_data_p_v[3]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA03_p"
     },
-    "*adc_n_v[3]": {
+    "*adc_data_n_v[3]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA03_n"
     },
-    "*adc_p_v[11]": {
+    "*adc_data_p_v[11]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA08_p"
     },
-    "*adc_n_v[11]": {
+    "*adc_data_n_v[11]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA08_n"
     },
-    "*adc_p_v[6]": {
+    "*adc_data_p_v[6]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA12_p"
     },
-    "*adc_n_v[6]": {
+    "*adc_data_n_v[6]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA12_n"
     },
-    "*dac_p_v[15]": {
+    "*dac_data_p[15]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA16_p"
     },
-    "*dac_n_v[15]": {
+    "*dac_data_n[15]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA16_n"
     },
-    "*dac_p_v[13]": {
+    "*dac_data_p[13]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA20_p"
     },
-    "*dac_n_v[13]": {
+    "*dac_data_n[13]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA20_n"
     },
-    "*dac_p_v[8]": {
+    "*dac_data_p[8]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA22_p"
     },
-    "*dac_n_v[8]": {
+    "*dac_data_n[8]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA22_n"
     },
-    "*dac_p_v[7]": {
+    "*dac_data_p[7]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA25_p"
     },
-    "*dac_n_v[7]": {
+    "*dac_data_n[7]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA25_n"
     },
-    "*dac_p_v[5]": {
+    "*dac_data_p[5]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA29_p"
     },
-    "*dac_n_v[5]": {
+    "*dac_data_n[5]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA29_n"
     },
-    "*dac_p_v[4]": {
+    "*dac_data_p[4]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA31_p"
     },
-    "*dac_n_v[4]": {
+    "*dac_data_n[4]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA31_n"
     },
-    "*dac_p_v[1]": {
+    "*dac_data_p[1]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA33_p"
     },
-    "*dac_n_v[1]": {
+    "*dac_data_n[1]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA33_n"
     },
-    "*adc_p_v[13]": {
+    "*adc_data_p_v[13]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA01_p_CC"
     },
-    "*adc_n_v[13]": {
+    "*adc_data_n_v[13]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA01_n_CC"
     },
-    "*adc_p_v[4]": {
+    "*adc_data_p_v[4]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA05_p"
     },
-    "*adc_n_v[4]": {
+    "*adc_data_n_v[4]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA05_n"
     },
-    "*adc_p_v[10]": {
+    "*adc_data_p_v[10]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA09_p"
     },
-    "*adc_n_v[10]": {
+    "*adc_data_n_v[10]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA09_n"
     },
-    "*adc_p_v[2]": {
+    "*adc_data_p_v[2]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA13_p"
     },
-    "*adc_n_v[2]": {
+    "*adc_data_n_v[2]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
@@ -347,95 +347,95 @@
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA17_n_CC"
     },
-    "*dac_p_v[11]": {
+    "*dac_data_p[11]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA23_p"
     },
-    "*dac_n_v[11]": {
+    "*dac_data_n[11]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA23_n"
     },
-    "*dac_p_v[10]": {
+    "*dac_data_p[10]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA26_p"
     },
-    "*dac_n_v[10]": {
+    "*dac_data_n[10]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA26_n"
     },
-    "*adc_p_v[12]": {
+    "*adc_data_p_v[12]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA06_p"
     },
-    "*adc_n_v[12]": {
+    "*adc_data_n_v[12]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA06_n"
     },
-    "*adc_p_v[5]": {
+    "*adc_data_p_v[5]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA10_p"
     },
-    "*adc_n_v[5]": {
+    "*adc_data_n_v[5]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA10_n"
     },
-    "*adc_p_v[1]": {
+    "*adc_data_p_v[1]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA14_p"
     },
-    "*adc_n_v[1]": {
+    "*adc_data_n_v[1]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA14_n"
     },
-    "*adc_p_v[0]": {
+    "*adc_data_p_v[0]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA18_p_CC"
     },
-    "*adc_n_v[0]": {
+    "*adc_data_n_v[0]": {
         "PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA18_n_CC"
     },
-    "*dac_p_v[9]": {
+    "*dac_data_p[9]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA27_p"
     },
-    "*dac_n_v[9]": {
+    "*dac_data_n[9]": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA27_n"
     },
-    "I2C_scl": {
+    "I2C1_scl": {
 	"PIO_DIRECTION": "BIDIR",
 	"fmc": "LA16_p"
     },
-    "I2C_sda": {
+    "I2C1_sda": {
 	"PIO_DIRECTION": "BIDIR",
 	"fmc": "LA16_n"
     }

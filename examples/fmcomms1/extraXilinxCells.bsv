@@ -28,8 +28,8 @@ endinterface
 
 import "BVI" OBUFDS =
 module mkxOBUFDS#(Wire#(Bit#(1)) i)(DiffOut);
-   default_clock no_clock;
-   default_reset no_reset;
+  default_clock clk();
+  default_reset rstn();
 
    port I = i;
    method O    read_p();

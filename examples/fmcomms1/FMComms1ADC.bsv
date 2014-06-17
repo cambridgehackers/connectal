@@ -187,8 +187,8 @@ module mkFMComms1ADC(FMComms1ADC);
       method Action io_adc_dco_n(Bit#(1) v);
 	 adc_dco_n <= v;
       endmethod
-      interface deleteme_unused_clock = defaultClock;
-      interface deleteme_unused_reset = defaultReset;
+      interface deleteme_unused_clock = adc_dco;
+      interface deleteme_unused_reset = adc_reset;
 
    endinterface
    

@@ -6,7 +6,7 @@ CPPFILES=testfmcomms1.cpp
 XBSVFLAGS = -C fmcomms1-$(BOARD).xdc --tcl clock.tcl
 XBSVFLAGS += --bscflags " -D NumberOfMasters=0"
 #XBSVFLAGS += --bscflags " -D TRACE_AXI"
-XBSVFLAGS += --bscflags " -D USE_I2C1 -D PinType=ImageCapturePins"
+XBSVFLAGS += --bscflags " -D USE_I2C1 -D PinType=FMComms1Pins"
 
 ifeq ($(BOARD),zedboard)
 HAS_PS7=true

@@ -75,11 +75,11 @@ module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,1))
    FMComms1DAC dac <- mkFMComms1DAC();
    
    FMComms1IndicationProxy fmcomms1IndicationProxy <- mkFMComms1IndicationProxy(FMComms1Indication);
-   FMComms1 fmcomms1 <- mkFMComms1(fmcomms1IndicationProxy, dac.dac, adc.adc);
-   FMComms1RequestWrapper fmcomms1RequestWrapper <- mkFMComms1RequestWrapper(FMComms1Request);
+   FMComms1 fmcomms1 <- mkFMComms1(fmcomms1IndicationProxy.ifc, dac.dac, adc.adc);
+   FMComms1RequestWrapper fmcomms1RequestWrapper <- mkFMComms1RequestWrapper(FMComms1Request, fmcomms1.request);
 
-   Vector#(1,  ObjectReadClient#(64))   readClients = cons(fmcomms1.dmaReadClient, nil);
-   Vector#(1, ObjectWriteClient#(64))  writeClients = cons(fmcomms1.dmaWriteClient, nil);
+   Vector#(1,  ObjectReadClient#(64))   readClients = cons(fmcomms1.readDmaClient, nil);
+   Vector#(1, ObjectWriteClient#(64))  writeClients = cons(fmcomms1.writeDmaClient, nil);
    DmaIndicationProxy dmaIndicationProxy <- mkDmaIndicationProxy(DmaIndication);
    MemServer#(addrWidth, 64, 1)   dma <- mkMemServer(dmaIndicationProxy.ifc, readClients, writeClients);
    DmaConfigWrapper dmaRequestWrapper <- mkDmaConfigWrapper(DmaConfig,dma.request);
@@ -93,16 +93,16 @@ module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,1))
    
    
    // instantiate system directory
-   StdDirectory dir <- mkStdDirectory(ic.portals);
-   let ctrl_mux <- mkSlaveMux(dir,ic.portals);
+   StdDirectory dir <- mkStdDirectory(portals);
+   let ctrl_mux <- mkSlaveMux(dir,portals);
    
 
 
    
-   interface interrupt = getInterruptVector(ic.portals);
+   interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface masters = nil;
-   //interface leds = captureRequestInternal.leds;
+   interface masters = dma.masters;
+   interface leds = default_leds;
    interface FMComms1Pins pins;
       interface FMCOmms1ADCPins adcpins = adc.pins;
       interface FMCOmms1ADCPins dacpins = dac.pins;
