@@ -36,6 +36,8 @@ interface FMComms1ADCPins;
    method Action io_adc_data_n(Bit#(14) v);
    method Action io_adc_or_p(Bit#(1) v);
    method Action io_adc_or_n(Bit#(1) v);
+   method Action io_adc_dco_p(Bit#(1) v);
+   method Action io_adc_dco_n(Bit#(1) v);
 endinterface
 
 typedef struct {
@@ -78,7 +80,7 @@ endinterface
  */
 
 
-module mkFMComms1ADC#(Clock clk_p, Clock clk_n)(FMComms1ADC);
+module mkFMComms1ADC(FMComms1ADC);
    
    Clock def_clock <- exposeCurrentClock;
    Reset def_reset <- exposeCurrentReset;
@@ -111,6 +113,8 @@ module mkFMComms1ADC#(Clock clk_p, Clock clk_n)(FMComms1ADC);
 
    Wire#(Bit#(1)) adc_or_p <- mkDWire(0);
    Wire#(Bit#(1)) adc_or_n <- mkDWire(0);
+   Wire#(Bit#(1)) adc_dco_p <- mkDWire(0);
+   Wire#(Bit#(1)) adc_dco_n <- mkDWire(0);
 
    Vector#(14, ReadOnly#(Bit#(1))) v_adc_data;   /* data */
    ReadOnly#(Bit#(14)) adc_data;
@@ -118,7 +122,7 @@ module mkFMComms1ADC#(Clock clk_p, Clock clk_n)(FMComms1ADC);
    ReadOnly#(Bit#(1)) adc_or;      /* overrange */
    Clock adc_dco;     /* DDR clock */
    
-   adc_dco <- mkClockIBUFGDS(clk_p, clk_n);
+   adc_dco <- mkClockIBUFDS(adc_dco_p, adc_dco_n);
    
    Reset adc_reset <- mkAsyncReset(3, def_reset, adc_dco);
    for(Integer i = 0; i < 14; i = i + 1)
@@ -174,6 +178,13 @@ module mkFMComms1ADC#(Clock clk_p, Clock clk_n)(FMComms1ADC);
       
       method Action io_adc_or_n(Bit#(1) v);
 	 adc_or_n <= v;
+      endmethod
+      method Action io_adc_dco_p(Bit#(1) v);
+	 adc_dco_p <= v;
+      endmethod
+      
+      method Action io_adc_dco_n(Bit#(1) v);
+	 adc_dco_n <= v;
       endmethod
    
    endinterface
