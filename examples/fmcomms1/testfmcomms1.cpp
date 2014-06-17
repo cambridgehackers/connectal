@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #include "StdDmaIndication.h"
 #include "DmaConfigProxy.h"
