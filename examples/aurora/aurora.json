@@ -1,0 +1,42 @@
+{
+    "userClk_p": {
+	"IOSTANDARD": "LVDS_25",
+	"DIFF_TERM": "TRUE",
+        "fmc": "userClk_p"
+    },
+    "userClk_n": {
+	"IOSTANDARD": "LVDS_25",
+	"DIFF_TERM": "TRUE",
+        "fmc": "userClk_n"
+    },
+    "smaUserClk_p": {
+	"IOSTANDARD": "LVDS_25",
+	"DIFF_TERM": "TRUE",
+        "fmc": "smaUserClk_p"
+    },
+    "smaUserClk_n": {
+	"IOSTANDARD": "LVDS_25",
+	"DIFF_TERM": "TRUE",
+        "fmc": "smaUserClk_n"
+    },
+    "mgtRefClk_p": {
+	"DIFF_TERM": "TRUE",
+        "fmc": "mgtRefClk_p"
+    },
+    "mgtRefClk_n": {
+	"DIFF_TERM": "TRUE",
+        "fmc": "mgtRefClk_n"
+    },
+    "mgtRx_p": {
+        "fmc": "mgtRx_p"
+    },
+    "mgtRx_n": {
+        "fmc": "mgtRx_n"
+    },
+    "mgtTx_p": {
+        "fmc": "mgtTx_p"
+    },
+    "mgtTx_n": {
+        "fmc": "mgtTx_n"
+    }
+}
