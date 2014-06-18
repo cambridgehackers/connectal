@@ -57,11 +57,15 @@ typedef enum { FMComms1Request, FMComms1Indication, DmaIndication, DmaConfig} If
 interface FMComms1Pins;
    interface FMComms1ADCPins adcpins;
    interface FMComms1DACPins dacpins;
+   method Bit#(1) ad9548_ref_p();
+   method Bit#(1) ad9548_ref_n();
+   
 //   (* prefix="" *)
 endinterface
 
+/* clk1 is the FCLKCLK1 controlled by software */
 
-module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,1))
+module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,FMComms1Pins,1))
       provisos(Add#(addrWidth, a__, 52),
 	    Add#(b__, addrWidth, 64),
 	    Add#(c__, 12, addrWidth),
@@ -69,7 +73,14 @@ module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,1))
 	    Add#(e__, c__, 40),
 	    Add#(f__, addrWidth, 40));
 
-   // These need to be connected to the clocks for the ADC and DAC
+   Bit#(1) ref_clk_bit <- mkC2B(clk1);
+   Wire#(Bit#(1)) ref_clk_wire <- mkDWire(0);
+   
+   rule senddown_clk;
+      ref_clk_wire <= clk;
+   endrule
+
+   DiffPair ref_clk <- mkxOBUFDS(ref_clk_wire);
 
    FMComms1ADC adc <- mkFMComms1ADC();
    FMComms1DAC dac <- mkFMComms1DAC();
@@ -106,5 +117,12 @@ module mkPortalTop(PortalTop#(addrWidth,64,FMComms1Pins,1))
    interface FMComms1Pins pins;
       interface FMCOmms1ADCPins adcpins = adc.pins;
       interface FMCOmms1ADCPins dacpins = dac.pins;
+      method Bit#(1) ad9548_ref_p();
+	 return(ref_clk.read_p());
+      endmethod
+   
+      method Bit#(1) ad9548_ref_n();
+	 return(ref_clk.read_n());
+      endmethod
    endinterface
 endmodule : mkPortalTop
