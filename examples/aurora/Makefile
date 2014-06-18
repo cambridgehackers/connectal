@@ -6,7 +6,7 @@ H2S = AuroraIndication
 BSVFILES = Aurora.bsv Top.bsv
 CPPFILES=testaurora.cpp
 XBSVFLAGS +=  -D NumberOfMasters=0 -D PinType=AuroraPins
-XBSVFLAGS += -C $(BOARD)/sources/aurora-$(BOARD).xdc --tcl clock.tcl
+XBSVFLAGS += -C $(BOARD)/sources/aurora-$(BOARD).xdc -C aurora-clocks.xdc --tcl clock.tcl
 
 AURORA_V = $(XBSVDIR)/generated/xilinx/$(BOARD)/aurora_64b66b_0/aurora_64b66b_0_stub.v
 

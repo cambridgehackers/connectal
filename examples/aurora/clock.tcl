@@ -8,7 +8,4 @@ foreach {pat} {CLK_GATE*} {
     foreach {net} [get_nets $pat] {
 	disconnect_net -net $net -objects [get_pins -of_objects $net]
     }
-    foreach {port} [get_ports $pat] {
-        place_ports $port
-    }
 }
