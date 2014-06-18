@@ -71,6 +71,27 @@ module mkClockIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(Clock) provisos(Bits#
    return _m.gen_clk;
 endmodule: mkClockIBUFDS
 
+import "BVI" IBUFDS_GTE2 =
+module vMkClockIBUFDS_GTE2#(Bool enable, Wire#(one_bit) i, Wire#(one_bit) ib)(ClockGenIfc) provisos(Bits#(one_bit,1));
+   default_clock clk();
+   default_reset rstn();
+   port CEB = pack(!enable);
+   port I = i;
+   port IB = ib;
+   //method O    _read;
+   output_clock gen_clk(O);
+   //output_clock gen_clk_div2(ODIV2);
+   path(I, O);
+   path(IB, O);
+   //path(I, ODIV2);
+   //path(IB, ODIV2);
+endmodule: vMkClockIBUFDS_GTE2
+
+module mkClockIBUFDS_GTE2#(Bool enable, Wire#(one_bit) i, Wire#(one_bit) ib)(Clock) provisos(Bits#(one_bit,1));
+   let _m <- vMkClockIBUFDS_GTE2(enable, i, ib);
+   return _m.gen_clk;
+endmodule: mkClockIBUFDS_GTE2
+
 import "BVI" OBUFT =
 module mkOBUFT#(Wire#(one_bit) i, Wire#(one_bit) t)(ReadOnly#(one_bit)) provisos(Bits#(one_bit,1));
    default_clock clk();
