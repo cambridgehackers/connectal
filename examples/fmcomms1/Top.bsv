@@ -51,6 +51,7 @@ import XbsvXilinxCells::*;
 import FMComms1ADC::*;
 import FMComms1DAC::*;
 import FMComms1::*;
+import extraXilinxCells::*;
 
 typedef enum { FMComms1Request, FMComms1Indication, DmaIndication, DmaConfig} IfcNames deriving (Eq,Bits);
 
@@ -80,7 +81,7 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,FMComms1Pins,1))
       ref_clk_wire <= ref_clk_as_bit.o();
    endrule
 
-   DiffPair ref_clk <- mkxOBUFDS(ref_clk_wire);
+   DiffOut ref_clk <- mkxOBUFDS(ref_clk_wire);
 
    FMComms1ADC adc <- mkFMComms1ADC();
    FMComms1DAC dac <- mkFMComms1DAC();
