@@ -73,11 +73,11 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,FMComms1Pins,1))
 	    Add#(e__, c__, 40),
 	    Add#(f__, addrWidth, 40));
 
-   Bit#(1) ref_clk_bit <- mkC2B(clk1);
+   C2B ref_clk_as_bit <- mkC2B(clk1);
    Wire#(Bit#(1)) ref_clk_wire <- mkDWire(0);
    
    rule senddown_clk;
-      ref_clk_wire <= clk;
+      ref_clk_wire <= ref_clk_as_bit.o();
    endrule
 
    DiffPair ref_clk <- mkxOBUFDS(ref_clk_wire);
