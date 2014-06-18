@@ -40,7 +40,7 @@ interface FMComms1DACPins;
    method Action io_dac_dco_p(Bit#(1) v);
    method Action io_dac_dco_n(Bit#(1) v);
    method Bit#(1) io_dac_dci_p();
-   method Bit#(2) io_dac_dci_n();
+   method Bit#(1) io_dac_dci_n();
    method Clock deleteme_unused_clock;
    method Reset deleteme_unused_reset;
 endinterface
