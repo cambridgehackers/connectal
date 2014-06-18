@@ -79,10 +79,11 @@ testnames = echo                 \
             bscan                \
             memread_4m           \
             memwrite_4m          \
-            testmm2.2.2          \
-            testmm4.4.2          \
-            testmm8.8.2          \
-            testmm16.16.2        \
+	    testmm2.2.2          \
+	    testmm4.2.2          \
+	    testmm4.4.2          \
+	    testmm8.8.2          \
+	    testmm16.16.2        \
             yuv                  \
 
 memtests =  memcpy               \
@@ -93,6 +94,12 @@ memtests =  memcpy               \
             echo                 \
             memread_manyclients  \
             memwrite_manyclients \
+
+matrixtests =testmm2.2.2         \
+	    testmm4.2.2          \
+	    testmm4.4.2          \
+	    testmm8.8.2          \
+	    testmm16.16.2        \
 
 zmemtests = memread_4m           \
             memwrite_4m          \
@@ -233,6 +240,10 @@ memtests.kc705: $(addsuffix .kc705, $(memtests))
 memtests.bluesim: $(addsuffix .bluesim, $(memtests))
 
 memtests.bluesimrun: $(addsuffix .bluesimrun, $(memtests))
+
+matrixtests.bluesim:  $(addsuffix .bluesim, $(matrixtests))
+matrixtests.bluesimrun:  $(addsuffix .bluesimrun, $(matrixtests))
+
 
 #################################################################################################
 # zmemtests

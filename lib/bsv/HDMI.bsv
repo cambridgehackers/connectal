@@ -69,15 +69,15 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
-    Reg#(Bit#(12)) dePixelEnd <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelWidth <- mkSyncReg(3, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelPorch <- mkSyncReg(192, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelVisible <- mkSyncReg(1920 + 192, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelEnd <- mkSyncReg(1920 + 192 + 44 + 44-1, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelWidth <- mkSyncReg(44 + 44 - 1 + 44, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelPorch <- mkSyncReg(44 + 44 - 1, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelVisible <- mkSyncReg(44 + 44 - 1 + 192, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(12)) pixelMidpoint <- mkSyncReg((1920/2) + 192, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineEnd <- mkSyncReg(0, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineWidth <- mkSyncReg(3, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLinePorch <- mkSyncReg(41, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineVisible <- mkSyncReg(1080+41, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineEnd <- mkSyncReg(1080 + 45-1, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineWidth <- mkSyncReg(3 + 5, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLinePorch <- mkSyncReg(3, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineVisible <- mkSyncReg(3 + 41, axi_clock, axi_reset, defaultClock);
     Reg#(Bit#(11)) lineMidpoint <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);
@@ -93,6 +93,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bool) lineVisible <- mkReg(False);
     Reg#(Bit#(1)) vsync <- mkReg(0);
     Reg#(Bit#(1)) hsync <- mkReg(0);
+    Reg#(Bit#(32)) vsyncCounter <- mkReg(0);
 
     Reg#(VideoData#(Rgb888)) rgb888StageReg <- mkReg(unpack(0));
     Reg#(Bool) evenOddPixelReg <- mkReg(False);
@@ -100,20 +101,21 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(32)) underflowCount <- mkReg(0);
     Reg#(Bit#(32)) underflowCountAxi <- mkSyncReg(0, defaultClock, defaultReset, axi_clock);
     Reg#(Bit#(32)) counter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
-    Reg#(Bit#(32)) vsyncCounter <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsed <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
     Reg#(Bit#(32)) elapsedVsync <- mkReg(0, clocked_by axi_clock, reset_by axi_reset);
+    SyncBitIfc#(Bit#(32)) vsyncCounters <- mkSyncBits(0, defaultClock, defaultReset, axi_clock, axi_reset);
+
+    rule vsyncaxi;
+       vsyncCounters.send(vsyncCounter);
+    endrule
 
     rule axicyclecount;
        counter <= counter + 1;
     endrule
       
-    rule vsyncCount if (startDMA.pulse());
-       vsyncCounter <= vsyncCounter+1;
-    endrule
     rule vsyncReceived if (sendVsyncIndication.pulse());
        elapsed <= counter;
-       elapsedVsync <= vsyncCounter;
+       elapsedVsync <= vsyncCounters.read();
        indication.vsync(extend(elapsed - counter), vsyncCounter - vsyncCounter);
        //waitingForVsync <= False;
     endrule
@@ -151,8 +153,10 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         else begin
            if (lineCount == deLinePorch) begin
               vsync <= 1;
-              if (pixelCount == 0 && testPatternEnabled == 0)
+              if (pixelCount == 0 && testPatternEnabled == 0) begin
+                  vsyncCounter <= vsyncCounter+1;
                   startDMA.send();
+              end
            end
            else if (lineCount == deLineWidth)
               vsync <= 0;

@@ -203,8 +203,8 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     interface XADC xadc;
         method Bit#(4) gpio;
             return { bozobit, hdmisignals.hdmi_vsync,
-                hdmisignals.hdmi_data[8], hdmisignals.hdmi_data[0]};
-                //hdmiGen.hdmi.hsync, hdmi_de};
+                //hdmisignals.hdmi_data[8], hdmisignals.hdmi_data[0]};
+                hdmisignals.hdmi_hsync, hdmisignals.hdmi_de};
         endmethod
     endinterface: xadc
 endmodule

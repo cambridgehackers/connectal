@@ -34,6 +34,8 @@ import Pipe::*;
 import RbmTypes::*;
 import MemTypes::*;
 
+typedef 4 BurstLen;
+
 interface VectorSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);

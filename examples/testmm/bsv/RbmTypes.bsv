@@ -45,8 +45,6 @@ typedef `K_VALUE K;
 
 typedef TMin#(4,J) RowsPerTile;
 typedef TDiv#(J,RowsPerTile) T;
-
-typedef 16 BurstLen;
 typedef TMul#(32,N) DmaSz;
 
 typedef enum {
