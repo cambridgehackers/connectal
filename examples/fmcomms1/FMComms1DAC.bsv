@@ -39,6 +39,8 @@ interface FMComms1DACPins;
    method Bit#(14) io_dac_data_n();
    method Action io_dac_dco_p(Bit#(1) v);
    method Action io_dac_dco_n(Bit#(1) v);
+   interface Bit#(1) io_dac_dci_p();
+   interface Bit#(2) io_dac_dci_n();
    interface Clock deleteme_unused_clock;
    interface Reset deleteme_unused_reset;
 endinterface
@@ -104,6 +106,15 @@ module mkFMComms1DAC(FMComms1DAC);
    for (Integer i = 0; i < 14; i = i + 1)
       dac_out[i] <- mkxOBUFDS(dac_ddr_data[i]);
    
+   Bit#(1) dac_dci_bit <- mkC2B(dac_dco);
+   Wire#(Bit#(1)) dac_dci_wire <- mkDWire(0);
+   
+   rule senddown_clk;
+      dac_dci_wire <- dac_dci_bit;
+   endrule
+   
+   DiffOut dac_dci <- mkxOBUFDS(dac_dci_wire);
+   
    rule senddown_gb;
       outfifo.deq();
       gb.enq(outfifo.first());
@@ -140,6 +151,14 @@ module mkFMComms1DAC(FMComms1DAC);
       
       method Bit#(14) io_dac_data_n();
          return(get_n(dac_out));
+      endmethod
+
+      method Bit#(1) io_dac_dci_p();
+         return(dac_dci.read_p());
+      endmethod
+      
+      method Bit#(1) io_dac_dci_n();
+         return(dac_dci.read_n());
       endmethod
 
       method Action io_dac_dco_p(Bit#(1) v);
