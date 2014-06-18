@@ -71,6 +71,33 @@ module mkClockIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(Clock) provisos(Bits#
    return _m.gen_clk;
 endmodule: mkClockIBUFDS
 
+interface DiffPair;
+   method Bit#(1) p;
+   method Bit#(1) n;
+endinterface
+
+import "BVI" OBUFDS =
+module vMkOBUFDS#(Bit#(1) i)(DiffPair);
+   default_clock clk();
+   default_reset reset();
+
+   port I = i;
+
+   method O p;
+   method OB n;
+
+   path(I, O);
+   path(I, OB);
+
+   schedule (p, n) CF (p, n);
+
+endmodule: vMkOBUFDS
+
+module mkOBUFDS#(Bit#(1) i)(DiffPair);
+   let _m <- vMkOBUFDS(i);
+   return _m;
+endmodule: mkOBUFDS
+
 import "BVI" IBUFDS_GTE2 =
 module vMkClockIBUFDS_GTE2#(Bool enable, Wire#(one_bit) i, Wire#(one_bit) ib)(ClockGenIfc) provisos(Bits#(one_bit,1));
    default_clock clk();
