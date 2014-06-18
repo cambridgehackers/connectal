@@ -115,11 +115,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
 
    interface zynq = ps7.pins;
    interface leds = top.leds;
-   interface XADC xadc;
-       method Bit#(4) gpio;
-           return 0;
-       endmethod
-   endinterface
+   interface XADC xadc = top.xadc;
 `ifdef USE_I2C0
    interface I2C_Pins i2c0;
       interface Inout scl = tscl0.io;

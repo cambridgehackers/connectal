@@ -24,6 +24,7 @@
 import Vector::*;
 import MemTypes::*;
 import Leds::*;
+import XADC::*;
 import Pipe::*;
 
 interface Portal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
@@ -64,6 +65,7 @@ interface PortalTop#(numeric type addrWidth, numeric type dataWidth, type pins, 
    interface Vector#(numMasters,MemMaster#(addrWidth, dataWidth)) masters;
    interface Vector#(16,ReadOnly#(Bool)) interrupt;
    interface LEDS             leds;
+   interface XADC             xadc;
    interface pins             pins;
 endinterface
 
