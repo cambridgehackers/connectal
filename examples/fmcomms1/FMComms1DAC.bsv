@@ -110,7 +110,7 @@ module mkFMComms1DAC(FMComms1DAC);
    Wire#(Bit#(1)) dac_dci_wire <- mkDWire(0);
    
    rule senddown_clk;
-      dac_dci_wire <- dac_dci_bit;
+      dac_dci_wire <= dac_dci_bit;
    endrule
    
    DiffOut dac_dci <- mkxOBUFDS(dac_dci_wire);
