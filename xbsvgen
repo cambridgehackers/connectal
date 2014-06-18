@@ -273,7 +273,13 @@ else
   endif
 endif
 
-BSCFLAGS = -show-schedule -aggressive-conditions --wait-for-license -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj -D TimeStamp=%(timestamp)s %(bscflags)s
+BSCMAJOR=%(bscmajor)d
+ifneq ($(BSCMAJOR), 2013)
+    BSCWARNFLAGS += -demote-errors G0066:G0045 -suppress-warnings G0046
+endif
+BSCOPTFLAGS= -show-schedule -aggressive-conditions
+BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
+BSCFLAGS = $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license -D TimeStamp=%(timestamp)s %(bscflags)s
 BSIM_CXX = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.cxx $(XBSVDIR)/cpp/sock_fd.cxx
 
 VIVADOFLAGS= -notrace
@@ -521,6 +527,14 @@ if __name__=='__main__':
     if not namespace.xsimflags:
         namespace.xsimflags = ['-R']
 
+    bscmajor = 0
+    bscminor = 0
+    m = re.match('.*version (\d+).(\d+)', subprocess.check_output(['bsc', '-v']))
+    if m:
+        bscmajor = int(m.group(1))
+        bscminor = int(m.group(2))
+        print "Using bsc %d.%d" % (bscmajor, bscminor)
+
     project_dir = os.path.expanduser(namespace.project_dir)
     srcdirs = []
 
@@ -547,6 +561,8 @@ if __name__=='__main__':
     elif boardname == 'zc702':
         bsvdefines += ['ZYNQ']
     bsvdefines += ['BOARD_'+boardname]
+    if bscmajor < 2014:
+        bsvdefines.append('ExportUnusedClocksAndResets')
 
     if not (os.path.abspath(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv')) in map(os.path.abspath, namespace.bsvfile)):
         namespace.bsvfile.append(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv'))
@@ -826,6 +842,8 @@ if __name__=='__main__':
                                    'clibs': ' '.join(['-l%s' % l for l in namespace.clib]),
                                    'cdefines': ' '.join([ '-D%s' % d for d in namespace.bsvdefine ]),
                                    'mdefines': '\n'.join(['%s="%s"' % (var,val) for (var,val) in map(util.splitBinding, namespace.bsvdefine)]),
+                                   'bscmajor': bscmajor,
+                                   'bscminor': bscminor,
                                    'bscflags': ' '.join(namespace.bscflags),
                                    'xelabflags': ' '.join(namespace.xelabflags),
                                    'xsimflags': ' '.join(namespace.xsimflags)
