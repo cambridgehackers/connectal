@@ -83,13 +83,13 @@
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA19_n"
     },
-    "*dac_dci_p_v": {
+    "*dac_dci_p": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
 	"fmc": "LA21_p"
     },
-    "*dac_dci_n_v": {
+    "*dac_dci_n": {
         "PIO_DIRECTION": "OUTPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
