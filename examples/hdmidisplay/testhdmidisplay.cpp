@@ -177,7 +177,7 @@ int main(int argc, const char **argv)
 
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
-      if ((pixclk > 0) && (pixclk < 148000000)) {
+      if ((pixclk > 0) && (pixclk < 170000000)) {
 	nlines = edid.timing[i].nlines;    // number of visible lines
 	npixels = edid.timing[i].npixels;
 	int vblank = edid.timing[i].blines; // number of blanking lines
@@ -194,7 +194,7 @@ int main(int argc, const char **argv)
 		60l * (long)(hblank + npixels) * (long)(vblank + nlines),
 		npixels, nlines);
 	status = poller->setClockFrequency(1, pixclk, 0);
-
+hblank--; // needed on zc702
 	hdmiInternal->setDeLine(vsyncoff,           // End of FrontPorch
                                 vsyncoff+vsyncwidth,// End of Sync
                                 vblank,             // Start of Visible (start of BackPorch)
