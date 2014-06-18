@@ -509,7 +509,7 @@ int main(int argc, const char **argv)
                 npixels, nlines);
         status = poller->setClockFrequency(1, pixclk, 0);
 
-/*
+hblank--; // needed on zc702
         hdmidevice->setDeLine(vsyncoff,           // End of FrontPorch
                                 vsyncoff+vsyncwidth,// End of Sync
                                 vblank,             // Start of Visible (start of BackPorch)
@@ -517,7 +517,6 @@ int main(int argc, const char **argv)
         hdmidevice->setDePixel(hsyncoff,
                                 hsyncoff+hsyncwidth, hblank,
                                 hblank + npixels, hblank + npixels / 2);
-*/
         break;
       }
     }
