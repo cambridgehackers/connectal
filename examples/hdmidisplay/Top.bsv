@@ -63,6 +63,6 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI#(Bit#(16)),1))
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
    interface masters = dma.masters;
-   interface leds = default_leds;
+   interface xadc = hdmiDisplay.xadc;
    interface pins = hdmiDisplay.hdmi;      
 endmodule : mkPortalTop
