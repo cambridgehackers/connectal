@@ -225,7 +225,7 @@ report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/
 report_clock_utilization -file $outputDir/%(dut)s_clock_util.rpt > hw/temp.log
 report_utilization -file $outputDir/%(dut)s_post_route_util.rpt > hw/temp.log
 report_datasheet -file $outputDir/%(dut)s_post_route_datasheet.rpt > hw/temp.log
-report_io -file $outputDir/%(dut)s_post_place_io.rpt > hw/temp.log
+report_io -file $outputDir/%(dut)s_post_route_io.rpt > hw/temp.log
 #report_power -file $outputDir/%(dut)s_post_route_power.rpt
 #report_drc -file $outputDir/%(dut)s_post_imp_drc.rpt
 #write_verilog -force $outputDir/%(dut)s_impl_netlist.v
@@ -235,7 +235,7 @@ write_xdc -no_fixed_only -force $outputDir/%(dut)s_impl.xdc > hw/temp.log
 # 
 set_property SEVERITY {Warning} [get_drc_checks NSTD-1]
 set_property SEVERITY {Warning} [get_drc_checks UCIO-1]
-report_drc -file $outputDir/%(dut)s_post_route_drc.rpt
+report_drc -file $outputDir/%(dut)s_post_route_drc.rpt > hw/temp.log
 write_bitstream -force -bin_file $outputDir/mkTop.bit
 
 close $rfh
