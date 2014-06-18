@@ -39,10 +39,10 @@ interface FMComms1DACPins;
    method Bit#(14) io_dac_data_n();
    method Action io_dac_dco_p(Bit#(1) v);
    method Action io_dac_dco_n(Bit#(1) v);
-   interface Bit#(1) io_dac_dci_p();
-   interface Bit#(2) io_dac_dci_n();
-   interface Clock deleteme_unused_clock;
-   interface Reset deleteme_unused_reset;
+   method Bit#(1) io_dac_dci_p();
+   method Bit#(2) io_dac_dci_n();
+   method Clock deleteme_unused_clock;
+   method Reset deleteme_unused_reset;
 endinterface
 
 typedef struct {
