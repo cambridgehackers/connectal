@@ -47,6 +47,7 @@ endinterface
 
 
 typedef struct {
+`define TAGGED_TOKENS
 `ifdef TAGGED_TOKENS
    UInt#(32) row;
    UInt#(32) col;
@@ -58,7 +59,7 @@ interface SharedDotProdServer#(numeric type k);
    interface Reg#(UInt#(20)) numElts;
    interface Put#(Token)                 aInput;
    interface Put#(Token)                 bInput;
-   interface Vector#(k, PipeOut#(Float)) pipes;
+   interface Vector#(k, PipeOut#(Token)) pipes;
    interface SharedDotProdDebug#(k) debug;
 endinterface
 
@@ -68,7 +69,27 @@ interface RowColSource#(numeric type dsz, type a);
    method ActionValue#(Bool) finish();
 endinterface
 
+interface RowColSink#(numeric type dsz, type a);
+   interface PipeIn#(a) pipe;
+   method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+   method ActionValue#(Bool) finish();
+endinterface
+
 function PipeOut#(dtype) vsp(RowColSource#(dsz,dtype) vs); return vs.pipe; endfunction
+
+module mkRowColSink#(VectorSink#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSink#(TMul#(N,32), Vector#(N,Token)));
+   function Float foo(Token v) = v.v;
+   method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
+      vs.start(p,a,l);
+   endmethod
+   method finish = vs.finish;
+   interface PipeIn pipe;
+      method Action enq(Vector#(N,Token) v);
+	 vs.pipe.enq(map(foo,v));
+      endmethod
+      method Bool notFull = vs.pipe.notFull;
+   endinterface
+endmodule
 
 module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSource#(TMul#(N,32), Vector#(N,Token)));
 `ifdef TAGGED_TOKENS
@@ -178,7 +199,12 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
 
    FloatAlu mul   <- mkFloatMultiplier(defaultValue);
    FloatAlu adder <- mkFloatAdder(defaultValue);
-
+   
+`ifdef TAGGED_TOKENS
+   Vector#(2,FIFO#(Tuple2#(UInt#(32),UInt#(32)))) tag_fifos <- replicateM(mkSizedFIFO(valueOf(K)));
+   Vector#(K,Reg#(Maybe#(Tuple2#(UInt#(32),UInt#(32))))) tag_regs <- replicateM(mkReg(tagged Invalid));
+`endif   
+   
    // afifo receives one value per K values received on bfifo
    FIFOF#(Token)                          afifo   <- mkFIFOF();
    PipeOut#(Token)                        aFunnel <- mkRepeat(repetitions, toPipeOut(afifo));
@@ -192,7 +218,7 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
    PipeOut#(Bool) lastPipe <- mkRepeat(repetitions,  toPipeOut(lastFifo));
 
    Vector#(K,FIFOF#(Float)) accumFifos <- replicateM(mkFIFOF1);
-   Vector#(K,FIFOF#(Float)) dotfifos   <- replicateM(mkFIFOF1);
+   Vector#(K,FIFOF#(Token)) dotfifos   <- replicateM(mkFIFOF1);
 
    Reg#(Bit#(TLog#(K))) chanReg <- mkReg(0);
    Vector#(2,FIFO#(Bit#(TLog#(K)))) chanFifos <- replicateM(mkSizedFIFO(valueOf(K)));
@@ -224,10 +250,10 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
       begin // measure and display latency
 	 let latency = cycles-lastMulin[chan];
 	 if ((lastMulin[chan] - cycles) < 6)
-	    $display("%08d label=%d mulin chan=%d latency", cycles, label, chan, latency);
+	    if(verbose) $display("%08d label=%d mulin chan=%d latency", cycles, label, chan, latency);
 	 if (latency > 11) latency = 11;
 	 if (!latencyReported[latency]) begin
-	    $display("%08d label=%d mulin chan=%d latency", cycles, label, chan, latency);
+	    if(verbose) $display("%08d label=%d mulin chan=%d latency", cycles, label, chan, latency);
 	    latencyReported[latency] <= True;
 	 end
       end
@@ -236,10 +262,16 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
       chanReg <= (chan + 1);
       let a <- toGet(aFunnel).get();
       let b <- toGet(bFunnel).get();
-
+      
+      if (a.row==0 && b.col==0)
+	 $display("xxx %h %h xxx", a.v, b.v);
+      
       let first <- toGet(firstPipe).get();
       if (verbose) $display("%08d label=%d mulin chan=%d first=%d", cycles-lastMulin[chan], label, chan, first);
       mul.request.put(tuple2(a.v, b.v));
+`ifdef TAGGED_TOKENS
+      tag_fifos[0].enq(tuple2(a.row,b.col));
+`endif
    endrule
 
    rule mulout;
@@ -250,6 +282,10 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
       let acc <- toGet(accumFifos[chan]).get();
       //adder.request.put(tuple2(resp,acc));
       adder.request.put(tuple2(resp,acc));
+`ifdef TAGGED_TOKENS
+      let t <- toGet(tag_fifos[0]).get;
+      tag_fifos[1].enq(t);
+`endif
    endrule
 
    rule accout if (initialized);
@@ -258,12 +294,30 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
       macs <= macs + 1;
       match {.acc,.*} <- adder.response.get();
       //if (label == 0) $display("%08d label=%d accout chan=%d acc=%x last=%d", cycles, label, chan, pack(acc), last);
-      if (last)
-	 dotfifos[chan].enq(acc);
       accumFifos[chan].enq(last ? unpack(0) : acc);
+`ifdef TAGGED_TOKENS
+      match {.row, .col} <- toGet(tag_fifos[1]).get;
+      case (tag_regs[chan]) matches
+	 tagged Valid .v: 
+	    begin
+	       match {.r,.c} = v;
+	       if (r != row || c != col) 
+		  $display("mkSharedDotProdServer:row/col mismatch");
+	       if (last)
+		  tag_regs[chan] <= tagged Invalid;
+	    end
+	 tagged Invalid:
+	    tag_regs[chan] <= tagged Valid tuple2(row,col);
+      endcase
+      if (last)
+	 dotfifos[chan].enq(Token{row:row, col:col, v:acc});
+`else
+      if (last)
+	 dotfifos[chan].enq(Token{v:acc});
+`endif
    endrule
 
-   Vector#(K,PipeOut#(Float)) dotpipes = map(toPipeOut, dotfifos);
+   Vector#(K,PipeOut#(Token)) dotpipes = map(toPipeOut, dotfifos);
 
    interface Put aInput;
       method Action put(Token a); // if (readyReg);
@@ -313,7 +367,7 @@ endinterface
 interface MmTile;
    interface Vector#(RowsPerTile, Put#(Token)) aInputs;
    interface Vector#(RowsPerTile, Put#(Token)) bInputs;
-   interface Vector#(RowsPerTile, PipeOut#(Vector#(N, Float))) fxPipes;
+   interface Vector#(RowsPerTile, PipeOut#(Vector#(N, Token))) fxPipes;
    interface Reg#(UInt#(20)) numElts;
    interface MmTileDebug debug;
 endinterface
@@ -330,17 +384,17 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
    Vector#(RowsPerTile,  FIFOF#(Token))   bFifos <- replicateM(mkFIFOF);
    Vector#(RowsPerTile,  PipeOut#(Token)) bPipes = map(toPipeOut, bFifos);
 
-   function Vector#(k,PipeOut#(Float)) getDotProdServerPipes(SharedDotProdServer#(k) s); return s.pipes; endfunction
+   function Vector#(k,PipeOut#(Token)) getDotProdServerPipes(SharedDotProdServer#(k) s); return s.pipes; endfunction
    Vector#(RowsPerTile, SharedDotProdServer#(K)) fxdotprods <- mapM(mkSharedDotProdServer, map(fromInteger,genVector));
-   Vector#(RowsPerTile, Vector#(K, PipeOut#(Float))) fxpipes = map(getDotProdServerPipes, fxdotprods);
+   Vector#(RowsPerTile, Vector#(K, PipeOut#(Token))) fxpipes = map(getDotProdServerPipes, fxdotprods);
 `define USE_MIMO_DFIFOS // this version is faster
 `ifndef USE_MIMO_DFIFOS
    Vector#(RowsPerTile, PipeOut#(Vector#(K, Float))) fxPipesK <- mapM(mkJoinVector(id), fxpipes);
    Vector#(RowsPerTile, PipeOut#(Vector#(N, Float))) fxPipesN <- mapM(mkFunnel, fxPipesK);
 `else
    MIMOConfiguration mimoCfg = defaultValue;
-   Vector#(RowsPerTile, MIMO#(K,N,TAdd#(K,N),Float)) dfifos <- replicateM(mkMIMO(mimoCfg));
-   Vector#(RowsPerTile, PipeOut#(Vector#(N, Float))) fxPipesN = map(toPipeOut, dfifos);
+   Vector#(RowsPerTile, MIMO#(K,N,TAdd#(K,N),Token)) dfifos <- replicateM(mkMIMO(mimoCfg));
+   Vector#(RowsPerTile, PipeOut#(Vector#(N, Token))) fxPipesN = map(toPipeOut, dfifos);
 `endif
    FirstLastPipe#(UInt#(MMSize)) firstLastPipe          <- mkFirstLastPipe();
    Vector#(2, PipeOut#(Tuple2#(Bool,Bool))) firstLastPipes <- mkForkVector(firstLastPipe.pipe);
@@ -361,7 +415,7 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
 `ifdef USE_MIMO_DFIFOS
    for (Integer j = 0; j < rowsPerTile; j = j + 1) begin
       rule dotProdValue;
-	 Vector#(K,Float) vs;
+	 Vector#(K,Token) vs;
 	 for (Integer k = 0; k < kk; k = k + 1) begin
 	    let v <- toGet(fxpipes[j][k]).get();
 	    vs[k] = v;
@@ -491,7 +545,7 @@ typedef enum {
  */
 module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) sA,
 				     Vector#(K, VectorSource#(dsz, Vector#(N, Float))) sB,
-				     Vector#(J, VectorSink#(dsz, Vector#(N,Float)))    sinks
+				     Vector#(J, VectorSink#(dsz, Vector#(N,Float)))    ss
 				     )(DmaMatrixMultiplyIfc#(addrwidth, dsz))
    provisos ( Add#(N,n__,K)
 	     , Mul#(N,m__,K)
@@ -525,6 +579,7 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
    
    Vector#(J, RowColSource#(TMul#(N,32), Vector#(N,Token))) sourceA <- mapM(mkRowSource, sA);
    Vector#(K, RowColSource#(TMul#(N,32), Vector#(N,Token))) sourceB <- mapM(mkColSource, sB);
+   Vector#(J, RowColSink#(TMul#(N,32),   Vector#(N,Token))) sinks   <- mapM(mkRowColSink,ss);
    Vector#(J, PipeOut#(Token))       aPipes <- mapM(mkFunnel1, map(vsp, sourceA));
    Vector#(K, PipeOut#(Token))       bPipes <- mapM(mkFunnel1, map(vsp, sourceB));
    PipeOut#(Token)                  bFunnel <- mkFunnelPipes1(bPipes);
@@ -535,7 +590,7 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
    endrule
 
    Vector#(T, MmTile) mmTiles <- mapM(mkMmTile,map(fromInteger,genVector));
-   Vector#(J, PipeOut#(Vector#(N,Float))) fxpipes;
+   Vector#(J, PipeOut#(Vector#(N,Token))) fxpipes;
    for (Integer t = 0; t < valueOf(T); t = t+1) begin
       for (Integer i = 0; i < valueof(RowsPerTile); i = i+1) begin
 	 let j = t*valueOf(RowsPerTile) + i;
@@ -553,7 +608,7 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
       end
    end
    
-   function PipeIn#(a) getPipe(VectorSink#(n,a) vs) = vs.pipe;
+   function PipeIn#(a) getPipe(RowColSink#(n,a) vs) = vs.pipe;
    zipWithM(mkConnection, fxpipes, map(getPipe, sinks));
    
    XYRangePipeIfc#(UInt#(addrwidth)) indexpipeifc <- mkXYRangePipeOut();
