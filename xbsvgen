@@ -233,6 +233,9 @@ write_xdc -no_fixed_only -force $outputDir/%(dut)s_impl.xdc > hw/temp.log
 #
 # STEP#5: generate a bitstream
 # 
+set_property SEVERITY {Warning} [get_drc_checks NSTD-1]
+set_property SEVERITY {Warning} [get_drc_checks UCIO-1]
+report_drc -file $outputDir/%(dut)s_post_route_drc.rpt
 write_bitstream -force -bin_file $outputDir/mkTop.bit
 
 close $rfh
