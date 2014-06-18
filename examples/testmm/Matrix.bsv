@@ -262,14 +262,13 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
       chanReg <= (chan + 1);
       let a <- toGet(aFunnel).get();
       let b <- toGet(bFunnel).get();
-      
-      if (a.row==0 && b.col==0)
-	 $display("xxx %h %h xxx", a.v, b.v);
-      
+            
       let first <- toGet(firstPipe).get();
       if (verbose) $display("%08d label=%d mulin chan=%d first=%d", cycles-lastMulin[chan], label, chan, first);
       mul.request.put(tuple2(a.v, b.v));
 `ifdef TAGGED_TOKENS
+      // if (a.row==2 && b.col==0)
+      // 	 $display("xxx %h %h xxx", a.v, b.v);
       tag_fifos[0].enq(tuple2(a.row,b.col));
 `endif
    endrule
@@ -309,8 +308,11 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
 	 tagged Invalid:
 	    tag_regs[chan] <= tagged Valid tuple2(row,col);
       endcase
-      if (last)
+      if (last) begin
 	 dotfifos[chan].enq(Token{row:row, col:col, v:acc});
+	 // if (row==2 && col==0)
+	 //    $display("last(%d,%d) = %h xxx", row, col, acc);
+      end
 `else
       if (last)
 	 dotfifos[chan].enq(Token{v:acc});
@@ -419,7 +421,7 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
 	 for (Integer k = 0; k < kk; k = k + 1) begin
 	    let v <- toGet(fxpipes[j][k]).get();
 	    vs[k] = v;
-	 end
+	 end	    
 	 dfifos[j].enq(fromInteger(kk), vs);
       endrule
    end
@@ -568,7 +570,7 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
    let nshift = valueOf(nshift);
    Bool verbose = False;
    Bool verbose1 = False;
-   Bool timing = True;
+   Bool timing = False;
 
    Reg#(UInt#(32)) cycles <- mkReg(0);
    Reg#(Bool) doneReg <- mkReg(False);

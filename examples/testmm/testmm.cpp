@@ -160,8 +160,8 @@ int main(int argc, const char **argv)
 		);
 #endif
   cv::Mat  m3 = m1 * m2;
-  dumpMatF<int>("m1", "%08x", m1, stdout);
-  dumpMatF<int>("m2", "%08x", m2, stdout);
+  //dumpMatF<int>("m1", "%08x", m1, stdout);
+  //dumpMatF<int>("m2", "%08x", m2, stdout);
   fflush(stdout);
   PortalMat pm1(m1);
   PortalMat pm2t(m2.t());
@@ -181,7 +181,7 @@ int main(int argc, const char **argv)
     dumpMat<float>("m1 * m2", "%5.1f", m3);
   }
   bool eq = std::equal(m3.begin<float>(), m3.end<float>(), pm3.begin<float>());
-  //dumpMat<float>("diff", "%5.1f", pm3);
+  //dumpMat<int>("pm3", "%08x", pm3);
   fprintf(stderr, "eq=%d\n", eq);
   //device->finish();
   exit(!eq);

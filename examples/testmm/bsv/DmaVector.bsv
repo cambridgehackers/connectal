@@ -34,7 +34,7 @@ import Pipe::*;
 import RbmTypes::*;
 import MemTypes::*;
 
-typedef 8 BurstLen;
+typedef 4 BurstLen;
 
 interface VectorSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
