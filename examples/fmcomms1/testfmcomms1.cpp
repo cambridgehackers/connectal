@@ -44,8 +44,17 @@ public:
   }
 };
 
+static void *thread_routine(void *data)
+{
+    fprintf(stderr, "Calling portalExec\n");
+    portalExec(0);
+    fprintf(stderr, "portalExec returned ???\n");
+    return data;
+}
+
 int main(int argc, const char **argv)
 {
+  PortalPoller *poller = 0;
   PortalAlloc *srcAlloc;
   PortalAlloc *dstAlloc;
   unsigned int *srcBuffer = 0;
@@ -59,7 +68,9 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new FMComms1RequestProxy(IfcNames_FMComms1Request);
+  poller = new PortalPoller();
+
+  device = new FMComms1RequestProxy(IfcNames_FMComms1Request, poller);
   dma = new DmaConfigProxy(IfcNames_DmaConfig);
 
   deviceIndication = new FMComms1Indication(IfcNames_FMComms1Indication);
@@ -73,14 +84,15 @@ int main(int argc, const char **argv)
 
   dstBuffer = (unsigned int *)mmap(0, alloc_sz, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, dstAlloc->header.fd, 0);
 
+  pthread_t thread;
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+  pthread_create(&thread, &attr, thread_routine, 0);
 
-  pthread_t tid;
-  fprintf(stderr, "Main::creating exec thread\n");
-  if(pthread_create(&tid, NULL,  portalExec, NULL)){
-   fprintf(stderr, "error creating exec thread\n");
-   exit(1);
-  }
-
+  int status;
+  status = poller->setClockFrequency(0, 100000000, 0);
+  /* FMComms1 refclk should be 30 MHz */
+  status = poller->setClockFrequency(1,  30000000, 0);
     
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
   dma->dCacheFlushInval(dstAlloc, dstBuffer);
