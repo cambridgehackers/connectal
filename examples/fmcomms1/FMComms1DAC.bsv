@@ -106,11 +106,11 @@ module mkFMComms1DAC(FMComms1DAC);
    for (Integer i = 0; i < 14; i = i + 1)
       dac_out[i] <- mkxOBUFDS(dac_ddr_data[i]);
    
-   Bit#(1) dac_dci_bit <- mkC2B(dac_dco);
+   C2B dac_dco_as_bit <- mkC2B(dac_dco);
    Wire#(Bit#(1)) dac_dci_wire <- mkDWire(0);
    
    rule senddown_clk;
-      dac_dci_wire <= dac_dci_bit;
+      dac_dci_wire <= dac_dco_as_bit.o();
    endrule
    
    DiffOut dac_dci <- mkxOBUFDS(dac_dci_wire);
