@@ -172,7 +172,7 @@ module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, 
    params.clkin_buffer     = False;
    params.clkfbout_mult_f  = 4.000;
    params.clkout0_divide_f = 8.000;
-   ClockGenerator7           clkgen <- mkClockGenerator7(params, clocked_by _ep.user.clk_out, reset_by user_reset_n);
+   ClockGenerator7           clkgen <- mkClockGenerator7(params, clocked_by epClock250, reset_by user_reset_n);
    Clock epClock125 = clkgen.clkout0; /* half speed user_clk */
    Reset epReset125 <- mkAsyncReset(4, user_reset_n, epClock125);
 
