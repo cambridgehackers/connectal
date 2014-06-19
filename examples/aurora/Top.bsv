@@ -1,4 +1,7 @@
 // bsv libraries
+export Aurora::*;
+export mkPortalTop;
+
 import Vector::*;
 import FIFO::*;
 import Connectable::*;
@@ -17,8 +20,6 @@ import AuroraRequestWrapper::*;
 
 // defined by user
 import Aurora::*;
-export Aurora::*;
-export mkPortalTop;
 typedef enum {AuroraIndication, AuroraRequest} IfcNames deriving (Eq,Bits);
 
 module mkPortalTop(PortalTop#(addrWidth,64,AuroraPins,0));

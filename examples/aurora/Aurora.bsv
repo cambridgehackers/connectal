@@ -30,146 +30,7 @@ import XilinxCells::*;
 import BviAurora::*;
 import Clocks::*;
 import FrequencyCounter::*;
-
-interface Drp#(numeric type asz, numeric type dsz);
-   method Action addr(Bit#(asz) a);
-   method Action en(Bit#(1) en);
-   method Action we(Bit#(1) we);
-   method Bit#(dsz) dout();
-   method Action din(Bit#(dsz) d);
-   method Bit#(1) rdy();
-endinterface
-
-interface Gtxe2Qpll;
-   method Action reset(Bool v);
-   method Bit#(1) lock();
-   interface Clock outClk;
-   interface Clock outRefClk;
-   method Bit#(1) refClkLost();
-endinterface
-
-interface VGtxe2Common;
-    (* always_ready, always_enabled *)
-   interface Gtxe2Qpll qpll;
-    (* always_ready, always_enabled *)
-   interface Drp#(9,16) drp;
-endinterface
-
-import "BVI" GTXE2_COMMON =
-module vMkGtxe2Common#(Clock qpllLockDetClk, Clock gtrefclk0, Clock drpClk)(VGtxe2Common);
-
-   default_clock clk();
-   default_reset reset();
-   input_clock gtrefclk0(GTREFCLK0) = gtrefclk0;
-   input_clock qpllLockDetClk(QPLLLOCKDETCLK) = qpllLockDetClk;
-   input_clock drpClk(DRPCLK) = drpClk;
-
-   parameter BIAS_CFG                               = (64'h0000040000001000);
-   parameter COMMON_CFG                             = (32'h00000000);
-   parameter QPLL_CFG                               = (27'h06801C1);
-   parameter QPLL_CLKOUT_CFG                        = (4'b0000);
-   parameter QPLL_COARSE_FREQ_OVRD                  = (6'b010000);
-   parameter QPLL_COARSE_FREQ_OVRD_EN               = (1'b0);
-   parameter QPLL_CP                                = (10'b0000011111);
-   parameter QPLL_CP_MONITOR_EN                     = (1'b0);
-   parameter QPLL_DMONITOR_SEL                      = (1'b0);
-   parameter QPLL_FBDIV                             = (10'b0000100000);
-   parameter QPLL_FBDIV_MONITOR_EN                  = (1'b0);
-   parameter QPLL_FBDIV_RATIO                       = (1'b1);
-   parameter QPLL_INIT_CFG                          = (24'h000006);
-   parameter QPLL_LOCK_CFG                          = (16'h21E8);
-   parameter QPLL_LPF                               = (4'b1111);
-   parameter QPLL_REFCLK_DIV                        = (1);
-
-   port GTGREFCLK = 0;
-   port GTNORTHREFCLK0 = 0;
-   port GTNORTHREFCLK1 = 0;
-   //port GTREFCLK0 = gtrefclk0;
-   port GTREFCLK1 = 0;
-   port GTSOUTHREFCLK0 = 0;
-   port GTSOUTHREFCLK1 = 0;
-   port QPLLLOCKEN = 1;
-   port QPLLOUTRESET = 0;
-   port QPLLPD = 0;
-   port QPLLREFCLKSEL = 3'b1;
-   port QPLLRSVD1 = 0;
-   port QPLLRSVD2 = 5'b11111;
-   port RCALENB = 1;
-   port BGBYPASSB = 1;
-   port BGMONITORENB = 1;
-   port BGPDB = 1;
-   port BGRCALOVRD = 5'b11111;
-   port PMARSVD = 0;
-   interface Drp drp;
-      method din(DRPDI) enable((*inhigh*)EN_DI) clocked_by(drpClk);
-      method addr(DRPADDR) enable((*inhigh*)EN_ADDR) clocked_by(drpClk);
-      method en(DRPEN) enable((*inhigh*)EN_EN) clocked_by(drpClk);
-      method we(DRPWE) enable((*inhigh*)EN_WE) clocked_by(drpClk);
-      method DRPDO dout() clocked_by(drpClk);
-      method DRPRDY rdy() clocked_by(drpClk);
-   endinterface
-   interface Gtxe2Qpll qpll;
-      method reset(QPLLRESET) enable ((*inhigh*)EN_RESET);
-      method QPLLLOCK lock();
-      output_clock outClk(QPLLOUTCLK);
-      output_clock outRefClk(QPLLOUTREFCLK);
-      method QPLLREFCLKLOST refClkLost();
-   endinterface
-   schedule (qpll_reset, qpll_lock, qpll_refClkLost, drp_addr, drp_din, drp_en, drp_we, drp_dout, drp_rdy, drp_we)
-         CF (qpll_reset, qpll_lock, qpll_refClkLost, drp_addr, drp_din, drp_en, drp_we, drp_dout, drp_rdy, drp_we);
-endmodule: vMkGtxe2Common
-
-typedef struct {
-   Bool      isWrite;
-   Bit#(asz) addr;
-   Bit#(dsz) data;
-   } DrpRequest#(numeric type asz, numeric type dsz) deriving (Bits,Eq);
-
-interface Gtxe2Common;
-   interface Gtxe2Qpll qpll;
-   interface Server#(DrpRequest#(9,16),Bit#(16)) drp;
-endinterface
-
-(* synthesize *)
-module mkGtxe2Common#(Clock qpllLockDetClk, Clock gtrefclk0, Clock drpClk)(Gtxe2Common);
-   let m <- vMkGtxe2Common(qpllLockDetClk, gtrefclk0, drpClk);
-   let defaultReset <- exposeCurrentReset();
-   let drpReset <- mkAsyncReset(2, defaultReset, drpClk);
-   Wire#(Bit#(1)) drpen <- mkDWire(0, clocked_by drpClk, reset_by drpReset);
-   rule drpenrule;
-      m.drp.en(drpen);
-   endrule
-
-   Reg#(Bool) resetWire <- mkReg(False);
-   rule qpll_reset_rule;
-      m.qpll.reset(resetWire);
-   endrule
-
-   interface Gtxe2Qpll qpll;
-      method Action reset(Bool v);
-	 resetWire <= v;
-      endmethod
-      method lock = m.qpll.lock;
-      interface outClk = m.qpll.outClk;
-      interface outRefClk = m.qpll.outRefClk;
-      method refClkLost = m.qpll.refClkLost;
-   endinterface
-   interface Server drp;
-      interface Put request;
-	 method Action put(DrpRequest#(9,16) req);
-	    m.drp.addr(req.addr);
-	    m.drp.din(req.data);
-	    m.drp.we(pack(req.isWrite));
-	    drpen <= 1;
-	 endmethod
-      endinterface
-      interface Get response;
-	 method ActionValue#(Bit#(16)) get() if (unpack(m.drp.rdy()));
-	    return m.drp.dout();
-	 endmethod
-      endinterface
-   endinterface
-endmodule
+import Gtx::*;
 
 (* always_enabled, always_ready *)
 interface AuroraPins;
@@ -201,6 +62,7 @@ interface AuroraRequest;
     method Action outRefClkElapsedCycles(Bit#(32) period);
     method Action drpRequest(Bit#(9) addr, Bit#(16) data, Bit#(1) isWrite);
     method Action qpllReset(Bit#(1) v);
+    method Action loopback(Bit#(3) v);
 endinterface
 
 interface Aurora;
@@ -236,13 +98,13 @@ module mkAuroraRequest#(AuroraIndication indication)(Aurora);
 
    let common <- mkGtxe2Common(defaultClock, mgtRefClk, defaultClock);
 
-   let outClk <- mkClockBUFG(common.qpll.outClk);
-   let outClkReset <- mkAsyncReset(2, defaultReset, outClk);
-   let outClkFreqCounter <- mkFrequencyCounter(outClk, outClkReset);
+   // let outClk <- mkClockBUFG(clocked_by common.qpll.outClk);
+   // let outClkReset <- mkAsyncReset(2, defaultReset, outClk);
+   // let outClkFreqCounter <- mkFrequencyCounter(outClk, outClkReset);
 
-   let outRefClk <- mkClockBUFG(common.qpll.outRefClk);
-   let outRefClkReset <- mkAsyncReset(2, defaultReset, outRefClk);
-   let outRefClkFreqCounter <- mkFrequencyCounter(outRefClk, outRefClkReset);
+   // let outRefClk <- mkClockBUFG(clocked_by common.qpll.outRefClk);
+   // let outRefClkReset <- mkAsyncReset(2, defaultReset, outRefClk);
+   // let outRefClkFreqCounter <- mkFrequencyCounter(outRefClk, outRefClkReset);
 
    let initReset <- mkAsyncReset(128, defaultReset, userClk);
    let aur <- mkBviAurora64(/* init_clk */ defaultClock,
@@ -256,6 +118,7 @@ module mkAuroraRequest#(AuroraIndication indication)(Aurora);
 			    /* user_clk_reset */ defaultReset);
       
    Reg#(Bit#(1)) pmaInitVal <- mkReg(0);
+   Reg#(Bit#(3)) loopbackVal <- mkReg(0);
    Reg#(Bit#(15)) ccCounter <- mkReg(0);
 
    rule tx_out_clk_rule;
@@ -264,7 +127,7 @@ module mkAuroraRequest#(AuroraIndication indication)(Aurora);
    // gt_pll_lock
 
    rule settings;
-      aur.loopback(1);
+      aur.loopback(loopbackVal);
       aur.power.down(0);
       aur.pma.init(pmaInitVal);
    endrule
@@ -278,18 +141,23 @@ module mkAuroraRequest#(AuroraIndication indication)(Aurora);
       indication.received(aur.m_axi_rx.tdata());
    endrule
 
-   // The CC block code should be sent atleast once for every 5000 clock cycles.
+   Reg#(Bit#(1)) ccValue <- mkReg(0);
    rule doCC;
+      aur.do_.cc(ccValue);
+   endrule
+
+   // The CC block code should be sent atleast once for every 5000 clock cycles.
+   rule countCC;
       let counter = ccCounter + 1;
       let doCC = 0;
       if (aur.channel.up() == 0)
 	 counter = 0;
       if (counter > 4992)
 	 doCC = 1;
-      aur.do_.cc(doCC);
       if (counter > 5000)
 	 counter = 0;
       ccCounter <= counter;
+      ccValue <= doCC;
    endrule
    rule userclkfreqcounter_rule;
       let ec <- userClkFreqCounter.elapsedCycles();
@@ -300,12 +168,12 @@ module mkAuroraRequest#(AuroraIndication indication)(Aurora);
       indication.mgtRefClkElapsedCycles(ec);
    endrule
    rule outclkfreqcounter_rule;
-      let ec <- outClkFreqCounter.elapsedCycles();
-      indication.outClkElapsedCycles(ec);
+//      let ec <- outClkFreqCounter.elapsedCycles();
+//      indication.outClkElapsedCycles(ec);
    endrule
    rule outrefclkfreqcounter_rule;
-      let ec <- outRefClkFreqCounter.elapsedCycles();
-      indication.outRefClkElapsedCycles(ec);
+//      let ec <- outRefClkFreqCounter.elapsedCycles();
+//      indication.outRefClkElapsedCycles(ec);
    endrule
    rule drpResponseRule;
       let v <- common.drp.response.get();
@@ -325,6 +193,9 @@ module mkAuroraRequest#(AuroraIndication indication)(Aurora);
       method Action pma_init(Bit#(1) v);
 	 pmaInitVal <= v;
       endmethod
+      method Action loopback(Bit#(3) v);
+	 loopbackVal <= v;
+      endmethod
       method Action userClkElapsedCycles(Bit#(32) period);
 	 userClkFreqCounter.start(period);
       endmethod
@@ -332,10 +203,10 @@ module mkAuroraRequest#(AuroraIndication indication)(Aurora);
 	 mgtRefClkFreqCounter.start(period);
       endmethod
       method Action outClkElapsedCycles(Bit#(32) period);
-	 outClkFreqCounter.start(period);
+//	 outClkFreqCounter.start(period);
       endmethod
       method Action outRefClkElapsedCycles(Bit#(32) period);
-	 outRefClkFreqCounter.start(period);
+//	 outRefClkFreqCounter.start(period);
       endmethod
       method Action drpRequest(Bit#(9) addr, Bit#(16) data, Bit#(1) isWrite);
          common.drp.request.put(DrpRequest { addr: addr, data: data, isWrite: unpack(isWrite) });

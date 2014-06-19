@@ -68,9 +68,9 @@ int main(int argc, const char **argv)
     device->debug();
     device->userClkElapsedCycles(1000);
     device->mgtRefClkElapsedCycles(1000);
-    device->outClkElapsedCycles(1000);
-    device->outRefClkElapsedCycles(1000);
     device->qpllReset(count < 2);
+    device->pma_init(count < 2);
+    device->loopback(1);
     if (count < 0x14) {
       fprintf(stderr, "Reading drp reg %x\n", count+0x30);
       device->drpRequest(count+0x30, 0, 0);
