@@ -61,6 +61,16 @@ instance ToPipeIn#(a, FIFOF#(a));
    endfunction
 endinstance
 
+instance ToPipeOut#(a, function a pipefn());
+   function PipeOut#(a) toPipeOut(function a pipefn());
+      return (interface PipeOut#(a);
+		 method first(); return pipefn(); endmethod
+		 method Action deq(); endmethod
+		 method Bool notEmpty(); return False; endmethod
+	      endinterface);
+   endfunction
+endinstance
+
 instance ToPipeOut#(a, Reg#(a));
    function PipeOut#(a) toPipeOut(Reg#(a) in);
       return (interface PipeOut#(a);
