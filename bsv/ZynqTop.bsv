@@ -37,6 +37,23 @@ import CtrlMux::*;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
 
+`ifdef USES_FCLK1
+`define CLOCK_DECL Clock clk1
+`define CLOCK_ARG  ps7.fclkclk[1],
+`else
+`define CLOCK_DECL
+`define CLOCK_ARG
+`endif
+
+`ifndef NumberOfMasters
+`define NumberOfMasters 1
+`endif
+`ifndef PinType
+`define PinType Empty
+`endif
+
+typedef `PinType PinType;
+typedef `NumberOfMasters NumberOfMasters;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
@@ -44,7 +61,7 @@ interface I2C_Pins;
 endinterface
 
 (* always_ready, always_enabled *)
-interface ZynqTop#(type pins);
+interface ZynqTop;
    (* prefix="" *)
    interface ZynqPins zynq;
    (* prefix="GPIO" *)
@@ -60,24 +77,14 @@ interface ZynqTop#(type pins);
    interface I2C_Pins         i2c1;
 `endif
    (* prefix="" *)
-   interface pins             pins;
+   interface PinType          pins;
    interface Vector#(4, Clock) deleteme_unused_clock;
    interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
 
-`ifdef USES_FCLK1
-`define CLOCK_DECL Clock clk1
-`define CLOCK_ARG  ps7.fclkclk[1],
-`else
-`define CLOCK_DECL
-`define CLOCK_ARG
-`endif
+typedef (function Module#(PortalTop#(32, 64, PinType, NumberOfMasters)) mkpt(`CLOCK_DECL)) MkPortalTop;
 
-typedef (function Module#(PortalTop#(32, 64, ipins, nMasters)) mkpt(`CLOCK_DECL)) MkPortalTop#(type ipins, numeric type nMasters);
-
-module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(ZynqTop#(ipins))
-   provisos(Add#(a__,nMasters,4));
-
+module [Module] mkZynqTopFromPortal#(MkPortalTop constructor)(ZynqTop);
    PS7 ps7 <- mkPS7();
    Clock mainclock = ps7.fclkclk[0];
    Reset mainreset = ps7.fclkreset[0];
@@ -133,10 +140,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    interface deleteme_unused_reset = unused_reset;
 endmodule
 
-`ifndef PinType
-`define PinType Empty
-`endif
-module mkZynqTop(ZynqTop#(`PinType));
+module mkZynqTop(ZynqTop);
    let top <- mkZynqTopFromPortal(mkPortalTop);
    return top;
 endmodule
