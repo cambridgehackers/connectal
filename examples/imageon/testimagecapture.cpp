@@ -420,7 +420,7 @@ printf("[%s:%d] before i2c_hdmi\n", __FUNCTION__, __LINE__);
 printf("[%s:%d] after i2c_hdmi\n", __FUNCTION__, __LINE__);
     //init_vclk();
 sleep(5);
-sleep(10000);
+//sleep(10000);
     hdmidevice->setTestPattern(0);
 
     // Reset DCMs

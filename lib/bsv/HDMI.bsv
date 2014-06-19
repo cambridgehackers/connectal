@@ -89,6 +89,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     Reg#(Bit#(1)) patternIndex0 <- mkReg(0);
     Reg#(Bit#(1)) patternIndex1 <- mkReg(0);
     Reg#(Bit#(1)) testPatternEnabled <- mkReg(1);
+    Reg#(Bit#(24)) pixelData <- mkReg(24'hFF00FF);
     Reg#(Bool) dataEnable <- mkReg(False);
     Reg#(Bool) lineVisible <- mkReg(False);
     Reg#(Bit#(1)) vsync <- mkReg(0);
@@ -117,7 +118,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
        elapsed <= counter;
        elapsedVsync <= vsyncCounters.read();
        indication.vsync(extend(elapsed - counter), vsyncCounter - vsyncCounter);
-       //waitingForVsync <= False;
+       waitingForVsync <= False;
     endrule
 
     rule init_pattern;
@@ -175,14 +176,19 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     rule output_data_rule if (!dataEnable);
         rgb888StageReg <= VideoData {de: 0, pixel: unpack(0), vsync: vsync, hsync: hsync };
     endrule
+    rule output_data_ruleenable if (dataEnable);
+        rgb888StageReg <= VideoData {de: 1, pixel: unpack(pixelData), vsync: 0, hsync: 0 };
+    endrule
 
     rule testpattern_rule if (testPatternEnabled != 0 && dataEnable);
-        rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(patternRegs[{patternIndex1, patternIndex0}])};
+       pixelData <= patternRegs[{patternIndex1, patternIndex0}];
+        //rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(patternRegs[{patternIndex1, patternIndex0}])};
     endrule
 
     interface Put request;
         method Action put(Bit#(32) v) if (testPatternEnabled == 0 && dataEnable);
-           rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v[23:0])};
+          pixelData <= v[23:0];
+           //rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v[23:0])};
         endmethod
     endinterface: request
 
