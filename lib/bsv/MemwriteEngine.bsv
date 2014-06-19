@@ -65,7 +65,6 @@ module mkBurstFunnelOld#(Integer __x)(BurstFunnel#(k,w))
 	    ,Min#(2,logk,bpc)
 	    ,FunnelPipesPipelined#(1, k, Tuple3#(Bit#(logk),Bit#(w),Bool), bpc)
 	    );
-   // 'mutex' is an ugly hack which should be replaced by something which will actually make timing and achieve full throughput (mdk)
    FIFO#(void) mutex <- mkSizedFIFO(1);
    Vector#(k, FIFOF#(Tuple3#(Bit#(logk), Bit#(w),Bool))) data_in <- replicateM(mkFIFOF);
    Vector#(k,Reg#(Bit#(8))) burst_len <- replicateM(mkReg(0));
