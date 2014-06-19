@@ -110,7 +110,9 @@ reserved = {
     'output_reset': 'TOKOUTPUT_RESET',
     'package': 'TOKPACKAGE',
     'par': 'TOKPAR',
+    'port': 'TOKPORT',
     'parameter': 'TOKPARAMETER',
+    'port': 'TOKPORT',
     'provisos': 'TOKPROVISOS',
     'ready': 'TOKREADY',
     'reset_by': 'TOKRESET_BY',
@@ -354,7 +356,9 @@ def p_importDecls(p):
                    | importDecls importDecl'''
 
 def p_exportDecl(p):
-    'exportDecl : TOKEXPORT VAR LPAREN DOT DOT RPAREN SEMICOLON'
+    '''exportDecl : TOKEXPORT VAR LPAREN DOT DOT RPAREN SEMICOLON
+                  | TOKEXPORT VAR SEMICOLON
+                  | TOKEXPORT VAR COLONCOLON STAR SEMICOLON'''
     p[0] = p[2]
 
 def p_exportDecls(p):
@@ -385,12 +389,16 @@ def p_interfaceHashParams(p):
     else:
         p[0] = []
 
+def p_instanceAttributes(p):
+    '''instanceAttributes :
+                          | instanceAttributes LPARENSTAR attrSpecs RPARENSTAR'''
+
 def p_subinterfaceDecl(p):
-    '''subinterfaceDecl : TOKINTERFACE type VAR SEMICOLON
+    '''subinterfaceDecl : instanceAttributes TOKINTERFACE type VAR SEMICOLON
                         | type VAR SEMICOLON'''
-    if len(p) == 5:
-        name = p[3]
-        t = p[2]
+    if len(p) == 6:
+        name = p[4]
+        t = p[3]
     else:
         name = p[2]
         t = p[1]
@@ -511,11 +519,12 @@ def p_expressionStmt(p):
                       | TOKACTION colonVar expressionStmts TOKENDACTION colonVar
                       | typeDef
                       | instanceAttributes rule
-                      | TOKSEQ fsmStmts TOKENDSEQ'''
+                      | TOKSEQ fsmStmts TOKENDSEQ
+                      '''
 
 def p_expressionStmts(p):
     '''expressionStmts : expressionStmts expressionStmt
-                       | expressionStmt '''
+                       | '''
 
 def p_provisos(p):
     '''provisos :
@@ -726,11 +735,7 @@ def p_attrSpec(p):
 
 def p_attrSpecs(p):
     '''attrSpecs : attrSpec
-                 | attrSpecs attrSpec'''
-
-def p_instanceAttributes(p):
-    '''instanceAttributes :
-                          | instanceAttributes LPARENSTAR attrSpecs RPARENSTAR'''
+                 | attrSpecs COMMA attrSpec'''
 
 def p_moduleContext(p):
     '''moduleContext : 
@@ -741,6 +746,73 @@ def p_moduleContext(p):
 def p_moduleDef(p):
     '''moduleDef : instanceAttributes TOKMODULE moduleContext VAR moduleParamsArgs provisos SEMICOLON expressionStmts TOKENDMODULE colonVar'''
     p[0] = AST.Module(p[3], p[4], p[5][0], p[5][1], p[6], p[8])
+
+def p_importBviDef(p):
+    '''importBviDef : TOKIMPORT STR VAR EQUAL bviModuleDef'''
+    p[0] = p[5]
+
+def p_bviModuleDef(p):
+    '''bviModuleDef : instanceAttributes TOKMODULE moduleContext VAR moduleParamsArgs provisos SEMICOLON bviExpressionStmts TOKENDMODULE colonVar'''
+    p[0] = AST.Module(p[3], p[4], p[5][0], p[5][1], p[6], p[8])
+
+def p_bviExpressionStmts(p):
+    '''bviExpressionStmts : bviExpressionStmts bviExpressionStmt
+                          | bviExpressionStmt '''
+
+def p_bviExpressionStmt(p):
+    '''bviExpressionStmt : TOKRETURN expression SEMICOLON
+                         | fsmStmtDef
+                         | whenStmt
+                         | lvalue SEMICOLON
+                         | lvalue LPAREN expressions RPAREN SEMICOLON
+                         | BUILTINVAR LPAREN expressions RPAREN SEMICOLON
+                         | varAssign SEMICOLON
+                         | varDecl SEMICOLON
+                         | beginStmt
+                         | ifStmt
+                         | caseStmt
+                         | forStmt
+                         | bviInterfaceDef
+                         | functionDef
+                         | bviMethodDef
+                         | moduleDef
+                         | TOKACTION colonVar expressionStmts TOKENDACTION colonVar
+                         | typeDef
+                         | instanceAttributes rule
+                         | TOKSEQ fsmStmts TOKENDSEQ
+                         | TOKPORT VAR EQUAL expression SEMICOLON
+                         | TOKPARAMETER VAR EQUAL expression SEMICOLON
+                         | TOKDEFAULT_CLOCK VAR LPAREN RPAREN SEMICOLON
+                         | TOKDEFAULT_CLOCK VAR LPAREN VAR RPAREN SEMICOLON
+                         | TOKDEFAULT_RESET VAR LPAREN RPAREN SEMICOLON
+                         | TOKDEFAULT_RESET VAR LPAREN VAR RPAREN SEMICOLON
+                         | TOKINPUT_CLOCK VAR LPAREN VAR RPAREN EQUAL expression SEMICOLON
+                         | TOKOUTPUT_CLOCK VAR LPAREN VAR RPAREN SEMICOLON
+                         | TOKSCHEDULE LPAREN vars RPAREN schedOp LPAREN vars RPAREN SEMICOLON'''
+
+def p_schedOp(p):
+    '''schedOp : TOKCF
+               | TOKC
+               | TOKSB
+               | TOKSBR'''
+
+def p_bviInterfaceDef(p):
+    '''bviInterfaceDef : TOKINTERFACE type VAR SEMICOLON bviExpressionStmts TOKENDINTERFACE colonVar
+                       | TOKINTERFACE type VAR EQUAL expression SEMICOLON
+                       | TOKINTERFACE VAR EQUAL expression SEMICOLON'''
+
+def p_bviMethodAttributes(p):
+    '''bviMethodAttributes :
+                           | bviMethodAttributes bviMethodAttribute'''
+def p_bviMethodAttribute(p):
+    '''bviMethodAttribute :
+                          | TOKENABLE LPAREN instanceAttributes VAR RPAREN
+                          | TOKCLOCKED_BY LPAREN instanceAttributes VAR RPAREN
+                          | TOKRESET_BY LPAREN instanceAttributes VAR RPAREN'''
+
+def p_bviMethodDef(p):
+    '''bviMethodDef : TOKMETHOD VAR LPAREN VAR RPAREN bviMethodAttributes SEMICOLON
+                    | TOKMETHOD VAR VAR LPAREN RPAREN bviMethodAttributes SEMICOLON'''
 
 def p_instanceDeclStmt(p):
     '''instanceDeclStmt : varAssign SEMICOLON
@@ -778,7 +850,8 @@ def p_packageStmt(p):
                    | varAssign SEMICOLON
                    | moduleDef
                    | macroDef
-                   | typeDef'''
+                   | typeDef
+                   | importBviDef'''
     decl = p[1]
     globaldecls.append(decl)
     globalvars[decl.name] = decl
