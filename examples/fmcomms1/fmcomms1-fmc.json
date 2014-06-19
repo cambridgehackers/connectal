@@ -433,10 +433,12 @@
     },
     "I2C1_scl": {
 	"PIO_DIRECTION": "BIDIR",
+	"IOSTANDARD": "LVCMOS33",
 	"fmc": "SCL"
     },
     "I2C1_sda": {
 	"PIO_DIRECTION": "BIDIR",
+	"IOSTANDARD": "LVCMOS33",
 	"fmc": "SDA"
     }
 }
