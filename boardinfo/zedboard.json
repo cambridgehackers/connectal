@@ -289,7 +289,7 @@
         "IOSTANDARD": "LVCMOS33"
         },
     "SCL": {
-        "LOC": "Y7",
+        "LOC": "R7",
         "IOSTANDARD": "LVCMOS33"
         }
 }
