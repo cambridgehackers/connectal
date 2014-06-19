@@ -70,7 +70,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs1 <- replicateM(mkReg(0));
    Vector#(numServers, Reg#(Bit#(outCntSz)))     outs0 <- replicateM(mkReg(0));
    Vector#(numServers, Ratchet#(16))           buffCap <- replicateM(mkRatchet(fromInteger(bufferSizeBeats)));
-   MemengineCmdBuf#(numServers,cmdQDepth)       cmdBuf <- mkMemengineCmdBuf;
+   UGBramFifos#(numServers,cmdQDepth,MemengineCmd) cmdBuf <- mkUGBramFifos;
 
    FIFO#(Bit#(serverIdxSz))                       loadf_a <- mkSizedFIFO(1);
    FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_b <- mkSizedFIFO(1);
@@ -134,7 +134,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
 	 end
 	 else begin
 	    let new_cmd = MemengineCmd{pointer:cmd.pointer, base:cmd.base+extend(cmd.burstLen), burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen)};
-	    cmdBuf.upd(idx,new_cmd);
+	    cmdBuf.upd_head(idx,new_cmd);
 	 end
       end
    endrule

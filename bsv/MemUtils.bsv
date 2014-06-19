@@ -84,57 +84,57 @@ module mkMemWriter(MemWriter#(dataWidth))
 endmodule
    
 
-interface MemengineCmdBuf#(numeric type numServers, numeric type cmdQDepth);
-   method Action enq(Bit#(TLog#(numServers)) idx, MemengineCmd cmd);
-   method Action first_req(Bit#(TLog#(numServers)) idx);
-   method ActionValue#(MemengineCmd) first_resp();
-   method Action deq(Bit#(TLog#(numServers)) idx);
-   method Action upd(Bit#(TLog#(numServers)) idx, MemengineCmd cmd);
+interface UGBramFifos#(numeric type numFifos, numeric type fifoDepth, type a);
+   method Action enq(Bit#(TLog#(numFifos)) idx, a v);
+   method Action first_req(Bit#(TLog#(numFifos)) idx);
+   method ActionValue#(a) first_resp();
+   method Action deq(Bit#(TLog#(numFifos)) idx);
+   method Action upd_head(Bit#(TLog#(numFifos)) idx, a v);
 endinterface
 
 
-module mkMemengineCmdBuf(MemengineCmdBuf#(numServers,cmdQDepth))
-   provisos(Mul#(cmdQDepth,numServers,cmdBuffSz),
-	    Log#(cmdBuffSz, cmdBuffAddrSz),
-	    Add#(a__, TLog#(numServers), TAdd#(1, cmdBuffAddrSz)));
+module mkUGBramFifos(UGBramFifos#(numFifos,fifoDepth,a))
+   provisos(Mul#(fifoDepth,numFifos,buffSz),
+	    Log#(buffSz, buffAddrSz),
+	    Add#(a__, TLog#(numFifos), TAdd#(1, buffAddrSz)),
+	    Bits#(a,b__));
    
-   function Bit#(cmdBuffAddrSz) hf(Integer i) = fromInteger(i*valueOf(cmdQDepth));
-   Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) head <- mapM(mkReg, genWith(hf));
-   Vector#(numServers, Reg#(Bit#(cmdBuffAddrSz))) tail <- mapM(mkReg, genWith(hf));
-   BRAM2Port#(Bit#(cmdBuffAddrSz),MemengineCmd)    cmdBuf <- mkBRAM2Server(defaultValue);
-   let cmd_q_depth = fromInteger(valueOf(cmdQDepth));
-
+   function Bit#(buffAddrSz) hf(Integer i) = fromInteger(i*valueOf(fifoDepth));
+   Vector#(numFifos, Reg#(Bit#(buffAddrSz))) head <- mapM(mkReg, genWith(hf));
+   Vector#(numFifos, Reg#(Bit#(buffAddrSz))) tail <- mapM(mkReg, genWith(hf));
+   BRAM2Port#(Bit#(buffAddrSz),a)    buff <- mkBRAM2Server(defaultValue);
+   let fifo_depth = fromInteger(valueOf(fifoDepth));
       
-   method Action enq(Bit#(TLog#(numServers)) idx, MemengineCmd cmd);
-      cmdBuf.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:cmd});
-      Bit#(TAdd#(1,cmdBuffAddrSz)) nt = extend(tail[idx])+1;
-      Bit#(TAdd#(1,cmdBuffAddrSz)) li = (extend(idx)+1)*cmd_q_depth;
-      Bit#(TAdd#(1,cmdBuffAddrSz)) rs = (extend(idx)+0)*cmd_q_depth;
+   method Action enq(Bit#(TLog#(numFifos)) idx, a v);
+      buff.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tail[idx], datain:v});
+      Bit#(TAdd#(1,buffAddrSz)) nt = extend(tail[idx])+1;
+      Bit#(TAdd#(1,buffAddrSz)) li = (extend(idx)+1)*fifo_depth;
+      Bit#(TAdd#(1,buffAddrSz)) rs = (extend(idx)+0)*fifo_depth;
       if (nt >= li) 
 	 nt = rs;
       tail[idx] <= truncate(nt);
    endmethod
 
-   method Action first_req(Bit#(TLog#(numServers)) idx);
-      cmdBuf.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:head[idx], datain:?});
+   method Action first_req(Bit#(TLog#(numFifos)) idx);
+      buff.portA.request.put(BRAMRequest{write:False, responseOnWrite:False, address:head[idx], datain:?});
    endmethod
    
-   method ActionValue#(MemengineCmd) first_resp();
-      let cmd <- cmdBuf.portA.response.get;
-      return cmd;
+   method ActionValue#(a) first_resp();
+      let v <- buff.portA.response.get;
+      return v;
    endmethod
 
-   method Action deq(Bit#(TLog#(numServers)) idx);
-      Bit#(TAdd#(1,cmdBuffAddrSz)) nt = extend(head[idx])+1;
-      Bit#(TAdd#(1,cmdBuffAddrSz)) li = (extend(idx)+1)*cmd_q_depth;
-      Bit#(TAdd#(1,cmdBuffAddrSz)) rs = (extend(idx)+0)*cmd_q_depth;
+   method Action deq(Bit#(TLog#(numFifos)) idx);
+      Bit#(TAdd#(1,buffAddrSz)) nt = extend(head[idx])+1;
+      Bit#(TAdd#(1,buffAddrSz)) li = (extend(idx)+1)*fifo_depth;
+      Bit#(TAdd#(1,buffAddrSz)) rs = (extend(idx)+0)*fifo_depth;
       if (nt >= li) 
 	 nt = rs;
       head[idx] <= truncate(nt);
    endmethod
 
-   method Action upd(Bit#(TLog#(numServers)) idx, MemengineCmd cmd);
-      cmdBuf.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head[idx], datain:cmd});
+   method Action upd_head(Bit#(TLog#(numFifos)) idx, a v);
+      buff.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head[idx], datain:v});
    endmethod
 
 endmodule
