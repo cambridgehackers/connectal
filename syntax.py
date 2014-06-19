@@ -524,7 +524,7 @@ def p_expressionStmt(p):
 
 def p_expressionStmts(p):
     '''expressionStmts : expressionStmts expressionStmt
-                       | expressionStmt '''
+                       | '''
 
 def p_provisos(p):
     '''provisos :
