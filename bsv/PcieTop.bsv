@@ -73,6 +73,7 @@ interface PcieTop#(type ipins);
    interface PciewrapPci_exp#(PcieLanes) pcie;
    (* always_ready *)
    method Bit#(NumLeds) leds();
+   (* prefix="" *)
    interface ipins       pins;
 endinterface
 
