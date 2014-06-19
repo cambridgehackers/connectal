@@ -388,6 +388,7 @@ ifeq ($(OS),android)
 
 bits: hw/mkTop.bit
 	mkdir -p bin
+	cp -f hw/*.rpt bin
 	git rev-parse HEAD > bin/githash
 	git diff > bin/gitdiff.patch
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
@@ -397,6 +398,7 @@ else
 
 bits: hw/mkTop.bit
 	mkdir -p bin
+	cp -f hw/*.rpt bin
 	git rev-parse HEAD > bin/githash
 	git diff > bin/gitdiff.patch
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
