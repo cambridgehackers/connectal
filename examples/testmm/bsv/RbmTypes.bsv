@@ -26,19 +26,19 @@ typedef 20 MMSize;
 typedef TDiv#(`DataBusWidth,32) N;
 `else
 `ifndef N_VALUE
-typedef 2 N;
+typedef 1 N;
 `else
 typedef `N_VALUE N;
 `endif
 `endif
 
 `ifndef J_VALUE
-typedef 2 J;
+typedef 1 J;
 `else
 typedef `J_VALUE J;
 `endif
 `ifndef K_VALUE
-typedef 2 K;
+typedef 1 K;
 `else
 typedef `K_VALUE K;
 `endif
