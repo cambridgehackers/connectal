@@ -387,12 +387,16 @@ def p_interfaceHashParams(p):
     else:
         p[0] = []
 
+def p_instanceAttributes(p):
+    '''instanceAttributes :
+                          | instanceAttributes LPARENSTAR attrSpecs RPARENSTAR'''
+
 def p_subinterfaceDecl(p):
-    '''subinterfaceDecl : TOKINTERFACE type VAR SEMICOLON
+    '''subinterfaceDecl : instanceAttributes TOKINTERFACE type VAR SEMICOLON
                         | type VAR SEMICOLON'''
-    if len(p) == 5:
-        name = p[3]
-        t = p[2]
+    if len(p) == 6:
+        name = p[4]
+        t = p[3]
     else:
         name = p[2]
         t = p[1]
@@ -729,10 +733,6 @@ def p_attrSpec(p):
 def p_attrSpecs(p):
     '''attrSpecs : attrSpec
                  | attrSpecs attrSpec'''
-
-def p_instanceAttributes(p):
-    '''instanceAttributes :
-                          | instanceAttributes LPARENSTAR attrSpecs RPARENSTAR'''
 
 def p_moduleContext(p):
     '''moduleContext : 
