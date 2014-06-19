@@ -53,7 +53,7 @@ endinterface
 instance ToGet#(FromBit#(n,a),a);
    function Get#(a) toGet(FromBit#(n,a) x);
       return (interface Get
-		 method get();
+		 method ActionValue #(a) get();
 		    actionvalue
 		       x.deq;
 		       return x.first;
@@ -66,7 +66,7 @@ endinstance
 instance ToPut#(ToBit#(n,a),a);
    function Put#(a) toPut(ToBit#(n,a) x);
       return (interface Put
-		 method put(a v);
+		 method Action put(a v);
 		    action
 		       x.enq(v);
 		    endaction
