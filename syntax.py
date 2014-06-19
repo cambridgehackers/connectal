@@ -354,7 +354,9 @@ def p_importDecls(p):
                    | importDecls importDecl'''
 
 def p_exportDecl(p):
-    'exportDecl : TOKEXPORT VAR LPAREN DOT DOT RPAREN SEMICOLON'
+    '''exportDecl : TOKEXPORT VAR LPAREN DOT DOT RPAREN SEMICOLON
+                  | TOKEXPORT VAR SEMICOLON
+                  | TOKEXPORT VAR COLONCOLON STAR SEMICOLON'''
     p[0] = p[2]
 
 def p_exportDecls(p):
