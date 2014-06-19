@@ -10,9 +10,9 @@ XBSVFLAGS += -C $(BOARD)/sources/aurora-$(BOARD).xdc -C aurora-clocks.xdc --tcl 
 
 AURORA_V = $(XBSVDIR)/generated/xilinx/$(BOARD)/aurora_64b66b_0/aurora_64b66b_0_stub.v
 
-prebuild:: $(BOARD)/sources/aurora-$(BOARD).xdc
+gentarget:: $(BOARD)/sources/aurora-$(BOARD).xdc
 
-prebuild:: $(AURORA_V) BviAurora.bsv
+gentarget:: $(AURORA_V) BviAurora.bsv
 
 $(AURORA_V): synth-ip.tcl
 	(cd $(BOARD); vivado -mode batch -source ../synth-ip.tcl)
