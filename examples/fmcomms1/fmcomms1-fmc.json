@@ -433,11 +433,11 @@
     },
     "I2C1_scl": {
 	"PIO_DIRECTION": "BIDIR",
-	"fmc": "LA16_p"
+	"fmc": "SCL"
     },
     "I2C1_sda": {
 	"PIO_DIRECTION": "BIDIR",
-	"fmc": "LA16_n"
+	"fmc": "SDA"
     }
 }
 
