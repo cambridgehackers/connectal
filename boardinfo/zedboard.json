@@ -284,9 +284,13 @@
         "LOC": "D18",
         "IOSTANDARD": "LVCMOS25"
         },
-    "CLK1_M2C_n": {
-        "LOC": "C19",
-        "IOSTANDARD": "LVCMOS25"
+    "SDA": {
+        "LOC": "U7",
+        "IOSTANDARD": "LVCMOS33"
+        }
+    "SCL": {
+        "LOC": "Y7",
+        "IOSTANDARD": "LVCMOS33"
         }
 }
 }
