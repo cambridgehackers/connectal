@@ -732,7 +732,7 @@ def p_attrSpec(p):
 
 def p_attrSpecs(p):
     '''attrSpecs : attrSpec
-                 | attrSpecs attrSpec'''
+                 | attrSpecs COMMA attrSpec'''
 
 def p_moduleContext(p):
     '''moduleContext : 
