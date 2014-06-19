@@ -350,11 +350,7 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
       method _read = numEltsReg._read;
    endinterface
    interface SharedDotProdDebug debug;
-      method PipeOut#(Bit#(32)) macCount = (interface PipeOut#(Bit#(32));
-	 method Bit#(32) first(); return macs; endmethod
-	 method Action deq(); endmethod
-	 method Bool notEmpty(); return False; endmethod
-	 endinterface);
+      interface PipeOut  macCount = toPipeOut(macs._read);
       method    Bit#(TLog#(K)) chan(); return chanReg; endmethod
    endinterface
 endmodule : mkSharedDotProdServer
