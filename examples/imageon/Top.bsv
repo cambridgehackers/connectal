@@ -144,9 +144,13 @@ module mkImageCapture#(Clock fmc_imageon_clk1)(ImageCapture);
       //captureIndicationProxy.ifc.frameStart(monitor, count);
    endrule
 
+Reg#(Bit#(10)) xsvi <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
    rule xsviConnection;
        // copy data from sensor to hdmi output
-       let xsvi <- fromSensor.get_data();
+       let xsvit <- fromSensor.get_data();
+       xsvi <= xsvit;
+   endrule
+   rule xsviput;
        Bit#(32) pixel = {8'b0, xsvi[9:2], xsvi[9:2], xsvi[9:2]};
        hdmiGen.request.put(pixel);
    endrule
