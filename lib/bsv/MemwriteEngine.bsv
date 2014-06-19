@@ -46,6 +46,7 @@ module mkMemwriteEngine(MemwriteEngineV#(dataWidth, cmdQDepth, numServers))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
 	    ,Add#(1, d__, dataWidth)
 	    ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(2),Bit#(dataWidth),Bool), TMin#(2, TLog#(numServers)))
+	    ,FunnelPipesPipelined#(1, numServers,Tuple3#(Bit#(TLog#(numServers)), Bit#(dataWidth), Bool), TMin#(2,TLog#(numServers)))
 	    );
    let rv <- mkMemwriteEngineBuff(256);
    return rv;
@@ -58,6 +59,60 @@ interface BurstFunnel#(numeric type k, numeric type w);
    interface PipeOut#(Tuple2#(Bit#(TLog#(k)),Bit#(w))) dataOut;
 endinterface
 
+      
+module mkBurstFunnelOld#(Integer __x)(BurstFunnel#(k,w))
+   provisos( Log#(k,logk)
+	    ,Min#(2,logk,bpc)
+	    ,FunnelPipesPipelined#(1, k, Tuple3#(Bit#(logk),Bit#(w),Bool), bpc)
+	    );
+   // 'mutex' is an ugly hack which should be replaced by something which will actually make timing and achieve full throughput (mdk)
+   FIFO#(void) mutex <- mkSizedFIFO(1);
+   Vector#(k, FIFOF#(Tuple3#(Bit#(logk), Bit#(w),Bool))) data_in <- replicateM(mkFIFOF);
+   Vector#(k,Reg#(Bit#(8))) burst_len <- replicateM(mkReg(0));
+   Vector#(k,Reg#(Bit#(8))) inj_ctrl <- replicateM(mkReg(0));
+   //TAdd#(1,logk) is because bsc is wierd about comparing literal '0' to a value of Bit#(0)
+   FIFO#(Bit#(TAdd#(1,logk))) loadIdxs <- mkSizedFIFO(32);
+   function PipeIn#(Bit#(w)) enter_data(FIFOF#(Tuple3#(Bit#(logk), Bit#(w), Bool)) f, Integer i) =
+      (interface PipeIn;
+	  method Bool notFull = f.notFull;
+	  method Action enq(Bit#(w) v) if (loadIdxs.first == fromInteger(i));
+	     let first = inj_ctrl[i] == 0;
+	     let cnt = first ? burst_len[i] : inj_ctrl[i];
+	     let new_cnt = cnt-1;
+	     inj_ctrl[i] <= new_cnt;
+	     if (first)
+		mutex.enq(?);
+	     if (new_cnt == 0)
+		loadIdxs.deq;
+	     //$display("enq (%d) %h", i, v);
+	     f.enq(tuple3(fromInteger(i), v, first));
+	  endmethod
+       endinterface);
+      Vector#(k, PipeIn#(Bit#(w))) data_in_pipes = zipWith(enter_data, data_in, genVector);
+      // this should use bpc, not logk, but I need to think of a clever way to stop bursts from overtaking oneanother (mdk)
+      FunnelPipe#(1, k, Tuple3#(Bit#(logk), Bit#(w),Bool),bpc) data_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,data_in));
+      method Action loadIdx(Bit#(logk) idx);
+	 loadIdxs.enq(extend(idx));
+	 //$display("loadIdxs %d", idx);
+      endmethod
+      interface burstLen = burst_len;
+	 interface dataIn = data_in_pipes;
+	    interface PipeOut dataOut;
+	       method Tuple2#(Bit#(logk), Bit#(w)) first;
+		  match{.a,.b,.c} = data_in_funnel[0].first;
+		  return tuple2(a,b);
+	       endmethod
+	       method Action deq;
+		  if(tpl_3(data_in_funnel[0].first))
+		     mutex.deq;
+		  data_in_funnel[0].deq;
+	       endmethod
+	       method Bool notEmpty = data_in_funnel[0].notEmpty;
+	    endinterface
+endmodule
+
+
+// this works correctly, but has throughput problems
 module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
    provisos( Log#(k,logk)
 	    ,Min#(2,logk,bpc)
@@ -111,6 +166,7 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
 	  method Bit#(8) _read = r._read;
        endinterface);
 
+   (* fire_when_enabled *)
    rule drain_funnel;
       match{.new_name,.data,.last} = data_in_funnel[0].first;
       data_in_funnel[0].deq;
@@ -126,6 +182,7 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
       drainRename.enq(truncate(old_name));
    endrule
    
+   (* fire_when_enabled *)
    rule drain_req (drainCnt > 0 && compCnts[newName].read > 0);
       complBuff.first_req(newName);
       drainCnt <= drainCnt-1;
@@ -133,6 +190,7 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
       complBuff.deq(newName);
    endrule
       
+   (* fire_when_enabled *)
    rule drain_resp;
       match {.data,.last} <- complBuff.first_resp;
       if (last)
@@ -167,6 +225,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 	     ,FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc)
 	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(2),Bit#(dataWidth),Bool), TMin#(2, serverIdxSz))
 	     ,Add#(1, d__, dataWidth)
+	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(serverIdxSz),Bit#(dataWidth), Bool), TMin#(2, serverIdxSz))
 	     );
    
    
@@ -186,7 +245,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    FunnelPipe#(1, numServers, Tuple2#(Bit#(serverIdxSz), MemengineCmd),bpc) cmds_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,cmds_in));
    Vector#(numServers, FIFOF#(Bit#(dataWidth)))  write_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
    Vector#(numServers, PipeOut#(Bit#(dataWidth))) foo = map(toPipeOut, write_data_buffs); 
-   BurstFunnel#(numServers,dataWidth) write_data_funnel <- mkBurstFunnel(bufferSizeBeats);
+   BurstFunnel#(numServers,dataWidth) write_data_funnel <- mkBurstFunnelOld(bufferSizeBeats);
    zipWithM(mkConnection, foo, write_data_funnel.dataIn);
       
    Reg#(Bit#(8))                               respCnt <- mkReg(0);
@@ -317,3 +376,4 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
 endmodule
 
 
+	       
