@@ -138,7 +138,7 @@ provisos(
 endmodule: mkPcieHost
 
 (* synthesize *)
-module mkSynthesizeablePortalTop(PortalTop#(40, DataBusWidth, Empty, NumberOfMasters));
+module mkSynthesizeablePortalTop(PortalTop#(40, DataBusWidth, PinType, NumberOfMasters));
    Clock defaultClock <- exposeCurrentClock();
    let top <- mkPortalTop(`CLOCK_ARG);
    interface masters = top.masters;
