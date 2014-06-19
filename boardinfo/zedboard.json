@@ -287,7 +287,7 @@
     "SDA": {
         "LOC": "U7",
         "IOSTANDARD": "LVCMOS33"
-        }
+        },
     "SCL": {
         "LOC": "Y7",
         "IOSTANDARD": "LVCMOS33"
