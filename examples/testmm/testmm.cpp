@@ -124,7 +124,7 @@ int main(int argc, const char **argv)
 
   matAllocator = new PortalMatAllocator(dma);
 
-  //#define LARGE_MAT
+#define LARGE_MAT
 #ifdef LARGE_MAT
   int A = 32;
   int B = 16;

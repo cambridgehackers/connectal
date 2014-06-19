@@ -87,27 +87,27 @@ module mkBurstFunnelOld#(Integer __x)(BurstFunnel#(k,w))
 	     f.enq(tuple3(fromInteger(i), v, first));
 	  endmethod
        endinterface);
-      Vector#(k, PipeIn#(Bit#(w))) data_in_pipes = zipWith(enter_data, data_in, genVector);
-      // this should use bpc, not logk, but I need to think of a clever way to stop bursts from overtaking oneanother (mdk)
-      FunnelPipe#(1, k, Tuple3#(Bit#(logk), Bit#(w),Bool),bpc) data_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,data_in));
-      method Action loadIdx(Bit#(logk) idx);
-	 loadIdxs.enq(extend(idx));
-	 //$display("loadIdxs %d", idx);
+   Vector#(k, PipeIn#(Bit#(w))) data_in_pipes = zipWith(enter_data, data_in, genVector);
+   // this should use bpc, not logk, but I need to think of a clever way to stop bursts from overtaking oneanother (mdk)
+   FunnelPipe#(1, k, Tuple3#(Bit#(logk), Bit#(w),Bool),bpc) data_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,data_in));
+   method Action loadIdx(Bit#(logk) idx);
+      loadIdxs.enq(extend(idx));
+      //$display("loadIdxs %d", idx);
+   endmethod
+   interface burstLen = burst_len;
+   interface dataIn = data_in_pipes;
+   interface PipeOut dataOut;
+      method Tuple2#(Bit#(logk), Bit#(w)) first;
+	 match{.a,.b,.c} = data_in_funnel[0].first;
+	 return tuple2(a,b);
       endmethod
-      interface burstLen = burst_len;
-	 interface dataIn = data_in_pipes;
-	    interface PipeOut dataOut;
-	       method Tuple2#(Bit#(logk), Bit#(w)) first;
-		  match{.a,.b,.c} = data_in_funnel[0].first;
-		  return tuple2(a,b);
-	       endmethod
-	       method Action deq;
-		  if(tpl_3(data_in_funnel[0].first))
-		     mutex.deq;
-		  data_in_funnel[0].deq;
-	       endmethod
-	       method Bool notEmpty = data_in_funnel[0].notEmpty;
-	    endinterface
+      method Action deq;
+	 if(tpl_3(data_in_funnel[0].first))
+	    mutex.deq;
+	 data_in_funnel[0].deq;
+      endmethod
+      method Bool notEmpty = data_in_funnel[0].notEmpty;
+   endinterface
 endmodule
 
 
@@ -373,6 +373,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    endinterface 
    interface dataPipes = zipWith(check_in, write_data_buffs, genVector);
 endmodule
+
 
 
 	       
