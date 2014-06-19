@@ -60,7 +60,8 @@ argparser.add_argument('-h2s', '--h2sinterface', help='BSV interface to generate
 argparser.add_argument('-p', '--project-dir', default='./xpsproj', help='xps project directory')
 argparser.add_argument('-e', '--edk-version', default=xpsgen.edkversion, help='Xilinx EDK version', choices=xpsgen.edkversions)
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
-argparser.add_argument('-I', '--contentid', help='Specify 64-bit contentid for PCIe designs')
+argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
+argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
 argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
 argparser.add_argument('--xci', default=[], help='Additional IP sources', action='append')
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append')
@@ -69,6 +70,7 @@ argparser.add_argument('-x', '--export', help='Promote/export named interface fr
 argparser.add_argument('-t', '--topbsv', help='Top-level bsv file')
 argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
+argparser.add_argument('-L', '--clibdir', default=[], help='C++ libary', action='append')
 argparser.add_argument('-T', '--tcl', default=[], help='Vivado tcl script', action='append')
 argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to the BSV compiler', action='append')
 argparser.add_argument('--xelabflags', default=[], help='Options to pass to the xelab compiler', action='append')
@@ -761,8 +763,8 @@ if __name__=='__main__':
 
     print 'Writing Android.mk', androidmkname
     print 'Writing Application.mk', applicationmkname
-    cppgen.writeAndroidMk(namespace.source, generatedCFiles, androidmkname, applicationmkname, xbsvdir, project_dir, namespace.bsvdefine)
-    cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source, swProxies, swWrappers, namespace.clib, namespace.bsvdefine)
+    cppgen.writeAndroidMk(namespace.source, generatedCFiles, androidmkname, applicationmkname, xbsvdir, project_dir, namespace.bsvdefine, namespace.cinclude, namespace.clib, namespace.clibdir)
+    cppgen.writeLinuxMk(dutname, linuxmkname, xbsvdir, namespace.source, swProxies, swWrappers, namespace.bsvdefine, namespace.cinclude, namespace.clib, namespace.clibdir)
 
     print 'Writing tcl impl file', tclimplname
     tclsubsts = {'dut': topmodulename.lower(),

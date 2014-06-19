@@ -43,9 +43,9 @@ LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 LOCAL_PATH :=
 LOCAL_MODULE := %(exe)s
 LOCAL_MODULE_TAGS := optional
-LOCAL_LDLIBS := -llog
+LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cdefines)s
+LOCAL_CXXFLAGS := -DZYNQ -DMMAP_HW -I%(xbsvdir)s -I%(xbsvdir)s/lib/cpp -I%(xbsvdir)s/cpp -I%(xbsvdir)s/drivers/zynqportal -I%(project_dir)s/jni %(cincludes)s %(cdefines)s
 
 #NDK_OUT := obj/
 
@@ -53,13 +53,13 @@ include $(BUILD_EXECUTABLE)
 '''
 
 linuxmakefile_template='''
-CFLAGS = -DMMAP_HW -O -g -I. -I%(xbsvdir)s/cpp -I%(xbsvdir)s -I%(xbsvdir)s/lib/cpp %(sourceincludes)s %(cdefines)s
+CFLAGS = -DMMAP_HW -O -g -I. -I%(xbsvdir)s/cpp -I%(xbsvdir)s -I%(xbsvdir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s
 
 PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.cpp PortalMemory.cpp sock_fd.cxx sock_utils.cxx)
 
 
 test%(classname)s: %(swProxies)s %(swWrappers)s $(PORTAL_CPP_FILES) %(source)s
-	g++ $(CFLAGS) -o %(classname)s %(swProxies)s %(swWrappers)s $(PORTAL_CPP_FILES) %(source)s %(clibs)s -pthread 
+	g++ $(CFLAGS) -o %(classname)s %(swProxies)s %(swWrappers)s $(PORTAL_CPP_FILES) %(source)s %(clibdirs)s %(clibs)s -pthread 
 '''
 
 
@@ -182,7 +182,10 @@ public:
 
 
 
-def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xbsvdir, project_dir, bsvdefine, silent=False):
+def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xbsvdir, project_dir, bsvdefine, cinclude, clib, clibdir, silent=False):
+	print 'cinclude', cinclude
+	print 'clib', clib
+	print 'clibdir', clibdir
         f = util.createDirAndOpen(androidmkname, 'w')
         substs = {
             'cfiles': ' '.join([os.path.abspath(x) for x in cfiles]),
@@ -190,7 +193,10 @@ def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xb
             'xbsvdir': xbsvdir,
 	    'project_dir': os.path.abspath(project_dir),
 	    'exe' : 'android_exe',
-	    'cdefines': ' '.join([ '-D%s' % d for d in bsvdefine ])
+	    'cdefines': ' '.join([ '-D%s' % d for d in bsvdefine ]),
+	    'clibs': ' '.join(['-l%s' % l for l in clib]),
+	    'clibdirs': ' '.join([ '-L%s' % os.path.abspath(l) for l in clibdir ]),
+	    'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in cinclude ])
         }
         f.write(androidmk_template % substs)
         f.close()
@@ -198,7 +204,7 @@ def writeAndroidMk(cfiles, generatedCFiles, androidmkname, applicationmkname, xb
         f.write(applicationmk_template % substs)
         f.close()
 
-def writeLinuxMk(base, linuxmkname, xbsvdir, sourcefiles, swProxies, swWrappers, clibs, bsvdefine):
+def writeLinuxMk(base, linuxmkname, xbsvdir, sourcefiles, swProxies, swWrappers, bsvdefine, cinclude, clib, clibdir):
         f = util.createDirAndOpen(linuxmkname, 'w')
         className = cName(base)
         substs = {
@@ -209,8 +215,10 @@ def writeLinuxMk(base, linuxmkname, xbsvdir, sourcefiles, swProxies, swWrappers,
 	    'swWrappers': ' '.join(['%sWrapper.cpp' % w.name for w in swWrappers]),
             'source': ' '.join([os.path.abspath(sf) for sf in sourcefiles]) if sourcefiles else '',
             'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in sourcefiles]) if sourcefiles else '',
-	    'clibs': ' '.join(['-l%s' % l for l in clibs]),
-	    'cdefines': ' '.join([ '-D%s' % d for d in bsvdefine ])
+	    'clibs': ' '.join(['-l%s' % l for l in clib]),
+	    'clibdirs': ' '.join([ '-L%s' % os.path.abspath(l) for l in clibdir ]),
+	    'cdefines': ' '.join([ '-D%s' % d for d in bsvdefine ]),
+	    'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in cinclude ])
         }
         f.write(linuxmakefile_template % substs)
         f.close()
