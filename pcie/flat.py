@@ -133,17 +133,17 @@ def emit_vcd_entry(f, timestamp, pktclass):
     else:
         f.write('$comment %s $end\n' % pktclass)
 
-def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
+def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum, address):
     if tlpbe == '0000':
         return 'trace'
     if tlpsof == 0:
         if portnum == 4:
-            return '(to) master continuation'
+            return 'DmaRCon'
         else:
-            return '(to) slave continuation'
+            return 'CpuRCon'
     if portnum == 4:
         if pkttype == 10: # COMPLETION
-            return 'DmaRResp'
+            return 'DmaRRsp'
         else:
             if pktformat == 2 or pktformat == 3:
                 return 'CpuWReq'
@@ -151,10 +151,13 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
                 return 'CpuRReq'
     elif portnum == 8:
         if pkttype == 10: # COMPLETION
-            return 'CpuRResp'
+            return 'CpuRRsp'
         else:
             if pktformat == 2 or pktformat == 3:
-                return 'DmaWReq'
+                if (address[0:3] == 'fee'):
+                    return 'Interru'
+                else:
+                    return 'DmaWReq'
             else:
                 return 'DmaRReq'
     else:
@@ -186,8 +189,14 @@ def print_tlp(tlpdata, f=None):
     pktformat = (int(tlpdata[-32:-31],16) >> 1) & 3
     pkttype = (int(tlpdata[-32:-30],16) & 0x1f)
 
+    address=0
+    if TlpPacketFormat[pktformat] == 'MEM_READ__4DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
+        address = tlpdata[-16:]
+    elif TlpPacketFormat[pktformat] == 'MEM_READ__3DW     ' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
+        address = tlpdata[-16:-8]
+
     portnum = int(tlpdata[-40:-38],16) >> 1
-    pktclass = pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum)
+    pktclass = pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum, address)
     if classCounts.has_key(pktclass):
        classCounts[pktclass] += 1
     else:
