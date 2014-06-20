@@ -242,9 +242,8 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
    Vector#(K,Reg#(Maybe#(Tuple2#(UInt#(32),UInt#(32))))) tag_regs <- replicateM(mkReg(tagged Invalid));
 `endif   
    
-   // afifo receives one value per K values received on bfifo
    FIFOF#(Token)                          afifo   <- mkFIFOF();
-   PipeOut#(Token)                        aFunnel <- mkRepeat(repetitions, toPipeOut(afifo));
+   PipeOut#(Token)                        aFunnel = toPipeOut(afifo);
 
    FIFOF#(Token)                          bfifo <- mkFIFOF();
    PipeOut#(Token)                        bFunnel = toPipeOut(bfifo);
@@ -405,7 +404,6 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
    Reg#(Bit#(32)) aTokensReadReg <- mkReg(0);
    Reg#(Bit#(32)) bTokensReadReg <- mkReg(0);
 
-   // aFifos receives one value per K values on bFifos
    Vector#(RowsPerTile, FIFOF#(Token))   aFifos <- replicateM(mkFIFOF);
    Vector#(RowsPerTile, PipeOut#(Token)) aPipes = map(toCountedPipeOut(aTokensReadReg), map(toPipeOut, aFifos));
    Vector#(RowsPerTile,  FIFOF#(Token))   bFifos <- replicateM(mkFIFOF);
@@ -624,14 +622,17 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
       cycles <= cycles+1;
    endrule
 
+   UInt#(TAdd#(TLog#(K),1)) repetitions = fromInteger(valueOf(K));
+   Vector#(J, PipeOut#(Token)) aRepeaters <- mapM(mkRepeat(repetitions), aPipes);
+
    Vector#(T, MmTile) mmTiles <- mapM(mkMmTile,map(fromInteger,genVector));
    Vector#(J, PipeOut#(Vector#(N,Token))) fxpipes;
    for (Integer t = 0; t < valueOf(T); t = t+1) begin
       for (Integer i = 0; i < valueof(RowsPerTile); i = i+1) begin
 	 let j = t*valueOf(RowsPerTile) + i;
-	 //mkConnection(toGet(aPipes[j]), mmTiles[t].aInputs[i]);
+	 //mkConnection(toGet(aRepeaters[j]), mmTiles[t].aInputs[i]);
 	 rule connectA;
-	    let x <- toGet(aPipes[j]).get;
+	    let x <- toGet(aRepeaters[j]).get;
 	    mmTiles[t].aInputs[i].put(x);
 	 endrule
 	 //mkConnection(toGet(bFunnelPipes[j]), mmTiles[t].bInputs[i]);
