@@ -136,6 +136,13 @@ instance MkPipeOut#(a, Get#(a))
    endmodule
 endinstance
 
+function PipeOut#(a) toCountedPipeOut(Reg#(Bit#(n)) r, PipeOut#(a) pipe);
+   return (interface PipeOut#(Vector#(n,a));
+	      method first = pipe.first;
+	      method Action deq(); pipe.deq; r <= r + 1; endmethod
+	      method notEmpty = pipe.notEmpty;
+	   endinterface);
+endfunction   
 
 instance ToGet #(PipeOut #(a), a);
    function Get #(a) toGet (PipeOut #(a) po);
