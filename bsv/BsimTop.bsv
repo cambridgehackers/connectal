@@ -379,5 +379,8 @@ module [Module] mkBsimTop(Empty)
    Vector#(NumberOfMasters,Axi3Master#(40,DataBusWidth,6)) m_axis <- mapM(mkAxiDmaMaster,top.masters);
    mkConnection(host.mem_client, top.slave);
    mapM(uncurry(mkConnection),zip(m_axis, host.axi_servers));
-   
+
+`ifdef BSIMRESPONDER
+   `BSIMRESPONDER (top.pins);
+`endif
 endmodule
