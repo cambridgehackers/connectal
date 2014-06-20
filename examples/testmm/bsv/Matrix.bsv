@@ -75,6 +75,14 @@ interface RowColSink#(numeric type dsz, type a);
    method ActionValue#(Bool) finish();
 endinterface
 
+function Put#(a) toCountedPut(Reg#(Bit#(n)) r, Put#(a) p);
+   return (interface Put#(a);
+      method Action put(a v);
+	 r <= r+1;
+	 p.put(v);
+      endmethod
+      endinterface);
+endfunction
 function PipeOut#(dtype) vsp(RowColSource#(dsz,dtype) vs); return vs.pipe; endfunction
 
 module mkRowColSink#(VectorSink#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSink#(TMul#(N,32), Vector#(N,Token)));
@@ -359,6 +367,8 @@ interface MmTileDebug;
    interface PipeOut#(Bit#(32)) macCount;
    method Bit#(RowsPerTile) aNotEmpty;
    method Bit#(RowsPerTile) bNotEmpty;
+   method Bit#(32) aBytesPut();
+   method Bit#(32) bBytesPut();
    method Bit#(32) aBytesRead();
    method Bit#(32) bBytesRead();
    method Vector#(RowsPerTile, Bit#(TLog#(K))) dotProdChan();
@@ -378,6 +388,8 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
    let rowsPerTile = valueOf(RowsPerTile);
    let kk = valueOf(K);
 
+   Reg#(Bit#(32)) aTokensPutReg <- mkReg(0);
+   Reg#(Bit#(32)) bTokensPutReg <- mkReg(0);
    Reg#(Bit#(32)) aTokensReadReg <- mkReg(0);
    Reg#(Bit#(32)) bTokensReadReg <- mkReg(0);
 
@@ -434,8 +446,8 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
    function PipeOut#(Bit#(32)) dotProdMacCount(SharedDotProdServer#(K) dotprodserver); return dotprodserver.debug.macCount; endfunction
    PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(mkMap(my_add), map(dotProdMacCount, fxdotprods));
 
-   interface Vector aInputs = map(toPut, aFifos);
-   interface Vector bInputs = map(toPut, bFifos);
+   interface Vector aInputs = map(toCountedPut(aTokensPutReg), map(toPut, aFifos));
+   interface Vector bInputs = map(toCountedPut(bTokensPutReg), map(toPut, bFifos));
    interface Vector fxPipes = fxPipesN;
    interface Reg numElts;
       method Action _write(UInt#(20) v);
@@ -450,6 +462,8 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
       interface PipeOut macCount = macCountPipe;
       method Bit#(RowsPerTile) aNotEmpty(); return pack(map(fifofNotEmpty, aFifos)); endmethod
       method Bit#(RowsPerTile) bNotEmpty(); return pack(map(fifofNotEmpty, bFifos)); endmethod
+      method Bit#(32) aBytesPut(); return aTokensPutReg * 4; endmethod
+      method Bit#(32) bBytesPut(); return bTokensPutReg * 4; endmethod
       method Bit#(32) aBytesRead(); return aTokensReadReg * 4; endmethod
       method Bit#(32) bBytesRead(); return bTokensReadReg * 4; endmethod
       method Vector#(RowsPerTile, Bit#(TLog#(K))) dotProdChan(); return map(getDotProdChan, fxdotprods); endmethod
@@ -533,6 +547,8 @@ interface DmaMatrixMultiplyDebug;
    method Bit#(32) macCount();
    method Bit#(J) mmtilesANotEmpty();
    method Bit#(J) mmtilesBNotEmpty();
+   method Bit#(32) aBytesPut();
+   method Bit#(32) bBytesPut();
    method Bit#(32) aBytesRead();
    method Bit#(32) bBytesRead();
 endinterface
@@ -817,6 +833,12 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
       method Bit#(J) mmtilesANotEmpty(); return pack(map(getMmTilesANotEmpty, mmTiles)); endmethod
       method Bit#(J) mmtilesBNotEmpty();  return pack(map(getMmTilesBNotEmpty, mmTiles)); endmethod
 //FIXME multiple tiles
+       method Bit#(32) aBytesPut();
+          return mmTiles[0].debug.aBytesPut();
+       endmethod
+       method Bit#(32) bBytesPut();
+          return mmTiles[0].debug.bBytesPut();
+       endmethod
        method Bit#(32) aBytesRead();
           return mmTiles[0].debug.aBytesRead();
        endmethod
@@ -951,7 +973,10 @@ module [Module] mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndicat
 	 let mmTilesANE = dmaMMF.debug.mmtilesANotEmpty();
 	 let mmTilesBNE = dmaMMF.debug.mmtilesBNotEmpty();
 	 mmDebugIndication.debug(extend(aNotEmpty), extend(bNotEmpty), macCount, extend(mmTilesANE), extend(mmTilesBNE), 0);
-	 mmDebugIndication.bytesRead(dmaMMF.debug.aBytesRead(), dmaMMF.debug.aBytesRead());
+	 mmDebugIndication.bytesRead(
+				     dmaMMF.debug.aBytesPut(), dmaMMF.debug.aBytesPut(),
+				     dmaMMF.debug.aBytesRead(), dmaMMF.debug.aBytesRead()
+				     );
       endmethod
    endinterface
 

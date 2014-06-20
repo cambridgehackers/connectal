@@ -131,8 +131,8 @@ public:
   virtual void debug ( uint32_t aNotEmpty, uint32_t bNotEmpty, uint32_t macCount, uint32_t mmtilesANE, uint32_t mmtilesBNE, uint64_t chans) {
     fprintf(stderr, "mmdebug aNotEmpty=%x bNotEmpty=%x macCount=%d ane=%x bne=%x chans="PRIu64"\n", aNotEmpty, bNotEmpty, macCount, mmtilesANE, mmtilesBNE, chans);
   }
-  virtual void bytesRead ( uint32_t aBytesRead, uint32_t bBytesRead) {
-    fprintf(stderr, "mmdebug aBytesRead=%d bBytesRead=%d\n", aBytesRead, bBytesRead);
+  virtual void bytesRead ( uint32_t aBytesPut, uint32_t bBytesPut, uint32_t aBytesRead, uint32_t bBytesRead) {
+    fprintf(stderr, "mmdebug aBytesPut=%d bBytesPut=%d aBytesRead=%d bBytesRead=%d\n", aBytesPut, bBytesPut, aBytesRead, bBytesRead);
   }
 };
 
