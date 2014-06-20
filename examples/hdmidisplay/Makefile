@@ -10,6 +10,7 @@ XBSVFLAGS = -C hdmidisplay-$(BOARD).xdc -D USES_FCLK1 -D PinType=HDMI16
 ifeq ($(BOARD),zedboard)
 XBSVFLAGS += -D USE_I2C0
 endif
+XBSVFLAGS += -D BSIMRESPONDER=mkResponder -m $(XBSVDIR)/examples/hdmidisplay/BsimHdmi.cpp 
 
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 

@@ -66,3 +66,22 @@ module mkPortalTop#(Clock clk1)(PortalTop#(addrWidth,64,HDMI#(Bit#(16)),1))
    interface xadc = hdmiDisplay.xadc;
    interface pins = hdmiDisplay.hdmi;      
 endmodule : mkPortalTop
+
+import "BDPI" function Action bdpi_hdmi_vsync(Bit#(1) v);
+import "BDPI" function Action bdpi_hdmi_hsync(Bit#(1) v);
+import "BDPI" function Action bdpi_hdmi_de(Bit#(1) v);
+import "BDPI" function Action bdpi_hdmi_data(Bit#(16) v);
+module mkResponder#(HDMI#(Bit#(16)) pins)(Empty);
+    rule hvconv;
+        bdpi_hdmi_vsync(pins.hdmi_vsync);
+    endrule
+    rule hvconh;
+        bdpi_hdmi_hsync(pins.hdmi_hsync);
+    endrule
+    rule hvconde;
+        bdpi_hdmi_de(pins.hdmi_de);
+    endrule
+    rule hvcond;
+        bdpi_hdmi_data(pins.hdmi_data);
+    endrule
+endmodule
