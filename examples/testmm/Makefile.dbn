@@ -7,6 +7,13 @@ XBSVFLAGS += --clib opencv_core
 Dma = Dma
 PINS = Std
 
+FAMILY=$(shell echo $(BOARD) | sed 's/z.*/zynq/' | sed 's/k.*/kintex/' | sed 's/v.*/virtex/')
+ifeq (zynq,$(FAMILY))
+NDK_DIR=$(shell ndk-which gcc | sed 's:toolchains.*::')
+OPENCVDIR=$(XBSVDIR)/../opencv-android-sdk/sdk/native/
+XBSVFLAGS += -I$(DBNDIR)/cpp -I$(OPENCVDIR)/jni/include -L$(OPENCVDIR)/libs/armeabi-v7a -lz -L$(NDK_DIR)/sources/cxx-stl/stlport/libs/armeabi-v7a/ -lstlport_static
+endif
+
 gen:: $(DBNDIR)/datasets
 
 include $(XBSVDIR)/Makefile.common
