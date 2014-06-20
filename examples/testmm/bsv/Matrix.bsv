@@ -53,10 +53,11 @@ typedef struct {
    UInt#(32) col;
 `endif
    Float v;
+   Bool first;
+   Bool last;
    } Token deriving (Eq,Bits);
 
 interface SharedDotProdServer#(numeric type k);
-   interface Reg#(UInt#(20)) numElts;
    interface Put#(Token)                 aInput;
    interface Put#(Token)                 bInput;
    interface Vector#(k, PipeOut#(Token)) pipes;
@@ -104,11 +105,18 @@ module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
    Reg#(UInt#(32)) col <- mkReg(0);
    FIFOF#(UInt#(32)) tagFifo <- mkFIFOF;
 `endif
+   // perhaps memreadengine could do the labeling
+   Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
+   Reg#(Bool) firstReg <- mkReg(True);
+   Reg#(Bool) lastReg  <- mkReg(False);
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
       vs.start(h,a,l);
+      countReg <= l;
+      firstReg <= True;
+      lastReg <= (l == 1);
    endmethod
    method ActionValue#(Bool) finish;
 `ifdef TAGGED_TOKENS
@@ -123,11 +131,15 @@ module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 	 Vector#(N,Token) rv;
 `ifdef TAGGED_TOKENS
 	 for(Integer i = 0; i < valueOf(N); i=i+1)
-	    rv[i] = Token{row:tagFifo.first, col:col+fromInteger(i), v:vs.pipe.first[i]};
+	    rv[i] = Token{row:tagFifo.first, col:col+fromInteger(i), v:vs.pipe.first[i], first:False, last:False};
 `else
 	 for(Integer i = 0; i < valueOf(N); i=i+1)
-	    rv[i] = Token{v:vs.pipe.first[i]};
+	    rv[i] = Token{v:vs.pipe.first[i], first:False, last:False};
 `endif
+	 if (firstReg)
+	    rv[0].first = True;
+	 if (lastReg)
+	    rv[valueOf(N)-1].last = True;
 	 return rv;
       endmethod
       method Action deq;
@@ -135,6 +147,10 @@ module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 `ifdef TAGGED_TOKENS
 	 col <= col+fromInteger(valueOf(N));
 `endif
+	 $display("mkRowSource count=%d first=%d last=%d", countReg, firstReg, lastReg);
+	 firstReg <= False;
+	 lastReg <= (countReg == 2); // ((countReg - 1) == 1)
+	 countReg <= countReg - 1;
       endmethod
       method Bool notEmpty;
 `ifdef TAGGED_TOKENS
@@ -151,11 +167,19 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
    Reg#(UInt#(32)) row <- mkReg(0);
    FIFOF#(UInt#(32)) tagFifo <- mkFIFOF;
 `endif
+   // perhaps memreadengine could do the labeling
+   Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
+   Reg#(Bool) firstReg <- mkReg(True);
+   Reg#(Bool) lastReg  <- mkReg(False);
+
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
       vs.start(h,a,l);
+      countReg <= l;
+      firstReg <= True;
+      lastReg <= (l == 1);
    endmethod
    method ActionValue#(Bool) finish;
 `ifdef TAGGED_TOKENS
@@ -170,11 +194,15 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 	 Vector#(N,Token) rv;
 `ifdef TAGGED_TOKENS
 	 for(Integer i = 0; i < valueOf(N); i=i+1)
-	    rv[i] = Token{row:row+fromInteger(i), col:tagFifo.first, v:vs.pipe.first[i]};
+	    rv[i] = Token{row:row+fromInteger(i), col:tagFifo.first, v:vs.pipe.first[i], first:False, last:False};
 `else
 	 for(Integer i = 0; i < valueOf(N); i=i+1)
-	    rv[i] = Token{v:vs.pipe.first[i]};
+	    rv[i] = Token{v:vs.pipe.first[i], first:False, last:False};
 `endif
+	 if (firstReg)
+	    rv[0].first = True;
+	 if (lastReg)
+	    rv[valueOf(N)-1].last = True;
 	 return rv;
       endmethod
       method Action deq;
@@ -182,6 +210,10 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 `ifdef TAGGED_TOKENS
 	 row <= row+fromInteger(valueOf(N));
 `endif
+	 firstReg <= False;
+	 lastReg <= (countReg == 2); // ((countReg - 1) == 1);
+	 countReg <= countReg - 1;
+	 $display("mkColSource count=%d first=%d last=%d", countReg, firstReg, lastReg);
       endmethod
       method Bool notEmpty;
 `ifdef TAGGED_TOKENS
@@ -198,11 +230,8 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
 
    let n = valueOf(N);
    UInt#(TAdd#(TLog#(K),1)) repetitions = fromInteger(valueOf(K));
-   Bool verbose = False;
+   Bool verbose = True;
 
-   Reg#(Bool)      readyReg     <- mkReg(False);
-   Reg#(UInt#(20)) numEltsReg   <- mkReg(0);
-   Reg#(UInt#(20)) lastCountReg <- mkReg(0);
    Reg#(UInt#(20)) countReg     <- mkReg(0);
 
    FloatAlu mul   <- mkFloatMultiplier(defaultValue);
@@ -220,11 +249,8 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
    FIFOF#(Token)                          bfifo <- mkFIFOF();
    PipeOut#(Token)                        bFunnel = toPipeOut(bfifo);
 
-   FIFOF#(Bool) firstFifo <- mkSizedFIFOF(valueOf(K));
-   FIFOF#(Bool) lastFifo  <- mkSizedFIFOF(valueOf(K));
-   PipeOut#(Bool) firstPipe <- mkRepeat(repetitions, toPipeOut(firstFifo));
-   PipeOut#(Bool) lastPipe <- mkRepeat(repetitions,  toPipeOut(lastFifo));
-
+   Vector#(K,FIFOF#(Bool)) firstFifos  <- replicateM(mkFIFOF1);
+   Vector#(K,FIFOF#(Bool)) lastFifos  <- replicateM(mkFIFOF1);
    Vector#(K,FIFOF#(Float)) accumFifos <- replicateM(mkFIFOF1);
    Vector#(K,FIFOF#(Token)) dotfifos   <- replicateM(mkFIFOF1);
 
@@ -242,13 +268,6 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
    Vector#(12, Reg#(Bool))   latencyReported <- replicateM(mkReg(False));
 
    Reg#(Bit#(32)) macs <- mkReg(0);
-
-   Reg#(Bool) initialized <- mkReg(False);
-   rule init if (!initialized);
-      for (Integer chan = 0; chan < valueOf(K); chan = chan + 1)
-	 accumFifos[chan].enq(unpack(0));
-      initialized <= True;
-   endrule
 
 //   (* descending_urgency = "mulin,accout" *)
    rule mulin;
@@ -271,8 +290,15 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
       let a <- toGet(aFunnel).get();
       let b <- toGet(bFunnel).get();
             
-      let first <- toGet(firstPipe).get();
-      if (verbose) $display("%08d label=%d mulin chan=%d first=%d", cycles-lastMulin[chan], label, chan, first);
+      let first = a.first;
+      let last = a.last;
+      firstFifos[chan].enq(first);
+      lastFifos[chan].enq(last);
+      if (a.first != b.first)
+	 $display("****\n    Warning: a.first=%d != b.first=%d\n****", a.first, b.first);
+      if (a.last != b.last)
+	 $display("****\n    Warning: a.last=%d != b.last=%d\n****", a.last, b.last);
+      if (verbose) $display("%08d label=%d mulin chan=%d first=%d last=%d", cycles-lastMulin[chan], label, chan, first, last);
       mul.request.put(tuple2(a.v, b.v));
 `ifdef TAGGED_TOKENS
       // if (a.row==2 && b.col==0)
@@ -283,10 +309,13 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
 
    rule mulout;
       let chan <- toGet(chanFifos[0]).get();
+      let first <- toGet(firstFifos[chan]).get();
       chanFifos[1].enq(chan);
-      //if (label == 0) $display("%08d label=%d mulout chan=%d", cycles, label, chan);
+      if (verbose) $display("%08d label=%d mulout chan=%d first=%d", cycles, label, chan, first);
       match {.resp,.*} <- mul.response.get();
-      let acc <- toGet(accumFifos[chan]).get();
+      let acc = unpack(0);
+      if (!first)
+	 acc <- toGet(accumFifos[chan]).get();
       //adder.request.put(tuple2(resp,acc));
       adder.request.put(tuple2(resp,acc));
 `ifdef TAGGED_TOKENS
@@ -295,13 +324,14 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
 `endif
    endrule
 
-   rule accout if (initialized);
+   rule accout;
       let chan <- toGet(chanFifos[1]).get();
-      let last <- toGet(lastPipe).get;
+      let last <- toGet(lastFifos[chan]).get;
       macs <= macs + 1;
       match {.acc,.*} <- adder.response.get();
-      //if (label == 0) $display("%08d label=%d accout chan=%d acc=%x last=%d", cycles, label, chan, pack(acc), last);
-      accumFifos[chan].enq(last ? unpack(0) : acc);
+      if (verbose) $display("%08d label=%d accout chan=%d acc=%x last=%d macs=%d", cycles, label, chan, pack(acc), last, macs+1);
+      if (!last)
+	 accumFifos[chan].enq(acc);
 `ifdef TAGGED_TOKENS
       match {.row, .col} <- toGet(tag_fifos[1]).get;
       case (tag_regs[chan]) matches
@@ -330,33 +360,16 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
    Vector#(K,PipeOut#(Token)) dotpipes = map(toPipeOut, dotfifos);
 
    interface Put aInput;
-      method Action put(Token a); // if (readyReg);
+      method Action put(Token a);
 
    	 afifo.enq(a);
 
-	 let c = countReg+1;
-	 Bool isFirst = (countReg == 0);
-	 Bool isLast = (countReg == lastCountReg);
-	 if (isLast) begin
-	    c = 0;
-	 end
-	 countReg <= c;
-
-	 lastFifo.enq(isLast);
-	 firstFifo.enq(isFirst);
+	 countReg <= countReg+1;
 
       endmethod
    endinterface
    interface Put bInput   = toPut(bfifo);
    interface Vector pipes = dotpipes;
-   interface Reg numElts;
-      method Action _write(UInt#(20) v); // if (!readyReg);
-	 numEltsReg <= v;
-	 lastCountReg <= v-1;
-	 readyReg <= True;
-      endmethod
-      method _read = numEltsReg._read;
-   endinterface
    interface SharedDotProdDebug debug;
       interface PipeOut  macCount = toPipeOut(macs._read);
       method    Bit#(TLog#(K)) chan(); return chanReg; endmethod
@@ -378,7 +391,6 @@ interface MmTile;
    interface Vector#(RowsPerTile, Put#(Token)) aInputs;
    interface Vector#(RowsPerTile, Put#(Token)) bInputs;
    interface Vector#(RowsPerTile, PipeOut#(Vector#(N, Token))) fxPipes;
-   interface Reg#(UInt#(20)) numElts;
    interface MmTileDebug debug;
 endinterface
 
@@ -449,15 +461,6 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
    interface Vector aInputs = map(toCountedPut(aTokensPutReg), map(toPut, aFifos));
    interface Vector bInputs = map(toCountedPut(bTokensPutReg), map(toPut, bFifos));
    interface Vector fxPipes = fxPipesN;
-   interface Reg numElts;
-      method Action _write(UInt#(20) v);
-	 for (Integer i = 0; i < rowsPerTile; i = i+1)
-	    fxdotprods[i].numElts <= v;
-      endmethod
-      method UInt#(20) _read();
-	 return fxdotprods[0].numElts;
-      endmethod
-   endinterface
    interface MmTileDebug debug;
       interface PipeOut macCount = macCountPipe;
       method Bit#(RowsPerTile) aNotEmpty(); return pack(map(fifofNotEmpty, aFifos)); endmethod
@@ -764,9 +767,6 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
       let numColumnsA = descriptorA.numColumns;
       let numColumnsB = descriptorB.numColumns;
       let numRowsB    = descriptorB.numRows;
-      for (Integer t = 0; t < tt; t = t+1) begin
-	 mmTiles[t].numElts <= truncate(numColumnsA);
-      end
       for (Integer j = 0; j < jj; j = j + 1) begin
 	 startAOffset[j] <= fromInteger(j)*numColumnsA;
 	 startCOffset[j] <= fromInteger(j)*numRowsB;
