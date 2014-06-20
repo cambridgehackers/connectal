@@ -72,6 +72,7 @@ argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', actio
 argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
 argparser.add_argument('-L', '--clibdir', default=[], help='C++ libary', action='append')
 argparser.add_argument('-T', '--tcl', default=[], help='Vivado tcl script', action='append')
+argparser.add_argument('-m', '--bsimsource', help='Bsim C++ source files', action='append')
 argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to the BSV compiler', action='append')
 argparser.add_argument('--xelabflags', default=[], help='Options to pass to the xelab compiler', action='append')
 argparser.add_argument('--xsimflags', default=[], help='Options to pass to the xsim simulator', action='append')
@@ -286,7 +287,7 @@ endif
 BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS = $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license -D TimeStamp=%(timestamp)s %(bscflags)s
-BSIM_CXX = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.cxx $(XBSVDIR)/cpp/sock_fd.cxx
+BSIM_CXX = $(XBSVDIR)/cpp/BsimCtrl.cxx $(XBSVDIR)/cpp/BsimDma.cxx $(XBSVDIR)/cpp/sock_utils.cxx $(XBSVDIR)/cpp/sock_fd.cxx %(bsimsource)s
 
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
@@ -526,6 +527,8 @@ if __name__=='__main__':
         sys.exit(-1)
     if not namespace.source:
         namespace.source = []
+    if not namespace.bsimsource:
+        namespace.bsimsource = []
     if not namespace.constraint:
         namespace.constraint = []
     if not namespace.verilog:
@@ -839,6 +842,7 @@ if __name__=='__main__':
                                    'h2sinterface': ' '.join(namespace.h2sinterface),
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in namespace.bsvfile]),
                                    'sourcefiles': ' '.join([os.path.abspath(source) for source in namespace.source]) if namespace.source else '',
+                                   'bsimsource': ' '.join([os.path.abspath(bsimsource) for bsimsource in namespace.bsimsource]) if namespace.bsimsource else '',
                                    'generatedCFiles': ' '.join(generatedCFiles),
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in namespace.source]) if namespace.source else '',
                                    'project_dir': os.path.abspath(project_dir),
