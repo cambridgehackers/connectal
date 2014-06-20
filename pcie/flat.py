@@ -70,14 +70,14 @@ last_vcd_timestamp = mpz(0)
 last_vcd_pktclass_code = None
 
 pktclassCodes = {
-    'SReq': 'S',
-    'SWReq': 'T',
-    'SResp': 's',
-    'slave continuation': 'c',
-    'MWReq': 'W',
-    'MReq': 'M',
-    'MResp': 'm',
-    'master continuation': 'C',
+    'CpuRReq': 'S',
+    'CpuWReq': 'T',
+    'CpuRResp': 's',
+    '(to) slave continuation': 'c',
+    'DmaWReq': 'W',
+    'DmaRReq': 'M',
+    'DmaRResp': 'm',
+    '(to) master continuation': 'C',
     'trace': 't',
 }
 
@@ -138,25 +138,25 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum):
         return 'trace'
     if tlpsof == 0:
         if portnum == 4:
-            return 'MCont'
+            return '(to) master continuation'
         else:
-            return 'SCont'
+            return '(to) slave continuation'
     if portnum == 4:
         if pkttype == 10: # COMPLETION
-            return 'MResp'
+            return 'DmaRResp'
         else:
             if pktformat == 2 or pktformat == 3:
-                return 'SWReq'
+                return 'CpuWReq'
             else:
-                return 'SReq'
+                return 'CpuRReq'
     elif portnum == 8:
         if pkttype == 10: # COMPLETION
-            return 'SResp'
+            return 'CpuRResp'
         else:
             if pktformat == 2 or pktformat == 3:
-                return 'MWReq'
+                return 'DmaWReq'
             else:
-                return 'MReq'
+                return 'DmaRReq'
     else:
         return 'Misc'
 
