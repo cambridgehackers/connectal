@@ -110,6 +110,10 @@ public:
     sem_post(&mul_sem);
     fprintf(stderr, "mmfDone cycles=%ld\n", cycles);
   }
+  void dpsVal(uint32_t v) {
+    sem_post(&mul_sem);
+    fprintf(stderr, "dpsVal v=%x %f\n", v, *(float *)&v);
+  }
 };
 
 class MmDebugIndication : public MmDebugIndicationWrapper {
@@ -127,7 +131,9 @@ public:
   virtual void debug ( uint32_t aNotEmpty, uint32_t bNotEmpty, uint32_t macCount, uint32_t mmtilesANE, uint32_t mmtilesBNE, uint64_t chans) {
     fprintf(stderr, "mmdebug aNotEmpty=%x bNotEmpty=%x macCount=%d ane=%x bne=%x chans="PRIu64"\n", aNotEmpty, bNotEmpty, macCount, mmtilesANE, mmtilesBNE, chans);
   }
-
+  virtual void bytesRead ( uint32_t aBytesRead, uint32_t bBytesRead) {
+    fprintf(stderr, "mmdebug aBytesRead=%d bBytesRead=%d\n", aBytesRead, bBytesRead);
+  }
 };
 
 class SigmoidIndication : public SigmoidIndicationWrapper

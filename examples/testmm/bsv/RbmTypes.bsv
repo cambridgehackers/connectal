@@ -66,13 +66,17 @@ typedef enum {
 
 interface MmIndication;
    method Action mmfDone(Bit#(64) cycles);
+   method Action dpsVal(Bit#(32) val);
 endinterface
 
 interface MmRequest;
    method Action mmf(Bit#(32) inPointer1, Bit#(32) r1, Bit#(32) c1,
 		     Bit#(32) inPointer2, Bit#(32) r2, Bit#(32) c2,
 		     Bit#(32) outPointer);
-endinterface   
+   method Action dpsCount(Bit#(32) count);
+   method Action dpsA(Bit#(32) aval);
+   method Action dpsB(Bit#(32) bval);
+endinterface
 
 interface SigmoidIndication;
    method Action sigmoidDone();
@@ -125,4 +129,5 @@ interface MmDebugIndication;
    method Action started();
    method Action startSourceAndSink(UInt#(32) startA, UInt#(32) startC, Int#(32) jint);
    method Action debug(Bit#(32) aNotEmpty, Bit#(32) bNotEmpty, Bit#(32) macCount, Bit#(32) mmtilesANotEmpty, Bit#(32) mmtilesBNotEmpty, Bit#(64) chans);
+   method Action bytesRead(Bit#(32) aBytesRead, Bit#(32) bBytesRead);
 endinterface

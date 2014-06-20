@@ -359,6 +359,8 @@ interface MmTileDebug;
    interface PipeOut#(Bit#(32)) macCount;
    method Bit#(RowsPerTile) aNotEmpty;
    method Bit#(RowsPerTile) bNotEmpty;
+   method Bit#(32) aBytesRead();
+   method Bit#(32) bBytesRead();
    method Vector#(RowsPerTile, Bit#(TLog#(K))) dotProdChan();
 endinterface
 
@@ -376,11 +378,14 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
    let rowsPerTile = valueOf(RowsPerTile);
    let kk = valueOf(K);
 
+   Reg#(Bit#(32)) aTokensReadReg <- mkReg(0);
+   Reg#(Bit#(32)) bTokensReadReg <- mkReg(0);
+
    // aFifos receives one value per K values on bFifos
    Vector#(RowsPerTile, FIFOF#(Token))   aFifos <- replicateM(mkFIFOF);
-   Vector#(RowsPerTile, PipeOut#(Token)) aPipes = map(toPipeOut, aFifos);
+   Vector#(RowsPerTile, PipeOut#(Token)) aPipes = map(toCountedPipeOut(aTokensReadReg), map(toPipeOut, aFifos));
    Vector#(RowsPerTile,  FIFOF#(Token))   bFifos <- replicateM(mkFIFOF);
-   Vector#(RowsPerTile,  PipeOut#(Token)) bPipes = map(toPipeOut, bFifos);
+   Vector#(RowsPerTile,  PipeOut#(Token)) bPipes = map(toCountedPipeOut(bTokensReadReg), map(toPipeOut, bFifos));
 
    function Vector#(k,PipeOut#(Token)) getDotProdServerPipes(SharedDotProdServer#(k) s); return s.pipes; endfunction
    Vector#(RowsPerTile, SharedDotProdServer#(K)) fxdotprods <- mapM(mkSharedDotProdServer, map(fromInteger,genVector));
@@ -445,6 +450,8 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
       interface PipeOut macCount = macCountPipe;
       method Bit#(RowsPerTile) aNotEmpty(); return pack(map(fifofNotEmpty, aFifos)); endmethod
       method Bit#(RowsPerTile) bNotEmpty(); return pack(map(fifofNotEmpty, bFifos)); endmethod
+      method Bit#(32) aBytesRead(); return aTokensReadReg * 4; endmethod
+      method Bit#(32) bBytesRead(); return bTokensReadReg * 4; endmethod
       method Vector#(RowsPerTile, Bit#(TLog#(K))) dotProdChan(); return map(getDotProdChan, fxdotprods); endmethod
    endinterface
 endmodule : mkMmTile
@@ -520,13 +527,23 @@ typedef struct {
    addrtype numColumns;
 } MatrixDescriptor#(type addrtype) deriving (Bits);
 
+interface DmaMatrixMultiplyDebug;
+   method Bit#(J) aNotEmpty();
+   method Bit#(J) bNotEmpty();
+   method Bit#(32) macCount();
+   method Bit#(J) mmtilesANotEmpty();
+   method Bit#(J) mmtilesBNotEmpty();
+   method Bit#(32) aBytesRead();
+   method Bit#(32) bBytesRead();
+endinterface
+   
 // row major layout
 interface DmaMatrixMultiplyIfc#(numeric type addrwidth, numeric type dsz);
    method Action start(ObjectPointer pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
 		       ObjectPointer pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
 		       ObjectPointer pointerC);
    method ActionValue#(Bool) finish();
-   method Tuple6#(Bit#(J),Bit#(K),Bit#(32),Bit#(J),Bit#(J),Bit#(TMul#(J,TLog#(K)))) dbg();
+   interface DmaMatrixMultiplyDebug debug;
 endinterface
 
 typedef enum {
@@ -746,15 +763,16 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
    function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) ab); match { .a, .b } = ab; return a+b; endfunction
    function PipeOut#(Bit#(32)) mmTileMacCount(MmTile mmtile); return mmtile.debug.macCount; endfunction
    PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(mkMap(my_add), map(mmTileMacCount, mmTiles));
-   Reg#(Bit#(32)) macCount <- mkReg(0);
+   Reg#(Bit#(32)) macCountReg <- mkReg(0);
    rule updateMacCount;
       let mc <- toGet(macCountPipe).get();
-      macCount <= mc;
+      macCountReg <= mc;
    endrule
 
    function Vector#(RowsPerTile, Bit#(TLog#(K))) getMmTileChans(MmTile mmtile); return mmtile.debug.dotProdChan; endfunction
    function Bit#(RowsPerTile) getMmTilesANotEmpty(MmTile mmtile); return mmtile.debug.aNotEmpty; endfunction
    function Bit#(RowsPerTile) getMmTilesBNotEmpty(MmTile mmtile); return mmtile.debug.bNotEmpty; endfunction
+   function Bool pipeNotEmpty(RowColSource#(asz, a) vs); return vs.pipe.notEmpty(); endfunction
 
    method Action start(ObjectPointer pointerA, UInt#(addrwidth) numRowsA, UInt#(addrwidth) numColumnsA,
 		       ObjectPointer pointerB, UInt#(addrwidth) numRowsB, UInt#(addrwidth) numColumnsB,
@@ -792,15 +810,20 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
       doneFifo.deq();
       return True;
    endmethod
-   method Tuple6#(Bit#(J),Bit#(K),Bit#(32),Bit#(J),Bit#(J),Bit#(TMul#(J,TLog#(K)))) dbg();
-      function Bool pipeNotEmpty(RowColSource#(asz, a) vs); return vs.pipe.notEmpty(); endfunction
-      Vector#(J,Bool) aNotEmpty = map(pipeNotEmpty, sourceA);
-      Vector#(K,Bool) bNotEmpty = map(pipeNotEmpty, sourceB);
-      Bit#(J) mmtilesANotEmpty = pack(map(getMmTilesANotEmpty, mmTiles));
-      Bit#(J) mmtilesBNotEmpty = pack(map(getMmTilesBNotEmpty, mmTiles));
-      Vector#(T, Vector#(RowsPerTile, Bit#(TLog#(K)))) chans = map(getMmTileChans, mmTiles);
-      return tuple6(pack(aNotEmpty), pack(bNotEmpty), macCount, mmtilesANotEmpty, mmtilesBNotEmpty, pack(chans));
-   endmethod
+   interface DmaMatrixMultiplyDebug debug;
+      method Bit#(32) macCount(); return macCountReg; endmethod
+      method Bit#(J) aNotEmpty(); return pack(map(pipeNotEmpty, sourceA)); endmethod
+      method Bit#(J) bNotEmpty(); return pack(map(pipeNotEmpty, sourceB)); endmethod
+      method Bit#(J) mmtilesANotEmpty(); return pack(map(getMmTilesANotEmpty, mmTiles)); endmethod
+      method Bit#(J) mmtilesBNotEmpty();  return pack(map(getMmTilesBNotEmpty, mmTiles)); endmethod
+//FIXME multiple tiles
+       method Bit#(32) aBytesRead();
+          return mmTiles[0].debug.aBytesRead();
+       endmethod
+       method Bit#(32) bBytesRead();
+          return mmTiles[0].debug.bBytesRead();
+       endmethod
+    endinterface
 endmodule : mkDmaMatrixMultiply
 
 interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
@@ -810,7 +833,7 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
 		       ObjectPointer pointerB, UInt#(MMSize) numRowsB, UInt#(MMSize) numColumnsB,
 		       ObjectPointer pointerC);
    method ActionValue#(Bool) finish();
-   method Tuple6#(Bit#(J),Bit#(K),Bit#(32),Bit#(J),Bit#(J),Bit#(TMul#(J,TLog#(K)))) dbg();
+   interface DmaMatrixMultiplyDebug debug;
 endinterface
 
 (* synthesize *)
@@ -829,14 +852,12 @@ module [Module] mkDramMatrixMultiply(DramMatrixMultiply#(N,TMul#(N,32)));
    interface writeClient = writeEngine.dmaClient;
    method start = dmaMMF.start;
    method finish = dmaMMF.finish;
-   method Tuple6#(Bit#(J),Bit#(K),Bit#(32),Bit#(J),Bit#(J),Bit#(TMul#(J,TLog#(K)))) dbg();
-      return dmaMMF.dbg();
-   endmethod
+   interface DmaMatrixMultiplyDebug debug = dmaMMF.debug;
 endmodule
 
 interface Mm#(numeric type n);
    interface MmRequest mmRequest;
-   interface MmDebugRequest mmDebugRequest;
+   interface MmDebugRequest mmDebug;
    interface TimerRequest timerRequest;
    interface Vector#(2, ObjectReadClient#(TMul#(32,N))) readClients;
    interface ObjectWriteClient#(TMul#(32,n)) writeClient;
@@ -863,6 +884,17 @@ module [Module] mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndicat
       busyFifo.deq();
       ind.mmfDone(mmfCycles);
    endrule
+
+`ifdef DPS_TESTBENCH
+   let dps <- mkSharedDotProdServer;
+   FIFOF#(Vector#(K, Token)) dpsAFifo <- mkSizedFIFO(32);
+   FIFOF#(Vector#(K, Token)) dpsBFifo <- mkSizedFIFO(32);
+   mkConnection(toGet(dpsAFifo), dps.aInput);
+   mkConnection(toGet(dpsBFifo), dps.bInput);
+   rule dpsdebug;
+      let v <- toGet(dps.debug.macCount()).get();
+   endrule
+`endif
 
    FIFOF#(Bool) timerRunning <- mkFIFOF();
    Reg#(Bit#(64)) cycleCount <- mkReg(0);
@@ -895,11 +927,31 @@ module [Module] mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndicat
 	 mmfCycles <= 0;
 	 busyFifo.enq(True);
       endmethod
+      method Action dpsCount(Bit#(32) count);
+`ifdef DPS_TESTBENCH
+	 dps.numElts <= count;
+`endif
+      endmethod
+      method Action dpsA(Bit#(32) aval);
+`ifdef DPS_TESTBENCH
+	 aFifo.enq(aval);
+`endif
+      endmethod
+      method Action dpsB(Bit#(32) bval);
+`ifdef DPS_TESTBENCH
+	 aFifo.enq(bval);
+`endif
+      endmethod
    endinterface
-   interface MmDebugRequest mmDebugRequest;
+   interface MmDebugRequest mmDebug;
       method Action debug();
-	 match { .aNotEmpty, .bNotEmpty, .macCount, .mmTilesANE, .mmTilesBNE, .chans } = dmaMMF.dbg();
-	 mmDebugIndication.debug(extend(aNotEmpty), extend(bNotEmpty), macCount, extend(mmTilesANE), extend(mmTilesBNE), extend(chans));
+	 let aNotEmpty = dmaMMF.debug.aNotEmpty();
+	 let bNotEmpty = dmaMMF.debug.bNotEmpty();
+	 let macCount = dmaMMF.debug.macCount();
+	 let mmTilesANE = dmaMMF.debug.mmtilesANotEmpty();
+	 let mmTilesBNE = dmaMMF.debug.mmtilesBNotEmpty();
+	 mmDebugIndication.debug(extend(aNotEmpty), extend(bNotEmpty), macCount, extend(mmTilesANE), extend(mmTilesBNE), 0);
+	 mmDebugIndication.bytesRead(dmaMMF.debug.aBytesRead(), dmaMMF.debug.aBytesRead());
       endmethod
    endinterface
 
