@@ -8,6 +8,12 @@ Dma = Dma
 PINS = Std
 
 FAMILY=$(shell echo $(BOARD) | sed 's/z.*/zynq/' | sed 's/k.*/kintex/' | sed 's/v.*/virtex/')
+
+##
+## To build testmm for Android on Zynq
+## cd $(XBSVDIR); cd ..; git clone git://github.com:cambridgehackers/opencv-android-sdk.git
+##
+
 ifeq (zynq,$(FAMILY))
 NDK_DIR=$(shell ndk-which gcc | sed 's:toolchains.*::')
 OPENCVDIR=$(XBSVDIR)/../opencv-android-sdk/sdk/native/
