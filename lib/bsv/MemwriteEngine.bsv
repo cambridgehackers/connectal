@@ -120,7 +120,6 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
 	  method Bit#(8) _read = r._read;
        endinterface);
 
-   (* fire_when_enabled *)
    rule drain_funnel;
       match{.new_name,.data,.last} = data_in_funnel[0].first;
       data_in_funnel[0].deq;
@@ -129,7 +128,6 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
    endrule
       
    
-   (* fire_when_enabled *)
    rule drain_req (compCnts[tpl_2(inFlight.first)].read > 0);
       let nn = newName;
       let new_drainCnt = drainCnt-1;
@@ -149,7 +147,6 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
       complBuff.deq(nn);
    endrule
       
-   (* fire_when_enabled *)
    rule drain_resp;
       match {.data,.last} <- complBuff.first_resp;
       if (last)

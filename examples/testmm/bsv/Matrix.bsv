@@ -147,7 +147,7 @@ module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 `ifdef TAGGED_TOKENS
 	 col <= col+fromInteger(valueOf(N));
 `endif
-	 $display("mkRowSource count=%d first=%d last=%d", countReg, firstReg, lastReg);
+	 //$display("mkRowSource count=%d first=%d last=%d", countReg, firstReg, lastReg);
 	 firstReg <= False;
 	 lastReg <= (countReg == 2); // ((countReg - 1) == 1)
 	 countReg <= countReg - 1;
@@ -213,7 +213,7 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 	 firstReg <= False;
 	 lastReg <= (countReg == 2); // ((countReg - 1) == 1);
 	 countReg <= countReg - 1;
-	 $display("mkColSource count=%d first=%d last=%d", countReg, firstReg, lastReg);
+	 //$display("mkColSource count=%d first=%d last=%d", countReg, firstReg, lastReg);
       endmethod
       method Bool notEmpty;
 `ifdef TAGGED_TOKENS
@@ -859,7 +859,7 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
    interface DmaMatrixMultiplyDebug debug;
 endinterface
 
-(* synthesize *)
+//(* synthesize *)
 module [Module] mkDramMatrixMultiply(DramMatrixMultiply#(N,TMul#(N,32)));
    
    MemreadEngineV#(TMul#(N,32), 1, J) rowReadEngine <- mkMemreadEngine();
