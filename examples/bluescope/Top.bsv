@@ -25,6 +25,8 @@ import DmaIndicationProxy::*;
 // defined by user
 import Memcpy::*;
 
+`define BluescopeSampleLength 8
+
 typedef enum {MemcpyIndication, MemcpyRequest, DmaIndication, DmaConfig, BluescopeIndication, BluescopeRequest} IfcNames deriving (Eq,Bits);
 
 module mkPortalTop(StdPortalDmaTop#(addrWidth)) 
@@ -37,7 +39,7 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth))
 	    Add#(f__, addrWidth, 40));
 
    BlueScopeIndicationProxy blueScopeIndicationProxy <- mkBlueScopeIndicationProxy(BluescopeIndication);
-   BlueScope#(64) bs <- mkBlueScope(32, blueScopeIndicationProxy.ifc);
+   BlueScope#(64) bs <- mkBlueScope(`BluescopeSampleLength, blueScopeIndicationProxy.ifc);
    BlueScopeRequestWrapper blueScopeRequestWrapper <- mkBlueScopeRequestWrapper(BluescopeRequest,bs.requestIfc);
 
    MemcpyIndicationProxy memcpyIndicationProxy <- mkMemcpyIndicationProxy(MemcpyIndication);

@@ -26,6 +26,9 @@
 #include <pthread.h>
 #include <monkit.h>
 #include <semaphore.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include "StdDmaIndication.h"
 
 #include "BlueScopeIndicationWrapper.h"
@@ -49,13 +52,21 @@ bool finished = false;
 bool memcmp_fail = false;
 unsigned int memcmp_count = 0;
 
-void dump(const char *prefix, char *buf, size_t len)
+static void memdump(void *p, int len, const char *title)
 {
-    fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < len ; i++) {
-	fprintf(stderr, "%02x", (unsigned char)buf[i]);
-	if (i % 32 == 31)
-	  fprintf(stderr, "\n");
+int i;
+
+    i = 0;
+    while (len > 0) {
+        if (!(i & 0xf)) {
+            if (i > 0)
+                fprintf(stderr, "\n");
+            fprintf(stderr, "%s: ",title);
+        }
+        fprintf(stderr, "%02x ", *(unsigned char *)p);
+        p = (unsigned char *)p + 1;
+        i++;
+        len--;
     }
     fprintf(stderr, "\n");
 }
@@ -82,12 +93,10 @@ public:
     unsigned int mcf = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
     memcmp_fail |= mcf;
     fprintf(stderr, "memcpy done:\n");
-    if(false){
-      fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
-      dump("src", (char*)srcBuffer, 128);
-      dump("dst", (char*)dstBuffer, 128);
-      dump("dbg", (char*)bsBuffer,  128);   
-    }
+    fprintf(stderr, "(%d) memcmp src=%lx dst=%lx success=%s\n", memcmp_count, (long)srcBuffer, (long)dstBuffer, mcf == 0 ? "pass" : "fail");
+    memdump(srcBuffer, 128, "src");
+    memdump(dstBuffer, 128, "dst");
+    memdump(bsBuffer,  128, "dbg");
   }
 };
 
@@ -104,10 +113,7 @@ public:
     trigger_fired = true;
   }
   virtual void reportStateDbg(uint64_t mask, uint64_t value){
-    //fprintf(stderr, "BlueScope::reportStateDbg mask=%016llx, value=%016llx\n", mask, value);
-    fprintf(stderr, "BlueScope::reportStateDbg\n");
-    dump("    mask =", (char*)&mask, sizeof(mask));
-    dump("   value =", (char*)&value, sizeof(value));
+    fprintf(stderr, "BlueScope::reportStateDbg mask=%" PRIu64 ", value=%" PRIu64 "\n", mask, value);
   }
 };
 
@@ -144,7 +150,7 @@ int main(int argc, const char **argv)
   bluescopeIndication = new BlueScopeIndication(IfcNames_BluescopeIndication);
   dmaIndication = new DmaIndication(dma, IfcNames_DmaIndication);
 
-  fprintf(stderr, "Main::allocating memory...\n");
+  fprintf(stderr, "Main::allocating memory of size=%d...\n", (int)alloc_sz);
 
   dma->alloc(alloc_sz, &srcAlloc);
   dma->alloc(alloc_sz, &dstAlloc);
