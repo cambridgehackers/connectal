@@ -226,7 +226,7 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
       endmethod
    endinterface
    interface Put resp_write;
-      method Action put(Axi3WriteData#(serverBusWidth,serverIdWidth) resp) if ((writeLen > 0) || (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency));
+      method Action put(Axi3WriteData#(serverBusWidth,serverIdWidth) resp) if ((writeLen > 0) || (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency)); // && cycle[4:0]==0);
 	 Bit#(5) write_len = ?;
 	 Bit#(serverAddrWidth) write_addr = ?;
 	 Bit#(serverIdWidth) write_id = ?;

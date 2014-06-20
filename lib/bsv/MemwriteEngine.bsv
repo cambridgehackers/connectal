@@ -78,13 +78,14 @@ module mkBurstFunnelOld#(Integer __x)(BurstFunnel#(k,w))
 	     let first = inj_ctrl[i] == 0;
 	     let cnt = first ? burst_len[i] : inj_ctrl[i];
 	     let new_cnt = cnt-1;
+	     let last = new_cnt == 0;
 	     inj_ctrl[i] <= new_cnt;
 	     if (first)
 		mutex.enq(?);
-	     if (new_cnt == 0)
+	     if (last)
 		loadIdxs.deq;
 	     //$display("enq (%d) %h", i, v);
-	     f.enq(tuple3(fromInteger(i), v, first));
+	     f.enq(tuple3(fromInteger(i), v, last));
 	  endmethod
        endinterface);
    Vector#(k, PipeIn#(Bit#(w))) data_in_pipes = zipWith(enter_data, data_in, genVector);
