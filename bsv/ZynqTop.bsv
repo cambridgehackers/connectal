@@ -38,10 +38,8 @@ import AxiMasterSlave    :: *;
 import AxiDma            :: *;
 
 `ifdef USES_FCLK1
-`define CLOCK_DECL Clock clk1
 `define CLOCK_ARG  ps7.fclkclk[1],
 `else
-`define CLOCK_DECL
 `define CLOCK_ARG
 `endif
 
@@ -82,9 +80,7 @@ interface ZynqTop;
    interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
 
-typedef (function Module#(PortalTop#(32, 64, PinType, NumberOfMasters)) mkpt(`CLOCK_DECL)) MkPortalTop;
-
-module [Module] mkZynqTopFromPortal#(MkPortalTop constructor)(ZynqTop);
+module mkZynqTop(ZynqTop);
    PS7 ps7 <- mkPS7();
    Clock mainclock = ps7.fclkclk[0];
    Reset mainreset = ps7.fclkreset[0];
@@ -107,7 +103,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop constructor)(ZynqTop);
    endrule
 `endif
 
-   let top <- constructor(`CLOCK_ARG clocked_by mainclock, reset_by mainreset);
+   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG clocked_by mainclock, reset_by mainreset);
    mkConnection(ps7, top, clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);
@@ -138,9 +134,4 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop constructor)(ZynqTop);
    interface pins = top.pins;
    interface deleteme_unused_clock = unused_clock;
    interface deleteme_unused_reset = unused_reset;
-endmodule
-
-module mkZynqTop(ZynqTop);
-   let top <- mkZynqTopFromPortal(mkPortalTop);
-   return top;
 endmodule
