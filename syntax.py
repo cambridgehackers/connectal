@@ -399,6 +399,9 @@ def p_subinterfaceDecl(p):
     if len(p) == 6:
         name = p[4]
         t = p[3]
+    elif len(p) == 5:
+        name = p[3]
+        t = p[2]
     else:
         name = p[2]
         t = p[1]
