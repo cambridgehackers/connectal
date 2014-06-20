@@ -59,60 +59,6 @@ interface BurstFunnel#(numeric type k, numeric type w);
    interface PipeOut#(Tuple2#(Bit#(TLog#(k)),Bit#(w))) dataOut;
 endinterface
 
-      
-module mkBurstFunnelOld#(Integer __x)(BurstFunnel#(k,w))
-   provisos( Log#(k,logk)
-	    ,Min#(2,logk,bpc)
-	    ,FunnelPipesPipelined#(1, k, Tuple3#(Bit#(logk),Bit#(w),Bool), bpc)
-	    );
-   FIFO#(void) mutex <- mkSizedFIFO(1);
-   Vector#(k, FIFOF#(Tuple3#(Bit#(logk), Bit#(w),Bool))) data_in <- replicateM(mkFIFOF);
-   Vector#(k,Reg#(Bit#(8))) burst_len <- replicateM(mkReg(0));
-   Vector#(k,Reg#(Bit#(8))) inj_ctrl <- replicateM(mkReg(0));
-   //TAdd#(1,logk) is because bsc is wierd about comparing literal '0' to a value of Bit#(0)
-   FIFO#(Bit#(TAdd#(1,logk))) loadIdxs <- mkSizedFIFO(32);
-   function PipeIn#(Bit#(w)) enter_data(FIFOF#(Tuple3#(Bit#(logk), Bit#(w), Bool)) f, Integer i) =
-      (interface PipeIn;
-	  method Bool notFull = f.notFull;
-	  method Action enq(Bit#(w) v) if (loadIdxs.first == fromInteger(i));
-	     let first = inj_ctrl[i] == 0;
-	     let cnt = first ? burst_len[i] : inj_ctrl[i];
-	     let new_cnt = cnt-1;
-	     let last = new_cnt == 0;
-	     inj_ctrl[i] <= new_cnt;
-	     if (first)
-		mutex.enq(?);
-	     if (last)
-		loadIdxs.deq;
-	     //$display("enq (%d) %h", i, v);
-	     f.enq(tuple3(fromInteger(i), v, last));
-	  endmethod
-       endinterface);
-   Vector#(k, PipeIn#(Bit#(w))) data_in_pipes = zipWith(enter_data, data_in, genVector);
-   // this should use bpc, not logk, but I need to think of a clever way to stop bursts from overtaking oneanother (mdk)
-   FunnelPipe#(1, k, Tuple3#(Bit#(logk), Bit#(w),Bool),bpc) data_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,data_in));
-   method Action loadIdx(Bit#(logk) idx);
-      loadIdxs.enq(extend(idx));
-      //$display("loadIdxs %d", idx);
-   endmethod
-   interface burstLen = burst_len;
-   interface dataIn = data_in_pipes;
-   interface PipeOut dataOut;
-      method Tuple2#(Bit#(logk), Bit#(w)) first;
-	 match{.a,.b,.c} = data_in_funnel[0].first;
-	 return tuple2(a,b);
-      endmethod
-      method Action deq;
-	 if(tpl_3(data_in_funnel[0].first))
-	    mutex.deq;
-	 data_in_funnel[0].deq;
-      endmethod
-      method Bool notEmpty = data_in_funnel[0].notEmpty;
-   endinterface
-endmodule
-
-
-// this works correctly, but has throughput problems
 module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
    provisos( Log#(k,logk)
 	    ,Min#(2,logk,bpc)
@@ -125,31 +71,39 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
    Vector#(k,FIFOF#(Tuple3#(Bit#(2), Bit#(w), Bool))) data_in <- replicateM(mkFIFOF);
    Vector#(k,Reg#(Bit#(8))) burst_len <- replicateM(mkReg(0));
    Vector#(k,Reg#(Bit#(8))) drain_cnt <- replicateM(mkReg(0));
-   Vector#(k,Reg#(Bit#(8))) inj_ctrl <- replicateM(mkReg(0));
-   FIFO#(Tuple2#(Bit#(TAdd#(1,logk)),Bit#(2))) loadIdxs <- mkSizedFIFO(1);
-   FIFO#(Tuple2#(Bit#(TAdd#(1,logk)),Bit#(2))) inFlight <- mkSizedFIFO(3); 
+   Reg#(Bit#(8)) inj_ctrl <- mkReg(0);
+   FIFO#(Tuple2#(Bit#(TAdd#(1,logk)),Bit#(2))) loadIdxs <- mkSizedFIFO(32);
+   FIFO#(Tuple2#(Bit#(TAdd#(1,logk)),Bit#(2))) inFlight <- mkSizedFIFO(4);
    FunnelPipe#(1, k, Tuple3#(Bit#(2),Bit#(w),Bool),bpc) data_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,data_in));
    Reg#(Bit#(8)) drainCnt <- mkReg(0);
    FIFOF#(Tuple2#(Bit#(TLog#(k)),Bit#(w))) exit_data <- mkFIFOF;
    Reg#(Bit#(2)) newName <- mkReg(0);
    FIFO#(Bit#(logk)) drainRename <- mkFIFO;
    
+   Reg#(Bit#(32)) cycle <- mkReg(0);
+   Reg#(Bit#(32)) last_entry <- mkReg(0);
+   
+   rule cyc;
+      cycle <= cycle+1;
+   endrule
    
    function PipeIn#(Bit#(w)) enter_data(FIFOF#(Tuple3#(Bit#(2), Bit#(w), Bool)) f, Integer i) = 
       (interface PipeIn;
    	  method Bool notFull = f.notFull;
    	  method Action enq(Bit#(w) v) if (tpl_1(loadIdxs.first) == fromInteger(i));
+	     last_entry <= cycle;
 	     match {.old_name, .new_name} = loadIdxs.first;
-	     let first = inj_ctrl[i] == 0;
-	     let cnt = first ? burst_len[i] : inj_ctrl[i];
+	     let first = inj_ctrl == 0;
+	     let cnt = first ? burst_len[i] : inj_ctrl;
 	     let new_cnt = cnt-1;
 	     let last = new_cnt == 0;
-	     inj_ctrl[i] <= new_cnt;
+	     inj_ctrl <= new_cnt;
 	     if (first)
 		inFlight.enq(loadIdxs.first);
 	     if (last) 
 		loadIdxs.deq;
 	     f.enq(tuple3(new_name, v, last));
+	     //$display("%d enq %d", cycle-last_entry, i);
 	  endmethod
        endinterface);
    Vector#(k, PipeIn#(Bit#(w))) data_in_pipes = zipWith(enter_data, data_in, genVector);
@@ -174,20 +128,25 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
       compCnts[new_name].increment(1);
    endrule
       
-   rule start_drain if (drainCnt == 0);
-      match {.old_name, .new_name} = inFlight.first;
-      newName <= new_name;
-      drainCnt <= burst_len[old_name];
-      inFlight.deq;
-      drainRename.enq(truncate(old_name));
-   endrule
    
    (* fire_when_enabled *)
-   rule drain_req (drainCnt > 0 && compCnts[newName].read > 0);
-      complBuff.first_req(newName);
-      drainCnt <= drainCnt-1;
+   rule drain_req (compCnts[tpl_2(inFlight.first)].read > 0);
+      let nn = newName;
+      let new_drainCnt = drainCnt-1;
+      if (drainCnt == 0) begin
+	 match {.old_name, .new_name} = inFlight.first;
+	 newName <= new_name;
+	 nn = new_name;
+	 new_drainCnt = burst_len[old_name]-1;
+	 drainRename.enq(truncate(old_name));
+      end
+      if (new_drainCnt == 0) begin
+	 inFlight.deq;
+      end
+      complBuff.first_req(nn);
+      drainCnt <= new_drainCnt;
       compCnts[newName].decrement(1);
-      complBuff.deq(newName);
+      complBuff.deq(nn);
    endrule
       
    (* fire_when_enabled *)
@@ -245,7 +204,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngineV#(dataWidth
    FunnelPipe#(1, numServers, Tuple2#(Bit#(serverIdxSz), MemengineCmd),bpc) cmds_in_funnel <- mkFunnelPipesPipelined(map(toPipeOut,cmds_in));
    Vector#(numServers, FIFOF#(Bit#(dataWidth)))  write_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
    Vector#(numServers, PipeOut#(Bit#(dataWidth))) foo = map(toPipeOut, write_data_buffs); 
-   BurstFunnel#(numServers,dataWidth) write_data_funnel <- mkBurstFunnelOld(bufferSizeBeats);
+   BurstFunnel#(numServers,dataWidth) write_data_funnel <- mkBurstFunnel(bufferSizeBeats);
    zipWithM(mkConnection, foo, write_data_funnel.dataIn);
       
    Reg#(Bit#(8))                               respCnt <- mkReg(0);

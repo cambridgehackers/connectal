@@ -230,7 +230,7 @@ module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDot
 
    let n = valueOf(N);
    UInt#(TAdd#(TLog#(K),1)) repetitions = fromInteger(valueOf(K));
-   Bool verbose = True;
+   Bool verbose = False;
 
    Reg#(UInt#(20)) countReg     <- mkReg(0);
 
@@ -544,7 +544,7 @@ typedef struct {
 
 interface DmaMatrixMultiplyDebug;
    method Bit#(J) aNotEmpty();
-   method Bit#(J) bNotEmpty();
+   method Bit#(K) bNotEmpty();
    method Bit#(32) macCount();
    method Bit#(J) mmtilesANotEmpty();
    method Bit#(J) mmtilesBNotEmpty();
@@ -830,9 +830,9 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
    interface DmaMatrixMultiplyDebug debug;
       method Bit#(32) macCount(); return macCountReg; endmethod
       method Bit#(J) aNotEmpty(); return pack(map(pipeNotEmpty, sourceA)); endmethod
-      method Bit#(J) bNotEmpty(); return pack(map(pipeNotEmpty, sourceB)); endmethod
+      method Bit#(K) bNotEmpty(); return pack(map(pipeNotEmpty, sourceB)); endmethod
       method Bit#(J) mmtilesANotEmpty(); return pack(map(getMmTilesANotEmpty, mmTiles)); endmethod
-      method Bit#(J) mmtilesBNotEmpty();  return pack(map(getMmTilesBNotEmpty, mmTiles)); endmethod
+      method Bit#(J) mmtilesBNotEmpty(); return pack(map(getMmTilesBNotEmpty, mmTiles)); endmethod
 //FIXME multiple tiles
        method Bit#(32) aBytesPut();
           return mmTiles[0].debug.aBytesPut();
