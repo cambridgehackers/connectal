@@ -32,7 +32,6 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <bitset>
 #include <assert.h>
 #include <semaphore.h>
 #include <pthread.h>
