@@ -76,6 +76,7 @@ argparser.add_argument('-m', '--bsimsource', help='Bsim C++ source files', actio
 argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to the BSV compiler', action='append')
 argparser.add_argument('--xelabflags', default=[], help='Options to pass to the xelab compiler', action='append')
 argparser.add_argument('--xsimflags', default=[], help='Options to pass to the xsim simulator', action='append')
+argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
 
 tclReadVerilogTemplate='read_verilog [ glob %(verilog)s/*.v ]'
 tclReadXciTemplate='''
@@ -89,6 +90,7 @@ tclboardTemplate='''
 set partname {%(partname)s}
 set boardname {%(boardname)s}
 set xbsvdir {%(xbsvdir)s}
+set xbsvipdir {%(ipdir)s}
 set needspcie {%(needspcie)s}
 %(tcldefines)s
 '''
@@ -788,7 +790,8 @@ if __name__=='__main__':
                  'read_xci': '\n'.join([tclReadXciTemplate
                                         % { 'xci': f } for f in namespace.xci]),
                  'needspcie': 1 if needs_pcie_7x_gen1x8 else 0,
-                 'tcldefines': '\n'.join(['set %s {%s}' % (var,val) for (var,val) in map(util.splitBinding, namespace.bsvdefine)])
+                 'tcldefines': '\n'.join(['set %s {%s}' % (var,val) for (var,val) in map(util.splitBinding, namespace.bsvdefine)]),
+                 'ipdir': os.path.abspath(namespace.ipdir) if namespace.ipdir else xbsvdir
                  }
     tcl = util.createDirAndOpen(tclimplname, 'w')
     tcl.write(tclfileTemplate % tclsubsts)
