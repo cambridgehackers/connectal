@@ -396,6 +396,7 @@ bits: hw/mkTop.bit
 	git diff > bin/gitdiff.patch
 	xxd hw/mkTop.bin | sed -e "s/  .*//" -e "s/ \(..\)\(..\) \(..\)\(..\)/ \\4\\3 \\2\\1/g" | xxd -r > bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
+	$(XBSVDIR)/scripts/check-timing.py bin/%(dut)s_post_route_timing_summary.rpt
 
 else
 
@@ -405,6 +406,7 @@ bits: hw/mkTop.bit
 	git rev-parse HEAD > bin/githash
 	git diff > bin/gitdiff.patch
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
+	$(XBSVDIR)/scripts/check-timing.py bin/%(dut)s_post_route_timing_summary.rpt
 
 endif
 
