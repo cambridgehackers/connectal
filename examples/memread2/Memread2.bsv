@@ -24,9 +24,11 @@ import FIFOF::*;
 import Vector::*;
 import GetPut::*;
 import ClientServer::*;
+import Connectable::*;
 
 import MemTypes::*;
 import MemreadEngine::*;
+import Pipe::*;
 
 interface Memread2Request;
    method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) burstLen);
@@ -56,6 +58,13 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    Reg#(Bit#(32)) mismatchCount2 <- mkReg(0);
    MemreadEngine#(64,1) re1 <- mkMemreadEngine;
 
+   FIFOF#(Bit#(64)) outReg0 <- mkFIFOF;
+   FIFOF#(Bit#(64)) outReg1 <- mkFIFOF;
+   PipeIn#(Bit#(64)) pi0 = toPipeIn(outReg0);
+   PipeIn#(Bit#(64)) pi1 = toPipeIn(outReg1);
+   mkConnection(re0.dataPipes[0], pi0);
+   mkConnection(re1.dataPipes[0], pi1);
+
    FIFOF#(Tuple3#(Bit#(32),Bit#(64),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
 
    rule mismatch;
@@ -68,8 +77,8 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
       srcGen <= srcGen+2;
       let expectedV1 = {srcGen+1,srcGen};
       let expectedV2 = {(srcGen+1)*3,srcGen*3};
-      let v1 <- toGet(re0.dataPipes[0]).get;
-      let v2 <- toGet(re1.dataPipes[0]).get;
+      let v1 <- toGet(outReg0).get;
+      let v2 <- toGet(outReg1).get;
 
       let misMatch = v1 != expectedV1;
       mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
