@@ -52,7 +52,6 @@ import "BDPI" function Action write_pareff64(Bit#(32) handle, Bit#(32) addr, Bit
 import "BDPI" function ActionValue#(Bit#(32)) read_pareff32(Bit#(32) handle, Bit#(32) addr);
 import "BDPI" function ActionValue#(Bit#(64)) read_pareff64(Bit#(32) handle, Bit#(32) addr);
 		 
-		 
 interface BsimCtrlReadWrite#(numeric type asz, numeric type dsz);
    method ActionValue#(Bit#(asz)) readAddr();
    method Action readData(Bit#(dsz) d);		    
@@ -179,6 +178,9 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
       cycle <= cycle+1;
    endrule
    
+   let read_jitter = True; //cycle[4:0] == 0; 
+   let write_jitter = True; //cycle[4:0] == 5; 
+   
    interface Put req_ar;
       method Action put(Axi3ReadRequest#(serverAddrWidth,serverIdWidth) req);
 	 //$display("mkBsimHost::req_ar_a: %d %d", req.id, cycle-last_reqAr);
@@ -187,7 +189,7 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
       endmethod
    endinterface
    interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(serverBusWidth,serverIdWidth)) get if ((readLen > 0) || (readLen == 0 && (cycle-tpl_1(readDelayFifo.first)) > readLatency));
+      method ActionValue#(Axi3ReadResponse#(serverBusWidth,serverIdWidth)) get if ((readLen > 0) || (readLen == 0 && (cycle-tpl_1(readDelayFifo.first)) > readLatency) && read_jitter);
 	 Bit#(5) read_len = ?;
 	 Bit#(serverAddrWidth) read_addr = ?;
 	 Bit#(serverIdWidth) read_id = ?;
@@ -226,7 +228,7 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
       endmethod
    endinterface
    interface Put resp_write;
-      method Action put(Axi3WriteData#(serverBusWidth,serverIdWidth) resp) if ((writeLen > 0) || (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency)); // && cycle[4:0]==0);
+      method Action put(Axi3WriteData#(serverBusWidth,serverIdWidth) resp) if ((writeLen > 0) || (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency) && write_jitter); 
 	 Bit#(5) write_len = ?;
 	 Bit#(serverAddrWidth) write_addr = ?;
 	 Bit#(serverIdWidth) write_id = ?;

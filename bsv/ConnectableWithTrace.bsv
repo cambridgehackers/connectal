@@ -39,8 +39,7 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
    provisos(Add#(0,addrWidth,32));
    module mkConnectionWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth) m, Axi3Slave#(addrWidth, busWidth,idWidth) s)(Empty);
 
-`ifdef 0 //ndef TRACE_AXI
-   blah
+`ifndef TRACE_AXI
    mkConnection(m, s);
 `else
    
