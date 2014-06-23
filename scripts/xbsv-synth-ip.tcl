@@ -21,14 +21,60 @@ proc xbsv_synth_ip {core_name core_version ip_name params} {
 	xbsv_set_board_part
     }
 
+    set generate_ip 0
+
     if [file exists $xbsvipdir/generated/xilinx/$boardname/$ip_name/$ip_name.xci] {
+    } else {
+	puts "no xci file $ip_name.xci"
+	set generate_ip 1
+    }
+    if [file exists $xbsvipdir/generated/xilinx/$boardname/$ip_name/vivadoversion.txt] {
+	gets [open $xbsvipdir/generated/xilinx/$boardname/$ip_name/vivadoversion.txt r] generated_version
+	puts "generated_version $generated_version"
+	set current_version [version -short]
+	puts "current_version $current_version"
+	if {$current_version != $generated_version} {
+	    puts "vivado version does not match"
+	    set generate_ip 1
+	}
+    } else {
+	puts "no vivado version recorded"
+	set generate_ip 1
+    }
+
+    ## check requested core version and parameters
+    if [file exists $xbsvipdir/generated/xilinx/$boardname/$ip_name/coreversion.txt] {
+	gets [open $xbsvipdir/generated/xilinx/$boardname/$ip_name/coreversion.txt r] generated_version
+	set current_version "$core_name $core_version $params"
+	puts "generated_version $generated_version"
+	puts "current_version $current_version"
+	if {$current_version != $generated_version} {
+	    puts "core version or params does not match"
+	    set generate_ip 1
+	}
+    } else {
+	puts "no core version recorded"
+	set generate_ip 1
+    }
+
+    puts "generate_ip $generate_ip"
+    if $generate_ip {
+	file delete -force $xbsvipdir/generated/xilinx/$boardname/$ip_name
+	file mkdir $xbsvipdir/generated/xilinx/$boardname
+	create_ip -name $core_name -version $core_version -vendor xilinx.com -library ip -module_name $ip_name -dir $xbsvipdir/generated/xilinx/$boardname
+	set_property -dict $params [get_ips $ip_name]
+	report_property [get_ips $ip_name]
+	generate_target all [get_files $xbsvipdir/generated/xilinx/$boardname/$ip_name/$ip_name.xci]
+
+	set versionfd [open $xbsvipdir/generated/xilinx/$boardname/$ip_name/vivadoversion.txt w]
+	puts $versionfd [version -short]
+	close $versionfd
+
+	set corefd [open $xbsvipdir/generated/xilinx/$boardname/$ip_name/coreversion.txt w]
+	puts $corefd "$core_name $core_version $params"
+	close $corefd
+    } else {
 	read_ip $xbsvipdir/generated/xilinx/$boardname/$ip_name/$ip_name.xci
-    }  else {
-        file mkdir $xbsvipdir/generated/xilinx/$boardname
-        create_ip -name $core_name -version $core_version -vendor xilinx.com -library ip -module_name $ip_name -dir $xbsvipdir/generated/xilinx/$boardname
-        set_property -dict $params [get_ips $ip_name]
-        report_property [get_ips $ip_name]
-        generate_target all [get_files $xbsvipdir/generated/xilinx/$boardname/$ip_name/$ip_name.xci]
     }
     if [file exists $xbsvipdir/generated/xilinx/$boardname/$ip_name/$ip_name.dcp] {
     } else {
