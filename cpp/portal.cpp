@@ -404,7 +404,7 @@ void PortalPoller::portalExec_end(void)
     }
 }
 
-void* PortalPoller::portalExec_event(int timeout)
+void* PortalPoller::portalExec_poll(int timeout)
 {
     long rc = 0;
 #ifdef MMAP_HW
@@ -415,14 +415,17 @@ void* PortalPoller::portalExec_event(int timeout)
     if(rc < 0) {
 	// return only in error case
 	fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
-	return (void*)rc;
     }
+    return (void*)rc;
+}
+
+void* PortalPoller::portalExec_event(void)
+{
     int mcnt = 0;
     for (int i = 0; i < numFds; i++) {
       if (!portal_wrappers) {
-        fprintf(stderr, "No portal_instances but rc=%ld revents=%d\n", rc, portal_fds[i].revents);
+        fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
       }
-    
       Portal *instance = portal_wrappers[i];
       volatile unsigned int *ind_reg_base = instance->ind_reg_base;
     
@@ -452,8 +455,11 @@ void* PortalPoller::portalExec(void* __x)
 {
     void *rc = portalExec_init();
     sem_post(&sem_startup);
-    while (!rc && !stopping)
-        rc = portalExec_event(portalExec_timeout);
+    while (!rc && !stopping) {
+        rc = portalExec_poll(portalExec_timeout);
+        if ((long) rc >= 0)
+            rc = portalExec_event();
+    }
     portalExec_end();
     printf("[%s] thread ending\n", __FUNCTION__);
     return rc;
@@ -469,9 +475,14 @@ void* portalExec_init(void)
   return defaultPoller->portalExec_init();
 }
 
-void* portalExec_event(int timeout)
+void* portalExec_poll(int timeout)
 {
-  return defaultPoller->portalExec_event(timeout);
+  return defaultPoller->portalExec_poll(timeout);
+}
+
+void* portalExec_event(void)
+{
+  return defaultPoller->portalExec_event();
 }
 
 void portalExec_end(void)

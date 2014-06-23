@@ -110,7 +110,8 @@ public:
   int registerInstance(Portal *portal);
   int unregisterInstance(Portal *portal);
   void *portalExec_init(void);
-  void *portalExec_event(int timeout);
+  void *portalExec_poll(int timeout);
+  void *portalExec_event(void);
   void portalExec_end(void);
   void portalExec_start();
   int portalExec_timeout;
@@ -164,7 +165,8 @@ void print_timer(int loops);
 void* portalExec(void* __x);
 /* fine grained functions for building custom portalExec */
 void* portalExec_init(void);
-void* portalExec_event(int timeout);
+void* portalExec_poll(int timeout);
+void* portalExec_event(void);
 void portalExec_start();
 void portalExec_end(void);
 void portalTrace_start();

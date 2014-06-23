@@ -50,8 +50,11 @@ PortalPoller *poller = 0;
 static void *pthread_worker(void *p)
 {
     void *rc = NULL;
-    while (CHECKSEM(sem_heard2) && !rc && !poller->stopping)
-        rc = poller->portalExec_event(poller->portalExec_timeout);
+    while (CHECKSEM(sem_heard2) && !rc && !poller->stopping) {
+        rc = poller->portalExec_poll(poller->portalExec_timeout);
+        if ((long)rc >= 0)
+            rc = poller->portalExec_event();
+    }
     return rc;
 }
 static void init_thread()

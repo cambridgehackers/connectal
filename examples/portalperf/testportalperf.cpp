@@ -46,8 +46,11 @@ int heard_count;
 static void *wait_for(int n)
 {
     void *rc = NULL;
-    while ((heard_count != n) && !rc)
-        rc = portalExec_event(0);
+    while ((heard_count != n) && !rc) {
+        rc = portalExec_poll(0);
+        if ((long)rc >= 0)
+            rc = portalExec_event();
+    }
     return rc;
 }
 
