@@ -73,7 +73,8 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
    UGBramFifos#(numServers,cmdQDepth,MemengineCmd) cmdBuf <- mkUGBramFifos;
 
    FIFO#(Bit#(serverIdxSz))                       loadf_a <- mkSizedFIFO(1);
-   FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_b <- mkSizedFIFO(1);
+   FIFO#(MemengineCmd)                            loadf_b <- mkSizedFIFO(2);
+   FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) loadf_c <- mkSizedFIFO(1);
    FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))   workf <- mkSizedFIFO(32); // isthis the right size?
 
    Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(1));
@@ -122,12 +123,17 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
    endrule
 
    rule load_ctxt_b;
-      let idx <- toGet(loadf_a).get;
       let cmd <- cmdBuf.first_resp;
+      loadf_b.enq(cmd);
+   endrule
+
+   rule load_ctxt_c;
+      let idx <- toGet(loadf_a).get;
+      let cmd <- toGet(loadf_b).get;
       if (outs1[idx] > 0 && buffCap[idx].read() >= unpack(extend(cmd.burstLen>>beat_shift))) begin
 	 //$display("load_ctxt_b %h %d", cmd.base, idx);
 	 buffCap[idx].decrement(unpack(extend(cmd.burstLen>>beat_shift)));
-	 loadf_b.enq(tuple2(idx,cmd));
+	 loadf_c.enq(tuple2(idx,cmd));
 	 if (cmd.len <= extend(cmd.burstLen)) begin
 	    outs1[idx] <= outs1[idx]-1;
 	    cmdBuf.deq(idx);
@@ -163,7 +169,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth,
    interface ObjectReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(ObjectRequest) get();
-	    match {.idx, .cmd} <- toGet(loadf_b).get;
+	    match {.idx, .cmd} <- toGet(loadf_c).get;
 	    Bit#(8) bl = cmd.burstLen;
 	    let last = False;
 	    if (cmd.len <= extend(bl)) begin
