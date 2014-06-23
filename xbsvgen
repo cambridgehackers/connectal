@@ -337,7 +337,7 @@ ubuntu_exe:
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
 	git diff > bin/gitdiff.patch
-	cd jni; make -f Makefile-jni
+	cd jni; make -f Ubuntu.mk
 	cp -v jni/mk* bin
 
 bsim: $(timestampfile)
@@ -494,9 +494,11 @@ CFLAGS_COMMON = -O -g -I. -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp 
 CFLAGS = -DMMAP_HW $(CFLAGS_COMMON)
 
 PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.cpp PortalMemory.cpp sock_fd.cxx sock_utils.cxx)
+SOURCES = $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(source)s $(PORTAL_CPP_FILES)
+LDLIBS := %(clibdirs)s %(clibs)s
 
-test%(classname)s: %(swProxies)s %(swWrappers)s $(PORTAL_CPP_FILES) %(source)s
-	g++ $(CFLAGS) -o %(classname)s %(swProxies)s %(swWrappers)s $(PORTAL_CPP_FILES) %(source)s %(clibdirs)s %(clibs)s -pthread 
+test%(classname)s: $(SOURCES)
+	g++ $(CFLAGS) -o %(classname)s $(SOURCES) $(LDLIBS) -pthread 
 '''
 
 def preprocess(source, defs):
@@ -789,7 +791,7 @@ if __name__=='__main__':
     timestampname = os.path.join(project_dir, 'sources', dutname.lower(), '.timestamp')
 
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
-    linuxmkname = os.path.join(project_dir, 'jni', 'Makefile-jni')
+    linuxmkname = os.path.join(project_dir, 'jni', 'Ubuntu.mk')
  
     if os != 'android':
         xpsgen.writeImpactCmd(dutname, os.path.join(project_dir, 'impact.cmd'))
@@ -806,10 +808,7 @@ if __name__=='__main__':
 	'generatedCFiles': ' '.join(generatedCFiles),
 	'project_dir': os.path.abspath(project_dir),
         #ubuntu
-        'ClassName': className,
         'classname': className.lower(),
-	'swProxies': ' '.join(['%sProxy.cpp' % p.name for p in swProxies]),
-	'swWrappers': ' '.join(['%sWrapper.cpp' % w.name for w in swWrappers]),
         'sourceincludes': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(sf)) for sf in namespace.source]) if namespace.source else '',
         #common
         'source': ' '.join([os.path.abspath(sf) for sf in namespace.source]) if namespace.source else '',
