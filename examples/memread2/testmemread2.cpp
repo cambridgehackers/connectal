@@ -96,7 +96,7 @@ int main(int argc, const char **argv)
   for (int i = 0; i < numWords; i++){
     int v = srcGen++;
     srcBuffer[i] = v;
-    srcBuffer2[i] = v * 3;;
+    srcBuffer2[i] = v*3;
   }
     
   dma->dCacheFlushInval(srcAlloc, srcBuffer);
@@ -108,9 +108,10 @@ int main(int argc, const char **argv)
   fprintf(stderr, "ref_srcAlloc2=%d\n", ref_srcAlloc2);
 
   fprintf(stderr, "Main::starting read %08x\n", numWords);
-  device->startRead(ref_srcAlloc, ref_srcAlloc2, 128, 2);
-
-  device->getStateDbg();
+  device->startRead(ref_srcAlloc, ref_srcAlloc2, 32, 16);
   fprintf(stderr, "Main::sleeping\n");
-  while(true){sleep(1);}
+  while(true){
+    sleep(3);
+    device->getStateDbg();
+  }
 }

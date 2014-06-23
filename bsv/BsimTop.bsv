@@ -189,7 +189,7 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
       endmethod
    endinterface
    interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(serverBusWidth,serverIdWidth)) get if ((readLen > 0) || (readLen == 0 && (cycle-tpl_1(readDelayFifo.first)) > readLatency) && read_jitter);
+      method ActionValue#(Axi3ReadResponse#(serverBusWidth,serverIdWidth)) get if (((readLen > 0) || (readLen == 0 && (cycle-tpl_1(readDelayFifo.first)) > readLatency)) && read_jitter);
 	 Bit#(5) read_len = ?;
 	 Bit#(serverAddrWidth) read_addr = ?;
 	 Bit#(serverIdWidth) read_id = ?;
@@ -228,7 +228,7 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
       endmethod
    endinterface
    interface Put resp_write;
-      method Action put(Axi3WriteData#(serverBusWidth,serverIdWidth) resp) if ((writeLen > 0) || (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency) && write_jitter); 
+      method Action put(Axi3WriteData#(serverBusWidth,serverIdWidth) resp) if (((writeLen > 0) || (writeLen == 0 && (cycle-tpl_1(writeDelayFifo.first)) > writeLatency)) && write_jitter); 
 	 Bit#(5) write_len = ?;
 	 Bit#(serverAddrWidth) write_addr = ?;
 	 Bit#(serverIdWidth) write_id = ?;
