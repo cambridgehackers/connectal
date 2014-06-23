@@ -38,6 +38,22 @@ import CtrlMux::*;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
 
+`ifdef USES_FCLK1
+`define CLOCK_ARG  ps7.fclkclk[1],
+`else
+`define CLOCK_ARG
+`endif
+
+`ifndef NumberOfMasters
+`define NumberOfMasters 1
+`endif
+`ifndef PinType
+`define PinType Empty
+`endif
+
+typedef `PinType PinType;
+typedef `NumberOfMasters NumberOfMasters;
+
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
    interface Inout#(Bit#(1)) sda;
@@ -61,18 +77,7 @@ interface ZynqTop#(type pins);
    interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
 
-`ifdef USES_FCLK1
-`define CLOCK_DECL Clock clk1
-`define CLOCK_ARG  ps7.fclkclk[1],
-`else
-`define CLOCK_DECL
-`define CLOCK_ARG
-`endif
-
-typedef (function Module#(PortalTop#(32, 64, ipins, nMasters)) mkpt(`CLOCK_DECL)) MkPortalTop#(type ipins, numeric type nMasters);
-
-module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(ZynqTop#(ipins))
-   provisos(Add#(a__,nMasters,4));
+module mkZynqTop(ZynqTop#(PinType));
 
    PS7 ps7 <- mkPS7();
    Clock mainclock = ps7.fclkclk[0];
@@ -87,7 +92,7 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
       ps7.i2c[1].scli(tscl.o);
    endrule
 
-   let top <- constructor(`CLOCK_ARG clocked_by mainclock, reset_by mainreset);
+   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG clocked_by mainclock, reset_by mainreset);
    mkConnection(ps7, top, clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);
@@ -115,12 +120,4 @@ module [Module] mkZynqTopFromPortal#(MkPortalTop#(ipins,nMasters) constructor)(Z
    interface pins = top.pins;
    interface deleteme_unused_clock = unused_clock;
    interface deleteme_unused_reset = unused_reset;
-endmodule
-
-`ifndef PinType
-`define PinType Empty
-`endif
-module mkZynqTop(ZynqTop#(`PinType));
-   let top <- mkZynqTopFromPortal(mkPortalTop);
-   return top;
 endmodule
