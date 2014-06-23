@@ -236,6 +236,7 @@ $(kc705runs):
 memtests.zedboard: $(addsuffix .zedboard, $(memtests))
 
 memtests.kc705: $(addsuffix .kc705, $(memtests))
+memtests.kc705run: $(addsuffix .kc705run, $(memtests))
 
 memtests.bluesim: $(addsuffix .bluesim, $(memtests))
 
