@@ -333,7 +333,7 @@ ubuntu_exe:
 	mkdir -p bin
 	git rev-parse HEAD > bin/githash
 	git diff > bin/gitdiff.patch
-	cd jni; make
+	cd jni; make -f Makefile-jni
 	cp -v jni/mk* bin
 
 bsim: $(timestampfile)
@@ -759,7 +759,7 @@ if __name__=='__main__':
 
     applicationmkname = os.path.join(project_dir, 'jni', 'Application.mk')
     androidmkname = os.path.join(project_dir, 'jni', 'Android.mk')
-    linuxmkname = os.path.join(project_dir, 'jni', 'Makefile')
+    linuxmkname = os.path.join(project_dir, 'jni', 'Makefile-jni')
  
     if os != 'android':
         xpsgen.writeImpactCmd(dutname, os.path.join(project_dir, 'impact.cmd'))
