@@ -42,9 +42,6 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 #ifdef ZYNQ
 #include <android/log.h>
 #include <zynqportal.h>
