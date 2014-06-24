@@ -25,7 +25,7 @@
 #include <dlfcn.h>
 #include <pthread.h>
 
-#define LIBNAME EXECDIRECTORY "/libHdmi.so"
+//#define LIBNAME EXECDIRECTORY "/libHdmi.so"
 
 typedef int (*qtmain_t)(void *param);
 typedef void (*show_data_t)(unsigned int vsync, unsigned int hsync, unsigned int de, unsigned int data);

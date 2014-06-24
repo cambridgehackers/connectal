@@ -1,13 +1,9 @@
+
 QT       += core gui
 
 TARGET = Hdmi
 TEMPLATE = lib
-CONFIG+= sharedlib
+CONFIG += sharedlib
 
-HEADERS += \
-    worker.h \
-    #
-
-SOURCES += \
-    qtmain.cpp \
-    #
+HEADERS += worker.h
+SOURCES += qtmain.cpp

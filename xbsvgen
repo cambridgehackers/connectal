@@ -79,6 +79,7 @@ argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to 
 argparser.add_argument('--xelabflags', default=[], help='Options to pass to the xelab compiler', action='append')
 argparser.add_argument('--xsimflags', default=[], help='Options to pass to the xsim simulator', action='append')
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
+argparser.add_argument('-q', '--qtused', help='Qt used in Bsim test application', action='store_true')
 
 tclReadVerilogTemplate='read_verilog [ glob %(verilog)s/*.v ]'
 tclReadXciTemplate='''
@@ -345,6 +346,7 @@ bsim: $(timestampfile)
 	cd sources; bsc -D BSIM %(bsvdefines)s $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -u -g %(topbsvmod)s %(topbsvfile)s
 	export BSC_CXXFLAGS="-I$(XBSVDIR)/cpp -I$(XBSVDIR) -DBSIM" ; cd sources; bsc $(BSCFLAGS) -p +:$(BSVPATH):%(dut)s/ -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX)
 	cp -v sources/bsim* bin
+	%(qtused)s
 
 verilog: $(vfile)
 
@@ -898,6 +900,7 @@ if __name__=='__main__':
                                    'boardname': boardname,
                                    'OS': namespace.os,
                                    'debug': debug_flag,
+                                   'qtused': 'cd jni; qmake ../..; make' if namespace.qtused else '',
                                    's2hinterface': ' '.join(namespace.s2hinterface),
                                    'h2sinterface': ' '.join(namespace.h2sinterface),
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in namespace.bsvfile]),
