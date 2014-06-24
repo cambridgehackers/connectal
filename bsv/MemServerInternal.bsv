@@ -169,6 +169,7 @@ module mkMemReadInternal#(Integer id,
    Vector#(numTags, FIFO#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(valueOf(TAG_DEPTH)));
    // stage 3: read data (minimal buffering required) 
    FIFO#(Tuple2#(DRec#(numClients,numTags,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
+   FIFO#(MemData#(dataWidth)) responseFifo <- mkFIFO;
    Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
    Reg#(Bit#(64))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
@@ -229,6 +230,24 @@ module mkMemReadInternal#(Integer id,
       beatCount <= beatCount+1;
    endrule
 
+   rule read_client_response;
+      let response <- toGet(responseFifo).get();
+      Bit#(6) response_tag = response.tag;
+      let dreqFifo = dreqFifos[response_tag];
+      dynamicAssert(truncate(response_tag) == dreqFifo.first.rename_tag, "mkMemReadInternal");
+      readDataPipelineFifo.enq(tuple2(dreqFifo.first, response));
+      let burstLen = burstRegs[response_tag];
+      if (burstLen == 0)
+	 burstLen = dreqFifo.first.req.burstLen >> beat_shift;
+      if (burstLen == 1) begin
+	 //$display("mkMemReadInternal::eob %d", cycle_cnt-last_eob);
+	 last_eob <= cycle_cnt;
+	 dreqFifo.deq();
+	 tag_gen.return_tag(truncate(response_tag));
+      end
+      burstRegs[response_tag] <= burstLen-1;
+   endrule
+
    interface MemReadClient read_client;
       interface Get readReq;
 	 method ActionValue#(MemRequest#(addrWidth)) get();
@@ -244,24 +263,7 @@ module mkMemReadInternal#(Integer id,
 	    return MemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
 	 endmethod
       endinterface
-      interface Put readData;
-	 method Action put(MemData#(dataWidth) response);
-	    Bit#(6) response_tag = response.tag;
-	    let dreqFifo = dreqFifos[response_tag];
-	    dynamicAssert(truncate(response_tag) == dreqFifo.first.rename_tag, "mkMemReadInternal");
-	    readDataPipelineFifo.enq(tuple2(dreqFifo.first, response));
-	    let burstLen = burstRegs[response_tag];
-	    if (burstLen == 0)
-	       burstLen = dreqFifo.first.req.burstLen >> beat_shift;
-	    if (burstLen == 1) begin
-	       //$display("mkMemReadInternal::eob %d", cycle_cnt-last_eob);
-	       last_eob <= cycle_cnt;
-	       dreqFifo.deq();
-	       tag_gen.return_tag(truncate(response_tag));
-	    end
-	    burstRegs[response_tag] <= burstLen-1;
-	 endmethod
-      endinterface
+      interface Put readData = toPut(responseFifo);
    endinterface
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
