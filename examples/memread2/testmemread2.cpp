@@ -46,8 +46,8 @@ public:
     fprintf(stderr, "rData (%08x): ", rDataCnt++);
     dump("", (char*)&v, sizeof(v));
   }
-  virtual void reportStateDbg(uint32_t streamRdCnt, uint32_t dataMismatch){
-    fprintf(stderr, "Memread2::reportStateDbg: streamRdCnt=%08x dataMismatch=%d\n", streamRdCnt, dataMismatch);
+  virtual void reportStateDbg(uint32_t x, uint32_t y){
+    fprintf(stderr, "Memread2::reportStateDbg: x=%08x y=%08x\n", x, y);
   }  
   virtual void mismatch(uint32_t offset, uint64_t ev, uint64_t v) {
     fprintf(stderr, "Mismatch at %x %zx != %zx\n", offset, ev, v);
@@ -113,5 +113,8 @@ int main(int argc, const char **argv)
   while(true){
     sleep(3);
     device->getStateDbg();
+    uint64_t beats = dma->show_mem_stats(ChannelType_Read);
+    fprintf(stderr, "   beats: %"PRIx64"\n", beats);
+    dma->getStateDbg(ChannelType_Read);
   }
 }

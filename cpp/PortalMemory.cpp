@@ -215,12 +215,8 @@ void PortalMemory::mtResp(uint64_t words)
 void PortalMemory::dbgResp(const DmaDbgRec& rec)
 {
   dbgRec = rec;
+  fprintf(stderr, "dbgResp: %08x %08x %08x %08x\n", dbgRec.x, dbgRec.y, dbgRec.z, dbgRec.w);
   sem_post(&dbgSem);
-#ifdef INTERVAL_ANAlYSIS
-  fprintf(stderr, "bin1: %d\n", dbgRec.y);
-  fprintf(stderr, "bin4: %d\n", dbgRec.z);
-  fprintf(stderr, "binx: %d\n", dbgRec.w);
-#endif
 }
 
 void PortalMemory::confResp(uint32_t channelId)

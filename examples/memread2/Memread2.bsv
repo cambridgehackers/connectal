@@ -37,14 +37,14 @@ endinterface
 
 interface Memread2;
    interface Memread2Request request;
-   interface ObjectReadClient#(64) dmaClient;
-   interface ObjectReadClient#(64) dmaClient2;
+   interface ObjectReadClient#(64) dmaClient0;
+   interface ObjectReadClient#(64) dmaClient1;
 endinterface
 
 interface Memread2Indication;
    method Action started(Bit#(32) numWords);
    method Action rData(Bit#(64) v);
-   method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount);
+   method Action reportStateDbg(Bit#(32) x, Bit#(32) y);
    method Action readReq(Bit#(32) v);
    method Action readDone(Bit#(32) mismatchCount);
    method Action mismatch(Bit#(32) offset, Bit#(64) expectedValue, Bit#(64) value);
@@ -52,10 +52,11 @@ endinterface
 
 module mkMemread2#(Memread2Indication indication) (Memread2);
 
-   Reg#(Bit#(32))      srcGen <- mkReg(0);
-   Reg#(Bit#(32)) mismatchCount <- mkReg(0);
+   Reg#(Bit#(32))     srcGen0 <- mkReg(0);
+   Reg#(Bit#(32))     srcGen1 <- mkReg(0);
+   Reg#(Bit#(32)) mismatchCount0 <- mkReg(0);
+   Reg#(Bit#(32)) mismatchCount1 <- mkReg(0);
    MemreadEngine#(64,1) re0 <- mkMemreadEngine;
-   Reg#(Bit#(32)) mismatchCount2 <- mkReg(0);
    MemreadEngine#(64,1) re1 <- mkMemreadEngine;
 
    FIFOF#(Bit#(64)) outReg0 <- mkFIFOF;
@@ -65,35 +66,28 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    mkConnection(re0.dataPipes[0], pi0);
    mkConnection(re1.dataPipes[0], pi1);
 
-   FIFOF#(Tuple3#(Bit#(32),Bit#(64),Bit#(64))) mismatchFifo <- mkSizedFIFOF(64);
-
-   rule mismatch;
-      let tpl = mismatchFifo.first();
-      mismatchFifo.deq();
-      indication.mismatch(tpl_1(tpl), tpl_2(tpl), tpl_3(tpl));
+   rule read0;
+      srcGen0 <= srcGen0+2;
+      let v = {srcGen0+1,srcGen0};
+      let rv <- toGet(outReg0).get;
+      let mm = v != rv;
+      mismatchCount0 <= mismatchCount0 + (mm ? 1 : 0);
+      if (mm) indication.mismatch(0, v, rv); 
    endrule
 
-   rule joinreads;
-      srcGen <= srcGen+2;
-      let expectedV1 = {srcGen+1,srcGen};
-      let expectedV2 = {(srcGen+1)*3,srcGen*3};
-      let v1 <- toGet(outReg0).get;
-      let v2 <- toGet(outReg1).get;
-
-      let misMatch = v1 != expectedV1;
-      mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
-      if (misMatch)
-	 mismatchFifo.enq(tuple3(srcGen, expectedV1, v1));
-
-      let misMatch2 = v2 != expectedV2;
-      mismatchCount2 <= mismatchCount2 + (misMatch2 ? 1 : 0);
-
+   rule read1;
+      srcGen1 <= srcGen1+2;
+      let v = {(srcGen1+1)*3,srcGen1*3};
+      let rv <- toGet(outReg1).get;
+      let mm = v != rv;
+      mismatchCount1 <= mismatchCount1 + (mm ? 1 : 0);
+      if (mm) indication.mismatch(1, v, rv); 
    endrule
    
    rule done;
-      let rv <- re0.readServers[0].response.get;
-      let rv2 <- re1.readServers[0].response.get;
-      indication.readDone(mismatchCount);
+      let rv0 <- re0.readServers[0].response.get;
+      let rv1 <- re1.readServers[0].response.get;
+      indication.readDone(mismatchCount1+mismatchCount0);
    endrule
    
    interface Memread2Request request;
@@ -105,9 +99,13 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
        endmethod
 
        method Action getStateDbg();
-	  indication.reportStateDbg(srcGen, mismatchCount);
+	  Bit#(16) sg0 = truncate(srcGen0);
+	  Bit#(16) sg1 = truncate(srcGen1);
+	  Bit#(16) mm0 = truncate(mismatchCount0);
+	  Bit#(16) mm1 = truncate(mismatchCount1);
+	  indication.reportStateDbg({sg0,sg1}, {mm0,mm1});
        endmethod
    endinterface
-   interface ObjectReadClient dmaClient = re0.dmaClient;
-   interface ObjectReadClient dmaClient2 = re1.dmaClient;
+   interface ObjectReadClient dmaClient0 = re0.dmaClient;
+   interface ObjectReadClient dmaClient1 = re1.dmaClient;
 endmodule

@@ -166,7 +166,7 @@ module mkMemReadInternal#(Integer id,
    // stage 1: address validation (latency = 1)
    FIFO#(RRec#(numClients,numTags,addrWidth))  reqFifo <- mkFIFO;
    // stage 2: read commands (maximum buffering to handle high latency read response times)
-   Vector#(numTags, FIFO#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedFIFO(valueOf(TAG_DEPTH)));
+   Vector#(numTags, FIFOF#(DRec#(numClients,numTags,addrWidth))) dreqFifos <- replicateM(mkSizedFIFOF(valueOf(TAG_DEPTH)));
    // stage 3: read data (minimal buffering required) 
    FIFO#(Tuple2#(DRec#(numClients,numTags,addrWidth),MemData#(dataWidth))) readDataPipelineFifo <- mkFIFO;
    Vector#(numTags, Reg#(Bit#(8)))           burstRegs <- replicateM(mkReg(0));
@@ -226,6 +226,7 @@ module mkMemReadInternal#(Integer id,
       let client = drq.client;
       let req = drq.req;
       readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag, last: False});
+      $display("readDataComp: %d %h", client, response.data);
       beatCount <= beatCount+1;
    endrule
 
@@ -248,7 +249,10 @@ module mkMemReadInternal#(Integer id,
 	 method Action put(MemData#(dataWidth) response);
 	    Bit#(6) response_tag = response.tag;
 	    let dreqFifo = dreqFifos[response_tag];
-	    dynamicAssert(truncate(response_tag) == dreqFifo.first.rename_tag, "mkMemReadInternal");
+	    if (truncate(response_tag) != dreqFifo.first.rename_tag) begin
+	       $display("ERROR: mkMemReadInternal");
+	       $finish(1);
+	    end
 	    readDataPipelineFifo.enq(tuple2(dreqFifo.first, response));
 	    let burstLen = burstRegs[response_tag];
 	    if (burstLen == 0)
@@ -265,7 +269,9 @@ module mkMemReadInternal#(Integer id,
    endinterface
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
-	 return DmaDbgRec{x:fromInteger(valueOf(numClients)), y:0, z:0, w:0};
+	 Bit#(1) ne0 = pack(dreqFifos[0].notEmpty);
+	 Bit#(1) ne1 = pack(dreqFifos[1].notEmpty);
+	 return DmaDbgRec{x:extend(burstRegs[0]), y:extend(burstRegs[1]), z:extend(ne0), w:extend(ne1)};
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic();
 	 return beatCount;

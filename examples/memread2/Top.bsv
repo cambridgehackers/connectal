@@ -41,8 +41,8 @@ module mkPortalTop(StdPortalDmaTop#(addrWidth)) provisos (
 
    Vector#(2, ObjectReadClient#(64)) clients;
    Vector#(2, DmaReadBuffer#(64, 16)) readBuffers <- replicateM(mkDmaReadBuffer);
-   mkConnection(memread.dmaClient, readBuffers[0].dmaServer);
-   mkConnection(memread.dmaClient2, readBuffers[1].dmaServer);
+   mkConnection(memread.dmaClient0, readBuffers[0].dmaServer);
+   mkConnection(memread.dmaClient1, readBuffers[1].dmaServer);
    clients = cons(readBuffers[0].dmaClient, cons(readBuffers[1].dmaClient, nil));
    MemServer#(addrWidth,64,1) dma <- mkMemServerR(dmaIndicationProxy.ifc, clients);
 

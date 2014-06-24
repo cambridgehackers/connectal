@@ -136,7 +136,7 @@ module mkPcieTracer(PcieTracer);
            method ActionValue#(TLPData#(16)) get();
            let tlp = tlpFromBusFifo.first;
            tlpFromBusFifo.deq();
-           $display("tlp in: %h\n", tlp);
+           //$display("tlp in: %h\n", tlp);
            if (tlpTracingReg) begin
                TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
                // skip root_broadcast_messages sent to tlp.hit 0

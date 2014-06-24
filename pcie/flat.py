@@ -268,7 +268,7 @@ def print_tlp(tlpdata, f=None):
         sys.exit(1)
     last_seqno = seqno
 
-def print_tlp_log(tlplog, f=None):
+def print_tlp_log(tlplog, f=None, lf=None):
     if f:
         emit_vcd_header(f)
     #ts     delta           response   foo XXX tlp(be hit eof sof) pkttype format             address  off be(1st last) tag req clid stat nosnoop bcnt laddr length data 
@@ -277,6 +277,8 @@ def print_tlp_log(tlplog, f=None):
     for tlpdata in tlplog:
         if tlpdata.startswith('00000000') or tlpdata == '':
             continue
+        if lf:
+            lf.write(tlpdata+'\n')
         print_tlp(tlpdata, f)
 
 if __name__ == '__main__':
@@ -285,7 +287,10 @@ if __name__ == '__main__':
     else:
         tlplog = subprocess.check_output(['xbsvutil', 'tlp', '/dev/fpga0']).split('\n')
     tlplog.sort()
+    lf = open('tlp.log', 'w')
     f = open('tlp.vcd', 'w')
-    print_tlp_log(tlplog[0:-1], f)
+    print_tlp_log(tlplog[0:-1], f, lf)
     print classCounts
     print sum([ classCounts[k] for k in classCounts])
+    f.close()
+    lf.close()

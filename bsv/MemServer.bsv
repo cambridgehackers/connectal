@@ -67,7 +67,9 @@ function  MemReadClient#(addrWidth, busWidth) null_mem_read_client();
 endfunction
 
 `ifdef BSIM
+`ifndef PCIE
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
+`endif
 `endif
 		 
 typedef 4 NUM_OO_TAGS;		
@@ -265,8 +267,10 @@ module mkConfigMemServerRW#(DmaIndication dmaIndication,
 	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
 `ifdef BSIM
+`ifndef PCIE
 	 let va <- pareff(pref, len);
          addr[39:32] = truncate(pref);
+`endif
 `endif
 	 sgl.sglist(pref, addr, len);
       endmethod
@@ -357,8 +361,10 @@ module mkConfigMemServerR#(DmaIndication dmaIndication,
 	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
 `ifdef BSIM
+`ifndef PCIE
 	 let va <- pareff(pref, len);
          addr[39:32] = truncate(pref);
+`endif
 `endif
 	 sgl.sglist(pref, addr, len);
       endmethod
@@ -448,8 +454,10 @@ module mkConfigMemServerW#(DmaIndication dmaIndication,
 	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
 `ifdef BSIM
+`ifndef PCIE
 	 let va <- pareff(pref, len);
          addr[39:32] = truncate(pref);
+`endif
 `endif
 	 sgl.sglist(pref, addr, len);
       endmethod

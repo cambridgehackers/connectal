@@ -156,8 +156,8 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
    Reg#(Bit#(5))  writeLen <- mkReg(0);
    Reg#(Bit#(serverIdWidth)) writeId <- mkReg(0);
    
-   Bit#(64) readLatency = 96;
-   Bit#(64) writeLatency = 96;
+   Bit#(64) readLatency = 128;
+   Bit#(64) writeLatency = 128;
    
    Reg#(Bit#(64)) req_ar_b_ts <- mkReg(0);
    Reg#(Bit#(64)) req_aw_b_ts <- mkReg(0);
@@ -185,7 +185,8 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
       method Action put(Axi3ReadRequest#(serverAddrWidth,serverIdWidth) req);
 	 //$display("mkBsimHost::req_ar_a: %d %d", req.id, cycle-last_reqAr);
 	 //last_reqAr <= cycle;
-	 readDelayFifos[req.id[1:0]].enq(tuple2(cycle,req));
+	 //readDelayFifos[req.id[1:0]].enq(tuple2(cycle,req));
+	 readDelayFifos[0].enq(tuple2(cycle,req));
       endmethod
    endinterface
    interface Get resp_read;
