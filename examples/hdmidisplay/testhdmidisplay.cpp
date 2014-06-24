@@ -29,10 +29,13 @@
 #include "HdmiInternalRequestProxy.h"
 #include "portal.h"
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #include <ctype.h>
 #include "i2chdmi.h"
 #include "edid.h"
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #define FRAME_COUNT 2
 #define MAX_PIXEL 256
@@ -114,7 +117,7 @@ base += INCREMENT_PIXEL;
       if (synccount++ >= 20) {
           synccount = 0;
 uint32_t zeros = v & 0xffffffff, pix = v >> 32;
-          fprintf(stderr, "[%s] v %llx pix=%x:%d. zero=%x:%d. w=%x:%d.\n", __FUNCTION__,v,pix,pix,zeros,zeros,w,w);
+          fprintf(stderr, "[%s] v %"PRIx64" pix=%x:%d. zero=%x:%d. w=%x:%d.\n", __FUNCTION__,v,pix,pix,zeros,zeros,w,w);
       }
     }
 };
@@ -128,7 +131,7 @@ public:
       fprintf(stderr, "[%s:%d] v=%d\n", __FUNCTION__, __LINE__, v);
     }
     virtual void transferStats ( uint32_t count, uint32_t cycles, uint64_t sumcycles ) {
-	fprintf(stderr, "[%s:%d] count=%d cycles=%d sumcycles=%lld avgcycles=%f\n", __FUNCTION__, __LINE__, count, cycles, sumcycles, (double)sumcycles / count);
+	fprintf(stderr, "[%s:%d] count=%d cycles=%d sumcycles=%"PRIx64" avgcycles=%f\n", __FUNCTION__, __LINE__, count, cycles, sumcycles, (double)sumcycles / count);
     }
 };
 
@@ -189,7 +192,7 @@ int main(int argc, const char **argv)
 
 	fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
              nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
-	fprintf(stderr, "Using pixclk %d calc_pixclk %d npixels %d nlines %d\n",
+	fprintf(stderr, "Using pixclk %d calc_pixclk %ld npixels %d nlines %d\n",
 		pixclk,
 		60l * (long)(hblank + npixels) * (long)(vblank + nlines),
 		npixels, nlines);
@@ -216,13 +219,13 @@ hblank--; // needed on zc702
         ref_srcAlloc[i] = dma->reference(portalAlloc[i]);
     }
 
-    fprintf(stderr, "first mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));
+    fprintf(stderr, "first mem_stats=%"PRIx64"\n", dma->show_mem_stats(ChannelType_Read));
     sleep(3);
     fprintf(stderr, "Starting frame buffer ref=%d...", ref_srcAlloc[0]);
     fill_pixels(0);
     fprintf(stderr, "done\n");
     while (1) {
-      fprintf(stderr, "mem_stats=%10u\n", dma->show_mem_stats(ChannelType_Read));
+      fprintf(stderr, "mem_stats=%"PRIx64"\n", dma->show_mem_stats(ChannelType_Read));
       sleep(1);
     }
 }
