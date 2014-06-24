@@ -31,72 +31,54 @@
 #include <sys/select.h>
 #include "worker.h"
 
+#define SIZE 300
+
+static int vpos, hpos;
+static int once = 1;
 static PinsUpdate *pinsglobal;
-static int vpos, hpos, visible;
-static QImage *image;
+static QImage image;
+
 extern "C" void show_data(unsigned int vsync, unsigned int hsync, unsigned int de, unsigned int data)
 {
     //printf("qtshowdata: v %x; h %x; e %x = %4x\n", vsync, hsync, de, data);
+    if (once)
+        image = QImage(SIZE, SIZE, QImage::Format_RGB32);
+    once = 0;
     if (de) {
-        //printf("qtshowdata: pos [%d:%d] %4x\n", vpos, hpos, data);
-if (vpos == 0 && hpos == 0)
-        pinsglobal->newpix(vpos, hpos, data);
-        image->setPixel(hpos, vpos, data);
-        visible = 1;
+        if (vpos == 0 && hpos == 0 && !once)
+            pinsglobal->newpix(image);
+        image.setPixel(hpos, vpos, data);
         hpos++;
     }
     if (vsync)
         vpos = 0;
     if (hsync) {
-        hpos = 0;
-        if (visible)
+        if (hpos)
             vpos++;
-        visible = 0;
+        hpos = 0;
     }
 }
 
-void PinsUpdate::newpix(int vpos, int hpos, int data)
+void Worker::newpix(QImage image)
 {
-    emit updatepix(vpos, hpos, data);
-};
-
-void Worker::newpix(int vpos, int hpos, int data)
-{
-    if (hpos == 0 && vpos == 0) {
-        label.setPixmap(QPixmap::fromImage(image));
-        offset = (offset + 10) % SIZE;
+    label.setPixmap(QPixmap::fromImage(image));
+    if (once) {
+        label.show();
+        once = 0;
     }
 };
 
-void Worker::mytick()
-{
-    for (int i = 0; i < SIZE; i++)
-       for (int j = 0; j < SIZE; j++) {
-            if (i+offset < SIZE && j + offset < SIZE) {
-            if (i == j)
-                image.setPixel(i+offset, j, value);
-            else
-                image.setPixel(i, j+offset, value2);
-            }
-       }
-    label.setPixmap(QPixmap::fromImage(image));
-    offset = (offset + 10) % SIZE;
-};
-
-//extern "C" int qtmain(int argc, char **argv)
-static char *fakeargv[] = {(char *)"HA", NULL};
-
 extern "C" int qtmain(void *param)
 {
-int argc = 1;
+    int argc = 1;
+    static char *fakeargv[] = {(char *)"HA", NULL};
     QApplication app(argc, fakeargv); 
-Worker worker;
-PinsUpdate pins;
-pinsglobal = &pins;
-image = &worker.image;
+    Worker worker;
+    PinsUpdate pins;
 
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    QObject::connect(&pins, SIGNAL(updatepix(int, int, int)), &worker, SLOT(newpix(int, int, int)));
+    pinsglobal = &pins;
+    QObject::connect(&pins, SIGNAL(updatepix(QImage)), &worker, SLOT(newpix(QImage)));
     printf("[%s:%d] starting app.exec thread %lx\n", __FUNCTION__, __LINE__, QThread::currentThreadId());
     return app.exec();
 }
