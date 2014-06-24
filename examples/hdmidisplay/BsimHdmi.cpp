@@ -21,32 +21,29 @@
 // SOFTWARE.
 
 #include <stdio.h>
-//#include <stdlib.h>
-//#include <errno.h>
-//#include <string.h>
-//#include <unistd.h>
-//#include <sys/types.h>
-//#include <sys/un.h>
-//#include <pthread.h>
-//#include <assert.h>
-//#include <portal.h>
 
-extern "C" {
-void bdpi_hdmi_vsync(unsigned int v)
+static unsigned int vsync, hsync, de;
+extern "C" void bdpi_hdmi_vsync(unsigned int v)
 {
-printf("v %x; ", v);
-}
-void bdpi_hdmi_hsync(unsigned int v)
-{
-printf("h %x; ", v);
-}
-void bdpi_hdmi_de(unsigned int v)
-{
-printf("e %x; ", v);
-}
-void bdpi_hdmi_data(unsigned int v)
-{
-printf("= %4x\n", v);
+    vsync = v;
 }
 
+extern "C" void bdpi_hdmi_hsync(unsigned int v)
+{
+    hsync = v;
+}
+
+extern "C" void bdpi_hdmi_de(unsigned int v)
+{
+    de = v;
+}
+
+extern "C" void bdpi_hdmi_data(unsigned int v)
+{
+#if 0
+extern void show_data(unsigned int vsync, unsigned int hsync, unsigned int de, unsigned int data);
+    show_data(vsync, hsync, de, v);
+#else
+    printf("v %x; h %x; e %x = %4x\n", vsync, hsync, de, v);
+#endif
 }
