@@ -158,21 +158,19 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    (PcieTop#(PinType));
 
 `ifdef BSIM
-   let cc <- exposeCurrentClock;
-   let rs <- exposeCurrentReset;
-   Clock epClock125 = cc;
-   Reset epReset125 = rs;
-   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(PciId{ bus:0, dev:0, func:0});
+   Clock epClock125 = pci_sys_clk_n;
+   Reset epReset125 = pci_sys_reset_n;
+   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(PciId{ bus:0, dev:0, func:0}, clocked_by epClock125, reset_by epReset125);
    // connect pciehost.pci to bdip functions here
    rule from_bdpi if (can_get_tlp);
       TLPData#(16) foo <- get_tlp;
       pciehost.pci.response.put(foo);
-      //$display("from_bdpi: %h %d", foo, valueOf(SizeOf#(TLPData#(16))));
+      $display("from_bdpi: %h %d", foo, valueOf(SizeOf#(TLPData#(16))));
    endrule
    rule to_bdpi if (can_put_tlp);
       TLPData#(16) foo <- pciehost.pci.request.get;
       put_tlp(foo);
-      //$display("to_bdpi");
+      $display("to_bdpi");
    endrule
 `else
    Clock sys_clk_200mhz <- mkClockIBUFDS(sys_clk_p, sys_clk_n);
@@ -237,10 +235,4 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    endmethod
    interface pins = portalTop.pins;
 `endif
-endmodule: mkPcieTopFromPortal
-
-module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)
-   (PcieTop#(PinType));
-   let top <- mkPcieTopFromPortal(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
-   return top;
-endmodule: mkPcieTop
+endmodule

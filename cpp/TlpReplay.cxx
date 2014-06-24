@@ -50,6 +50,7 @@ uint8_t cvt(char c)
 void load_tlp()
 {
   if(!loaded){
+    fprintf(stderr, "about to load tlp.log\n");
     int tlp_file = open("tlp.log", O_RDONLY);
     struct stat fileStat;
     assert(fstat(tlp_file,&fileStat) >= 0);
@@ -70,6 +71,7 @@ void load_tlp()
       }
     }
     loaded = true;
+    fprintf(stderr, "loaded tlp.log successfully\n");
   }
 }
 
