@@ -21,8 +21,47 @@
 // SOFTWARE.
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <dlfcn.h>
+#include <pthread.h>
 
+//#define LIBNAME EXECDIRECTORY "/libHdmi.so"
+
+typedef int (*qtmain_t)(void *param);
+typedef void (*show_data_t)(unsigned int vsync, unsigned int hsync, unsigned int de, unsigned int data);
+
+static show_data_t show_data;
+static pthread_t threaddata;
 static unsigned int vsync, hsync, de;
+
+static void startmeup()
+{
+    void* handle = dlopen(LIBNAME, RTLD_LAZY);
+    if (!handle) {
+        printf( "Cannot open library\n");
+        exit(-1);
+    }
+    printf("Loading symbol qtmain...\n");
+    dlerror();
+    qtmain_t qtmain = (qtmain_t) dlsym(handle, "qtmain");
+    const char *dlsym_error = dlerror();
+    if (dlsym_error) {
+        printf( "Cannot load symbol 'qtmain': %s\n", dlsym_error);
+        dlclose(handle);
+        exit(-1);
+    }
+    show_data = (show_data_t) dlsym(handle, "show_data");
+    dlsym_error = dlerror();
+    if (dlsym_error) {
+        printf( "Cannot load symbol 'show_data': %s\n", dlsym_error);
+        dlclose(handle);
+        exit(-1);
+    }
+    printf( "Calling qtmain...\n");
+    pthread_create(&threaddata, NULL, qtmain, (void*)NULL);
+    //dlclose(handle);
+}
+
 extern "C" void bdpi_hdmi_vsync(unsigned int v)
 {
     vsync = v;
@@ -40,10 +79,12 @@ extern "C" void bdpi_hdmi_de(unsigned int v)
 
 extern "C" void bdpi_hdmi_data(unsigned int v)
 {
-#if 0
-extern void show_data(unsigned int vsync, unsigned int hsync, unsigned int de, unsigned int data);
-    show_data(vsync, hsync, de, v);
-#else
-    printf("v %x; h %x; e %x = %4x\n", vsync, hsync, de, v);
-#endif
+    static int once = 1;
+    if (once)
+       startmeup();
+    once = 0;
+    if (show_data)
+        show_data(vsync, hsync, de, v);
+    else
+        printf("v %x; h %x; e %x = %4x\n", vsync, hsync, de, v);
 }

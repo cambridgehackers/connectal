@@ -186,8 +186,18 @@ typedef struct {
    Bit#(64)      data;
 } AxiTx deriving (Bits, Eq);
 
-module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
-   provisos(Add#(1, z, lanes));
+`ifdef Artix7
+typedef 4 PcieLanes;
+typedef 4 NumLeds;
+`else
+typedef 8 PcieLanes;
+typedef 8 NumLeds;
+`endif
+
+(* synthesize *)
+module mkPCIExpressEndpointX7(PCIExpressX7#(PcieLanes));
+
+   PCIEParams params = defaultValue;
 
    ////////////////////////////////////////////////////////////////////////////////
    /// Design Elements
@@ -221,8 +231,8 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
    Bufgctrl bbufc <- mkBufgctrl(clockGen.clkout0, defaultReset, clockGen.clkout1, defaultReset);
    Reset rsto <- mkAsyncReset(2, defaultReset, bbufc.o);
    Reg#(Bit#(1)) pclk_sel <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
-   Reg#(Bit#(lanes)) pclk_sel_reg1 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
-   Reg#(Bit#(lanes)) pclk_sel_reg2 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
+   Reg#(Bit#(PcieLanes)) pclk_sel_reg1 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
+   Reg#(Bit#(PcieLanes)) pclk_sel_reg2 <- mkReg(0, clocked_by bbufc.o, reset_by rsto);
 
    rule bufcruleinit;
       bbufc.ce0(1);
@@ -235,8 +245,8 @@ module mkPCIExpressEndpointX7#(PCIEParams params)(PCIExpressX7#(lanes))
       bbufc.s1(pclk_sel);
    endrule
 
-   PCIE_X7#(lanes) pcie_ep <- vMkXilinx7PCIExpress(params, clockGen.clkout0, clockGen.clkout2, bbufc.o);
-   //new PcieWrap#(lanes)  pciew <- mkPcieWrap();
+   PCIE_X7#(PcieLanes) pcie_ep <- vMkXilinx7PCIExpress(params, clockGen.clkout0, clockGen.clkout2, bbufc.o);
+   //new PcieWrap#(PcieLanes)  pciew <- mkPcieWrap();
 
    FIFOF#(AxiTx)             fAxiTx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
    FIFOF#(AxiRx)             fAxiRx              <- mkBypassFIFOF(clocked_by pcie_ep.user.clk_out, reset_by noReset);
