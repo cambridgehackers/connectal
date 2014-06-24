@@ -91,7 +91,6 @@ memtests =  memcpy               \
 	    memwrite             \
             memrw                \
 	    memread2             \
-            echo                 \
             memread_manyclients  \
             memwrite_manyclients \
 
