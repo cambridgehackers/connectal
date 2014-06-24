@@ -6,12 +6,12 @@
 
 class Worker: public QObject {
     Q_OBJECT
-QLabel label;
-int offset;
-QRgb value;
-QRgb value2;
-QImage image;
+    QLabel label;
+    int offset;
+    QRgb value;
+    QRgb value2;
 public:
+    QImage image;
     Worker()
     {
         offset = 0;
@@ -23,5 +23,15 @@ public:
     }
 private slots:
     void mytick();
+    void newpix(int vpos, int hpos, int data);
+};
+
+
+class PinsUpdate: public QObject {
+    Q_OBJECT
+public:
+    void newpix(int vpos, int hpos, int data);
+signals:
+    void updatepix(int vpos, int hpos, int data);
 };
 

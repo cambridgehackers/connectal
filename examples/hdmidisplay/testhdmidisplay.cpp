@@ -148,6 +148,7 @@ int main(int argc, const char **argv)
     HdmiDisplayIndicationWrapper *displayIndication = new DisplayIndication(IfcNames_HdmiDisplayIndication);
     hdmiInternal = new HdmiInternalRequestProxy(IfcNames_HdmiInternalRequest);
 
+#ifndef BOARD_bluesim
     // read out monitor EDID from ADV7511
     struct edid edid;
     init_i2c_hdmi();
@@ -167,6 +168,7 @@ int main(int argc, const char **argv)
     }
     close(i2cfd);
     parseEdid(edid);
+#endif
 
     device->stopFrameBuffer();
 
@@ -178,6 +180,27 @@ int main(int argc, const char **argv)
     int status;
     status = poller->setClockFrequency(0, 100000000, 0);
 
+#ifdef BOARD_bluesim
+    nlines = 100;
+    npixels = 200;
+    int vblank = 10;
+    int hblank = 10;
+    int vsyncoff = 2;
+    int hsyncoff = 2;
+    int vsyncwidth = 3;
+    int hsyncwidth = 3;
+
+    fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
+             nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
+hblank--; // needed on zc702
+    hdmiInternal->setDeLine(vsyncoff,           // End of FrontPorch
+                            vsyncoff+vsyncwidth,// End of Sync
+                            vblank,             // Start of Visible (start of BackPorch)
+                            vblank + nlines, vblank + nlines / 2); // End
+        hdmiInternal->setDePixel(hsyncoff,
+                            hsyncoff+hsyncwidth, hblank,
+                            hblank + npixels, hblank + npixels / 2);
+#else
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
       if ((pixclk > 0) && (pixclk < 170000000)) {
@@ -208,6 +231,7 @@ hblank--; // needed on zc702
 	break;
       }
     }
+#endif
 
     fbsize = nlines*npixels*4;
 

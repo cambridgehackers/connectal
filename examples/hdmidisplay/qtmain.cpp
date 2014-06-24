@@ -31,10 +31,42 @@
 #include <sys/select.h>
 #include "worker.h"
 
-void show_data(unsigned int vsync, unsigned int hsync, unsigned int de, unsigned int data)
+static PinsUpdate *pinsglobal;
+static int vpos, hpos, visible;
+static QImage *image;
+extern "C" void show_data(unsigned int vsync, unsigned int hsync, unsigned int de, unsigned int data)
 {
-    printf("showdata: v %x; h %x; e %x = %4x\n", vsync, hsync, de, data);
+    //printf("qtshowdata: v %x; h %x; e %x = %4x\n", vsync, hsync, de, data);
+    if (de) {
+        //printf("qtshowdata: pos [%d:%d] %4x\n", vpos, hpos, data);
+if (vpos == 0 && hpos == 0)
+        pinsglobal->newpix(vpos, hpos, data);
+        image->setPixel(hpos, vpos, data);
+        visible = 1;
+        hpos++;
+    }
+    if (vsync)
+        vpos = 0;
+    if (hsync) {
+        hpos = 0;
+        if (visible)
+            vpos++;
+        visible = 0;
+    }
 }
+
+void PinsUpdate::newpix(int vpos, int hpos, int data)
+{
+    emit updatepix(vpos, hpos, data);
+};
+
+void Worker::newpix(int vpos, int hpos, int data)
+{
+    if (hpos == 0 && vpos == 0) {
+        label.setPixmap(QPixmap::fromImage(image));
+        offset = (offset + 10) % SIZE;
+    }
+};
 
 void Worker::mytick()
 {
@@ -51,15 +83,20 @@ void Worker::mytick()
     offset = (offset + 10) % SIZE;
 };
 
-int main(int argc, char **argv)
+//extern "C" int qtmain(int argc, char **argv)
+static char *fakeargv[] = {(char *)"HA", NULL};
+
+extern "C" int qtmain(void *param)
 {
-    QApplication app(argc, argv); 
-    Worker worker;
-    QTimer t;
+int argc = 1;
+    QApplication app(argc, fakeargv); 
+Worker worker;
+PinsUpdate pins;
+pinsglobal = &pins;
+image = &worker.image;
 
     printf("[%s:%d]\n", __FUNCTION__, __LINE__);
-    QObject::connect(&t, SIGNAL(timeout()), &worker, SLOT(mytick()));
-    t.start(100);
+    QObject::connect(&pins, SIGNAL(updatepix(int, int, int)), &worker, SLOT(newpix(int, int, int)));
     printf("[%s:%d] starting app.exec thread %lx\n", __FUNCTION__, __LINE__, QThread::currentThreadId());
     return app.exec();
 }
