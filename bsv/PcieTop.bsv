@@ -85,25 +85,26 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Client#(TLPData#(16), TLPData#(16)) pci;
 endinterface
 
-module [Module] mkPcieHost#(PciId my_pciId)(PcieHost#(dsz, nSlaves))
-provisos(
-   Mul#(TDiv#(dsz, 8), 8, dsz),
-    Add#(a__, TDiv#(dsz, 32), 8),
-    Add#(b__, TMul#(32, TDiv#(dsz, 32)), 256),
-    Add#(c__, TMul#(8, TDiv#(dsz, 32)), 64),
-    Add#(d__, dsz, 256),
-    Add#(e__, 32, dsz),
-    Mul#(TDiv#(dsz, 32), 32, dsz));
+(* synthesize *)
+module [Module] mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
+// provisos(
+//    Mul#(TDiv#(dsz, 8), 8, dsz),
+//     Add#(a__, TDiv#(dsz, 32), 8),
+//     Add#(b__, TMul#(32, TDiv#(dsz, 32)), 256),
+//     Add#(c__, TMul#(8, TDiv#(dsz, 32)), 64),
+//     Add#(d__, dsz, 256),
+//     Add#(e__, 32, dsz),
+//     Mul#(TDiv#(dsz, 32), 32, dsz));
    Clock epClock125 <- exposeCurrentClock();
    Reset epReset125 <- exposeCurrentReset();
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
-   Vector#(nSlaves,MemSlaveEngine#(dsz)) sEngine <- replicateM(mkMemSlaveEngine(my_pciId));
-   Vector#(nSlaves,MemSlave#(40,dsz)) slavearr;
+   Vector#(NumberOfMasters,MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngine(my_pciId));
+   Vector#(NumberOfMasters,MemSlave#(40,DataBusWidth)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 
    Vector#(PortMax, MemMasterEngine) mvec;
-   for (Integer i = 0; i < valueOf(PortMax) - 1 + valueOf(nSlaves); i=i+1) begin
+   for (Integer i = 0; i < valueOf(PortMax) - 1 + valueOf(NumberOfMasters); i=i+1) begin
        let tlp;
        if (i == portInterrupt)
            tlp = intr.tlp;
