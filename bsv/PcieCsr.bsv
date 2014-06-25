@@ -25,8 +25,6 @@ import BRAM           :: *;
 import FIFOF          :: *;
 import GetPut         :: *;
 import PCIE           :: *;
-import Bscan          :: *;
-import BramMux        :: *;
 import Clocks         :: *;
 import PcieTracer     :: *;
 import MemSlave       :: *;
