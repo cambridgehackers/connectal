@@ -50,7 +50,7 @@ module mkMemSlave#(MemSlaveClient client)(MemSlave#(32,32));
       end
 
       let v = client.rd(unpack(addr >> 2));
-      $display("MemSlave do_read addr=%h len=%d v=%h", addr, bc, v);
+      //$display("MemSlave do_read addr=%h len=%d v=%h", addr, bc, v);
       slaveReadDataFifos.enq(MemData { data: v, tag: req.tag });
 
       addr = addr + 4;

@@ -227,7 +227,7 @@ module mkMemReadInternal#(Integer id,
       let client = drq.client;
       let req = drq.req;
       readClients[client].readData.put(ObjectData { data: response.data, tag: req.tag, last: False});
-      $display("readDataComp: %d %h", client, response.data);
+      //$display("readDataComp: %d %h", client, response.data);
       beatCount <= beatCount+1;
    endrule
 
