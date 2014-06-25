@@ -22,27 +22,17 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import FIFO::*;
-import FIFOF::*;
 import BRAMFIFO::*;
 import Vector::*;
 import Clocks::*;
 import GetPut::*;
 import ClientServer::*;
-import PCIE::*;
-import GetPutWithClocks::*;
 import Connectable::*;
-import PortalMemory::*;
 import MemTypes::*;
-import DmaUtils::*;
-import ClientServer::*;
-import AxiMasterSlave::*;
 import MemreadEngine::*;
 import HDMI::*;
 import XADC::*;
 import YUV::*;
-import Gearbox::*;
-import MIMO::*;
 import BlueScope::*;
 
 interface HdmiDisplayRequest;
