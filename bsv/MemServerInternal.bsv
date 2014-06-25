@@ -268,9 +268,10 @@ module mkMemReadInternal#(Integer id,
    endinterface
    interface DmaDbg dbg;
       method ActionValue#(DmaDbgRec) dbg();
-	 Bit#(1) ne0 = pack(dreqFifos[0].notEmpty);
-	 Bit#(1) ne1 = pack(dreqFifos[1].notEmpty);
-	 return DmaDbgRec{x:extend(burstRegs[0]), y:extend(burstRegs[1]), z:extend(ne0), w:extend(ne1)};
+	 // Bit#(1) ne0 = pack(dreqFifos[0].notEmpty);
+	 // Bit#(1) ne1 = pack(dreqFifos[1].notEmpty);
+	 // return DmaDbgRec{x:extend(burstRegs[0]), y:extend(burstRegs[1]), z:extend(ne0), w:extend(ne1)};
+	 return DmaDbgRec{x:0, y:0, z:0, w:0};
       endmethod
       method ActionValue#(Bit#(64)) getMemoryTraffic();
 	 return beatCount;
