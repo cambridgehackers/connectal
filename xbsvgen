@@ -839,6 +839,9 @@ if __name__=='__main__':
     f = util.createDirAndOpen(linuxmkname, 'w')
     f.write(linuxmakefile_template % substs)
     f.close()
+    f = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'Application.mk'), 'w')
+    f.write('APP_STL                 := stlport_static\n')
+    f.close()
 
     print 'Writing tcl impl file', tclimplname
     tclsubsts = {'dut': topmodulename.lower(),
