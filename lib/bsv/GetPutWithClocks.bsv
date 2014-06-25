@@ -1,5 +1,5 @@
 
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2013,2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -22,8 +22,14 @@
 // SOFTWARE.
 
 import GetPut :: *;
-import PCIE :: *; // ConnectableWithClocks
 import Clocks :: *;
+
+////////////////////////////////////////////////////////////////////////////////
+/// Typeclass Definition
+////////////////////////////////////////////////////////////////////////////////
+typeclass ConnectableWithClocks#(type a, type b);
+   module mkConnectionWithClocks#(a x1, b x2, Clock fastClock, Reset fastReset, Clock slowClock, Reset slowReset)(Empty);
+endtypeclass
 
 instance ConnectableWithClocks#(Get#(a), Put#(a)) provisos (Bits#(a, awidth));
    module mkConnectionWithClocks#(Get#(a) in, Put#(a) out,
