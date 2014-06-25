@@ -241,8 +241,15 @@ memtests.bluesim: $(addsuffix .bluesim, $(memtests))
 
 memtests.bluesimrun: $(addsuffix .bluesimrun, $(memtests))
 
+#################################################################################################
+# matrixtests
+
 matrixtests.bluesim:  $(addsuffix .bluesim, $(matrixtests))
+
 matrixtests.bluesimrun:  $(addsuffix .bluesimrun, $(matrixtests))
+
+matrixtests.kc705:  $(addsuffix .kc705, $(matrixtests))
+matrixtests.vc707:  $(addsuffix .vc707, $(matrixtests))
 
 
 #################################################################################################
