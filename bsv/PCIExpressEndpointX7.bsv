@@ -4,7 +4,7 @@
 //  Filename      : XbsvXilinx7PCIE.bsv
 //  Description   :
 ////////////////////////////////////////////////////////////////////////////////
-package XbsvXilinx7Pcie;
+package PCIExpressEndpointX7;
 
 import Clocks            ::*;
 import Vector            ::*;
@@ -338,4 +338,4 @@ module mkPCIExpressEndpointX7(PCIExpressX7#(PcieLanes));
    interface PciewrapCfg cfg = pcie_ep.cfg;
 endmodule: mkPCIExpressEndpointX7
 
-endpackage: XbsvXilinx7Pcie
+endpackage: PCIExpressEndpointX7

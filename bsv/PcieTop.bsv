@@ -32,7 +32,7 @@ import PcieTracer        :: *;
 import PcieGearbox       :: *;
 import Xilinx            :: *;
 `ifndef BSIM
-import XbsvXilinx7Pcie   :: *;
+import PCIExpressEndpointX7 :: *;
 `endif
 import PCIEWRAPPER       :: *;
 import Portal            :: *;
