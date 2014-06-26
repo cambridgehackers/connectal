@@ -14,7 +14,6 @@ import Clocks          :: *;
 import DefaultValue    :: *;
 import TieOff          :: *;
 import XilinxCells     :: *;
-import XbsvXilinx7Pcie :: *;
 import PCIEWRAPPER     :: *;
 import ClientServer    :: *;
 

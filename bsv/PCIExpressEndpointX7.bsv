@@ -25,6 +25,7 @@ import XilinxCells       ::*;
 import PCIE              ::*;
 import PCIEWRAPPER       ::*;
 import Bufgctrl           ::*;
+import PcieGearbox       :: *;
 
 (* always_ready, always_enabled *)
 interface PCIE_X7#(numeric type lanes);
@@ -170,7 +171,9 @@ interface PCIExpressX7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)   pcie;
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
-   interface Server#(TLPData#(8), TLPData#(8)) tlp;
+   interface Server#(TLPData#(16), TLPData#(16)) tlp;
+   interface Clock epClock125;
+   interface Reset epReset125;
 endinterface
 
 typedef struct {
@@ -312,30 +315,55 @@ module mkPCIExpressEndpointX7(PCIExpressX7#(PcieLanes));
                         data: pcie_ep.m_axis_rx.tdata });
    endrule
 
-   interface Server      tlp;
-      interface Put request;
-         method Action put(TLPData#(8) data);
-	   fAxiTx.enq(AxiTx {last: pack(data.eof),
-              keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
-         endmethod
-      endinterface
-      interface Get response;
-         method ActionValue#(TLPData#(8)) get();
-	   let info <- toGet(fAxiRx).get;
-	   TLPData#(8) retval = defaultValue;
-	   retval.sof  = (info.user[14] == 1);
-	   retval.eof  = info.last != 0;
-	   retval.hit  = info.user[8:2];
-	   retval.be= dwordSwap64BE(info.keep);
-	   retval.data = dwordSwap64(info.data);
-	   return retval;
-         endmethod
-      endinterface
-   endinterface
+   // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
+   Clock clock250 = pcie_ep.user.clk_out;
+   Reset user_reset_n <- mkResetInverter(pcie_ep.user.reset_out, clocked_by clock250);
+   Reset reset250 <- mkAsyncReset(4, user_reset_n, clock250);
 
+   ClockGenerator7Params     clkgenParams = defaultValue;
+   clkgenParams.clkin1_period    = 4.000;
+   clkgenParams.clkin_buffer     = False;
+   clkgenParams.clkfbout_mult_f  = 4.000;
+   clkgenParams.clkout0_divide_f = 8.000;
+   ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by clock250, reset_by user_reset_n);
+   Clock clock125 = clkgen.clkout0; /* half speed user_clk */
+   Reset reset125 <- mkAsyncReset(4, user_reset_n, clock125);
+
+   Server#(TLPData#(8), TLPData#(8)) tlp8 = (interface Server;
+						interface Put request;
+						   method Action put(TLPData#(8) data);
+						      fAxiTx.enq(AxiTx {last: pack(data.eof),
+									keep: dwordSwap64BE(data.be), data: dwordSwap64(data.data) });
+						   endmethod
+						endinterface
+						interface Get response;
+						   method ActionValue#(TLPData#(8)) get();
+						      let info <- toGet(fAxiRx).get;
+						      TLPData#(8) retval = defaultValue;
+						      retval.sof  = (info.user[14] == 1);
+						      retval.eof  = info.last != 0;
+						      retval.hit  = info.user[8:2];
+						      retval.be= dwordSwap64BE(info.keep);
+						      retval.data = dwordSwap64(info.data);
+						      return retval;
+						   endmethod
+						endinterface
+					     endinterface);
+
+   // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
+   // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
+   // connection between the endpoint and the AXI contains GearBox
+   // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
+   // conversion.
+   PcieGearbox gb <- mkPcieGearbox(clock250, reset250, clock125, reset125);
+   mkConnection(tlp8, gb.tlp, clocked_by clock250, reset_by reset250);
+
+   interface tlp = gb.pci;
    interface pcie    = pcie_ep.pcie;
    interface PciewrapUser user = pcie_ep.user;
    interface PciewrapCfg cfg = pcie_ep.cfg;
+   interface Clock epClock125 = clock125;
+   interface Reset epReset125 = reset125;
 endmodule: mkPCIExpressEndpointX7
 
 endpackage: PCIExpressEndpointX7

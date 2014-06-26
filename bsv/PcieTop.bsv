@@ -29,7 +29,6 @@ import ClientServer      :: *;
 import DefaultValue      :: *;
 import PcieSplitter      :: *;
 import PcieTracer        :: *;
-import PcieGearbox       :: *;
 import Xilinx            :: *;
 `ifndef BSIM
 import PCIExpressEndpointX7 :: *;
@@ -184,31 +183,13 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    PCIExpressX7#(PcieLanes) ep7 <- mkPCIExpressEndpointX7( clocked_by pci_clk_100mhz_buf
 							  , reset_by pci_sys_reset_n
 							  );
-   // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
-   Clock epClock250 = ep7.user.clk_out;
-   Reset user_reset_n <- mkResetInverter(ep7.user.reset_out, clocked_by epClock250);
-   Reset epReset250 <- mkAsyncReset(4, user_reset_n, epClock250);
 
-   ClockGenerator7Params     params = defaultValue;
-   params.clkin1_period    = 4.000;
-   params.clkin_buffer     = False;
-   params.clkfbout_mult_f  = 4.000;
-   params.clkout0_divide_f = 8.000;
-   ClockGenerator7           clkgen <- mkClockGenerator7(params, clocked_by epClock250, reset_by user_reset_n);
-   Clock epClock125 = clkgen.clkout0; /* half speed user_clk */
-   Reset epReset125 <- mkAsyncReset(4, user_reset_n, epClock125);
-
-   // The PCIE endpoint is processing TLPData#(8)s at 250MHz.  The
-   // AXI bridge is accepting TLPData#(16)s at 125 MHz. The
-   // connection between the endpoint and the AXI contains GearBox
-   // instances for the TLPData#(8)@250 <--> TLPData#(16)@125
-   // conversion.
-   PcieGearbox gb <- mkPcieGearbox(epClock250, epReset250, epClock125, epReset125);
-   mkConnection(ep7.tlp, gb.tlp, clocked_by epClock250, reset_by epReset250);
+   Clock epClock125 = ep7.epClock125;
+   Reset epReset125 = ep7.epReset125;
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
          PciId{ bus:  ep7.cfg.bus_number(), dev: ep7.cfg.device_number(), func: ep7.cfg.function_number()},
          clocked_by epClock125, reset_by epReset125);
-   mkConnection(gb.pci, pciehost.pci, clocked_by epClock125, reset_by epReset125);
+   mkConnection(ep7.tlp, pciehost.pci, clocked_by epClock125, reset_by epReset125);
 `endif
 
    let portalTop <- mkSynthesizeablePortalTop(clocked_by epClock125, reset_by epReset125);
