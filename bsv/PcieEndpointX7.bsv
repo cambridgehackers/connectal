@@ -4,7 +4,7 @@
 //  Filename      : XbsvXilinx7PCIE.bsv
 //  Description   :
 ////////////////////////////////////////////////////////////////////////////////
-package PCIExpressEndpointX7;
+package PcieEndpointX7;
 
 import Clocks            ::*;
 import Vector            ::*;
@@ -167,7 +167,7 @@ endmodule: vMkXilinx7PCIExpress
 /// Interfaces
 ////////////////////////////////////////////////////////////////////////////////
 
-interface PCIExpressX7#(numeric type lanes);
+interface PcieEndpointX7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)   pcie;
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
@@ -198,7 +198,7 @@ typedef 8 NumLeds;
 `endif
 
 (* synthesize *)
-module mkPCIExpressEndpointX7(PCIExpressX7#(PcieLanes));
+module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 
    PCIEParams params = defaultValue;
 
@@ -364,6 +364,6 @@ module mkPCIExpressEndpointX7(PCIExpressX7#(PcieLanes));
    interface PciewrapCfg cfg = pcie_ep.cfg;
    interface Clock epClock125 = clock125;
    interface Reset epReset125 = reset125;
-endmodule: mkPCIExpressEndpointX7
+endmodule: mkPcieEndpointX7
 
-endpackage: PCIExpressEndpointX7
+endpackage: PcieEndpointX7

@@ -31,7 +31,7 @@ import PcieSplitter      :: *;
 import PcieTracer        :: *;
 import Xilinx            :: *;
 `ifndef BSIM
-import PCIExpressEndpointX7 :: *;
+import PcieEndpointX7 :: *;
 `endif
 import PCIEWRAPPER       :: *;
 import Portal            :: *;
@@ -180,9 +180,9 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Cl
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
    Clock pci_clk_100mhz_buf <- mkClockIBUFDS_GTE2(True, pci_sys_clk_p, pci_sys_clk_n);
    // Instantiate the PCIE endpoint
-   PCIExpressX7#(PcieLanes) ep7 <- mkPCIExpressEndpointX7( clocked_by pci_clk_100mhz_buf
-							  , reset_by pci_sys_reset_n
-							  );
+   PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7( clocked_by pci_clk_100mhz_buf
+						      , reset_by pci_sys_reset_n
+						       );
 
    Clock epClock125 = ep7.epClock125;
    Reset epReset125 = ep7.epReset125;
