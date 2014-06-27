@@ -100,9 +100,9 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
    endrule
 
    rule clearRule if (selected.read() && !selectdelay);
-       addrReg <= 0;  // first time USER1 selected, reset address
+       addrReg <= fromInteger(-1);  // first time USER1 selected, reset address
    endrule
-   rule updateRule if (readData);
+   rule updateRule if (startWrite.pulse());
        addrReg <= addrReg + 1;
    endrule
 
