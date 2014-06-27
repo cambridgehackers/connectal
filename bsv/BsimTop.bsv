@@ -166,9 +166,7 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
    Reg#(Bit#(64)) last_read_eob <- mkReg(0);
    Reg#(Bit#(64)) last_write_eob <- mkReg(0);
 
-   Vector#(4,FIFOF#(Tuple2#(Bit#(64), Axi3ReadRequest#(serverAddrWidth,serverIdWidth)))) readDelayFifos <- replicateM(mkSizedFIFOF(16));
-   let readDelayFifo = (readDelayFifos[3].notEmpty ? readDelayFifos[3] : (readDelayFifos[2].notEmpty ? readDelayFifos[2] : (readDelayFifos[1].notEmpty ? readDelayFifos[1] : readDelayFifos[0])));
-
+   FIFOF#(Tuple2#(Bit#(64), Axi3ReadRequest#(serverAddrWidth,serverIdWidth)))  readDelayFifo <- mkSizedFIFOF(16);
    FIFOF#(Tuple2#(Bit#(64),Axi3WriteRequest#(serverAddrWidth,serverIdWidth))) writeDelayFifo <- mkSizedFIFOF(16);
 
    Vector#(4,FIFOF#(Tuple2#(Bit#(64), Axi3WriteResponse#(serverIdWidth)))) bFifos <- replicateM(mkSizedFIFOF(16));
@@ -185,8 +183,7 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
       method Action put(Axi3ReadRequest#(serverAddrWidth,serverIdWidth) req);
 	 //$display("mkBsimHost::req_ar_a: %d %d", req.id, cycle-last_reqAr);
 	 //last_reqAr <= cycle;
-	 //readDelayFifos[req.id[1:0]].enq(tuple2(cycle,req));
-	 readDelayFifos[0].enq(tuple2(cycle,req));
+	 readDelayFifo.enq(tuple2(cycle,req));
       endmethod
    endinterface
    interface Get resp_read;
