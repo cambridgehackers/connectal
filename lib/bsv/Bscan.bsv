@@ -57,9 +57,7 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
    Reg#(Bit#(dsz)) fromBram <- mkReg(0);
    SyncBitIfc#(Bit#(dsz)) tojtag <- mkSyncBits(0, defaultClock, defaultReset, tck, rst);
    SyncBitIfc#(Bit#(dsz)) fromjtag <- mkSyncBits(0, tck, rst, defaultClock, defaultReset);
-   SyncBitIfc#(Bool) bramreq <- mkSyncBits(False, tck, rst, defaultClock, defaultReset);
    SyncBitIfc#(Bool) selected <- mkSyncBits(False, tck, rst, defaultClock, defaultReset);
-   Reg#(Bool) bramdelay <- mkReg(False);
    Reg#(Bool) selectdelay <- mkReg(False);
    Reg#(Bool) readData <- mkReg(False);
    Reg#(Bool) shiftextra <- mkReg(False, clocked_by tck, reset_by rst);
@@ -72,28 +70,26 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
    rule toj;
        tojtag.send(fromBram);
    endrule
-   let cyclemem = startWrite.pulse();
-   rule readr;
-       readData <= cyclemem;
-   endrule
 
    rule updater;
-       bramreq.send(bscan.sel() == 1 && bscan.shift() == 1);
        selected.send(bscan.sel() == 1);
    endrule
+   rule writed;
+       selectdelay <= selected.read();
+   endrule
+
    rule sendwrite if(bscan.sel() == 1 && bscan.update() == 1);
        startWrite.send();
    endrule
-   rule writed;
-       bramdelay <= bramreq.read();
-       selectdelay <= selected.read();
+   rule readr;
+       readData <= startWrite.pulse();
    endrule
 
    rule tdo;
       bscan.tdo(shiftReg[0]);
    endrule
    rule shiftextrarule;
-      shiftextra <= bscan.sel() == 1 && bscan.shift() == 1;
+      shiftextra <= bscan.shift() == 1;
    endrule
 
    rule shiftrule if (bscan.sel() == 1 && (bscan.capture() == 1 || bscan.shift() == 1 || shiftextra));
@@ -112,7 +108,7 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
 
    interface BRAMClient bramClient;
       interface Get request;
-	 method ActionValue#(BRAMRequest#(atype,dtype)) get() if (cyclemem || readData);
+	 method ActionValue#(BRAMRequest#(atype,dtype)) get() if (startWrite.pulse() || readData);
             return BRAMRequest {write:!readData, responseOnWrite:False, address:unpack(addrReg), datain:unpack(fromjtag.read())};
 	 endmethod
       endinterface
