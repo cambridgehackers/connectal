@@ -34,7 +34,7 @@ import Pipe::*;
 import RbmTypes::*;
 import MemTypes::*;
 
-typedef 4 BurstLen;
+typedef 8 BurstLen;
 
 interface VectorSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
@@ -65,6 +65,8 @@ module [Module] mkMemreadVectorSource#(Server#(MemengineCmd,Bool) memreadEngine,
    method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
       if (verbose) $display("VectorSource.start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
       memreadEngine.request.put(MemengineCmd { pointer: p, base: a << ashift, len: truncate(l << ashift), burstLen: (fromInteger(valueOf(BurstLen)) << ashift) });
+      // Bit#(8) foo = (fromInteger(valueOf(BurstLen)) << ashift);
+      // $display("feck %d", foo);
    endmethod
    method finish = memreadEngine.response.get;
    interface PipeOut pipe = mapPipe(unpack, pipeOut);

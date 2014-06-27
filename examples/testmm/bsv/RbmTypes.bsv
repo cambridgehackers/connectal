@@ -60,6 +60,8 @@ typedef enum {
    TimerRequestPortal,
    FpMacRequestPortal,
    FpMacIndicationPortal,
+   FpMulRequestPortal,
+   FpMulIndicationPortal,
    MmDebugRequestPortal,
    MmDebugIndicationPortal
 } IfcNames deriving (Eq,Bits);
