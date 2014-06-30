@@ -35,24 +35,17 @@ BOARD=zedboard
 parsetab.py: syntax.py
 	python syntax.py
 
-test: test-echo/ztop_1.bit.bin.gz test-memcpy/ztop_1.bit.bin.gz test-hdmi/hdmidisplay.bit.bin.gz
-
 #################################################################################################
 
-dontcompile =                    \
-            pcietestbench        \
-            pcietestbench_dma_io \
-            pcietestbench_dma_oo \
+tests    =  memread_manyclients  \
+            memwrite_manyclients \
 
-
-testnames = echo                 \
+examples =  echo                 \
 	    hdmidisplay          \
             memcpy               \
             memlatency           \
             memread              \
-            memread_manyclients  \
 	    memwrite             \
-            memwrite_manyclients \
             memrw                \
             memread128           \
             memread2             \
@@ -92,8 +85,6 @@ memtests =  memcpy               \
 	    memwrite             \
             memrw                \
 	    memread2             \
-            memread_manyclients  \
-            memwrite_manyclients \
 
 matrixtests =testmm2.2.2         \
 	    testmm4.2.2          \
@@ -115,7 +106,7 @@ zmemtests = memread_4m           \
 #################################################################################################
 # bluesim
 
-bluesimtests = $(addsuffix .bluesim, $(testnames))
+bluesimtests = $(addsuffix .bluesim, $(examples))
 bluesimtests: $(bluesimtests)
 
 $(bluesimtests):
@@ -123,7 +114,7 @@ $(bluesimtests):
 	make BOARD=bluesim -C examples/$(basename $@) bsim_exe bsim
 
 
-bluesimruns = $(addsuffix .bluesimrun, $(testnames))
+bluesimruns = $(addsuffix .bluesimrun, $(examples))
 bluesimruns: $(bluesimruns)
 
 $(bluesimruns):
@@ -132,14 +123,14 @@ $(bluesimruns):
 #################################################################################################
 # xsim
 
-xsimtests = $(addsuffix .xsim, $(testnames))
+xsimtests = $(addsuffix .xsim, $(examples))
 xsimtests: $(xsimtests)
 
 $(xsimtests):
 	rm -fr examples/$(basename $@)/bluesim
 	make BOARD=bluesim -C examples/$(basename $@) xsim
 
-xsimruns = $(addsuffix .xsimrun, $(testnames))
+xsimruns = $(addsuffix .xsimrun, $(examples))
 xsimruns: $(xsimruns)
 
 $(xsimruns):
@@ -148,14 +139,14 @@ $(xsimruns):
 #################################################################################################
 # zedboard
 
-zedtests = $(addsuffix .zedboard, $(testnames))
+zedtests = $(addsuffix .zedboard, $(examples))
 zedtests: $(zedtests)
 
 $(zedtests):
 	rm -fr examples/$(basename $@)/zedboard
 	make BOARD=zedboard -C examples/$(basename $@) all
 
-zedboardruns = $(addsuffix .zedboardrun, $(testnames))
+zedboardruns = $(addsuffix .zedboardrun, $(examples))
 zedboardruns: $(zedboardruns)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zedboard
@@ -166,14 +157,14 @@ $(zedboardruns):
 #################################################################################################
 # zc702
 
-zctests = $(addsuffix .zc702, $(testnames))
+zctests = $(addsuffix .zc702, $(examples))
 zctests: $(zctests)
 
 $(zctests):
 	rm -fr examples/$(basename $@)/zc702
 	make BOARD=zc702 -C examples/$(basename $@) all
 
-zc702runs = $(addsuffix .zc702run, $(testnames))
+zc702runs = $(addsuffix .zc702run, $(examples))
 zc702runs: $(zc702runs)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc702
@@ -183,14 +174,14 @@ $(zc702runs):
 #################################################################################################
 # zc706
 
-zc706tests = $(addsuffix .zc706, $(testnames))
+zc706tests = $(addsuffix .zc706, $(examples))
 zc706tests: $(zc706tests)
 
 $(zc706tests):
 	rm -fr examples/$(basename $@)/zc706
 	make BOARD=zc706 -C examples/$(basename $@) all
 
-zc706runs = $(addsuffix .zc706run, $(testnames))
+zc706runs = $(addsuffix .zc706run, $(examples))
 zc706runs: $(zc706runs)
 
 # RUNPARAM=ipaddr is an optional argument if you already know the IP of the zc706
@@ -200,14 +191,14 @@ $(zc706runs):
 #################################################################################################
 # vc707
 
-vc707tests = $(addsuffix .vc707, $(testnames))
+vc707tests = $(addsuffix .vc707, $(examples))
 vc707tests: $9vc707tests)
 
 $(vc707tests):
 	rm -fr examples/$(basename $@)/vc707
 	make BOARD=vc707 -C examples/$(basename $@) all
 
-vc707runs = $(addsuffix .vc707run, $(testnames))
+vc707runs = $(addsuffix .vc707run, $(examples))
 vc707runs: $(vc707runs)
 
 $(vc707runs):
@@ -216,14 +207,14 @@ $(vc707runs):
 #################################################################################################
 # kc705
 
-kc705tests = $(addsuffix .kc705, $(testnames))
+kc705tests = $(addsuffix .kc705, $(examples))
 kc705tests: $(kc705tests)
 
 $(kc705tests):
 	rm -fr examples/$(basename $@)/kc705
 	make BOARD=kc705 -C examples/$(basename $@) all
 
-kc705runs = $(addsuffix .kc705run, $(testnames))
+kc705runs = $(addsuffix .kc705run, $(examples))
 kc705runs: $(kc705runs)
 
 $(kc705runs):
@@ -265,26 +256,26 @@ zmemtests.bluesimrun: $(addsuffix .bluesimrun, $(zmemtests))
 #################################################################################################
 # misc
 
-android_exetests = $(addsuffix .android_exe, $(testnames))
+android_exetests = $(addsuffix .android_exe, $(examples))
 android_exetests: $(android_exetests)
 
 $(android_exetests):
 	make BOARD=zedboard -C examples/$(basename $@) android_exe
 
-ubuntu_exetests = $(addsuffix .ubuntu_exe, $(testnames))
+ubuntu_exetests = $(addsuffix .ubuntu_exe, $(examples))
 ubuntu_exetests: $(ubuntu_exetests)
 
 $(ubuntu_exetests):
 	make BOARD=zedboard -C examples/$(basename $@) ubuntu_exe
 
-ac701tests = $(addsuffix .ac701, $(testnames))
+ac701tests = $(addsuffix .ac701, $(examples))
 ac701tests: $(ac701tests)
 
 $(ac701tests):
 	rm -fr examples/$(basename $@)/ac701
 	make BOARD=ac701 -C examples/$(basename $@) all
 
-ac701runs = $(addsuffix .ac701run, $(testnames))
+ac701runs = $(addsuffix .ac701run, $(examples))
 ac701runs: $(ac701runs)
 
 $(ac701runs):
