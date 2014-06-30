@@ -48,6 +48,7 @@ dontcompile =                    \
 testnames = echo                 \
 	    hdmidisplay          \
             memcpy               \
+            memlatency           \
             memread              \
             memread_manyclients  \
 	    memwrite             \
