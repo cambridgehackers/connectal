@@ -143,7 +143,7 @@ module mkSigmoidServer#(SigmoidTable#(tsz) sigmoidTable)(Server#(Float,Float))
    endinterface
 endmodule
 
-module [Module] mkSigmoid#(SigmoidTable#(tsz) sigmoidTable, PipeOut#(Float) in)(PipeOut#(Float))
+module  mkSigmoid#(SigmoidTable#(tsz) sigmoidTable, PipeOut#(Float) in)(PipeOut#(Float))
    provisos (Add#(a__, TAdd#(tsz, 2), 32));
 
    let server <- mkSigmoidServer(sigmoidTable);
@@ -170,7 +170,7 @@ interface DmaSigmoidIfc#(numeric type dsz);
 endinterface
 
 (* synthesize *)
-module [Module] mkDmaSigmoid(DmaSigmoidIfc#(dsz))
+module  mkDmaSigmoid(DmaSigmoidIfc#(dsz))
    provisos (Bits#(Float, fsz)
 	     , Add#(N,0,n)
 	     , Mul#(fsz,N,dmasz)

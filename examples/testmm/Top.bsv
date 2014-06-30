@@ -36,7 +36,7 @@ typedef 1 NumMasters;
 typedef 1 NumMasters;
 `endif
 
-module [Module] mkPortalTop(PortalTop#(addrWidth,TMul#(32,N),Empty,NumMasters))
+module  mkPortalTop(PortalTop#(addrWidth,TMul#(32,N),Empty,NumMasters))
    provisos (Add#(a__, addrWidth, 40),
 	     Add#(a__, b__, 40),
 	     Add#(addrWidth, c__, 52),

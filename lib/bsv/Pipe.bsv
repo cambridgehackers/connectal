@@ -518,7 +518,7 @@ function PipeIn#(a) mapPipeIn(function b f(a av), PipeIn#(b) apipe);
 endfunction
 
 // buffered version of mapPipe
-module mkMap#(function b f(a av), PipeOut#(a) apipe)(PipeOut#(b))
+module mkMapPipe#(function b f(a av), PipeOut#(a) apipe)(PipeOut#(b))
    provisos (Bits#(b,bsz));
    FIFOF#(b) fifo <- mkFIFOF();
    rule compute;
@@ -528,42 +528,47 @@ module mkMap#(function b f(a av), PipeOut#(a) apipe)(PipeOut#(b))
    return toPipeOut(fifo);
 endmodule
 
-typedef (function Module #(PipeOut #(tb)) mkPipeOut(PipeOut#(ta) ifc)) PipeOutConstructor#(type ta, type tb);
+typedef (function tb f(ta x)) CombinePipe#(type ta, type tb);
 
 typeclass ReducePipe#( numeric type n, type a);
-   module [Module] mkReducePipe (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
-				 PipeOut#(Vector#(n,a)) inpipe,
-				 PipeOut#(a) ifc);
-   module [Module] mkReducePipes (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
-				  Vector#(n,PipeOut#(a)) inpipe,
-				  PipeOut#(a) ifc);
+   module  mkReducePipe (CombinePipe#(Tuple2#(a,a), a) combinepipe,
+			 PipeOut#(Vector#(n,a)) inpipe,
+			 PipeOut#(a) ifc);
+   module  mkReducePipes (CombinePipe#(Tuple2#(a,a), a) combinepipe,
+			  Vector#(n,PipeOut#(a)) inpipe,
+			  PipeOut#(a) ifc);
 endtypeclass
 instance ReducePipe#(1, a);
-   module [Module] mkReducePipe (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
+   module  mkReducePipe (CombinePipe#(Tuple2#(a,a), a) combinepipe,
 				 PipeOut#(Vector#(1,a)) inpipe,
 				 PipeOut#(a) ifc);
       let pipe = mapPipe(head, inpipe);
       return pipe;
    endmodule
-   module [Module] mkReducePipes (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
+   module  mkReducePipes (CombinePipe#(Tuple2#(a,a), a) combinepipe,
 				  Vector#(1,PipeOut#(a)) inpipes,
 				  PipeOut#(a) ifc);
       return inpipes[0];
    endmodule
 endinstance
-instance ReducePipe#(2, a);
-   module [Module] mkReducePipe (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
-				 PipeOut#(Vector#(2,a)) inpipe,
-				 PipeOut#(a) ifc);
-      function Tuple2#(a,a) foo(Vector#(2,a) invec); return tuple2(invec[0], invec[1]); endfunction
-      PipeOut#(Tuple2#(a,a)) zippipe = mapPipe(foo, inpipe);
-      let pipe <- combinepipe(zippipe);
+instance ReducePipe#(2, a)
+   provisos(Bits#(a,a__));
+   module  mkReducePipe (CombinePipe#(Tuple2#(a,a), a) combinepipe,
+			 PipeOut#(Vector#(2,a)) inpipe,
+			 PipeOut#(a) ifc);
+      function a foo(Vector#(2,a) invec); 
+	 return combinepipe(tuple2(invec[0], invec[1])); 
+      endfunction
+      let pipe <- mkMapPipe(foo, inpipe);
       return pipe;
    endmodule
-   module [Module] mkReducePipes (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
-				  Vector#(2,PipeOut#(a)) inpipes,
-				  PipeOut#(a) ifc);
-      let pipe <- combinepipe(zipPipeOut(inpipes[0], inpipes[1]));
+   module  mkReducePipes (CombinePipe#(Tuple2#(a,a), a) combinepipe,
+			  Vector#(2,PipeOut#(a)) inpipes,
+			  PipeOut#(a) ifc);
+      function a foo(Tuple2#(a,a) invec); 
+	 return combinepipe(invec);
+      endfunction
+      let pipe <- mkMapPipe(foo, zipPipeOut(inpipes[0], inpipes[1]));
       return pipe;
    endmodule
 endinstance
@@ -572,9 +577,9 @@ instance ReducePipe#(n, a)
    provisos (Add#(TDiv#(n,2), a__, n),
 	     Bits#(Vector#(TDiv#(n,2), a), b__),
 	     ReducePipe#(TDiv#(n,2),a));
-   module [Module] mkReducePipe (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
-				 PipeOut#(Vector#(n,a)) inpipe,
-				 PipeOut#(a) ifc);
+   module  mkReducePipe (CombinePipe#(Tuple2#(a,a), a) combinepipe,
+			 PipeOut#(Vector#(n,a)) inpipe,
+			 PipeOut#(a) ifc);
       FIFOF#(Vector#(TDiv#(n,2),a)) infifo0 <- mkFIFOF;
       FIFOF#(Vector#(TDiv#(n,2),a)) infifo1 <- mkFIFOF;
       rule splitinput;
@@ -589,21 +594,27 @@ instance ReducePipe#(n, a)
       PipeOut#(a) p0 <- mkReducePipe(combinepipe, inpipe0);
       PipeOut#(a) p1 <- mkReducePipe(combinepipe, inpipe1);
 
-      PipeOut#(a) outpipe <- combinepipe(zipPipeOut(p0, p1));
-      return outpipe;
+      function a foo(Tuple2#(a,a) invec); 
+	 return combinepipe(invec);
+      endfunction
+      let pipe <- mkMapPipe(foo,zipPipeOut(p0, p1));
+      return pipe;
    endmodule
 
-   module [Module] mkReducePipes (PipeOutConstructor#(Tuple2#(a,a), a) combinepipe,
-				  Vector#(n, PipeOut#(a)) inpipes,
-				 PipeOut#(a) ifc);
+   module  mkReducePipes (CombinePipe#(Tuple2#(a,a), a) combinepipe,
+			  Vector#(n, PipeOut#(a)) inpipes,
+			  PipeOut#(a) ifc);
       Vector#(TDiv#(n,2),PipeOut#(a)) pipes0 = takeAt(0, inpipes);
       Vector#(TDiv#(n,2),PipeOut#(a)) pipes1 = takeAt(valueOf(TDiv#(n,2)), inpipes);
 
       PipeOut#(a) p0 <- mkReducePipes(combinepipe, pipes0);
       PipeOut#(a) p1 <- mkReducePipes(combinepipe, pipes1);
 
-      PipeOut#(a) outpipe <- combinepipe(zipPipeOut(p0, p1));
-      return outpipe;
+      function a foo(Tuple2#(a,a) invec); 
+	 return combinepipe(invec);
+      endfunction
+      let pipe <- mkMapPipe(foo,zipPipeOut(p0, p1));
+      return pipe;
    endmodule
 endinstance
 

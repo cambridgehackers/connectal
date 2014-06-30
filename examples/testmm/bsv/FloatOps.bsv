@@ -99,7 +99,7 @@ module mkRandomPipe(PipeOut#(Float));
    return pipe_out;
 endmodule
 
-module [Module] mkComputeStatesPipe#(PipeOut#(Vector#(n, Float)) pipe_in)(PipeOut#(Vector#(n, Float)))
+module  mkComputeStatesPipe#(PipeOut#(Vector#(n, Float)) pipe_in)(PipeOut#(Vector#(n, Float)))
    provisos(Add#(a__, 1, n)
       );
    FIFOF#(Float) rfifo <- mkFIFOF();
@@ -143,7 +143,7 @@ module [Module] mkComputeStatesPipe#(PipeOut#(Vector#(n, Float)) pipe_in)(PipeOu
    return toPipeOut(dfifo);
 endmodule
 
-module [Module] mkComputeStatesPipe2#(PipeOut#(Vector#(n, Float)) pipe_in, PipeOut#(Vector#(n, Float)) randomPipe)(PipeOut#(Vector#(n, Float)))
+module  mkComputeStatesPipe2#(PipeOut#(Vector#(n, Float)) pipe_in, PipeOut#(Vector#(n, Float)) randomPipe)(PipeOut#(Vector#(n, Float)))
    provisos(Add#(a__, 1, n)
       );
 

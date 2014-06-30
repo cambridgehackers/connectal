@@ -270,7 +270,7 @@ module mkAxi3Slave(Axi3Slave#(serverAddrWidth,  serverBusWidth, serverIdWidth))
 endmodule
    
 		 
-module [Module] mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
+module  mkBsimHost (BsimHost#(clientAddrWidth, clientBusWidth, clientIdWidth,
 				      serverAddrWidth, serverBusWidth, serverIdWidth,
 				      nSlaves))
    provisos (SelectBsimRdmaReadWrite#(serverBusWidth),
@@ -371,7 +371,7 @@ typedef `PinType PinType;
 typedef `NumberOfMasters NumberOfMasters;
 typedef `DataBusWidth DataBusWidth;
 
-module [Module] mkBsimTop(Empty)
+module  mkBsimTop(Empty)
    provisos (SelectBsimRdmaReadWrite#(DataBusWidth));
    Clock defaultClock <- exposeCurrentClock();
    BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost;

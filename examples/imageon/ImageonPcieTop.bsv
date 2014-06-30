@@ -56,7 +56,7 @@ interface PcieTop#(type ipins);
 endinterface
 
 (* no_default_clock, no_default_reset *)
-module [Module] mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
+module  mkPcieTopFromPortal #(Clock pci_sys_clk_p, Clock pci_sys_clk_n,
 				      Clock sys_clk_p,     Clock sys_clk_n,
 				      Clock io_vita_clk_out_p, Clock io_vita_clk_out_n,
 				      Reset pci_sys_reset_n,

@@ -49,7 +49,7 @@ interface MemwriteIndication;
    method Action writeDone(Bit#(32) v);
 endinterface
 
-module [Module] mkMemwrite#(MemwriteIndication indication) (Memwrite);
+module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    Reg#(ObjectPointer)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);

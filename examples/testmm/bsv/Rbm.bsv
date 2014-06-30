@@ -55,7 +55,7 @@ interface DmaStatesPipe#(numeric type n, numeric type dmasz);
 endinterface
 
 (* synthesize *)
-module [Module] mkDmaStatesPipe(DmaStatesPipe#(N, DmaSz))
+module  mkDmaStatesPipe(DmaStatesPipe#(N, DmaSz))
    provisos (Bits#(Vector#(N, Float), DmaSz)
 	     );
    DmaVectorSource#(DmaSz, Vector#(N,Float)) statesource <- mkDmaVectorSource();
@@ -85,7 +85,7 @@ interface DmaStatesPipe2#(numeric type n, numeric type dmasz);
 endinterface
 
 (* synthesize *)
-module [Module] mkDmaStatesPipe2(DmaStatesPipe2#(N, DmaSz))
+module  mkDmaStatesPipe2(DmaStatesPipe2#(N, DmaSz))
    provisos (Bits#(Vector#(N, Float), DmaSz)
 	     );
    Vector#(2, DmaVectorSource#(DmaSz, Vector#(N,Float))) statesources <- replicateM(mkDmaVectorSource());
@@ -115,7 +115,7 @@ interface DmaUpdateWeights#(numeric type n, numeric type dmasz);
 endinterface
 
 (* synthesize *)
-module [Module] mkDmaUpdateWeights(DmaUpdateWeights#(N, DmaSz))
+module  mkDmaUpdateWeights(DmaUpdateWeights#(N, DmaSz))
    provisos (Bits#(Vector#(N, Float), DmaSz)
 	     );
    Vector#(3, DmaVectorSource#(DmaSz, Vector#(N,Float))) sources <- replicateM(mkDmaVectorSource());
@@ -190,7 +190,7 @@ interface DmaSumOfErrorSquared#(numeric type n, numeric type dmasz);
 endinterface
 
 (* synthesize *)
-module [Module] mkDmaSumOfErrorSquared(DmaSumOfErrorSquared#(N, DmaSz))
+module  mkDmaSumOfErrorSquared(DmaSumOfErrorSquared#(N, DmaSz))
    provisos (Bits#(Vector#(N, Float), DmaSz)
 	     );
    Vector#(2, DmaVectorSource#(DmaSz, Vector#(N,Float))) sources <- replicateM(mkDmaVectorSource());
@@ -265,7 +265,7 @@ interface Rbm#(numeric type n);
    interface Vector#(5, ObjectWriteClient#(TMul#(32,n))) writeClients;
 endinterface
 
-module [Module] mkRbm#(RbmIndication rbmInd, MmIndication mmInd, SigmoidIndication sigmoidInd, TimerIndication timerInd)(Rbm#(N))
+module  mkRbm#(RbmIndication rbmInd, MmIndication mmInd, SigmoidIndication sigmoidInd, TimerIndication timerInd)(Rbm#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)

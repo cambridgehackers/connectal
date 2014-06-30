@@ -49,7 +49,7 @@ interface MemreadIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-module [Module] mkMemread#(MemreadIndication indication) (Memread);
+module mkMemread#(MemreadIndication indication) (Memread);
 
    Reg#(ObjectPointer)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numWords <- mkReg(0);
@@ -95,7 +95,7 @@ module [Module] mkMemread#(MemreadIndication indication) (Memread);
    function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) xy); match { .x, .y } = xy; return x + y; endfunction
    
    PipeOut#(Vector#(NumEngineServers, Bit#(32))) mismatchCountsPipe <- mkJoinVector(id, map(toPipeOut, mismatchFifos));
-   PipeOut#(Bit#(32)) mismatchCountPipe <- mkReducePipe(mkMap(my_add), mismatchCountsPipe);
+   PipeOut#(Bit#(32)) mismatchCountPipe <- mkReducePipe(my_add, mismatchCountsPipe);
    
    rule indicate_finish;
       let mc <- toGet(mismatchCountPipe).get();

@@ -88,7 +88,7 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
 endinterface
 
 (* synthesize *)
-module [Module] mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
+module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 // provisos(
 //    Mul#(TDiv#(dsz, 8), 8, dsz),
 //     Add#(a__, TDiv#(dsz, 32), 8),

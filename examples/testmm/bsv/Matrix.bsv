@@ -227,7 +227,7 @@ endmodule
 
 		   
 (* synthesize *)
-module [Module] mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServer#(K))
+module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServer#(K))
    provisos(Div#(8,K,gatherSz));
  
    
@@ -451,7 +451,7 @@ interface MmTile;
 endinterface
 
 (* synthesize *)
-module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
+module  mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
 
    let rowsPerTile = valueOf(RowsPerTile);
    let kk = valueOf(K);
@@ -513,7 +513,7 @@ module [Module] mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
    function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) ab); match { .a, .b } = ab; return a+b; endfunction
    function Bit#(TLog#(K)) getDotProdChan(SharedDotProdServer#(K) dotprodserver); return dotprodserver.debug.chan; endfunction
    function PipeOut#(Bit#(32)) dotProdMacCount(SharedDotProdServer#(K) dotprodserver); return dotprodserver.debug.macCount; endfunction
-   PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(mkMap(my_add), map(dotProdMacCount, fxdotprods));
+   PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(my_add, map(dotProdMacCount, fxdotprods));
 
    interface Vector aInputs = zipWith(toCountedPut, aTokensPutRegs, map(toPut, aFifos));
    interface Vector bInputs = zipWith(toCountedPut, bTokensPutRegs, map(toPut, bFifos));
@@ -634,7 +634,7 @@ typedef enum {
  * Just considering memory bandwidth, every J+K cycles it is ready to perform J*K*N multiply accumulates.
  *
  */
-module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) sA,
+module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) sA,
 				     Vector#(K, VectorSource#(dsz, Vector#(N, Float))) sB,
 				     Vector#(J, VectorSink#(dsz, Vector#(N,Float)))    ss
 				     )(DmaMatrixMultiplyIfc#(addrwidth, dsz))
@@ -838,7 +838,7 @@ module [Module] mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Fl
 
    function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) ab); match { .a, .b } = ab; return a+b; endfunction
    function PipeOut#(Bit#(32)) mmTileMacCount(MmTile mmtile); return mmtile.debug.macCount; endfunction
-   PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(mkMap(my_add), map(mmTileMacCount, mmTiles));
+   PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(my_add, map(mmTileMacCount, mmTiles));
    Reg#(Bit#(32)) macCountReg <- mkReg(0);
    rule updateMacCount;
       let mc <- toGet(macCountPipe).get();
@@ -919,7 +919,7 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz);
 endinterface
 
 //(* synthesize *)
-module [Module] mkDramMatrixMultiply(DramMatrixMultiply#(N,TMul#(N,32)));
+module  mkDramMatrixMultiply(DramMatrixMultiply#(N,TMul#(N,32)));
    
    MemreadEngineV#(TMul#(N,32), 1, J) rowReadEngine <- mkMemreadEngine();
    MemreadEngineV#(TMul#(N,32), 1, K) colReadEngine <- mkMemreadEngine();
@@ -945,7 +945,7 @@ interface Mm#(numeric type n);
    interface ObjectWriteClient#(TMul#(32,n)) writeClient;
 endinterface
 
-module [Module] mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDebugIndication)(Mm#(N))
+module  mkMm#(MmIndication ind, TimerIndication timerInd, MmDebugIndication mmDebugIndication)(Mm#(N))
    provisos (Add#(1,a__,N),
 	     Add#(N,0,n),
 	     Mul#(N,32,DmaSz)

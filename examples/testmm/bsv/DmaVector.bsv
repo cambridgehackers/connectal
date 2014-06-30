@@ -53,7 +53,7 @@ function ObjectReadClient#(asz) getSourceReadClient(DmaVectorSource#(asz,a) s); 
 function ObjectWriteClient#(asz) getSinkWriteClient(DmaVectorSink#(asz,a) s); return s.dmaClient; endfunction
 function VectorSource#(dsz, dtype) dmaVectorSourceVector(DmaVectorSource#(dsz,dtype) dmavs); return dmavs.vector; endfunction
 
-module [Module] mkMemreadVectorSource#(Server#(MemengineCmd,Bool) memreadEngine, PipeOut#(Bit#(asz)) pipeOut)(VectorSource#(asz, a))
+module  mkMemreadVectorSource#(Server#(MemengineCmd,Bool) memreadEngine, PipeOut#(Bit#(asz)) pipeOut)(VectorSource#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),
@@ -72,7 +72,7 @@ module [Module] mkMemreadVectorSource#(Server#(MemengineCmd,Bool) memreadEngine,
    interface PipeOut pipe = mapPipe(unpack, pipeOut);
 endmodule
 
-module [Module] mkDmaVectorSource(DmaVectorSource#(asz, a))
+module  mkDmaVectorSource(DmaVectorSource#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),
@@ -120,7 +120,7 @@ interface DmaVectorSink#(numeric type dsz, type a);
    interface VectorSink#(dsz, a) vector;
 endinterface
 
-module [Module] mkMemwriteVectorSink#(Server#(MemengineCmd,Bool) memwriteEngine, PipeIn#(Bit#(asz)) pipeIn)(VectorSink#(asz, a))
+module  mkMemwriteVectorSink#(Server#(MemengineCmd,Bool) memwriteEngine, PipeIn#(Bit#(asz)) pipeIn)(VectorSink#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),
@@ -138,7 +138,7 @@ module [Module] mkMemwriteVectorSink#(Server#(MemengineCmd,Bool) memwriteEngine,
    interface PipeIn pipe = mapPipeIn(pack, pipeIn);
 endmodule
 
-module [Module] mkDmaVectorSink#(PipeOut#(a) pipe_in)(DmaVectorSink#(asz, a))
+module  mkDmaVectorSink#(PipeOut#(a) pipe_in)(DmaVectorSink#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),
@@ -176,7 +176,7 @@ interface BramVectorSource#(numeric type addrsz, numeric type dsz, type dtype);
    interface VectorSource#(dsz, dtype) vector;
 endinterface
 
-module [Module] mkBramVectorSource(BramVectorSource#(addrsz, dsz, dtype))
+module  mkBramVectorSource(BramVectorSource#(addrsz, dsz, dtype))
    provisos (Bits#(dtype,dsz),
 	     Add#(a__, addrsz, ObjectOffsetSize)
 	     );
