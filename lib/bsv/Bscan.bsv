@@ -101,16 +101,15 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
        widthReg <= 0;
    endrule
 
-   rule clearRule if (selected.read() && !selectdelay);
-       addrReg <= fromInteger(0);  // first time USER1 selected, reset address
-       readData <= True;
+   let readValue = startWrite.pulse() || (selected.read() && !selectdelay);
+   rule addrRule if (readValue);
+       let v = fromInteger(0);  // first time USER1 selected, reset address
+       if (startWrite.pulse())
+           v = addrReg + 1;
+       addrReg <= v;
    endrule
-   rule updateRule if (startWrite.pulse());
-       addrReg <= addrReg + 1;
-       readData <= True;
-   endrule
-   rule readClear if (readData);
-       readData <= False;
+   rule readClear;
+       readData <= readValue;
    endrule
 
    SyncBitIfc#(Bit#(8)) widthSync <- mkSyncBits(0, tck, rst, defaultClock, defaultReset);
