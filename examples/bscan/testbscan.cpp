@@ -44,11 +44,11 @@ class BscanIndication : public BscanIndicationWrapper
 {
 public:
     virtual void bscanGet(uint64_t v) {
-        fprintf(stderr, "bscanGet: %"PRIx64"\n", v);
+        printf("bscanGet: %"PRIx64"\n", v);
         SEMPOST(&sem_bscan);
     }
     virtual void bscanGetValue(uint32_t v) {
-        fprintf(stderr, "bscanGetValue: 0x%x\n", v);
+        printf("bscanGetValue: 0x%x\n", v);
         SEMPOST(&sem_bscan);
     }
     BscanIndication(unsigned int id, PortalPoller *poller) : BscanIndicationWrapper(id, poller) {
@@ -72,7 +72,7 @@ int main(int argc, const char **argv)
 
     if (argc == 1) {
     int v = 42;
-    fprintf(stderr, "Bscan put %x\n", v);
+    printf("Bscan put %x\n", v);
     for (int i = 0; i < 255; i++)
       bscanRequestProxy->bscanPut(i, i*v);
     }
