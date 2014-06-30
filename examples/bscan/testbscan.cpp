@@ -3,40 +3,21 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #include "BscanIndicationWrapper.h"
 #include "BscanRequestProxy.h"
 #include "GeneratedTypes.h"
 
 #define LOOP_COUNT 1000
-#define SEPARATE_EVENT_THREAD
-//#define USE_MUTEX_SYNC
 
 BscanRequestProxy *bscanRequestProxy = 0;
 
-#ifndef SEPARATE_EVENT_THREAD
-typedef int SEM_TYPE;
-#define SEMPOST(A) (*(A))++
-#define SEMWAIT pthread_worker
-#elif defined(USE_MUTEX_SYNC)
-typedef pthread_mutex_t SEM_TYPE;
-#define SEMINIT(A) pthread_mutex_lock(A);
-#define SEMWAIT(A) pthread_mutex_lock(A);
-#define SEMPOST(A) pthread_mutex_unlock(A);
-#else // use semaphores
 typedef sem_t SEM_TYPE;
 #define SEMINIT(A) sem_init(A, 0, 0);
 #define SEMWAIT(A) sem_wait(A);
 #define SEMPOST(A) sem_post(A)
-#endif
-
-#ifdef SEPARATE_EVENT_THREAD
-#define PREPAREWAIT(A)
-#define CHECKSEM(A) 1
-#else // use inline sync
-#define PREPAREWAIT(A) (A) = 0
-#define CHECKSEM(A) (!(A))
-#endif
 
 static SEM_TYPE sem_bscan;
 
@@ -45,7 +26,7 @@ PortalPoller *poller = 0;
 static void *pthread_worker(void *p)
 {
     void *rc = NULL;
-    while (CHECKSEM(sem_bscan) && !rc) {
+    while (!rc) {
         rc = poller->portalExec_poll(poller->portalExec_timeout);
         if ((long) rc >= 0)
             rc = poller->portalExec_event();
@@ -54,18 +35,21 @@ static void *pthread_worker(void *p)
 }
 static void init_thread()
 {
-#ifdef SEPARATE_EVENT_THREAD
     pthread_t threaddata;
     SEMINIT(&sem_bscan);
     pthread_create(&threaddata, NULL, &pthread_worker, (void*)poller);
-#endif
 }
 
 class BscanIndication : public BscanIndicationWrapper
 {
 public:
-    virtual void bscanGet(uint32_t v) {
-        fprintf(stderr, "bscanGet: %ux\n", v);
+    virtual void bscanGet(uint64_t v) {
+        fprintf(stderr, "bscanGet: %"PRIx64"\n", v);
+        SEMPOST(&sem_bscan);
+    }
+    virtual void bscanGetValue(uint32_t v) {
+        fprintf(stderr, "bscanGetValue: 0x%x\n", v);
+        SEMPOST(&sem_bscan);
     }
     BscanIndication(unsigned int id, PortalPoller *poller) : BscanIndicationWrapper(id, poller) {
     }
@@ -86,10 +70,29 @@ int main(int argc, const char **argv)
 	exit(1);
     }
 
+    if (argc == 1) {
     int v = 42;
     fprintf(stderr, "Bscan put %x\n", v);
     for (int i = 0; i < 255; i++)
       bscanRequestProxy->bscanPut(i, i*v);
+    }
+    else if (argc == 2) {
+      bscanRequestProxy->bscanGet(atoll(argv[1]));
+      SEMWAIT(&sem_bscan);
+    }
+    else if (argc == 3)
+      bscanRequestProxy->bscanPut(atoll(argv[1]), atoll(argv[2]));
+    else if (argc == 4) {
+      printf("testbscan: get address: ");
+      bscanRequestProxy->bscanGetA();
+      SEMWAIT(&sem_bscan);
+      printf("testbscan: get select: ");
+      bscanRequestProxy->bscanGetS();
+      SEMWAIT(&sem_bscan);
+      printf("testbscan: get width: ");
+      bscanRequestProxy->bscanGetW();
+      SEMWAIT(&sem_bscan);
+    }
 
     //print_dbg_requeste_intervals();
     poller->portalExec_end();
