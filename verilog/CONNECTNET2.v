@@ -21,13 +21,6 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-module CONNECTNET(IN, OUT);
-output OUT;
-input IN;
-assign OUT = IN;
-endmodule
-
 module CONNECTNET2(OUT1, OUT2, IN1, IN2);
 output OUT1;
 output OUT2;
