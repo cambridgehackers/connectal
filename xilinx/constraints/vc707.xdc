@@ -138,6 +138,12 @@ set_property LOC RAMB36_X14Y17 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i
 set_property LOC RAMB36_X14Y18 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[6].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
 set_property LOC RAMB36_X14Y19 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[7].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
 
+#
+# JTAG
+#
+set_property LOC BSCAN_X0Y0 [get_cells pciehost/*/*_bscan]
+set_property LOC BSCAN_X0Y2 [get_cells */*bscanRequest_bscan_bscan]
+
 ######################################################################################################
 # AREA GROUPS
 ######################################################################################################
@@ -161,7 +167,8 @@ set_property LOC RAMB36_X14Y19 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i
 ######################################################################################################
 # TIMING CONSTRAINTS
 ######################################################################################################
-create_clock -name bscan_refclk -period 20 [get_pins pciehost/traceif/*pcieBscanBram_bscan/TCK]
+create_clock -name bscan_refclk_user -period 20 [get_pins */*bscanRequest_bscan_bscan/TCK]
+create_clock -name bscan_refclk -period 20 [get_pins pciehost/traceif/*_bscan/TCK]
 create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
 
 ## no longer needed?
