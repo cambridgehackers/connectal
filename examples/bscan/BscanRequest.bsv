@@ -44,7 +44,8 @@ module mkBscanRequest#(BscanIndication indication)(BscanRequest);
 
    Reg#(Bit#(8)) addrReg <- mkReg(0);
 
-   BscanBram#(Bit#(8),Bit#(64)) bscanBram <- mkBscanBram(1, addrReg);
+   BscanTop bscan <- mkBscanTop(1);
+   BscanBram#(Bit#(8),Bit#(64)) bscanBram <- mkBscanBram(addrReg, bscan);
    let bram <- mkSyncBRAM2Server(defaultValue, defaultClock, defaultReset, bscanBram.jtagClock, bscanBram.jtagReset);
    mkConnection(bscanBram.bramClient, bram.portB);
 

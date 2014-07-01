@@ -33,71 +33,87 @@ import SyncBits::*;
 // Example usage: http://www.pld.ttu.ee/~vadim/tty/IAY0570/video_pipeline/psram_app/program_rom.v
 // Example usage: http://ohm.bu.edu/~dean/G-2TrackerWORKING/uart_test.vhd
 
+interface BscanTop;
+   interface Reset    rst;
+   interface Clock    tck;
+   method Bit#(1)     reset();
+   method Bit#(1)     capture();
+   method Bit#(1)     sel();
+   method Bit#(1)     shift();
+   method Bit#(1)     tdi();
+   method Action      tdo(Bit#(1) v);
+   method Bit#(1)     update();
+   method Bool        first();
+endinterface
+module mkBscanTop#(Integer bus)(BscanTop);
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
+   BscanE2 bscan <- mkBscanE2(bus);
+   Clock mytck <- mkClockBUFG(clocked_by bscan.tck);
+   Reset myrst <- mkAsyncReset(2, defaultReset, mytck);
+   SyncBitIfc#(Bool) selected <- mkSyncBits(False, mytck, myrst, defaultClock, defaultReset);
+   Reg#(Bool) selectdelay <- mkReg(False);
+
+   rule updater;
+       selected.send(bscan.sel() == 1);
+   endrule
+   rule writed;
+       selectdelay <= selected.read();
+   endrule
+
+   interface tck = mytck;
+   interface rst = myrst;
+   method capture = bscan.capture;
+   method sel = bscan.sel;
+   method shift = bscan.shift;
+   method tdi = bscan.tdi;
+   method tdo = bscan.tdo;
+   method update = bscan.update;
+   method first();
+      return selected.read() && !selectdelay;
+   endmethod
+endmodule
+
 interface BscanBram#(type atype, type dtype);
    interface Clock jtagClock;
    interface Reset jtagReset;
    interface BRAMClient#(atype, dtype) bramClient;
 endinterface
 
-module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
-   provisos (Bits#(atype, asz), Bits#(dtype,dsz), Add#(1, a__, dsz)
-,Add#(b__, asz, dsz)
-);
+module mkBscanBram#(atype addr, BscanTop bscan)(BscanBram#(atype, dtype))
+   provisos (Bits#(atype, asz), Bits#(dtype,dsz), Add#(1, a__, dsz));
    let asz = valueOf(asz);
    let dsz = valueOf(dsz);
 
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
-   BscanE2 bscan <- mkBscanE2(bus);
-   Clock tck <- mkClockBUFG(clocked_by bscan.tck);
-   Reset rst <- mkAsyncReset(2, defaultReset, tck);
 
    Reg#(Bit#(asz)) addrReg <- mkReg(0);
-   Reg#(Bit#(dsz)) fromBram <- mkReg(0);
-   Reg#(Bool) selectdelay <- mkReg(False);
    Reg#(Bool) readData <- mkReg(False);
 
-   Reg#(Bit#(dsz)) shiftReg <- mkReg(0, clocked_by tck, reset_by rst);
-   SyncBitIfc#(Bit#(dsz)) tojtag <- mkSyncBits(0, defaultClock, defaultReset, tck, rst);
-   SyncBitIfc#(Bit#(dsz)) fromjtag <- mkSyncBits(0, tck, rst, defaultClock, defaultReset);
-   SyncBitIfc#(Bool) selected <- mkSyncBits(False, tck, rst, defaultClock, defaultReset);
-   SyncPulseIfc startWrite <- mkSyncHandshake(tck, rst, defaultClock);
+   Reg#(Bit#(dsz)) shiftReg <- mkReg(0, clocked_by bscan.tck, reset_by bscan.rst);
+   SyncBitIfc#(Bit#(dsz)) tojtag <- mkSyncBits(0, defaultClock, defaultReset, bscan.tck, bscan.rst);
+   SyncBitIfc#(Bit#(dsz)) fromjtag <- mkSyncBits(0, bscan.tck, bscan.rst, defaultClock, defaultReset);
+   SyncPulseIfc startWrite <- mkSyncHandshake(bscan.tck, bscan.rst, defaultClock);
 
-   let thisActive = bscan.sel() == 1;
-   let readNext = startWrite.pulse() || (selected.read() && !selectdelay);
+   let readNext = startWrite.pulse() || bscan.first();
 
-   rule fromj;
-       fromjtag.send(shiftReg);
-   endrule
-
-   rule toj;
-       tojtag.send(fromBram);
-   endrule
-
-   rule updater;
-       selected.send(thisActive);
-   endrule
-   rule writed;
-       selectdelay <= selected.read();
-   endrule
-
-   rule capturer if(//thisActive && 
-bscan.capture() == 1);
+   rule capturer if(bscan.capture() == 1);
        shiftReg <= tojtag.read();
    endrule
-   rule sendwrite if(thisActive && bscan.update() == 1);
-       startWrite.send();
-   endrule
-   rule shiftrule if (//thisActive && 
-bscan.shift() == 1);
+   rule shiftrule if (bscan.shift() == 1);
        shiftReg <= { bscan.tdi(), shiftReg[dsz-1:1] };
    endrule
    rule tdo;
       bscan.tdo(shiftReg[0]);
    endrule
+   rule sendwrite if(bscan.sel() == 1 && bscan.update() == 1);
+       startWrite.send();
+       fromjtag.send(shiftReg);
+   endrule
 
    rule addrRule if (readNext);
-       let v = fromInteger(0);  // first time USER1 selected, reset address
+       let v = fromInteger(0);  // first time USER1, reset address
        if (startWrite.pulse())
            v = addrReg + 1;
        addrReg <= v;
@@ -114,7 +130,7 @@ bscan.shift() == 1);
       endinterface
       interface Put response;
 	 method Action put(dtype d);
-	    fromBram <= pack(d);
+            tojtag.send(pack(d));
 	 endmethod
       endinterface
    endinterface

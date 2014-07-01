@@ -46,7 +46,8 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
    Reg#(Bit#(8)) addrReg <- mkReg(9);
-   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg);
+   BscanTop bscan <- mkBscanTop(bus);
+   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg, bscan);
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = 256;
    bramCfg.latency = 1;
