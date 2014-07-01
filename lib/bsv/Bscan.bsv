@@ -34,9 +34,6 @@ import SyncBits::*;
 // Example usage: http://ohm.bu.edu/~dean/G-2TrackerWORKING/uart_test.vhd
 
 interface BscanBram#(type atype, type dtype);
-   method atype getAddr();
-   method Bit#(1) getSelected();
-   method Bit#(8) getWidth();
    interface Clock jtagClock;
    interface Reset jtagReset;
    interface BRAMClient#(atype, dtype) bramClient;
@@ -61,11 +58,13 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
    Reg#(Bool) readData <- mkReg(False);
 
    Reg#(Bit#(dsz)) shiftReg <- mkReg(0, clocked_by tck, reset_by rst);
-   Reg#(Bit#(8)) widthReg <- mkReg(0, clocked_by tck, reset_by rst);
    SyncBitIfc#(Bit#(dsz)) tojtag <- mkSyncBits(0, defaultClock, defaultReset, tck, rst);
    SyncBitIfc#(Bit#(dsz)) fromjtag <- mkSyncBits(0, tck, rst, defaultClock, defaultReset);
    SyncBitIfc#(Bool) selected <- mkSyncBits(False, tck, rst, defaultClock, defaultReset);
    SyncPulseIfc startWrite <- mkSyncHandshake(tck, rst, defaultClock);
+
+   let thisActive = bscan.sel() == 1;
+   let readNext = startWrite.pulse() || (selected.read() && !selectdelay);
 
    rule fromj;
        fromjtag.send(shiftReg);
@@ -75,56 +74,37 @@ module mkBscanBram#(Integer bus, atype addr)(BscanBram#(atype, dtype))
        tojtag.send(fromBram);
    endrule
 
-   rule tdo;
-      bscan.tdo(shiftReg[0]);
-   endrule
-
    rule updater;
-       selected.send(bscan.sel() == 1);
+       selected.send(thisActive);
    endrule
    rule writed;
        selectdelay <= selected.read();
    endrule
 
-   rule capturer if(bscan.sel() == 1 && bscan.capture() == 1);
+   rule capturer if(//thisActive && 
+bscan.capture() == 1);
        shiftReg <= tojtag.read();
    endrule
-   rule sendwrite if(bscan.sel() == 1 && bscan.update() == 1);
+   rule sendwrite if(thisActive && bscan.update() == 1);
        startWrite.send();
    endrule
-
-   rule shiftrule if (bscan.sel() == 1 && bscan.shift() == 1);
+   rule shiftrule if (//thisActive && 
+bscan.shift() == 1);
        shiftReg <= { bscan.tdi(), shiftReg[dsz-1:1] };
-       widthReg <= widthReg + 1;
    endrule
-   rule clearwidth if (bscan.sel() == 0);
-       widthReg <= 0;
+   rule tdo;
+      bscan.tdo(shiftReg[0]);
    endrule
 
-   let readValue = startWrite.pulse() || (selected.read() && !selectdelay);
-   rule addrRule if (readValue);
+   rule addrRule if (readNext);
        let v = fromInteger(0);  // first time USER1 selected, reset address
        if (startWrite.pulse())
            v = addrReg + 1;
        addrReg <= v;
    endrule
    rule readClear;
-       readData <= readValue;
+       readData <= readNext;
    endrule
-
-   SyncBitIfc#(Bit#(8)) widthSync <- mkSyncBits(0, tck, rst, defaultClock, defaultReset);
-   rule syncw;
-       widthSync.send(widthReg);
-   endrule
-   method atype getAddr;
-       return unpack(addrReg);
-   endmethod
-   method Bit#(1) getSelected();
-       return pack(selected.read());
-   endmethod
-   method Bit#(8) getWidth();
-       return widthSync.read();
-   endmethod
 
    interface BRAMClient bramClient;
       interface Get request;

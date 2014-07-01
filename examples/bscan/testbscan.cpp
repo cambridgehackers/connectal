@@ -47,10 +47,6 @@ public:
         printf("bscanGet: %"PRIx64"\n", v);
         SEMPOST(&sem_bscan);
     }
-    virtual void bscanGetValue(uint32_t v) {
-        printf("bscanGetValue: 0x%x\n", v);
-        SEMPOST(&sem_bscan);
-    }
     BscanIndication(unsigned int id, PortalPoller *poller) : BscanIndicationWrapper(id, poller) {
     }
 };
@@ -82,17 +78,6 @@ int main(int argc, const char **argv)
     }
     else if (argc == 3)
       bscanRequestProxy->bscanPut(atoll(argv[1]), atoll(argv[2]));
-    else if (argc == 4) {
-      printf("testbscan: get address: ");
-      bscanRequestProxy->bscanGetA();
-      SEMWAIT(&sem_bscan);
-      printf("testbscan: get select: ");
-      bscanRequestProxy->bscanGetS();
-      SEMWAIT(&sem_bscan);
-      printf("testbscan: get width: ");
-      bscanRequestProxy->bscanGetW();
-      SEMWAIT(&sem_bscan);
-    }
 
     //print_dbg_requeste_intervals();
     poller->portalExec_end();
