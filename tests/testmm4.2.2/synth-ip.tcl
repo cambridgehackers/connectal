@@ -1,1 +1,1 @@
-../testmm/synth-ip.tcl
+../../examples/testmm/synth-ip.tcl
