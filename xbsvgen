@@ -125,11 +125,11 @@ set rfh [open "$runLog.log" w]
 set cfh [open "$commandLog.log" w]
 set wfh [open "$criticalLog.log" w]
 
+create_project -in_memory -part $partname
 read_verilog [ glob {verilog/*.v} ]
 %(read_verilog)s
 %(read_xci)s
 %(tclfileConstraints)s
-create_design -in_memory -part $partname
 
 source $xbsvdir/scripts/xbsv-synth-ip.tcl
 if $needspcie {
