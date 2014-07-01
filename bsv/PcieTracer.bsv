@@ -63,11 +63,6 @@ endinterface: PcieTracer
 // The PCIe-to-AXI bridge puts all of the elements together
 (* synthesize *)
 module mkPcieTracer(PcieTracer);
-
-   // Clocks and Resets
-   Clock defaultClock <- exposeCurrentClock();
-   Reset defaultReset <- exposeCurrentReset();
-   
    // Trace Support
    Reg#(Bool) tlpTracingReg        <- mkReg(False);
    Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimitReg <- mkReg(0);
@@ -75,23 +70,17 @@ module mkPcieTracer(PcieTracer);
    Reg#(Bit#(TlpTraceAddrSize))   toPcieTraceBramWrAddrReg <- mkReg(0);
    Integer memorySize = 2**valueOf(TlpTraceAddrSize);
    // TODO: lift BscanBram to *Top.bsv
-`ifdef BSIM
-   Clock jtagClock = defaultClock;
-   Reset jtagReset = defaultReset;
-`else
+`ifndef BSIM
    Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
-   BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(1, bscanPcieTraceBramWrAddrReg);
-   Clock jtagClock = pcieBscanBram.jtagClock;
-   Reset jtagReset = pcieBscanBram.jtagReset;
+   BscanTop bscan <- mkBscanTop(1);
+   BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(123, bscanPcieTraceBramWrAddrReg, bscan);
 `endif
 
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = memorySize;
    bramCfg.latency = 1;
-   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
-												 jtagClock, jtagReset);
-   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
-											       jtagClock, jtagReset);
+   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- mkBRAM2Server(bramCfg);
+   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- mkBRAM2Server(bramCfg);
    Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bramServers;
    bramServers[0] = fromPcieTraceBram.portA;
    bramServers[1] =   toPcieTraceBram.portA;
@@ -101,8 +90,8 @@ module mkPcieTracer(PcieTracer);
    Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bscanBramServers;
    bscanBramServers[0] = fromPcieTraceBram.portB;
    bscanBramServers[1] =   toPcieTraceBram.portB;
-   BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bscanBramMux <- mkBramServerMux(bscanBramServers, clocked_by jtagClock, reset_by jtagReset);
-   mkConnection(pcieBscanBram.bramClient, bscanBramMux.bramServer, clocked_by jtagClock, reset_by jtagReset);
+   BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bscanBramMux <- mkBramServerMux(bscanBramServers);
+   mkConnection(pcieBscanBram.bramClient, bscanBramMux.bramServer);
 `endif
 
    Reg#(Bit#(32)) timestamp <- mkReg(0);
