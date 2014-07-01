@@ -44,7 +44,7 @@ module mkBscanRequest#(BscanIndication indication)(BscanRequest);
 
    Reg#(Bit#(8)) addrReg <- mkReg(0);
 
-   BscanTop bscan <- mkBscanTop(1);
+   BscanTop bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
    BscanBram#(Bit#(8),Bit#(64)) bscanBram <- mkBscanBram(123, addrReg, bscan);
    let bram <- mkBRAM2Server(defaultValue);
    mkConnection(bscanBram.bramClient, bram.portB);
