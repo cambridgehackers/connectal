@@ -1,6 +1,6 @@
 startgroup
 create_pblock pblock_ep7
-resize_pblock pblock_ep7 -add {SLICE_X176Y54:SLICE_X221Y164 DSP48_X17Y22:DSP48_X19Y65 RAMB18_X11Y22:RAMB18_X14Y65 RAMB36_X11Y11:RAMB36_X14Y32}
+resize_pblock pblock_ep7 -add {SLICE_X184Y54:SLICE_X221Y166 DSP48_X18Y22:DSP48_X19Y65 RAMB18_X12Y22:RAMB18_X14Y65 RAMB36_X12Y11:RAMB36_X14Y32}
 add_cells_to_pblock pblock_ep7 [get_cells [list ep7]] -clear_locs
 endgroup
 
