@@ -941,9 +941,9 @@ endinterface
 //(* synthesize *)
 module  mkDramMatrixMultiply(DramMatrixMultiply#(N,TMul#(N,32)));
    
-   MemreadEngineV#(TMul#(N,32), 1, J) rowReadEngine <- mkMemreadEngine();
-   MemreadEngineV#(TMul#(N,32), 1, K) colReadEngine <- mkMemreadEngine();
-   MemwriteEngineV#(TMul#(N,32),1, J)   writeEngine <- mkMemwriteEngine();
+   MemreadEngineV#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngine();
+   MemreadEngineV#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngine();
+   MemwriteEngineV#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
 
    Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(rowReadEngine.readServers, rowReadEngine.dataPipes));
    Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(colReadEngine.readServers, colReadEngine.dataPipes));
