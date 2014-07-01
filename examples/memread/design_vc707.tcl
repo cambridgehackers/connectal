@@ -29,7 +29,7 @@ set part         $device$package$speed
 ###############################################################
 ####flow control
 set run.topSynth   0
-set run.oocSynth   0
+set run.oocSynth   1
 set run.tdImpl     1
 set run.oocImpl    1
 set run.topImpl    1
@@ -65,7 +65,7 @@ set top "mkPcieTop"
 add_module $top
 set_attribute module $top    top_level     1
 set_attribute module $top    vlog          [concat [glob $rtlDir/top/*.v] [glob $rtlDir/lib/*.v] ]
-set_attribute module $top    ip            [glob /scratch/jamey/xbsv/generated/xilinx/vc707/*/*.xci]
+set_attribute module $top    ip            []
 #set_attribute module $top    vlog_headers  [glob $rtlDir/top/*Stub.v]
 set_attribute module $top    synth         ${run.topSynth}
 
@@ -99,7 +99,7 @@ set_attribute ooc $instance   preservation routing
 
 set module2 "mkPCIExpressEndpointX7"
 add_module $module2
-set_attribute module $module2 vlog          [concat [glob $rtlDir/lib/*.v] [list $rtlDir/endpoint/mkPCIExpressEndpointX7.v]]
+set_attribute module $module2 vlog          [concat [glob $rtlDir/lib/*.v] [list $rtlDir/ep7/mkPCIExpressEndpointX7.v]]
 set_attribute module $module2 ip            [glob /scratch/jamey/xbsv/generated/xilinx/vc707/*/*.xci]
 set_attribute module $module2 synth        ${run.oocSynth}
 
@@ -116,42 +116,40 @@ set_attribute ooc $instance   implXDC      [list $xdcDir/${instance}_phys.xdc \
 set_attribute ooc $instance   impl         ${run.oocImpl}
 set_attribute ooc $instance   preservation routing
 
-set module3 "mkSynthesizeablePortalTop"
-add_module $module3
-set_attribute module $module3 vlog          [concat [glob $rtlDir/lib/*.v] [list $rtlDir/portal/mkSynthesizeablePortalTop.v]]
-set_attribute module $module3 ip            []
-set_attribute module $module3 synth        ${run.oocSynth}
+# set module3 "mkSynthesizeablePortalTop"
+# add_module $module3
+# set_attribute module $module3 vlog          [concat [glob $rtlDir/lib/*.v] [list $rtlDir/portal/mkSynthesizeablePortalTop.v]]
+# set_attribute module $module3 ip            []
+# set_attribute module $module3 synth        ${run.oocSynth}
 
-set instance "portalTop"
-add_ooc_implementation $instance
-set_attribute ooc $instance   module       $module3
-set_attribute ooc $instance   inst         $instance
-set_attribute ooc $instance   hierInst     $instance
-set_attribute ooc $instance   implXDC      [list $xdcDir/${instance}_phys.xdc \
-						 $xdcDir/${instance}_ooc_timing.xdc \
-						 $xdcDir/${instance}_ooc_budget.xdc \
-						 $xdcDir/${instance}_ooc_optimize.xdc \
-						]
-set_attribute ooc $instance   impl         ${run.oocImpl}
-set_attribute ooc $instance   preservation routing
+# set instance "portalTop"
+# add_ooc_implementation $instance
+# set_attribute ooc $instance   module       $module3
+# set_attribute ooc $instance   inst         $instance
+# set_attribute ooc $instance   hierInst     $instance
+# set_attribute ooc $instance   implXDC      [list $xdcDir/${instance}_phys.xdc \
+# 						 $xdcDir/${instance}_ooc_timing.xdc \
+# 						 $xdcDir/${instance}_ooc_budget.xdc \
+# 						 $xdcDir/${instance}_ooc_optimize.xdc \
+# 						]
+# set_attribute ooc $instance   impl         ${run.oocImpl}
+# set_attribute ooc $instance   preservation routing
 
 ####################################################################
 ### Create TopDown implementation run 
 ####################################################################
 set module1File "$synthDir/$module1/${module1}_synth.dcp"
 set module2File "$synthDir/$module2/${module2}_synth.dcp"
-set module3File "$synthDir/$module3/${module3}_synth.dcp"
+#set module3File "$synthDir/$module3/${module3}_synth.dcp"
 add_implementation TopDown
 set_attribute impl TopDown      top          $top
 set_attribute impl TopDown      implXDC      [list $xdcDir/floorplan_vc707.xdc $xdcDir/vc707.xdc]
 set_attribute impl TopDown      td.impl      1
 set_attribute impl TopDown      cores        [list $module1File                          \
                                                    $module2File                          \
-                                                   $module3File                          \
                                                    [get_attribute module $top cores]     \
                                                    [get_attribute module $module1 cores] \
                                                    [get_attribute module $module2 cores] \
-                                                   [get_attribute module $module3 cores] \
                                              ] 
 set_attribute impl TopDown      impl         ${run.tdImpl}
 set_attribute impl TopDown      route        0
@@ -164,11 +162,9 @@ set_attribute impl Flat         top          $top
 set_attribute impl Flat         implXDC      [list $xdcDir/${top}_flpn.xdc $xdcDir/vc707.xdc]
 set_attribute impl Flat         cores        [list $module1File                          \
                                                    $module2File                          \
-                                                   $module3File                          \
                                                    [get_attribute module $top cores]     \
                                                    [get_attribute module $module1 cores] \
                                                    [get_attribute module $module2 cores] \
-                                                   [get_attribute module $module3 cores] \
                                              ] 
 set_attribute impl Flat         impl         ${run.flatImpl}
 
