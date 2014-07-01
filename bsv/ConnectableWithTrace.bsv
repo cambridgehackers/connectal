@@ -46,13 +46,12 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
    Reg#(Bit#(8)) addrReg <- mkReg(9);
-   BscanTop bscan <- mkBscanTop(bus);
-   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(1, addrReg, bscan);
+   BscanTop bscan <- mkBscanTop(1);
+   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(456, addrReg, bscan);
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = 256;
    bramCfg.latency = 1;
-   BRAM2Port#(Bit#(8), Bit#(64)) traceBram <- mkSyncBRAM2Server(bramCfg, defaultClock, defaultReset,
-								bscanBram.jtagClock, bscanBram.jtagReset);
+   BRAM2Port#(Bit#(8), Bit#(64)) traceBram <- mkBRAM2Server(bramCfg);
    mkConnection(bscanBram.bramClient, traceBram.portB);
 
    Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF);

@@ -75,12 +75,10 @@ module mkBscanTop#(Integer bus)(BscanTop);
 endmodule
 
 interface BscanBram#(type atype, type dtype);
-   interface Clock jtagClock;
-   interface Reset jtagReset;
    interface BRAMClient#(atype, dtype) bramClient;
 endinterface
 
-module mkBscanBram#(atype addr, BscanTop bscan)(BscanBram#(atype, dtype))
+module mkBscanBram#(Integer id, atype addr, BscanTop bscan)(BscanBram#(atype, dtype))
    provisos (Bits#(atype, asz), Bits#(dtype,dsz), Add#(1, a__, dsz));
    let asz = valueOf(asz);
    let dsz = valueOf(dsz);
@@ -134,6 +132,4 @@ module mkBscanBram#(atype addr, BscanTop bscan)(BscanBram#(atype, dtype))
 	 endmethod
       endinterface
    endinterface
-   interface Clock jtagClock = defaultClock;
-   interface Reset jtagReset = defaultReset;
 endmodule
