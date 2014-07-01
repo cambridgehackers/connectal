@@ -107,22 +107,16 @@ module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 `endif
    // perhaps memreadengine could do the labeling
    Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
-   Reg#(Bool) firstReg <- mkReg(True);
-   Reg#(Bool) lastReg  <- mkReg(False);
+   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkFIFOF;
+
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
       vs.start(h,a,l);
-      countReg <= l;
-      firstReg <= True;
-      lastReg <= (l == 1);
-   endmethod
+      cmdFifo.enq(l);
+   endmethod 
    method ActionValue#(Bool) finish;
-`ifdef TAGGED_TOKENS
-      tagFifo.deq;
-      col <= 0;
-`endif      
       let rv <- vs.finish;
       return rv;
    endmethod
@@ -136,21 +130,29 @@ module mkRowSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 	 for(Integer i = 0; i < valueOf(N); i=i+1)
 	    rv[i] = Token{v:vs.pipe.first[i], first:False, last:False};
 `endif
-	 if (firstReg)
+	 if (countReg==0)
 	    rv[0].first = True;
-	 if (lastReg)
+	 if (countReg+1==cmdFifo.first)
 	    rv[valueOf(N)-1].last = True;
 	 return rv;
       endmethod
       method Action deq;
 	 vs.pipe.deq;
-`ifdef TAGGED_TOKENS
-	 col <= col+fromInteger(valueOf(N));
-`endif
 	 //$display("mkRowSource count=%d first=%d last=%d", countReg, firstReg, lastReg);
-	 firstReg <= False;
-	 lastReg <= (countReg == 2); // ((countReg - 1) == 1)
-	 countReg <= countReg - 1;
+	 if(countReg+1==cmdFifo.first) begin
+	    countReg <= 0;
+	    cmdFifo.deq;
+`ifdef TAGGED_TOKENS
+	    tagFifo.deq;
+	    col <= 0;
+`endif      
+	 end
+	 else begin
+`ifdef TAGGED_TOKENS
+	    col <= col+fromInteger(valueOf(N));
+`endif
+	    countReg <= countReg + 1;
+	 end
       endmethod
       method Bool notEmpty;
 `ifdef TAGGED_TOKENS
@@ -169,23 +171,16 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 `endif
    // perhaps memreadengine could do the labeling
    Reg#(Bit#(ObjectOffsetSize)) countReg <- mkReg(0);
-   Reg#(Bool) firstReg <- mkReg(True);
-   Reg#(Bool) lastReg  <- mkReg(False);
+   FIFOF#(Bit#(ObjectOffsetSize)) cmdFifo <- mkFIFOF;
 
    method Action start(ObjectPointer h, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l, UInt#(32) tag);
 `ifdef TAGGED_TOKENS
       tagFifo.enq(tag);
 `endif
       vs.start(h,a,l);
-      countReg <= l;
-      firstReg <= True;
-      lastReg <= (l == 1);
+      cmdFifo.enq(l);
    endmethod
    method ActionValue#(Bool) finish;
-`ifdef TAGGED_TOKENS
-      tagFifo.deq;
-      row <= 0;
-`endif      
       let rv <- vs.finish;
       return rv;
    endmethod
@@ -199,21 +194,28 @@ module mkColSource#(VectorSource#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSourc
 	 for(Integer i = 0; i < valueOf(N); i=i+1)
 	    rv[i] = Token{v:vs.pipe.first[i], first:False, last:False};
 `endif
-	 if (firstReg)
+	 if (countReg==0)
 	    rv[0].first = True;
-	 if (lastReg)
+	 if (countReg+1==cmdFifo.first)
 	    rv[valueOf(N)-1].last = True;
 	 return rv;
       endmethod
       method Action deq;
 	 vs.pipe.deq;
+	 if(countReg+1==cmdFifo.first) begin
+	    countReg <= 0;
+	    cmdFifo.deq;
 `ifdef TAGGED_TOKENS
-	 row <= row+fromInteger(valueOf(N));
+	    tagFifo.deq;
+	    row <= 0;
+`endif      
+	 end
+	 else begin
+`ifdef TAGGED_TOKENS
+	    row <= row+fromInteger(valueOf(N));
 `endif
-	 firstReg <= False;
-	 lastReg <= (countReg == 2); // ((countReg - 1) == 1);
-	 countReg <= countReg - 1;
-	 //$display("mkColSource count=%d first=%d last=%d", countReg, firstReg, lastReg);
+	    countReg <= countReg+1;
+	 end
       endmethod
       method Bool notEmpty;
 `ifdef TAGGED_TOKENS
@@ -253,21 +255,23 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
    FIFOF#(Token)                          bfifo <- mkFIFOF();
    PipeOut#(Token)                        bFunnel = toPipeOut(bfifo);
 
-   Vector#(K,FIFOF#(Bool)) firstFifos  <- replicateM(mkSizedFIFOF(ub_MulLat));
-   Vector#(K,FIFOF#(Bool)) lastFifos  <- replicateM(mkSizedFIFOF(ub_MulLat+ub_AddLat)); 
+   FIFOF#(Bool) firstFifo  <- mkSizedFIFOF(ub_MulLat);
+   FIFOF#(Bool) lastFifoA  <- mkSizedFIFOF(ub_MulLat);
+   FIFOF#(Bool) lastFifoB  <- mkSizedFIFOF(ub_AddLat); 
+
    Vector#(K,Vector#(gatherSz,FIFOF#(Float))) accumFifos <- replicateM(replicateM(mkFIFOF1));
    Vector#(K,Reg#(Bit#(TLog#(gatherSz)))) accumFifosEnqIdxs <- replicateM(mkReg(0));
    Vector#(K,Reg#(Bit#(TLog#(gatherSz)))) accumFifosDeqIdxs <- replicateM(mkReg(0));
    Vector#(K,Reg#(Bit#(32))) firstCnts <- replicateM(mkReg(0));
-   Reg#(Bit#(32)) lastCnt   <- mkReg(0);
+
+   Reg#(Bit#(32)) lastCntA   <- mkReg(0);
+   Reg#(Bit#(32)) lastCntB   <- mkReg(0);
    Reg#(Bit#(32)) gatherCntA <- mkReg(0);
    Reg#(Bit#(32)) gatherCntB <- mkReg(0);
    Vector#(K,FIFOF#(Token)) dotfifos   <- replicateM(mkFIFOF1);
    
-   Reg#(Bit#(TLog#(K))) chanReg <- mkReg(0);
-   Vector#(2,FIFO#(Bit#(TLog#(K)))) chanFifos <- replicateM(mkSizedFIFO(valueOf(TMul#(gatherSz,K))));
-
-   function Bit#(TLog#(N)) i_v(Integer i) = fromInteger(i);
+   Vector#(2,Reg#(Bit#(TLog#(K)))) chanRegs <- replicateM(mkReg(0));
+   Vector#(3,FIFO#(Bit#(TLog#(K)))) chanFifos <- replicateM(mkSizedFIFO(valueOf(TMul#(gatherSz,K))));
 
    Reg#(Bit#(32)) cycles <- mkReg(0);
    rule countCycles;
@@ -276,39 +280,41 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
 
    Reg#(Bit#(32)) lastMulin <- mkReg(0);
    Reg#(Bit#(32)) lastAccin <- mkReg(0);
+   Reg#(Bit#(32)) lastAccout <- mkReg(0);
    Reg#(Bit#(32)) macs <- mkReg(0);
    
-   let gather_phase = lastCnt == fromInteger(valueOf(K));
+   let gather_phaseA = lastCntA == fromInteger(valueOf(K));
+   let gather_phaseB = lastCntB == fromInteger(valueOf(K));
       
-   rule mulin if (!gather_phase);
+   rule mulin;
       lastMulin <= cycles;
 
-      let chan = chanReg;
+      let chan = chanRegs[0];
       chanFifos[0].enq(chan);
-      chanReg <= (chan + 1);
+      chanRegs[0] <= (chan + 1);
       let a <- toGet(aFunnel).get();
       let b <- toGet(bFunnel).get();
             
       let first = a.first;
       let last = a.last;
-      firstFifos[chan].enq(first);
-      lastFifos[chan].enq(last);
+      firstFifo.enq(first);
+      lastFifoA.enq(last);
       if (a.first != b.first)
 	 $display("****\n    Warning: a.first=%d != b.first=%d\n****", a.first, b.first);
       if (a.last != b.last)
 	 $display("****\n    Warning: a.last=%d != b.last=%d\n****", a.last, b.last);
-      //if (verbose) $display("%08d label=%d mulin chan=%d first=%d last=%d", cycles-lastMulin, label, chan, first, last);
+      if (verbose) $display("%08d label=%d mulin chan=%d first=%d last=%d", cycles-lastMulin, label, chan, first, last);
       mul.request.put(tuple2(a.v, b.v));
 `ifdef TAGGED_TOKENS
-      // if (a.row==2 && b.col==0)
-      // 	 $display("xxx %h %h xxx", a.v, b.v);
       tag_fifos[0].enq(tuple2(a.row,b.col));
 `endif
    endrule
 
-   rule mulout if (!gather_phase);
+   rule mulout if (!gather_phaseA);
       let chan <- toGet(chanFifos[0]).get();
-      let first <- toGet(firstFifos[chan]).get();
+      let first <- toGet(firstFifo).get();
+      let last <- toGet(lastFifoA).get;
+      lastFifoB.enq(last);
       chanFifos[1].enq(chan);
       lastAccin <= cycles;
       if (verbose) $display("%08d label=%d mulout chan=%d first=%d", cycles-lastAccin, label, chan, first);
@@ -324,23 +330,26 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
 	 else firstCnts[chan] <= firstCnts[chan]+1;
 	 //if (verbose) $display("firstCnts[%d] = %d", chan, firstCnts[chan]);
       end
-      //adder.request.put(tuple2(resp,acc));
       adder.request.put(tuple2(resp,acc));
 `ifdef TAGGED_TOKENS
       let t <- toGet(tag_fifos[0]).get;
       tag_fifos[1].enq(t);
 `endif
+      if(last) begin
+	 lastCntA <= lastCntA+1;
+	 if (verbose) $display("mulout lastCntA=%d, K=%d", lastCntA, valueOf(K));
+      end
    endrule
 
-   rule accout if (!gather_phase);
+   rule accout if (!gather_phaseB);
       let chan <- toGet(chanFifos[1]).get();
-      let last <- toGet(lastFifos[chan]).get;
+      let last <- toGet(lastFifoB).get;
       macs <= macs + 1;
+      lastAccout <= cycles;
       match {.acc,.*} <- adder.response.get();
-      //if (verbose) $display("%08d label=%d accout chan=%d acc=%x last=%d macs=%d", cycles, label, chan, pack(acc), last, macs+1);
+      if (verbose) $display("%08d label=%d accout chan=%d acc=%x last=%d macs=%d", cycles-lastAccout, label, chan, pack(acc), last, macs+1);
       accumFifos[chan][accumFifosEnqIdxs[chan]].enq(acc);
       accumFifosEnqIdxs[chan] <= accumFifosEnqIdxs[chan]+1;
-      //if (verbose) $display("accumFifos[%d][%d].enq", chan,accumFifosEnqIdxs[chan]);
 `ifdef TAGGED_TOKENS
       match {.row, .col} <- toGet(tag_fifos[1]).get;
       case (tag_regs[chan]) matches
@@ -357,18 +366,18 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
       endcase
 `endif
       if (last) begin
-	 lastCnt <= lastCnt+1;
-	 if (verbose) $display("accout lastCnt=%d, K=%d", lastCnt, valueOf(K));
+	 lastCntB <= lastCntB+1;
+	 if (verbose) $display("accout lastCntB=%d, K=%d", lastCntB, valueOf(K));
       end
    endrule
    
-   rule gatherA if (gather_phase && gatherCntA < fromInteger(valueOf(gatherSz)));
-      let chan = chanReg;
-      chanReg <= chan+1;
+   rule gatherA if (gather_phaseA);
+      let chan = chanRegs[1];
+      chanRegs[1] <= chan+1;
       let last_chan = chan == fromInteger(valueOf(K)-1);
       let last_pass = gatherCntA+1 == fromInteger(valueOf(gatherSz));
       if (!last_pass) begin
-	 chanFifos[1].enq(chan);
+	 chanFifos[2].enq(chan);
 	 let x <- toGet(accumFifos[chan][gatherCntA+0]).get;
 	 let y <- toGet(accumFifos[chan][gatherCntA+1]).get;
 	 adder.request.put(tuple2(x,y));
@@ -396,23 +405,34 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
 `endif      
 	 if (last_chan) begin
 	    gatherCntA <= 0;
-	    lastCnt <= 0;
+	    lastCntA <= 0;
+	    if(verbose) $display("gatherA reset");
 	 end
       end
-   endrule   
+   endrule
 
-   rule gatherB if (gather_phase);
-      let chan <- toGet(chanFifos[1]).get;
-      let last_chan = chan == fromInteger(valueOf(K)-1);
-      let last_pass = gatherCntB+2 == fromInteger(valueOf(gatherSz));
-      if (last_chan && !last_pass)
-	 gatherCntB <= gatherCntB+1;
-      else if (last_chan && last_pass) 
+   rule gatherB if (gather_phaseB);
+      if (valueOf(gatherSz)==1) begin
 	 gatherCntB <= 0;
-      match {.acc, .*} <- adder.response.get;
-      accumFifos[chan][gatherCntB+1].enq(acc);
-      //if (verbose) $display("gatherB=%d chan=%d last_chan=%d last_pass=%d", gatherCntB, chan, last_chan, last_pass);
-      //if (verbose) $display("gatherB: accumFifos[%d][%d].enq %d", chan, gatherCntB+1, last_pass);
+	 lastCntB <= 0;
+	 if(verbose) $display("gatherB reset");
+      end
+      else begin
+	 let chan <- toGet(chanFifos[2]).get;
+	 let last_chan = chan == fromInteger(valueOf(K)-1);
+	 let last_pass = gatherCntB+2 == fromInteger(valueOf(gatherSz));
+	 if (last_chan && !last_pass)
+	    gatherCntB <= gatherCntB+1;
+	 else if (last_chan && last_pass) begin
+	    gatherCntB <= 0;
+	    lastCntB <= 0;
+	    if(verbose) $display("gatherB reset");
+	 end
+	 match {.acc, .*} <- adder.response.get;
+	 accumFifos[chan][gatherCntB+1].enq(acc);
+	 //if (verbose) $display("gatherB=%d chan=%d last_chan=%d last_pass=%d", gatherCntB, chan, last_chan, last_pass);
+	 //if (verbose) $display("gatherB: accumFifos[%d][%d].enq %d", chan, gatherCntB+1, last_pass);
+      end
    endrule
    
 
@@ -428,7 +448,7 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
    interface Vector pipes = dotpipes;
    interface SharedDotProdDebug debug;
       interface PipeOut  macCount = toPipeOut(macs._read);
-      method    Bit#(TLog#(K)) chan(); return chanReg; endmethod
+      method    Bit#(TLog#(K)) chan(); return chanRegs[0]; endmethod
    endinterface
 endmodule : mkSharedDotProdServer
 
@@ -761,7 +781,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       rule finishSourceB;
 	 UInt#(TLog#(K)) in = fromInteger(k);
 	 int kint = fromInteger(k);
-	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceB[")+fshow(kint)+fshow("].finish")));
+	 if (timing || verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceB[")+fshow(kint)+fshow("].finish")));
 	 let b <- sourceB[k].finish();
       endrule
    end
@@ -801,7 +821,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       endrule
 
       rule finishSourceA;
-	 if (verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceA[")+fshow(jint)+fshow("].finish ")));
+	 if (timing || verbose || verbose1) $display($format(fshow(cycles)+fshow("    sourceA[")+fshow(jint)+fshow("].finish ")));
 	 let b <- sourceA[j].finish();
       endrule
 
@@ -812,7 +832,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	 let b <- sinks[j].finish();
 	 let c = dotprodCount-fromInteger(kk);
 	 int jint = fromInteger(j);
-	 if (verbose1) $display($format(fshow(cycles)+fshow("    finishSink c")+fshow(c)+fshow(" j=")+fshow(jint)));
+	 if (timing || verbose1) $display($format(fshow(cycles)+fshow("    finishSink c")+fshow(c)+fshow(" j=")+fshow(jint)));
 	 dotprodCount <= c;
 	 if (c == 0) begin
 	    running <= False;
@@ -936,6 +956,7 @@ module  mkDramMatrixMultiply(DramMatrixMultiply#(N,TMul#(N,32)));
    method finish = dmaMMF.finish;
    interface DmaMatrixMultiplyDebug debug = dmaMMF.debug;
 endmodule
+
 
 interface Mm#(numeric type n);
    interface MmRequest mmRequest;
