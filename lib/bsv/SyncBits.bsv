@@ -47,7 +47,7 @@ module mkSyncBits#(a initValue, Clock sClkIn, Reset sRst, Clock dClkIn, Reset dR
       ff0 <= value;
    endmethod: send
 endmodule
-
+/* Not needed?? -- jca
 module mkSyncBitsFromCC#(a initValue, Clock dClkIn, Reset dRst)(SyncBitIfc#(a))
    provisos (Bits#(a,awidth));
    Clock sClkIn <- exposeCurrentClock();
@@ -69,3 +69,4 @@ module mkSyncBits128#(Clock sClkIn, Reset sRst, Clock dClkIn, Reset dRst)(SyncBi
    method read = sbits.read;
    method send = sbits.send;
 endmodule: mkSyncBits128
+*/
