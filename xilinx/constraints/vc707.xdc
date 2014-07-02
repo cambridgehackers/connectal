@@ -8,6 +8,15 @@
 ##
 ######################################################################################################
 
+#
+# JTAG
+#
+#set_property LOC BSCAN_X0Y0 [get_cells pciehost/*/bscan_bscan]
+#set_property LOC BSCAN_X0Y2 [get_cells */*bscanRequest_bscan_bscan]
+#set_property LOC {BSCAN_X0Y2} [get_cells portalTop/top_bscanRequest_bscan_bscan]
+#set_property LOC {BSCAN_X0Y0} [get_cells pciehost/traceif/bscan_bscan]
+
+
 ######################################################################################################
 # PIN ASSIGNMENTS
 ######################################################################################################
@@ -137,12 +146,6 @@ set_property LOC RAMB36_X13Y17 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i
 set_property LOC RAMB36_X14Y17 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[5].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
 set_property LOC RAMB36_X14Y18 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[6].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
 set_property LOC RAMB36_X14Y19 [get_cells {*/pcie_7x_v2_1_i/pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[7].ram/use_tdp.ramb36/genblk*.bram36_tdp_bl.bram36_tdp_bl}]
-
-#
-# JTAG
-#
-set_property LOC BSCAN_X0Y0 [get_cells pciehost/*/*_bscan]
-set_property LOC BSCAN_X0Y2 [get_cells */*bscanRequest_bscan_bscan]
 
 ######################################################################################################
 # AREA GROUPS
