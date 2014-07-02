@@ -72,7 +72,7 @@ module mkPcieTracer(PcieTracer);
    // TODO: lift BscanBram to *Top.bsv
 `ifndef BSIM
    Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
-   BscanTop bscan <- mkBscanTop(1);
+   BscanTop bscan <- mkBscanTop(2);
    BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(123, bscanPcieTraceBramWrAddrReg, bscan);
 `endif
 
