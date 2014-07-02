@@ -44,6 +44,7 @@ interface BscanTop;
    method Action      tdo(Bit#(1) v);
    method Bit#(1)     update();
    method Bool        first();
+   method Bit#(1)     selsync();
 endinterface
 module mkBscanTop#(Integer bus)(BscanTop);
    Clock defaultClock <- exposeCurrentClock();
@@ -71,6 +72,9 @@ module mkBscanTop#(Integer bus)(BscanTop);
    method update = bscan.update;
    method first();
       return selected.read() && !selectdelay;
+   endmethod
+   method selsync();
+      return pack(selected.read());
    endmethod
 endmodule
 
