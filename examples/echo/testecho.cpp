@@ -12,7 +12,7 @@
 #include "GeneratedTypes.h"
 #include "SwallowProxy.h"
 
-#define LOOP_COUNT 1000
+#define LOOP_COUNT 1//000
 #define SEPARATE_EVENT_THREAD
 //#define USE_MUTEX_SYNC
 
@@ -40,6 +40,17 @@ typedef sem_t SEM_TYPE;
 #else // use inline sync
 #define PREPAREWAIT(A) (A) = 0
 #define CHECKSEM(A) (!(A))
+#endif
+
+#if 0
+#define START_TIMER(A) start_timer(A)
+#define CATCH_TIMER(A) catch_timer(A)
+#define LAP_TIMER(A) lap_timer(A)
+#else
+/* using timers make it difficult to compare AXI bus traces */
+#define START_TIMER(A) {}
+#define CATCH_TIMER(A) {}
+#define LAP_TIMER(A) (0)
 #endif
 
 static SEM_TYPE sem_heard2;
@@ -73,10 +84,10 @@ public:
 	echoRequestProxy->say2(v, 2*v);
     }
     virtual void heard2(uint32_t a, uint32_t b) {
-        catch_timer(20);
+        CATCH_TIMER(20);
         SEMPOST(&sem_heard2);
         //fprintf(stderr, "heard an echo2: %ld %ld\n", a, b);
-        //catch_timer(25);
+        //CATCH_TIMER(25);
     }
     EchoIndication(unsigned int id, PortalPoller *poller) : EchoIndicationWrapper(id, poller) {}
 };
@@ -84,22 +95,22 @@ public:
 static void call_say(int v)
 {
     printf("[%s:%d] %d\n", __FUNCTION__, __LINE__, v);
-    start_timer(0);
+    START_TIMER(0);
     PREPAREWAIT(sem_heard2);
     echoRequestProxy->say(v);
     SEMWAIT(&sem_heard2);
-    printf("call_say: elapsed %" PRIu64 "\n", lap_timer(0));
+    printf("call_say: elapsed %" PRIu64 "\n", LAP_TIMER(0));
 }
 
 static void call_say2(int v, int v2)
 {
-    start_timer(0);
+    START_TIMER(0);
     PREPAREWAIT(sem_heard2);
-    catch_timer(0);
+    CATCH_TIMER(0);
     echoRequestProxy->say2(v, v2);
-    catch_timer(19);
+    CATCH_TIMER(19);
     SEMWAIT(&sem_heard2);
-    catch_timer(30);
+    CATCH_TIMER(30);
 }
 
 int main(int argc, const char **argv)
@@ -118,15 +129,15 @@ int main(int argc, const char **argv)
     printf("Timer tests\n");
     init_timer();
     for (int i = 0; i < 1000; i++) {
-      start_timer(0);
-      catch_timer(1);
-      catch_timer(2);
-      catch_timer(3);
-      catch_timer(4);
-      catch_timer(5);
-      catch_timer(6);
-      catch_timer(7);
-      catch_timer(8);
+      START_TIMER(0);
+      CATCH_TIMER(1);
+      CATCH_TIMER(2);
+      CATCH_TIMER(3);
+      CATCH_TIMER(4);
+      CATCH_TIMER(5);
+      CATCH_TIMER(6);
+      CATCH_TIMER(7);
+      CATCH_TIMER(8);
     }
     print_timer(1000);
 #endif
@@ -139,10 +150,10 @@ int main(int argc, const char **argv)
     call_say(v*93);
     printf("[%s:%d] run %d loops\n\n", __FUNCTION__, __LINE__, LOOP_COUNT);
     init_timer();
-    start_timer(1);
+    START_TIMER(1);
     for (int i = 0; i < LOOP_COUNT; i++)
         call_say2(v, v*3);
-uint64_t elapsed = lap_timer(1);
+uint64_t elapsed = LAP_TIMER(1);
     printf("TEST TYPE: "
 #ifndef SEPARATE_EVENT_THREAD
        "INLINE"
