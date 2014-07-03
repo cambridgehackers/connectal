@@ -32,7 +32,6 @@ import XbsvXilinxCells   :: *;
 import PS7LIB::*;
 import PPS7LIB::*;
 import XADC::*;
-import ConnectableWithTrace::*;
 import CtrlMux::*;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;

@@ -33,7 +33,6 @@ import PS7LIB::*;
 import PPS7LIB::*;
 import XADC::*;
 import FIFOF::*;
-import ConnectableWithTrace::*;
 import CtrlMux::*;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
