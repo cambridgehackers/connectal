@@ -38,34 +38,23 @@ module mkBramServerMux#(Vector#(numServers, BRAMServer#(Bit#(asz),dtype)) bramSe
 	     Bits#(dtype,dsz),
 	     Bits#(Tuple2#(Bit#(csz), BRAM::BRAMRequest#(Bit#(asz), dtype)), c__)
 	     );
-   FIFO#(Bit#(csz)) clientNumberFifo <- mkPipelineFIFO();
-   FIFO#(Tuple2#(Bit#(csz),BRAMRequest#(Bit#(asz), dtype))) reqFifo <- mkPipelineFIFO();
+   let numServers = valueOf(numServers);
    FIFO#(dtype) responseFifo <- mkPipelineFIFO();
-   rule request;
-      let clientreq = reqFifo.first();
-      reqFifo.deq();
-      let clientNumber = tpl_1(clientreq);
-      let req          = tpl_2(clientreq);
-      bramServers[clientNumber].request.put(req);
-   endrule
-   rule respond;
-      let clientNumber = clientNumberFifo.first();
-      clientNumberFifo.deq();
-      let response <- bramServers[clientNumber].response.get();
-      responseFifo.enq(response);
-   endrule
+   for (Integer i = 0; i < numServers; i = i + 1) begin
+      rule respond;
+         let response <- bramServers[i].response.get();
+         responseFifo.enq(response);
+      endrule
+   end
    interface BRAMServer bramServer;
       interface Put request;
 	 method Action put(BRAMRequest#(Bit#(aszn), dtype) request);
 	    Bit#(csz) clientNumber = request.address[valueOf(aszn)-1:valueOf(asz)];
-	    clientNumberFifo.enq(clientNumber);
-	    reqFifo.enq(tuple2(clientNumber,
-			       BRAMRequest {
+            bramServers[clientNumber].request.put( BRAMRequest {
 					    write: request.write,
 					    responseOnWrite: request.responseOnWrite,
 					    address: truncate(request.address),
-					    datain: request.datain
-					    }));
+					    datain: request.datain });
 	 endmethod
       endinterface
       interface Get response;
