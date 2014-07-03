@@ -8,15 +8,6 @@
 ##
 ######################################################################################################
 
-#
-# JTAG
-#
-#set_property LOC BSCAN_X0Y0 [get_cells pciehost/*/bscan_bscan]
-#set_property LOC BSCAN_X0Y2 [get_cells */*bscanRequest_bscan_bscan]
-#set_property LOC {BSCAN_X0Y2} [get_cells portalTop/top_bscanRequest_bscan_bscan]
-#set_property LOC {BSCAN_X0Y0} [get_cells pciehost/traceif/bscan_bscan]
-
-
 ######################################################################################################
 # PIN ASSIGNMENTS
 ######################################################################################################
