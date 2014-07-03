@@ -34,6 +34,8 @@ endtypeclass
 //`define TRACE_AXI
 //`define AXI_READ_TIMING
 //`define AXI_WRITE_TIMING
+`define TRACE_ADDR_WIDTH 12 //8
+`define TRACE_ADDR_SIZE  4096 //256
 
 instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrWidth, busWidth,idWidth))
    provisos(Add#(0,addrWidth,32));
@@ -45,13 +47,13 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
    
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
-   Reg#(Bit#(8)) addrReg <- mkReg(9);
+   Reg#(Bit#(`TRACE_ADDR_WIDTH)) addrReg <- mkReg(9);
    BscanTop bscan <- mkBscanTop(2);
-   BscanBram#(Bit#(8), Bit#(64)) bscanBram <- mkBscanBram(456, addrReg, bscan);
+   BscanBram#(Bit#(`TRACE_ADDR_WIDTH), Bit#(64)) bscanBram <- mkBscanBram(456, addrReg, bscan);
    BRAM_Configure bramCfg = defaultValue;
-   bramCfg.memorySize = 256;
+   bramCfg.memorySize = `TRACE_ADDR_SIZE;
    bramCfg.latency = 1;
-   BRAM2Port#(Bit#(8), Bit#(64)) traceBram <- mkBRAM2Server(bramCfg);
+   BRAM2Port#(Bit#(`TRACE_ADDR_WIDTH), Bit#(64)) traceBram <- mkBRAM2Server(bramCfg);
    mkConnection(bscanBram.bramClient, traceBram.portB);
 
    Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF);
