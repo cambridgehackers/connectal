@@ -28,7 +28,6 @@ import FIFO              :: *;
 import FIFOF        :: *;
 import PCIE               :: *;
 import BRAM         :: *;
-import Bscan          :: *;
 import BramMux        :: *;
 
 typedef 11 TlpTraceAddrSize;
@@ -52,6 +51,7 @@ interface TlpTraceData;
    interface Reg#(Bit#(TlpTraceAddrSize)) fromPcieTraceBramWrAddr;
    interface Reg#(Bit#(TlpTraceAddrSize))   toPcieTraceBramWrAddr;
    interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) bramServer;
+   interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) bscanBramServer;
 endinterface
 interface PcieTracer;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
@@ -69,12 +69,6 @@ module mkPcieTracer(PcieTracer);
    Reg#(Bit#(TlpTraceAddrSize)) fromPcieTraceBramWrAddrReg <- mkReg(0);
    Reg#(Bit#(TlpTraceAddrSize))   toPcieTraceBramWrAddrReg <- mkReg(0);
    Integer memorySize = 2**valueOf(TlpTraceAddrSize);
-   // TODO: lift BscanBram to *Top.bsv
-`ifndef BSIM
-   Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
-   BscanTop bscan <- mkBscanTop(2);
-   BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(123, bscanPcieTraceBramWrAddrReg, bscan);
-`endif
 
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = memorySize;
@@ -86,13 +80,12 @@ module mkPcieTracer(PcieTracer);
    bramServers[1] =   toPcieTraceBram.portA;
    BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bramMuxReg <- mkBramServerMux(bramServers);
 
-`ifndef BSIM
+//`ifndef BSIM ????? jca
    Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bscanBramServers;
    bscanBramServers[0] = fromPcieTraceBram.portB;
    bscanBramServers[1] =   toPcieTraceBram.portB;
    BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bscanBramMux <- mkBramServerMux(bscanBramServers);
-   mkConnection(pcieBscanBram.bramClient, bscanBramMux.bramServer);
-`endif
+//`endif
 
    Reg#(Bit#(32)) timestamp <- mkReg(0);
    rule incTimestamp;
@@ -175,5 +168,6 @@ module mkPcieTracer(PcieTracer);
       interface Reg fromPcieTraceBramWrAddr = fromPcieTraceBramWrAddrReg;
       interface Reg   toPcieTraceBramWrAddr =   toPcieTraceBramWrAddrReg;
       interface Server bramServer = bramMuxReg.bramServer;
+      interface Server bscanBramServer = bscanBramMux.bramServer;
    endinterface
 endmodule: mkPcieTracer

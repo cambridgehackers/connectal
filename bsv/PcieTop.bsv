@@ -30,9 +30,6 @@ import DefaultValue      :: *;
 import PcieSplitter      :: *;
 import PcieTracer        :: *;
 import Xilinx            :: *;
-`ifndef BSIM
-import PcieEndpointX7 :: *;
-`endif
 import PCIEWRAPPER       :: *;
 import Portal            :: *;
 import Leds              :: *;
@@ -42,6 +39,10 @@ import MemMasterEngine   :: *;
 import PcieCsr           :: *;
 import MemSlave          :: *;
 import MemTypes          :: *;
+`ifndef BSIM
+import PcieEndpointX7    :: *;
+import Bscan             :: *;
+`endif
 
 `ifndef DataBusWidth
 `define DataBusWidth 64
@@ -68,17 +69,6 @@ typedef `DataBusWidth DataBusWidth;
 typedef `NumberOfMasters NumberOfMasters;
 typedef `PinType PinType;
 
-interface PcieTop#(type ipins);
-`ifndef BSIM
-   (* prefix="PCIE" *)
-   interface PciewrapPci_exp#(PcieLanes) pcie;
-   (* always_ready *)
-   method Bit#(NumLeds) leds();
-   (* prefix="" *)
-   interface ipins       pins;
-`endif
-endinterface
-
 interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(16,MSIX_Entry)              msixEntry;
    interface MemMaster#(32,32)                   master;
@@ -89,14 +79,6 @@ endinterface
 
 (* synthesize *)
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
-// provisos(
-//    Mul#(TDiv#(dsz, 8), 8, dsz),
-//     Add#(a__, TDiv#(dsz, 32), 8),
-//     Add#(b__, TMul#(32, TDiv#(dsz, 32)), 256),
-//     Add#(c__, TMul#(8, TDiv#(dsz, 32)), 64),
-//     Add#(d__, dsz, 256),
-//     Add#(e__, 32, dsz),
-//     Mul#(TDiv#(dsz, 32), 32, dsz));
    Clock epClock125 <- exposeCurrentClock();
    Reset epReset125 <- exposeCurrentReset();
    let dispatcher <- mkTLPDispatcher;
@@ -129,6 +111,12 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
                                  interface request = arbiter.outToBus;
                                  interface response = dispatcher.inFromBus;
                               endinterface));
+`ifndef BSIM
+   BscanTop bscan <- mkBscanTop(2);
+   Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
+   BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(123, bscanPcieTraceBramWrAddrReg, bscan);
+   mkConnection(pcieBscanBram.bramClient, traceif.tlpdata.bscanBramServer);
+`endif
 
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs(traceif.tlpdata);
    MemSlave#(32,32) my_slave <- mkMemSlave(csr.client);
@@ -151,6 +139,17 @@ module mkSynthesizeablePortalTop(PortalTop#(40, DataBusWidth, PinType, NumberOfM
    interface leds = top.leds;
    interface pins = top.pins;
 endmodule
+
+interface PcieTop#(type ipins);
+`ifndef BSIM
+   (* prefix="PCIE" *)
+   interface PciewrapPci_exp#(PcieLanes) pcie;
+   (* always_ready *)
+   method Bit#(NumLeds) leds();
+   (* prefix="" *)
+   interface ipins       pins;
+`endif
+endinterface
 
 `ifndef BSIM
 (* no_default_clock, no_default_reset *)
