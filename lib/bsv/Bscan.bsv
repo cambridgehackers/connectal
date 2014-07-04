@@ -80,6 +80,7 @@ endmodule
 
 interface BscanBram#(type atype, type dtype);
    interface BRAMClient#(atype, dtype) bramClient;
+   method Bit#(1) data_out();
 endinterface
 
 module mkBscanBram#(Integer id, atype addr, BscanTop bscan)(BscanBram#(atype, dtype))
@@ -105,9 +106,6 @@ module mkBscanBram#(Integer id, atype addr, BscanTop bscan)(BscanBram#(atype, dt
    endrule
    rule shiftrule if (bscan.shift() == 1);
        shiftReg <= { bscan.tdi(), shiftReg[dsz-1:1] };
-   endrule
-   rule tdo;
-      bscan.tdo(shiftReg[0]);
    endrule
    rule sendwrite if(bscan.sel() == 1 && bscan.update() == 1);
        startWrite.send();
@@ -136,4 +134,8 @@ module mkBscanBram#(Integer id, atype addr, BscanTop bscan)(BscanBram#(atype, dt
 	 endmethod
       endinterface
    endinterface
+   method Bit#(1) data_out();
+      // the output lines are all OR'ed together when going back to the BSCAN core
+      return shiftReg[0];
+   endmethod
 endmodule

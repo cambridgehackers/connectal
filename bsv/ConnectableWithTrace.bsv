@@ -55,6 +55,9 @@ instance ConnectableWithTrace#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Sla
    bramCfg.latency = 1;
    BRAM2Port#(Bit#(`TRACE_ADDR_WIDTH), Bit#(64)) traceBram <- mkBRAM2Server(bramCfg);
    mkConnection(bscanBram.bramClient, traceBram.portB);
+   rule tdorule;
+      bscan.tdo(bscanBram.data_out());
+   endrule
 
    Vector#(5, FIFOF#(Bit#(64))) bscan_fifos <- replicateM(mkFIFOF);
 

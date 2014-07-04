@@ -48,6 +48,9 @@ module mkBscanRequest#(BscanIndication indication)(BscanRequest);
    BscanBram#(Bit#(8),Bit#(64)) bscanBram <- mkBscanBram(123, addrReg, bscan);
    let bram <- mkBRAM2Server(defaultValue);
    mkConnection(bscanBram.bramClient, bram.portB);
+   rule tdorule;
+      bscan.tdo(bscanBram.data_out());
+   endrule
 
    rule bscanGetRule2;
       let v <- bram.portA.response.get();
