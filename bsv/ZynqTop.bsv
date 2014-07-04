@@ -23,6 +23,7 @@
 import Clocks :: *;
 import Vector            :: *;
 import Connectable       :: *;
+import ConnectableWithTrace::*;
 import Portal            :: *;
 import Leds              :: *;
 import Top               :: *;
@@ -35,6 +36,7 @@ import XADC::*;
 import CtrlMux::*;
 import AxiMasterSlave    :: *;
 import AxiDma            :: *;
+import Bscan             :: *;
 
 `ifdef USES_FCLK1
 `define CLOCK_ARG  ps7.fclkclk[1],
@@ -103,7 +105,8 @@ module mkZynqTop(ZynqTop);
 `endif
 
    PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG clocked_by mainclock, reset_by mainreset);
-   mkConnection(ps7, top, clocked_by mainclock, reset_by mainreset);
+   BscanTop bscan <- mkBscanTop(2);
+   mkConnectionWithTrace(ps7, top, bscan, clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;

@@ -26,6 +26,7 @@ import DefaultValue::*;
 import GetPut::*;
 import Connectable::*;
 import ConnectableWithTrace::*;
+import Bscan::*;
 import Vector::*;
 import PPS7LIB::*;
 import CtrlMux::*;
@@ -860,11 +861,11 @@ module mkPS7(PS7);
     interface Pps7Emioi2c       i2c = ps7.i2c;
 endmodule
 
-instance Connectable#(PS7, PortalTop#(32,64,ipins,nMasters));
-   module mkConnection#(PS7 ps7, PortalTop#(32,64,ipins,nMasters) top)(Empty);
+instance ConnectableWithTrace#(PS7, PortalTop#(32,64,ipins,nMasters), BscanTop);
+   module mkConnectionWithTrace#(PS7 ps7, PortalTop#(32,64,ipins,nMasters) top, BscanTop bscan)(Empty);
 
       Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
-      mkConnectionWithTrace(ps7.m_axi_gp[0].client, ctrl);
+      mkConnectionWithTrace(ps7.m_axi_gp[0].client, ctrl, bscan);
 
       module mkAxiMasterConnection#(Integer i)(Axi3Master#(32,64,6));
 	 let m_axi <- mkAxiDmaMaster(top.masters[i]);
