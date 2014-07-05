@@ -78,6 +78,27 @@ module mkBscanTop#(Integer bus)(BscanTop);
    endmethod
 endmodule
 
+interface BscanLocal;
+   method Action tdo1(Bit#(1) v);
+   method Action tdo2(Bit#(1) v);
+endinterface
+
+module mkBscanLocal#(BscanTop bscan)(BscanLocal);
+   Wire#(Bit#(1)) tdo_wire1 <- mkDWire(0);
+   Wire#(Bit#(1)) tdo_wire2 <- mkDWire(0);
+
+   rule tdo_rule;
+       bscan.tdo(tdo_wire1 | tdo_wire2);
+   endrule
+
+   method Action tdo1(Bit#(1) v);
+       tdo_wire1 <= v;
+   endmethod
+   method Action tdo2(Bit#(1) v);
+       tdo_wire2 <= v;
+   endmethod
+endmodule
+
 interface BscanBram#(type atype, type dtype);
    interface BRAMClient#(atype, dtype) bramClient;
    method Bit#(1) data_out();
