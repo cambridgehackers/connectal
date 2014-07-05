@@ -44,6 +44,32 @@ interface BscanTop;
    method Bit#(1)     update();
    method Bool        first();
 endinterface
+`ifdef BSIM
+module mkBscanTop#(Integer bus)(BscanTop);
+   Clock defaultClock <- exposeCurrentClock();
+   Reset defaultReset <- exposeCurrentReset();
+   interface tck = defaultClock;
+   interface rst = defaultReset;
+   method tdi;
+       return 0;
+   endmethod
+   method tdo;
+       return 0;
+   endmethod
+   method capture;
+       return 0;
+   endmethod
+   method shift;
+       return 0;
+   endmethod
+   method update;
+       return 0;
+   endmethod
+   method first();
+      return 0;
+   endmethod
+endmodule
+`else
 module mkBscanTop#(Integer bus)(BscanTop);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
@@ -77,6 +103,7 @@ module mkBscanTop#(Integer bus)(BscanTop);
       return selected.read() && !selectdelay;
    endmethod
 endmodule
+`endif
 
 interface BscanLocal;
    method Action tdo1(Bit#(1) v);
