@@ -126,8 +126,13 @@ int main(int argc, const char **argv)
 
 #define LARGE_MAT
 #ifdef LARGE_MAT
+#ifdef BSIM
   int A = 32;
   int B = 16;
+#else
+  int A = 512;
+  int B = 256;
+#endif
   if (argc > 1) {
     B = strtoul(argv[1], 0, 0);
     A = 2*B;
@@ -180,7 +185,8 @@ int main(int argc, const char **argv)
     dumpMat<float>("pm1 * pm2", "%5.1f", pm3);
     dumpMat<float>("m1 * m2", "%5.1f", m3);
   }
-  bool eq = std::equal(m3.begin<float>(), m3.end<float>(), pm3.begin<float>());
+  //bool eq = std::equal(m3.begin<float>(), m3.end<float>(), pm3.begin<float>());
+  bool eq = pm3.compare(m3);
   //dumpMat<int>("pm3", "%08x", pm3);
   fprintf(stderr, "eq=%d\n", eq);
   //device->finish();
