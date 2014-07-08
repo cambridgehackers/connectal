@@ -84,7 +84,6 @@ class PortalInternal
   char *name;
   volatile unsigned int *map_base;
   volatile unsigned int *ind_fifo_base;
-  volatile unsigned int *req_fifo_base;
   int sendMessage(PortalMessage *msg);
   friend class Directory;
 };
@@ -173,7 +172,7 @@ extern int portalExec_timeout;
 
 /* Offsets of mapped registers */
 
-#define PORTAL_REQ_FIFO_OFFSET  (0<<14)
+#define PORTAL_REQ_FIFO_OFFSET_32  ((0<<14)/sizeof(uint32_t))
 #define PORTAL_IND_FIFO_OFFSET  (2<<14)
 #define PORTAL_IND_REG_OFFSET_32   ((3<<14)/sizeof(uint32_t))
 

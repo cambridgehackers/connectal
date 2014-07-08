@@ -132,7 +132,7 @@ int main(int argc, const char **argv)
     int i = 0;
     buf[i++] = payload.v;
     for (int i = 4/4-1; i >= 0; i--)
-      *((volatile unsigned int*)(((long)intarr[1]->req_fifo_base) + FIFO_OFFSET_SimpleRequestProxy_say1)) = buf[i];
+      *(intarr[1]->map_base + PORTAL_REQ_FIFO_OFFSET_32 + FIFO_OFFSET_SimpleRequestProxy_say1/sizeof(uint32_t)) = buf[i];
   };
   manual_event();
 
@@ -151,7 +151,7 @@ int main(int argc, const char **argv)
     buf[i++] = payload.b;
     buf[i++] = payload.a;
     for (int i = 8/4-1; i >= 0; i--)
-      *((volatile unsigned int*)(((long)intarr[1]->req_fifo_base) + FIFO_OFFSET_SimpleRequestProxy_say2)) = buf[i];
+      *(intarr[1]->map_base + PORTAL_REQ_FIFO_OFFSET_32 + FIFO_OFFSET_SimpleRequestProxy_say2/sizeof(uint32_t)) = buf[i];
   };
   manual_event();
 }
