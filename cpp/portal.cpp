@@ -56,11 +56,6 @@
 #define MAX_TIMER_COUNT      16
 #define TIMING_INTERVAL_SIZE  6
 
-#define REG_INTERRUPT_FLAG    0
-#define REG_INTERRUPT_MASK    1
-#define REG_INTERRUPT_COUNT   2
-#define REG_QUEUE_STATUS      6
-
 #define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
 #define ENABLE_INTERRUPTS(A) WRITEL(A, &((A)->ind_reg_base[REG_INTERRUPT_MASK]), 1)
@@ -243,10 +238,10 @@ PortalInternal::PortalInternal(int id)
     connect_socket(&(p->write));
 #endif
 
-    req_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+(0<<14));
-    req_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(1<<14));
-    ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+(2<<14));
-    ind_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+(3<<14));
+    req_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+PORTAL_REQ_FIFO_OFFSET);
+    req_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+PORTAL_REQ_REG_OFFSET);
+    ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+PORTAL_IND_FIFO_OFFSET);
+    ind_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+PORTAL_IND_REG_OFFSET);
 errlab:
     if (rc != 0) {
       printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);

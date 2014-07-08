@@ -172,4 +172,16 @@ void portalTrace_start();
 void portalTrace_stop();
 extern int portalExec_timeout;
 
+/* Offsets of mapped registers */
+
+#define PORTAL_REQ_FIFO_OFFSET  (0<<14)
+#define PORTAL_REQ_REG_OFFSET   (1<<14)
+#define PORTAL_IND_FIFO_OFFSET  (2<<14)
+#define PORTAL_IND_REG_OFFSET   (3<<14)
+
+#define REG_INTERRUPT_FLAG    0
+#define REG_INTERRUPT_MASK    1
+#define REG_INTERRUPT_COUNT   2
+#define REG_QUEUE_STATUS      6
+
 #endif // _PORTAL_H_
