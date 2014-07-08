@@ -51,7 +51,8 @@ matrixtests =testmm2.2.2         \
 	    testmm16.16.2        
 
 tests    =  $(memtests)          \
-	    $(matrixtests)         
+	    $(matrixtests)       \
+	    simple_manual
 
 #################################################################################################
 # examples
