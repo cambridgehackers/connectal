@@ -53,7 +53,7 @@ ifeq ($(origin TOP),undefined)
     MKTOP=mkZynqTop
     endif
     ifeq ($(BOARD),zc706)
-    TOP=$(XBSVDIR)/bsv/Zc706Top.bsv
+    TOP=$(XBSVDIR)/bsv/ZynqTop.bsv
     MKTOP=mkZynqTop
     endif
 endif
