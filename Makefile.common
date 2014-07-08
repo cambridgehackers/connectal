@@ -14,7 +14,7 @@ run.%:
 	make XBSV_DEBUG=1 $*
 
 ifeq ($(origin XBSVDIR),undefined)
-XBSVDIR=../..
+XBSVDIR=$(shell cd ../..; /bin/pwd)
 endif
 ifneq ($(origin IPDIR),undefined)
 XBSVFLAGS += --ipdir=$(IPDIR)
