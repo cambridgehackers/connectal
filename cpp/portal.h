@@ -82,9 +82,8 @@ class PortalInternal
   int fd;
   struct portal *p;
   char *name;
-  volatile unsigned int *ind_reg_base;
+  volatile unsigned int *map_base;
   volatile unsigned int *ind_fifo_base;
-  volatile unsigned int *req_reg_base;
   volatile unsigned int *req_fifo_base;
   int sendMessage(PortalMessage *msg);
   friend class Directory;
@@ -175,13 +174,12 @@ extern int portalExec_timeout;
 /* Offsets of mapped registers */
 
 #define PORTAL_REQ_FIFO_OFFSET  (0<<14)
-#define PORTAL_REQ_REG_OFFSET   (1<<14)
 #define PORTAL_IND_FIFO_OFFSET  (2<<14)
-#define PORTAL_IND_REG_OFFSET   (3<<14)
+#define PORTAL_IND_REG_OFFSET_32   ((3<<14)/sizeof(uint32_t))
 
-#define REG_INTERRUPT_FLAG    0
-#define REG_INTERRUPT_MASK    1
-#define REG_INTERRUPT_COUNT   2
-#define REG_QUEUE_STATUS      6
+#define IND_REG_INTERRUPT_FLAG    (PORTAL_IND_REG_OFFSET_32 + 0)
+#define IND_REG_INTERRUPT_MASK    (PORTAL_IND_REG_OFFSET_32 + 1)
+#define IND_REG_INTERRUPT_COUNT   (PORTAL_IND_REG_OFFSET_32 + 2)
+#define IND_REG_QUEUE_STATUS      (PORTAL_IND_REG_OFFSET_32 + 6)
 
 #endif // _PORTAL_H_

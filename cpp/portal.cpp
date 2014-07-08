@@ -58,7 +58,7 @@
 
 #define USE_INTERRUPTS
 #ifdef USE_INTERRUPTS
-#define ENABLE_INTERRUPTS(A) WRITEL(A, &((A)->ind_reg_base[REG_INTERRUPT_MASK]), 1)
+#define ENABLE_INTERRUPTS(A) WRITEL(A, &((A)->map_base[IND_REG_INTERRUPT_MASK]), 1)
 #else
 #define ENABLE_INTERRUPTS(A)
 #endif
@@ -162,9 +162,8 @@ PortalInternal::PortalInternal(PortalInternal *p)
   : fd(p->fd),
     p(p->p),
     name(strdup(p->name)),
-    ind_reg_base(p->ind_reg_base),
+    map_base(p->map_base),
     ind_fifo_base(p->ind_fifo_base),
-    req_reg_base(p->req_reg_base),
     req_fifo_base(p->req_fifo_base)
 {
 }
@@ -172,9 +171,8 @@ PortalInternal::PortalInternal(PortalInternal *p)
 
 PortalInternal::PortalInternal(int id)
   : fd(-1),
-    ind_reg_base(0x0), 
+    map_base(0x0), 
     ind_fifo_base(0x0),
-    req_reg_base(0x0),
     req_fifo_base(0x0)
 {
     int rc = 0;
@@ -239,9 +237,8 @@ PortalInternal::PortalInternal(int id)
 #endif
 
     req_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+PORTAL_REQ_FIFO_OFFSET);
-    req_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+PORTAL_REQ_REG_OFFSET);
     ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+PORTAL_IND_FIFO_OFFSET);
-    ind_reg_base   = (volatile unsigned int*)(((unsigned char *)dev_base)+PORTAL_IND_REG_OFFSET);
+    map_base   = (volatile unsigned int*)(unsigned char *)dev_base;
 errlab:
     if (rc != 0) {
       printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
@@ -262,28 +259,10 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   unsigned int buf[128];
   msg->marshall(buf);
 
-#ifdef MMAP_HW //DEBUG INFO
-  if (0) {
-    volatile unsigned int *addr = (volatile unsigned int *)req_reg_base;
-    fprintf(stderr, "requestFiredCount=%x outOfRangeWriteCount=%x\n",addr[0], addr[1]);
-    //addr[2] = 0xffffffff;
-  }
-#endif
   for (int i = msg->size()/4-1; i >= 0; i--){
     volatile unsigned int *ptr = (volatile unsigned int*)(((long)req_fifo_base) + msg->fifo_offset);
-    // req_fifo_base is derived from dev_base, which is the address returned from mmap in PortalInternal::PortalInternal(int id)
     WRITEL(this, ptr, buf[i]);
   }
-  //uint64_t after_requestt = catch_timer(12);
-  //print_dbg_request_intervals();
-  //fprintf(stderr, "(%s) sendMessage\n", name);
-#ifdef MMAP_HW //DEBUG INFO
-  if (0)
-  for (int i = 0; i < 3; i++) {
-    volatile unsigned int *addr = (volatile unsigned int *)req_reg_base;
-    fprintf(stderr, "requestFiredCount=%x outOfRangeWriteCount=%x getWordCount=%x putWordCount=%x putEnable=%x\n",addr[0], addr[1], addr[7], addr[8], addr[2]);
-  }
-#endif
   return 0;
 }
 
@@ -392,7 +371,7 @@ void PortalPoller::portalExec_end(void)
     for (int i = 0; i < numFds; i++) {
       Portal *instance = portal_wrappers[i];
       fprintf(stderr, "portalExec::disabling interrupts portal %d %s\n", i, instance->name);
-      WRITEL(instance, &(instance->ind_reg_base)[REG_INTERRUPT_MASK], 0);
+      WRITEL(instance, &(instance->map_base)[IND_REG_INTERRUPT_MASK], 0);
     }
 }
 
@@ -419,17 +398,17 @@ void* PortalPoller::portalExec_event(void)
         fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
       }
       Portal *instance = portal_wrappers[i];
-      volatile unsigned int *ind_reg_base = instance->ind_reg_base;
+      volatile unsigned int *map_base = instance->map_base;
     
       // sanity check, to see the status of interrupt source and enable
       unsigned int queue_status;
     
       // handle all messasges from this portal instance
-      while ((queue_status= READL(instance, ind_reg_base + REG_QUEUE_STATUS))) {
+      while ((queue_status= READL(instance, &map_base[IND_REG_QUEUE_STATUS]))) {
         if(0) {
-          unsigned int int_src = READL(instance, ind_reg_base + REG_INTERRUPT_FLAG);
-          unsigned int int_en  = READL(instance, ind_reg_base + REG_INTERRUPT_MASK);
-          unsigned int ind_count  = READL(instance, ind_reg_base + REG_INTERRUPT_COUNT);
+          unsigned int int_src = READL(instance, &map_base[IND_REG_INTERRUPT_FLAG]);
+          unsigned int int_en  = READL(instance, &map_base[IND_REG_INTERRUPT_MASK]);
+          unsigned int ind_count  = READL(instance, &map_base[IND_REG_INTERRUPT_COUNT]);
           fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
         }
         instance->handleMessage(queue_status-1);

@@ -101,12 +101,12 @@ static void manual_event(void)
 {
     for (int i = 0; i < 2; i++) {
       PortalInternal *instance = intarr[i];
-      volatile unsigned int *ind_reg_base = instance->ind_reg_base;
+      volatile unsigned int *map_base = instance->map_base;
       unsigned int queue_status;
-      while ((queue_status= *(ind_reg_base + REG_QUEUE_STATUS))) {
-        unsigned int int_src = *(ind_reg_base + REG_INTERRUPT_FLAG);
-        unsigned int int_en  = *(ind_reg_base + REG_INTERRUPT_MASK);
-        unsigned int ind_count  = *(ind_reg_base + REG_INTERRUPT_COUNT);
+      while ((queue_status= map_base[IND_REG_QUEUE_STATUS])) {
+        unsigned int int_src = map_base[IND_REG_INTERRUPT_FLAG];
+        unsigned int int_en  = map_base[IND_REG_INTERRUPT_MASK];
+        unsigned int ind_count  = map_base[IND_REG_INTERRUPT_COUNT];
         fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
         if (i == 0)
             indication_handleMessage(instance->ind_fifo_base, queue_status-1);
