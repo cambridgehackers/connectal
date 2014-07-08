@@ -44,6 +44,12 @@ import Bscan             :: *;
 `define CLOCK_ARG
 `endif
 
+`ifdef USES_BSCAN
+`define BSCAN_ARG  lbscan.loc[0],
+`else
+`define BSCAN_ARG
+`endif
+
 `ifndef NumberOfMasters
 `define NumberOfMasters 1
 `endif
@@ -104,9 +110,10 @@ module mkZynqTop(ZynqTop);
    endrule
 `endif
 
-   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG clocked_by mainclock, reset_by mainreset);
-   BscanTop bscan <- mkBscanTop(2);
-   mkConnectionWithTrace(ps7, top, bscan, clocked_by mainclock, reset_by mainreset);
+   BscanTop bscan <- mkBscanTop(3, clocked_by mainclock, reset_by mainreset); // Use USER3  (JTAG IDCODE address 0x22)
+   BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
+   PortalTop#(32, 64, PinType, NumberOfMasters) top <- mkPortalTop(`CLOCK_ARG `BSCAN_ARG clocked_by mainclock, reset_by mainreset);
+   mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;

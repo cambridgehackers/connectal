@@ -39,9 +39,9 @@ import MemMasterEngine   :: *;
 import PcieCsr           :: *;
 import MemSlave          :: *;
 import MemTypes          :: *;
+import Bscan             :: *;
 `ifndef BSIM
 import PcieEndpointX7    :: *;
-import Bscan             :: *;
 `endif
 
 `ifndef DataBusWidth
@@ -57,6 +57,12 @@ import Bscan             :: *;
 `define CLOCK_ARG  defaultClock
 `else
 `define CLOCK_ARG
+`endif
+
+`ifdef USES_BSCAN
+`define BSCAN_ARG  local_bscan
+`else
+`define BSCAN_ARG
 `endif
 
 // implemented in TlpReplay.cxx
@@ -75,6 +81,7 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(nSlaves,MemSlave#(40,dsz))  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
    interface Client#(TLPData#(16), TLPData#(16)) pci;
+   interface BscanTop bscanif;
 endinterface
 
 (* synthesize *)
@@ -86,6 +93,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    Vector#(NumberOfMasters,MemSlaveEngine#(DataBusWidth)) sEngine <- replicateM(mkMemSlaveEngine(my_pciId));
    Vector#(NumberOfMasters,MemSlave#(40,DataBusWidth)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
+   BscanTop bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
 
    Vector#(PortMax, MemMasterEngine) mvec;
    for (Integer i = 0; i < valueOf(PortMax) - 1 + valueOf(NumberOfMasters); i=i+1) begin
@@ -112,9 +120,8 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
                                  interface response = dispatcher.inFromBus;
                               endinterface));
 `ifndef BSIM
-   BscanTop bscan <- mkBscanTop(2);
    Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
-   BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(123, bscanPcieTraceBramWrAddrReg, bscan);
+   BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(127, bscanPcieTraceBramWrAddrReg, bscan);
    mkConnection(pcieBscanBram.bramClient, traceif.tlpdata.bscanBramServer);
    rule tdorule;
       bscan.tdo(pcieBscanBram.data_out());
@@ -130,12 +137,14 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface slave = slavearr;
    interface interruptRequest = intr.interruptRequest;
    interface pci = traceif.pci;
+   interface BscanTop bscanif = bscan;
 endmodule: mkPcieHost
 
 (* synthesize *)
 module mkSynthesizeablePortalTop(PortalTop#(40, DataBusWidth, PinType, NumberOfMasters));
    Clock defaultClock <- exposeCurrentClock();
-   let top <- mkPortalTop(`CLOCK_ARG);
+   BscanTop local_bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
+   let top <- mkPortalTop(`CLOCK_ARG `BSCAN_ARG);
    interface masters = top.masters;
    interface slave = top.slave;
    interface interrupt = top.interrupt;

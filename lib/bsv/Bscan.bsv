@@ -23,6 +23,7 @@
 
 import FIFOF::*;
 import Clocks::*;
+import Vector::*;
 import BRAM::*;
 import BscanE2::*;
 import GetPut::*;
@@ -106,24 +107,34 @@ endmodule
 `endif
 
 interface BscanLocal;
-   method Action tdo1(Bit#(1) v);
-   method Action tdo2(Bit#(1) v);
+   interface Vector#(2, BscanTop) loc;
 endinterface
 
 module mkBscanLocal#(BscanTop bscan)(BscanLocal);
-   Wire#(Bit#(1)) tdo_wire1 <- mkDWire(0);
-   Wire#(Bit#(1)) tdo_wire2 <- mkDWire(0);
+   Vector#(2, Wire#(Bit#(1))) tdo_wire <- replicateM(mkDWire(0));
+   //Wire#(Bit#(1)) tdo_wire2 <- mkDWire(0);
 
    rule tdo_rule;
-       bscan.tdo(tdo_wire1 | tdo_wire2);
+       bscan.tdo(tdo_wire[0] | tdo_wire[1]);
    endrule
-
-   method Action tdo1(Bit#(1) v);
-       tdo_wire1 <= v;
-   endmethod
-   method Action tdo2(Bit#(1) v);
-       tdo_wire2 <= v;
-   endmethod
+   Vector#(2, BscanTop) vloc;
+   for (Integer i = 0; i < 2; i = i + 1) begin
+     vloc[i] =
+      (interface BscanTop;
+         method rst = bscan.rst;
+         method tck = bscan.tck;
+         method reset = bscan.reset;
+         method capture = bscan.capture;
+         method shift = bscan.shift;
+         method tdi = bscan.tdi;
+         method update = bscan.update;
+         method first = bscan.first;
+         method Action tdo(Bit#(1) v);
+             tdo_wire[i] <= v;
+         endmethod
+      endinterface);
+   end
+   interface loc = vloc;
 endmodule
 
 interface BscanBram#(type atype, type dtype);
