@@ -21,6 +21,9 @@
 
 #include "pcieportal.h"
 
+/* flag for adding 'direct call' interface to driver */
+//#define SUPPORT_MANUAL_INTERFACE
+
 /* stem used for module and device names */
 #define DEV_NAME "fpga"
 
@@ -249,6 +252,29 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 }
                 }
                 break;
+#ifdef SUPPORT_MANUAL_INTERFACE
+        case PCIE_MANUAL_READ:
+                {
+                /* read 32 bit value from specified offset in bar2 */
+		tReadInfo readInfo;
+                err = copy_from_user(&readInfo, (void __user *) arg, sizeof(readInfo));
+                if (!err) {
+                         readInfo.value = ioread32(this_board->bar2io + readInfo.offset);
+                         err = copy_to_user((void __user *) arg, &readInfo, sizeof(readInfo));
+                }
+                break;
+                }
+        case PCIE_MANUAL_WRITE:
+                {
+                /* write 32 bit value to specified offset in bar2 */
+		tWriteInfo writeInfo;
+                err = copy_from_user(&writeInfo, (void __user *) arg, sizeof(writeInfo));
+                if (!err) {
+                         iowrite32(writeInfo.value, this_board->bar2io + writeInfo.offset);
+                }
+                }
+                break;
+#endif
         default:
                 return -ENOTTY;
         }
@@ -334,6 +360,9 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
                 rc = pci_request_region(dev, 2, "bar2");
                 printk("reserving region bar2 rc=%d\n", rc);
                 /* map BARs */
+#ifdef SUPPORT_MANUAL_INTERFACE
+// map all of bar2
+#endif
                 this_board->bar0io = pci_iomap(dev, 0, 0);
                 printk("bar0io=%p\n", this_board->bar0io);
                 this_board->bar1io = pci_iomap(dev, 1, 0);

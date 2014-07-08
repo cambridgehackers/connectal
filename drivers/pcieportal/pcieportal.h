@@ -43,6 +43,16 @@ typedef struct {
   unsigned int traceLength;
 } tTraceInfo;
 
+typedef struct {
+  unsigned int offset;
+  unsigned int value;
+} tReadInfo;
+
+typedef struct {
+  unsigned int offset;
+  unsigned int value;
+} tWriteInfo;
+
 typedef unsigned int tTlpData[6];
 
 /* IOCTL code definitions */
@@ -51,6 +61,8 @@ typedef unsigned int tTlpData[6];
 #define BNOC_IDENTIFY_PORTAL _IOR(BNOC_IOC_MAGIC,6,tPortalInfo*)
 #define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
 #define BNOC_TRACE           _IOWR(BNOC_IOC_MAGIC,8,tTraceInfo*)
+#define PCIE_MANUAL_READ     _IOWR(BNOC_IOC_MAGIC,10,tReadInfo*)
+#define PCIE_MANUAL_WRITE    _IOWR(BNOC_IOC_MAGIC,11,tWriteInfo*)
 
 /* maximum valid IOCTL number */
 #define BNOC_IOC_MAXNR 11
