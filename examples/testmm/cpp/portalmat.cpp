@@ -192,6 +192,7 @@ bool PortalMat::compare(Mat &other, const char *file, int line, float epsilon, M
 		rows, cols, other.rows, other.cols);
 	return false;
     }
+    bool rv = true;
     for (int i = 0; i < rows; i++) {
 	for (int j = 0; j < cols; j++) {
 	    float v = at<float>(i, j);
@@ -205,12 +206,36 @@ bool PortalMat::compare(Mat &other, const char *file, int line, float epsilon, M
 		    fprintf(stderr, " pm[%d,%d]=%f %08x", i, j, pmv, *(int*)&pmv);
 		}
 		fprintf(stderr, "\n");
-		//return false;
+		rv = false;
 	    }
 	}
     }
-    return true;
+    return rv;
 }
+
+
+void PortalMat::naive_mul(cv::Mat &a, cv::Mat &b)
+{
+  assert(a.cols == b.rows);
+  create(a.rows, b.cols, CV_32F);
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      int K = 2;
+      int gatherSz = 8/K;
+      float c_ij[gatherSz];
+      for(int k = 0; k < gatherSz; k++)
+	c_ij[k] = 0.0;
+      for(int l = 0; l < a.cols; l+=gatherSz)
+	for(int k = 0; k < gatherSz; k++)
+	  c_ij[k] += a.at<float>(i,l+k) * b.at<float>(l+k,j);
+      float c = 0.0;
+      for(int k = 0; k < gatherSz; k++)
+	c += c_ij[k];
+      at<float>(i, j) = c;
+    }
+  }
+}
+
 
 /*!
  * Multiplies a * b-transpose
@@ -368,11 +393,27 @@ void dumpMatF(const char *prefix, const char *fmt, const cv::Mat &mat, FILE *ofi
 template void dumpMatF<float>(const char *prefix, const char *fmt, const cv::Mat &mat, FILE *ofile);
 
 template<typename T>
+void dumpMatOctave(const char *name, const char *fmt, const cv::Mat &mat, FILE *ofile)
+{
+  fprintf(ofile, "%s=[", name);
+  for (int i = 0; i < mat.rows; i++) {
+    for (int j = 0; j < mat.cols; j++) {
+      fprintf(ofile, " ");
+      fprintf(ofile, fmt, mat.at<T>(i, j));
+      if(j+1 < mat.cols)
+	fprintf(ofile, ",");
+    }
+    if(i+1 < mat.rows)
+      fprintf(ofile, ";");
+  }
+  fprintf(ofile,"];\n");
+}
+template void dumpMatOctave<float>(const char *name, const char *fmt, const cv::Mat &mat, FILE *ofile);
+
+template<typename T>
 void dumpMat(const char *prefix, const char *fmt, const cv::Mat &mat)
 {
   dumpMatF<T>(prefix,fmt,mat,stderr);
 }
 template void dumpMat<float>(const char *prefix, const char *fmt, const cv::Mat &mat);
 template void dumpMat<int>(const char *prefix, const char *fmt, const cv::Mat &mat);
-
-

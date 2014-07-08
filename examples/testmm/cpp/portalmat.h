@@ -84,6 +84,7 @@ public:
   bool copy(cv::MatExpr other);
   bool transpose(cv::Mat &other);
   bool compare(Mat &other, const char *file=0, int line=0, float epsilon=0.0001, Mat *pm = 0);
+  void naive_mul(cv::Mat &a, cv::Mat &b);
 
   /*!
    * Multiplies a * b-transpose
@@ -216,6 +217,9 @@ template<typename T>
 
 template<typename T>
   void dumpMatF(const char *prefix, const char *fmt, const cv::Mat &mat, FILE *ofile);
+
+template<typename T>
+  void dumpMatOctave(const char *name, const char *fmt, const cv::Mat &mat, FILE *ofile);
 
 #endif // _PORTALMAT_H_
 

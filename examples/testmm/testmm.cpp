@@ -128,10 +128,10 @@ int main(int argc, const char **argv)
 #ifdef LARGE_MAT
 #ifdef BSIM
   int A = 32;
-  int B = 16;
+  int B = 64;
 #else
-  int A = 512;
-  int B = 256;
+  int A = 32;
+  int B = 64;
 #endif
   if (argc > 1) {
     B = strtoul(argv[1], 0, 0);
@@ -139,11 +139,12 @@ int main(int argc, const char **argv)
   }
   cv::Mat m1(A,B,CV_32F);
   cv::Mat m2(B,A,CV_32F);
-  int v = 0;
+  float v = 0;
   for(int a = 0; a < A; a++){
     for(int b = 0; b < B; b++){
-      m2.at<float>(b,a) = v+(A*B);;
-      m1.at<float>(a,b) = v++;
+      m2.at<float>(b,a) = v;
+      m1.at<float>(a,b) = v;
+      v += 1;
     }
   }
 #else
@@ -164,9 +165,21 @@ int main(int argc, const char **argv)
 		85,86,87,88
 		);
 #endif
+
   cv::Mat  m3 = m1 * m2;
-  //dumpMatF<int>("m1", "%08x", m1, stdout);
-  //dumpMatF<int>("m2", "%08x", m2, stdout);
+  PortalMat tm3;
+  tm3.naive_mul(m1,m2);  
+
+  FILE *octave_file = fopen("foo.m", "w");
+  dumpMatOctave<float>("m1",  "%10.5f", m1,  octave_file);
+  dumpMatOctave<float>("m2",  "%10.5f", m2,  octave_file);
+  dumpMatOctave<float>("m3",  "%10.5f", m3,  octave_file);
+  dumpMatOctave<float>("tm3", "%10.5f", tm3, octave_file);
+  fclose(octave_file);
+  bool sanity = tm3.compare(m3);
+  fprintf(stderr, "sanity=%d\n", sanity);
+  //exit(!sanity);
+
   fflush(stdout);
   PortalMat pm1(m1);
   PortalMat pm2t(m2.t());
@@ -182,12 +195,11 @@ int main(int argc, const char **argv)
   fprintf(stderr, "memory write beats %ld utilization (beats/cycle): %f\n", write_beats, write_util);
 
   if (0) {
-    dumpMat<float>("pm1 * pm2", "%5.1f", pm3);
-    dumpMat<float>("m1 * m2", "%5.1f", m3);
+    dumpMat<float>("pm3", "%5.1f", pm3);
+    dumpMat<float>(" m3", "%5.1f", m3);
   }
   //bool eq = std::equal(m3.begin<float>(), m3.end<float>(), pm3.begin<float>());
-  bool eq = pm3.compare(m3);
-  //dumpMat<int>("pm3", "%08x", pm3);
+  bool eq = pm3.compare(pm3);
   fprintf(stderr, "eq=%d\n", eq);
   //device->finish();
   exit(!eq);

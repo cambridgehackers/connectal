@@ -246,7 +246,8 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
    
 `ifdef TAGGED_TOKENS
    Vector#(2,FIFO#(Tuple2#(UInt#(32),UInt#(32)))) tag_fifos <- replicateM(mkSizedFIFO(max(ub_MulLat,ub_AddLat))); 
-   Vector#(K,Reg#(Maybe#(Tuple2#(UInt#(32),UInt#(32))))) tag_regs <- replicateM(mkReg(tagged Invalid));
+   Vector#(K,Reg#(Tuple2#(UInt#(32),UInt#(32)))) tag_regs <- replicateM(mkRegU);
+   Vector#(K,Reg#(Bool)) tag_regs_valid <- replicateM(mkReg(False)); 
 `endif   
    
    FIFOF#(Token)                          afifo   <- mkFIFOF();
@@ -352,18 +353,13 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
       accumFifosEnqIdxs[chan] <= accumFifosEnqIdxs[chan]+1;
 `ifdef TAGGED_TOKENS
       match {.row, .col} <- toGet(tag_fifos[1]).get;
-      case (tag_regs[chan]) matches
-	 tagged Valid .v: 
-	    begin
-	       match {.r,.c} = v;
-	       if (r != row || c != col) 
-		  $display("mkSharedDotProdServer:row/col mismatch");
-	       if (last)
-		  tag_regs[chan] <= tagged Invalid;
-	    end
-	 tagged Invalid:
-	    tag_regs[chan] <= tagged Valid tuple2(row,col);
-      endcase
+      tag_regs[chan] <= tuple2(row,col);
+      tag_regs_valid[chan] <= !last;
+      if (tag_regs_valid[chan]) begin
+	 match {.r,.c} = tag_regs[chan];
+	 if (r != row || c != col) 
+	    $display("mkSharedDotProdServer:row/col mismatch");
+      end
 `endif
       if (last) begin
 	 lastCntB <= lastCntB+1;
@@ -390,15 +386,8 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
       else begin
 	 let x <- toGet(accumFifos[chan][gatherCntA+0]).get;
 `ifdef TAGGED_TOKENS
-	 let row = 0;
-	 let col = 0;
-	 case (tag_regs[chan]) matches
-      	    tagged Valid .v:
-      	       begin
-      		  row = tpl_1(v);
-      		  col = tpl_2(v);
-      	       end
-	 endcase
+      	 let row = tpl_1(tag_regs[chan]);
+      	 let col = tpl_2(tag_regs[chan]);
 	 dotfifos[chan].enq(Token{row:row, col:col, v:x});
 `else
 	 dotfifos[chan].enq(Token{v:x});
@@ -709,16 +698,8 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    for (Integer t = 0; t < valueOf(T); t = t+1) begin
       for (Integer i = 0; i < valueof(RowsPerTile); i = i+1) begin
 	 let j = t*valueOf(RowsPerTile) + i;
-	 //mkConnection(toGet(aRepeaters[j]), mmTiles[t].aInputs[i]);
-	 rule connectA;
-	    let x <- toGet(aRepeaters[j]).get;
-	    mmTiles[t].aInputs[i].put(x);
-	 endrule
-	 //mkConnection(toGet(bFunnelPipes[j]), mmTiles[t].bInputs[i]);
-	 rule connectB;
-	    let x <- toGet(bFunnelPipes[j]).get;
-	    mmTiles[t].bInputs[i].put(x);
-	 endrule
+	 mkConnection(toGet(aRepeaters[j]), mmTiles[t].aInputs[i]);
+	 mkConnection(toGet(bFunnelPipes[j]), mmTiles[t].bInputs[i]);
 	 fxpipes[j] = mmTiles[t].fxPipes[i];
       end
    end
