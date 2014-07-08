@@ -3,7 +3,8 @@ BSVDIR=../../bsv
 S2H = SimpleRequest
 H2S = SimpleIndication
 BSVFILES = Simple.bsv Top.bsv
-CPPFILES=testsimple.cpp
+#original user program CPPFILES=testsimple.cpp
+CPPFILES=manualsimple.cpp
 XBSVFLAGS += --bscflags " -D NumberOfMasters=0"
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"
 
