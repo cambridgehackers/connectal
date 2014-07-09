@@ -252,11 +252,8 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   // TODO: this intermediate buffer (and associated copy) should be removed (mdk)
   unsigned int buf[128];
   msg->marshall(buf);
-
-  for (int i = msg->size()/4-1; i >= 0; i--){
-    volatile unsigned int *ptr = &map_base[msg->fifo_offset];
-    WRITEL(this, ptr, buf[i]);
-  }
+  for (int i = msg->size()/4-1; i >= 0; i--)
+    WRITEL(this, &map_base[PORTAL_REQ_FIFO(msg->channel)], buf[i]);
   return 0;
 }
 
@@ -551,7 +548,7 @@ void Directory::scan(int display)
 {
   unsigned int i;
   if(display) fprintf(stderr, "Directory::scan(%s)\n", name);
-  volatile unsigned int *ptr = &map_base[(PORTAL_REQ_FIFO_OFFSET)/sizeof(uint32_t)+128];
+  volatile unsigned int *ptr = &map_base[PORTAL_REQ_FIFO(0)+128];
   version    = READL(this, ptr++);
   timestamp  = READL(this, ptr++);
   numportals = READL(this, ptr++);

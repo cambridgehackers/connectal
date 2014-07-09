@@ -84,11 +84,9 @@ responseSzCaseTemplate='''
     case %(channelNumber)s: 
     { 
         %(msg)s msg;
-        for (int i = (msg.size()/4)-1; i >= 0; i--) {
-            volatile unsigned int *ptr = &map_base[%(fifoOffset)s];
-            unsigned int val = READL(this, ptr);
-            buf[i] = val;
-        }
+        volatile unsigned int *ptr = &map_base[%(fifoOffset)s];
+        for (int i = (msg.size()/4)-1; i >= 0; i--)
+            buf[i] = READL(this, ptr);
         msg.demarshall(buf);
         msg.indicate(this);
         break;
@@ -120,7 +118,6 @@ void %(namespace)s%(className)s::%(methodName)s ( %(paramDeclarations)s )
 {
     %(className)s%(methodName)sMSG msg;
     msg.channel = %(methodChannelOffset)s;
-    msg.fifo_offset = %(methodFifoOffset)s;
 %(paramSetters)s
     sendMessage(&msg);
 };
@@ -311,7 +308,7 @@ class MethodMixin:
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
             'methodChannelOffset': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
-            'methodFifoOffset': 'FIFO_OFFSET_%s_%s' % (className, cName(self.name)),
+            'methodFifoOffset': 'PORTAL_IND_FIFO(CHAN_NUM_%s_%s)' % (className, cName(self.name)),
             # if message is empty, we still send an int of padding
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
@@ -422,11 +419,8 @@ class InterfaceMixin:
         statusDecl = "%s%s *proxyStatus;" % (cName(self.name), 'ProxyStatus')
 	reqChanNums = []
 	reqFifoOffsets = []
-        reqChanNums.append('#include "portal.h"\n')
         for d in self.decls:
             reqChanNums.append('#define CHAN_NUM_%s %d\n' % (self.global_name(d.name, suffix), d.channelNumber))
-	for d in self.decls:
-            reqFifoOffsets.append('#define FIFO_OFFSET_%s ((PORTAL_REQ_FIFO_OFFSET + CHAN_NUM_%s * 256)/sizeof(uint32_t))\n' % (self.global_name(d.name, suffix), self.global_name(d.name, suffix)))
         subs = {'className': className,
                 'namespace': namespace,
 		'statusDecl' : '' if self.hasPutFailed() else statusDecl,
@@ -444,8 +438,6 @@ class InterfaceMixin:
 	indFifoOffsets = []
 	for d in self.decls:
             indChanNums.append('#define CHAN_NUM_%s %d\n' % (self.global_name(cName(d.name), suffix),d.channelNumber));
-	for d in self.decls:
-            indFifoOffsets.append('#define FIFO_OFFSET_%s ((PORTAL_IND_FIFO_OFFSET + CHAN_NUM_%s * 256)/sizeof(uint32_t))\n' % (self.global_name(d.name, suffix), self.global_name(d.name, suffix)))
         subs = {'className': className,
                 'namespace': namespace,
                 'parentClass': self.parentClass('Portal')}
@@ -474,7 +466,7 @@ class InterfaceMixin:
 			 'putFailedMethodName' : putFailedMethodName,
                          'parentClass': self.parentClass('Portal'),
                          'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': 'CHAN_NUM_%s' % self.global_name(cName(d.name), suffix),
-										'fifoOffset': 'FIFO_OFFSET_%s' % self.global_name(cName(d.name), suffix),
+										'fifoOffset': 'PORTAL_IND_FIFO(CHAN_NUM_%s)' % self.global_name(cName(d.name), suffix),
                                                                                 'msg': '%s%sMSG' % (className, d.name)}
                                                      for d in self.decls 
                                                      if d.type == 'Method' and d.return_type.name == 'Action']),
