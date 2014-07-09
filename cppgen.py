@@ -85,8 +85,7 @@ responseSzCaseTemplate='''
     { 
         %(msg)s msg;
         for (int i = (msg.size()/4)-1; i >= 0; i--) {
-volatile unsigned int *ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)map_base)+PORTAL_IND_FIFO_OFFSET);
-            volatile unsigned int *ptr = &ind_fifo_base[%(fifoOffset)s];
+            volatile unsigned int *ptr = &map_base[PORTAL_IND_FIFO_OFFSET/sizeof(uint32_t) + %(fifoOffset)s];
             unsigned int val = READL(this, ptr);
             buf[i] = val;
         }

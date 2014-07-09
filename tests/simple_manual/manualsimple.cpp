@@ -35,7 +35,6 @@ static PortalInternal *intarr[2];
 
 static int indication_handleMessage(volatile unsigned int* map_base, unsigned int channel)
 {    
-volatile unsigned int *ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)map_base)+PORTAL_IND_FIFO_OFFSET);
     unsigned int buf[1024];
     switch (channel) {
     case CHAN_NUM_SimpleIndicationWrapper_heard1: 
@@ -44,7 +43,7 @@ volatile unsigned int *ind_fifo_base  = (volatile unsigned int*)(((unsigned char
             uint32_t v:32;
         } payload;
         for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = ind_fifo_base[FIFO_OFFSET_SimpleIndicationWrapper_heard1];
+            buf[i] = map_base[PORTAL_IND_FIFO_OFFSET/sizeof(uint32_t) + FIFO_OFFSET_SimpleIndicationWrapper_heard1];
         int i = 0;
         payload.v = (uint32_t)(((buf[i])&0xfffffffful));
         i++;
@@ -58,7 +57,7 @@ volatile unsigned int *ind_fifo_base  = (volatile unsigned int*)(((unsigned char
             uint32_t b:32;
         } payload;
         for (int i = (8/4)-1; i >= 0; i--)
-            buf[i] = ind_fifo_base[FIFO_OFFSET_SimpleIndicationWrapper_heard2];
+            buf[i] = map_base[PORTAL_IND_FIFO_OFFSET/sizeof(uint32_t) + FIFO_OFFSET_SimpleIndicationWrapper_heard2];
         int i = 0;
         payload.b = (uint32_t)(((buf[i])&0xfffffffful));
         i++;
@@ -75,7 +74,6 @@ volatile unsigned int *ind_fifo_base  = (volatile unsigned int*)(((unsigned char
 }
 static int request_handleMessage(volatile unsigned int* map_base, unsigned int channel)
 {    
-volatile unsigned int *ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)map_base)+PORTAL_IND_FIFO_OFFSET);
     unsigned int buf[1024];
     switch (channel) {
     case CHAN_NUM_SimpleRequestProxyStatus_putFailed: 
@@ -84,7 +82,7 @@ volatile unsigned int *ind_fifo_base  = (volatile unsigned int*)(((unsigned char
             uint32_t v:32;
         } payload;
         for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = ind_fifo_base[FIFO_OFFSET_SimpleRequestProxyStatus_putFailed];
+            buf[i] = map_base[PORTAL_IND_FIFO_OFFSET/sizeof(uint32_t) + FIFO_OFFSET_SimpleRequestProxyStatus_putFailed];
         int i = 0;
         payload.v = (uint32_t)(((buf[i])&0xfffffffful));
         i++;
