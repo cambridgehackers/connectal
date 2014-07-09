@@ -36,10 +36,6 @@
 /* XBSV device ID */
 #define XBSV_DEVICE_ID 0xc100
 
-/* Number of boards to support */
-#define NUM_BOARDS 1
-#define NUM_PORTALS 16
-
 /* CSR address space offsets */
 #define CSR_ID                        (   0 << 2) /* 64-bit */
 #define CSR_TLPDATAFIFO_DEQ           ( 768 << 2)
@@ -59,27 +55,6 @@
 #define CSR_MSIX_MSG_DATA             (1026 << 2)
 #define CSR_MSIX_MASKED               (1027 << 2)
 
-/*
- * Per-device data
- */
-typedef struct {
-        unsigned int      portal_number;
-        struct tBoard    *board;
-        void             *virt;
-        volatile uint32_t *count;
-        wait_queue_head_t wait_queue; /* used for interrupt notifications */
-        dma_addr_t        dma_handle;
-        struct cdev       cdev; /* per-portal cdev structure */
-} tPortal;
-
-typedef struct tBoard {
-        void __iomem     *bar0io, *bar1io, *bar2io; /* bars */
-        struct pci_dev   *pci_dev; /* pci device pointer */
-        tPortal           portal[NUM_PORTALS];
-        tBoardInfo        info; /* board identification fields */
-        unsigned int      irq_num;
-        unsigned int      open_count;
-} tBoard;
 
 /* static device data */
 static dev_t device_number;
@@ -556,6 +531,17 @@ static struct pci_driver pcieportal_ops = {
 };
 
 /*
+ *
+ * get the tBoard struct 
+ *
+ */
+  
+static tBoard* get_pcie_portal_descriptor()
+{
+  return &board_map[0];
+}
+
+/*
  * driver initialization and exit
  *
  * these routines are responsible for allocating and
@@ -609,12 +595,15 @@ static void __exit pcieportal_exit(void)
         printk(KERN_INFO "%s: Unregistered Bluespec Pcieportal driver %s\n", DEV_NAME, DEV_VERSION);
 }
 
+
 /*
  * driver module data for the kernel
  */
 
 module_init(pcieportal_init);
 module_exit(pcieportal_exit);
+
+EXPORT_SYMBOL(get_pcie_portal_descriptor);
 
 MODULE_AUTHOR("Bluespec, Inc., Cambridge hackers");
 MODULE_DESCRIPTION("PCIe device driver for PCIe FPGA portals");

@@ -67,4 +67,30 @@ typedef unsigned int tTlpData[6];
 /* maximum valid IOCTL number */
 #define BNOC_IOC_MAXNR 11
 
+/* Number of boards to support */
+#define NUM_BOARDS 1
+#define NUM_PORTALS 16
+
+/*
+ * Per-device data
+ */
+typedef struct {
+        unsigned int      portal_number;
+        struct tBoard    *board;
+        void             *virt;
+        volatile uint32_t *count;
+        wait_queue_head_t wait_queue; /* used for interrupt notifications */
+        dma_addr_t        dma_handle;
+        struct cdev       cdev; /* per-portal cdev structure */
+} tPortal;
+
+typedef struct tBoard {
+        void __iomem     *bar0io, *bar1io, *bar2io; /* bars */
+        struct pci_dev   *pci_dev; /* pci device pointer */
+        tPortal           portal[NUM_PORTALS];
+        tBoardInfo        info; /* board identification fields */
+        unsigned int      irq_num;
+        unsigned int      open_count;
+} tBoard;
+
 #endif /* __BLUENOC_H__ */
