@@ -257,7 +257,7 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   msg->marshall(buf);
 
   for (int i = msg->size()/4-1; i >= 0; i--){
-    volatile unsigned int *ptr = map_base + PORTAL_REQ_FIFO_OFFSET_32 + msg->fifo_offset/sizeof(uint32_t);
+    volatile unsigned int *ptr = map_base + PORTAL_REQ_FIFO_OFFSET_32 + msg->fifo_offset;
     WRITEL(this, ptr, buf[i]);
   }
   return 0;

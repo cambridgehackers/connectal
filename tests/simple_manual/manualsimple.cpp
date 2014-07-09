@@ -22,8 +22,8 @@
 
 #include <stdio.h>
 #include <unistd.h>
-#include "SimpleIndicationWrapper.h"
-#include "SimpleRequestProxy.h"
+#include <stdint.h>
+#include "GeneratedTypes.h"
 #include "SimpleIndicationWrapperOffsets.h"
 #include "SimpleRequestProxyOffsets.h"
 #include "portal.h"
@@ -43,7 +43,7 @@ static int indication_handleMessage(volatile unsigned int* ind_fifo_base, unsign
             uint32_t v:32;
         } payload;
         for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = *((volatile unsigned int*)(((long)ind_fifo_base) + FIFO_OFFSET_SimpleIndicationWrapper_heard1));
+            buf[i] = ind_fifo_base[FIFO_OFFSET_SimpleIndicationWrapper_heard1];
         int i = 0;
         payload.v = (uint32_t)(((buf[i])&0xfffffffful));
         i++;
@@ -57,7 +57,7 @@ static int indication_handleMessage(volatile unsigned int* ind_fifo_base, unsign
             uint32_t b:32;
         } payload;
         for (int i = (8/4)-1; i >= 0; i--)
-            buf[i] = *((volatile unsigned int*)(((long)ind_fifo_base) + FIFO_OFFSET_SimpleIndicationWrapper_heard2));
+            buf[i] = ind_fifo_base[FIFO_OFFSET_SimpleIndicationWrapper_heard2];
         int i = 0;
         payload.b = (uint32_t)(((buf[i])&0xfffffffful));
         i++;
@@ -82,7 +82,7 @@ static int request_handleMessage(volatile unsigned int* ind_fifo_base, unsigned 
             uint32_t v:32;
         } payload;
         for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = *((volatile unsigned int*)(((long)ind_fifo_base) + FIFO_OFFSET_SimpleRequestProxyStatus_putFailed));
+            buf[i] = ind_fifo_base[FIFO_OFFSET_SimpleRequestProxyStatus_putFailed];
         int i = 0;
         payload.v = (uint32_t)(((buf[i])&0xfffffffful));
         i++;
@@ -132,7 +132,7 @@ int main(int argc, const char **argv)
     int i = 0;
     buf[i++] = payload.v;
     for (int i = 4/4-1; i >= 0; i--)
-      *(intarr[1]->map_base + PORTAL_REQ_FIFO_OFFSET_32 + FIFO_OFFSET_SimpleRequestProxy_say1/sizeof(uint32_t)) = buf[i];
+      intarr[1]->map_base[PORTAL_REQ_FIFO_OFFSET_32 + FIFO_OFFSET_SimpleRequestProxy_say1] = buf[i];
   };
   manual_event();
 
@@ -151,7 +151,7 @@ int main(int argc, const char **argv)
     buf[i++] = payload.b;
     buf[i++] = payload.a;
     for (int i = 8/4-1; i >= 0; i--)
-      *(intarr[1]->map_base + PORTAL_REQ_FIFO_OFFSET_32 + FIFO_OFFSET_SimpleRequestProxy_say2/sizeof(uint32_t)) = buf[i];
+      intarr[1]->map_base[PORTAL_REQ_FIFO_OFFSET_32 + FIFO_OFFSET_SimpleRequestProxy_say2] = buf[i];
   };
   manual_event();
 }
