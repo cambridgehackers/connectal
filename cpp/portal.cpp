@@ -162,7 +162,6 @@ PortalInternal::PortalInternal(PortalInternal *p)
   : fd(p->fd),
     p(p->p),
     name(strdup(p->name)),
-    ind_fifo_base(p->ind_fifo_base),
     map_base(p->map_base)
 {
 }
@@ -170,7 +169,6 @@ PortalInternal::PortalInternal(PortalInternal *p)
 
 PortalInternal::PortalInternal(int id)
   : fd(-1),
-    ind_fifo_base(0x0),
     map_base(0x0)
 {
     int rc = 0;
@@ -226,6 +224,7 @@ PortalInternal::PortalInternal(int id)
         rc = -errno;
 	goto errlab;
     }  
+    map_base   = (volatile unsigned int*)dev_base;
 #else
     p = (struct portal*)malloc(sizeof(struct portal));
     snprintf(p->read.path, sizeof(p->read.path), "%s_rc", name);
@@ -234,8 +233,6 @@ PortalInternal::PortalInternal(int id)
     connect_socket(&(p->write));
 #endif
 
-    ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)dev_base)+PORTAL_IND_FIFO_OFFSET);
-    map_base   = (volatile unsigned int*)(unsigned char *)dev_base;
 errlab:
     if (rc != 0) {
       printf("[%s:%d] failed to open Portal %s\n", __FUNCTION__, __LINE__, name);
@@ -257,7 +254,7 @@ int PortalInternal::sendMessage(PortalMessage *msg)
   msg->marshall(buf);
 
   for (int i = msg->size()/4-1; i >= 0; i--){
-    volatile unsigned int *ptr = map_base + PORTAL_REQ_FIFO_OFFSET_32 + msg->fifo_offset;
+    volatile unsigned int *ptr = &map_base[PORTAL_REQ_FIFO_OFFSET/sizeof(uint32_t) + msg->fifo_offset];
     WRITEL(this, ptr, buf[i]);
   }
   return 0;
@@ -554,7 +551,7 @@ void Directory::scan(int display)
 {
   unsigned int i;
   if(display) fprintf(stderr, "Directory::scan(%s)\n", name);
-  volatile unsigned int *ptr = map_base+PORTAL_REQ_FIFO_OFFSET_32+128;
+  volatile unsigned int *ptr = &map_base[(PORTAL_REQ_FIFO_OFFSET)/sizeof(uint32_t)+128];
   version    = READL(this, ptr++);
   timestamp  = READL(this, ptr++);
   numportals = READL(this, ptr++);

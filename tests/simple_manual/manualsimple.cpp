@@ -33,8 +33,9 @@ static int v2a = 2;
 static int v2b = 4;
 static PortalInternal *intarr[2];
 
-static int indication_handleMessage(volatile unsigned int* ind_fifo_base, unsigned int channel)
+static int indication_handleMessage(volatile unsigned int* map_base, unsigned int channel)
 {    
+volatile unsigned int *ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)map_base)+PORTAL_IND_FIFO_OFFSET);
     unsigned int buf[1024];
     switch (channel) {
     case CHAN_NUM_SimpleIndicationWrapper_heard1: 
@@ -72,8 +73,9 @@ static int indication_handleMessage(volatile unsigned int* ind_fifo_base, unsign
     }
     return 0;
 }
-static int request_handleMessage(volatile unsigned int* ind_fifo_base, unsigned int channel)
+static int request_handleMessage(volatile unsigned int* map_base, unsigned int channel)
 {    
+volatile unsigned int *ind_fifo_base  = (volatile unsigned int*)(((unsigned char *)map_base)+PORTAL_IND_FIFO_OFFSET);
     unsigned int buf[1024];
     switch (channel) {
     case CHAN_NUM_SimpleRequestProxyStatus_putFailed: 
@@ -109,9 +111,9 @@ static void manual_event(void)
         unsigned int ind_count  = map_base[IND_REG_INTERRUPT_COUNT];
         fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
         if (i == 0)
-            indication_handleMessage(instance->ind_fifo_base, queue_status-1);
+            indication_handleMessage(instance->map_base, queue_status-1);
         else
-            request_handleMessage(instance->ind_fifo_base, queue_status-1);
+            request_handleMessage(instance->map_base, queue_status-1);
       }
     }
 }
@@ -132,7 +134,7 @@ int main(int argc, const char **argv)
     int i = 0;
     buf[i++] = payload.v;
     for (int i = 4/4-1; i >= 0; i--)
-      intarr[1]->map_base[PORTAL_REQ_FIFO_OFFSET_32 + FIFO_OFFSET_SimpleRequestProxy_say1] = buf[i];
+      intarr[1]->map_base[PORTAL_REQ_FIFO_OFFSET/sizeof(uint32_t) + FIFO_OFFSET_SimpleRequestProxy_say1] = buf[i];
   };
   manual_event();
 
@@ -151,7 +153,7 @@ int main(int argc, const char **argv)
     buf[i++] = payload.b;
     buf[i++] = payload.a;
     for (int i = 8/4-1; i >= 0; i--)
-      intarr[1]->map_base[PORTAL_REQ_FIFO_OFFSET_32 + FIFO_OFFSET_SimpleRequestProxy_say2] = buf[i];
+      intarr[1]->map_base[PORTAL_REQ_FIFO_OFFSET/sizeof(uint32_t) + FIFO_OFFSET_SimpleRequestProxy_say2] = buf[i];
   };
   manual_event();
 }
