@@ -85,7 +85,7 @@ responseSzCaseTemplate='''
     { 
         %(msg)s msg;
         for (int i = (msg.size()/4)-1; i >= 0; i--) {
-            volatile unsigned int *ptr = &map_base[PORTAL_IND_FIFO_OFFSET/sizeof(uint32_t) + %(fifoOffset)s];
+            volatile unsigned int *ptr = &map_base[%(fifoOffset)s];
             unsigned int val = READL(this, ptr);
             buf[i] = val;
         }
@@ -426,7 +426,7 @@ class InterfaceMixin:
         for d in self.decls:
             reqChanNums.append('#define CHAN_NUM_%s %d\n' % (self.global_name(d.name, suffix), d.channelNumber))
 	for d in self.decls:
-            reqFifoOffsets.append('#define FIFO_OFFSET_%s ((CHAN_NUM_%s * 256)/sizeof(uint32_t))\n' % (self.global_name(d.name, suffix), self.global_name(d.name, suffix)))
+            reqFifoOffsets.append('#define FIFO_OFFSET_%s ((PORTAL_REQ_FIFO_OFFSET + CHAN_NUM_%s * 256)/sizeof(uint32_t))\n' % (self.global_name(d.name, suffix), self.global_name(d.name, suffix)))
         subs = {'className': className,
                 'namespace': namespace,
 		'statusDecl' : '' if self.hasPutFailed() else statusDecl,
@@ -445,7 +445,7 @@ class InterfaceMixin:
 	for d in self.decls:
             indChanNums.append('#define CHAN_NUM_%s %d\n' % (self.global_name(cName(d.name), suffix),d.channelNumber));
 	for d in self.decls:
-            indFifoOffsets.append('#define FIFO_OFFSET_%s ((CHAN_NUM_%s * 256)/sizeof(uint32_t))\n' % (self.global_name(d.name, suffix), self.global_name(d.name, suffix)))
+            indFifoOffsets.append('#define FIFO_OFFSET_%s ((PORTAL_IND_FIFO_OFFSET + CHAN_NUM_%s * 256)/sizeof(uint32_t))\n' % (self.global_name(d.name, suffix), self.global_name(d.name, suffix)))
         subs = {'className': className,
                 'namespace': namespace,
                 'parentClass': self.parentClass('Portal')}

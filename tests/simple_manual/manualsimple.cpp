@@ -43,7 +43,7 @@ static int indication_handleMessage(volatile unsigned int* map_base, unsigned in
             uint32_t v:32;
         } payload;
         for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = map_base[PORTAL_IND_FIFO_OFFSET/sizeof(uint32_t) + FIFO_OFFSET_SimpleIndicationWrapper_heard1];
+            buf[i] = map_base[FIFO_OFFSET_SimpleIndicationWrapper_heard1];
         int i = 0;
         payload.v = (uint32_t)(((buf[i])&0xfffffffful));
         i++;
@@ -57,7 +57,7 @@ static int indication_handleMessage(volatile unsigned int* map_base, unsigned in
             uint32_t b:32;
         } payload;
         for (int i = (8/4)-1; i >= 0; i--)
-            buf[i] = map_base[PORTAL_IND_FIFO_OFFSET/sizeof(uint32_t) + FIFO_OFFSET_SimpleIndicationWrapper_heard2];
+            buf[i] = map_base[FIFO_OFFSET_SimpleIndicationWrapper_heard2];
         int i = 0;
         payload.b = (uint32_t)(((buf[i])&0xfffffffful));
         i++;
@@ -82,7 +82,7 @@ static int request_handleMessage(volatile unsigned int* map_base, unsigned int c
             uint32_t v:32;
         } payload;
         for (int i = (4/4)-1; i >= 0; i--)
-            buf[i] = map_base[PORTAL_IND_FIFO_OFFSET/sizeof(uint32_t) + FIFO_OFFSET_SimpleRequestProxyStatus_putFailed];
+            buf[i] = map_base[FIFO_OFFSET_SimpleRequestProxyStatus_putFailed];
         int i = 0;
         payload.v = (uint32_t)(((buf[i])&0xfffffffful));
         i++;
@@ -132,7 +132,7 @@ int main(int argc, const char **argv)
     int i = 0;
     buf[i++] = payload.v;
     for (int i = 4/4-1; i >= 0; i--)
-      intarr[1]->map_base[PORTAL_REQ_FIFO_OFFSET/sizeof(uint32_t) + FIFO_OFFSET_SimpleRequestProxy_say1] = buf[i];
+      intarr[1]->map_base[FIFO_OFFSET_SimpleRequestProxy_say1] = buf[i];
   };
   manual_event();
 
@@ -151,7 +151,7 @@ int main(int argc, const char **argv)
     buf[i++] = payload.b;
     buf[i++] = payload.a;
     for (int i = 8/4-1; i >= 0; i--)
-      intarr[1]->map_base[PORTAL_REQ_FIFO_OFFSET/sizeof(uint32_t) + FIFO_OFFSET_SimpleRequestProxy_say2] = buf[i];
+      intarr[1]->map_base[FIFO_OFFSET_SimpleRequestProxy_say2] = buf[i];
   };
   manual_event();
 }
