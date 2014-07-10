@@ -253,6 +253,16 @@ module mkFunnel1#(PipeOut#(Vector#(k,a)) in)(PipeOut#(a))
    endmethod
 endmodule
 
+module mkFunnelGB1#(Clock slowClock, Reset slowReset, Clock fastClock, Reset fastReset, PipeOut#(Vector#(k,a)) in)(PipeOut#(a))
+   provisos (Bits#(a, asz), Log#(k,ksz), Add#(1,a__,k));
+
+   Gearbox#(k,1,a) gb <- mkNto1Gearbox(slowClock, slowReset, fastClock, fastReset);
+   PipeIn#(Vector#(k,a)) toGb = toPipeIn(gb);
+   mkConnection(in, toGb);
+   PipeOut#(Vector#(1,a)) fromGb = toPipeOut(gb);
+   return mapPipe(head, fromGb);
+endmodule
+
 // 'j' is the width of the narrow end, and 'k' is the width of the wide end
 typedef Vector#(j,PipeOut#(a))   FunnelPipe#(numeric type j, numeric type k, type a, numeric type bitsPerCycle);
 typedef Vector#(k,PipeOut#(a)) UnFunnelPipe#(numeric type j, numeric type k, type a, numeric type bitsPerCycle);
@@ -347,6 +357,22 @@ module mkUnfunnel#(PipeOut#(Vector#(m,a)) in)(PipeOut#(Vector#(mk, a)))
       return mimo.deqReadyN(mk);
    endmethod
 endmodule
+
+module mkUnfunnelGB#(Clock slowClock, Reset slowReset, Clock fastClock, Reset fastReset, PipeOut#(Vector#(1,a)) in)(PipeOut#(Vector#(k, a)))
+   provisos (Bits#(a, asz),
+	     Add#(1, a__, k),
+	     Add#(1, b__, asz),
+	     Add#(1, c__, TMul#(2,k)),
+	     Add#(k, d__, TMul#(2,k))
+      );
+   let k = fromInteger(valueOf(k));
+
+   Gearbox#(1,k,a) gb <- mk1toNGearbox(fastClock, fastReset, slowClock, slowReset);
+   PipeIn#(Vector#(1,a)) toGb = toPipeIn(gb);
+   PipeOut#(Vector#(k,a)) fromGb = toPipeOut(gb);
+   mkConnection(in,toGb);
+   return fromGb;
+endmodule: mkUnfunnelGB
 
 module mkFunnelPipes#(Vector#(mk, PipeOut#(a)) ins)(Vector#(m, PipeOut#(a)))
    provisos (Mul#(m, k, mk),
