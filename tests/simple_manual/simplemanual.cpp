@@ -99,14 +99,13 @@ static void manual_event(void)
 {
     for (int i = 0; i < 2; i++) {
       PortalInternal *instance = intarr[i];
-      volatile unsigned int *map_base = instance->map_base;
       unsigned int queue_status;
-      while ((queue_status= map_base[IND_REG_QUEUE_STATUS])) {
-        unsigned int int_src = map_base[IND_REG_INTERRUPT_FLAG];
-        unsigned int int_en  = map_base[IND_REG_INTERRUPT_MASK];
-        unsigned int ind_count  = map_base[IND_REG_INTERRUPT_COUNT];
+      while ((queue_status= instance->map_base[IND_REG_QUEUE_STATUS])) {
+        unsigned int int_src = instance->map_base[IND_REG_INTERRUPT_FLAG];
+        unsigned int int_en  = instance->map_base[IND_REG_INTERRUPT_MASK];
+        unsigned int ind_count  = instance->map_base[IND_REG_INTERRUPT_COUNT];
         fprintf(stderr, "(%d:%s) about to receive messages int=%08x en=%08x qs=%08x\n", i, instance->name, int_src, int_en, queue_status);
-        if (i == 0)
+        if (i == 1)
             indication_handleMessage(instance->map_base, queue_status-1);
         else
             request_handleMessage(instance->map_base, queue_status-1);
@@ -115,8 +114,10 @@ static void manual_event(void)
 }
 int main(int argc, const char **argv)
 {
-   intarr[0] = new PortalInternal(IfcNames_SimpleIndication);
-   intarr[1] = new PortalInternal(IfcNames_SimpleRequest);
+   intarr[0] = new PortalInternal(IfcNames_SimpleRequest); // portal 1
+   intarr[1] = new PortalInternal(IfcNames_SimpleIndication); // portal 2
+   intarr[0]->map_base[IND_REG_INTERRUPT_MASK] = 0;
+   intarr[1]->map_base[IND_REG_INTERRUPT_MASK] = 0;
 
   fprintf(stderr, "Main::calling say1(%d)\n", v1a);
   //device->say1(v1a);  
@@ -130,7 +131,7 @@ int main(int argc, const char **argv)
     int i = 0;
     buf[i++] = payload.v;
     for (int i = 4/4-1; i >= 0; i--)
-      intarr[1]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_SimpleRequestProxy_say1)] = buf[i];
+      intarr[0]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_SimpleRequestProxy_say1)] = buf[i];
   };
   manual_event();
 
@@ -149,7 +150,7 @@ int main(int argc, const char **argv)
     buf[i++] = payload.b;
     buf[i++] = payload.a;
     for (int i = 8/4-1; i >= 0; i--)
-      intarr[1]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_SimpleRequestProxy_say2)] = buf[i];
+      intarr[0]->map_base[PORTAL_REQ_FIFO(CHAN_NUM_SimpleRequestProxy_say2)] = buf[i];
   };
   manual_event();
 }
