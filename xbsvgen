@@ -718,58 +718,50 @@ if __name__=='__main__':
         return f
 
     generatedCFiles = []
+    hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
+    generated_hpp = util.createDirAndOpen(hname, 'w')
+    generated_hpp.write('#ifndef __GENERATED_TYPES__\n');
+    generated_hpp.write('#define __GENERATED_TYPES__\n');
 
     for i in swProxies:
         cppname = '%sProxy.cpp' % i.name
         hppname = '%sProxy.h' % i.name
-        offname = '%sProxyOffsets.h' % i.name
         hpp = create_cpp_file(hppname)
-        off = create_bare_file(offname)
         cpp = create_cpp_file(cppname)
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
         cpp.write('#include "%s"' % hppname)
-        cpp.write('\n#include "%s"' % offname)
         hpp.write('#include "%s.h"' % i.parentClass("portal"))
-        i.ind.emitCWrapperDeclaration(hpp, off, "ProxyStatus")
-        i.emitCProxyDeclaration(hpp, off, "Proxy")
+        i.ind.emitCWrapperDeclaration(hpp, generated_hpp, "ProxyStatus")
+        i.emitCProxyDeclaration(hpp, generated_hpp, "Proxy")
         i.ind.emitCWrapperImplementation(cpp, "ProxyStatus")
         i.emitCProxyImplementation(cpp, "Proxy")
         hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
         hpp.close();
         cpp.close();
-        off.close();
         generatedCFiles.append(cppname)
 
     for i in swWrappers:
         cppname = '%sWrapper.cpp' % i.name
         hppname = '%sWrapper.h' % i.name
-        offname = '%sWrapperOffsets.h' % i.name
         hpp = create_cpp_file(hppname)
-        off = create_bare_file(offname)
         cpp = create_cpp_file(cppname)
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': i.name.upper()})
         cpp.write('#include "%s"' % hppname)
-        cpp.write('\n#include "%s"' % offname)
-        i.ind.emitCProxyDeclaration(hpp, off, "WrapperStatus")
-        i.emitCWrapperDeclaration(hpp, off, "Wrapper")
+        i.ind.emitCProxyDeclaration(hpp, generated_hpp, "WrapperStatus")
+        i.emitCWrapperDeclaration(hpp, generated_hpp, "Wrapper")
         i.ind.emitCProxyImplementation(cpp, "WrapperStatus")
         i.emitCWrapperImplementation(cpp, "Wrapper")
         hpp.write('#endif // _%(name)s_H_\n' % {'name': i.name.upper()})
         hpp.close();
         cpp.close();
-        off.close();
         generatedCFiles.append(cppname)
     
-    hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
-    hpp = util.createDirAndOpen(hname, 'w')
-    hpp.write('#ifndef __GENERATED_TYPES__\n');
-    hpp.write('#define __GENERATED_TYPES__\n');
     # global type declarations used by interface mthods
     for v in syntax.globaldecls:
         if (v.type == 'TypeDef'):
-            v.emitCDeclaration(hpp)
-    hpp.write('#endif //__GENERATED_TYPES__\n');
-    hpp.close();
+            v.emitCDeclaration(generated_hpp)
+    generated_hpp.write('#endif //__GENERATED_TYPES__\n');
+    generated_hpp.close();
 
     def create_bsv_package(pname, files=[]):
         fname = os.path.join(project_dir, 'sources', dutname.lower(), '%s.bsv' % pname)

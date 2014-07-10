@@ -417,7 +417,7 @@ class InterfaceMixin:
         statusDecl = "%s%s *proxyStatus;" % (cName(self.name), 'ProxyStatus')
 	reqChanNums = []
         for d in self.decls:
-            reqChanNums.append('#define CHAN_NUM_%s %d\n' % (self.global_name(d.name, suffix), d.channelNumber))
+            reqChanNums.append('CHAN_NUM_%s' % self.global_name(d.name, suffix))
         subs = {'className': className,
                 'namespace': namespace,
 		'statusDecl' : '' if self.hasPutFailed() else statusDecl,
@@ -426,13 +426,13 @@ class InterfaceMixin:
         for d in self.decls:
             d.emitCDeclaration(f, True, indentation + 4, namespace)
         f.write(proxyClassSuffixTemplate % subs)
-	of.write(''.join(reqChanNums))
+	of.write('enum { ' + ','.join(reqChanNums) + '};\n')
     def emitCWrapperDeclaration(self, f, of, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
         indent(f, indentation)
 	indChanNums = []
 	for d in self.decls:
-            indChanNums.append('#define CHAN_NUM_%s %d\n' % (self.global_name(cName(d.name), suffix),d.channelNumber));
+            indChanNums.append('CHAN_NUM_%s' % self.global_name(cName(d.name), suffix));
         subs = {'className': className,
                 'namespace': namespace,
                 'parentClass': self.parentClass('Portal')}
@@ -440,7 +440,7 @@ class InterfaceMixin:
         for d in self.decls:
             d.emitCDeclaration(f, False, indentation + 4, namespace)
         f.write(wrapperClassSuffixTemplate % subs)
-	of.write(''.join(indChanNums))
+	of.write('enum { ' + ','.join(indChanNums) + '};\n')
     def emitCProxyImplementation(self, f,  suffix, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
 	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')

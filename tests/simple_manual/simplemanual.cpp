@@ -24,8 +24,6 @@
 #include <unistd.h>
 #include <stdint.h>
 #include "GeneratedTypes.h"
-#include "SimpleIndicationWrapperOffsets.h"
-#include "SimpleRequestProxyOffsets.h"
 #include "portal.h"
 
 static int v1a = 42;
