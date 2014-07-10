@@ -729,14 +729,14 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    Vector#(K, Reg#(UInt#(addrwidth))) startBOffset <- replicateM(mkReg(0));
    Vector#(J, Reg#(UInt#(addrwidth))) startCOffset <- replicateM(mkReg(0));
 
-   Vector#(K, FIFO#(void)) bar <- replicateM(mkFIFO);
+   Vector#(K, FIFO#(void)) controlDependenceB <- replicateM(mkFIFO);
    for (Integer k = 0; k < kk; k = k + 1) begin
       rule startSourceB;
 
 	 if(k > 0)
-	    bar[k-1].deq;
+	    controlDependenceB[k-1].deq;
 	 if(k < kk-1)
-	    bar[k].enq(?);
+	    controlDependenceB[k].enq(?);
 
 	 Tuple2#(UInt#(addrwidth),UInt#(addrwidth)) index <- toGet(indexpipes[k]).get();
 	 match { .unusedB, .startBBase } <- toGet(offsetpipesB[k]).get();
@@ -767,7 +767,7 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 	 let b <- sourceB[k].finish();
       endrule
    end
-   Vector#(J, FIFO#(void)) foo <- replicateM(mkFIFO);
+   Vector#(J, FIFO#(void)) controlDependenceA <- replicateM(mkFIFO);
    for (Integer j = 0; j < jj; j = j + 1) begin
 
       int jint = fromInteger(j);
@@ -775,9 +775,9 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
       rule startSourceAndSink;
 	 
 	 if(j > 0)
-	    foo[j-1].deq;
+	    controlDependenceA[j-1].deq;
 	 if(j < jj-1)
-	    foo[j].enq(?);
+	    controlDependenceA[j].enq(?);
 	 
 	 Tuple2#(UInt#(addrwidth),UInt#(addrwidth)) index <- toGet(indexpipes[j+kk]).get();
 	 
