@@ -84,9 +84,8 @@ responseSzCaseTemplate='''
     case %(channelNumber)s: 
     { 
         %(msg)s msg;
-        volatile unsigned int *ptr = &map_base[%(fifoOffset)s];
         for (int i = (msg.size()/4)-1; i >= 0; i--)
-            buf[i] = READL(this, ptr);
+            buf[i] = READL(this, &map_base[PORTAL_IND_FIFO(%(channelNumber)s)]);
         msg.demarshall(buf);
         msg.indicate(this);
         break;
@@ -308,7 +307,6 @@ class MethodMixin:
             'paramNames': ', '.join(['msg->%s' % p.name for p in params]),
             'resultType': resultTypeName,
             'methodChannelOffset': 'CHAN_NUM_%s_%s' % (className, cName(self.name)),
-            'methodFifoOffset': 'PORTAL_IND_FIFO(CHAN_NUM_%s_%s)' % (className, cName(self.name)),
             # if message is empty, we still send an int of padding
             'payloadSize' : max(4, 4*((sum([p.numBitsBSV() for p in self.params])+31)/32)) 
             }
@@ -418,7 +416,6 @@ class InterfaceMixin:
         className = "%s%s" % (cName(self.name), suffix)
         statusDecl = "%s%s *proxyStatus;" % (cName(self.name), 'ProxyStatus')
 	reqChanNums = []
-	reqFifoOffsets = []
         for d in self.decls:
             reqChanNums.append('#define CHAN_NUM_%s %d\n' % (self.global_name(d.name, suffix), d.channelNumber))
         subs = {'className': className,
@@ -430,12 +427,10 @@ class InterfaceMixin:
             d.emitCDeclaration(f, True, indentation + 4, namespace)
         f.write(proxyClassSuffixTemplate % subs)
 	of.write(''.join(reqChanNums))
-	of.write(''.join(reqFifoOffsets))
     def emitCWrapperDeclaration(self, f, of, suffix, indentation=0, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
         indent(f, indentation)
 	indChanNums = []
-	indFifoOffsets = []
 	for d in self.decls:
             indChanNums.append('#define CHAN_NUM_%s %d\n' % (self.global_name(cName(d.name), suffix),d.channelNumber));
         subs = {'className': className,
@@ -446,7 +441,6 @@ class InterfaceMixin:
             d.emitCDeclaration(f, False, indentation + 4, namespace)
         f.write(wrapperClassSuffixTemplate % subs)
 	of.write(''.join(indChanNums))
-	of.write(''.join(indFifoOffsets))
     def emitCProxyImplementation(self, f,  suffix, namespace=''):
         className = "%s%s" % (cName(self.name), suffix)
 	statusName = "%s%s" % (cName(self.name), 'ProxyStatus')
@@ -466,7 +460,6 @@ class InterfaceMixin:
 			 'putFailedMethodName' : putFailedMethodName,
                          'parentClass': self.parentClass('Portal'),
                          'responseSzCases': ''.join([responseSzCaseTemplate % { 'channelNumber': 'CHAN_NUM_%s' % self.global_name(cName(d.name), suffix),
-										'fifoOffset': 'PORTAL_IND_FIFO(CHAN_NUM_%s)' % self.global_name(cName(d.name), suffix),
                                                                                 'msg': '%s%sMSG' % (className, d.name)}
                                                      for d in self.decls 
                                                      if d.type == 'Method' and d.return_type.name == 'Action']),
