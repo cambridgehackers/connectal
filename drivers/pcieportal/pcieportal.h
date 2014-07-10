@@ -87,6 +87,9 @@ typedef struct {
         struct extra_info *extra;
 } tPortal;
 
+#ifndef __KERNEL__
+#define __iomem
+#endif
 typedef struct tBoard {
         void __iomem     *bar0io, *bar1io, *bar2io; /* bars */
         struct pci_dev   *pci_dev; /* pci device pointer */
