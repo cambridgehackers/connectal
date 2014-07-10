@@ -83,8 +83,8 @@ public:
   bool copy(cv::Mat &other);
   bool copy(cv::MatExpr other);
   bool transpose(cv::Mat &other);
-  bool compare(Mat &other, const char *file=0, int line=0, float epsilon=0.0001, Mat *pm = 0);
-  void naive_mul(cv::Mat &a, cv::Mat &b);
+  bool compare(Mat &other, const char *file=0, int line=0, float epsilon=0.0001, Mat *pm = 0, bool verbose = false);
+  void naive_mul(cv::Mat &a, cv::Mat &b, FILE *f);
 
   /*!
    * Multiplies a * b-transpose

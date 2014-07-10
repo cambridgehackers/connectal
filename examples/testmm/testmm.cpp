@@ -142,9 +142,9 @@ int main(int argc, const char **argv)
   float v = 0;
   for(int a = 0; a < A; a++){
     for(int b = 0; b < B; b++){
-      m2.at<float>(b,a) = v;
+      m2.at<float>(b,a) = (A*B)+v;
       m1.at<float>(a,b) = v;
-      v += 1;
+      v++;
     }
   }
 #else
@@ -166,19 +166,19 @@ int main(int argc, const char **argv)
 		);
 #endif
 
+  FILE *octave_file = fopen("foo.m", "w");
+
   cv::Mat  m3 = m1 * m2;
   PortalMat tm3;
-  tm3.naive_mul(m1,m2);  
+  tm3.naive_mul(m1,m2, octave_file);
 
-  FILE *octave_file = fopen("foo.m", "w");
   dumpMatOctave<float>("m1",  "%10.5f", m1,  octave_file);
   dumpMatOctave<float>("m2",  "%10.5f", m2,  octave_file);
   dumpMatOctave<float>("m3",  "%10.5f", m3,  octave_file);
   dumpMatOctave<float>("tm3", "%10.5f", tm3, octave_file);
   fclose(octave_file);
-  bool sanity = tm3.compare(m3);
-  fprintf(stderr, "sanity=%d\n", sanity);
-  //exit(!sanity);
+  bool sane = tm3.compare(m3, 0, 0, 0.0001, 0, false);
+  fprintf(stderr, "sane=%d\n", sane);
 
   fflush(stdout);
   PortalMat pm1(m1);
@@ -202,5 +202,5 @@ int main(int argc, const char **argv)
   bool eq = pm3.compare(pm3);
   fprintf(stderr, "eq=%d\n", eq);
   //device->finish();
-  exit(!eq);
+  exit(!eq&&!sane);
 }

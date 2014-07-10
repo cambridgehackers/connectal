@@ -181,7 +181,7 @@ bool PortalMat::transpose(cv::Mat &other)
     return true;
 }
 
-bool PortalMat::compare(Mat &other, const char *file, int line, float epsilon, Mat *pm)
+bool PortalMat::compare(Mat &other, const char *file, int line, float epsilon, Mat *pm, bool verbose)
 {
     if (0)
 	fprintf(stderr, "PortalMat.compare rows=%d cols=%d other.rows=%d other.cols=%d\n",
@@ -199,13 +199,13 @@ bool PortalMat::compare(Mat &other, const char *file, int line, float epsilon, M
 	    float ov = other.at<float>(i, j);
 	    if (fabs(v - ov) > epsilon) {
 		if (file)
-		    fprintf(stderr, "%s:%d: ", file, line);
-		fprintf(stderr, "mismatch[%d,%d] expected %f got %f error=%f", i, j, v, ov, fabs(v - ov));
+		  if(verbose) fprintf(stderr, "%s:%d: ", file, line);
+		if(verbose) fprintf(stderr, "mismatch[%d,%d] expected %f got %f error=%f", i, j, v, ov, fabs(v - ov));
 		if (pm) {
 		    float pmv = pm->at<float>(i,j);
-		    fprintf(stderr, " pm[%d,%d]=%f %08x", i, j, pmv, *(int*)&pmv);
+		    if(verbose) fprintf(stderr, " pm[%d,%d]=%f %08x", i, j, pmv, *(int*)&pmv);
 		}
-		fprintf(stderr, "\n");
+		if(verbose) fprintf(stderr, "\n");
 		rv = false;
 	    }
 	}
@@ -214,12 +214,37 @@ bool PortalMat::compare(Mat &other, const char *file, int line, float epsilon, M
 }
 
 
-void PortalMat::naive_mul(cv::Mat &a, cv::Mat &b)
+void PortalMat::naive_mul(cv::Mat &a, cv::Mat &b, FILE *f)
 {
+
+  fprintf(stderr, "a:(%d x %d) b:(%d x %d)", a.rows, a.cols, b.rows, b.cols);
   assert(a.cols == b.rows);
   create(a.rows, b.cols, CV_32F);
   for (int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
+      double c = 0.0;
+#ifndef __FOO
+      bool last = (i==(rows-1) && j==(cols-1));
+      if(last) fprintf(f, "c = 0.0;\n");
+      for(int l = 0; l < a.cols; l++) {
+	double x = (double)a.at<float>(i,l);
+	double y = (double)b.at<float>(l,j);
+	double p = x*y;
+	if(last){
+	  fprintf(f, "assert(c==%f);\n", c);
+	}
+      	c = c + p;
+	if(last){
+	  fprintf(f, "p = %f*%f;\n", x, y);
+	  fprintf(f, "assert(p==%f);\n", p);
+	  fprintf(f, "c = c + p;\n");
+	  fprintf(f, "disp([c, %f])\n", c);
+	  fprintf(f, "assert(c==%f)\n", c);
+	}
+      }
+      at<float>(i, j) = (float)c;
+      if (last) fprintf(f, "rez = %f;\n", c);
+#else
       int K = 2;
       int gatherSz = 8/K;
       float c_ij[gatherSz];
@@ -228,10 +253,10 @@ void PortalMat::naive_mul(cv::Mat &a, cv::Mat &b)
       for(int l = 0; l < a.cols; l+=gatherSz)
 	for(int k = 0; k < gatherSz; k++)
 	  c_ij[k] += a.at<float>(i,l+k) * b.at<float>(l+k,j);
-      float c = 0.0;
       for(int k = 0; k < gatherSz; k++)
 	c += c_ij[k];
       at<float>(i, j) = c;
+#endif
     }
   }
 }
