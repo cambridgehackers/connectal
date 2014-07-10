@@ -52,6 +52,7 @@ matrixtests =testmm2.2.2         \
 
 tests    =  $(memtests)          \
 	    $(matrixtests)       \
+	    memread_manual       \
 	    simple_manual
 
 #################################################################################################
