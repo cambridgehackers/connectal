@@ -20,6 +20,7 @@
 #include <asm/uaccess.h>        /* copy_to_user, copy_from_user */
 
 #include "pcieportal.h"
+#include "portal_offsets.h"
 
 /* flag for adding 'direct call' interface to driver */
 //#define SUPPORT_MANUAL_INTERFACE
@@ -273,7 +274,7 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
         if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
                 return -EINVAL;
         if (vma->vm_pgoff < 16) {
-                off = pci_dev->resource[2].start + (1 << 16) * this_portal->portal_number;
+                off = pci_dev->resource[2].start + PORTAL_BASE_OFFSET * this_portal->portal_number;
                 printk("portal_mmap portal_number=%d board_start=%012lx portal_start=%012lx\n",
                      this_portal->portal_number, (long) pci_dev->resource[2].start, off);
                 vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
@@ -283,7 +284,7 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
                 if (!this_portal->virt) {
                         this_portal->virt = dma_alloc_coherent(&pci_dev->dev,
                              vma->vm_end - vma->vm_start, &this_portal->extra->dma_handle, GFP_ATOMIC);
-                        //this_portal->virt =pci_alloc_consistent(pci_dev, 1<<16, &this_portal->extra->dma_handle);
+                        //this_portal->virt =pci_alloc_consistent(pci_dev, PORTAL_BASE_OFFSET, &this_portal->extra->dma_handle);
                         printk("dma_alloc_coherent virt=%p dma_handle=%p\n",
                              this_portal->virt, (void *) this_portal->extra->dma_handle);
                 }
