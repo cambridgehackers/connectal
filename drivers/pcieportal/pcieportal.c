@@ -59,6 +59,12 @@
 /* static device data */
 static dev_t device_number;
 static struct class *pcieportal_class = NULL;
+typedef struct extra_info {
+        wait_queue_head_t wait_queue; /* used for interrupt notifications */
+        dma_addr_t        dma_handle;
+        struct cdev       cdev; /* per-portal cdev structure */
+} extra_info ;
+static struct extra_info extra_portal_info[NUM_PORTALS * NUM_BOARDS];
 static tBoard board_map[NUM_BOARDS + 1];
 static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 'u' << 16) | ((unsigned long long) 'e' << 24)
@@ -73,7 +79,7 @@ static irqreturn_t intr_handler(int irq, void *p)
         tPortal *this_portal = p;
 
         //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_portal->portal_number);
-        wake_up_interruptible(&(this_portal->wait_queue)); 
+        wake_up_interruptible(&(this_portal->extra->wait_queue)); 
         return IRQ_HANDLED;
 }
 
@@ -97,7 +103,7 @@ static int pcieportal_open(struct inode *inode, struct file *filp)
                 printk(KERN_ERR "%s_%d: Unable to locate board\n", DEV_NAME, this_board_number);
                 return -ENXIO;
         }
-        init_waitqueue_head(&(this_portal->wait_queue));
+        init_waitqueue_head(&(this_portal->extra->wait_queue));
         filp->private_data = (void *) &this_board->portal[this_portal_number];
         /* increment the open file count */
         this_board->open_count += 1; 
@@ -112,7 +118,7 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
 {
         tPortal *this_portal = (tPortal *) filp->private_data;
         /* decrement the open file count */
-        init_waitqueue_head(&(this_portal->wait_queue));
+        init_waitqueue_head(&(this_portal->extra->wait_queue));
         this_portal->board->open_count -= 1;
         //printk(KERN_INFO "%s_%d: Closed device file\n", DEV_NAME, this_board_number);
         return 0;                /* success */
@@ -127,7 +133,7 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
         //tBoard *this_board = this_portal->board;
 
         //printk(KERN_INFO "%s_%d: poll function called\n", DEV_NAME, this_board->info.board_number);
-        poll_wait(filp, &this_portal->wait_queue, poll_table);
+        poll_wait(filp, &this_portal->extra->wait_queue, poll_table);
         if (this_portal->count) {
             tc = *this_portal->count;
             //printk(KERN_INFO "%s_%d: count %x\n", DEV_NAME, this_portal->portal_number, tc);
@@ -276,13 +282,13 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
         } else {
                 if (!this_portal->virt) {
                         this_portal->virt = dma_alloc_coherent(&pci_dev->dev,
-                             vma->vm_end - vma->vm_start, &this_portal->dma_handle, GFP_ATOMIC);
-                        //this_portal->virt =pci_alloc_consistent(pci_dev, 1<<16, &this_portal->dma_handle);
+                             vma->vm_end - vma->vm_start, &this_portal->extra->dma_handle, GFP_ATOMIC);
+                        //this_portal->virt =pci_alloc_consistent(pci_dev, 1<<16, &this_portal->extra->dma_handle);
                         printk("dma_alloc_coherent virt=%p dma_handle=%p\n",
-                             this_portal->virt, (void *) this_portal->dma_handle);
+                             this_portal->virt, (void *) this_portal->extra->dma_handle);
                 }
                 //vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-                off = this_portal->dma_handle;
+                off = this_portal->extra->dma_handle;
         }
         vma->vm_flags |= VM_IO;
         if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
@@ -309,9 +315,16 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
         unsigned long long magic_num;
 	int num_entries = 16;
 	struct msix_entry msix_entries[16];
+printk("[%s:%d]\n", __FUNCTION__, __LINE__);
+        for (i = 0; i < NUM_PORTALS; i++)
+        	if (!this_board->portal[i].extra) {
+                        printk(KERN_ERR "%s: extra not initialized!!! %s\n", DEV_NAME, pci_name(dev));
+                        err = -EFAULT;
+                        goto err_exit;
+                }
         if (activate) {
         	for (i = 0; i < NUM_PORTALS; i++)
-        		init_waitqueue_head(&(this_board->portal[i].wait_queue));
+        		init_waitqueue_head(&(this_board->portal[i].extra->wait_queue));
                 this_board->pci_dev = dev;
                 /* enable the PCI device */
                 if (pci_enable_device(dev)) {
@@ -421,8 +434,8 @@ printk("[%s:%d] nr_entries %x msi %x msix %x\n", __FUNCTION__, __LINE__, nr_entr
                         if (this_board->bar2io)
                                 this_board->portal[dn].count = (volatile uint32_t *)(this_board->bar2io + 0x10000 * dn + 0xc000);
                         /* add the device operations */
-                        cdev_init(&this_board->portal[dn].cdev, &pcieportal_fops);
-                        if (cdev_add(&this_board->portal[dn].cdev, this_device_number, 1)) {
+                        cdev_init(&this_board->portal[dn].extra->cdev, &pcieportal_fops);
+                        if (cdev_add(&this_board->portal[dn].extra->cdev, this_device_number, 1)) {
                                 printk(KERN_ERR "%s: cdev_add %x failed\n",
                                        DEV_NAME, this_device_number);
                                 err = -EFAULT;
@@ -448,7 +461,7 @@ printk("[%s:%d] nr_entries %x msi %x msix %x\n", __FUNCTION__, __LINE__, nr_entr
                 printk(KERN_INFO "%s: /dev/%s_%d = %x removed\n",
                        DEV_NAME, DEV_NAME, this_board->info.board_number * NUM_PORTALS + dn, this_device_number); 
                 /* remove device */
-                cdev_del(&this_board->portal[dn].cdev);
+                cdev_del(&this_board->portal[dn].extra->cdev);
         }
         pci_clear_master(dev); /* disable PCI bus master */
         /* set MSIX Entry 0 Vector Control value to 1 (masked) */
@@ -482,7 +495,7 @@ err_exit:
 static int __init pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
         tBoard *this_board = NULL;
-        int board_number = 0;
+        int i, board_number = 0;
 
 printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &pcieportal_probe, dev, id, pci_get_drvdata(dev));
         printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
@@ -501,6 +514,8 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         this_board = &board_map[board_number];
         printk(KERN_INFO "%s: board_number = %d\n", DEV_NAME, board_number);
         memset(this_board, 0, sizeof(tBoard));
+        for (i = 0; i < NUM_PORTALS; i++)
+                this_board->portal[i].extra = &extra_portal_info[board_number * NUM_PORTALS + i];
         this_board->info.board_number = board_number;
         return board_activate(1, this_board, dev);
 }
@@ -536,7 +551,7 @@ static struct pci_driver pcieportal_ops = {
  *
  */
   
-static tBoard* get_pcie_portal_descriptor()
+tBoard* get_pcie_portal_descriptor(void)
 {
   return &board_map[0];
 }
@@ -555,6 +570,7 @@ static int __init pcieportal_init(void)
 {
         int status;
 
+printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         pcieportal_class = class_create(THIS_MODULE, "Bluespec");
         if (IS_ERR(pcieportal_class)) {
                 printk(KERN_ERR "%s: failed to create class Bluespec\n", DEV_NAME);
@@ -580,6 +596,7 @@ static int __init pcieportal_init(void)
         printk(KERN_INFO "%s: Major = %d  Minors = %d to %d\n", DEV_NAME,
                MAJOR(device_number), MINOR(device_number),
                MINOR(device_number) + NUM_BOARDS * NUM_BOARDS - 1);
+printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         return 0;                /* success */
 }
 

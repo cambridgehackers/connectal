@@ -79,9 +79,12 @@ typedef struct {
         struct tBoard    *board;
         void             *virt;
         volatile uint32_t *count;
+#if 0
         wait_queue_head_t wait_queue; /* used for interrupt notifications */
         dma_addr_t        dma_handle;
         struct cdev       cdev; /* per-portal cdev structure */
+#endif
+        struct extra_info *extra;
 } tPortal;
 
 typedef struct tBoard {
@@ -92,5 +95,9 @@ typedef struct tBoard {
         unsigned int      irq_num;
         unsigned int      open_count;
 } tBoard;
+
+#ifdef __KERNEL__
+extern tBoard* get_pcie_portal_descriptor(void);
+#endif
 
 #endif /* __BLUENOC_H__ */
