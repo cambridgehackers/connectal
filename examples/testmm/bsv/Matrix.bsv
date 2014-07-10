@@ -87,14 +87,14 @@ endfunction
 function PipeOut#(dtype) vsp(RowColSource#(dsz,dtype) vs); return vs.pipe; endfunction
 
 module mkRowColSink#(VectorSink#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSink#(TMul#(N,32), Vector#(N,Token)));
-   function Float foo(Token v) = v.v;
+   function Float tokenValue(Token v) = v.v;
    method Action start(ObjectPointer p, Bit#(ObjectOffsetSize) a, Bit#(ObjectOffsetSize) l);
       vs.start(p,a,l);
    endmethod
    method finish = vs.finish;
    interface PipeIn pipe;
       method Action enq(Vector#(N,Token) v);
-	 vs.pipe.enq(map(foo,v));
+	 vs.pipe.enq(map(tokenValue,v));
       endmethod
       method Bool notFull = vs.pipe.notFull;
    endinterface
