@@ -39,6 +39,9 @@ import Timer::*;
 import RbmTypes::*;
 import Assert::*;
 import Connectable::*;
+import Clocks::*;
+import Gearbox::*;
+import XilinxCells::*;
 
 interface SharedDotProdDebug#(numeric type k);
    interface PipeOut#(Bit#(32)) macCount;
@@ -83,7 +86,8 @@ function Put#(a) toCountedPut(Reg#(Bit#(n)) r, Put#(a) p);
       endmethod
       endinterface);
 endfunction
-function PipeOut#(dtype) vsp(RowColSource#(dsz,dtype) vs); return vs.pipe; endfunction
+function PipeOut#(dtype) getRowColSourcePipe(RowColSource#(dsz,dtype) vs); return vs.pipe; endfunction
+function PipeIn#(a) getRowColSinkPipe(RowColSink#(n,a) vs) = vs.pipe;
 
 module mkRowColSink#(VectorSink#(TMul#(N,32),Vector#(N,Float)) vs) (RowColSink#(TMul#(N,32), Vector#(N,Token)));
    function Float tokenValue(Token v) = v.v;
@@ -452,7 +456,7 @@ interface MmTile;
 endinterface
 
 (* synthesize *)
-module  mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
+module  mkMmTile#(Clock slowClock, Reset slowReset, UInt#(TLog#(T)) tile)(MmTile);
 
    let rowsPerTile = valueOf(RowsPerTile);
    let kk = valueOf(K);
@@ -476,9 +480,16 @@ module  mkMmTile#(UInt#(TLog#(T)) tile)(MmTile);
    Vector#(RowsPerTile, PipeOut#(Vector#(N, Float))) fxPipesN <- mapM(mkFunnel, fxPipesK);
 `else
    MIMOConfiguration mimoCfg = defaultValue;
-   Vector#(RowsPerTile, MIMO#(K,N,TAdd#(K,N),Token)) dfifos <- replicateM(mkMIMO(mimoCfg));
-   Vector#(RowsPerTile, PipeOut#(Vector#(N, Token))) fxPipesN = map(toPipeOut, dfifos);
+   Vector#(RowsPerTile, MIMO#(K,1,TAdd#(K,1),Token)) dfifos <- replicateM(mkMIMO(mimoCfg));
+   Vector#(RowsPerTile, PipeOut#(Vector#(1, Token))) fxPipes1 = map(toPipeOut, dfifos);
+   let fastClock <- exposeCurrentClock();
+   let fastReset <- exposeCurrentReset();
+   Vector#(RowsPerTile, Gearbox#(1, N, Token)) gearboxes <- replicateM(mk1toNGearbox(fastClock, fastReset, slowClock, slowReset));
+   Vector#(RowsPerTile, PipeIn#(Vector#(1,Token))) toGearboxes = map(toPipeIn, gearboxes);
+   mapM(uncurry(mkConnection), zip(fxPipes1, toGearboxes));
+   Vector#(RowsPerTile, PipeOut#(Vector#(N, Token))) fxPipesN = map(toPipeOut, gearboxes);
 `endif
+
    FirstLastPipe#(UInt#(MMSize)) firstLastPipe          <- mkFirstLastPipe();
    Vector#(2, PipeOut#(Tuple2#(Bool,Bool))) firstLastPipes <- mkForkVector(firstLastPipe.pipe);
 
@@ -647,6 +658,27 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    Bool verbose1 = False;
    Bool timing = False;
 
+   let defaultClock <- exposeCurrentClock();
+   let defaultReset <- exposeCurrentReset();
+
+`ifdef BSIM
+   let doubleClock = defaultClock;
+   let doubleReset = defaultReset;
+`else
+   ClockGenerator7Params clockParams = defaultValue;
+   clockParams.clkfbout_mult_f    = 5.000;
+   clockParams.clkfbout_phase     = 0.0;
+   clockParams.clkin1_period      = 5.000;
+   clockParams.clkout0_divide_f   = 2.500;
+   clockParams.clkout0_duty_cycle = 0.5;
+   clockParams.clkout0_phase      = 0.0000;
+   clockParams.clkout0_buffer     = True;
+   clockParams.clkin_buffer = False;
+   ClockGenerator7   clockGen <- mkClockGenerator7(clockParams);
+   let doubleClock = clockGen.clkout0;
+   let doubleReset <- mkAsyncReset(2, defaultReset, doubleClock);
+`endif
+
    Reg#(UInt#(32)) cycles <- mkReg(0);
    Reg#(Bool) doneReg <- mkReg(False);
    Reg#(MatrixDescriptor#(UInt#(addrwidth))) descriptorA <- mkReg(unpack(0));
@@ -657,31 +689,30 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    Vector#(J, RowColSource#(TMul#(N,32), Vector#(N,Token))) sourceA <- mapM(mkRowSource, sA);
    Vector#(K, RowColSource#(TMul#(N,32), Vector#(N,Token))) sourceB <- mapM(mkColSource, sB);
    Vector#(J, RowColSink#(TMul#(N,32),   Vector#(N,Token))) sinks   <- mapM(mkRowColSink,ss);
-   Vector#(J, PipeOut#(Token))       aPipes <- mapM(mkFunnel1, map(vsp, sourceA));
-   Vector#(K, PipeOut#(Token))       bPipes <- mapM(mkFunnel1, map(vsp, sourceB));
-   PipeOut#(Token)                  bFunnel <- mkFunnelPipes1(bPipes);
-   Vector#(J, PipeOut#(Token)) bFunnelPipes <- mkForkVector(bFunnel);
+   Vector#(J, PipeOut#(Token))       aPipes <- mapM(mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset), map(getRowColSourcePipe, sourceA));
+   Vector#(K, PipeOut#(Token))       bPipes <- mapM(mkFunnelGB1(defaultClock, defaultReset, doubleClock, doubleReset), map(getRowColSourcePipe, sourceB));
+   PipeOut#(Token)                  bFunnel <- mkFunnelPipes1(bPipes, clocked_by doubleClock, reset_by doubleReset);
+   Vector#(J, PipeOut#(Token)) bFunnelPipes <- mkForkVector(bFunnel, clocked_by doubleClock, reset_by doubleReset);
 
    rule countCycles;
       cycles <= cycles+1;
    endrule
 
    UInt#(TAdd#(TLog#(K),1)) repetitions = fromInteger(valueOf(K));
-   Vector#(J, PipeOut#(Token)) aRepeaters <- mapM(mkRepeat(repetitions), aPipes);
+   Vector#(J, PipeOut#(Token)) aRepeaters <- mapM(mkRepeat(repetitions), aPipes, clocked_by doubleClock, reset_by doubleReset);
 
-   Vector#(T, MmTile) mmTiles <- mapM(mkMmTile,map(fromInteger,genVector));
+   Vector#(T, MmTile) mmTiles <- mapM(mkMmTile(defaultClock, defaultReset), map(fromInteger,genVector), clocked_by doubleClock, reset_by doubleReset);
    Vector#(J, PipeOut#(Vector#(N,Token))) fxpipes;
    for (Integer t = 0; t < valueOf(T); t = t+1) begin
       for (Integer i = 0; i < valueof(RowsPerTile); i = i+1) begin
 	 let j = t*valueOf(RowsPerTile) + i;
-	 mkConnection(toGet(aRepeaters[j]), mmTiles[t].aInputs[i]);
-	 mkConnection(toGet(bFunnelPipes[j]), mmTiles[t].bInputs[i]);
+	 mkConnection(toGet(aRepeaters[j]), mmTiles[t].aInputs[i], clocked_by doubleClock, reset_by doubleReset);
+	 mkConnection(toGet(bFunnelPipes[j]), mmTiles[t].bInputs[i], clocked_by doubleClock, reset_by doubleReset);
 	 fxpipes[j] = mmTiles[t].fxPipes[i];
       end
    end
    
-   function PipeIn#(a) getPipe(RowColSink#(n,a) vs) = vs.pipe;
-   zipWithM(mkConnection, fxpipes, map(getPipe, sinks));
+   zipWithM(mkConnection, fxpipes, map(getRowColSinkPipe, sinks));
    
    XYRangePipeIfc#(UInt#(addrwidth)) indexpipeifc <- mkXYRangePipeOut();
    XYRangePipeIfc#(UInt#(addrwidth)) offsetpipeA <- mkXYRangePipeOut();
@@ -815,7 +846,10 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
 
    function Bit#(32) my_add(Tuple2#(Bit#(32),Bit#(32)) ab); match { .a, .b } = ab; return a+b; endfunction
    function PipeOut#(Bit#(32)) mmTileMacCount(MmTile mmtile); return mmtile.debug.macCount; endfunction
-   PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(my_add, map(mmTileMacCount, mmTiles));
+   Vector#(T, PipeOut#(Vector#(2,Bit#(32)))) macCountPipes <- mapM(mkUnfunnelGB(defaultClock, defaultReset, doubleClock, doubleReset),
+								   map(mapPipe(replicate),
+								       map(mmTileMacCount, mmTiles)));
+   PipeOut#(Bit#(32)) macCountPipe <- mkReducePipes(my_add, map(mapPipe(head),macCountPipes));
    Reg#(Bit#(32)) macCountReg <- mkReg(0);
    rule updateMacCount;
       let mc <- toGet(macCountPipe).get();
