@@ -19,6 +19,17 @@ endif
 ifneq ($(origin IPDIR),undefined)
 XBSVFLAGS += --ipdir=$(IPDIR)
 endif
+ifndef NUMBER_OF_MASTERS
+NUMBER_OF_MASTERS=1
+endif
+XBSVFLAGS += --bscflags " -D NumberOfMasters=$(NUMBER_OF_MASTERS)"
+
+ifneq ($(NUMBER_OF_MASTERS), 0)
+#S2H += DmaConfig
+#H2S += DmaIndication
+BSVFILES += $(XBSVDIR)/bsv/PortalMemory.bsv
+CPPFILES += $(XBSVDIR)/cpp/dmaManager.cpp
+endif
 
 all bits verilog implementation android_exe bsim bsim_exe ubuntu_exe xsim xsimrun: gentarget
 	make -C $(BOARD) $@

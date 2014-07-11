@@ -6,7 +6,7 @@ H2S = YuvIndication
 BSVFILES =  YuvRequest.bsv Top.bsv
 CPPFILES= testyuv.cpp
 
-XBSVFLAGS += -D NumberOfMasters=0
+NUMBER_OF_MASTERS =0
 #XBSVFLAGS+=  -D TRACE_AXI
 
 include ../../Makefile.common

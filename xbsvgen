@@ -481,7 +481,7 @@ androidmk_template='''
 include $(CLEAR_VARS)
 LOCAL_ARM_MODE := arm
 APP_SRC_FILES := $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(source)s
-PORTAL_SRC_FILES := $(addprefix %(xbsvdir)s/cpp/, portal.cpp dmaManager.cpp sock_fd.cxx sock_utils.cxx)
+PORTAL_SRC_FILES := $(addprefix %(xbsvdir)s/cpp/, portal.cpp sock_fd.cxx sock_utils.cxx)
 LOCAL_SRC_FILES := $(APP_SRC_FILES) $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
@@ -498,7 +498,7 @@ linuxmakefile_template='''
 CFLAGS_COMMON = -O -g -I%(project_dir)s/jni -I%(xbsvdir)s -I%(xbsvdir)s/cpp -I%(xbsvdir)s/lib/cpp %(sourceincludes)s %(cincludes)s %(cdefines)s
 CFLAGS = -DMMAP_HW $(CFLAGS_COMMON)
 
-PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.cpp dmaManager.cpp sock_fd.cxx sock_utils.cxx)
+PORTAL_CPP_FILES = $(addprefix %(xbsvdir)s/cpp/, portal.cpp sock_fd.cxx sock_utils.cxx)
 SOURCES = $(addprefix %(project_dir)s/jni/,  %(generatedCFiles)s) %(source)s $(PORTAL_CPP_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s -pthread 
 
@@ -620,9 +620,6 @@ if __name__=='__main__':
     bsvdefines += ['BOARD_'+boardname]
     if bscmajor < 2014:
         bsvdefines.append('ExportUnusedClocksAndResets')
-
-    if not (os.path.abspath(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv')) in map(os.path.abspath, namespace.bsvfile)):
-        namespace.bsvfile.append(os.path.join(xbsvdir, 'bsv', 'PortalMemory.bsv'))
 
     for inputfile in namespace.bsvfile:
         inputdir = os.path.dirname(inputfile)

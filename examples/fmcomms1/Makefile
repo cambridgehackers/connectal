@@ -4,7 +4,7 @@ H2S = FMComms1Indication DmaIndication
 BSVFILES = FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv Top.bsv
 CPPFILES=testfmcomms1.cpp
 XBSVFLAGS = -C fmcomms1-$(BOARD).xdc --tcl clock.tcl
-XBSVFLAGS += --bscflags " -D NumberOfMasters=0"
+NUMBER_OF_MASTERS =0
 #XBSVFLAGS += --bscflags " -D TRACE_AXI"
 XBSVFLAGS += --bscflags " -D USE_I2C1 -D USES_FCLK1 -D PinType=FMComms1Pins"
 

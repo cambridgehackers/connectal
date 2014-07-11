@@ -4,6 +4,6 @@ S2H = LedControllerRequest
 H2S = 
 BSVFILES = LedController.bsv Top.bsv
 CPPFILES= testleds.cpp
-XBSVFLAGS += --bscflags " -D NumberOfMasters=0"
+NUMBER_OF_MASTERS =0
 
 include ../../Makefile.common

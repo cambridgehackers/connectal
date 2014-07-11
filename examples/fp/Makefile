@@ -4,7 +4,7 @@ S2H = FpRequest
 H2S = FpIndication
 BSVFILES = Fp.bsv Top.bsv
 CPPFILES=testfp.cpp
-XBSVFLAGS += -D NumberOfMasters=0
+NUMBER_OF_MASTERS =0
 
 FP_ADD_V = $(XBSVDIR)/generated/xilinx/$(BOARD)/fp_add/fp_add_stub.v
 

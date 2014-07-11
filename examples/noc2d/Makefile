@@ -9,7 +9,7 @@ BSVFILES = Noc2d.bsv Top.bsv
 CPPFILES=testnoc2d.cpp
 ## uncomment the following line to enable AXI trace
 # XBSVFLAGS="--bscflags=-D TRACE_AXI"
-XBSVFLAGS += --bscflags " -D NumberOfMasters=0"
+NUMBER_OF_MASTERS =0
 
 include ../../Makefile.common
 
