@@ -49,7 +49,7 @@ endinterface
 
 
 typedef struct {
-`define TAGGED_TOKENS
+//`define TAGGED_TOKENS
 `ifdef TAGGED_TOKENS
    UInt#(32) row;
    UInt#(32) col;
@@ -474,21 +474,22 @@ module  mkMmTile#(Clock slowClock, Reset slowReset, UInt#(TLog#(T)) tile)(MmTile
    function Vector#(k,PipeOut#(Token)) getDotProdServerPipes(SharedDotProdServer#(k) s); return s.pipes; endfunction
    Vector#(RowsPerTile, SharedDotProdServer#(K)) fxdotprods <- mapM(mkSharedDotProdServer, map(fromInteger,genVector));
    Vector#(RowsPerTile, Vector#(K, PipeOut#(Token))) fxpipes = map(getDotProdServerPipes, fxdotprods);
-`define USE_MIMO_DFIFOS // this version is faster
+//`define USE_MIMO_DFIFOS // this version is faster
+   let fastClock <- exposeCurrentClock();
+   let fastReset <- exposeCurrentReset();
 `ifndef USE_MIMO_DFIFOS
-   Vector#(RowsPerTile, PipeOut#(Vector#(K, Float))) fxPipesK <- mapM(mkJoinVector(id), fxpipes);
-   Vector#(RowsPerTile, PipeOut#(Vector#(N, Float))) fxPipesN <- mapM(mkFunnel, fxPipesK);
+   Vector#(RowsPerTile, PipeOut#(Vector#(K, Token))) fxPipesK <- mapM(mkJoinVector(id), fxpipes);
+   Vector#(RowsPerTile, PipeOut#(Token)) fxPipes1Token <- mapM(mkFunnel1, fxPipesK);
+   Vector#(RowsPerTile, PipeOut#(Vector#(1, Token))) fxPipes1 = map(mapPipe(replicate), fxPipes1Token);
 `else
    MIMOConfiguration mimoCfg = defaultValue;
    Vector#(RowsPerTile, MIMO#(K,1,TAdd#(K,1),Token)) dfifos <- replicateM(mkMIMO(mimoCfg));
    Vector#(RowsPerTile, PipeOut#(Vector#(1, Token))) fxPipes1 = map(toPipeOut, dfifos);
-   let fastClock <- exposeCurrentClock();
-   let fastReset <- exposeCurrentReset();
+`endif
    Vector#(RowsPerTile, Gearbox#(1, N, Token)) gearboxes <- replicateM(mk1toNGearbox(fastClock, fastReset, slowClock, slowReset));
    Vector#(RowsPerTile, PipeIn#(Vector#(1,Token))) toGearboxes = map(toPipeIn, gearboxes);
    mapM(uncurry(mkConnection), zip(fxPipes1, toGearboxes));
    Vector#(RowsPerTile, PipeOut#(Vector#(N, Token))) fxPipesN = map(toPipeOut, gearboxes);
-`endif
 
    FirstLastPipe#(UInt#(MMSize)) firstLastPipe          <- mkFirstLastPipe();
    Vector#(2, PipeOut#(Tuple2#(Bool,Bool))) firstLastPipes <- mkForkVector(firstLastPipe.pipe);
@@ -676,7 +677,8 @@ module  mkDmaMatrixMultiply#(Vector#(J, VectorSource#(dsz, Vector#(N, Float))) s
    clockParams.clkin_buffer = False;
    ClockGenerator7   clockGen <- mkClockGenerator7(clockParams);
    let doubleClock = clockGen.clkout0;
-   let doubleReset <- mkAsyncReset(2, defaultReset, doubleClock);
+   let doubleResetUnbuffered <- mkAsyncReset(2, defaultReset, doubleClock);
+   let doubleReset <- mkResetBUFG(clocked_by doubleClock, reset_by doubleResetUnbuffered);
 `endif
 
    Reg#(UInt#(32)) cycles <- mkReg(0);
