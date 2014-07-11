@@ -48,7 +48,7 @@ AST.Type.__bases__ += (cppgen.TypeMixin,bsvgen.TypeMixin)
 AST.Param.__bases__ += (cppgen.ParamMixin,bsvgen.ParamMixin)
 AST.Interface.__bases__ += (cppgen.InterfaceMixin,bsvgen.InterfaceMixin)
 
-supported_boards = ['ac701', 'zedboard', 'zc702', 'zc706', 'kc705', 'vc707', 'v2000t', 'bluesim']
+supported_boards = ['ac701', 'zedboard', 'zc702', 'zc706', 'kc705', 'vc707', 'zynq100', 'v2000t', 'bluesim']
 supported_os = ['android', 'ubuntu']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
@@ -651,6 +651,12 @@ if __name__=='__main__':
     elif boardname == 'zc706':
         if not 'os' in namespace: namespace.os = 'android'
         partname = 'xc7z045ffg900-2'
+        rewireclockstring = tclzynqrewireclock
+        #namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
+        namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z045ffg900.xdc'))
+    elif boardname == 'zynq100':
+        if not 'os' in namespace: namespace.os = 'android'
+        partname = 'xc7z100ffg900-2'
         rewireclockstring = tclzynqrewireclock
         #namespace.verilog.append(os.path.join(xbsvdir, 'xilinx', 'sources', 'processing_system7'))
         namespace.constraint.append(os.path.join(xbsvdir, 'xilinx/constraints/zc7z045ffg900.xdc'))
