@@ -360,9 +360,6 @@ endmodule
 `ifndef DataBusWidth
 `define DataBusWidth 64
 `endif
-`ifndef NumberOfMasters
-`define NumberOfMasters 1
-`endif
 `ifndef PinType
 `define PinType Empty
 `endif

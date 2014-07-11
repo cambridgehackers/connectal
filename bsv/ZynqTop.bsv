@@ -49,10 +49,6 @@ import Bscan             :: *;
 `else
 `define BSCAN_ARG
 `endif
-
-`ifndef NumberOfMasters
-`define NumberOfMasters 1
-`endif
 `ifndef PinType
 `define PinType Empty
 `endif
