@@ -263,12 +263,12 @@ module  mkSharedDotProdServer#(UInt#(TLog#(TMul#(J,K))) label)(SharedDotProdServ
    Vector#(K,Vector#(gatherSz,FIFOF#(Float))) accumFifos <- replicateM(replicateM(mkFIFOF1));
    Vector#(K,Reg#(Bit#(TLog#(gatherSz)))) accumFifosEnqIdxs <- replicateM(mkReg(0));
    Vector#(K,Reg#(Bit#(TLog#(gatherSz)))) accumFifosDeqIdxs <- replicateM(mkReg(0));
-   Vector#(K,Reg#(Bit#(32))) firstCnts <- replicateM(mkReg(0));
+   Vector#(K,Reg#(Bit#(16))) firstCnts <- replicateM(mkReg(0));
 
-   Reg#(Bit#(32)) lastCntA   <- mkReg(0);
-   Reg#(Bit#(32)) lastCntB   <- mkReg(0);
-   Reg#(Bit#(32)) gatherCntA <- mkReg(0);
-   Reg#(Bit#(32)) gatherCntB <- mkReg(0);
+   Reg#(Bit#(16)) lastCntA   <- mkReg(0);
+   Reg#(Bit#(16)) lastCntB   <- mkReg(0);
+   Reg#(Bit#(16)) gatherCntA <- mkReg(0);
+   Reg#(Bit#(16)) gatherCntB <- mkReg(0);
    Vector#(K,FIFOF#(Token)) dotfifos   <- replicateM(mkFIFOF1);
    
    Vector#(2,Reg#(Bit#(TLog#(K)))) chanRegs <- replicateM(mkReg(0));
