@@ -1,6 +1,6 @@
 
-S2H = MemcpyRequest DmaConfig
-H2S = MemcpyIndication DmaIndication
+S2H = MemcpyRequest
+H2S = MemcpyIndication
 BSVFILES = Memcpy.bsv Top.bsv
 CPPFILES=testmemcpy.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"

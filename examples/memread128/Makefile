@@ -1,7 +1,7 @@
 
 BSVDIR=../../bsv
-S2H = MemreadRequest DmaConfig
-H2S = MemreadIndication DmaIndication
+S2H = MemreadRequest
+H2S = MemreadIndication
 BSVFILES = Memread.bsv Top.bsv
 CPPFILES=testmemread.cpp
 XBSVFLAGS += --bscflags " -D DataBusWidth=128"

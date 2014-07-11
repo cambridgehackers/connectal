@@ -25,8 +25,8 @@ endif
 XBSVFLAGS += --bscflags " -D NumberOfMasters=$(NUMBER_OF_MASTERS)"
 
 ifneq ($(NUMBER_OF_MASTERS), 0)
-#S2H += DmaConfig
-#H2S += DmaIndication
+S2H += DmaConfig
+H2S += DmaIndication
 BSVFILES += $(XBSVDIR)/bsv/PortalMemory.bsv
 CPPFILES += $(XBSVDIR)/cpp/dmaManager.cpp
 endif

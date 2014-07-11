@@ -1,7 +1,7 @@
 
 BSVDIR=../../bsv
-S2H = MaxcommonsubseqRequest DmaConfig
-H2S = MaxcommonsubseqIndication DmaIndication
+S2H = MaxcommonsubseqRequest
+H2S = MaxcommonsubseqIndication
 BSVFILES = Maxcommonsubseq.bsv Top.bsv ../../lib/deprecated/DmaUtils.bsv
 CPPFILES=testmaxcommonsubseq.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"

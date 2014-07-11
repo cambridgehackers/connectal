@@ -1,6 +1,6 @@
 
-S2H = MemlatencyRequest DmaConfig
-H2S = MemlatencyIndication DmaIndication
+S2H = MemlatencyRequest
+H2S = MemlatencyIndication
 BSVFILES = Memlatency.bsv Top.bsv
 CPPFILES=testmemlatency.cpp
 #XBSVFLAGS=--bscflags " -D TRACE_AXI"

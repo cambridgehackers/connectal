@@ -1,6 +1,6 @@
 
-S2H = FMComms1Request DmaConfig
-H2S = FMComms1Indication DmaIndication
+S2H = FMComms1Request
+H2S = FMComms1Indication
 BSVFILES = FMComms1ADC.bsv FMComms1DAC.bsv FMComms1.bsv Top.bsv
 CPPFILES=testfmcomms1.cpp
 XBSVFLAGS = -C fmcomms1-$(BOARD).xdc --tcl clock.tcl
